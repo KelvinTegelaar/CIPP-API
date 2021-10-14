@@ -39,17 +39,17 @@ $results = foreach ($Tenant in $tenants) {
         }
         $Body = convertto-json -InputObject $ObjBody
         $GraphRequest = New-GraphPostRequest -uri "https://graph.microsoft.com/beta/deviceManagement/windowsAutopilotDeploymentProfiles" -body $body -tenantid $Tenant
-        Log-Request -user $user -message "$($Tenant): Added Autopilot profile $($Displayname)" -Sev "Info"
+        Log-Request -user $request.headers.'x-ms-client-principal'   -message "$($Tenant): Added Autopilot profile $($Displayname)" -Sev "Info"
         if ($AssignTo) {
             $AssignBody = '{"target":{"@odata.type":"#microsoft.graph.allDevicesAssignmentTarget"}}'
             $assign = New-GraphPOSTRequest -uri  "https://graph.microsoft.com/beta/deviceManagement/windowsAutopilotDeploymentProfiles/$($GraphRequest.id)/assignments" -tenantid $Tenant -type POST -body $AssignBody
-            Log-Request -user $user -message "$($Tenant): Assigned autopilot profile $($Displayname) to $AssignTo" -Sev "Info"
+            Log-Request -user $request.headers.'x-ms-client-principal'   -message "$($Tenant): Assigned autopilot profile $($Displayname) to $AssignTo" -Sev "Info"
         }
         "Succesfully added profile for $($Tenant)<br>"
     }
     catch {
         "Failed to add profile for $($Tenant): $($_.Exception.Message) <br>"
-        Log-Request -user $user -message "$($Tenant): Failed adding Autopilot Profile $($Displayname). Error: $($_.Exception.Message)" -Sev "Error"
+        Log-Request -user $request.headers.'x-ms-client-principal'   -message "$($Tenant): Failed adding Autopilot Profile $($Displayname). Error: $($_.Exception.Message)" -Sev "Error"
         continue
     }
 

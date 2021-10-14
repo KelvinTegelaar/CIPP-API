@@ -20,10 +20,10 @@ try{
     } | convertto-json
     $GraphRequest = New-GraphPostRequest -AsApp $true -uri "https://graph.microsoft.com/beta/groups" -tenantid $groupobj.tenantid -type POST -body $BodyToship   -verbose
     $body = [pscustomobject]@{"Results" = "Succesfully created group. $($_.Exception.Message)" }
-    Log-Request -user $user -message "Created group $($groupobj.displayname) with id $($GraphRequest.id) for $($groupobj.tenantid)" -Sev "Info"
+    Log-Request -user $request.headers.'x-ms-client-principal'   -message "Created group $($groupobj.displayname) with id $($GraphRequest.id) for $($groupobj.tenantid)" -Sev "Info"
 
 } catch {
-    Log-Request -user $user -message "Group creation API failed. $($_.Exception.Message)" -Sev "Error"
+    Log-Request -user $request.headers.'x-ms-client-principal'   -message "Group creation API failed. $($_.Exception.Message)" -Sev "Error"
     $body = [pscustomobject]@{"Results" = "Failed to create group. $($_.Exception.Message)" }
 
 }

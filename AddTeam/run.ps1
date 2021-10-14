@@ -31,12 +31,12 @@ try {
 
     write-host $TeamsSettings
     New-GraphPostRequest -AsApp $true -uri "https://graph.microsoft.com/beta/teams" -tenantid $Userobj.tenantid -type POST -body $TeamsSettings -verbose
-    Log-Request -user $user -message "$($userobj.tenantid): $($userobj.tenantid): Added Team $($userobj.displayname)" -Sev "Info"
+    Log-Request -user $request.headers.'x-ms-client-principal'   -message "$($userobj.tenantid): $($userobj.tenantid): Added Team $($userobj.displayname)" -Sev "Info"
     $body = [pscustomobject]@{"Results" = "Success. Team has been added" }
 
 }
 catch {
-    Log-Request -user $user -message "$($userobj.tenantid): Add Team failed. $($_.Exception.Message)" -Sev "Error"
+    Log-Request -user $request.headers.'x-ms-client-principal'   -message "$($userobj.tenantid): Add Team failed. $($_.Exception.Message)" -Sev "Error"
     $body = [pscustomobject]@{"Results" = "Failed. Error message: $($_.Exception.Message)" }
 }
 

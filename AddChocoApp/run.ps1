@@ -30,10 +30,10 @@ $Results = foreach ($Tenant in $tenants) {
         } | ConvertTo-Json -Depth 15
         $JSONFile = New-Item -Path ".\ChocoApps.Cache\$(New-Guid)" -Value $CompleteObject -Force -ErrorAction Stop
         "Succesfully added Choco App for $($Tenant) to queue.<br>"
-        Log-Request -user $user -message "$($Tenant): Chocolatey Application $($intunebody.Displayname) queued to add" -Sev "Info"
+        Log-Request -user $request.headers.'x-ms-client-principal'   -message "$($Tenant): Chocolatey Application $($intunebody.Displayname) queued to add" -Sev "Info"
     }
     catch {
-        Log-Request -user $user -message "$($Tenant): Failed to add Chocolatey Application $($intunebody.Displayname) to queue" -Sev "Error"
+        Log-Request -user $request.headers.'x-ms-client-principal'   -message "$($Tenant): Failed to add Chocolatey Application $($intunebody.Displayname) to queue" -Sev "Error"
         "Failed added Choco App for $($Tenant) to queue<br>"
     }
 }

@@ -19,12 +19,12 @@ $Result = try {
     $NewStatus = New-GraphgetRequest -uri "https://api.partnercenter.microsoft.com/v1/customers/$tenantfilter/DeviceBatches" -scope 'https://api.partnercenter.microsoft.com/user_impersonation'
     if ($Newstatus.totalcount -eq $CurrentStatus.totalcount) { throw "We could not find the new autopilot device. Please check if your input is correct." }
     write-host $CurrentStatus.Items
-    Log-Request -user $user -message "Created Autopilot devices group for $($Request.body.TenantFilter). Group ID is $GroupName" -Sev "Info"
+    Log-Request -user $request.headers.'x-ms-client-principal'   -message "Created Autopilot devices group for $($Request.body.TenantFilter). Group ID is $GroupName" -Sev "Info"
     "Created Autopilot devices group for $($Request.body.TenantFilter). Group ID is $GroupName"
 }
 catch {
     "$($Request.body.TenantFilter): Failed to create autopilot devices. $($_.Exception.Message)"
-    Log-Request -user $user -message "$($Request.body.TenantFilter): Failed to create autopilot devices. $($_.Exception.Message)" -Sev "Error"
+    Log-Request -user $request.headers.'x-ms-client-principal'   -message "$($Request.body.TenantFilter): Failed to create autopilot devices. $($_.Exception.Message)" -Sev "Error"
 }
 
 $body = [pscustomobject]@{"Results" = $Result }

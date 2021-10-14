@@ -12,14 +12,14 @@ $date = (get-date).tostring('dd-MM-yyyy')
 try {
       if ($Request.Query.List) {
         $ExcludedTenants = [System.IO.File]::ReadAllLines("ExcludedTenants") | convertfrom-csv -delimiter "|" -header "Name","User","Date" | where-object{ $_.name -ne ""} 
-        Log-Request -user $user -message "got excluded tenants list" -Sev "Info"
+        Log-Request -user $request.headers.'x-ms-client-principal'   -message "got excluded tenants list" -Sev "Info"
         $body = $ExcludedTenants
     }
     # Interact with query parameters or the body of the request.
     $name = $Request.Query.TenantFilter
     if ($Request.Query.AddExclusion) {
         Add-content -Value "$($name)|$($username)|$($date)" -path "ExcludedTenants"
-        Log-Request -user $user -message "Added exclusion for customer $($name)" -Sev "Info"
+        Log-Request -user $request.headers.'x-ms-client-principal'   -message "Added exclusion for customer $($name)" -Sev "Info"
         $body = [pscustomobject]@{"Results" = "Success. We've added $name to the excluded tenants." }
     }
 
@@ -27,12 +27,12 @@ try {
         $Content = [System.IO.File]::ReadAllLines("ExcludedTenants")
         $Content = $Content -replace $name, ''
         $Content | Set-Content -Path "ExcludedTenants"
-        Log-Request -user $user -message "Removed exclusion for customer $($name)" -Sev "Info"
+        Log-Request -user $request.headers.'x-ms-client-principal'   -message "Removed exclusion for customer $($name)" -Sev "Info"
         $body = [pscustomobject]@{"Results" = "Success. We've removed $name from the excluded tenants." }
     }
 }
 catch {
-    Log-Request -user $user -message "Exclusion API failed. $($_.Exception.Message)" -Sev "Error"
+    Log-Request -user $request.headers.'x-ms-client-principal'   -message "Exclusion API failed. $($_.Exception.Message)" -Sev "Error"
     $body = [pscustomobject]@{"Results" = "Failed. $($_.Exception.Message)" }
 }
 

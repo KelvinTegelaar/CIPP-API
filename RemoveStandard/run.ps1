@@ -6,13 +6,13 @@ $user = $request.headers.'x-ms-client-principal'
 $ID = $request.query.id
 try {
     remove-item "$($ID).Standards.json" -force
-    Log-Request -user $user -message "Removed standards for $ID." -Sev "Info"
+    Log-Request -user $request.headers.'x-ms-client-principal'   -message "Removed standards for $ID." -Sev "Info"
     $body = [pscustomobject]@{"Results" = "Successfully removed standards deployment" }
 
 
 }
 catch {
-    Log-Request -user $user -message "Failed to remove standard for $ID. $($_.Exception.Message)" -Sev "Error"
+    Log-Request -user $request.headers.'x-ms-client-principal'   -message "Failed to remove standard for $ID. $($_.Exception.Message)" -Sev "Error"
     $body = [pscustomobject]@{"Results" = "Failed to remove standard)" }
 }
 

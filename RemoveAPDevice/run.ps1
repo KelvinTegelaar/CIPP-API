@@ -17,10 +17,10 @@ if ($TenantFilter -eq $null -or $TenantFilter -eq "null") {
 else {
     $GraphRequest = New-GraphPOSTRequest -uri "https://graph.microsoft.com/beta/deviceManagement/windowsAutopilotDeviceIdentities/$Deviceid" -tenantid $TenantFilter -type DELETE
 }
-    Log-Request -user $user -message "Deleted autopilot device $Deviceid for tenant $TenantFilter" -Sev "Info"
+    Log-Request -user $request.headers.'x-ms-client-principal'   -message "Deleted autopilot device $Deviceid for tenant $TenantFilter" -Sev "Info"
     $body = [pscustomobject]@{"Results" = "Succesfully deleted the autopilot device" }
 } catch {
-    Log-Request -user $user -message "Autopilot Delete API failed for $deviceid - $tenantid. The error is: $($_.Exception.Message)" -Sev "Error"
+    Log-Request -user $request.headers.'x-ms-client-principal'   -message "Autopilot Delete API failed for $deviceid - $tenantid. The error is: $($_.Exception.Message)" -Sev "Error"
     $body = [pscustomobject]@{"Results" = "Failed to delete device: $($_.Exception.Message)" }
 }
 #force a sync, this can give "too many requests" if deleleting a bunch of devices though.

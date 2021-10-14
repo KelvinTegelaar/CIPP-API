@@ -35,12 +35,12 @@ Write-Host $body
         $ExistingStatusPage = (New-GraphGetRequest -Uri "https://graph.microsoft.com/beta/deviceManagement/deviceEnrollmentConfigurations" -tenantid $Tenant) | Where-Object { $_.id -like "*DefaultWindows10EnrollmentCompletionPageConfiguration" }
         $GraphRequest = New-GraphPOSTRequest -uri "https://graph.microsoft.com/beta/deviceManagement/deviceEnrollmentConfigurations/$($ExistingStatusPage.ID)" -body $body -Type PATCH -tenantid $tenant
         "Succesfully changed default enrollment status page for $($Tenant)<br>"
-        Log-Request -user $user -message "$($Tenant): Added Autopilot Enrollment Status Page $($Displayname)" -Sev "Info"
+        Log-Request -user $request.headers.'x-ms-client-principal'   -message "$($Tenant): Added Autopilot Enrollment Status Page $($Displayname)" -Sev "Info"
 
     }
     catch {
         "Failed to change default enrollment status page for $($Tenant): $($_.Exception.Message) <br>"
-        Log-Request -user $user -message "$($Tenant): Failed adding Autopilot Enrollment Status Page $($Displayname). Error: $($_.Exception.Message)" -Sev "Error"
+        Log-Request -user $request.headers.'x-ms-client-principal'   -message "$($Tenant): Failed adding Autopilot Enrollment Status Page $($Displayname). Error: $($_.Exception.Message)" -Sev "Error"
         continue
     }
 

@@ -14,17 +14,17 @@ $results = foreach ($Tenant in $tenants) {
         $CreateRequest = New-GraphPOSTRequest -uri "https://graph.microsoft.com/beta/deviceManagement/groupPolicyConfigurations" -tenantid $tenant -type POST -body $CreateBody
         $UpdateRequest = New-GraphPOSTRequest -uri "https://graph.microsoft.com/beta/deviceManagement/groupPolicyConfigurations('$($CreateRequest.id)')/updateDefinitionValues" -tenantid $tenant -type POST -body $RawJSON
       
-        Log-Request -user $user -message "$($Tenant): Added policy $($Displayname)" -Sev "Error"
+        Log-Request -user $request.headers.'x-ms-client-principal'   -message "$($Tenant): Added policy $($Displayname)" -Sev "Error"
         if ($AssignTo) {
             $AssignBody = if ($AssignTo -ne "AllDevicesAndUsers") { '{"assignments":[{"id":"","target":{"@odata.type":"#microsoft.graph.' + $($AssignTo) + 'AssignmentTarget"}}]}' } else { '{"assignments":[{"id":"","target":{"@odata.type":"#microsoft.graph.allDevicesAssignmentTarget"}},{"id":"","target":{"@odata.type":"#microsoft.graph.allLicensedUsersAssignmentTarget"}}]}' }
             $assign = New-GraphPOSTRequest -uri  "https://graph.microsoft.com/beta/deviceManagement/groupPolicyConfigurations('$($CreateRequest.id)')/assign" -tenantid $tenant -type POST -body $AssignBody
-            Log-Request -user $user -message "$($Tenant): Assigned policy $($Displayname) to $AssignTo" -Sev "Info"
+            Log-Request -user $request.headers.'x-ms-client-principal'   -message "$($Tenant): Assigned policy $($Displayname) to $AssignTo" -Sev "Info"
         }
           "Succesfully added policy for $($Tenant)<br>"
     }
     catch {
         "Failed to add policy for $($Tenant): $($_.Exception.Message) <br>"
-        Log-Request -user $user -message "$($Tenant): Failed adding policy $($Displayname). Error: $($_.Exception.Message)" -Sev "Error"
+        Log-Request -user $request.headers.'x-ms-client-principal'   -message "$($Tenant): Failed adding policy $($Displayname). Error: $($_.Exception.Message)" -Sev "Error"
         continue
     }
 

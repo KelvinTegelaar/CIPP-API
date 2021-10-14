@@ -20,7 +20,7 @@ try {
     $body = [pscustomobject]@{"Results" = "Successfully added standards deployment" }
 }
 catch {
-    Log-Request -user $user -message "Standards API failed. $($_.Exception.Message)" -Sev "Error"
+    Log-Request -user $request.headers.'x-ms-client-principal'   -message "Standards API failed. $($_.Exception.Message)" -Sev "Error"
     $body = [pscustomobject]@{"Results" = "Failed to create user. $($_.Exception.Message)" }
 }
 
