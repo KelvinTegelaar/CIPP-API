@@ -2,27 +2,31 @@ using namespace System.Net
 
 # Input bindings are passed in via param block.
 param($Request, $TriggerMetadata)
-$Skiplist = (get-content ExcludedTenants -ErrorAction SilentlyContinue | convertfrom-csv -delimiter "|" -header "name","date","user").name
+$Skiplist = (Get-Content ExcludedTenants -ErrorAction SilentlyContinue | ConvertFrom-Csv -Delimiter "|" -Header "name", "date", "user").name
 # Write to the Azure Functions log stream.
 $cachefile = 'tenants.cache.json'
-$Testfile = get-item  $cachefile  -ErrorAction SilentlyContinue | where-object -property LastWriteTime -gt (get-date).Addhours(-24)
-if($Testfile){
-    write-host "using cache"
-    $GraphRequest = get-content $cachefile | convertfrom-json
+$Testfile = Get-Item  $cachefile  -ErrorAction SilentlyContinue | Where-Object -Property LastWriteTime -GT (Get-Date).Addhours(-24)
+if ($Testfile) {
+    Write-Host "using cache"
+    $GraphRequest = Get-Content $cachefile | ConvertFrom-Json
     Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
-    StatusCode = [HttpStatusCode]::OK
-    Body = $GraphRequest | where-object -property DefaultdomainName -notin $Skiplist
-})
-exit
-} else {
-write-host "Grabbing all tenants via Graph API" -ForegroundColor Green
-$GraphRequest = (New-GraphGetRequest -uri "https://graph.microsoft.com/beta/contracts?`$top=999" -tenantid $ENV:Tenantid) | select-object CustomerID,DefaultdomainName,DisplayName,domains | where-object -property DefaultdomainName -notin $Skiplist
-# Associate values to output bindings by calling 'Push-OutputBinding'.
-Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
-    StatusCode = [HttpStatusCode]::OK
-    Body = $GraphRequest
-})
+            StatusCode = [HttpStatusCode]::OK
+            Body       = $GraphRequest | Where-Object -Property DefaultdomainName -NotIn $Skiplist
+        })
+    exit
+}
+else {
+    Write-Host "Grabbing all tenants via Graph API" -ForegroundColor Green
+    $GraphRequest = (New-GraphGetRequest -uri "https://graph.microsoft.com/beta/contracts?`$top=999" -tenantid $ENV:Tenantid) | Select-Object CustomerID, DefaultdomainName, DisplayName, domains | Where-Object -Property DefaultdomainName -NotIn $Skiplist
+    # Associate values to output bindings by calling 'Push-OutputBinding'.
+    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
+            StatusCode = [HttpStatusCode]::OK
+            Body       = $GraphRequest
+        })
 
-$GraphRequest | convertto-json | out-file $cachefile
+    if ($GraphRequest) {
+        $GraphRequest | ConvertTo-Json | Out-File $cachefile
+
+    }
 }
 
