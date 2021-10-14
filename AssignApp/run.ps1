@@ -31,11 +31,19 @@ $AssignBody = switch ($AssignTo) {
     }
 
 }
+$body = [pscustomobject]@{"Results" = "$($TenantFilter): Assigned app to $assignTo" }
+try {
+    $GraphRequest = New-Graphpostrequest -uri "https://graph.microsoft.com/beta/deviceAppManagement/mobileApps/$appFilter/assign" -tenantid $TenantFilter -body $Assignbody
+    Log-Request -user $request.headers.'x-ms-client-principal'   -message "$($tenantfilter): Assigned $($appFilter) to $assignTo" -Sev "Info"
 
-Write-Host $AssignBody
-$GraphRequest = New-Graphpostrequest -uri "https://graph.microsoft.com/beta/deviceAppManagement/mobileApps/$appFilter/assign" -tenantid $TenantFilter -body $Assignbody
+}
+catch {
+    Log-Request -user $request.headers.'x-ms-client-principal'   -message "$($tenantfilter): Failed to assign app $($appFilter): $($_.Exception.Message)" -Sev "Error"
+    $body = [pscustomobject]@{"Results" = "Failed to assign. $($_.Exception.Message)" }
+}
+
 # Associate values to output bindings by calling 'Push-OutputBinding'.
 Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
         StatusCode = [HttpStatusCode]::OK
-        Body       = $GraphRequest
+        Body       = $body
     })
