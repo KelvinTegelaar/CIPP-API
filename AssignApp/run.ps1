@@ -8,7 +8,7 @@ Write-Host "PowerShell HTTP trigger function processed a request."
 
 # Interact with query parameters or the body of the request.
 $tenantfilter = $Request.Query.TenantFilter
-$appFilter = $Request.Query.AppFilter
+$appFilter = $Request.Query.ID
 $AssignTo = $Request.Query.AssignTo
 $AssignBody = switch ($AssignTo) {
 
@@ -32,7 +32,7 @@ $AssignBody = switch ($AssignTo) {
 
 }
 
-write-host $AssignBody
+Write-Host $AssignBody
 $GraphRequest = New-Graphpostrequest -uri "https://graph.microsoft.com/beta/deviceAppManagement/mobileApps/$appFilter/assign" -tenantid $TenantFilter -body $Assignbody
 # Associate values to output bindings by calling 'Push-OutputBinding'.
 Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
