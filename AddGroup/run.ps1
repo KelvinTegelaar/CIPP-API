@@ -7,7 +7,7 @@ $user = $request.headers.'x-ms-client-principal'
 
 # Write to the Azure Functions log stream.
 Write-Host "PowerShell HTTP trigger function processed a request."
-try{
+try {
     $email = "$($groupobj.username)@$($groupobj.domain)"
     $BodyToship = [pscustomobject] @{
         "displayName"      = $groupobj.Displayname
@@ -17,13 +17,14 @@ try{
         securityEnabled    = [bool]$true
         isAssignableToRole = [bool]($groupobj.isAssignableToRole)
 
-    } | convertto-json
+    } | ConvertTo-Json
     $GraphRequest = New-GraphPostRequest -AsApp $true -uri "https://graph.microsoft.com/beta/groups" -tenantid $groupobj.tenantid -type POST -body $BodyToship   -verbose
     $body = [pscustomobject]@{"Results" = "Succesfully created group. $($_.Exception.Message)" }
-    Log-Request -user $request.headers.'x-ms-client-principal'   -message "Created group $($groupobj.displayname) with id $($GraphRequest.id) for $($groupobj.tenantid)" -Sev "Info"
+    Log-Request -user $request.headers.'x-ms-client-principal'   -message "$($groupobj.tenantid): Created group $($groupobj.displayname) with id $($GraphRequest.id) for " -Sev "Info"
 
-} catch {
-    Log-Request -user $request.headers.'x-ms-client-principal'   -message "Group creation API failed. $($_.Exception.Message)" -Sev "Error"
+}
+catch {
+    Log-Request -user $request.headers.'x-ms-client-principal'   -message "$($groupobj.tenantid): Group creation API failed. $($_.Exception.Message)" -Sev "Error"
     $body = [pscustomobject]@{"Results" = "Failed to create group. $($_.Exception.Message)" }
 
 }
