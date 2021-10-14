@@ -11,7 +11,10 @@ $intuneBody.description = $ChocoApp.description
 $intuneBody.displayName = $chocoapp.ApplicationName
 $intuneBody.installExperience.runAsAccount = if ($ChocoApp.InstallAsSystem) { "system" } else { "user" }
 $intuneBody.installExperience.deviceRestartBehavior = if ($ChocoApp.DisableRestart) { "suppress" } else { "allow" }
-$intuneBody.installCommandLine = "powershell.exe -executionpolicy bypass .\Install.ps1 -InstallChoco -Packagename $($chocoapp.PackageName) -CustomRepo $($chocoapp.CustomRepo)"
+$intuneBody.installCommandLine = "powershell.exe -executionpolicy bypass .\Install.ps1 -InstallChoco -Packagename $($chocoapp.PackageName)"
+if ($ChocoApp.customrepo) {
+    $intuneBody.installCommandLine = $intuneBody.installCommandLine + "-CustomRepo $($chocoapp.CustomRepo)"
+}
 $intuneBody.UninstallCommandLine = "powershell.exe -executionpolicy bypass .\Uninstall.ps1 -Packagename $($chocoapp.PackageName)"
 $intunebody.detectionRules[0].path = "$($ENV:SystemDrive)\programdata\chocolatey\lib"
 $intunebody.detectionRules[0].fileOrFolderName = "$($chocoapp.PackageName)"
@@ -24,8 +27,8 @@ $Results = foreach ($Tenant in $tenants) {
             Applicationname = $ChocoApp.ApplicationName
             assignTo        = $assignTo
             IntuneBody      = $intunebody
-        } | ConvertTo-Json -depth 15
-        $JSONFile = New-Item -Path ".\ChocoApps.Cache\$(New-Guid)" -value $CompleteObject -force -erroraction Stop
+        } | ConvertTo-Json -Depth 15
+        $JSONFile = New-Item -Path ".\ChocoApps.Cache\$(New-Guid)" -Value $CompleteObject -Force -ErrorAction Stop
         "Succesfully added Choco App for $($Tenant) to queue.<br>"
         Log-Request -user $user -message "$($Tenant): Chocolatey Application $($intunebody.Displayname) queued to add" -Sev "Info"
     }
