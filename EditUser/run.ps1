@@ -51,13 +51,13 @@ catch {
 try {
     if ($licenses -or $userobj.RemoveAllLicenses) {
         $CurrentLicenses = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/users/$($userobj.Userid)" -tenantid $Userobj.tenantid
-        $RemovalList = ($CurrentLicenses.assignedLicenses | where-object -Property skuid -notin $licenses).skuid
+        $RemovalList = ($CurrentLicenses.assignedLicenses | Where-Object -Property skuid -NotIn $licenses).skuid
         $LicensesToRemove = if ($RemovalList) { ConvertTo-Json @( $RemovalList ) } else { "[]" }
    
         $liclist = foreach ($license in $Licenses) { '{"disabledPlans": [],"skuId": "' + $license + '" },' }
         $LicenseBody = '{"addLicenses": [' + $LicList + '], "removeLicenses": ' + $LicensesToRemove + '}'
         
-        write-host $LicenseBody
+        Write-Host $LicenseBody
         $LicRequest = New-GraphPostRequest -uri "https://graph.microsoft.com/beta/users/$($userobj.Userid)/assignlicense" -tenantid $Userobj.tenantid -type POST -body $LicenseBody -verbose
 
         Log-Request -user $request.headers.'x-ms-client-principal'   -message "Assigned user $($userobj.displayname) license $($licences)" -Sev "Info"
@@ -67,7 +67,7 @@ try {
 }
 catch {
     Log-Request -user $request.headers.'x-ms-client-principal'   -message "License assign API failed. $($_.Exception.Message)" -Sev "Error"
-    $body = [pscustomobject]@{"Results" = "Succesfully created user. The password is $password. We've failed to assign the license. $($_.Exception.Message)" }
+    $body = [pscustomobject]@{"Results" = "Succesfully edit user. The password is $password. We've failed to assign the license. $($_.Exception.Message)" }
 }
 
 #Add aliasses, removal currently not supported.
@@ -84,7 +84,7 @@ try {
 }
 catch {
     Log-Request -user $request.headers.'x-ms-client-principal'   -message "Alias API failed. $($_.Exception.Message)" -Sev "Error"
-    $body = [pscustomobject]@{"Results" = "Succesfully created user. The password is $password. We've failed to create the aliasses: $($_.Exception.Message)" }
+    $body = [pscustomobject]@{"Results" = "Succesfully edited user. The password is $password. We've failed to create the aliasses: $($_.Exception.Message)" }
 }
 
 # Associate values to output bindings by calling 'Push-OutputBinding'.
