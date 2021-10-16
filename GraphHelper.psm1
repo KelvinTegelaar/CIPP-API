@@ -41,7 +41,12 @@ function New-GraphGetRequest ($uri, $tenantid, $scope, $AsApp) {
     if ($tenantid -ne $null -and $tenantid -in $($Skiplist.name)) {
         return "Not allowed. Tenant is in exclusion list."
     }
-    $headers = Get-GraphToken -tenantid $tenantid -scope $scope -AsApp $asapp
+    if ($scope -eq "ExchangeOnline") { 
+        $Headers = Get-GraphToken -AppID 'a0c73c16-a7e3-4564-9a95-2bdf47383716' -RefreshToken $ENV:ExchangeRefreshToken -Scope 'https://outlook.office365.com/.default' -Tenantid $tenantid
+    }
+    else {
+        $headers = Get-GraphToken -tenantid $tenantid -scope $scope -AsApp $asapp
+    }
     Write-Verbose "Using $($uri) as url"
     $nextURL = $uri
     #not a fan of this, have to reconsider and change. Seperate function?
