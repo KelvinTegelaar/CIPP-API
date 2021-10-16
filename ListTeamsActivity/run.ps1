@@ -9,8 +9,7 @@ Write-Host "PowerShell HTTP trigger function processed a request."
 # Interact with query parameters or the body of the request.
 $TenantFilter = $Request.Query.TenantFilter
 $type = $request.query.Type
-$GraphRequest = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/reports/get$($type)Detail(period='D30')" -tenantid $TenantFilter | convertfrom-csv
-@{ Name = 'UPN'; Expression = { $_.'User Principal Name' } },
+$GraphRequest = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/reports/get$($type)Detail(period='D30')" -tenantid $TenantFilter | convertfrom-csv | select-object @{ Name = 'UPN'; Expression = { $_.'User Principal Name' } },
 @{ Name = 'LastActive'; Expression = { $_.'Last Activity Date' } },
 @{ Name = 'TeamsChat'; Expression = { $_.'Team Chat Message Count' } },
 @{ Name = 'CallCount'; Expression = { $_.'Call Count' } },
