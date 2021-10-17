@@ -22,8 +22,8 @@ $response = foreach ($user in $PerUserMFA ) {
   [PSCustomObject]@{
       'Display Name'                                          = $user.DisplayName
       'UserPrincipalName'                                     = $user.userPrincipalName
-      "Legacy MFA Enabled"                                    = $user.'MFA Status'
-      "MFA Registered through Security Defaults or CA Policy" = ($GraphRequest | Where-Object { $_.UserPrincipalName -eq $user.userPrincipalName}).isMfaRegistered
+      "Per User MFA"                                          = $user.'MFA Status'
+      "MFA Registered via CA Policy/Security Defaults"        = ($GraphRequest | Where-Object { $_.UserPrincipalName -eq $user.userPrincipalName}).isMfaRegistered
       "isLicensed"                                            = $user.isLicensed
   }
 
