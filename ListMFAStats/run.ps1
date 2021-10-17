@@ -18,14 +18,20 @@ try{
 }
 
 
-$response = foreach ($user in $PerUserMFA ) {
+$MFAComplier = foreach ($user in $PerUserMFA ) {
   [PSCustomObject]@{
-      'Display Name'                                          = $user.DisplayName
+      'DisplayName'                                          = $user.DisplayName
       'UserPrincipalName'                                     = $user.userPrincipalName
-      "Per User MFA"                                          = $user.'MFA Status'
-      "MFA Registered via CA Policy/Security Defaults"        = ($GraphRequest | Where-Object { $_.UserPrincipalName -eq $user.userPrincipalName}).isMfaRegistered
+      "PerUserMFA"                                          = $user.'MFA Status'
+      "CAPolicySecurityDefaults"        = ($GraphRequest | Where-Object { $_.UserPrincipalName -eq $user.userPrincipalName}).isMfaRegistered
       "isLicensed"                                            = $user.isLicensed
   }
+
+$response = $MFAComplier | select-object @{ Name = 'UPN'; Expression = { $_.UserPrincipalName } },
+@{ Name = 'displayName'; Expression = { $_.DisplayName} },
+@{ Name = 'PerUserMFA'; Expression = { $_.PerUserMFA } },
+@{ Name = 'MFARegisteredviaCAPolicy/SecurityDefaults'; Expression = { $_.CAPolicySecurityDefaults } },
+@{ Name = 'isLicensed'; Expression = { $_.isLicensed} }
 
 }
 # Associate values to output bindings by calling 'Push-OutputBinding'.
