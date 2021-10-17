@@ -13,7 +13,7 @@ $TenantFilter = $Request.Query.TenantFilter
 
 try{
   $GraphRequest = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/reports/credentialUserRegistrationDetails" -tenantid $TenantFilter | Select-Object @{ Name = 'UPN'; Expression = { $_.userPrincipalName } },
-  @{ Name = 'mfaregistered'; Expression = { $_.isMfaRegistered } } 
+  @{ Name = 'isMFAEnabled'; Expression = { $_.isMfaRegistered } } 
 
 }catch {
  $GraphRequest = "null"
