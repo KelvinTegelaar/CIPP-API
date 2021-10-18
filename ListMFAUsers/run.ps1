@@ -26,15 +26,19 @@ $CAState = foreach ($Policy in $CAPolicies) {
         continue
     }        
 }
+$MFARegistration = (New-GraphGetRequest -uri "https://graph.microsoft.com/beta/reports/credentialUserRegistrationDetails" -tenantid $Request.query.TenantFilter)
 
 # Interact with query parameters or the body of the request.
 $GraphRequest = $Users | ForEach-Object {
+    
     $PerUser = if ($_.StrongAuthenticationRequirements.StrongAuthenticationRequirement.state -ne $null) { $_.StrongAuthenticationRequirements.StrongAuthenticationRequirement.state } else { "Disabled" }
+    $MFARegUser = if (($MFARegistration | Where-Object -Property UserPrincipalName -EQ $_.UserPrincipalName).IsMFARegistered -eq $null) { $false } else { ($MFARegistration | Where-Object -Property UserPrincipalName -EQ $_.UserPrincipalName).IsMFARegistered }
     [PSCustomObject]@{
-        UPN         = $_.UserPrincipalName
-        PerUser     = $PerUser
-        CoveredByCA = ($CAState -join ", ")
-        CoveredBySD = $SecureDefaultsState
+        UPN             = $_.UserPrincipalName
+        PerUser         = $PerUser
+        MFARegistration = $MFARegUser
+        CoveredByCA     = ($CAState -join ", ")
+        CoveredBySD     = $SecureDefaultsState
     }
 }
 # Associate values to output bindings by calling 'Push-OutputBinding'.
