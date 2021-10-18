@@ -1,2 +1,5 @@
 .github/
 local.settings.json
+.vscode
+tenants.cache.json
+102021
