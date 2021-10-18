@@ -26,6 +26,7 @@ $CAState = foreach ($Policy in $CAPolicies) {
         continue
     }        
 }
+if (!$CAState) { $CAState = "None" }
 $MFARegistration = (New-GraphGetRequest -uri "https://graph.microsoft.com/beta/reports/credentialUserRegistrationDetails" -tenantid $Request.query.TenantFilter)
 
 # Interact with query parameters or the body of the request.
