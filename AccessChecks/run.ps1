@@ -13,7 +13,7 @@ if ($Request.query.Permissions -eq "true") {
         $GraphPermissions = ((Get-GraphToken -returnRefresh $true).scope).split(' ') -replace "https://graph.microsoft.com/", "" | Where-Object { $_ -notin @("email", "openid", "profile", ".default") }
         $MissingPermissions = $ExpectedPermissions | Where-Object { $_ -notin $GraphPermissions } 
         if ($MissingPermissions) {
-            "Your Secure Application Model is missing the following permissions:"
+            "Your Secure Application Model is missing the following <i>delegated</i> permissions:<br>"
             $MissingPermissions -join "<br>"
         }
         else {
