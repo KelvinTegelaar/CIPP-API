@@ -4,7 +4,9 @@ using namespace System.Net
 param($Request, $TriggerMetadata)
 
 $APIName = $TriggerMetadata.FunctionName
-Log-Request -user $request.headers.'x-ms-client-principal' -API $APINAME  -message "Accessed this API" -Sev "Debug"$user = $request.headers.'x-ms-client-principal'
+Log-Request -user $request.headers.'x-ms-client-principal' -API $APINAME  -message "Accessed this API" -Sev "Debug"
+
+$user = $request.headers.'x-ms-client-principal'
 $Tenants = ($Request.body | Select-Object Select_*).psobject.properties.value
 $displayname = $request.body.Displayname
 $description = $request.body.Description

@@ -4,7 +4,9 @@ using namespace System.Net
 param($Request, $TriggerMetadata)
 
 $APIName = $TriggerMetadata.FunctionName
-Log-Request -user $request.headers.'x-ms-client-principal' -API $APINAME  -message "Accessed this API" -Sev "Debug"$user = $request.headers.'x-ms-client-principal'
+Log-Request -user $request.headers.'x-ms-client-principal' -API $APINAME  -message "Accessed this API" -Sev "Debug"
+
+$user = $request.headers.'x-ms-client-principal'
 $ID = $request.query.id
 try {
     Remove-Item "$($ID).Standards.json" -Force

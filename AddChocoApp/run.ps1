@@ -5,6 +5,8 @@ param($Request, $TriggerMetadata)
 
 $APIName = $TriggerMetadata.FunctionName
 Log-Request -user $request.headers.'x-ms-client-principal' -API $APINAME  -message "Accessed this API" -Sev "Debug"
+
+
 Write-Host "PowerShell HTTP trigger function processed a request."
 $ChocoApp = $request.body
 $intuneBody = Get-Content "AddChocoApp\choco.app.json" | ConvertFrom-Json

@@ -4,7 +4,10 @@ using namespace System.Net
 param($Request, $TriggerMetadata)
 
 $APIName = $TriggerMetadata.FunctionName
-Log-Request -user $request.headers.'x-ms-client-principal' -API $APINAME  -message "Accessed this API" -Sev "Debug"$userobj = $Request.body
+Log-Request -user $request.headers.'x-ms-client-principal' -API $APINAME  -message "Accessed this API" -Sev "Debug"
+
+
+$userobj = $Request.body
 $user = $request.headers.'x-ms-client-principal'
 
 # Write to the Azure Functions log stream.
@@ -62,7 +65,7 @@ try {
         Write-Host $LicenseBody
         $LicRequest = New-GraphPostRequest -uri "https://graph.microsoft.com/beta/users/$($userobj.Userid)/assignlicense" -tenantid $Userobj.tenantid -type POST -body $LicenseBody -verbose
 
-        Log-Request  -API $APINAME -tenant ($UserObj.tenantid) -user $request.headers.'x-ms-client-principal'   -message "Assigned user $($userobj.displayname) license $($licences)" -Sev "Info"
+        Log-Request -API $APINAME -tenant ($UserObj.tenantid) -user $request.headers.'x-ms-client-principal' -message "Assigned user $($userobj.displayname) license $($licences)" -Sev "Info"
         $body = [pscustomobject]@{"Results" = "Success. User has been edited." }
     }
 
