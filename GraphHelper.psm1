@@ -65,14 +65,10 @@ function New-GraphGetRequest ($uri, $tenantid, $scope, $AsApp) {
     #not a fan of this, have to reconsider and change. Seperate function?
     if ($tenantid -in $tenantlist.defaultdomainname -or $uri -like "https://graph.microsoft.com/beta/contracts?`$top=999" -or $uri -like "*/customers/*") {
         $ReturnedData = do {
-            try {
-                $Data = (Invoke-RestMethod -Uri $nextURL -Method GET -Headers $headers -ContentType "application/json; charset=utf-8")
-            }
-            catch {
-                $errorMessage = "Status Code: $($_.Exception.Response.StatusCode.value__) - Status Description: $($_.ErrorDetails.Message)"
-                Log-Request -message $errorMessage -tenant $tenantid -api "GraphRequest" -user $null -sev "Error" 
-                throw $_
-            }
+
+            $Data = (Invoke-RestMethod -Uri $nextURL -Method GET -Headers $headers -ContentType "application/json; charset=utf-8")
+        
+
 
             if ($data.value) { $data.value } else { ($Data) }
             $nextURL = $data.'@odata.nextLink'
