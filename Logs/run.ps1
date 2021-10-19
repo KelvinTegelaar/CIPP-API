@@ -10,7 +10,8 @@ Log-Request -user $request.headers.'x-ms-client-principal' -API $APINAME  -messa
 Write-Host "PowerShell HTTP trigger function processed a request."
 # Interact with query parameters or the body of the request.
 $date = if ($Request.Query.DateFilter) { $Request.query.DateFilter } else { (Get-Date).ToString('MMyyyy') }
-$ReturnedLog = Get-Content "$($date)" | ConvertFrom-Csv -Header "DateTime", "Message", "User", "Sev" -Delimiter "|"
+$ReturnedLog = Get-Content "$($date).log" | ConvertFrom-Csv -Header "DateTime", "Tenant", "API", "Message", "User", "Severity" -Delimiter "|"
+
 if ($request.query.last) {
     $ReturnedLog = $ReturnedLog | Select-Object -Last $request.query.last
 }

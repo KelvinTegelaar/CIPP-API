@@ -10,13 +10,13 @@ Write-Host "PowerShell HTTP trigger function processed a request."
 
 # Input bindings are passed in via param block.
 $user = $request.headers.'x-ms-client-principal'
-$Tenants = ($Request.body | select-object Select_*).psobject.properties.value
+$Tenants = ($Request.body | Select-Object Select_*).psobject.properties.value
 $displayname = $request.body.Displayname
 $description = $request.body.Description
 $AssignTo = if ($request.body.Assignto -ne "on") { $request.body.Assignto }
 $Profbod = $Request.body
 $usertype = if ($Profbod.NotLocalAdmin -eq "true") { "standard" } else { "administrator" }
-$DeploymentMode = if($profbod.DeploymentMode -eq "true") { "shared"} else { "singleUser" }
+$DeploymentMode = if ($profbod.DeploymentMode -eq "true") { "shared" } else { "singleUser" }
 $results = foreach ($Tenant in $tenants) {
     try {
         $ObjBody = [pscustomobject]@{
@@ -39,19 +39,19 @@ $results = foreach ($Tenant in $tenants) {
                 "skipKeyboardSelectionPage" = $([bool]($Profbod.Autokeyboard))
             }
         }
-        $Body = convertto-json -InputObject $ObjBody
+        $Body = ConvertTo-Json -InputObject $ObjBody
         $GraphRequest = New-GraphPostRequest -uri "https://graph.microsoft.com/beta/deviceManagement/windowsAutopilotDeploymentProfiles" -body $body -tenantid $Tenant
-        Log-Request -user $request.headers.'x-ms-client-principal'   -message "$($Tenant): Added Autopilot profile $($Displayname)" -Sev "Info"
+        Log-Request -user $request.headers.'x-ms-client-principal' -apiname $APIName  -tenant $($tenant) -message "Added Autopilot profile $($Displayname)" -Sev "Info"
         if ($AssignTo) {
             $AssignBody = '{"target":{"@odata.type":"#microsoft.graph.allDevicesAssignmentTarget"}}'
             $assign = New-GraphPOSTRequest -uri  "https://graph.microsoft.com/beta/deviceManagement/windowsAutopilotDeploymentProfiles/$($GraphRequest.id)/assignments" -tenantid $Tenant -type POST -body $AssignBody
-            Log-Request -user $request.headers.'x-ms-client-principal'   -message "$($Tenant): Assigned autopilot profile $($Displayname) to $AssignTo" -Sev "Info"
+            Log-Request -user $request.headers.'x-ms-client-principal' -apiname $APIName  -tenant $($tenant) -message "Assigned autopilot profile $($Displayname) to $AssignTo" -Sev "Info"
         }
         "Succesfully added profile for $($Tenant)<br>"
     }
     catch {
         "Failed to add profile for $($Tenant): $($_.Exception.Message) <br>"
-        Log-Request -user $request.headers.'x-ms-client-principal'   -message "$($Tenant): Failed adding Autopilot Profile $($Displayname). Error: $($_.Exception.Message)" -Sev "Error"
+        Log-Request -user $request.headers.'x-ms-client-principal' -apiname $APIName  -tenant $($tenant)  -message "Failed adding Autopilot Profile $($Displayname). Error: $($_.Exception.Message)" -Sev "Error"
         continue
     }
 

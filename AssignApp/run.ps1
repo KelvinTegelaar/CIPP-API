@@ -36,11 +36,11 @@ $AssignBody = switch ($AssignTo) {
 $body = [pscustomobject]@{"Results" = "$($TenantFilter): Assigned app to $assignTo" }
 try {
     $GraphRequest = New-Graphpostrequest -uri "https://graph.microsoft.com/beta/deviceAppManagement/mobileApps/$appFilter/assign" -tenantid $TenantFilter -body $Assignbody
-    Log-Request -user $request.headers.'x-ms-client-principal'   -message "$($tenantfilter): Assigned $($appFilter) to $assignTo" -Sev "Info"
+    Log-Request -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $($tenantfilter) -message "Assigned $($appFilter) to $assignTo" -Sev "Info"
 
 }
 catch {
-    Log-Request -user $request.headers.'x-ms-client-principal'   -message "$($tenantfilter): Failed to assign app $($appFilter): $($_.Exception.Message)" -Sev "Error"
+    Log-Request -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $($tenantfilter) -message "Failed to assign app $($appFilter): $($_.Exception.Message)" -Sev "Error"
     $body = [pscustomobject]@{"Results" = "Failed to assign. $($_.Exception.Message)" }
 }
 

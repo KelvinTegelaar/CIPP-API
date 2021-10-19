@@ -43,9 +43,9 @@ try {
     }
 }
 catch {
-    Log-Request -user $request.headers.'x-ms-client-principal'   -message "User edit API failed. $($_.Exception.Message)" -Sev "Error"
+    Log-Request -API $APINAME -tenant ($UserObj.tenantid) -user $request.headers.'x-ms-client-principal' -message "User edit API failed. $($_.Exception.Message)" -Sev "Error"
     $body = [pscustomobject]@{"Results" = "Failed to create user. $($_.Exception.Message)" }
-    Log-Request -user $request.headers.'x-ms-client-principal'   -message "Edited user $($userobj.displayname) with id $($userobj.Userid)  for $($UserObj.tenantid)" -Sev "Info"
+    Log-Request -API $APINAME -tenant ($UserObj.tenantid) -user $request.headers.'x-ms-client-principal' -message "Edited user $($userobj.displayname) with id $($userobj.Userid)" -Sev "Info"
 }
 
 
@@ -62,13 +62,13 @@ try {
         Write-Host $LicenseBody
         $LicRequest = New-GraphPostRequest -uri "https://graph.microsoft.com/beta/users/$($userobj.Userid)/assignlicense" -tenantid $Userobj.tenantid -type POST -body $LicenseBody -verbose
 
-        Log-Request -user $request.headers.'x-ms-client-principal'   -message "Assigned user $($userobj.displayname) license $($licences)" -Sev "Info"
+        Log-Request  -API $APINAME -tenant ($UserObj.tenantid) -user $request.headers.'x-ms-client-principal'   -message "Assigned user $($userobj.displayname) license $($licences)" -Sev "Info"
         $body = [pscustomobject]@{"Results" = "Success. User has been edited." }
     }
 
 }
 catch {
-    Log-Request -user $request.headers.'x-ms-client-principal'   -message "License assign API failed. $($_.Exception.Message)" -Sev "Error"
+    Log-Request -API $APINAME -tenant ($UserObj.tenantid) -user $request.headers.'x-ms-client-principal' -message "License assign API failed. $($_.Exception.Message)" -Sev "Error"
     $body = [pscustomobject]@{"Results" = "Succesfully edit user. The password is $password. We've failed to assign the license. $($_.Exception.Message)" }
 }
 
@@ -79,13 +79,13 @@ try {
             New-GraphPostRequest -uri "https://graph.microsoft.com/beta/users/$($userobj.Userid)" -tenantid $Userobj.tenantid -type "patch" -body "{`"mail`": `"$Alias`"}" -verbose
         }
         New-GraphPostRequest -uri "https://graph.microsoft.com/beta/users/$($userobj.Userid)" -tenantid $Userobj.tenantid -type "patch" -body "{`"mail`": `"$UserprincipalName`"}" -verbose
-        Log-Request -user $request.headers.'x-ms-client-principal'   -message "Added aliasses to $($userobj.displayname) license $($licences)" -Sev "Info"
+        Log-Request -API $APINAME -tenant ($UserObj.tenantid) -user $request.headers.'x-ms-client-principal'   -message "Added aliasses to $($userobj.displayname) license $($licences)" -Sev "Info"
         $body = [pscustomobject]@{"Results" = "Success. User has been edited" }
     }
 
 }
 catch {
-    Log-Request -user $request.headers.'x-ms-client-principal'   -message "Alias API failed. $($_.Exception.Message)" -Sev "Error"
+    Log-Request -API $APINAME -tenant ($UserObj.tenantid) -user $request.headers.'x-ms-client-principal'   -message "Alias API failed. $($_.Exception.Message)" -Sev "Error"
     $body = [pscustomobject]@{"Results" = "Succesfully edited user. The password is $password. We've failed to create the aliasses: $($_.Exception.Message)" }
 }
 

@@ -10,7 +10,7 @@ Write-Host "PowerShell HTTP trigger function processed a request."
 
 # Input bindings are passed in via param block.
 $user = $request.headers.'x-ms-client-principal'
-$Tenants = ($Request.body | select-object Select_*).psobject.properties.value
+$Tenants = ($Request.body | Select-Object Select_*).psobject.properties.value
 $AssignTo = if ($request.body.Assignto -ne "on") { $request.body.Assignto }
 $Profbod = $Request.body
 $results = foreach ($Tenant in $tenants) {
@@ -32,17 +32,17 @@ $results = foreach ($Tenant in $tenants) {
             "disableUserStatusTrackingAfterFirstUser" = $true
             "roleScopeTagIds"                         = @()
         }
-        $Body = convertto-json -InputObject $ObjBody
-Write-Host $body
+        $Body = ConvertTo-Json -InputObject $ObjBody
+        Write-Host $body
         $ExistingStatusPage = (New-GraphGetRequest -Uri "https://graph.microsoft.com/beta/deviceManagement/deviceEnrollmentConfigurations" -tenantid $Tenant) | Where-Object { $_.id -like "*DefaultWindows10EnrollmentCompletionPageConfiguration" }
         $GraphRequest = New-GraphPOSTRequest -uri "https://graph.microsoft.com/beta/deviceManagement/deviceEnrollmentConfigurations/$($ExistingStatusPage.ID)" -body $body -Type PATCH -tenantid $tenant
         "Succesfully changed default enrollment status page for $($Tenant)<br>"
-        Log-Request -user $request.headers.'x-ms-client-principal'   -message "$($Tenant): Added Autopilot Enrollment Status Page $($Displayname)" -Sev "Info"
+        Log-Request -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $tenant -message "Added Autopilot Enrollment Status Page $($Displayname)" -Sev "Info"
 
     }
     catch {
         "Failed to change default enrollment status page for $($Tenant): $($_.Exception.Message) <br>"
-        Log-Request -user $request.headers.'x-ms-client-principal'   -message "$($Tenant): Failed adding Autopilot Enrollment Status Page $($Displayname). Error: $($_.Exception.Message)" -Sev "Error"
+        Log-Request -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $tenant -message "Failed adding Autopilot Enrollment Status Page $($Displayname). Error: $($_.Exception.Message)" -Sev "Error"
         continue
     }
 
