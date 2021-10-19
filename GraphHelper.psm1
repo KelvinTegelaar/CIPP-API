@@ -34,6 +34,19 @@ function Get-GraphToken($tenantid, $scope, $AsApp, $AppID, $refreshToken, $Retur
     return $header
 }
 
+function Log-Request ($message, $tenant, $API, $user, $sev) {
+    $username = ([System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($user)) | ConvertFrom-Json).userDetails
+    $date = (Get-Date).ToString('s')
+    $LogMutex = New-Object System.Threading.Mutex($false, "LogMutex")
+    if (!$username) { $username = "CIPP" }
+    if (!$tenant) { $tenant = "None" }
+    $logdata = "$($date)|$($tenant)|$($API)|$($message)|$($username)|$($sev)"
+    if ($LogMutex.WaitOne(1000)) {
+        $logdata | Out-File -Append -path "$((Get-Date).ToString('MMyyyy')).log"
+    }
+    $LogMutex.ReleaseMutex()
+}
+
 function New-GraphGetRequest ($uri, $tenantid, $scope, $AsApp) {
     $TenantList = Get-Content 'Tenants.cache.json'  -ErrorAction SilentlyContinue | ConvertFrom-Json
     $Skiplist = Get-Content "ExcludedTenants" | ConvertFrom-Csv -Delimiter "|" -Header "Name", "User", "Date"
@@ -52,7 +65,15 @@ function New-GraphGetRequest ($uri, $tenantid, $scope, $AsApp) {
     #not a fan of this, have to reconsider and change. Seperate function?
     if ($tenantid -in $tenantlist.defaultdomainname -or $uri -like "https://graph.microsoft.com/beta/contracts?`$top=999" -or $uri -like "*/customers/*") {
         $ReturnedData = do {
-            $Data = (Invoke-RestMethod -Uri $nextURL -Method GET -Headers $headers -ContentType "application/json; charset=utf-8")
+            try {
+                $Data = (Invoke-RestMethod -Uri $nextURL -Method GET -Headers $headers -ContentType "application/json; charset=utf-8")
+            }
+            catch {
+                $errorMessage = "Status Code: $($_.Exception.Response.StatusCode.value__) - Status Description: $($_.ErrorDetails.Message)"
+                Log-Request $errorMessage $tenantid "GraphRequest" $null "High" 
+                throw $_
+            }
+
             if ($data.value) { $data.value } else { ($Data) }
             $nextURL = $data.'@odata.nextLink'
         } until ($null -eq $NextURL)
@@ -83,18 +104,6 @@ function New-GraphPOSTRequest ($uri, $tenantid, $body, $type, $scope, $AsApp) {
     else {
         Write-Error "Not allowed. You cannot manage your own tenant or tenants not under your scope" 
     }
-}
-Function Log-request ($message, $tenant, $API, $user, $sev) {
-    $username = ([System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($user)) | ConvertFrom-Json).userDetails
-    $date = (Get-Date).ToString('s')
-    $LogMutex = New-Object System.Threading.Mutex($false, "LogMutex")
-    if (!$username) { $username = "CIPP" }
-    if (!$tenant) { $tenant = "None" }
-    $logdata = "$($date)|$($tenant)|$($API)|$($message)|$($username)|$($sev)"
-    if ($LogMutex.WaitOne(1000)) {
-        $logdata | Out-File -Append -path "$((Get-Date).ToString('MMyyyy')).log"
-    }
-    $LogMutex.ReleaseMutex()
 }
 function convert-skuname($skuname, $skuID) {
     $ConvertTable = Import-Csv Conversiontable.csv

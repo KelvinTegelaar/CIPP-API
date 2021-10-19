@@ -3,3 +3,4 @@ local.settings.json
 tenants.cache.json
 chocoapps.cache
 *.log
+.vscode/
