@@ -1,12 +1,12 @@
 param($Context)
 
 $Batch = (Invoke-DurableActivity -FunctionName 'Applications_GetQueue' -Input 'LetsGo')
-write-host $Batch
+Write-Host $Batch
 $ParallelTasks = foreach ($Item in $Batch) {
-    Invoke-DurableActivity -FunctionName "Applications_Upload"-Input $item -NoWait
-  }
+  Invoke-DurableActivity -FunctionName "Applications_Upload"-Input $item -NoWait
+}
 
 $Outputs = Wait-ActivityFunction -Task $ParallelTasks
-write-host $Outputs
+Write-Host $Outputs
 
-Log-request "Choco Application Queue: Deployment finished." -sev Info
+Log-request -API "ChocoApp" "Choco Application Queue: Deployment finished." -sev Info

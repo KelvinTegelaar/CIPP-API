@@ -29,7 +29,7 @@ $EncBody = @{
 Try {
     $ApplicationList = (New-graphGetRequest -Uri $baseuri -tenantid $Tenant) | Where-Object { $_.DisplayName -eq $ChocoApp.ApplicationName }
     if ($ApplicationList.displayname.count -ge 1) { 
-        Log-Request -message "$($Tenant): $($ChocoApp.ApplicationName) exists. Skipping this application" -Sev "Warning"
+        Log-Request -api "ChocoAppUpload" -API "ChocoApp"  -tenant $($Tenant) -message "$($ChocoApp.ApplicationName) exists. Skipping this application" -Sev "Warning"
         continue
     }
     $NewApp = New-GraphPostRequest -Uri $baseuri -Body ($intuneBody | ConvertTo-Json) -Type POST -tenantid $tenant
@@ -52,22 +52,22 @@ Try {
     do {
         $CommitStateReq = New-graphGetRequest -Uri "$($BaseURI)/$($NewApp.id)/microsoft.graph.win32lobapp/contentVersions/1/files/$($ContentReq.id)" -tenantid $tenant
         if ($CommitStateReq.uploadState -like "*fail*") {
-            Log-Request -message "$($Tenant): $($ChocoApp.ApplicationName) Commit failed. Please check if app uploaded succesful" -Sev "Warning"
+            Log-Request -api "ChocoAppUpload" -tenant $($Tenant) -message "$($ChocoApp.ApplicationName) Commit failed. Please check if app uploaded succesful" -Sev "Warning"
             break 
         }
         Start-Sleep -Milliseconds 300
     } while ($CommitStateReq.uploadState -eq "commitFilePending")        
     $CommitFinalizeReq = New-graphPostRequest -Uri "$($BaseURI)/$($NewApp.id)" -tenantid $tenant -Body '{"@odata.type":"#microsoft.graph.win32lobapp","committedContentVersion":"1"}' -type PATCH
-    Log-Request -user $request.headers.'x-ms-client-principal'   -message "$($Tenant): Added Choco app $($chocoApp.ApplicationName)" -Sev "Info"
+    Log-Request -api "ChocoAppUpload" -user $request.headers.'x-ms-client-principal'  -tenant $($Tenant) -message  "Added Choco app $($chocoApp.ApplicationName)" -Sev "Info"
     if ($AssignTo -ne "On") {
         $AssignBody = if ($AssignTo -ne "AllDevicesAndUsers") { '{"mobileAppAssignments":[{"@odata.type":"#microsoft.graph.mobileAppAssignment","target":{"@odata.type":"#microsoft.graph.' + $($AssignTo) + 'AssignmentTarget"},"intent":"Required","settings":{"@odata.type":"#microsoft.graph.win32LobAppAssignmentSettings","notifications":"hideAll","installTimeSettings":null,"restartSettings":null,"deliveryOptimizationPriority":"notConfigured"}}]}' } else { '{"mobileAppAssignments":[{"@odata.type":"#microsoft.graph.mobileAppAssignment","target":{"@odata.type":"#microsoft.graph.allDevicesAssignmentTarget"},"intent":"Required","settings":{"@odata.type":"#microsoft.graph.win32LobAppAssignmentSettings","notifications":"showAll","installTimeSettings":null,"restartSettings":null,"deliveryOptimizationPriority":"notConfigured"}},{"@odata.type":"#microsoft.graph.mobileAppAssignment","target":{"@odata.type":"#microsoft.graph.allLicensedUsersAssignmentTarget"},"intent":"Required","settings":{"@odata.type":"#microsoft.graph.win32LobAppAssignmentSettings","notifications":"showAll","installTimeSettings":null,"restartSettings":null,"deliveryOptimizationPriority":"notConfigured"}}]}' }
         $assign = New-GraphPOSTRequest -uri  "https://graph.microsoft.com/beta/deviceAppManagement/mobileApps/$($NewApp.id)/assign" -tenantid $tenant -type POST -body $AssignBody
-        Log-Request -user $request.headers.'x-ms-client-principal'   -message "$($Tenant): Assigned application $($chocoApp.ApplicationName) to $AssignTo" -Sev "Info"
+        Log-Request -api "ChocoAppUpload" -user $request.headers.'x-ms-client-principal' -tenant $($Tenant) -message "Assigned application $($chocoApp.ApplicationName) to $AssignTo" -Sev "Info"
     }
-    Log-Request -message "$($Tenant): Succesfully added Choco App for $($Tenant)<br>"
+    Log-Request -api "ChocoAppUpload" -tenant $($Tenant) -message "$($Tenant): Succesfully added Choco App for $($Tenant)<br>"
 }
 catch {
     "Failed to add Choco App for $($Tenant): $($_.Exception.Message) <br>"
-    Log-Request -user $request.headers.'x-ms-client-principal'   -message "$($Tenant): Failed adding choco App $($ChocoApp.ApplicationName). Error: $($_.Exception.Message)" -Sev "Error"
+    Log-Request -api "ChocoAppUpload" -user $request.headers.'x-ms-client-principal'  -tenant $($Tenant) -message "Failed adding choco App $($ChocoApp.ApplicationName). Error: $($_.Exception.Message)" -Sev "Error"
     continue
 }

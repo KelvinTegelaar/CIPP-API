@@ -2,6 +2,10 @@ using namespace System.Net
 
 # Input bindings are passed in via param block.
 param($Request, $TriggerMetadata)
+
+$APIName = $TriggerMetadata.FunctionName
+Log-Request -user $request.headers.'x-ms-client-principal' -API $APINAME  -message "Accessed this API" -Sev "Debug"
+
 $userobj = $Request.body
 $user = $request.headers.'x-ms-client-principal'
 
@@ -26,12 +30,12 @@ try {
         }
     } | ConvertTo-Json
     $GraphRequest = New-GraphPostRequest -uri "https://graph.microsoft.com/beta/users" -tenantid $Userobj.tenantid-type POST -body $BodyToship   -verbose
-    Log-Request -user $request.headers.'x-ms-client-principal'   -message "$($UserObj.tenantid): Created user $($userobj.displayname) with id $($GraphRequest.id) " -Sev "Info"
+    Log-Request -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $($userobj.tenantid)  -message "Created user $($userobj.displayname) with id $($GraphRequest.id) " -Sev "Info"
     $body = [pscustomobject]@{"Results" = "Success.  <br> Username: $($UserprincipalName) <br>Password: $password" }
 
 }
 catch {
-    Log-Request -user $request.headers.'x-ms-client-principal'   -message "$($UserObj.tenantid): User creation API failed. $($_.Exception.Message)" -Sev "Error"
+    Log-Request -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $($userobj.tenantid)  -message "User creation API failed. $($_.Exception.Message)" -Sev "Error"
     $body = [pscustomobject]@{"Results" = "Failed to create user. $($_.Exception.Message)" }
 }
 
@@ -45,13 +49,13 @@ try {
             '{"addLicenses": [ {"disabledPlans": [],"skuId": "' + $licenses + '" }],"removeLicenses": [ ]}'
         }
         $LicRequest = New-GraphPostRequest -uri "https://graph.microsoft.com/beta/users/$($GraphRequest.id)/assignlicense" -tenantid $Userobj.tenantid -type POST -body $LicenseBody -verbose
-        Log-Request -user $request.headers.'x-ms-client-principal'   -message "$($UserObj.tenantid): Assigned user $($userobj.displayname) license $($licences)" -Sev "Info"
+        Log-Request -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $($userobj.tenantid)  -message "Assigned user $($userobj.displayname) license $($licences)" -Sev "Info"
         $body = [pscustomobject]@{"Results" = "Success.  <br> Username: $($UserprincipalName) <br>Password: $password" }
 
     }
 }
 catch {
-    Log-Request -user $request.headers.'x-ms-client-principal'   -message "$($UserObj.tenantid): License assign API failed. $($_.Exception.Message)" -Sev "Error"
+    Log-Request -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $($userobj.tenantid)  -message "License assign API failed. $($_.Exception.Message)" -Sev "Error"
     $body = [pscustomobject]@{"Results" = "Succesfully created user.  <br> Username: $($UserprincipalName) <br>Password: $password <br> We've failed to assign the license. $($_.Exception.Message)" }
 }
 
@@ -62,12 +66,12 @@ try {
             New-GraphPostRequest -uri "https://graph.microsoft.com/beta/users/$($GraphRequest.id)" -tenantid $Userobj.tenantid -type "patch" -body "{`"mail`": `"$Alias`"}" -verbose
         }
         New-GraphPostRequest -uri "https://graph.microsoft.com/beta/users/$($GraphRequest.id)" -tenantid $Userobj.tenantid -type "patch" -body "{`"mail`": `"$UserprincipalName`"}" -verbose
-        Log-Request -user $request.headers.'x-ms-client-principal'   -message "$($UserObj.tenantid): Added alias $($Alias) to $($userobj.displayname)" -Sev "Info"
+        Log-Request -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $($userobj.tenantid)  -message "Added alias $($Alias) to $($userobj.displayname)" -Sev "Info"
         $body = [pscustomobject]@{"Results" = "Success. User has been created. <br> Username: $($UserprincipalName) <br>Password: $password" }
     }
 }
 catch {
-    Log-Request -user $request.headers.'x-ms-client-principal'   -message "$($UserObj.tenantid): Alias API failed. $($_.Exception.Message)" -Sev "Error"
+    Log-Request -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $($userobj.tenantid) -message "Alias API failed. $($_.Exception.Message)" -Sev "Error"
     $body = [pscustomobject]@{"Results" = "Succesfully created user. <br> Username: $($UserprincipalName) <br>Password: $password <br> We've failed to create the aliasses: $($_.Exception.Message)" }
 }
 

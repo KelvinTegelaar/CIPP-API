@@ -2,11 +2,15 @@ using namespace System.Net
 
 # Input bindings are passed in via param block.
 param($Request, $TriggerMetadata)
+
+$APIName = $TriggerMetadata.FunctionName
+Log-Request -user $request.headers.'x-ms-client-principal' -API $APINAME  -message "Accessed this API" -Sev "Debug"
+
 $user = $request.headers.'x-ms-client-principal'
-$Tenants = ($Request.body | select-object Select_*).psobject.properties.value
+$Tenants = ($Request.body | Select-Object Select_*).psobject.properties.value
 $displayname = $request.body.Displayname
 $description = $request.body.Description
-$AssignTo = if($request.body.Assignto -ne "on") { $request.body.Assignto }
+$AssignTo = if ($request.body.Assignto -ne "on") { $request.body.Assignto }
 $RawJSON = $Request.body.RawJSON
 $results = foreach ($Tenant in $tenants) {
     try {
@@ -14,17 +18,17 @@ $results = foreach ($Tenant in $tenants) {
         $CreateRequest = New-GraphPOSTRequest -uri "https://graph.microsoft.com/beta/deviceManagement/groupPolicyConfigurations" -tenantid $tenant -type POST -body $CreateBody
         $UpdateRequest = New-GraphPOSTRequest -uri "https://graph.microsoft.com/beta/deviceManagement/groupPolicyConfigurations('$($CreateRequest.id)')/updateDefinitionValues" -tenantid $tenant -type POST -body $RawJSON
       
-        Log-Request -user $request.headers.'x-ms-client-principal'   -message "$($Tenant): Added policy $($Displayname)" -Sev "Error"
+        Log-Request -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $($Tenant) -message "Added policy $($Displayname)" -Sev "Error"
         if ($AssignTo) {
             $AssignBody = if ($AssignTo -ne "AllDevicesAndUsers") { '{"assignments":[{"id":"","target":{"@odata.type":"#microsoft.graph.' + $($AssignTo) + 'AssignmentTarget"}}]}' } else { '{"assignments":[{"id":"","target":{"@odata.type":"#microsoft.graph.allDevicesAssignmentTarget"}},{"id":"","target":{"@odata.type":"#microsoft.graph.allLicensedUsersAssignmentTarget"}}]}' }
             $assign = New-GraphPOSTRequest -uri  "https://graph.microsoft.com/beta/deviceManagement/groupPolicyConfigurations('$($CreateRequest.id)')/assign" -tenantid $tenant -type POST -body $AssignBody
-            Log-Request -user $request.headers.'x-ms-client-principal'   -message "$($Tenant): Assigned policy $($Displayname) to $AssignTo" -Sev "Info"
+            Log-Request -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $($Tenant) -message "Assigned policy $($Displayname) to $AssignTo" -Sev "Info"
         }
-          "Succesfully added policy for $($Tenant)<br>"
+        "Succesfully added policy for $($Tenant)<br>"
     }
     catch {
         "Failed to add policy for $($Tenant): $($_.Exception.Message) <br>"
-        Log-Request -user $request.headers.'x-ms-client-principal'   -message "$($Tenant): Failed adding policy $($Displayname). Error: $($_.Exception.Message)" -Sev "Error"
+        Log-Request -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $($Tenant) -message "Failed adding policy $($Displayname). Error: $($_.Exception.Message)" -Sev "Error"
         continue
     }
 

@@ -11,8 +11,8 @@ try {
         'x-ms-correlation-id'    = [guid]::NewGuid()
         'X-Requested-With'       = 'XMLHttpRequest' 
     }
-    Log-request "Standards API: $($Tenant) Modern Authentication enabled." -sev Info
+    Log-request -API "Standards" -tenant $tenant -message "Modern Authentication enabled." -sev Info
 }
 catch {
-    Log-request "Standards API: $($Tenant) Failed to enable Modern Authentication. Error: $($_.exception.message)"
+    Log-request -API "Standards" -tenant $tenant -message "Failed to enable Modern Authentication. Error: $($_.exception.message)" -sev "Error"
 }
