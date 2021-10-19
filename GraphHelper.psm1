@@ -84,13 +84,15 @@ function New-GraphPOSTRequest ($uri, $tenantid, $body, $type, $scope, $AsApp) {
         Write-Error "Not allowed. You cannot manage your own tenant or tenants not under your scope" 
     }
 }
-Function Log-request ($message, $user, $sev) {
+Function Log-request ($message, $tenant, $API, $user, $sev) {
     $username = ([System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($user)) | ConvertFrom-Json).userDetails
     $date = (Get-Date).ToString('s')
     $LogMutex = New-Object System.Threading.Mutex($false, "LogMutex")
-    $logdata = "$($date)|$($message)|$($username)|$($sev)"
+    if (!$username) { $username = "CIPP" }
+    if (!$tenant) { $tenant = "None" }
+    $logdata = "$($date)|$($tenant)|$($API)|$($message)|$($username)|$($sev)"
     if ($LogMutex.WaitOne(1000)) {
-        $logdata | Out-File -Append -path (Get-Date).ToString('MMyyyy')
+        $logdata | Out-File -Append -path "$((Get-Date).ToString('MMyyyy')).log"
     }
     $LogMutex.ReleaseMutex()
 }
