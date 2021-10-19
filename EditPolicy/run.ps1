@@ -2,7 +2,9 @@ using namespace System.Net
 
 # Input bindings are passed in via param block.
 param($Request, $TriggerMetadata)
-$user = $request.headers.'x-ms-client-principal'
+
+$APIName = $TriggerMetadata.FunctionName
+Log-Request -user $request.headers.'x-ms-client-principal' -API $APINAME  -message "Accessed this API" -Sev "Debug"$user = $request.headers.'x-ms-client-principal'
 $Tenant = $request.body.tenantid
 $ID = $request.body.groupid
 $displayname = $request.body.Displayname

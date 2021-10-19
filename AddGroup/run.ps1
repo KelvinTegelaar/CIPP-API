@@ -2,7 +2,9 @@ using namespace System.Net
 
 # Input bindings are passed in via param block.
 param($Request, $TriggerMetadata)
-$groupobj = $Request.body
+
+$APIName = $TriggerMetadata.FunctionName
+Log-Request -user $request.headers.'x-ms-client-principal' -API $APINAME  -message "Accessed this API" -Sev "Debug"$groupobj = $Request.body
 $user = $request.headers.'x-ms-client-principal'
 
 # Write to the Azure Functions log stream.

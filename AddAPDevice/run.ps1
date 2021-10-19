@@ -3,6 +3,8 @@ using namespace System.Net
 # Input bindings are passed in via param block.
 param($Request, $TriggerMetadata)
 
+$APIName = $TriggerMetadata.FunctionName
+Log-Request -user $request.headers.'x-ms-client-principal' -API $APINAME  -message "Accessed this API" -Sev "Debug"
 # Write to the Azure Functions log stream.
 Write-Host "PowerShell HTTP trigger function processed a request."
 $TenantFilter = (get-content Tenants.cache.json | convertfrom-json | where-object { $_.defaultdomainname -eq $Request.body.TenantFilter }).customerid
