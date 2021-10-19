@@ -26,15 +26,15 @@ if ($Request.query.Permissions -eq "true") {
 }
 
 if ($Request.query.Tenants -eq "true") {
-    $Tenants = Get-Content 'Tenants.cache.json'
+    $Tenants = ($Request.body.tenantid).split(',')
     if (!$Tenants) { $results = "Could not load the tenants list from cache. Please run permissions check first, or visit the tenants page." }
     $results = foreach ($tenant in $Tenants) {
         try {
-            $token = Get-GraphToken -tenantid $tenant
-            "$($Tenant): Succesfully connected"
+            $token = New-GraphGetRequest -uri 'https://graph.microsoft.com/v1.0/users/delta?$select=displayName' -tenantid $tenant
+            "$($Tenant): Succesfully connected<br>"
         }
         catch {
-            "$($tenant): Failed to connect to $($_.Exception.Message)"
+            "$($tenant): Failed to connect to $($_.Exception.Message)<br>"
         }
     }
     if (!$Tenants) { $results = "Could not load the tenants list from cache. Please run permissions check first, or visit the tenants page." }
