@@ -70,7 +70,8 @@ function New-GraphGetRequest ($uri, $tenantid, $scope, $AsApp) {
             }
             catch {
                 $errorMessage = "Status Code: $($_.Exception.Response.StatusCode.value__) - Status Description: $($_.ErrorDetails.Message)"
-                Log-Request $errorMessage $tenantid "GraphRequest" $null "CRITICAL" 
+
+                Log-Request -message $errorMessage -tenant $tenantid -api "GraphRequest" -user $null -sev "Error" 
                 throw $_
             }
 
