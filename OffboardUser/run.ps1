@@ -99,7 +99,6 @@ $results = switch ($request.body) {
         try {
             $UserSharepoint = (New-GraphGetRequest -uri "https://graph.microsoft.com/beta/users/$($userid)/drive" -AsApp $true -tenantid $tenantFilter).weburl -replace "/Documents"
             $GainAccessJson = '{"SecondaryContact":"' + $request.body.OnedriveAccess + '","IsCurrentUserPersonalSiteAdmin":false,"IsDelegatedAdmin":true,"UserPersonalSiteUrl":"' + $UserSharepoint + '"}'
-            #$GainAccessJson = '{"SharingCapabilitiesForTenant":3,"SecondaryContactDisplayName":null,"errorState":false,"SecondaryContact":"' + $request.body.OnedriveAccess + '","IsCurrentUserPersonalSiteAdmin":false,"IsUserSpecificQuota":false,"StoragePercentageUse":0.12,"SharingCapabilities":3,"ExceptionMessage":null,"OrphanedPersonalSitesRetentionPeriod":2492,"IsDelegatedAdmin":false,"LitigationHoldPresent":false,"TenantMaxQuotaLimitInGB":5120,"UserPersonalSiteUrl":"' + $UserSharepoint + '","StorageQuotaLimit":5120}'
             $uri = "https://login.microsoftonline.com/$($Tenant)/oauth2/token"
             $body = "resource=https://admin.microsoft.com&grant_type=refresh_token&refresh_token=$($ENV:ExchangeRefreshToken)"
             $token = Invoke-RestMethod $uri -Body $body -ContentType "application/x-www-form-urlencoded" -ErrorAction SilentlyContinue -Method post
