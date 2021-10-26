@@ -2,7 +2,7 @@ param($Context)
 
 
 
-$Batch = (Invoke-ActivityFunction -FunctionName 'BestPracticeAnalyser_GetQueue' -Input 'LetsGo') | Select -First 3
+$Batch = (Invoke-ActivityFunction -FunctionName 'BestPracticeAnalyser_GetQueue' -Input 'LetsGo')
 $ParallelTasks = foreach ($Item in $Batch) {
   Invoke-DurableActivity -FunctionName "BestPracticeAnalyser_All" -Input $item -NoWait
   #Invoke-ActivityFunction -FunctionName "BestPracticeAnalyser_All" -Input $Item
@@ -16,7 +16,7 @@ $Outputs = Wait-ActivityFunction -Task $ParallelTasks
   foreach ($item in $Outputs) {
   write-host $Item | Out-String
   $Object = $Item | ConvertTo-Json
-  Set-Content "Cache_BestPracticeAnalyser\$($item.tenant).BestPracticeAnalysis.json" -Value $Object
+  Set-Content "Cache_BestPracticeAnalyser\$($item.tenant).BestPracticeAnalysis.json" -Value $Object -Force
 }
 
 
