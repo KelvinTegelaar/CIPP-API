@@ -98,13 +98,13 @@ if ($Request.body.CopyFrom -ne "") {
         try {
             $groupname = (New-GraphGetRequest -tenantid $Userobj.tenantid -asApp $true -uri "https://graph.microsoft.com/beta/groups/$($_)").displayName
             Write-Host "name: $groupname"
-            $GroupResult = New-GraphPostRequest -AsApp $true -uri "https://graph.microsoft.com/beta/groups/$($_)" -tenantid $Userobj.tenantid -type patch -body $addmemberbody -Verbose
+            $GroupResult = New-GraphPostRequest -AsApp $true -uri "https://graph.microsoft.com/beta/groups/$($_)" -tenantid $Userobj.tenantid -type patch -body $addmemberbody -ErrorAction Stop
             Log-Request -user $request.headers.'x-ms-client-principal' -API $APINAME  -message "Added $($UserprincipalName) to group $groupresult.displayName)" -Sev "Info"  -tenant $TenantFilter
             $body = $results.add("Added group: $($groupname)")
         }
         catch {
             $body = $results.add("We've failed to add the group $($groupname): $($_.Exception.Message)")
-            Log-Request -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $($userobj.tenantid) -message "Alias API failed. $($_.Exception.Message)" -Sev "Error"
+            Log-Request -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $($userobj.tenantid) -message "Failed to add group. $($_.Exception.Message)" -Sev "Error"
         }
     }
 
