@@ -52,9 +52,12 @@ catch {
 $GraphRequest = $Users | ForEach-Object {
     
     $PerUser = if ($_.StrongAuthenticationRequirements.StrongAuthenticationRequirement.state -ne $null) { $_.StrongAuthenticationRequirements.StrongAuthenticationRequirement.state } else { "Disabled" }
+    $AccountState = if ($_.BlockCredential -eq $true) { $false } else { $true }
+
     $MFARegUser = if (($MFARegistration | Where-Object -Property UserPrincipalName -EQ $_.UserPrincipalName).IsMFARegistered -eq $null) { $false } else { ($MFARegistration | Where-Object -Property UserPrincipalName -EQ $_.UserPrincipalName).IsMFARegistered }
     [PSCustomObject]@{
         UPN             = $_.UserPrincipalName
+        AccountEnabled  = $AccountState
         PerUser         = $PerUser
         MFARegistration = $MFARegUser
         CoveredByCA     = ($CAState -join ", ")

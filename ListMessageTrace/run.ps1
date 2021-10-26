@@ -27,13 +27,13 @@ try {
     }
     else {
         Get-MessageTrace @SearchParams -erroraction stop | Select-Object MessageTraceId, Status, Subject, RecipientAddress, SenderAddress, @{ Name = 'Date'; Expression = { $_.Received.tostring('s') } }
-        Log-Request -user $request.headers.'x-ms-client-principal' -message "$($Tenant): Executed message trace" -Sev "Info"
+        Log-Request -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $($Tenant)  -message "Executed message trace" -Sev "Info"
 
     }
     Get-PSSession | Remove-PSSession
 }
 catch {
-    Log-Request -user $request.headers.'x-ms-client-principal' -message "$($Tenant): Failed executing messagetrace. Error: $($_.Exception.Message)" -Sev "Error"
+    Log-Request -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $($Tenant) -message "Failed executing messagetrace. Error: $($_.Exception.Message)" -Sev "Error"
     $trace = @{Status = "Failed to retrieve message trace $($_.Exception.Message)" }
     Get-PSSession | Remove-PSSession
 }
