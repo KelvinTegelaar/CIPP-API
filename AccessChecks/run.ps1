@@ -46,6 +46,25 @@ if ($Request.query.Tenants -eq "true") {
             Log-Request -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $tenant -message "Tenant access check failed: $($_.Exception.Message) " -Sev "Error"
 
         }
+
+        try {
+            $upn = "notRequired@required.com"
+            $tokenvalue = ConvertTo-SecureString (Get-GraphToken -AppID 'a0c73c16-a7e3-4564-9a95-2bdf47383716' -RefreshToken $ENV:ExchangeRefreshToken -Scope 'https://outlook.office365.com/.default' -Tenantid $tenant).Authorization -AsPlainText -Force
+            $credential = New-Object System.Management.Automation.PSCredential($upn, $tokenValue)
+            $session = New-PSSession -ConfigurationName Microsoft.Exchange -ConnectionUri "https://ps.outlook.com/powershell-liveid?DelegatedOrg=$($tenant)&BasicAuthToOAuthConversion=true" -Credential $credential -Authentication Basic -AllowRedirection -ErrorAction Continue
+            $session = Import-PSSession $session -ea Silentlycontinue -AllowClobber -CommandName "Get-OrganizationConfig"
+            $org = Get-OrganizationConfig
+            $null = Get-PSSession | Remove-PSSession
+            "$($Tenant): Succesfully connected to Exchange<br>"
+        }
+        catch {
+            $Message = ($_ | ConvertFrom-Json).error_description 
+            if ($Message -eq $null) { $Message = $($_.Exception.Message) }
+            "$($tenant): Failed to connect to Exchange: $($Message)<br>"
+            Log-Request -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $tenant -message "Tenant access check for Exchange failed: $($Message) " -Sev "Error"
+
+
+        }
     }
     if (!$Tenants) { $results = "Could not load the tenants list from cache. Please run permissions check first, or visit the tenants page." }
 
