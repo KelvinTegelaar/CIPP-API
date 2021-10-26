@@ -11,7 +11,7 @@ Log-Request -user $request.headers.'x-ms-client-principal' -API $APINAME  -messa
 Write-Host "PowerShell HTTP trigger function processed a request."
 
 # Get all the things
-$Results = Get-ChildItem ".\Cache_BestPracticeAnalyser\*.json" | %{Get-Content $_.FullName | Out-String | ConvertFrom-Json}
+$Results = Get-ChildItem ".\Cache_BestPracticeAnalyser\*.json" | ForEach-Object{Get-Content $_.FullName | Out-String | ConvertFrom-Json}
 
 # Associate values to output bindings by calling 'Push-OutputBinding'.
 Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
