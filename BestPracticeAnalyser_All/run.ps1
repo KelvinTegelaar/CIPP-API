@@ -41,6 +41,9 @@ $Result = [PSCustomObject]@{
     SelfServicePasswordReset         = ""
     DisabledSharedMailboxLogins      = ""
     DisabledSharedMailboxLoginsCount = ""
+    UnusedLicensesCount = ""
+    UnusedLicensesResult = ""
+    UnusedLicenseList = ""
 }
 
 # Starting the Best Practice Analyser
@@ -226,6 +229,32 @@ try {
 catch {
     Log-request -API "BestPracticeAnalyser" -tenant $tenant -message "Shared Mailbox Enabled Accounts on $($tenant). Error: $($_.exception.message)" -sev "Error"  
 }
+
+# Get unused Licenses
+try {
+    $LicenseUsage = Invoke-RestMethod -ContentType "application/json;charset=UTF-8" -Uri 'https://portal.office.com/admin/api/tenant/accountSkus' -Method GET -Headers @{
+        Authorization            = "Bearer $($token.access_token)";
+        "x-ms-client-request-id" = [guid]::NewGuid().ToString();
+        "x-ms-client-session-id" = [guid]::NewGuid().ToString()
+        'x-ms-correlation-id'    = [guid]::NewGuid()
+        'X-Requested-With'       = 'XMLHttpRequest' 
+    }
+
+    $WhiteListedSKUs = "FLOW_FREE", "TEAMS_EXPLORATORY", "TEAMS_COMMERCIAL_TRIAL", "POWERAPPS_VIRAL", "POWER_BI_STANDARD"
+    $UnusedLicenses = $LicenseUsage | Where-Object { ($_.Purchased -ne $_.Consumed) -and ($WhiteListedSKUs -notcontains $_.AccountSkuId.SkuPartNumber) }
+    $UnusedLicensesCount = $UnusedLicenses | Measure-Object | Select-Object -ExpandProperty Count
+    $UnusedLicensesResult = if ($UnusedLicensesCount -gt 0) { "FAIL" } else { "PASS" }
+    $Result.UnusedLicenseList = ($UnusedLicensesListBuilder = foreach ($License in $UnusedLicenses) {
+            "SKU: $($License.AccountSkuId.SkuPartNumber), Purchased: $($License.Purchased), Consumed: $($License.Consumed)"
+        }) -join "<br />"
+    $Result.UnusedLicensesCount = $UnusedLicensesCount
+    $Result.UnusedLicensesResult = $UnusedLicensesResult
+    Log-request -API "BestPracticeAnalyser" -tenant $tenant -message "Unused Licenses on $($tenant). $($Result.UnusedLicensesCount) total not matching" -sev "Debug"
+}
+catch {
+    Log-request -API "BestPracticeAnalyser" -tenant $tenant -message "Unused Licenses on $($tenant). Error: $($_.exception.message)" -sev "Error"
+}
+
 
 # Send Output of all the Results to the Stream
 $Result
