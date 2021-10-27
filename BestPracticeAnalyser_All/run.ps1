@@ -41,9 +41,9 @@ $Result = [PSCustomObject]@{
     SelfServicePasswordReset         = ""
     DisabledSharedMailboxLogins      = ""
     DisabledSharedMailboxLoginsCount = ""
-    UnusedLicensesCount = ""
-    UnusedLicensesResult = ""
-    UnusedLicenseList = ""
+    UnusedLicensesCount              = ""
+    UnusedLicensesResult             = ""
+    UnusedLicenseList                = ""
 }
 
 # Starting the Best Practice Analyser
@@ -137,13 +137,19 @@ catch {
 
 # Get Basic Auth States
 try {
-    $BasicAuthDisable = Invoke-RestMethod -ContentType "application/json;charset=UTF-8" -Uri 'https://admin.microsoft.com/admin/api/services/apps/modernAuth' -Method GET -Headers @{
-        Authorization            = "Bearer $($token.access_token)";
-        "x-ms-client-request-id" = [guid]::NewGuid().ToString();
-        "x-ms-client-session-id" = [guid]::NewGuid().ToString()
-        'x-ms-correlation-id'    = [guid]::NewGuid()
-        'X-Requested-With'       = 'XMLHttpRequest' 
-    }
+    $counter = 0
+    do {
+        $counter++
+        $BasicAuthDisable = Invoke-RestMethod -ContentType "application/json;charset=UTF-8" -Uri 'https://admin.microsoft.com/admin/api/services/apps/modernAuth' -Method GET -Headers @{
+            Authorization            = "Bearer $($token.access_token)";
+            "x-ms-client-request-id" = [guid]::NewGuid().ToString();
+            "x-ms-client-session-id" = [guid]::NewGuid().ToString()
+            'x-ms-correlation-id'    = [guid]::NewGuid()
+            'X-Requested-With'       = 'XMLHttpRequest' 
+        }
+        Start-Sleep -Milliseconds 500
+    } while ($null -ne $BasicAuthDisable.ShowBasicAuthSettings -or $counter -lt 3)
+
 
     $Result.ShowBasicAuthSettings = $BasicAuthDisable.ShowBasicAuthSettings
     $Result.EnableModernAuth = $BasicAuthDisable.EnableModernAuth
@@ -182,8 +188,8 @@ catch {
 # Get Self Service Password Reset State
 try {
     $bodypasswordresetpol = "resource=74658136-14ec-4630-ad9b-26e160ff0fc6&grant_type=refresh_token&refresh_token=$($ENV:ExchangeRefreshToken)"
-    $tokensspr = Invoke-RestMethod $uri -Body $bodypasswordresetpol -ContentType "application/x-www-form-urlencoded" -ErrorAction SilentlyContinue -method post
-    $SSPRGraph = Invoke-RestMethod -contenttype "application/json;charset=UTF-8" -uri 'https://main.iam.ad.ext.azure.com/api/PasswordReset/PasswordResetPolicies' -method GET -Headers @{
+    $tokensspr = Invoke-RestMethod $uri -Body $bodypasswordresetpol -ContentType "application/x-www-form-urlencoded" -ErrorAction SilentlyContinue -Method post
+    $SSPRGraph = Invoke-RestMethod -ContentType "application/json;charset=UTF-8" -Uri 'https://main.iam.ad.ext.azure.com/api/PasswordReset/PasswordResetPolicies' -Method GET -Headers @{
         Authorization            = "Bearer $($tokensspr.access_token)";
         "x-ms-client-request-id" = [guid]::NewGuid().ToString();
         "x-ms-client-session-id" = [guid]::NewGuid().ToString()
@@ -202,7 +208,7 @@ catch {
 
 # Get Passwords set to Never Expire
 try {
-    $Result.DoNotExpirePasswords = Invoke-RestMethod -contenttype "application/json; charset=utf-8" -uri 'https://admin.microsoft.com/admin/api/Settings/security/passwordpolicy' -method GET -Headers @{Authorization = "Bearer $($token.access_token)"; "x-ms-client-request-id" = [guid]::NewGuid().ToString(); "x-ms-client-session-id" = [guid]::NewGuid().ToString(); 'X-Requested-With' = 'XMLHttpRequest'; 'x-ms-correlation-id' = [guid]::NewGuid() } | Select-Object -ExpandProperty NeverExpire
+    $Result.DoNotExpirePasswords = Invoke-RestMethod -ContentType "application/json; charset=utf-8" -Uri 'https://admin.microsoft.com/admin/api/Settings/security/passwordpolicy' -Method GET -Headers @{Authorization = "Bearer $($token.access_token)"; "x-ms-client-request-id" = [guid]::NewGuid().ToString(); "x-ms-client-session-id" = [guid]::NewGuid().ToString(); 'X-Requested-With' = 'XMLHttpRequest'; 'x-ms-correlation-id' = [guid]::NewGuid() } | Select-Object -ExpandProperty NeverExpire
     Log-request -API "BestPracticeAnalyser" -tenant $tenant -message "Passwords never expire setting on $($tenant). $($Result.DoNotExpirePasswords)" -sev "Debug"
 }
 catch {
