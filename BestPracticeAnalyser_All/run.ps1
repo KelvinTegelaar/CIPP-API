@@ -148,7 +148,7 @@ try {
             'X-Requested-With'       = 'XMLHttpRequest' 
         }
         Start-Sleep -Milliseconds 500
-    } while ($null -ne $BasicAuthDisable.ShowBasicAuthSettings -or $counter -lt 3)
+    } while ($null -ne $BasicAuthDisable.EnableModernAuth -or $counter -lt 3)
 
 
     $Result.ShowBasicAuthSettings = $BasicAuthDisable.ShowBasicAuthSettings
