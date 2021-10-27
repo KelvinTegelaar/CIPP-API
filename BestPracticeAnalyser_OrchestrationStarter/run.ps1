@@ -9,4 +9,4 @@ $Response = New-OrchestrationCheckStatusResponse -Request $Request -InstanceId $
 
 Write-Host ($Response | ConvertTo-Json)
 
-Log-request  -API "BestPracticeAnalyser" -message "Started applying the standard templates to tenants." -sev Info
+Log-request  -API "BestPracticeAnalyser" -message "Started retrieving best practice information" -sev Info
