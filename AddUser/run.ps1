@@ -5,10 +5,8 @@ param($Request, $TriggerMetadata)
 
 $APIName = $TriggerMetadata.FunctionName
 Log-Request -user $request.headers.'x-ms-client-principal' -API $APINAME  -message "Accessed this API" -Sev "Debug"
-
+$Results = [System.Collections.ArrayList]@()
 $userobj = $Request.body
-$user = $request.headers.'x-ms-client-principal'
-
 # Write to the Azure Functions log stream.
 Write-Host "PowerShell HTTP trigger function processed a request."
 try {
@@ -29,14 +27,15 @@ try {
             "password"                      = $password
         }
     } | ConvertTo-Json
-    $GraphRequest = New-GraphPostRequest -uri "https://graph.microsoft.com/beta/users" -tenantid $Userobj.tenantid-type POST -body $BodyToship   -verbose
+    $GraphRequest = New-GraphPostRequest -uri "https://graph.microsoft.com/beta/users" -tenantid $Userobj.tenantid-type POST -body $BodyToship  -verbose
     Log-Request -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $($userobj.tenantid)  -message "Created user $($userobj.displayname) with id $($GraphRequest.id) " -Sev "Info"
-    $body = [pscustomobject]@{"Results" = "Success.  <br> Username: $($UserprincipalName) <br>Password: $password" }
-
+    $results.add("Created user.")
+    $results.add("Username: $($UserprincipalName)")
+    $results.add("Password: $password")
 }
 catch {
     Log-Request -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $($userobj.tenantid)  -message "User creation API failed. $($_.Exception.Message)" -Sev "Error"
-    $body = [pscustomobject]@{"Results" = "Failed to create user. $($_.Exception.Message)" }
+    $body = $results.add("Failed to create user. $($_.Exception.Message)" )
 }
 
 try {
@@ -50,13 +49,14 @@ try {
         }
         $LicRequest = New-GraphPostRequest -uri "https://graph.microsoft.com/beta/users/$($GraphRequest.id)/assignlicense" -tenantid $Userobj.tenantid -type POST -body $LicenseBody -verbose
         Log-Request -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $($userobj.tenantid)  -message "Assigned user $($userobj.displayname) license $($licences)" -Sev "Info"
-        $body = [pscustomobject]@{"Results" = "Success.  <br> Username: $($UserprincipalName) <br>Password: $password" }
-
+        $body = $results.add("Assigned licenses.")
     }
+
 }
+
 catch {
     Log-Request -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $($userobj.tenantid)  -message "License assign API failed. $($_.Exception.Message)" -Sev "Error"
-    $body = [pscustomobject]@{"Results" = "Succesfully created user.  <br> Username: $($UserprincipalName) <br>Password: $password <br> We've failed to assign the license. $($_.Exception.Message)" }
+    $body = $results.add("We've failed to assign the license. $($_.Exception.Message)")
 }
 
 try {
@@ -67,14 +67,32 @@ try {
         }
         New-GraphPostRequest -uri "https://graph.microsoft.com/beta/users/$($GraphRequest.id)" -tenantid $Userobj.tenantid -type "patch" -body "{`"mail`": `"$UserprincipalName`"}" -verbose
         Log-Request -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $($userobj.tenantid)  -message "Added alias $($Alias) to $($userobj.displayname)" -Sev "Info"
-        $body = [pscustomobject]@{"Results" = "Success. User has been created. <br> Username: $($UserprincipalName) <br>Password: $password" }
+        $body = $results.add("Added aliasses: $($aliasses -join ',')")
     }
 }
 catch {
     Log-Request -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $($userobj.tenantid) -message "Alias API failed. $($_.Exception.Message)" -Sev "Error"
-    $body = [pscustomobject]@{"Results" = "Succesfully created user. <br> Username: $($UserprincipalName) <br>Password: $password <br> We've failed to create the aliasses: $($_.Exception.Message)" }
+    $body = $results.add("We've failed to create the aliasses: $($_.Exception.Message)")
 }
+if ($Request.body.CopyFrom -ne "") {
+    $MemberIDs = "https://graph.microsoft.com/v1.0/directoryObjects/" + (New-GraphGetRequest -uri "https://graph.microsoft.com/beta/users/$($GraphRequest.id)" -tenantid $Userobj.tenantid).id 
+    $addmemberbody = "{ `"members@odata.bind`": $(ConvertTo-Json @($MemberIDs)) }"
+        (New-GraphPostRequest -uri "https://graph.microsoft.com/beta/users/$($Request.body.CopyFrom)/GetMemberGroups" -tenantid $Userobj.tenantid -type POST -body  '{"securityEnabledOnly": false}').value | ForEach-Object {
+        try {
+            $groupname = (New-GraphGetRequest -tenantid $Userobj.tenantid -asApp $true -uri "https://graph.microsoft.com/beta/groups/$($_)").displayName
+            Write-Host "name: $groupname"
+            $GroupResult = New-GraphPostRequest -AsApp $true -uri "https://graph.microsoft.com/beta/groups/$($_)" -tenantid $Userobj.tenantid -type patch -body $addmemberbody -Verbose
+            Log-Request -user $request.headers.'x-ms-client-principal' -API $APINAME  -message "Added $($UserprincipalName) to group $groupresult.displayName)" -Sev "Info"  -tenant $TenantFilter
+            $body = $results.add("Added group: $($groupname)")
+        }
+        catch {
+            $body = $results.add("We've failed to add the group $($groupname): $($_.Exception.Message)")
+            Log-Request -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $($userobj.tenantid) -message "Alias API failed. $($_.Exception.Message)" -Sev "Error"
+        }
+    }
 
+}
+$body = @{"Results" = ($results -join "<br>") }
 # Associate values to output bindings by calling 'Push-OutputBinding'.
 Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
         StatusCode = [HttpStatusCode]::OK

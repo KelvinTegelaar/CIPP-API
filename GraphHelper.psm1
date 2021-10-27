@@ -65,9 +65,16 @@ function New-GraphGetRequest ($uri, $tenantid, $scope, $AsApp) {
     #not a fan of this, have to reconsider and change. Seperate function?
     if ($tenantid -in $tenantlist.defaultdomainname -or $uri -like "https://graph.microsoft.com/beta/contracts?`$top=999" -or $uri -like "*/customers/*") {
         $ReturnedData = do {
-            $Data = (Invoke-RestMethod -Uri $nextURL -Method GET -Headers $headers -ContentType "application/json; charset=utf-8")
-            if ($data.value) { $data.value } else { ($Data) }
-            $nextURL = $data.'@odata.nextLink'
+            try {
+                $Data = (Invoke-RestMethod -Uri $nextURL -Method GET -Headers $headers -ContentType "application/json; charset=utf-8")
+                if ($data.value) { $data.value } else { ($Data) }
+                $nextURL = $data.'@odata.nextLink'
+            }
+            catch {
+                $Message = ($_.ErrorDetails.Message | ConvertFrom-Json).error.message
+                if ($Message -eq $null) { $Message = $($_.Exception.Message) }
+                throw $Message
+            }
         } until ($null -eq $NextURL)
         return $ReturnedData   
     }
@@ -90,7 +97,15 @@ function New-GraphPOSTRequest ($uri, $tenantid, $body, $type, $scope, $AsApp) {
     }
     #not a fan of this, have to reconsider and change. Seperate function?
     if ($tenantid -in $tenantlist.defaultdomainname -or $uri -like "*/contracts*" -or $uri -like "*/customers/*") {
-        $ReturnedData = (Invoke-RestMethod -Uri $($uri) -Method $TYPE -Body $body -Headers $headers -ContentType "application/json; charset=utf-8")
+        try {
+            $ReturnedData = (Invoke-RestMethod -Uri $($uri) -Method $TYPE -Body $body -Headers $headers -ContentType "application/json; charset=utf-8")
+        }
+        catch {
+            Write-Host ($_.ErrorDetails.Message | ConvertFrom-Json).error.message
+            $Message = ($_.ErrorDetails.Message | ConvertFrom-Json).error.message
+            if ($Message -eq $null) { $Message = $($_.Exception.Message) }
+            throw $Message
+        }
         return $ReturnedData 
     }
     else {
