@@ -8,7 +8,7 @@ if ($env:MSI_SECRET) {
 }
 
 if ($Request.body.TZ) {
-    Update-AzFunctionAppSetting -Name $WEBSITE_SITE_NAME -ResourceGroupName $ENV:Website_Resource_Group -AppSetting @{"WEBSITE_TIME_ZONE" = "$($request.body.TZ)" }       
+    Update-AzFunctionAppSetting -Name $ENV:WEBSITE_SITE_NAME -ResourceGroupName $ENV:Website_Resource_Group -AppSetting @{"WEBSITE_TIME_ZONE" = "$($request.body.TZ)" }       
     $body = @{"Results" = "Set timezone to $($request.body.TZ)" }
 }
 else {
