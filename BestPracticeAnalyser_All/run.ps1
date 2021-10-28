@@ -137,18 +137,14 @@ catch {
 
 # Get Basic Auth States
 try {
-    $counter = 0
-    do {
-        $counter++
-        $BasicAuthDisable = Invoke-RestMethod -ContentType "application/json;charset=UTF-8" -Uri 'https://admin.microsoft.com/admin/api/services/apps/modernAuth' -Method GET -Headers @{
-            Authorization            = "Bearer $($token.access_token)";
-            "x-ms-client-request-id" = [guid]::NewGuid().ToString();
-            "x-ms-client-session-id" = [guid]::NewGuid().ToString()
-            'x-ms-correlation-id'    = [guid]::NewGuid()
-            'X-Requested-With'       = 'XMLHttpRequest' 
-        }
-        Start-Sleep -Milliseconds 500
-    } while ($null -ne $BasicAuthDisable.EnableModernAuth -or $counter -lt 3)
+    $BasicAuthDisable = Invoke-RestMethod -ContentType "application/json;charset=UTF-8" -Uri 'https://admin.microsoft.com/admin/api/services/apps/modernAuth' -Method GET -Headers @{
+        Authorization            = "Bearer $($token.access_token)";
+        "x-ms-client-request-id" = [guid]::NewGuid().ToString();
+        "x-ms-client-session-id" = [guid]::NewGuid().ToString()
+        'x-ms-correlation-id'    = [guid]::NewGuid()
+        'X-Requested-With'       = 'XMLHttpRequest' 
+    }
+
 
 
     $Result.ShowBasicAuthSettings = $BasicAuthDisable.ShowBasicAuthSettings
