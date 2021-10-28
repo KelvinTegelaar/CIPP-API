@@ -25,7 +25,6 @@ if ($request.Query.ClearCache -eq "true") {
 }
 
 # Get the list of tenants to skip, create the file first if it does not exist yet.
-New-Item excludedtenants -ErrorAction SilentlyContinue
 $Skiplist = (Get-Content ExcludedTenants -ErrorAction SilentlyContinue | ConvertFrom-Csv -Delimiter "|" -Header "name", "date", "user").name
 
 # Get the tenant cache file where it is under 24 hours old. If it's over 24 hours old, re-create it
