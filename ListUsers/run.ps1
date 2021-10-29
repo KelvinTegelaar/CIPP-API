@@ -33,7 +33,7 @@ if ($userid) {
         'x-ms-correlation-id'    = [guid]::NewGuid()
         'X-Requested-With'       = 'XMLHttpRequest' 
     }
-    $GraphRequest | Select-Object *, @{ Name = 'LastSignInfo'; Expression = { $_.LastSignIn } }
+    $GraphRequest = $GraphRequest | Select-Object *, @{ Name = 'LastSignInfo'; Expression = { $_.LastSignIn } }
 }
 
 # Associate values to output bindings by calling 'Push-OutputBinding'.
@@ -41,5 +41,3 @@ Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
         StatusCode = [HttpStatusCode]::OK
         Body       = @($GraphRequest)
     })
-
-#@{ Name = 'LicJoined'; Expression = { ($_.assignedLicenses | ForEach-Object { convert-skuname -skuID $_.skuid }) -join ", " } }, @{ Name = 'Aliasses'; Expression = { $_.Proxyaddresses -join ", " } }, @{ Name = 'primDomain'; Expression = { $_.userPrincipalName -split "@" | Select-Object -Last 1 } }
