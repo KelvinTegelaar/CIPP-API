@@ -14,8 +14,8 @@ $GroupName = if ($Request.body.Groupname) { $Request.body.Groupname } else { New
 $rawDevices = if ($Request.body.devices -like "Device serial number,Windows product ID,Hardware hash,Manufacturer name,Device Model*") {
     Write-Host "csvupload"
 
-    Write-Host ($Request.body.Devices | Select-Object -Skip 1 )
-    ($Request.body.Devices | Select-Object -Skip 1 | ConvertFrom-Csv -Delimiter "," -Header "SerialNumber", "productKey", "hardwareHash", "oemManufacturerName", "modelName")
+    Write-Host ($Request.body.Devices )
+    ($Request.body.Devices | ConvertFrom-Csv -Delimiter "," -Header "SerialNumber", "productKey", "hardwareHash", "oemManufacturerName", "modelName")
 }
 else {
     Write-Host "Standard table request"
