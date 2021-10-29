@@ -33,7 +33,7 @@ if ($userid) {
         'x-ms-correlation-id'    = [guid]::NewGuid()
         'X-Requested-With'       = 'XMLHttpRequest' 
     }
-    $GraphRequest = $GraphRequest | Select-Object *, @{ Name = 'LastSignInfo'; Expression = { $LastSignIn } }
+    $GraphRequest = $GraphRequest | Select-Object *, @{ Name = 'LastSigninApplication'; Expression = { $LastSignIn.AppDisplayName } }, @{ Name = 'LastSigninDate'; Expression = { $LastSignIn.CreatedDateTime } }, @{ Name = 'LastSigninStatus'; Expression = { $LastSignIn.Status } }
 }
 
 # Associate values to output bindings by calling 'Push-OutputBinding'.
