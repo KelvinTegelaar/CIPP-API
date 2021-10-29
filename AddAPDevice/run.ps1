@@ -13,9 +13,7 @@ $TenantFilter = (Get-Content Tenants.cache.json | ConvertFrom-Json | Where-Objec
 $GroupName = if ($Request.body.Groupname) { $Request.body.Groupname } else { New-Guid }
 $rawDevices = if ($Request.body.devices -like "Device serial number,Windows product ID,Hardware hash,Manufacturer name,Device Model*") {
     Write-Host "csvupload"
-
-    Write-Host ($Request.body.Devices )
-    ($Request.body.Devices | ConvertFrom-Csv -Delimiter "," -Header "SerialNumber", "productKey", "hardwareHash", "oemManufacturerName", "modelName")
+    ($Request.body.Devices | ConvertFrom-Csv -Delimiter "," -Header "SerialNumber", "productKey", "hardwareHash", "oemManufacturerName", "modelName") | Select-Object -Skip 1
 }
 else {
     Write-Host "Standard table request"
