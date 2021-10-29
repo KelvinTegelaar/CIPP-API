@@ -44,6 +44,9 @@ $Result = [PSCustomObject]@{
     UnusedLicensesCount              = ""
     UnusedLicensesResult             = ""
     UnusedLicenseList                = ""
+    SecureScoreCurrent               = ""
+    SecureScoreMax                   = ""
+    SecureScorePercentage            = ""
 }
 
 # Starting the Best Practice Analyser
@@ -255,6 +258,18 @@ try {
 }
 catch {
     Log-request -API "BestPracticeAnalyser" -tenant $tenant -message "Unused Licenses on $($tenant). Error: $($_.exception.message)" -sev "Error"
+}
+
+# Get Secure Score
+try {
+    $SecureScore = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/security/secureScores?`$top=1" -tenantid $tenant -noPagination $true
+    $Result.SecureScoreCurrent = $SecureScore.currentScore
+    $Result.SecureScoreMax = $SecureScore.maxScore
+    $Result.SecureScorePercentage = [int](($SecureScore.currentScore / $SecureScore.maxScore) * 100)
+    Log-request -API "BestPracticeAnalyser" -tenant $tenant -message "Secure Score on $($tenant) is $($Result.SecureScoreCurrent) / $($Result.SecureScoreMax)" -sev "Debug"
+}
+catch {
+    Log-request -API "BestPracticeAnalyser" -tenant $tenant -message "Secure Score Retrieval on $($tenant). Error: $($_.exception.message)" -sev "Error" 
 }
 
 
