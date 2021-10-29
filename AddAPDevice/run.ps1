@@ -22,7 +22,7 @@ else {
     ($Request.body.Devices | ConvertFrom-Csv -Header "SerialNumber", "oemManufacturerName", "modelName", "productKey", "hardwareHash" -Delimiter ",")
 }
 $Devices = ConvertTo-Json @($rawDevices)
-
+Write-Host $Devices
 $Result = try {
     $CurrentStatus = (New-GraphgetRequest -uri "https://api.partnercenter.microsoft.com/v1/customers/$tenantfilter/DeviceBatches" -scope 'https://api.partnercenter.microsoft.com/user_impersonation')
     if ($groupname -in $CurrentStatus.items.id) { throw "This device batch name already exists. Please try with another name." }
