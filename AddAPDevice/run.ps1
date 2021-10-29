@@ -12,9 +12,13 @@ Write-Host "PowerShell HTTP trigger function processed a request."
 $TenantFilter = (Get-Content Tenants.cache.json | ConvertFrom-Json | Where-Object { $_.defaultdomainname -eq $Request.body.TenantFilter }).customerid
 $GroupName = if ($Request.body.Groupname) { $Request.body.Groupname } else { New-Guid }
 $rawDevices = if ($Request.body.devices -like "Device serial number,Windows product ID,Hardware hash,Manufacturer name,Device Model*") {
+    Write-Host "csvupload"
+
+    Write-Host ($Request.body.Devices | Select-Object -Skip 1 )
     ($Request.body.Devices | Select-Object -Skip 1 | ConvertFrom-Csv -Delimiter "," -Header "SerialNumber", "productKey", "hardwareHash", "oemManufacturerName", "modelName")
 }
 else {
+    Write-Host "Standard table request"
     ($Request.body.Devices | ConvertFrom-Csv -Header "SerialNumber", "oemManufacturerName", "modelName", "productKey", "hardwareHash" -Delimiter ",")
 }
 $Devices = ConvertTo-Json @($rawDevices)
