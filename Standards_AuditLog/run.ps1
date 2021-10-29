@@ -6,6 +6,10 @@ try {
     $credential = New-Object System.Management.Automation.PSCredential($upn, $tokenValue)
     $session = New-PSSession -ConfigurationName Microsoft.Exchange -ConnectionUri "https://ps.outlook.com/powershell-liveid?DelegatedOrg=$($tenant)&BasicAuthToOAuthConversion=true" -Credential $credential -Authentication Basic -AllowRedirection -ErrorAction Continue
     Import-PSSession $session -ea Silentlycontinue -AllowClobber -CommandName "Set-AdminAuditLogConfig", "Get-OrganizationConfig", "Enable-OrganizationCustomization"
+    $DehydratedTenant = (Get-OrganizationConfig).IsDehydrated
+    if ($DehydratedTenant) {
+        Enable-OrganizationCustomization
+    }
     Set-AdminAuditLogConfig -UnifiedAuditLogIngestionEnabled $true 
     Get-PSSession | Remove-PSSession
     Log-request -API "Standards" -tenant $tenant -message "Unified Audit Log Enabled." -sev Info
