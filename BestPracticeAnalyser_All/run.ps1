@@ -41,9 +41,12 @@ $Result = [PSCustomObject]@{
     SelfServicePasswordReset         = ""
     DisabledSharedMailboxLogins      = ""
     DisabledSharedMailboxLoginsCount = ""
-    UnusedLicensesCount = ""
-    UnusedLicensesResult = ""
-    UnusedLicenseList = ""
+    UnusedLicensesCount              = ""
+    UnusedLicensesResult             = ""
+    UnusedLicenseList                = ""
+    SecureScoreCurrent               = ""
+    SecureScoreMax                   = ""
+    SecureScorePercentage            = ""
 }
 
 # Starting the Best Practice Analyser
@@ -145,6 +148,8 @@ try {
         'X-Requested-With'       = 'XMLHttpRequest' 
     }
 
+
+
     $Result.ShowBasicAuthSettings = $BasicAuthDisable.ShowBasicAuthSettings
     $Result.EnableModernAuth = $BasicAuthDisable.EnableModernAuth
     $Result.AllowBasicAuthActiveSync = $BasicAuthDisable.AllowBasicAuthActiveSync
@@ -182,8 +187,8 @@ catch {
 # Get Self Service Password Reset State
 try {
     $bodypasswordresetpol = "resource=74658136-14ec-4630-ad9b-26e160ff0fc6&grant_type=refresh_token&refresh_token=$($ENV:ExchangeRefreshToken)"
-    $tokensspr = Invoke-RestMethod $uri -Body $bodypasswordresetpol -ContentType "application/x-www-form-urlencoded" -ErrorAction SilentlyContinue -method post
-    $SSPRGraph = Invoke-RestMethod -contenttype "application/json;charset=UTF-8" -uri 'https://main.iam.ad.ext.azure.com/api/PasswordReset/PasswordResetPolicies' -method GET -Headers @{
+    $tokensspr = Invoke-RestMethod $uri -Body $bodypasswordresetpol -ContentType "application/x-www-form-urlencoded" -ErrorAction SilentlyContinue -Method post
+    $SSPRGraph = Invoke-RestMethod -ContentType "application/json;charset=UTF-8" -Uri 'https://main.iam.ad.ext.azure.com/api/PasswordReset/PasswordResetPolicies' -Method GET -Headers @{
         Authorization            = "Bearer $($tokensspr.access_token)";
         "x-ms-client-request-id" = [guid]::NewGuid().ToString();
         "x-ms-client-session-id" = [guid]::NewGuid().ToString()
@@ -202,7 +207,7 @@ catch {
 
 # Get Passwords set to Never Expire
 try {
-    $Result.DoNotExpirePasswords = Invoke-RestMethod -contenttype "application/json; charset=utf-8" -uri 'https://admin.microsoft.com/admin/api/Settings/security/passwordpolicy' -method GET -Headers @{Authorization = "Bearer $($token.access_token)"; "x-ms-client-request-id" = [guid]::NewGuid().ToString(); "x-ms-client-session-id" = [guid]::NewGuid().ToString(); 'X-Requested-With' = 'XMLHttpRequest'; 'x-ms-correlation-id' = [guid]::NewGuid() } | Select-Object -ExpandProperty NeverExpire
+    $Result.DoNotExpirePasswords = Invoke-RestMethod -ContentType "application/json; charset=utf-8" -Uri 'https://admin.microsoft.com/admin/api/Settings/security/passwordpolicy' -Method GET -Headers @{Authorization = "Bearer $($token.access_token)"; "x-ms-client-request-id" = [guid]::NewGuid().ToString(); "x-ms-client-session-id" = [guid]::NewGuid().ToString(); 'X-Requested-With' = 'XMLHttpRequest'; 'x-ms-correlation-id' = [guid]::NewGuid() } | Select-Object -ExpandProperty NeverExpire
     Log-request -API "BestPracticeAnalyser" -tenant $tenant -message "Passwords never expire setting on $($tenant). $($Result.DoNotExpirePasswords)" -sev "Debug"
 }
 catch {
@@ -240,7 +245,7 @@ try {
         'X-Requested-With'       = 'XMLHttpRequest' 
     }
 
-    $WhiteListedSKUs = "FLOW_FREE", "TEAMS_EXPLORATORY", "TEAMS_COMMERCIAL_TRIAL", "POWERAPPS_VIRAL", "POWER_BI_STANDARD"
+    $WhiteListedSKUs = "FLOW_FREE", "TEAMS_EXPLORATORY", "TEAMS_COMMERCIAL_TRIAL", "POWERAPPS_VIRAL", "POWER_BI_STANDARD", "DYN365_ENTERPRISE_P1_IW"
     $UnusedLicenses = $LicenseUsage | Where-Object { ($_.Purchased -ne $_.Consumed) -and ($WhiteListedSKUs -notcontains $_.AccountSkuId.SkuPartNumber) }
     $UnusedLicensesCount = $UnusedLicenses | Measure-Object | Select-Object -ExpandProperty Count
     $UnusedLicensesResult = if ($UnusedLicensesCount -gt 0) { "FAIL" } else { "PASS" }
@@ -253,6 +258,18 @@ try {
 }
 catch {
     Log-request -API "BestPracticeAnalyser" -tenant $tenant -message "Unused Licenses on $($tenant). Error: $($_.exception.message)" -sev "Error"
+}
+
+# Get Secure Score
+try {
+    $SecureScore = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/security/secureScores?`$top=1" -tenantid $tenant -noPagination $true
+    $Result.SecureScoreCurrent = $SecureScore.currentScore
+    $Result.SecureScoreMax = $SecureScore.maxScore
+    $Result.SecureScorePercentage = [int](($SecureScore.currentScore / $SecureScore.maxScore) * 100)
+    Log-request -API "BestPracticeAnalyser" -tenant $tenant -message "Secure Score on $($tenant) is $($Result.SecureScoreCurrent) / $($Result.SecureScoreMax)" -sev "Debug"
+}
+catch {
+    Log-request -API "BestPracticeAnalyser" -tenant $tenant -message "Secure Score Retrieval on $($tenant). Error: $($_.exception.message)" -sev "Error" 
 }
 
 

@@ -22,11 +22,27 @@ $GraphRequest = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/users
     $_
 }
 
+if ($userid) {
+    $uri = "https://login.microsoftonline.com/$($TenantFilter)/oauth2/token"
+    $body = "resource=https://admin.microsoft.com&grant_type=refresh_token&refresh_token=$($ENV:ExchangeRefreshToken)"
+    $token = Invoke-RestMethod $uri -Body $body -ContentType "application/x-www-form-urlencoded" -ErrorAction SilentlyContinue -Method post
+    $LastSignIn = Invoke-RestMethod -ContentType "application/json;charset=UTF-8" -Uri "https://admin.microsoft.com/admin/api/users/$($userid)/lastSignInInfo" -Method GET -Headers @{
+        Authorization            = "Bearer $($token.access_token)";
+        "x-ms-client-request-id" = [guid]::NewGuid().ToString();
+        "x-ms-client-session-id" = [guid]::NewGuid().ToString()
+        'x-ms-correlation-id'    = [guid]::NewGuid()
+        'X-Requested-With'       = 'XMLHttpRequest' 
+    }
+    $GraphRequest = $GraphRequest | Select-Object *, 
+    @{ Name = 'LastSigninApplication'; Expression = { $LastSignIn.AppDisplayName } },
+    @{ Name = 'LastSigninDate'; Expression = { $LastSignIn.CreatedDateTime.value } },
+    @{ Name = 'LastSigninStatus'; Expression = { $LastSignIn.Status.AdditionalDetails } },
+    @{ Name = 'LastSigninResult'; Expression = { if ($LastSignIn.Status.ErrorCode -eq 0) { "Success" } else { "Failure" } } }, 
+    @{ Name = 'LastSigninFailureReason'; Expression = { if ($LastSignIn.Status.ErrorCode -eq 0) { "Sucessfully signed in" } else { $LastSignIn.status.FailureReason } } }
+}
 
 # Associate values to output bindings by calling 'Push-OutputBinding'.
 Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
         StatusCode = [HttpStatusCode]::OK
         Body       = @($GraphRequest)
     })
-
-#@{ Name = 'LicJoined'; Expression = { ($_.assignedLicenses | ForEach-Object { convert-skuname -skuID $_.skuid }) -join ", " } }, @{ Name = 'Aliasses'; Expression = { $_.Proxyaddresses -join ", " } }, @{ Name = 'primDomain'; Expression = { $_.userPrincipalName -split "@" | Select-Object -Last 1 } }

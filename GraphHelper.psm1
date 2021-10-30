@@ -47,7 +47,7 @@ function Log-Request ($message, $tenant, $API, $user, $sev) {
     $LogMutex.ReleaseMutex()
 }
 
-function New-GraphGetRequest ($uri, $tenantid, $scope, $AsApp) {
+function New-GraphGetRequest ($uri, $tenantid, $scope, $AsApp, $noPagination) {
     $TenantList = Get-Content 'Tenants.cache.json'  -ErrorAction SilentlyContinue | ConvertFrom-Json
     $Skiplist = Get-Content "ExcludedTenants" | ConvertFrom-Csv -Delimiter "|" -Header "Name", "User", "Date"
 
@@ -68,7 +68,7 @@ function New-GraphGetRequest ($uri, $tenantid, $scope, $AsApp) {
             try {
                 $Data = (Invoke-RestMethod -Uri $nextURL -Method GET -Headers $headers -ContentType "application/json; charset=utf-8")
                 if ($data.value) { $data.value } else { ($Data) }
-                $nextURL = $data.'@odata.nextLink'
+                if ($noPagination) { $nextURL = $null } else { $nextURL = $data.'@odata.nextLink'}                
             }
             catch {
                 $Message = ($_.ErrorDetails.Message | ConvertFrom-Json).error.message

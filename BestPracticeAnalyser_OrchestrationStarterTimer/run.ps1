@@ -1,6 +1,5 @@
-using namespace System.Net
+param($Timer)
 
-param($Request, $TriggerMetadata)
 $CurrentlyRunning = Get-Item "Cache_BestPracticeAnalyser\CurrentlyRunning.txt" -ErrorAction SilentlyContinue | Where-Object -Property LastWriteTime -GT (Get-Date).AddHours(-24)
 if ($CurrentlyRunning) {
     $Results = [pscustomobject]@{"Results" = "Already running. Please wait for the current instance to finish" }
@@ -14,9 +13,3 @@ else {
     $Results = [pscustomobject]@{"Results" = "Started running analysis" }
 }
 Write-Host ($Orchestrator | ConvertTo-Json)
-
-
-Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
-        StatusCode = [HttpStatusCode]::OK
-        Body       = $results
-    })

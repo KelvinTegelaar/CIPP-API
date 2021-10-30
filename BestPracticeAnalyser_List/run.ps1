@@ -11,7 +11,12 @@ Log-Request -user $request.headers.'x-ms-client-principal' -API $APINAME  -messa
 Write-Host "PowerShell HTTP trigger function processed a request."
 
 # Get all the things
-$Results = Get-ChildItem ".\Cache_BestPracticeAnalyser\*.json" | ForEach-Object{Get-Content $_.FullName | Out-String | ConvertFrom-Json}
+$UnfilteredResults = Get-ChildItem ".\Cache_BestPracticeAnalyser\*.json" | ForEach-Object{Get-Content $_.FullName | Out-String | ConvertFrom-Json}
+
+# Need to apply exclusion logic
+$Skiplist = Get-Content "ExcludedTenants" | ConvertFrom-Csv -Delimiter "|" -Header "Name", "User", "Date"
+
+$Results = $UnfilteredResults | Where-Object {$_.Tenant -notin $Skiplist.Name}
 
 # Associate values to output bindings by calling 'Push-OutputBinding'.
 Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
