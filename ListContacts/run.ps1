@@ -6,7 +6,7 @@ param($Request, $TriggerMetadata)
 $APIName = $TriggerMetadata.FunctionName
 Log-Request -user $request.headers.'x-ms-client-principal' -API $APINAME  -message "Accessed this API" -Sev "Debug"
 
-$selectlist = "id", "companyName","department","displayName","proxyAddresses","givenName","jobTitle","mail","mailNickname","onPremisesLastSyncDateTime","onPremisesSyncEnabled","surname","phones","addresses", "Aliasses"
+$selectlist = "id", "companyName","department","displayName","proxyAddresses","givenName","jobTitle","mail","mailNickname","onPremisesLastSyncDateTime","onPremisesSyncEnabled","surname","phones","addresses", "Aliasses","WorkPhone", "FaxPhone", "MobilePhone", "OfficePhone"
 
 # Write to the Azure Functions log stream.
 Write-Host "PowerShell HTTP trigger function processed a request."
@@ -14,12 +14,17 @@ Write-Host "PowerShell HTTP trigger function processed a request."
 
 # Interact with query parameters or the body of the request.
 $TenantFilter = $Request.Query.TenantFilter
+$ContactID = $Request.Query.ContactID
 
 Write-Host "Tenant Filter: $TenantFilter"
 
-$GraphRequest = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/contacts/?`$top=999&`$select=$($selectlist -join ',')" -tenantid $TenantFilter | ForEach-Object {
+$GraphRequest = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/contacts/$($ContactID)?`$top=999&" -tenantid $TenantFilter | Select-Object $selectlist | ForEach-Object {
     $_.onPremisesSyncEnabled = [bool]($_.onPremisesSyncEnabled)
     $_.Aliasses = $_.Proxyaddresses -join ", "
+    $_.WorkPhone = ($_.phones | where-object {$_.type -eq 'business'}).number
+    $_.FaxPhone = ($_.phones | where-object {$_.type -eq 'businessFax'}).number
+    $_.MobilePhone = ($_.phones | where-object {$_.type -eq 'mobile'}).number
+    $_.OfficePhone = $_.addresses[0].officeLocation
     $_
 }
 
