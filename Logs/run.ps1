@@ -7,7 +7,7 @@ $APIName = $TriggerMetadata.FunctionName
 Log-Request -user $request.headers.'x-ms-client-principal' -API $APINAME  -message "Accessed this API" -Sev "Debug"
 
 
-$LogLevel = if ($Request.Query.LogLevel) { ($Request.query.Loglevel).split(',') } else { "Info", "Warn", "Error", "Critical" }
+$LogLevel = if ($Request.Query.Severity) { ($Request.query.Severity).split(',') } else { "Info", "Warn", "Error", "Critical" }
 # Write to the Azure Functions log stream.
 Write-Host "PowerShell HTTP trigger function processed a request."
 # Interact with query parameters or the body of the request.
