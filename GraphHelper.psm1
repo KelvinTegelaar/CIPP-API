@@ -146,8 +146,6 @@ function New-ClassicAPIPostRequest($TenantID, $Uri, $Method = 'POST', $Resource 
 
     $token = Get-ClassicAPIToken -Tenant $tenantID -Resource $Resource
 
-    Write-Host "$($Body | ConvertTo-Json -depth 100)"
-
     if ((Get-AuthorisedRequest -Uri $uri -TenantID $tenantid)) {
         try {
             $ReturnedData = Invoke-RestMethod -ContentType "application/json;charset=UTF-8" -Uri $Uri -Method $Method -Body $Body -Headers @{
@@ -215,4 +213,12 @@ function Get-Tenants {
     } else {
         return $Script:IncludedTenantsCache
     }
+}
+
+function Remove-CIPPCache {
+    Remove-Item 'tenants.cache.json' -Force
+    Get-ChildItem -Path "Cache_BestPracticeAnalyser" -Filter *.json | Remove-Item -Force -ErrorAction SilentlyContinue
+    Remove-Variable -scope Script -name "SkipListCache"
+    Remove-Variable -scope Script -name "SkipListCacheEmpty"
+    Remove-Variable -scope Script -name "IncludedTenantsCache"
 }

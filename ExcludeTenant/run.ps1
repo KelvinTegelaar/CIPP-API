@@ -34,11 +34,16 @@ try {
         Log-Request -API $APINAME -tenant $($name) -user $request.headers.'x-ms-client-principal'   -message "Removed exclusion for customer $($name)" -Sev "Info"
         $body = [pscustomobject]@{"Results" = "Success. We've removed $name from the excluded tenants." }
     }
+
+    Remove-CIPPCache
+    
 }
 catch {
     Log-Request -API $APINAME -tenant $($name) -user $request.headers.'x-ms-client-principal'   -message "Exclusion API failed. $($_.Exception.Message)" -Sev "Error"
     $body = [pscustomobject]@{"Results" = "Failed. $($_.Exception.Message)" }
 }
+
+
 
 # Associate values to output bindings by calling 'Push-OutputBinding'.
 Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{

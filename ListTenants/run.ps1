@@ -14,8 +14,7 @@ $cachefile = 'tenants.cache.json'
 
 # Clear Cache
 if ($request.Query.ClearCache -eq "true") {
-    Remove-Item $cachefile -Force
-    Get-ChildItem -Path "Cache_BestPracticeAnalyser" -Filter *.json | Remove-Item -Force -ErrorAction SilentlyContinue
+    Remove-CIPPCache
     $GraphRequest = [pscustomobject]@{"Results" = "Successfully completed request." }
     Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
             StatusCode = [HttpStatusCode]::OK
