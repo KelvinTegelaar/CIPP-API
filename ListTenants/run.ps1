@@ -6,12 +6,6 @@ param($Request, $TriggerMetadata)
 $APIName = $TriggerMetadata.FunctionName
 Log-Request -user $request.headers.'x-ms-client-principal' -API $APINAME  -message "Accessed this API" -Sev "Debug"
 
-# We create the excluded tenants file. This is not set to force so will not overwrite
-New-Item -ErrorAction SilentlyContinue -ItemType File -Path "ExcludedTenants"
-
-# Set cache locations
-$cachefile = 'tenants.cache.json'
-
 # Clear Cache
 if ($request.Query.ClearCache -eq "true") {
     Remove-CIPPCache
