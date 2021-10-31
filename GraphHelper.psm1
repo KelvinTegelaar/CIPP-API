@@ -56,7 +56,7 @@ function New-GraphGetRequest ($uri, $tenantid, $scope, $AsApp, $noPagination) {
     }
     Write-Verbose "Using $($uri) as url"
     $nextURL = $uri
-    #not a fan of this, have to reconsider and change. Seperate function?
+    
     if ((Get-AuthorisedRequest -Uri $uri -TenantID $tenantid)) {
         $ReturnedData = do {
             try {
@@ -82,7 +82,7 @@ function New-GraphPOSTRequest ($uri, $tenantid, $body, $type, $scope, $AsApp) {
     if (!$type) {
         $type = 'POST'
     }
-    #not a fan of this, have to reconsider and change. Seperate function?
+   
     if ((Get-AuthorisedRequest -Uri $uri -TenantID $tenantid)) {
         try {
             $ReturnedData = (Invoke-RestMethod -Uri $($uri) -Method $TYPE -Body $body -Headers $headers -ContentType "application/json; charset=utf-8")
@@ -119,24 +119,52 @@ function New-ClassicAPIGetRequest($TenantID, $Uri, $Method = 'GET', $Resource = 
     $token = Get-ClassicAPIToken -Tenant $tenantID -Resource $Resource
 
     $NextURL = $Uri
+    
+    if ((Get-AuthorisedRequest -Uri $uri -TenantID $tenantid)) {
+        $ReturnedData = do {
+            try {
+                $Data = Invoke-RestMethod -ContentType "application/json;charset=UTF-8" -Uri $NextURL -Method $Method -Headers @{
+                    Authorization            = "Bearer $($token.access_token)";
+                    "x-ms-client-request-id" = [guid]::NewGuid().ToString();
+                    "x-ms-client-session-id" = [guid]::NewGuid().ToString()
+                    'x-ms-correlation-id'    = [guid]::NewGuid()
+                    'X-Requested-With'       = 'XMLHttpRequest' 
+                } 
+                $Data
+                if ($noPagination) { $nextURL = $null } else { $nextURL = $data.NextLink }            
+            } catch {
+                throw "Failed to make Classic Get Request $_"
+            }
+        } until ($null -eq $NextURL)
+        return $ReturnedData
+    } else {
+        Write-Error "Not allowed. You cannot manage your own tenant or tenants not under your scope" 
+    }
+}
 
-    $ReturnedData = do {
+function New-ClassicAPIPostRequest($TenantID, $Uri, $Method = 'POST', $Resource = 'https://admin.microsoft.com', $Body) {
+
+    $token = Get-ClassicAPIToken -Tenant $tenantID -Resource $Resource
+
+    Write-Host "$($Body | ConvertTo-Json -depth 100)"
+
+    if ((Get-AuthorisedRequest -Uri $uri -TenantID $tenantid)) {
         try {
-            $Data = Invoke-RestMethod -ContentType "application/json;charset=UTF-8" -Uri $NextURL -Method $Method -Headers @{
+            $ReturnedData = Invoke-RestMethod -ContentType "application/json;charset=UTF-8" -Uri $Uri -Method $Method -Body $Body -Headers @{
                 Authorization            = "Bearer $($token.access_token)";
                 "x-ms-client-request-id" = [guid]::NewGuid().ToString();
                 "x-ms-client-session-id" = [guid]::NewGuid().ToString()
                 'x-ms-correlation-id'    = [guid]::NewGuid()
                 'X-Requested-With'       = 'XMLHttpRequest' 
             } 
-            $Data
-            if ($noPagination) { $nextURL = $null } else { $nextURL = $data.NextLink }            
+                       
         } catch {
             throw "Failed to make Classic Get Request $_"
         }
-    } until ($null -eq $NextURL)
-    return $ReturnedData
-
+        return $ReturnedData
+    } else {
+        Write-Error "Not allowed. You cannot manage your own tenant or tenants not under your scope" 
+    }
 }
 
 function Get-AuthorisedRequest($TenantID, $Uri) {
@@ -163,20 +191,16 @@ function Get-Tenants {
     $cachefile = 'tenants.cache.json'
     
     if ((!$Script:SkipListCache -and !$Script:SkipListCacheEmpty) -or !$Script:IncludedTenantsCache) {
-        Write-Host "Read File System"
         $Script:SkipListCache = Get-Content "ExcludedTenants" | ConvertFrom-Csv -Delimiter "|" -Header "Name", "User", "Date"
         if ($null -eq $Script:SkipListCache) {
-            Write-Host "Setting Empty Var"
             $Script:SkipListCacheEmpty = $true
         }
 
         # Load or refresh the cache if older than 24 hours
         $Testfile = Get-Item $cachefile -ErrorAction SilentlyContinue | Where-Object -Property LastWriteTime -GT (Get-Date).Addhours(-24)
         if ($Testfile) {
-            Write-Host "Reading Cache"
             $Script:IncludedTenantsCache = Get-Content $cachefile  -ErrorAction SilentlyContinue | ConvertFrom-Json
         } else {
-            Write-Host "Updating Cache"
             $Script:IncludedTenantsCache = (New-GraphGetRequest -uri "https://graph.microsoft.com/beta/contracts?`$top=999" -tenantid $ENV:Tenantid) | Select-Object CustomerID, DefaultdomainName, DisplayName, domains | Where-Object -Property DefaultdomainName -NotIn $Script:SkipListCache.name
             if ($Script:IncludedTenantsCache) {
                 $Script:IncludedTenantsCache | ConvertTo-Json | Out-File $cachefile
@@ -184,14 +208,11 @@ function Get-Tenants {
         }    
     }
     if ($SkipList) {
-        Write-Host "Returning Skip List"
         return $Script:SkipListCache
     }
     if ($IncludeAll) {
-        Write-Host "Returning All"
         return (New-GraphGetRequest -uri "https://graph.microsoft.com/beta/contracts?`$top=999" -tenantid $ENV:Tenantid) | Select-Object CustomerID, DefaultdomainName, DisplayName, domains
     } else {
-        Write-Host "Returnning Filtered"
         return $Script:IncludedTenantsCache
     }
 }
