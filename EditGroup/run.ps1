@@ -50,7 +50,8 @@ try {
     if ($AddOwners) {
         $AddOwners | ForEach-Object { 
             $ID = "https://graph.microsoft.com/beta/users/" + (New-GraphGetRequest -uri "https://graph.microsoft.com/beta/users/$($_)" -tenantid $Userobj.tenantid).id
-            $AddOwner = New-GraphPostRequest -uri "https://graph.microsoft.com/beta/groups/$($userobj.groupid)" -tenantid $Userobj.tenantid -type patch -body '{"@odata.id": "'+ $ID +'"}' -Verbose
+            Write-Host $ID
+            $AddOwner = New-GraphPostRequest -uri "https://graph.microsoft.com/beta/groups/$($userobj.groupid)/owners/`$ref" -tenantid $Userobj.tenantid -type POST -body ('{"@odata.id": "' + $ID + '"}')
             Log-Request -API $APINAME -tenant $Userobj.tenantid -user $request.headers.'x-ms-client-principal'  -message "Added owner $_ to $($userobj.displayname) group" -Sev "Info"
             $body = $results.add("Success. $_ has been added")
     
