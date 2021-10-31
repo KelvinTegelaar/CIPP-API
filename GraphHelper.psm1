@@ -189,6 +189,8 @@ function Get-Tenants {
     $cachefile = 'tenants.cache.json'
     
     if ((!$Script:SkipListCache -and !$Script:SkipListCacheEmpty) -or !$Script:IncludedTenantsCache) {
+        # We create the excluded tenants file. This is not set to force so will not overwrite
+        New-Item -ErrorAction SilentlyContinue -ItemType File -Path "ExcludedTenants"
         $Script:SkipListCache = Get-Content "ExcludedTenants" | ConvertFrom-Csv -Delimiter "|" -Header "Name", "User", "Date"
         if ($null -eq $Script:SkipListCache) {
             $Script:SkipListCacheEmpty = $true
