@@ -23,7 +23,8 @@ try {
     $name = $Request.Query.TenantFilter
     if ($Request.Query.AddExclusion) {
         Add-Content -Value "$($name)|$($username)|$($date)" -Path "ExcludedTenants"
-        Log-Request -API $APINAME -tenant $($name) -user $request.headers.'x-ms-client-principal'   -message "Added exclusion for customer $($name)" -Sev "Info"
+        Remove-CIPPCache
+        Log-Request -API $APINAME -tenant $($name) -user $request.headers.'x-ms-client-principal'   -message "Added exclusion for customer $($name)" -Sev "Info" 
         $body = [pscustomobject]@{"Results" = "Success. We've added $name to the excluded tenants." }
     }
 
@@ -31,12 +32,12 @@ try {
         $Content = [System.IO.File]::ReadAllLines("ExcludedTenants")
         $Content = $Content -replace $name, ''
         $Content | Set-Content -Path "ExcludedTenants"
+        Remove-CIPPCache
         Log-Request -API $APINAME -tenant $($name) -user $request.headers.'x-ms-client-principal'   -message "Removed exclusion for customer $($name)" -Sev "Info"
         $body = [pscustomobject]@{"Results" = "Success. We've removed $name from the excluded tenants." }
     }
 
-    Remove-CIPPCache
-    
+
 }
 catch {
     Log-Request -API $APINAME -tenant $($name) -user $request.headers.'x-ms-client-principal'   -message "Exclusion API failed. $($_.Exception.Message)" -Sev "Error"
