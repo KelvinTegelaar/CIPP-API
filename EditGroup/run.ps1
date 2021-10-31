@@ -26,7 +26,7 @@ try {
 }
 catch {
     Log-Request -user $request.headers.'x-ms-client-principal'   -message "Add member API failed. $($_.Exception.Message)" -Sev "Error"
-    $body = $results.add("Succesfully added the users $AddMembers to $($userobj.Groupid) $($_.Exception.Message)")
+    $body = $results.add("Failed to add $AddMembers to $($userobj.Groupid) $($_.Exception.Message)")
 }
 
 $RemoveMembers = ($userobj.Removemember).Split([Environment]::NewLine)
@@ -61,7 +61,7 @@ try {
 }
 catch {
     Log-Request -user $request.headers.'x-ms-client-principal'   -message "Add member API failed. $($_.Exception.Message)" -Sev "Error"
-    $body = $results.add("Succesfully added the users $AddMembers to $($userobj.Groupid) $($_.Exception.Message)")
+    $body = $results.add("Failed to add $AddMembers to $($userobj.Groupid) $($_.Exception.Message)")
 }
 
 $RemoveOwners = ($userobj.RemoveOwner).Split([Environment]::NewLine)
