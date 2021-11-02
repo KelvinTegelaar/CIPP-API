@@ -8,13 +8,13 @@ $ParallelTasks = foreach ($Item in $Batch) {
 }
 
 $Outputs = Wait-ActivityFunction -Task $ParallelTasks
-Log-request -API "DomainAnalyser" -tenant $tenant -message "Outputs found count = $($Outputs.count) and $($Outputs | ft)" -sev Info
+Log-request -API "DomainAnalyser" -tenant $tenant -message "Outputs found count = $($Outputs.count)" -sev Info
 
 foreach ($item in $Outputs) {
   Write-Host $Item | Out-String
   $Object = $Item | ConvertTo-Json
 
-  Set-Content "Cache_DomainAnalyser\$($item.tenant).DomainAnalysis.json" -Value $Object -Force
+  Set-Content "Cache_DomainAnalyser\$($item.domain).DomainAnalysis.json" -Value $Object -Force
 }
 
 Log-request  -API "DomainAnalyser" -tenant $tenant -message "Domain Analyser has Finished" -sev Info
