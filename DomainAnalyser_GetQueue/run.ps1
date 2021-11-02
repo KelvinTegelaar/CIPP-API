@@ -1,11 +1,10 @@
 param($name)
 
-$Skiplist = (Get-Content ExcludedTenants -ErrorAction SilentlyContinue | ConvertFrom-Csv -Delimiter "|" -Header "name", "date", "user").name
-$Tenants = Get-Content ".\tenants.cache.json" | ConvertFrom-Json | Where-Object { $Skiplist -notcontains $_.defaultDomainName }
+$Tenants = Get-Tenants
 
 $object = foreach ($Tenant in $Tenants) {
     # Get Domains to Lookup
-    $Domains = New-GraphGetRequest -uri "https://graph.microsoft.com/v1.0/domains" -tenantid $Tenant.defaultDomainName | Where-Object { $_.id -notlike '*.onmicrosoft.com' }
+    $Domains = New-GraphGetRequest -uri "https://graph.microsoft.com/v1.0/domains" -tenantid $Tenant.defaultDomainName | Where-Object { ($_.id -notlike '*.onmicrosoft.com') -and ($_.supportedServices -contains 'Email')}
     foreach ($d in $domains) {
         [PSCustomObject]@{
             Tenant             = $Tenant.defaultDomainName

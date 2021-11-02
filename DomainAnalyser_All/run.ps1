@@ -76,6 +76,8 @@ $Result = [PSCustomObject]@{
     MailProvider         = ""
     DKIMEnabled          = ""
     Score                = ""
+    MaximumScore         = 160
+    ScorePercentage      = ""
     ScoreExplanation     = ""
 }
 
@@ -93,7 +95,6 @@ $Scores = [PSCustomObject]@{
     DKIMActiveAndWorking = 20
 }
 
-$MaxPossibleScore = 140
 $ScoreDomain = 0
 # Setup Score Explanation
 [System.Collections.ArrayList]$ScoreExplanation = @()
@@ -132,6 +133,7 @@ If (($SPFMatch | Measure-Object | Select-Object -ExpandProperty Count) -gt 0) {
     }
     else {
         $Result.SPFPassAll = $false
+        $ScoreExplanation.Add("SPF Record is not set to hard Fail") | Out-Null 
     }
 }
 else {
@@ -187,18 +189,18 @@ try {
         $ScoreDomain += $Scores.DMARCPresent
 
         $Result.DMARCFullPolicy = $DMARCResults.data
+        if (($Result.DMARCFullPolicy.replace(' ', '') -like '*;p=reject*')) { 
+            $Result.DMARCActionPolicy = "Reject"
+            $ScoreDomain += $Scores.DMARCSetReject
+        }
         if ($Result.DMARCFullPolicy -like '*p=n*') { 
             $Result.DMARCActionPolicy = "None"
             $ScoreExplanation.Add("DMARC is not being enforced") | Out-Null 
         }
-        if ($Result.DMARCFullPolicy -like '*p=q*') {
+        if ($Result.DMARCFullPolicy -like '*p=qua*') {
             $Result.DMARCActionPolicy = "Quarantine"
             $ScoreDomain += $Scores.DMARCSetQuarantine
             $ScoreExplanation.Add("DMARC Partially Enforced with quarantine") | Out-Null
-        }
-        if ($Result.DMARCFullPolicy -like '*p=r*') { 
-            $Result.DMARCActionPolicy = "Reject"
-            $ScoreDomain += $Scores.DMARCSetReject
         }
         if (($Result.DMARCFullPolicy -like '*rua*') -or ($Result.DMARCHFullPolicy -like '*ruf*')) {
             $Result.DMARCReportingActive = $true
@@ -262,7 +264,6 @@ try {
     }
 
     if ($Result.MailProvider -ne 'Unknown') {
-        Log-Request -API "DomainAnalyser" -tenant $tenant.tenant -message "This is $($domain) with DKIM Selector of $($DKIMSelector)"
         $DKIMResult = Get-GoogleDNSQuery -Domain $DKIMSelector -RecordType "TXT"
         if ($DKIMResult.Data -like '*v=DKIM1*') {
             $Result.DKIMEnabled = $true
@@ -280,9 +281,10 @@ catch {
 }
 # Final Score
 $Result.Score = $ScoreDomain
+$Result.ScorePercentage = [int](($Result.Score / $Result.MaximumScore)*100)
 $Result.ScoreExplanation = ($ScoreExplanation) -join ", "
 
 # Final Write to Output
-Log-request -API "DomainAnalyser" -tenant $tenant.tenant -message "DNS Analyser Finished with an output of $($Final.Count) result(s)" -sev Info
+Log-request -API "DomainAnalyser" -tenant $tenant.tenant -message "DNS Analyser Finished For $($Result.Domain)" -sev Info
 Write-Output $Result
 
