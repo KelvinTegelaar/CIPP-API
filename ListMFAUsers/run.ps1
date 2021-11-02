@@ -23,29 +23,41 @@ $MSOLXML = @"
 "@
 $Users = (Invoke-RestMethod -Uri "https://provisioningapi.microsoftonline.com/provisioningwebservice.svc" -Method post -Body $MSOLXML -ContentType 'application/soap+xml; charset=utf-8').envelope.body.ListUsersResponse.listusersresult.returnvalue.results.user
 $SecureDefaultsState = (New-GraphGetRequest -Uri "https://graph.microsoft.com/beta/policies/identitySecurityDefaultsEnforcementPolicy" -tenantid $Request.query.TenantFilter ).IsEnabled
-$CAPolicies = (New-GraphGetRequest -Uri "https://graph.microsoft.com/beta/identity/conditionalAccess/policies" -tenantid $Request.query.TenantFilter )
-$CAState = foreach ($Policy in $CAPolicies) {
-    if ($policy.grantControls.builtincontrols -ne 'mfa') { continue }
-    if ($Policy.conditions.applications.includeApplications -ne "All") {
-        Write-Host $Policy.conditions.applications.includeApplications
-        "Specific Applications"
-        continue
+try {
+    $CAPolicies = (New-GraphGetRequest -Uri "https://graph.microsoft.com/beta/identity/conditionalAccess/policies" -tenantid $Request.query.TenantFilter )
+    $CAState = foreach ($Policy in $CAPolicies) {
+        if ($policy.grantControls.builtincontrols -ne 'mfa') { continue }
+        if ($Policy.conditions.applications.includeApplications -ne "All") {
+            Write-Host $Policy.conditions.applications.includeApplications
+            "Specific Applications"
+            continue
+        }
+        if ($Policy.conditions.users.includeUsers -eq "All") {
+            'All Users'
+            continue
+        }        
     }
-    if ($Policy.conditions.users.includeUsers -eq "All") {
-        'All Users'
-        continue
-    }        
+}
+catch {
+    $CAState = $null
 }
 if (!$CAState) { $CAState = "None" }
-$MFARegistration = (New-GraphGetRequest -uri "https://graph.microsoft.com/beta/reports/credentialUserRegistrationDetails" -tenantid $Request.query.TenantFilter)
-
+Try {
+    $MFARegistration = (New-GraphGetRequest -uri "https://graph.microsoft.com/beta/reports/credentialUserRegistrationDetails" -tenantid $Request.query.TenantFilter)
+}
+catch {
+    $MFARegistration = $null
+}
 # Interact with query parameters or the body of the request.
 $GraphRequest = $Users | ForEach-Object {
     
     $PerUser = if ($_.StrongAuthenticationRequirements.StrongAuthenticationRequirement.state -ne $null) { $_.StrongAuthenticationRequirements.StrongAuthenticationRequirement.state } else { "Disabled" }
+    $AccountState = if ($_.BlockCredential -eq $true) { $false } else { $true }
+
     $MFARegUser = if (($MFARegistration | Where-Object -Property UserPrincipalName -EQ $_.UserPrincipalName).IsMFARegistered -eq $null) { $false } else { ($MFARegistration | Where-Object -Property UserPrincipalName -EQ $_.UserPrincipalName).IsMFARegistered }
     [PSCustomObject]@{
         UPN             = $_.UserPrincipalName
+        AccountEnabled  = $AccountState
         PerUser         = $PerUser
         MFARegistration = $MFARegUser
         CoveredByCA     = ($CAState -join ", ")
