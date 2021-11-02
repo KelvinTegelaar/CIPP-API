@@ -220,6 +220,7 @@ function Get-Tenants {
 function Remove-CIPPCache {
     Remove-Item 'tenants.cache.json' -Force
     Get-ChildItem -Path "Cache_BestPracticeAnalyser" -Filter *.json | Remove-Item -Force -ErrorAction SilentlyContinue
+    Get-ChildItem -Path "Cache_DomainAnalyser" -Filter *.json | Remove-Item -Force -ErrorAction SilentlyContinue
     $Script:SkipListCache = $Null
     $Script:SkipListCacheEmpty = $Null
     $Script:IncludedTenantsCache = $Null
