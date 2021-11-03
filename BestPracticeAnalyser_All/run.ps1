@@ -50,8 +50,7 @@ $Result = [PSCustomObject]@{
 }
 
 # Starting the Best Practice Analyser
-Log-request -API "BestPracticeAnalyser" -tenant $tenant -message "Started Best Practice Analyser Durable Function on $($tenant)" -sev "Info"
-
+    
 # Get the Secure Default State
 try {
     $SecureDefaultsState = (New-GraphGetRequest -Uri "https://graph.microsoft.com/beta/policies/identitySecurityDefaultsEnforcementPolicy" -tenantid $tenant)
