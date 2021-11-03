@@ -28,7 +28,7 @@ Static Web App (Role Management): https://portal.azure.com/#@limenetworks.nl/res
 "@
 
 
-$body = @{Result = $Results } 
+$body = @{Results = $Results } 
 
 # Associate values to output bindings by calling 'Push-OutputBinding'.
 Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
