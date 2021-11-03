@@ -74,21 +74,21 @@ catch {
     $results.add( "Succesfully edit user. The password is $password. We've failed to assign the license. $($_.Exception.Message)")
 }
 
-#Add aliasses, removal currently not supported.
+#Add Aliases, removal currently not supported.
 try {
-    if ($aliasses) {
-        foreach ($Alias in $aliasses) {
+    if ($Aliases) {
+        foreach ($Alias in $Aliases) {
             New-GraphPostRequest -uri "https://graph.microsoft.com/beta/users/$($userobj.Userid)" -tenantid $Userobj.tenantid -type "patch" -body "{`"mail`": `"$Alias`"}" -verbose
         }
         New-GraphPostRequest -uri "https://graph.microsoft.com/beta/users/$($userobj.Userid)" -tenantid $Userobj.tenantid -type "patch" -body "{`"mail`": `"$UserprincipalName`"}" -verbose
-        Log-Request -API $APINAME -tenant ($UserObj.tenantid) -user $request.headers.'x-ms-client-principal'   -message "Added aliasses to $($userobj.displayname) license $($licences)" -Sev "Info"
+        Log-Request -API $APINAME -tenant ($UserObj.tenantid) -user $request.headers.'x-ms-client-principal'   -message "Added Aliases to $($userobj.displayname) license $($licences)" -Sev "Info"
         $results.add( "Success. User has been edited")
     }
 
 }
 catch {
     Log-Request -API $APINAME -tenant ($UserObj.tenantid) -user $request.headers.'x-ms-client-principal'   -message "Alias API failed. $($_.Exception.Message)" -Sev "Error"
-    $results.add( "Succesfully edited user. The password is $password. We've failed to create the aliasses: $($_.Exception.Message)")
+    $results.add( "Succesfully edited user. The password is $password. We've failed to create the Aliases: $($_.Exception.Message)")
 }
 
 if ($Request.body.CopyFrom -ne "") {
