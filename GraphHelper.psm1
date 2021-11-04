@@ -51,7 +51,8 @@ function New-GraphGetRequest ($uri, $tenantid, $scope, $AsApp, $noPagination) {
 
     if ($scope -eq "ExchangeOnline") { 
         $Headers = Get-GraphToken -AppID 'a0c73c16-a7e3-4564-9a95-2bdf47383716' -RefreshToken $ENV:ExchangeRefreshToken -Scope 'https://outlook.office365.com/.default' -Tenantid $tenantid
-    } else {
+    }
+    else {
         $headers = Get-GraphToken -tenantid $tenantid -scope $scope -AsApp $asapp
     }
     Write-Verbose "Using $($uri) as url"
@@ -63,14 +64,16 @@ function New-GraphGetRequest ($uri, $tenantid, $scope, $AsApp, $noPagination) {
                 $Data = (Invoke-RestMethod -Uri $nextURL -Method GET -Headers $headers -ContentType "application/json; charset=utf-8")
                 if ($data.value) { $data.value } else { ($Data) }
                 if ($noPagination) { $nextURL = $null } else { $nextURL = $data.'@odata.nextLink' }                
-            } catch {
+            }
+            catch {
                 $Message = ($_.ErrorDetails.Message | ConvertFrom-Json).error.message
                 if ($Message -eq $null) { $Message = $($_.Exception.Message) }
                 throw $Message
             }
         } until ($null -eq $NextURL)
         return $ReturnedData   
-    } else {
+    }
+    else {
         Write-Error "Not allowed. You cannot manage your own tenant or tenants not under your scope" 
     }
 }       
@@ -86,14 +89,16 @@ function New-GraphPOSTRequest ($uri, $tenantid, $body, $type, $scope, $AsApp) {
     if ((Get-AuthorisedRequest -Uri $uri -TenantID $tenantid)) {
         try {
             $ReturnedData = (Invoke-RestMethod -Uri $($uri) -Method $TYPE -Body $body -Headers $headers -ContentType "application/json; charset=utf-8")
-        } catch {
+        }
+        catch {
             Write-Host ($_.ErrorDetails.Message | ConvertFrom-Json).error.message
             $Message = ($_.ErrorDetails.Message | ConvertFrom-Json).error.message
             if ($Message -eq $null) { $Message = $($_.Exception.Message) }
             throw $Message
         }
         return $ReturnedData 
-    } else {
+    }
+    else {
         Write-Error "Not allowed. You cannot manage your own tenant or tenants not under your scope" 
     }
 }
@@ -110,7 +115,8 @@ function Get-ClassicAPIToken($tenantID, $Resource) {
     try {
         $token = Invoke-RestMethod $uri -Body $body -ContentType "application/x-www-form-urlencoded" -ErrorAction SilentlyContinue -Method post
         return $token
-    } catch {
+    }
+    catch {
         Write-Error "Failed to obtain Classic API Token for $Tenant - $_"        
     }
 }
@@ -132,12 +138,14 @@ function New-ClassicAPIGetRequest($TenantID, $Uri, $Method = 'GET', $Resource = 
                 } 
                 $Data
                 if ($noPagination) { $nextURL = $null } else { $nextURL = $data.NextLink }            
-            } catch {
+            }
+            catch {
                 throw "Failed to make Classic Get Request $_"
             }
         } until ($null -eq $NextURL)
         return $ReturnedData
-    } else {
+    }
+    else {
         Write-Error "Not allowed. You cannot manage your own tenant or tenants not under your scope" 
     }
 }
@@ -156,11 +164,13 @@ function New-ClassicAPIPostRequest($TenantID, $Uri, $Method = 'POST', $Resource 
                 'X-Requested-With'       = 'XMLHttpRequest' 
             } 
                        
-        } catch {
+        }
+        catch {
             throw "Failed to make Classic Get Request $_"
         }
         return $ReturnedData
-    } else {
+    }
+    else {
         Write-Error "Not allowed. You cannot manage your own tenant or tenants not under your scope" 
     }
 }
@@ -171,7 +181,8 @@ function Get-AuthorisedRequest($TenantID, $Uri) {
     }
     if ($TenantID -in (Get-Tenants).defaultdomainname) {
         return $true
-    } else {
+    }
+    else {
         return $false
     }
 
@@ -200,7 +211,8 @@ function Get-Tenants {
         $Testfile = Get-Item $cachefile -ErrorAction SilentlyContinue | Where-Object -Property LastWriteTime -GT (Get-Date).Addhours(-24)
         if ($Testfile) {
             $Script:IncludedTenantsCache = Get-Content $cachefile  -ErrorAction SilentlyContinue | ConvertFrom-Json
-        } else {
+        }
+        else {
             $Script:IncludedTenantsCache = (New-GraphGetRequest -uri "https://graph.microsoft.com/beta/contracts?`$top=999" -tenantid $ENV:Tenantid) | Select-Object CustomerID, DefaultdomainName, DisplayName, domains | Where-Object -Property DefaultdomainName -NotIn $Script:SkipListCache.name
             if ($Script:IncludedTenantsCache) {
                 $Script:IncludedTenantsCache | ConvertTo-Json | Out-File $cachefile
@@ -212,7 +224,8 @@ function Get-Tenants {
     }
     if ($IncludeAll) {
         return (New-GraphGetRequest -uri "https://graph.microsoft.com/beta/contracts?`$top=999" -tenantid $ENV:Tenantid) | Select-Object CustomerID, DefaultdomainName, DisplayName, domains
-    } else {
+    }
+    else {
         return $Script:IncludedTenantsCache
     }
 }
@@ -225,3 +238,21 @@ function Remove-CIPPCache {
     $Script:SkipListCacheEmpty = $Null
     $Script:IncludedTenantsCache = $Null
 }
+
+function New-ExoRequest ($tenantid, $cmdlet, $cmdParams) {
+    $Headers = Get-GraphToken -AppID 'a0c73c16-a7e3-4564-9a95-2bdf47383716' -RefreshToken $ENV:ExchangeRefreshToken -Scope 'https://outlook.office365.com/.default' -Tenantid $tenantid 
+    if ((Get-AuthorisedRequest -TenantID $tenantid)) {
+        $tenant = (get-tenants | Where-Object -Property defaultDomainName -EQ $tenantid).customerid
+        $ExoBody = @{
+            CmdletInput = @{
+                CmdletName = $cmdlet
+                Parameters = @{}
+            }
+        } | ConvertTo-Json
+        $ReturnedData = Invoke-RestMethod "https://outlook.office365.com/adminapi/beta/$($tenant)/InvokeCommand" -Method POST -Body $ExoBody -Headers $Headers -ContentType "application/json; charset=utf-8"
+        return $ReturnedData.value   
+    }
+    else {
+        Write-Error "Not allowed. You cannot manage your own tenant or tenants not under your scope" 
+    }
+}  
