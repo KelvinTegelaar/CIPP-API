@@ -6,10 +6,21 @@ param($Request, $TriggerMetadata)
 $APIName = $TriggerMetadata.FunctionName
 Log-Request -user $request.headers.'x-ms-client-principal' -API $APINAME  -message "Accessed this API" -Sev "Debug"
 
-$Version = Get-Content "version_latest.txt"
+$APIVersion = Get-Content "version_latest.txt" | Out-String
+$CIPPVersion = $request.query.localversion
 
+$RemoteAPIVersion = Invoke-RestMethod -Uri "https://raw.githubusercontent.com/KelvinTegelaar/CIPP-API/master/version_latest.txt"
+$RemoteCIPPVersion = Invoke-RestMethod -Uri "https://raw.githubusercontent.com/KelvinTegelaar/CIPP/master/version_latest.txt"
+
+$version = [PSCustomObject]@{
+    LocalCIPPVersion     = $CIPPVersion
+    RemoteCIPPVersion    = $RemoteCIPPVersion
+    LocalCIPPAPIVersion  = $APIVersion
+    RemoteCIPPAPIVersion = $RemoteAPIVersion
+    OutOfDateCIPP        = ([version]$RemoteCIPPVersion -ge [version]$CIPPVersion)
+    OutOfDateCIPPAPI     = ([version]$RemoteAPIVersion -ge [version]$APIVersion)
+}
 # Write to the Azure Functions log stream.
-Write-Host "Version is $($Version)"
 
 # Associate values to output bindings by calling 'Push-OutputBinding'.
 Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
