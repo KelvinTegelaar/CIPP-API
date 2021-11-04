@@ -27,7 +27,7 @@ try {
             "password"                      = $password
         }
     } | ConvertTo-Json
-    $GraphRequest = New-GraphPostRequest -uri "https://graph.microsoft.com/beta/users" -tenantid $Userobj.tenantid-type POST -body $BodyToship  -verbose
+    $GraphRequest = New-GraphPostRequest -uri "https://graph.microsoft.com/beta/users" -tenantid $Userobj.tenantid -type POST -body $BodyToship  -verbose
     Log-Request -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $($userobj.tenantid)  -message "Created user $($userobj.displayname) with id $($GraphRequest.id) " -Sev "Info"
     $results.add("Created user.")
     $results.add("Username: $($UserprincipalName)")

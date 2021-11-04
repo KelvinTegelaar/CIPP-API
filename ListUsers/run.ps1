@@ -36,7 +36,7 @@ if ($userid) {
     }
     $GraphRequest = $GraphRequest | Select-Object *, 
     @{ Name = 'LastSigninApplication'; Expression = { $LastSignIn.AppDisplayName } },
-    @{ Name = 'LastSigninDate'; Expression = { $LastSignIn.CreatedDateTime.value } },
+    @{ Name = 'LastSigninDate'; Expression = { $($LastSignIn.CreatedDateTime | Out-String) } },
     @{ Name = 'LastSigninStatus'; Expression = { $LastSignIn.Status.AdditionalDetails } },
     @{ Name = 'LastSigninResult'; Expression = { if ($LastSignIn.Status.ErrorCode -eq 0) { "Success" } else { "Failure" } } }, 
     @{ Name = 'LastSigninFailureReason'; Expression = { if ($LastSignIn.Status.ErrorCode -eq 0) { "Sucessfully signed in" } else { $LastSignIn.status.FailureReason } } }
