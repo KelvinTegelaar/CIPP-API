@@ -16,11 +16,11 @@ $results = @"
 
 <a href="https://portal.azure.com/#@Go/resource/subscriptions/$Subscription/resourceGroups/$ENV:Website_Resource_Group/overview">Resource group</a><br>
 <a href="https://portal.azure.com/#@Go/resource/subscriptions/$Subscription/resourceGroups/$ENV:Website_Resource_Group/providers/Microsoft.KeyVault/vaults/$($ENV:WEBSITE_SITE_NAME)/secrets">Keyvault (Password storage)</a><br>
-<h1>Function app </h1><br><br>
+<br><br><h1>Function app </h1><br><br>
 <a href="https://portal.azure.com/#@Go/resource/subscriptions/$Subscription/resourceGroups/$ENV:Website_Resource_Group/providers/Microsoft.Web/sites/$($ENV:WEBSITE_SITE_NAME)/appServices">Function Application (Overview) </a><br>
 <a href="https://portal.azure.com/#@Go/resource/subscriptions/$Subscription/resourceGroups/$ENV:Website_Resource_Group/providers/Microsoft.Web/sites/$($ENV:WEBSITE_SITE_NAME)/configuration">Function Application (Configuration) </a><br>
 <a href="https://portal.azure.com/#@Go/resource/subscriptions/$Subscription/resourceGroups/$ENV:Website_Resource_Group/providers/Microsoft.Web/sites/$($ENV:WEBSITE_SITE_NAME)/vstscd">Function Application (Deployment Center)</a><br>
-<h1>Static Web App </h1><br><br>
+<br><br><h1>Static Web App </h1><br><br>
 <a href="https://portal.azure.com/#@Go/resource/subscriptions/$Subscription/resourceGroups/$ENV:Website_Resource_Group/providers/Microsoft.Web/staticSites/$SWAName/customDomains">Static Web App (Custom Domains)</a><br>
 <a href="https://portal.azure.com/#@Go/resource/subscriptions/$Subscription/resourceGroups/$ENV:Website_Resource_Group/providers/Microsoft.Web/staticSites/$SWAName/customDomains">Static Web App (Role Management)</a><br>
 
