@@ -5,4 +5,5 @@ chocoapps.cache
 *.log
 .vscode/
 Cache_BestPracticeAnalyser/
+Cache_DomainAnalyser/
 ExcludedTenants

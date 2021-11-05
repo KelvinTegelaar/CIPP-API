@@ -10,18 +10,15 @@ Log-Request -user $request.headers.'x-ms-client-principal' -API $APINAME  -messa
 # Write to the Azure Functions log stream.
 Write-Host "PowerShell HTTP trigger function processed a request."
 
-# Interact with query parameters or the body of the request.
-$TenantFilter = $Request.Query.TenantFilter
-if ($TenantFilter) {
-    $GraphRequest = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/users?`$top=999" -tenantid $TenantFilter
-}
-else {
-    $GraphRequest = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/users?`$top=999"
-}
+# Get all the things
+$UnfilteredResults = Get-ChildItem ".\Cache_DomainAnalyser\*.json" | ForEach-Object { Get-Content $_.FullName | Out-String | ConvertFrom-Json }
 
+# Need to apply exclusion logic
+$Skiplist = Get-Content "ExcludedTenants" | ConvertFrom-Csv -Delimiter "|" -Header "Name", "User", "Date"
+$Results = $UnfilteredResults | ForEach-Object { $_.GUID = $_.GUID -replace '[^a-zA-Z-]', ''; $_ } | Where-Object { $_.Tenant -notin $Skiplist.Name }
 
 # Associate values to output bindings by calling 'Push-OutputBinding'.
 Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
         StatusCode = [HttpStatusCode]::OK
-        Body       = $GraphRequest
+        Body       = @($Results)
     })

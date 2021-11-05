@@ -6,7 +6,7 @@ try {
     $credential = New-Object System.Management.Automation.PSCredential($upn, $tokenValue)
     $session = New-PSSession -ConfigurationName Microsoft.Exchange -ConnectionUri "https://ps.outlook.com/powershell-liveid?DelegatedOrg=$($Tenant)&BasicAuthToOAuthConversion=true" -Credential $credential -Authentication Basic -AllowRedirection -ErrorAction Continue
     Import-PSSession $session -ea Silentlycontinue -AllowClobber -CommandName "Get-Mailbox", "Set-mailbox"
-    Get-Mailbox -ResultSize Unlimited -RecipientTypeDetails UserMailbox, SharedMailbox | set-mailbox -erroraction SilentlyContinue -MessageCopyForSentAsEnabled $true -MessageCopyForSendOnBehalfEnabled $true 
+    Get-Mailbox -ResultSize Unlimited -RecipientTypeDetails UserMailbox, SharedMailbox | Where-Object { $_.MessageCopyForSendOnBehalfEnabled -eq $false -or $_.MessageCopyForSentAsEnabled -eq $false } | set-mailbox -erroraction SilentlyContinue -MessageCopyForSentAsEnabled $true -MessageCopyForSendOnBehalfEnabled $true 
     Get-PSSession | Remove-PSSession
     Log-request  -API "Standards" -tenant $tenant -message "Delegate Sent Items Style enabled." -sev Info
 }

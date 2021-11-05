@@ -11,7 +11,7 @@ $userobj = $Request.body
 Write-Host "PowerShell HTTP trigger function processed a request."
 try {
     $licenses = ($userobj | Select-Object "License_*").psobject.properties.value
-    $aliasses = ($userobj.AddedAliasses).Split([Environment]::NewLine)
+    $Aliases = ($userobj.AddedAliases).Split([Environment]::NewLine)
     $password = if ($userobj.password) { $userobj.password } else { -join ('abcdefghkmnrstuvwxyzABCDEFGHKLMNPRSTUVWXYZ23456789$%&*#'.ToCharArray() | Get-Random -Count 12) }
     $UserprincipalName = "$($UserObj.username)@$($UserObj.domain)"
     $BodyToship = [pscustomobject] @{
@@ -27,7 +27,7 @@ try {
             "password"                      = $password
         }
     } | ConvertTo-Json
-    $GraphRequest = New-GraphPostRequest -uri "https://graph.microsoft.com/beta/users" -tenantid $Userobj.tenantid-type POST -body $BodyToship  -verbose
+    $GraphRequest = New-GraphPostRequest -uri "https://graph.microsoft.com/beta/users" -tenantid $Userobj.tenantid -type POST -body $BodyToship  -verbose
     Log-Request -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $($userobj.tenantid)  -message "Created user $($userobj.displayname) with id $($GraphRequest.id) " -Sev "Info"
     $results.add("Created user.")
     $results.add("Username: $($UserprincipalName)")
@@ -60,19 +60,19 @@ catch {
 }
 
 try {
-    if ($aliasses) {
-        foreach ($Alias in $aliasses) {
+    if ($Aliases) {
+        foreach ($Alias in $Aliases) {
             Write-Host $Alias
             New-GraphPostRequest -uri "https://graph.microsoft.com/beta/users/$($GraphRequest.id)" -tenantid $Userobj.tenantid -type "patch" -body "{`"mail`": `"$Alias`"}" -verbose
         }
         New-GraphPostRequest -uri "https://graph.microsoft.com/beta/users/$($GraphRequest.id)" -tenantid $Userobj.tenantid -type "patch" -body "{`"mail`": `"$UserprincipalName`"}" -verbose
         Log-Request -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $($userobj.tenantid)  -message "Added alias $($Alias) to $($userobj.displayname)" -Sev "Info"
-        $body = $results.add("Added aliasses: $($aliasses -join ',')")
+        $body = $results.add("Added Aliases: $($Aliases -join ',')")
     }
 }
 catch {
     Log-Request -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $($userobj.tenantid) -message "Alias API failed. $($_.Exception.Message)" -Sev "Error"
-    $body = $results.add("We've failed to create the aliasses: $($_.Exception.Message)")
+    $body = $results.add("We've failed to create the Aliases: $($_.Exception.Message)")
 }
 if ($Request.body.CopyFrom -ne "") {
     $MemberIDs = "https://graph.microsoft.com/v1.0/directoryObjects/" + (New-GraphGetRequest -uri "https://graph.microsoft.com/beta/users/$($GraphRequest.id)" -tenantid $Userobj.tenantid).id 
