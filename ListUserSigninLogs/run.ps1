@@ -22,6 +22,7 @@ $EndTime = Get-Date (Get-Date($EndDate)).ToUniversalTime() -UFormat '+%Y-%m-%dT%
 $URI = "https://graph.microsoft.com/beta/auditLogs/signIns?`$filter=(userId eq '$UserID')&`$top=50&`$orderby=createdDateTime desc" 
 Write-Host $URI
 $GraphRequest = New-GraphGetRequest -uri $URI -tenantid $TenantFilter -noPagination $true -verbose | select-object @{ Name = 'Date'; Expression = { $(($_.createdDateTime | Out-String)-replace '\r\n')} },
+id,
 @{ Name = 'Application'; Expression = { $_.resourceDisplayName} },
 @{ Name = 'LoginStatus'; Expression = { $_.status.errorCode } },
 @{ Name = 'ConditionalAccessStatus'; Expression = { $_.conditionalAccessStatus } },
