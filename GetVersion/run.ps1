@@ -17,8 +17,8 @@ $version = [PSCustomObject]@{
     RemoteCIPPVersion    = $RemoteCIPPVersion
     LocalCIPPAPIVersion  = $APIVersion
     RemoteCIPPAPIVersion = $RemoteAPIVersion
-    OutOfDateCIPP        = ([version]$RemoteCIPPVersion -ge [version]$CIPPVersion)
-    OutOfDateCIPPAPI     = ([version]$RemoteAPIVersion -ge [version]$APIVersion)
+    OutOfDateCIPP        = ([version]$RemoteCIPPVersion -gt [version]$CIPPVersion)
+    OutOfDateCIPPAPI     = ([version]$RemoteAPIVersion -gt [version]$APIVersion)
 }
 # Write to the Azure Functions log stream.
 
