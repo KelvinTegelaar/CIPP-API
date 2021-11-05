@@ -19,7 +19,8 @@ try {
             AddedBy   = $username
             Standards = $Settings
         } | ConvertTo-Json
-        Set-Content "$($tenant).Standards.json" -Value $Object
+        New-Item Cache_Standards -ItemType Directory -ErrorAction SilentlyContinue
+        Set-Content "Cache_Standards\$($tenant).Standards.json" -Value $Object -Force
     }
     $body = [pscustomobject]@{"Results" = "Successfully added standards deployment" }
 }

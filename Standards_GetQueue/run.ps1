@@ -1,13 +1,14 @@
 param($name)
 
-$Tenants = get-childitem "*.standards.json"
+$Tenants = Get-ChildItem "Cache_Standards\*.standards.json"
 
 $object = foreach ($Tenant in $tenants) {
-    $StandardsFile = get-content "$($tenant)" | convertfrom-json
-    $Standardsfile.Standards.psobject.properties.name | foreach-object { 
+    $StandardsFile = Get-Content "$($tenant)" | ConvertFrom-Json
+    $Standardsfile.Standards.psobject.properties.name | ForEach-Object { 
         [pscustomobject]@{ 
-            Tenant = $Standardsfile.Tenant
-         Standard = $_ }
+            Tenant   = $Standardsfile.Tenant
+            Standard = $_ 
+        }
     }
 
 }
