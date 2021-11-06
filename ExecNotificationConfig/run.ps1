@@ -10,7 +10,7 @@ Log-Request -user $request.headers.'x-ms-client-principal' -API $APINAME  -messa
 # Write to the Azure Functions log stream.
 Write-Host "PowerShell HTTP trigger function processed a request."
 $results = try { 
-    $Request.body | ConvertTo-Json | Set-Content "SendNotifcations\Config.Json"
+    $Request.body | ConvertTo-Json | Set-Content ".\SendNotifications\Config.Json"
     "succesfully set the configuration"
 }
 catch {
