@@ -1,6 +1,6 @@
 param($name)
 
-$OldStandards = Get-ChildItem "*.standards.json" | ForEach-Object { Copy-Item -Path $_.FullName -Destination "Cache_Standards\"; Remove-Item $_ -Force }
+$OldStandards = Get-ChildItem "*.standards.json" | ForEach-Object { Copy-Item -Path $_.FullName -Destination "Cache_Standards\"; Remove-Item $_.fullname -Force }
 $Tenants = Get-ChildItem "Cache_Standards\*.standards.json"
 
 $object = foreach ($Tenant in $tenants) {
