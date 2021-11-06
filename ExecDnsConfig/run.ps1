@@ -6,6 +6,7 @@ param($Request, $TriggerMetadata)
 $APIName = $TriggerMetadata.FunctionName
 Log-Request -user $request.headers.'x-ms-client-principal' -API $APINAME -message 'Accessed this API' -Sev 'Debug'
 
+# List of supported resolvers
 $ValidResolvers = @(
     'Google'
     'Cloudflare'
@@ -15,6 +16,7 @@ $ValidResolvers = @(
 Write-Host 'PowerShell HTTP trigger function processed a request.'
 $user = $request.headers.'x-ms-client-principal'
 
+$StatusCode = [HttpStatusCode]::OK
 try {
     if (Test-Path 'DnsConfig.json') {
         $Config = Get-Content -Path 'DnsConfig.json' | ConvertFrom-Json
@@ -35,7 +37,8 @@ try {
             }
             else {
                 Log-Request -API $APINAME -tenant 'Global' -user $request.headers.'x-ms-client-principal' -message "Invalid DNS Resolver - $Resolver" -Sev 'Error' 
-                $body = [pscustomobject]@{'Results' = 'Error: DNS resolver $Resolver is invalid.' }
+                $body = [pscustomobject]@{'Results' = "Error: DNS resolver $Resolver is invalid." }
+                $StatusCode = [HttpStatusCode]::BadRequest
             }
         }
         if ($updated) {
@@ -48,10 +51,11 @@ try {
 catch {
     Log-Request -API $APINAME -tenant $($name) -user $request.headers.'x-ms-client-principal' -message "Exclusion API failed. $($_.Exception.Message)" -Sev 'Error'
     $body = [pscustomobject]@{'Results' = "Failed. $($_.Exception.Message)" }
+    $StatusCode = [HttpStatusCode]::BadRequest
 }
 
 # Associate values to output bindings by calling 'Push-OutputBinding'.
 Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
-        StatusCode = [HttpStatusCode]::OK
+        StatusCode = $StatusCode
         Body       = $body
     })
