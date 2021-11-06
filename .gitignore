@@ -7,3 +7,4 @@ chocoapps.cache
 Cache_*
 Logs
 ExcludedTenants
+SendNotifcations/config.json
