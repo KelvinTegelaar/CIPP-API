@@ -53,19 +53,23 @@ if ($Config.webhook -ne "" -and $null -ne $CurrentLog) {
     "*webhook.office.com*" {
       $Log = $Currentlog | ConvertTo-Html -frag | Out-String
       $JSonBody = "{`"text`": `"You've setup your alert policies to be alerted whenever specific events happen. We've found some of these events in the log. <br><br>$Log`"}" 
+      Invoke-RestMethod -Uri $config.webhook -Method POST -ContentType "Application/json" -Body $JSONBody
     }
 
     "*slack.com*" {
-      $Log = $Currentlog | Format-Table | Out-String
-      $JSonBody = "{`"text`": `"You've setup your alert policies to be alerted whenever specific events happen. We've found some of these events in the log. $Log`"}" 
+      $Log = $Currentlog | ForEach-Object {
+        $JSonBody = '{"blocks":[{"type":"section","text":{"type":"mrkdwn","text":"New Alert from CIPP"}},{"type":"section","fields":[{"type":"mrkdwn","text":"*DateTime:*\n' + $($_.DateTime) + '"},{"type":"mrkdwn","text":"*Tenant:*\n' + $($_.Tenant) + '"},{"type":"mrkdwn","text":"*API:*\n' + $($_.API) + '"},{"type":"mrkdwn","text":"*User:*\n' + $($_.User) + '"},{"type":"mrkdwn","text":"*Message:*\n' + $($_.Message) + '"}]}]}'
+        Invoke-RestMethod -Uri $config.webhook -Method POST -ContentType "Application/json" -Body $JSONBody
+      }
     }
 
     "*discord.com*" {
       $Log = $Currentlog | ConvertTo-Html -frag | Out-String
       $JSonBody = "{`"content`": `"You've setup your alert policies to be alerted whenever specific events happen. We've found some of these events in the log. $Log`"}" 
+      Invoke-RestMethod -Uri $config.webhook -Method POST -ContentType "Application/json" -Body $JSONBody
     }
   }
-  Invoke-RestMethod -Uri $config.webhook -Method POST -ContentType "Application/json" -Body $JSONBody
+
 }
 
 # Write an information log with the current time.
