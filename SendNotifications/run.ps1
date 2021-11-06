@@ -14,8 +14,8 @@ if (!$Config) {
 $Settings = $Config.psobject.properties.name
 $logdate = (Get-Date).ToString('MMyyyy')
 $Currentlog = Get-Content "Logs\$($logdate).log" | ConvertFrom-Csv -Header "DateTime", "Tenant", "API", "Message", "User", "Severity" -Delimiter "|" | Where-Object { [datetime]$_.Datetime -gt (Get-Date).AddMinutes(-31) -and $_.api -in $Settings -and $_.Severity -ne "debug" }
-
-
+Write-Host "Current log: $CurrentLog"
+Write-Host $Config
 if ($Config.email -ne "" -and $null -ne $CurrentLog) {
   $HTMLLog = ($CurrentLog | ConvertTo-Html -frag) -replace "<table>", "<table class=blueTable>" | Out-String
   $JSONBody = @"
