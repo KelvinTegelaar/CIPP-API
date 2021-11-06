@@ -58,7 +58,9 @@ if ($Config.webhook -ne "" -and $null -ne $CurrentLog) {
 
     "*slack.com*" {
       $Log = $Currentlog | ForEach-Object {
-        $JSonBody = '{"blocks":[{"type":"section","text":{"type":"mrkdwn","text":"New Alert from CIPP"}},{"type":"section","fields":[{"type":"mrkdwn","text":"*DateTime:*\n' + $($_.DateTime) + '"},{"type":"mrkdwn","text":"*Tenant:*\n' + $($_.Tenant) + '"},{"type":"mrkdwn","text":"*API:*\n' + $($_.API) + '"},{"type":"mrkdwn","text":"*User:*\n' + $($_.User) + '"},{"type":"mrkdwn","text":"*Message:*\n' + $($_.Message) + '"}]}]}'
+        $JSonBody = @"
+        {"blocks":[{"type":"header","text":{"type":"plain_text","text":"New Alert from CIPP","emoji":true}},{"type":"section","fields":[{"type":"mrkdwn","text":"*DateTime:*\n$($_.DateTime)"},{"type":"mrkdwn","text":"*Tenant:*\n$($_.Tenant)"},{"type":"mrkdwn","text":"*API:*\n$($_.API)"},{"type":"mrkdwn","text":"*User:*\n$($_.User)."}]},{"type":"section","text":{"type":"mrkdwn","text":"*Message:*\n$($_.message)"}}]}
+"@
         Invoke-RestMethod -Uri $config.webhook -Method POST -ContentType "Application/json" -Body $JSONBody
       }
     }
