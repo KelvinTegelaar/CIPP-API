@@ -4,7 +4,7 @@ param($Timer)
 # Get the current universal time in the default string format.
 $currentUTCtime = (Get-Date).ToUniversalTime()
 
-$Config = Get-Content "SendNotifcations\Config.json" | ConvertFrom-Json
+$Config = Get-Content ".\SendNotifications\Config.json" | ConvertFrom-Json
 
 if (!$Config) { 
   "Done - No config active"
