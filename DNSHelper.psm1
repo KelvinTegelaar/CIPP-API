@@ -1,24 +1,42 @@
-function Get-GoogleDNSQuery {
-    [CmdletBinding()]
-    param (
+function Resolve-DnsHttpsQuery {
+    [cmdletbinding()]
+    Param(
+        [Parameter(Mandatory = $true)]
+        [string]$Domain,
+        
         [Parameter()]
-        [string]
-        $Domain,
+        [string]$RecordType = 'A',
 
         [Parameter()]
-        [string]
-        $RecordType,
+        [bool]$FullResultRecord = $False,
 
         [Parameter()]
-        [bool]
-        $FullResultRecord = $False
+        [ValidateSet('Google', 'Cloudflare')]
+        [string]$Resolver = 'Google'
     )
 
-    try {                
-        $Results = Invoke-RestMethod -Uri "https://dns.google/resolve?name=$($Domain)&type=$($RecordType)" -Method Get
+    switch ($Resolver) {
+        'Google' {
+            $BaseUri = 'https://dns.google/resolve'
+            $QueryTemplate = '{0}?name={1}&type={2}'
+        }
+        'CloudFlare' {
+            $BaseUri = 'https://cloudflare-dns.com/dns-query'
+            $QueryTemplate = '{0}?name={1}&type={2}&do=true'
+        }
+    }
+
+    $Headers = @{
+        'accept' = 'application/dns-json'
+    }
+
+    $Uri = $QueryTemplate -f $BaseUri, $Domain, $RecordType
+
+    try {
+        $Results = Invoke-RestMethod -Uri $Uri -Headers $Headers
     }
     catch {
-        Log-request -API 'DomainAnalyser' -tenant $tenant.tenant -message "Get Google DNS Query Failed with $($_.Exception.Message)" -sev Debug
+        Write-Verbose "$Resolver DoH Query Exception - $($_.Exception.Message)" 
     }
 
     # Domain does not exist
@@ -92,88 +110,104 @@ Function Read-SpfRecord {
         $IPAddresses = New-Object System.Collections.ArrayList
         $AllMechanism = ''
 
-        # Query DNS for SPF Record
-        $DnsQuery = @{
-            RecordType = 'TXT'
-            Domain     = $Domain
-        }
-    
-        $Query = Get-GoogleDNSQuery @DnsQuery
-
-        if ($level -ne 'Parent') {
-            $LookupCount++
-        }
-
-        $Record = $Query | Select-Object -ExpandProperty data | Where-Object { $_ -match '^v=spf1' }
-        $RecordCount = ($Record | Measure-Object).Count
+        if (Test-Path -Path 'Config/DnsConfig.json') {
+            $Config = Get-Content 'Config/DnsConfig.json' | ConvertFrom-Json
             
-        # Split records and parse
-        $RecordEntries = $Record -split ' '
-
-        $RecordEntries | ForEach-Object {
-            if ($_ -match 'v=spf1') {}
-            
-            # Look for redirect modifier
-            elseif ($_ -match 'redirect=(?<Domain>.+)') {
-                if ($Record -match 'all$') {
-                    $ValidationErrors.Add("$Domain - Redirect modifier should not contain all mechanism, SPF record invalid") | Out-Null
-                }
-                else {
-                    $IsRedirected = $true
-                    $Domain = $Matches.Domain
-                }
-            }
-            
-            # Don't increment for include, this will be done in a recursive call
-            elseif ($_ -match 'include:(.+)') {
-                $DomainIncludes.Add($Matches[1]) | Out-Null
-                $IncludeList.Add($Matches[1]) | Out-Null
-            }
-
-            # Increment lookup count for exists mechanism
-            elseif ($_ -match 'exists:(.+)') {
-                $LookupCount++
-            }
-
-            # Collect explicit IP addresses
-            elseif ($_ -match 'ip[4,6]:(.+)') {
-                $IPAddresses.Add($Matches[1]) | Out-Null
-            }
-
-            # Get parent level mechanism for all
-            elseif ($Level -eq 'Parent' -and $_ -match 'all') {
-                if ($Record -match "$_$") {
-                    $AllMechanism = $_
-                }
-            }
-            # Get any type specific entry
-            elseif ($_ -match '^(?<RecordType>[A-Za-z]+)(?:[:])?(?<Domain>.+)?$$') {
-                $LookupCount++
-                $TypeLookups.Add($_) | Out-Null
-            }
-        }
-
-        # Follow redirect modifier
-        if ($IsRedirected) {
-            $RedirectedLookup = Read-SpfRecord -Domain $Domain
-            if (($RedirectedLookup | Measure-Object).Count -eq 0) {
-                $ValidationErrors.Add('Redirected lookup does not contain a SPF record, permerror')
+            $DnsQuery = @{
+                RecordType = 'TXT'
+                Domain     = $Domain
+                Resolver   = $Config.Resolver
             }
         }
         else {
-            # Return object containing Domain and SPF record
-            $Result = [PSCustomObject]@{
-                Domain       = $Domain
-                Record       = $Record
-                RecordCount  = $RecordCount
-                Level        = $Level
-                Includes     = $DomainIncludes
-                TypeLookups  = $TypeLookups
-                IPAddresses  = $IPAddresses
-                LookupCount  = $LookupCount
-                AllMechanism = $AllMechanism
+            $DnsQuery = @{
+                RecordType = 'TXT'
+                Domain     = $Domain
             }
-            $RecordList.Add($Result) | Out-Null
+        }
+
+        # Query DNS for SPF Record
+        try {
+            $Query = Resolve-DnsHttpsQuery @DnsQuery
+
+            if ($level -ne 'Parent') {
+                $LookupCount++
+            }
+
+            $Record = $Query | Select-Object -ExpandProperty data | Where-Object { $_ -match '^v=spf1' }
+            $RecordCount = ($Record | Measure-Object).Count
+            
+            # Split records and parse
+            $RecordEntries = $Record -split ' '
+
+            $RecordEntries | ForEach-Object {
+                if ($_ -match 'v=spf1') {}
+            
+                # Look for redirect modifier
+                elseif ($_ -match 'redirect=(?<Domain>.+)') {
+                    if ($Record -match 'all$') {
+                        $ValidationErrors.Add("$Domain - Redirect modifier should not contain all mechanism, SPF record invalid") | Out-Null
+                    }
+                    else {
+                        $IsRedirected = $true
+                        $Domain = $Matches.Domain
+                    }
+                }
+            
+                # Don't increment for include, this will be done in a recursive call
+                elseif ($_ -match 'include:(.+)') {
+                    $DomainIncludes.Add($Matches[1]) | Out-Null
+                    $IncludeList.Add($Matches[1]) | Out-Null
+                }
+
+                # Increment lookup count for exists mechanism
+                elseif ($_ -match 'exists:(.+)') {
+                    $LookupCount++
+                }
+
+                # Collect explicit IP addresses
+                elseif ($_ -match 'ip[4,6]:(.+)') {
+                    $IPAddresses.Add($Matches[1]) | Out-Null
+                }
+
+                # Get parent level mechanism for all
+                elseif ($Level -eq 'Parent' -and $_ -match 'all') {
+                    if ($Record -match "$_$") {
+                        $AllMechanism = $_
+                    }
+                }
+                # Get any type specific entry
+                elseif ($_ -match '^(?<RecordType>[A-Za-z]+)(?:[:])?(?<Domain>.+)?$$') {
+                    $LookupCount++
+                    $TypeLookups.Add($_) | Out-Null
+                }
+            }
+
+            # Follow redirect modifier
+            if ($IsRedirected) {
+                $RedirectedLookup = Read-SpfRecord -Domain $Domain
+                if (($RedirectedLookup | Measure-Object).Count -eq 0) {
+                    $ValidationErrors.Add('Redirected lookup does not contain a SPF record, permerror')
+                }
+            }
+            else {
+                # Return object containing Domain and SPF record
+                $Result = [PSCustomObject]@{
+                    Domain       = $Domain
+                    Record       = $Record
+                    RecordCount  = $RecordCount
+                    Level        = $Level
+                    Includes     = $DomainIncludes
+                    TypeLookups  = $TypeLookups
+                    IPAddresses  = $IPAddresses
+                    LookupCount  = $LookupCount
+                    AllMechanism = $AllMechanism
+                }
+                $RecordList.Add($Result) | Out-Null
+            }
+        }
+        catch {
+            # DNS Resolver exception
         }
     }
     end {
