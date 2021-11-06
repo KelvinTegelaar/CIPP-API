@@ -7,11 +7,11 @@ $currentUTCtime = (Get-Date).ToUniversalTime()
 $Config = Get-Content ".\SendNotifications\Config.json" | ConvertFrom-Json
 
 if (!$Config) { 
-  "Done - No config active"
+  Write-Host "Done - No config active"
   exit 
 }
 
-$Settings = $Request.Body.psobject.properties.name
+$Settings = $Config.psobject.properties.name
 $logdate = (Get-Date).ToString('MMyyyy')
 $Currentlog = Get-Content "Logs\$($logdate).log" | ConvertFrom-Csv -Header "DateTime", "Tenant", "API", "Message", "User", "Severity" -Delimiter "|" | Where-Object { [datetime]$_.Datetime -gt (Get-Date).AddMinutes(-31) -and $_.api -in $Settings -and $_.Severity -ne "debug" }
 
