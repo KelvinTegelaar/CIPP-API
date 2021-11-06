@@ -12,16 +12,18 @@ $ValidResolvers = @(
     'Cloudflare'
 )
 
+$ConfigPath = 'Config/DnsConfig.json'
+
 # Write to the Azure Functions log stream.
 Write-Host 'PowerShell HTTP trigger function processed a request.'
-$user = $request.headers.'x-ms-client-principal'
 
 $StatusCode = [HttpStatusCode]::OK
 try {
-    if (Test-Path 'DnsConfig.json') {
-        $Config = Get-Content -Path 'DnsConfig.json' | ConvertFrom-Json
+    if (Test-Path $ConfigPath) {
+        $Config = Get-Content -Path $ConfigPath | ConvertFrom-Json
     }
     else {
+        New-Item 'Config' -ItemType Directory -ErrorAction SilentlyContinue
         $Config = [PSCustomObject]@{
             Resolver = ''
         }
@@ -42,7 +44,7 @@ try {
             }
         }
         if ($updated) {
-            $Config | ConvertTo-Json | Set-Content 'DnsConfig.json'
+            $Config | ConvertTo-Json | Set-Content $ConfigPath
             Log-Request -API $APINAME -tenant 'Global' -user $request.headers.'x-ms-client-principal' -message 'DNS configuration updated' -Sev 'Info' 
             $body = [pscustomobject]@{'Results' = 'Success: DNS configuration updated.' }
         }

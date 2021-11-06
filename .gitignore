@@ -7,5 +7,5 @@ chocoapps.cache
 Cache_*
 Logs
 ExcludedTenants
-DnsConfig.json
+Config
 SendNotifications/config.json

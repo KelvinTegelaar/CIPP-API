@@ -110,8 +110,8 @@ Function Read-SpfRecord {
         $IPAddresses = New-Object System.Collections.ArrayList
         $AllMechanism = ''
 
-        if (Test-Path -Path 'DnsConfig.json') {
-            $Config = Get-Content DnsConfig.json | ConvertFrom-Json
+        if (Test-Path -Path 'Config/DnsConfig.json') {
+            $Config = Get-Content 'Config/DnsConfig.json' | ConvertFrom-Json
             
             $DnsQuery = @{
                 RecordType = 'TXT'
