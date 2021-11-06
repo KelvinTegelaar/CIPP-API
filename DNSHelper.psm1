@@ -127,82 +127,87 @@ Function Read-SpfRecord {
         }
 
         # Query DNS for SPF Record
-        $Query = Resolve-DnsHttpsQuery @DnsQuery
+        try {
+            $Query = Resolve-DnsHttpsQuery @DnsQuery
 
-        if ($level -ne 'Parent') {
-            $LookupCount++
-        }
-
-        $Record = $Query | Select-Object -ExpandProperty data | Where-Object { $_ -match '^v=spf1' }
-        $RecordCount = ($Record | Measure-Object).Count
-            
-        # Split records and parse
-        $RecordEntries = $Record -split ' '
-
-        $RecordEntries | ForEach-Object {
-            if ($_ -match 'v=spf1') {}
-            
-            # Look for redirect modifier
-            elseif ($_ -match 'redirect=(?<Domain>.+)') {
-                if ($Record -match 'all$') {
-                    $ValidationErrors.Add("$Domain - Redirect modifier should not contain all mechanism, SPF record invalid") | Out-Null
-                }
-                else {
-                    $IsRedirected = $true
-                    $Domain = $Matches.Domain
-                }
-            }
-            
-            # Don't increment for include, this will be done in a recursive call
-            elseif ($_ -match 'include:(.+)') {
-                $DomainIncludes.Add($Matches[1]) | Out-Null
-                $IncludeList.Add($Matches[1]) | Out-Null
-            }
-
-            # Increment lookup count for exists mechanism
-            elseif ($_ -match 'exists:(.+)') {
+            if ($level -ne 'Parent') {
                 $LookupCount++
             }
 
-            # Collect explicit IP addresses
-            elseif ($_ -match 'ip[4,6]:(.+)') {
-                $IPAddresses.Add($Matches[1]) | Out-Null
-            }
+            $Record = $Query | Select-Object -ExpandProperty data | Where-Object { $_ -match '^v=spf1' }
+            $RecordCount = ($Record | Measure-Object).Count
+            
+            # Split records and parse
+            $RecordEntries = $Record -split ' '
 
-            # Get parent level mechanism for all
-            elseif ($Level -eq 'Parent' -and $_ -match 'all') {
-                if ($Record -match "$_$") {
-                    $AllMechanism = $_
+            $RecordEntries | ForEach-Object {
+                if ($_ -match 'v=spf1') {}
+            
+                # Look for redirect modifier
+                elseif ($_ -match 'redirect=(?<Domain>.+)') {
+                    if ($Record -match 'all$') {
+                        $ValidationErrors.Add("$Domain - Redirect modifier should not contain all mechanism, SPF record invalid") | Out-Null
+                    }
+                    else {
+                        $IsRedirected = $true
+                        $Domain = $Matches.Domain
+                    }
+                }
+            
+                # Don't increment for include, this will be done in a recursive call
+                elseif ($_ -match 'include:(.+)') {
+                    $DomainIncludes.Add($Matches[1]) | Out-Null
+                    $IncludeList.Add($Matches[1]) | Out-Null
+                }
+
+                # Increment lookup count for exists mechanism
+                elseif ($_ -match 'exists:(.+)') {
+                    $LookupCount++
+                }
+
+                # Collect explicit IP addresses
+                elseif ($_ -match 'ip[4,6]:(.+)') {
+                    $IPAddresses.Add($Matches[1]) | Out-Null
+                }
+
+                # Get parent level mechanism for all
+                elseif ($Level -eq 'Parent' -and $_ -match 'all') {
+                    if ($Record -match "$_$") {
+                        $AllMechanism = $_
+                    }
+                }
+                # Get any type specific entry
+                elseif ($_ -match '^(?<RecordType>[A-Za-z]+)(?:[:])?(?<Domain>.+)?$$') {
+                    $LookupCount++
+                    $TypeLookups.Add($_) | Out-Null
                 }
             }
-            # Get any type specific entry
-            elseif ($_ -match '^(?<RecordType>[A-Za-z]+)(?:[:])?(?<Domain>.+)?$$') {
-                $LookupCount++
-                $TypeLookups.Add($_) | Out-Null
-            }
-        }
 
-        # Follow redirect modifier
-        if ($IsRedirected) {
-            $RedirectedLookup = Read-SpfRecord -Domain $Domain
-            if (($RedirectedLookup | Measure-Object).Count -eq 0) {
-                $ValidationErrors.Add('Redirected lookup does not contain a SPF record, permerror')
+            # Follow redirect modifier
+            if ($IsRedirected) {
+                $RedirectedLookup = Read-SpfRecord -Domain $Domain
+                if (($RedirectedLookup | Measure-Object).Count -eq 0) {
+                    $ValidationErrors.Add('Redirected lookup does not contain a SPF record, permerror')
+                }
+            }
+            else {
+                # Return object containing Domain and SPF record
+                $Result = [PSCustomObject]@{
+                    Domain       = $Domain
+                    Record       = $Record
+                    RecordCount  = $RecordCount
+                    Level        = $Level
+                    Includes     = $DomainIncludes
+                    TypeLookups  = $TypeLookups
+                    IPAddresses  = $IPAddresses
+                    LookupCount  = $LookupCount
+                    AllMechanism = $AllMechanism
+                }
+                $RecordList.Add($Result) | Out-Null
             }
         }
-        else {
-            # Return object containing Domain and SPF record
-            $Result = [PSCustomObject]@{
-                Domain       = $Domain
-                Record       = $Record
-                RecordCount  = $RecordCount
-                Level        = $Level
-                Includes     = $DomainIncludes
-                TypeLookups  = $TypeLookups
-                IPAddresses  = $IPAddresses
-                LookupCount  = $LookupCount
-                AllMechanism = $AllMechanism
-            }
-            $RecordList.Add($Result) | Out-Null
+        catch {
+            # DNS Resolver exception
         }
     }
     end {
