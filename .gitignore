@@ -7,3 +7,4 @@ chocoapps.cache
 Cache_BestPracticeAnalyser/
 Cache_DomainAnalyser/
 ExcludedTenants
+DnsConfig.json

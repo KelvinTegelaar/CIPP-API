@@ -1,24 +1,42 @@
-function Get-GoogleDNSQuery {
-    [CmdletBinding()]
-    param (
+function Resolve-DnsHttpsQuery {
+    [cmdletbinding()]
+    Param(
+        [Parameter(Mandatory = $true)]
+        [string]$Domain,
+        
         [Parameter()]
-        [string]
-        $Domain,
+        [string]$RecordType = 'A',
 
         [Parameter()]
-        [string]
-        $RecordType,
+        [bool]$FullResultRecord = $False,
 
         [Parameter()]
-        [bool]
-        $FullResultRecord = $False
+        [ValidateSet('Google', 'Cloudflare')]
+        [string]$Resolver = 'Google'
     )
 
-    try {                
-        $Results = Invoke-RestMethod -Uri "https://dns.google/resolve?name=$($Domain)&type=$($RecordType)" -Method Get
+    switch ($Resolver) {
+        'Google' {
+            $BaseUri = 'https://dns.google/resolve'
+            $QueryTemplate = '{0}?name={1}&type={2}'
+        }
+        'CloudFlare' {
+            $BaseUri = 'https://cloudflare-dns.com/dns-query'
+            $QueryTemplate = '{0}?name={1}&type={2}&do=true'
+        }
+    }
+
+    $Headers = @{
+        'accept' = 'application/dns-json'
+    }
+
+    $Uri = $QueryTemplate -f $BaseUri, $Domain, $RecordType
+
+    try {
+        $Results = Invoke-RestMethod -Uri $Uri -Headers $Headers
     }
     catch {
-        Log-request -API 'DomainAnalyser' -tenant $tenant.tenant -message "Get Google DNS Query Failed with $($_.Exception.Message)" -sev Debug
+        Write-Verbose "$Resolver DoH Query Exception - $($_.Exception.Message)" 
     }
 
     # Domain does not exist
@@ -92,13 +110,24 @@ Function Read-SpfRecord {
         $IPAddresses = New-Object System.Collections.ArrayList
         $AllMechanism = ''
 
-        # Query DNS for SPF Record
-        $DnsQuery = @{
-            RecordType = 'TXT'
-            Domain     = $Domain
+        if (Test-Path -Path 'DnsConfig.json') {
+            $Config = Get-Content DnsConfig.json | ConvertFrom-Json
+            
+            $DnsQuery = @{
+                RecordType = 'TXT'
+                Domain     = $Domain
+                Resolver   = $Config.Resolver
+            }
         }
-    
-        $Query = Get-GoogleDNSQuery @DnsQuery
+        else {
+            $DnsQuery = @{
+                RecordType = 'TXT'
+                Domain     = $Domain
+            }
+        }
+
+        # Query DNS for SPF Record
+        $Query = Resolve-DnsHttpsQuery @DnsQuery
 
         if ($level -ne 'Parent') {
             $LookupCount++
