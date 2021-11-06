@@ -36,13 +36,14 @@ function Get-GraphToken($tenantid, $scope, $AsApp, $AppID, $refreshToken, $Retur
 
 function Log-Request ($message, $tenant, $API, $user, $sev) {
     $username = ([System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($user)) | ConvertFrom-Json).userDetails
+    New-Item -Path "Logs" -ItemType Directory -ErrorAction SilentlyContinue
     $date = (Get-Date).ToString('s')
     $LogMutex = New-Object System.Threading.Mutex($false, "LogMutex")
     if (!$username) { $username = "CIPP" }
     if (!$tenant) { $tenant = "None" }
     $logdata = "$($date)|$($tenant)|$($API)|$($message)|$($username)|$($sev)"
     if ($LogMutex.WaitOne(1000)) {
-        $logdata | Out-File -Append -path "$((Get-Date).ToString('MMyyyy')).log"
+        $logdata | Out-File -Append -FilePath "Logs\$((Get-Date).ToString('MMyyyy')).log" -Force
     }
     $LogMutex.ReleaseMutex()
 }
@@ -176,7 +177,7 @@ function New-ClassicAPIPostRequest($TenantID, $Uri, $Method = 'POST', $Resource 
 }
 
 function Get-AuthorisedRequest($TenantID, $Uri) {
-    if ($uri -like "https://graph.microsoft.com/beta/contracts?`$top=999" -or $uri -like "*/customers/*") {
+    if ($uri -like "https://graph.microsoft.com/beta/contracts?`$top=999" -or $uri -like "*/customers/*" -or $uri -eq "https://graph.microsoft.com/v1.0/me/sendMail") {
         return $true
     }
     if ($TenantID -in (Get-Tenants).defaultdomainname) {

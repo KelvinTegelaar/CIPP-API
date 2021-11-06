@@ -1,4 +1,4 @@
-using namespace System.Net
+﻿using namespace System.Net
 
 # Input bindings are passed in via param block.
 param($Request, $TriggerMetadata)
@@ -9,22 +9,19 @@ Log-Request -user $request.headers.'x-ms-client-principal' -API $APINAME  -messa
 
 # Write to the Azure Functions log stream.
 Write-Host "PowerShell HTTP trigger function processed a request."
-
-$Tenants = Get-ChildItem "Cache_Standards\*.standards.json"
-
-$CurrentStandards = foreach ($tenant in $tenants) {
-    $StandardsFile = Get-Content "$($tenant)" | ConvertFrom-Json
-    if ($StandardsFile.Tenant -eq $null) { continue }
-    [PSCustomObject]@{
-        displayName  = $StandardsFile.tenant
-        standardName = ($standardsFile.Standards.psobject.properties.name -join ' & ')
-        appliedBy    = $StandardsFile.addedby
-    }
+$results = try { 
+    $Request.body | ConvertTo-Json | Set-Content ".\SendNotifications\Config.Json"
+    "succesfully set the configuration"
+}
+catch {
+    "Failed to set configuration"
 }
 
+
+$body = [pscustomobject]@{"Results" = $Results }
 
 # Associate values to output bindings by calling 'Push-OutputBinding'.
 Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
         StatusCode = [HttpStatusCode]::OK
-        Body       = @($CurrentStandards)
+        Body       = $body
     })
