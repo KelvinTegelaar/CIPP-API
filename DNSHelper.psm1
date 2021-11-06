@@ -177,7 +177,7 @@ Function Read-SpfRecord {
                     }
                 }
                 # Get any type specific entry
-                elseif ($_ -match '^(?<RecordType>[A-Za-z]+)(?:[:])?(?<Domain>.+)?$$') {
+                elseif ($_ -match '^(?<RecordType>[A-Za-z]+)(?:[:])?(?<Domain>.+)?$') {
                     $LookupCount++
                     $TypeLookups.Add($_) | Out-Null
                 }
@@ -185,7 +185,7 @@ Function Read-SpfRecord {
 
             # Follow redirect modifier
             if ($IsRedirected) {
-                $RedirectedLookup = Read-SpfRecord -Domain $Domain
+                $RedirectedLookup = Read-SpfRecord -Domain $Domain -Level 'Redirect'
                 if (($RedirectedLookup | Measure-Object).Count -eq 0) {
                     $ValidationErrors.Add('Redirected lookup does not contain a SPF record, permerror')
                 }
@@ -229,7 +229,7 @@ Function Read-SpfRecord {
                 }
             }
         
-            if ($Level -eq 'Parent') {
+            if ($Level -eq 'Parent' -or $Level -eq 'Redirect') {
                 if ($RecordCount -eq 0) { $ValidationErrors.Add('No SPF record detected') | Out-Null }
                 if ($RecordCount -gt 1) { $ValidationErrors.Add("There should only be one SPF record, $RecordCount detected") | Out-Null }
     
@@ -241,7 +241,7 @@ Function Read-SpfRecord {
                 $SpfResults.LookupCount = $LookupCount
                 $SpfResults.AllMechanism = $AllMechanism
                 $SpfResults.ValidationErrors = $ValidationErrors
-                $SpfResults.Lookups = $RecordList | Where-Object -Property Level -NE -Value 'Parent'            
+                $SpfResults.Lookups = $RecordList | Where-Object { $_.Level -ne 'Parent' -and $_.Level -ne 'Redirect' }
             
                 # Output SpfResults object
                 $SpfResults
