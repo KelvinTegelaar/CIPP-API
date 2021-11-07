@@ -1,4 +1,4 @@
-﻿using namespace System.Net
+using namespace System.Net
 
 # Input bindings are passed in via param block.
 param($Request, $TriggerMetadata)
@@ -9,21 +9,13 @@ Log-Request -user $request.headers.'x-ms-client-principal' -API $APINAME  -messa
 
 # Write to the Azure Functions log stream.
 Write-Host "PowerShell HTTP trigger function processed a request."
+Write-Host $Request.query.id
+$Templates = Get-ChildItem "Config\*.IntuneTemplate.json" | ForEach-Object { Get-Content $_ | ConvertFrom-Json }
+if ($Request.query.ID) { $Templates = $Templates | Where-Object -Property guid -EQ $Request.query.id }
 
-# Interact with query parameters or the body of the request.
-$name = $Request.Query.Name
-if (-not $name) {
-    $name = $Request.Body.Name
-}
-
-$body = "This HTTP triggered function executed successfully. Pass a name in the query string or in the request body for a personalized response."
-
-if ($name) {
-    $body = "Hello, $name. This HTTP triggered function executed successfully."
-}
 
 # Associate values to output bindings by calling 'Push-OutputBinding'.
 Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
-    StatusCode = [HttpStatusCode]::OK
-    Body = $body
-})
+        StatusCode = [HttpStatusCode]::OK
+        Body       = @($Templates)
+    })
