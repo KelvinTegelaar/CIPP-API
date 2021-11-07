@@ -244,8 +244,8 @@ function New-ExoRequest ($tenantid, $cmdlet, $cmdParams) {
     $Headers = Get-GraphToken -AppID 'a0c73c16-a7e3-4564-9a95-2bdf47383716' -RefreshToken $ENV:ExchangeRefreshToken -Scope 'https://outlook.office365.com/.default' -Tenantid $tenantid 
     if ((Get-AuthorisedRequest -TenantID $tenantid)) {
         $tenant = (get-tenants | Where-Object -Property defaultDomainName -EQ $tenantid).customerid
-        if ($cmdParamas){
-            $Params = $cmdParamas
+        if ($cmdParams){
+            $Params = $cmdParams
         } else {
             $Params = @{}
         }
