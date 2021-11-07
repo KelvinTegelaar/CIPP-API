@@ -14,11 +14,6 @@ Write-Host "PowerShell HTTP trigger function processed a request."
 $TenantFilter = $Request.Query.TenantFilter
 $UserID = $Request.Query.UserID
 
-$StartTime = Get-Date (Get-Date).ToUniversalTime() -UFormat '+%Y-%m-%dT%H:%M:%S.000Z'
-$EndDate = (Get-Date).addDays(-1)
-$EndTime = Get-Date (Get-Date($EndDate)).ToUniversalTime() -UFormat '+%Y-%m-%dT%H:%M:%S.000Z'
-
-
 $URI = "https://graph.microsoft.com/beta/auditLogs/signIns?`$filter=(userId eq '$UserID')&`$top=50&`$orderby=createdDateTime desc" 
 Write-Host $URI
 $GraphRequest = New-GraphGetRequest -uri $URI -tenantid $TenantFilter -noPagination $true -verbose | select-object @{ Name = 'Date'; Expression = { $(($_.createdDateTime | Out-String)-replace '\r\n')} },
@@ -35,7 +30,10 @@ id,
 @{ Name = 'DeviceCompliant'; Expression = { $_.deviceDetail.isCompliant} },
 @{ Name = 'OS'; Expression = { $_.deviceDetail.operatingSystem} },
 @{ Name = 'Browser'; Expression = { $_.deviceDetail.browser} },
-@{ Name = 'AppliedCAPs'; Expression = { ($_.appliedConditionalAccessPolicies | foreach-object {@{Result = $_.result;  Name = $_.displayName}})  }}
+@{ Name = 'AppliedCAPs'; Expression = { ($_.appliedConditionalAccessPolicies | foreach-object {@{Result = $_.result;  Name = $_.displayName}})  }},
+@{ Name = 'AdditionalDetails'; Expression = { $_.status.additionalDetails} },
+@{ Name = 'FailureReason'; Expression = { $_.status.failureReason} },
+@{ Name = 'FullDetails'; Expression = { $_} }
 
 # Associate values to output bindings by calling 'Push-OutputBinding'.
 Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{

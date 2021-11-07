@@ -13,6 +13,16 @@ Write-Host "PowerShell HTTP trigger function processed a request."
 # Interact with query parameters or the body of the request.
 $TenantFilter = $Request.Query.TenantFilter
 $UserID = $Request.Query.UserID
+
+function Get-EPMID{
+    param(
+        $deviceID,
+        $EPMDevices
+    )
+    return ($EPMDevices | where-object {$_.azureADDeviceId -eq $deviceID}).id
+}
+
+$EPMDevices = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/users/$UserID/managedDevices" -Tenantid $tenantfilter
 $GraphRequest = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/users/$UserID/ownedDevices?`$top=999" -Tenantid $tenantfilter  | Select-Object @{ Name = 'ID'; Expression = { $_.'id' } },
 @{ Name = 'accountEnabled'; Expression = { $_.'accountEnabled' } },
 @{ Name = 'approximateLastSignInDateTime'; Expression = { $_.'approximateLastSignInDateTime' | Out-String } },
@@ -27,7 +37,9 @@ $GraphRequest = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/users
 @{ Name = 'operatingSystem'; Expression = { $_.'operatingSystem' } },
 @{ Name = 'onPremisesSyncEnabled'; Expression = { $(if([string]::IsNullOrEmpty($_.'onPremisesSyncEnabled')){$false}else{$true}) } },
 @{ Name = 'operatingSystemVersion'; Expression = { $_.'operatingSystemVersion' } },
-@{ Name = 'trustType'; Expression = { $_.'trustType' } }
+@{ Name = 'trustType'; Expression = { $_.'trustType' } },
+@{ Name = 'EPMID'; Expression = { $(Get-EPMID -deviceID $_.'deviceId' -EPMDevices $EPMDevices) } }
+
 
 # Associate values to output bindings by calling 'Push-OutputBinding'.
 Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
