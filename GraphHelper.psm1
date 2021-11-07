@@ -122,7 +122,7 @@ function Get-ClassicAPIToken($tenantID, $Resource) {
     }
 }
 
-function New-ClassicAPIGetRequest($TenantID, $Uri, $Method = 'GET', $Resource = 'https://admin.microsoft.com') {
+function New-ClassicAPIGetRequest($TenantID, $Uri, $Method = 'GET', $Resource = 'https://admin.microsoft.com', $ContentType = 'application/json') {
     $token = Get-ClassicAPIToken -Tenant $tenantID -Resource $Resource
 
     $NextURL = $Uri
@@ -130,7 +130,7 @@ function New-ClassicAPIGetRequest($TenantID, $Uri, $Method = 'GET', $Resource = 
     if ((Get-AuthorisedRequest -Uri $uri -TenantID $tenantid)) {
         $ReturnedData = do {
             try {
-                $Data = Invoke-RestMethod -ContentType "application/json;charset=UTF-8" -Uri $NextURL -Method $Method -Headers @{
+                $Data = Invoke-RestMethod -ContentType "$ContentType;charset=UTF-8" -Uri $NextURL -Method $Method -Headers @{
                     Authorization            = "Bearer $($token.access_token)";
                     "x-ms-client-request-id" = [guid]::NewGuid().ToString();
                     "x-ms-client-session-id" = [guid]::NewGuid().ToString()
@@ -244,10 +244,15 @@ function New-ExoRequest ($tenantid, $cmdlet, $cmdParams) {
     $Headers = Get-GraphToken -AppID 'a0c73c16-a7e3-4564-9a95-2bdf47383716' -RefreshToken $ENV:ExchangeRefreshToken -Scope 'https://outlook.office365.com/.default' -Tenantid $tenantid 
     if ((Get-AuthorisedRequest -TenantID $tenantid)) {
         $tenant = (get-tenants | Where-Object -Property defaultDomainName -EQ $tenantid).customerid
+        if ($cmdParamas){
+            $Params = $cmdParamas
+        } else {
+            $Params = @{}
+        }
         $ExoBody = @{
             CmdletInput = @{
                 CmdletName = $cmdlet
-                Parameters = @{}
+                Parameters = $Params
             }
         } | ConvertTo-Json
         $ReturnedData = Invoke-RestMethod "https://outlook.office365.com/adminapi/beta/$($tenant)/InvokeCommand" -Method POST -Body $ExoBody -Headers $Headers -ContentType "application/json; charset=utf-8"
