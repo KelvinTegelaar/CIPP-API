@@ -26,7 +26,7 @@ if ($Request.query.Permissions -eq "true") {
         }
     }
     catch {
-        Log-Request -user $request.headers.'x-ms-client-principal' -API $APINAME  -message "Permissions check failed: $($_.Exception.Message) " -Sev "Error"
+        Log-Request -user $request.headers.'x-ms-client-principal' -API $APINAME  -message "Permissions check failed: $($_) " -Sev "Error"
         "We could not connect to the API to retrieve the permissions. There might be a problem with the secure application model configuration. The returned error is: $($_.Exception.Response.StatusCode.value__ ) - $($_.Exception.Message)"
     }
 }
@@ -43,7 +43,7 @@ if ($Request.query.Tenants -eq "true") {
         }
         catch {
             "$($tenant): Failed to connect to $($_.Exception.Message)<br>"
-            Log-Request -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $tenant -message "Tenant access check failed: $($_.Exception.Message) " -Sev "Error"
+            Log-Request -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $tenant -message "Tenant access check failed: $($_) " -Sev "Error"
 
         }
 
