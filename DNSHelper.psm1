@@ -83,7 +83,8 @@ Function Read-SpfRecord {
     Param(
         [Parameter(Mandatory = $true, ValueFromPipeline = $true)]
         [string]$Domain,
-        $Level = 'Parent'
+        [string]$Level = 'Parent',
+        [string]$ExpectedInclude = ''
     )
     begin {
         $SPFResults = [PSCustomObject]@{
@@ -230,6 +231,24 @@ Function Read-SpfRecord {
             }
         
             if ($Level -eq 'Parent' -or $Level -eq 'Redirect') {
+                if ($ExpectedInclude -ne '') {
+                    if ($Record -notcontains $ExpectedInclude) {
+                        $ExpectedIncludeSpf = Read-SpfRecord -Domain $ExpectedInclude
+                        $ExpectedIPList = $ExpectedIncludeSpf.Lookups.IPAddresses
+                        $ExpectedIPCount = $ExpectedIPList | Measure-Object | Select-Object -ExpandProperty Count
+                        $FoundIPCount = Compare-Object $RecordList.IPAddresses $ExpectedIPList -IncludeEqual | Where-Object -Property SideIndicator -EQ '==' | Measure-Object | Select-Object -ExpandProperty Count
+                        if ($ExpectedIPCount -eq $FoundIPCount) {
+                            Write-Verbose 'Expected SPF IP Addresses found'
+                        }
+                        else {
+                            $ValidationErrors.Add("Expected SPF include of '$ExpectedInclude' was not found in the SPF record")
+                        }
+                    }
+                    else {
+                        Write-Verbose 'Expected SPF include found'
+                    }
+                }
+
                 if ($RecordCount -eq 0) { $ValidationErrors.Add('No SPF record detected') | Out-Null }
                 if ($RecordCount -gt 1) { $ValidationErrors.Add("There should only be one SPF record, $RecordCount detected") | Out-Null }
     
@@ -241,7 +260,7 @@ Function Read-SpfRecord {
                 $SpfResults.LookupCount = $LookupCount
                 $SpfResults.AllMechanism = $AllMechanism
                 $SpfResults.ValidationErrors = $ValidationErrors
-                $SpfResults.Lookups = $RecordList | Where-Object { $_.Level -ne 'Parent' -and $_.Level -ne 'Redirect' }
+                $SpfResults.Lookups = $RecordList
             
                 # Output SpfResults object
                 $SpfResults
