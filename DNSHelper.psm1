@@ -88,13 +88,15 @@ Function Read-SpfRecord {
     )
     begin {
         $SPFResults = [PSCustomObject]@{
-            Domain          = $Domain
-            Record          = ''
-            RecordCount     = 0
-            LookupCount     = 0
-            AllMechanism    = ''
-            ValidationFails = New-Object System.Collections.ArrayList
-            Lookups         = New-Object System.Collections.ArrayList        
+            Domain           = $Domain
+            Record           = ''
+            RecordCount      = 0
+            LookupCount      = 0
+            AllMechanism     = ''
+            ValidationPasses = New-Object System.Collections.ArrayList
+            ValidationWarns  = New-Object System.Collections.ArrayList
+            ValidationFails  = New-Object System.Collections.ArrayList
+            Lookups          = New-Object System.Collections.ArrayList        
         }
 
         # Initialize lists to hold all records
