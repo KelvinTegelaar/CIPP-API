@@ -93,14 +93,18 @@ Function Read-SpfRecord {
             RecordCount      = 0
             LookupCount      = 0
             AllMechanism     = ''
-            ValidationErrors = New-Object System.Collections.ArrayList
+            ValidationPasses = New-Object System.Collections.ArrayList
+            ValidationWarns  = New-Object System.Collections.ArrayList
+            ValidationFails  = New-Object System.Collections.ArrayList
             Lookups          = New-Object System.Collections.ArrayList        
         }
 
         # Initialize lists to hold all records
         $RecordList = New-Object System.Collections.ArrayList
         $IncludeList = New-Object System.Collections.ArrayList
-        $ValidationErrors = New-Object System.Collections.ArrayList
+        $ValidationFails = New-Object System.Collections.ArrayList
+        $ValidationPasses = New-Object System.Collections.ArrayList
+        $ValidationWarns = New-Object System.Collections.ArrayList
         $LookupCount = 0
         $IsRedirected = $false
     }
@@ -147,7 +151,7 @@ Function Read-SpfRecord {
                 # Look for redirect modifier
                 elseif ($_ -match 'redirect=(?<Domain>.+)') {
                     if ($Record -match 'all$') {
-                        $ValidationErrors.Add("$Domain - Redirect modifier should not contain all mechanism, SPF record invalid") | Out-Null
+                        $ValidationFails.Add("FAIL: $Domain - Redirect modifier should not contain all mechanism, SPF record invalid") | Out-Null
                     }
                     else {
                         $IsRedirected = $true
@@ -188,7 +192,7 @@ Function Read-SpfRecord {
             if ($IsRedirected) {
                 $RedirectedLookup = Read-SpfRecord -Domain $Domain -Level 'Redirect'
                 if (($RedirectedLookup | Measure-Object).Count -eq 0) {
-                    $ValidationErrors.Add('Redirected lookup does not contain a SPF record, permerror')
+                    $ValidationFails.Add('FAIL: Redirected lookup does not contain a SPF record, permerror')
                 }
             }
             else {
@@ -241,7 +245,7 @@ Function Read-SpfRecord {
                             Write-Verbose 'Expected SPF IP Addresses found'
                         }
                         else {
-                            $ValidationErrors.Add("Expected SPF include of '$ExpectedInclude' was not found in the SPF record")
+                            $ValidationFails.Add("FAIL: Expected SPF include of '$ExpectedInclude' was not found in the SPF record")
                         }
                     }
                     else {
@@ -249,17 +253,34 @@ Function Read-SpfRecord {
                     }
                 }
 
-                if ($RecordCount -eq 0) { $ValidationErrors.Add('No SPF record detected') | Out-Null }
-                if ($RecordCount -gt 1) { $ValidationErrors.Add("There should only be one SPF record, $RecordCount detected") | Out-Null }
+                $LegacySpfType = Resolve-DnsHttpsQuery -Domain $Domain -RecordType 'SPF'
+
+                if ($null -ne $LegacySpfType) {
+                    $ValidationWarns.Add('WARN: DNS Record Type SPF detected, this is legacy and should not be used. It is recommeded to delete this record.')
+                }
+
+                if ($RecordCount -eq 0) { $ValidationFails.Add('FAIL: No SPF record detected') | Out-Null }
+                if ($RecordCount -gt 1) { $ValidationFails.Add("FAIL: There should only be one SPF record, $RecordCount detected") | Out-Null }
     
                 $LookupCount = ($RecordList | Measure-Object -Property LookupCount -Sum).Sum
-                if ($LookupCount -gt 10) { $ValidationErrors.Add("SPF record exceeded 10 lookups, found $LookupCount") | Out-Null }
-    
+                if ($LookupCount -gt 10) { 
+                    $ValidationFails.Add("FAIL: SPF record exceeded 10 lookups, found $LookupCount") | Out-Null 
+                }
+                elseif ($LookupCount -ge 9 -and $LookupCount -lt 10) {
+                    $ValidationWarns.Add("WARN: SPF lookup count is close to the limit of 10, found $LookupCount") | Out-Null
+                }
+
+                if (($ValidationFails | Measure-Object | Select-Object -ExpandProperty Count) -eq 0) {
+                    $ValidationPasses.Add('PASS: No errors detected with SPF record') | Out-Null
+                }
+
                 $SpfResults.Record = $Record
                 $SpfResults.RecordCount = $RecordCount
                 $SpfResults.LookupCount = $LookupCount
                 $SpfResults.AllMechanism = $AllMechanism
-                $SpfResults.ValidationErrors = $ValidationErrors
+                $SpfResults.ValidationPasses = $ValidationPasses
+                $SpfResults.ValidationWarns = $ValidationWarns
+                $SpfResults.ValidationFails = $ValidationFails
                 $SpfResults.Lookups = $RecordList
             
                 # Output SpfResults object
