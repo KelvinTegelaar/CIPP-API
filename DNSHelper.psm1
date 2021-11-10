@@ -177,8 +177,8 @@ Function Read-SpfRecord {
 
                 # Get parent level mechanism for all
                 elseif ($Level -eq 'Parent' -and $_ -match 'all') {
-                    if ($Record -match "$_$") {
-                        $AllMechanism = $_
+                    if ($Record -match '(?<Mechanism>[+-~?])all$') {
+                        $AllMechanism = $Matches.Mechanism
                     }
                 }
                 # Get any type specific entry
@@ -262,6 +262,17 @@ Function Read-SpfRecord {
                 if ($RecordCount -eq 0) { $ValidationFails.Add('FAIL: No SPF record detected') | Out-Null }
                 if ($RecordCount -gt 1) { $ValidationFails.Add("FAIL: There should only be one SPF record, $RecordCount detected") | Out-Null }
     
+                if ($AllMechanism -eq '') { 
+                    $ValidationFails.Add('FAIL: All mechanism is missing from SPF record, defaulting to +all') | Out-Null
+                    $AllMechanism = '+' 
+                }
+                if ($AllMechanism -eq '-') {
+                    $ValidationPasses.Add('PASS: SPF record ends in -all') | Out-Null
+                }
+                else {
+                    $ValidationFails.Add('FAIL: SPF record should end in -all to prevent spamming') | Out-Null 
+                }
+
                 $LookupCount = ($RecordList | Measure-Object -Property LookupCount -Sum).Sum
                 if ($LookupCount -gt 10) { 
                     $ValidationFails.Add("FAIL: SPF record exceeded 10 lookups, found $LookupCount") | Out-Null 
@@ -271,7 +282,7 @@ Function Read-SpfRecord {
                 }
 
                 if (($ValidationFails | Measure-Object | Select-Object -ExpandProperty Count) -eq 0) {
-                    $ValidationPasses.Add('PASS: No errors detected with SPF record') | Out-Null
+                    $ValidationPasses.Add('PASS: All validation succeeded. No errors detected with SPF record') | Out-Null
                 }
 
                 $SpfResults.Record = $Record
