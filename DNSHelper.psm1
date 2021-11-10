@@ -293,3 +293,171 @@ Function Read-SpfRecord {
         }
     }
 }
+
+function Read-DmarcPolicy {
+    Param(
+        [Parameter(Mandatory = $true)]
+        [string]$Domain
+    )
+    $DmarcAnalysis = [PSCustomObject]@{
+        Domain           = $Domain
+        Record           = ''
+        Policy           = ''
+        SubdomainPolicy  = ''
+        FailureReport    = ''
+        Percent          = 100
+        ReportingEmails  = New-Object System.Collections.ArrayList
+        ForensicEmails   = New-Object System.Collections.ArrayList
+        ValidationPasses = New-Object System.Collections.ArrayList
+        ValidationWarns  = New-Object System.Collections.ArrayList
+        ValidationFails  = New-Object System.Collections.ArrayList
+    }
+
+    $ValidationPasses = New-Object System.Collections.ArrayList
+    $ValidationWarns = New-Object System.Collections.ArrayList
+    $ValidationFails = New-Object System.Collections.ArrayList
+
+    $ReportDomains = New-Object System.Collections.ArrayList
+
+    $PolicyValues = @('none', 'quarantine', 'reject')
+    $FailureReportValues = @('0', '1', 'd', 's')
+
+    if (Test-Path -Path 'Config/DnsConfig.json') {
+        $Config = Get-Content 'Config/DnsConfig.json' | ConvertFrom-Json
+            
+        $DnsQuery = @{
+            RecordType = 'TXT'
+            Domain     = "_dmarc.$Domain"
+            Resolver   = $Config.Resolver
+        }
+    }
+    else {
+        $DnsQuery = @{
+            RecordType = 'TXT'
+            Domain     = "_dmarc.$Domain"
+        }
+    }
+    $DmarcRecord = (Resolve-DnsHttpsQuery @DnsQuery).data
+    $DmarcAnalysis.Record = $DmarcRecord
+    
+    # Split DMARC record into name/value pairs
+    $TagList = New-Object System.Collections.ArrayList
+    Foreach ($Element in ($DmarcRecord -split ';').trim()) {
+        $Name, $Value = $Element -split '='
+        $TagList.Add([PSCustomObject]@{
+                Name  = $Name
+                Value = $Value
+            }) | Out-Null
+    }
+
+    $x = 0
+    foreach ($Tag in $TagList) {
+        switch ($Tag.Name) {
+            'v' {
+                # REQUIRED: Version
+                if ($x -ne 0) { $ValidationFails.Add('FAIL: v=DMARC1 must be at the beginning of the record') | Out-Null }
+                if ($Tag.Value -ne 'DMARC1') { $ValidationFails.Add("FAIL: Version must be DMARC1 - found $($Tag.Value)") | Out-Null }
+            }
+            'p' {
+                # REQUIRED: Policy
+                if ($PolicyValues -notcontains $Tag.Value) { $ValidationFails.Add("FAIL: Policy must be one of the following - none, quarantine,reject. Found $($Tag.Value)") | Out-Null }
+                if ($Tag.Value -eq 'reject') { $ValidationPasses.Add('PASS: Policy is sufficiently strict') | Out-Null }
+                if ($Tag.Value -eq 'quarantine') { $ValidationWarns.Add('WARN: Policy is only partially enforced with quarantine') | Out-Null }
+                if ($Tag.Value -eq 'none') { $ValidationWarns.Add('FAIL: Policy is not being enforced') | Out-Null }
+                $DmarcAnalysis.Policy = $Tag.Value
+            }
+            'sp' {
+                # Subdomain policy
+                if ($PolicyValues -notcontains $Tag.Value) { $ValidationFails.Add("FAIL: Subdomain policy must be one of the following - none, quarantine,reject. Found $($Tag.Value)") | Out-Null }
+                if ($Tag.Value -eq 'reject') { $ValidationPasses.Add('PASS: Subdomain policy is sufficiently strict') | Out-Null }
+                if ($Tag.Value -eq 'quarantine') { $ValidationWarns.Add('WARN: Subdomain policy is only partially enforced with quarantine') | Out-Null }
+                if ($Tag.Value -eq 'none') { $ValidationWarns.Add('FAIL: Subdomain policy is not being enforced') | Out-Null }
+                $DmarcAnalysis.SubdomainPolicy = $Tag.Value
+            }
+            'rua' {
+                # Aggregate report emails
+                $ReportingEmails = $Tag.Value -split ','
+                $ReportEmailsSet = $false
+                foreach ($MailTo in $ReportingEmails) {
+                    if ($MailTo -notmatch '^mailto:') { $ValidationFails.Add("FAIL: Aggregate report email must begin with 'mailto:', multiple addresses must be separated by commas - found $($Tag.Value)") | Out-Null }
+                    else {
+                        $ReportEmailsSet = $true
+                        if ($MailTo -match '^mailto:(?<Email>.+@(?<Domain>.+))$') {
+                            if ($ReportDomains -notcontains $Matches.Domain -and $Matches.Domain -ne $Domain) {
+                                $ReportDomains.Add($Matches.Domain) | Out-Null
+                            }
+                            $DmarcAnalysis.ReportingEmails.Add($Matches.Email) | Out-Null
+                        }
+                    }
+                    
+                }
+                if ($ReportEmailsSet) {
+                    $ValidationPasses.Add('PASS: Aggregate reports are being sent') | Out-Null
+                }
+                else {
+                    $ValidationWarns.Add('WARN: Aggregate reports are not being sent') | Out-Null
+                }
+            }
+            'ruf' {
+                # Forensic reporting emails
+                foreach ($MailTo in ($Tag.Value -split ',')) {
+                    if ($MailTo -notmatch '^mailto:') { $ValidationFails.Add("FAIL: Forensic report email must begin with 'mailto:', multiple addresses must be separated by commas - found $($Tag.Value)") | Out-Null }
+                    else {
+                        if ($MailTo -match '^mailto:(?<Email>.+@(?<Domain>.+))$') {
+                            if ($ReportDomains -notcontains $Matches.Domain -and $Matches.Domain -ne $Domain) {
+                                $ReportDomains.Add($Matches.Domain) | Out-Null
+                            }
+                            $DmarcAnalysis.ForensicEmails.Add($Matches.Email) | Out-Null
+                        }
+                    }
+                }
+            }
+            'fo' {
+                # Failure reporting options
+                if ($FailureReportValues -notcontains $Tag.Value) { $ValidationFails.Add('FAIL: Failure reporting options must be 0, 1, d or s') | Out-Null }
+                if ($Tag.Value -eq '1') { $ValidationPasses.Add('PASS: Failure report option 1 generates reports on SPF or DKIM misalignment') | Out-Null }
+                if ($Tag.Value -eq '0') { $ValidationWarns.Add('WARN: Failure report option 0 will only generate a report on both SPF and DKIM misalignment. It is recommended to set this value to 1') | Out-Null }
+                if ($Tag.Value -eq 'd') { $ValidationWarns.Add('WARN: Failure report option d will only generate a report on failed DKIM evaluation. It is recommended to set this value to 1') | Out-Null }
+                if ($Tag.Value -eq 's') { $ValidationWarns.Add('WARN: Failure report option s will only generate a report on failed SPF evaluation. It is recommended to set this value to 1') | Out-Null }
+                $DmarcAnalysis.FailureReport = $Tag.Value
+            } 
+            'pct' {
+                if ($Tag.Value -gt 100 -or $Tag.Value -lt 0) { $ValidationWarns.Add('WARN: Percentage must be between 0 and 100') | Out-Null }
+                $DmarcAnalysis.Percent = $Tag.Value
+            }
+        }
+        $x++
+    }
+
+    # Check report domains for DMARC reporting record
+    foreach ($ReportDomain in $ReportDomains) {
+        $ReportDomainQuery = "$Domain._report._dmarc.$ReportDomain"
+        $DnsQuery['Domain'] = $ReportDomainQuery
+        $ReportDmarcRecord = Resolve-DnsHttpsQuery @DnsQuery
+
+        if ($null -eq $ReportDmarcRecord) {
+            $ValidationWarns.Add("WARN: Report DMARC policy for $Domain is missing from $ReportDomain, reports will not be delivered. Expected record: $Domain._report._dmarc.$ReportDomain - Expected value: v=DMARC1;") | Out-Null
+        }
+        elseif ($ReportDmarcRecord.data -notmatch '^v=DMARC1') {
+            $ValidationWarns.Add("WARN: Report DMARC policy for $Domain is missing from $ReportDomain, reports will not be delivered. Expected record: $Domain._report._dmarc.$ReportDomain - Expected value: v=DMARC1;") | Out-Null
+        }
+    }
+
+    # Check for missing record tags
+    if ($DmarcAnalysis.Policy -eq '') { $ValidationFails.Add('FAIL: Policy record is missing') | Out-Null }
+    if ($DmarcAnalysis.SubdomainPolicy -eq '') { $DmarcAnalysis.SubdomainPolicy = $DmarcAnalysis.Policy }
+    if ($DmarcAnalysis.FailureReport -eq '' -and $null -ne $DmarcRecord) { 
+        $ValidationWarns.Add('WARN: Failure report option 0 will only generate a report on both SPF and DKIM misalignment. It is recommended to set this value to 1') | Out-Null 
+        $DmarcAnalysis.FailureReport = 0 
+    }
+    if ($DmarcAnalysis.Percent -lt 100) {
+        $ValidationWarns.Add('WARN: Not all emails will be processed by the DMARC policy') | Out-Null
+    }
+
+    # Add the validation lists
+    $DmarcAnalysis.ValidationPasses = $ValidationPasses
+    $DmarcAnalysis.ValidationWarns = $ValidationWarns
+    $DmarcAnalysis.ValidationFails = $ValidationFails
+
+    $DmarcAnalysis
+}
