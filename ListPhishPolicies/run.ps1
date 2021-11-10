@@ -16,8 +16,9 @@ $AntiPhishRules = New-ExoRequest -tenantid $TenantFilter -cmdlet "Get-AntiPhishR
 $AntiPhishPolicies = New-ExoRequest -tenantid $TenantFilter -cmdlet "Get-AntiPhishPolicy"
 
 $GraphRequest = $AntiPhishPolicies | Select-Object name,
+@{Name = 'GUID'; Expression = {$(( -join (( 0x41..0x5A) + ( 0x61..0x7A) | Get-Random -Count 13  | % {[char]$_}) ))}},
 @{ Name = 'ExcludedDomains'; Expression = {$($_.ExcludedDomains) -join "<br />"}},
-@{ Name = 'ExcludedSenders'; Expression = { $($_.ExcludedSenders) -join "<br />" } },
+@{ Name = 'ExcludedSenders'; Expression = {$($_.ExcludedSenders) -join "<br />" } },
 @{ Name = 'PhishThresholdLevel'; Expression = {
         switch ($_.PhishThresholdLevel) {
             1 { $result = 'Standard' }
