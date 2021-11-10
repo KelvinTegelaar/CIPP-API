@@ -305,6 +305,7 @@ function Read-DmarcPolicy {
         Policy           = ''
         SubdomainPolicy  = ''
         FailureReport    = ''
+        Percent          = 100
         ReportingEmails  = New-Object System.Collections.ArrayList
         ForensicEmails   = New-Object System.Collections.ArrayList
         ValidationPasses = New-Object System.Collections.ArrayList
@@ -420,6 +421,10 @@ function Read-DmarcPolicy {
                 if ($Tag.Value -eq 's') { $ValidationWarns.Add('WARN: Failure report option s will only generate a report on failed SPF evaluation. It is recommended to set this value to 1') | Out-Null }
                 $DmarcAnalysis.FailureReport = $Tag.Value
             } 
+            'pct' {
+                if ($Tag.Value -gt 100 -or $Tag.Value -lt 0) { $ValidationWarns.Add('WARN: Percentage must be between 0 and 100') | Out-Null }
+                $DmarcAnalysis.Percent = $Tag.Value
+            }
         }
         $x++
     }
@@ -433,7 +438,7 @@ function Read-DmarcPolicy {
         if ($null -eq $ReportDmarcRecord) {
             $ValidationWarns.Add("WARN: Report DMARC policy for $Domain is missing from $ReportDomain, reports will not be delivered. Expected record: $Domain._report._dmarc.$ReportDomain - Expected value: v=DMARC1;") | Out-Null
         }
-        elseif ($ReportDmarcRecord.data -ne 'v=DMARC1;') {
+        elseif ($ReportDmarcRecord.data -notmatch '^v=DMARC1') {
             $ValidationWarns.Add("WARN: Report DMARC policy for $Domain is missing from $ReportDomain, reports will not be delivered. Expected record: $Domain._report._dmarc.$ReportDomain - Expected value: v=DMARC1;") | Out-Null
         }
     }
@@ -441,9 +446,12 @@ function Read-DmarcPolicy {
     # Check for missing record tags
     if ($DmarcAnalysis.Policy -eq '') { $ValidationFails.Add('FAIL: Policy record is missing') | Out-Null }
     if ($DmarcAnalysis.SubdomainPolicy -eq '') { $DmarcAnalysis.SubdomainPolicy = $DmarcAnalysis.Policy }
-    if ($DmarcAnalysis.FailureReport -eq '') { 
+    if ($DmarcAnalysis.FailureReport -eq '' -and $null -ne $DmarcRecord) { 
         $ValidationWarns.Add('WARN: Failure report option 0 will only generate a report on both SPF and DKIM misalignment. It is recommended to set this value to 1') | Out-Null 
         $DmarcAnalysis.FailureReport = 0 
+    }
+    if ($DmarcAnalysis.Percent -lt 100) {
+        $ValidationWarns.Add('WARN: Not all emails will be processed by the DMARC policy') | Out-Null
     }
 
     # Add the validation lists
