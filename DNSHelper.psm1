@@ -313,12 +313,17 @@ function Read-DmarcPolicy {
     $DmarcAnalysis = [PSCustomObject]@{
         Domain           = $Domain
         Record           = ''
+        Version          = ''
         Policy           = ''
         SubdomainPolicy  = ''
-        FailureReport    = ''
         Percent          = 100
+        DkimAlignment    = 'r'
+        SpfAlignment     = 'r'
+        ReportFormat     = 'afrf'
+        ReportInterval   = 86400
         ReportingEmails  = New-Object System.Collections.ArrayList
         ForensicEmails   = New-Object System.Collections.ArrayList
+        FailureReport    = ''
         ValidationPasses = New-Object System.Collections.ArrayList
         ValidationWarns  = New-Object System.Collections.ArrayList
         ValidationFails  = New-Object System.Collections.ArrayList
@@ -368,21 +373,14 @@ function Read-DmarcPolicy {
                 # REQUIRED: Version
                 if ($x -ne 0) { $ValidationFails.Add('FAIL: v=DMARC1 must be at the beginning of the record') | Out-Null }
                 if ($Tag.Value -ne 'DMARC1') { $ValidationFails.Add("FAIL: Version must be DMARC1 - found $($Tag.Value)") | Out-Null }
+                $DmarcAnalysis.Version = $Tag.Value
             }
             'p' {
                 # REQUIRED: Policy
-                if ($PolicyValues -notcontains $Tag.Value) { $ValidationFails.Add("FAIL: Policy must be one of the following - none, quarantine,reject. Found $($Tag.Value)") | Out-Null }
-                if ($Tag.Value -eq 'reject') { $ValidationPasses.Add('PASS: Policy is sufficiently strict') | Out-Null }
-                if ($Tag.Value -eq 'quarantine') { $ValidationWarns.Add('WARN: Policy is only partially enforced with quarantine') | Out-Null }
-                if ($Tag.Value -eq 'none') { $ValidationWarns.Add('FAIL: Policy is not being enforced') | Out-Null }
                 $DmarcAnalysis.Policy = $Tag.Value
             }
             'sp' {
                 # Subdomain policy
-                if ($PolicyValues -notcontains $Tag.Value) { $ValidationFails.Add("FAIL: Subdomain policy must be one of the following - none, quarantine,reject. Found $($Tag.Value)") | Out-Null }
-                if ($Tag.Value -eq 'reject') { $ValidationPasses.Add('PASS: Subdomain policy is sufficiently strict') | Out-Null }
-                if ($Tag.Value -eq 'quarantine') { $ValidationWarns.Add('WARN: Subdomain policy is only partially enforced with quarantine') | Out-Null }
-                if ($Tag.Value -eq 'none') { $ValidationWarns.Add('FAIL: Subdomain policy is not being enforced') | Out-Null }
                 $DmarcAnalysis.SubdomainPolicy = $Tag.Value
             }
             'rua' {
@@ -400,7 +398,6 @@ function Read-DmarcPolicy {
                             $DmarcAnalysis.ReportingEmails.Add($Matches.Email) | Out-Null
                         }
                     }
-                    
                 }
                 if ($ReportEmailsSet) {
                     $ValidationPasses.Add('PASS: Aggregate reports are being sent') | Out-Null
@@ -425,17 +422,29 @@ function Read-DmarcPolicy {
             }
             'fo' {
                 # Failure reporting options
-                if ($FailureReportValues -notcontains $Tag.Value) { $ValidationFails.Add('FAIL: Failure reporting options must be 0, 1, d or s') | Out-Null }
-                if ($Tag.Value -eq '1') { $ValidationPasses.Add('PASS: Failure report option 1 generates reports on SPF or DKIM misalignment') | Out-Null }
-                if ($Tag.Value -eq '0') { $ValidationWarns.Add('WARN: Failure report option 0 will only generate a report on both SPF and DKIM misalignment. It is recommended to set this value to 1') | Out-Null }
-                if ($Tag.Value -eq 'd') { $ValidationWarns.Add('WARN: Failure report option d will only generate a report on failed DKIM evaluation. It is recommended to set this value to 1') | Out-Null }
-                if ($Tag.Value -eq 's') { $ValidationWarns.Add('WARN: Failure report option s will only generate a report on failed SPF evaluation. It is recommended to set this value to 1') | Out-Null }
                 $DmarcAnalysis.FailureReport = $Tag.Value
             } 
             'pct' {
-                if ($Tag.Value -gt 100 -or $Tag.Value -lt 0) { $ValidationWarns.Add('WARN: Percentage must be between 0 and 100') | Out-Null }
+                # Percentage of email to check
                 $DmarcAnalysis.Percent = $Tag.Value
             }
+            'adkim' {
+                # DKIM Alignmenet
+                $DmarcAnalysis.DkimAlignment = $Tag.Value
+            }
+            'aspf' {
+                # SPF Alignment
+                $DmarcAnalysis.SpfAlignment = $Tag.Value
+            }
+            'rf' {
+                # Report Format
+                $DmarcAnalysis.ReportFormat = $Tag.Value
+            }
+            'ri' {
+                # Report Interval
+                $DmarcAnalysis.ReportInterval = $Tag.Value
+            }
+
         }
         $x++
     }
@@ -454,16 +463,37 @@ function Read-DmarcPolicy {
         }
     }
 
-    # Check for missing record tags
+    # Check for missing record tags and set defaults
     if ($DmarcAnalysis.Policy -eq '') { $ValidationFails.Add('FAIL: Policy record is missing') | Out-Null }
     if ($DmarcAnalysis.SubdomainPolicy -eq '') { $DmarcAnalysis.SubdomainPolicy = $DmarcAnalysis.Policy }
-    if ($DmarcAnalysis.FailureReport -eq '' -and $null -ne $DmarcRecord) { 
-        $ValidationWarns.Add('WARN: Failure report option 0 will only generate a report on both SPF and DKIM misalignment. It is recommended to set this value to 1') | Out-Null 
-        $DmarcAnalysis.FailureReport = 0 
-    }
-    if ($DmarcAnalysis.Percent -lt 100) {
-        $ValidationWarns.Add('WARN: Not all emails will be processed by the DMARC policy') | Out-Null
-    }
+    if ($DmarcAnalysis.FailureReport -eq '' -and $null -ne $DmarcRecord) { $DmarcAnalysis.FailureReport = 0 }
+
+    # Perform validation checks
+
+    # Check policy
+    if ($PolicyValues -notcontains $DmarcAnalysis.Policy) { $ValidationFails.Add("FAIL: Policy must be one of the following - none, quarantine,reject. Found $($Tag.Value)") | Out-Null }
+    if ($DmarcAnalysis.Policy -eq 'reject') { $ValidationPasses.Add('PASS: Policy is sufficiently strict') | Out-Null }
+    if ($DmarcAnalysis.Policy -eq 'quarantine') { $ValidationWarns.Add('WARN: Policy is only partially enforced with quarantine') | Out-Null }
+    if ($DmarcAnalysis.Policy -eq 'none') { $ValidationWarns.Add('FAIL: Policy is not being enforced') | Out-Null }
+
+    # Check subdomain policy
+    if ($PolicyValues -notcontains $DmarcAnalysis.SubdomainPolicy) { $ValidationFails.Add("FAIL: Subdomain policy must be one of the following - none, quarantine,reject. Found $($DmarcAnalysis.SubdomainPolicy)") | Out-Null }
+    if ($DmarcAnalysis.SubdomainPolicy -eq 'reject') { $ValidationPasses.Add('PASS: Subdomain policy is sufficiently strict') | Out-Null }
+    if ($DmarcAnalysis.SubdomainPolicy -eq 'quarantine') { $ValidationWarns.Add('WARN: Subdomain policy is only partially enforced with quarantine') | Out-Null }
+    if ($DmarcAnalysis.SubdomainPolicy -eq 'none') { $ValidationWarns.Add('FAIL: Subdomain policy is not being enforced') | Out-Null }
+
+    # Check percentage
+    if ($DmarcAnalysis.Percent -lt 100 -and $DmarcAnalysis.Percent -gt 0) { $ValidationWarns.Add('WARN: Not all emails will be processed by the DMARC policy') | Out-Null }
+    if ($DmarcAnalysis.Percent -gt 100 -or $DmarcAnalysis.Percent -le 0) { $ValidationFails.Add('FAIL: Percentage must be between 1 and 100') | Out-Null }
+ 
+    # Check forensic reports and failure options
+    $ForensicCount = ($DmarcAnalysis.ForensicEmails | Measure-Object | Select-Object -ExpandProperty Count)   
+    if ($FailureReportValues -notcontains $DmarcAnalysis.FailureReport) { $ValidationFails.Add('FAIL: Failure reporting options must be 0, 1, d or s') | Out-Null }
+    if ($ForensicCount -eq 0 -and $DmarcAnalysis.FailureReport -ne '') { $ValidationWarns.Add('WARN: Forensic email reports recipients are not defined and failure report options are set. No reports will be sent.') | Out-Null }
+    if ($DmarcAnalysis.FailureReport -eq '1') { $ValidationPasses.Add('PASS: Failure report option 1 generates reports on SPF or DKIM misalignment') | Out-Null }
+    if ($DmarcAnalysis.FailureReport -eq '0') { $ValidationWarns.Add('WARN: Failure report option 0 will only generate a report on both SPF and DKIM misalignment. It is recommended to set this value to 1') | Out-Null }
+    if ($DmarcAnalysis.FailureReport -eq 'd') { $ValidationWarns.Add('WARN: Failure report option d will only generate a report on failed DKIM evaluation. It is recommended to set this value to 1') | Out-Null }
+    if ($DmarcAnalysis.FailureReport -eq 's') { $ValidationWarns.Add('WARN: Failure report option s will only generate a report on failed SPF evaluation. It is recommended to set this value to 1') | Out-Null }
 
     # Add the validation lists
     $DmarcAnalysis.ValidationPasses = $ValidationPasses
