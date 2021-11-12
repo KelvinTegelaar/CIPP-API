@@ -26,26 +26,25 @@ $SecureDefaultsState = (New-GraphGetRequest -Uri "https://graph.microsoft.com/be
 try {
     $CAPolicies = (New-GraphGetRequest -Uri "https://graph.microsoft.com/beta/identity/conditionalAccess/policies" -tenantid $Request.query.TenantFilter )
     $CAState = foreach ($Policy in $CAPolicies) {
-        if ($policy.grantControls.builtincontrols -ne 'mfa') { continue }
-        if ($Policy.conditions.applications.includeApplications -ne "All") {
-            Write-Host $Policy.conditions.applications.includeApplications
-            "Specific Applications"
-            continue
-        }
-        if ($Policy.conditions.users.includeUsers -eq "All") {
-            'All Users'
-            continue
-        }        
+        if (($policy.grantControls.builtincontrols -eq 'mfa') -or ($policy.grantControls.customAuthenticationFactors -eq 'RequireDuoMfa')) {
+            if ($Policy.conditions.applications.includeApplications -ne "All") {
+                Write-Host $Policy.conditions.applications.includeApplications
+                "Specific Applications"
+                continue
+            }
+            if ($Policy.conditions.users.includeUsers -eq "All") {
+                'All Users'
+                continue
+            }
+        } 
     }
-}
-catch {
+} catch {
     $CAState = $null
 }
 if (!$CAState) { $CAState = "None" }
 Try {
     $MFARegistration = (New-GraphGetRequest -uri "https://graph.microsoft.com/beta/reports/credentialUserRegistrationDetails" -tenantid $Request.query.TenantFilter)
-}
-catch {
+} catch {
     $MFARegistration = $null
 }
 # Interact with query parameters or the body of the request.
