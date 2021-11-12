@@ -74,7 +74,17 @@ Function Read-SpfRecord {
     Domain to obtain SPF record for
     
     .EXAMPLE
-    Read-SpfRecord -Domain example.com
+    PS> Read-SpfRecord -Domain gmail.com
+
+    Domain           : gmail.com
+    Record           : v=spf1 redirect=_spf.google.com
+    RecordCount      : 1
+    LookupCount      : 4
+    AllMechanism     : ~
+    ValidationPasses : {}
+    ValidationWarns  : {}
+    ValidationFails  : {FAIL: SPF record should end in -all to prevent spamming}
+    Lookups          : {@{Domain=_spf.google.com; Record=v=spf1 include:_netblocks.google.com include:_netblocks2.google.com include:_netblocks3.google.com ~all; RecordCount=1; Level=Redirect; Includes=System.Collections.ArrayList; TypeLookups=System.Collections.ArrayList; IPAddresses=System.Collections.ArrayList; LookupCount=1; AllMechanism=~}, @{Domain=_netblocks.google.com; Record=v=spf1 ip4:35.190.247.0/24 ip4:64.233.160.0/19 ip4:66.102.0.0/20 ip4:66.249.80.0/20 ip4:72.14.192.0/18 ip4:74.125.0.0/16 ip4:108.177.8.0/21 ip4:173.194.0.0/16 ip4:209.85.128.0/17 ip4:216.58.192.0/19 ip4:216.239.32.0/19 ~all; RecordCount=1; Level=Include; Includes=System.Collections.ArrayList; TypeLookups=System.Collections.ArrayList; IPAddresses=System.Collections.ArrayList; LookupCount=1; AllMechanism=}, @{Domain=_netblocks2.google.com; Record=v=spf1 ip6:2001:4860:4000::/36 ip6:2404:6800:4000::/36 ip6:2607:f8b0:4000::/36 ip6:2800:3f0:4000::/36 ip6:2a00:1450:4000::/36 ip6:2c0f:fb50:4000::/36 ~all; RecordCount=1; Level=Include; Includes=System.Collections.ArrayList; TypeLookups=System.Collections.ArrayList; IPAddresses=System.Collections.ArrayList; LookupCount=1; AllMechanism=}, @{Domain=_netblocks3.google.com; Record=v=spf1 ip4:172.217.0.0/19 ip4:172.217.32.0/20 ip4:172.217.128.0/19 ip4:172.217.160.0/20 ip4:172.217.192.0/19 ip4:172.253.56.0/21 ip4:172.253.112.0/20 ip4:108.177.96.0/19 ip4:35.191.0.0/16 ip4:130.211.0.0/22 ~all; RecordCount=1; Level=Include; Includes=System.Collections.ArrayList; TypeLookups=System.Collections.ArrayList; IPAddresses=System.Collections.ArrayList; LookupCount=1; AllMechanism=}}
 
     .NOTES
     Author: John Duprey
@@ -176,7 +186,7 @@ Function Read-SpfRecord {
                 }
 
                 # Get parent level mechanism for all
-                elseif ($Level -eq 'Parent' -and $_ -match 'all') {
+                elseif (($Level -eq 'Parent' -or $Level -eq 'Redirect') -and $_ -match 'all') {
                     if ($Record -match '(?<Mechanism>[+-~?])all$') {
                         $AllMechanism = $Matches.Mechanism
                     }
@@ -194,6 +204,11 @@ Function Read-SpfRecord {
                 if (($RedirectedLookup | Measure-Object).Count -eq 0) {
                     $ValidationFails.Add('FAIL: Redirected lookup does not contain a SPF record, permerror')
                 }
+                $RecordList.AddRange($RedirectedLookup.Lookups) | Out-Null
+                $AllMechanism = $RedirectedLookup.AllMechanism
+                $ValidationFails.AddRange($RedirectedLookup.ValidationFails)
+                $ValidationWarns.AddRange($RedirectedLookup.ValidationWarns)
+                $ValidationPasses.AddRange($RedirectedLookup.ValidationPasses)
             }
             else {
                 # Return object containing Domain and SPF record
@@ -216,100 +231,131 @@ Function Read-SpfRecord {
         }
     }
     end {
-        if ($IsRedirected) {
-            $RedirectedLookup
-        }
-        else {
-            # Loop through includes and perform recursive lookup
-            $IncludeHosts = $IncludeList | Sort-Object -Unique
-            if (($IncludeHosts | Measure-Object).Count -gt 0) {
-                foreach ($Include in $IncludeHosts) {
-                    # Verify we have not performed a lookup for this nested SPF record
-                    if ($RecordList.Domain -notcontains $Include) {
-                        $IncludeRecords = Read-SpfRecord -Domain $Include -Level 'Include'
-                        Foreach ($IncludeRecord in $IncludeRecords) {
-                            $RecordList.Add($IncludeRecord) | Out-Null
-                        }
+        # Loop through includes and perform recursive lookup
+        $IncludeHosts = $IncludeList | Sort-Object -Unique
+        if (($IncludeHosts | Measure-Object).Count -gt 0) {
+            foreach ($Include in $IncludeHosts) {
+                # Verify we have not performed a lookup for this nested SPF record
+                if ($RecordList.Domain -notcontains $Include) {
+                    $IncludeRecords = Read-SpfRecord -Domain $Include -Level 'Include'
+                    Foreach ($IncludeRecord in $IncludeRecords) {
+                        $RecordList.Add($IncludeRecord) | Out-Null
                     }
                 }
             }
+        }
         
-            if ($Level -eq 'Parent' -or $Level -eq 'Redirect') {
-                if ($ExpectedInclude -ne '') {
-                    if ($Record -notcontains $ExpectedInclude) {
-                        $ExpectedIncludeSpf = Read-SpfRecord -Domain $ExpectedInclude
-                        $ExpectedIPList = $ExpectedIncludeSpf.Lookups.IPAddresses
-                        $ExpectedIPCount = $ExpectedIPList | Measure-Object | Select-Object -ExpandProperty Count
-                        $FoundIPCount = Compare-Object $RecordList.IPAddresses $ExpectedIPList -IncludeEqual | Where-Object -Property SideIndicator -EQ '==' | Measure-Object | Select-Object -ExpandProperty Count
-                        if ($ExpectedIPCount -eq $FoundIPCount) {
-                            Write-Verbose 'Expected SPF IP Addresses found'
-                        }
-                        else {
-                            $ValidationFails.Add("FAIL: Expected SPF include of '$ExpectedInclude' was not found in the SPF record")
-                        }
+        if ($Level -eq 'Parent' -or $Level -eq 'Redirect') {
+            if ($ExpectedInclude -ne '') {
+                if ($Record -notcontains $ExpectedInclude) {
+                    $ExpectedIncludeSpf = Read-SpfRecord -Domain $ExpectedInclude
+                    $ExpectedIPList = $ExpectedIncludeSpf.Lookups.IPAddresses
+                    $ExpectedIPCount = $ExpectedIPList | Measure-Object | Select-Object -ExpandProperty Count
+                    $FoundIPCount = Compare-Object $RecordList.IPAddresses $ExpectedIPList -IncludeEqual | Where-Object -Property SideIndicator -EQ '==' | Measure-Object | Select-Object -ExpandProperty Count
+                    if ($ExpectedIPCount -eq $FoundIPCount) {
+                        Write-Verbose 'Expected SPF IP Addresses found'
                     }
                     else {
-                        Write-Verbose 'Expected SPF include found'
+                        $ValidationFails.Add("FAIL: Expected SPF include of '$ExpectedInclude' was not found in the SPF record")
                     }
                 }
-
-                $LegacySpfType = Resolve-DnsHttpsQuery -Domain $Domain -RecordType 'SPF'
-
-                if ($null -ne $LegacySpfType) {
-                    $ValidationWarns.Add('WARN: DNS Record Type SPF detected, this is legacy and should not be used. It is recommeded to delete this record.')
-                }
-
-                if ($RecordCount -eq 0) { $ValidationFails.Add('FAIL: No SPF record detected') | Out-Null }
-                if ($RecordCount -gt 1) { $ValidationFails.Add("FAIL: There should only be one SPF record, $RecordCount detected") | Out-Null }
-    
-                if ($AllMechanism -eq '') { 
-                    $ValidationFails.Add('FAIL: All mechanism is missing from SPF record, defaulting to +all') | Out-Null
-                    $AllMechanism = '+' 
-                }
-                if ($AllMechanism -eq '-') {
-                    $ValidationPasses.Add('PASS: SPF record ends in -all') | Out-Null
-                }
                 else {
-                    $ValidationFails.Add('FAIL: SPF record should end in -all to prevent spamming') | Out-Null 
+                    Write-Verbose 'Expected SPF include found'
                 }
+            }
 
-                $LookupCount = ($RecordList | Measure-Object -Property LookupCount -Sum).Sum
-                if ($LookupCount -gt 10) { 
-                    $ValidationFails.Add("FAIL: SPF record exceeded 10 lookups, found $LookupCount") | Out-Null 
-                }
-                elseif ($LookupCount -ge 9 -and $LookupCount -lt 10) {
-                    $ValidationWarns.Add("WARN: SPF lookup count is close to the limit of 10, found $LookupCount") | Out-Null
-                }
+            $LegacySpfType = Resolve-DnsHttpsQuery -Domain $Domain -RecordType 'SPF'
 
-                if (($ValidationFails | Measure-Object | Select-Object -ExpandProperty Count) -eq 0) {
-                    $ValidationPasses.Add('PASS: All validation succeeded. No errors detected with SPF record') | Out-Null
-                }
+            if ($null -ne $LegacySpfType) {
+                $ValidationWarns.Add('WARN: DNS Record Type SPF detected, this is legacy and should not be used. It is recommeded to delete this record.')
+            }
 
-                $SpfResults.Record = $Record
-                $SpfResults.RecordCount = $RecordCount
-                $SpfResults.LookupCount = $LookupCount
-                $SpfResults.AllMechanism = $AllMechanism
-                $SpfResults.ValidationPasses = $ValidationPasses
-                $SpfResults.ValidationWarns = $ValidationWarns
-                $SpfResults.ValidationFails = $ValidationFails
-                $SpfResults.Lookups = $RecordList
-            
-                # Output SpfResults object
-                $SpfResults
+            if ($RecordCount -eq 0) { $ValidationFails.Add('FAIL: No SPF record detected') | Out-Null }
+            if ($RecordCount -gt 1) { $ValidationFails.Add("FAIL: There should only be one SPF record, $RecordCount detected") | Out-Null }
+    
+            if ($AllMechanism -eq '' -and -not $IsRedirected) { 
+                $ValidationFails.Add('FAIL: All mechanism is missing from SPF record, defaulting to +all') | Out-Null
+                $AllMechanism = '+' 
+            }
+            if ($AllMechanism -eq '-') {
+                $ValidationPasses.Add('PASS: SPF record ends in -all') | Out-Null
             }
             else {
-                # Return list of psobjects 
-                $RecordList
+                if (-not $IsRedirected) {
+                    $ValidationFails.Add('FAIL: SPF record should end in -all to prevent spamming') | Out-Null 
+                }
             }
+
+            $LookupCount = ($RecordList | Measure-Object -Property LookupCount -Sum).Sum
+            if ($LookupCount -gt 10) { 
+                $ValidationFails.Add("FAIL: SPF record exceeded 10 lookups, found $LookupCount") | Out-Null 
+            }
+            elseif ($LookupCount -ge 9 -and $LookupCount -lt 10) {
+                $ValidationWarns.Add("WARN: SPF lookup count is close to the limit of 10, found $LookupCount") | Out-Null
+            }
+
+            if (($ValidationFails | Measure-Object | Select-Object -ExpandProperty Count) -eq 0) {
+                $ValidationPasses.Add('PASS: All validation succeeded. No errors detected with SPF record') | Out-Null
+            }
+
+            $SpfResults.Record = $Record
+            $SpfResults.RecordCount = $RecordCount
+            $SpfResults.LookupCount = $LookupCount
+            $SpfResults.AllMechanism = $AllMechanism
+            $SpfResults.ValidationPasses = $ValidationPasses
+            $SpfResults.ValidationWarns = $ValidationWarns
+            $SpfResults.ValidationFails = $ValidationFails
+            $SpfResults.Lookups = $RecordList
+            
+            # Output SpfResults object
+            $SpfResults
+        }
+        else {
+            # Return list of psobjects 
+            $RecordList
         }
     }
 }
 
 function Read-DmarcPolicy {
+    <#
+    .SYNOPSIS
+    Resolve and validate DMARC policy
+    
+    .DESCRIPTION
+    Query domain for DMARC policy (_dmarc.domain.com) and parse results. Record is checked for issues.
+    
+    .PARAMETER Domain
+    Domain to process DMARC policy
+    
+    .EXAMPLE
+    PS> Read-DmarcPolicy -Domain gmail.com
+
+    Domain           : gmail.com
+    Record           : v=DMARC1; p=none; sp=quarantine; rua=mailto:mailauth-reports@google.com
+    Version          : DMARC1
+    Policy           : none
+    SubdomainPolicy  : quarantine
+    Percent          : 100
+    DkimAlignment    : r
+    SpfAlignment     : r
+    ReportFormat     : afrf
+    ReportInterval   : 86400
+    ReportingEmails  : {mailauth-reports@google.com}
+    ForensicEmails   : {}
+    FailureReport    : 0
+    ValidationPasses : {PASS: Aggregate reports are being sent}
+    ValidationWarns  : {FAIL: Policy is not being enforced, WARN: Subdomain policy is only partially enforced with quarantine, WARN: Failure report option 0 will only generate a report on both SPF and DKIM misalignment. It is recommended to set this value to 1}
+    ValidationFails  : {}
+    
+    #>
+    [CmdletBinding()]
     Param(
         [Parameter(Mandatory = $true)]
         [string]$Domain
     )
+
+    # Initialize object
     $DmarcAnalysis = [PSCustomObject]@{
         Domain           = $Domain
         Record           = ''
@@ -329,18 +375,22 @@ function Read-DmarcPolicy {
         ValidationFails  = New-Object System.Collections.ArrayList
     }
 
+    # Validation lists
     $ValidationPasses = New-Object System.Collections.ArrayList
     $ValidationWarns = New-Object System.Collections.ArrayList
     $ValidationFails = New-Object System.Collections.ArrayList
 
+    # Email report domains
     $ReportDomains = New-Object System.Collections.ArrayList
 
+    # Validation ranges
     $PolicyValues = @('none', 'quarantine', 'reject')
     $FailureReportValues = @('0', '1', 'd', 's')
+    $ReportFormatValues = @('afrf')
 
+    # Check for DnsConfig file and set DNS resolver
     if (Test-Path -Path 'Config/DnsConfig.json') {
         $Config = Get-Content 'Config/DnsConfig.json' | ConvertFrom-Json
-            
         $DnsQuery = @{
             RecordType = 'TXT'
             Domain     = "_dmarc.$Domain"
@@ -353,19 +403,22 @@ function Read-DmarcPolicy {
             Domain     = "_dmarc.$Domain"
         }
     }
+
+    # Resolve DMARC record
     $DmarcRecord = (Resolve-DnsHttpsQuery @DnsQuery).data
     $DmarcAnalysis.Record = $DmarcRecord
     
     # Split DMARC record into name/value pairs
     $TagList = New-Object System.Collections.ArrayList
-    Foreach ($Element in ($DmarcRecord -split ';').trim()) {
-        $Name, $Value = $Element -split '='
+    Foreach ($Element in ($DmarcRecord -split '; ').trim()) {
+        $Name, $Value = $Element -split '= '
         $TagList.Add([PSCustomObject]@{
                 Name  = $Name
                 Value = $Value
             }) | Out-Null
     }
 
+    # Loop through name/value pairs and set object properties
     $x = 0
     foreach ($Tag in $TagList) {
         switch ($Tag.Name) {
@@ -380,12 +433,12 @@ function Read-DmarcPolicy {
                 $DmarcAnalysis.Policy = $Tag.Value
             }
             'sp' {
-                # Subdomain policy
+                # Subdomain policy, defaults to policy record 
                 $DmarcAnalysis.SubdomainPolicy = $Tag.Value
             }
             'rua' {
                 # Aggregate report emails
-                $ReportingEmails = $Tag.Value -split ','
+                $ReportingEmails = $Tag.Value -split ', '
                 $ReportEmailsSet = $false
                 foreach ($MailTo in $ReportingEmails) {
                     if ($MailTo -notmatch '^mailto:') { $ValidationFails.Add("FAIL: Aggregate report email must begin with 'mailto:', multiple addresses must be separated by commas - found $($Tag.Value)") | Out-Null }
@@ -408,7 +461,7 @@ function Read-DmarcPolicy {
             }
             'ruf' {
                 # Forensic reporting emails
-                foreach ($MailTo in ($Tag.Value -split ',')) {
+                foreach ($MailTo in ($Tag.Value -split ', ')) {
                     if ($MailTo -notmatch '^mailto:') { $ValidationFails.Add("FAIL: Forensic report email must begin with 'mailto:', multiple addresses must be separated by commas - found $($Tag.Value)") | Out-Null }
                     else {
                         if ($MailTo -match '^mailto:(?<Email>.+@(?<Domain>.+))$') {
@@ -466,11 +519,10 @@ function Read-DmarcPolicy {
     # Check for missing record tags and set defaults
     if ($DmarcAnalysis.Policy -eq '') { $ValidationFails.Add('FAIL: Policy record is missing') | Out-Null }
     if ($DmarcAnalysis.SubdomainPolicy -eq '') { $DmarcAnalysis.SubdomainPolicy = $DmarcAnalysis.Policy }
-    if ($DmarcAnalysis.FailureReport -eq '' -and $null -ne $DmarcRecord) { $DmarcAnalysis.FailureReport = 0 }
 
     # Perform validation checks
 
-    # Check policy
+    # Check policy for errors and best practice
     if ($PolicyValues -notcontains $DmarcAnalysis.Policy) { $ValidationFails.Add("FAIL: Policy must be one of the following - none, quarantine,reject. Found $($Tag.Value)") | Out-Null }
     if ($DmarcAnalysis.Policy -eq 'reject') { $ValidationPasses.Add('PASS: Policy is sufficiently strict') | Out-Null }
     if ($DmarcAnalysis.Policy -eq 'quarantine') { $ValidationWarns.Add('WARN: Policy is only partially enforced with quarantine') | Out-Null }
@@ -482,23 +534,30 @@ function Read-DmarcPolicy {
     if ($DmarcAnalysis.SubdomainPolicy -eq 'quarantine') { $ValidationWarns.Add('WARN: Subdomain policy is only partially enforced with quarantine') | Out-Null }
     if ($DmarcAnalysis.SubdomainPolicy -eq 'none') { $ValidationWarns.Add('FAIL: Subdomain policy is not being enforced') | Out-Null }
 
-    # Check percentage
+    # Check percentage - validate range and ensure 100%
     if ($DmarcAnalysis.Percent -lt 100 -and $DmarcAnalysis.Percent -gt 0) { $ValidationWarns.Add('WARN: Not all emails will be processed by the DMARC policy') | Out-Null }
     if ($DmarcAnalysis.Percent -gt 100 -or $DmarcAnalysis.Percent -le 0) { $ValidationFails.Add('FAIL: Percentage must be between 1 and 100') | Out-Null }
+
+    # Check report format
+    if ($ReportFormatValues -notcontains $DmarcAnalysis.ReportFormat) { $ValidationFails.Add("FAIL: The report format '$($DmarcAnalysis.ReportFormat)' is not supported") | Out-Null }
  
     # Check forensic reports and failure options
-    $ForensicCount = ($DmarcAnalysis.ForensicEmails | Measure-Object | Select-Object -ExpandProperty Count)   
-    if ($FailureReportValues -notcontains $DmarcAnalysis.FailureReport) { $ValidationFails.Add('FAIL: Failure reporting options must be 0, 1, d or s') | Out-Null }
+    $ForensicCount = ($DmarcAnalysis.ForensicEmails | Measure-Object | Select-Object -ExpandProperty Count)
     if ($ForensicCount -eq 0 -and $DmarcAnalysis.FailureReport -ne '') { $ValidationWarns.Add('WARN: Forensic email reports recipients are not defined and failure report options are set. No reports will be sent.') | Out-Null }
-    if ($DmarcAnalysis.FailureReport -eq '1') { $ValidationPasses.Add('PASS: Failure report option 1 generates reports on SPF or DKIM misalignment') | Out-Null }
-    if ($DmarcAnalysis.FailureReport -eq '0') { $ValidationWarns.Add('WARN: Failure report option 0 will only generate a report on both SPF and DKIM misalignment. It is recommended to set this value to 1') | Out-Null }
-    if ($DmarcAnalysis.FailureReport -eq 'd') { $ValidationWarns.Add('WARN: Failure report option d will only generate a report on failed DKIM evaluation. It is recommended to set this value to 1') | Out-Null }
-    if ($DmarcAnalysis.FailureReport -eq 's') { $ValidationWarns.Add('WARN: Failure report option s will only generate a report on failed SPF evaluation. It is recommended to set this value to 1') | Out-Null }
+    if ($DmarcAnalysis.FailureReport -eq '' -and $null -ne $DmarcRecord) { $DmarcAnalysis.FailureReport = 0 }
+    if ($ForensicCount -gt 0) {
+        if ($FailureReportValues -notcontains $DmarcAnalysis.FailureReport) { $ValidationFails.Add('FAIL: Failure reporting options must be 0, 1, d or s') | Out-Null }
+        if ($DmarcAnalysis.FailureReport -eq '1') { $ValidationPasses.Add('PASS: Failure report option 1 generates forensic reports on SPF or DKIM misalignment') | Out-Null }
+        if ($DmarcAnalysis.FailureReport -eq '0') { $ValidationWarns.Add('WARN: Failure report option 0 will only generate a forensic report on both SPF and DKIM misalignment. It is recommended to set this value to 1') | Out-Null }
+        if ($DmarcAnalysis.FailureReport -eq 'd') { $ValidationWarns.Add('WARN: Failure report option d will only generate a forensic report on failed DKIM evaluation. It is recommended to set this value to 1') | Out-Null }
+        if ($DmarcAnalysis.FailureReport -eq 's') { $ValidationWarns.Add('WARN: Failure report option s will only generate a forensic report on failed SPF evaluation. It is recommended to set this value to 1') | Out-Null }
+    }
 
     # Add the validation lists
     $DmarcAnalysis.ValidationPasses = $ValidationPasses
     $DmarcAnalysis.ValidationWarns = $ValidationWarns
     $DmarcAnalysis.ValidationFails = $ValidationFails
 
+    # Return DMARC analysis
     $DmarcAnalysis
 }
