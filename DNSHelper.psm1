@@ -1,4 +1,31 @@
 function Resolve-DnsHttpsQuery {
+    <#
+    .SYNOPSIS
+    Resolves DNS record using DoH JSON query
+    
+    .DESCRIPTION
+    This function uses Google or Cloudflare DoH REST APIs to resolve DNS records
+    
+    .PARAMETER Domain
+    Domain to query
+    
+    .PARAMETER RecordType
+    Type of record - Examples: A, CNAME, MX, TXT
+    
+    .PARAMETER FullResultRecord
+    Return the entire response instead of just the answer - True, False
+    
+    .PARAMETER Resolver
+    Resolver to query - Options: Google, Cloudflare
+    
+    .EXAMPLE
+    PS> Resolve-DnsHttpsQuery -Domain google.com -RecordType A
+    
+    name        type TTL data
+    ----        ---- --- ----
+    google.com.    1  30 142.250.80.110
+    
+    #>
     [cmdletbinding()]
     Param(
         [Parameter(Mandatory = $true)]
@@ -8,7 +35,7 @@ function Resolve-DnsHttpsQuery {
         [string]$RecordType = 'A',
 
         [Parameter()]
-        [bool]$FullResultRecord = $False,
+        [switch]$FullResultRecord,
 
         [Parameter()]
         [ValidateSet('Google', 'Cloudflare')]
@@ -37,6 +64,7 @@ function Resolve-DnsHttpsQuery {
     }
     catch {
         Write-Verbose "$Resolver DoH Query Exception - $($_.Exception.Message)" 
+        return $null
     }
 
     # Domain does not exist
@@ -47,17 +75,17 @@ function Resolve-DnsHttpsQuery {
     if (($Results.Answer | Measure-Object | Select-Object -ExpandProperty Count) -eq 0) {
         return $null
     }
-    else {
+    elseif (!$FullResultRecord) {
         if ($RecordType -eq 'MX') {
             $FinalClean = $Results.Answer | ForEach-Object { $_.Data.Split(' ')[1] }
             return $FinalClean
         }
-        if (!$FullResultRecord) {
+        else {
             return $Results.Answer
         }
-        else {
-            return $Results
-        }
+    }
+    else {
+        return $Results
     }
 }
 
@@ -81,77 +109,115 @@ Function Read-SpfRecord {
     RecordCount      : 1
     LookupCount      : 4
     AllMechanism     : ~
-    ValidationPasses : {}
+    ValidationPasses : {PASS: Expected SPF record was included, PASS: No PermError detected in SPF record}
     ValidationWarns  : {}
     ValidationFails  : {FAIL: SPF record should end in -all to prevent spamming}
-    Lookups          : {@{Domain=_spf.google.com; Record=v=spf1 include:_netblocks.google.com include:_netblocks2.google.com include:_netblocks3.google.com ~all; RecordCount=1; Level=Redirect; Includes=System.Collections.ArrayList; TypeLookups=System.Collections.ArrayList; IPAddresses=System.Collections.ArrayList; LookupCount=1; AllMechanism=~}, @{Domain=_netblocks.google.com; Record=v=spf1 ip4:35.190.247.0/24 ip4:64.233.160.0/19 ip4:66.102.0.0/20 ip4:66.249.80.0/20 ip4:72.14.192.0/18 ip4:74.125.0.0/16 ip4:108.177.8.0/21 ip4:173.194.0.0/16 ip4:209.85.128.0/17 ip4:216.58.192.0/19 ip4:216.239.32.0/19 ~all; RecordCount=1; Level=Include; Includes=System.Collections.ArrayList; TypeLookups=System.Collections.ArrayList; IPAddresses=System.Collections.ArrayList; LookupCount=1; AllMechanism=}, @{Domain=_netblocks2.google.com; Record=v=spf1 ip6:2001:4860:4000::/36 ip6:2404:6800:4000::/36 ip6:2607:f8b0:4000::/36 ip6:2800:3f0:4000::/36 ip6:2a00:1450:4000::/36 ip6:2c0f:fb50:4000::/36 ~all; RecordCount=1; Level=Include; Includes=System.Collections.ArrayList; TypeLookups=System.Collections.ArrayList; IPAddresses=System.Collections.ArrayList; LookupCount=1; AllMechanism=}, @{Domain=_netblocks3.google.com; Record=v=spf1 ip4:172.217.0.0/19 ip4:172.217.32.0/20 ip4:172.217.128.0/19 ip4:172.217.160.0/20 ip4:172.217.192.0/19 ip4:172.253.56.0/21 ip4:172.253.112.0/20 ip4:108.177.96.0/19 ip4:35.191.0.0/16 ip4:130.211.0.0/22 ~all; RecordCount=1; Level=Include; Includes=System.Collections.ArrayList; TypeLookups=System.Collections.ArrayList; IPAddresses=System.Collections.ArrayList; LookupCount=1; AllMechanism=}}
+    RecordList       : {@{Domain=_spf.google.com; Record=v=spf1 include:_netblocks.google.com include:_netblocks2.google.com include:_netblocks3.google.com ~all;           RecordCount=1; LookupCount=4; AllMechanism=~; ValidationPasses=System.Collections.ArrayList; ValidationWarns=System.Collections.ArrayList; ValidationFails=System.Collections.ArrayList; RecordList=System.Collections.ArrayList; TypeLookups=System.Collections.ArrayList; IPAddresses=System.Collections.ArrayList; PermError=False}}
+    TypeLookups      : {}
+    IPAddresses      : {}
+    PermError        : False
 
     .NOTES
     Author: John Duprey
     #>
-    [CmdletBinding()]
+    [CmdletBinding(DefaultParameterSetName = 'Lookup')]
     Param(
-        [Parameter(Mandatory = $true, ValueFromPipeline = $true)]
+        [Parameter(Mandatory = $true, ParameterSetName = 'Lookup')]
+        [Parameter(ParameterSetName = 'Manual')]
         [string]$Domain,
+
+        [Parameter(Mandatory = $true, ParameterSetName = 'Manual')]
+        [string]$Record,
+
+        [Parameter(ParameterSetName = 'Lookup')]
+        [Parameter(ParameterSetName = 'Manual')]
         [string]$Level = 'Parent',
+
+        [Parameter(ParameterSetName = 'Lookup')]
+        [Parameter(ParameterSetName = 'Manual')]
         [string]$ExpectedInclude = ''
     )
-    begin {
-        $SPFResults = [PSCustomObject]@{
-            Domain           = $Domain
-            Record           = ''
-            RecordCount      = 0
-            LookupCount      = 0
-            AllMechanism     = ''
-            ValidationPasses = New-Object System.Collections.ArrayList
-            ValidationWarns  = New-Object System.Collections.ArrayList
-            ValidationFails  = New-Object System.Collections.ArrayList
-            Lookups          = New-Object System.Collections.ArrayList        
-        }
-
-        # Initialize lists to hold all records
-        $RecordList = New-Object System.Collections.ArrayList
-        $IncludeList = New-Object System.Collections.ArrayList
-        $ValidationFails = New-Object System.Collections.ArrayList
-        $ValidationPasses = New-Object System.Collections.ArrayList
-        $ValidationWarns = New-Object System.Collections.ArrayList
-        $LookupCount = 0
-        $IsRedirected = $false
+    $SPFResults = [PSCustomObject]@{
+        Domain           = ''
+        Record           = ''
+        RecordCount      = 0
+        LookupCount      = 0
+        AllMechanism     = ''
+        ValidationPasses = New-Object System.Collections.ArrayList
+        ValidationWarns  = New-Object System.Collections.ArrayList
+        ValidationFails  = New-Object System.Collections.ArrayList
+        RecordList       = New-Object System.Collections.ArrayList   
+        TypeLookups      = New-Object System.Collections.ArrayList
+        IPAddresses      = New-Object System.Collections.ArrayList
+        PermError        = $false     
     }
-    process {
-        # Initialize lists for domain
-        $DomainIncludes = New-Object System.Collections.ArrayList
-        $TypeLookups = New-Object System.Collections.ArrayList
-        $IPAddresses = New-Object System.Collections.ArrayList
-        $AllMechanism = ''
 
-        if (Test-Path -Path 'Config/DnsConfig.json') {
-            $Config = Get-Content 'Config/DnsConfig.json' | ConvertFrom-Json
+    # Initialize lists to hold all records
+    $RecordList = New-Object System.Collections.ArrayList
+    $ValidationFails = New-Object System.Collections.ArrayList
+    $ValidationPasses = New-Object System.Collections.ArrayList
+    $ValidationWarns = New-Object System.Collections.ArrayList
+    $LookupCount = 0
+    $IsRedirected = $false
+    $AllMechanism = ''
+    $PermError = $false
+
+    $IncludeList = New-Object System.Collections.ArrayList
+    $TypeLookups = New-Object System.Collections.ArrayList
+    $IPAddresses = New-Object System.Collections.ArrayList
+
+    if (Test-Path -Path 'Config/DnsConfig.json') {
+        $Config = Get-Content 'Config/DnsConfig.json' | ConvertFrom-Json
             
-            $DnsQuery = @{
-                RecordType = 'TXT'
-                Domain     = $Domain
-                Resolver   = $Config.Resolver
+        $DnsQuery = @{
+            RecordType       = 'TXT'
+            Domain           = $Domain
+            Resolver         = $Config.Resolver
+            FullResultRecord = $true
+        }
+    }
+    else {
+        $DnsQuery = @{
+            RecordType       = 'TXT'
+            Domain           = $Domain
+            FullResultRecord = $true
+        }
+    }
+
+    # Query DNS for SPF Record
+    try {
+        switch ($PSCmdlet.ParameterSetName) {
+            'Lookup' {
+                if ($Domain -eq 'Not Specified') {
+                    # don't perform lookup if domain is not specified
+                }
+                else {
+                    $Query = Resolve-DnsHttpsQuery @DnsQuery
+                    if ($null -ne $Query -and $Query.Status -ne 0) {
+                        $ValidationFails.Add("FAIL: $Domain does not resolve an SPF record, PermError") | Out-Null
+                        $PermError = $true
+                    }
+                    else {
+                        $Record = $Query.answer | Select-Object -ExpandProperty data | Where-Object { $_ -match '^v=spf1' }
+                        $RecordCount = ($Record | Measure-Object).Count
+                        if ($RecordCount -eq 0) { 
+                            $ValidationFails.Add("FAIL: $Domain does not resolve an SPF record, PermError") | Out-Null
+                            $PermError = $true 
+                        }
+                    }
+                }
+                if ($level -ne 'Parent') {
+                    $LookupCount++
+                }
+            }
+            'Manual' {
+                if ([string]::IsNullOrEmpty($Domain)) { $Domain = 'Not Specified' }
+                $RecordCount = 1
             }
         }
-        else {
-            $DnsQuery = @{
-                RecordType = 'TXT'
-                Domain     = $Domain
-            }
-        }
+        $SPFResults.Domain = $Domain
 
-        # Query DNS for SPF Record
-        try {
-            $Query = Resolve-DnsHttpsQuery @DnsQuery
-
-            if ($level -ne 'Parent') {
-                $LookupCount++
-            }
-
-            $Record = $Query | Select-Object -ExpandProperty data | Where-Object { $_ -match '^v=spf1' }
-            $RecordCount = ($Record | Measure-Object).Count
-            
+        if ($Record -ne '') {
             # Split records and parse
             $RecordEntries = $Record -split ' '
 
@@ -162,6 +228,7 @@ Function Read-SpfRecord {
                 elseif ($_ -match 'redirect=(?<Domain>.+)') {
                     if ($Record -match 'all$') {
                         $ValidationFails.Add("FAIL: $Domain - Redirect modifier should not contain all mechanism, SPF record invalid") | Out-Null
+                        $PermError = $true
                     }
                     else {
                         $IsRedirected = $true
@@ -171,7 +238,6 @@ Function Read-SpfRecord {
             
                 # Don't increment for include, this will be done in a recursive call
                 elseif ($_ -match 'include:(.+)') {
-                    $DomainIncludes.Add($Matches[1]) | Out-Null
                     $IncludeList.Add($Matches[1]) | Out-Null
                 }
 
@@ -185,136 +251,185 @@ Function Read-SpfRecord {
                     $IPAddresses.Add($Matches[1]) | Out-Null
                 }
 
-                # Get parent level mechanism for all
-                elseif (($Level -eq 'Parent' -or $Level -eq 'Redirect') -and $_ -match 'all') {
+                # Get all mechanism
+                elseif ($_ -match 'all') {
                     if ($Record -match '(?<Mechanism>[+-~?])all$') {
                         $AllMechanism = $Matches.Mechanism
                     }
-                }
-                # Get any type specific entry
-                elseif ($_ -match '^(?<RecordType>[A-Za-z]+)(?:[:])?(?<Domain>.+)?$') {
-                    $LookupCount++
-                    $TypeLookups.Add($_) | Out-Null
-                }
-            }
-
-            # Follow redirect modifier
-            if ($IsRedirected) {
-                $RedirectedLookup = Read-SpfRecord -Domain $Domain -Level 'Redirect'
-                if (($RedirectedLookup | Measure-Object).Count -eq 0) {
-                    $ValidationFails.Add('FAIL: Redirected lookup does not contain a SPF record, permerror')
-                }
-                $RecordList.AddRange($RedirectedLookup.Lookups) | Out-Null
-                $AllMechanism = $RedirectedLookup.AllMechanism
-                $ValidationFails.AddRange($RedirectedLookup.ValidationFails)
-                $ValidationWarns.AddRange($RedirectedLookup.ValidationWarns)
-                $ValidationPasses.AddRange($RedirectedLookup.ValidationPasses)
-            }
-            else {
-                # Return object containing Domain and SPF record
-                $Result = [PSCustomObject]@{
-                    Domain       = $Domain
-                    Record       = $Record
-                    RecordCount  = $RecordCount
-                    Level        = $Level
-                    Includes     = $DomainIncludes
-                    TypeLookups  = $TypeLookups
-                    IPAddresses  = $IPAddresses
-                    LookupCount  = $LookupCount
-                    AllMechanism = $AllMechanism
-                }
-                $RecordList.Add($Result) | Out-Null
-            }
-        }
-        catch {
-            # DNS Resolver exception
-        }
-    }
-    end {
-        # Loop through includes and perform recursive lookup
-        $IncludeHosts = $IncludeList | Sort-Object -Unique
-        if (($IncludeHosts | Measure-Object).Count -gt 0) {
-            foreach ($Include in $IncludeHosts) {
-                # Verify we have not performed a lookup for this nested SPF record
-                if ($RecordList.Domain -notcontains $Include) {
-                    $IncludeRecords = Read-SpfRecord -Domain $Include -Level 'Include'
-                    Foreach ($IncludeRecord in $IncludeRecords) {
-                        $RecordList.Add($IncludeRecord) | Out-Null
+                    else {
+                        $AllMechanism = ''
                     }
                 }
-            }
-        }
-        
-        if ($Level -eq 'Parent' -or $Level -eq 'Redirect') {
-            if ($ExpectedInclude -ne '') {
-                if ($Record -notcontains $ExpectedInclude) {
-                    $ExpectedIncludeSpf = Read-SpfRecord -Domain $ExpectedInclude
-                    $ExpectedIPList = $ExpectedIncludeSpf.Lookups.IPAddresses
-                    $ExpectedIPCount = $ExpectedIPList | Measure-Object | Select-Object -ExpandProperty Count
-                    $FoundIPCount = Compare-Object $RecordList.IPAddresses $ExpectedIPList -IncludeEqual | Where-Object -Property SideIndicator -EQ '==' | Measure-Object | Select-Object -ExpandProperty Count
-                    if ($ExpectedIPCount -eq $FoundIPCount) {
-                        Write-Verbose 'Expected SPF IP Addresses found'
+                # Get any type specific mechanism
+                elseif ($_ -match '^(?<RecordType>(?:a|mx|ptr))(?:[:](?<TypeDomain>.+))?') {
+                    $LookupCount++
+                    
+                    if ($Matches.TypeDomain) {
+                        $TypeDomain = $Matches.TypeDomain
                     }
                     else {
-                        $ValidationFails.Add("FAIL: Expected SPF include of '$ExpectedInclude' was not found in the SPF record")
+                        $TypeDomain = $Domain
                     }
+                    $TypeQuery = @{Domain = $TypeDomain; RecordType = $Matches.RecordType; FullResultRecord = $true }      
+                    
+                    if ($TypeQuery.Domain -ne 'Not Specified') {
+                        try {
+                            Write-Verbose "Looking up $($TypeQuery.Domain)"
+                            $TypeResult = Resolve-DnsHttpsQuery @TypeQuery
+                            Write-Verbose ($TypeResult | Format-Table | Out-String)
+                        }
+                        catch { $TypeResult = $null }
+                        if ($null -eq $TypeResult -or $TypeResult.Status -ne 0) {
+                            $ValidationFails.Add("FAIL: $Domain - Type lookup for mechanism '$($TypeQuery.RecordType)' did not return any results, PermError") | Out-Null
+                            $PermError = $true
+                            $Result = $false
+                        }
+                        else {
+                            $Result = $TypeResult.answer.data
+                        }
+                        $TypeLookups.Add(
+                            [PSCustomObject]@{
+                                Domain     = $TypeQuery.Domain 
+                                RecordType = $TypeQuery.RecordType
+                                Result     = $Result
+                            }
+                        ) | Out-Null
+
+                    }
+                    else {
+                        $ValidationWarns.Add("WARN: No domain specified and mechanism '$_' does not have one defined. Specify a domain to perform a lookup on this record.") | Out-Null
+                    }
+                    
                 }
                 else {
-                    Write-Verbose 'Expected SPF include found'
+                    $ValidationFails.Add("FAIL: $Domain - Unknown mechanism or modifier specified '$_'") | Out-Null
+                    $PermError = $true
                 }
             }
-
-            $LegacySpfType = Resolve-DnsHttpsQuery -Domain $Domain -RecordType 'SPF'
-
-            if ($null -ne $LegacySpfType) {
-                $ValidationWarns.Add('WARN: DNS Record Type SPF detected, this is legacy and should not be used. It is recommeded to delete this record.')
-            }
-
-            if ($RecordCount -eq 0) { $ValidationFails.Add('FAIL: No SPF record detected') | Out-Null }
-            if ($RecordCount -gt 1) { $ValidationFails.Add("FAIL: There should only be one SPF record, $RecordCount detected") | Out-Null }
-    
-            if ($AllMechanism -eq '' -and -not $IsRedirected) { 
-                $ValidationFails.Add('FAIL: All mechanism is missing from SPF record, defaulting to +all') | Out-Null
-                $AllMechanism = '+' 
-            }
-            if ($AllMechanism -eq '-') {
-                $ValidationPasses.Add('PASS: SPF record ends in -all') | Out-Null
-            }
-            else {
-                if (-not $IsRedirected) {
-                    $ValidationFails.Add('FAIL: SPF record should end in -all to prevent spamming') | Out-Null 
-                }
-            }
-
-            $LookupCount = ($RecordList | Measure-Object -Property LookupCount -Sum).Sum
-            if ($LookupCount -gt 10) { 
-                $ValidationFails.Add("FAIL: SPF record exceeded 10 lookups, found $LookupCount") | Out-Null 
-            }
-            elseif ($LookupCount -ge 9 -and $LookupCount -lt 10) {
-                $ValidationWarns.Add("WARN: SPF lookup count is close to the limit of 10, found $LookupCount") | Out-Null
-            }
-
-            if (($ValidationFails | Measure-Object | Select-Object -ExpandProperty Count) -eq 0) {
-                $ValidationPasses.Add('PASS: All validation succeeded. No errors detected with SPF record') | Out-Null
-            }
-
-            $SpfResults.Record = $Record
-            $SpfResults.RecordCount = $RecordCount
-            $SpfResults.LookupCount = $LookupCount
-            $SpfResults.AllMechanism = $AllMechanism
-            $SpfResults.ValidationPasses = $ValidationPasses
-            $SpfResults.ValidationWarns = $ValidationWarns
-            $SpfResults.ValidationFails = $ValidationFails
-            $SpfResults.Lookups = $RecordList
-            
-            # Output SpfResults object
-            $SpfResults
-        }
-        else {
-            # Return list of psobjects 
-            $RecordList
         }
     }
+    catch {
+        # DNS Resolver exception
+    }
+
+    # Follow redirect modifier
+    if ($IsRedirected) {
+        $RedirectedLookup = Read-SpfRecord -Domain $Domain -Level 'Redirect'
+        if (($RedirectedLookup | Measure-Object).Count -eq 0) {
+            $ValidationFails.Add("FAIL: $Domain Redirected lookup does not contain a SPF record, permerror") | Out-Null
+            $PermError = $true
+        }
+        $RecordList.Add($RedirectedLookup) | Out-Null
+        $AllMechanism = $RedirectedLookup.AllMechanism
+        $ValidationFails.AddRange($RedirectedLookup.ValidationFails) | Out-Null
+        $ValidationWarns.AddRange($RedirectedLookup.ValidationWarns) | Out-Null
+        $ValidationPasses.AddRange($RedirectedLookup.ValidationPasses) | Out-Null
+    }
+
+    # Loop through includes and perform recursive lookup
+    $IncludeHosts = $IncludeList | Sort-Object -Unique
+    if (($IncludeHosts | Measure-Object).Count -gt 0) {
+        foreach ($Include in $IncludeHosts) {
+            # Verify we have not performed a lookup for this nested SPF record
+            if ($RecordList.Domain -notcontains $Include) {
+                $IncludeRecord = Read-SpfRecord -Domain $Include -Level 'Include'
+                $RecordList.Add($IncludeRecord) | Out-Null
+                $ValidationFails.AddRange($IncludeRecord.ValidationFails) | Out-Null
+                $ValidationWarns.AddRange($IncludeRecord.ValidationWarns) | Out-Null
+                $ValidationPasses.AddRange($IncludeRecord.ValidationPasses) | Out-Null
+                $IPAddresses.AddRange($IncludeRecord.IPAddresses) | Out-Null
+                if ($IncludeRecord.PermError -eq $true) {
+                    $PermError = $true
+                }
+            }
+        }
+    }
+        
+    # Look for expected include record and report pass or fail
+    if ($ExpectedInclude -ne '') {
+        if ($RecordList.Domain -notcontains $ExpectedInclude) {
+            $ExpectedIncludeSpf = Read-SpfRecord -Domain $ExpectedInclude
+            $ExpectedIPCount = $ExpectedIncludeSpf.IPAddresses | Measure-Object | Select-Object -ExpandProperty Count
+            $FoundIPCount = Compare-Object $IPAddresses $ExpectedIncludeSpf.IPAddresses -IncludeEqual | Where-Object -Property SideIndicator -EQ '==' | Measure-Object | Select-Object -ExpandProperty Count
+            if ($ExpectedIPCount -eq $FoundIPCount) {
+                $ValidationPasses.Add('PASS: Expected SPF record IP addresses were found') | Out-Null
+            }
+            else {
+                $ValidationFails.Add("FAIL: Expected SPF include of '$ExpectedInclude' was not found in the SPF record") | Out-Null
+            }
+        }
+        else {
+            $ValidationPasses.Add('PASS: Expected SPF record was included') | Out-Null
+        }
+    }
+
+    # Count total lookups
+    $LookupCount = $LookupCount + ($RecordList | Measure-Object -Property LookupCount -Sum).Sum
+        
+    if ($Domain -ne 'Not Specified') {
+        # Check legacy SPF type
+        $LegacySpfType = Resolve-DnsHttpsQuery -Domain $Domain -RecordType 'SPF' -FullResultRecord
+        if ($null -ne $LegacySpfType -and $LegacySpfType -eq 0) {
+            $ValidationWarns.Add("WARN: Domain: $Domain Record Type SPF detected, this is legacy and should not be used. It is recommeded to delete this record.") | Out-Null
+        }
+    }
+    if ($Level -eq 'Parent') {
+        # Check for the correct number of records
+        if ($RecordCount -eq 0) { 
+            $ValidationFails.Add('FAIL: No SPF record detected') | Out-Null 
+            $PermError = $true
+        }
+        if ($RecordCount -gt 1) {
+            $ValidationFails.Add("FAIL: There should only be one SPF record, $RecordCount detected") | Out-Null 
+            $PermError = $true
+        }
+
+        # Report pass if no PermErrors are found
+        if ($PermError -eq $false) {
+            $ValidationPasses.Add('PASS: No PermError detected in SPF record') | Out-Null
+        }
+
+        # Check for the correct all mechanism
+        if ($AllMechanism -eq '' -and $Record -ne '') { 
+            $ValidationFails.Add('FAIL: All mechanism is missing from SPF record, defaulting to +all') | Out-Null
+            $AllMechanism = '+' 
+        }
+        if ($AllMechanism -eq '-') {
+            $ValidationPasses.Add('PASS: SPF record ends in -all') | Out-Null
+        }
+        elseif ($Record -ne '') {
+            $ValidationFails.Add('FAIL: SPF record should end in -all to prevent spamming') | Out-Null 
+        }
+
+        # SPF lookup count
+        if ($LookupCount -gt 10) { 
+            $ValidationFails.Add("FAIL: SPF record exceeded 10 lookups, found $LookupCount") | Out-Null 
+        }
+        elseif ($LookupCount -ge 9 -and $LookupCount -lt 10) {
+            $ValidationWarns.Add("WARN: SPF lookup count is close to the limit of 10, found $LookupCount") | Out-Null
+        }
+
+        # Report pass if no errors are found
+        if (($ValidationFails | Measure-Object | Select-Object -ExpandProperty Count) -eq 0) {
+            $ValidationPasses.Add('PASS: All validation succeeded. No errors detected with SPF record') | Out-Null
+        }
+    }
+
+    $SpfResults.Record = $Record
+    $SpfResults.RecordCount = $RecordCount
+    $SpfResults.LookupCount = $LookupCount
+    $SpfResults.AllMechanism = $AllMechanism
+    $SpfResults.ValidationPasses = $ValidationPasses
+    $SpfResults.ValidationWarns = $ValidationWarns
+    $SpfResults.ValidationFails = $ValidationFails
+    $SpfResults.RecordList = $RecordList
+    $SPFResults.TypeLookups = $TypeLookups
+    $SPFResults.IPAddresses = $IPAddresses
+    $SPFResults.PermError = $PermError
+            
+    # Output SpfResults object
+    $SpfResults
+    
 }
 
 function Read-DmarcPolicy {
@@ -410,12 +525,14 @@ function Read-DmarcPolicy {
     
     # Split DMARC record into name/value pairs
     $TagList = New-Object System.Collections.ArrayList
-    Foreach ($Element in ($DmarcRecord -split '; ').trim()) {
-        $Name, $Value = $Element -split '= '
-        $TagList.Add([PSCustomObject]@{
+    Foreach ($Element in ($DmarcRecord -split ';').trim()) {
+        $Name, $Value = $Element -split '='
+        $TagList.Add(
+            [PSCustomObject]@{
                 Name  = $Name
                 Value = $Value
-            }) | Out-Null
+            }
+        ) | Out-Null
     }
 
     # Loop through name/value pairs and set object properties
@@ -497,7 +614,6 @@ function Read-DmarcPolicy {
                 # Report Interval
                 $DmarcAnalysis.ReportInterval = $Tag.Value
             }
-
         }
         $x++
     }
@@ -544,7 +660,7 @@ function Read-DmarcPolicy {
     # Check forensic reports and failure options
     $ForensicCount = ($DmarcAnalysis.ForensicEmails | Measure-Object | Select-Object -ExpandProperty Count)
     if ($ForensicCount -eq 0 -and $DmarcAnalysis.FailureReport -ne '') { $ValidationWarns.Add('WARN: Forensic email reports recipients are not defined and failure report options are set. No reports will be sent.') | Out-Null }
-    if ($DmarcAnalysis.FailureReport -eq '' -and $null -ne $DmarcRecord) { $DmarcAnalysis.FailureReport = 0 }
+    if ($DmarcAnalysis.FailureReport -eq '' -and $null -ne $DmarcRecord) { $DmarcAnalysis.FailureReport = '0' }
     if ($ForensicCount -gt 0) {
         if ($FailureReportValues -notcontains $DmarcAnalysis.FailureReport) { $ValidationFails.Add('FAIL: Failure reporting options must be 0, 1, d or s') | Out-Null }
         if ($DmarcAnalysis.FailureReport -eq '1') { $ValidationPasses.Add('PASS: Failure report option 1 generates forensic reports on SPF or DKIM misalignment') | Out-Null }
@@ -560,4 +676,110 @@ function Read-DmarcPolicy {
 
     # Return DMARC analysis
     $DmarcAnalysis
+}
+
+function Read-DkimRecord {
+    [CmdletBinding(DefaultParameterSetName = 'Selector')]
+    Param(
+        [Parameter(ParameterSetName = 'Selector', Mandatory = $true)]
+        [Parameter(ParameterSetName = 'MxLookup', Mandatory = $true)]
+        [string]$Domain,
+
+        [Parameter(ParameterSetName = 'Selector', Mandatory = $true)]
+        [string]$Selector,
+
+        [Parameter(ParameterSetName = 'MxLookup')]
+        [switch]$MxLookup
+    )
+
+    # Initialize object
+    $DkimAnalysis = [PSCustomObject]@{
+        Domain             = ''
+        Record             = ''
+        Version            = ''
+        PublicKey          = ''
+        KeyType            = 'rsa'
+        Flags              = ''
+        Notes              = ''
+        AcceptedAlgorithms = '*'
+        ValidationPasses   = New-Object System.Collections.ArrayList
+        ValidationWarns    = New-Object System.Collections.ArrayList
+        ValidationFails    = New-Object System.Collections.ArrayList
+    }
+
+    # Check for DnsConfig file and set DNS resolver
+    if (Test-Path -Path 'Config/DnsConfig.json') {
+        $Config = Get-Content 'Config/DnsConfig.json' | ConvertFrom-Json
+        $DnsQuery = @{
+            RecordType = 'TXT'
+            Domain     = "$Selector._domainkey.$Domain"
+            Resolver   = $Config.Resolver
+        }
+    }
+    else {
+        $DnsQuery = @{
+            RecordType = 'TXT'
+            Domain     = "$Selector._domainkey.$Domain"
+        }
+    }
+    $QueryResults = (Resolve-DnsHttpsQuery @DnsQuery).data
+
+    if (($QueryResults | Measure-Object).Count -gt 1) {
+        $DkimRecord = $QueryResults[-1]
+    }
+    else {
+        $DkimRecord = $QueryResults
+    }
+    $DkimAnalysis.Record = $DkimRecord
+    $DkimAnalysis.Domain = $DnsQuery.Domain
+
+    # Split DKIM record into name/value pairs
+    $TagList = New-Object System.Collections.ArrayList
+    Foreach ($Element in ($DkimRecord -split ';').trim()) {
+        $Name, $Value = $Element -split '='
+        $TagList.Add(
+            [PSCustomObject]@{
+                Name  = $Name
+                Value = $Value
+            }
+        ) | Out-Null
+    }
+
+    # Loop through name/value pairs and set object properties
+    $x = 0
+    foreach ($Tag in $TagList) {
+        switch ($Tag.Name) {
+            'v' {
+                # REQUIRED: Version
+                if ($x -ne 0) { $ValidationFails.Add('FAIL: v=DKIM1 must be at the beginning of the record') | Out-Null }
+                if ($Tag.Value -ne 'DKIM1') { $ValidationFails.Add("FAIL: Version must be DKIM1 - found $($Tag.Value)") | Out-Null }
+                $DkimAnalysis.Version = $Tag.Value
+            }
+            'p' {
+                # REQUIRED: Public Key
+
+                if ($Tag.Value -ne '') {
+                    $DkimAnalysis.PublicKey = "-----BEGIN PUBLIC KEY-----`n{0}`n-----END PUBLIC KEY-----" -f $Tag.Value
+                }
+                else {
+                    $ValidationFails.Add('FAIL: No public key specified for DKIM record') | Out-Null 
+                }
+            }
+            'k' {
+                $DkimAnalysis.KeyType = $Tag.Value
+            }
+            't' {
+                $DkimAnalysis.Flags = $Tag.Value
+            }
+            'n' {
+                $DkimAnalysis.Notes = $Tag.Value
+            }
+            'h' {
+                $DkimAnalysis.AcceptedAlgorithms = $Tag.Value
+            }
+        }
+        $x++
+    }
+
+    $DkimAnalysis
 }
