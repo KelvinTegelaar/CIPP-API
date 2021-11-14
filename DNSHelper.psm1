@@ -620,6 +620,7 @@ function Read-DmarcPolicy {
     }
 
     # Check report domains for DMARC reporting record
+    $ReportDomainsPass = $true
     foreach ($ReportDomain in $ReportDomains) {
         $ReportDomainQuery = "$Domain._report._dmarc.$ReportDomain"
         $DnsQuery['Domain'] = $ReportDomainQuery
@@ -627,10 +628,16 @@ function Read-DmarcPolicy {
 
         if ($null -eq $ReportDmarcRecord) {
             $ValidationWarns.Add("WARN: Report DMARC policy for $Domain is missing from $ReportDomain, reports will not be delivered. Expected record: $Domain._report._dmarc.$ReportDomain - Expected value: v=DMARC1;") | Out-Null
+            $ReportDomainsPass = $false
         }
         elseif ($ReportDmarcRecord.data -notmatch '^v=DMARC1') {
             $ValidationWarns.Add("WARN: Report DMARC policy for $Domain is missing from $ReportDomain, reports will not be delivered. Expected record: $Domain._report._dmarc.$ReportDomain - Expected value: v=DMARC1;") | Out-Null
+            $ReportDomainsPass = $false
         }
+    }
+
+    if ($ReportDomainsPass) {
+        $ValidationPasses.Add("PASS: All reporting domains ($($ReportDomains -join ', ')) allow $Domain to send DMARC reports") | Out-Null
     }
 
     # Check for missing record tags and set defaults
