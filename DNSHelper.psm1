@@ -679,6 +679,26 @@ function Read-DmarcPolicy {
 }
 
 function Read-DkimRecord {
+    <#
+    .SYNOPSIS
+    Read DKIM record from DNS
+    
+    .DESCRIPTION
+    Validates DKIM records on a domain a selector
+    
+    .PARAMETER Domain
+    Domain to check
+    
+    .PARAMETER Selector
+    Selector record to check
+    
+    .PARAMETER MxLookup
+    Lookup record based on MX
+    
+    .EXAMPLE
+    PS> Read-DkimRecord -Domain example.com -Selector test
+
+    #>
     [CmdletBinding(DefaultParameterSetName = 'Selector')]
     Param(
         [Parameter(ParameterSetName = 'Selector', Mandatory = $true)]
@@ -698,37 +718,51 @@ function Read-DkimRecord {
         Record             = ''
         Version            = ''
         PublicKey          = ''
-        KeyType            = 'rsa'
+        PublicKeyInfo      = ''
+        KeyType            = ''
         Flags              = ''
         Notes              = ''
-        AcceptedAlgorithms = '*'
+        AcceptedAlgorithms = ''
+        ServiceType        = ''
         ValidationPasses   = New-Object System.Collections.ArrayList
         ValidationWarns    = New-Object System.Collections.ArrayList
         ValidationFails    = New-Object System.Collections.ArrayList
     }
 
+    $ValidationPasses = New-Object System.Collections.ArrayList
+    $ValidationWarns = New-Object System.Collections.ArrayList
+    $ValidationFails = New-Object System.Collections.ArrayList
+
     # Check for DnsConfig file and set DNS resolver
     if (Test-Path -Path 'Config/DnsConfig.json') {
         $Config = Get-Content 'Config/DnsConfig.json' | ConvertFrom-Json
         $DnsQuery = @{
-            RecordType = 'TXT'
-            Domain     = "$Selector._domainkey.$Domain"
-            Resolver   = $Config.Resolver
+            RecordType       = 'TXT'
+            Domain           = "$Selector._domainkey.$Domain"
+            Resolver         = $Config.Resolver
+            FullResultRecord = $true
         }
     }
     else {
         $DnsQuery = @{
-            RecordType = 'TXT'
-            Domain     = "$Selector._domainkey.$Domain"
+            RecordType       = 'TXT'
+            Domain           = "$Selector._domainkey.$Domain"
+            FullResultRecord = $true
         }
     }
-    $QueryResults = (Resolve-DnsHttpsQuery @DnsQuery).data
+    $QueryResults = Resolve-DnsHttpsQuery @DnsQuery
 
-    if (($QueryResults | Measure-Object).Count -gt 1) {
-        $DkimRecord = $QueryResults[-1]
+    if ($QueryResults -eq '' -or $QueryResults.Status -ne 0) {
+        $ValidationFails.Add('FAIL: DKIM record is missing, check the selector and try again') | Out-Null
+        $DkimRecord = ''
     }
     else {
-        $DkimRecord = $QueryResults
+        if (($QueryResults.Answer.data | Measure-Object).Count -gt 1) {
+            $DkimRecord = $QueryResults.Answer.data[-1]
+        }
+        else {
+            $DkimRecord = $QueryResults.Answer.data
+        }
     }
     $DkimAnalysis.Record = $DkimRecord
     $DkimAnalysis.Domain = $DnsQuery.Domain
@@ -757,9 +791,9 @@ function Read-DkimRecord {
             }
             'p' {
                 # REQUIRED: Public Key
-
                 if ($Tag.Value -ne '') {
                     $DkimAnalysis.PublicKey = "-----BEGIN PUBLIC KEY-----`n{0}`n-----END PUBLIC KEY-----" -f $Tag.Value
+                    $DkimAnalysis.PublicKeyInfo = Get-RsaPublicKeyInfo -EncodedString $Tag.Value
                 }
                 else {
                     $ValidationFails.Add('FAIL: No public key specified for DKIM record') | Out-Null 
@@ -777,9 +811,198 @@ function Read-DkimRecord {
             'h' {
                 $DkimAnalysis.AcceptedAlgorithms = $Tag.Value
             }
+            's' {
+                $DkimAnalysis.ServiceType = $Tag.Value
+            }
         }
         $x++
     }
 
+    if ($DkimRecord -ne '') {
+        if ($DkimAnalysis.KeyType -eq '') { $DkimAnalysis.KeyType = 'rsa' }
+        if ($DkimAnalysis.AcceptedAlgorithms -eq '') { $DkimAnalysis.AcceptedAlgorithms = 'all' }
+        if ($DkimAnalysis.PublicKeyInfo.SignatureAlgorithm -ne $DkimAnalysis.KeyType) {
+            $ValidationWarns.Add("WARN: Key signature algorithm $($DkimAnalysis.PublicKeyInfo.SignatureAlgorithm) does not match $($DkimAnalysis.KeyType)") | Out-Null
+        }
+        if ($DkimAnalysis.PublicKeyInfo.KeySize -lt 1024) {
+            $ValidationFails.Add("FAIL: Key size is less than 1024 bit, found $($DkimAnalysis.PublicKeyInfo.KeySize)") | Out-Null
+        }
+        else {
+            $ValidationPasses.Add('PASS: DKIM key validation succeeded') | Out-Null
+        }
+    }
+
+    if (($ValidationFails | Measure-Object | Select-Object -ExpandProperty Count) -eq 0) {
+        $ValidationPasses.Add('PASS: No errors detected with DKIM record') | Out-Null
+    }
+
+    # Collect validation results
+    $DkimAnalysis.ValidationPasses = $ValidationPasses
+    $DkimAnalysis.ValidationWarns = $ValidationWarns
+    $DkimAnalysis.ValidationFails = $ValidationFails
+
+    # Return analysis
     $DkimAnalysis
+}
+
+function Get-RsaPublicKeyInfo {
+    <#
+    .SYNOPSIS
+    Gets RSA public key info from Base64 string
+    
+    .DESCRIPTION
+    Decodes RSA public key information for validation. Uses a c# library to decode base64 data.
+    
+    .PARAMETER EncodedString
+    Base64 encoded public key string
+    
+    .EXAMPLE
+    PS> Get-RsaPublicKeyInfo -EncodedString <base64 string>
+    
+    LegalKeySizes                           KeyExchangeAlgorithm SignatureAlgorithm KeySize
+    -------------                           -------------------- ------------------ -------
+    {System.Security.Cryptography.KeySizes} RSA                  RSA                   2048
+    
+    .NOTES
+    Obtained C# code from https://github.com/sevenTiny/Bamboo/blob/b5503b5597383ca6085ceb4aa5fa054918a4bd73/10-Code/SevenTiny.Bantina/Security/RSACommon.cs
+    #>
+    Param(
+        [Parameter(Mandatory = $true)]
+        $EncodedString
+    )
+    $source = @'
+/*********************************************************
+ * CopyRight: 7TINY CODE BUILDER. 
+ * Version: 5.0.0
+ * Author: 7tiny
+ * Address: Earth
+ * Create: 2018-04-08 21:54:19
+ * Modify: 2018-04-08 21:54:19
+ * E-mail: dong@7tiny.com | sevenTiny@foxmail.com 
+ * GitHub: https://github.com/sevenTiny 
+ * Personal web site: http://www.7tiny.com 
+ * Technical WebSit: http://www.cnblogs.com/7tiny/ 
+ * Description: 
+ * Thx , Best Regards ~
+ *********************************************************/
+using System;
+using System.IO;
+using System.Security.Cryptography;
+using System.Text;
+
+namespace SevenTiny.Bantina.Security {
+    public static class RSACommon {
+        public static RSA CreateRsaProviderFromPublicKey(string publicKeyString)
+        {
+            // encoded OID sequence for  PKCS #1 rsaEncryption szOID_RSA_RSA = "1.2.840.113549.1.1.1"
+            byte[] seqOid = { 0x30, 0x0D, 0x06, 0x09, 0x2A, 0x86, 0x48, 0x86, 0xF7, 0x0D, 0x01, 0x01, 0x01, 0x05, 0x00 };
+            byte[] seq = new byte[15];
+
+            var x509Key = Convert.FromBase64String(publicKeyString);
+
+            // ---------  Set up stream to read the asn.1 encoded SubjectPublicKeyInfo blob  ------
+            using (MemoryStream mem = new MemoryStream(x509Key))
+            {
+                using (BinaryReader binr = new BinaryReader(mem))  //wrap Memory Stream with BinaryReader for easy reading
+                {
+                    byte bt = 0;
+                    ushort twobytes = 0;
+
+                    twobytes = binr.ReadUInt16();
+                    if (twobytes == 0x8130) //data read as little endian order (actual data order for Sequence is 30 81)
+                        binr.ReadByte();    //advance 1 byte
+                    else if (twobytes == 0x8230)
+                        binr.ReadInt16();   //advance 2 bytes
+                    else
+                        return null;
+
+                    seq = binr.ReadBytes(15);       //read the Sequence OID
+                    if (!CompareBytearrays(seq, seqOid))    //make sure Sequence for OID is correct
+                        return null;
+
+                    twobytes = binr.ReadUInt16();
+                    if (twobytes == 0x8103) //data read as little endian order (actual data order for Bit String is 03 81)
+                        binr.ReadByte();    //advance 1 byte
+                    else if (twobytes == 0x8203)
+                        binr.ReadInt16();   //advance 2 bytes
+                    else
+                        return null;
+
+                    bt = binr.ReadByte();
+                    if (bt != 0x00)     //expect null byte next
+                        return null;
+
+                    twobytes = binr.ReadUInt16();
+                    if (twobytes == 0x8130) //data read as little endian order (actual data order for Sequence is 30 81)
+                        binr.ReadByte();    //advance 1 byte
+                    else if (twobytes == 0x8230)
+                        binr.ReadInt16();   //advance 2 bytes
+                    else
+                        return null;
+
+                    twobytes = binr.ReadUInt16();
+                    byte lowbyte = 0x00;
+                    byte highbyte = 0x00;
+
+                    if (twobytes == 0x8102) //data read as little endian order (actual data order for Integer is 02 81)
+                        lowbyte = binr.ReadByte();  // read next bytes which is bytes in modulus
+                    else if (twobytes == 0x8202)
+                    {
+                        highbyte = binr.ReadByte(); //advance 2 bytes
+                        lowbyte = binr.ReadByte();
+                    }
+                    else
+                        return null;
+                    byte[] modint = { lowbyte, highbyte, 0x00, 0x00 };   //reverse byte order since asn.1 key uses big endian order
+                    int modsize = BitConverter.ToInt32(modint, 0);
+
+                    int firstbyte = binr.PeekChar();
+                    if (firstbyte == 0x00)
+                    {   //if first byte (highest order) of modulus is zero, don't include it
+                        binr.ReadByte();    //skip this null byte
+                        modsize -= 1;   //reduce modulus buffer size by 1
+                    }
+
+                    byte[] modulus = binr.ReadBytes(modsize);   //read the modulus bytes
+
+                    if (binr.ReadByte() != 0x02)            //expect an Integer for the exponent data
+                        return null;
+                    int expbytes = (int)binr.ReadByte();        // should only need one byte for actual exponent data (for all useful values)
+                    byte[] exponent = binr.ReadBytes(expbytes);
+
+                    // ------- create RSACryptoServiceProvider instance and initialize with public key -----
+                    var rsa = System.Security.Cryptography.RSA.Create();
+                    RSAParameters rsaKeyInfo = new RSAParameters
+                    {
+                        Modulus = modulus,
+                        Exponent = exponent
+                    };
+                    rsa.ImportParameters(rsaKeyInfo);
+
+                    return rsa;
+                }
+            }
+        }
+        private static bool CompareBytearrays(byte[] a, byte[] b)
+        {
+            if (a.Length != b.Length)
+                return false;
+            int i = 0;
+            foreach (byte c in a)
+            {
+                if (c != b[i])
+                    return false;
+                i++;
+            }
+            return true;
+        }
+    }
+}
+'@
+    if (!('SevenTiny.Bantina.Security.RSACommon' -as [type])) {
+        Add-Type -TypeDefinition $source -Language CSharp
+    }
+
+    # Return RSA Public Key information
+    [SevenTiny.Bantina.Security.RSACommon]::CreateRsaProviderFromPublicKey($EncodedString)
 }
