@@ -404,6 +404,7 @@ Function Read-SpfRecord {
         # SPF lookup count
         if ($LookupCount -gt 10) { 
             $ValidationFails.Add("FAIL: SPF record exceeded 10 lookups, found $LookupCount") | Out-Null 
+            $PermError = $true
         }
         elseif ($LookupCount -ge 9 -and $LookupCount -lt 10) {
             $ValidationWarns.Add("WARN: SPF lookup count is close to the limit of 10, found $LookupCount") | Out-Null

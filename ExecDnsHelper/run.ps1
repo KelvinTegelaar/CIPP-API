@@ -14,27 +14,32 @@ Write-Host 'PowerShell HTTP trigger function processed a request.'
 $StatusCode = [HttpStatusCode]::OK
 try {
     if ($Request.Query.Action) {
-
-        switch ($Request.Query.Action) {
-            'ReadSpfRecord' {
-                if ($Request.Query.ExpectedInclude) {
-                    $Body = Read-SpfRecord -Domain $Request.Query.Domain -ExpectedInclude $Request.Query.ExpectedInclude
+        if ($Request.Query.Domain -match '^(((?!-))(xn--|_{1,1})?[a-z0-9-]{0,61}[a-z0-9]{1,1}\.)*(xn--)?([a-z0-9][a-z0-9\-]{0,60}|[a-z0-9-]{1,30}\.[a-z]{2,})$') {
+            switch ($Request.Query.Action) {
+                'ReadSpfRecord' {
+                    if ($Request.Query.ExpectedInclude) {
+                        $Body = Read-SpfRecord -Domain $Request.Query.Domain -ExpectedInclude $Request.Query.ExpectedInclude
+                    }
+                    else {
+                        $Body = Read-SpfRecord -Domain $Request.Query.Domain
+                    }
                 }
-                else {
-                    $Body = Read-SpfRecord -Domain $Request.Query.Domain
+                'ReadDmarcPolicy' {
+                    $Body = Read-DmarcPolicy -Domain $Request.Query.Domain
+                }
+                'ReadDkimRecord' {
+                    $Body = Read-DkimRecord -Domain $Request.Query.Domain -Selector $Request.Query.Selector
                 }
             }
-            'ReadDmarcPolicy' {
-                $Body = Read-DmarcPolicy -Domain $Request.Query.Domain
-            }
-            'ReadDkimRecord' {
-                $Body = Read-DkimRecord -Domain $Request.Query.Domain -Selector $Request.Query.Selector
-            }
+        }
+        else {
+            $body = [pscustomobject]@{'Results' = "Domain: $($Request.Query.Domain) is invalid" }
+            $StatusCode = [HttpStatusCode]::BadRequest
         }
     }
 }
 catch {
-    Log-Request -API $APINAME -tenant $($name) -user $request.headers.'x-ms-client-principal' -message "DNS Test API failed. $($_.Exception.Message)" -Sev 'Error'
+    Log-Request -API $APINAME -tenant $($name) -user $request.headers.'x-ms-client-principal' -message "DNS Helper API failed. $($_.Exception.Message)" -Sev 'Error'
     $body = [pscustomobject]@{'Results' = "Failed. $($_.Exception.Message)" }
     $StatusCode = [HttpStatusCode]::BadRequest
 }
