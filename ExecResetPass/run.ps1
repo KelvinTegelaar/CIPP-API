@@ -13,9 +13,10 @@ Write-Host "$($Request.query.ID)"
 # Interact with query parameters or the body of the request.
 $TenantFilter = $Request.Query.TenantFilter
 $password = -join ('abcdefghkmnrstuvwxyzABCDEFGHKLMNPRSTUVWXYZ23456789$%&*#'.ToCharArray() | Get-Random -Count 12)
+$mustChange = $request.query.MustChange
 
 $passwordProfile = @"
-{"passwordProfile": { "forceChangePasswordNextSignIn": true, "password": "$password" }}'
+{"passwordProfile": { "forceChangePasswordNextSignIn": $mustChange, "password": "$password" }}'
 "@
 
 try {
