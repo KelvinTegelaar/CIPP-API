@@ -4,20 +4,20 @@ using namespace System.Net
 param($Request, $TriggerMetadata)
 
 $APIName = $TriggerMetadata.FunctionName
-Log-Request -user $request.headers.'x-ms-client-principal' -API $APINAME  -message "Accessed this API" -Sev "Debug"
-
-
-# Write to the Azure Functions log stream.
-Write-Host "PowerShell HTTP trigger function processed a request."
-Write-Host "$($Request.query.ID)"
-# Interact with query parameters or the body of the request.
-
-try {
-    Log-Request -user $request.headers.'x-ms-client-principal' -API $APINAME  -message "Reset password for $($REquest.query.id)" -Sev "Info"
-}
-catch {
-    Log-Request -user $request.headers.'x-ms-client-principal' -API $APINAME  -message "Failed to reset password for $($Request.query.id): $($_.Exception.Message)" -Sev "Error"
-
+$DefinitionsList = ($request.body.RawJSON | ConvertFrom-Json).added
+$Tenant = ($Request.body | Select-Object Select_*).psobject.properties.value | Select-Object -First 1
+$Results = foreach ($DefinitionLink in $DefinitionsList) {
+    try {
+        $uri = $DefinitionLink.'definition@odata.bind'
+        $Data = New-GraphGetRequest -uri $uri -tenantid $Tenant
+        [PSCustomObject]@{
+            Name  = $data.displayName
+            value = $DefinitionLink.enabled
+        }
+    }
+    catch {
+        "Could not retrieve definition for $DefinitionLink"
+    }
 }
 
 # Associate values to output bindings by calling 'Push-OutputBinding'.
