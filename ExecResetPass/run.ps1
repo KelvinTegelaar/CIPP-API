@@ -14,6 +14,7 @@ Write-Host "$($Request.query.ID)"
 $TenantFilter = $Request.Query.TenantFilter
 $password = -join ('abcdefghkmnrstuvwxyzABCDEFGHKLMNPRSTUVWXYZ23456789$%&*#'.ToCharArray() | Get-Random -Count 12)
 $mustChange = $request.query.MustChange
+if (!$mustChange) { $mustChange = 'true' }
 
 $passwordProfile = @"
 {"passwordProfile": { "forceChangePasswordNextSignIn": $mustChange, "password": "$password" }}'
@@ -26,7 +27,7 @@ try {
     else {
         $GraphRequest = New-GraphPostRequest -uri "https://graph.microsoft.com/v1.0/users/$($Request.query.ID)" -tenantid $TenantFilter -type PATCH -body $passwordProfile  -verbose
     }
-    $Results = [pscustomobject]@{"Results" = "Successfully completed request. The user must change their password at next logon. Temporary password is $password" }
+    $Results = [pscustomobject]@{"Results" = "Successfully completed request. User must changed password at next logon is set to $mustChange. Temporary password is $password" }
     Log-Request -user $request.headers.'x-ms-client-principal' -API $APINAME  -message "Reset password for $($REquest.query.id)" -Sev "Info"
 }
 catch {
