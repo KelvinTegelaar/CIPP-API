@@ -285,7 +285,12 @@ Function Read-SpfRecord {
                             $Result = $false
                         }
                         else {
-                            $Result = $TypeResult.answer.data
+                            if ($TypeQuery.RecordType -eq 'mx') {
+                                $Result = $TypeResult.Answer | ForEach-Object { $_.Data.Split(' ')[1] }
+                            }
+                            else {
+                                $Result = $TypeResult.answer.data
+                            }
                         }
                         $TypeLookups.Add(
                             [PSCustomObject]@{
@@ -637,7 +642,7 @@ function Read-DmarcPolicy {
     }
 
     if ($ReportDomainsPass) {
-        $ValidationPasses.Add("PASS: All reporting domains ($($ReportDomains -join ', ')) allow $Domain to send DMARC reports") | Out-Null
+        $ValidationPasses.Add("PASS: All external reporting domains ($($ReportDomains -join ', ')) allow $Domain to send DMARC reports") | Out-Null
     }
 
     # Check for missing record tags and set defaults
@@ -722,24 +727,26 @@ function Read-DkimRecord {
 
     # Initialize object
     $DkimAnalysis = [PSCustomObject]@{
-        Domain             = ''
-        Record             = ''
-        Version            = ''
-        PublicKey          = ''
-        PublicKeyInfo      = ''
-        KeyType            = ''
-        Flags              = ''
-        Notes              = ''
-        AcceptedAlgorithms = ''
-        ServiceType        = ''
-        ValidationPasses   = New-Object System.Collections.ArrayList
-        ValidationWarns    = New-Object System.Collections.ArrayList
-        ValidationFails    = New-Object System.Collections.ArrayList
+        Domain           = ''
+        Record           = ''
+        Version          = ''
+        PublicKey        = ''
+        PublicKeyInfo    = ''
+        KeyType          = ''
+        Flags            = ''
+        Notes            = ''
+        HashAlgorithms   = ''
+        ServiceType      = ''
+        Granularity      = ''
+        ValidationPasses = New-Object System.Collections.ArrayList
+        ValidationWarns  = New-Object System.Collections.ArrayList
+        ValidationFails  = New-Object System.Collections.ArrayList
     }
 
     $ValidationPasses = New-Object System.Collections.ArrayList
     $ValidationWarns = New-Object System.Collections.ArrayList
     $ValidationFails = New-Object System.Collections.ArrayList
+    $UnrecognizedTags = New-Object System.Collections.ArrayList
 
     # Check for DnsConfig file and set DNS resolver
     if (Test-Path -Path 'Config/DnsConfig.json') {
@@ -817,10 +824,16 @@ function Read-DkimRecord {
                 $DkimAnalysis.Notes = $Tag.Value
             }
             'h' {
-                $DkimAnalysis.AcceptedAlgorithms = $Tag.Value
+                $DkimAnalysis.HashAlgorithms = $Tag.Value
             }
             's' {
                 $DkimAnalysis.ServiceType = $Tag.Value
+            }
+            'g' {
+                $DkimAnalysis.Granularity = $Tag.Value
+            }
+            default {
+                $UnrecognizedTags.Add($Tag) | Out-Null
             }
         }
         $x++
@@ -828,10 +841,22 @@ function Read-DkimRecord {
 
     if ($DkimRecord -ne '') {
         if ($DkimAnalysis.KeyType -eq '') { $DkimAnalysis.KeyType = 'rsa' }
-        if ($DkimAnalysis.AcceptedAlgorithms -eq '') { $DkimAnalysis.AcceptedAlgorithms = 'all' }
+
+        if ($DkimAnalysis.HashAlgorithms -eq '') { $DkimAnalysis.HashAlgorithms = 'all' }
+
+        $UnrecognizedTagCount = $UnrecognizedTags | Measure-Object | Select-Object -ExpandProperty Count
+        if ($UnrecognizedTagCount -gt 0) {
+            $TagString = ($UnrecognizedTags | ForEach-Object { '{0}={1}' -f $_.Tag, $_.Value }) -join ', '
+            $ValidationWarns.Add("WARN: $UnrecognizedTagCount tag(s) detected in DKIM record. This can cause issues with some mailbox providers. Tags: $TagString")
+        }
+        if ($DkimAnalysis.Flags -eq 'y') {
+            $ValidationWarns.Add("WARN: This flag 't=y' indicates that this domain is testing mode currently. If DKIM is fully deployed, this flag should be changed to t=s unless subdomaining is required.") | Out-Null
+        }
+
         if ($DkimAnalysis.PublicKeyInfo.SignatureAlgorithm -ne $DkimAnalysis.KeyType) {
             $ValidationWarns.Add("WARN: Key signature algorithm $($DkimAnalysis.PublicKeyInfo.SignatureAlgorithm) does not match $($DkimAnalysis.KeyType)") | Out-Null
         }
+
         if ($DkimAnalysis.PublicKeyInfo.KeySize -lt 1024) {
             $ValidationFails.Add("FAIL: Key size is less than 1024 bit, found $($DkimAnalysis.PublicKeyInfo.KeySize)") | Out-Null
         }
