@@ -72,7 +72,7 @@ try {
         SuspectUserMailboxLogons = ($7dayslog | Where-Object -Property Operations -In  "MailboxLogin" ).AuditData | ConvertFrom-Json | Where-Object -Property mailboxGuid -EQ $SuspectUser
         LastSuspectUserLogon     = $LastSignIn
         SuspectUserDevices       = $Devices
-        NewRules                 = ($7dayslog | Where-Object -Property Operations -In "New-InboxRule", "Set-InboxRule", "UpdateInboxRules")
+        NewRules                 = ($7dayslog | Where-Object -Property Operations -In "New-InboxRule", "Set-InboxRule", "UpdateInboxRules").AuditData | ConvertFrom-Json
         MailboxPermissionChanges = ($7dayslog | Where-Object -Property Operations -In "Remove-MailboxPermission", "Add-MailboxPermission", "UpdateCalendarDelegation", "AddFolderPermissions" ).AuditData | ConvertFrom-Json
         NewUsers                 = ($7dayslog | Where-Object -Property Operations -In "Add user.").AuditData | ConvertFrom-Json
         ChangedUsers             = ($7dayslog | Where-Object -Property Operations -In "Update user.").AuditData | ConvertFrom-Json
@@ -80,11 +80,11 @@ try {
         DeletedUsers             = ($7dayslog | Where-Object -Property Operations -In "Delete user.").AuditData | ConvertFrom-Json
     }
     Write-Host $Results
-    Log-Request -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $($tenantfilter) -message "Assigned $($appFilter) to $assignTo" -Sev "Info"
+    #Log-Request -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $($tenantfilter) -message "Assigned $($appFilter) to $assignTo" -Sev "Info"
 
 }
 catch {
-    Log-Request -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $($tenantfilter) -message "Failed to assign app $($appFilter): $($_.Exception.Message)" -Sev "Error"
+    #Log-Request -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $($tenantfilter) -message "Failed to assign app $($appFilter): $($_.Exception.Message)" -Sev "Error"
     $results = [pscustomobject]@{"Results" = "Failed to assign. $($_.Exception.Message)" }
 }
 
