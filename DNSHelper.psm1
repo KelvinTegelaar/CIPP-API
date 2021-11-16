@@ -89,7 +89,62 @@ function Resolve-DnsHttpsQuery {
     }
 }
 
-Function Read-SpfRecord {
+function Read-MXRecord {
+    <#
+    .SYNOPSIS
+    Reads MX records for domain
+    
+    .DESCRIPTION
+    Queries DNS servers to get MX records and returns in PSCustomObject list with Priority and Hostname
+    
+    .PARAMETER Domain
+    Domain to query
+    
+    .EXAMPLE
+    PS> Read-MXRecord -Domain gmail.com
+    
+    Priority Hostname
+    -------- --------
+       5 gmail-smtp-in.l.google.com.
+      10 alt1.gmail-smtp-in.l.google.com.
+      20 alt2.gmail-smtp-in.l.google.com.
+      30 alt3.gmail-smtp-in.l.google.com.
+      40 alt4.gmail-smtp-in.l.google.com.
+    
+    #>
+    [CmdletBinding()]
+    Param(
+        [Parameter(Mandatory = $true)]
+        [string]$Domain
+    )
+    $Query = @{
+        Domain           = $Domain; 
+        RecordType       = 'mx' 
+        FullResultRecord = $true
+    }      
+    
+    try {
+        $Result = Resolve-DnsHttpsQuery @Query
+        Write-Verbose ($TypeResult | Format-Table | Out-String)
+    }
+    catch { $Result = $null }
+    if ($null -eq $Result -or $Result.Status -ne 0) {
+        $MXRecords = $null
+    }
+    else {
+        $MXRecords = $Result.Answer | ForEach-Object { 
+            $Priority, $Hostname = $_.Data.Split(' ')
+            [PSCustomObject]@{
+                Priority = [int]$Priority
+                Hostname = $Hostname
+            }
+        }
+        $MXRecords = $MXRecords | Sort-Object -Property Priority
+    }
+    $MXRecords
+}
+
+function Read-SpfRecord {
     <#
     .SYNOPSIS
     Reads SPF record for specified domain
