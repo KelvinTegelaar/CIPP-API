@@ -51,7 +51,7 @@ try {
     }
 }
 catch {
-    Log-Request -API $APINAME -tenant $($name) -user $request.headers.'x-ms-client-principal' -message "Exclusion API failed. $($_.Exception.Message)" -Sev 'Error'
+    Log-Request -API $APINAME -tenant $($name) -user $request.headers.'x-ms-client-principal' -message "DNS Config API failed. $($_.Exception.Message)" -Sev 'Error'
     $body = [pscustomobject]@{'Results' = "Failed. $($_.Exception.Message)" }
     $StatusCode = [HttpStatusCode]::BadRequest
 }
