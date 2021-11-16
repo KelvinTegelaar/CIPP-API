@@ -586,7 +586,7 @@ function Read-DmarcPolicy {
     
     # Resolve DMARC record
     $Query = Resolve-DnsHttpsQuery @DnsQuery
-    if ($null -ne $Query -and $Query.Status -ne 0) {
+    if (($null -ne $Query -and $Query.Status -ne 0) -or $null -eq $Query.Answer.data) {
         $ValidationFails.Add("FAIL: $Domain does not have a DMARC record") | Out-Null
     }
     else {
