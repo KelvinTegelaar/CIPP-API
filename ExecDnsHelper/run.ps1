@@ -30,6 +30,9 @@ try {
                 'ReadDkimRecord' {
                     $Body = Read-DkimRecord -Domain $Request.Query.Domain -Selector $Request.Query.Selector
                 }
+                'ReadMXRecord' {
+                    $Body = Read-MXRecord -Domain $Request.Query.Domain
+                }
             }
         }
         else {
