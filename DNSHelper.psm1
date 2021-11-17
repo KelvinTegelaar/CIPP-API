@@ -45,7 +45,7 @@ function Resolve-DnsHttpsQuery {
     switch ($Resolver) {
         'Google' {
             $BaseUri = 'https://dns.google/resolve'
-            $QueryTemplate = '{0}?name={1}&type={2}'
+            $QueryTemplate = '{0}?name={1}&type={2}&do=true'
         }
         'CloudFlare' {
             $BaseUri = 'https://cloudflare-dns.com/dns-query'
@@ -87,6 +87,87 @@ function Resolve-DnsHttpsQuery {
     else {
         return $Results
     }
+}
+
+function Test-DNSSEC {
+    <#
+    .SYNOPSIS
+    Test Domain for DNSSEC validation
+    
+    .DESCRIPTION
+    Requests dnskey record from DNS and checks response validation (AD=True)
+    
+    .PARAMETER Domain
+    Domain to check
+    
+    .EXAMPLE
+    PS> Test-DNSSEC -Domain example.com
+    
+    Domain           : example.com
+    ValidationPasses : {PASS: example.com - DNSSEC enabled and validated}
+    ValidationFails  : {}
+    Keys             : {...}
+
+    #>
+    [CmdletBinding()]
+    Param(
+        [Parameter(Mandatory = $true)]
+        [string]$Domain
+    )
+    $DSResults = [PSCustomObject]@{
+        Domain           = $Domain
+        ValidationPasses = New-Object System.Collections.ArrayList
+        ValidationFails  = New-Object System.Collections.ArrayList
+        Keys             = New-Object System.Collections.ArrayList
+    }
+    $ValidationPasses = New-Object System.Collections.ArrayList
+    $ValidationFails = New-Object System.Collections.ArrayList
+
+    if (Test-Path -Path 'Config\DnsConfig.json') {
+        $Config = Get-Content 'Config\DnsConfig.json' | ConvertFrom-Json 
+        $DnsQuery = @{
+            RecordType       = 'dnskey'
+            Domain           = $Domain
+            Resolver         = $Config.Resolver
+            FullResultRecord = $true
+        }
+    }
+    else {
+        $DnsQuery = @{
+            RecordType       = 'dnskey'
+            Domain           = $Domain
+            FullResultRecord = $true
+        }
+    }
+
+    $Result = Resolve-DnsHttpsQuery @DnsQuery
+    $RecordCount = ($Result.Answer.data | Measure-Object).Count
+    if ($null -eq $Result) {
+        $ValidationFails.Add('FAIL: DNSSEC validation failed, no dnskey record found') | Out-Null
+    }
+    else {
+        if ($Result.Status -eq 2) {
+            if ($Result.AD -eq $false) {
+                $ValidationFails.Add("FAIL: $($Result.Comment)") | Out-Null
+            }
+        }
+        elseif ($Result.Status -eq 3) {
+            $ValidationFails.Add('FAIL: Domain does not exist (NXDOMAIN)') | Out-Null
+        }
+        elseif ($RecordCount -gt 0) {
+            if ($Result.AD -eq $false) {
+                $ValidationFails.Add('FAIL: DNSSEC enabled, but response was not validated. Ensure DNSSEC has been enabled at your registrar') | Out-Null
+            }
+            else {
+                $ValidationPasses.Add('PASS: DNSSEC enabled and validated for this domain') | Out-Null
+            }
+            $DSResults.Keys = $Result.answer.data
+        }
+    }
+
+    $DSResults.ValidationPasses = $ValidationPasses
+    $DSResults.ValidationFails = $ValidationFails
+    $DSResults
 }
 
 function Read-MXRecord {

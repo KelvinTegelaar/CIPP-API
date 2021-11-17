@@ -38,6 +38,9 @@ try {
                 'ReadMXRecord' {
                     $Body = Read-MXRecord -Domain $Request.Query.Domain
                 }
+                'TestDNSSEC' {
+                    $Body = Test-DNSSEC -Domain $Request.Query.Domain
+                }
             }
         }
         else {
