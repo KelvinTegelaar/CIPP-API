@@ -461,8 +461,8 @@ function Read-SpfRecord {
     if ($Level -eq 'Parent' -and $ExpectedInclude -eq '') {
         $MXRecord = Read-MXRecord -Domain $Domain
         $SPFResults.MailProvider = $MXRecord.MailProvider
-        if ($MXRecord.MailProvider.ExpectedInclude -ne '') {
-            $ExpectedInclude = $MXRecord.MailProvider.ExpectedInclude
+        if ($MXRecord.ExpectedInclude -ne '') {
+            $ExpectedInclude = $MXRecord.ExpectedInclude
         }
     }
         
@@ -862,7 +862,7 @@ function Read-DkimRecord {
 
     if ($MxLookup) {
         $MXRecord = Read-MXRecord -Domain $Domain 
-        $Selectors = $MXRecord.MailProvider.Selectors
+        $Selectors = $MXRecord.Selectors
         if (($Selectors | Measure-Object | Select-Object -ExpandProperty Count) -eq 0) {
             # Initialize object
             $DkimAnalysis = [PSCustomObject]@{
