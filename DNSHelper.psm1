@@ -242,10 +242,13 @@ function Read-MXRecord {
     else {
         $MXRecords = $Result.Answer | ForEach-Object { 
             $Priority, $Hostname = $_.Data.Split(' ')
-            [PSCustomObject]@{
-                Priority = [int]$Priority
-                Hostname = $Hostname
+            try {
+                [PSCustomObject]@{
+                    Priority = [int]$Priority
+                    Hostname = $Hostname
+                }
             }
+            catch {}
         }
         $ValidationPasses.Add("PASS: $Domain - MX record is present") | Out-Null
         $MXRecords = $MXRecords | Sort-Object -Property Priority
