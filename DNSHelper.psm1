@@ -407,7 +407,7 @@ function Read-SpfRecord {
 
         if ($Record -ne '') {
             # Split records and parse
-            $RecordEntries = $Record -split ' '
+            $RecordEntries = $Record -split '\s+'
 
             $RecordEntries | ForEach-Object {
                 if ($_ -match 'v=spf1') {}
