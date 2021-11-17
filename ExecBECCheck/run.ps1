@@ -7,10 +7,10 @@ $APIName = $TriggerMetadata.FunctionName
 Log-Request -user $request.headers.'x-ms-client-principal' -API $APINAME  -message "Accessed this API" -Sev "Debug"
 Write-Host "PowerShell HTTP trigger function processed a request."
 
-$TenantFilter = $request.query.TenantFilter
-$SuspectUser = $request.query.SuspectUser
+$TenantFilter = $request.body.tenantfilter
+$SuspectUser = (New-GraphGetRequest -uri "https://graph.microsoft.com/beta/users/$($request.body.user)?`$select=id" -tenantid $TenantFilter).id
 Write-Host $TenantFilter
-
+Write-Host $SuspectUser
 try {
     $startDate = (Get-Date).AddDays(-7)
     $endDate = (Get-Date)
