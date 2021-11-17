@@ -737,7 +737,7 @@ function Read-DmarcPolicy {
         $ValidationFails.Add("FAIL: $Domain does not have a DMARC record") | Out-Null
     }
     else {
-        $DmarcRecord = $Query.Answer.data
+        $DmarcRecord = ($Query.Answer | Where-Object -Property type -EQ 16).data
         $DmarcAnalysis.Record = $DmarcRecord
         $RecordCount = ($DmarcRecord | Measure-Object).Count   
     }
@@ -1026,11 +1026,12 @@ function Read-DkimRecord {
                 $DkimRecord = ''
             }
             else {
-                if (($QueryResults.Answer.data | Measure-Object).Count -gt 1) {
-                    $DkimRecord = $QueryResults.Answer.data[-1]
+                $QueryData = ($QueryResults.Answer | Where-Object -Property type -EQ 16).data
+                if (( $QueryData | Measure-Object).Count -gt 1) {
+                    $DkimRecord = $QueryData[-1]
                 }
                 else {
-                    $DkimRecord = $QueryResults.Answer.data
+                    $DkimRecord = $QueryData
                 }
             }
             $DkimAnalysis.Record = $DkimRecord
