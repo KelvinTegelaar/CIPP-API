@@ -71,7 +71,7 @@ function Resolve-DnsHttpsQuery {
     if ($Results.Status -ne 0) {
         return $Results
     }
-
+    
     if (($Results.Answer | Measure-Object | Select-Object -ExpandProperty Count) -eq 0) {
         return $null
     }
@@ -387,14 +387,14 @@ function Read-SpfRecord {
                 else {
                     $Query = Resolve-DnsHttpsQuery @DnsQuery
                     if ($null -ne $Query -and $Query.Status -ne 0) {
-                        $ValidationFails.Add("FAIL: $Domain does not resolve an SPF record, PermError") | Out-Null
+                        $ValidationFails.Add("FAIL: $Domain does not resolve an SPF record.") | Out-Null
                         $PermError = $true
                     }
                     else {
                         $Record = $Query.answer | Select-Object -ExpandProperty data | Where-Object { $_ -match '^v=spf1' }
                         $RecordCount = ($Record | Measure-Object).Count
                         if ($RecordCount -eq 0) { 
-                            $ValidationFails.Add("FAIL: $Domain does not resolve an SPF record, PermError") | Out-Null
+                            $ValidationFails.Add("FAIL: $Domain does not resolve an SPF record.") | Out-Null
                             $PermError = $true 
                         }
                     }
@@ -410,7 +410,7 @@ function Read-SpfRecord {
         }
         $SPFResults.Domain = $Domain
 
-        if ($Record -ne '') {
+        if ($Record -ne '' -and $RecordCount -gt 0) {
             # Split records and parse
             $RecordEntries = $Record -split '\s+'
 
@@ -580,12 +580,8 @@ function Read-SpfRecord {
             $ValidationWarns.Add("WARN: Domain: $Domain Record Type SPF detected, this is legacy and should not be used. It is recommeded to delete this record.") | Out-Null
         }
     }
-    if ($Level -eq 'Parent') {
+    if ($Level -eq 'Parent' -and $RecordCount -gt 0) {
         # Check for the correct number of records
-        if ($RecordCount -eq 0) { 
-            $ValidationFails.Add('FAIL: No SPF record detected') | Out-Null 
-            $PermError = $true
-        }
         if ($RecordCount -gt 1) {
             $ValidationFails.Add("FAIL: There should only be one SPF record, $RecordCount detected") | Out-Null 
             $PermError = $true
@@ -848,11 +844,11 @@ function Read-DmarcPolicy {
                 $ReportDmarcQuery = Resolve-DnsHttpsQuery @DnsQuery
                 $ReportDmarcRecord = $ReportDmarcQuery.Answer.data
                 if ($null -eq $ReportDmarcQuery -or $ReportDmarcQuery.Status -ne 0) {
-                    $ValidationWarns.Add("WARN: Report DMARC policy for $Domain is missing from $ReportDomain, reports will not be delivered. Expected record: $Domain._report._dmarc.$ReportDomain - Expected value: v=DMARC1;") | Out-Null
+                    $ValidationWarns.Add("WARN: Report DMARC policy for $Domain is missing from $ReportDomain, reports will not be delivered. Expected record: $Domain._report._dmarc.$ReportDomain - Expected value: v=DMARC1; ") | Out-Null
                     $ReportDomainsPass = $false
                 }
                 elseif ($ReportDmarcRecord -notmatch '^v=DMARC1') {
-                    $ValidationWarns.Add("WARN: Report DMARC policy for $Domain is missing from $ReportDomain, reports will not be delivered. Expected record: $Domain._report._dmarc.$ReportDomain - Expected value: v=DMARC1;") | Out-Null
+                    $ValidationWarns.Add("WARN: Report DMARC policy for $Domain is missing from $ReportDomain, reports will not be delivered. Expected record: $Domain._report._dmarc.$ReportDomain - Expected value: v=DMARC1; ") | Out-Null
                     $ReportDomainsPass = $false
                 }
             }
@@ -867,13 +863,13 @@ function Read-DmarcPolicy {
         if ($DmarcAnalysis.SubdomainPolicy -eq '') { $DmarcAnalysis.SubdomainPolicy = $DmarcAnalysis.Policy }
 
         # Check policy for errors and best practice
-        if ($PolicyValues -notcontains $DmarcAnalysis.Policy) { $ValidationFails.Add("FAIL: Policy must be one of the following - none, quarantine,reject. Found $($Tag.Value)") | Out-Null }
+        if ($PolicyValues -notcontains $DmarcAnalysis.Policy) { $ValidationFails.Add("FAIL: Policy must be one of the following - none, quarantine, reject. Found $($Tag.Value)") | Out-Null }
         if ($DmarcAnalysis.Policy -eq 'reject') { $ValidationPasses.Add('PASS: Policy is sufficiently strict') | Out-Null }
         if ($DmarcAnalysis.Policy -eq 'quarantine') { $ValidationWarns.Add('WARN: Policy is only partially enforced with quarantine') | Out-Null }
         if ($DmarcAnalysis.Policy -eq 'none') { $ValidationWarns.Add('FAIL: Policy is not being enforced') | Out-Null }
 
         # Check subdomain policy
-        if ($PolicyValues -notcontains $DmarcAnalysis.SubdomainPolicy) { $ValidationFails.Add("FAIL: Subdomain policy must be one of the following - none, quarantine,reject. Found $($DmarcAnalysis.SubdomainPolicy)") | Out-Null }
+        if ($PolicyValues -notcontains $DmarcAnalysis.SubdomainPolicy) { $ValidationFails.Add("FAIL: Subdomain policy must be one of the following - none, quarantine, reject. Found $($DmarcAnalysis.SubdomainPolicy)") | Out-Null }
         if ($DmarcAnalysis.SubdomainPolicy -eq 'reject') { $ValidationPasses.Add('PASS: Subdomain policy is sufficiently strict') | Out-Null }
         if ($DmarcAnalysis.SubdomainPolicy -eq 'quarantine') { $ValidationWarns.Add('WARN: Subdomain policy is only partially enforced with quarantine') | Out-Null }
         if ($DmarcAnalysis.SubdomainPolicy -eq 'none') { $ValidationWarns.Add('FAIL: Subdomain policy is not being enforced') | Out-Null }
@@ -932,53 +928,43 @@ function Read-DkimRecord {
     PS> Read-DkimRecord -Domain example.com -Selector test
 
     #>
-    [CmdletBinding(DefaultParameterSetName = 'Selector')]
+    [CmdletBinding()]
     Param(
-        [Parameter(ParameterSetName = 'Selector', Mandatory = $true)]
-        [Parameter(ParameterSetName = 'MxLookup', Mandatory = $true)]
+        [Parameter(Mandatory = $true)]
         [string]$Domain,
 
-        [Parameter(ParameterSetName = 'Selector', Mandatory = $true)]
-        [string[]]$Selectors,
-
-        [Parameter(ParameterSetName = 'MxLookup')]
-        [switch]$MxLookup
+        [Parameter()]
+        [string[]]$Selectors = @()
     )
+
     $MXRecord = $null
 
-    if ($MxLookup) {
+    $DkimAnalysis = [PSCustomObject]@{
+        Domain           = $Domain
+        MailProvider     = ''
+        Records          = New-Object System.Collections.ArrayList
+        ValidationPasses = New-Object System.Collections.ArrayList
+        ValidationWarns  = New-Object System.Collections.ArrayList
+        ValidationFails  = New-Object System.Collections.ArrayList
+    }
+
+    $ValidationPasses = New-Object System.Collections.ArrayList
+    $ValidationWarns = New-Object System.Collections.ArrayList
+    $ValidationFails = New-Object System.Collections.ArrayList
+
+    if (($Selectors | Measure-Object | Select-Object -ExpandProperty Count) -eq 0) {
         $MXRecord = Read-MXRecord -Domain $Domain 
         $Selectors = $MXRecord.Selectors
+        $DkimAnalysis.MailProvider = $MXRecord.MailProvider
         if (($Selectors | Measure-Object | Select-Object -ExpandProperty Count) -eq 0) {
-            # Initialize object
-            $DkimAnalysis = [PSCustomObject]@{
-                Domain           = $Domain
-                Record           = ''
-                Version          = ''
-                PublicKey        = ''
-                PublicKeyInfo    = ''
-                KeyType          = ''
-                Flags            = ''
-                Notes            = ''
-                HashAlgorithms   = ''
-                ServiceType      = ''
-                Granularity      = ''
-                MailProvider     = ''
-                ValidationPasses = New-Object System.Collections.ArrayList
-                ValidationWarns  = New-Object System.Collections.ArrayList
-                ValidationFails  = New-Object System.Collections.ArrayList
-            }
-            $DkimAnalysis.MailProvider = $MXRecord.MailProvider
-            $DkimAnalysis.ValidationFails.Add("FAIL: $Domain - No selectors found from MX record") | Out-Null
-            $DkimAnalysis
+            $ValidationFails.Add("FAIL: $Domain - No selectors found from MX record") | Out-Null
         }
     }
     
     if (($Selectors | Measure-Object | Select-Object -ExpandProperty Count) -gt 0) {
         foreach ($Selector in $Selectors) {
             # Initialize object
-            $DkimAnalysis = [PSCustomObject]@{
-                Domain           = ''
+            $DkimRecord = [PSCustomObject]@{
                 Record           = ''
                 Version          = ''
                 PublicKey        = ''
@@ -989,18 +975,9 @@ function Read-DkimRecord {
                 HashAlgorithms   = ''
                 ServiceType      = ''
                 Granularity      = ''
-                MailProvider     = ''
-                ValidationPasses = New-Object System.Collections.ArrayList
-                ValidationWarns  = New-Object System.Collections.ArrayList
-                ValidationFails  = New-Object System.Collections.ArrayList
+                UnrecognizedTags = New-Object System.Collections.ArrayList
             }
-            if ($null -ne $MXRecord) { $DkimAnalysis.MailProvider = $MXRecord.MailProvider }
 
-            $DkimAnalysis.Domain = $Domain
-            $ValidationPasses = New-Object System.Collections.ArrayList
-            $ValidationWarns = New-Object System.Collections.ArrayList
-            $ValidationFails = New-Object System.Collections.ArrayList
-            $UnrecognizedTags = New-Object System.Collections.ArrayList
             # Check for DnsConfig file and set DNS resolver
             if (Test-Path -Path 'Config/DnsConfig.json') {
                 $Config = Get-Content 'Config/DnsConfig.json' | ConvertFrom-Json
@@ -1019,26 +996,25 @@ function Read-DkimRecord {
                 }
             }
             $QueryResults = Resolve-DnsHttpsQuery @DnsQuery
-    
 
             if ($QueryResults -eq '' -or $QueryResults.Status -ne 0) {
                 $ValidationFails.Add("FAIL: $Selector - DKIM record is missing, check the selector and try again") | Out-Null
-                $DkimRecord = ''
+                $Record = ''
             }
             else {
-                $QueryData = ($QueryResults.Answer | Where-Object -Property type -EQ 16).data
+                $QueryData = ($QueryResults.Answer).data
                 if (( $QueryData | Measure-Object).Count -gt 1) {
-                    $DkimRecord = $QueryData[-1]
+                    $Record = $QueryData[-1]
                 }
                 else {
-                    $DkimRecord = $QueryData
+                    $Record = $QueryData
                 }
             }
-            $DkimAnalysis.Record = $DkimRecord
+            $DkimRecord.Record = $Record
 
             # Split DKIM record into name/value pairs
             $TagList = New-Object System.Collections.ArrayList
-            Foreach ($Element in ($DkimRecord -split ';').trim()) {
+            Foreach ($Element in ($Record -split ';').trim()) {
                 $Name, $Value = $Element -split '='
                 $TagList.Add(
                     [PSCustomObject]@{
@@ -1047,6 +1023,7 @@ function Read-DkimRecord {
                     }
                 ) | Out-Null
             }
+            
 
             # Loop through name/value pairs and set object properties
             $x = 0
@@ -1056,82 +1033,82 @@ function Read-DkimRecord {
                         # REQUIRED: Version
                         if ($x -ne 0) { $ValidationFails.Add("FAIL: $Selector - v=DKIM1 must be at the beginning of the record") | Out-Null }
                         if ($Tag.Value -ne 'DKIM1') { $ValidationFails.Add("FAIL: $Selector - Version must be DKIM1 - found $($Tag.Value)") | Out-Null }
-                        $DkimAnalysis.Version = $Tag.Value
+                        $DkimRecord.Version = $Tag.Value
                     }
                     'p' {
                         # REQUIRED: Public Key
                         if ($Tag.Value -ne '') {
-                            $DkimAnalysis.PublicKey = "-----BEGIN PUBLIC KEY-----`n{0}`n-----END PUBLIC KEY-----" -f $Tag.Value
-                            $DkimAnalysis.PublicKeyInfo = Get-RsaPublicKeyInfo -EncodedString $Tag.Value
+                            $DkimRecord.PublicKey = "-----BEGIN PUBLIC KEY-----`n {0}`n-----END PUBLIC KEY-----" -f $Tag.Value
+                            $DkimRecord.PublicKeyInfo = Get-RsaPublicKeyInfo -EncodedString $Tag.Value
                         }
                         else {
                             $ValidationFails.Add("FAIL: $Selector - No public key specified for DKIM record") | Out-Null 
                         }
                     }
                     'k' {
-                        $DkimAnalysis.KeyType = $Tag.Value
+                        $DkimRecord.KeyType = $Tag.Value
                     }
                     't' {
-                        $DkimAnalysis.Flags = $Tag.Value
+                        $DkimRecord.Flags = $Tag.Value
                     }
                     'n' {
-                        $DkimAnalysis.Notes = $Tag.Value
+                        $DkimRecord.Notes = $Tag.Value
                     }
                     'h' {
-                        $DkimAnalysis.HashAlgorithms = $Tag.Value
+                        $DkimRecord.HashAlgorithms = $Tag.Value
                     }
                     's' {
-                        $DkimAnalysis.ServiceType = $Tag.Value
+                        $DkimRecord.ServiceType = $Tag.Value
                     }
                     'g' {
-                        $DkimAnalysis.Granularity = $Tag.Value
+                        $DkimRecord.Granularity = $Tag.Value
                     }
                     default {
-                        $UnrecognizedTags.Add($Tag) | Out-Null
+                        $DkimRecord.UnrecognizedTags.Add($Tag) | Out-Null
                     }
                 }
                 $x++
             }
 
-            if ($DkimRecord -ne '') {
-                if ($DkimAnalysis.KeyType -eq '') { $DkimAnalysis.KeyType = 'rsa' }
+            if ($Record -ne '') {
+                if ($DkimRecord.KeyType -eq '') { $DkimRecord.KeyType = 'rsa' }
 
-                if ($DkimAnalysis.HashAlgorithms -eq '') { $DkimAnalysis.HashAlgorithms = 'all' }
+                if ($DkimRecord.HashAlgorithms -eq '') { $DkimRecord.HashAlgorithms = 'all' }
 
                 $UnrecognizedTagCount = $UnrecognizedTags | Measure-Object | Select-Object -ExpandProperty Count
                 if ($UnrecognizedTagCount -gt 0) {
                     $TagString = ($UnrecognizedTags | ForEach-Object { '{0}={1}' -f $_.Tag, $_.Value }) -join ', '
                     $ValidationWarns.Add("WARN: $Selector - $UnrecognizedTagCount tag(s) detected in DKIM record. This can cause issues with some mailbox providers. Tags: $TagString")
                 }
-                if ($DkimAnalysis.Flags -eq 'y') {
+                if ($DkimRecord.Flags -eq 'y') {
                     $ValidationWarns.Add("WARN: $Selector - This flag 't=y' indicates that this domain is testing mode currently. If DKIM is fully deployed, this flag should be changed to t=s unless subdomaining is required.") | Out-Null
                 }
 
-                if ($DkimAnalysis.PublicKeyInfo.SignatureAlgorithm -ne $DkimAnalysis.KeyType) {
-                    $ValidationWarns.Add("WARN: $Selector - Key signature algorithm $($DkimAnalysis.PublicKeyInfo.SignatureAlgorithm) does not match $($DkimAnalysis.KeyType)") | Out-Null
+                if ($DkimRecord.PublicKeyInfo.SignatureAlgorithm -ne $DkimRecord.KeyType) {
+                    $ValidationWarns.Add("WARN: $Selector - Key signature algorithm $($DkimRecord.PublicKeyInfo.SignatureAlgorithm) does not match $($DkimRecord.KeyType)") | Out-Null
                 }
 
-                if ($DkimAnalysis.PublicKeyInfo.KeySize -lt 1024) {
-                    $ValidationFails.Add("FAIL: $Selector - Key size is less than 1024 bit, found $($DkimAnalysis.PublicKeyInfo.KeySize)") | Out-Null
+                if ($DkimRecord.PublicKeyInfo.KeySize -lt 1024) {
+                    $ValidationFails.Add("FAIL: $Selector - Key size is less than 1024 bit, found $($DkimRecord.PublicKeyInfo.KeySize)") | Out-Null
                 }
                 else {
                     $ValidationPasses.Add("PASS: $Selector - DKIM key validation succeeded") | Out-Null
                 }
+                ($DkimAnalysis.Records).Add($DkimRecord) | Out-Null
             }
 
             if (($ValidationFails | Measure-Object | Select-Object -ExpandProperty Count) -eq 0) {
                 $ValidationPasses.Add("PASS: $Selector - No errors detected with DKIM record") | Out-Null
             }
-
-            # Collect validation results
-            $DkimAnalysis.ValidationPasses = $ValidationPasses
-            $DkimAnalysis.ValidationWarns = $ValidationWarns
-            $DkimAnalysis.ValidationFails = $ValidationFails
-
-            # Return analysis
-            $DkimAnalysis
         }
     }
+    # Collect validation results
+    $DkimAnalysis.ValidationPasses = $ValidationPasses
+    $DkimAnalysis.ValidationWarns = $ValidationWarns
+    $DkimAnalysis.ValidationFails = $ValidationFails
+
+    # Return analysis
+    $DkimAnalysis
 }
 
 function Get-RsaPublicKeyInfo {
