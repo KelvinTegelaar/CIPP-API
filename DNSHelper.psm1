@@ -117,6 +117,7 @@ function Test-DNSSEC {
     $DSResults = [PSCustomObject]@{
         Domain           = $Domain
         ValidationPasses = New-Object System.Collections.ArrayList
+        ValidationWarns  = New-Object System.Collections.ArrayList
         ValidationFails  = New-Object System.Collections.ArrayList
         Keys             = New-Object System.Collections.ArrayList
     }
@@ -202,6 +203,7 @@ function Read-MXRecord {
         Domain           = ''
         Records          = New-Object System.Collections.ArrayList
         ValidationPasses = New-Object System.Collections.ArrayList
+        ValidationWarns  = New-Object System.Collections.ArrayList
         ValidationFails  = New-Object System.Collections.ArrayList
         MailProvider     = ''
         ExpectedInclude  = ''
