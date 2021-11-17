@@ -117,6 +117,7 @@ function Test-DNSSEC {
     $DSResults = [PSCustomObject]@{
         Domain           = $Domain
         ValidationPasses = New-Object System.Collections.ArrayList
+        ValidationWarns  = New-Object System.Collections.ArrayList
         ValidationFails  = New-Object System.Collections.ArrayList
         Keys             = New-Object System.Collections.ArrayList
     }
@@ -202,6 +203,7 @@ function Read-MXRecord {
         Domain           = ''
         Records          = New-Object System.Collections.ArrayList
         ValidationPasses = New-Object System.Collections.ArrayList
+        ValidationWarns  = New-Object System.Collections.ArrayList
         ValidationFails  = New-Object System.Collections.ArrayList
         MailProvider     = ''
         ExpectedInclude  = ''
@@ -240,10 +242,13 @@ function Read-MXRecord {
     else {
         $MXRecords = $Result.Answer | ForEach-Object { 
             $Priority, $Hostname = $_.Data.Split(' ')
-            [PSCustomObject]@{
-                Priority = [int]$Priority
-                Hostname = $Hostname
+            try {
+                [PSCustomObject]@{
+                    Priority = [int]$Priority
+                    Hostname = $Hostname
+                }
             }
+            catch {}
         }
         $ValidationPasses.Add("PASS: $Domain - MX record is present") | Out-Null
         $MXRecords = $MXRecords | Sort-Object -Property Priority
@@ -407,7 +412,7 @@ function Read-SpfRecord {
 
         if ($Record -ne '') {
             # Split records and parse
-            $RecordEntries = $Record -split ' '
+            $RecordEntries = $Record -split '\s+'
 
             $RecordEntries | ForEach-Object {
                 if ($_ -match 'v=spf1') {}
