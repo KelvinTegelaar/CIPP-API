@@ -2,5 +2,8 @@
     "Name": "Google",
     "MxMatch": "aspmx.l.google.com",
     "SpfInclude": "_spf.google.com",
-    "Selectors": ["google"]
+    "Selectors": ["google"],
+    "_MxComment": "https://support.google.com/a/answer/140034",
+    "_SpfComment": "https://support.google.com/a/answer/10684623",
+    "_DkimComment": "https://support.google.com/a/answer/174126"
 }

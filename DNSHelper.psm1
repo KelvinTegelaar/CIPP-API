@@ -255,7 +255,7 @@ function Read-MXRecord {
 
         # Attempt to identify mail provider based on MX record
         if (Test-Path 'MailProviders') {
-            Get-ChildItem 'MailProviders' | ForEach-Object {
+            Get-ChildItem 'MailProviders' -Exclude '_template.json' | ForEach-Object {
                 $Provider = Get-Content $_ | ConvertFrom-Json
                 $MXRecords.Hostname | ForEach-Object {
                     if ($_ -match $Provider.MxMatch) {
