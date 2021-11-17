@@ -856,30 +856,28 @@ function Read-DkimRecord {
         [Parameter(ParameterSetName = 'MxLookup')]
         [switch]$MxLookup
     )
-
-    # Initialize object
-    $DkimAnalysis = [PSCustomObject]@{
-        Domain           = ''
-        Record           = ''
-        Version          = ''
-        PublicKey        = ''
-        PublicKeyInfo    = ''
-        KeyType          = ''
-        Flags            = ''
-        Notes            = ''
-        HashAlgorithms   = ''
-        ServiceType      = ''
-        Granularity      = ''
-        ValidationPasses = New-Object System.Collections.ArrayList
-        ValidationWarns  = New-Object System.Collections.ArrayList
-        ValidationFails  = New-Object System.Collections.ArrayList
-    }
-    $DkimAnalysis.Domain = $DnsQuery.Domain
-
+    
     if ($MxLookup) {
         $MXRecord = Read-MXRecord -Domain $Domain 
         $Selectors = $MXRecord.Selectors
         if (($Selectors | Measure-Object | Select-Object -ExpandProperty Count) -eq 0) {
+            # Initialize object
+            $DkimAnalysis = [PSCustomObject]@{
+                Domain           = $Domain
+                Record           = ''
+                Version          = ''
+                PublicKey        = ''
+                PublicKeyInfo    = ''
+                KeyType          = ''
+                Flags            = ''
+                Notes            = ''
+                HashAlgorithms   = ''
+                ServiceType      = ''
+                Granularity      = ''
+                ValidationPasses = New-Object System.Collections.ArrayList
+                ValidationWarns  = New-Object System.Collections.ArrayList
+                ValidationFails  = New-Object System.Collections.ArrayList
+            }
             $DkimAnalysis.ValidationFails.Add("FAIL: $Domain - No selectors found from MX record") | Out-Null
             $DkimAnalysis
         }
@@ -887,6 +885,24 @@ function Read-DkimRecord {
     
     if (($Selectors | Measure-Object | Select-Object -ExpandProperty Count) -gt 0) {
         foreach ($Selector in $Selectors) {
+            # Initialize object
+            $DkimAnalysis = [PSCustomObject]@{
+                Domain           = ''
+                Record           = ''
+                Version          = ''
+                PublicKey        = ''
+                PublicKeyInfo    = ''
+                KeyType          = ''
+                Flags            = ''
+                Notes            = ''
+                HashAlgorithms   = ''
+                ServiceType      = ''
+                Granularity      = ''
+                ValidationPasses = New-Object System.Collections.ArrayList
+                ValidationWarns  = New-Object System.Collections.ArrayList
+                ValidationFails  = New-Object System.Collections.ArrayList
+            }
+            $DkimAnalysis.Domain = $Domain
             $ValidationPasses = New-Object System.Collections.ArrayList
             $ValidationWarns = New-Object System.Collections.ArrayList
             $ValidationFails = New-Object System.Collections.ArrayList
