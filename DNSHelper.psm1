@@ -45,11 +45,11 @@ function Resolve-DnsHttpsQuery {
     switch ($Resolver) {
         'Google' {
             $BaseUri = 'https://dns.google/resolve'
-            $QueryTemplate = '{0}?name={1}&type={2}&do=true'
+            $QueryTemplate = '{0}?name={1}&type={2}'
         }
         'CloudFlare' {
             $BaseUri = 'https://cloudflare-dns.com/dns-query'
-            $QueryTemplate = '{0}?name={1}&type={2}&do=true'
+            $QueryTemplate = '{0}?name={1}&type={2}'
         }
     }
 
