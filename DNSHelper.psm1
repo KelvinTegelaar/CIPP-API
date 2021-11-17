@@ -255,6 +255,7 @@ function Read-SpfRecord {
         RecordList       = New-Object System.Collections.ArrayList   
         TypeLookups      = New-Object System.Collections.ArrayList
         IPAddresses      = New-Object System.Collections.ArrayList
+        MailProvider     = ''
         PermError        = $false     
     }
 
@@ -459,8 +460,9 @@ function Read-SpfRecord {
     # Lookup MX record for expected include information if not supplied
     if ($Level -eq 'Parent' -and $ExpectedInclude -eq '') {
         $MXRecord = Read-MXRecord -Domain $Domain
-        if ($MXRecord.ExpectedInclude -ne '') {
-            $ExpectedInclude = $MXRecord.ExpectedInclude
+        $SPFResults.MailProvider = $MXRecord.MailProvider
+        if ($MXRecord.MailProvider.ExpectedInclude -ne '') {
+            $ExpectedInclude = $MXRecord.MailProvider.ExpectedInclude
         }
     }
         
@@ -856,10 +858,11 @@ function Read-DkimRecord {
         [Parameter(ParameterSetName = 'MxLookup')]
         [switch]$MxLookup
     )
-    
+    $MXRecord = $null
+
     if ($MxLookup) {
         $MXRecord = Read-MXRecord -Domain $Domain 
-        $Selectors = $MXRecord.Selectors
+        $Selectors = $MXRecord.MailProvider.Selectors
         if (($Selectors | Measure-Object | Select-Object -ExpandProperty Count) -eq 0) {
             # Initialize object
             $DkimAnalysis = [PSCustomObject]@{
@@ -874,10 +877,12 @@ function Read-DkimRecord {
                 HashAlgorithms   = ''
                 ServiceType      = ''
                 Granularity      = ''
+                MailProvider     = ''
                 ValidationPasses = New-Object System.Collections.ArrayList
                 ValidationWarns  = New-Object System.Collections.ArrayList
                 ValidationFails  = New-Object System.Collections.ArrayList
             }
+            $DkimAnalysis.MailProvider = $MXRecord.MailProvider
             $DkimAnalysis.ValidationFails.Add("FAIL: $Domain - No selectors found from MX record") | Out-Null
             $DkimAnalysis
         }
@@ -898,10 +903,13 @@ function Read-DkimRecord {
                 HashAlgorithms   = ''
                 ServiceType      = ''
                 Granularity      = ''
+                MailProvider     = ''
                 ValidationPasses = New-Object System.Collections.ArrayList
                 ValidationWarns  = New-Object System.Collections.ArrayList
                 ValidationFails  = New-Object System.Collections.ArrayList
             }
+            if ($null -ne $MXRecord) { $DkimAnalysis.MailProvider = $MXRecord.MailProvider }
+
             $DkimAnalysis.Domain = $Domain
             $ValidationPasses = New-Object System.Collections.ArrayList
             $ValidationWarns = New-Object System.Collections.ArrayList
