@@ -1,0 +1,6 @@
+{
+    "Name": "Microsoft 365",
+    "MxMatch": "mail.protection.outlook.com",
+    "SpfInclude": "spf.protection.outlook.com",
+    "Selectors": ["selector1","selector2"]
+}
