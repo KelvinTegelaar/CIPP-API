@@ -1,6 +1,9 @@
 {
     "Name": "Google",
+    "_MxComment": "https://support.google.com/a/answer/174125?hl=en",
     "MxMatch": "aspmx.l.google.com",
+    "_SpfComment": "https://support.google.com/a/answer/10683907",
     "SpfInclude": "_spf.google.com",
+    "_DkimComment": "https://support.google.com/a/answer/173535",
     "Selectors": ["google"]
 }
