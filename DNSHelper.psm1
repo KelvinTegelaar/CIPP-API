@@ -45,7 +45,7 @@ function Resolve-DnsHttpsQuery {
     switch ($Resolver) {
         'Google' {
             $BaseUri = 'https://dns.google/resolve'
-            $QueryTemplate = '{0}?name={1}&type={2}'
+            $QueryTemplate = '{0}?name={1}&type={2}&do=true'
         }
         'CloudFlare' {
             $BaseUri = 'https://cloudflare-dns.com/dns-query'
@@ -89,6 +89,87 @@ function Resolve-DnsHttpsQuery {
     }
 }
 
+function Test-DNSSEC {
+    <#
+    .SYNOPSIS
+    Test Domain for DNSSEC validation
+    
+    .DESCRIPTION
+    Requests dnskey record from DNS and checks response validation (AD=True)
+    
+    .PARAMETER Domain
+    Domain to check
+    
+    .EXAMPLE
+    PS> Test-DNSSEC -Domain example.com
+    
+    Domain           : example.com
+    ValidationPasses : {PASS: example.com - DNSSEC enabled and validated}
+    ValidationFails  : {}
+    Keys             : {...}
+
+    #>
+    [CmdletBinding()]
+    Param(
+        [Parameter(Mandatory = $true)]
+        [string]$Domain
+    )
+    $DSResults = [PSCustomObject]@{
+        Domain           = $Domain
+        ValidationPasses = New-Object System.Collections.ArrayList
+        ValidationFails  = New-Object System.Collections.ArrayList
+        Keys             = New-Object System.Collections.ArrayList
+    }
+    $ValidationPasses = New-Object System.Collections.ArrayList
+    $ValidationFails = New-Object System.Collections.ArrayList
+
+    if (Test-Path -Path 'Config\DnsConfig.json') {
+        $Config = Get-Content 'Config\DnsConfig.json' | ConvertFrom-Json 
+        $DnsQuery = @{
+            RecordType       = 'dnskey'
+            Domain           = $Domain
+            Resolver         = $Config.Resolver
+            FullResultRecord = $true
+        }
+    }
+    else {
+        $DnsQuery = @{
+            RecordType       = 'dnskey'
+            Domain           = $Domain
+            FullResultRecord = $true
+        }
+    }
+
+    $Result = Resolve-DnsHttpsQuery @DnsQuery
+    $RecordCount = ($Result.Answer.data | Measure-Object).Count
+    if ($null -eq $Result) {
+        $ValidationFails.Add('FAIL: DNSSEC validation failed, no dnskey record found') | Out-Null
+    }
+    else {
+        if ($Result.Status -eq 2) {
+            if ($Result.AD -eq $false) {
+                $ValidationFails.Add("FAIL: $($Result.Comment)") | Out-Null
+            }
+        }
+        elseif ($Result.Status -eq 3) {
+            $ValidationFails.Add('FAIL: Domain does not exist (NXDOMAIN)') | Out-Null
+        }
+        elseif ($RecordCount -gt 0) {
+            if ($Result.AD -eq $false) {
+                $ValidationFails.Add('FAIL: DNSSEC enabled, but response was not validated. Ensure DNSSEC has been enabled at your registrar') | Out-Null
+            }
+            else {
+                $ValidationPasses.Add('PASS: DNSSEC enabled and validated for this domain') | Out-Null
+            }
+            $DSResults.Keys = $Result.answer.data
+        }
+    }
+
+    $DSResults.ValidationPasses = $ValidationPasses
+    $DSResults.ValidationFails = $ValidationFails
+    $DSResults
+}
+
 function Read-MXRecord {
     <#
     .SYNOPSIS
@@ -117,19 +198,44 @@ function Read-MXRecord {
         [Parameter(Mandatory = $true)]
         [string]$Domain
     )
-    $Query = @{
-        Domain           = $Domain; 
-        RecordType       = 'mx' 
-        FullResultRecord = $true
-    }      
-    
+    $MXResults = [PSCustomObject]@{
+        Domain           = ''
+        Records          = New-Object System.Collections.ArrayList
+        ValidationPasses = New-Object System.Collections.ArrayList
+        ValidationFails  = New-Object System.Collections.ArrayList
+        MailProvider     = ''
+        ExpectedInclude  = ''
+        Selectors        = ''
+    }
+    $ValidationPasses = New-Object System.Collections.ArrayList
+    $ValidationFails = New-Object System.Collections.ArrayList
+
+    if (Test-Path -Path 'Config\DnsConfig.json') {
+        $Config = Get-Content 'Config\DnsConfig.json' | ConvertFrom-Json 
+        $DnsQuery = @{
+            RecordType       = 'mx'
+            Domain           = $Domain
+            Resolver         = $Config.Resolver
+            FullResultRecord = $true
+        }
+    }
+    else {
+        $DnsQuery = @{
+            RecordType       = 'mx'
+            Domain           = $Domain
+            FullResultRecord = $true
+        }
+    }
+ 
+    $MXResults.Domain = $Domain
+
     try {
-        $Result = Resolve-DnsHttpsQuery @Query
-        Write-Verbose ($TypeResult | Format-Table | Out-String)
+        $Result = Resolve-DnsHttpsQuery @DnsQuery
     }
     catch { $Result = $null }
     if ($null -eq $Result -or $Result.Status -ne 0) {
         $MXRecords = $null
+        $ValidationFails.Add("FAIL: $Domain - MX record does not exist") | Out-Null
     }
     else {
         $MXRecords = $Result.Answer | ForEach-Object { 
@@ -139,9 +245,35 @@ function Read-MXRecord {
                 Hostname = $Hostname
             }
         }
+        $ValidationPasses.Add("PASS: $Domain - MX record is present") | Out-Null
         $MXRecords = $MXRecords | Sort-Object -Property Priority
+
+        # Attempt to identify mail provider based on MX record
+        if (Test-Path 'MailProviders') {
+            Get-ChildItem 'MailProviders' | ForEach-Object {
+                $Provider = Get-Content $_ | ConvertFrom-Json
+                $MXRecords.Hostname | ForEach-Object {
+                    if ($_ -match $Provider.MxMatch) {
+                        $MXResults.MailProvider = $Provider
+                        if (($Provider.SpfReplace | Measure-Object | Select-Object -ExpandProperty Count) -gt 0) {
+                            $Replace = foreach ($Var in $Provider.SpfReplace) { $Var }
+                            $ExpectedInclude = $Provider.SpfInclude -f $Matches.$Replace
+                        }
+                        else {
+                            $ExpectedInclude = $Provider.SpfInclude
+                        }
+                        # Set ExpectedInclude and Selector fields based on provider details
+                        $MXResults.ExpectedInclude = $ExpectedInclude
+                        $MXResults.Selectors = $Provider.Selectors
+                    }
+                }
+            }
+        }
+        $MXResults.Records = $MXRecords
     }
-    $MXRecords
+    $MXResults.ValidationPasses = $ValidationPasses
+    $MXResults.ValidationFails = $ValidationFails
+    $MXResults
 }
 
 function Read-SpfRecord {
@@ -204,6 +336,7 @@ function Read-SpfRecord {
         RecordList       = New-Object System.Collections.ArrayList   
         TypeLookups      = New-Object System.Collections.ArrayList
         IPAddresses      = New-Object System.Collections.ArrayList
+        MailProvider     = ''
         PermError        = $false     
     }
 
@@ -404,6 +537,15 @@ function Read-SpfRecord {
             }
         }
     }
+
+    # Lookup MX record for expected include information if not supplied
+    if ($Level -eq 'Parent' -and $ExpectedInclude -eq '') {
+        $MXRecord = Read-MXRecord -Domain $Domain
+        $SPFResults.MailProvider = $MXRecord.MailProvider
+        if ($MXRecord.ExpectedInclude -ne '') {
+            $ExpectedInclude = $MXRecord.ExpectedInclude
+        }
+    }
         
     # Look for expected include record and report pass or fail
     if ($ExpectedInclude -ne '') {
@@ -412,14 +554,14 @@ function Read-SpfRecord {
             $ExpectedIPCount = $ExpectedIncludeSpf.IPAddresses | Measure-Object | Select-Object -ExpandProperty Count
             $FoundIPCount = Compare-Object $IPAddresses $ExpectedIncludeSpf.IPAddresses -IncludeEqual | Where-Object -Property SideIndicator -EQ '==' | Measure-Object | Select-Object -ExpandProperty Count
             if ($ExpectedIPCount -eq $FoundIPCount) {
-                $ValidationPasses.Add('PASS: Expected SPF record IP addresses were found') | Out-Null
+                $ValidationPasses.Add("PASS: Expected SPF ($ExpectedInclude) IP addresses were found") | Out-Null
             }
             else {
                 $ValidationFails.Add("FAIL: Expected SPF include of '$ExpectedInclude' was not found in the SPF record") | Out-Null
             }
         }
         else {
-            $ValidationPasses.Add('PASS: Expected SPF record was included') | Out-Null
+            $ValidationPasses.Add("PASS: Expected SPF record ($ExpectedInclude) was included") | Out-Null
         }
     }
 
@@ -775,8 +917,8 @@ function Read-DkimRecord {
     .PARAMETER Domain
     Domain to check
     
-    .PARAMETER Selector
-    Selector record to check
+    .PARAMETER Selectors
+    Selector records to check
     
     .PARAMETER MxLookup
     Lookup record based on MX
@@ -792,163 +934,198 @@ function Read-DkimRecord {
         [string]$Domain,
 
         [Parameter(ParameterSetName = 'Selector', Mandatory = $true)]
-        [string]$Selector,
+        [string[]]$Selectors,
 
         [Parameter(ParameterSetName = 'MxLookup')]
         [switch]$MxLookup
     )
+    $MXRecord = $null
 
-    # Initialize object
-    $DkimAnalysis = [PSCustomObject]@{
-        Domain           = ''
-        Record           = ''
-        Version          = ''
-        PublicKey        = ''
-        PublicKeyInfo    = ''
-        KeyType          = ''
-        Flags            = ''
-        Notes            = ''
-        HashAlgorithms   = ''
-        ServiceType      = ''
-        Granularity      = ''
-        ValidationPasses = New-Object System.Collections.ArrayList
-        ValidationWarns  = New-Object System.Collections.ArrayList
-        ValidationFails  = New-Object System.Collections.ArrayList
-    }
-
-    $ValidationPasses = New-Object System.Collections.ArrayList
-    $ValidationWarns = New-Object System.Collections.ArrayList
-    $ValidationFails = New-Object System.Collections.ArrayList
-    $UnrecognizedTags = New-Object System.Collections.ArrayList
-
-    # Check for DnsConfig file and set DNS resolver
-    if (Test-Path -Path 'Config/DnsConfig.json') {
-        $Config = Get-Content 'Config/DnsConfig.json' | ConvertFrom-Json
-        $DnsQuery = @{
-            RecordType       = 'TXT'
-            Domain           = "$Selector._domainkey.$Domain"
-            Resolver         = $Config.Resolver
-            FullResultRecord = $true
-        }
-    }
-    else {
-        $DnsQuery = @{
-            RecordType       = 'TXT'
-            Domain           = "$Selector._domainkey.$Domain"
-            FullResultRecord = $true
-        }
-    }
-    $QueryResults = Resolve-DnsHttpsQuery @DnsQuery
-
-    if ($QueryResults -eq '' -or $QueryResults.Status -ne 0) {
-        $ValidationFails.Add('FAIL: DKIM record is missing, check the selector and try again') | Out-Null
-        $DkimRecord = ''
-    }
-    else {
-        if (($QueryResults.Answer.data | Measure-Object).Count -gt 1) {
-            $DkimRecord = $QueryResults.Answer.data[-1]
-        }
-        else {
-            $DkimRecord = $QueryResults.Answer.data
-        }
-    }
-    $DkimAnalysis.Record = $DkimRecord
-    $DkimAnalysis.Domain = $DnsQuery.Domain
-
-    # Split DKIM record into name/value pairs
-    $TagList = New-Object System.Collections.ArrayList
-    Foreach ($Element in ($DkimRecord -split ';').trim()) {
-        $Name, $Value = $Element -split '='
-        $TagList.Add(
-            [PSCustomObject]@{
-                Name  = $Name
-                Value = $Value
+    if ($MxLookup) {
+        $MXRecord = Read-MXRecord -Domain $Domain 
+        $Selectors = $MXRecord.Selectors
+        if (($Selectors | Measure-Object | Select-Object -ExpandProperty Count) -eq 0) {
+            # Initialize object
+            $DkimAnalysis = [PSCustomObject]@{
+                Domain           = $Domain
+                Record           = ''
+                Version          = ''
+                PublicKey        = ''
+                PublicKeyInfo    = ''
+                KeyType          = ''
+                Flags            = ''
+                Notes            = ''
+                HashAlgorithms   = ''
+                ServiceType      = ''
+                Granularity      = ''
+                MailProvider     = ''
+                ValidationPasses = New-Object System.Collections.ArrayList
+                ValidationWarns  = New-Object System.Collections.ArrayList
+                ValidationFails  = New-Object System.Collections.ArrayList
             }
-        ) | Out-Null
+            $DkimAnalysis.MailProvider = $MXRecord.MailProvider
+            $DkimAnalysis.ValidationFails.Add("FAIL: $Domain - No selectors found from MX record") | Out-Null
+            $DkimAnalysis
+        }
     }
-
-    # Loop through name/value pairs and set object properties
-    $x = 0
-    foreach ($Tag in $TagList) {
-        switch ($Tag.Name) {
-            'v' {
-                # REQUIRED: Version
-                if ($x -ne 0) { $ValidationFails.Add('FAIL: v=DKIM1 must be at the beginning of the record') | Out-Null }
-                if ($Tag.Value -ne 'DKIM1') { $ValidationFails.Add("FAIL: Version must be DKIM1 - found $($Tag.Value)") | Out-Null }
-                $DkimAnalysis.Version = $Tag.Value
+    
+    if (($Selectors | Measure-Object | Select-Object -ExpandProperty Count) -gt 0) {
+        foreach ($Selector in $Selectors) {
+            # Initialize object
+            $DkimAnalysis = [PSCustomObject]@{
+                Domain           = ''
+                Record           = ''
+                Version          = ''
+                PublicKey        = ''
+                PublicKeyInfo    = ''
+                KeyType          = ''
+                Flags            = ''
+                Notes            = ''
+                HashAlgorithms   = ''
+                ServiceType      = ''
+                Granularity      = ''
+                MailProvider     = ''
+                ValidationPasses = New-Object System.Collections.ArrayList
+                ValidationWarns  = New-Object System.Collections.ArrayList
+                ValidationFails  = New-Object System.Collections.ArrayList
             }
-            'p' {
-                # REQUIRED: Public Key
-                if ($Tag.Value -ne '') {
-                    $DkimAnalysis.PublicKey = "-----BEGIN PUBLIC KEY-----`n{0}`n-----END PUBLIC KEY-----" -f $Tag.Value
-                    $DkimAnalysis.PublicKeyInfo = Get-RsaPublicKeyInfo -EncodedString $Tag.Value
+            if ($null -ne $MXRecord) { $DkimAnalysis.MailProvider = $MXRecord.MailProvider }
+
+            $DkimAnalysis.Domain = $Domain
+            $ValidationPasses = New-Object System.Collections.ArrayList
+            $ValidationWarns = New-Object System.Collections.ArrayList
+            $ValidationFails = New-Object System.Collections.ArrayList
+            $UnrecognizedTags = New-Object System.Collections.ArrayList
+            # Check for DnsConfig file and set DNS resolver
+            if (Test-Path -Path 'Config/DnsConfig.json') {
+                $Config = Get-Content 'Config/DnsConfig.json' | ConvertFrom-Json
+                $DnsQuery = @{
+                    RecordType       = 'TXT'
+                    Domain           = "$Selector._domainkey.$Domain"
+                    Resolver         = $Config.Resolver
+                    FullResultRecord = $true
+                }
+            }
+            else {
+                $DnsQuery = @{
+                    RecordType       = 'TXT'
+                    Domain           = "$Selector._domainkey.$Domain"
+                    FullResultRecord = $true
+                }
+            }
+            $QueryResults = Resolve-DnsHttpsQuery @DnsQuery
+    
+
+            if ($QueryResults -eq '' -or $QueryResults.Status -ne 0) {
+                $ValidationFails.Add("FAIL: $Selector - DKIM record is missing, check the selector and try again") | Out-Null
+                $DkimRecord = ''
+            }
+            else {
+                if (($QueryResults.Answer.data | Measure-Object).Count -gt 1) {
+                    $DkimRecord = $QueryResults.Answer.data[-1]
                 }
                 else {
-                    $ValidationFails.Add('FAIL: No public key specified for DKIM record') | Out-Null 
+                    $DkimRecord = $QueryResults.Answer.data
                 }
             }
-            'k' {
-                $DkimAnalysis.KeyType = $Tag.Value
+            $DkimAnalysis.Record = $DkimRecord
+
+            # Split DKIM record into name/value pairs
+            $TagList = New-Object System.Collections.ArrayList
+            Foreach ($Element in ($DkimRecord -split ';').trim()) {
+                $Name, $Value = $Element -split '='
+                $TagList.Add(
+                    [PSCustomObject]@{
+                        Name  = $Name
+                        Value = $Value
+                    }
+                ) | Out-Null
             }
-            't' {
-                $DkimAnalysis.Flags = $Tag.Value
+
+            # Loop through name/value pairs and set object properties
+            $x = 0
+            foreach ($Tag in $TagList) {
+                switch ($Tag.Name) {
+                    'v' {
+                        # REQUIRED: Version
+                        if ($x -ne 0) { $ValidationFails.Add("FAIL: $Selector - v=DKIM1 must be at the beginning of the record") | Out-Null }
+                        if ($Tag.Value -ne 'DKIM1') { $ValidationFails.Add("FAIL: $Selector - Version must be DKIM1 - found $($Tag.Value)") | Out-Null }
+                        $DkimAnalysis.Version = $Tag.Value
+                    }
+                    'p' {
+                        # REQUIRED: Public Key
+                        if ($Tag.Value -ne '') {
+                            $DkimAnalysis.PublicKey = "-----BEGIN PUBLIC KEY-----`n{0}`n-----END PUBLIC KEY-----" -f $Tag.Value
+                            $DkimAnalysis.PublicKeyInfo = Get-RsaPublicKeyInfo -EncodedString $Tag.Value
+                        }
+                        else {
+                            $ValidationFails.Add("FAIL: $Selector - No public key specified for DKIM record") | Out-Null 
+                        }
+                    }
+                    'k' {
+                        $DkimAnalysis.KeyType = $Tag.Value
+                    }
+                    't' {
+                        $DkimAnalysis.Flags = $Tag.Value
+                    }
+                    'n' {
+                        $DkimAnalysis.Notes = $Tag.Value
+                    }
+                    'h' {
+                        $DkimAnalysis.HashAlgorithms = $Tag.Value
+                    }
+                    's' {
+                        $DkimAnalysis.ServiceType = $Tag.Value
+                    }
+                    'g' {
+                        $DkimAnalysis.Granularity = $Tag.Value
+                    }
+                    default {
+                        $UnrecognizedTags.Add($Tag) | Out-Null
+                    }
+                }
+                $x++
             }
-            'n' {
-                $DkimAnalysis.Notes = $Tag.Value
+
+            if ($DkimRecord -ne '') {
+                if ($DkimAnalysis.KeyType -eq '') { $DkimAnalysis.KeyType = 'rsa' }
+
+                if ($DkimAnalysis.HashAlgorithms -eq '') { $DkimAnalysis.HashAlgorithms = 'all' }
+
+                $UnrecognizedTagCount = $UnrecognizedTags | Measure-Object | Select-Object -ExpandProperty Count
+                if ($UnrecognizedTagCount -gt 0) {
+                    $TagString = ($UnrecognizedTags | ForEach-Object { '{0}={1}' -f $_.Tag, $_.Value }) -join ', '
+                    $ValidationWarns.Add("WARN: $Selector - $UnrecognizedTagCount tag(s) detected in DKIM record. This can cause issues with some mailbox providers. Tags: $TagString")
+                }
+                if ($DkimAnalysis.Flags -eq 'y') {
+                    $ValidationWarns.Add("WARN: $Selector - This flag 't=y' indicates that this domain is testing mode currently. If DKIM is fully deployed, this flag should be changed to t=s unless subdomaining is required.") | Out-Null
+                }
+
+                if ($DkimAnalysis.PublicKeyInfo.SignatureAlgorithm -ne $DkimAnalysis.KeyType) {
+                    $ValidationWarns.Add("WARN: $Selector - Key signature algorithm $($DkimAnalysis.PublicKeyInfo.SignatureAlgorithm) does not match $($DkimAnalysis.KeyType)") | Out-Null
+                }
+
+                if ($DkimAnalysis.PublicKeyInfo.KeySize -lt 1024) {
+                    $ValidationFails.Add("FAIL: $Selector - Key size is less than 1024 bit, found $($DkimAnalysis.PublicKeyInfo.KeySize)") | Out-Null
+                }
+                else {
+                    $ValidationPasses.Add("PASS: $Selector - DKIM key validation succeeded") | Out-Null
+                }
             }
-            'h' {
-                $DkimAnalysis.HashAlgorithms = $Tag.Value
+
+            if (($ValidationFails | Measure-Object | Select-Object -ExpandProperty Count) -eq 0) {
+                $ValidationPasses.Add("PASS: $Selector - No errors detected with DKIM record") | Out-Null
             }
-            's' {
-                $DkimAnalysis.ServiceType = $Tag.Value
-            }
-            'g' {
-                $DkimAnalysis.Granularity = $Tag.Value
-            }
-            default {
-                $UnrecognizedTags.Add($Tag) | Out-Null
-            }
+
+            # Collect validation results
+            $DkimAnalysis.ValidationPasses = $ValidationPasses
+            $DkimAnalysis.ValidationWarns = $ValidationWarns
+            $DkimAnalysis.ValidationFails = $ValidationFails
+
+            # Return analysis
+            $DkimAnalysis
         }
-        $x++
     }
-
-    if ($DkimRecord -ne '') {
-        if ($DkimAnalysis.KeyType -eq '') { $DkimAnalysis.KeyType = 'rsa' }
-
-        if ($DkimAnalysis.HashAlgorithms -eq '') { $DkimAnalysis.HashAlgorithms = 'all' }
-
-        $UnrecognizedTagCount = $UnrecognizedTags | Measure-Object | Select-Object -ExpandProperty Count
-        if ($UnrecognizedTagCount -gt 0) {
-            $TagString = ($UnrecognizedTags | ForEach-Object { '{0}={1}' -f $_.Tag, $_.Value }) -join ', '
-            $ValidationWarns.Add("WARN: $UnrecognizedTagCount tag(s) detected in DKIM record. This can cause issues with some mailbox providers. Tags: $TagString")
-        }
-        if ($DkimAnalysis.Flags -eq 'y') {
-            $ValidationWarns.Add("WARN: This flag 't=y' indicates that this domain is testing mode currently. If DKIM is fully deployed, this flag should be changed to t=s unless subdomaining is required.") | Out-Null
-        }
-
-        if ($DkimAnalysis.PublicKeyInfo.SignatureAlgorithm -ne $DkimAnalysis.KeyType) {
-            $ValidationWarns.Add("WARN: Key signature algorithm $($DkimAnalysis.PublicKeyInfo.SignatureAlgorithm) does not match $($DkimAnalysis.KeyType)") | Out-Null
-        }
-
-        if ($DkimAnalysis.PublicKeyInfo.KeySize -lt 1024) {
-            $ValidationFails.Add("FAIL: Key size is less than 1024 bit, found $($DkimAnalysis.PublicKeyInfo.KeySize)") | Out-Null
-        }
-        else {
-            $ValidationPasses.Add('PASS: DKIM key validation succeeded') | Out-Null
-        }
-    }
-
-    if (($ValidationFails | Measure-Object | Select-Object -ExpandProperty Count) -eq 0) {
-        $ValidationPasses.Add('PASS: No errors detected with DKIM record') | Out-Null
-    }
-
-    # Collect validation results
-    $DkimAnalysis.ValidationPasses = $ValidationPasses
-    $DkimAnalysis.ValidationWarns = $ValidationWarns
-    $DkimAnalysis.ValidationFails = $ValidationFails
-
-    # Return analysis
-    $DkimAnalysis
 }
 
 function Get-RsaPublicKeyInfo {

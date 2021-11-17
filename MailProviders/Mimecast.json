@@ -1,0 +1,7 @@
+{
+    "Name": "Mimecast",
+    "MxMatch": "(?<Prefix>[a-z]{2})-smtp-inbound-[0-9].mimecast.com",
+    "SpfInclude": "{0}._netblocks.mimecast.com",
+    "SpfReplace": [ "Prefix" ],
+    "Selectors": []
+}

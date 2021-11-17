@@ -28,10 +28,18 @@ try {
                     $Body = Read-DmarcPolicy -Domain $Request.Query.Domain
                 }
                 'ReadDkimRecord' {
-                    $Body = Read-DkimRecord -Domain $Request.Query.Domain -Selector $Request.Query.Selector
+                    if ($Request.Query.Selector) {
+                        $Body = Read-DkimRecord -Domain $Request.Query.Domain -Selector $Request.Query.Selector
+                    }
+                    else {
+                        $Body = Read-DkimRecord -Domain $Request.Query.Domain -MxLookup
+                    }
                 }
                 'ReadMXRecord' {
                     $Body = Read-MXRecord -Domain $Request.Query.Domain
+                }
+                'TestDNSSEC' {
+                    $Body = Test-DNSSEC -Domain $Request.Query.Domain
                 }
             }
         }
