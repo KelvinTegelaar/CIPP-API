@@ -1,0 +1,7 @@
+{
+    "_comment": "https://help.proofpoint.com/Proofpoint_Essentials/Email_Security/Administrator_Topics/000_gettingstarted/020_connectiondetails",
+    "Name": "Proofpoint",
+    "MxMatch": "ppe-hosted.com",
+    "SpfInclude": "ppe-hosted.com",
+    "Selectors": [""]
+}

@@ -1,0 +1,6 @@
+{
+    "Name": "Barracuda Email Security Service - US",
+    "MxMatch": "ess.barracudanetworks.com",
+    "SpfInclude": "spf.ess.barracudanetworks.com",
+    "Selectors": [""]
+}

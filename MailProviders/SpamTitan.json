@@ -1,0 +1,6 @@
+{
+    "Name": "SpamTitan",
+    "MxMatch": "spamtitan.com",
+    "SpfInclude": "",
+    "Selectors": [""]
+}
