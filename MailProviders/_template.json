@@ -1,0 +1,10 @@
+{
+    "Name": "Provider Name",
+    "_MxComment": "https://URL.TO.DOCS",
+    "MxMatch": "",
+    "_SpfComment": "https://URL.TO.DOCS",
+    "SpfInclude": "",
+    "SpfReplace": [ "Prefix" ],
+    "_DkimComment": "https://URL.TO.DOCS",
+    "Selectors": [""]
+}
