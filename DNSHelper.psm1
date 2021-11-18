@@ -236,8 +236,13 @@ function Read-MXRecord {
     }
     catch { $Result = $null }
     if ($null -eq $Result -or $Result.Status -ne 0) {
+        if ($Result.Status -eq 3) {
+            $ValidationFails.Add('FAIL: Domain does not exist (NXDOMAIN)') | Out-Null
+        }
+        else {
+            $ValidationFails.Add("FAIL: $Domain - MX record does not exist") | Out-Null
+        }
         $MXRecords = $null
-        $ValidationFails.Add("FAIL: $Domain - MX record does not exist") | Out-Null
     }
     else {
         $MXRecords = $Result.Answer | ForEach-Object { 
@@ -387,7 +392,12 @@ function Read-SpfRecord {
                 else {
                     $Query = Resolve-DnsHttpsQuery @DnsQuery
                     if ($null -ne $Query -and $Query.Status -ne 0) {
-                        $ValidationFails.Add("FAIL: $Domain does not resolve an SPF record.") | Out-Null
+                        if ($Query.Status -eq 3) {
+                            $ValidationFails.Add('FAIL: Domain does not exist (NXDOMAIN)') | Out-Null
+                        }
+                        else {
+                            $ValidationFails.Add("FAIL: $Domain does not resolve an SPF record.") | Out-Null
+                        }
                         $PermError = $true
                     }
                     else {
@@ -430,17 +440,17 @@ function Read-SpfRecord {
                 }
             
                 # Don't increment for include, this will be done in a recursive call
-                elseif ($_ -match 'include:(.+)') {
+                elseif ($_ -match '(?<Qualifier>[+-~?])?include:(.+)') {
                     $IncludeList.Add($Matches[1]) | Out-Null
                 }
 
                 # Increment lookup count for exists mechanism
-                elseif ($_ -match 'exists:(.+)') {
+                elseif ($_ -match '(?<Qualifier>[+-~?])?exists:(.+)') {
                     $LookupCount++
                 }
 
                 # Collect explicit IP addresses
-                elseif ($_ -match 'ip[4,6]:(.+)') {
+                elseif ($_ -match '(?<Qualifier>[+-~?])?ip[4,6]:(.+)') {
                     $IPAddresses.Add($Matches[1]) | Out-Null
                 }
 
@@ -454,7 +464,7 @@ function Read-SpfRecord {
                     }
                 }
                 # Get any type specific mechanism
-                elseif ($_ -match '^(?<RecordType>(?:a|mx|ptr))(?:[:](?<TypeDomain>.+))?') {
+                elseif ($_ -match '^(?<Qualifier>[+-~?])?(?<RecordType>(?:a|mx|ptr))(?:[:](?<TypeDomain>.+))?') {
                     $LookupCount++
                     
                     if ($Matches.TypeDomain) {
@@ -730,7 +740,12 @@ function Read-DmarcPolicy {
     # Resolve DMARC record
     $Query = Resolve-DnsHttpsQuery @DnsQuery
     if (($null -ne $Query -and $Query.Status -ne 0) -or $null -eq $Query.Answer.data) {
-        $ValidationFails.Add("FAIL: $Domain does not have a DMARC record") | Out-Null
+        if ($Query.Status -eq 3) {
+            $ValidationFails.Add('FAIL: Domain does not exist (NXDOMAIN)') | Out-Null
+        }
+        else {
+            $ValidationFails.Add("FAIL: $Domain does not have a DMARC record") | Out-Null
+        }
     }
     else {
         $DmarcRecord = ($Query.Answer | Where-Object -Property type -EQ 16).data
@@ -998,7 +1013,12 @@ function Read-DkimRecord {
             $QueryResults = Resolve-DnsHttpsQuery @DnsQuery
 
             if ($QueryResults -eq '' -or $QueryResults.Status -ne 0) {
-                $ValidationFails.Add("FAIL: $Selector - DKIM record is missing, check the selector and try again") | Out-Null
+                if ($QueryResults.Status -eq 3) {
+                    $ValidationFails.Add('FAIL: Domain does not exist (NXDOMAIN)') | Out-Null
+                }
+                else {
+                    $ValidationFails.Add("FAIL: $Selector - DKIM record is missing, check the selector and try again") | Out-Null
+                }
                 $Record = ''
             }
             else {
