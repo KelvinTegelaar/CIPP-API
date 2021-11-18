@@ -45,6 +45,10 @@ $FinalObject = [PSCustomObject]@{
     DNSSECFailCount = ""
     DNSSECFinalState = ""
     DKIMResults = ""
+    DKIMPassCount = ""
+    DKIMWarnCount = ""
+    DKIMFailCount = ""
+    DKIMFinalState = ""
 }
 
 
@@ -138,7 +142,22 @@ catch {
 }
 
 try {
-    $FinalObject.DKIMResults = Read-DkimRecord -Domain $DomainToCheck -Selector "selector1"
+    $FinalObject.DKIMResults = Read-DkimRecord -Domain $DomainToCheck
+    $FinalObject.DKIMPassCount = $FinalObject.DKIMResults.ValidationPasses | Measure-Object | Select-Object -ExpandProperty Count
+    $FinalObject.DKIMWarnCount = $FinalObject.DKIMResults.ValidationWarns | Measure-Object | Select-Object -ExpandProperty Count
+    $FinalObject.DKIMFailCount = $FinalObject.DKIMResults.ValidationFails | Measure-Object | Select-Object -ExpandProperty Count
+    if ($FinalObject.DKIMFailCount -gt 0) {
+        $FinalObject.DKIMFinalState = 'Fail'
+    }
+    elseif ($FinalObject.DKIMWarnCount -gt 0) {
+        $FinalObject.DKIMFinalState = 'Warn'
+    }
+    elseif ($FinalObject.DKIMPassCount -gt 0) {
+        $FinalObject.DKIMFinalState = 'Pass'
+    }
+    else {
+        $FinalObject.DKIMFinalState = 'Unknown'
+    }
 }
 catch {
     Log-Request -API $APINAME -tenant "CIPP" -user $request.headers.'x-ms-client-principal' -message "DKIM Record Lookup Failed for $($DomainToCheck). $($_.Exception.Message)" -Sev "Error"
