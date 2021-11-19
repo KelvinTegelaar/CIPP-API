@@ -8,6 +8,7 @@ Log-Request -user $request.headers.'x-ms-client-principal' -API $APINAME  -messa
 
 $user = $request.headers.'x-ms-client-principal'
 $username = ([System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($user)) | ConvertFrom-Json).userDetails
+New-Item Cache_Standards -ItemType Directory -ErrorAction SilentlyContinue
 
 try {
     $Tenants = ($Request.body | Select-Object Select_*).psobject.properties.value
@@ -19,7 +20,6 @@ try {
             AddedBy   = $username
             Standards = $Settings
         } | ConvertTo-Json
-        New-Item Cache_Standards -ItemType Directory -ErrorAction SilentlyContinue
         Set-Content "Cache_Standards\$($tenant).Standards.json" -Value $Object -Force
     }
     $body = [pscustomobject]@{"Results" = "Successfully added standards deployment" }
