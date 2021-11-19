@@ -261,21 +261,26 @@ function Read-MXRecord {
         # Attempt to identify mail provider based on MX record
         if (Test-Path 'MailProviders') {
             Get-ChildItem 'MailProviders' -Exclude '_template.json' | ForEach-Object {
-                $Provider = Get-Content $_ | ConvertFrom-Json
-                $MXRecords.Hostname | ForEach-Object {
-                    if ($_ -match $Provider.MxMatch) {
-                        $MXResults.MailProvider = $Provider
-                        if (($Provider.SpfReplace | Measure-Object | Select-Object -ExpandProperty Count) -gt 0) {
-                            $Replace = foreach ($Var in $Provider.SpfReplace) { $Var }
-                            $ExpectedInclude = $Provider.SpfInclude -f $Matches.$Replace
+                try {
+                    $Provider = Get-Content $_ | ConvertFrom-Json -ErrorAction Stop
+                    $MXRecords.Hostname | ForEach-Object {
+                        if ($_ -match $Provider.MxMatch) {
+                            $MXResults.MailProvider = $Provider
+                            if (($Provider.SpfReplace | Measure-Object | Select-Object -ExpandProperty Count) -gt 0) {
+                                $Replace = foreach ($Var in $Provider.SpfReplace) { $Var }
+                                $ExpectedInclude = $Provider.SpfInclude -f $Matches.$Replace
+                            }
+                            else {
+                                $ExpectedInclude = $Provider.SpfInclude
+                            }
+                            # Set ExpectedInclude and Selector fields based on provider details
+                            $MXResults.ExpectedInclude = $ExpectedInclude
+                            $MXResults.Selectors = $Provider.Selectors
                         }
-                        else {
-                            $ExpectedInclude = $Provider.SpfInclude
-                        }
-                        # Set ExpectedInclude and Selector fields based on provider details
-                        $MXResults.ExpectedInclude = $ExpectedInclude
-                        $MXResults.Selectors = $Provider.Selectors
                     }
+                }
+                catch {
+                    Write-Host "MailProvider - Error parsing json from $_"
                 }
             }
         }
