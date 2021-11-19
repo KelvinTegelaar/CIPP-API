@@ -9,21 +9,19 @@ Log-Request -user $request.headers.'x-ms-client-principal' -API $APINAME  -messa
 
 # Write to the Azure Functions log stream.
 Write-Host "PowerShell HTTP trigger function processed a request."
-
-# Interact with query parameters or the body of the request.
-$name = $Request.Query.Name
-if (-not $name) {
-    $name = $Request.Body.Name
+$results = try { 
+    $Request.body | ConvertTo-Json | Set-Content ".\SendNotifications\Config.Json"
+    "succesfully set the configuration"
+}
+catch {
+    "Failed to set configuration"
 }
 
-$body = "This HTTP triggered function executed successfully. Pass a name in the query string or in the request body for a personalized response."
 
-if ($name) {
-    $body = "Hello, $name. This HTTP triggered function executed successfully."
-}
+$body = [pscustomobject]@{"Results" = $Results }
 
 # Associate values to output bindings by calling 'Push-OutputBinding'.
 Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
-    StatusCode = [HttpStatusCode]::OK
-    Body = $body
-})
+        StatusCode = [HttpStatusCode]::OK
+        Body       = $body
+    })

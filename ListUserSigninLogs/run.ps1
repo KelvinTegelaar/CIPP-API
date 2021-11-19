@@ -14,22 +14,26 @@ Write-Host "PowerShell HTTP trigger function processed a request."
 $TenantFilter = $Request.Query.TenantFilter
 $UserID = $Request.Query.UserID
 
-$StartTime = Get-Date (Get-Date).ToUniversalTime() -UFormat '+%Y-%m-%dT%H:%M:%S.000Z'
-$EndDate = (Get-Date).addDays(-1)
-$EndTime = Get-Date (Get-Date($EndDate)).ToUniversalTime() -UFormat '+%Y-%m-%dT%H:%M:%S.000Z'
-
-
-$URI = "https://graph.microsoft.com/beta/auditLogs/signIns?`$filter=(userId eq '$UserID')&`$top=50&`$orderby=createdDateTime desc"
+$URI = "https://graph.microsoft.com/beta/auditLogs/signIns?`$filter=(userId eq '$UserID')&`$top=50&`$orderby=createdDateTime desc" 
 Write-Host $URI
-$GraphRequest = New-GraphGetRequest -uri $URI -tenantid $TenantFilter -verbose
-
-#$GraphRequest = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/reports/get$($type)Detail(period='D7')" -tenantid $TenantFilter | convertfrom-csv | select-object @{ Name = 'UPN'; Expression = { $_.'Owner Principal Name' } },
-#@{ Name = 'displayName'; Expression = { $_.'Owner Display Name' } },
-#@{ Name = 'LastActive'; Expression = { $_.'Last Activity Date' } },
-#@{ Name = 'FileCount'; Expression = { $_.'File Count' } },
-#@{ Name = 'UsedGB'; Expression = { [math]::round($_.'Storage Used (Byte)' /1GB,0) } },
-#@{ Name = 'URL'; Expression = { $_.'Site URL' } },
-#@{ Name = 'Allocated'; Expression = { $_.'Storage Allocated (Byte)' /1GB } }
+$GraphRequest = New-GraphGetRequest -uri $URI -tenantid $TenantFilter -noPagination $true -verbose | select-object @{ Name = 'Date'; Expression = { $(($_.createdDateTime | Out-String)-replace '\r\n')} },
+id,
+@{ Name = 'Application'; Expression = { $_.resourceDisplayName} },
+@{ Name = 'LoginStatus'; Expression = { $_.status.errorCode } },
+@{ Name = 'ConditionalAccessStatus'; Expression = { $_.conditionalAccessStatus } },
+@{ Name = 'OverallLoginStatus'; Expression = { if (($_.conditionalAccessStatus -eq 'Success' -or 'Not Applied') -and $_.status.errorCode -eq 0){'Success'} else {'Failed'} } },
+@{ Name = 'IPAddress'; Expression = { $_.ipAddress} },
+@{ Name = 'Town'; Expression = { $_.location.city} },
+@{ Name = 'State'; Expression = { $_.location.state} },
+@{ Name = 'Country'; Expression = { $_.location.countryOrRegion} },
+@{ Name = 'Device'; Expression = { $_.deviceDetail.displayName} },
+@{ Name = 'DeviceCompliant'; Expression = { $_.deviceDetail.isCompliant} },
+@{ Name = 'OS'; Expression = { $_.deviceDetail.operatingSystem} },
+@{ Name = 'Browser'; Expression = { $_.deviceDetail.browser} },
+@{ Name = 'AppliedCAPs'; Expression = { ($_.appliedConditionalAccessPolicies | foreach-object {@{Result = $_.result;  Name = $_.displayName}})  }},
+@{ Name = 'AdditionalDetails'; Expression = { $_.status.additionalDetails} },
+@{ Name = 'FailureReason'; Expression = { $_.status.failureReason} },
+@{ Name = 'FullDetails'; Expression = { $_} }
 
 # Associate values to output bindings by calling 'Push-OutputBinding'.
 Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{

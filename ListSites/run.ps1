@@ -13,7 +13,18 @@ Write-Host "PowerShell HTTP trigger function processed a request."
 # Interact with query parameters or the body of the request.
 $TenantFilter = $Request.Query.TenantFilter
 $type = $request.query.Type
-$GraphRequest = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/reports/get$($type)Detail(period='D7')" -tenantid $TenantFilter | convertfrom-csv | select-object @{ Name = 'UPN'; Expression = { $_.'Owner Principal Name' } },
+$UserUPN = $request.query.UserUPN
+
+$Result = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/reports/get$($type)Detail(period='D7')" -tenantid $TenantFilter | convertfrom-csv 
+
+if ($UserUPN){
+$ParsedRequest = $Result |  where-object {$_.'Owner Principal Name' -eq $UserUPN}
+} else {
+$ParsedRequest = $Result
+}
+
+
+$GraphRequest = $ParsedRequest | select-object @{ Name = 'UPN'; Expression = { $_.'Owner Principal Name' } },
 @{ Name = 'displayName'; Expression = { $_.'Owner Display Name' } },
 @{ Name = 'LastActive'; Expression = { $_.'Last Activity Date' } },
 @{ Name = 'FileCount'; Expression = { $_.'File Count' } },

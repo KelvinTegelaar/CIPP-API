@@ -36,13 +36,14 @@ function Get-GraphToken($tenantid, $scope, $AsApp, $AppID, $refreshToken, $Retur
 
 function Log-Request ($message, $tenant, $API, $user, $sev) {
     $username = ([System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($user)) | ConvertFrom-Json).userDetails
+    New-Item -Path "Logs" -ItemType Directory -ErrorAction SilentlyContinue
     $date = (Get-Date).ToString('s')
     $LogMutex = New-Object System.Threading.Mutex($false, "LogMutex")
     if (!$username) { $username = "CIPP" }
     if (!$tenant) { $tenant = "None" }
     $logdata = "$($date)|$($tenant)|$($API)|$($message)|$($username)|$($sev)"
     if ($LogMutex.WaitOne(1000)) {
-        $logdata | Out-File -Append -path "$((Get-Date).ToString('MMyyyy')).log"
+        $logdata | Out-File -Append -FilePath "Logs\$((Get-Date).ToString('MMyyyy')).log" -Force
     }
     $LogMutex.ReleaseMutex()
 }
@@ -121,7 +122,7 @@ function Get-ClassicAPIToken($tenantID, $Resource) {
     }
 }
 
-function New-ClassicAPIGetRequest($TenantID, $Uri, $Method = 'GET', $Resource = 'https://admin.microsoft.com') {
+function New-ClassicAPIGetRequest($TenantID, $Uri, $Method = 'GET', $Resource = 'https://admin.microsoft.com', $ContentType = 'application/json') {
     $token = Get-ClassicAPIToken -Tenant $tenantID -Resource $Resource
 
     $NextURL = $Uri
@@ -129,7 +130,7 @@ function New-ClassicAPIGetRequest($TenantID, $Uri, $Method = 'GET', $Resource = 
     if ((Get-AuthorisedRequest -Uri $uri -TenantID $tenantid)) {
         $ReturnedData = do {
             try {
-                $Data = Invoke-RestMethod -ContentType "application/json;charset=UTF-8" -Uri $NextURL -Method $Method -Headers @{
+                $Data = Invoke-RestMethod -ContentType "$ContentType;charset=UTF-8" -Uri $NextURL -Method $Method -Headers @{
                     Authorization            = "Bearer $($token.access_token)";
                     "x-ms-client-request-id" = [guid]::NewGuid().ToString();
                     "x-ms-client-session-id" = [guid]::NewGuid().ToString()
@@ -176,7 +177,7 @@ function New-ClassicAPIPostRequest($TenantID, $Uri, $Method = 'POST', $Resource 
 }
 
 function Get-AuthorisedRequest($TenantID, $Uri) {
-    if ($uri -like "https://graph.microsoft.com/beta/contracts?`$top=999" -or $uri -like "*/customers/*") {
+    if ($uri -like "https://graph.microsoft.com/beta/contracts?`$top=999" -or $uri -like "*/customers/*" -or $uri -eq "https://graph.microsoft.com/v1.0/me/sendMail") {
         return $true
     }
     if ($TenantID -in (Get-Tenants).defaultdomainname) {
@@ -243,10 +244,15 @@ function New-ExoRequest ($tenantid, $cmdlet, $cmdParams) {
     $Headers = Get-GraphToken -AppID 'a0c73c16-a7e3-4564-9a95-2bdf47383716' -RefreshToken $ENV:ExchangeRefreshToken -Scope 'https://outlook.office365.com/.default' -Tenantid $tenantid 
     if ((Get-AuthorisedRequest -TenantID $tenantid)) {
         $tenant = (get-tenants | Where-Object -Property defaultDomainName -EQ $tenantid).customerid
+        if ($cmdParams){
+            $Params = $cmdParams
+        } else {
+            $Params = @{}
+        }
         $ExoBody = @{
             CmdletInput = @{
                 CmdletName = $cmdlet
-                Parameters = @{}
+                Parameters = $Params
             }
         } | ConvertTo-Json
         $ReturnedData = Invoke-RestMethod "https://outlook.office365.com/adminapi/beta/$($tenant)/InvokeCommand" -Method POST -Body $ExoBody -Headers $Headers -ContentType "application/json; charset=utf-8"

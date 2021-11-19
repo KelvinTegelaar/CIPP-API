@@ -10,17 +10,17 @@ Log-Request -user $request.headers.'x-ms-client-principal' -API $APINAME  -messa
 # Write to the Azure Functions log stream.
 Write-Host "PowerShell HTTP trigger function processed a request."
 
-$Tenants = get-childitem *.standards.json
+$Tenants = Get-ChildItem "Cache_Standards\*.standards.json"
 
 $CurrentStandards = foreach ($tenant in $tenants) {
-    $StandardsFile = get-content "$($tenant)" | convertfrom-json
-    if($StandardsFile.Tenant -eq $null){ continue }
-        [PSCustomObject]@{
-            displayName  = $StandardsFile.tenant
-            standardName = ($standardsFile.Standards.psobject.properties.name -join ' & ')
-            appliedBy    = $StandardsFile.addedby
-        }
+    $StandardsFile = Get-Content "$($tenant)" | ConvertFrom-Json
+    if ($StandardsFile.Tenant -eq $null) { continue }
+    [PSCustomObject]@{
+        displayName  = $StandardsFile.tenant
+        standardName = ($standardsFile.Standards.psobject.properties.name -join ' & ')
+        appliedBy    = $StandardsFile.addedby
     }
+}
 
 
 # Associate values to output bindings by calling 'Push-OutputBinding'.

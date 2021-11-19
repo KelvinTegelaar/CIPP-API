@@ -1,0 +1,13 @@
+{
+    "Name": "Mimecast",
+    "_MxComment": "",
+    "MxMatch": "(?<Prefix>[a-z]{2})-smtp-inbound-[0-9].mimecast.com",
+    "_SpfComment": "https://community.mimecast.com/s/article/Connect-Application-Implementing-SPF-for-Outbound-Email-Delivery-731048977",
+    "SpfInclude": "{0}._netblocks.mimecast.com",
+    "SpfReplace": [ "Prefix" ],
+    "Selectors": [],
+    "_MxComment": "https://community.mimecast.com/s/article/Connect-Application-Modifying-Your-MX-Records-673313100",
+    "_SpfComment": "https://community.mimecast.com/s/article/Connect-Application-Implementing-SPF-for-Outbound-Email-Delivery-731048977",
+    "_DkimComment": "https://community.mimecast.com/s/article/DNS-Authentication-Configuration-Guide-345109074"
+
+}
