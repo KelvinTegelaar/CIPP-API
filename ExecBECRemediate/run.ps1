@@ -27,7 +27,7 @@ try {
     Import-PSSession $session -ea Silentlycontinue -AllowClobber -CommandName "Get-inboxRule", "Disable-InboxRule"
     Get-InboxRule | Disable-InboxRule 
     Get-PSSession | Remove-PSSession
-    $results = [pscustomobject]@{"Results" = "Executed Remediation for $SuspectUser. The temporary is $password and must be changed at next logon." }
+    $results = [pscustomobject]@{"Results" = "Executed Remediation for $SuspectUser and tenant $($TenantFilter). The temporary is $password and must be changed at next logon." }
 
 }
 catch {
