@@ -29,10 +29,10 @@ try {
                 }
                 'ReadDkimRecord' {
                     if ($Request.Query.Selector) {
-                        $Body = Read-DkimRecord -Domain $Request.Query.Domain -Selector $Request.Query.Selector
+                        $Body = Read-DkimRecord -Domain $Request.Query.Domain -Selectors $Request.Query.Selector
                     }
                     else {
-                        $Body = Read-DkimRecord -Domain $Request.Query.Domain -MxLookup
+                        $Body = Read-DkimRecord -Domain $Request.Query.Domain
                     }
                 }
                 'ReadMXRecord' {

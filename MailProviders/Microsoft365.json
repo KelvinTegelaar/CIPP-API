@@ -4,6 +4,8 @@
     "MxMatch": "mail.protection.outlook.com",
     "_SpfComment": "https://docs.microsoft.com/en-us/microsoft-365/security/office-365-security/set-up-spf-in-office-365-to-help-prevent-spoofing?view=o365-worldwide#create-or-update-your-spf-txt-record",
     "SpfInclude": "spf.protection.outlook.com",
-    "_DkimComment": "https://docs.microsoft.com/en-us/microsoft-365/security/office-365-security/use-dkim-to-validate-outbound-email?view=o365-worldwide",
-    "Selectors": ["selector1","selector2"]
+    "Selectors": ["selector1","selector2"],
+    "_MxComment": "https://docs.microsoft.com/en-us/microsoft-365/admin/get-help-with-domains/create-dns-records-at-any-dns-hosting-provider",
+    "_SpfComment": "https://docs.microsoft.com/en-us/microsoft-365/admin/get-help-with-domains/create-dns-records-at-any-dns-hosting-provider",
+    "_DkimComment": "https://docs.microsoft.com/en-us/microsoft-365/security/office-365-security/use-dkim-to-validate-outbound-email?view=o365-worldwide"
 }

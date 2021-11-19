@@ -7,8 +7,8 @@ $APIName = $TriggerMetadata.FunctionName
 Log-Request -user $request.headers.'x-ms-client-principal' -API $APINAME  -message "Accessed this API" -Sev "Debug"
 Write-Host "PowerShell HTTP trigger function processed a request."
 
-$TenantFilter = $request.body.tenantfilter
-$SuspectUser = (New-GraphGetRequest -uri "https://graph.microsoft.com/beta/users/$($request.body.user)?`$select=id" -tenantid $TenantFilter).id
+$TenantFilter = $request.query.tenantfilter
+$SuspectUser = $($request.query.userid)
 Write-Host $TenantFilter
 Write-Host $SuspectUser
 try {
@@ -37,9 +37,7 @@ try {
             "MailboxLogin",
             "Add user.",
             "Change user password.",
-            "Delete user.",
             "Reset user password."
-            "Update user."
         )
         do {
             $logsTenant = Search-unifiedAuditLog -SessionCommand ReturnLargeSet -ResultSize 5000 -StartDate $startDate -EndDate $endDate -sessionid $sessionid -Operations $operations
@@ -65,20 +63,23 @@ try {
     Write-Host "Last Sign in is: $LastSignIn"
     $Bytes = [System.Text.Encoding]::UTF8.GetBytes($SuspectUser)
     $base64IdentityParam = [Convert]::ToBase64String($Bytes)
-    $Devices = New-GraphGetRequest -uri "https://outlook.office365.com:443/adminapi/beta/$($TenantFilter)/mailbox('$($base64IdentityParam)')/MobileDevice/Exchange.GetMobileDeviceStatistics()/?IsEncoded=True" -Tenantid $tenantfilter -scope ExchangeOnline
-    
-    $Results = [PSCustomObject]@{
-        AddedApps                = ($7dayslog | Where-Object -Property Operations -In 'Add OAuth2PermissionGrant.', 'Consent to application.')
-        SuspectUserMailboxLogons = ($7dayslog | Where-Object -Property Operations -In  "MailboxLogin" ).AuditData | ConvertFrom-Json | Where-Object -Property mailboxGuid -EQ $SuspectUser
-        LastSuspectUserLogon     = $LastSignIn
-        SuspectUserDevices       = $Devices
-        NewRules                 = ($7dayslog | Where-Object -Property Operations -In "New-InboxRule", "Set-InboxRule", "UpdateInboxRules").AuditData | ConvertFrom-Json
-        MailboxPermissionChanges = ($7dayslog | Where-Object -Property Operations -In "Remove-MailboxPermission", "Add-MailboxPermission", "UpdateCalendarDelegation", "AddFolderPermissions" ).AuditData | ConvertFrom-Json
-        NewUsers                 = ($7dayslog | Where-Object -Property Operations -In "Add user.").AuditData | ConvertFrom-Json
-        ChangedUsers             = ($7dayslog | Where-Object -Property Operations -In "Update user.").AuditData | ConvertFrom-Json
-        ChangedPasswords         = ($7dayslog | Where-Object -Property Operations -In "Change user password.", "Reset user password.").AuditData | ConvertFrom-Json
-        DeletedUsers             = ($7dayslog | Where-Object -Property Operations -In "Delete user.").AuditData | ConvertFrom-Json
+    Try {
+        $Devices = New-GraphGetRequest -uri "https://outlook.office365.com:443/adminapi/beta/$($TenantFilter)/mailbox('$($base64IdentityParam)')/MobileDevice/Exchange.GetMobileDeviceStatistics()/?IsEncoded=True" -Tenantid $tenantfilter -scope ExchangeOnline
     }
+    catch {
+        $Devices = $null
+    }
+    $Results = [PSCustomObject]@{
+        AddedApps                = @(($7dayslog | Where-Object -Property Operations -In 'Add OAuth2PermissionGrant.', 'Consent to application.').AuditData | ConvertFrom-Json)
+        SuspectUserMailboxLogons = @(($7dayslog | Where-Object -Property Operations -In  "MailboxLogin" ).AuditData | ConvertFrom-Json)
+        LastSuspectUserLogon     = @($LastSignIn)
+        SuspectUserDevices       = @($Devices)
+        NewRules                 = @(($7dayslog | Where-Object -Property Operations -In "New-InboxRule", "Set-InboxRule", "UpdateInboxRules").AuditData | ConvertFrom-Json)
+        MailboxPermissionChanges = @(($7dayslog | Where-Object -Property Operations -In "Remove-MailboxPermission", "Add-MailboxPermission", "UpdateCalendarDelegation", "AddFolderPermissions" ).AuditData | ConvertFrom-Json)
+        NewUsers                 = @(($7dayslog | Where-Object -Property Operations -In "Add user.").AuditData | ConvertFrom-Json)
+        ChangedPasswords         = @(($7dayslog | Where-Object -Property Operations -In "Change user password.", "Reset user password.").AuditData | ConvertFrom-Json)
+    }
+    
     Write-Host $Results
     #Log-Request -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $($tenantfilter) -message "Assigned $($appFilter) to $assignTo" -Sev "Info"
 
@@ -91,5 +92,5 @@ catch {
 # Associate values to output bindings by calling 'Push-OutputBinding'.
 Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
         StatusCode = [HttpStatusCode]::OK
-        Body       = $Results
+        Body       = (ConvertTo-Json -Depth 10 -InputObject $Results)
     })

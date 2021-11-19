@@ -5,6 +5,9 @@
     "_SpfComment": "https://community.mimecast.com/s/article/Connect-Application-Implementing-SPF-for-Outbound-Email-Delivery-731048977",
     "SpfInclude": "{0}._netblocks.mimecast.com",
     "SpfReplace": [ "Prefix" ],
-    "_DkimComment": "https://community.mimecast.com/s/article/DNS-Authentication-Configuration-Guide-345109074",
-    "Selectors": []
+    "Selectors": [],
+    "_MxComment": "https://community.mimecast.com/s/article/Connect-Application-Modifying-Your-MX-Records-673313100",
+    "_SpfComment": "https://community.mimecast.com/s/article/Connect-Application-Implementing-SPF-for-Outbound-Email-Delivery-731048977",
+    "_DkimComment": "https://community.mimecast.com/s/article/DNS-Authentication-Configuration-Guide-345109074"
+
 }
