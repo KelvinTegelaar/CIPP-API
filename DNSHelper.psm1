@@ -153,7 +153,7 @@ function Test-DNSSEC {
             }
         }
         elseif ($Result.Status -eq 3) {
-            $ValidationFails.Add('FAIL: Domain does not exist (NXDOMAIN)') | Out-Null
+            $ValidationFails.Add('FAIL: Record does not exist (NXDOMAIN)') | Out-Null
         }
         elseif ($RecordCount -gt 0) {
             if ($Result.AD -eq $false) {
@@ -236,8 +236,13 @@ function Read-MXRecord {
     }
     catch { $Result = $null }
     if ($null -eq $Result -or $Result.Status -ne 0) {
+        if ($Result.Status -eq 3) {
+            $ValidationFails.Add('FAIL: Record does not exist (NXDOMAIN)') | Out-Null
+        }
+        else {
+            $ValidationFails.Add("FAIL: $Domain - MX record does not exist") | Out-Null
+        }
         $MXRecords = $null
-        $ValidationFails.Add("FAIL: $Domain - MX record does not exist") | Out-Null
     }
     else {
         $MXRecords = $Result.Answer | ForEach-Object { 
@@ -387,7 +392,12 @@ function Read-SpfRecord {
                 else {
                     $Query = Resolve-DnsHttpsQuery @DnsQuery
                     if ($null -ne $Query -and $Query.Status -ne 0) {
-                        $ValidationFails.Add("FAIL: $Domain does not resolve an SPF record.") | Out-Null
+                        if ($Query.Status -eq 3) {
+                            $ValidationFails.Add('FAIL: Record does not exist (NXDOMAIN)') | Out-Null
+                        }
+                        else {
+                            $ValidationFails.Add("FAIL: $Domain does not resolve an SPF record.") | Out-Null
+                        }
                         $PermError = $true
                     }
                     else {
@@ -430,18 +440,20 @@ function Read-SpfRecord {
                 }
             
                 # Don't increment for include, this will be done in a recursive call
-                elseif ($_ -match 'include:(.+)') {
-                    $IncludeList.Add($Matches[1]) | Out-Null
+                elseif ($_ -match '(?<Qualifier>[+-~?])?include:(?<Value>.+)') {
+                    $IncludeList.Add($Matches.Value) | Out-Null
                 }
 
                 # Increment lookup count for exists mechanism
-                elseif ($_ -match 'exists:(.+)') {
+                elseif ($_ -match '(?<Qualifier>[+-~?])?exists:(?<Value>.+)') {
                     $LookupCount++
                 }
 
                 # Collect explicit IP addresses
-                elseif ($_ -match 'ip[4,6]:(.+)') {
-                    $IPAddresses.Add($Matches[1]) | Out-Null
+                elseif ($_ -match '(?<Qualifier>[+-~?])?ip[4,6]:(?<Value>.+)') {
+                    if ($Matches.PSObject.Properties.Name -notcontains 'Qualifier' -or $Matches.Qualifier -eq '+') {
+                        $IPAddresses.Add($Matches.Value) | Out-Null
+                    }
                 }
 
                 # Get all mechanism
@@ -454,7 +466,7 @@ function Read-SpfRecord {
                     }
                 }
                 # Get any type specific mechanism
-                elseif ($_ -match '^(?<RecordType>(?:a|mx|ptr))(?:[:](?<TypeDomain>.+))?') {
+                elseif ($_ -match '^(?<Qualifier>[+-~?])?(?<RecordType>(?:a|mx|ptr))(?:[:](?<TypeDomain>.+))?') {
                     $LookupCount++
                     
                     if ($Matches.TypeDomain) {
@@ -730,7 +742,12 @@ function Read-DmarcPolicy {
     # Resolve DMARC record
     $Query = Resolve-DnsHttpsQuery @DnsQuery
     if (($null -ne $Query -and $Query.Status -ne 0) -or $null -eq $Query.Answer.data) {
-        $ValidationFails.Add("FAIL: $Domain does not have a DMARC record") | Out-Null
+        if ($Query.Status -eq 3) {
+            $ValidationFails.Add('FAIL: Record does not exist (NXDOMAIN)') | Out-Null
+        }
+        else {
+            $ValidationFails.Add("FAIL: $Domain does not have a DMARC record") | Out-Null
+        }
     }
     else {
         $DmarcRecord = ($Query.Answer | Where-Object -Property type -EQ 16).data
@@ -961,7 +978,7 @@ function Read-DkimRecord {
         }
     }
     
-    if (($Selectors | Measure-Object | Select-Object -ExpandProperty Count) -gt 0) {
+    if (($Selectors | Measure-Object | Select-Object -ExpandProperty Count) -gt 0 -and $Selectors -notcontains '') {
         foreach ($Selector in $Selectors) {
             # Initialize object
             $DkimRecord = [PSCustomObject]@{
@@ -998,7 +1015,12 @@ function Read-DkimRecord {
             $QueryResults = Resolve-DnsHttpsQuery @DnsQuery
 
             if ($QueryResults -eq '' -or $QueryResults.Status -ne 0) {
-                $ValidationFails.Add("FAIL: $Selector - DKIM record is missing, check the selector and try again") | Out-Null
+                if ($QueryResults.Status -eq 3) {
+                    $ValidationFails.Add("FAIL: $Selector - Selector record does not exist (NXDOMAIN)") | Out-Null
+                }
+                else {
+                    $ValidationFails.Add("FAIL: $Selector - DKIM record is missing, check the selector and try again") | Out-Null
+                }
                 $Record = ''
             }
             else {
@@ -1102,6 +1124,10 @@ function Read-DkimRecord {
             }
         }
     }
+    else {
+        $ValidationFails.Add('FAIL: No DKIM selectors provided') | Out-Null
+    }
+
     # Collect validation results
     $DkimAnalysis.ValidationPasses = $ValidationPasses
     $DkimAnalysis.ValidationWarns = $ValidationWarns
