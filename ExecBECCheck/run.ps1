@@ -63,8 +63,12 @@ try {
     Write-Host "Last Sign in is: $LastSignIn"
     $Bytes = [System.Text.Encoding]::UTF8.GetBytes($SuspectUser)
     $base64IdentityParam = [Convert]::ToBase64String($Bytes)
-    #$Devices = New-GraphGetRequest -uri "https://outlook.office365.com:443/adminapi/beta/$($TenantFilter)/mailbox('$($base64IdentityParam)')/MobileDevice/Exchange.GetMobileDeviceStatistics()/?IsEncoded=True" -Tenantid $tenantfilter -scope ExchangeOnline
-    
+    Try {
+        $Devices = New-GraphGetRequest -uri "https://outlook.office365.com:443/adminapi/beta/$($TenantFilter)/mailbox('$($base64IdentityParam)')/MobileDevice/Exchange.GetMobileDeviceStatistics()/?IsEncoded=True" -Tenantid $tenantfilter -scope ExchangeOnline
+    }
+    catch {
+        $Devices = $null
+    }
     $Results = [PSCustomObject]@{
         AddedApps                = @(($7dayslog | Where-Object -Property Operations -In 'Add OAuth2PermissionGrant.', 'Consent to application.').AuditData | ConvertFrom-Json)
         SuspectUserMailboxLogons = @(($7dayslog | Where-Object -Property Operations -In  "MailboxLogin" ).AuditData | ConvertFrom-Json)
