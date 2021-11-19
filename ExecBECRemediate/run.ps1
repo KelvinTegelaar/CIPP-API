@@ -21,11 +21,11 @@ try {
     $GraphRequest = New-GraphPostRequest -uri "https://graph.microsoft.com/v1.0/users/$SuspectUser" -tenantid $TenantFilter -type PATCH -body '{"accountEnabled":"false"}'  -verbose
     $GraphRequest = New-GraphPostRequest -uri "https://graph.microsoft.com/v1.0/users/$SuspectUser/revokeSignInSessions" -tenantid $TenantFilter -type POST -body '{}'  -verbose
     $upn = "notRequired@required.com"
-    $tokenvalue = ConvertTo-SecureString (Get-GraphToken -AppID 'a0c73c16-a7e3-4564-9a95-2bdf47383716' -RefreshToken $ENV:ExchangeRefreshToken -Scope 'https://outlook.office365.com/.default' -Tenantid $tenant).Authorization -AsPlainText -Force
+    $tokenvalue = ConvertTo-SecureString (Get-GraphToken -AppID 'a0c73c16-a7e3-4564-9a95-2bdf47383716' -RefreshToken $ENV:ExchangeRefreshToken -Scope 'https://outlook.office365.com/.default' -Tenantid $tenantfilter).Authorization -AsPlainText -Force
     $credential = New-Object System.Management.Automation.PSCredential($upn, $tokenValue)
     $session = New-PSSession -ConfigurationName Microsoft.Exchange -ConnectionUri "https://ps.outlook.com/powershell-liveid?DelegatedOrg=$($tenant)&BasicAuthToOAuthConversion=true" -Credential $credential -Authentication Basic -AllowRedirection -ErrorAction Continue
     Import-PSSession $session -ea Silentlycontinue -AllowClobber -CommandName "Get-inboxRule", "Disable-InboxRule"
-    Get-InboxRule | Disable-InboxRule 
+    Get-InboxRule -mailbox $SuspectUser | Disable-InboxRule 
     Get-PSSession | Remove-PSSession
     $results = [pscustomobject]@{"Results" = "Executed Remediation for $SuspectUser and tenant $($TenantFilter). The temporary is $password and must be changed at next logon." }
 
