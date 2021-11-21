@@ -1,0 +1,10 @@
+{
+    "Name": "AppRiver",
+    "MxMatch": "arsmtp.com",
+    "SpfInclude": "{0}.spf.smtp25.com",
+    "SpfReplace": ["DomainNameDashNotation"],
+    "Selectors": [""],
+    "_MxComment": "https://cp.appriver.com/Help/SpamLab%20Administrator%20Help/desktop/Administrator_Services/SpamLab/Alerts_MX_Records.htm",
+    "_SpfComment": "https://cp.appriver.com/ngp/admin/system-setup",
+    "_DkimComment": "https://cp.appriver.com/ngp/dkim/"
+}

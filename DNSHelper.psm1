@@ -260,6 +260,10 @@ function Read-MXRecord {
 
         # Attempt to identify mail provider based on MX record
         if (Test-Path 'MailProviders') {
+            $ReservedVariables = @{
+                'DomainNameDashNotation' = $Domain -replace '\.', '-'
+            }
+
             Get-ChildItem 'MailProviders' -Exclude '_template.json' | ForEach-Object {
                 try {
                     $Provider = Get-Content $_ | ConvertFrom-Json -ErrorAction Stop
@@ -267,8 +271,17 @@ function Read-MXRecord {
                         if ($_ -match $Provider.MxMatch) {
                             $MXResults.MailProvider = $Provider
                             if (($Provider.SpfReplace | Measure-Object | Select-Object -ExpandProperty Count) -gt 0) {
-                                $Replace = foreach ($Var in $Provider.SpfReplace) { $Var }
-                                $ExpectedInclude = $Provider.SpfInclude -f $Matches.$Replace
+                                $ReplaceList = New-Object System.Collections.ArrayList
+                                foreach ($Var in $Provider.SpfReplace) { 
+                                    if ($ReservedVariables.Keys -contains $Var) {
+                                        $ReplaceList.Add($ReservedVariables.$Var) | Out-Null
+                                    } 
+                                    else {
+                                        $ReplaceList.Add($Matches.$Var) | Out-Null
+                                    }
+                                }
+
+                                $ExpectedInclude = $Provider.SpfInclude -f ($ReplaceList -join ',')
                             }
                             else {
                                 $ExpectedInclude = $Provider.SpfInclude
