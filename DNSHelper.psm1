@@ -414,9 +414,6 @@ function Read-SpfRecord {
                         }
                     }
                 }
-                if ($level -ne 'Parent') {
-                    $LookupCount++
-                }
             }
             'Manual' {
                 if ([string]::IsNullOrEmpty($Domain)) { $Domain = 'Not Specified' }
@@ -434,6 +431,7 @@ function Read-SpfRecord {
             
                 # Look for redirect modifier
                 elseif ($_ -match 'redirect=(?<Domain>.+)') {
+                    $LookupCount++
                     if ($Record -match 'all$') {
                         $ValidationFails.Add("FAIL: $Domain - Redirect modifier should not contain all mechanism, SPF record invalid") | Out-Null
                         $PermError = $true
@@ -446,6 +444,7 @@ function Read-SpfRecord {
             
                 # Don't increment for include, this will be done in a recursive call
                 elseif ($_ -match '(?<Qualifier>[+-~?])?include:(?<Value>.+)') {
+                    $LookupCount++
                     $IncludeList.Add($Matches.Value) | Out-Null
                 }
 
@@ -496,7 +495,10 @@ function Read-SpfRecord {
                         }
                         else {
                             if ($TypeQuery.RecordType -eq 'mx') {
-                                $Result = $TypeResult.Answer | ForEach-Object { $_.Data.Split(' ')[1] }
+                                $Result = $TypeResult.Answer | ForEach-Object { 
+                                    $LookupCount++
+                                    $_.Data.Split(' ')[1] 
+                                }
                             }
                             else {
                                 $Result = $TypeResult.answer.data
@@ -626,8 +628,8 @@ function Read-SpfRecord {
             $ValidationFails.Add("FAIL: SPF record exceeded 10 lookups, found $LookupCount") | Out-Null 
             $PermError = $true
         }
-        elseif ($LookupCount -ge 9 -and $LookupCount -lt 10) {
-            $ValidationWarns.Add("WARN: SPF lookup count is close to the limit of 10, found $LookupCount") | Out-Null
+        elseif ($LookupCount -ge 9 -and $LookupCount -le 10) {
+            $ValidationWarns.Add("WARN: SPF lookup count is at or close to the lookup limit, found $LookupCount") | Out-Null
         }
 
         # Report pass if no errors are found
@@ -1119,7 +1121,7 @@ function Read-DkimRecord {
                     $ValidationFails.Add("FAIL: $Selector - Key size is less than 1024 bit, found $($DkimRecord.PublicKeyInfo.KeySize)") | Out-Null
                 }
                 else {
-                    $ValidationPasses.Add("PASS: $Selector - DKIM key validation succeeded") | Out-Null
+                    $ValidationPasses.Add("PASS: $Selector - DKIM key validation succeeded ($($DkimRecord.PublicKeyInfo.KeySize) bit)") | Out-Null
                 }
                 ($DkimAnalysis.Records).Add($DkimRecord) | Out-Null
             }
