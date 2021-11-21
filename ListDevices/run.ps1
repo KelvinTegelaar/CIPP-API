@@ -19,7 +19,7 @@ $GraphRequest = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/devic
 @{ Name = 'deviceOwnership'; Expression = { $_.'deviceOwnership' } },
 @{ Name = 'displayName'; Expression = { $_.'displayName' } },
 @{ Name = 'enrollmentType'; Expression = { $_.'enrollmentType' } },
-@{ Name = 'isCompliant'; Expression = { $_.'isCompliant' } },
+@{ Name = 'isCompliant'; Expression = { $(if([string]::IsNullOrEmpty($_.'isCompliant')){$false}else{$true}) } },
 @{ Name = 'managementType'; Expression = { $_.'managementType' } },
 @{ Name = 'manufacturer'; Expression = { $_.'manufacturer' } },
 @{ Name = 'model'; Expression = { $_.'model' } },
