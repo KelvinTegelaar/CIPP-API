@@ -13,6 +13,7 @@ Write-Host "PowerShell HTTP trigger function processed a request."
 
 # Interact with query parameters or the body of the request.
 Try {
+    $MailboxType = if ($request.query.ConvertToUser -eq 'true') { "Regular" } else { "Shared" }
     $upn = "notrequired@notrequired.com" 
     $customerId = $Request.Query.TenantFilter 
     Write-Host "$customerId"
@@ -20,7 +21,7 @@ Try {
     $credential = New-Object System.Management.Automation.PSCredential($upn, $tokenValue)
     $session = New-PSSession -ConfigurationName Microsoft.Exchange -ConnectionUri "https://ps.outlook.com/powershell-liveid?DelegatedOrg=$($customerId)&BasicAuthToOAuthConversion=true" -Credential $credential -Authentication Basic -AllowRedirection -ea Stop
     Import-PSSession $session -ea Stop -AllowClobber -CommandName "Set-Mailbox"
-    $Mailbox = Set-mailbox -identity $request.query.id -type Shared -ea Stop
+    $Mailbox = Set-mailbox -identity $request.query.id -type $($MailboxType) -ea Stop
     Remove-PSSession $session
     $Results = [pscustomobject]@{"Results" = "Succesfully completed task." }
     Log-Request -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $($customerId) -message "Converted mailbox $($request.query.id)" -Sev "Info"
