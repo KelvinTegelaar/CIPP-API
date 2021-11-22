@@ -502,8 +502,14 @@ function Read-SpfRecord {
                         }
                         catch { $TypeResult = $null }
                         if ($null -eq $TypeResult -or $TypeResult.Status -ne 0) {
-                            $ValidationFails.Add("FAIL: $Domain - Type lookup for mechanism '$($TypeQuery.RecordType)' did not return any results, PermError") | Out-Null
-                            $PermError = $true
+                            $Message = "$Domain - Type lookup for mechanism '$($TypeQuery.RecordType)' did not return any results"
+                            switch ($Level) {
+                                'Parent' { 
+                                    $ValidationFails.Add("FAIL: $Message") | Out-Null
+                                    $PermError = $true 
+                                }
+                                'Include' { $ValidationWarns.Add("WARN: $Message") | Out-Null }
+                            }
                             $Result = $false
                         }
                         else {
