@@ -25,7 +25,7 @@ foreach ($RemoveUser in $RemoveFullAccess | Where-Object { $_ -ne "" } ) {
         Log-Request -user $request.headers.'x-ms-client-principal' -API $APINAME  -message "Removed $($_) from $($username) Shared Mailbox permission" -Sev "Info" -tenant $TenantFilter       
     }
     catch {
-        Log-Request -user $request.headers.'x-ms-client-principal' -API $APINAME  -message "Could not remove mailbox permissions for $($_) on $($username)" -Sev "Error" -tenant $TenantFilter
+        Log-Request -user $request.headers.'x-ms-client-principal' -API $APINAME  -message "Could not remove mailbox permissions for $($removeuser) on $($username)" -Sev "Error" -tenant $TenantFilter
         $results.add("Could not remove shared mailbox permissions for $($username). Error: $($_.Exception.Message)")
     }
 }
