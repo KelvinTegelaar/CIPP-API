@@ -108,6 +108,7 @@ function Test-DNSSEC {
     }
 
     $Result = Resolve-DnsHttpsQuery @DnsQuery
+    
     $RecordCount = ($Result.Answer.data | Measure-Object).Count
     if ($null -eq $Result) {
         $ValidationFails.Add('FAIL: DNSSEC validation failed, no dnskey record found') | Out-Null
@@ -129,6 +130,9 @@ function Test-DNSSEC {
                 $ValidationPasses.Add('PASS: DNSSEC enabled and validated for this domain') | Out-Null
             }
             $DSResults.Keys = $Result.answer.data
+        }
+        else {
+            $ValidationFails.Add('FAIL: DNSSEC validation failed, no dnskey record found') | Out-Null
         }
     }
 
