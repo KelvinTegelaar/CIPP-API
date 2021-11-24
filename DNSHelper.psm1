@@ -54,6 +54,8 @@ function Resolve-DnsHttpsQuery {
 
     $Uri = $QueryTemplate -f $BaseUri, $Domain, $RecordType
 
+    Write-Verbose "### $Uri ###"
+ 
     try {
         $Results = Invoke-RestMethod -Uri $Uri -Headers $Headers -ErrorAction Stop
     }
@@ -198,17 +200,17 @@ function Read-MXRecord {
     }
     else {
         $MXRecords = $Result.Answer | ForEach-Object { 
-            $Preference, $Hostname = $_.Data.Split(' ')
+            $Priority, $Hostname = $_.Data.Split(' ')
             try {
                 [PSCustomObject]@{
-                    Preference = [int]$Preference
-                    Hostname   = $Hostname
+                    Priority = [int]$Priority
+                    Hostname = $Hostname
                 }
             }
             catch {}
         }
         $ValidationPasses.Add("PASS: $Domain - MX record is present") | Out-Null
-        $MXRecords = $MXRecords | Sort-Object -Property Preference
+        $MXRecords = $MXRecords | Sort-Object -Property Priority
 
         # Attempt to identify mail provider based on MX record
         if (Test-Path 'MailProviders') {
@@ -554,7 +556,7 @@ function Read-SpfRecord {
     # Look for expected include record and report pass or fail
     if ($ExpectedInclude -ne '') {
         if ($RecordList.Domain -notcontains $ExpectedInclude) {
-            $ExpectedIncludeSpf = Read-SpfRecord -Domain $ExpectedInclude
+            $ExpectedIncludeSpf = Read-SpfRecord -Domain $ExpectedInclude -Level ExpectedInclude
             $ExpectedIPCount = $ExpectedIncludeSpf.IPAddresses | Measure-Object | Select-Object -ExpandProperty Count
             $FoundIPCount = Compare-Object $IPAddresses $ExpectedIncludeSpf.IPAddresses -IncludeEqual | Where-Object -Property SideIndicator -EQ '==' | Measure-Object | Select-Object -ExpandProperty Count
             if ($ExpectedIPCount -eq $FoundIPCount) {
@@ -632,9 +634,7 @@ function Read-SpfRecord {
     $SPFResults.Status = $Status    
 
     # Output SpfResults object
-    #Write-Verbose ($SpfResults | ConvertTo-Json)
     $SpfResults
-    
 }
 
 function Read-DmarcPolicy {
