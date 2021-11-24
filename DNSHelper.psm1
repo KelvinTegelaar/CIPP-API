@@ -12,12 +12,6 @@ function Resolve-DnsHttpsQuery {
     .PARAMETER RecordType
     Type of record - Examples: A, CNAME, MX, TXT
     
-    .PARAMETER FullResultRecord
-    Return the entire response instead of just the answer - True, False
-    
-    .PARAMETER Resolver
-    Resolver to query - Options: Google, Cloudflare
-    
     .EXAMPLE
     PS> Resolve-DnsHttpsQuery -Domain google.com -RecordType A
     
@@ -32,15 +26,16 @@ function Resolve-DnsHttpsQuery {
         [string]$Domain,
         
         [Parameter()]
-        [string]$RecordType = 'A',
-
-        [Parameter()]
-        [switch]$FullResultRecord,
-
-        [Parameter()]
-        [ValidateSet('Google', 'Cloudflare')]
-        [string]$Resolver = 'Google'
+        [string]$RecordType = 'A'
     )
+
+    if (Test-Path -Path 'Config\DnsConfig.json') {
+        $Config = Get-Content 'Config\DnsConfig.json' | ConvertFrom-Json 
+        $Resolver = $Config.Resolver
+    }
+    else {
+        $Resolver = 'Google'
+    }
 
     switch ($Resolver) {
         'Google' {
@@ -60,33 +55,14 @@ function Resolve-DnsHttpsQuery {
     $Uri = $QueryTemplate -f $BaseUri, $Domain, $RecordType
 
     try {
-        $Results = Invoke-RestMethod -Uri $Uri -Headers $Headers
+        $Results = Invoke-RestMethod -Uri $Uri -Headers $Headers -ErrorAction Stop
     }
     catch {
         Write-Verbose "$Resolver DoH Query Exception - $($_.Exception.Message)" 
         return $null
     }
-
-    # Domain does not exist
-    if ($Results.Status -ne 0) {
-        return $Results
-    }
     
-    if (($Results.Answer | Measure-Object | Select-Object -ExpandProperty Count) -eq 0) {
-        return $null
-    }
-    elseif (!$FullResultRecord) {
-        if ($RecordType -eq 'MX') {
-            $FinalClean = $Results.Answer | ForEach-Object { $_.Data.Split(' ')[1] }
-            return $FinalClean
-        }
-        else {
-            return $Results.Answer
-        }
-    }
-    else {
-        return $Results
-    }
+    return $Results
 }
 
 function Test-DNSSEC {
@@ -124,21 +100,9 @@ function Test-DNSSEC {
     $ValidationPasses = New-Object System.Collections.ArrayList
     $ValidationFails = New-Object System.Collections.ArrayList
 
-    if (Test-Path -Path 'Config\DnsConfig.json') {
-        $Config = Get-Content 'Config\DnsConfig.json' | ConvertFrom-Json 
-        $DnsQuery = @{
-            RecordType       = 'dnskey'
-            Domain           = $Domain
-            Resolver         = $Config.Resolver
-            FullResultRecord = $true
-        }
-    }
-    else {
-        $DnsQuery = @{
-            RecordType       = 'dnskey'
-            Domain           = $Domain
-            FullResultRecord = $true
-        }
+    $DnsQuery = @{
+        RecordType = 'dnskey'
+        Domain     = $Domain
     }
 
     $Result = Resolve-DnsHttpsQuery @DnsQuery
@@ -177,7 +141,7 @@ function Read-MXRecord {
     Reads MX records for domain
     
     .DESCRIPTION
-    Queries DNS servers to get MX records and returns in PSCustomObject list with Priority and Hostname
+    Queries DNS servers to get MX records and returns in PSCustomObject list with Preference and Hostname
     
     .PARAMETER Domain
     Domain to query
@@ -185,8 +149,8 @@ function Read-MXRecord {
     .EXAMPLE
     PS> Read-MXRecord -Domain gmail.com
     
-    Priority Hostname
-    -------- --------
+    Preference Hostname
+    ---------- --------
        5 gmail-smtp-in.l.google.com.
       10 alt1.gmail-smtp-in.l.google.com.
       20 alt2.gmail-smtp-in.l.google.com.
@@ -212,21 +176,9 @@ function Read-MXRecord {
     $ValidationPasses = New-Object System.Collections.ArrayList
     $ValidationFails = New-Object System.Collections.ArrayList
 
-    if (Test-Path -Path 'Config\DnsConfig.json') {
-        $Config = Get-Content 'Config\DnsConfig.json' | ConvertFrom-Json 
-        $DnsQuery = @{
-            RecordType       = 'mx'
-            Domain           = $Domain
-            Resolver         = $Config.Resolver
-            FullResultRecord = $true
-        }
-    }
-    else {
-        $DnsQuery = @{
-            RecordType       = 'mx'
-            Domain           = $Domain
-            FullResultRecord = $true
-        }
+    $DnsQuery = @{
+        RecordType = 'mx'
+        Domain     = $Domain
     }
  
     $MXResults.Domain = $Domain
@@ -246,17 +198,17 @@ function Read-MXRecord {
     }
     else {
         $MXRecords = $Result.Answer | ForEach-Object { 
-            $Priority, $Hostname = $_.Data.Split(' ')
+            $Preference, $Hostname = $_.Data.Split(' ')
             try {
                 [PSCustomObject]@{
-                    Priority = [int]$Priority
-                    Hostname = $Hostname
+                    Preference = [int]$Preference
+                    Hostname   = $Hostname
                 }
             }
             catch {}
         }
         $ValidationPasses.Add("PASS: $Domain - MX record is present") | Out-Null
-        $MXRecords = $MXRecords | Sort-Object -Property Priority
+        $MXRecords = $MXRecords | Sort-Object -Property Preference
 
         # Attempt to identify mail provider based on MX record
         if (Test-Path 'MailProviders') {
@@ -365,7 +317,7 @@ function Read-SpfRecord {
         TypeLookups      = New-Object System.Collections.ArrayList
         IPAddresses      = New-Object System.Collections.ArrayList
         MailProvider     = ''
-        PermError        = $false     
+        Status           = ''
     }
 
     # Initialize lists to hold all records
@@ -374,30 +326,15 @@ function Read-SpfRecord {
     $ValidationPasses = New-Object System.Collections.ArrayList
     $ValidationWarns = New-Object System.Collections.ArrayList
     $LookupCount = 0
-    $IsRedirected = $false
     $AllMechanism = ''
-    $PermError = $false
+    $Status = ''
 
-    $IncludeList = New-Object System.Collections.ArrayList
     $TypeLookups = New-Object System.Collections.ArrayList
     $IPAddresses = New-Object System.Collections.ArrayList
-
-    if (Test-Path -Path 'Config/DnsConfig.json') {
-        $Config = Get-Content 'Config/DnsConfig.json' | ConvertFrom-Json
-            
-        $DnsQuery = @{
-            RecordType       = 'TXT'
-            Domain           = $Domain
-            Resolver         = $Config.Resolver
-            FullResultRecord = $true
-        }
-    }
-    else {
-        $DnsQuery = @{
-            RecordType       = 'TXT'
-            Domain           = $Domain
-            FullResultRecord = $true
-        }
+       
+    $DnsQuery = @{
+        RecordType = 'TXT'
+        Domain     = $Domain
     }
 
     # Query DNS for SPF Record
@@ -411,19 +348,20 @@ function Read-SpfRecord {
                     $Query = Resolve-DnsHttpsQuery @DnsQuery
                     if ($null -ne $Query -and $Query.Status -ne 0) {
                         if ($Query.Status -eq 3) {
-                            $ValidationFails.Add('FAIL: Record does not exist (NXDOMAIN)') | Out-Null
+                            $ValidationFails.Add("FAIL: $Domain - Record does not exist, nxdomain") | Out-Null
+                            $Status = 'permerror'
                         }
                         else {
-                            $ValidationFails.Add("FAIL: $Domain does not resolve an SPF record.") | Out-Null
+                            $ValidationFails.Add("FAIL: $Domain - Does not resolve an SPF record.") | Out-Null
+                            $Status = 'temperror'
                         }
-                        $PermError = $true
                     }
                     else {
                         $Record = $Query.answer | Select-Object -ExpandProperty data | Where-Object { $_ -match '^v=spf1' }
                         $RecordCount = ($Record | Measure-Object).Count
                         if ($RecordCount -eq 0) { 
                             $ValidationFails.Add("FAIL: $Domain does not resolve an SPF record.") | Out-Null
-                            $PermError = $true 
+                            $Status = 'permerror'
                         }
                     }
                 }
@@ -437,149 +375,172 @@ function Read-SpfRecord {
 
         if ($Record -ne '' -and $RecordCount -gt 0) {
             # Split records and parse
-            $RecordEntries = $Record -split '\s+'
+            if ($Record -match '^v=spf1\s+(?<Terms>.+?)(:?\s+(?<AllMechanism>[+-~?]all)(:?\s+(?<Discard>(?!all).+))?)?$') {
+                $RecordTerms = $Matches.Terms -split '\s+'
+                Write-Verbose "########### Record: $Record"
 
-            $RecordEntries | ForEach-Object {
-                if ($_ -match 'v=spf1') {}
-            
-                # Look for redirect modifier
-                elseif ($_ -match 'redirect=(?<Domain>.+)') {
-                    $LookupCount++
-                    if ($Record -match 'all$') {
-                        $ValidationFails.Add("FAIL: $Domain - Redirect modifier should not contain all mechanism, SPF record invalid") | Out-Null
-                        $PermError = $true
-                    }
-                    else {
-                        $IsRedirected = $true
-                        $Domain = $Matches.Domain
-                    }
-                }
-            
-                # Don't increment for include, this will be done in a recursive call
-                elseif ($_ -match '(?<Qualifier>[+-~?])?include:(?<Value>.+)') {
-                    $LookupCount++
-                    $IncludeList.Add($Matches.Value) | Out-Null
+                if ($Level -eq 'Parent') {
+                    $AllMechanism = $Matches.AllMechanism
                 }
 
-                # Increment lookup count for exists mechanism
-                elseif ($_ -match '(?<Qualifier>[+-~?])?exists:(?<Value>.+)') {
-                    $LookupCount++
+                if ($null -ne $Matches.Discard) {
+                    $ValidationWarns.Add("WARN: The terms '$($Matches.Discard)' are past the all mechanism and will be discarded") | Out-Null
                 }
 
-                # Collect explicit IP addresses
-                elseif ($_ -match '(?<Qualifier>[+-~?])?ip[4,6]:(?<Value>.+)') {
-                    if ($Matches.PSObject.Properties.Name -notcontains 'Qualifier' -or $Matches.Qualifier -eq '+') {
-                        $IPAddresses.Add($Matches.Value) | Out-Null
-                    }
-                }
+                foreach ($Term in $RecordTerms) {
 
-                # Get all mechanism
-                elseif ($_ -match 'all') {
-                    if ($Record -match '(?<Mechanism>[+-~?])all$') {
-                        $AllMechanism = $Matches.Mechanism
-                    }
-                    else {
-                        $AllMechanism = ''
-                    }
-                }
-                # Get any type specific mechanism
-                elseif ($_ -match '^(?<Qualifier>[+-~?])?(?<RecordType>(?:a|mx|ptr))(?:[:](?<TypeDomain>.+))?') {
-                    $LookupCount++
-                    
-                    if ($Matches.TypeDomain) {
-                        $TypeDomain = $Matches.TypeDomain
-                    }
-                    else {
-                        $TypeDomain = $Domain
-                    }
-                    $TypeQuery = @{Domain = $TypeDomain; RecordType = $Matches.RecordType; FullResultRecord = $true }      
-                    
-                    if ($TypeQuery.Domain -ne 'Not Specified') {
-                        try {
-                            Write-Verbose "Looking up $($TypeQuery.Domain)"
-                            $TypeResult = Resolve-DnsHttpsQuery @TypeQuery
-                            Write-Verbose ($TypeResult | Format-Table | Out-String)
-                        }
-                        catch { $TypeResult = $null }
-                        if ($null -eq $TypeResult -or $TypeResult.Status -ne 0) {
-                            $Message = "$Domain - Type lookup for mechanism '$($TypeQuery.RecordType)' did not return any results"
-                            switch ($Level) {
-                                'Parent' { 
-                                    $ValidationFails.Add("FAIL: $Message") | Out-Null
-                                    $PermError = $true 
-                                }
-                                'Include' { $ValidationWarns.Add("WARN: $Message") | Out-Null }
-                            }
-                            $Result = $false
+                    # Redirect modifier
+                    if ($Term -match 'redirect=(?<Domain>.+)') {
+                        $LookupCount++
+                        if ($Record -match '(?<Qualifier>[+-~?])all') {
+                            $ValidationFails.Add("FAIL: $Domain - A record with a redirect modifier must not contain an all mechanism, permerror") | Out-Null
+                            $Status = 'permerror'
                         }
                         else {
-                            if ($TypeQuery.RecordType -eq 'mx') {
-                                $Result = $TypeResult.Answer | ForEach-Object { 
-                                    $LookupCount++
-                                    $_.Data.Split(' ')[1] 
-                                }
+                            $Domain = $Matches.Domain
+
+                            # Follow redirect modifier
+                            $RedirectedLookup = Read-SpfRecord -Domain $Domain -Level 'Redirect'
+                            if (($RedirectedLookup | Measure-Object).Count -eq 0) {
+                                $ValidationFails.Add("FAIL: $Domain Redirected lookup does not contain a SPF record, permerror") | Out-Null
+                                $Status = 'permerror'
                             }
                             else {
-                                $Result = $TypeResult.answer.data
+                                $RecordList.Add($RedirectedLookup) | Out-Null
+                                $AllMechanism = $RedirectedLookup.AllMechanism
+                                $ValidationFails.AddRange($RedirectedLookup.ValidationFails) | Out-Null
+                                $ValidationWarns.AddRange($RedirectedLookup.ValidationWarns) | Out-Null
+                                $ValidationPasses.AddRange($RedirectedLookup.ValidationPasses) | Out-Null
+                                $IPAddresses.AddRange($RedirectedLookup.IPAddresses) | Out-Null
                             }
                         }
-                        $TypeLookups.Add(
-                            [PSCustomObject]@{
-                                Domain     = $TypeQuery.Domain 
-                                RecordType = $TypeQuery.RecordType
-                                Result     = $Result
-                            }
-                        ) | Out-Null
+                        # Record has been redirected, stop evaluating terms
+                        break
+                    }
+                 
+                    # Explanation modifier
+                    elseif ($Term -match '^exp=(?<Domain>.+)$') {}
+            
+                    # Include mechanism
+                    elseif ($Term -match '^(?<Qualifier>[+-~?])?include:(?<Value>.+)$') {
+                        $LookupCount++
 
+                        Write-Verbose "Looking up include $($Matches.Value)"
+                        $IncludeLookup = Read-SpfRecord -Domain $Matches.Value -Level 'Include'
+                        
+                        if (($IncludeLookup | Measure-Object).Count -eq 0) {
+                            $ValidationFails.Add("FAIL: $Domain Include lookup does not contain a SPF record, permerror") | Out-Null
+                            $Status = 'permerror'
+                        }
+                        else {
+                            $RecordList.Add($IncludeLookup) | Out-Null
+                            $ValidationFails.AddRange($IncludeLookup.ValidationFails) | Out-Null
+                            $ValidationWarns.AddRange($IncludeLookup.ValidationWarns) | Out-Null
+                            $ValidationPasses.AddRange($IncludeLookup.ValidationPasses) | Out-Null
+                            $IPAddresses.AddRange($IncludeLookup.IPAddresses) | Out-Null
+                        }
                     }
-                    else {
-                        $ValidationWarns.Add("WARN: No domain specified and mechanism '$_' does not have one defined. Specify a domain to perform a lookup on this record.") | Out-Null
+
+                    # Exists mechanism
+                    elseif ($Term -match '^(?<Qualifier>[+-~?])?exists:(?<Value>.+)$') {
+                        $LookupCount++
                     }
+
+                    # ip4/ip6 mechanism
+                    elseif ($Term -match '^(?<Qualifier>[+-~?])?ip[4,6]:(?<Value>.+)$') {
+                        if ($Matches.PSObject.Properties.Name -notcontains 'Qualifier' -or $Matches.Qualifier -eq '+') {
+                            $IPAddresses.Add($Matches.Value) | Out-Null
+                        }
+                    }
+
+                    # Remaining type mechanisms a,mx,ptr
+                    elseif ($Term -match '^(?<Qualifier>[+-~?])?(?<RecordType>(?:a|mx|ptr))(?:[:](?<TypeDomain>.+))?$') {
+                        $LookupCount++
                     
-                }
-                else {
-                    $ValidationFails.Add("FAIL: $Domain - Unknown mechanism or modifier specified '$_'") | Out-Null
-                    $PermError = $true
+                        if ($Matches.TypeDomain) {
+                            $TypeDomain = $Matches.TypeDomain
+                        }
+                        else {
+                            $TypeDomain = $Domain
+                        }      
+                    
+                        if ($TypeDomain -ne 'Not Specified') {
+                            try {
+                                $TypeQuery = @{ Domain = $TypeDomain; RecordType = $Matches.RecordType }
+                                Write-Verbose "Looking up $($TypeQuery.Domain)"
+                                $TypeResult = Resolve-DnsHttpsQuery @TypeQuery
+                                
+                                if ($Matches.RecordType -eq 'mx') {
+                                    $MxCount = 0
+                                    foreach ($mx in $TypeResult.Answer.data) {
+                                        $MxCount++
+                                        $Preference, $MxDomain = $mx -replace '\.$' -split '\s+'                                        
+                                        $MxQuery = Resolve-DnsHttpsQuery -Domain $MxDomain
+                                        $MxIps = $MxQuery.Answer.data
+
+                                        foreach ($MxIp in $MxIps) {
+                                            $IPAddresses.Add($MxIp) | Out-Null
+                                        }
+                                        
+                                        if ($MxCount -gt 10) {
+                                            $ValidationWarns.Add("WARN: $Domain - Mechanism 'mx' lookup for $MxDomain exceeded the 10 lookup limit (RFC 7208, Section 4.6.4") | Out-Null
+                                            $TypeResult = $null
+                                            break
+                                        }
+                                    }
+                                }
+                                elseif ($Matches.RecordType -eq 'ptr') {
+                                    $ValidationWarns.Add("WARN: $Domain - The mechanism 'ptr' should not be published in an SPF record (RFC 7208, Section 5.5)")
+                                }
+                            }
+                            catch {
+                                $TypeResult = $null 
+                            }
+
+                            if ($null -eq $TypeResult -or $TypeResult.Status -ne 0) {
+                                $Message = "$Domain - Type lookup for mechanism '$($TypeQuery.RecordType)' did not return any results"
+                                switch ($Level) {
+                                    'Parent' { 
+                                        $ValidationFails.Add("FAIL: $Message") | Out-Null
+                                        $Status = 'permerror'
+                                    }
+                                    'Include' { $ValidationWarns.Add("WARN: $Message") | Out-Null }
+                                }
+                                $Result = $false
+                            }
+                            else {
+                                if ($TypeQuery.RecordType -eq 'mx') {
+                                    $Result = $TypeResult.Answer | ForEach-Object { 
+                                        $LookupCount++
+                                        $_.Data.Split(' ')[1] 
+                                    }
+                                }
+                                else {
+                                    $Result = $TypeResult.answer.data
+                                }
+                            }
+                            $TypeLookups.Add(
+                                [PSCustomObject]@{
+                                    Domain     = $TypeQuery.Domain 
+                                    RecordType = $TypeQuery.RecordType
+                                    Result     = $Result
+                                }
+                            ) | Out-Null
+
+                        }
+                        else {
+                            $ValidationWarns.Add("WARN: No domain specified and mechanism '$Term' does not have one defined. Specify a domain to perform a lookup on this record.") | Out-Null
+                        }
+                    
+                    }
+                    elseif ($null -ne $Term) {
+                        $ValidationWarns.Add("WARN: $Domain - Unknown term specified '$Term'") | Out-Null
+                    }
                 }
             }
         }
     }
-    catch {
-        # DNS Resolver exception
-    }
-
-    # Follow redirect modifier
-    if ($IsRedirected) {
-        $RedirectedLookup = Read-SpfRecord -Domain $Domain -Level 'Redirect'
-        if (($RedirectedLookup | Measure-Object).Count -eq 0) {
-            $ValidationFails.Add("FAIL: $Domain Redirected lookup does not contain a SPF record, permerror") | Out-Null
-            $PermError = $true
-        }
-        $RecordList.Add($RedirectedLookup) | Out-Null
-        $AllMechanism = $RedirectedLookup.AllMechanism
-        $ValidationFails.AddRange($RedirectedLookup.ValidationFails) | Out-Null
-        $ValidationWarns.AddRange($RedirectedLookup.ValidationWarns) | Out-Null
-        $ValidationPasses.AddRange($RedirectedLookup.ValidationPasses) | Out-Null
-    }
-
-    # Loop through includes and perform recursive lookup
-    $IncludeHosts = $IncludeList | Sort-Object -Unique
-    if (($IncludeHosts | Measure-Object).Count -gt 0) {
-        foreach ($Include in $IncludeHosts) {
-            # Verify we have not performed a lookup for this nested SPF record
-            if ($RecordList.Domain -notcontains $Include) {
-                $IncludeRecord = Read-SpfRecord -Domain $Include -Level 'Include'
-                $RecordList.Add($IncludeRecord) | Out-Null
-                $ValidationFails.AddRange($IncludeRecord.ValidationFails) | Out-Null
-                $ValidationWarns.AddRange($IncludeRecord.ValidationWarns) | Out-Null
-                $ValidationPasses.AddRange($IncludeRecord.ValidationPasses) | Out-Null
-                $IPAddresses.AddRange($IncludeRecord.IPAddresses) | Out-Null
-                if ($IncludeRecord.PermError -eq $true) {
-                    $PermError = $true
-                }
-            }
-        }
-    }
+    catch {}
 
     # Lookup MX record for expected include information if not supplied
     if ($Level -eq 'Parent' -and $ExpectedInclude -eq '') {
@@ -613,29 +574,29 @@ function Read-SpfRecord {
         
     if ($Domain -ne 'Not Specified') {
         # Check legacy SPF type
-        $LegacySpfType = Resolve-DnsHttpsQuery -Domain $Domain -RecordType 'SPF' -FullResultRecord
+        $LegacySpfType = Resolve-DnsHttpsQuery -Domain $Domain -RecordType 'SPF'
         if ($null -ne $LegacySpfType -and $LegacySpfType -eq 0) {
-            $ValidationWarns.Add("WARN: Domain: $Domain Record Type SPF detected, this is legacy and should not be used. It is recommeded to delete this record.") | Out-Null
+            $ValidationWarns.Add("WARN: Domain: $Domain Record Type SPF detected, this is legacy and should not be used. It is recommeded to delete this record. (RFC 7208 Section 14.1)") | Out-Null
         }
     }
     if ($Level -eq 'Parent' -and $RecordCount -gt 0) {
         # Check for the correct number of records
         if ($RecordCount -gt 1) {
             $ValidationFails.Add("FAIL: There should only be one SPF record, $RecordCount detected") | Out-Null 
-            $PermError = $true
+            $Status = 'permerror'
         }
 
         # Report pass if no PermErrors are found
-        if ($PermError -eq $false) {
+        if ($Status -ne 'permerror') {
             $ValidationPasses.Add('PASS: No PermError detected in SPF record') | Out-Null
         }
 
         # Check for the correct all mechanism
         if ($AllMechanism -eq '' -and $Record -ne '') { 
             $ValidationFails.Add('FAIL: All mechanism is missing from SPF record, defaulting to +all') | Out-Null
-            $AllMechanism = '+' 
+            $AllMechanism = '+all' 
         }
-        if ($AllMechanism -eq '-') {
+        if ($AllMechanism -eq '-all') {
             $ValidationPasses.Add('PASS: SPF record ends in -all') | Out-Null
         }
         elseif ($Record -ne '') {
@@ -645,7 +606,7 @@ function Read-SpfRecord {
         # SPF lookup count
         if ($LookupCount -gt 10) { 
             $ValidationFails.Add("FAIL: SPF record exceeded 10 lookups, found $LookupCount") | Out-Null 
-            $PermError = $true
+            $Status = 'permerror'
         }
         elseif ($LookupCount -ge 9 -and $LookupCount -le 10) {
             $ValidationWarns.Add("WARN: SPF lookup count is at or close to the lookup limit, found $LookupCount") | Out-Null
@@ -657,6 +618,7 @@ function Read-SpfRecord {
         }
     }
 
+    # Set SPF result object
     $SpfResults.Record = $Record
     $SpfResults.RecordCount = $RecordCount
     $SpfResults.LookupCount = $LookupCount
@@ -667,9 +629,10 @@ function Read-SpfRecord {
     $SpfResults.RecordList = $RecordList
     $SPFResults.TypeLookups = $TypeLookups
     $SPFResults.IPAddresses = $IPAddresses
-    $SPFResults.PermError = $PermError
-            
+    $SPFResults.Status = $Status    
+
     # Output SpfResults object
+    #Write-Verbose ($SpfResults | ConvertTo-Json)
     $SpfResults
     
 }
@@ -747,22 +710,9 @@ function Read-DmarcPolicy {
 
     $RecordCount = 0
 
-    # Check for DnsConfig file and set DNS resolver
-    if (Test-Path -Path 'Config/DnsConfig.json') {
-        $Config = Get-Content 'Config/DnsConfig.json' | ConvertFrom-Json
-        $DnsQuery = @{
-            RecordType       = 'TXT'
-            Domain           = "_dmarc.$Domain"
-            Resolver         = $Config.Resolver
-            FullResultRecord = $true
-        }
-    }
-    else {
-        $DnsQuery = @{
-            RecordType       = 'TXT'
-            Domain           = "_dmarc.$Domain"
-            FullResultRecord = $true
-        }
+    $DnsQuery = @{
+        RecordType = 'TXT'
+        Domain     = "_dmarc.$Domain"
     }
     
     # Resolve DMARC record
@@ -1021,23 +971,11 @@ function Read-DkimRecord {
                 UnrecognizedTags = New-Object System.Collections.ArrayList
             }
 
-            # Check for DnsConfig file and set DNS resolver
-            if (Test-Path -Path 'Config/DnsConfig.json') {
-                $Config = Get-Content 'Config/DnsConfig.json' | ConvertFrom-Json
-                $DnsQuery = @{
-                    RecordType       = 'TXT'
-                    Domain           = "$Selector._domainkey.$Domain"
-                    Resolver         = $Config.Resolver
-                    FullResultRecord = $true
-                }
+            $DnsQuery = @{
+                RecordType = 'TXT'
+                Domain     = "$Selector._domainkey.$Domain"
             }
-            else {
-                $DnsQuery = @{
-                    RecordType       = 'TXT'
-                    Domain           = "$Selector._domainkey.$Domain"
-                    FullResultRecord = $true
-                }
-            }
+
             $QueryResults = Resolve-DnsHttpsQuery @DnsQuery
 
             if ($QueryResults -eq '' -or $QueryResults.Status -ne 0) {
