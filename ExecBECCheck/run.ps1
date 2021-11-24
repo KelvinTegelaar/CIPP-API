@@ -17,6 +17,7 @@ if ($request.query.GUID) {
                 StatusCode = [HttpStatusCode]::OK
                 Body       = $JSONOutput
             })
+        Remove-Item "Cache_BECCheck\$($Request.Query.GUID).json" -Force
         exit
     }
 }
