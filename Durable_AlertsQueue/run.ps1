@@ -1,7 +1,5 @@
 param($name)
 
-$Tenants = Get-Tenants | Select -First 35
+$Tenants = Get-Tenants
 
 $Tenants
-
-Write-Host $Tenants
