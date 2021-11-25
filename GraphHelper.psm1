@@ -103,6 +103,7 @@ function New-GraphPOSTRequest ($uri, $tenantid, $body, $type, $scope, $AsApp) {
         Write-Error "Not allowed. You cannot manage your own tenant or tenants not under your scope" 
     }
 }
+
 function convert-skuname($skuname, $skuID) {
     $ConvertTable = Import-Csv Conversiontable.csv
     if ($skuname) { $ReturnedName = ($ConvertTable | Where-Object { $_.String_Id -eq $skuname } | Select-Object -Last 1).'Product_Display_Name' }
@@ -177,7 +178,7 @@ function New-ClassicAPIPostRequest($TenantID, $Uri, $Method = 'POST', $Resource 
 }
 
 function Get-AuthorisedRequest($TenantID, $Uri) {
-    if ($uri -like "https://graph.microsoft.com/beta/contracts?`$top=999" -or $uri -like "*/customers/*" -or $uri -eq "https://graph.microsoft.com/v1.0/me/sendMail") {
+    if ($uri -like "https://graph.microsoft.com/beta/contracts?`$top=999" -or $uri -like "*/customers/*" -or $uri -eq "https://graph.microsoft.com/v1.0/me/sendMail" -or $uri -like "https://graph.microsoft.com/beta/contracts/*") {
         return $true
     }
     if ($TenantID -in (Get-Tenants).defaultdomainname) {
