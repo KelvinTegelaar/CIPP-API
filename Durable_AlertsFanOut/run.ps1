@@ -21,4 +21,13 @@ try {
 }
 catch {
   Write-Host "$($_.Exception.Message)"
+  $Stuff.Add([PSCustomObject]@{
+    Tenant = $tenant.defaultDomainName
+    Id     = ""
+    Title  = ""
+    Category = ""
+    EventDateTime = ""
+    Severity = ""
+    Status = ""
+  })
 }
