@@ -1,5 +1,5 @@
 param($name)
 
-$Tenants = Get-Tenants | Select -First 3
+$Tenants = Get-Tenants
 
 $Tenants

@@ -1,6 +1,9 @@
 param($Context)
+
+
 #$Context does not allow itself to be cast to a pscustomobject for some reason, so we converts
 $context = $Context | ConvertTo-Json | ConvertFrom-Json
+$GUID = $context.input.GUID
 $APIName = $TriggerMetadata.FunctionName
 Log-Request -user $request.headers.'x-ms-client-principal' -API $APINAME  -message "Accessed this API" -Sev "Debug"
 Write-Host "PowerShell HTTP trigger function processed a request."
@@ -15,4 +18,4 @@ $Outputs = Wait-ActivityFunction -Task $ParallelTasks
 
 
 New-Item "Cache_AlertsCheck" -ItemType Directory -Force -ErrorAction SilentlyContinue | Out-Null
-$results | ConvertTo-Json | Out-File "Cache_BECCheck\$GUID.json"
+$Outputs | ConvertTo-Json | Out-File "Cache_AlertsCheck\$GUID.json"
