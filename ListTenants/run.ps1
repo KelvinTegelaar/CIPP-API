@@ -4,7 +4,9 @@ using namespace System.Net
 param($Request, $TriggerMetadata)
 
 $APIName = $TriggerMetadata.FunctionName
+
 Log-Request -user $request.headers.'x-ms-client-principal' -API $APINAME  -message "Accessed this API" -Sev "Debug"
+
 
 # Clear Cache
 if ($request.Query.ClearCache -eq "true") {
@@ -17,7 +19,22 @@ if ($request.Query.ClearCache -eq "true") {
     exit
 }
 
-$Body = Get-Tenants
+$tenantfilter = $Request.Query.TenantFilter
+
+try {
+    if ($null -eq $TenantFilter -or $TenantFilter -eq "null") {
+        $Body = Get-Tenants
+    }
+    else {
+        $body = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/contracts?`$top=999" -tenantid $ENV:Tenantid | Select-Object ID, CustomerID, DefaultdomainName, DisplayName, domains | Where-Object -Property DefaultdomainName -eq $Tenantfilter
+    }
+    Log-Request -user $request.headers.'x-ms-client-principal' -tenant $Tenantfilter -API $APINAME  -message "Listed Tenant Details" -Sev "Info"
+}
+catch {
+    Log-Request -user $request.headers.'x-ms-client-principal' -tenant $Tenantfilter -API $APINAME -message "List Tenant failed. The error is: $($_.Exception.Message)" -Sev "Error"
+    $body = [pscustomobject]@{"Results" = "Failed to retrieve tenants: $($_.Exception.Message)" }
+}
+
 
 
 Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
