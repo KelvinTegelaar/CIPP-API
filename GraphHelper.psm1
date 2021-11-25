@@ -178,7 +178,7 @@ function New-ClassicAPIPostRequest($TenantID, $Uri, $Method = 'POST', $Resource 
 }
 
 function Get-AuthorisedRequest($TenantID, $Uri) {
-    if ($uri -like "https://graph.microsoft.com/beta/contracts?`$top=999" -or $uri -like "*/customers/*" -or $uri -eq "https://graph.microsoft.com/v1.0/me/sendMail" -or $uri -like "https://graph.microsoft.com/beta/contracts/*") {
+    if ($uri -like "https://graph.microsoft.com/beta/contracts*" -or $uri -like "*/customers/*" -or $uri -eq "https://graph.microsoft.com/v1.0/me/sendMail") {
         return $true
     }
     if ($TenantID -in (Get-Tenants).defaultdomainname) {
@@ -245,9 +245,10 @@ function New-ExoRequest ($tenantid, $cmdlet, $cmdParams) {
     $Headers = Get-GraphToken -AppID 'a0c73c16-a7e3-4564-9a95-2bdf47383716' -RefreshToken $ENV:ExchangeRefreshToken -Scope 'https://outlook.office365.com/.default' -Tenantid $tenantid 
     if ((Get-AuthorisedRequest -TenantID $tenantid)) {
         $tenant = (get-tenants | Where-Object -Property defaultDomainName -EQ $tenantid).customerid
-        if ($cmdParams){
+        if ($cmdParams) {
             $Params = $cmdParams
-        } else {
+        }
+        else {
             $Params = @{}
         }
         $ExoBody = @{
