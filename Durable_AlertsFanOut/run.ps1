@@ -1,8 +1,9 @@
 param($tenant)
 
 try {
-  $Test = New-GraphGetRequest -uri 'https://graph.microsoft.com/v1.0/security/alerts' -tenantid $tenant.defaultDomainName -AsApp $true
   $Stuff = [System.Collections.Generic.List[PSCustomObject]]@()
+  $Test = New-GraphGetRequest -uri 'https://graph.microsoft.com/v1.0/security/alerts' -tenantid $tenant.defaultDomainName -AsApp $true
+
   
 
   foreach ($alert in $test) {
@@ -21,4 +22,13 @@ try {
 }
 catch {
   Write-Host "$($_.Exception.Message)"
+  $Stuff.Add([PSCustomObject]@{
+    Tenant = $tenant.defaultDomainName
+    Id     = ""
+    Title  = ""
+    Category = ""
+    EventDateTime = ""
+    Severity = ""
+    Status = ""
+  })
 }
