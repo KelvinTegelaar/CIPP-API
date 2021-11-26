@@ -178,7 +178,7 @@ function New-ClassicAPIPostRequest($TenantID, $Uri, $Method = 'POST', $Resource 
 }
 
 function Get-AuthorisedRequest($TenantID, $Uri) {
-    if ($uri -like "https://graph.microsoft.com/beta/contracts*" -or $uri -like "*/customers/*" -or $uri -eq "https://graph.microsoft.com/v1.0/me/sendMail") {
+    if ($uri -like "https://graph.microsoft.com/beta/contracts*" -or $uri -like "*/customers/*" -or $uri -eq "https://graph.microsoft.com/v1.0/me/sendMail" -or $uri -like "https://graph.microsoft.com/beta/tenantRelationships/managedTenants*") {
         return $true
     }
     if ($TenantID -in (Get-Tenants).defaultdomainname) {
