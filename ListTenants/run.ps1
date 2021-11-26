@@ -26,7 +26,7 @@ try {
         $Body = Get-Tenants
     }
     else {
-        $body = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/contracts?`$top=999" -tenantid $ENV:Tenantid | Select-Object ID, CustomerID, DefaultdomainName, DisplayName, domains | Where-Object -Property DefaultdomainName -eq $Tenantfilter
+        $body = Get-Tenants | Where-Object -Property DefaultdomainName -EQ $Tenantfilter
     }
     Log-Request -user $request.headers.'x-ms-client-principal' -tenant $Tenantfilter -API $APINAME  -message "Listed Tenant Details" -Sev "Info"
 }
@@ -39,6 +39,6 @@ catch {
 
 Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
         StatusCode = [HttpStatusCode]::OK
-        Body       = $Body
+        Body       = @($Body)
     })
     
