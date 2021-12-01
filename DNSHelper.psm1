@@ -108,6 +108,7 @@ function Test-DNSSEC {
     }
 
     $Result = Resolve-DnsHttpsQuery @DnsQuery
+
     $RecordCount = ($Result.Answer.data | Measure-Object).Count
     if ($null -eq $Result) {
         $ValidationFails.Add('FAIL: DNSSEC validation failed, no dnskey record found') | Out-Null
@@ -129,6 +130,9 @@ function Test-DNSSEC {
                 $ValidationPasses.Add('PASS: DNSSEC enabled and validated for this domain') | Out-Null
             }
             $DSResults.Keys = $Result.answer.data
+        }
+        else {
+            $ValidationFails.Add('FAIL: DNSSEC validation failed, no dnskey record found') | Out-Null
         }
     }
 
@@ -595,8 +599,8 @@ function Read-SpfRecord {
 
         # Check for the correct all mechanism
         if ($AllMechanism -eq '' -and $Record -ne '') { 
-            $ValidationFails.Add('FAIL: All mechanism is missing from SPF record, defaulting to +all') | Out-Null
-            $AllMechanism = '+all' 
+            $ValidationFails.Add('FAIL: All mechanism is missing from SPF record, defaulting to ?all') | Out-Null
+            $AllMechanism = '?all' 
         }
         if ($AllMechanism -eq '-all') {
             $ValidationPasses.Add('PASS: SPF record ends in -all') | Out-Null
