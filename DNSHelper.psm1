@@ -946,7 +946,7 @@ function Read-DkimRecord {
     $DkimAnalysis = [PSCustomObject]@{
         Domain           = $Domain
         MailProvider     = ''
-        Records          = New-Object System.Collections.Generic.List[string]
+        Records          = New-Object System.Collections.Generic.List[PSCustomObject]
         ValidationPasses = New-Object System.Collections.Generic.List[string]
         ValidationWarns  = New-Object System.Collections.Generic.List[string]
         ValidationFails  = New-Object System.Collections.Generic.List[string]
