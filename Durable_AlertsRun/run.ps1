@@ -25,7 +25,7 @@ function New-FlatArray ([Array]$arr) {
   }
 }
 
-$DisplayableAlerts = New-FlatArray $Outputs | Sort-Object -Property EventDateTime -Descending
+$DisplayableAlerts = New-FlatArray $Outputs | ? {$_.Id -ne $null} | Sort-Object -Property EventDateTime -Descending
 
 $NewAlertsCount = $DisplayableAlerts | ? {$_.Status -eq 'newAlert'} | Measure-Object | Select-Object -ExpandProperty Count
 $InProgressAlertsCount = $DisplayableAlerts | ? {$_.Status -eq 'inProgress'} | Measure-Object | Select-Object -ExpandProperty Count
