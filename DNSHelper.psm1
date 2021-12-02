@@ -611,12 +611,16 @@ function Read-SpfRecord {
 
         # SPF lookup count
         if ($LookupCount -gt 10) { 
-            $ValidationFails.Add("FAIL: SPF record exceeded 10 lookups, found $LookupCount") | Out-Null 
+            $ValidationFails.Add("FAIL: Lookup count: $LookupCount/10. SPF evaluation will fail with a permerror (RFC 7208 Section 4.6.4)") | Out-Null 
             $Status = 'permerror'
         }
         elseif ($LookupCount -ge 9 -and $LookupCount -le 10) {
-            $ValidationWarns.Add("WARN: SPF lookup count is at or close to the lookup limit, found $LookupCount") | Out-Null
+            $ValidationWarns.Add("WARN: Lookup count: $LookupCount/10. Excessive lookups can cause the SPF evaluation to fail (RFC 7208 Section 4.6.4)") | Out-Null
         }
+        else {
+            $ValidationPasses.Add("PASS: Lookup count: $LookupCount/10") | Out-Null
+        }
+
 
         # Report pass if no errors are found
         if (($ValidationFails | Measure-Object | Select-Object -ExpandProperty Count) -eq 0) {
