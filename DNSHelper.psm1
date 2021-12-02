@@ -951,7 +951,7 @@ function Read-DkimRecord {
         ValidationWarns  = New-Object System.Collections.Generic.List[string]
         ValidationFails  = New-Object System.Collections.Generic.List[string]
     }
-    
+
     $ValidationPasses = New-Object System.Collections.Generic.List[string]
     $ValidationWarns = New-Object System.Collections.Generic.List[string]
     $ValidationFails = New-Object System.Collections.Generic.List[string]
@@ -982,7 +982,7 @@ function Read-DkimRecord {
                 HashAlgorithms   = ''
                 ServiceType      = ''
                 Granularity      = ''
-                UnrecognizedTags = New-Object System.Collections.Generic.List[string]
+                UnrecognizedTags = New-Object System.Collections.Generic.List[PSCustomObject]
             }
 
             $DnsQuery = @{
@@ -1015,13 +1015,15 @@ function Read-DkimRecord {
             # Split DKIM record into name/value pairs
             $TagList = New-Object System.Collections.Generic.List[PSCustomObject]
             Foreach ($Element in ($Record -split ';').trim()) {
-                $Name, $Value = $Element -split '='
-                $TagList.Add(
-                    [PSCustomObject]@{
-                        Name  = $Name
-                        Value = $Value
-                    }
-                ) | Out-Null
+                if ($Element -ne '') {
+                    $Name, $Value = $Element -split '='
+                    $TagList.Add(
+                        [PSCustomObject]@{
+                            Name  = $Name
+                            Value = $Value
+                        }
+                    ) | Out-Null
+                }
             }
             
 
