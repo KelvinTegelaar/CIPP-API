@@ -94,13 +94,13 @@ function Test-DNSSEC {
     )
     $DSResults = [PSCustomObject]@{
         Domain           = $Domain
-        ValidationPasses = New-Object System.Collections.ArrayList
-        ValidationWarns  = New-Object System.Collections.ArrayList
-        ValidationFails  = New-Object System.Collections.ArrayList
-        Keys             = New-Object System.Collections.ArrayList
+        ValidationPasses = New-Object System.Collections.Generic.List[string]
+        ValidationWarns  = New-Object System.Collections.Generic.List[string]
+        ValidationFails  = New-Object System.Collections.Generic.List[string]
+        Keys             = New-Object System.Collections.Generic.List[string]
     }
-    $ValidationPasses = New-Object System.Collections.ArrayList
-    $ValidationFails = New-Object System.Collections.ArrayList
+    $ValidationPasses = New-Object System.Collections.Generic.List[string]
+    $ValidationFails = New-Object System.Collections.Generic.List[string]
 
     $DnsQuery = @{
         RecordType = 'dnskey'
@@ -171,16 +171,16 @@ function Read-MXRecord {
     )
     $MXResults = [PSCustomObject]@{
         Domain           = ''
-        Records          = New-Object System.Collections.ArrayList
-        ValidationPasses = New-Object System.Collections.ArrayList
-        ValidationWarns  = New-Object System.Collections.ArrayList
-        ValidationFails  = New-Object System.Collections.ArrayList
+        Records          = New-Object System.Collections.Generic.List[PSCustomObject]
+        ValidationPasses = New-Object System.Collections.Generic.List[string]
+        ValidationWarns  = New-Object System.Collections.Generic.List[string]
+        ValidationFails  = New-Object System.Collections.Generic.List[string]
         MailProvider     = ''
         ExpectedInclude  = ''
         Selectors        = ''
     }
-    $ValidationPasses = New-Object System.Collections.ArrayList
-    $ValidationFails = New-Object System.Collections.ArrayList
+    $ValidationPasses = New-Object System.Collections.Generic.List[string]
+    $ValidationFails = New-Object System.Collections.Generic.List[string]
 
     $DnsQuery = @{
         RecordType = 'mx'
@@ -229,7 +229,7 @@ function Read-MXRecord {
                         if ($_ -match $Provider.MxMatch) {
                             $MXResults.MailProvider = $Provider
                             if (($Provider.SpfReplace | Measure-Object | Select-Object -ExpandProperty Count) -gt 0) {
-                                $ReplaceList = New-Object System.Collections.ArrayList
+                                $ReplaceList = New-Object System.Collections.Generic.List[string]
                                 foreach ($Var in $Provider.SpfReplace) { 
                                     if ($ReservedVariables.Keys -contains $Var) {
                                         $ReplaceList.Add($ReservedVariables.$Var) | Out-Null
@@ -316,27 +316,27 @@ function Read-SpfRecord {
         RecordCount      = 0
         LookupCount      = 0
         AllMechanism     = ''
-        ValidationPasses = New-Object System.Collections.ArrayList
-        ValidationWarns  = New-Object System.Collections.ArrayList
-        ValidationFails  = New-Object System.Collections.ArrayList
-        RecordList       = New-Object System.Collections.ArrayList   
-        TypeLookups      = New-Object System.Collections.ArrayList
-        IPAddresses      = New-Object System.Collections.ArrayList
+        ValidationPasses = New-Object System.Collections.Generic.List[string]
+        ValidationWarns  = New-Object System.Collections.Generic.List[string]
+        ValidationFails  = New-Object System.Collections.Generic.List[string]
+        RecordList       = New-Object System.Collections.Generic.List[PSCustomObject]   
+        TypeLookups      = New-Object System.Collections.Generic.List[PSCustomObject]
+        IPAddresses      = New-Object System.Collections.Generic.List[string]
         MailProvider     = ''
         Status           = ''
     }
 
     # Initialize lists to hold all records
-    $RecordList = New-Object System.Collections.ArrayList
-    $ValidationFails = New-Object System.Collections.ArrayList
-    $ValidationPasses = New-Object System.Collections.ArrayList
-    $ValidationWarns = New-Object System.Collections.ArrayList
+    $RecordList = New-Object System.Collections.Generic.List[PSCustomObject]
+    $ValidationFails = New-Object System.Collections.Generic.List[string]
+    $ValidationPasses = New-Object System.Collections.Generic.List[string]
+    $ValidationWarns = New-Object System.Collections.Generic.List[string]
     $LookupCount = 0
     $AllMechanism = ''
     $Status = ''
 
-    $TypeLookups = New-Object System.Collections.ArrayList
-    $IPAddresses = New-Object System.Collections.ArrayList
+    $TypeLookups = New-Object System.Collections.Generic.List[PSCustomObject]
+    $IPAddresses = New-Object System.Collections.Generic.List[string]
        
     $DnsQuery = @{
         RecordType = 'TXT'
@@ -385,7 +385,7 @@ function Read-SpfRecord {
                 $RecordTerms = $Matches.Terms -split '\s+'
                 Write-Verbose "########### Record: $Record"
 
-                if ($Level -eq 'Parent') {
+                if ($Level -eq 'Parent' -or $Level -eq 'Redirect') {
                     $AllMechanism = $Matches.AllMechanism
                 }
 
@@ -550,11 +550,14 @@ function Read-SpfRecord {
 
     # Lookup MX record for expected include information if not supplied
     if ($Level -eq 'Parent' -and $ExpectedInclude -eq '') {
-        $MXRecord = Read-MXRecord -Domain $Domain
-        $SPFResults.MailProvider = $MXRecord.MailProvider
-        if ($MXRecord.ExpectedInclude -ne '') {
-            $ExpectedInclude = $MXRecord.ExpectedInclude
+        try {
+            $MXRecord = Read-MXRecord -Domain $Domain
+            $SPFResults.MailProvider = $MXRecord.MailProvider
+            if ($MXRecord.ExpectedInclude -ne '') {
+                $ExpectedInclude = $MXRecord.ExpectedInclude
+            }
         }
+        catch {}
     }
         
     # Look for expected include record and report pass or fail
@@ -695,21 +698,21 @@ function Read-DmarcPolicy {
         SpfAlignment     = 'r'
         ReportFormat     = 'afrf'
         ReportInterval   = 86400
-        ReportingEmails  = New-Object System.Collections.ArrayList
-        ForensicEmails   = New-Object System.Collections.ArrayList
+        ReportingEmails  = New-Object System.Collections.Generic.List[string]
+        ForensicEmails   = New-Object System.Collections.Generic.List[string]
         FailureReport    = ''
-        ValidationPasses = New-Object System.Collections.ArrayList
-        ValidationWarns  = New-Object System.Collections.ArrayList
-        ValidationFails  = New-Object System.Collections.ArrayList
+        ValidationPasses = New-Object System.Collections.Generic.List[string]
+        ValidationWarns  = New-Object System.Collections.Generic.List[string]
+        ValidationFails  = New-Object System.Collections.Generic.List[string]
     }
 
     # Validation lists
-    $ValidationPasses = New-Object System.Collections.ArrayList
-    $ValidationWarns = New-Object System.Collections.ArrayList
-    $ValidationFails = New-Object System.Collections.ArrayList
+    $ValidationPasses = New-Object System.Collections.Generic.List[string]
+    $ValidationWarns = New-Object System.Collections.Generic.List[string]
+    $ValidationFails = New-Object System.Collections.Generic.List[string]
 
     # Email report domains
-    $ReportDomains = New-Object System.Collections.ArrayList
+    $ReportDomains = New-Object System.Collections.Generic.List[string]
 
     # Validation ranges
     $PolicyValues = @('none', 'quarantine', 'reject')
@@ -740,7 +743,7 @@ function Read-DmarcPolicy {
     }
 
     # Split DMARC record into name/value pairs
-    $TagList = New-Object System.Collections.ArrayList
+    $TagList = New-Object System.Collections.Generic.List[PSCustomObject]
     Foreach ($Element in ($DmarcRecord -split ';').trim()) {
         $Name, $Value = $Element -split '='
         $TagList.Add(
@@ -943,15 +946,15 @@ function Read-DkimRecord {
     $DkimAnalysis = [PSCustomObject]@{
         Domain           = $Domain
         MailProvider     = ''
-        Records          = New-Object System.Collections.ArrayList
-        ValidationPasses = New-Object System.Collections.ArrayList
-        ValidationWarns  = New-Object System.Collections.ArrayList
-        ValidationFails  = New-Object System.Collections.ArrayList
+        Records          = New-Object System.Collections.Generic.List[string]
+        ValidationPasses = New-Object System.Collections.Generic.List[string]
+        ValidationWarns  = New-Object System.Collections.Generic.List[string]
+        ValidationFails  = New-Object System.Collections.Generic.List[string]
     }
 
-    $ValidationPasses = New-Object System.Collections.ArrayList
-    $ValidationWarns = New-Object System.Collections.ArrayList
-    $ValidationFails = New-Object System.Collections.ArrayList
+    $ValidationPasses = New-Object System.Collections.Generic.List[string]
+    $ValidationWarns = New-Object System.Collections.Generic.List[string]
+    $ValidationFails = New-Object System.Collections.Generic.List[string]
 
     if (($Selectors | Measure-Object | Select-Object -ExpandProperty Count) -eq 0) {
         $MXRecord = Read-MXRecord -Domain $Domain 
@@ -976,7 +979,7 @@ function Read-DkimRecord {
                 HashAlgorithms   = ''
                 ServiceType      = ''
                 Granularity      = ''
-                UnrecognizedTags = New-Object System.Collections.ArrayList
+                UnrecognizedTags = New-Object System.Collections.Generic.List[string]
             }
 
             $DnsQuery = @{
@@ -1007,7 +1010,7 @@ function Read-DkimRecord {
             $DkimRecord.Record = $Record
 
             # Split DKIM record into name/value pairs
-            $TagList = New-Object System.Collections.ArrayList
+            $TagList = New-Object System.Collections.Generic.List[PSCustomObject]
             Foreach ($Element in ($Record -split ';').trim()) {
                 $Name, $Value = $Element -split '='
                 $TagList.Add(
