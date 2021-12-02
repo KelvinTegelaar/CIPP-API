@@ -951,15 +951,18 @@ function Read-DkimRecord {
         ValidationWarns  = New-Object System.Collections.Generic.List[string]
         ValidationFails  = New-Object System.Collections.Generic.List[string]
     }
-
+    
     $ValidationPasses = New-Object System.Collections.Generic.List[string]
     $ValidationWarns = New-Object System.Collections.Generic.List[string]
     $ValidationFails = New-Object System.Collections.Generic.List[string]
 
     if (($Selectors | Measure-Object | Select-Object -ExpandProperty Count) -eq 0) {
-        $MXRecord = Read-MXRecord -Domain $Domain 
-        $Selectors = $MXRecord.Selectors
-        $DkimAnalysis.MailProvider = $MXRecord.MailProvider
+        try {
+            $MXRecord = Read-MXRecord -Domain $Domain 
+            $Selectors = $MXRecord.Selectors
+            $DkimAnalysis.MailProvider = $MXRecord.MailProvider
+        }
+        catch {}
         if (($Selectors | Measure-Object | Select-Object -ExpandProperty Count) -eq 0) {
             $ValidationFails.Add("FAIL: $Domain - No selectors found from MX record") | Out-Null
         }
