@@ -3,7 +3,13 @@ using namespace System.Net
 param($Request, $TriggerMetadata)
 
 if ($request.query.GUID) {
-    $JSONOutput = Get-Content "Cache_BECCheck\$($Request.Query.GUID).json" | ConvertFrom-Json
+    try {
+        $JSONOutput = Get-Content "Cache_AlertsCheck\$($Request.Query.GUID).json" -ErrorAction SilentlyContinue | ConvertFrom-Json
+    }
+    catch {
+        Write-Host "Durable Function Alert List JSON not Present Yet"
+    }
+
     if (!$JSONOutput) {
         # Associate values to output bindings by calling 'Push-OutputBinding'.
         Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
@@ -17,7 +23,7 @@ if ($request.query.GUID) {
                 StatusCode = [HttpStatusCode]::OK
                 Body       = $JSONOutput
             })
-        Remove-Item "Cache_BECCheck\$($Request.Query.GUID).json" -Force
+        Remove-Item "Cache_AlertsCheck\$($Request.Query.GUID).json" -Force
         exit
     }
 }
@@ -29,9 +35,7 @@ else {
         })
     $OrchRequest = [PSCustomObject]@{
         GUID         = $RunningGUID
-        TenantFilter = $request.query.tenantfilter
-        UserID       = $request.query.userid
     }
-    $InstanceId = Start-NewOrchestration -FunctionName 'Durable_BECRun' -InputObject $OrchRequest
+    $InstanceId = Start-NewOrchestration -FunctionName 'Durable_AlertsRun' -InputObject $OrchRequest
 
 }

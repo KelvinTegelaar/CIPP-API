@@ -24,6 +24,7 @@ try {
         "postalCode"        = $userobj.postalCode
         "companyName"       = $userobj.companyName
         "mailNickname"      = $UserObj.username
+        "jobTitle"          = $UserObj.JobTitle
         "userPrincipalName" = $Email
         "usageLocation"     = $UserObj.usageLocation
         "mobilePhone"       = $userobj.mobilePhone
