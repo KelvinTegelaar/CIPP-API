@@ -250,9 +250,7 @@ function Read-MXRecord {
                         }
                     }
                 }
-                catch {
-                    Write-Host "MailProvider - Error parsing json from $_"
-                }
+                catch {}
             }
         }
         $MXResults.Records = $MXRecords
