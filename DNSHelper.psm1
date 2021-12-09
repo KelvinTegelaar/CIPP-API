@@ -778,7 +778,7 @@ function Read-DmarcPolicy {
                     if ($MailTo -notmatch '^mailto:') { $ValidationFails.Add("FAIL: Aggregate report email must begin with 'mailto:', multiple addresses must be separated by commas - found $($Tag.Value)") | Out-Null }
                     else {
                         $ReportEmailsSet = $true
-                        if ($MailTo -match '^mailto:(?<Email>.+@(?<Domain>.+))$') {
+                        if ($MailTo -match '^mailto:(?<Email>.+@(?<Domain>[^!]+?)(?:!(?<SizeLimit>[0-9]+[kmgt]?))?)$') {
                             if ($ReportDomains -notcontains $Matches.Domain -and $Matches.Domain -ne $Domain) {
                                 $ReportDomains.Add($Matches.Domain) | Out-Null
                             }
