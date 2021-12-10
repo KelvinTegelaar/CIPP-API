@@ -396,7 +396,9 @@ function Read-SpfRecord {
                 }
 
                 if ($null -ne $Matches.Discard) {
-                    $ValidationWarns.Add("WARN: The terms '$($Matches.Discard)' are past the all mechanism and will be discarded") | Out-Null
+                    if ($Matches.Discard -notmatch '^exp=(?<Domain>.+)$') {
+                        $ValidationWarns.Add("WARN: $Domain - The terms '$($Matches.Discard)' are past the all mechanism and will be discarded") | Out-Null
+                    }
                 }
 
                 foreach ($Term in $RecordTerms) {
