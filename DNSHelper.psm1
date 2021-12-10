@@ -244,6 +244,7 @@ function Read-MXRecord {
                             else {
                                 $ExpectedInclude = $Provider.SpfInclude
                             }
+
                             # Set ExpectedInclude and Selector fields based on provider details
                             $MXResults.ExpectedInclude = $ExpectedInclude
                             $MXResults.Selectors = $Provider.Selectors
@@ -399,7 +400,6 @@ function Read-SpfRecord {
                 }
 
                 foreach ($Term in $RecordTerms) {
-
                     # Redirect modifier
                     if ($Term -match 'redirect=(?<Domain>.+)') {
                         $LookupCount++
@@ -941,6 +941,8 @@ function Read-DkimRecord {
     )
 
     $MXRecord = $null
+    $MinimumSelectorPass = 0
+    $SelectorPasses = 0
 
     $DkimAnalysis = [PSCustomObject]@{
         Domain           = $Domain
@@ -960,6 +962,9 @@ function Read-DkimRecord {
             $MXRecord = Read-MXRecord -Domain $Domain 
             $Selectors = $MXRecord.Selectors
             $DkimAnalysis.MailProvider = $MXRecord.MailProvider
+            if ($MXRecord.MailProvider.PSObject.Properties.Name -contains 'MinimumSelectorPass') {
+                $MinimumSelectorPass = $MXRecord.MailProvider.MinimumSelectorPass
+            }
         }
         catch {}
         if (($Selectors | Measure-Object | Select-Object -ExpandProperty Count) -eq 0) {
@@ -993,7 +998,9 @@ function Read-DkimRecord {
 
             if ($QueryResults -eq '' -or $QueryResults.Status -ne 0) {
                 if ($QueryResults.Status -eq 3) {
-                    $ValidationFails.Add("FAIL: $Selector - Selector record does not exist (NXDOMAIN)") | Out-Null
+                    if ($MinimumSelectorPass -eq 0) {
+                        $ValidationFails.Add("FAIL: $Selector - Selector record does not exist (NXDOMAIN)") | Out-Null
+                    }
                 }
                 else {
                     $ValidationFails.Add("FAIL: $Selector - DKIM record is missing, check the selector and try again") | Out-Null
@@ -1025,7 +1032,6 @@ function Read-DkimRecord {
                 }
             }
             
-
             # Loop through name/value pairs and set object properties
             $x = 0
             foreach ($Tag in $TagList) {
@@ -1094,17 +1100,25 @@ function Read-DkimRecord {
                 }
                 else {
                     $ValidationPasses.Add("PASS: $Selector - DKIM key validation succeeded ($($DkimRecord.PublicKeyInfo.KeySize) bit)") | Out-Null
+                    $SelectorPasses++
                 }
                 ($DkimAnalysis.Records).Add($DkimRecord) | Out-Null
-            }
 
-            if (($ValidationFails | Measure-Object | Select-Object -ExpandProperty Count) -eq 0) {
-                $ValidationPasses.Add("PASS: $Selector - No errors detected with DKIM record") | Out-Null
-            }
+                if (($ValidationFails | Measure-Object | Select-Object -ExpandProperty Count) -eq 0) {
+                    $ValidationPasses.Add("PASS: $Selector - No errors detected with DKIM record") | Out-Null
+                }
+            }      
         }
     }
     else {
-        $ValidationFails.Add('FAIL: No DKIM selectors provided') | Out-Null
+        $ValidationWarns.Add('WARN: No DKIM selectors provided') | Out-Null
+    }
+
+    if ($MinimumSelectorPass -gt 0 -and $SelectorPasses -eq 0) {
+        $ValidationFails.Add('FAIL: Minimum number of selector record passes were met') | Out-Null
+    }
+    elseif ($MinimumSelectorPass -gt 0 -and $SelectorPasses -ge $MinimumSelectorPass) {
+        $ValidationPasses.Add(('PASS: Minimum number of selector record passes were met {0}/{1}' -f $SelectorPasses, $MinimumSelectorPass))
     }
 
     # Collect validation results
