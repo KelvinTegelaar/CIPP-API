@@ -350,7 +350,7 @@ function Read-SpfRecord {
                 }
                 else {
                     $Query = Resolve-DnsHttpsQuery @DnsQuery
-                    if ($null -ne $Query -and $Query.Status -ne 0) {
+                    if ($Query.Status -ne 0) {
                         if ($Query.Status -eq 3) {
                             $ValidationFails.Add("FAIL: $Domain - Record does not exist, nxdomain") | Out-Null
                             $Status = 'permerror'
@@ -361,11 +361,18 @@ function Read-SpfRecord {
                         }
                     }
                     else {
-                        $Record = $Query.answer | Select-Object -ExpandProperty data | Where-Object { $_ -match '^v=spf1' }
-                        $RecordCount = ($Record | Measure-Object).Count
+                        $Answer = ($Query.answer | Where-Object { $_.data -match '^v=spf1' })
+                        $RecordCount = ($Answer | Measure-Object).count
+                        $Record = $Answer.data
                         if ($RecordCount -eq 0) { 
                             $ValidationFails.Add("FAIL: $Domain does not resolve an SPF record.") | Out-Null
                             $Status = 'permerror'
+                        }
+                        # Check for the correct number of records
+                        elseif ($RecordCount -gt 1 -and $Level -eq 'Parent') {
+                            $ValidationFails.Add("FAIL: There must only be one SPF record, $RecordCount detected") | Out-Null 
+                            $Status = 'permerror'
+                            $Record = $Answer.data[0]
                         }
                     }
                 }
@@ -587,12 +594,6 @@ function Read-SpfRecord {
         }
     }
     if ($Level -eq 'Parent' -and $RecordCount -gt 0) {
-        # Check for the correct number of records
-        if ($RecordCount -gt 1) {
-            $ValidationFails.Add("FAIL: There should only be one SPF record, $RecordCount detected") | Out-Null 
-            $Status = 'permerror'
-        }
-
         # Report pass if no PermErrors are found
         if ($Status -ne 'permerror') {
             $ValidationPasses.Add('PASS: No PermError detected in SPF record') | Out-Null
@@ -798,7 +799,7 @@ function Read-DmarcPolicy {
                 foreach ($MailTo in ($Tag.Value -split ', ')) {
                     if ($MailTo -notmatch '^mailto:') { $ValidationFails.Add("FAIL: Forensic report email must begin with 'mailto:', multiple addresses must be separated by commas - found $($Tag.Value)") | Out-Null }
                     else {
-                        if ($MailTo -match '^mailto:(?<Email>.+@(?<Domain>.+))$') {
+                        if ($MailTo -match '^mailto:(?<Email>.+@(?<Domain>[^!]+?)(?:!(?<SizeLimit>[0-9]+[kmgt]?))?)$') {
                             if ($ReportDomains -notcontains $Matches.Domain -and $Matches.Domain -ne $Domain) {
                                 $ReportDomains.Add($Matches.Domain) | Out-Null
                             }
