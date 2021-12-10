@@ -388,7 +388,7 @@ function Read-SpfRecord {
         if ($Record -ne '' -and $RecordCount -gt 0) {
             # Split records and parse
             if ($Record -match '^v=spf1(:?\s+(?<Terms>(?![+-~?]all).+?))?(:?\s+(?<AllMechanism>[+-~?]all)(:?\s+(?<Discard>(?!all).+))?)?$') {
-                if ($Matches.PSObject.Properties -contains 'Terms') {
+                if ($Matches.Terms) {
                     $RecordTerms = $Matches.Terms -split '\s+'
                 }
                 else {
@@ -466,7 +466,7 @@ function Read-SpfRecord {
 
                     # ip4/ip6 mechanism
                     elseif ($Term -match '^(?<Qualifier>[+-~?])?ip[4,6]:(?<Value>.+)$') {
-                        if ($Matches.PSObject.Properties.Name -notcontains 'Qualifier' -or $Matches.Qualifier -eq '+') {
+                        if (-not ($Matches.Qualifier) -or $Matches.Qualifier -eq '+') {
                             $IPAddresses.Add($Matches.Value) | Out-Null
                         }
                     }
