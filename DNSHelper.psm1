@@ -387,8 +387,13 @@ function Read-SpfRecord {
 
         if ($Record -ne '' -and $RecordCount -gt 0) {
             # Split records and parse
-            if ($Record -match '^v=spf1\s+(?<Terms>.+?)(:?\s+(?<AllMechanism>[+-~?]all)(:?\s+(?<Discard>(?!all).+))?)?$') {
-                $RecordTerms = $Matches.Terms -split '\s+'
+            if ($Record -match '^v=spf1(:?\s+(?<Terms>(?![+-~?]all).+?))?(:?\s+(?<AllMechanism>[+-~?]all)(:?\s+(?<Discard>(?!all).+))?)?$') {
+                if ($Matches.PSObject.Properties -contains 'Terms') {
+                    $RecordTerms = $Matches.Terms -split '\s+'
+                }
+                else {
+                    $RecordTerms = @()
+                }
                 Write-Verbose "########### Record: $Record"
 
                 if ($Level -eq 'Parent' -or $Level -eq 'Redirect') {
@@ -562,6 +567,15 @@ function Read-SpfRecord {
             $SPFResults.MailProvider = $MXRecord.MailProvider
             if ($MXRecord.ExpectedInclude -ne '') {
                 $ExpectedInclude = $MXRecord.ExpectedInclude
+            }
+
+            if ($MXRecord.MailProvider.Name -eq 'Null') {
+                if ($Record -eq 'v=spf1 -all') {
+                    $ValidationPasses.Add('PASS: SPF record is valid for a Null MX configuration') | Out-Null
+                }
+                else {
+                    $ValidationFails.Add('FAIL: SPF record is not valid for a Null MX configuration. Expected record: "v=spf1 -all"') | Out-Null
+                }
             }
         }
         catch {}
@@ -1051,7 +1065,12 @@ function Read-DkimRecord {
                             $DkimRecord.PublicKeyInfo = Get-RsaPublicKeyInfo -EncodedString $Tag.Value
                         }
                         else {
-                            $ValidationFails.Add("FAIL: $Selector - No public key specified for DKIM record") | Out-Null 
+                            if ($MXRecord.MailProvider.Name -eq 'Null') {
+                                $ValidationPasses.Add("PASS: $Selector - DKIM configuration is valid for a Null MX record configuration") | Out-Null
+                            }
+                            else {
+                                $ValidationFails.Add("FAIL: $Selector - No public key specified for DKIM record or key revoked") | Out-Null 
+                            }
                         }
                     }
                     'k' {
@@ -1093,17 +1112,20 @@ function Read-DkimRecord {
                     $ValidationWarns.Add("WARN: $Selector - This flag 't=y' indicates that this domain is testing mode currently. If DKIM is fully deployed, this flag should be changed to t=s unless subdomaining is required.") | Out-Null
                 }
 
-                if ($DkimRecord.PublicKeyInfo.SignatureAlgorithm -ne $DkimRecord.KeyType) {
+                if ($DkimRecord.PublicKeyInfo.SignatureAlgorithm -ne $DkimRecord.KeyType -and $MXRecord.MailProvider.Name -ne 'Null') {
                     $ValidationWarns.Add("WARN: $Selector - Key signature algorithm $($DkimRecord.PublicKeyInfo.SignatureAlgorithm) does not match $($DkimRecord.KeyType)") | Out-Null
                 }
 
-                if ($DkimRecord.PublicKeyInfo.KeySize -lt 1024) {
+                if ($DkimRecord.PublicKeyInfo.KeySize -lt 1024 -and $MXRecord.MailProvider.Name -ne 'Null') {
                     $ValidationFails.Add("FAIL: $Selector - Key size is less than 1024 bit, found $($DkimRecord.PublicKeyInfo.KeySize)") | Out-Null
                 }
                 else {
-                    $ValidationPasses.Add("PASS: $Selector - DKIM key validation succeeded ($($DkimRecord.PublicKeyInfo.KeySize) bit)") | Out-Null
+                    if ($MXRecord.MailProvider.Name -ne 'Null') {
+                        $ValidationPasses.Add("PASS: $Selector - DKIM key validation succeeded ($($DkimRecord.PublicKeyInfo.KeySize) bit)") | Out-Null
+                    }
                     $SelectorPasses++
                 }
+
                 ($DkimAnalysis.Records).Add($DkimRecord) | Out-Null
 
                 if (($ValidationFails | Measure-Object | Select-Object -ExpandProperty Count) -eq 0) {
