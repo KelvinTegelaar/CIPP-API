@@ -193,12 +193,16 @@ function Read-MXRecord {
         $Result = Resolve-DnsHttpsQuery @DnsQuery
     }
     catch { $Result = $null }
-    if ($null -eq $Result -or $Result.Status -ne 0) {
+    if ($Result.Status -ne 0 -or -not ($Result.Answer)) {
         if ($Result.Status -eq 3) {
-            $ValidationFails.Add('FAIL: Record does not exist (NXDOMAIN)') | Out-Null
+            $ValidationFails.Add('FAIL: Record does not exist (nxdomain). If you do not want to receive mail for this domain use a Null MX record of . with a priority 0 (RFC 7505)') | Out-Null
+            $MXResults.MailProvider = Get-Content 'MailProviders\Null.json' | ConvertFrom-Json
+            $MXResults.Selectors = $MXRecords.MailProvider.Selectors
         }
         else {
-            $ValidationFails.Add("FAIL: $Domain - MX record does not exist") | Out-Null
+            $ValidationFails.Add("FAIL: $Domain - MX record does not exist, if you do not want to receive mail for this domain use a Null MX record of . with a priority 0 (RFC 7505)") | Out-Null
+            $MXResults.MailProvider = Get-Content 'MailProviders\Null.json' | ConvertFrom-Json
+            $MXResults.Selectors = $MXRecords.MailProvider.Selectors
         }
         $MXRecords = $null
     }
@@ -221,37 +225,42 @@ function Read-MXRecord {
             $ReservedVariables = @{
                 'DomainNameDashNotation' = $Domain -replace '\.', '-'
             }
-
-            Get-ChildItem 'MailProviders' -Exclude '_template.json' | ForEach-Object {
-                try {
-                    $Provider = Get-Content $_ | ConvertFrom-Json -ErrorAction Stop
-                    $MXRecords.Hostname | ForEach-Object {
-                        if ($_ -match $Provider.MxMatch) {
-                            $MXResults.MailProvider = $Provider
-                            if (($Provider.SpfReplace | Measure-Object | Select-Object -ExpandProperty Count) -gt 0) {
-                                $ReplaceList = New-Object System.Collections.Generic.List[string]
-                                foreach ($Var in $Provider.SpfReplace) { 
-                                    if ($ReservedVariables.Keys -contains $Var) {
-                                        $ReplaceList.Add($ReservedVariables.$Var) | Out-Null
-                                    } 
-                                    else {
-                                        $ReplaceList.Add($Matches.$Var) | Out-Null
+            if ($MXRecords.Hostname -eq '') {
+                $ValidationFails.Add("FAIL: Blank MX record found for $Domain, if you do not want to receive mail for this domain use a Null MX record of . with a priority 0 (RFC 7505)") | Out-Null
+                $MXResults.MailProvider = Get-Content 'MailProviders\Null.json' | ConvertFrom-Json
+            }
+            else {
+                Get-ChildItem 'MailProviders' -Exclude '_template.json' | ForEach-Object {
+                    try {
+                        $Provider = Get-Content $_ | ConvertFrom-Json -ErrorAction Stop
+                        $MXRecords.Hostname | ForEach-Object {
+                            if ($_ -match $Provider.MxMatch) {
+                                $MXResults.MailProvider = $Provider
+                                if (($Provider.SpfReplace | Measure-Object | Select-Object -ExpandProperty Count) -gt 0) {
+                                    $ReplaceList = New-Object System.Collections.Generic.List[string]
+                                    foreach ($Var in $Provider.SpfReplace) { 
+                                        if ($ReservedVariables.Keys -contains $Var) {
+                                            $ReplaceList.Add($ReservedVariables.$Var) | Out-Null
+                                        } 
+                                        else {
+                                            $ReplaceList.Add($Matches.$Var) | Out-Null
+                                        }
                                     }
+
+                                    $ExpectedInclude = $Provider.SpfInclude -f ($ReplaceList -join ',')
+                                }
+                                else {
+                                    $ExpectedInclude = $Provider.SpfInclude
                                 }
 
-                                $ExpectedInclude = $Provider.SpfInclude -f ($ReplaceList -join ',')
+                                # Set ExpectedInclude and Selector fields based on provider details
+                                $MXResults.ExpectedInclude = $ExpectedInclude
+                                $MXResults.Selectors = $Provider.Selectors
                             }
-                            else {
-                                $ExpectedInclude = $Provider.SpfInclude
-                            }
-
-                            # Set ExpectedInclude and Selector fields based on provider details
-                            $MXResults.ExpectedInclude = $ExpectedInclude
-                            $MXResults.Selectors = $Provider.Selectors
                         }
                     }
+                    catch {}
                 }
-                catch {}
             }
         }
         $MXResults.Records = $MXRecords
@@ -1024,7 +1033,7 @@ function Read-DkimRecord {
                 $Record = ''
             }
             else {
-                $QueryData = ($QueryResults.Answer).data
+                $QueryData = ($QueryResults.Answer).data | Where-Object { $_ -match '^v=DKIM1' }
                 if (( $QueryData | Measure-Object).Count -gt 1) {
                     $Record = $QueryData[-1]
                 }
