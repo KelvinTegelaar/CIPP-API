@@ -193,12 +193,16 @@ function Read-MXRecord {
         $Result = Resolve-DnsHttpsQuery @DnsQuery
     }
     catch { $Result = $null }
-    if ($null -eq $Result -or $Result.Status -ne 0) {
+    if ($Result.Status -ne 0 -or -not ($Result.Answer)) {
         if ($Result.Status -eq 3) {
-            $ValidationFails.Add('FAIL: Record does not exist (NXDOMAIN)') | Out-Null
+            $ValidationFails.Add('FAIL: Record does not exist (nxdomain). If you do not want to receive mail for this domain use a Null MX record of . with a priority 0 (RFC 7505)') | Out-Null
+            $MXResults.MailProvider = Get-Content 'MailProviders\Null.json' | ConvertFrom-Json
+            $MXResults.Selectors = $MXRecords.MailProvider.Selectors
         }
         else {
-            $ValidationFails.Add("FAIL: $Domain - MX record does not exist") | Out-Null
+            $ValidationFails.Add("FAIL: $Domain - MX record does not exist, if you do not want to receive mail for this domain use a Null MX record of . with a priority 0 (RFC 7505)") | Out-Null
+            $MXResults.MailProvider = Get-Content 'MailProviders\Null.json' | ConvertFrom-Json
+            $MXResults.Selectors = $MXRecords.MailProvider.Selectors
         }
         $MXRecords = $null
     }
@@ -221,37 +225,41 @@ function Read-MXRecord {
             $ReservedVariables = @{
                 'DomainNameDashNotation' = $Domain -replace '\.', '-'
             }
-
-            Get-ChildItem 'MailProviders' -Exclude '_template.json' | ForEach-Object {
-                try {
-                    $Provider = Get-Content $_ | ConvertFrom-Json -ErrorAction Stop
-                    $MXRecords.Hostname | ForEach-Object {
-                        if ($_ -match $Provider.MxMatch) {
-                            $MXResults.MailProvider = $Provider
-                            if (($Provider.SpfReplace | Measure-Object | Select-Object -ExpandProperty Count) -gt 0) {
-                                $ReplaceList = New-Object System.Collections.Generic.List[string]
-                                foreach ($Var in $Provider.SpfReplace) { 
-                                    if ($ReservedVariables.Keys -contains $Var) {
-                                        $ReplaceList.Add($ReservedVariables.$Var) | Out-Null
-                                    } 
-                                    else {
-                                        $ReplaceList.Add($Matches.$Var) | Out-Null
+            if ($MXRecords.Hostname -eq '') {
+                $ValidationFails.Add("FAIL: Blank MX record found for $Domain, if you do not want to receive mail for this domain use a Null MX record of . with a priority 0 (RFC 7505)") | Out-Null
+                $MXResults.MailProvider = Get-Content 'MailProviders\Null.json' | ConvertFrom-Json
+            }
+            else {
+                Get-ChildItem 'MailProviders' -Exclude '_template.json' | ForEach-Object {
+                    try {
+                        $Provider = Get-Content $_ | ConvertFrom-Json -ErrorAction Stop
+                        $MXRecords.Hostname | ForEach-Object {
+                            if ($_ -match $Provider.MxMatch) {
+                                $MXResults.MailProvider = $Provider
+                                if (($Provider.SpfReplace | Measure-Object | Select-Object -ExpandProperty Count) -gt 0) {
+                                    $ReplaceList = New-Object System.Collections.Generic.List[string]
+                                    foreach ($Var in $Provider.SpfReplace) { 
+                                        if ($ReservedVariables.Keys -contains $Var) {
+                                            $ReplaceList.Add($ReservedVariables.$Var) | Out-Null
+                                        } 
+                                        else {
+                                            $ReplaceList.Add($Matches.$Var) | Out-Null
+                                        }
                                     }
+
+                                    $ExpectedInclude = $Provider.SpfInclude -f ($ReplaceList -join ',')
+                                }
+                                else {
+                                    $ExpectedInclude = $Provider.SpfInclude
                                 }
 
-                                $ExpectedInclude = $Provider.SpfInclude -f ($ReplaceList -join ',')
+                                # Set ExpectedInclude and Selector fields based on provider details
+                                $MXResults.ExpectedInclude = $ExpectedInclude
+                                $MXResults.Selectors = $Provider.Selectors
                             }
-                            else {
-                                $ExpectedInclude = $Provider.SpfInclude
-                            }
-                            # Set ExpectedInclude and Selector fields based on provider details
-                            $MXResults.ExpectedInclude = $ExpectedInclude
-                            $MXResults.Selectors = $Provider.Selectors
                         }
                     }
-                }
-                catch {
-                    Write-Host "MailProvider - Error parsing json from $_"
+                    catch {}
                 }
             }
         }
@@ -352,7 +360,7 @@ function Read-SpfRecord {
                 }
                 else {
                     $Query = Resolve-DnsHttpsQuery @DnsQuery
-                    if ($null -ne $Query -and $Query.Status -ne 0) {
+                    if ($Query.Status -ne 0) {
                         if ($Query.Status -eq 3) {
                             $ValidationFails.Add("FAIL: $Domain - Record does not exist, nxdomain") | Out-Null
                             $Status = 'permerror'
@@ -363,11 +371,18 @@ function Read-SpfRecord {
                         }
                     }
                     else {
-                        $Record = $Query.answer | Select-Object -ExpandProperty data | Where-Object { $_ -match '^v=spf1' }
-                        $RecordCount = ($Record | Measure-Object).Count
+                        $Answer = ($Query.answer | Where-Object { $_.data -match '^v=spf1' })
+                        $RecordCount = ($Answer | Measure-Object).count
+                        $Record = $Answer.data
                         if ($RecordCount -eq 0) { 
                             $ValidationFails.Add("FAIL: $Domain does not resolve an SPF record.") | Out-Null
                             $Status = 'permerror'
+                        }
+                        # Check for the correct number of records
+                        elseif ($RecordCount -gt 1 -and $Level -eq 'Parent') {
+                            $ValidationFails.Add("FAIL: There must only be one SPF record, $RecordCount detected") | Out-Null 
+                            $Status = 'permerror'
+                            $Record = $Answer.data[0]
                         }
                     }
                 }
@@ -381,8 +396,13 @@ function Read-SpfRecord {
 
         if ($Record -ne '' -and $RecordCount -gt 0) {
             # Split records and parse
-            if ($Record -match '^v=spf1\s+(?<Terms>.+?)(:?\s+(?<AllMechanism>[+-~?]all)(:?\s+(?<Discard>(?!all).+))?)?$') {
-                $RecordTerms = $Matches.Terms -split '\s+'
+            if ($Record -match '^v=spf1(:?\s+(?<Terms>(?![+-~?]all).+?))?(:?\s+(?<AllMechanism>[+-~?]all)(:?\s+(?<Discard>(?!all).+))?)?$') {
+                if ($Matches.Terms) {
+                    $RecordTerms = $Matches.Terms -split '\s+'
+                }
+                else {
+                    $RecordTerms = @()
+                }
                 Write-Verbose "########### Record: $Record"
 
                 if ($Level -eq 'Parent' -or $Level -eq 'Redirect') {
@@ -390,11 +410,12 @@ function Read-SpfRecord {
                 }
 
                 if ($null -ne $Matches.Discard) {
-                    $ValidationWarns.Add("WARN: The terms '$($Matches.Discard)' are past the all mechanism and will be discarded") | Out-Null
+                    if ($Matches.Discard -notmatch '^exp=(?<Domain>.+)$') {
+                        $ValidationWarns.Add("WARN: $Domain - The terms '$($Matches.Discard)' are past the all mechanism and will be discarded") | Out-Null
+                    }
                 }
 
                 foreach ($Term in $RecordTerms) {
-
                     # Redirect modifier
                     if ($Term -match 'redirect=(?<Domain>.+)') {
                         $LookupCount++
@@ -454,7 +475,7 @@ function Read-SpfRecord {
 
                     # ip4/ip6 mechanism
                     elseif ($Term -match '^(?<Qualifier>[+-~?])?ip[4,6]:(?<Value>.+)$') {
-                        if ($Matches.PSObject.Properties.Name -notcontains 'Qualifier' -or $Matches.Qualifier -eq '+') {
+                        if (-not ($Matches.Qualifier) -or $Matches.Qualifier -eq '+') {
                             $IPAddresses.Add($Matches.Value) | Out-Null
                         }
                     }
@@ -556,6 +577,15 @@ function Read-SpfRecord {
             if ($MXRecord.ExpectedInclude -ne '') {
                 $ExpectedInclude = $MXRecord.ExpectedInclude
             }
+
+            if ($MXRecord.MailProvider.Name -eq 'Null') {
+                if ($Record -eq 'v=spf1 -all') {
+                    $ValidationPasses.Add('PASS: SPF record is valid for a Null MX configuration') | Out-Null
+                }
+                else {
+                    $ValidationFails.Add('FAIL: SPF record is not valid for a Null MX configuration. Expected record: "v=spf1 -all"') | Out-Null
+                }
+            }
         }
         catch {}
     }
@@ -589,12 +619,6 @@ function Read-SpfRecord {
         }
     }
     if ($Level -eq 'Parent' -and $RecordCount -gt 0) {
-        # Check for the correct number of records
-        if ($RecordCount -gt 1) {
-            $ValidationFails.Add("FAIL: There should only be one SPF record, $RecordCount detected") | Out-Null 
-            $Status = 'permerror'
-        }
-
         # Report pass if no PermErrors are found
         if ($Status -ne 'permerror') {
             $ValidationPasses.Add('PASS: No PermError detected in SPF record') | Out-Null
@@ -780,7 +804,7 @@ function Read-DmarcPolicy {
                     if ($MailTo -notmatch '^mailto:') { $ValidationFails.Add("FAIL: Aggregate report email must begin with 'mailto:', multiple addresses must be separated by commas - found $($Tag.Value)") | Out-Null }
                     else {
                         $ReportEmailsSet = $true
-                        if ($MailTo -match '^mailto:(?<Email>.+@(?<Domain>.+))$') {
+                        if ($MailTo -match '^mailto:(?<Email>.+@(?<Domain>[^!]+?))(?:!(?<SizeLimit>[0-9]+[kmgt]?))?$') {
                             if ($ReportDomains -notcontains $Matches.Domain -and $Matches.Domain -ne $Domain) {
                                 $ReportDomains.Add($Matches.Domain) | Out-Null
                             }
@@ -800,7 +824,7 @@ function Read-DmarcPolicy {
                 foreach ($MailTo in ($Tag.Value -split ', ')) {
                     if ($MailTo -notmatch '^mailto:') { $ValidationFails.Add("FAIL: Forensic report email must begin with 'mailto:', multiple addresses must be separated by commas - found $($Tag.Value)") | Out-Null }
                     else {
-                        if ($MailTo -match '^mailto:(?<Email>.+@(?<Domain>.+))$') {
+                        if ($MailTo -match '^mailto:(?<Email>.+@(?<Domain>[^!]+?))(?:!(?<SizeLimit>[0-9]+[kmgt]?))?$') {
                             if ($ReportDomains -notcontains $Matches.Domain -and $Matches.Domain -ne $Domain) {
                                 $ReportDomains.Add($Matches.Domain) | Out-Null
                             }
@@ -870,13 +894,13 @@ function Read-DmarcPolicy {
         if ($PolicyValues -notcontains $DmarcAnalysis.Policy) { $ValidationFails.Add("FAIL: Policy must be one of the following - none, quarantine, reject. Found $($Tag.Value)") | Out-Null }
         if ($DmarcAnalysis.Policy -eq 'reject') { $ValidationPasses.Add('PASS: Policy is sufficiently strict') | Out-Null }
         if ($DmarcAnalysis.Policy -eq 'quarantine') { $ValidationWarns.Add('WARN: Policy is only partially enforced with quarantine') | Out-Null }
-        if ($DmarcAnalysis.Policy -eq 'none') { $ValidationWarns.Add('FAIL: Policy is not being enforced') | Out-Null }
+        if ($DmarcAnalysis.Policy -eq 'none') { $ValidationFails.Add('FAIL: Policy is not being enforced') | Out-Null }
 
         # Check subdomain policy
         if ($PolicyValues -notcontains $DmarcAnalysis.SubdomainPolicy) { $ValidationFails.Add("FAIL: Subdomain policy must be one of the following - none, quarantine, reject. Found $($DmarcAnalysis.SubdomainPolicy)") | Out-Null }
         if ($DmarcAnalysis.SubdomainPolicy -eq 'reject') { $ValidationPasses.Add('PASS: Subdomain policy is sufficiently strict') | Out-Null }
         if ($DmarcAnalysis.SubdomainPolicy -eq 'quarantine') { $ValidationWarns.Add('WARN: Subdomain policy is only partially enforced with quarantine') | Out-Null }
-        if ($DmarcAnalysis.SubdomainPolicy -eq 'none') { $ValidationWarns.Add('FAIL: Subdomain policy is not being enforced') | Out-Null }
+        if ($DmarcAnalysis.SubdomainPolicy -eq 'none') { $ValidationFails.Add('FAIL: Subdomain policy is not being enforced') | Out-Null }
 
         # Check percentage - validate range and ensure 100%
         if ($DmarcAnalysis.Percent -lt 100 -and $DmarcAnalysis.Percent -gt 0) { $ValidationWarns.Add('WARN: Not all emails will be processed by the DMARC policy') | Out-Null }
@@ -942,6 +966,8 @@ function Read-DkimRecord {
     )
 
     $MXRecord = $null
+    $MinimumSelectorPass = 0
+    $SelectorPasses = 0
 
     $DkimAnalysis = [PSCustomObject]@{
         Domain           = $Domain
@@ -961,6 +987,9 @@ function Read-DkimRecord {
             $MXRecord = Read-MXRecord -Domain $Domain 
             $Selectors = $MXRecord.Selectors
             $DkimAnalysis.MailProvider = $MXRecord.MailProvider
+            if ($MXRecord.MailProvider.PSObject.Properties.Name -contains 'MinimumSelectorPass') {
+                $MinimumSelectorPass = $MXRecord.MailProvider.MinimumSelectorPass
+            }
         }
         catch {}
         if (($Selectors | Measure-Object | Select-Object -ExpandProperty Count) -eq 0) {
@@ -994,7 +1023,9 @@ function Read-DkimRecord {
 
             if ($QueryResults -eq '' -or $QueryResults.Status -ne 0) {
                 if ($QueryResults.Status -eq 3) {
-                    $ValidationFails.Add("FAIL: $Selector - Selector record does not exist (NXDOMAIN)") | Out-Null
+                    if ($MinimumSelectorPass -eq 0) {
+                        $ValidationFails.Add("FAIL: $Selector - Selector record does not exist (NXDOMAIN)") | Out-Null
+                    }
                 }
                 else {
                     $ValidationFails.Add("FAIL: $Selector - DKIM record is missing, check the selector and try again") | Out-Null
@@ -1002,7 +1033,7 @@ function Read-DkimRecord {
                 $Record = ''
             }
             else {
-                $QueryData = ($QueryResults.Answer).data
+                $QueryData = ($QueryResults.Answer).data | Where-Object { $_ -match '^v=DKIM1' }
                 if (( $QueryData | Measure-Object).Count -gt 1) {
                     $Record = $QueryData[-1]
                 }
@@ -1026,7 +1057,6 @@ function Read-DkimRecord {
                 }
             }
             
-
             # Loop through name/value pairs and set object properties
             $x = 0
             foreach ($Tag in $TagList) {
@@ -1044,7 +1074,12 @@ function Read-DkimRecord {
                             $DkimRecord.PublicKeyInfo = Get-RsaPublicKeyInfo -EncodedString $Tag.Value
                         }
                         else {
-                            $ValidationFails.Add("FAIL: $Selector - No public key specified for DKIM record") | Out-Null 
+                            if ($MXRecord.MailProvider.Name -eq 'Null') {
+                                $ValidationPasses.Add("PASS: $Selector - DKIM configuration is valid for a Null MX record configuration") | Out-Null
+                            }
+                            else {
+                                $ValidationFails.Add("FAIL: $Selector - No public key specified for DKIM record or key revoked") | Out-Null 
+                            }
                         }
                     }
                     'k' {
@@ -1086,26 +1121,37 @@ function Read-DkimRecord {
                     $ValidationWarns.Add("WARN: $Selector - This flag 't=y' indicates that this domain is testing mode currently. If DKIM is fully deployed, this flag should be changed to t=s unless subdomaining is required.") | Out-Null
                 }
 
-                if ($DkimRecord.PublicKeyInfo.SignatureAlgorithm -ne $DkimRecord.KeyType) {
+                if ($DkimRecord.PublicKeyInfo.SignatureAlgorithm -ne $DkimRecord.KeyType -and $MXRecord.MailProvider.Name -ne 'Null') {
                     $ValidationWarns.Add("WARN: $Selector - Key signature algorithm $($DkimRecord.PublicKeyInfo.SignatureAlgorithm) does not match $($DkimRecord.KeyType)") | Out-Null
                 }
 
-                if ($DkimRecord.PublicKeyInfo.KeySize -lt 1024) {
+                if ($DkimRecord.PublicKeyInfo.KeySize -lt 1024 -and $MXRecord.MailProvider.Name -ne 'Null') {
                     $ValidationFails.Add("FAIL: $Selector - Key size is less than 1024 bit, found $($DkimRecord.PublicKeyInfo.KeySize)") | Out-Null
                 }
                 else {
-                    $ValidationPasses.Add("PASS: $Selector - DKIM key validation succeeded ($($DkimRecord.PublicKeyInfo.KeySize) bit)") | Out-Null
+                    if ($MXRecord.MailProvider.Name -ne 'Null') {
+                        $ValidationPasses.Add("PASS: $Selector - DKIM key validation succeeded ($($DkimRecord.PublicKeyInfo.KeySize) bit)") | Out-Null
+                    }
+                    $SelectorPasses++
                 }
-                ($DkimAnalysis.Records).Add($DkimRecord) | Out-Null
-            }
 
-            if (($ValidationFails | Measure-Object | Select-Object -ExpandProperty Count) -eq 0) {
-                $ValidationPasses.Add("PASS: $Selector - No errors detected with DKIM record") | Out-Null
-            }
+                ($DkimAnalysis.Records).Add($DkimRecord) | Out-Null
+
+                if (($ValidationFails | Measure-Object | Select-Object -ExpandProperty Count) -eq 0) {
+                    $ValidationPasses.Add("PASS: $Selector - No errors detected with DKIM record") | Out-Null
+                }
+            }      
         }
     }
     else {
-        $ValidationFails.Add('FAIL: No DKIM selectors provided') | Out-Null
+        $ValidationWarns.Add('WARN: No DKIM selectors provided') | Out-Null
+    }
+
+    if ($MinimumSelectorPass -gt 0 -and $SelectorPasses -eq 0) {
+        $ValidationFails.Add(('FAIL: Minimum number of selector record passes were not met {0}/{1}' -f $SelectorPasses, $MinimumSelectorPass)) | Out-Null
+    }
+    elseif ($MinimumSelectorPass -gt 0 -and $SelectorPasses -ge $MinimumSelectorPass) {
+        $ValidationPasses.Add(('PASS: Minimum number of selector record passes were met {0}/{1}' -f $SelectorPasses, $MinimumSelectorPass))
     }
 
     # Collect validation results
