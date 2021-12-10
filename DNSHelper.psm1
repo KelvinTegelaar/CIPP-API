@@ -1117,7 +1117,7 @@ function Read-DkimRecord {
     }
 
     if ($MinimumSelectorPass -gt 0 -and $SelectorPasses -eq 0) {
-        $ValidationFails.Add('FAIL: Minimum number of selector record passes were met') | Out-Null
+        $ValidationFails.Add(('FAIL: Minimum number of selector record passes were not met {0}/{1}' -f $SelectorPasses, $MinimumSelectorPass)) | Out-Null
     }
     elseif ($MinimumSelectorPass -gt 0 -and $SelectorPasses -ge $MinimumSelectorPass) {
         $ValidationPasses.Add(('PASS: Minimum number of selector record passes were met {0}/{1}' -f $SelectorPasses, $MinimumSelectorPass))
