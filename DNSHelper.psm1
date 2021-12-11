@@ -64,6 +64,13 @@ function Resolve-DnsHttpsQuery {
         return $null
     }
     
+    if ($Resolver -eq 'Cloudflare' -and $RecordType -eq 'txt' -and $Results.Answer) {
+        $Results.Answer | ForEach-Object {
+            $_.data = $_.data -replace '"' -replace '\s+', ' '
+        }
+    }
+    
+    #Write-Verbose ($Results | ConvertTo-Json)
     return $Results
 }
 
