@@ -245,10 +245,11 @@ try {
     }
 
     $WhiteListedSKUs = "FLOW_FREE", "TEAMS_EXPLORATORY", "TEAMS_COMMERCIAL_TRIAL", "POWERAPPS_VIRAL", "POWER_BI_STANDARD", "DYN365_ENTERPRISE_P1_IW"
-    $UnusedLicenses = $LicenseUsage | Where-Object { ($_.Purchased -ne $_.Consumed) -and ($WhiteListedSKUs -notcontains $_.AccountSkuId.SkuPartNumber) }
+    $TrackedLicenses = $LicenseUsage | Where-Object ($WhiteListedSKUs -notcontains $_.AccountSkuId.SkuPartNumber)
+    $UnusedLicenses = TrackedLicenses | Where-Object { ($_.Purchased -ne $_.Consumed) }
     $UnusedLicensesCount = $UnusedLicenses | Measure-Object | Select-Object -ExpandProperty Count
     $UnusedLicensesResult = if ($UnusedLicensesCount -gt 0) { "FAIL" } else { "PASS" }
-    $Result.UnusedLicenseList = ($UnusedLicensesListBuilder = foreach ($License in $UnusedLicenses) {
+    $Result.UnusedLicenseList = ($UnusedLicensesListBuilder = foreach ($License in $TrackedLicenses) {
             "SKU: $($License.AccountSkuId.SkuPartNumber), Purchased: $($License.Purchased), Consumed: $($License.Consumed)"
         }) -join "<br />"
     $Result.UnusedLicensesCount = $UnusedLicensesCount
