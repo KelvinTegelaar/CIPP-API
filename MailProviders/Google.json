@@ -1,6 +1,6 @@
 {
     "Name": "Google",
-    "MxMatch": "aspmx.l.google.com",
+    "MxMatch": "google.com",
     "SpfInclude": "_spf.google.com",
     "Selectors": ["google"],
     "MinimumSelectorPass": 1,
