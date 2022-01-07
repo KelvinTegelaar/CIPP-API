@@ -64,6 +64,13 @@ function Resolve-DnsHttpsQuery {
         return $null
     }
     
+    if ($Resolver -eq 'Cloudflare' -and $RecordType -eq 'txt' -and $Results.Answer) {
+        $Results.Answer | ForEach-Object {
+            $_.data = $_.data -replace '"' -replace '\s+', ' '
+        }
+    }
+    
+    #Write-Verbose ($Results | ConvertTo-Json)
     return $Results
 }
 
@@ -139,6 +146,62 @@ function Test-DNSSEC {
     $DSResults.ValidationPasses = $ValidationPasses
     $DSResults.ValidationFails = $ValidationFails
     $DSResults
+}
+
+function Read-NSRecord {
+    <#
+    .SYNOPSIS
+    Reads NS records for domain
+    
+    .DESCRIPTION
+    Queries DNS servers to get NS records and returns in PSCustomObject list
+    
+    .PARAMETER Domain
+    Domain to query
+    
+    .EXAMPLE
+    PS> Read-NSRecord -Domain gmail.com
+    
+    #>
+    [CmdletBinding()]
+    Param(
+        [Parameter(Mandatory = $true)]
+        [string]$Domain
+    )
+    $NSResults = [PSCustomObject]@{
+        Domain           = ''
+        Records          = New-Object System.Collections.Generic.List[PSCustomObject]
+        ValidationPasses = New-Object System.Collections.Generic.List[string]
+        ValidationWarns  = New-Object System.Collections.Generic.List[string]
+        ValidationFails  = New-Object System.Collections.Generic.List[string]
+        NameProvider     = ''
+    }
+    $ValidationPasses = New-Object System.Collections.Generic.List[string]
+    $ValidationFails = New-Object System.Collections.Generic.List[string]
+
+    $DnsQuery = @{
+        RecordType = 'ns'
+        Domain     = $Domain
+    }
+ 
+    $NSResults.Domain = $Domain
+
+    try {
+        $Result = Resolve-DnsHttpsQuery @DnsQuery
+    }
+    catch { $Result = $null }
+    if ($Result.Status -ne 0 -or -not ($Result.Answer)) {
+        $ValidationFails.Add("FAIL: $Domain - NS record does not exist") | Out-Null
+        $NSRecords = $null
+    }
+    else {
+        $NSRecords = $Result.Answer.data
+        $ValidationPasses.Add("PASS: $Domain - NS record is present") | Out-Null
+        $NSResults.Records = $NSRecords
+    }
+    $NSResults.ValidationPasses = $ValidationPasses
+    $NSResults.ValidationFails = $ValidationFails
+    $NSResults
 }
 
 function Read-MXRecord {
@@ -424,10 +487,8 @@ function Read-SpfRecord {
                             $Status = 'permerror'
                         }
                         else {
-                            $Domain = $Matches.Domain
-
                             # Follow redirect modifier
-                            $RedirectedLookup = Read-SpfRecord -Domain $Domain -Level 'Redirect'
+                            $RedirectedLookup = Read-SpfRecord -Domain $Matches.Domain -Level 'Redirect'
                             if (($RedirectedLookup | Measure-Object).Count -eq 0) {
                                 $ValidationFails.Add("FAIL: $Domain Redirected lookup does not contain a SPF record, permerror") | Out-Null
                                 $Status = 'permerror'
@@ -572,6 +633,7 @@ function Read-SpfRecord {
     # Lookup MX record for expected include information if not supplied
     if ($Level -eq 'Parent' -and $ExpectedInclude -eq '') {
         try {
+            #Write-Information $Domain
             $MXRecord = Read-MXRecord -Domain $Domain
             $SPFResults.MailProvider = $MXRecord.MailProvider
             if ($MXRecord.ExpectedInclude -ne '') {
@@ -619,11 +681,6 @@ function Read-SpfRecord {
         }
     }
     if ($Level -eq 'Parent' -and $RecordCount -gt 0) {
-        # Report pass if no PermErrors are found
-        if ($Status -ne 'permerror') {
-            $ValidationPasses.Add('PASS: No PermError detected in SPF record') | Out-Null
-        }
-
         # Check for the correct all mechanism
         if ($AllMechanism -eq '' -and $Record -ne '') { 
             $ValidationFails.Add('FAIL: All mechanism is missing from SPF record, defaulting to ?all') | Out-Null
@@ -648,6 +705,10 @@ function Read-SpfRecord {
             $ValidationPasses.Add("PASS: Lookup count: $LookupCount/10") | Out-Null
         }
 
+        # Report pass if no PermErrors are found
+        if ($Status -ne 'permerror') {
+            $ValidationPasses.Add('PASS: No PermError detected in SPF record') | Out-Null
+        }
 
         # Report pass if no errors are found
         if (($ValidationFails | Measure-Object | Select-Object -ExpandProperty Count) -eq 0) {
@@ -1001,6 +1062,7 @@ function Read-DkimRecord {
         foreach ($Selector in $Selectors) {
             # Initialize object
             $DkimRecord = [PSCustomObject]@{
+                Selector         = ''
                 Record           = ''
                 Version          = ''
                 PublicKey        = ''
@@ -1041,6 +1103,7 @@ function Read-DkimRecord {
                     $Record = $QueryData
                 }
             }
+            $DkimRecord.Selector = $Selector
             $DkimRecord.Record = $Record
 
             # Split DKIM record into name/value pairs
@@ -1161,6 +1224,172 @@ function Read-DkimRecord {
 
     # Return analysis
     $DkimAnalysis
+}
+
+function Read-WhoisRecord {
+    <#
+    .SYNOPSIS
+    Reads Whois record data for queried information
+    
+    .DESCRIPTION
+    Connects to top level registrar servers (IANA, ARIN) and performs recursion to find Whois data
+    
+    .PARAMETER Query
+    Whois query to perform (e.g. microsoft.com)
+    
+    .PARAMETER Server
+    Whois server to query, defaults to whois.iana.org
+    
+    .PARAMETER Port
+    Whois server port, default 43
+    
+    .EXAMPLE
+    PS> Read-WhoisRecord -Query microsoft.com
+    
+    #>
+    [CmdletBinding()]
+    param (
+        [Parameter (Position = 0, Mandatory = $true)]
+        [String]$Query,
+        [String]$Server = 'whois.iana.org',
+        $Port = 43
+    )
+    $HasReferral = $false
+
+    # Top level referring servers, IANA and ARIN
+    $TopLevelReferrers = @('whois.iana.org', 'whois.arin.net')
+
+    # Record Pattern Matching
+    $ServerPortRegex = '(?<refsvr>[^:\r\n]+)(:(?<port>\d+))?'
+    $ReferralMatch = @{
+        'ReferralServer'         = "whois://$ServerPortRegex"
+        'Whois Server'           = $ServerPortRegex
+        'Registrar Whois Server' = $ServerPortRegex
+        'refer'                  = $ServerPortRegex
+        'remarks'                = '(?<refsvr>whois\.[0-9a-z\-\.]+\.[a-z]{2,})(:(?<port>\d+))?'
+    }
+
+    # List of properties for Registrars
+    $RegistrarProps = @(
+        'Registrar'
+    )
+
+    # Whois parser, generic Property: Value format with some multi-line support and comment handlers
+    $WhoisRegex = '^(?!(?:%|>>>|-+|#|[*]))[^\S\n]*(?<PropName>.+?):(?:[\r\n]+)?(:?(?!([0-9]|[/]{2}))[^\S\r\n]*(?<PropValue>.+))?$'
+
+    # TCP Client for Whois
+    $Client = New-Object System.Net.Sockets.TcpClient($Server, 43)
+    try {
+        # Open TCP connection and send query
+        $Stream = $Client.GetStream()
+        $ReferralServers = New-Object System.Collections.Generic.List[string]
+        $ReferralServers.Add($Server) | Out-Null
+
+        # WHOIS query to send
+        $Data = [System.Text.Encoding]::Ascii.GetBytes("$Query`r`n")
+        $Stream.Write($Data, 0, $data.length)
+
+        # Read response from stream
+        $Reader = New-Object System.IO.StreamReader $Stream, [System.Text.Encoding]::ASCII
+        $Raw = $Reader.ReadToEnd()
+        
+        # Split comments and parse raw whois results
+        $data, $comment = $Raw -split '(>>>|\n\s+--)'
+        $PropMatches = [regex]::Matches($data, $WhoisRegex, ([System.Text.RegularExpressions.RegexOptions]::MultiLine, [System.Text.RegularExpressions.RegexOptions]::IgnoreCase))
+
+        # Hold property count in hashtable for auto increment
+        $PropertyCounts = @{}
+
+        # Create ordered list for properties
+        $Results = [ordered]@{}
+        foreach ($PropMatch in $PropMatches) { 
+            $PropName = $PropMatch.Groups['PropName'].value
+            if ($Results.Contains($PropName)) {
+                $PropertyCounts.$PropName++
+                $PropName = '{0}{1}' -f $PropName, $PropertyCounts.$PropName
+                $Results[$PropName] = $PropMatch.Groups['PropValue'].value.trim()
+            }
+            else {
+                $Results[$PropName] = $PropMatch.Groups['PropValue'].value.trim()
+                $PropertyCounts.$PropName = 0
+            }
+        }
+
+        foreach ($RegistrarProp in $RegistrarProps) {
+            if ($Results.Contains($RegistrarProp)) {
+                $Results._Registrar = $Results.$RegistrarProp
+                break
+            }
+        }
+
+        # Store raw results and query metadata
+        $Results._Raw = $Raw
+        $Results._ReferralServers = New-Object System.Collections.Generic.List[string]
+        $Results._Query = $Query
+        $LastResult = $Results
+
+        # Loop through keys looking for referral server match
+        foreach ($Key in $ReferralMatch.Keys) {
+            if ([bool]($Results.Keys -match $Key)) {
+                if ($Results.$Key -match $ReferralMatch.$Key) {
+                    $ReferralServer = $Matches.refsvr
+                    if ($Server -ne $ReferralServer) {
+                        if ($Matches.port) { $Port = $Matches.port }
+                        else { $Port = 43 }
+                        $HasReferral = $true
+                        break
+                    }
+                }
+            }
+        }
+
+        # Recurse through referrals
+        if ($HasReferral) {    
+            if ($Server -ne $ReferralServer) {
+                $LastResult = $Results
+                $Results = Get-Whois -Query $Query -Server $ReferralServer -Port $Port
+                if ($Results._Raw -Match '(No match|Not Found)' -and $TopLevelReferrers -notcontains $Server) { 
+                    $Results = $LastResult 
+                }
+                else {
+                    foreach ($s in $Results._ReferralServers) {
+                        $ReferralServers.Add($s) | Out-Null
+                    }
+                }
+                
+            }
+        } 
+        else {
+            if ($Results._Raw -Match '(No match|Not Found)') {
+                $first, $newquery = ($Query -split '\.')
+                if (($newquery | Measure-Object).Count -gt 1) {
+                    $Query = $newquery -join '.'
+                    $Results = Get-Whois -Query $Query -Server $Server -Port $Port
+                    foreach ($s in $Results._ReferralServers) {
+                        $ReferralServers.Add($s) | Out-Null
+                    }
+                }
+            }
+        }
+    }
+    catch {
+        Write-Error $_.Exception.Message
+    }
+    finally {
+        IF ($Stream) {
+            $Stream.Close()
+            $Stream.Dispose()
+        }
+    }
+
+    # Collect referral server list
+    $Results._ReferralServers = $ReferralServers
+    
+    # Convert to json and back to preserve object order
+    $WhoisResults = $Results | ConvertTo-Json | ConvertFrom-Json
+
+    # Return Whois results as PSObject
+    $WhoisResults
 }
 
 function Get-RsaPublicKeyInfo {

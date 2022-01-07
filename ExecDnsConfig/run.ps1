@@ -30,17 +30,19 @@ try {
     }
     $updated = $false
     # Interact with query parameters or the body of the request.
-    if ($Request.Query.SetConfig) {
+    if ($Request.Query.Action -eq 'SetConfig') {
         if ($Request.Query.Resolver) {
             $Resolver = $Request.Query.Resolver
             if ($ValidResolvers -contains $Resolver) {
-                $Config.Resolver = $Resolver
+                try {
+                    $Config.Resolver = $Resolver
+                }
+                catch {
+                    $Config = [PSCustomObject]@{
+                        Resolver = $Resolver
+                    }
+                }
                 $updated = $true
-            }
-            else {
-                Log-Request -API $APINAME -tenant 'Global' -user $request.headers.'x-ms-client-principal' -message "Invalid DNS Resolver - $Resolver" -Sev 'Error' 
-                $body = [pscustomobject]@{'Results' = "Error: DNS resolver $Resolver is invalid." }
-                $StatusCode = [HttpStatusCode]::BadRequest
             }
         }
         if ($updated) {
@@ -48,6 +50,14 @@ try {
             Log-Request -API $APINAME -tenant 'Global' -user $request.headers.'x-ms-client-principal' -message 'DNS configuration updated' -Sev 'Info' 
             $body = [pscustomobject]@{'Results' = 'Success: DNS configuration updated.' }
         }
+        else {
+            $StatusCode = [HttpStatusCode]::BadRequest
+            $body = [pscustomobject]@{'Results' = 'Error: No DNS resolver provided.' }
+        }
+    }
+    elseif ($Request.Query.Action -eq 'GetConfig') {
+        $body = $Config
+        Log-Request -API $APINAME -tenant 'Global' -user $request.headers.'x-ms-client-principal' -message 'Retrieved DNS configuration' -Sev 'Info' 
     }
 }
 catch {
