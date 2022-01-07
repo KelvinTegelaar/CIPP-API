@@ -12,14 +12,11 @@ Write-Host "PowerShell HTTP trigger function processed a request."
 
 # Interact with query parameters or the body of the request.
 $TenantFilter = $Request.Query.TenantFilter
-if ($TenantFilter -eq $null -or $TenantFilter -eq "null") {
-        $GraphRequest = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/domains" | Select-Object id, isdefault, isinitial | Sort-Object isdefault
-}
-else {
-        $GraphRequest = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/domains" -tenantid $TenantFilter | Select-Object id, isdefault, isinitial | Sort-Object isdefault
-}
+
+$GraphRequest = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/domains" -tenantid $TenantFilter | Select-Object id, isdefault, isinitial | Sort-Object isdefault
+
 # Associate values to output bindings by calling 'Push-OutputBinding'.
 Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
                 StatusCode = [HttpStatusCode]::OK
-                Body       = $GraphRequest
+                Body       = @($GraphRequest)
         })
