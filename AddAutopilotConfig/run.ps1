@@ -49,10 +49,10 @@ $results = foreach ($Tenant in $tenants) {
             $assign = New-GraphPOSTRequest -uri  "https://graph.microsoft.com/beta/deviceManagement/windowsAutopilotDeploymentProfiles/$($GraphRequest.id)/assignments" -tenantid $Tenant -type POST -body $AssignBody
             Log-Request -user $request.headers.'x-ms-client-principal' -apiname $APIName  -tenant $($tenant) -message "Assigned autopilot profile $($Displayname) to $AssignTo" -Sev "Info"
         }
-        "Succesfully added profile for $($Tenant)<br>"
+        "Succesfully added profile for $($Tenant)"
     }
     catch {
-        "Failed to add profile for $($Tenant): $($_.Exception.Message) <br>"
+        "Failed to add profile for $($Tenant): $($_.Exception.Message)"
         Log-Request -user $request.headers.'x-ms-client-principal' -apiname $APIName  -tenant $($tenant)  -message "Failed adding Autopilot Profile $($Displayname). Error: $($_.Exception.Message)" -Sev "Error"
         continue
     }
