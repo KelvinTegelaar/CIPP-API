@@ -67,7 +67,7 @@ Try {
     Log-Request -api "ChocoAppUpload" -tenant $($Tenant) -message "$($Tenant): Succesfully added Choco App for $($Tenant)<br>"
 }
 catch {
-    "Failed to add Choco App for $($Tenant): $($_.Exception.Message) <br>"
+    "Failed to add Choco App for $($Tenant): $($_.Exception.Message)"
     Log-Request -api "ChocoAppUpload" -user $request.headers.'x-ms-client-principal'  -tenant $($Tenant) -message "Failed adding choco App $($ChocoApp.ApplicationName). Error: $($_.Exception.Message)" -Sev "Error"
     continue
 }
