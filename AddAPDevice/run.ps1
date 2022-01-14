@@ -11,14 +11,7 @@ Log-Request -user $request.headers.'x-ms-client-principal' -API $APINAME  -messa
 Write-Host "PowerShell HTTP trigger function processed a request."
 $TenantFilter = (Get-Content Tenants.cache.json | ConvertFrom-Json | Where-Object { $_.defaultdomainname -eq $Request.body.TenantFilter }).customerid
 $GroupName = if ($Request.body.Groupname) { $Request.body.Groupname } else { New-Guid }
-$rawDevices = if ($Request.body.devices -like "Device serial number,Windows product ID,Hardware hash,Manufacturer name,Device Model*") {
-    Write-Host "csvupload"
-    ($Request.body.Devices | ConvertFrom-Csv -Delimiter "," -Header "SerialNumber", "productKey", "hardwareHash", "oemManufacturerName", "modelName") | Select-Object -Skip 1
-}
-else {
-    Write-Host "Standard table request"
-    ($Request.body.Devices | ConvertFrom-Csv -Header "SerialNumber", "oemManufacturerName", "modelName", "productKey", "hardwareHash" -Delimiter ",")
-}
+$rawDevices = $request.body.autopilotData
 $Devices = ConvertTo-Json @($rawDevices)
 Write-Host $Devices
 $Result = try {
@@ -26,7 +19,7 @@ $Result = try {
     if ($groupname -in $CurrentStatus.items.id) { throw "This device batch name already exists. Please try with another name." }
     $body = '{"batchId":"' + $($GroupName) + '","devices":' + $Devices + '}'
     $GraphRequest = (New-GraphPostRequest -uri "https://api.partnercenter.microsoft.com/v1/customers/$TenantFilter/DeviceBatches" -body $body -scope 'https://api.partnercenter.microsoft.com/user_impersonation')
-    Start-Sleep 3
+    Start-Sleep 5
     $NewStatus = New-GraphgetRequest -uri "https://api.partnercenter.microsoft.com/v1/customers/$tenantfilter/DeviceBatches" -scope 'https://api.partnercenter.microsoft.com/user_impersonation'
     if ($Newstatus.totalcount -eq $CurrentStatus.totalcount) { throw "We could not find the new autopilot device. Please check if your input is correct." }
     Write-Host $CurrentStatus.Items
