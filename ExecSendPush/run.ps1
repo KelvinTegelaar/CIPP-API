@@ -19,13 +19,15 @@ function get-clientaccess {
     )
     try {
         $ClientToken = Invoke-RestMethod -Method post -Uri $uri -Body $body -ea stop
-    } catch {
+    }
+    catch {
         if ($count -lt 20) {
 
             $count++
             Start-Sleep 1
             $ClientToken = get-clientaccess -uri $uri -body $body -count $count
-        } else {
+        }
+        else {
             Throw "Could not get Client Token: $_"
         }
     }
@@ -37,7 +39,7 @@ function get-clientaccess {
 $SPResult = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/servicePrincipals?`$top=999&`$select=id,appId" -tenantid $TenantFilter
 
 # Check if we have one for the MFA App
-$SPID = ($SPResult | where-object { $_.appId -eq $MFAAppID }).id
+$SPID = ($SPResult | Where-Object { $_.appId -eq $MFAAppID }).id
 
 # Create a serivce principal if needed
 if (!$SPID) {
@@ -55,7 +57,7 @@ $PassReqBody = @{
         "endDateTime"   = $(((Get-Date).addminutes(5)))
         "startDateTime" = $((Get-Date).addminutes(-5))
     }
-} | ConvertTo-Json -depth 5
+} | ConvertTo-Json -Depth 5
 
 $TempPass = (New-GraphPostRequest -uri "https://graph.microsoft.com/v1.0/servicePrincipals/$SPID/addPassword" -tenantid $TenantFilter -type POST -body $PassReqBody -verbose).secretText
 
@@ -84,7 +86,8 @@ $body = @{
 $ClientUri = "https://login.microsoftonline.com/$TenantFilter/oauth2/token"
 try {
     $ClientToken = get-clientaccess -Uri $ClientUri -Body $body
-} catch {
+}
+catch {
     $Body = "Failed to create temporary password"
 }
 
@@ -93,19 +96,19 @@ if ($ClientToken) {
 
     $ClientHeaders = @{ "Authorization" = "Bearer $($ClientToken.access_token)" }
 
-    $obj = Invoke-RestMethod -uri 'https://adnotifications.windowsazure.com/StrongAuthenticationService.svc/Connector//BeginTwoWayAuthentication' -Method POST -Headers $ClientHeaders -Body $XML -ContentType 'application/xml'
+    $obj = Invoke-RestMethod -Uri 'https://adnotifications.windowsazure.com/StrongAuthenticationService.svc/Connector//BeginTwoWayAuthentication' -Method POST -Headers $ClientHeaders -Body $XML -ContentType 'application/xml'
 
     if ($obj.BeginTwoWayAuthenticationResponse.result) {
-        $Body = "<div class=`"alert alert-success`" role=`"alert`"><i class=`"fas fa-check fa-fw`"></i>&nbsp;&nbsp;Received an MFA confirmation: $($obj.BeginTwoWayAuthenticationResponse.result.value | Out-String)</div>"
+        $Body = "Received an MFA confirmation: $($obj.BeginTwoWayAuthenticationResponse.result.value | Out-String)"
     }
     if ($obj.BeginTwoWayAuthenticationResponse.AuthenticationResult -ne $true) {
-        $Body = "<div class=`"alert alert-warning`" role=`"alert`"><i class=`"fas fa-skull-crossbones fa-fw`"></i>&nbsp;&nbsp;Authentication Failed! Does the user have Push/Phone call MFA configured? Errorcode: $($obj.BeginTwoWayAuthenticationResponse.result.value | out-string)</div>"
+        $Body = "Authentication Failed! Does the user have Push/Phone call MFA configured? Errorcode: $($obj.BeginTwoWayAuthenticationResponse.result.value | Out-String)"
     }
     
 }
 
 $Results = [pscustomobject]@{"Results" = $Body }
-Log-Request -user $request.headers.'x-ms-client-principal' -API $APINAME  -message "Sent push request to $UserEmail - Result: $($obj.BeginTwoWayAuthenticationResponse.result.value | out-string)" -Sev "Info"
+Log-Request -user $request.headers.'x-ms-client-principal' -API $APINAME  -message "Sent push request to $UserEmail - Result: $($obj.BeginTwoWayAuthenticationResponse.result.value | Out-String)" -Sev "Info"
 
 Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
         StatusCode = [HttpStatusCode]::OK

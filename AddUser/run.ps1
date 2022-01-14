@@ -10,7 +10,7 @@ $userobj = $Request.body
 # Write to the Azure Functions log stream.
 Write-Host "PowerShell HTTP trigger function processed a request."
 try {
-    $licenses = ($userobj | Select-Object "License_*").psobject.properties.value
+    $license = $userobj.license
     $Aliases = ($userobj.AddedAliases).Split([Environment]::NewLine)
     $password = if ($userobj.password) { $userobj.password } else { -join ('abcdefghkmnrstuvwxyzABCDEFGHKLMNPRSTUVWXYZ23456789$%&*#'.ToCharArray() | Get-Random -Count 12) }
     $UserprincipalName = "$($UserObj.username)@$($UserObj.domain)"
@@ -39,7 +39,10 @@ catch {
 }
 
 try {
-    if ($licenses) {
+    if ($license) {
+        Write-Host ($userobj | ConvertTo-Json)
+        $licenses = (($userobj | Select-Object "License_*").psobject.properties | Where-Object { $_.value -EQ $true }).name -replace "License_", ""
+        Write-Host "Lics are: $licences"
         $LicenseBody = if ($licenses.count -ge 2) {
             $liclist = foreach ($license in $Licenses) { '{"disabledPlans": [],"skuId": "' + $license + '" },' }
             '{"addLicenses": [' + $LicList + '], "removeLicenses": [ ] }'
@@ -47,6 +50,7 @@ try {
         else {
             '{"addLicenses": [ {"disabledPlans": [],"skuId": "' + $licenses + '" }],"removeLicenses": [ ]}'
         }
+        Write-Host $LicenseBody
         $LicRequest = New-GraphPostRequest -uri "https://graph.microsoft.com/beta/users/$($GraphRequest.id)/assignlicense" -tenantid $Userobj.tenantid -type POST -body $LicenseBody -verbose
         Log-Request -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $($userobj.tenantid)  -message "Assigned user $($userobj.displayname) license $($licences)" -Sev "Info"
         $body = $results.add("Assigned licenses.")
