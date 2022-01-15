@@ -392,9 +392,11 @@ function Read-SpfRecord {
         ValidationFails  = New-Object System.Collections.Generic.List[string]
         RecordList       = New-Object System.Collections.Generic.List[PSCustomObject]   
         TypeLookups      = New-Object System.Collections.Generic.List[PSCustomObject]
+        Recommendations  = New-Object System.Collections.Generic.List[PSCustomObject]
         IPAddresses      = New-Object System.Collections.Generic.List[string]
         MailProvider     = ''
         Status           = ''
+
     }
 
     # Initialize lists to hold all records
@@ -402,6 +404,7 @@ function Read-SpfRecord {
     $ValidationFails = New-Object System.Collections.Generic.List[string]
     $ValidationPasses = New-Object System.Collections.Generic.List[string]
     $ValidationWarns = New-Object System.Collections.Generic.List[string]
+    $Recommendations = New-Object System.Collections.Generic.List[PSCustomObject]
     $LookupCount = 0
     $AllMechanism = ''
     $Status = ''
@@ -444,6 +447,7 @@ function Read-SpfRecord {
                         # Check for the correct number of records
                         elseif ($RecordCount -gt 1 -and $Level -eq 'Parent') {
                             $ValidationFails.Add("FAIL: There must only be one SPF record, $RecordCount detected") | Out-Null 
+                            $Recommendations.Add([pscustomobject]@{Message = 'Delete one of the records beginning with v=spf1' }) | Out-Null
                             $Status = 'permerror'
                             $Record = $Answer.data[0]
                         }
@@ -475,6 +479,11 @@ function Read-SpfRecord {
                 if ($null -ne $Matches.Discard) {
                     if ($Matches.Discard -notmatch '^exp=(?<Domain>.+)$') {
                         $ValidationWarns.Add("WARN: $Domain - The terms '$($Matches.Discard)' are past the all mechanism and will be discarded") | Out-Null
+                        $Recommendations.Add([pscustomobject]@{
+                                Message = 'Remove entries following all';
+                                Match   = $Matches.Discard
+                                Replace = ''
+                            }) | Out-Null
                     }
                 }
 
@@ -485,6 +494,11 @@ function Read-SpfRecord {
                         if ($Record -match '(?<Qualifier>[+-~?])all') {
                             $ValidationFails.Add("FAIL: $Domain - A record with a redirect modifier must not contain an all mechanism, permerror") | Out-Null
                             $Status = 'permerror'
+                            $Recommendations.Add([pscustomobject]@{
+                                    Message = "Remove the 'all' mechanism from this record.";
+                                    Match   = '{0}all' -f $Matches.Qualifier
+                                    Replace = ''
+                                }) | Out-Null
                         }
                         else {
                             # Follow redirect modifier
@@ -812,8 +826,17 @@ function Read-DmarcPolicy {
     }
     
     # Resolve DMARC record
+
     $Query = Resolve-DnsHttpsQuery @DnsQuery
-    if (($null -ne $Query -and $Query.Status -ne 0) -or $null -eq $Query.Answer.data) {
+
+    $RecordCount = 0
+    $Query.Answer.data | Where-Object { $_.data -match '^v=DMARC1' } | ForEach-Object {
+        $DmarcRecord = $Query.Answer.data
+        $DmarcAnalysis.Record = $DmarcRecord
+        $RecordCount = ($DmarcRecord | Measure-Object).Count   
+    }
+
+    if ($Query.Status -ne 0 -or $RecordCount -eq 0) {
         if ($Query.Status -eq 3) {
             $ValidationFails.Add('FAIL: Record does not exist (NXDOMAIN)') | Out-Null
         }
@@ -821,11 +844,7 @@ function Read-DmarcPolicy {
             $ValidationFails.Add("FAIL: $Domain does not have a DMARC record") | Out-Null
         }
     }
-    else {
-        $DmarcRecord = ($Query.Answer | Where-Object -Property type -EQ 16).data
-        $DmarcAnalysis.Record = $DmarcRecord
-        $RecordCount = ($DmarcRecord | Measure-Object).Count   
-    }
+
 
     # Split DMARC record into name/value pairs
     $TagList = New-Object System.Collections.Generic.List[PSCustomObject]
@@ -900,7 +919,7 @@ function Read-DmarcPolicy {
             } 
             'pct' {
                 # Percentage of email to check
-                $DmarcAnalysis.Percent = $Tag.Value
+                $DmarcAnalysis.Percent = [int]$Tag.Value
             }
             'adkim' {
                 # DKIM Alignmenet
@@ -965,7 +984,7 @@ function Read-DmarcPolicy {
 
         # Check percentage - validate range and ensure 100%
         if ($DmarcAnalysis.Percent -lt 100 -and $DmarcAnalysis.Percent -gt 0) { $ValidationWarns.Add('WARN: Not all emails will be processed by the DMARC policy') | Out-Null }
-        if ($DmarcAnalysis.Percent -gt 100 -or $DmarcAnalysis.Percent -le 0) { $ValidationFails.Add('FAIL: Percentage must be between 1 and 100') | Out-Null }
+        if ($DmarcAnalysis.Percent -gt 100 -or $DmarcAnalysis.Percent -lt 1) { $ValidationFails.Add('FAIL: Percentage must be between 1 and 100') | Out-Null }
 
         # Check report format
         if ($ReportFormatValues -notcontains $DmarcAnalysis.ReportFormat) { $ValidationFails.Add("FAIL: The report format '$($DmarcAnalysis.ReportFormat)' is not supported") | Out-Null }
@@ -1023,7 +1042,7 @@ function Read-DkimRecord {
         [string]$Domain,
 
         [Parameter()]
-        [string[]]$Selectors = @()
+        [System.Collections.Generic.List[string]]$Selectors = @()
     )
 
     $MXRecord = $null
@@ -1044,17 +1063,37 @@ function Read-DkimRecord {
     $ValidationFails = New-Object System.Collections.Generic.List[string]
 
     if (($Selectors | Measure-Object | Select-Object -ExpandProperty Count) -eq 0) {
+        # MX lookup, check for defined selectors
         try {
-            $MXRecord = Read-MXRecord -Domain $Domain 
-            $Selectors = $MXRecord.Selectors
+            $MXRecord = Read-MXRecord -Domain $Domain
+            foreach ($Selector in $MXRecord.Selectors) {
+                $Selectors.Add($Selector) | Out-Null
+            }
             $DkimAnalysis.MailProvider = $MXRecord.MailProvider
             if ($MXRecord.MailProvider.PSObject.Properties.Name -contains 'MinimumSelectorPass') {
                 $MinimumSelectorPass = $MXRecord.MailProvider.MinimumSelectorPass
             }
         }
         catch {}
+        
+        # Explicitly defined DKIM selectors
+        if (Test-Path 'Config\DkimSelectors') {
+            try {
+                Get-ChildItem 'Config\DkimSelectors' -Filter "$($Domain).json" -ErrorAction Stop | ForEach-Object {
+                    try {
+                        $CustomSelectors = Get-Content $_ | ConvertFrom-Json
+                        foreach ($Selector in $CustomSelectors) {
+                            $Selectors.Add($Selector) | Out-Null
+                        }
+                    } 
+                    catch {}
+                }
+            }
+            catch {}
+        }
+
         if (($Selectors | Measure-Object | Select-Object -ExpandProperty Count) -eq 0) {
-            $ValidationFails.Add("FAIL: $Domain - No selectors found from MX record") | Out-Null
+            $ValidationFails.Add("FAIL: $Domain - No selectors provided") | Out-Null
         }
     }
     
@@ -1104,13 +1143,15 @@ function Read-DkimRecord {
                 }
             }
             $DkimRecord.Selector = $Selector
+
+            if ($null -eq $Record) { $Record = '' }
             $DkimRecord.Record = $Record
 
             # Split DKIM record into name/value pairs
             $TagList = New-Object System.Collections.Generic.List[PSCustomObject]
-            Foreach ($Element in ($Record -split ';').trim()) {
+            Foreach ($Element in ($Record -split ';')) {
                 if ($Element -ne '') {
-                    $Name, $Value = $Element -split '='
+                    $Name, $Value = $Element.trim() -split '='
                     $TagList.Add(
                         [PSCustomObject]@{
                             Name  = $Name
