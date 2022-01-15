@@ -8,5 +8,4 @@ Cache_*
 Logs
 ExcludedTenants
 Config
-DkimSelectors
 SendNotifications/config.json

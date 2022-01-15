@@ -826,8 +826,17 @@ function Read-DmarcPolicy {
     }
     
     # Resolve DMARC record
+
     $Query = Resolve-DnsHttpsQuery @DnsQuery
-    if (($null -ne $Query -and $Query.Status -ne 0) -or $null -eq $Query.Answer.data) {
+
+    $RecordCount = 0
+    $Query.Answer.data | Where-Object { $_.data -match '^v=DMARC1' } | ForEach-Object {
+        $DmarcRecord = $Query.Answer.data
+        $DmarcAnalysis.Record = $DmarcRecord
+        $RecordCount = ($DmarcRecord | Measure-Object).Count   
+    }
+
+    if ($Query.Status -ne 0 -or $RecordCount -eq 0) {
         if ($Query.Status -eq 3) {
             $ValidationFails.Add('FAIL: Record does not exist (NXDOMAIN)') | Out-Null
         }
@@ -835,11 +844,7 @@ function Read-DmarcPolicy {
             $ValidationFails.Add("FAIL: $Domain does not have a DMARC record") | Out-Null
         }
     }
-    else {
-        $DmarcRecord = ($Query.Answer | Where-Object -Property type -EQ 16).data
-        $DmarcAnalysis.Record = $DmarcRecord
-        $RecordCount = ($DmarcRecord | Measure-Object).Count   
-    }
+
 
     # Split DMARC record into name/value pairs
     $TagList = New-Object System.Collections.Generic.List[PSCustomObject]
@@ -1070,19 +1075,22 @@ function Read-DkimRecord {
             }
         }
         catch {}
+        
         # Explicitly defined DKIM selectors
-        try {
-            Get-ChildItem 'DkimSelectors' -Filter "$($Domain).json" | ForEach-Object {
-                try {
-                    $CustomSelectors = Get-Content $_ | ConvertFrom-Json
-                    foreach ($Selector in $CustomSelectors) {
-                        $Selectors.Add($Selector) | Out-Null
-                    }
-                } 
-                catch {}
+        if (Test-Path 'Config\DkimSelectors') {
+            try {
+                Get-ChildItem 'Config\DkimSelectors' -Filter "$($Domain).json" -ErrorAction Stop | ForEach-Object {
+                    try {
+                        $CustomSelectors = Get-Content $_ | ConvertFrom-Json
+                        foreach ($Selector in $CustomSelectors) {
+                            $Selectors.Add($Selector) | Out-Null
+                        }
+                    } 
+                    catch {}
+                }
             }
+            catch {}
         }
-        catch {}
 
         if (($Selectors | Measure-Object | Select-Object -ExpandProperty Count) -eq 0) {
             $ValidationFails.Add("FAIL: $Domain - No selectors provided") | Out-Null
@@ -1135,13 +1143,15 @@ function Read-DkimRecord {
                 }
             }
             $DkimRecord.Selector = $Selector
+
+            if ($null -eq $Record) { $Record = '' }
             $DkimRecord.Record = $Record
 
             # Split DKIM record into name/value pairs
             $TagList = New-Object System.Collections.Generic.List[PSCustomObject]
-            Foreach ($Element in ($Record -split ';').trim()) {
+            Foreach ($Element in ($Record -split ';')) {
                 if ($Element -ne '') {
-                    $Name, $Value = $Element -split '='
+                    $Name, $Value = $Element.trim() -split '='
                     $TagList.Add(
                         [PSCustomObject]@{
                             Name  = $Name
