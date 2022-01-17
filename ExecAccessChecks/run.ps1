@@ -36,12 +36,18 @@ if ($Request.query.Tenants -eq "true") {
     $results = foreach ($tenant in $Tenants) {
         try {
             $token = New-GraphGetRequest -uri 'https://graph.microsoft.com/v1.0/users/delta?$select=displayName' -tenantid $tenant
-            "$($Tenant): Succesfully connected<br>"
+            @{
+                TenantName = "$($Tenant)"
+                Status     = "Succesfully connected" 
+            }
             Log-Request -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $tenant -message "Tenant access check executed succesfully" -Sev "Info"
 
         }
         catch {
-            "$($tenant): Failed to connect to $($_.Exception.Message)<br>"
+            @{
+                TenantName = "$($tenant)"
+                Status     = "Failed to connect to $($_.Exception.Message)" 
+            }
             Log-Request -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $tenant -message "Tenant access check failed: $($_) " -Sev "Error"
 
         }
@@ -54,12 +60,18 @@ if ($Request.query.Tenants -eq "true") {
             $session = Import-PSSession $session -ea Silentlycontinue -AllowClobber -CommandName "Get-OrganizationConfig"
             $org = Get-OrganizationConfig
             $null = Get-PSSession | Remove-PSSession
-            "$($Tenant): Succesfully connected to Exchange<br>"
+            @{ 
+                TenantName = "$($Tenant)"
+                Status     = "Succesfully connected to Exchange" 
+            }
         }
         catch {
             $Message = ($_ | ConvertFrom-Json).error_description 
             if ($Message -eq $null) { $Message = $($_.Exception.Message) }
-            "$($tenant): Failed to connect to Exchange: $($Message)<br>"
+            @{
+                TenantName = "$($Tenant)"
+                Status     = "Failed to connect to Exchange: $($Message)" 
+            }
             Log-Request -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $tenant -message "Tenant access check for Exchange failed: $($Message) " -Sev "Error"
         }
     }
