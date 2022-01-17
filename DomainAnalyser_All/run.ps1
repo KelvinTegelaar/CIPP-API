@@ -58,7 +58,13 @@ $ScoreDomain = 0
 
 $MXRecord = Read-MXRecord -Domain $Domain
 $Result.ExpectedSPFRecord = $MXRecord.ExpectedInclude
-$Result.MailProvider = $MXRecord.MailProvider.Name
+
+if ([string]::IsNullOrEmpty($MXRecord.MailProvider)) {
+    $Result.MailProvider = 'Unknown'
+}
+else {
+    $Result.MailProvider = $MXRecord.MailProvider.Name
+}
 
 # Get SPF Record
 try {
