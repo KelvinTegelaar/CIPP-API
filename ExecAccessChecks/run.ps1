@@ -18,8 +18,7 @@ if ($Request.query.Permissions -eq "true") {
         $GraphPermissions = ((Get-GraphToken -returnRefresh $true).scope).split(' ') -replace "https://graph.microsoft.com/", "" | Where-Object { $_ -notin @("email", "openid", "profile", ".default") }
         $MissingPermissions = $ExpectedPermissions | Where-Object { $_ -notin $GraphPermissions } 
         if ($MissingPermissions) {
-            "Your Secure Application Model is missing the following <i>delegated</i> permissions:<br>"
-            $MissingPermissions -join "<br>"
+            @{ MissingPermissions = @($MissingPermissions) }
         }
         else {
             "Your Secure Application Model has all required permissions"
@@ -62,13 +61,9 @@ if ($Request.query.Tenants -eq "true") {
             if ($Message -eq $null) { $Message = $($_.Exception.Message) }
             "$($tenant): Failed to connect to Exchange: $($Message)<br>"
             Log-Request -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $tenant -message "Tenant access check for Exchange failed: $($Message) " -Sev "Error"
-
-
         }
     }
     if (!$Tenants) { $results = "Could not load the tenants list from cache. Please run permissions check first, or visit the tenants page." }
-
-
 }
 
 $body = [pscustomobject]@{"Results" = $Results }
