@@ -1,0 +1,8 @@
+{
+    "Name": "Sophos",
+    "MxMatch": "mx-[0-9]{2}-(?<Country>(us|eu))-(?<Location>(central|east|west))-(?<Server>([0-9])).prod.hydra.sophos.com",
+    "SpfInclude": "_spf.prod.hydra.sophos.com",
+    "_MxComment": "https://docs.sophos.com/central/Customer/help/en-us/central/Customer/learningContents/Configure365.html",
+    "_SpfComment": "https://docs.sophos.com/central/Customer/help/en-us/central/Customer/tasks/updatingspf.html",
+    "_DkimComment": "https://docs.sophos.com/central/Customer/help/en-us/central/Customer/common/learningContents/DkimKeys.html"
+}

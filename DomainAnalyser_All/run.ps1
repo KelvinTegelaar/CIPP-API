@@ -58,7 +58,13 @@ $ScoreDomain = 0
 
 $MXRecord = Read-MXRecord -Domain $Domain
 $Result.ExpectedSPFRecord = $MXRecord.ExpectedInclude
-$Result.MailProvider = $MXRecord.MailProvider.Name
+
+if ([string]::IsNullOrEmpty($MXRecord.MailProvider)) {
+    $Result.MailProvider = 'Unknown'
+}
+else {
+    $Result.MailProvider = $MXRecord.MailProvider.Name
+}
 
 # Get SPF Record
 try {
@@ -82,9 +88,12 @@ catch {
 $Result.SPFPassAll = $false
 $Result.SPFPassTest = $false
 
-if ($SPFRecord.ValidationPasses -contains '*Expected SPF*') {
-    $ScoreDomain += $Scores.SPFMSRecommended
-    $Result.SPFPassTest = $true
+foreach ($Validation in $SPFRecord.ValidationPasses) {
+    if ($Validation -match 'Expected SPF') {
+        $ScoreDomain += $Scores.SPFMSRecommended
+        $Result.SPFPassTest = $true
+        break
+    }
 }
 
 # Check warning + fail counts to ensure all tests pass
