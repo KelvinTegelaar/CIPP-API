@@ -18,8 +18,7 @@ if ($Request.query.Permissions -eq "true") {
         $GraphPermissions = ((Get-GraphToken -returnRefresh $true).scope).split(' ') -replace "https://graph.microsoft.com/", "" | Where-Object { $_ -notin @("email", "openid", "profile", ".default") }
         $MissingPermissions = $ExpectedPermissions | Where-Object { $_ -notin $GraphPermissions } 
         if ($MissingPermissions) {
-            "Your Secure Application Model is missing the following <i>delegated</i> permissions:<br>"
-            $MissingPermissions -join "<br>"
+            @{ MissingPermissions = @($MissingPermissions) }
         }
         else {
             "Your Secure Application Model has all required permissions"
@@ -37,12 +36,18 @@ if ($Request.query.Tenants -eq "true") {
     $results = foreach ($tenant in $Tenants) {
         try {
             $token = New-GraphGetRequest -uri 'https://graph.microsoft.com/v1.0/users/delta?$select=displayName' -tenantid $tenant
-            "$($Tenant): Succesfully connected<br>"
+            @{
+                TenantName = "$($Tenant)"
+                Status     = "Succesfully connected" 
+            }
             Log-Request -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $tenant -message "Tenant access check executed succesfully" -Sev "Info"
 
         }
         catch {
-            "$($tenant): Failed to connect to $($_.Exception.Message)<br>"
+            @{
+                TenantName = "$($tenant)"
+                Status     = "Failed to connect to $($_.Exception.Message)" 
+            }
             Log-Request -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $tenant -message "Tenant access check failed: $($_) " -Sev "Error"
 
         }
@@ -55,20 +60,22 @@ if ($Request.query.Tenants -eq "true") {
             $session = Import-PSSession $session -ea Silentlycontinue -AllowClobber -CommandName "Get-OrganizationConfig"
             $org = Get-OrganizationConfig
             $null = Get-PSSession | Remove-PSSession
-            "$($Tenant): Succesfully connected to Exchange<br>"
+            @{ 
+                TenantName = "$($Tenant)"
+                Status     = "Succesfully connected to Exchange" 
+            }
         }
         catch {
             $Message = ($_ | ConvertFrom-Json).error_description 
             if ($Message -eq $null) { $Message = $($_.Exception.Message) }
-            "$($tenant): Failed to connect to Exchange: $($Message)<br>"
+            @{
+                TenantName = "$($Tenant)"
+                Status     = "Failed to connect to Exchange: $($Message)" 
+            }
             Log-Request -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $tenant -message "Tenant access check for Exchange failed: $($Message) " -Sev "Error"
-
-
         }
     }
     if (!$Tenants) { $results = "Could not load the tenants list from cache. Please run permissions check first, or visit the tenants page." }
-
-
 }
 
 $body = [pscustomobject]@{"Results" = $Results }
