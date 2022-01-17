@@ -830,10 +830,10 @@ function Read-DmarcPolicy {
     $Query = Resolve-DnsHttpsQuery @DnsQuery
 
     $RecordCount = 0
-    $Query.Answer.data | Where-Object { $_.data -match '^v=DMARC1' } | ForEach-Object {
-        $DmarcRecord = $Query.Answer.data
+    $Query.Answer | Where-Object { $_.data -match '^v=DMARC1' } | ForEach-Object {
+        $DmarcRecord = $_.data
         $DmarcAnalysis.Record = $DmarcRecord
-        $RecordCount = ($DmarcRecord | Measure-Object).Count   
+        $RecordCount++  
     }
 
     if ($Query.Status -ne 0 -or $RecordCount -eq 0) {
@@ -843,6 +843,9 @@ function Read-DmarcPolicy {
         else {
             $ValidationFails.Add("FAIL: $Domain does not have a DMARC record") | Out-Null
         }
+    }
+    elseif ($RecordCount -gt 1) {
+        $ValidationFails.Add("FAIL: $Domain has multiple DMARC records") | Out-Null
     }
 
 

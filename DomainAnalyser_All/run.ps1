@@ -82,9 +82,12 @@ catch {
 $Result.SPFPassAll = $false
 $Result.SPFPassTest = $false
 
-if ($SPFRecord.ValidationPasses -contains '*Expected SPF*') {
-    $ScoreDomain += $Scores.SPFMSRecommended
-    $Result.SPFPassTest = $true
+foreach ($Validation in $SPFRecord.ValidationPasses) {
+    if ($Validation -match 'Expected SPF') {
+        $ScoreDomain += $Scores.SPFMSRecommended
+        $Result.SPFPassTest = $true
+        break
+    }
 }
 
 # Check warning + fail counts to ensure all tests pass
