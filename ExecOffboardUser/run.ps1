@@ -193,7 +193,7 @@ $results = switch ($request.body) {
     }
 }
 Get-PSSession | Remove-PSSession
-$body = [pscustomobject]@{"Results" = $($results -join '<br>') }
+$body = [pscustomobject]@{"Results" = @($results) }
 
 
 # Associate values to output bindings by calling 'Push-OutputBinding'.

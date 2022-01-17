@@ -35,10 +35,10 @@ $results = foreach ($Tenant in $tenants) {
             $assign = New-GraphPOSTRequest -uri  "https://graph.microsoft.com/beta/deviceManagement/groupPolicyConfigurations('$($CreateRequest.id)')/assign" -tenantid $tenant -type POST -body $AssignBody
             Log-Request -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $($Tenant) -message "Assigned policy $($Displayname) to $AssignTo" -Sev "Info"
         }
-        "Succesfully added policy for $($Tenant)<br>"
+        "Succesfully added policy for $($Tenant)"
     }
     catch {
-        "Failed to add policy for $($Tenant): $($_.Exception.Message) <br>"
+        "Failed to add policy for $($Tenant): $($_.Exception.Message)"
         Log-Request -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $($Tenant) -message "Failed adding policy $($Displayname). Error: $($_.Exception.Message)" -Sev "Error"
         continue
     }

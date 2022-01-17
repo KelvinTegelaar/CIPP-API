@@ -25,10 +25,11 @@ $results = try {
     Log-Request -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $($Tenant) -message "Edited tenant $($Tenant)" -Sev "Info"
     Remove-CIPPCache
 
-    "Successfully amended details for $($Tenant) and cleared tenant cache<br>"
+    "Successfully amended details for $($Tenant) and cleared tenant cache"
 
-} catch {
-    "Failed to amend details for $($Tenant): $($_.ExceptionMessage) <br>"
+}
+catch {
+    "Failed to amend details for $($Tenant): $($_.ExceptionMessage)"
     Log-Request -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $($Tenant) -message "Failed amending details $($tenantDisplayName). Error: $($_.Exception.Message)" -Sev "Error"
     continue
 }

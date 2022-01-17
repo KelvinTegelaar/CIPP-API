@@ -1,8 +1,9 @@
 {
     "Name": "Google",
-    "MxMatch": "aspmx.l.google.com",
+    "MxMatch": "google.com",
     "SpfInclude": "_spf.google.com",
     "Selectors": ["google"],
+    "MinimumSelectorPass": 1,
     "_MxComment": "https://support.google.com/a/answer/140034",
     "_SpfComment": "https://support.google.com/a/answer/10684623",
     "_DkimComment": "https://support.google.com/a/answer/174126"

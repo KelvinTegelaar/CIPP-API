@@ -1,0 +1,10 @@
+{
+    "Name": "Null",
+    "MxMatch": "^[.]?$",
+    "SpfInclude": "",
+    "Selectors": ["*"],
+    "MinimumSelectorPass": 1,
+    "_MxComment": "https://datatracker.ietf.org/doc/html/rfc7505",
+    "_SpfComment": "",
+    "_DkimComment": ""
+}
