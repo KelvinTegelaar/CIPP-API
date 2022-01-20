@@ -30,8 +30,11 @@ function Resolve-DnsHttpsQuery {
     )
 
     if (Test-Path -Path 'Config\DnsConfig.json') {
-        $Config = Get-Content 'Config\DnsConfig.json' | ConvertFrom-Json 
-        $Resolver = $Config.Resolver
+        try {
+            $Config = Get-Content 'Config\DnsConfig.json' | ConvertFrom-Json 
+            $Resolver = $Config.Resolver
+        }
+        catch { $Resolver = 'Google' }
     }
     else {
         $Resolver = 'Google'
@@ -847,7 +850,6 @@ function Read-DmarcPolicy {
     elseif ($RecordCount -gt 1) {
         $ValidationFails.Add("FAIL: $Domain has multiple DMARC records") | Out-Null
     }
-
 
     # Split DMARC record into name/value pairs
     $TagList = New-Object System.Collections.Generic.List[PSCustomObject]

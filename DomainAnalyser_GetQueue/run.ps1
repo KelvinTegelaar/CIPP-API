@@ -5,7 +5,7 @@ $Tenants = Get-Tenants
 $object = foreach ($Tenant in $Tenants) {
     # Get Domains to Lookup
     try {
-        $Domains = New-GraphGetRequest -uri 'https://graph.microsoft.com/v1.0/domains' -tenantid $Tenant.defaultDomainName | Where-Object { ($_.id -notlike '*.onmicrosoft.com') -and ($_.supportedServices -contains 'Email') }
+        $Domains = New-GraphGetRequest -uri 'https://graph.microsoft.com/v1.0/domains' -tenantid $Tenant.defaultDomainName | Where-Object { ($_.id -notlike '*.onmicrosoft.com' -and $_.id -NotLike '*.exclaimer.cloud') -and ($_.supportedServices -contains 'Email') }
         foreach ($d in $domains) {
             [PSCustomObject]@{
                 Tenant             = $Tenant.defaultDomainName

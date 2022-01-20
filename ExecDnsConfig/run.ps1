@@ -19,16 +19,24 @@ Write-Host 'PowerShell HTTP trigger function processed a request.'
 
 $StatusCode = [HttpStatusCode]::OK
 try {
+    $Config = ''
     if (Test-Path $ConfigPath) {
-        $Config = Get-Content -Path $ConfigPath | ConvertFrom-Json
-    }
-    else {
-        New-Item 'Config' -ItemType Directory -ErrorAction SilentlyContinue
-        $Config = [PSCustomObject]@{
-            Resolver = ''
+        try {
+            # Try to parse config file and catch exceptions
+            $Config = Get-Content -Path $ConfigPath | ConvertFrom-Json
         }
+        catch {}
     }
+    if ($Config -eq '') {
+        New-Item 'Config' -ItemType Directory -ErrorAction SilentlyContinue | Out-Null
+        $Config = [PSCustomObject]@{
+            Resolver = 'Google'
+        }
+        $Config | ConvertTo-Json | Set-Content $ConfigPath
+    }
+
     $updated = $false
+
     # Interact with query parameters or the body of the request.
     if ($Request.Query.Action -eq 'SetConfig') {
         if ($Request.Query.Resolver) {
