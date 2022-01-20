@@ -4,40 +4,35 @@ using namespace System.Net
 param($Request, $TriggerMetadata)
 
 $APIName = $TriggerMetadata.FunctionName
-Log-Request -user $request.headers.'x-ms-client-principal' -API $APINAME  -message "Accessed this API" -Sev "Debug"
-$Results = [System.Collections.ArrayList]@()
-
-
-# Write to the Azure Functions log stream.
-Write-Host "PowerShell HTTP trigger function processed a request."
-
-# Interact with query parameters or the body of the request.
+Log-Request -user $request.headers.'x-ms-client-principal' -API $APINAME -message 'Accessed this API' -Sev 'Debug'
 
 $tenantDisplayName = $request.body.displayName
 $tenantDefaultDomainName = $request.body.defaultDomainName
 $Tenant = $request.body.tenantid
 $tenantObjID = $request.body.id
 
-
 $results = try {
-    $bodyToPatch = '{"displayName":"' + $tenantDisplayName + '","defaultDomainName":"' + $tenantDefaultDomainName + '",}'
-    $Request = New-GraphPOSTRequest -uri "https://graph.microsoft.com/beta/contracts/$tenantObjID" -type PATCH -body $bodyToPatch
-    Log-Request -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $($Tenant) -message "Edited tenant $($Tenant)" -Sev "Info"
+    $AADGraphtoken = (Get-GraphToken -scope 'https://graph.windows.net/.default')
+    $bodyToPatch = '{"displayName":"' + $tenantDisplayName + '","defaultDomainName":"' + $tenantDefaultDomainName + '"}'
+    #$GetContracts = (Invoke-RestMethod -Method GET -Uri 'https://graph.windows.net/myorganization/contracts?api-version=1.6' -ContentType 'application/json' -Headers $AADGraphtoken)
+    $PostContracts = (Invoke-RestMethod -Method PATCH -Uri "https://graph.windows.net/myorganization/contracts/$($TenantObjID)?api-version=1.6" -Body $bodyToPatch -ContentType 'application/json' -Headers $AADGraphtoken)
+    Log-Request -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $($Tenant) -message "Edited tenant $($Tenant)" -Sev 'Info'
     Remove-CIPPCache
 
     "Successfully amended details for $($Tenant) and cleared tenant cache"
 
 }
 catch {
-    "Failed to amend details for $($Tenant): $($_.ExceptionMessage)"
-    Log-Request -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $($Tenant) -message "Failed amending details $($tenantDisplayName). Error: $($_.Exception.Message)" -Sev "Error"
+    "Failed to amend details for $($Tenant): $($_.ExceptionMessage) <br>"
+    Log-Request -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $($Tenant) -message "Failed amending details $($tenantDisplayName). Error: $($_.Exception.Message)" -Sev 'Error'
     continue
 }
 
-$body = [pscustomobject]@{"Results" = $results }
+
+$body = [pscustomobject]@{'Results' = $results }
 
 # Associate values to output bindings by calling 'Push-OutputBinding'.
 Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
         StatusCode = [HttpStatusCode]::OK
-        Body       = $body
+        Body = $body
     })
