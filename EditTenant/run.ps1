@@ -9,15 +9,16 @@ Log-Request -user $request.headers.'x-ms-client-principal' -API $APINAME -messag
 $tenantDisplayName = $request.body.displayName
 $tenantDefaultDomainName = $request.body.defaultDomainName
 $Tenant = $request.body.tenantid
+$customerContextId = $request.body.customerId
 
 $tokens = try {
 
     $AADGraphtoken = (Get-GraphToken -scope 'https://graph.windows.net/.default')
     $allTenantsDetails = (Invoke-RestMethod -Method GET -Uri 'https://graph.windows.net/myorganization/contracts?api-version=1.6' -ContentType 'application/json' -Headers $AADGraphtoken)
-    $tenantObjectId = $allTenantsDetails.value | Where-Object { $_.displayName -eq $tenantDisplayName } | Select-Object 'objectId'
+    $tenantObjectId = $allTenantsDetails.value | Where-Object { $_.customerContextId -eq $customerContextId } | Select-Object 'objectId'
 } catch {
     "Failed to retrieve list of tenants.  Error: $($_.ExceptionMessage)"
-    Log-Request -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $($Tenant) -message "Failed to retrieve list of tenants. Error: $($_.Exception.Message)" -Sev 'Error'
+    Log-Request -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $($tenantDisplayName) -message "Failed to retrieve list of tenants. Error: $($_.Exception.Message)" -Sev 'Error'
 }
 
 
@@ -36,11 +37,10 @@ $results = if ($tenantObjectId) {
         }
         Log-Request -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $($Tenant) -message "Edited tenant $($Tenant)" -Sev 'Info'
         "Successfully amended details for $($Tenant) and cleared tenant cache"
-        $tenantObjectId.objectId
     }
     catch { 
         "Failed to amend details for $($Tenant): $($_.ExceptionMessage)"
-        Log-Request -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $($Tenant) -message "Failed amending details $($tenantDisplayName). Error: $($_.Exception.Message)" -Sev 'Error'
+        Log-Request -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $($Tenant) -message "Failed amending details $($Tenant). Error: $($_.Exception.Message)" -Sev 'Error'
         continue
     }
 }
