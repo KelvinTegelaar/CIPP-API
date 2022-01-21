@@ -1,5 +1,5 @@
 function Get-GraphToken($tenantid, $scope, $AsApp, $AppID, $refreshToken, $ReturnRefresh) {
-    if (!$scope) { $scope = 'https://graph.microsoft.com/.default' }
+    if (!$scope) { $scope = 'https://graph.microsoft.com//.default' }
 
     $AuthBody = @{
         client_id     = $ENV:ApplicationId

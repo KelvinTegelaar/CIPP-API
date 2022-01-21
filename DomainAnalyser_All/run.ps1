@@ -97,10 +97,10 @@ foreach ($Validation in $SPFRecord.ValidationPasses) {
 }
 
 # Check warning + fail counts to ensure all tests pass
-$SPFWarnCount = $SPFRecord.ValidationWarns | Measure-Object | Select-Object -ExpandProperty Count
+#$SPFWarnCount = $SPFRecord.ValidationWarns | Measure-Object | Select-Object -ExpandProperty Count
 $SPFFailCount = $SPFRecord.ValidationFails | Measure-Object | Select-Object -ExpandProperty Count
 
-if (($SPFWarnCount + $SPFFailCount) -eq 0) {
+if ($SPFFailCount -eq 0) {
     $ScoreDomain += $Scores.SPFCorrectAll
     $Result.SPFPassAll = $true
 }
