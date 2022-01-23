@@ -162,6 +162,20 @@ $results = switch ($request.body) {
             "Could not add out of office message for $($username). Error: $($_.Exception.Message)"
         }
     }
+    { $_."forward" -ne "" } { 
+        try {
+            $ImportedSession = Import-PSSession $session -ea Stop -AllowClobber -CommandName "Set-Mailbox"
+            $MailboxPerms = Set-mailbox -Identity $userid -ForwardingAddress $_.forward -DeliverToMailboxAndForward $true
+            "Forwarding all email for $username to $($_.Forward)"
+            Log-Request -user $request.headers.'x-ms-client-principal' -API $APINAME  -message "Set Forwarding for $($username) to $($_.Forward)" -Sev "Info" -tenant $TenantFilter
+
+        }
+        catch {
+            Log-Request -user $request.headers.'x-ms-client-principal' -API $APINAME  -message "Could not add forwarding for $($username)" -Sev "Error" -tenant $TenantFilter
+
+            "Could not add forwarding for $($username). Error: $($_.Exception.Message)"
+        }
+    }
     { $_."RemoveLicenses" -eq 'true' } {
         try {
             $CurrentLicenses = (New-GraphGetRequest -uri "https://graph.microsoft.com/beta/users/$($userid)" -tenantid $tenantFilter).assignedlicenses.skuid
@@ -191,6 +205,7 @@ $results = switch ($request.body) {
             "Could not delete $($username). Error: $($_.Exception.Message)"
         }
     }
+    
 }
 Get-PSSession | Remove-PSSession
 $body = [pscustomobject]@{"Results" = @($results) }
