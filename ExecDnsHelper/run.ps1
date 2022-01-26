@@ -41,6 +41,12 @@ try {
                 'TestDNSSEC' {
                     $Body = Test-DNSSEC -Domain $Request.Query.Domain
                 }
+                'ReadWhoisRecord' {
+                    $Body = Read-WhoisRecord -Query $Request.Query.Domain
+                }
+                'ReadNSRecord' {
+                    $Body = Read-NSRecord -Domain $Request.Query.Domain
+                }
             }
         }
         else {

@@ -1393,7 +1393,7 @@ function Read-WhoisRecord {
         if ($HasReferral) {    
             if ($Server -ne $ReferralServer) {
                 $LastResult = $Results
-                $Results = Get-Whois -Query $Query -Server $ReferralServer -Port $Port
+                $Results = Read-WhoisRecord -Query $Query -Server $ReferralServer -Port $Port
                 if ($Results._Raw -Match '(No match|Not Found)' -and $TopLevelReferrers -notcontains $Server) { 
                     $Results = $LastResult 
                 }
