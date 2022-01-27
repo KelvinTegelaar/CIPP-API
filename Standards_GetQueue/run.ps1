@@ -7,6 +7,7 @@ $object = foreach ($Tenant in $tenants) {
     $Standardsfile.Standards.psobject.properties.name | ForEach-Object { 
         $Standard = $_
         if ($standardsfile.Tenant -ne "AllTenants") {
+            Write-Host "Not all tenants. Single object"
             [pscustomobject]@{ 
                 Tenant   = $Standardsfile.Tenant
                 Standard = $Standard
