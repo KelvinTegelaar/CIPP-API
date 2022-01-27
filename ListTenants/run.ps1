@@ -23,7 +23,19 @@ $tenantfilter = $Request.Query.TenantFilter
 
 try {
     if ($null -eq $TenantFilter -or $TenantFilter -eq "null") {
-        $Body = Get-Tenants
+        if ($Request.Query.AllTenantSelector) { 
+            $tenants = get-tenants
+            $allTenants = @([PSCustomObject]@{
+                    customerId        = "AllTenants"
+                    defaultDomainName = "AllTenants"
+                    displayName       = "All current and future tenants"
+                    domains           = "AllTenants"
+                })
+            $body = $allTenants + $tenants
+        }
+        else {
+            $Body = Get-Tenants
+        }
     }
     else {
         $body = Get-Tenants | Where-Object -Property DefaultdomainName -EQ $Tenantfilter
@@ -34,8 +46,6 @@ catch {
     Log-Request -user $request.headers.'x-ms-client-principal' -tenant $Tenantfilter -API $APINAME -message "List Tenant failed. The error is: $($_.Exception.Message)" -Sev "Error"
     $body = [pscustomobject]@{"Results" = "Failed to retrieve tenants: $($_.Exception.Message)" }
 }
-
-
 
 Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
         StatusCode = [HttpStatusCode]::OK
