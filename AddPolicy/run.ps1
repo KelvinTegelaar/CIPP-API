@@ -17,14 +17,17 @@ $results = foreach ($Tenant in $tenants) {
     try {
         switch ($Request.body.TemplateType) {
             "Admin" {
+                $TemplateTypeURL = "groupPolicyConfigurations"
                 $CreateBody = '{"description":"' + $description + '","displayName":"' + $displayname + '","roleScopeTagIds":["0"]}'
                 $CreateRequest = New-GraphPOSTRequest -uri "https://graph.microsoft.com/beta/deviceManagement/groupPolicyConfigurations" -tenantid $tenant -type POST -body $CreateBody
                 $UpdateRequest = New-GraphPOSTRequest -uri "https://graph.microsoft.com/beta/deviceManagement/groupPolicyConfigurations('$($CreateRequest.id)')/updateDefinitionValues" -tenantid $tenant -type POST -body $RawJSON
             }
             "Device" {
+                $TemplateTypeURL = "deviceConfigurations"
                 $CreateRequest = New-GraphPOSTRequest -uri "https://graph.microsoft.com/beta/deviceManagement/deviceConfigurations" -tenantid $tenant -type POST -body $RawJSON
             }
             "Catalog" {
+                $TemplateTypeURL = "configurationPolicies"
                 $CreateRequest = New-GraphPOSTRequest -uri "https://graph.microsoft.com/beta/deviceManagement/configurationPolicies" -tenantid $tenant -type POST -body $RawJSON
             }
 
@@ -32,7 +35,7 @@ $results = foreach ($Tenant in $tenants) {
         Log-Request -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $($Tenant) -message "Added policy $($Displayname)" -Sev "Error"
         if ($AssignTo) {
             $AssignBody = if ($AssignTo -ne "AllDevicesAndUsers") { '{"assignments":[{"id":"","target":{"@odata.type":"#microsoft.graph.' + $($AssignTo) + 'AssignmentTarget"}}]}' } else { '{"assignments":[{"id":"","target":{"@odata.type":"#microsoft.graph.allDevicesAssignmentTarget"}},{"id":"","target":{"@odata.type":"#microsoft.graph.allLicensedUsersAssignmentTarget"}}]}' }
-            $assign = New-GraphPOSTRequest -uri  "https://graph.microsoft.com/beta/deviceManagement/groupPolicyConfigurations('$($CreateRequest.id)')/assign" -tenantid $tenant -type POST -body $AssignBody
+            $assign = New-GraphPOSTRequest -uri  "https://graph.microsoft.com/beta/deviceManagement/$TemplateTypeURL('$($CreateRequest.id)')/assign" -tenantid $tenant -type POST -body $AssignBody
             Log-Request -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $($Tenant) -message "Assigned policy $($Displayname) to $AssignTo" -Sev "Info"
         }
         "Succesfully added policy for $($Tenant)"
