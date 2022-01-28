@@ -42,7 +42,7 @@ function Log-Request ($message, $tenant, $API, $user, $sev) {
     if (!$username) { $username = "CIPP" }
     if (!$tenant) { $tenant = "None" }
     if ($sev -eq "Debug" -and $env:DebugMode -ne "true") { return "Debug log is disabled" }
-    $CleanMessage = [string]::join("", ($message.Split("`n")))
+    $CleanMessage = [string]::join(" ", ($message.Split("`n")))
     $logdata = "$($date)|$($tenant)|$($API)|$($CleanMessage)|$($username)|$($sev)"
     if ($LogMutex.WaitOne(1000)) {
         $logdata | Out-File -Append -FilePath "Logs\$((Get-Date).ToString('ddMMyyyy')).log" -Force
