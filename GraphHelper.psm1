@@ -41,7 +41,7 @@ function Log-Request ($message, $tenant, $API, $user, $sev) {
     $LogMutex = New-Object System.Threading.Mutex($false, "LogMutex")
     if (!$username) { $username = "CIPP" }
     if (!$tenant) { $tenant = "None" }
-    if ($sev -eq "Debug" -and $env:DebugMode -ne "true") { return "Debug log is disabled" }
+    if ($sev -eq "Debug" -and $env:DebugMode -ne "true") { return }
     $CleanMessage = [string]::join(" ", ($message.Split("`n")))
     $logdata = "$($date)|$($tenant)|$($API)|$($CleanMessage)|$($username)|$($sev)"
     if ($LogMutex.WaitOne(1000)) {
