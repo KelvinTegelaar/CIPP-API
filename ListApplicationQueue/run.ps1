@@ -12,14 +12,15 @@ Write-Host "PowerShell HTTP trigger function processed a request."
 
 $QueuedApps = Get-ChildItem "ChocoApps.Cache\"
 
-$CurrentStandards = foreach ($tenant in $QueuedApps) {
-    $ApplicationFile = Get-Content "$($tenant)" | ConvertFrom-Json
+$CurrentStandards = foreach ($QueueFile in $QueuedApps) {
+    $ApplicationFile = Get-Content "$($QueueFile)" | ConvertFrom-Json
     if ($ApplicationFile.Tenant -eq $null) { continue }
     [PSCustomObject]@{
         tenantName      = $ApplicationFile.tenant
         applicationName = $ApplicationFile.Applicationname
         cmdLine         = $ApplicationFile.IntuneBody.installCommandLine
         assignTo        = $ApplicationFile.assignTo
+        id              = $($QueueFile.name)
     }
 }
 
