@@ -40,9 +40,9 @@ $results = foreach ($Tenant in $tenants) {
             "Catalog" {
                 $TemplateTypeURL = "configurationPolicies"
                 $CheckExististing = New-GraphGETRequest -uri "https://graph.microsoft.com/beta/deviceManagement/$TemplateTypeURL" -tenantid $tenant
-                $PolicyName = ($RawJSON | ConvertFrom-Json).displayName
+                $PolicyName = ($RawJSON | ConvertFrom-Json).Name
                 $CheckExististing = New-GraphGETRequest -uri "https://graph.microsoft.com/beta/deviceManagement/$TemplateTypeURL" -tenantid $tenant
-                if ($PolicyName -in $CheckExististing.displayName) {
+                if ($PolicyName -in $CheckExististing.name) {
                     Throw "Policy with Display Name $($Displayname) Already exists"
                 }
                 $CreateRequest = New-GraphPOSTRequest -uri "https://graph.microsoft.com/beta/deviceManagement/$TemplateTypeURL" -tenantid $tenant -type POST -body $RawJSON
