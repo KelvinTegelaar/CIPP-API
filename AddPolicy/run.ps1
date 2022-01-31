@@ -6,8 +6,8 @@ param($Request, $TriggerMetadata)
 $APIName = $TriggerMetadata.FunctionName
 Log-Request -user $request.headers.'x-ms-client-principal' -API $APINAME  -message "Accessed this API" -Sev "Debug"
 
-$user = $request.headers.'x-ms-client-principal'
 $Tenants = ($Request.body | Select-Object Select_*).psobject.properties.value
+if ("AllTenants" -in $Tenants) { $Tenants = (Get-Tenants).DefaultDomainName }
 $displayname = $request.body.Displayname
 $description = $request.body.Description
 $AssignTo = if ($request.body.Assignto -ne "on") { $request.body.Assignto }
@@ -19,16 +19,33 @@ $results = foreach ($Tenant in $tenants) {
             "Admin" {
                 $TemplateTypeURL = "groupPolicyConfigurations"
                 $CreateBody = '{"description":"' + $description + '","displayName":"' + $displayname + '","roleScopeTagIds":["0"]}'
-                $CreateRequest = New-GraphPOSTRequest -uri "https://graph.microsoft.com/beta/deviceManagement/groupPolicyConfigurations" -tenantid $tenant -type POST -body $CreateBody
-                $UpdateRequest = New-GraphPOSTRequest -uri "https://graph.microsoft.com/beta/deviceManagement/groupPolicyConfigurations('$($CreateRequest.id)')/updateDefinitionValues" -tenantid $tenant -type POST -body $RawJSON
+                $CheckExististing = New-GraphGETRequest -uri "https://graph.microsoft.com/beta/deviceManagement/$TemplateTypeURL" -tenantid $tenant
+                if ($displayname -in $CheckExististing.displayName) {
+                    Throw "Policy with Display Name $($Displayname) Already exists"
+                }
+                $CreateRequest = New-GraphPOSTRequest -uri "https://graph.microsoft.com/beta/deviceManagement/$TemplateTypeURL" -tenantid $tenant -type POST -body $CreateBody
+                $UpdateRequest = New-GraphPOSTRequest -uri "https://graph.microsoft.com/beta/deviceManagement/$TemplateTypeURL('$($CreateRequest.id)')/updateDefinitionValues" -tenantid $tenant -type POST -body $RawJSON
             }
             "Device" {
                 $TemplateTypeURL = "deviceConfigurations"
-                $CreateRequest = New-GraphPOSTRequest -uri "https://graph.microsoft.com/beta/deviceManagement/deviceConfigurations" -tenantid $tenant -type POST -body $RawJSON
+                $PolicyName = ($RawJSON | ConvertFrom-Json).displayName
+                $CheckExististing = New-GraphGETRequest -uri "https://graph.microsoft.com/beta/deviceManagement/$TemplateTypeURL" -tenantid $tenant
+                Write-Host $PolicyName
+                if ($PolicyName -in $CheckExististing.displayName) {
+                    Throw "Policy with Display Name $($Displayname) Already exists"
+                }
+                
+                $CreateRequest = New-GraphPOSTRequest -uri "https://graph.microsoft.com/beta/deviceManagement/$TemplateTypeURL" -tenantid $tenant -type POST -body $RawJSON
             }
             "Catalog" {
                 $TemplateTypeURL = "configurationPolicies"
-                $CreateRequest = New-GraphPOSTRequest -uri "https://graph.microsoft.com/beta/deviceManagement/configurationPolicies" -tenantid $tenant -type POST -body $RawJSON
+                $CheckExististing = New-GraphGETRequest -uri "https://graph.microsoft.com/beta/deviceManagement/$TemplateTypeURL" -tenantid $tenant
+                $PolicyName = ($RawJSON | ConvertFrom-Json).displayName
+                $CheckExististing = New-GraphGETRequest -uri "https://graph.microsoft.com/beta/deviceManagement/$TemplateTypeURL" -tenantid $tenant
+                if ($PolicyName -in $CheckExististing.displayName) {
+                    Throw "Policy with Display Name $($Displayname) Already exists"
+                }
+                $CreateRequest = New-GraphPOSTRequest -uri "https://graph.microsoft.com/beta/deviceManagement/$TemplateTypeURL" -tenantid $tenant -type POST -body $RawJSON
             }
 
         }
@@ -48,7 +65,7 @@ $results = foreach ($Tenant in $tenants) {
 
 }
 
-$body = [pscustomobject]@{"Results" = $results }
+$body = [pscustomobject]@{"Results" = @($results) }
 
 # Associate values to output bindings by calling 'Push-OutputBinding'.
 Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
