@@ -13,7 +13,7 @@ else {
 }
 
 $Settings = $Config.psobject.properties.name
-$logdate = (Get-Date).ToString('MMyyyy')
+$logdate = (Get-Date).ToString('ddMMyyyy')
 $Currentlog = Get-Content "Logs\$($logdate).log" | ConvertFrom-Csv -Header 'DateTime', 'Tenant', 'API', 'Message', 'User', 'Severity' -Delimiter '|' | Where-Object { [datetime]$_.Datetime -gt (Get-Date).AddMinutes(-31) -and $_.api -in $Settings -and $_.Severity -ne 'debug' }
 Write-Host "Current log: $CurrentLog"
 Write-Host $Config
