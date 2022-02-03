@@ -10,7 +10,8 @@ Log-Request -user $request.headers.'x-ms-client-principal' -API $APINAME  -messa
 # Write to the Azure Functions log stream.
 Write-Host "PowerShell HTTP trigger function processed a request."
 $results = try { 
-    $Request.body | ConvertTo-Json | Set-Content ".\SendNotifications\Config.Json"
+    $Request.body | ConvertTo-Json | Set-Content ".\Config\Config_Notifications.Json"
+    Set-Content '.\Cache_Scheduler\_DefaultNotifications.json' -Value '{ "tenant": "any","Type": "CIPPNotifications" }'
     "succesfully set the configuration"
 }
 catch {

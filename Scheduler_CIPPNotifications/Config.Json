@@ -1,0 +1,11 @@
+{
+  "addStandardsDeploy": true,
+  "webhook": "mywebhook.com",
+  "addPolicy": true,
+  "email": "kelvin@cyberdrain.com",
+  "addChocoApp": true,
+  "addUser": true,
+  "removeUser": true,
+  "removeStandard": true,
+  "tokenUpdater": true
+}
