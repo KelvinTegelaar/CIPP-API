@@ -17,7 +17,7 @@ $CurrentStandards = foreach ($QueueFile in $QueuedApps) {
     if ($ApplicationFile.Tenant -eq $null) { continue }
     [PSCustomObject]@{
         tenantName = $ApplicationFile.tenant
-        alerts     = ($ApplicationFile.psobject.properties.name -join ' & ')
+        alerts     = (($ApplicationFile.psobject.properties.name | Where-Object { $_ -NE "Tenant" }) -join ' & ')
     }
 }
 
