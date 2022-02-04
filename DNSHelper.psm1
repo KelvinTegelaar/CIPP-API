@@ -1810,7 +1810,7 @@ namespace CyberDrain.CIPP {
             };
 
             var httpClient = new HttpClient(httpClientHandler);
-            HttpResponseMessage HttpResponse = Task.Run(async() => await httpClient.SendAsync(new HttpRequestMessage(HttpMethod.Head, url))).Result;
+            HttpResponseMessage HttpResponse = Task.Run(async() => await httpClient.SendAsync(new HttpRequestMessage(HttpMethod.Get, url))).Result;
             certvalidation.HttpResponse = HttpResponse;
             return certvalidation;
         }
@@ -1822,4 +1822,463 @@ namespace CyberDrain.CIPP {
     }
 
     [CyberDrain.CIPP.CertificateCheck]::GetServerCertificate($Url, $FollowRedirect)
+}
+
+function Test-MtaSts {
+    <#
+    .SYNOPSIS
+    Perform MTA-STS and TLSRPT checks
+    
+    .DESCRIPTION
+    Retrieve MTA-STS record, policy and TLSRPT record
+    
+    .PARAMETER Domain
+    Domain to process
+    
+    .EXAMPLE
+    PS> Test-MtaSts -Domain gmail.com
+
+    #>
+    [CmdletBinding()]
+    Param(
+        [Parameter(Mandatory = $true)]
+        [string]$Domain
+    )
+
+    # MTA-STS test object
+    $MtaSts = [PSCustomObject]@{
+        Domain           = $Domain
+        StsRecord        = (Read-MtaStsRecord -Domain $Domain)
+        StsPolicy        = (Read-MtaStsPolicy -Domain $Domain)
+        TlsRptRecord     = (Read-TlsRptRecord -Domain $Domain)
+        ValidationPasses = New-Object System.Collections.Generic.List[string]
+        ValidationWarns  = New-Object System.Collections.Generic.List[string]
+        ValidationFails  = New-Object System.Collections.Generic.List[string]
+    }
+
+    # Validation lists
+    $ValidationPasses = New-Object System.Collections.Generic.List[string]
+    $ValidationWarns = New-Object System.Collections.Generic.List[string]
+    $ValidationFails = New-Object System.Collections.Generic.List[string]
+
+    # Check results for each test
+    if ($MtaSts.StsRecord.IsValid) { $ValidationPasses.Add('MTA-STS Record is valid') | Out-Null }
+    else { $ValidationFails.Add('MTA-STS Record is not valid') | Out-Null }
+    if ($MtaSts.StsRecord.HasWarnings) { $ValidationWarns.Add('MTA-STS Record has warnings') | Out-Null }
+
+    if ($MtaSts.StsPolicy.IsValid) { $ValidationPasses.Add('MTA-STS Policy is valid') | Out-Null }
+    else { $ValidationFails.Add('MTA-STS Policy is not valid') | Out-Null }
+    if ($MtaSts.StsPolicy.HasWarnings) { $ValidationWarns.Add('MTA-STS Policy has warnings') | Out-Null }
+
+    if ($MtaSts.TlsRptRecord.IsValid) { $ValidationPasses.Add('TLSRPT Record is valid') | Out-Null }
+    else { $ValidationFails.Add('TLSRPT Record is not valid') | Out-Null }
+    if ($MtaSts.TlsRptRecord.HasWarnings) { $ValidationWarns.Add('TLSRPT Record has warnings') | Out-Null }
+
+    # Aggregate validation results
+    $MtaSts.ValidationPasses = $ValidationPasses
+    $MtaSts.ValidationWarns = $ValidationWarns
+    $MtaSts.ValidationFails = $ValidationFails
+
+    $MtaSts
+}
+
+function Read-MtaStsRecord {
+    <#
+    .SYNOPSIS
+    Resolve and validate MTA-STS record
+    
+    .DESCRIPTION
+    Query domain for DMARC policy (_mta-sts.domain.com) and parse results. Record is checked for issues.
+    
+    .PARAMETER Domain
+    Domain to process MTA-STS record
+    
+    .EXAMPLE
+    PS> Read-MtaStsRecord -Domain gmail.com
+
+    #>
+    [CmdletBinding()]
+    Param(
+        [Parameter(Mandatory = $true)]
+        [string]$Domain
+    )
+
+    # Initialize object
+    $StsAnalysis = [PSCustomObject]@{
+        Domain           = $Domain
+        Record           = ''
+        Version          = ''
+        Id               = ''
+        IsValid          = $false
+        HasWarnings      = $false
+        ValidationPasses = New-Object System.Collections.Generic.List[string]
+        ValidationWarns  = New-Object System.Collections.Generic.List[string]
+        ValidationFails  = New-Object System.Collections.Generic.List[string]
+    }
+
+    # Validation lists
+    $ValidationPasses = New-Object System.Collections.Generic.List[string]
+    $ValidationWarns = New-Object System.Collections.Generic.List[string]
+    $ValidationFails = New-Object System.Collections.Generic.List[string]
+
+    # Validation ranges
+
+    $RecordCount = 0
+
+    $DnsQuery = @{
+        RecordType = 'TXT'
+        Domain     = "_mta-sts.$Domain"
+    }
+    
+    # Resolve DMARC record
+
+    $Query = Resolve-DnsHttpsQuery @DnsQuery
+
+    $RecordCount = 0
+    $Query.Answer | Where-Object { $_.data -match '^v=STSv1' } | ForEach-Object {
+        $StsRecord = $_.data
+        $StsAnalysis.Record = $StsRecord
+        $RecordCount++  
+    }
+
+    if ($Query.Status -ne 0 -or $RecordCount -eq 0) {
+        if ($Query.Status -eq 3) {
+            $ValidationFails.Add('Record does not exist (NXDOMAIN)') | Out-Null
+        }
+        else {
+            $ValidationFails.Add("$Domain does not have an MTA-STS record") | Out-Null
+        }
+    }
+    elseif ($RecordCount -gt 1) {
+        $ValidationFails.Add("$Domain has multiple MTA-STS records") | Out-Null
+    }
+
+    # Split DMARC record into name/value pairs
+    $TagList = New-Object System.Collections.Generic.List[PSCustomObject]
+    Foreach ($Element in ($StsRecord -split ';').trim()) {
+        $Name, $Value = $Element -split '='
+        $TagList.Add(
+            [PSCustomObject]@{
+                Name  = $Name
+                Value = $Value
+            }
+        ) | Out-Null
+    }
+
+    # Loop through name/value pairs and set object properties
+    $x = 0
+    foreach ($Tag in $TagList) {
+        switch ($Tag.Name) {
+            'v' {
+                # REQUIRED: Version
+                if ($x -ne 0) { $ValidationFails.Add('v=STSv1 must be at the beginning of the record') | Out-Null }
+                if ($Tag.Value -ne 'STSv1') { $ValidationFails.Add("Version must be STSv1 - found $($Tag.Value)") | Out-Null }
+                $StsAnalysis.Version = $Tag.Value
+            }
+            'id' {
+                # REQUIRED: Id
+                $StsAnalysis.Id = $Tag.Value
+            }
+
+        }
+        $x++
+    }
+
+    if ($RecordCount -gt 0) {
+        # Check for missing record tags and set defaults
+        if ($StsAnalysis.Id -eq '') { $ValidationFails.Add('Id record is missing') | Out-Null }
+        elseif ($StsAnalysis.Id -notmatch '^[A-Za-z0-9]+$') {
+            $ValidationFails.Add('STS Record ID must be alphanumeric') | Out-Null 
+        }
+            
+        if ($RecordCount -gt 1) {
+            $ValidationWarns.Add('Multiple MTA-STS records detected, this may cause unexpected behavior.') | Out-Null
+            $StsAnalysis.HasWarnings = $true
+        }
+        
+        $ValidationWarnCount = ($Test.ValidationWarns | Measure-Object).Count
+        $ValidationFailCount = ($Test.ValidationFails | Measure-Object).Count
+        if ($ValidationFailCount -eq 0 -and $ValidationWarnCount -eq 0) {
+            $ValidationPasses.Add('MTA-STS record is valid') | Out-Null
+            $StsAnalysis.IsValid = $true
+        }
+    }
+
+    # Add the validation lists
+    $StsAnalysis.ValidationPasses = $ValidationPasses
+    $StsAnalysis.ValidationWarns = $ValidationWarns
+    $StsAnalysis.ValidationFails = $ValidationFails
+
+    # Return MTA-STS analysis
+    $StsAnalysis
+}
+
+function Read-MtaStsPolicy {
+    <#
+    .SYNOPSIS
+    Resolve and validate MTA-STS policy
+    
+    .DESCRIPTION
+    Retrieve mta-sts.txt from .well-known directory on domain
+    
+    .PARAMETER Domain
+    Domain to process MTA-STS policy 
+    
+    .EXAMPLE
+    PS> Read-MtaStsPolicy -Domain gmail.com
+    #>   
+    [CmdletBinding()]
+    Param(
+        [Parameter(Mandatory = $true)]
+        [string]$Domain
+    )
+
+    $StsPolicyAnalysis = [PSCustomObject]@{
+        Domain           = $Domain
+        Version          = ''
+        Mode             = ''
+        Mx               = New-Object System.Collections.Generic.List[string]
+        MaxAge           = ''
+        IsValid          = $false
+        HasWarnings      = $false
+        ValidationPasses = New-Object System.Collections.Generic.List[string]
+        ValidationWarns  = New-Object System.Collections.Generic.List[string]
+        ValidationFails  = New-Object System.Collections.Generic.List[string]
+    }
+
+    $ValidationPasses = New-Object System.Collections.Generic.List[string]
+    $ValidationWarns = New-Object System.Collections.Generic.List[string]
+    $ValidationFails = New-Object System.Collections.Generic.List[string]
+
+    # Valid policy modes
+    $StsPolicyModes = @('testing', 'enforce')
+
+    # Request policy file from domain, only accept text/plain results
+    $RequestParams = @{
+        Uri     = ('https://mta-sts.{0}/.well-known/mta-sts.txt' -f $Domain)
+        Headers = @{
+            Accept = 'text/plain'
+        }
+    }
+
+    $PolicyExists = $false
+    try {
+        $wr = Invoke-WebRequest @RequestParams -ErrorAction Stop
+        $PolicyExists = $true
+    }
+    catch {
+        $ValidationFails.Add(('MTA-STS policy does not exist for {0}' -f $Domain)) | Out-Null
+    }
+
+    # Policy file is key value pairs split on new lines
+    $StsPolicyEntries = New-Object System.Collections.Generic.List[PSCustomObject]
+    $Entries = $wr.Content -split "`r?`n"
+    foreach ($Entry in $Entries) {
+        if ($null -ne $Entry) {
+            try {
+                $Name, $Value = $Entry -split ':'
+                $StsPolicyEntries.Add(
+                    [PSCustomObject]@{
+                        Name  = $Name.trim()
+                        Value = $Value.trim()
+                    }
+                ) | Out-Null
+            }
+            catch {}
+        }
+    }
+
+    foreach ($StsPolicyEntry in $StsPolicyEntries) {
+        switch ($StsPolicyEntry.Name) {
+            'version' {
+                # REQUIRED: Version
+                $StsPolicyAnalysis.Version = $StsPolicyEntry.Value
+            }
+            'mode' {
+                $StsPolicyAnalysis.Mode = $StsPolicyEntry.Value
+            }
+            'mx' {
+                $StsPolicyAnalysis.Mx.Add($StsPolicyEntry.Value) | Out-Null
+            }
+            'max_age' {
+                $StsPolicyAnalysis.MaxAge = $StsPolicyEntry.Value
+            }
+        }
+    }
+
+    # Check policy for issues
+    if ($PolicyExists) {
+        if ($StsPolicyAnalysis.Version -ne 'STSv1') { 
+            $ValidationFails.Add("Version must be STSv1 - found $($StsPolicyEntry.Value)") | Out-Null 
+        }
+        if ($StsPolicyAnalysis.Version -eq '') {
+            $ValidationFails.Add('Version is missing from policy') | Out-Null
+        }
+        if ($StsPolicyModes -notcontains $StsPolicyAnalysis.Mode) {
+            $ValidationFails.Add(('Policy mode "{0}" is not valid. (Options: {1})' -f $StsPolicyAnalysis.Mode, $StsPolicyModes -join ', '))
+        }
+        if ($StsPolicyAnalysis.Mode -eq 'Testing') { 
+            $ValidationWarns.Add('MTA-STS policy is in testing mode, no action will be taken') | Out-Null 
+            $StsPolicyAnalysis.HasWarnings = $true
+        }
+
+        $ValidationFailCount = ($ValidationFails | Measure-Object).Count
+        if ($ValidationFailCount -eq 0) {
+            $ValidationPasses.Add('MTA-STS policy is valid')
+            $StsPolicyAnalysis.IsValid = $true
+        }
+    }
+
+    # Aggregate validation results
+    $StsPolicyAnalysis.ValidationPasses = $ValidationPasses
+    $StsPolicyAnalysis.ValidationWarns = $ValidationWarns
+    $StsPolicyAnalysis.ValidationFails = $ValidationFails
+
+    $StsPolicyAnalysis
+}
+
+function Read-TlsRptRecord {
+    <#
+    .SYNOPSIS
+    Resolve and validate TLSRPT record
+    
+    .DESCRIPTION
+    Query domain for DMARC policy (_smtp._tls.domain.com) and parse results. Record is checked for issues.
+    
+    .PARAMETER Domain
+    Domain to process TLSRPT record
+    
+    .EXAMPLE
+    PS> Read-TlsRptRecord -Domain gmail.com
+
+    #>
+    [CmdletBinding()]
+    Param(
+        [Parameter(Mandatory = $true)]
+        [string]$Domain
+    )
+
+    # Initialize object
+    $TlsRptAnalysis = [PSCustomObject]@{
+        Domain           = $Domain
+        Record           = ''
+        Version          = ''
+        RuaEntries       = New-Object System.Collections.Generic.List[string]
+        IsValid          = $false
+        HasWarnings      = $false
+        ValidationPasses = New-Object System.Collections.Generic.List[string]
+        ValidationWarns  = New-Object System.Collections.Generic.List[string]
+        ValidationFails  = New-Object System.Collections.Generic.List[string]
+    }
+
+    $ValidRuaProtocols = @(
+        '^(?<Rua>https:.+)$'
+        '^mailto:(?<Rua>.+)$'
+    )
+
+    # Validation lists
+    $ValidationPasses = New-Object System.Collections.Generic.List[string]
+    $ValidationWarns = New-Object System.Collections.Generic.List[string]
+    $ValidationFails = New-Object System.Collections.Generic.List[string]
+
+    # Validation ranges
+
+    $RecordCount = 0
+
+    $DnsQuery = @{
+        RecordType = 'TXT'
+        Domain     = "_smtp._tls.$Domain"
+    }
+    
+    # Resolve DMARC record
+
+    $Query = Resolve-DnsHttpsQuery @DnsQuery
+
+    $RecordCount = 0
+    $Query.Answer | Where-Object { $_.data -match '^v=TLSRPTv1' } | ForEach-Object {
+        $TlsRtpRecord = $_.data
+        $TlsRptAnalysis.Record = $TlsRtpRecord
+        $RecordCount++  
+    }
+
+    if ($Query.Status -ne 0 -or $RecordCount -eq 0) {
+        if ($Query.Status -eq 3) {
+            $ValidationFails.Add('Record does not exist (NXDOMAIN)') | Out-Null
+        }
+        else {
+            $ValidationFails.Add("$Domain does not have an TLSRPT record") | Out-Null
+        }
+    }
+    elseif ($RecordCount -gt 1) {
+        $ValidationFails.Add("$Domain has multiple TLSRPT records") | Out-Null
+    }
+
+    # Split DMARC record into name/value pairs
+    $TagList = New-Object System.Collections.Generic.List[PSCustomObject]
+    Foreach ($Element in ($TlsRtpRecord -split ';').trim()) {
+        $Name, $Value = $Element -split '='
+        $TagList.Add(
+            [PSCustomObject]@{
+                Name  = $Name
+                Value = $Value
+            }
+        ) | Out-Null
+    }
+
+    # Loop through name/value pairs and set object properties
+    $x = 0
+    foreach ($Tag in $TagList) {
+        switch ($Tag.Name) {
+            'v' {
+                # REQUIRED: Version
+                if ($x -ne 0) { $ValidationFails.Add('v=TLSRPTv1 must be at the beginning of the record') | Out-Null }
+                if ($Tag.Value -ne 'TLSRPTv1') { $ValidationFails.Add("Version must be TLSRPTv1 - found $($Tag.Value)") | Out-Null }
+                $TlsRptAnalysis.Version = $Tag.Value
+            }
+            'rua' {
+                $RuaMatched = $false
+                $RuaEntries = $Tag.Value -split ','
+                foreach ($RuaEntry in $RuaEntries) {
+                    foreach ($Protocol in $ValidRuaProtocols) {
+                        if ($RuaEntry -match $Protocol) {
+                            $TlsRptAnalysis.RuaEntries.Add($Matches.Rua) | Out-Null
+                            $RuaMatched = $true
+                        }
+                    }
+                }
+                if ($RuaMatched) {
+                    $ValidationPasses.Add('Aggregate reports are being sent') | Out-Null
+                }
+                else {
+                    $ValidationWarns.Add('Aggregate reports are not being sent') | Out-Null
+                    $TlsRptAnalysis.HasWarnings = $true
+                }
+            }
+        }
+        $x++
+    }
+
+    if ($RecordCount -gt 0) {
+        # Check for missing record tags and set defaults
+            
+        if ($RecordCount -gt 1) {
+            $ValidationWarns.Add('Multiple TLSRPT records detected, this may cause unexpected behavior.') | Out-Null
+            $TlsRptAnalysis.HasWarnings = $true
+        }
+        
+        $ValidationWarnCount = ($Test.ValidationWarns | Measure-Object).Count
+        $ValidationFailCount = ($Test.ValidationFails | Measure-Object).Count
+        if ($ValidationFailCount -eq 0 -and $ValidationWarnCount -eq 0) {
+            $ValidationPasses.Add('TLSRPT record is valid') | Out-Null
+            $TlsRptAnalysis.IsValid = $true
+        }
+    }
+
+    # Add the validation lists
+    $TlsRptAnalysis.ValidationPasses = $ValidationPasses
+    $TlsRptAnalysis.ValidationWarns = $ValidationWarns
+    $TlsRptAnalysis.ValidationFails = $ValidationFails
+
+    # Return MTA-STS analysis
+    $TlsRptAnalysis
 }
