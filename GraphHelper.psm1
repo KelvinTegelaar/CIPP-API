@@ -41,9 +41,14 @@ function Log-Request ($message, $tenant, $API, $user, $sev) {
     $LogMutex = New-Object System.Threading.Mutex($false, "LogMutex")
     if (!$username) { $username = "CIPP" }
     if (!$tenant) { $tenant = "None" }
-    $logdata = "$($date)|$($tenant)|$($API)|$($message)|$($username)|$($sev)"
+    if ($sev -eq "Debug" -and $env:DebugMode -ne "true") { 
+        Write-Information "Not writing to log file - Debug mode is not enabled."
+        return
+    }
+    $CleanMessage = [string]::join(" ", ($message.Split("`n")))
+    $logdata = "$($date)|$($tenant)|$($API)|$($CleanMessage)|$($username)|$($sev)"
     if ($LogMutex.WaitOne(1000)) {
-        $logdata | Out-File -Append -FilePath "Logs\$((Get-Date).ToString('MMyyyy')).log" -Force
+        $logdata | Out-File -Append -FilePath "Logs\$((Get-Date).ToString('ddMMyyyy')).log" -Force
     }
     $LogMutex.ReleaseMutex()
 }

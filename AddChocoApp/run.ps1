@@ -42,9 +42,6 @@ $Results = foreach ($Tenant in $tenants) {
     }
 }
 
-$InstanceId = Start-NewOrchestration -FunctionName 'Applications_Orchestrator'
-Write-Host "Started orchestration with ID = '$InstanceId'"
-
 $body = [pscustomobject]@{"Results" = $results }
 
 # Associate values to output bindings by calling 'Push-OutputBinding'.

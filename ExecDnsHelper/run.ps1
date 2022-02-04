@@ -17,29 +17,62 @@ try {
         if ($Request.Query.Domain -match '^(((?!-))(xn--|_{1,1})?[a-z0-9-]{0,61}[a-z0-9]{1,1}\.)*(xn--)?([a-z0-9][a-z0-9\-]{0,60}|[a-z0-9-]{1,30}\.[a-z]{2,})$') {
             switch ($Request.Query.Action) {
                 'ReadSpfRecord' {
+                    $SpfQuery = @{
+                        Domain = $Request.Query.Domain
+                    }
+
                     if ($Request.Query.ExpectedInclude) {
-                        $Body = Read-SpfRecord -Domain $Request.Query.Domain -ExpectedInclude $Request.Query.ExpectedInclude
+                        $SpfQuery.ExpectedInclude = $Request.Query.ExpectedInclude
                     }
-                    else {
-                        $Body = Read-SpfRecord -Domain $Request.Query.Domain
+
+                    if ($Request.Query.Record) {
+                        $SpfQuery.Record = $Request.Query.Record
                     }
+
+                    $Body = Read-SpfRecord @SpfQuery
                 }
                 'ReadDmarcPolicy' {
                     $Body = Read-DmarcPolicy -Domain $Request.Query.Domain
                 }
                 'ReadDkimRecord' {
+                    $DkimQuery = @{
+                        Domain = $Request.Query.Domain
+                    }
                     if ($Request.Query.Selector) {
-                        $Body = Read-DkimRecord -Domain $Request.Query.Domain -Selectors $Request.Query.Selector
+                        $DkimQuery.Selectors = ($Request.Query.Selector).trim() -split '\s*,\s*'
                     }
-                    else {
-                        $Body = Read-DkimRecord -Domain $Request.Query.Domain
-                    }
+                    $Body = Read-DkimRecord @DkimQuery
                 }
                 'ReadMXRecord' {
                     $Body = Read-MXRecord -Domain $Request.Query.Domain
                 }
                 'TestDNSSEC' {
                     $Body = Test-DNSSEC -Domain $Request.Query.Domain
+                }
+                'ReadWhoisRecord' {
+                    $Body = Read-WhoisRecord -Query $Request.Query.Domain
+                }
+                'ReadNSRecord' {
+                    $Body = Read-NSRecord -Domain $Request.Query.Domain
+                }
+                'TestHttpsCertificate' {
+                    $HttpsQuery = @{
+                        Domain = $Request.Query.Domain
+                    }
+                    if ($Request.Query.Subdomains) {
+                        $HttpsQuery.Subdomains = ($Request.Query.Subdomains).trim() -split '\s*,\s*'
+                    }
+                    else {
+                        $HttpsQuery.Subdomains = 'www'
+                    }
+
+                    $Body = Test-HttpsCertificate @HttpsQuery
+                }
+                'TestMtaSts' {
+                    $HttpsQuery = @{
+                        Domain = $Request.Query.Domain
+                    }
+                    $Body = Test-MtaSts @HttpsQuery
                 }
             }
         }

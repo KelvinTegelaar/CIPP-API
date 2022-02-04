@@ -1,4 +1,4 @@
 param($name)
 
-$object = (get-childitem ".\ChocoApps.Cache\*").name
+$object = (Get-ChildItem ".\ChocoApps.Cache\*" | Where-Object { $_.name -ne "CurrentlyRunning.txt" }).name 
 $object

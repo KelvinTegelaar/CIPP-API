@@ -54,14 +54,16 @@ catch {
 
 #Reassign the licenses
 try {
+
     if ($licenses -or $userobj.RemoveAllLicenses) {
+        $licenses = (($userobj | Select-Object "License_*").psobject.properties | Where-Object { $_.value -EQ $true }).name -replace "License_", ""
         $CurrentLicenses = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/users/$($userobj.Userid)" -tenantid $Userobj.tenantid
         $RemovalList = ($CurrentLicenses.assignedLicenses | Where-Object -Property skuid -NotIn $licenses).skuid
         $LicensesToRemove = if ($RemovalList) { ConvertTo-Json @( $RemovalList ) } else { "[]" }
    
         $liclist = foreach ($license in $Licenses) { '{"disabledPlans": [],"skuId": "' + $license + '" },' }
         $LicenseBody = '{"addLicenses": [' + $LicList + '], "removeLicenses": ' + $LicensesToRemove + '}'
-        
+        if ($userobj.RemoveAllLicenses) { $LicenseBody = '{"addLicenses": [], "removeLicenses": ' + $LicensesToRemove + '}' }
         Write-Host $LicenseBody
         $LicRequest = New-GraphPostRequest -uri "https://graph.microsoft.com/beta/users/$($userobj.Userid)/assignlicense" -tenantid $Userobj.tenantid -type POST -body $LicenseBody -verbose
 
@@ -72,7 +74,7 @@ try {
 }
 catch {
     Log-Request -API $APINAME -tenant ($UserObj.tenantid) -user $request.headers.'x-ms-client-principal' -message "License assign API failed. $($_.Exception.Message)" -Sev "Error"
-    $results.add( "Succesfully edit user. The password is $password. We've failed to assign the license. $($_.Exception.Message)")
+    $results.add( "We've failed to assign the license. $($_.Exception.Message)")
 }
 
 #Add Aliases, removal currently not supported.
@@ -110,7 +112,7 @@ if ($Request.body.CopyFrom -ne "") {
     }
 
 }
-$body = @{"Results" = ($results -join "<br>") }
+$body = @{"Results" = @($results) }
 # Associate values to output bindings by calling 'Push-OutputBinding'.
 Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
         StatusCode = [HttpStatusCode]::OK
