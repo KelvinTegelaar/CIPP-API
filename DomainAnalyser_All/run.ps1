@@ -33,7 +33,7 @@ $Result = [PSCustomObject]@{
     MailProvider         = ''
     DKIMEnabled          = ''
     Score                = ''
-    MaximumScore         = 160
+    MaximumScore         = 180
     ScorePercentage      = ''
     ScoreExplanation     = ''
 }
