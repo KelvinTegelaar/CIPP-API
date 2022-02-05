@@ -68,6 +68,12 @@ try {
 
                     $Body = Test-HttpsCertificate @HttpsQuery
                 }
+                'TestMtaSts' {
+                    $HttpsQuery = @{
+                        Domain = $Request.Query.Domain
+                    }
+                    $Body = Test-MtaSts @HttpsQuery
+                }
             }
         }
         else {

@@ -6,7 +6,7 @@ param($Request, $TriggerMetadata)
 $APIName = $TriggerMetadata.FunctionName
 Log-Request -user $request.headers.'x-ms-client-principal' -API $APINAME  -message "Accessed this API" -Sev "Debug"
 
-$body = Get-Content "SendNotifications\Config.Json" | ConvertFrom-Json
+$body = Get-Content "Config\Config_Notifications.json" | ConvertFrom-Json
 
 # Associate values to output bindings by calling 'Push-OutputBinding'.
 Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
