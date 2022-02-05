@@ -78,24 +78,14 @@ catch {
     Log-request -API "BestPracticeAnalyser" -tenant $tenant -message "Privacy Enabled State on $($tenant) Error: $($_.exception.message)" -sev "Error"
 }
 
-
-# Build up and enter an Exchange PSSession for the next section
-try {
-    $tokenvalue = ConvertTo-SecureString (Get-GraphToken -AppID 'a0c73c16-a7e3-4564-9a95-2bdf47383716' -RefreshToken $ENV:ExchangeRefreshToken -Scope 'https://outlook.office365.com/.default' -Tenantid $($Tenant)).Authorization -AsPlainText -Force
-    $credential = New-Object System.Management.Automation.PSCredential($upn, $tokenValue)
-    $session = New-PSSession -ConfigurationName Microsoft.Exchange -ConnectionUri "https://ps.outlook.com/powershell-liveid?DelegatedOrg=$($Tenant)&BasicAuthToOAuthConversion=true" -Credential $credential -Authentication Basic -AllowRedirection -ErrorAction Continue
-    Import-PSSession $session -ea Silentlycontinue -AllowClobber -CommandName "Get-Mailbox", "Set-mailbox", "Get-AdminAuditLogConfig", "Get-OrganizationConfig", "Enable-OrganizationCustomization" | Out-Null
-    Log-request -API "BestPracticeAnalyser" -tenant $tenant -message "Exchange PS Sesssion Generated on $($tenant) is successful" -sev "Debug"
-}
-catch {
-    Log-request -API "BestPracticeAnalyser" -tenant $tenant -message "Exchange PS Session on $($tenant) Error: $($_.exception.message)" -sev "Error"
-}
-
-
 # Get Send and Send Behalf Of
 try {
     # Send and Send Behalf Of
-    $MailboxBPA = Get-Mailbox -ResultSize Unlimited -RecipientTypeDetails UserMailbox, SharedMailbox
+    $MailboxBPAParams = @{
+        ResultSize           = 'Unlimited'
+        RecipientTypeDetails = 'UserMailbox, SharedMailbox'
+    }
+    $MailboxBPA = New-ExoRequest -tenantid $Tenant -cmdlet "Get-Mailbox"
     $TotalMailboxes = $MailboxBPA | Measure-Object | Select-Object -ExpandProperty Count
     $TotalMessageCopyForSentAsEnabled = $MailboxBPA | Where-Object { $_.MessageCopyForSentAsEnabled -eq $true } | Measure-Object | Select-Object -ExpandProperty Count
     $TotalMessageCopyForSendOnBehalfEnabled = $MailboxBPA | Where-Object { $_.MessageCopyForSendOnBehalfEnabled -eq $true } | Measure-Object | Select-Object -ExpandProperty Count
@@ -119,23 +109,14 @@ catch {
 
 # Get Unified Audit Log
 try {
-    $Result.UnifiedAuditLog = Get-AdminAuditLogConfig | Select-Object -ExpandProperty UnifiedAuditLogIngestionEnabled
+    $EXOAdminAuditLogConfig = New-ExoRequest -tenantid $Tenant -cmdlet "Get-AdminAuditLogConfig"
+    $Result.UnifiedAuditLog = $EXOAdminAuditLogConfig | Select-Object -ExpandProperty UnifiedAuditLogIngestionEnabled
     Log-request -API "BestPracticeAnalyser" -tenant $tenant -message "Unified Audit Log on $($tenant) is $($Result.UnifiedAuditLog)" -sev "Debug"
     
 }
 catch {
     Log-request -API "BestPracticeAnalyser" -tenant $tenant -message "Unified Audit Log on $($tenant). Error: $($_.exception.message)" -sev "Error"
 }
-
-
-# Important to clean up the remote session
-try {
-    Get-PSSession | Remove-PSSession
-}
-catch {
-    Log-request -API "BestPracticeAnalyser" -tenant $tenant -message "Error cleaning up PSSession on $($tenant). Error: $($_.exception.message)" -sev "Error"
-}
-
 
 # Get Basic Auth States
 try {
