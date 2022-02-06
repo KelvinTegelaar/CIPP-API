@@ -13,13 +13,12 @@ Write-Host "PowerShell HTTP trigger function processed a request."
 # Interact with query parameters or the body of the request.
 $TenantFilter = $Request.Query.TenantFilter
 
-if ($TenantFilter = 'AllTenants') {
+if ($TenantFilter -eq 'AllTenants') {
     $GraphRequest = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/tenantRelationships/managedTenants/managedDeviceCompliances"    
 }
 else {
-    $GraphRequest = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/tenantRelationships/managedTenants/managedDeviceCompliances?`$top=999&`$filter=tenantId eq '$TenantFilter'"    
+    $GraphRequest = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/tenantRelationships/managedTenants/managedDeviceCompliances?`$top=999&`$filter=organizationId eq '$TenantFilter'"    
 }
-
 
 if ($GraphRequest.value.count -lt 1) { 
     $StatusCode = [HttpStatusCode]::Forbidden
