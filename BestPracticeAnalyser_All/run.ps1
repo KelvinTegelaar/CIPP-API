@@ -42,6 +42,7 @@ $Result = [PSCustomObject]@{
     DisabledSharedMailboxLogins      = ""
     DisabledSharedMailboxLoginsCount = ""
     UnusedLicensesCount              = ""
+    UnusedLicensesTotal              = ""
     UnusedLicensesResult             = ""
     UnusedLicenseList                = ""
     SecureScoreCurrent               = ""
@@ -225,13 +226,19 @@ try {
         'X-Requested-With'       = 'XMLHttpRequest' 
     }
 
-    $WhiteListedSKUs = "FLOW_FREE", "TEAMS_EXPLORATORY", "TEAMS_COMMERCIAL_TRIAL", "POWERAPPS_VIRAL", "POWER_BI_STANDARD", "DYN365_ENTERPRISE_P1_IW"
+    $WhiteListedSKUs = "FLOW_FREE", "TEAMS_EXPLORATORY", "TEAMS_COMMERCIAL_TRIAL", "POWERAPPS_VIRAL", "POWER_BI_STANDARD", "DYN365_ENTERPRISE_P1_IW", "STREAM", "Dynamics 365 for Financials for IWs", "POWERAPPS_PER_APP_IW"
     $UnusedLicenses = $LicenseUsage | Where-Object { ($_.Purchased -ne $_.Consumed) -and ($WhiteListedSKUs -notcontains $_.AccountSkuId.SkuPartNumber) }
     $UnusedLicensesCount = $UnusedLicenses | Measure-Object | Select-Object -ExpandProperty Count
     $UnusedLicensesResult = if ($UnusedLicensesCount -gt 0) { "FAIL" } else { "PASS" }
     $Result.UnusedLicenseList = ($UnusedLicensesListBuilder = foreach ($License in $UnusedLicenses) {
             "SKU: $($License.AccountSkuId.SkuPartNumber), Purchased: $($License.Purchased), Consumed: $($License.Consumed)"
         }) -join "<br />"
+    
+    $TempCount = 0
+    foreach ($License in $UnusedLicenses) {
+        $TempCount = $TempCount + ($($License.Purchased) - $($License.Consumed))
+    }
+    $Result.UnusedLicensesTotal = $TempCount
     $Result.UnusedLicensesCount = $UnusedLicensesCount
     $Result.UnusedLicensesResult = $UnusedLicensesResult
     Log-request -API "BestPracticeAnalyser" -tenant $tenant -message "Unused Licenses on $($tenant). $($Result.UnusedLicensesCount) total not matching" -sev "Debug"
