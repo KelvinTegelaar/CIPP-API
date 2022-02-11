@@ -30,6 +30,6 @@ catch {
     # Associate values to output bindings by calling 'Push-OutputBinding'.
     Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
             StatusCode = '500'
-            Body       = $($_.Exception.message)
+            Body       = $(Get-NormalizedError -message $_.Exception.message)
         })
 }

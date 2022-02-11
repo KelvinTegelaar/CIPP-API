@@ -14,26 +14,33 @@ Write-Host "PowerShell HTTP trigger function processed a request."
 $TenantFilter = $Request.Query.TenantFilter
 $type = $request.query.Type
 $UserUPN = $request.query.UserUPN
+try {
+    $Result = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/reports/get$($type)Detail(period='D7')" -tenantid $TenantFilter | ConvertFrom-Csv 
 
-$Result = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/reports/get$($type)Detail(period='D7')" -tenantid $TenantFilter | convertfrom-csv 
+    if ($UserUPN) {
+        $ParsedRequest = $Result |  Where-Object { $_.'Owner Principal Name' -eq $UserUPN }
+    }
+    else {
+        $ParsedRequest = $Result
+    }
 
-if ($UserUPN){
-$ParsedRequest = $Result |  where-object {$_.'Owner Principal Name' -eq $UserUPN}
-} else {
-$ParsedRequest = $Result
+
+    $GraphRequest = $ParsedRequest | Select-Object @{ Name = 'UPN'; Expression = { $_.'Owner Principal Name' } },
+    @{ Name = 'displayName'; Expression = { $_.'Owner Display Name' } },
+    @{ Name = 'LastActive'; Expression = { $_.'Last Activity Date' } },
+    @{ Name = 'FileCount'; Expression = { $_.'File Count' } },
+    @{ Name = 'UsedGB'; Expression = { [math]::round($_.'Storage Used (Byte)' / 1GB, 0) } },
+    @{ Name = 'URL'; Expression = { $_.'Site URL' } },
+    @{ Name = 'Allocated'; Expression = { $_.'Storage Allocated (Byte)' / 1GB } }
+    $StatusCode = [HttpStatusCode]::OK
 }
-
-
-$GraphRequest = $ParsedRequest | select-object @{ Name = 'UPN'; Expression = { $_.'Owner Principal Name' } },
-@{ Name = 'displayName'; Expression = { $_.'Owner Display Name' } },
-@{ Name = 'LastActive'; Expression = { $_.'Last Activity Date' } },
-@{ Name = 'FileCount'; Expression = { $_.'File Count' } },
-@{ Name = 'UsedGB'; Expression = { [math]::round($_.'Storage Used (Byte)' /1GB,0) } },
-@{ Name = 'URL'; Expression = { $_.'Site URL' } },
-@{ Name = 'Allocated'; Expression = { $_.'Storage Allocated (Byte)' /1GB } }
-
+catch {
+    $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
+    $StatusCode = [HttpStatusCode]::Forbidden
+    $GraphRequest = $ErrorMessage
+}
 # Associate values to output bindings by calling 'Push-OutputBinding'.
 Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
-        StatusCode = [HttpStatusCode]::OK
+        StatusCode = $StatusCode
         Body       = @($GraphRequest)
     })
