@@ -29,12 +29,14 @@ try {
     $BlockedSender = New-ExoRequest -TenantID $TenantFilter -cmdlet 'Get-BlockedSenderAddress' -cmdParams $FetchParam
     if ($BlockedSender) {
         $BlockedForSpam = $True
-    } else {
+    }
+    else {
         $BlockedForSpam = $False
     }
     $StatsRequest = New-GraphGetRequest -uri "https://outlook.office365.com/adminapi/beta/$($tenantfilter)/Mailbox('$($MailRequest.PrimarySmtpAddress)')/Exchange.GetMailboxStatistics()" -Tenantid $tenantfilter -scope ExchangeOnline -noPagination $true
     $PermsRequest = New-GraphGetRequest -uri "https://outlook.office365.com/adminapi/beta/$($tenantfilter)/Mailbox('$($MailRequest.PrimarySmtpAddress)')/MailboxPermission" -Tenantid $tenantfilter -scope ExchangeOnline -noPagination $true
-} catch {
+}
+catch {
     Write-Error "Failed Fetching Data $_"
 }
 
@@ -47,10 +49,20 @@ $ParsedPerms = foreach ($Perm in $PermsRequest) {
     }
 }
 
+$forwardingaddress = if ($MailboxDetailedRequest.ForwardingAddress) {
+    $MailboxDetailedRequest.ForwardingAddress 
+}
+else {
+    $MailboxDetailedRequest.ForwardingSmtpAddress 
+}
+elseif ($MailboxDetailedRequest.ForwardingSmtpAddress -and $MailboxDetailedRequest.ForwardingAddress) {
+    $MailboxDetailedRequest.ForwardingAddress + ' ' + $MailboxDetailedRequest.ForwardingSmtpAddress
+}
+
 
 $GraphRequest = [ordered]@{
     ForwardAndDeliver        = $MailboxDetailedRequest.DeliverToMailboxAndForward
-    ForwardingAddress        = $MailboxDetailedRequest.ForwardingAddress + ' ' + $MailboxDetailedRequest.ForwardingSmtpAddress
+    ForwardingAddress        = $ForwardingAddress
     LitiationHold            = $MailboxDetailedRequest.LitigationHoldEnabled
     HiddenFromAddressLists   = $MailboxDetailedRequest.HiddenFromAddressListsEnabled
     EWSEnabled               = $CASRequest.EwsEnabled

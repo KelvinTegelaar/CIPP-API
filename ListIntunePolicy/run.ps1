@@ -14,41 +14,49 @@ Write-Host "PowerShell HTTP trigger function processed a request."
 $TenantFilter = $Request.Query.TenantFilter
 $id = $Request.Query.ID
 $urlname = $Request.Query.URLName
-if ($ID) {
-    $GraphRequest = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/deviceManagement/$($urlname)('$ID')" -tenantid $tenantfilter
+try {
+    if ($ID) {
+        $GraphRequest = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/deviceManagement/$($urlname)('$ID')" -tenantid $tenantfilter
 
+    }
+    else {
+
+        $GraphURLS = @("https://graph.microsoft.com/beta/deviceManagement/deviceConfigurations?`$select=id,displayName,lastModifiedDateTime,roleScopeTagIds,microsoft.graph.unsupportedDeviceConfiguration/originalEntityTypeName&`$expand=assignments&top=1000",
+            "https://graph.microsoft.com/beta/deviceManagement/groupPolicyConfigurations?`$expand=assignments&top=1000"
+            "https://graph.microsoft.com/beta/deviceAppManagement/mobileAppConfigurations?`$expand=assignments&`$filter=microsoft.graph.androidManagedStoreAppConfiguration/appSupportsOemConfig%20eq%20true"
+            "https://graph.microsoft.com/beta/deviceManagement/configurationPolicies?`$select=id,name,description,platforms,technologies,lastModifiedDateTime,settingCount,roleScopeTagIds,isAssigned&`$top=100&`$filter=(platforms%20eq%20%27windows10%27%20or%20platforms%20eq%20%27macOS%27)%20and%20(technologies%20eq%20%27mdm%27%20or%20technologies%20eq%20%27windows10XManagement%27)%20and%20(templateReference/templateFamily%20eq%20%27none%27)&`$expand=assignments")
+
+        $GraphRequest = $GraphURLS | ForEach-Object {
+            $URLName = (($_).split('?') | Select-Object -First 1) -replace 'https://graph.microsoft.com/beta/deviceManagement/', ''
+            New-GraphGetRequest -uri $_ -tenantid $TenantFilter
+
+        } | ForEach-Object {
+            $policyTypeName = switch -Wildcard ($_."assignments@odata.context") {
+                "*microsoft.graph.windowsIdentityProtectionConfiguration*" { "Identity Protection" }
+                "*microsoft.graph.windows10EndpointProtectionConfiguration*" { "Endpoint Protection" }
+                "*microsoft.graph.windows10CustomConfiguration*" { "Custom" }
+                "*groupPolicyConfigurations*" { "Administrative Templates" }
+                "*windowsDomainJoinConfiguration*" { "Domain Join configuration" }
+                "*windowsUpdateForBusinessConfiguration*" { "Update Configuration" }
+                "*windowsHealthMonitoringConfiguration*" { "Health Monitoring" }
+                default { $_."assignments@odata.context" }
+            }
+            if ($_.displayname -eq $null) { $_ | Add-Member -NotePropertyName displayName -NotePropertyValue $_.name }
+            $_ | Add-Member -NotePropertyName PolicyTypeName -NotePropertyValue  $policyTypeName 
+            $_ | Add-Member -NotePropertyName URLName -NotePropertyValue  $URLName
+            $_
+        } | Where-Object { $_.DisplayName -ne $null }
+
+    }
+    $StatusCode = [HttpStatusCode]::OK
 }
-else {
-
-    $GraphURLS = @("https://graph.microsoft.com/beta/deviceManagement/deviceConfigurations?`$select=id,displayName,lastModifiedDateTime,roleScopeTagIds,microsoft.graph.unsupportedDeviceConfiguration/originalEntityTypeName&`$expand=assignments&top=1000",
-        "https://graph.microsoft.com/beta/deviceManagement/groupPolicyConfigurations?`$expand=assignments&top=1000"
-        "https://graph.microsoft.com/beta/deviceAppManagement/mobileAppConfigurations?`$expand=assignments&`$filter=microsoft.graph.androidManagedStoreAppConfiguration/appSupportsOemConfig%20eq%20true"
-        "https://graph.microsoft.com/beta/deviceManagement/configurationPolicies?`$select=id,name,description,platforms,technologies,lastModifiedDateTime,settingCount,roleScopeTagIds,isAssigned&`$top=100&`$filter=(platforms%20eq%20%27windows10%27%20or%20platforms%20eq%20%27macOS%27)%20and%20(technologies%20eq%20%27mdm%27%20or%20technologies%20eq%20%27windows10XManagement%27)%20and%20(templateReference/templateFamily%20eq%20%27none%27)&`$expand=assignments")
-
-    $GraphRequest = $GraphURLS | ForEach-Object {
-        $URLName = (($_).split('?') | Select-Object -First 1) -replace 'https://graph.microsoft.com/beta/deviceManagement/', ''
-        New-GraphGetRequest -uri $_ -tenantid $TenantFilter
-
-    } | ForEach-Object {
-        $policyTypeName = switch -Wildcard ($_."assignments@odata.context") {
-            "*microsoft.graph.windowsIdentityProtectionConfiguration*" { "Identity Protection" }
-            "*microsoft.graph.windows10EndpointProtectionConfiguration*" { "Endpoint Protection" }
-            "*microsoft.graph.windows10CustomConfiguration*" { "Custom" }
-            "*groupPolicyConfigurations*" { "Administrative Templates" }
-            "*windowsDomainJoinConfiguration*" { "Domain Join configuration" }
-            "*windowsUpdateForBusinessConfiguration*" { "Update Configuration" }
-            "*windowsHealthMonitoringConfiguration*" { "Health Monitoring" }
-            default { $_."assignments@odata.context" }
-        }
-        if ($_.displayname -eq $null) { $_ | Add-Member -NotePropertyName displayName -NotePropertyValue $_.name }
-        $_ | Add-Member -NotePropertyName PolicyTypeName -NotePropertyValue  $policyTypeName 
-        $_ | Add-Member -NotePropertyName URLName -NotePropertyValue  $URLName
-        $_
-    } | Where-Object { $_.DisplayName -ne $null }
-
+catch {
+    $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
+    $StatusCode = [HttpStatusCode]::Forbidden
+    $GraphRequest = $ErrorMessage
 }
 # Associate values to output bindings by calling 'Push-OutputBinding'.
 Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
-        StatusCode = [HttpStatusCode]::OK
-        Body       = (ConvertTo-Json @($GraphRequest))
+        StatusCode = $StatusCode
+        Body       = @($GraphRequest)
     })

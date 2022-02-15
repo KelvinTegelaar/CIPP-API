@@ -82,7 +82,7 @@ catch {
 }
 
 
-$body = @{"Results" = ($results -join "<br>") }
+$body = @{"Results" = @($results) }
 # Associate values to output bindings by calling 'Push-OutputBinding'.
 Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
         StatusCode = [HttpStatusCode]::OK

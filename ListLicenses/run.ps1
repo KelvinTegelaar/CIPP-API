@@ -18,12 +18,12 @@ if ($TenantFilter) {
 else {
     $RawGraphRequest = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/subscribedSkus"
 }
-$ConvertTable = import-csv Conversiontable.csv
+$ConvertTable = Import-Csv Conversiontable.csv
 
 $GraphRequest = foreach ($SingleRequest in $RawGraphRequest) {
-   $prettyname = convert-skuname -skuname $($SingleRequest.skuPartNumber)
-   if($prettyname){$SingleRequest.skuPartNumber = $PrettyName }
-    $SingleRequest | Select-Object id,skuId,skuPartNumber,consumedUnits,@{ Name = 'availableUnits';  Expression = {$_.prepaidUnits.enabled - $_.consumedUnits}}
+    $prettyname = convert-skuname -skuname $($SingleRequest.skuPartNumber)
+    if ($prettyname) { $SingleRequest.skuPartNumber = $PrettyName }
+    $SingleRequest | Select-Object id, skuId, skuPartNumber, consumedUnits, @{ Name = 'availableUnits'; Expression = { $_.prepaidUnits.enabled - $_.consumedUnits } }
 }
 
 

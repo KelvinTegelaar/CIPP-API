@@ -19,7 +19,7 @@ function Get-LocationNameFromId {
     if ($id -eq 'All') {
         return 'All'
     }
-    $DisplayName = $Locations | ? { $_.id -eq $ID } | Select -ExpandProperty DisplayName
+    $DisplayName = $Locations | Where-Object { $_.id -eq $ID } | Select-Object -ExpandProperty DisplayName
     if ([string]::IsNullOrEmpty($displayName)) {
         return ""
     }
@@ -40,7 +40,7 @@ function Get-RoleNameFromId {
     if ($id -eq 'All') {
         return 'All'
     }
-    $DisplayName = $RoleDefinitions | ? { $_.id -eq $ID } | Select -ExpandProperty DisplayName
+    $DisplayName = $RoleDefinitions | Where-Object { $_.id -eq $ID } | Select-Object -ExpandProperty DisplayName
     if ([string]::IsNullOrEmpty($displayName)) {
         return ""
     }
@@ -61,7 +61,7 @@ function Get-UserNameFromId {
     if ($id -eq 'All') {
         return 'All'
     }
-    $DisplayName = $Users | ? { $_.id -eq $ID } | Select -ExpandProperty DisplayName
+    $DisplayName = $Users | Where-Object { $_.id -eq $ID } | Select-Object -ExpandProperty DisplayName
     if ([string]::IsNullOrEmpty($displayName)) {
         return ""
     }
@@ -81,7 +81,7 @@ function Get-GroupNameFromId {
     if ($id -eq 'All') {
         return 'All'
     }
-    $DisplayName = $Groups | ? { $_.id -eq $ID } | Select -ExpandProperty DisplayName
+    $DisplayName = $Groups | Where-Object { $_.id -eq $ID } | Select-Object -ExpandProperty DisplayName
     if ([string]::IsNullOrEmpty($displayName)) {
         return "No Data"
     }
@@ -377,11 +377,11 @@ function Get-ApplicationNameFromId {
     }
 
     if ([string]::IsNullOrEmpty($return)) {
-        $return = $Applications | ? { $_.Appid -eq $ID } | Select -ExpandProperty DisplayName 
+        $return = $Applications | Where-Object { $_.Appid -eq $ID } | Select-Object -ExpandProperty DisplayName 
     }
 
     if ([string]::IsNullOrEmpty($return)) {
-        $return = $Applications | ? { $_.ID -eq $ID } | Select -ExpandProperty DisplayName 
+        $return = $Applications | Where-Object { $_.ID -eq $ID } | Select-Object -ExpandProperty DisplayName 
     }
 
     if ([string]::IsNullOrEmpty($return)) {
@@ -396,50 +396,55 @@ Write-Host "PowerShell HTTP trigger function processed a request."
 
 # Interact with query parameters or the body of the request.
 $TenantFilter = $Request.Query.TenantFilter
+try {
+    $ConditionalAccessPolicyOutput = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/identity/conditionalAccess/policies" -tenantid $tenantfilter
+    $AllNamedLocations = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/identity/conditionalAccess/namedLocations" -tenantid $tenantfilter
+    $AllApplications = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/applications" -tenantid $tenantfilter
+    $AllRoleDefinitions = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/roleManagement/directory/roleDefinitions" -tenantid $tenantfilter
+    $GroupListOutput = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/groups" -tenantid $tenantfilter
+    $UserListOutput = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/users" -tenantid $tenantfilter | Select-Object * -ExcludeProperty *extensionAttribute*
 
-$ConditionalAccessPolicyOutput = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/identity/conditionalAccess/policies" -tenantid $tenantfilter
-$AllNamedLocations = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/identity/conditionalAccess/namedLocations" -tenantid $tenantfilter
-$AllApplications = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/applications" -tenantid $tenantfilter
-$AllRoleDefinitions = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/roleManagement/directory/roleDefinitions" -tenantid $tenantfilter
-$GroupListOutput = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/groups" -tenantid $tenantfilter
-$UserListOutput = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/users" -tenantid $tenantfilter | Select-Object * -ExcludeProperty *extensionAttribute*
-
-$GraphRequest = foreach ($cap in $ConditionalAccessPolicyOutput) {
-    $temp = [PSCustomObject]@{
-        id                                          = $cap.id
-        displayName                                 = $cap.displayName
-        customer                                    = $cap.Customer
-        tenantID                                    = $cap.TenantID
-        createdDateTime                             = $(if (![string]::IsNullOrEmpty($cap.createdDateTime)) { [datetime]$cap.createdDateTime | Get-Date -Format "yyyy-MM-dd HH:mm" }else { "" })
-        modifiedDateTime                            = $(if (![string]::IsNullOrEmpty($cap.modifiedDateTime)) { [datetime]$cap.modifiedDateTime | Get-Date -Format "yyyy-MM-dd HH:mm" }else { "" })
-        state                                       = $cap.state
-        clientAppTypes                              = ($cap.conditions.clientAppTypes) -join ","
-        includePlatforms                            = ($cap.conditions.platforms.includePlatforms) -join ","
-        excludePlatforms                            = ($cap.conditions.platforms.excludePlatforms) -join ","
-        includeLocations                            = (Get-LocationNameFromId -Locations $AllNamedLocations -id $cap.conditions.locations.includeLocations) -join ","
-        excludeLocations                            = (Get-LocationNameFromId -Locations $AllNamedLocations -id $cap.conditions.locations.excludeLocations) -join ","
-        includeApplications                         = ($cap.conditions.applications.includeApplications | % { Get-ApplicationNameFromId -Applications $AllApplications -id $_ }) -join ","
-        excludeApplications                         = ($cap.conditions.applications.excludeApplications | % { Get-ApplicationNameFromId -Applications $AllApplications -id $_ }) -join ","
-        includeUserActions                          = ($cap.conditions.applications.includeUserActions | out-string)
-        includeAuthenticationContextClassReferences = ($cap.conditions.applications.includeAuthenticationContextClassReferences | out-string)
-        includeUsers                                = ($cap.conditions.users.includeUsers | % { Get-UserNameFromId -Users $UserListOutput -id $_ }) | Out-String
-        excludeUsers                                = ($cap.conditions.users.excludeUsers | % { Get-UserNameFromId -Users $UserListOutput -id $_ }) | Out-String
-        includeGroups                               = ($cap.conditions.users.includeGroups | % { Get-GroupNameFromId -Groups $GroupListOutput -id $_ }) | Out-String
-        excludeGroups                               = ($cap.conditions.users.excludeGroups | % { Get-GroupNameFromId -Groups $GroupListOutput -id $_ }) | Out-String
-        includeRoles                                = ($cap.conditions.users.includeRoles | % { Get-RoleNameFromId -RoleDefinitions $AllRoleDefinitions -id $_ }) | Out-String
-        excludeRoles                                = ($cap.conditions.users.excludeRoles | % { Get-RoleNameFromId -RoleDefinitions $AllRoleDefinitions -id $_ }) | Out-String
-        grantControlsOperator                       = ($cap.grantControls.operator) -join ","
-        builtInControls                             = ($cap.grantControls.builtInControls) -join ","
-        customAuthenticationFactors                 = ($cap.grantControls.customAuthenticationFactors) -join ","
-        termsOfUse                                  = ($cap.grantControls.termsOfUse) -join ","
+    $GraphRequest = foreach ($cap in $ConditionalAccessPolicyOutput) {
+        $temp = [PSCustomObject]@{
+            id                                          = $cap.id
+            displayName                                 = $cap.displayName
+            customer                                    = $cap.Customer
+            tenantID                                    = $cap.TenantID
+            createdDateTime                             = $(if (![string]::IsNullOrEmpty($cap.createdDateTime)) { [datetime]$cap.createdDateTime | Get-Date -Format "yyyy-MM-dd HH:mm" }else { "" })
+            modifiedDateTime                            = $(if (![string]::IsNullOrEmpty($cap.modifiedDateTime)) { [datetime]$cap.modifiedDateTime | Get-Date -Format "yyyy-MM-dd HH:mm" }else { "" })
+            state                                       = $cap.state
+            clientAppTypes                              = ($cap.conditions.clientAppTypes) -join ","
+            includePlatforms                            = ($cap.conditions.platforms.includePlatforms) -join ","
+            excludePlatforms                            = ($cap.conditions.platforms.excludePlatforms) -join ","
+            includeLocations                            = (Get-LocationNameFromId -Locations $AllNamedLocations -id $cap.conditions.locations.includeLocations) -join ","
+            excludeLocations                            = (Get-LocationNameFromId -Locations $AllNamedLocations -id $cap.conditions.locations.excludeLocations) -join ","
+            includeApplications                         = ($cap.conditions.applications.includeApplications | ForEach-Object { Get-ApplicationNameFromId -Applications $AllApplications -id $_ }) -join ","
+            excludeApplications                         = ($cap.conditions.applications.excludeApplications | ForEach-Object { Get-ApplicationNameFromId -Applications $AllApplications -id $_ }) -join ","
+            includeUserActions                          = ($cap.conditions.applications.includeUserActions | Out-String)
+            includeAuthenticationContextClassReferences = ($cap.conditions.applications.includeAuthenticationContextClassReferences | Out-String)
+            includeUsers                                = ($cap.conditions.users.includeUsers | ForEach-Object { Get-UserNameFromId -Users $UserListOutput -id $_ }) | Out-String
+            excludeUsers                                = ($cap.conditions.users.excludeUsers | ForEach-Object { Get-UserNameFromId -Users $UserListOutput -id $_ }) | Out-String
+            includeGroups                               = ($cap.conditions.users.includeGroups | ForEach-Object { Get-GroupNameFromId -Groups $GroupListOutput -id $_ }) | Out-String
+            excludeGroups                               = ($cap.conditions.users.excludeGroups | ForEach-Object { Get-GroupNameFromId -Groups $GroupListOutput -id $_ }) | Out-String
+            includeRoles                                = ($cap.conditions.users.includeRoles | ForEach-Object { Get-RoleNameFromId -RoleDefinitions $AllRoleDefinitions -id $_ }) | Out-String
+            excludeRoles                                = ($cap.conditions.users.excludeRoles | ForEach-Object { Get-RoleNameFromId -RoleDefinitions $AllRoleDefinitions -id $_ }) | Out-String
+            grantControlsOperator                       = ($cap.grantControls.operator) -join ","
+            builtInControls                             = ($cap.grantControls.builtInControls) -join ","
+            customAuthenticationFactors                 = ($cap.grantControls.customAuthenticationFactors) -join ","
+            termsOfUse                                  = ($cap.grantControls.termsOfUse) -join ","
+        }
+        $temp
     }
-    $temp
+    $StatusCode = [HttpStatusCode]::OK
 }
-
-Write-Host $GraphRequest
+catch {
+    $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
+    $StatusCode = [HttpStatusCode]::Forbidden
+    $GraphRequest = $ErrorMessage
+}
 
 # Associate values to output bindings by calling 'Push-OutputBinding'.
 Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
-        StatusCode = [HttpStatusCode]::OK
+        StatusCode = $StatusCode
         Body       = @($GraphRequest)
     })
