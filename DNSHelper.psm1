@@ -173,7 +173,7 @@ function Read-NSRecord {
     )
     $NSResults = [PSCustomObject]@{
         Domain           = ''
-        Records          = New-Object System.Collections.Generic.List[PSCustomObject]
+        Records          = New-Object System.Collections.Generic.List[string]
         ValidationPasses = New-Object System.Collections.Generic.List[string]
         ValidationWarns  = New-Object System.Collections.Generic.List[string]
         ValidationFails  = New-Object System.Collections.Generic.List[string]
@@ -200,7 +200,7 @@ function Read-NSRecord {
     else {
         $NSRecords = $Result.Answer.data
         $ValidationPasses.Add("$Domain - NS record is present") | Out-Null
-        $NSResults.Records = $NSRecords
+        $NSResults.Records = @($NSRecords)
     }
     $NSResults.ValidationPasses = $ValidationPasses
     $NSResults.ValidationFails = $ValidationFails
@@ -331,8 +331,8 @@ function Read-MXRecord {
         }
         $MXResults.Records = $MXRecords
     }
-    $MXResults.ValidationPasses = $ValidationPasses
-    $MXResults.ValidationFails = $ValidationFails
+    $MXResults.ValidationPasses = @($ValidationPasses)
+    $MXResults.ValidationFails = @($ValidationFails)
     $MXResults
 }
 
@@ -738,12 +738,12 @@ function Read-SpfRecord {
     $SpfResults.RecordCount = $RecordCount
     $SpfResults.LookupCount = $LookupCount
     $SpfResults.AllMechanism = $AllMechanism
-    $SpfResults.ValidationPasses = $ValidationPasses
-    $SpfResults.ValidationWarns = $ValidationWarns
-    $SpfResults.ValidationFails = $ValidationFails
+    $SpfResults.ValidationPasses = @($ValidationPasses)
+    $SpfResults.ValidationWarns = @($ValidationWarns)
+    $SpfResults.ValidationFails = @($ValidationFails)
     $SpfResults.RecordList = $RecordList
     $SPFResults.TypeLookups = $TypeLookups
-    $SPFResults.IPAddresses = $IPAddresses
+    $SPFResults.IPAddresses = @($IPAddresses)
     $SPFResults.Status = $Status    
 
     # Output SpfResults object
@@ -1012,9 +1012,9 @@ function Read-DmarcPolicy {
     }
 
     # Add the validation lists
-    $DmarcAnalysis.ValidationPasses = $ValidationPasses
-    $DmarcAnalysis.ValidationWarns = $ValidationWarns
-    $DmarcAnalysis.ValidationFails = $ValidationFails
+    $DmarcAnalysis.ValidationPasses = @($ValidationPasses)
+    $DmarcAnalysis.ValidationWarns = @($ValidationWarns)
+    $DmarcAnalysis.ValidationFails = @($ValidationFails)
 
     # Return DMARC analysis
     $DmarcAnalysis
@@ -1264,9 +1264,9 @@ function Read-DkimRecord {
     }
 
     # Collect validation results
-    $DkimAnalysis.ValidationPasses = $ValidationPasses
-    $DkimAnalysis.ValidationWarns = $ValidationWarns
-    $DkimAnalysis.ValidationFails = $ValidationFails
+    $DkimAnalysis.ValidationPasses = @($ValidationPasses)
+    $DkimAnalysis.ValidationWarns = @($ValidationWarns)
+    $DkimAnalysis.ValidationFails = @($ValidationFails)
 
     # Return analysis
     $DkimAnalysis
@@ -1394,7 +1394,7 @@ function Read-WhoisRecord {
             if ($Server -ne $ReferralServer) {
                 $LastResult = $Results
                 $Results = Read-WhoisRecord -Query $Query -Server $ReferralServer -Port $Port
-                if ($Results._Raw -Match '(No match|Not Found)' -and $TopLevelReferrers -notcontains $Server) { 
+                if ($Results._Raw -Match '(No match|Not Found|No Data)' -and $TopLevelReferrers -notcontains $Server) { 
                     $Results = $LastResult 
                 }
                 else {
@@ -1406,11 +1406,11 @@ function Read-WhoisRecord {
             }
         } 
         else {
-            if ($Results._Raw -Match '(No match|Not Found)') {
+            if ($Results._Raw -Match '(No match|Not Found|No Data)') {
                 $first, $newquery = ($Query -split '\.')
                 if (($newquery | Measure-Object).Count -gt 1) {
                     $Query = $newquery -join '.'
-                    $Results = Get-Whois -Query $Query -Server $Server -Port $Port
+                    $Results = Read-WhoisRecord -Query $Query -Server $Server -Port $Port
                     foreach ($s in $Results._ReferralServers) {
                         $ReferralServers.Add($s) | Out-Null
                     }
@@ -2005,9 +2005,9 @@ function Read-MtaStsRecord {
     }
 
     # Add the validation lists
-    $StsAnalysis.ValidationPasses = $ValidationPasses
-    $StsAnalysis.ValidationWarns = $ValidationWarns
-    $StsAnalysis.ValidationFails = $ValidationFails
+    $StsAnalysis.ValidationPasses = @($ValidationPasses)
+    $StsAnalysis.ValidationWarns = @($ValidationWarns)
+    $StsAnalysis.ValidationFails = @($ValidationFails)
 
     # Return MTA-STS analysis
     $StsAnalysis
@@ -2130,9 +2130,9 @@ function Read-MtaStsPolicy {
     }
 
     # Aggregate validation results
-    $StsPolicyAnalysis.ValidationPasses = $ValidationPasses
-    $StsPolicyAnalysis.ValidationWarns = $ValidationWarns
-    $StsPolicyAnalysis.ValidationFails = $ValidationFails
+    $StsPolicyAnalysis.ValidationPasses = @($ValidationPasses)
+    $StsPolicyAnalysis.ValidationWarns = @($ValidationWarns)
+    $StsPolicyAnalysis.ValidationFails = @($ValidationFails)
 
     $StsPolicyAnalysis
 }
