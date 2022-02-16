@@ -104,13 +104,13 @@ function Test-DNSSEC {
     )
     $DSResults = [PSCustomObject]@{
         Domain           = $Domain
-        ValidationPasses = New-Object System.Collections.Generic.List[string]
-        ValidationWarns  = New-Object System.Collections.Generic.List[string]
-        ValidationFails  = New-Object System.Collections.Generic.List[string]
-        Keys             = New-Object System.Collections.Generic.List[string]
+        ValidationPasses = [System.Collections.Generic.List[string]]::new()
+        ValidationWarns  = [System.Collections.Generic.List[string]]::new()
+        ValidationFails  = [System.Collections.Generic.List[string]]::new()
+        Keys             = [System.Collections.Generic.List[string]]::new()
     }
-    $ValidationPasses = New-Object System.Collections.Generic.List[string]
-    $ValidationFails = New-Object System.Collections.Generic.List[string]
+    $ValidationPasses = [System.Collections.Generic.List[string]]::new()
+    $ValidationFails = [System.Collections.Generic.List[string]]::new()
 
     $DnsQuery = @{
         RecordType = 'dnskey'
@@ -173,14 +173,14 @@ function Read-NSRecord {
     )
     $NSResults = [PSCustomObject]@{
         Domain           = ''
-        Records          = New-Object System.Collections.Generic.List[string]
-        ValidationPasses = New-Object System.Collections.Generic.List[string]
-        ValidationWarns  = New-Object System.Collections.Generic.List[string]
-        ValidationFails  = New-Object System.Collections.Generic.List[string]
+        Records          = [System.Collections.Generic.List[string]]::new()
+        ValidationPasses = [System.Collections.Generic.List[string]]::new()
+        ValidationWarns  = [System.Collections.Generic.List[string]]::new()
+        ValidationFails  = [System.Collections.Generic.List[string]]::new()
         NameProvider     = ''
     }
-    $ValidationPasses = New-Object System.Collections.Generic.List[string]
-    $ValidationFails = New-Object System.Collections.Generic.List[string]
+    $ValidationPasses = [System.Collections.Generic.List[string]]::new()
+    $ValidationFails = [System.Collections.Generic.List[string]]::new()
 
     $DnsQuery = @{
         RecordType = 'ns'
@@ -237,16 +237,16 @@ function Read-MXRecord {
     )
     $MXResults = [PSCustomObject]@{
         Domain           = ''
-        Records          = New-Object System.Collections.Generic.List[PSCustomObject]
-        ValidationPasses = New-Object System.Collections.Generic.List[string]
-        ValidationWarns  = New-Object System.Collections.Generic.List[string]
-        ValidationFails  = New-Object System.Collections.Generic.List[string]
+        Records          = [System.Collections.Generic.List[object]]::new()
+        ValidationPasses = [System.Collections.Generic.List[string]]::new()
+        ValidationWarns  = [System.Collections.Generic.List[string]]::new()
+        ValidationFails  = [System.Collections.Generic.List[string]]::new()
         MailProvider     = ''
         ExpectedInclude  = ''
         Selectors        = ''
     }
-    $ValidationPasses = New-Object System.Collections.Generic.List[string]
-    $ValidationFails = New-Object System.Collections.Generic.List[string]
+    $ValidationPasses = [System.Collections.Generic.List[string]]::new()
+    $ValidationFails = [System.Collections.Generic.List[string]]::new()
 
     $DnsQuery = @{
         RecordType = 'mx'
@@ -303,7 +303,7 @@ function Read-MXRecord {
                             if ($_ -match $Provider.MxMatch) {
                                 $MXResults.MailProvider = $Provider
                                 if (($Provider.SpfReplace | Measure-Object | Select-Object -ExpandProperty Count) -gt 0) {
-                                    $ReplaceList = New-Object System.Collections.Generic.List[string]
+                                    $ReplaceList = [System.Collections.Generic.List[string]]::new()
                                     foreach ($Var in $Provider.SpfReplace) { 
                                         if ($ReservedVariables.Keys -contains $Var) {
                                             $ReplaceList.Add($ReservedVariables.$Var) | Out-Null
@@ -333,6 +333,7 @@ function Read-MXRecord {
     }
     $MXResults.ValidationPasses = @($ValidationPasses)
     $MXResults.ValidationFails = @($ValidationFails)
+    $MXResults.Records = @($MXResults.Records)
     $MXResults
 }
 
@@ -384,36 +385,40 @@ function Read-SpfRecord {
         [Parameter(ParameterSetName = 'Manual')]
         [string]$ExpectedInclude = ''
     )
-    $SPFResults = [PSCustomObject]@{
-        Domain           = ''
-        Record           = ''
-        RecordCount      = 0
-        LookupCount      = 0
-        AllMechanism     = ''
-        ValidationPasses = New-Object System.Collections.Generic.List[string]
-        ValidationWarns  = New-Object System.Collections.Generic.List[string]
-        ValidationFails  = New-Object System.Collections.Generic.List[string]
-        RecordList       = New-Object System.Collections.Generic.List[PSCustomObject]   
-        TypeLookups      = New-Object System.Collections.Generic.List[PSCustomObject]
-        Recommendations  = New-Object System.Collections.Generic.List[PSCustomObject]
-        IPAddresses      = New-Object System.Collections.Generic.List[string]
-        MailProvider     = ''
-        Status           = ''
+    $SpfResults = [PSCustomObject]@{
+        Domain            = ''
+        Record            = ''
+        RecordCount       = 0
+        LookupCount       = 0
+        AllMechanism      = ''
+        ValidationPasses  = [System.Collections.Generic.List[string]]::new()
+        ValidationWarns   = [System.Collections.Generic.List[string]]::new()
+        ValidationFails   = [System.Collections.Generic.List[string]]::new()
+        RecordList        = [System.Collections.Generic.List[object]]::new()   
+        TypeLookups       = [System.Collections.Generic.List[object]]::new()
+        Recommendations   = [System.Collections.Generic.List[object]]::new()
+        RecommendedRecord = ''
+        IPAddresses       = [System.Collections.Generic.List[string]]::new()
+        MailProvider      = ''
+        Status            = ''
 
     }
 
+  
+
     # Initialize lists to hold all records
-    $RecordList = New-Object System.Collections.Generic.List[PSCustomObject]
-    $ValidationFails = New-Object System.Collections.Generic.List[string]
-    $ValidationPasses = New-Object System.Collections.Generic.List[string]
-    $ValidationWarns = New-Object System.Collections.Generic.List[string]
-    $Recommendations = New-Object System.Collections.Generic.List[PSCustomObject]
+    $RecordList = [System.Collections.Generic.List[object]]::new()
+    $ValidationFails = [System.Collections.Generic.List[string]]::new()
+    $ValidationPasses = [System.Collections.Generic.List[string]]::new()
+    $ValidationWarns = [System.Collections.Generic.List[string]]::new()
+    $Recommendations = [System.Collections.Generic.List[object]]::new()
     $LookupCount = 0
     $AllMechanism = ''
     $Status = ''
+    $RecommendedRecord = ''
 
-    $TypeLookups = New-Object System.Collections.Generic.List[PSCustomObject]
-    $IPAddresses = New-Object System.Collections.Generic.List[string]
+    $TypeLookups = [System.Collections.Generic.List[object]]::new()
+    $IPAddresses = [System.Collections.Generic.List[string]]::new()
        
     $DnsQuery = @{
         RecordType = 'TXT'
@@ -462,7 +467,7 @@ function Read-SpfRecord {
                 $RecordCount = 1
             }
         }
-        $SPFResults.Domain = $Domain
+        $SpfResults.Domain = $Domain
 
         if ($Record -ne '' -and $RecordCount -gt 0) {
             # Split records and parse
@@ -473,7 +478,7 @@ function Read-SpfRecord {
                 else {
                     $RecordTerms = @()
                 }
-                Write-Verbose "########### Record: $Record"
+                Write-Verbose "########### RECORD: $Record"
 
                 if ($Level -eq 'Parent' -or $Level -eq 'Redirect') {
                     $AllMechanism = $Matches.AllMechanism
@@ -491,8 +496,10 @@ function Read-SpfRecord {
                 }
 
                 foreach ($Term in $RecordTerms) {
+                    Write-Verbose "TERM $Term"
                     # Redirect modifier
                     if ($Term -match 'redirect=(?<Domain>.+)') {
+                        Write-Verbose '-----REDIRECT-----'
                         $LookupCount++
                         if ($Record -match '(?<Qualifier>[+-~?])all') {
                             $ValidationFails.Add("$Domain - A record with a redirect modifier must not contain an all mechanism, permerror") | Out-Null
@@ -513,10 +520,10 @@ function Read-SpfRecord {
                             else {
                                 $RecordList.Add($RedirectedLookup) | Out-Null
                                 $AllMechanism = $RedirectedLookup.AllMechanism
-                                $ValidationFails.AddRange($RedirectedLookup.ValidationFails) | Out-Null
-                                $ValidationWarns.AddRange($RedirectedLookup.ValidationWarns) | Out-Null
-                                $ValidationPasses.AddRange($RedirectedLookup.ValidationPasses) | Out-Null
-                                $IPAddresses.AddRange($RedirectedLookup.IPAddresses) | Out-Null
+                                $ValidationFails.AddRange([string[]]$RedirectedLookup.ValidationFails) | Out-Null
+                                $ValidationWarns.AddRange([string[]]$RedirectedLookup.ValidationWarns) | Out-Null
+                                $ValidationPasses.AddRange([string[]]$RedirectedLookup.ValidationPasses) | Out-Null
+                                $IPAddresses.AddRange([string[]]$RedirectedLookup.IPAddresses) | Out-Null
                             }
                         }
                         # Record has been redirected, stop evaluating terms
@@ -524,25 +531,27 @@ function Read-SpfRecord {
                     }
                  
                     # Explanation modifier
-                    elseif ($Term -match '^exp=(?<Domain>.+)$') {}
+                    elseif ($Term -match '^exp=(?<Domain>.+)$') { Write-Verbose '-----EXP-----' }
             
                     # Include mechanism
                     elseif ($Term -match '^(?<Qualifier>[+-~?])?include:(?<Value>.+)$') {
                         $LookupCount++
-
+                        Write-Verbose '-----INCLUDE-----'
                         Write-Verbose "Looking up include $($Matches.Value)"
                         $IncludeLookup = Read-SpfRecord -Domain $Matches.Value -Level 'Include'
                         
                         if (($IncludeLookup | Measure-Object).Count -eq 0) {
+                            Write-Verbose '-----END INCLUDE (SPF MISSING)-----'
                             $ValidationFails.Add("$Domain Include lookup does not contain a SPF record, permerror") | Out-Null
                             $Status = 'permerror'
                         }
                         else {
+                            Write-Verbose '-----END INCLUDE (SPF FOUND)-----'
                             $RecordList.Add($IncludeLookup) | Out-Null
-                            $ValidationFails.AddRange($IncludeLookup.ValidationFails) | Out-Null
-                            $ValidationWarns.AddRange($IncludeLookup.ValidationWarns) | Out-Null
-                            $ValidationPasses.AddRange($IncludeLookup.ValidationPasses) | Out-Null
-                            $IPAddresses.AddRange($IncludeLookup.IPAddresses) | Out-Null
+                            $ValidationFails.AddRange([string[]]$IncludeLookup.ValidationFails) | Out-Null
+                            $ValidationWarns.AddRange([string[]]$IncludeLookup.ValidationWarns) | Out-Null
+                            $ValidationPasses.AddRange([string[]]$IncludeLookup.ValidationPasses) | Out-Null
+                            $IPAddresses.AddRange([string[]]$IncludeLookup.IPAddresses) | Out-Null
                         }
                     }
 
@@ -645,14 +654,16 @@ function Read-SpfRecord {
             }
         }
     }
-    catch {}
-
+    catch {
+        Write-Verbose "EXCEPTION: $($_.Exception.Message)"
+    }
+    
     # Lookup MX record for expected include information if not supplied
     if ($Level -eq 'Parent' -and $ExpectedInclude -eq '') {
         try {
             #Write-Information $Domain
             $MXRecord = Read-MXRecord -Domain $Domain
-            $SPFResults.MailProvider = $MXRecord.MailProvider
+            $SpfResults.MailProvider = $MXRecord.MailProvider
             if ($MXRecord.ExpectedInclude -ne '') {
                 $ExpectedInclude = $MXRecord.ExpectedInclude
             }
@@ -664,6 +675,14 @@ function Read-SpfRecord {
                 else {
                     $ValidationFails.Add('SPF record is not valid for a Null MX configuration. Expected record: "v=spf1 -all"') | Out-Null
                 }
+            }
+
+            if ($TypeLookups.RecordType -contains 'mx') {
+                $Recommendations.Add([pscustomobject]@{
+                        Message = "Remove the 'mx' modifier from your record. Check the mail provider documentation for the correct SPF include.";
+                        Match   = '\s+mx\s+'
+                        Replace = ' '
+                    }) | Out-Null
             }
         }
         catch {}
@@ -689,7 +708,7 @@ function Read-SpfRecord {
 
     # Count total lookups
     $LookupCount = $LookupCount + ($RecordList | Measure-Object -Property LookupCount -Sum).Sum
-        
+
     if ($Domain -ne 'Not Specified') {
         # Check legacy SPF type
         $LegacySpfType = Resolve-DnsHttpsQuery -Domain $Domain -RecordType 'SPF'
@@ -714,9 +733,15 @@ function Read-SpfRecord {
         if ($LookupCount -gt 10) { 
             $ValidationFails.Add("Lookup count: $LookupCount/10. SPF evaluation will fail with a permerror (RFC 7208 Section 4.6.4)") | Out-Null 
             $Status = 'permerror'
+            $Recommendations.Add([PSCustomObject]@{
+                    Message = 'Remove includes with excessive lookup counts.'
+                }) | Out-Null
         }
         elseif ($LookupCount -ge 9 -and $LookupCount -le 10) {
             $ValidationWarns.Add("Lookup count: $LookupCount/10. Excessive lookups can cause the SPF evaluation to fail (RFC 7208 Section 4.6.4)") | Out-Null
+            $Recommendations.Add([PSCustomObject]@{
+                    Message = 'Remove includes with excessive lookup counts.'
+                }) | Out-Null
         }
         else {
             $ValidationPasses.Add("Lookup count: $LookupCount/10") | Out-Null
@@ -733,6 +758,14 @@ function Read-SpfRecord {
         }
     }
 
+    if (($Recommendations | Measure-Object).Count -gt 0) {
+        foreach ($Rec in $Recommendations) {
+            if ($Rec.Match -ne '') {
+                $RecommendedRecord = $Record -replace $Rec.Match, $Rec.Replace
+            }
+        }
+    }
+
     # Set SPF result object
     $SpfResults.Record = $Record
     $SpfResults.RecordCount = $RecordCount
@@ -741,11 +774,16 @@ function Read-SpfRecord {
     $SpfResults.ValidationPasses = @($ValidationPasses)
     $SpfResults.ValidationWarns = @($ValidationWarns)
     $SpfResults.ValidationFails = @($ValidationFails)
-    $SpfResults.RecordList = $RecordList
-    $SPFResults.TypeLookups = $TypeLookups
-    $SPFResults.IPAddresses = @($IPAddresses)
-    $SPFResults.Status = $Status    
+    $SpfResults.RecordList = @($RecordList)
+    $SpfResults.Recommendations = @($Recommendations)
+    $SpfResults.RecommendedRecord = $RecommendedRecord
+    $SpfResults.TypeLookups = @($TypeLookups)
+    $SpfResults.IPAddresses = @($IPAddresses)
+    $SpfResults.Status = $Status    
 
+    
+    Write-Verbose "-----END SPF RECORD ($Level)-----"
+    
     # Output SpfResults object
     $SpfResults
 }
@@ -800,21 +838,21 @@ function Read-DmarcPolicy {
         SpfAlignment     = 'r'
         ReportFormat     = 'afrf'
         ReportInterval   = 86400
-        ReportingEmails  = New-Object System.Collections.Generic.List[string]
-        ForensicEmails   = New-Object System.Collections.Generic.List[string]
+        ReportingEmails  = [System.Collections.Generic.List[string]]::new()
+        ForensicEmails   = [System.Collections.Generic.List[string]]::new()
         FailureReport    = ''
-        ValidationPasses = New-Object System.Collections.Generic.List[string]
-        ValidationWarns  = New-Object System.Collections.Generic.List[string]
-        ValidationFails  = New-Object System.Collections.Generic.List[string]
+        ValidationPasses = [System.Collections.Generic.List[string]]::new()
+        ValidationWarns  = [System.Collections.Generic.List[string]]::new()
+        ValidationFails  = [System.Collections.Generic.List[string]]::new()
     }
 
     # Validation lists
-    $ValidationPasses = New-Object System.Collections.Generic.List[string]
-    $ValidationWarns = New-Object System.Collections.Generic.List[string]
-    $ValidationFails = New-Object System.Collections.Generic.List[string]
+    $ValidationPasses = [System.Collections.Generic.List[string]]::new()
+    $ValidationWarns = [System.Collections.Generic.List[string]]::new()
+    $ValidationFails = [System.Collections.Generic.List[string]]::new()
 
     # Email report domains
-    $ReportDomains = New-Object System.Collections.Generic.List[string]
+    $ReportDomains = [System.Collections.Generic.List[string]]::new()
 
     # Validation ranges
     $PolicyValues = @('none', 'quarantine', 'reject')
@@ -852,7 +890,7 @@ function Read-DmarcPolicy {
     }
 
     # Split DMARC record into name/value pairs
-    $TagList = New-Object System.Collections.Generic.List[PSCustomObject]
+    $TagList = [System.Collections.Generic.List[object]]::new()
     Foreach ($Element in ($DmarcRecord -split ';').trim()) {
         $Name, $Value = $Element -split '='
         $TagList.Add(
@@ -1057,15 +1095,15 @@ function Read-DkimRecord {
     $DkimAnalysis = [PSCustomObject]@{
         Domain           = $Domain
         MailProvider     = ''
-        Records          = New-Object System.Collections.Generic.List[PSCustomObject]
-        ValidationPasses = New-Object System.Collections.Generic.List[string]
-        ValidationWarns  = New-Object System.Collections.Generic.List[string]
-        ValidationFails  = New-Object System.Collections.Generic.List[string]
+        Records          = [System.Collections.Generic.List[object]]::new()
+        ValidationPasses = [System.Collections.Generic.List[string]]::new()
+        ValidationWarns  = [System.Collections.Generic.List[string]]::new()
+        ValidationFails  = [System.Collections.Generic.List[string]]::new()
     }
 
-    $ValidationPasses = New-Object System.Collections.Generic.List[string]
-    $ValidationWarns = New-Object System.Collections.Generic.List[string]
-    $ValidationFails = New-Object System.Collections.Generic.List[string]
+    $ValidationPasses = [System.Collections.Generic.List[string]]::new()
+    $ValidationWarns = [System.Collections.Generic.List[string]]::new()
+    $ValidationFails = [System.Collections.Generic.List[string]]::new()
 
     if (($Selectors | Measure-Object | Select-Object -ExpandProperty Count) -eq 0) {
         # MX lookup, check for defined selectors
@@ -1117,7 +1155,7 @@ function Read-DkimRecord {
                 HashAlgorithms   = ''
                 ServiceType      = ''
                 Granularity      = ''
-                UnrecognizedTags = New-Object System.Collections.Generic.List[PSCustomObject]
+                UnrecognizedTags = [System.Collections.Generic.List[object]]::new()
             }
 
             $DnsQuery = @{
@@ -1153,7 +1191,7 @@ function Read-DkimRecord {
             $DkimRecord.Record = $Record
 
             # Split DKIM record into name/value pairs
-            $TagList = New-Object System.Collections.Generic.List[PSCustomObject]
+            $TagList = [System.Collections.Generic.List[object]]::new()
             Foreach ($Element in ($Record -split ';')) {
                 if ($Element -ne '') {
                     $Name, $Value = $Element.trim() -split '='
@@ -1328,7 +1366,7 @@ function Read-WhoisRecord {
     try {
         # Open TCP connection and send query
         $Stream = $Client.GetStream()
-        $ReferralServers = New-Object System.Collections.Generic.List[string]
+        $ReferralServers = [System.Collections.Generic.List[string]]::new()
         $ReferralServers.Add($Server) | Out-Null
 
         # WHOIS query to send
@@ -1370,7 +1408,7 @@ function Read-WhoisRecord {
 
         # Store raw results and query metadata
         $Results._Raw = $Raw
-        $Results._ReferralServers = New-Object System.Collections.Generic.List[string]
+        $Results._ReferralServers = [System.Collections.Generic.List[string]]::new()
         $Results._Query = $Query
         $LastResult = $Results
 
@@ -1628,14 +1666,14 @@ function Test-HttpsCertificate {
     
     $CertificateTests = [PSCustomObject]@{
         Domain           = $Domain
-        UrlsToTest       = New-Object System.Collections.Generic.List[string]
-        Tests            = New-Object System.Collections.Generic.List[PSCustomObject]
-        ValidationPasses = New-Object System.Collections.Generic.List[string]
-        ValidationWarns  = New-Object System.Collections.Generic.List[string]
-        ValidationFails  = New-Object System.Collections.Generic.List[string]
+        UrlsToTest       = [System.Collections.Generic.List[string]]::new()
+        Tests            = [System.Collections.Generic.List[object]]::new()
+        ValidationPasses = [System.Collections.Generic.List[string]]::new()
+        ValidationWarns  = [System.Collections.Generic.List[string]]::new()
+        ValidationFails  = [System.Collections.Generic.List[string]]::new()
     }
 
-    $Urls = New-Object System.Collections.Generic.List[string]
+    $Urls = [System.Collections.Generic.List[string]]::new()
     $Urls.Add(('https://{0}' -f $Domain)) | Out-Null
 
     if (($Subdomains | Measure-Object).Count -gt 0) {
@@ -1653,10 +1691,10 @@ function Test-HttpsCertificate {
             Chain            = ''
             HttpResponse     = ''
             ValidityDays     = 0
-            ValidationPasses = New-Object System.Collections.Generic.List[string]
-            ValidationWarns  = New-Object System.Collections.Generic.List[string]
-            ValidationFails  = New-Object System.Collections.Generic.List[string]
-            Errors           = New-Object System.Collections.Generic.List[string]
+            ValidationPasses = [System.Collections.Generic.List[string]]::new()
+            ValidationWarns  = [System.Collections.Generic.List[string]]::new()
+            ValidationFails  = [System.Collections.Generic.List[string]]::new()
+            Errors           = [System.Collections.Generic.List[string]]::new()
         }      
         try {
             # Parse URL and extract hostname
@@ -1851,15 +1889,15 @@ function Test-MtaSts {
         StsRecord        = (Read-MtaStsRecord -Domain $Domain)
         StsPolicy        = (Read-MtaStsPolicy -Domain $Domain)
         TlsRptRecord     = (Read-TlsRptRecord -Domain $Domain)
-        ValidationPasses = New-Object System.Collections.Generic.List[string]
-        ValidationWarns  = New-Object System.Collections.Generic.List[string]
-        ValidationFails  = New-Object System.Collections.Generic.List[string]
+        ValidationPasses = [System.Collections.Generic.List[string]]::new()
+        ValidationWarns  = [System.Collections.Generic.List[string]]::new()
+        ValidationFails  = [System.Collections.Generic.List[string]]::new()
     }
 
     # Validation lists
-    $ValidationPasses = New-Object System.Collections.Generic.List[string]
-    $ValidationWarns = New-Object System.Collections.Generic.List[string]
-    $ValidationFails = New-Object System.Collections.Generic.List[string]
+    $ValidationPasses = [System.Collections.Generic.List[string]]::new()
+    $ValidationWarns = [System.Collections.Generic.List[string]]::new()
+    $ValidationFails = [System.Collections.Generic.List[string]]::new()
 
     # Check results for each test
     if ($MtaSts.StsRecord.IsValid) { $ValidationPasses.Add('MTA-STS Record is valid') | Out-Null }
@@ -1911,15 +1949,15 @@ function Read-MtaStsRecord {
         Id               = ''
         IsValid          = $false
         HasWarnings      = $false
-        ValidationPasses = New-Object System.Collections.Generic.List[string]
-        ValidationWarns  = New-Object System.Collections.Generic.List[string]
-        ValidationFails  = New-Object System.Collections.Generic.List[string]
+        ValidationPasses = [System.Collections.Generic.List[string]]::new()
+        ValidationWarns  = [System.Collections.Generic.List[string]]::new()
+        ValidationFails  = [System.Collections.Generic.List[string]]::new()
     }
 
     # Validation lists
-    $ValidationPasses = New-Object System.Collections.Generic.List[string]
-    $ValidationWarns = New-Object System.Collections.Generic.List[string]
-    $ValidationFails = New-Object System.Collections.Generic.List[string]
+    $ValidationPasses = [System.Collections.Generic.List[string]]::new()
+    $ValidationWarns = [System.Collections.Generic.List[string]]::new()
+    $ValidationFails = [System.Collections.Generic.List[string]]::new()
 
     # Validation ranges
 
@@ -1954,7 +1992,7 @@ function Read-MtaStsRecord {
     }
 
     # Split DMARC record into name/value pairs
-    $TagList = New-Object System.Collections.Generic.List[PSCustomObject]
+    $TagList = [System.Collections.Generic.List[object]]::new()
     Foreach ($Element in ($StsRecord -split ';').trim()) {
         $Name, $Value = $Element -split '='
         $TagList.Add(
@@ -2037,18 +2075,18 @@ function Read-MtaStsPolicy {
         Domain           = $Domain
         Version          = ''
         Mode             = ''
-        Mx               = New-Object System.Collections.Generic.List[string]
+        Mx               = [System.Collections.Generic.List[string]]::new()
         MaxAge           = ''
         IsValid          = $false
         HasWarnings      = $false
-        ValidationPasses = New-Object System.Collections.Generic.List[string]
-        ValidationWarns  = New-Object System.Collections.Generic.List[string]
-        ValidationFails  = New-Object System.Collections.Generic.List[string]
+        ValidationPasses = [System.Collections.Generic.List[string]]::new()
+        ValidationWarns  = [System.Collections.Generic.List[string]]::new()
+        ValidationFails  = [System.Collections.Generic.List[string]]::new()
     }
 
-    $ValidationPasses = New-Object System.Collections.Generic.List[string]
-    $ValidationWarns = New-Object System.Collections.Generic.List[string]
-    $ValidationFails = New-Object System.Collections.Generic.List[string]
+    $ValidationPasses = [System.Collections.Generic.List[string]]::new()
+    $ValidationWarns = [System.Collections.Generic.List[string]]::new()
+    $ValidationFails = [System.Collections.Generic.List[string]]::new()
 
     # Valid policy modes
     $StsPolicyModes = @('testing', 'enforce')
@@ -2071,7 +2109,7 @@ function Read-MtaStsPolicy {
     }
 
     # Policy file is key value pairs split on new lines
-    $StsPolicyEntries = New-Object System.Collections.Generic.List[PSCustomObject]
+    $StsPolicyEntries = [System.Collections.Generic.List[object]]::new()
     $Entries = $wr.Content -split "`r?`n"
     foreach ($Entry in $Entries) {
         if ($null -ne $Entry) {
@@ -2163,12 +2201,12 @@ function Read-TlsRptRecord {
         Domain           = $Domain
         Record           = ''
         Version          = ''
-        RuaEntries       = New-Object System.Collections.Generic.List[string]
+        RuaEntries       = [System.Collections.Generic.List[string]]::new()
         IsValid          = $false
         HasWarnings      = $false
-        ValidationPasses = New-Object System.Collections.Generic.List[string]
-        ValidationWarns  = New-Object System.Collections.Generic.List[string]
-        ValidationFails  = New-Object System.Collections.Generic.List[string]
+        ValidationPasses = [System.Collections.Generic.List[string]]::new()
+        ValidationWarns  = [System.Collections.Generic.List[string]]::new()
+        ValidationFails  = [System.Collections.Generic.List[string]]::new()
     }
 
     $ValidRuaProtocols = @(
@@ -2177,9 +2215,9 @@ function Read-TlsRptRecord {
     )
 
     # Validation lists
-    $ValidationPasses = New-Object System.Collections.Generic.List[string]
-    $ValidationWarns = New-Object System.Collections.Generic.List[string]
-    $ValidationFails = New-Object System.Collections.Generic.List[string]
+    $ValidationPasses = [System.Collections.Generic.List[string]]::new()
+    $ValidationWarns = [System.Collections.Generic.List[string]]::new()
+    $ValidationFails = [System.Collections.Generic.List[string]]::new()
 
     # Validation ranges
 
@@ -2214,7 +2252,7 @@ function Read-TlsRptRecord {
     }
 
     # Split DMARC record into name/value pairs
-    $TagList = New-Object System.Collections.Generic.List[PSCustomObject]
+    $TagList = [System.Collections.Generic.List[object]]::new()
     Foreach ($Element in ($TlsRtpRecord -split ';').trim()) {
         $Name, $Value = $Element -split '='
         $TagList.Add(
