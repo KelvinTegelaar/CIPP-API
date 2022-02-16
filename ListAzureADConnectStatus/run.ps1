@@ -29,23 +29,18 @@ if (($DataToReturn -eq 'AzureADConnectSettings') -or ([string]::IsNullOrEmpty($D
 
 if (($DataToReturn -eq 'AzureADObjectsInError') -or ([string]::IsNullOrEmpty($DataToReturn)) ) {
     $selectlist = "id", "displayName", "onPremisesProvisioningErrors", "createdDateTime"
-    $GraphRequest = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/users?`$select=$($selectlist -join ',')" -tenantid $TenantFilter | ForEach-Object {
-        $_ | Add-Member -NotePropertyName ObjectType -NotePropertyValue "User"
-        $_
+    $Types = "Users", "Contacts", "Groups"
+
+    $GraphRequest = foreach ($Type in $types) {
+        New-GraphGetRequest -uri "https://graph.microsoft.com/beta/$($Type)?`$select=$($selectlist -join ',')" -tenantid $TenantFilter | ForEach-Object {
+            if ($_.id -ne $null) {
+                $_ | Add-Member -NotePropertyName ObjectType -NotePropertyValue $Type 
+                $_
+            }
+        
+        }
     }
-    
-    $GraphRequest2 = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/groups?`$select=$($selectlist -join ',')" -tenantid $TenantFilter | ForEach-Object {
-        $_ | Add-Member -NotePropertyName ObjectType -NotePropertyValue "Group"
-        $_
-    }
-    
-    
-    $GraphRequest3 = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/contacts?`$select=$($selectlist -join ',')" -tenantid $TenantFilter | ForEach-Object {
-        $_ | Add-Member -NotePropertyName ObjectType -NotePropertyValue "Contact"
-        $_
-    }
-    
-    $ObjectsInError = $GraphRequest + $GraphRequest2 + $GraphRequest3
+    $ObjectsInError = @($GraphRequest)
 }
 
 if ([string]::IsNullOrEmpty($DataToReturn)) {

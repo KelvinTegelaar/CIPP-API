@@ -86,7 +86,8 @@ try {
 }
 catch {
   #Log-Request -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $($tenantfilter) -message "Failed to assign app $($appFilter): $($_.Exception.Message)" -Sev "Error"
-  $results = [pscustomobject]@{"Results" = "Failed to assign. $($_.Exception.Message)" }
+  $errMessage = Get-NormalizedError -message $_.Exception.Message
+  $results = [pscustomobject]@{"Results" = "$errMessage" }
 }
 New-Item "Cache_BECCheck" -ItemType Directory -Force -ErrorAction SilentlyContinue | Out-Null
 $results | ConvertTo-Json | Out-File "Cache_BECCheck\$GUID.json"
