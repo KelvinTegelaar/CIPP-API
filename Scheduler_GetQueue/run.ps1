@@ -15,6 +15,7 @@ $object = foreach ($Tenant in $tenants) {
         get-tenants | ForEach-Object {
             [pscustomobject]@{ 
                 Tenant = $_.defaultDomainName
+                Tag    = "AllTenants"
                 Type   = $Typefile.Type
             }
         }
