@@ -702,6 +702,11 @@ function Read-SpfRecord {
             }
             else {
                 $ValidationFails.Add("Expected SPF include of '$ExpectedInclude' was not found in the SPF record") | Out-Null
+                $Recommendations.Add([pscustomobject]@{
+                        Message = ("Add 'include:{0} to your record." -f $ExpectedInclude)
+                        Match   = '^v=spf1 (.+?)([-~?+]all)?$'
+                        Replace = "v=spf1 `$1 include:$ExpectedInclude `$2"
+                    }) | Out-Null
             }
         }
         else {
