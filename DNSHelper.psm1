@@ -455,7 +455,10 @@ function Read-SpfRecord {
                         # Check for the correct number of records
                         elseif ($RecordCount -gt 1 -and $Level -eq 'Parent') {
                             $ValidationFails.Add("There must only be one SPF record, $RecordCount detected") | Out-Null 
-                            $Recommendations.Add([pscustomobject]@{Message = 'Delete one of the records beginning with v=spf1' }) | Out-Null
+                            $Recommendations.Add([pscustomobject]@{
+                                    Message = 'Delete one of the records beginning with v=spf1'
+                                    Match   = '' 
+                                }) | Out-Null
                             $Status = 'permerror'
                             $Record = $Answer.data[0]
                         }
@@ -680,7 +683,7 @@ function Read-SpfRecord {
             if ($TypeLookups.RecordType -contains 'mx') {
                 $Recommendations.Add([pscustomobject]@{
                         Message = "Remove the 'mx' modifier from your record. Check the mail provider documentation for the correct SPF include.";
-                        Match   = '\s+mx\s+'
+                        Match   = '\s*(mx)\s+'
                         Replace = ' '
                     }) | Out-Null
             }
@@ -735,18 +738,33 @@ function Read-SpfRecord {
         }
 
         # SPF lookup count
+        if ($LookupCount -ge 9) {
+            $SpecificLookupsFound = $false
+            foreach ($SpfRecord in $RecordList) {
+                if ($SpfRecord.LookupCount -ge 5) {
+                    $SpecificLookupsFound = $true
+                    $Match = ('include:{0}' -f $SpfRecord.Domain)
+                    $Recommendations.Add([PSCustomObject]@{
+                            Message = ("Remove include modifier for domain '{0}', this adds {1} lookups towards the max of 10." -f $SpfRecord.Domain, $SpfRecord.LookupCount)
+                            Match   = $Match
+                            Replace = ''
+                        }) | Out-Null
+                } 
+            }
+            if (!($SpecificLookupsFound)) {
+                $Recommendations.Add([PSCustomObject]@{
+                        Message = 'Review includes modifiers to ensure that your lookup count stays below 10.'
+                        Match   = ''
+                    }) | Out-Null
+            }
+        }
+
         if ($LookupCount -gt 10) { 
             $ValidationFails.Add("Lookup count: $LookupCount/10. SPF evaluation will fail with a permerror (RFC 7208 Section 4.6.4)") | Out-Null 
             $Status = 'permerror'
-            $Recommendations.Add([PSCustomObject]@{
-                    Message = 'Remove includes with excessive lookup counts.'
-                }) | Out-Null
         }
         elseif ($LookupCount -ge 9 -and $LookupCount -le 10) {
-            $ValidationWarns.Add("Lookup count: $LookupCount/10. Excessive lookups can cause the SPF evaluation to fail (RFC 7208 Section 4.6.4)") | Out-Null
-            $Recommendations.Add([PSCustomObject]@{
-                    Message = 'Remove includes with excessive lookup counts.'
-                }) | Out-Null
+            $ValidationWarns.Add("Lookup count: $LookupCount/10. Excessive lookups can cause the SPF evaluation to fail (RFC 7208 Section 4.6.4)") | Out-Null            
         }
         else {
             $ValidationPasses.Add("Lookup count: $LookupCount/10") | Out-Null
@@ -763,12 +781,17 @@ function Read-SpfRecord {
         }
     }
 
+    # Check recommendations for replacement regexes
     if (($Recommendations | Measure-Object).Count -gt 0) {
+        $RecommendedRecord = $Record
         foreach ($Rec in $Recommendations) {
             if ($Rec.Match -ne '') {
-                $RecommendedRecord = $Record -replace $Rec.Match, $Rec.Replace
+                # Replace item in record with recommended
+                $RecommendedRecord = $RecommendedRecord -replace $Rec.Match, $Rec.Replace
             }
         }
+        # Cleanup extra spaces
+        $RecommendedRecord = $RecommendedRecord -replace '\s+', ' '
     }
 
     # Set SPF result object
