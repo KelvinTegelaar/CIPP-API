@@ -727,6 +727,11 @@ function Read-SpfRecord {
         }
         elseif ($Record -ne '') {
             $ValidationFails.Add('SPF record should end in -all to prevent spamming') | Out-Null 
+            $Recommendations.Add([PSCustomObject]@{
+                    Message = "Replace '{0}' with '-all' to make a SPF failure result in a hard fail." -f $AllMechanism
+                    Match   = $AllMechanism
+                    Replace = '-all'
+                }) | Out-Null
         }
 
         # SPF lookup count
