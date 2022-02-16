@@ -743,9 +743,10 @@ function Read-SpfRecord {
             foreach ($SpfRecord in $RecordList) {
                 if ($SpfRecord.LookupCount -ge 5) {
                     $SpecificLookupsFound = $true
+                    $IncludeLookupCount = $SpfRecord.LookupCount + 1
                     $Match = ('include:{0}' -f $SpfRecord.Domain)
                     $Recommendations.Add([PSCustomObject]@{
-                            Message = ("Remove include modifier for domain '{0}', this adds {1} lookups towards the max of 10." -f $SpfRecord.Domain, $SpfRecord.LookupCount)
+                            Message = ("Remove include modifier for domain '{0}', this adds {1} lookups towards the max of 10. Alternatively, reduce the number of lookups inside this record if you are able to." -f $SpfRecord.Domain, $IncludeLookupCount)
                             Match   = $Match
                             Replace = ''
                         }) | Out-Null
@@ -753,7 +754,7 @@ function Read-SpfRecord {
             }
             if (!($SpecificLookupsFound)) {
                 $Recommendations.Add([PSCustomObject]@{
-                        Message = 'Review includes modifiers to ensure that your lookup count stays below 10.'
+                        Message = 'Review include modifiers to ensure that your lookup count stays below 10.'
                         Match   = ''
                     }) | Out-Null
             }
