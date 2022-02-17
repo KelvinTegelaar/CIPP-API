@@ -12,22 +12,38 @@ Write-Host "PowerShell HTTP trigger function processed a request."
 
 # Interact with query parameters or the body of the request.
 $TenantFilter = $Request.Query.TenantFilter
-if ($TenantFilter) {
-    $RawGraphRequest = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/subscribedSkus" -tenantid $TenantFilter
+$RawGraphRequest = if ($TenantFilter -ne "AllTenants") {
+    $LicRequest = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/subscribedSkus" -tenantid $TenantFilter
+    [PSCustomObject]@{
+        Tenant   = $TenantFilter
+        Licenses = $LicRequest
+    }
 }
 else {
-    $RawGraphRequest = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/subscribedSkus"
+    Get-Tenants | ForEach-Object { $Licrequest = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/subscribedSkus" -tenantid $_.defaultDomainName 
+        [PSCustomObject]@{
+            Tenant   = $_.defaultDomainName
+            Licenses = $Licrequest
+        } 
+    }
 }
 $ConvertTable = Import-Csv Conversiontable.csv
 
-$GraphRequest = foreach ($SingleRequest in $RawGraphRequest) {
-    $prettyname = convert-skuname -skuname $($SingleRequest.skuPartNumber)
-    if ($prettyname) { $SingleRequest.skuPartNumber = $PrettyName }
-    $SingleRequest | Select-Object id, skuId, skuPartNumber, consumedUnits, @{ Name = 'availableUnits'; Expression = { $_.prepaidUnits.enabled - $_.consumedUnits } }
+$GraphRequest = $RawGraphRequest | ForEach-Object {
+    $skuid = $_.Licenses
+    foreach ($sku in $skuid) {
+        $PrettyName = ($ConvertTable | Where-Object { $_.guid -eq $sku.skuid }).'Product_Display_Name' | Select-Object -Last 1
+        if (!$PrettyName) { $PrettyName = $skuid.skuPartNumber }
+        [PSCustomObject]@{
+            Tenant   = $_.Tenant
+            License        = $PrettyName
+            CountUsed      = "$($sku.consumedUnits)"
+            CountAvailable = $sku.prepaidUnits.enabled - $sku.consumedUnits
+            TotalLicenses  = "$($sku.prepaidUnits.enabled)"
+        }      
+    }
 }
 
-
-# Associate values to output bindings by calling 'Push-OutputBinding'.
 Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
         StatusCode = [HttpStatusCode]::OK
         Body       = @($GraphRequest)
