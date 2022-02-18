@@ -69,24 +69,50 @@ try {
   catch {
     $Devices = $null
   }
+  $PermissionsLog = ($7dayslog | Where-Object -Property Operations -In "Remove-MailboxPermission", "Add-MailboxPermission", "UpdateCalendarDelegation", "AddFolderPermissions" ).AuditData | ConvertFrom-Json -Depth 100 | ForEach-Object {
+    $perms = if ($_.Parameters) {
+      $_.Parameters | ForEach-Object { if ($_.Name -eq "AccessRights") { $_.Value } }
+    }
+    else
+    { $_.item.ParentFolder.MemberRights }
+    $objectID = if ($_.ObjectID) { $_.ObjectID } else { $($_.MailboxOwnerUPN) + $_.item.ParentFolder.Path }
+    [pscustomobject]@{
+      Operation   = $_.Operation
+      UserKey     = $_.UserKey
+      ObjectId    = $objectId
+      Permissions = $perms
+    }
+  }
+
+  $RulesLog = @(($7dayslog | Where-Object -Property Operations -In "New-InboxRule", "Set-InboxRule", "UpdateInboxRules").AuditData | ConvertFrom-Json) | ForEach-Object {
+    Write-Host ($_ | ConvertTo-Json)
+    [pscustomobject]@{
+      ClientIP      = $_.ClientIP
+      CreationTime  = $_.CreationTime
+      UserId        = $_.UserId
+      RuleName      = ($_.OperationProperties | ForEach-Object { if ($_.Name -eq "RuleName") { $_.Value } })
+      RuleCondition = ($_.OperationProperties | ForEach-Object { if ($_.Name -eq "RuleCondition") { $_.Value } })
+    }
+  }
+  
   $Results = [PSCustomObject]@{
     AddedApps                = @(($7dayslog | Where-Object -Property Operations -In 'Add OAuth2PermissionGrant.', 'Consent to application.').AuditData | ConvertFrom-Json)
     SuspectUserMailboxLogons = @(($7dayslog | Where-Object -Property Operations -In  "MailboxLogin" ).AuditData | ConvertFrom-Json)
     LastSuspectUserLogon     = @($LastSignIn)
     SuspectUserDevices       = @($Devices)
-    NewRules                 = @(($7dayslog | Where-Object -Property Operations -In "New-InboxRule", "Set-InboxRule", "UpdateInboxRules").AuditData | ConvertFrom-Json)
-    MailboxPermissionChanges = @(($7dayslog | Where-Object -Property Operations -In "Remove-MailboxPermission", "Add-MailboxPermission", "UpdateCalendarDelegation", "AddFolderPermissions" ).AuditData | ConvertFrom-Json)
+    NewRules                 = @($RulesLog)
+    MailboxPermissionChanges = @($PermissionsLog)
     NewUsers                 = @(($7dayslog | Where-Object -Property Operations -In "Add user.").AuditData | ConvertFrom-Json)
     ChangedPasswords         = @(($7dayslog | Where-Object -Property Operations -In "Change user password.", "Reset user password.").AuditData | ConvertFrom-Json)
   }
     
-  Write-Host $Results
   #Log-Request -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $($tenantfilter) -message "Assigned $($appFilter) to $assignTo" -Sev "Info"
 
 }
 catch {
   #Log-Request -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $($tenantfilter) -message "Failed to assign app $($appFilter): $($_.Exception.Message)" -Sev "Error"
-  $results = [pscustomobject]@{"Results" = "Failed to assign. $($_.Exception.Message)" }
+  $errMessage = Get-NormalizedError -message $_.Exception.Message
+  $results = [pscustomobject]@{"Results" = "$errMessage" }
 }
 New-Item "Cache_BECCheck" -ItemType Directory -Force -ErrorAction SilentlyContinue | Out-Null
 $results | ConvertTo-Json | Out-File "Cache_BECCheck\$GUID.json"

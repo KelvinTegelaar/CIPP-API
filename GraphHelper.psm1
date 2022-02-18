@@ -1,3 +1,18 @@
+function Get-NormalizedError {
+    [CmdletBinding()]
+    param (
+        [string]$message
+    )
+    switch -Wildcard ($message) {
+        "Request not applicable to target tenant." { "Required license not available for this tenant" }
+        "Neither tenant is B2C or tenant doesn't have premium license" { "This feature requires a P1 license or higher" }
+        "Response status code does not indicate success: 400 (Bad Request)." { "Error 400 occured. There is an issue with the token configuration for this tenant. Please perform an access check" }
+        "*Microsoft.Skype.Sync.Pstn.Tnm.Common.Http.HttpResponseException*" { "Could not connect to Teams Admin center - Tenant might be missing a Teams license" }
+        "*Provide valid credential.*" { "Error 400: There is an issue with your Exchange Token configuration. Please perform an access check for this tenant" }
+        Default { $message }
+    }
+}
+
 function Get-GraphToken($tenantid, $scope, $AsApp, $AppID, $refreshToken, $ReturnRefresh) {
     if (!$scope) { $scope = 'https://graph.microsoft.com//.default' }
 

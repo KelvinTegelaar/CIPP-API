@@ -34,7 +34,8 @@ else {
             Body       = @{ GUID = $RunningGUID }
         })
     $OrchRequest = [PSCustomObject]@{
-        GUID         = $RunningGUID
+        GUID     = $RunningGUID
+        TenantID = $Request.query.tenantFilter
     }
     $InstanceId = Start-NewOrchestration -FunctionName 'Durable_AlertsRun' -InputObject $OrchRequest
 

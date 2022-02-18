@@ -25,7 +25,7 @@ try {
 
     $TeamsSettings = [PSCustomObject]@{
         "template@odata.bind" = "https://graph.microsoft.com/v1.0/teamsTemplates('standard')"
-        "visibility"          = "Public"
+        "visibility"          = $userobj.visibility
         "displayName"         = $userobj.displayname
         "description"         = $userobj.description
         "members"             = @($owners)

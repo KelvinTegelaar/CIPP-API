@@ -12,16 +12,23 @@ Write-Host "PowerShell HTTP trigger function processed a request."
 
 # Interact with query parameters or the body of the request.
 $TenantFilter = $Request.Query.TenantFilter
-$GraphRequest = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/reports/getMailboxUsageDetail(period='D7')" -tenantid $TenantFilter | ConvertFrom-Csv | Select-Object @{ Name = 'UPN'; Expression = { $_.'User Principal Name' } },
-@{ Name = 'displayName'; Expression = { $_.'Display Name' } },
-@{ Name = 'LastActive'; Expression = { $_.'Last Activity Date' } },
-@{ Name = 'UsedGB'; Expression = { [math]::round($_.'Storage Used (Byte)' / 1GB, 0) } },
-@{ Name = 'QuotaGB'; Expression = { [math]::round($_.'Prohibit Send/Receive Quota (Byte)' / 1GB, 0) } },
-@{ Name = 'ItemCount'; Expression = { $_.'Item Count' } },
-@{ Name = 'HasArchive'; Expression = { $_.'Has Archive' } }
-
+try {
+    $GraphRequest = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/reports/getMailboxUsageDetail(period='D7')" -tenantid $TenantFilter | ConvertFrom-Csv | Select-Object @{ Name = 'UPN'; Expression = { $_.'User Principal Name' } },
+    @{ Name = 'displayName'; Expression = { $_.'Display Name' } },
+    @{ Name = 'LastActive'; Expression = { $_.'Last Activity Date' } },
+    @{ Name = 'UsedGB'; Expression = { [math]::round($_.'Storage Used (Byte)' / 1GB, 0) } },
+    @{ Name = 'QuotaGB'; Expression = { [math]::round($_.'Prohibit Send/Receive Quota (Byte)' / 1GB, 0) } },
+    @{ Name = 'ItemCount'; Expression = { $_.'Item Count' } },
+    @{ Name = 'HasArchive'; Expression = { $_.'Has Archive' } }
+    $StatusCode = [HttpStatusCode]::OK
+}
+catch {
+    $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
+    $StatusCode = [HttpStatusCode]::Forbidden
+    $GraphRequest = $ErrorMessage
+}
 # Associate values to output bindings by calling 'Push-OutputBinding'.
 Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
-        StatusCode = [HttpStatusCode]::OK
+        StatusCode = $StatusCode
         Body       = @($GraphRequest)
     })

@@ -28,34 +28,43 @@ if ($Request.Query.owners) {
     $members = "owners"
     $selectstring = "id,createdDateTime,displayName,description,hideFromOutlookClients,hideFromAddressLists,mail,mailEnabled,mailNickname,resourceProvisioningOptions,securityEnabled,visibility,organizationId,onPremisesSamAccountName,membershipRule"
 }
+try {
+    $GraphRequest = New-GraphGetRequest -asApp $true -uri "https://graph.microsoft.com/beta/groups/$($GroupID)/$($members)?`$top=999&select=$selectstring" -tenantid $TenantFilter  | Select-Object *, @{ Name = 'primDomain'; Expression = { $_.mail -split "@" | Select-Object -Last 1 } },
+    @{Name = 'teamsEnabled'; Expression = { if ($_.resourceProvisioningOptions -Like '*Team*') { $true }else { $false } } },
+    @{Name = 'calculatedGroupType'; Expression = {
+            if ($_.mailEnabled -and $_.securityEnabled) {
+                "Mail-Enabled Security"
+            }
+            if (!$_.mailEnabled -and $_.securityEnabled) {
+                "Security"
+            }
+            if ($_.groupTypes -contains 'Unified') {
+                "Microsoft 365"
+            }
+            if (([string]::isNullOrEmpty($_.groupTypes)) -and ($_.mailEnabled) -and (!$_.securityEnabled)) {
+                "Distribution List"
+            }
+        }
+    },
+    @{Name = 'dynamicGroupBool'; Expression = {
+            if ($_.groupTypes -contains 'DynamicMembership') {
+                $true
+            }
+            else {
+                $false
+            }
+        }
+    }
 
-$GraphRequest = New-GraphGetRequest -asApp $true -uri "https://graph.microsoft.com/beta/groups/$($GroupID)/$($members)?`$top=999&select=$selectstring" -tenantid $TenantFilter  | Select-Object *, @{ Name = 'primDomain'; Expression = { $_.mail -split "@" | Select-Object -Last 1 } },
-@{Name = 'teamsEnabled'; Expression = {if ($_.resourceProvisioningOptions -Like '*Team*'){$true}else{$false}}},
-@{Name = 'calculatedGroupType'; Expression = {
-    if ($_.mailEnabled -and $_.securityEnabled) {
-        "Mail-Enabled Security"
-    }
-    if(!$_.mailEnabled -and $_.securityEnabled) {
-        "Security"
-    }
-    if($_.groupTypes -contains 'Unified') {
-        "Microsoft 365"
-    }
-    if (([string]::isNullOrEmpty($_.groupTypes)) -and ($_.mailEnabled) -and (!$_.securityEnabled)) {
-        "Distribution List"
-    }
-}},
-@{Name = 'dynamicGroupBool'; Expression = {
-    if ($_.groupTypes -contains 'DynamicMembership') {
-        $true
-    } else {
-        $false
-    }
-}}
-
-
+    $StatusCode = [HttpStatusCode]::OK
+}
+catch {
+    $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
+    $StatusCode = [HttpStatusCode]::Forbidden
+    $GraphRequest = $ErrorMessage
+}
 # Associate values to output bindings by calling 'Push-OutputBinding'.
 Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
-        StatusCode = [HttpStatusCode]::OK
+        StatusCode = $StatusCode
         Body       = @($GraphRequest)
     })

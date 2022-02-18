@@ -12,19 +12,21 @@ Write-Host "PowerShell HTTP trigger function processed a request."
 
 # Interact with query parameters or the body of the request.
 $TenantFilter = $Request.Query.TenantFilter
-$userid = $Request.Query.UserID
-try {
-    $GraphRequest = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/deviceManagement/windowsAutopilotDeviceIdentities?`$top=999" -tenantid $TenantFilter  
-    $StatusCode = [HttpStatusCode]::OK
+
+if ($TenantFilter -eq 'AllTenants') {
+    $GraphRequest = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/tenantRelationships/managedTenants/managedDeviceCompliances"    
 }
-catch {
-    $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
+else {
+    $GraphRequest = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/tenantRelationships/managedTenants/managedDeviceCompliances?`$top=999&`$filter=organizationId eq '$TenantFilter'"    
+}
+
+if ($GraphRequest.value.count -lt 1) { 
     $StatusCode = [HttpStatusCode]::Forbidden
-    $GraphRequest = $ErrorMessage
+    $GraphRequest = "No data found - This client might not be onboarded in Lighthouse" 
 }
 
 # Associate values to output bindings by calling 'Push-OutputBinding'.
 Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
-        StatusCode = $StatusCode
+        StatusCode = [HttpStatusCode]::OK
         Body       = @($GraphRequest)
     })
