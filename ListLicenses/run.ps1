@@ -46,6 +46,10 @@ $GraphRequest = $RawGraphRequest | ForEach-Object {
             CountUsed      = "$($sku.consumedUnits)"
             CountAvailable = $sku.prepaidUnits.enabled - $sku.consumedUnits
             TotalLicenses  = "$($sku.prepaidUnits.enabled)"
+            skuId          = $sku.skuId
+            skuPartNumber  = $PrettyName
+            availableUnits = $sku.prepaidUnits.enabled - $sku.consumedUnits
+
         }      
     }
 }
