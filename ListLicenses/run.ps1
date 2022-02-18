@@ -20,11 +20,17 @@ $RawGraphRequest = if ($TenantFilter -ne "AllTenants") {
     }
 }
 else {
-    Get-Tenants | ForEach-Object { $Licrequest = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/subscribedSkus" -tenantid $_.defaultDomainName 
-        [PSCustomObject]@{
-            Tenant   = $_.defaultDomainName
-            Licenses = $Licrequest
-        } 
+    Get-Tenants | ForEach-Object { 
+        try {
+            $Licrequest = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/subscribedSkus" -tenantid $_.defaultDomainName 
+            [PSCustomObject]@{
+                Tenant   = $_.defaultDomainName
+                Licenses = $Licrequest
+            } 
+        }
+        catch {
+            continue
+        }
     }
 }
 $ConvertTable = Import-Csv Conversiontable.csv
@@ -35,7 +41,7 @@ $GraphRequest = $RawGraphRequest | ForEach-Object {
         $PrettyName = ($ConvertTable | Where-Object { $_.guid -eq $sku.skuid }).'Product_Display_Name' | Select-Object -Last 1
         if (!$PrettyName) { $PrettyName = $skuid.skuPartNumber }
         [PSCustomObject]@{
-            Tenant   = $_.Tenant
+            Tenant         = $_.Tenant
             License        = $PrettyName
             CountUsed      = "$($sku.consumedUnits)"
             CountAvailable = $sku.prepaidUnits.enabled - $sku.consumedUnits
