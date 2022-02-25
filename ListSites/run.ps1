@@ -28,10 +28,11 @@ try {
     $GraphRequest = $ParsedRequest | Select-Object @{ Name = 'UPN'; Expression = { $_.'Owner Principal Name' } },
     @{ Name = 'displayName'; Expression = { $_.'Owner Display Name' } },
     @{ Name = 'LastActive'; Expression = { $_.'Last Activity Date' } },
-    @{ Name = 'FileCount'; Expression = { $_.'File Count' } },
+    @{ Name = 'FileCount'; Expression = { [int]$_.'File Count' } },
     @{ Name = 'UsedGB'; Expression = { [math]::round($_.'Storage Used (Byte)' / 1GB, 0) } },
     @{ Name = 'URL'; Expression = { $_.'Site URL' } },
-    @{ Name = 'Allocated'; Expression = { $_.'Storage Allocated (Byte)' / 1GB } }
+    @{ Name = 'Allocated'; Expression = { $_.'Storage Allocated (Byte)' / 1GB } },
+    @{ Name = 'Template'; Expression = { $_.'Root Web Template' } }
     $StatusCode = [HttpStatusCode]::OK
 }
 catch {
