@@ -287,6 +287,12 @@ function Remove-CIPPCache {
     Remove-Item 'tenants.cache.json' -Force
     Get-ChildItem -Path "Cache_BestPracticeAnalyser" -Filter *.json | Remove-Item -Force -ErrorAction SilentlyContinue
     Get-ChildItem -Path "Cache_DomainAnalyser" -Filter *.json | Remove-Item -Force -ErrorAction SilentlyContinue
+    Get-ChildItem -Path "Cache_BestPracticeAnalyser\CurrentlyRunning.txt" -ErrorAction SilentlyContinue | Remove-Item -Force -ErrorAction SilentlyContinue
+    Get-ChildItem -Path "ChocoApps.Cache\CurrentlyRunning.txt" -ErrorAction SilentlyContinue | Remove-Item -Force -ErrorAction SilentlyContinue
+    Get-ChildItem -Path "Cache_DomainAnalyser\CurrentlyRunning.txt" -ErrorAction SilentlyContinue | Remove-Item -Force -ErrorAction SilentlyContinue
+    Get-ChildItem -Path "Cache_Scheduler\CurrentlyRunning.txt" -ErrorAction SilentlyContinue | Remove-Item -Force -ErrorAction SilentlyContinue
+    Get-ChildItem -Path "SecurityBaselines_All\CurrentlyRunning.txt" -ErrorAction SilentlyContinue | Remove-Item -Force -ErrorAction SilentlyContinue
+    Get-ChildItem -Path "Cache_Standards\CurrentlyRunning.txt" -ErrorAction SilentlyContinue | Remove-Item -Force -ErrorAction SilentlyContinue
     $Script:SkipListCache = $Null
     $Script:SkipListCacheEmpty = $Null
     $Script:IncludedTenantsCache = $Null
