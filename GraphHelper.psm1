@@ -293,7 +293,10 @@ function Remove-CIPPCache {
 }
 
 function New-ExoRequest ($tenantid, $cmdlet, $cmdParams) {
-    $Headers = Get-GraphToken -AppID 'fb78d390-0c51-40cd-8e17-fdbfab77341b' -RefreshToken $ENV:ExchangeRefreshToken -Scope 'https://outlook.office365.com/.default' -Tenantid $tenantid 
+    $token = Get-ClassicAPIToken -resource 'https://outlook.office365.com' -Tenantid $tenantid 
+    $Headers = @{ 
+        Authorization = "Bearer $($token.access_token)" 
+    }
     if ((Get-AuthorisedRequest -TenantID $tenantid)) {
         $tenant = (get-tenants | Where-Object -Property defaultDomainName -EQ $tenantid).customerid
         if ($cmdParams) {
