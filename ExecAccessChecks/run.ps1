@@ -13,6 +13,7 @@ if ($Request.query.Permissions -eq 'true') {
     Log-Request -user $request.headers.'x-ms-client-principal' -API $APINAME -message 'Started permissions check' -Sev 'Debug'
     $Messages = [System.Collections.Generic.List[string]]::new()
     $MissingPermissions = [System.Collections.Generic.List[string]]::new()
+    $Links = [System.Collections.Generic.List[object]]::new()
     $AccessTokenDetails = [PSCustomObject]@{
         AppId             = ''
         AppName           = ''
@@ -33,25 +34,47 @@ if ($Request.query.Permissions -eq 'true') {
         $GraphPermissions = $GraphToken.scope.split(' ') -replace 'https://graph.microsoft.com//', '' | Where-Object { $_ -notin @('email', 'openid', 'profile', '.default') }
         #Write-Host ($GraphPermissions | ConvertTo-Json)
 
-        $AccessTokenDetails = Read-JwtAccessDetails -Token $GraphToken.access_token
-        #Write-Host ($AccessTokenDetails | ConvertTo-Json)
-
+        try {
+            $AccessTokenDetails = Read-JwtAccessDetails -Token $GraphToken.access_token
+            #Write-Host ($AccessTokenDetails | ConvertTo-Json)
+        }
+        catch {
+            $AccessTokenDetails = [PSCustomObject]@{
+                Name        = ''
+                AuthMethods = @()
+            }
+            Log-Request -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $tenant -message "Token exception: $($_) " -Sev 'Error'
+            $Success = $false
+        }
+        
         if ($AccessTokenDetails.Name -eq '') {
             $Messages.Add('Your refresh token is invalid, check for line breaks or missing characters.') | Out-Null
             $Success = $false
         }
-
-        if ($AccessTokenDetails.AuthMethods -contains 'mfa') {
-            $Messages.Add('Your access token contains an MFA claim.') | Out-Null
-        }
         else {
-            $Messages.Add('Your access token does not contain an MFA claim, Refresh your SAM tokens.') | Out-Null
-            $Success = $false
+            if ($AccessTokenDetails.AuthMethods -contains 'mfa') {
+                $Messages.Add('Your access token contains the MFA claim.') | Out-Null
+            }
+            else {
+                $Messages.Add('Your access token does not contain the MFA claim, Refresh your SAM tokens.') | Out-Null
+                $Success = $false
+                $Links.Add([PSCustomObject]@{
+                        Text = 'MFA Troubleshooting'
+                        Href = 'https://cipp.app/docs/general/troubleshooting/#multi-factor-authentication-troubleshooting'
+                    }
+                ) | Out-Null
+            }
         }
         
         $MissingPermissions = $ExpectedPermissions | Where-Object { $_ -notin $GraphPermissions } 
         if ($MissingPermissions) {
             $MissingPermissions = @($MissingPermissions)
+            $Success = $false
+            $Links.Add([PSCustomObject]@{
+                    Text = 'Permissions'
+                    Href = 'https://cipp.app/docs/user/gettingstarted/permissions/#permissions'
+                }
+            ) | Out-Null
         }
         else {
             $Messages.Add('Your Secure Application Model has all required permissions') | Out-Null
@@ -67,6 +90,7 @@ if ($Request.query.Permissions -eq 'true') {
         AccessTokenDetails = $AccessTokenDetails
         Messages           = @($Messages)
         MissingPermissions = @($MissingPermissions)
+        Links              = @($Links)
         Success            = $Success
     }
 }
