@@ -15,8 +15,8 @@ $TenantFilter = $Request.Query.TenantFilter
 try {
     $GraphRequest = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/devices" -Tenantid $tenantfilter  | Select-Object @{ Name = 'ID'; Expression = { $_.'id' } },
     @{ Name = 'accountEnabled'; Expression = { $_.'accountEnabled' } },
-    @{ Name = 'approximateLastSignInDateTime'; Expression = { $_.'approximateLastSignInDateTime' | Out-String } },
-    @{ Name = 'createdDateTime'; Expression = { $_.'createdDateTime' | Out-String } },
+    @{ Name = 'approximateLastSignInDateTime'; Expression = { ($_.'approximateLastSignInDateTime').ToString("yyyy-MM-dd HH:mm") } },
+    @{ Name = 'createdDateTime'; Expression = { ($_.'createdDateTime').ToString("yyyy-MM-dd") } },
     @{ Name = 'deviceOwnership'; Expression = { $_.'deviceOwnership' } },
     @{ Name = 'displayName'; Expression = { $_.'displayName' } },
     @{ Name = 'enrollmentType'; Expression = { $_.'enrollmentType' } },
