@@ -28,7 +28,7 @@ try {
             $allTenants = @([PSCustomObject]@{
                     customerId        = 'AllTenants'
                     defaultDomainName = 'AllTenants'
-                    displayName       = 'All Tenants'
+                    displayName       = '*All Tenants'
                     domains           = 'AllTenants'
                 })
             $body = $allTenants + $tenants
