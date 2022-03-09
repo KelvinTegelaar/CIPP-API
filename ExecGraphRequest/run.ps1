@@ -6,15 +6,84 @@ param($Request, $TriggerMetadata)
 $APIName = $TriggerMetadata.FunctionName
 Log-Request -user $request.headers.'x-ms-client-principal' -API $APINAME  -message "Accessed this API" -Sev "Debug"
 
+Function ConvertTo-FlatObject {
+        # https://evotec.xyz/powershell-converting-advanced-object-to-flat-object/ - MIT License
+        [CmdletBinding()]
+        Param (
+                [Parameter(ValueFromPipeLine)][Object[]]$Objects,
+                [String]$Separator = ".",
+                [ValidateSet("", 0, 1)]$Base = 1,
+                [int]$Depth = 5,
+                [Parameter(DontShow)][String[]]$Path,
+                [Parameter(DontShow)][System.Collections.IDictionary] $OutputObject
+        )
+        Begin {
+                $InputObjects = [System.Collections.Generic.List[Object]]::new()
+        }
+        Process {
+                foreach ($O in $Objects) {
+                        $InputObjects.Add($O)
+                }
+        }
+        End {
+                If ($PSBoundParameters.ContainsKey("OutputObject")) {
+                        $Object = $InputObjects[0]
+                        $Iterate = [ordered] @{}
+                        if ($null -eq $Object) {
+                                #Write-Verbose -Message "ConvertTo-FlatObject - Object is null"
+                        }
+                        elseif ($Object.GetType().Name -in 'String', 'DateTime', 'TimeSpan', 'Version', 'Enum') {
+                                $Object = $Object.ToString()
+                        }
+                        elseif ($Depth) {
+                                $Depth--
+                                If ($Object -is [System.Collections.IDictionary]) {
+                                        $Iterate = $Object
+                                }
+                                elseif ($Object -is [Array] -or $Object -is [System.Collections.IEnumerable]) {
+                                        $i = $Base
+                                        foreach ($Item in $Object.GetEnumerator()) {
+                                                $Iterate["$i"] = $Item
+                                                $i += 1
+                                        }
+                                }
+                                else {
+                                        foreach ($Prop in $Object.PSObject.Properties) {
+                                                if ($Prop.IsGettable) {
+                                                        $Iterate["$($Prop.Name)"] = $Object.$($Prop.Name)
+                                                }
+                                        }
+                                }
+                        }
+                        If ($Iterate.Keys.Count) {
+                                foreach ($Key in $Iterate.Keys) {
+                                        ConvertTo-FlatObject -Objects @(, $Iterate["$Key"]) -Separator $Separator -Base $Base -Depth $Depth -Path ($Path + $Key) -OutputObject $OutputObject
+                                }
+                        }
+                        else {
+                                $Property = $Path -Join $Separator
+                                $OutputObject[$Property] = $Object
+                        }
+                }
+                elseif ($InputObjects.Count -gt 0) {
+                        foreach ($ItemObject in $InputObjects) {
+                                $OutputObject = [ordered]@{}
+                                ConvertTo-FlatObject -Objects @(, $ItemObject) -Separator $Separator -Base $Base -Depth $Depth -Path $Path -OutputObject $OutputObject
+                                [PSCustomObject] $OutputObject
+                        }
+                }
+        }
+}
 $TenantFilter = $Request.Query.TenantFilter
 try {
         if ($TenantFilter -ne "AllTenants") {
-                $GraphRequest = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/$($Request.Query.Endpoint)" -tenantid $TenantFilter
+                $RawGraphRequest = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/$($Request.Query.Endpoint)" -tenantid $TenantFilter
         }
         else {
-                $GraphRequest = Get-tenants | ForEach-Object { New-GraphGetRequest -uri "https://graph.microsoft.com/beta/$($Request.Query.Endpoint)" -tenantid $_ }
+                $RawGraphRequest = Get-tenants | ForEach-Object { New-GraphGetRequest -uri "https://graph.microsoft.com/beta/$($Request.Query.Endpoint)" -tenantid $_ }
 
         }
+        $GraphRequest = $RawGraphRequest | ConvertTo-FlatObject 
         $StatusCode = [HttpStatusCode]::OK
 }
 catch {
