@@ -80,10 +80,15 @@ try {
                 $RawGraphRequest = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/$($Request.Query.Endpoint)" -tenantid $TenantFilter
         }
         else {
-                $RawGraphRequest = Get-tenants | ForEach-Object { New-GraphGetRequest -uri "https://graph.microsoft.com/beta/$($Request.Query.Endpoint)" -tenantid $_.defaultdomainname }
+                $RawGraphRequest = Get-tenants | ForEach-Object {
+                        $DefaultDomainName = $_.defaultdomainname
+                        New-GraphGetRequest -uri "https://graph.microsoft.com/beta/$($Request.Query.Endpoint)" -tenantid $DefaultDomainName } | Select-Object *, @{
+                        label      = 'Tenant'
+                        expression = { $DefaultDomainName }
+                }
 
         }
-        $GraphRequest = $RawGraphRequest | ConvertTo-FlatObject 
+        $GraphRequest = $RawGraphRequest | Where-Object -Property '@odata.context' -EQ $null | ConvertTo-FlatObject 
         $StatusCode = [HttpStatusCode]::OK
 }
 catch {
