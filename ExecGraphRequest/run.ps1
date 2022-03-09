@@ -80,7 +80,7 @@ try {
                 $RawGraphRequest = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/$($Request.Query.Endpoint)" -tenantid $TenantFilter
         }
         else {
-                $RawGraphRequest = Get-tenants | ForEach-Object { New-GraphGetRequest -uri "https://graph.microsoft.com/beta/$($Request.Query.Endpoint)" -tenantid $_ }
+                $RawGraphRequest = Get-tenants | ForEach-Object { New-GraphGetRequest -uri "https://graph.microsoft.com/beta/$($Request.Query.Endpoint)" -tenantid $_.defaultdomainname }
 
         }
         $GraphRequest = $RawGraphRequest | ConvertTo-FlatObject 
