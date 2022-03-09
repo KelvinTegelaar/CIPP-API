@@ -40,6 +40,8 @@ try {
     else {
         $body = Get-Tenants | Where-Object -Property DefaultdomainName -EQ $Tenantfilter
     }
+
+
     Log-Request -user $request.headers.'x-ms-client-principal' -tenant $Tenantfilter -API $APINAME -message 'Listed Tenant Details' -Sev 'Info'
 }
 catch {
