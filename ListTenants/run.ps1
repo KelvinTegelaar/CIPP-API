@@ -28,7 +28,7 @@ try {
             $allTenants = @([PSCustomObject]@{
                     customerId        = 'AllTenants'
                     defaultDomainName = 'AllTenants'
-                    displayName       = 'All Tenants'
+                    displayName       = '*All Tenants'
                     domains           = 'AllTenants'
                 })
             $body = $allTenants + $tenants
@@ -40,6 +40,8 @@ try {
     else {
         $body = Get-Tenants | Where-Object -Property DefaultdomainName -EQ $Tenantfilter
     }
+
+
     Log-Request -user $request.headers.'x-ms-client-principal' -tenant $Tenantfilter -API $APINAME -message 'Listed Tenant Details' -Sev 'Info'
 }
 catch {
