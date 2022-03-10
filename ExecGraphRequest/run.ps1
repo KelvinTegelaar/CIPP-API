@@ -82,10 +82,10 @@ try {
         else {
                 $RawGraphRequest = Get-tenants | ForEach-Object {
                         $DefaultDomainName = $_.defaultdomainname
-                        New-GraphGetRequest -uri "https://graph.microsoft.com/beta/$($Request.Query.Endpoint)" -tenantid $DefaultDomainName } | Select-Object *, @{
+                        New-GraphGetRequest -uri "https://graph.microsoft.com/beta/$($Request.Query.Endpoint)" -tenantid $DefaultDomainName } | Select-Object @{
                         label      = 'Tenant'
                         expression = { $DefaultDomainName }
-                }
+                }, *
 
         }
         $GraphRequest = $RawGraphRequest | Where-Object -Property '@odata.context' -EQ $null | ConvertTo-FlatObject 
