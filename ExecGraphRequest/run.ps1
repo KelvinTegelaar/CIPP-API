@@ -82,9 +82,10 @@ try {
         else {
                 $RawGraphRequest = Get-tenants | ForEach-Object {
                         $DefaultDomainName = $_.defaultdomainname
+                        $TenantName = $_.displayName
                         New-GraphGetRequest -uri "https://graph.microsoft.com/beta/$($Request.Query.Endpoint)" -tenantid $DefaultDomainName } | Select-Object @{
                         label      = 'Tenant'
-                        expression = { $DefaultDomainName }
+                        expression = { $TenantName }
                 }, *
 
         }
