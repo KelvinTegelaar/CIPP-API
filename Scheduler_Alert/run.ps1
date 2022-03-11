@@ -24,7 +24,10 @@ $ShippedAlerts = switch ($Alerts) {
             "$($_.managedDeviceName) - Real Time Protection: $($_.realTimeProtectionEnabled) & Malware Protection: $($_.MalwareprotectionEnabled)"
         }
     }
-    { $_."MFAAdmins" -eq $true } {}
+    { $_."MFAAdmins" -eq $true } {
+        (New-GraphGETRequest -uri "https://graph.microsoft.com/beta/roleManagement/directory/roleAssignments?`$filter=roleDefinitionId eq '62e90394-69f5-4237-9190-012177145e10'&expand=principal" -tenantid $($tenant.tenant)).principal
+
+    }
     { $_."MFAAlertUsers" -eq $true } {}
     { $_."NewApprovedApp" -eq $true } {}
 
