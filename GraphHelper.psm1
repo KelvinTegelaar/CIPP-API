@@ -87,7 +87,7 @@ function New-GraphGetRequest ($uri, $tenantid, $scope, $AsApp, $noPagination) {
                 if ($noPagination) { $nextURL = $null } else { $nextURL = $data.'@odata.nextLink' }                
             }
             catch {
-                $Message = ($_.ErrorDetails.Message | ConvertFrom-Json).error.message
+                $Message = ($_.ErrorDetails.Message | ConvertFrom-Json -ErrorAction SilentlyContinue).error.message
                 if ($Message -eq $null) { $Message = $($_.Exception.Message) }
                 throw $Message
             }
@@ -112,8 +112,7 @@ function New-GraphPOSTRequest ($uri, $tenantid, $body, $type, $scope, $AsApp) {
             $ReturnedData = (Invoke-RestMethod -Uri $($uri) -Method $TYPE -Body $body -Headers $headers -ContentType 'application/json; charset=utf-8')
         }
         catch {
-            Write-Host ($_.ErrorDetails.Message | ConvertFrom-Json).error.message
-            $Message = ($_.ErrorDetails.Message | ConvertFrom-Json).error.message
+            $Message = ($_.ErrorDetails.Message | ConvertFrom-Json -ErrorAction SilentlyContinue).error.message
             if ($Message -eq $null) { $Message = $($_.Exception.Message) }
             throw $Message
         }

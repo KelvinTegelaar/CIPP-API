@@ -1,4 +1,7 @@
 param($tenant)
+Write-Host $($Tenant.tenant)
+Write-Host $($Tenant.tag)
+Write-Host $($Tenant | ConvertTo-Json)
 
 if ($Tenant.tag -eq "AllTenants") {
     $Alerts = Get-Content ".\Cache_Scheduler\AllTenants.alert.json" | ConvertFrom-Json
@@ -25,19 +28,21 @@ $ShippedAlerts = switch ($Alerts) {
         }
     }
     { $_."MFAAdmins" -eq $true } {
-        #(New-GraphGETRequest -uri "https://graph.microsoft.com/beta/roleManagement/directory/roleAssignments?`$filter=roleDefinitionId eq '62e90394-69f5-4237-9190-012177145e10'&expand=principal" -tenantid $($tenant.tenant)).principal
-
+        $AdminIds = (New-GraphGETRequest -uri "https://graph.microsoft.com/beta/roleManagement/directory/roleAssignments?`$filter=roleDefinitionId eq '62e90394-69f5-4237-9190-012177145e10'&expand=principal" -tenantid $($tenant.tenant)).principal
+        $AdminList = Get-CIPPMSolUsers -tenant $tenant.tenant | Where-Object -Property ObjectID -In $AdminIds.id
+        $MFARegistration = (New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/reports/credentialUserRegistrationDetails' -tenantid $tenant.tenant)
+        $AdminList | Where-Object { $_.Usertype -eq "Member" -and $_.BlockCredential -eq $false } | ForEach-Object {
+            $CARegistered = ($MFARegistration | Where-Object -Property UserPrincipalName -EQ $_.UserPrincipalName).IsMFARegistered
+            if ($_.StrongAuthenticationRequirements.StrongAuthenticationRequirement.state -eq $null -and $CARegistered -eq $false) { "Admin $($_.UserPrincipalName) is enabled but does not have any form of MFA configured." }
+        }
     }
     { $_."MFAAlertUsers" -eq $true } {
         $users = Get-CIPPMSolUsers -tenant $tenant.tenant
         $MFARegistration = (New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/reports/credentialUserRegistrationDetails' -tenantid $tenant.tenant)
         $users | Where-Object { $_.Usertype -eq "Member" -and $_.BlockCredential -eq $false } | ForEach-Object {
             $CARegistered = ($MFARegistration | Where-Object -Property UserPrincipalName -EQ $_.UserPrincipalName).IsMFARegistered
-            if ($_.StrongAuthenticationRequirements.StrongAuthenticationRequirement.state -eq $null -and $CARegistered -eq $false) { "$($_.UserPrincipalName) is enabled but does not have any form of MFA configured." }
+            if ($_.StrongAuthenticationRequirements.StrongAuthenticationRequirement.state -eq $null -and $CARegistered -eq $false) { "User $($_.UserPrincipalName) is enabled but does not have any form of MFA configured." }
         }
-    }
-    { $_."NewApprovedApp" -eq $true } {
-
     }
 
     { $_."NewRole" -eq $true } {
@@ -82,6 +87,8 @@ $ShippedAlerts = switch ($Alerts) {
     }
 }
 
-$ShippedAlerts
+$ShippedAlerts | ForEach-Object {
+    Log-Request -message $_ -API "Alerts" -tenant $tenant.tenant -sev warn
+}
 
 #EmailAllAlertsInNiceTable
