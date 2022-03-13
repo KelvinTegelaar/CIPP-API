@@ -9,7 +9,7 @@ Log-Request -user $request.headers.'x-ms-client-principal' -API $APINAME -messag
 
 # Write to the Azure Functions log stream.
 Write-Host 'PowerShell HTTP trigger function processed a request.'
-$users = Get-CIPPMSolUsers -tenant $tenant.tenant
+$users = Get-CIPPMSolUsers -tenant $Request.query.TenantFilter
 $SecureDefaultsState = (New-GraphGetRequest -Uri 'https://graph.microsoft.com/beta/policies/identitySecurityDefaultsEnforcementPolicy' -tenantid $Request.query.TenantFilter ).IsEnabled
 $CAState = New-Object System.Collections.ArrayList
 $CAPolicies = (New-GraphGetRequest -Uri 'https://graph.microsoft.com/beta/identity/conditionalAccess/policies' -tenantid $Request.query.TenantFilter )
