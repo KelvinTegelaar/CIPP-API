@@ -16,8 +16,16 @@ $CurrentStandards = foreach ($QueueFile in $QueuedApps) {
     $ApplicationFile = Get-Content "$($QueueFile)" | ConvertFrom-Json
     if ($ApplicationFile.Tenant -eq $null) { continue }
     [PSCustomObject]@{
-        tenantName = $ApplicationFile.tenant
-        alerts     = (($ApplicationFile.psobject.properties.name | Where-Object { $_ -NE "Tenant" }) -join ' & ')
+        tenantName      = $ApplicationFile.tenant
+        AdminPassword   = [bool]$ApplicationFile.AdminPassword
+        DefenderMalware = [bool]$ApplicationFile.DefenderMalware
+        DefenderStatus  = [bool]$ApplicationFile.DefenderStatus
+        MFAAdmins       = [bool]$ApplicationFile.MFAAdmins
+        MFAAlertUsers   = [bool]$ApplicationFile.MFAAlertUsers
+        NewGA           = [bool]$ApplicationFile.NewGA
+        NewRole         = [bool]$ApplicationFile.NewRole
+        QuotaUsed       = [bool]$ApplicationFile.QuotaUsed
+        UnusedLicenses  = [bool]$ApplicationFile.UnusedLicenses
     }
 }
 

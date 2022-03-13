@@ -2,7 +2,7 @@ param($tenant)
 Write-Host $($Tenant.tenant)
 Write-Host $($Tenant.tag)
 Write-Host $($Tenant | ConvertTo-Json)
-
+#thoughts: add more delta/tracking to prevent duplicate alerts.
 if ($Tenant.tag -eq "AllTenants") {
     $Alerts = Get-Content ".\Cache_Scheduler\AllTenants.alert.json" | ConvertFrom-Json
 }
@@ -86,9 +86,10 @@ $ShippedAlerts = switch ($Alerts) {
         }
     }
 }
-
+$currentlog = Get-Content "Logs\$((Get-Date).ToString('ddMMyyyy')).log" | ConvertFrom-Csv -Header "DateTime", "Tenant", "API", "Message", "User", "Severity" -Delimiter "|" | Where-Object -Property Tenant -EQ $tenant.tenant
 $ShippedAlerts | ForEach-Object {
-    Log-Request -message $_ -API "Alerts" -tenant $tenant.tenant -sev warn
+    if ($_ -in $currentlog.message) {
+        continue
+    }
+    Log-Request -message $_ -API "Alerts" -tenant $tenant.tenant -sev Alert
 }
-
-#EmailAllAlertsInNiceTable
