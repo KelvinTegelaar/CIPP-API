@@ -19,6 +19,7 @@ $CurrentStandards = foreach ($tenant in $tenants) {
         displayName  = $StandardsFile.tenant
         standardName = ($standardsFile.Standards.psobject.properties.name -join ' & ')
         appliedBy    = $StandardsFile.addedby
+        appliedAt    = ($tenant).LastWriteTime.toString('s')
     }
 }
 
