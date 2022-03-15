@@ -11,9 +11,7 @@ Log-Request -user $request.headers.'x-ms-client-principal' -API $APINAME  -messa
 Write-Host "PowerShell HTTP trigger function processed a request."
 
 # Input bindings are passed in via param block.
-$user = $request.headers.'x-ms-client-principal'
 $Tenants = ($Request.body | Select-Object Select_*).psobject.properties.value
-$AssignTo = if ($request.body.Assignto -ne "on") { $request.body.Assignto }
 $Profbod = $Request.body
 $results = foreach ($Tenant in $tenants) {
     try {
@@ -23,7 +21,7 @@ $results = foreach ($Tenant in $tenants) {
             "displayName"                             = "All users and all devices"
             "description"                             = "This is the default enrollment status screen configuration applied with the lowest priority to all users and all devices regardless of group membership."
             "showInstallationProgress"                = [bool]$Profbod.ShowProgress
-            "blockDeviceSetupRetryByUser"             = [bool]$Profbod.AllowRetry
+            "blockDeviceSetupRetryByUser"             = [bool]$Profbod.blockDevice
             "allowDeviceResetOnInstallFailure"        = [bool]$Profbod.AllowReset
             "allowLogCollectionOnInstallFailure"      = [bool]$Profbod.EnableLog
             "customErrorMessage"                      = $Profbod.ErrorMessage
