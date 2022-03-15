@@ -10,8 +10,8 @@ Log-Request -user $request.headers.'x-ms-client-principal' -API $APINAME  -messa
 $TenantFilter = $Request.Query.TenantFilter
 $Body = "{}"
 try {
-      $GraphRequest = New-GraphPostRequest -uri "https://graph.microsoft.com/beta/users/$($Request.query.ID)/authentication/temporaryAccessPassMethods" -tenantid $TenantFilter -type PATCH -body $Body  -verbose
-      $Results = [pscustomobject]@{"Results" = "The TAP for this user is $($GraphRequest.temporaryAccessPass). This TAP is usable for the next $($GraphRequest.LifetimeInMinutes) minutes" }
+      $GraphRequest = New-GraphPostRequest -uri "https://graph.microsoft.com/beta/users/$($Request.query.ID)/authentication/temporaryAccessPassMethods" -tenantid $TenantFilter -type POST -body $Body  -verbose
+      $Results = [pscustomobject]@{"Results" = "The TAP for this user is $($GraphRequest.temporaryAccessPass) - This TAP is usable for the next $($GraphRequest.LifetimeInMinutes) minutes" }
       Log-Request -user $request.headers.'x-ms-client-principal' -API $APINAME  -message "Created temporary access pass for user $($Request.Query.id)" -Sev "Info"
 
 }
