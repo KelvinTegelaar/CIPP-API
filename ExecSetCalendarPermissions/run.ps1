@@ -5,23 +5,29 @@ param($Request, $TriggerMetadata)
 
 $APIName = $TriggerMetadata.FunctionName
 Log-Request -user $request.headers.'x-ms-client-principal' -API $APINAME  -message "Accessed this API" -Sev "Debug"
-$UserID = $request.Query.UserID
+$UserID = ($request.query.UserID)
+$UserToGetPermissions = $Request.query.UserToGetPermissions
 $Tenantfilter = $request.Query.tenantfilter
+$Permissions = @($Request.query.permissions)
+$folderName = $Request.query.folderName
 
+
+$CalParam = [PSCustomObject]@{
+    Identity     = "$($UserID):\$folderName"
+    AccessRights = @($Permissions)
+    User         = $UserToGetPermissions
+}
 try {
-    $GetCalParam = @{Identity = $UserID; FolderScope = 'Calendar' }
-    $CalendarFolder = New-ExoRequest -tenantid $Tenantfilter -cmdlet "Get-MailboxFolderStatistics" -cmdParams $GetCalParam | Select-Object -First 1
-    $CalParam = @{Identity = "$($UserID):\$($CalendarFolder.name)" }
-    $GraphRequest = New-ExoRequest -tenantid $Tenantfilter -cmdlet "Get-MailboxFolderPermission" -cmdParams $CalParam | Select-Object Identity, User, AccessRights, FolderName
+    $GraphRequest = New-ExoRequest -tenantid $Tenantfilter -cmdlet "Add-MailboxFolderPermission" -cmdParams $CalParam
     Log-request -API 'List Calendar Permissions' -tenant $tenantfilter -message "Calendar permissions listed for $($tenantfilter)" -sev Debug
     $StatusCode = [HttpStatusCode]::OK
+    $Result = "Succesfully set permissions on folder $($CalParam.Identity). The user $UserToGetPermissions now has $Permissions permissions on this folder."
 }
 catch {
-    $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
+    $ErrorMessage = Get-NormalizedError -Message $_.Exception
     $StatusCode = [HttpStatusCode]::Forbidden
-    $GraphRequest = $ErrorMessage
+    $Result = $ErrorMessage
 }
-
 # Associate values to output bindings by calling 'Push-OutputBinding'.
 Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
         StatusCode = $StatusCode
