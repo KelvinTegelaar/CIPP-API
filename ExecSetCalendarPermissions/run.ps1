@@ -18,7 +18,12 @@ $CalParam = [PSCustomObject]@{
     User         = $UserToGetPermissions
 }
 try {
-    $GraphRequest = New-ExoRequest -tenantid $Tenantfilter -cmdlet "Add-MailboxFolderPermission" -cmdParams $CalParam
+    try {
+        $GraphRequest = New-ExoRequest -tenantid $Tenantfilter -cmdlet "Set-MailboxFolderPermission" -cmdParams $CalParam
+    }
+    catch {
+        $GraphRequest = New-ExoRequest -tenantid $Tenantfilter -cmdlet "Add-MailboxFolderPermission" -cmdParams $CalParam
+    }
     Log-request -API 'List Calendar Permissions' -tenant $tenantfilter -message "Calendar permissions listed for $($tenantfilter)" -sev Debug
     $StatusCode = [HttpStatusCode]::OK
     $Result = "Succesfully set permissions on folder $($CalParam.Identity). The user $UserToGetPermissions now has $Permissions permissions on this folder."
