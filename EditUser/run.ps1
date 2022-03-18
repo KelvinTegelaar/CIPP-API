@@ -34,7 +34,7 @@ try {
             "forceChangePasswordNextSignIn" = [bool]$UserObj.mustchangepass
         }
     } | ForEach-Object {
-        $NonEmptyProperties = $_.psobject.Properties | Where-Object { $_.Value } | Select-Object -ExpandProperty Name
+        $NonEmptyProperties = $_.psobject.Properties | Select-Object -ExpandProperty Name
         $_ | Select-Object -Property $NonEmptyProperties | ConvertTo-Json
     }
     $GraphRequest = New-GraphPostRequest -uri "https://graph.microsoft.com/beta/users/$($userobj.Userid)" -tenantid $Userobj.tenantid -type PATCH -body $BodyToship  -verbose
