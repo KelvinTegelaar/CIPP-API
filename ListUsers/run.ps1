@@ -41,7 +41,6 @@ if ($userid) {
     @{ Name = 'LastSigninResult'; Expression = { if ($LastSignIn.Status.ErrorCode -eq 0) { "Success" } else { "Failure" } } }, 
     @{ Name = 'LastSigninFailureReason'; Expression = { if ($LastSignIn.Status.ErrorCode -eq 0) { "Sucessfully signed in" } else { $LastSignIn.status.FailureReason } } }
 }
-
 # Associate values to output bindings by calling 'Push-OutputBinding'.
 Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
         StatusCode = [HttpStatusCode]::OK

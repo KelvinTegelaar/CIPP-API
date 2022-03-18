@@ -226,12 +226,14 @@ try {
         'X-Requested-With'       = 'XMLHttpRequest' 
     }
 
+    # Import the licenses conversion table
+    $ConvertTable = Import-Csv Conversiontable.csv | Sort-Object -Property 'guid' -Unique
     $WhiteListedSKUs = "FLOW_FREE", "TEAMS_EXPLORATORY", "TEAMS_COMMERCIAL_TRIAL", "POWERAPPS_VIRAL", "POWER_BI_STANDARD", "DYN365_ENTERPRISE_P1_IW", "STREAM", "Dynamics 365 for Financials for IWs", "POWERAPPS_PER_APP_IW"
     $UnusedLicenses = $LicenseUsage | Where-Object { ($_.Purchased -ne $_.Consumed) -and ($WhiteListedSKUs -notcontains $_.AccountSkuId.SkuPartNumber) }
     $UnusedLicensesCount = $UnusedLicenses | Measure-Object | Select-Object -ExpandProperty Count
     $UnusedLicensesResult = if ($UnusedLicensesCount -gt 0) { "FAIL" } else { "PASS" }
     $Result.UnusedLicenseList = ($UnusedLicensesListBuilder = foreach ($License in $UnusedLicenses) {
-            "SKU: $($License.AccountSkuId.SkuPartNumber), Purchased: $($License.Purchased), Consumed: $($License.Consumed)"
+            "License: $($License.Name), Purchased: $($License.Purchased), Consumed: $($License.Consumed)"
         }) -join "<br />"
     
     $TempCount = 0

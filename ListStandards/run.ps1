@@ -14,11 +14,27 @@ $Tenants = Get-ChildItem "Cache_Standards\*.standards.json"
 
 $CurrentStandards = foreach ($tenant in $tenants) {
     $StandardsFile = Get-Content "$($tenant)" | ConvertFrom-Json
-    if ($StandardsFile.Tenant -eq $null) { continue }
+    if ($null -eq $StandardsFile.Tenant) { continue }
     [PSCustomObject]@{
-        displayName  = $StandardsFile.tenant
-        standardName = ($standardsFile.Standards.psobject.properties.name -join ' & ')
-        appliedBy    = $StandardsFile.addedby
+        displayName                  = $StandardsFile.tenant
+        appliedBy                    = $StandardsFile.addedby
+        appliedAt                    = ($tenant).LastWriteTime.toString('s')
+        "DisableBasicAuth"           = $StandardsFile.standards.DisableBasicAuth
+        "ModernAuth"                 = $StandardsFile.standards.ModernAuth
+        "AuditLog"                   = $StandardsFile.standards.AuditLog
+        "AutoExpandArchive"          = $StandardsFile.standards.AutoExpandArchive
+        "SecurityDefaults"           = $StandardsFile.standards.SecurityDefaults
+        "DisableSharedMailbox"       = $StandardsFile.standards.DisableSharedMailbox
+        "UndoOauth"                  = $StandardsFile.standards.UndoOauth
+        "DisableSelfServiceLicenses" = $StandardsFile.standards.DisableSelfServiceLicenses
+        "AnonReportDisable"          = $StandardsFile.standards.AnonReportDisable
+        "UndoSSPR"                   = $StandardsFile.standards.UndoSSPR
+        "PasswordExpireDisabled"     = $StandardsFile.standards.PasswordExpireDisabled
+        "DelegateSentItems"          = $StandardsFile.standards.DelegateSentItems
+        "OauthConsent"               = $StandardsFile.standards.OauthConsent
+        "SSPR"                       = $StandardsFile.standards.SSPR
+        "LegacyMFA"                  = $StandardsFile.standards.LegacyMFA
+        "SpoofWarn"                  = $StandardsFile.standards.SpoofWarn
     }
 }
 
