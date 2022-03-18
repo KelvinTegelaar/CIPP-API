@@ -28,9 +28,9 @@ $ShippedAlerts = switch ($Alerts) {
     { $_."MFAAdmins" -eq $true } {
         $AdminIds = (New-GraphGETRequest -uri "https://graph.microsoft.com/beta/roleManagement/directory/roleAssignments?`$filter=roleDefinitionId eq '62e90394-69f5-4237-9190-012177145e10'&expand=principal" -tenantid $($tenant.tenant)).principal
         $AdminList = Get-CIPPMSolUsers -tenant $tenant.tenant | Where-Object -Property ObjectID -In $AdminIds.id
-        try {$MFARegistration = (New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/reports/credentialUserRegistrationDetails' -tenantid $tenant.tenant -ErrorAction)} catch {}
+        try { $MFARegistration = (New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/reports/credentialUserRegistrationDetails' -tenantid $tenant.tenant -ErrorAction) } catch {}
         $AdminList | Where-Object { $_.Usertype -eq "Member" -and $_.BlockCredential -eq $false } | ForEach-Object {
-            $CARegistered = ($MFARegistration | Where-Object -Property UserPrincipalName -EQ $_.UserPrincipalName).IsMFARegistered
+            $CARegistered = [boolean]($MFARegistration | Where-Object -Property UserPrincipalName -EQ $_.UserPrincipalName).IsMFARegistered
             if ($_.StrongAuthenticationRequirements.StrongAuthenticationRequirement.state -eq $null -and $CARegistered -eq $false) { "Admin $($_.UserPrincipalName) is enabled but does not have any form of MFA configured." }
         }
     }
@@ -38,7 +38,7 @@ $ShippedAlerts = switch ($Alerts) {
         $users = Get-CIPPMSolUsers -tenant $tenant.tenant
         try { $MFARegistration = (New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/reports/credentialUserRegistrationDetails' -tenantid $tenant.tenant -ErrorAction) } catch {}
         $users | Where-Object { $_.Usertype -eq "Member" -and $_.BlockCredential -eq $false } | ForEach-Object {
-            $CARegistered = ($MFARegistration | Where-Object -Property UserPrincipalName -EQ $_.UserPrincipalName).IsMFARegistered
+            $CARegistered = [boolean]($MFARegistration | Where-Object -Property UserPrincipalName -EQ $_.UserPrincipalName).IsMFARegistered
             if ($_.StrongAuthenticationRequirements.StrongAuthenticationRequirement.state -eq $null -and $CARegistered -eq $false) { "User $($_.UserPrincipalName) is enabled but does not have any form of MFA configured." }
         }
     }
