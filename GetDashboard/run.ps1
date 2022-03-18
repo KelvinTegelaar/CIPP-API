@@ -192,10 +192,10 @@ $dash = [PSCustomObject]@{
     NextBPARun        = (Get-CronNextExecutionTime -Expression '0 3 * * *').tostring('s')
     queuedApps        = [int64](Get-ChildItem '.\ChocoApps.Cache' -ErrorAction SilentlyContinue).count
     queuedStandards   = [int64](Get-ChildItem '.\Cache_Standards' -ErrorAction SilentlyContinue).count
-    tenantCount       = (get-tenants).count
+    tenantCount       = [int64](get-tenants -ErrorAction SilentlyContinue).count
     RefreshTokenDate  = (Get-CronNextExecutionTime -Expression '0 0 * * 0').AddDays('-7').tostring('s') -split "T" | Select-Object -First 1
     ExchangeTokenDate = (Get-CronNextExecutionTime -Expression '0 0 * * 0').AddDays('-7').tostring('s') -split "T" | Select-Object -First 1
-    LastLog           = Get-Content "Logs\$((Get-Date).ToString('ddMMyyyy')).log" | ConvertFrom-Csv -Header "DateTime", "Tenant", "API", "Message", "User", "Severity" -Delimiter "|" | Select-Object -Last 10
+    LastLog           = @(Get-Content "Logs\$((Get-Date).ToString('ddMMyyyy')).log" | ConvertFrom-Csv -Header "DateTime", "Tenant", "API", "Message", "User", "Severity" -Delimiter "|" | Select-Object -Last 10)
 }
 # Write to the Azure Functions log stream.
 

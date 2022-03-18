@@ -6,13 +6,12 @@ param($Request, $TriggerMetadata)
 $APIName = $TriggerMetadata.FunctionName
 Log-Request -user $request.headers.'x-ms-client-principal' -API $APINAME  -message "Accessed this API" -Sev "Debug"
 
-Write-Host "PowerShell HTTP trigger function processed a request."
-
 $Tenants = ($Request.body | Select-Object Select_*).psobject.properties.value
 $Results = foreach ($Tenant in $tenants) {
     try {
         $CompleteObject = [PSCustomObject]@{
             tenant          = $tenant
+            tenantid        = (get-tenants | Where-Object -Property defaultDomainName -EQ $Tenant).Customerid
             AdminPassword   = [bool]$Request.body.AdminPassword
             DefenderMalware = [bool]$Request.body.DefenderMalware
             DefenderStatus  = [bool]$Request.body.DefenderStatus

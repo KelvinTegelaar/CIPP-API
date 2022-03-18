@@ -7,6 +7,7 @@ $object = foreach ($Tenant in $tenants) {
     if ($Typefile.Tenant -ne "AllTenants") {
         [pscustomobject]@{ 
             Tenant   = $Typefile.Tenant
+            Tag      = "SingleTenant"
             TenantID = $TypeFile.tenantId
             Type     = $Typefile.Type
         }
