@@ -6,8 +6,8 @@ if ($Tenant.tag -eq "AllTenants") {
 else {
     $Alerts = Get-Content ".\Cache_Scheduler\$($tenant.tenant).alert.json" | ConvertFrom-Json
 }
-Write-Host $Alerts
 $ShippedAlerts = switch ($Alerts) {
+   
     { $Alerts."AdminPassword" -eq $true } {
         New-GraphGETRequest -uri "https://graph.microsoft.com/beta/roleManagement/directory/roleAssignments?`$filter=roleDefinitionId eq '62e90394-69f5-4237-9190-012177145e10'" -tenantid $($tenant.tenant) | ForEach-Object { 
             $LastChanges = New-GraphGETRequest -uri "https://graph.microsoft.com/beta/users/$($_.principalId)?`$select=UserPrincipalName,lastPasswordChangeDateTime" -tenant $($tenant.tenant)
@@ -28,7 +28,7 @@ $ShippedAlerts = switch ($Alerts) {
     { $_."MFAAdmins" -eq $true } {
         $AdminIds = (New-GraphGETRequest -uri "https://graph.microsoft.com/beta/roleManagement/directory/roleAssignments?`$filter=roleDefinitionId eq '62e90394-69f5-4237-9190-012177145e10'&expand=principal" -tenantid $($tenant.tenant)).principal
         $AdminList = Get-CIPPMSolUsers -tenant $tenant.tenant | Where-Object -Property ObjectID -In $AdminIds.id
-        $MFARegistration = (New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/reports/credentialUserRegistrationDetails' -tenantid $tenant.tenant)
+        try {$MFARegistration = (New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/reports/credentialUserRegistrationDetails' -tenantid $tenant.tenant -ErrorAction)} catch {}
         $AdminList | Where-Object { $_.Usertype -eq "Member" -and $_.BlockCredential -eq $false } | ForEach-Object {
             $CARegistered = ($MFARegistration | Where-Object -Property UserPrincipalName -EQ $_.UserPrincipalName).IsMFARegistered
             if ($_.StrongAuthenticationRequirements.StrongAuthenticationRequirement.state -eq $null -and $CARegistered -eq $false) { "Admin $($_.UserPrincipalName) is enabled but does not have any form of MFA configured." }
@@ -36,7 +36,7 @@ $ShippedAlerts = switch ($Alerts) {
     }
     { $_."MFAAlertUsers" -eq $true } {
         $users = Get-CIPPMSolUsers -tenant $tenant.tenant
-        $MFARegistration = (New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/reports/credentialUserRegistrationDetails' -tenantid $tenant.tenant)
+        try { $MFARegistration = (New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/reports/credentialUserRegistrationDetails' -tenantid $tenant.tenant -ErrorAction) } catch {}
         $users | Where-Object { $_.Usertype -eq "Member" -and $_.BlockCredential -eq $false } | ForEach-Object {
             $CARegistered = ($MFARegistration | Where-Object -Property UserPrincipalName -EQ $_.UserPrincipalName).IsMFARegistered
             if ($_.StrongAuthenticationRequirements.StrongAuthenticationRequirement.state -eq $null -and $CARegistered -eq $false) { "User $($_.UserPrincipalName) is enabled but does not have any form of MFA configured." }
@@ -85,6 +85,7 @@ $ShippedAlerts = switch ($Alerts) {
     }
 }
 $currentlog = Get-Content "Logs\$((Get-Date).ToString('ddMMyyyy')).log" | ConvertFrom-Csv -Header "DateTime", "Tenant", "API", "Message", "User", "Severity" -Delimiter "|" | Where-Object -Property Tenant -EQ $tenant.tenant
+Write-Host $ShippedAlerts
 $ShippedAlerts | ForEach-Object {
     if ($_ -in $currentlog.message) {
         continue
