@@ -1,14 +1,12 @@
 param($tenant)
-Write-Host $($Tenant.tenant)
-Write-Host $($Tenant.tag)
 Write-Host $($Tenant | ConvertTo-Json)
-#thoughts: add more delta/tracking to prevent duplicate alerts.
 if ($Tenant.tag -eq "AllTenants") {
     $Alerts = Get-Content ".\Cache_Scheduler\AllTenants.alert.json" | ConvertFrom-Json
 }
 else {
     $Alerts = Get-Content ".\Cache_Scheduler\$($tenant.tenant).alert.json" | ConvertFrom-Json
 }
+Write-Host $Alerts
 $ShippedAlerts = switch ($Alerts) {
     { $Alerts."AdminPassword" -eq $true } {
         New-GraphGETRequest -uri "https://graph.microsoft.com/beta/roleManagement/directory/roleAssignments?`$filter=roleDefinitionId eq '62e90394-69f5-4237-9190-012177145e10'" -tenantid $($tenant.tenant) | ForEach-Object { 
@@ -92,4 +90,7 @@ $ShippedAlerts | ForEach-Object {
         continue
     }
     Log-Request -message $_ -API "Alerts" -tenant $tenant.tenant -sev Alert
+}
+[PSCustomObject]@{
+    ReturnedValues = $true
 }
