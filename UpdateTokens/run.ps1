@@ -17,12 +17,11 @@ $KV = Get-AzKeyVault -SubscriptionID $Subscription -ResourceGroupName $ResourceG
 
 if ($Refreshtoken) { 
     Set-AzKeyVaultSecret -VaultName $kv.vaultname -Name 'RefreshToken' -SecretValue (ConvertTo-SecureString -String $Refreshtoken -AsPlainText -Force)
-
 }
 else { log-request -message "Could not update refresh token. Will try again in 7 days." -sev "CRITICAL" }
 if ($ExchangeRefreshtoken) {
     Set-AzKeyVaultSecret -VaultName $kv.vaultname -Name 'ExchangeRefreshToken' -SecretValue (ConvertTo-SecureString -String $ExchangeRefreshtoken -AsPlainText -Force)
-    log-request -message "System API: Updated Refresh token." -sev "info" -API "TokensUpdater"
+    log-request -message "System API: Updated Exchange Refresh token." -sev "info" -API "TokensUpdater"
 }
 else {
     log-request -message "Could not update Exchange refresh token. Will try again in 7 days." -sev "CRITICAL" -API "TokensUpdater"

@@ -12,4 +12,4 @@ $ParallelTasks = foreach ($Item in $Batch) {
 $Outputs = Wait-ActivityFunction -Task $ParallelTasks
 Write-Host $Outputs
 Remove-Item "Cache_Scheduler\CurrentlyRunning.txt" -Force
-Log-request  -API "Scheduler" -tenant $tenant -message "Scheduler Ran." -sev Info
+Log-request  -API "Scheduler" -tenant $tenant -message "Scheduler Ran." -sev Debug
