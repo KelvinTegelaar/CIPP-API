@@ -96,7 +96,7 @@ try {
                   $URL = ($Request.headers.'x-ms-original-url').split('?') | Select-Object -First 1
                   $Validated = Get-Content ".\Cache_SAMSetup\Validated.json" -ErrorAction SilentlyContinue
                   if ($Validated) { $step = 3 }
-                  $Results = @{ message = "Give the next approval by clicking "  ; step = $step; url = "https://login.microsoftonline.com/$TenantId/oauth2/v2.0/authorize?scope=https://graph.microsoft.com/.default+offline_access+openid+profile&response_type=code&client_id=$($appid)&redirect_uri=$($url)&client-request-id=eef306a9-fa85-4c1f-bb9a-a340d11de748&x-client-SKU=CIPP-AUTH&x-client-Ver=4.8.1.0&prompt=select_account" }
+                  $Results = @{ message = "Give the next approval by clicking "  ; step = $step; url = "https://login.microsoftonline.com/$TenantId/oauth2/v2.0/authorize?scope=https://graph.microsoft.com/.default+offline_access+openid+profile&response_type=code&client_id=$($appid)&redirect_uri=$($url)" }
             }
             3 {
 
