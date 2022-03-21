@@ -2,6 +2,7 @@ using namespace System.Net
 
 # Input bindings are passed in via param block.
 param($Request, $TriggerMetadata)
+Write-Host ($request | ConvertTo-Json)
 $APIName = $TriggerMetadata.FunctionName
 Log-Request -user $request.headers.'x-ms-client-principal' -API $APINAME  -message "Accessed this API" -Sev "Debug"
 $ResourceGroup = $ENV:Website_Resource_Group
@@ -40,7 +41,7 @@ try {
             $Token = (New-DeviceLogin -clientid "1b730954-1685-4b74-9bfd-dac224a7b894" -Scope 'https://graph.microsoft.com/.default' -device_code $SAMSetup.device_code)
             if ($token.Access_Token) {
                   $step = 2
-                  $URL = ($Request.url).split('?') | Select-Object -First 1
+                  $URL = ($Request.headers.'x-ms-original-url').split('?') | Select-Object -First 1
                   $PartnerSetup = Get-Content '.\Cache_SAMSetup\PartnerSetup.json' -ErrorAction SilentlyContinue
                   $TenantId = (Invoke-RestMethod "https://graph.microsoft.com/v1.0/organization" -Headers @{ authorization = "Bearer $($Token.Access_Token)" } -Method GET -ContentType 'application/json').value.id
                   $TenantId | Out-File '.\Cache_SAMSetup\cache.tenantid' 
@@ -92,7 +93,7 @@ try {
                   $AppID = Get-Content '.\Cache_SAMSetup\cache.appid'
                   $PartnerSetup = Get-Content '.\Cache_SAMSetup\PartnerSetup.json' -ErrorAction SilentlyContinue  
                   New-Item '.\Cache_SAMSetup\SamSetup.json' -Value ($FirstLogonRefreshtoken | ConvertTo-Json) -Force
-                  $URL = ($Request.url).split('?') | Select-Object -First 1
+                  $URL = ($Request.headers.'x-ms-original-url').split('?') | Select-Object -First 1
                   $Validated = Get-Content ".\Cache_SAMSetup\Validated.json" -ErrorAction SilentlyContinue
                   if ($Validated) { $step = 3 }
                   $Results = @{ message = "Give the next approval by clicking "  ; step = $step; url = "https://login.microsoftonline.com/$TenantId/oauth2/v2.0/authorize?scope=https://graph.microsoft.com/.default+offline_access+openid+profile&response_type=code&client_id=$($appid)&redirect_uri=$($url)&client-request-id=eef306a9-fa85-4c1f-bb9a-a340d11de748&x-client-SKU=CIPP-AUTH&x-client-Ver=4.8.1.0&prompt=select_account" }
