@@ -60,13 +60,7 @@ try {
                   $TenantId = Get-Content '.\Cache_SAMSetup\cache.tenantid'
                   $AppID = Get-Content '.\Cache_SAMSetup\cache.appid'
                   $PartnerSetup = Get-Content '.\Cache_SAMSetup\PartnerSetup.json' -ErrorAction SilentlyContinue  
-                  if ($PartnerSetup) {
-                        $FirstLogonRefreshtoken = New-DeviceLogin -clientid $AppID -Scope 'https://api.partnercenter.microsoft.com/user_impersonation' -FirstLogon -TenantId $TenantId
-                  }
-                  else {
-                        $FirstLogonRefreshtoken = New-DeviceLogin -clientid $AppID -Scope 'https://graph.microsoft.com/.default' -FirstLogon -TenantId $TenantId
-
-                  }
+                  $FirstLogonRefreshtoken = New-DeviceLogin -clientid $AppID -Scope 'https://graph.microsoft.com/.default' -FirstLogon -TenantId $TenantId
                   New-Item '.\Cache_SAMSetup\SamSetup.json' -Value ($FirstLogonRefreshtoken | ConvertTo-Json) -Force
                   $step = 3
                   $Results = @{ message = $FirstLogonRefreshtoken.message  ; step = $step }
@@ -77,14 +71,14 @@ try {
                   $TenantId = Get-Content '.\Cache_SAMSetup\cache.tenantid' 
                   $AppID = Get-Content '.\Cache_SAMSetup\cache.appid'  
                   $PartnerSetup = Get-Content '.\Cache_SAMSetup\PartnerSetup.json' -ErrorAction SilentlyContinue  
-                  if ($PartnerSetup) {
-                        $RefreshToken = (New-DeviceLogin -clientid $AppID -Scope 'https://api.partnercenter.microsoft.com/user_impersonation' -device_code $SAMSetup.device_code)
-                  }
-                  else {
-                        $RefreshToken = (New-DeviceLogin -clientid $AppID -Scope 'https://graph.microsoft.com/.default' -device_code $SAMSetup.device_code)
+                  $RefreshToken = (New-DeviceLogin -clientid $AppID -Scope 'https://graph.microsoft.com/.default' -device_code $SAMSetup.device_code)
 
-                  }
                   if ($RefreshToken.Refresh_Token) {
+                        if ($PartnerSetup) {
+                              $GroupID = (Invoke-RestMethod "https://graph.microsoft.com/v1.0/groups?`$filter=startswith(displayName,'AdminAgents')" -Headers @{ authorization = "Bearer $($RefreshToken.Access_Token)" } -Method Get -ContentType 'application/json').value.id
+                              $SPN = (Invoke-RestMethod "https://graph.microsoft.com/v1.0/servicePrincipals?`$filter=appId eq '$($Appid.appid)'" -Headers @{ authorization = "Bearer $($RefreshToken.Access_Token)" } -Method Get -ContentType 'application/json').value.id
+                              $AddingToAdminAgent = (Invoke-RestMethod "https://graph.microsoft.com/v1.0/groups/$($GroupID)/members/`$ref" -Headers @{ authorization = "Bearer $($RefreshToken.Access_Token)" } -Method POST -Body "{ `"@odata.id`": `"https://graph.microsoft.com/v1.0/directoryObjects/$($SPN)`"}" -ContentType 'application/json')
+                        }
                         Set-AzKeyVaultSecret -VaultName $kv.vaultname -Name 'RefreshToken' -SecretValue (ConvertTo-SecureString -String $RefreshToken.Refresh_Token -AsPlainText -Force)
                         $step = 4
                         $Results = @{"message" = "Retrieved refresh token and saving to Keyvault."; step = $step }
