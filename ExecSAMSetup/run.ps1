@@ -74,12 +74,28 @@ try {
                   $RefreshToken = (New-DeviceLogin -clientid $AppID -Scope 'https://graph.microsoft.com/.default' -device_code $SAMSetup.device_code)
 
                   if ($RefreshToken.Refresh_Token) {
-                        if ($PartnerSetup) {
-                              $GroupID = (Invoke-RestMethod "https://graph.microsoft.com/v1.0/groups?`$filter=startswith(displayName,'AdminAgents')" -Headers @{ authorization = "Bearer $($RefreshToken.Access_Token)" } -Method Get -ContentType 'application/json').value.id
-                              $SPN = (Invoke-RestMethod "https://graph.microsoft.com/v1.0/servicePrincipals?`$filter=appId eq '$($Appid.appid)'" -Headers @{ authorization = "Bearer $($RefreshToken.Access_Token)" } -Method Get -ContentType 'application/json').value.id
-                              $AddingToAdminAgent = (Invoke-RestMethod "https://graph.microsoft.com/v1.0/groups/$($GroupID)/members/`$ref" -Headers @{ authorization = "Bearer $($RefreshToken.Access_Token)" } -Method POST -Body "{ `"@odata.id`": `"https://graph.microsoft.com/v1.0/directoryObjects/$($SPN)`"}" -ContentType 'application/json')
-                        }
                         Set-AzKeyVaultSecret -VaultName $kv.vaultname -Name 'RefreshToken' -SecretValue (ConvertTo-SecureString -String $RefreshToken.Refresh_Token -AsPlainText -Force)
+                        if ($PartnerSetup) {
+                              $attempt = 0
+                              do {
+                                    try {
+                                          Start-Sleep 3
+                                          $GroupID = (Invoke-RestMethod "https://graph.microsoft.com/v1.0/groups?`$filter=startswith(displayName,'AdminAgents')" -Headers @{ authorization = "Bearer $($RefreshToken.Access_Token)" } -Method Get -ContentType 'application/json').value.id
+                                          Write-Host "Id is $GroupID"
+                                          $SPN = (Invoke-RestMethod "https://graph.microsoft.com/v1.0/servicePrincipals?`$filter=appId eq '$($Appid)'" -Headers @{ authorization = "Bearer $($RefreshToken.Access_Token)" } -Method Get -ContentType 'application/json').value.id
+                                          Write-Host "SPN is $SPN"
+                                          $AddingToAdminAgent = (Invoke-RestMethod "https://graph.microsoft.com/v1.0/groups/$($GroupID)/members/`$ref" -Headers @{ authorization = "Bearer $($RefreshToken.Access_Token)" } -Method POST -Body "{ `"@odata.id`": `"https://graph.microsoft.com/v1.0/directoryObjects/$($SPN)`"}" -ContentType 'application/json')
+                                          Write-Host "Added to adminagents"
+                                          $attempt ++
+                                    }
+                                    catch {
+                                          $attempt ++
+                                    }
+                              } until ($attempt -gt 5)
+
+                           
+
+                        }
                         $step = 4
                         $Results = @{"message" = "Retrieved refresh token and saving to Keyvault."; step = $step }
                   }
