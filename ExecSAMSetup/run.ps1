@@ -13,6 +13,7 @@ if ($env:MSI_SECRET) {
 $KV = Get-AzKeyVault -SubscriptionID $Subscription -ResourceGroupName $ResourceGroup
 
 try {
+      if ($Request.query.count -lt 1 ) { $Results = "No authentication code found. Please retry cllicking the URL" }
       if ($request.query.code) {
             try {
                   $TenantId = Get-Content '.\Cache_SAMSetup\cache.tenantid'
