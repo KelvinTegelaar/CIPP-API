@@ -2,7 +2,6 @@ using namespace System.Net
 
 # Input bindings are passed in via param block.
 param($Request, $TriggerMetadata)
-Write-Host ($request | ConvertTo-Json)
 $APIName = $TriggerMetadata.FunctionName
 Log-Request -user $request.headers.'x-ms-client-principal' -API $APINAME  -message "Accessed this API" -Sev "Debug"
 $ResourceGroup = $ENV:Website_Resource_Group
@@ -16,9 +15,15 @@ $KV = Get-AzKeyVault -SubscriptionID $Subscription -ResourceGroupName $ResourceG
 try {
       if ($request.query.code) {
             try {
+                  $TenantId = Get-Content '.\Cache_SAMSetup\cache.tenantid'
+                  $AppID = Get-Content '.\Cache_SAMSetup\cache.appid'
+                  $URL = ($Request.headers.'x-ms-original-url').split('?') | Select-Object -First 1
+                  $clientsecret = Get-AzKeyVaultSecret -VaultName $kv.vaultname -Name 'applicationsecret' -AsPlainText
+                  $RefreshToken = Invoke-RestMethod -Method POST -Body "client_id=$appid&scope=https://graph.microsoft.com/.default+offline_access+openid+profile&code=$($request.query.code)&grant_type=authorization_code&redirect_uri=$($url)&client_secret=$clientsecret" -Uri "https://login.microsoftonline.com/$TenantId/oauth2/v2.0/token"
+                  Write-Host ($RefreshToken | ConvertTo-Json)
                   Set-AzKeyVaultSecret -VaultName $kv.vaultname -Name 'RefreshToken' -SecretValue (ConvertTo-SecureString -String $Request.query.code -AsPlainText -Force)
                   $Results = "Authentication is now complete. You may now close this window."
-                  New-Item ".\Cache_SAMSetup\Validated.json" -Value "true"
+                  New-Item ".\Cache_SAMSetup\Validated.json" -Value "true" -Force
             }
             catch {
                   $Results = "Authentication failed. $($_.Exception.message)"
@@ -119,7 +124,7 @@ try {
                   $SAMSetup = Get-Content '.\Cache_SAMSetup\SamSetup.json' | ConvertFrom-Json
                   $ExchangeRefreshToken = (New-DeviceLogin -clientid 'a0c73c16-a7e3-4564-9a95-2bdf47383716' -Scope 'https://outlook.office365.com/.default' -device_code $SAMSetup.device_code)
                   if ($ExchangeRefreshToken.Refresh_Token) {
-                        #Set-AzKeyVaultSecret -VaultName $kv.vaultname -Name 'exchangerefreshtoken' -SecretValue (ConvertTo-SecureString -String $ExchangeRefreshToken.Refresh_Token -AsPlainText -Force)
+                        Set-AzKeyVaultSecret -VaultName $kv.vaultname -Name 'exchangerefreshtoken' -SecretValue (ConvertTo-SecureString -String $ExchangeRefreshToken.Refresh_Token -AsPlainText -Force)
                         $step = 6
                         $Results = @{"message" = "Retrieved refresh token and saving to Keyvault."; step = $step }
                   }
