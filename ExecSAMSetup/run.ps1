@@ -13,7 +13,8 @@ if ($env:MSI_SECRET) {
 $KV = Get-AzKeyVault -SubscriptionID $Subscription -ResourceGroupName $ResourceGroup
 
 try {
-      if ($Request.query.count -lt 1 ) { $Results = "No authentication code found. Please retry cllicking the URL" }
+      if ($Request.query.count -lt 1 ) { $Results = "No authentication code found. Please retry." }
+      if ($Request.query.error -eq 'invalid_client') { $Results = "Client ID was not found in Azure. Try waiting 10 seconds to try again, if you have gotten this error after 5 minutes, please restart the process." }
       if ($request.query.code) {
             try {
                   $TenantId = Get-Content '.\Cache_SAMSetup\cache.tenantid'
