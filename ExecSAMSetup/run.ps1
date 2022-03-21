@@ -60,7 +60,7 @@ try {
                   $TenantId = Get-Content '.\Cache_SAMSetup\cache.tenantid'
                   $AppID = Get-Content '.\Cache_SAMSetup\cache.appid'
                   $PartnerSetup = Get-Content '.\Cache_SAMSetup\PartnerSetup.json' -ErrorAction SilentlyContinue  
-                  $FirstLogonRefreshtoken = New-DeviceLogin -clientid $AppID -Scope 'https://graph.microsoft.com/.default' -FirstLogon -TenantId $TenantId
+                  $FirstLogonRefreshtoken = New-DeviceLogin -clientid $AppID -Scope 'https://api.partnercenter.microsoft.com/user_impersonation' -FirstLogon -TenantId $TenantId
                   New-Item '.\Cache_SAMSetup\SamSetup.json' -Value ($FirstLogonRefreshtoken | ConvertTo-Json) -Force
                   $step = 3
                   $Results = @{ message = $FirstLogonRefreshtoken.message  ; step = $step }
