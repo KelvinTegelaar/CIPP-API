@@ -13,12 +13,16 @@ else {
 
 $Settings = if ($Config.psobject.properties.name) { @($Config.psobject.properties.name, "Alerts") } else { @("Alerts") }
 $logdate = (Get-Date).ToString('ddMMyyyy')
-try {
-  $Currentlog = Get-Content "Logs\$($logdate).log" | ConvertFrom-Csv -Header 'DateTime', 'Tenant', 'API', 'Message', 'User', 'Severity' -Delimiter '|' | Where-Object { [datetime]$_.Datetime -gt (Get-Date).AddMinutes(-10) -and $_.api -in $Settings -and $_.Severity -ne 'debug' }
+$Currentlog = Get-Content "Logs\$($logdate).log" | ForEach-Object {
+  try {
+    $Line = $_
+    $Line | ConvertFrom-Csv -Header 'DateTime', 'Tenant', 'API', 'Message', 'User', 'Severity' -Delimiter '|' | Where-Object { [datetime]$_.Datetime -gt (Get-Date).AddMinutes(-10) -and $_.api -in $Settings -and $_.Severity -ne 'debug' }
+  }
+  catch {
+    
+  }
 }
-catch {
-  $Currentlog = @{ date = $logdate; message = "The log might be corrupted. We could not retrieve the information: $($_.Exception.message)" }
-}
+
 if ($Config.email -ne '' -and $null -ne $CurrentLog) {
   $HTMLLog = ($CurrentLog | ConvertTo-Html -frag) -replace '<table>', '<table class=blueTable>' | Out-String
   $JSONBody = @"
