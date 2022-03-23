@@ -45,6 +45,7 @@ $ReturnObject = foreach ($h in $ResultHealthSummary) {
     }
     $SH
 }
+$StatusCode = [HttpStatusCode]::OK
 
 # Associate values to output bindings by calling 'Push-OutputBinding'.
 Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
