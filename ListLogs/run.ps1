@@ -12,7 +12,7 @@ if ($request.Query.filter -eq "True") {
     $username = $Request.Query.User
 }
 else {
-    $LogLevel = "Info", "Warn", "Error", "Critical"
+    $LogLevel = "Info", "Warn", "Error", "Critical", "Alert"
     $date = (Get-Date).ToString('ddMMyyyy')
     $username = '*'
 }
@@ -24,7 +24,7 @@ $ReturnedLog = if ($Request.Query.ListLogs) {
         } }
 }
 else {
-    Get-Content "Logs\$($date).log" | ConvertFrom-Csv -Header "DateTime", "Tenant", "API", "Message", "User", "Severity" -Delimiter "|" | Where-Object { $_.Severity -In $LogLevel -and $_.user -like $username }
+    Get-Content "Logs\$($date).log" | ForEach-Object { $_ | ConvertFrom-Csv -Header "DateTime", "Tenant", "API", "Message", "User", "Severity" -Delimiter "|" | Where-Object { $_.Severity -In $LogLevel -and $_.user -like $username } }
 }
 Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
         StatusCode = [HttpStatusCode]::OK
