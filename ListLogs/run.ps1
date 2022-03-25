@@ -17,6 +17,9 @@ else {
     $username = '*'
 }
 
+
+$IllegalLines = New-Object -TypeName "System.Collections.ArrayList"
+
 $ReturnedLog = if ($Request.Query.ListLogs) {
     Get-ChildItem "Logs" | Select-Object Name, BaseName | ForEach-Object { @{
             value = $_.BaseName
@@ -24,8 +27,20 @@ $ReturnedLog = if ($Request.Query.ListLogs) {
         } }
 }
 else {
-    Get-Content "Logs\$($date).log" | ForEach-Object { $_ | ConvertFrom-Csv -Header "DateTime", "Tenant", "API", "Message", "User", "Severity" -Delimiter "|" | Where-Object { $_.Severity -In $LogLevel -and $_.user -like $username } }
+    $content = Get-Content "Logs\$($date).log"
+    foreach ($line in $content) {
+        try {
+            $line | ConvertFrom-Csv -Header "DateTime", "Tenant", "API", "Message", "User", "Severity" -Delimiter "|" -ErrorAction Stop | Where-Object { $_.Severity -In $LogLevel -and $_.user -like $username 
+            } 
+        }
+        catch {
+            Write-Host $content.IndexOf($line)
+            $IllegalLines.Add($content.IndexOf($line))
+        }
+    }
 }
+if ($IllegalLines.count -ge 1) { Log-Request "The following line numbers in the log are invalid: $IllegalLines" -API $APINAME -Sev Warn }
+
 Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
         StatusCode = [HttpStatusCode]::OK
         Body       = @($ReturnedLog)
