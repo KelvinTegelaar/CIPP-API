@@ -12,6 +12,9 @@ Write-Host "PowerShell HTTP trigger function processed a request."
 # Get me some of that classic token!
 $token = Get-ClassicAPIToken -Resource "https://admin.microsoft.com" -tenantID $Env:TenantID
 
+# Get the list of authorised tenants so we can take into account exclusions
+$Tenants = Get-Tenants
+
 # This allows access to a tenant key that is needed in the POST for service health
 $ResultClients = Invoke-RestMethod -ContentType "application/json;charset=UTF-8" -Uri 'https://admin.microsoft.com/admin/api/partners/GetAOBOClients/true' -Method Get -Headers @{
     Authorization            = "Bearer $($token.access_token)";
@@ -21,8 +24,12 @@ $ResultClients = Invoke-RestMethod -ContentType "application/json;charset=UTF-8"
     'X-Requested-With'       = 'XMLHttpRequest' 
 }
 
+# Filter out the tenants that shouldn't be there
+$ResultClients = $ResultClients | Where-Object { $Tenants.customerId -contains $_.TenantId }
+
 # Build the body
 $Body = $ResultClients.TenantKey | ConvertTo-Json
+
 
 # Get the service health info
 $ResultHealthSummary = Invoke-RestMethod -ContentType "application/json;charset=UTF-8" -Uri 'https://admin.microsoft.com/admin/api/tenant/listservicehealthsummary' -Method POST -Body $body -Headers @{
