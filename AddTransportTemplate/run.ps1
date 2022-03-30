@@ -9,18 +9,18 @@ Log-Request -user $request.headers.'x-ms-client-principal' -API $APINAME  -messa
 
 try {        
     $GUID = New-Guid
-
-    $object = [PSCustomObject]@{}
-    $request.body.PowerShellCommand | ConvertFrom-Csv -Delimiter " " -Header "name", "value" | ForEach-Object {
-        $object | Add-Member -NotePropertyName ($_.name -replace '-', '') -NotePropertyValue $_.value
-    }
-
-
     New-Item Config -ItemType Directory -ErrorAction SilentlyContinue
-    Set-Content "Config\$($GUID).TransportRuleTemplate.json" -Value ($Object | ConvertTo-Json -Depth 10) -Force
-    Log-Request -user $request.headers.'x-ms-client-principal' -API $APINAME  -message "Created Transport Rule Template $($Request.body.displayname) with GUID $GUID" -Sev "Debug"
+    $Object = if ($request.body.PowerShellCommand) {
+        $request.body.PowerShellCommand | Select-Object -Property * -ExcludeProperty GUID
+    }
+    else {
+        $request.body | Select-Object -Property * -ExcludeProperty GUID
 
+    }
+    Set-Content "Config\$($GUID).TransportRuleTemplate.json" -Value ($Object | ConvertTo-Json -Depth 10).ToLower() -Force
+    Log-Request -user $request.headers.'x-ms-client-principal' -API $APINAME  -message "Created Transport Rule Template $($Request.body.name) with GUID $GUID" -Sev "Debug"
     $body = [pscustomobject]@{"Results" = "Successfully added template" }
+    
 }
 catch {
     Log-Request -user $request.headers.'x-ms-client-principal'  -API $APINAME -message "Failed to create Transport Rule Template: $($_.Exception.Message)" -Sev "Error"
