@@ -11,8 +11,7 @@ try {
     $GUID = New-Guid
     New-Item Config -ItemType Directory -ErrorAction SilentlyContinue
     $JSON = if ($request.body.rawjson) {
-        Write-Host "PowerShellCommand"
-        $request.body.rawjson
+       ([pscustomobject]$request.body.rawjson) | ConvertFrom-Json
     }
     else {
         ([pscustomobject]$Request.body) | ForEach-Object {
