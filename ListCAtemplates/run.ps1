@@ -10,7 +10,7 @@ Log-Request -user $request.headers.'x-ms-client-principal' -API $APINAME  -messa
 # Write to the Azure Functions log stream.
 Write-Host "PowerShell HTTP trigger function processed a request."
 Write-Host $Request.query.id
-$Templates = Get-ChildItem "Config\*.IntuneTemplate.json" | ForEach-Object { Get-Content $_ | ConvertFrom-Json }
+$Templates = Get-ChildItem "Config\*.CATemplate.json" | ForEach-Object { Get-Content $_ | ConvertFrom-Json }
 if ($Request.query.ID) { $Templates = $Templates | Where-Object -Property guid -EQ $Request.query.id }
 
 
