@@ -8,7 +8,7 @@ Log-Request -user $request.headers.'x-ms-client-principal' -API $APINAME  -messa
 
 $ID = $request.query.id
 try {
-    Remove-Item "Config\$($ID).TransportRuleTemplate.json" -Force
+    Remove-Item "Config\$($ID).CATemplate.json" -Force
     Log-Request -user $request.headers.'x-ms-client-principal'  -API $APINAME  -message "Removed Conditional Access Template with ID $ID." -Sev "Info"
     $body = [pscustomobject]@{"Results" = "Successfully removed Conditional Access Template" }
 }

@@ -15,7 +15,7 @@ try {
         $request.body.rawjson
     }
     else {
-        ([pscustomobject]$Request.body) | ForEach-Object {
+        ([pscustomobject]$Request.body | Select-Object -Property * -ExcludeProperty id, GUID) | ForEach-Object {
             $NonEmptyProperties = $_.psobject.Properties | Where-Object { $null -ne $_.Value } | Select-Object -ExpandProperty Name
             $_ | Select-Object -Property $NonEmptyProperties 
         }
