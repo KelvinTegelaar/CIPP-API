@@ -15,12 +15,12 @@ try {
         $request.body.rawjson
     }
     else {
-        ([pscustomobject]$Request.body | Select-Object -Property * -ExcludeProperty id, GUID) | ForEach-Object {
+        ([pscustomobject]$Request.body) | ForEach-Object {
             $NonEmptyProperties = $_.psobject.Properties | Where-Object { $null -ne $_.Value } | Select-Object -ExpandProperty Name
             $_ | Select-Object -Property $NonEmptyProperties 
         }
     }
-    $JSON = ($JSON | ConvertTo-Json -Depth 10).tolower()
+    $JSON = ($JSON | ConvertTo-Json -Depth 10)
     Set-Content "Config\$($GUID).CATemplate.json" -Value ($JSON) -Force
     Log-Request -user $request.headers.'x-ms-client-principal' -API $APINAME  -message "Created Transport Rule Template $($Request.body.name) with GUID $GUID" -Sev "Debug"
     $body = [pscustomobject]@{"Results" = "Successfully added template" }
