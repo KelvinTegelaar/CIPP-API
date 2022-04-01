@@ -1,0 +1,36 @@
+{
+  "state": "enabled",
+  "grantControls": {
+    "builtInControls": ["block"],
+    "operator": "OR",
+    "termsOfUse": [],
+    "customAuthenticationFactors": []
+  },
+  "conditions": {
+    "times": null,
+    "locations": null,
+    "signInRiskLevels": [],
+    "devices": null,
+    "deviceStates": null,
+    "users": {
+      "excludeRoles": [],
+      "excludeUsers": [],
+      "excludeGroups": [],
+      "includeUsers": ["All"],
+      "includeRoles": [],
+      "includeGroups": []
+    },
+    "servicePrincipalRiskLevels": [],
+    "userRiskLevels": [],
+    "clientAppTypes": ["exchangeActiveSync", "other"],
+    "platforms": null,
+    "clientApplications": null,
+    "applications": {
+      "includeApplications": ["None"],
+      "includeUserActions": [],
+      "includeAuthenticationContextClassReferences": [],
+      "excludeApplications": []
+    }
+  },
+  "displayName": "Block Legacy Authentication"
+}
