@@ -19,10 +19,7 @@ $Result = [PSCustomObject]@{
     SupportedServices    = $Tenant.supportedServices
     ExpectedSPFRecord    = ''
     ActualSPFRecord      = ''
-    SPFPassTest          = ''
     SPFPassAll           = ''
-    ExpectedMXRecord     = ''
-    ActualMXRecord       = ''
     MXPassTest           = ''
     DMARCPresent         = ''
     DMARCFullPolicy      = ''
@@ -33,16 +30,15 @@ $Result = [PSCustomObject]@{
     MailProvider         = ''
     DKIMEnabled          = ''
     Score                = ''
-    MaximumScore         = 180
+    MaximumScore         = 160
     ScorePercentage      = ''
     ScoreExplanation     = ''
 }
 
 $Scores = [PSCustomObject]@{
     SPFPresent           = 10
-    SPFMSRecommended     = 10
-    SPFCorrectAll        = 10
-    MXMSRecommended      = 10
+    SPFCorrectAll        = 20
+    MXRecommended        = 10
     DMARCPresent         = 10
     DMARCSetQuarantine   = 20
     DMARCSetReject       = 30
@@ -54,10 +50,25 @@ $Scores = [PSCustomObject]@{
 
 $ScoreDomain = 0
 # Setup Score Explanation
-[System.Collections.ArrayList]$ScoreExplanation = @()
+$ScoreExplanation = [System.Collections.Generic.List[string]]::new()
 
+# Check MX Record
 $MXRecord = Read-MXRecord -Domain $Domain
+
 $Result.ExpectedSPFRecord = $MXRecord.ExpectedInclude
+$Result.MXPassTest = $false
+
+# Check fail counts to ensure all tests pass
+#$MXWarnCount = $MXRecord.ValidationWarns | Measure-Object | Select-Object -ExpandProperty Count
+$MXFailCount = $MXRecord.ValidationFails | Measure-Object | Select-Object -ExpandProperty Count
+
+if ($MXFailCount -eq 0) {
+    $Result.MXPassTest = $true
+    $ScoreDomain += $Scores.MXRecommended
+}
+else {
+    $ScoreExplanation.Add('MX record did not pass validation') | Out-Null
+}
 
 if ([string]::IsNullOrEmpty($MXRecord.MailProvider)) {
     $Result.MailProvider = 'Unknown'
@@ -74,6 +85,9 @@ try {
         if ($SPFRecord.RecordCount -eq 1) {
             $ScoreDomain += $Scores.SPFPresent
         }
+        else {
+            $ScoreExplanation.Add('Multiple SPF records detected') | Out-Null
+        }
     }
     else {
         $Result.ActualSPFRecord = 'No SPF Record'
@@ -86,15 +100,6 @@ catch {
     
 # Check SPF Record
 $Result.SPFPassAll = $false
-$Result.SPFPassTest = $false
-
-foreach ($Validation in $SPFRecord.ValidationPasses) {
-    if ($Validation -match 'Expected SPF') {
-        $ScoreDomain += $Scores.SPFMSRecommended
-        $Result.SPFPassTest = $true
-        break
-    }
-}
 
 # Check warning + fail counts to ensure all tests pass
 #$SPFWarnCount = $SPFRecord.ValidationWarns | Measure-Object | Select-Object -ExpandProperty Count
@@ -104,17 +109,8 @@ if ($SPFFailCount -eq 0) {
     $ScoreDomain += $Scores.SPFCorrectAll
     $Result.SPFPassAll = $true
 }
-    
-# Check MX Record
-
-$Result.MXPassTest = $false
-# Check warning + fail counts to ensure all tests pass
-$MXWarnCount = $MXRecord.ValidationWarns | Measure-Object | Select-Object -ExpandProperty Count
-$MXFailCount = $MXRecord.ValidationFails | Measure-Object | Select-Object -ExpandProperty Count
-
-if (($MXWarnCount + $MXFailCount) -eq 0) {
-    $Result.MXPassTest = $true
-    $ScoreDomain += $Scores.MXMSRecommended
+else {
+    $ScoreExplanation.Add('SPF record did not pass validation') | Out-Null
 }
 
 # Get DMARC Record
@@ -143,6 +139,7 @@ try {
             $ScoreDomain += $Scores.DMARCSetQuarantine
             $ScoreExplanation.Add('DMARC Partially Enforced with quarantine') | Out-Null
         }
+
         $ReportEmailCount = $DMARCPolicy.ReportingEmails | Measure-Object | Select-Object -ExpandProperty Count
         if ($ReportEmailCount -gt 0) {
             $Result.DMARCReportingActive = $true
@@ -191,8 +188,8 @@ try {
     
     $DkimRecordCount = $DkimRecord.Records | Measure-Object | Select-Object -ExpandProperty Count
     $DkimFailCount = $DkimRecord.ValidationFails | Measure-Object | Select-Object -ExpandProperty Count
-    $DkimWarnCount = $DkimRecord.ValidationWarns | Measure-Object | Select-Object -ExpandProperty Count
-    if ($DkimRecordCount -gt 0 -and ($DkimFailCount + $DkimWarnCount) -eq 0) {
+    #$DkimWarnCount = $DkimRecord.ValidationWarns | Measure-Object | Select-Object -ExpandProperty Count
+    if ($DkimRecordCount -gt 0 -and $DkimFailCount -eq 0) {
         $Result.DKIMEnabled = $true
         $ScoreDomain += $Scores.DKIMActiveAndWorking
     }

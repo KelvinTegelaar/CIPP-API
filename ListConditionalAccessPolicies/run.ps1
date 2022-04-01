@@ -432,6 +432,7 @@ try {
             builtInControls                             = ($cap.grantControls.builtInControls) -join ","
             customAuthenticationFactors                 = ($cap.grantControls.customAuthenticationFactors) -join ","
             termsOfUse                                  = ($cap.grantControls.termsOfUse) -join ","
+            rawjson                                     = ($cap | ConvertTo-Json -Depth 100)
         }
         $temp
     }

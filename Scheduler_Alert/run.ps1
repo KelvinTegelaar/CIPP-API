@@ -84,7 +84,14 @@ $ShippedAlerts = switch ($Alerts) {
         }
     }
 }
-$currentlog = Get-Content "Logs\$((Get-Date).ToString('ddMMyyyy')).log" | ConvertFrom-Csv -Header "DateTime", "Tenant", "API", "Message", "User", "Severity" -Delimiter "|" | Where-Object -Property Tenant -EQ $tenant.tenant
+$currentlog = Get-Content "Logs\$((Get-Date).ToString('ddMMyyyy')).log" | ForEach-Object {
+    try {
+        $_ | ConvertFrom-Csv -Header "DateTime", "Tenant", "API", "Message", "User", "Severity" -Delimiter "|" | Where-Object -Property Tenant -EQ $tenant.tenant
+    }
+    catch {
+
+    }
+}
 Write-Host $ShippedAlerts
 $ShippedAlerts | ForEach-Object {
     if ($_ -in $currentlog.message) {

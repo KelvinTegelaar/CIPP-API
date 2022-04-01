@@ -334,7 +334,8 @@ function New-ExoRequest ($tenantid, $cmdlet, $cmdParams) {
             $ReturnedData = Invoke-RestMethod "https://outlook.office365.com/adminapi/beta/$($tenant)/InvokeCommand" -Method POST -Body $ExoBody -Headers $Headers -ContentType 'application/json; charset=utf-8'
         }
         catch {
-            $Message = ($_.ErrorDetails | ConvertFrom-Json -ErrorAction SilentlyContinue).error.details.message
+            $ReportedError = ($_.ErrorDetails | ConvertFrom-Json -ErrorAction SilentlyContinue)
+            $Message = if ($ReportedError.error.details.message) { $ReportedError.error.details.message } else { $ReportedError.error.innererror.internalException.message }
             if ($Message -eq $null) { $Message = $($_.Exception.Message) }
             throw $Message
         }
