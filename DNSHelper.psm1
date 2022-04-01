@@ -78,9 +78,11 @@ function Resolve-DnsHttpsQuery {
         if ($Results.Answer) {
             $DataReturned = $true
         }
+        elseif ($Results.Status -ne 0) {
+            $DataReturned = $true
+        }
         else {
             if ($Retry -gt 3) {
-                $Results = $null
                 $DataReturned = $true
             }
             $Retry++
@@ -133,31 +135,30 @@ function Test-DNSSEC {
     }
 
     $Result = Resolve-DnsHttpsQuery @DnsQuery
-
-    $RecordCount = ($Result.Answer.data | Measure-Object).Count
-    if ($null -eq $Result) {
-        $ValidationFails.Add('DNSSEC is not set up for this domain.') | Out-Null
+    if ($Result.Status -eq 2 -and $Result.AD -eq $false) {
+        $ValidationFails.Add('DNSSEC Validation failed.') | Out-Null
     }
     else {
-        if ($Result.Status -eq 2) {
-            if ($Result.AD -eq $false) {
-                $ValidationFails.Add("$($Result.Comment)") | Out-Null
-            }
-        }
-        elseif ($Result.Status -eq 3) {
+        $RecordCount = ($Result.Answer.data | Measure-Object).Count
+        if ($null -eq $Result) {
             $ValidationFails.Add('DNSSEC is not set up for this domain.') | Out-Null
-        }
-        elseif ($RecordCount -gt 0) {
-            if ($Result.AD -eq $false) {
-                $ValidationFails.Add('DNSSEC is enabled, but the DNS query response was not validated. Ensure DNSSEC has been enabled on your domain provider.') | Out-Null
-            }
-            else {
-                $ValidationPasses.Add('DNSSEC is enabled and validated for this domain.') | Out-Null
-            }
-            $DSResults.Keys = $Result.answer.data
         }
         else {
-            $ValidationFails.Add('DNSSEC is not set up for this domain.') | Out-Null
+            if ($Result.Status -eq 3) {
+                $ValidationFails.Add('DNSSEC is not set up for this domain.') | Out-Null
+            }
+            elseif ($RecordCount -gt 0) {
+                if ($Result.AD -eq $false) {
+                    $ValidationFails.Add('DNSSEC is enabled, but the DNS query response was not validated. Ensure DNSSEC has been enabled on your domain provider.') | Out-Null
+                }
+                else {
+                    $ValidationPasses.Add('DNSSEC is enabled and validated for this domain.') | Out-Null
+                }
+                $DSResults.Keys = $Result.answer.data
+            }
+            else {
+                $ValidationFails.Add('DNSSEC is not set up for this domain.') | Out-Null
+            }
         }
     }
 
@@ -208,7 +209,10 @@ function Read-NSRecord {
         $Result = Resolve-DnsHttpsQuery @DnsQuery
     }
     catch { $Result = $null }
-    if ($Result.Status -ne 0 -or -not ($Result.Answer)) {
+    if ($Result.Status -eq 2 -and $Result.AD -eq $false) {
+        $ValidationFails.Add('DNSSEC Validation failed.') | Out-Null
+    }
+    elseif ($Result.Status -ne 0 -or -not ($Result.Answer)) {
         $ValidationFails.Add('No nameservers found for this domain.') | Out-Null
         $NSRecords = $null
     }
@@ -276,7 +280,10 @@ function Read-MXRecord {
         $Result = Resolve-DnsHttpsQuery @DnsQuery
     }
     catch { $Result = $null }
-    if ($Result.Status -ne 0 -or -not ($Result.Answer)) {
+    if ($Result.Status -eq 2 -and $Result.AD -eq $false) {
+        $ValidationFails.Add('DNSSEC validation failed.') | Out-Null
+    }
+    elseif ($Result.Status -ne 0 -or -not ($Result.Answer)) {
         if ($Result.Status -eq 3) {
             $ValidationFails.Add($NoMxValidation) | Out-Null
             $MXResults.MailProvider = Get-Content 'MailProviders\Null.json' | ConvertFrom-Json
@@ -453,7 +460,10 @@ function Read-SpfRecord {
                 }
                 else {
                     $Query = Resolve-DnsHttpsQuery @DnsQuery
-                    if ($Query.Status -ne 0) {
+                    if ($Query.Status -eq 2 -and $Query.AD -eq $false) {
+                        $ValidationFails.Add('DNSSEC validation failed.') | Out-Null
+                    }
+                    elseif ($Query.Status -ne 0) {
                         if ($Query.Status -eq 3) {
                             $ValidationFails.Add($NoSpfValidation) | Out-Null
                             $Status = 'permerror'
@@ -932,8 +942,10 @@ function Read-DmarcPolicy {
         $DmarcAnalysis.Record = $DmarcRecord
         $RecordCount++  
     }
-
-    if ($Query.Status -ne 0 -or $RecordCount -eq 0) {
+    if ($Query.Status -eq 2 -and $Query.AD -eq $false) {
+        $ValidationFails.Add('DNSSEC validation failed.') | Out-Null
+    }
+    elseif ($Query.Status -ne 0 -or $RecordCount -eq 0) {
         $ValidationFails.Add('This domain does not have a DMARC record.') | Out-Null
     }
     elseif (($Query.Answer | Measure-Object).Count -eq 1 -and $RecordCount -eq 0) {
@@ -1212,7 +1224,10 @@ function Read-DkimRecord {
             $QueryResults = Resolve-DnsHttpsQuery @DnsQuery
 
             if ([string]::IsNullOrEmpty($Selector)) { continue }
-
+            
+            if ($QueryResults.Status -eq 2 -and $QueryResults.AD -eq $false) {
+                $ValidationFails.Add('DNSSEC validation failed.') | Out-Null
+            }
             if ($QueryResults -eq '' -or $QueryResults.Status -ne 0) {
                 if ($QueryResults.Status -eq 3) {
                     if ($MinimumSelectorPass -eq 0) {
@@ -2035,8 +2050,10 @@ function Read-MtaStsRecord {
         $StsAnalysis.Record = $StsRecord
         $RecordCount++  
     }
-
-    if ($Query.Status -ne 0 -or $RecordCount -eq 0) {
+    if ($Query.Status -eq 2 -and $Query.AD -eq $false) {
+        $ValidationFails.Add('DNSSEC validation failed.') | Out-Null
+    }
+    elseif ($Query.Status -ne 0 -or $RecordCount -eq 0) {
         if ($Query.Status -eq 3) {
             $ValidationFails.Add('Record does not exist (NXDOMAIN)') | Out-Null
         }
@@ -2295,7 +2312,9 @@ function Read-TlsRptRecord {
         $TlsRptAnalysis.Record = $TlsRtpRecord
         $RecordCount++  
     }
-
+    if ($Query.Status -eq 2 -and $Query.AD -eq $false) {
+        $ValidationFails.Add('DNSSEC validation failed.') | Out-Null
+    }
     if ($Query.Status -ne 0 -or $RecordCount -eq 0) {
         if ($Query.Status -eq 3) {
             $ValidationFails.Add('Record does not exist (NXDOMAIN)') | Out-Null
