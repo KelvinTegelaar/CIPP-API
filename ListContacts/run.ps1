@@ -29,3 +29,7 @@ catch {
     $StatusCode = [HttpStatusCode]::Forbidden
     $GraphRequest = $ErrorMessage
 }
+Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
+        StatusCode = $StatusCode
+        Body       = @($GraphRequest)
+    })
