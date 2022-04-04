@@ -23,7 +23,6 @@ Try {
 catch {
     Log-Request -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $($tenantfilter) -message "Convert to shared mailbox failed: $($_.Exception.Message)" -Sev "Error"
     $Results = [pscustomobject]@{"Results" = "Failed. $_.Exception.Message" }
-    Remove-PSSession $session
 }
 # Associate values to output bindings by calling 'Push-OutputBinding'.
 Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
