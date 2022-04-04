@@ -15,7 +15,7 @@ Write-Host "PowerShell HTTP trigger function processed a request."
 Try {
     $MailboxType = if ($request.query.ConvertToUser -eq 'true') { "Regular" } else { "Shared" }
     $tenantfilter = $Request.Query.TenantFilter 
-    New-ExoRequest -tenantid $TenantFilter -cmdlet "Disable-InboxRule" -cmdParams @{Identity = $_.request.query.id; type = $MailboxType }
+    New-ExoRequest -tenantid $TenantFilter -cmdlet "Set-mailbox" -cmdParams @{Identity = $request.query.id; type = $MailboxType }
 
     $Results = [pscustomobject]@{"Results" = "Succesfully completed task." }
     Log-Request -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $($tenantfilter) -message "Converted mailbox $($request.query.id)" -Sev "Info"
