@@ -21,7 +21,7 @@ try {
             Set-AzKeyVaultSecret -VaultName $kv.vaultname -Name 'applicationsecret' -SecretValue (ConvertTo-SecureString -String $request.body.applicationsecret -AsPlainText -Force)
             $Results = @{ Results = "Replaced keys" }
       }
-      if ($Request.query.count -lt 1 ) { $Results = "No authentication code found. Please retry." }
+      if ($Request.query.count -lt 1 ) { $Results = "No authentication code found. Please go back to the wizard and click the URL again." }
       if ($Request.query.error -eq 'invalid_client') { $Results = "Client ID was not found in Azure. Try waiting 10 seconds to try again, if you have gotten this error after 5 minutes, please restart the process." }
       if ($request.query.code) {
             try {

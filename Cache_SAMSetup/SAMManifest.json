@@ -1,6 +1,6 @@
 {
   "isFallbackPublicClient": true,
-  "signInAudience": "AzureADMyOrg",
+  "signInAudience": "AzureADMultipleOrgs",
   "displayName": "CIPP-SAM",
   "web": {
     "redirectUris": [
