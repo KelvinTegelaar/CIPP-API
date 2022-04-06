@@ -8,6 +8,7 @@ if ($date.hour -eq 23 -and $date.minute -le '9') {
     $HistoryTable = (Get-AzStorageTable -Context $context -Name "*history").cloudTable
     Get-AzTableRow -table $InstancesTable | Where-Object -Property RunTimeStatus -NE "Running" | Remove-AzTableRow -Table $InstancesTable
     Get-AzTableRow -table $HistoryTable | Where-Object -Property TimeStamp -LT (Get-Date).addhours(-24) | Remove-AzTableRow -Table $HistoryTable
+    Get-AzStorageTable -Context $context -Name "AzureWebJobsHostLogs*" | Remove-AzStorageTable -Force
 }
 else {
     "not my turn yet, waiting"
