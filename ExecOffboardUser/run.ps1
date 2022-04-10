@@ -14,6 +14,18 @@ $ConvertTable = Import-Csv Conversiontable.csv | Sort-Object -Property 'guid' -U
 
 Write-Host ($request.body | ConvertTo-Json)
 $results = switch ($request.body) {
+
+    { $_.RevokeSessions -eq 'true' } { 
+        try {
+            $GraphRequest = New-GraphPostRequest -uri "https://graph.microsoft.com/beta/users/$($userid)/invalidateAllRefreshTokens" -tenantid $TenantFilter -type POST -body '{}'  -verbose
+            "Success. All sessions by this user have been revoked"
+            Log-Request -user $request.headers.'x-ms-client-principal' -API $APINAME  -message "Revoked sessions for $($userid)" -Sev "Info"
+
+        }
+        catch {
+            "Failed. $($_.Exception.Message)" 
+        }
+    }
     { $_.ResetPass -eq 'true' } { 
         try { 
             $password = -join ('abcdefghkmnrstuvwxyzABCDEFGHKLMNPRSTUVWXYZ23456789$%&*#'.ToCharArray() | Get-Random -Count 12)
