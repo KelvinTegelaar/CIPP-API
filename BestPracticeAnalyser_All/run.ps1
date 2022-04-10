@@ -86,7 +86,7 @@ try {
         ResultSize           = 'Unlimited'
         RecipientTypeDetails = 'UserMailbox, SharedMailbox'
     }
-    $MailboxBPA = New-ExoRequest -tenantid $Tenant -cmdlet "Get-Mailbox"
+    $MailboxBPA = New-ExoRequest -tenantid $Tenant -cmdlet "Get-Mailbox" -cmdparams $MailboxBPAParams
     $TotalMailboxes = $MailboxBPA | Measure-Object | Select-Object -ExpandProperty Count
     $TotalMessageCopyForSentAsEnabled = $MailboxBPA | Where-Object { $_.MessageCopyForSentAsEnabled -eq $true } | Measure-Object | Select-Object -ExpandProperty Count
     $TotalMessageCopyForSendOnBehalfEnabled = $MailboxBPA | Where-Object { $_.MessageCopyForSendOnBehalfEnabled -eq $true } | Measure-Object | Select-Object -ExpandProperty Count
