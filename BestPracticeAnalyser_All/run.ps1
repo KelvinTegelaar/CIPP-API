@@ -82,11 +82,8 @@ catch {
 # Get Send and Send Behalf Of
 try {
     # Send and Send Behalf Of
-    $MailboxBPAParams = @{
-        ResultSize           = 'Unlimited'
-        RecipientTypeDetails = 'UserMailbox, SharedMailbox'
-    }
-    $MailboxBPA = New-ExoRequest -tenantid $Tenant -cmdlet "Get-Mailbox"
+    $MailboxBPA = New-ExoRequest -tenantid $Tenant -cmdlet "Get-Mailbox" | Where-Object { $_.RecipientTypeDetails -In @("UserMailbox", "SharedMailbox") -and $_.userPrincipalName -notlike "DiscoverySearchMailbox" }
+    Write-Host (($MailboxBPA)[-1] | ConvertTo-Json -Compress)
     $TotalMailboxes = $MailboxBPA | Measure-Object | Select-Object -ExpandProperty Count
     $TotalMessageCopyForSentAsEnabled = $MailboxBPA | Where-Object { $_.MessageCopyForSentAsEnabled -eq $true } | Measure-Object | Select-Object -ExpandProperty Count
     $TotalMessageCopyForSendOnBehalfEnabled = $MailboxBPA | Where-Object { $_.MessageCopyForSendOnBehalfEnabled -eq $true } | Measure-Object | Select-Object -ExpandProperty Count

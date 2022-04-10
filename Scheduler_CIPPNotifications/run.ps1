@@ -23,7 +23,7 @@ $Currentlog = Get-Content "Logs\$($logdate).log" | ForEach-Object {
   }
 }
 
-if ($Config.email -ne '' -and $null -ne $CurrentLog) {
+if ($Config.email -like "*@*" -and $null -ne $CurrentLog) {
   $HTMLLog = ($CurrentLog | ConvertTo-Html -frag) -replace '<table>', '<table class=blueTable>' | Out-String
   $JSONBody = @"
                     {
