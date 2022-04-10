@@ -9,7 +9,7 @@ Log-Request -user $request.headers.'x-ms-client-principal' -API $APINAME  -messa
 # Interact with query parameters or the body of the request.
 $TenantFilter = $Request.Query.TenantFilter
 try {
-      $GraphRequest = New-GraphPostRequest -uri "https://graph.microsoft.com/beta/users/$($Request.query.ID)/invalidateAllRefreshTokens" -tenantid $TenantFilter -type GET  -verbose
+      $GraphRequest = New-GraphPostRequest -uri "https://graph.microsoft.com/beta/users/$($Request.query.ID)/invalidateAllRefreshTokens" -tenantid $TenantFilter -type POST -body '{}'  -verbose
       $Results = [pscustomobject]@{"Results" = "Success. All sessions by this user have been revoked" }
       Log-Request -user $request.headers.'x-ms-client-principal' -API $APINAME  -message "Revoked sessions for $($Request.Query.id)" -Sev "Info"
 
