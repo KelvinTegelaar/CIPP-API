@@ -124,9 +124,6 @@ try {
         'x-ms-correlation-id'    = [guid]::NewGuid()
         'X-Requested-With'       = 'XMLHttpRequest' 
     }
-
-
-
     $Result.ShowBasicAuthSettings = $BasicAuthDisable.ShowBasicAuthSettings
     $Result.EnableModernAuth = $BasicAuthDisable.EnableModernAuth
     $Result.AllowBasicAuthActiveSync = $BasicAuthDisable.AllowBasicAuthActiveSync
