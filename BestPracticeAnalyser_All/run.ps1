@@ -149,13 +149,8 @@ catch {
 
 # Get OAuth Admin Consenst
 try {
-    $Result.AdminConsentForApplications = Invoke-RestMethod -ContentType "application/json;charset=UTF-8" -Uri 'https://admin.microsoft.com/admin/api/settings/apps/IntegratedApps' -Method GET -Headers @{
-        Authorization            = "Bearer $($token.access_token)";
-        "x-ms-client-request-id" = [guid]::NewGuid().ToString();
-        "x-ms-client-session-id" = [guid]::NewGuid().ToString()
-        'x-ms-correlation-id'    = [guid]::NewGuid()
-        'X-Requested-With'       = 'XMLHttpRequest' 
-    }
+    $GraphRequest = New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/policies/authorizationPolicy/authorizationPolicy' -tenantid $Tenant -asApp $true
+    $Result.AdminConsentForApplications = if ($GraphRequest.permissionGrantPolicyIdsAssignedToDefaultUserRole -eq "ManagePermissionGrantsForSelf.microsoft-user-default-legacy") { $true } else { $false }
     Log-request -API "BestPracticeAnalyser" -tenant $tenant -message "OAuth Admin Consent on $($tenant). Admin Consent for Applications $($Result.AdminConsentForApplications) and password reset is $($Result.SelfServicePasswordReset)" -sev "Debug"
 }
 catch {
