@@ -1,6 +1,8 @@
 ﻿param($tenant)
 try {
-    $body = @"
+    $State = (New-GraphGetRequest -Uri "https://graph.microsoft.com/beta/policies/activityBasedTimeoutPolicies" -tenantid $tenant)
+    if (!$State) {
+        $body = @"
 {
   "displayName": "DefaultTimeoutPolicy",
   "isOrganizationDefault": true,
@@ -8,6 +10,7 @@ try {
 }
 "@
     (New-GraphPostRequest -tenantid $tenant -Uri "https://graph.microsoft.com/beta/policies/activityBasedTimeoutPolicies" -Type POST -Body $body -ContentType "application/json")
+    }
     Log-request -API "Standards" -tenant $tenant -message  "Enabled Activity Based Timeout of one hour" -sev Info
 }
 catch {
