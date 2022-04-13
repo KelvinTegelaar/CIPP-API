@@ -1,0 +1,15 @@
+﻿param($tenant)
+try {
+    $body = @"
+{
+  "displayName": "DefaultTimeoutPolicy",
+  "isOrganizationDefault": true,
+  "definition":["{\"ActivityBasedTimeoutPolicy\":{\"Version\":1,\"ApplicationPolicies\":[{\"ApplicationId\":\"default\",\"WebSessionIdleTimeout\":\"01:00:00\"}]}}"]
+}
+"@
+    (New-GraphPostRequest -tenantid $tenant -Uri "https://graph.microsoft.com/beta/policies/activityBasedTimeoutPolicies" -Type POST -Body $body -ContentType "application/json")
+    Log-request -API "Standards" -tenant $tenant -message  "Enabled Activity Based Timeout of one hour" -sev Info
+}
+catch {
+    Log-request -API "Standards" -tenant $tenant -message  "Failed to enable Activity Based Timeout $($_.exception.message)" -sev Error
+}
