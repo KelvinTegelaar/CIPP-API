@@ -82,7 +82,7 @@ if ($Request.query.Permissions -eq 'true') {
     }
     catch {
         Log-Request -user $request.headers.'x-ms-client-principal' -API $APINAME -message "Permissions check failed: $($_) " -Sev 'Error'
-        $Messages.Add("We could not connect to the API to retrieve the permissions. There might be a problem with the secure application model configuration. The returned error is: $($_.Exception.Response.StatusCode.value__ ) - $($_.Exception.Message)") | Out-Null
+        $Messages.Add("We could not connect to the API to retrieve the permissions. There might be a problem with the secure application model configuration. The returned error is: $($_)") | Out-Null
         $Success = $false
     }
 
@@ -118,13 +118,7 @@ if ($Request.query.Tenants -eq 'true') {
         }
 
         try {
-            $upn = 'notRequired@required.com'
-            $tokenvalue = ConvertTo-SecureString (Get-GraphToken -AppID 'a0c73c16-a7e3-4564-9a95-2bdf47383716' -RefreshToken $ENV:ExchangeRefreshToken -Scope 'https://outlook.office365.com/.default' -Tenantid $tenant).Authorization -AsPlainText -Force
-            $credential = New-Object System.Management.Automation.PSCredential($upn, $tokenValue)
-            $session = New-PSSession -ConfigurationName Microsoft.Exchange -ConnectionUri "https://ps.outlook.com/powershell-liveid?DelegatedOrg=$($tenant)&BasicAuthToOAuthConversion=true" -Credential $credential -Authentication Basic -AllowRedirection -ErrorAction Continue
-            $session = Import-PSSession $session -ea Silentlycontinue -AllowClobber -CommandName 'Get-OrganizationConfig'
-            $org = Get-OrganizationConfig
-            $null = Get-PSSession | Remove-PSSession
+            $GraphRequest = New-ExoRequest -tenantid $Tenantfilter -cmdlet "Get-OrganizationConfig"
             @{ 
                 TenantName = "$($Tenant)"
                 Status     = 'Succesfully connected to Exchange' 
