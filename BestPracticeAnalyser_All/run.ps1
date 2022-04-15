@@ -82,11 +82,7 @@ catch {
 # Get Send and Send Behalf Of
 try {
     # Send and Send Behalf Of
-    $MailboxBPAParams = @{
-        ResultSize           = 'Unlimited'
-        RecipientTypeDetails = 'UserMailbox, SharedMailbox'
-    }
-    $MailboxBPA = New-ExoRequest -tenantid $Tenant -cmdlet "Get-Mailbox"
+    $MailboxBPA = New-ExoRequest -tenantid $Tenant -cmdlet "Get-Mailbox" | Where-Object { $_.RecipientTypeDetails -In @("UserMailbox", "SharedMailbox") -and $_.userPrincipalName -notlike "DiscoverySearchMailbox" }
     $TotalMailboxes = $MailboxBPA | Measure-Object | Select-Object -ExpandProperty Count
     $TotalMessageCopyForSentAsEnabled = $MailboxBPA | Where-Object { $_.MessageCopyForSentAsEnabled -eq $true } | Measure-Object | Select-Object -ExpandProperty Count
     $TotalMessageCopyForSendOnBehalfEnabled = $MailboxBPA | Where-Object { $_.MessageCopyForSendOnBehalfEnabled -eq $true } | Measure-Object | Select-Object -ExpandProperty Count
@@ -128,9 +124,6 @@ try {
         'x-ms-correlation-id'    = [guid]::NewGuid()
         'X-Requested-With'       = 'XMLHttpRequest' 
     }
-
-
-
     $Result.ShowBasicAuthSettings = $BasicAuthDisable.ShowBasicAuthSettings
     $Result.EnableModernAuth = $BasicAuthDisable.EnableModernAuth
     $Result.AllowBasicAuthActiveSync = $BasicAuthDisable.AllowBasicAuthActiveSync
@@ -152,13 +145,8 @@ catch {
 
 # Get OAuth Admin Consenst
 try {
-    $Result.AdminConsentForApplications = Invoke-RestMethod -ContentType "application/json;charset=UTF-8" -Uri 'https://admin.microsoft.com/admin/api/settings/apps/IntegratedApps' -Method GET -Headers @{
-        Authorization            = "Bearer $($token.access_token)";
-        "x-ms-client-request-id" = [guid]::NewGuid().ToString();
-        "x-ms-client-session-id" = [guid]::NewGuid().ToString()
-        'x-ms-correlation-id'    = [guid]::NewGuid()
-        'X-Requested-With'       = 'XMLHttpRequest' 
-    }
+    $GraphRequest = New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/policies/authorizationPolicy/authorizationPolicy' -tenantid $Tenant -asApp $true
+    $Result.AdminConsentForApplications = if ($GraphRequest.permissionGrantPolicyIdsAssignedToDefaultUserRole -eq "ManagePermissionGrantsForSelf.microsoft-user-default-legacy") { $true } else { $false }
     Log-request -API "BestPracticeAnalyser" -tenant $tenant -message "OAuth Admin Consent on $($tenant). Admin Consent for Applications $($Result.AdminConsentForApplications) and password reset is $($Result.SelfServicePasswordReset)" -sev "Debug"
 }
 catch {
@@ -218,28 +206,28 @@ catch {
 
 # Get unused Licenses
 try {
-    $LicenseUsage = Invoke-RestMethod -ContentType "application/json;charset=UTF-8" -Uri 'https://portal.office.com/admin/api/tenant/accountSkus' -Method GET -Headers @{
-        Authorization            = "Bearer $($token.access_token)";
-        "x-ms-client-request-id" = [guid]::NewGuid().ToString();
-        "x-ms-client-session-id" = [guid]::NewGuid().ToString()
-        'x-ms-correlation-id'    = [guid]::NewGuid()
-        'X-Requested-With'       = 'XMLHttpRequest' 
-    }
-
+    $LicenseUsage = New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/subscribedSkus' -tenantid $Tenant
     # Import the licenses conversion table
     $ConvertTable = Import-Csv Conversiontable.csv | Sort-Object -Property 'guid' -Unique
-    $WhiteListedSKUs = "FLOW_FREE", "TEAMS_EXPLORATORY", "TEAMS_COMMERCIAL_TRIAL", "POWERAPPS_VIRAL", "POWER_BI_STANDARD", "DYN365_ENTERPRISE_P1_IW", "STREAM", "Dynamics 365 for Financials for IWs", "POWERAPPS_PER_APP_IW"
-    $UnusedLicenses = $LicenseUsage | Where-Object { ($_.Purchased -ne $_.Consumed) -and ($WhiteListedSKUs -notcontains $_.AccountSkuId.SkuPartNumber) }
+    $ExcludeList = Get-Content '.\Config\ExcludeSkuList.json' | ConvertFrom-Json
+    $UnusedLicenses = $LicenseUsage | Where-Object { ($_.prepaidUnits.enabled -ne $_.consumedUnits) -and ($_.SkuID -notin $ExcludeList.GUID) }
     $UnusedLicensesCount = $UnusedLicenses | Measure-Object | Select-Object -ExpandProperty Count
     $UnusedLicensesResult = if ($UnusedLicensesCount -gt 0) { "FAIL" } else { "PASS" }
-    $Result.UnusedLicenseList = ($UnusedLicensesListBuilder = foreach ($License in $UnusedLicenses) {
-            "License: $($License.Name), Purchased: $($License.Purchased), Consumed: $($License.Consumed)"
-        }) -join "<br />"
+    $Result.UnusedLicenseList = foreach ($License in $UnusedLicenses) {
+        $PrettyName = ($ConvertTable | Where-Object { $_.guid -eq $License.skuid }).'Product_Display_Name' | Select-Object -Last 1
+        if (!$PrettyName) { $PrettyName = $License.skuPartNumber } 
+        [PSCustomObject]@{
+            License   = $($PrettyName)
+            Purchased = $($License.prepaidUnits.enabled)
+            Consumed  = $($License.consumedUnits)
+        }
+    }
     
     $TempCount = 0
     foreach ($License in $UnusedLicenses) {
-        $TempCount = $TempCount + ($($License.Purchased) - $($License.Consumed))
+        $TempCount = $TempCount + ($($License.prepaidUnits.enabled) - $($License.ConsumedUnits))
     }
+    $Result.UnusedLicenseList = @($Result.UnusedLicenseList)
     $Result.UnusedLicensesTotal = $TempCount
     $Result.UnusedLicensesCount = $UnusedLicensesCount
     $Result.UnusedLicensesResult = $UnusedLicensesResult

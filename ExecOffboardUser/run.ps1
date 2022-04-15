@@ -11,14 +11,21 @@ if ($username -eq $null) { exit }
 $userid = (New-GraphGetRequest -uri "https://graph.microsoft.com/beta/users/$($username)" -tenantid $Tenantfilter).id
 
 $ConvertTable = Import-Csv Conversiontable.csv | Sort-Object -Property 'guid' -Unique
-$upn = "notrequired@notrequired.com" 
-$tokenvalue = ConvertTo-SecureString (Get-GraphToken -AppID 'a0c73c16-a7e3-4564-9a95-2bdf47383716' -RefreshToken $ENV:ExchangeRefreshToken -Scope 'https://outlook.office365.com/.default' -Tenantid $tenantFilter).Authorization -AsPlainText -Force
-$credential = New-Object System.Management.Automation.PSCredential($upn, $tokenValue)
-$session = New-PSSession -ConfigurationName Microsoft.Exchange -ConnectionUri "https://ps.outlook.com/powershell-liveid?DelegatedOrg=$($tenantFilter)&BasicAuthToOAuthConversion=true" -Credential $credential -Authentication Basic -AllowRedirection -ea Stop
-
 
 Write-Host ($request.body | ConvertTo-Json)
 $results = switch ($request.body) {
+
+    { $_.RevokeSessions -eq 'true' } { 
+        try {
+            $GraphRequest = New-GraphPostRequest -uri "https://graph.microsoft.com/beta/users/$($userid)/invalidateAllRefreshTokens" -tenantid $TenantFilter -type POST -body '{}'  -verbose
+            "Success. All sessions by this user have been revoked"
+            Log-Request -user $request.headers.'x-ms-client-principal' -API $APINAME  -message "Revoked sessions for $($userid)" -Sev "Info"
+
+        }
+        catch {
+            "Failed. $($_.Exception.Message)" 
+        }
+    }
     { $_.ResetPass -eq 'true' } { 
         try { 
             $password = -join ('abcdefghkmnrstuvwxyzABCDEFGHKLMNPRSTUVWXYZ23456789$%&*#'.ToCharArray() | Get-Random -Count 12)
@@ -84,8 +91,7 @@ $results = switch ($request.body) {
     }
     { $_."ConvertToShared" -eq 'true' } { 
         try {
-            $ImportedSession = Import-PSSession $session -ea Stop -AllowClobber -CommandName "Set-Mailbox"
-            $Mailbox = Set-mailbox -identity $userid -type Shared -ea Stop
+            $SharedMailbox = New-ExoRequest -tenantid $TenantFilter -cmdlet "Set-mailbox" -cmdParams @{Identity = $userid; type = "Shared" }
             "Converted $($username) to Shared Mailbox"
             Log-Request -user $request.headers.'x-ms-client-principal' -API $APINAME  -message "Converted $($username) to a shared mailbox" -Sev "Info" -tenant $TenantFilter
 
@@ -121,8 +127,7 @@ $results = switch ($request.body) {
     }
     { $_."AccessNoAutomap" -ne "" } { 
         try {
-            $ImportedSession = Import-PSSession $session -ea Stop -AllowClobber -CommandName "Add-mailboxPermission"
-            $MailboxPerms = Add-MailboxPermission -identity $userid -user $Request.body.AccessNoAutomap -automapping $false -AccessRights FullAccess -InheritanceType All
+            $permissions = New-ExoRequest -tenantid $TenantFilter -cmdlet "Add-MailboxPermission" -cmdParams @{Identity = $userid; user = $Request.body.AccessNoAutomap; automapping = $false; accessRights = @("FullAccess"); InheritanceType = "all" }
             "added $($Request.body.AccessNoAutomap) to $($username) Shared Mailbox without automapping"
             Log-Request -user $request.headers.'x-ms-client-principal' -API $APINAME  -message "Gave full permissions to $($request.body.AccessNoAutomap) on $($username)" -Sev "Info" -tenant $TenantFilter
 
@@ -135,8 +140,7 @@ $results = switch ($request.body) {
     }
     { $_."AccessAutomap" -ne "" } { 
         try {
-            $ImportedSession = Import-PSSession $session -ea Stop -AllowClobber -CommandName "Add-mailboxPermission"
-            $MailboxPerms = Add-MailboxPermission -identity $userid -user $Request.body.AccessAutomap -automapping $true -AccessRights FullAccess -InheritanceType All
+            $permissions = New-ExoRequest -tenantid $TenantFilter -cmdlet "Add-MailboxPermission" -cmdParams @{Identity = $userid; user = $Request.body.AccessNoAutomap; automapping = $true; accessRights = @("FullAccess"); InheritanceType = "all" }
             "added $($Request.body.AccessAutomap) to $($username) Shared Mailbox with automapping"
             Log-Request -user $request.headers.'x-ms-client-principal' -API $APINAME  -message "Gave full permissions to $($request.body.AccessAutomap) on $($username)" -Sev "Info" -tenant $TenantFilter
 
@@ -150,8 +154,7 @@ $results = switch ($request.body) {
     
     { $_."OOO" -ne "" } { 
         try {
-            $ImportedSession = Import-PSSession $session -ea Stop -AllowClobber -CommandName "Set-MailboxAutoReplyConfiguration"
-            $MailboxPerms = Set-MailboxAutoReplyConfiguration -Identity $userid -AutoReplyState Enabled -InternalMessage $_."OOO" -ExternalMessage $_."OOO"
+            $permissions = New-ExoRequest -tenantid $TenantFilter -cmdlet "Set-MailboxAutoReplyConfiguration" -cmdParams @{Identity = $userid; AutoReplyState = "Enabled"; InternalMessage = $_."OOO"; ExternalMessage = $_."OOO" }
             "added Out-of-office to $username"
             Log-Request -user $request.headers.'x-ms-client-principal' -API $APINAME  -message "Set Out-of-office for $($username)" -Sev "Info" -tenant $TenantFilter
 
@@ -164,8 +167,7 @@ $results = switch ($request.body) {
     }
     { $_."forward" -ne "" } { 
         try {
-            $ImportedSession = Import-PSSession $session -ea Stop -AllowClobber -CommandName "Set-Mailbox"
-            $MailboxPerms = Set-mailbox -Identity $userid -ForwardingAddress $_.forward -DeliverToMailboxAndForward $true
+            $permissions = New-ExoRequest -tenantid $TenantFilter -cmdlet "Set-mailbox" -cmdParams @{Identity = $userid; ForwardingAddress = $_.forward ; DeliverToMailboxAndForward = $true }
             "Forwarding all email for $username to $($_.Forward)"
             Log-Request -user $request.headers.'x-ms-client-principal' -API $APINAME  -message "Set Forwarding for $($username) to $($_.Forward)" -Sev "Info" -tenant $TenantFilter
 
@@ -207,7 +209,6 @@ $results = switch ($request.body) {
     }
     
 }
-Get-PSSession | Remove-PSSession
 $body = [pscustomobject]@{"Results" = @($results) }
 
 

@@ -9,17 +9,11 @@ $TenantFilter = $Context.input.tenantfilter
 $SuspectUser = $Context.input.userid
 $GUID = $context.input.GUID
 
-
-
 try {
   $startDate = (Get-Date).AddDays(-7)
   $endDate = (Get-Date)
-  $upn = "notRequired@required.com"
-  $tokenvalue = ConvertTo-SecureString (Get-GraphToken -AppID 'a0c73c16-a7e3-4564-9a95-2bdf47383716' -RefreshToken $ENV:ExchangeRefreshToken -Scope 'https://outlook.office365.com/.default' -Tenantid $TenantFilter).Authorization -AsPlainText -Force
-  $credential = New-Object System.Management.Automation.PSCredential($upn, $tokenValue)
-  $session = New-PSSession -ConfigurationName Microsoft.Exchange -ConnectionUri "https://ps.outlook.com/powershell-liveid?DelegatedOrg=$($TenantFilter)&BasicAuthToOAuthConversion=true" -Credential $credential -Authentication Basic -AllowRedirection -ErrorAction Continue
-  $s = Import-PSSession $session -ea Silentlycontinue -AllowClobber -CommandName "Search-unifiedAuditLog", "Get-AdminAuditLogConfig"
-  $7dayslog = if ((Get-AdminAuditLogConfig).UnifiedAuditLogIngestionEnabled -eq $false) {
+  $auditLog = (New-ExoRequest -tenantid $Tenantfilter -cmdlet "Get-AdminAuditLogConfig").UnifiedAuditLogIngestionEnabled 
+  $7dayslog = if ($auditLog -eq $false) {
     "AuditLog is disabled. Cannot perform full analysis"
   }
   else {
@@ -39,13 +33,21 @@ try {
       "Change user password.",
       "Reset user password."
     )
+    $startDate = (Get-Date).AddDays(-7)
+    $endDate = (Get-Date)
+    $SearchParam = @{
+      SessionCommand = "ReturnLargeSet"
+      Operations     = $operations
+      sessionid      = $sessionid
+      startDate      = $startDate
+      endDate        = $endDate
+    }
     do {
-      $logsTenant = Search-unifiedAuditLog -SessionCommand ReturnLargeSet -ResultSize 5000 -StartDate $startDate -EndDate $endDate -sessionid $sessionid -Operations $operations
+      New-ExoRequest -tenantid $Tenantfilter -cmdlet "Search-unifiedAuditLog" -cmdParams $SearchParam
       Write-Host "Retrieved $($logsTenant.count) logs" -ForegroundColor Yellow
       $logsTenant
     } while ($LogsTenant.count % 5000 -eq 0 -and $LogsTenant.count -ne 0)
   }
-  Get-PSSession | Remove-PSSession
   #Get user last logon
   $uri = "https://login.microsoftonline.com/$($TenantFilter)/oauth2/token"
   $body = "resource=https://admin.microsoft.com&grant_type=refresh_token&refresh_token=$($ENV:ExchangeRefreshToken)"
