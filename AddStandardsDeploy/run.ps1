@@ -19,7 +19,7 @@ try {
             Tenant    = $tenant
             AddedBy   = $username
             Standards = $Settings
-        } | ConvertTo-Json
+        } | ConvertTo-Json -Depth 10
         Set-Content "Cache_Standards\$($tenant).Standards.json" -Value $Object -Force
     }
     $body = [pscustomobject]@{"Results" = "Successfully added standards deployment" }
