@@ -15,8 +15,7 @@ $endTime = $ts.ToString("yyyy-MM-ddTHH:MM:ss")
 $filters = "createdDateTime ge $($endTime)Z and createdDateTime lt $($currentTime)Z and (clientAppUsed eq 'AutoDiscover' or clientAppUsed eq 'Exchange ActiveSync' or clientAppUsed eq 'Exchange Online PowerShell' or clientAppUsed eq 'Exchange Web Services' or clientAppUsed eq 'IMAP4' or clientAppUsed eq 'MAPI Over HTTP' or clientAppUsed eq 'Offline Address Book' or clientAppUsed eq 'Outlook Anywhere (RPC over HTTP)' or clientAppUsed eq 'Other clients' or clientAppUsed eq 'POP3' or clientAppUsed eq 'Reporting Web Services' or clientAppUsed eq 'Authenticated SMTP' or clientAppUsed eq 'Outlook Service')"
 try {
     $GraphRequest = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/auditLogs/signIns?api-version=beta&filter=$($filters)" -tenantid $TenantFilter -erroraction stop | Select-Object userPrincipalName, clientAppUsed | Sort-Object -Unique -Property clientAppUsed
-    $response = $GraphRequest | Select-Object @{ Name = 'UPN'; Expression = { $_.userPrincipalName } },
-    @{ Name = 'BasicAuth'; Expression = { $_.clientAppUsed } } 
+    $response = $GraphRequest
     Log-Request -user $request.headers.'x-ms-client-principal' -API $APINAME  -message  "Retrieved basic authentication report" -Sev "Debug" -tenant $TenantFilter
     
     # Associate values to output bindings by calling 'Push-OutputBinding'.
