@@ -28,7 +28,7 @@ $AddFullAccess = ($Request.body.AddFullAccess).Split([Environment]::NewLine)
 foreach ($UserAutomap in $AddFullAccess | Where-Object { $_ -ne "" } ) { 
     try {
         $MailboxPerms = New-ExoRequest -tenantid $Tenantfilter -cmdlet "Add-MailboxPermission" -cmdParams @{Identity = $userid; user = $UserAutomap; accessRights = @("FullAccess"); automapping = $true }
-        $results.add( "added $($Request.body.AccessAutomap) to $($username) Mailbox with automapping")
+        $results.add( "added $($UserAutomap) to $($username) Mailbox with automapping")
         Log-Request -user $request.headers.'x-ms-client-principal' -API $APINAME  -message "Gave full permissions to $($request.body.AccessAutomap) on $($username)" -Sev "Info" -tenant $TenantFilter
 
     }
@@ -41,8 +41,8 @@ $AddFullAccessNoAutoMap = ($Request.body.AddFullAccessNoAutoMap).Split([Environm
 
 foreach ($UserNoAutomap in $AddFullAccessNoAutoMap | Where-Object { $_ -ne "" } ) { 
     try {
-        $MailboxPerms = New-ExoRequest -tenantid $Tenantfilter -cmdlet "Add-MailboxPermission" -cmdParams @{Identity = $userid; user = $UserAutomap; accessRights = @("FullAccess"); automapping = $false }
-        $results.add( "added $($Request.body.AccessAutomap) to $($username) Mailbox without automapping")
+        $MailboxPerms = New-ExoRequest -tenantid $Tenantfilter -cmdlet "Add-MailboxPermission" -cmdParams @{Identity = $userid; user = $UserNoAutomap; accessRights = @("FullAccess"); automapping = $false }
+        $results.add( "added $UserNoAutomap to $($username) Mailbox without automapping")
         Log-Request -user $request.headers.'x-ms-client-principal' -API $APINAME  -message "Gave full permissions to $($request.body.AccessAutomap) on $($username)" -Sev "Info" -tenant $TenantFilter
     }
     catch {
