@@ -118,7 +118,7 @@ if ($Request.query.Tenants -eq 'true') {
         }
 
         try {
-            $GraphRequest = New-ExoRequest -tenantid $Tenantfilter -cmdlet "Get-PartnerApplication"
+            $GraphRequest = New-ExoRequest -tenantid $Tenantfilter -cmdlet "Get-OrganizationConfig" -ErrorAction Stop
             @{ 
                 TenantName = "$($Tenant)"
                 Status     = 'Succesfully connected to Exchange' 
