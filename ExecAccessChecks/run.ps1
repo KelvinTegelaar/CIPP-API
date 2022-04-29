@@ -100,7 +100,7 @@ if ($Request.query.Tenants -eq 'true') {
     if (!$Tenants) { $results = 'Could not load the tenants list from cache. Please run permissions check first, or visit the tenants page.' }
     $results = foreach ($tenant in $Tenants) {
         try {
-            $token = New-GraphGetRequest -uri 'https://graph.microsoft.com/v1.0/users/delta?$select=displayName' -tenantid $tenant
+            $token = New-GraphGetRequest -uri 'https://graph.microsoft.com/v1.0/Organization' -tenantid $tenant
             @{
                 TenantName = "$($Tenant)"
                 Status     = 'Succesfully connected' 
@@ -118,7 +118,7 @@ if ($Request.query.Tenants -eq 'true') {
         }
 
         try {
-            $GraphRequest = New-ExoRequest -tenantid $Tenantfilter -cmdlet "Get-OrganizationConfig"
+            $GraphRequest = New-ExoRequest -tenantid $Tenantfilter -cmdlet "Get-OrganizationConfig" -ErrorAction Stop
             @{ 
                 TenantName = "$($Tenant)"
                 Status     = 'Succesfully connected to Exchange' 
