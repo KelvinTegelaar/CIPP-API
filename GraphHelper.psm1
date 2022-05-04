@@ -60,7 +60,7 @@ function Log-Request ($message, $tenant, $API, $user, $sev) {
         Write-Information 'Not writing to log file - Debug mode is not enabled.'
         return
     }
-    $CleanMessage = [string]::join(' ', ($message.Split("`n")))
+    $CleanMessage = [string]::join(' ', ($message.Split("`n"))) -replace '[|]', ':'
     $logdata = "$($date)|$($tenant)|$($API)|$($CleanMessage)|$($username)|$($sev)"
     if ($LogMutex.WaitOne(1000)) {
         $logdata | Out-File -Append -FilePath "Logs\$((Get-Date).ToString('ddMMyyyy')).log" -Force
