@@ -138,7 +138,7 @@ if ($Request.query.Tenants -eq 'true') {
     if (!$Tenants) { $results = 'Could not load the tenants list from cache. Please run permissions check first, or visit the tenants page.' }
 }
 
-$body = [pscustomobject]@{'Results' = @($Results) }
+$body = [pscustomobject]@{'Results' = $Results }
 
 # Associate values to output bindings by calling 'Push-OutputBinding'.
 Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
