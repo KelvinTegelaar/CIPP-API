@@ -15,11 +15,11 @@ $TenantFilter = $Request.Query.TenantFilter
 
 if ($TenantFilter -eq 'AllTenants') {
     $GraphRequest = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/tenantRelationships/managedTenants/managedDeviceCompliances"   
-    [HttpStatusCode]::OK 
+    $StatusCode = [HttpStatusCode]::OK 
 }
 else {
     $GraphRequest = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/tenantRelationships/managedTenants/managedDeviceCompliances?`$top=999&`$filter=organizationId eq '$TenantFilter'"    
-    [HttpStatusCode]::OK
+    $StatusCode = [HttpStatusCode]::OK
 }
 
 if ($GraphRequest.value.count -lt 1) { 
