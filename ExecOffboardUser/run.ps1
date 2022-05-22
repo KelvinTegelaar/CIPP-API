@@ -207,6 +207,50 @@ $results = switch ($request.body) {
             "Could not delete $($username). Error: $($_.Exception.Message)"
         }
     }
+
+    { $_."RemoveRules" -eq 'true' } {
+        try {
+            $rules = New-ExoRequest -tenantid $TenantFilter -cmdlet "Get-InboxRule" -cmdParams @{Identity = $userid } | ForEach-Object {
+                try {
+                    New-ExoRequest -tenantid $TenantFilter -cmdlet "Remove-InboxRule" -cmdParams @{Identity = $_.Identity }
+                    "Removed rule: $($_.Name)"
+                }
+                catch {
+                    "Could not remove rule: $($_.Name)"
+                    continue
+                }
+            }
+           
+            Log-Request -user $request.headers.'x-ms-client-principal' -API $APINAME  -message "Deleted account $($username)" -Sev "Info" -tenant $TenantFilter
+
+        }
+        catch {
+            Log-Request -user $request.headers.'x-ms-client-principal' -API $APINAME  -message "Could not delete $($username)" -Sev "Error" -tenant $TenantFilter
+            "Could not delete $($username). Error: $($_.Exception.Message)"
+        }
+    }
+
+    { $_."RemoveMobile" -eq 'true' } {
+        try {
+            $devices = New-ExoRequest -tenantid $TenantFilter -cmdlet "Get-MobileDevice" -cmdParams @{mailbox = $userid } | ForEach-Object {
+                try {
+                    New-ExoRequest -tenantid $TenantFilter -cmdlet "Remove-MobileDevice" -cmdParams @{Identity = $_.Identity }
+                    "Removed device: $($_.FriendlyName)"
+                }
+                catch {
+                    "Could not remove device: $($_.FriendlyName)"
+                    continue
+                }
+            }
+           
+            Log-Request -user $request.headers.'x-ms-client-principal' -API $APINAME  -message "Deleted account $($username)" -Sev "Info" -tenant $TenantFilter
+
+        }
+        catch {
+            Log-Request -user $request.headers.'x-ms-client-principal' -API $APINAME  -message "Could not delete $($username)" -Sev "Error" -tenant $TenantFilter
+            "Could not delete $($username). Error: $($_.Exception.Message)"
+        }
+    }
     
 }
 $body = [pscustomobject]@{"Results" = @($results) }

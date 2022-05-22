@@ -12,21 +12,22 @@ Write-Host "PowerShell HTTP trigger function processed a request."
 
 # Interact with query parameters or the body of the request.
 $TenantFilter = $Request.Query.TenantFilter
-
-if ($TenantFilter -eq 'AllTenants') {
-    $GraphRequest = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/tenantRelationships/managedTenants/managedDeviceCompliances"   
-    $StatusCode = [HttpStatusCode]::OK 
-}
-else {
-    $GraphRequest = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/tenantRelationships/managedTenants/managedDeviceCompliances?`$top=999&`$filter=organizationId eq '$TenantFilter'"    
+try {
+    $GraphRequest = New-GraphGetRequest -uri "https://outlook.office365.com/adminapi/beta/$($tenantFilter)/Mailbox?RecipientTypeDetails=sharedmailbox" -Tenantid $tenantFilter -scope ExchangeOnline | ForEach-Object {
+        try {
+            New-ExoRequest -tenantid $TenantFilter -cmdlet "Get-MailboxStatistics" -cmdParams @{Identity = $_.GUID }
+        }
+        catch {
+            continue
+        }
+    }
     $StatusCode = [HttpStatusCode]::OK
 }
-
-if ($GraphRequest.value.count -lt 1) { 
+catch {
+    $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
     $StatusCode = [HttpStatusCode]::Forbidden
-    $GraphRequest = "No data found - This client might not be onboarded in Lighthouse" 
+    $GraphRequest = $ErrorMessage
 }
-
 # Associate values to output bindings by calling 'Push-OutputBinding'.
 Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
         StatusCode = $StatusCode

@@ -51,6 +51,34 @@ foreach ($UserNoAutomap in $AddFullAccessNoAutoMap | Where-Object { $_ -ne "" } 
     }
 }
 
+$AddSendAS = ($Request.body.AddSendAs).Split([Environment]::NewLine)
+
+foreach ($UserSendAs in $AddSendAS  | Where-Object { $_ -ne "" } ) { 
+    try {
+        $MailboxPerms = New-ExoRequest -tenantid $Tenantfilter -cmdlet "Add-RecipientPermission" -cmdParams @{Identity = $userid; Trustee = $UserSendAs; accessRights = @("SendAs") }
+        $results.add( "added $AddSendAS to $($username) with Send As permissions")
+        Log-Request -user $request.headers.'x-ms-client-principal' -API $APINAME  -message "Gave sendas permissions to $($request.body.AddSendAs) on $($username)" -Sev "Info" -tenant $TenantFilter
+    }
+    catch {
+        Log-Request -user $request.headers.'x-ms-client-principal' -API $APINAME  -message "Could not add mailbox permissions for $($request.body.AccessAutomap) on $($username)" -Sev "Error" -tenant $TenantFilter
+        $results.add(  "Could not add send-as permissions for $($username). Error: $($_.Exception.Message)")
+    }
+}
+
+$RemoveSendAs = ($Request.body.RemoveSendAs).Split([Environment]::NewLine)
+
+foreach ($UserSendAs in $RemoveSendAs  | Where-Object { $_ -ne "" } ) { 
+    try {
+        $MailboxPerms = New-ExoRequest -tenantid $Tenantfilter -cmdlet "Remove-RecipientPermission" -cmdParams @{Identity = $userid; Trustee = $UserSendAs; accessRights = @("SendAs") }
+        $results.add( "Removed $AddSendAS from $($username) with Send As permissions")
+        Log-Request -user $request.headers.'x-ms-client-principal' -API $APINAME  -message "Remove sendas permissions to $($request.body.AddSendAs) on $($username)" -Sev "Info" -tenant $TenantFilter
+    }
+    catch {
+        Log-Request -user $request.headers.'x-ms-client-principal' -API $APINAME  -message "Could not remove mailbox permissions for $($request.body.AccessAutomap) on $($username)" -Sev "Error" -tenant $TenantFilter
+        $results.add(  "Could not remove send-as permissions for $($username). Error: $($_.Exception.Message)")
+    }
+}
+
 $body = [pscustomobject]@{"Results" = @($results) }
 
 # Associate values to output bindings by calling 'Push-OutputBinding'.
