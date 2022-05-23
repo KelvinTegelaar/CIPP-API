@@ -13,7 +13,16 @@ Write-Host "PowerShell HTTP trigger function processed a request."
 # Interact with query parameters or the body of the request.
 $TenantFilter = $Request.Query.TenantFilter
 try {
-        $GraphRequest = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/oauth2PermissionGrants?`$top=999" -tenantid $TenantFilter
+        $ServicePrincipals = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/servicePrincipals?`$select=id,displayName," -tenantid $TenantFilter
+        $GraphRequest = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/oauth2PermissionGrants" -tenantid $TenantFilter | ForEach-Object {
+                
+                [PSCustomObject]@{
+                        Name      = ($ServicePrincipals | Where-Object -Property id -EQ $_.clientId).displayName
+                        ID        = $_.clientId
+                        Scope     = ($_.scope -join ',')
+                        StartTime = $_.startTime
+                }
+        }
         $StatusCode = [HttpStatusCode]::OK
 }
 catch {
