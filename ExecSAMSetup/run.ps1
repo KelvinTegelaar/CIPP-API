@@ -2,6 +2,15 @@ using namespace System.Net
 
 # Input bindings are passed in via param block.
 param($Request, $TriggerMetadata)
+$UserCreds = ([System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($request.headers.'x-ms-client-principal')) | ConvertFrom-Json)
+if ("admin" -notin $UserCreds.userRoles) {
+      Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
+                  StatusCode = [HttpStatusCode]::Forbidden
+                  Body       = "Could not find admin role. Please login under the correct user, or go back to the wizard and click the URL again."
+            })
+      exit
+}
+
 $APIName = $TriggerMetadata.FunctionName
 Log-Request -user $request.headers.'x-ms-client-principal' -API $APINAME  -message "Accessed this API" -Sev "Debug"
 $ResourceGroup = $ENV:Website_Resource_Group
