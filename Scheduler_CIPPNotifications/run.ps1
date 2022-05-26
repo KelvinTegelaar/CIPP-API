@@ -22,10 +22,10 @@ $Currentlog = Get-Content "Logs\$($logdate).log" | ForEach-Object {
     
   }
 }
-
-if ($Config.email -like "*@*" -and $null -ne $CurrentLog) {
-  $HTMLLog = ($CurrentLog | ConvertTo-Html -frag) -replace '<table>', '<table class=blueTable>' | Out-String
-  $JSONBody = @"
+try {
+  if ($Config.email -like "*@*" -and $null -ne $CurrentLog) {
+    $HTMLLog = ($CurrentLog | ConvertTo-Html -frag) -replace '<table>', '<table class=blueTable>' | Out-String
+    $JSONBody = @"
                     {
                         "message": {
                           "subject": "CIPP Alert: Alerts found starting at $((Get-Date).AddMinutes(-10))",
@@ -49,37 +49,40 @@ if ($Config.email -like "*@*" -and $null -ne $CurrentLog) {
                         "saveToSentItems": "false"
                       }
 "@
-  New-GraphPostRequest -uri 'https://graph.microsoft.com/v1.0/me/sendMail' -tenantid $env:TenantID -type POST -body ($JSONBody)
-}
+    New-GraphPostRequest -uri 'https://graph.microsoft.com/v1.0/me/sendMail' -tenantid $env:TenantID -type POST -body ($JSONBody)
+  }
 
 
-if ($Config.webhook -ne '' -and $null -ne $CurrentLog) {
-  switch -wildcard ($config.Webhook) {
+  if ($Config.webhook -ne '' -and $null -ne $CurrentLog) {
+    switch -wildcard ($config.Webhook) {
 
-    '*webhook.office.com*' {
-      $Log = $Currentlog | ConvertTo-Html -frag | Out-String
-      $JSonBody = "{`"text`": `"You've setup your alert policies to be alerted whenever specific events happen. We've found some of these events in the log. <br><br>$Log`"}" 
-      Invoke-RestMethod -Uri $config.webhook -Method POST -ContentType 'Application/json' -Body $JSONBody
-    }
+      '*webhook.office.com*' {
+        $Log = $Currentlog | ConvertTo-Html -frag | Out-String
+        $JSonBody = "{`"text`": `"You've setup your alert policies to be alerted whenever specific events happen. We've found some of these events in the log. <br><br>$Log`"}" 
+        Invoke-RestMethod -Uri $config.webhook -Method POST -ContentType 'Application/json' -Body $JSONBody
+      }
 
-    '*slack.com*' {
-      $Log = $Currentlog | ForEach-Object {
-        $JSonBody = @"
+      '*slack.com*' {
+        $Log = $Currentlog | ForEach-Object {
+          $JSonBody = @"
         {"blocks":[{"type":"header","text":{"type":"plain_text","text":"New Alert from CIPP","emoji":true}},{"type":"section","fields":[{"type":"mrkdwn","text":"*DateTime:*\n$($_.DateTime)"},{"type":"mrkdwn","text":"*Tenant:*\n$($_.Tenant)"},{"type":"mrkdwn","text":"*API:*\n$($_.API)"},{"type":"mrkdwn","text":"*User:*\n$($_.User)."}]},{"type":"section","text":{"type":"mrkdwn","text":"*Message:*\n$($_.message)"}}]}
 "@
+          Invoke-RestMethod -Uri $config.webhook -Method POST -ContentType 'Application/json' -Body $JSONBody
+        }
+      }
+
+      '*discord.com*' {
+        $Log = $Currentlog | ConvertTo-Html -frag | Out-String
+        $JSonBody = "{`"content`": `"You've setup your alert policies to be alerted whenever specific events happen. We've found some of these events in the log. $Log`"}" 
         Invoke-RestMethod -Uri $config.webhook -Method POST -ContentType 'Application/json' -Body $JSONBody
       }
     }
 
-    '*discord.com*' {
-      $Log = $Currentlog | ConvertTo-Html -frag | Out-String
-      $JSonBody = "{`"content`": `"You've setup your alert policies to be alerted whenever specific events happen. We've found some of these events in the log. $Log`"}" 
-      Invoke-RestMethod -Uri $config.webhook -Method POST -ContentType 'Application/json' -Body $JSONBody
-    }
   }
-
 }
-
+catch {
+  Log-request -API "Alerts" -tenant $tenant -message "Could not send alert" -sev info
+}
 
 [PSCustomObject]@{
   ReturnedValues = $true
