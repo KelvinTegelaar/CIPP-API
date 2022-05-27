@@ -22,14 +22,13 @@ $RawGraphRequest = if ($TenantFilter -ne "AllTenants") {
 else {
     Get-Tenants | ForEach-Object { 
         try {
-            $Licrequest = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/subscribedSkus" -tenantid $_.defaultDomainName 
+            $Licrequest = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/subscribedSkus" -tenantid $_.defaultDomainName -ErrorAction Stop
             [PSCustomObject]@{
                 Tenant   = $_.defaultDomainName
                 Licenses = $Licrequest
             } 
         }
         catch {
-            continue
         }
     }
 }
