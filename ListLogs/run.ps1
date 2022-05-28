@@ -37,7 +37,7 @@ $ReturnedLog = if ($Request.Query.ListLogs) {
     #        value = $_.BaseName
     #        label = $_.BaseName
     #    } }
-    Get-AzTableRow -Table $table -SelectColumn partitionkey | Sort-Object -Unique partitionkey | ForEach-Object {
+    Get-AzTableRow -Table $table | Sort-Object -Unique partitionkey | ForEach-Object {
         @{ 
             value = $_.PartitionKey
             label = $_.PartitionKey
