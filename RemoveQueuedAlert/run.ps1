@@ -17,7 +17,6 @@ catch {
     $body = [pscustomobject]@{"Results" = "Failed to remove alert from queue $($_.Exception.Message)" }
 }
 
-
 # Associate values to output bindings by calling 'Push-OutputBinding'.
 Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
         StatusCode = [HttpStatusCode]::OK
