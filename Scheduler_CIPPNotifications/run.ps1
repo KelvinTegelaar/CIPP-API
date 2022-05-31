@@ -14,7 +14,7 @@ else {
 $Settings = if ($Config.psobject.properties.name) { @($Config.psobject.properties.name, "Alerts") } else { @("Alerts") }
 $Table = Get-CIPPTable
 $PartitionKey = Get-Date -UFormat '%Y%m%d'
-$Currentlog = Get-AzTableRow -Table $table -PartitionKey $PartitionKey | Where-Object { [datetime]$_.Datetime -gt (Get-Date).AddMinutes(-10) -and $_.api -in $Settings -and $_.Severity -ne 'debug' }
+$Currentlog = Get-AzTableRow -Table $table -PartitionKey $PartitionKey | Where-Object { [datetime]$_.TableTimeStamp -gt (Get-Date).AddMinutes(-10) -and $_.api -in $Settings -and $_.Severity -ne 'debug' }
 
 try {
   if ($Config.email -like "*@*" -and $null -ne $CurrentLog) {
