@@ -28,7 +28,7 @@ $Results = foreach ($Tenant in $tenants) {
         $TableRow = @{
             table    = $Table
             rowKey   = [guid]::NewGuid()
-            property = $LogRequest
+            property = $CompleteObject
         }
         get-cipptable -TableName "AlertConfig" | Add-AzTableRow @TableRow 
         "Succesfully added Alert for $($Tenant) to queue."
