@@ -49,34 +49,27 @@ function Get-GraphToken($tenantid, $scope, $AsApp, $AppID, $refreshToken, $Retur
     return $header
 }
 
-function Log-Request ($message, $tenant, $API, $user, $sev) {
+function Log-Request ($message, $tenant = "None", $API = "None", $user, $sev) {
     $username = ([System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($user)) | ConvertFrom-Json).userDetails
-    #New-Item -Path 'Logs' -ItemType Directory -ErrorAction SilentlyContinue
-    
     $context = New-AzStorageContext -ConnectionString $ENV:AzureWebJobsStorage
     $tablename = 'CippLogs'
 
     try { 
-        $StorageTable = Get-AzStorageTable –Context $context -Name $tablename -ErrorAction Stop
+        $StorageTable = Get-AzStorageTable -Context $context -Name $tablename -ErrorAction Stop
     }
     catch {
         New-AzStorageTable -Context $context -Name $tablename | Out-Null
-        $StorageTable = Get-AzStorageTable –Context $context -Name $tablename
-    }
-    
+        $StorageTable = Get-AzStorageTable -Context $context -Name $tablename
+    } 
     $Table = $StorageTable.CloudTable
     #$date = (Get-Date).ToString('s')
     #$LogMutex = New-Object System.Threading.Mutex($false, 'LogMutex')
-    
     if (!$username) { $username = 'CIPP' }
-    if (!$tenant) { $tenant = 'None' }
     if ($sev -eq 'Debug' -and $env:DebugMode -ne 'true') { 
         Write-Information 'Not writing to log file - Debug mode is not enabled.'
         return
     }
-
     $PartitionKey = Get-Date -UFormat '%Y%m%d'
-
     $LogRequest = @{
         'Tenant'   = $tenant
         'API'      = $API
@@ -84,16 +77,13 @@ function Log-Request ($message, $tenant, $API, $user, $sev) {
         'Username' = $username
         'Severity' = $sev
     }
-
     $TableRow = @{
         table        = $Table
         partitionKey = $PartitionKey
         rowKey       = [guid]::NewGuid()
         property     = $LogRequest
     }
-
-    Add-AzTableRow @TableRow | Out-Null
-
+    Write-Host ($TableRow | ConvertTo-Json)
     <#$CleanMessage = [string]::join(' ', ($message.Split("`n"))) -replace '[|]', ':'
     $logdata = "$($date)|$($tenant)|$($API)|$($CleanMessage)|$($username)|$($sev)"
     if ($LogMutex.WaitOne(1000)) {
