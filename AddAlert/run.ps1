@@ -24,7 +24,13 @@ $Results = foreach ($Tenant in $tenants) {
             Type            = "Alert"
 
         } | ConvertTo-Json
-        $JSONFile = New-Item -Path ".\Cache_Scheduler\$tenant.alert.json" -Value $CompleteObject -Force -ErrorAction Stop
+
+        $TableRow = @{
+            table    = $Table
+            rowKey   = [guid]::NewGuid()
+            property = $LogRequest
+        }
+        get-cipptable -TableName "AlertConfig" | Add-AzTableRow @TableRow 
         "Succesfully added Alert for $($Tenant) to queue."
         Log-Request -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $tenant -message  "Succesfully added Alert for $($Tenant) to queue." -Sev "Info"
     }

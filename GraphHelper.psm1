@@ -1,3 +1,18 @@
+function Get-CIPPTable {
+    [CmdletBinding()]
+    param (
+        $tablename = 'CippLogs'
+    )
+    $context = New-AzStorageContext -ConnectionString $ENV:AzureWebJobsStorage
+    try { 
+        $StorageTable = Get-AzStorageTable -Context $context -Name $tablename -ErrorAction Stop
+    }
+    catch {
+        New-AzStorageTable -Context $context -Name $tablename | Out-Null
+        $StorageTable = Get-AzStorageTable -Context $context -Name $tablename
+    }
+    return $StorageTable.CloudTable
+}
 function Get-NormalizedError {
     [CmdletBinding()]
     param (
@@ -51,19 +66,8 @@ function Get-GraphToken($tenantid, $scope, $AsApp, $AppID, $refreshToken, $Retur
 
 function Log-Request ($message, $tenant = "None", $API = "None", $user, $sev) {
     $username = ([System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($user)) | ConvertFrom-Json).userDetails
-    $context = New-AzStorageContext -ConnectionString $ENV:AzureWebJobsStorage
-    $tablename = 'CippLogs'
 
-    try { 
-        $StorageTable = Get-AzStorageTable -Context $context -Name $tablename -ErrorAction Stop
-    }
-    catch {
-        New-AzStorageTable -Context $context -Name $tablename | Out-Null
-        $StorageTable = Get-AzStorageTable -Context $context -Name $tablename
-    } 
-    $Table = $StorageTable.CloudTable
-    #$date = (Get-Date).ToString('s')
-    #$LogMutex = New-Object System.Threading.Mutex($false, 'LogMutex')
+    $Table = Get-CIPPTable
     if (!$username) { $username = 'CIPP' }
     if ($sev -eq 'Debug' -and $env:DebugMode -ne 'true') { 
         Write-Information 'Not writing to log file - Debug mode is not enabled.'
@@ -83,13 +87,8 @@ function Log-Request ($message, $tenant = "None", $API = "None", $user, $sev) {
         rowKey       = [guid]::NewGuid()
         property     = $LogRequest
     }
-    Write-Host ($TableRow | ConvertTo-Json)
-    <#$CleanMessage = [string]::join(' ', ($message.Split("`n"))) -replace '[|]', ':'
-    $logdata = "$($date)|$($tenant)|$($API)|$($CleanMessage)|$($username)|$($sev)"
-    if ($LogMutex.WaitOne(1000)) {
-        $logdata | Out-File -Append -FilePath "Logs\$((Get-Date).ToString('ddMMyyyy')).log" -Force
-    }
-    $LogMutex.ReleaseMutex()#>
+    Add-AzTableRow @TableRow | Out-Null
+
 }
 
 function New-GraphGetRequest ($uri, $tenantid, $scope, $AsApp, $noPagination) {
@@ -490,3 +489,4 @@ function New-DeviceLogin {
     }
     return $ReturnCode
 }
+
