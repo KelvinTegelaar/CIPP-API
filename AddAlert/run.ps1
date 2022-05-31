@@ -9,9 +9,10 @@ Log-Request -user $request.headers.'x-ms-client-principal' -API $APINAME  -messa
 $Tenants = ($Request.body | Select-Object Select_*).psobject.properties.value
 $Results = foreach ($Tenant in $tenants) {
     try {
-        $CompleteObject = [PSCustomObject]@{
+        $TenantID = (get-tenants | Where-Object -Property defaultDomainName -EQ $Tenant).Customerid
+        $CompleteObject = @{
             tenant          = $tenant
-            tenantid        = (get-tenants | Where-Object -Property defaultDomainName -EQ $Tenant).Customerid
+            tenantid        = $TenantID 
             AdminPassword   = [bool]$Request.body.AdminPassword
             DefenderMalware = [bool]$Request.body.DefenderMalware
             DefenderStatus  = [bool]$Request.body.DefenderStatus
@@ -22,21 +23,23 @@ $Results = foreach ($Tenant in $tenants) {
             QuotaUsed       = [bool]$Request.body.QuotaUsed
             UnusedLicenses  = [bool]$Request.body.UnusedLicenses
             Type            = "Alert"
-
-        } | ConvertTo-Json
+        }
 
         $TableRow = @{
-            table    = $Table
-            rowKey   = [guid]::NewGuid()
-            property = $CompleteObject
+            table          = (get-cipptable -TableName "AlertConfig")
+            rowKey         = $TenantID 
+            partitionKey   = 'config'
+            property       = $CompleteObject
+            UpdateExisting = $true
         }
-        get-cipptable -TableName "AlertConfig" | Add-AzTableRow @TableRow 
+
+        Add-AzTableRow @TableRow | Out-Null
         "Succesfully added Alert for $($Tenant) to queue."
         Log-Request -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $tenant -message  "Succesfully added Alert for $($Tenant) to queue." -Sev "Info"
     }
     catch {
         Log-Request -user $request.headers.'x-ms-client-principal'  -API $APINAME -tenant $tenant -message  "Failed to add Alert for for $($Tenant) to queue" -Sev "Error"
-        "Failed to add Alert for for $($Tenant) to queue"
+        "Failed to add Alert for for $($Tenant) to queue $($_.Exception.message)"
     }
 }
 

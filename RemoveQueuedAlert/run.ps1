@@ -5,17 +5,16 @@ param($Request, $TriggerMetadata)
 
 $APIName = $TriggerMetadata.FunctionName
 Log-Request -user $request.headers.'x-ms-client-principal' -API $APINAME  -message "Accessed this API" -Sev "Debug"
-
-$user = $request.headers.'x-ms-client-principal'
+$Table = Get-CIPPTable -TableName "AlertConfig" 
 $ID = $request.query.id
 try {
-    Remove-Item "Cache_Scheduler\$($ID).alert.json" -Force
+    Remove-AzTableRow -Table $Table -RowKey $ID
     Log-Request -user $request.headers.'x-ms-client-principal'  -API $APINAME  -message "Removed application queue for $ID." -Sev "Info"
     $body = [pscustomobject]@{"Results" = "Successfully removed from queue." }
 }
 catch {
     Log-Request -user $request.headers.'x-ms-client-principal'  -API $APINAME  -message "Failed to remove from queue $ID. $($_.Exception.Message)" -Sev "Error"
-    $body = [pscustomobject]@{"Results" = "Failed to remove alert from queue" }
+    $body = [pscustomobject]@{"Results" = "Failed to remove alert from queue $($_.Exception.Message)" }
 }
 
 
