@@ -21,11 +21,11 @@ else {
 $context = New-AzStorageContext -ConnectionString $ENV:AzureWebJobsStorage
 $tablename = 'CippLogs'
 try { 
-    $StorageTable = Get-AzStorageTable –Context $context -Name $tablename -ErrorAction Stop
+    $StorageTable = Get-AzStorageTable -Context $context -Name $tablename -ErrorAction Stop
 }
 catch {
     New-AzStorageTable -Context $context -Name $tablename | Out-Null
-    $StorageTable = Get-AzStorageTable –Context $context -Name $tablename
+    $StorageTable = Get-AzStorageTable -Context $context -Name $tablename
 }
     
 $Table = $StorageTable.CloudTable
