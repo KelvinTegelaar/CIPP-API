@@ -10,23 +10,52 @@ param (
 
     [Parameter()]
     [string]
-    $CustomRepo
+    $CustomRepo,
+
+    [Parameter()]
+    [switch]
+    $Trace
 )
 
-$chocoPath = "$($ENV:SystemDrive)\ProgramData\chocolatey\bin\choco.exe"
+try {
+    if ($Trace) { Start-Transcript -Path (Join-Path $env:windir "\temp\choco-$Packagename-trace.log") }
+    $chocoPath = "$($ENV:SystemDrive)\ProgramData\chocolatey\bin\choco.exe"
 
-if ($InstallChoco) {
-    if (-not (Test-Path $chocoPath)) {
-        Set-ExecutionPolicy Bypass -Scope Process -Force; [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor 3072; Invoke-Expression ((New-Object System.Net.WebClient).DownloadString('https://chocolatey.org/install.ps1'))
+    if ($InstallChoco) {
+        if (-not (Test-Path $chocoPath)) {
+            try {
+                Set-ExecutionPolicy Bypass -Scope Process -Force; [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor 3072; Invoke-Expression ((New-Object System.Net.WebClient).DownloadString('https://chocolatey.org/install.ps1'))
+                $chocoPath = "$($ENV:SystemDrive)\ProgramData\chocolatey\bin\choco.exe"
+            }
+            catch {
+                Write-Host "InstallChoco Error: $($_.Exception.Message)"
+            }
+        }
     }
+
+    try {
+        $localprograms = & "$chocoPath" list --localonly
+        $CustomRepoString = if ($CustomRepo) { "-s `"$customrepo`"" } else { $null }
+        if ($localprograms -like "*$Packagename*" ) {
+            Write-Host "Upgrading $packagename"
+            & "$chocoPath" upgrade $Packagename $CustomRepoString
+        }
+        else {
+            Write-Host "Installing $packagename"
+            & "$chocoPath" install $Packagename -y $CustomRepoString
+        }
+        Write-Host 'Completed.'
+    }  
+    catch {
+        Write-Host "Install/upgrade error: $($_.Exception.Message)"
+    }
+
 }
-$localprograms = & $chocoPath list --localonly
-$CustomRepoString = if ($CustomRepo) { "-s `"$customrepo`"" } else { $null }
-if ($localprograms -like "*$Packagename*" ) {
-    & $Chocopath upgrade $Packagename $CustomRepoString
+catch {
+    Write-Host "Error encountered: $($_.Exception.Message)"
 }
-else {
-    & $Chocopath install $Packagename -y $CustomRepoString
+finally {
+    if ($Trace) { Stop-Transcript }
 }
 
-return $?
+exit $?
