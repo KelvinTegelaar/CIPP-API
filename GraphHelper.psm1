@@ -68,6 +68,7 @@ function Log-Request ($message, $tenant = "None", $API = "None", $user, $sev) {
     $username = ([System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($user)) | ConvertFrom-Json).userDetails
 
     $Table = Get-CIPPTable
+    if (!$tenant) { $tenant = "None" }
     if (!$username) { $username = 'CIPP' }
     if ($sev -eq 'Debug' -and $env:DebugMode -ne 'true') { 
         Write-Information 'Not writing to log file - Debug mode is not enabled.'
@@ -75,11 +76,12 @@ function Log-Request ($message, $tenant = "None", $API = "None", $user, $sev) {
     }
     $PartitionKey = Get-Date -UFormat '%Y%m%d'
     $LogRequest = @{
-        'Tenant'   = $tenant
-        'API'      = $API
-        'Message'  = $message
-        'Username' = $username
-        'Severity' = $sev
+        'Tenant'      = $tenant
+        'API'         = $API
+        'Message'     = $message
+        'Username'    = $username
+        'Severity'    = $sev
+        'SentAsAlert' = $false
     }
     $TableRow = @{
         table        = $Table

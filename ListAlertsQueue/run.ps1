@@ -9,8 +9,8 @@ Log-Request -user $request.headers.'x-ms-client-principal' -API $APINAME  -messa
 
 # Write to the Azure Functions log stream.
 Write-Host "PowerShell HTTP trigger function processed a request."
-$Table = Get-CIPPTable -TableName "AlertConfig" 
-$QueuedApps = Get-AzTableRow -Table $Table 
+$Table = Get-CIPPTable -TableName "SchedulerConfig" 
+$QueuedApps = Get-AzTableRow -Table $Table -PartitionKey "Alert"
 
 $CurrentStandards = foreach ($QueueFile in $QueuedApps) {
     [PSCustomObject]@{
