@@ -8,7 +8,7 @@ Log-Request -user $request.headers.'x-ms-client-principal' -API $APINAME  -messa
 $Table = Get-CIPPTable -TableName "SchedulerConfig" 
 $ID = $request.query.id
 try {
-    Remove-AzTableRow -Table $Table -RowKey $ID -PartitionKey "config"
+    Remove-AzTableRow -Table $Table -RowKey $ID -PartitionKey "Alert"
     Log-Request -user $request.headers.'x-ms-client-principal'  -API $APINAME  -message "Removed application queue for $ID." -Sev "Info"
     $body = [pscustomobject]@{"Results" = "Successfully removed from queue." }
 }
