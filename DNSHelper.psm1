@@ -1080,13 +1080,13 @@ function Read-DmarcPolicy {
         # Check policy for errors and best practice
         if ($PolicyValues -notcontains $DmarcAnalysis.Policy) { $ValidationFails.Add("The policy must be one of the following: none, quarantine or reject. Found $($Tag.Value)") | Out-Null }
         if ($DmarcAnalysis.Policy -eq 'reject') { $ValidationPasses.Add('The domain policy is set to reject, this is best practice.') | Out-Null }
-        if ($DmarcAnalysis.Policy -eq 'quarantine') { $ValidationWarns.Add('The domain policy is only partially enforced with quarantine.') | Out-Null }
+        if ($DmarcAnalysis.Policy -eq 'quarantine') { $ValidationWarns.Add('The domain policy is only partially enforced with quarantine. Set this to reject to be fully compliant.') | Out-Null }
         if ($DmarcAnalysis.Policy -eq 'none') { $ValidationFails.Add('The domain policy is not being enforced.') | Out-Null }
 
         # Check subdomain policy
         if ($PolicyValues -notcontains $DmarcAnalysis.SubdomainPolicy) { $ValidationFails.Add("The subdomain policy must be one of the following: none, quarantine or reject. Found $($DmarcAnalysis.SubdomainPolicy)") | Out-Null }
         if ($DmarcAnalysis.SubdomainPolicy -eq 'reject') { $ValidationPasses.Add('The subdomain policy is set to reject, this is best practice.') | Out-Null }
-        if ($DmarcAnalysis.SubdomainPolicy -eq 'quarantine') { $ValidationWarns.Add('The subdomain policy is only partially enforced with quarantine.') | Out-Null }
+        if ($DmarcAnalysis.SubdomainPolicy -eq 'quarantine') { $ValidationWarns.Add('The subdomain policy is only partially enforced with quarantine. Set this to reject to be fully compliant.') | Out-Null }
         if ($DmarcAnalysis.SubdomainPolicy -eq 'none') { $ValidationFails.Add('The subdomain policy is not being enforced.') | Out-Null }
 
         # Check percentage - validate range and ensure 100%
@@ -2255,7 +2255,7 @@ function Read-TlsRptRecord {
     Resolve and validate TLSRPT record
     
     .DESCRIPTION
-    Query domain for DMARC policy (_smtp._tls.domain.com) and parse results. Record is checked for issues.
+    Query domain for TLSRPT record (_smtp._tls.domain.com) and parse results. Record is checked for issues.
     
     .PARAMETER Domain
     Domain to process TLSRPT record
