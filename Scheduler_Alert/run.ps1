@@ -130,9 +130,9 @@ $ShippedAlerts = switch ($Alerts) {
     
         }
     }
-    { $Alerts."UnusedLicenses" -eq $true } {
+    { $_."UnusedLicenses" -eq $true } {
         try {
-            $ConvertTable = Import-Csv Conversiontable.csv
+            #$ConvertTable = Import-Csv Conversiontable.csv
             $ExcludedSkuList = Get-Content ".\config\ExcludeSkuList.json" | ConvertFrom-Json
             New-GraphGetRequest -uri "https://graph.microsoft.com/beta/subscribedSkus" -tenantid $Tenant.tenant | ForEach-Object {
                 $skuid = $_
