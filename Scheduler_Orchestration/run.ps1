@@ -6,7 +6,13 @@ New-Item "Cache_Scheduler\CurrentlyRunning.txt" -ItemType File -Force
 
 $Batch = (Invoke-DurableActivity -FunctionName 'Scheduler_GetQueue' -Input 'LetsGo')
 $ParallelTasks = foreach ($Item in $Batch) {
-  Invoke-DurableActivity -FunctionName "Scheduler_$($item['Type'])" -Input $item -NoWait
+  try {
+    Invoke-DurableActivity -FunctionName "Scheduler_$($item['Type'])" -Input $item -NoWait
+  }
+  catch {
+    Write-Host "Could not start:"
+    Write-Host ($item | ConvertTo-Json)
+  }
 }
 
 $Outputs = Wait-ActivityFunction -Task $ParallelTasks

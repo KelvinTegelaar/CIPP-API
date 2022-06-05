@@ -13,7 +13,7 @@ Write-Host "PowerShell HTTP trigger function processed a request."
 # Interact with query parameters or the body of the request.
 $TenantFilter = $Request.Query.TenantFilter
 try {
-    $GraphRequest = New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/sites' -tenantid $TenantFilter -asApp $true
+    $GraphRequest = New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/admin/sharepoint/settings' -tenantid $TenantFilter
     $StatusCode = [HttpStatusCode]::OK
 }
 catch {

@@ -1,3 +1,18 @@
+function Get-CIPPTable {
+    [CmdletBinding()]
+    param (
+        $tablename = 'CippLogs'
+    )
+    $context = New-AzStorageContext -ConnectionString $ENV:AzureWebJobsStorage
+    try { 
+        $StorageTable = Get-AzStorageTable -Context $context -Name $tablename -ErrorAction Stop
+    }
+    catch {
+        New-AzStorageTable -Context $context -Name $tablename | Out-Null
+        $StorageTable = Get-AzStorageTable -Context $context -Name $tablename
+    }
+    return $StorageTable.CloudTable
+}
 function Get-NormalizedError {
     [CmdletBinding()]
     param (
@@ -49,23 +64,33 @@ function Get-GraphToken($tenantid, $scope, $AsApp, $AppID, $refreshToken, $Retur
     return $header
 }
 
-function Log-Request ($message, $tenant, $API, $user, $sev) {
+function Log-Request ($message, $tenant = "None", $API = "None", $user, $sev) {
     $username = ([System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($user)) | ConvertFrom-Json).userDetails
-    New-Item -Path 'Logs' -ItemType Directory -ErrorAction SilentlyContinue
-    $date = (Get-Date).ToString('s')
-    $LogMutex = New-Object System.Threading.Mutex($false, 'LogMutex')
+
+    $Table = Get-CIPPTable
+    if (!$tenant) { $tenant = "None" }
     if (!$username) { $username = 'CIPP' }
-    if (!$tenant) { $tenant = 'None' }
     if ($sev -eq 'Debug' -and $env:DebugMode -ne 'true') { 
         Write-Information 'Not writing to log file - Debug mode is not enabled.'
         return
     }
-    $CleanMessage = [string]::join(' ', ($message.Split("`n"))) -replace '[|]', ':'
-    $logdata = "$($date)|$($tenant)|$($API)|$($CleanMessage)|$($username)|$($sev)"
-    if ($LogMutex.WaitOne(1000)) {
-        $logdata | Out-File -Append -FilePath "Logs\$((Get-Date).ToString('ddMMyyyy')).log" -Force
+    $PartitionKey = Get-Date -UFormat '%Y%m%d'
+    $LogRequest = @{
+        'Tenant'      = $tenant
+        'API'         = $API
+        'Message'     = $message
+        'Username'    = $username
+        'Severity'    = $sev
+        'SentAsAlert' = $false
     }
-    $LogMutex.ReleaseMutex()
+    $TableRow = @{
+        table        = $Table
+        partitionKey = $PartitionKey
+        rowKey       = [guid]::NewGuid()
+        property     = $LogRequest
+    }
+    Add-AzTableRow @TableRow | Out-Null
+
 }
 
 function New-GraphGetRequest ($uri, $tenantid, $scope, $AsApp, $noPagination) {
@@ -452,11 +477,11 @@ function New-DeviceLogin {
 
         }
         else {
-            $ReturnCode = Invoke-RestMethod -Uri "https://login.microsoftonline.com/organizations/oauth2/v2.0/devicecode" -Method POST -Body "client_id=$($Clientid)&scope=$encodedscope+offline_access+profile+openid"
+            $ReturnCode = Invoke-RestMethod -Uri 'https://login.microsoftonline.com/organizations/oauth2/v2.0/devicecode' -Method POST -Body "client_id=$($Clientid)&scope=$encodedscope+offline_access+profile+openid"
         }
     }
     else {
-        $Checking = Invoke-RestMethod -SkipHttpErrorCheck -Uri "https://login.microsoftonline.com/organizations/oauth2/v2.0/token" -Method POST -Body "client_id=$($Clientid)&scope=$encodedscope+offline_access+profile+openid&grant_type=device_code&device_code=$($device_code)"
+        $Checking = Invoke-RestMethod -SkipHttpErrorCheck -Uri 'https://login.microsoftonline.com/organizations/oauth2/v2.0/token' -Method POST -Body "client_id=$($Clientid)&scope=$encodedscope+offline_access+profile+openid&grant_type=device_code&device_code=$($device_code)"
         if ($checking.refresh_token) {
             $ReturnCode = $Checking
         }
@@ -466,3 +491,4 @@ function New-DeviceLogin {
     }
     return $ReturnCode
 }
+

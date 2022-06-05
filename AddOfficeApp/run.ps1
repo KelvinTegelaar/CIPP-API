@@ -4,7 +4,7 @@ using namespace System.Net
 param($Request, $TriggerMetadata)
 
 $APIName = $TriggerMetadata.FunctionName
-Log-Request -user $request.headers.'x-ms-client-principal' -API $APINAME  -message "Accessed this API" -Sev "Debug"
+Log-Request -user $request.headers.'x-ms-client-principal' -API $APINAME -message "Accessed this API" -Sev "Debug"
 
 
 # Write to the Azure Functions log stream.
@@ -67,17 +67,17 @@ $results = foreach ($Tenant in $tenants) {
             "Office deployment already exists for $($Tenant)"
             Continue
         }
-        Log-Request -user $request.headers.'x-ms-client-principal' -apiname $APIName  -tenant $($tenant) -message "Added Office profile to $($tenant)" -Sev "Info"
+        Log-Request -user $request.headers.'x-ms-client-principal' -API $APIName -tenant $($tenant) -message "Added Office profile to $($tenant)" -Sev "Info"
         if ($AssignTo) {
             $AssignO365 = if ($AssignTo -ne "AllDevicesAndUsers") { '{"mobileAppAssignments":[{"@odata.type":"#microsoft.graph.mobileAppAssignment","target":{"@odata.type":"#microsoft.graph.' + $($AssignTo) + 'AssignmentTarget"},"intent":"Required"}]}' } else { '{"mobileAppAssignments":[{"@odata.type":"#microsoft.graph.mobileAppAssignment","target":{"@odata.type":"#microsoft.graph.allDevicesAssignmentTarget"},"intent":"Required"},{"@odata.type":"#microsoft.graph.mobileAppAssignment","target":{"@odata.type":"#microsoft.graph.allLicensedUsersAssignmentTarget"},"intent":"Required"}]}' }           Write-Host ($AssignO365)
             New-graphPostRequest -Uri "https://graph.microsoft.com/beta/deviceAppManagement/mobileApps/$($OfficeAppID.id)/assign" -tenantid $tenant -Body $AssignO365 -type POST
-            Log-Request -user $request.headers.'x-ms-client-principal' -apiname $APIName  -tenant $($tenant) -message "Assigned Office to $AssignTo" -Sev "Info"
+            Log-Request -user $request.headers.'x-ms-client-principal' -API $APIName -tenant $($tenant) -message "Assigned Office to $AssignTo" -Sev "Info"
         }
         "Succesfully added Office Application for $($Tenant)"
     }
     catch {
         "Failed to add Office App for $($Tenant): $($_.Exception.Message)"
-        Log-Request -user $request.headers.'x-ms-client-principal' -apiname $APIName  -tenant $($tenant)  -message "Failed adding Autopilot Profile $($Displayname). Error: $($_.Exception.Message)" -Sev "Error"
+        Log-Request -user $request.headers.'x-ms-client-principal' -API $APIName  -tenant $($tenant)  -message "Failed adding Autopilot Profile $($Displayname). Error: $($_.Exception.Message)" -Sev "Error"
         continue
     }
 
