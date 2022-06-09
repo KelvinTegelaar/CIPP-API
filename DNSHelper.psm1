@@ -50,7 +50,7 @@ function Resolve-DnsHttpsQuery {
             $QueryTemplate = '{0}?name={1}&type={2}'
         }
         'Quad9' {
-            $BaseUri = 'https://dns10.quad9.net:5053/dns-query'
+            $BaseUri = 'https://dns9.quad9.net:5053/dns-query'
             $QueryTemplate = '{0}?name={1}&type={2}'
         }
     }
