@@ -49,6 +49,10 @@ function Resolve-DnsHttpsQuery {
             $BaseUri = 'https://cloudflare-dns.com/dns-query'
             $QueryTemplate = '{0}?name={1}&type={2}'
         }
+        'Quad9' {
+            $BaseUri = 'https://dns10.quad9.net:5053/dns-query'
+            $QueryTemplate = '{0}?name={1}&type={2}'
+        }
     }
 
     $Headers = @{
@@ -69,7 +73,7 @@ function Resolve-DnsHttpsQuery {
             Write-Verbose "$Resolver DoH Query Exception - $($_.Exception.Message)" 
         }
     
-        if ($Resolver -eq 'Cloudflare' -and $RecordType -eq 'txt' -and $Results.Answer) {
+        if ($Resolver -eq 'Cloudflare' -or $Resolver -eq 'Quad9' -and $RecordType -eq 'txt' -and $Results.Answer) {
             $Results.Answer | ForEach-Object {
                 $_.data = $_.data -replace '"' -replace '\s+', ' '
             }
