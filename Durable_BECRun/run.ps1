@@ -49,6 +49,7 @@ try {
     } while ($LogsTenant.count % 5000 -eq 0 -and $LogsTenant.count -ne 0)
   }
   #Get user last logon
+  try {
   $uri = "https://login.microsoftonline.com/$($TenantFilter)/oauth2/token"
   $body = "resource=https://admin.microsoft.com&grant_type=refresh_token&refresh_token=$($ENV:ExchangeRefreshToken)"
   Write-Host "getting token"
@@ -61,8 +62,15 @@ try {
     'x-ms-correlation-id'    = [guid]::NewGuid()
     'X-Requested-With'       = 'XMLHttpRequest' 
   }
-  #List all users devices
   Write-Host "Last Sign in is: $LastSignIn"
+}
+catch{
+  Write-Host "Last Sign in is: Unknown"
+  $LastSignIn = "Unknown"
+}
+
+  #List all users devices
+
   $Bytes = [System.Text.Encoding]::UTF8.GetBytes($SuspectUser)
   $base64IdentityParam = [Convert]::ToBase64String($Bytes)
   Try {
