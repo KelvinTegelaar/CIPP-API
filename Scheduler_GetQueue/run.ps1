@@ -1,15 +1,15 @@
 param($name)
 
-$Tenants = Get-ChildItem "Cache_Scheduler\*.json"
+$Table = Get-CIPPTable -TableName SchedulerConfig
+$Tenants = Get-AzTableRow -Table $table
 
 $object = foreach ($Tenant in $tenants) {
-    $TypeFile = Get-Content "$($tenant)" | ConvertFrom-Json
-    if ($Typefile.Tenant -ne "AllTenants") {
+    if ($Tenant.Tenant -ne "AllTenants") {
         [pscustomobject]@{ 
-            Tenant   = $Typefile.Tenant
+            Tenant   = $Tenant.Tenant
             Tag      = "SingleTenant"
-            TenantID = $TypeFile.tenantId
-            Type     = $Typefile.Type
+            TenantID = $Tenant.tenantId
+            Type     = $Tenant.Type
         }
     }
     else {
@@ -19,7 +19,7 @@ $object = foreach ($Tenant in $tenants) {
                 Tenant   = $_.defaultDomainName
                 Tag      = "AllTenants"
                 TenantID = $_.customerId
-                Type     = $Typefile.Type
+                Type     = $Tenant.Type
             }
         }
     }
