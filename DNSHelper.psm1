@@ -1407,8 +1407,8 @@ function Read-WhoisRecord {
     )
     $HasReferral = $false
 
-    # Top level referring servers, IANA and ARIN
-    $TopLevelReferrers = @('whois.iana.org', 'whois.arin.net')
+    # Top level referring servers, IANA, ARIN and AUDA
+    $TopLevelReferrers = @('whois.iana.org', 'whois.arin.net', 'whois.auda.org.au')
 
     # Record Pattern Matching
     $ServerPortRegex = '(?<refsvr>[^:\r\n]+)(:(?<port>\d+))?'
@@ -1422,7 +1422,7 @@ function Read-WhoisRecord {
 
     # List of properties for Registrars
     $RegistrarProps = @(
-        'Registrar'
+        'Registrar', 'Registrar Name'
     )
 
     # Whois parser, generic Property: Value format with some multi-line support and comment handlers
@@ -1469,7 +1469,9 @@ function Read-WhoisRecord {
         foreach ($RegistrarProp in $RegistrarProps) {
             if ($Results.Contains($RegistrarProp)) {
                 $Results._Registrar = $Results.$RegistrarProp
-                break
+                if($Results.$RegistrarProp -eq 'Registrar') {
+                    break  # Means we always favour Registrar if it exists, or keep looking
+                }
             }
         }
 
