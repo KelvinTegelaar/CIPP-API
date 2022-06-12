@@ -33,7 +33,7 @@ $Results = foreach ($Tenant in $tenants) {
             $installcommandline = "powershell.exe -executionpolicy bypass .\install.ps1 -InstallParam $($RMMApp.PackageName)"
             $UninstallCommandLine = "powershell.exe -executionpolicy bypass .\uninstall.ps1"
         }
-        'Syncro' { 
+        'syncro' { 
             $installcommandline = "powershell.exe -executionpolicy bypass .\install.ps1 -URL $($InstallParams.ClientURL["$($tenant.customerId)"])"
             $UninstallCommandLine = "powershell.exe -executionpolicy bypass .\uninstall.ps1"
         }
