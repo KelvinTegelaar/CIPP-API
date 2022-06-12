@@ -9,28 +9,59 @@ Log-Request -user $request.headers.'x-ms-client-principal' -API $APINAME  -messa
 
 Write-Host "PowerShell HTTP trigger function processed a request."
 $RMMApp = $request.body
-$intuneBody = Get-Content "AddRMMApp\$($RMMApp.RMMName).app.json" | ConvertFrom-Json
 $assignTo = $Request.body.AssignTo
-$intuneBody.displayName = $RMMApp.ApplicationName
-$intuneBody.installCommandLine = "powershell.exe -executionpolicy bypass .\Install.ps1 -InstallChoco -Packagename $($RMMApp.PackageName)"
-$intuneBody.UninstallCommandLine = "powershell.exe -executionpolicy bypass .\Uninstall.ps1 -Packagename $($RMMApp.PackageName)"
+$intuneBody = Get-Content "AddMSPApp\$($RMMApp.RMMName.value).app.json" | ConvertFrom-Json
+$intuneBody.displayName = $RMMApp.DisplayName
 
-$Tenants = ($Request.body | Select-Object Select_*).psobject.properties.value
+$Tenants = $request.body.selectedTenants
 $Results = foreach ($Tenant in $tenants) {
+    $InstallParams = [pscustomobject]$RMMApp.params
+    switch ($rmmapp.RMMName.value) {
+        'datto' { 
+            $installcommandline = "powershell.exe -executionpolicy bypass .\install.ps1 -URL $($InstallParams.DattoURL) -GUID $($InstallParams.DattoGUID["$($tenant.customerId)"])"
+            $UninstallCommandLine = "powershell.exe -executionpolicy bypass .\uninstall.ps1"
+        }
+        'ninja' { 
+            $installcommandline = "powershell.exe -executionpolicy bypass .\install.ps1 -InstallParam $($RMMApp.PackageName)"
+            $UninstallCommandLine = "powershell.exe -executionpolicy bypass .\uninstall.ps1"
+        }
+        'Huntress' { 
+            $installcommandline = "powershell.exe -executionpolicy bypass .\install.ps1 -OrgKey $($InstallParams.Orgkey["$($tenant.customerId)"]) -acctkey $($InstallParams.AccountKey)"
+            $UninstallCommandLine = "powershell.exe -executionpolicy bypass .\uninstall.ps1"
+        }
+        'Immybot' { 
+            $installcommandline = "powershell.exe -executionpolicy bypass .\install.ps1 -InstallParam $($RMMApp.PackageName)"
+            $UninstallCommandLine = "powershell.exe -executionpolicy bypass .\uninstall.ps1"
+        }
+        'Syncro' { 
+            $installcommandline = "powershell.exe -executionpolicy bypass .\install.ps1 -ClientURL $($InstallParams.ClientURL["$($tenant.customerId)"])"
+            $UninstallCommandLine = "powershell.exe -executionpolicy bypass .\uninstall.ps1"
+        }
+        'NCentral' { 
+            $installcommandline = "powershell.exe -executionpolicy bypass .\install.ps1 -InstallParam $($RMMApp.PackageName)"
+            $UninstallCommandLine = "powershell.exe -executionpolicy bypass .\uninstall.ps1"
+        }
+    }
+    $intuneBody.installCommandLine = $installcommandline
+    $intuneBody.UninstallCommandLine = $UninstallCommandLine
+
+
     try {
         $CompleteObject = [PSCustomObject]@{
-            tenant          = $tenant
-            Applicationname = $RMMApp.ApplicationName
+            tenant          = $tenant.defaultDomainName
+            Applicationname = $RMMApp.DisplayName
             assignTo        = $assignTo
             IntuneBody      = $intunebody
+            type            = "MSPApp"
+            MSPAppName      = $RMMApp.RMMName.value
         } | ConvertTo-Json -Depth 15
         $JSONFile = New-Item -Path ".\ChocoApps.Cache\$(New-Guid)" -Value $CompleteObject -Force -ErrorAction Stop
-        "Succesfully added MSP App for $($Tenant) to queue."
-        Log-Request -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $tenant -message "MSP Application $($intunebody.Displayname) queued to add" -Sev "Info"
+        "Succesfully added MSP App for $($Tenant.defaultDomainName) to queue."
+        Log-Request -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $tenant.defaultDomainName -message "MSP Application $($intunebody.Displayname) queued to add" -Sev "Info"
     }
     catch {
-        Log-Request -user $request.headers.'x-ms-client-principal'  -API $APINAME -tenant $tenant -message "Failed to add MSP Application $($intunebody.Displayname) to queue" -Sev "Error"
-        "Failed to add MSP app for $($Tenant) to queue"
+        Log-Request -user $request.headers.'x-ms-client-principal'  -API $APINAME -tenant $tenant.defaultDomainName -message "Failed to add MSP Application $($intunebody.Displayname) to queue" -Sev "Error"
+        "Failed to add MSP app for $($Tenant.defaultDomainName) to queue"
     }
 }
 
