@@ -34,7 +34,7 @@ $Results = foreach ($Tenant in $tenants) {
             $UninstallCommandLine = "powershell.exe -executionpolicy bypass .\uninstall.ps1"
         }
         'Syncro' { 
-            $installcommandline = "powershell.exe -executionpolicy bypass .\install.ps1 -ClientURL $($InstallParams.ClientURL["$($tenant.customerId)"])"
+            $installcommandline = "powershell.exe -executionpolicy bypass .\install.ps1 -URL $($InstallParams.ClientURL["$($tenant.customerId)"])"
             $UninstallCommandLine = "powershell.exe -executionpolicy bypass .\uninstall.ps1"
         }
         'NCentral' { 
