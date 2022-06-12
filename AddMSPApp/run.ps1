@@ -27,7 +27,7 @@ $Results = foreach ($Tenant in $tenants) {
         }
         'Huntress' { 
             $installcommandline = "powershell.exe -executionpolicy bypass .\install.ps1 -OrgKey $($InstallParams.Orgkey["$($tenant.customerId)"]) -acctkey $($InstallParams.AccountKey)"
-            $UninstallCommandLine = "powershell.exe -executionpolicy bypass .\uninstall.ps1"
+            $UninstallCommandLine = "powershell.exe -executionpolicy bypass .\install.ps1 -Uninstall"
         }
         'Immybot' { 
             $installcommandline = "powershell.exe -executionpolicy bypass .\install.ps1 -InstallParam $($RMMApp.PackageName)"
