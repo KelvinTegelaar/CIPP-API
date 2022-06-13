@@ -124,6 +124,13 @@ if ($Request.query.Tenants -eq 'true') {
                 Status     = 'Succesfully connected to Exchange'
                 Response   = $GraphRequest 
             }
+            #adding this, because sometimes you get a non-stopping error somehow.
+            if (!$GraphRequest) {
+                @{
+                    TenantName = "$($Tenant)"
+                    Status     = "Failed to connect to Exchange: $($error[0].Exception.Message)" 
+                }
+            }
         }
         catch {
             $Message = ($_ | ConvertFrom-Json).error_description 

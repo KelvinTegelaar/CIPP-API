@@ -49,6 +49,10 @@ function Resolve-DnsHttpsQuery {
             $BaseUri = 'https://cloudflare-dns.com/dns-query'
             $QueryTemplate = '{0}?name={1}&type={2}'
         }
+        'Quad9' {
+            $BaseUri = 'https://dns9.quad9.net:5053/dns-query'
+            $QueryTemplate = '{0}?name={1}&type={2}'
+        }
     }
 
     $Headers = @{
@@ -69,7 +73,7 @@ function Resolve-DnsHttpsQuery {
             Write-Verbose "$Resolver DoH Query Exception - $($_.Exception.Message)" 
         }
     
-        if ($Resolver -eq 'Cloudflare' -and $RecordType -eq 'txt' -and $Results.Answer) {
+        if ($Resolver -eq 'Cloudflare' -or $Resolver -eq 'Quad9' -and $RecordType -eq 'txt' -and $Results.Answer) {
             $Results.Answer | ForEach-Object {
                 $_.data = $_.data -replace '"' -replace '\s+', ' '
             }
@@ -1403,8 +1407,8 @@ function Read-WhoisRecord {
     )
     $HasReferral = $false
 
-    # Top level referring servers, IANA and ARIN
-    $TopLevelReferrers = @('whois.iana.org', 'whois.arin.net')
+    # Top level referring servers, IANA, ARIN and AUDA
+    $TopLevelReferrers = @('whois.iana.org', 'whois.arin.net', 'whois.auda.org.au')
 
     # Record Pattern Matching
     $ServerPortRegex = '(?<refsvr>[^:\r\n]+)(:(?<port>\d+))?'
@@ -1418,7 +1422,7 @@ function Read-WhoisRecord {
 
     # List of properties for Registrars
     $RegistrarProps = @(
-        'Registrar'
+        'Registrar', 'Registrar Name'
     )
 
     # Whois parser, generic Property: Value format with some multi-line support and comment handlers
@@ -1465,7 +1469,9 @@ function Read-WhoisRecord {
         foreach ($RegistrarProp in $RegistrarProps) {
             if ($Results.Contains($RegistrarProp)) {
                 $Results._Registrar = $Results.$RegistrarProp
-                break
+                if($Results.$RegistrarProp -eq 'Registrar') {
+                    break  # Means we always favour Registrar if it exists, or keep looking
+                }
             }
         }
 
