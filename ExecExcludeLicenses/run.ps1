@@ -33,7 +33,6 @@ try {
     # Interact with query parameters or the body of the request.
     $name = $Request.Query.TenantFilter
     if ($Request.Query.AddExclusion) {
-        $ExcludedList = [System.Collections.ArrayList](Get-Content '.\config\ExcludeSkuList.JSON' | ConvertFrom-Json)
         $AddObject = @{
             "GUID"                 = $Request.body.GUID
             "Product_Display_Name" = $request.body.SKUName
