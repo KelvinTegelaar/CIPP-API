@@ -45,7 +45,7 @@ foreach ($tenant in $tenants) {
     Try {
         $ApplicationList = (New-graphGetRequest -Uri $baseuri -tenantid $Tenant) | Where-Object { $_.DisplayName -eq $ChocoApp.ApplicationName }
         if ($ApplicationList.displayname.count -ge 1) { 
-            Log-Request -api "AppUpload" -tenant $($Tenant) -message "$($ChocoApp.ApplicationName) exists. Skipping this application" -Sev "Warning"
+            Log-Request -api "AppUpload" -tenant $($Tenant) -message "$($ChocoApp.ApplicationName) exists. Skipping this application" -Sev "Info"
             continue
         }
         $NewApp = New-GraphPostRequest -Uri $baseuri -Body ($intuneBody | ConvertTo-Json) -Type POST -tenantid $tenant
