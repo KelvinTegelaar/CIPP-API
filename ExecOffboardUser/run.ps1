@@ -221,11 +221,11 @@ $results = switch ($request.body) {
                 }
             }
            
-            Log-Request -user $request.headers.'x-ms-client-principal' -API $APINAME  -message "Deleted account $($username)" -Sev "Info" -tenant $TenantFilter
+            Log-Request -user $request.headers.'x-ms-client-principal' -API $APINAME  -message "Deleted Rules for $($username)" -Sev "Info" -tenant $TenantFilter
 
         }
         catch {
-            Log-Request -user $request.headers.'x-ms-client-principal' -API $APINAME  -message "Could not delete $($username)" -Sev "Error" -tenant $TenantFilter
+            Log-Request -user $request.headers.'x-ms-client-principal' -API $APINAME  -message "Could not delete rules for $($username): $($_.Exception.Message)" -Sev "Error" -tenant $TenantFilter
             "Could not delete $($username). Error: $($_.Exception.Message)"
         }
     }
@@ -243,11 +243,11 @@ $results = switch ($request.body) {
                 }
             }
            
-            Log-Request -user $request.headers.'x-ms-client-principal' -API $APINAME  -message "Deleted account $($username)" -Sev "Info" -tenant $TenantFilter
+            Log-Request -user $request.headers.'x-ms-client-principal' -API $APINAME  -message "Deleted mobile devices for $($username)" -Sev "Info" -tenant $TenantFilter
 
         }
         catch {
-            Log-Request -user $request.headers.'x-ms-client-principal' -API $APINAME  -message "Could not delete $($username)" -Sev "Error" -tenant $TenantFilter
+            Log-Request -user $request.headers.'x-ms-client-principal' -API $APINAME  -message "Could not delete mobile devices for $($username): $($_.Exception.Message)" -Sev "Error" -tenant $TenantFilter
             "Could not delete $($username). Error: $($_.Exception.Message)"
         }
     }
