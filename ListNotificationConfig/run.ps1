@@ -6,7 +6,10 @@ param($Request, $TriggerMetadata)
 $APIName = $TriggerMetadata.FunctionName
 Log-Request -user $request.headers.'x-ms-client-principal' -API $APINAME  -message "Accessed this API" -Sev "Debug"
 
-$body = Get-Content "Config\Config_Notifications.json" | ConvertFrom-Json
+$Table = Get-CIPPTable -TableName SchedulerConfig
+$Config = Get-AzTableRow -Table $table -RowKey "CippNotifications" -PartitionKey 'CippNotifications'
+
+$body = $Config
 
 # Associate values to output bindings by calling 'Push-OutputBinding'.
 Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{

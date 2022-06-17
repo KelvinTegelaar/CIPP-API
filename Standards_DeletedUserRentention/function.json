@@ -2,8 +2,8 @@
   "bindings": [
     {
       "name": "tenant",
-      "direction": "in",
-      "type": "activityTrigger"
+      "type": "activityTrigger",
+      "direction": "in"
     }
   ]
 }

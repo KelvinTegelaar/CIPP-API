@@ -185,6 +185,30 @@ Function Get-CronNextExecutionTime {
  
     Return $Date
 }
+
+$context = New-AzStorageContext -ConnectionString $ENV:AzureWebJobsStorage
+$tablename = 'CippLogs'
+try { 
+    $StorageTable = Get-AzStorageTable –Context $context -Name $tablename -ErrorAction Stop
+}
+catch {
+    New-AzStorageTable -Context $context -Name $tablename | Out-Null
+    $StorageTable = Get-AzStorageTable –Context $context -Name $tablename
+}
+$Table = $StorageTable.CloudTable
+$PartitionKey = Get-Date -UFormat '%Y%m%d'
+$Rows = Get-AzTableRow -Table $table -PartitionKey $PartitionKey -Top 10 -SelectColumn Tenant, Message
+foreach ($Row in $Rows) {
+    @{
+        DateTime = $Row.TableTimeStamp
+        Tenant   = $Row.Tenant
+        API      = $Row.API
+        Message  = $Row.Message
+        User     = $Row.Username
+        Severity = $Row.Severity
+    }
+}
+
 $APIName = $TriggerMetadata.FunctionName
 Log-Request -user $request.headers.'x-ms-client-principal' -API $APINAME  -message "Accessed this API" -Sev "Debug"
 $dash = [PSCustomObject]@{
@@ -195,10 +219,10 @@ $dash = [PSCustomObject]@{
     tenantCount       = [int64](Get-Content '.\tenants.cache.json' | ConvertFrom-Json -ErrorAction SilentlyContinue).count
     RefreshTokenDate  = (Get-CronNextExecutionTime -Expression '0 0 * * 0').AddDays('-7').tostring('s') -split "T" | Select-Object -First 1
     ExchangeTokenDate = (Get-CronNextExecutionTime -Expression '0 0 * * 0').AddDays('-7').tostring('s') -split "T" | Select-Object -First 1
-    LastLog           = @(Get-Content "Logs\$((Get-Date).ToString('ddMMyyyy')).log" | ConvertFrom-Csv -Header "DateTime", "Tenant", "API", "Message", "User", "Severity" -Delimiter "|" | Select-Object -Last 10)
+    LastLog           = @($Rows)
 }
 # Write to the Azure Functions log stream.
-
+ 
 # Associate values to output bindings by calling 'Push-OutputBinding'.
 Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
         StatusCode = [HttpStatusCode]::OK
