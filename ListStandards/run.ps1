@@ -9,8 +9,12 @@ Log-Request -user $request.headers.'x-ms-client-principal' -API $APINAME  -messa
 
 # Write to the Azure Functions log stream.
 Write-Host "PowerShell HTTP trigger function processed a request."
-
-$Tenants = Get-ChildItem "Cache_Standards\*.standards.json"
+if ($Request.query.TenantFilter) { 
+    $tenants = Get-ChildItem "Cache_Standards\$($Request.query.TenantFilter).standards.json" 
+}
+else {
+    $Tenants = Get-ChildItem "Cache_Standards\*.standards.json"
+}
 
 $CurrentStandards = foreach ($tenant in $tenants) {
     $StandardsFile = Get-Content "$($tenant)" | ConvertFrom-Json
