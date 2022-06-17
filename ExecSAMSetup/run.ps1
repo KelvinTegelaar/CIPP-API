@@ -6,7 +6,7 @@ $UserCreds = ([System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase6
 if ("admin" -notin $UserCreds.userRoles) {
       Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
                   StatusCode = [HttpStatusCode]::Forbidden
-                  Body       = "Could not find admin role. Please login under the correct user, or go back to the wizard and click the URL again."
+                  Body       = "Could not find admin role on your user. Try refreshing this page or logging in under the right user."
             })
       exit
 }

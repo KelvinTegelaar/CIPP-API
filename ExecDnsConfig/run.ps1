@@ -10,6 +10,7 @@ Log-Request -user $request.headers.'x-ms-client-principal' -API $APINAME -messag
 $ValidResolvers = @(
     'Google'
     'Cloudflare'
+    'Quad9'
 )
 
 $ConfigPath = 'Config/DnsConfig.json'
