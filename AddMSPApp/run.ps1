@@ -30,7 +30,7 @@ $Results = foreach ($Tenant in $tenants) {
             $UninstallCommandLine = "powershell.exe -executionpolicy bypass .\install.ps1 -Uninstall"
         }
         'Immybot' { 
-            $installcommandline = "powershell.exe -executionpolicy bypass .\install.ps1 -InstallParam $($RMMApp.PackageName)"
+            $installcommandline = "powershell.exe -executionpolicy bypass .\install.ps1 -url $($InstallParams.ClientURL["$($tenant.customerId)"])"
             $UninstallCommandLine = "powershell.exe -executionpolicy bypass .\uninstall.ps1"
         }
         'syncro' { 
