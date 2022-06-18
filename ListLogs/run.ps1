@@ -6,8 +6,8 @@ param($Request, $TriggerMetadata)
 $APIName = $TriggerMetadata.FunctionName
 Log-Request -user $request.headers.'x-ms-client-principal' -API $APINAME -message 'Accessed this API' -Sev 'Info'
 
-if ($request.Query.SearchNow -eq 'True') {
-    $LogLevel = ($Request.query.Severity).split(',') 
+if ($request.Query.Filter -eq 'True') {
+    $LogLevel = if ($Request.query.Severity) { ($Request.query.Severity).split(',') } else { 'Info', 'Warn', 'Error', 'Critical', 'Alert' } 
     $PartitionKey = $Request.query.DateFilter
     $username = $Request.Query.User
 }
