@@ -37,9 +37,26 @@ if($Redirected -le 0 -or !$Redirected)
 }
 else
 {
+    # Send back that we rejected the attempt to alter status on the redirected incident
     Log-Request -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $($tenantfilter) -message "Rejected status update of redirected incident $($IncidentFilter): $($_.Exception.Message)" -Sev "Error"
     $body = [pscustomobject]@{"Results" = "Rejected status update of redirected incident" }
 }
+
+Write-Host @"
+"
+
+#    # #    # #  ####  #    # ##### #   ##   #    #
+#   #  ##   # # #    # #    #   #   #  #  #  ##   #
+####   # #  # # #      ######   #   # #    # # #  #
+#  #   #  # # # #  ### #    #   #   # ###### #  # #
+#   #  #   ## # #    # #    #   #   # #    # #   ##
+#    # #    # #  ####  #    #   #   # #    # #    #
+ 
+Ian Harris (@knightian) - White Knight IT - 14-6-2022
+
+https://whiteknightit.com.au"
+
+"@
 
 # Associate values to output bindings by calling 'Push-OutputBinding'.
 Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
