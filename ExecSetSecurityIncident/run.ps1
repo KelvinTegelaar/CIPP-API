@@ -6,57 +6,71 @@ param($Request, $TriggerMetadata)
 $APIName = $TriggerMetadata.FunctionName
 Log-Request -user $request.headers.'x-ms-client-principal' -API $APINAME  -message "Accessed this API" -Sev "Debug"
 
+$first=''
 # Interact with query parameters or the body of the request.
 $tenantfilter = $Request.Query.TenantFilter
 $IncidentFilter = $Request.Query.GUID
 $Status = $Request.Query.Status
 $Assigned = $Request.Query.Assigned
+$Classification = $Request.Query.Classification
+$Determination = $Request.Query.Determination
 $Redirected = $Request.Query.Redirected -as [int]
-$AssignBody = '{"status":"' + $Status + '","assignedTo":"'+ $Assigned +'"}'
-$ResponseBody = [pscustomobject]@{"Results" = "Set status for incident to $Status" }
+$BodyBuild
+$AssignBody = '{'
 
-if(!$Status) {
-    $Redirected = 0
-    $AssignBody = '{"assignedTo":"'+ $Assigned +'"}'
-    $ResponseBody = [pscustomobject]@{"Results" = "Assigned incident to $Assigned" }
-}
+try {
+  # We won't update redirected incidents because the incident it is redirected to should instead be updated
+  if($Redirected -lt 1)
+  {
+    # Set received status
+    if($null -ne $Status)
+    {
+      $AssignBody += $first + '"status":"' + $Status + '"'
+      $BodyBuild += $first + "Set status for incident to " + $Status
+      $first = ', '
+    }
 
-if($Redirected -le 0 -or !$Redirected)
-{
+    # Set received classification and determination
+    if($null -ne $Classification)
+    {
+      if($null -eq $Determination){
+        # Maybe some poindexter tries to send a classification without a determination
+        throw
+      }
 
-  try {       
-    $GraphRequest = New-Graphpostrequest -uri "https://graph.microsoft.com/beta/security/incidents/$IncidentFilter" -type PATCH -tenantid $TenantFilter -body $Assignbody -asApp $true
-    Log-Request -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $($tenantfilter) -message "Set incident $IncidentFilter to status $Status" -Sev "Info"
-    $body = $ResponseBody
+      $AssignBody += $first + '"classification":"' + $Classification + '", "determination":"' + $Determination + '"'
+      $BodyBuild += $first + "Set classification & determination for incident to " + $Classification + ' ' + $Determination
+      $first = ', '
+    }
 
+    # Set received asignee
+    if($null -ne $Assigned)
+    {
+      $AssignBody += $first + '"assignedTo":"' + $Assigned + '"'
+      if($null -eq $Status)
+      {
+        $BodyBuild += $first + "Set assigned for incident to " + $Assigned
+      }
+      $first = ', '
+    }
+
+    $AssignBody += '}'
+
+    $ResponseBody = [pscustomobject]@{"Results" = $BodyBuild }
+    New-Graphpostrequest -uri "https://graph.microsoft.com/beta/security/incidents/$IncidentFilter" -type PATCH -tenantid $TenantFilter -body $Assignbody -asApp $true
+    Log-Request -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $($tenantfilter) -message "Update incident $IncidentFilter with values $Assignbody" -Sev "Info"
   }
-  catch {
-    Log-Request -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $($tenantfilter) -message "Failed to update incident $($IncidentFilter): $($_.Exception.Message)" -Sev "Error"
-    $body = [pscustomobject]@{"Results" = "Failed to change status: $($_.Exception.Message)" }
+  else {
+    $ResponseBody = [pscustomobject]@{"Results" = "Cannot update redirected incident" }
+    Log-Request -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $($tenantfilter) -message "Refuse to pdate incident $IncidentFilter with values $Assignbody because it is redirected to another incident" -Sev "Info"
   }
+
+  $body = $ResponseBody
 }
-else
-{
-    # Send back that we rejected the attempt to alter status on the redirected incident
-    Log-Request -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $($tenantfilter) -message "Rejected status update of redirected incident $($IncidentFilter): $($_.Exception.Message)" -Sev "Error"
-    $body = [pscustomobject]@{"Results" = "Rejected status update of redirected incident" }
+catch {
+  Log-Request -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $($tenantfilter) -message "Failed to update alert $($AlertFilter): $($_.Exception.Message)" -Sev "Error"
+  $body = [pscustomobject]@{"Results" = "Failed to update incident: $($_.Exception.Message)" }
 }
-
-Write-Host @"
-"
-
-#    # #    # #  ####  #    # ##### #   ##   #    #
-#   #  ##   # # #    # #    #   #   #  #  #  ##   #
-####   # #  # # #      ######   #   # #    # # #  #
-#  #   #  # # # #  ### #    #   #   # ###### #  # #
-#   #  #   ## # #    # #    #   #   # #    # #   ##
-#    # #    # #  ####  #    #   #   # #    # #    #
- 
-Ian Harris (@knightian) - White Knight IT - 14-6-2022
-
-https://whiteknightit.com.au"
-
-"@
 
 # Associate values to output bindings by calling 'Push-OutputBinding'.
 Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
