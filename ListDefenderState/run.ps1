@@ -13,8 +13,7 @@ Write-Host "PowerShell HTTP trigger function processed a request."
 # Interact with query parameters or the body of the request.
 $TenantFilter = $Request.Query.TenantFilter
 try {
-    #$GraphRequest = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/tenantRelationships/managedTenants/windowsProtectionStates?`$top=999&`$filter=tenantId eq '$TenantFilter'"
-    $GraphRequest = New-GraphGetRequest -uri "https://security.microsoft.com/apiproxy/mtp/k8s/machines?lookingBackIndays=30&deviceCategories=Endpoint&pageIndex=1&pageSize=25&sortByField=riskscore&sortOrder=Descending"
+    $GraphRequest = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/tenantRelationships/managedTenants/windowsProtectionStates?`$top=999&`$filter=tenantId eq '$TenantFilter'"
     if ($GraphRequest.tenantDisplayName.length -lt 1) { 
         $StatusCode = [HttpStatusCode]::Forbidden
         $GraphRequest = "No data found - This client might not be onboarded in Lighthouse" 
