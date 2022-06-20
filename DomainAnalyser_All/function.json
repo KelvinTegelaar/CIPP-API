@@ -1,7 +1,7 @@
 {
   "bindings": [
     {
-      "name": "tenant",
+      "name": "DomainObject",
       "direction": "in",
       "type": "activityTrigger"
     }

@@ -1170,37 +1170,22 @@ function Read-DkimRecord {
     $ValidationWarns = [System.Collections.Generic.List[string]]::new()
     $ValidationFails = [System.Collections.Generic.List[string]]::new()
 
-    if (($Selectors | Measure-Object | Select-Object -ExpandProperty Count) -eq 0) {
-        # MX lookup, check for defined selectors
-        try {
-            $MXRecord = Read-MXRecord -Domain $Domain
-            foreach ($Selector in $MXRecord.Selectors) {
-                $Selectors.Add($Selector) | Out-Null
-            }
-            $DkimAnalysis.MailProvider = $MXRecord.MailProvider
-            if ($MXRecord.MailProvider.PSObject.Properties.Name -contains 'MinimumSelectorPass') {
-                $MinimumSelectorPass = $MXRecord.MailProvider.MinimumSelectorPass
-            }
-            $DkimAnalysis.Selectors = $Selectors
+    # MX lookup, check for defined selectors
+    try {
+        $MXRecord = Read-MXRecord -Domain $Domain
+        foreach ($Selector in $MXRecord.Selectors) {
+            $Selectors.Add($Selector) | Out-Null
         }
-        catch {}
-        
-        # Explicitly defined DKIM selectors
-        if (Test-Path 'Config\DkimSelectors') {
-            try {
-                Get-ChildItem 'Config\DkimSelectors' -Filter "$($Domain).json" -ErrorAction Stop | ForEach-Object {
-                    try {
-                        $CustomSelectors = Get-Content $_ | ConvertFrom-Json
-                        foreach ($Selector in $CustomSelectors) {
-                            $Selectors.Add($Selector) | Out-Null
-                        }
-                    } 
-                    catch {}
-                }
-            }
-            catch {}
+        $DkimAnalysis.MailProvider = $MXRecord.MailProvider
+        if ($MXRecord.MailProvider.PSObject.Properties.Name -contains 'MinimumSelectorPass') {
+            $MinimumSelectorPass = $MXRecord.MailProvider.MinimumSelectorPass
         }
+        $DkimAnalysis.Selectors = $Selectors
     }
+    catch {}
+
+    # Get unique selectors
+    $Selectors = $Selectors | Sort-Object -Unique
     
     if (($Selectors | Measure-Object | Select-Object -ExpandProperty Count) -gt 0) {
         foreach ($Selector in $Selectors) {
@@ -1469,7 +1454,7 @@ function Read-WhoisRecord {
         foreach ($RegistrarProp in $RegistrarProps) {
             if ($Results.Contains($RegistrarProp)) {
                 $Results._Registrar = $Results.$RegistrarProp
-                if($Results.$RegistrarProp -eq 'Registrar') {
+                if ($Results.$RegistrarProp -eq 'Registrar') {
                     break  # Means we always favour Registrar if it exists, or keep looking
                 }
             }
