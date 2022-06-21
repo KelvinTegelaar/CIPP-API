@@ -2,15 +2,11 @@ using namespace System.Net
 
 # Input bindings are passed in via param block.
 param($Request, $TriggerMetadata)
-
 $APIName = $TriggerMetadata.FunctionName
 Log-Request -user $request.headers.'x-ms-client-principal' -API $APINAME  -message "Accessed this API" -Sev "Debug"
-
-
 # Write to the Azure Functions log stream.
 Write-Host "PowerShell HTTP trigger function processed a request."
 $user = $request.headers.'x-ms-client-principal'
-
 $username = ([System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($user)) | ConvertFrom-Json).userDetails
 $date = (Get-Date).tostring('dd-MM-yyyy')
 try {
@@ -22,10 +18,13 @@ try {
     # Interact with query parameters or the body of the request.
     $name = $Request.Query.TenantFilter
     if ($Request.Query.AddExclusion) {
-        Add-Content -Value "$($name)|$($username)|$($date)" -Path "ExcludedTenants"
+        $Tenants = (Get-Tenants | Where-Object -Property CustomerId -In $Request.body.value).defaultDomainName
+        $Tenants | ForEach-Object {
+            Add-Content -Value "$($_)|$($username)|$($date)" -Path "ExcludedTenants"
+        }
         Remove-CIPPCache
-        Log-Request -API $APINAME -tenant $($name) -user $request.headers.'x-ms-client-principal'   -message "Added exclusion for customer $($name)" -Sev "Info" 
-        $body = [pscustomobject]@{"Results" = "Success. We've added $name to the excluded tenants." }
+        Log-Request -API $APINAME -tenant $($name) -user $request.headers.'x-ms-client-principal'   -message "Added exclusion for customer(s): $($Tenants -join ",")" -Sev "Info" 
+        $body = [pscustomobject]@{"Results" = "Success. Added exclusions for customer(s): $($Tenants -join ",")" }
     }
 
     if ($Request.Query.RemoveExclusion) {
