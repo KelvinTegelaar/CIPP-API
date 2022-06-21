@@ -163,7 +163,7 @@ function Get-ClassicAPIToken($tenantID, $Resource) {
         return $token
     }
     catch {
-        Write-Error "Failed to obtain Classic API Token for $Tenant - $_"        
+        Throw "Failed to obtain Classic API Token for $TenantID - $_"        
     }
 }
 
