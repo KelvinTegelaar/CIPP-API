@@ -9,108 +9,96 @@
 #>
 [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
 
-#Requires -modules Az.Storage, Az.Resources
+#Requires -modules Az.Storage
 
 # Deprecated Message
 $DeprecatedMessage = "IMPORTANT: This function is deprecated and will be removed in the next release, please use Get-AzTableRow instead."
 
 # Module Functions
 
-function TestAzTableEmptyKeys
-{
-	param
-	(
-		[Parameter(Mandatory=$true)]
-		$PartitionKey,
+function TestAzTableEmptyKeys {
+    param
+    (
+        [Parameter(Mandatory = $true)]
+        $PartitionKey,
 
-		[Parameter(Mandatory=$true)]
-		$RowKey
-	)
+        [Parameter(Mandatory = $true)]
+        $RowKey
+    )
 
     $CosmosEmptyKeysErrorMessage = "Cosmos DB table API does not accept empty partition or row keys when using CloudTable.Execute operation, because of this we are disabling this capability in this module and it will not proceed." 
 
-    if ([string]::IsNullOrEmpty($PartitionKey) -or [string]::IsNullOrEmpty($RowKey))
-    {
+    if ([string]::IsNullOrEmpty($PartitionKey) -or [string]::IsNullOrEmpty($RowKey)) {
         Throw $CosmosEmptyKeysErrorMessage
     }
 }
 
-function ExecuteQueryAsync
-{
-	param
-	(
-		[Parameter(Mandatory=$true)]
-		$Table,
-		[Parameter(Mandatory=$true)]
-		$TableQuery
-	)
-	# Internal function 
-	# Executes query in async mode
+function ExecuteQueryAsync {
+    param
+    (
+        [Parameter(Mandatory = $true)]
+        $Table,
+        [Parameter(Mandatory = $true)]
+        $TableQuery
+    )
+    # Internal function 
+    # Executes query in async mode
 
-	if ($TableQuery -ne $null)
-	{
+    if ($TableQuery -ne $null) {
         $token = $null
-		$AllRows = @()
-		do
-		{
-			$Results = $Table.ExecuteQuerySegmentedAsync($TableQuery, $token)
-			$token = $Results.Result.ContinuationToken
-			$AllRows += $Results.Result.Results
-			# TakeCount controls the number of results returned per page, not
-			# for the entire query. See e.g. the note in
-			# https://docs.microsoft.com/azure/cosmos-db/table-storage-design-guide#retrieve-large-numbers-of-entities-from-a-query
-			if (($null -ne $token) -and ($null -ne $TableQuery.TakeCount))
-			{
-				# If the take count is larger than the number of rows in this
-				# segment, there are more rows to return.
-				if ($TableQuery.TakeCount -gt $Results.Result.Results.Count)
-				{
-					$TableQuery.TakeCount -= $Results.Result.Results.Count
-				}
-				else
-				{
-					# No more rows are available in the current page.
-					break
-				}
-			}
-		} while ($token)
+        $AllRows = @()
+        do {
+            $Results = $Table.ExecuteQuerySegmentedAsync($TableQuery, $token)
+            $token = $Results.Result.ContinuationToken
+            $AllRows += $Results.Result.Results
+            # TakeCount controls the number of results returned per page, not
+            # for the entire query. See e.g. the note in
+            # https://docs.microsoft.com/azure/cosmos-db/table-storage-design-guide#retrieve-large-numbers-of-entities-from-a-query
+            if (($null -ne $token) -and ($null -ne $TableQuery.TakeCount)) {
+                # If the take count is larger than the number of rows in this
+                # segment, there are more rows to return.
+                if ($TableQuery.TakeCount -gt $Results.Result.Results.Count) {
+                    $TableQuery.TakeCount -= $Results.Result.Results.Count
+                }
+                else {
+                    # No more rows are available in the current page.
+                    break
+                }
+            }
+        } while ($token)
 	
-		return $AllRows
-	}
+        return $AllRows
+    }
 }
 
-function GetPSObjectFromEntity($entityList)
-{
-	# Internal function
-	# Converts entities output from the ExecuteQuery method of table into an array of PowerShell Objects
+function GetPSObjectFromEntity($entityList) {
+    # Internal function
+    # Converts entities output from the ExecuteQuery method of table into an array of PowerShell Objects
 
-	$returnObjects = @()
+    $returnObjects = @()
 
-	if (-not [string]::IsNullOrEmpty($entityList))
-	{
-		foreach ($entity in $entityList)
-		{
-			$entityNewObj = New-Object -TypeName psobject
-			$entity.Properties.Keys | ForEach-Object {Add-Member -InputObject $entityNewObj -Name $_ -Value $entity.Properties[$_].PropertyAsObject -MemberType NoteProperty}
+    if (-not [string]::IsNullOrEmpty($entityList)) {
+        foreach ($entity in $entityList) {
+            $entityNewObj = New-Object -TypeName psobject
+            $entity.Properties.Keys | ForEach-Object { Add-Member -InputObject $entityNewObj -Name $_ -Value $entity.Properties[$_].PropertyAsObject -MemberType NoteProperty }
 
-			# Adding table entity other attributes
-			Add-Member -InputObject $entityNewObj -Name "PartitionKey" -Value $entity.PartitionKey -MemberType NoteProperty
-			Add-Member -InputObject $entityNewObj -Name "RowKey" -Value $entity.RowKey -MemberType NoteProperty
-			Add-Member -InputObject $entityNewObj -Name "TableTimestamp" -Value $entity.Timestamp -MemberType NoteProperty
-			Add-Member -InputObject $entityNewObj -Name "Etag" -Value $entity.Etag -MemberType NoteProperty
+            # Adding table entity other attributes
+            Add-Member -InputObject $entityNewObj -Name "PartitionKey" -Value $entity.PartitionKey -MemberType NoteProperty
+            Add-Member -InputObject $entityNewObj -Name "RowKey" -Value $entity.RowKey -MemberType NoteProperty
+            Add-Member -InputObject $entityNewObj -Name "TableTimestamp" -Value $entity.Timestamp -MemberType NoteProperty
+            Add-Member -InputObject $entityNewObj -Name "Etag" -Value $entity.Etag -MemberType NoteProperty
 
-			$returnObjects += $entityNewObj
-		}
-	}
+            $returnObjects += $entityNewObj
+        }
+    }
 
-	return $returnObjects
+    return $returnObjects
 
 }
 
 
-function Get-AzTableTable
-{
-	<#
+function Get-AzTableTable {
+    <#
 	.SYNOPSIS
 		Gets a Table object to be used in all other cmdlets.
 	.DESCRIPTION
@@ -128,86 +116,76 @@ function Get-AzTableTable
 		$TableName = "table01"
 		$Table = Get-AzTabletable -resourceGroup $resourceGroup -tableName $TableName -storageAccountName $storageAccount
 	#>
-	[CmdletBinding()]
-	param
-	(
-		[Parameter(ParameterSetName="AzTableStorage",Mandatory=$true)]
-		[string]$resourceGroup,
+    [CmdletBinding()]
+    param
+    (
+        [Parameter(ParameterSetName = "AzTableStorage", Mandatory = $true)]
+        [string]$resourceGroup,
 		
-		[Parameter(Mandatory=$true)]
+        [Parameter(Mandatory = $true)]
         [String]$TableName,
 
-		[Parameter(ParameterSetName="AzTableStorage",Mandatory=$true)]
-		[String]$storageAccountName,
+        [Parameter(ParameterSetName = "AzTableStorage", Mandatory = $true)]
+        [String]$storageAccountName,
 		
-		[Parameter(ParameterSetName="AzStorageEmulator",Mandatory=$true)]
+        [Parameter(ParameterSetName = "AzStorageEmulator", Mandatory = $true)]
         [switch]$UseStorageEmulator
-	)
+    )
 	
-	# Validating name
-	if ($TableName.Contains("_") -or $TableName.Contains("-"))
-	{
-		throw "Invalid table name: $TableName"
-	} 
+    # Validating name
+    if ($TableName.Contains("_") -or $TableName.Contains("-")) {
+        throw "Invalid table name: $TableName"
+    } 
 
-	$nullTableErrorMessage = [string]::Empty
+    $nullTableErrorMessage = [string]::Empty
 
-	if ($PSCmdlet.ParameterSetName -ne "AzStorageEmulator")
-	{
-		$keys = Invoke-AzResourceAction -Action listKeys -ResourceType "Microsoft.Storage/storageAccounts" -ApiVersion "2017-10-01" -ResourceGroupName $resourceGroup -Name $storageAccountName -Force
+    if ($PSCmdlet.ParameterSetName -ne "AzStorageEmulator") {
+        #$keys = Invoke-AzResourceAction -Action listKeys -ResourceType "Microsoft.Storage/storageAccounts" -ApiVersion "2017-10-01" -ResourceGroupName $resourceGroup -Name $storageAccountName -Force 
+        if ($keys -ne $null) {
+            if ($PSCmdlet.ParameterSetName -eq "AzTableStorage" ) {
+                $key = (($ENV:AzureWebJobsStorage).split(';') | ConvertFrom-StringData | ConvertTo-Json | ConvertFrom-Json).AccountKey
+                $endpoint = "https://{0}.table.core.windows.net"
+                $nullTableErrorMessage = "Table $TableName could not be retrieved from $storageAccountName on resource group $resourceGroupName"
+            }
+            else {
+                # Future Cosmos implementation
+                # $key = $keys.primaryMasterKey
+                # $endpoint = "https://{0}.table.Cosmos.azure.com"
+                # $nullTableErrorMessage = "Table $TableName could not be retrieved from $<<<TDB VAR>>> on resource group $resourceGroupName"
+            }
+        }
+        else {
+            throw "An error ocurred while obtaining keys from $storageAccountName."    
+        }
 
-		if ($keys -ne $null)
-		{
-			if ($PSCmdlet.ParameterSetName -eq "AzTableStorage" )
-			{
-				$key = $keys.keys[0].value
-				$endpoint = "https://{0}.table.core.windows.net"
-				$nullTableErrorMessage = "Table $TableName could not be retrieved from $storageAccountName on resource group $resourceGroupName"
-			}
-			else
-			{
-				# Future Cosmos implementation
-				# $key = $keys.primaryMasterKey
-				# $endpoint = "https://{0}.table.Cosmos.azure.com"
-				# $nullTableErrorMessage = "Table $TableName could not be retrieved from $<<<TDB VAR>>> on resource group $resourceGroupName"
-			}
-		}
-		else
-		{
-			throw "An error ocurred while obtaining keys from $storageAccountName."    
-		}
+        $connString = [string]::Format("DefaultEndpointsProtocol=https;AccountName={0};AccountKey={1};TableEndpoint=$endpoint", $storageAccountName, $key)
+        [Microsoft.Azure.Cosmos.Table.CloudStorageAccount]$storageAccount = [Microsoft.Azure.Cosmos.Table.CloudStorageAccount]::Parse($connString)
+        [Microsoft.Azure.Cosmos.Table.CloudTableClient]$TableClient = [Microsoft.Azure.Cosmos.Table.CloudTableClient]::new($storageAccount.TableEndpoint, $storageAccount.Credentials)
+        [Microsoft.Azure.Cosmos.Table.CloudTable]$Table = [Microsoft.Azure.Cosmos.Table.CloudTable]$TableClient.GetTableReference($TableName)
 
-		$connString = [string]::Format("DefaultEndpointsProtocol=https;AccountName={0};AccountKey={1};TableEndpoint=$endpoint",$storageAccountName,$key)
-		[Microsoft.Azure.Cosmos.Table.CloudStorageAccount]$storageAccount = [Microsoft.Azure.Cosmos.Table.CloudStorageAccount]::Parse($connString)
-		[Microsoft.Azure.Cosmos.Table.CloudTableClient]$TableClient = [Microsoft.Azure.Cosmos.Table.CloudTableClient]::new($storageAccount.TableEndpoint,$storageAccount.Credentials)
-		[Microsoft.Azure.Cosmos.Table.CloudTable]$Table = [Microsoft.Azure.Cosmos.Table.CloudTable]$TableClient.GetTableReference($TableName)
+        $Table.CreateIfNotExistsAsync() | Out-Null
+    }
+    else {
+        # https://docs.microsoft.com/en-us/azure/storage/common/storage-use-emulator
+        $nullTableErrorMessage = "Table $TableName could not be retrieved from Azure Storage Emulator"
+        $connString = "DefaultEndpointsProtocol=http;AccountName=devstoreaccount1;AccountKey=Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw==;TableEndpoint=http://127.0.0.1:10002/devstoreaccount1"
+        [Microsoft.Azure.Cosmos.Table.CloudStorageAccount]$storageAccount = [Microsoft.Azure.Cosmos.Table.CloudStorageAccount]::Parse($connString)
+        [Microsoft.Azure.Cosmos.Table.CloudTableClient]$TableClient = [Microsoft.Azure.Cosmos.Table.CloudTableClient]::new($storageAccount.TableEndpoint, $storageAccount.Credentials)
+        [Microsoft.Azure.Cosmos.Table.CloudTable]$Table = [Microsoft.Azure.Cosmos.Table.CloudTable]$TableClient.GetTableReference($TableName)
 
-		$Table.CreateIfNotExistsAsync() | Out-Null
-	}
-	else
-	{
-		# https://docs.microsoft.com/en-us/azure/storage/common/storage-use-emulator
-		$nullTableErrorMessage = "Table $TableName could not be retrieved from Azure Storage Emulator"
-		$connString ="DefaultEndpointsProtocol=http;AccountName=devstoreaccount1;AccountKey=Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw==;TableEndpoint=http://127.0.0.1:10002/devstoreaccount1"
-		[Microsoft.Azure.Cosmos.Table.CloudStorageAccount]$storageAccount = [Microsoft.Azure.Cosmos.Table.CloudStorageAccount]::Parse($connString)
-		[Microsoft.Azure.Cosmos.Table.CloudTableClient]$TableClient = [Microsoft.Azure.Cosmos.Table.CloudTableClient]::new($storageAccount.TableEndpoint,$storageAccount.Credentials)
-		[Microsoft.Azure.Cosmos.Table.CloudTable]$Table = [Microsoft.Azure.Cosmos.Table.CloudTable]$TableClient.GetTableReference($TableName)
+        $Table.CreateIfNotExistsAsync() | Out-Null
+    }
 
-		$Table.CreateIfNotExistsAsync() | Out-Null
-	}
+    # Checking if there a table got returned
+    if ($Table -eq $null) {
+        throw $nullTableErrorMessage
+    }
 
-	# Checking if there a table got returned
-	if ($Table -eq $null)
-	{
-		throw $nullTableErrorMessage
-	}
-
-	return $Table
+    return $Table
 }
 
-function Add-AzTableRow
-{
-	<#
+function Add-AzTableRow {
+    <#
 	.SYNOPSIS
 		Adds a row/entity to a specified table
 	.DESCRIPTION
@@ -226,50 +204,45 @@ function Add-AzTableRow
 		# Adding a row
 		Add-AzTableRow -Table $Table -PartitionKey $PartitionKey -RowKey ([guid]::NewGuid().tostring()) -property @{"firstName"="Paulo";"lastName"="Costa";"role"="presenter"}
 	#>
-	[CmdletBinding()]
-	param
-	(
-		[Parameter(Mandatory=$true)]
-		$Table,
+    [CmdletBinding()]
+    param
+    (
+        [Parameter(Mandatory = $true)]
+        $Table,
 		
-		[Parameter(Mandatory=$true)]
-		[AllowEmptyString()]
+        [Parameter(Mandatory = $true)]
+        [AllowEmptyString()]
         [String]$PartitionKey,
 
-		[Parameter(Mandatory=$true)]
-		[AllowEmptyString()]
+        [Parameter(Mandatory = $true)]
+        [AllowEmptyString()]
         [String]$RowKey,
 
-		[Parameter(Mandatory=$false)]
+        [Parameter(Mandatory = $false)]
         [hashtable]$property,
-		[Switch]$UpdateExisting
-	)
+        [Switch]$UpdateExisting
+    )
 	
-	# Creates the table entity with mandatory PartitionKey and RowKey arguments
-	$entity = New-Object -TypeName "Microsoft.Azure.Cosmos.Table.DynamicTableEntity" -ArgumentList $PartitionKey, $RowKey
+    # Creates the table entity with mandatory PartitionKey and RowKey arguments
+    $entity = New-Object -TypeName "Microsoft.Azure.Cosmos.Table.DynamicTableEntity" -ArgumentList $PartitionKey, $RowKey
     
     # Adding the additional columns to the table entity
-	foreach ($prop in $property.Keys)
-	{
-		if ($prop -ne "TableTimestamp")
-		{
-			$entity.Properties.Add($prop, $property.Item($prop))
-		}
-	}
+    foreach ($prop in $property.Keys) {
+        if ($prop -ne "TableTimestamp") {
+            $entity.Properties.Add($prop, $property.Item($prop))
+        }
+    }
 
-    if ($UpdateExisting)
-	{
-		return ($Table.Execute([Microsoft.Azure.Cosmos.Table.TableOperation]::InsertOrReplace($entity)))
-	}
-	else
-	{
-		return ($Table.Execute([Microsoft.Azure.Cosmos.Table.TableOperation]::Insert($entity)))
-	}
+    if ($UpdateExisting) {
+        return ($Table.Execute([Microsoft.Azure.Cosmos.Table.TableOperation]::InsertOrReplace($entity)))
+    }
+    else {
+        return ($Table.Execute([Microsoft.Azure.Cosmos.Table.TableOperation]::Insert($entity)))
+    }
 }
 
-function Get-AzTableRowAll
-{
-	<#
+function Get-AzTableRowAll {
+    <#
 	.SYNOPSIS
 		Returns all rows/entities from a storage table - no Filtering
 	.DESCRIPTION
@@ -280,29 +253,27 @@ function Get-AzTableRowAll
 		# Getting all rows
 		Get-AzTableRowAll -Table $Table
 	#>
-	[CmdletBinding()]
-	param
-	(
-		[Parameter(Mandatory=$true)]
-		$Table
-	)
+    [CmdletBinding()]
+    param
+    (
+        [Parameter(Mandatory = $true)]
+        $Table
+    )
 
-	Write-Verbose $DeprecatedMessage -Verbose
+    Write-Verbose $DeprecatedMessage -Verbose
 
-	# No Filtering
+    # No Filtering
 
-	$Result = Get-AzTableRow -Table $Table
+    $Result = Get-AzTableRow -Table $Table
 
-	if (-not [string]::IsNullOrEmpty($Result))
-	{
-		return $Result
-	}
+    if (-not [string]::IsNullOrEmpty($Result)) {
+        return $Result
+    }
 
 }
 
-function Get-AzTableRowByPartitionKey
-{
-	<#
+function Get-AzTableRowByPartitionKey {
+    <#
 	.SYNOPSIS
 		Returns one or more rows/entities based on Partition Key
 	.DESCRIPTION
@@ -320,34 +291,32 @@ function Get-AzTableRowByPartitionKey
 		# Getting rows by partition key with a maximum number returned
 		Get-AzTableRowByPartitionKey -Table $Table -PartitionKey "mypartitionkey" -Top 10
 	#>
-	[CmdletBinding()]
-	param
-	(
-		[Parameter(Mandatory=$true)]
-		$Table,
+    [CmdletBinding()]
+    param
+    (
+        [Parameter(Mandatory = $true)]
+        $Table,
 
-		[Parameter(Mandatory=$true)]
-		[AllowEmptyString()]
-		[string]$PartitionKey,
+        [Parameter(Mandatory = $true)]
+        [AllowEmptyString()]
+        [string]$PartitionKey,
 
-		[Parameter(Mandatory=$false)]
-		[Nullable[Int32]]$Top = $null
-	)
+        [Parameter(Mandatory = $false)]
+        [Nullable[Int32]]$Top = $null
+    )
 	
-	Write-Verbose $DeprecatedMessage -Verbose
+    Write-Verbose $DeprecatedMessage -Verbose
 
-	# Filtering by Partition Key
-	$Result = Get-AzTableRow -Table $Table -PartitionKey $PartitionKey -Top $Top
+    # Filtering by Partition Key
+    $Result = Get-AzTableRow -Table $Table -PartitionKey $PartitionKey -Top $Top
 
-	if (-not [string]::IsNullOrEmpty($Result))
-	{
-		return $Result
-	}
+    if (-not [string]::IsNullOrEmpty($Result)) {
+        return $Result
+    }
 
 }
-function Get-AzTableRowByPartitionKeyRowKey
-{
-	<#
+function Get-AzTableRowByPartitionKeyRowKey {
+    <#
 	.SYNOPSIS
 		Returns one entity based on Partition Key and RowKey
 	.DESCRIPTION
@@ -367,39 +336,37 @@ function Get-AzTableRowByPartitionKeyRowKey
 		# Getting rows by Partition Key and Row Key, with a maximum number returned
 		Get-AzStorageTableRowByPartitionKeyRowKey -Table $Table -PartitionKey "partition1" -RowKey "id12345" -Top 10
 		#>
-	[CmdletBinding()]
-	param
-	(
-		[Parameter(Mandatory=$true)]
-		$Table,
+    [CmdletBinding()]
+    param
+    (
+        [Parameter(Mandatory = $true)]
+        $Table,
 
-		[Parameter(Mandatory=$true)]
-		[AllowEmptyString()]
-		[string]$PartitionKey,
+        [Parameter(Mandatory = $true)]
+        [AllowEmptyString()]
+        [string]$PartitionKey,
 
-		[Parameter(Mandatory=$true)]
-		[AllowEmptyString()]
-		[string]$RowKey,
+        [Parameter(Mandatory = $true)]
+        [AllowEmptyString()]
+        [string]$RowKey,
 
-		[Parameter(Mandatory=$false)]
-		[Nullable[Int32]]$Top = $null
-	)
+        [Parameter(Mandatory = $false)]
+        [Nullable[Int32]]$Top = $null
+    )
 	
-	# Filtering by Partition Key and Row Key
+    # Filtering by Partition Key and Row Key
 
-	Write-Verbose $DeprecatedMessage -Verbose
+    Write-Verbose $DeprecatedMessage -Verbose
 
-	$Result = Get-AzTableRow -Table $Table -PartitionKey $PartitionKey -RowKey $RowKey -Top $Top
+    $Result = Get-AzTableRow -Table $Table -PartitionKey $PartitionKey -RowKey $RowKey -Top $Top
 
-	if (-not [string]::IsNullOrEmpty($Result))
-	{
-		return $Result
-	}
+    if (-not [string]::IsNullOrEmpty($Result)) {
+        return $Result
+    }
 }
 
-function Get-AzTableRowByColumnName
-{
-	<#
+function Get-AzTableRowByColumnName {
+    <#
 	.SYNOPSIS
 		Returns one or more rows/entities based on a specified column and its value
 	.DESCRIPTION
@@ -423,52 +390,48 @@ function Get-AzTableRowByColumnName
 		# Getting row by firstname with a maximum number of rows returned
 		Get-AzTableRowByColumnName -Table $Table -ColumnName "firstName" -value "Paulo" -Operator Equal -Top 10
 	#>
-	[CmdletBinding()]
-	param
-	(
-		[Parameter(Mandatory=$true)]
-		$Table,
+    [CmdletBinding()]
+    param
+    (
+        [Parameter(Mandatory = $true)]
+        $Table,
 
-		[Parameter(Mandatory=$true)]
-		[string]$ColumnName,
+        [Parameter(Mandatory = $true)]
+        [string]$ColumnName,
 
-		[Parameter(ParameterSetName="byString",Mandatory=$true)]
-		[AllowEmptyString()]
-		[string]$Value,
+        [Parameter(ParameterSetName = "byString", Mandatory = $true)]
+        [AllowEmptyString()]
+        [string]$Value,
 
-		[Parameter(ParameterSetName="byGuid",Mandatory=$true)]
-		[guid]$GuidValue,
+        [Parameter(ParameterSetName = "byGuid", Mandatory = $true)]
+        [guid]$GuidValue,
 
-		[Parameter(Mandatory=$true)]
-		[validateSet("Equal","GreaterThan","GreaterThanOrEqual","LessThan" ,"LessThanOrEqual" ,"NotEqual")]
-		[string]$Operator,
+        [Parameter(Mandatory = $true)]
+        [validateSet("Equal", "GreaterThan", "GreaterThanOrEqual", "LessThan" , "LessThanOrEqual" , "NotEqual")]
+        [string]$Operator,
 
-		[Parameter(Mandatory=$false)]
-		[Nullable[Int32]]$Top = $null
-	)
+        [Parameter(Mandatory = $false)]
+        [Nullable[Int32]]$Top = $null
+    )
 
-	Write-Verbose $DeprecatedMessage -Verbose
+    Write-Verbose $DeprecatedMessage -Verbose
 
-	# Filtering by Columnn Name
+    # Filtering by Columnn Name
 
-	if ($PSCmdlet.ParameterSetName -eq "byString")
-	{			
-		Get-AzTableRow -Table $Table -ColumnName $ColumnName -value $Value -Operator $Operator -Top $Top
-	}
-	else
-	{
-		Get-AzTableRow -Table $Table -ColumnName $ColumnName -GuidValue $GuidValue -Operator $Operator -Top $Top
-	}
+    if ($PSCmdlet.ParameterSetName -eq "byString") {			
+        Get-AzTableRow -Table $Table -ColumnName $ColumnName -Value $Value -Operator $Operator -Top $Top
+    }
+    else {
+        Get-AzTableRow -Table $Table -ColumnName $ColumnName -GuidValue $GuidValue -Operator $Operator -Top $Top
+    }
 
-	if (-not [string]::IsNullOrEmpty($Result))
-	{
-		return $Result
-	}
+    if (-not [string]::IsNullOrEmpty($Result)) {
+        return $Result
+    }
 }
 
-function Get-AzTableRowByCustomFilter
-{
-	<#
+function Get-AzTableRowByCustomFilter {
+    <#
 	.SYNOPSIS
 		Returns one or more rows/entities based on custom Filter.
 	.DESCRIPTION
@@ -491,34 +454,32 @@ function Get-AzTableRowByCustomFilter
 		# Getting row by firstname by using text Filter directly with a maximum number of rows returned
 		Get-AzTableRowByCustomFilter -Table $Table -CustomFilter "(firstName eq 'User1') and (lastName eq 'LastName1')" -Top 10
 	#>
-	[CmdletBinding()]
-	param
-	(
-		[Parameter(Mandatory=$true)]
-		$Table,
+    [CmdletBinding()]
+    param
+    (
+        [Parameter(Mandatory = $true)]
+        $Table,
 
-		[Parameter(Mandatory=$true)]
-		[string]$CustomFilter,
+        [Parameter(Mandatory = $true)]
+        [string]$CustomFilter,
 
-		[Parameter(Mandatory=$false)]
-		[Nullable[Int32]]$Top = $null
-	)
+        [Parameter(Mandatory = $false)]
+        [Nullable[Int32]]$Top = $null
+    )
 	
-	Write-Verbose $DeprecatedMessage -Verbose
+    Write-Verbose $DeprecatedMessage -Verbose
 
-	# Custom Filter
+    # Custom Filter
 
-	$Result = Get-AzTableRow -Table $Table -CustomFilter $CustomFilter -Top $Top
+    $Result = Get-AzTableRow -Table $Table -CustomFilter $CustomFilter -Top $Top
 
-	if (-not [string]::IsNullOrEmpty($Result))
-	{
-		return $Result
-	}
+    if (-not [string]::IsNullOrEmpty($Result)) {
+        return $Result
+    }
 }
 
-function Get-AzTableRow
-{
-	<#
+function Get-AzTableRow {
+    <#
 	.SYNOPSIS
 		Used to return entities from a table with several options, this replaces all other Get-AzTable<XYZ> cmdlets.
 	.DESCRIPTION
@@ -569,133 +530,122 @@ function Get-AzTableRow
 		# Querying with a maximum number of rows returned
 		Get-AzTableRow -Table $Table -partitionKey NewYorkSite -Top 10
 	#>
-	[CmdletBinding()]
-	param
-	(
-		[Parameter(Mandatory=$true,ParameterSetName="GetAll")]
-		[Parameter(ParameterSetName="byPartitionKey")]
-		[Parameter(ParameterSetName="byPartRowKeys")]
-		[Parameter(ParameterSetName="byColummnString")]
-		[Parameter(ParameterSetName="byColummnGuid")]
-		[Parameter(ParameterSetName="byCustomFilter")]
-		$Table,
+    [CmdletBinding()]
+    param
+    (
+        [Parameter(Mandatory = $true, ParameterSetName = "GetAll")]
+        [Parameter(ParameterSetName = "byPartitionKey")]
+        [Parameter(ParameterSetName = "byPartRowKeys")]
+        [Parameter(ParameterSetName = "byColummnString")]
+        [Parameter(ParameterSetName = "byColummnGuid")]
+        [Parameter(ParameterSetName = "byCustomFilter")]
+        $Table,
 
-		[Parameter(ParameterSetName="GetAll")]
-		[Parameter(ParameterSetName="byPartitionKey")]
-		[Parameter(ParameterSetName="byPartRowKeys")]
-		[Parameter(ParameterSetName="byColummnString")]
-		[Parameter(ParameterSetName="byColummnGuid")]
-		[Parameter(ParameterSetName="byCustomFilter")]
-		[System.Collections.Generic.List[string]]$SelectColumn,
+        [Parameter(ParameterSetName = "GetAll")]
+        [Parameter(ParameterSetName = "byPartitionKey")]
+        [Parameter(ParameterSetName = "byPartRowKeys")]
+        [Parameter(ParameterSetName = "byColummnString")]
+        [Parameter(ParameterSetName = "byColummnGuid")]
+        [Parameter(ParameterSetName = "byCustomFilter")]
+        [System.Collections.Generic.List[string]]$SelectColumn,
 
-		[Parameter(Mandatory=$true,ParameterSetName="byPartitionKey")]
-		[Parameter(ParameterSetName="byPartRowKeys")]
-		[AllowEmptyString()]
-		[string]$PartitionKey,
+        [Parameter(Mandatory = $true, ParameterSetName = "byPartitionKey")]
+        [Parameter(ParameterSetName = "byPartRowKeys")]
+        [AllowEmptyString()]
+        [string]$PartitionKey,
 
-		[Parameter(Mandatory=$true,ParameterSetName="byPartRowKeys")]
-		[AllowEmptyString()]
-		[string]$RowKey,
+        [Parameter(Mandatory = $true, ParameterSetName = "byPartRowKeys")]
+        [AllowEmptyString()]
+        [string]$RowKey,
 
-		[Parameter(Mandatory=$true, ParameterSetName="byColummnString")]
-		[Parameter(ParameterSetName="byColummnGuid")]
-		[string]$ColumnName,
+        [Parameter(Mandatory = $true, ParameterSetName = "byColummnString")]
+        [Parameter(ParameterSetName = "byColummnGuid")]
+        [string]$ColumnName,
 
-		[Parameter(Mandatory=$true, ParameterSetName="byColummnString")]
-		[AllowEmptyString()]
-		[string]$Value,
+        [Parameter(Mandatory = $true, ParameterSetName = "byColummnString")]
+        [AllowEmptyString()]
+        [string]$Value,
 
-		[Parameter(ParameterSetName="byColummnGuid",Mandatory=$true)]
-		[guid]$GuidValue,
+        [Parameter(ParameterSetName = "byColummnGuid", Mandatory = $true)]
+        [guid]$GuidValue,
 
-		[Parameter(Mandatory=$true, ParameterSetName="byColummnString")]
-		[Parameter(ParameterSetName="byColummnGuid")]
-		[validateSet("Equal","GreaterThan","GreaterThanOrEqual","LessThan" ,"LessThanOrEqual" ,"NotEqual")]
-		[string]$Operator,
+        [Parameter(Mandatory = $true, ParameterSetName = "byColummnString")]
+        [Parameter(ParameterSetName = "byColummnGuid")]
+        [validateSet("Equal", "GreaterThan", "GreaterThanOrEqual", "LessThan" , "LessThanOrEqual" , "NotEqual")]
+        [string]$Operator,
 		
-		[Parameter(Mandatory=$true, ParameterSetName="byCustomFilter")]
-		[string]$CustomFilter,
+        [Parameter(Mandatory = $true, ParameterSetName = "byCustomFilter")]
+        [string]$CustomFilter,
 
-		[Parameter(Mandatory=$false)]
-		[Nullable[Int32]]$Top = $null
-	)
+        [Parameter(Mandatory = $false)]
+        [Nullable[Int32]]$Top = $null
+    )
 
-	$TableQuery = New-Object -TypeName "Microsoft.Azure.Cosmos.Table.TableQuery"
+    $TableQuery = New-Object -TypeName "Microsoft.Azure.Cosmos.Table.TableQuery"
 
-	# Building filters if any
-	if ($PSCmdlet.ParameterSetName -eq "byPartitionKey")
-	{
-		[string]$Filter = `
-			[Microsoft.Azure.Cosmos.Table.TableQuery]::GenerateFilterCondition("PartitionKey",`
-			[Microsoft.Azure.Cosmos.Table.QueryComparisons]::Equal,$PartitionKey)
-	}
-	elseif ($PSCmdlet.ParameterSetName -eq "byPartRowKeys")
-	{
-		[string]$FilterA = `
-			[Microsoft.Azure.Cosmos.Table.TableQuery]::GenerateFilterCondition("PartitionKey",`
-			[Microsoft.Azure.Cosmos.Table.QueryComparisons]::Equal,$PartitionKey)
+    # Building filters if any
+    if ($PSCmdlet.ParameterSetName -eq "byPartitionKey") {
+        [string]$Filter = `
+            [Microsoft.Azure.Cosmos.Table.TableQuery]::GenerateFilterCondition("PartitionKey", `
+                [Microsoft.Azure.Cosmos.Table.QueryComparisons]::Equal, $PartitionKey)
+    }
+    elseif ($PSCmdlet.ParameterSetName -eq "byPartRowKeys") {
+        [string]$FilterA = `
+            [Microsoft.Azure.Cosmos.Table.TableQuery]::GenerateFilterCondition("PartitionKey", `
+                [Microsoft.Azure.Cosmos.Table.QueryComparisons]::Equal, $PartitionKey)
 
-		[string]$FilterB = `
-			[Microsoft.Azure.Cosmos.Table.TableQuery]::GenerateFilterCondition("RowKey",`
-			[Microsoft.Azure.Cosmos.Table.QueryComparisons]::Equal,$RowKey)
+        [string]$FilterB = `
+            [Microsoft.Azure.Cosmos.Table.TableQuery]::GenerateFilterCondition("RowKey", `
+                [Microsoft.Azure.Cosmos.Table.QueryComparisons]::Equal, $RowKey)
 
-		[string]$Filter = [Microsoft.Azure.Cosmos.Table.TableQuery]::CombineFilters($FilterA,"and",$FilterB)
-	}
-	elseif ($PSCmdlet.ParameterSetName -eq "byColummnString")
-	{
-		[string]$Filter = `
-			[Microsoft.Azure.Cosmos.Table.TableQuery]::GenerateFilterCondition($ColumnName,[Microsoft.Azure.Cosmos.Table.QueryComparisons]::$Operator,$Value)
-	}
-	elseif ($PSCmdlet.ParameterSetName -eq "byColummnGuid")
-	{
-		[string]$Filter = `
-			[Microsoft.Azure.Cosmos.Table.TableQuery]::GenerateFilterConditionForGuid($ColumnName,[Microsoft.Azure.Cosmos.Table.QueryComparisons]::$Operator,$GuidValue)
-	}
-	elseif ($PSCmdlet.ParameterSetName -eq "byCustomFilter")
-	{
-		[string]$Filter = $CustomFilter
-	}
-	else
-	{
-		[string]$filter = $null	
-	}
+        [string]$Filter = [Microsoft.Azure.Cosmos.Table.TableQuery]::CombineFilters($FilterA, "and", $FilterB)
+    }
+    elseif ($PSCmdlet.ParameterSetName -eq "byColummnString") {
+        [string]$Filter = `
+            [Microsoft.Azure.Cosmos.Table.TableQuery]::GenerateFilterCondition($ColumnName, [Microsoft.Azure.Cosmos.Table.QueryComparisons]::$Operator, $Value)
+    }
+    elseif ($PSCmdlet.ParameterSetName -eq "byColummnGuid") {
+        [string]$Filter = `
+            [Microsoft.Azure.Cosmos.Table.TableQuery]::GenerateFilterConditionForGuid($ColumnName, [Microsoft.Azure.Cosmos.Table.QueryComparisons]::$Operator, $GuidValue)
+    }
+    elseif ($PSCmdlet.ParameterSetName -eq "byCustomFilter") {
+        [string]$Filter = $CustomFilter
+    }
+    else {
+        [string]$filter = $null	
+    }
 	
-	# Adding filter if not null
-	if (-not [string]::IsNullOrEmpty($Filter))
-	{
-		$TableQuery.FilterString = $Filter
-	}
+    # Adding filter if not null
+    if (-not [string]::IsNullOrEmpty($Filter)) {
+        $TableQuery.FilterString = $Filter
+    }
 
-	# Selecting columns if specified
-	if ($null -ne $SelectColumn){
-		$TableQuery.SelectColumns = $SelectColumn
-	}
+    # Selecting columns if specified
+    if ($null -ne $SelectColumn) {
+        $TableQuery.SelectColumns = $SelectColumn
+    }
 
-	# Set number of rows to return.
-	if ($null -ne $Top)
-	{
-		$TableQuery.TakeCount = $Top
-	}
+    # Set number of rows to return.
+    if ($null -ne $Top) {
+        $TableQuery.TakeCount = $Top
+    }
 
-	# Getting results
-	if (($TableQuery.FilterString -ne $null) -or ($PSCmdlet.ParameterSetName -eq "GetAll"))
-	{
-		$Result = ExecuteQueryAsync -Table $Table -TableQuery $TableQuery
+    # Getting results
+    if (($TableQuery.FilterString -ne $null) -or ($PSCmdlet.ParameterSetName -eq "GetAll")) {
+        $Result = ExecuteQueryAsync -Table $Table -TableQuery $TableQuery
 
-		# if (-not [string]::IsNullOrEmpty($Result.Result.Results))
-		# {
-		# 	return (GetPSObjectFromEntity($Result.Result.Results))
-		# }
+        # if (-not [string]::IsNullOrEmpty($Result.Result.Results))
+        # {
+        # 	return (GetPSObjectFromEntity($Result.Result.Results))
+        # }
 
-		if (-not [string]::IsNullOrEmpty($Result))
-		{
-			return (GetPSObjectFromEntity($Result))
-		}
-	}
+        if (-not [string]::IsNullOrEmpty($Result)) {
+            return (GetPSObjectFromEntity($Result))
+        }
+    }
 }
-function Update-AzTableRow
-{
-	<#
+function Update-AzTableRow {
+    <#
 	.SYNOPSIS
 		Updates a table entity
 	.DESCRIPTION
@@ -716,47 +666,43 @@ function Update-AzTableRow
 		$person.lastName = "New Last Name"
 		$person | Update-AzTableRow -Table $Table
 	#>
-	[CmdletBinding()]
-	param
-	(
-		[Parameter(Mandatory=$true)]
-		$Table,
+    [CmdletBinding()]
+    param
+    (
+        [Parameter(Mandatory = $true)]
+        $Table,
 
-		[Parameter(Mandatory=$true,ValueFromPipeline=$true)]
-		$entity
-	)
+        [Parameter(Mandatory = $true, ValueFromPipeline = $true)]
+        $entity
+    )
     
     # Only one entity at a time can be updated
     $updatedEntityList = @()
     $updatedEntityList += $entity
 
-    if ($updatedEntityList.Count -gt 1)
-    {
+    if ($updatedEntityList.Count -gt 1) {
         throw "Update operation can happen on only one entity at a time, not in a list/array of entities."
     }
 
-	$updatedEntity = New-Object -TypeName "Microsoft.Azure.Cosmos.Table.DynamicTableEntity" -ArgumentList $entity.PartitionKey, $entity.RowKey
+    $updatedEntity = New-Object -TypeName "Microsoft.Azure.Cosmos.Table.DynamicTableEntity" -ArgumentList $entity.PartitionKey, $entity.RowKey
 	
-	# Iterating over PS Object properties to add to the updated entity 
-	foreach ($prop in $entity.psobject.Properties)
-	{
-		if (($prop.name -ne "PartitionKey") -and ($prop.name -ne "RowKey") -and ($prop.name -ne "Timestamp") -and ($prop.name -ne "Etag") -and ($prop.name -ne "TableTimestamp"))
-		{
-			$updatedEntity.Properties.Add($prop.name, $prop.Value)
-		}
-	}
+    # Iterating over PS Object properties to add to the updated entity 
+    foreach ($prop in $entity.psobject.Properties) {
+        if (($prop.name -ne "PartitionKey") -and ($prop.name -ne "RowKey") -and ($prop.name -ne "Timestamp") -and ($prop.name -ne "Etag") -and ($prop.name -ne "TableTimestamp")) {
+            $updatedEntity.Properties.Add($prop.name, $prop.Value)
+        }
+    }
 
-	$updatedEntity.ETag = $entity.Etag
-	$updatedEntity.Timestamp = $entity.TableTimestamp
+    $updatedEntity.ETag = $entity.Etag
+    $updatedEntity.Timestamp = $entity.TableTimestamp
 
     # Updating the dynamic table entity to the table
     # return ($Table.ExecuteAsync([Microsoft.Azure.Cosmos.Table.TableOperation]::InsertOrMerge($updatedEntity)))
-	return ($Table.Execute([Microsoft.Azure.Cosmos.Table.TableOperation]::InsertOrMerge($updatedEntity)))
+    return ($Table.Execute([Microsoft.Azure.Cosmos.Table.TableOperation]::InsertOrMerge($updatedEntity)))
 }
 
-function Remove-AzTableRow
-{
-	<#
+function Remove-AzTableRow {
+    <#
 	.SYNOPSIS
 		Remove-AzTableRow - Removes a specified table row
 	.DESCRIPTION
@@ -784,121 +730,104 @@ function Remove-AzTableRow
 		# Deleting everything
 		Get-AzTableRowAll -Table $Table | Remove-AzTableRow -Table $Table
 	#>
-	[CmdletBinding()]
-	param
-	(
-		[Parameter(Mandatory=$true)]
-		$Table,
+    [CmdletBinding()]
+    param
+    (
+        [Parameter(Mandatory = $true)]
+        $Table,
 
-		[Parameter(Mandatory=$true,ValueFromPipeline=$true,ParameterSetName="byEntityPSObjectObject")]
-		$entity,
+        [Parameter(Mandatory = $true, ValueFromPipeline = $true, ParameterSetName = "byEntityPSObjectObject")]
+        $entity,
 
-		[Parameter(Mandatory=$true,ParameterSetName="byPartitionandRowKeys")]
-		[AllowEmptyString()]
-		[string]$PartitionKey,
+        [Parameter(Mandatory = $true, ParameterSetName = "byPartitionandRowKeys")]
+        [AllowEmptyString()]
+        [string]$PartitionKey,
 
-		[Parameter(Mandatory=$true,ParameterSetName="byPartitionandRowKeys")]
-		[AllowEmptyString()]
-		[string]$RowKey
-	)
+        [Parameter(Mandatory = $true, ParameterSetName = "byPartitionandRowKeys")]
+        [AllowEmptyString()]
+        [string]$RowKey
+    )
 
-	begin
-	{
-		$updatedEntityList = @()
-		$updatedEntityList += $entity
+    begin {
+        $updatedEntityList = @()
+        $updatedEntityList += $entity
 
-		if ($updatedEntityList.Count -gt 1)
-		{
-			throw "Delete operation cannot happen on an array of entities, altough you can pipe multiple items."
-		}
+        if ($updatedEntityList.Count -gt 1) {
+            throw "Delete operation cannot happen on an array of entities, altough you can pipe multiple items."
+        }
 		
-		$Results = @()
-	}
+        $Results = @()
+    }
 	
-	process
-	{
-		if ($PSCmdlet.ParameterSetName -eq "byEntityPSObjectObject")
-		{
-			$PartitionKey = $entity.PartitionKey
-			$RowKey = $entity.RowKey
-		}
+    process {
+        if ($PSCmdlet.ParameterSetName -eq "byEntityPSObjectObject") {
+            $PartitionKey = $entity.PartitionKey
+            $RowKey = $entity.RowKey
+        }
 
-		$TableQuery = New-Object -TypeName "Microsoft.Azure.Cosmos.Table.TableQuery"
-		[string]$Filter =  "(PartitionKey eq '$($PartitionKey)') and (RowKey eq '$($RowKey)')"
-		$TableQuery.FilterString = $Filter
-		$itemToDelete = ExecuteQueryAsync -Table $Table -TableQuery $TableQuery
+        $TableQuery = New-Object -TypeName "Microsoft.Azure.Cosmos.Table.TableQuery"
+        [string]$Filter = "(PartitionKey eq '$($PartitionKey)') and (RowKey eq '$($RowKey)')"
+        $TableQuery.FilterString = $Filter
+        $itemToDelete = ExecuteQueryAsync -Table $Table -TableQuery $TableQuery
 
-		if ($itemToDelete -ne $null)
-		{
-			# Converting DynamicTableEntity to TableEntity for deletion
-			$entityToDelete = New-Object -TypeName "Microsoft.Azure.Cosmos.Table.TableEntity"
-			$entityToDelete.ETag = $itemToDelete.Etag
-			$entityToDelete.PartitionKey = $itemToDelete.PartitionKey
-			$entityToDelete.RowKey = $itemToDelete.RowKey
+        if ($itemToDelete -ne $null) {
+            # Converting DynamicTableEntity to TableEntity for deletion
+            $entityToDelete = New-Object -TypeName "Microsoft.Azure.Cosmos.Table.TableEntity"
+            $entityToDelete.ETag = $itemToDelete.Etag
+            $entityToDelete.PartitionKey = $itemToDelete.PartitionKey
+            $entityToDelete.RowKey = $itemToDelete.RowKey
 
-			$Results += $Table.Execute([Microsoft.Azure.Cosmos.Table.TableOperation]::Delete($entityToDelete))
-		}
-	}
+            $Results += $Table.Execute([Microsoft.Azure.Cosmos.Table.TableOperation]::Delete($entityToDelete))
+        }
+    }
 	
-	end
-	{
-		return ,$Results
-	}
+    end {
+        return , $Results
+    }
 }
 
 # Aliases
 
-If (-not (Get-Alias -Name Add-StorageTableRow -ErrorAction SilentlyContinue))
-{
-	New-Alias -Name Add-StorageTableRow -Value Add-AzTableRow
+If (-not (Get-Alias -Name Add-StorageTableRow -ErrorAction SilentlyContinue)) {
+    New-Alias -Name Add-StorageTableRow -Value Add-AzTableRow
 }
 
-If (-not (Get-Alias -Name Add-AzureStorageTableRow -ErrorAction SilentlyContinue))
-{
-	New-Alias -Name Add-AzureStorageTableRow -Value Add-AzTableRow
+If (-not (Get-Alias -Name Add-AzureStorageTableRow -ErrorAction SilentlyContinue)) {
+    New-Alias -Name Add-AzureStorageTableRow -Value Add-AzTableRow
 }
 
-If (-not (Get-Alias -Name Get-AzureStorageTableTable -ErrorAction SilentlyContinue))
-{
-	New-Alias -Name Get-AzureStorageTableTable -Value Get-AzTableTable
+If (-not (Get-Alias -Name Get-AzureStorageTableTable -ErrorAction SilentlyContinue)) {
+    New-Alias -Name Get-AzureStorageTableTable -Value Get-AzTableTable
 }
 
-If (-not (Get-Alias -Name Get-AzureStorageTableRowAll -ErrorAction SilentlyContinue))
-{
-	New-Alias -Name Get-AzureStorageTableRowAll -Value Get-AzTableRowAll
+If (-not (Get-Alias -Name Get-AzureStorageTableRowAll -ErrorAction SilentlyContinue)) {
+    New-Alias -Name Get-AzureStorageTableRowAll -Value Get-AzTableRowAll
 }
 
-If (-not (Get-Alias -Name Get-AzureStorageTableRowByPartitionKey -ErrorAction SilentlyContinue))
-{
-	New-Alias -Name Get-AzureStorageTableRowByPartitionKey -Value Get-AzTableRowByPartitionKey
+If (-not (Get-Alias -Name Get-AzureStorageTableRowByPartitionKey -ErrorAction SilentlyContinue)) {
+    New-Alias -Name Get-AzureStorageTableRowByPartitionKey -Value Get-AzTableRowByPartitionKey
 }
 
-If (-not (Get-Alias -Name Get-AzureStorageTableRowByPartitionKeyRowKey -ErrorAction SilentlyContinue))
-{
-	New-Alias -Name Get-AzureStorageTableRowByPartitionKeyRowKey -Value Get-AzTableRowByPartitionKeyRowKey
+If (-not (Get-Alias -Name Get-AzureStorageTableRowByPartitionKeyRowKey -ErrorAction SilentlyContinue)) {
+    New-Alias -Name Get-AzureStorageTableRowByPartitionKeyRowKey -Value Get-AzTableRowByPartitionKeyRowKey
 }
 
-If (-not (Get-Alias -Name Get-AzureStorageTableRowByColumnName -ErrorAction SilentlyContinue))
-{
-	New-Alias -Name Get-AzureStorageTableRowByColumnName -Value Get-AzTableRowByColumnName
+If (-not (Get-Alias -Name Get-AzureStorageTableRowByColumnName -ErrorAction SilentlyContinue)) {
+    New-Alias -Name Get-AzureStorageTableRowByColumnName -Value Get-AzTableRowByColumnName
 }
 
-If (-not (Get-Alias -Name Get-AzureStorageTableRowByCustomFilter -ErrorAction SilentlyContinue))
-{
-	New-Alias -Name Get-AzureStorageTableRowByCustomFilter -Value Get-AzTableRowByCustomFilter
+If (-not (Get-Alias -Name Get-AzureStorageTableRowByCustomFilter -ErrorAction SilentlyContinue)) {
+    New-Alias -Name Get-AzureStorageTableRowByCustomFilter -Value Get-AzTableRowByCustomFilter
 }
 
-If (-not (Get-Alias -Name Get-AzureStorageTableRow -ErrorAction SilentlyContinue))
-{
-	New-Alias -Name Get-AzureStorageTableRow -Value Get-AzTableRow
+If (-not (Get-Alias -Name Get-AzureStorageTableRow -ErrorAction SilentlyContinue)) {
+    New-Alias -Name Get-AzureStorageTableRow -Value Get-AzTableRow
 }
 
-If (-not (Get-Alias -Name Update-AzureStorageTableRow -ErrorAction SilentlyContinue))
-{
-	New-Alias -Name Update-AzureStorageTableRow -Value Update-AzTableRow
+If (-not (Get-Alias -Name Update-AzureStorageTableRow -ErrorAction SilentlyContinue)) {
+    New-Alias -Name Update-AzureStorageTableRow -Value Update-AzTableRow
 }
 
-If (-not (Get-Alias -Name Remove-AzureStorageTableRow -ErrorAction SilentlyContinue))
-{
-	New-Alias -Name Remove-AzureStorageTableRow -Value Remove-AzTableRow
+If (-not (Get-Alias -Name Remove-AzureStorageTableRow -ErrorAction SilentlyContinue)) {
+    New-Alias -Name Remove-AzureStorageTableRow -Value Remove-AzTableRow
 }
