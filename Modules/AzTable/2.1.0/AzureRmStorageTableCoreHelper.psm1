@@ -766,7 +766,7 @@ function Remove-AzTableRow {
         }
 
         $TableQuery = New-Object -TypeName "Microsoft.Azure.Cosmos.Table.TableQuery"
-        [string]$Filter = "(PartitionKey eq '$($PartitionKey)') and (RowKey eq '$($RowKey)')"
+        $Filter = "(PartitionKey eq '$($PartitionKey)') and (RowKey eq '$($RowKey)')"
         $TableQuery.FilterString = $Filter
         $itemToDelete = ExecuteQueryAsync -Table $Table -TableQuery $TableQuery
 
@@ -779,6 +779,7 @@ function Remove-AzTableRow {
 
             $Results += $Table.Execute([Microsoft.Azure.Cosmos.Table.TableOperation]::Delete($entityToDelete))
         }
+        
     }
 	
     end {
