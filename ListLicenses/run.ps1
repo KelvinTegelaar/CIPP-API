@@ -31,7 +31,7 @@ else {
         }
         catch {
         }
-    } -ThrottleLimit 40
+    }
 }
 $ConvertTable = Import-Csv Conversiontable.csv
 
