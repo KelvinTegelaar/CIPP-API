@@ -20,9 +20,8 @@ $RawGraphRequest = if ($TenantFilter -ne "AllTenants") {
     }
 }
 else {
-    Get-Tenants | ForEach-Object -Parallel { 
+    Get-Tenants | ForEach-Object { 
         try {
-            Import-Module '.\GraphHelper.psm1'
             $Licrequest = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/subscribedSkus" -tenantid $_.defaultDomainName -ErrorAction Stop
             [PSCustomObject]@{
                 Tenant   = $_.defaultDomainName
