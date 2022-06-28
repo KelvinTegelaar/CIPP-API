@@ -29,10 +29,10 @@ $CurrentStandards = foreach ($tenant in $tenants) {
 
 if (!$CurrentStandards) {
     $CurrentStandards = [PSCustomObject]@{
-        displayName = $null
+        displayName = "No Standards applied"
         appliedBy   = $null
         appliedAt   = $null
-        standards   = $null
+        standards   = @{none = $null }
     }
 }
 # Associate values to output bindings by calling 'Push-OutputBinding'.
