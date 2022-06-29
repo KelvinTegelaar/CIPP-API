@@ -26,7 +26,7 @@ try {
                 $Rows = Get-AzTableRow -Table $table
             }
         }
-        Log-Request -API $APINAME -user $request.headers.'x-ms-client-principal'  -message "got excluded tenants list" -Sev "Info"
+        Log-Request -API $APINAME -user $request.headers.'x-ms-client-principal'  -message "got excluded licenses list" -Sev "Info"
         $body = @($Rows)
     }
 
@@ -44,20 +44,20 @@ try {
             property     = $AddObject
         }
         Add-AzTableRow @TableRow | Out-Null
-        Log-Request -API $APINAME -tenant $($name) -user $request.headers.'x-ms-client-principal'   -message "Added exclusion for customer $($name)" -Sev "Info" 
+        Log-Request -API $APINAME -user $request.headers.'x-ms-client-principal' -message "Added exclusion $($request.body.SKUName)" -Sev "Info" 
         $body = [pscustomobject]@{"Results" = "Success. We've added $($request.body.SKUName) to the excluded list." }
     }
 
     if ($Request.Query.RemoveExclusion) {
-        Remove-AzTableRow -Table $Table -RowKey $Request.Query.GUID -PartitionKey 'license'
-        Log-Request -API $APINAME -tenant $($name) -user $request.headers.'x-ms-client-principal'   -message "Removed exclusion for customer $($name)" -Sev "Info"
+        Remove-AzTableRow -Table $Table -RowKey "$($Request.Query.GUID)" -PartitionKey 'License'
+        Log-Request -API $APINAME -user $request.headers.'x-ms-client-principal' -message "Removed exclusion $($Request.Query.GUID)" -Sev "Info"
         $body = [pscustomobject]@{"Results" = "Success. We've removed $($Request.query.guid) from the excluded list." }
     }
 
 
 }
 catch {
-    Log-Request -API $APINAME -tenant $($name) -user $request.headers.'x-ms-client-principal'   -message "Exclusion API failed. $($_.Exception.Message)" -Sev "Error"
+    Log-Request -API $APINAME -user $request.headers.'x-ms-client-principal'   -message "Exclusion API failed. $($_.Exception.Message)" -Sev "Error"
     $body = [pscustomobject]@{"Results" = "Failed. $($_.Exception.Message)" }
 }
 

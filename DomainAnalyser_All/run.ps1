@@ -1,22 +1,15 @@
-param($tenant)
+param($DomainObject)
 
 Import-Module '.\DNSHelper.psm1'
 
-$Domain = $Tenant.Domain
+$Domain = $DomainObject.rowKey
 
 Log-request -API 'DomainAnalyser' -tenant $tenant.tenant -message "Starting Processing of $($Tenant.Domain)" -sev Debug
 $Result = [PSCustomObject]@{
-    Tenant               = $tenant.tenant
-    GUID                 = $($Tenant.Domain.Replace('.', ''))
+    Tenant               = $DomainObject.partitionKey
+    GUID                 = $($Domain.Replace('.', ''))
     LastRefresh          = $(Get-Date (Get-Date).ToUniversalTime() -UFormat '+%Y-%m-%dT%H:%M:%S.000Z')
     Domain               = $Domain
-    AuthenticationType   = $Tenant.authenticationType
-    IsAdminManaged       = $Tenant.isAdminManaged
-    IsDefault            = $Tenant.isDefault
-    IsInitial            = $Tenant.isInitial
-    IsRoot               = $Tenant.isRoot
-    IsVerified           = $Tenant.isVerified
-    SupportedServices    = $Tenant.supportedServices
     ExpectedSPFRecord    = ''
     ActualSPFRecord      = ''
     SPFPassAll           = ''
@@ -184,7 +177,14 @@ catch {
 
 # DKIM Check
 try {
-    $DkimRecord = Read-DkimRecord -Domain $Domain
+    $DkimParams = @{
+        Domain = $Domain
+    }
+    if (![string]::IsNullOrEmpty($DomainObject.DkimSelectors)) {
+        $DkimParams.Selectors = $DomainObject.DkimSelectors | ConvertFrom-Json
+    }
+
+    $DkimRecord = Read-DkimRecord @DkimParams
     
     $DkimRecordCount = $DkimRecord.Records | Measure-Object | Select-Object -ExpandProperty Count
     $DkimFailCount = $DkimRecord.ValidationFails | Measure-Object | Select-Object -ExpandProperty Count
@@ -206,7 +206,10 @@ $Result.Score = $ScoreDomain
 $Result.ScorePercentage = [int](($Result.Score / $Result.MaximumScore) * 100)
 $Result.ScoreExplanation = ($ScoreExplanation) -join ', '
 
+
+$DomainObject.DomainAnalyser = ($Result | ConvertTo-Json)
+
 # Final Write to Output
 Log-request -API 'DomainAnalyser' -tenant $tenant.tenant -message "DNS Analyser Finished For $($Result.Domain)" -sev Info
-Write-Output $Result
 
+Write-Output $DomainObject

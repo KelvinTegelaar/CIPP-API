@@ -30,16 +30,22 @@ try {
   $Stuff
 }
 catch {
-  Write-Host "$($_.Exception.Message)"
   $Stuff.Add([PSCustomObject]@{
-      Tenant        = $tenant.defaultDomainName
-      GUID          = $GUID
-      Id            = ""
-      Title         = ""
-      Category      = ""
-      EventDateTime = ""
-      Severity      = ""
-      Status        = ""
-      RawResult     = ""
+      Tenant         = $tenant.defaultDomainName
+      GUID           = $GUID
+      Id             = $incident.id
+      Status         = $incident.status
+      IncidentUrl    = $incident.incidentWebUrl
+      RedirectId     = $incident.redirectIncidentId
+      DisplayName    = $incident.displayName
+      Created        = $incident.createdDateTime
+      Updated        = $incident.lastUpdateDateTime
+      AssignedTo     = $incident.assignedTo
+      Classification = $incident.classification
+      Determination  = $incident.determination
+      Severity       = $incident.severity
+      Tags           = $incident.tags
+      Comments       = $incident.comments
     })
+  $Stuff
 }

@@ -208,6 +208,10 @@ foreach ($Row in $Rows) {
         Severity = $Row.Severity
     }
 }
+$Alerts = [System.Collections.ArrayList]@()
+if ($ENV:ApplicationID -eq "LongApplicationID" -or $null -eq $ENV:ApplicationID) { $Alerts.add("You have not yet setup your SAM Setup. Please go to the SAM Wizard in settings to finish setup") }
+if ($ENV:FUNCTIONS_EXTENSION_VERSION -ne "~4") { $Alerts.add("Your Function App is running on a Runtime version lower than 4. This impacts performance. Go to Settings -> Backend -> Function App Configuration -> Function Runtime Settings and set this to 4 for maximum performance") }
+if ($psversiontable.psversion.toString() -lt 7.2) { $Alerts.add("Your Function App is running on Powershell 7. This impacts performance. Go to Settings -> Backend -> Function App Configuration -> General Settings and set PowerShell Core Version to 7.2 for maximum performance") }
 
 $APIName = $TriggerMetadata.FunctionName
 Log-Request -user $request.headers.'x-ms-client-principal' -API $APINAME  -message "Accessed this API" -Sev "Debug"
@@ -220,6 +224,7 @@ $dash = [PSCustomObject]@{
     RefreshTokenDate  = (Get-CronNextExecutionTime -Expression '0 0 * * 0').AddDays('-7').tostring('s') -split "T" | Select-Object -First 1
     ExchangeTokenDate = (Get-CronNextExecutionTime -Expression '0 0 * * 0').AddDays('-7').tostring('s') -split "T" | Select-Object -First 1
     LastLog           = @($Rows)
+    Alerts            = @($Alerts)
 }
 # Write to the Azure Functions log stream.
  

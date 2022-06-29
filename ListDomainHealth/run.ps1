@@ -5,6 +5,8 @@ param($Request, $TriggerMetadata)
 
 Import-Module .\DNSHelper.psm1
 
+$UserCreds = ([System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($request.headers.'x-ms-client-principal')) | ConvertFrom-Json)
+
 $APIName = $TriggerMetadata.FunctionName
 Log-Request -user $request.headers.'x-ms-client-principal' -API $APINAME -message 'Accessed this API' -Sev 'Debug'
 
@@ -15,6 +17,14 @@ $StatusCode = [HttpStatusCode]::OK
 try {
     if ($Request.Query.Action) {
         if ($Request.Query.Domain -match '^(((?!-))(xn--|_{1,1})?[a-z0-9-]{0,61}[a-z0-9]{1,1}\.)*(xn--)?([a-z0-9][a-z0-9\-]{0,60}|[a-z0-9-]{1,30}\.[a-z]{2,})$') {
+            $DomainTable = Get-CIPPTable -Table 'Domains'
+            $DomainQuery = @{
+                Table      = $DomainTable
+                ColumnName = 'RowKey'
+                Value      = $Request.Query.Domain
+                Operator   = 'Equal'
+            }
+            $DomainInfo = Get-AzTableRow @DomainQuery
             switch ($Request.Query.Action) {
                 'ReadSpfRecord' {
                     $SpfQuery = @{
@@ -40,6 +50,14 @@ try {
                     }
                     if ($Request.Query.Selector) {
                         $DkimQuery.Selectors = ($Request.Query.Selector).trim() -split '\s*,\s*'
+                        
+                        if ('admin' -in $UserCreds.userRoles -or 'editor' -in $UserCreds.userRoles) {
+                            $DomainInfo.DkimSelectors = ($DkimQuery.Selectors | ConvertTo-Json)
+                            $DomainInfo | Update-AzTableRow -Table $DomainTable
+                        }
+                    }
+                    elseif (![string]::IsNullOrEmpty($DomainInfo.DkimSelectors)) {
+                        $DkimQuery.Selectors = ($DomainInfo.DkimSelectors | ConvertFrom-Json)
                     }
                     $Body = Read-DkimRecord @DkimQuery
                 }
