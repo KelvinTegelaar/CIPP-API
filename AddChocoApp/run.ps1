@@ -32,7 +32,7 @@ $Results = foreach ($Tenant in $tenants) {
             assignTo        = $assignTo
             IntuneBody      = $intunebody
         } | ConvertTo-Json -Depth 15
-        $JSONFile = New-Item -Path ".\ChocoApps.Cache\$(New-Guid)" -Value $CompleteObject -Force -ErrorAction Stop
+        $JSONFile = New-Item -Path ".\ChocoApps.Cache\$((New-Guid).GUID)" -Value $CompleteObject -Force -ErrorAction Stop
         "Succesfully added Choco App for $($Tenant) to queue."
         Log-Request -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $tenant -message "Chocolatey Application $($intunebody.Displayname) queued to add" -Sev "Info"
     }

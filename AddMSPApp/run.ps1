@@ -61,7 +61,7 @@ $Results = foreach ($Tenant in $tenants) {
             type            = "MSPApp"
             MSPAppName      = $RMMApp.RMMName.value
         } | ConvertTo-Json -Depth 15
-        $JSONFile = New-Item -Path ".\ChocoApps.Cache\$(New-Guid)" -Value $CompleteObject -Force -ErrorAction Stop
+        $JSONFile = New-Item -Path ".\ChocoApps.Cache\$((New-Guid).GUID)" -Value $CompleteObject -Force -ErrorAction Stop
         "Successfully added MSP App for $($Tenant.defaultDomainName) to queue. "
         Log-Request -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $tenant.defaultDomainName -message "MSP Application $($intunebody.Displayname) queued to add" -Sev "Info"
     }

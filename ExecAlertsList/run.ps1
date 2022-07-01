@@ -28,7 +28,7 @@ if ($request.query.GUID) {
     }
 }
 else {
-    $RunningGUID = New-Guid
+    $RunningGUID = (New-Guid).GUID
     Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
             StatusCode = [HttpStatusCode]::OK
             Body       = @{ GUID = $RunningGUID }
