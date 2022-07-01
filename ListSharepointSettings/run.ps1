@@ -13,8 +13,7 @@ Write-Host "PowerShell HTTP trigger function processed a request."
 # Interact with query parameters or the body of the request.
 $TenantFilter = $Request.Query.TenantFilter
 try {
-    $body = '{"deletedUserPersonalSiteRetentionPeriodInDays":360}'
-    $GraphRequest = New-GraphPostRequest -tenantid $TenantFilter -Uri "https://graph.microsoft.com/beta/admin/sharepoint/settings" -AsApp $true -Type patch -Body $body -ContentType "application/json"
+    $GraphRequest = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/deviceManagement/groupPolicyConfigurations('2eaca87d-9808-4dac-a82e-e465e389f4cc')/definitionValues?`$expand=definition(`$select=id,classType,displayName,policyType,hasRelatedDefinitions,version,minUserCspVersion,minDeviceCspVersion)" -tenantid $tenantfilter | ConvertTo-Json -Depth 10
     $StatusCode = [HttpStatusCode]::OK
 }
 catch {
@@ -25,5 +24,5 @@ catch {
 # Associate values to output bindings by calling 'Push-OutputBinding'.
 Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
         StatusCode = $StatusCode
-        Body       = @($GraphRequest)
+        Body       = $GraphRequest
     })
