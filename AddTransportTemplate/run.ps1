@@ -8,7 +8,7 @@ Log-Request -user $request.headers.'x-ms-client-principal' -API $APINAME  -messa
 Write-Host ($request | ConvertTo-Json -Compress)
 
 try {        
-    $GUID = New-Guid
+    $GUID = (New-Guid).GUID
     New-Item Config -ItemType Directory -ErrorAction SilentlyContinue
     $JSON = if ($request.body.PowerShellCommand) {
         Write-Host "PowerShellCommand"
