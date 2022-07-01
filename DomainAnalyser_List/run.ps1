@@ -20,15 +20,27 @@ if (Test-Path .\Cache_DomainAnalyser) {
     foreach ($Result in $UnfilteredResults) { 
         $Object = $Result | ConvertFrom-Json
 
+        $MigratePartitionKey = @{
+            Table        = $DomainTable
+            PartitionKey = $Tenant.Tenant
+            RowKey       = $Tenant.Domain
+        }
+
+        $OldDomain = Get-AzTableRow @MigratePartitionKey
+
+        if ($OldDomain) {
+            $OldDomain | Remove-AzTableRow -Table $DomainTable
+        }
+
         $ExistingDomain = @{
             Table        = $DomainTable
             rowKey       = $Object.Domain
-            partitionKey = $Object.Tenant
+            partitionKey = 'TenantDomains'
         }
 
         $Domain = Get-AzTableRow @ExistingDomain
 
-        if (!$Domain -or $Domain.PartitionKey -eq $Object.Tenant) {
+        if (!$Domain) {
             Write-Host 'Adding domain from cache file'
             $DomainObject = @{
                 Table        = $DomainTable
@@ -42,13 +54,21 @@ if (Test-Path .\Cache_DomainAnalyser) {
                     MailProviders  = ''
                 }
             }
-            Add-AzTableRow @DomainObject | Out-Null
 
-            if ($Domain) { $Domain | Remove-AzTableRow -Table $DomainTable }
+            if ($OldDomain) {
+                $DomainObject.property.DkimSelectors = $OldDomain.DkimSelectors
+                $DomainObject.property.MailProviders = $OldDomain.MailProviders
+            }
+
+            Add-AzTableRow @DomainObject | Out-Null
         }
         else {
             Write-Host 'Updating domain from cache file'
             $Domain.DomainAnalyser = $Result
+            if ($OldDomain) {
+                $Domain.DkimSelectors = $OldDomain.DkimSelectors
+                $Domain.MailProviders = $OldDomain.MailProviders
+            }
             $Domain | Update-AzTableRow -Table $DomainTable | Out-Null
         }
         Remove-Item -Path ".\Cache_DomainAnalyser\$($Object.Domain).DomainAnalysis.json" | Out-Null
