@@ -6,7 +6,7 @@ param($Request, $TriggerMetadata)
 $APIName = $TriggerMetadata.FunctionName
 Log-Request -user $request.headers.'x-ms-client-principal' -API $APINAME  -message "Accessed this API" -Sev "Debug"
 
-$GUID = New-Guid
+$GUID = (New-Guid).GUID
 try { 
     if ($Request.body.rawJSON) {       
         if (!$Request.body.displayname) { throw "You must enter a displayname" }
