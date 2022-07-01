@@ -41,6 +41,12 @@ $Results = foreach ($Tenant in $tenants) {
             $installcommandline = "powershell.exe -executionpolicy bypass .\install.ps1 -InstallParam $($RMMApp.PackageName)"
             $UninstallCommandLine = "powershell.exe -executionpolicy bypass .\uninstall.ps1"
         }
+        'automate' { 
+            $installcommandline = "c:\windows\sysnative\windowspowershell\v1.0\powershell.exe -executionpolicy bypass .\install.ps1 -Server $($InstallParams.Server) -InstallerToken $($InstallParams.InstallerToken["$($tenant.customerId)"]) -LocationID $($InstallParams.LocationID["$($tenant.customerId)"])"
+            $UninstallCommandLine = "c:\windows\sysnative\windowspowershell\v1.0\powershell.exe -executionpolicy bypass .\uninstall.ps1 -Server $($InstallParams.Server)"
+            $DetectionScript = (Get-Content "AddMSPApp\automate.detection.ps1" -Raw) -replace "##SERVER##", $InstallParams.Server
+            $intuneBody.detectionRules[0].scriptContent = [Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes($DetectionScript))
+        }
     }
     $intuneBody.installCommandLine = $installcommandline
     $intuneBody.UninstallCommandLine = $UninstallCommandLine
@@ -56,7 +62,7 @@ $Results = foreach ($Tenant in $tenants) {
             MSPAppName      = $RMMApp.RMMName.value
         } | ConvertTo-Json -Depth 15
         $JSONFile = New-Item -Path ".\ChocoApps.Cache\$(New-Guid)" -Value $CompleteObject -Force -ErrorAction Stop
-        "Succesfully added MSP App for $($Tenant.defaultDomainName) to queue."
+        "Successfully added MSP App for $($Tenant.defaultDomainName) to queue. "
         Log-Request -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $tenant.defaultDomainName -message "MSP Application $($intunebody.Displayname) queued to add" -Sev "Info"
     }
     catch {

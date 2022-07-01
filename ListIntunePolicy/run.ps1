@@ -17,7 +17,6 @@ $urlname = $Request.Query.URLName
 try {
     if ($ID) {
         $GraphRequest = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/deviceManagement/$($urlname)('$ID')" -tenantid $tenantfilter
-
     }
     else {
 

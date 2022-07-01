@@ -16,15 +16,15 @@ $results = try {
         'tenantid'           = 'TenantId'
         'type'               = 'CIPPNotifications'
         'schedule'           = "Every 15 minutes"
-        'email'              = $Request.Body.Email
-        'webhook'            = $Request.Body.Webhook
-        "removeStandard"     = $Request.Body.removeStandard
-        "addStandardsDeploy" = $Request.Body.addStandardsDeploy
-        "tokenUpdater"       = $Request.Body.tokenUpdater
-        "addPolicy"          = $Request.Body.addPolicy
-        "removeUser"         = $Request.Body.removeUser
-        "addUser"            = $Request.Body.addUser
-        "addChocoApp"        = $Request.Body.addChocoApp
+        'email'              = "$($Request.Body.Email)"
+        'webhook'            = "$($Request.Body.Webhook)"
+        "removeStandard"     = [boolean]$Request.Body.removeStandard
+        "addStandardsDeploy" = [boolean]$Request.Body.addStandardsDeploy
+        "tokenUpdater"       = [boolean]$Request.Body.tokenUpdater
+        "addPolicy"          = [boolean]$Request.Body.addPolicy
+        "removeUser"         = [boolean]$Request.Body.removeUser
+        "addUser"            = [boolean]$Request.Body.addUser
+        "addChocoApp"        = [boolean]$Request.Body.addChocoApp
     }
     $TableRow = @{
         table        = $Table
@@ -36,7 +36,7 @@ $results = try {
     "succesfully set the configuration"
 }
 catch {
-    "Failed to set configuration"
+    "Failed to set configuration: $($_.Exception.message)"
 }
 
 
