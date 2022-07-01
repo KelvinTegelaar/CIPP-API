@@ -41,8 +41,8 @@ try {
 
             } 
             "deviceConfigurations" {
-                $Type = "Custom"
-                $Template = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/deviceManagement/$($urlname)/$($ID)" -tenantid $tenantfilter | Select-Object displayname, description, omaSettings
+                $Type = "Device"
+                $Template = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/deviceManagement/$($urlname)/$($ID)" -tenantid $tenantfilter | Select-Object displayname, description, omaSettings, '@odata.type'
                 $DisplayName = $template.displayName
                 $TemplateJson = ConvertTo-Json -InputObject $Template -Depth 10 -Compress
             }
