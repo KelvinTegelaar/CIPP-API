@@ -28,9 +28,9 @@ try {
     @{ Name = 'deviceModel'; Expression = { $_.DeviceModel } },
     @{ Name = 'deviceOS'; Expression = { $_.DeviceOS } },
     @{ Name = 'deviceType'; Expression = { $_.DeviceType } },
-    @{ Name = 'firstSync'; Expression = { $_.FirstSyncTime } },
-    @{ Name = 'lastSyncAttempt'; Expression = { $_.LastSyncAttemptTime } },
-    @{ Name = 'lastSuccessSync'; Expression = { $_.LastSuccessSync } },
+    @{ Name = 'firstSync'; Expression = { $_.FirstSyncTime.toString('s') } },
+    @{ Name = 'lastSyncAttempt'; Expression = { $_.LastSyncAttemptTime.toString('s') } },
+    @{ Name = 'lastSuccessSync'; Expression = { $_.LastSuccessSync.toString('s') } },
     @{ Name = 'status'; Expression = { $_.Status } }
 
     $StatusCode = [HttpStatusCode]::OK

@@ -1,0 +1,16 @@
+<ApplicationInfo xmlns:xsd="http://www.w3.org/2001/XMLSchema"
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" ToolVersion="1.8.4.0">
+  <Name>install.ps1</Name>
+  <UnencryptedContentSize>1839</UnencryptedContentSize>
+  <FileName>automate.intunewin</FileName>
+  <SetupFile>install.ps1</SetupFile>
+  <EncryptionInfo>
+    <EncryptionKey>puLtoZ56Rz8KdDnzP7xEFHrKpUQGeVBZD03QFOEij7s=</EncryptionKey>
+    <MacKey>mTScwMCFQggTpOguo1U59Gtb6mEWaS2hedxkT9bP+Cg=</MacKey>
+    <InitializationVector>jC6dWKgazVG3IB2KJgsuvg==</InitializationVector>
+    <Mac>lV34NP+vwzGsRJYWAVaphkDBvDahS+XEi4pvnyhPIrU=</Mac>
+    <ProfileIdentifier>ProfileVersion1</ProfileIdentifier>
+    <FileDigest>AwmSKskla6TNCJb2jk7bIL+uGsGa4a6i49wc5pqB648=</FileDigest>
+    <FileDigestAlgorithm>SHA256</FileDigestAlgorithm>
+  </EncryptionInfo>
+</ApplicationInfo>
