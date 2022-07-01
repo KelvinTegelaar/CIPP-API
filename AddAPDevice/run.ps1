@@ -10,7 +10,7 @@ Log-Request -user $request.headers.'x-ms-client-principal' -API $APINAME  -messa
 # Write to the Azure Functions log stream.
 Write-Host "PowerShell HTTP trigger function processed a request."
 $TenantFilter = (Get-Tenants | Where-Object { $_.defaultdomainname -eq $Request.body.TenantFilter }).customerid
-$GroupName = if ($Request.body.Groupname) { $Request.body.Groupname } else { New-Guid }
+$GroupName = if ($Request.body.Groupname) { $Request.body.Groupname } else { (New-Guid).GUID }
 $rawDevices = $request.body.autopilotData
 $Devices = ConvertTo-Json @($rawDevices)
 Write-Host $Devices
