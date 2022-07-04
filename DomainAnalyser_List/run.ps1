@@ -28,20 +28,23 @@ if (Test-Path .\Cache_DomainAnalyser) {
 
         $Domain = Get-AzTableRow @ExistingDomain
 
-        if (!$Domain) {
+        if (!$Domain -or $Domain.PartitionKey -eq $Object.Tenant) {
             Write-Host 'Adding domain from cache file'
             $DomainObject = @{
                 Table        = $DomainTable
                 rowKey       = $Object.Domain
-                partitionKey = $Object.Tenant
+                partitionKey = 'TenantDomains'
                 property     = @{
                     DomainAnalyser = $Result
+                    TenantId       = $Object.Tenant
                     TenantDetails  = ''
                     DkimSelectors  = ''
                     MailProviders  = ''
                 }
             }
             Add-AzTableRow @DomainObject | Out-Null
+
+            if ($Domain) { $Domain | Remove-AzTableRow -Table $DomainTable }
         }
         else {
             Write-Host 'Updating domain from cache file'
@@ -57,11 +60,13 @@ $Skiplist = Get-Content 'ExcludedTenants' | ConvertFrom-Csv -Delimiter '|' -Head
 
 $DomainList = @{
     Table        = $DomainTable
-    SelectColumn = @('partitionKey', 'DomainAnalyser')
+    SelectColumn = @('partitionKey', 'DomainAnalyser', 'TenantId')
 }
 
 if ($Request.Query.tenantFilter -ne 'AllTenants') {
-    $DomainList.partitionKey = $Request.Query.tenantFilter
+    $DomainList.columnName = 'TenantId' 
+    $DomainList.operator = 'Equal'
+    $DomainList.value = $Request.Query.tenantFilter
 }
 
 try {
