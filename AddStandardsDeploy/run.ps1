@@ -12,7 +12,7 @@ New-Item Cache_Standards -ItemType Directory -ErrorAction SilentlyContinue
 
 try {
     $Tenants = ($Request.body | Select-Object Select_*).psobject.properties.value
-    $Settings = ($request.body | Select-Object -Property * -ExcludeProperty Select_*, DataTable* )
+    $Settings = ($request.body | Select-Object -Property * -ExcludeProperty Select_*, None )
     foreach ($Tenant in $tenants) {
         
         $object = [PSCustomObject]@{
