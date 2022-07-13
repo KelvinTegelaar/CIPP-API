@@ -1174,7 +1174,10 @@ function Read-DkimRecord {
     try {
         $MXRecord = Read-MXRecord -Domain $Domain
         foreach ($Selector in $MXRecord.Selectors) {
-            $Selectors.Add($Selector) | Out-Null
+            try {
+                $Selectors.Add($Selector) | Out-Null
+            }
+            catch {}
         }
         $DkimAnalysis.MailProvider = $MXRecord.MailProvider
         if ($MXRecord.MailProvider.PSObject.Properties.Name -contains 'MinimumSelectorPass') {

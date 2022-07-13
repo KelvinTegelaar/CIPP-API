@@ -4,7 +4,13 @@ Import-Module '.\DNSHelper.psm1'
 
 $Domain = $DomainObject.rowKey
 
-Log-request -API 'DomainAnalyser' -tenant $tenant.tenant -message "Starting Processing of $($Tenant.Domain)" -sev Debug
+try {
+    $Tenant = $Domain.TenantDetails | ConvertFrom-Json
+}
+catch {
+}
+
+Log-request -API 'DomainAnalyser' -tenant $tenant.tenant -message "Starting Processing of $Domain" -sev Debug
 $Result = [PSCustomObject]@{
     Tenant               = $DomainObject.partitionKey
     GUID                 = $($Domain.Replace('.', ''))
@@ -210,6 +216,6 @@ $Result.ScoreExplanation = ($ScoreExplanation) -join ', '
 $DomainObject.DomainAnalyser = ($Result | ConvertTo-Json)
 
 # Final Write to Output
-Log-request -API 'DomainAnalyser' -tenant $tenant.tenant -message "DNS Analyser Finished For $($Result.Domain)" -sev Info
+Log-request -API 'DomainAnalyser' -tenant $tenant.tenant -message "DNS Analyser Finished For $Domain" -sev Info
 
 Write-Output $DomainObject
