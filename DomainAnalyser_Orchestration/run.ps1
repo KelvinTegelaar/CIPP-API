@@ -4,6 +4,12 @@ try {
   New-Item 'Cache_DomainAnalyser' -ItemType Directory -ErrorAction SilentlyContinue
   New-Item 'Cache_DomainAnalyser\CurrentlyRunning.txt' -ItemType File -Force
 
+  $DurableRetryOptions = @{
+    FirstRetryInterval  = (New-TimeSpan -Seconds 5)
+    MaxNumberOfAttempts = 3
+  }
+  $RetryOptions = New-DurableRetryOptions @DurableRetryOptions
+
   $DomainTable = Get-CippTable -Table Domains
   $TenantDomains = Invoke-ActivityFunction -FunctionName 'DomainAnalyser_GetTenantDomains' -Input 'Tenants'
 
@@ -68,7 +74,7 @@ try {
   $Batch = Get-AzTableRow @DomainParam
 
   $ParallelTasks = foreach ($Item in $Batch) {
-    Invoke-DurableActivity -FunctionName 'DomainAnalyser_All' -Input $item -NoWait
+    Invoke-DurableActivity -FunctionName 'DomainAnalyser_All' -Input $item -NoWait -RetryOptions $RetryOptions
   }
 
   $Outputs = Wait-ActivityFunction -Task $ParallelTasks
