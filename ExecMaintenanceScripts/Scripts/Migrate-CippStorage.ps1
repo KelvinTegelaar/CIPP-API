@@ -1,3 +1,7 @@
+if (!(Get-Module -ListAvailable AzTable)) {
+    Install-Module AzTable -Confirm:$false
+}
+
 $Logo = @'
    _____ _____ _____  _____  
   / ____|_   _|  __ \|  __ \ 
@@ -79,7 +83,7 @@ if (Get-AzResourceGroup -Name $RGName) {
         $DestinationContext = New-AzStorageContext -ConnectionString $DestinationConnectionString
     }
 
-    if ($SourceContext -and $DestinationContext -and -not $SkipMigrateData) {
+    if ($SourceContext -and $DestinationContext) {
         Write-Host '- Migrating table data'
         $SourceTables = Get-AzStorageTable -Context $SourceContext | Where-Object { $_.Name -notmatch 'AzureWebJobsHostLogs*' -and $_.Name -notmatch 'History' -and $_.Name -notmatch 'Instances' -and $_.Name -notmatch 'TestHubName' -and $_.Name -ne 'CippLogs' }
         $DestinationTables = Get-AzStorageTable -Context $DestinationContext | Where-Object { $_.Name -notmatch 'AzureWebJobsHostLogs*' -and $_.Name -notmatch 'History' -and $_.Name -notmatch 'Instances' -and $_.Name -notmatch 'TestHubName' -and $_.Name -ne 'CippLogs' }
