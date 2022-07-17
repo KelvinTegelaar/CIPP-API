@@ -13,23 +13,26 @@ $userobj = $Request.body
 # Write to the Azure Functions log stream.
 Write-Host "PowerShell HTTP trigger function processed a request."
  
-$AddMembers = ($userobj.Addmember).Split([Environment]::NewLine)
-try {
-    if ($AddMembers) {
-        $MemberIDs = $AddMembers | ForEach-Object { "https://graph.microsoft.com/v1.0/directoryObjects/" + (New-GraphGetRequest -uri "https://graph.microsoft.com/beta/users/$($_)" -tenantid $Userobj.tenantid).id }
-        $addmemberbody = "{ `"members@odata.bind`": $(ConvertTo-Json @($MemberIDs)) }"
-        New-GraphPostRequest -uri "https://graph.microsoft.com/beta/groups/$($userobj.groupid)" -tenantid $Userobj.tenantid -type patch -body $addmemberbody -verbose
-        Log-Request -API $APINAME -tenant $Userobj.tenantid -user $request.headers.'x-ms-client-principal'  -message "Added member to $($userobj.displayname) group" -Sev "Info"
-        $body = $results.add("Success. $AddMembers have been added")
+$AddMembers = ($userobj.Addmember).value
+if ($AddMembers) {
+    $AddMembers | ForEach-Object {
+        try {
+            $member = $_
+            $MemberIDs = "https://graph.microsoft.com/v1.0/directoryObjects/" + (New-GraphGetRequest -uri "https://graph.microsoft.com/beta/users/$($_)" -tenantid $Userobj.tenantid).id 
+            $addmemberbody = "{ `"members@odata.bind`": $(ConvertTo-Json @($MemberIDs)) }"
+            New-GraphPostRequest -uri "https://graph.microsoft.com/beta/groups/$($userobj.groupid)" -tenantid $Userobj.tenantid -type patch -body $addmemberbody -Verbose
+            Log-Request -API $APINAME -tenant $Userobj.tenantid -user $request.headers.'x-ms-client-principal' -message "Added member to $($userobj.displayname) group" -Sev "Info"
+            $body = $results.add("Success. $member has been added")
+        }
+        catch {
+            $body = $results.add("Failed to add member $member to $($userobj.Groupid): $($_.Exception.Message)")
+        }
     }
 
 }
-catch {
-    Log-Request -user $request.headers.'x-ms-client-principal'   -message "Add member API failed. $($_.Exception.Message)" -Sev "Error"
-    $body = $results.add("Failed to add $AddMembers to $($userobj.Groupid) $($_.Exception.Message)")
-}
 
-$RemoveMembers = ($userobj.Removemember).Split([Environment]::NewLine)
+
+$RemoveMembers = ($userobj.Removemember).value
 try {
     if ($RemoveMembers) {
         $RemoveMembers | ForEach-Object { 
@@ -45,34 +48,42 @@ catch {
     $body = $results.add("Could not remove $RemoveMembers from $($userobj.Groupid). $($_.Exception.Message)")
 }
 
-$AddOwners = ($userobj.Addowner).Split([Environment]::NewLine)
+$AddOwners = $userobj.Addowner.value
 try {
     if ($AddOwners) {
         $AddOwners | ForEach-Object { 
-            $ID = "https://graph.microsoft.com/beta/users/" + (New-GraphGetRequest -uri "https://graph.microsoft.com/beta/users/$($_)" -tenantid $Userobj.tenantid).id
-            Write-Host $ID
-            $AddOwner = New-GraphPostRequest -uri "https://graph.microsoft.com/beta/groups/$($userobj.groupid)/owners/`$ref" -tenantid $Userobj.tenantid -type POST -body ('{"@odata.id": "' + $ID + '"}')
-            Log-Request -API $APINAME -tenant $Userobj.tenantid -user $request.headers.'x-ms-client-principal'  -message "Added owner $_ to $($userobj.displayname) group" -Sev "Info"
-            $body = $results.add("Success. $_ has been added")
-    
+            try {
+                $ID = "https://graph.microsoft.com/beta/users/" + (New-GraphGetRequest -uri "https://graph.microsoft.com/beta/users/$($_)" -tenantid $Userobj.tenantid).id
+                Write-Host $ID
+                $AddOwner = New-GraphPostRequest -uri "https://graph.microsoft.com/beta/groups/$($userobj.groupid)/owners/`$ref" -tenantid $Userobj.tenantid -type POST -body ('{"@odata.id": "' + $ID + '"}')
+                Log-Request -API $APINAME -tenant $Userobj.tenantid -user $request.headers.'x-ms-client-principal'  -message "Added owner $_ to $($userobj.displayname) group" -Sev "Info"
+                $body = $results.add("Success. $_ has been added")
+            }
+            catch {
+                $body = $results.add("Failed to add owner $_ to $($userobj.Groupid): $($_.Exception.Message)")
+            }
         }
 
     }
 
 }
 catch {
-    Log-Request -user $request.headers.'x-ms-client-principal'   -message "Add member API failed. $($_.Exception.Message)" -Sev "Error"
-    $body = $results.add("Failed to add $AddMembers to $($userobj.Groupid) $($_.Exception.Message)")
+    Log-Request -user $request.headers.'x-ms-client-principal' -message "Add member API failed. $($_.Exception.Message)" -Sev "Error"
 }
 
-$RemoveOwners = ($userobj.RemoveOwner).Split([Environment]::NewLine)
+$RemoveOwners = ($userobj.RemoveOwner).value
 try {
     if ($RemoveOwners) {
         $RemoveOwners | ForEach-Object { 
-            $MemberInfo = (New-GraphGetRequest -uri "https://graph.microsoft.com/beta/users/$($_)" -tenantid $Userobj.tenantid)
-            New-GraphPostRequest -uri "https://graph.microsoft.com/beta/groups/$($userobj.groupid)/owners/$($MemberInfo.id)/`$ref" -tenantid $Userobj.tenantid -type DELETE 
-            Log-Request -API $APINAME -tenant $Userobj.tenantid -user $request.headers.'x-ms-client-principal'  -message "Removed $($MemberInfo.UserPrincipalname) from $($userobj.displayname) group" -Sev "Info"
-            $body = $results.add("Success. Member $_ has been removed from $($userobj.Groupid)")
+            try {
+                $MemberInfo = (New-GraphGetRequest -uri "https://graph.microsoft.com/beta/users/$($_)" -tenantid $Userobj.tenantid)
+                New-GraphPostRequest -uri "https://graph.microsoft.com/beta/groups/$($userobj.groupid)/owners/$($MemberInfo.id)/`$ref" -tenantid $Userobj.tenantid -type DELETE 
+                Log-Request -API $APINAME -tenant $Userobj.tenantid -user $request.headers.'x-ms-client-principal'  -message "Removed $($MemberInfo.UserPrincipalname) from $($userobj.displayname) group" -Sev "Info"
+                $body = $results.add("Success. Member $_ has been removed from $($userobj.Groupid)")
+            }
+            catch {
+                $body = $results.add("Failed to remove $_ from $($userobj.Groupid): $($_.Exception.Message)")
+            }
         }  
     }
 }

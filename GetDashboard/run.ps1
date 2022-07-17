@@ -198,15 +198,12 @@ catch {
 $Table = $StorageTable.CloudTable
 $PartitionKey = Get-Date -UFormat '%Y%m%d'
 $Rows = Get-AzTableRow -Table $table -PartitionKey $PartitionKey -Top 10 -SelectColumn Tenant, Message
+$SlimRows = New-Object System.Collections.ArrayList
 foreach ($Row in $Rows) {
-    @{
-        DateTime = $Row.TableTimeStamp
-        Tenant   = $Row.Tenant
-        API      = $Row.API
-        Message  = $Row.Message
-        User     = $Row.Username
-        Severity = $Row.Severity
-    }
+    $SlimRows.Add(@{
+        Tenant = $Row.Tenant
+        Message = $Row.Message
+    })
 }
 $Alerts = [System.Collections.ArrayList]@()
 if ($ENV:ApplicationID -eq "LongApplicationID" -or $null -eq $ENV:ApplicationID) { $Alerts.add("You have not yet setup your SAM Setup. Please go to the SAM Wizard in settings to finish setup") }
@@ -223,7 +220,7 @@ $dash = [PSCustomObject]@{
     tenantCount       = [int64](Get-Content '.\tenants.cache.json' | ConvertFrom-Json -ErrorAction SilentlyContinue).count
     RefreshTokenDate  = (Get-CronNextExecutionTime -Expression '0 0 * * 0').AddDays('-7').tostring('s') -split "T" | Select-Object -First 1
     ExchangeTokenDate = (Get-CronNextExecutionTime -Expression '0 0 * * 0').AddDays('-7').tostring('s') -split "T" | Select-Object -First 1
-    LastLog           = @($Rows)
+    LastLog           = @($SlimRows)
     Alerts            = @($Alerts)
 }
 # Write to the Azure Functions log stream.
