@@ -201,8 +201,8 @@ $Rows = Get-AzTableRow -Table $table -PartitionKey $PartitionKey -Top 10 -Select
 $SlimRows = New-Object System.Collections.ArrayList
 foreach ($Row in $Rows) {
     $SlimRows.Add(@{
-        Tenant = $Row.Tenant
-        Message = $Row.Message
+        tenant = $Row.Tenant
+        message = $Row.Message
     })
 }
 $Alerts = [System.Collections.ArrayList]@()
