@@ -13,12 +13,12 @@ $RemoteAPIVersion = Invoke-RestMethod -Uri "https://raw.githubusercontent.com/Ke
 $RemoteCIPPVersion = Invoke-RestMethod -Uri "https://raw.githubusercontent.com/KelvinTegelaar/CIPP/master/version_latest.txt"
 
 $version = [PSCustomObject]@{
-    LocalCIPPVersion     = $CIPPVersion
-    RemoteCIPPVersion    = $RemoteCIPPVersion
-    LocalCIPPAPIVersion  = $APIVersion
-    RemoteCIPPAPIVersion = $RemoteAPIVersion
-    OutOfDateCIPP        = ([version]$RemoteCIPPVersion -gt [version]$CIPPVersion)
-    OutOfDateCIPPAPI     = ([version]$RemoteAPIVersion -gt [version]$APIVersion)
+    localCIPPVersion     = $CIPPVersion
+    remoteCIPPVersion    = $RemoteCIPPVersion
+    localCIPPAPIVersion  = $APIVersion
+    remoteCIPPAPIVersion = $RemoteAPIVersion
+    outOfDateCIPP        = ([version]$RemoteCIPPVersion -gt [version]$CIPPVersion)
+    outOfDateCIPPAPI     = ([version]$RemoteAPIVersion -gt [version]$APIVersion)
 }
 # Write to the Azure Functions log stream.
 
