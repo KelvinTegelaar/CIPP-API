@@ -6,7 +6,7 @@ param($Request, $TriggerMetadata)
 $APIName = $TriggerMetadata.FunctionName
 Log-Request -user $request.headers.'x-ms-client-principal' -API $APINAME  -message "Accessed this API" -Sev "Debug"
 
-$selectlist = "id", "accountEnabled", "businessPhones", "city", "createdDateTime", "companyName", "country", "department", "displayName", "faxNumber", "givenName", "isResourceAccount", "jobTitle", "mail", "mailNickname", "mobilePhone", "onPremisesDistinguishedName", "officeLocation", "onPremisesLastSyncDateTime", "otherMails", "postalCode", "preferredDataLocation", "preferredLanguage", "proxyAddresses", "showInAddressList", "state", "streetAddress", "surname", "usageLocation", "userPrincipalName", "userType", "assignedLicenses", "onPremisesSyncEnabled", "LicJoined", "Aliases", "primDomain"
+$selectlist = "id", "accountEnabled", "businessPhones", "city", "createdDateTime", "companyName", "country", "department", "displayName", "faxNumber", "givenName", "isResourceAccount", "jobTitle", "mail", "mailNickname", "mobilePhone", "onPremisesDistinguishedName", "officeLocation", "onPremisesLastSyncDateTime", "otherMails", "postalCode", "preferredDataLocation", "preferredLanguage", "proxyAddresses", "showInAddressList", "state", "streetAddress", "surname", "usageLocation", "userPrincipalName", "userType", "assignedLicenses", "onPremisesSyncEnabled", "licJoined", "aliases", "primDomain"
 
 # Write to the Azure Functions log stream.
 Write-Host "PowerShell HTTP trigger function processed a request."
@@ -16,9 +16,9 @@ $TenantFilter = $Request.Query.TenantFilter
 $userid = $Request.Query.UserID
 $GraphRequest = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/users/$($userid)?`$top=999&`$select=$($selectlist -join ',')" -tenantid $TenantFilter | Select-Object $selectlist | ForEach-Object {
     $_.onPremisesSyncEnabled = [bool]($_.onPremisesSyncEnabled)
-    $_.Aliases = $_.Proxyaddresses -join ", "
-    $SkuID = $_.AssignedLicenses.skuid
-    $_.LicJoined = ($ConvertTable | Where-Object { $_.guid -in $skuid }).'Product_Display_Name' -join ", "
+    $_.aliases = $_.proxyAddresses -join ", "
+    $SkuID = $_.assignedLicenses.skuid
+    $_.licJoined = ($ConvertTable | Where-Object { $_.guid -in $skuid }).'Product_Display_Name' -join ", "
     $_.primDomain = ($_.userPrincipalName -split '@' | Select-Object -Last 1)
     $_
 }
@@ -35,11 +35,11 @@ if ($userid) {
         'X-Requested-With'       = 'XMLHttpRequest' 
     }
     $GraphRequest = $GraphRequest | Select-Object *, 
-    @{ Name = 'LastSigninApplication'; Expression = { $LastSignIn.AppDisplayName } },
-    @{ Name = 'LastSigninDate'; Expression = { $($LastSignIn.CreatedDateTime | Out-String) } },
-    @{ Name = 'LastSigninStatus'; Expression = { $LastSignIn.Status.AdditionalDetails } },
-    @{ Name = 'LastSigninResult'; Expression = { if ($LastSignIn.Status.ErrorCode -eq 0) { "Success" } else { "Failure" } } }, 
-    @{ Name = 'LastSigninFailureReason'; Expression = { if ($LastSignIn.Status.ErrorCode -eq 0) { "Sucessfully signed in" } else { $LastSignIn.status.FailureReason } } }
+    @{ Name = 'lastSigninApplication'; Expression = { $LastSignIn.AppDisplayName } },
+    @{ Name = 'lastSigninDate'; Expression = { $($LastSignIn.CreatedDateTime | Out-String) } },
+    @{ Name = 'lastSigninStatus'; Expression = { $LastSignIn.Status.AdditionalDetails } },
+    @{ Name = 'lastSigninResult'; Expression = { if ($LastSignIn.Status.ErrorCode -eq 0) { "Success" } else { "Failure" } } }, 
+    @{ Name = 'lastSigninFailureReason'; Expression = { if ($LastSignIn.Status.ErrorCode -eq 0) { "Sucessfully signed in" } else { $LastSignIn.status.FailureReason } } }
 }
 # Associate values to output bindings by calling 'Push-OutputBinding'.
 Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
