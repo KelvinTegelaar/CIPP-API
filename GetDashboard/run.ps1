@@ -215,9 +215,9 @@ Log-Request -user $request.headers.'x-ms-client-principal' -API $APINAME  -messa
 $dash = [PSCustomObject]@{
     NextStandardsRun  = (Get-CronNextExecutionTime -Expression '0 */3 * * *').tostring('s')
     NextBPARun        = (Get-CronNextExecutionTime -Expression '0 3 * * *').tostring('s')
-    queuedApps        = [int64](Get-ChildItem '.\ChocoApps.Cache' -ErrorAction SilentlyContinue).count
-    queuedStandards   = [int64](Get-ChildItem '.\Cache_Standards' -ErrorAction SilentlyContinue).count
-    tenantCount       = [int64](Get-Content '.\tenants.cache.json' | ConvertFrom-Json -ErrorAction SilentlyContinue).count
+    QueuedApps        = [int64](Get-ChildItem '.\ChocoApps.Cache' -ErrorAction SilentlyContinue).count
+    QueuedStandards   = [int64](Get-ChildItem '.\Cache_Standards' -ErrorAction SilentlyContinue).count
+    TenantCount       = [int64](Get-Content '.\tenants.cache.json' | ConvertFrom-Json -ErrorAction SilentlyContinue).count
     RefreshTokenDate  = (Get-CronNextExecutionTime -Expression '0 0 * * 0').AddDays('-7').tostring('s') -split "T" | Select-Object -First 1
     ExchangeTokenDate = (Get-CronNextExecutionTime -Expression '0 0 * * 0').AddDays('-7').tostring('s') -split "T" | Select-Object -First 1
     LastLog           = @($SlimRows)
