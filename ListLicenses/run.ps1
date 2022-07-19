@@ -39,7 +39,7 @@ if (!$GraphRequest) {
         $skuid = $singlereq.Licenses
         foreach ($sku in $skuid) {
             $PrettyName = ($ConvertTable | Where-Object { $_.guid -eq $sku.skuid }).'Product_Display_Name' | Select-Object -Last 1
-            if (!$PrettyName) { $PrettyName = $skuid.skuPartNumber }
+            if (!$PrettyName) { $PrettyName = $sku.skuPartNumber }
             [PSCustomObject]@{
                 Tenant         = $singlereq.Tenant
                 License        = $PrettyName
