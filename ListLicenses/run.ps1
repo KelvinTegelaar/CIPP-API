@@ -38,7 +38,7 @@ $ConvertTable = Import-Csv Conversiontable.csv
 $GraphRequest = foreach ($singlereq in $RawGraphRequest) {
     $skuid = $singlereq.Licenses
     foreach ($sku in $skuid) {
-        $PrettyName = ($ConvertTable | Where-Object { $singlereq.guid -eq $sku.skuid }).'Product_Display_Name' | Select-Object -Last 1
+        $PrettyName = ($ConvertTable | Where-Object { $_.guid -eq $sku.skuid }).'Product_Display_Name' | Select-Object -Last 1
         if (!$PrettyName) { $PrettyName = $skuid.skuPartNumber }
         [PSCustomObject]@{
             Tenant         = $singlereq.Tenant
