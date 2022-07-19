@@ -30,6 +30,10 @@ else {
             } 
         }
         catch {
+            [PSCustomObject]@{
+                Tenant   = $_.defaultDomainName
+                Licenses = "Could not retrieve licenses"
+            } 
         }
     }
 }
@@ -57,4 +61,4 @@ $GraphRequest = foreach ($singlereq in $RawGraphRequest) {
 Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
         StatusCode = [HttpStatusCode]::OK
         Body       = @($GraphRequest)
-    })
+    }) -Clobber
