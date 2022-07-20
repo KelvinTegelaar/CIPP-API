@@ -248,7 +248,5 @@ try {
 catch {
     Write-LogMessage -API 'BestPracticeAnalyser' -tenant $tenant -message "Secure Score Retrieval on $($tenant). Error: $($_.exception.message)" -sev 'Error' 
 }
-                    
 
-the Results to the Stream
 $Result

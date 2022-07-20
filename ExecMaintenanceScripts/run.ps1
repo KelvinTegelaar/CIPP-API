@@ -15,7 +15,7 @@ try {
     }
 }
 catch { Write-Host $_.Exception.Message }
-$ReplacementStrings | Format-Table
+#$ReplacementStrings | Format-Table
 
 try {
     $ScriptFile = $Request.Query.ScriptFile
@@ -49,8 +49,8 @@ try {
             $LinkGuid = ([guid]::NewGuid()).ToString()
 
             $MaintenanceScriptRow = @{
-                'rowKey'        = $LinkGuid
-                'partitionKey'  = 'Maintenance'
+                'RowKey'        = $LinkGuid
+                'PartitionKey'  = 'Maintenance'
                 'ScriptContent' = $ScriptContent
             }
             Add-AzDataTableEntity @Table -Entity $MaintenanceScriptRow -Force

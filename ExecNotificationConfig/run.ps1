@@ -25,8 +25,8 @@ $results = try {
         'removeUser'         = [boolean]$Request.Body.removeUser
         'addUser'            = [boolean]$Request.Body.addUser
         'addChocoApp'        = [boolean]$Request.Body.addChocoApp
-        partitionKey         = 'CippNotifications'
-        rowKey               = 'CippNotifications'
+        'PartitionKey'       = 'CippNotifications'
+        'RowKey'             = 'CippNotifications'
     }
 
     Add-AzDataTableEntity @Table -Entity $SchedulerConfig -Force | Out-Null

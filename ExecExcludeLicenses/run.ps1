@@ -11,6 +11,7 @@ Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -m
 Write-Host 'PowerShell HTTP trigger function processed a request.'
 $Table = Get-CIPPTable -TableName ExcludedLicenses
 try {
+    
     if ($Request.Query.List) {
         $Rows = Get-AzDataTableEntity @Table
         if ($Rows.Count -lt 1) {
@@ -22,8 +23,9 @@ try {
             }
             Add-AzDataTableEntity @Table -Entity $TableRows -Force | Out-Null
             $Rows = Get-AzDataTableEntity @Table
+
+            Write-LogMessage -API $APINAME -user $request.headers.'x-ms-client-principal' -message 'got excluded licenses list' -Sev 'Info'
         }
-        Write-LogMessage -API $APINAME -user $request.headers.'x-ms-client-principal' -message 'got excluded licenses list' -Sev 'Info'
         $body = @($Rows)
     }
 
@@ -31,12 +33,13 @@ try {
     $name = $Request.Query.TenantFilter
     if ($Request.Query.AddExclusion) {
         $AddObject = @{
-            partitionKey           = 'License'
-            rowKey                 = $Request.body.GUID
+            PartitionKey           = 'License'
+            RowKey                 = $Request.body.GUID
             'GUID'                 = $Request.body.GUID
             'Product_Display_Name' = $request.body.SKUName
         }
-        Add-AzDataTableEntity @Table -Entity $AddObject -Force | Out-Null
+        Add-AzDataTableEntity @Table -Entity $AddObject -Force
+
         Write-LogMessage -API $APINAME -user $request.headers.'x-ms-client-principal' -message "Added exclusion $($request.body.SKUName)" -Sev 'Info' 
         $body = [pscustomobject]@{'Results' = "Success. We've added $($request.body.SKUName) to the excluded list." }
     }

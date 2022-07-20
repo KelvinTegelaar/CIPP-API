@@ -44,8 +44,8 @@ $GraphRequest = foreach ($singlereq in $RawGraphRequest) {
             skuId          = $sku.skuId
             skuPartNumber  = $PrettyName
             availableUnits = $sku.prepaidUnits.enabled - $sku.consumedUnits
-            partitionKey   = 'License'
-            rowKey         = "$($Request.tenant)-$($Request.skuId)"
+            PartitionKey   = 'License'
+            RowKey         = "$($Request.tenant)-$($Request.skuId)"
         }      
     }
 }

@@ -8,7 +8,7 @@ Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -m
 $Table = Get-CIPPTable -TableName 'SchedulerConfig' 
 $ID = $request.query.id
 try {
-    $Filter = "RowKey eq '{0}' and PartitionKey eq 'Alert'"
+    $Filter = "RowKey eq '{0}' and PartitionKey eq 'Alert'" -f $ID
     $Alert = Get-AzDataTableEntity @Table -Filter $Filter
     Remove-AzDataTableEntity @Table -Entity $Alert
     Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -message "Removed application queue for $ID." -Sev 'Info'

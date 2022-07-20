@@ -71,6 +71,7 @@ function Get-GraphToken($tenantid, $scope, $AsApp, $AppID, $refreshToken, $Retur
 }
 
 function Write-LogMessage ($message, $tenant = 'None', $API = 'None', $user, $sev) {
+    Import-Module ThreadJob
     $username = ([System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($user)) | ConvertFrom-Json).userDetails
 
     $Table = Get-CIPPTable -tablename CippLogs
@@ -92,7 +93,12 @@ function Write-LogMessage ($message, $tenant = 'None', $API = 'None', $user, $se
         'PartitionKey' = $PartitionKey
         'RowKey'       = ([guid]::NewGuid()).ToString()
     }
-    Add-AzDataTableEntity @Table -Entity $TableRow | Out-Null
+    $Table.Entity = $TableRow
+
+    Start-ThreadJob -ScriptBlock {
+        Param($LogEntry)
+        Add-AzDataTableEntity @LogEntry | Out-Null
+    } -ArgumentList $Table | Wait-Job | Receive-Job
 }
 
 function New-GraphGetRequest ($uri, $tenantid, $scope, $AsApp, $noPagination) {
