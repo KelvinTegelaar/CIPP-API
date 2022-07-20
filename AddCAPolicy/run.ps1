@@ -4,7 +4,7 @@ using namespace System.Net
 param($Request, $TriggerMetadata)
 
 $APIName = $TriggerMetadata.FunctionName
-Log-Request -user $request.headers.'x-ms-client-principal' -API $APINAME  -message "Accessed this API" -Sev "Debug"
+Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME  -message "Accessed this API" -Sev "Debug"
 
 $Tenants = ($Request.body | Select-Object Select_*).psobject.properties.value
 if ("AllTenants" -in $Tenants) { $Tenants = (Get-Tenants).DefaultDomainName }
@@ -47,12 +47,12 @@ $results = foreach ($Tenant in $tenants) {
         }
     
         $CreateRequest = New-GraphPOSTRequest -uri "https://graph.microsoft.com/v1.0/identity/conditionalAccess/policies" -tenantid $tenant -type POST -body $RawJSON
-        Log-Request -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $($Tenant) -message "Added Conditional Access Policy $($Displayname)" -Sev "Error"
+        Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $($Tenant) -message "Added Conditional Access Policy $($Displayname)" -Sev "Error"
         "Succesfully added Conditional Access Policy for $($Tenant)"
     }
     catch {
         "Failed to add policy for $($Tenant): $($_.Exception.Message)"
-        Log-Request -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $($Tenant) -message "Failed adding Conditional Access Policy $($Displayname). Error: $($_.Exception.Message)" -Sev "Error"
+        Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $($Tenant) -message "Failed adding Conditional Access Policy $($Displayname). Error: $($_.Exception.Message)" -Sev "Error"
         continue
     }
 

@@ -1,18 +1,19 @@
 param($DomainObject)
 
 Import-Module '.\DNSHelper.psm1'
-
 $Domain = $DomainObject.rowKey
 
 try {
-    $Tenant = $DomainObject.TenantDetails | ConvertFrom-Json
+    $Tenant = $DomainObject.TenantDetails | ConvertFrom-Json -ErrorAction Stop
 }
 catch {
+    $Tenant = @{Tenant = 'None' }
 }
 
-Log-request -API 'DomainAnalyser' -tenant $tenant.tenant -message "Starting Processing of $Domain" -sev Debug
+Write-LogMessage -API 'DomainAnalyser' -tenant $tenant.tenant -message "Starting Processing of $Domain" -sev Debug
+
 $Result = [PSCustomObject]@{
-    Tenant               = $DomainObject.partitionKey
+    Tenant               = $Tenant.Tenant
     GUID                 = $($Domain.Replace('.', ''))
     LastRefresh          = $(Get-Date (Get-Date).ToUniversalTime() -UFormat '+%Y-%m-%dT%H:%M:%S.000Z')
     Domain               = $Domain
@@ -94,7 +95,7 @@ try {
     }
 }
 catch {
-    Log-request -API 'DomainAnalyser' -tenant $tenant.tenant -message "Exception while getting SPF Record with $($_.Exception.Message)" -sev Error
+    Write-LogMessage -API 'DomainAnalyser' -tenant $tenant.tenant -message "Exception while getting SPF Record with $($_.Exception.Message)" -sev Error
     throw $_.Exception.Message
 }
     
@@ -161,7 +162,7 @@ try {
     }
 }
 catch {
-    Log-request -API 'DomainAnalyser' -tenant $tenant.tenant -message "Exception while getting DMARC Record with $($_.Exception.Message)" -sev Error
+    Write-LogMessage -API 'DomainAnalyser' -tenant $tenant.tenant -message "Exception while getting DMARC Record with $($_.Exception.Message)" -sev Error
     throw $_.Exception.Message
 }
 
@@ -180,7 +181,7 @@ try {
     }
 }
 catch {
-    Log-request -API 'DomainAnalyser' -tenant $tenant.tenant -message "Exception while getting DNSSEC with $($_.Exception.Message)" -sev Error
+    Write-LogMessage -API 'DomainAnalyser' -tenant $tenant.tenant -message "Exception while getting DNSSEC with $($_.Exception.Message)" -sev Error
     throw $_.Exception.Message
 }
 
@@ -208,7 +209,7 @@ try {
     }
 }
 catch {
-    Log-request -API 'DomainAnalyser' -tenant $tenant.tenant -message "DKIM Lookup Failed with $($_.Exception.Message)" -sev Error
+    Write-LogMessage -API 'DomainAnalyser' -tenant $tenant.tenant -message "DKIM Lookup Failed with $($_.Exception.Message)" -sev Error
     throw $_.Exception.Message
 }
 # Final Score
@@ -217,9 +218,9 @@ $Result.ScorePercentage = [int](($Result.Score / $Result.MaximumScore) * 100)
 $Result.ScoreExplanation = ($ScoreExplanation) -join ', '
 
 
-$DomainObject.DomainAnalyser = ($Result | ConvertTo-Json)
+$DomainObject.DomainAnalyser = ($Result | ConvertTo-Json -Compress).ToString()
 
 # Final Write to Output
-Log-request -API 'DomainAnalyser' -tenant $tenant.tenant -message "DNS Analyser Finished For $Domain" -sev Info
+Write-LogMessage -API 'DomainAnalyser' -tenant $tenant.tenant -message "DNS Analyser Finished For $Domain" -sev Info
 
 Write-Output $DomainObject

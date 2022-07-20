@@ -8,7 +8,7 @@ Import-Module .\DNSHelper.psm1
 $UserCreds = ([System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($request.headers.'x-ms-client-principal')) | ConvertFrom-Json)
 
 $APIName = $TriggerMetadata.FunctionName
-Log-Request -user $request.headers.'x-ms-client-principal' -API $APINAME -message 'Accessed this API' -Sev 'Debug'
+Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -message 'Accessed this API' -Sev 'Debug'
 
 # Write to the Azure Functions log stream.
 Write-Host 'PowerShell HTTP trigger function processed a request.'
@@ -18,13 +18,8 @@ try {
     if ($Request.Query.Action) {
         if ($Request.Query.Domain -match '^(((?!-))(xn--|_{1,1})?[a-z0-9-]{0,61}[a-z0-9]{1,1}\.)*(xn--)?([a-z0-9][a-z0-9\-]{0,60}|[a-z0-9-]{1,30}\.[a-z]{2,})$') {
             $DomainTable = Get-CIPPTable -Table 'Domains'
-            $DomainQuery = @{
-                Table      = $DomainTable
-                ColumnName = 'RowKey'
-                Value      = $Request.Query.Domain
-                Operator   = 'Equal'
-            }
-            $DomainInfo = Get-AzTableRow @DomainQuery
+            $Filter = "RowKey eq '{0}'" -f $Request.Query.Domain
+            $DomainInfo = Get-AzDataTableEntity @DomainTable -Filter $Filter
             switch ($Request.Query.Action) {
                 'ReadSpfRecord' {
                     $SpfQuery = @{
@@ -52,8 +47,22 @@ try {
                         $DkimQuery.Selectors = ($Request.Query.Selector).trim() -split '\s*,\s*'
                         
                         if ('admin' -in $UserCreds.userRoles -or 'editor' -in $UserCreds.userRoles) {
-                            $DomainInfo.DkimSelectors = ($DkimQuery.Selectors | ConvertTo-Json)
-                            $DomainInfo | Update-AzTableRow -Table $DomainTable
+                            $DkimSelectors = ($DkimQuery.Selectors | ConvertTo-Json -Compress)
+                            if ($DomainInfo) {
+                                $DomainInfo.DkimSelectors = $DkimSelectors
+                            }
+                            else {
+                                $DomainInfo = @{
+                                    'RowKey'         = $Request.Query.Domain
+                                    'PartitionKey'   = 'ManualEntry'
+                                    'TenantId'       = 'NoTenant'
+                                    'MailProviders'  = ''
+                                    'TenantDetails'  = ''
+                                    'DomainAnalyser' = ''
+                                    'DkimSelectors'  = $DkimSelectors
+                                }
+                            }
+                            Add-AzDataTableEntity @DomainTable -Entity $DomainInfo -Force
                         }
                     }
                     elseif (![string]::IsNullOrEmpty($DomainInfo.DkimSelectors)) {
@@ -101,7 +110,7 @@ try {
     }
 }
 catch {
-    Log-Request -API $APINAME -tenant $($name) -user $request.headers.'x-ms-client-principal' -message "DNS Helper API failed. $($_.Exception.Message)" -Sev 'Error'
+    Write-LogMessage -API $APINAME -tenant $($name) -user $request.headers.'x-ms-client-principal' -message "DNS Helper API failed. $($_.Exception.Message)" -Sev 'Error'
     $body = [pscustomobject]@{'Results' = "Failed. $($_.Exception.Message)" }
     $StatusCode = [HttpStatusCode]::BadRequest
 }

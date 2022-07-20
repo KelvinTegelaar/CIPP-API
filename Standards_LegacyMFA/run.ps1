@@ -16,9 +16,9 @@ try {
 "@
         $SetMFA = (Invoke-RestMethod -Uri "https://provisioningapi.microsoftonline.com/provisioningwebservice.svc" -Method post -Body $MSOLXML -ContentType 'application/soap+xml; charset=utf-8')
     }
-    Log-request -API "Standards" -tenant $tenant -message "Enabled per user MFA." -sev Info
+    Write-LogMessage -API "Standards" -tenant $tenant -message "Enabled per user MFA." -sev Info
 
 }
 catch {
-    Log-request -API "Standards" -tenant $tenant -message  "Failed to enable (legacy) per user MFA: $($_.exception.message)"
+    Write-LogMessage -API "Standards" -tenant $tenant -message  "Failed to enable (legacy) per user MFA: $($_.exception.message)"
 }

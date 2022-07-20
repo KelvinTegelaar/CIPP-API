@@ -4,17 +4,19 @@ param($tenant)
 $currentUTCtime = (Get-Date).ToUniversalTime()
 
 $Table = Get-CIPPTable -TableName SchedulerConfig
-$Config = Get-AzTableRow -Table $table -RowKey CippNotifications -PartitionKey CippNotifications
+$Filter = "RowKey eq 'CippNotifications' and PartitionKey eq 'CippNotifications'"
+$Config = Get-AzDataTableEntity @Table -Filter $Filter
 
 
-$Settings = [System.Collections.ArrayList]@("Alerts")
+$Settings = [System.Collections.ArrayList]@('Alerts')
 $Config.psobject.properties.name | ForEach-Object { $settings.add($_) } 
 $Table = Get-CIPPTable
 $PartitionKey = Get-Date -UFormat '%Y%m%d'
-$Currentlog = Get-AzTableRow -Table $table -PartitionKey $PartitionKey | Where-Object { $_.api -In $Settings -and $_.SentAsAlert -ne $true }
+$Filter = "PartitionKey eq '{0}'" -f $PartitionKey
+$Currentlog = Get-AzDataTableEntity @Table -Filter $Filter | Where-Object { $_.api -In $Settings -and $_.SentAsAlert -ne $true }
 
 try {
-  if ($Config.email -like "*@*" -and $null -ne $CurrentLog) {
+  if ($Config.email -like '*@*' -and $null -ne $CurrentLog) {
     $HTMLLog = ($CurrentLog | Select-Object Message, API, Tenant, Username, Severity | ConvertTo-Html -frag) -replace '<table>', '<table class=blueTable>' | Out-String
     $JSONBody = @"
                     {
@@ -71,12 +73,17 @@ try {
 
   }
   Write-Host ($currentLog | ConvertTo-Json)
-  $CurrentLog | ForEach-Object { $_.SentAsAlert = $true; $_ | Update-AzTableRow -Table $Table }
+  $UpdateLogs = $CurrentLog | ForEach-Object { 
+    $_.SentAsAlert = $true
+    $_
+  }
+
+  Add-AzDataTableEntity @Table -Entity $UpdateLogs -Force
 
 }
 catch {
   Write-Host "$($_.Exception.message)"
-  Log-request -API "Alerts" -message "Could not send alerts: $($_.Exception.message)" -sev info
+  Write-LogMessage -API 'Alerts' -message "Could not send alerts: $($_.Exception.message)" -sev info
 }
 
 [PSCustomObject]@{

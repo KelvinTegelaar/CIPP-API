@@ -6,7 +6,7 @@ $context = $Context | ConvertTo-Json | ConvertFrom-Json
 $GUID = $context.input.GUID
 $TenantFilter = $context.input.TenantID
 $APIName = $TriggerMetadata.FunctionName
-Log-Request -user $request.headers.'x-ms-client-principal' -API $APINAME  -message "Accessed this API" -Sev "Debug"
+Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME  -message "Accessed this API" -Sev "Debug"
 Write-Host "PowerShell HTTP trigger function processed a request."
 Write-Host ($Context | ConvertTo-Json)
 Write-Host "Using input $TenantFilter"

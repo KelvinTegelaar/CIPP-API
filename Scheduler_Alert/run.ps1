@@ -1,12 +1,13 @@
 param($tenant)
 $Table = Get-CIPPTable -Table SchedulerConfig
 if ($Tenant.tag -eq 'AllTenants') {
-    $Alerts = Get-AzTableRow -Table $table -RowKey 'AllTenants' -PartitionKey 'Alert'
+    $Filter = "RowKey eq 'AllTenants' and PartitionKey eq 'Alert'"
 }
 else {
-    $Alerts = Get-AzTableRow -Table $table -RowKey $Tenant.tenantid -PartitionKey 'Alert'
-
+    $Filter = "RowKey eq '{0}' and PartitionKey eq 'Alert'" -f $Tenant.tenantid
 }
+$Alerts = Get-AzDataTableEntity @Table -Filter $Filter
+
 $DeltaTable = Get-CIPPTable -Table DeltaCompare
 $LastRunTable = Get-CIPPTable -Table AlertLastRun
 
@@ -95,7 +96,8 @@ $ShippedAlerts = switch ($Alerts) {
 
     { $_.'NewRole' -eq $true } {
         try {
-            $AdminDelta = (Get-AzTableRow -Table $Deltatable -RowKey $Tenant.tenantid -PartitionKey 'AdminDelta').delta | ConvertFrom-Json -ErrorAction SilentlyContinue
+            $Filter = "PartitionKey eq 'AdminDelta' and RowKey eq '{0}'" -f $Tenant.tenantid
+            $AdminDelta = (Get-AzDataTableEntity @Deltatable -Filter $Filter).delta | ConvertFrom-Json -ErrorAction SilentlyContinue
             $NewDelta = (New-GraphGetRequest -uri "https://graph.microsoft.com/beta/directoryRoles?`$expand=members" -tenantid $Tenant.tenant) | Select-Object displayname, Members | ForEach-Object {
                 [PSCustomObject]@{
                     GroupName = $_.displayname
@@ -103,7 +105,12 @@ $ShippedAlerts = switch ($Alerts) {
                 }
             }
             $NewDeltatoSave = $NewDelta | ConvertTo-Json -Depth 10 -Compress -ErrorAction SilentlyContinue
-            $null = Add-AzTableRow -Table $DeltaTable -PartitionKey 'AdminDelta' -RowKey $Tenant.tenantid -property @{delta = $NewDeltatoSave } -UpdateExisting
+            $DeltaEntity = @{
+                PartitionKey = 'AdminDelta'
+                RowKey       = $Tenant.tenantid
+                delta        = $NewDeltatoSave
+            }
+            Add-AzDataTableEntity @DeltaTable -Entity $DeltaEntity -Force
         
             if ($AdminDelta) {
                 foreach ($Group in $NewDelta) {
@@ -133,7 +140,8 @@ $ShippedAlerts = switch ($Alerts) {
     { $_.'UnusedLicenses' -eq $true } {
         try {
             #$ConvertTable = Import-Csv Conversiontable.csv
-            $ExcludedSkuList = Get-AzTableRow -Table (Get-CIPPTable -TableName ExcludedLicenses)
+            $LicenseTable = Get-CIPPTable -TableName ExcludedLicenses
+            $ExcludedSkuList = Get-AzDataTableEntity @LicenseTable
             New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/subscribedSkus' -tenantid $Tenant.tenant | ForEach-Object {
                 $skuid = $_
                 foreach ($sku in $skuid) {
@@ -153,8 +161,9 @@ $ShippedAlerts = switch ($Alerts) {
     }
     { $_.'AppSecretExpiry' -eq $true } {
         try {
-            $LastRun = Get-AzTableRow -Table $LastRunTable -RowKey 'AppSecretExpiry' -PartitionKey $Tenant.tenantid
-            if ($null -eq $LastRun.TableTimestamp -or ($LastRun.TableTimestamp -lt (Get-Date).AddDays(-1))) {
+            $Filter = "RowKey eq 'AppSecretExpiry' and PartitionKey eq '{0}'" -f $Tenant.tenantid
+            $LastRun = Get-AzDataTableEntity @LastRunTable -Filter $Filter
+            if ($null -eq $LastRun.Timestamp -or ($LastRun.Timestamp -lt (Get-Date).AddDays(-1))) {
                 New-GraphGetRequest -uri "https://graph.microsoft.com/beta/applications?`$select=appId,displayName,passwordCredentials" -tenantid $Tenant.tenant | ForEach-Object {
                     foreach ($App in $_) {
                         if ($App.passwordCredentials) {
@@ -166,7 +175,11 @@ $ShippedAlerts = switch ($Alerts) {
                         }
                     }
                 }
-                $null = Add-AzTableRow -Table $LastRunTable -RowKey 'AppSecretExpiry' -PartitionKey $Tenant.tenantid -UpdateExisting
+                $LastRun = @{
+                    RowKey       = 'AppSecretExpiry'
+                    PartitionKey = $Tenant.tenantid
+                }
+                Add-AzDataTableEntity @LastRunTable -Entity $LastRun -Force
             }
         }
         catch {
@@ -177,11 +190,12 @@ $ShippedAlerts = switch ($Alerts) {
 
 $Table = Get-CIPPTable
 $PartitionKey = Get-Date -UFormat '%Y%m%d'
-$currentlog = Get-AzTableRow -Table $table -PartitionKey $PartitionKey 
+$Filter = "PartitionKey eq '{0}'" -f $PartitionKey
+$currentlog = Get-AzDataTableEntity @Table -Filter $Filter
 
 $ShippedAlerts | ForEach-Object {
     if ($_ -notin $currentlog.Message) {
-        Log-Request -message $_ -API 'Alerts' -tenant $tenant.tenant -sev Alert
+        Write-LogMessage -message $_ -API 'Alerts' -tenant $tenant.tenant -sev Alert
     }
 }
 [PSCustomObject]@{

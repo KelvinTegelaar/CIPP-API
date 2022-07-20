@@ -4,7 +4,7 @@ using namespace System.Net
 param($Request, $TriggerMetadata)
 
 $APIName = $TriggerMetadata.FunctionName
-Log-Request -user $request.headers.'x-ms-client-principal' -API $APINAME  -message "Accessed this API" -Sev "Debug"
+Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME  -message "Accessed this API" -Sev "Debug"
 
 
 # Write to the Azure Functions log stream.
@@ -72,7 +72,7 @@ try {
     }
 }
 catch {
-    Log-Request -API $APINAME -tenant "CIPP" -user $request.headers.'x-ms-client-principal' -message "SPF Record Lookup Failed for $($DomainToCheck). $($_.Exception.Message)" -Sev "Error"
+    Write-LogMessage -API $APINAME -tenant "CIPP" -user $request.headers.'x-ms-client-principal' -message "SPF Record Lookup Failed for $($DomainToCheck). $($_.Exception.Message)" -Sev "Error"
 }
 
 try {
@@ -94,7 +94,7 @@ try {
     }
 }
 catch {
-    Log-Request -API $APINAME -tenant "CIPP" -user $request.headers.'x-ms-client-principal' -message "DMARC Policy Lookup Failed for $($DomainToCheck). $($_.Exception.Message)" -Sev "Error"
+    Write-LogMessage -API $APINAME -tenant "CIPP" -user $request.headers.'x-ms-client-principal' -message "DMARC Policy Lookup Failed for $($DomainToCheck). $($_.Exception.Message)" -Sev "Error"
 }
 
 try {
@@ -116,7 +116,7 @@ try {
     }
 }
 catch {
-    Log-Request -API $APINAME -tenant "CIPP" -user $request.headers.'x-ms-client-principal' -message "MX Record Lookup Failed for $($DomainToCheck). $($_.Exception.Message)" -Sev "Error"
+    Write-LogMessage -API $APINAME -tenant "CIPP" -user $request.headers.'x-ms-client-principal' -message "MX Record Lookup Failed for $($DomainToCheck). $($_.Exception.Message)" -Sev "Error"
 }
 
 try {
@@ -138,7 +138,7 @@ try {
     }
 }
 catch {
-    Log-Request -API $APINAME -tenant "CIPP" -user $request.headers.'x-ms-client-principal' -message "DNSSEC Record Lookup Failed for $($DomainToCheck). $($_.Exception.Message)" -Sev "Error"
+    Write-LogMessage -API $APINAME -tenant "CIPP" -user $request.headers.'x-ms-client-principal' -message "DNSSEC Record Lookup Failed for $($DomainToCheck). $($_.Exception.Message)" -Sev "Error"
 }
 
 try {
@@ -160,7 +160,7 @@ try {
     }
 }
 catch {
-    Log-Request -API $APINAME -tenant "CIPP" -user $request.headers.'x-ms-client-principal' -message "DKIM Record Lookup Failed for $($DomainToCheck). $($_.Exception.Message)" -Sev "Error"
+    Write-LogMessage -API $APINAME -tenant "CIPP" -user $request.headers.'x-ms-client-principal' -message "DKIM Record Lookup Failed for $($DomainToCheck). $($_.Exception.Message)" -Sev "Error"
 }
 
 Write-Host "$DomainToCheck was checked with results:`nSPF Fails: $($FinalObject.SPFResults.ValidationFails)`nSPF Passes: $($FinalObject.SPFResults.ValidationPasses)`nSPF Warns: $($FinalObject.SPFResults.ValidationWarns) "

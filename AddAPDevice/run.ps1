@@ -4,7 +4,7 @@ using namespace System.Net
 param($Request, $TriggerMetadata)
 
 $APIName = $TriggerMetadata.FunctionName
-Log-Request -user $request.headers.'x-ms-client-principal' -API $APINAME  -message "Accessed this API" -Sev "Debug"
+Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME  -message "Accessed this API" -Sev "Debug"
 
 
 # Write to the Azure Functions log stream.
@@ -23,12 +23,12 @@ $Result = try {
     $NewStatus = New-GraphgetRequest -uri "https://api.partnercenter.microsoft.com/v1/customers/$tenantfilter/DeviceBatches" -scope 'https://api.partnercenter.microsoft.com/user_impersonation'
     if ($Newstatus.totalcount -eq $CurrentStatus.totalcount) { throw "We could not find the new autopilot device. Please check if your input is correct." }
     Write-Host $CurrentStatus.Items
-    Log-Request -user $request.headers.'x-ms-client-principal' -API $APIName -tenant $($Request.body.TenantFilter) -message "Created Autopilot devices group. Group ID is $GroupName" -Sev "Info"
+    Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APIName -tenant $($Request.body.TenantFilter) -message "Created Autopilot devices group. Group ID is $GroupName" -Sev "Info"
     "Created Autopilot devices group for $($Request.body.TenantFilter). Group ID is $GroupName"
 }
 catch {
     "$($Request.body.TenantFilter): Failed to create autopilot devices. $($_.Exception.Message)"
-    Log-Request -user $request.headers.'x-ms-client-principal' -API $APIName -tenant $($Request.body.TenantFilter) -message "Failed to create autopilot devices. $($_.Exception.Message)" -Sev "Error"
+    Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APIName -tenant $($Request.body.TenantFilter) -message "Failed to create autopilot devices. $($_.Exception.Message)" -Sev "Error"
 }
 
 $body = [pscustomobject]@{"Results" = $Result }

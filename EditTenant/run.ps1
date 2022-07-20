@@ -4,7 +4,7 @@ using namespace System.Net
 param($Request, $TriggerMetadata)
 
 $APIName = $TriggerMetadata.FunctionName
-Log-Request -user $request.headers.'x-ms-client-principal' -API $APINAME -message 'Accessed this API' -Sev 'Debug'
+Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -message 'Accessed this API' -Sev 'Debug'
 
 $tenantDisplayName = $request.body.displayName
 $tenantDefaultDomainName = $request.body.defaultDomainName
@@ -18,7 +18,7 @@ $tokens = try {
     $tenantObjectId = $allTenantsDetails.value | Where-Object { $_.customerContextId -eq $customerContextId } | Select-Object 'objectId'
 } catch {
     "Failed to retrieve list of tenants.  Error: $($_.ExceptionMessage)"
-    Log-Request -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $($tenantDisplayName) -message "Failed to retrieve list of tenants. Error: $($_.Exception.Message)" -Sev 'Error'
+    Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $($tenantDisplayName) -message "Failed to retrieve list of tenants. Error: $($_.Exception.Message)" -Sev 'Error'
 }
 
 
@@ -35,12 +35,12 @@ $results = if ($tenantObjectId) {
                 'There was an error removing the tenants cache for some reason.' 
             } 
         }
-        Log-Request -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $($Tenant) -message "Edited tenant $($Tenant)" -Sev 'Info'
+        Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $($Tenant) -message "Edited tenant $($Tenant)" -Sev 'Info'
         "Successfully amended details for $($Tenant) and cleared tenant cache"
     }
     catch { 
         "Failed to amend details for $($Tenant): $($_.ExceptionMessage)"
-        Log-Request -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $($Tenant) -message "Failed amending details $($Tenant). Error: $($_.Exception.Message)" -Sev 'Error'
+        Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $($Tenant) -message "Failed amending details $($Tenant). Error: $($_.Exception.Message)" -Sev 'Error'
         continue
     }
 }

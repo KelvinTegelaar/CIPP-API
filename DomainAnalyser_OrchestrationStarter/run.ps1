@@ -4,13 +4,13 @@ param($Request, $TriggerMetadata)
 $CurrentlyRunning = Get-Item 'Cache_DomainAnalyser\CurrentlyRunning.txt' -ErrorAction SilentlyContinue | Where-Object -Property LastWriteTime -GT (Get-Date).AddHours(-24)
 if ($CurrentlyRunning) {
     $Results = [pscustomobject]@{'Results' = 'Already running. Please wait for the current instance to finish' }
-    Log-request -API 'DomainAnalyser' -message 'Attempted to start domain analysis but an instance was already running.' -sev Info
+    Write-LogMessage -API 'DomainAnalyser' -message 'Attempted to start domain analysis but an instance was already running.' -sev Info
 }
 else {
     $InstanceId = Start-NewOrchestration -FunctionName 'DomainAnalyser_Orchestration'
     Write-Host "Started orchestration with ID = '$InstanceId'"
     $Orchestrator = New-OrchestrationCheckStatusResponse -Request $Request -InstanceId $InstanceId
-    Log-request -API 'DomainAnalyser' -message 'Started retrieving domain information' -sev Info
+    Write-LogMessage -API 'DomainAnalyser' -message 'Started retrieving domain information' -sev Info
     $Results = [pscustomobject]@{'Results' = 'Started running analysis' }
 }
 Write-Host ($Orchestrator | ConvertTo-Json)

@@ -4,7 +4,7 @@ using namespace System.Net
 param($Request, $TriggerMetadata)
 
 $APIName = $TriggerMetadata.FunctionName
-Log-Request -user $request.headers.'x-ms-client-principal' -API $APINAME  -message "Accessed this API" -Sev "Debug"
+Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME  -message "Accessed this API" -Sev "Debug"
 
 $first=''
 # Interact with query parameters or the body of the request.
@@ -58,17 +58,17 @@ try {
 
     $ResponseBody = [pscustomobject]@{"Results" = $BodyBuild }
     New-Graphpostrequest -uri "https://graph.microsoft.com/beta/security/incidents/$IncidentFilter" -type PATCH -tenantid $TenantFilter -body $Assignbody -asApp $true
-    Log-Request -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $($tenantfilter) -message "Update incident $IncidentFilter with values $Assignbody" -Sev "Info"
+    Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $($tenantfilter) -message "Update incident $IncidentFilter with values $Assignbody" -Sev "Info"
   }
   else {
     $ResponseBody = [pscustomobject]@{"Results" = "Cannot update redirected incident" }
-    Log-Request -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $($tenantfilter) -message "Refuse to pdate incident $IncidentFilter with values $Assignbody because it is redirected to another incident" -Sev "Info"
+    Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $($tenantfilter) -message "Refuse to pdate incident $IncidentFilter with values $Assignbody because it is redirected to another incident" -Sev "Info"
   }
 
   $body = $ResponseBody
 }
 catch {
-  Log-Request -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $($tenantfilter) -message "Failed to update alert $($AlertFilter): $($_.Exception.Message)" -Sev "Error"
+  Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $($tenantfilter) -message "Failed to update alert $($AlertFilter): $($_.Exception.Message)" -Sev "Error"
   $body = [pscustomobject]@{"Results" = "Failed to update incident: $($_.Exception.Message)" }
 }
 

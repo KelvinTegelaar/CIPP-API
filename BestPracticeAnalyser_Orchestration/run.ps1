@@ -1,6 +1,6 @@
 param($Context)
 
-Log-request  -API "BestPracticeAnalyser" -tenant $tenant -message "Best Practice Analyser has Started" -sev Info
+Write-LogMessage  -API "BestPracticeAnalyser" -tenant $tenant -message "Best Practice Analyser has Started" -sev Info
 New-Item "Cache_BestPracticeAnalyser" -ItemType Directory -ErrorAction SilentlyContinue
 New-Item "Cache_BestPracticeAnalyser\CurrentlyRunning.txt" -ItemType File -Force
 $Batch = (Invoke-ActivityFunction -FunctionName 'BestPracticeAnalyser_GetQueue' -Input 'LetsGo')
@@ -17,5 +17,5 @@ foreach ($item in $Outputs) {
   Set-Content "Cache_BestPracticeAnalyser\$($item.tenant).BestPracticeAnalysis.json" -Value $Object -Force
 }
 
-Log-request  -API "BestPracticeAnalyser" -tenant $tenant -message "Best Practice Analyser has Finished" -sev Info
+Write-LogMessage  -API "BestPracticeAnalyser" -tenant $tenant -message "Best Practice Analyser has Finished" -sev Info
 Remove-Item "Cache_BestPracticeAnalyser\CurrentlyRunning.txt" -Force

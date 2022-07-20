@@ -4,7 +4,7 @@ using namespace System.Net
 param($Request, $TriggerMetadata) 
 
 $APIName = $TriggerMetadata.FunctionName
-Log-Request -user $request.headers.'x-ms-client-principal' -API $APINAME -message 'Accessed this API' -Sev 'Debug'
+Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -message 'Accessed this API' -Sev 'Debug'
 
 try {
     $ReplacementStrings = @{
@@ -46,17 +46,14 @@ try {
 
         if ($Request.Query.MakeLink) {
             $Table = Get-CippTable -TableName 'MaintenanceScripts'
-            $LinkGuid = (New-Guid).Guid
+            $LinkGuid = ([guid]::NewGuid()).ToString()
 
             $MaintenanceScriptRow = @{
-                'Table'        = $Table
-                'rowKey'       = $LinkGuid
-                'partitionKey' = 'Maintenance'
-                'property'     = @{
-                    'ScriptContent' = $ScriptContent
-                }
+                'rowKey'        = $LinkGuid
+                'partitionKey'  = 'Maintenance'
+                'ScriptContent' = $ScriptContent
             }
-            Add-AzTableRow @MaintenanceScriptRow
+            Add-AzDataTableEntity @Table -Entity $MaintenanceScriptRow -Force
 
             $Body = @{ Link = "/api/PublicScripts?guid=$LinkGuid" }
         }
@@ -66,7 +63,7 @@ try {
     }
 }
 catch {
-    Log-Request -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $($tenantfilter) -message "Failed to retrieve maintenance scripts. Error: $($_.Exception.Message)" -Sev 'Error'
+    Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $($tenantfilter) -message "Failed to retrieve maintenance scripts. Error: $($_.Exception.Message)" -Sev 'Error'
     $Body = @{Status = "Failed to retrieve maintenance scripts $($_.Exception.Message)" }
 }
 

@@ -4,7 +4,7 @@ using namespace System.Net
 param($Request, $TriggerMetadata)
 
 $APIName = $TriggerMetadata.FunctionName
-Log-Request -user $request.headers.'x-ms-client-principal' -API $APINAME  -message "Accessed this API" -Sev "Debug"
+Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME  -message "Accessed this API" -Sev "Debug"
 
 
 # Write to the Azure Functions log stream.
@@ -26,11 +26,11 @@ try {
     $SetMFA = (Invoke-RestMethod -Uri "https://provisioningapi.microsoftonline.com/provisioningwebservice.svc" -Method post -Body $MSOLXML -ContentType 'application/soap+xml; charset=utf-8')
  
     $Results = [pscustomobject]@{"Results" = "Successfully completed request. User must supply MFA at next logon" }
-    Log-Request -user $request.headers.'x-ms-client-principal' -API $APINAME  -message "Reset Multi factor authentication settings for $($Request.query.id)" -Sev "Info"
+    Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME  -message "Reset Multi factor authentication settings for $($Request.query.id)" -Sev "Info"
 }
 catch {
     $Results = [pscustomobject]@{"Results" = "Failed to reset MFA methods for $($Request.query.id): $($_.Exception.Message)" }
-    Log-Request -user $request.headers.'x-ms-client-principal' -API $APINAME  -message "Failed to reset MFA: $($_.Exception.Message)" -Sev "Error"
+    Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME  -message "Failed to reset MFA: $($_.Exception.Message)" -Sev "Error"
 
 }
 

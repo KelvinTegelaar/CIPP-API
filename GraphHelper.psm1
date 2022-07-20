@@ -3,15 +3,21 @@ function Get-CIPPTable {
     param (
         $tablename = 'CippLogs'
     )
-    $context = New-AzStorageContext -ConnectionString $ENV:AzureWebJobsStorage
-    try { 
-        $StorageTable = Get-AzStorageTable -Context $context -Name $tablename -ErrorAction Stop
+    #$context = New-AzStorageContext -ConnectionString $ENV:AzureWebJobsStorage
+    #try { 
+    #    $StorageTable = Get-AzStorageTable -Context $context -Name $tablename -ErrorAction Stop
+    #}
+    #catch {
+    #    New-AzStorageTable -Context $context -Name $tablename | Out-Null
+    #    $StorageTable = Get-AzStorageTable -Context $context -Name $tablename
+    #}
+    #return $StorageTable.CloudTable
+
+    @{
+        ConnectionString       = $ENV:AzureWebJobsStorage
+        TableName              = $tablename
+        CreateTableIfNotExists = $true
     }
-    catch {
-        New-AzStorageTable -Context $context -Name $tablename | Out-Null
-        $StorageTable = Get-AzStorageTable -Context $context -Name $tablename
-    }
-    return $StorageTable.CloudTable
 }
 function Get-NormalizedError {
     [CmdletBinding()]
@@ -64,33 +70,29 @@ function Get-GraphToken($tenantid, $scope, $AsApp, $AppID, $refreshToken, $Retur
     return $header
 }
 
-function Log-Request ($message, $tenant = "None", $API = "None", $user, $sev) {
+function Write-LogMessage ($message, $tenant = 'None', $API = 'None', $user, $sev) {
     $username = ([System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($user)) | ConvertFrom-Json).userDetails
 
-    $Table = Get-CIPPTable
-    if (!$tenant) { $tenant = "None" }
+    $Table = Get-CIPPTable -tablename CippLogs
+
+    if (!$tenant) { $tenant = 'None' }
     if (!$username) { $username = 'CIPP' }
     if ($sev -eq 'Debug' -and $env:DebugMode -ne 'true') { 
         Write-Information 'Not writing to log file - Debug mode is not enabled.'
         return
     }
-    $PartitionKey = Get-Date -UFormat '%Y%m%d'
-    $LogRequest = @{
-        'Tenant'      = $tenant
-        'API'         = $API
-        'Message'     = $message
-        'Username'    = $username
-        'Severity'    = $sev
-        'SentAsAlert' = $false
-    }
+    $PartitionKey = (Get-Date -UFormat '%Y%m%d').ToString()
     $TableRow = @{
-        table        = $Table
-        partitionKey = $PartitionKey
-        rowKey       = [guid]::NewGuid()
-        property     = $LogRequest
+        'Tenant'       = $tenant
+        'API'          = $API
+        'Message'      = $message
+        'Username'     = $username
+        'Severity'     = $sev
+        'SentAsAlert'  = $false
+        'PartitionKey' = $PartitionKey
+        'RowKey'       = ([guid]::NewGuid()).ToString()
     }
-    Add-AzTableRow @TableRow | Out-Null
-
+    Add-AzDataTableEntity @Table -Entity $TableRow | Out-Null
 }
 
 function New-GraphGetRequest ($uri, $tenantid, $scope, $AsApp, $noPagination) {

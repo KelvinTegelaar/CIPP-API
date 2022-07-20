@@ -4,7 +4,7 @@ using namespace System.Net
 param($Request, $TriggerMetadata)
 
 $APIName = $TriggerMetadata.FunctionName
-Log-Request -user $request.headers.'x-ms-client-principal' -API $APINAME  -message "Accessed this API" -Sev "Debug"
+Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME  -message "Accessed this API" -Sev "Debug"
 
 $GUID = (New-Guid).GUID
 try { 
@@ -22,7 +22,7 @@ try {
         } | ConvertTo-Json
         New-Item Config -ItemType Directory -ErrorAction SilentlyContinue
         Set-Content "Config\$($GUID).IntuneTemplate.json" -Value $Object -Force
-        Log-Request -user $request.headers.'x-ms-client-principal' -API $APINAME  -message "Created intune policy template named $($Request.body.displayname) with GUID $GUID" -Sev "Debug"
+        Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME  -message "Created intune policy template named $($Request.body.displayname) with GUID $GUID" -Sev "Debug"
 
         $body = [pscustomobject]@{"Results" = "Successfully added template" }
     }
@@ -71,13 +71,13 @@ try {
         } | ConvertTo-Json
         New-Item Config -ItemType Directory -ErrorAction SilentlyContinue
         Set-Content "Config\$($GUID).IntuneTemplate.json" -Value $Object -Force
-        Log-Request -user $request.headers.'x-ms-client-principal' -API $APINAME  -message "Created intune policy template $($Request.body.displayname) with GUID $GUID using an original policy from a tenant" -Sev "Debug"
+        Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME  -message "Created intune policy template $($Request.body.displayname) with GUID $GUID using an original policy from a tenant" -Sev "Debug"
 
         $body = [pscustomobject]@{"Results" = "Successfully added template" }
     }
 }
 catch {
-    Log-Request -user $request.headers.'x-ms-client-principal'  -API $APINAME -message "Intune Template Deployment failed: $($_.Exception.Message)" -Sev "Error"
+    Write-LogMessage -user $request.headers.'x-ms-client-principal'  -API $APINAME -message "Intune Template Deployment failed: $($_.Exception.Message)" -Sev "Error"
     $body = [pscustomobject]@{"Results" = "Intune Template Deployment failed: $($_.Exception.Message)" }
 }
 

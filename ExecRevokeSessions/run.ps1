@@ -4,14 +4,14 @@ using namespace System.Net
 param($Request, $TriggerMetadata)
 
 $APIName = $TriggerMetadata.FunctionName
-Log-Request -user $request.headers.'x-ms-client-principal' -API $APINAME  -message "Accessed this API" -Sev "Debug"
+Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME  -message "Accessed this API" -Sev "Debug"
 
 # Interact with query parameters or the body of the request.
 $TenantFilter = $Request.Query.TenantFilter
 try {
       $GraphRequest = New-GraphPostRequest -uri "https://graph.microsoft.com/beta/users/$($Request.query.ID)/invalidateAllRefreshTokens" -tenantid $TenantFilter -type POST -body '{}'  -verbose
       $Results = [pscustomobject]@{"Results" = "Success. All sessions by this user have been revoked" }
-      Log-Request -user $request.headers.'x-ms-client-principal' -API $APINAME  -message "Revoked sessions for $($Request.Query.id)" -Sev "Info"
+      Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME  -message "Revoked sessions for $($Request.Query.id)" -Sev "Info"
 
 }
 catch {

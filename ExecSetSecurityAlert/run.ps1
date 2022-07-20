@@ -4,7 +4,7 @@ using namespace System.Net
 param($Request, $TriggerMetadata)
 
 $APIName = $TriggerMetadata.FunctionName
-Log-Request -user $request.headers.'x-ms-client-principal' -API $APINAME  -message "Accessed this API" -Sev "Debug"
+Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME  -message "Accessed this API" -Sev "Debug"
 
 # Interact with query parameters or the body of the request.
 $tenantfilter = $Request.Query.TenantFilter
@@ -13,12 +13,12 @@ $Status = $Request.Query.Status
 $AssignBody = '{"status":"' + $Status + '","vendorInformation":{"provider":"' + $Request.query.provider + '","vendor":"' + $Request.query.vendor + '"}}'
 try {       
     $GraphRequest = New-Graphpostrequest -uri "https://graph.microsoft.com/beta/security/alerts/$AlertFilter" -type PATCH -tenantid $TenantFilter -body $Assignbody -asApp $true
-    Log-Request -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $($tenantfilter) -message "Set alert $AlertFilter to status $Status" -Sev "Info"
+    Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $($tenantfilter) -message "Set alert $AlertFilter to status $Status" -Sev "Info"
     $body = [pscustomobject]@{"Results" = "Set status for alert to $Status" }
 
 }
 catch {
-    Log-Request -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $($tenantfilter) -message "Failed to update alert $($AlertFilter): $($_.Exception.Message)" -Sev "Error"
+    Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $($tenantfilter) -message "Failed to update alert $($AlertFilter): $($_.Exception.Message)" -Sev "Error"
     $body = [pscustomobject]@{"Results" = "Failed to change status: $($_.Exception.Message)" }
 }
 

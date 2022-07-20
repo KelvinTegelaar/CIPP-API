@@ -12,7 +12,7 @@ if ("admin" -notin $UserCreds.userRoles) {
 }
 
 $APIName = $TriggerMetadata.FunctionName
-Log-Request -user $request.headers.'x-ms-client-principal' -API $APINAME  -message "Accessed this API" -Sev "Debug"
+Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME  -message "Accessed this API" -Sev "Debug"
 if ($env:MSI_SECRET) {
       Disable-AzContextAutosave -Scope Process | Out-Null
       $AzSession = Connect-AzAccount -Identity
