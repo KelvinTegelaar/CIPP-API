@@ -4,7 +4,13 @@ Import-Module '.\DNSHelper.psm1'
 
 $Domain = $DomainObject.rowKey
 
-Log-request -API 'DomainAnalyser' -tenant $tenant.tenant -message "Starting Processing of $($Tenant.Domain)" -sev Debug
+try {
+    $Tenant = $DomainObject.TenantDetails | ConvertFrom-Json
+}
+catch {
+}
+
+Log-request -API 'DomainAnalyser' -tenant $tenant.tenant -message "Starting Processing of $Domain" -sev Debug
 $Result = [PSCustomObject]@{
     Tenant               = $DomainObject.partitionKey
     GUID                 = $($Domain.Replace('.', ''))
@@ -46,7 +52,7 @@ $ScoreDomain = 0
 $ScoreExplanation = [System.Collections.Generic.List[string]]::new()
 
 # Check MX Record
-$MXRecord = Read-MXRecord -Domain $Domain
+$MXRecord = Read-MXRecord -Domain $Domain -ErrorAction Stop
 
 $Result.ExpectedSPFRecord = $MXRecord.ExpectedInclude
 $Result.MXPassTest = $false
@@ -72,7 +78,7 @@ else {
 
 # Get SPF Record
 try {
-    $SPFRecord = Read-SPFRecord -Domain $Domain
+    $SPFRecord = Read-SPFRecord -Domain $Domain -ErrorAction Stop
     if ($SPFRecord.RecordCount -gt 0) {
         $Result.ActualSPFRecord = $SPFRecord.Record
         if ($SPFRecord.RecordCount -eq 1) {
@@ -88,7 +94,8 @@ try {
     }
 }
 catch {
-    Log-request -API 'DomainAnalyser' -tenant $tenant.tenant -message "Exception and Error while getting SPF Record with $($_.Exception.Message)" -sev Error
+    Log-request -API 'DomainAnalyser' -tenant $tenant.tenant -message "Exception while getting SPF Record with $($_.Exception.Message)" -sev Error
+    throw $_.Exception.Message
 }
     
 # Check SPF Record
@@ -108,7 +115,7 @@ else {
 
 # Get DMARC Record
 try {
-    $DMARCPolicy = Read-DmarcPolicy -Domain $Domain
+    $DMARCPolicy = Read-DmarcPolicy -Domain $Domain -ErrorAction Stop
 
     If ([string]::IsNullOrEmpty($DMARCPolicy.Record)) {
         $Result.DMARCPresent = $false
@@ -154,12 +161,13 @@ try {
     }
 }
 catch {
-    Log-request -API 'DomainAnalyser' -tenant $tenant.tenant -message "Exception and Error while getting DMARC Record with $($_.Exception.Message)" -sev Error
+    Log-request -API 'DomainAnalyser' -tenant $tenant.tenant -message "Exception while getting DMARC Record with $($_.Exception.Message)" -sev Error
+    throw $_.Exception.Message
 }
 
 # DNS Sec Check
 try {
-    $DNSSECResult = Test-DNSSEC -Domain $Domain
+    $DNSSECResult = Test-DNSSEC -Domain $Domain -ErrorAction Stop
     $DNSSECFailCount = $DNSSECResult.ValidationFails | Measure-Object | Select-Object -ExpandProperty Count
     $DNSSECWarnCount = $DNSSECResult.ValidationFails | Measure-Object | Select-Object -ExpandProperty Count
     if (($DNSSECFailCount + $DNSSECWarnCount) -eq 0) {
@@ -172,7 +180,8 @@ try {
     }
 }
 catch {
-    Log-request -API 'DomainAnalyser' -tenant $tenant.tenant -message "Exception and Error while getting DNSSEC with $($_.Exception.Message)" -sev Error
+    Log-request -API 'DomainAnalyser' -tenant $tenant.tenant -message "Exception while getting DNSSEC with $($_.Exception.Message)" -sev Error
+    throw $_.Exception.Message
 }
 
 # DKIM Check
@@ -184,7 +193,7 @@ try {
         $DkimParams.Selectors = $DomainObject.DkimSelectors | ConvertFrom-Json
     }
 
-    $DkimRecord = Read-DkimRecord @DkimParams
+    $DkimRecord = Read-DkimRecord @DkimParams -ErrorAction Stop
     
     $DkimRecordCount = $DkimRecord.Records | Measure-Object | Select-Object -ExpandProperty Count
     $DkimFailCount = $DkimRecord.ValidationFails | Measure-Object | Select-Object -ExpandProperty Count
@@ -200,6 +209,7 @@ try {
 }
 catch {
     Log-request -API 'DomainAnalyser' -tenant $tenant.tenant -message "DKIM Lookup Failed with $($_.Exception.Message)" -sev Error
+    throw $_.Exception.Message
 }
 # Final Score
 $Result.Score = $ScoreDomain
@@ -210,6 +220,6 @@ $Result.ScoreExplanation = ($ScoreExplanation) -join ', '
 $DomainObject.DomainAnalyser = ($Result | ConvertTo-Json)
 
 # Final Write to Output
-Log-request -API 'DomainAnalyser' -tenant $tenant.tenant -message "DNS Analyser Finished For $($Result.Domain)" -sev Info
+Log-request -API 'DomainAnalyser' -tenant $tenant.tenant -message "DNS Analyser Finished For $Domain" -sev Info
 
 Write-Output $DomainObject

@@ -52,11 +52,11 @@ $ParsedPerms = foreach ($Perm in $PermsRequest) {
 $forwardingaddress = if ($MailboxDetailedRequest.ForwardingAddress) {
     $MailboxDetailedRequest.ForwardingAddress 
 }
-else {
-    $MailboxDetailedRequest.ForwardingSmtpAddress 
-}
 elseif ($MailboxDetailedRequest.ForwardingSmtpAddress -and $MailboxDetailedRequest.ForwardingAddress) {
     $MailboxDetailedRequest.ForwardingAddress + ' ' + $MailboxDetailedRequest.ForwardingSmtpAddress
+}
+else {
+    $MailboxDetailedRequest.ForwardingSmtpAddress 
 }
 
 
