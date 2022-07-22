@@ -10,12 +10,11 @@ try {
 catch {
     Log-request -API "BestPracticeAnalyser" -tenant $tenant -message "Unable to Retrieve token for Best Practice Analyser $($tenant) Error: $($_.exception.message)" -sev "Error"
 }
-$upn = "notRequired@required.com"
-
+$TenantName = Get-Tenants | Where-Object -Property DefaultDomainName -EQ $tenant
 # Build up the result object that will be passed back to the durable function
 $Result = [PSCustomObject]@{
-    Tenant                           = $tenant
-    GUID                             = $($Tenant.Replace('.', ''))
+    Tenant                           = $TenantName.displayname
+    GUID                             = $TenantName.CustomerId
     LastRefresh                      = $(Get-Date (Get-Date).ToUniversalTime() -UFormat '+%Y-%m-%dT%H:%M:%S.000Z')
     SecureDefaultState               = ""
     PrivacyEnabled                   = ""
