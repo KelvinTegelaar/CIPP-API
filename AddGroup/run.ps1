@@ -12,7 +12,7 @@ $groupobj = $Request.body
 Write-Host "PowerShell HTTP trigger function processed a request."
 try {
     $email = "$($groupobj.username)@$($groupobj.domain)"
-    if ($groupobj.groupType -eq "Generic" -or "azurerole") {
+    if ($groupobj.groupType -eq "Generic" -or $groupobj.groupType -eq "azurerole") {
         
         $BodyToship = [pscustomobject] @{
             "displayName"      = $groupobj.Displayname
