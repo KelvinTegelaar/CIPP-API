@@ -7,15 +7,19 @@ $APIName = $TriggerMetadata.FunctionName
 Log-Request -user $request.headers.'x-ms-client-principal' -API $APINAME -message 'Accessed this API' -Sev 'Debug'
 
 try {
+    $GraphToken = Get-GraphToken -returnRefresh $true
+    $AccessTokenDetails = Read-JwtAccessDetails -Token $GraphToken.access_token
+
     $ReplacementStrings = @{
         '##TENANTID##'      = $ENV:TenantId
         '##RESOURCEGROUP##' = $ENV:WEBSITE_RESOURCE_GROUP
         '##FUNCTIONAPP##'   = $ENV:WEBSITE_SITE_NAME 
         '##SUBSCRIPTION##'  = (($ENV:WEBSITE_OWNER_NAME).split('+') | Select-Object -First 1)
+        '##TOKENIP##'       = $AccessTokenDetails.IPAddress
     }
 }
 catch { Write-Host $_.Exception.Message }
-$ReplacementStrings | Format-Table
+#$ReplacementStrings | Format-Table
 
 try {
     $ScriptFile = $Request.Query.ScriptFile
