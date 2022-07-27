@@ -189,7 +189,7 @@ Function Get-CronNextExecutionTime {
 $Table = Get-CippTable -tablename CippLogs
 $PartitionKey = Get-Date -UFormat '%Y%m%d'
 $Filter = "PartitionKey eq '{0}'" -f $PartitionKey
-$Rows = Get-AzDataTableEntity @Table -PartitionKey $PartitionKey | Sort-Object TableTimestamp -Descending | Select-Object -Top 10
+$Rows = Get-AzDataTableEntity @Table -Filter $Filter | Sort-Object TableTimestamp -Descending | Select-Object -First 10
 $SlimRows = New-Object System.Collections.ArrayList
 foreach ($Row in $Rows) {
     $SlimRows.Add(@{
