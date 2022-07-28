@@ -23,30 +23,31 @@ $tenantfilter = $Request.Query.TenantFilter
 
 try {
     if ($null -eq $TenantFilter -or $TenantFilter -eq 'null') {
+        $TenantList = [system.collections.generic.list[object]]::new()
+        $Tenants = Get-Tenants
         if ($Request.Query.AllTenantSelector -eq $true) { 
-            $tenants = get-tenants
-            $allTenants = @([PSCustomObject]@{
+            $TenantList.Add(@{
                     customerId        = 'AllTenants'
                     defaultDomainName = 'AllTenants'
                     displayName       = '*All Tenants'
                     domains           = 'AllTenants'
-                })
-            $body = $allTenants + $tenants
+                }) | Out-Null
+            $TenantList.AddRange($Tenants) | Out-Null
+            $body = $TenantList
         }
         else {
-            $Body = Get-Tenants
+            $Body = $Tenants
         }
     }
     else {
-        $body = Get-Tenants | Where-Object -Property DefaultdomainName -EQ $Tenantfilter
+        $body = $TenantList | Where-Object -Property DefaultdomainName -EQ $Tenantfilter
     }
-
 
     Write-LogMessage -user $request.headers.'x-ms-client-principal' -tenant $Tenantfilter -API $APINAME -message 'Listed Tenant Details' -Sev 'Debug'
 }
 catch {
     Write-LogMessage -user $request.headers.'x-ms-client-principal' -tenant $Tenantfilter -API $APINAME -message "List Tenant failed. The error is: $($_.Exception.Message)" -Sev 'Error'
-    $body = [pscustomobject]@{'Results' = "Failed to retrieve tenants: $($_.Exception.Message)" }
+    $body = [pscustomobject]@{ 'Results' = "Failed to retrieve tenants: $($_.Exception.Message)" }
 }
 
 Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{

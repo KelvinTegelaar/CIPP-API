@@ -16,7 +16,8 @@ $tokens = try {
     $AADGraphtoken = (Get-GraphToken -scope 'https://graph.windows.net/.default')
     $allTenantsDetails = (Invoke-RestMethod -Method GET -Uri 'https://graph.windows.net/myorganization/contracts?api-version=1.6' -ContentType 'application/json' -Headers $AADGraphtoken)
     $tenantObjectId = $allTenantsDetails.value | Where-Object { $_.customerContextId -eq $customerContextId } | Select-Object 'objectId'
-} catch {
+}
+catch {
     "Failed to retrieve list of tenants.  Error: $($_.ExceptionMessage)"
     Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $($tenantDisplayName) -message "Failed to retrieve list of tenants. Error: $($_.Exception.Message)" -Sev 'Error'
 }
@@ -24,19 +25,26 @@ $tokens = try {
 
 $results = if ($tenantObjectId) {
     try {
+        $TenantsTable = Get-CippTable -tablename Tenants
         $bodyToPatch = '{"displayName":"' + $tenantDisplayName + '","defaultDomainName":"' + $tenantDefaultDomainName + '"}'
         $patchTenant = (Invoke-RestMethod -Method PATCH -Uri "https://graph.windows.net/myorganization/contracts/$($tenantObjectId.objectId)?api-version=1.6" -Body $bodyToPatch -ContentType 'application/json' -Headers $AADGraphtoken)    
         
-        if (Test-Path -Path '.\tenants.cache.json') {
+        # Update display name instead of clearing cache
+        $Filter = "PartitionKey eq 'Tenants' and defaultDomainName eq '{0}'" -f $tenantDefaultDomainName
+        $Tenant = Get-AzDataTableEntity @TenantsTable -Filter $Filter 
+        $Tenant.displayName = $tenantDisplayName
+        Update-AzDataTableEntity @TenantsTable -Entity $Tenant
+
+        <#if (Test-Path -Path '.\tenants.cache.json') {
             try {
                 Remove-CIPPCache
             }
             catch { 
                 'There was an error removing the tenants cache for some reason.' 
             } 
-        }
+        }#>
         Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $($Tenant) -message "Edited tenant $($Tenant)" -Sev 'Info'
-        "Successfully amended details for $($Tenant) and cleared tenant cache"
+        "Successfully amended details for $($Tenant)"
     }
     catch { 
         "Failed to amend details for $($Tenant): $($_.ExceptionMessage)"
