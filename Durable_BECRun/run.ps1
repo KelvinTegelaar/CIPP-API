@@ -2,7 +2,7 @@ param($Context)
 #$Context does not allow itself to be cast to a pscustomobject for some reason, so we convert
 $context = $Context | ConvertTo-Json | ConvertFrom-Json
 $APIName = $TriggerMetadata.FunctionName
-Log-Request -user $request.headers.'x-ms-client-principal' -API $APINAME  -message "Accessed this API" -Sev "Debug"
+Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME  -message "Accessed this API" -Sev "Debug"
 Write-Host "PowerShell HTTP trigger function processed a request."
 Write-Host ($Context | ConvertTo-Json)
 $TenantFilter = $Context.input.tenantfilter
@@ -118,11 +118,11 @@ try {
     ChangedPasswords         = @(($7dayslog | Where-Object -Property Operations -In "Change user password.", "Reset user password.").AuditData | ConvertFrom-Json)
   }
     
-  #Log-Request -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $($tenantfilter) -message "Assigned $($appFilter) to $assignTo" -Sev "Info"
+  #Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $($tenantfilter) -message "Assigned $($appFilter) to $assignTo" -Sev "Info"
 
 }
 catch {
-  #Log-Request -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $($tenantfilter) -message "Failed to assign app $($appFilter): $($_.Exception.Message)" -Sev "Error"
+  #Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $($tenantfilter) -message "Failed to assign app $($appFilter): $($_.Exception.Message)" -Sev "Error"
   $errMessage = Get-NormalizedError -message $_.Exception.Message
   $results = [pscustomobject]@{"Results" = "$errMessage" }
 }

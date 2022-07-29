@@ -15,9 +15,9 @@ try {
   }
 }
 catch {
-  Log-request -API 'Standards' -tenant $tenant -message "Orchestrator error: $($_.Exception.Message)" -sev Info
+  Write-LogMessage -API 'Standards' -tenant $tenant -message "Orchestrator error: $($_.Exception.Message)" -sev Info
 }
 finally {
-  Log-request -API 'Standards' -tenant $tenant -message 'Deployment finished.' -sev Info
+  Write-LogMessage -API 'Standards' -tenant $tenant -message 'Deployment finished.' -sev Info
   Remove-Item 'Cache_Standards\CurrentlyRunning.txt' -Force
 }

@@ -1,5 +1,5 @@
 if (!(Get-Module -ListAvailable AzTable)) {
-    Install-Module AzTable -Confirm:$false
+    Install-Module AzTable -Confirm:$false -Force
 }
 
 $Logo = @'
@@ -14,7 +14,6 @@ $Logo = @'
 Write-Host $Logo
 Write-Host '- Connecting to Azure'
 Connect-AzAccount -Subscription '##SUBSCRIPTION##'
-Install-Module AzTable -Confirm:$false -Force
 $RGName = '##RESOURCEGROUP##'
 $FunctionApp = '##FUNCTIONAPP##'
 

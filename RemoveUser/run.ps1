@@ -4,7 +4,7 @@ using namespace System.Net
 param($Request, $TriggerMetadata)
 
 $APIName = $TriggerMetadata.FunctionName
-Log-Request -user $request.headers.'x-ms-client-principal' -API $APINAME  -message "Accessed this API" -Sev "Debug"
+Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME  -message "Accessed this API" -Sev "Debug"
 
 # Interact with query parameters or the body of the request.
 $TenantFilter = $Request.Query.TenantFilter
@@ -12,12 +12,12 @@ $userid = $Request.Query.ID
 if (!$userid) { exit }
 try {
     $GraphRequest = New-GraphPostRequest -uri "https://graph.microsoft.com/beta/users/$($userid)" -type DELETE -tenant $TenantFilter
-    Log-Request -user $request.headers.'x-ms-client-principal' -API $APINAME  -message "Deleted $userid" -Sev "Info" -tenant $TenantFilter
+    Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME  -message "Deleted $userid" -Sev "Info" -tenant $TenantFilter
     $body = [pscustomobject]@{"Results" = "Succesfully deleted the user." }
 
 }
 catch {
-    Log-Request -user $request.headers.'x-ms-client-principal' -API $APINAME  -message "Could not delete user $userid. $($_.Exception.Message)" -Sev "Error" -tenant $TenantFilter
+    Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME  -message "Could not delete user $userid. $($_.Exception.Message)" -Sev "Error" -tenant $TenantFilter
     $body = [pscustomobject]@{"Results" = "Could not delete user: $($_.Exception.Message)" }
 
 }

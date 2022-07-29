@@ -4,7 +4,7 @@ using namespace System.Net
 param($Request, $TriggerMetadata)
 
 $APIName = $TriggerMetadata.FunctionName
-Log-Request -user $request.headers.'x-ms-client-principal' -API $APINAME  -message "Accessed this API" -Sev "Debug"
+Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME  -message "Accessed this API" -Sev "Debug"
 
 $userobj = $Request.body
 
@@ -34,12 +34,12 @@ try {
 
     Write-Host $TeamsSettings
     New-GraphPostRequest -AsApp $true -uri "https://graph.microsoft.com/beta/teams" -tenantid $Userobj.tenantid -type POST -body $TeamsSettings -verbose
-    Log-Request -user $request.headers.'x-ms-client-principal'  -API $APINAME -tenant $($userobj.tenantid) -message "Added Team $($userobj.displayname)" -Sev "Info"
+    Write-LogMessage -user $request.headers.'x-ms-client-principal'  -API $APINAME -tenant $($userobj.tenantid) -message "Added Team $($userobj.displayname)" -Sev "Info"
     $body = [pscustomobject]@{"Results" = "Success. Team has been added" }
 
 }
 catch {
-    Log-Request -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $($userobj.tenantid) -message "$($userobj.tenantid): Add Team failed. $($_.Exception.Message)" -Sev "Error"
+    Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $($userobj.tenantid) -message "$($userobj.tenantid): Add Team failed. $($_.Exception.Message)" -Sev "Error"
     $body = [pscustomobject]@{"Results" = "Failed. Error message: $($_.Exception.Message)" }
 }
 

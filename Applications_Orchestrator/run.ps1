@@ -14,5 +14,5 @@ catch {
   Write-Host "Applications_Orchestrator exception: $($_.Exception.Message)"
 }
 finally {
-  Log-request -API 'ChocoApp' -Message 'Choco Application Queue: Deployment finished.' -sev Info
+  Write-LogMessage -API 'ChocoApp' -Message 'Choco Application Queue: Deployment finished.' -sev Info
 }

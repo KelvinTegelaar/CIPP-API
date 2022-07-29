@@ -11,10 +11,10 @@ Write-Host "Pop receipt: $($TriggerMetadata.PopReceipt)"
 Write-Host "Dequeue count: $($TriggerMetadata.DequeueCount)"
 
 
-$RawGraphRequest = Get-Tenants | ForEach-Object -parallel { 
+$RawGraphRequest = Get-Tenants | ForEach-Object -Parallel { 
     Import-Module '.\GraphHelper.psm1'
     try {
-        $Licrequest = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/subscribedSkus" -tenantid $_.defaultDomainName -ErrorAction Stop
+        $Licrequest = New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/subscribedSkus' -tenantid $_.defaultDomainName -ErrorAction Stop
         [PSCustomObject]@{
             Tenant   = $_.defaultDomainName
             Licenses = $Licrequest
@@ -23,7 +23,7 @@ $RawGraphRequest = Get-Tenants | ForEach-Object -parallel {
     catch {
         [PSCustomObject]@{
             Tenant   = $_.defaultDomainName
-            Licenses = "Could not retrieve licenses"
+            Licenses = 'Could not retrieve licenses'
         } 
     }
 }
@@ -44,17 +44,10 @@ $GraphRequest = foreach ($singlereq in $RawGraphRequest) {
             skuId          = $sku.skuId
             skuPartNumber  = $PrettyName
             availableUnits = $sku.prepaidUnits.enabled - $sku.consumedUnits
+            PartitionKey   = 'License'
+            RowKey         = "$($Request.tenant)-$($Request.skuId)"
         }      
     }
 }
 $Table = Get-CIPPTable -TableName cachelicenses
-
-foreach ($Request in $GraphRequest) {
-    $TableRow = @{
-        table        = $Table
-        partitionKey = 'License'
-        rowKey       = "$($Request.tenant)-$($Request.skuId)"
-        property     = $Request
-    }
-    Add-AzTableRow @TableRow -UpdateExisting | Out-Null
-}
+Add-AzDataTableEntity @Table -Entity $GraphRequest -Force | Out-Null

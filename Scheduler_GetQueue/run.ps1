@@ -1,23 +1,23 @@
 param($name)
 
 $Table = Get-CIPPTable -TableName SchedulerConfig
-$Tenants = Get-AzTableRow -Table $table
+$Tenants = Get-AzDataTableEntity @Table
 
 $object = foreach ($Tenant in $tenants) {
-    if ($Tenant.Tenant -ne "AllTenants") {
+    if ($Tenant.Tenant -ne 'AllTenants') {
         [pscustomobject]@{ 
             Tenant   = $Tenant.Tenant
-            Tag      = "SingleTenant"
+            Tag      = 'SingleTenant'
             TenantID = $Tenant.tenantId
             Type     = $Tenant.Type
         }
     }
     else {
-        Write-Host "All tenants, doing them all"
+        Write-Host 'All tenants, doing them all'
         get-tenants | ForEach-Object {
             [pscustomobject]@{ 
                 Tenant   = $_.defaultDomainName
-                Tag      = "AllTenants"
+                Tag      = 'AllTenants'
                 TenantID = $_.customerId
                 Type     = $Tenant.Type
             }

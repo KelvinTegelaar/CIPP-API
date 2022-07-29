@@ -4,7 +4,7 @@ using namespace System.Net
 param($Request, $TriggerMetadata)
 
 $APIName = $TriggerMetadata.FunctionName
-Log-Request -user $request.headers.'x-ms-client-principal' -API $APINAME  -message "Accessed this API" -Sev "Debug"
+Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME  -message "Accessed this API" -Sev "Debug"
 
 
 Write-Host "PowerShell HTTP trigger function processed a request."
@@ -63,10 +63,10 @@ $Results = foreach ($Tenant in $tenants) {
         } | ConvertTo-Json -Depth 15
         $JSONFile = New-Item -Path ".\ChocoApps.Cache\$((New-Guid).GUID)" -Value $CompleteObject -Force -ErrorAction Stop
         "Successfully added MSP App for $($Tenant.defaultDomainName) to queue. "
-        Log-Request -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $tenant.defaultDomainName -message "MSP Application $($intunebody.Displayname) queued to add" -Sev "Info"
+        Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $tenant.defaultDomainName -message "MSP Application $($intunebody.Displayname) queued to add" -Sev "Info"
     }
     catch {
-        Log-Request -user $request.headers.'x-ms-client-principal'  -API $APINAME -tenant $tenant.defaultDomainName -message "Failed to add MSP Application $($intunebody.Displayname) to queue" -Sev "Error"
+        Write-LogMessage -user $request.headers.'x-ms-client-principal'  -API $APINAME -tenant $tenant.defaultDomainName -message "Failed to add MSP Application $($intunebody.Displayname) to queue" -Sev "Error"
         "Failed to add MSP app for $($Tenant.defaultDomainName) to queue"
     }
 }

@@ -20,5 +20,5 @@ try {
 }
 catch {}
 finally {
-  Log-request -API 'Scheduler' -tenant $tenant -message 'Scheduler Ran.' -sev Debug
+  Write-LogMessage -API 'Scheduler' -tenant $tenant -message 'Scheduler Ran.' -sev Debug
 }

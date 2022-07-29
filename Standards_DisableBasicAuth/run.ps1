@@ -11,8 +11,8 @@ try {
         'x-ms-correlation-id'    = [guid]::NewGuid()
         'X-Requested-With'       = 'XMLHttpRequest' 
     }
-    Log-request  -API "Standards" -tenant $tenant -message "Basic Authentication Disabled." -sev Info
+    Write-LogMessage  -API "Standards" -tenant $tenant -message "Basic Authentication Disabled." -sev Info
 }
 catch {
-    Log-request  -API "Standards" -tenant $tenant -message "Failed to disable Basic Authentication Error: $($_.exception.message)" -sev Error
+    Write-LogMessage  -API "Standards" -tenant $tenant -message "Failed to disable Basic Authentication Error: $($_.exception.message)" -sev Error
 }

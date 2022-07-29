@@ -4,7 +4,7 @@ using namespace System.Net
 param($Request, $TriggerMetadata)
 
 $APIName = $TriggerMetadata.FunctionName
-Log-Request -user $request.headers.'x-ms-client-principal' -API $APINAME -message 'Accessed this API' -Sev 'Info'
+Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -message 'Accessed this API' -Sev 'Info'
 
 if ($request.Query.Filter -eq 'True') {
     $LogLevel = if ($Request.query.Severity) { ($Request.query.Severity).split(',') } else { 'Info', 'Warn', 'Error', 'Critical', 'Alert' } 
@@ -20,7 +20,7 @@ $Table = Get-CIPPTable
 
 $ReturnedLog = if ($Request.Query.ListLogs) {
 
-    Get-AzTableRow -Table $table | Sort-Object -Unique partitionkey | ForEach-Object {
+    Get-AzDataTableEntity @Table | Sort-Object -Unique partitionkey | Select-Object partitionkey | ForEach-Object {
         @{ 
             value = $_.PartitionKey
             label = $_.PartitionKey
@@ -28,10 +28,11 @@ $ReturnedLog = if ($Request.Query.ListLogs) {
     }
 }
 else {
-    $Rows = Get-AzTableRow -Table $table -PartitionKey $PartitionKey | Where-Object { $_.Severity -In $LogLevel -and $_.user -like $username }
+    $Filter = "PartitionKey eq '{0}'" -f $PartitionKey
+    $Rows = Get-AzDataTableEntity @Table -Filter $Filter | Where-Object { $_.Severity -In $LogLevel -and $_.user -like $username }
     foreach ($Row in $Rows) {
         @{
-            DateTime = $Row.TableTimeStamp
+            DateTime = $Row.Timestamp
             Tenant   = $Row.Tenant
             API      = $Row.API
             Message  = $Row.Message

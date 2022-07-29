@@ -4,7 +4,7 @@ using namespace System.Net
 param($Request, $TriggerMetadata)
 
 $APIName = $TriggerMetadata.FunctionName
-Log-Request -user $request.headers.'x-ms-client-principal' -API $APINAME  -message "Accessed this API" -Sev "Debug"
+Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME  -message "Accessed this API" -Sev "Debug"
 
 
 try {
@@ -23,12 +23,12 @@ try {
     }
     else {
         New-ExoRequest -tenantid $Tenantfilter -cmdlet "Get-MessageTrace" -cmdParams $Searchparams | Select-Object MessageTraceId, Status, Subject, RecipientAddress, SenderAddress, @{ Name = 'Date'; Expression = { $_.Received.tostring('s') } }
-        Log-Request -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $($tenantfilter)  -message "Executed message trace" -Sev "Info"
+        Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $($tenantfilter)  -message "Executed message trace" -Sev "Info"
 
     }
 }
 catch {
-    Log-Request -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $($tenantfilter) -message "Failed executing messagetrace. Error: $($_.Exception.Message)" -Sev "Error"
+    Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $($tenantfilter) -message "Failed executing messagetrace. Error: $($_.Exception.Message)" -Sev "Error"
     $trace = @{Status = "Failed to retrieve message trace $($_.Exception.Message)" }
 }
 

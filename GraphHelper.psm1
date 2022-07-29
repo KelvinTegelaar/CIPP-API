@@ -3,15 +3,21 @@ function Get-CIPPTable {
     param (
         $tablename = 'CippLogs'
     )
-    $context = New-AzStorageContext -ConnectionString $ENV:AzureWebJobsStorage
-    try { 
-        $StorageTable = Get-AzStorageTable -Context $context -Name $tablename -ErrorAction Stop
+    #$context = New-AzStorageContext -ConnectionString $ENV:AzureWebJobsStorage
+    #try { 
+    #    $StorageTable = Get-AzStorageTable -Context $context -Name $tablename -ErrorAction Stop
+    #}
+    #catch {
+    #    New-AzStorageTable -Context $context -Name $tablename | Out-Null
+    #    $StorageTable = Get-AzStorageTable -Context $context -Name $tablename
+    #}
+    #return $StorageTable.CloudTable
+
+    @{
+        ConnectionString       = $ENV:AzureWebJobsStorage
+        TableName              = $tablename
+        CreateTableIfNotExists = $true
     }
-    catch {
-        New-AzStorageTable -Context $context -Name $tablename | Out-Null
-        $StorageTable = Get-AzStorageTable -Context $context -Name $tablename
-    }
-    return $StorageTable.CloudTable
 }
 function Get-NormalizedError {
     [CmdletBinding()]
@@ -64,33 +70,30 @@ function Get-GraphToken($tenantid, $scope, $AsApp, $AppID, $refreshToken, $Retur
     return $header
 }
 
-function Log-Request ($message, $tenant = "None", $API = "None", $user, $sev) {
+function Write-LogMessage ($message, $tenant = 'None', $API = 'None', $user, $sev) {
     $username = ([System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($user)) | ConvertFrom-Json).userDetails
 
-    $Table = Get-CIPPTable
-    if (!$tenant) { $tenant = "None" }
+    $Table = Get-CIPPTable -tablename CippLogs
+
+    if (!$tenant) { $tenant = 'None' }
     if (!$username) { $username = 'CIPP' }
     if ($sev -eq 'Debug' -and $env:DebugMode -ne 'true') { 
         Write-Information 'Not writing to log file - Debug mode is not enabled.'
         return
     }
-    $PartitionKey = Get-Date -UFormat '%Y%m%d'
-    $LogRequest = @{
-        'Tenant'      = $tenant
-        'API'         = $API
-        'Message'     = $message
-        'Username'    = $username
-        'Severity'    = $sev
-        'SentAsAlert' = $false
-    }
+    $PartitionKey = (Get-Date -UFormat '%Y%m%d').ToString()
     $TableRow = @{
-        table        = $Table
-        partitionKey = $PartitionKey
-        rowKey       = [guid]::NewGuid()
-        property     = $LogRequest
+        'Tenant'       = $tenant
+        'API'          = $API
+        'Message'      = $message
+        'Username'     = $username
+        'Severity'     = $sev
+        'SentAsAlert'  = $false
+        'PartitionKey' = $PartitionKey
+        'RowKey'       = ([guid]::NewGuid()).ToString()
     }
-    Add-AzTableRow @TableRow | Out-Null
-
+    $Table.Entity = $TableRow
+    Add-AzDataTableEntity @Table | Out-Null
 }
 
 function New-GraphGetRequest ($uri, $tenantid, $scope, $AsApp, $noPagination) {
@@ -256,7 +259,7 @@ function Get-AuthorisedRequest($TenantID, $Uri) {
     if ($uri -like 'https://graph.microsoft.com/beta/contracts*' -or $uri -like '*/customers/*' -or $uri -eq 'https://graph.microsoft.com/v1.0/me/sendMail' -or $uri -like 'https://graph.microsoft.com/beta/tenantRelationships/managedTenants*') {
         return $true
     }
-    if ($TenantID -in (Get-Tenants).defaultdomainname) {
+    if ($TenantID -in (Get-Tenants).defaultDomainName) {
         return $true
     }
     else {
@@ -274,35 +277,57 @@ function Get-Tenants {
         
     )
 
-    $cachefile = 'tenants.cache.json'
+    $TenantsTable = Get-CippTable -tablename 'Tenants'
+    #$cachefile = 'tenants.cache.json'
     
     if ((!$Script:SkipListCache -and !$Script:SkipListCacheEmpty) -or !$Script:IncludedTenantsCache) {
         # We create the excluded tenants file. This is not set to force so will not overwrite
-        New-Item -ErrorAction SilentlyContinue -ItemType File -Path 'ExcludedTenants'
-        $Script:SkipListCache = Get-Content 'ExcludedTenants' | ConvertFrom-Csv -Delimiter '|' -Header 'Name', 'User', 'Date'
+
+        $ExcludedFilter = "PartitionKey eq 'Tenants' and Excluded eq true" 
+        $Script:SkipListCache = Get-AzDataTableRow @TenantsTable -Filter $ExcludedFilter
+        
         if ($null -eq $Script:SkipListCache) {
             $Script:SkipListCacheEmpty = $true
         }
 
         # Load or refresh the cache if older than 24 hours
-        $Testfile = Get-Item $cachefile -ErrorAction SilentlyContinue | Where-Object -Property LastWriteTime -GT (Get-Date).Addhours(-24)
-        if ($Testfile) {
-            $Script:IncludedTenantsCache = Get-Content $cachefile -ErrorAction SilentlyContinue | ConvertFrom-Json
-        }
-        else {
-            $Script:IncludedTenantsCache = (New-GraphGetRequest -uri "https://graph.microsoft.com/beta/contracts?`$top=999" -tenantid $ENV:Tenantid) | Select-Object CustomerID, DefaultdomainName, DisplayName, domains | Where-Object -Property DefaultdomainName -NotIn $Script:SkipListCache.name
+        $Filter = "PartitionKey eq 'Tenants' and Excluded eq false" 
+        $Script:IncludedTenantsCache = Get-AzDataTableEntity @TenantsTable -Filter $Filter
+
+        if (($Script:IncludedTenantsCache | Sort-Object Timestamp | Select-Object -First 1).Timestamp -lt (Get-Date).Addhours(-24)) {
+            $TenantList = (New-GraphGetRequest -uri "https://graph.microsoft.com/beta/contracts?`$top=999" -tenantid $ENV:Tenantid) | Select-Object id, CustomerID, DefaultdomainName, DisplayName, domains | Where-Object -Property DefaultdomainName -NotIn $Script:SkipListCache.DefaultdomainName
+
+            $Script:IncludedTenantsCache = [system.collections.generic.list[hashtable]]::new()
             if ($ENV:PartnerTenantAvailable) {
-                $PartnerTenant = @([PSCustomObject]@{
+                $Script:IncludedTenantsCache.Add(@{
+                        RowKey            = $env:TenantID
+                        PartitionKey      = 'Tenants'
                         customerId        = $env:TenantID
                         defaultDomainName = $env:TenantID
                         displayName       = '*Partner Tenant'
                         domains           = 'PartnerTenant'
-                    })
-                $Script:IncludedTenantsCache = $PartnerTenant + $Script:IncludedTenantsCache
+                        Excluded          = $false
+                        ExcludeUser       = ''
+                        ExcludeDate       = ''
+                    }) | Out-Null
+            }
+            foreach ($Tenant in $TenantList) {
+                $Script:IncludedTenantsCache.Add(@{
+                        RowKey            = $Tenant.id
+                        PartitionKey      = 'Tenants'
+                        customerId        = $Tenant.customerId
+                        defaultDomainName = $Tenant.DefaultDomainName
+                        displayName       = $Tenant.DisplayName
+                        domains           = ''
+                        Excluded          = $false
+                        ExcludeUser       = ''
+                        ExcludeDate       = ''
+                    }) | Out-Null
             }
    
             if ($Script:IncludedTenantsCache) {
-                $Script:IncludedTenantsCache | ConvertTo-Json | Out-File $cachefile
+                $TenantsTable.Force = $true
+                Add-AzDataTableEntity @TenantsTable -Entity $Script:IncludedTenantsCache
             }
         }    
     }
@@ -319,9 +344,13 @@ function Get-Tenants {
 }
 
 function Remove-CIPPCache {
-    Remove-Item 'tenants.cache.json' -Force
+    $TenantsTable = Get-CippTable -tablename 'Tenants'
+    $Filter = "PartitionKey eq 'Tenants' and 'Excluded' eq false" 
+    $ClearIncludedTenants = Get-AzDataTableRow @TenantsTable -Filter $Filter
+    Remove-AzDataTableRow @TenantsTable -Entity $ClearIncludedTenants
+
     Get-ChildItem -Path 'Cache_BestPracticeAnalyser' -Filter *.json | Remove-Item -Force -ErrorAction SilentlyContinue
-    Get-ChildItem -Path 'Cache_DomainAnalyser' -Filter *.json | Remove-Item -Force -ErrorAction SilentlyContinue
+    #Get-ChildItem -Path 'Cache_DomainAnalyser' -Filter *.json | Remove-Item -Force -ErrorAction SilentlyContinue
     Get-ChildItem -Path 'Cache_BestPracticeAnalyser\CurrentlyRunning.txt' -ErrorAction SilentlyContinue | Remove-Item -Force -ErrorAction SilentlyContinue
     Get-ChildItem -Path 'ChocoApps.Cache\CurrentlyRunning.txt' -ErrorAction SilentlyContinue | Remove-Item -Force -ErrorAction SilentlyContinue
     Get-ChildItem -Path 'Cache_DomainAnalyser\CurrentlyRunning.txt' -ErrorAction SilentlyContinue | Remove-Item -Force -ErrorAction SilentlyContinue
