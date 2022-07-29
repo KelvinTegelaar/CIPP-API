@@ -37,13 +37,13 @@ $GraphRequest = foreach ($singlereq in $RawGraphRequest) {
         if (!$PrettyName) { $PrettyName = $sku.skuPartNumber }
         @{
             Tenant         = $singlereq.Tenant
-            License        = $PrettyName
+            License        = [string]$PrettyName
             CountUsed      = "$($sku.consumedUnits)"
-            CountAvailable = $sku.prepaidUnits.enabled - $sku.consumedUnits
+            CountAvailable = ($sku.prepaidUnits.enabled - $sku.consumedUnits)
             TotalLicenses  = "$($sku.prepaidUnits.enabled)"
-            skuId          = $sku.skuId
-            skuPartNumber  = $PrettyName
-            availableUnits = $sku.prepaidUnits.enabled - $sku.consumedUnits
+            skuId          = [string]$sku.skuId
+            skuPartNumber  = [string]$PrettyName
+            availableUnits = ($sku.prepaidUnits.enabled - $sku.consumedUnits)
             PartitionKey   = 'License'
             RowKey         = "$($Request.tenant)-$($Request.skuId)"
         }      
