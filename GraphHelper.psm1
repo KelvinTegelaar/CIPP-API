@@ -64,10 +64,33 @@ function Get-GraphToken($tenantid, $scope, $AsApp, $AppID, $refreshToken, $Retur
     }
 
     if (!$tenantid) { $tenantid = $env:tenantid }
-    $AccessToken = (Invoke-RestMethod -Method post -Uri "https://login.microsoftonline.com/$($tenantid)/oauth2/v2.0/token" -Body $Authbody -ErrorAction Stop)
-    if ($ReturnRefresh) { $header = $AccessToken } else { $header = @{ Authorization = "Bearer $($AccessToken.access_token)" } }
 
-    return $header
+    # Track consecutive Graph API failures
+    $TenantsTable = Get-CippTable -tablename Tenants
+    $Filter = "PartitionKey eq 'Tenants' and (defaultDomainName eq '{0}' or customerId eq '{0}')" -f $tenantid
+    $Tenant = Get-AzDataTableRow @TenantsTable -Filter $Filter
+
+    try {
+        $AccessToken = (Invoke-RestMethod -Method post -Uri "https://login.microsoftonline.com/$($tenantid)/oauth2/v2.0/token" -Body $Authbody -ErrorAction Stop)
+        if ($ReturnRefresh) { $header = $AccessToken } else { $header = @{ Authorization = "Bearer $($AccessToken.access_token)" } }
+        if ($Tenant.GraphErrorCount -gt 0) {
+            $Tenant.GraphErrorCount = 0
+            $Tenant.LastGraphTokenError = ''
+            Update-AzDataTableRow @TenantsTable -Entity $Tenant
+        }
+        return $header
+    }
+    catch {
+        $Tenant.LastGraphTokenError = $_.Exception.Message
+        if ($Tenant.GraphErrorCount -gt 0) {
+            $Tenant.GraphErrorCount++
+        }
+        else {
+            $Tenant.GraphErrorCount = 1
+        }
+        Update-AzDataTableRow @TenantsTable -Entity $Tenant
+        throw
+    }
 }
 
 function Write-LogMessage ($message, $tenant = 'None', $API = 'None', $user, $sev) {

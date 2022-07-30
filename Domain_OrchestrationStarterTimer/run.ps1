@@ -1,5 +1,10 @@
 param($Timer)
 
+if ($env:DEV_SKIP_DOMAIN_TIMER) { 
+    Write-Host 'Skipping DomainAnalyser timer'
+    exit 0 
+}
+
 try {
     $CurrentlyRunning = Get-Item 'Cache_DomainAnalyser\CurrentlyRunning.txt' -ErrorAction SilentlyContinue | Where-Object -Property LastWriteTime -GT (Get-Date).AddHours(-24)
     if ($CurrentlyRunning) {
