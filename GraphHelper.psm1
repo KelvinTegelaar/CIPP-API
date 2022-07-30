@@ -316,35 +316,42 @@ function Get-Tenants {
         # Load or refresh the cache if older than 24 hours
         $Filter = "PartitionKey eq 'Tenants' and Excluded eq false" 
         $Script:IncludedTenantsCache = Get-AzDataTableEntity @TenantsTable -Filter $Filter
-
-        if (($Script:IncludedTenantsCache | Sort-Object Timestamp | Select-Object -First 1).Timestamp -lt (Get-Date).Addhours(-24)) {
+        
+        $LastRefresh = ($Script:IncludedTenantsCache | Sort-Object LastRefresh | Select-Object -First 1).LastRefresh.DateTime
+        if ($LastRefresh -lt (Get-Date).Addhours(-24).ToUniversalTime()) {
             $TenantList = (New-GraphGetRequest -uri "https://graph.microsoft.com/beta/contracts?`$top=999" -tenantid $ENV:Tenantid) | Select-Object id, CustomerID, DefaultdomainName, DisplayName, domains | Where-Object -Property DefaultdomainName -NotIn $Script:SkipListCache.DefaultdomainName
 
             $Script:IncludedTenantsCache = [system.collections.generic.list[hashtable]]::new()
             if ($ENV:PartnerTenantAvailable) {
                 $Script:IncludedTenantsCache.Add(@{
-                        RowKey            = $env:TenantID
-                        PartitionKey      = 'Tenants'
-                        customerId        = $env:TenantID
-                        defaultDomainName = $env:TenantID
-                        displayName       = '*Partner Tenant'
-                        domains           = 'PartnerTenant'
-                        Excluded          = $false
-                        ExcludeUser       = ''
-                        ExcludeDate       = ''
+                        RowKey              = $env:TenantID
+                        PartitionKey        = 'Tenants'
+                        customerId          = $env:TenantID
+                        defaultDomainName   = $env:TenantID
+                        displayName         = '*Partner Tenant'
+                        domains             = 'PartnerTenant'
+                        Excluded            = $false
+                        ExcludeUser         = ''
+                        ExcludeDate         = ''
+                        GraphErrorCount     = 0
+                        LastGraphTokenError = ''
+                        LastRefresh         = (Get-Date).ToUniversalTime()
                     }) | Out-Null
             }
             foreach ($Tenant in $TenantList) {
                 $Script:IncludedTenantsCache.Add(@{
-                        RowKey            = $Tenant.id
-                        PartitionKey      = 'Tenants'
-                        customerId        = $Tenant.customerId
-                        defaultDomainName = $Tenant.DefaultDomainName
-                        displayName       = $Tenant.DisplayName
-                        domains           = ''
-                        Excluded          = $false
-                        ExcludeUser       = ''
-                        ExcludeDate       = ''
+                        RowKey              = $Tenant.id
+                        PartitionKey        = 'Tenants'
+                        customerId          = $Tenant.customerId
+                        defaultDomainName   = $Tenant.DefaultDomainName
+                        displayName         = $Tenant.DisplayName
+                        domains             = ''
+                        Excluded            = $false
+                        ExcludeUser         = ''
+                        ExcludeDate         = ''
+                        GraphErrorCount     = 0
+                        LastGraphTokenError = ''
+                        LastRefresh         = (Get-Date).ToUniversalTime()
                     }) | Out-Null
             }
    
@@ -360,7 +367,6 @@ function Get-Tenants {
     if ($IncludeAll) {
         return (New-GraphGetRequest -uri "https://graph.microsoft.com/beta/contracts?`$top=999" -tenantid $ENV:Tenantid) | Select-Object CustomerID, DefaultdomainName, DisplayName, domains
     }
-    
     else {
         return $Script:IncludedTenantsCache
     }
