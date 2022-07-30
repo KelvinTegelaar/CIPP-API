@@ -319,6 +319,7 @@ function Get-Tenants {
         
         $LastRefresh = ($Script:IncludedTenantsCache | Sort-Object LastRefresh | Select-Object -First 1).LastRefresh.DateTime
         if ($LastRefresh -lt (Get-Date).Addhours(-24).ToUniversalTime()) {
+
             $TenantList = (New-GraphGetRequest -uri "https://graph.microsoft.com/beta/contracts?`$top=999" -tenantid $ENV:Tenantid) | Select-Object id, CustomerID, DefaultdomainName, DisplayName, domains | Where-Object -Property DefaultdomainName -NotIn $Script:SkipListCache.DefaultdomainName
 
             $Script:IncludedTenantsCache = [system.collections.generic.list[hashtable]]::new()
@@ -374,7 +375,7 @@ function Get-Tenants {
 
 function Remove-CIPPCache {
     $TenantsTable = Get-CippTable -tablename 'Tenants'
-    $Filter = "PartitionKey eq 'Tenants' and 'Excluded' eq false" 
+    $Filter = "PartitionKey eq 'Tenants' and Excluded eq false" 
     $ClearIncludedTenants = Get-AzDataTableRow @TenantsTable -Filter $Filter
     Remove-AzDataTableRow @TenantsTable -Entity $ClearIncludedTenants
 
