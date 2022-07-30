@@ -1,9 +1,9 @@
 param($name)
 
 $Tenants = Get-Tenants
+$ExcludedTenants = Get-Tenants -SkipList
 $DomainTable = Get-CippTable -tablename 'Domains'
 
-$TenantErrors = [System.Collections.Concurrent.ConcurrentDictionary[string, string]]::new()
 $TenantDomains = $Tenants | ForEach-Object -Parallel {
     Import-Module '.\GraphHelper.psm1'
     $Tenant = $_
@@ -25,24 +25,21 @@ $TenantDomains = $Tenants | ForEach-Object -Parallel {
         }
     }
     catch {
-        $dict = $using:TenantErrors
-        $dict.TryAdd($Tenant.defaultDomainName, $_.Exception.Message) | Out-Null
         Write-LogMessage -API 'DomainAnalyser' -tenant $tenant.defaultDomainName -message "DNS Analyser GraphGetRequest Exception: $($_.Exception.Message)" -sev Error
     }
 }
 
-#Write-Host 'Tenant Errors: '
-#Write-Host ($TenantErrors | Format-Table | Out-String)
-
 # Cleanup domains from tenants with errors, skip domains with manually set selectors or mail providers
-foreach ($Key in $TenantErrors.Keys) {
-    Write-LogMessage -API 'DomainAnalyser' -tenant $Key -message 'Removing domains for tenant' -sev Error
-    $Filter = "PartitionKey eq 'TenantDomains' and TenantID eq '{0}' and DkimSelectors eq '' and MailProviders eq ''" -f $Key
+foreach ($Exclude in $ExcludedTenants) {
+    $Filter = "PartitionKey eq 'TenantDomains' and TenantId eq '{0}'" -f $Exclude.defaultDomainName
     $CleanupRows = Get-AzDataTableEntity @DomainTable -Filter $Filter
-    if (($CleanupRows | Measure-Object).Count -gt 0) {
+    $CleanupCount = ($CleanupRows | Measure-Object).Count
+    if ($CleanupCount -gt 0) {
+        Write-LogMessage -API 'DomainAnalyser' -tenant $Exclude.defaultDomainName -message "Cleaning up $CleanupCount domain(s) for excluded tenant" -sev Info
         Remove-AzDataTableRow @DomainTable -Entity $CleanupRows
     }
 }
+
 
 $TenantCount = ($TenantDomains | Measure-Object).Count
 if ($TenantCount -gt 0) {

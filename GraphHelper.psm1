@@ -374,13 +374,22 @@ function Get-Tenants {
 }
 
 function Remove-CIPPCache {
+    # Remove all tenants except excluded
     $TenantsTable = Get-CippTable -tablename 'Tenants'
     $Filter = "PartitionKey eq 'Tenants' and Excluded eq false" 
     $ClearIncludedTenants = Get-AzDataTableRow @TenantsTable -Filter $Filter
     Remove-AzDataTableRow @TenantsTable -Entity $ClearIncludedTenants
 
+    # Remove Domain Analyser cached results
+    $DomainsTable = Get-CippTable -tablename 'Domains'
+    $Filter = "PartitionKey eq 'TenantDomains'"
+    $ClearDomainAnalyserRows = Get-AzDataTableRow @DomainsTable -Filter $Filter | ForEach-Object {
+        $_.DomainAnalyser = ''
+        $_
+    }
+    Update-AzDataTableEntity @DomainsTable -Entity $ClearDomainAnalyserRows
+
     Get-ChildItem -Path 'Cache_BestPracticeAnalyser' -Filter *.json | Remove-Item -Force -ErrorAction SilentlyContinue
-    #Get-ChildItem -Path 'Cache_DomainAnalyser' -Filter *.json | Remove-Item -Force -ErrorAction SilentlyContinue
     Get-ChildItem -Path 'Cache_BestPracticeAnalyser\CurrentlyRunning.txt' -ErrorAction SilentlyContinue | Remove-Item -Force -ErrorAction SilentlyContinue
     Get-ChildItem -Path 'ChocoApps.Cache\CurrentlyRunning.txt' -ErrorAction SilentlyContinue | Remove-Item -Force -ErrorAction SilentlyContinue
     Get-ChildItem -Path 'Cache_DomainAnalyser\CurrentlyRunning.txt' -ErrorAction SilentlyContinue | Remove-Item -Force -ErrorAction SilentlyContinue
