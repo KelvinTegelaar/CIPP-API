@@ -29,25 +29,29 @@ $RawGraphRequest = Get-Tenants | ForEach-Object -Parallel {
 }
 
 $ConvertTable = Import-Csv Conversiontable.csv
+$Table = Get-CIPPTable -TableName cachelicenses
+
 
 $GraphRequest = foreach ($singlereq in $RawGraphRequest) {
     $skuid = $singlereq.Licenses
     foreach ($sku in $skuid) {
+        if (!$sku.skuId) { $SkuId = "Could not connect" } else { $skuId = $sku.skuid }
         $PrettyName = ($ConvertTable | Where-Object { $_.guid -eq $sku.skuid }).'Product_Display_Name' | Select-Object -Last 1
         if (!$PrettyName) { $PrettyName = $sku.skuPartNumber }
         @{
-            Tenant         = $singlereq.Tenant
-            License        = $PrettyName
+            Tenant         = "$($singlereq.Tenant)"
+            License        = "$PrettyName"
             CountUsed      = "$($sku.consumedUnits)"
-            CountAvailable = $sku.prepaidUnits.enabled - $sku.consumedUnits
+            CountAvailable = "$($sku.prepaidUnits.enabled - $sku.consumedUnits)"
             TotalLicenses  = "$($sku.prepaidUnits.enabled)"
-            skuId          = $sku.skuId
-            skuPartNumber  = $PrettyName
-            availableUnits = $sku.prepaidUnits.enabled - $sku.consumedUnits
+            skuId          = "$SkuId"
+            skuPartNumber  = "$PrettyName"
+            availableUnits = "$($sku.prepaidUnits.enabled - $sku.consumedUnits)"
             PartitionKey   = 'License'
-            RowKey         = "$($Request.tenant)-$($Request.skuId)"
+            RowKey         = "$($singlereq.tenant)-$SkuId"
         }      
     }
 }
-$Table = Get-CIPPTable -TableName cachelicenses
+
+Write-Host "$($GraphRequest.RowKey) - $($GraphRequest.tenant)"
 Add-AzDataTableEntity @Table -Entity $GraphRequest -Force | Out-Null

@@ -10,8 +10,7 @@ catch {
     $Tenant = @{Tenant = 'None' }
 }
 
-Write-LogMessage -API 'DomainAnalyser' -tenant $tenant.tenant -message "Starting Processing of $Domain" -sev Debug
-
+Write-Host "$($DomainObject.TenantDetails)"
 $Result = [PSCustomObject]@{
     Tenant               = $Tenant.Tenant
     GUID                 = $($Domain.Replace('.', ''))
