@@ -1678,9 +1678,12 @@ namespace SevenTiny.Bantina.Security {
     }
 }
 '@
-    if (!('SevenTiny.Bantina.Security.RSACommon' -as [type])) {
-        Add-Type -TypeDefinition $source -Language CSharp
+    try {
+        if (!('SevenTiny.Bantina.Security.RSACommon' -as [type])) {
+            Add-Type -TypeDefinition $source -Language CSharp
+        }
     }
+    catch {}
 
     # Return RSA Public Key information
     [SevenTiny.Bantina.Security.RSACommon]::CreateRsaProviderFromPublicKey($EncodedString)
