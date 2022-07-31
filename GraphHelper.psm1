@@ -3,16 +3,6 @@ function Get-CIPPTable {
     param (
         $tablename = 'CippLogs'
     )
-    #$context = New-AzStorageContext -ConnectionString $ENV:AzureWebJobsStorage
-    #try { 
-    #    $StorageTable = Get-AzStorageTable -Context $context -Name $tablename -ErrorAction Stop
-    #}
-    #catch {
-    #    New-AzStorageTable -Context $context -Name $tablename | Out-Null
-    #    $StorageTable = Get-AzStorageTable -Context $context -Name $tablename
-    #}
-    #return $StorageTable.CloudTable
-
     @{
         ConnectionString       = $ENV:AzureWebJobsStorage
         TableName              = $tablename

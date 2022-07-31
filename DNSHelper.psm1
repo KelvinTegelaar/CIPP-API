@@ -29,15 +29,22 @@ function Resolve-DnsHttpsQuery {
         [string]$RecordType = 'A'
     )
 
-    if (Test-Path -Path 'Config\DnsConfig.json') {
-        try {
-            $Config = Get-Content 'Config\DnsConfig.json' | ConvertFrom-Json 
-            $Resolver = $Config.Resolver
-        }
-        catch { $Resolver = 'Google' }
+    $ConfigTable = Get-CippTable -tablename Config
+    $Filter = "PartitionKey eq 'Domains' and RowKey eq 'Domains'"
+    $Config = Get-AzDataTableEntity @ConfigTable -Filter $Filter
+
+    $ValidResolvers = @('Google', 'CloudFlare', 'Quad9')
+    if ($ValidResolvers -contains $Config.Resolver) {
+        $Resolver = $Config.Resolver
     }
     else {
         $Resolver = 'Google'
+        $Config = @{
+            PartitionKey = 'Domains'
+            RowKey       = 'Domains'
+            Resolver     = $Resolver
+        }
+        Add-AzDataTableEntity @ConfigTable -Entity $Config -Force
     }
 
     switch ($Resolver) {

@@ -13,27 +13,22 @@ $ValidResolvers = @(
     'Quad9'
 )
 
-$ConfigPath = 'Config/DnsConfig.json'
-
 # Write to the Azure Functions log stream.
 Write-Host 'PowerShell HTTP trigger function processed a request.'
 
 $StatusCode = [HttpStatusCode]::OK
 try {
-    $Config = ''
-    if (Test-Path $ConfigPath) {
-        try {
-            # Try to parse config file and catch exceptions
-            $Config = Get-Content -Path $ConfigPath | ConvertFrom-Json
+    $ConfigTable = Get-CippTable -tablename Config
+    $Filter = "PartitionKey eq 'Domains' and RowKey eq 'Domains'"
+    $Config = Get-AzDataTableEntity @ConfigTable -Filter $Filter
+
+    if ($ValidResolvers -notcontains $Config.Resolver) {
+        $Config = @{
+            PartitionKey = 'Domains'
+            RowKey       = 'Domains'
+            Resolver     = 'Google'
         }
-        catch {}
-    }
-    if ($Config -eq '') {
-        New-Item 'Config' -ItemType Directory -ErrorAction SilentlyContinue | Out-Null
-        $Config = [PSCustomObject]@{
-            Resolver = 'Google'
-        }
-        $Config | ConvertTo-Json | Set-Content $ConfigPath
+        Add-AzDataTableEntity @ConfigTable -Entity $Config -Force
     }
 
     $updated = $false
@@ -47,7 +42,7 @@ try {
                     $Config.Resolver = $Resolver
                 }
                 catch {
-                    $Config = [PSCustomObject]@{
+                    $Config = @{
                         Resolver = $Resolver
                     }
                 }
@@ -55,7 +50,8 @@ try {
             }
         }
         if ($updated) {
-            $Config | ConvertTo-Json | Set-Content $ConfigPath
+            Add-AzDataTableEntity @ConfigTable -Entity $Config -Force
+            #$Config | ConvertTo-Json | Set-Content $ConfigPath
             Write-LogMessage -API $APINAME -tenant 'Global' -user $request.headers.'x-ms-client-principal' -message 'DNS configuration updated' -Sev 'Info' 
             $body = [pscustomobject]@{'Results' = 'Success: DNS configuration updated.' }
         }
@@ -65,7 +61,7 @@ try {
         }
     }
     elseif ($Request.Query.Action -eq 'GetConfig') {
-        $body = $Config
+        $body = [pscustomobject]$Config
         Write-LogMessage -API $APINAME -tenant 'Global' -user $request.headers.'x-ms-client-principal' -message 'Retrieved DNS configuration' -Sev 'Info' 
     }
 }
