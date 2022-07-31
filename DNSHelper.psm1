@@ -1915,9 +1915,12 @@ namespace CyberDrain.CIPP {
     }
 }
 '@
-    if (!('CyberDrain.CIPP.CertificateCheck' -as [type])) {
-        Add-Type -TypeDefinition $source -Language CSharp
+    try { 
+        if (!('CyberDrain.CIPP.CertificateCheck' -as [type])) {
+            Add-Type -TypeDefinition $source -Language CSharp
+        }
     }
+    catch {}
 
     [CyberDrain.CIPP.CertificateCheck]::GetServerCertificate($Url, $FollowRedirect)
 }
