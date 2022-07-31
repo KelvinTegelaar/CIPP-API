@@ -64,10 +64,33 @@ function Get-GraphToken($tenantid, $scope, $AsApp, $AppID, $refreshToken, $Retur
     }
 
     if (!$tenantid) { $tenantid = $env:tenantid }
-    $AccessToken = (Invoke-RestMethod -Method post -Uri "https://login.microsoftonline.com/$($tenantid)/oauth2/v2.0/token" -Body $Authbody -ErrorAction Stop)
-    if ($ReturnRefresh) { $header = $AccessToken } else { $header = @{ Authorization = "Bearer $($AccessToken.access_token)" } }
 
-    return $header
+    # Track consecutive Graph API failures
+    $TenantsTable = Get-CippTable -tablename Tenants
+    $Filter = "PartitionKey eq 'Tenants' and (defaultDomainName eq '{0}' or customerId eq '{0}')" -f $tenantid
+    $Tenant = Get-AzDataTableRow @TenantsTable -Filter $Filter
+
+    try {
+        $AccessToken = (Invoke-RestMethod -Method post -Uri "https://login.microsoftonline.com/$($tenantid)/oauth2/v2.0/token" -Body $Authbody -ErrorAction Stop)
+        if ($ReturnRefresh) { $header = $AccessToken } else { $header = @{ Authorization = "Bearer $($AccessToken.access_token)" } }
+        if ($Tenant.GraphErrorCount -gt 0) {
+            $Tenant.GraphErrorCount = 0
+            $Tenant.LastGraphTokenError = ''
+            Update-AzDataTableRow @TenantsTable -Entity $Tenant
+        }
+        return $header
+    }
+    catch {
+        $Tenant.LastGraphTokenError = $_.Exception.Message
+        if ($Tenant.GraphErrorCount -gt 0) {
+            $Tenant.GraphErrorCount++
+        }
+        else {
+            $Tenant.GraphErrorCount = 1
+        }
+        Update-AzDataTableRow @TenantsTable -Entity $Tenant
+        throw
+    }
 }
 
 function Write-LogMessage ($message, $tenant = 'None', $API = 'None', $user, $sev) {
@@ -293,35 +316,43 @@ function Get-Tenants {
         # Load or refresh the cache if older than 24 hours
         $Filter = "PartitionKey eq 'Tenants' and Excluded eq false" 
         $Script:IncludedTenantsCache = Get-AzDataTableEntity @TenantsTable -Filter $Filter
+        
+        $LastRefresh = ($Script:IncludedTenantsCache | Sort-Object LastRefresh | Select-Object -First 1).LastRefresh.DateTime
+        if ($LastRefresh -lt (Get-Date).Addhours(-24).ToUniversalTime()) {
 
-        if (($Script:IncludedTenantsCache | Sort-Object Timestamp | Select-Object -First 1).Timestamp -lt (Get-Date).Addhours(-24)) {
             $TenantList = (New-GraphGetRequest -uri "https://graph.microsoft.com/beta/contracts?`$top=999" -tenantid $ENV:Tenantid) | Select-Object id, CustomerID, DefaultdomainName, DisplayName, domains | Where-Object -Property DefaultdomainName -NotIn $Script:SkipListCache.DefaultdomainName
 
             $Script:IncludedTenantsCache = [system.collections.generic.list[hashtable]]::new()
             if ($ENV:PartnerTenantAvailable) {
                 $Script:IncludedTenantsCache.Add(@{
-                        RowKey            = $env:TenantID
-                        PartitionKey      = 'Tenants'
-                        customerId        = $env:TenantID
-                        defaultDomainName = $env:TenantID
-                        displayName       = '*Partner Tenant'
-                        domains           = 'PartnerTenant'
-                        Excluded          = $false
-                        ExcludeUser       = ''
-                        ExcludeDate       = ''
+                        RowKey              = $env:TenantID
+                        PartitionKey        = 'Tenants'
+                        customerId          = $env:TenantID
+                        defaultDomainName   = $env:TenantID
+                        displayName         = '*Partner Tenant'
+                        domains             = 'PartnerTenant'
+                        Excluded            = $false
+                        ExcludeUser         = ''
+                        ExcludeDate         = ''
+                        GraphErrorCount     = 0
+                        LastGraphTokenError = ''
+                        LastRefresh         = (Get-Date).ToUniversalTime()
                     }) | Out-Null
             }
             foreach ($Tenant in $TenantList) {
                 $Script:IncludedTenantsCache.Add(@{
-                        RowKey            = $Tenant.id
-                        PartitionKey      = 'Tenants'
-                        customerId        = $Tenant.customerId
-                        defaultDomainName = $Tenant.DefaultDomainName
-                        displayName       = $Tenant.DisplayName
-                        domains           = ''
-                        Excluded          = $false
-                        ExcludeUser       = ''
-                        ExcludeDate       = ''
+                        RowKey              = $Tenant.id
+                        PartitionKey        = 'Tenants'
+                        customerId          = $Tenant.customerId
+                        defaultDomainName   = $Tenant.DefaultDomainName
+                        displayName         = $Tenant.DisplayName
+                        domains             = ''
+                        Excluded            = $false
+                        ExcludeUser         = ''
+                        ExcludeDate         = ''
+                        GraphErrorCount     = 0
+                        LastGraphTokenError = ''
+                        LastRefresh         = (Get-Date).ToUniversalTime()
                     }) | Out-Null
             }
    
@@ -337,20 +368,28 @@ function Get-Tenants {
     if ($IncludeAll) {
         return (New-GraphGetRequest -uri "https://graph.microsoft.com/beta/contracts?`$top=999" -tenantid $ENV:Tenantid) | Select-Object CustomerID, DefaultdomainName, DisplayName, domains
     }
-    
     else {
         return $Script:IncludedTenantsCache
     }
 }
 
 function Remove-CIPPCache {
+    # Remove all tenants except excluded
     $TenantsTable = Get-CippTable -tablename 'Tenants'
-    $Filter = "PartitionKey eq 'Tenants' and 'Excluded' eq false" 
+    $Filter = "PartitionKey eq 'Tenants' and Excluded eq false" 
     $ClearIncludedTenants = Get-AzDataTableRow @TenantsTable -Filter $Filter
     Remove-AzDataTableRow @TenantsTable -Entity $ClearIncludedTenants
 
+    # Remove Domain Analyser cached results
+    $DomainsTable = Get-CippTable -tablename 'Domains'
+    $Filter = "PartitionKey eq 'TenantDomains'"
+    $ClearDomainAnalyserRows = Get-AzDataTableRow @DomainsTable -Filter $Filter | ForEach-Object {
+        $_.DomainAnalyser = ''
+        $_
+    }
+    Update-AzDataTableEntity @DomainsTable -Entity $ClearDomainAnalyserRows
+
     Get-ChildItem -Path 'Cache_BestPracticeAnalyser' -Filter *.json | Remove-Item -Force -ErrorAction SilentlyContinue
-    #Get-ChildItem -Path 'Cache_DomainAnalyser' -Filter *.json | Remove-Item -Force -ErrorAction SilentlyContinue
     Get-ChildItem -Path 'Cache_BestPracticeAnalyser\CurrentlyRunning.txt' -ErrorAction SilentlyContinue | Remove-Item -Force -ErrorAction SilentlyContinue
     Get-ChildItem -Path 'ChocoApps.Cache\CurrentlyRunning.txt' -ErrorAction SilentlyContinue | Remove-Item -Force -ErrorAction SilentlyContinue
     Get-ChildItem -Path 'Cache_DomainAnalyser\CurrentlyRunning.txt' -ErrorAction SilentlyContinue | Remove-Item -Force -ErrorAction SilentlyContinue
