@@ -17,9 +17,19 @@ $ModuleTests = $Modules | ForEach-Object -Parallel {
     $Module = $_
 
     try { 
+        # Update module from gallery
+        Save-Module -Name $Module -Path $using:CippRoot\Modules
+        $ModuleInfo = Get-Module $using:CippRoot\Modules\$Module -ListAvailable
+
+        # Remove old versions
+        if (($ModuleInfo | Measure-Object).Count -gt 1) {
+            $RemoveVersion = $ModuleInfo | Sort-Object -Property Version | Select-Object -First 1
+            Remove-Item -Path $RemoveVersion.ModuleBase -Recurse
+        }
+
         # Check for module
-        if (-not (Get-Module -ListAvailable $Module)) {
-            Install-Module $Module -Force -ErrorAction Stop
+        if (-not ($ModuleInfo)) {
+            Import-Module $using:CippRoot\Modules\$Module -Force -ErrorAction Stop
         }
 
         # Get list of module commands
@@ -57,6 +67,7 @@ $ModuleTests = $Modules | ForEach-Object -Parallel {
     # Return processed module object
     [pscustomobject]@{
         Module     = $Module
+        Version    = $ModuleInfo.Version
         References = $ModuleRefs
         Files      = $Files
         ErrorMsg   = $ErrorMsg
