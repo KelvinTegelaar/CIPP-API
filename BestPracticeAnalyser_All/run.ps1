@@ -14,7 +14,7 @@ $TenantName = Get-Tenants | Where-Object -Property DefaultDomainName -EQ $tenant
 # Build up the result object that will be passed back to the durable function
 $Result = [PSCustomObject]@{
     Tenant                           = $TenantName.displayname
-    GUID                             = $TenantName.CustomerId
+    GUID                             = $TenantName.customerId
     LastRefresh                      = $(Get-Date (Get-Date).ToUniversalTime() -UFormat '+%Y-%m-%dT%H:%M:%S.000Z')
     SecureDefaultState               = ''
     PrivacyEnabled                   = ''
