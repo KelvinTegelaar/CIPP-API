@@ -42,7 +42,8 @@ try {
             } 
             "deviceConfigurations" {
                 $Type = "Device"
-                $Template = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/deviceManagement/$($urlname)/$($ID)" -tenantid $tenantfilter | Select-Object displayname, description, omaSettings, '@odata.type'
+                $Template = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/deviceManagement/$($urlname)/$($ID)" -tenantid $tenantfilter | Select-Object * -ExcludeProperty id, lastModifiedDateTime, '@odata.context', 'ScopeTagIds', 'supportsScopeTags', 'createdDateTime'
+                Write-Host ($Template | ConvertTo-Json)
                 $DisplayName = $template.displayName
                 $TemplateJson = ConvertTo-Json -InputObject $Template -Depth 10 -Compress
             }
@@ -50,14 +51,24 @@ try {
                 $Type = "Admin"
                 $Template = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/deviceManagement/$($urlname)('$($ID)')" -tenantid $tenantfilter
                 $DisplayName = $Template.displayName
-                $TemplateJsonSource = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/deviceManagement/$($urlname)('$($ID)')/definitionValues?`$expand=definition(`$select=id)" -tenantid $tenantfilter | Select-Object enabled, @{label = 'definition@odata.bind'; expression = { "https://graph.microsoft.com/beta/deviceManagement/groupPolicyDefinitions('$($_.definition.id)')" } }
-                $input = [pscustomobject]@{
+                $TemplateJsonItems = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/deviceManagement/$($urlname)('$($ID)')/definitionValues?`$expand=definition" -tenantid $tenantfilter
+                $TemplateJsonSource = foreach ($TemplateJsonItem in $TemplateJsonItems) {
+                    $presentationValues = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/deviceManagement/$($urlname)('$($ID)')/definitionValues('$($TemplateJsonItem.id)')/presentationValues?`$expand=presentation" -tenantid $tenantfilter | Select-Object id, value, '@odata.type', @{label = "presentation@odata.bind"; Expression = { "https://graph.microsoft.com/beta/deviceManagement/groupPolicyDefinitions('$($TemplateJsonItem.definition.id)')/presentations('$($_.presentation.id)')" } }
+                    [PSCustomObject]@{
+                        'definition@odata.bind' = "https://graph.microsoft.com/beta/deviceManagement/groupPolicyDefinitions('$($TemplateJsonItem.definition.id)')"
+                        enabled                 = $TemplateJsonItem.enabled
+                        presentationValues      = @($presentationValues)
+                    }
+                }
+                $inputvar = [pscustomobject]@{
                     added      = @($TemplateJsonSource)
                     updated    = @()
                     deletedIds = @()
 
                 }
-                $TemplateJson = ConvertTo-Json -InputObject $input -Depth 5 -Compress
+                
+
+                $TemplateJson = (ConvertTo-Json -InputObject $inputvar -Depth 6 -Compress)
             }
         }
        
