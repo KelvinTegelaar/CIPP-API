@@ -12,7 +12,7 @@ Write-Host "PowerShell HTTP trigger function processed a request."
 
 # Interact with query parameters or the body of the request.
 $TenantFilter = $Request.Query.TenantFilter
-$tenantid = (Get-Tenants | Where-Object -Property DefaultdomainName -EQ $Request.Query.TenantFilter).CustomerID
+$tenantid = (Get-Tenants | Where-Object -Property DefaultdomainName -EQ $Request.Query.TenantFilter).customerId
 try {
     $GraphRequest = (New-TeamsAPIGetRequest -uri "https://api.interfaces.records.teams.microsoft.com/Skype.TelephoneNumberMgmt/Tenants/$($Tenantid)/telephone-numbers?locale=en-US" -tenantid $TenantFilter).TelephoneNumbers | ForEach-Object {
         $CompleteRequest = $_ | Select-Object *, "AssignedTo"
