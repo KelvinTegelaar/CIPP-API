@@ -10,7 +10,7 @@ $Tenants = ($Request.body | Select-Object Select_*).psobject.properties.value
 $Results = foreach ($Tenant in $tenants) {
     try {
         $TenantID = if ($tenant -ne 'AllTenants') {
-            (get-tenants | Where-Object -Property defaultDomainName -EQ $Tenant).Customerid
+            (get-tenants | Where-Object -Property defaultDomainName -EQ $Tenant).customerId
         }
         else {
             'AllTenants'

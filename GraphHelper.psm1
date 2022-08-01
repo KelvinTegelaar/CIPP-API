@@ -310,7 +310,7 @@ function Get-Tenants {
         $LastRefresh = ($Script:IncludedTenantsCache | Sort-Object LastRefresh | Select-Object -First 1).LastRefresh.DateTime
         if ($LastRefresh -lt (Get-Date).Addhours(-24).ToUniversalTime()) {
 
-            $TenantList = (New-GraphGetRequest -uri "https://graph.microsoft.com/beta/contracts?`$top=999" -tenantid $ENV:Tenantid) | Select-Object id, CustomerID, DefaultdomainName, DisplayName, domains | Where-Object -Property DefaultdomainName -NotIn $Script:SkipListCache.DefaultdomainName
+            $TenantList = (New-GraphGetRequest -uri "https://graph.microsoft.com/beta/contracts?`$top=999" -tenantid $ENV:Tenantid) | Select-Object id, customerId, DefaultdomainName, DisplayName, domains | Where-Object -Property DefaultdomainName -NotIn $Script:SkipListCache.DefaultdomainName
 
             $Script:IncludedTenantsCache = [system.collections.generic.list[hashtable]]::new()
             if ($ENV:PartnerTenantAvailable) {
@@ -334,7 +334,7 @@ function Get-Tenants {
                         RowKey              = $Tenant.id
                         PartitionKey        = 'Tenants'
                         customerId          = $Tenant.customerId
-                        defaultDomainName   = $Tenant.DefaultDomainName
+                        defaultDomainName   = $Tenant.defaultDomainName
                         displayName         = $Tenant.DisplayName
                         domains             = ''
                         Excluded            = $false
@@ -356,7 +356,7 @@ function Get-Tenants {
         return $Script:SkipListCache
     }
     if ($IncludeAll) {
-        return (New-GraphGetRequest -uri "https://graph.microsoft.com/beta/contracts?`$top=999" -tenantid $ENV:Tenantid) | Select-Object CustomerID, DefaultdomainName, DisplayName, domains
+        return (New-GraphGetRequest -uri "https://graph.microsoft.com/beta/contracts?`$top=999" -tenantid $ENV:Tenantid) | Select-Object CustomerId, DefaultdomainName, DisplayName, domains
     }
     else {
         return $Script:IncludedTenantsCache
@@ -394,7 +394,7 @@ function Remove-CIPPCache {
 function New-ExoRequest ($tenantid, $cmdlet, $cmdParams) {
     $token = Get-ClassicAPIToken -resource 'https://outlook.office365.com' -Tenantid $tenantid 
     if ((Get-AuthorisedRequest -TenantID $tenantid)) {
-        $tenant = (get-tenants | Where-Object -Property defaultDomainName -EQ $tenantid).customerid
+        $tenant = (get-tenants | Where-Object -Property defaultDomainName -EQ $tenantid).customerId
         if ($cmdParams) {
             $Params = $cmdParams
         }
@@ -493,7 +493,7 @@ function Get-CIPPMSolUsers {
         [string]$tenant
     )
     $AADGraphtoken = (Get-GraphToken -scope 'https://graph.windows.net/.default')
-    $tenantid = (get-tenants | Where-Object -Property DefaultDomainName -EQ $tenant).CustomerID
+    $tenantid = (get-tenants | Where-Object -Property defaultDomainName -EQ $tenant).customerID
     $TrackingGuid = (New-Guid).GUID
     $LogonPost = @"
 <s:Envelope xmlns:s="http://www.w3.org/2003/05/soap-envelope" xmlns:a="http://www.w3.org/2005/08/addressing"><s:Header><a:Action s:mustUnderstand="1">http://provisioning.microsoftonline.com/IProvisioningWebService/MsolConnect</a:Action><a:MessageID>urn:uuid:$TrackingGuid</a:MessageID><a:ReplyTo><a:Address>http://www.w3.org/2005/08/addressing/anonymous</a:Address></a:ReplyTo><UserIdentityHeader xmlns="http://provisioning.microsoftonline.com/" xmlns:i="http://www.w3.org/2001/XMLSchema-instance"><BearerToken xmlns="http://schemas.datacontract.org/2004/07/Microsoft.Online.Administration.WebService">$($AADGraphtoken['Authorization'])</BearerToken><LiveToken i:nil="true" xmlns="http://schemas.datacontract.org/2004/07/Microsoft.Online.Administration.WebService"/></UserIdentityHeader><ClientVersionHeader xmlns="http://provisioning.microsoftonline.com/" xmlns:i="http://www.w3.org/2001/XMLSchema-instance"><ClientId xmlns="http://schemas.datacontract.org/2004/07/Microsoft.Online.Administration.WebService">50afce61-c917-435b-8c6d-60aa5a8b8aa7</ClientId><Version xmlns="http://schemas.datacontract.org/2004/07/Microsoft.Online.Administration.WebService">1.2.183.57</Version></ClientVersionHeader><ContractVersionHeader xmlns="http://becwebservice.microsoftonline.com/" xmlns:i="http://www.w3.org/2001/XMLSchema-instance"><BecVersion xmlns="http://schemas.datacontract.org/2004/07/Microsoft.Online.Administration.WebService">Version47</BecVersion></ContractVersionHeader><TrackingHeader xmlns="http://becwebservice.microsoftonline.com/">$($TrackingGuid)</TrackingHeader><a:To s:mustUnderstand="1">https://provisioningapi.microsoftonline.com/provisioningwebservice.svc</a:To></s:Header><s:Body><MsolConnect xmlns="http://provisioning.microsoftonline.com/"><request xmlns:b="http://schemas.datacontract.org/2004/07/Microsoft.Online.Administration.WebService" xmlns:i="http://www.w3.org/2001/XMLSchema-instance"><b:BecVersion>Version4</b:BecVersion><b:TenantId i:nil="true"/><b:VerifiedDomain i:nil="true"/></request></MsolConnect></s:Body></s:Envelope>
