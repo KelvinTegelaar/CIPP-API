@@ -10,7 +10,7 @@ try {
 catch {
     Write-LogMessage -API 'BestPracticeAnalyser' -tenant $tenant -message "Unable to Retrieve token for Best Practice Analyser $($tenant) Error: $($_.exception.message)" -sev 'Error'
 }
-$TenantName = Get-Tenants | Where-Object -Property DefaultDomainName -EQ $tenant
+$TenantName = Get-Tenants | Where-Object -Property defaultDomainName -EQ $tenant
 # Build up the result object that will be passed back to the durable function
 $Result = [PSCustomObject]@{
     Tenant                           = $TenantName.displayname

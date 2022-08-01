@@ -12,7 +12,7 @@ Write-Host "PowerShell HTTP trigger function processed a request."
 
 # Interact with query parameters or the body of the request.
 $TenantFilter = $Request.Query.TenantFilter
-if ($TenantFilter -eq "AllTenants") { $Tenants = (Get-Tenants).DefaultDomainName } else { $tenants = $TenantFilter }
+if ($TenantFilter -eq "AllTenants") { $Tenants = (Get-Tenants).defaultDomainName } else { $tenants = $TenantFilter }
 
 try {
         $GraphRequest = foreach ($Tenant in $Tenants) {
