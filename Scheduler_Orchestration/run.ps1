@@ -21,7 +21,7 @@ try {
       }
     }
     $Outputs = Wait-ActivityFunction -Task $ParallelTasks
-    if (-not $Outputs.DataReturned) {
+    if (-not $Outputs['DataReturned']) {
       Write-Host 'Errors detected'
     }
   }
