@@ -24,7 +24,7 @@ try {
 
             }
             catch {
-                throw "Could not get admin password changes for $($Tenant.tenant): $($_.Exception.message)"
+                "Could not get admin password changes for $($Tenant.tenant): $($_.Exception.message)"
 
             }
         }
@@ -35,7 +35,7 @@ try {
                 }
             }
             catch {
-                throw
+
             }
         }
     
@@ -46,7 +46,7 @@ try {
                 }
             }
             catch {
-                throw
+    
             }
         }
         { $_.'MFAAdmins' -eq $true } {
@@ -68,7 +68,7 @@ try {
                 }
             }
             catch {
-                throw "Could not get MFA status for admins for $($Tenant.tenant): $($_.Exception.message)"
+                "Could not get MFA status for admins for $($Tenant.tenant): $($_.Exception.message)"
 
             }
         }
@@ -92,7 +92,7 @@ try {
 
             }
             catch {
-                throw "Could not get MFA status for users for $($Tenant.tenant): $($_.Exception.message)"
+                "Could not get MFA status for users for $($Tenant.tenant): $($_.Exception.message)"
 
             }
         }
@@ -107,7 +107,7 @@ try {
                         Members   = $_.Members.UserPrincipalName
                     }
                 }
-                $NewDeltatoSave = $NewDelta | ConvertTo-Json -Depth 10 -Compress -ErrorAction SilentlyContinue | Out-String
+                $NewDeltatoSave = $NewDelta | ConvertTo-Json -Depth 10 -Compress -ErrorAction SilentlyContinue
                 $DeltaEntity = @{
                     PartitionKey = 'AdminDelta'
                     RowKey       = $Tenant.tenantid
@@ -125,7 +125,7 @@ try {
                 }
             }
             catch {
-                throw   "Could not get get role changes for $($Tenant.tenant): $($_.Exception.message)"
+                "Could not get get role changes for $($Tenant.tenant): $($_.Exception.message)"
 
             }
         }
@@ -137,7 +137,7 @@ try {
                 }
             }
             catch {
-              
+    
             }
         }
         { $_.'UnusedLicenses' -eq $true } {
@@ -187,7 +187,8 @@ try {
                 }
             }
             catch {
-                throw "could not get app secret expire for $($Tenant.tenant)"
+                $Message = 'Exception on line {0} - {1}' -f $_.InvocationInfo.ScriptLineNumber, $_.Exception.Message
+                Write-LogMessage -message $Message -API 'Alerts' -tenant $tenant.tenant -sev Error
             }
         }
     }
@@ -207,12 +208,9 @@ try {
     }
 }
 catch {
-    Throw 
     $Message = 'Exception on line {0} - {1}' -f $_.InvocationInfo.ScriptLineNumber, $_.Exception.Message
     Write-LogMessage -message $Message -API 'Alerts' -tenant $tenant.tenant -sev Error
-    
     [PSCustomObject]@{
         ReturnedValues = $false
     }
-    Throw $message
 }
