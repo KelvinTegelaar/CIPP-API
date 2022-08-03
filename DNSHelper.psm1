@@ -29,15 +29,22 @@ function Resolve-DnsHttpsQuery {
         [string]$RecordType = 'A'
     )
 
-    if (Test-Path -Path 'Config\DnsConfig.json') {
-        try {
-            $Config = Get-Content 'Config\DnsConfig.json' | ConvertFrom-Json 
-            $Resolver = $Config.Resolver
-        }
-        catch { $Resolver = 'Google' }
+    $ConfigTable = Get-CippTable -tablename Config
+    $Filter = "PartitionKey eq 'Domains' and RowKey eq 'Domains'"
+    $Config = Get-AzDataTableEntity @ConfigTable -Filter $Filter
+
+    $ValidResolvers = @('Google', 'CloudFlare', 'Quad9')
+    if ($ValidResolvers -contains $Config.Resolver) {
+        $Resolver = $Config.Resolver
     }
     else {
         $Resolver = 'Google'
+        $Config = @{
+            PartitionKey = 'Domains'
+            RowKey       = 'Domains'
+            Resolver     = $Resolver
+        }
+        Add-AzDataTableEntity @ConfigTable -Entity $Config -Force
     }
 
     switch ($Resolver) {
@@ -1671,9 +1678,12 @@ namespace SevenTiny.Bantina.Security {
     }
 }
 '@
-    if (!('SevenTiny.Bantina.Security.RSACommon' -as [type])) {
-        Add-Type -TypeDefinition $source -Language CSharp
+    try {
+        if (!('SevenTiny.Bantina.Security.RSACommon' -as [type])) {
+            Add-Type -TypeDefinition $source -Language CSharp
+        }
     }
+    catch {}
 
     # Return RSA Public Key information
     [SevenTiny.Bantina.Security.RSACommon]::CreateRsaProviderFromPublicKey($EncodedString)
@@ -1905,9 +1915,12 @@ namespace CyberDrain.CIPP {
     }
 }
 '@
-    if (!('CyberDrain.CIPP.CertificateCheck' -as [type])) {
-        Add-Type -TypeDefinition $source -Language CSharp
+    try { 
+        if (!('CyberDrain.CIPP.CertificateCheck' -as [type])) {
+            Add-Type -TypeDefinition $source -Language CSharp
+        }
     }
+    catch {}
 
     [CyberDrain.CIPP.CertificateCheck]::GetServerCertificate($Url, $FollowRedirect)
 }

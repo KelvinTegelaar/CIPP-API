@@ -40,8 +40,15 @@
         </TN>
         <DCT>
           <En>
-            <S N="Key">Cmdlet</S>
+            <S N="Key">DscResource</S>
             <Obj N="Value" RefId="3">
+              <TNRef RefId="1" />
+              <LST />
+            </Obj>
+          </En>
+          <En>
+            <S N="Key">Cmdlet</S>
+            <Obj N="Value" RefId="4">
               <TNRef RefId="1" />
               <LST>
                 <S>Add-AzDataTableEntity</S>
@@ -53,14 +60,7 @@
           </En>
           <En>
             <S N="Key">Workflow</S>
-            <Obj N="Value" RefId="4">
-              <TNRef RefId="1" />
-              <LST />
-            </Obj>
-          </En>
-          <En>
-            <S N="Key">Function</S>
-            <Ref N="Value" RefId="4" />
+            <Ref N="Value" RefId="3" />
           </En>
           <En>
             <S N="Key">Command</S>
@@ -75,12 +75,12 @@
             </Obj>
           </En>
           <En>
-            <S N="Key">DscResource</S>
-            <Ref N="Value" RefId="4" />
+            <S N="Key">Function</S>
+            <Ref N="Value" RefId="3" />
           </En>
           <En>
             <S N="Key">RoleCapability</S>
-            <Ref N="Value" RefId="4" />
+            <Ref N="Value" RefId="3" />
           </En>
         </DCT>
       </Obj>
@@ -104,15 +104,15 @@
           <S N="requireLicenseAcceptance">False</S>
           <S N="isLatestVersion">True</S>
           <S N="isAbsoluteLatestVersion">True</S>
-          <S N="versionDownloadCount">6</S>
-          <S N="downloadCount">231</S>
+          <S N="versionDownloadCount">49</S>
+          <S N="downloadCount">302</S>
           <S N="packageSize">613616</S>
           <S N="published">7/25/2022 11:13:01 AM -04:00</S>
           <S N="created">7/25/2022 11:13:01 AM -04:00</S>
-          <S N="lastUpdated">7/25/2022 8:56:33 PM -04:00</S>
+          <S N="lastUpdated">8/1/2022 1:30:38 AM -04:00</S>
           <S N="tags">azure storage table PSModule PSEdition_Core PSCmdlet_Add-AzDataTableEntity PSCommand_Add-AzDataTableEntity PSCmdlet_Get-AzDataTableEntity PSCommand_Get-AzDataTableEntity PSCmdlet_Remove-AzDataTableEntity PSCommand_Remove-AzDataTableEntity PSCmdlet_Update-AzDataTableEntity PSCommand_Update-AzDataTableEntity PSIncludes_Cmdlet</S>
           <S N="developmentDependency">False</S>
-          <S N="updated">2022-07-25T20:56:33Z</S>
+          <S N="updated">2022-08-01T01:30:38Z</S>
           <S N="NormalizedVersion">2.2.1</S>
           <S N="Authors">Emanuel Palm</S>
           <S N="IsPrerelease">false</S>
