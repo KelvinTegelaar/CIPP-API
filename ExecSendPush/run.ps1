@@ -4,7 +4,7 @@ using namespace System.Net
 param($Request, $TriggerMetadata)
 
 $APIName = $TriggerMetadata.FunctionName
-Log-Request -user $request.headers.'x-ms-client-principal' -API $APINAME  -message "Accessed this API" -Sev "Debug"
+Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME  -message "Accessed this API" -Sev "Debug"
 
 $TenantFilter = $Request.Query.TenantFilter
 $UserEmail = $Request.Query.UserEmail
@@ -108,7 +108,7 @@ if ($ClientToken) {
 }
 
 $Results = [pscustomobject]@{"Results" = $Body }
-Log-Request -user $request.headers.'x-ms-client-principal' -API $APINAME  -message "Sent push request to $UserEmail - Result: $($obj.BeginTwoWayAuthenticationResponse.result.value | Out-String)" -Sev "Info"
+Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME  -message "Sent push request to $UserEmail - Result: $($obj.BeginTwoWayAuthenticationResponse.result.value | Out-String)" -Sev "Info"
 
 Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
         StatusCode = [HttpStatusCode]::OK

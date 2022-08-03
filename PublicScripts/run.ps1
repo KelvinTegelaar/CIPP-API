@@ -4,7 +4,7 @@ using namespace System.Net
 param($Request, $TriggerMetadata)
 
 $APIName = $TriggerMetadata.FunctionName
-Log-Request -user $request.headers.'x-ms-client-principal' -API $APINAME -message 'Accessed this API' -Sev 'Debug'
+Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -message 'Accessed this API' -Sev 'Debug'
 
 # Write to the Azure Functions log stream.
 Write-Host 'PowerShell HTTP trigger function processed a request.'
@@ -12,7 +12,8 @@ Write-Host 'PowerShell HTTP trigger function processed a request.'
 $Table = Get-CippTable -TableName 'MaintenanceScripts'
 
 if (![string]::IsNullOrEmpty($Request.Query.Guid)) {
-    $ScriptRow = Get-AzTableRow -Table $Table -PartitionKey 'Maintenance' -RowKey $Request.Query.Guid
+    $Filter = "PartitionKey eq 'Maintenance' and RowKey eq '{0}'" -f $Request.Query.Guid
+    $ScriptRow = Get-AzDataTableEntity @Table -Filter $Filter
     if ($ScriptRow) {
         if ($ScriptRow.TableTimestamp -lt (Get-Date).AddMinutes(-5)) {
             $Body = 'Write-Host "Link expired"'
@@ -20,7 +21,7 @@ if (![string]::IsNullOrEmpty($Request.Query.Guid)) {
         else {
             $Body = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($ScriptRow.ScriptContent))
         }
-        $ScriptRow | Remove-AzTableRow -Table $Table
+        Remove-AzDataTableEntity @Table -Entity $ScriptRow
     }
     else {
         $Body = 'Write-Host "Invalid Script ID"'

@@ -6,8 +6,8 @@ try {
 "@
     (New-GraphPostRequest -tenantid $tenant -Uri "https://graph.microsoft.com/beta/policies/authenticationMethodsPolicy/authenticationMethodConfigurations/microsoftAuthenticator" -Type patch -Body $body -ContentType "application/json")
 
-    Log-request  -API "Standards" -tenant $tenant -message "Enabled passwordless with Number Matching." -sev Info
+    Write-LogMessage  -API "Standards" -tenant $tenant -message "Enabled passwordless with Number Matching." -sev Info
 }
 catch {
-    Log-request  -API "Standards" -tenant $tenant -message "Failed to enable passwordless with Number Matching. Error: $($_.exception.message)"
+    Write-LogMessage  -API "Standards" -tenant $tenant -message "Failed to enable passwordless with Number Matching. Error: $($_.exception.message)"
 }

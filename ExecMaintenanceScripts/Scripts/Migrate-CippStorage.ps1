@@ -1,5 +1,5 @@
 if (!(Get-Module -ListAvailable AzTable)) {
-    Install-Module AzTable -Confirm:$false
+    Install-Module AzTable -Confirm:$false -Force
 }
 
 $Logo = @'
@@ -14,12 +14,22 @@ $Logo = @'
 Write-Host $Logo
 Write-Host '- Connecting to Azure'
 Connect-AzAccount -Subscription '##SUBSCRIPTION##'
-Install-Module AzTable -Confirm:$false -Force
 $RGName = '##RESOURCEGROUP##'
 $FunctionApp = '##FUNCTIONAPP##'
 
 $StandardTableCols = @('PartitionKey', 'RowKey', 'TableTimestamp', 'Etag')
-$FunctionStorageSettings = @('AzureWebJobsStorage', 'AzureWebJobsDashboard', 'WEBSITE_CONTENTAZUREFILECONNECTIONSTRING')
+$FunctionStorageSettings = @('AzureWebJobsStorage', 'WEBSITE_CONTENTAZUREFILECONNECTIONSTRING')
+
+function Start-SleepProgress($Seconds) {
+    $doneDT = (Get-Date).AddSeconds($Seconds)
+    while ($doneDT -gt (Get-Date)) {
+        $secondsLeft = $doneDT.Subtract((Get-Date)).TotalSeconds
+        $percent = ($seconds - $secondsLeft) / $seconds * 100
+        Write-Progress -Activity 'Sleeping' -Status 'Sleeping...' -SecondsRemaining $secondsLeft -PercentComplete $percent
+        [System.Threading.Thread]::Sleep(500)
+    }
+    Write-Progress -Activity 'Sleeping' -Status 'Sleeping...' -SecondsRemaining 0 -Completed
+}
 
 if (Get-AzResourceGroup -Name $RGName) {
     Write-Host '- Getting storage account details'
@@ -48,27 +58,33 @@ if (Get-AzResourceGroup -Name $RGName) {
     }
 
     if ($StorageV2Present -and -not $StorageV1Present) {
-        Write-Host '- Exporting storage resource template'
-        Export-AzResourceGroup -ResourceGroupName $RGName -Resource $SourceResource.ResourceId
-        $Template = Get-Content -Path .\$RGName.json | ConvertFrom-Json
-        Remove-Item .\$RGName.json
+        try {
+            Write-Host '- Exporting storage resource template'
+            Export-AzResourceGroup -ResourceGroupName $RGName -Resource $SourceResource.ResourceId
+            $Template = Get-Content -Path .\$RGName.json | ConvertFrom-Json
+            Remove-Item .\$RGName.json
 
-        # Convert type to Storage and remove accessTier property
-        $Template.resources[0].kind = 'Storage'
-        $Template.resources[0].properties = $Template.resources[0].properties | Select-Object minimumTlsVersion, allowBlobPublicAccess, networkAcls, supportsHttpsTrafficOnly, encryption
+            # Convert type to Storage and remove accessTier property
+            $Template.resources[0].kind = 'Storage'
+            $Template.resources[0].properties = $Template.resources[0].properties | Select-Object minimumTlsVersion, allowBlobPublicAccess, networkAcls, supportsHttpsTrafficOnly, encryption
 
-        $DestResourceNameProp = $Template.parameters.psobject.properties.name
-        $DestResourceName = '{0}v1' -f $SourceResource.Name
-        $Parameters = @{
-            $DestResourceNameProp = $DestResourceName
-        }
+            $DestResourceNameProp = $Template.parameters.psobject.properties.name
+            $DestResourceName = '{0}v1' -f $SourceResource.Name
+            $Parameters = @{
+                $DestResourceNameProp = $DestResourceName
+            }
         
-        $Template | ConvertTo-Json -Depth 100 | Out-File .\DestinationStorageTemplate.json
+            $Template | ConvertTo-Json -Depth 100 | Out-File .\DestinationStorageTemplate.json
 
-        Write-Host '- Importing V1 storage resource'
-        New-AzResourceGroupDeployment -ResourceGroupName $RGName -Name CippStorageMigration -TemplateParameterObject $Parameters -TemplateFile .\DestinationStorageTemplate.json
+            Write-Host '- Importing V1 storage resource'
+            New-AzResourceGroupDeployment -ResourceGroupName $RGName -Name CippStorageMigration -TemplateParameterObject $Parameters -TemplateFile .\DestinationStorageTemplate.json
 
-        $DestinationResource = Get-AzResource -ResourceGroupName $RGName -ResourceName $DestResourceName
+            $DestinationResource = Get-AzResource -ResourceGroupName $RGName -ResourceName $DestResourceName
+        }
+        catch {
+            Write-Host "Error detected during template deployment, waiting 5 minutes before continuing: $($_.Exception.Message)"
+            Start-SleepProgress -Seconds 300
+        }
     }
 
     if ($DestinationResource) {
@@ -136,11 +152,17 @@ if (Get-AzResourceGroup -Name $RGName) {
             $AppSettings.$StorageSetting = $DestinationConnectionString
         }
 
+        Write-Host 'Removing AzureWebJobsDashboard setting'
+        $Function | Remove-AzFunctionAppSetting -AppSettingName AzureWebJobsDashboard -Force
+
         Write-Host 'Updating function app'
         $Function | Update-AzFunctionAppSetting -AppSetting $AppSettings
 
         Write-Host 'Restarting function app'
         $Function | Restart-AzFunctionApp
+
+        Write-Host 'Waiting 5 minutes before trying to sync with GitHub'
+        Start-SleepProgress -Seconds 300
 
         Write-Host 'Synchronizing with GitHub'
         & az functionapp deployment source sync --name $FunctionApp --resource-group $RGName

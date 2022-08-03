@@ -7,8 +7,8 @@ if (!$Setting) { $Setting = (Get-Content ".\Cache_Standards\AllTenants.Standards
 
 try {
     New-GraphPostRequest -tenantid $tenant -Uri "https://graph.microsoft.com/beta/admin/sharepoint/settings" -AsApp $true -Type patch -Body "{`"sharingCapability`":`"$($Setting.Level)`"}" -ContentType "application/json"
-    Log-request -API "Standards" -tenant $tenant -message  "Set sharing level to $($Setting.level)" -sev Info
+    Write-LogMessage -API "Standards" -tenant $tenant -message  "Set sharing level to $($Setting.level)" -sev Info
 }
 catch {
-    Log-request -API "Standards" -tenant $tenant -message  "Failed to set sharing level to $($Setting.level): $($_.exception.message)" -sev Error
+    Write-LogMessage -API "Standards" -tenant $tenant -message  "Failed to set sharing level to $($Setting.level): $($_.exception.message)" -sev Error
 }

@@ -6,7 +6,7 @@ $APIName = $TriggerMetadata.FunctionName
 
 # Write to the Azure Functions log stream.
 Write-Host "PowerShell HTTP trigger function processed a request."
-Log-Request -user $request.headers.'x-ms-client-principal' -API $APINAME  -message "Accessed this API" -Sev "Debug"
+Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME  -message "Accessed this API" -Sev "Debug"
 # Interact with query parameters or the body of the request.
 $TenantFilter = $Request.Query.TenantFilter
 $currentTime = Get-Date -Format "yyyy-MM-ddTHH:MM:ss"
@@ -17,7 +17,7 @@ $filters = "createdDateTime ge $($endTime)Z and createdDateTime lt $($currentTim
 try {
     $GraphRequest = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/auditLogs/signIns?api-version=beta&filter=$($filters)" -tenantid $TenantFilter -erroraction stop | Select-Object userPrincipalName, clientAppUsed | Sort-Object -Unique -Property clientAppUsed
     $response = $GraphRequest
-    Log-Request -user $request.headers.'x-ms-client-principal' -API $APINAME  -message  "Retrieved basic authentication report" -Sev "Debug" -tenant $TenantFilter
+    Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME  -message  "Retrieved basic authentication report" -Sev "Debug" -tenant $TenantFilter
     
     # Associate values to output bindings by calling 'Push-OutputBinding'.
     Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
@@ -26,7 +26,7 @@ try {
         })
 }
 catch {
-    Log-Request -user $request.headers.'x-ms-client-principal' -API $APINAME  -message "Failed to retrieve basic authentication report: $($_.Exception.message) " -Sev "Error"  -tenant $TenantFilter
+    Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME  -message "Failed to retrieve basic authentication report: $($_.Exception.message) " -Sev "Error"  -tenant $TenantFilter
     # Associate values to output bindings by calling 'Push-OutputBinding'.
     Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
             StatusCode = '500'

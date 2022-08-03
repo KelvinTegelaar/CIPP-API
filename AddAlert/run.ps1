@@ -4,13 +4,13 @@ using namespace System.Net
 param($Request, $TriggerMetadata)
 
 $APIName = $TriggerMetadata.FunctionName
-Log-Request -user $request.headers.'x-ms-client-principal' -API $APINAME -message 'Accessed this API' -Sev 'Debug'
+Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -message 'Accessed this API' -Sev 'Debug'
 
 $Tenants = ($Request.body | Select-Object Select_*).psobject.properties.value
 $Results = foreach ($Tenant in $tenants) {
     try {
         $TenantID = if ($tenant -ne 'AllTenants') {
-            (get-tenants | Where-Object -Property defaultDomainName -EQ $Tenant).Customerid
+            (get-tenants | Where-Object -Property defaultDomainName -EQ $Tenant).customerId
         }
         else {
             'AllTenants'
@@ -29,22 +29,25 @@ $Results = foreach ($Tenant in $tenants) {
             UnusedLicenses  = [bool]$Request.body.UnusedLicenses
             AppSecretExpiry = [bool]$Request.body.AppSecretExpiry
             type            = 'Alert'
+            RowKey          = $TenantID 
+            PartitionKey    = 'Alert'
         }
 
-        $TableRow = @{
-            table          = (get-cipptable -TableName 'SchedulerConfig')
-            rowKey         = $TenantID 
-            partitionKey   = 'Alert'
+        $Table = get-cipptable -TableName 'SchedulerConfig'
+        <#$TableRow = @{
+            table          = ()
             property       = $CompleteObject
             UpdateExisting = $true
-        }
+        }#>
         Write-Host ($TableRow | ConvertTo-Json)
-        Add-AzTableRow @TableRow | Out-Null
+
+        #Add-AzTableRow @TableRow | Out-Null
+        Add-AzDataTableEntity @Table -Entity $CompleteObject -Force
         "Succesfully added Alert for $($Tenant) to queue."
-        Log-Request -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $tenant -message "Succesfully added Alert for $($Tenant) to queue." -Sev 'Info'
+        Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $tenant -message "Succesfully added Alert for $($Tenant) to queue." -Sev 'Info'
     }
     catch {
-        Log-Request -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $tenant -message "Failed to add Alert for for $($Tenant) to queue" -Sev 'Error'
+        Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $tenant -message "Failed to add Alert for for $($Tenant) to queue" -Sev 'Error'
         "Failed to add Alert for for $($Tenant) to queue $($_.Exception.message)"
     }
 }

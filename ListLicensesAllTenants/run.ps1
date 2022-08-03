@@ -11,10 +11,10 @@ Write-Host "Pop receipt: $($TriggerMetadata.PopReceipt)"
 Write-Host "Dequeue count: $($TriggerMetadata.DequeueCount)"
 
 
-$RawGraphRequest = Get-Tenants | ForEach-Object -parallel { 
+$RawGraphRequest = Get-Tenants | ForEach-Object -Parallel { 
     Import-Module '.\GraphHelper.psm1'
     try {
-        $Licrequest = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/subscribedSkus" -tenantid $_.defaultDomainName -ErrorAction Stop
+        $Licrequest = New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/subscribedSkus' -tenantid $_.defaultDomainName -ErrorAction Stop
         [PSCustomObject]@{
             Tenant   = $_.defaultDomainName
             Licenses = $Licrequest
@@ -23,38 +23,35 @@ $RawGraphRequest = Get-Tenants | ForEach-Object -parallel {
     catch {
         [PSCustomObject]@{
             Tenant   = $_.defaultDomainName
-            Licenses = "Could not retrieve licenses"
+            Licenses = 'Could not retrieve licenses'
         } 
     }
 }
 
 $ConvertTable = Import-Csv Conversiontable.csv
+$Table = Get-CIPPTable -TableName cachelicenses
+
 
 $GraphRequest = foreach ($singlereq in $RawGraphRequest) {
     $skuid = $singlereq.Licenses
     foreach ($sku in $skuid) {
+        if (!$sku.skuId) { $SkuId = "Could not connect" } else { $skuId = $sku.skuid }
         $PrettyName = ($ConvertTable | Where-Object { $_.guid -eq $sku.skuid }).'Product_Display_Name' | Select-Object -Last 1
         if (!$PrettyName) { $PrettyName = $sku.skuPartNumber }
         @{
-            Tenant         = $singlereq.Tenant
-            License        = $PrettyName
+            Tenant         = "$($singlereq.Tenant)"
+            License        = "$PrettyName"
             CountUsed      = "$($sku.consumedUnits)"
-            CountAvailable = $sku.prepaidUnits.enabled - $sku.consumedUnits
+            CountAvailable = "$($sku.prepaidUnits.enabled - $sku.consumedUnits)"
             TotalLicenses  = "$($sku.prepaidUnits.enabled)"
-            skuId          = $sku.skuId
-            skuPartNumber  = $PrettyName
-            availableUnits = $sku.prepaidUnits.enabled - $sku.consumedUnits
+            skuId          = "$SkuId"
+            skuPartNumber  = "$PrettyName"
+            availableUnits = "$($sku.prepaidUnits.enabled - $sku.consumedUnits)"
+            PartitionKey   = 'License'
+            RowKey         = "$($singlereq.tenant)-$SkuId"
         }      
     }
 }
-$Table = Get-CIPPTable -TableName cachelicenses
 
-foreach ($Request in $GraphRequest) {
-    $TableRow = @{
-        table        = $Table
-        partitionKey = 'License'
-        rowKey       = "$($Request.tenant)-$($Request.skuId)"
-        property     = $Request
-    }
-    Add-AzTableRow @TableRow -UpdateExisting | Out-Null
-}
+Write-Host "$($GraphRequest.RowKey) - $($GraphRequest.tenant)"
+Add-AzDataTableEntity @Table -Entity $GraphRequest -Force | Out-Null

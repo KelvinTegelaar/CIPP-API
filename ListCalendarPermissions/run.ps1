@@ -4,7 +4,7 @@ using namespace System.Net
 param($Request, $TriggerMetadata)
 
 $APIName = $TriggerMetadata.FunctionName
-Log-Request -user $request.headers.'x-ms-client-principal' -API $APINAME  -message "Accessed this API" -Sev "Debug"
+Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME  -message "Accessed this API" -Sev "Debug"
 $UserID = $request.Query.UserID
 $Tenantfilter = $request.Query.tenantfilter
 
@@ -13,7 +13,7 @@ try {
     $CalendarFolder = New-ExoRequest -tenantid $Tenantfilter -cmdlet "Get-MailboxFolderStatistics" -cmdParams $GetCalParam | Select-Object -First 1
     $CalParam = @{Identity = "$($UserID):\$($CalendarFolder.name)" }
     $GraphRequest = New-ExoRequest -tenantid $Tenantfilter -cmdlet "Get-MailboxFolderPermission" -cmdParams $CalParam | Select-Object Identity, User, AccessRights, FolderName
-    Log-request -API 'List Calendar Permissions' -tenant $tenantfilter -message "Calendar permissions listed for $($tenantfilter)" -sev Debug
+    Write-LogMessage -API 'List Calendar Permissions' -tenant $tenantfilter -message "Calendar permissions listed for $($tenantfilter)" -sev Debug
     $StatusCode = [HttpStatusCode]::OK
 }
 catch {

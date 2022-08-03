@@ -4,7 +4,7 @@ using namespace System.Net
 param($Request, $TriggerMetadata)
 
 $APIName = $TriggerMetadata.FunctionName
-Log-Request -user $request.headers.'x-ms-client-principal' -API $APINAME  -message "Accessed this API" -Sev "Debug"
+Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME  -message "Accessed this API" -Sev "Debug"
 
 $RequestParams = $Request.Body.PowerShellCommand | ConvertFrom-Json | Select-Object -Property * -ExcludeProperty GUID
 
@@ -13,7 +13,7 @@ $Result = foreach ($Tenantfilter in $tenants) {
     try {
         $GraphRequest = New-ExoRequest -tenantid $Tenantfilter -cmdlet "New-TransportRule" -cmdParams $RequestParams
         "Succesfully created transport rule for $tenantfilter."
-        Log-request -API $APINAME -tenant $tenantfilter -message "Created transport rule for $($tenantfilter)" -sev Debug
+        Write-LogMessage -API $APINAME -tenant $tenantfilter -message "Created transport rule for $($tenantfilter)" -sev Debug
     }
     catch {
         "Could not create created transport rule for $($tenantfilter): $($_.Exception.message)"

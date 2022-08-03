@@ -11,8 +11,8 @@ try {
         'x-ms-correlation-id'    = [guid]::NewGuid()
         'X-Requested-With'       = 'XMLHttpRequest' 
     }
-    Log-request -API "Standards" -tenant $tenant -message  "Application Consent Mode has been disabled." -sev Info
+    Write-LogMessage -API "Standards" -tenant $tenant -message  "Application Consent Mode has been disabled." -sev Info
 }
 catch {
-    Log-request -API "Standards" -tenant $tenant -message  "Failed to set Application Consent Mode to disabled Error: $($_.exception.message)" -sev Error
+    Write-LogMessage -API "Standards" -tenant $tenant -message  "Failed to set Application Consent Mode to disabled Error: $($_.exception.message)" -sev Error
 }

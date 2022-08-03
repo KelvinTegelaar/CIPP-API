@@ -4,7 +4,7 @@ using namespace System.Net
 param($Request, $TriggerMetadata)
 
 $APIName = $TriggerMetadata.FunctionName
-Log-Request -user $request.headers.'x-ms-client-principal' -API $APINAME  -message "Accessed this API" -Sev "Debug"
+Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME  -message "Accessed this API" -Sev "Debug"
 
 
 # Write to the Azure Functions log stream.
@@ -23,10 +23,10 @@ Try {
     Write-Host $params
     New-ExoRequest -tenantid $TenantFilter -cmdlet "Release-QuarantineMessage" -cmdParams $Params
     $Results = [pscustomobject]@{"Results" = "Succesfully completed task." }
-    Log-Request -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $($tenantfilter) -message "$($request.query.id)" -Sev "Info"
+    Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $($tenantfilter) -message "$($request.query.id)" -Sev "Info"
 }
 catch {
-    Log-Request -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $($tenantfilter) -message "Quarantine Management failed: $($_.Exception.Message)" -Sev "Error"
+    Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $($tenantfilter) -message "Quarantine Management failed: $($_.Exception.Message)" -Sev "Error"
     $Results = [pscustomobject]@{"Results" = "Failed. $($_.Exception.Message)" }
 }
 # Associate values to output bindings by calling 'Push-OutputBinding'.
