@@ -102,7 +102,7 @@ try {
                 $Filter = "PartitionKey eq 'AdminDelta' and RowKey eq '{0}'" -f $Tenant.tenantid
                 $AdminDelta = (Get-AzDataTableEntity @Deltatable -Filter $Filter).delta | ConvertFrom-Json -ErrorAction SilentlyContinue
                 $NewDelta = (New-GraphGetRequest -uri "https://graph.microsoft.com/beta/directoryRoles?`$expand=members" -tenantid $Tenant.tenant) | Select-Object displayname, Members | ForEach-Object {
-                    [PSCustomObject]@{
+                    @{
                         GroupName = $_.displayname
                         Members   = $_.Members.UserPrincipalName
                     }
