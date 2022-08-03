@@ -13,7 +13,9 @@ try {
 
   $Batch = (Invoke-ActivityFunction -FunctionName 'Standards_GetQueue' -Input 'LetsGo')
   $ParallelTasks = foreach ($Item in $Batch) {
-    Invoke-DurableActivity -FunctionName "Standards_$($item['Standard'])"-Input $item['Tenant'] -NoWait -RetryOptions $RetryOptions
+    if ($item['Standard'] -ne "") {
+      Invoke-DurableActivity -FunctionName "Standards_$($item['Standard'])" -Input $item['Tenant'] -NoWait -RetryOptions $RetryOptions
+    }
   }
 
   if (($ParallelTasks | Measure-Object).Count -gt 0) { 
