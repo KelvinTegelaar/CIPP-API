@@ -359,7 +359,7 @@ function Get-Tenants {
         return (New-GraphGetRequest -uri "https://graph.microsoft.com/beta/contracts?`$top=999" -tenantid $ENV:Tenantid) | Select-Object CustomerId, DefaultdomainName, DisplayName, domains
     }
     else {
-        return $Script:IncludedTenantsCache
+        return ($Script:IncludedTenantsCache | Sort-Object -Property displayName)
     }
 }
 
@@ -422,7 +422,7 @@ function New-ExoRequest ($tenantid, $cmdlet, $cmdParams) {
             if ($Message -eq $null) { $Message = $($_.Exception.Message) }
             throw $Message
         }
-        return $ReturnedData.value   
+        return $ReturnedData.value
     }
     else {
         Write-Error 'Not allowed. You cannot manage your own tenant or tenants not under your scope' 
