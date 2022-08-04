@@ -107,7 +107,7 @@ try {
                         Members   = $_.Members.UserPrincipalName
                     }
                 }
-                $NewDeltatoSave = $NewDelta | ConvertTo-Json -Depth 10 -Compress -ErrorAction SilentlyContinue
+                $NewDeltatoSave = $NewDelta | ConvertTo-Json -Depth 10 -Compress -ErrorAction SilentlyContinue | Out-String
                 $DeltaEntity = @{
                     PartitionKey = 'AdminDelta'
                     RowKey       = $Tenant.tenantid
