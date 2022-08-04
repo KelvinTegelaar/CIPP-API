@@ -102,16 +102,16 @@ try {
                 $Filter = "PartitionKey eq 'AdminDelta' and RowKey eq '{0}'" -f $Tenant.tenantid
                 $AdminDelta = (Get-AzDataTableEntity @Deltatable -Filter $Filter).delta | ConvertFrom-Json -ErrorAction SilentlyContinue
                 $NewDelta = (New-GraphGetRequest -uri "https://graph.microsoft.com/beta/directoryRoles?`$expand=members" -tenantid $Tenant.tenant) | Select-Object displayname, Members | ForEach-Object {
-                    [PSCustomObject]@{
+                    @{
                         GroupName = $_.displayname
                         Members   = $_.Members.UserPrincipalName
                     }
                 }
-                $NewDeltatoSave = $NewDelta | ConvertTo-Json -Depth 10 -Compress -ErrorAction SilentlyContinue
+                $NewDeltatoSave = $NewDelta | ConvertTo-Json -Depth 10 -Compress -ErrorAction SilentlyContinue | Out-String
                 $DeltaEntity = @{
                     PartitionKey = 'AdminDelta'
                     RowKey       = $Tenant.tenantid
-                    delta        = $NewDeltatoSave
+                    delta        = "$NewDeltatoSave"
                 }
                 Add-AzDataTableEntity @DeltaTable -Entity $DeltaEntity -Force
         
@@ -187,7 +187,8 @@ try {
                 }
             }
             catch {
-                
+                $Message = 'Exception on line {0} - {1}' -f $_.InvocationInfo.ScriptLineNumber, $_.Exception.Message
+                Write-LogMessage -message $Message -API 'Alerts' -tenant $tenant.tenant -sev Error
             }
         }
     }
