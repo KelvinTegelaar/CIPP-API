@@ -4,16 +4,16 @@ using namespace System.Net
 param($Request, $TriggerMetadata)
 
 $APIName = $TriggerMetadata.FunctionName
-Log-Request -user $request.headers.'x-ms-client-principal' -API $APINAME  -message "Accessed this API" -Sev "Debug"
+Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME  -message "Accessed this API" -Sev "Debug"
 
 $ID = $request.query.id
 try {
     Remove-Item "Config\$($ID).TransportRuleTemplate.json" -Force
-    Log-Request -user $request.headers.'x-ms-client-principal'  -API $APINAME  -message "Removed Transport Rule Template with ID $ID." -Sev "Info"
+    Write-LogMessage -user $request.headers.'x-ms-client-principal'  -API $APINAME  -message "Removed Transport Rule Template with ID $ID." -Sev "Info"
     $body = [pscustomobject]@{"Results" = "Successfully removed Transport Rule Template" }
 }
 catch {
-    Log-Request -user $request.headers.'x-ms-client-principal'  -API $APINAME  -message "Failed to remove Transport Rule template $ID. $($_.Exception.Message)" -Sev "Error"
+    Write-LogMessage -user $request.headers.'x-ms-client-principal'  -API $APINAME  -message "Failed to remove Transport Rule template $ID. $($_.Exception.Message)" -Sev "Error"
     $body = [pscustomobject]@{"Results" = "Failed to remove template" }
 }
 

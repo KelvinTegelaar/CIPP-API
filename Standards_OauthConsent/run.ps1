@@ -30,8 +30,8 @@ try {
     if ($AllowedAppIdsForTenant) {
     }
 
-    Log-request -API "Standards" -tenant $tenant -message  "Application Consent Mode has been enabled." -sev Info
+    Write-LogMessage -API "Standards" -tenant $tenant -message  "Application Consent Mode has been enabled." -sev Info
 }
 catch {
-    Log-request -API "Standards" -tenant $tenant -message  "Failed to apply Application Consent Mode Error: $($_.exception.message)" -sev Error
+    Write-LogMessage -API "Standards" -tenant $tenant -message  "Failed to apply Application Consent Mode Error: $($_.exception.message)" -sev Error
 }

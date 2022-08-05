@@ -10,9 +10,9 @@ try {
         UnifiedAuditLogIngestionEnabled = $true
     }
     New-ExoRequest -tenantid $Tenant -cmdlet "Set-AdminAuditLogConfig" -cmdParams $AdminAuditLogParams
-    Log-request -API "Standards" -tenant $tenant -message "Unified Audit Log Enabled." -sev Info
+    Write-LogMessage -API "Standards" -tenant $tenant -message "Unified Audit Log Enabled." -sev Info
 
 }
 catch {
-    Log-request -API "Standards" -tenant $tenant -message "Failed to apply Unified Audit Log. Error: $($_.exception.message)" -sev Error
+    Write-LogMessage -API "Standards" -tenant $tenant -message "Failed to apply Unified Audit Log. Error: $($_.exception.message)" -sev Error
 }

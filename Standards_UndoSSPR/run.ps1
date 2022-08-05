@@ -12,8 +12,8 @@ try {
         'x-ms-correlation-id'    = [guid]::NewGuid()
         'X-Requested-With'       = 'XMLHttpRequest' 
     }
-    Log-request -API "Standards" -tenant $tenant -message "SSPR disabled" -sev Info
+    Write-LogMessage -API "Standards" -tenant $tenant -message "SSPR disabled" -sev Info
 }
 catch {
-    Log-request -API "Standards" -tenant $tenant -message  "Failed to disable SSPR $($_.exception.message)"
+    Write-LogMessage -API "Standards" -tenant $tenant -message  "Failed to disable SSPR $($_.exception.message)"
 }

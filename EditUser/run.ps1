@@ -4,7 +4,7 @@ using namespace System.Net
 param($Request, $TriggerMetadata)
 
 $APIName = $TriggerMetadata.FunctionName
-Log-Request -user $request.headers.'x-ms-client-principal' -API $APINAME  -message "Accessed this API" -Sev "Debug"
+Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME  -message "Accessed this API" -Sev "Debug"
 $userobj = $Request.body
 $Results = [System.Collections.ArrayList]@()
 $licenses = ($userobj | Select-Object "License_*").psobject.properties.value
@@ -46,9 +46,9 @@ try {
     }
 }
 catch {
-    Log-Request -API $APINAME -tenant ($UserObj.tenantid) -user $request.headers.'x-ms-client-principal' -message "User edit API failed. $($_.Exception.Message)" -Sev "Error"
+    Write-LogMessage -API $APINAME -tenant ($UserObj.tenantid) -user $request.headers.'x-ms-client-principal' -message "User edit API failed. $($_.Exception.Message)" -Sev "Error"
     $results.add( "Failed to edit user. $($_.Exception.Message)")
-    Log-Request -API $APINAME -tenant ($UserObj.tenantid) -user $request.headers.'x-ms-client-principal' -message "Edited user $($userobj.displayname) with id $($userobj.Userid)" -Sev "Info"
+    Write-LogMessage -API $APINAME -tenant ($UserObj.tenantid) -user $request.headers.'x-ms-client-principal' -message "Edited user $($userobj.displayname) with id $($userobj.Userid)" -Sev "Info"
 }
 
 
@@ -67,13 +67,13 @@ try {
         Write-Host $LicenseBody
         $LicRequest = New-GraphPostRequest -uri "https://graph.microsoft.com/beta/users/$($userobj.Userid)/assignlicense" -tenantid $Userobj.tenantid -type POST -body $LicenseBody -verbose
 
-        Log-Request -API $APINAME -tenant ($UserObj.tenantid) -user $request.headers.'x-ms-client-principal' -message "Changed user $($userobj.displayname) license. Sent info: $licensebody" -Sev "Info"
+        Write-LogMessage -API $APINAME -tenant ($UserObj.tenantid) -user $request.headers.'x-ms-client-principal' -message "Changed user $($userobj.displayname) license. Sent info: $licensebody" -Sev "Info"
         $results.add( "Success. User license has been edited." )
     }
 
 }
 catch {
-    Log-Request -API $APINAME -tenant ($UserObj.tenantid) -user $request.headers.'x-ms-client-principal' -message "License assign API failed. $($_.Exception.Message)" -Sev "Error"
+    Write-LogMessage -API $APINAME -tenant ($UserObj.tenantid) -user $request.headers.'x-ms-client-principal' -message "License assign API failed. $($_.Exception.Message)" -Sev "Error"
     $results.add( "We've failed to assign the license. $($_.Exception.Message)")
 }
 
@@ -84,13 +84,13 @@ try {
             New-GraphPostRequest -uri "https://graph.microsoft.com/beta/users/$($userobj.Userid)" -tenantid $Userobj.tenantid -type "patch" -body "{`"mail`": `"$Alias`"}" -verbose
         }
         New-GraphPostRequest -uri "https://graph.microsoft.com/beta/users/$($userobj.Userid)" -tenantid $Userobj.tenantid -type "patch" -body "{`"mail`": `"$UserprincipalName`"}" -verbose
-        Log-Request -API $APINAME -tenant ($UserObj.tenantid) -user $request.headers.'x-ms-client-principal'   -message "Added Aliases to $($userobj.displayname) license $($licences)" -Sev "Info"
+        Write-LogMessage -API $APINAME -tenant ($UserObj.tenantid) -user $request.headers.'x-ms-client-principal'   -message "Added Aliases to $($userobj.displayname) license $($licences)" -Sev "Info"
         $results.add( "Success. User has been edited")
     }
 
 }
 catch {
-    Log-Request -API $APINAME -tenant ($UserObj.tenantid) -user $request.headers.'x-ms-client-principal'   -message "Alias API failed. $($_.Exception.Message)" -Sev "Error"
+    Write-LogMessage -API $APINAME -tenant ($UserObj.tenantid) -user $request.headers.'x-ms-client-principal'   -message "Alias API failed. $($_.Exception.Message)" -Sev "Error"
     $results.add( "Succesfully edited user. The password is $password. We've failed to create the Aliases: $($_.Exception.Message)")
 }
 
@@ -102,12 +102,12 @@ if ($Request.body.CopyFrom -ne "") {
             $groupname = (New-GraphGetRequest -tenantid $Userobj.tenantid -asApp $true -uri "https://graph.microsoft.com/beta/groups/$($_)").displayName
             Write-Host "name: $groupname"
             $GroupResult = New-GraphPostRequest -AsApp $true -uri "https://graph.microsoft.com/beta/groups/$($_)" -tenantid $Userobj.tenantid -type patch -body $addmemberbody -ErrorAction Stop
-            Log-Request -user $request.headers.'x-ms-client-principal' -API $APINAME  -message "Added $($UserprincipalName) to group $groupresult.displayName)" -Sev "Info"  -tenant $TenantFilter
+            Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME  -message "Added $($UserprincipalName) to group $groupresult.displayName)" -Sev "Info"  -tenant $TenantFilter
             $body = $results.add("Added group: $($groupname)")
         }
         catch {
             $body = $results.add("We've failed to add the group $($groupname): $($_.Exception.Message)")
-            Log-Request -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $($userobj.tenantid) -message "Failed to add group. $($_.Exception.Message)" -Sev "Error"
+            Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $($userobj.tenantid) -message "Failed to add group. $($_.Exception.Message)" -Sev "Error"
         }
     }
 

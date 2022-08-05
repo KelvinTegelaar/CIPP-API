@@ -4,16 +4,16 @@ using namespace System.Net
 param($Request, $TriggerMetadata)
 
 $APIName = $TriggerMetadata.FunctionName
-Log-Request -user $request.headers.'x-ms-client-principal' -API $APINAME  -message "Accessed this API" -Sev "Debug"
+Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -message 'Accessed this API' -Sev 'Debug'
 
 
 # Write to the Azure Functions log stream.
-Write-Host "PowerShell HTTP trigger function processed a request."
+Write-Host 'PowerShell HTTP trigger function processed a request.'
 
 # Interact with query parameters or the body of the request.
 $TenantFilter = $Request.Query.TenantFilter
-$RawGraphRequest = if ($TenantFilter -ne "AllTenants") {
-    $LicRequest = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/subscribedSkus" -tenantid $TenantFilter
+$RawGraphRequest = if ($TenantFilter -ne 'AllTenants') {
+    $LicRequest = New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/subscribedSkus' -tenantid $TenantFilter
     [PSCustomObject]@{
         Tenant   = $TenantFilter
         Licenses = $LicRequest
@@ -21,12 +21,12 @@ $RawGraphRequest = if ($TenantFilter -ne "AllTenants") {
 }
 else {
     $Table = Get-CIPPTable -TableName cachelicenses
-    $Rows = Get-AzTableRow -Table $table | Where-Object -Property TableTimestamp -GT (Get-Date).AddHours(-1)
+    $Rows = Get-AzDataTableEntity @Table | Where-Object -Property Timestamp -GT (Get-Date).AddHours(-1)
     if (!$Rows) {
         Push-OutputBinding -Name Msg -Value (Get-Date).ToString()
         [PSCustomObject]@{
-            Tenant   = "Loading data for all tenants. Please check back in 1 minute"
-            Licenses = "Loading data for all tenants. Please check back in 1 minute"
+            Tenant   = 'Loading data for all tenants. Please check back in 1 minute'
+            Licenses = 'Loading data for all tenants. Please check back in 1 minute'
         }
     }         
     else {

@@ -1,0 +1,9 @@
+﻿{
+  "bindings": [
+    {
+      "name": "TableParams",
+      "type": "activityTrigger",
+      "direction": "in"
+    }
+  ]
+}

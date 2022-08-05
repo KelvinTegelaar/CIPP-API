@@ -11,8 +11,8 @@ try {
         'x-ms-correlation-id'    = [guid]::NewGuid()
         'X-Requested-With'       = 'XMLHttpRequest' 
     }
-    Log-request  -API "Standards" -tenant $tenant -message "Anonymous Reports Disabled." -sev Info
+    Write-LogMessage  -API "Standards" -tenant $tenant -message "Anonymous Reports Disabled." -sev Info
 }
 catch {
-    Log-request  -API "Standards" -tenant $tenant -message "Failed to disable anonymous reports. Error: $($_.exception.message)"
+    Write-LogMessage  -API "Standards" -tenant $tenant -message "Failed to disable anonymous reports. Error: $($_.exception.message)"
 }

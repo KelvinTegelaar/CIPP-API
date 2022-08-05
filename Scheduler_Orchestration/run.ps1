@@ -1,12 +1,19 @@
 param($Context)
 
-try {
-  $Batch = (Invoke-DurableActivity -FunctionName 'Scheduler_GetQueue' -Input 'LetsGo')
+$DurableRetryOptions = @{
+  FirstRetryInterval  = (New-TimeSpan -Seconds 5)
+  MaxNumberOfAttempts = 3
+  BackoffCoefficient  = 2
+}
+$RetryOptions = New-DurableRetryOptions @DurableRetryOptions
 
+try {
+  $Batch = Invoke-ActivityFunction -FunctionName 'Scheduler_GetQueue' -Input 'LetsGo'
   if (($Batch | Measure-Object).Count -gt 0) {
+
     $ParallelTasks = foreach ($Item in $Batch) {
       try {
-        Invoke-DurableActivity -FunctionName "Scheduler_$($item['Type'])" -Input $item -NoWait
+        Invoke-DurableActivity -FunctionName "Scheduler_$($item['Type'])" -Input $item -NoWait -RetryOptions $RetryOptions
       }
       catch {
         Write-Host 'Could not start:'
@@ -14,11 +21,12 @@ try {
       }
     }
     $Outputs = Wait-ActivityFunction -Task $ParallelTasks
+    if (-not $Outputs['DataReturned']) {
+      Write-Host 'Errors detected'
+    }
   }
-
-  Write-Host $Outputs
 }
 catch {}
 finally {
-  Log-request -API 'Scheduler' -tenant $tenant -message 'Scheduler Ran.' -sev Debug
+  Write-LogMessage -API 'Scheduler' -tenant $tenant -message 'Scheduler Ran.' -sev Debug
 }
