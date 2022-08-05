@@ -19,8 +19,8 @@
   "detectionRules": [
     {
       "@odata.type": "#microsoft.graph.win32LobAppFileSystemDetection",
-      "path": "%ProgramFiles%\\saazod",
-      "fileOrFolderName": "saazwatchdog.exe",
+      "path": "%ProgramFiles(x86)%\\ITSPlatform\\agentcore\\",
+      "fileOrFolderName": "platform-agent-core.exe",
       "check32BitOn64System": false,
       "detectionType": "exists"
     }
