@@ -7,7 +7,7 @@ $APIName = $TriggerMetadata.FunctionName
 Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME  -message "Accessed this API" -Sev "Debug"
 
 $Tenants = ($Request.body | Select-Object Select_*).psobject.properties.value
-if ("AllTenants" -in $Tenants) { $Tenants = (Get-Tenants).DefaultDomainName }
+if ("AllTenants" -in $Tenants) { $Tenants = (Get-Tenants).defaultDomainName }
 $displayname = $request.body.Displayname
 $description = $request.body.Description
 $AssignTo = if ($request.body.Assignto -ne "on") { $request.body.Assignto }
