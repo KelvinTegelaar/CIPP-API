@@ -1,15 +1,13 @@
 param($tenant)
 
-# Get the current universal time in the default string format.
-$currentUTCtime = (Get-Date).ToUniversalTime()
 
 $Table = Get-CIPPTable -TableName SchedulerConfig
 $Filter = "RowKey eq 'CippNotifications' and PartitionKey eq 'CippNotifications'"
-$Config = Get-AzDataTableEntity @Table -Filter $Filter
-
+$Config = [pscustomobject](Get-AzDataTableEntity @Table -Filter $Filter)
 
 $Settings = [System.Collections.ArrayList]@('Alerts')
 $Config.psobject.properties.name | ForEach-Object { $settings.add($_) } 
+
 $Table = Get-CIPPTable
 $PartitionKey = Get-Date -UFormat '%Y%m%d'
 $Filter = "PartitionKey eq '{0}'" -f $PartitionKey
@@ -34,7 +32,7 @@ try {
                           "toRecipients": [
                             {
                               "emailAddress": {
-                                "address": "$($config.email)"
+                                "address": "$($Config.email)"
                               }
                             }
                           ]
@@ -44,10 +42,10 @@ try {
 "@
     New-GraphPostRequest -uri 'https://graph.microsoft.com/v1.0/me/sendMail' -tenantid $env:TenantID -type POST -body ($JSONBody)
   }
-
-
+  Write-Host $($config | ConvertTo-Json)
+  Write-Host $config.webhook
   if ($Config.webhook -ne '' -and $null -ne $CurrentLog) {
-    switch -wildcard ($config.Webhook) {
+    switch -wildcard ($config.webhook) {
 
       '*webhook.office.com*' {
         $Log = $Currentlog | ConvertTo-Html -frag | Out-String
@@ -69,17 +67,22 @@ try {
         $JSonBody = "{`"content`": `"You've setup your alert policies to be alerted whenever specific events happen. We've found some of these events in the log. $Log`"}" 
         Invoke-RestMethod -Uri $config.webhook -Method POST -ContentType 'Application/json' -Body $JSONBody
       }
+      default {
+        $Log = $Currentlog | ConvertTo-Json -Compress
+        $JSonBody = $Log
+        Invoke-RestMethod -Uri $config.webhook -Method POST -ContentType 'Application/json' -Body $JSONBody
+      }
     }
 
   }
-  Write-Host ($currentLog | ConvertTo-Json)
+
   $UpdateLogs = $CurrentLog | ForEach-Object { 
     $_.SentAsAlert = $true
     $_
   }
-
-  Add-AzDataTableEntity @Table -Entity $UpdateLogs -Force
-
+  if ($UpdateLogs) {
+    Add-AzDataTableEntity @Table -Entity $UpdateLogs -Force
+  }
 }
 catch {
   Write-Host "$($_.Exception.message)"
