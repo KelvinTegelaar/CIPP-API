@@ -187,8 +187,8 @@ try {
                 }
             }
             catch {
-                $Message = 'Exception on line {0} - {1}' -f $_.InvocationInfo.ScriptLineNumber, $_.Exception.Message
-                Write-LogMessage -message $Message -API 'Alerts' -tenant $tenant.tenant -sev Error
+                #$Message = 'Exception on line {0} - {1}' -f $_.InvocationInfo.ScriptLineNumber, $_.Exception.Message
+                #Write-LogMessage -message $Message -API 'Alerts' -tenant $tenant.tenant -sev Error
             }
         }
     }

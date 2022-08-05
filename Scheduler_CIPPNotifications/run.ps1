@@ -13,7 +13,7 @@ $Config.psobject.properties.name | ForEach-Object { $settings.add($_) }
 $Table = Get-CIPPTable
 $PartitionKey = Get-Date -UFormat '%Y%m%d'
 $Filter = "PartitionKey eq '{0}'" -f $PartitionKey
-$Currentlog = Get-AzDataTableEntity @Table -Filter $Filter | Where-Object { $_.api -In $Settings -and $_.SentAsAlert -ne $true }
+$Currentlog = Get-AzDataTableEntity @Table -Filter $Filter | Where-Object { $_.API -In $Settings -and $_.SentAsAlert -ne $true }
 
 try {
   if ($Config.email -like '*@*' -and $null -ne $CurrentLog) {
@@ -58,7 +58,7 @@ try {
       '*slack.com*' {
         $Log = $Currentlog | ForEach-Object {
           $JSonBody = @"
-        {"blocks":[{"type":"header","text":{"type":"plain_text","text":"New Alert from CIPP","emoji":true}},{"type":"section","fields":[{"type":"mrkdwn","text":"*DateTime:*\n$($_.DateTime)"},{"type":"mrkdwn","text":"*Tenant:*\n$($_.Tenant)"},{"type":"mrkdwn","text":"*API:*\n$($_.API)"},{"type":"mrkdwn","text":"*User:*\n$($_.User)."}]},{"type":"section","text":{"type":"mrkdwn","text":"*Message:*\n$($_.message)"}}]}
+        {"blocks":[{"type":"header","text":{"type":"plain_text","text":"New Alert from CIPP","emoji":true}},{"type":"section","fields":[{"type":"mrkdwn","text":"*DateTime:*\n$($_.Timestamp)"},{"type":"mrkdwn","text":"*Tenant:*\n$($_.Tenant)"},{"type":"mrkdwn","text":"*API:*\n$($_.API)"},{"type":"mrkdwn","text":"*User:*\n$($_.Username)."}]},{"type":"section","text":{"type":"mrkdwn","text":"*Message:*\n$($_.Message)"}}]}
 "@
           Invoke-RestMethod -Uri $config.webhook -Method POST -ContentType 'Application/json' -Body $JSONBody
         }
