@@ -4,7 +4,7 @@ using namespace System.Net
 param($Request, $TriggerMetadata)
 
 $APIName = $TriggerMetadata.FunctionName
-Log-Request -user $request.headers.'x-ms-client-principal' -API $APINAME -message 'Accessed this API' -Sev 'Debug'
+Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -message 'Accessed this API' -Sev 'Debug'
 
 # List of supported resolvers
 $ValidResolvers = @(
@@ -13,27 +13,22 @@ $ValidResolvers = @(
     'Quad9'
 )
 
-$ConfigPath = 'Config/DnsConfig.json'
-
 # Write to the Azure Functions log stream.
 Write-Host 'PowerShell HTTP trigger function processed a request.'
 
 $StatusCode = [HttpStatusCode]::OK
 try {
-    $Config = ''
-    if (Test-Path $ConfigPath) {
-        try {
-            # Try to parse config file and catch exceptions
-            $Config = Get-Content -Path $ConfigPath | ConvertFrom-Json
+    $ConfigTable = Get-CippTable -tablename Config
+    $Filter = "PartitionKey eq 'Domains' and RowKey eq 'Domains'"
+    $Config = Get-AzDataTableEntity @ConfigTable -Filter $Filter
+
+    if ($ValidResolvers -notcontains $Config.Resolver) {
+        $Config = @{
+            PartitionKey = 'Domains'
+            RowKey       = 'Domains'
+            Resolver     = 'Google'
         }
-        catch {}
-    }
-    if ($Config -eq '') {
-        New-Item 'Config' -ItemType Directory -ErrorAction SilentlyContinue | Out-Null
-        $Config = [PSCustomObject]@{
-            Resolver = 'Google'
-        }
-        $Config | ConvertTo-Json | Set-Content $ConfigPath
+        Add-AzDataTableEntity @ConfigTable -Entity $Config -Force
     }
 
     $updated = $false
@@ -47,7 +42,7 @@ try {
                     $Config.Resolver = $Resolver
                 }
                 catch {
-                    $Config = [PSCustomObject]@{
+                    $Config = @{
                         Resolver = $Resolver
                     }
                 }
@@ -55,8 +50,9 @@ try {
             }
         }
         if ($updated) {
-            $Config | ConvertTo-Json | Set-Content $ConfigPath
-            Log-Request -API $APINAME -tenant 'Global' -user $request.headers.'x-ms-client-principal' -message 'DNS configuration updated' -Sev 'Info' 
+            Add-AzDataTableEntity @ConfigTable -Entity $Config -Force
+            #$Config | ConvertTo-Json | Set-Content $ConfigPath
+            Write-LogMessage -API $APINAME -tenant 'Global' -user $request.headers.'x-ms-client-principal' -message 'DNS configuration updated' -Sev 'Info' 
             $body = [pscustomobject]@{'Results' = 'Success: DNS configuration updated.' }
         }
         else {
@@ -65,12 +61,12 @@ try {
         }
     }
     elseif ($Request.Query.Action -eq 'GetConfig') {
-        $body = $Config
-        Log-Request -API $APINAME -tenant 'Global' -user $request.headers.'x-ms-client-principal' -message 'Retrieved DNS configuration' -Sev 'Info' 
+        $body = [pscustomobject]$Config
+        Write-LogMessage -API $APINAME -tenant 'Global' -user $request.headers.'x-ms-client-principal' -message 'Retrieved DNS configuration' -Sev 'Info' 
     }
 }
 catch {
-    Log-Request -API $APINAME -tenant $($name) -user $request.headers.'x-ms-client-principal' -message "DNS Config API failed. $($_.Exception.Message)" -Sev 'Error'
+    Write-LogMessage -API $APINAME -tenant $($name) -user $request.headers.'x-ms-client-principal' -message "DNS Config API failed. $($_.Exception.Message)" -Sev 'Error'
     $body = [pscustomobject]@{'Results' = "Failed. $($_.Exception.Message)" }
     $StatusCode = [HttpStatusCode]::BadRequest
 }

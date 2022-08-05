@@ -17,7 +17,7 @@ Function Test-CronRange {
     #>
     [cmdletbinding()]
     param(
-        [ValidatePattern("^[\d-*/,]*$")]
+        [ValidatePattern('^[\d-*/,]*$')]
         [string]$range
         ,
         [int]$inputvalue
@@ -54,8 +54,8 @@ Function ConvertFrom-DateTable {
     Param (
         $DateTable
     )
-    $datestring = "{0}-{1:00}-{2:00} {3:00}:{4:00}" -f $DateTable.year, $DateTable.month, $DateTable.day, $DateTable.hour, $DateTable.Minute
-    $date = [datetime]::ParseExact($datestring, "yyyy-MM-dd HH:mm", $null)
+    $datestring = '{0}-{1:00}-{2:00} {3:00}:{4:00}' -f $DateTable.year, $DateTable.month, $DateTable.day, $DateTable.hour, $DateTable.Minute
+    $date = [datetime]::ParseExact($datestring, 'yyyy-MM-dd HH:mm', $null)
     return $date
 }
 Function Invoke-CronIncrement {
@@ -173,7 +173,7 @@ Function Get-CronNextExecutionTime {
                 $next = Invoke-CronIncrement -DateTable $Next -Increment Day
                 $next.Hour = 0
                 $next.Minute = 0    
-            } While ( (Test-CronRange -InputValue  $Next.WeekDay -Range $cronWeekday) -eq $false )
+            } While ( (Test-CronRange -InputValue $Next.WeekDay -Range $cronWeekday) -eq $false )
             continue
         }
         $done = $true
@@ -186,40 +186,34 @@ Function Get-CronNextExecutionTime {
     Return $Date
 }
 
-$context = New-AzStorageContext -ConnectionString $ENV:AzureWebJobsStorage
-$tablename = 'CippLogs'
-try { 
-    $StorageTable = Get-AzStorageTable –Context $context -Name $tablename -ErrorAction Stop
-}
-catch {
-    New-AzStorageTable -Context $context -Name $tablename | Out-Null
-    $StorageTable = Get-AzStorageTable –Context $context -Name $tablename
-}
-$Table = $StorageTable.CloudTable
+$Table = Get-CippTable -tablename CippLogs
 $PartitionKey = Get-Date -UFormat '%Y%m%d'
-$Rows = Get-AzTableRow -Table $table -PartitionKey $PartitionKey -Top 10 -SelectColumn Tenant, Message
+$Filter = "PartitionKey eq '{0}'" -f $PartitionKey
+$Rows = Get-AzDataTableEntity @Table -Filter $Filter | Sort-Object TableTimestamp -Descending | Select-Object -First 10
 $SlimRows = New-Object System.Collections.ArrayList
 foreach ($Row in $Rows) {
     $SlimRows.Add(@{
-        Tenant = $Row.Tenant
-        Message = $Row.Message
-    })
+            Tenant  = $Row.Tenant
+            Message = $Row.Message
+        })
 }
 $Alerts = [System.Collections.ArrayList]@()
-if ($ENV:ApplicationID -eq "LongApplicationID" -or $null -eq $ENV:ApplicationID) { $Alerts.add("You have not yet setup your SAM Setup. Please go to the SAM Wizard in settings to finish setup") }
-if ($ENV:FUNCTIONS_EXTENSION_VERSION -ne "~4") { $Alerts.add("Your Function App is running on a Runtime version lower than 4. This impacts performance. Go to Settings -> Backend -> Function App Configuration -> Function Runtime Settings and set this to 4 for maximum performance") }
-if ($psversiontable.psversion.toString() -lt 7.2) { $Alerts.add("Your Function App is running on Powershell 7. This impacts performance. Go to Settings -> Backend -> Function App Configuration -> General Settings and set PowerShell Core Version to 7.2 for maximum performance") }
+if ($ENV:ApplicationID -eq 'LongApplicationID' -or $null -eq $ENV:ApplicationID) { $Alerts.add('You have not yet setup your SAM Setup. Please go to the SAM Wizard in settings to finish setup') }
+if ($ENV:FUNCTIONS_EXTENSION_VERSION -ne '~4') { $Alerts.add('Your Function App is running on a Runtime version lower than 4. This impacts performance. Go to Settings -> Backend -> Function App Configuration -> Function Runtime Settings and set this to 4 for maximum performance') }
+if ($psversiontable.psversion.toString() -lt 7.2) { $Alerts.add('Your Function App is running on Powershell 7. This impacts performance. Go to Settings -> Backend -> Function App Configuration -> General Settings and set PowerShell Core Version to 7.2 for maximum performance') }
+
+$TenantCount = (Get-Tenants | Measure-Object).Count
 
 $APIName = $TriggerMetadata.FunctionName
-Log-Request -user $request.headers.'x-ms-client-principal' -API $APINAME  -message "Accessed this API" -Sev "Debug"
+Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -message 'Accessed this API' -Sev 'Debug'
 $dash = [PSCustomObject]@{
     NextStandardsRun  = (Get-CronNextExecutionTime -Expression '0 */3 * * *').tostring('s')
     NextBPARun        = (Get-CronNextExecutionTime -Expression '0 3 * * *').tostring('s')
     queuedApps        = [int64](Get-ChildItem '.\ChocoApps.Cache' -ErrorAction SilentlyContinue).count
     queuedStandards   = [int64](Get-ChildItem '.\Cache_Standards' -ErrorAction SilentlyContinue).count
-    tenantCount       = [int64](Get-Content '.\tenants.cache.json' | ConvertFrom-Json -ErrorAction SilentlyContinue).count
-    RefreshTokenDate  = (Get-CronNextExecutionTime -Expression '0 0 * * 0').AddDays('-7').tostring('s') -split "T" | Select-Object -First 1
-    ExchangeTokenDate = (Get-CronNextExecutionTime -Expression '0 0 * * 0').AddDays('-7').tostring('s') -split "T" | Select-Object -First 1
+    tenantCount       = [int64]$TenantCount
+    RefreshTokenDate  = (Get-CronNextExecutionTime -Expression '0 0 * * 0').AddDays('-7').tostring('s') -split 'T' | Select-Object -First 1
+    ExchangeTokenDate = (Get-CronNextExecutionTime -Expression '0 0 * * 0').AddDays('-7').tostring('s') -split 'T' | Select-Object -First 1
     LastLog           = @($SlimRows)
     Alerts            = @($Alerts)
 }

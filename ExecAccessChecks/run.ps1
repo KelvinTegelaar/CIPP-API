@@ -4,13 +4,13 @@
 param($Request, $TriggerMetadata)
 
 $APIName = $TriggerMetadata.FunctionName
-Log-Request -user $request.headers.'x-ms-client-principal' -API $APINAME -message 'Accessed this API' -Sev 'Debug'
+Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -message 'Accessed this API' -Sev 'Debug'
 
 
 # Write to the Azure Functions log stream.
 Write-Host 'PowerShell HTTP trigger function processed a request.'
 if ($Request.query.Permissions -eq 'true') {
-    Log-Request -user $request.headers.'x-ms-client-principal' -API $APINAME -message 'Started permissions check' -Sev 'Debug'
+    Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -message 'Started permissions check' -Sev 'Debug'
     $Messages = [System.Collections.Generic.List[string]]::new()
     $MissingPermissions = [System.Collections.Generic.List[string]]::new()
     $Links = [System.Collections.Generic.List[object]]::new()
@@ -43,7 +43,7 @@ if ($Request.query.Permissions -eq 'true') {
                 Name        = ''
                 AuthMethods = @()
             }
-            Log-Request -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $tenant -message "Token exception: $($_) " -Sev 'Error'
+            Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $tenant -message "Token exception: $($_) " -Sev 'Error'
             $Success = $false
         }
         
@@ -81,7 +81,7 @@ if ($Request.query.Permissions -eq 'true') {
         }
     }
     catch {
-        Log-Request -user $request.headers.'x-ms-client-principal' -API $APINAME -message "Permissions check failed: $($_) " -Sev 'Error'
+        Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -message "Permissions check failed: $($_) " -Sev 'Error'
         $Messages.Add("We could not connect to the API to retrieve the permissions. There might be a problem with the secure application model configuration. The returned error is: $($_)") | Out-Null
         $Success = $false
     }
@@ -105,7 +105,7 @@ if ($Request.query.Tenants -eq 'true') {
                 TenantName = "$($Tenant)"
                 Status     = 'Succesfully connected' 
             }
-            Log-Request -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $tenant -message 'Tenant access check executed succesfully' -Sev 'Info'
+            Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $tenant -message 'Tenant access check executed succesfully' -Sev 'Info'
 
         }
         catch {
@@ -113,7 +113,7 @@ if ($Request.query.Tenants -eq 'true') {
                 TenantName = "$($tenant)"
                 Status     = "Failed to connect to $($_.Exception.Message)" 
             }
-            Log-Request -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $tenant -message "Tenant access check failed: $($_) " -Sev 'Error'
+            Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $tenant -message "Tenant access check failed: $($_) " -Sev 'Error'
 
         }
 
@@ -133,7 +133,7 @@ if ($Request.query.Tenants -eq 'true') {
                 TenantName = "$($Tenant)"
                 Status     = "Failed to connect to Exchange: $($Message)" 
             }
-            Log-Request -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $tenant -message "Tenant access check for Exchange failed: $($Message) " -Sev 'Error'
+            Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $tenant -message "Tenant access check for Exchange failed: $($Message) " -Sev 'Error'
         }
     }
     if (!$Tenants) { $results = 'Could not load the tenants list from cache. Please run permissions check first, or visit the tenants page.' }

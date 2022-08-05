@@ -17,13 +17,13 @@ $KV = $ENV:WEBSITE_DEPLOYMENT_ID
 if ($Refreshtoken) { 
     Set-AzKeyVaultSecret -VaultName $kv -Name 'RefreshToken' -SecretValue (ConvertTo-SecureString -String $Refreshtoken -AsPlainText -Force)
 }
-else { log-request -message "Could not update refresh token. Will try again in 7 days." -sev "CRITICAL" }
+else { Write-LogMessage -message "Could not update refresh token. Will try again in 7 days." -sev "CRITICAL" }
 if ($ExchangeRefreshtoken -and $KV) {
     Set-AzKeyVaultSecret -VaultName $kv -Name 'ExchangeRefreshToken' -SecretValue (ConvertTo-SecureString -String $ExchangeRefreshtoken -AsPlainText -Force)
-    log-request -message "System API: Updated Exchange Refresh token." -sev "info" -API "TokensUpdater"
+    Write-LogMessage -message "System API: Updated Exchange Refresh token." -sev "info" -API "TokensUpdater"
 }
 else {
-    log-request -message "Could not update Exchange refresh token. Will try again in 7 days." -sev "CRITICAL" -API "TokensUpdater"
+    Write-LogMessage -message "Could not update Exchange refresh token. Will try again in 7 days." -sev "CRITICAL" -API "TokensUpdater"
 }
 
 # Write an information log with the current time.

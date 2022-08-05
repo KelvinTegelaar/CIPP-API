@@ -4,7 +4,7 @@ using namespace System.Net
 param($Request, $TriggerMetadata)
 
 $APIName = $TriggerMetadata.FunctionName
-Log-Request -user $request.headers.'x-ms-client-principal' -API $APINAME  -message "Accessed this API" -Sev "Debug"
+Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME  -message "Accessed this API" -Sev "Debug"
 
 Function ConvertTo-FlatObject {
         # https://evotec.xyz/powershell-converting-advanced-object-to-flat-object/ - MIT License
@@ -82,7 +82,7 @@ try {
         else {
                 $RawGraphRequest = Get-tenants | ForEach-Object {
                         try {
-                                $DefaultDomainName = $_.defaultdomainname
+                                $DefaultDomainName = $_.defaultDomainName
                                 $TenantName = $_.displayName
                                 New-GraphGetRequest -uri "https://graph.microsoft.com/beta/$($Request.Query.Endpoint)" -tenantid $DefaultDomainName 
                         }

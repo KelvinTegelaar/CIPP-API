@@ -4,18 +4,22 @@ using namespace System.Net
 param($Request, $TriggerMetadata) 
 
 $APIName = $TriggerMetadata.FunctionName
-Log-Request -user $request.headers.'x-ms-client-principal' -API $APINAME -message 'Accessed this API' -Sev 'Debug'
+Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -message 'Accessed this API' -Sev 'Debug'
 
 try {
+    $GraphToken = Get-GraphToken -returnRefresh $true
+    $AccessTokenDetails = Read-JwtAccessDetails -Token $GraphToken.access_token
+
     $ReplacementStrings = @{
         '##TENANTID##'      = $ENV:TenantId
         '##RESOURCEGROUP##' = $ENV:WEBSITE_RESOURCE_GROUP
         '##FUNCTIONAPP##'   = $ENV:WEBSITE_SITE_NAME 
         '##SUBSCRIPTION##'  = (($ENV:WEBSITE_OWNER_NAME).split('+') | Select-Object -First 1)
+        '##TOKENIP##'       = $AccessTokenDetails.IPAddress
     }
 }
 catch { Write-Host $_.Exception.Message }
-$ReplacementStrings | Format-Table
+#$ReplacementStrings | Format-Table
 
 try {
     $ScriptFile = $Request.Query.ScriptFile
@@ -46,17 +50,14 @@ try {
 
         if ($Request.Query.MakeLink) {
             $Table = Get-CippTable -TableName 'MaintenanceScripts'
-            $LinkGuid = (New-Guid).Guid
+            $LinkGuid = ([guid]::NewGuid()).ToString()
 
             $MaintenanceScriptRow = @{
-                'Table'        = $Table
-                'rowKey'       = $LinkGuid
-                'partitionKey' = 'Maintenance'
-                'property'     = @{
-                    'ScriptContent' = $ScriptContent
-                }
+                'RowKey'        = $LinkGuid
+                'PartitionKey'  = 'Maintenance'
+                'ScriptContent' = $ScriptContent
             }
-            Add-AzTableRow @MaintenanceScriptRow
+            Add-AzDataTableEntity @Table -Entity $MaintenanceScriptRow -Force
 
             $Body = @{ Link = "/api/PublicScripts?guid=$LinkGuid" }
         }
@@ -66,7 +67,7 @@ try {
     }
 }
 catch {
-    Log-Request -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $($tenantfilter) -message "Failed to retrieve maintenance scripts. Error: $($_.Exception.Message)" -Sev 'Error'
+    Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $($tenantfilter) -message "Failed to retrieve maintenance scripts. Error: $($_.Exception.Message)" -Sev 'Error'
     $Body = @{Status = "Failed to retrieve maintenance scripts $($_.Exception.Message)" }
 }
 

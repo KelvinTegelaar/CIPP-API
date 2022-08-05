@@ -12,8 +12,8 @@ try {
     'x-ms-correlation-id'    = [guid]::NewGuid()
     'X-Requested-With'       = 'XMLHttpRequest' 
   }
-  Log-request -API "Standards" -tenant $tenant -message "Azure AD Portal access for users disabled" -sev Info
+  Write-LogMessage -API "Standards" -tenant $tenant -message "Azure AD Portal access for users disabled" -sev Info
 }
 catch {
-  Log-request -API "Standards" -tenant $tenant -message  "Failed to disable user access to Azure Portal $($_.exception.message)"
+  Write-LogMessage -API "Standards" -tenant $tenant -message  "Failed to disable user access to Azure Portal $($_.exception.message)"
 }

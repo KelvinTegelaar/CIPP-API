@@ -16,8 +16,8 @@ try {
     }
     Write-Host  (ConvertTo-Json -InputObject $body)
     New-GraphPostRequest -tenantid $tenant -Uri "https://graph.microsoft.com/beta/organization/$($TenantID.id)" -Type patch -Body (ConvertTo-Json -InputObject $body) -ContentType "application/json"
-    Log-request -API "Standards" -tenant $tenant -message  "Contact email's set." -sev Info
+    Write-LogMessage -API "Standards" -tenant $tenant -message  "Contact email's set." -sev Info
 }
 catch {
-    Log-request -API "Standards" -tenant $tenant -message  "Failed to set contact emails: $($_.exception.message)" -sev Error
+    Write-LogMessage -API "Standards" -tenant $tenant -message  "Failed to set contact emails: $($_.exception.message)" -sev Error
 }

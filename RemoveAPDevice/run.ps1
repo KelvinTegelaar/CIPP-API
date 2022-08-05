@@ -4,7 +4,7 @@ using namespace System.Net
 param($Request, $TriggerMetadata)
 
 $APIName = $TriggerMetadata.FunctionName
-Log-Request -user $request.headers.'x-ms-client-principal' -API $APINAME -message "Accessed this API" -Sev "Debug"
+Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -message "Accessed this API" -Sev "Debug"
 # Write to the Azure Functions log stream.
 Write-Host "PowerShell HTTP trigger function processed a request."
 
@@ -19,11 +19,11 @@ try {
     else {
         $GraphRequest = New-GraphPOSTRequest -uri "https://graph.microsoft.com/beta/deviceManagement/windowsAutopilotDeviceIdentities/$Deviceid" -tenantid $TenantFilter -type DELETE
     }
-    Log-Request -user $request.headers.'x-ms-client-principal' -tenant $TenantFilter -API $APINAME  -message "Deleted autopilot device $Deviceid" -Sev "Info"
+    Write-LogMessage -user $request.headers.'x-ms-client-principal' -tenant $TenantFilter -API $APINAME  -message "Deleted autopilot device $Deviceid" -Sev "Info"
     $body = [pscustomobject]@{"Results" = "Succesfully deleted the autopilot device" }
 }
 catch {
-    Log-Request -user $request.headers.'x-ms-client-principal' -tenant $TenantFilter -API $APINAME -message "Autopilot Delete API failed for $deviceid. The error is: $($_.Exception.Message)" -Sev "Error"
+    Write-LogMessage -user $request.headers.'x-ms-client-principal' -tenant $TenantFilter -API $APINAME -message "Autopilot Delete API failed for $deviceid. The error is: $($_.Exception.Message)" -Sev "Error"
     $body = [pscustomobject]@{"Results" = "Failed to delete device: $($_.Exception.Message)" }
 }
 #force a sync, this can give "too many requests" if deleleting a bunch of devices though.
