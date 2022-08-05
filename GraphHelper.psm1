@@ -96,11 +96,11 @@ function Write-LogMessage ($message, $tenant = 'None', $API = 'None', $user, $se
     }
     $PartitionKey = (Get-Date -UFormat '%Y%m%d').ToString()
     $TableRow = @{
-        'Tenant'       = $tenant
-        'API'          = $API
-        'Message'      = $message
-        'Username'     = $username
-        'Severity'     = $sev
+        'Tenant'       = [string]$tenant
+        'API'          = [string]$API
+        'Message'      = [string]$message
+        'Username'     = [string]$username
+        'Severity'     = [string]$sev
         'SentAsAlert'  = $false
         'PartitionKey' = $PartitionKey
         'RowKey'       = ([guid]::NewGuid()).ToString()
