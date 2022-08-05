@@ -110,7 +110,7 @@ try {
                 $NewDeltatoSave = $NewDelta | ConvertTo-Json -Depth 10 -Compress -ErrorAction SilentlyContinue | Out-String
                 $DeltaEntity = @{
                     PartitionKey = 'AdminDelta'
-                    RowKey       = $Tenant.tenantid
+                    RowKey       = [string]$Tenant.tenantid
                     delta        = "$NewDeltatoSave"
                 }
                 Add-AzDataTableEntity @DeltaTable -Entity $DeltaEntity -Force
