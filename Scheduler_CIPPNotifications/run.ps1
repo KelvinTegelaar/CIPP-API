@@ -75,12 +75,14 @@ try {
     }
 
   }
+
   $UpdateLogs = $CurrentLog | ForEach-Object { 
     $_.SentAsAlert = $true
     $_
   }
-  Add-AzDataTableEntity @Table -Entity $UpdateLogs -Force
-
+  if ($UpdateLogs) {
+    Add-AzDataTableEntity @Table -Entity $UpdateLogs -Force
+  }
 }
 catch {
   Write-Host "$($_.Exception.message)"
