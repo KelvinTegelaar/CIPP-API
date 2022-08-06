@@ -40,7 +40,7 @@ try {
         }
     }
     else {
-        $body = $TenantList | Where-Object -Property DefaultdomainName -EQ $Tenantfilter
+        $body = $TenantList | Where-Object -Property defaultDomainName -EQ $Tenantfilter
     }
 
     Write-LogMessage -user $request.headers.'x-ms-client-principal' -tenant $Tenantfilter -API $APINAME -message 'Listed Tenant Details' -Sev 'Debug'
