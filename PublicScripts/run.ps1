@@ -15,7 +15,7 @@ if (![string]::IsNullOrEmpty($Request.Query.Guid)) {
     $Filter = "PartitionKey eq 'Maintenance' and RowKey eq '{0}'" -f $Request.Query.Guid
     $ScriptRow = Get-AzDataTableEntity @Table -Filter $Filter
     if ($ScriptRow) {
-        if ($ScriptRow.TableTimestamp -lt (Get-Date).AddMinutes(-5)) {
+        if ($ScriptRow.Timestamp.DateTime -lt (Get-Date).AddMinutes(-5)) {
             $Body = 'Write-Host "Link expired"'
         }
         else {
