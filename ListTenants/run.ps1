@@ -20,11 +20,11 @@ if ($request.Query.ClearCache -eq 'true') {
 }
 
 $tenantfilter = $Request.Query.TenantFilter
+$Tenants = Get-Tenants
 
 try {
     if ($null -eq $TenantFilter -or $TenantFilter -eq 'null') {
         $TenantList = [system.collections.generic.list[object]]::new()
-        $Tenants = Get-Tenants
         if ($Request.Query.AllTenantSelector -eq $true) { 
             $TenantList.Add(@{
                     customerId        = 'AllTenants'
@@ -40,7 +40,7 @@ try {
         }
     }
     else {
-        $body = $TenantList | Where-Object -Property defaultDomainName -EQ $Tenantfilter
+        $body = $Tenants | Where-Object -Property defaultDomainName -EQ $Tenantfilter
     }
 
     Write-LogMessage -user $request.headers.'x-ms-client-principal' -tenant $Tenantfilter -API $APINAME -message 'Listed Tenant Details' -Sev 'Debug'
