@@ -380,7 +380,7 @@ function Remove-CIPPCache {
     Update-AzDataTableEntity @DomainsTable -Entity $ClearDomainAnalyserRows
     #Clear BPA
     $BPATable = Get-CippTable -tablename 'cachebpa'
-    $ClearBPARows = Get-AzDataTableRow @DomainsTable | ForEach-Object {
+    $ClearBPARows = Get-AzDataTableRow @BPATable | ForEach-Object {
         $_.Results = ''
         $_
     }
