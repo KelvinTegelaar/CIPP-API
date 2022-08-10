@@ -7,16 +7,8 @@ $APIName = $TriggerMetadata.FunctionName
 Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME  -message "Accessed this API" -Sev "Debug"
 
 
-# Write to the Azure Functions log stream.
-Write-Host "PowerShell HTTP trigger function processed a request."
-
-# Get all the things
-$UnfilteredResults = Get-ChildItem ".\Cache_BestPracticeAnalyser\*.json" | ForEach-Object{Get-Content $_.FullName | Out-String | ConvertFrom-Json}
-
-# Need to apply exclusion logic
-$Skiplist = Get-Content "ExcludedTenants" | ConvertFrom-Csv -Delimiter "|" -Header "Name", "User", "Date"
-
-$Results = $UnfilteredResults | Where-Object {$_.Tenant -notin $Skiplist.Name}
+$Table = get-cipptable 'cachebpa'
+$Results = (Get-AzDataTableRow @Table).Results | ConvertFrom-Json -ErrorAction SilentlyContinue
 
 # Associate values to output bindings by calling 'Push-OutputBinding'.
 Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
