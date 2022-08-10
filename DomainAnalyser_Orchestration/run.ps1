@@ -1,8 +1,6 @@
 param($Context)
 
 try { 
-  New-Item 'Cache_DomainAnalyser' -ItemType Directory -ErrorAction SilentlyContinue | Out-Null
-  New-Item 'Cache_DomainAnalyser\CurrentlyRunning.txt' -ItemType File -Force | Out-Null
 
   $DurableRetryOptions = @{
     FirstRetryInterval  = (New-TimeSpan -Seconds 5)
