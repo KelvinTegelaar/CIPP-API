@@ -10,6 +10,11 @@ Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME  -
 $Table = get-cipptable 'cachebpa'
 $Results = (Get-AzDataTableRow @Table).Results | ConvertFrom-Json -ErrorAction SilentlyContinue
 
+if (!$Results) {
+    $Results = @{
+        Tenant = "The BPA has not yet run."
+    }
+}
 # Associate values to output bindings by calling 'Push-OutputBinding'.
 Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
         StatusCode = [HttpStatusCode]::OK
