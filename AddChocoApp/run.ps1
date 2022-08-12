@@ -32,7 +32,13 @@ $Results = foreach ($Tenant in $tenants) {
             assignTo        = $assignTo
             IntuneBody      = $intunebody
         } | ConvertTo-Json -Depth 15
-        $JSONFile = New-Item -Path ".\ChocoApps.Cache\$((New-Guid).GUID)" -Value $CompleteObject -Force -ErrorAction Stop
+        $Table = Get-CippTable -tablename 'apps'
+        $Table.Force = $true
+        Add-AzDataTableEntity @Table -Entity @{
+            JSON         = "$CompleteObject"
+            RowKey       = "$((New-Guid).GUID)"
+            PartitionKey = "apps"
+        }
         "Succesfully added Choco App for $($Tenant) to queue."
         Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $tenant -message "Chocolatey Application $($intunebody.Displayname) queued to add" -Sev "Info"
     }

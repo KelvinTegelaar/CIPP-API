@@ -25,7 +25,7 @@ try {
     Add-AzDataTableEntity @Table -Entity @{
         JSON         = "$json"
         RowKey       = "$GUID"
-        PartitionKey = "IntuneTemplate"
+        PartitionKey = "TransportTemplate"
     }
     Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME  -message "Created Transport Rule Template $($Request.body.name) with GUID $GUID" -Sev "Debug"
     $body = [pscustomobject]@{"Results" = "Successfully added template" }
