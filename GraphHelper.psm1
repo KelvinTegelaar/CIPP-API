@@ -386,10 +386,6 @@ function Remove-CIPPCache {
     }
     Update-AzDataTableEntity @BPATable -Entity $ClearBPARows
 
-    Get-ChildItem -Path 'ChocoApps.Cache\CurrentlyRunning.txt' -ErrorAction SilentlyContinue | Remove-Item -Force -ErrorAction SilentlyContinue
-    Get-ChildItem -Path 'Cache_Scheduler\CurrentlyRunning.txt' -ErrorAction SilentlyContinue | Remove-Item -Force -ErrorAction SilentlyContinue
-    Get-ChildItem -Path 'SecurityBaselines_All\CurrentlyRunning.txt' -ErrorAction SilentlyContinue | Remove-Item -Force -ErrorAction SilentlyContinue
-
     $Script:SkipListCache = $Null
     $Script:SkipListCacheEmpty = $Null
     $Script:IncludedTenantsCache = $Null
