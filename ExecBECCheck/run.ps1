@@ -4,9 +4,9 @@ param($Request, $TriggerMetadata)
 
 
 $body = if ($request.query.GUID) {
-    $BECTable = Get-CippTable -tablename 'cachebec'
+    $Table = Get-CippTable -tablename 'cachebec'
     $Filter = "PartitionKey eq 'bec' and RowKey eq '$($request.query.GUID)'" 
-    $JSONOutput = Get-AzDataTableRow @BECTable -Filter $Filter
+    $JSONOutput = Get-AzDataTableRow @Table -Filter $Filter
     if (!$JSONOutput) {
         @{ Waiting = $true }
     }

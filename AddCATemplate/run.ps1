@@ -9,7 +9,6 @@ Write-Host ($request | ConvertTo-Json -Compress)
 
 try {        
     $GUID = (New-Guid).GUID
-    New-Item Config -ItemType Directory -ErrorAction SilentlyContinue
     $JSON = if ($request.body.rawjson) {
        ([pscustomobject]$request.body.rawjson) | ConvertFrom-Json
     }
@@ -20,7 +19,14 @@ try {
         }
     }
     $JSON = ($JSON | ConvertTo-Json -Depth 10)
-    Set-Content "Config\$($GUID).CATemplate.json" -Value ($JSON) -Force
+    $Table = Get-CippTable -tablename 'templates'
+    $Table.Force = $true
+    Add-AzDataTableEntity @Table -Entity @{
+        JSON         = "$JSON"
+        RowKey       = "$GUID"
+        PartitionKey = "CATemplate"
+        GUID         = "$GUID"
+    }
     Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME  -message "Created Transport Rule Template $($Request.body.name) with GUID $GUID" -Sev "Debug"
     $body = [pscustomobject]@{"Results" = "Successfully added template" }
     

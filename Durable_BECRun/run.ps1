@@ -125,9 +125,9 @@ catch {
   $results = [pscustomobject]@{"Results" = "$errMessage" }
 }
 
-$BECTable = Get-CippTable -tablename 'cachebec'
-$BECTable.Force = $true
-Add-AzDataTableEntity @BECTable -Entity @{
+$Table = Get-CippTable -tablename 'cachebec'
+$Table.Force = $true
+Add-AzDataTableEntity @Table -Entity @{
   UserId       = $Context.input.userid
   Results      = "$($results | ConvertTo-Json -Depth 10)"
   RowKey       = $Context.input.userid
