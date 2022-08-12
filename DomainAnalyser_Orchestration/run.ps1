@@ -41,5 +41,4 @@ catch {
 }
 finally {
   Write-LogMessage -API 'DomainAnalyser' -message 'Domain Analyser has Finished' -sev Info
-  Remove-Item 'Cache_DomainAnalyser\CurrentlyRunning.txt' -Force
 }
