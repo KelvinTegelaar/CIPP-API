@@ -59,11 +59,18 @@ function Get-GraphToken($tenantid, $scope, $AsApp, $AppID, $refreshToken, $Retur
     $TenantsTable = Get-CippTable -tablename Tenants
     $Filter = "PartitionKey eq 'Tenants' and (defaultDomainName eq '{0}' or customerId eq '{0}')" -f $tenantid
     $Tenant = Get-AzDataTableRow @TenantsTable -Filter $Filter
-
+    if (!$Tenant) {
+        $Tenant = @{
+            GraphErrorCount     = $null
+            LastGraphTokenError = $null
+            PartitionKey        = "TenantFailed"
+            RowKey              = "Failed"
+        }
+    }
     try {
         $AccessToken = (Invoke-RestMethod -Method post -Uri "https://login.microsoftonline.com/$($tenantid)/oauth2/v2.0/token" -Body $Authbody -ErrorAction Stop)
         if ($ReturnRefresh) { $header = $AccessToken } else { $header = @{ Authorization = "Bearer $($AccessToken.access_token)" } }
-        if ($Tenant.GraphErrorCount -gt 0) {
+        if ($Tenant.GraphErrorCount -gt 0 -and $Tenant.GraphErrorCount) {
             $Tenant.GraphErrorCount = 0
             $Tenant.LastGraphTokenError = ''
             Update-AzDataTableRow @TenantsTable -Entity $Tenant
@@ -71,7 +78,13 @@ function Get-GraphToken($tenantid, $scope, $AsApp, $AppID, $refreshToken, $Retur
         return $header
     }
     catch {
-        $Tenant.LastGraphTokenError = $_.Exception.Message
+        $Tenant.LastGraphTokenError = if ( $_.ErrorDetails.Message) {
+            $msg = $_.ErrorDetails.Message | ConvertFrom-Json
+            "$($msg.error):$($msg.error_description)"
+        }
+        else {
+            $_.Exception.message
+        }
         if ($Tenant.GraphErrorCount -gt 0) {
             $Tenant.GraphErrorCount++
         }
@@ -79,7 +92,7 @@ function Get-GraphToken($tenantid, $scope, $AsApp, $AppID, $refreshToken, $Retur
             $Tenant.GraphErrorCount = 1
         }
         Update-AzDataTableRow @TenantsTable -Entity $Tenant
-        throw
+        throw "$($Tenant.LastGraphTokenError)"
     }
 }
 
