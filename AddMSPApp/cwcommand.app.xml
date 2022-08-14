@@ -1,7 +1,8 @@
-<ApplicationInfo xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" ToolVersion="1.8.4.0">
+<ApplicationInfo xmlns:xsd="http://www.w3.org/2001/XMLSchema"
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" ToolVersion="1.8.4.0">
   <Name>install.ps1</Name>
   <UnencryptedContentSize>2717</UnencryptedContentSize>
-  <FileName>IntunePackage.intunewin</FileName>
+  <FileName>cwcommand.intunewin</FileName>
   <SetupFile>install.ps1</SetupFile>
   <EncryptionInfo>
     <EncryptionKey>6bilNd8M34xxoOl/marQi04r0PjYRD0YUuVf5hR/cVY=</EncryptionKey>
