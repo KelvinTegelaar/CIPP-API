@@ -51,7 +51,9 @@ try {
             }
       }
       if ($request.query.CreateSAM) { 
-            Remove-AzDataTableRow @Table -Entity $Rows
+            if ($rows) {
+                  Remove-AzDataTableRow @Table -Entity $Rows
+            }
             if ($Request.query.partnersetup) {
                   $SetupPhase = @{RowKey = "setup"; PartitionKey = "setup"; partnersetup = $true }
                   Add-AzDataTableEntity @Table -Entity $SetupPhase -Force | Out-Null
