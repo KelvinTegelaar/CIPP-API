@@ -150,8 +150,8 @@ try {
             4 {
                   $step = 4
                   $TenantId = $Rows.tenantid
-                  $FirstExchangeLogonRefreshtoken = New-DeviceLogin -clientid 'a0c73c16-a7e3-4564-9a95-2bdf47383716' -Scope 'https://outlook.office365.com/.default' -FirstLogon  -TenantId $TenantId
-                  $SetupPhase = $rows.SamSetup = [string]($FirstLogonRefreshtoken | ConvertTo-Json)
+                  $FirstExchangeLogonRefreshtoken = New-DeviceLogin -clientid 'a0c73c16-a7e3-4564-9a95-2bdf47383716' -Scope 'https://outlook.office365.com/.default' -FirstLogon -TenantId $TenantId
+                  $SetupPhase = $rows.SamSetup = [string]($FirstExchangeLogonRefreshtoken | ConvertTo-Json)
                   Add-AzDataTableEntity @Table -Entity $Rows -Force | Out-Null
                   $step = 5
                   $Results = @{ message = "Your code is $($FirstExchangeLogonRefreshtoken.user_code). Enter the code "  ; step = $step; url = $FirstExchangeLogonRefreshtoken.verification_uri }            
