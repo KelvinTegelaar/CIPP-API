@@ -158,8 +158,8 @@ try {
             }
             5 {
                   $step = 5
-                  $TenantId = $row.tenantid
-                  $SAMSetup = $row.SamSetup | ConvertFrom-Json
+                  $TenantId = $rows.tenantid
+                  $SAMSetup = $rows.SamSetup | ConvertFrom-Json
                   $ExchangeRefreshToken = (New-DeviceLogin -clientid 'a0c73c16-a7e3-4564-9a95-2bdf47383716' -Scope 'https://outlook.office365.com/.default' -device_code $SAMSetup.device_code)
                   if ($ExchangeRefreshToken.Refresh_Token) {
                         Set-AzKeyVaultSecret -VaultName $kv -Name 'exchangerefreshtoken' -SecretValue (ConvertTo-SecureString -String $ExchangeRefreshToken.Refresh_Token -AsPlainText -Force)
