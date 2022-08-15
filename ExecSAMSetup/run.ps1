@@ -181,7 +181,7 @@ try {
 
 }
 catch {
-      $Results = [pscustomobject]@{"Results" = "Failed. $($_.InvocationInfo.ScriptLineNumber)" ; step = $step }
+      $Results = [pscustomobject]@{"Results" = "Failed. $($_.InvocationInfo.ScriptLineNumber):  $($_.Exception.message)" ; step = $step }
 }
 
 # Associate values to output bindings by calling 'Push-OutputBinding'.
