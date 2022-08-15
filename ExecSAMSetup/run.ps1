@@ -42,8 +42,8 @@ try {
                   $RefreshToken = Invoke-RestMethod -Method POST -Body "client_id=$appid&scope=https://graph.microsoft.com/.default+offline_access+openid+profile&code=$($request.query.code)&grant_type=authorization_code&redirect_uri=$($url)&client_secret=$clientsecret" -Uri "https://login.microsoftonline.com/$TenantId/oauth2/v2.0/token"
                   Set-AzKeyVaultSecret -VaultName $kv -Name 'RefreshToken' -SecretValue (ConvertTo-SecureString -String $RefreshToken.refresh_token -AsPlainText -Force)
                   $Results = "Authentication is now complete. You may now close this window."
-                  $SetupPhase = @{RowKey = "setup"; PartitionKey = "setup"; validated = $true }
-                  Add-AzDataTableEntity @Table -Entity $SetupPhase -Force | Out-Null
+                  $SetupPhase = $rows.validated = $true
+                  Add-AzDataTableEntity @Table -Entity $Rows -Force | Out-Null
 
             }
             catch {
@@ -51,37 +51,46 @@ try {
             }
       }
       if ($request.query.CreateSAM) { 
-            if ($rows) {
-                  Remove-AzDataTableRow @Table -Entity $Rows
+            $SetupPhase = @{
+                  RowKey       = "setup"
+                  PartitionKey = "setup"
+                  validated    = $false 
+                  SamSetup     = "NotStarted"
+                  partnersetup = $false
+                  appid        = "NotStarted"
+                  tenantid     = "NotStarted"
             }
+            Add-AzDataTableEntity @Table -Entity $Rows -Force | Out-Null
+            $Rows = Get-AzDataTableEntity @Table | Where-Object -Property Timestamp -GT (Get-Date).AddMinutes(-10)
+
             if ($Request.query.partnersetup) {
-                  $SetupPhase = @{RowKey = "setup"; PartitionKey = "setup"; partnersetup = $true }
-                  Add-AzDataTableEntity @Table -Entity $SetupPhase -Force | Out-Null
+                  $SetupPhase = $Rows.partnersetup = $true
+                  Add-AzDataTableEntity @Table -Entity $Rows -Force | Out-Null
             }
             $step = 1
             $DeviceLogon = New-DeviceLogin -clientid "1b730954-1685-4b74-9bfd-dac224a7b894" -Scope 'https://graph.microsoft.com/.default' -FirstLogon
             #New-Item '.\Cache_SAMSetup\SamSetup.json' -Value ($DeviceLogon | ConvertTo-Json) -Force
-            $SetupPhase = @{RowKey = "setup"; PartitionKey = "setup"; SamSetup = [string]($DeviceLogon | ConvertTo-Json) }
-            Add-AzDataTableEntity @Table -Entity $SetupPhase -Force | Out-Null
+            $SetupPhase = $rows.SamSetup = [string]($DeviceLogon | ConvertTo-Json) 
+            Add-AzDataTableEntity @Table -Entity $Rows -Force | Out-Null
             $Results = @{ message = "Your code is $($DeviceLogon.user_code). Enter the code"  ; step = $step; url = $DeviceLogon.verification_uri }
       }
       if ($Request.query.CheckSetupProcess -and $request.query.step -eq 1) {
-            $SAMSetup = $Row.SamSetup | ConvertFrom-Json
+            $SAMSetup = $Rows.SamSetup | ConvertFrom-Json -ErrorAction SilentlyContinue
             $Token = (New-DeviceLogin -clientid "1b730954-1685-4b74-9bfd-dac224a7b894" -Scope 'https://graph.microsoft.com/.default' -device_code $SAMSetup.device_code)
             if ($token.Access_Token) {
                   $step = 2
                   $URL = ($Request.headers.'x-ms-original-url').split('?') | Select-Object -First 1
                   $PartnerSetup = $Rows.partnersetup
                   $TenantId = (Invoke-RestMethod "https://graph.microsoft.com/v1.0/organization" -Headers @{ authorization = "Bearer $($Token.Access_Token)" } -Method GET -ContentType 'application/json').value.id
-                  $SetupPhase = @{RowKey = "setup"; PartitionKey = "setup"; tenantid = [string]($TenantId) }
-                  Add-AzDataTableEntity @Table -Entity $SetupPhase -Force | Out-Null
+                  $SetupPhase = $rows.tenantid = [string]($TenantId)
+                  Add-AzDataTableEntity @Table -Entity $Rows -Force | Out-Null
                   if ($PartnerSetup) {
                         $app = Get-Content '.\Cache_SAMSetup\SAMManifest.json' | ConvertFrom-Json
                         $App.web.redirectUris = @($App.web.redirectUris + $URL)
                         $app = $app | ConvertTo-Json -Depth 15
                         $AppId = (Invoke-RestMethod "https://graph.microsoft.com/v1.0/applications" -Headers @{ authorization = "Bearer $($Token.Access_Token)" } -Method POST -Body $app -ContentType 'application/json')
-                        $SetupPhase = @{RowKey = "setup"; PartitionKey = "setup"; appid = [string]($AppId.appId) }
-                        Add-AzDataTableEntity @Table -Entity $SetupPhase -Force | Out-Null
+                        $rows.appid = [string]($AppId.appId)
+                        Add-AzDataTableEntity @Table -Entity $Rows -Force | Out-Null
                         $attempt = 0
                         do {
                               try {
@@ -103,8 +112,8 @@ try {
                   else {
                         $app = Get-Content '.\Cache_SAMSetup\SAMManifestNoPartner.json'
                         $AppId = (Invoke-RestMethod "https://graph.microsoft.com/v1.0/applications" -Headers @{ authorization = "Bearer $($Token.Access_Token)" } -Method POST -Body $app -ContentType 'application/json')
-                        $SetupPhase = @{RowKey = "setup"; PartitionKey = "setup"; appid = [string]($AppId.appId) }
-                        Add-AzDataTableEntity @Table -Entity $SetupPhase -Force | Out-Null
+                        $rows.appid = [string]($AppId.appId)
+                        Add-AzDataTableEntity @Table -Entity $Rows -Force | Out-Null
                   }
                   $AppPassword = (Invoke-RestMethod "https://graph.microsoft.com/v1.0/applications/$($AppID.id)/addPassword" -Headers @{ authorization = "Bearer $($Token.Access_Token)" } -Method POST -Body '{"passwordCredential":{"displayName":"CIPPInstall"}}' -ContentType 'application/json').secretText
                   Set-AzKeyVaultSecret -VaultName $kv -Name 'tenantid' -SecretValue (ConvertTo-SecureString -String $TenantId -AsPlainText -Force)
@@ -124,8 +133,8 @@ try {
                   $TenantId = $Rows.tenantid
                   $AppID = $rows.appid
                   $PartnerSetup = $Rows.partnersetup
-                  $SetupPhase = @{RowKey = "setup"; PartitionKey = "setup"; SamSetup = [string]($FirstLogonRefreshtoken | ConvertTo-Json) }
-                  Add-AzDataTableEntity @Table -Entity $SetupPhase -Force | Out-Null
+                  $SetupPhase = $rows.SamSetup = [string]($FirstLogonRefreshtoken | ConvertTo-Json)
+                  Add-AzDataTableEntity @Table -Entity $Rows -Force | Out-Null
                   $URL = ($Request.headers.'x-ms-original-url').split('?') | Select-Object -First 1
                   $Validated = $Rows.validated
                   if ($Validated) { $step = 3 }
@@ -142,8 +151,8 @@ try {
                   $step = 4
                   $TenantId = $Rows.tenantid
                   $FirstExchangeLogonRefreshtoken = New-DeviceLogin -clientid 'a0c73c16-a7e3-4564-9a95-2bdf47383716' -Scope 'https://outlook.office365.com/.default' -FirstLogon  -TenantId $TenantId
-                  $SetupPhase = @{RowKey = "setup"; PartitionKey = "setup"; SamSetup = [string]($FirstLogonRefreshtoken | ConvertTo-Json) }
-                  Add-AzDataTableEntity @Table -Entity $SetupPhase -Force | Out-Null
+                  $SetupPhase = $rows.SamSetup = [string]($FirstLogonRefreshtoken | ConvertTo-Json)
+                  Add-AzDataTableEntity @Table -Entity $Rows -Force | Out-Null
                   $step = 5
                   $Results = @{ message = "Your code is $($FirstExchangeLogonRefreshtoken.user_code). Enter the code "  ; step = $step; url = $FirstExchangeLogonRefreshtoken.verification_uri }            
             }
@@ -172,7 +181,7 @@ try {
 
 }
 catch {
-      $Results = [pscustomobject]@{"Results" = "Failed. $($_.Exception.message)" ; step = $step }
+      $Results = [pscustomobject]@{"Results" = "Failed. $($_.InvocationInfo.ScriptLineNumber)" ; step = $step }
 }
 
 # Associate values to output bindings by calling 'Push-OutputBinding'.
