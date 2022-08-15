@@ -69,7 +69,6 @@ try {
             }
             $step = 1
             $DeviceLogon = New-DeviceLogin -clientid "1b730954-1685-4b74-9bfd-dac224a7b894" -Scope 'https://graph.microsoft.com/.default' -FirstLogon
-            #New-Item '.\Cache_SAMSetup\SamSetup.json' -Value ($DeviceLogon | ConvertTo-Json) -Force
             $SetupPhase = $rows.SamSetup = [string]($DeviceLogon | ConvertTo-Json) 
             Add-AzDataTableEntity @Table -Entity $Rows -Force | Out-Null
             $Results = @{ message = "Your code is $($DeviceLogon.user_code). Enter the code"  ; step = $step; url = $DeviceLogon.verification_uri }
