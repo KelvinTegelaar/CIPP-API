@@ -51,7 +51,7 @@ try {
             }
       }
       if ($request.query.CreateSAM) { 
-            $SetupPhase = @{
+            $Rows = @{
                   RowKey       = "setup"
                   PartitionKey = "setup"
                   validated    = $false 
