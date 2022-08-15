@@ -29,22 +29,27 @@ function Resolve-DnsHttpsQuery {
         [string]$RecordType = 'A'
     )
 
-    $ConfigTable = Get-CippTable -tablename Config
-    $Filter = "PartitionKey eq 'Domains' and RowKey eq 'Domains'"
-    $Config = Get-AzDataTableEntity @ConfigTable -Filter $Filter
+    try {
+        $ConfigTable = Get-CippTable -tablename Config
+        $Filter = "PartitionKey eq 'Domains' and RowKey eq 'Domains'"
+        $Config = Get-AzDataTableEntity @ConfigTable -Filter $Filter
 
-    $ValidResolvers = @('Google', 'CloudFlare', 'Quad9')
-    if ($ValidResolvers -contains $Config.Resolver) {
-        $Resolver = $Config.Resolver
-    }
-    else {
-        $Resolver = 'Google'
-        $Config = @{
-            PartitionKey = 'Domains'
-            RowKey       = 'Domains'
-            Resolver     = $Resolver
+        $ValidResolvers = @('Google', 'CloudFlare', 'Quad9')
+        if ($ValidResolvers -contains $Config.Resolver) {
+            $Resolver = $Config.Resolver
         }
-        Add-AzDataTableEntity @ConfigTable -Entity $Config -Force
+        else {
+            $Resolver = 'Google'
+            $Config = @{
+                PartitionKey = 'Domains'
+                RowKey       = 'Domains'
+                Resolver     = $Resolver
+            }
+            Add-AzDataTableEntity @ConfigTable -Entity $Config -Force
+        }
+    }
+    catch {
+        $Resolver = 'Google'
     }
 
     switch ($Resolver) {
@@ -74,6 +79,7 @@ function Resolve-DnsHttpsQuery {
         $Results.Answer | ForEach-Object {
             $_.data = $_.data -replace '"' -replace '\s+', ' '
         }
+        $Results.Answer = $Results.Answer | Where-Object { $_.type -eq 16 } 
     }
     
     return $Results
