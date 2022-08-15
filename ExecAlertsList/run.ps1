@@ -52,7 +52,8 @@ $GraphRequest = if ($TenantFilter -ne 'AllTenants') {
 }
 else {
     $Table = Get-CIPPTable -TableName cachealertsandincidents
-    $Rows = Get-AzDataTableEntity @Table | Where-Object -Property Timestamp -GT (Get-Date).AddMinutes(-10)
+    $Filter = "PartitionKey eq 'alert'"
+    $Rows = Get-AzDataTableEntity @Table -filter $Filter | Where-Object -Property Timestamp -GT (Get-Date).AddMinutes(-10)
     if (!$Rows) {
         Push-OutputBinding -Name Msg -Value (Get-Date).ToString()
         [PSCustomObject]@{
