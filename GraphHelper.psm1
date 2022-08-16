@@ -63,7 +63,6 @@ function Get-GraphToken($tenantid, $scope, $AsApp, $AppID, $refreshToken, $Retur
         $Tenant = @{
             GraphErrorCount     = $null
             LastGraphTokenError = $null
-            PartitionKey        = "TenantFailed"
             PartitionKey        = 'TenantFailed'
             RowKey              = 'Failed'
         }
