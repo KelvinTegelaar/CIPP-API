@@ -253,14 +253,14 @@ try {
         }
     
     }
+    $StatusCode = [HttpStatusCode]::OK
     $body = [pscustomobject]@{"Results" = @($results) }
 }
 catch {
-    [pscustomobject]@{"Results" = @("Could not offboard user: $($_.Exception.message)") }
+    $StatusCode = [HttpStatusCode]::Forbidden
+    $body = $_.Exception.message
 }
-
-# Associate values to output bindings by calling 'Push-OutputBinding'.
 Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
-        StatusCode = [HttpStatusCode]::OK
+        StatusCode = $StatusCode
         Body       = $Body
-    })
+    }) 
