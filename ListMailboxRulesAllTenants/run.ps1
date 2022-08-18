@@ -32,7 +32,7 @@ $Tenants | ForEach-Object -Parallel {
     }
     catch {
         $Rules = @{
-            displayName = "Could not connect to tenant $($_.Exception.message)"
+            Name = "Could not connect to tenant $($_.Exception.message)"
         } | ConvertTo-Json
         $GraphRequest = @{
             Rules        = [string]$Rules
