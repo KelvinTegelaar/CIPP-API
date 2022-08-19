@@ -1,8 +1,6 @@
 param($Context)
 
 try {
-  New-Item 'Cache_Standards' -ItemType Directory -ErrorAction SilentlyContinue
-  New-Item 'Cache_Standards\CurrentlyRunning.txt' -ItemType File -Force
 
   $DurableRetryOptions = @{
     FirstRetryInterval  = (New-TimeSpan -Seconds 5)
@@ -28,5 +26,4 @@ catch {
 }
 finally {
   Write-LogMessage -API 'Standards' -tenant $tenant -message 'Deployment finished.' -sev Info
-  Remove-Item 'Cache_Standards\CurrentlyRunning.txt' -Force
 }

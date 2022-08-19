@@ -6,10 +6,12 @@ param($Request, $TriggerMetadata)
 $APIName = $TriggerMetadata.FunctionName
 Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME  -message "Accessed this API" -Sev "Debug"
 
-$user = $request.headers.'x-ms-client-principal'
 $ID = $request.query.id
 try {
-    Remove-Item "ChocoApps.cache\$($ID)" -Force
+    $Table = Get-CippTable -tablename 'apps'
+    $Filter = "PartitionKey eq 'apps' and RowKey eq '$id'" 
+    $ClearRow = Get-AzDataTableRow @Table -Filter $Filter
+    Remove-AzDataTableRow @Table -Entity $clearRow
     Write-LogMessage -user $request.headers.'x-ms-client-principal'  -API $APINAME  -message "Removed application queue for $ID." -Sev "Info"
     $body = [pscustomobject]@{"Results" = "Successfully removed from queue." }
 }

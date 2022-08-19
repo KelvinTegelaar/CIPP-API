@@ -22,7 +22,7 @@ $ModuleTests = $Modules | ForEach-Object -Parallel {
         $ModuleInfo = Get-Module $using:CippRoot\Modules\$Module -ListAvailable
 
         # Remove old versions
-        if (($ModuleInfo | Measure-Object).Count -gt 1) {
+        while (($ModuleInfo | Measure-Object).Count -gt 1) {
             $RemoveVersion = $ModuleInfo | Sort-Object -Property Version | Select-Object -First 1
             Remove-Item -Path $RemoveVersion.ModuleBase -Recurse
         }

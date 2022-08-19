@@ -12,9 +12,9 @@ catch {
 }
 $TenantName = Get-Tenants | Where-Object -Property defaultDomainName -EQ $tenant
 # Build up the result object that will be passed back to the durable function
-$Result = [PSCustomObject]@{
-    Tenant                           = $TenantName.displayname
-    GUID                             = $TenantName.customerId
+$Result = [pscustomobject]@{
+    Tenant                           = "$($TenantName.displayName)"
+    GUID                             = "$($TenantName.customerId)"
     LastRefresh                      = $(Get-Date (Get-Date).ToUniversalTime() -UFormat '+%Y-%m-%dT%H:%M:%S.000Z')
     SecureDefaultState               = ''
     PrivacyEnabled                   = ''
@@ -249,4 +249,8 @@ catch {
     Write-LogMessage -API 'BestPracticeAnalyser' -tenant $tenant -message "Secure Score Retrieval on $($tenant). Error: $($_.exception.message)" -sev 'Error' 
 }
 
-$Result
+@{
+    Results      = ($Result | ConvertTo-Json)
+    PartitionKey = "bpa"
+    RowKey       = "$($TenantName.customerId)"
+}

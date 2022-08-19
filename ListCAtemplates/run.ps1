@@ -10,11 +10,29 @@ Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME  -
 # Write to the Azure Functions log stream.
 Write-Host "PowerShell HTTP trigger function processed a request."
 Write-Host $Request.query.id
+#Migrating old policies whenever you do a list
+$Table = Get-CippTable -tablename 'templates'
+
 $Templates = Get-ChildItem "Config\*.CATemplate.json" | ForEach-Object {
-    $data = Get-Content $_ | ConvertFrom-Json 
-    $data | Add-Member -NotePropertyName "GUID" -NotePropertyValue (($_.name).split('.') | Select-Object -First 1)
-    $data }
-if ($Request.query.ID) { $Templates = $Templates | Where-Object -Property guid -EQ $Request.query.id }
+    $Entity = @{
+        JSON         = "$(Get-Content $_)"
+        RowKey       = "$($_.name)"
+        PartitionKey = "CATemplate"
+        GUID         = "$($_.name)"
+    }
+    Add-AzDataTableEntity @Table -Entity $Entity -Force
+}
+
+#List new policies
+$Table = Get-CippTable -tablename 'templates'
+$Filter = "PartitionKey eq 'CATemplate'" 
+$Templates = (Get-AzDataTableRow @Table -Filter $Filter) | ForEach-Object {
+    $data = $_.JSON | ConvertFrom-Json 
+    $data | Add-Member -NotePropertyName "GUID" -NotePropertyValue $_.GUID
+    $data 
+}
+
+if ($Request.query.ID) { $Templates = $Templates | Where-Object -Property GUID -EQ $Request.query.id }
 
 
 # Associate values to output bindings by calling 'Push-OutputBinding'.
