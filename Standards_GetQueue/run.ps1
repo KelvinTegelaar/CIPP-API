@@ -1,15 +1,14 @@
 param($name)
-
-$Tenants = Get-ChildItem "Cache_Standards\*.standards.json"
+$Table = Get-CippTable -tablename 'standards'
+$tenants = (Get-AzDataTableRow @Table -Filter $Filter).JSON | ConvertFrom-Json
 
 $object = foreach ($Tenant in $tenants) {
-    $StandardsFile = Get-Content "$($tenant)" | ConvertFrom-Json
-    $Standardsfile.Standards.psobject.properties.name | ForEach-Object { 
+    $tenant.standards.psobject.properties.name | ForEach-Object { 
         $Standard = $_
-        if ($standardsfile.Tenant -ne "AllTenants") {
+        if ($tenant.Tenant -ne "AllTenants") {
             Write-Host "Not all tenants. Single object"
             [pscustomobject]@{ 
-                Tenant   = $Standardsfile.Tenant
+                Tenant   = $tenant.Tenant
                 Standard = $Standard
             }
         }
