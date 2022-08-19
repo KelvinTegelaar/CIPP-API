@@ -2,36 +2,29 @@ using namespace System.Net
 # Input bindings are passed in via param block.
 param($Request, $TriggerMetadata)
 
-if ($request.query.GUID) {
-    $JSONOutput = Get-Content "Cache_BECCheck\$($Request.Query.GUID).json" | ConvertFrom-Json
+
+$body = if ($request.query.GUID) {
+    $Table = Get-CippTable -tablename 'cachebec'
+    $Filter = "PartitionKey eq 'bec' and RowKey eq '$($request.query.GUID)'" 
+    $JSONOutput = Get-AzDataTableRow @Table -Filter $Filter
     if (!$JSONOutput) {
-        # Associate values to output bindings by calling 'Push-OutputBinding'.
-        Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
-                StatusCode = [HttpStatusCode]::OK
-                Body       = @{ Waiting = $true }
-            })
-        exit
+        @{ Waiting = $true }
     }
     else {
-        Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
-                StatusCode = [HttpStatusCode]::OK
-                Body       = $JSONOutput
-            })
-        Remove-Item "Cache_BECCheck\$($Request.Query.GUID).json" -Force
-        exit
+        $JSONOutput.Results
     }
 }
 else {
-    $RunningGUID = (New-Guid).GUID
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
-            StatusCode = [HttpStatusCode]::OK
-            Body       = @{ GUID = $RunningGUID }
-        })
     $OrchRequest = [PSCustomObject]@{
-        GUID         = $RunningGUID
         TenantFilter = $request.query.tenantfilter
         UserID       = $request.query.userid
     }
     $InstanceId = Start-NewOrchestration -FunctionName 'Durable_BECRun' -InputObject $OrchRequest
-
+    @{ GUID = $request.query.userid }
 }
+
+
+Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
+        StatusCode = [HttpStatusCode]::OK
+        Body       = $body
+    })

@@ -72,7 +72,6 @@ try {
     }
   }
   #List all users devices
-  Write-Host "Last Sign in is: $LastSignIn"
   $Bytes = [System.Text.Encoding]::UTF8.GetBytes($SuspectUser)
   $base64IdentityParam = [Convert]::ToBase64String($Bytes)
   Try {
@@ -116,15 +115,21 @@ try {
     MailboxPermissionChanges = @($PermissionsLog)
     NewUsers                 = @(($7dayslog | Where-Object -Property Operations -In "Add user.").AuditData | ConvertFrom-Json)
     ChangedPasswords         = @(($7dayslog | Where-Object -Property Operations -In "Change user password.", "Reset user password.").AuditData | ConvertFrom-Json)
+    ExtractedAt              = (Get-Date).ToString('s')
   }
     
-  #Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $($tenantfilter) -message "Assigned $($appFilter) to $assignTo" -Sev "Info"
 
 }
 catch {
-  #Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $($tenantfilter) -message "Failed to assign app $($appFilter): $($_.Exception.Message)" -Sev "Error"
   $errMessage = Get-NormalizedError -message $_.Exception.Message
   $results = [pscustomobject]@{"Results" = "$errMessage" }
 }
-New-Item "Cache_BECCheck" -ItemType Directory -Force -ErrorAction SilentlyContinue | Out-Null
-$results | ConvertTo-Json | Out-File "Cache_BECCheck\$GUID.json"
+
+$Table = Get-CippTable -tablename 'cachebec'
+$Table.Force = $true
+Add-AzDataTableEntity @Table -Entity @{
+  UserId       = $Context.input.userid
+  Results      = "$($results | ConvertTo-Json -Depth 10)"
+  RowKey       = $Context.input.userid
+  PartitionKey = "bec"
+}
