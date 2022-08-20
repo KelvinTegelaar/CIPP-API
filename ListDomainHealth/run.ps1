@@ -47,7 +47,7 @@ try {
                         $DkimQuery.Selectors = ($Request.Query.Selector).trim() -split '\s*,\s*'
                         
                         if ('admin' -in $UserCreds.userRoles -or 'editor' -in $UserCreds.userRoles) {
-                            $DkimSelectors = ($DkimQuery.Selectors | ConvertTo-Json -Compress)
+                            $DkimSelectors = [string]($DkimQuery.Selectors | ConvertTo-Json -Compress)
                             if ($DomainInfo) {
                                 $DomainInfo.DkimSelectors = $DkimSelectors
                             }
@@ -62,13 +62,15 @@ try {
                                     'DkimSelectors'  = $DkimSelectors
                                 }
                             }
+                            Write-Host $DomainInfo
                             Add-AzDataTableEntity @DomainTable -Entity $DomainInfo -Force
                         }
                     }
                     elseif (![string]::IsNullOrEmpty($DomainInfo.DkimSelectors)) {
-                        $DkimQuery.Selectors = ($DomainInfo.DkimSelectors | ConvertFrom-Json)
+                        $DkimQuery.Selectors = [System.Collections.Generic.List[string]]($DomainInfo.DkimSelectors | ConvertFrom-Json)
                     }
                     $Body = Read-DkimRecord @DkimQuery
+ 
                 }
                 'ReadMXRecord' {
                     $Body = Read-MXRecord -Domain $Request.Query.Domain
@@ -105,14 +107,12 @@ try {
         }
         else {
             $body = [pscustomobject]@{'Results' = "Domain: $($Request.Query.Domain) is invalid" }
-            $StatusCode = [HttpStatusCode]::BadRequest
         }
     }
 }
 catch {
     Write-LogMessage -API $APINAME -tenant $($name) -user $request.headers.'x-ms-client-principal' -message "DNS Helper API failed. $($_.Exception.Message)" -Sev 'Error'
     $body = [pscustomobject]@{'Results' = "Failed. $($_.Exception.Message)" }
-    $StatusCode = [HttpStatusCode]::BadRequest
 }
 
 # Associate values to output bindings by calling 'Push-OutputBinding'.
