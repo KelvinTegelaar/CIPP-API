@@ -90,7 +90,7 @@ try {
         Add-AzDataTableEntity @Table -Entity @{
             JSON         = "$object"
             RowKey       = "$GUID"
-            PartitionKey = "CATemplate"
+            PartitionKey = "IntuneTemplate"
         }
         Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME  -message "Created intune policy template $($Request.body.displayname) with GUID $GUID using an original policy from a tenant" -Sev "Debug"
 
