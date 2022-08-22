@@ -16,7 +16,7 @@ Write-Host ($Request.body | ConvertTo-Json)
 $results = foreach ($Tenant in $tenants) {
     try {
         $ObjBody = if ($Request.body.Type -eq "IPLocation") {
-            $IPRanges = $Request.body.Ips -split "`n" | ForEach-Object { @{cidrAddress = "$_" } }
+            $IPRanges = ($Request.body.Ips -split "`n") | ForEach-Object { if ($_ -ne "") { @{cidrAddress = "$_" } } }
             [pscustomobject]@{
                 "@odata.type" = "#microsoft.graph.ipNamedLocation"
                 displayName   = $request.body.policyName
