@@ -315,8 +315,8 @@ function Get-Tenants {
         [Parameter( ParameterSetName = 'Skip', Mandatory = $True )]
         [switch]$SkipList,
         [Parameter( ParameterSetName = 'Standard')]
-        [switch]$IncludeAll
-        
+        [switch]$IncludeAll,
+        [switch]$IncludeErrors
     )
 
     $TenantsTable = Get-CippTable -tablename 'Tenants'
@@ -325,7 +325,12 @@ function Get-Tenants {
     if ((!$Script:SkipListCache -and !$Script:SkipListCacheEmpty) -or !$Script:IncludedTenantsCache) {
         # We create the excluded tenants file. This is not set to force so will not overwrite
 
-        $ExcludedFilter = "PartitionKey eq 'Tenants' and (Excluded eq true or GraphErrorCount gt 50)" 
+        if ($IncludeErrors) {
+            $ExcludedFilter = "PartitionKey eq 'Tenants' and Excluded eq true" 
+        }
+        else {
+            $ExcludedFilter = "PartitionKey eq 'Tenants' and (Excluded eq true or GraphErrorCount gt 50)" 
+        }
         $Script:SkipListCache = Get-AzDataTableRow @TenantsTable -Filter $ExcludedFilter
         
         if ($null -eq $Script:SkipListCache) {
