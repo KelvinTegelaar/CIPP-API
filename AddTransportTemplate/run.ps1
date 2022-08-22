@@ -9,7 +9,6 @@ Write-Host ($request | ConvertTo-Json -Compress)
 
 try {        
     $GUID = (New-Guid).GUID
-    New-Item Config -ItemType Directory -ErrorAction SilentlyContinue
     $JSON = if ($request.body.PowerShellCommand) {
         Write-Host "PowerShellCommand"
         $request.body.PowerShellCommand | ConvertFrom-Json
@@ -21,7 +20,13 @@ try {
         }
     }
     $JSON = ($JSON | Select-Object @{n = 'name'; e = { $_.name } }, @{n = 'comments'; e = { $_.comments } }, * | ConvertTo-Json -Depth 10)
-    Set-Content "Config\$($GUID).TransportRuleTemplate.json" -Value ($JSON) -Force
+    $Table = Get-CippTable -tablename 'templates'
+    $Table.Force = $true
+    Add-AzDataTableEntity @Table -Entity @{
+        JSON         = "$json"
+        RowKey       = "$GUID"
+        PartitionKey = "TransportTemplate"
+    }
     Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME  -message "Created Transport Rule Template $($Request.body.name) with GUID $GUID" -Sev "Debug"
     $body = [pscustomobject]@{"Results" = "Successfully added template" }
     

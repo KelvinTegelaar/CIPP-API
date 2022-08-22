@@ -51,7 +51,6 @@ try {
         }
         if ($updated) {
             Add-AzDataTableEntity @ConfigTable -Entity $Config -Force
-            #$Config | ConvertTo-Json | Set-Content $ConfigPath
             Write-LogMessage -API $APINAME -tenant 'Global' -user $request.headers.'x-ms-client-principal' -message 'DNS configuration updated' -Sev 'Info' 
             $body = [pscustomobject]@{'Results' = 'Success: DNS configuration updated.' }
         }

@@ -1,6 +1,8 @@
 param($name)
+$Table = Get-CippTable -tablename 'apps'
+$Filter = "PartitionKey eq 'apps' and RowKey eq '$name'" 
 
-$ChocoApp = Get-Content ".\ChocoApps.Cache\$name" | ConvertFrom-Json
+$ChocoApp = (Get-AzDataTableRow @Table -filter $Filter).JSON | ConvertFrom-Json
 $intuneBody = $ChocoApp.IntuneBody
 $tenants = if ($chocoapp.Tenant -eq "AllTenants") { 
     (Get-tenants).defaultDomainName
@@ -27,8 +29,19 @@ $ContentBody = ConvertTo-Json @{
     size          = [int64]$intunexml.ApplicationInfo.UnencryptedContentSize
     sizeEncrypted = [int64]($intunewinFilesize).length
 } 
-
-$RemoveCacheFile = if ($chocoapp.Tenant -ne "AllTenants") { Remove-Item ".\ChocoApps.Cache\$name" -Force }
+$ClearRow = Get-AzDataTableRow @Table -Filter $Filter
+$RemoveCacheFile = if ($chocoapp.Tenant -ne "AllTenants") {
+    Remove-AzDataTableRow @Table -Entity $clearRow
+}
+else {
+    $Table.Force = $true
+    Add-AzDataTableEntity @Table -Entity @{
+        JSON         = "$($ChocoApp | ConvertTo-Json)"
+        RowKey       = "$($ClearRow.RowKey)"
+        PartitionKey = "apps"
+        status       = "Deployed"
+    }
+}
 $EncBody = @{
     fileEncryptionInfo = @{
         encryptionKey        = $intunexml.ApplicationInfo.EncryptionInfo.EncryptionKey

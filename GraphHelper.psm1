@@ -59,19 +59,31 @@ function Get-GraphToken($tenantid, $scope, $AsApp, $AppID, $refreshToken, $Retur
     $TenantsTable = Get-CippTable -tablename Tenants
     $Filter = "PartitionKey eq 'Tenants' and (defaultDomainName eq '{0}' or customerId eq '{0}')" -f $tenantid
     $Tenant = Get-AzDataTableRow @TenantsTable -Filter $Filter
-
+    if (!$Tenant) {
+        $Tenant = @{
+            GraphErrorCount     = $null
+            LastGraphTokenError = $null
+            PartitionKey        = 'TenantFailed'
+            RowKey              = 'Failed'
+        }
+    }
     try {
         $AccessToken = (Invoke-RestMethod -Method post -Uri "https://login.microsoftonline.com/$($tenantid)/oauth2/v2.0/token" -Body $Authbody -ErrorAction Stop)
         if ($ReturnRefresh) { $header = $AccessToken } else { $header = @{ Authorization = "Bearer $($AccessToken.access_token)" } }
-        if ($Tenant.GraphErrorCount -gt 0) {
-            $Tenant.GraphErrorCount = 0
-            $Tenant.LastGraphTokenError = ''
+        if ($Tenant.GraphErrorCount -gt 0 -and $Tenant.GraphErrorCount) {
+            $Tenant.LastGraphError = ''
             Update-AzDataTableRow @TenantsTable -Entity $Tenant
         }
         return $header
     }
     catch {
-        $Tenant.LastGraphTokenError = $_.Exception.Message
+        $Tenant.LastGraphError = if ( $_.ErrorDetails.Message) {
+            $msg = $_.ErrorDetails.Message | ConvertFrom-Json
+            "$($msg.error):$($msg.error_description)"
+        }
+        else {
+            $_.Exception.message
+        }
         if ($Tenant.GraphErrorCount -gt 0) {
             $Tenant.GraphErrorCount++
         }
@@ -79,7 +91,7 @@ function Get-GraphToken($tenantid, $scope, $AsApp, $AppID, $refreshToken, $Retur
             $Tenant.GraphErrorCount = 1
         }
         Update-AzDataTableRow @TenantsTable -Entity $Tenant
-        throw
+        throw "$($Tenant.LastGraphError)"
     }
 }
 
@@ -120,6 +132,18 @@ function New-GraphGetRequest ($uri, $tenantid, $scope, $AsApp, $noPagination) {
     Write-Verbose "Using $($uri) as url"
     $nextURL = $uri
     
+    # Track consecutive Graph API failures
+    $TenantsTable = Get-CippTable -tablename Tenants
+    $Filter = "PartitionKey eq 'Tenants' and (defaultDomainName eq '{0}' or customerId eq '{0}')" -f $tenantid
+    $Tenant = Get-AzDataTableRow @TenantsTable -Filter $Filter
+    if (!$Tenant) {
+        $Tenant = @{
+            GraphErrorCount = 0
+            LastGraphError  = $null
+            PartitionKey    = 'TenantFailed'
+            RowKey          = 'Failed'
+        }
+    }
     if ((Get-AuthorisedRequest -Uri $uri -TenantID $tenantid)) {
         $ReturnedData = do {
             try {
@@ -130,9 +154,14 @@ function New-GraphGetRequest ($uri, $tenantid, $scope, $AsApp, $noPagination) {
             catch {
                 $Message = ($_.ErrorDetails.Message | ConvertFrom-Json -ErrorAction SilentlyContinue).error.message
                 if ($Message -eq $null) { $Message = $($_.Exception.Message) }
+                $Tenant.LastGraphError = $Message
+                $Tenant.GraphErrorCount++
+                Update-AzDataTableRow @TenantsTable -Entity $Tenant
                 throw $Message
             }
         } until ($null -eq $NextURL)
+        $Tenant.LastGraphError = ''
+        Update-AzDataTableRow @TenantsTable -Entity $Tenant
         return $ReturnedData   
     }
     else {
@@ -296,7 +325,7 @@ function Get-Tenants {
     if ((!$Script:SkipListCache -and !$Script:SkipListCacheEmpty) -or !$Script:IncludedTenantsCache) {
         # We create the excluded tenants file. This is not set to force so will not overwrite
 
-        $ExcludedFilter = "PartitionKey eq 'Tenants' and Excluded eq true" 
+        $ExcludedFilter = "PartitionKey eq 'Tenants' and (Excluded eq true or GraphErrorCount gt 50)" 
         $Script:SkipListCache = Get-AzDataTableRow @TenantsTable -Filter $ExcludedFilter
         
         if ($null -eq $Script:SkipListCache) {
@@ -315,34 +344,34 @@ function Get-Tenants {
             $Script:IncludedTenantsCache = [system.collections.generic.list[hashtable]]::new()
             if ($ENV:PartnerTenantAvailable) {
                 $Script:IncludedTenantsCache.Add(@{
-                        RowKey              = $env:TenantID
-                        PartitionKey        = 'Tenants'
-                        customerId          = $env:TenantID
-                        defaultDomainName   = $env:TenantID
-                        displayName         = '*Partner Tenant'
-                        domains             = 'PartnerTenant'
-                        Excluded            = $false
-                        ExcludeUser         = ''
-                        ExcludeDate         = ''
-                        GraphErrorCount     = 0
-                        LastGraphTokenError = ''
-                        LastRefresh         = (Get-Date).ToUniversalTime()
+                        RowKey            = $env:TenantID
+                        PartitionKey      = 'Tenants'
+                        customerId        = $env:TenantID
+                        defaultDomainName = $env:TenantID
+                        displayName       = '*Partner Tenant'
+                        domains           = 'PartnerTenant'
+                        Excluded          = $false
+                        ExcludeUser       = ''
+                        ExcludeDate       = ''
+                        GraphErrorCount   = 0
+                        LastGraphError    = ''
+                        LastRefresh       = (Get-Date).ToUniversalTime()
                     }) | Out-Null
             }
             foreach ($Tenant in $TenantList) {
                 $Script:IncludedTenantsCache.Add(@{
-                        RowKey              = $Tenant.id
-                        PartitionKey        = 'Tenants'
-                        customerId          = $Tenant.customerId
-                        defaultDomainName   = $Tenant.defaultDomainName
-                        displayName         = $Tenant.DisplayName
-                        domains             = ''
-                        Excluded            = $false
-                        ExcludeUser         = ''
-                        ExcludeDate         = ''
-                        GraphErrorCount     = 0
-                        LastGraphTokenError = ''
-                        LastRefresh         = (Get-Date).ToUniversalTime()
+                        RowKey            = $Tenant.id
+                        PartitionKey      = 'Tenants'
+                        customerId        = $Tenant.customerId
+                        defaultDomainName = $Tenant.defaultDomainName
+                        displayName       = $Tenant.DisplayName
+                        domains           = ''
+                        Excluded          = $false
+                        ExcludeUser       = ''
+                        ExcludeDate       = ''
+                        GraphErrorCount   = 0
+                        LastGraphError    = ''
+                        LastRefresh       = (Get-Date).ToUniversalTime()
                     }) | Out-Null
             }
    
@@ -378,14 +407,11 @@ function Remove-CIPPCache {
         $_
     }
     Update-AzDataTableEntity @DomainsTable -Entity $ClearDomainAnalyserRows
+    #Clear BPA
+    $BPATable = Get-CippTable -tablename 'cachebpa'
+    $ClearBPARows = Get-AzDataTableRow @BPATable
+    Remove-AzDataTableEntity @BPATable -Entity $ClearBPARows
 
-    Get-ChildItem -Path 'Cache_BestPracticeAnalyser' -Filter *.json | Remove-Item -Force -ErrorAction SilentlyContinue
-    Get-ChildItem -Path 'Cache_BestPracticeAnalyser\CurrentlyRunning.txt' -ErrorAction SilentlyContinue | Remove-Item -Force -ErrorAction SilentlyContinue
-    Get-ChildItem -Path 'ChocoApps.Cache\CurrentlyRunning.txt' -ErrorAction SilentlyContinue | Remove-Item -Force -ErrorAction SilentlyContinue
-    Get-ChildItem -Path 'Cache_DomainAnalyser\CurrentlyRunning.txt' -ErrorAction SilentlyContinue | Remove-Item -Force -ErrorAction SilentlyContinue
-    Get-ChildItem -Path 'Cache_Scheduler\CurrentlyRunning.txt' -ErrorAction SilentlyContinue | Remove-Item -Force -ErrorAction SilentlyContinue
-    Get-ChildItem -Path 'SecurityBaselines_All\CurrentlyRunning.txt' -ErrorAction SilentlyContinue | Remove-Item -Force -ErrorAction SilentlyContinue
-    Get-ChildItem -Path 'Cache_Standards\CurrentlyRunning.txt' -ErrorAction SilentlyContinue | Remove-Item -Force -ErrorAction SilentlyContinue
     $Script:SkipListCache = $Null
     $Script:SkipListCacheEmpty = $Null
     $Script:IncludedTenantsCache = $Null

@@ -20,8 +20,13 @@ try {
             Type        = $request.body.TemplateType
             GUID        = $GUID
         } | ConvertTo-Json
-        New-Item Config -ItemType Directory -ErrorAction SilentlyContinue
-        Set-Content "Config\$($GUID).IntuneTemplate.json" -Value $Object -Force
+        $Table = Get-CippTable -tablename 'templates'
+        $Table.Force = $true
+        Add-AzDataTableEntity @Table -Entity @{
+            JSON         = "$object"
+            RowKey       = "$GUID"
+            PartitionKey = "IntuneTemplate"
+        }
         Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME  -message "Created intune policy template named $($Request.body.displayname) with GUID $GUID" -Sev "Debug"
 
         $body = [pscustomobject]@{"Results" = "Successfully added template" }
@@ -80,8 +85,13 @@ try {
             Type        = $Type
             GUID        = $GUID
         } | ConvertTo-Json
-        New-Item Config -ItemType Directory -ErrorAction SilentlyContinue
-        Set-Content "Config\$($GUID).IntuneTemplate.json" -Value $Object -Force
+        $Table = Get-CippTable -tablename 'templates'
+        $Table.Force = $true
+        Add-AzDataTableEntity @Table -Entity @{
+            JSON         = "$object"
+            RowKey       = "$GUID"
+            PartitionKey = "IntuneTemplate"
+        }
         Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME  -message "Created intune policy template $($Request.body.displayname) with GUID $GUID using an original policy from a tenant" -Sev "Debug"
 
         $body = [pscustomobject]@{"Results" = "Successfully added template" }
