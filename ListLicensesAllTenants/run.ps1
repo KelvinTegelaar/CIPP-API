@@ -26,7 +26,7 @@ $RawGraphRequest = Get-Tenants | ForEach-Object -Parallel {
         } 
     }
 }
-
+Set-Location $ENV:CippRoot
 $ConvertTable = Import-Csv Conversiontable.csv
 $Table = Get-CIPPTable -TableName cachelicenses
 

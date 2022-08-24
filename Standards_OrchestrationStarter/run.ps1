@@ -1,7 +1,6 @@
 using namespace System.Net
 
 param($Request, $TriggerMetadata)
-$CurrentlyRunning = Get-Item "Cache_Standards\CurrentlyRunning.txt" -ErrorAction SilentlyContinue | Where-Object -Property LastWriteTime -GT (Get-Date).AddHours(-4)
 if ($CurrentlyRunning) {
     $Results = [pscustomobject]@{"Results" = "Already running. Please wait for the current instance to finish" }
     Write-LogMessage  -API "StandardsApply" -message "Attempted to Standards but an instance was already running." -sev Info
