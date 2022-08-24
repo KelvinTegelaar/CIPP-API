@@ -6,7 +6,6 @@ if ($env:DEV_SKIP_DOMAIN_TIMER) {
 }
 
 try {
-    $CurrentlyRunning = Get-Item 'Cache_DomainAnalyser\CurrentlyRunning.txt' -ErrorAction SilentlyContinue | Where-Object -Property LastWriteTime -GT (Get-Date).AddHours(-24)
     if ($CurrentlyRunning) {
         $Results = [pscustomobject]@{'Results' = 'Already running. Please wait for the current instance to finish' }
         Write-LogMessage -API 'DomainAnalyser' -message 'Attempted to start analysis but an instance was already running.' -sev Info

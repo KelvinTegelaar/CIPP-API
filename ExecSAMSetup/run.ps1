@@ -1,5 +1,5 @@
 using namespace System.Net
-
+Set-Location $ENV:CippRoot
 # Input bindings are passed in via param block.
 param($Request, $TriggerMetadata)
 $UserCreds = ([System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($request.headers.'x-ms-client-principal')) | ConvertFrom-Json)

@@ -1,7 +1,6 @@
 if (!(Get-Module -ListAvailable AzTable)) {
     Install-Module AzTable -Confirm:$false -Force
 }
-
 $Logo = @'
    _____ _____ _____  _____  
   / ____|_   _|  __ \|  __ \ 

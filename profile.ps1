@@ -16,7 +16,7 @@ try {
     Disable-AzContextAutosave -Scope Process | Out-Null
 }
 catch {}
-$SCRIPT:CippRoot = (Get-Item $PSScriptRoot).Parent.FullName
+$ENV:CippRoot = (Get-Item $PSScriptRoot).FullName
 # Uncomment the next line to enable legacy AzureRm alias in Azure PowerShell.
 # Enable-AzureRmAlias
 

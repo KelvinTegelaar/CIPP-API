@@ -1,7 +1,6 @@
 param($Timer)
 
 try {
-    $CurrentlyRunning = Get-Item 'ChocoApps.Cache\CurrentlyRunning.txt' -ErrorAction SilentlyContinue | Where-Object -Property LastWriteTime -GT (Get-Date).AddHours(-24)
     if ($CurrentlyRunning) {
         $Results = [pscustomobject]@{'Results' = 'Already running. Please wait for the current instance to finish' }
         Write-LogMessage -API 'ChocoApps' -message 'Attempted to start upload but an instance was already running.' -sev Info
