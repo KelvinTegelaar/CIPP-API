@@ -1,7 +1,6 @@
 using namespace System.Net
 
 param($Request, $TriggerMetadata)
-$CurrentlyRunning = Get-Item "Cache_BestPracticeAnalyser\CurrentlyRunning.txt" -ErrorAction SilentlyContinue | Where-Object -Property LastWriteTime -GT (Get-Date).AddHours(-24)
 if ($CurrentlyRunning) {
     $Results = [pscustomobject]@{"Results" = "Already running. Please wait for the current instance to finish" }
     Write-LogMessage  -API "BestPracticeAnalyser" -message "Attempted to start analysis but an instance was already running." -sev Info
