@@ -1,7 +1,7 @@
 param($name)
 $Table = Get-CippTable -tablename 'apps'
 $Filter = "PartitionKey eq 'apps' and RowKey eq '$name'" 
-
+Set-Location $ENV:CippRoot
 $ChocoApp = (Get-AzDataTableRow @Table -filter $Filter).JSON | ConvertFrom-Json
 $intuneBody = $ChocoApp.IntuneBody
 $tenants = if ($chocoapp.Tenant -eq "AllTenants") { 
