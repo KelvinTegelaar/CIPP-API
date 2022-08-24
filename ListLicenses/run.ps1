@@ -33,7 +33,7 @@ else {
         $GraphRequest = $Rows
     }
 }
-Set-Location $ENV:CippRoot
+Set-Location (Get-Item $PSScriptRoot).Parent.FullName
 $ConvertTable = Import-Csv Conversiontable.csv
 if (!$GraphRequest) {
     $GraphRequest = foreach ($singlereq in $RawGraphRequest) {
