@@ -14,7 +14,7 @@ Write-Host "PowerShell HTTP trigger function processed a request."
 $TenantFilter = $Request.Query.TenantFilter
 try {
     $body = '{"deletedUserPersonalSiteRetentionPeriodInDays":360}'
-    $GraphRequest = $ENV:CippRoot
+    $GraphRequest = (Get-Item $PSScriptRoot).Parent.FullName
     $StatusCode = [HttpStatusCode]::OK
 }
 catch {
