@@ -9,7 +9,7 @@ try {
     $Tenantfilter = $request.body.tenantfilter
     if ($username -eq $null) { exit }
     $userid = (New-GraphGetRequest -uri "https://graph.microsoft.com/beta/users/$($username)" -tenantid $Tenantfilter).id
-
+    Set-Location (Get-Item $PSScriptRoot).Parent.FullName
     $ConvertTable = Import-Csv Conversiontable.csv | Sort-Object -Property 'guid' -Unique
 
     Write-Host ($request.body | ConvertTo-Json)

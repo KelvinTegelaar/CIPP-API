@@ -14,7 +14,7 @@ Write-Host "PowerShell HTTP trigger function processed a request."
 $TenantFilter = $Request.Query.TenantFilter
 try {
     $body = '{"deletedUserPersonalSiteRetentionPeriodInDays":360}'
-    $GraphRequest = New-GraphPostRequest -tenantid $TenantFilter -Uri "https://graph.microsoft.com/beta/admin/sharepoint/settings" -AsApp $true -Type patch -Body $body -ContentType "application/json"
+    $GraphRequest = (Get-Item $PSScriptRoot).Parent.FullName
     $StatusCode = [HttpStatusCode]::OK
 }
 catch {
