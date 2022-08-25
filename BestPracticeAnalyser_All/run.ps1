@@ -5,7 +5,7 @@ $uri = "https://login.microsoftonline.com/$($Tenant)/oauth2/token"
 $body = "resource=https://admin.microsoft.com&grant_type=refresh_token&refresh_token=$($ENV:ExchangeRefreshToken)"
 try {
     $token = Invoke-RestMethod $uri -Body $body -ContentType 'application/x-www-form-urlencoded' -ErrorAction SilentlyContinue -Method post
-    Write-LogMessage -API 'BestPracticeAnalyser' -tenant $tenant -message "Token retrieved for Best Practice Analyser on $($tenant)" -sev 'Info'
+    Write-LogMessage -API 'BestPracticeAnalyser' -tenant $tenant -message "Token retrieved for Best Practice Analyser on $($tenant)" -sev 'Debug'
 }
 catch {
     Write-LogMessage -API 'BestPracticeAnalyser' -tenant $tenant -message "Unable to Retrieve token for Best Practice Analyser $($tenant) Error: $($_.exception.message)" -sev 'Error'
