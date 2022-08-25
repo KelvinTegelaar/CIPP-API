@@ -3,5 +3,5 @@
   "Description": "Sets the screen to lock after 5 minutes of inactivity.",
   "RAWJson": "{\"name\":\"Set Screen Lockout to 5 minutes\",\"description\":\"\",\"platforms\":\"windows10\",\"technologies\":\"mdm\",\"roleScopeTagIds\":[\"0\"],\"settings\":[{\"@odata.type\":\"#microsoft.graph.deviceManagementConfigurationSetting\",\"settingInstance\":{\"@odata.type\":\"#microsoft.graph.deviceManagementConfigurationSimpleSettingInstance\",\"settingDefinitionId\":\"device_vendor_msft_policy_config_localpoliciessecurityoptions_interactivelogon_machineinactivitylimit_v2\",\"simpleSettingValue\":{\"@odata.type\":\"#microsoft.graph.deviceManagementConfigurationIntegerSettingValue\",\"value\":300}}}]}",
   "Type": "Catalog",
-  "GUID": "4d9206b0-4f96-41e6-86a5-f78cdcff5069"
+  "GUID": "4d9206b0-4f96-41e6-86a5-f78cdcff5069.IntuneTemplate.json"
 }
