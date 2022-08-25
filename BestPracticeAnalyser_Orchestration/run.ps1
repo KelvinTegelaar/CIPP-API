@@ -27,6 +27,6 @@ if ($TableParams) {
   }
 }
 else {
-  Write-LogMessage -API 'BestPracticeAnalyser' -tenant $tenant -message "Tried writing empty values to BestPracticeAnalyser" -sev debug
+  Write-LogMessage -API 'BestPracticeAnalyser' -tenant $tenant -message "Tried writing empty values to BestPracticeAnalyser" -sev Info
 }
 Write-LogMessage -API 'BestPracticeAnalyser' -tenant $tenant -message 'Best Practice Analyser has Finished' -sev Info
