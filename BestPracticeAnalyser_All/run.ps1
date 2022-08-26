@@ -240,7 +240,7 @@ catch {
 Write-LogMessage -API 'BestPracticeAnalyserDebug' -tenant $tenant -message "$($Result | ConvertTo-Json)" -sev 'Debug' 
 
 @{
-    Results      = "$($Result | ConvertTo-Json)"
+    Results      = "$($Result | ConvertTo-Json -Depth 10)"
     PartitionKey = "bpa"
     RowKey       = "$($tenant)"
 }
