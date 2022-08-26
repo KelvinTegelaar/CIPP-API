@@ -242,5 +242,5 @@ Write-LogMessage -API 'BestPracticeAnalyserDebug' -tenant $tenant -message "$($R
 @{
     Results      = "$($Result | ConvertTo-Json)"
     PartitionKey = "bpa"
-    RowKey       = "$($TenantName.customerId)"
+    RowKey       = "$($tenant)"
 }
