@@ -207,6 +207,7 @@ catch {
 try {
     $LicenseUsage = New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/subscribedSkus' -tenantid $Tenant
     # Import the licenses conversion table
+    Set-Location (Get-Item $PSScriptRoot).Parent.FullName
     $ConvertTable = Import-Csv Conversiontable.csv | Sort-Object -Property 'guid' -Unique
     $Table = Get-CIPPTable -TableName ExcludedLicenses
     $ExcludeList = Get-AzDataTableEntity @Table

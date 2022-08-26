@@ -1,9 +1,9 @@
 ﻿param($tenant)
-if ((Test-Path ".\Cache_Standards\$($Tenant).Standards.json")) {
-    $Setting = (Get-Content ".\Cache_Standards\$($Tenant).Standards.json" -ErrorAction SilentlyContinue | ConvertFrom-Json -ErrorAction SilentlyContinue).standards.ExcludedfileExt
+$ConfigTable = Get-CippTable -tablename 'standards'
+$Setting = ((Get-AzDataTableEntity @ConfigTable -Filter "PartitionKey eq 'standards' and RowKey eq '$tenant'").JSON | ConvertFrom-Json).standards.ExcludedfileExt
+if (!$Setting) {
+    $Setting = ((Get-AzDataTableEntity @ConfigTable -Filter "PartitionKey eq 'standards' and RowKey eq 'AllTenants'").JSON | ConvertFrom-Json).standards.ExcludedfileExt
 }
-
-if (!$Setting) { $Setting = (Get-Content ".\Cache_Standards\AllTenants.Standards.json" -ErrorAction SilentlyContinue | ConvertFrom-Json -ErrorAction SilentlyContinue).standards.ExcludedfileExt }
 
 try {
     $Exts = $Setting.ext -split ','

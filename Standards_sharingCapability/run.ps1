@@ -1,9 +1,10 @@
 ﻿param($tenant)
-if ((Test-Path ".\Cache_Standards\$($Tenant).Standards.json")) {
-    $Setting = (Get-Content ".\Cache_Standards\$($Tenant).Standards.json" -ErrorAction SilentlyContinue | ConvertFrom-Json -ErrorAction SilentlyContinue).standards.sharingCapability
-}
 
-if (!$Setting) { $Setting = (Get-Content ".\Cache_Standards\AllTenants.Standards.json" -ErrorAction SilentlyContinue | ConvertFrom-Json -ErrorAction SilentlyContinue).standards.sharingCapability }
+$ConfigTable = Get-CippTable -tablename 'standards'
+$Setting = ((Get-AzDataTableEntity @ConfigTable -Filter "PartitionKey eq 'standards' and RowKey eq '$tenant'").JSON | ConvertFrom-Json).standards.sharingCapability
+if (!$Setting) {
+    $Setting = ((Get-AzDataTableEntity @ConfigTable -Filter "PartitionKey eq 'standards' and RowKey eq 'AllTenants'").JSON | ConvertFrom-Json).standards.sharingCapability
+}
 
 try {
     New-GraphPostRequest -tenantid $tenant -Uri "https://graph.microsoft.com/beta/admin/sharepoint/settings" -AsApp $true -Type patch -Body "{`"sharingCapability`":`"$($Setting.Level)`"}" -ContentType "application/json"
