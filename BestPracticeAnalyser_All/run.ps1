@@ -249,9 +249,10 @@ try {
 catch {
     Write-LogMessage -API 'BestPracticeAnalyser' -tenant $tenant -message "Secure Score Retrieval on $($tenant). Error: $($_.exception.message)" -sev 'Error' 
 }
+Write-LogMessage -API 'BestPracticeAnalyser' -tenant $tenant -message "$($Result | ConvertTo-Json)" -sev 'Debug' 
 
 @{
-    Results      = ($Result | ConvertTo-Json)
+    Results      = "$($Result | ConvertTo-Json)"
     PartitionKey = "bpa"
     RowKey       = "$($TenantName.customerId)"
 }
