@@ -12,9 +12,11 @@ catch {
 }
 $TenantName = Get-Tenants | Where-Object -Property defaultDomainName -EQ $tenant
 # Build up the result object that will be passed back to the durable function
-$Result = [pscustomobject]@{
+$Result = @{
     Tenant                           = "$($TenantName.displayName)"
     GUID                             = "$($TenantName.customerId)"
+    RowKey                           = "$($TenantName.customerId)"
+    PartitionKey                     = 'bpa'
     LastRefresh                      = $(Get-Date (Get-Date).ToUniversalTime() -UFormat '+%Y-%m-%dT%H:%M:%S.000Z')
     SecureDefaultState               = ''
     PrivacyEnabled                   = ''
@@ -218,7 +220,7 @@ try {
     foreach ($License in $UnusedLicenses) {
         $TempCount = $TempCount + ($($License.prepaidUnits.enabled) - $($License.ConsumedUnits))
     }
-    $Result.UnusedLicenseList = @($Result.UnusedLicenseList)
+    $Result.UnusedLicenseList = ConvertTo-Json -InputObject @($Result.UnusedLicenseList) -Compress
     $Result.UnusedLicensesTotal = $TempCount
     $Result.UnusedLicensesCount = $UnusedLicensesCount
     $Result.UnusedLicensesResult = $UnusedLicensesResult
@@ -230,19 +232,11 @@ catch {
 # Get Secure Score
 try {
     $SecureScore = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/security/secureScores?`$top=1" -tenantid $tenant -noPagination $true
-    $Result.SecureScoreCurrent = $SecureScore.currentScore
-    $Result.SecureScoreMax = $SecureScore.maxScore
+    $Result.SecureScoreCurrent = [int]$SecureScore.currentScore
+    $Result.SecureScoreMax = [int]$SecureScore.maxScore
     $Result.SecureScorePercentage = [int](($SecureScore.currentScore / $SecureScore.maxScore) * 100)
 }
 catch {
     Write-LogMessage -API 'BestPracticeAnalyser' -tenant $tenant -message "Secure Score Retrieval on $($tenant). Error: $($_.exception.message)" -sev 'Error' 
 }
-
-$BPAResults = @{
-    Results      = "$($Result | ConvertTo-Json -Depth 10)"
-    PartitionKey = "bpa"
-    RowKey       = "$($tenant)"
-}
-
-Write-LogMessage -API 'BestPracticeAnalyserDebug' -tenant $tenant -message "$($BPAResults | ConvertTo-Json)" -sev 'Debug' 
-$BPAResults
+$Result
