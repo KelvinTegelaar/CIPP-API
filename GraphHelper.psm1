@@ -397,7 +397,7 @@ function Get-Tenants {
    
         if ($IncludedTenantsCache) {
             $TenantsTable.Force = $true
-            Add-AzDataTableEntity @TenantsTable -Entity $Script:IncludedTenantsCache
+            Add-AzDataTableEntity @TenantsTable -Entity $IncludedTenantsCache
         }
     }    
     if ($SkipList) {
