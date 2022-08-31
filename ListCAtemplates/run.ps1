@@ -30,7 +30,7 @@ $Templates = (Get-AzDataTableRow @Table -Filter $Filter) | ForEach-Object {
     $data = $_.JSON | ConvertFrom-Json 
     $data | Add-Member -NotePropertyName "GUID" -NotePropertyValue $_.GUID
     $data 
-}
+} | Sort-Object -Property displayName
 
 if ($Request.query.ID) { $Templates = $Templates | Where-Object -Property GUID -EQ $Request.query.id }
 
