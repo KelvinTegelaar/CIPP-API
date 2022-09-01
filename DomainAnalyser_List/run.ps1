@@ -90,7 +90,6 @@ if (Test-Path .\Cache_DomainAnalyser) {
 }
 
 # Need to apply exclusion logic
-$Skiplist = Get-Content 'ExcludedTenants' | ConvertFrom-Csv -Delimiter '|' -Header 'Name', 'User', 'Date'
 
 <#$DomainList = @{
     Table        = $DomainTable
