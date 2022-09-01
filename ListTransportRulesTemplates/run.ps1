@@ -23,8 +23,9 @@ $Templates = Get-ChildItem "Config\*.TransportRuleTemplate.json" | ForEach-Objec
 $Table = Get-CippTable -tablename 'templates'
 $Filter = "PartitionKey eq 'TransportTemplate'" 
 $Templates = (Get-AzDataTableRow @Table -Filter $Filter) | ForEach-Object {
+    $GUID = $_.GUID
     $data = $_.JSON | ConvertFrom-Json 
-    $data | Add-Member -NotePropertyName "GUID" -NotePropertyValue $_.GUID
+    $data | Add-Member -NotePropertyName "GUID" -NotePropertyValue $GUID
     $data 
 }
 
