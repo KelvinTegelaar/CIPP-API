@@ -40,7 +40,7 @@ if ($Request.query.Permissions -eq 'true') {
 
                 $KV = $ENV:WEBSITE_DEPLOYMENT_ID
                 $KeyVaultRefresh = Get-AzKeyVaultSecret -VaultName $kv -Name 'RefreshToken' -AsPlainText
-                if ($GraphToken.refresh_token -ne $KeyVaultRefresh) {
+                if ($ENV:RefreshToken -ne $KeyVaultRefresh) {
                     $Success = $false
                     $Messages.Add('Your refresh token does not match key vault, follow the Clear Token Cache procedure.') | Out-Null
                     $Links.Add([PSCustomObject]@{
