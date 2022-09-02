@@ -104,6 +104,26 @@ catch {
     $body = $results.add("Could not remove $RemoveMembers from $($userobj.Groupid). $($_.Exception.Message)")
 }
 
+if ($userobj.allowExternal -eq 'true') {
+    try {
+        if ($userobj.groupType -eq "Distribution list") {
+            $Params = @{ Identity = $userobj.groupid; RequireSenderAuthenticationEnabled = $false }
+            New-ExoRequest -tenantid $Userobj.tenantid -cmdlet "Set-DistributionGroup" -cmdParams $params
+        }
+        else {
+            $Params = @{ Identity = $userobj.groupid; RequireSenderAuthenticationEnabled = $false }
+            New-ExoRequest -tenantid $Userobj.tenantid -cmdlet "Set-UnifiedGroup" -cmdParams $params
+        }
+        $body = $results.add("Allowed external senders to send to $($userobj.Groupid).")
+        Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $Userobj.tenantid -message "Allowed external senders to send to $($userobj.Groupid)" -Sev "Error"
+
+    }
+    catch {
+        $body = $results.add("Failed to allow external senders to send to $($userobj.Groupid).")
+        Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $Userobj.tenantid -message "Failed to allow external senders for $($userobj.Groupid). $($_.Exception.Message)" -Sev "Error"
+    }
+
+}
 
 $body = @{"Results" = @($results) }
 # Associate values to output bindings by calling 'Push-OutputBinding'.

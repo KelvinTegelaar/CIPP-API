@@ -55,28 +55,24 @@ function Get-GraphToken($tenantid, $scope, $AsApp, $AppID, $refreshToken, $Retur
 
     if (!$tenantid) { $tenantid = $env:tenantid }
 
-    # Track consecutive Graph API failures
-    $TenantsTable = Get-CippTable -tablename Tenants
-    $Filter = "PartitionKey eq 'Tenants' and (defaultDomainName eq '{0}' or customerId eq '{0}')" -f $tenantid
-    $Tenant = Get-AzDataTableRow @TenantsTable -Filter $Filter
-    if (!$Tenant) {
-        $Tenant = @{
-            GraphErrorCount     = $null
-            LastGraphTokenError = $null
-            PartitionKey        = 'TenantFailed'
-            RowKey              = 'Failed'
-        }
-    }
     try {
         $AccessToken = (Invoke-RestMethod -Method post -Uri "https://login.microsoftonline.com/$($tenantid)/oauth2/v2.0/token" -Body $Authbody -ErrorAction Stop)
         if ($ReturnRefresh) { $header = $AccessToken } else { $header = @{ Authorization = "Bearer $($AccessToken.access_token)" } }
-        if ($Tenant.GraphErrorCount -gt 0 -and $Tenant.GraphErrorCount) {
-            $Tenant.LastGraphError = ''
-            Update-AzDataTableRow @TenantsTable -Entity $Tenant
-        }
         return $header
     }
     catch {
+        # Track consecutive Graph API failures
+        $TenantsTable = Get-CippTable -tablename Tenants
+        $Filter = "PartitionKey eq 'Tenants' and (defaultDomainName eq '{0}' or customerId eq '{0}')" -f $tenantid
+        $Tenant = Get-AzDataTableRow @TenantsTable -Filter $Filter
+        if (!$Tenant) {
+            $Tenant = @{
+                GraphErrorCount     = $null
+                LastGraphTokenError = $null
+                PartitionKey        = 'TenantFailed'
+                RowKey              = 'Failed'
+            }
+        }
         $Tenant.LastGraphError = if ( $_.ErrorDetails.Message) {
             $msg = $_.ErrorDetails.Message | ConvertFrom-Json
             "$($msg.error):$($msg.error_description)"
@@ -84,12 +80,8 @@ function Get-GraphToken($tenantid, $scope, $AsApp, $AppID, $refreshToken, $Retur
         else {
             $_.Exception.message
         }
-        if ($Tenant.GraphErrorCount -gt 0) {
-            $Tenant.GraphErrorCount++
-        }
-        else {
-            $Tenant.GraphErrorCount = 1
-        }
+        $Tenant.GraphErrorCount++
+
         Update-AzDataTableRow @TenantsTable -Entity $Tenant
         throw "$($Tenant.LastGraphError)"
     }
@@ -121,13 +113,25 @@ function Write-LogMessage ($message, $tenant = 'None', $API = 'None', $user, $se
     Add-AzDataTableEntity @Table | Out-Null
 }
 
-function New-GraphGetRequest ($uri, $tenantid, $scope, $AsApp, $noPagination) {
+function New-GraphGetRequest {
+    Param(
+        $uri, 
+        $tenantid, 
+        $scope, 
+        $AsApp, 
+        $noPagination,
+        [switch]$ComplexFilter
+    ) 
 
     if ($scope -eq 'ExchangeOnline') { 
         $Headers = Get-GraphToken -AppID 'a0c73c16-a7e3-4564-9a95-2bdf47383716' -RefreshToken $ENV:ExchangeRefreshToken -Scope 'https://outlook.office365.com/.default' -Tenantid $tenantid
     }
     else {
         $headers = Get-GraphToken -tenantid $tenantid -scope $scope -AsApp $asapp
+    }
+
+    if ($ComplexFilter) {
+        $headers['ConsistencyLevel'] = 'eventual'
     }
     Write-Verbose "Using $($uri) as url"
     $nextURL = $uri
@@ -194,6 +198,7 @@ function New-GraphPOSTRequest ($uri, $tenantid, $body, $type, $scope, $AsApp) {
 }
 
 function convert-skuname($skuname, $skuID) {
+    Set-Location (Get-Item $PSScriptRoot).FullName
     $ConvertTable = Import-Csv Conversiontable.csv
     if ($skuname) { $ReturnedName = ($ConvertTable | Where-Object { $_.String_Id -eq $skuname } | Select-Object -Last 1).'Product_Display_Name' }
     if ($skuID) { $ReturnedName = ($ConvertTable | Where-Object { $_.guid -eq $skuid } | Select-Object -Last 1).'Product_Display_Name' }
@@ -203,11 +208,28 @@ function convert-skuname($skuname, $skuID) {
 function Get-ClassicAPIToken($tenantID, $Resource) {
     $uri = "https://login.microsoftonline.com/$($TenantID)/oauth2/token"
     $body = "resource=$Resource&grant_type=refresh_token&refresh_token=$($ENV:ExchangeRefreshToken)"
+
     try {
         $token = Invoke-RestMethod $uri -Body $body -ContentType 'application/x-www-form-urlencoded' -ErrorAction SilentlyContinue -Method post
         return $token
     }
     catch {
+        # Track consecutive Graph API failures
+        $TenantsTable = Get-CippTable -tablename Tenants
+        $Filter = "PartitionKey eq 'Tenants' and (defaultDomainName eq '{0}' or customerId eq '{0}')" -f $tenantid
+        $Tenant = Get-AzDataTableRow @TenantsTable -Filter $Filter
+        if (!$Tenant) {
+            $Tenant = @{
+                GraphErrorCount     = $null
+                LastGraphTokenError = $null
+                PartitionKey        = 'TenantFailed'
+                RowKey              = 'Failed'
+            }
+        }
+        $Tenant.LastGraphError = $_.Exception.Message
+        $Tenant.GraphErrorCount++
+        
+        Update-AzDataTableRow @TenantsTable -Entity $Tenant
         Throw "Failed to obtain Classic API Token for $TenantID - $_"        
     }
 }
@@ -315,80 +337,78 @@ function Get-Tenants {
         [Parameter( ParameterSetName = 'Skip', Mandatory = $True )]
         [switch]$SkipList,
         [Parameter( ParameterSetName = 'Standard')]
-        [switch]$IncludeAll
-        
+        [switch]$IncludeAll,
+        [switch]$IncludeErrors
     )
 
     $TenantsTable = Get-CippTable -tablename 'Tenants'
-    #$cachefile = 'tenants.cache.json'
-    
-    if ((!$Script:SkipListCache -and !$Script:SkipListCacheEmpty) -or !$Script:IncludedTenantsCache) {
-        # We create the excluded tenants file. This is not set to force so will not overwrite
+    # We create the excluded tenants file. This is not set to force so will not overwrite
 
+    if ($IncludeErrors) {
+        $ExcludedFilter = "PartitionKey eq 'Tenants' and Excluded eq true" 
+    }
+    else {
         $ExcludedFilter = "PartitionKey eq 'Tenants' and (Excluded eq true or GraphErrorCount gt 50)" 
-        $Script:SkipListCache = Get-AzDataTableRow @TenantsTable -Filter $ExcludedFilter
+    }
+    $SkipListCache = Get-AzDataTableRow @TenantsTable -Filter $ExcludedFilter
         
-        if ($null -eq $Script:SkipListCache) {
-            $Script:SkipListCacheEmpty = $true
+    # Load or refresh the cache if older than 24 hours
+    $Filter = "PartitionKey eq 'Tenants' and Excluded eq false" 
+    $IncludedTenantsCache = Get-AzDataTableEntity @TenantsTable -Filter $Filter
+        
+    $LastRefresh = ($IncludedTenantsCache | Sort-Object LastRefresh | Select-Object -First 1).LastRefresh.DateTime
+    if ($LastRefresh -lt (Get-Date).Addhours(-24).ToUniversalTime()) {
+
+        $TenantList = (New-GraphGetRequest -uri "https://graph.microsoft.com/beta/contracts?`$top=999" -tenantid $ENV:Tenantid) | Select-Object id, customerId, DefaultdomainName, DisplayName, domains | Where-Object -Property defaultDomainName -NotIn $SkipListCache.defaultDomainName
+
+        $IncludedTenantsCache = [system.collections.generic.list[hashtable]]::new()
+        if ($ENV:PartnerTenantAvailable) {
+            $IncludedTenantsCache.Add(@{
+                    RowKey            = $env:TenantID
+                    PartitionKey      = 'Tenants'
+                    customerId        = $env:TenantID
+                    defaultDomainName = $env:TenantID
+                    displayName       = '*Partner Tenant'
+                    domains           = 'PartnerTenant'
+                    Excluded          = $false
+                    ExcludeUser       = ''
+                    ExcludeDate       = ''
+                    GraphErrorCount   = 0
+                    LastGraphError    = ''
+                    LastRefresh       = (Get-Date).ToUniversalTime()
+                }) | Out-Null
         }
-
-        # Load or refresh the cache if older than 24 hours
-        $Filter = "PartitionKey eq 'Tenants' and Excluded eq false" 
-        $Script:IncludedTenantsCache = Get-AzDataTableEntity @TenantsTable -Filter $Filter
-        
-        $LastRefresh = ($Script:IncludedTenantsCache | Sort-Object LastRefresh | Select-Object -First 1).LastRefresh.DateTime
-        if ($LastRefresh -lt (Get-Date).Addhours(-24).ToUniversalTime()) {
-
-            $TenantList = (New-GraphGetRequest -uri "https://graph.microsoft.com/beta/contracts?`$top=999" -tenantid $ENV:Tenantid) | Select-Object id, customerId, DefaultdomainName, DisplayName, domains | Where-Object -Property defaultDomainName -NotIn $Script:SkipListCache.defaultDomainName
-
-            $Script:IncludedTenantsCache = [system.collections.generic.list[hashtable]]::new()
-            if ($ENV:PartnerTenantAvailable) {
-                $Script:IncludedTenantsCache.Add(@{
-                        RowKey            = $env:TenantID
-                        PartitionKey      = 'Tenants'
-                        customerId        = $env:TenantID
-                        defaultDomainName = $env:TenantID
-                        displayName       = '*Partner Tenant'
-                        domains           = 'PartnerTenant'
-                        Excluded          = $false
-                        ExcludeUser       = ''
-                        ExcludeDate       = ''
-                        GraphErrorCount   = 0
-                        LastGraphError    = ''
-                        LastRefresh       = (Get-Date).ToUniversalTime()
-                    }) | Out-Null
-            }
-            foreach ($Tenant in $TenantList) {
-                $Script:IncludedTenantsCache.Add(@{
-                        RowKey            = $Tenant.id
-                        PartitionKey      = 'Tenants'
-                        customerId        = $Tenant.customerId
-                        defaultDomainName = $Tenant.defaultDomainName
-                        displayName       = $Tenant.DisplayName
-                        domains           = ''
-                        Excluded          = $false
-                        ExcludeUser       = ''
-                        ExcludeDate       = ''
-                        GraphErrorCount   = 0
-                        LastGraphError    = ''
-                        LastRefresh       = (Get-Date).ToUniversalTime()
-                    }) | Out-Null
-            }
+        foreach ($Tenant in $TenantList) {
+            $IncludedTenantsCache.Add(@{
+                    RowKey            = $Tenant.id
+                    PartitionKey      = 'Tenants'
+                    customerId        = $Tenant.customerId
+                    defaultDomainName = $Tenant.defaultDomainName
+                    displayName       = $Tenant.DisplayName
+                    domains           = ''
+                    Excluded          = $false
+                    ExcludeUser       = ''
+                    ExcludeDate       = ''
+                    GraphErrorCount   = 0
+                    LastGraphError    = ''
+                    LastRefresh       = (Get-Date).ToUniversalTime()
+                }) | Out-Null
+        }
    
-            if ($Script:IncludedTenantsCache) {
-                $TenantsTable.Force = $true
-                Add-AzDataTableEntity @TenantsTable -Entity $Script:IncludedTenantsCache
-            }
-        }    
-    }
+        if ($IncludedTenantsCache) {
+            $TenantsTable.Force = $true
+            Add-AzDataTableEntity @TenantsTable -Entity $IncludedTenantsCache
+        }
+    }    
     if ($SkipList) {
-        return $Script:SkipListCache
+        return $SkipListCache
     }
+
     if ($IncludeAll) {
         return (New-GraphGetRequest -uri "https://graph.microsoft.com/beta/contracts?`$top=999" -tenantid $ENV:Tenantid) | Select-Object CustomerId, DefaultdomainName, DisplayName, domains
     }
     else {
-        return ($Script:IncludedTenantsCache | Sort-Object -Property displayName)
+        return ($IncludedTenantsCache | Sort-Object -Property displayName)
     }
 }
 

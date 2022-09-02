@@ -65,7 +65,7 @@
         <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
           <maml:name>CreateTableIfNotExists</maml:name>
           <maml:description>
-            <maml:para>{{ Fill CreateTableIfNotExists Description }}</maml:para>
+            <maml:para>If the table should be created if it does not exist.</maml:para>
           </maml:description>
           <dev:type>
             <maml:name>SwitchParameter</maml:name>
@@ -126,7 +126,7 @@
         <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
           <maml:name>CreateTableIfNotExists</maml:name>
           <maml:description>
-            <maml:para>{{ Fill CreateTableIfNotExists Description }}</maml:para>
+            <maml:para>If the table should be created if it does not exist.</maml:para>
           </maml:description>
           <dev:type>
             <maml:name>SwitchParameter</maml:name>
@@ -199,7 +199,7 @@
         <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
           <maml:name>CreateTableIfNotExists</maml:name>
           <maml:description>
-            <maml:para>{{ Fill CreateTableIfNotExists Description }}</maml:para>
+            <maml:para>If the table should be created if it does not exist.</maml:para>
           </maml:description>
           <dev:type>
             <maml:name>SwitchParameter</maml:name>
@@ -297,7 +297,7 @@
       <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
         <maml:name>CreateTableIfNotExists</maml:name>
         <maml:description>
-          <maml:para>{{ Fill CreateTableIfNotExists Description }}</maml:para>
+          <maml:para>If the table should be created if it does not exist.</maml:para>
         </maml:description>
         <command:parameterValue required="false" variableLength="false">SwitchParameter</command:parameterValue>
         <dev:type>
@@ -373,6 +373,17 @@ PS C:\&gt; Add-AzDataTableEntity -Entity $Users -TableName $TableName -Connectio
           </dev:type>
           <dev:defaultValue>None</dev:defaultValue>
         </command:parameter>
+        <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
+          <maml:name>CreateTableIfNotExists</maml:name>
+          <maml:description>
+            <maml:para>If the table should be created if it does not exist.</maml:para>
+          </maml:description>
+          <dev:type>
+            <maml:name>SwitchParameter</maml:name>
+            <maml:uri />
+          </dev:type>
+          <dev:defaultValue>False</dev:defaultValue>
+        </command:parameter>
         <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="True (ByValue)" position="named" aliases="Query">
           <maml:name>Filter</maml:name>
           <maml:description>
@@ -381,6 +392,18 @@ PS C:\&gt; Add-AzDataTableEntity -Entity $Users -TableName $TableName -Connectio
           <command:parameterValue required="true" variableLength="false">String</command:parameterValue>
           <dev:type>
             <maml:name>String</maml:name>
+            <maml:uri />
+          </dev:type>
+          <dev:defaultValue>None</dev:defaultValue>
+        </command:parameter>
+        <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="True (ByValue)" position="named" aliases="none">
+          <maml:name>Property</maml:name>
+          <maml:description>
+            <maml:para>One or several names of properties, to specify data to return for the entities.</maml:para>
+          </maml:description>
+          <command:parameterValue required="true" variableLength="false">String[]</command:parameterValue>
+          <dev:type>
+            <maml:name>String[]</maml:name>
             <maml:uri />
           </dev:type>
           <dev:defaultValue>None</dev:defaultValue>
@@ -397,6 +420,9 @@ PS C:\&gt; Add-AzDataTableEntity -Entity $Users -TableName $TableName -Connectio
           </dev:type>
           <dev:defaultValue>None</dev:defaultValue>
         </command:parameter>
+      </command:syntaxItem>
+      <command:syntaxItem>
+        <maml:name>Get-AzDataTableEntity</maml:name>
         <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
           <maml:name>CreateTableIfNotExists</maml:name>
           <maml:description>
@@ -408,9 +434,6 @@ PS C:\&gt; Add-AzDataTableEntity -Entity $Users -TableName $TableName -Connectio
           </dev:type>
           <dev:defaultValue>False</dev:defaultValue>
         </command:parameter>
-      </command:syntaxItem>
-      <command:syntaxItem>
-        <maml:name>Get-AzDataTableEntity</maml:name>
         <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="True (ByValue)" position="named" aliases="Query">
           <maml:name>Filter</maml:name>
           <maml:description>
@@ -419,6 +442,18 @@ PS C:\&gt; Add-AzDataTableEntity -Entity $Users -TableName $TableName -Connectio
           <command:parameterValue required="true" variableLength="false">String</command:parameterValue>
           <dev:type>
             <maml:name>String</maml:name>
+            <maml:uri />
+          </dev:type>
+          <dev:defaultValue>None</dev:defaultValue>
+        </command:parameter>
+        <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="True (ByValue)" position="named" aliases="none">
+          <maml:name>Property</maml:name>
+          <maml:description>
+            <maml:para>One or several names of properties, to specify data to return for the entities.</maml:para>
+          </maml:description>
+          <command:parameterValue required="true" variableLength="false">String[]</command:parameterValue>
+          <dev:type>
+            <maml:name>String[]</maml:name>
             <maml:uri />
           </dev:type>
           <dev:defaultValue>None</dev:defaultValue>
@@ -447,6 +482,9 @@ PS C:\&gt; Add-AzDataTableEntity -Entity $Users -TableName $TableName -Connectio
           </dev:type>
           <dev:defaultValue>None</dev:defaultValue>
         </command:parameter>
+      </command:syntaxItem>
+      <command:syntaxItem>
+        <maml:name>Get-AzDataTableEntity</maml:name>
         <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
           <maml:name>CreateTableIfNotExists</maml:name>
           <maml:description>
@@ -458,9 +496,6 @@ PS C:\&gt; Add-AzDataTableEntity -Entity $Users -TableName $TableName -Connectio
           </dev:type>
           <dev:defaultValue>False</dev:defaultValue>
         </command:parameter>
-      </command:syntaxItem>
-      <command:syntaxItem>
-        <maml:name>Get-AzDataTableEntity</maml:name>
         <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="True (ByValue)" position="named" aliases="Query">
           <maml:name>Filter</maml:name>
           <maml:description>
@@ -469,6 +504,18 @@ PS C:\&gt; Add-AzDataTableEntity -Entity $Users -TableName $TableName -Connectio
           <command:parameterValue required="true" variableLength="false">String</command:parameterValue>
           <dev:type>
             <maml:name>String</maml:name>
+            <maml:uri />
+          </dev:type>
+          <dev:defaultValue>None</dev:defaultValue>
+        </command:parameter>
+        <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="True (ByValue)" position="named" aliases="none">
+          <maml:name>Property</maml:name>
+          <maml:description>
+            <maml:para>One or several names of properties, to specify data to return for the entities.</maml:para>
+          </maml:description>
+          <command:parameterValue required="true" variableLength="false">String[]</command:parameterValue>
+          <dev:type>
+            <maml:name>String[]</maml:name>
             <maml:uri />
           </dev:type>
           <dev:defaultValue>None</dev:defaultValue>
@@ -509,17 +556,6 @@ PS C:\&gt; Add-AzDataTableEntity -Entity $Users -TableName $TableName -Connectio
           </dev:type>
           <dev:defaultValue>None</dev:defaultValue>
         </command:parameter>
-        <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
-          <maml:name>CreateTableIfNotExists</maml:name>
-          <maml:description>
-            <maml:para>If the table should be created if it does not exist.</maml:para>
-          </maml:description>
-          <dev:type>
-            <maml:name>SwitchParameter</maml:name>
-            <maml:uri />
-          </dev:type>
-          <dev:defaultValue>False</dev:defaultValue>
-        </command:parameter>
       </command:syntaxItem>
     </command:syntax>
     <command:parameters>
@@ -535,6 +571,18 @@ PS C:\&gt; Add-AzDataTableEntity -Entity $Users -TableName $TableName -Connectio
         </dev:type>
         <dev:defaultValue>None</dev:defaultValue>
       </command:parameter>
+      <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
+        <maml:name>CreateTableIfNotExists</maml:name>
+        <maml:description>
+          <maml:para>If the table should be created if it does not exist.</maml:para>
+        </maml:description>
+        <command:parameterValue required="false" variableLength="false">SwitchParameter</command:parameterValue>
+        <dev:type>
+          <maml:name>SwitchParameter</maml:name>
+          <maml:uri />
+        </dev:type>
+        <dev:defaultValue>False</dev:defaultValue>
+      </command:parameter>
       <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="True (ByValue)" position="named" aliases="Query">
         <maml:name>Filter</maml:name>
         <maml:description>
@@ -543,6 +591,18 @@ PS C:\&gt; Add-AzDataTableEntity -Entity $Users -TableName $TableName -Connectio
         <command:parameterValue required="true" variableLength="false">String</command:parameterValue>
         <dev:type>
           <maml:name>String</maml:name>
+          <maml:uri />
+        </dev:type>
+        <dev:defaultValue>None</dev:defaultValue>
+      </command:parameter>
+      <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="True (ByValue)" position="named" aliases="none">
+        <maml:name>Property</maml:name>
+        <maml:description>
+          <maml:para>One or several names of properties, to specify data to return for the entities.</maml:para>
+        </maml:description>
+        <command:parameterValue required="true" variableLength="false">String[]</command:parameterValue>
+        <dev:type>
+          <maml:name>String[]</maml:name>
           <maml:uri />
         </dev:type>
         <dev:defaultValue>None</dev:defaultValue>
@@ -595,18 +655,6 @@ PS C:\&gt; Add-AzDataTableEntity -Entity $Users -TableName $TableName -Connectio
         </dev:type>
         <dev:defaultValue>None</dev:defaultValue>
       </command:parameter>
-      <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
-        <maml:name>CreateTableIfNotExists</maml:name>
-        <maml:description>
-          <maml:para>If the table should be created if it does not exist.</maml:para>
-        </maml:description>
-        <command:parameterValue required="false" variableLength="false">SwitchParameter</command:parameterValue>
-        <dev:type>
-          <maml:name>SwitchParameter</maml:name>
-          <maml:uri />
-        </dev:type>
-        <dev:defaultValue>False</dev:defaultValue>
-      </command:parameter>
     </command:parameters>
     <command:inputTypes>
       <command:inputType>
@@ -639,6 +687,13 @@ PS C:\&gt; Add-AzDataTableEntity -Entity $Users -TableName $TableName -Connectio
         <dev:code>PS C:\&gt; $UserEntity = Get-AzDataTableEntity -Filter "FirstName eq 'Bobby' and LastName eq 'Tables'" -TableName $TableName -ConnectionString $ConnectionString</dev:code>
         <dev:remarks>
           <maml:para>Get the user "Bobby Tables" from the table using a connection string.</maml:para>
+        </dev:remarks>
+      </command:example>
+      <command:example>
+        <maml:title>-------------------------- Example 2 --------------------------</maml:title>
+        <dev:code>PS C:\&gt; $UserEntities = Get-AzDataTableEntity -Property 'FirstName','Age' -TableName $TableName -SharedAccessSignature $SAS</dev:code>
+        <dev:remarks>
+          <maml:para>Get only the properties "FirstName" and "Age" for all entities found in the table using a shared access signature URL.</maml:para>
         </dev:remarks>
       </command:example>
     </command:examples>

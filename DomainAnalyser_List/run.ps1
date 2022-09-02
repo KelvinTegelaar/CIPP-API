@@ -2,7 +2,7 @@ using namespace System.Net
 
 # Input bindings are passed in via param block.
 param($Request, $TriggerMetadata)
-
+Set-Location (Get-Item $PSScriptRoot).Parent.FullName
 $APIName = $TriggerMetadata.FunctionName
 Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -message 'Accessed this API' -Sev 'Debug'
 
@@ -20,45 +20,22 @@ if (Test-Path .\Cache_DomainAnalyser) {
     foreach ($Result in $UnfilteredResults) { 
         $Object = $Result | ConvertFrom-Json
 
-        <#$MigratePartitionKey = @{
-            Table        = $DomainTable
-            PartitionKey = $Tenant.Tenant
-            RowKey       = $Tenant.Domain
-        }#>
-        #$OldDomain = Get-AzTableRow @MigratePartitionKey
 
         $Filter = "PartitionKey eq '{0}' and RowKey eq '{1}'" -f $Tenant.Tenant, $Tenant.Domain
         $OldDomain = Get-AzDataTableEntity @DomainTale -Filter $Filter
 
         if ($OldDomain) {
-            #$OldDomain | Remove-AzTableRow -Table $DomainTable
             Remove-AzDataTableEntity @DomainTable -Entity $OldDomain
         }
 
-        <#$ExistingDomain = @{
-            Table        = $DomainTable
-            rowKey       = $Object.Domain
-            partitionKey = 'TenantDomains'
-        }#>
-        #$Domain = Get-AzTableRow @ExistingDomain
+
 
         $Filter = "PartitionKey eq 'TenantDomains' and RowKey eq '{1}'" -f $Tenant.Domain
         $Domain = Get-AzDataTableEntity @DomainTable -Filter $Filter 
 
         if (!$Domain) {
             Write-Host 'Adding domain from cache file'
-            <#$DomainObject = @{
-                Table        = $DomainTable
-                rowKey       = $Object.Domain
-                partitionKey = 'TenantDomains'
-                property     = @{
-                    DomainAnalyser = $Result
-                    TenantId       = $Object.Tenant
-                    TenantDetails  = ''
-                    DkimSelectors  = ''
-                    MailProviders  = ''
-                }
-            }#>
+
             $DomainObject = @{
                 DomainAnalyser = ''
                 TenantDetails  = $TenantDetails
@@ -89,18 +66,10 @@ if (Test-Path .\Cache_DomainAnalyser) {
     }
 }
 
-# Need to apply exclusion logic
-$Skiplist = Get-Content 'ExcludedTenants' | ConvertFrom-Csv -Delimiter '|' -Header 'Name', 'User', 'Date'
 
-<#$DomainList = @{
-    Table        = $DomainTable
-    SelectColumn = @('partitionKey', 'DomainAnalyser', 'TenantId')
-}#>
 
 if ($Request.Query.tenantFilter -ne 'AllTenants') {
-    <#$DomainList.columnName = 'TenantId' 
-    $DomainList.operator = 'Equal'
-    $DomainList.value = $Request.Query.tenantFilter#>
+
     $DomainTable.Filter = "TenantId eq '{0}'" -f $Request.Query.tenantFilter
 }
 

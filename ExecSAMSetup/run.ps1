@@ -1,7 +1,7 @@
 using namespace System.Net
-
 # Input bindings are passed in via param block.
 param($Request, $TriggerMetadata)
+Set-Location (Get-Item $PSScriptRoot).Parent.FullName
 $UserCreds = ([System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($request.headers.'x-ms-client-principal')) | ConvertFrom-Json)
 if ("admin" -notin $UserCreds.userRoles) {
       Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{

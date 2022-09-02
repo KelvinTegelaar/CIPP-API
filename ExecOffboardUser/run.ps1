@@ -9,7 +9,7 @@ try {
     $Tenantfilter = $request.body.tenantfilter
     if ($username -eq $null) { exit }
     $userid = (New-GraphGetRequest -uri "https://graph.microsoft.com/beta/users/$($username)" -tenantid $Tenantfilter).id
-
+    Set-Location (Get-Item $PSScriptRoot).Parent.FullName
     $ConvertTable = Import-Csv Conversiontable.csv | Sort-Object -Property 'guid' -Unique
 
     Write-Host ($request.body | ConvertTo-Json)
@@ -167,7 +167,7 @@ try {
         }
         { $_."forward" -ne "" } { 
             try {
-                $permissions = New-ExoRequest -tenantid $TenantFilter -cmdlet "Set-mailbox" -cmdParams @{Identity = $userid; ForwardingAddress = $_.forward ; DeliverToMailboxAndForward = $true }
+                $permissions = New-ExoRequest -tenantid $TenantFilter -cmdlet "Set-mailbox" -cmdParams @{Identity = $userid; ForwardingAddress = $_.forward ; DeliverToMailboxAndForward = [bool]$request.body.keepCopy }
                 "Forwarding all email for $username to $($_.Forward)"
                 Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME  -message "Set Forwarding for $($username) to $($_.Forward)" -Sev "Info" -tenant $TenantFilter
 

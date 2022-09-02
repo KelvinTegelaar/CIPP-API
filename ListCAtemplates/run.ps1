@@ -5,7 +5,7 @@ param($Request, $TriggerMetadata)
 
 $APIName = $TriggerMetadata.FunctionName
 Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME  -message "Accessed this API" -Sev "Debug"
-
+Set-Location (Get-Item $PSScriptRoot).Parent.FullName
 
 # Write to the Azure Functions log stream.
 Write-Host "PowerShell HTTP trigger function processed a request."
@@ -30,7 +30,7 @@ $Templates = (Get-AzDataTableRow @Table -Filter $Filter) | ForEach-Object {
     $data = $_.JSON | ConvertFrom-Json 
     $data | Add-Member -NotePropertyName "GUID" -NotePropertyValue $_.GUID
     $data 
-}
+} | Sort-Object -Property displayName
 
 if ($Request.query.ID) { $Templates = $Templates | Where-Object -Property GUID -EQ $Request.query.id }
 

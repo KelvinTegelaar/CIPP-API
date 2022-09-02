@@ -5,7 +5,7 @@ param($Request, $TriggerMetadata)
 
 $APIName = $TriggerMetadata.FunctionName
 Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -message 'Accessed this API' -Sev 'Debug'
-
+Set-Location (Get-Item $PSScriptRoot).Parent.FullName
 
 Write-Host 'PowerShell HTTP trigger function processed a request.'
 $RMMApp = $request.body
