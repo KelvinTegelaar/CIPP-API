@@ -32,11 +32,34 @@ if ($Request.query.Permissions -eq 'true') {
         )
         $GraphToken = Get-GraphToken -returnRefresh $true
         $GraphPermissions = $GraphToken.scope.split(' ') -replace 'https://graph.microsoft.com//', '' | Where-Object { $_ -notin @('email', 'openid', 'profile', '.default') }
-        #Write-Host ($GraphPermissions | ConvertTo-Json)
+
+        if ($env:MSI_SECRET) {
+            try {
+                Disable-AzContextAutosave -Scope Process | Out-Null
+                $AzSession = Connect-AzAccount -Identity
+
+                $KV = $ENV:WEBSITE_DEPLOYMENT_ID
+                $KeyVaultRefresh = Get-AzKeyVaultSecret -VaultName $kv -Name 'RefreshToken' -AsPlainText
+                if ($ENV:RefreshToken -ne $KeyVaultRefresh) {
+                    $Success = $false
+                    $Messages.Add('Your refresh token does not match key vault, follow the Clear Token Cache procedure.') | Out-Null
+                    $Links.Add([PSCustomObject]@{
+                            Text = 'Clear Token Cache'
+                            Href = 'https://cipp.app/docs/general/troubleshooting/#clear-token-cache'
+                        }
+                    ) | Out-Null
+                }
+                else {
+                    $Messages.Add('Your refresh token matches key vault.') | Out-Null
+                }
+            }
+            catch {
+                Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $tenant -message "Key vault exception: $($_) " -Sev 'Error'
+            }
+        }
 
         try {
             $AccessTokenDetails = Read-JwtAccessDetails -Token $GraphToken.access_token
-            #Write-Host ($AccessTokenDetails | ConvertTo-Json)
         }
         catch {
             $AccessTokenDetails = [PSCustomObject]@{
@@ -118,7 +141,7 @@ if ($Request.query.Tenants -eq 'true') {
         }
 
         try {
-            $GraphRequest = New-ExoRequest -tenantid $Tenant -cmdlet "Get-OrganizationConfig" -ErrorAction Stop
+            $GraphRequest = New-ExoRequest -tenantid $Tenant -cmdlet 'Get-OrganizationConfig' -ErrorAction Stop
             @{ 
                 TenantName = "$($Tenant)"
                 Status     = 'Succesfully connected to Exchange'
