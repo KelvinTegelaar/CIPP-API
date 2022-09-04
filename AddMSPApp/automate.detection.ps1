@@ -7,7 +7,7 @@ else {
     Install-Module -Name PowerShellGet -Force -AllowClobber
     Update-Module -Name PowerShellGet
     Set-PSRepository -Name 'PSGallery' -InstallationPolicy Trusted 
-    Install-Module ConnectWiseAutomateAgent -MinimumVersion 0.1.1.0 -Confirm:$false -Force
+    Install-Module ConnectWiseAutomateAgent -MinimumVersion 0.1.2.0 -Confirm:$false -Force
 }
 
 Invoke-CWAACommand -Command 'Send Status'
