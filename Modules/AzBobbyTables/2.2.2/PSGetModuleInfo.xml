@@ -7,13 +7,13 @@
     </TN>
     <MS>
       <S N="Name">AzBobbyTables</S>
-      <S N="Version">2.2.1</S>
+      <S N="Version">2.2.2</S>
       <S N="Type">Module</S>
       <S N="Description">A module that wraps the Azure Data Tables SDK.</S>
       <S N="Author">Emanuel Palm</S>
       <S N="CompanyName">PalmEmanuel</S>
       <S N="Copyright">(c) Emanuel Palm. All rights reserved.</S>
-      <DT N="PublishedDate">2022-07-25T11:13:01-04:00</DT>
+      <DT N="PublishedDate">2022-09-01T16:34:14-04:00</DT>
       <Nil N="InstalledDate" />
       <Nil N="UpdatedDate" />
       <URI N="LicenseUri">https://github.com/PalmEmanuel/AzBobbyTables/blob/main/LICENSE</URI>
@@ -40,19 +40,27 @@
         </TN>
         <DCT>
           <En>
-            <S N="Key">DscResource</S>
+            <S N="Key">Cmdlet</S>
             <Obj N="Value" RefId="3">
+              <TNRef RefId="1" />
+              <LST>
+                <S>Add-AzDataTableEntity</S>
+                <S>Get-AzDataTableEntity</S>
+                <S>Remove-AzDataTableEntity</S>
+                <S>Update-AzDataTableEntity</S>
+              </LST>
+            </Obj>
+          </En>
+          <En>
+            <S N="Key">DscResource</S>
+            <Obj N="Value" RefId="4">
               <TNRef RefId="1" />
               <LST />
             </Obj>
           </En>
           <En>
-            <S N="Key">Function</S>
-            <Ref N="Value" RefId="3" />
-          </En>
-          <En>
             <S N="Key">Command</S>
-            <Obj N="Value" RefId="4">
+            <Obj N="Value" RefId="5">
               <TNRef RefId="1" />
               <LST>
                 <S>Add-AzDataTableEntity</S>
@@ -64,23 +72,15 @@
           </En>
           <En>
             <S N="Key">RoleCapability</S>
-            <Ref N="Value" RefId="3" />
+            <Ref N="Value" RefId="4" />
           </En>
           <En>
             <S N="Key">Workflow</S>
-            <Ref N="Value" RefId="3" />
+            <Ref N="Value" RefId="4" />
           </En>
           <En>
-            <S N="Key">Cmdlet</S>
-            <Obj N="Value" RefId="5">
-              <TNRef RefId="1" />
-              <LST>
-                <S>Add-AzDataTableEntity</S>
-                <S>Get-AzDataTableEntity</S>
-                <S>Remove-AzDataTableEntity</S>
-                <S>Update-AzDataTableEntity</S>
-              </LST>
-            </Obj>
+            <S N="Key">Function</S>
+            <Ref N="Value" RefId="4" />
           </En>
         </DCT>
       </Obj>
@@ -104,26 +104,26 @@
           <S N="requireLicenseAcceptance">False</S>
           <S N="isLatestVersion">True</S>
           <S N="isAbsoluteLatestVersion">True</S>
-          <S N="versionDownloadCount">144</S>
-          <S N="downloadCount">418</S>
-          <S N="packageSize">613616</S>
-          <S N="published">7/25/2022 11:13:01 AM -04:00</S>
-          <S N="created">7/25/2022 11:13:01 AM -04:00</S>
-          <S N="lastUpdated">8/15/2022 7:12:40 PM -04:00</S>
+          <S N="versionDownloadCount">0</S>
+          <S N="downloadCount">503</S>
+          <S N="packageSize">613991</S>
+          <S N="published">9/1/2022 4:34:14 PM -04:00</S>
+          <S N="created">9/1/2022 4:34:14 PM -04:00</S>
+          <S N="lastUpdated">9/1/2022 4:34:14 PM -04:00</S>
           <S N="tags">azure storage table PSModule PSEdition_Core PSCmdlet_Add-AzDataTableEntity PSCommand_Add-AzDataTableEntity PSCmdlet_Get-AzDataTableEntity PSCommand_Get-AzDataTableEntity PSCmdlet_Remove-AzDataTableEntity PSCommand_Remove-AzDataTableEntity PSCmdlet_Update-AzDataTableEntity PSCommand_Update-AzDataTableEntity PSIncludes_Cmdlet</S>
           <S N="developmentDependency">False</S>
-          <S N="updated">2022-08-15T19:12:40Z</S>
-          <S N="NormalizedVersion">2.2.1</S>
+          <S N="updated">2022-09-01T16:34:14Z</S>
+          <S N="NormalizedVersion">2.2.2</S>
           <S N="Authors">Emanuel Palm</S>
           <S N="IsPrerelease">false</S>
           <S N="ItemType">Module</S>
-          <S N="FileList">AzBobbyTables.nuspec|AzBobbyTables.psd1|dependencies\Azure.Core.dll|dependencies\System.Buffers.dll|dependencies\System.Memory.Data.dll|dependencies\System.Numerics.Vectors.dll|dependencies\System.Text.Encodings.Web.dll|dependencies\System.Threading.Tasks.Extensions.dll|dependencies\AzBobbyTables.Core.dll|dependencies\Azure.Data.Tables.dll|dependencies\System.Diagnostics.DiagnosticSource.dll|dependencies\System.Memory.dll|dependencies\System.Runtime.CompilerServices.Unsafe.dll|dependencies\System.Text.Json.dll|en-US\AzBobbyTables.PS.dll-Help.xml|AzBobbyTables.PS.dll|dependencies\AzBobbyTables.Core.pdb|dependencies\Microsoft.Bcl.AsyncInterfaces.dll|AzBobbyTables.PS.pdb</S>
+          <S N="FileList">AzBobbyTables.nuspec|dependencies\System.Threading.Tasks.Extensions.dll|AzBobbyTables.psd1|dependencies\Azure.Core.dll|dependencies\System.Buffers.dll|dependencies\System.Memory.Data.dll|dependencies\System.Numerics.Vectors.dll|dependencies\System.Text.Encodings.Web.dll|en-US\AzBobbyTables.PS.dll-Help.xml|AzBobbyTables.PS.dll|dependencies\AzBobbyTables.Core.dll|dependencies\Azure.Data.Tables.dll|dependencies\System.Diagnostics.DiagnosticSource.dll|dependencies\System.Memory.dll|dependencies\System.Runtime.CompilerServices.Unsafe.dll|dependencies\System.Text.Json.dll|AzBobbyTables.PS.pdb|dependencies\AzBobbyTables.Core.pdb|dependencies\Microsoft.Bcl.AsyncInterfaces.dll</S>
           <S N="GUID">eead4f42-5080-4f83-8901-340c529a5a11</S>
           <S N="PowerShellVersion">7.0</S>
           <S N="CompanyName">pipe.how</S>
         </MS>
       </Obj>
-      <S N="InstalledLocation">C:\Users\jduprey.CNS\Documents\GitHub\CIPP-API\Modules\AzBobbyTables\2.2.1</S>
+      <S N="InstalledLocation">C:\Users\jduprey.CNS\Documents\GitHub\CIPP-API\Modules\AzBobbyTables\2.2.2</S>
     </MS>
   </Obj>
 </Objs>

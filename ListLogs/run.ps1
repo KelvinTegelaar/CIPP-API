@@ -20,7 +20,7 @@ $Table = Get-CIPPTable
 
 $ReturnedLog = if ($Request.Query.ListLogs) {
 
-    Get-AzDataTableEntity @Table | Sort-Object -Unique partitionkey | Select-Object partitionkey | ForEach-Object {
+    Get-AzDataTableEntity @Table -Property PartitionKey | Sort-Object -Unique PartitionKey | Select-Object PartitionKey | ForEach-Object {
         @{ 
             value = $_.PartitionKey
             label = $_.PartitionKey

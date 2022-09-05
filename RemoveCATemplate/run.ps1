@@ -9,6 +9,7 @@ Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME  -
 $ID = $request.query.id
 try {
     $Table = Get-CippTable -tablename 'templates'
+
     $Filter = "PartitionKey eq 'CATemplate' and RowKey eq '$id'" 
     $ClearRow = Get-AzDataTableRow @Table -Filter $Filter
     Remove-AzDataTableRow @Table -Entity $clearRow
@@ -17,7 +18,7 @@ try {
 }
 catch {
     Write-LogMessage -user $request.headers.'x-ms-client-principal'  -API $APINAME  -message "Failed to remove Conditional Access template $ID. $($_.Exception.Message)" -Sev "Error"
-    $body = [pscustomobject]@{"Results" = "Failed to remove template" }
+    $body = [pscustomobject]@{"Results" = "Failed to remove template: $($_.Exception.Message)" }
 }
 
 

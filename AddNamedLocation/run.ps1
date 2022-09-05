@@ -17,6 +17,7 @@ $results = foreach ($Tenant in $tenants) {
     try {
         $ObjBody = if ($Request.body.Type -eq "IPLocation") {
             $IPRanges = ($Request.body.Ips -split "`n") | ForEach-Object { if ($_ -ne "") { @{cidrAddress = "$_" } } }
+            if (!$IPRanges) { $IPRanges = @(@{cidrAddress = "$($Request.Body.Ips)" }) }
             [pscustomobject]@{
                 "@odata.type" = "#microsoft.graph.ipNamedLocation"
                 displayName   = $request.body.policyName
@@ -33,7 +34,6 @@ $results = foreach ($Tenant in $tenants) {
             }
         }
         $Body = ConvertTo-Json -InputObject $ObjBody
-        Write-Host $body
         $GraphRequest = New-GraphPOSTRequest -uri "https://graph.microsoft.com/beta/identity/conditionalAccess/namedLocations" -body $body -Type POST -tenantid $tenant
         "Succesfully added Named Location for $($Tenant)"
         Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $tenant -message " added Named Location $($Displayname)" -Sev "Info"
