@@ -16,7 +16,7 @@ try {
     ##Create Filter for basic auth sign-ins
     $filters = "createdDateTime ge $($endTime)Z and createdDateTime lt $($currentTime)Z"
 
-    $GraphRequest = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/auditLogs/signIns?api-version=beta&filter=$($filters)" -tenantid $TenantFilter -erroraction stop | Select-Object userPrincipalName, clientAppUsed, Status
+    $GraphRequest = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/auditLogs/signIns?api-version=beta&filter=$($filters)" -tenantid $TenantFilter -erroraction stop
     $response = $GraphRequest
     Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME  -message  "Retrieved sign in report" -Sev "Debug" -tenant $TenantFilter
     
