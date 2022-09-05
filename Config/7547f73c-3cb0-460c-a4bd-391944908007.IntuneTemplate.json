@@ -3,5 +3,5 @@
   "Description": "Skips the autopilot user setup page",
   "RAWJson": "{\"id\":\"00000000-0000-0000-0000-000000000000\",\"displayName\":\"Skip Autopilot User Setup Page\",\"roleScopeTagIds\":[\"0\"],\"@odata.type\":\"#microsoft.graph.windows10CustomConfiguration\",\"omaSettings\":[{\"displayName\":\"SkipUserSetupPage\",\"omaUri\":\"./Device/Vendor/MSFT/DMClient/Provider/MS DM Server/FirstSyncStatus/SkipUserStatusPage\",\"@odata.type\":\"#microsoft.graph.omaSettingBoolean\",\"value\":\"true\"}]}",
   "Type": "Device",
-  "GUID": "7547f73c-3cb0-460c-a4bd-391944908007"
+  "GUID": "7547f73c-3cb0-460c-a4bd-391944908007.IntuneTemplate.json"
 }

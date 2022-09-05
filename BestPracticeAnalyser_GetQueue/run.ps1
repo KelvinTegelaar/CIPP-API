@@ -6,5 +6,6 @@ $Tenants = Get-Tenants #Get-Content ".\tenants.cache.json" | ConvertFrom-Json | 
 $object = foreach ($Tenant in $Tenants) {
     $Tenant.defaultDomainName
 }
+Write-LogMessage -API 'BestPracticeAnalyser' -tenant 'None' -message "running BPA for $($tenants.count) tenants" -sev info
 
 $object

@@ -5,16 +5,18 @@ $uri = "https://login.microsoftonline.com/$($Tenant)/oauth2/token"
 $body = "resource=https://admin.microsoft.com&grant_type=refresh_token&refresh_token=$($ENV:ExchangeRefreshToken)"
 try {
     $token = Invoke-RestMethod $uri -Body $body -ContentType 'application/x-www-form-urlencoded' -ErrorAction SilentlyContinue -Method post
-    Write-LogMessage -API 'BestPracticeAnalyser' -tenant $tenant -message "Token retrieved for Best Practice Analyser on $($tenant)" -sev 'Info'
+    Write-LogMessage -API 'BestPracticeAnalyser' -tenant $tenant -message "Token retrieved for Best Practice Analyser on $($tenant)" -sev 'Debug'
 }
 catch {
     Write-LogMessage -API 'BestPracticeAnalyser' -tenant $tenant -message "Unable to Retrieve token for Best Practice Analyser $($tenant) Error: $($_.exception.message)" -sev 'Error'
 }
 $TenantName = Get-Tenants | Where-Object -Property defaultDomainName -EQ $tenant
 # Build up the result object that will be passed back to the durable function
-$Result = [pscustomobject]@{
+$Result = @{
     Tenant                           = "$($TenantName.displayName)"
     GUID                             = "$($TenantName.customerId)"
+    RowKey                           = "$($TenantName.customerId)"
+    PartitionKey                     = 'bpa'
     LastRefresh                      = $(Get-Date (Get-Date).ToUniversalTime() -UFormat '+%Y-%m-%dT%H:%M:%S.000Z')
     SecureDefaultState               = ''
     PrivacyEnabled                   = ''
@@ -55,8 +57,6 @@ $Result = [pscustomobject]@{
 try {
     $SecureDefaultsState = (New-GraphGetRequest -Uri 'https://graph.microsoft.com/beta/policies/identitySecurityDefaultsEnforcementPolicy' -tenantid $tenant)
     $Result.SecureDefaultState = $SecureDefaultsState.IsEnabled
-
-    Write-LogMessage -API 'BestPracticeAnalyser' -tenant $tenant -message "Security Defaults State on $($tenant) is $($SecureDefaultsState.IsEnabled)" -sev 'Debug'
 }
 catch {
     Write-LogMessage -API 'BestPracticeAnalyser' -tenant $tenant -message "Security Defaults State on $($tenant) Error: $($_.exception.message)" -sev 'Error'
@@ -72,7 +72,6 @@ try {
         'x-ms-correlation-id'    = [guid]::NewGuid()
         'X-Requested-With'       = 'XMLHttpRequest' 
     } | Select-Object -ExpandProperty Output | ConvertFrom-Json | Select-Object -ExpandProperty PrivacyEnabled
-    Write-LogMessage -API 'BestPracticeAnalyser' -tenant $tenant -message "Privacy Enabled State on $($tenant) is $($Result.PrivacyEnabled)" -sev 'Debug'
 }
 catch {
     Write-LogMessage -API 'BestPracticeAnalyser' -tenant $tenant -message "Privacy Enabled State on $($tenant) Error: $($_.exception.message)" -sev 'Error'
@@ -96,7 +95,6 @@ try {
         $Result.MessageCopyForSendOnBehalfCount = $MailboxBPA | Where-Object { $_.MessageCopyForSendOnBehalfEnabled -eq $false } | Measure-Object | Select-Object -ExpandProperty Count
         $Result.MessageCopyForSendList = ($MailboxBPA | Where-Object { ($_.MessageCopyForSendOnBehalfEnabled -eq $false) -or ( $_.MessageCopyForSendOnBehalfEnabled -eq $false) } | Select-Object -ExpandProperty userPrincipalName) -join '<br />'
     }
-    Write-LogMessage -API 'BestPracticeAnalyser' -tenant $tenant -message "Send and Send Behalf Of on $($tenant) is $($Result.MessageCopyForSend)" -sev 'Debug'
 }
 catch {
     Write-LogMessage -API 'BestPracticeAnalyser' -tenant $tenant -message "Send and Send Behalf Of on $($tenant) Error: $($_.exception.message)" -sev 'Error'
@@ -107,7 +105,6 @@ catch {
 try {
     $EXOAdminAuditLogConfig = New-ExoRequest -tenantid $Tenant -cmdlet 'Get-AdminAuditLogConfig'
     $Result.UnifiedAuditLog = $EXOAdminAuditLogConfig | Select-Object -ExpandProperty UnifiedAuditLogIngestionEnabled
-    Write-LogMessage -API 'BestPracticeAnalyser' -tenant $tenant -message "Unified Audit Log on $($tenant) is $($Result.UnifiedAuditLog)" -sev 'Debug'
     
 }
 catch {
@@ -135,7 +132,6 @@ try {
     $Result.AllowBasicAuthOfflineAddressBook = $BasicAuthDisable.AllowBasicAuthOfflineAddressBook
     $Result.AllowBasicAuthRpc = $BasicAuthDisable.AllowBasicAuthRpc
     $Result.AllowBasicAuthSmtp = $BasicAuthDisable.AllowBasicAuthSmtp
-    Write-LogMessage -API 'BestPracticeAnalyser' -tenant $tenant -message "Basic Auth States on $($tenant) run" -sev 'Debug'
 }
 catch {
     Write-LogMessage -API 'BestPracticeAnalyser' -tenant $tenant -message "Basic Auth States on $($tenant). Error: $($_.exception.message)" -sev 'Error'
@@ -146,7 +142,6 @@ catch {
 try {
     $GraphRequest = New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/policies/authorizationPolicy/authorizationPolicy' -tenantid $Tenant -asApp $true
     $Result.AdminConsentForApplications = if ($GraphRequest.permissionGrantPolicyIdsAssignedToDefaultUserRole -eq 'ManagePermissionGrantsForSelf.microsoft-user-default-legacy') { $true } else { $false }
-    Write-LogMessage -API 'BestPracticeAnalyser' -tenant $tenant -message "OAuth Admin Consent on $($tenant). Admin Consent for Applications $($Result.AdminConsentForApplications) and password reset is $($Result.SelfServicePasswordReset)" -sev 'Debug'
 }
 catch {
     Write-LogMessage -API 'BestPracticeAnalyser' -tenant $tenant -message "OAuth Admin Consent on $($tenant). Error: $($_.exception.message)" -sev 'Error'   
@@ -167,7 +162,6 @@ try {
     If ($SSPRGraph.enablementType -eq 1) { $Result.SelfServicePasswordReset = 'Specific Users' }
     If ($SSPRGraph.enablementType -eq 2) { $Result.SelfServicePasswordReset = 'On' }
     If ([string]::IsNullOrEmpty($SSPRGraph.enablementType)) { $Result.SelfServicePasswordReset = 'Unknown' }
-    Write-LogMessage -API 'BestPracticeAnalyser' -tenant $tenant -message "Basic Self Service Password State on $($tenant) is $($Result.SelfServicePasswordReset) run" -sev 'Debug'
 }
 catch {
     Write-LogMessage -API 'BestPracticeAnalyser' -tenant $tenant -message "Self Service Password Reset on $($tenant). Error: $($_.exception.message)" -sev 'Error' 
@@ -176,7 +170,6 @@ catch {
 # Get Passwords set to Never Expire
 try {
     $Result.DoNotExpirePasswords = Invoke-RestMethod -ContentType 'application/json; charset=utf-8' -Uri 'https://admin.microsoft.com/admin/api/Settings/security/passwordpolicy' -Method GET -Headers @{Authorization = "Bearer $($token.access_token)"; 'x-ms-client-request-id' = [guid]::NewGuid().ToString(); 'x-ms-client-session-id' = [guid]::NewGuid().ToString(); 'X-Requested-With' = 'XMLHttpRequest'; 'x-ms-correlation-id' = [guid]::NewGuid() } | Select-Object -ExpandProperty NeverExpire
-    Write-LogMessage -API 'BestPracticeAnalyser' -tenant $tenant -message "Passwords never expire setting on $($tenant). $($Result.DoNotExpirePasswords)" -sev 'Debug'
 }
 catch {
     Write-LogMessage -API 'BestPracticeAnalyser' -tenant $tenant -message "Passwords never expire setting on $($tenant). Error: $($_.exception.message)" -sev 'Error' 
@@ -185,7 +178,7 @@ catch {
 
 # Get Shared Mailbox Stuff
 try {
-    $SharedMailboxList = (New-GraphGetRequest -uri "https://outlook.office365.com/adminapi/beta/$($tenant)/Mailbox" -Tenantid $tenant -scope ExchangeOnline | Where-Object -propert RecipientTypeDetails -EQ 'SharedMailbox')
+    $SharedMailboxList = (New-GraphGetRequest -uri "https://outlook.office365.com/adminapi/beta/$($tenant)/Mailbox?`$filter=RecipientTypeDetails eq 'SharedMailbox'" -Tenantid $tenant -scope ExchangeOnline)
     $AllUsersAccountState = New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/users?select=userPrincipalName,accountEnabled' -tenantid $Tenant
     $EnabledUsersWithSharedMailbox = foreach ($SharedMailbox in $SharedMailboxList) {
         # Match the User
@@ -197,7 +190,6 @@ try {
     
     if (($EnabledUsersWithSharedMailbox | Measure-Object | Select-Object -ExpandProperty Count) -gt 0) { $Result.DisabledSharedMailboxLogins = ($EnabledUsersWithSharedMailbox) -join '<br />' } else { $Result.DisabledSharedMailboxLogins = 'PASS' } 
     $Result.DisabledSharedMailboxLoginsCount = $EnabledUsersWithSharedMailbox | Measure-Object | Select-Object -ExpandProperty Count
-    Write-LogMessage -API 'BestPracticeAnalyser' -tenant $tenant -message "Shared Mailbox Enabled Accounts on $($tenant). $($Result.DisabledSharedMailboxLogins)" -sev 'Debug'
 }
 catch {
     Write-LogMessage -API 'BestPracticeAnalyser' -tenant $tenant -message "Shared Mailbox Enabled Accounts on $($tenant). Error: $($_.exception.message)" -sev 'Error'  
@@ -228,11 +220,10 @@ try {
     foreach ($License in $UnusedLicenses) {
         $TempCount = $TempCount + ($($License.prepaidUnits.enabled) - $($License.ConsumedUnits))
     }
-    $Result.UnusedLicenseList = @($Result.UnusedLicenseList)
+    $Result.UnusedLicenseList = ConvertTo-Json -InputObject @($Result.UnusedLicenseList) -Compress
     $Result.UnusedLicensesTotal = $TempCount
     $Result.UnusedLicensesCount = $UnusedLicensesCount
     $Result.UnusedLicensesResult = $UnusedLicensesResult
-    Write-LogMessage -API 'BestPracticeAnalyser' -tenant $tenant -message "Unused Licenses on $($tenant). $($Result.UnusedLicensesCount) total not matching" -sev 'Debug'
 }
 catch {
     Write-LogMessage -API 'BestPracticeAnalyser' -tenant $tenant -message "Unused Licenses on $($tenant). Error: $($_.exception.message)" -sev 'Error'
@@ -241,17 +232,11 @@ catch {
 # Get Secure Score
 try {
     $SecureScore = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/security/secureScores?`$top=1" -tenantid $tenant -noPagination $true
-    $Result.SecureScoreCurrent = $SecureScore.currentScore
-    $Result.SecureScoreMax = $SecureScore.maxScore
+    $Result.SecureScoreCurrent = [int]$SecureScore.currentScore
+    $Result.SecureScoreMax = [int]$SecureScore.maxScore
     $Result.SecureScorePercentage = [int](($SecureScore.currentScore / $SecureScore.maxScore) * 100)
-    Write-LogMessage -API 'BestPracticeAnalyser' -tenant $tenant -message "Secure Score on $($tenant) is $($Result.SecureScoreCurrent) / $($Result.SecureScoreMax)" -sev 'Debug'
 }
 catch {
     Write-LogMessage -API 'BestPracticeAnalyser' -tenant $tenant -message "Secure Score Retrieval on $($tenant). Error: $($_.exception.message)" -sev 'Error' 
 }
-
-@{
-    Results      = ($Result | ConvertTo-Json)
-    PartitionKey = "bpa"
-    RowKey       = "$($TenantName.customerId)"
-}
+$Result
