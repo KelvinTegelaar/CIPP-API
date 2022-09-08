@@ -17,7 +17,7 @@ try {
 }
 catch {
     Write-LogMessage -user $request.headers.'x-ms-client-principal'  -API $APINAME  -message "Failed to remove Transport Rule template $ID. $($_.Exception.Message)" -Sev "Error"
-    $body = [pscustomobject]@{"Results" = "Failed to remove template" }
+    $body = [pscustomobject]@{"Results" = "Failed to remove template: $($_.Exception.Message)" }
 }
 
 
