@@ -191,6 +191,79 @@ try {
                 #Write-LogMessage -message $Message -API 'Alerts' -tenant $tenant.tenant -sev Error
             }
         }
+        { $_.'ApnCertExpiry' -eq $true } {
+            try {
+                $Filter = "RowKey eq 'ApnCertExpiry' and PartitionKey eq '{0}'" -f $Tenant.tenantid
+                $LastRun = Get-AzDataTableEntity @LastRunTable -Filter $Filter
+                $Yesterday = (Get-Date).AddDays(-1)
+                if (-not $LastRun.Timestamp.DateTime -or ($LastRun.Timestamp.DateTime -le $Yesterday)) {
+                    $Apn = New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/deviceManagement/applePushNotificationCertificate' -tenantid $Tenant.tenant 
+                    if ($Apn.expirationDateTime -lt (Get-Date).AddDays(30) -and $Apn.expirationDateTime -gt (Get-Date).AddDays(-7)) {
+                        "Apple Push Notification certificate for '{0}' is expiring on {1}" -f $App.appleIdentifier, $Apn.expirationDateTime
+                    }
+                }
+                $LastRun = @{
+                    RowKey       = 'ApnCertExpiry'
+                    PartitionKey = $Tenant.tenantid
+                }
+                Add-AzDataTableEntity @LastRunTable -Entity $LastRun -Force         
+            }
+            catch {
+                #$Message = 'Exception on line {0} - {1}' -f $_.InvocationInfo.ScriptLineNumber, $_.Exception.Message
+                #Write-LogMessage -message $Message -API 'Alerts' -tenant $tenant.tenant -sev Error
+            }
+        }
+        { $_.'VppTokenExpiry' -eq $true } {
+            try {
+                $Filter = "RowKey eq 'VppTokenExpiry' and PartitionKey eq '{0}'" -f $Tenant.tenantid
+                $LastRun = Get-AzDataTableEntity @LastRunTable -Filter $Filter
+                $Yesterday = (Get-Date).AddDays(-1)
+                if (-not $LastRun.Timestamp.DateTime -or ($LastRun.Timestamp.DateTime -le $Yesterday)) {
+                    $VppTokens = (New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/deviceAppManagement/vppTokens' -tenantid $Tenant.tenant).value 
+                    foreach ($Vpp in $VppTokens) {
+                        if ($Vpp.state -ne 'valid') {
+                            'Apple Volume Purchase Program Token is not valid, new token required'
+                        }
+                        if ($Vpp.expirationDateTime -lt (Get-Date).AddDays(30) -and $Vpp.expirationDateTime -gt (Get-Date).AddDays(-7)) {
+                            'Apple Volume Purchase Program token expiring on {0}' -f $Vpp.expirationDateTime
+                        } 
+                    }
+                    $LastRun = @{
+                        RowKey       = 'VppTokenExpiry'
+                        PartitionKey = $Tenant.tenantid
+                    }
+                    Add-AzDataTableEntity @LastRunTable -Entity $LastRun -Force
+                }
+            }
+            catch {
+                #$Message = 'Exception on line {0} - {1}' -f $_.InvocationInfo.ScriptLineNumber, $_.Exception.Message
+                #Write-LogMessage -message $Message -API 'Alerts' -tenant $tenant.tenant -sev Error
+            }
+        }
+        { $_.'DepTokenExpiry' -eq $true } {
+            try {
+                $Filter = "RowKey eq 'DepTokenExpiry' and PartitionKey eq '{0}'" -f $Tenant.tenantid
+                $LastRun = Get-AzDataTableEntity @LastRunTable -Filter $Filter
+                $Yesterday = (Get-Date).AddDays(-1)
+                if (-not $LastRun.Timestamp.DateTime -or ($LastRun.Timestamp.DateTime -le $Yesterday)) {
+                    $DepTokens = (New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/deviceManagement/depOnboardingSettings' -tenantid $Tenant.tenant).value 
+                    foreach ($Dep in $DepTokens) {
+                        if ($Dep.tokenExpirationDateTime -lt (Get-Date).AddDays(30) -and $Dep.tokenExpirationDateTime -gt (Get-Date).AddDays(-7)) {
+                            'Apple Device Enrollment Program token expiring on {0}' -f $Dep.expirationDateTime
+                        }
+                    }
+                    $LastRun = @{
+                        RowKey       = 'DepTokenExpiry'
+                        PartitionKey = $Tenant.tenantid
+                    }
+                    Add-AzDataTableEntity @LastRunTable -Entity $LastRun -Force 
+                }
+            }
+            catch {
+                #$Message = 'Exception on line {0} - {1}' -f $_.InvocationInfo.ScriptLineNumber, $_.Exception.Message
+                #Write-LogMessage -message $Message -API 'Alerts' -tenant $tenant.tenant -sev Error
+            }
+        }
     }
 
     $Table = Get-CIPPTable
