@@ -140,6 +140,15 @@ try {
     
             }
         }
+        { $_.'NoCAConfig' -eq $true } {
+            try {
+                $CAPolicies = (New-GraphGetRequest -uri "https://graph.microsoft.com/beta/identity/conditionalAccess/policies" -tenantid $Tenant.tenant)
+                if ($CAPolicies.id.length -lt 1 -or $CAPolicies.value) { "Conditional Access is available, but no policies could be found." }
+            }
+            catch {
+    
+            }
+        }
         { $_.'UnusedLicenses' -eq $true } {
             try {
                 #$ConvertTable = Import-Csv Conversiontable.csv
