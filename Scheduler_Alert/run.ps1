@@ -142,14 +142,15 @@ try {
         }
         { $_.'NoCAConfig' -eq $true } {
             try {
-                $CAAvailable = (New-GraphGetRequest -uri "https://graph.microsoft.com/beta//subscribedSkus" -tenantid $Tenant.Tenant -erroraction stop).serviceplans
+                $CAAvailable = (New-GraphGetRequest -uri "https://graph.microsoft.com/beta/subscribedSkus" -tenantid $Tenant.Tenant -erroraction stop).serviceplans
                 if ('AAD_PREMIUM' -in $CAAvailable.servicePlanName) {
                     $CAPolicies = (New-GraphGetRequest -uri "https://graph.microsoft.com/v1.0/identity/conditionalAccess/policies" -tenantid $Tenant.Tenant) 
-                    if (!$CAPolicies.id) { "Conditional Access is available, but no policies could be found." }
+                    if (!$CAPolicies.id) {
+                        "Conditional Access is available, but no policies could be found." 
+                    }
                 }
             }
             catch {
-    
             }
         }
         { $_.'UnusedLicenses' -eq $true } {
@@ -280,7 +281,7 @@ try {
 
     $Table = Get-CIPPTable
     $PartitionKey = Get-Date -UFormat '%Y%m%d'
-    $Filter = "PartitionKey eq '{0}'" -f $PartitionKey
+    $Filter = "PartitionKey eq '{0}' and tenant eq '{1}'" -f $PartitionKey, $tenant.tenant
     $currentlog = Get-AzDataTableEntity @Table -Filter $Filter
 
     $ShippedAlerts | ForEach-Object {
