@@ -142,9 +142,9 @@ try {
         }
         { $_.'NoCAConfig' -eq $true } {
             try {
-                $CAAvailable = (New-GraphGetRequest -uri "https://graph.microsoft.com/beta//subscribedSkus" -tenantid $Tenantfilter -erroraction stop).serviceplans
+                $CAAvailable = (New-GraphGetRequest -uri "https://graph.microsoft.com/beta//subscribedSkus" -tenantid $Tenant.Tenant -erroraction stop).serviceplans
                 if ('AAD_PREMIUM' -in $CAAvailable.servicePlanName) {
-                    $CAPolicies = (New-GraphGetRequest -uri "https://graph.microsoft.com/v1.0/identity/conditionalAccess/policies" -tenantid $TenantFilter) 
+                    $CAPolicies = (New-GraphGetRequest -uri "https://graph.microsoft.com/v1.0/identity/conditionalAccess/policies" -tenantid $Tenant.Tenant) 
                     if (!$CAPolicies.id) { "Conditional Access is available, but no policies could be found." }
                 }
             }
