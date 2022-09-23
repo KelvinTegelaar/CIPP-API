@@ -17,7 +17,7 @@ try {
     $ShippedAlerts = switch ($Alerts) {
         { $_.'AdminPassword' -eq $true } {
             try {
-                New-GraphGETRequest -uri "https://graph.microsoft.com/beta/roleManagement/directory/roleAssignments?`$filter=roleDefinitionId eq '62e90394-69f5-4237-9190-012177145e10'" -tenantid $($tenant.tenant) | ForEach-Object { 
+                New-GraphGETRequest -uri "https://graph.microsoft.com/beta/roleManagement/directory/roleAssignments?`$filter=roleDefinitionId eq '62e90394-69f5-4237-9190-012177145e10'" -tenantid $($tenant.tenant) | Where-Object -Property 'principalOrganizationId' -EQ $tenant.tenantid | ForEach-Object { 
                     $LastChanges = New-GraphGETRequest -uri "https://graph.microsoft.com/beta/users/$($_.principalId)?`$select=UserPrincipalName,lastPasswordChangeDateTime" -tenant $($tenant.tenant)
                     if ([datetime]$LastChanges.LastPasswordChangeDateTime -gt (Get-Date).AddDays(-1)) { "Admin password has been changed for $($LastChanges.UserPrincipalName) in last 24 hours" }
                 }
@@ -25,7 +25,6 @@ try {
             }
             catch {
                 "Could not get admin password changes for $($Tenant.tenant): $($_.Exception.message)"
-
             }
         }
         { $_.'DefenderMalware' -eq $true } {
