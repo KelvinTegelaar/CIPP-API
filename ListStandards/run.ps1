@@ -6,18 +6,7 @@ Set-Location (Get-Item $PSScriptRoot).Parent.FullName
 $APIName = $TriggerMetadata.FunctionName
 Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -message 'Accessed this API' -Sev 'Debug'
 $Table = Get-CippTable -tablename 'standards'
-#Migrate old standards to table Storage
-if (Test-Path 'Cache_Standards\*.Standards.json') {
-    $Migrate = Get-ChildItem 'Cache_Standards\*.Standards.json' | ForEach-Object {
-        $StandardsFile = Get-Content "$($_)"
-        $Entity = @{
-            JSON         = "$StandardsFile"
-            RowKey       = "$(($StandardsFile | ConvertFrom-Json).Tenant)"
-            PartitionKey = 'standards'
-        }
-        Add-AzDataTableEntity @Table -Entity $Entity -Force
-    }
-}
+
 $Filter = "PartitionKey eq 'standards'" 
 
 try { 
@@ -32,10 +21,11 @@ catch {}
 
 $CurrentStandards = foreach ($tenant in $tenants) {
     [PSCustomObject]@{
-        displayName = $tenant.tenant
-        appliedBy   = $tenant.addedBy
-        appliedAt   = $tenant.appliedAt
-        standards   = $tenant.Standards
+        displayName     = $tenant.tenant
+        appliedBy       = $tenant.addedBy
+        appliedAt       = $tenant.appliedAt
+        standards       = $tenant.Standards
+        StandardsExport = ($tenant.Standards.psobject.properties.name) -join ', '
     }
 }
 if (!$CurrentStandards) {
