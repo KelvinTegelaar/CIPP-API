@@ -60,7 +60,7 @@ if ($Request.query.Permissions -eq 'true') {
         }
 
         try {
-            $AccessTokenDetails = Read-JwtAccessDetails -Token $GraphToken.access_token
+            $AccessTokenDetails = Read-JwtAccessDetails -Token $GraphToken.access_token -erroraction SilentlyContinue
         }
         catch {
             $AccessTokenDetails = [PSCustomObject]@{
