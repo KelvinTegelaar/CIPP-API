@@ -28,6 +28,7 @@ $Results = foreach ($Tenant in $tenants) {
             QuotaUsed       = [bool]$Request.body.QuotaUsed
             UnusedLicenses  = [bool]$Request.body.UnusedLicenses
             AppSecretExpiry = [bool]$Request.body.AppSecretExpiry
+            NoCAConfig      = [bool]$Request.body.NoCAConfig
             type            = 'Alert'
             RowKey          = $TenantID 
             PartitionKey    = 'Alert'

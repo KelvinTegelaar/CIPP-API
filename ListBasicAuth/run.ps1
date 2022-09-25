@@ -17,7 +17,7 @@ $filters = "createdDateTime ge $($endTime)Z and createdDateTime lt $($currentTim
 if ($TenantFilter -ne 'AllTenants') {
 
     try {
-        $GraphRequest = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/auditLogs/signIns?api-version=beta&filter=$($filters)" -tenantid $TenantFilter -erroraction stop | Select-Object userPrincipalName, clientAppUsed | Sort-Object -Unique -Property clientAppUsed
+        $GraphRequest = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/auditLogs/signIns?api-version=beta&filter=$($filters)" -tenantid $TenantFilter -erroraction stop | Select-Object userPrincipalName, clientAppUsed, Status | Sort-Object -Unique -Property userPrincipalName
         $response = $GraphRequest
         Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME  -message  "Retrieved basic authentication report" -Sev "Debug" -tenant $TenantFilter
     

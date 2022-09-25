@@ -34,10 +34,10 @@ try {
                     GraphErrorCount   = 0
                 }) | Out-Null
 
-            if (($Tenants | Measure-Object).Count -gt 1) {
+            if (($Tenants).length -gt 1) {
                 $TenantList.AddRange($Tenants) | Out-Null
             }
-            else {
+            elseif ($Tenants) {
                 $TenantList.Add($Tenants) | Out-Null
             }
             $body = $TenantList

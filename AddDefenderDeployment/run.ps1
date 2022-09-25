@@ -11,6 +11,7 @@ if ("AllTenants" -in $Tenants) { $Tenants = (Get-Tenants).defaultDomainName }
 $Compliance = $request.body.Compliance
 $PolicySettings = $request.body.Policy
 $ASR = $request.body.ASR
+$EDR = $request.body.EDR
 $results = foreach ($Tenant in $tenants) {
     try {
         $SettingsObj = @{
@@ -141,6 +142,81 @@ $results = foreach ($Tenant in $tenants) {
                 Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $($Tenant) -message "Assigned policy $($Displayname) to $($ASR.AssignTo)" -Sev "Info"
             }
             "$($Tenant): Succesfully added ASR Settings"
+        }
+
+        $EDRSettings = switch ($EDR) {
+            { $_.SampleSharing } { 
+                @{
+                    '@odata.type'   = '#microsoft.graph.deviceManagementConfigurationSetting'
+                    settingInstance = @{
+                        '@odata.type'                    = "#microsoft.graph.deviceManagementConfigurationChoiceSettingInstance"
+                        settingDefinitionId              = "device_vendor_msft_windowsadvancedthreatprotection_configuration_samplesharing"
+                        choiceSettingValue               = @{
+                            settingValueTemplateReference = @{settingValueTemplateId = "f72c326c-7c5b-4224-b890-0b9b54522bd9" }
+                            '@odata.type'                 = "#microsoft.graph.deviceManagementConfigurationChoiceSettingValue"
+                            'value'                       = "device_vendor_msft_windowsadvancedthreatprotection_configuration_samplesharing_1"
+                        }
+                        settingInstanceTemplateReference = @{settingInstanceTemplateId = "6998c81e-2814-4f5e-b492-a6159128a97b" }
+                    }
+                } 
+            }
+            { $_.Telemetry } { 
+                @{
+                    '@odata.type'   = '#microsoft.graph.deviceManagementConfigurationSetting'
+                    settingInstance = @{
+                        '@odata.type'                    = "#microsoft.graph.deviceManagementConfigurationChoiceSettingInstance"
+                        settingDefinitionId              = "device_vendor_msft_windowsadvancedthreatprotection_configuration_telemetryreportingfrequency"
+                        choiceSettingValue               = @{
+                            settingValueTemplateReference = @{settingValueTemplateId = "350b0bea-b67b-43d4-9a04-c796edb961fd" }
+                            '@odata.type'                 = "#microsoft.graph.deviceManagementConfigurationChoiceSettingValue"
+                            'value'                       = "device_vendor_msft_windowsadvancedthreatprotection_configuration_telemetryreportingfrequency_2"
+                        }
+                        settingInstanceTemplateReference = @{settingInstanceTemplateId = "03de6095-07c4-4f35-be38-c1cd3bae4484" }
+                    }
+                }     
+             
+            }
+            { $_.Config } { 
+                @{
+                    '@odata.type'   = '#microsoft.graph.deviceManagementConfigurationSetting'
+                    settingInstance = @{
+                        '@odata.type'                    = "#microsoft.graph.deviceManagementConfigurationChoiceSettingInstance"
+                        settingDefinitionId              = "device_vendor_msft_windowsadvancedthreatprotection_configurationtype"
+                        choiceSettingValue               = @{
+                            '@odata.type'                 = "#microsoft.graph.deviceManagementConfigurationChoiceSettingValue"
+                            'value'                       = "device_vendor_msft_windowsadvancedthreatprotection_configurationtype_autofromconnector"
+                            settingValueTemplateReference = @{settingValueTemplateId = "e5c7c98c-c854-4140-836e-bd22db59d651" }
+                            children                      = @(@{'@odata.type' = "#microsoft.graph.deviceManagementConfigurationSimpleSettingInstance" ; settingDefinitionId = 'device_vendor_msft_windowsadvancedthreatprotection_onboarding_fromconnector' ; simpleSettingValue = @{'@odata.type' = "#microsoft.graph.deviceManagementConfigurationSecretSettingValue" ; value = "Microsoft ATP connector enabled"; valueState = "NotEncrypted" } } )
+                        }
+                
+                        settingInstanceTemplateReference = @{settingInstanceTemplateId = "23ab0ea3-1b12-429a-8ed0-7390cf699160" }
+                    }
+                }   
+            
+            }
+        }
+        $EDRbody = ConvertTo-Json -Depth 15 -Compress -InputObject @{
+            name              = 'EDR Configuration'
+            description       = ''
+            platforms         = 'windows10'
+            technologies      = 'mdm,microsoftSense'
+            roleScopeTagIds   = @('0')
+            templateReference = @{templateId = '0385b795-0f2f-44ac-8602-9f65bf6adede_1' }
+            settings          = @($EDRSettings)
+        }
+        Write-Host ( $EDRbody)
+        $CheckExististingEDR = New-GraphGETRequest -uri "https://graph.microsoft.com/beta/deviceManagement/configurationPolicies" -tenantid $tenant
+        if ('EDR Configuration' -in $CheckExististingEDR.Name) {
+            "$($Tenant): EDR Policy already exists. Skipping"
+        }
+        else {
+            $EDRRequest = New-GraphPOSTRequest -uri "https://graph.microsoft.com/beta/deviceManagement/configurationPolicies" -tenantid $tenant -type POST -body $EDRbody
+            if ($ASR.AssignTo -ne "none") {
+                $AssignBody = if ($ASR.AssignTo -ne "AllDevicesAndUsers") { '{"assignments":[{"id":"","target":{"@odata.type":"#microsoft.graph.' + $($asr.AssignTo) + 'AssignmentTarget"}}]}' } else { '{"assignments":[{"id":"","target":{"@odata.type":"#microsoft.graph.allDevicesAssignmentTarget"}},{"id":"","target":{"@odata.type":"#microsoft.graph.allLicensedUsersAssignmentTarget"}}]}' }
+                $assign = New-GraphPOSTRequest -uri  "https://graph.microsoft.com/beta/deviceManagement/configurationPolicies('$($EDRRequest.id)')/assign" -tenantid $tenant -type POST -body $AssignBody
+                Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $($Tenant) -message "Assigned EDR policy $($Displayname) to $($ASR.AssignTo)" -Sev "Info"
+            }
+            "$($Tenant): Succesfully added EDR Settings"
         }
 
     }
