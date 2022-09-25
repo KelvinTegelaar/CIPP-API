@@ -9,10 +9,10 @@ Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME  -
 # Interact with query parameters or the body of the request.
 $tenantfilter = $Request.Query.TenantFilter
 $DeviceFilter = $Request.Query.GUID
-$Action = $Request.Query.$Action
-$ActionBody = $Request.body
+$Action = $Request.Query.Action
+$ActionBody = if ($Request.body) { $Request.body | ConvertTo-Json } else { '{}' }
 try {     
-    $GraphRequest = New-Graphpostrequest -uri "https://graph.microsoft.com/beta/deviceManagement/managedDevices('$DeviceFilter')/$($DeviceAction)" -type POST -tenantid $TenantFilter -body $ActionBody
+    $GraphRequest = New-Graphpostrequest -uri "https://graph.microsoft.com/beta/deviceManagement/managedDevices('$DeviceFilter')/$($Action)" -type POST -tenantid $TenantFilter -body $actionbody -asapp $true
 
     Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $($tenantfilter) -message "Queued $Action on $DeviceFilter" -Sev "Info"
     $body = [pscustomobject]@{"Results" = "Queued $Action on $DeviceFilter" }
