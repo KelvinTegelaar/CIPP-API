@@ -29,9 +29,9 @@ try {
     @{ Name = 'displayName'; Expression = { $_.'Owner Display Name' } },
     @{ Name = 'LastActive'; Expression = { $_.'Last Activity Date' } },
     @{ Name = 'FileCount'; Expression = { [int]$_.'File Count' } },
-    @{ Name = 'UsedGB'; Expression = { [math]::round($_.'Storage Used (Byte)' / 1GB, 0) } },
+    @{ Name = 'UsedGB'; Expression = { [math]::round($_.'Storage Used (Byte)' / 1GB, 2) } },
     @{ Name = 'URL'; Expression = { $_.'Site URL' } },
-    @{ Name = 'Allocated'; Expression = { $_.'Storage Allocated (Byte)' / 1GB } },
+    @{ Name = 'Allocated'; Expression = { [math]::round($_.'Storage Allocated (Byte)' / 1GB, 2) } },
     @{ Name = 'Template'; Expression = { $_.'Root Web Template' } }
     $StatusCode = [HttpStatusCode]::OK
 }

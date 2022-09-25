@@ -23,6 +23,7 @@ $ModuleTests = $Modules | ForEach-Object -Parallel {
 
         # Remove old versions
         while (($ModuleInfo | Measure-Object).Count -gt 1) {
+            Remove-Module $Module
             $RemoveVersion = $ModuleInfo | Sort-Object -Property Version | Select-Object -First 1
             Remove-Item -Path $RemoveVersion.ModuleBase -Recurse
         }
