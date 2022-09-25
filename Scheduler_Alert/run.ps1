@@ -280,7 +280,7 @@ try {
 
     $Table = Get-CIPPTable
     $PartitionKey = Get-Date -UFormat '%Y%m%d'
-    $Filter = "PartitionKey eq '{0}' and tenant eq '{1}'" -f $PartitionKey, $tenant.tenant
+    $Filter = "PartitionKey eq '{0}' and Tenant eq '{1}'" -f $PartitionKey, $tenant.tenant
     $currentlog = Get-AzDataTableEntity @Table -Filter $Filter
 
     $ShippedAlerts | ForEach-Object {
