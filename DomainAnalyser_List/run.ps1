@@ -13,63 +13,7 @@ $DomainTable = Get-CIPPTable -Table 'Domains'
 
 # Get all the things
 
-# Convert file json results to table results
-if (Test-Path .\Cache_DomainAnalyser) {
-    $UnfilteredResults = Get-ChildItem '.\Cache_DomainAnalyser\*.json' | ForEach-Object { Get-Content $_.FullName | Out-String }
-    
-    foreach ($Result in $UnfilteredResults) { 
-        $Object = $Result | ConvertFrom-Json
-
-
-        $Filter = "PartitionKey eq '{0}' and RowKey eq '{1}'" -f $Tenant.Tenant, $Tenant.Domain
-        $OldDomain = Get-AzDataTableEntity @DomainTale -Filter $Filter
-
-        if ($OldDomain) {
-            Remove-AzDataTableEntity @DomainTable -Entity $OldDomain
-        }
-
-
-
-        $Filter = "PartitionKey eq 'TenantDomains' and RowKey eq '{1}'" -f $Tenant.Domain
-        $Domain = Get-AzDataTableEntity @DomainTable -Filter $Filter 
-
-        if (!$Domain) {
-            Write-Host 'Adding domain from cache file'
-
-            $DomainObject = @{
-                DomainAnalyser = ''
-                TenantDetails  = $TenantDetails
-                TenantId       = $Tenant.Tenant
-                DkimSelectors  = ''
-                MailProviders  = ''
-                rowKey         = $Tenant.Domain
-                partitionKey   = 'TenantDomains'
-            }
-
-            if ($OldDomain) {
-                $DomainObject.DkimSelectors = $OldDomain.DkimSelectors
-                $DomainObject.MailProviders = $OldDomain.MailProviders
-            }
-
-            Add-AzDataTableEntity @DomainTable -Entity $DomainObject | Out-Null
-        }
-        else {
-            Write-Host 'Updating domain from cache file'
-            $Domain.DomainAnalyser = $Result
-            if ($OldDomain) {
-                $Domain.DkimSelectors = $OldDomain.DkimSelectors
-                $Domain.MailProviders = $OldDomain.MailProviders
-            }
-            Update-AzDataTableEntity @DomainTable -Entity $Domain | Out-Null
-        }
-        Remove-Item -Path ".\Cache_DomainAnalyser\$($Object.Domain).DomainAnalysis.json" | Out-Null
-    }
-}
-
-
-
 if ($Request.Query.tenantFilter -ne 'AllTenants') {
-
     $DomainTable.Filter = "TenantId eq '{0}'" -f $Request.Query.tenantFilter
 }
 
