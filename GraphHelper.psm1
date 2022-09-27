@@ -126,6 +126,7 @@ function New-GraphGetRequest {
         $scope, 
         $AsApp, 
         $noPagination,
+        $NoAuthCheck,
         [switch]$ComplexFilter
     ) 
 
@@ -154,7 +155,7 @@ function New-GraphGetRequest {
             RowKey          = 'Failed'
         }
     }
-    if ((Get-AuthorisedRequest -Uri $uri -TenantID $tenantid)) {
+    if ((Get-AuthorisedRequest -Uri $uri -TenantID $tenantid) -or $NoAuthCheck) {
         $ReturnedData = do {
             try {
                 $Data = (Invoke-RestMethod -Uri $nextURL -Method GET -Headers $headers -ContentType 'application/json; charset=utf-8')
@@ -179,7 +180,7 @@ function New-GraphGetRequest {
     }
 }       
 
-function New-GraphPOSTRequest ($uri, $tenantid, $body, $type, $scope, $AsApp) {
+function New-GraphPOSTRequest ($uri, $tenantid, $body, $type, $scope, $AsApp, $NoAuthCheck) {
 
     $headers = Get-GraphToken -tenantid $tenantid -scope $scope -AsApp $asapp
     Write-Verbose "Using $($uri) as url"
@@ -187,7 +188,7 @@ function New-GraphPOSTRequest ($uri, $tenantid, $body, $type, $scope, $AsApp) {
         $type = 'POST'
     }
    
-    if ((Get-AuthorisedRequest -Uri $uri -TenantID $tenantid)) {
+    if ((Get-AuthorisedRequest -Uri $uri -TenantID $tenantid) -or $NoAuthCheck) {
         try {
             $ReturnedData = (Invoke-RestMethod -Uri $($uri) -Method $TYPE -Body $body -Headers $headers -ContentType 'application/json; charset=utf-8')
         }
