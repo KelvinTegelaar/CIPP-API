@@ -32,7 +32,7 @@ if ($tenantObjectId) {
         $Tenant.displayName = $tenantDisplayName
         Update-AzDataTableEntity @TenantsTable -Entity $Tenant
         Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $($Tenant) -message "Edited tenant $($Tenant)" -Sev 'Info'
-        $results = "Successfully amended details for $($Tenant)"
+        $results = "Successfully amended details for $($Tenant.displayName)"
     }
     catch { 
         $results = "Failed to amend details for $($Tenant): $($_.Exception.Message)"

@@ -13,8 +13,7 @@ Write-Host "PowerShell HTTP trigger function processed a request."
 # Interact with query parameters or the body of the request.
 $TenantFilter = $Request.Query.TenantFilter
 try {
-    $body = '{"deletedUserPersonalSiteRetentionPeriodInDays":360}'
-    $GraphRequest = (Get-Item $PSScriptRoot).Parent.FullName
+    $GraphRequest = New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/users' -tenantid $TenantFilter -AsApp $true
     $StatusCode = [HttpStatusCode]::OK
 }
 catch {
