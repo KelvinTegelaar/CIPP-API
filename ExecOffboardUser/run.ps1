@@ -167,7 +167,7 @@ try {
         }
         { $_."forward" -ne "" } { 
             try {
-                $permissions = New-ExoRequest -tenantid $TenantFilter -cmdlet "Set-mailbox" -cmdParams @{Identity = $userid; ForwardingAddress = $_.forward ; DeliverToMailboxAndForward = $true }
+                $permissions = New-ExoRequest -tenantid $TenantFilter -cmdlet "Set-mailbox" -cmdParams @{Identity = $userid; ForwardingAddress = $_.forward ; DeliverToMailboxAndForward = [bool]$request.body.keepCopy }
                 "Forwarding all email for $username to $($_.Forward)"
                 Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME  -message "Set Forwarding for $($username) to $($_.Forward)" -Sev "Info" -tenant $TenantFilter
 
