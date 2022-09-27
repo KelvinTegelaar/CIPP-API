@@ -173,7 +173,7 @@ try {
                   Remove-AzDataTableRow @Table -Entity $Rows
 
                   $step = 7
-                  $Results = @{"message" = "Installation completed."; step = $step
+                  $Results = @{"message" = "Installation completed. You must perform a token cache clear. For instructions click "; step = $step ; url = "https://cipp.app/docs/general/troubleshooting/#clear-token-cache"
                   }
             }
       }
