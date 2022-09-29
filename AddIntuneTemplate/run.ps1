@@ -58,7 +58,19 @@ try {
                 $DisplayName = $Template.displayName
                 $TemplateJsonItems = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/deviceManagement/$($urlname)('$($ID)')/definitionValues?`$expand=definition" -tenantid $tenantfilter
                 $TemplateJsonSource = foreach ($TemplateJsonItem in $TemplateJsonItems) {
-                    $presentationValues = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/deviceManagement/$($urlname)('$($ID)')/definitionValues('$($TemplateJsonItem.id)')/presentationValues?`$expand=presentation" -tenantid $tenantfilter | Select-Object id, value, '@odata.type', @{label = "presentation@odata.bind"; Expression = { "https://graph.microsoft.com/beta/deviceManagement/groupPolicyDefinitions('$($TemplateJsonItem.definition.id)')/presentations('$($_.presentation.id)')" } }
+                    $presentationValues = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/deviceManagement/$($urlname)('$($ID)')/definitionValues('$($TemplateJsonItem.id)')/presentationValues?`$expand=presentation" -tenantid $tenantfilter | ForEach-Object {
+                        $obj = $_
+                        if ($obj.id) {
+                            $PresObj = @{
+                                id                        = $obj.id
+                                "presentation@odata.bind" = "https://graph.microsoft.com/beta/deviceManagement/groupPolicyDefinitions('$($TemplateJsonItem.definition.id)')/presentations('$($obj.presentation.id)')"
+                            }
+                            if ($obj.values) { $PresObj['values'] = $obj.values }
+                            if ($obj.value) { $PresObj['value'] = $obj.value }
+                            if ($obj.'@odata.type') { $PresObj['@odata.type'] = $obj.'@odata.type' }
+                            [pscustomobject]$PresObj
+                        }
+                    }
                     [PSCustomObject]@{
                         'definition@odata.bind' = "https://graph.microsoft.com/beta/deviceManagement/groupPolicyDefinitions('$($TemplateJsonItem.definition.id)')"
                         enabled                 = $TemplateJsonItem.enabled
@@ -73,7 +85,7 @@ try {
                 }
                 
 
-                $TemplateJson = (ConvertTo-Json -InputObject $inputvar -Depth 6 -Compress)
+                $TemplateJson = (ConvertTo-Json -InputObject $inputvar -Depth 15 -Compress)
             }
         }
        

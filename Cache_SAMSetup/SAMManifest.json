@@ -101,6 +101,10 @@
         { "id": "ee928332-e9c2-4747-b4a0-f8c164b68de6", "type": "Scope" },
         { "id": "c975dd04-a06e-4fbb-9704-62daad77bb49", "type": "Scope" },
         { "id": "c37c9b61-7762-4bff-a156-afc0005847a0", "type": "Scope" },
+        { "id": "b9abcc4f-94fc-4457-9141-d20ce80ec952", "type": "Scope" },
+        { "id": "128ca929-1a19-45e6-a3b8-435ec44a36ba", "type": "Scope" },
+        { "id": "b27add92-efb2-4f16-84f5-8108ba77985c", "type": "Scope" },
+        { "id": "5b07b0dd-2377-4e44-a38d-703f09a0dc3c", "type": "Scope" },
         { "id": "19b94e34-907c-4f43-bde9-38b1909ed408", "type": "Role" },
         { "id": "999f8c63-0a38-4f1b-91fd-ed1947bdd1a9", "type": "Role" },
         { "id": "292d869f-3427-49a8-9dab-8c70152b74e9", "type": "Role" },
@@ -136,7 +140,11 @@
         { "id": "35930dcf-aceb-4bd1-b99a-8ffed403c974", "type": "Role" },
         { "id": "25f85f3c-f66c-4205-8cd5-de92dd7f0cec", "type": "Role" },
         { "id": "29c18626-4985-4dcd-85c0-193eef327366", "type": "Role" },
-        { "id": "4437522e-9a86-4a41-a7da-e380edd4a97d", "type": "Role" }
+        { "id": "4437522e-9a86-4a41-a7da-e380edd4a97d", "type": "Role" },
+        { "id": "34bf0e97-1971-4929-b999-9e2442d941d7", "type": "Role" },
+        { "id": "45cc0394-e837-488b-a098-1918f48d186c", "type": "Role" },
+        { "id": "be74164b-cff1-491c-8741-e671cb536e13", "type": "Role" },
+        { "id": "3404d2bf-2b13-457e-a330-c24615765193", "type": "Role" }
       ]
     },
     {

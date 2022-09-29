@@ -1,4 +1,6 @@
 param($name)
+
+Write-Host "QUEUEQUE"
 $Table = Get-CippTable -tablename 'standards'
 $tenants = (Get-AzDataTableRow @Table -Filter $Filter).JSON | ConvertFrom-Json
 
