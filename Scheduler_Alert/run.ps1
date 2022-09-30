@@ -141,11 +141,11 @@ try {
         }
         { $_.'NoCAConfig' -eq $true } {
             try {
-                $CAAvailable = (New-GraphGetRequest -uri "https://graph.microsoft.com/beta/subscribedSkus" -tenantid $Tenant.Tenant -erroraction stop).serviceplans
+                $CAAvailable = (New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/subscribedSkus' -tenantid $Tenant.Tenant -erroraction stop).serviceplans
                 if ('AAD_PREMIUM' -in $CAAvailable.servicePlanName) {
-                    $CAPolicies = (New-GraphGetRequest -uri "https://graph.microsoft.com/v1.0/identity/conditionalAccess/policies" -tenantid $Tenant.Tenant) 
+                    $CAPolicies = (New-GraphGetRequest -uri 'https://graph.microsoft.com/v1.0/identity/conditionalAccess/policies' -tenantid $Tenant.Tenant) 
                     if (!$CAPolicies.id) {
-                        "Conditional Access is available, but no policies could be found." 
+                        'Conditional Access is available, but no policies could be found.' 
                     }
                 }
             }
@@ -209,10 +209,13 @@ try {
                 $LastRun = Get-AzDataTableEntity @LastRunTable -Filter $Filter
                 $Yesterday = (Get-Date).AddDays(-1)
                 if (-not $LastRun.Timestamp.DateTime -or ($LastRun.Timestamp.DateTime -le $Yesterday)) {
-                    $Apn = New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/deviceManagement/applePushNotificationCertificate' -tenantid $Tenant.tenant 
-                    if ($Apn.expirationDateTime -lt (Get-Date).AddDays(30) -and $Apn.expirationDateTime -gt (Get-Date).AddDays(-7)) {
-                        "Apple Push Notification certificate for '{0}' is expiring on {1}" -f $App.appleIdentifier, $Apn.expirationDateTime
+                    try { 
+                        $Apn = New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/deviceManagement/applePushNotificationCertificate' -tenantid $Tenant.tenant 
+                        if ($Apn.expirationDateTime -lt (Get-Date).AddDays(30) -and $Apn.expirationDateTime -gt (Get-Date).AddDays(-7)) {
+                            "Apple Push Notification certificate for '{0}' is expiring on {1}" -f $App.appleIdentifier, $Apn.expirationDateTime
+                        }
                     }
+                    catch {}
                 }
                 $LastRun = @{
                     RowKey       = 'ApnCertExpiry'
@@ -231,15 +234,18 @@ try {
                 $LastRun = Get-AzDataTableEntity @LastRunTable -Filter $Filter
                 $Yesterday = (Get-Date).AddDays(-1)
                 if (-not $LastRun.Timestamp.DateTime -or ($LastRun.Timestamp.DateTime -le $Yesterday)) {
-                    $VppTokens = (New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/deviceAppManagement/vppTokens' -tenantid $Tenant.tenant).value 
-                    foreach ($Vpp in $VppTokens) {
-                        if ($Vpp.state -ne 'valid') {
-                            'Apple Volume Purchase Program Token is not valid, new token required'
+                    try {
+                        $VppTokens = (New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/deviceAppManagement/vppTokens' -tenantid $Tenant.tenant).value 
+                        foreach ($Vpp in $VppTokens) {
+                            if ($Vpp.state -ne 'valid') {
+                                'Apple Volume Purchase Program Token is not valid, new token required'
+                            }
+                            if ($Vpp.expirationDateTime -lt (Get-Date).AddDays(30) -and $Vpp.expirationDateTime -gt (Get-Date).AddDays(-7)) {
+                                'Apple Volume Purchase Program token expiring on {0}' -f $Vpp.expirationDateTime
+                            } 
                         }
-                        if ($Vpp.expirationDateTime -lt (Get-Date).AddDays(30) -and $Vpp.expirationDateTime -gt (Get-Date).AddDays(-7)) {
-                            'Apple Volume Purchase Program token expiring on {0}' -f $Vpp.expirationDateTime
-                        } 
                     }
+                    catch {}
                     $LastRun = @{
                         RowKey       = 'VppTokenExpiry'
                         PartitionKey = $Tenant.tenantid
@@ -258,12 +264,15 @@ try {
                 $LastRun = Get-AzDataTableEntity @LastRunTable -Filter $Filter
                 $Yesterday = (Get-Date).AddDays(-1)
                 if (-not $LastRun.Timestamp.DateTime -or ($LastRun.Timestamp.DateTime -le $Yesterday)) {
-                    $DepTokens = (New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/deviceManagement/depOnboardingSettings' -tenantid $Tenant.tenant).value 
-                    foreach ($Dep in $DepTokens) {
-                        if ($Dep.tokenExpirationDateTime -lt (Get-Date).AddDays(30) -and $Dep.tokenExpirationDateTime -gt (Get-Date).AddDays(-7)) {
-                            'Apple Device Enrollment Program token expiring on {0}' -f $Dep.expirationDateTime
+                    try {
+                        $DepTokens = (New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/deviceManagement/depOnboardingSettings' -tenantid $Tenant.tenant).value 
+                        foreach ($Dep in $DepTokens) {
+                            if ($Dep.tokenExpirationDateTime -lt (Get-Date).AddDays(30) -and $Dep.tokenExpirationDateTime -gt (Get-Date).AddDays(-7)) {
+                                'Apple Device Enrollment Program token expiring on {0}' -f $Dep.expirationDateTime
+                            }
                         }
                     }
+                    catch {}
                     $LastRun = @{
                         RowKey       = 'DepTokenExpiry'
                         PartitionKey = $Tenant.tenantid
@@ -281,6 +290,7 @@ try {
     $Table = Get-CIPPTable
     $PartitionKey = Get-Date -UFormat '%Y%m%d'
     $Filter = "PartitionKey eq '{0}' and Tenant eq '{1}'" -f $PartitionKey, $tenant.tenant
+    Write-Host $Filter
     $currentlog = Get-AzDataTableEntity @Table -Filter $Filter
 
     $ShippedAlerts | ForEach-Object {
