@@ -18,8 +18,10 @@ $logRequest = @{
 
 Add-AzDataTableEntity @Table -Entity $logRequest -Force | Out-Null
 
-$ExistingGroups = New-GraphGetRequest -NoAuthCheck $True -asApp $true -uri "https://graph.microsoft.com/beta/groups" -tenantid $TenantFilter
 $RoleMappings = foreach ($group in $Groups) {
+    $randomSleep = Get-Random -Minimum 10 -Maximum 500
+    Start-Sleep -Milliseconds $randomSleep
+    $ExistingGroups = New-GraphGetRequest -NoAuthCheck $True -asApp $true -uri "https://graph.microsoft.com/beta/groups" -tenantid $TenantFilter
     try {
         if ("M365 GDAP $($Group.Name)" -in $ExistingGroups.displayName) {
             @{
@@ -70,9 +72,10 @@ try {
     } | ConvertTo-Json -Depth 5 -Compress
     Write-Host  $JSONBody
     $MigrateRequest = New-GraphPostRequest -NoAuthCheck $True -uri "https://traf-pcsvcadmin-prod.trafficmanager.net/CustomerServiceAdminApi/Web//v1/delegatedAdminRelationships/migrate" -type POST -body $JSONBody -verbose -tenantid $ENV:TenantId -scope 'https://api.partnercustomeradministration.microsoft.com/.default'
+    Start-Sleep -Milliseconds 100
     do {
         $CheckActive = New-GraphGetRequest -NoAuthCheck $True -uri "https://traf-pcsvcadmin-prod.trafficmanager.net/CustomerServiceAdminApi/Web//v1/delegatedAdminRelationships/$($MigrateRequest.id)" -tenantid $ENV:TenantId  -scope 'https://api.partnercustomeradministration.microsoft.com/.default'
-        Start-Sleep -Milliseconds 600
+        Start-Sleep -Milliseconds 200
     } until ($CheckActive.status -eq "Active")
 }
 catch {
@@ -98,6 +101,7 @@ if ($CheckActive.status -eq "Active") {
                 }
             }
             $RoleActiveID = New-GraphPostRequest -NoAuthCheck $True -uri "https://traf-pcsvcadmin-prod.trafficmanager.net/CustomerServiceAdminApi/Web//v1/delegatedAdminRelationships/$($MigrateRequest.id)/accessAssignments" -tenantid $ENV:TenantId -type POST -body $MappingBody  -verbose  -scope 'https://api.partnercustomeradministration.microsoft.com/.default'
+            Start-Sleep -Milliseconds 400
             $LogRequest['status'] = "Step 3: GDAP Relationship active. Mapping group: $($Role.GroupId)"
             Add-AzDataTableEntity @Table -Entity $logRequest -Force | Out-Null
         }
