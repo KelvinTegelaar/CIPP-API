@@ -18,7 +18,7 @@ $SelectList = 'id', 'displayName', 'userPrincipalName'
 $GraphRequest = foreach ($Role in $Roles) {
 	
 	#[System.Collections.Generic.List[PSCustomObject]]$Members = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/directoryRoles/$($Role.id)/members?`$select=$($selectlist -join ',')" -tenantid $TenantFilter | Select-Object $SelectList
-	$Members = if ($Role.members) { $role.members | ForEach-Object { "$($_.displayName) ($($_.userPrincipalName))" } } else { "none" }
+	$Members = if ($Role.members) { $role.members | ForEach-Object { " $($_.displayName) ($($_.userPrincipalName))" } } else { "none" }
 	[PSCustomObject]@{
 		DisplayName = $Role.displayName
 		Description = $Role.description
