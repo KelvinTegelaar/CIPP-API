@@ -36,7 +36,7 @@ try {
         }
         New-ExoRequest -tenantid $groupobj.tenantid -cmdlet "New-DistributionGroup" -cmdParams $params
     }
-    $body = [pscustomobject]@{"Results" = "Succesfully created group. $($_.Exception.Message)" }
+    $body = [pscustomobject]@{"Results" = "Successfully created group. $($_.Exception.Message)" }
     Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $($groupobj.tenantid) -message "Created group $($groupobj.displayname) with id $($GraphRequest.id) " -Sev "Info"
 
 }

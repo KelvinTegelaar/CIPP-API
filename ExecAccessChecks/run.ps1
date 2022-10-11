@@ -127,9 +127,9 @@ if ($Request.query.Tenants -eq 'true') {
             $token = New-GraphGetRequest -uri 'https://graph.microsoft.com/v1.0/Organization' -tenantid $tenant
             @{
                 TenantName = "$($Tenant)"
-                Status     = 'Succesfully connected' 
+                Status     = 'Successfully connected' 
             }
-            Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $tenant -message 'Tenant access check executed succesfully' -Sev 'Info'
+            Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $tenant -message 'Tenant access check executed successfully' -Sev 'Info'
 
         }
         catch {
@@ -145,7 +145,7 @@ if ($Request.query.Tenants -eq 'true') {
             $GraphRequest = New-ExoRequest -tenantid $Tenant -cmdlet 'Get-OrganizationConfig' -ErrorAction Stop
             @{ 
                 TenantName = "$($Tenant)"
-                Status     = 'Succesfully connected to Exchange'
+                Status     = 'Successfully connected to Exchange'
             }
 
         }

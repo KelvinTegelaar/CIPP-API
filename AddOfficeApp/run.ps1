@@ -73,7 +73,7 @@ $results = foreach ($Tenant in $tenants) {
             New-graphPostRequest -Uri "https://graph.microsoft.com/beta/deviceAppManagement/mobileApps/$($OfficeAppID.id)/assign" -tenantid $tenant -Body $AssignO365 -type POST
             Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APIName -tenant $($tenant) -message "Assigned Office to $AssignTo" -Sev "Info"
         }
-        "Succesfully added Office Application for $($Tenant)"
+        "Successfully added Office Application for $($Tenant)"
     }
     catch {
         "Failed to add Office App for $($Tenant): $($_.Exception.Message)"
