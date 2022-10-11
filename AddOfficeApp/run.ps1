@@ -50,6 +50,7 @@ $results = foreach ($Tenant in $tenants) {
                 "autoAcceptEula"                       = [bool]$request.body.AcceptLicense
                 "excludedApps"                         = $ExcludedApps
                 "officePlatformArchitecture"           = $Arch
+                "officeSuiteAppDefaultFileFormat"      = "OfficeOpenXMLFormat"
                 "localesToInstall"                     = @($request.body.languages.value)
                 "shouldUninstallOlderVersionsOfOffice" = [bool]$request.body.RemoveVersions
                 "updateChannel"                        = $request.body.updateChannel.value
