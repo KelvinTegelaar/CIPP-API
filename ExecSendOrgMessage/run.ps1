@@ -12,18 +12,19 @@ Write-Host "PowerShell HTTP trigger function processed a request."
 
 # Interact with query parameters or the body of the request.
 $TenantFilter = $Request.Query.TenantFilter
+$Device = $request.query.ID
 try {
 
     $tmpbody = ConvertTo-Json -Depth 10 -InputObject @{
         scenario      = "lifecycle"
         surface       = "actionCenter"
         startDateTime	= (Get-Date).ToString("O")
-        endDateTime   = (Get-Date).AddDays('10').ToString("O")
+        endDateTime   = (Get-Date).AddYears('10').ToString("O")
         frequency     = 'weeklyOnce'
         theme         = "welcomeToWindows"
         targeting     = @{
             targetingType = 'aadGroup'
-            includeIds    = @('71a0e6ca-2019-497d-a922-a3d528566b40')
+            includeIds    = @($Device)
         }
         content       = @{
             placementDetails = @(@{
@@ -32,7 +33,8 @@ try {
                             variantId      = (New-Guid).Guid
                             name           = (New-Guid).Guid
                             localizedTexts = @(@{
-                                    text = @{
+                                    locale = "EN-us"
+                                    text   = @{
                                         title      = 'Title value'
                                         message    = 'Message value'
                                         clickUrl   = 'https://example.com/clickUrl/'
