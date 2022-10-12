@@ -13,8 +13,7 @@ Write-Host "PowerShell HTTP trigger function processed a request."
 # Interact with query parameters or the body of the request.
 $TenantFilter = $Request.Query.TenantFilter
 try {
-    $GraphRequest = New-GraphPOSTRequest -type "POST" -NoAuthCheck $True -uri "https://traf-pcsvcadmin-prod.trafficmanager.net/CustomerServiceAdminApi/Web/v1/granularAdminRelationships/7aad2ff9-4326-4e1e-ad2d-90ca66eac1c8-529ceae5-f210-42e8-9645-7f44fb00e543/UpdateStatus" -tenantid $ENV:TenantId  -scope 'https://api.partnercustomeradministration.microsoft.com/.default' -body '{"status":"terminationRequested"}'
-
+    $GraphRequest = New-GraphgetRequest -noauthcheck $true -uri "https://management.azure.com/providers/Microsoft.Capacity/reservations?api-version=2020-06-01" -scope "https://management.azure.com/.default" -tenantid $TenantFilter
     $StatusCode = [HttpStatusCode]::OK
 }
 catch {
