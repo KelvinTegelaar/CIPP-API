@@ -35,10 +35,13 @@ else {
 }
 Set-Location (Get-Item $PSScriptRoot).Parent.FullName
 $ConvertTable = Import-Csv Conversiontable.csv
+$LicenseTable = Get-CIPPTable -TableName ExcludedLicenses
+$ExcludedSkuList = Get-AzDataTableEntity @LicenseTable
 if (!$GraphRequest) {
     $GraphRequest = foreach ($singlereq in $RawGraphRequest) {
         $skuid = $singlereq.Licenses
         foreach ($sku in $skuid) {
+            if ($sku.skuId -in $ExcludedSkuList.GUID) { continue }
             $PrettyName = ($ConvertTable | Where-Object { $_.guid -eq $sku.skuid }).'Product_Display_Name' | Select-Object -Last 1
             if (!$PrettyName) { $PrettyName = $sku.skuPartNumber }
             [PSCustomObject]@{
