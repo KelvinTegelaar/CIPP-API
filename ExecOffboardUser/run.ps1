@@ -49,7 +49,7 @@ try {
                 try { 
                     $RemoveRequest = New-GraphPostRequest -uri "https://graph.microsoft.com/beta/groups/$_/members/$($userid)/`$ref" -tenantid $tenantFilter -type DELETE -body '' -Verbose
                     $Groupname = (New-GraphGetRequest -uri "https://graph.microsoft.com/beta/groups/$_" -tenantid $tenantFilter).displayName
-                    "Succesfully removed user from group $Groupname"
+                    "Successfully removed user from group $Groupname"
                     Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME  -message "Removed groups for $($username)" -Sev "Info"  -tenant $TenantFilter
 
                 }
@@ -167,7 +167,7 @@ try {
         }
         { $_."forward" -ne "" } { 
             try {
-                $permissions = New-ExoRequest -tenantid $TenantFilter -cmdlet "Set-mailbox" -cmdParams @{Identity = $userid; ForwardingAddress = $_.forward ; DeliverToMailboxAndForward = $true }
+                $permissions = New-ExoRequest -tenantid $TenantFilter -cmdlet "Set-mailbox" -cmdParams @{Identity = $userid; ForwardingAddress = $_.forward ; DeliverToMailboxAndForward = [bool]$request.body.keepCopy }
                 "Forwarding all email for $username to $($_.Forward)"
                 Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME  -message "Set Forwarding for $($username) to $($_.Forward)" -Sev "Info" -tenant $TenantFilter
 

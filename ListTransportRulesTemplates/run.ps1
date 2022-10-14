@@ -23,12 +23,13 @@ $Templates = Get-ChildItem "Config\*.TransportRuleTemplate.json" | ForEach-Objec
 $Table = Get-CippTable -tablename 'templates'
 $Filter = "PartitionKey eq 'TransportTemplate'" 
 $Templates = (Get-AzDataTableRow @Table -Filter $Filter) | ForEach-Object {
+    $GUID = $_.RowKey
     $data = $_.JSON | ConvertFrom-Json 
-    $data | Add-Member -NotePropertyName "GUID" -NotePropertyValue $_.GUID
+    $data | Add-Member -NotePropertyName "GUID" -NotePropertyValue $GUID
     $data 
 }
 
-if ($Request.query.ID) { $Templates = $Templates | Where-Object -Property guid -EQ $Request.query.id }
+if ($Request.query.ID) { $Templates = $Templates | Where-Object -Property RowKey -EQ $Request.query.id }
 
 
 # Associate values to output bindings by calling 'Push-OutputBinding'.

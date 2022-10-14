@@ -21,7 +21,7 @@ if ($AddMembers) {
             $MemberIDs = "https://graph.microsoft.com/v1.0/directoryObjects/" + (New-GraphGetRequest -uri "https://graph.microsoft.com/beta/users/$($_)" -tenantid $Userobj.tenantid).id 
             $addmemberbody = "{ `"members@odata.bind`": $(ConvertTo-Json @($MemberIDs)) }"
             if ($userobj.groupType -eq "Distribution list" -or $userobj.groupType -eq "Mail-Enabled Security") {
-                $Params = @{ Identity = $userobj.groupid; Member = $member }
+                $Params = @{ Identity = $userobj.groupid; Member = $member; BypassSecurityGroupManagerCheck = $true }
                 New-ExoRequest -tenantid $Userobj.tenantid -cmdlet "Add-DistributionGroupMember" -cmdParams $params
             }
             else {
@@ -104,6 +104,26 @@ catch {
     $body = $results.add("Could not remove $RemoveMembers from $($userobj.Groupid). $($_.Exception.Message)")
 }
 
+if ($userobj.allowExternal -eq 'true') {
+    try {
+        if ($userobj.groupType -eq "Distribution list") {
+            $Params = @{ Identity = $userobj.groupid; RequireSenderAuthenticationEnabled = $false }
+            New-ExoRequest -tenantid $Userobj.tenantid -cmdlet "Set-DistributionGroup" -cmdParams $params
+        }
+        else {
+            $Params = @{ Identity = $userobj.groupid; RequireSenderAuthenticationEnabled = $false }
+            New-ExoRequest -tenantid $Userobj.tenantid -cmdlet "Set-UnifiedGroup" -cmdParams $params
+        }
+        $body = $results.add("Allowed external senders to send to $($userobj.Groupid).")
+        Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $Userobj.tenantid -message "Allowed external senders to send to $($userobj.Groupid)" -Sev "Error"
+
+    }
+    catch {
+        $body = $results.add("Failed to allow external senders to send to $($userobj.Groupid).")
+        Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $Userobj.tenantid -message "Failed to allow external senders for $($userobj.Groupid). $($_.Exception.Message)" -Sev "Error"
+    }
+
+}
 
 $body = @{"Results" = @($results) }
 # Associate values to output bindings by calling 'Push-OutputBinding'.

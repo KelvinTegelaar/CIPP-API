@@ -14,14 +14,15 @@ Write-Host "PowerShell HTTP trigger function processed a request."
 $TenantFilter = $Request.Query.TenantFilter
 $SelectList = 'id', 'displayName', 'userPrincipalName'
 
-[System.Collections.Generic.List[PSCustomObject]]$Roles = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/directoryRoles" -tenantid $TenantFilter
-
+[System.Collections.Generic.List[PSCustomObject]]$Roles = New-GraphGetRequest -uri "https://graph.microsoft.com/v1.0/directoryRoles?`$expand=members" -tenantid $TenantFilter
 $GraphRequest = foreach ($Role in $Roles) {
-	[System.Collections.Generic.List[PSCustomObject]]$Members = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/directoryRoles/$($Role.id)/members?`$select=$($selectlist -join ',')" -tenantid $TenantFilter | select-object $SelectList
+	
+	#[System.Collections.Generic.List[PSCustomObject]]$Members = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/directoryRoles/$($Role.id)/members?`$select=$($selectlist -join ',')" -tenantid $TenantFilter | Select-Object $SelectList
+	$Members = if ($Role.members) { $role.members | ForEach-Object { " $($_.displayName) ($($_.userPrincipalName))" } } else { "none" }
 	[PSCustomObject]@{
-		DisplayName    = $Role.displayName
+		DisplayName = $Role.displayName
 		Description = $Role.description
-		Members = ($Members | ForEach-Object { $Return = "$($_.displayName)"; if ($_.userPrincipalName){$Return = $Return + " ($($_.userPrincipalName))"}; $Return}) -join ', '
+		Members     = $Members -join ','
 	}
 }
 

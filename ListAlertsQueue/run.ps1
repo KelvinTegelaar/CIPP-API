@@ -26,6 +26,10 @@ $CurrentStandards = foreach ($QueueFile in $QueuedApps) {
         QuotaUsed       = [bool]$QueueFile.QuotaUsed
         UnusedLicenses  = [bool]$QueueFile.UnusedLicenses
         AppSecretExpiry = [bool]$QueueFile.AppSecretExpiry
+        ApnCertExpiry   = [bool]$QueueFile.ApnCertExpiry
+        VppTokenExpiry  = [bool]$QueueFile.VppTokenExpiry
+        DepTokenExpiry  = [bool]$QueueFile.DepTokenExpiry
+        NoCAConfig      = [bool]$QueueFile.NoCAConfig
         tenantId        = $QueueFile.tenantid
     }
 }

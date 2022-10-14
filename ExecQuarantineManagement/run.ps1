@@ -22,7 +22,7 @@ Try {
     }
     Write-Host $params
     New-ExoRequest -tenantid $TenantFilter -cmdlet "Release-QuarantineMessage" -cmdParams $Params
-    $Results = [pscustomobject]@{"Results" = "Succesfully completed task." }
+    $Results = [pscustomobject]@{"Results" = "Successfully completed task." }
     Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $($tenantfilter) -message "$($request.query.id)" -Sev "Info"
 }
 catch {
