@@ -29,7 +29,7 @@ $results = foreach ($Tenant in $tenants) {
             microsoftDefenderForEndpointAttachEnabled           = [bool]$compliance.AllowMEMEnforceCompliance
         } | ConvertTo-Json -Compress
         $SettingsRequest = New-GraphPOSTRequest -uri "https://graph.microsoft.com/beta/deviceManagement/mobileThreatDefenseConnectors/" -tenantid $tenant -type POST -body $SettingsObj
-        "$($Tenant): Succesfully set Defender Compliance and Reporting settings"
+        "$($Tenant): Successfully set Defender Compliance and Reporting settings"
  
         $Settings = switch ($PolicySettings) {
             { $_.ScanArchives } {
@@ -89,7 +89,7 @@ $results = foreach ($Tenant in $tenants) {
                 $assign = New-GraphPOSTRequest -uri  "https://graph.microsoft.com/beta/deviceManagement/configurationPolicies('$($PolicyRequest.id)')/assign" -tenantid $tenant -type POST -body $AssignBody
                 Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $($Tenant) -message "Assigned policy $($Displayname) to $($PolicySettings.AssignTo)" -Sev "Info"
             }
-            "$($Tenant): Succesfully set Default AV Policy settings"
+            "$($Tenant): Successfully set Default AV Policy settings"
         }
         $ASRSettings = switch ($ASR) {
             { $_.BlockAdobeChild } { @{'@odata.type' = '#microsoft.graph.deviceManagementConfigurationChoiceSettingInstance' ; settingDefinitionId = 'device_vendor_msft_policy_config_defender_attacksurfacereductionrules_blockadobereaderfromcreatingchildprocesses' ; choiceSettingValue = @{ '@odata.type' = '#microsoft.graph.deviceManagementConfigurationchoiceSettingValue'; ; value = 'device_vendor_msft_policy_config_defender_attacksurfacereductionrules_blockadobereaderfromcreatingchildprocesses_block' } } }
@@ -141,7 +141,7 @@ $results = foreach ($Tenant in $tenants) {
                 $assign = New-GraphPOSTRequest -uri  "https://graph.microsoft.com/beta/deviceManagement/configurationPolicies('$($ASRRequest.id)')/assign" -tenantid $tenant -type POST -body $AssignBody
                 Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $($Tenant) -message "Assigned policy $($Displayname) to $($ASR.AssignTo)" -Sev "Info"
             }
-            "$($Tenant): Succesfully added ASR Settings"
+            "$($Tenant): Successfully added ASR Settings"
         }
 
         $EDRSettings = switch ($EDR) {
@@ -216,7 +216,7 @@ $results = foreach ($Tenant in $tenants) {
                 $assign = New-GraphPOSTRequest -uri  "https://graph.microsoft.com/beta/deviceManagement/configurationPolicies('$($EDRRequest.id)')/assign" -tenantid $tenant -type POST -body $AssignBody
                 Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $($Tenant) -message "Assigned EDR policy $($Displayname) to $($ASR.AssignTo)" -Sev "Info"
             }
-            "$($Tenant): Succesfully added EDR Settings"
+            "$($Tenant): Successfully added EDR Settings"
         }
 
     }

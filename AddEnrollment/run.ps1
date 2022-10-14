@@ -36,7 +36,7 @@ $results = foreach ($Tenant in $tenants) {
         Write-Host $body
         $ExistingStatusPage = (New-GraphGetRequest -Uri "https://graph.microsoft.com/beta/deviceManagement/deviceEnrollmentConfigurations" -tenantid $Tenant) | Where-Object { $_.id -like "*DefaultWindows10EnrollmentCompletionPageConfiguration" }
         $GraphRequest = New-GraphPOSTRequest -uri "https://graph.microsoft.com/beta/deviceManagement/deviceEnrollmentConfigurations/$($ExistingStatusPage.ID)" -body $body -Type PATCH -tenantid $tenant
-        "Succesfully changed default enrollment status page for $($Tenant)"
+        "Successfully changed default enrollment status page for $($Tenant)"
         Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $tenant -message "Added Autopilot Enrollment Status Page $($Displayname)" -Sev "Info"
 
     }
