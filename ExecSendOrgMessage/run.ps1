@@ -15,13 +15,11 @@ $TenantFilter = $Request.Query.TenantFilter
 $Device = $request.query.ID
 try {
 
-    $tmpbody = ConvertTo-Json -Depth 10 -InputObject @{
-        scenario      = "lifecycle"
+    $tmpbody = ConvertTo-Json -Depth 10 -Compress -InputObject @{
         surface       = "actionCenter"
         startDateTime	= (Get-Date).ToString("O")
         endDateTime   = (Get-Date).AddYears('10').ToString("O")
         frequency     = 'weeklyOnce'
-        theme         = "welcomeToWindows"
         targeting     = @{
             targetingType = 'aadGroup'
             includeIds    = @($Device)
@@ -31,14 +29,13 @@ try {
                     placement = 'default'
                     variants  = @(@{
                             variantId      = (New-Guid).Guid
-                            name           = (New-Guid).Guid
                             localizedTexts = @(@{
-                                    locale = "EN-us"
+                                    locale = "invariant"
                                     text   = @{
-                                        title      = 'Title value'
-                                        message    = 'Message value'
+                                        title      = 'This message'
+                                        message    = 'My Message Value'
                                         clickUrl   = 'https://example.com/clickUrl/'
-                                        buttonText = 'Button Text value'
+                                        buttonText = 'PlzClick'
                                     }
                                 })
                         })
@@ -48,8 +45,9 @@ try {
             }
         }
     }
-    $GraphRequest = New-GraphPOSTRequest -noauthcheck $true -type "POST" -uri "https://graph.microsoft.com/beta/deviceManagement/organizationalMessageDetails" -tenantid $tenantfilter -body $tmpbody
+    Write-Host $tmpbody
 
+    $GraphRequest = New-GraphPOSTRequest -noauthcheck $true -type "POST" -uri "https://graph.microsoft.com/beta/deviceManagement/organizationalMessageDetails" -tenantid $tenantfilter -body $tmpbody
     $StatusCode = [HttpStatusCode]::OK
 }
 catch {

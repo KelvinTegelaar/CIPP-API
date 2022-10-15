@@ -71,10 +71,12 @@ function Get-GraphToken($tenantid, $scope, $AsApp, $AppID, $refreshToken, $Retur
         $TenantsTable = Get-CippTable -tablename Tenants
         $Filter = "PartitionKey eq 'Tenants' and (defaultDomainName eq '{0}' or customerId eq '{0}')" -f $tenantid
         $Tenant = Get-AzDataTableRow @TenantsTable -Filter $Filter
-        if (!$Tenant) {
-            $Tenant = @{
+        if (!$Tenant.RowKey) {
+            $donotset = $true
+            $Tenant = [pscustomobject]@{
                 GraphErrorCount     = $null
                 LastGraphTokenError = $null
+                LastGraphError      = $null
                 PartitionKey        = 'TenantFailed'
                 RowKey              = 'Failed'
             }
@@ -88,7 +90,7 @@ function Get-GraphToken($tenantid, $scope, $AsApp, $AppID, $refreshToken, $Retur
         }
         $Tenant.GraphErrorCount++
 
-        Update-AzDataTableRow @TenantsTable -Entity $Tenant
+        if (!$donotset) { Update-AzDataTableRow @TenantsTable -Entity $Tenant }
         throw "$($Tenant.LastGraphError)"
     }
 }
