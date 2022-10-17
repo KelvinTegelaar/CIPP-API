@@ -160,8 +160,8 @@ try {
                 New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/subscribedSkus' -tenantid $Tenant.tenant | ForEach-Object {
                     $skuid = $_
                     foreach ($sku in $skuid) {
-                        if ($sku.skuId -in $ExcludedSkuList.guid) { continue }
-                        $PrettyName = ($ConvertTable | Where-Object { $_.guid -eq $sku.skuid }).'Product_Display_Name' | Select-Object -Last 1
+                        if ($sku.skuId -in $ExcludedSkuList.GUID) { continue }
+                        $PrettyName = ($ConvertTable | Where-Object { $_.GUID -eq $sku.skuid }).'Product_Display_Name' | Select-Object -Last 1
                         if (!$PrettyName) { $PrettyName = $skuid.skuPartNumber }
 
                         if ($sku.prepaidUnits.enabled - $sku.consumedUnits -ne 0) {

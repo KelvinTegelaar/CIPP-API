@@ -30,7 +30,7 @@ $results = try {
     }
 
     Add-AzDataTableEntity @Table -Entity $SchedulerConfig -Force | Out-Null
-    'Succesfully set the configuration'
+    'Successfully set the configuration'
 }
 catch {
     "Failed to set configuration: $($_.Exception.message)"

@@ -17,7 +17,7 @@ Try {
     $tenantfilter = $Request.Query.TenantFilter 
     New-ExoRequest -tenantid $TenantFilter -cmdlet "Set-mailbox" -cmdParams @{Identity = $request.query.id; type = $MailboxType }
 
-    $Results = [pscustomobject]@{"Results" = "Succesfully completed task." }
+    $Results = [pscustomobject]@{"Results" = "Successfully completed task." }
     Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $($tenantfilter) -message "Converted mailbox $($request.query.id)" -Sev "Info"
 }
 catch {
