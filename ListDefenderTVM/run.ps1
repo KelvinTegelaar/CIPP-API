@@ -16,6 +16,7 @@ try {
     $GraphRequest = New-GraphgetRequest -uri "https://api.securitycenter.microsoft.com/api/machines/SoftwareVulnerabilitiesByMachine?`$top=999" -scope "https://api.securitycenter.microsoft.com/.default" -tenantid $TenantFilter | Group-Object cveid
     $GroupObj = foreach ($cve in $GraphRequest) {
         [pscustomobject]@{
+            customerId                 = $TenantFilter
             affectedDevicesCount       = $cve.count
             cveId                      = $cve.name
             affectedDevices            = ($cve.group.deviceName -join ', ')
@@ -35,7 +36,7 @@ catch {
     $StatusCode = [HttpStatusCode]::Forbidden
     $GraphRequest = $ErrorMessage
 }
-# Associate values to output bindings by calling 'Push-OutputBinding'.
+# Associate values to output bindings by calling 'Push-OutputBinding'. 
 Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
         StatusCode = $StatusCode
         Body       = @($GroupObj)
