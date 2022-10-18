@@ -48,7 +48,7 @@ $results = foreach ($Tenant in $tenants) {
     
         $CreateRequest = New-GraphPOSTRequest -uri "https://graph.microsoft.com/v1.0/identity/conditionalAccess/policies" -tenantid $tenant -type POST -body $RawJSON
         Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $($Tenant) -message "Added Conditional Access Policy $($Displayname)" -Sev "Error"
-        "Succesfully added Conditional Access Policy for $($Tenant)"
+        "Successfully added Conditional Access Policy for $($Tenant)"
     }
     catch {
         "Failed to add policy for $($Tenant): $($_.Exception.Message)"

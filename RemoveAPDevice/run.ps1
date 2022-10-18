@@ -20,7 +20,7 @@ try {
         $GraphRequest = New-GraphPOSTRequest -uri "https://graph.microsoft.com/beta/deviceManagement/windowsAutopilotDeviceIdentities/$Deviceid" -tenantid $TenantFilter -type DELETE
     }
     Write-LogMessage -user $request.headers.'x-ms-client-principal' -tenant $TenantFilter -API $APINAME  -message "Deleted autopilot device $Deviceid" -Sev "Info"
-    $body = [pscustomobject]@{"Results" = "Succesfully deleted the autopilot device" }
+    $body = [pscustomobject]@{"Results" = "Successfully deleted the autopilot device" }
 }
 catch {
     Write-LogMessage -user $request.headers.'x-ms-client-principal' -tenant $TenantFilter -API $APINAME -message "Autopilot Delete API failed for $deviceid. The error is: $($_.Exception.Message)" -Sev "Error"

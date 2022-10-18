@@ -13,7 +13,7 @@ if (!$policyId) { exit }
 try {
     $GraphRequest = New-GraphPostRequest -uri "https://graph.microsoft.com/v1.0/identity/conditionalAccess/policies/$($policyId)" -type DELETE -tenant $TenantFilter
     Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME  -message "Deleted CA Policy $policyId" -Sev "Info" -tenant $TenantFilter
-    $body = [pscustomobject]@{"Results" = "Succesfully deleted the policy" }
+    $body = [pscustomobject]@{"Results" = "Successfully deleted the policy" }
 
 }
 catch {
