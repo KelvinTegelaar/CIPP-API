@@ -50,6 +50,7 @@ $results = foreach ($Tenant in $tenants) {
                 "autoAcceptEula"                       = [bool]$request.body.AcceptLicense
                 "excludedApps"                         = $ExcludedApps
                 "officePlatformArchitecture"           = $Arch
+                "officeSuiteAppDefaultFileFormat"      = "OfficeOpenXMLFormat"
                 "localesToInstall"                     = @($request.body.languages.value)
                 "shouldUninstallOlderVersionsOfOffice" = [bool]$request.body.RemoveVersions
                 "updateChannel"                        = $request.body.updateChannel.value
@@ -73,7 +74,7 @@ $results = foreach ($Tenant in $tenants) {
             New-graphPostRequest -Uri "https://graph.microsoft.com/beta/deviceAppManagement/mobileApps/$($OfficeAppID.id)/assign" -tenantid $tenant -Body $AssignO365 -type POST
             Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APIName -tenant $($tenant) -message "Assigned Office to $AssignTo" -Sev "Info"
         }
-        "Succesfully added Office Application for $($Tenant)"
+        "Successfully added Office Application for $($Tenant)"
     }
     catch {
         "Failed to add Office App for $($Tenant): $($_.Exception.Message)"
