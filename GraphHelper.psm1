@@ -424,28 +424,33 @@ function Get-Tenants {
 }
 
 function Remove-CIPPCache {
+    param (
+        $TenantsOnly
+    )
     # Remove all tenants except excluded
     $TenantsTable = Get-CippTable -tablename 'Tenants'
     $Filter = "PartitionKey eq 'Tenants' and Excluded eq false" 
     $ClearIncludedTenants = Get-AzDataTableRow @TenantsTable -Filter $Filter
     Remove-AzDataTableRow @TenantsTable -Entity $ClearIncludedTenants
+    if ($tenantsonly -eq 'false') {
+        Write-Host "Clearing all"
+        # Remove Domain Analyser cached results
+        $DomainsTable = Get-CippTable -tablename 'Domains'
+        $Filter = "PartitionKey eq 'TenantDomains'"
+        $ClearDomainAnalyserRows = Get-AzDataTableRow @DomainsTable -Filter $Filter | ForEach-Object {
+            $_.DomainAnalyser = ''
+            $_
+        }
+        Update-AzDataTableEntity @DomainsTable -Entity $ClearDomainAnalyserRows
+        #Clear BPA
+        $BPATable = Get-CippTable -tablename 'cachebpa'
+        $ClearBPARows = Get-AzDataTableRow @BPATable
+        Remove-AzDataTableEntity @BPATable -Entity $ClearBPARows
 
-    # Remove Domain Analyser cached results
-    $DomainsTable = Get-CippTable -tablename 'Domains'
-    $Filter = "PartitionKey eq 'TenantDomains'"
-    $ClearDomainAnalyserRows = Get-AzDataTableRow @DomainsTable -Filter $Filter | ForEach-Object {
-        $_.DomainAnalyser = ''
-        $_
+        $Script:SkipListCache = $Null
+        $Script:SkipListCacheEmpty = $Null
+        $Script:IncludedTenantsCache = $Null
     }
-    Update-AzDataTableEntity @DomainsTable -Entity $ClearDomainAnalyserRows
-    #Clear BPA
-    $BPATable = Get-CippTable -tablename 'cachebpa'
-    $ClearBPARows = Get-AzDataTableRow @BPATable
-    Remove-AzDataTableEntity @BPATable -Entity $ClearBPARows
-
-    $Script:SkipListCache = $Null
-    $Script:SkipListCacheEmpty = $Null
-    $Script:IncludedTenantsCache = $Null
 }
 
 function New-ExoRequest ($tenantid, $cmdlet, $cmdParams) {
