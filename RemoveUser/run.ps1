@@ -13,7 +13,7 @@ if (!$userid) { exit }
 try {
     $GraphRequest = New-GraphPostRequest -uri "https://graph.microsoft.com/beta/users/$($userid)" -type DELETE -tenant $TenantFilter
     Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME  -message "Deleted $userid" -Sev "Info" -tenant $TenantFilter
-    $body = [pscustomobject]@{"Results" = "Succesfully deleted the user." }
+    $body = [pscustomobject]@{"Results" = "Successfully deleted the user." }
 
 }
 catch {
