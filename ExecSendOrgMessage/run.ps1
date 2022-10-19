@@ -15,36 +15,53 @@ $TenantFilter = $Request.Query.TenantFilter
 $Device = $request.query.ID
 try {
 
-    $tmpbody = ConvertTo-Json -Depth 10 -Compress -InputObject @{
-        surface       = "actionCenter"
+    $object = [pscustomobject]@{
         startDateTime	= (Get-Date).ToString("O")
-        endDateTime   = (Get-Date).AddYears('10').ToString("O")
+        endDateTime   = (Get-Date).AddYears('1').ToString("O")
         frequency     = 'weeklyOnce'
         targeting     = @{
             targetingType = 'aadGroup'
             includeIds    = @($Device)
         }
         content       = @{
-            placementDetails = @(@{
-                    placement = 'default'
+            "guidedContentId" = "ce57aa57-7ed5-4ea1-87a8-f1764b03de8f"
+            placementDetails  = @(@{
+                    placement = 'card0'
                     variants  = @(@{
-                            variantId      = (New-Guid).Guid
+                            variantId      = "ed0d0fa2-df72-42f4-9866-66cf3de1fafb"
                             localizedTexts = @(@{
                                     locale = "invariant"
                                     text   = @{
-                                        title      = 'This message'
-                                        message    = 'My Message Value'
-                                        clickUrl   = 'https://example.com/clickUrl/'
-                                        buttonText = 'PlzClick'
+                                        "message"    = "My Message Value"
+                                        "clickUrl"   = "https://example.com/clickUrl/"
+                                        "title"      = "This message"
+                                        "buttonText" = "PlzClick"
+                                    }
+                                })
+                        })
+                }
+                @{
+                    placement = 'card1'
+                    variants  = @(@{
+                            variantId      = "ed0d0fa2-df72-42f4-9866-66cf3de1fafb"
+                            localizedTexts = @(@{
+                                    locale = "invariant"
+                                    text   = @{
+                                        "message"    = "My Message Value"
+                                        "clickUrl"   = "https://example.com/clickUrl/"
+                                        "title"      = "This message"
+                                        "buttonText" = "PlzClick"
                                     }
                                 })
                         })
                 })
-            logoInfo         = @{
-                logoCdnUrl = 'https://example.com/logoCdnUrl/'
+            logoInfo          = @{
+                contentType = "png"
+                logoCdnUrl  = 'https://hulpnu.nl/tools/Red.jpg'
             }
         }
     }
+    $tmpbody = ConvertTo-Json -Depth 15 -Compress -InputObject $object
     Write-Host $tmpbody
 
     $GraphRequest = New-GraphPOSTRequest -noauthcheck $true -type "POST" -uri "https://graph.microsoft.com/beta/deviceManagement/organizationalMessageDetails" -tenantid $tenantfilter -body $tmpbody
