@@ -13,13 +13,18 @@ Write-Host "PowerShell HTTP trigger function processed a request."
 # Interact with query parameters or the body of the request.
 $TenantFilter = $Request.Query.TenantFilter
 try {
-    $GraphRequest = New-GraphgetRequest -noauthcheck $true -uri "https://management.azure.com/providers/Microsoft.Capacity/reservations?api-version=2020-06-01" -scope "https://management.azure.com/.default" -tenantid $TenantFilter
+    $GraphRequest = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/identity/conditionalAccess/namedLocations" -Tenantid $tenantfilter | Select-Object *, 
+    @{
+        name       = "rangeOrLocation"
+        expression = { if ($_.ipRanges) { $_.ipranges.cidrAddress -join ', ' } else { $_.countriesAndRegions -join ', ' } }
+    }
     $StatusCode = [HttpStatusCode]::OK
 }
 catch {
     $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
     $StatusCode = [HttpStatusCode]::Forbidden
     $GraphRequest = $ErrorMessage
+
 }
 # Associate values to output bindings by calling 'Push-OutputBinding'.
 Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
