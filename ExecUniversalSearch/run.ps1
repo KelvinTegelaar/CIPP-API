@@ -13,6 +13,7 @@ Write-Host "PowerShell HTTP trigger function processed a request."
 # Interact with query parameters or the body of the request.
 $SearchObj = $Request.query.SearchObj
 try {
+    #future API. Currently not functional due to limitations in SWA.
     $GraphRequest = get-tenants | ForEach-Object {
         $DefaultDomainName = $_.defaultDomainName
         $TenantId = $_.customerId
