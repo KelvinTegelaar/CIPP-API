@@ -263,6 +263,8 @@ function Read-MXRecord {
         Domain     = $Domain
     }
 
+    Set-Location (Get-Item $PSScriptRoot).FullName
+    
     $NoMxValidation = 'There are no mail exchanger records for this domain. If you do not want to receive mail for this domain use a Null MX record of . with a priority 0 (RFC 7505).'
  
     $MXResults.Domain = $Domain

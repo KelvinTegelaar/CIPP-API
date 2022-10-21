@@ -30,7 +30,7 @@ try {
             Set-AzKeyVaultSecret -VaultName $kv -Name 'ExchangeRefreshToken' -SecretValue (ConvertTo-SecureString -String $request.body.exchangeRefreshToken -AsPlainText -Force)
             Set-AzKeyVaultSecret -VaultName $kv -Name 'applicationid' -SecretValue (ConvertTo-SecureString -String $request.body.applicationid -AsPlainText -Force)
             Set-AzKeyVaultSecret -VaultName $kv -Name 'applicationsecret' -SecretValue (ConvertTo-SecureString -String $request.body.applicationsecret -AsPlainText -Force)
-            $Results = @{ Results = "Replaced keys succesfully. Please clear your token cache or wait 24 hours for the cache to be cleared." }
+            $Results = @{ Results = "Replaced keys successfully. Please clear your token cache or wait 24 hours for the cache to be cleared." }
       }
       if ($Request.query.error -eq 'invalid_client') { $Results = "Client ID was not found in Azure. Try waiting 10 seconds to try again, if you have gotten this error after 5 minutes, please restart the process." }
       if ($request.query.code) {

@@ -12,7 +12,7 @@ $results = try {
     $EditBody = "{`"state`": `"$($request.query.state)`"}"
     $Request = New-GraphPOSTRequest -uri "https://graph.microsoft.com/beta//identity/conditionalAccess/policies/$($id)" -tenantid $tenant -type PATCH -body $EditBody
     Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $($Tenant) -message "Edited CA policy $($ID)" -Sev "Error"
-    "Succesfully edited CA policy"
+    "Successfully edited CA policy"
 }
 catch {
     "Failed to add CA policy: $($_.Exception.Message)"

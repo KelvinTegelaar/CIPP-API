@@ -91,7 +91,7 @@ try {
 }
 catch {
     Write-LogMessage -API $APINAME -tenant ($UserObj.tenantid) -user $request.headers.'x-ms-client-principal'   -message "Alias API failed. $($_.Exception.Message)" -Sev "Error"
-    $results.add( "Succesfully edited user. The password is $password. We've failed to create the Aliases: $($_.Exception.Message)")
+    $results.add( "Successfully edited user. The password is $password. We've failed to create the Aliases: $($_.Exception.Message)")
 }
 
 if ($Request.body.CopyFrom -ne "") {

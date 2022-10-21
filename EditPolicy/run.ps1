@@ -21,7 +21,7 @@ $results = try {
         $assign = New-GraphPOSTRequest -uri  "https://graph.microsoft.com/beta/deviceManagement/groupPolicyConfigurations('$($ID)')/assign" -tenantid $tenant -type POST -body $AssignBody
         Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $($Tenant) -message "Assigned policy $($Displayname) to $AssignTo" -Sev "Info"
     }
-    "Succesfully edited policy for $($Tenant)"
+    "Successfully edited policy for $($Tenant)"
 }
 catch {
     "Failed to add policy for $($Tenant): $($_.Exception.Message)"
