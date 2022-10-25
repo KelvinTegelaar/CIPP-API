@@ -35,7 +35,7 @@ $results = foreach ($Tenant in $tenants) {
         }
         $Body = ConvertTo-Json -InputObject $ObjBody
         $GraphRequest = New-GraphPOSTRequest -uri "https://graph.microsoft.com/beta/identity/conditionalAccess/namedLocations" -body $body -Type POST -tenantid $tenant
-        "Succesfully added Named Location for $($Tenant)"
+        "Successfully added Named Location for $($Tenant)"
         Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $tenant -message " added Named Location $($Displayname)" -Sev "Info"
 
     }

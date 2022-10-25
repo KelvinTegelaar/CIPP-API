@@ -12,7 +12,7 @@ $Tenants = ($Request.body | Select-Object Select_*).psobject.properties.value
 $Result = foreach ($Tenantfilter in $tenants) {
     try {
         $GraphRequest = New-ExoRequest -tenantid $Tenantfilter -cmdlet "New-TransportRule" -cmdParams $RequestParams
-        "Succesfully created transport rule for $tenantfilter."
+        "Successfully created transport rule for $tenantfilter."
         Write-LogMessage -API $APINAME -tenant $tenantfilter -message "Created transport rule for $($tenantfilter)" -sev Debug
     }
     catch {

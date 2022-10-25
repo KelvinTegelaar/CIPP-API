@@ -14,7 +14,7 @@ try {
     #$unAssignRequest = New-GraphPostRequest -uri "https://graph.microsoft.com/beta/deviceManagement/configurationPolicies('$($policyId)')/assign" -type POST -Body '{"assignments":[]}' -tenant $TenantFilter
     $GraphRequest = New-GraphPostRequest -uri "https://graph.microsoft.com/beta/deviceAppManagement/mobileApps/$($policyId)" -type DELETE -tenant $TenantFilter
     Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME  -message "Deleted $policyId" -Sev "Info" -tenant $TenantFilter
-    $body = [pscustomobject]@{"Results" = "Succesfully deleted the application" }
+    $body = [pscustomobject]@{"Results" = "Successfully deleted the application" }
 }
 catch {
     Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME  -message "Could not delete app $policyId. $($_.Exception.Message)" -Sev "Error" -tenant $TenantFilter
