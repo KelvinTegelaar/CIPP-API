@@ -4,7 +4,7 @@
 RootModule = 'AzBobbyTables.PS.dll'
 
 # Version number of this module.
-ModuleVersion = '2.2.2'
+ModuleVersion = '2.3.0'
 
 # Supported PSEditions
 CompatiblePSEditions = @('Core')
@@ -64,7 +64,7 @@ PowerShellVersion = '7.0'
 FunctionsToExport = @()
 
 # Cmdlets to export from this module, for best performance, do not use wildcards and do not delete the entry, use an empty array if there are no cmdlets to export.
-CmdletsToExport = @('Add-AzDataTableEntity', 'Get-AzDataTableEntity', 'Remove-AzDataTableEntity', 'Update-AzDataTableEntity')
+CmdletsToExport = @('Add-AzDataTableEntity', 'Clear-AzDataTable', 'Get-AzDataTableEntity', 'Remove-AzDataTableEntity', 'Update-AzDataTableEntity')
 
 # Variables to export from this module
 VariablesToExport = @()

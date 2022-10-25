@@ -81,17 +81,16 @@ catch {
 if ($Request.body.CopyFrom -ne "") {
     $MemberIDs = "https://graph.microsoft.com/v1.0/directoryObjects/" + (New-GraphGetRequest -uri "https://graph.microsoft.com/beta/users/$($GraphRequest.id)" -tenantid $Userobj.tenantid).id 
     $addmemberbody = "{ `"members@odata.bind`": $(ConvertTo-Json @($MemberIDs)) }"
-        (New-GraphPostRequest -uri "https://graph.microsoft.com/beta/users/$($Request.body.CopyFrom)/GetMemberGroups" -tenantid $Userobj.tenantid -type POST -body  '{"securityEnabledOnly": false}').value | ForEach-Object {
+        (New-GraphGETRequest -uri "https://graph.microsoft.com/beta/users/$($Request.body.CopyFrom)/memberOf" -tenantid $Userobj.tenantid) | ForEach-Object {
         try {
-            $groupname = (New-GraphGetRequest -tenantid $Userobj.tenantid -asApp $true -uri "https://graph.microsoft.com/beta/groups/$($_)").displayName
-            Write-Host "name: $groupname"
-            $GroupResult = New-GraphPostRequest -AsApp $true -uri "https://graph.microsoft.com/beta/groups/$($_)" -tenantid $Userobj.tenantid -type patch -body $addmemberbody -Verbose
-            Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME  -message "Added $($UserprincipalName) to group $groupresult.displayName)" -Sev "Info"  -tenant $TenantFilter
-            $body = $results.add("Added group: $($groupname)")
+            Write-Host "name: $($_.displayName)"
+            $GroupResult = New-GraphPostRequest -AsApp $true -uri "https://graph.microsoft.com/beta/groups/$($_.id)" -tenantid $Userobj.tenantid -type patch -body $addmemberbody -Verbose
+            Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME  -message "Added $($UserprincipalName) to group $($_.displayName)" -Sev "Info"  -tenant $TenantFilter
+            $body = $results.add("Added group: $($_.displayName)")
         }
         catch {
-            $body = $results.add("We've failed to add the group $($groupname): $($_.Exception.Message)")
-            Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $($userobj.tenantid) -message "Alias API failed. $($_.Exception.Message)" -Sev "Error"
+            $body = $results.add("We've failed to add the group $($_.displayName): $($_.Exception.Message)")
+            Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $($userobj.tenantid) -message "Group adding failed for group $($_.displayName):  $($_.Exception.Message)" -Sev "Error"
         }
     }
 
