@@ -8,8 +8,8 @@ Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME  -
 $Tenantfilter = $request.Query.tenantfilter
 
 try {
-    $Outbound = New-ExoRequest -tenantid $Tenantfilter -cmdlet "Get-OutboundConnector"
-    $Inbound = New-ExoRequest -tenantid $Tenantfilter -cmdlet "Get-InboundConnector"
+    $Outbound = New-ExoRequest -tenantid $Tenantfilter -cmdlet "Get-OutboundConnector" | Select-Object *, @{n = 'cippconnectortype'; e = { 'outbound' } }
+    $Inbound = New-ExoRequest -tenantid $Tenantfilter -cmdlet "Get-InboundConnector" | Select-Object *, @{n = 'cippconnectortype'; e = { 'Inbound' } }
     $StatusCode = [HttpStatusCode]::OK
 }
 catch {
