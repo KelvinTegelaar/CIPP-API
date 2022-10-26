@@ -15,7 +15,7 @@ $Results = try {
 catch {
     $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
     $StatusCode = [HttpStatusCode]::Forbidden
-    $GraphRequest = $ErrorMessage
+    $ErrorMessage
 }
 
 # Associate values to output bindings by calling 'Push-OutputBinding'.
