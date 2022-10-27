@@ -16,7 +16,7 @@ try {
     }
     else {
         @(
-            "name", "ConnectorSource", "ConnectorType", "EFSkipIPs", "EFSkipLastIP", "EFSkipMailGateway", "EFTestMode", "EFUsers", "Enabled ", "RequireTls", "RestrictDomainsToCertificate", "RestrictDomainsToIPAddresses", "ScanAndDropRecipients", "SenderIPAddresses", "TlsSenderCertificateName", "TreatMessagesAsInternal", "TrustedOrganizations"
+            "name", "SenderDomains", "ConnectorSource", "ConnectorType", "EFSkipIPs", "EFSkipLastIP", "EFSkipMailGateway", "EFTestMode", "EFUsers", "Enabled ", "RequireTls", "RestrictDomainsToCertificate", "RestrictDomainsToIPAddresses", "ScanAndDropRecipients", "SenderIPAddresses", "TlsSenderCertificateName", "TreatMessagesAsInternal", "TrustedOrganizations"
         )
     }
 
@@ -24,7 +24,7 @@ try {
         $NonEmptyProperties = $_.psobject.Properties | Where-Object { $null -ne $_.Value } | Select-Object -ExpandProperty Name
         $_ | Select-Object -Property $NonEmptyProperties 
     }
-    $JSON = ($JSON | Select-Object @{n = 'name'; e = { $_.name } }, @{n = 'comments'; e = { $_.comments } }, * | ConvertTo-Json -Depth 10)
+    $JSON = ($JSON | Select-Object @{n = 'name'; e = { $_.name } }, * | ConvertTo-Json -Depth 10)
     $Table = Get-CippTable -tablename 'templates'
     $Table.Force = $true
     Add-AzDataTableEntity @Table -Entity @{
