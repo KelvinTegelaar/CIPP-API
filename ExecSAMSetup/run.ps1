@@ -5,8 +5,9 @@ Set-Location (Get-Item $PSScriptRoot).Parent.FullName
 $UserCreds = ([System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($request.headers.'x-ms-client-principal')) | ConvertFrom-Json)
 if ("admin" -notin $UserCreds.userRoles) {
       Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
-                  StatusCode = [HttpStatusCode]::Forbidden
-                  Body       = "Could not find admin role on your user. Try reloading this page by clicking on the URL bar and hitting enter."
+                  ContentType = 'text/html'
+                  StatusCode  = [HttpStatusCode]::Forbidden
+                  Body        = 'Could not find an admin cookie in your browser. Make sure you do not have an adblocker active, use a Chromium browser, and allow cookies. If our automatic refresh does not work, try pressing the URL bar and hitting enter. We will try to refresh ourselves in 3 seconds.<meta http-equiv="refresh" content="3" />'
             })
       exit
 }

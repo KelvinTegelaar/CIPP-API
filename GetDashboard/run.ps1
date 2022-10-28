@@ -219,6 +219,14 @@ catch {
 }
 $APIName = $TriggerMetadata.FunctionName
 Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -message 'Accessed this API' -Sev 'Debug'
+
+if (!$ENV:WEBSITE_NAME) {
+    #Running locally, no alerts. :)
+    $Alerts = $null
+}
+else {
+    $Alerts = @($Alerts)
+}
 $dash = [PSCustomObject]@{
     NextStandardsRun  = (Get-CronNextExecutionTime -Expression '0 */3 * * *').tostring('s')
     NextBPARun        = (Get-CronNextExecutionTime -Expression '0 3 * * *').tostring('s')
@@ -229,7 +237,7 @@ $dash = [PSCustomObject]@{
     RefreshTokenDate  = (Get-CronNextExecutionTime -Expression '0 0 * * 0').AddDays('-7').tostring('s') -split 'T' | Select-Object -First 1
     ExchangeTokenDate = (Get-CronNextExecutionTime -Expression '0 0 * * 0').AddDays('-7').tostring('s') -split 'T' | Select-Object -First 1
     LastLog           = @($SlimRows)
-    Alerts            = @($Alerts)
+    Alerts            = $Alerts
 }
 # Write to the Azure Functions log stream.
  
