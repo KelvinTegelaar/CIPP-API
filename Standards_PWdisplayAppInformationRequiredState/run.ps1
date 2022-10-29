@@ -2,7 +2,7 @@ param($tenant)
 
 try {
     $body = @"
-    {"@odata.context":"https://graph.microsoft.com/beta/$metadata#authenticationMethodConfigurations/$entity","@odata.type":"#microsoft.graph.microsoftAuthenticatorAuthenticationMethodConfiguration","id":"MicrosoftAuthenticator","state":"enabled","includeTargets@odata.context":"https://graph.microsoft.com/beta/$metadata#policies/authenticationMethodsPolicy/authenticationMethodConfigurations('MicrosoftAuthenticator')/microsoft.graph.microsoftAuthenticatorAuthenticationMethodConfiguration/includeTargets","includeTargets":[{"targetType":"group","id":"all_users","isRegistrationRequired":false,"authenticationMode":"any","outlookMobileAllowedState":"default","displayAppInformationRequiredState":"enabled","numberMatchingRequiredState":"enabled"}]}
+{"@odata.type":"#microsoft.graph.microsoftAuthenticatorAuthenticationMethodConfiguration","id":"MicrosoftAuthenticator","includeTargets":[{"id":"all_users","isRegistrationRequired":false,"targetType":"group","displayName":"All users","authenticationMode":"any"}],"excludeTargets":[],"state":"enabled","featureSettings":{"numberMatchingRequiredState":{"state":"enabled","includeTarget":{"id":"all_users","targetType":"group","displayName":"All users"}},"displayLocationInformationRequiredState":{"state":"enabled","includeTarget":{"id":"all_users","targetType":"group","displayName":"All users"}},"displayAppInformationRequiredState":{"state":"enabled","includeTarget":{"id":"all_users","targetType":"group","displayName":"All users"}}}}
 "@
     (New-GraphPostRequest -tenantid $tenant -Uri "https://graph.microsoft.com/beta/policies/authenticationMethodsPolicy/authenticationMethodConfigurations/microsoftAuthenticator" -Type patch -Body $body -ContentType "application/json")
 
