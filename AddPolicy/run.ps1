@@ -14,6 +14,9 @@ $AssignTo = if ($request.body.Assignto -ne "on") { $request.body.Assignto }
 $RawJSON = $Request.body.RawJSON
 
 $results = foreach ($Tenant in $tenants) {
+    if ($Request.body.replacemap.$tenant) {
+        ([pscustomobject]$Request.body.replacemap.$tenant).psobject.properties | ForEach-Object { $RawJson = $RawJson -replace $_.name, $_.value }
+    }
     try {
         switch ($Request.body.TemplateType) {
             "Admin" {
