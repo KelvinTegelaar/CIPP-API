@@ -27,12 +27,12 @@ if ($Request.query.Permissions -eq 'true') {
     }
     $Success = $true
     try {
-        $ExpectedPermissions = @(
-            'Application.Read.All', 'Application.ReadWrite.All', 'AuditLog.Read.All', 'Channel.Create', 'Channel.Delete.All', 'Channel.ReadBasic.All', 'ChannelMember.Read.All', 'ChannelMember.ReadWrite.All', 'ChannelMessage.Edit', 'ChannelMessage.Read.All', 'ChannelMessage.Send', 'ChannelSettings.Read.All', 'ChannelSettings.ReadWrite.All', 'ConsentRequest.Read.All', 'Device.Command', 'Device.Read', 'Device.Read.All', 'DeviceManagementApps.ReadWrite.All', 'DeviceManagementManagedDevices.PrivilegedOperations.All', 'DeviceManagementConfiguration.ReadWrite.All', 'DeviceManagementManagedDevices.ReadWrite.All', 'DeviceManagementRBAC.ReadWrite.All', 'DeviceManagementServiceConfig.ReadWrite.All', 'Directory.AccessAsUser.All', 'Domain.Read.All', 'Group.ReadWrite.All', 'GroupMember.ReadWrite.All', 'Mail.Send', 'Mail.Send.Shared', 'Member.Read.Hidden', 'Organization.ReadWrite.All', 'Policy.ReadWrite.ApplicationConfiguration' , 'Policy.Read.All', 'Policy.ReadWrite.AuthenticationFlows', 'Policy.ReadWrite.AuthenticationMethod', 'Policy.ReadWrite.Authorization', 'Policy.ReadWrite.ConsentRequest', 'Policy.ReadWrite.DeviceConfiguration', 'PrivilegedAccess.Read.AzureResources', 'PrivilegedAccess.ReadWrite.AzureResources', 'Reports.Read.All', 'RoleManagement.ReadWrite.Directory', 'SharePointTenantSettings.ReadWrite.All' , 'SecurityActions.ReadWrite.All', 'SecurityEvents.ReadWrite.All', 'SecurityIncident.Read.All', 'SecurityIncident.ReadWrite.All', 'ServiceHealth.Read.All', 'ServiceMessage.Read.All', 'Sites.ReadWrite.All', 'Team.Create', 'Team.ReadBasic.All', 'TeamMember.ReadWrite.All', 'TeamMember.ReadWriteNonOwnerRole.All', 'TeamsActivity.Read', 'TeamsActivity.Send', 'TeamsAppInstallation.ReadForChat', 'TeamsAppInstallation.ReadForTeam', 'TeamsAppInstallation.ReadForUser', 'TeamsAppInstallation.ReadWriteForChat', 'TeamsAppInstallation.ReadWriteForTeam', 'TeamsAppInstallation.ReadWriteForUser', 'TeamsAppInstallation.ReadWriteSelfForChat', 'TeamsAppInstallation.ReadWriteSelfForTeam', 'TeamsAppInstallation.ReadWriteSelfForUser', 'TeamSettings.Read.All', 'TeamSettings.ReadWrite.All', 'TeamsTab.Create', 'TeamsTab.Read.All', 'TeamsTab.ReadWrite.All', 'TeamsTab.ReadWriteForChat', 'TeamsTab.ReadWriteForTeam', 'TeamsTab.ReadWriteForUser', 'ThreatAssessment.ReadWrite.All', 'UnifiedGroupMember.Read.AsGuest', 'User.ManageIdentities.All', 'User.Read', 'User.ReadWrite.All', 'UserAuthenticationMethod.Read.All', 'UserAuthenticationMethod.ReadWrite', 'UserAuthenticationMethod.ReadWrite.All'
-        )
+        Set-Location (Get-Item $PSScriptRoot).Parent.FullName
+        $ExpectedPermissions = Get-Content '.\Cache_SAMSetup\SAMManifest.json' | ConvertFrom-Json
+
         $GraphToken = Get-GraphToken -returnRefresh $true
         if ($GraphToken) {
-            $GraphPermissions = $GraphToken.scope.split(' ') -replace 'https://graph.microsoft.com//', '' | Where-Object { $_ -notin @('email', 'openid', 'profile', '.default') }
+            $GraphPermissions = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/myorganization/applications?`$filter=appId eq '$ENV:ApplicationID'" -NoAuthCheck $true
         }
         if ($env:MSI_SECRET) {
             try {
@@ -90,9 +90,11 @@ if ($Request.query.Permissions -eq 'true') {
             }
         }
         
-        $MissingPermissions = $ExpectedPermissions | Where-Object { $_ -notin $GraphPermissions } 
+        $MissingPermissions = $ExpectedPermissions.requiredResourceAccess.ResourceAccess.id | Where-Object { $_ -notin $GraphPermissions.requiredResourceAccess.ResourceAccess.id } 
         if ($MissingPermissions) {
-            $MissingPermissions = @($MissingPermissions)
+            $Translator = Get-Content '.\Cache_SAMSetup\PermissionsTranslator.json' | ConvertFrom-Json
+            $TranslatedPermissions = $Translator | Where-Object id -In $MissingPermissions | ForEach-Object { "$($_.value) - $($_.Origin)" }
+            $MissingPermissions = @($TranslatedPermissions)
             $Success = $false
             $Links.Add([PSCustomObject]@{
                     Text = 'Permissions'
