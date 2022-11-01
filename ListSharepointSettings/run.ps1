@@ -26,11 +26,11 @@ $RequiredCPVPerms = $ExpectedPermissions.requiredResourceAccess | ForEach-Object
         }
     }
 }
-$DeleteOldPermissions = New-GraphpostRequest -Type DELETE -noauthcheck $true -uri "https://api.partnercenter.microsoft.com/v1/customers/$($TenantFilter)/applicationconsents/$($env:ApplicationId)" -scope "https://api.partnercenter.microsoft.com/.default" -tenantid $env:TenantID
+$DeleteOldPermissions = New-GraphpostRequest -Type DELETE -noauthcheck $true -uri "https://api.partnercenter.microsoft.com/v1/customers/$($TenantFilter)/applicationconsents/$($env:ApplicationID)" -scope "https://api.partnercenter.microsoft.com/.default" -tenantid $env:TenantID
 $AppBody = @"
 {
   "ApplicationGrants": $(ConvertTo-Json -InputObject $RequiredCPVPerms -Compress -Depth 10),
-  "ApplicationId": "$($env:ApplicationId)",
+  "ApplicationId": "$($env:ApplicationID)",
   "DisplayName": "CIPP-SAM"
 }
 "@

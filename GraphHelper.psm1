@@ -36,7 +36,7 @@ function Get-GraphToken($tenantid, $scope, $AsApp, $AppID, $refreshToken, $Retur
     if (!$scope) { $scope = 'https://graph.microsoft.com//.default' }
 
     $AuthBody = @{
-        client_id     = $env:ApplicationId
+        client_id     = $env:ApplicationID
         client_secret = $env:ApplicationSecret
         scope         = $Scope
         refresh_token = $env:RefreshToken
@@ -45,7 +45,7 @@ function Get-GraphToken($tenantid, $scope, $AsApp, $AppID, $refreshToken, $Retur
     }
     if ($asApp -eq $true) {
         $AuthBody = @{
-            client_id     = $env:ApplicationId
+            client_id     = $env:ApplicationID
             client_secret = $env:ApplicationSecret
             scope         = $Scope
             grant_type    = 'client_credentials'
