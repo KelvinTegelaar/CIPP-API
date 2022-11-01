@@ -17,7 +17,10 @@ try {
     $filters = "createdDateTime ge $($endTime)Z and createdDateTime lt $($currentTime)Z and userDisplayName ne 'On-Premises Directory Synchronization Service Account'"
 
     $GraphRequest = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/auditLogs/signIns?api-version=beta&`$filter=$($filters)" -tenantid $TenantFilter -erroraction stop
-    $response = $GraphRequest
+    $response = $GraphRequest  | Select-Object *, 
+    @{l = "additionalDetails"; e = { $_.status.additionalDetails } } ,
+    @{l = "errorCode"; e = { $_.status.errorCode } },
+    @{l = "locationcipp"; e = { "$($_.location.city) - $($_.location.countryOrRegion)" } } 
     Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -message 'Retrieved sign in report' -Sev 'Debug' -tenant $TenantFilter
     
     # Associate values to output bindings by calling 'Push-OutputBinding'.
