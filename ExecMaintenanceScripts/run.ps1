@@ -11,10 +11,10 @@ try {
     $AccessTokenDetails = Read-JwtAccessDetails -Token $GraphToken.access_token
 
     $ReplacementStrings = @{
-        '##TENANTID##'      = $ENV:TenantId
-        '##RESOURCEGROUP##' = $ENV:WEBSITE_RESOURCE_GROUP
-        '##FUNCTIONAPP##'   = $ENV:WEBSITE_SITE_NAME 
-        '##SUBSCRIPTION##'  = (($ENV:WEBSITE_OWNER_NAME).split('+') | Select-Object -First 1)
+        '##TENANTID##'      = $env:TenantID
+        '##RESOURCEGROUP##' = $env:WEBSITE_RESOURCE_GROUP
+        '##FUNCTIONAPP##'   = $env:WEBSITE_SITE_NAME 
+        '##SUBSCRIPTION##'  = (($env:WEBSITE_OWNER_NAME).split('+') | Select-Object -First 1)
         '##TOKENIP##'       = $AccessTokenDetails.IPAddress
     }
 }
