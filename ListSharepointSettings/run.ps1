@@ -26,15 +26,15 @@ $RequiredCPVPerms = $ExpectedPermissions.requiredResourceAccess | ForEach-Object
         }
     }
 }
-$DeleteOldPermissions = New-GraphpostRequest -Type DELETE -noauthcheck $true -uri "https://api.partnercenter.microsoft.com/v1/customers/$($TenantFilter)/applicationconsents/$($ENV:ApplicationId)" -scope "https://api.partnercenter.microsoft.com/.default" -tenantid $ENV:TenantId
+$DeleteOldPermissions = New-GraphpostRequest -Type DELETE -noauthcheck $true -uri "https://api.partnercenter.microsoft.com/v1/customers/$($TenantFilter)/applicationconsents/$($env:ApplicationID)" -scope "https://api.partnercenter.microsoft.com/.default" -tenantid $env:TenantID
 $AppBody = @"
 {
   "ApplicationGrants": $(ConvertTo-Json -InputObject $RequiredCPVPerms -Compress -Depth 10),
-  "ApplicationId": "$($ENV:ApplicationId)",
+  "ApplicationId": "$($env:ApplicationID)",
   "DisplayName": "CIPP-SAM"
 }
 "@
-$CPVConsent = New-GraphpostRequest -body $AppBody -Type POST -noauthcheck $true -uri "https://api.partnercenter.microsoft.com/v1/customers/$($TenantFilter)/applicationconsents" -scope "https://api.partnercenter.microsoft.com/.default" -tenantid $ENV:TenantId
+$CPVConsent = New-GraphpostRequest -body $AppBody -Type POST -noauthcheck $true -uri "https://api.partnercenter.microsoft.com/v1/customers/$($TenantFilter)/applicationconsents" -scope "https://api.partnercenter.microsoft.com/.default" -tenantid $env:TenantID
 $StatusCode = [HttpStatusCode]::OK
 
 # Associate values to output bindings by calling 'Push-OutputBinding'.
