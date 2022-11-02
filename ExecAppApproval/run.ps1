@@ -12,11 +12,11 @@ Write-Host "PowerShell HTTP trigger function processed a request."
 Write-Host "$($Request.query.ID)"
 # Interact with query parameters or the body of the request.
 $applicationid = if ($request.query.applicationid) { $request.query.applicationid } else { $env:applicationid } 
-
+v
 $Results = get-tenants | ForEach-Object {
     [PSCustomObject]@{
         defaultDomainName = $_.defaultDomainName
-        link              = "https://login.microsoftonline.com/$($_.customerId)/adminconsent?client_id=$applicationid"
+        link              = "https://login.microsoftonline.com/$($_.customerId)/v2.0/adminconsent?client_id=$applicationid&scope=https://graph.microsoft.com/.default"
     }
 }
 
