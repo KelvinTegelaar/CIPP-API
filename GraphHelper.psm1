@@ -25,6 +25,7 @@ function Get-NormalizedError {
         '*The user or administrator has not consented to use the application*' { 'AADSTS65001: The user you have used for your Secure Application Model is a guest in this tenant, or your are using GDAP and have not added the user to the correct group. Please delete the guest user to gain access to this tenant' }
         '*AADSTS50020*' { 'AADSTS50020: The user you have used for your Secure Application Model is a guest in this tenant, or your are using GDAP and have not added the user to the correct group. Please delete the guest user to gain access to this tenant' }
         '*invalid or malformed*' { 'The request is malformed. You have entered incorrect tokens or have not performed a clear of the token cache after entering new tokens. Please see the troubleshooting documentation on how to execute a clear of the token cache.' }
+        '*Windows Store repository apps feature is not supported for this tenant*' { 'This tenant does not have WinGet support available' }
         Default { $message }
         
     }
@@ -71,10 +72,12 @@ function Get-GraphToken($tenantid, $scope, $AsApp, $AppID, $refreshToken, $Retur
         $TenantsTable = Get-CippTable -tablename Tenants
         $Filter = "PartitionKey eq 'Tenants' and (defaultDomainName eq '{0}' or customerId eq '{0}')" -f $tenantid
         $Tenant = Get-AzDataTableRow @TenantsTable -Filter $Filter
-        if (!$Tenant) {
-            $Tenant = @{
+        if (!$Tenant.RowKey) {
+            $donotset = $true
+            $Tenant = [pscustomobject]@{
                 GraphErrorCount     = $null
                 LastGraphTokenError = $null
+                LastGraphError      = $null
                 PartitionKey        = 'TenantFailed'
                 RowKey              = 'Failed'
             }
@@ -88,7 +91,7 @@ function Get-GraphToken($tenantid, $scope, $AsApp, $AppID, $refreshToken, $Retur
         }
         $Tenant.GraphErrorCount++
 
-        Update-AzDataTableRow @TenantsTable -Entity $Tenant
+        if (!$donotset) { Update-AzDataTableRow @TenantsTable -Entity $Tenant }
         throw "$($Tenant.LastGraphError)"
     }
 }
@@ -422,28 +425,33 @@ function Get-Tenants {
 }
 
 function Remove-CIPPCache {
+    param (
+        $TenantsOnly
+    )
     # Remove all tenants except excluded
     $TenantsTable = Get-CippTable -tablename 'Tenants'
     $Filter = "PartitionKey eq 'Tenants' and Excluded eq false" 
     $ClearIncludedTenants = Get-AzDataTableRow @TenantsTable -Filter $Filter
     Remove-AzDataTableRow @TenantsTable -Entity $ClearIncludedTenants
+    if ($tenantsonly -eq 'false') {
+        Write-Host "Clearing all"
+        # Remove Domain Analyser cached results
+        $DomainsTable = Get-CippTable -tablename 'Domains'
+        $Filter = "PartitionKey eq 'TenantDomains'"
+        $ClearDomainAnalyserRows = Get-AzDataTableRow @DomainsTable -Filter $Filter | ForEach-Object {
+            $_.DomainAnalyser = ''
+            $_
+        }
+        Update-AzDataTableEntity @DomainsTable -Entity $ClearDomainAnalyserRows
+        #Clear BPA
+        $BPATable = Get-CippTable -tablename 'cachebpa'
+        $ClearBPARows = Get-AzDataTableRow @BPATable
+        Remove-AzDataTableEntity @BPATable -Entity $ClearBPARows
 
-    # Remove Domain Analyser cached results
-    $DomainsTable = Get-CippTable -tablename 'Domains'
-    $Filter = "PartitionKey eq 'TenantDomains'"
-    $ClearDomainAnalyserRows = Get-AzDataTableRow @DomainsTable -Filter $Filter | ForEach-Object {
-        $_.DomainAnalyser = ''
-        $_
+        $Script:SkipListCache = $Null
+        $Script:SkipListCacheEmpty = $Null
+        $Script:IncludedTenantsCache = $Null
     }
-    Update-AzDataTableEntity @DomainsTable -Entity $ClearDomainAnalyserRows
-    #Clear BPA
-    $BPATable = Get-CippTable -tablename 'cachebpa'
-    $ClearBPARows = Get-AzDataTableRow @BPATable
-    Remove-AzDataTableEntity @BPATable -Entity $ClearBPARows
-
-    $Script:SkipListCache = $Null
-    $Script:SkipListCacheEmpty = $Null
-    $Script:IncludedTenantsCache = $Null
 }
 
 function New-ExoRequest ($tenantid, $cmdlet, $cmdParams) {

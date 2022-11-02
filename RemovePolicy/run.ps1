@@ -15,7 +15,7 @@ try {
     #$unAssignRequest = New-GraphPostRequest -uri "https://graph.microsoft.com/beta/deviceManagement/configurationPolicies('$($policyId)')/assign" -type POST -Body '{"assignments":[]}' -tenant $TenantFilter
     $GraphRequest = New-GraphPostRequest -uri "https://graph.microsoft.com/beta/deviceManagement/$($Request.Query.URLName)('$($policyId)')" -type DELETE -tenant $TenantFilter
     Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME  -message "Deleted $policyId" -Sev "Info" -tenant $TenantFilter
-    $body = [pscustomobject]@{"Results" = "Succesfully deleted the policy" }
+    $body = [pscustomobject]@{"Results" = "Successfully deleted the policy" }
 
 }
 catch {
