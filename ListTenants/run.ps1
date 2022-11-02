@@ -10,7 +10,7 @@ Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -m
 
 # Clear Cache
 if ($request.Query.ClearCache -eq 'true') {
-    Remove-CIPPCache
+    Remove-CIPPCache -tenantsOnly $request.query.TenantsOnly
     $GraphRequest = [pscustomobject]@{'Results' = 'Successfully completed request.' }
     Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
             StatusCode = [HttpStatusCode]::OK
