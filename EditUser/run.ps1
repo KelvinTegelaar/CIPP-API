@@ -12,6 +12,7 @@ $licenses = ($userobj | Select-Object "License_*").psobject.properties.value
 Write-Host "PowerShell HTTP trigger function processed a request."
 #Edit the user
 try {
+    Write-Host "$([boolean]$UserObj.mustchangepass)"
     $Email = "$($UserObj.username)@$($UserObj.domain)"
     $UserprincipalName = "$($UserObj.username)@$($UserObj.domain)"
     $BodyToship = [pscustomobject] @{
@@ -31,7 +32,7 @@ try {
         "streetAddress"     = $userobj.streetAddress
         "businessPhones"    = @($userobj.businessPhone)
         "passwordProfile"   = @{
-            "forceChangePasswordNextSignIn" = [bool]$UserObj.mustchangepass
+            "forceChangePasswordNextSignIn" = [boolean]$UserObj.mustchangepass
         }
     } | ForEach-Object {
         $NonEmptyProperties = $_.psobject.Properties | Select-Object -ExpandProperty Name
