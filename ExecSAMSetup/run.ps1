@@ -9,7 +9,7 @@ if ($Request.query.error) {
       Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
                   ContentType = 'text/html'
                   StatusCode  = [HttpStatusCode]::Forbidden
-                  Body        = [System.Web.HttpUtility]::UrlDecode($Request.Query.error_description)
+                  Body        = Get-normalizedError -Message [System.Web.HttpUtility]::UrlDecode($Request.Query.error_description)
             })
       exit
 }

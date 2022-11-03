@@ -12,15 +12,31 @@ Write-Host "PowerShell HTTP trigger function processed a request."
 
 # Interact with query parameters or the body of the request.
 $TenantFilter = $Request.Query.TenantFilter
-try {
-    $GraphRequest = New-GraphgetRequest -noauthcheck $true -uri "https://management.azure.com/providers/Microsoft.Capacity/reservations?api-version=2020-06-01" -scope "https://management.azure.com/.default" -tenantid $TenantFilter
-    $StatusCode = [HttpStatusCode]::OK
+Set-Location (Get-Item $PSScriptRoot).Parent.FullName
+
+$Translator = Get-Content '.\Cache_SAMSetup\PermissionsTranslator.json' | ConvertFrom-Json
+$ExpectedPermissions = Get-Content '.\Cache_SAMSetup\SAMManifest.json' | ConvertFrom-Json
+$RequiredCPVPerms = $ExpectedPermissions.requiredResourceAccess | ForEach-Object {
+    $Resource = $_
+    $Scope = ($Translator | Where-Object { $_.id -in $Resource.ResourceAccess.id } | Where-Object { $_.value -notin 'profile', 'openid', 'offline_access' }).value -join ','
+    if ($Scope) {
+        [PSCustomObject]@{
+            EnterpriseApplicationId = $_.ResourceAppId
+            Scope                   = $Scope
+        }
+    }
 }
-catch {
-    $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
-    $StatusCode = [HttpStatusCode]::Forbidden
-    $GraphRequest = $ErrorMessage
+$DeleteOldPermissions = New-GraphpostRequest -Type DELETE -noauthcheck $true -uri "https://api.partnercenter.microsoft.com/v1/customers/$($TenantFilter)/applicationconsents/$($env:ApplicationID)" -scope "https://api.partnercenter.microsoft.com/.default" -tenantid $env:TenantID
+$AppBody = @"
+{
+  "ApplicationGrants": $(ConvertTo-Json -InputObject $RequiredCPVPerms -Compress -Depth 10),
+  "ApplicationId": "$($env:ApplicationID)",
+  "DisplayName": "CIPP-SAM"
 }
+"@
+$CPVConsent = New-GraphpostRequest -body $AppBody -Type POST -noauthcheck $true -uri "https://api.partnercenter.microsoft.com/v1/customers/$($TenantFilter)/applicationconsents" -scope "https://api.partnercenter.microsoft.com/.default" -tenantid $env:TenantID
+$StatusCode = [HttpStatusCode]::OK
+
 # Associate values to output bindings by calling 'Push-OutputBinding'.
 Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
         StatusCode = $StatusCode
