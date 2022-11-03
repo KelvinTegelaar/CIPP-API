@@ -9,7 +9,7 @@ Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME  -
 
 $Table = get-cipptable 'cachebpa'
 $Results = (Get-AzDataTableRow @Table) | ForEach-Object { 
-    $_.UnusedLicenseList = $_.UnusedLicenseList | ConvertFrom-Json -ErrorAction silentlycontinue
+    $_.UnusedLicenseList = @(ConvertFrom-Json -ErrorAction silentlycontinue -InputObject $_.UnusedLicenseList)
     $_
 }
 
