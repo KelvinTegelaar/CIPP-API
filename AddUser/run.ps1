@@ -19,14 +19,24 @@ try {
         "surname"           = $userobj.lastname
         "accountEnabled"    = $true
         "displayName"       = $UserObj.Displayname
+        "department"        = $userobj.department
         "mailNickname"      = $UserObj.username
         "userPrincipalName" = $UserprincipalName
         "usageLocation"     = $UserObj.usageLocation
+        "city"              = $userobj.city
+        "country"           = $userobj.country
+        "jobtitle"          = $userObj.jobtitle
+        "mobilePhone"       = $userobj.mobilePhone
+        "streetAddress"     = $userobj.streetAddress
+        "postalCode"        = $userobj.postalCode
+        "companyName"       = $userobj.companyName
         "passwordProfile"   = @{
             "forceChangePasswordNextSignIn" = [bool]$UserObj.mustchangepass
             "password"                      = $password
         }
-    } | ConvertTo-Json
+    } 
+    if ($userobj.businessPhone) { $bodytoShip | Add-Member -NotePropertyName businessPhones -NotePropertyValue @($userobj.businessPhone) }
+    $bodyToShip = ConvertTo-Json -Depth 10 -InputObject $BodyToship -Compress
     $GraphRequest = New-GraphPostRequest -uri "https://graph.microsoft.com/beta/users" -tenantid $Userobj.tenantid -type POST -body $BodyToship  -verbose
     Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $($userobj.tenantid)  -message "Created user $($userobj.displayname) with id $($GraphRequest.id) " -Sev "Info"
     $results.add("Created user.")

@@ -14,13 +14,11 @@ if ($chocoApp.type -eq "MSPApp") {
     [xml]$Intunexml = Get-Content "AddMSPApp\$($ChocoApp.MSPAppName).app.xml"
     $intunewinFilesize = (Get-Item "AddMSPApp\$($ChocoApp.MSPAppName).intunewin")
     $Infile = "AddMSPApp\$($ChocoApp.MSPAppName).intunewin"
-
 }
 else {
     [xml]$Intunexml = Get-Content "AddChocoApp\choco.app.xml"
     $intunewinFilesize = (Get-Item "AddChocoApp\IntunePackage.intunewin")
     $Infile = "AddChocoApp\$($intunexml.ApplicationInfo.FileName)"
-
 }
 $assignTo = $ChocoApp.AssignTo
 $Baseuri = "https://graph.microsoft.com/beta/deviceAppManagement/mobileApps"
@@ -56,12 +54,27 @@ $EncBody = @{
 
 foreach ($tenant in $tenants) {
     Try {
+
         $ApplicationList = (New-graphGetRequest -Uri $baseuri -tenantid $Tenant) | Where-Object { $_.DisplayName -eq $ChocoApp.ApplicationName }
         if ($ApplicationList.displayname.count -ge 1) { 
             Write-LogMessage -api "AppUpload" -tenant $($Tenant) -message "$($ChocoApp.ApplicationName) exists. Skipping this application" -Sev "Info"
             continue
         }
-        $NewApp = New-GraphPostRequest -Uri $baseuri -Body ($intuneBody | ConvertTo-Json) -Type POST -tenantid $tenant
+        if ($chocoApp.type -eq "WinGet") { 
+            $NewApp = New-GraphPostRequest -Uri $baseuri -Body ($intuneBody | ConvertTo-Json) -Type POST -tenantid $tenant
+            Write-LogMessage -api "AppUpload" -tenant $($Tenant) -message "$($ChocoApp.ApplicationName) uploaded as WinGet app." -Sev "Info"
+            if ($AssignTo -ne "On") {
+                $AssignBody = if ($AssignTo -ne "AllDevicesAndUsers") { '{"mobileAppAssignments":[{"@odata.type":"#microsoft.graph.mobileAppAssignment","target":{"@odata.type":"#microsoft.graph.' + $($AssignTo) + 'AssignmentTarget"},"intent":"Required","settings":{"@odata.type":"#microsoft.graph.win32LobAppAssignmentSettings","notifications":"hideAll","installTimeSettings":null,"restartSettings":null,"deliveryOptimizationPriority":"notConfigured"}}]}' } else { '{"mobileAppAssignments":[{"@odata.type":"#microsoft.graph.mobileAppAssignment","target":{"@odata.type":"#microsoft.graph.allDevicesAssignmentTarget"},"intent":"Required","settings":{"@odata.type":"#microsoft.graph.win32LobAppAssignmentSettings","notifications":"showAll","installTimeSettings":null,"restartSettings":null,"deliveryOptimizationPriority":"notConfigured"}},{"@odata.type":"#microsoft.graph.mobileAppAssignment","target":{"@odata.type":"#microsoft.graph.allLicensedUsersAssignmentTarget"},"intent":"Required","settings":{"@odata.type":"#microsoft.graph.win32LobAppAssignmentSettings","notifications":"showAll","installTimeSettings":null,"restartSettings":null,"deliveryOptimizationPriority":"notConfigured"}}]}' }
+                $assign = New-GraphPOSTRequest -uri  "https://graph.microsoft.com/beta/deviceAppManagement/mobileApps/$($NewApp.id)/assign" -tenantid $tenant -type POST -body $AssignBody
+                Write-LogMessage -api "AppUpload" -tenant $($Tenant) -message "Assigned application $($chocoApp.ApplicationName) to $AssignTo" -Sev "Info"
+            }
+            Write-LogMessage -api "AppUpload" -tenant $($Tenant) -message "$($ChocoApp.ApplicationName) Successfully created" -Sev "Info"
+            exit 0
+        }
+        else {
+            $NewApp = New-GraphPostRequest -Uri $baseuri -Body ($intuneBody | ConvertTo-Json) -Type POST -tenantid $tenant
+
+        }
         $ContentReq = New-GraphPostRequest -Uri "$($BaseURI)/$($NewApp.id)/microsoft.graph.win32lobapp/contentVersions/1/files/" -Body $ContentBody -Type POST -tenantid $tenant
         do {
             $AzFileUri = New-graphGetRequest -Uri  "$($BaseURI)/$($NewApp.id)/microsoft.graph.win32lobapp/contentVersions/1/files/$($ContentReq.id)" -tenantid $tenant
@@ -87,17 +100,17 @@ foreach ($tenant in $tenants) {
             Start-Sleep -Milliseconds 300
         } while ($CommitStateReq.uploadState -eq "commitFilePending")        
         $CommitFinalizeReq = New-graphPostRequest -Uri "$($BaseURI)/$($NewApp.id)" -tenantid $tenant -Body '{"@odata.type":"#microsoft.graph.win32lobapp","committedContentVersion":"1"}' -type PATCH
-        Write-LogMessage -api "AppUpload" -tenant $($Tenant) -message  "Added Choco app $($chocoApp.ApplicationName)" -Sev "Info"
+        Write-LogMessage -api "AppUpload" -tenant $($Tenant) -message  "Added Application $($chocoApp.ApplicationName)" -Sev "Info"
         if ($AssignTo -ne "On") {
             $AssignBody = if ($AssignTo -ne "AllDevicesAndUsers") { '{"mobileAppAssignments":[{"@odata.type":"#microsoft.graph.mobileAppAssignment","target":{"@odata.type":"#microsoft.graph.' + $($AssignTo) + 'AssignmentTarget"},"intent":"Required","settings":{"@odata.type":"#microsoft.graph.win32LobAppAssignmentSettings","notifications":"hideAll","installTimeSettings":null,"restartSettings":null,"deliveryOptimizationPriority":"notConfigured"}}]}' } else { '{"mobileAppAssignments":[{"@odata.type":"#microsoft.graph.mobileAppAssignment","target":{"@odata.type":"#microsoft.graph.allDevicesAssignmentTarget"},"intent":"Required","settings":{"@odata.type":"#microsoft.graph.win32LobAppAssignmentSettings","notifications":"showAll","installTimeSettings":null,"restartSettings":null,"deliveryOptimizationPriority":"notConfigured"}},{"@odata.type":"#microsoft.graph.mobileAppAssignment","target":{"@odata.type":"#microsoft.graph.allLicensedUsersAssignmentTarget"},"intent":"Required","settings":{"@odata.type":"#microsoft.graph.win32LobAppAssignmentSettings","notifications":"showAll","installTimeSettings":null,"restartSettings":null,"deliveryOptimizationPriority":"notConfigured"}}]}' }
             $assign = New-GraphPOSTRequest -uri  "https://graph.microsoft.com/beta/deviceAppManagement/mobileApps/$($NewApp.id)/assign" -tenantid $tenant -type POST -body $AssignBody
             Write-LogMessage -api "AppUpload" -tenant $($Tenant) -message "Assigned application $($chocoApp.ApplicationName) to $AssignTo" -Sev "Info"
         }
-        Write-LogMessage -api "AppUpload" -tenant $($Tenant) -message "Successfully added Choco App"
+        Write-LogMessage -api "AppUpload" -tenant $($Tenant) -message "Successfully added Application"
     }
     catch {
-        "Failed to add Choco App for $($Tenant): $($_.Exception.Message)"
-        Write-LogMessage -api "AppUpload" -tenant $($Tenant) -message "Failed adding choco App $($ChocoApp.ApplicationName). Error: $($_.Exception.Message)" -Sev "Error"
+        "Failed to add Application for $($Tenant): $($_.Exception.Message)"
+        Write-LogMessage -api "AppUpload" -tenant $($Tenant) -message "Failed adding Application $($ChocoApp.ApplicationName). Error: $($_.Exception.Message)" -Sev "Error"
         continue
     }
 
