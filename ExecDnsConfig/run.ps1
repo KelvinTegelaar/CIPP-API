@@ -22,6 +22,8 @@ try {
     $Filter = "PartitionKey eq 'Domains' and RowKey eq 'Domains'"
     $Config = Get-AzDataTableEntity @ConfigTable -Filter $Filter
 
+    $DomainTable = Get-CippTable -tablename 'Domains'
+
     if ($ValidResolvers -notcontains $Config.Resolver) {
         $Config = @{
             PartitionKey = 'Domains'
@@ -33,35 +35,43 @@ try {
 
     $updated = $false
 
-    # Interact with query parameters or the body of the request.
-    if ($Request.Query.Action -eq 'SetConfig') {
-        if ($Request.Query.Resolver) {
-            $Resolver = $Request.Query.Resolver
-            if ($ValidResolvers -contains $Resolver) {
-                try {
-                    $Config.Resolver = $Resolver
-                }
-                catch {
-                    $Config = @{
-                        Resolver = $Resolver
+    switch ($Request.Query.Action) {
+        'SetConfig' {
+            if ($Request.Query.Resolver) {
+                $Resolver = $Request.Query.Resolver
+                if ($ValidResolvers -contains $Resolver) {
+                    try {
+                        $Config.Resolver = $Resolver
                     }
+                    catch {
+                        $Config = @{
+                            Resolver = $Resolver
+                        }
+                    }
+                    $updated = $true
                 }
-                $updated = $true
+            }
+            if ($updated) {
+                Add-AzDataTableEntity @ConfigTable -Entity $Config -Force
+                Write-LogMessage -API $APINAME -tenant 'Global' -user $request.headers.'x-ms-client-principal' -message 'DNS configuration updated' -Sev 'Info' 
+                $body = [pscustomobject]@{'Results' = 'Success: DNS configuration updated.' }
+            }
+            else {
+                $StatusCode = [HttpStatusCode]::BadRequest
+                $body = [pscustomobject]@{'Results' = 'Error: No DNS resolver provided.' }
             }
         }
-        if ($updated) {
-            Add-AzDataTableEntity @ConfigTable -Entity $Config -Force
-            Write-LogMessage -API $APINAME -tenant 'Global' -user $request.headers.'x-ms-client-principal' -message 'DNS configuration updated' -Sev 'Info' 
-            $body = [pscustomobject]@{'Results' = 'Success: DNS configuration updated.' }
+        'GetConfig' {
+            $body = [pscustomobject]$Config
+            Write-LogMessage -API $APINAME -tenant 'Global' -user $request.headers.'x-ms-client-principal' -message 'Retrieved DNS configuration' -Sev 'Info' 
         }
-        else {
-            $StatusCode = [HttpStatusCode]::BadRequest
-            $body = [pscustomobject]@{'Results' = 'Error: No DNS resolver provided.' }
+        'RemoveDomain' {
+            $Filter = "RowKey eq '{0}'" -f $Request.Query.Domain
+            $DomainRow = Get-AzDataTableEntity @DomainTable -Filter $Filter 
+            Remove-AzDataTableEntity @DomainTable -Entity $DomainRow
+            Write-LogMessage -API $APINAME -tenant 'Global' -user $request.headers.'x-ms-client-principal' -message "Removed Domain - $($Request.Query.Domain) " -Sev 'Info'
+            $body = [pscustomobject]@{ 'Results' = "Domain removed - $($Request.Query.Domain)" }
         }
-    }
-    elseif ($Request.Query.Action -eq 'GetConfig') {
-        $body = [pscustomobject]$Config
-        Write-LogMessage -API $APINAME -tenant 'Global' -user $request.headers.'x-ms-client-principal' -message 'Retrieved DNS configuration' -Sev 'Info' 
     }
 }
 catch {
