@@ -19,7 +19,7 @@ $ContactID = $Request.Query.ContactID
 Write-Host "Tenant Filter: $TenantFilter"
 try {
     $GraphRequest = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/contacts/$($ContactID)?`$top=999&`$select=$($selectlist -join ',')" -tenantid $TenantFilter | Select-Object $selectlist | ForEach-Object {
-        $_.editURL = "https://outlook.office365.com/ecp/@$TenantFilter/UsersGroups/EditContact.aspx?exsvurl=1&realm=$($Env:TenantID)&mkt=en-US&id=$($_.id)"
+        $_.editURL = "https://outlook.office365.com/ecp/@$TenantFilter/UsersGroups/EditContact.aspx?exsvurl=1&realm=$($env:TenantID)&mkt=en-US&id=$($_.id)"
         $_
     }
     $StatusCode = [HttpStatusCode]::OK
