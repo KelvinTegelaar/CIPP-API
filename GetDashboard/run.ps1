@@ -205,10 +205,10 @@ foreach ($Row in $Rows) {
         })
 }
 $Alerts = [System.Collections.ArrayList]@()
-if ($ENV:ApplicationID -eq 'LongApplicationID' -or $null -eq $ENV:ApplicationID) { $Alerts.add('You have not yet setup your SAM Setup. Please go to the SAM Wizard in settings to finish setup') }
-if ($ENV:FUNCTIONS_EXTENSION_VERSION -ne '~4') { $Alerts.add('Your Function App is running on a Runtime version lower than 4. This impacts performance. Go to Settings -> Backend -> Function App Configuration -> Function Runtime Settings and set this to 4 for maximum performance') }
+if ($env:ApplicationID -eq 'LongApplicationID' -or $null -eq $ENV:ApplicationID) { $Alerts.add('You have not yet setup your SAM Setup. Please go to the SAM Wizard in settings to finish setup') }
+if ($env:FUNCTIONS_EXTENSION_VERSION -ne '~4') { $Alerts.add('Your Function App is running on a Runtime version lower than 4. This impacts performance. Go to Settings -> Backend -> Function App Configuration -> Function Runtime Settings and set this to 4 for maximum performance') }
 if ($psversiontable.psversion.toString() -lt 7.2) { $Alerts.add('Your Function App is running on Powershell 7. This impacts performance. Go to Settings -> Backend -> Function App Configuration -> General Settings and set PowerShell Core Version to 7.2 for maximum performance') }
-if ($ENV:WEBSITE_RUN_FROM_PACKAGE -ne '1') { $Alerts.add('Your Function App is running in write mode. Please check the release notes to enable Run from Package mode. (https://github.com/KelvinTegelaar/CIPP/releases/tag/v2.1.11.0)') }
+if ($env:WEBSITE_RUN_FROM_PACKAGE -ne '1') { $Alerts.add('Your Function App is running in write mode. Please check the release notes to enable Run from Package mode. (https://github.com/KelvinTegelaar/CIPP/releases/tag/v2.1.11.0)') }
 try {
     $TenantCount = (Get-Tenants -IncludeErrors | Measure-Object).Count
     $TenantErrorCount = $TenantCount - (Get-Tenants | Measure-Object).Count
@@ -220,7 +220,7 @@ catch {
 $APIName = $TriggerMetadata.FunctionName
 Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -message 'Accessed this API' -Sev 'Debug'
 
-if (!$ENV:WEBSITE_NAME) {
+if (!$env:WEBSITE_NAME) {
     #Running locally, no alerts. :)
     $Alerts = $null
 }

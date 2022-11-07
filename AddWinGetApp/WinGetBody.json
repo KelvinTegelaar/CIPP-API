@@ -1,0 +1,14 @@
+{
+  "@odata.type": "#microsoft.graph.winGetApp",
+  "displayName": "Display Name value",
+  "description": "Description value",
+  "publisher": "Publisher value",
+  "isFeatured": true,
+  "uploadState": 11,
+  "publishingState": "processing",
+  "packageIdentifier": "",
+  "installExperience": {
+    "@odata.type": "microsoft.graph.winGetAppInstallExperience",
+    "runAsAccount": "user"
+  }
+}
