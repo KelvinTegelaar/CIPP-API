@@ -21,7 +21,7 @@ $results = foreach ($Tenant in $tenants) {
             [pscustomobject]@{
                 "@odata.type" = "#microsoft.graph.ipNamedLocation"
                 displayName   = $request.body.policyName
-                ipRanges      = $IPRanges
+                ipRanges      = @($IPRanges)
                 isTrusted     = $Request.body.Trusted
             }
         }
