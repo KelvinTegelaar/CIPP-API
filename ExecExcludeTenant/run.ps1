@@ -56,6 +56,7 @@ catch {
     Write-LogMessage -API $APINAME -tenant $($name) -user $request.headers.'x-ms-client-principal' -message "Exclusion API failed. $($_.Exception.Message)" -Sev 'Error'
     $body = [pscustomobject]@{'Results' = "Failed. $($_.Exception.Message)" }
 }
+if (!$body) { $body = @() }
 
 # Associate values to output bindings by calling 'Push-OutputBinding'.
 Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
