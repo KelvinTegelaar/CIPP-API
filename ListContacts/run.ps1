@@ -31,5 +31,5 @@ catch {
 }
 Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
         StatusCode = $StatusCode
-        Body       = @($GraphRequest)
+        Body       = @($GraphRequest | Where-Object -Property id -ne $null)
     })
