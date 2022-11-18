@@ -13,10 +13,14 @@ $TenantsTable = Get-CippTable -tablename Tenants
 try {
     if ($Request.Query.List) {
         $ExcludedFilter = "PartitionKey eq 'Tenants' and Excluded eq true" 
-        $ExcludedTenants = Get-AzDataTableRow @TenantsTable -Filter $ExcludedFilter | Select-Object @{name = 'Name'; expression = { $_.defaultDomainName } }, @{name = 'User'; expression = { $_.ExcludeUser } }, @{name = 'Date'; expression = { $_.ExcludeDate } } 
-        #$ExcludedTenants = [System.IO.File]::ReadAllLines("ExcludedTenants") | ConvertFrom-Csv -Delimiter "|" -Header "Name", "User", "Date" | Where-Object { $_.name -ne "" } 
+        $ExcludedTenants = Get-AzDataTableRow @TenantsTable -Filter $ExcludedFilter 
         Write-LogMessage -API $APINAME -user $request.headers.'x-ms-client-principal' -message 'got excluded tenants list' -Sev 'Info'
         $body = $ExcludedTenants
+    }
+    elseif ($Request.query.ListAll) {
+        $ExcludedTenants = Get-AzDataTableRow @TenantsTable
+        Write-LogMessage -API $APINAME -user $request.headers.'x-ms-client-principal' -message 'got excluded tenants list' -Sev 'Info'
+        $body = $ExcludedTenants | Where-Object -Property defaultDomainName -NE $null
     }
     # Interact with query parameters or the body of the request.
     $name = $Request.Query.TenantFilter
