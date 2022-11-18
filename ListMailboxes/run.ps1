@@ -14,6 +14,8 @@ Write-Host "PowerShell HTTP trigger function processed a request."
 $TenantFilter = $Request.Query.TenantFilter
 try {
     $GraphRequest = New-GraphGetRequest -uri "https://outlook.office365.com/adminapi/beta/$($tenantfilter)/Mailbox" -Tenantid $tenantfilter -scope ExchangeOnline | Select-Object @{ Name = 'UPN'; Expression = { $_.'UserPrincipalName' } },
+    @{ Name = 'id'; Expression = { $_.'ObjectKey' } 
+    },
     @{ Name = 'displayName'; Expression = { $_.'DisplayName' } },
     @{ Name = 'primarySmtpAddress'; Expression = { $_.'PrimarySMTPAddress' } },
     @{ Name = 'recipientType'; Expression = { $_.'RecipientType' } },
