@@ -17,7 +17,7 @@ $tokens = try {
     $tenantObjectId = $allTenantsDetails.value | Where-Object { $_.customerContextId -eq $customerContextId } | Select-Object 'objectId'
 }
 catch {
-    "Failed to retrieve list of tenants.  Error: $($_.ExceptionMessage)"
+    "Failed to retrieve list of tenants.  Error: $($_.Exception.Message)"
     Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $($tenantDisplayName) -message "Failed to retrieve list of tenants. Error: $($_.Exception.Message)" -Sev 'Error'
 }
 
@@ -31,12 +31,12 @@ if ($tenantObjectId) {
         $Tenant = Get-AzDataTableEntity @TenantsTable -Filter $Filter 
         $Tenant.displayName = $tenantDisplayName
         Update-AzDataTableEntity @TenantsTable -Entity $Tenant
-        Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $($Tenant) -message "Edited tenant $($Tenant)" -Sev 'Info'
+        Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $tenantDisplayName -message "Edited tenant $tenantDisplayName" -Sev 'Info'
         $results = "Successfully amended details for $($Tenant.displayName)"
     }
     catch { 
-        $results = "Failed to amend details for $($Tenant): $($_.Exception.Message)"
-        Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $($Tenant) -message "Failed amending details $($Tenant). Error: $($_.Exception.Message)" -Sev 'Error'
+        $results = "Failed to amend details for $tenantDisplayName : $($_.Exception.Message)"
+        Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $tenantDisplayName -message "Failed amending details $tenantDisplayName. Error: $($_.Exception.Message)" -Sev 'Error'
     }
 }
 

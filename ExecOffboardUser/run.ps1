@@ -105,7 +105,7 @@ try {
             try {
                 $UserSharepoint = (New-GraphGetRequest -uri "https://graph.microsoft.com/beta/users/$($userid)/drive" -AsApp $true -tenantid $tenantFilter).weburl -replace "/Documents"
                 $GainAccessJson = '{"SecondaryContact":"' + $request.body.OnedriveAccess + '","IsCurrentUserPersonalSiteAdmin":false,"IsDelegatedAdmin":true,"UserPersonalSiteUrl":"' + $UserSharepoint + '"}'
-                $uri = "https://login.microsoftonline.com/$($Tenant)/oauth2/token"
+                $uri = "https://login.microsoftonline.com/$($TenantFilter)/oauth2/token"
                 $body = "resource=https://admin.microsoft.com&grant_type=refresh_token&refresh_token=$($ENV:ExchangeRefreshToken)"
                 $token = Invoke-RestMethod $uri -Body $body -ContentType "application/x-www-form-urlencoded" -ErrorAction SilentlyContinue -Method post
                 $OwnershipOnedrive = Invoke-RestMethod -ContentType "application/json;charset=UTF-8" -Uri 'https://admin.microsoft.com/admin/api/users/setSecondaryOwner' -Body $GainAccessJson -Method POST -Headers @{
