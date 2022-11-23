@@ -14,6 +14,9 @@ $AssignTo = if ($request.body.Assignto -ne "on") { $request.body.Assignto }
 $RawJSON = $Request.body.RawJSON
 
 $results = foreach ($Tenant in $tenants) {
+    if ($Request.body.replacemap.$tenant) {
+        ([pscustomobject]$Request.body.replacemap.$tenant).psobject.properties | ForEach-Object { $RawJson = $RawJson -replace $_.name, $_.value }
+    }
     try {
         switch ($Request.body.TemplateType) {
             "Admin" {
@@ -55,7 +58,7 @@ $results = foreach ($Tenant in $tenants) {
             $assign = New-GraphPOSTRequest -uri  "https://graph.microsoft.com/beta/deviceManagement/$TemplateTypeURL('$($CreateRequest.id)')/assign" -tenantid $tenant -type POST -body $AssignBody
             Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $($Tenant) -message "Assigned policy $($Displayname) to $AssignTo" -Sev "Info"
         }
-        "Succesfully added policy for $($Tenant)"
+        "Successfully added policy for $($Tenant)"
     }
     catch {
         "Failed to add policy for $($Tenant): $($_.Exception.Message)"

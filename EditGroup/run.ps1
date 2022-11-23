@@ -21,7 +21,7 @@ if ($AddMembers) {
             $MemberIDs = "https://graph.microsoft.com/v1.0/directoryObjects/" + (New-GraphGetRequest -uri "https://graph.microsoft.com/beta/users/$($_)" -tenantid $Userobj.tenantid).id 
             $addmemberbody = "{ `"members@odata.bind`": $(ConvertTo-Json @($MemberIDs)) }"
             if ($userobj.groupType -eq "Distribution list" -or $userobj.groupType -eq "Mail-Enabled Security") {
-                $Params = @{ Identity = $userobj.groupid; Member = $member }
+                $Params = @{ Identity = $userobj.groupid; Member = $member; BypassSecurityGroupManagerCheck = $true }
                 New-ExoRequest -tenantid $Userobj.tenantid -cmdlet "Add-DistributionGroupMember" -cmdParams $params
             }
             else {

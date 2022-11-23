@@ -263,6 +263,8 @@ function Read-MXRecord {
         Domain     = $Domain
     }
 
+    Set-Location (Get-Item $PSScriptRoot).FullName
+    
     $NoMxValidation = 'There are no mail exchanger records for this domain. If you do not want to receive mail for this domain use a Null MX record of . with a priority 0 (RFC 7505).'
  
     $MXResults.Domain = $Domain
@@ -311,11 +313,15 @@ function Read-MXRecord {
                 $MXResults.MailProvider = Get-Content 'MailProviders\Null.json' | ConvertFrom-Json
             }
             else {
-                Get-ChildItem 'MailProviders' -Exclude '_template.json' | ForEach-Object {
-                    try {
-                        $Provider = Get-Content $_ | ConvertFrom-Json -ErrorAction Stop
-                        $MXRecords.Hostname | ForEach-Object {
-                            if ($_ -match $Provider.MxMatch) {
+                $ProviderList = Get-ChildItem 'MailProviders' -Exclude '_template.json' | ForEach-Object { 
+                    try { Get-Content $_ | ConvertFrom-Json -ErrorAction Stop } 
+                    catch {} 
+                }
+                foreach ($Record in $MXRecords) {
+                    $ProviderMatched = $false
+                    foreach ($Provider in $ProviderList) {
+                        try {
+                            if ($Record.Hostname -match $Provider.MxMatch) {
                                 $MXResults.MailProvider = $Provider
                                 if (($Provider.SpfReplace | Measure-Object | Select-Object -ExpandProperty Count) -gt 0) {
                                     $ReplaceList = [System.Collections.Generic.List[string]]::new()
@@ -337,10 +343,15 @@ function Read-MXRecord {
                                 # Set ExpectedInclude and Selector fields based on provider details
                                 $MXResults.ExpectedInclude = $ExpectedInclude
                                 $MXResults.Selectors = $Provider.Selectors
+                                $ProviderMatched = $true
+                                break
                             }
                         }
+                        catch {}
                     }
-                    catch {}
+                    if ($ProviderMatched) {
+                        break
+                    }
                 }
             }
         }
