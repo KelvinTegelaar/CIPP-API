@@ -15,7 +15,6 @@ try {
             "Config"
             "Domains"
             "ExcludedLicenses"
-            "Tenants"
             "templates"
             "standards"
             "SchedulerConfig"
