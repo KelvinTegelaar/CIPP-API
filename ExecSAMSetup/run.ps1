@@ -3,6 +3,16 @@ using namespace System.Net
 param($Request, $TriggerMetadata)
 Set-Location (Get-Item $PSScriptRoot).Parent.FullName
 $UserCreds = ([System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($request.headers.'x-ms-client-principal')) | ConvertFrom-Json)
+
+if ($Request.query.error) {
+      Add-Type -AssemblyName System.Web
+      Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
+                  ContentType = 'text/html'
+                  StatusCode  = [HttpStatusCode]::Forbidden
+                  Body        = Get-normalizedError -Message [System.Web.HttpUtility]::UrlDecode($Request.Query.error_description)
+            })
+      exit
+}
 if ("admin" -notin $UserCreds.userRoles) {
       Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
                   ContentType = 'text/html'
