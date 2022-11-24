@@ -104,9 +104,13 @@ try {
                         $attempt = 0
                         do {
                               try {
-                                    Write-Host "{ `"appId`": `"$($AppId.appId)`" }" 
+                                    try {
+                                          $SPNDefender = (Invoke-RestMethod "https://graph.microsoft.com/v1.0/servicePrincipals" -Headers @{ authorization = "Bearer $($Token.Access_Token)" } -Method POST -Body "{ `"appId`": `"fc780465-2017-40d4-a0c5-307022471b92`" }" -ContentType 'application/json')
+                                    }
+                                    catch {
+                                          Write-Host "didn't deploy spn for defender."
+                                    }
                                     $SPN = (Invoke-RestMethod "https://graph.microsoft.com/v1.0/servicePrincipals" -Headers @{ authorization = "Bearer $($Token.Access_Token)" } -Method POST -Body "{ `"appId`": `"$($AppId.appId)`" }" -ContentType 'application/json')
-                                    Write-Host "SPN"
                                     Start-Sleep 3
                                     $GroupID = (Invoke-RestMethod "https://graph.microsoft.com/v1.0/groups?`$filter=startswith(displayName,'AdminAgents')" -Headers @{ authorization = "Bearer $($Token.Access_Token)" } -Method Get -ContentType 'application/json').value.id
                                     Write-Host "Id is $GroupID"
