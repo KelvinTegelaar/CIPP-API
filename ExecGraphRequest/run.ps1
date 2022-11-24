@@ -77,14 +77,14 @@ Function ConvertTo-FlatObject {
 $TenantFilter = $Request.Query.TenantFilter
 try {
         if ($TenantFilter -ne 'AllTenants') {
-                $RawGraphRequest = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/$($Request.Query.Endpoint)" -tenantid $TenantFilter -ComplexFilter
+                $RawGraphRequest = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/$($Request.Query.Endpoint)" -tenantid $TenantFilter -NoPagination [boolean]$Request.query.DisablePagination -ComplexFilter
         }
         else {
                 $RawGraphRequest = Get-tenants | ForEach-Object {
                         try {
                                 $DefaultDomainName = $_.defaultDomainName
                                 $TenantName = $_.displayName
-                                New-GraphGetRequest -uri "https://graph.microsoft.com/beta/$($Request.Query.Endpoint)" -tenantid $DefaultDomainName -ComplexFilter
+                                New-GraphGetRequest -uri "https://graph.microsoft.com/beta/$($Request.Query.Endpoint)" -tenantid $DefaultDomainName -NoPagination [boolean]$Request.query.DisablePagination -ComplexFilter
                         }
                         catch {
                                 continue
