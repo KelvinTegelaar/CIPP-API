@@ -3,10 +3,21 @@ using namespace System.Net
 param($Request, $TriggerMetadata)
 Set-Location (Get-Item $PSScriptRoot).Parent.FullName
 $UserCreds = ([System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($request.headers.'x-ms-client-principal')) | ConvertFrom-Json)
+
+if ($Request.query.error) {
+      Add-Type -AssemblyName System.Web
+      Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
+                  ContentType = 'text/html'
+                  StatusCode  = [HttpStatusCode]::Forbidden
+                  Body        = Get-normalizedError -Message [System.Web.HttpUtility]::UrlDecode($Request.Query.error_description)
+            })
+      exit
+}
 if ("admin" -notin $UserCreds.userRoles) {
       Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
-                  StatusCode = [HttpStatusCode]::Forbidden
-                  Body       = "Could not find admin role on your user. Try reloading this page by clicking on the URL bar and hitting enter."
+                  ContentType = 'text/html'
+                  StatusCode  = [HttpStatusCode]::Forbidden
+                  Body        = 'Could not find an admin cookie in your browser. Make sure you do not have an adblocker active, use a Chromium browser, and allow cookies. If our automatic refresh does not work, try pressing the URL bar and hitting enter. We will try to refresh ourselves in 3 seconds.<meta http-equiv="refresh" content="3" />'
             })
       exit
 }
@@ -30,7 +41,7 @@ try {
             Set-AzKeyVaultSecret -VaultName $kv -Name 'ExchangeRefreshToken' -SecretValue (ConvertTo-SecureString -String $request.body.exchangeRefreshToken -AsPlainText -Force)
             Set-AzKeyVaultSecret -VaultName $kv -Name 'applicationid' -SecretValue (ConvertTo-SecureString -String $request.body.applicationid -AsPlainText -Force)
             Set-AzKeyVaultSecret -VaultName $kv -Name 'applicationsecret' -SecretValue (ConvertTo-SecureString -String $request.body.applicationsecret -AsPlainText -Force)
-            $Results = @{ Results = "Replaced keys succesfully. Please clear your token cache or wait 24 hours for the cache to be cleared." }
+            $Results = @{ Results = "Replaced keys successfully. Please clear your token cache or wait 24 hours for the cache to be cleared." }
       }
       if ($Request.query.error -eq 'invalid_client') { $Results = "Client ID was not found in Azure. Try waiting 10 seconds to try again, if you have gotten this error after 5 minutes, please restart the process." }
       if ($request.query.code) {
