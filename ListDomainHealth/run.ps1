@@ -21,6 +21,9 @@ try {
             $Filter = "RowKey eq '{0}'" -f $Request.Query.Domain
             $DomainInfo = Get-AzDataTableEntity @DomainTable -Filter $Filter
             switch ($Request.Query.Action) {
+                'GetDkimSelectors' {
+                    $Body = ($DomainInfo.DkimSelectors | ConvertFrom-Json) -join ','
+                }
                 'ReadSpfRecord' {
                     $SpfQuery = @{
                         Domain = $Request.Query.Domain

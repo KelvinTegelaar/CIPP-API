@@ -8,10 +8,13 @@ Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME  -
 $userobj = $Request.body
 $Results = [System.Collections.ArrayList]@()
 $licenses = ($userobj | Select-Object "License_*").psobject.properties.value
+$Aliases = ($userobj.AddedAliases).Split([Environment]::NewLine)
+
 # Write to the Azure Functions log stream.
 Write-Host "PowerShell HTTP trigger function processed a request."
 #Edit the user
 try {
+    Write-Host "$([boolean]$UserObj.mustchangepass)"
     $Email = "$($UserObj.username)@$($UserObj.domain)"
     $UserprincipalName = "$($UserObj.username)@$($UserObj.domain)"
     $BodyToship = [pscustomobject] @{
@@ -31,7 +34,7 @@ try {
         "streetAddress"     = $userobj.streetAddress
         "businessPhones"    = @($userobj.businessPhone)
         "passwordProfile"   = @{
-            "forceChangePasswordNextSignIn" = [bool]$UserObj.mustchangepass
+            "forceChangePasswordNextSignIn" = [boolean]$UserObj.mustchangepass
         }
     } | ForEach-Object {
         $NonEmptyProperties = $_.psobject.Properties | Select-Object -ExpandProperty Name
@@ -85,7 +88,7 @@ try {
         }
         New-GraphPostRequest -uri "https://graph.microsoft.com/beta/users/$($userobj.Userid)" -tenantid $Userobj.tenantid -type "patch" -body "{`"mail`": `"$UserprincipalName`"}" -verbose
         Write-LogMessage -API $APINAME -tenant ($UserObj.tenantid) -user $request.headers.'x-ms-client-principal'   -message "Added Aliases to $($userobj.displayname) license $($licences)" -Sev "Info"
-        $results.add( "Success. User has been edited")
+        $results.add( "Success. added aliasses to user.")
     }
 
 }
