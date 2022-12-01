@@ -11,14 +11,14 @@ Write-Host "PowerShell HTTP trigger function processed a request."
 $WinGetApp = $request.body
 if ($ChocoApp.InstallAsSystem) { "system" } else { "user" }
 $assignTo = $Request.body.AssignTo
-$WinGetData = @{
+$WinGetData = [ordered]@{
     "@odata.type"       = "#microsoft.graph.winGetApp"
     "displayName"       = "$($WinGetApp.ApplicationName)"
     "description"       = "$($WinGetApp.description)"
     "packageIdentifier" = "$($WinGetApp.PackageName)"
     "installExperience" = @{
         "@odata.type"  = "microsoft.graph.winGetAppInstallExperience"
-        "runAsAccount" = if ($WinGetApp.InstallAsSystem) { "system" } else { "user" }
+        "runAsAccount" = "user"
     }
 }
 
