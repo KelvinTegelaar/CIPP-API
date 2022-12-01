@@ -10,7 +10,7 @@ if ($request.body.type -eq "WinGet") {
     $body = @"
 {"MaximumResults":50,"Filters":[{"PackageMatchField":"Market","RequestMatch":{"KeyWord":"US","MatchType":"CaseInsensitive"}}],"Query":{"KeyWord":"$($Request.Body.SearchString)","MatchType":"Substring"}}
 "@
-    $DataRequest = (Invoke-RestMethod -Uri "https://storeedgefd.dsx.mp.microsoft.com/v9.0/manifestSearch" -Method POST -Body $body -ContentType "Application/json").data | Select-Object *, @{l = 'label'; e = { $_.packageName } }, @{l = 'value'; e = { $_.packageIdentifier } }
+    $DataRequest = (Invoke-RestMethod -Uri "https://storeedgefd.dsx.mp.microsoft.com/v9.0/manifestSearch" -Method POST -Body $body -ContentType "Application/json").data | Select-Object @{l = 'applicationName'; e = { $_.packagename } }, @{l = 'packagename'; e = { $_.packageIdentifier } }
 }
 
 if ($Request.body.type -eq "Choco") {
