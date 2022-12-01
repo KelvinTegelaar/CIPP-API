@@ -14,7 +14,7 @@ if ($request.body.type -eq "WinGet") {
 }
 
 if ($Request.body.type -eq "Choco") {
-    $DataRequest = Invoke-RestMethod -Uri "https://raw.githubusercontent.com/KelvinTegelaar/CIPP/master/version_latest.txt"
+    $DataRequest = Invoke-RestMethod -Uri "https://community.chocolatey.org/api/v2/Search()?`$filter=IsLatestVersion&`$skip=0&`$top=999&searchTerm=%27$($request.body.SearchString)%27&targetFramework=%27%27&includePrerelease=false" -ContentType 'application/json' | Select-Object @{l = 'applicationName'; e = { $_.properties.Title } }, @{l = 'packagename'; e = { $_.title.'#text' } }
 }
 
 
