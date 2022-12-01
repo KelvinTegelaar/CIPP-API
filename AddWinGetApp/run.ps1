@@ -10,7 +10,7 @@ Set-Location (Get-Item $PSScriptRoot).Parent.FullName
 Write-Host "PowerShell HTTP trigger function processed a request."
 $WinGetApp = $request.body
 if ($ChocoApp.InstallAsSystem) { "system" } else { "user" }
-
+$assignTo = $Request.body.AssignTo
 $WinGetData = @{
     "@odata.type"       = "#microsoft.graph.winGetApp"
     "displayName"       = "$($WinGetApp.ApplicationName)"
