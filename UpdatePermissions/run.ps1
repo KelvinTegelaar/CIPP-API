@@ -6,7 +6,7 @@ $currentUTCtime = (Get-Date).ToUniversalTime()
 
 Set-Location (Get-Item $PSScriptRoot).Parent.FullName
 $Tenants = get-tenants
-
+$APINAME = "CPV Permissions"
 foreach ($TenantFilter in $Tenants) {
     $Translator = Get-Content '.\Cache_SAMSetup\PermissionsTranslator.json' | ConvertFrom-Json
     $ExpectedPermissions = Get-Content '.\Cache_SAMSetup\SAMManifest.json' | ConvertFrom-Json
