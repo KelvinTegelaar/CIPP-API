@@ -1,0 +1,59 @@
+{
+  "displayName": "Prevent External Access",
+  "state": "enabledForReportingButNotEnforced",
+  "conditions": {
+    "applications": {
+      "includeUserActions": [],
+      "includeAuthenticationContextClassReferences": [],
+      "excludeApplications": [],
+      "includeApplications": [
+        "All"
+      ]
+    },
+    "clientAppTypes": [
+      "exchangeActiveSync",
+      "browser",
+      "mobileAppsAndDesktopClients",
+      "other"
+    ],
+    "locations": {
+      "excludeLocations": [
+        "00000000-0000-0000-0000-000000000000"
+      ],
+      "includeLocations": [
+        "All"
+      ]
+    },
+    "users": {
+      "includeUsers": [
+        "All"
+      ],
+      "includeGroups": [],
+      "excludeUsers": [
+        "92cdbc8a-8dfc-4dc0-b00c-746634c018cc",
+        "ae9c4479-9549-4804-b741-5f55e9512cc2"
+      ],
+      "includeRoles": [],
+      "excludeGuestsOrExternalUsers": {
+        "guestOrExternalUserTypes": "b2bCollaborationGuest,serviceProvider",
+        "externalTenants": "@{@odata.type=#microsoft.graph.conditionalAccessAllExternalTenants; membershipKind=all}"
+      },
+      "excludeGroups": [],
+      "excludeRoles": [],
+      "includeGuestsOrExternalUsers": null
+    },
+    "platforms": {
+      "excludePlatforms": [],
+      "includePlatforms": [
+        "all"
+      ]
+    },
+    "grantControls": {
+      "builtInControls": [
+        "block"
+      ],
+      "operator": "OR"
+    }
+  },
+  "GUID": "0b29acec-9c11-499f-b37b-65b6279aaf78.CATemplate.json"
+}
