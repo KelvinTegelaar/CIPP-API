@@ -11,18 +11,18 @@ name: PSScriptAnalyzer
 
 on:
   push:
-    branches: [ master ]
+    branches: [master]
   pull_request:
-    branches: [ master ]
+    branches: [master]
   schedule:
-    - cron: '22 22 * * 5'
-    
+    - cron: "22 22 * * 5"
+
 jobs:
   build:
     name: PSScriptAnalyzer
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
 
       - name: Run PSScriptAnalyzer
         uses: microsoft/psscriptanalyzer-action@2044ae068e37d0161fa2127de04c19633882f061
@@ -30,13 +30,13 @@ jobs:
           # Check https://github.com/microsoft/action-psscriptanalyzer for more info about the options.
           # The below set up runs PSScriptAnalyzer to your entire repository and runs some basic security rules.
           path: .\
-          recurse: true 
-          # Include your own basic security rules. Removing this option will run all the rules 
+          recurse: true
+          # Include your own basic security rules. Removing this option will run all the rules
           includeRule: '"PSAvoidGlobalAliases", "PSAvoidUsingConvertToSecureStringWithPlainText"'
           output: results.sarif
-      
+
       # Upload the SARIF file generated in the previous step
       - name: Upload SARIF results file
-        uses: github/codeql-action/upload-sarif@v1
+        uses: github/codeql-action/upload-sarif@v2
         with:
           sarif_file: results.sarif
