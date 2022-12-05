@@ -1,47 +1,41 @@
 {
-    "displayName": "Require MFA for all users",
-    "state": "enabledForReportingButNotEnforced",
-    "conditions": {
-      "applications": {
-        "includeUserActions": [],
-        "includeAuthenticationContextClassReferences": [],
-        "excludeApplications": [],
-        "includeApplications": [
-          "All"
-        ]
-      },
-      "users": {
-        "excludeUsers": [],
-        "includeGroups": [],
-        "excludeGuestsOrExternalUsers": null,
-        "includeGuestsOrExternalUsers": null,
-        "includeRoles": [],
-        "excludeGroups": [],
-        "includeUsers": [
-          "All"
-        ],
-        "excludeRoles": []
-      },
-      "signInRiskLevels": [],
-      "deviceStates": null,
-      "locations": null,
-      "times": null,
-      "platforms": null,
-      "userRiskLevels": [],
-      "clientApplications": null,
-      "devices": null,
-      "clientAppTypes": [
-        "browser",
-        "mobileAppsAndDesktopClients"
-      ],
-      "servicePrincipalRiskLevels": []
+  "displayName": "Require MFA for all users",
+  "state": "enabledForReportingButNotEnforced",
+  "conditions": {
+    "applications": {
+      "includeUserActions": [],
+      "includeAuthenticationContextClassReferences": [],
+      "excludeApplications": [],
+      "includeApplications": ["All"]
     },
-    "grantControls": {
-      "operator": "OR",
-      "builtInControls": [
-        "mfa"
-      ],
-      "termsOfUse": [],
-      "customAuthenticationFactors": []
-    }
+    "users": {
+      "excludeUsers": [],
+      "includeGroups": [],
+      "excludeGuestsOrExternalUsers": {
+        "guestOrExternalUserTypes": "b2bCollaborationGuest,serviceProvider",
+        "externalTenants": "@{membershipKind=all; @odata.type=#microsoft.graph.conditionalAccessAllExternalTenants}"
+      },
+      "includeGuestsOrExternalUsers": null,
+      "includeRoles": [],
+      "excludeGroups": [],
+      "includeUsers": ["All"],
+      "excludeRoles": []
+    },
+    "signInRiskLevels": [],
+    "deviceStates": null,
+    "locations": null,
+    "times": null,
+    "platforms": null,
+    "userRiskLevels": [],
+    "clientApplications": null,
+    "devices": null,
+    "clientAppTypes": ["browser", "mobileAppsAndDesktopClients"],
+    "servicePrincipalRiskLevels": []
+  },
+  "grantControls": {
+    "operator": "OR",
+    "builtInControls": ["mfa"],
+    "termsOfUse": [],
+    "customAuthenticationFactors": []
   }
+}

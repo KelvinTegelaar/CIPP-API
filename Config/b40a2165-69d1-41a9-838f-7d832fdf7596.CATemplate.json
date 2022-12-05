@@ -1,55 +1,51 @@
 {
-    "displayName": "Require MFA for administrators",
-    "state": "enabledForReportingButNotEnforced",
-    "conditions": {
-      "applications": {
-        "includeUserActions": [],
-        "includeAuthenticationContextClassReferences": [],
-        "excludeApplications": [],
-        "includeApplications": [
-          "All"
-        ]
-      },
-      "users": {
-        "excludeUsers": [],
-        "includeGroups": [],
-        "excludeGuestsOrExternalUsers": null,
-        "includeGuestsOrExternalUsers": null,
-        "includeRoles": [
-          "b0f54661-2d74-4c50-afa3-1ec803f12efe",
-          "b1be1c3e-b65d-4f19-8427-f6fa0d97feb9",
-          "29232cdf-9323-42fd-ade2-1d097af3e4de",
-          "62e90394-69f5-4237-9190-012177145e10",
-          "729827e3-9c14-49f7-bb1b-9608f156bbb8",
-          "966707d0-3269-4727-9be2-8c3a10f19b9d",
-          "194ae4cb-b126-40b2-bd5b-6091b380977d",
-          "f28a1f50-f6e7-4571-818b-6a12f2af6b6c",
-          "fe930be7-5e62-47db-91af-98c3a49a38b1"
-        ],
-        "excludeGroups": [],
-        "includeUsers": [],
-        "excludeRoles": []
-      },
-      "signInRiskLevels": [],
-      "deviceStates": null,
-      "locations": null,
-      "times": null,
-      "platforms": null,
-      "userRiskLevels": [],
-      "clientApplications": null,
-      "devices": null,
-      "clientAppTypes": [
-        "browser",
-        "mobileAppsAndDesktopClients"
-      ],
-      "servicePrincipalRiskLevels": []
+  "displayName": "Require MFA for administrators",
+  "state": "enabledForReportingButNotEnforced",
+  "conditions": {
+    "applications": {
+      "includeUserActions": [],
+      "includeAuthenticationContextClassReferences": [],
+      "excludeApplications": [],
+      "includeApplications": ["All"]
     },
-    "grantControls": {
-      "operator": "OR",
-      "builtInControls": [
-        "mfa"
+    "users": {
+      "excludeUsers": [],
+      "includeGroups": [],
+      "excludeGuestsOrExternalUsers": {
+        "guestOrExternalUserTypes": "b2bCollaborationGuest,serviceProvider",
+        "externalTenants": "@{@odata.type=#microsoft.graph.conditionalAccessAllExternalTenants; membershipKind=all}"
+      },
+      "includeGuestsOrExternalUsers": null,
+      "includeRoles": [
+        "b0f54661-2d74-4c50-afa3-1ec803f12efe",
+        "b1be1c3e-b65d-4f19-8427-f6fa0d97feb9",
+        "29232cdf-9323-42fd-ade2-1d097af3e4de",
+        "62e90394-69f5-4237-9190-012177145e10",
+        "729827e3-9c14-49f7-bb1b-9608f156bbb8",
+        "966707d0-3269-4727-9be2-8c3a10f19b9d",
+        "194ae4cb-b126-40b2-bd5b-6091b380977d",
+        "f28a1f50-f6e7-4571-818b-6a12f2af6b6c",
+        "fe930be7-5e62-47db-91af-98c3a49a38b1"
       ],
-      "termsOfUse": [],
-      "customAuthenticationFactors": []
-    }
+      "excludeGroups": [],
+      "includeUsers": [],
+      "excludeRoles": []
+    },
+    "signInRiskLevels": [],
+    "deviceStates": null,
+    "locations": null,
+    "times": null,
+    "platforms": null,
+    "userRiskLevels": [],
+    "clientApplications": null,
+    "devices": null,
+    "clientAppTypes": ["browser", "mobileAppsAndDesktopClients"],
+    "servicePrincipalRiskLevels": []
+  },
+  "grantControls": {
+    "operator": "OR",
+    "builtInControls": ["mfa"],
+    "termsOfUse": [],
+    "customAuthenticationFactors": []
   }
+}
