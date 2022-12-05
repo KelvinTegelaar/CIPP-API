@@ -15,7 +15,6 @@
         "guestOrExternalUserTypes": "b2bCollaborationGuest,serviceProvider",
         "externalTenants": "@{@odata.type=#microsoft.graph.conditionalAccessAllExternalTenants; membershipKind=all}"
       },
-      "includeGuestsOrExternalUsers": null,
       "includeRoles": [
         "b0f54661-2d74-4c50-afa3-1ec803f12efe",
         "b1be1c3e-b65d-4f19-8427-f6fa0d97feb9",
@@ -32,13 +31,7 @@
       "excludeRoles": []
     },
     "signInRiskLevels": [],
-    "deviceStates": null,
-    "locations": null,
-    "times": null,
-    "platforms": null,
     "userRiskLevels": [],
-    "clientApplications": null,
-    "devices": null,
     "clientAppTypes": ["browser", "mobileAppsAndDesktopClients"],
     "servicePrincipalRiskLevels": []
   },
