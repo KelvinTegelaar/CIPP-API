@@ -29,10 +29,7 @@
         "All"
       ],
       "includeGroups": [],
-      "excludeUsers": [
-        "92cdbc8a-8dfc-4dc0-b00c-746634c018cc",
-        "ae9c4479-9549-4804-b741-5f55e9512cc2"
-      ],
+      "excludeUsers": [],
       "includeRoles": [],
       "excludeGuestsOrExternalUsers": {
         "guestOrExternalUserTypes": "b2bCollaborationGuest,serviceProvider",
@@ -54,6 +51,5 @@
       ],
       "operator": "OR"
     }
-  },
-  "GUID": "0b29acec-9c11-499f-b37b-65b6279aaf78.CATemplate.json"
+  }
 }
