@@ -21,7 +21,7 @@ Add-AzDataTableEntity @Table -Entity $logRequest -Force | Out-Null
 $RoleMappings = foreach ($group in $Groups) {
     $randomSleep = Get-Random -Minimum 10 -Maximum 500
     Start-Sleep -Milliseconds $randomSleep
-    $ExistingGroups = New-GraphGetRequest -NoAuthCheck $True -asApp $true -uri "https://graph.microsoft.com/beta/groups" -tenantid $TenantFilter
+    $ExistingGroups = New-GraphGetRequest -NoAuthCheck $True  -uri "https://graph.microsoft.com/beta/groups" -tenantid $TenantFilter
     try {
         if ("M365 GDAP $($Group.Name)" -in $ExistingGroups.displayName) {
             @{
@@ -31,7 +31,7 @@ $RoleMappings = foreach ($group in $Groups) {
         }
         else {
             $BodyToship = [pscustomobject] @{"displayName" = "M365 GDAP $($Group.Name)"; "description" = "This group is used to manage M365 partner tenants at the $($group.name) level."; securityEnabled = $true; mailEnabled = $false; mailNickname = "M365GDAP$(($Group.Name).replace(' ',''))" } | ConvertTo-Json
-            $GraphRequest = New-GraphPostRequest -NoAuthCheck $True -AsApp $true -uri "https://graph.microsoft.com/beta/groups" -tenantid $env:TenantID -type POST -body $BodyToship  -verbose
+            $GraphRequest = New-GraphPostRequest -NoAuthCheck $True -uri "https://graph.microsoft.com/beta/groups" -tenantid $env:TenantID -type POST -body $BodyToship  -verbose
             @{
                 GroupId          = $GraphRequest.Id 
                 roleDefinitionId = $group.ObjectId
