@@ -76,6 +76,7 @@ if ($Request.query.TenantFilter -ne 'AllTenants') {
             UPN             = $_.UserPrincipalName
             AccountEnabled  = $AccountState
             PerUser         = $PerUser
+            isLicensed      = $_.isLicensed
             MFARegistration = $MFARegUser
             CoveredByCA     = ($UserCAState -join ', ')
             CoveredBySD     = $SecureDefaultsState

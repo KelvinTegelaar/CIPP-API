@@ -12,8 +12,7 @@ $DeviceFilter = $Request.Query.GUID
 $Action = $Request.Query.Action
 $ActionBody = if ($Request.body) { $Request.body | ConvertTo-Json } else { '{}' }
 try {     
-    $GraphRequest = New-Graphpostrequest -uri "https://graph.microsoft.com/beta/deviceManagement/managedDevices('$DeviceFilter')/$($Action)" -type POST -tenantid $TenantFilter -body $actionbody -asapp $true
-
+    $GraphRequest = New-Graphpostrequest -uri "https://graph.microsoft.com/beta/deviceManagement/managedDevices('$DeviceFilter')/$($Action)" -type POST -tenantid $TenantFilter -body $actionbody 
     Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $($tenantfilter) -message "Queued $Action on $DeviceFilter" -Sev "Info"
     $body = [pscustomobject]@{"Results" = "Queued $Action on $DeviceFilter" }
 
