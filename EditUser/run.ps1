@@ -102,9 +102,9 @@ if ($Request.body.CopyFrom -ne "") {
     $addmemberbody = "{ `"members@odata.bind`": $(ConvertTo-Json @($MemberIDs)) }"
         (New-GraphPostRequest -uri "https://graph.microsoft.com/beta/users/$($Request.body.CopyFrom)/GetMemberGroups" -tenantid $Userobj.tenantid -type POST -body  '{"securityEnabledOnly": false}').value | ForEach-Object {
         try {
-            $groupname = (New-GraphGetRequest -tenantid $Userobj.tenantid -asApp $true -uri "https://graph.microsoft.com/beta/groups/$($_)").displayName
+            $groupname = (New-GraphGetRequest -tenantid $Userobj.tenantid  -uri "https://graph.microsoft.com/beta/groups/$($_)").displayName
             Write-Host "name: $groupname"
-            $GroupResult = New-GraphPostRequest -AsApp $true -uri "https://graph.microsoft.com/beta/groups/$($_)" -tenantid $Userobj.tenantid -type patch -body $addmemberbody -ErrorAction Stop
+            $GroupResult = New-GraphPostRequest -uri "https://graph.microsoft.com/beta/groups/$($_)" -tenantid $Userobj.tenantid -type patch -body $addmemberbody -ErrorAction Stop
             Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME  -message "Added $($UserprincipalName) to group $groupresult.displayName)" -Sev "Info"  -tenant $TenantFilter
             $body = $results.add("Added group: $($groupname)")
         }

@@ -10,7 +10,7 @@ Get-Tenants | ForEach-Object -Parallel {
     $Table = Get-CIPPTable -TableName 'cachealertsandincidents'
 
     try {
-        $Alerts = New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/security/alerts' -tenantid $domainName -AsApp $true 
+        $Alerts = New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/security/alerts' -tenantid $domainName 
         foreach ($Alert in $Alerts) {
             $GUID = (New-Guid).Guid
             $alertJson = $Alert | ConvertTo-Json
