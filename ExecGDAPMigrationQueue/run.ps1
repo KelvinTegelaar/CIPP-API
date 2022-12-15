@@ -3,7 +3,7 @@ param( $QueueItem, $TriggerMetadata)
 
 # Write out the queue message and metadata to the information log.
 Write-Host "PowerShell queue trigger function processed work item: $QueueItem"
-$TenantFilter = $ENV:TenantId
+$TenantFilter = $env:TenantID
 $Groups = $QueueItem.gdapRoles
 $tenant = $queueitem.tenant
 $Table = Get-CIPPTable -TableName 'gdapmigration'
@@ -21,7 +21,7 @@ Add-AzDataTableEntity @Table -Entity $logRequest -Force | Out-Null
 $RoleMappings = foreach ($group in $Groups) {
     $randomSleep = Get-Random -Minimum 10 -Maximum 500
     Start-Sleep -Milliseconds $randomSleep
-    $ExistingGroups = New-GraphGetRequest -NoAuthCheck $True -asApp $true -uri "https://graph.microsoft.com/beta/groups" -tenantid $TenantFilter
+    $ExistingGroups = New-GraphGetRequest -NoAuthCheck $True  -uri "https://graph.microsoft.com/beta/groups" -tenantid $TenantFilter
     try {
         if ("M365 GDAP $($Group.Name)" -in $ExistingGroups.displayName) {
             @{
@@ -31,7 +31,7 @@ $RoleMappings = foreach ($group in $Groups) {
         }
         else {
             $BodyToship = [pscustomobject] @{"displayName" = "M365 GDAP $($Group.Name)"; "description" = "This group is used to manage M365 partner tenants at the $($group.name) level."; securityEnabled = $true; mailEnabled = $false; mailNickname = "M365GDAP$(($Group.Name).replace(' ',''))" } | ConvertTo-Json
-            $GraphRequest = New-GraphPostRequest -NoAuthCheck $True -AsApp $true -uri "https://graph.microsoft.com/beta/groups" -tenantid $ENV:TenantId -type POST -body $BodyToship  -verbose
+            $GraphRequest = New-GraphPostRequest -NoAuthCheck $True -uri "https://graph.microsoft.com/beta/groups" -tenantid $env:TenantID -type POST -body $BodyToship  -verbose
             @{
                 GroupId          = $GraphRequest.Id 
                 roleDefinitionId = $group.ObjectId
@@ -71,10 +71,10 @@ try {
         "duration"      = "P730D"
     } | ConvertTo-Json -Depth 5 -Compress
     Write-Host  $JSONBody
-    $MigrateRequest = New-GraphPostRequest -NoAuthCheck $True -uri "https://traf-pcsvcadmin-prod.trafficmanager.net/CustomerServiceAdminApi/Web//v1/delegatedAdminRelationships/migrate" -type POST -body $JSONBody -verbose -tenantid $ENV:TenantId -scope 'https://api.partnercustomeradministration.microsoft.com/.default'
+    $MigrateRequest = New-GraphPostRequest -NoAuthCheck $True -uri "https://traf-pcsvcadmin-prod.trafficmanager.net/CustomerServiceAdminApi/Web//v1/delegatedAdminRelationships/migrate" -type POST -body $JSONBody -verbose -tenantid $env:TenantID -scope 'https://api.partnercustomeradministration.microsoft.com/.default'
     Start-Sleep -Milliseconds 100
     do {
-        $CheckActive = New-GraphGetRequest -NoAuthCheck $True -uri "https://traf-pcsvcadmin-prod.trafficmanager.net/CustomerServiceAdminApi/Web//v1/delegatedAdminRelationships/$($MigrateRequest.id)" -tenantid $ENV:TenantId  -scope 'https://api.partnercustomeradministration.microsoft.com/.default'
+        $CheckActive = New-GraphGetRequest -NoAuthCheck $True -uri "https://traf-pcsvcadmin-prod.trafficmanager.net/CustomerServiceAdminApi/Web//v1/delegatedAdminRelationships/$($MigrateRequest.id)" -tenantid $env:TenantID -scope 'https://api.partnercustomeradministration.microsoft.com/.default'
         Start-Sleep -Milliseconds 200
     } until ($CheckActive.status -eq "Active")
 }
@@ -100,7 +100,7 @@ if ($CheckActive.status -eq "Active") {
                         }) 
                 }
             }
-            $RoleActiveID = New-GraphPostRequest -NoAuthCheck $True -uri "https://traf-pcsvcadmin-prod.trafficmanager.net/CustomerServiceAdminApi/Web//v1/delegatedAdminRelationships/$($MigrateRequest.id)/accessAssignments" -tenantid $ENV:TenantId -type POST -body $MappingBody  -verbose  -scope 'https://api.partnercustomeradministration.microsoft.com/.default'
+            $RoleActiveID = New-GraphPostRequest -NoAuthCheck $True -uri "https://traf-pcsvcadmin-prod.trafficmanager.net/CustomerServiceAdminApi/Web//v1/delegatedAdminRelationships/$($MigrateRequest.id)/accessAssignments" -tenantid $env:TenantID -type POST -body $MappingBody  -verbose  -scope 'https://api.partnercustomeradministration.microsoft.com/.default'
             Start-Sleep -Milliseconds 400
             $LogRequest['status'] = "Step 3: GDAP Relationship active. Mapping group: $($Role.GroupId)"
             Add-AzDataTableEntity @Table -Entity $logRequest -Force | Out-Null
@@ -110,7 +110,7 @@ if ($CheckActive.status -eq "Active") {
             Add-AzDataTableEntity @Table -Entity $logRequest -Force | Out-Null
             exit 1
         }
-        #$CheckActiveRole = New-GraphGetRequest -NoAuthCheck $True -uri "https://traf-pcsvcadmin-prod.trafficmanager.net/CustomerServiceAdminApi/Web//v1/delegatedAdminRelationships/$($MigrateRequest.id)/accessAssignments/$($RoleActiveID.id)" -tenantid $ENV:TenantId  -scope 'https://api.partnercustomeradministration.microsoft.com/.default'
+        #$CheckActiveRole = New-GraphGetRequest -NoAuthCheck $True -uri "https://traf-pcsvcadmin-prod.trafficmanager.net/CustomerServiceAdminApi/Web//v1/delegatedAdminRelationships/$($MigrateRequest.id)/accessAssignments/$($RoleActiveID.id)" -tenantid $env:TenantId  -scope 'https://api.partnercustomeradministration.microsoft.com/.default'
     }
     $LogRequest['status'] = "Migration Complete"
     Add-AzDataTableEntity @Table -Entity $logRequest -Force | Out-Null
