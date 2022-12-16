@@ -4,7 +4,7 @@
 RootModule = 'AzBobbyTables.PS.dll'
 
 # Version number of this module.
-ModuleVersion = '2.3.2'
+ModuleVersion = '2.4.0'
 
 # Supported PSEditions
 CompatiblePSEditions = @('Core')
@@ -22,7 +22,7 @@ CompanyName = 'pipe.how'
 Copyright = '(c) Emanuel Palm. All rights reserved.'
 
 # Description of the functionality provided by this module
-Description = 'A module that wraps the Azure Data Tables SDK.'
+Description = 'A module for handling Azure Table Storage operations by wrapping the Azure Data Tables SDK.'
 
 # Minimum version of the PowerShell engine required by this module
 PowerShellVersion = '7.0'
