@@ -25,6 +25,7 @@ $results = try {
         'removeUser'         = [boolean]$Request.Body.removeUser
         'addUser'            = [boolean]$Request.Body.addUser
         'addChocoApp'        = [boolean]$Request.Body.addChocoApp
+        'onePerTenant'       = [boolean]$Request.Body.onePerTenant
         'PartitionKey'       = 'CippNotifications'
         'RowKey'             = 'CippNotifications'
     }

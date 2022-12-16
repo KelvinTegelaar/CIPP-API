@@ -12,8 +12,9 @@ Write-Host "PowerShell HTTP trigger function processed a request."
 
 # Interact with query parameters or the body of the request.
 $TenantFilter = $Request.Query.TenantFilter
-$tenantid = (Get-Tenants | Where-Object -Property DefaultdomainName -EQ $Request.Query.TenantFilter).customerId
+$tenantid = (Get-Tenants | Where-Object -Property defaultDomainName -EQ $Request.Query.TenantFilter).customerId
 try {
+    $users = (New-GraphGetRequest -uri "https://graph.microsoft.com/beta/users?`$top=999&`$select=id,userPrincipalName,displayname" -tenantid $TenantFilter)
     $GraphRequest = (New-TeamsAPIGetRequest -uri "https://api.interfaces.records.teams.microsoft.com/Skype.TelephoneNumberMgmt/Tenants/$($Tenantid)/telephone-numbers?locale=en-US" -tenantid $TenantFilter).TelephoneNumbers | ForEach-Object {
         $CompleteRequest = $_ | Select-Object *, "AssignedTo"
         $CompleteRequest.AcquisitionDate = $CompleteRequest.AcquisitionDate -split 'T' | Select-Object -First 1
@@ -22,7 +23,7 @@ try {
             $CompleteRequest.AssignedTo = "Unassigned"
         }
         else {
-            $CompleteRequest.AssignedTo = (New-GraphGetRequest -uri "https://graph.microsoft.com/beta/users/$($_.TargetId)?`$top=999&`$select=id,userPrincipalName,displayname" -tenantid $TenantFilter).userPrincipalName
+            $CompleteRequest.AssignedTo = ($users | Where-Object -Property Id -EQ $CompleteRequest.TargetId).userPrincipalName
        
         }
         $CompleteRequest
