@@ -31,7 +31,7 @@ $results = foreach ($tenant in $SelectedTenants) {
                 $BodyToship | Add-Member  -NotePropertyName "groupTypes" -NotePropertyValue @("DynamicMembership")
                 $BodyToship | Add-Member  -NotePropertyName "membershipRuleProcessingState" -NotePropertyValue "On"
             }
-            $GraphRequest = New-GraphPostRequest -AsApp $true -uri "https://graph.microsoft.com/beta/groups" -tenantid $tenant -type POST -body (ConvertTo-Json -InputObject $BodyToship -Depth 10)  -verbose
+            $GraphRequest = New-GraphPostRequest -uri "https://graph.microsoft.com/beta/groups" -tenantid $tenant -type POST -body (ConvertTo-Json -InputObject $BodyToship -Depth 10)  -verbose
         }
         else {
             $Params = @{ 
