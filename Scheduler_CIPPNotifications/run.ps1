@@ -17,7 +17,7 @@ $Currentlog = Get-AzDataTableEntity @Table -Filter $Filter | Where-Object { $_.A
 try {
   if ($config.onePerTenant) {
     if ($Config.email -like '*@*' -and $null -ne $CurrentLog) {
-      foreach ($tenant in $CurrentLog.Tenant) {
+      foreach ($tenant in ($CurrentLog.Tenant | Sort-Object -Unique)) {
         $HTMLLog = ($CurrentLog | Select-Object Message, API, Tenant, Username, Severity | Where-Object -Property tenant -EQ $tenant | ConvertTo-Html -frag) -replace '<table>', '<table class=blueTable>' | Out-String
         $JSONBody = @"
                     {
