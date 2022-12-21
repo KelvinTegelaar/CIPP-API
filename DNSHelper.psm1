@@ -1001,6 +1001,7 @@ function Read-DmarcPolicy {
                         }
                     }
                 }
+                if (!$DmarcAnalysis.ReportingEmails) { $DmarcAnalysis.ReportingEmails.Add($null) }
                 if ($ReportEmailsSet) {
                     $ValidationPasses.Add('Aggregate reports are being sent.') | Out-Null
                 }
