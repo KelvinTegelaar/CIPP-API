@@ -32,7 +32,7 @@ if ($Request.query.Permissions -eq 'true') {
 
         $GraphToken = Get-GraphToken -returnRefresh $true
         if ($GraphToken) {
-            $GraphPermissions = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/myorganization/applications?`$filter=appId eq '$ENV:ApplicationID'" -NoAuthCheck $true
+            $GraphPermissions = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/myorganization/applications?`$filter=appId eq '$env:ApplicationID'" -NoAuthCheck $true
         }
         if ($env:MSI_SECRET) {
             try {

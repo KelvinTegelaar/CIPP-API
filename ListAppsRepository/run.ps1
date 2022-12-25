@@ -6,8 +6,8 @@ param($Request, $TriggerMetadata)
 $APIName = $TriggerMetadata.FunctionName
 Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -message 'Accessed this API' -Sev 'Debug'
 
-$Search = $Request.Query.Search
-$Repository = $Request.Query.Repository
+$Search = $Request.Body.Search
+$Repository = $Request.Body.Repository
 $Packages = @()
 $Message = ''
 $IsError = $false
@@ -27,12 +27,13 @@ try {
         if (($RepoPackages | Measure-Object).Count -gt 0) {
             $Packages = foreach ($RepoPackage in $RepoPackages) {
                 [PSCustomObject]@{
-                    Name        = $RepoPackage.title.'#text'
-                    Author      = $RepoPackage.author.Name
-                    Title       = $RepoPackage.properties.Title
-                    Version     = $RepoPackage.properties.Version
-                    Description = $RepoPackage.summary.'#text'
-                    Created     = Get-Date -Date $RepoPackage.properties.Created.'#text' -Format 'MM/dd/yyyy HH:mm:ss'
+                    packagename     = $RepoPackage.title.'#text'
+                    author          = $RepoPackage.author.Name
+                    applicationName = $RepoPackage.properties.Title
+                    version         = $RepoPackage.properties.Version
+                    description     = $RepoPackage.summary.'#text'
+                    customRepo      = $Repository
+                    created         = Get-Date -Date $RepoPackage.properties.Created.'#text' -Format 'MM/dd/yyyy HH:mm:ss'
                 }  
             }
         }
@@ -52,11 +53,10 @@ catch {
 }
 
 $PackageSearch = @{
-    Search     = $Search
-    Repository = $Repository
-    Results    = @($Packages)
-    Message    = $Message
-    IsError    = $IsError
+    Search  = $Search
+    Results = @($Packages)
+    Message = $Message
+    IsError = $IsError
 }
 
 Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{

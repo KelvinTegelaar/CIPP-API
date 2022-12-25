@@ -4,7 +4,7 @@ function Get-CIPPTable {
         $tablename = 'CippLogs'
     )
     @{
-        ConnectionString       = $ENV:AzureWebJobsStorage
+        ConnectionString       = $env:AzureWebJobsStorage
         TableName              = $tablename
         CreateTableIfNotExists = $true
     }
@@ -26,6 +26,8 @@ function Get-NormalizedError {
         '*AADSTS50020*' { 'AADSTS50020: The user you have used for your Secure Application Model is a guest in this tenant, or your are using GDAP and have not added the user to the correct group. Please delete the guest user to gain access to this tenant' }
         '*invalid or malformed*' { 'The request is malformed. You have entered incorrect tokens or have not performed a clear of the token cache after entering new tokens. Please see the troubleshooting documentation on how to execute a clear of the token cache.' }
         '*Windows Store repository apps feature is not supported for this tenant*' { 'This tenant does not have WinGet support available' }
+        '*AADSTS650051*' { 'The application does not exist yet. Try again in 30 seconds.' }
+        '*AppLifecycle_2210*' { 'Failed to call Intune APIs: Does the tenant have a license available?' }
         Default { $message }
         
     }
@@ -35,17 +37,17 @@ function Get-GraphToken($tenantid, $scope, $AsApp, $AppID, $refreshToken, $Retur
     if (!$scope) { $scope = 'https://graph.microsoft.com//.default' }
 
     $AuthBody = @{
-        client_id     = $ENV:ApplicationId
-        client_secret = $ENV:ApplicationSecret
+        client_id     = $env:ApplicationID
+        client_secret = $env:ApplicationSecret
         scope         = $Scope
-        refresh_token = $ENV:RefreshToken
+        refresh_token = $env:RefreshToken
         grant_type    = 'refresh_token'
                     
     }
     if ($asApp -eq $true) {
         $AuthBody = @{
-            client_id     = $ENV:ApplicationId
-            client_secret = $ENV:ApplicationSecret
+            client_id     = $env:ApplicationID
+            client_secret = $env:ApplicationSecret
             scope         = $Scope
             grant_type    = 'client_credentials'
         }
@@ -60,7 +62,7 @@ function Get-GraphToken($tenantid, $scope, $AsApp, $AppID, $refreshToken, $Retur
         }
     }
 
-    if (!$tenantid) { $tenantid = $env:tenantid }
+    if (!$tenantid) { $tenantid = $env:TenantID }
 
     try {
         $AccessToken = (Invoke-RestMethod -Method post -Uri "https://login.microsoftonline.com/$($tenantid)/oauth2/v2.0/token" -Body $Authbody -ErrorAction Stop)
@@ -134,7 +136,7 @@ function New-GraphGetRequest {
     ) 
 
     if ($scope -eq 'ExchangeOnline') { 
-        $Headers = Get-GraphToken -AppID 'a0c73c16-a7e3-4564-9a95-2bdf47383716' -RefreshToken $ENV:ExchangeRefreshToken -Scope 'https://outlook.office365.com/.default' -Tenantid $tenantid
+        $Headers = Get-GraphToken -AppID 'a0c73c16-a7e3-4564-9a95-2bdf47383716' -RefreshToken $env:ExchangeRefreshToken -Scope 'https://outlook.office365.com/.default' -Tenantid $tenantid
     }
     else {
         $headers = Get-GraphToken -tenantid $tenantid -scope $scope -AsApp $asapp
@@ -219,7 +221,7 @@ function convert-skuname($skuname, $skuID) {
 
 function Get-ClassicAPIToken($tenantID, $Resource) {
     $uri = "https://login.microsoftonline.com/$($TenantID)/oauth2/token"
-    $body = "resource=$Resource&grant_type=refresh_token&refresh_token=$($ENV:ExchangeRefreshToken)"
+    $body = "resource=$Resource&grant_type=refresh_token&refresh_token=$($env:ExchangeRefreshToken)"
 
     try {
         $token = Invoke-RestMethod $uri -Body $body -ContentType 'application/x-www-form-urlencoded' -ErrorAction SilentlyContinue -Method post
@@ -371,10 +373,10 @@ function Get-Tenants {
     $LastRefresh = ($IncludedTenantsCache | Sort-Object LastRefresh | Select-Object -First 1).LastRefresh.DateTime
     if ($LastRefresh -lt (Get-Date).Addhours(-24).ToUniversalTime()) {
 
-        $TenantList = (New-GraphGetRequest -uri "https://graph.microsoft.com/beta/contracts?`$top=999" -tenantid $ENV:Tenantid) | Select-Object id, customerId, DefaultdomainName, DisplayName, domains | Where-Object -Property defaultDomainName -NotIn $SkipListCache.defaultDomainName
+        $TenantList = (New-GraphGetRequest -uri "https://graph.microsoft.com/beta/contracts?`$top=999" -tenantid $env:TenantID ) | Select-Object id, customerId, DefaultdomainName, DisplayName, domains | Where-Object -Property defaultDomainName -NotIn $SkipListCache.defaultDomainName
 
         $IncludedTenantsCache = [system.collections.generic.list[hashtable]]::new()
-        if ($ENV:PartnerTenantAvailable) {
+        if ($env:PartnerTenantAvailable) {
             $IncludedTenantsCache.Add(@{
                     RowKey            = $env:TenantID
                     PartitionKey      = 'Tenants'
@@ -417,7 +419,7 @@ function Get-Tenants {
     }
 
     if ($IncludeAll) {
-        return (New-GraphGetRequest -uri "https://graph.microsoft.com/beta/contracts?`$top=999" -tenantid $ENV:Tenantid) | Select-Object CustomerId, DefaultdomainName, DisplayName, domains
+        return (New-GraphGetRequest -uri "https://graph.microsoft.com/beta/contracts?`$top=999" -tenantid $env:TenantID) | Select-Object CustomerId, DefaultdomainName, DisplayName, domains
     }
     else {
         return ($IncludedTenantsCache | Sort-Object -Property displayName)
