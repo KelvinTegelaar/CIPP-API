@@ -36,6 +36,25 @@ if ($AddMembers) {
     }
 
 }
+$AddContacts = ($userobj.AddContacts).value
+
+if ($AddContacts) {
+    $AddContacts | ForEach-Object {
+        try {
+            $member = $_
+            if ($userobj.groupType -eq "Distribution list" -or $userobj.groupType -eq "Mail-Enabled Security") {
+                $Params = @{ Identity = $userobj.groupid; Member = $member; BypassSecurityGroupManagerCheck = $true }
+                New-ExoRequest -tenantid $Userobj.tenantid -cmdlet "Add-DistributionGroupMember" -cmdParams $params
+            }
+            Write-LogMessage -API $APINAME -tenant $Userobj.tenantid -user $request.headers.'x-ms-client-principal' -message "Added member to $($userobj.displayname) group" -Sev "Info"
+            $body = $results.add("Success. $member has been added")
+        }
+        catch {
+            $body = $results.add("Failed to add member $member to $($userobj.Groupid): $($_.Exception.Message)")
+        }
+    }
+
+}
 
 
 $RemoveMembers = ($userobj.Removemember).value
