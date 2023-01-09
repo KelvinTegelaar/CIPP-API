@@ -12,7 +12,7 @@ $AlertFilter = $Request.Query.GUID
 $Status = $Request.Query.Status
 $AssignBody = '{"status":"' + $Status + '","vendorInformation":{"provider":"' + $Request.query.provider + '","vendor":"' + $Request.query.vendor + '"}}'
 try {       
-    $GraphRequest = New-Graphpostrequest -uri "https://graph.microsoft.com/beta/security/alerts/$AlertFilter" -type PATCH -tenantid $TenantFilter -body $Assignbody -asApp $true
+    $GraphRequest = New-Graphpostrequest -uri "https://graph.microsoft.com/beta/security/alerts/$AlertFilter" -type PATCH -tenantid $TenantFilter -body $Assignbody
     Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $($tenantfilter) -message "Set alert $AlertFilter to status $Status" -Sev "Info"
     $body = [pscustomobject]@{"Results" = "Set status for alert to $Status" }
 

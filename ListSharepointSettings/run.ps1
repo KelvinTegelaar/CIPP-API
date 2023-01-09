@@ -13,7 +13,8 @@ Write-Host "PowerShell HTTP trigger function processed a request."
 # Interact with query parameters or the body of the request.
 $TenantFilter = $Request.Query.TenantFilter
 Set-Location (Get-Item $PSScriptRoot).Parent.FullName
-$GraphRequest = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/deviceManagement/intents" -tenantid $TenantFilter -erroraction stop -noauthcheck $true
+$body = '{"deletedUserPersonalSiteRetentionPeriodInDays": 80}'
+$GraphRequest = New-GraphPostRequest -tenantid $tenantfilter -Uri "https://graph.microsoft.com/beta/admin/sharepoint/settings" -AsApp $true -Type PATCH -Body $body -ContentType "application/json"
 
 # Associate values to output bindings by calling 'Push-OutputBinding'.
 Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
