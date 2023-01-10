@@ -73,7 +73,9 @@ if ($Request.query.TenantFilter -ne 'AllTenants') {
 
         $MFARegUser = if (($MFARegistration | Where-Object -Property UserPrincipalName -EQ $_.UserPrincipalName).IsMFARegistered -eq $null) { $false } else { ($MFARegistration | Where-Object -Property UserPrincipalName -EQ $_.UserPrincipalName).IsMFARegistered }
         [PSCustomObject]@{
+            ID              = $_.Id
             UPN             = $_.UserPrincipalName
+            DisplayName     = $_.UserDisplayName
             AccountEnabled  = $AccountState
             PerUser         = $PerUser
             isLicensed      = $_.isLicensed
