@@ -94,7 +94,7 @@ if ($Request.body.CopyFrom -ne "") {
         (New-GraphGETRequest -uri "https://graph.microsoft.com/beta/users/$($Request.body.CopyFrom)/memberOf" -tenantid $Userobj.tenantid) | ForEach-Object {
         try {
             Write-Host "name: $($_.displayName)"
-            $GroupResult = New-GraphPostRequest -AsApp $true -uri "https://graph.microsoft.com/beta/groups/$($_.id)" -tenantid $Userobj.tenantid -type patch -body $addmemberbody -Verbose
+            $GroupResult = New-GraphPostRequest -uri "https://graph.microsoft.com/beta/groups/$($_.id)" -tenantid $Userobj.tenantid -type patch -body $addmemberbody -Verbose
             Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME  -message "Added $($UserprincipalName) to group $($_.displayName)" -Sev "Info"  -tenant $TenantFilter
             $body = $results.add("Added group: $($_.displayName)")
         }
