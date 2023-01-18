@@ -21,7 +21,7 @@ foreach ($Row in $Tenants ) {
         Push-OutputBinding -Name Msg -Value $row.customerId
     }
 
-    if ($CPVRows | Where-Object { $_.Tenant -eq $row.customerId } | Where-Object { $_.LastApply -EQ $null -or $_.LastApply -lt (Get-Date).AddSeconds(-14) }) {
+    if ($CPVRows | Where-Object { $_.Tenant -eq $row.customerId } | Where-Object { $_.LastApply -EQ $null -or $_.LastApply -lt (Get-Date).AddDays(-14) }) {
         Write-Host "In list, Old age."
         Push-OutputBinding -Name Msg -Value $row.customerId
     }
