@@ -51,8 +51,8 @@ $GraphRequest = $ExpectedPermissions.requiredResourceAccess | ForEach-Object {
 
 $GraphRequest = @{
     LastApply    = "$((Get-Date).ToString())"
-    Tenant       = "$($tenanfilter.customerId)"
+    Tenant       = "$($tenantfilter.customerId)"
     PartitionKey = 'Tenant'
-    RowKey       = "$($tenanfilter.customerId)"
+    RowKey       = "$($tenantfilter.customerId)"
 }    
 Add-AzDataTableEntity @Table -Entity $GraphRequest -Force | Out-Null

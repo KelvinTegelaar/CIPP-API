@@ -11,15 +11,12 @@ $Tenants = get-tenants
 
 foreach ($Row in $Tenants ) {
     Write-Host "Processing tenants"
-    if (!($rows | Where-Object { $_.customerId -NotIn $row.customerId })) {
-        Write-Host "Not in list"
+    if (!$rows) {
         Push-OutputBinding -Name Msg -Value $row.customerId
     }
-    if ($rows | Where-Object { $_.customerId -eq $row.customerId -and $_.LastApply -EQ $null -or $_.LastApply -LT (Get-Date).AddDays(-14) }) {
+
+    if ($rows | Where-Object { $_.customerId -eq $row.customerId } | Where-Object { $_.LastApply -EQ $null -or $_.LastApply -lt (Get-Date).AddSeconds(-14) }) {
         Write-Host "In list, Old age."
         Push-OutputBinding -Name Msg -Value $row.customerId
     }
 }
-
-# Write an information log with the current time.
-Write-Host "PowerShell timer trigger function ran! TIME: $currentUTCtime"
