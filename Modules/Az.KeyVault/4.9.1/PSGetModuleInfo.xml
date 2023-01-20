@@ -1,0 +1,305 @@
+<Objs Version="1.1.0.1" xmlns="http://schemas.microsoft.com/powershell/2004/04">
+  <Obj RefId="0">
+    <TN RefId="0">
+      <T>Microsoft.PowerShell.Commands.PSRepositoryItemInfo</T>
+      <T>System.Management.Automation.PSCustomObject</T>
+      <T>System.Object</T>
+    </TN>
+    <MS>
+      <S N="Name">Az.KeyVault</S>
+      <S N="Version">4.9.1</S>
+      <S N="Type">Module</S>
+      <S N="Description">Microsoft Azure PowerShell - Key Vault service cmdlets for Azure Resource Manager in Windows PowerShell and PowerShell Core._x000D__x000A__x000D__x000A_For more information on Key Vault, please visit the following: https://docs.microsoft.com/azure/key-vault/</S>
+      <S N="Author">Microsoft Corporation</S>
+      <S N="CompanyName">azure-sdk</S>
+      <S N="Copyright">Microsoft Corporation. All rights reserved.</S>
+      <DT N="PublishedDate">2022-12-06T09:06:11-05:00</DT>
+      <Nil N="InstalledDate" />
+      <Nil N="UpdatedDate" />
+      <URI N="LicenseUri">https://aka.ms/azps-license</URI>
+      <URI N="ProjectUri">https://github.com/Azure/azure-powershell</URI>
+      <Nil N="IconUri" />
+      <Obj N="Tags" RefId="1">
+        <TN RefId="1">
+          <T>System.Object[]</T>
+          <T>System.Array</T>
+          <T>System.Object</T>
+        </TN>
+        <LST>
+          <S>Azure</S>
+          <S>ResourceManager</S>
+          <S>ARM</S>
+          <S>KeyVault</S>
+          <S>SecretManagement</S>
+          <S>PSModule</S>
+          <S>PSEdition_Core</S>
+          <S>PSEdition_Desktop</S>
+        </LST>
+      </Obj>
+      <Obj N="Includes" RefId="2">
+        <TN RefId="2">
+          <T>System.Collections.Hashtable</T>
+          <T>System.Object</T>
+        </TN>
+        <DCT>
+          <En>
+            <S N="Key">DscResource</S>
+            <Obj N="Value" RefId="3">
+              <TNRef RefId="1" />
+              <LST />
+            </Obj>
+          </En>
+          <En>
+            <S N="Key">Command</S>
+            <Obj N="Value" RefId="4">
+              <TNRef RefId="1" />
+              <LST>
+                <S>Add-AzKeyVaultCertificate</S>
+                <S>Update-AzKeyVaultCertificate</S>
+                <S>Stop-AzKeyVaultCertificateOperation</S>
+                <S>Get-AzKeyVaultCertificateOperation</S>
+                <S>Import-AzKeyVaultCertificate</S>
+                <S>Add-AzKeyVaultCertificateContact</S>
+                <S>Get-AzKeyVaultCertificate</S>
+                <S>Get-AzKeyVaultCertificateContact</S>
+                <S>Get-AzKeyVaultCertificateIssuer</S>
+                <S>New-AzKeyVaultCertificatePolicy</S>
+                <S>Remove-AzKeyVaultCertificate</S>
+                <S>Remove-AzKeyVaultCertificateContact</S>
+                <S>Remove-AzKeyVaultCertificateIssuer</S>
+                <S>Remove-AzKeyVaultCertificateOperation</S>
+                <S>Set-AzKeyVaultCertificateIssuer</S>
+                <S>Set-AzKeyVaultCertificatePolicy</S>
+                <S>Get-AzKeyVaultManagedHsm</S>
+                <S>New-AzKeyVaultManagedHsm</S>
+                <S>Remove-AzKeyVaultManagedHsm</S>
+                <S>Undo-AzKeyVaultManagedHsmRemoval</S>
+                <S>Update-AzKeyVaultManagedHsm</S>
+                <S>Get-AzKeyVault</S>
+                <S>New-AzKeyVault</S>
+                <S>Remove-AzKeyVault</S>
+                <S>Undo-AzKeyVaultRemoval</S>
+                <S>Backup-AzKeyVault</S>
+                <S>Restore-AzKeyVault</S>
+                <S>Get-AzKeyVaultRoleDefinition</S>
+                <S>Get-AzKeyVaultRoleAssignment</S>
+                <S>New-AzKeyVaultRoleAssignment</S>
+                <S>New-AzKeyVaultRoleDefinition</S>
+                <S>Remove-AzKeyVaultRoleDefinition</S>
+                <S>Remove-AzKeyVaultRoleAssignment</S>
+                <S>Remove-AzKeyVaultAccessPolicy</S>
+                <S>Set-AzKeyVaultAccessPolicy</S>
+                <S>Backup-AzKeyVaultKey</S>
+                <S>Get-AzKeyVaultKey</S>
+                <S>Get-AzKeyVaultSecret</S>
+                <S>Get-AzKeyVaultRandomNumber</S>
+                <S>Undo-AzKeyVaultKeyRemoval</S>
+                <S>Undo-AzKeyVaultSecretRemoval</S>
+                <S>Add-AzKeyVaultKey</S>
+                <S>Remove-AzKeyVaultKey</S>
+                <S>Update-AzKeyVault</S>
+                <S>New-AzKeyVaultNetworkRuleSetObject</S>
+                <S>Remove-AzKeyVaultSecret</S>
+                <S>Restore-AzKeyVaultKey</S>
+                <S>Update-AzKeyVaultKey</S>
+                <S>Invoke-AzKeyVaultKeyRotation</S>
+                <S>Get-AzKeyVaultKeyRotationPolicy</S>
+                <S>Set-AzKeyVaultKeyRotationPolicy</S>
+                <S>Invoke-AzKeyVaultKeyOperation</S>
+                <S>Set-AzKeyVaultSecret</S>
+                <S>Update-AzKeyVaultSecret</S>
+                <S>Get-AzKeyVaultCertificatePolicy</S>
+                <S>New-AzKeyVaultCertificateAdministratorDetail</S>
+                <S>New-AzKeyVaultCertificateOrganizationDetail</S>
+                <S>Backup-AzKeyVaultSecret</S>
+                <S>Restore-AzKeyVaultSecret</S>
+                <S>Get-AzKeyVaultManagedStorageAccount</S>
+                <S>Add-AzKeyVaultManagedStorageAccount</S>
+                <S>Remove-AzKeyVaultManagedStorageAccount</S>
+                <S>Update-AzKeyVaultManagedStorageAccount</S>
+                <S>Update-AzKeyVaultManagedStorageAccountKey</S>
+                <S>Get-AzKeyVaultManagedStorageSasDefinition</S>
+                <S>Set-AzKeyVaultManagedStorageSasDefinition</S>
+                <S>Remove-AzKeyVaultManagedStorageSasDefinition</S>
+                <S>Undo-AzKeyVaultCertificateRemoval</S>
+                <S>Backup-AzKeyVaultCertificate</S>
+                <S>Restore-AzKeyVaultCertificate</S>
+                <S>Backup-AzKeyVaultManagedStorageAccount</S>
+                <S>Restore-AzKeyVaultManagedStorageAccount</S>
+                <S>Undo-AzKeyVaultManagedStorageSasDefinitionRemoval</S>
+                <S>Undo-AzKeyVaultManagedStorageAccountRemoval</S>
+                <S>Add-AzKeyVaultNetworkRule</S>
+                <S>Update-AzKeyVaultNetworkRuleSet</S>
+                <S>Remove-AzKeyVaultNetworkRule</S>
+                <S>Export-AzKeyVaultSecurityDomain</S>
+                <S>Import-AzKeyVaultSecurityDomain</S>
+              </LST>
+            </Obj>
+          </En>
+          <En>
+            <S N="Key">Cmdlet</S>
+            <Obj N="Value" RefId="5">
+              <TNRef RefId="1" />
+              <LST>
+                <S>Add-AzKeyVaultCertificate</S>
+                <S>Update-AzKeyVaultCertificate</S>
+                <S>Stop-AzKeyVaultCertificateOperation</S>
+                <S>Get-AzKeyVaultCertificateOperation</S>
+                <S>Import-AzKeyVaultCertificate</S>
+                <S>Add-AzKeyVaultCertificateContact</S>
+                <S>Get-AzKeyVaultCertificate</S>
+                <S>Get-AzKeyVaultCertificateContact</S>
+                <S>Get-AzKeyVaultCertificateIssuer</S>
+                <S>New-AzKeyVaultCertificatePolicy</S>
+                <S>Remove-AzKeyVaultCertificate</S>
+                <S>Remove-AzKeyVaultCertificateContact</S>
+                <S>Remove-AzKeyVaultCertificateIssuer</S>
+                <S>Remove-AzKeyVaultCertificateOperation</S>
+                <S>Set-AzKeyVaultCertificateIssuer</S>
+                <S>Set-AzKeyVaultCertificatePolicy</S>
+                <S>Get-AzKeyVaultManagedHsm</S>
+                <S>New-AzKeyVaultManagedHsm</S>
+                <S>Remove-AzKeyVaultManagedHsm</S>
+                <S>Undo-AzKeyVaultManagedHsmRemoval</S>
+                <S>Update-AzKeyVaultManagedHsm</S>
+                <S>Get-AzKeyVault</S>
+                <S>New-AzKeyVault</S>
+                <S>Remove-AzKeyVault</S>
+                <S>Undo-AzKeyVaultRemoval</S>
+                <S>Backup-AzKeyVault</S>
+                <S>Restore-AzKeyVault</S>
+                <S>Get-AzKeyVaultRoleDefinition</S>
+                <S>Get-AzKeyVaultRoleAssignment</S>
+                <S>New-AzKeyVaultRoleAssignment</S>
+                <S>New-AzKeyVaultRoleDefinition</S>
+                <S>Remove-AzKeyVaultRoleDefinition</S>
+                <S>Remove-AzKeyVaultRoleAssignment</S>
+                <S>Remove-AzKeyVaultAccessPolicy</S>
+                <S>Set-AzKeyVaultAccessPolicy</S>
+                <S>Backup-AzKeyVaultKey</S>
+                <S>Get-AzKeyVaultKey</S>
+                <S>Get-AzKeyVaultSecret</S>
+                <S>Get-AzKeyVaultRandomNumber</S>
+                <S>Undo-AzKeyVaultKeyRemoval</S>
+                <S>Undo-AzKeyVaultSecretRemoval</S>
+                <S>Add-AzKeyVaultKey</S>
+                <S>Remove-AzKeyVaultKey</S>
+                <S>Update-AzKeyVault</S>
+                <S>New-AzKeyVaultNetworkRuleSetObject</S>
+                <S>Remove-AzKeyVaultSecret</S>
+                <S>Restore-AzKeyVaultKey</S>
+                <S>Update-AzKeyVaultKey</S>
+                <S>Invoke-AzKeyVaultKeyRotation</S>
+                <S>Get-AzKeyVaultKeyRotationPolicy</S>
+                <S>Set-AzKeyVaultKeyRotationPolicy</S>
+                <S>Invoke-AzKeyVaultKeyOperation</S>
+                <S>Set-AzKeyVaultSecret</S>
+                <S>Update-AzKeyVaultSecret</S>
+                <S>Get-AzKeyVaultCertificatePolicy</S>
+                <S>New-AzKeyVaultCertificateAdministratorDetail</S>
+                <S>New-AzKeyVaultCertificateOrganizationDetail</S>
+                <S>Backup-AzKeyVaultSecret</S>
+                <S>Restore-AzKeyVaultSecret</S>
+                <S>Get-AzKeyVaultManagedStorageAccount</S>
+                <S>Add-AzKeyVaultManagedStorageAccount</S>
+                <S>Remove-AzKeyVaultManagedStorageAccount</S>
+                <S>Update-AzKeyVaultManagedStorageAccount</S>
+                <S>Update-AzKeyVaultManagedStorageAccountKey</S>
+                <S>Get-AzKeyVaultManagedStorageSasDefinition</S>
+                <S>Set-AzKeyVaultManagedStorageSasDefinition</S>
+                <S>Remove-AzKeyVaultManagedStorageSasDefinition</S>
+                <S>Undo-AzKeyVaultCertificateRemoval</S>
+                <S>Backup-AzKeyVaultCertificate</S>
+                <S>Restore-AzKeyVaultCertificate</S>
+                <S>Backup-AzKeyVaultManagedStorageAccount</S>
+                <S>Restore-AzKeyVaultManagedStorageAccount</S>
+                <S>Undo-AzKeyVaultManagedStorageSasDefinitionRemoval</S>
+                <S>Undo-AzKeyVaultManagedStorageAccountRemoval</S>
+                <S>Add-AzKeyVaultNetworkRule</S>
+                <S>Update-AzKeyVaultNetworkRuleSet</S>
+                <S>Remove-AzKeyVaultNetworkRule</S>
+                <S>Export-AzKeyVaultSecurityDomain</S>
+                <S>Import-AzKeyVaultSecurityDomain</S>
+              </LST>
+            </Obj>
+          </En>
+          <En>
+            <S N="Key">Workflow</S>
+            <Ref N="Value" RefId="3" />
+          </En>
+          <En>
+            <S N="Key">Function</S>
+            <Ref N="Value" RefId="3" />
+          </En>
+          <En>
+            <S N="Key">RoleCapability</S>
+            <Ref N="Value" RefId="3" />
+          </En>
+        </DCT>
+      </Obj>
+      <Nil N="PowerShellGetFormatVersion" />
+      <S N="ReleaseNotes">* Fixed certificate export parameter issue in 'Add-AzKeyVaultKey' [#19623]_x000D__x000A_* Fixed CertificateString decoding issue in 'Import-AzKeyVaultCertificate'_x000D__x000A_* Shifted the location of key CVM release policy to GitHub [#19984]_x000D__x000A_* Added fallback logic (reading default CVM policy from a local copy) if fetching default CVM Policy from GitHub failed.</S>
+      <Obj N="Dependencies" RefId="6">
+        <TNRef RefId="1" />
+        <LST>
+          <Obj RefId="7">
+            <TN RefId="3">
+              <T>System.Collections.Specialized.OrderedDictionary</T>
+              <T>System.Object</T>
+            </TN>
+            <DCT>
+              <En>
+                <S N="Key">Name</S>
+                <S N="Value">Az.Accounts</S>
+              </En>
+              <En>
+                <S N="Key">MinimumVersion</S>
+                <S N="Value">2.10.4</S>
+              </En>
+              <En>
+                <S N="Key">CanonicalId</S>
+                <S N="Value">nuget:Az.Accounts/2.10.4</S>
+              </En>
+            </DCT>
+          </Obj>
+        </LST>
+      </Obj>
+      <S N="RepositorySourceLocation">https://www.powershellgallery.com/api/v2</S>
+      <S N="Repository">PSGallery</S>
+      <S N="PackageManagementProvider">NuGet</S>
+      <Obj N="AdditionalMetadata" RefId="8">
+        <TN RefId="4">
+          <T>System.Management.Automation.PSCustomObject</T>
+          <T>System.Object</T>
+        </TN>
+        <MS>
+          <S N="copyright">Microsoft Corporation. All rights reserved.</S>
+          <S N="description">Microsoft Azure PowerShell - Key Vault service cmdlets for Azure Resource Manager in Windows PowerShell and PowerShell Core._x000D__x000A__x000D__x000A_For more information on Key Vault, please visit the following: https://docs.microsoft.com/azure/key-vault/</S>
+          <S N="requireLicenseAcceptance">True</S>
+          <S N="releaseNotes">* Fixed certificate export parameter issue in 'Add-AzKeyVaultKey' [#19623]_x000D__x000A_* Fixed CertificateString decoding issue in 'Import-AzKeyVaultCertificate'_x000D__x000A_* Shifted the location of key CVM release policy to GitHub [#19984]_x000D__x000A_* Added fallback logic (reading default CVM policy from a local copy) if fetching default CVM Policy from GitHub failed.</S>
+          <S N="isLatestVersion">True</S>
+          <S N="isAbsoluteLatestVersion">True</S>
+          <S N="versionDownloadCount">503567</S>
+          <S N="downloadCount">48156809</S>
+          <S N="packageSize">2258421</S>
+          <S N="published">12/6/2022 9:06:11 AM -05:00</S>
+          <S N="created">12/6/2022 9:06:11 AM -05:00</S>
+          <S N="lastUpdated">12/16/2022 9:07:59 PM -05:00</S>
+          <S N="tags">Azure ResourceManager ARM KeyVault SecretManagement PSModule PSEdition_Core PSEdition_Desktop PSCmdlet_Add-AzKeyVaultCertificate PSCommand_Add-AzKeyVaultCertificate PSCmdlet_Update-AzKeyVaultCertificate PSCommand_Update-AzKeyVaultCertificate PSCmdlet_Stop-AzKeyVaultCertificateOperation PSCommand_Stop-AzKeyVaultCertificateOperation PSCmdlet_Get-AzKeyVaultCertificateOperation PSCommand_Get-AzKeyVaultCertificateOperation PSCmdlet_Import-AzKeyVaultCertificate PSCommand_Import-AzKeyVaultCertificate PSCmdlet_Add-AzKeyVaultCertificateContact PSCommand_Add-AzKeyVaultCertificateContact PSCmdlet_Get-AzKeyVaultCertificate PSCommand_Get-AzKeyVaultCertificate PSCmdlet_Get-AzKeyVaultCertificateContact PSCommand_Get-AzKeyVaultCertificateContact PSCmdlet_Get-AzKeyVaultCertificateIssuer PSCommand_Get-AzKeyVaultCertificateIssuer PSCmdlet_New-AzKeyVaultCertificatePolicy PSCommand_New-AzKeyVaultCertificatePolicy PSCmdlet_Remove-AzKeyVaultCertificate PSCommand_Remove-AzKeyVaultCertificate PSCmdlet_Remove-AzKeyVaultCertificateContact PSCommand_Remove-AzKeyVaultCertificateContact PSCmdlet_Remove-AzKeyVaultCertificateIssuer PSCommand_Remove-AzKeyVaultCertificateIssuer PSCmdlet_Remove-AzKeyVaultCertificateOperation PSCommand_Remove-AzKeyVaultCertificateOperation PSCmdlet_Set-AzKeyVaultCertificateIssuer PSCommand_Set-AzKeyVaultCertificateIssuer PSCmdlet_Set-AzKeyVaultCertificatePolicy PSCommand_Set-AzKeyVaultCertificatePolicy PSCmdlet_Get-AzKeyVaultManagedHsm PSCommand_Get-AzKeyVaultManagedHsm PSCmdlet_New-AzKeyVaultManagedHsm PSCommand_New-AzKeyVaultManagedHsm PSCmdlet_Remove-AzKeyVaultManagedHsm PSCommand_Remove-AzKeyVaultManagedHsm PSCmdlet_Undo-AzKeyVaultManagedHsmRemoval PSCommand_Undo-AzKeyVaultManagedHsmRemoval PSCmdlet_Update-AzKeyVaultManagedHsm PSCommand_Update-AzKeyVaultManagedHsm PSCmdlet_Get-AzKeyVault PSCommand_Get-AzKeyVault PSCmdlet_New-AzKeyVault PSCommand_New-AzKeyVault PSCmdlet_Remove-AzKeyVault PSCommand_Remove-AzKeyVault PSCmdlet_Undo-AzKeyVaultRemoval PSCommand_Undo-AzKeyVaultRemoval PSCmdlet_Backup-AzKeyVault PSCommand_Backup-AzKeyVault PSCmdlet_Restore-AzKeyVault PSCommand_Restore-AzKeyVault PSCmdlet_Get-AzKeyVaultRoleDefinition PSCommand_Get-AzKeyVaultRoleDefinition PSCmdlet_Get-AzKeyVaultRoleAssignment PSCommand_Get-AzKeyVaultRoleAssignment PSCmdlet_New-AzKeyVaultRoleAssignment PSCommand_New-AzKeyVaultRoleAssignment PSCmdlet_New-AzKeyVaultRoleDefinition PSCommand_New-AzKeyVaultRoleDefinition PSCmdlet_Remove-AzKeyVaultRoleDefinition PSCommand_Remove-AzKeyVaultRoleDefinition PSCmdlet_Remove-AzKeyVaultRoleAssignment PSCommand_Remove-AzKeyVaultRoleAssignment PSCmdlet_Remove-AzKeyVaultAccessPolicy PSCommand_Remove-AzKeyVaultAccessPolicy PSCmdlet_Set-AzKeyVaultAccessPolicy PSCommand_Set-AzKeyVaultAccessPolicy PSCmdlet_Backup-AzKeyVaultKey PSCommand_Backup-AzKeyVaultKey PSCmdlet_Get-AzKeyVaultKey PSCommand_Get-AzKeyVaultKey PSCmdlet_Get-AzKeyVaultSecret PSCommand_Get-AzKeyVaultSecret PSCmdlet_Get-AzKeyVaultRandomNumber PSCommand_Get-AzKeyVaultRandomNumber PSCmdlet_Undo-AzKeyVaultKeyRemoval PSCommand_Undo-AzKeyVaultKeyRemoval PSCmdlet_Undo-AzKeyVaultSecretRemoval PSCommand_Undo-AzKeyVaultSecretRemoval PSCmdlet_Add-AzKeyVaultKey PSCommand_Add-AzKeyVaultKey PSCmdlet_Remove-AzKeyVaultKey PSCommand_Remove-AzKeyVaultKey PSCmdlet_Update-AzKeyVault PSCommand_Update-AzKeyVault PSCmdlet_New-AzKeyVaultNetworkRuleSetObject PSCommand_New-AzKeyVaultNetworkRuleSetObject PSCmdlet_Remove-AzKeyVaultSecret PSCommand_Remove-AzKeyVaultSecret PSCmdlet_Restore-AzKeyVaultKey PSCommand_Restore-AzKeyVaultKey PSCmdlet_Update-AzKeyVaultKey PSCommand_Update-AzKeyVaultKey PSCmdlet_Invoke-AzKeyVaultKeyRotation PSCommand_Invoke-AzKeyVaultKeyRotation PSCmdlet_Get-AzKeyVaultKeyRotationPolicy PSCommand_Get-AzKeyVaultKeyRotationPolicy PSCmdlet_Set-AzKeyVaultKeyRotationPolicy PSCommand_Set-AzKeyVaultKeyRotationPolicy PSCmdlet_Invoke-AzKeyVaultKeyOperation PSCommand_Invoke-AzKeyVaultKeyOperation PSCmdlet_Set-AzKeyVaultSecret PSCommand_Set-AzKeyVaultSecret PSCmdlet_Update-AzKeyVaultSecret PSCommand_Update-AzKeyVaultSecret PSCmdlet_Get-AzKeyVaultCertificatePolicy PSCommand_Get-AzKeyVaultCertificatePolicy PSCmdlet_New-AzKeyVaultCertificateAdministratorDetail PSCommand_New-AzKeyVaultCertificateAdministratorDetail PSCmdlet_New-AzKeyVaultCertificateOrganizationDetail PSCommand_New-AzKeyVaultCertificateOrganizationDetail PSCmdlet_Backup-AzKeyVaultSecret PSCommand_Backup-AzKeyVaultSecret PSCmdlet_Restore-AzKeyVaultSecret PSCommand_Restore-AzKeyVaultSecret PSCmdlet_Get-AzKeyVaultManagedStorageAccount PSCommand_Get-AzKeyVaultManagedStorageAccount PSCmdlet_Add-AzKeyVaultManagedStorageAccount PSCommand_Add-AzKeyVaultManagedStorageAccount PSCmdlet_Remove-AzKeyVaultManagedStorageAccount PSCommand_Remove-AzKeyVaultManagedStorageAccount PSCmdlet_Update-AzKeyVaultManagedStorageAccount PSCommand_Update-AzKeyVaultManagedStorageAccount PSCmdlet_Update-AzKeyVaultManagedStorageAccountKey PSCommand_Update-AzKeyVaultManagedStorageAccountKey PSCmdlet_Get-AzKeyVaultManagedStorageSasDefinition PSCommand_Get-AzKeyVaultManagedStorageSasDefinition PSCmdlet_Set-AzKeyVaultManagedStorageSasDefinition PSCommand_Set-AzKeyVaultManagedStorageSasDefinition PSCmdlet_Remove-AzKeyVaultManagedStorageSasDefinition PSCommand_Remove-AzKeyVaultManagedStorageSasDefinition PSCmdlet_Undo-AzKeyVaultCertificateRemoval PSCommand_Undo-AzKeyVaultCertificateRemoval PSCmdlet_Backup-AzKeyVaultCertificate PSCommand_Backup-AzKeyVaultCertificate PSCmdlet_Restore-AzKeyVaultCertificate PSCommand_Restore-AzKeyVaultCertificate PSCmdlet_Backup-AzKeyVaultManagedStorageAccount PSCommand_Backup-AzKeyVaultManagedStorageAccount PSCmdlet_Restore-AzKeyVaultManagedStorageAccount PSCommand_Restore-AzKeyVaultManagedStorageAccount PSCmdlet_Undo-AzKeyVaultManagedStorageSasDefinitionRemoval PSCommand_Undo-AzKeyVaultManagedStorageSasDefinitionRemoval PSCmdlet_Undo-AzKeyVaultManagedStorageAccountRemoval PSCommand_Undo-AzKeyVaultManagedStorageAccountRemoval PSCmdlet_Add-AzKeyVaultNetworkRule PSCommand_Add-AzKeyVaultNetworkRule PSCmdlet_Update-AzKeyVaultNetworkRuleSet PSCommand_Update-AzKeyVaultNetworkRuleSet PSCmdlet_Remove-AzKeyVaultNetworkRule PSCommand_Remove-AzKeyVaultNetworkRule PSCmdlet_Export-AzKeyVaultSecurityDomain PSCommand_Export-AzKeyVaultSecurityDomain PSCmdlet_Import-AzKeyVaultSecurityDomain PSCommand_Import-AzKeyVaultSecurityDomain PSIncludes_Cmdlet</S>
+          <S N="developmentDependency">False</S>
+          <S N="updated">2022-12-16T21:07:59Z</S>
+          <S N="NormalizedVersion">4.9.1</S>
+          <S N="Authors">Microsoft Corporation</S>
+          <S N="IsPrerelease">false</S>
+          <S N="ItemType">Module</S>
+          <S N="FileList">Az.KeyVault.nuspec|Az.KeyVault.psd1|Az.KeyVault.psm1|Azure.Security.KeyVault.Administration.dll|Azure.Security.KeyVault.Certificates.dll|Azure.Security.KeyVault.Keys.dll|BouncyCastle.Crypto.dll|KeyVault.format.ps1xml|Microsoft.Azure.KeyVault.dll|Microsoft.Azure.KeyVault.WebKey.dll|Microsoft.Azure.PowerShell.Cmdlets.KeyVault.deps.json|Microsoft.Azure.PowerShell.Cmdlets.KeyVault.dll|Microsoft.Azure.PowerShell.Cmdlets.KeyVault.dll-Help.xml|Microsoft.Azure.PowerShell.KeyVault.Management.Sdk.deps.json|Microsoft.Azure.PowerShell.KeyVault.Management.Sdk.dll|Az.KeyVault.Extension\Az.KeyVault.Extension.psd1|Az.KeyVault.Extension\Az.KeyVault.Extension.psm1</S>
+          <S N="GUID">cd188042-f215-4657-adfe-c17ae28cf730</S>
+          <S N="PowerShellVersion">5.1</S>
+          <S N="DotNetFrameworkVersion">4.7.2</S>
+          <S N="CompanyName">Microsoft Corporation</S>
+        </MS>
+      </Obj>
+      <S N="InstalledLocation">C:\Users\jduprey.CNS\Documents\GitHub\CIPP-API\Modules\Az.KeyVault\4.9.1</S>
+    </MS>
+  </Obj>
+</Objs>
