@@ -17,6 +17,8 @@ $UserID = $Request.Query.UserID
 
 $TenantFilter = $Request.Query.TenantFilter
 try {
+    $Bytes = [System.Text.Encoding]::UTF8.GetBytes($Request.Query.UserID)
+    $base64IdentityParam = [Convert]::ToBase64String($Bytes)  
     $CASRequest = New-GraphGetRequest -uri "https://outlook.office365.com/adminapi/beta/$($tenantfilter)/CasMailbox('$UserID')" -Tenantid $tenantfilter -scope ExchangeOnline -noPagination $true
     $MailRequest = New-GraphGetRequest -uri "https://outlook.office365.com/adminapi/beta/$($tenantfilter)/Mailbox('$UserID')" -Tenantid $tenantfilter -scope ExchangeOnline -noPagination $true
     $FetchParam = @{
@@ -35,16 +37,28 @@ try {
     }
     $StatsRequest = New-GraphGetRequest -uri "https://outlook.office365.com/adminapi/beta/$($tenantfilter)/Mailbox('$($MailRequest.PrimarySmtpAddress)')/Exchange.GetMailboxStatistics()" -Tenantid $tenantfilter -scope ExchangeOnline -noPagination $true
     $PermsRequest = New-GraphGetRequest -uri "https://outlook.office365.com/adminapi/beta/$($tenantfilter)/Mailbox('$($MailRequest.PrimarySmtpAddress)')/MailboxPermission" -Tenantid $tenantfilter -scope ExchangeOnline -noPagination $true
+    $PermsRequest2 = New-GraphGetRequest -uri "https://outlook.office365.com/adminapi/beta/$($tenantfilter)/Recipient('$base64IdentityParam')?`$expand=RecipientPermission&isEncoded=true" -Tenantid $tenantfilter -scope ExchangeOnline 
+
 }
 catch {
     Write-Error "Failed Fetching Data $_"
 }
 
-$ParsedPerms = foreach ($Perm in $PermsRequest) {
-    if ($Perm.User -ne 'NT AUTHORITY\SELF') {
-        [pscustomobject]@{
-            User         = $Perm.User
-            AccessRights = $Perm.PermissionList.AccessRights -join ', '
+$ParsedPerms = foreach ($Perm in $PermsRequest, $PermsRequest2.RecipientPermission) {
+
+    if ($perm.Trustee) {
+        $perm | Where-Object Trustee | ForEach-Object { [PSCustomObject]@{
+                User         = $_.Trustee
+                AccessRights = $_.accessRights -join ', '
+            }
+        }
+            
+    }
+    if ($perm.PermissionList) {
+        $perm |  Where-Object User | ForEach-Object { [PSCustomObject]@{
+                User         = $_.User
+                AccessRights = $_.PermissionList.accessRights -join ', '
+            }        
         }
     }
 }
