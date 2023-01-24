@@ -17,20 +17,18 @@ Try {
     $tenantfilter = $Request.Query.TenantFilter 
     New-ExoRequest -tenantid $TenantFilter -cmdlet "Set-mailbox" -cmdParams @{Identity = $request.query.id; HiddenFromAddressListsEnabled = $Hidden }
 
-    $Results = [pscustomobject]@{}
-
 if ($Hidden -eq "$true") {
-    $Results | Add-Member -Type NoteProperty -Name "Results" -Value "Successfully hidden $($request.query.id) from GAL."
+    $Results = [pscustomobject]@{"Results" = "Successfully hidden $($request.query.id) from GAL."}
     Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $($tenantfilter) -message "$($request.query.id) Hidden from GAL" -Sev "Info"
 }
 else {
-    $Results | Add-Member -Type NoteProperty -Name "Results" -Value "Successfully unhidden $($request.query.id) from GAL."
+    $Results = [pscustomobject]@{"Results" = "Successfully unhidden $($request.query.id) from GAL."}
     Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $($tenantfilter) -message "$($request.query.id) Unhidden from GAL" -Sev "Info"
 }     
 }
 catch {
-    Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $($tenantfilter) -message "Hide/UnHide from GAL failed: $($_.Exception.Message)" -Sev "Error"
     $Results = [pscustomobject]@{"Results" = "Failed. $_.Exception.Message" }
+    Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $($tenantfilter) -message "Hide/UnHide from GAL failed: $($_.Exception.Message)" -Sev "Error"
 }
 # Associate values to output bindings by calling 'Push-OutputBinding'.
 Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
