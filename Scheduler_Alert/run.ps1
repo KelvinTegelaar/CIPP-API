@@ -161,11 +161,31 @@ try {
                     $skuid = $_
                     foreach ($sku in $skuid) {
                         if ($sku.skuId -in $ExcludedSkuList.GUID) { continue }
+                        $PrettyName = ($ConvertTable | Where-Object { $_.GUID -eq $_.skuid }).'Product_Display_Name' | Select-Object -Last 1
+                        if (!$PrettyName) { $PrettyName = $sku.skuPartNumber }
+                        if ($sku.prepaidUnits.enabled - $sku.consumedUnits -gt 0) {
+                            "$PrettyName has unused licenses. Using $($_.consumedUnits) of $($_.prepaidUnits.enabled)."
+                        }
+                    }
+                }
+            }
+            catch {
+    
+            }
+        }
+        { $_.'OverusedLicenses' -eq $true } {
+            try {
+                #$ConvertTable = Import-Csv Conversiontable.csv
+                $LicenseTable = Get-CIPPTable -TableName ExcludedLicenses
+                $ExcludedSkuList = Get-AzDataTableEntity @LicenseTable
+                New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/subscribedSkus' -tenantid $Tenant.tenant | ForEach-Object {
+                    $skuid = $_
+                    foreach ($sku in $skuid) {
+                        if ($sku.skuId -in $ExcludedSkuList.GUID) { continue }
                         $PrettyName = ($ConvertTable | Where-Object { $_.GUID -eq $sku.skuid }).'Product_Display_Name' | Select-Object -Last 1
-                        if (!$PrettyName) { $PrettyName = $skuid.skuPartNumber }
-
-                        if ($sku.prepaidUnits.enabled - $sku.consumedUnits -ne 0) {
-                            "$PrettyName has unused licenses. Using $($sku.consumedUnits) of $($sku.prepaidUnits.enabled)."
+                        if (!$PrettyName) { $PrettyName = $sku.skuPartNumber }
+                        if ($sku.prepaidUnits.enabled - $sku.consumedUnits -lt 0) {
+                            "$PrettyName has Overused licenses. Using $($_.consumedUnits) of $($_.prepaidUnits.enabled)."
                         }
                     }
                 }
