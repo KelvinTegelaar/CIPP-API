@@ -24,6 +24,8 @@ function Resolve-DnsHttpsQuery {
     Param(
         [Parameter(Mandatory = $true)]
         [string]$Domain,
+
+        [string]$MacroExpand,
         
         [Parameter()]
         [string]$RecordType = 'A'
@@ -71,6 +73,11 @@ function Resolve-DnsHttpsQuery {
         'accept' = 'application/dns-json'
     }
 
+    if ($MacroExpand) {
+        $Domain = Get-DomainMacros -MacroExpand $MacroExpand -Domain $Domain
+        Write-Verbose "Macro expand: $Domain"
+    }
+
     $Uri = $QueryTemplate -f $BaseUri, $Domain, $RecordType
 
     $Results = Invoke-RestMethod -Uri $Uri -Headers $Headers -ErrorAction Stop
@@ -83,6 +90,32 @@ function Resolve-DnsHttpsQuery {
     }
     
     return $Results
+}
+
+function Get-DomainMacros {
+    [CmdletBinding()]
+    Param(
+        [Parameter(Mandatory = $true)]
+        [string]$Domain,
+        
+        [Parameter(Mandatory = $true)]
+        [string]$MacroExpand
+    )
+
+    $Macros = @{
+        '%{d}' = $Domain
+        '%{o}' = $Domain
+        '%{h}' = $Domain
+        '%{l}' = 'postmaster'
+        '%{s}' = 'postmaster@{0}' -f $Domain
+        '%{i}' = '1.2.3.4'
+    }
+
+    foreach ($Macro in $Macros.Keys) {
+        $MacroExpand = $MacroExpand -replace $Macro, $Macros.$Macro
+    }
+
+    $MacroExpand
 }
 
 function Test-DNSSEC {
@@ -426,6 +459,7 @@ function Read-SpfRecord {
         RecommendedRecord = ''
         IPAddresses       = [System.Collections.Generic.List[string]]::new()
         MailProvider      = ''
+        Explanation       = ''
         Status            = ''
 
     }
@@ -471,7 +505,7 @@ function Read-SpfRecord {
                             $Status = 'permerror'
                         }
                         else {
-                            Write-Host $Query
+                            #Write-Host $Query
                             $ValidationFails.Add($NoSpfValidation) | Out-Null
                             $Status = 'temperror'
                         }
@@ -529,6 +563,7 @@ function Read-SpfRecord {
                                 Replace = ''
                             }) | Out-Null
                     }
+                    
                 }
 
                 foreach ($Term in $RecordTerms) {
@@ -565,9 +600,6 @@ function Read-SpfRecord {
                         # Record has been redirected, stop evaluating terms
                         break
                     }
-                 
-                    # Explanation modifier
-                    elseif ($Term -match '^exp=(?<Domain>.+)$') { Write-Verbose '-----EXP-----' }
             
                     # Include mechanism
                     elseif ($Term -match '^(?<Qualifier>[+-~?])?include:(?<Value>.+)$') {
@@ -661,7 +693,7 @@ function Read-SpfRecord {
                             else {
                                 if ($TypeQuery.RecordType -eq 'mx') {
                                     $Result = $TypeResult.Answer | ForEach-Object { 
-                                        $LookupCount++
+                                        #$LookupCount++
                                         $_.Data.Split(' ')[1] 
                                     }
                                 }
@@ -686,6 +718,22 @@ function Read-SpfRecord {
                     elseif ($null -ne $Term) {
                         $ValidationWarns.Add("$Domain - Unknown term specified '$Term'") | Out-Null
                     }
+                }
+
+                # Explanation modifier
+                if ($Record -match 'exp=(?<MacroExpand>.+)$') { 
+                    Write-Verbose '-----EXPLAIN-----'
+                    $ExpQuery = @{ Domain = $Domain; MacroExpand = $Matches.MacroExpand; RecordType = 'TXT' }
+                    $ExpResult = Resolve-DnsHttpsQuery @ExpQuery -ErrorAction Stop
+                    if ($ExpResult.Status -eq 0 -and $ExpResult.Answer.Type -eq 16) { 
+                        $Explain = @{
+                            Record  = $ExpResult.Answer.data
+                            Example = Get-DomainMacros -Domain $Domain -MacroExpand $ExpResult.Answer.data
+                        }
+                    }
+                }
+                else {
+                    $Explain = @{ Example = ''; Record = '' }
                 }
             }
         }
@@ -847,6 +895,7 @@ function Read-SpfRecord {
     $SpfResults.RecommendedRecord = $RecommendedRecord
     $SpfResults.TypeLookups = @($TypeLookups)
     $SpfResults.IPAddresses = @($IPAddresses)
+    $SpfResults.Explanation = $Explain
     $SpfResults.Status = $Status    
 
     
