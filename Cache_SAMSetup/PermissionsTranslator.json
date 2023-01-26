@@ -5260,5 +5260,14 @@
     "userConsentDescription": "Allows the app to read Threat and Vulnerability Management vulnerability information on behalf of the signed-in user",
     "userConsentDisplayName": "Read Threat and Vulnerability Management vulnerability information",
     "value": "Vulnerability.Read"
+  },
+  {
+    "description": "Allows the app to manage Exchange Online",
+    "displayName": "Manage Exchange online",
+    "id": "ab4f2b77-0b06-4fc1-a9de-02113fc2ab7c",
+    "Origin": "Delegated (Office 365 Exchange Online)",
+    "userConsentDescription": "Allows the app to read Threat and Vulnerability Management vulnerability information on behalf of the signed-in user",
+    "userConsentDisplayName": "Read Threat and Vulnerability Management vulnerability information",
+    "value": "Exchange.Manage"
   }
 ]

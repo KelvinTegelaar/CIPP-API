@@ -41,7 +41,7 @@ try {
 
 }
 catch {
-    Write-Error "Failed Fetching Data $_"
+    Write-Error "Failed Fetching Data $($_.Exception.message): $($_.InvocationInfo.ScriptLineNumber)"
 }
 
 $ParsedPerms = foreach ($Perm in $PermsRequest, $PermsRequest2.RecipientPermission) {
@@ -49,7 +49,7 @@ $ParsedPerms = foreach ($Perm in $PermsRequest, $PermsRequest2.RecipientPermissi
     if ($perm.Trustee) {
         $perm | Where-Object Trustee | ForEach-Object { [PSCustomObject]@{
                 User         = $_.Trustee
-                AccessRights = $_.accessRights -join ', '
+                AccessRights = $_.accessRights -join ', ' 
             }
         }
             

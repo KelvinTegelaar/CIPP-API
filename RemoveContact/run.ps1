@@ -15,7 +15,7 @@ $Params = @{
 try {
     $Params = @{ Identity = $request.query.GUID }
 
-    $GraphRequest = New-ExoRequest -tenantid $Tenantfilter -cmdlet "Remove-MailContact" -cmdParams $params
+    $GraphRequest = New-ExoRequest -tenantid $Tenantfilter -cmdlet "Remove-MailContact" -cmdParams $params -UseSystemMailbox $true
     $Result = "Deleted $($Request.query.guid)"
     Write-LogMessage -API "TransportRules" -tenant $tenantfilter -message "Deleted contact $($Request.query.guid)" -sev Debug
 }
