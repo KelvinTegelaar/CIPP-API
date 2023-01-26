@@ -14,7 +14,18 @@ try {
 
     Write-Host ($request.body | ConvertTo-Json)
     $results = switch ($request.body) {
+        { $_."ConvertToShared" -eq 'true' } { 
+            try {
+                $SharedMailbox = New-ExoRequest -tenantid $TenantFilter -cmdlet "Set-mailbox" -cmdParams @{Identity = $userid; type = "Shared" }
+                "Converted $($username) to Shared Mailbox"
+                Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME  -message "Converted $($username) to a shared mailbox" -Sev "Info" -tenant $TenantFilter
 
+            }
+            catch {
+                Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME  -message "Could not convert $username to shared mailbox" -Sev "Error" -tenant $TenantFilter
+                "Could not convert $($username) to a shared mailbox. Error: $($_.Exception.Message)"
+            }
+        }
         { $_.RevokeSessions -eq 'true' } { 
             try {
                 $GraphRequest = New-GraphPostRequest -uri "https://graph.microsoft.com/beta/users/$($userid)/invalidateAllRefreshTokens" -tenantid $TenantFilter -type POST -body '{}'  -verbose
@@ -89,18 +100,7 @@ try {
             }
         
         }
-        { $_."ConvertToShared" -eq 'true' } { 
-            try {
-                $SharedMailbox = New-ExoRequest -tenantid $TenantFilter -cmdlet "Set-mailbox" -cmdParams @{Identity = $userid; type = "Shared" }
-                "Converted $($username) to Shared Mailbox"
-                Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME  -message "Converted $($username) to a shared mailbox" -Sev "Info" -tenant $TenantFilter
 
-            }
-            catch {
-                Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME  -message "Could not convert $username to shared mailbox" -Sev "Error" -tenant $TenantFilter
-                "Could not convert $($username) to a shared mailbox. Error: $($_.Exception.Message)"
-            }
-        }
         { $_."OnedriveAccess" -ne "" } { 
             try {
                 $UserSharepoint = (New-GraphGetRequest -uri "https://graph.microsoft.com/beta/users/$($userid)/drive" -AsApp $true -tenantid $tenantFilter).weburl -replace "/Documents"
