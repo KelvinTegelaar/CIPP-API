@@ -672,7 +672,10 @@ function Read-SpfRecord {
                                                     break
                                                 }
                                             }
-                                            catch { Write-Verbose $_.Exception.Message }
+                                            catch { 
+                                                Write-Verbose $_.Exception.Message 
+                                                $TypeResult = $null
+                                            }
                                         }
                                     }
                                     else {
@@ -699,14 +702,18 @@ function Read-SpfRecord {
                                 $Result = $false
                             }
                             else {
-                                if ($TypeQuery.RecordType -match 'mx') {
-                                    $Result = $TypeResult.Answer | ForEach-Object { 
-                                        #$LookupCount++
-                                        $_.Data.Split(' ')[1] 
+                                if ($TypeResult.Answer) {
+                                    if ($TypeQuery.RecordType -match 'mx') {
+                                    
+                                        $Result = $TypeResult.Answer | ForEach-Object { 
+                                            #$LookupCount++
+                                            $_.Data.Split(' ')[1] 
+                                        }
                                     }
-                                }
-                                else {
-                                    $Result = $TypeResult.answer.data
+                                
+                                    else {
+                                        $Result = $TypeResult.answer.data
+                                    }
                                 }
                             }
                             $TypeLookups.Add(
@@ -747,7 +754,7 @@ function Read-SpfRecord {
         }
     }
     catch {
-        Write-Verbose "EXCEPTION: $($_.Exception.Message)"
+        Write-Verbose "EXCEPTION: $($_.InvocationInfo.ScriptLineNumber) $($_.Exception.Message)"
     }
     
     # Lookup MX record for expected include information if not supplied
