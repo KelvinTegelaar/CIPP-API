@@ -651,24 +651,32 @@ function Read-SpfRecord {
                                 $TypeQuery = @{ Domain = $TypeDomain; RecordType = $Matches.RecordType }
                                 Write-Verbose "Looking up $($TypeQuery.Domain)"
                                 $TypeResult = Resolve-DnsHttpsQuery @TypeQuery -ErrorAction Stop
-                                
                                 if ($Matches.RecordType -eq 'mx') {
                                     $MxCount = 0
-                                    foreach ($mx in $TypeResult.Answer.data) {
-                                        $MxCount++
-                                        $Preference, $MxDomain = $mx -replace '\.$' -split '\s+'                                        
-                                        $MxQuery = Resolve-DnsHttpsQuery -Domain $MxDomain -ErrorAction Stop
-                                        $MxIps = $MxQuery.Answer.data
-
-                                        foreach ($MxIp in $MxIps) {
-                                            $IPAddresses.Add($MxIp) | Out-Null
-                                        }
+                                    if ($TypeResult.Answer) {
+                                        foreach ($mx in $TypeResult.Answer.data) {
+                                            $MxCount++
+                                            $Preference, $MxDomain = $mx -replace '\.$' -split '\s+'     
+                                            try {                           
+                                                Write-Verbose "MX: Lookup $MxDomain"        
+                                                $MxQuery = Resolve-DnsHttpsQuery -Domain $MxDomain -ErrorAction Stop
+                                                $MxIps = $MxQuery.Answer.data
                                         
-                                        if ($MxCount -gt 10) {
-                                            $ValidationWarns.Add("$Domain - Mechanism 'mx' lookup for $MxDomain has exceeded the 10 lookup limit(RFC 7208, Section 4.6.4).") | Out-Null
-                                            $TypeResult = $null
-                                            break
+                                                foreach ($MxIp in $MxIps) {
+                                                    $IPAddresses.Add($MxIp) | Out-Null
+                                                }
+                                        
+                                                if ($MxCount -gt 10) {
+                                                    $ValidationWarns.Add("$Domain - Mechanism 'mx' lookup for $MxDomain has exceeded the 10 A or AAAA record lookup limit (RFC 7208, Section 4.6.4).") | Out-Null
+                                                    $TypeResult = $null
+                                                    break
+                                                }
+                                            }
+                                            catch { Write-Verbose $_.Exception.Message }
                                         }
+                                    }
+                                    else {
+                                        $ValidationWarns.Add("$Domain - Mechanism 'mx' lookup for $($TypeQuery.Domain) did not have any records") | Out-Null
                                     }
                                 }
                                 elseif ($Matches.RecordType -eq 'ptr') {
@@ -691,7 +699,7 @@ function Read-SpfRecord {
                                 $Result = $false
                             }
                             else {
-                                if ($TypeQuery.RecordType -eq 'mx') {
+                                if ($TypeQuery.RecordType -match 'mx') {
                                     $Result = $TypeResult.Answer | ForEach-Object { 
                                         #$LookupCount++
                                         $_.Data.Split(' ')[1] 
