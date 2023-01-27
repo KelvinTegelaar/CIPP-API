@@ -16,7 +16,22 @@ try {
     $results = switch ($request.body) {
         { $_."ConvertToShared" -eq 'true' } { 
             try {
-                $SharedMailbox = New-ExoRequest -tenantid $TenantFilter -cmdlet "Set-mailbox" -cmdParams @{Identity = $userid; type = "Shared" }
+                $SharedMailbox = New-ExoRequest -tenantid $TenantFilter -cmdlet "Set-mailbox" -cmdParams @{Identity = $userid; type = "Shared" } -Anchor $username
+                $ConvertedMailbox = New-ExoRequest -tenantid $TenantFilter -cmdlet "Get-mailbox" -cmdParams @{Identity = $userid }
+                $counter = 0
+                while ($ConvertedMailbox.RecipientTypeDetails -eq 'UserMailbox' -and $counter -lt 3) {
+                    $counter ++
+                    $ConvertedMailbox = New-ExoRequest -tenantid $TenantFilter -cmdlet "Get-mailbox" -cmdParams @{Identity = $userid }
+                    Write-Host "Waiting on convert"
+                   
+                    if ($ConvertedMailbox.RecipientTypeDetails -eq "UserMailbox") {
+                        $LicenseUnAssignAllowed = $false
+                    }
+                    else {
+                        $LicenseUnAssignAllowed = $true
+                    }
+                    Start-Sleep -Milliseconds 500
+                }
                 "Converted $($username) to Shared Mailbox"
                 Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME  -message "Converted $($username) to a shared mailbox" -Sev "Info" -tenant $TenantFilter
 
@@ -127,7 +142,7 @@ try {
         }
         { $_."AccessNoAutomap" -ne "" } { 
             try {
-                $permissions = New-ExoRequest -tenantid $TenantFilter -cmdlet "Add-MailboxPermission" -cmdParams @{Identity = $userid; user = $Request.body.AccessNoAutomap; automapping = $false; accessRights = @("FullAccess"); InheritanceType = "all" }
+                $permissions = New-ExoRequest -tenantid $TenantFilter -cmdlet "Add-MailboxPermission" -cmdParams @{Identity = $userid; user = $Request.body.AccessNoAutomap; automapping = $false; accessRights = @("FullAccess"); InheritanceType = "all" } -Anchor $username
                 "added $($Request.body.AccessNoAutomap) to $($username) Shared Mailbox without automapping"
                 Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME  -message "Gave full permissions to $($request.body.AccessNoAutomap) on $($username)" -Sev "Info" -tenant $TenantFilter
 
@@ -140,7 +155,7 @@ try {
         }
         { $_."AccessAutomap" -ne "" } { 
             try {
-                $permissions = New-ExoRequest -tenantid $TenantFilter -cmdlet "Add-MailboxPermission" -cmdParams @{Identity = $userid; user = $Request.body.AccessAutomap; automapping = $true; accessRights = @("FullAccess"); InheritanceType = "all" }
+                $permissions = New-ExoRequest -tenantid $TenantFilter -cmdlet "Add-MailboxPermission" -cmdParams @{Identity = $userid; user = $Request.body.AccessAutomap; automapping = $true; accessRights = @("FullAccess"); InheritanceType = "all" } -Anchor $username
                 "added $($Request.body.AccessAutomap) to $($username) Shared Mailbox with automapping"
                 Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME  -message "Gave full permissions to $($request.body.AccessAutomap) on $($username)" -Sev "Info" -tenant $TenantFilter
 
@@ -154,7 +169,7 @@ try {
     
         { $_."OOO" -ne "" } { 
             try {
-                $permissions = New-ExoRequest -tenantid $TenantFilter -cmdlet "Set-MailboxAutoReplyConfiguration" -cmdParams @{Identity = $userid; AutoReplyState = "Enabled"; InternalMessage = $_."OOO"; ExternalMessage = $_."OOO" }
+                $permissions = New-ExoRequest -tenantid $TenantFilter -cmdlet "Set-MailboxAutoReplyConfiguration" -cmdParams @{Identity = $userid; AutoReplyState = "Enabled"; InternalMessage = $_."OOO"; ExternalMessage = $_."OOO" } -Anchor $username
                 "added Out-of-office to $username"
                 Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME  -message "Set Out-of-office for $($username)" -Sev "Info" -tenant $TenantFilter
 
@@ -167,7 +182,7 @@ try {
         }
         { $_."forward" -ne "" } { 
             try {
-                $permissions = New-ExoRequest -tenantid $TenantFilter -cmdlet "Set-mailbox" -cmdParams @{Identity = $userid; ForwardingAddress = $_.forward ; DeliverToMailboxAndForward = [bool]$request.body.keepCopy }
+                $permissions = New-ExoRequest -tenantid $TenantFilter -cmdlet "Set-mailbox" -cmdParams @{Identity = $userid; ForwardingAddress = $_.forward ; DeliverToMailboxAndForward = [bool]$request.body.keepCopy } -Anchor $username
                 "Forwarding all email for $username to $($_.Forward)"
                 Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME  -message "Set Forwarding for $($username) to $($_.Forward)" -Sev "Info" -tenant $TenantFilter
 
@@ -180,12 +195,18 @@ try {
         }
         { $_."RemoveLicenses" -eq 'true' } {
             try {
-                $CurrentLicenses = (New-GraphGetRequest -uri "https://graph.microsoft.com/beta/users/$($userid)" -tenantid $tenantFilter).assignedlicenses.skuid
-                $LicensesToRemove = if ($CurrentLicenses) { ConvertTo-Json @( $CurrentLicenses) } else { "[]" }
-                $LicenseBody = '{"addLicenses": [], "removeLicenses": ' + $LicensesToRemove + '}'
-                $LicRequest = New-GraphPostRequest -uri "https://graph.microsoft.com/beta/users/$($userid)/assignlicense" -tenantid $tenantFilter -type POST -body $LicenseBody -verbose
-                "Removed current licenses: $(($ConvertTable | Where-Object { $_.guid -in $CurrentLicenses }).'Product_Display_Name' -join ',')"
-                Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME  -message "Removed all licenses for $($username)" -Sev "Info" -tenant $TenantFilter
+                if ($LicenseUnAssignAllowed -eq $false) {
+                    "Could not remove license as the users mailbox is still being converted to a shared mailbox."
+                    Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME  -message "Could not remove license as the users mailbox is still being converted to a shared mailbox" -Sev "Info" -tenant $TenantFilter
+                }
+                else {
+                    $CurrentLicenses = (New-GraphGetRequest -uri "https://graph.microsoft.com/beta/users/$($userid)" -tenantid $tenantFilter).assignedlicenses.skuid
+                    $LicensesToRemove = if ($CurrentLicenses) { ConvertTo-Json @( $CurrentLicenses) } else { "[]" }
+                    $LicenseBody = '{"addLicenses": [], "removeLicenses": ' + $LicensesToRemove + '}'
+                    $LicRequest = New-GraphPostRequest -uri "https://graph.microsoft.com/beta/users/$($userid)/assignlicense" -tenantid $tenantFilter -type POST -body $LicenseBody -verbose
+                    "Removed current licenses: $(($ConvertTable | Where-Object { $_.guid -in $CurrentLicenses }).'Product_Display_Name' -join ',')"
+                    Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME  -message "Removed all licenses for $($username)" -Sev "Info" -tenant $TenantFilter
+                }
            
             }
             catch {
@@ -210,9 +231,9 @@ try {
 
         { $_."RemoveRules" -eq 'true' } {
             try {
-                $rules = New-ExoRequest -tenantid $TenantFilter -cmdlet "Get-InboxRule" -cmdParams @{Identity = $userid } | ForEach-Object {
+                $rules = New-ExoRequest -tenantid $TenantFilter -cmdlet "Get-InboxRule" -cmdParams @{Identity = $userid } -Anchor $username | ForEach-Object {
                     try {
-                        New-ExoRequest -tenantid $TenantFilter -cmdlet "Remove-InboxRule" -cmdParams @{Identity = $_.Identity }
+                        New-ExoRequest -tenantid $TenantFilter -cmdlet "Remove-InboxRule" -Anchor $username -cmdParams @{Identity = $_.Identity }
                         "Removed rule: $($_.Name)"
                     }
                     catch {
@@ -232,9 +253,9 @@ try {
 
         { $_."RemoveMobile" -eq 'true' } {
             try {
-                $devices = New-ExoRequest -tenantid $TenantFilter -cmdlet "Get-MobileDevice" -cmdParams @{mailbox = $userid } | ForEach-Object {
+                $devices = New-ExoRequest -tenantid $TenantFilter -cmdlet "Get-MobileDevice" -Anchor $username -cmdParams @{mailbox = $userid } | ForEach-Object {
                     try {
-                        New-ExoRequest -tenantid $TenantFilter -cmdlet "Remove-MobileDevice" -cmdParams @{Identity = $_.Identity }
+                        New-ExoRequest -tenantid $TenantFilter -cmdlet "Remove-MobileDevice" -Anchor $username -cmdParams @{Identity = $_.Identity }
                         "Removed device: $($_.FriendlyName)"
                     }
                     catch {
