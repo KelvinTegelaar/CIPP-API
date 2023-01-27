@@ -26,13 +26,15 @@ try {
                    
                     if ($ConvertedMailbox.RecipientTypeDetails -eq "UserMailbox") {
                         $LicenseUnAssignAllowed = $false
+                        "Conversion to Shared Mailbox is in progress. We might not be able to make changes to the licenses."
                     }
                     else {
                         $LicenseUnAssignAllowed = $true
+                        "Converted $($username) to Shared Mailbox"
                     }
-                    Start-Sleep -Milliseconds 500
+                    Start-Sleep 1
                 }
-                "Converted $($username) to Shared Mailbox"
+                
                 Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME  -message "Converted $($username) to a shared mailbox" -Sev "Info" -tenant $TenantFilter
 
             }
