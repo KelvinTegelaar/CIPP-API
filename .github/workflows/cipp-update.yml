@@ -8,10 +8,7 @@ on:
 jobs:
   merge-upstream:
     runs-on: ubuntu-latest
-    steps: 
-      - uses: TobKed/github-forks-sync-action@v0.2.0
+    steps:
+      - uses: anatawa12/fork-sync-all-branches@v1
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          upstream_repository: KelvinTegelaar/CIPP-API
-          upstream_branch: master
-          target_branch: master
