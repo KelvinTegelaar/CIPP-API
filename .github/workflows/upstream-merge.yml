@@ -1,0 +1,22 @@
+name: Scheduled CIPP Update
+on: 
+  schedule:
+    - cron: '50 11 * * 5'
+    # scheduled for 11:50 UTC every Friday
+
+jobs:
+  merge-upstream:
+    runs-on: ubuntu-latest
+    steps: 
+      - name: Checkout
+        uses: actions/checkout@v2
+        with:
+          ref: upstream             # set the branch to merge to
+          fetch-depth: 0 
+      - name: Merge Upstream
+        uses: exions/merge-upstream@v1
+        with:
+          upstream: KelvinTegelaar/CIPP-API  # set the upstream repo
+          upstream-branch: master   # set the upstream branch to merge from
+          branch: master          # set the branch to merge to
+          
