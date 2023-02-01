@@ -25,6 +25,21 @@ try {
         anr = $MailRequest.PrimarySmtpAddress
     }
     $MailboxDetailedRequest = New-ExoRequest -TenantID $TenantFilter -cmdlet 'Get-Mailbox' -cmdParams $FetchParam
+    $Archive = New-ExoRequest -TenantID $TenantFilter -cmdlet 'Get-Mailbox' -cmdParams $FetchParam
+    if ($Archive.ArchiveStatus -eq "Active") {
+        $ArchiveEnabled = $True 
+    }
+    else {
+        $ArchiveEnabled = $False
+    }
+
+    $FetchParam = @{
+        Identity = $MailRequest.PrimarySmtpAddress
+        Archive = $true
+    }
+
+    $ArchiveSize = New-ExoRequest -TenantID $TenantFilter -cmdlet 'Get-MailboxStatistics' -cmdParams $FetchParam
+    
     $FetchParam = @{
         SenderAddress = $MailRequest.PrimarySmtpAddress
     }
@@ -90,7 +105,11 @@ $GraphRequest = [ordered]@{
     ProhibitSendReceiveQuota = [math]::Round([float]($MailboxDetailedRequest.ProhibitSendReceiveQuota -split ' GB')[0], 2)
     ItemCount                = [math]::Round($StatsRequest.ItemCount, 2)
     TotalItemSize            = [math]::Round($StatsRequest.TotalItemSize / 1Gb, 2)
+    TotalArchiveItemSize     = $ArchiveSize.TotalItemSize.Split(" ")[0]
+    TotalArchiveItemCount    = [math]::Round($ArchiveSize.ItemCount, 2)
     BlockedForSpam           = $BlockedForSpam
+    ArchiveMailBox           = $ArchiveEnabled
+    AutoExpandingArchive     = $Archive.AutoExpandingArchiveEnabled
 }
 
 #$GraphRequest = [ordered]@{
