@@ -47,8 +47,9 @@ try {
       if ($request.query.code) {
             try {
                   $TenantId = $Rows.tenantid
-                  if (!$TenantId) { $Env:TenantId }
+                  if (!$TenantId) { $TenantId = $ENV:TenantId }
                   $AppID = $Rows.appid
+                  if (!$AppID) { $appid = $env:ApplicationId }
                   $URL = ($Request.headers.'x-ms-original-url').split('?') | Select-Object -First 1
                   $clientsecret = Get-AzKeyVaultSecret -VaultName $kv -Name 'applicationsecret' -AsPlainText
                   $RefreshToken = Invoke-RestMethod -Method POST -Body "client_id=$appid&scope=https://graph.microsoft.com/.default+offline_access+openid+profile&code=$($request.query.code)&grant_type=authorization_code&redirect_uri=$($url)&client_secret=$clientsecret" -Uri "https://login.microsoftonline.com/$TenantId/oauth2/v2.0/token"
