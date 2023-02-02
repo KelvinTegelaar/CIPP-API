@@ -41,8 +41,7 @@ function Get-GraphToken($tenantid, $scope, $AsApp, $AppID, $refreshToken, $Retur
         client_secret = $env:ApplicationSecret
         scope         = $Scope
         refresh_token = $env:RefreshToken
-        grant_type    = 'refresh_token'
-                    
+        grant_type    = 'refresh_token'             
     }
     if ($asApp -eq $true) {
         $AuthBody = @{
@@ -231,7 +230,6 @@ function Get-ClassicAPIToken($tenantID, $Resource) {
         grant_type    = 'refresh_token'
                     
     }
-    #$body = "resource=$Resource&grant_type=refresh_token&refresh_token=$($env:ExchangeRefreshToken)"
 
     try {
         $token = Invoke-RestMethod $uri -Body $body -ContentType 'application/x-www-form-urlencoded' -ErrorAction SilentlyContinue -Method post
@@ -325,11 +323,13 @@ function New-ClassicAPIPostRequest($TenantID, $Uri, $Method = 'POST', $Resource 
     if ((Get-AuthorisedRequest -Uri $uri -TenantID $tenantid)) {
         try {
             $ReturnedData = Invoke-RestMethod -ContentType 'application/json;charset=UTF-8' -Uri $Uri -Method $Method -Body $Body -Headers @{
-                Authorization            = "Bearer $($token.access_token)";
-                'x-ms-client-request-id' = [guid]::NewGuid().ToString();
-                'x-ms-client-session-id' = [guid]::NewGuid().ToString()
-                'x-ms-correlation-id'    = [guid]::NewGuid()
-                'X-Requested-With'       = 'XMLHttpRequest' 
+                Authorization                  = "Bearer $($token.access_token)";
+                'x-ms-client-request-id'       = [guid]::NewGuid().ToString();
+                'x-ms-client-session-id'       = [guid]::NewGuid().ToString()
+                'x-ms-correlation-id'          = [guid]::NewGuid()
+                'X-Requested-With'             = 'XMLHttpRequest' 
+                'X-RequestForceAuthentication' = $true
+
             } 
                        
         }
