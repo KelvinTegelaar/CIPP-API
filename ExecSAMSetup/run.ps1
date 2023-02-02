@@ -47,6 +47,7 @@ try {
       if ($request.query.code) {
             try {
                   $TenantId = $Rows.tenantid
+                  if (!$TenantId) { $Env:TenantId }
                   $AppID = $Rows.appid
                   $URL = ($Request.headers.'x-ms-original-url').split('?') | Select-Object -First 1
                   $clientsecret = Get-AzKeyVaultSecret -VaultName $kv -Name 'applicationsecret' -AsPlainText
