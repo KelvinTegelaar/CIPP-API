@@ -56,9 +56,13 @@ try {
                   $RefreshToken = Invoke-RestMethod -Method POST -Body "client_id=$appid&scope=https://graph.microsoft.com/.default+offline_access+openid+profile&code=$($request.query.code)&grant_type=authorization_code&redirect_uri=$($url)&client_secret=$clientsecret" -Uri "https://login.microsoftonline.com/$TenantId/oauth2/v2.0/token"
                   Set-AzKeyVaultSecret -VaultName $kv -Name 'RefreshToken' -SecretValue (ConvertTo-SecureString -String $RefreshToken.refresh_token -AsPlainText -Force)
                   $Results = "Authentication is now complete. You may now close this window."
-                  $SetupPhase = $rows.validated = $true
-                  Add-AzDataTableEntity @Table -Entity $Rows -Force | Out-Null
-
+                  try {
+                        $SetupPhase = $rows.validated = $true
+                        Add-AzDataTableEntity @Table -Entity $Rows -Force | Out-Null
+                  }
+                  catch {
+                        #no need.
+                  }
             }
             catch {
                   $Results = "Authentication failed. $($_.Exception.message)"
