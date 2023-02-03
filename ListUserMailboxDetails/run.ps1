@@ -25,21 +25,29 @@ try {
         anr = $MailRequest.PrimarySmtpAddress
     }
     $MailboxDetailedRequest = New-ExoRequest -TenantID $TenantFilter -cmdlet 'Get-Mailbox' -cmdParams $FetchParam
-    $Archive = New-ExoRequest -TenantID $TenantFilter -cmdlet 'Get-Mailbox' -cmdParams $FetchParam
-    if ($Archive.ArchiveStatus -eq "Active") {
-        $ArchiveEnabled = $True 
+    try {
+        $Archive = New-ExoRequest -TenantID $TenantFilter -cmdlet 'Get-Mailbox' -cmdParams $FetchParam
+        if ($Archive.ArchiveStatus -eq "Active") {
+            $ArchiveEnabled = $True 
+        }
+        else {
+            $ArchiveEnabled = $False
+        }
+
+        $FetchParam = @{
+            Identity = $MailRequest.PrimarySmtpAddress
+            Archive  = $true
+        }
+
+        $ArchiveSize = New-ExoRequest -TenantID $TenantFilter -cmdlet 'Get-MailboxStatistics' -cmdParams $FetchParam
     }
-    else {
+    catch {
         $ArchiveEnabled = $False
+        $ArchiveSize = @{
+            TotalItemSize = "0"
+            ItemCount     = "0"
+        }
     }
-
-    $FetchParam = @{
-        Identity = $MailRequest.PrimarySmtpAddress
-        Archive = $true
-    }
-
-    $ArchiveSize = New-ExoRequest -TenantID $TenantFilter -cmdlet 'Get-MailboxStatistics' -cmdParams $FetchParam
-    
     $FetchParam = @{
         SenderAddress = $MailRequest.PrimarySmtpAddress
     }
