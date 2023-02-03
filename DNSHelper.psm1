@@ -24,6 +24,8 @@ function Resolve-DnsHttpsQuery {
     Param(
         [Parameter(Mandatory = $true)]
         [string]$Domain,
+
+        [string]$MacroExpand,
         
         [Parameter()]
         [string]$RecordType = 'A'
@@ -71,6 +73,11 @@ function Resolve-DnsHttpsQuery {
         'accept' = 'application/dns-json'
     }
 
+    if ($MacroExpand) {
+        $Domain = Get-DomainMacros -MacroExpand $MacroExpand -Domain $Domain
+        Write-Verbose "Macro expand: $Domain"
+    }
+
     $Uri = $QueryTemplate -f $BaseUri, $Domain, $RecordType
 
     $Results = Invoke-RestMethod -Uri $Uri -Headers $Headers -ErrorAction Stop
@@ -83,6 +90,32 @@ function Resolve-DnsHttpsQuery {
     }
     
     return $Results
+}
+
+function Get-DomainMacros {
+    [CmdletBinding()]
+    Param(
+        [Parameter(Mandatory = $true)]
+        [string]$Domain,
+        
+        [Parameter(Mandatory = $true)]
+        [string]$MacroExpand
+    )
+
+    $Macros = @{
+        '%{d}' = $Domain
+        '%{o}' = $Domain
+        '%{h}' = $Domain
+        '%{l}' = 'postmaster'
+        '%{s}' = 'postmaster@{0}' -f $Domain
+        '%{i}' = '1.2.3.4'
+    }
+
+    foreach ($Macro in $Macros.Keys) {
+        $MacroExpand = $MacroExpand -replace $Macro, $Macros.$Macro
+    }
+
+    $MacroExpand
 }
 
 function Test-DNSSEC {
@@ -426,6 +459,7 @@ function Read-SpfRecord {
         RecommendedRecord = ''
         IPAddresses       = [System.Collections.Generic.List[string]]::new()
         MailProvider      = ''
+        Explanation       = ''
         Status            = ''
 
     }
@@ -471,7 +505,7 @@ function Read-SpfRecord {
                             $Status = 'permerror'
                         }
                         else {
-                            Write-Host $Query
+                            #Write-Host $Query
                             $ValidationFails.Add($NoSpfValidation) | Out-Null
                             $Status = 'temperror'
                         }
@@ -529,6 +563,7 @@ function Read-SpfRecord {
                                 Replace = ''
                             }) | Out-Null
                     }
+                    
                 }
 
                 foreach ($Term in $RecordTerms) {
@@ -565,9 +600,6 @@ function Read-SpfRecord {
                         # Record has been redirected, stop evaluating terms
                         break
                     }
-                 
-                    # Explanation modifier
-                    elseif ($Term -match '^exp=(?<Domain>.+)$') { Write-Verbose '-----EXP-----' }
             
                     # Include mechanism
                     elseif ($Term -match '^(?<Qualifier>[+-~?])?include:(?<Value>.+)$') {
@@ -619,24 +651,35 @@ function Read-SpfRecord {
                                 $TypeQuery = @{ Domain = $TypeDomain; RecordType = $Matches.RecordType }
                                 Write-Verbose "Looking up $($TypeQuery.Domain)"
                                 $TypeResult = Resolve-DnsHttpsQuery @TypeQuery -ErrorAction Stop
-                                
                                 if ($Matches.RecordType -eq 'mx') {
                                     $MxCount = 0
-                                    foreach ($mx in $TypeResult.Answer.data) {
-                                        $MxCount++
-                                        $Preference, $MxDomain = $mx -replace '\.$' -split '\s+'                                        
-                                        $MxQuery = Resolve-DnsHttpsQuery -Domain $MxDomain -ErrorAction Stop
-                                        $MxIps = $MxQuery.Answer.data
-
-                                        foreach ($MxIp in $MxIps) {
-                                            $IPAddresses.Add($MxIp) | Out-Null
-                                        }
+                                    if ($TypeResult.Answer) {
+                                        foreach ($mx in $TypeResult.Answer.data) {
+                                            $MxCount++
+                                            $Preference, $MxDomain = $mx -replace '\.$' -split '\s+'     
+                                            try {                           
+                                                Write-Verbose "MX: Lookup $MxDomain"        
+                                                $MxQuery = Resolve-DnsHttpsQuery -Domain $MxDomain -ErrorAction Stop
+                                                $MxIps = $MxQuery.Answer.data
                                         
-                                        if ($MxCount -gt 10) {
-                                            $ValidationWarns.Add("$Domain - Mechanism 'mx' lookup for $MxDomain has exceeded the 10 lookup limit(RFC 7208, Section 4.6.4).") | Out-Null
-                                            $TypeResult = $null
-                                            break
+                                                foreach ($MxIp in $MxIps) {
+                                                    $IPAddresses.Add($MxIp) | Out-Null
+                                                }
+                                        
+                                                if ($MxCount -gt 10) {
+                                                    $ValidationWarns.Add("$Domain - Mechanism 'mx' lookup for $MxDomain has exceeded the 10 A or AAAA record lookup limit (RFC 7208, Section 4.6.4).") | Out-Null
+                                                    $TypeResult = $null
+                                                    break
+                                                }
+                                            }
+                                            catch { 
+                                                Write-Verbose $_.Exception.Message 
+                                                $TypeResult = $null
+                                            }
                                         }
+                                    }
+                                    else {
+                                        $ValidationWarns.Add("$Domain - Mechanism 'mx' lookup for $($TypeQuery.Domain) did not have any records") | Out-Null
                                     }
                                 }
                                 elseif ($Matches.RecordType -eq 'ptr') {
@@ -659,14 +702,18 @@ function Read-SpfRecord {
                                 $Result = $false
                             }
                             else {
-                                if ($TypeQuery.RecordType -eq 'mx') {
-                                    $Result = $TypeResult.Answer | ForEach-Object { 
-                                        $LookupCount++
-                                        $_.Data.Split(' ')[1] 
+                                if ($TypeResult.Answer) {
+                                    if ($TypeQuery.RecordType -match 'mx') {
+                                    
+                                        $Result = $TypeResult.Answer | ForEach-Object { 
+                                            #$LookupCount++
+                                            $_.Data.Split(' ')[1] 
+                                        }
                                     }
-                                }
-                                else {
-                                    $Result = $TypeResult.answer.data
+                                
+                                    else {
+                                        $Result = $TypeResult.answer.data
+                                    }
                                 }
                             }
                             $TypeLookups.Add(
@@ -687,11 +734,27 @@ function Read-SpfRecord {
                         $ValidationWarns.Add("$Domain - Unknown term specified '$Term'") | Out-Null
                     }
                 }
+
+                # Explanation modifier
+                if ($Record -match 'exp=(?<MacroExpand>.+)$') { 
+                    Write-Verbose '-----EXPLAIN-----'
+                    $ExpQuery = @{ Domain = $Domain; MacroExpand = $Matches.MacroExpand; RecordType = 'TXT' }
+                    $ExpResult = Resolve-DnsHttpsQuery @ExpQuery -ErrorAction Stop
+                    if ($ExpResult.Status -eq 0 -and $ExpResult.Answer.Type -eq 16) { 
+                        $Explain = @{
+                            Record  = $ExpResult.Answer.data
+                            Example = Get-DomainMacros -Domain $Domain -MacroExpand $ExpResult.Answer.data
+                        }
+                    }
+                }
+                else {
+                    $Explain = @{ Example = ''; Record = '' }
+                }
             }
         }
     }
     catch {
-        Write-Verbose "EXCEPTION: $($_.Exception.Message)"
+        Write-Verbose "EXCEPTION: $($_.InvocationInfo.ScriptLineNumber) $($_.Exception.Message)"
     }
     
     # Lookup MX record for expected include information if not supplied
@@ -847,6 +910,7 @@ function Read-SpfRecord {
     $SpfResults.RecommendedRecord = $RecommendedRecord
     $SpfResults.TypeLookups = @($TypeLookups)
     $SpfResults.IPAddresses = @($IPAddresses)
+    $SpfResults.Explanation = $Explain
     $SpfResults.Status = $Status    
 
     
