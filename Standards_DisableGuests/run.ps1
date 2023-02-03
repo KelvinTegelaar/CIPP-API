@@ -7,7 +7,7 @@ try {
         New-GraphPostRequest -type Patch -tenantid $tenant -uri "https://graph.microsoft.com/beta/users/$($guest.id)" -body '{"accountEnabled":"false"}'
         Write-LogMessage -API "Standards" -tenant $tenant -message  "Disabling guest $($guest.UserPrincipalName) ($($guest.id))" -sev Info
     }
-    Write-LogMessage -API "Standards" -tenant $tenant -message  "Disabled guests accounts with a login longer than 30 days ago." -sev Info
+    Write-LogMessage -API "Standards" -tenant $tenant -message  "Disabled guests accounts with a login longer than 90 days ago." -sev Info
 }
 catch {
     Write-LogMessage -API "Standards" -tenant $tenant -message  "Failed to disable guests older than 90 days: $($_.exception.message)" -sev Error
