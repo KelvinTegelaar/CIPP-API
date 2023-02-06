@@ -15,7 +15,7 @@ $TenantFilter = $Request.Query.TenantFilter
 $DataToReturn = $Request.Query.DataToReturn
 
 if (($DataToReturn -eq 'AzureADConnectSettings') -or ([string]::IsNullOrEmpty($DataToReturn)) ) {
-    $ADConnectStatusGraph = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/$($Type)?`$select=$($selectlist -join ',')" -tenantid $TenantFilter
+    $ADConnectStatusGraph = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/organization" -tenantid $TenantFilter
     #$ADConnectStatusGraph = New-ClassicAPIGetRequest -Resource "74658136-14ec-4630-ad9b-26e160ff0fc6" -TenantID $TenantFilter -Uri "https://main.iam.ad.ext.azure.com/api/Directories/ADConnectStatus" -Method "GET"
     #$PasswordSyncStatusGraph = New-ClassicAPIGetRequest -Resource "74658136-14ec-4630-ad9b-26e160ff0fc6" -TenantID $TenantFilter -Uri "https://main.iam.ad.ext.azure.com/api/Directories/GetPasswordSyncStatus" -Method "GET"
     $AzureADConnectSettings = [PSCustomObject]@{
@@ -25,6 +25,7 @@ if (($DataToReturn -eq 'AzureADConnectSettings') -or ([string]::IsNullOrEmpty($D
         seamlessSingleSignOnEnabled      = [boolean]$ADConnectStatusGraph.seamlessSingleSignOnEnabled
         numberOfHoursFromLastSync        = $ADConnectStatusGraph.onPremisesLastSyncDateTime
         passwordSyncStatus               = [boolean]$PasswordSyncStatusGraph
+        raw                              = $ADConnectStatusGraph
     }
 }
 
