@@ -70,7 +70,7 @@ $RemoveSendAs = ($Request.body.RemoveSendAs).value
 foreach ($UserSendAs in $RemoveSendAs) { 
     try {
         $MailboxPerms = New-ExoRequest -Anchor $username -tenantid $Tenantfilter -cmdlet "Remove-RecipientPermission" -cmdParams @{Identity = $userid; Trustee = $UserSendAs; accessRights = @("SendAs") }
-        $results.add( "Removed $AddSendAS from $($username) with Send As permissions")
+        $results.add( "Removed $RemoveSendAs from $($username) with Send As permissions")
         Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME-message "Remove sendas permissions to $($request.body.AddSendAs) on $($username)" -Sev "Info" -tenant $TenantFilter
     }
     catch {
