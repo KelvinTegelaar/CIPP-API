@@ -163,6 +163,18 @@
         { "id": "63a677ce-818c-4409-9d12-5c6d2e2a6bfe", "type": "Scope" },
         { "id": "41269fc5-d04d-4bfd-bce7-43a51cea049a", "type": "Role" }
       ]
+    },
+    {
+      "resourceAppId": "00000002-0000-0ff1-ce00-000000000000",
+      "resourceAccess": [
+        { "id": "ab4f2b77-0b06-4fc1-a9de-02113fc2ab7c", "type": "Scope" }
+      ]
+    },
+    {
+      "resourceAppId": "00000003-0000-0ff1-ce00-000000000000",
+      "resourceAccess": [
+        { "id": "56680e0d-d2a3-4ae1-80d8-3c4f2100e3d0", "type": "Scope" }
+      ]
     }
   ]
 }

@@ -28,8 +28,10 @@ $GraphRequest = $ExpectedPermissions.requiredResourceAccess | ForEach-Object {
     try {
         $Resource = $_
         $Permissionsname = switch ($Resource.ResourceAppId) {
+            '00000002-0000-0ff1-ce00-000000000000' { 'Office 365 Exchange Online' }
             '00000003-0000-0000-c000-000000000000' { "Graph API" }
             'fc780465-2017-40d4-a0c5-307022471b92' { 'WindowsDefenderATP' }
+            '00000003-0000-0ff1-ce00-000000000000' { 'Sharepoint' }
         }
         $Scope = ($Translator | Where-Object { $_.id -in $Resource.ResourceAccess.id } | Where-Object { $_.value -notin 'profile', 'openid', 'offline_access' }).value -join ', '
         if ($Scope) {
