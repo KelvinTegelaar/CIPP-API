@@ -17,6 +17,8 @@ $Currentlog = Get-AzDataTableEntity @Table -Filter $Filter | Where-Object { $_.A
 try {
   if ($config.onePerTenant) {
     if ($Config.email -like '*@*' -and $null -ne $CurrentLog) {
+      $JSONRecipients = $Config.email.split(",").trim() | ForEach-Object { if ($_ -like '*@*') { '{"EmailAddress": {"Address": "' + $_ + '"}},' } }
+      $JSONRecipients = ([string]$JSONRecipients).Substring(0, ([string]$JSONRecipients).Length - 1)
       foreach ($tenant in ($CurrentLog.Tenant | Sort-Object -Unique)) {
         $HTMLLog = ($CurrentLog | Select-Object Message, API, Tenant, Username, Severity | Where-Object -Property tenant -EQ $tenant | ConvertTo-Html -frag) -replace '<table>', '<table class=blueTable>' | Out-String
         $JSONBody = @"
@@ -33,11 +35,7 @@ try {
                             "
                           },
                           "toRecipients": [
-                            {
-                              "emailAddress": {
-                                "address": "$($Config.email)"
-                              }
-                            }
+                            $($JSONRecipients)
                           ]
                         },
                         "saveToSentItems": "false"
@@ -49,6 +47,8 @@ try {
   }
   else {
     if ($Config.email -like '*@*' -and $null -ne $CurrentLog) {
+      $JSONRecipients = $Config.email.split(",").trim() | ForEach-Object { if ($_ -like '*@*') { '{"EmailAddress": {"Address": "' + $_ + '"}},' } }
+      $JSONRecipients = ([string]$JSONRecipients).Substring(0, ([string]$JSONRecipients).Length - 1)
       $HTMLLog = ($CurrentLog | Select-Object Message, API, Tenant, Username, Severity | ConvertTo-Html -frag) -replace '<table>', '<table class=blueTable>' | Out-String
       $JSONBody = @"
                     {
@@ -64,11 +64,7 @@ try {
                             "
                           },
                           "toRecipients": [
-                            {
-                              "emailAddress": {
-                                "address": "$($Config.email)"
-                              }
-                            }
+                            $($JSONRecipients)
                           ]
                         },
                         "saveToSentItems": "false"
@@ -121,7 +117,7 @@ try {
 }
 catch {
   Write-Host "Could not send alerts: $($_.Exception.message)"
-  Write-LogMessage -API 'Alerts' -message "Could not send alerts: $($_.Exception.message)" -sev info
+  Write-LogMessage -API 'Alerts' -message "Could not send alerts to : $($_.Exception.message)" -sev info
 }
 
 [PSCustomObject]@{

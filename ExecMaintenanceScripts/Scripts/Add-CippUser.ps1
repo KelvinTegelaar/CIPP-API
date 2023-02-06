@@ -37,7 +37,8 @@ if (!$Role) {
 
 $CurrentUsers = Get-AzStaticWebAppUser -Name $swa.name -ResourceGroupName $ResourceGroup -AuthProvider all | Select-Object DisplayName, Role
 
-$AllUsers = Get-AzADUser -Filter "userType eq 'Member' and accountEnabled eq true" | Select-Object DisplayName, UserPrincipalName
+$AllUsers = Get-AzADUser -Filter "userType eq 'Member' and accountEnabled eq true" | Select-Object DisplayName, UserPrincipalName 
+
 
 $SelectedUsers = $AllUsers | Where-Object { $CurrentUsers.DisplayName -notcontains $_.UserPrincipalName } | Out-ConsoleGridView -Title "Select users for role '$Role'"
 Write-Host "Selected users: $($SelectedUsers.UserPrincipalName -join ', ')"

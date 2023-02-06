@@ -24,10 +24,10 @@ try {
     }
     else {
         try {
-            $GraphRequest = New-ExoRequest -tenantid $Tenantfilter -cmdlet "Set-MailboxFolderPermission" -cmdParams $CalParam
+            $GraphRequest = New-ExoRequest -tenantid $Tenantfilter -cmdlet "Set-MailboxFolderPermission" -cmdParams $CalParam -Anchor $($UserID)
         }
         catch {
-            $GraphRequest = New-ExoRequest -tenantid $Tenantfilter -cmdlet "Add-MailboxFolderPermission" -cmdParams $CalParam
+            $GraphRequest = New-ExoRequest -tenantid $Tenantfilter -cmdlet "Add-MailboxFolderPermission" -cmdParams $CalParam -Anchor $($UserID)
         }
         Write-LogMessage -API 'List Calendar Permissions' -tenant $tenantfilter -message "Calendar permissions listed for $($tenantfilter)" -sev Debug
     
