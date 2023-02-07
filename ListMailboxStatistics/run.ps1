@@ -15,6 +15,7 @@ $TenantFilter = $Request.Query.TenantFilter
 try {
     $GraphRequest = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/reports/getMailboxUsageDetail(period='D7')" -tenantid $TenantFilter | ConvertFrom-Csv | Select-Object @{ Name = 'UPN'; Expression = { $_.'User Principal Name' } },
     @{ Name = 'displayName'; Expression = { $_.'Display Name' } },
+    @{ Name = 'MailboxType'; Expression = { $_.'Recipient Type' } },
     @{ Name = 'LastActive'; Expression = { $_.'Last Activity Date' } },
     @{ Name = 'UsedGB'; Expression = { [math]::round($_.'Storage Used (Byte)' / 1GB, 0) } },
     @{ Name = 'QuotaGB'; Expression = { [math]::round($_.'Prohibit Send/Receive Quota (Byte)' / 1GB, 0) } },
