@@ -63,7 +63,7 @@ try {
         $RemoveMembers | ForEach-Object { 
             $MemberInfo = (New-GraphGetRequest -uri "https://graph.microsoft.com/beta/users/$($_)" -tenantid $Userobj.tenantid)
             if ($userobj.groupType -eq "Distribution list" -or $userobj.groupType -eq "Mail-Enabled Security") {
-                $Params = @{ Identity = $userobj.groupid; Member = $_ }
+                $Params = @{ Identity = $userobj.groupid; Member = $_ ; BypassSecurityGroupManagerCheck = $true }
                 New-ExoRequest -tenantid $Userobj.tenantid -cmdlet "Remove-DistributionGroupMember" -cmdParams $params  -UseSystemMailbox $true
             }
             else {
