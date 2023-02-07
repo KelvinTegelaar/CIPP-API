@@ -1,0 +1,9 @@
+{
+  "Name": "Reflexion",
+  "MxMatch": "asp.reflexion.net",
+  "SpfInclude": "reflexion.net",
+  "Selectors": [""],
+  "_MxComment": "https://support.sophos.com/support/s/article/KB-000036185?language=en_US",
+  "_SpfComment": "https://support.sophos.com/support/s/article/KB-000036185?language=en_US#SPF",
+  "_DkimComment": "https://community.sophos.com/reflexion/f/discussions/79994/feature-request---dkim-and-dmarc-support"
+}

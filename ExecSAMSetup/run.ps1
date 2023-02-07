@@ -47,15 +47,22 @@ try {
       if ($request.query.code) {
             try {
                   $TenantId = $Rows.tenantid
+                  if (!$TenantId) { $TenantId = $ENV:TenantId }
                   $AppID = $Rows.appid
+                  if (!$AppID) { $appid = $env:ApplicationId }
                   $URL = ($Request.headers.'x-ms-original-url').split('?') | Select-Object -First 1
                   $clientsecret = Get-AzKeyVaultSecret -VaultName $kv -Name 'applicationsecret' -AsPlainText
+                  if (!$clientsecret) { $clientsecret = $ENV:ApplicationSecret }
                   $RefreshToken = Invoke-RestMethod -Method POST -Body "client_id=$appid&scope=https://graph.microsoft.com/.default+offline_access+openid+profile&code=$($request.query.code)&grant_type=authorization_code&redirect_uri=$($url)&client_secret=$clientsecret" -Uri "https://login.microsoftonline.com/$TenantId/oauth2/v2.0/token"
                   Set-AzKeyVaultSecret -VaultName $kv -Name 'RefreshToken' -SecretValue (ConvertTo-SecureString -String $RefreshToken.refresh_token -AsPlainText -Force)
                   $Results = "Authentication is now complete. You may now close this window."
-                  $SetupPhase = $rows.validated = $true
-                  Add-AzDataTableEntity @Table -Entity $Rows -Force | Out-Null
-
+                  try {
+                        $SetupPhase = $rows.validated = $true
+                        Add-AzDataTableEntity @Table -Entity $Rows -Force | Out-Null
+                  }
+                  catch {
+                        #no need.
+                  }
             }
             catch {
                   $Results = "Authentication failed. $($_.Exception.message)"
@@ -162,32 +169,9 @@ try {
  
             }
             4 {
-                  $step = 4
-                  $TenantId = $Rows.tenantid
-                  $FirstExchangeLogonRefreshtoken = New-DeviceLogin -clientid 'a0c73c16-a7e3-4564-9a95-2bdf47383716' -Scope 'https://outlook.office365.com/.default' -FirstLogon -TenantId $TenantId
-                  $SetupPhase = $rows.SamSetup = [string]($FirstExchangeLogonRefreshtoken | ConvertTo-Json)
-                  Add-AzDataTableEntity @Table -Entity $Rows -Force | Out-Null
-                  $step = 5
-                  $Results = @{ message = "Your code is $($FirstExchangeLogonRefreshtoken.user_code). Enter the code "  ; step = $step; url = $FirstExchangeLogonRefreshtoken.verification_uri }            
-            }
-            5 {
-                  $step = 5
-                  $TenantId = $rows.tenantid
-                  $SAMSetup = $rows.SamSetup | ConvertFrom-Json
-                  $ExchangeRefreshToken = (New-DeviceLogin -clientid 'a0c73c16-a7e3-4564-9a95-2bdf47383716' -Scope 'https://outlook.office365.com/.default' -device_code $SAMSetup.device_code)
-                  if ($ExchangeRefreshToken.Refresh_Token) {
-                        Set-AzKeyVaultSecret -VaultName $kv -Name 'exchangerefreshtoken' -SecretValue (ConvertTo-SecureString -String $ExchangeRefreshToken.Refresh_Token -AsPlainText -Force)
-                        $step = 6
-                        $Results = @{"message" = "Retrieved refresh token and saving to Keyvault."; step = $step }
-                  }
-                  else {
-                        $Results = @{ message = "Your code is $($SAMSetup.user_code). Enter the code "  ; step = $step; url = $SAMSetup.verification_uri }            
-                  }
-            }
-            6 {
                   Remove-AzDataTableRow @Table -Entity $Rows
 
-                  $step = 7
+                  $step = 5
                   $Results = @{"message" = "Installation completed. You must perform a token cache clear. For instructions click "; step = $step ; url = "https://cipp.app/docs/general/troubleshooting/#clear-token-cache"
                   }
             }
