@@ -22,10 +22,29 @@ if ($AddMembers) {
             $addmemberbody = "{ `"members@odata.bind`": $(ConvertTo-Json @($MemberIDs)) }"
             if ($userobj.groupType -eq "Distribution list" -or $userobj.groupType -eq "Mail-Enabled Security") {
                 $Params = @{ Identity = $userobj.groupid; Member = $member; BypassSecurityGroupManagerCheck = $true }
-                New-ExoRequest -tenantid $Userobj.tenantid -cmdlet "Add-DistributionGroupMember" -cmdParams $params
+                New-ExoRequest -tenantid $Userobj.tenantid -cmdlet "Add-DistributionGroupMember" -cmdParams $params -UseSystemMailbox $true 
             }
             else {
                 New-GraphPostRequest -uri "https://graph.microsoft.com/beta/groups/$($userobj.groupid)" -tenantid $Userobj.tenantid -type patch -body $addmemberbody -Verbose
+            }
+            Write-LogMessage -API $APINAME -tenant $Userobj.tenantid -user $request.headers.'x-ms-client-principal' -message "Added member to $($userobj.displayname) group" -Sev "Info"
+            $body = $results.add("Success. $member has been added")
+        }
+        catch {
+            $body = $results.add("Failed to add member $member to $($userobj.Groupid): $($_.Exception.Message)")
+        }
+    }
+
+}
+$AddContacts = ($userobj.AddContacts).value
+
+if ($AddContacts) {
+    $AddContacts | ForEach-Object {
+        try {
+            $member = $_
+            if ($userobj.groupType -eq "Distribution list" -or $userobj.groupType -eq "Mail-Enabled Security") {
+                $Params = @{ Identity = $userobj.groupid; Member = $member; BypassSecurityGroupManagerCheck = $true }
+                New-ExoRequest -tenantid $Userobj.tenantid -cmdlet "Add-DistributionGroupMember" -cmdParams $params  -UseSystemMailbox $true
             }
             Write-LogMessage -API $APINAME -tenant $Userobj.tenantid -user $request.headers.'x-ms-client-principal' -message "Added member to $($userobj.displayname) group" -Sev "Info"
             $body = $results.add("Success. $member has been added")
@@ -45,7 +64,7 @@ try {
             $MemberInfo = (New-GraphGetRequest -uri "https://graph.microsoft.com/beta/users/$($_)" -tenantid $Userobj.tenantid)
             if ($userobj.groupType -eq "Distribution list" -or $userobj.groupType -eq "Mail-Enabled Security") {
                 $Params = @{ Identity = $userobj.groupid; Member = $_ }
-                New-ExoRequest -tenantid $Userobj.tenantid -cmdlet "Remove-DistributionGroupMember" -cmdParams $params
+                New-ExoRequest -tenantid $Userobj.tenantid -cmdlet "Remove-DistributionGroupMember" -cmdParams $params  -UseSystemMailbox $true
             }
             else {
                 New-GraphPostRequest -uri "https://graph.microsoft.com/beta/groups/$($userobj.groupid)/members/$($MemberInfo.id)/`$ref" -tenantid $Userobj.tenantid -type DELETE 
