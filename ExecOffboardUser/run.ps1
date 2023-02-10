@@ -45,8 +45,8 @@ try {
         { $_.RevokeSessions -eq 'true' } { 
             try {
                 $GraphRequest = New-GraphPostRequest -uri "https://graph.microsoft.com/beta/users/$($userid)/invalidateAllRefreshTokens" -tenantid $TenantFilter -type POST -body '{}'  -verbose
-                "Success. All sessions by this user have been revoked"
-                Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME  -message "Revoked sessions for $($userid)" -Sev "Info"
+                "Success. All sessions by $username have been revoked"
+                Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME  -message "Revoked sessions for $($username)" -Sev "Info"
 
             }
             catch {
