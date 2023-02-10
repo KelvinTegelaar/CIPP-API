@@ -244,19 +244,18 @@ try {
 
         { $_."RemoveRules" -eq 'true' } {
             try {
-                $rules = New-ExoRequest -tenantid $TenantFilter -cmdlet "Get-InboxRule" -cmdParams @{Identity = $userid } -Anchor $username | ForEach-Object {
-                    try {
-                        New-ExoRequest -tenantid $TenantFilter -cmdlet "Remove-InboxRule" -Anchor $username -cmdParams @{Identity = $_.Identity }
-                        "Removed rule: $($_.Name)"
-                    }
-                    catch {
-                        "Could not remove rule: $($_.Name)"
-                        continue
-                    }
+                $rules = New-ExoRequest -tenantid $TenantFilter -cmdlet "Get-InboxRule" -cmdParams @{mailbox = $userid } 
+                if ($rules -eq $null) {
+                    Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME  -message "No Rules for $($username) to delete" -Sev "Info" -tenant $TenantFilter
+                    "No rules for $($username) to delete"
                 }
-           
+                else {
+                    ForEach ($rule in $rules) {
+                         New-ExoRequest -tenantid $TenantFilter -cmdlet "Remove-InboxRule" -Anchor $username -cmdParams @{Identity = $rule.Identity }
+                }
                 Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME  -message "Deleted Rules for $($username)" -Sev "Info" -tenant $TenantFilter
-
+                "Deleted Rules for $($username)"
+                }
             }
             catch {
                 Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME  -message "Could not delete rules for $($username): $($_.Exception.Message)" -Sev "Error" -tenant $TenantFilter
