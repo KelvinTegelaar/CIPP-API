@@ -16,25 +16,26 @@ $Results = foreach ($Tenant in $tenants) {
             'AllTenants'
         }
         $CompleteObject = @{
-            tenant          = $tenant
-            tenantid        = $TenantID 
-            AdminPassword   = [bool]$Request.body.AdminPassword
-            DefenderMalware = [bool]$Request.body.DefenderMalware
-            DefenderStatus  = [bool]$Request.body.DefenderStatus
-            MFAAdmins       = [bool]$Request.body.MFAAdmins
-            MFAAlertUsers   = [bool]$Request.body.MFAAlertUsers
-            NewGA           = [bool]$Request.body.NewGA
-            NewRole         = [bool]$Request.body.NewRole
-            QuotaUsed       = [bool]$Request.body.QuotaUsed
-            UnusedLicenses  = [bool]$Request.body.UnusedLicenses
-            AppSecretExpiry = [bool]$Request.body.AppSecretExpiry
-            ApnCertExpiry   = [bool]$Request.body.ApnCertExpiry
-            VppTokenExpiry  = [bool]$Request.body.VppTokenExpiry
-            DepTokenExpiry  = [bool]$Request.body.DepTokenExpiry
-            NoCAConfig      = [bool]$Request.body.NoCAConfig
-            type            = 'Alert'
-            RowKey          = $TenantID 
-            PartitionKey    = 'Alert'
+            tenant           = $tenant
+            tenantid         = $TenantID 
+            AdminPassword    = [bool]$Request.body.AdminPassword
+            DefenderMalware  = [bool]$Request.body.DefenderMalware
+            DefenderStatus   = [bool]$Request.body.DefenderStatus
+            MFAAdmins        = [bool]$Request.body.MFAAdmins
+            MFAAlertUsers    = [bool]$Request.body.MFAAlertUsers
+            NewGA            = [bool]$Request.body.NewGA
+            NewRole          = [bool]$Request.body.NewRole
+            QuotaUsed        = [bool]$Request.body.QuotaUsed
+            UnusedLicenses   = [bool]$Request.body.UnusedLicenses
+            OverusedLicenses = [bool]$Request.body.OverusedLicenses
+            AppSecretExpiry  = [bool]$Request.body.AppSecretExpiry
+            ApnCertExpiry    = [bool]$Request.body.ApnCertExpiry
+            VppTokenExpiry   = [bool]$Request.body.VppTokenExpiry
+            DepTokenExpiry   = [bool]$Request.body.DepTokenExpiry
+            NoCAConfig       = [bool]$Request.body.NoCAConfig
+            type             = 'Alert'
+            RowKey           = $TenantID 
+            PartitionKey     = 'Alert'
         }
 
         $Table = get-cipptable -TableName 'SchedulerConfig'
