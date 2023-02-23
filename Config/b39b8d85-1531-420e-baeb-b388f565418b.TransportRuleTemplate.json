@@ -1,5 +1,5 @@
 {
-  "name": "if a message subject contains \"encrypt:\" then encrypt the message.",
+  "name": "if a message subject contains \"encrypt:\" encrypt message.",
   "applyome": false,
   "applyrightsprotectiontemplate": "encrypt",
   "attachmenthasexecutablecontent": false,
