@@ -23,7 +23,7 @@ if (($DataToReturn -eq 'AzureADConnectSettings') -or ([string]::IsNullOrEmpty($D
         #dirSyncConfigured                = [boolean]$ADConnectStatusGraph.dirSyncConfigured
         #passThroughAuthenticationEnabled = [boolean]$ADConnectStatusGraph.passThroughAuthenticationEnabled
         #seamlessSingleSignOnEnabled      = [boolean]$ADConnectStatusGraph.seamlessSingleSignOnEnabled
-        #numberOfHoursFromLastSync        = $ADConnectStatusGraph.onPremisesLastSyncDateTime
+        numberOfHoursFromLastSync        = $ADConnectStatusGraph.onPremisesLastSyncDateTime
         #passwordSyncStatus               = [boolean]$PasswordSyncStatusGraph
         raw                              = $ADConnectStatusGraph
     }
