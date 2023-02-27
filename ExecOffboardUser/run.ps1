@@ -88,7 +88,7 @@ try {
                 catch {
                     Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME  -message "Could not remove $($username) from group $group" -Sev "Error" -tenant $TenantFilter
 
-                    "Could not remove user from group $($Groupname): $($_.Exception.Message). This is likely because its a Dynamic Group"
+                    "Could not remove user from group $($Groupname): $($_.Exception.Message). This is likely because its a Dynamic Group or synched with active directory"
                 }
             
             }
