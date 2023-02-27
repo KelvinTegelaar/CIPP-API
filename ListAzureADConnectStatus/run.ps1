@@ -20,11 +20,11 @@ if (($DataToReturn -eq 'AzureADConnectSettings') -or ([string]::IsNullOrEmpty($D
     #$PasswordSyncStatusGraph = New-ClassicAPIGetRequest -Resource "74658136-14ec-4630-ad9b-26e160ff0fc6" -TenantID $TenantFilter -Uri "https://main.iam.ad.ext.azure.com/api/Directories/GetPasswordSyncStatus" -Method "GET"
     $AzureADConnectSettings = [PSCustomObject]@{
         dirSyncEnabled                   = [boolean]$ADConnectStatusGraph.onPremisesSyncEnabled
-        dirSyncConfigured                = [boolean]$ADConnectStatusGraph.dirSyncConfigured
-        passThroughAuthenticationEnabled = [boolean]$ADConnectStatusGraph.passThroughAuthenticationEnabled
-        seamlessSingleSignOnEnabled      = [boolean]$ADConnectStatusGraph.seamlessSingleSignOnEnabled
+        #dirSyncConfigured                = [boolean]$ADConnectStatusGraph.dirSyncConfigured
+        #passThroughAuthenticationEnabled = [boolean]$ADConnectStatusGraph.passThroughAuthenticationEnabled
+        #seamlessSingleSignOnEnabled      = [boolean]$ADConnectStatusGraph.seamlessSingleSignOnEnabled
         numberOfHoursFromLastSync        = $ADConnectStatusGraph.onPremisesLastSyncDateTime
-        passwordSyncStatus               = [boolean]$PasswordSyncStatusGraph
+        #passwordSyncStatus               = [boolean]$PasswordSyncStatusGraph
         raw                              = $ADConnectStatusGraph
     }
 }
