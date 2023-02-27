@@ -1,10 +1,9 @@
 param($tenant)
 
 # Prepare tokens, connections and variables that will be used multiple times later
-$uri = "https://login.microsoftonline.com/$($Tenant)/oauth2/token"
-$body = "resource=https://admin.microsoft.com&grant_type=refresh_token&refresh_token=$($ENV:ExchangeRefreshToken)"
+
 try {
-    $token = Invoke-RestMethod $uri -Body $body -ContentType 'application/x-www-form-urlencoded' -ErrorAction SilentlyContinue -Method post
+    $token = Get-ClassicAPIToken -resource 'https://outlook.office365.com' -tenantid $tenant
     Write-LogMessage -API 'BestPracticeAnalyser' -tenant $tenant -message "Token retrieved for Best Practice Analyser on $($tenant)" -sev 'Debug'
 }
 catch {
@@ -65,13 +64,7 @@ catch {
 
 # Get the Privacy Enabled State
 try {
-    $Result.PrivacyEnabled = Invoke-RestMethod -ContentType 'application/json;charset=UTF-8' -Uri 'https://admin.microsoft.com/admin/api/reports/config/GetTenantConfiguration' -Method Get -Headers @{
-        Authorization            = "Bearer $($token.access_token)";
-        'x-ms-client-request-id' = [guid]::NewGuid().ToString();
-        'x-ms-client-session-id' = [guid]::NewGuid().ToString()
-        'x-ms-correlation-id'    = [guid]::NewGuid()
-        'X-Requested-With'       = 'XMLHttpRequest' 
-    } | Select-Object -ExpandProperty Output | ConvertFrom-Json | Select-Object -ExpandProperty PrivacyEnabled
+    $Result.PrivacyEnabled = (New-GraphGetRequest -Uri 'https://graph.microsoft.com/beta/admin/reportSettings' -tenantid $tenant).displayConcealedNames
 }
 catch {
     Write-LogMessage -API 'BestPracticeAnalyser' -tenant $tenant -message "Privacy Enabled State on $($tenant) Error: $($_.exception.message)" -sev 'Error'
@@ -140,7 +133,7 @@ catch {
 
 # Get OAuth Admin Consenst
 try {
-    $GraphRequest = New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/policies/authorizationPolicy/authorizationPolicy' -tenantid $Tenant -asApp $true
+    $GraphRequest = New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/policies/authorizationPolicy/authorizationPolicy' -tenantid $Tenant
     $Result.AdminConsentForApplications = if ($GraphRequest.permissionGrantPolicyIdsAssignedToDefaultUserRole -eq 'ManagePermissionGrantsForSelf.microsoft-user-default-legacy') { $true } else { $false }
 }
 catch {
@@ -149,7 +142,7 @@ catch {
 
 # Get Self Service Password Reset State
 try {
-    $bodypasswordresetpol = "resource=74658136-14ec-4630-ad9b-26e160ff0fc6&grant_type=refresh_token&refresh_token=$($ENV:ExchangeRefreshToken)"
+    $bodypasswordresetpol = "resource=74658136-14ec-4630-ad9b-26e160ff0fc6&grant_type=refresh_token&refresh_token=$($ENV:RefreshToken)"
     $tokensspr = Invoke-RestMethod $uri -Body $bodypasswordresetpol -ContentType 'application/x-www-form-urlencoded' -ErrorAction SilentlyContinue -Method post
     $SSPRGraph = Invoke-RestMethod -ContentType 'application/json;charset=UTF-8' -Uri 'https://main.iam.ad.ext.azure.com/api/PasswordReset/PasswordResetPolicies' -Method GET -Headers @{
         Authorization            = "Bearer $($tokensspr.access_token)";

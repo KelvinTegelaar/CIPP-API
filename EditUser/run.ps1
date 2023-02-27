@@ -8,7 +8,7 @@ Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME  -
 $userobj = $Request.body
 $Results = [System.Collections.ArrayList]@()
 $licenses = ($userobj | Select-Object "License_*").psobject.properties.value
-$Aliases = ($userobj.AddedAliases).Split([Environment]::NewLine)
+$Aliases = if ($userobj.AddedAliases) { ($userobj.AddedAliases).Split([Environment]::NewLine) }
 
 # Write to the Azure Functions log stream.
 Write-Host "PowerShell HTTP trigger function processed a request."
@@ -43,7 +43,7 @@ try {
     $GraphRequest = New-GraphPostRequest -uri "https://graph.microsoft.com/beta/users/$($userobj.Userid)" -tenantid $Userobj.tenantid -type PATCH -body $BodyToship  -verbose
     $results.add( "Success. The user has been edited." )
     if ($userobj.password) {
-        $passwordProfile = [pscustomobject] @{"passwordProfile" = @{ "password" = $userobj.password } } | ConvertTo-Json
+        $passwordProfile = [pscustomobject]@{"passwordProfile" = @{ "password" = $userobj.password; "forceChangePasswordNextSignIn" = [boolean]$UserObj.mustchangepass } } | ConvertTo-Json
         $GraphRequest = New-GraphPostRequest -uri "https://graph.microsoft.com/beta/users/$($userobj.Userid)" -tenantid $Userobj.tenantid -type PATCH -body $PasswordProfile  -verbose
         $results.add("Success. The password has been set to $($userobj.password)")
     }
@@ -87,7 +87,7 @@ try {
             New-GraphPostRequest -uri "https://graph.microsoft.com/beta/users/$($userobj.Userid)" -tenantid $Userobj.tenantid -type "patch" -body "{`"mail`": `"$Alias`"}" -verbose
         }
         New-GraphPostRequest -uri "https://graph.microsoft.com/beta/users/$($userobj.Userid)" -tenantid $Userobj.tenantid -type "patch" -body "{`"mail`": `"$UserprincipalName`"}" -verbose
-        Write-LogMessage -API $APINAME -tenant ($UserObj.tenantid) -user $request.headers.'x-ms-client-principal'   -message "Added Aliases to $($userobj.displayname) license $($licences)" -Sev "Info"
+        Write-LogMessage -API $APINAME -tenant ($UserObj.tenantid) -user $request.headers.'x-ms-client-principal'   -message "Added Aliases to $($userobj.displayname)" -Sev "Info"
         $results.add( "Success. added aliasses to user.")
     }
 
@@ -102,9 +102,9 @@ if ($Request.body.CopyFrom -ne "") {
     $addmemberbody = "{ `"members@odata.bind`": $(ConvertTo-Json @($MemberIDs)) }"
         (New-GraphPostRequest -uri "https://graph.microsoft.com/beta/users/$($Request.body.CopyFrom)/GetMemberGroups" -tenantid $Userobj.tenantid -type POST -body  '{"securityEnabledOnly": false}').value | ForEach-Object {
         try {
-            $groupname = (New-GraphGetRequest -tenantid $Userobj.tenantid -asApp $true -uri "https://graph.microsoft.com/beta/groups/$($_)").displayName
+            $groupname = (New-GraphGetRequest -tenantid $Userobj.tenantid  -uri "https://graph.microsoft.com/beta/groups/$($_)").displayName
             Write-Host "name: $groupname"
-            $GroupResult = New-GraphPostRequest -AsApp $true -uri "https://graph.microsoft.com/beta/groups/$($_)" -tenantid $Userobj.tenantid -type patch -body $addmemberbody -ErrorAction Stop
+            $GroupResult = New-GraphPostRequest -uri "https://graph.microsoft.com/beta/groups/$($_)" -tenantid $Userobj.tenantid -type patch -body $addmemberbody -ErrorAction Stop
             Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME  -message "Added $($UserprincipalName) to group $groupresult.displayName)" -Sev "Info"  -tenant $TenantFilter
             $body = $results.add("Added group: $($groupname)")
         }

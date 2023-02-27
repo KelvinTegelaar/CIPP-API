@@ -36,26 +36,33 @@ try {
       if ($Request.query.count -lt 1 ) { $Results = "No authentication code found. Please go back to the wizard." }
 
       if ($request.body.setkeys) {
-            Set-AzKeyVaultSecret -VaultName $kv -Name 'tenantid' -SecretValue (ConvertTo-SecureString -String $request.body.tenantid -AsPlainText -Force)
-            Set-AzKeyVaultSecret -VaultName $kv -Name 'RefreshToken' -SecretValue (ConvertTo-SecureString -String $request.body.RefreshToken -AsPlainText -Force)
-            Set-AzKeyVaultSecret -VaultName $kv -Name 'ExchangeRefreshToken' -SecretValue (ConvertTo-SecureString -String $request.body.exchangeRefreshToken -AsPlainText -Force)
-            Set-AzKeyVaultSecret -VaultName $kv -Name 'applicationid' -SecretValue (ConvertTo-SecureString -String $request.body.applicationid -AsPlainText -Force)
-            Set-AzKeyVaultSecret -VaultName $kv -Name 'applicationsecret' -SecretValue (ConvertTo-SecureString -String $request.body.applicationsecret -AsPlainText -Force)
+            if ($request.body.tenantid) { Set-AzKeyVaultSecret -VaultName $kv -Name 'tenantid' -SecretValue (ConvertTo-SecureString -String $request.body.tenantid -AsPlainText -Force) } 
+            if ($request.body.RefreshToken) { Set-AzKeyVaultSecret -VaultName $kv -Name 'RefreshToken' -SecretValue (ConvertTo-SecureString -String $request.body.RefreshToken -AsPlainText -Force) }
+            if ($request.body.exchangeRefreshToken) { Set-AzKeyVaultSecret -VaultName $kv -Name 'ExchangeRefreshToken' -SecretValue (ConvertTo-SecureString -String $request.body.exchangeRefreshToken -AsPlainText -Force) }
+            if ($request.body.applicationid) { Set-AzKeyVaultSecret -VaultName $kv -Name 'applicationid' -SecretValue (ConvertTo-SecureString -String $request.body.applicationid -AsPlainText -Force) }
+            if ($request.body.applicationsecret) { Set-AzKeyVaultSecret -VaultName $kv -Name 'applicationsecret' -SecretValue (ConvertTo-SecureString -String $request.body.applicationsecret -AsPlainText -Force) }
             $Results = @{ Results = "Replaced keys successfully. Please clear your token cache or wait 24 hours for the cache to be cleared." }
       }
       if ($Request.query.error -eq 'invalid_client') { $Results = "Client ID was not found in Azure. Try waiting 10 seconds to try again, if you have gotten this error after 5 minutes, please restart the process." }
       if ($request.query.code) {
             try {
                   $TenantId = $Rows.tenantid
+                  if (!$TenantId) { $TenantId = $ENV:TenantId }
                   $AppID = $Rows.appid
+                  if (!$AppID) { $appid = $env:ApplicationId }
                   $URL = ($Request.headers.'x-ms-original-url').split('?') | Select-Object -First 1
                   $clientsecret = Get-AzKeyVaultSecret -VaultName $kv -Name 'applicationsecret' -AsPlainText
+                  if (!$clientsecret) { $clientsecret = $ENV:ApplicationSecret }
                   $RefreshToken = Invoke-RestMethod -Method POST -Body "client_id=$appid&scope=https://graph.microsoft.com/.default+offline_access+openid+profile&code=$($request.query.code)&grant_type=authorization_code&redirect_uri=$($url)&client_secret=$clientsecret" -Uri "https://login.microsoftonline.com/$TenantId/oauth2/v2.0/token"
                   Set-AzKeyVaultSecret -VaultName $kv -Name 'RefreshToken' -SecretValue (ConvertTo-SecureString -String $RefreshToken.refresh_token -AsPlainText -Force)
                   $Results = "Authentication is now complete. You may now close this window."
-                  $SetupPhase = $rows.validated = $true
-                  Add-AzDataTableEntity @Table -Entity $Rows -Force | Out-Null
-
+                  try {
+                        $SetupPhase = $rows.validated = $true
+                        Add-AzDataTableEntity @Table -Entity $Rows -Force | Out-Null
+                  }
+                  catch {
+                        #no need.
+                  }
             }
             catch {
                   $Results = "Authentication failed. $($_.Exception.message)"
@@ -104,9 +111,13 @@ try {
                         $attempt = 0
                         do {
                               try {
-                                    Write-Host "{ `"appId`": `"$($AppId.appId)`" }" 
+                                    try {
+                                          $SPNDefender = (Invoke-RestMethod "https://graph.microsoft.com/v1.0/servicePrincipals" -Headers @{ authorization = "Bearer $($Token.Access_Token)" } -Method POST -Body "{ `"appId`": `"fc780465-2017-40d4-a0c5-307022471b92`" }" -ContentType 'application/json')
+                                    }
+                                    catch {
+                                          Write-Host "didn't deploy spn for defender, probably already there."
+                                    }
                                     $SPN = (Invoke-RestMethod "https://graph.microsoft.com/v1.0/servicePrincipals" -Headers @{ authorization = "Bearer $($Token.Access_Token)" } -Method POST -Body "{ `"appId`": `"$($AppId.appId)`" }" -ContentType 'application/json')
-                                    Write-Host "SPN"
                                     Start-Sleep 3
                                     $GroupID = (Invoke-RestMethod "https://graph.microsoft.com/v1.0/groups?`$filter=startswith(displayName,'AdminAgents')" -Headers @{ authorization = "Bearer $($Token.Access_Token)" } -Method Get -ContentType 'application/json').value.id
                                     Write-Host "Id is $GroupID"
@@ -158,32 +169,9 @@ try {
  
             }
             4 {
-                  $step = 4
-                  $TenantId = $Rows.tenantid
-                  $FirstExchangeLogonRefreshtoken = New-DeviceLogin -clientid 'a0c73c16-a7e3-4564-9a95-2bdf47383716' -Scope 'https://outlook.office365.com/.default' -FirstLogon -TenantId $TenantId
-                  $SetupPhase = $rows.SamSetup = [string]($FirstExchangeLogonRefreshtoken | ConvertTo-Json)
-                  Add-AzDataTableEntity @Table -Entity $Rows -Force | Out-Null
-                  $step = 5
-                  $Results = @{ message = "Your code is $($FirstExchangeLogonRefreshtoken.user_code). Enter the code "  ; step = $step; url = $FirstExchangeLogonRefreshtoken.verification_uri }            
-            }
-            5 {
-                  $step = 5
-                  $TenantId = $rows.tenantid
-                  $SAMSetup = $rows.SamSetup | ConvertFrom-Json
-                  $ExchangeRefreshToken = (New-DeviceLogin -clientid 'a0c73c16-a7e3-4564-9a95-2bdf47383716' -Scope 'https://outlook.office365.com/.default' -device_code $SAMSetup.device_code)
-                  if ($ExchangeRefreshToken.Refresh_Token) {
-                        Set-AzKeyVaultSecret -VaultName $kv -Name 'exchangerefreshtoken' -SecretValue (ConvertTo-SecureString -String $ExchangeRefreshToken.Refresh_Token -AsPlainText -Force)
-                        $step = 6
-                        $Results = @{"message" = "Retrieved refresh token and saving to Keyvault."; step = $step }
-                  }
-                  else {
-                        $Results = @{ message = "Your code is $($SAMSetup.user_code). Enter the code "  ; step = $step; url = $SAMSetup.verification_uri }            
-                  }
-            }
-            6 {
                   Remove-AzDataTableRow @Table -Entity $Rows
 
-                  $step = 7
+                  $step = 5
                   $Results = @{"message" = "Installation completed. You must perform a token cache clear. For instructions click "; step = $step ; url = "https://cipp.app/docs/general/troubleshooting/#clear-token-cache"
                   }
             }
