@@ -71,22 +71,23 @@ try {
             }
         }
         { $_.RemoveGroups -eq 'true' } { 
-      (New-GraphPostRequest -uri "https://graph.microsoft.com/beta/users/$($userid)/GetMemberGroups" -tenantid $tenantFilter -type POST -body  '{"securityEnabledOnly": false}').value | ForEach-Object {
+            $AllGroups = (New-GraphGetRequest -uri "https://graph.microsoft.com/beta/groups/?$select=DisplayName,mailEnabled" -tenantid $tenantFilter)
+            (New-GraphPostRequest -uri "https://graph.microsoft.com/beta/users/$($userid)/GetMemberGroups" -tenantid $tenantFilter -type POST -body  '{"securityEnabledOnly": false}').value | ForEach-Object {
                 $group = $_
                 try { 
-                    $Groupname = (New-GraphGetRequest -uri "https://graph.microsoft.com/beta/groups/$_" -tenantid $tenantFilter).displayName
-                    $IsMailEnabled = (New-GraphGetRequest -uri "https://graph.microsoft.com/beta/groups/$_" -tenantid $tenantFilter).mailEnabled
+                    $Groupname = ($AllGroups | where-object -property id -eq $group).displayName
+                    $IsMailEnabled = ($AllGroups | where-object -property id -eq $group).mailEnabled
                     if (-not $IsMailEnabled) {
                     $RemoveRequest = New-GraphPostRequest -uri "https://graph.microsoft.com/beta/groups/$_/members/$($userid)/`$ref" -tenantid $tenantFilter -type DELETE -body '' -Verbose
-                    } else {
+                    } elseif ($IsMailEnabled) {
                     $Params = @{ Identity = $Groupname; Member = $userid ; BypassSecurityGroupManagerCheck = $true }
                     New-ExoRequest -tenantid $tenantFilter -cmdlet "Remove-DistributionGroupMember" -cmdParams $params  -UseSystemMailbox $true
                     }
                     "Successfully removed user from group $Groupname"
-                    Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME  -message "Removed groups for $($username)" -Sev "Info"  -tenant $TenantFilter
+                    Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME  -message "Removed $($username) from $groupname" -Sev "Info"  -tenant $TenantFilter
                 }
                 catch {
-                    Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME  -message "Could not remove $($username) from group $group" -Sev "Error" -tenant $TenantFilter
+                    Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME  -message "Could not remove $($username) from group $groupname" -Sev "Error" -tenant $TenantFilter
 
                     "Could not remove user from group $($Groupname): $($_.Exception.Message). This is likely because its a Dynamic Group or synched with active directory"
                 }
