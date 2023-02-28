@@ -46,7 +46,7 @@ try {
             try {
                 $GraphRequest = New-GraphPostRequest -uri "https://graph.microsoft.com/beta/users/$($userid)/invalidateAllRefreshTokens" -tenantid $TenantFilter -type POST -body '{}'  -verbose
                 "Success. All sessions by $username have been revoked"
-                Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME  -message "Revoked sessions for $($username)" -Sev "Info"
+                Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME  -message "Revoked sessions for $($username)" -Sev "Info" -tenant $TenantFilter
 
             }
             catch {
@@ -88,7 +88,7 @@ try {
                 catch {
                     Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME  -message "Could not remove $($username) from group $group" -Sev "Error" -tenant $TenantFilter
 
-                    "Could not remove user from group $($Groupname): $($_.Exception.Message). This is likely because its a Dynamic Group"
+                    "Could not remove user from group $($Groupname): $($_.Exception.Message). This is likely because its a Dynamic Group or synched with active directory"
                 }
             
             }
