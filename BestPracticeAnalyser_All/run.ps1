@@ -24,18 +24,6 @@ $Result = @{
     MessageCopyForSendAsCount        = ''
     MessageCopyForSendOnBehalfCount  = ''
     MessageCopyForSendList           = ''
-    ShowBasicAuthSettings            = ''
-    EnableModernAuth                 = ''
-    AllowBasicAuthActiveSync         = ''
-    AllowBasicAuthImap               = ''
-    AllowBasicAuthPop                = ''
-    AllowBasicAuthWebServices        = ''
-    AllowBasicAuthPowershell         = ''
-    AllowBasicAuthAutodiscover       = ''
-    AllowBasicAuthMapi               = ''
-    AllowBasicAuthOfflineAddressBook = ''
-    AllowBasicAuthRpc                = ''
-    AllowBasicAuthSmtp               = ''
     AdminConsentForApplications      = ''
     DoNotExpirePasswords             = ''
     SelfServicePasswordReset         = ''
@@ -48,10 +36,29 @@ $Result = @{
     SecureScoreCurrent               = ''
     SecureScoreMax                   = ''
     SecureScorePercentage            = ''
+    SentFromAlias                    = ''
+    MFANudge                         = ''
+    TAPEnabled                       = ''
 }
 
 # Starting the Best Practice Analyser
-    
+# Get the TAP state
+try {
+    $TAPEnabled = (New-GraphGetRequest -Uri 'https://graph.microsoft.com/beta/policies/authenticationmethodspolicy/authenticationMethodConfigurations/TemporaryAccessPass' -tenantid $tenant)
+    $Result.TAPEnabled = $TAPEnabled.State
+}
+catch {
+    Write-LogMessage -API 'BestPracticeAnalyser' -tenant $tenant -message "Security Defaults State on $($tenant) Error: $($_.exception.message)" -sev 'Error'
+}
+# Get the Secure Default State
+try {
+    $NudgeState = (New-GraphGetRequest -Uri 'https://graph.microsoft.com/beta/policies/authenticationMethodsPolicy' -tenantid $tenant)
+    $Result.MFANudge = $NudgeState.registrationEnforcement.authenticationMethodsRegistrationCampaign.state
+}
+catch {
+    Write-LogMessage -API 'BestPracticeAnalyser' -tenant $tenant -message "Security Defaults State on $($tenant) Error: $($_.exception.message)" -sev 'Error'
+}
+
 # Get the Secure Default State
 try {
     $SecureDefaultsState = (New-GraphGetRequest -Uri 'https://graph.microsoft.com/beta/policies/identitySecurityDefaultsEnforcementPolicy' -tenantid $tenant)
