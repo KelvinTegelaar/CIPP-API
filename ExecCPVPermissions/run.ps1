@@ -32,6 +32,7 @@ $GraphRequest = $ExpectedPermissions.requiredResourceAccess | ForEach-Object {
             '00000003-0000-0000-c000-000000000000' { "Graph API" }
             'fc780465-2017-40d4-a0c5-307022471b92' { 'WindowsDefenderATP' }
             '00000003-0000-0ff1-ce00-000000000000' { 'Sharepoint' }
+            '48ac35b8-9aa8-4d74-927d-1f4a14a0b239' { 'Skype and Teams Tenant Admin API' }
         }
         $Scope = ($Translator | Where-Object { $_.id -in $Resource.ResourceAccess.id } | Where-Object { $_.value -notin 'profile', 'openid', 'offline_access' }).value -join ', '
         if ($Scope) {
