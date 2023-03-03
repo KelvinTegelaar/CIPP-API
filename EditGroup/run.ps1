@@ -22,12 +22,12 @@ if ($AddMembers) {
             $addmemberbody = "{ `"members@odata.bind`": $(ConvertTo-Json @($MemberIDs)) }"
             if ($userobj.groupType -eq "Distribution list" -or $userobj.groupType -eq "Mail-Enabled Security") {
                 $Params = @{ Identity = $userobj.groupid; Member = $member; BypassSecurityGroupManagerCheck = $true }
-                New-ExoRequest -tenantid $Userobj.tenantid -cmdlet "Add-DistributionGroupMember" -cmdParams $params
+                New-ExoRequest -tenantid $Userobj.tenantid -cmdlet "Add-DistributionGroupMember" -cmdParams $params -UseSystemMailbox $true 
             }
             else {
                 New-GraphPostRequest -uri "https://graph.microsoft.com/beta/groups/$($userobj.groupid)" -tenantid $Userobj.tenantid -type patch -body $addmemberbody -Verbose
             }
-            Write-LogMessage -API $APINAME -tenant $Userobj.tenantid -user $request.headers.'x-ms-client-principal' -message "Added member to $($userobj.displayname) group" -Sev "Info"
+            Write-LogMessage -API $APINAME -tenant $Userobj.tenantid -user $request.headers.'x-ms-client-principal' -message "Added $member to $($userobj.groupid) group" -Sev "Info"
             $body = $results.add("Success. $member has been added")
         }
         catch {
@@ -36,22 +36,44 @@ if ($AddMembers) {
     }
 
 }
+$AddContacts = ($userobj.AddContacts).value
 
+if ($AddContacts) {
+    $AddContacts | ForEach-Object {
+        try {
+            $member = $_
+            if ($userobj.groupType -eq "Distribution list" -or $userobj.groupType -eq "Mail-Enabled Security") {
+                $Params = @{ Identity = $userobj.groupid; Member = $member; BypassSecurityGroupManagerCheck = $true }
+                New-ExoRequest -tenantid $Userobj.tenantid -cmdlet "Add-DistributionGroupMember" -cmdParams $params  -UseSystemMailbox $true
+                Write-LogMessage -API $APINAME -tenant $Userobj.tenantid -user $request.headers.'x-ms-client-principal' -message "Added $member to $($userobj.groupid) group" -Sev "Info"
+                $body = $results.add("Success. $member has been added")
+        } else {
+            Write-LogMessage -API $APINAME -tenant $Userobj.tenantid -user $request.headers.'x-ms-client-principal' -message "You cannot add a contact to a security group" -Sev "Error"
+            $body = $results.add("You cannot add a contact to a security group")
+        }
+    }
+        catch {
+            $body = $results.add("Failed to add member $member to $($userobj.Groupid): $($_.Exception.Message)")
+        }
+    }
+
+}
 
 $RemoveMembers = ($userobj.Removemember).value
 try {
     if ($RemoveMembers) {
         $RemoveMembers | ForEach-Object { 
-            $MemberInfo = (New-GraphGetRequest -uri "https://graph.microsoft.com/beta/users/$($_)" -tenantid $Userobj.tenantid)
+            $member = $_
             if ($userobj.groupType -eq "Distribution list" -or $userobj.groupType -eq "Mail-Enabled Security") {
-                $Params = @{ Identity = $userobj.groupid; Member = $_ }
-                New-ExoRequest -tenantid $Userobj.tenantid -cmdlet "Remove-DistributionGroupMember" -cmdParams $params
+                $Params = @{ Identity = $userobj.groupid; Member = $member ; BypassSecurityGroupManagerCheck = $true }
+                New-ExoRequest -tenantid $Userobj.tenantid -cmdlet "Remove-DistributionGroupMember" -cmdParams $params  -UseSystemMailbox $true
             }
             else {
+                $MemberInfo = (New-GraphGetRequest -uri "https://graph.microsoft.com/beta/users/$($_)" -tenantid $Userobj.tenantid)
                 New-GraphPostRequest -uri "https://graph.microsoft.com/beta/groups/$($userobj.groupid)/members/$($MemberInfo.id)/`$ref" -tenantid $Userobj.tenantid -type DELETE 
             }
-            Write-LogMessage -API $APINAME -tenant $Userobj.tenantid -user $request.headers.'x-ms-client-principal'  -message "Removed $($MemberInfo.UserPrincipalname) from $($userobj.displayname) group" -Sev "Info"
-            $body = $results.add("Success. Member $_ has been removed from $($userobj.Groupid)")
+            Write-LogMessage -API $APINAME -tenant $Userobj.tenantid -user $request.headers.'x-ms-client-principal'  -message "Removed $member from $($userobj.groupid) group" -Sev "Info"
+            $body = $results.add("Success. Member $member has been removed")
         }  
     }
 }
@@ -68,7 +90,7 @@ try {
                 $ID = "https://graph.microsoft.com/beta/users/" + (New-GraphGetRequest -uri "https://graph.microsoft.com/beta/users/$($_)" -tenantid $Userobj.tenantid).id
                 Write-Host $ID
                 $AddOwner = New-GraphPostRequest -uri "https://graph.microsoft.com/beta/groups/$($userobj.groupid)/owners/`$ref" -tenantid $Userobj.tenantid -type POST -body ('{"@odata.id": "' + $ID + '"}')
-                Write-LogMessage -API $APINAME -tenant $Userobj.tenantid -user $request.headers.'x-ms-client-principal'  -message "Added owner $_ to $($userobj.displayname) group" -Sev "Info"
+                Write-LogMessage -API $APINAME -tenant $Userobj.tenantid -user $request.headers.'x-ms-client-principal'  -message "Added owner $_ to $($userobj.groupid) group" -Sev "Info"
                 $body = $results.add("Success. $_ has been added")
             }
             catch {

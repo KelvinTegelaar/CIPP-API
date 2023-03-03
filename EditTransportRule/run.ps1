@@ -14,7 +14,7 @@ $Params = @{
 
 try {
     $cmdlet = if ($request.query.state -eq "enable") { "Enable-TransportRule" } else { "Disable-TransportRule" }
-    $GraphRequest = New-ExoRequest -tenantid $Tenantfilter -cmdlet $cmdlet -cmdParams $params
+    $GraphRequest = New-ExoRequest -tenantid $Tenantfilter -cmdlet $cmdlet -cmdParams $params -UseSystemMailbox $true
     $Result = "Set transport rule $($Request.query.guid) to $($request.query.State)"
     Write-LogMessage -API "TransportRules" -tenant $tenantfilter -message "Set transport rule $($Request.query.guid) to $($request.query.State)" -sev Debug
 }

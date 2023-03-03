@@ -36,6 +36,9 @@ function Remove-EmptyArrays ($Object) {
 
 $JSONObj = $request.body.RawJSON | ConvertFrom-Json | Select-Object * -ExcludeProperty ID, GUID, *time*
 Remove-EmptyArrays $JSONObj
+#Remove context as it does not belong in the payload.
+$JsonObj.grantControls.PSObject.Properties.Remove('authenticationStrength@odata.context')
+$JsonObj.conditions.users.excludeGuestsOrExternalUsers.externalTenants.PSObject.Properties.Remove('@odata.type')
 $RawJSON = $JSONObj | ConvertTo-Json -Depth 10
 
 $results = foreach ($Tenant in $tenants) {
@@ -46,7 +49,7 @@ $results = foreach ($Tenant in $tenants) {
             Throw "Conditional Access Policy with Display Name $($Displayname) Already exists"
         }
     
-        $CreateRequest = New-GraphPOSTRequest -uri "https://graph.microsoft.com/v1.0/identity/conditionalAccess/policies" -tenantid $tenant -type POST -body $RawJSON
+        $CreateRequest = New-GraphPOSTRequest -uri "https://graph.microsoft.com/beta/identity/conditionalAccess/policies" -tenantid $tenant -type POST -body $RawJSON
         Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $($Tenant) -message "Added Conditional Access Policy $($Displayname)" -Sev "Error"
         "Successfully added Conditional Access Policy for $($Tenant)"
     }

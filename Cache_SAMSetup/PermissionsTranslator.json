@@ -5260,5 +5260,32 @@
     "userConsentDescription": "Allows the app to read Threat and Vulnerability Management vulnerability information on behalf of the signed-in user",
     "userConsentDisplayName": "Read Threat and Vulnerability Management vulnerability information",
     "value": "Vulnerability.Read"
+  },
+  {
+    "description": "Allows the app to manage Exchange Online",
+    "displayName": "Manage Exchange online",
+    "id": "ab4f2b77-0b06-4fc1-a9de-02113fc2ab7c",
+    "Origin": "Delegated (Office 365 Exchange Online)",
+    "userConsentDescription": "Allows the app to read Threat and Vulnerability Management vulnerability information on behalf of the signed-in user",
+    "userConsentDisplayName": "Read Threat and Vulnerability Management vulnerability information",
+    "value": "Exchange.Manage"
+  },
+  {
+    "description": "Allows the app to have full control of all site collections on behalf of the signed-in user.",
+    "displayName": "Manage Sharepoint Online",
+    "id": "56680e0d-d2a3-4ae1-80d8-3c4f2100e3d0",
+    "Origin": "Delegated (Office 365 SharePoint Online)",
+    "userConsentDescription": "Have full control of all site collections",
+    "userConsentDisplayName": "Allows the app to have full control of all site collections on your behalf.",
+    "value": "AllSites.FullControl"
+  },
+  {
+    "description": "Access Microsoft Teams and Skype for Business data as the signed in user",
+    "displayName": "Access Microsoft Teams and Skype for Business data based on the user's role membership",
+    "id": "e60370c1-e451-437e-aa6e-d76df38e5f15",
+    "Origin": "Delegated (Skype and Teams Tenant Admin API)",
+    "userConsentDescription": "Access Microsoft Teams and Skype for Business data as the signed in user",
+    "userConsentDisplayName": "Access Microsoft Teams and Skype for Business data based on the user's role membership",
+    "value": "user_impersonation"
   }
 ]
