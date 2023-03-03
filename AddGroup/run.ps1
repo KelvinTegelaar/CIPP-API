@@ -14,8 +14,8 @@ $SelectedTenants = if ($Request.body.selectedTenants) { $request.body.selectedTe
 Write-Host "PowerShell HTTP trigger function processed a request."
 $results = foreach ($tenant in $SelectedTenants) {
     try {
-        $email = if ($groupobj.domain) { "$($groupobj.username)@$($groupobj.domain)" } else { "$($groupobj.username)@$($tenant.defaultDomainName)" }
-        if ($groupobj.groupType -in "Security", "Generic", "azurerole", "dynamic") {
+        $email = if ($groupobj.domain) { "$($groupobj.username)@$($groupobj.domain)" } else { "$($groupobj.username)@$($tenant)" }
+        if ($groupobj.groupType -in "Generic", "azurerole", "dynamic") {
         
             $BodyToship = [pscustomobject] @{
                 "displayName"      = $groupobj.Displayname
@@ -27,7 +27,7 @@ $results = foreach ($tenant in $SelectedTenants) {
 
             } 
             if ($groupobj.membershipRules) {
-                $BodyToship | Add-Member  -NotePropertyName "membershipRule" -NotePropertyValue $groupobj.membershipRules
+                $BodyToship | Add-Member  -NotePropertyName "membershipRule" -NotePropertyValue ($groupobj.membershipRules | ConvertFrom-Json)
                 $BodyToship | Add-Member  -NotePropertyName "groupTypes" -NotePropertyValue @("DynamicMembership")
                 $BodyToship | Add-Member  -NotePropertyName "membershipRuleProcessingState" -NotePropertyValue "On"
             }
