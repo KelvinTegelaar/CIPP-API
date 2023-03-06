@@ -26,13 +26,13 @@ try {
         RowKey       = "$GUID"
         PartitionKey = "GroupTemplate"
     }
-    Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME  -message "Created intune policy template named $($Request.body.displayname) with GUID $GUID" -Sev "Debug"
+    Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME  -message "Created Group template named $($Request.body.displayname) with GUID $GUID" -Sev "Info"
 
     $body = [pscustomobject]@{"Results" = "Successfully added template" }
 }
 catch {
-    Write-LogMessage -user $request.headers.'x-ms-client-principal'  -API $APINAME -message "Intune Template Deployment failed: $($_.Exception.Message)" -Sev "Error"
-    $body = [pscustomobject]@{"Results" = "Intune Template Deployment failed: $($_.Exception.Message)" }
+    Write-LogMessage -user $request.headers.'x-ms-client-principal'  -API $APINAME -message "Group Template Creation failed: $($_.Exception.Message)" -Sev "Error"
+    $body = [pscustomobject]@{"Results" = "Group Template Creation failed: $($_.Exception.Message)" }
 }
 
 
