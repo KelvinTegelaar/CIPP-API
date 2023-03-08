@@ -14,7 +14,7 @@ $Results = [System.Collections.ArrayList]@()
 $RemoveFullAccess = ($Request.body.RemoveFullAccess).value
 foreach ($RemoveUser in $RemoveFullAccess) { 
     try {
-        $MailboxPerms = New-ExoRequest -tenantid $Tenantfilter -cmdlet "Remove-mailboxpermission" -cmdParams @{Identity = $userid; user = $RemoveUser; accessRights = @("FullAccess"); }
+        $MailboxPerms = New-ExoRequest -Anchor $username -tenantid $Tenantfilter -cmdlet "Remove-mailboxpermission" -cmdParams @{Identity = $userid; user = $RemoveUser; accessRights = @("FullAccess"); }
         $results.add("Removed $($removeuser) from $($username) Shared Mailbox permissions")
         Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME-message "Removed $($_) from $($username) Shared Mailbox permission" -Sev "Info" -tenant $TenantFilter 
     }
@@ -27,7 +27,7 @@ $AddFullAccess = ($Request.body.AddFullAccess).value
 
 foreach ($UserAutomap in $AddFullAccess) { 
     try {
-        $MailboxPerms = New-ExoRequest -tenantid $Tenantfilter -cmdlet "Add-MailboxPermission" -cmdParams @{Identity = $userid; user = $UserAutomap; accessRights = @("FullAccess"); automapping = $true }
+        $MailboxPerms = New-ExoRequest -Anchor $username -tenantid $Tenantfilter -cmdlet "Add-MailboxPermission" -cmdParams @{Identity = $userid; user = $UserAutomap; accessRights = @("FullAccess"); automapping = $true }
         $results.add( "added $($UserAutomap) to $($username) Mailbox with automapping")
         Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME-message "Gave full permissions to $($request.body.AccessAutomap) on $($username)" -Sev "Info" -tenant $TenantFilter
 
@@ -41,7 +41,7 @@ $AddFullAccessNoAutoMap = ($Request.body.AddFullAccessNoAutoMap).value
 
 foreach ($UserNoAutomap in $AddFullAccessNoAutoMap) { 
     try {
-        $MailboxPerms = New-ExoRequest -tenantid $Tenantfilter -cmdlet "Add-MailboxPermission" -cmdParams @{Identity = $userid; user = $UserNoAutomap; accessRights = @("FullAccess"); automapping = $false }
+        $MailboxPerms = New-ExoRequest -Anchor $username -tenantid $Tenantfilter -cmdlet "Add-MailboxPermission" -cmdParams @{Identity = $userid; user = $UserNoAutomap; accessRights = @("FullAccess"); automapping = $false }
         $results.add( "added $UserNoAutomap to $($username) Mailbox without automapping")
         Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME-message "Gave full permissions to $($request.body.AccessAutomap) on $($username)" -Sev "Info" -tenant $TenantFilter
     }
@@ -55,7 +55,7 @@ $AddSendAS = ($Request.body.AddSendAs).value
 
 foreach ($UserSendAs in $AddSendAS) { 
     try {
-        $MailboxPerms = New-ExoRequest -tenantid $Tenantfilter -cmdlet "Add-RecipientPermission" -cmdParams @{Identity = $userid; Trustee = $UserSendAs; accessRights = @("SendAs") }
+        $MailboxPerms = New-ExoRequest -Anchor $username -tenantid $Tenantfilter -cmdlet "Add-RecipientPermission" -cmdParams @{Identity = $userid; Trustee = $UserSendAs; accessRights = @("SendAs") }
         $results.add( "added $AddSendAS to $($username) with Send As permissions")
         Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME-message "Gave sendas permissions to $($request.body.AddSendAs) on $($username)" -Sev "Info" -tenant $TenantFilter
     }
@@ -69,8 +69,8 @@ $RemoveSendAs = ($Request.body.RemoveSendAs).value
 
 foreach ($UserSendAs in $RemoveSendAs) { 
     try {
-        $MailboxPerms = New-ExoRequest -tenantid $Tenantfilter -cmdlet "Remove-RecipientPermission" -cmdParams @{Identity = $userid; Trustee = $UserSendAs; accessRights = @("SendAs") }
-        $results.add( "Removed $AddSendAS from $($username) with Send As permissions")
+        $MailboxPerms = New-ExoRequest -Anchor $username -tenantid $Tenantfilter -cmdlet "Remove-RecipientPermission" -cmdParams @{Identity = $userid; Trustee = $UserSendAs; accessRights = @("SendAs") }
+        $results.add( "Removed $RemoveSendAs from $($username) with Send As permissions")
         Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME-message "Remove sendas permissions to $($request.body.AddSendAs) on $($username)" -Sev "Info" -tenant $TenantFilter
     }
     catch {
