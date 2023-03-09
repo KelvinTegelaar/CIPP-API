@@ -54,7 +54,7 @@ catch {
 
 $PackageSearch = @{
     Search  = $Search
-    Results = @($Packages)
+    Results = @($Packages | Sort-Object -Property packagename)
     Message = $Message
     IsError = $IsError
 }
