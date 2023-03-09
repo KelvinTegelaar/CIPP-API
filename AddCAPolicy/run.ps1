@@ -38,6 +38,7 @@ $JSONObj = $request.body.RawJSON | ConvertFrom-Json | Select-Object * -ExcludePr
 Remove-EmptyArrays $JSONObj
 #Remove context as it does not belong in the payload.
 $JsonObj.grantControls.PSObject.Properties.Remove('authenticationStrength@odata.context')
+$JsonObj.conditions.users.excludeGuestsOrExternalUsers.externalTenants.PSObject.Properties.Remove('@odata.type')
 $RawJSON = $JSONObj | ConvertTo-Json -Depth 10
 
 $results = foreach ($Tenant in $tenants) {
