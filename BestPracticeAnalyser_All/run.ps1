@@ -24,18 +24,6 @@ $Result = @{
     MessageCopyForSendAsCount        = ''
     MessageCopyForSendOnBehalfCount  = ''
     MessageCopyForSendList           = ''
-    ShowBasicAuthSettings            = ''
-    EnableModernAuth                 = ''
-    AllowBasicAuthActiveSync         = ''
-    AllowBasicAuthImap               = ''
-    AllowBasicAuthPop                = ''
-    AllowBasicAuthWebServices        = ''
-    AllowBasicAuthPowershell         = ''
-    AllowBasicAuthAutodiscover       = ''
-    AllowBasicAuthMapi               = ''
-    AllowBasicAuthOfflineAddressBook = ''
-    AllowBasicAuthRpc                = ''
-    AllowBasicAuthSmtp               = ''
     AdminConsentForApplications      = ''
     DoNotExpirePasswords             = ''
     SelfServicePasswordReset         = ''
@@ -48,10 +36,29 @@ $Result = @{
     SecureScoreCurrent               = ''
     SecureScoreMax                   = ''
     SecureScorePercentage            = ''
+    SentFromAlias                    = ''
+    MFANudge                         = ''
+    TAPEnabled                       = ''
 }
 
 # Starting the Best Practice Analyser
-    
+# Get the TAP state
+try {
+    $TAPEnabled = (New-GraphGetRequest -Uri 'https://graph.microsoft.com/beta/policies/authenticationmethodspolicy/authenticationMethodConfigurations/TemporaryAccessPass' -tenantid $tenant)
+    $Result.TAPEnabled = $TAPEnabled.State
+}
+catch {
+    Write-LogMessage -API 'BestPracticeAnalyser' -tenant $tenant -message "Security Defaults State on $($tenant) Error: $($_.exception.message)" -sev 'Error'
+}
+# Get the Secure Default State
+try {
+    $NudgeState = (New-GraphGetRequest -Uri 'https://graph.microsoft.com/beta/policies/authenticationMethodsPolicy' -tenantid $tenant)
+    $Result.MFANudge = $NudgeState.registrationEnforcement.authenticationMethodsRegistrationCampaign.state
+}
+catch {
+    Write-LogMessage -API 'BestPracticeAnalyser' -tenant $tenant -message "Security Defaults State on $($tenant) Error: $($_.exception.message)" -sev 'Error'
+}
+
 # Get the Secure Default State
 try {
     $SecureDefaultsState = (New-GraphGetRequest -Uri 'https://graph.microsoft.com/beta/policies/identitySecurityDefaultsEnforcementPolicy' -tenantid $tenant)
@@ -106,25 +113,7 @@ catch {
 
 # Get Basic Auth States
 try {
-    $BasicAuthDisable = Invoke-RestMethod -ContentType 'application/json;charset=UTF-8' -Uri 'https://admin.microsoft.com/admin/api/services/apps/modernAuth' -Method GET -Headers @{
-        Authorization            = "Bearer $($token.access_token)";
-        'x-ms-client-request-id' = [guid]::NewGuid().ToString();
-        'x-ms-client-session-id' = [guid]::NewGuid().ToString()
-        'x-ms-correlation-id'    = [guid]::NewGuid()
-        'X-Requested-With'       = 'XMLHttpRequest' 
-    }
-    $Result.ShowBasicAuthSettings = $BasicAuthDisable.ShowBasicAuthSettings
-    $Result.EnableModernAuth = $BasicAuthDisable.EnableModernAuth
-    $Result.AllowBasicAuthActiveSync = $BasicAuthDisable.AllowBasicAuthActiveSync
-    $Result.AllowBasicAuthImap = $BasicAuthDisable.AllowBasicAuthImap
-    $Result.AllowBasicAuthPop = $BasicAuthDisable.AllowBasicAuthPop
-    $Result.AllowBasicAuthWebServices = $BasicAuthDisable.AllowBasicAuthWebServices
-    $Result.AllowBasicAuthPowershell = $BasicAuthDisable.AllowBasicAuthPowershell
-    $Result.AllowBasicAuthAutodiscover = $BasicAuthDisable.AllowBasicAuthAutodiscover
-    $Result.AllowBasicAuthMapi = $BasicAuthDisable.AllowBasicAuthMapi
-    $Result.AllowBasicAuthOfflineAddressBook = $BasicAuthDisable.AllowBasicAuthOfflineAddressBook
-    $Result.AllowBasicAuthRpc = $BasicAuthDisable.AllowBasicAuthRpc
-    $Result.AllowBasicAuthSmtp = $BasicAuthDisable.AllowBasicAuthSmtp
+    #No longer used - Basic authentication is deprecated.
 }
 catch {
     Write-LogMessage -API 'BestPracticeAnalyser' -tenant $tenant -message "Basic Auth States on $($tenant). Error: $($_.exception.message)" -sev 'Error'
@@ -142,19 +131,12 @@ catch {
 
 # Get Self Service Password Reset State
 try {
-    $bodypasswordresetpol = "resource=74658136-14ec-4630-ad9b-26e160ff0fc6&grant_type=refresh_token&refresh_token=$($ENV:RefreshToken)"
-    $tokensspr = Invoke-RestMethod $uri -Body $bodypasswordresetpol -ContentType 'application/x-www-form-urlencoded' -ErrorAction SilentlyContinue -Method post
-    $SSPRGraph = Invoke-RestMethod -ContentType 'application/json;charset=UTF-8' -Uri 'https://main.iam.ad.ext.azure.com/api/PasswordReset/PasswordResetPolicies' -Method GET -Headers @{
-        Authorization            = "Bearer $($tokensspr.access_token)";
-        'x-ms-client-request-id' = [guid]::NewGuid().ToString();
-        'x-ms-client-session-id' = [guid]::NewGuid().ToString()
-        'x-ms-correlation-id'    = [guid]::NewGuid()
-        'X-Requested-With'       = 'XMLHttpRequest' 
-    }
-    If ($SSPRGraph.enablementType -eq 0) { $Result.SelfServicePasswordReset = 'Off' }
-    If ($SSPRGraph.enablementType -eq 1) { $Result.SelfServicePasswordReset = 'Specific Users' }
-    If ($SSPRGraph.enablementType -eq 2) { $Result.SelfServicePasswordReset = 'On' }
-    If ([string]::IsNullOrEmpty($SSPRGraph.enablementType)) { $Result.SelfServicePasswordReset = 'Unknown' }
+    $GraphRequest = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/reports/authenticationMethods/usersRegisteredByFeature(includedUserTypes='all',includedUserRoles='all')" -tenantid $Tenant
+    $RegState = ($GraphRequest.userRegistrationFeatureCounts | Where-Object -Property Feature -EQ "ssprRegistered").usercount
+    $CapableState = ($GraphRequest.userRegistrationFeatureCounts | Where-Object -Property Feature -EQ "ssprCapable").usercount
+    Write-Host "state: $RegState / $CapableState"
+    $Result.SelfServicePasswordReset = if ($RegState -ge $CapableState) { $true } else { $false } 
+
 }
 catch {
     Write-LogMessage -API 'BestPracticeAnalyser' -tenant $tenant -message "Self Service Password Reset on $($tenant). Error: $($_.exception.message)" -sev 'Error' 
@@ -162,8 +144,10 @@ catch {
 
 # Get Passwords set to Never Expire
 try {
-    $Result.DoNotExpirePasswords = Invoke-RestMethod -ContentType 'application/json; charset=utf-8' -Uri 'https://admin.microsoft.com/admin/api/Settings/security/passwordpolicy' -Method GET -Headers @{Authorization = "Bearer $($token.access_token)"; 'x-ms-client-request-id' = [guid]::NewGuid().ToString(); 'x-ms-client-session-id' = [guid]::NewGuid().ToString(); 'X-Requested-With' = 'XMLHttpRequest'; 'x-ms-correlation-id' = [guid]::NewGuid() } | Select-Object -ExpandProperty NeverExpire
+    $ExpirePasswordReq = (New-GraphGetRequest -uri "https://graph.microsoft.com/beta/users/?`$top=999&`$select=userPrincipalName,passwordPolicies" -tenantid $Tenant | Where-Object -Property passwordPolicies -EQ $null).userPrincipalName
+    $Result.DoNotExpirePasswords = if ($ExpirePasswordReq) { $false } else { $true }
 }
+
 catch {
     Write-LogMessage -API 'BestPracticeAnalyser' -tenant $tenant -message "Passwords never expire setting on $($tenant). Error: $($_.exception.message)" -sev 'Error' 
 }
