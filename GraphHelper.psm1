@@ -67,6 +67,7 @@ function Get-GraphToken($tenantid, $scope, $AsApp, $AppID, $refreshToken, $Retur
         $AccessToken = (Invoke-RestMethod -Method post -Uri "https://login.microsoftonline.com/$($tenantid)/oauth2/v2.0/token" -Body $Authbody -ErrorAction Stop)
         if ($ReturnRefresh) { $header = $AccessToken } else { $header = @{ Authorization = "Bearer $($AccessToken.access_token)" } }
         return $header
+        Write-Host $header['Authorization']
     }
     catch {
         # Track consecutive Graph API failures
