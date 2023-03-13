@@ -367,7 +367,6 @@ function Get-Tenants {
     )
 
     $TenantsTable = Get-CippTable -tablename 'Tenants'
-    # We create the excluded tenants file. This is not set to force so will not overwrite
 
     if ($IncludeErrors) {
         $ExcludedFilter = "PartitionKey eq 'Tenants' and Excluded eq true" 
@@ -383,9 +382,12 @@ function Get-Tenants {
         
     $LastRefresh = ($IncludedTenantsCache | Sort-Object LastRefresh | Select-Object -First 1).LastRefresh.DateTime
     if ($LastRefresh -lt (Get-Date).Addhours(-24).ToUniversalTime()) {
-
-        $TenantList = (New-GraphGetRequest -uri "https://graph.microsoft.com/beta/contracts?`$top=999" -tenantid $env:TenantID ) | Select-Object id, customerId, DefaultdomainName, DisplayName, domains | Where-Object -Property defaultDomainName -NotIn $SkipListCache.defaultDomainName
-
+        try {
+            $TenantList = (New-GraphGetRequest -uri "https://graph.microsoft.com/beta/tenantRelationships/managedTenants/tenants?`$top=999" -tenantid $env:TenantID ) | Select-Object id, @{l = 'customerId'; e = { $_.tenantId } }, @{l = 'DefaultdomainName'; e = { [string]($_.contract.defaultDomainName) } } , DisplayName, domains, tenantStatusInformation | Where-Object -Property defaultDomainName -NotIn $SkipListCache.defaultDomainName, 'Invalid'
+        }
+        catch {
+            $TenantList = (New-GraphGetRequest -uri "https://graph.microsoft.com/beta/contracts?`$top=999" -tenantid $env:TenantID ) | Select-Object id, customerId, DefaultdomainName, DisplayName, domains | Where-Object -Property defaultDomainName -NotIn $SkipListCache.defaultDomainName
+        }
         $IncludedTenantsCache = [system.collections.generic.list[hashtable]]::new()
         if ($env:PartnerTenantAvailable) {
             $IncludedTenantsCache.Add(@{
@@ -405,18 +407,19 @@ function Get-Tenants {
         }
         foreach ($Tenant in $TenantList) {
             $IncludedTenantsCache.Add(@{
-                    RowKey            = $Tenant.id
-                    PartitionKey      = 'Tenants'
-                    customerId        = $Tenant.customerId
-                    defaultDomainName = $Tenant.defaultDomainName
-                    displayName       = $Tenant.DisplayName
-                    domains           = ''
-                    Excluded          = $false
-                    ExcludeUser       = ''
-                    ExcludeDate       = ''
-                    GraphErrorCount   = 0
-                    LastGraphError    = ''
-                    LastRefresh       = (Get-Date).ToUniversalTime()
+                    RowKey                   = [string]$Tenant.customerId
+                    PartitionKey             = 'Tenants'
+                    customerId               = [string]$Tenant.customerId
+                    defaultDomainName        = [string]$Tenant.defaultDomainName
+                    displayName              = [string]$Tenant.DisplayName
+                    delegatedPrivilegeStatus = [string]$Tenant.tenantStatusInformation.delegatedPrivilegeStatus
+                    domains                  = ''
+                    Excluded                 = $false
+                    ExcludeUser              = ''
+                    ExcludeDate              = ''
+                    GraphErrorCount          = 0
+                    LastGraphError           = ''
+                    LastRefresh              = (Get-Date).ToUniversalTime()
                 }) | Out-Null
         }
    
