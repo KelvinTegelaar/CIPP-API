@@ -55,7 +55,7 @@ try {
         }
         { $_.ResetPass -eq 'true' } { 
             try { 
-                $password = -join ('abcdefghkmnrstuvwxyzABCDEFGHKLMNPRSTUVWXYZ23456789$%&*#'.ToCharArray() | Get-Random -Count 12)
+                $password = New-passwordString
                 $passwordProfile = @"
                 {"passwordProfile": { "forceChangePasswordNextSignIn": true, "password": "$password" }}'
 "@ 
@@ -76,13 +76,14 @@ try {
                 Import-Module '.\GraphHelper.psm1'
                 $group = $_
                 try { 
-                    $Groupname = ($using:AllGroups | where-object -property id -eq $group).displayName
-                    $IsMailEnabled = ($using:AllGroups | where-object -property id -eq $group).mailEnabled
+                    $Groupname = ($using:AllGroups | Where-Object -Property id -EQ $group).displayName
+                    $IsMailEnabled = ($using:AllGroups | Where-Object -Property id -EQ $group).mailEnabled
                     if (-not $IsMailEnabled) {
-                    $RemoveRequest = New-GraphPostRequest -uri "https://graph.microsoft.com/beta/groups/$_/members/$($using:userid)/`$ref" -tenantid $using:tenantFilter -type DELETE -body '' -Verbose
-                    } elseif ($IsMailEnabled) {
-                    $Params = @{ Identity = $Groupname; Member = $using:userid ; BypassSecurityGroupManagerCheck = $true }
-                    New-ExoRequest -tenantid $using:tenantFilter -cmdlet "Remove-DistributionGroupMember" -cmdParams $params  -UseSystemMailbox $true
+                        $RemoveRequest = New-GraphPostRequest -uri "https://graph.microsoft.com/beta/groups/$_/members/$($using:userid)/`$ref" -tenantid $using:tenantFilter -type DELETE -body '' -Verbose
+                    }
+                    elseif ($IsMailEnabled) {
+                        $Params = @{ Identity = $Groupname; Member = $using:userid ; BypassSecurityGroupManagerCheck = $true }
+                        New-ExoRequest -tenantid $using:tenantFilter -cmdlet "Remove-DistributionGroupMember" -cmdParams $params  -UseSystemMailbox $true
                     }
                     "Successfully removed user from group $Groupname"
                     Write-LogMessage -user $using:request.headers.'x-ms-client-principal' -API $using:APINAME  -message "Removed $($using:username) from $groupname" -Sev "Info"  -tenant $using:TenantFilter
@@ -257,10 +258,10 @@ try {
                 }
                 else {
                     ForEach ($rule in $rules) {
-                         New-ExoRequest -tenantid $TenantFilter -cmdlet "Remove-InboxRule" -Anchor $username -cmdParams @{Identity = $rule.Identity }
-                }
-                Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME  -message "Deleted Rules for $($username)" -Sev "Info" -tenant $TenantFilter
-                "Deleted Rules for $($username)"
+                        New-ExoRequest -tenantid $TenantFilter -cmdlet "Remove-InboxRule" -Anchor $username -cmdParams @{Identity = $rule.Identity }
+                    }
+                    Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME  -message "Deleted Rules for $($username)" -Sev "Info" -tenant $TenantFilter
+                    "Deleted Rules for $($username)"
                 }
             }
             catch {
