@@ -381,7 +381,7 @@ function Get-Tenants {
     $IncludedTenantsCache = Get-AzDataTableEntity @TenantsTable -Filter $Filter
         
     $LastRefresh = ($IncludedTenantsCache | Sort-Object LastRefresh | Select-Object -First 1).LastRefresh.DateTime
-    if ($LastRefresh -lt (Get-Date).Addhours(-24).ToUniversalTime()) {
+    if ($LastRefresh -lt (Get-Date).AddMinutes(-1).ToUniversalTime()) {
         try {
             $TenantList = (New-GraphGetRequest -uri "https://graph.microsoft.com/beta/tenantRelationships/managedTenants/tenants?`$top=999" -tenantid $env:TenantID ) | Select-Object id, @{l = 'customerId'; e = { $_.tenantId } }, @{l = 'DefaultdomainName'; e = { [string]($_.contract.defaultDomainName) } } , DisplayName, domains, tenantStatusInformation | Where-Object -Property defaultDomainName -NotIn $SkipListCache.defaultDomainName, 'Invalid'
         }
