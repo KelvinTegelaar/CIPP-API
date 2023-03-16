@@ -381,7 +381,7 @@ function Get-Tenants {
     $IncludedTenantsCache = Get-AzDataTableEntity @TenantsTable -Filter $Filter
         
     $LastRefresh = ($IncludedTenantsCache | Sort-Object LastRefresh | Select-Object -First 1).LastRefresh.DateTime
-    if ($LastRefresh -lt (Get-Date).Addhours(-24).ToUniversalTime()) {
+    if ($LastRefresh -lt (Get-Date).AddMinutes(-1).ToUniversalTime()) {
         try {
             $TenantList = (New-GraphGetRequest -uri "https://graph.microsoft.com/beta/tenantRelationships/managedTenants/tenants?`$top=999" -tenantid $env:TenantID ) | Select-Object id, @{l = 'customerId'; e = { $_.tenantId } }, @{l = 'DefaultdomainName'; e = { [string]($_.contract.defaultDomainName) } } , DisplayName, domains, tenantStatusInformation | Where-Object -Property defaultDomainName -NotIn $SkipListCache.defaultDomainName, 'Invalid'
         }
@@ -433,7 +433,12 @@ function Get-Tenants {
     }
 
     if ($IncludeAll) {
-        return (New-GraphGetRequest -uri "https://graph.microsoft.com/beta/contracts?`$top=999" -tenantid $env:TenantID) | Select-Object CustomerId, DefaultdomainName, DisplayName, domains
+        try {
+            $TenantList = (New-GraphGetRequest -uri "https://graph.microsoft.com/beta/tenantRelationships/managedTenants/tenants?`$top=999" -tenantid $env:TenantID ) | Select-Object id, @{l = 'customerId'; e = { $_.tenantId } }, @{l = 'DefaultdomainName'; e = { [string]($_.contract.defaultDomainName) } } , DisplayName, domains, tenantStatusInformation | Where-Object -Property defaultDomainName -NotIn $SkipListCache.defaultDomainName, 'Invalid'
+        }
+        catch {
+            $TenantList = (New-GraphGetRequest -uri "https://graph.microsoft.com/beta/contracts?`$top=999" -tenantid $env:TenantID ) | Select-Object id, customerId, DefaultdomainName, DisplayName, domains | Where-Object -Property defaultDomainName -NotIn $SkipListCache.defaultDomainName
+        }    
     }
     else {
         return ($IncludedTenantsCache | Sort-Object -Property displayName)
@@ -641,3 +646,19 @@ function New-DeviceLogin {
     return $ReturnCode
 }
 
+function New-passwordString {
+    [CmdletBinding()]
+    param (
+        [int]$count = 12
+    )
+    Set-Location (Get-Item $PSScriptRoot).FullName
+    $SettingsTable = Get-CippTable -tablename 'Settings'
+    $PasswordType = (Get-AzDataTableRow @SettingsTable).passwordType
+    if ($PasswordType -eq "Correct-Battery-Horse") { 
+        $Words = Get-Content .\words.txt
+        (Get-Random -InputObject $words -Count 4) -join '-'
+    }
+    else {
+        -join ('abcdefghkmnrstuvwxyzABCDEFGHKLMNPRSTUVWXYZ23456789$%&*#'.ToCharArray() | Get-Random -Count $count)
+    }
+}
