@@ -67,6 +67,7 @@ function Get-GraphToken($tenantid, $scope, $AsApp, $AppID, $refreshToken, $Retur
         $AccessToken = (Invoke-RestMethod -Method post -Uri "https://login.microsoftonline.com/$($tenantid)/oauth2/v2.0/token" -Body $Authbody -ErrorAction Stop)
         if ($ReturnRefresh) { $header = $AccessToken } else { $header = @{ Authorization = "Bearer $($AccessToken.access_token)" } }
         return $header
+        Write-Host $header['Authorization']
     }
     catch {
         # Track consecutive Graph API failures
@@ -366,25 +367,27 @@ function Get-Tenants {
     )
 
     $TenantsTable = Get-CippTable -tablename 'Tenants'
-    # We create the excluded tenants file. This is not set to force so will not overwrite
-
-    if ($IncludeErrors) {
-        $ExcludedFilter = "PartitionKey eq 'Tenants' and Excluded eq true" 
-    }
-    else {
-        $ExcludedFilter = "PartitionKey eq 'Tenants' and (Excluded eq true or GraphErrorCount gt 50)" 
-    }
+    $ExcludedFilter = "PartitionKey eq 'Tenants' and Excluded eq true" 
+ 
     $SkipListCache = Get-AzDataTableRow @TenantsTable -Filter $ExcludedFilter
         
-    # Load or refresh the cache if older than 24 hours
-    $Filter = "PartitionKey eq 'Tenants' and Excluded eq false" 
+    if ($IncludeAll) {
+        $Filter = "PartitionKey eq 'Tenants'" 
+    }
+    else {
+        $Filter = "PartitionKey eq 'Tenants' and Excluded eq false" 
+
+    }
     $IncludedTenantsCache = Get-AzDataTableEntity @TenantsTable -Filter $Filter
         
     $LastRefresh = ($IncludedTenantsCache | Sort-Object LastRefresh | Select-Object -First 1).LastRefresh.DateTime
     if ($LastRefresh -lt (Get-Date).Addhours(-24).ToUniversalTime()) {
-
-        $TenantList = (New-GraphGetRequest -uri "https://graph.microsoft.com/beta/contracts?`$top=999" -tenantid $env:TenantID ) | Select-Object id, customerId, DefaultdomainName, DisplayName, domains | Where-Object -Property defaultDomainName -NotIn $SkipListCache.defaultDomainName
-
+        try {
+            $TenantList = (New-GraphGetRequest -uri "https://graph.microsoft.com/beta/tenantRelationships/managedTenants/tenants?`$top=999" -tenantid $env:TenantID ) | Select-Object id, @{l = 'customerId'; e = { $_.tenantId } }, @{l = 'DefaultdomainName'; e = { [string]($_.contract.defaultDomainName) } } , DisplayName, domains, tenantStatusInformation | Where-Object -Property defaultDomainName -NotIn $SkipListCache.defaultDomainName, 'Invalid'
+        }
+        catch {
+            $TenantList = (New-GraphGetRequest -uri "https://graph.microsoft.com/beta/contracts?`$top=999" -tenantid $env:TenantID ) | Select-Object id, customerId, DefaultdomainName, DisplayName, domains | Where-Object -Property defaultDomainName -NotIn $SkipListCache.defaultDomainName
+        }
         $IncludedTenantsCache = [system.collections.generic.list[hashtable]]::new()
         if ($env:PartnerTenantAvailable) {
             $IncludedTenantsCache.Add(@{
@@ -404,18 +407,19 @@ function Get-Tenants {
         }
         foreach ($Tenant in $TenantList) {
             $IncludedTenantsCache.Add(@{
-                    RowKey            = $Tenant.id
-                    PartitionKey      = 'Tenants'
-                    customerId        = $Tenant.customerId
-                    defaultDomainName = $Tenant.defaultDomainName
-                    displayName       = $Tenant.DisplayName
-                    domains           = ''
-                    Excluded          = $false
-                    ExcludeUser       = ''
-                    ExcludeDate       = ''
-                    GraphErrorCount   = 0
-                    LastGraphError    = ''
-                    LastRefresh       = (Get-Date).ToUniversalTime()
+                    RowKey                   = [string]$Tenant.customerId
+                    PartitionKey             = 'Tenants'
+                    customerId               = [string]$Tenant.customerId
+                    defaultDomainName        = [string]$Tenant.defaultDomainName
+                    displayName              = [string]$Tenant.DisplayName
+                    delegatedPrivilegeStatus = [string]$Tenant.tenantStatusInformation.delegatedPrivilegeStatus
+                    domains                  = ''
+                    Excluded                 = $false
+                    ExcludeUser              = ''
+                    ExcludeDate              = ''
+                    GraphErrorCount          = 0
+                    LastGraphError           = ''
+                    LastRefresh              = (Get-Date).ToUniversalTime()
                 }) | Out-Null
         }
    
@@ -427,13 +431,7 @@ function Get-Tenants {
     if ($SkipList) {
         return $SkipListCache
     }
-
-    if ($IncludeAll) {
-        return (New-GraphGetRequest -uri "https://graph.microsoft.com/beta/contracts?`$top=999" -tenantid $env:TenantID) | Select-Object CustomerId, DefaultdomainName, DisplayName, domains
-    }
-    else {
-        return ($IncludedTenantsCache | Sort-Object -Property displayName)
-    }
+    return ($IncludedTenantsCache | Sort-Object -Property displayName)
 }
 
 function Remove-CIPPCache {
@@ -637,3 +635,19 @@ function New-DeviceLogin {
     return $ReturnCode
 }
 
+function New-passwordString {
+    [CmdletBinding()]
+    param (
+        [int]$count = 12
+    )
+    Set-Location (Get-Item $PSScriptRoot).FullName
+    $SettingsTable = Get-CippTable -tablename 'Settings'
+    $PasswordType = (Get-AzDataTableRow @SettingsTable).passwordType
+    if ($PasswordType -eq "Correct-Battery-Horse") { 
+        $Words = Get-Content .\words.txt
+        (Get-Random -InputObject $words -Count 4) -join '-'
+    }
+    else {
+        -join ('abcdefghkmnrstuvwxyzABCDEFGHKLMNPRSTUVWXYZ23456789$%&*#'.ToCharArray() | Get-Random -Count $count)
+    }
+}
