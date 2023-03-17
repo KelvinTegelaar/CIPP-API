@@ -367,17 +367,17 @@ function Get-Tenants {
     )
 
     $TenantsTable = Get-CippTable -tablename 'Tenants'
-
-    if ($IncludeErrors) {
-        $ExcludedFilter = "PartitionKey eq 'Tenants' and Excluded eq true" 
-    }
-    else {
-        $ExcludedFilter = "PartitionKey eq 'Tenants' and (Excluded eq true or GraphErrorCount gt 50)" 
-    }
+    $ExcludedFilter = "PartitionKey eq 'Tenants' and Excluded eq true" 
+ 
     $SkipListCache = Get-AzDataTableRow @TenantsTable -Filter $ExcludedFilter
         
-    # Load or refresh the cache if older than 24 hours
-    $Filter = "PartitionKey eq 'Tenants' and Excluded eq false" 
+    if ($IncludeAll) {
+        $Filter = "PartitionKey eq 'Tenants'" 
+    }
+    else {
+        $Filter = "PartitionKey eq 'Tenants' and Excluded eq false" 
+
+    }
     $IncludedTenantsCache = Get-AzDataTableEntity @TenantsTable -Filter $Filter
         
     $LastRefresh = ($IncludedTenantsCache | Sort-Object LastRefresh | Select-Object -First 1).LastRefresh.DateTime
@@ -431,18 +431,7 @@ function Get-Tenants {
     if ($SkipList) {
         return $SkipListCache
     }
-
-    if ($IncludeAll) {
-        try {
-            $TenantList = (New-GraphGetRequest -uri "https://graph.microsoft.com/beta/tenantRelationships/managedTenants/tenants?`$top=999" -tenantid $env:TenantID ) | Select-Object id, @{l = 'customerId'; e = { $_.tenantId } }, @{l = 'DefaultdomainName'; e = { [string]($_.contract.defaultDomainName) } } , DisplayName, domains, tenantStatusInformation | Where-Object -Property defaultDomainName -NotIn $SkipListCache.defaultDomainName, 'Invalid'
-        }
-        catch {
-            $TenantList = (New-GraphGetRequest -uri "https://graph.microsoft.com/beta/contracts?`$top=999" -tenantid $env:TenantID ) | Select-Object id, customerId, DefaultdomainName, DisplayName, domains | Where-Object -Property defaultDomainName -NotIn $SkipListCache.defaultDomainName
-        }    
-    }
-    else {
-        return ($IncludedTenantsCache | Sort-Object -Property displayName)
-    }
+    return ($IncludedTenantsCache | Sort-Object -Property displayName)
 }
 
 function Remove-CIPPCache {
