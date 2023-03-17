@@ -14,7 +14,7 @@ Write-Host "PowerShell HTTP trigger function processed a request."
 $TenantFilter = $Request.Query.TenantFilter
 try {
     $users = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/users/?`$top=999&`$select=id,userPrincipalName,assignedLicenses" -Tenantid $tenantfilter
-    $GraphRequest = New-GraphGetRequest -uri "https://outlook.office365.com/adminapi/beta/$($tenantfilter)/Mailbox" -Tenantid $tenantfilter -scope ExchangeOnline | Select-Object @{ Name = 'UPN'; Expression = { $_.'UserPrincipalName' } },
+    $GraphRequest = (New-ExoRequest -tenantid $TenantFilter -cmdlet "Get-mailbox") | Select-Object @{ Name = 'UPN'; Expression = { $_.'UserPrincipalName' } },
     @{ Name = 'id'; Expression = { $_.'ObjectKey' } 
     },
     @{ Name = 'displayName'; Expression = { $_.'DisplayName' } },
