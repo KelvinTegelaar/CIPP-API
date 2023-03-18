@@ -3,7 +3,32 @@ using namespace System.Net
 # Input bindings are passed in via param block.
 param($Request, $TriggerMetadata)
 
-Import-Module .\DNSHelper.psm1
+Import-Module DNSHealth
+
+try {
+    $ConfigTable = Get-CippTable -tablename Config
+    $Filter = "PartitionKey eq 'Domains' and RowKey eq 'Domains'"
+    $Config = Get-AzDataTableEntity @ConfigTable -Filter $Filter
+
+    $ValidResolvers = @('Google', 'CloudFlare', 'Quad9')
+    if ($ValidResolvers -contains $Config.Resolver) {
+        $Resolver = $Config.Resolver
+    }
+    else {
+        $Resolver = 'Google'
+        $Config = @{
+            PartitionKey = 'Domains'
+            RowKey       = 'Domains'
+            Resolver     = $Resolver
+        }
+        Add-AzDataTableEntity @ConfigTable -Entity $Config -Force
+    }
+}
+catch {
+    $Resolver = 'Google'
+}
+
+Set-DnsResolver -Resolver $Resolver
 
 $UserCreds = ([System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($request.headers.'x-ms-client-principal')) | ConvertFrom-Json)
 

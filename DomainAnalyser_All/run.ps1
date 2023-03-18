@@ -1,6 +1,31 @@
 param($DomainObject)
 
-Import-Module '.\DNSHelper.psm1'
+Import-Module DNSHealth
+
+try {
+    $ConfigTable = Get-CippTable -tablename Config
+    $Filter = "PartitionKey eq 'Domains' and RowKey eq 'Domains'"
+    $Config = Get-AzDataTableEntity @ConfigTable -Filter $Filter
+
+    $ValidResolvers = @('Google', 'CloudFlare', 'Quad9')
+    if ($ValidResolvers -contains $Config.Resolver) {
+        $Resolver = $Config.Resolver
+    }
+    else {
+        $Resolver = 'Google'
+        $Config = @{
+            PartitionKey = 'Domains'
+            RowKey       = 'Domains'
+            Resolver     = $Resolver
+        }
+        Add-AzDataTableEntity @ConfigTable -Entity $Config -Force
+    }
+}
+catch {
+    $Resolver = 'Google'
+}
+Set-DnsResolver -Resolver $Resolver
+
 $Domain = $DomainObject.rowKey
 
 try {
@@ -79,7 +104,7 @@ else {
 
 # Get SPF Record
 try {
-    $SPFRecord = Read-SPFRecord -Domain $Domain -ErrorAction Stop
+    $SPFRecord = Read-SpfRecord -Domain $Domain -ErrorAction Stop
     if ($SPFRecord.RecordCount -gt 0) {
         $Result.ActualSPFRecord = $SPFRecord.Record
         if ($SPFRecord.RecordCount -eq 1) {

@@ -14,7 +14,7 @@ $Params = @{
 
 try {
     $cmdlet = "Remove-TransportRule"
-    $GraphRequest = New-ExoRequest -tenantid $Tenantfilter -cmdlet $cmdlet -cmdParams $params
+    $GraphRequest = New-ExoRequest -tenantid $Tenantfilter -cmdlet $cmdlet -cmdParams $params -UseSystemMailbox $true
     $Result = "Deleted $($Request.query.guid)"
     Write-LogMessage -API "TransportRules" -tenant $tenantfilter -message "Deleted transport rule $($Request.query.guid)" -sev Debug
 }
