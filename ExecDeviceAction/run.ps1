@@ -10,7 +10,11 @@ Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME  -
 $tenantfilter = $Request.Query.TenantFilter
 $DeviceFilter = $Request.Query.GUID
 $Action = $Request.Query.Action
+if ($Action -eq "setDeviceName") {
+    $ActionBody = @{ deviceName = $Request.Body.input } | convertto-json -compress
+} else {
 $ActionBody = if ($Request.body) { $Request.body | ConvertTo-Json } else { '{}' }
+}
 try {     
     $GraphRequest = New-Graphpostrequest -uri "https://graph.microsoft.com/beta/deviceManagement/managedDevices('$DeviceFilter')/$($Action)" -type POST -tenantid $TenantFilter -body $actionbody 
     Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $($tenantfilter) -message "Queued $Action on $DeviceFilter" -Sev "Info"

@@ -9,7 +9,8 @@ Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME  -
 Write-Host "PowerShell HTTP trigger function processed a request."
 
 
-$ResultHealthSummary = Get-Tenants | ForEach-Object {
+$ResultHealthSummary = Get-Tenants | ForEach-Object -Parallel {
+    Import-Module '.\GraphHelper.psm1'
     $tenantname = $_.displayName
     Write-Host $tenantname
     $prop = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/admin/serviceAnnouncement/issues?`$filter=endDateTime eq null" -tenantid $_.defaultDomainName
