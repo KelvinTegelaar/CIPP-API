@@ -12,7 +12,7 @@ Write-Host "PowerShell HTTP trigger function processed a request."
 try {
     $license = $userobj.license
     $Aliases = ($userobj.AddedAliases).Split([Environment]::NewLine)
-    $password = if ($userobj.password) { $userobj.password } else { -join ('abcdefghkmnrstuvwxyzABCDEFGHKLMNPRSTUVWXYZ23456789$%&*#'.ToCharArray() | Get-Random -Count 12) }
+    $password = if ($userobj.password) { $userobj.password } else { New-passwordString }
     $UserprincipalName = "$($UserObj.username)@$($UserObj.domain)"
     $BodyToship = [pscustomobject] @{
         "givenName"         = $userobj.firstname

@@ -12,7 +12,7 @@ $SuspectUser = $($request.body.userid)
 Write-Host $TenantFilter
 Write-Host $SuspectUser
 try {
-    $password = -join ('abcdefghkmnrstuvwxyzABCDEFGHKLMNPRSTUVWXYZ23456789$%&*#'.ToCharArray() | Get-Random -Count 12)
+    $password = New-PasswordString
     $mustChange = 'true'
     $passwordProfile = @"
 {"passwordProfile": { "forceChangePasswordNextSignIn": $mustChange, "password": "$password" }}'
