@@ -19,7 +19,7 @@ try {
     },
     @{ Name = 'displayName'; Expression = { $_.'DisplayName' } },
     @{ Name = 'SharedMailboxWithLicense'; Expression = { 
-            $ID = $_.ObjectKey
+            $ID = $_.id
             $Shared = if ($_.'RecipientTypeDetails' -eq 'SharedMailbox') { $true } else { $false }
             if (($users | Where-Object -Property ID -EQ $ID).assignedLicenses.skuid -and $Shared) { $true } else { $false } 
         } 
