@@ -15,7 +15,7 @@ $TenantFilter = $Request.Query.TenantFilter
 try {
     $users = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/users/?`$top=999&`$select=id,userPrincipalName,assignedLicenses" -Tenantid $tenantfilter
     $GraphRequest = (New-ExoRequest -tenantid $TenantFilter -cmdlet "Get-mailbox") | Select-Object @{ Name = 'UPN'; Expression = { $_.'UserPrincipalName' } },
-    @{ Name = 'id'; Expression = { $_.'ObjectKey' } 
+    @{ Name = 'id'; Expression = { $_.'id' } 
     },
     @{ Name = 'displayName'; Expression = { $_.'DisplayName' } },
     @{ Name = 'SharedMailboxWithLicense'; Expression = { 
