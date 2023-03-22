@@ -37,12 +37,30 @@ try {
 
             }
         }
-    
         { $_.'DefenderStatus' -eq $true } {
             try {
                 New-GraphGetRequest -uri "https://graph.microsoft.com/beta/tenantRelationships/managedTenants/windowsProtectionStates?`$top=999&`$filter=tenantId eq '$($Tenant.tenantid)'" | Where-Object { $_.realTimeProtectionEnabled -eq $false -or $_.MalwareprotectionEnabled -eq $false } | ForEach-Object {
                     "$($_.managedDeviceName) - Real Time Protection: $($_.realTimeProtectionEnabled) & Malware Protection: $($_.MalwareprotectionEnabled)"
                 }
+            }
+            catch {
+
+            }
+        }
+        { $_.'SecDefaultsOn' -eq $true } {
+            try {
+                $SecureDefaultsState = (New-GraphGetRequest -Uri 'https://graph.microsoft.com/beta/policies/identitySecurityDefaultsEnforcementPolicy' -tenantid $tenant)
+                if ($SecureDefaultsState.IsEnabled = $true) { "Security Defaults is Enabled" }
+            }
+            catch {
+
+            }
+        }
+    
+        { $_.'SecDefaultsOff' -eq $true } {
+            try {
+                $SecureDefaultsState = (New-GraphGetRequest -Uri 'https://graph.microsoft.com/beta/policies/identitySecurityDefaultsEnforcementPolicy' -tenantid $tenant)
+                if ($SecureDefaultsState.IsEnabled = $false) { "Security Defaults is Disabled" }
             }
             catch {
     
