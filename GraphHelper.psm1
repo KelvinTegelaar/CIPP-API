@@ -387,7 +387,10 @@ function Get-Tenants {
             $TenantList = (New-GraphGetRequest -uri "https://graph.microsoft.com/beta/tenantRelationships/managedTenants/tenants?`$top=999" -tenantid $env:TenantID ) | Select-Object id, @{l = 'customerId'; e = { $_.tenantId } }, @{l = 'DefaultdomainName'; e = { [string]($_.contract.defaultDomainName) } } , @{l = 'MigratedToNewTenantAPI'; e = { $true } }, DisplayName, domains, tenantStatusInformation | Where-Object -Property defaultDomainName -NotIn $SkipListCache.defaultDomainName, 'Invalid'
         }
         catch {
-            $TenantList = (New-GraphGetRequest -uri "https://graph.microsoft.com/beta/contracts?`$top=999" -tenantid $env:TenantID ) | Select-Object id, customerId, DefaultdomainName, DisplayName, domains, @{l = 'MigratedToNewTenantAPI'; e = { $false } } | Where-Object -Property defaultDomainName -NotIn $SkipListCache.defaultDomainName
+            Write-Host "probably no license for Lighthouse. Using old API."
+        }
+        if (!$TenantList) {
+            $TenantList = (New-GraphGetRequest -uri "https://graph.microsoft.com/beta/contracts?`$top=999" -tenantid $env:TenantID ) | Select-Object id, customerId, DefaultdomainName, DisplayName, domains | Where-Object -Property defaultDomainName -NotIn $SkipListCache.defaultDomainName
         }
         $IncludedTenantsCache = [system.collections.generic.list[hashtable]]::new()
         if ($env:PartnerTenantAvailable) {
@@ -421,7 +424,6 @@ function Get-Tenants {
                     GraphErrorCount          = 0
                     LastGraphError           = ''
                     LastRefresh              = (Get-Date).ToUniversalTime()
-                    MigratedToNewTenantAPI   = [string]$Tenant.MigratedToNewTenantAPI
                 }) | Out-Null
         }
    
@@ -433,10 +435,6 @@ function Get-Tenants {
     if ($SkipList) {
         return $SkipListCache
     }
-    $NewTenantAPI = ($IncludedTenantsCache | Sort-Object LastRefresh | Select-Object -First 1).MigratedToNewTenantAPI
-    if (!$NewTenantAPI) {
-        Remove-CIPPCache -tenantsOnly $true
-    }  
     return ($IncludedTenantsCache | Sort-Object -Property displayName)
   
 }
