@@ -383,7 +383,15 @@ function Get-Tenants {
     $LastRefresh = ($IncludedTenantsCache | Sort-Object LastRefresh | Select-Object -First 1).LastRefresh.DateTime
 
     if ($LastRefresh -lt (Get-Date).Addhours(-24).ToUniversalTime()) {
-        $TenantList = (New-GraphGetRequest -uri "https://graph.microsoft.com/beta/tenantRelationships/managedTenants/tenants?`$top=999" -tenantid $env:TenantID ) | Select-Object id, @{l = 'customerId'; e = { $_.tenantId } }, @{l = 'DefaultdomainName'; e = { [string]($_.contract.defaultDomainName) } } , @{l = 'MigratedToNewTenantAPI'; e = { $true } }, DisplayName, domains, tenantStatusInformation | Where-Object -Property defaultDomainName -NotIn $SkipListCache.defaultDomainName, 'Invalid'
+        try {
+            $TenantList = (New-GraphGetRequest -uri "https://graph.microsoft.com/beta/tenantRelationships/managedTenants/tenants?`$top=999" -tenantid $env:TenantID ) | Select-Object id, @{l = 'customerId'; e = { $_.tenantId } }, @{l = 'DefaultdomainName'; e = { [string]($_.contract.defaultDomainName) } } , @{l = 'MigratedToNewTenantAPI'; e = { $true } }, DisplayName, domains, tenantStatusInformation | Where-Object -Property defaultDomainName -NotIn $SkipListCache.defaultDomainName, 'Invalid'
+        }
+        catch {
+            Write-Host "probably no license for Lighthouse. Using old API."
+        }
+        if (!$TenantList) {
+            $TenantList = (New-GraphGetRequest -uri "https://graph.microsoft.com/beta/contracts?`$top=999" -tenantid $env:TenantID ) | Select-Object id, customerId, DefaultdomainName, DisplayName, domains | Where-Object -Property defaultDomainName -NotIn $SkipListCache.defaultDomainName
+        }
         $IncludedTenantsCache = [system.collections.generic.list[hashtable]]::new()
         if ($env:PartnerTenantAvailable) {
             $IncludedTenantsCache.Add(@{
@@ -416,7 +424,6 @@ function Get-Tenants {
                     GraphErrorCount          = 0
                     LastGraphError           = ''
                     LastRefresh              = (Get-Date).ToUniversalTime()
-                    MigratedToNewTenantAPI   = [string]$Tenant.MigratedToNewTenantAPI
                 }) | Out-Null
         }
    
