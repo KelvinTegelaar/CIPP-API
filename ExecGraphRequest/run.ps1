@@ -80,20 +80,20 @@ try {
                 $RawGraphRequest = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/$($Request.Query.Endpoint)" -tenantid $TenantFilter -NoPagination [boolean]$Request.query.DisablePagination -ComplexFilter
         }
         else {
-                $RawGraphRequest = Get-tenants | ForEach-Object {
+                $RawGraphRequest = Get-Tenants | ForEach-Object -Parallel {
+                        Import-Module .\GraphHelper.psm1
                         try {
                                 $DefaultDomainName = $_.defaultDomainName
                                 $TenantName = $_.displayName
-                                New-GraphGetRequest -uri "https://graph.microsoft.com/beta/$($Request.Query.Endpoint)" -tenantid $DefaultDomainName -NoPagination [boolean]$Request.query.DisablePagination -ComplexFilter
+                                New-GraphGetRequest -uri "https://graph.microsoft.com/beta/$($using:Request.Query.Endpoint)" -tenantid $DefaultDomainName -NoPagination [boolean]$using:Request.query.DisablePagination -ComplexFilter | Select-Object @{
+                                        label      = 'Tenant'
+                                        expression = { $TenantName }
+                                }, *
                         }
                         catch {
                                 continue
                         }
-                } | Select-Object @{
-                        label      = 'Tenant'
-                        expression = { $TenantName }
-                    
-                }, *
+                } 
 
         }
         $GraphRequest = $RawGraphRequest | Where-Object -Property '@odata.context' -EQ $null | ConvertTo-FlatObject 
