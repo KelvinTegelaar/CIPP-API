@@ -278,7 +278,7 @@ function New-TeamsAPIGetRequest($Uri, $tenantID, $Method = 'GET', $Resource = '4
                 if ($noPagination) { $nextURL = $null } else { $nextURL = $data.NextLink }            
             }
             catch {
-                throw "Failed to make Classic Get Request $_"
+                throw "Failed to make Teams API Get Request $_"
             }
         } until ($null -eq $NextURL)
         return $ReturnedData
