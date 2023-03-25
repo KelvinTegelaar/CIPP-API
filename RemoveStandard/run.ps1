@@ -10,8 +10,8 @@ $ID = $request.query.id
 try {
     $Table = Get-CippTable -tablename 'standards'
     $Filter = "PartitionKey eq 'standards' and RowKey eq '$id'" 
-    $ClearRow = Get-AzDataTableRow @Table -Filter $Filter
-    Remove-AzDataTableRow @Table -Entity $clearRow
+    $ClearRow = Get-AzDataTableEntity @Table -Filter $Filter
+    Remove-AzDataTableEntity @Table -Entity $clearRow
     Write-LogMessage -user $request.headers.'x-ms-client-principal'  -API $APINAME  -message "Removed standards for $ID." -Sev "Info"
     $body = [pscustomobject]@{"Results" = "Successfully removed standards deployment" }
 

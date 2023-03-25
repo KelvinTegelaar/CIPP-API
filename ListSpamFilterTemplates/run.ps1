@@ -10,7 +10,7 @@ $Table = Get-CippTable -tablename 'templates'
 #List new policies
 $Table = Get-CippTable -tablename 'templates'
 $Filter = "PartitionKey eq 'SpamfilterTemplate'" 
-$Templates = (Get-AzDataTableRow @Table -Filter $Filter) | ForEach-Object {
+$Templates = (Get-AzDataTableEntity @Table -Filter $Filter) | ForEach-Object {
     $GUID = $_.RowKey
     $data = $_.JSON | ConvertFrom-Json 
     $data | Add-Member -NotePropertyName "GUID" -NotePropertyValue $GUID

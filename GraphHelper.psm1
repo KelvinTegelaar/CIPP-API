@@ -74,7 +74,7 @@ function Get-GraphToken($tenantid, $scope, $AsApp, $AppID, $refreshToken, $Retur
         # Track consecutive Graph API failures
         $TenantsTable = Get-CippTable -tablename Tenants
         $Filter = "PartitionKey eq 'Tenants' and (defaultDomainName eq '{0}' or customerId eq '{0}')" -f $tenantid
-        $Tenant = Get-AzDataTableRow @TenantsTable -Filter $Filter
+        $Tenant = Get-AzDataTableEntity @TenantsTable -Filter $Filter
         if (!$Tenant.RowKey) {
             $donotset = $true
             $Tenant = [pscustomobject]@{
@@ -94,7 +94,7 @@ function Get-GraphToken($tenantid, $scope, $AsApp, $AppID, $refreshToken, $Retur
         }
         $Tenant.GraphErrorCount++
 
-        if (!$donotset) { Update-AzDataTableRow @TenantsTable -Entity $Tenant }
+        if (!$donotset) { Update-AzDataTableEntity @TenantsTable -Entity $Tenant }
         throw "$($Tenant.LastGraphError)"
     }
 }
@@ -153,7 +153,7 @@ function New-GraphGetRequest {
     # Track consecutive Graph API failures
     $TenantsTable = Get-CippTable -tablename Tenants
     $Filter = "PartitionKey eq 'Tenants' and (defaultDomainName eq '{0}' or customerId eq '{0}')" -f $tenantid
-    $Tenant = Get-AzDataTableRow @TenantsTable -Filter $Filter
+    $Tenant = Get-AzDataTableEntity @TenantsTable -Filter $Filter
     if (!$Tenant) {
         $Tenant = @{
             GraphErrorCount = 0
@@ -175,13 +175,13 @@ function New-GraphGetRequest {
                 if ($Message -ne 'Request not applicable to target tenant.') {
                     $Tenant.LastGraphError = $Message
                     $Tenant.GraphErrorCount++
-                    Update-AzDataTableRow @TenantsTable -Entity $Tenant
+                    Update-AzDataTableEntity @TenantsTable -Entity $Tenant
                 }
                 throw $Message
             }
         } until ($null -eq $NextURL)
         $Tenant.LastGraphError = ''
-        Update-AzDataTableRow @TenantsTable -Entity $Tenant
+        Update-AzDataTableEntity @TenantsTable -Entity $Tenant
         return $ReturnedData
     }
     else {
@@ -222,7 +222,7 @@ function convert-skuname($skuname, $skuID) {
 }
 
 function Get-ClassicAPIToken($tenantID, $Resource) {
-    Write-Host "Using classic"
+    Write-Host 'Using classic'
     $uri = "https://login.microsoftonline.com/$($TenantID)/oauth2/token"
     $Body = @{
         client_id     = $env:ApplicationID
@@ -241,7 +241,7 @@ function Get-ClassicAPIToken($tenantID, $Resource) {
         # Track consecutive Graph API failures
         $TenantsTable = Get-CippTable -tablename Tenants
         $Filter = "PartitionKey eq 'Tenants' and (defaultDomainName eq '{0}' or customerId eq '{0}')" -f $tenantid
-        $Tenant = Get-AzDataTableRow @TenantsTable -Filter $Filter
+        $Tenant = Get-AzDataTableEntity @TenantsTable -Filter $Filter
         if (!$Tenant) {
             $Tenant = @{
                 GraphErrorCount     = $null
@@ -253,7 +253,7 @@ function Get-ClassicAPIToken($tenantID, $Resource) {
         $Tenant.LastGraphError = $_.Exception.Message
         $Tenant.GraphErrorCount++
 
-        Update-AzDataTableRow @TenantsTable -Entity $Tenant
+        Update-AzDataTableEntity @TenantsTable -Entity $Tenant
         Throw "Failed to obtain Classic API Token for $TenantID - $_"
     }
 }
@@ -370,7 +370,7 @@ function Get-Tenants {
     $TenantsTable = Get-CippTable -tablename 'Tenants'
     $ExcludedFilter = "PartitionKey eq 'Tenants' and Excluded eq true"
 
-    $SkipListCache = Get-AzDataTableRow @TenantsTable -Filter $ExcludedFilter
+    $SkipListCache = Get-AzDataTableEntity @TenantsTable -Filter $ExcludedFilter
 
     if ($IncludeAll) {
         $Filter = "PartitionKey eq 'Tenants'"
@@ -388,7 +388,7 @@ function Get-Tenants {
             $TenantList = (New-GraphGetRequest -uri "https://graph.microsoft.com/beta/tenantRelationships/managedTenants/tenants?`$top=999" -tenantid $env:TenantID ) | Select-Object id, @{l = 'customerId'; e = { $_.tenantId } }, @{l = 'DefaultdomainName'; e = { [string]($_.contract.defaultDomainName) } } , @{l = 'MigratedToNewTenantAPI'; e = { $true } }, DisplayName, domains, tenantStatusInformation | Where-Object -Property defaultDomainName -NotIn $SkipListCache.defaultDomainName, 'Invalid'
         }
         catch {
-            Write-Host "probably no license for Lighthouse. Using old API."
+            Write-Host 'probably no license for Lighthouse. Using old API.'
         }
         if (!$TenantList) {
             $TenantList = (New-GraphGetRequest -uri "https://graph.microsoft.com/beta/contracts?`$top=999" -tenantid $env:TenantID ) | Select-Object id, customerId, DefaultdomainName, DisplayName, domains | Where-Object -Property defaultDomainName -NotIn $SkipListCache.defaultDomainName
@@ -447,21 +447,21 @@ function Remove-CIPPCache {
     # Remove all tenants except excluded
     $TenantsTable = Get-CippTable -tablename 'Tenants'
     $Filter = "PartitionKey eq 'Tenants' and Excluded eq false"
-    $ClearIncludedTenants = Get-AzDataTableRow @TenantsTable -Filter $Filter
-    Remove-AzDataTableRow @TenantsTable -Entity $ClearIncludedTenants
+    $ClearIncludedTenants = Get-AzDataTableEntity @TenantsTable -Filter $Filter
+    Remove-AzDataTableEntity @TenantsTable -Entity $ClearIncludedTenants
     if ($tenantsonly -eq 'false') {
-        Write-Host "Clearing all"
+        Write-Host 'Clearing all'
         # Remove Domain Analyser cached results
         $DomainsTable = Get-CippTable -tablename 'Domains'
         $Filter = "PartitionKey eq 'TenantDomains'"
-        $ClearDomainAnalyserRows = Get-AzDataTableRow @DomainsTable -Filter $Filter | ForEach-Object {
+        $ClearDomainAnalyserRows = Get-AzDataTableEntity @DomainsTable -Filter $Filter | ForEach-Object {
             $_.DomainAnalyser = ''
             $_
         }
         Update-AzDataTableEntity @DomainsTable -Entity $ClearDomainAnalyserRows
         #Clear BPA
         $BPATable = Get-CippTable -tablename 'cachebpa'
-        $ClearBPARows = Get-AzDataTableRow @BPATable
+        $ClearBPARows = Get-AzDataTableEntity @BPATable
         Remove-AzDataTableEntity @BPATable -Entity $ClearBPARows
 
         $Script:SkipListCache = $Null
@@ -500,7 +500,7 @@ function New-ExoRequest ($tenantid, $cmdlet, $cmdParams, $useSystemMailbox, $Anc
         Write-Host "Using $Anchor"
         $Headers = @{
             Authorization     = "Bearer $($token.access_token)"
-            Prefer            = "odata.maxpagesize = 1000"
+            Prefer            = 'odata.maxpagesize = 1000'
             'X-AnchorMailbox' = $anchor
 
         }
@@ -648,8 +648,8 @@ function New-passwordString {
     )
     Set-Location (Get-Item $PSScriptRoot).FullName
     $SettingsTable = Get-CippTable -tablename 'Settings'
-    $PasswordType = (Get-AzDataTableRow @SettingsTable).passwordType
-    if ($PasswordType -eq "Correct-Battery-Horse") {
+    $PasswordType = (Get-AzDataTableEntity @SettingsTable).passwordType
+    if ($PasswordType -eq 'Correct-Battery-Horse') {
         $Words = Get-Content .\words.txt
         (Get-Random -InputObject $words -Count 4) -join '-'
     }
