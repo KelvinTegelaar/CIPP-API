@@ -13,12 +13,12 @@ $TenantsTable = Get-CippTable -tablename Tenants
 try {
     if ($Request.Query.List) {
         $ExcludedFilter = "PartitionKey eq 'Tenants' and Excluded eq true" 
-        $ExcludedTenants = Get-AzDataTableRow @TenantsTable -Filter $ExcludedFilter 
+        $ExcludedTenants = Get-AzDataTableEntity @TenantsTable -Filter $ExcludedFilter 
         Write-LogMessage -API $APINAME -user $request.headers.'x-ms-client-principal' -message 'got excluded tenants list' -Sev 'Info'
         $body = @($ExcludedTenants)
     }
     elseif ($Request.query.ListAll) {
-        $ExcludedTenants = Get-AzDataTableRow @TenantsTable
+        $ExcludedTenants = Get-AzDataTableEntity @TenantsTable
         Write-LogMessage -API $APINAME -user $request.headers.'x-ms-client-principal' -message 'got excluded tenants list' -Sev 'Info'
         $body = @($ExcludedTenants | Where-Object -Property defaultDomainName -NE $null)
     }

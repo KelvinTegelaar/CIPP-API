@@ -50,7 +50,7 @@ try {
 catch {
     Write-LogMessage -API 'BestPracticeAnalyser' -tenant $tenant -message "Security Defaults State on $($tenant) Error: $($_.exception.message)" -sev 'Error'
 }
-# Get the Secure Default State
+# Get the nudge State
 try {
     $NudgeState = (New-GraphGetRequest -Uri 'https://graph.microsoft.com/beta/policies/authenticationMethodsPolicy' -tenantid $tenant)
     $Result.MFANudge = $NudgeState.registrationEnforcement.authenticationMethodsRegistrationCampaign.state
