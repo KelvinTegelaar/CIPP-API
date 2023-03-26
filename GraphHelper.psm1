@@ -375,7 +375,7 @@ function Get-Tenants {
         $Filter = "PartitionKey eq 'Tenants'" 
     }
     else {
-        $Filter = "PartitionKey eq 'Tenants' and Excluded eq false" 
+        $Filter = "PartitionKey eq 'Tenants' and (Excluded eq true or GraphErrorCount gt 50)" 
 
     }
     $IncludedTenantsCache = Get-AzDataTableEntity @TenantsTable -Filter $Filter
