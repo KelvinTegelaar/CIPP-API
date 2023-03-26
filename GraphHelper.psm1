@@ -376,7 +376,7 @@ function Get-Tenants {
         $Filter = "PartitionKey eq 'Tenants'"
     }
     else {
-        $Filter = "PartitionKey eq 'Tenants' and Excluded eq false"
+        $Filter = "PartitionKey eq 'Tenants' and (Excluded eq true or GraphErrorCount gt 50)" 
 
     }
     $IncludedTenantsCache = Get-AzDataTableEntity @TenantsTable -Filter $Filter
@@ -385,7 +385,7 @@ function Get-Tenants {
 
     if ($LastRefresh -lt (Get-Date).Addhours(-24).ToUniversalTime()) {
         try {
-            $TenantList = (New-GraphGetRequest -uri "https://graph.microsoft.com/beta/tenantRelationships/managedTenants/tenants?`$top=999" -tenantid $env:TenantID ) | Select-Object id, @{l = 'customerId'; e = { $_.tenantId } }, @{l = 'DefaultdomainName'; e = { [string]($_.contract.defaultDomainName) } } , @{l = 'MigratedToNewTenantAPI'; e = { $true } }, DisplayName, domains, tenantStatusInformation | Where-Object -Property defaultDomainName -NotIn $SkipListCache.defaultDomainName, 'Invalid'
+            $TenantList = (New-GraphGetRequest -uri "https://graph.microsoft.com/beta/tenantRelationships/managedTenants/tenants?`$top=999" -tenantid $env:TenantID ) | Select-Object id, @{l = 'customerId'; e = { $_.tenantId } }, @{l = 'DefaultdomainName'; e = { [string]($_.contract.defaultDomainName) } } , @{l = 'MigratedToNewTenantAPI'; e = { $true } }, DisplayName, domains, tenantStatusInformation | Where-Object -Property defaultDomainName -NotIn $SkipListCache.defaultDomainName
         }
         catch {
             Write-Host 'probably no license for Lighthouse. Using old API.'
@@ -411,6 +411,7 @@ function Get-Tenants {
                 }) | Out-Null
         }
         foreach ($Tenant in $TenantList) {
+            if ($Tenant.defaultDomainName -eq "Invalid") { continue }
             $IncludedTenantsCache.Add(@{
                     RowKey                   = [string]$Tenant.customerId
                     PartitionKey             = 'Tenants'
