@@ -1,14 +1,14 @@
 param($name)
 
-Write-Host "QUEUEQUE"
+Write-Host 'QUEUEQUE'
 $Table = Get-CippTable -tablename 'standards'
-$tenants = (Get-AzDataTableRow @Table -Filter $Filter).JSON | ConvertFrom-Json
+$tenants = (Get-AzDataTableEntity @Table -Filter $Filter).JSON | ConvertFrom-Json
 
 $object = foreach ($Tenant in $tenants) {
     $tenant.standards.psobject.properties.name | ForEach-Object { 
         $Standard = $_
-        if ($tenant.Tenant -ne "AllTenants") {
-            Write-Host "Not all tenants. Single object"
+        if ($tenant.Tenant -ne 'AllTenants') {
+            Write-Host 'Not all tenants. Single object'
             [pscustomobject]@{ 
                 Tenant   = $tenant.Tenant
                 Standard = $Standard

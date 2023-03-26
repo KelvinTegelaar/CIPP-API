@@ -11,10 +11,10 @@ $Filter = "PartitionKey eq 'standards'"
 
 try { 
     if ($Request.query.TenantFilter) { 
-        $tenants = (Get-AzDataTableRow @Table -Filter $Filter).JSON | ConvertFrom-Json -ErrorAction Stop | Where-Object Tenant -EQ $Request.query.tenantFilter
+        $tenants = (Get-AzDataTableEntity @Table -Filter $Filter).JSON | ConvertFrom-Json -ErrorAction Stop | Where-Object Tenant -EQ $Request.query.tenantFilter
     }
     else {
-        $Tenants = (Get-AzDataTableRow @Table -Filter $Filter).JSON | ConvertFrom-Json -ErrorAction Stop
+        $Tenants = (Get-AzDataTableEntity @Table -Filter $Filter).JSON | ConvertFrom-Json -ErrorAction Stop
     }
 }
 catch {}
