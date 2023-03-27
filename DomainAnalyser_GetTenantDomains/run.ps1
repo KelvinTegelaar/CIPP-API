@@ -36,7 +36,7 @@ foreach ($Exclude in $ExcludedTenants) {
     $CleanupCount = ($CleanupRows | Measure-Object).Count
     if ($CleanupCount -gt 0) {
         Write-LogMessage -API 'DomainAnalyser' -tenant $Exclude.defaultDomainName -message "Cleaning up $CleanupCount domain(s) for excluded tenant" -sev Info
-        Remove-AzDataTableRow @DomainTable -Entity $CleanupRows
+        Remove-AzDataTableEntity @DomainTable -Entity $CleanupRows
     }
 }
 
