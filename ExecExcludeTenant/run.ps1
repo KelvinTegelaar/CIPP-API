@@ -26,7 +26,7 @@ try {
     $name = $Request.Query.TenantFilter
     if ($Request.Query.AddExclusion) {
         Write-Host ($Request.body.value | ConvertTo-Json)
-        $Tenants = Get-Tenants | Where-Object { $Request.body.value -contains $_.customerId }
+        $Tenants = Get-Tenants -IncludeAll | Where-Object { $Request.body.value -contains $_.customerId }
         Write-Host ($Tenants | ConvertTo-Json)
         $Excluded = foreach ($Tenant in $Tenants) {
             $Tenant.Excluded = $true
