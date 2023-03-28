@@ -68,7 +68,6 @@ function Get-GraphToken($tenantid, $scope, $AsApp, $AppID, $refreshToken, $Retur
         $AccessToken = (Invoke-RestMethod -Method post -Uri "https://login.microsoftonline.com/$($tenantid)/oauth2/v2.0/token" -Body $Authbody -ErrorAction Stop)
         if ($ReturnRefresh) { $header = $AccessToken } else { $header = @{ Authorization = "Bearer $($AccessToken.access_token)" } }
         return $header
-        Write-Host $header['Authorization']
     }
     catch {
         # Track consecutive Graph API failures
@@ -381,10 +380,12 @@ function Get-Tenants {
     }
     $IncludedTenantsCache = Get-AzDataTableEntity @TenantsTable -Filter $Filter
 
-    $LastRefresh = ($IncludedTenantsCache | Sort-Object LastRefresh | Select-Object -First 1).LastRefresh.DateTime
-
+    $LastRefresh = ($IncludedTenantsCache | Where-Object -Property $_.customerId | Sort-Object LastRefresh | Select-Object -First 1).LastRefresh.DateTime
+    Write-Host ($IncludedTenantsCache | Where-Object -Property $_.customerId | Sort-Object LastRefresh | Select-Object -First 1 | ConvertTo-Json)
     if ($LastRefresh -lt (Get-Date).Addhours(-24).ToUniversalTime()) {
         try {
+            Write-Host 'Renewing. Cache not hit.'
+
             $TenantList = (New-GraphGetRequest -uri "https://graph.microsoft.com/beta/tenantRelationships/managedTenants/tenants?`$top=999" -tenantid $env:TenantID ) | Select-Object id, @{l = 'customerId'; e = { $_.tenantId } }, @{l = 'DefaultdomainName'; e = { [string]($_.contract.defaultDomainName) } } , @{l = 'MigratedToNewTenantAPI'; e = { $true } }, DisplayName, domains, tenantStatusInformation | Where-Object -Property defaultDomainName -NotIn $SkipListCache.defaultDomainName
         }
         catch {
