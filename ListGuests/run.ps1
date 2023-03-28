@@ -13,7 +13,7 @@ Set-Location (Get-Item $PSScriptRoot).Parent.FullName
 # Interact with query parameters or the body of the request.
 $TenantFilter = $Request.Query.TenantFilter
 $userid = $Request.Query.UserID
-$GraphRequest = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/users/$($userid)?`$filter=userType eq 'member'&`$top=999&`$select=$($selectlist -join ',')" -tenantid $TenantFilter | Select-Object $selectlist | ForEach-Object {
+$GraphRequest = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/users/$($userid)?`$filter=userType eq 'Guest'&`$top=999&`$select=$($selectlist -join ',')" -tenantid $TenantFilter | Select-Object $selectlist | ForEach-Object {
     $_.onPremisesSyncEnabled = [bool]($_.onPremisesSyncEnabled)
     $_.Aliases = $_.Proxyaddresses -join ", "
     $SkuID = $_.AssignedLicenses.skuid
