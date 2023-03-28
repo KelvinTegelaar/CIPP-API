@@ -13,8 +13,8 @@ try {
 
     $Filter = "PartitionKey eq 'GroupTemplate' and RowKey eq '$id'" 
     Write-Host $Filter
-    $ClearRow = Get-AzDataTableRow @Table -Filter $Filter
-    Remove-AzDataTableRow @Table -Entity $clearRow
+    $ClearRow = Get-AzDataTableEntity @Table -Filter $Filter
+    Remove-AzDataTableEntity @Table -Entity $clearRow
     Write-LogMessage -user $request.headers.'x-ms-client-principal'  -API $APINAME  -message "Removed Intune Template with ID $ID." -Sev "Info"
     $body = [pscustomobject]@{"Results" = "Successfully removed Template" }
 }
