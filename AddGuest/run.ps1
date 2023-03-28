@@ -9,6 +9,7 @@ $Results = [System.Collections.ArrayList]@()
 $userobj = $Request.body
 # Write to the Azure Functions log stream.
 Write-Host "PowerShell HTTP trigger function processed a request."
+write-host [boolean]$userobj.SendInvite
 try {
     $BodyToship = [pscustomobject] @{
         "InvitedUserDisplayName"                = $userobj.Displayname
