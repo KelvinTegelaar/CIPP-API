@@ -10,7 +10,7 @@ $Table = Get-CippTable -tablename 'templates'
 #List new policies
 $Table = Get-CippTable -tablename 'templates'
 $Filter = "PartitionKey eq 'ExConnectorTemplate'" 
-$Templates = (Get-AzDataTableRow @Table -Filter $Filter) | ForEach-Object {
+$Templates = (Get-AzDataTableEntity @Table -Filter $Filter) | ForEach-Object {
     $GUID = $_.RowKey
     $Direction = $_.direction
     $data = $_.JSON | ConvertFrom-Json 
