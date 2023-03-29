@@ -390,7 +390,7 @@ function Get-Tenants {
         catch {
             Write-Host 'probably no license for Lighthouse. Using old API.'
         }
-        if (!$TenantList) {
+        if (!$TenantList.customerId) {
             $TenantList = (New-GraphGetRequest -uri "https://graph.microsoft.com/beta/contracts?`$top=999" -tenantid $env:TenantID ) | Select-Object id, customerId, DefaultdomainName, DisplayName, domains | Where-Object -Property defaultDomainName -NotIn $SkipListCache.defaultDomainName
         }
         $IncludedTenantsCache = [system.collections.generic.list[hashtable]]::new()
