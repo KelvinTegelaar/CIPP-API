@@ -13,28 +13,28 @@ $TenantsTable = Get-CippTable -tablename Tenants
 try {
     if ($Request.Query.List) {
         $ExcludedFilter = "PartitionKey eq 'Tenants' and Excluded eq true" 
-        $ExcludedTenants = Get-AzDataTableRow @TenantsTable -Filter $ExcludedFilter 
+        $ExcludedTenants = Get-AzDataTableEntity @TenantsTable -Filter $ExcludedFilter 
         Write-LogMessage -API $APINAME -user $request.headers.'x-ms-client-principal' -message 'got excluded tenants list' -Sev 'Info'
         $body = @($ExcludedTenants)
     }
     elseif ($Request.query.ListAll) {
-        $ExcludedTenants = Get-AzDataTableRow @TenantsTable
+        $ExcludedTenants = Get-AzDataTableEntity @TenantsTable
         Write-LogMessage -API $APINAME -user $request.headers.'x-ms-client-principal' -message 'got excluded tenants list' -Sev 'Info'
         $body = @($ExcludedTenants | Where-Object -Property defaultDomainName -NE $null)
     }
     # Interact with query parameters or the body of the request.
     $name = $Request.Query.TenantFilter
     if ($Request.Query.AddExclusion) {
-        Write-Host ($Request.body.value | ConvertTo-Json)
-        $Tenants = Get-Tenants | Where-Object { $Request.body.value -contains $_.customerId }
-        Write-Host ($Tenants | ConvertTo-Json)
+        $Tenants = Get-Tenants -IncludeAll | Where-Object { $Request.body.value -contains $_.customerId }
+       
         $Excluded = foreach ($Tenant in $Tenants) {
             $Tenant.Excluded = $true
             $Tenant.ExcludeUser = $username
             $Tenant.ExcludeDate = $date
             $Tenant
         }
-        Update-AzDataTableEntity @TenantsTable -Entity $Excluded
+        Write-Host ($Excluded | ConvertTo-Json)
+        Update-AzDataTableEntity @TenantsTable -Entity ([pscustomobject]$Excluded)
         #Remove-CIPPCache
         Write-LogMessage -API $APINAME -tenant $($name) -user $request.headers.'x-ms-client-principal' -message "Added exclusion for customer(s): $($Excluded.defaultDomainName -join ',')" -Sev 'Info' 
         $body = [pscustomobject]@{'Results' = "Success. Added exclusions for customer(s): $($Excluded.defaultDomainName -join ',')" }
