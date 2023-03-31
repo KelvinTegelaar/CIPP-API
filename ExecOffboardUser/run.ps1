@@ -78,7 +78,11 @@ try {
                 try { 
                     $Groupname = ($using:AllGroups | Where-Object -Property id -EQ $group).displayName
                     $IsMailEnabled = ($using:AllGroups | Where-Object -Property id -EQ $group).mailEnabled
-                    if (-not $IsMailEnabled) {
+                    $IsM365Group = ($using:AllGroups | Where-Object {$_.id -eq $group -and $_.groupTypes -contains "Unified"}) -ne $null
+                    if ($IsM365Group) {
+                        $RemoveRequest = New-GraphPostRequest -uri "https://graph.microsoft.com/beta/groups/$_/members/$($using:userid)/`$ref" -tenantid $using:tenantFilter -type DELETE -body '' -Verbose
+                    }
+                    elseif (-not $IsMailEnabled) {
                         $RemoveRequest = New-GraphPostRequest -uri "https://graph.microsoft.com/beta/groups/$_/members/$($using:userid)/`$ref" -tenantid $using:tenantFilter -type DELETE -body '' -Verbose
                     }
                     elseif ($IsMailEnabled) {
