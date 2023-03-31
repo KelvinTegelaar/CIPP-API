@@ -25,16 +25,16 @@ try {
     # Interact with query parameters or the body of the request.
     $name = $Request.Query.TenantFilter
     if ($Request.Query.AddExclusion) {
-        Write-Host ($Request.body.value | ConvertTo-Json)
         $Tenants = Get-Tenants -IncludeAll | Where-Object { $Request.body.value -contains $_.customerId }
-        Write-Host ($Tenants | ConvertTo-Json)
+       
         $Excluded = foreach ($Tenant in $Tenants) {
             $Tenant.Excluded = $true
             $Tenant.ExcludeUser = $username
             $Tenant.ExcludeDate = $date
             $Tenant
         }
-        Update-AzDataTableEntity @TenantsTable -Entity $Excluded
+        Write-Host ($Excluded | ConvertTo-Json)
+        Update-AzDataTableEntity @TenantsTable -Entity ([pscustomobject]$Excluded)
         #Remove-CIPPCache
         Write-LogMessage -API $APINAME -tenant $($name) -user $request.headers.'x-ms-client-principal' -message "Added exclusion for customer(s): $($Excluded.defaultDomainName -join ',')" -Sev 'Info' 
         $body = [pscustomobject]@{'Results' = "Success. Added exclusions for customer(s): $($Excluded.defaultDomainName -join ',')" }

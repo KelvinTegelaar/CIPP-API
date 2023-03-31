@@ -381,16 +381,16 @@ function Get-Tenants {
     }
     $IncludedTenantsCache = Get-AzDataTableEntity @TenantsTable -Filter $Filter
 
-    $LastRefresh = ($IncludedTenantsCache | Sort-Object LastRefresh | Select-Object -First 1).LastRefresh.DateTime
-
+    $LastRefresh = ($IncludedTenantsCache | Where-Object { $_.customerId } | Sort-Object LastRefresh | Select-Object -First 1).LastRefresh.DateTime
     if ($LastRefresh -lt (Get-Date).Addhours(-24).ToUniversalTime()) {
         try {
+            Write-Host 'Renewing. Cache not hit.'
             $TenantList = (New-GraphGetRequest -uri "https://graph.microsoft.com/beta/tenantRelationships/managedTenants/tenants?`$top=999" -tenantid $env:TenantID ) | Select-Object id, @{l = 'customerId'; e = { $_.tenantId } }, @{l = 'DefaultdomainName'; e = { [string]($_.contract.defaultDomainName) } } , @{l = 'MigratedToNewTenantAPI'; e = { $true } }, DisplayName, domains, tenantStatusInformation | Where-Object -Property defaultDomainName -NotIn $SkipListCache.defaultDomainName
         }
         catch {
             Write-Host 'probably no license for Lighthouse. Using old API.'
         }
-        if (!$TenantList) {
+        if (!$TenantList.customerId) {
             $TenantList = (New-GraphGetRequest -uri "https://graph.microsoft.com/beta/contracts?`$top=999" -tenantid $env:TenantID ) | Select-Object id, customerId, DefaultdomainName, DisplayName, domains | Where-Object -Property defaultDomainName -NotIn $SkipListCache.defaultDomainName
         }
         $IncludedTenantsCache = [system.collections.generic.list[hashtable]]::new()
@@ -434,6 +434,7 @@ function Get-Tenants {
             Add-AzDataTableEntity @TenantsTable -Entity $IncludedTenantsCache
         }
     }
+
     if ($SkipList) {
         return $SkipListCache
     }
