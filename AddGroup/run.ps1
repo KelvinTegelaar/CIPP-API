@@ -27,7 +27,7 @@ $results = foreach ($tenant in $SelectedTenants) {
 
             } 
             if ($groupobj.membershipRules) {
-                $BodyToship | Add-Member  -NotePropertyName "membershipRule" -NotePropertyValue ($groupobj.membershipRules | ConvertFrom-Json)
+                $BodyToship | Add-Member  -NotePropertyName "membershipRule" -NotePropertyValue ($groupobj.membershipRules)
                 $BodyToship | Add-Member  -NotePropertyName "groupTypes" -NotePropertyValue @("DynamicMembership")
                 $BodyToship | Add-Member  -NotePropertyName "membershipRuleProcessingState" -NotePropertyValue "On"
             }
