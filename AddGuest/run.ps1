@@ -10,12 +10,21 @@ $userobj = $Request.body
 # Write to the Azure Functions log stream.
 Write-Host "PowerShell HTTP trigger function processed a request."
 try {
+if ($userobj.RedirectURL) {
     $BodyToship = [pscustomobject] @{
         "InvitedUserDisplayName"                = $userobj.Displayname
         "InvitedUserEmailAddress"               = $($userobj.mail)
         "inviteRedirectUrl"                     = $($userobj.RedirectURL)
         "sendInvitationMessage"                 = [boolean]$userobj.SendInvite
     } 
+}
+else {$BodyToship = [pscustomobject] @{
+    "InvitedUserDisplayName"                = $userobj.Displayname
+    "InvitedUserEmailAddress"               = $($userobj.mail)
+    "sendInvitationMessage"                 = [boolean]$userobj.SendInvite
+    "inviteRedirectUrl"                     = "https://myapps.microsoft.com"
+}
+} 
     $bodyToShip = ConvertTo-Json -Depth 10 -InputObject $BodyToship -Compress
     $GraphRequest = New-GraphPostRequest -uri "https://graph.microsoft.com/beta/invitations" -tenantid $Userobj.tenantid -type POST -body $BodyToship -verbose
     if ($Userobj.sendInvite -eq "true") { 
