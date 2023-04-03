@@ -20,8 +20,9 @@ try {
     }
 }
 catch { 
-    $StatusCode = [HttpStatusCode]::Forbidden
-    $GraphRequest = "Could not connect to Azure Lighthouse API: $($_)" 
+        $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
+        $StatusCode = [HttpStatusCode]::Forbidden
+        $GraphRequest = "Could not connect to Azure Lighthouse API: $($ErrorMessage)"
 }
 # Associate values to output bindings by calling 'Push-OutputBinding'.
 Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
