@@ -19,9 +19,10 @@ try {
             $TableRows = foreach ($Row in $TableBaseData) {
                 $Row.PartitionKey = 'License'
                 $Row.RowKey = $Row.GUID
-                $Row
+                
+                Add-AzDataTableEntity @Table -Entity ([pscustomobject]$Row) -Force | Out-Null
             }
-            Add-AzDataTableEntity @Table -Entity $TableRows -Force | Out-Null
+            
             $Rows = Get-AzDataTableEntity @Table
 
             Write-LogMessage -API $APINAME -user $request.headers.'x-ms-client-principal' -message 'got excluded licenses list' -Sev 'Info'

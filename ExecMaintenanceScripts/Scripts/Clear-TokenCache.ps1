@@ -32,10 +32,9 @@ try {
     $Settings = $Function | Get-AzFunctionAppSetting
     $Function | Update-AzFunctionAppSetting -AppSetting @{ 
         RefreshToken2         = $Settings.RefreshToken 
-        ExchangeRefreshToken2 = $Settings.ExchangeRefreshToken
     } | Out-Null
     $Function | Remove-AzFunctionAppSetting -AppSettingName RefreshToken | Out-Null
-    $Function | Remove-AzFunctionAppSetting -AppSettingName ExchangeRefreshToken | Out-Null
+    $Function | Remove-AzFunctionAppSetting -AppSettingName ExchangeRefreshToken | Out-Null # Leave this in to clean up ExchangeRefreshToken entry
     $Function | Stop-AzFunctionApp -Force | Out-Null
 }
 catch {
@@ -58,7 +57,6 @@ try {
     $Settings = $Function | Get-AzFunctionAppSetting
     $Function | Update-AzFunctionAppSetting -AppSetting @{ 
         RefreshToken         = $Settings.RefreshToken2
-        ExchangeRefreshToken = $Settings.ExchangeRefreshToken2
     } | Out-Null
     $Function | Stop-AzFunctionApp -Force | Out-Null
     Start-SleepProgress -Seconds 300
@@ -66,7 +64,7 @@ try {
 
     Write-Host 'Cleaning up temporary settings'
     $Function | Remove-AzFunctionAppSetting -AppSettingName RefreshToken2 | Out-Null
-    $Function | Remove-AzFunctionAppSetting -AppSettingName ExchangeRefreshToken2 | Out-Null
+    $Function | Remove-AzFunctionAppSetting -AppSettingName ExchangeRefreshToken2 | Out-Null # Leave this in to deal with leftover ExchangeRefreshToken2 entries
     $Function | Restart-AzFunctionApp -Force | Out-Null
 }
 catch {

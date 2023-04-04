@@ -10,18 +10,19 @@ $user = $request.headers.'x-ms-client-principal'
 $username = ([System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($user)) | ConvertFrom-Json).userDetails
 $date = (Get-Date).tostring('yyyy-MM-dd')
 $TenantsTable = Get-CippTable -tablename Tenants
+
+if ($Request.Query.List) {
+    $ExcludedFilter = "PartitionKey eq 'Tenants' and Excluded eq true" 
+    $ExcludedTenants = Get-AzDataTableEntity @TenantsTable -Filter $ExcludedFilter 
+    Write-LogMessage -API $APINAME -user $request.headers.'x-ms-client-principal' -message 'got excluded tenants list' -Sev 'Info'
+    $body = @($ExcludedTenants)
+}
+elseif ($Request.query.ListAll) {
+    $ExcludedTenants = Get-AzDataTableEntity @TenantsTable -filter "PartitionKey eq 'Tenants'" 
+    Write-LogMessage -API $APINAME -user $request.headers.'x-ms-client-principal' -message 'got excluded tenants list' -Sev 'Info'
+    $body = @($ExcludedTenants)
+}
 try {
-    if ($Request.Query.List) {
-        $ExcludedFilter = "PartitionKey eq 'Tenants' and Excluded eq true" 
-        $ExcludedTenants = Get-AzDataTableEntity @TenantsTable -Filter $ExcludedFilter 
-        Write-LogMessage -API $APINAME -user $request.headers.'x-ms-client-principal' -message 'got excluded tenants list' -Sev 'Info'
-        $body = @($ExcludedTenants)
-    }
-    elseif ($Request.query.ListAll) {
-        $ExcludedTenants = Get-AzDataTableEntity @TenantsTable
-        Write-LogMessage -API $APINAME -user $request.headers.'x-ms-client-principal' -message 'got excluded tenants list' -Sev 'Info'
-        $body = @($ExcludedTenants | Where-Object -Property defaultDomainName -NE $null)
-    }
     # Interact with query parameters or the body of the request.
     $name = $Request.Query.TenantFilter
     if ($Request.Query.AddExclusion) {

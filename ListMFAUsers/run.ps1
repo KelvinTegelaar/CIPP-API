@@ -50,10 +50,10 @@ if ($Request.query.TenantFilter -ne 'AllTenants') {
     }
     # Interact with query parameters or the body of the request.
     $GraphRequest = $Users | ForEach-Object {
-        Write-Host "Processing users"
+        Write-Host 'Processing users'
         $UserCAState = New-Object System.Collections.ArrayList
         foreach ($CA in $CAState) {
-            Write-Host "Looping CAState"
+            Write-Host 'Looping CAState'
             if ($CA -eq 'All Users') {
                 if ($ExcludeAllUsers -contains $_.ObjectId) { $UserCAState.Add('Excluded from All Users') | Out-Null }
                 else { $UserCAState.Add($CA) | Out-Null }
@@ -63,7 +63,7 @@ if ($Request.query.TenantFilter -ne 'AllTenants') {
                 else { $UserCAState.Add($CA) | Out-Null }
             }
             else {
-                Write-Host "Adding to CA"
+                Write-Host 'Adding to CA'
                 $UserCAState.Add($CA) | Out-Null
             }
         }
@@ -87,9 +87,12 @@ if ($Request.query.TenantFilter -ne 'AllTenants') {
 }
 else {
     $Table = Get-CIPPTable -TableName cachemfa
+
     $Rows = Get-AzDataTableEntity @Table | Where-Object -Property Timestamp -GT (Get-Date).AddHours(-2)
     if (!$Rows) {
-        Push-OutputBinding -Name Msg -Value (Get-Date).ToString()
+        $Queue = New-CippQueueEntry -Name 'MFA Users - All Tenants' -Link '/identity/reports/mfa-report?customerId=AllTenants'
+        Write-Information ($Queue | ConvertTo-Json)
+        Push-OutputBinding -Name Msg -Value $Queue.RowKey
         $GraphRequest = [PSCustomObject]@{
             UPN = 'Loading data for all tenants. Please check back in 10 minutes'
         }
