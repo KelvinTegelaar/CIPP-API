@@ -235,7 +235,6 @@ $dash = [PSCustomObject]@{
     tenantCount       = [int64]$TenantCount
     tenantErrorCount  = [int64]$TenantErrorCount
     RefreshTokenDate  = (Get-CronNextExecutionTime -Expression '0 0 * * 0').AddDays('-7').tostring('s') -split 'T' | Select-Object -First 1
-    ExchangeTokenDate = (Get-CronNextExecutionTime -Expression '0 0 * * 0').AddDays('-7').tostring('s') -split 'T' | Select-Object -First 1
     LastLog           = @($SlimRows)
     Alerts            = $Alerts
 }
