@@ -1,0 +1,9 @@
+{
+  "Name": "Proofpoint",
+  "_MxComment": "https://help.proofpoint.com/Proofpoint_Essentials/Email_Security/Administrator_Topics/000_gettingstarted/020_connectiondetails",
+  "MxMatch": "ppe-hosted.com",
+  "_SpfComment": "https://help.proofpoint.com/Proofpoint_Essentials/Email_Security/Administrator_Topics/000_gettingstarted/020_connectiondetails",
+  "SpfInclude": "ppe-hosted.com",
+  "_DkimComment": "https://help.proofpoint.com/Proofpoint_Essentials/Email_Security/Administrator_Topics/030_domains/Configuring_Outbound_DKIM_Signing",
+  "Selectors": [""]
+}

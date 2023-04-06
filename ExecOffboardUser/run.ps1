@@ -13,7 +13,7 @@ try {
 
     Write-Host ($request.body | ConvertTo-Json)
     $results = switch ($request.body) {
-        { $_."ConvertToShared" -eq 'true' } { 
+        { $_."ConvertToShared" -eq 'true' } {
             try {
                 $SharedMailbox = New-ExoRequest -tenantid $TenantFilter -cmdlet "Set-mailbox" -cmdParams @{Identity = $userid; type = "Shared" } -Anchor $username
                 $ConvertedMailbox = New-ExoRequest -tenantid $TenantFilter -cmdlet "Get-mailbox" -cmdParams @{Identity = $userid }
@@ -31,7 +31,7 @@ try {
                         $LicenseUnAssignAllowed = $true
                         "Converted $($username) to Shared Mailbox"
                     }
-                    Start-Sleep 3
+                    Start-Sleep -Milliseconds 500
                 }
                 
                 Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME  -message "Converted $($username) to a shared mailbox" -Sev "Info" -tenant $TenantFilter
@@ -45,8 +45,8 @@ try {
         { $_.RevokeSessions -eq 'true' } { 
             try {
                 $GraphRequest = New-GraphPostRequest -uri "https://graph.microsoft.com/beta/users/$($userid)/invalidateAllRefreshTokens" -tenantid $TenantFilter -type POST -body '{}'  -verbose
-                "Success. All sessions by this user have been revoked"
-                Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME  -message "Revoked sessions for $($userid)" -Sev "Info"
+                "Success. All sessions by $username have been revoked"
+                Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME  -message "Revoked sessions for $($username)" -Sev "Info" -tenant $TenantFilter
 
             }
             catch {
@@ -55,7 +55,7 @@ try {
         }
         { $_.ResetPass -eq 'true' } { 
             try { 
-                $password = -join ('abcdefghkmnrstuvwxyzABCDEFGHKLMNPRSTUVWXYZ23456789$%&*#'.ToCharArray() | Get-Random -Count 12)
+                $password = New-passwordString
                 $passwordProfile = @"
                 {"passwordProfile": { "forceChangePasswordNextSignIn": true, "password": "$password" }}'
 "@ 
@@ -71,19 +71,31 @@ try {
             }
         }
         { $_.RemoveGroups -eq 'true' } { 
-      (New-GraphPostRequest -uri "https://graph.microsoft.com/beta/users/$($userid)/GetMemberGroups" -tenantid $tenantFilter -type POST -body  '{"securityEnabledOnly": false}').value | ForEach-Object {
+            $AllGroups = (New-GraphGetRequest -uri "https://graph.microsoft.com/beta/groups/?$select=DisplayName,mailEnabled" -tenantid $tenantFilter)
+            (New-GraphPostRequest -uri "https://graph.microsoft.com/beta/users/$($userid)/GetMemberGroups" -tenantid $tenantFilter -type POST -body  '{"securityEnabledOnly": false}').value | ForEach-Object -parallel {
+                Import-Module '.\GraphHelper.psm1'
                 $group = $_
                 try { 
-                    $RemoveRequest = New-GraphPostRequest -uri "https://graph.microsoft.com/beta/groups/$_/members/$($userid)/`$ref" -tenantid $tenantFilter -type DELETE -body '' -Verbose
-                    $Groupname = (New-GraphGetRequest -uri "https://graph.microsoft.com/beta/groups/$_" -tenantid $tenantFilter).displayName
+                    $Groupname = ($using:AllGroups | Where-Object -Property id -EQ $group).displayName
+                    $IsMailEnabled = ($using:AllGroups | Where-Object -Property id -EQ $group).mailEnabled
+                    $IsM365Group = ($using:AllGroups | Where-Object {$_.id -eq $group -and $_.groupTypes -contains "Unified"}) -ne $null
+                    if ($IsM365Group) {
+                        $RemoveRequest = New-GraphPostRequest -uri "https://graph.microsoft.com/beta/groups/$_/members/$($using:userid)/`$ref" -tenantid $using:tenantFilter -type DELETE -body '' -Verbose
+                    }
+                    elseif (-not $IsMailEnabled) {
+                        $RemoveRequest = New-GraphPostRequest -uri "https://graph.microsoft.com/beta/groups/$_/members/$($using:userid)/`$ref" -tenantid $using:tenantFilter -type DELETE -body '' -Verbose
+                    }
+                    elseif ($IsMailEnabled) {
+                        $Params = @{ Identity = $Groupname; Member = $using:userid ; BypassSecurityGroupManagerCheck = $true }
+                        New-ExoRequest -tenantid $using:tenantFilter -cmdlet "Remove-DistributionGroupMember" -cmdParams $params  -UseSystemMailbox $true
+                    }
                     "Successfully removed user from group $Groupname"
-                    Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME  -message "Removed groups for $($username)" -Sev "Info"  -tenant $TenantFilter
-
+                    Write-LogMessage -user $using:request.headers.'x-ms-client-principal' -API $using:APINAME  -message "Removed $($using:username) from $groupname" -Sev "Info"  -tenant $using:TenantFilter
                 }
                 catch {
-                    Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME  -message "Could not remove $($username) from group $group" -Sev "Error" -tenant $TenantFilter
+                    Write-LogMessage -user $using:request.headers.'x-ms-client-principal' -API $using:APINAME  -message "Could not remove $($using:username) from group $groupname" -Sev "Error" -tenant $using:TenantFilter
 
-                    "Could not remove user from group$($group): $($_.Exception.Message)"
+                    "Could not remove user from group $($Groupname): $($_.Exception.Message). This is likely because its a Dynamic Group or synched with active directory"
                 }
             
             }
@@ -243,19 +255,18 @@ try {
 
         { $_."RemoveRules" -eq 'true' } {
             try {
-                $rules = New-ExoRequest -tenantid $TenantFilter -cmdlet "Get-InboxRule" -cmdParams @{Identity = $userid } -Anchor $username | ForEach-Object {
-                    try {
-                        New-ExoRequest -tenantid $TenantFilter -cmdlet "Remove-InboxRule" -Anchor $username -cmdParams @{Identity = $_.Identity }
-                        "Removed rule: $($_.Name)"
-                    }
-                    catch {
-                        "Could not remove rule: $($_.Name)"
-                        continue
-                    }
+                $rules = New-ExoRequest -tenantid $TenantFilter -cmdlet "Get-InboxRule" -cmdParams @{mailbox = $userid } 
+                if ($rules -eq $null) {
+                    Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME  -message "No Rules for $($username) to delete" -Sev "Info" -tenant $TenantFilter
+                    "No rules for $($username) to delete"
                 }
-           
-                Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME  -message "Deleted Rules for $($username)" -Sev "Info" -tenant $TenantFilter
-
+                else {
+                    ForEach ($rule in $rules) {
+                        New-ExoRequest -tenantid $TenantFilter -cmdlet "Remove-InboxRule" -Anchor $username -cmdParams @{Identity = $rule.Identity }
+                    }
+                    Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME  -message "Deleted Rules for $($username)" -Sev "Info" -tenant $TenantFilter
+                    "Deleted Rules for $($username)"
+                }
             }
             catch {
                 Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME  -message "Could not delete rules for $($username): $($_.Exception.Message)" -Sev "Error" -tenant $TenantFilter

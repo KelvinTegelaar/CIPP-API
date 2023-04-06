@@ -11,7 +11,7 @@ $TenantFilter = $Request.Query.TenantFilter
 $Body = if ($Request.Query.Enable) { '{"accountEnabled":"true"}' } else { '{"accountEnabled":"false"}' }
 try {
       $GraphRequest = New-GraphPostRequest -uri "https://graph.microsoft.com/v1.0/users/$($Request.query.ID)" -tenantid $TenantFilter -type PATCH -body $Body  -verbose
-      $Results = [pscustomobject]@{"Results" = "Successfully completed request." }
+      $Results = [pscustomobject]@{"Results" = "Successfully changed state for $($Request.query.ID)" }
 }
 catch {
       $Results = [pscustomobject]@{"Results" = "Failed. $($_.Exception.Message)" }
