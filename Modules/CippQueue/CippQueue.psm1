@@ -67,4 +67,19 @@ function Get-CippQueue {
         })
 }
 
-Export-ModuleMember -Function @('New-CippQueueEntry', 'Get-CippQueue', 'Update-CippQueueEntry')
+function Remove-CippQueue {
+    # Input bindings are passed in via param block.
+    param($Request, $TriggerMetadata)
+
+    $APIName = $TriggerMetadata.FunctionName
+    Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -message 'Accessed this API' -Sev 'Debug'
+
+    # Write to the Azure Functions log stream.
+    Write-Host 'PowerShell HTTP trigger function processed a request.'
+
+    $CippQueue = Get-CippTable -TableName 'CippQueue'
+    Clear-AzDataTable -Context @CippQueue
+}
+
+
+Export-ModuleMember -Function @('New-CippQueueEntry', 'Get-CippQueue', 'Update-CippQueueEntry', 'Remove-CippQueue')
