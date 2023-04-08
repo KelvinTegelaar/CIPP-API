@@ -34,7 +34,7 @@ $RoleMappings = foreach ($group in $Groups) {
                         PartitionKey     = 'Roles'
                         RowKey           = $GraphRequest.Id
                         RoleName         = $Group.Name
-                        GroupName        = $BodyToship.displayName
+                        GroupName        = "M365 GDAP $($Group.Name)"
                         GroupId          = $GraphRequest.Id 
                         roleDefinitionId = $group.ObjectId
                   }
