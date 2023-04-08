@@ -12,9 +12,6 @@ $Results = [System.Collections.Generic.List[string]]::new()
 $ExistingGroups = New-GraphGetRequest -NoAuthCheck $True -uri 'https://graph.microsoft.com/beta/groups' -tenantid $env:TenantID
 
 $RoleMappings = foreach ($group in $Groups) {
-      $randomSleep = Get-Random -Minimum 10 -Maximum 500
-      Start-Sleep -Milliseconds $randomSleep
-      
       try {
             if ("M365 GDAP $($Group.Name)" -in $ExistingGroups.displayName) {
                   @{
