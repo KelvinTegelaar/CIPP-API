@@ -19,7 +19,7 @@ $RoleMappings = foreach ($group in $Groups) {
             if ("M365 GDAP $($Group.Name)" -in $ExistingGroups.displayName) {
                   @{
                         PartitionKey     = 'Roles'
-                        RowKey           = $Group.ObjectId
+                        RowKey           = ($ExistingGroups | Where-Object -Property displayName -EQ "M365 GDAP $($Group.Name)").id
                         RoleName         = $Group.Name
                         GroupName        = "M365 GDAP $($Group.Name)"
                         GroupId          = ($ExistingGroups | Where-Object -Property displayName -EQ "M365 GDAP $($Group.Name)").id
@@ -32,7 +32,7 @@ $RoleMappings = foreach ($group in $Groups) {
                   $GraphRequest = New-GraphPostRequest -NoAuthCheck $True -uri 'https://graph.microsoft.com/beta/groups' -tenantid $env:TenantID -type POST -body $BodyToship -verbose
                   @{
                         PartitionKey     = 'Roles'
-                        RowKey           = $Group.ObjectId
+                        RowKey           = $GraphRequest.Id
                         RoleName         = $Group.Name
                         GroupName        = $BodyToship.displayName
                         GroupId          = $GraphRequest.Id 
