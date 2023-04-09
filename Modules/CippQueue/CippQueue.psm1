@@ -59,7 +59,7 @@ function Get-CippQueue {
     Write-Host 'PowerShell HTTP trigger function processed a request.'
 
     $CippQueue = Get-CippTable -TableName 'CippQueue'
-    $CippQueueData = Get-AzDataTableEntity @CippQueue 
+    $CippQueueData = Get-AzDataTableEntity @CippQueue | Sort-Object -Property Timestamp -Descending 
 
     Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
             StatusCode = [HttpStatusCode]::OK
