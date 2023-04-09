@@ -78,7 +78,12 @@ function Remove-CippQueue {
     Write-Host 'PowerShell HTTP trigger function processed a request.'
 
     $CippQueue = Get-CippTable -TableName 'CippQueue'
-    Clear-AzDataTable -Context @CippQueue
+    Clear-AzDataTable @CippQueue
+
+    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
+            StatusCode = [HttpStatusCode]::OK
+            Body       = @{Results = @('History cleared') }
+        })
 }
 
 
