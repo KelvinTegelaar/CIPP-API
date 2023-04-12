@@ -60,7 +60,7 @@ if ($TenantCount -gt 0) {
             $Domain = Get-AzDataTableEntity @DomainTable -Filter $Filter
 
             if (!$Domain) {
-                $DomainObject = @{
+                $DomainObject = [pscustomobject]@{
                     DomainAnalyser = ''
                     TenantDetails  = $TenantDetails
                     TenantId       = $Tenant.Tenant
