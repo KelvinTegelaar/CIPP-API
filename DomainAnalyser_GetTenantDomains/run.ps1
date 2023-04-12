@@ -50,7 +50,6 @@ if ($TenantCount -gt 0) {
     try {
         $TenantDomainObjects = foreach ($Tenant in $TenantDomains) {
             $TenantDetails = ($Tenant | ConvertTo-Json -Compress).ToString()
-            Write-LogMessage -API 'DomainAnalyserTesting' -message "$TenantDetails" -sev info
             $Filter = "PartitionKey eq '{0}' and RowKey eq '{1}'" -f $Tenant.Tenant, $Tenant.Domain
             $OldDomain = Get-AzDataTableEntity @DomainTable -Filter $Filter
 
@@ -62,7 +61,7 @@ if ($TenantCount -gt 0) {
             $Domain = Get-AzDataTableEntity @DomainTable -Filter $Filter
 
             if (!$Domain) {
-                $DomainObject = @{
+                $DomainObject = [pscustomobject]@{
                     DomainAnalyser = ''
                     TenantDetails  = $TenantDetails
                     TenantId       = $Tenant.Tenant
