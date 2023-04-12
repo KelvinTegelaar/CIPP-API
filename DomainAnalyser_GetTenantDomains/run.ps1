@@ -1,7 +1,7 @@
 param($name)
 
 $Tenants = Get-Tenants
-#$ExcludedTenants = Get-Tenants -SkipList
+$ExcludedTenants = Get-Tenants -SkipList
 $DomainTable = Get-CippTable -tablename 'Domains'
 
 $TenantDomains = $Tenants | ForEach-Object -Parallel {
@@ -30,15 +30,15 @@ $TenantDomains = $Tenants | ForEach-Object -Parallel {
 }
 
 # Cleanup domains from tenants with errors, skip domains with manually set selectors or mail providers
-#foreach ($Exclude in $ExcludedTenants) {
-#    $Filter = "PartitionKey eq 'TenantDomains' and TenantId eq '{0}'" -f $Exclude.defaultDomainName
-#    $CleanupRows = Get-AzDataTableEntity @DomainTable -Filter $Filter
-#    $CleanupCount = ($CleanupRows | Measure-Object).Count
-#    if ($CleanupCount -gt 0) {
-#        Write-LogMessage -API 'DomainAnalyser' -tenant $Exclude.defaultDomainName -message "Cleaning up $CleanupCount domain(s) for excluded tenant" -sev Info
-#        Remove-AzDataTableEntity @DomainTable -Entity $CleanupRows
-#    }
-#}
+foreach ($Exclude in $ExcludedTenants) {
+    $Filter = "PartitionKey eq 'TenantDomains' and TenantId eq '{0}'" -f $Exclude.defaultDomainName
+    $CleanupRows = Get-AzDataTableEntity @DomainTable -Filter $Filter
+    $CleanupCount = ($CleanupRows | Measure-Object).Count
+    if ($CleanupCount -gt 0) {
+        Write-LogMessage -API 'DomainAnalyser' -tenant $Exclude.defaultDomainName -message "Cleaning up $CleanupCount domain(s) for excluded tenant" -sev Info
+        Remove-AzDataTableEntity @DomainTable -Entity $CleanupRows
+    }
+}
 
 
 $TenantCount = ($TenantDomains | Measure-Object).Count
@@ -60,7 +60,7 @@ if ($TenantCount -gt 0) {
             $Domain = Get-AzDataTableEntity @DomainTable -Filter $Filter
 
             if (!$Domain) {
-                $DomainObject = [PSCustomObject]@{
+                $DomainObject = @{
                     DomainAnalyser = ''
                     TenantDetails  = $TenantDetails
                     TenantId       = $Tenant.Tenant
@@ -85,13 +85,11 @@ if ($TenantCount -gt 0) {
             }
             # Return domain object to list
             $Domain
-            Write-LogMessage -API 'DomainAnalyserTesting' -message "$TenantDetails"
         }
 
         # Batch insert all tenant domains
         try {
             Add-AzDataTableEntity @DomainTable -Entity $TenantDomainObjects -Force
-            Write-LogMessage -API 'DomainAnalyserTesting' -message "$($TenantDomainObjects.count)"
         }
         catch { Write-LogMessage -API 'DomainAnalyser' -message "Domain Analyser GetTenantDomains Error $($_.Exception.Message)" -sev info }
     }
