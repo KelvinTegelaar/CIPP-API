@@ -44,11 +44,13 @@ foreach ($Exclude in $ExcludedTenants) {
 $TenantCount = ($TenantDomains | Measure-Object).Count
 if ($TenantCount -gt 0) {
     Write-Host "$TenantCount tenant Domains"
+    Write-LogMessage -API 'DomainAnalyser' -message "Domain Analyser running on $TenantCount Domains" -sev info
 
     # Process tenant domain results
     try {
         $TenantDomainObjects = foreach ($Tenant in $TenantDomains) {
             $TenantDetails = ($Tenant | ConvertTo-Json -Compress).ToString()
+            Write-LogMessage -API 'DomainAnalyserTesting' -message "$TenantDetails" -sev info
             $Filter = "PartitionKey eq '{0}' and RowKey eq '{1}'" -f $Tenant.Tenant, $Tenant.Domain
             $OldDomain = Get-AzDataTableEntity @DomainTable -Filter $Filter
 
@@ -90,6 +92,7 @@ if ($TenantCount -gt 0) {
         # Batch insert all tenant domains
         try {
             Add-AzDataTableEntity @DomainTable -Entity $TenantDomainObjects -Force
+            Write-LogMessage -API 'DomainAnalyserTesting' -message "Domain Analyser Uploading $($TenantDomainObjects.Count)" -sev info
         }
         catch { Write-LogMessage -API 'DomainAnalyser' -message "Domain Analyser GetTenantDomains Error $($_.Exception.Message)" -sev info }
     }
