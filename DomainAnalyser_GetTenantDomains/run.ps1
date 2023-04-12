@@ -87,7 +87,7 @@ if ($TenantCount -gt 0) {
             # Return domain object to list
             $Domain
         }
-
+        $TenantDomainObjects = New-Object psobject -Property $TenantDomainObjects
         # Batch insert all tenant domains
         try {
             Add-AzDataTableEntity @DomainTable -Entity $TenantDomainObjects -Force
