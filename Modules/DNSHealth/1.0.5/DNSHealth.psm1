@@ -1507,24 +1507,28 @@ function Read-SpfRecord {
 
                     # Include mechanism
                     elseif ($Term -match '^(?<Qualifier>[+-~?])?include:(?<Value>.+)$') {
-                        $LookupCount++
-                        Write-Verbose '-----INCLUDE-----'
-                        Write-Verbose "Looking up include $($Matches.Value)"
-                        $IncludeLookup = Read-SpfRecord -Domain $Matches.Value -Level 'Include'
+                        if ($Matches.Value -ne $Domain) {
+                            $LookupCount++
+                            Write-Verbose '-----INCLUDE-----'
+                            Write-Verbose "Looking up include $($Matches.Value)"
+                            $IncludeLookup = Read-SpfRecord -Domain $Matches.Value -Level 'Include'
 
-                        if ([string]::IsNullOrEmpty($IncludeLookup.Record) -and $Level -eq 'Parent') {
-                            Write-Verbose '-----END INCLUDE (SPF MISSING)-----'
-                            $ValidationFails.Add("Include lookup for $($Matches.Value) does not contain a SPF record, this will result in a failure.") | Out-Null
+                            if ([string]::IsNullOrEmpty($IncludeLookup.Record) -and $Level -eq 'Parent') {
+                                Write-Verbose '-----END INCLUDE (SPF MISSING)-----'
+                                $ValidationFails.Add("Include lookup for $($Matches.Value) does not contain a SPF record, this will result in a failure.") | Out-Null
+                                $Status = 'permerror'
+                            } else {
+                                Write-Verbose '-----END INCLUDE (SPF FOUND)-----'
+                                $RecordList.Add($IncludeLookup) | Out-Null
+                                $ValidationFails.AddRange([string[]]$IncludeLookup.ValidationFails) | Out-Null
+                                $ValidationWarns.AddRange([string[]]$IncludeLookup.ValidationWarns) | Out-Null
+                                $ValidationPasses.AddRange([string[]]$IncludeLookup.ValidationPasses) | Out-Null
+                                $IPAddresses.AddRange([string[]]$IncludeLookup.IPAddresses) | Out-Null
+                            }
+                        } else {
+                            Write-Verbose "-----END INCLUDE (INFINITE LOOP -> $Domain SHOULD NOT INCLUDE ITSELF)-----"
+                            $ValidationFails.Add("Include lookup for $($Matches.Value) should not exist. It will cause an infinite loop.") | Out-Null
                             $Status = 'permerror'
-                        }
-
-                        else {
-                            Write-Verbose '-----END INCLUDE (SPF FOUND)-----'
-                            $RecordList.Add($IncludeLookup) | Out-Null
-                            $ValidationFails.AddRange([string[]]$IncludeLookup.ValidationFails) | Out-Null
-                            $ValidationWarns.AddRange([string[]]$IncludeLookup.ValidationWarns) | Out-Null
-                            $ValidationPasses.AddRange([string[]]$IncludeLookup.ValidationPasses) | Out-Null
-                            $IPAddresses.AddRange([string[]]$IncludeLookup.IPAddresses) | Out-Null
                         }
                     }
 
@@ -1841,7 +1845,7 @@ function Read-SpfRecord {
     # Output SpfResults object
     $SpfResults
 }
-#EndRegion './Public/Records/Read-SPFRecord.ps1' 549
+#EndRegion './Public/Records/Read-SPFRecord.ps1' 553
 #Region './Public/Records/Read-TlsRptRecord.ps1' 0
 function Read-TlsRptRecord {
     <#
