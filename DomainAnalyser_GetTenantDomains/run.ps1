@@ -1,7 +1,7 @@
 param($name)
 
 $Tenants = Get-Tenants
-$ExcludedTenants = Get-Tenants -SkipList
+#$ExcludedTenants = Get-Tenants -SkipList
 $DomainTable = Get-CippTable -tablename 'Domains'
 
 $TenantDomains = $Tenants | ForEach-Object -Parallel {
@@ -30,19 +30,20 @@ $TenantDomains = $Tenants | ForEach-Object -Parallel {
 }
 
 # Cleanup domains from tenants with errors, skip domains with manually set selectors or mail providers
-foreach ($Exclude in $ExcludedTenants) {
-    $Filter = "PartitionKey eq 'TenantDomains' and TenantId eq '{0}'" -f $Exclude.defaultDomainName
-    $CleanupRows = Get-AzDataTableEntity @DomainTable -Filter $Filter
-    $CleanupCount = ($CleanupRows | Measure-Object).Count
-    if ($CleanupCount -gt 0) {
-        Write-LogMessage -API 'DomainAnalyser' -tenant $Exclude.defaultDomainName -message "Cleaning up $CleanupCount domain(s) for excluded tenant" -sev Info
-        Remove-AzDataTableEntity @DomainTable -Entity $CleanupRows
-    }
-}
+#foreach ($Exclude in $ExcludedTenants) {
+#    $Filter = "PartitionKey eq 'TenantDomains' and TenantId eq '{0}'" -f $Exclude.defaultDomainName
+#    $CleanupRows = Get-AzDataTableEntity @DomainTable -Filter $Filter
+#    $CleanupCount = ($CleanupRows | Measure-Object).Count
+#    if ($CleanupCount -gt 0) {
+#        Write-LogMessage -API 'DomainAnalyser' -tenant $Exclude.defaultDomainName -message "Cleaning up $CleanupCount domain(s) for excluded tenant" -sev Info
+#        Remove-AzDataTableEntity @DomainTable -Entity $CleanupRows
+#    }
+#}
 
 
 $TenantCount = ($TenantDomains | Measure-Object).Count
 if ($TenantCount -gt 0) {
+    Write-LogMessage -API 'DomainAnalyser' -tenant "AccurateNetworks" -message "DNS Analyser running on $TenantCount" -sev Info
     Write-Host "$TenantCount tenant Domains"
 
     # Process tenant domain results
