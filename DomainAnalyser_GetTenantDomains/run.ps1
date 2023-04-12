@@ -27,7 +27,7 @@ $TenantDomains = $Tenants | ForEach-Object -Parallel {
     catch {
         Write-LogMessage -API 'DomainAnalyser' -tenant $tenant.defaultDomainName -message "DNS Analyser GraphGetRequest Exception: $($_.Exception.Message)" -sev Error
     }
-}
+} | Sort-Object -Unique -Property Domain
 
 # Cleanup domains from tenants with errors, skip domains with manually set selectors or mail providers
 foreach ($Exclude in $ExcludedTenants) {
