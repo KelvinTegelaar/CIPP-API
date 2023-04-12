@@ -85,11 +85,13 @@ if ($TenantCount -gt 0) {
             }
             # Return domain object to list
             $Domain
+            Write-LogMessage -API 'DomainAnalyserTesting' -message "$TenantDetails"
         }
 
         # Batch insert all tenant domains
         try {
             Add-AzDataTableEntity @DomainTable -Entity $TenantDomainObjects -Force
+            Write-LogMessage -API 'DomainAnalyserTesting' -message "$($TenantDomainObjects.count)"
         }
         catch { Write-LogMessage -API 'DomainAnalyser' -message "Domain Analyser GetTenantDomains Error $($_.Exception.Message)" -sev info }
     }
