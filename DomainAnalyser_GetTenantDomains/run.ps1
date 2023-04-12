@@ -43,7 +43,6 @@ $TenantDomains = $Tenants | ForEach-Object -Parallel {
 
 $TenantCount = ($TenantDomains | Measure-Object).Count
 if ($TenantCount -gt 0) {
-    Write-LogMessage -API 'DomainAnalyser' -tenant "AccurateNetworks" -message "DNS Analyser running on $TenantCount" -sev Info
     Write-Host "$TenantCount tenant Domains"
 
     # Process tenant domain results
@@ -61,7 +60,7 @@ if ($TenantCount -gt 0) {
             $Domain = Get-AzDataTableEntity @DomainTable -Filter $Filter
 
             if (!$Domain) {
-                $DomainObject = @{
+                $DomainObject = [PSCustomObject]@{
                     DomainAnalyser = ''
                     TenantDetails  = $TenantDetails
                     TenantId       = $Tenant.Tenant
@@ -87,7 +86,7 @@ if ($TenantCount -gt 0) {
             # Return domain object to list
             $Domain
         }
-        $TenantDomainObjects = New-Object psobject -Property $TenantDomainObjects
+
         # Batch insert all tenant domains
         try {
             Add-AzDataTableEntity @DomainTable -Entity $TenantDomainObjects -Force
