@@ -54,7 +54,7 @@ if ($Request.query.TenantFilter -ne 'AllTenants') {
     }
     if ($CAState.length -eq 0) { $CAState.Add('None') | Out-Null }
     Try {
-        $MFARegistration = (New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/reports/credentialUserRegistrationDetails,accountEnabled' -tenantid $Request.query.TenantFilter)
+        $MFARegistration = (New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/reports/credentialUserRegistrationDetails' -tenantid $Request.query.TenantFilter)
     }
     catch {
         $CAState.Add('Not Licensed for Conditional Access')
