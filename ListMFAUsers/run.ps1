@@ -13,6 +13,18 @@ Write-Host 'PowerShell HTTP trigger function processed a request.'
 if ($Request.query.TenantFilter -ne 'AllTenants') {
 
     $users = Get-CIPPMSolUsers -tenant $Request.query.TenantFilter
+    if (!$users) {
+        $users = foreach ($user in (New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/users?$select=id,UserPrincipalName,DisplayName,accountEnabled' -tenantid $Request.query.TenantFilter)) {
+            [PSCustomObject]@{
+                UserPrincipalName                = $user.UserPrincipalName
+                BlockCredential                  = $user.accountEnabled
+                DisplayName                      = $user.DisplayName
+                ObjectId                         = $user.id
+                StrongAuthenticationRequirements = @{StrongAuthenticationRequirement = @{state = 'Not Available - GDAP Only' } }
+            }
+        }
+    
+    }
     $SecureDefaultsState = (New-GraphGetRequest -Uri 'https://graph.microsoft.com/beta/policies/identitySecurityDefaultsEnforcementPolicy' -tenantid $Request.query.TenantFilter ).IsEnabled
     $CAState = New-Object System.Collections.ArrayList
 
@@ -42,12 +54,13 @@ if ($Request.query.TenantFilter -ne 'AllTenants') {
     }
     if ($CAState.length -eq 0) { $CAState.Add('None') | Out-Null }
     Try {
-        $MFARegistration = (New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/reports/credentialUserRegistrationDetails' -tenantid $Request.query.TenantFilter)
+        $MFARegistration = (New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/reports/credentialUserRegistrationDetails,accountEnabled' -tenantid $Request.query.TenantFilter)
     }
     catch {
         $CAState.Add('Not Licensed for Conditional Access')
         $MFARegistration = $null
     }
+
     # Interact with query parameters or the body of the request.
     $GraphRequest = $Users | ForEach-Object {
         Write-Host 'Processing users'
