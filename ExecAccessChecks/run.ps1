@@ -98,7 +98,7 @@ if ($Request.query.Permissions -eq 'true') {
             $Success = $false
             $Links.Add([PSCustomObject]@{
                     Text = 'Permissions'
-                    Href = 'https://cipp.app/docs/user/gettingstarted/permissions/#permissions'
+                    Href = 'https://cipp.app/docs/user/gettingstarted/postinstall/permissions/'
                 }
             ) | Out-Null
         }

@@ -287,7 +287,7 @@ try {
                         $DepTokens = (New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/deviceManagement/depOnboardingSettings' -tenantid $Tenant.tenant).value 
                         foreach ($Dep in $DepTokens) {
                             if ($Dep.tokenExpirationDateTime -lt (Get-Date).AddDays(30) -and $Dep.tokenExpirationDateTime -gt (Get-Date).AddDays(-7)) {
-                                'Apple Device Enrollment Program token expiring on {0}' -f $Dep.expirationDateTime
+                                'Apple Device Enrollment Program token expiring on {0}' -f $Dep.tokenExpirationDateTime
                             }
                         }
                     }
