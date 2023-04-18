@@ -3,9 +3,9 @@ param([string]$QueueItem, $TriggerMetadata)
 
 # Write out the queue message and metadata to the information log.
 Write-Host "PowerShell queue trigger function processed work item: $QueueItem"
-$URL = $QueueItem.tolower()
-$Table = Get-CIPPTable -TableName "cache$url"
-$fullUrl = "https://graph.microsoft.com/beta/$url"
+$TableURLName = ($QueueItem.tolower() -split '?' | Select-Object -First 1).toString()
+$Table = Get-CIPPTable -TableName "cache$TableURLName"
+$fullUrl = "https://graph.microsoft.com/beta/$QueueItem"
 Get-AzDataTableEntity @Table | Remove-AzDataTableEntity @table
 
 $RawGraphRequest = Get-Tenants | ForEach-Object -Parallel { 

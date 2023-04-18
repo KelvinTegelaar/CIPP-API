@@ -13,7 +13,7 @@ Write-Host 'PowerShell HTTP trigger function processed a request.'
 # Interact with query parameters or the body of the request.
 $TenantFilter = $Request.Query.TenantFilter
 $url = $request.Query.url.tolower()
-
+$TableURLName = ($request.query.url.tolower() -split '?' | Select-Object -First 1).toString()
 $GraphRequest = if ($TenantFilter -ne 'AllTenants') {
     $LicRequest = New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/subscribedSkus' -tenantid $TenantFilter
     [PSCustomObject]@{
@@ -22,7 +22,7 @@ $GraphRequest = if ($TenantFilter -ne 'AllTenants') {
     }
 }
 else {
-    $Table = Get-CIPPTable -TableName "cache$url"
+    $Table = Get-CIPPTable -TableName "cache$TableURLName"
     $Rows = Get-AzDataTableEntity @Table | Where-Object -Property Timestamp -GT (Get-Date).AddHours(-1)
     if (!$Rows) {
         $Queue = New-CippQueueEntry -Name $URL -Link '/identity/reports/mfa-report?customerId=AllTenants'
