@@ -24,9 +24,7 @@ $RawGraphRequest = Get-Tenants | ForEach-Object -Parallel {
     } 
 }
 foreach ($Request in $RawGraphRequest) {
-    if (!$Request.Status) {
-        $Json = ConvertTo-Json -Compress -InputObject $request
-    }
+    $Json = ConvertTo-Json -Compress -InputObject $request
     $GraphRequest = [PSCustomObject]@{
         Tenant       = [string]$Request.tenant
         RowKey       = [string](New-Guid)
