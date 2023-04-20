@@ -13,14 +13,39 @@ Set-Location (Get-Item $PSScriptRoot).Parent.FullName
 # Interact with query parameters or the body of the request.
 $TenantFilter = $Request.Query.TenantFilter
 $userid = $Request.Query.UserID
-$GraphRequest = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/users/$($userid)?`$top=999&`$select=$($selectlist -join ',')" -tenantid $TenantFilter | Select-Object $selectlist | ForEach-Object {
-    $_.onPremisesSyncEnabled = [bool]($_.onPremisesSyncEnabled)
-    $_.Aliases = $_.Proxyaddresses -join ", "
-    $SkuID = $_.AssignedLicenses.skuid
-    $_.LicJoined = ($ConvertTable | Where-Object { $_.guid -in $skuid }).'Product_Display_Name' -join ", "
-    $_.primDomain = ($_.userPrincipalName -split '@' | Select-Object -Last 1)
-    $_
+
+$GraphRequest = if ($TenantFilter -ne 'AllTenants') {
+    New-GraphGetRequest -uri "https://graph.microsoft.com/beta/users/$($userid)?`$top=999&`$select=$($selectlist -join ',')" -tenantid $TenantFilter | Select-Object $selectlist | ForEach-Object {
+        $_.onPremisesSyncEnabled = [bool]($_.onPremisesSyncEnabled)
+        $_.Aliases = $_.Proxyaddresses -join ", "
+        $SkuID = $_.AssignedLicenses.skuid
+        $_.LicJoined = ($ConvertTable | Where-Object { $_.guid -in $skuid }).'Product_Display_Name' -join ", "
+        $_.primDomain = ($_.userPrincipalName -split '@' | Select-Object -Last 1)
+        $_
+    }
 }
+else {
+    $Table = Get-CIPPTable -TableName "cacheusers"
+    $Rows = Get-AzDataTableEntity @Table | Where-Object -Property Timestamp -GT (Get-Date).AddHours(-1)
+    if (!$Rows) {
+        $Queue = New-CippQueueEntry -Name  "users" -Link '/identity/reports/mailbox-statistics?customerId=AllTenants'
+        Push-OutputBinding -Name Msg -Value "users/$($userid)?`$top=999&`$select=$($selectlist -join ',')"
+        [PSCustomObject]@{
+            Tenant = 'Loading data for all tenants. Please check back after the job completes'
+        }
+    }         
+    else {
+        $Rows.Data | ConvertFrom-Json | Select-Object $selectlist | ForEach-Object {
+            $_.onPremisesSyncEnabled = [bool]($_.onPremisesSyncEnabled)
+            $_.Aliases = $_.Proxyaddresses -join ", "
+            $SkuID = $_.AssignedLicenses.skuid
+            $_.LicJoined = ($ConvertTable | Where-Object { $_.guid -in $skuid }).'Product_Display_Name' -join ", "
+            $_.primDomain = ($_.userPrincipalName -split '@' | Select-Object -Last 1)
+            $_
+        }
+    }
+}
+
 
 if ($userid -and $Request.query.IncludeLogonDetails) {
     $startDate = (Get-Date).AddDays(-7)
