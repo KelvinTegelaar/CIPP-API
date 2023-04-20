@@ -35,7 +35,6 @@ foreach ($Request in $RawGraphRequest) {
         Data         = [string]$Json
 
     }
-    #Write-Host "$fullUrl - $($GraphRequest.tenant)"
     Add-AzDataTableEntity @Table -Entity $GraphRequest -Force | Out-Null
 }
 
