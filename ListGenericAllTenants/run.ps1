@@ -4,12 +4,8 @@ param([string]$QueueItem, $TriggerMetadata)
 # Write out the queue message and metadata to the information log.
 Write-Host "PowerShell queue trigger function processed work item: $QueueItem"
 $TableURLName = ($QueueItem.tolower().split('?').Split('/') | Select-Object -First 1).toString()
-
-Write-Host "using $TableURLName"
-Write-Host "using $TableURLName"
-Write-Host "using $TableURLName"
-Write-Host "using $TableURLName"
-Write-Host "using $TableURLName"
+$QueueKey = (Get-CippQueue | Where-Object -Property Name -EQ $TableURLName | Select-Object -Last 1).RowKey
+Update-CippQueueEntry -RowKey $QueueKey -Status "Started"
 $Table = Get-CIPPTable -TableName "cache$TableURLName"
 $fullUrl = "https://graph.microsoft.com/beta/$QueueItem"
 Get-AzDataTableEntity @Table | Remove-AzDataTableEntity @table
@@ -20,7 +16,6 @@ $RawGraphRequest = Get-Tenants | ForEach-Object -Parallel {
     try {
         Write-Host $using:fullUrl
         New-GraphGetRequest -uri $using:fullUrl -tenantid $_.defaultDomainName -ErrorAction Stop | Select-Object *, @{l = 'tenant'; e = { $domainName } }, @{l = 'CippStatus'; e = { "Good" } }
-
     }
     catch {
         [PSCustomObject]@{
@@ -29,6 +24,8 @@ $RawGraphRequest = Get-Tenants | ForEach-Object -Parallel {
         }
     } 
 }
+
+Update-CippQueueEntry -RowKey $QueueKey -Status "Processing"
 foreach ($Request in $RawGraphRequest) {
     $Json = ConvertTo-Json -Compress -InputObject $request
     $GraphRequest = [PSCustomObject]@{
@@ -42,5 +39,5 @@ foreach ($Request in $RawGraphRequest) {
     Add-AzDataTableEntity @Table -Entity $GraphRequest -Force | Out-Null
 }
 
-$QueueKey = (Get-CippQueue | Where-Object -Property Name -EQ $url | Select-Object -Last 1).RowKey
+
 Update-CippQueueEntry -RowKey $QueueKey -Status "Completed"

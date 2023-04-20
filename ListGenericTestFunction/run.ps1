@@ -14,27 +14,10 @@ Write-Host 'PowerShell HTTP trigger function processed a request.'
 $TenantFilter = $Request.Query.TenantFilter
 $url = $request.Query.url.tolower()
 $TableURLName = ($request.query.url.tolower() -split '?' | Select-Object -First 1).toString()
-$GraphRequest = if ($TenantFilter -ne 'AllTenants') {
-    $LicRequest = New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/subscribedSkus' -tenantid $TenantFilter
-    [PSCustomObject]@{
-        Tenant   = $TenantFilter
-        Licenses = $LicRequest
-    }
-}
-else {
-    $Table = Get-CIPPTable -TableName "cache$TableURLName"
-    $Rows = Get-AzDataTableEntity @Table | Where-Object -Property Timestamp -GT (Get-Date).AddHours(-1)
-    if (!$Rows) {
-        $Queue = New-CippQueueEntry -Name $URL -Link '/identity/reports/mfa-report?customerId=AllTenants'
-        Push-OutputBinding -Name Msg -Value $url
-        [PSCustomObject]@{
-            Tenant = 'Loading data for all tenants. Please check back after the job completes'
-        }
-    }         
-    else {
-        $Rows.Data | ConvertFrom-Json
-    }
-}
+
+$Queue = New-CippQueueEntry -Name $URL -Link '/identity/reports/mfa-report?customerId=AllTenants'
+Push-OutputBinding -Name Msg -Value $url
+
 
 Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
         StatusCode = [HttpStatusCode]::OK

@@ -36,7 +36,6 @@ function Update-CippQueueEntry {
         if ($QueueEntry) {
             $QueueEntry.Status = $Status
             Update-AzDataTableEntity @CippQueue -Entity $QueueEntry
-
             $QueueEntry
         }
         else {
@@ -60,11 +59,15 @@ function Get-CippQueue {
 
     $CippQueue = Get-CippTable -TableName 'CippQueue'
     $CippQueueData = Get-AzDataTableEntity @CippQueue | Sort-Object -Property Timestamp -Descending 
-
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
-            StatusCode = [HttpStatusCode]::OK
-            Body       = @($CippQueueData)
-        })
+    if ($request) {
+        Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
+                StatusCode = [HttpStatusCode]::OK
+                Body       = @($CippQueueData)
+            })
+    } 
+    else {
+        return $CippQueueData
+    }
 }
 
 function Remove-CippQueue {
