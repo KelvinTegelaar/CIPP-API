@@ -147,6 +147,29 @@ if ($userobj.allowExternal -eq 'true') {
 
 }
 
+if ($userobj.sendCopies -eq 'true') {
+    try {
+            $Params = @{ Identity = $userobj.Groupid; subscriptionEnabled = $true; AutoSubscribeNewMembers = $true }
+            New-ExoRequest -tenantid $Userobj.tenantid -cmdlet "Set-UnifiedGroup" -cmdParams $params -useSystemMailbox $true
+
+            $MemberParams = @{ Identity = $userobj.Groupid; LinkType = "members" }
+            $Members = New-ExoRequest -tenantid $Userobj.tenantid -cmdlet "Get-UnifiedGrouplinks" -cmdParams $MemberParams
+
+            $MemberSmtpAddresses = $Members | ForEach-Object { $_.PrimarySmtpAddress }
+
+            $subscriberParams = @{ Identity = $userobj.Groupid; LinkType = "subscribers"; Links = @($MemberSmtpAddresses) }
+            New-ExoRequest -tenantid $Userobj.tenantid -cmdlet "Add-UnifiedGrouplinks" -cmdParams $subscriberParams -Anchor $userobj.mail
+            
+
+        $body = $results.add("Send Copies of team emails and events to team members inboxes for $($userobj.mail) enabled.")
+        Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $Userobj.tenantid -message "Send Copies of team emails and events to team members inboxes for $($userobj.mail) enabled." -Sev "Error"
+    }
+    catch {
+        $body = $results.add("Failed to Send Copies of team emails and events to team members inboxes for $($userobj.mail).")
+        Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $Userobj.tenantid -message "Failed to Send Copies of team emails and events to team members inboxes for $($userobj.mail). $($_.Exception.Message)" -Sev "Error"
+    }
+}
+
 $body = @{"Results" = @($results) }
 # Associate values to output bindings by calling 'Push-OutputBinding'.
 Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{

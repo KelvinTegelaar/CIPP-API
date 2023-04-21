@@ -1,4 +1,6 @@
-﻿{
+{
+  "scriptFile": "../Modules/CippQueue/CippQueue.psm1",
+  "entryPoint": "Remove-CippQueue",
   "bindings": [
     {
       "authLevel": "anonymous",
@@ -11,12 +13,6 @@
       "type": "http",
       "direction": "out",
       "name": "Response"
-    },
-    {
-      "type": "queue",
-      "direction": "out",
-      "name": "Msg",
-      "queueName": "generalAllTenantQueue"
     }
   ]
 }
