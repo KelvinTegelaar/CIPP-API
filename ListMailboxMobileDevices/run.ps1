@@ -31,7 +31,9 @@ try {
     @{ Name = 'firstSync'; Expression = { $_.FirstSyncTime.toString('s') } },
     @{ Name = 'lastSyncAttempt'; Expression = { $_.LastSyncAttemptTime.toString('s') } },
     @{ Name = 'lastSuccessSync'; Expression = { $_.LastSuccessSync.toString('s') } },
-    @{ Name = 'status'; Expression = { $_.Status } }
+    @{ Name = 'status'; Expression = { $_.Status } },
+    @{ Name = 'deviceID'; Expression = { $_.deviceID } },
+    @{ Name = 'Guid'; Expression = { $_.Guid } }
 
     $StatusCode = [HttpStatusCode]::OK
 }
