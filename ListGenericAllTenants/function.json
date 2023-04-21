@@ -1,0 +1,10 @@
+﻿{
+  "bindings": [
+    {
+      "name": "QueueItem",
+      "type": "queueTrigger",
+      "direction": "in",
+      "queueName": "generalAllTenantQueue"
+    }
+  ]
+}
