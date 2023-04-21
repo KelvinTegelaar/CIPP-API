@@ -134,8 +134,8 @@ try {
     $GraphRequest = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/reports/authenticationMethods/usersRegisteredByFeature(includedUserTypes='all',includedUserRoles='all')" -tenantid $Tenant
     $RegState = ($GraphRequest.userRegistrationFeatureCounts | Where-Object -Property Feature -EQ "ssprRegistered").usercount
     $CapableState = ($GraphRequest.userRegistrationFeatureCounts | Where-Object -Property Feature -EQ "ssprCapable").usercount
-    Write-Host "state: $RegState / $CapableState"
-    $Result.SelfServicePasswordReset = if ($RegState -ge $CapableState) { $true } else { $false } 
+    $Result.SelfServicePasswordReset = if ($RegState -ge $CapableState -and $CapableState -ne 0) { $true } else { $false } 
+
 
 }
 catch {
