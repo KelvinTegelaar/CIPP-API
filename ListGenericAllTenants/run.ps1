@@ -15,7 +15,7 @@ $RawGraphRequest = Get-Tenants | ForEach-Object -Parallel {
     Import-Module '.\GraphHelper.psm1'
     try {
         Write-Host $using:fullUrl
-        New-GraphGetRequest -uri $using:fullUrl -tenantid $_.defaultDomainName -ErrorAction Stop | Select-Object *, @{l = 'tenant'; e = { $domainName } }, @{l = 'CippStatus'; e = { "Good" } }
+        New-GraphGetRequest -uri $using:fullUrl -tenantid $_.defaultDomainName -ErrorAction Stop | Select-Object *, @{l = 'Tenant'; e = { $domainName } }, @{l = 'CippStatus'; e = { "Good" } }
     }
     catch {
         [PSCustomObject]@{
