@@ -40,7 +40,7 @@ catch {
 
 try {
 if ($request.query.delete -eq 'true') {
-    New-ExoRequest -tenant $TenantFilter -cmdlet "Remove-MobileDevice" -cmdParams @{Identity = "$($request.query.Guid)"; Confirm = $false}
+    New-ExoRequest -tenant $TenantFilter -cmdlet "Remove-MobileDevice" -cmdParams @{Identity = "$($request.query.Guid)"; Confirm = $false} -UseSystemMailbox $true 
     $Results = [pscustomobject]@{"Results" = "Deleted Active Sync Device for $($request.query.Userid)"}
     Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $($tenantfilter) -message "Deleted Active Sync Device for $($request.query.Userid)" -Sev "Info"
 }
