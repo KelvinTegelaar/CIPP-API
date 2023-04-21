@@ -24,8 +24,10 @@ function New-CippQueueEntry {
 
 function Update-CippQueueEntry {
     Param(
+        [Parameter(Mandatory = $true)]
         $RowKey,
-        $Status
+        $Status,
+        $Name
     )
 
     $CippQueue = Get-CippTable -TableName CippQueue
@@ -34,7 +36,12 @@ function Update-CippQueueEntry {
         $QueueEntry = Get-AzDataTableEntity @CippQueue -Filter ("RowKey eq '{0}'" -f $RowKey)
 
         if ($QueueEntry) {
-            $QueueEntry.Status = $Status
+            if ($Status) {
+                $QueueEntry.Status = $Status
+            }
+            if ($Name) {
+                $QueueEntry.Name = $Name
+            }
             Update-AzDataTableEntity @CippQueue -Entity $QueueEntry
             $QueueEntry
         }
