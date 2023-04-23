@@ -133,7 +133,8 @@ function New-GraphGetRequest {
         $AsApp,
         $noPagination,
         $NoAuthCheck,
-        [switch]$ComplexFilter
+        [switch]$ComplexFilter,
+        [switch]$CountOnly
     )
 
     if ($scope -eq 'ExchangeOnline') {
@@ -166,8 +167,13 @@ function New-GraphGetRequest {
         $ReturnedData = do {
             try {
                 $Data = (Invoke-RestMethod -Uri $nextURL -Method GET -Headers $headers -ContentType 'application/json; charset=utf-8')
-                if ($data.value) { $data.value } else { ($Data) }
-                if ($noPagination) { $nextURL = $null } else { $nextURL = $data.'@odata.nextLink' }
+                if ($CountOnly) {
+                    $Data.'@odata.count'
+                    $nextURL = $null
+                } else {
+                    if ($data.value) { $data.value } else { ($Data) }
+                    if ($noPagination) { $nextURL = $null } else { $nextURL = $data.'@odata.nextLink' }
+                }
             }
             catch {
                 $Message = ($_.ErrorDetails.Message | ConvertFrom-Json -ErrorAction SilentlyContinue).error.message
@@ -376,7 +382,7 @@ function Get-Tenants {
         $Filter = "PartitionKey eq 'Tenants'"
     }
     else {
-        $Filter = "PartitionKey eq 'Tenants' and (Excluded eq false or GraphErrorCount gt 50)" 
+        $Filter = "PartitionKey eq 'Tenants' and (Excluded eq false or GraphErrorCount gt 50)"
 
     }
     $IncludedTenantsCache = Get-AzDataTableEntity @TenantsTable -Filter $Filter
