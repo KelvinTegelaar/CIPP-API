@@ -11,6 +11,7 @@ Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME  -
 Write-Host "PowerShell HTTP trigger function processed a request."
 
 # Interact with query parameters or the body of the request.
+try {
 $TenantFilter = $Request.Query.TenantFilter
 $UserID = $Request.Query.UserID
             $GraphRequest = New-ExoRequest -tenantid $TenantFilter -cmdlet "Get-InboxRule" -cmdParams @{mailbox = $UserID} | Select-Object
@@ -21,7 +22,7 @@ $UserID = $Request.Query.UserID
             @{ Name = 'Move To Folder'; Expression = { $_.MoveToFolder} },
             @{ Name = 'Soft Delete Message'; Expression = { $_.SoftDeleteMessage} },
             @{ Name = 'Delete Message'; Expression = { $_.DeleteMessage} }
-
+}
     catch {
         Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -message "Failed to retrieve mailbox rules $($request.query.id): $($_.Exception.message) " -Sev 'Error' -tenant $TenantFilter
         # Associate values to output bindings by calling 'Push-OutputBinding'.

@@ -24,8 +24,10 @@ function New-CippQueueEntry {
 
 function Update-CippQueueEntry {
     Param(
+        [Parameter(Mandatory = $true)]
         $RowKey,
-        $Status
+        $Status,
+        $Name
     )
 
     $CippQueue = Get-CippTable -TableName CippQueue
@@ -34,9 +36,13 @@ function Update-CippQueueEntry {
         $QueueEntry = Get-AzDataTableEntity @CippQueue -Filter ("RowKey eq '{0}'" -f $RowKey)
 
         if ($QueueEntry) {
-            $QueueEntry.Status = $Status
+            if ($Status) {
+                $QueueEntry.Status = $Status
+            }
+            if ($Name) {
+                $QueueEntry.Name = $Name
+            }
             Update-AzDataTableEntity @CippQueue -Entity $QueueEntry
-
             $QueueEntry
         }
         else {
@@ -59,12 +65,36 @@ function Get-CippQueue {
     Write-Host 'PowerShell HTTP trigger function processed a request.'
 
     $CippQueue = Get-CippTable -TableName 'CippQueue'
-    $CippQueueData = Get-AzDataTableEntity @CippQueue 
+    $CippQueueData = Get-AzDataTableEntity @CippQueue | Sort-Object -Property Timestamp -Descending 
+    if ($request) {
+        Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
+                StatusCode = [HttpStatusCode]::OK
+                Body       = @($CippQueueData)
+            })
+    } 
+    else {
+        return $CippQueueData
+    }
+}
+
+function Remove-CippQueue {
+    # Input bindings are passed in via param block.
+    param($Request, $TriggerMetadata)
+
+    $APIName = $TriggerMetadata.FunctionName
+    Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -message 'Accessed this API' -Sev 'Debug'
+
+    # Write to the Azure Functions log stream.
+    Write-Host 'PowerShell HTTP trigger function processed a request.'
+
+    $CippQueue = Get-CippTable -TableName 'CippQueue'
+    Clear-AzDataTable @CippQueue
 
     Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
             StatusCode = [HttpStatusCode]::OK
-            Body       = @($CippQueueData)
+            Body       = @{Results = @('History cleared') }
         })
 }
 
-Export-ModuleMember -Function @('New-CippQueueEntry', 'Get-CippQueue', 'Update-CippQueueEntry')
+
+Export-ModuleMember -Function @('New-CippQueueEntry', 'Get-CippQueue', 'Update-CippQueueEntry', 'Remove-CippQueue')
