@@ -5,7 +5,7 @@ param($Request, $TriggerMetadata)
 $APIName = $TriggerMetadata.FunctionName
 Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME  -message "Accessed this API" -Sev "Debug"
 
-$selectlist = "id", "accountEnabled", "businessPhones", "city", "createdDateTime", "companyName", "country", "department", "displayName", "faxNumber", "givenName", "isResourceAccount", "jobTitle", "mail", "mailNickname", "mobilePhone", "onPremisesDistinguishedName", "officeLocation", "onPremisesLastSyncDateTime", "otherMails", "postalCode", "preferredDataLocation", "preferredLanguage", "proxyAddresses", "showInAddressList", "state", "streetAddress", "surname", "usageLocation", "userPrincipalName", "userType", "assignedLicenses", "onPremisesSyncEnabled", "LicJoined", "Aliases", "primDomain"
+$selectlist = "id", "accountEnabled", "businessPhones", "city", "createdDateTime", "companyName", "country", "department", "displayName", "faxNumber", "givenName", "isResourceAccount", "jobTitle", "mail", "mailNickname", "mobilePhone", "onPremisesDistinguishedName", "officeLocation", "onPremisesLastSyncDateTime", "otherMails", "postalCode", "preferredDataLocation", "preferredLanguage", "proxyAddresses", "showInAddressList", "state", "streetAddress", "surname", "usageLocation", "userPrincipalName", "userType", "assignedLicenses", "onPremisesSyncEnabled", "LicJoined", "Aliases", "primDomain", "Tenant", "CippStatus"
 # Write to the Azure Functions log stream.
 Write-Host "PowerShell HTTP trigger function processed a request."
 $ConvertTable = Import-Csv Conversiontable.csv | Sort-Object -Property 'guid' -Unique
@@ -13,14 +13,39 @@ Set-Location (Get-Item $PSScriptRoot).Parent.FullName
 # Interact with query parameters or the body of the request.
 $TenantFilter = $Request.Query.TenantFilter
 $userid = $Request.Query.UserID
-$GraphRequest = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/users/$($userid)?`$top=999&`$select=$($selectlist -join ',')" -tenantid $TenantFilter | Select-Object $selectlist | ForEach-Object {
-    $_.onPremisesSyncEnabled = [bool]($_.onPremisesSyncEnabled)
-    $_.Aliases = $_.Proxyaddresses -join ", "
-    $SkuID = $_.AssignedLicenses.skuid
-    $_.LicJoined = ($ConvertTable | Where-Object { $_.guid -in $skuid }).'Product_Display_Name' -join ", "
-    $_.primDomain = ($_.userPrincipalName -split '@' | Select-Object -Last 1)
-    $_
+
+$GraphRequest = if ($TenantFilter -ne 'AllTenants') {
+    New-GraphGetRequest -uri "https://graph.microsoft.com/beta/users/$($userid)?`$top=999&`$select=$($selectlist -join ',')" -tenantid $TenantFilter | Select-Object $selectlist | ForEach-Object {
+        $_.onPremisesSyncEnabled = [bool]($_.onPremisesSyncEnabled)
+        $_.Aliases = $_.Proxyaddresses -join ", "
+        $SkuID = $_.AssignedLicenses.skuid
+        $_.LicJoined = ($ConvertTable | Where-Object { $_.guid -in $skuid }).'Product_Display_Name' -join ", "
+        $_.primDomain = ($_.userPrincipalName -split '@' | Select-Object -Last 1)
+        $_
+    }
 }
+else {
+    $Table = Get-CIPPTable -TableName "cacheusers"
+    $Rows = Get-AzDataTableEntity @Table | Where-Object -Property Timestamp -GT (Get-Date).AddHours(-1)
+    if (!$Rows) {
+        $Queue = New-CippQueueEntry -Name  "Users" -Link '/identity/administration/users?customerId=AllTenants'
+        Push-OutputBinding -Name Msg -Value "users/$($userid)?`$top=999&`$select=$($selectlist -join ',')"
+        [PSCustomObject]@{
+            Tenant = 'Loading data for all tenants. Please check back after the job completes'
+        }
+    }         
+    else {
+        $Rows.Data | ConvertFrom-Json | Select-Object $selectlist | ForEach-Object {
+            $_.onPremisesSyncEnabled = [bool]($_.onPremisesSyncEnabled)
+            $_.Aliases = $_.Proxyaddresses -join ", "
+            $SkuID = $_.AssignedLicenses.skuid
+            $_.LicJoined = ($ConvertTable | Where-Object { $_.guid -in $skuid }).'Product_Display_Name' -join ", "
+            $_.primDomain = ($_.userPrincipalName -split '@' | Select-Object -Last 1)
+            $_
+        }
+    }
+}
+
 
 if ($userid -and $Request.query.IncludeLogonDetails) {
     $startDate = (Get-Date).AddDays(-7)
