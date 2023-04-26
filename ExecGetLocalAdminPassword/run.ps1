@@ -16,7 +16,7 @@ $device = $($request.query.guid)
 try {
     $GraphRequest = (New-GraphGetRequest -noauthcheck $true -uri "https://graph.microsoft.com/beta/deviceLocalCredentials/$($device)?`$select=credentials" -tenantid $TenantFilter).credentials | Select-Object -First 1 | ForEach-Object {
         $PlainText = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($_.passwordBase64))
-        $date = $_.lastBackupDateTime
+        $date = $_.BackupDateTime
         "The password for $($_.AccountName) is $($PlainText) generated at $($date)"
         
     }
