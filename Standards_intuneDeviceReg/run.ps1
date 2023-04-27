@@ -5,8 +5,10 @@ try {
     if (!$Setting) {
         $Setting = ((Get-AzDataTableEntity @ConfigTable -Filter "PartitionKey eq 'standards' and RowKey eq 'AllTenants'").JSON | ConvertFrom-Json).standards.intuneDeviceReg
     }
-
-    New-GraphPostRequest -tenantid $tenant -Uri "https://graph.microsoft.com/beta/policies/deviceRegistrationPolicy" -Type PUT -Body "{`"userDeviceQuota`":$($setting.max), `"localAdminPassword`":{`"isEnabled`": true } }" -ContentType "application/json"
+    $PreviousSetting = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/policies/deviceRegistrationPolicy" -tenantid $Tenant
+    $PreviousSetting.userDeviceQuota = $Setting.max
+    $Newbody = ConvertTo-Json -Compress -InputObject $PreviousSetting
+    New-GraphPostRequest -tenantid $tenant -Uri "https://graph.microsoft.com/beta/policies/deviceRegistrationPolicy" -Type PUT -Body $NewBody -ContentType "application/json"
     Write-LogMessage -API "Standards" -tenant $tenant -message  "Set user device quota to $($setting.max)" -sev Info
 }
 catch {
