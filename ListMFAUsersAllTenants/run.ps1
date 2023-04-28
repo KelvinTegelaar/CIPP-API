@@ -19,6 +19,18 @@ try {
 
         try {
             $users = Get-CIPPMSolUsers -tenant $domainName
+            if (!$users) {
+                $users = foreach ($user in (New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/users?$select=id,UserPrincipalName,DisplayName,accountEnabled' -tenantid $Request.query.TenantFilter)) {
+                    [PSCustomObject]@{
+                        UserPrincipalName                = $user.UserPrincipalName
+                        BlockCredential                  = $user.accountEnabled
+                        DisplayName                      = $user.DisplayName
+                        ObjectId                         = $user.id
+                        StrongAuthenticationRequirements = @{StrongAuthenticationRequirement = @{state = 'Not Available - GDAP Only' } }
+                    }
+                }
+    
+            }
             $SecureDefaultsState = (New-GraphGetRequest -Uri 'https://graph.microsoft.com/beta/policies/identitySecurityDefaultsEnforcementPolicy' -tenantid $domainName).IsEnabled
             $CAState = New-Object System.Collections.ArrayList
             $CAPolicies = (New-GraphGetRequest -Uri 'https://graph.microsoft.com/v1.0/identity/conditionalAccess/policies' -tenantid $domainName -ErrorAction Stop )
