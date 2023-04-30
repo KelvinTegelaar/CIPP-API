@@ -183,6 +183,10 @@ function Get-GraphRequestListHttp {
         $Parameters.'$filter' = $Request.Query.'$filter'
     }
 
+    if (!$Request.Query.'$filter' -and $Request.Query.graphFilter) {
+        $Parameters.'$filter' = $Request.Query.graphFilter
+    }
+
     if ($Request.Query.'$select') {
         $Parameters.'$select' = $Request.Query.'$select'
     }
