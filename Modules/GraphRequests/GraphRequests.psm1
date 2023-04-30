@@ -29,7 +29,7 @@ function Get-GraphRequestList {
     if (!$SkipCache -and !$ClearCache) {
         $PartitionKey = '{0}-{1}' -f $Endpoint, $ParamCollection.ToString()
         if ($Tenant -eq 'AllTenants') {
-            $Filter = "PartitionKey eq '{0}'" -f $PartitionKey
+            $Filter = "PartitionKey eq '{0}' and QueueType eq 'AllTenants'" -f $PartitionKey
         } else {
             $Filter = "PartitionKey eq '{0}' and Tenant eq '{1}'" -f $PartitionKey, $Tenant
         }
@@ -59,6 +59,7 @@ function Get-GraphRequestList {
                             Endpoint   = $Endpoint
                             QueueId    = $Queue.RowKey
                             QueueName  = $QueueName
+                            QueueType  = 'AllTenants'
                             Parameters = $Parameters
                         } | ConvertTo-Json -Depth 5 -Compress
 
@@ -84,6 +85,7 @@ function Get-GraphRequestList {
                                 Endpoint   = $Endpoint
                                 QueueId    = $Queue.RowKey
                                 QueueName  = $QueueName
+                                QueueType  = 'SingleTenant'
                                 Parameters = $Parameters
                             } | ConvertTo-Json -Depth 5 -Compress
 
@@ -158,6 +160,8 @@ function Push-GraphRequestListQueue {
         $Json = ConvertTo-Json -Compress -InputObject $Request
         $GraphResults = [PSCustomObject]@{
             Tenant       = [string]$QueueTenant.Tenant
+            QueueId      = [string]$QueueTenant.QueueId
+            QueueType    = [string]$QueueTenant.QueueType
             RowKey       = [string](New-Guid)
             PartitionKey = [string]$PartitionKey
             Data         = [string]$Json
