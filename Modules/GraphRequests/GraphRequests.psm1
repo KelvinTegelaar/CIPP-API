@@ -47,13 +47,15 @@ function Get-GraphRequestList {
             $Filter = "PartitionKey eq '{0}' and Tenant eq '{1}'" -f $PartitionKey, $Tenant
         }
         Write-Host $Filter
-        $Rows = Get-AzDataTableEntity @Table -Filter $Filter
+        $Rows = Get-AzDataTableEntity @Table -Filter $Filter | Where-Object { $_.Timestamp.DateTime -gt (Get-Date).ToUniversalTime().AddHours(-1) }
         $Type = 'Cache'
     } else {
         $Type = 'None'
         $Rows = @()
     }
 
+    $FirstTS = $Rows | Select-Object -First 1 -ExpandProperty Timestamp
+    Write-Host "$($FirstTS.DateTime) - $((Get-Date).ToUniversalTime())"
     Write-Host "Cached: $(($Rows | Measure-Object).Count) rows (Type: $($Type))"
 
     <#############
