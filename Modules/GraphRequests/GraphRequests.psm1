@@ -1,4 +1,13 @@
 using namespace System.Net
+
+function Get-StringHash {
+    Param($String)
+    $StringBuilder = New-Object System.Text.StringBuilder
+    [System.Security.Cryptography.HashAlgorithm]::Create('SHA1').ComputeHash([System.Text.Encoding]::UTF8.GetBytes($String)) | ForEach-Object {
+        [Void]$StringBuilder.Append($_.ToString('x2'))
+    }
+    $StringBuilder.ToString()
+}
 function Get-GraphRequestList {
     [CmdletBinding()]
     Param(
@@ -23,30 +32,55 @@ function Get-GraphRequestList {
         $ParamCollection.Add($Item.Key, $Item.Value)
     }
     $GraphQuery.Query = $ParamCollection.ToString()
+    $PartitionKey = Get-StringHash -String (@($QueueTenant.Endpoint, $ParamCollection.ToString()) -join '-')
 
     Write-Host $GraphQuery.ToString()
 
-    if (!$SkipCache -and !$ClearCache) {
-        $PartitionKey = '{0}-{1}' -f $Endpoint, $ParamCollection.ToString()
+    if ($QueueId) {
+        $Filter = "QueueId = '{0}'" -f $QueueId
+        $Rows = Get-AzDataTableEntity @Table -Filter $Filter
+        $Type = 'Queue'
+    } elseif (!$SkipCache.IsPresent -and !$ClearCache.IsPresent) {
         if ($Tenant -eq 'AllTenants') {
             $Filter = "PartitionKey eq '{0}' and QueueType eq 'AllTenants'" -f $PartitionKey
         } else {
             $Filter = "PartitionKey eq '{0}' and Tenant eq '{1}'" -f $PartitionKey, $Tenant
         }
-        $Rows = Get-AzDataTableEntity @Table -Filter $Filter | Where-Object -Property Timestamp -GT (Get-Date).AddHours(-1)
+        Write-Host $Filter
+        $Rows = Get-AzDataTableEntity @Table -Filter $Filter | Where-Object { $_.Timestamp.DateTime -gt (Get-Date).ToUniversalTime().AddHours(-1) }
+        $Type = 'Cache'
     } else {
+        $Type = 'None'
         $Rows = @()
     }
 
-    Write-Host "$(($Rows | Measure-Object).Count) rows"
+    $FirstTS = $Rows | Select-Object -First 1 -ExpandProperty Timestamp
+    Write-Host "$($FirstTS.DateTime) - $((Get-Date).ToUniversalTime())"
+    Write-Host "Cached: $(($Rows | Measure-Object).Count) rows (Type: $($Type))"
+
+    <#############
+
+    return [PSCustomObject]@{
+        Tenant  = 'Data still processing, please wait'
+        QueueId = $RunningQueue.RowKey
+    }
+    #############>
+
+    $QueueReference = '{0}-{1}' -f $Tenant, $PartitionKey
+    $RunningQueue = Get-CippQueue | Where-Object { $_.Reference -eq $QueueReference -and $_.Status -ne 'Completed' }
 
     if (!$Rows) {
         switch ($Tenant) {
             'AllTenants' {
-                $Rows = Get-AzDataTableEntity @Table | Where-Object -Property Timestamp -GT (Get-Date).AddHours(-1)
-                if (!$Rows) {
-                    $Queue = New-CippQueueEntry -Name "$QueueName (All Tenants)" -Link $CippLink
-
+                if ($RunningQueue) {
+                    Write-Host 'Queue currently running'
+                    Write-Host ($RunningQueue | ConvertTo-Json)
+                    [PSCustomObject]@{
+                        Tenant  = 'Data still processing, please wait'
+                        QueueId = $RunningQueue.RowKey
+                    }
+                } else {
+                    $Queue = New-CippQueueEntry -Name "$QueueName (All Tenants)" -Link $CippLink -Reference $QueueReference
                     [PSCustomObject]@{
                         Tenant  = 'Loading data for all tenants. Please check back after the job completes'
                         QueueId = $Queue.RowKey
@@ -55,12 +89,13 @@ function Get-GraphRequestList {
                     Get-Tenants | ForEach-Object {
                         $Tenant = $_.defaultDomainName
                         $QueueTenant = @{
-                            Tenant     = $Tenant
-                            Endpoint   = $Endpoint
-                            QueueId    = $Queue.RowKey
-                            QueueName  = $QueueName
-                            QueueType  = 'AllTenants'
-                            Parameters = $Parameters
+                            Tenant       = $Tenant
+                            Endpoint     = $Endpoint
+                            QueueId      = $Queue.RowKey
+                            QueueName    = $QueueName
+                            QueueType    = 'AllTenants'
+                            Parameters   = $Parameters
+                            PartitionKey = $PartitionKey
                         } | ConvertTo-Json -Depth 5 -Compress
 
                         Push-OutputBinding -Name QueueTenant -Value $QueueTenant
@@ -79,20 +114,30 @@ function Get-GraphRequestList {
                         $Count = New-GraphGetRequest @GraphRequest -CountOnly -ErrorAction Stop
                         if ($Count -gt 5000) {
                             $QueueThresholdExceeded = $true
-                            $Queue = New-CippQueueEntry -Name $QueueName -Link $CippLink
-                            $QueueTenant = @{
-                                Tenant     = $Tenant
-                                Endpoint   = $Endpoint
-                                QueueId    = $Queue.RowKey
-                                QueueName  = $QueueName
-                                QueueType  = 'SingleTenant'
-                                Parameters = $Parameters
-                            } | ConvertTo-Json -Depth 5 -Compress
+                            if ($RunningQueue) {
+                                Write-Host 'Queue currently running'
+                                Write-Host ($RunningQueue | ConvertTo-Json)
+                                [PSCustomObject]@{
+                                    Tenant  = 'Data still processing, please wait'
+                                    QueueId = $RunningQueue.RowKey
+                                }
+                            } else {
+                                $Queue = New-CippQueueEntry -Name $QueueName -Link $CippLink -Reference $QueueReference
+                                $QueueTenant = @{
+                                    Tenant       = $Tenant
+                                    Endpoint     = $Endpoint
+                                    QueueId      = $Queue.RowKey
+                                    QueueName    = $QueueName
+                                    QueueType    = 'SingleTenant'
+                                    Parameters   = $Parameters
+                                    PartitionKey = $PartitionKey
+                                } | ConvertTo-Json -Depth 5 -Compress
 
-                            Push-OutputBinding -Name QueueTenant -Value $QueueTenant
-                            [PSCustomObject]@{
-                                Tenant  = ('Loading {0} rows for {1}. Please check back after the job completes' -f $Count, $Tenant)
-                                QueueId = $Queue.RowKey
+                                Push-OutputBinding -Name QueueTenant -Value $QueueTenant
+                                [PSCustomObject]@{
+                                    Tenant  = ('Loading {0} rows for {1}. Please check back after the job completes' -f $Count, $Tenant)
+                                    QueueId = $Queue.RowKey
+                                }
                             }
                         }
                     }
@@ -121,7 +166,7 @@ function Push-GraphRequestListQueue {
     Write-Host "PowerShell queue trigger function processed work item $QueueTenant"
 
     #$QueueTenant = $QueueTenant | ConvertFrom-Json
-    Write-Host ($QueueTenant | ConvertTo-Json)
+    Write-Host ($QueueTenant | ConvertTo-Json -Depth 5)
 
     $TenantQueueName = '{0} - {1}' -f $QueueTenant.QueueName, $QueueTenant.Tenant
     Update-CippQueueEntry -RowKey $QueueTenant.QueueId -Status 'Processing' -Name $TenantQueueName
@@ -131,7 +176,7 @@ function Push-GraphRequestListQueue {
         $ParamCollection.Add($Item.Key, $Item.Value)
     }
 
-    $PartitionKey = @($QueueTenant.Endpoint, $ParamCollection.ToString()) -join '-'
+    $PartitionKey = $QueueTenant.PartitionKey
 
     $TableName = 'cache{0}' -f ($QueueTenant.Endpoint -replace '/')
     $Table = Get-CIPPTable -TableName $TableName
@@ -157,7 +202,7 @@ function Push-GraphRequestListQueue {
     }
 
     foreach ($Request in $RawGraphRequest) {
-        $Json = ConvertTo-Json -Compress -InputObject $Request
+        $Json = ConvertTo-Json -Depth 5 -Compress -InputObject $Request
         $GraphResults = [PSCustomObject]@{
             Tenant       = [string]$QueueTenant.Tenant
             QueueId      = [string]$QueueTenant.QueueId
@@ -166,7 +211,13 @@ function Push-GraphRequestListQueue {
             PartitionKey = [string]$PartitionKey
             Data         = [string]$Json
         }
-        Add-AzDataTableEntity @Table -Entity $GraphResults -Force | Out-Null
+        try {
+            Add-AzDataTableEntity @Table -Entity $GraphResults -Force | Out-Null
+        } catch {
+            Write-Host "Error adding row $($_.Exception.Message)"
+            Write-Host ($GraphResults | ConvertTo-Json)
+            break
+        }
     }
 
     Update-CippQueueEntry -RowKey $QueueTenant.QueueId -Status 'Completed'
@@ -176,7 +227,7 @@ function Get-GraphRequestListHttp {
     # Input bindings are passed in via param block.
     param($Request, $TriggerMetadata)
 
-    Write-Host ($TriggerMetadata | ConvertTo-Json)
+    $CippLink = ([System.Uri]$TriggerMetadata.Headers.referer).PathAndQuery
 
     $Parameters = @{}
     if ($Request.Query.'$filter') {
@@ -206,7 +257,7 @@ function Get-GraphRequestListHttp {
     $GraphRequestParams = @{
         Endpoint   = $Request.Query.Endpoint
         Parameters = $Parameters
-        CippLink   = ''
+        CippLink   = $CippLink
     }
 
     if ($Request.Query.TenantFilter) {
@@ -215,6 +266,10 @@ function Get-GraphRequestListHttp {
 
     if ($Request.Query.QueueId) {
         $GraphRequestParams.QueueId = $Request.Query.QueueId
+    }
+
+    if (![string]::IsNullOrEmpty($Request.Query.refreshGuid)) {
+        $Parameters.ClearCache = $true
     }
 
     Write-Host ($GraphRequestParams | ConvertTo-Json)
