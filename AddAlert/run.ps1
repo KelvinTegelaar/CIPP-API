@@ -44,7 +44,6 @@ $Results = foreach ($Tenant in $tenants) {
             property       = $CompleteObject
             UpdateExisting = $true
         }#>
-        Write-Host ($TableRow | ConvertTo-Json)
 
         #Add-AzTableRow @TableRow | Out-Null
         Add-AzDataTableEntity @Table -Entity $CompleteObject -Force
