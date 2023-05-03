@@ -17,6 +17,8 @@ function Get-GraphRequestList {
         $Parameters,
         $QueueId,
         $CippLink,
+        [ValidateSet('v1.0', 'beta')]
+        $Version = 'beta',
         [switch]$SkipCache,
         [switch]$ClearCache
     )
@@ -26,7 +28,7 @@ function Get-GraphRequestList {
     $TextInfo = (Get-Culture).TextInfo
     $QueueName = $TextInfo.ToTitleCase($Endpoint -csplit '(?=[A-Z])' -ne '' -join ' ')
 
-    $GraphQuery = [System.UriBuilder]('https://graph.microsoft.com/beta/{0}' -f $Endpoint)
+    $GraphQuery = [System.UriBuilder]('https://graph.microsoft.com/{0}/{1}' -f $Version, $Endpoint)
     $ParamCollection = [System.Web.HttpUtility]::ParseQueryString([String]::Empty)
     foreach ($Item in ($Parameters.GetEnumerator() | Sort-Object -CaseSensitive -Property Key)) {
         $ParamCollection.Add($Item.Key, $Item.Value)
@@ -54,8 +56,6 @@ function Get-GraphRequestList {
         $Rows = @()
     }
 
-    $FirstTS = $Rows | Select-Object -First 1 -ExpandProperty Timestamp
-    Write-Host "$($FirstTS.DateTime) - $((Get-Date).ToUniversalTime())"
     Write-Host "Cached: $(($Rows | Measure-Object).Count) rows (Type: $($Type))"
 
     <#############
@@ -67,7 +67,7 @@ function Get-GraphRequestList {
     #############>
 
     $QueueReference = '{0}-{1}' -f $Tenant, $PartitionKey
-    $RunningQueue = Get-CippQueue | Where-Object { $_.Reference -eq $QueueReference -and $_.Status -ne 'Completed' }
+    $RunningQueue = Get-CippQueue | Where-Object { $_.Reference -eq $QueueReference -and $_.Status -ne 'Completed' -and $_.Status -ne 'Failed' }
 
     if (!$Rows) {
         switch ($Tenant) {
@@ -112,7 +112,8 @@ function Get-GraphRequestList {
                     $QueueThresholdExceeded = $false
                     if ($Parameters.'$count' -and !$SkipCache) {
                         $Count = New-GraphGetRequest @GraphRequest -CountOnly -ErrorAction Stop
-                        if ($Count -gt 5000) {
+                        if ($Count -gt 8000) {
+                            Write-Host "Query results: $Count"
                             $QueueThresholdExceeded = $true
                             if ($RunningQueue) {
                                 Write-Host 'Queue currently running'
@@ -201,9 +202,9 @@ function Push-GraphRequestListQueue {
         }
     }
 
-    foreach ($Request in $RawGraphRequest) {
+    $GraphResults = foreach ($Request in $RawGraphRequest) {
         $Json = ConvertTo-Json -Depth 5 -Compress -InputObject $Request
-        $GraphResults = [PSCustomObject]@{
+        [PSCustomObject]@{
             Tenant       = [string]$QueueTenant.Tenant
             QueueId      = [string]$QueueTenant.QueueId
             QueueType    = [string]$QueueTenant.QueueType
@@ -211,16 +212,14 @@ function Push-GraphRequestListQueue {
             PartitionKey = [string]$PartitionKey
             Data         = [string]$Json
         }
-        try {
-            Add-AzDataTableEntity @Table -Entity $GraphResults -Force | Out-Null
-        } catch {
-            Write-Host "Error adding row $($_.Exception.Message)"
-            Write-Host ($GraphResults | ConvertTo-Json)
-            break
-        }
     }
-
-    Update-CippQueueEntry -RowKey $QueueTenant.QueueId -Status 'Completed'
+    try {
+        Add-AzDataTableEntity @Table -Entity $GraphResults -Force | Out-Null
+        Update-CippQueueEntry -RowKey $QueueTenant.QueueId -Status 'Completed'
+    } catch {
+        Write-Host "Queue Error: $($_.Exception.Message)"
+        Update-CippQueueEntry -RowKey $QueueTenant.QueueId -Status 'Failed'
+    }
 }
 
 function Get-GraphRequestListHttp {
@@ -254,6 +253,10 @@ function Get-GraphRequestListHttp {
         $Parameters.'$count' = $Request.Query.'$count'
     }
 
+    if ($Request.Query.'$orderby') {
+        $Parameters.'$orderby' = $Request.Query.'$orderby'
+    }
+
     $GraphRequestParams = @{
         Endpoint   = $Request.Query.Endpoint
         Parameters = $Parameters
@@ -268,15 +271,21 @@ function Get-GraphRequestListHttp {
         $GraphRequestParams.QueueId = $Request.Query.QueueId
     }
 
-    if (![string]::IsNullOrEmpty($Request.Query.refreshGuid)) {
-        $Parameters.ClearCache = $true
+    if ($Request.Query.Version) {
+        $GraphRequestParams.Version = $Request.Query.Version
     }
 
     Write-Host ($GraphRequestParams | ConvertTo-Json)
-    $GraphRequestData = Get-GraphRequestList @GraphRequestParams
+    try {
+        $GraphRequestData = Get-GraphRequestList @GraphRequestParams
+        $StatusCode = [HttpStatusCode]::OK
+    } catch {
+        $GraphRequestData = "Graph Error: $($_.Exception.Message)"
+        $StatusCode = [HttpStatusCode]::BadRequest
+    }
 
     Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
-            StatusCode = [HttpStatusCode]::OK
+            StatusCode = $StatusCode
             Body       = @($GraphRequestData)
         })
 }
