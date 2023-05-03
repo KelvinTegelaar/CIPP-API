@@ -17,6 +17,8 @@ function Get-GraphRequestList {
         $Parameters,
         $QueueId,
         $CippLink,
+        [ValidateSet('v1.0', 'beta')]
+        $Version = 'beta',
         [switch]$SkipCache,
         [switch]$ClearCache
     )
@@ -26,7 +28,7 @@ function Get-GraphRequestList {
     $TextInfo = (Get-Culture).TextInfo
     $QueueName = $TextInfo.ToTitleCase($Endpoint -csplit '(?=[A-Z])' -ne '' -join ' ')
 
-    $GraphQuery = [System.UriBuilder]('https://graph.microsoft.com/beta/{0}' -f $Endpoint)
+    $GraphQuery = [System.UriBuilder]('https://graph.microsoft.com/{0}/{1}' -f $Version, $Endpoint)
     $ParamCollection = [System.Web.HttpUtility]::ParseQueryString([String]::Empty)
     foreach ($Item in ($Parameters.GetEnumerator() | Sort-Object -CaseSensitive -Property Key)) {
         $ParamCollection.Add($Item.Key, $Item.Value)
@@ -263,6 +265,10 @@ function Get-GraphRequestListHttp {
 
     if ($Request.Query.QueueId) {
         $GraphRequestParams.QueueId = $Request.Query.QueueId
+    }
+
+    if ($Request.Query.Version) {
+        $GraphRequestParams.Version = $Request.Query.Version
     }
 
     Write-Host ($GraphRequestParams | ConvertTo-Json)
