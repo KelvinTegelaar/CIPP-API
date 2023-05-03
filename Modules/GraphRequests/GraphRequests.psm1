@@ -112,7 +112,7 @@ function Get-GraphRequestList {
                     $QueueThresholdExceeded = $false
                     if ($Parameters.'$count' -and !$SkipCache) {
                         $Count = New-GraphGetRequest @GraphRequest -CountOnly -ErrorAction Stop
-                        if ($Count -gt 5000) {
+                        if ($Count -gt 8000) {
                             $QueueThresholdExceeded = $true
                             if ($RunningQueue) {
                                 Write-Host 'Queue currently running'
@@ -269,10 +269,16 @@ function Get-GraphRequestListHttp {
     }
 
     Write-Host ($GraphRequestParams | ConvertTo-Json)
-    $GraphRequestData = Get-GraphRequestList @GraphRequestParams
+    try {
+        $GraphRequestData = Get-GraphRequestList @GraphRequestParams
+        $StatusCode = [HttpStatusCode]::OK
+    } catch {
+        $GraphRequestData = "Graph Error: $($_.Exception.Message)"
+        $StatusCode = [HttpStatusCode]::BadRequest
+    }
 
     Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
-            StatusCode = [HttpStatusCode]::OK
+            StatusCode = $StatusCode
             Body       = @($GraphRequestData)
         })
 }
