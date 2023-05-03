@@ -253,6 +253,10 @@ function Get-GraphRequestListHttp {
         $Parameters.'$count' = $Request.Query.'$count'
     }
 
+    if ($Request.Query.'$orderby') {
+        $Parameters.'$orderby' = $Request.Query.'$orderby'
+    }
+
     $GraphRequestParams = @{
         Endpoint   = $Request.Query.Endpoint
         Parameters = $Parameters
