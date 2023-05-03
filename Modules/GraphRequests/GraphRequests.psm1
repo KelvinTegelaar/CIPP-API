@@ -65,7 +65,7 @@ function Get-GraphRequestList {
     #############>
 
     $QueueReference = '{0}-{1}' -f $Tenant, $PartitionKey
-    $RunningQueue = Get-CippQueue | Where-Object { $_.Reference -eq $QueueReference -and $_.Status -ne 'Completed' }
+    $RunningQueue = Get-CippQueue | Where-Object { $_.Reference -eq $QueueReference -and $_.Status -ne 'Completed' -and $_.Status -ne 'Failed' }
 
     if (!$Rows) {
         switch ($Tenant) {
@@ -200,9 +200,9 @@ function Push-GraphRequestListQueue {
         }
     }
 
-    foreach ($Request in $RawGraphRequest) {
+    $GraphResults = foreach ($Request in $RawGraphRequest) {
         $Json = ConvertTo-Json -Depth 5 -Compress -InputObject $Request
-        $GraphResults = [PSCustomObject]@{
+        [PSCustomObject]@{
             Tenant       = [string]$QueueTenant.Tenant
             QueueId      = [string]$QueueTenant.QueueId
             QueueType    = [string]$QueueTenant.QueueType
@@ -210,16 +210,14 @@ function Push-GraphRequestListQueue {
             PartitionKey = [string]$PartitionKey
             Data         = [string]$Json
         }
-        try {
-            Add-AzDataTableEntity @Table -Entity $GraphResults -Force | Out-Null
-        } catch {
-            Write-Host "Error adding row $($_.Exception.Message)"
-            Write-Host ($GraphResults | ConvertTo-Json)
-            break
-        }
     }
-
-    Update-CippQueueEntry -RowKey $QueueTenant.QueueId -Status 'Completed'
+    try {
+        Add-AzDataTableEntity @Table -Entity $GraphResults -Force | Out-Null
+        Update-CippQueueEntry -RowKey $QueueTenant.QueueId -Status 'Completed'
+    } catch {
+        Write-Host "Queue Error: $($_.Exception.Message)"
+        Update-CippQueueEntry -RowKey $QueueTenant.QueueId -Status 'Failed'
+    }
 }
 
 function Get-GraphRequestListHttp {
