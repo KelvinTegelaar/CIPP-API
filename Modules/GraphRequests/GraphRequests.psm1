@@ -268,10 +268,6 @@ function Get-GraphRequestListHttp {
         $GraphRequestParams.QueueId = $Request.Query.QueueId
     }
 
-    if (![string]::IsNullOrEmpty($Request.Query.refreshGuid)) {
-        $Parameters.ClearCache = $true
-    }
-
     Write-Host ($GraphRequestParams | ConvertTo-Json)
     $GraphRequestData = Get-GraphRequestList @GraphRequestParams
 
