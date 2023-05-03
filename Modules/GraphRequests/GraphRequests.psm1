@@ -54,8 +54,6 @@ function Get-GraphRequestList {
         $Rows = @()
     }
 
-    $FirstTS = $Rows | Select-Object -First 1 -ExpandProperty Timestamp
-    Write-Host "$($FirstTS.DateTime) - $((Get-Date).ToUniversalTime())"
     Write-Host "Cached: $(($Rows | Measure-Object).Count) rows (Type: $($Type))"
 
     <#############
@@ -113,6 +111,7 @@ function Get-GraphRequestList {
                     if ($Parameters.'$count' -and !$SkipCache) {
                         $Count = New-GraphGetRequest @GraphRequest -CountOnly -ErrorAction Stop
                         if ($Count -gt 8000) {
+                            Write-Host "Query results: $Count"
                             $QueueThresholdExceeded = $true
                             if ($RunningQueue) {
                                 Write-Host 'Queue currently running'
