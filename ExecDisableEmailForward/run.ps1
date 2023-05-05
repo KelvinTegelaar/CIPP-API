@@ -8,7 +8,7 @@ try {
     $Username = $request.body.user
     $Tenantfilter = $request.body.tenantfilter
     $Results = try {
-        $OoO = New-ExoRequest -tenantid $TenantFilter -cmdlet "Set-Mailbox" -cmdParams @{Identity = $request.body.user; ForwardingAddress = $null; ForwardingSMTPAddress = $null }
+        $OoO = New-ExoRequest -tenantid $TenantFilter -cmdlet "Set-Mailbox" -cmdParams @{Identity = $request.body.user; ForwardingAddress = $null; ForwardingSMTPAddress = $null; DeliverToMailboxAndForward = $false }
         "Disabled Email forwarding $username"
         Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME  -message "Disabled Email forwarding $($username)" -Sev "Info" -tenant $TenantFilter
 
