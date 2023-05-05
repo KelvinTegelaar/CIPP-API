@@ -3,7 +3,8 @@ using namespace System.Net
 function New-CippQueueEntry {
     Param(
         $Name,
-        $Link
+        $Link,
+        $Reference
     )
 
     $CippQueue = Get-CippTable -TableName CippQueue
@@ -13,6 +14,7 @@ function New-CippQueueEntry {
         RowKey       = (New-Guid).Guid.ToString()
         Name         = $Name
         Link         = $Link
+        Reference    = $Reference
         Status       = 'Queued'
     }
     $CippQueue.Entity = $QueueEntry
@@ -44,12 +46,10 @@ function Update-CippQueueEntry {
             }
             Update-AzDataTableEntity @CippQueue -Entity $QueueEntry
             $QueueEntry
-        }
-        else {
+        } else {
             return $false
         }
-    }
-    else {
+    } else {
         return $false
     }
 }
@@ -65,14 +65,13 @@ function Get-CippQueue {
     Write-Host 'PowerShell HTTP trigger function processed a request.'
 
     $CippQueue = Get-CippTable -TableName 'CippQueue'
-    $CippQueueData = Get-AzDataTableEntity @CippQueue | Sort-Object -Property Timestamp -Descending 
+    $CippQueueData = Get-AzDataTableEntity @CippQueue | Sort-Object -Property Timestamp -Descending
     if ($request) {
         Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
                 StatusCode = [HttpStatusCode]::OK
                 Body       = @($CippQueueData)
             })
-    } 
-    else {
+    } else {
         return $CippQueueData
     }
 }
