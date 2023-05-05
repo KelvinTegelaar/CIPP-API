@@ -265,6 +265,10 @@ function Get-GraphRequestListHttp {
         $Parameters.'$orderby' = $Request.Query.'$orderby'
     }
 
+    if ($Request.Query.'$search') {
+        $Parameters.'$search' = $Request.Query.'$search'
+    }
+
     $GraphRequestParams = @{
         Endpoint   = $Request.Query.Endpoint
         Parameters = $Parameters
