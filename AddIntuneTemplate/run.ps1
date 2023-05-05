@@ -39,7 +39,7 @@ try {
 
             "configurationPolicies" {
                 $Type = "Catalog"
-                $Template = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/deviceManagement/$($urlname)('$($ID)')?`$expand=settings" -tenantid $tenantfilter | Select-Object name, description, settings, platforms, technologies
+                $Template = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/deviceManagement/$($urlname)('$($ID)')?`$expand=settings" -tenantid $tenantfilter | Select-Object name, description, settings, platforms, technologies, templateReference
                 $TemplateJson = $Template | ConvertTo-Json -Depth 10
                 $DisplayName = $template.name
 
