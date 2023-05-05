@@ -35,7 +35,7 @@ function Get-NormalizedError {
 }
 
 function Get-GraphToken($tenantid, $scope, $AsApp, $AppID, $refreshToken, $ReturnRefresh) {
-    if (!$scope) { $scope = 'https://graph.microsoft.com//.default' }
+    if (!$scope) { $scope = 'https://graph.microsoft.com/.default' }
 
     $AuthBody = @{
         client_id     = $env:ApplicationID
@@ -133,7 +133,8 @@ function New-GraphGetRequest {
         $AsApp,
         $noPagination,
         $NoAuthCheck,
-        [switch]$ComplexFilter
+        [switch]$ComplexFilter,
+        [switch]$CountOnly
     )
 
     if ($scope -eq 'ExchangeOnline') {
@@ -166,8 +167,14 @@ function New-GraphGetRequest {
         $ReturnedData = do {
             try {
                 $Data = (Invoke-RestMethod -Uri $nextURL -Method GET -Headers $headers -ContentType 'application/json; charset=utf-8')
-                if ($data.value) { $data.value } else { ($Data) }
-                if ($noPagination) { $nextURL = $null } else { $nextURL = $data.'@odata.nextLink' }
+                if ($CountOnly) {
+                    $Data.'@odata.count'
+                    $nextURL = $null
+                }
+                else {
+                    if ($data.value) { $data.value } else { ($Data) }
+                    if ($noPagination) { $nextURL = $null } else { $nextURL = $data.'@odata.nextLink' }
+                }
             }
             catch {
                 $Message = ($_.ErrorDetails.Message | ConvertFrom-Json -ErrorAction SilentlyContinue).error.message
@@ -346,7 +353,7 @@ function New-ClassicAPIPostRequest($TenantID, $Uri, $Method = 'POST', $Resource 
 }
 
 function Get-AuthorisedRequest($TenantID, $Uri) {
-    if ($uri -like 'https://graph.microsoft.com/beta/contracts*' -or $uri -like '*/customers/*' -or $uri -eq 'https://graph.microsoft.com/v1.0/me/sendMail' -or $uri -like 'https://graph.microsoft.com/beta/tenantRelationships/managedTenants*') {
+    if ($uri -like 'https://graph.microsoft.com/beta/contracts*' -or $uri -like '*/customers/*' -or $uri -eq 'https://graph.microsoft.com/v1.0/me/sendMail' -or $uri -like '*/tenantRelationships/*') {
         return $true
     }
     if ($TenantID -in (Get-Tenants).defaultDomainName) {
@@ -376,15 +383,14 @@ function Get-Tenants {
         $Filter = "PartitionKey eq 'Tenants'"
     }
     else {
-        $Filter = "PartitionKey eq 'Tenants' and (Excluded eq false or GraphErrorCount gt 50)" 
-
+        $Filter = "PartitionKey eq 'Tenants' and Excluded eq false and GraphErrorCount lt 50"
     }
     $IncludedTenantsCache = Get-AzDataTableEntity @TenantsTable -Filter $Filter
 
-    $LastRefresh = ($IncludedTenantsCache | Where-Object { $_.customerId } | Sort-Object LastRefresh | Select-Object -First 1).LastRefresh.DateTime
+    $LastRefresh = ($IncludedTenantsCache | Where-Object { $_.customerId } | Sort-Object LastRefresh | Select-Object -First 1).LastRefresh | Get-Date
     if ($LastRefresh -lt (Get-Date).Addhours(-24).ToUniversalTime()) {
         try {
-            Write-Host 'Renewing. Cache not hit.'
+            Write-Host "Renewing. Cache not hit. $LastRefresh"
             $TenantList = (New-GraphGetRequest -uri "https://graph.microsoft.com/beta/tenantRelationships/managedTenants/tenants?`$top=999" -tenantid $env:TenantID ) | Select-Object id, @{l = 'customerId'; e = { $_.tenantId } }, @{l = 'DefaultdomainName'; e = { [string]($_.contract.defaultDomainName) } } , @{l = 'MigratedToNewTenantAPI'; e = { $true } }, DisplayName, domains, tenantStatusInformation | Where-Object -Property defaultDomainName -NotIn $SkipListCache.defaultDomainName
         }
         catch {
@@ -411,7 +417,7 @@ function Get-Tenants {
                 }) | Out-Null
         }
         foreach ($Tenant in $TenantList) {
-            if ($Tenant.defaultDomainName -eq "Invalid") { continue }
+            if ($Tenant.defaultDomainName -eq 'Invalid') { continue }
             $IncludedTenantsCache.Add(@{
                     RowKey                   = [string]$Tenant.customerId
                     PartitionKey             = 'Tenants'
