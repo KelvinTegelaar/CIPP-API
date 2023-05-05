@@ -5280,6 +5280,15 @@
     "value": "AllSites.FullControl"
   },
   {
+    "description": "Allows to read the LAPs passwords.",
+    "displayName": "Manage LAPs passwords",
+    "id": "280b3b69-0437-44b1-bc20-3b2fca1ee3e9",
+    "Origin": "Delegated",
+    "userConsentDescription": "Allows to read the LAPs passwords.",
+    "userConsentDisplayName": "Manage LAPs passwords",
+    "value": "DeviceLocalCredential.Read.All"
+  },
+  {
     "description": "Access Microsoft Teams and Skype for Business data as the signed in user",
     "displayName": "Access Microsoft Teams and Skype for Business data based on the user's role membership",
     "id": "e60370c1-e451-437e-aa6e-d76df38e5f15",
