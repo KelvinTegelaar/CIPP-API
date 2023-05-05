@@ -17,8 +17,8 @@ Try {
     $tenantfilter = $Request.Query.TenantFilter 
     if ($Quarantine -eq "false") {
     New-ExoRequest -tenantid $TenantFilter -cmdlet "Set-CASMailbox" -cmdParams @{Identity = $request.query.Userid; ActiveSyncAllowedDeviceIDs = @{'@odata.type' = '#Exchange.GenericHashTable'; add=$request.query.deviceid} }
-    $Results = [pscustomobject]@{"Results" = "Allowed Active Synch Device for $($request.query.Userid)"}
-    Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $($tenantfilter) -message "Allow Active Synch Device for $($request.query.Userid)" -Sev "Info"
+    $Results = [pscustomobject]@{"Results" = "Allowed Active Sync Device for $($request.query.Userid)"}
+    Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $($tenantfilter) -message "Allow Active Sync Device for $($request.query.Userid)" -Sev "Info"
 }
     elseif ($Quarantine -eq "true") {
         New-ExoRequest -tenantid $TenantFilter -cmdlet "Set-CASMailbox" -cmdParams @{Identity = $request.query.Userid; ActiveSyncBlockedDeviceIDs = @{'@odata.type' = '#Exchange.GenericHashTable'; add=$request.query.deviceid} }
@@ -40,7 +40,7 @@ catch {
 
 try {
 if ($request.query.delete -eq 'true') {
-    New-ExoRequest -tenant $TenantFilter -cmdlet "Remove-MobileDevice" -cmdParams @{Identity = "$($request.query.Guid)"; Confirm = $false}
+    New-ExoRequest -tenant $TenantFilter -cmdlet "Remove-MobileDevice" -cmdParams @{Identity = "$($request.query.Guid)"; Confirm = $false} -UseSystemMailbox $true 
     $Results = [pscustomobject]@{"Results" = "Deleted Active Sync Device for $($request.query.Userid)"}
     Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $($tenantfilter) -message "Deleted Active Sync Device for $($request.query.Userid)" -Sev "Info"
 }
