@@ -42,16 +42,17 @@ try {
     }
     $GraphRequest = New-GraphPostRequest -uri "https://graph.microsoft.com/beta/users/$($userobj.Userid)" -tenantid $Userobj.tenantid -type PATCH -body $BodyToship  -verbose
     $results.add( "Success. The user has been edited." )
+    Write-LogMessage -API $APINAME -tenant ($UserObj.tenantid) -user $request.headers.'x-ms-client-principal' -message "Edited user $($userobj.displayname) with id $($userobj.Userid)" -Sev "Info"
     if ($userobj.password) {
         $passwordProfile = [pscustomobject]@{"passwordProfile" = @{ "password" = $userobj.password; "forceChangePasswordNextSignIn" = [boolean]$UserObj.mustchangepass } } | ConvertTo-Json
         $GraphRequest = New-GraphPostRequest -uri "https://graph.microsoft.com/beta/users/$($userobj.Userid)" -tenantid $Userobj.tenantid -type PATCH -body $PasswordProfile  -verbose
         $results.add("Success. The password has been set to $($userobj.password)")
+        Write-LogMessage -API $APINAME -tenant ($UserObj.tenantid) -user $request.headers.'x-ms-client-principal' -message "Reset $($userobj.displayname)'s Password" -Sev "Info"
     }
 }
 catch {
     Write-LogMessage -API $APINAME -tenant ($UserObj.tenantid) -user $request.headers.'x-ms-client-principal' -message "User edit API failed. $($_.Exception.Message)" -Sev "Error"
     $results.add( "Failed to edit user. $($_.Exception.Message)")
-    Write-LogMessage -API $APINAME -tenant ($UserObj.tenantid) -user $request.headers.'x-ms-client-principal' -message "Edited user $($userobj.displayname) with id $($userobj.Userid)" -Sev "Info"
 }
 
 

@@ -1,0 +1,12 @@
+{
+  "scriptFile": "../Modules/GraphRequests/GraphRequests.psm1",
+  "entryPoint": "Push-GraphRequestListQueue",
+  "bindings": [
+    {
+      "name": "QueueTenant",
+      "type": "queueTrigger",
+      "direction": "in",
+      "queueName": "GraphRequestQueue"
+    }
+  ]
+}
