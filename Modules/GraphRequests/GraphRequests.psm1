@@ -20,7 +20,8 @@ function Get-GraphRequestList {
         [ValidateSet('v1.0', 'beta')]
         $Version = 'beta',
         [switch]$SkipCache,
-        [switch]$ClearCache
+        [switch]$ClearCache,
+        [switch]$NoPagination
     )
 
     $TableName = 'cache{0}' -f ($Endpoint -replace '/')
@@ -96,6 +97,7 @@ function Get-GraphRequestList {
                             QueueType    = 'AllTenants'
                             Parameters   = $Parameters
                             PartitionKey = $PartitionKey
+                            NoPagination = $NoPagination
                         } | ConvertTo-Json -Depth 5 -Compress
 
                         Push-OutputBinding -Name QueueTenant -Value $QueueTenant
@@ -108,12 +110,17 @@ function Get-GraphRequestList {
                     tenantid      = $Tenant
                     ComplexFilter = $true
                 }
+
+                if ($NoPagination.IsPresent) {
+                    $GraphRequest.noPagination = $NoPagination.IsPresent
+                }
+
                 try {
                     $QueueThresholdExceeded = $false
-                    if ($Parameters.'$count' -and !$SkipCache) {
+                    if ($Parameters.'$count' -and !$SkipCache -and !$NoPagination) {
                         $Count = New-GraphGetRequest @GraphRequest -CountOnly -ErrorAction Stop
+                        Write-Host "Total results (`$count): $Count"
                         if ($Count -gt 8000) {
-                            Write-Host "Query results: $Count"
                             $QueueThresholdExceeded = $true
                             if ($RunningQueue) {
                                 Write-Host 'Queue currently running'
@@ -187,10 +194,11 @@ function Push-GraphRequestListQueue {
     Get-AzDataTableEntity @Table -Filter $Filter | Remove-AzDataTableEntity @table
 
     $GraphRequestParams = @{
-        Tenant     = $QueueTenant.Tenant
-        Endpoint   = $QueueTenant.Endpoint
-        Parameters = $QueueTenant.Parameters
-        SkipCache  = $true
+        Tenant       = $QueueTenant.Tenant
+        Endpoint     = $QueueTenant.Endpoint
+        Parameters   = $QueueTenant.Parameters
+        NoPagination = $QueueTenant.NoPagination
+        SkipCache    = $true
     }
 
     $RawGraphRequest = try {
@@ -250,11 +258,15 @@ function Get-GraphRequestListHttp {
     }
 
     if ($Request.Query.'$count') {
-        $Parameters.'$count' = $Request.Query.'$count'
+        $Parameters.'$count' = ([string]([System.Boolean]$Request.Query.'$count')).ToLower()
     }
 
     if ($Request.Query.'$orderby') {
         $Parameters.'$orderby' = $Request.Query.'$orderby'
+    }
+
+    if ($Request.Query.'$search') {
+        $Parameters.'$search' = $Request.Query.'$search'
     }
 
     $GraphRequestParams = @{
@@ -273,6 +285,10 @@ function Get-GraphRequestListHttp {
 
     if ($Request.Query.Version) {
         $GraphRequestParams.Version = $Request.Query.Version
+    }
+
+    if ($Request.Query.NoPagination) {
+        $GraphRequestParams.NoPagination = [System.Boolean]$Request.Query.NoPagination
     }
 
     Write-Host ($GraphRequestParams | ConvertTo-Json)
