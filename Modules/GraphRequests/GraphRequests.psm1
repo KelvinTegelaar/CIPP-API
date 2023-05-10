@@ -21,13 +21,17 @@ function Get-GraphRequestList {
         $Version = 'beta',
         [switch]$SkipCache,
         [switch]$ClearCache,
-        [switch]$NoPagination
+        [switch]$NoPagination,
+        [switch]$CountOnly
     )
 
-    $TableName = 'cache{0}' -f ($Endpoint -replace '/')
+    $TableName = 'cache{0}' -f (($Endpoint -replace '[^A-Za-z0-9]')[0..57] -join '')
+    Write-Host $TableName
+    $DisplayName = ($Endpoint -split '/')[0]
+
     $Table = Get-CIPPTable -TableName $TableName
     $TextInfo = (Get-Culture).TextInfo
-    $QueueName = $TextInfo.ToTitleCase($Endpoint -csplit '(?=[A-Z])' -ne '' -join ' ')
+    $QueueName = $TextInfo.ToTitleCase($DisplayName -csplit '(?=[A-Z])' -ne '' -join ' ')
 
     $GraphQuery = [System.UriBuilder]('https://graph.microsoft.com/{0}/{1}' -f $Version, $Endpoint)
     $ParamCollection = [System.Web.HttpUtility]::ParseQueryString([String]::Empty)
@@ -43,13 +47,13 @@ function Get-GraphRequestList {
         $Filter = "QueueId = '{0}'" -f $QueueId
         $Rows = Get-AzDataTableEntity @Table -Filter $Filter
         $Type = 'Queue'
-    } elseif (!$SkipCache.IsPresent -and !$ClearCache.IsPresent) {
+    } elseif ($Tenant -eq 'AllTenants' -or (!$SkipCache.IsPresent -and !$ClearCache.IsPresent -and !$CountOnly.IsPresent)) {
         if ($Tenant -eq 'AllTenants') {
             $Filter = "PartitionKey eq '{0}' and QueueType eq 'AllTenants'" -f $PartitionKey
         } else {
             $Filter = "PartitionKey eq '{0}' and Tenant eq '{1}'" -f $PartitionKey, $Tenant
         }
-        Write-Host $Filter
+        #Write-Host $Filter
         $Rows = Get-AzDataTableEntity @Table -Filter $Filter | Where-Object { $_.Timestamp.DateTime -gt (Get-Date).ToUniversalTime().AddHours(-1) }
         $Type = 'Cache'
     } else {
@@ -58,14 +62,6 @@ function Get-GraphRequestList {
     }
 
     Write-Host "Cached: $(($Rows | Measure-Object).Count) rows (Type: $($Type))"
-
-    <#############
-
-    return [PSCustomObject]@{
-        Tenant  = 'Data still processing, please wait'
-        QueueId = $RunningQueue.RowKey
-    }
-    #############>
 
     $QueueReference = '{0}-{1}' -f $Tenant, $PartitionKey
     $RunningQueue = Get-CippQueue | Where-Object { $_.Reference -eq $QueueReference -and $_.Status -ne 'Completed' -and $_.Status -ne 'Failed' }
@@ -97,7 +93,7 @@ function Get-GraphRequestList {
                             QueueType    = 'AllTenants'
                             Parameters   = $Parameters
                             PartitionKey = $PartitionKey
-                            NoPagination = $NoPagination
+                            NoPagination = $NoPagination.IsPresent
                         } | ConvertTo-Json -Depth 5 -Compress
 
                         Push-OutputBinding -Name QueueTenant -Value $QueueTenant
@@ -113,6 +109,10 @@ function Get-GraphRequestList {
 
                 if ($NoPagination.IsPresent) {
                     $GraphRequest.noPagination = $NoPagination.IsPresent
+                }
+
+                if ($CountOnly.IsPresent) {
+                    $GraphRequest.CountOnly = $CountOnly.IsPresent
                 }
 
                 try {
@@ -171,10 +171,9 @@ function Push-GraphRequestListQueue {
     param($QueueTenant, $TriggerMetadata)
 
     # Write out the queue message and metadata to the information log.
-    Write-Host "PowerShell queue trigger function processed work item $QueueTenant"
+    Write-Host "PowerShell queue trigger function processed work item: $($QueueTenant.Endpoint) - $($QueueTenant.Tenant)"
 
-    #$QueueTenant = $QueueTenant | ConvertFrom-Json
-    Write-Host ($QueueTenant | ConvertTo-Json -Depth 5)
+    #Write-Host ($QueueTenant | ConvertTo-Json -Depth 5)
 
     $TenantQueueName = '{0} - {1}' -f $QueueTenant.QueueName, $QueueTenant.Tenant
     Update-CippQueueEntry -RowKey $QueueTenant.QueueId -Status 'Processing' -Name $TenantQueueName
@@ -186,7 +185,8 @@ function Push-GraphRequestListQueue {
 
     $PartitionKey = $QueueTenant.PartitionKey
 
-    $TableName = 'cache{0}' -f ($QueueTenant.Endpoint -replace '/')
+    $TableName = 'cache{0}' -f (($QueueTenant.Endpoint -replace '[^A-Za-z0-9]')[0..57] -join '')
+    Write-Host $TableName
     $Table = Get-CIPPTable -TableName $TableName
 
     $Filter = "PartitionKey eq '{0}' and Tenant eq '{1}'" -f $PartitionKey, $QueueTenant.Tenant
@@ -289,6 +289,10 @@ function Get-GraphRequestListHttp {
 
     if ($Request.Query.NoPagination) {
         $GraphRequestParams.NoPagination = [System.Boolean]$Request.Query.NoPagination
+    }
+
+    if ($Request.Query.CountOnly) {
+        $GraphRequestParams.CountOnly = [System.Boolean]$Request.Query.CountOnly
     }
 
     Write-Host ($GraphRequestParams | ConvertTo-Json)
