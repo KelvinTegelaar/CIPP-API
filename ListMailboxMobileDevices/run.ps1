@@ -28,9 +28,9 @@ try {
     @{ Name = 'deviceModel'; Expression = { $_.DeviceModel } },
     @{ Name = 'deviceOS'; Expression = { $_.DeviceOS } },
     @{ Name = 'deviceType'; Expression = { $_.DeviceType } },
-    @{ Name = 'firstSync'; Expression = { $_.FirstSyncTime.toString('s') } },
-    @{ Name = 'lastSyncAttempt'; Expression = { $_.LastSyncAttemptTime.toString('s') } },
-    @{ Name = 'lastSuccessSync'; Expression = { $_.LastSuccessSync.toString('s') } },
+    @{ Name = 'firstSync'; Expression = { $_.FirstSyncTime.toString() } },
+    @{ Name = 'lastSyncAttempt'; Expression = { $_.LastSyncAttemptTime.toString() } },
+    @{ Name = 'lastSuccessSync'; Expression = { $_.LastSuccessSync.toString() } },
     @{ Name = 'status'; Expression = { $_.Status } },
     @{ Name = 'deviceID'; Expression = { $_.deviceID } },
     @{ Name = 'Guid'; Expression = { $_.Guid } }
