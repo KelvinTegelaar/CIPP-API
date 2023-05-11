@@ -10,4 +10,6 @@ ForEach ($Key in $CIPPSettings.PSObject.Properties.Name) {
 }
 
 Import-Module "$CippRoot\GraphHelper.psm1"
-Import-Module "$CippRoot\DNSHelper.psm1"
+Import-Module "$CippRoot\Modules\AzBobbyTables"
+Import-Module "$CippRoot\Modules\DNSHealth"
+Import-Module "$CippRoot\Modules\CippQueue"
