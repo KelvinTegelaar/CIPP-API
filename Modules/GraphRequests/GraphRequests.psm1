@@ -334,6 +334,14 @@ function Get-GraphRequestListHttp {
         $GraphRequestParams.QueueNameOverride = [System.Boolean]$Request.Query.QueueNameOverride
     }
 
+    if ($Request.Query.ReverseTenantLookup) {
+        $GraphRequestParams.ReverseTenantLookup = [System.Boolean]$Request.Query.ReverseTenantLookup
+    }
+
+    if ($Request.Query.ReverseTenantLookupProperty) {
+        $GraphRequestParams.ReverseTenantLookupProperty = $Request.Query.ReverseTenantLookupProperty
+    }
+
     Write-Host ($GraphRequestParams | ConvertTo-Json)
     try {
         $GraphRequestData = Get-GraphRequestList @GraphRequestParams
