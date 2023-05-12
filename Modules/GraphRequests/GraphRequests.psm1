@@ -330,6 +330,10 @@ function Get-GraphRequestListHttp {
         $GraphRequestParams.CountOnly = [System.Boolean]$Request.Query.CountOnly
     }
 
+    if ($Request.Query.QueueNameOverride) {
+        $GraphRequestParams.QueueNameOverride = [System.Boolean]$Request.Query.QueueNameOverride
+    }
+
     Write-Host ($GraphRequestParams | ConvertTo-Json)
     try {
         $GraphRequestData = Get-GraphRequestList @GraphRequestParams
