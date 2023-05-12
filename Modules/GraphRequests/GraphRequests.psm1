@@ -30,7 +30,6 @@ function Get-GraphRequestList {
     Write-Host $TableName
     $DisplayName = ($Endpoint -split '/')[0]
 
-    $Table = Get-CIPPTable -TableName $TableName
     $TextInfo = (Get-Culture).TextInfo
     $QueueName = $TextInfo.ToTitleCase($DisplayName -csplit '(?=[A-Z])' -ne '' -join ' ')
 
@@ -45,10 +44,12 @@ function Get-GraphRequestList {
     Write-Host ( 'GET [ {0} ]' -f $GraphQuery.ToString())
 
     if ($QueueId) {
+        $Table = Get-CIPPTable -TableName $TableName
         $Filter = "QueueId = '{0}'" -f $QueueId
         $Rows = Get-AzDataTableEntity @Table -Filter $Filter
         $Type = 'Queue'
     } elseif ($Tenant -eq 'AllTenants' -or (!$SkipCache.IsPresent -and !$ClearCache.IsPresent -and !$CountOnly.IsPresent)) {
+        $Table = Get-CIPPTable -TableName $TableName
         if ($Tenant -eq 'AllTenants') {
             $Filter = "PartitionKey eq '{0}' and QueueType eq 'AllTenants'" -f $PartitionKey
         } else {
@@ -61,7 +62,6 @@ function Get-GraphRequestList {
         $Type = 'None'
         $Rows = @()
     }
-
     Write-Host "Cached: $(($Rows | Measure-Object).Count) rows (Type: $($Type))"
 
     $QueueReference = '{0}-{1}' -f $Tenant, $PartitionKey
