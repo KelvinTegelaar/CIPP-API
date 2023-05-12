@@ -172,10 +172,12 @@ function Get-GraphRequestList {
                     if (!$QueueThresholdExceeded) {
                         $GraphRequestResults = New-GraphGetRequest @GraphRequest -ErrorAction Stop
                         if ($ReverseTenantLookup -and $GraphRequestResults) {
-                            $GraphRequestResults | ForEach-Object {
-                                $TenantInfo = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/tenantRelationships/findTenantInformationByTenantId(tenantId='$($_.$ReverseTenantLookupProperty)')" -noauthcheck $true
-
-                                $_ | Select-Object @{n = 'displayName'; e = { $TenantInfo.displayName } }, @{n = 'federationBrandName'; e = { $TenantInfo.federationBrandName } }, @{n = 'defaultDomainName'; e = { $TenantInfo.defaultDomainName } }, *
+                            $TenantInfo = $GraphRequestResults.$ReverseTenantLookupProperty | Sort-Object -Unique | ForEach-Object {
+                                New-GraphGetRequest -uri "https://graph.microsoft.com/beta/tenantRelationships/findTenantInformationByTenantId(tenantId='$_')" -noauthcheck $true
+                            }
+                            Write-Host $TenantInfo
+                            foreach ($Result in $GraphRequestResults) {
+                                $Result | Select-Object @{n = 'TenantInfo'; e = { $TenantInfo | Where-Object { $Result.$ReverseTenantLookupProperty -eq $_.tenantId } } }, *
                             }
                         } else {
                             $GraphRequestResults
@@ -356,6 +358,5 @@ function Get-GraphRequestListHttp {
             Body       = @($GraphRequestData)
         })
 }
-
 
 Export-ModuleMember -Function @('Get-GraphRequestList', 'Get-GraphRequestListHttp', 'Push-GraphRequestListQueue')
