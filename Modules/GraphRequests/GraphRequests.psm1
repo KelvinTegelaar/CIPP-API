@@ -14,7 +14,7 @@ function Get-GraphRequestList {
         $Tenant = $env:TenantId,
         [Parameter(Mandatory = $true)]
         $Endpoint,
-        $Parameters,
+        $Parameters = @(),
         $QueueId,
         $CippLink,
         [ValidateSet('v1.0', 'beta')]
@@ -22,10 +22,11 @@ function Get-GraphRequestList {
         [switch]$SkipCache,
         [switch]$ClearCache,
         [switch]$NoPagination,
-        [switch]$CountOnly
+        [switch]$CountOnly,
+        [switch]$NoAuthCheck
     )
 
-    $TableName = 'cache{0}' -f (($Endpoint -replace '[^A-Za-z0-9]')[0..57] -join '')
+    $TableName = ('cache{0}' -f ($Endpoint -replace '[^A-Za-z0-9]'))[0..63] -join ''
     Write-Host $TableName
     $DisplayName = ($Endpoint -split '/')[0]
 
@@ -41,7 +42,7 @@ function Get-GraphRequestList {
     $GraphQuery.Query = $ParamCollection.ToString()
     $PartitionKey = Get-StringHash -String (@($QueueTenant.Endpoint, $ParamCollection.ToString()) -join '-')
 
-    Write-Host $GraphQuery.ToString()
+    Write-Host ( 'GET [ {0} ]' -f $GraphQuery.ToString())
 
     if ($QueueId) {
         $Filter = "QueueId = '{0}'" -f $QueueId
@@ -115,6 +116,10 @@ function Get-GraphRequestList {
                     $GraphRequest.CountOnly = $CountOnly.IsPresent
                 }
 
+                if ($NoAuthCheck.IsPresent) {
+                    $GraphRequest.noauthcheck = $NoAuthCheck.IsPresent
+                }
+
                 try {
                     $QueueThresholdExceeded = $false
                     if ($Parameters.'$count' -and !$SkipCache -and !$NoPagination) {
@@ -139,6 +144,7 @@ function Get-GraphRequestList {
                                     QueueType    = 'SingleTenant'
                                     Parameters   = $Parameters
                                     PartitionKey = $PartitionKey
+                                    NoAuthCheck  = $NoAuthCheck.IsPresent
                                 } | ConvertTo-Json -Depth 5 -Compress
 
                                 Push-OutputBinding -Name QueueTenant -Value $QueueTenant
@@ -233,6 +239,11 @@ function Push-GraphRequestListQueue {
 function Get-GraphRequestListHttp {
     # Input bindings are passed in via param block.
     param($Request, $TriggerMetadata)
+
+    $APIName = $TriggerMetadata.FunctionName
+
+    $Message = 'Accessed this API | Endpoint: {0}' -f $Request.Query.Endpoint
+    Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -message $Message -Sev 'Debug'
 
     $CippLink = ([System.Uri]$TriggerMetadata.Headers.referer).PathAndQuery
 
