@@ -19,19 +19,26 @@ function Get-GraphRequestList {
         $CippLink,
         [ValidateSet('v1.0', 'beta')]
         $Version = 'beta',
+        $QueueNameOverride,
         [switch]$SkipCache,
         [switch]$ClearCache,
         [switch]$NoPagination,
         [switch]$CountOnly,
-        [switch]$NoAuthCheck
+        [switch]$NoAuthCheck,
+        [switch]$ReverseTenantLookup,
+        [string]$ReverseTenantLookupProperty = 'tenantId'
     )
 
     $TableName = ('cache{0}' -f ($Endpoint -replace '[^A-Za-z0-9]'))[0..63] -join ''
-    Write-Host $TableName
+    Write-Host "Table: $TableName"
     $DisplayName = ($Endpoint -split '/')[0]
 
-    $TextInfo = (Get-Culture).TextInfo
-    $QueueName = $TextInfo.ToTitleCase($DisplayName -csplit '(?=[A-Z])' -ne '' -join ' ')
+    if ($QueueNameOverride) {
+        $QueueName = $QueueNameOverride
+    } else {
+        $TextInfo = (Get-Culture).TextInfo
+        $QueueName = $TextInfo.ToTitleCase($DisplayName -csplit '(?=[A-Z])' -ne '' -join ' ')
+    }
 
     $GraphQuery = [System.UriBuilder]('https://graph.microsoft.com/{0}/{1}' -f $Version, $Endpoint)
     $ParamCollection = [System.Web.HttpUtility]::ParseQueryString([String]::Empty)
@@ -39,7 +46,8 @@ function Get-GraphRequestList {
         $ParamCollection.Add($Item.Key, $Item.Value)
     }
     $GraphQuery.Query = $ParamCollection.ToString()
-    $PartitionKey = Get-StringHash -String (@($QueueTenant.Endpoint, $ParamCollection.ToString()) -join '-')
+    $PartitionKey = Get-StringHash -String (@($Endpoint, $ParamCollection.ToString()) -join '-')
+    Write-Host "PK: $PartitionKey"
 
     Write-Host ( 'GET [ {0} ]' -f $GraphQuery.ToString())
 
@@ -87,14 +95,17 @@ function Get-GraphRequestList {
                     Get-Tenants | ForEach-Object {
                         $Tenant = $_.defaultDomainName
                         $QueueTenant = @{
-                            Tenant       = $Tenant
-                            Endpoint     = $Endpoint
-                            QueueId      = $Queue.RowKey
-                            QueueName    = $QueueName
-                            QueueType    = 'AllTenants'
-                            Parameters   = $Parameters
-                            PartitionKey = $PartitionKey
-                            NoPagination = $NoPagination.IsPresent
+                            Tenant                      = $Tenant
+                            Endpoint                    = $Endpoint
+                            QueueId                     = $Queue.RowKey
+                            QueueName                   = $QueueName
+                            QueueType                   = 'AllTenants'
+                            Parameters                  = $Parameters
+                            PartitionKey                = $PartitionKey
+                            NoPagination                = $NoPagination.IsPresent
+                            NoAuthCheck                 = $NoAuthCheck.IsPresent
+                            ReverseTenantLookupProperty = $ReverseTenantLookupProperty
+                            ReverseTenantLookup         = $ReverseTenantLookup.IsPresent
                         } | ConvertTo-Json -Depth 5 -Compress
 
                         Push-OutputBinding -Name QueueTenant -Value $QueueTenant
@@ -137,14 +148,16 @@ function Get-GraphRequestList {
                             } else {
                                 $Queue = New-CippQueueEntry -Name $QueueName -Link $CippLink -Reference $QueueReference
                                 $QueueTenant = @{
-                                    Tenant       = $Tenant
-                                    Endpoint     = $Endpoint
-                                    QueueId      = $Queue.RowKey
-                                    QueueName    = $QueueName
-                                    QueueType    = 'SingleTenant'
-                                    Parameters   = $Parameters
-                                    PartitionKey = $PartitionKey
-                                    NoAuthCheck  = $NoAuthCheck.IsPresent
+                                    Tenant                      = $Tenant
+                                    Endpoint                    = $Endpoint
+                                    QueueId                     = $Queue.RowKey
+                                    QueueName                   = $QueueName
+                                    QueueType                   = 'SingleTenant'
+                                    Parameters                  = $Parameters
+                                    PartitionKey                = $PartitionKey
+                                    NoAuthCheck                 = $NoAuthCheck.IsPresent
+                                    ReverseTenantLookupProperty = $ReverseTenantLookupProperty
+                                    ReverseTenantLookup         = $ReverseTenantLookup.IsPresent
                                 } | ConvertTo-Json -Depth 5 -Compress
 
                                 Push-OutputBinding -Name QueueTenant -Value $QueueTenant
@@ -157,7 +170,16 @@ function Get-GraphRequestList {
                     }
 
                     if (!$QueueThresholdExceeded) {
-                        New-GraphGetRequest @GraphRequest -ErrorAction Stop
+                        $GraphRequestResults = New-GraphGetRequest @GraphRequest -ErrorAction Stop
+                        if ($ReverseTenantLookup -and $GraphRequestResults) {
+                            $GraphRequestResults | ForEach-Object {
+                                $TenantInfo = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/tenantRelationships/findTenantInformationByTenantId(tenantId='$($_.$ReverseTenantLookupProperty)')" -noauthcheck $true
+
+                                $_ | Select-Object @{n = 'displayName'; e = { $TenantInfo.displayName } }, @{n = 'federationBrandName'; e = { $TenantInfo.federationBrandName } }, @{n = 'defaultDomainName'; e = { $TenantInfo.defaultDomainName } }, *
+                            }
+                        } else {
+                            $GraphRequestResults
+                        }
                     }
 
                 } catch {
@@ -191,20 +213,22 @@ function Push-GraphRequestListQueue {
 
     $PartitionKey = $QueueTenant.PartitionKey
 
-    $TableName = 'cache{0}' -f (($QueueTenant.Endpoint -replace '[^A-Za-z0-9]')[0..57] -join '')
+    $TableName = ('cache{0}' -f ($QueueTenant.Endpoint -replace '[^A-Za-z0-9]'))[0..63] -join ''
     Write-Host $TableName
     $Table = Get-CIPPTable -TableName $TableName
 
     $Filter = "PartitionKey eq '{0}' and Tenant eq '{1}'" -f $PartitionKey, $QueueTenant.Tenant
     Write-Host $Filter
-    Get-AzDataTableEntity @Table -Filter $Filter | Remove-AzDataTableEntity @table
+    Get-AzDataTableEntity @Table -Filter $Filter | Remove-AzDataTableEntity @Table
 
     $GraphRequestParams = @{
-        Tenant       = $QueueTenant.Tenant
-        Endpoint     = $QueueTenant.Endpoint
-        Parameters   = $QueueTenant.Parameters
-        NoPagination = $QueueTenant.NoPagination
-        SkipCache    = $true
+        Tenant                      = $QueueTenant.Tenant
+        Endpoint                    = $QueueTenant.Endpoint
+        Parameters                  = $QueueTenant.Parameters
+        NoPagination                = $QueueTenant.NoPagination
+        ReverseTenantLookupProperty = $QueueTenant.ReverseTenantLookupProperty
+        ReverseTenantLookup         = $QueueTenant.ReverseTenantLookup
+        SkipCache                   = $true
     }
 
     $RawGraphRequest = try {

@@ -8,18 +8,12 @@ Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -m
 
 try {
 	$GraphRequestList = @{
-		Endpoint = 'policies/crossTenantAccessPolicy/partners'
-		Tenant   = $Request.Query.TenantFilter
+		Endpoint            = 'policies/crossTenantAccessPolicy/partners'
+		Tenant              = $Request.Query.TenantFilter
+		QueueNameOverride   = 'Partner Relationships'
+		ReverseTenantLookup = $true
 	}
-	$Partners = Get-GraphRequestList @GraphRequestList
-
-	$GraphRequest = foreach ($Partner in $Partners) {
-		if ($Partner.tenantId) {
-			$PartnerInfo = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/tenantRelationships/findTenantInformationByTenantId(tenantId='$($Partner.tenantId)')" -noauthcheck $true
-
-			$Partner | Select-Object @{n = 'displayName'; e = { $PartnerInfo.displayName } }, @{n = 'federationBrandName'; e = { $PartnerInfo.federationBrandName } }, @{n = 'defaultDomainName'; e = { $PartnerInfo.defaultDomainName } }, *
-		}
-	}
+	$GraphRequest = Get-GraphRequestList @GraphRequestList
 } catch {
 	$GraphRequest = @()
 }
