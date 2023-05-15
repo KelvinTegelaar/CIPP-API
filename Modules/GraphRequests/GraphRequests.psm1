@@ -29,7 +29,7 @@ function Get-GraphRequestList {
         [string]$ReverseTenantLookupProperty = 'tenantId'
     )
 
-    $TableName = ('cache{0}' -f ($Endpoint -replace '[^A-Za-z0-9]'))[0..63] -join ''
+    $TableName = ('cache{0}' -f ($Endpoint -replace '[^A-Za-z0-9]'))[0..62] -join ''
     Write-Host "Table: $TableName"
     $DisplayName = ($Endpoint -split '/')[0]
 
