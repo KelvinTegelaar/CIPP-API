@@ -27,7 +27,7 @@ $StatusCode = [HttpStatusCode]::OK
 $Counts = @{
         Users    = $users
         LicUsers = $LicUsers
-        Gas      = ($Gas).count
+        Gas      = $Gas
         Guests   = $guests
 }
 
