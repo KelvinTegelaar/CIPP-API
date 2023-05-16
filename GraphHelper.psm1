@@ -64,14 +64,17 @@ function Get-GraphToken($tenantid, $scope, $AsApp, $AppID, $refreshToken, $Retur
 
     if (!$tenantid) { $tenantid = $env:TenantID }
 
+    $TokenKey = '{0}-{1}' -f $tenantid, $scope
+
     try {
-        if ($script:AccessToken -and [int](Get-Date -UFormat %s -Millisecond 0) -lt $script:AccessToken.expires_on) {
-            $AccessToken = $script:AccessToken
+        if ($script:AccessTokens.$TokenKey -and [int](Get-Date -UFormat %s -Millisecond 0) -lt $script:AccessTokens.$TokenKey.expires_on) {
+            $AccessToken = $script:AccessTokens.$TokenKey
         } else {
             $AccessToken = (Invoke-RestMethod -Method post -Uri "https://login.microsoftonline.com/$($tenantid)/oauth2/v2.0/token" -Body $Authbody -ErrorAction Stop)
             $ExpiresOn = [int](Get-Date -UFormat %s -Millisecond 0) + $AccessToken.expires_in
             Add-Member -InputObject $AccessToken -NotePropertyName 'expires_on' -NotePropertyValue $ExpiresOn
-            $script:AccessToken = $AccessToken
+            if (!$script:AccessTokens) { $script:AccessTokens = @{} }
+            $script:AccessTokens.$TokenKey = $AccessToken
         }
 
         if ($ReturnRefresh) { $header = $AccessToken } else { $header = @{ Authorization = "Bearer $($AccessToken.access_token)" } }
@@ -229,8 +232,9 @@ function convert-skuname($skuname, $skuID) {
 }
 
 function Get-ClassicAPIToken($tenantID, $Resource) {
-    if ($script:classictoken -and [int](Get-Date -UFormat %s -Millisecond 0) -lt $script:classictoken.expires_on) {
-        return $script:classictoken
+    $TokenKey = '{0}-{1}' -f $TenantID, $Resource
+    if ($script:classictoken.$TokenKey -and [int](Get-Date -UFormat %s -Millisecond 0) -lt $script:classictoken.$TokenKey.expires_on) {
+        return $script:classictoken.$TokenKey
     } else {
         Write-Host 'Using classic'
         $uri = "https://login.microsoftonline.com/$($TenantID)/oauth2/token"
@@ -242,8 +246,9 @@ function Get-ClassicAPIToken($tenantID, $Resource) {
             grant_type    = 'refresh_token'
         }
         try {
-            $script:classictoken = Invoke-RestMethod $uri -Body $body -ContentType 'application/x-www-form-urlencoded' -ErrorAction SilentlyContinue -Method post
-            return $script:classictoken
+            if (!$script:classictoken) { $script:classictoken = @{} }
+            $script:classictoken.$TokenKey = Invoke-RestMethod $uri -Body $body -ContentType 'application/x-www-form-urlencoded' -ErrorAction SilentlyContinue -Method post
+            return $script:classictoken.$TokenKey
         } catch {
             # Track consecutive Graph API failures
             $TenantsTable = Get-CippTable -tablename Tenants
