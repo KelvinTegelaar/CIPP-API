@@ -341,12 +341,11 @@ function Get-AuthorisedRequest($TenantID, $Uri) {
     if ($uri -like 'https://graph.microsoft.com/beta/contracts*' -or $uri -like '*/customers/*' -or $uri -eq 'https://graph.microsoft.com/v1.0/me/sendMail' -or $uri -like '*/tenantRelationships/*') {
         return $true
     }
-    if ($TenantID -in (Get-Tenants).defaultDomainName) {
+    if (($TenantID -ne $env:TenantId -or $env:PartnerTenantAvailable) -and (Get-Tenants -SkipList).defaultDomainName -notcontains $TenantID) {
         return $true
     } else {
         return $false
     }
-
 }
 
 function Get-Tenants {
@@ -362,6 +361,9 @@ function Get-Tenants {
     $ExcludedFilter = "PartitionKey eq 'Tenants' and Excluded eq true"
 
     $SkipListCache = Get-AzDataTableEntity @TenantsTable -Filter $ExcludedFilter
+    if ($SkipList) {
+        return $SkipListCache
+    }
 
     if ($IncludeAll.IsPresent) {
         $Filter = "PartitionKey eq 'Tenants'"
@@ -423,10 +425,6 @@ function Get-Tenants {
             $TenantsTable.Force = $true
             Add-AzDataTableEntity @TenantsTable -Entity $IncludedTenantsCache
         }
-    }
-
-    if ($SkipList) {
-        return $SkipListCache
     }
     return ($IncludedTenantsCache | Sort-Object -Property displayName)
 
