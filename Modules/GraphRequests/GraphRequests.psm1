@@ -88,27 +88,32 @@ function Get-GraphRequestList {
                 } else {
                     $Queue = New-CippQueueEntry -Name "$QueueName (All Tenants)" -Link $CippLink -Reference $QueueReference
                     [PSCustomObject]@{
-                        Tenant  = 'Loading data for all tenants. Please check back after the job completes'
-                        QueueId = $Queue.RowKey
+                        QueueMessage = 'Loading data for all tenants. Please check back after the job completes'
+                        Queued       = $true
+                        QueueId      = $Queue.RowKey
                     }
+                    Write-Output 'Pushing output bindings'
+                    try {
+                        Get-Tenants | ForEach-Object {
+                            $Tenant = $_.defaultDomainName
+                            $QueueTenant = @{
+                                Tenant                      = $Tenant
+                                Endpoint                    = $Endpoint
+                                QueueId                     = $Queue.RowKey
+                                QueueName                   = $QueueName
+                                QueueType                   = 'AllTenants'
+                                Parameters                  = $Parameters
+                                PartitionKey                = $PartitionKey
+                                NoPagination                = $NoPagination.IsPresent
+                                NoAuthCheck                 = $NoAuthCheck.IsPresent
+                                ReverseTenantLookupProperty = $ReverseTenantLookupProperty
+                                ReverseTenantLookup         = $ReverseTenantLookup.IsPresent
+                            } | ConvertTo-Json -Depth 5 -Compress
 
-                    Get-Tenants | ForEach-Object {
-                        $Tenant = $_.defaultDomainName
-                        $QueueTenant = @{
-                            Tenant                      = $Tenant
-                            Endpoint                    = $Endpoint
-                            QueueId                     = $Queue.RowKey
-                            QueueName                   = $QueueName
-                            QueueType                   = 'AllTenants'
-                            Parameters                  = $Parameters
-                            PartitionKey                = $PartitionKey
-                            NoPagination                = $NoPagination.IsPresent
-                            NoAuthCheck                 = $NoAuthCheck.IsPresent
-                            ReverseTenantLookupProperty = $ReverseTenantLookupProperty
-                            ReverseTenantLookup         = $ReverseTenantLookup.IsPresent
-                        } | ConvertTo-Json -Depth 5 -Compress
-
-                        Push-OutputBinding -Name QueueTenant -Value $QueueTenant
+                            Push-OutputBinding -Name QueueTenant -Value $QueueTenant
+                        }
+                    } catch {
+                        Write-Host "QUEUE ERROR: $($_.Exception.Message)"
                     }
                 }
             }
@@ -142,8 +147,9 @@ function Get-GraphRequestList {
                                 Write-Host 'Queue currently running'
                                 Write-Host ($RunningQueue | ConvertTo-Json)
                                 [PSCustomObject]@{
-                                    Tenant  = 'Data still processing, please wait'
-                                    QueueId = $RunningQueue.RowKey
+                                    QueueMessage = 'Data still processing, please wait'
+                                    QueueId      = $RunningQueue.RowKey
+                                    Queued       = $true
                                 }
                             } else {
                                 $Queue = New-CippQueueEntry -Name $QueueName -Link $CippLink -Reference $QueueReference
@@ -162,8 +168,9 @@ function Get-GraphRequestList {
 
                                 Push-OutputBinding -Name QueueTenant -Value $QueueTenant
                                 [PSCustomObject]@{
-                                    Tenant  = ('Loading {0} rows for {1}. Please check back after the job completes' -f $Count, $Tenant)
-                                    QueueId = $Queue.RowKey
+                                    QueueMessage = ('Loading {0} rows for {1}. Please check back after the job completes' -f $Count, $Tenant)
+                                    QueueId      = $Queue.RowKey
+                                    Queued       = $true
                                 }
                             }
                         }
