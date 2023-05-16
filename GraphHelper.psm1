@@ -68,12 +68,14 @@ function Get-GraphToken($tenantid, $scope, $AsApp, $AppID, $refreshToken, $Retur
 
     try {
         if ($script:AccessTokens.$TokenKey -and [int](Get-Date -UFormat %s -Millisecond 0) -lt $script:AccessTokens.$TokenKey.expires_on) {
+            Write-Host 'Graph: cached token'
             $AccessToken = $script:AccessTokens.$TokenKey
         } else {
+            Write-Host 'Graph: new token'
             $AccessToken = (Invoke-RestMethod -Method post -Uri "https://login.microsoftonline.com/$($tenantid)/oauth2/v2.0/token" -Body $Authbody -ErrorAction Stop)
             $ExpiresOn = [int](Get-Date -UFormat %s -Millisecond 0) + $AccessToken.expires_in
             Add-Member -InputObject $AccessToken -NotePropertyName 'expires_on' -NotePropertyValue $ExpiresOn
-            if (!$script:AccessTokens) { $script:AccessTokens = @{} }
+            if (!$script:AccessTokens) { $script:AccessTokens = [HashTable]::Synchronized(@{}) }
             $script:AccessTokens.$TokenKey = $AccessToken
         }
 
@@ -234,6 +236,7 @@ function convert-skuname($skuname, $skuID) {
 function Get-ClassicAPIToken($tenantID, $Resource) {
     $TokenKey = '{0}-{1}' -f $TenantID, $Resource
     if ($script:classictoken.$TokenKey -and [int](Get-Date -UFormat %s -Millisecond 0) -lt $script:classictoken.$TokenKey.expires_on) {
+        Write-Host 'Classic: cached token'
         return $script:classictoken.$TokenKey
     } else {
         Write-Host 'Using classic'
@@ -246,7 +249,7 @@ function Get-ClassicAPIToken($tenantID, $Resource) {
             grant_type    = 'refresh_token'
         }
         try {
-            if (!$script:classictoken) { $script:classictoken = @{} }
+            if (!$script:classictoken) { $script:classictoken = [HashTable]::Synchronized(@{}) }
             $script:classictoken.$TokenKey = Invoke-RestMethod $uri -Body $body -ContentType 'application/x-www-form-urlencoded' -ErrorAction SilentlyContinue -Method post
             return $script:classictoken.$TokenKey
         } catch {
