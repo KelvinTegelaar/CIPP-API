@@ -53,7 +53,7 @@ function Get-GraphRequestList {
 
     if ($QueueId) {
         $Table = Get-CIPPTable -TableName $TableName
-        $Filter = "QueueId = '{0}'" -f $QueueId
+        $Filter = "QueueId eq '{0}'" -f $QueueId
         $Rows = Get-AzDataTableEntity @Table -Filter $Filter
         $Type = 'Queue'
     } elseif ($Tenant -eq 'AllTenants' -or (!$SkipCache.IsPresent -and !$ClearCache.IsPresent -and !$CountOnly.IsPresent)) {
