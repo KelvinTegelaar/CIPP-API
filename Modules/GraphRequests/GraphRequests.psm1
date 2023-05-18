@@ -78,42 +78,67 @@ function Get-GraphRequestList {
     if (!$Rows) {
         switch ($Tenant) {
             'AllTenants' {
-                if ($RunningQueue) {
-                    Write-Host 'Queue currently running'
-                    Write-Host ($RunningQueue | ConvertTo-Json)
-                    [PSCustomObject]@{
-                        Tenant  = 'Data still processing, please wait'
-                        QueueId = $RunningQueue.RowKey
+                if ($SkipCache) {
+                    Get-Tenants -IncludeErrors | ForEach-Object -Parallel {
+                        Import-Module .\GraphHelper.psm1
+                        $GraphRequestParams = @{
+                            Tenant                      = $_.defaultDomainName
+                            Endpoint                    = $using:Endpoint
+                            Parameters                  = $using:Parameters
+                            NoPagination                = $using:NoPagination.IsPresent
+                            ReverseTenantLookupProperty = $using:ReverseTenantLookupProperty
+                            ReverseTenantLookup         = $using:ReverseTenantLookup.IsPresent
+                            SkipCache                   = $true
+                        }
+
+                        try {
+                            Get-GraphRequestList @GraphRequestParams | Select-Object *, @{l = 'Tenant'; e = { $_.defaultDomainName } }, @{l = 'CippStatus'; e = { 'Good' } }
+                        } catch {
+                            [PSCustomObject]@{
+                                Tenant     = $_.defaultDomainName
+                                CippStatus = "Could not connect to tenant. $($_.Exception.message)"
+                            }
+                        }
                     }
                 } else {
-                    $Queue = New-CippQueueEntry -Name "$QueueName (All Tenants)" -Link $CippLink -Reference $QueueReference
-                    [PSCustomObject]@{
-                        QueueMessage = 'Loading data for all tenants. Please check back after the job completes'
-                        Queued       = $true
-                        QueueId      = $Queue.RowKey
-                    }
-                    Write-Output 'Pushing output bindings'
-                    try {
-                        Get-Tenants | ForEach-Object {
-                            $Tenant = $_.defaultDomainName
-                            $QueueTenant = @{
-                                Tenant                      = $Tenant
-                                Endpoint                    = $Endpoint
-                                QueueId                     = $Queue.RowKey
-                                QueueName                   = $QueueName
-                                QueueType                   = 'AllTenants'
-                                Parameters                  = $Parameters
-                                PartitionKey                = $PartitionKey
-                                NoPagination                = $NoPagination.IsPresent
-                                NoAuthCheck                 = $NoAuthCheck.IsPresent
-                                ReverseTenantLookupProperty = $ReverseTenantLookupProperty
-                                ReverseTenantLookup         = $ReverseTenantLookup.IsPresent
-                            } | ConvertTo-Json -Depth 5 -Compress
 
-                            Push-OutputBinding -Name QueueTenant -Value $QueueTenant
+                    if ($RunningQueue) {
+                        Write-Host 'Queue currently running'
+                        Write-Host ($RunningQueue | ConvertTo-Json)
+                        [PSCustomObject]@{
+                            Tenant  = 'Data still processing, please wait'
+                            QueueId = $RunningQueue.RowKey
                         }
-                    } catch {
-                        Write-Host "QUEUE ERROR: $($_.Exception.Message)"
+                    } else {
+                        $Queue = New-CippQueueEntry -Name "$QueueName (All Tenants)" -Link $CippLink -Reference $QueueReference
+                        [PSCustomObject]@{
+                            QueueMessage = 'Loading data for all tenants. Please check back after the job completes'
+                            Queued       = $true
+                            QueueId      = $Queue.RowKey
+                        }
+                        Write-Host 'Pushing output bindings'
+                        try {
+                            Get-Tenants -IncludeErrors | ForEach-Object {
+                                $Tenant = $_.defaultDomainName
+                                $QueueTenant = @{
+                                    Tenant                      = $Tenant
+                                    Endpoint                    = $Endpoint
+                                    QueueId                     = $Queue.RowKey
+                                    QueueName                   = $QueueName
+                                    QueueType                   = 'AllTenants'
+                                    Parameters                  = $Parameters
+                                    PartitionKey                = $PartitionKey
+                                    NoPagination                = $NoPagination.IsPresent
+                                    NoAuthCheck                 = $NoAuthCheck.IsPresent
+                                    ReverseTenantLookupProperty = $ReverseTenantLookupProperty
+                                    ReverseTenantLookup         = $ReverseTenantLookup.IsPresent
+                                } | ConvertTo-Json -Depth 5 -Compress
+
+                                Push-OutputBinding -Name QueueTenant -Value $QueueTenant
+                            }
+                        } catch {
+                            Write-Host "QUEUE ERROR: $($_.Exception.Message)"
+                        }
                     }
                 }
             }
@@ -348,6 +373,10 @@ function Get-GraphRequestListHttp {
 
     if ($Request.Query.ReverseTenantLookupProperty) {
         $GraphRequestParams.ReverseTenantLookupProperty = $Request.Query.ReverseTenantLookupProperty
+    }
+
+    if ($Request.Query.SkipCache) {
+        $GraphRequestParams.SkipCache = [System.Boolean]$Request.Query.SkipCache
     }
 
     Write-Host ($GraphRequestParams | ConvertTo-Json)
