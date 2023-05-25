@@ -50,7 +50,7 @@ try {
 catch {
     Write-LogMessage -API 'BestPracticeAnalyser' -tenant $tenant -message "Security Defaults State on $($tenant) Error: $($_.exception.message)" -sev 'Error'
 }
-# Get the Secure Default State
+# Get the nudge State
 try {
     $NudgeState = (New-GraphGetRequest -Uri 'https://graph.microsoft.com/beta/policies/authenticationMethodsPolicy' -tenantid $tenant)
     $Result.MFANudge = $NudgeState.registrationEnforcement.authenticationMethodsRegistrationCampaign.state
@@ -134,8 +134,8 @@ try {
     $GraphRequest = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/reports/authenticationMethods/usersRegisteredByFeature(includedUserTypes='all',includedUserRoles='all')" -tenantid $Tenant
     $RegState = ($GraphRequest.userRegistrationFeatureCounts | Where-Object -Property Feature -EQ "ssprRegistered").usercount
     $CapableState = ($GraphRequest.userRegistrationFeatureCounts | Where-Object -Property Feature -EQ "ssprCapable").usercount
-    Write-Host "state: $RegState / $CapableState"
-    $Result.SelfServicePasswordReset = if ($RegState -ge $CapableState) { $true } else { $false } 
+    $Result.SelfServicePasswordReset = if ($RegState -ge $CapableState -and $CapableState -ne 0) { $true } else { $false } 
+
 
 }
 catch {

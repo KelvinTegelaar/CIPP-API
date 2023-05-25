@@ -10,7 +10,7 @@ Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME  -
 # Write to the Azure Functions log stream.
 Write-Host "PowerShell HTTP trigger function processed a request."
 $Table = Get-CippTable -tablename 'apps'
-$QueuedApps = (Get-AzDataTableRow @Table)
+$QueuedApps = (Get-AzDataTableEntity @Table)
 
 $CurrentApps = foreach ($QueueFile in $QueuedApps) {
     Write-Host $QueueFile

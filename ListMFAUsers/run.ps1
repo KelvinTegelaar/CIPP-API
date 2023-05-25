@@ -13,6 +13,18 @@ Write-Host 'PowerShell HTTP trigger function processed a request.'
 if ($Request.query.TenantFilter -ne 'AllTenants') {
 
     $users = Get-CIPPMSolUsers -tenant $Request.query.TenantFilter
+    if (!$users) {
+        $users = foreach ($user in (New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/users?$select=id,UserPrincipalName,DisplayName,accountEnabled' -tenantid $Request.query.TenantFilter)) {
+            [PSCustomObject]@{
+                UserPrincipalName                = $user.UserPrincipalName
+                BlockCredential                  = $user.accountEnabled
+                DisplayName                      = $user.DisplayName
+                ObjectId                         = $user.id
+                StrongAuthenticationRequirements = @{StrongAuthenticationRequirement = @{state = 'Not Available - GDAP Only' } }
+            }
+        }
+    
+    }
     $SecureDefaultsState = (New-GraphGetRequest -Uri 'https://graph.microsoft.com/beta/policies/identitySecurityDefaultsEnforcementPolicy' -tenantid $Request.query.TenantFilter ).IsEnabled
     $CAState = New-Object System.Collections.ArrayList
 
@@ -48,12 +60,13 @@ if ($Request.query.TenantFilter -ne 'AllTenants') {
         $CAState.Add('Not Licensed for Conditional Access')
         $MFARegistration = $null
     }
+
     # Interact with query parameters or the body of the request.
     $GraphRequest = $Users | ForEach-Object {
-        Write-Host "Processing users"
+        Write-Host 'Processing users'
         $UserCAState = New-Object System.Collections.ArrayList
         foreach ($CA in $CAState) {
-            Write-Host "Looping CAState"
+            Write-Host 'Looping CAState'
             if ($CA -eq 'All Users') {
                 if ($ExcludeAllUsers -contains $_.ObjectId) { $UserCAState.Add('Excluded from All Users') | Out-Null }
                 else { $UserCAState.Add($CA) | Out-Null }
@@ -63,7 +76,7 @@ if ($Request.query.TenantFilter -ne 'AllTenants') {
                 else { $UserCAState.Add($CA) | Out-Null }
             }
             else {
-                Write-Host "Adding to CA"
+                Write-Host 'Adding to CA'
                 $UserCAState.Add($CA) | Out-Null
             }
         }
@@ -87,9 +100,12 @@ if ($Request.query.TenantFilter -ne 'AllTenants') {
 }
 else {
     $Table = Get-CIPPTable -TableName cachemfa
+
     $Rows = Get-AzDataTableEntity @Table | Where-Object -Property Timestamp -GT (Get-Date).AddHours(-2)
     if (!$Rows) {
-        Push-OutputBinding -Name Msg -Value (Get-Date).ToString()
+        $Queue = New-CippQueueEntry -Name 'MFA Users - All Tenants' -Link '/identity/reports/mfa-report?customerId=AllTenants'
+        Write-Information ($Queue | ConvertTo-Json)
+        Push-OutputBinding -Name Msg -Value $Queue.RowKey
         $GraphRequest = [PSCustomObject]@{
             UPN = 'Loading data for all tenants. Please check back in 10 minutes'
         }
