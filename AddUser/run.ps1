@@ -38,7 +38,7 @@ try {
 
     
     $AccessToken = Get-AccessToken -tenantid $Userobj.tenantid -scope $scope -AsApp $asapp
-    Connect-AzureAD -AadAccessToken $AccessToken -TenantId $Userobj.tenantid 
+    #Connect-AzureAD -AadAccessToken $AccessToken -TenantId $Userobj.tenantid 
 
     $body = "[{username: `"$AccessToken : $env:RefreshToken`"}]"
 
@@ -54,3 +54,11 @@ catch {
     Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $($userobj.tenantid)  -message "User creation API failed. $($_.Exception.Message)" -Sev "Error"
     $body = $results.add("Failed to create user. $($_.Exception.Message)" )
 }
+
+$body = @{"Results" = @($results) }
+# Associate values to output bindings by calling 'Push-OutputBinding'.
+Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
+        StatusCode = [HttpStatusCode]::OK
+        Body       = $Body
+    })
+
