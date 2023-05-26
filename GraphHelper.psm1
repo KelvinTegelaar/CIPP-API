@@ -64,11 +64,24 @@ function Get-GraphToken($tenantid, $scope, $AsApp, $AppID, $refreshToken, $Retur
 
     if (!$tenantid) { $tenantid = $env:TenantID }
 
+    $TokenKey = '{0}-{1}' -f $tenantid, $scope
+
     try {
-        $AccessToken = (Invoke-RestMethod -Method post -Uri "https://login.microsoftonline.com/$($tenantid)/oauth2/v2.0/token" -Body $Authbody -ErrorAction Stop)
+        if ($script:AccessTokens.$TokenKey -and [int](Get-Date -UFormat %s -Millisecond 0) -lt $script:AccessTokens.$TokenKey.expires_on) {
+            Write-Host 'Graph: cached token'
+            $AccessToken = $script:AccessTokens.$TokenKey
+        } else {
+            Write-Host 'Graph: new token'
+            $AccessToken = (Invoke-RestMethod -Method post -Uri "https://login.microsoftonline.com/$($tenantid)/oauth2/v2.0/token" -Body $Authbody -ErrorAction Stop)
+            $ExpiresOn = [int](Get-Date -UFormat %s -Millisecond 0) + $AccessToken.expires_in
+            Add-Member -InputObject $AccessToken -NotePropertyName 'expires_on' -NotePropertyValue $ExpiresOn
+            if (!$script:AccessTokens) { $script:AccessTokens = [HashTable]::Synchronized(@{}) }
+            $script:AccessTokens.$TokenKey = $AccessToken
+        }
+
         if ($ReturnRefresh) { $header = $AccessToken } else { $header = @{ Authorization = "Bearer $($AccessToken.access_token)" } }
         return $header
-        Write-Host $header['Authorization']
+        #Write-Host $header['Authorization']
     } catch {
         # Track consecutive Graph API failures
         $TenantsTable = Get-CippTable -tablename Tenants
@@ -221,38 +234,43 @@ function convert-skuname($skuname, $skuID) {
 }
 
 function Get-ClassicAPIToken($tenantID, $Resource) {
-    Write-Host 'Using classic'
-    $uri = "https://login.microsoftonline.com/$($TenantID)/oauth2/token"
-    $Body = @{
-        client_id     = $env:ApplicationID
-        client_secret = $env:ApplicationSecret
-        resource      = $Resource
-        refresh_token = $env:RefreshToken
-        grant_type    = 'refresh_token'
-
-    }
-
-    try {
-        $token = Invoke-RestMethod $uri -Body $body -ContentType 'application/x-www-form-urlencoded' -ErrorAction SilentlyContinue -Method post
-        return $token
-    } catch {
-        # Track consecutive Graph API failures
-        $TenantsTable = Get-CippTable -tablename Tenants
-        $Filter = "PartitionKey eq 'Tenants' and (defaultDomainName eq '{0}' or customerId eq '{0}')" -f $tenantid
-        $Tenant = Get-AzDataTableEntity @TenantsTable -Filter $Filter
-        if (!$Tenant) {
-            $Tenant = @{
-                GraphErrorCount     = $null
-                LastGraphTokenError = $null
-                PartitionKey        = 'TenantFailed'
-                RowKey              = 'Failed'
-            }
+    $TokenKey = '{0}-{1}' -f $TenantID, $Resource
+    if ($script:classictoken.$TokenKey -and [int](Get-Date -UFormat %s -Millisecond 0) -lt $script:classictoken.$TokenKey.expires_on) {
+        Write-Host 'Classic: cached token'
+        return $script:classictoken.$TokenKey
+    } else {
+        Write-Host 'Using classic'
+        $uri = "https://login.microsoftonline.com/$($TenantID)/oauth2/token"
+        $Body = @{
+            client_id     = $env:ApplicationID
+            client_secret = $env:ApplicationSecret
+            resource      = $Resource
+            refresh_token = $env:RefreshToken
+            grant_type    = 'refresh_token'
         }
-        $Tenant.LastGraphError = $_.Exception.Message
-        $Tenant.GraphErrorCount++
+        try {
+            if (!$script:classictoken) { $script:classictoken = [HashTable]::Synchronized(@{}) }
+            $script:classictoken.$TokenKey = Invoke-RestMethod $uri -Body $body -ContentType 'application/x-www-form-urlencoded' -ErrorAction SilentlyContinue -Method post
+            return $script:classictoken.$TokenKey
+        } catch {
+            # Track consecutive Graph API failures
+            $TenantsTable = Get-CippTable -tablename Tenants
+            $Filter = "PartitionKey eq 'Tenants' and (defaultDomainName eq '{0}' or customerId eq '{0}')" -f $tenantid
+            $Tenant = Get-AzDataTableEntity @TenantsTable -Filter $Filter
+            if (!$Tenant) {
+                $Tenant = @{
+                    GraphErrorCount     = $null
+                    LastGraphTokenError = $null
+                    PartitionKey        = 'TenantFailed'
+                    RowKey              = 'Failed'
+                }
+            }
+            $Tenant.LastGraphError = $_.Exception.Message
+            $Tenant.GraphErrorCount++
 
-        Update-AzDataTableEntity @TenantsTable -Entity $Tenant
-        Throw "Failed to obtain Classic API Token for $TenantID - $_"
+            Update-AzDataTableEntity @TenantsTable -Entity $Tenant
+            Throw "Failed to obtain Classic API Token for $TenantID - $_"
+        }
     }
 }
 
