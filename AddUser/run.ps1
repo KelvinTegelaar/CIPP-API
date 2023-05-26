@@ -36,8 +36,21 @@ try {
         }
     } 
 
-    
+    $FunctionName = 'AddUser'
+    $ModuleName = 'AzureAD'
+    # Replace module version with 
+    $ModuleVersion = '2.0.2.180'
+    # Your Aad Tenant Id
+    $TenantId = $Userobj.tenantid
+    # Your Application Service Principal Id
+    #$AppId = 'YOUR_APP_ID'
+    # Your Certificate Thumbprint
+    #$Thumbprint = 'YOUR_THUMBPRINT'
+    # Import AzureAD PS module
+    $PSModulePath = "D:\home\site\wwwroot\$FunctionName\$ModuleName\$ModuleVersion\$ModuleName.psd1"
+    Import-module $PSModulePath
     $AccessToken = Get-AccessToken -tenantid $Userobj.tenantid -scope $scope -AsApp $asapp
+    # Connect-AzureAD -TenantId $TenantId -ApplicationId $AppId -CertificateThumbprint $Thumbprint
     #Connect-AzureAD -AadAccessToken $AccessToken -TenantId $Userobj.tenantid 
 
     $body = "[{username: `"$AccessToken : $env:RefreshToken`"}]"
