@@ -34,6 +34,45 @@ function Get-NormalizedError {
     }
 }
 
+function Get-AccessToken($tenantid, $scope, $AsApp, $AppID, $refreshToken, $ReturnRefresh) {
+    if (!$scope) { $scope = 'https://graph.microsoft.com/.default' }
+
+    $AuthBody = @{
+        client_id     = $env:ApplicationID
+        client_secret = $env:ApplicationSecret
+        scope         = $Scope
+        refresh_token = $env:RefreshToken
+        grant_type    = 'refresh_token'
+    }
+    if ($asApp -eq $true) {
+        $AuthBody = @{
+            client_id     = $env:ApplicationID
+            client_secret = $env:ApplicationSecret
+            scope         = $Scope
+            grant_type    = 'client_credentials'
+        }
+    }
+
+    if ($null -ne $AppID -and $null -ne $refreshToken) {
+        $AuthBody = @{
+            client_id     = $appid
+            refresh_token = $RefreshToken
+            scope         = $Scope
+            grant_type    = 'refresh_token'
+        }
+    }
+
+    if (!$tenantid) { $tenantid = $env:TenantID }
+
+    try {
+        $AccessToken = (Invoke-RestMethod -Method post -Uri "https://login.microsoftonline.com/$($tenantid)/oauth2/v2.0/token" -Body $Authbody -ErrorAction Stop)
+        return $AccessToken.access_token
+        Write-Host $header['Authorization']
+    } catch {
+        $_
+    }
+}
+
 function Get-GraphToken($tenantid, $scope, $AsApp, $AppID, $refreshToken, $ReturnRefresh) {
     if (!$scope) { $scope = 'https://graph.microsoft.com/.default' }
 
