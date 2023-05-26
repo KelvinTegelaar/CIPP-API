@@ -1,0 +1,969 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<helpItems schema="maml" xmlns="http://msh">
+  <command:command xmlns:maml="http://schemas.microsoft.com/maml/2004/10" xmlns:command="http://schemas.microsoft.com/maml/dev/command/2004/10" xmlns:dev="http://schemas.microsoft.com/maml/dev/2004/10" xmlns:MSHelp="http://msdn.microsoft.com/mshelp">
+    <command:details>
+      <command:name>Connect-AzureAD</command:name>
+      <command:verb>Connect</command:verb>
+      <command:noun>AzureAD</command:noun>
+      <maml:description>
+        <maml:para>Connects with an authenticated account to use Active Directory cmdlet requests.</maml:para>
+      </maml:description>
+    </command:details>
+    <maml:description>
+      <maml:para>The Connect-AzureAD cmdlet connects an authenticated account to use for Azure Active Directory cmdlet requests.</maml:para>
+      <maml:para>You can use this authenticated account only with Azure Active Directory cmdlets.</maml:para>
+    </maml:description>
+    <command:syntax>
+      <command:syntaxItem>
+        <maml:name>Connect-AzureAD</maml:name>
+        <command:parameter required="true" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
+          <maml:name>AadAccessToken</maml:name>
+          <maml:Description>
+            <maml:para>Specifies a Azure Active Directory Graph access token.</maml:para>
+          </maml:Description>
+          <command:parameterValue required="true" variableLength="false">String</command:parameterValue>
+          <dev:type>
+            <maml:name>String</maml:name>
+            <maml:uri />
+          </dev:type>
+          <dev:defaultValue>None</dev:defaultValue>
+        </command:parameter>
+        <command:parameter required="true" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
+          <maml:name>AccountId</maml:name>
+          <maml:Description>
+            <maml:para>Specifies the ID of an account. You must specify the UPN of the user when authenticating with a user access token.</maml:para>
+          </maml:Description>
+          <command:parameterValue required="true" variableLength="false">String</command:parameterValue>
+          <dev:type>
+            <maml:name>String</maml:name>
+            <maml:uri />
+          </dev:type>
+          <dev:defaultValue>None</dev:defaultValue>
+        </command:parameter>
+        <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
+          <maml:name>AzureEnvironmentName</maml:name>
+          <maml:Description>
+            <maml:para>Specifies the name of the Azure environment. The acceptable values for this parameter are: </maml:para>
+            <maml:para>- AzureCloud</maml:para>
+            <maml:para>- AzureChinaCloud</maml:para>
+            <maml:para>- AzureUSGovernment</maml:para>
+            <maml:para>- AzureGermanyCloud</maml:para>
+            <maml:para></maml:para>
+            <maml:para>The default value is AzureCloud.</maml:para>
+          </maml:Description>
+          <command:parameterValue required="true" variableLength="false">EnvironmentName</command:parameterValue>
+          <dev:type>
+            <maml:name>EnvironmentName</maml:name>
+            <maml:uri />
+          </dev:type>
+          <dev:defaultValue>None</dev:defaultValue>
+        </command:parameter>
+        <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="infa">
+          <maml:name>InformationAction</maml:name>
+          <maml:Description>
+            <maml:para>Specifies how this cmdlet responds to an information event. The acceptable values for this parameter are:</maml:para>
+            <maml:para>- Continue</maml:para>
+            <maml:para>- Ignore</maml:para>
+            <maml:para>- Inquire</maml:para>
+            <maml:para>- SilentlyContinue</maml:para>
+            <maml:para>- Stop</maml:para>
+            <maml:para>- Suspend</maml:para>
+          </maml:Description>
+          <command:parameterValue required="true" variableLength="false">ActionPreference</command:parameterValue>
+          <dev:type>
+            <maml:name>ActionPreference</maml:name>
+            <maml:uri />
+          </dev:type>
+          <dev:defaultValue>None</dev:defaultValue>
+        </command:parameter>
+        <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="iv">
+          <maml:name>InformationVariable</maml:name>
+          <maml:Description>
+            <maml:para>Specifies a variable in which to store an information event message.</maml:para>
+          </maml:Description>
+          <command:parameterValue required="true" variableLength="false">String</command:parameterValue>
+          <dev:type>
+            <maml:name>String</maml:name>
+            <maml:uri />
+          </dev:type>
+          <dev:defaultValue>None</dev:defaultValue>
+        </command:parameter>
+        <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
+          <maml:name>LogLevel</maml:name>
+          <maml:Description>
+            <maml:para>Specifies the log level. The accdeptable values for this parameter are: </maml:para>
+            <maml:para>- Info</maml:para>
+            <maml:para>- Error</maml:para>
+            <maml:para>- Warning</maml:para>
+            <maml:para>- None</maml:para>
+            <maml:para></maml:para>
+            <maml:para>The default value is Info.</maml:para>
+          </maml:Description>
+          <command:parameterValue required="true" variableLength="false">LogLevel</command:parameterValue>
+          <dev:type>
+            <maml:name>LogLevel</maml:name>
+            <maml:uri />
+          </dev:type>
+          <dev:defaultValue>None</dev:defaultValue>
+        </command:parameter>
+        <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
+          <maml:name>MsAccessToken</maml:name>
+          <maml:Description>
+            <maml:para>Specifies a Microsoft Graph access token.</maml:para>
+          </maml:Description>
+          <command:parameterValue required="true" variableLength="false">String</command:parameterValue>
+          <dev:type>
+            <maml:name>String</maml:name>
+            <maml:uri />
+          </dev:type>
+          <dev:defaultValue>None</dev:defaultValue>
+        </command:parameter>
+        <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="Domain, TenantDomain">
+          <maml:name>TenantId</maml:name>
+          <maml:Description>
+            <maml:para>Specifies the ID of a tenant.</maml:para>
+            <maml:para>If you do not specify this parameter, the account is authenticated with the home tenant.</maml:para>
+            <maml:para>You must specify the TenantId parameter to authenticate as a service principal or when using Microsoft account.</maml:para>
+          </maml:Description>
+          <command:parameterValue required="true" variableLength="false">String</command:parameterValue>
+          <dev:type>
+            <maml:name>String</maml:name>
+            <maml:uri />
+          </dev:type>
+          <dev:defaultValue>None</dev:defaultValue>
+        </command:parameter>
+        <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="cf">
+          <maml:name>Confirm</maml:name>
+          <maml:Description>
+            <maml:para>Prompts you for confirmation before running the cmdlet.</maml:para>
+          </maml:Description>
+          <dev:type>
+            <maml:name>SwitchParameter</maml:name>
+            <maml:uri />
+          </dev:type>
+          <dev:defaultValue>False</dev:defaultValue>
+        </command:parameter>
+        <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="wi">
+          <maml:name>WhatIf</maml:name>
+          <maml:Description>
+            <maml:para>Shows what would happen if the cmdlet runs. The cmdlet is not run.</maml:para>
+          </maml:Description>
+          <dev:type>
+            <maml:name>SwitchParameter</maml:name>
+            <maml:uri />
+          </dev:type>
+          <dev:defaultValue>False</dev:defaultValue>
+        </command:parameter>
+        <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
+          <maml:name>LogFilePath</maml:name>
+          <maml:Description>
+            <maml:para>The path where the log file for this PowerShell session is written to. Provide a value here if you need to deviate from the default PowerShell log file location.</maml:para>
+          </maml:Description>
+          <command:parameterValue required="true" variableLength="false">String</command:parameterValue>
+          <dev:type>
+            <maml:name>String</maml:name>
+            <maml:uri />
+          </dev:type>
+          <dev:defaultValue>None</dev:defaultValue>
+        </command:parameter>
+      </command:syntaxItem>
+      <command:syntaxItem>
+        <maml:name>Connect-AzureAD</maml:name>
+        <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
+          <maml:name>AccountId</maml:name>
+          <maml:Description>
+            <maml:para>Specifies the ID of an account. You must specify the UPN of the user when authenticating with a user access token.</maml:para>
+          </maml:Description>
+          <command:parameterValue required="true" variableLength="false">String</command:parameterValue>
+          <dev:type>
+            <maml:name>String</maml:name>
+            <maml:uri />
+          </dev:type>
+          <dev:defaultValue>None</dev:defaultValue>
+        </command:parameter>
+        <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
+          <maml:name>AzureEnvironmentName</maml:name>
+          <maml:Description>
+            <maml:para>Specifies the name of the Azure environment. The acceptable values for this parameter are: </maml:para>
+            <maml:para>- AzureCloud</maml:para>
+            <maml:para>- AzureChinaCloud</maml:para>
+            <maml:para>- AzureUSGovernment</maml:para>
+            <maml:para>- AzureGermanyCloud</maml:para>
+            <maml:para></maml:para>
+            <maml:para>The default value is AzureCloud.</maml:para>
+          </maml:Description>
+          <command:parameterValue required="true" variableLength="false">EnvironmentName</command:parameterValue>
+          <dev:type>
+            <maml:name>EnvironmentName</maml:name>
+            <maml:uri />
+          </dev:type>
+          <dev:defaultValue>None</dev:defaultValue>
+        </command:parameter>
+        <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
+          <maml:name>Credential</maml:name>
+          <maml:Description>
+            <maml:para>Specifies a PSCredential object. For more information about the PSCredential object, type Get-Help Get-Credential.</maml:para>
+            <maml:para>The PSCredential object provides the user ID and password for organizational ID credentials.</maml:para>
+          </maml:Description>
+          <command:parameterValue required="true" variableLength="false">PSCredential</command:parameterValue>
+          <dev:type>
+            <maml:name>PSCredential</maml:name>
+            <maml:uri />
+          </dev:type>
+          <dev:defaultValue>None</dev:defaultValue>
+        </command:parameter>
+        <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="infa">
+          <maml:name>InformationAction</maml:name>
+          <maml:Description>
+            <maml:para>Specifies how this cmdlet responds to an information event. The acceptable values for this parameter are:</maml:para>
+            <maml:para>- Continue</maml:para>
+            <maml:para>- Ignore</maml:para>
+            <maml:para>- Inquire</maml:para>
+            <maml:para>- SilentlyContinue</maml:para>
+            <maml:para>- Stop</maml:para>
+            <maml:para>- Suspend</maml:para>
+          </maml:Description>
+          <command:parameterValue required="true" variableLength="false">ActionPreference</command:parameterValue>
+          <dev:type>
+            <maml:name>ActionPreference</maml:name>
+            <maml:uri />
+          </dev:type>
+          <dev:defaultValue>None</dev:defaultValue>
+        </command:parameter>
+        <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="iv">
+          <maml:name>InformationVariable</maml:name>
+          <maml:Description>
+            <maml:para>Specifies a variable in which to store an information event message.</maml:para>
+          </maml:Description>
+          <command:parameterValue required="true" variableLength="false">String</command:parameterValue>
+          <dev:type>
+            <maml:name>String</maml:name>
+            <maml:uri />
+          </dev:type>
+          <dev:defaultValue>None</dev:defaultValue>
+        </command:parameter>
+        <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
+          <maml:name>LogLevel</maml:name>
+          <maml:Description>
+            <maml:para>Specifies the log level. The accdeptable values for this parameter are: </maml:para>
+            <maml:para>- Info</maml:para>
+            <maml:para>- Error</maml:para>
+            <maml:para>- Warning</maml:para>
+            <maml:para>- None</maml:para>
+            <maml:para></maml:para>
+            <maml:para>The default value is Info.</maml:para>
+          </maml:Description>
+          <command:parameterValue required="true" variableLength="false">LogLevel</command:parameterValue>
+          <dev:type>
+            <maml:name>LogLevel</maml:name>
+            <maml:uri />
+          </dev:type>
+          <dev:defaultValue>None</dev:defaultValue>
+        </command:parameter>
+        <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="Domain, TenantDomain">
+          <maml:name>TenantId</maml:name>
+          <maml:Description>
+            <maml:para>Specifies the ID of a tenant.</maml:para>
+            <maml:para>If you do not specify this parameter, the account is authenticated with the home tenant.</maml:para>
+            <maml:para>You must specify the TenantId parameter to authenticate as a service principal or when using Microsoft account.</maml:para>
+          </maml:Description>
+          <command:parameterValue required="true" variableLength="false">String</command:parameterValue>
+          <dev:type>
+            <maml:name>String</maml:name>
+            <maml:uri />
+          </dev:type>
+          <dev:defaultValue>None</dev:defaultValue>
+        </command:parameter>
+        <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="cf">
+          <maml:name>Confirm</maml:name>
+          <maml:Description>
+            <maml:para>Prompts you for confirmation before running the cmdlet.</maml:para>
+          </maml:Description>
+          <dev:type>
+            <maml:name>SwitchParameter</maml:name>
+            <maml:uri />
+          </dev:type>
+          <dev:defaultValue>False</dev:defaultValue>
+        </command:parameter>
+        <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="wi">
+          <maml:name>WhatIf</maml:name>
+          <maml:Description>
+            <maml:para>Shows what would happen if the cmdlet runs. The cmdlet is not run.</maml:para>
+          </maml:Description>
+          <dev:type>
+            <maml:name>SwitchParameter</maml:name>
+            <maml:uri />
+          </dev:type>
+          <dev:defaultValue>False</dev:defaultValue>
+        </command:parameter>
+        <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
+          <maml:name>LogFilePath</maml:name>
+          <maml:Description>
+            <maml:para>The path where the log file for this PowerShell session is written to. Provide a value here if you need to deviate from the default PowerShell log file location.</maml:para>
+          </maml:Description>
+          <command:parameterValue required="true" variableLength="false">String</command:parameterValue>
+          <dev:type>
+            <maml:name>String</maml:name>
+            <maml:uri />
+          </dev:type>
+          <dev:defaultValue>None</dev:defaultValue>
+        </command:parameter>
+      </command:syntaxItem>
+      <command:syntaxItem>
+        <maml:name>Connect-AzureAD</maml:name>
+        <command:parameter required="true" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
+          <maml:name>ApplicationId</maml:name>
+          <maml:Description>
+            <maml:para>Specifies the application ID of the service principal.</maml:para>
+          </maml:Description>
+          <command:parameterValue required="true" variableLength="false">String</command:parameterValue>
+          <dev:type>
+            <maml:name>String</maml:name>
+            <maml:uri />
+          </dev:type>
+          <dev:defaultValue>None</dev:defaultValue>
+        </command:parameter>
+        <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
+          <maml:name>AzureEnvironmentName</maml:name>
+          <maml:Description>
+            <maml:para>Specifies the name of the Azure environment. The acceptable values for this parameter are: </maml:para>
+            <maml:para>- AzureCloud</maml:para>
+            <maml:para>- AzureChinaCloud</maml:para>
+            <maml:para>- AzureUSGovernment</maml:para>
+            <maml:para>- AzureGermanyCloud</maml:para>
+            <maml:para></maml:para>
+            <maml:para>The default value is AzureCloud.</maml:para>
+          </maml:Description>
+          <command:parameterValue required="true" variableLength="false">EnvironmentName</command:parameterValue>
+          <dev:type>
+            <maml:name>EnvironmentName</maml:name>
+            <maml:uri />
+          </dev:type>
+          <dev:defaultValue>None</dev:defaultValue>
+        </command:parameter>
+        <command:parameter required="true" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
+          <maml:name>CertificateThumbprint</maml:name>
+          <maml:Description>
+            <maml:para>Specifies the certificate thumbprint of a digital public key X.509 certificate of a user account that has permission to perform this action.</maml:para>
+          </maml:Description>
+          <command:parameterValue required="true" variableLength="false">String</command:parameterValue>
+          <dev:type>
+            <maml:name>String</maml:name>
+            <maml:uri />
+          </dev:type>
+          <dev:defaultValue>None</dev:defaultValue>
+        </command:parameter>
+        <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="infa">
+          <maml:name>InformationAction</maml:name>
+          <maml:Description>
+            <maml:para>Specifies how this cmdlet responds to an information event. The acceptable values for this parameter are:</maml:para>
+            <maml:para>- Continue</maml:para>
+            <maml:para>- Ignore</maml:para>
+            <maml:para>- Inquire</maml:para>
+            <maml:para>- SilentlyContinue</maml:para>
+            <maml:para>- Stop</maml:para>
+            <maml:para>- Suspend</maml:para>
+          </maml:Description>
+          <command:parameterValue required="true" variableLength="false">ActionPreference</command:parameterValue>
+          <dev:type>
+            <maml:name>ActionPreference</maml:name>
+            <maml:uri />
+          </dev:type>
+          <dev:defaultValue>None</dev:defaultValue>
+        </command:parameter>
+        <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="iv">
+          <maml:name>InformationVariable</maml:name>
+          <maml:Description>
+            <maml:para>Specifies a variable in which to store an information event message.</maml:para>
+          </maml:Description>
+          <command:parameterValue required="true" variableLength="false">String</command:parameterValue>
+          <dev:type>
+            <maml:name>String</maml:name>
+            <maml:uri />
+          </dev:type>
+          <dev:defaultValue>None</dev:defaultValue>
+        </command:parameter>
+        <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
+          <maml:name>LogLevel</maml:name>
+          <maml:Description>
+            <maml:para>Specifies the log level. The accdeptable values for this parameter are: </maml:para>
+            <maml:para>- Info</maml:para>
+            <maml:para>- Error</maml:para>
+            <maml:para>- Warning</maml:para>
+            <maml:para>- None</maml:para>
+            <maml:para></maml:para>
+            <maml:para>The default value is Info.</maml:para>
+          </maml:Description>
+          <command:parameterValue required="true" variableLength="false">LogLevel</command:parameterValue>
+          <dev:type>
+            <maml:name>LogLevel</maml:name>
+            <maml:uri />
+          </dev:type>
+          <dev:defaultValue>None</dev:defaultValue>
+        </command:parameter>
+        <command:parameter required="true" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="Domain, TenantDomain">
+          <maml:name>TenantId</maml:name>
+          <maml:Description>
+            <maml:para>Specifies the ID of a tenant.</maml:para>
+            <maml:para>If you do not specify this parameter, the account is authenticated with the home tenant.</maml:para>
+            <maml:para>You must specify the TenantId parameter to authenticate as a service principal or when using Microsoft account.</maml:para>
+          </maml:Description>
+          <command:parameterValue required="true" variableLength="false">String</command:parameterValue>
+          <dev:type>
+            <maml:name>String</maml:name>
+            <maml:uri />
+          </dev:type>
+          <dev:defaultValue>None</dev:defaultValue>
+        </command:parameter>
+        <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="cf">
+          <maml:name>Confirm</maml:name>
+          <maml:Description>
+            <maml:para>Prompts you for confirmation before running the cmdlet.</maml:para>
+          </maml:Description>
+          <dev:type>
+            <maml:name>SwitchParameter</maml:name>
+            <maml:uri />
+          </dev:type>
+          <dev:defaultValue>False</dev:defaultValue>
+        </command:parameter>
+        <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="wi">
+          <maml:name>WhatIf</maml:name>
+          <maml:Description>
+            <maml:para>Shows what would happen if the cmdlet runs. The cmdlet is not run.</maml:para>
+          </maml:Description>
+          <dev:type>
+            <maml:name>SwitchParameter</maml:name>
+            <maml:uri />
+          </dev:type>
+          <dev:defaultValue>False</dev:defaultValue>
+        </command:parameter>
+        <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
+          <maml:name>LogFilePath</maml:name>
+          <maml:Description>
+            <maml:para>The path where the log file for this PowerShell session is written to. Provide a value here if you need to deviate from the default PowerShell log file location.</maml:para>
+          </maml:Description>
+          <command:parameterValue required="true" variableLength="false">String</command:parameterValue>
+          <dev:type>
+            <maml:name>String</maml:name>
+            <maml:uri />
+          </dev:type>
+          <dev:defaultValue>None</dev:defaultValue>
+        </command:parameter>
+      </command:syntaxItem>
+    </command:syntax>
+    <command:parameters>
+      <command:parameter required="true" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
+        <maml:name>AadAccessToken</maml:name>
+        <maml:Description>
+          <maml:para>Specifies a Azure Active Directory Graph access token.</maml:para>
+        </maml:Description>
+        <command:parameterValue required="true" variableLength="false">String</command:parameterValue>
+        <dev:type>
+          <maml:name>String</maml:name>
+          <maml:uri />
+        </dev:type>
+        <dev:defaultValue>None</dev:defaultValue>
+      </command:parameter>
+      <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
+        <maml:name>AccountId</maml:name>
+        <maml:Description>
+          <maml:para>Specifies the ID of an account. You must specify the UPN of the user when authenticating with a user access token.</maml:para>
+        </maml:Description>
+        <command:parameterValue required="true" variableLength="false">String</command:parameterValue>
+        <dev:type>
+          <maml:name>String</maml:name>
+          <maml:uri />
+        </dev:type>
+        <dev:defaultValue>None</dev:defaultValue>
+      </command:parameter>
+      <command:parameter required="true" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
+        <maml:name>ApplicationId</maml:name>
+        <maml:Description>
+          <maml:para>Specifies the application ID of the service principal.</maml:para>
+        </maml:Description>
+        <command:parameterValue required="true" variableLength="false">String</command:parameterValue>
+        <dev:type>
+          <maml:name>String</maml:name>
+          <maml:uri />
+        </dev:type>
+        <dev:defaultValue>None</dev:defaultValue>
+      </command:parameter>
+      <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
+        <maml:name>AzureEnvironmentName</maml:name>
+        <maml:Description>
+          <maml:para>Specifies the name of the Azure environment. The acceptable values for this parameter are: </maml:para>
+          <maml:para>- AzureCloud</maml:para>
+          <maml:para>- AzureChinaCloud</maml:para>
+          <maml:para>- AzureUSGovernment</maml:para>
+          <maml:para>- AzureGermanyCloud</maml:para>
+          <maml:para></maml:para>
+          <maml:para>The default value is AzureCloud.</maml:para>
+        </maml:Description>
+        <command:parameterValue required="true" variableLength="false">EnvironmentName</command:parameterValue>
+        <dev:type>
+          <maml:name>EnvironmentName</maml:name>
+          <maml:uri />
+        </dev:type>
+        <dev:defaultValue>None</dev:defaultValue>
+      </command:parameter>
+      <command:parameter required="true" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
+        <maml:name>CertificateThumbprint</maml:name>
+        <maml:Description>
+          <maml:para>Specifies the certificate thumbprint of a digital public key X.509 certificate of a user account that has permission to perform this action.</maml:para>
+        </maml:Description>
+        <command:parameterValue required="true" variableLength="false">String</command:parameterValue>
+        <dev:type>
+          <maml:name>String</maml:name>
+          <maml:uri />
+        </dev:type>
+        <dev:defaultValue>None</dev:defaultValue>
+      </command:parameter>
+      <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
+        <maml:name>Credential</maml:name>
+        <maml:Description>
+          <maml:para>Specifies a PSCredential object. For more information about the PSCredential object, type Get-Help Get-Credential.</maml:para>
+          <maml:para>The PSCredential object provides the user ID and password for organizational ID credentials.</maml:para>
+        </maml:Description>
+        <command:parameterValue required="true" variableLength="false">PSCredential</command:parameterValue>
+        <dev:type>
+          <maml:name>PSCredential</maml:name>
+          <maml:uri />
+        </dev:type>
+        <dev:defaultValue>None</dev:defaultValue>
+      </command:parameter>
+      <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="infa">
+        <maml:name>InformationAction</maml:name>
+        <maml:Description>
+          <maml:para>Specifies how this cmdlet responds to an information event. The acceptable values for this parameter are:</maml:para>
+          <maml:para>- Continue</maml:para>
+          <maml:para>- Ignore</maml:para>
+          <maml:para>- Inquire</maml:para>
+          <maml:para>- SilentlyContinue</maml:para>
+          <maml:para>- Stop</maml:para>
+          <maml:para>- Suspend</maml:para>
+        </maml:Description>
+        <command:parameterValue required="true" variableLength="false">ActionPreference</command:parameterValue>
+        <dev:type>
+          <maml:name>ActionPreference</maml:name>
+          <maml:uri />
+        </dev:type>
+        <dev:defaultValue>None</dev:defaultValue>
+      </command:parameter>
+      <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="iv">
+        <maml:name>InformationVariable</maml:name>
+        <maml:Description>
+          <maml:para>Specifies a variable in which to store an information event message.</maml:para>
+        </maml:Description>
+        <command:parameterValue required="true" variableLength="false">String</command:parameterValue>
+        <dev:type>
+          <maml:name>String</maml:name>
+          <maml:uri />
+        </dev:type>
+        <dev:defaultValue>None</dev:defaultValue>
+      </command:parameter>
+      <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
+        <maml:name>LogLevel</maml:name>
+        <maml:Description>
+          <maml:para>Specifies the log level. The accdeptable values for this parameter are: </maml:para>
+          <maml:para>- Info</maml:para>
+          <maml:para>- Error</maml:para>
+          <maml:para>- Warning</maml:para>
+          <maml:para>- None</maml:para>
+          <maml:para></maml:para>
+          <maml:para>The default value is Info.</maml:para>
+        </maml:Description>
+        <command:parameterValue required="true" variableLength="false">LogLevel</command:parameterValue>
+        <dev:type>
+          <maml:name>LogLevel</maml:name>
+          <maml:uri />
+        </dev:type>
+        <dev:defaultValue>None</dev:defaultValue>
+      </command:parameter>
+      <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
+        <maml:name>MsAccessToken</maml:name>
+        <maml:Description>
+          <maml:para>Specifies a Microsoft Graph access token.</maml:para>
+        </maml:Description>
+        <command:parameterValue required="true" variableLength="false">String</command:parameterValue>
+        <dev:type>
+          <maml:name>String</maml:name>
+          <maml:uri />
+        </dev:type>
+        <dev:defaultValue>None</dev:defaultValue>
+      </command:parameter>
+      <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="Domain, TenantDomain">
+        <maml:name>TenantId</maml:name>
+        <maml:Description>
+          <maml:para>Specifies the ID of a tenant.</maml:para>
+          <maml:para>If you do not specify this parameter, the account is authenticated with the home tenant.</maml:para>
+          <maml:para>You must specify the TenantId parameter to authenticate as a service principal or when using Microsoft account.</maml:para>
+        </maml:Description>
+        <command:parameterValue required="true" variableLength="false">String</command:parameterValue>
+        <dev:type>
+          <maml:name>String</maml:name>
+          <maml:uri />
+        </dev:type>
+        <dev:defaultValue>None</dev:defaultValue>
+      </command:parameter>
+      <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="cf">
+        <maml:name>Confirm</maml:name>
+        <maml:Description>
+          <maml:para>Prompts you for confirmation before running the cmdlet.</maml:para>
+        </maml:Description>
+        <command:parameterValue required="false" variableLength="false">SwitchParameter</command:parameterValue>
+        <dev:type>
+          <maml:name>SwitchParameter</maml:name>
+          <maml:uri />
+        </dev:type>
+        <dev:defaultValue>False</dev:defaultValue>
+      </command:parameter>
+      <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="wi">
+        <maml:name>WhatIf</maml:name>
+        <maml:Description>
+          <maml:para>Shows what would happen if the cmdlet runs. The cmdlet is not run.</maml:para>
+        </maml:Description>
+        <command:parameterValue required="false" variableLength="false">SwitchParameter</command:parameterValue>
+        <dev:type>
+          <maml:name>SwitchParameter</maml:name>
+          <maml:uri />
+        </dev:type>
+        <dev:defaultValue>False</dev:defaultValue>
+      </command:parameter>
+      <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
+        <maml:name>LogFilePath</maml:name>
+        <maml:Description>
+          <maml:para>The path where the log file for this PowerShell session is written to. Provide a value here if you need to deviate from the default PowerShell log file location.</maml:para>
+        </maml:Description>
+        <command:parameterValue required="true" variableLength="false">String</command:parameterValue>
+        <dev:type>
+          <maml:name>String</maml:name>
+          <maml:uri />
+        </dev:type>
+        <dev:defaultValue>None</dev:defaultValue>
+      </command:parameter>
+    </command:parameters>
+    <command:inputTypes />
+    <command:returnValues />
+    <maml:alertSet>
+      <maml:alert>
+        <maml:para></maml:para>
+      </maml:alert>
+    </maml:alertSet>
+    <command:examples>
+      <command:example>
+        <maml:title>Example 1: Connect a PowerShell session to a tenant</maml:title>
+        <dev:code>PS C:\&gt; Connect-AzureAD -Confirm</dev:code>
+        <dev:remarks>
+          <maml:para>This command connects the current PowerShell session to an Azure Active Directory tenant. The command prompts you for a username and password for the tenant you want to connect to. The Confirm parameter prompts you for confirmation. </maml:para>
+          <maml:para>If multi-factor authentication is enabled for your credentials, you must log in using the interactive option or use service principal authentication.</maml:para>
+        </dev:remarks>
+      </command:example>
+      <command:example>
+        <maml:title>Example 2: Connect a session using a variable</maml:title>
+        <dev:code>PS C:\&gt; $Credential = Get-Credential
+PS C:\&gt; Connect-AzureAD -Credential $Credential</dev:code>
+        <dev:remarks>
+          <maml:para>The first command gets the user credentials, and then stores them in the $Credential variable.</maml:para>
+          <maml:para>The second command connects the current PowerShell session using the credentials in $Credential.</maml:para>
+          <maml:para>This account authenticates with Azure Active Directory using organizational ID credentials. You cannot use multi-factor authentication or Microsoft account credentials to run Azure Active Directory cmdlets with this account.</maml:para>
+        </dev:remarks>
+      </command:example>
+      <command:example>
+        <maml:title>Example 3: Connect a session as a service principal</maml:title>
+        <dev:code># Login to Azure AD PowerShell With Admin Account
+Connect-AzureAD 
+
+# Create the self signed cert
+$currentDate = Get-Date
+$endDate = $currentDate.AddYears(1)
+$notAfter = $endDate.AddYears(1)
+$pwd = "&lt;password&gt;"
+$thumb = (New-SelfSignedCertificate -CertStoreLocation cert:\localmachine\my -DnsName com.foo.bar -KeyExportPolicy Exportable -Provider "Microsoft Enhanced RSA and AES Cryptographic Provider" -NotAfter $notAfter).Thumbprint
+$pwd = ConvertTo-SecureString -String $pwd -Force -AsPlainText
+Export-PfxCertificate -cert "cert:\localmachine\my\$thumb" -FilePath c:\temp\examplecert.pfx -Password $pwd
+
+# Load the certificate
+$cert = New-Object System.Security.Cryptography.X509Certificates.X509Certificate("C:\temp\examplecert.pfx", $pwd)
+$keyValue = [System.Convert]::ToBase64String($cert.GetRawCertData())
+
+
+# Create the Azure Active Directory Application
+$application = New-AzureADApplication -DisplayName "test123" -IdentifierUris "https://test123"
+New-AzureADApplicationKeyCredential -ObjectId $application.ObjectId -CustomKeyIdentifier "Test123" -StartDate $currentDate -EndDate $endDate -Type AsymmetricX509Cert -Usage Verify -Value $keyValue
+
+# Create the Service Principal and connect it to the Application
+$sp=New-AzureADServicePrincipal -AppId $application.AppId
+
+# Give the Service Principal Reader access to the current tenant (Get-AzureADDirectoryRole)
+Add-AzureADDirectoryRoleMember -ObjectId 5997d714-c3b5-4d5b-9973-ec2f38fd49d5 -RefObjectId $sp.ObjectId
+
+# Get Tenant Detail
+$tenant=Get-AzureADTenantDetail
+# Now you can login to Azure PowerShell with your Service Principal and Certificate
+Connect-AzureAD -TenantId $tenant.ObjectId -ApplicationId  $sp.AppId -CertificateThumbprint $thumb</dev:code>
+        <dev:remarks>
+          <maml:para>This command authenticates the user to Azure Active Directory as a service principal.</maml:para>
+        </dev:remarks>
+      </command:example>
+    </command:examples>
+    <command:relatedLinks>
+      <maml:navigationLink>
+        <maml:linkText>Disconnet-AzureAD</maml:linkText>
+        <maml:uri></maml:uri>
+      </maml:navigationLink>
+    </command:relatedLinks>
+  </command:command>
+  <command:command xmlns:maml="http://schemas.microsoft.com/maml/2004/10" xmlns:command="http://schemas.microsoft.com/maml/dev/command/2004/10" xmlns:dev="http://schemas.microsoft.com/maml/dev/2004/10" xmlns:MSHelp="http://msdn.microsoft.com/mshelp">
+    <command:details>
+      <command:name>Disconnect-AzureAD</command:name>
+      <command:verb>Disconnect</command:verb>
+      <command:noun>AzureAD</command:noun>
+      <maml:description>
+        <maml:para>Disconnects the current session from an Azure Active Directory tenant.</maml:para>
+      </maml:description>
+    </command:details>
+    <maml:description>
+      <maml:para>The Disconnect-AzureAD cmdlet disconnects the current session from an Azure Active Directory tenant.</maml:para>
+    </maml:description>
+    <command:syntax>
+      <command:syntaxItem>
+        <maml:name>Disconnect-AzureAD</maml:name>
+        <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="infa">
+          <maml:name>InformationAction</maml:name>
+          <maml:Description>
+            <maml:para>Specifies how this cmdlet responds to an information event. The acceptable values for this parameter are:</maml:para>
+            <maml:para>- Continue</maml:para>
+            <maml:para>- Ignore</maml:para>
+            <maml:para>- Inquire</maml:para>
+            <maml:para>- SilentlyContinue</maml:para>
+            <maml:para>- Stop</maml:para>
+            <maml:para>- Suspend</maml:para>
+          </maml:Description>
+          <command:parameterValue required="true" variableLength="false">ActionPreference</command:parameterValue>
+          <dev:type>
+            <maml:name>ActionPreference</maml:name>
+            <maml:uri />
+          </dev:type>
+          <dev:defaultValue>None</dev:defaultValue>
+        </command:parameter>
+        <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="iv">
+          <maml:name>InformationVariable</maml:name>
+          <maml:Description>
+            <maml:para>Specifies a variable in which to store an information event message.</maml:para>
+          </maml:Description>
+          <command:parameterValue required="true" variableLength="false">String</command:parameterValue>
+          <dev:type>
+            <maml:name>String</maml:name>
+            <maml:uri />
+          </dev:type>
+          <dev:defaultValue>None</dev:defaultValue>
+        </command:parameter>
+        <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="cf">
+          <maml:name>Confirm</maml:name>
+          <maml:Description>
+            <maml:para>Prompts you for confirmation before running the cmdlet.Prompts you for confirmation before running the cmdlet.</maml:para>
+          </maml:Description>
+          <dev:type>
+            <maml:name>SwitchParameter</maml:name>
+            <maml:uri />
+          </dev:type>
+          <dev:defaultValue>False</dev:defaultValue>
+        </command:parameter>
+        <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="wi">
+          <maml:name>WhatIf</maml:name>
+          <maml:Description>
+            <maml:para>Shows what would happen if the cmdlet runs. The cmdlet is not run.Shows what would happen if the cmdlet runs. The cmdlet is not run.</maml:para>
+          </maml:Description>
+          <dev:type>
+            <maml:name>SwitchParameter</maml:name>
+            <maml:uri />
+          </dev:type>
+          <dev:defaultValue>False</dev:defaultValue>
+        </command:parameter>
+      </command:syntaxItem>
+    </command:syntax>
+    <command:parameters>
+      <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="infa">
+        <maml:name>InformationAction</maml:name>
+        <maml:Description>
+          <maml:para>Specifies how this cmdlet responds to an information event. The acceptable values for this parameter are:</maml:para>
+          <maml:para>- Continue</maml:para>
+          <maml:para>- Ignore</maml:para>
+          <maml:para>- Inquire</maml:para>
+          <maml:para>- SilentlyContinue</maml:para>
+          <maml:para>- Stop</maml:para>
+          <maml:para>- Suspend</maml:para>
+        </maml:Description>
+        <command:parameterValue required="true" variableLength="false">ActionPreference</command:parameterValue>
+        <dev:type>
+          <maml:name>ActionPreference</maml:name>
+          <maml:uri />
+        </dev:type>
+        <dev:defaultValue>None</dev:defaultValue>
+      </command:parameter>
+      <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="iv">
+        <maml:name>InformationVariable</maml:name>
+        <maml:Description>
+          <maml:para>Specifies a variable in which to store an information event message.</maml:para>
+        </maml:Description>
+        <command:parameterValue required="true" variableLength="false">String</command:parameterValue>
+        <dev:type>
+          <maml:name>String</maml:name>
+          <maml:uri />
+        </dev:type>
+        <dev:defaultValue>None</dev:defaultValue>
+      </command:parameter>
+      <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="cf">
+        <maml:name>Confirm</maml:name>
+        <maml:Description>
+          <maml:para>Prompts you for confirmation before running the cmdlet.Prompts you for confirmation before running the cmdlet.</maml:para>
+        </maml:Description>
+        <command:parameterValue required="false" variableLength="false">SwitchParameter</command:parameterValue>
+        <dev:type>
+          <maml:name>SwitchParameter</maml:name>
+          <maml:uri />
+        </dev:type>
+        <dev:defaultValue>False</dev:defaultValue>
+      </command:parameter>
+      <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="wi">
+        <maml:name>WhatIf</maml:name>
+        <maml:Description>
+          <maml:para>Shows what would happen if the cmdlet runs. The cmdlet is not run.Shows what would happen if the cmdlet runs. The cmdlet is not run.</maml:para>
+        </maml:Description>
+        <command:parameterValue required="false" variableLength="false">SwitchParameter</command:parameterValue>
+        <dev:type>
+          <maml:name>SwitchParameter</maml:name>
+          <maml:uri />
+        </dev:type>
+        <dev:defaultValue>False</dev:defaultValue>
+      </command:parameter>
+    </command:parameters>
+    <command:inputTypes />
+    <command:returnValues />
+    <maml:alertSet>
+      <maml:alert>
+        <maml:para></maml:para>
+      </maml:alert>
+    </maml:alertSet>
+    <command:examples>
+      <command:example>
+        <maml:title>Example 1: Disconnect your session from a tenant</maml:title>
+        <dev:code>PS C:\&gt; Disconnect-AzureAD</dev:code>
+        <dev:remarks>
+          <maml:para>This command disconnects your session from a tenant.</maml:para>
+        </dev:remarks>
+      </command:example>
+    </command:examples>
+    <command:relatedLinks>
+      <maml:navigationLink>
+        <maml:linkText>Connect-AzureAD</maml:linkText>
+        <maml:uri></maml:uri>
+      </maml:navigationLink>
+    </command:relatedLinks>
+  </command:command>
+  <command:command xmlns:maml="http://schemas.microsoft.com/maml/2004/10" xmlns:command="http://schemas.microsoft.com/maml/dev/command/2004/10" xmlns:dev="http://schemas.microsoft.com/maml/dev/2004/10" xmlns:MSHelp="http://msdn.microsoft.com/mshelp">
+    <command:details>
+      <command:name>Get-AzureADCurrentSessionInfo</command:name>
+      <command:verb>Get</command:verb>
+      <command:noun>AzureADCurrentSessionInfo</command:noun>
+      <maml:description>
+        <maml:para>This cmdlet will return the current session state</maml:para>
+      </maml:description>
+    </command:details>
+    <maml:description>
+      <maml:para>This cmdlet will return the current session state</maml:para>
+    </maml:description>
+    <command:syntax>
+      <command:syntaxItem>
+        <maml:name>Get-AzureADCurrentSessionInfo</maml:name>
+        <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="cf">
+          <maml:name>Confirm</maml:name>
+          <maml:Description>
+            <maml:para>Prompts you for confirmation before running the cmdlet.</maml:para>
+          </maml:Description>
+          <dev:type>
+            <maml:name>SwitchParameter</maml:name>
+            <maml:uri />
+          </dev:type>
+          <dev:defaultValue>False</dev:defaultValue>
+        </command:parameter>
+        <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="wi">
+          <maml:name>WhatIf</maml:name>
+          <maml:Description>
+            <maml:para>Shows what would happen if the cmdlet runs. The cmdlet is not run.</maml:para>
+          </maml:Description>
+          <dev:type>
+            <maml:name>SwitchParameter</maml:name>
+            <maml:uri />
+          </dev:type>
+          <dev:defaultValue>False</dev:defaultValue>
+        </command:parameter>
+      </command:syntaxItem>
+    </command:syntax>
+    <command:parameters>
+      <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="cf">
+        <maml:name>Confirm</maml:name>
+        <maml:Description>
+          <maml:para>Prompts you for confirmation before running the cmdlet.</maml:para>
+        </maml:Description>
+        <command:parameterValue required="false" variableLength="false">SwitchParameter</command:parameterValue>
+        <dev:type>
+          <maml:name>SwitchParameter</maml:name>
+          <maml:uri />
+        </dev:type>
+        <dev:defaultValue>False</dev:defaultValue>
+      </command:parameter>
+      <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="wi">
+        <maml:name>WhatIf</maml:name>
+        <maml:Description>
+          <maml:para>Shows what would happen if the cmdlet runs. The cmdlet is not run.</maml:para>
+        </maml:Description>
+        <command:parameterValue required="false" variableLength="false">SwitchParameter</command:parameterValue>
+        <dev:type>
+          <maml:name>SwitchParameter</maml:name>
+          <maml:uri />
+        </dev:type>
+        <dev:defaultValue>False</dev:defaultValue>
+      </command:parameter>
+    </command:parameters>
+    <command:inputTypes>
+      <command:inputType>
+        <dev:type>
+          <maml:name>None</maml:name>
+        </dev:type>
+        <maml:description>
+          <maml:para></maml:para>
+        </maml:description>
+      </command:inputType>
+    </command:inputTypes>
+    <command:returnValues>
+      <command:returnValue>
+        <dev:type>
+          <maml:name>System.Object</maml:name>
+        </dev:type>
+        <maml:description>
+          <maml:para></maml:para>
+        </maml:description>
+      </command:returnValue>
+    </command:returnValues>
+    <maml:alertSet>
+      <maml:alert>
+        <maml:para></maml:para>
+      </maml:alert>
+    </maml:alertSet>
+    <command:examples>
+      <command:example>
+        <maml:title>Example 1</maml:title>
+        <dev:code>Get-AzureADCurrentSessionInfo
+
+Account                       Environment TenantId
+-------                       ----------- --------
+Karen@drumkit.onmicrosoft.com AzureCloud  85b5ff1e-0402-400c-9e3c-0f9e965325d1</dev:code>
+        <dev:remarks>
+          <maml:para></maml:para>
+        </dev:remarks>
+      </command:example>
+    </command:examples>
+    <command:relatedLinks />
+  </command:command>
+</helpItems>

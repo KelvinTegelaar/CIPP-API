@@ -1,0 +1,52 @@
+{
+  "AzureCloud": {
+    "Name": 0,
+    "OnPremise": false,
+    "Endpoints": {
+      "ActiveDirectory": "https://login.microsoftonline.com/",
+      "ActiveDirectoryServiceEndpointResourceId": "https://management.core.windows.net/",
+      "MsGraphEndpointResourceId": "https://graph.microsoft.com",
+      "AadGraphEndpointResourceId": "https://graph.windows.net"
+    }
+  },
+  "AzureChinaCloud": {
+    "Name": 1,
+    "OnPremise": false,
+    "Endpoints": {
+      "ActiveDirectory": "https://login.chinacloudapi.cn/",
+      "ActiveDirectoryServiceEndpointResourceId": "https://management.core.chinacloudapi.cn/",
+      "MsGraphEndpointResourceId": "https://microsoftgraph.chinacloudapi.cn",
+      "AadGraphEndpointResourceId": "https://graph.chinacloudapi.cn"
+    }
+  },
+  "AzureUSGovernment": {
+    "Name": 2,
+    "OnPremise": false,
+    "Endpoints": {
+      "ActiveDirectory": "https://login-us.microsoftonline.com/",
+      "ActiveDirectoryServiceEndpointResourceId": "https://management.core.usgovcloudapi.net/",
+      "MsGraphEndpointResourceId": "https://graph.microsoft.com",
+      "AadGraphEndpointResourceId": "https://graph.windows.net"
+    }
+  },
+  "AzureGermanyCloud": {
+    "Name": 3,
+    "OnPremise": false,
+    "Endpoints": {
+      "ActiveDirectory": "https://login.microsoftonline.de/",
+      "ActiveDirectoryServiceEndpointResourceId": "https://management.core.cloudapi.de/",
+      "MsGraphEndpointResourceId": "https://graph.microsoft.de",
+      "AadGraphEndpointResourceId": "https://graph.cloudapi.de"
+    }
+  },
+  "AzurePPE": {
+    "Name": 99,
+    "OnPremise": false,
+    "Endpoints": {
+      "ActiveDirectory": "",
+      "ActiveDirectoryServiceEndpointResourceId": "",
+      "MsGraphEndpointResourceId": "",
+      "AadGraphEndpointResourceId": ""
+    }
+  }
+}
