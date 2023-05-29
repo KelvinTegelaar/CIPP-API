@@ -1,17 +1,17 @@
 function New-HaloPSATicket {
-    [CmdletBinding()]
-    param (
-        $title,
-        $description,
-        $client
-    )
-    #Get Halo PSA Token based on the config we have.
-    $Table = Get-CIPPTable -TableName Extensionsconfig
-    $Configuration = ((Get-AzDataTableEntity @Table).config | ConvertFrom-Json).HaloPSA
+  [CmdletBinding()]
+  param (
+    $title,
+    $description,
+    $client
+  )
+  #Get Halo PSA Token based on the config we have.
+  $Table = Get-CIPPTable -TableName Extensionsconfig
+  $Configuration = ((Get-AzDataTableEntity @Table).config | ConvertFrom-Json).HaloPSA
 
-    $token = Get-HaloToken
-    #use the token to create a new ticket in HaloPSA
-    $body = @"
+  $token = Get-HaloToken -configuration $Configuration
+  #use the token to create a new ticket in HaloPSA
+  $body = @"
 [
   {
     "files": null,
@@ -33,6 +33,6 @@ function New-HaloPSATicket {
   }
 ]
 "@
-    Invoke-RestMethod -Uri "$($Configuration.ResourceURL)/Tickets" -ContentType 'application/json' -Method Post -Body $body -Headers @{Authorization = "Bearer $($token.access_token)" }
+  Invoke-RestMethod -Uri "$($Configuration.ResourceURL)/Tickets" -ContentType 'application/json' -Method Post -Body $body -Headers @{Authorization = "Bearer $($token.access_token)" }
 
 }
