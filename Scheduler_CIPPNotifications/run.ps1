@@ -136,6 +136,7 @@ if ($config.sendtoIntegration) {
         AlertTitle = "CIPP Alert: Alerts found starting at $((Get-Date).AddMinutes(-15))"
       }
       New-CippExtAlert -Alert $Alert
+      
     }
   }
   catch {
@@ -144,6 +145,13 @@ if ($config.sendtoIntegration) {
   }
 }
 
+$UpdateLogs = $CurrentLog | ForEach-Object { 
+  $_.SentAsAlert = $true
+  $_
+}
+if ($UpdateLogs) {
+  Add-AzDataTableEntity @Table -Entity $UpdateLogs -Force
+}
 [PSCustomObject]@{
   ReturnedValues = $true
 }
