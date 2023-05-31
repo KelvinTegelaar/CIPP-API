@@ -19,9 +19,9 @@ function New-CippExtAlert {
                     New-HaloPSATicket -Title $Alert.AlertTitle -Description $Alert.AlertText -Client $mappedId 
                 }
             }
-            "GradientTicketing" {
+            "Gradient" {
                 If ($Configuration.GradientTicketing.enabled) {
-                    New-GradientAlert -Title "CIPP Alert" -Description "CIPP Alert" -Client $mappedId
+                    New-GradientAlert -Title $Alert.AlertTitle -Description $Alert.AlertText -Client $Alert.TenantId
                 }
             }
         }
