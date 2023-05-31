@@ -15,7 +15,6 @@ function Get-CippMappings {
         switch ($ConfigItem) {
             "HaloPSA" {
                 If ($Configuration.HaloPSA.enabled) {
-                    $MappedId = 
                     New-HaloPSATicket -Title "CIPP Alert" -Description "CIPP Alert" -client $mappedId -Priority "Low" -Type "Incident" -Status "New" -Source "CIPP" -Assignee "CIPP"
                 }
             }
