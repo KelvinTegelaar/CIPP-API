@@ -6,7 +6,7 @@ function Get-GradientToken {
     $partnerApiKey = (Get-AzKeyVaultSecret -VaultName $ENV:WEBSITE_DEPLOYMENT_ID -Name "Gradient" -AsPlainText)
     $authorizationToken = [Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes("$($configuration.vendorApiKey):$($partnerApiKey)"))
 
-    $headers = @{
+    $headers = [hashtable]@{
         'Accept'         = 'application/json'
         'GRADIENT-TOKEN' = $authorizationToken
     }
