@@ -16,7 +16,7 @@ try {
             }
             "Gradient" {
                   $GradientToken = Get-GradientToken -Configuration $Configuration.Gradient
-                  $ExistingIntegrations = (Invoke-RestMethod -Uri 'https://app.usegradient.com/api/vendor-api/organization' -Method GET -Headers $GradientToken)
+                  $ExistingIntegrations = Invoke-RestMethod -Uri 'https://app.usegradient.com/api/vendor-api/organization' -Method GET -Headers $GradientToken
                   if ($ExistingIntegrations.Status -ne "active") {
                         $ActivateRequest = Invoke-RestMethod -Uri 'https://app.usegradient.com/api/vendor-api/organization/status/active' -Method PATCH -Headers $GradientToken
                   }
