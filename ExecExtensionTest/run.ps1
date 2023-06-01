@@ -11,7 +11,6 @@ $Configuration = ((Get-AzDataTableEntity @Table).config | ConvertFrom-Json)
 try {
       switch ($Request.query.extensionName) {
             "HaloPSA" {
-
                   $token = Get-HaloToken -configuration $Configuration.HaloPSA
                   $Results = [pscustomobject]@{"Results" = "Succesfully Connected to HaloPSA" }
             }
