@@ -2,6 +2,7 @@ function Get-GradientToken {
     param(
         $Configuration
     )
+    Connect-AzAccount -Identity
     $partnerApiKey = (Get-AzKeyVaultSecret -VaultName $ENV:WEBSITE_DEPLOYMENT_ID -Name "Gradient" -AsPlainText)
     $authorizationToken = [Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes("$($configuration.vendorApiKey):$($partnerApiKey)"))
 
