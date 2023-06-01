@@ -13,14 +13,13 @@ function New-CippExtAlert {
         switch ($ConfigItem) {
             "HaloPSA" {
                 If ($Configuration.HaloPSA.enabled) {
-                    Write-Host "HaloPSA is enabled, creating ticket"
                     $MappedId = ($MappingFile | Where-Object TenantId -EQ $Alert.TenantId).HaloID
                     if (!$mappedId) { $MappedId = 1 }
                     New-HaloPSATicket -Title $Alert.AlertTitle -Description $Alert.AlertText -Client $mappedId 
                 }
             }
             "Gradient" {
-                If ($Configuration.GradientTicketing.enabled) {
+                If ($Configuration.Gradient.enabled) {
                     New-GradientAlert -Title $Alert.AlertTitle -Description $Alert.AlertText -Client $Alert.TenantId
                 }
             }
