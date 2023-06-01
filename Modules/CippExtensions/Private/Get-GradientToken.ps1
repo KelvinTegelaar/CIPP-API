@@ -12,7 +12,7 @@ function Get-GradientToken {
     }
 
     try {
-        return $headers
+        return [hashtable]$headers
     }
     catch {
         Write-Error $_.Exception.Message

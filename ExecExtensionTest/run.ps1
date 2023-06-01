@@ -15,6 +15,7 @@ try {
                   $Results = [pscustomobject]@{"Results" = "Succesfully Connected to HaloPSA" }
             }
             "Gradient" {
+                  
                   $GradientToken = Get-GradientToken -Configuration $Configuration.Gradient
                   $ExistingIntegrations = Invoke-RestMethod -Uri 'https://app.usegradient.com/api/vendor-api/organization' -Method GET -Headers $GradientToken
                   if ($ExistingIntegrations.Status -ne "active") {
@@ -27,7 +28,7 @@ try {
       }
 }
 catch {
-      $Results = [pscustomobject]@{"Results" = "Failed to connect: $($_.Exception.Message)" }
+      $Results = [pscustomobject]@{"Results" = $GradientToken }
 }
 
 # Associate values to output bindings by calling 'Push-OutputBinding'.
