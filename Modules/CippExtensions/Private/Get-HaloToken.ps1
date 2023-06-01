@@ -3,7 +3,7 @@ function Get-HaloToken {
     param (
         $Configuration 
     )
-    Connect-AzAccount -Identity
+    $null = Connect-AzAccount -Identity
     $body = @{
         grant_type    = 'client_credentials'
         client_id     = $Configuration.ClientId
