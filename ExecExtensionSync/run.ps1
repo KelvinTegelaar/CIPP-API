@@ -16,16 +16,19 @@ try {
             "Gradient" {
                 If ($Configuration.Gradient.enabled -and $Configuration.Gradient.BillingEnabled) {
                     New-GradientServiceSyncRun
+                    $Results = [pscustomobject]@{"Results" = "Succesfully started gradient Sync" }
                 }
             }
         }
     }
 }
 catch {
+    $Results = [pscustomobject]@{"Results" = "Could not start Gradient Sync: $($_.Exception.Message)" }
+
     Write-LogMessage -API "Scheduler_Billing" -tenant "none" -message "Could not start billing processing $($_.Exception.Message)" -sev Error
 }
 
 Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
         StatusCode = [HttpStatusCode]::OK
-        Body       = @("Executed")
+        Body       = $Results
     }) -clobber
