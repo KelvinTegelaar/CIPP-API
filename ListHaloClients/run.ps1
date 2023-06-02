@@ -26,7 +26,7 @@ try {
 catch {
         $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
         $StatusCode = [HttpStatusCode]::Forbidden
-        $GraphRequest = $ErrorMessage
+        $HaloClients = $ErrorMessage
 }
 
 # Associate values to output bindings by calling 'Push-OutputBinding'.
