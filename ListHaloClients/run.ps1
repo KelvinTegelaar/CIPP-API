@@ -17,8 +17,8 @@ try {
         $Token = Get-HaloToken -configuration $Configuration
         $i = 0
         $HaloClients = do {
-                $Result = Invoke-RestMethod -Uri "$($Configuration.ResourceURL)/Clients?page_no=$i&page_size=999" -ContentType 'application/json' -Method Post -Body $body -Headers @{Authorization = "Bearer $($token.access_token)" }
-                $Result
+                $Result = Invoke-RestMethod -Uri "$($Configuration.ResourceURL)/Client?page_no=$i&page_size=999" -ContentType 'application/json' -Method GET -Headers @{Authorization = "Bearer $($token.access_token)" }
+                $Result.clients
                 $i++
         } while ($Result.clients -gt 0)
         $StatusCode = [HttpStatusCode]::OK
