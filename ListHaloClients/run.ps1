@@ -16,12 +16,18 @@ try {
         $Configuration = ((Get-AzDataTableEntity @Table).config | ConvertFrom-Json).HaloPSA
         $Token = Get-HaloToken -configuration $Configuration
         $i = 0
-        $HaloClients = do {
+        $RawHaloClients = do {
                 $Result = Invoke-RestMethod -Uri "$($Configuration.ResourceURL)/Client?page_no=$i&page_size=999" -ContentType 'application/json' -Method GET -Headers @{Authorization = "Bearer $($token.access_token)" }
                 $Result.clients | Select-Object * -ExcludeProperty logo
                 $i++
                 $pagecount = [Math]::Ceiling($Result.record_count / 999)
         } while ($i -le $pagecount)
+        $HaloClients = $RawHaloClients | ForEach-Object {
+                [PSCustomObject]@{
+                        label = $_.name
+                        value = $_.id
+                }
+        }
         $StatusCode = [HttpStatusCode]::OK
 }
 catch {
