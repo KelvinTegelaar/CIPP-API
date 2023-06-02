@@ -39,7 +39,7 @@ try {
       }
 }
 catch {
-      $Results = [pscustomobject]@{"Results" = "Failed to connect: $($_.Exception.Message)" }
+      $Results = [pscustomobject]@{"Results" = "Failed to connect: $($_.Exception.Message). $($_.InvocationInfo.ScriptLineNumber)" }
 }
 
 # Associate values to output bindings by calling 'Push-OutputBinding'.
