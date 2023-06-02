@@ -18,9 +18,9 @@ try {
         $i = 0
         $HaloClients = do {
                 $Result = Invoke-RestMethod -Uri "$($Configuration.ResourceURL)/Client?page_no=$i&page_size=999" -ContentType 'application/json' -Method GET -Headers @{Authorization = "Bearer $($token.access_token)" }
-                $Result.clients
+                $Result.clients | Select-Object * -ExcludeProperty logo
                 $i++
-        } while ($Result.clients -gt 0)
+        } while ($Result.clients.count -gt 0)
         $StatusCode = [HttpStatusCode]::OK
 }
 catch {
