@@ -25,7 +25,7 @@ try {
                               id          = $_.defaultDomainName
                         }
                   } | ConvertTo-Json -Depth 10
-                  Invoke-RestMethod -Uri 'https://app.usegradient.com/api/vendor-api/organization/accounts' -Method POST -Headers $GradientToken -Body $NewAccounts -ContentType 'application/json'
+                  if ($NewAccounts) { Invoke-RestMethod -Uri 'https://app.usegradient.com/api/vendor-api/organization/accounts' -Method POST -Headers $GradientToken -Body $NewAccounts -ContentType 'application/json' }
                   #setting the integration to active
 
                   $ExistingIntegrations = Invoke-RestMethod -Uri 'https://app.usegradient.com/api/vendor-api/organization' -Method GET -Headers $GradientToken
