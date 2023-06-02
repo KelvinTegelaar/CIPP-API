@@ -11,7 +11,6 @@ Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME  -
 Write-Host "PowerShell HTTP trigger function processed a request."
 
 # Interact with query parameters or the body of the request.
-$TenantFilter = $Request.Query.TenantFilter
 try {
         $Table = Get-CIPPTable -TableName Extensionsconfig
         $Configuration = ((Get-AzDataTableEntity @Table).config | ConvertFrom-Json).HaloPSA
