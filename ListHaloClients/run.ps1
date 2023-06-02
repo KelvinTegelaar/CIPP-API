@@ -21,9 +21,7 @@ try {
                 $Result
                 $i++
         } while ($Result.clients -gt 0)
-       
-
-
+        $StatusCode = [HttpStatusCode]::OK
 }
 catch {
         $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
