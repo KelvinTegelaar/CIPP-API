@@ -15,8 +15,7 @@ if ($Request.Query.List) {
     #Get available mappings
     $Mappings = [pscustomobject]@{}
     Get-AzDataTableEntity @Table | ForEach-Object {
-        $Mappings | Add-Member -NotePropertyName $_.RowKey -NotePropertyValue @{$_.RowKey = @{ name = "$($_.HaloPSAName)"; value = "$($_.HaloPSA)" }
-        }
+        $Mappings | Add-Member -NotePropertyName $_.RowKey -NotePropertyValue @{ label = "$($_.HaloPSAName)"; value = "$($_.HaloPSA)" }
     }
     #Get Available TEnants
     $Tenants = Get-Tenants
@@ -47,7 +46,6 @@ if ($Request.Query.List) {
 try {
     if ($Request.Query.AddMapping) {
         foreach ($Mapping in ([pscustomobject]$Request.body.mappings).psobject.properties) {
-            Write-Host ($mapping | ConvertTo-Json)
             $AddObject = @{
                 PartitionKey  = 'Mapping'
                 RowKey        = "$($mapping.name)"
