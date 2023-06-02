@@ -20,7 +20,8 @@ try {
                 $Result = Invoke-RestMethod -Uri "$($Configuration.ResourceURL)/Client?page_no=$i&page_size=999" -ContentType 'application/json' -Method GET -Headers @{Authorization = "Bearer $($token.access_token)" }
                 $Result.clients | Select-Object * -ExcludeProperty logo
                 $i++
-        } while ($Result.clients.count -gt 0)
+                $pagecount = [Math]::Ceiling($Result.record_count / 999)
+        } while ($i -le $pagecount)
         $StatusCode = [HttpStatusCode]::OK
 }
 catch {
