@@ -15,19 +15,7 @@ try {
                   $Results = [pscustomobject]@{"Results" = "Succesfully Connected to HaloPSA" }
             }
             "Gradient" {
-                  $Tenants = Get-Tenants
                   $GradientToken = Get-GradientToken -Configuration $Configuration.Gradient
-                  $ExistingAccounts = (Invoke-RestMethod -Uri 'https://app.usegradient.com/api/vendor-api/organization/accounts' -Method GET -Headers $GradientToken)
-                  $NewAccounts = $Tenants | Where-Object defaultDomainName -NotIn $ExistingAccounts.id | ForEach-Object {
-                        [PSCustomObject]@{
-                              name        = $_.displayName
-                              description = $_.defaultDomainName
-                              id          = $_.defaultDomainName
-                        }
-                  } | ConvertTo-Json -Depth 10
-                  if ($NewAccounts) { Invoke-RestMethod -Uri 'https://app.usegradient.com/api/vendor-api/organization/accounts' -Method POST -Headers $GradientToken -Body $NewAccounts -ContentType 'application/json' }
-                  #setting the integration to active
-
                   $ExistingIntegrations = Invoke-RestMethod -Uri 'https://app.usegradient.com/api/vendor-api/organization' -Method GET -Headers $GradientToken
                   if ($ExistingIntegrations.Status -ne "active") {
                         $ActivateRequest = Invoke-RestMethod -Uri 'https://app.usegradient.com/api/vendor-api/organization/status/active' -Method PATCH -Headers $GradientToken
