@@ -10,7 +10,7 @@ try {
     foreach ($ConfigItem in $Configuration.psobject.properties.name) {
         switch ($ConfigItem) {
             "Gradient" {
-                If ($Configuration.Gradient.enabled) {
+                If ($Configuration.Gradient.enabled -and $Configuration.Gradient.BillingEnabled) {
                     New-GradientServiceSyncRun
                 }
             }

@@ -69,6 +69,7 @@ function New-GradientServiceSyncRun {
                 if (!$PrettyName) { $PrettyName = $sku.skuPartNumber }
                 #Check if serviceID exists by SKUID in gradient
                 $ExistingService = (Invoke-RestMethod -Uri "https://app.usegradient.com/api/vendor-api" -Method GET -Headers $GradientToken).data.skus | Where-Object name -EQ $PrettyName
+                Write-Host "New service: $($ExistingService.name) ID: $($ExistingService.id)"               
                 if (!$ExistingService) {
                     #Create service
                     $ServiceBody = [PSCustomObject]@{
@@ -84,10 +85,10 @@ function New-GradientServiceSyncRun {
                     accountId = $singlereq.Tenant
                     unitCount = $sku.prepaidUnits.enabled
                 } | ConvertTo-Json -Depth 10
-                Invoke-RestMethod -Uri "https://app.usegradient.com/api/vendor-api/service/$($ExistingService.id)/count" -Method POST -Headers $GradientToken -Body $ServiceBody -ContentType 'application/json'
-            }
+                $Results = Invoke-RestMethod -Uri "https://app.usegradient.com/api/vendor-api/service/$($ExistingService.id)/count" -Method POST -Headers $GradientToken -Body $ServiceBody -ContentType 'application/json'
+            } 
             catch {
-                Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME  -message "Failed to create license in Gradient API. Error: $($_.Exception.Message)" -Sev "Error" -tenant $singlereq.tenant
+                Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME  -message "Failed to create license in Gradient API. Error: $($_). $results" -Sev "Error" -tenant $singlereq.tenant
 
             }
         }
