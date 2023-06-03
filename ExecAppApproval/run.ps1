@@ -15,7 +15,7 @@ $applicationid = if ($request.query.applicationid) { $request.query.applicationi
 $Results = get-tenants | ForEach-Object {
     [PSCustomObject]@{
         defaultDomainName = $_.defaultDomainName
-        link              = "https://login.microsoftonline.com/$($_.customerId)/v2.0/adminconsent?client_id=$applicationid&scope=https://graph.microsoft.com/.default"
+        link              = "https://login.microsoftonline.com/$($_.customerId)/v2.0/adminconsent?client_id=$applicationid&scope=$applicationid/.default"
     }
 }
 

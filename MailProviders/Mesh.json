@@ -1,0 +1,9 @@
+{
+    "Name": "Mesh Email Security",
+    "_MxComment": "https://docs.emailsecurity.app/help-center/connection-details",
+    "MxMatch": "emailsecurity.app",
+    "_SpfComment": "https://docs.emailsecurity.app/help-center/connection-details",
+    "SpfInclude": "spf1.emailsecurity.app",
+    "_DkimComment": "No configuration found",
+    "Selectors": [""]
+}

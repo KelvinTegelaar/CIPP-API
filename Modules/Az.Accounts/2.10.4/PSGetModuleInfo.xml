@@ -1,0 +1,204 @@
+<Objs Version="1.1.0.1" xmlns="http://schemas.microsoft.com/powershell/2004/04">
+  <Obj RefId="0">
+    <TN RefId="0">
+      <T>Microsoft.PowerShell.Commands.PSRepositoryItemInfo</T>
+      <T>System.Management.Automation.PSCustomObject</T>
+      <T>System.Object</T>
+    </TN>
+    <MS>
+      <S N="Name">Az.Accounts</S>
+      <S N="Version">2.10.4</S>
+      <S N="Type">Module</S>
+      <S N="Description">Microsoft Azure PowerShell - Accounts credential management cmdlets for Azure Resource Manager in Windows PowerShell and PowerShell Core._x000D__x000A__x000D__x000A_For more information on account credential management, please visit the following: https://learn.microsoft.com/powershell/azure/authenticate-azureps</S>
+      <S N="Author">Microsoft Corporation</S>
+      <S N="CompanyName">azure-sdk</S>
+      <S N="Copyright">Microsoft Corporation. All rights reserved.</S>
+      <DT N="PublishedDate">2022-12-06T09:00:44-05:00</DT>
+      <Nil N="InstalledDate" />
+      <Nil N="UpdatedDate" />
+      <URI N="LicenseUri">https://aka.ms/azps-license</URI>
+      <URI N="ProjectUri">https://github.com/Azure/azure-powershell</URI>
+      <Nil N="IconUri" />
+      <Obj N="Tags" RefId="1">
+        <TN RefId="1">
+          <T>System.Object[]</T>
+          <T>System.Array</T>
+          <T>System.Object</T>
+        </TN>
+        <LST>
+          <S>Azure</S>
+          <S>ResourceManager</S>
+          <S>ARM</S>
+          <S>Accounts</S>
+          <S>Authentication</S>
+          <S>Environment</S>
+          <S>Subscription</S>
+          <S>PSModule</S>
+          <S>PSEdition_Core</S>
+          <S>PSEdition_Desktop</S>
+        </LST>
+      </Obj>
+      <Obj N="Includes" RefId="2">
+        <TN RefId="2">
+          <T>System.Collections.Hashtable</T>
+          <T>System.Object</T>
+        </TN>
+        <DCT>
+          <En>
+            <S N="Key">DscResource</S>
+            <Obj N="Value" RefId="3">
+              <TNRef RefId="1" />
+              <LST />
+            </Obj>
+          </En>
+          <En>
+            <S N="Key">Command</S>
+            <Obj N="Value" RefId="4">
+              <TNRef RefId="1" />
+              <LST>
+                <S>Disable-AzDataCollection</S>
+                <S>Disable-AzContextAutosave</S>
+                <S>Enable-AzDataCollection</S>
+                <S>Enable-AzContextAutosave</S>
+                <S>Remove-AzEnvironment</S>
+                <S>Get-AzEnvironment</S>
+                <S>Set-AzEnvironment</S>
+                <S>Add-AzEnvironment</S>
+                <S>Get-AzSubscription</S>
+                <S>Connect-AzAccount</S>
+                <S>Get-AzContext</S>
+                <S>Set-AzContext</S>
+                <S>Import-AzContext</S>
+                <S>Save-AzContext</S>
+                <S>Get-AzTenant</S>
+                <S>Send-Feedback</S>
+                <S>Resolve-AzError</S>
+                <S>Select-AzContext</S>
+                <S>Rename-AzContext</S>
+                <S>Remove-AzContext</S>
+                <S>Clear-AzContext</S>
+                <S>Disconnect-AzAccount</S>
+                <S>Get-AzContextAutosaveSetting</S>
+                <S>Set-AzDefault</S>
+                <S>Get-AzDefault</S>
+                <S>Clear-AzDefault</S>
+                <S>Register-AzModule</S>
+                <S>Enable-AzureRmAlias</S>
+                <S>Disable-AzureRmAlias</S>
+                <S>Uninstall-AzureRm</S>
+                <S>Invoke-AzRestMethod</S>
+                <S>Get-AzAccessToken</S>
+                <S>Open-AzSurveyLink</S>
+                <S>Get-AzConfig</S>
+                <S>Update-AzConfig</S>
+                <S>Clear-AzConfig</S>
+                <S>Export-AzConfig</S>
+                <S>Import-AzConfig</S>
+              </LST>
+            </Obj>
+          </En>
+          <En>
+            <S N="Key">Cmdlet</S>
+            <Obj N="Value" RefId="5">
+              <TNRef RefId="1" />
+              <LST>
+                <S>Disable-AzDataCollection</S>
+                <S>Disable-AzContextAutosave</S>
+                <S>Enable-AzDataCollection</S>
+                <S>Enable-AzContextAutosave</S>
+                <S>Remove-AzEnvironment</S>
+                <S>Get-AzEnvironment</S>
+                <S>Set-AzEnvironment</S>
+                <S>Add-AzEnvironment</S>
+                <S>Get-AzSubscription</S>
+                <S>Connect-AzAccount</S>
+                <S>Get-AzContext</S>
+                <S>Set-AzContext</S>
+                <S>Import-AzContext</S>
+                <S>Save-AzContext</S>
+                <S>Get-AzTenant</S>
+                <S>Send-Feedback</S>
+                <S>Resolve-AzError</S>
+                <S>Select-AzContext</S>
+                <S>Rename-AzContext</S>
+                <S>Remove-AzContext</S>
+                <S>Clear-AzContext</S>
+                <S>Disconnect-AzAccount</S>
+                <S>Get-AzContextAutosaveSetting</S>
+                <S>Set-AzDefault</S>
+                <S>Get-AzDefault</S>
+                <S>Clear-AzDefault</S>
+                <S>Register-AzModule</S>
+                <S>Enable-AzureRmAlias</S>
+                <S>Disable-AzureRmAlias</S>
+                <S>Uninstall-AzureRm</S>
+                <S>Invoke-AzRestMethod</S>
+                <S>Get-AzAccessToken</S>
+                <S>Open-AzSurveyLink</S>
+                <S>Get-AzConfig</S>
+                <S>Update-AzConfig</S>
+                <S>Clear-AzConfig</S>
+                <S>Export-AzConfig</S>
+                <S>Import-AzConfig</S>
+              </LST>
+            </Obj>
+          </En>
+          <En>
+            <S N="Key">Workflow</S>
+            <Ref N="Value" RefId="3" />
+          </En>
+          <En>
+            <S N="Key">Function</S>
+            <Ref N="Value" RefId="3" />
+          </En>
+          <En>
+            <S N="Key">RoleCapability</S>
+            <Ref N="Value" RefId="3" />
+          </En>
+        </DCT>
+      </Obj>
+      <Nil N="PowerShellGetFormatVersion" />
+      <S N="ReleaseNotes">* Enabled caching tokens when logging in with a client assertion. This fixed the incorrectly short lifespan of tokens._x000D__x000A_* Upgraded target framework of Microsoft.Identity.Client to net461 [#20189]_x000D__x000A_* Stored 'ServicePrincipalSecret' and 'CertificatePassword' into 'AzKeyStore'._x000D__x000A_* Updated the reference of Azure PowerShell Common to 1.3.67-preview.</S>
+      <Obj N="Dependencies" RefId="6">
+        <TNRef RefId="1" />
+        <LST />
+      </Obj>
+      <S N="RepositorySourceLocation">https://www.powershellgallery.com/api/v2</S>
+      <S N="Repository">PSGallery</S>
+      <S N="PackageManagementProvider">NuGet</S>
+      <Obj N="AdditionalMetadata" RefId="7">
+        <TN RefId="3">
+          <T>System.Management.Automation.PSCustomObject</T>
+          <T>System.Object</T>
+        </TN>
+        <MS>
+          <S N="copyright">Microsoft Corporation. All rights reserved.</S>
+          <S N="description">Microsoft Azure PowerShell - Accounts credential management cmdlets for Azure Resource Manager in Windows PowerShell and PowerShell Core._x000D__x000A__x000D__x000A_For more information on account credential management, please visit the following: https://learn.microsoft.com/powershell/azure/authenticate-azureps</S>
+          <S N="requireLicenseAcceptance">True</S>
+          <S N="releaseNotes">* Enabled caching tokens when logging in with a client assertion. This fixed the incorrectly short lifespan of tokens._x000D__x000A_* Upgraded target framework of Microsoft.Identity.Client to net461 [#20189]_x000D__x000A_* Stored 'ServicePrincipalSecret' and 'CertificatePassword' into 'AzKeyStore'._x000D__x000A_* Updated the reference of Azure PowerShell Common to 1.3.67-preview.</S>
+          <S N="isLatestVersion">True</S>
+          <S N="isAbsoluteLatestVersion">True</S>
+          <S N="versionDownloadCount">1598558</S>
+          <S N="downloadCount">108306227</S>
+          <S N="packageSize">7573290</S>
+          <S N="published">12/6/2022 9:00:44 AM -05:00</S>
+          <S N="created">12/6/2022 9:00:44 AM -05:00</S>
+          <S N="lastUpdated">12/16/2022 9:07:59 PM -05:00</S>
+          <S N="tags">Azure ResourceManager ARM Accounts Authentication Environment Subscription PSModule PSEdition_Core PSEdition_Desktop PSCmdlet_Disable-AzDataCollection PSCommand_Disable-AzDataCollection PSCmdlet_Disable-AzContextAutosave PSCommand_Disable-AzContextAutosave PSCmdlet_Enable-AzDataCollection PSCommand_Enable-AzDataCollection PSCmdlet_Enable-AzContextAutosave PSCommand_Enable-AzContextAutosave PSCmdlet_Remove-AzEnvironment PSCommand_Remove-AzEnvironment PSCmdlet_Get-AzEnvironment PSCommand_Get-AzEnvironment PSCmdlet_Set-AzEnvironment PSCommand_Set-AzEnvironment PSCmdlet_Add-AzEnvironment PSCommand_Add-AzEnvironment PSCmdlet_Get-AzSubscription PSCommand_Get-AzSubscription PSCmdlet_Connect-AzAccount PSCommand_Connect-AzAccount PSCmdlet_Get-AzContext PSCommand_Get-AzContext PSCmdlet_Set-AzContext PSCommand_Set-AzContext PSCmdlet_Import-AzContext PSCommand_Import-AzContext PSCmdlet_Save-AzContext PSCommand_Save-AzContext PSCmdlet_Get-AzTenant PSCommand_Get-AzTenant PSCmdlet_Send-Feedback PSCommand_Send-Feedback PSCmdlet_Resolve-AzError PSCommand_Resolve-AzError PSCmdlet_Select-AzContext PSCommand_Select-AzContext PSCmdlet_Rename-AzContext PSCommand_Rename-AzContext PSCmdlet_Remove-AzContext PSCommand_Remove-AzContext PSCmdlet_Clear-AzContext PSCommand_Clear-AzContext PSCmdlet_Disconnect-AzAccount PSCommand_Disconnect-AzAccount PSCmdlet_Get-AzContextAutosaveSetting PSCommand_Get-AzContextAutosaveSetting PSCmdlet_Set-AzDefault PSCommand_Set-AzDefault PSCmdlet_Get-AzDefault PSCommand_Get-AzDefault PSCmdlet_Clear-AzDefault PSCommand_Clear-AzDefault PSCmdlet_Register-AzModule PSCommand_Register-AzModule PSCmdlet_Enable-AzureRmAlias PSCommand_Enable-AzureRmAlias PSCmdlet_Disable-AzureRmAlias PSCommand_Disable-AzureRmAlias PSCmdlet_Uninstall-AzureRm PSCommand_Uninstall-AzureRm PSCmdlet_Invoke-AzRestMethod PSCommand_Invoke-AzRestMethod PSCmdlet_Get-AzAccessToken PSCommand_Get-AzAccessToken PSCmdlet_Open-AzSurveyLink PSCommand_Open-AzSurveyLink PSCmdlet_Get-AzConfig PSCommand_Get-AzConfig PSCmdlet_Update-AzConfig PSCommand_Update-AzConfig PSCmdlet_Clear-AzConfig PSCommand_Clear-AzConfig PSCmdlet_Export-AzConfig PSCommand_Export-AzConfig PSCmdlet_Import-AzConfig PSCommand_Import-AzConfig PSIncludes_Cmdlet</S>
+          <S N="developmentDependency">False</S>
+          <S N="updated">2022-12-16T21:07:59Z</S>
+          <S N="NormalizedVersion">2.10.4</S>
+          <S N="Authors">Microsoft Corporation</S>
+          <S N="IsPrerelease">false</S>
+          <S N="ItemType">Module</S>
+          <S N="FileList">Az.Accounts.nuspec|Accounts.format.ps1xml|Accounts.generated.format.ps1xml|Accounts.types.ps1xml|Az.Accounts.psd1|Az.Accounts.psm1|FuzzySharp.dll|Hyak.Common.dll|Microsoft.ApplicationInsights.dll|Microsoft.Azure.Common.dll|Microsoft.Azure.PowerShell.Authentication.Abstractions.dll|Microsoft.Azure.PowerShell.Authentication.deps.json|Microsoft.Azure.PowerShell.Authentication.dll|Microsoft.Azure.PowerShell.Authentication.ResourceManager.deps.json|Microsoft.Azure.PowerShell.Authentication.ResourceManager.dll|Microsoft.Azure.PowerShell.AuthenticationAssemblyLoadContext.deps.json|Microsoft.Azure.PowerShell.AuthenticationAssemblyLoadContext.dll|Microsoft.Azure.PowerShell.Authenticators.dll|Microsoft.Azure.PowerShell.Clients.Aks.dll|Microsoft.Azure.PowerShell.Clients.Authorization.dll|Microsoft.Azure.PowerShell.Clients.Compute.dll|Microsoft.Azure.PowerShell.Clients.Graph.Rbac.dll|Microsoft.Azure.PowerShell.Clients.KeyVault.dll|Microsoft.Azure.PowerShell.Clients.Monitor.dll|Microsoft.Azure.PowerShell.Clients.Network.dll|Microsoft.Azure.PowerShell.Clients.PolicyInsights.dll|Microsoft.Azure.PowerShell.Clients.ResourceManager.dll|Microsoft.Azure.PowerShell.Clients.Storage.Management.dll|Microsoft.Azure.PowerShell.Clients.Websites.dll|Microsoft.Azure.PowerShell.Cmdlets.Accounts.deps.json|Microsoft.Azure.PowerShell.Cmdlets.Accounts.dll|Microsoft.Azure.PowerShell.Cmdlets.Accounts.dll-Help.xml|Microsoft.Azure.PowerShell.Common.dll|Microsoft.Azure.PowerShell.Common.Share.dll|Microsoft.Azure.PowerShell.Storage.dll|Microsoft.Azure.PowerShell.Strategies.dll|Microsoft.Rest.ClientRuntime.Azure.dll|Microsoft.Rest.ClientRuntime.dll|Microsoft.WindowsAzure.Storage.DataMovement.dll|Microsoft.WindowsAzure.Storage.dll|AzSharedAlcAssemblies\Azure.Core.dll|AzSharedAlcAssemblies\Azure.Identity.dll|AzSharedAlcAssemblies\Microsoft.Bcl.AsyncInterfaces.dll|AzSharedAlcAssemblies\Microsoft.Identity.Client.dll|AzSharedAlcAssemblies\Microsoft.Identity.Client.Extensions.Msal.dll|AzSharedAlcAssemblies\Microsoft.IdentityModel.Abstractions.dll|AzSharedAlcAssemblies\System.Memory.Data.dll|AzSharedAlcAssemblies\System.Text.Json.dll|en-US\about_az.help.txt|PostImportScripts\LoadAuthenticators.ps1|PreloadAssemblies\Azure.Core.dll|PreloadAssemblies\Azure.Identity.dll|PreloadAssemblies\Microsoft.Azure.PowerShell.Authenticators.dll|PreloadAssemblies\Microsoft.Bcl.AsyncInterfaces.dll|PreloadAssemblies\Microsoft.Identity.Client.dll|PreloadAssemblies\Microsoft.Identity.Client.Extensions.Msal.dll|PreloadAssemblies\Microsoft.IdentityModel.Abstractions.dll|PreloadAssemblies\Newtonsoft.Json.12.0.3.dll|PreloadAssemblies\Newtonsoft.Json.dll|PreloadAssemblies\System.Buffers.dll|PreloadAssemblies\System.Diagnostics.DiagnosticSource.dll|PreloadAssemblies\System.Memory.Data.dll|PreloadAssemblies\System.Memory.dll|PreloadAssemblies\System.Net.Http.WinHttpHandler.dll|PreloadAssemblies\System.Numerics.Vectors.dll|PreloadAssemblies\System.Private.ServiceModel.dll|PreloadAssemblies\System.Reflection.DispatchProxy.dll|PreloadAssemblies\System.Runtime.CompilerServices.Unsafe.dll|PreloadAssemblies\System.Security.AccessControl.dll|PreloadAssemblies\System.Security.Cryptography.Cng.dll|PreloadAssemblies\System.Security.Permissions.dll|PreloadAssemblies\System.Security.Principal.Windows.dll|PreloadAssemblies\System.ServiceModel.Primitives.dll|PreloadAssemblies\System.Text.Encodings.Web.dll|PreloadAssemblies\System.Text.Json.dll|PreloadAssemblies\System.Threading.Tasks.Extensions.dll|PreloadAssemblies\System.Xml.ReaderWriter.dll|StartupScripts\AzError.ps1|StartupScripts\InitializeAssemblyResolver.ps1</S>
+          <S N="GUID">17a2feff-488b-47f9-8729-e2cec094624c</S>
+          <S N="PowerShellVersion">5.1</S>
+          <S N="DotNetFrameworkVersion">4.7.2</S>
+          <S N="CompanyName">Microsoft Corporation</S>
+        </MS>
+      </Obj>
+      <S N="InstalledLocation">C:\Users\jduprey.CNS\Documents\GitHub\CIPP-API\Modules\Az.Accounts\2.10.4</S>
+    </MS>
+  </Obj>
+</Objs>
