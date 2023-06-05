@@ -39,7 +39,6 @@ function New-GradientServiceSyncRun {
     $RawGraphRequest = $Tenants | ForEach-Object -Parallel { 
         $domainName = $_.defaultDomainName
         Import-Module '.\GraphHelper.psm1'
-        Import-Module '.\Modules\AzBobbyTables'
         Write-Host "Doing $domainName"
         try {
             $Licrequest = New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/subscribedSkus' -tenantid $_.defaultDomainName -ErrorAction Stop
