@@ -16,7 +16,7 @@
       "type": "queue",
       "direction": "out",
       "name": "Msg",
-      "queueName": "generalAllTenantQueue"
+      "queueName": "billqueue"
     }
   ]
 }
