@@ -1,4 +1,5 @@
 param($tenant)
+
 $ConfigTable = Get-CippTable -tablename 'standards'
 $Setting = ((Get-AzDataTableEntity @ConfigTable -Filter "PartitionKey eq 'standards' and RowKey eq '$tenant'").JSON | ConvertFrom-Json).standards.IntuneTemplate
 if (!$Setting) {
