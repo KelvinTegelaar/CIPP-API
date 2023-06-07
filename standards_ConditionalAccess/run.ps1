@@ -49,7 +49,8 @@ foreach ($Template in $Setting.TemplateList) {
     catch {
       #no action required, failure allowed.
     }
-    $RawJSON = $JSONObj | ConvertTo-Json -Depth 10
+    $RawJSON = $JSONObj | Select-Object * -ExcludeProperty Id, *time* | ConvertTo-Json -Depth 10
+    $PolicyName = $JSONObj.displayName
     $CheckExististing = New-GraphGETRequest -uri "https://graph.microsoft.com/v1.0/identity/conditionalAccess/policies" -tenantid $tenant | Where-Object displayName -EQ $JSONObj.displayName
     if ($PolicyName -in $CheckExististing.displayName) {
       #patch the conditional access policy to restore our config.
