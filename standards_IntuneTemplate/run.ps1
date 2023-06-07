@@ -5,6 +5,8 @@ $Setting = ((Get-AzDataTableEntity @ConfigTable -Filter "PartitionKey eq 'standa
 if (!$Setting) {
   $Setting = ((Get-AzDataTableEntity @ConfigTable -Filter "PartitionKey eq 'standards' and RowKey eq 'AllTenants'").JSON | ConvertFrom-Json).standards.IntuneTemplate
 }
+
+
 foreach ($Template in $Setting.TemplateList) {
   try {
     $Table = Get-CippTable -tablename 'templates'

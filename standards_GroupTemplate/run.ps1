@@ -7,6 +7,7 @@ if (!$Setting) {
 }
 
 
+
 foreach ($Template in $Setting.TemplateList) {
   try {
     $Table = Get-CippTable -tablename 'templates'
