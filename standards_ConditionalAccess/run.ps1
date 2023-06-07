@@ -5,7 +5,7 @@ if (!$Setting) {
   $Setting = ((Get-AzDataTableEntity @ConfigTable -Filter "PartitionKey eq 'standards' and RowKey eq 'AllTenants'").JSON | ConvertFrom-Json).standards.ConditionalAccess
 }
 
-
+$APINAME = "Standards"
 function Remove-EmptyArrays ($Object) {
   if ($Object -is [Array]) {
     foreach ($Item in $Object) { Remove-EmptyArrays $Item }
@@ -64,7 +64,7 @@ foreach ($Template in $Setting.TemplateList) {
     }
   }
   catch {
-    Write-LogMessage -API "Standards" -tenant $tenant -message  "Failed to create or update conditional access rule: $($_.exception.message)" -sev "Error"
+    Write-LogMessage -API "Standards" -tenant $tenant -message  "Failed to create or update conditional access rule $($JSONObj.displayName): $($_.exception.message)" -sev "Error"
   }
 }
 
