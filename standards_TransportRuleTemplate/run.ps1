@@ -13,6 +13,7 @@ foreach ($Template in $Setting.TemplateList) {
   $RequestParams = (Get-AzDataTableEntity @Table -Filter $Filter).JSON | ConvertFrom-Json
   $Existing = New-ExoRequest -ErrorAction SilentlyContinue -tenantid $Tenant -cmdlet "Get-TransportRule" -useSystemMailbox $true | Where-Object -Property Identity -EQ $RequestParams.name
   
+  
   try {
     if ($Existing) {
       Write-Host "Found existing"
