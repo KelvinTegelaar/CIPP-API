@@ -55,12 +55,12 @@ foreach ($Template in $Setting.TemplateList) {
     if ($PolicyName -in $CheckExististing.displayName) {
       #patch the conditional access policy to restore our config.
       $PatchRequest = New-GraphPOSTRequest -uri "https://graph.microsoft.com/beta/identity/conditionalAccess/policies/$($CheckExististing.id)" -tenantid $tenant -type PATCH -body $RawJSON
-      Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $($Tenant) -message "Updated Conditional Access Policy $($Displayname) to the template standard." -Sev "Info"
+      Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $($Tenant) -message "Updated Conditional Access Policy $($JSONObj.Displayname) to the template standard." -Sev "Info"
 
     }
     else {
       $CreateRequest = New-GraphPOSTRequest -uri "https://graph.microsoft.com/beta/identity/conditionalAccess/policies" -tenantid $tenant -type POST -body $RawJSON
-      Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $($Tenant) -message "Added Conditional Access Policy $($Displayname)" -Sev "Info"
+      Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $($Tenant) -message "Added Conditional Access Policy $($JSONObj.Displayname)" -Sev "Info"
     }
   }
   catch {
