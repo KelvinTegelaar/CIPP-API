@@ -111,7 +111,11 @@ function Get-GraphToken($tenantid, $scope, $AsApp, $AppID, $refreshToken, $Retur
 }
 
 function Write-LogMessage ($message, $tenant = 'None', $API = 'None', $user, $sev) {
-    $username = ([System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($user)) | ConvertFrom-Json).userDetails
+    try {
+        $username = ([System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($user)) | ConvertFrom-Json).userDetails
+    } catch {
+        $username = $user
+    }
 
     $Table = Get-CIPPTable -tablename CippLogs
 
