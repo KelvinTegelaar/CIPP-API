@@ -5,7 +5,8 @@ try {
     $Table = Get-CIPPTable -Table SchedulerConfig
     if ($Tenant.tag -eq 'AllTenants') {
         $Filter = "RowKey eq 'AllTenants' and PartitionKey eq 'Alert'"
-    } else {
+    }
+    else {
         $Filter = "RowKey eq '{0}' and PartitionKey eq 'Alert'" -f $Tenant.tenantid
     }
     $Alerts = Get-AzDataTableEntity @Table -Filter $Filter
@@ -18,10 +19,11 @@ try {
             try {
                 New-GraphGETRequest -uri "https://graph.microsoft.com/beta/roleManagement/directory/roleAssignments?`$filter=roleDefinitionId eq '62e90394-69f5-4237-9190-012177145e10'" -tenantid $($tenant.tenant) | Where-Object -Property 'principalOrganizationId' -EQ $tenant.tenantid | ForEach-Object {
                     $LastChanges = New-GraphGETRequest -uri "https://graph.microsoft.com/beta/users/$($_.principalId)?`$select=UserPrincipalName,lastPasswordChangeDateTime" -tenant $($tenant.tenant)
-                    if ([datetime]$LastChanges.LastPasswordChangeDateTime -gt (Get-Date).AddDays(-1)) { "Admin password has been changed for $($LastChanges.UserPrincipalName) in last 24 hours" }
+                    if ($LastChanges.LastPasswordChangeDateTime -gt (Get-Date).AddDays(-1)) { "Admin password has been changed for $($LastChanges.UserPrincipalName) in last 24 hours" }
                 }
 
-            } catch {
+            }
+            catch {
                 "Could not get admin password changes for $($Tenant.tenant): $($_.Exception.message)"
             }
         }
@@ -30,7 +32,8 @@ try {
                 New-GraphGetRequest -uri "https://graph.microsoft.com/beta/tenantRelationships/managedTenants/windowsDeviceMalwareStates?`$top=999&`$filter=tenantId eq '$($Tenant.tenantid)'" | Where-Object { $_.malwareThreatState -eq 'Active' } | ForEach-Object {
                     "$($_.managedDeviceName): Malware found and active. Severity: $($_.MalwareSeverity). Malware name: $($_.MalwareDisplayName)"
                 }
-            } catch {
+            }
+            catch {
 
             }
         }
@@ -40,7 +43,8 @@ try {
                 New-GraphGetRequest -uri "https://graph.microsoft.com/beta/tenantRelationships/managedTenants/windowsProtectionStates?`$top=999&`$filter=tenantId eq '$($Tenant.tenantid)'" | Where-Object { $_.realTimeProtectionEnabled -eq $false -or $_.MalwareprotectionEnabled -eq $false } | ForEach-Object {
                     "$($_.managedDeviceName) - Real Time Protection: $($_.realTimeProtectionEnabled) & Malware Protection: $($_.MalwareprotectionEnabled)"
                 }
-            } catch {
+            }
+            catch {
 
             }
         }
@@ -57,10 +61,12 @@ try {
                             }
                         }
                         if ($_.StrongAuthenticationRequirements.StrongAuthenticationRequirement.state -eq $null -and $CARegistered -ne $true) { "Admin $($_.UserPrincipalName) is enabled but does not have any form of MFA configured." }
-                    } catch {
+                    }
+                    catch {
                     }
                 }
-            } catch {
+            }
+            catch {
                 "Could not get MFA status for admins for $($Tenant.tenant): $($_.Exception.message)"
             }
         }
@@ -76,12 +82,14 @@ try {
                                 $CARegistered = $true;
                             } }
                         if ($_.StrongAuthenticationRequirements.StrongAuthenticationRequirement.state -eq $null -and $CARegistered -eq $false) { "User $($_.UserPrincipalName) is enabled but does not have any form of MFA configured." }
-                    } catch {
+                    }
+                    catch {
                         $CARegistered = $false
                     }
                 }
 
-            } catch {
+            }
+            catch {
                 "Could not get MFA status for users for $($Tenant.tenant): $($_.Exception.message)"
 
             }
@@ -113,7 +121,8 @@ try {
                         }
                     }
                 }
-            } catch {
+            }
+            catch {
                 "Could not get get role changes for $($Tenant.tenant): $($_.Exception.message)"
 
             }
@@ -124,7 +133,8 @@ try {
                     $PercentLeft = [math]::round($_.StorageUsedInBytes / $_.prohibitSendReceiveQuotaInBytes * 100)
                     if ($PercentLeft -gt 90) { "$($_.UserPrincipalName): Mailbox has less than 10% space left. Mailbox is $PercentLeft% full" }
                 }
-            } catch {
+            }
+            catch {
 
             }
         }
@@ -137,7 +147,8 @@ try {
                         'Conditional Access is available, but no policies could be found.'
                     }
                 }
-            } catch {
+            }
+            catch {
             }
         }
         { $_.'UnusedLicenses' -eq $true } {
@@ -156,7 +167,8 @@ try {
                         }
                     }
                 }
-            } catch {
+            }
+            catch {
 
             }
         }
@@ -176,7 +188,8 @@ try {
                         }
                     }
                 }
-            } catch {
+            }
+            catch {
 
             }
         }
@@ -203,7 +216,8 @@ try {
                     }
                     Add-AzDataTableEntity @LastRunTable -Entity $LastRun -Force
                 }
-            } catch {
+            }
+            catch {
                 #$Message = 'Exception on line {0} - {1}' -f $_.InvocationInfo.ScriptLineNumber, $_.Exception.Message
                 #Write-LogMessage -message $Message -API 'Alerts' -tenant $tenant.tenant -sev Error
             }
@@ -219,14 +233,16 @@ try {
                         if ($Apn.expirationDateTime -lt (Get-Date).AddDays(30) -and $Apn.expirationDateTime -gt (Get-Date).AddDays(-7)) {
                             'Intune: Apple Push Notification certificate for {0} is expiring on {1}' -f $Apn.appleIdentifier, $Apn.expirationDateTime
                         }
-                    } catch {}
+                    }
+                    catch {}
                 }
                 $LastRun = @{
                     RowKey       = 'ApnCertExpiry'
                     PartitionKey = $Tenant.tenantid
                 }
                 Add-AzDataTableEntity @LastRunTable -Entity $LastRun -Force
-            } catch {
+            }
+            catch {
                 #$Message = 'Exception on line {0} - {1}' -f $_.InvocationInfo.ScriptLineNumber, $_.Exception.Message
                 #Write-LogMessage -message $Message -API 'Alerts' -tenant $tenant.tenant -sev Error
             }
@@ -247,14 +263,16 @@ try {
                                 'Apple Volume Purchase Program token expiring on {0}' -f $Vpp.expirationDateTime
                             }
                         }
-                    } catch {}
+                    }
+                    catch {}
                     $LastRun = @{
                         RowKey       = 'VppTokenExpiry'
                         PartitionKey = $Tenant.tenantid
                     }
                     Add-AzDataTableEntity @LastRunTable -Entity $LastRun -Force
                 }
-            } catch {
+            }
+            catch {
                 #$Message = 'Exception on line {0} - {1}' -f $_.InvocationInfo.ScriptLineNumber, $_.Exception.Message
                 #Write-LogMessage -message $Message -API 'Alerts' -tenant $tenant.tenant -sev Error
             }
@@ -272,14 +290,16 @@ try {
                                 'Apple Device Enrollment Program token expiring on {0}' -f $Dep.tokenExpirationDateTime
                             }
                         }
-                    } catch {}
+                    }
+                    catch {}
                     $LastRun = @{
                         RowKey       = 'DepTokenExpiry'
                         PartitionKey = $Tenant.tenantid
                     }
                     Add-AzDataTableEntity @LastRunTable -Entity $LastRun -Force
                 }
-            } catch {
+            }
+            catch {
                 #$Message = 'Exception on line {0} - {1}' -f $_.InvocationInfo.ScriptLineNumber, $_.Exception.Message
                 #Write-LogMessage -message $Message -API 'Alerts' -tenant $tenant.tenant -sev Error
             }
@@ -295,14 +315,16 @@ try {
                         if ($SecDefaults.isEnabled -eq $false -and $SecDefaults.securityDefaultsUpsell.action -in @('autoEnable', 'autoEnabledNotify')) {
                             'Security Defaults will be automatically enabled on {0}' -f $SecDefaults.securityDefaultsUpsell.dueDateTime
                         }
-                    } catch {}
+                    }
+                    catch {}
                     $LastRun = @{
                         RowKey       = 'SecDefaultsUpsell'
                         PartitionKey = $Tenant.tenantid
                     }
                     Add-AzDataTableEntity @LastRunTable -Entity $LastRun -Force
                 }
-            } catch {
+            }
+            catch {
                 #$Message = 'Exception on line {0} - {1}' -f $_.InvocationInfo.ScriptLineNumber, $_.Exception.Message
                 #Write-LogMessage -message $Message -API 'Alerts' -tenant $tenant.tenant -sev Error
             }
@@ -323,7 +345,8 @@ try {
     [PSCustomObject]@{
         ReturnedValues = $true
     }
-} catch {
+}
+catch {
     $Message = 'Exception on line {0} - {1}' -f $_.InvocationInfo.ScriptLineNumber, $_.Exception.Message
     Write-LogMessage -message $Message -API 'Alerts' -tenant $tenant.tenant -sev Error
     [PSCustomObject]@{
