@@ -56,7 +56,7 @@ function Update-CippQueueEntry {
 
 function Get-CippQueue {
     # Input bindings are passed in via param block.
-    param($Request, $TriggerMetadata)
+    param($Request = $null, $TriggerMetadata)
 
     if ($Request) {
         $APIName = $TriggerMetadata.FunctionName
@@ -67,7 +67,7 @@ function Get-CippQueue {
     }
 
     $CippQueue = Get-CippTable -TableName 'CippQueue'
-    $CippQueueData = Get-AzDataTableEntity @CippQueue | Sort-Object -Property Timestamp -Descending
+    $CippQueueData = Get-AzDataTableEntity @CippQueue | Where-Object { ($_.Timestamp.DateTime) -ge (Get-Date).ToUniversalTime().AddHours(-1) } | Sort-Object -Property Timestamp -Descending
     if ($request) {
         Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
                 StatusCode = [HttpStatusCode]::OK
