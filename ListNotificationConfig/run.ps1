@@ -8,9 +8,9 @@ Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -m
 
 $Table = Get-CIPPTable -TableName SchedulerConfig
 $Filter = "RowKey eq 'CippNotifications' and PartitionKey eq 'CippNotifications'"
-$Config = Get-AzDataTableEntity @Table -Filter $Filter | ConvertTo-Json -Depth 10 | ConvertFrom-Json -depth 10
+$Config = Get-AzDataTableEntity @Table -Filter $Filter | ConvertTo-Json -Depth 10 | ConvertFrom-Json -Depth 10
 $config | Add-Member -NotePropertyValue @() -NotePropertyName 'logsToInclude' -Force
-$config.logsToInclude = @(([pscustomobject]$config | Select-Object * -ExcludeProperty schedule, type, tenantid, onepertenant, partitionkey, rowkey, tenant, ETag, email, logsToInclude, timestamp, webhook).psobject.properties.name)
+$config.logsToInclude = @(([pscustomobject]$config | Select-Object * -ExcludeProperty schedule, type, tenantid, onepertenant, sendtoIntegration, partitionkey, rowkey, tenant, ETag, email, logsToInclude, timestamp, webhook).psobject.properties.name)
 if (!$config.logsToInclude) {
     $config.logsToInclude = @('None')
 }
