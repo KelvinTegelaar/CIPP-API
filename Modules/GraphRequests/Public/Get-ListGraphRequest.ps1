@@ -1,4 +1,4 @@
-using namespace System.Net
+
 function Get-ListGraphRequest {
     # Input bindings are passed in via param block.
     param($Request, $TriggerMetadata)
@@ -6,10 +6,6 @@ function Get-ListGraphRequest {
     $APIName = $TriggerMetadata.FunctionName
 
     if ($APIName -match '^Ext') {
-        $AccessResult = Confirm-CippApiAccess -Request $Request
-        Write-Host ($AccessResult | ConvertTo-Json)
-        if (!$AccessResult.Authorized) { return }
-
         $Message = 'Accessed this API | Endpoint: {0}' -f $Request.Query.Endpoint
         Write-LogMessage -user $AccessResult.ClientId -API $APINAME -message $Message -Sev 'Debug'
     } else {
