@@ -91,7 +91,6 @@ function Get-GraphRequestList {
                         }
                     }
                 } else {
-
                     if ($RunningQueue) {
                         Write-Host 'Queue currently running'
                         Write-Host ($RunningQueue | ConvertTo-Json)
@@ -195,7 +194,7 @@ function Get-GraphRequestList {
                         $GraphRequestResults = New-GraphGetRequest @GraphRequest -ErrorAction Stop
                         if ($ReverseTenantLookup -and $GraphRequestResults) {
                             $TenantInfo = $GraphRequestResults.$ReverseTenantLookupProperty | Sort-Object -Unique | ForEach-Object {
-                                New-GraphGetRequest -uri "https://graph.microsoft.com/beta/tenantRelationships/findTenantInformationByTenantId(tenantId='$_')" -noauthcheck $true
+                                New-GraphGetRequest -uri "https://graph.microsoft.com/beta/tenantRelationships/findTenantInformationByTenantId(tenantId='$_')" -noauthcheck $true -asApp:$true
                             }
                             foreach ($Result in $GraphRequestResults) {
                                 $Result | Select-Object @{n = 'TenantInfo'; e = { $TenantInfo | Where-Object { $Result.$ReverseTenantLookupProperty -eq $_.tenantId } } }, *
