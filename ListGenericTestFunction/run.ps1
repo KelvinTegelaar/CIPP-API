@@ -7,19 +7,26 @@ $APIName = $TriggerMetadata.FunctionName
 Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -message 'Accessed this API' -Sev 'Debug'
 
 
-# Write to the Azure Functions log stream.
-Write-Host 'PowerShell HTTP trigger function processed a request.'
+try {
+    Write-LogMessage -API "Scheduler_Billing" -tenant "none" -message "Starting billing processing." -sev Info
 
-# Interact with query parameters or the body of the request.
-$TenantFilter = $Request.Query.TenantFilter
-$url = $request.Query.url.tolower()
-$TableURLName = ($request.query.url.tolower() -split '?' | Select-Object -First 1).toString()
-
-$Queue = New-CippQueueEntry -Name $URL -Link '/identity/reports/mfa-report?customerId=AllTenants'
-Push-OutputBinding -Name Msg -Value $url
-
+    $Table = Get-CIPPTable -TableName Extensionsconfig
+    $Configuration = (Get-AzDataTableEntity @Table).config | ConvertFrom-Json -Depth 10
+    foreach ($ConfigItem in $Configuration.psobject.properties.name) {
+        switch ($ConfigItem) {
+            "Gradient" {
+                If ($Configuration.Gradient.enabled -and $Configuration.Gradient.BillingEnabled) {
+                    New-GradientServiceSyncRun
+                }
+            }
+        }
+    }
+}
+catch {
+    Write-LogMessage -API "Scheduler_Billing" -tenant "none" -message "Could not start billing processing $($_.Exception.Message)" -sev Error
+}
 
 Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
         StatusCode = [HttpStatusCode]::OK
-        Body       = @($GraphRequest)
+        Body       = @("Executed")
     }) -clobber
