@@ -64,13 +64,25 @@ function Get-GraphToken($tenantid, $scope, $AsApp, $AppID, $refreshToken, $Retur
 
     if (!$tenantid) { $tenantid = $env:TenantID }
 
+    $TokenKey = '{0}-{1}' -f $tenantid, $scope
+
     try {
-        $AccessToken = (Invoke-RestMethod -Method post -Uri "https://login.microsoftonline.com/$($tenantid)/oauth2/v2.0/token" -Body $Authbody -ErrorAction Stop)
+        if ($script:AccessTokens.$TokenKey -and [int](Get-Date -UFormat %s -Millisecond 0) -lt $script:AccessTokens.$TokenKey.expires_on) {
+            Write-Host 'Graph: cached token'
+            $AccessToken = $script:AccessTokens.$TokenKey
+        } else {
+            Write-Host 'Graph: new token'
+            $AccessToken = (Invoke-RestMethod -Method post -Uri "https://login.microsoftonline.com/$($tenantid)/oauth2/v2.0/token" -Body $Authbody -ErrorAction Stop)
+            $ExpiresOn = [int](Get-Date -UFormat %s -Millisecond 0) + $AccessToken.expires_in
+            Add-Member -InputObject $AccessToken -NotePropertyName 'expires_on' -NotePropertyValue $ExpiresOn
+            if (!$script:AccessTokens) { $script:AccessTokens = [HashTable]::Synchronized(@{}) }
+            $script:AccessTokens.$TokenKey = $AccessToken
+        }
+
         if ($ReturnRefresh) { $header = $AccessToken } else { $header = @{ Authorization = "Bearer $($AccessToken.access_token)" } }
         return $header
-        Write-Host $header['Authorization']
-    }
-    catch {
+        #Write-Host $header['Authorization']
+    } catch {
         # Track consecutive Graph API failures
         $TenantsTable = Get-CippTable -tablename Tenants
         $Filter = "PartitionKey eq 'Tenants' and (defaultDomainName eq '{0}' or customerId eq '{0}')" -f $tenantid
@@ -88,8 +100,7 @@ function Get-GraphToken($tenantid, $scope, $AsApp, $AppID, $refreshToken, $Retur
         $Tenant.LastGraphError = if ( $_.ErrorDetails.Message) {
             $msg = $_.ErrorDetails.Message | ConvertFrom-Json
             "$($msg.error):$($msg.error_description)"
-        }
-        else {
+        } else {
             $_.Exception.message
         }
         $Tenant.GraphErrorCount++
@@ -100,7 +111,11 @@ function Get-GraphToken($tenantid, $scope, $AsApp, $AppID, $refreshToken, $Retur
 }
 
 function Write-LogMessage ($message, $tenant = 'None', $API = 'None', $user, $sev) {
-    $username = ([System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($user)) | ConvertFrom-Json).userDetails
+    try {
+        $username = ([System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($user)) | ConvertFrom-Json).userDetails
+    } catch {
+        $username = $user
+    }
 
     $Table = Get-CIPPTable -tablename CippLogs
 
@@ -140,8 +155,7 @@ function New-GraphGetRequest {
     if ($scope -eq 'ExchangeOnline') {
         $AccessToken = Get-ClassicAPIToken -resource 'https://outlook.office365.com' -Tenantid $tenantid
         $headers = @{ Authorization = "Bearer $($AccessToken.access_token)" }
-    }
-    else {
+    } else {
         $headers = Get-GraphToken -tenantid $tenantid -scope $scope -AsApp $asapp
     }
 
@@ -170,13 +184,11 @@ function New-GraphGetRequest {
                 if ($CountOnly) {
                     $Data.'@odata.count'
                     $nextURL = $null
-                }
-                else {
+                } else {
                     if ($data.value) { $data.value } else { ($Data) }
                     if ($noPagination) { $nextURL = $null } else { $nextURL = $data.'@odata.nextLink' }
                 }
-            }
-            catch {
+            } catch {
                 $Message = ($_.ErrorDetails.Message | ConvertFrom-Json -ErrorAction SilentlyContinue).error.message
                 if ($Message -eq $null) { $Message = $($_.Exception.Message) }
                 if ($Message -ne 'Request not applicable to target tenant.') {
@@ -190,8 +202,7 @@ function New-GraphGetRequest {
         $Tenant.LastGraphError = ''
         Update-AzDataTableEntity @TenantsTable -Entity $Tenant
         return $ReturnedData
-    }
-    else {
+    } else {
         Write-Error 'Not allowed. You cannot manage your own tenant or tenants not under your scope'
     }
 }
@@ -207,15 +218,13 @@ function New-GraphPOSTRequest ($uri, $tenantid, $body, $type, $scope, $AsApp, $N
     if ((Get-AuthorisedRequest -Uri $uri -TenantID $tenantid) -or $NoAuthCheck) {
         try {
             $ReturnedData = (Invoke-RestMethod -Uri $($uri) -Method $TYPE -Body $body -Headers $headers -ContentType 'application/json; charset=utf-8')
-        }
-        catch {
+        } catch {
             $Message = ($_.ErrorDetails.Message | ConvertFrom-Json -ErrorAction SilentlyContinue).error.message
             if ($Message -eq $null) { $Message = $($_.Exception.Message) }
             throw $Message
         }
         return $ReturnedData
-    }
-    else {
+    } else {
         Write-Error 'Not allowed. You cannot manage your own tenant or tenants not under your scope'
     }
 }
@@ -229,39 +238,43 @@ function convert-skuname($skuname, $skuID) {
 }
 
 function Get-ClassicAPIToken($tenantID, $Resource) {
-    Write-Host 'Using classic'
-    $uri = "https://login.microsoftonline.com/$($TenantID)/oauth2/token"
-    $Body = @{
-        client_id     = $env:ApplicationID
-        client_secret = $env:ApplicationSecret
-        resource      = $Resource
-        refresh_token = $env:RefreshToken
-        grant_type    = 'refresh_token'
-
-    }
-
-    try {
-        $token = Invoke-RestMethod $uri -Body $body -ContentType 'application/x-www-form-urlencoded' -ErrorAction SilentlyContinue -Method post
-        return $token
-    }
-    catch {
-        # Track consecutive Graph API failures
-        $TenantsTable = Get-CippTable -tablename Tenants
-        $Filter = "PartitionKey eq 'Tenants' and (defaultDomainName eq '{0}' or customerId eq '{0}')" -f $tenantid
-        $Tenant = Get-AzDataTableEntity @TenantsTable -Filter $Filter
-        if (!$Tenant) {
-            $Tenant = @{
-                GraphErrorCount     = $null
-                LastGraphTokenError = $null
-                PartitionKey        = 'TenantFailed'
-                RowKey              = 'Failed'
-            }
+    $TokenKey = '{0}-{1}' -f $TenantID, $Resource
+    if ($script:classictoken.$TokenKey -and [int](Get-Date -UFormat %s -Millisecond 0) -lt $script:classictoken.$TokenKey.expires_on) {
+        Write-Host 'Classic: cached token'
+        return $script:classictoken.$TokenKey
+    } else {
+        Write-Host 'Using classic'
+        $uri = "https://login.microsoftonline.com/$($TenantID)/oauth2/token"
+        $Body = @{
+            client_id     = $env:ApplicationID
+            client_secret = $env:ApplicationSecret
+            resource      = $Resource
+            refresh_token = $env:RefreshToken
+            grant_type    = 'refresh_token'
         }
-        $Tenant.LastGraphError = $_.Exception.Message
-        $Tenant.GraphErrorCount++
+        try {
+            if (!$script:classictoken) { $script:classictoken = [HashTable]::Synchronized(@{}) }
+            $script:classictoken.$TokenKey = Invoke-RestMethod $uri -Body $body -ContentType 'application/x-www-form-urlencoded' -ErrorAction SilentlyContinue -Method post
+            return $script:classictoken.$TokenKey
+        } catch {
+            # Track consecutive Graph API failures
+            $TenantsTable = Get-CippTable -tablename Tenants
+            $Filter = "PartitionKey eq 'Tenants' and (defaultDomainName eq '{0}' or customerId eq '{0}')" -f $tenantid
+            $Tenant = Get-AzDataTableEntity @TenantsTable -Filter $Filter
+            if (!$Tenant) {
+                $Tenant = @{
+                    GraphErrorCount     = $null
+                    LastGraphTokenError = $null
+                    PartitionKey        = 'TenantFailed'
+                    RowKey              = 'Failed'
+                }
+            }
+            $Tenant.LastGraphError = $_.Exception.Message
+            $Tenant.GraphErrorCount++
 
-        Update-AzDataTableEntity @TenantsTable -Entity $Tenant
-        Throw "Failed to obtain Classic API Token for $TenantID - $_"
+            Update-AzDataTableEntity @TenantsTable -Entity $Tenant
+            Throw "Failed to obtain Classic API Token for $TenantID - $_"
+        }
     }
 }
 
@@ -284,14 +297,12 @@ function New-TeamsAPIGetRequest($Uri, $tenantID, $Method = 'GET', $Resource = '4
                 }
                 $Data
                 if ($noPagination) { $nextURL = $null } else { $nextURL = $data.NextLink }
-            }
-            catch {
+            } catch {
                 throw "Failed to make Teams API Get Request $_"
             }
         } until ($null -eq $NextURL)
         return $ReturnedData
-    }
-    else {
+    } else {
         Write-Error 'Not allowed. You cannot manage your own tenant or tenants not under your scope'
     }
 }
@@ -313,14 +324,12 @@ function New-ClassicAPIGetRequest($TenantID, $Uri, $Method = 'GET', $Resource = 
                 }
                 $Data
                 if ($noPagination) { $nextURL = $null } else { $nextURL = $data.NextLink }
-            }
-            catch {
+            } catch {
                 throw "Failed to make Classic Get Request $_"
             }
         } until ($null -eq $NextURL)
         return $ReturnedData
-    }
-    else {
+    } else {
         Write-Error 'Not allowed. You cannot manage your own tenant or tenants not under your scope'
     }
 }
@@ -341,13 +350,11 @@ function New-ClassicAPIPostRequest($TenantID, $Uri, $Method = 'POST', $Resource 
 
             }
 
-        }
-        catch {
+        } catch {
             throw "Failed to make Classic Get Request $_"
         }
         return $ReturnedData
-    }
-    else {
+    } else {
         Write-Error 'Not allowed. You cannot manage your own tenant or tenants not under your scope'
     }
 }
@@ -356,13 +363,11 @@ function Get-AuthorisedRequest($TenantID, $Uri) {
     if ($uri -like 'https://graph.microsoft.com/beta/contracts*' -or $uri -like '*/customers/*' -or $uri -eq 'https://graph.microsoft.com/v1.0/me/sendMail' -or $uri -like '*/tenantRelationships/*') {
         return $true
     }
-    if ($TenantID -in (Get-Tenants).defaultDomainName) {
+    if (($TenantID -ne $env:TenantId -or $env:PartnerTenantAvailable) -and (Get-Tenants -SkipList).defaultDomainName -notcontains $TenantID) {
         return $true
-    }
-    else {
+    } else {
         return $false
     }
-
 }
 
 function Get-Tenants {
@@ -378,11 +383,15 @@ function Get-Tenants {
     $ExcludedFilter = "PartitionKey eq 'Tenants' and Excluded eq true"
 
     $SkipListCache = Get-AzDataTableEntity @TenantsTable -Filter $ExcludedFilter
-
-    if ($IncludeAll) {
-        $Filter = "PartitionKey eq 'Tenants'"
+    if ($SkipList) {
+        return $SkipListCache
     }
-    else {
+
+    if ($IncludeAll.IsPresent) {
+        $Filter = "PartitionKey eq 'Tenants'"
+    } elseif ($IncludeErrors.IsPresent) {
+        $Filter = "PartitionKey eq 'Tenants' and Excluded eq false"
+    } else {
         $Filter = "PartitionKey eq 'Tenants' and Excluded eq false and GraphErrorCount lt 50"
     }
     $IncludedTenantsCache = Get-AzDataTableEntity @TenantsTable -Filter $Filter
@@ -392,8 +401,7 @@ function Get-Tenants {
         try {
             Write-Host "Renewing. Cache not hit. $LastRefresh"
             $TenantList = (New-GraphGetRequest -uri "https://graph.microsoft.com/beta/tenantRelationships/managedTenants/tenants?`$top=999" -tenantid $env:TenantID ) | Select-Object id, @{l = 'customerId'; e = { $_.tenantId } }, @{l = 'DefaultdomainName'; e = { [string]($_.contract.defaultDomainName) } } , @{l = 'MigratedToNewTenantAPI'; e = { $true } }, DisplayName, domains, tenantStatusInformation | Where-Object -Property defaultDomainName -NotIn $SkipListCache.defaultDomainName
-        }
-        catch {
+        } catch {
             Write-Host 'probably no license for Lighthouse. Using old API.'
         }
         if (!$TenantList.customerId) {
@@ -440,10 +448,6 @@ function Get-Tenants {
             Add-AzDataTableEntity @TenantsTable -Entity $IncludedTenantsCache
         }
     }
-
-    if ($SkipList) {
-        return $SkipListCache
-    }
     return ($IncludedTenantsCache | Sort-Object -Property displayName)
 
 }
@@ -484,8 +488,7 @@ function New-ExoRequest ($tenantid, $cmdlet, $cmdParams, $useSystemMailbox, $Anc
         $tenant = (get-tenants | Where-Object -Property defaultDomainName -EQ $tenantid).customerId
         if ($cmdParams) {
             $Params = $cmdParams
-        }
-        else {
+        } else {
             $Params = @{}
         }
         $ExoBody = ConvertTo-Json -Depth 5 -InputObject @{
@@ -514,16 +517,14 @@ function New-ExoRequest ($tenantid, $cmdlet, $cmdParams, $useSystemMailbox, $Anc
         }
         try {
             $ReturnedData = Invoke-RestMethod "https://outlook.office365.com/adminapi/beta/$($tenant)/InvokeCommand" -Method POST -Body $ExoBody -Headers $Headers -ContentType 'application/json; charset=utf-8'
-        }
-        catch {
+        } catch {
             $ReportedError = ($_.ErrorDetails | ConvertFrom-Json -ErrorAction SilentlyContinue)
             $Message = if ($ReportedError.error.details.message) { $ReportedError.error.details.message } else { $ReportedError.error.innererror.internalException.message }
             if ($Message -eq $null) { $Message = $($_.Exception.Message) }
             throw $Message
         }
         return $ReturnedData.value
-    }
-    else {
+    } else {
         Write-Error 'Not allowed. You cannot manage your own tenant or tenants not under your scope'
     }
 }
@@ -606,8 +607,7 @@ function Get-CIPPMSolUsers {
         if ($null -eq $page) {
             $Page = (Invoke-RestMethod -Uri 'https://provisioningapi.microsoftonline.com/provisioningwebservice.svc' -Method post -Body $MSOLXML -ContentType 'application/soap+xml; charset=utf-8').envelope.body.ListUsersResponse.listusersresult.returnvalue
             $Page.results.user
-        }
-        else {
+        } else {
             $Page = (Invoke-RestMethod -Uri 'https://provisioningapi.microsoftonline.com/provisioningwebservice.svc' -Method post -Body $MSOLXML -ContentType 'application/soap+xml; charset=utf-8').envelope.body.NavigateUserResultsResponse.NavigateUserResultsResult.returnvalue
             $Page.results.user
         }
@@ -632,17 +632,14 @@ function New-DeviceLogin {
         if ($TenantID) {
             $ReturnCode = Invoke-RestMethod -Uri "https://login.microsoftonline.com/$($TenantID)/oauth2/v2.0/devicecode" -Method POST -Body "client_id=$($Clientid)&scope=$encodedscope+offline_access+profile+openid"
 
-        }
-        else {
+        } else {
             $ReturnCode = Invoke-RestMethod -Uri 'https://login.microsoftonline.com/organizations/oauth2/v2.0/devicecode' -Method POST -Body "client_id=$($Clientid)&scope=$encodedscope+offline_access+profile+openid"
         }
-    }
-    else {
+    } else {
         $Checking = Invoke-RestMethod -SkipHttpErrorCheck -Uri 'https://login.microsoftonline.com/organizations/oauth2/v2.0/token' -Method POST -Body "client_id=$($Clientid)&scope=$encodedscope+offline_access+profile+openid&grant_type=device_code&device_code=$($device_code)"
         if ($checking.refresh_token) {
             $ReturnCode = $Checking
-        }
-        else {
+        } else {
             $returncode = $Checking.error
         }
     }
@@ -660,8 +657,7 @@ function New-passwordString {
     if ($PasswordType -eq 'Correct-Battery-Horse') {
         $Words = Get-Content .\words.txt
         (Get-Random -InputObject $words -Count 4) -join '-'
-    }
-    else {
+    } else {
         -join ('abcdefghkmnrstuvwxyzABCDEFGHKLMNPRSTUVWXYZ23456789$%&*#'.ToCharArray() | Get-Random -Count $count)
     }
 }

@@ -11,10 +11,10 @@ $Filter = "PartitionKey eq 'standards'"
 
 try { 
     if ($Request.query.TenantFilter) { 
-        $tenants = (Get-AzDataTableEntity @Table -Filter $Filter).JSON | ConvertFrom-Json -ErrorAction Stop | Where-Object Tenant -EQ $Request.query.tenantFilter
+        $tenants = (Get-AzDataTableEntity @Table -Filter $Filter).JSON | ConvertFrom-Json -Depth 15 -ErrorAction Stop | Where-Object Tenant -EQ $Request.query.tenantFilter
     }
     else {
-        $Tenants = (Get-AzDataTableEntity @Table -Filter $Filter).JSON | ConvertFrom-Json -ErrorAction Stop
+        $Tenants = (Get-AzDataTableEntity @Table -Filter $Filter).JSON | ConvertFrom-Json -Depth 15 -ErrorAction Stop
     }
 }
 catch {}
@@ -37,10 +37,10 @@ if (!$CurrentStandards) {
     }
 }
 
-
+$CurrentStandards = ConvertTo-Json -InputObject @($CurrentStandards) -Depth 15 -Compress
 
 # Associate values to output bindings by calling 'Push-OutputBinding'.
 Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
         StatusCode = [HttpStatusCode]::OK
-        Body       = @($CurrentStandards)
+        Body       = $CurrentStandards
     })
