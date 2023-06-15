@@ -95,7 +95,7 @@ function Get-ListGraphRequest {
         $GraphRequestData = Get-GraphRequestList @GraphRequestParams
         $StatusCode = [HttpStatusCode]::OK
     } catch {
-        $GraphRequestData = "Graph Error: $($_.Exception.Message)"
+        $GraphRequestData = "Graph Error: $($_.Exception.Message) - Endpoint: $($Request.Query.Endpoint)"
         $StatusCode = [HttpStatusCode]::BadRequest
     }
 
