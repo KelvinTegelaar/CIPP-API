@@ -64,7 +64,7 @@ function Get-GraphToken($tenantid, $scope, $AsApp, $AppID, $refreshToken, $Retur
 
     if (!$tenantid) { $tenantid = $env:TenantID }
 
-    $TokenKey = '{0}-{1}' -f $tenantid, $scope
+    $TokenKey = '{0}-{1}-{2}' -f $tenantid, $scope, $asApp
 
     try {
         if ($script:AccessTokens.$TokenKey -and [int](Get-Date -UFormat %s -Millisecond 0) -lt $script:AccessTokens.$TokenKey.expires_on) {
