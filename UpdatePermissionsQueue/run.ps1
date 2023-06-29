@@ -37,8 +37,7 @@ $GraphRequest = $ExpectedPermissions.requiredResourceAccess | ForEach-Object {
             $AppBody = @"
 {
   "ApplicationGrants":[ $(ConvertTo-Json -InputObject $RequiredCPVPerms -Compress -Depth 10)],
-  "ApplicationId": "$($env:ApplicationID)",
-  "DisplayName": "CIPP-SAM"
+  "ApplicationId": "$($env:ApplicationID)"
 }
 "@
             $CPVConsent = New-GraphpostRequest -body $AppBody -Type POST -noauthcheck $true -uri "https://api.partnercenter.microsoft.com/v1/customers/$($TenantFilter.customerId)/applicationconsents" -scope "https://api.partnercenter.microsoft.com/.default" -tenantid $env:TenantID
