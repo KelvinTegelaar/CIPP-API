@@ -5,5 +5,5 @@ try {
     Write-LogMessage  -API "Standards" -tenant $tenant -message "Anonymous Reports Disabled." -sev Info
 }
 catch {
-    Write-LogMessage  -API "Standards" -tenant $tenant -message "Failed to disable anonymous reports. Error: $($_.exception.message)"
+    Write-LogMessage  -API "Standards" -tenant $tenant -message "Failed to disable anonymous reports. Error: $($_.exception.message)" -sev Error
 }
