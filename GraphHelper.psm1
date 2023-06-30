@@ -167,7 +167,6 @@ function New-GraphGetRequest {
     if ($ComplexFilter) {
         $headers['ConsistencyLevel'] = 'eventual'
     }
-    Write-Verbose "Using $($uri) as url"
     $nextURL = $uri
 
     # Track consecutive Graph API failures
@@ -384,8 +383,17 @@ function New-ClassicAPIPostRequest($TenantID, $Uri, $Method = 'POST', $Resource 
     }
 }
 
-function Get-AuthorisedRequest($TenantID, $Uri) {
-    if ($uri -like 'https://graph.microsoft.com/beta/contracts*' -or $uri -like '*/customers/*' -or $uri -eq 'https://graph.microsoft.com/v1.0/me/sendMail' -or $uri -like '*/tenantRelationships/*') {
+function Get-AuthorisedRequest {
+    [CmdletBinding()]
+    Param(
+        [string]$TenantID,
+        [Parameter(Mandatory = $true)]
+        [string]$Uri
+    )
+    if (!$TenantID) {
+        $TenantID = $env:TenantId
+    }
+    if ($Uri -like 'https://graph.microsoft.com/beta/contracts*' -or $Uri -like '*/customers/*' -or $Uri -eq 'https://graph.microsoft.com/v1.0/me/sendMail' -or $Uri -like '*/tenantRelationships/*') {
         return $true
     }
     if (($TenantID -ne $env:TenantId -or $env:PartnerTenantAvailable) -and (Get-Tenants -SkipList).defaultDomainName -notcontains $TenantID) {
@@ -395,6 +403,7 @@ function Get-AuthorisedRequest($TenantID, $Uri) {
         return $false
     }
 }
+
 
 function Get-Tenants {
     param (
