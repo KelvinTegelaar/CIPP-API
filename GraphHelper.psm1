@@ -387,7 +387,6 @@ function Get-AuthorisedRequest {
     [CmdletBinding()]
     Param(
         [string]$TenantID,
-        [Parameter(Mandatory = $true)]
         [string]$Uri
     )
     if (!$TenantID) {
