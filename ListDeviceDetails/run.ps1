@@ -68,13 +68,14 @@ try {
 
         $BulkResults = New-GraphBulkRequest -Requests $BulkRequests -tenantid $TenantFilter
 
-        $DeviceGroups = Get-GraphBulkResultByID -Results $BulkResults -ID 'DeviceGroups'
-        $CompliancePolicies = Get-GraphBulkResultByID -Results $BulkResults -ID 'CompliancePolicies'
-        $DetectedApps = Get-GraphBulkResultByID -Results $BulkResults -ID 'DetectedApps'
+        $DeviceGroups = Get-GraphBulkResultByID -Results $BulkResults -ID 'DeviceGroups' -Value
+        $CompliancePolicies = Get-GraphBulkResultByID -Results $BulkResults -ID 'CompliancePolicies' -Value
+        $DetectedApps = Get-GraphBulkResultByID -Results $BulkResults -ID 'DetectedApps' 
 
-        $Null = $GraphRequest | Add-Member -NotePropertyName 'DetectedApps' -NotePropertyValue $DetectedApps
-        $Null = $GraphRequest | Add-Member -NotePropertyName 'CompliancePolicies' -NotePropertyValue $CompliancePolicies
-        $Null = $GraphRequest | Add-Member -NotePropertyName 'DeviceGroups' -NotePropertyValue $DeviceGroups
+        $Null = $GraphRequest | Add-Member -NotePropertyName 'DetectedApps' -NotePropertyValue ($DetectedApps.DetectedApps | select-object id, displayName, version)
+        $Null = $GraphRequest | Add-Member -NotePropertyName 'CompliancePolicies' -NotePropertyValue ($CompliancePolicies | select-object id, displayname, UserPrincipalName, state)
+        $Null = $GraphRequest | Add-Member -NotePropertyName 'DeviceGroups' -NotePropertyValue ($DeviceGroups | select-object id, displayName, description)
+
 
     }
 
@@ -88,5 +89,5 @@ try {
 # Associate values to output bindings by calling 'Push-OutputBinding'.
 Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
         StatusCode = $StatusCode
-        Body       = "@($GraphRequest),$($BulkResults)"
+        Body       = $GraphRequest
     })
