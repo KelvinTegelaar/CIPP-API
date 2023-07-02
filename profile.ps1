@@ -16,6 +16,7 @@ Import-Module Az.KeyVault
 Import-Module Az.Accounts
 Import-Module GraphRequests
 Import-Module CippExtensions
+Import-module CippCore
 
 try {
     Disable-AzContextAutosave -Scope Process | Out-Null
