@@ -14,7 +14,7 @@ try {
     Write-Host ($request.body | ConvertTo-Json)
     $results = switch ($request.body) {
         { $_."ConvertToShared" -eq 'true' } {
-            Set-CIPPMailboxType -ExecutingUser $request.headers.'x-ms-client-principal' -tenantFilter $tenantFilter -userid $username -MailboxType "Shared"
+            Set-CIPPMailboxType -ExecutingUser $request.headers.'x-ms-client-principal' -tenantFilter $tenantFilter -userid $username -username $username -MailboxType "Shared"
         }
         { $_.RevokeSessions -eq 'true' } { 
             Revoke-CIPPSessions -tenantFilter $tenantFilter -username $username -userid $userid -ExecutingUser $request.headers.'x-ms-client-principal'
