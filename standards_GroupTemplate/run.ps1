@@ -54,7 +54,7 @@ foreach ($Template in $Setting.TemplateList) {
     }
   }
   catch {
-    Write-LogMessage -API "Standards" -tenant $tenant -message  "Failed to create group: $($_.exception.message)"
+    Write-LogMessage -API "Standards" -tenant $tenant -message  "Failed to create group: $($_.exception.message)" -sev "Error"
   }
 }
 
