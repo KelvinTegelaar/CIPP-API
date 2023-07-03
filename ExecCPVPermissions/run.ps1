@@ -43,9 +43,7 @@ $GraphRequest = $ExpectedPermissions.requiredResourceAccess | ForEach-Object {
             $AppBody = @"
 {
   "ApplicationGrants":[ $(ConvertTo-Json -InputObject $RequiredCPVPerms -Compress -Depth 10)],
-  "ApplicationId": "$($env:ApplicationID)",
-  "DisplayName": "CIPP-SAM"
-}
+  "ApplicationId": "$($env:ApplicationID)"}
 "@
             $CPVConsent = New-GraphpostRequest -body $AppBody -Type POST -noauthcheck $true -uri "https://api.partnercenter.microsoft.com/v1/customers/$($TenantFilter)/applicationconsents" -scope "https://api.partnercenter.microsoft.com/.default" -tenantid $env:TenantID
             "Succesfully set CPV permissions for $Permissionsname"
@@ -58,6 +56,34 @@ $GraphRequest = $ExpectedPermissions.requiredResourceAccess | ForEach-Object {
     }
 }
 
+
+$ourSVCPrincipal = New-GraphGETRequest -uri "https://graph.microsoft.com/beta/servicePrincipals(appId='$($ENV:applicationid)')" -tenantid $Tenantfilter
+
+# if the app svc principal exists, consent app permissions
+$apps = $ExpectedPermissions 
+$Grants = foreach ($App in $apps.requiredResourceAccess) {
+    try {
+        $svcPrincipalId = New-GraphGETRequest -uri "https://graph.microsoft.com/v1.0/servicePrincipals(appId='$($app.resourceAppId)')" -tenantid $tenantfilter
+    }
+    catch {
+        continue
+    }
+    foreach ($SingleResource in $app.ResourceAccess | Where-Object -Property Type -EQ "Role") {
+        [pscustomobject]@{
+            principalId = $($ourSVCPrincipal.id)
+            resourceId  = $($svcPrincipalId.id)
+            appRoleId   = "$($SingleResource.Id)"
+        }
+    } 
+} 
+foreach ($Grant in $grants) {
+    try {
+        $SettingsRequest = New-GraphPOSTRequest -body ($grant | ConvertTo-Json) -uri "https://graph.microsoft.com/beta/servicePrincipals/$($ourSVCPrincipal.id)/appRoleAssignedTo" -tenantid $tenantfilter -type POST
+    }
+    catch {
+        "Failed to grant $($grant.appRoleId) to $($grant.resourceId): $($_.Exception.Message). "
+    }
+}
 $StatusCode = [HttpStatusCode]::OK
 
 # Associate values to output bindings by calling 'Push-OutputBinding'.
