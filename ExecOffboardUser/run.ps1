@@ -37,10 +37,10 @@ try {
             Set-CIPPOnedriveAccess -tenantFilter $tenantFilter -userid $username -OnedriveAccessUser $request.body.OnedriveAccess -ExecutingUser $request.headers.'x-ms-client-principal'
         }
         { $_."AccessNoAutomap" -ne "" } { 
-            Set-CIPPMailboxAccess -tenantFilter $tenantFilter -username $username -AccessUser $request.body.AccessNoAutomap -Automap $true -AccessRights @("FullAccess") -ExecutingUser $request.headers.'x-ms-client-principal'
+            Set-CIPPMailboxAccess -tenantFilter $tenantFilter -userid $username -AccessUser $request.body.AccessNoAutomap -Automap $true -AccessRights @("FullAccess") -ExecutingUser $request.headers.'x-ms-client-principal'
         }
         { $_."AccessAutomap" -ne "" } { 
-            Set-CIPPMailboxAccess -tenantFilter $tenantFilter -username $username -AccessUser $request.body.AccessNoAutomap -Automap $false -AccessRights @("FullAccess") -ExecutingUser $request.headers.'x-ms-client-principal'
+            Set-CIPPMailboxAccess -tenantFilter $tenantFilter -userid $username -AccessUser $request.body.AccessNoAutomap -Automap $false -AccessRights @("FullAccess") -ExecutingUser $request.headers.'x-ms-client-principal'
         }
     
         { $_."OOO" -ne "" } { 
