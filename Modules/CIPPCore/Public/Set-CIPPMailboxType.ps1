@@ -4,7 +4,7 @@ function Set-CIPPMailboxType {
         $ExecutingUser,
         $userid,
         $username,
-        $TenantFlter,
+        $TenantFilter,
         [Parameter()]
         [ValidateSet('shared', 'Regular', 'Room', 'Equipment')]$MailboxType
     )

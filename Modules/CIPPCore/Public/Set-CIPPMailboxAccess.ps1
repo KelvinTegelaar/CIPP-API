@@ -1,4 +1,4 @@
-function Set-CIPPSharedMailboxAccess {
+function Set-CIPPMailboxAccess {
     [CmdletBinding()]
     param (
         $userid,
