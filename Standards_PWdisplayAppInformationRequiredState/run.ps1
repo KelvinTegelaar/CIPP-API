@@ -9,5 +9,5 @@ try {
     Write-LogMessage  -API "Standards" -tenant $tenant -message "Enabled passwordless with Information and Number Matching." -sev Info
 }
 catch {
-    Write-LogMessage  -API "Standards" -tenant $tenant -message "Failed to enable passwordless with Information and Number Matching. Error: $($_.exception.message)"
+    Write-LogMessage  -API "Standards" -tenant $tenant -message "Failed to enable passwordless with Information and Number Matching. Error: $($_.exception.message)" -sev "Error"
 }
