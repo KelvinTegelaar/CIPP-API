@@ -5,21 +5,10 @@ param($Request, $TriggerMetadata)
 
 $APIName = $TriggerMetadata.FunctionName
 Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -message 'Accessed this API' -Sev 'Debug'
-
-
-# Write to the Azure Functions log stream.
-Write-Host 'PowerShell HTTP trigger function processed a request.'
-
-# Interact with query parameters or the body of the request.
-$TenantFilter = $Request.Query.TenantFilter
-$url = $request.Query.url.tolower()
-$TableURLName = ($request.query.url.tolower() -split '?' | Select-Object -First 1).toString()
-
-$Queue = New-CippQueueEntry -Name $URL -Link '/identity/reports/mfa-report?customerId=AllTenants'
-Push-OutputBinding -Name Msg -Value $url
-
+$body = '{"userPreferredMethodForSecondaryAuthentication": "push"}'
+$graphRequest = New-GraphPOSTRequest -body $body -type PATCH -uri 'https://graph.microsoft.com/beta/users/b4156a0c-91c5-4195-bb1b-41b96d0806a7/authentication/signInPreferences' -tenantid $TenantFilter
 
 Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
-        StatusCode = [HttpStatusCode]::OK
-        Body       = @($GraphRequest)
-    }) -clobber
+                StatusCode = [HttpStatusCode]::OK
+                Body       = @($graphRequest)
+        }) -clobber
