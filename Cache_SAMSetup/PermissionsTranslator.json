@@ -1,9 +1,9 @@
 [
   {
     "description": "Allows Exchange Management as app",
-    "displayName": "Manage Exchange As Application",
+    "displayName": "Manage Exchange As Application ",
     "id": "dc50a0fb-09a3-484d-be87-e023b12c6440",
-    "origin": "Application",
+    "origin": "Application (Office 365 Exchange Online)",
     "value": "Exchange.ManageAsApp"
   },
   {
