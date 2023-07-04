@@ -3,6 +3,7 @@ function Remove-CIPPGroups {
     param(
         $userid,
         $tenantFilter,
+        $APIName = "Remove From Groups",
         $ExecutingUser
     )
 
@@ -28,11 +29,11 @@ function Remove-CIPPGroups {
                 New-ExoRequest -tenantid $using:tenantFilter -cmdlet "Remove-DistributionGroupMember" -cmdParams $params  -UseSystemMailbox $true
             }
 
-            Write-LogMessage -user $using:ExecutingUser -API "Remove From Groups"  -message "Removed $($using:userid) from $groupname" -Sev "Info"  -tenant $using:TenantFilter
+            Write-LogMessage -user $using:ExecutingUser -API $($using:APIName) -message "Removed $($using:userid) from $groupname" -Sev "Info"  -tenant $using:TenantFilter
             return "Successfully removed user from group $Groupname"
         }
         catch {
-            Write-LogMessage -user $using:ExecutingUser -API "Remove From Groups"  -message "Could not remove $($using:userid) from group $groupname" -Sev "Error" -tenant $using:TenantFilter
+            Write-LogMessage -user $using:ExecutingUser -API $($using:APIName) -message "Could not remove $($using:userid) from group $groupname" -Sev "Error" -tenant $using:TenantFilter
             return "Could not remove user from group $($Groupname): $($_.Exception.Message). This is likely because its a Dynamic Group or synched with active directory"
         }
     }
