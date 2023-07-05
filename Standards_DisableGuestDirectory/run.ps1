@@ -7,5 +7,5 @@ try {
     Write-LogMessage -API "Standards" -tenant $tenant -message "Disabled Guest access to directory information." -sev Info
 }
 catch {
-    Write-LogMessage -API "Standards" -tenant $tenant -message  "Failed to disable Guest access to directory information.: $($_.exception.message)"
+    Write-LogMessage -API "Standards" -tenant $tenant -message  "Failed to disable Guest access to directory information.: $($_.exception.message)" -sev "Error"
 }
