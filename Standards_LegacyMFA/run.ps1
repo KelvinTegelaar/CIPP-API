@@ -20,5 +20,5 @@ try {
 
 }
 catch {
-    Write-LogMessage -API 'Standards' -tenant $tenant -message "Failed to enable (legacy) per user MFA: $($_.exception.message)"
+    Write-LogMessage -API 'Standards' -tenant $tenant -message "Failed to enable (legacy) per user MFA: $($_.exception.message)" -sev "Error"
 }

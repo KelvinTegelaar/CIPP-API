@@ -6,5 +6,5 @@ try {
     Write-LogMessage -API "Standards" -tenant $tenant -message "Standards API: Disabled users from creating tenants." -sev Info
 }
 catch {
-    Write-LogMessage -API "Standards" -tenant $tenant -message  "Failed to disable users from creating tenants:  $($_.exception.message)"
+    Write-LogMessage -API "Standards" -tenant $tenant -message  "Failed to disable users from creating tenants:  $($_.exception.message)" -sev "Error"
 }

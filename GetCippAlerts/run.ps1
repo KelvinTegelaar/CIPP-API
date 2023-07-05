@@ -24,13 +24,7 @@ if ($env:WEBSITE_RUN_FROM_PACKAGE -ne '1') {
         }) 
 }
 if ($Rows) { $Rows | ForEach-Object { $alerts.add($_) } }
-if (!$env:WEBSITE_NAME) {
-    #Running locally, no alerts. :)
-    $Alerts = $null
-}
-else {
-    $Alerts = @($Alerts)
-}
+$Alerts = @($Alerts)
 $APIName = $TriggerMetadata.FunctionName
 Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -message 'Accessed this API' -Sev 'Debug'
 

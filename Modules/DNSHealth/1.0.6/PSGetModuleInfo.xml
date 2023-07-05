@@ -7,13 +7,13 @@
     </TN>
     <MS>
       <S N="Name">DNSHealth</S>
-      <S N="Version">1.0.5</S>
+      <S N="Version">1.0.6</S>
       <S N="Type">Module</S>
       <S N="Description">CIPP DNS Health Check Module</S>
       <S N="Author">John Duprey</S>
       <S N="CompanyName">johnduprey</S>
       <S N="Copyright">2023 John Duprey</S>
-      <DT N="PublishedDate">2023-04-12T19:41:15-04:00</DT>
+      <DT N="PublishedDate">2023-06-15T12:02:08-04:00</DT>
       <Nil N="InstalledDate" />
       <Nil N="UpdatedDate" />
       <Nil N="LicenseUri" />
@@ -36,15 +36,26 @@
         </TN>
         <DCT>
           <En>
-            <S N="Key">Workflow</S>
+            <S N="Key">Function</S>
             <Obj N="Value" RefId="3">
               <TNRef RefId="1" />
-              <LST />
+              <LST>
+                <S>Read-DmarcPolicy</S>
+                <S>Read-MtaStsPolicy</S>
+                <S>Read-DkimRecord</S>
+                <S>Read-MtaStsRecord</S>
+                <S>Read-MXRecord</S>
+                <S>Read-NSRecord</S>
+                <S>Read-SPFRecord</S>
+                <S>Read-TlsRptRecord</S>
+                <S>Read-WhoisRecord</S>
+                <S>Resolve-DnsHttpsQuery</S>
+                <S>Set-DnsResolver</S>
+                <S>Test-DNSSEC</S>
+                <S>Test-HttpsCertificate</S>
+                <S>Test-MtaSts</S>
+              </LST>
             </Obj>
-          </En>
-          <En>
-            <S N="Key">Cmdlet</S>
-            <Ref N="Value" RefId="3" />
           </En>
           <En>
             <S N="Key">Command</S>
@@ -69,34 +80,23 @@
             </Obj>
           </En>
           <En>
+            <S N="Key">Workflow</S>
+            <Obj N="Value" RefId="5">
+              <TNRef RefId="1" />
+              <LST />
+            </Obj>
+          </En>
+          <En>
             <S N="Key">RoleCapability</S>
-            <Ref N="Value" RefId="3" />
+            <Ref N="Value" RefId="5" />
+          </En>
+          <En>
+            <S N="Key">Cmdlet</S>
+            <Ref N="Value" RefId="5" />
           </En>
           <En>
             <S N="Key">DscResource</S>
-            <Ref N="Value" RefId="3" />
-          </En>
-          <En>
-            <S N="Key">Function</S>
-            <Obj N="Value" RefId="5">
-              <TNRef RefId="1" />
-              <LST>
-                <S>Read-DmarcPolicy</S>
-                <S>Read-MtaStsPolicy</S>
-                <S>Read-DkimRecord</S>
-                <S>Read-MtaStsRecord</S>
-                <S>Read-MXRecord</S>
-                <S>Read-NSRecord</S>
-                <S>Read-SPFRecord</S>
-                <S>Read-TlsRptRecord</S>
-                <S>Read-WhoisRecord</S>
-                <S>Resolve-DnsHttpsQuery</S>
-                <S>Set-DnsResolver</S>
-                <S>Test-DNSSEC</S>
-                <S>Test-HttpsCertificate</S>
-                <S>Test-MtaSts</S>
-              </LST>
-            </Obj>
+            <Ref N="Value" RefId="5" />
           </En>
         </DCT>
       </Obj>
@@ -121,25 +121,25 @@
           <S N="isLatestVersion">True</S>
           <S N="isAbsoluteLatestVersion">True</S>
           <S N="versionDownloadCount">0</S>
-          <S N="downloadCount">23</S>
-          <S N="packageSize">27716</S>
-          <S N="published">4/12/2023 7:41:15 PM -04:00</S>
-          <S N="created">4/12/2023 7:41:15 PM -04:00</S>
-          <S N="lastUpdated">4/12/2023 7:41:15 PM -04:00</S>
+          <S N="downloadCount">39</S>
+          <S N="packageSize">27746</S>
+          <S N="published">6/15/2023 12:02:08 PM -04:00</S>
+          <S N="created">6/15/2023 12:02:08 PM -04:00</S>
+          <S N="lastUpdated">6/15/2023 12:02:08 PM -04:00</S>
           <S N="tags">PSModule PSFunction_Read-DmarcPolicy PSCommand_Read-DmarcPolicy PSFunction_Read-MtaStsPolicy PSCommand_Read-MtaStsPolicy PSFunction_Read-DkimRecord PSCommand_Read-DkimRecord PSFunction_Read-MtaStsRecord PSCommand_Read-MtaStsRecord PSFunction_Read-MXRecord PSCommand_Read-MXRecord PSFunction_Read-NSRecord PSCommand_Read-NSRecord PSFunction_Read-SPFRecord PSCommand_Read-SPFRecord PSFunction_Read-TlsRptRecord PSCommand_Read-TlsRptRecord PSFunction_Read-WhoisRecord PSCommand_Read-WhoisRecord PSFunction_Resolve-DnsHttpsQuery PSCommand_Resolve-DnsHttpsQuery PSFunction_Set-DnsResolver PSCommand_Set-DnsResolver PSFunction_Test-DNSSEC PSCommand_Test-DNSSEC PSFunction_Test-HttpsCertificate PSCommand_Test-HttpsCertificate PSFunction_Test-MtaSts PSCommand_Test-MtaSts PSIncludes_Function</S>
           <S N="developmentDependency">False</S>
-          <S N="updated">2023-04-12T19:41:15Z</S>
-          <S N="NormalizedVersion">1.0.5</S>
+          <S N="updated">2023-06-15T12:02:08Z</S>
+          <S N="NormalizedVersion">1.0.6</S>
           <S N="Authors">John Duprey</S>
           <S N="IsPrerelease">false</S>
           <S N="ItemType">Module</S>
-          <S N="FileList">DNSHealth.nuspec|DNSHealth.psm1|MailProviders\Microsoft365.json|DNSHealth.psd1|MailProviders\Intermedia.json|MailProviders\Proofpoint.json|MailProviders\BarracudaESS.json|MailProviders\Mimecast.json|MailProviders\_template.json|MailProviders\Null.json|MailProviders\Sophos.json|MailProviders\Reflexion.json|MailProviders\SpamTitan.json|MailProviders\AppRiver.json|MailProviders\Google.json</S>
+          <S N="FileList">DNSHealth.nuspec|MailProviders\SpamTitan.json|DNSHealth.psd1|MailProviders\Null.json|DNSHealth.psm1|MailProviders\BarracudaESS.json|MailProviders\Microsoft365.json|MailProviders\AppRiver.json|MailProviders\Google.json|MailProviders\Sophos.json|MailProviders\_template.json|MailProviders\Reflexion.json|MailProviders\Intermedia.json|MailProviders\Proofpoint.json|MailProviders\Mimecast.json</S>
           <S N="GUID">a300d2b0-d468-46d1-88a3-e442a76b655b</S>
           <S N="PowerShellVersion">7.0</S>
           <S N="CompanyName">Unknown</S>
         </MS>
       </Obj>
-      <S N="InstalledLocation">C:\Users\jduprey.CNS\Documents\GitHub\CIPP-API\Modules\DNSHealth\1.0.5</S>
+      <S N="InstalledLocation">C:\Users\JDDoS\Documents\GitHub\CIPP-API\Modules\DNSHealth\1.0.6</S>
     </MS>
   </Obj>
 </Objs>
