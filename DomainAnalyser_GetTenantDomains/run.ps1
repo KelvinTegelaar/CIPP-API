@@ -93,5 +93,5 @@ if ($TenantCount -gt 0) {
         }
         catch { Write-LogMessage -API 'DomainAnalyser' -message "Domain Analyser GetTenantDomains Error $($_.Exception.Message)" -sev info }
     }
-    catch { Write-LogMessage -API 'DomainAnalyser' -message "GetTenantDomains loop exception: $($_.Exception.Message) line $($_.InvocationInfo.ScriptLineNumber)" }
+    catch { Write-LogMessage -API 'DomainAnalyser' -message "GetTenantDomains loop exception: $($_.Exception.Message) line $($_.InvocationInfo.ScriptLineNumber)" -sev "Error"}
 }
