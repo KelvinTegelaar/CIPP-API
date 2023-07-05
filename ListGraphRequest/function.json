@@ -1,6 +1,6 @@
 {
-  "scriptFile": "../Modules/GraphRequests/GraphRequests.psm1",
-  "entryPoint": "Get-GraphRequestListHttp",
+  "scriptFile": "../Modules/CippEntryPoints/CippEntryPoints.psm1",
+  "entryPoint": "Receive-CippHttpTrigger",
   "bindings": [
     {
       "authLevel": "anonymous",
@@ -17,7 +17,7 @@
     {
       "type": "queue",
       "direction": "out",
-      "name": "QueueTenant",
+      "name": "QueueItem",
       "queueName": "GraphRequestQueue"
     }
   ]
