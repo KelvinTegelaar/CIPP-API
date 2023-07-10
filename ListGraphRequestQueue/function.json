@@ -1,9 +1,9 @@
 {
-  "scriptFile": "../Modules/GraphRequests/GraphRequests.psm1",
-  "entryPoint": "Push-GraphRequestListQueue",
+  "scriptFile": "../Modules/CippEntryPoints/CippEntryPoints.psm1",
+  "entryPoint": "Receive-CippQueueTrigger",
   "bindings": [
     {
-      "name": "QueueTenant",
+      "name": "QueueItem",
       "type": "queueTrigger",
       "direction": "in",
       "queueName": "GraphRequestQueue"

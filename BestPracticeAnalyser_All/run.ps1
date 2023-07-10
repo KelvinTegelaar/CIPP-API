@@ -48,7 +48,7 @@ try {
     $Result.TAPEnabled = $TAPEnabled.State
 }
 catch {
-    Write-LogMessage -API 'BestPracticeAnalyser' -tenant $tenant -message "Security Defaults State on $($tenant) Error: $($_.exception.message)" -sev 'Error'
+    Write-LogMessage -API 'BestPracticeAnalyser' -tenant $tenant -message "Retrieving TAP state failed: $($tenant) Error: $($_.exception.message)" -sev 'Error'
 }
 # Get the nudge State
 try {
