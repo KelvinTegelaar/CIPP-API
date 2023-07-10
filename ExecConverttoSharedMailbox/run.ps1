@@ -17,12 +17,12 @@ Try {
     $tenantfilter = $Request.Query.TenantFilter 
     New-ExoRequest -tenantid $TenantFilter -cmdlet "Set-mailbox" -cmdParams @{Identity = $request.query.id; type = $MailboxType }
 
-    $Results = [pscustomobject]@{"Results" = "Successfully completed task." }
+    $Results = [pscustomobject]@{"Results" = "Successfully converted $($request.query.id)." }
     Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $($tenantfilter) -message "Converted mailbox $($request.query.id)" -Sev "Info"
 }
 catch {
     Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $($tenantfilter) -message "Convert to shared mailbox failed: $($_.Exception.Message)" -Sev "Error"
-    $Results = [pscustomobject]@{"Results" = "Failed. $_.Exception.Message" }
+    $Results = [pscustomobject]@{"Results" = "Failed to convert $($request.query.id) - $($_.Exception.Message)" }
 }
 # Associate values to output bindings by calling 'Push-OutputBinding'.
 Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{

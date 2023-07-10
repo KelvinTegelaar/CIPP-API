@@ -27,5 +27,5 @@ try {
     Write-LogMessage  -API "Standards" -tenant $tenant -message "Enabled Temporary Access Passwords." -sev Info
 }
 catch {
-    Write-LogMessage  -API "Standards" -tenant $tenant -message "Failed to enable TAP. Error: $($_.exception.message)"
+    Write-LogMessage  -API "Standards" -tenant $tenant -message "Failed to enable TAP. Error: $($_.exception.message)" -sev Error
 }

@@ -23,7 +23,8 @@ try {
         $GraphURLS = @("https://graph.microsoft.com/beta/deviceManagement/deviceConfigurations?`$select=id,displayName,lastModifiedDateTime,roleScopeTagIds,microsoft.graph.unsupportedDeviceConfiguration/originalEntityTypeName&`$expand=assignments&top=1000",
             "https://graph.microsoft.com/beta/deviceManagement/groupPolicyConfigurations?`$expand=assignments&top=1000"
             "https://graph.microsoft.com/beta/deviceAppManagement/mobileAppConfigurations?`$expand=assignments&`$filter=microsoft.graph.androidManagedStoreAppConfiguration/appSupportsOemConfig%20eq%20true"
-            "https://graph.microsoft.com/beta/deviceManagement/configurationPolicies?`$select=id,name,description,platforms,technologies,lastModifiedDateTime,settingCount,roleScopeTagIds,isAssigned&`$top=100&`$filter=(platforms%20eq%20%27windows10%27%20or%20platforms%20eq%20%27macOS%27)%20and%20(technologies%20eq%20%27mdm%27%20or%20technologies%20eq%20%27windows10XManagement%27)%20and%20(templateReference/templateFamily%20eq%20%27none%27)&`$expand=assignments")
+            "https://graph.microsoft.com/beta/deviceManagement/configurationPolicies"
+        )
 
         $GraphRequest = $GraphURLS | ForEach-Object {
             $URLName = (($_).split('?') | Select-Object -First 1) -replace 'https://graph.microsoft.com/beta/deviceManagement/', ''

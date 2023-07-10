@@ -98,7 +98,7 @@ if ($Request.query.Permissions -eq 'true') {
             $Success = $false
             $Links.Add([PSCustomObject]@{
                     Text = 'Permissions'
-                    Href = 'https://cipp.app/docs/user/gettingstarted/permissions/#permissions'
+                    Href = 'https://cipp.app/docs/user/gettingstarted/postinstall/permissions/'
                 }
             ) | Out-Null
         }
@@ -137,7 +137,7 @@ if ($Request.query.Tenants -eq 'true') {
         catch {
             @{
                 TenantName = "$($tenant)"
-                Status     = "Failed to connect to $(Get-NormalizedError -message $_.Exception.Message)" 
+                Status     = "Failed to connect to: $(Get-NormalizedError -message $_.Exception.Message)" 
             }
             Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $tenant -message "Tenant access check failed: $(Get-NormalizedError -message $_) " -Sev 'Error'
 
