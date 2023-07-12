@@ -24,11 +24,13 @@ try {
         New-ExoRequest -tenantid $TenantFilter -cmdlet "Disable-InboxRule" -cmdParams @{Confirm = $false; Identity = $_.Identity } -anchor $SuspectUser 
     } 
     $results = [pscustomobject]@{"Results" = "Executed Remediation for $SuspectUser and tenant $($TenantFilter). The temporary password is $password and must be changed at next logon." }
+    Write-LogMessage -API "BECRemediate" -tenant $tenantfilter -message "Executed Remediation for $SuspectUser" -sev "Info"
 
 }
 catch {
     #Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $($tenantfilter) -message "Failed to assign app $($appFilter): $($_.Exception.Message)" -Sev "Error"
     $results = [pscustomobject]@{"Results" = "Failed to execute remediation. $($_.Exception.Message)" }
+    Write-LogMessage -API "BECRemediate" -tenant $tenantfilter -message "Executed Remediation for $SuspectUser failed" -sev "Error"
 }
 
 # Associate values to output bindings by calling 'Push-OutputBinding'.
