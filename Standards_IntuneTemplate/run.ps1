@@ -80,9 +80,9 @@ foreach ($Template in $Setting.TemplateList) {
       $assign = New-GraphPOSTRequest -uri  "https://graph.microsoft.com/beta/deviceManagement/$TemplateTypeURL('$($CreateRequest.id)')/assign" -tenantid $tenant -type POST -body $AssignBody
       Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $($Tenant) -message "Assigned policy $($Displayname) to $AssignTo" -Sev "Info"
     }
-    Write-LogMessage -API "Standards" -tenant $tenant -message "Successfully added Intune Template policy for $($Tenant)"
+    Write-LogMessage -API "Standards" -tenant $tenant -message "Successfully added Intune Template policy for $($Tenant)" -sev "Info"
   }
   catch {
-    Write-LogMessage -API "Standards" -tenant $tenant -message "Failed to create or update Intune Template: $($_.exception.message)"
+    Write-LogMessage -API "Standards" -tenant $tenant -message "Failed to create or update Intune Template: $($_.exception.message)" -sev "Error"
   }
 }

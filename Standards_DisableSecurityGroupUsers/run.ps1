@@ -7,5 +7,5 @@ try {
     Write-LogMessage -API "Standards" -tenant $tenant -message "Standards API: Disabled users from creating Security Groups." -sev Info
 }
 catch {
-    Write-LogMessage -API "Standards" -tenant $tenant -message  "Failed to disable users from creating Security Groups: $($_.exception.message)"
+    Write-LogMessage -API "Standards" -tenant $tenant -message  "Failed to disable users from creating Security Groups: $($_.exception.message)" -sev "Error"
 }

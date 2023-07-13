@@ -1,5 +1,12 @@
 [
   {
+    "description": "Allows Exchange Management as app",
+    "displayName": "Manage Exchange As Application ",
+    "id": "dc50a0fb-09a3-484d-be87-e023b12c6440",
+    "origin": "Application (Office 365 Exchange Online)",
+    "value": "Exchange.ManageAsApp"
+  },
+  {
     "description": "Allows the app to read a basic set of profile properties of other users in your organization without a signed-in user. Includes display name, first and last name, email address, open extensions, and photo.",
     "displayName": "Read all users' basic profiles",
     "id": "97235f07-e226-4f63-ace3-39588e11d3a1",
