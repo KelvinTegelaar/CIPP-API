@@ -13,6 +13,7 @@ function Set-CIPPMailboxType {
     try {
         $Mailbox = New-ExoRequest -tenantid $TenantFilter -cmdlet "Set-mailbox" -cmdParams @{Identity = $userid; type = $MailboxType } -Anchor $username
         Write-LogMessage -user $ExecutingUser -API $APIName -message "Converted $($username) to a $MailboxType mailbox" -Sev "Info" -tenant $TenantFilter
+        if (!$username) { $username = $userid }
         return "Converted $($username) to a $MailboxType mailbox"
     }
     catch {
