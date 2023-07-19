@@ -9,12 +9,13 @@ Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME  -
 
 $TenantFilter = $request.query.tenantfilter
 Try {
-    $HideResults = Set-CIPPHideFromGAL -tenantFilter $tenantFilter -userid $Request.query.ID -HideFromGAL $true -ExecutingUser $request.headers.'x-ms-client-principal' -APIName "ExecOffboardUser"
+    $Hidden = [System.Convert]::ToBoolean($Request.query.HideFromGal)
+    $HideResults = Set-CIPPHideFromGAL -tenantFilter $tenantFilter -userid $Request.query.ID -HideFromGAL $Hidden -ExecutingUser $request.headers.'x-ms-client-principal' -APIName "ExecOffboardUser"
     $Results = [pscustomobject]@{"Results" = $HideResults }
 
 }
 catch {
-    $Results = [pscustomobject]@{"Results" = "Failed. $_.Exception.Message" }
+    $Results = [pscustomobject]@{"Results" = "Failed. $($_.Exception.Message)" }
     Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $($tenantfilter) -message "Hide/UnHide from GAL failed: $($_.Exception.Message)" -Sev "Error"
 }
 # Associate values to output bindings by calling 'Push-OutputBinding'.
