@@ -32,6 +32,7 @@ $CurrentStandards = foreach ($QueueFile in $QueuedApps) {
         DepTokenExpiry    = [bool]$QueueFile.DepTokenExpiry
         NoCAConfig        = [bool]$QueueFile.NoCAConfig
         SecDefaultsUpsell = [bool]$QueueFile.SecDefaultsUpsell
+        SharepointQuota   = [bool]$QueueFile.SharePointQuota
         tenantId          = $QueueFile.tenantid
     }
 }
