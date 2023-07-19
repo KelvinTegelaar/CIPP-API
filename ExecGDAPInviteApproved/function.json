@@ -12,6 +12,11 @@
       "direction": "out",
       "name": "Msg",
       "queueName": "gdapinvitequeue"
+    },
+    {
+      "type": "http",
+      "direction": "out",
+      "name": "Response"
     }
   ]
 }
