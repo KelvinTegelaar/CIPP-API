@@ -17,7 +17,7 @@ try {
     $ShippedAlerts = switch ($Alerts) {
         { $_.'AdminPassword' -eq $true } {
             try {
-                New-GraphGETRequest -uri "https://graph.microsoft.com/beta/roleManagement/directory/roleAssignments?`$filter=roleDefinitionId eq '62e90394-69f5-4237-9190-012177145e10'&`$expand=principal" -tenantid $($tenant.tenant) | Where-Object {($_.principalOrganizationId -EQ $tenant.tenantid) -and ($_.principal.'@odata.type' -eq '#microsoft.graph.user')} | ForEach-Object {
+                New-GraphGETRequest -uri "https://graph.microsoft.com/beta/roleManagement/directory/roleAssignments?`$filter=roleDefinitionId eq '62e90394-69f5-4237-9190-012177145e10'&`$expand=principal" -tenantid $($tenant.tenant) | Where-Object { ($_.principalOrganizationId -EQ $tenant.tenantid) -and ($_.principal.'@odata.type' -eq '#microsoft.graph.user') } | ForEach-Object {
                     $LastChanges = New-GraphGETRequest -uri "https://graph.microsoft.com/beta/users/$($_.principalId)?`$select=UserPrincipalName,lastPasswordChangeDateTime" -tenant $($tenant.tenant)
                     if ($LastChanges.LastPasswordChangeDateTime -gt (Get-Date).AddDays(-1)) { "Admin password has been changed for $($LastChanges.UserPrincipalName) in last 24 hours" }
                 }
@@ -52,18 +52,30 @@ try {
             try {
                 $StrongMFAMethods = '#microsoft.graph.fido2AuthenticationMethod', '#microsoft.graph.phoneAuthenticationMethod', '#microsoft.graph.passwordlessmicrosoftauthenticatorauthenticationmethod', '#microsoft.graph.softwareOathAuthenticationMethod', '#microsoft.graph.microsoftAuthenticatorAuthenticationMethod'
                 $AdminList = (New-GraphGETRequest -uri "https://graph.microsoft.com/beta/directoryRoles?`$expand=members" -tenantid $($tenant.tenant) | Where-Object -Property roleTemplateId -NE 'd29b2b05-8046-44ba-8758-1e26182fcf32').members | Where-Object { $_.userPrincipalName -ne $null -and $_.Usertype -eq 'Member' -and $_.accountEnabled -eq $true } | Sort-Object UserPrincipalName -Unique
-                $AdminList | ForEach-Object {
-                    $CARegistered = $null
-                    try {
+                $CAPolicies = (New-GraphGetRequest -Uri 'https://graph.microsoft.com/v1.0/identity/conditionalAccess/policies' -tenantid $Tenant.tenant -ErrorAction Stop)
+                foreach ($Policy in $CAPolicies) {
+                    if ($policy.grantControls.customAuthenticationFactors -eq 'RequireDuoMfa') {
+                        $DuoActive = $true
+                    }
+                } 
+                if (!$DuoActive) {
+                    $AdminList | ForEach-Object {
+                        $CARegistered = $null
+                        try {
             (New-GraphGETRequest -uri "https://graph.microsoft.com/beta/users/$($_.ID)/authentication/Methods" -tenantid $($tenant.tenant)) | ForEach-Object {
-                            if ($_.'@odata.type' -in $StrongMFAMethods) {
-                                $CARegistered = $true;
+                                if ($_.'@odata.type' -in $StrongMFAMethods) {
+                                    $CARegistered = $true;
+                                }
                             }
+                            if ($_.StrongAuthenticationRequirements.StrongAuthenticationRequirement.state -eq $null -and $CARegistered -ne $true) { "Admin $($_.UserPrincipalName) is enabled but does not have any form of MFA configured." }
                         }
-                        if ($_.StrongAuthenticationRequirements.StrongAuthenticationRequirement.state -eq $null -and $CARegistered -ne $true) { "Admin $($_.UserPrincipalName) is enabled but does not have any form of MFA configured." }
+                        catch {
+                        }
                     }
-                    catch {
-                    }
+                }
+                else {
+                    Write-LogMessage -message "Potentially using Duo for MFA, could not check MFA status for Admins with 100% accuracy" -API 'Alerts' -tenant $tenant.tenant -sev Info
+
                 }
             }
             catch {
