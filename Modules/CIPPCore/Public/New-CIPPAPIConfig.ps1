@@ -55,7 +55,7 @@ function New-CIPPAPIConfig {
         return @{
             ApplicationID     = $APIApp.AppId
             ApplicationSecret = $APIPassword.secretText
-            Results           = "API Enabled. Your Application ID is $($APIApp.AppId) and your Application Secret is $($APIPassword.secretText) - Copy these keys, they are only shown once."
+            Results           = "API Enabled. Your API URL is https://$($ENV:Website_hostname). Your Application ID is $($APIApp.AppId) and your Application Secret is $($APIPassword.secretText) - Copy these keys, they are only shown once."
         }
     
     }
