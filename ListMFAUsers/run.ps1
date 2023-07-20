@@ -35,6 +35,7 @@ if ($Request.query.TenantFilter -ne 'AllTenants') {
         $CAState.Add('Not Licensed for Conditional Access')
         $MFARegistration = $null
     }
+
     if ($null -ne $MFARegistration) {
         $CAPolicies = (New-GraphGetRequest -Uri 'https://graph.microsoft.com/beta/identity/conditionalAccess/policies' -tenantid $Request.query.TenantFilter -ErrorAction Stop )
 
@@ -61,6 +62,7 @@ if ($Request.query.TenantFilter -ne 'AllTenants') {
         catch {
         }
     }
+
     if ($CAState.count -eq 0) { $CAState.Add('None') | Out-Null }
 
 
@@ -71,11 +73,11 @@ if ($Request.query.TenantFilter -ne 'AllTenants') {
         foreach ($CA in $CAState) {
             Write-Host 'Looping CAState'
             if ($CA -like '*All Users*') {
-                if ($ExcludeAllUsers -contains $_.ObjectId) { $UserCAState.Add('Excluded from All Users') | Out-Null }
+                if ($ExcludeAllUsers -contains $_.ObjectId) { $UserCAState.Add("Excluded from $($policy.displayName) - All Users") | Out-Null }
                 else { $UserCAState.Add($CA) | Out-Null }
             }
             elseif ($CA -like '*Specific Applications*') {
-                if ($ExcludeSpecific -contains $_.ObjectId) { $UserCAState.Add('Excluded from Specific Applications') | Out-Null }
+                if ($ExcludeSpecific -contains $_.ObjectId) { $UserCAState.Add("Excluded from $($policy.displayName) - Specific Applications") | Out-Null }
                 else { $UserCAState.Add($CA) | Out-Null }
             }
             else {
