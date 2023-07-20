@@ -10,6 +10,12 @@ Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -m
 # Write to the Azure Functions log stream.
 Write-Host 'PowerShell HTTP trigger function processed a request.'
 $results = try { 
+    if ($Request.body.CIPPAPI.Enabled) {
+        $APIConfig = New-CIPPAPIConfig -ExecutingUser $request.headers.'x-ms-client-principal'
+        $AddedText = $APIConfig.Result
+    }
+
+
     $Table = Get-CIPPTable -TableName Extensionsconfig
     foreach ($APIKey in ([pscustomobject]$request.body).psobject.properties.name) {
         Write-Host "Working on $apikey"
@@ -31,7 +37,7 @@ $results = try {
     }
 
     Add-AzDataTableEntity @Table -Entity $Config -Force | Out-Null
-    "Successfully set the configuration"
+    "Successfully set the configuration. $AddedText"
 }
 catch {
     "Failed to set configuration: $($_.Exception.message)"
