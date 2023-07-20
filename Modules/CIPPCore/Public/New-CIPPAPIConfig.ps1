@@ -8,8 +8,6 @@ function New-CIPPAPIConfig {
     )
 
     try {
-(Get-AzKeyVaultSecret -VaultName $ENV:WEBSITE_DEPLOYMENT_ID -Name "HaloPSA" -AsPlainText)
-
         $CreateBody = @"
 {"api":{"oauth2PermissionScopes":[{"adminConsentDescription":"Allow the application to access CIPP-API on behalf of the signed-in user.","adminConsentDisplayName":"Access CIPP-API","id":"ba7ffeff-96ea-4ac4-9822-1bcfee9adaa4","isEnabled":true,"type":"User","userConsentDescription":"Allow the application to access CIPP-API on your behalf.","userConsentDisplayName":"Access CIPP-API","value":"user_impersonation"}]},"displayName":"CIPP-API","requiredResourceAccess":[{"resourceAccess":[{"id":"e1fe6dd8-ba31-4d61-89e7-88639da4683d","type":"Scope"}],"resourceAppId":"00000003-0000-0000-c000-000000000000"}],"signInAudience":"AzureADMyOrg","web":{"homePageUrl":"https://cipp.app","implicitGrantSettings":{"enableAccessTokenIssuance":false,"enableIdTokenIssuance":true},"redirectUris":["https://$($ENV:Website_hostname)/.auth/login/aad/callback"]}}
 "@
