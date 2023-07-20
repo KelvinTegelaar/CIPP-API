@@ -40,7 +40,7 @@ function New-CIPPAPIConfig {
         
         Write-Host "writing to Azure"
         $SetAPIAuth = New-GraphPOSTRequest -type "PUT" -uri "https://management.azure.com/subscriptions/$($subscription)/resourceGroups/$ENV:WEBSITE_RESOURCE_GROUP/providers/Microsoft.Web/sites/$ENV:WEBSITE_SITE_NAME/Config/authsettingsV2?api-version=2018-11-01" -scope "https://management.azure.com/.default" -NoAuthCheck $true -body $currentBody
-        Write-LogMessage -user $ExecutingUser -API $APINAME -tenant 'None '-message "Succesfully setup CIPP-API Access: $($_.Exception.Message)" -Sev "info"
+        Write-LogMessage -user $ExecutingUser -API $APINAME -tenant 'None '-message "Succesfully setup CIPP-API Access." -Sev "info"
 
         return @{
             ApplicationID     = $APIApp.AppId
