@@ -23,8 +23,10 @@ $results = try {
         else {
             Write-Host "writing API Key to keyvault, and clearing."
             Write-Host "$ENV:WEBSITE_DEPLOYMENT_ID"
-            $null = Set-AzKeyVaultSecret -VaultName $ENV:WEBSITE_DEPLOYMENT_ID -Name $APIKey -SecretValue (ConvertTo-SecureString -String $request.body.$APIKey.APIKey -AsPlainText -Force)
-            $request.body.$APIKey.APIKey = "SentToKeyVault"
+            if ($request.body.$APIKey.APIKey) {
+                $null = Set-AzKeyVaultSecret -VaultName $ENV:WEBSITE_DEPLOYMENT_ID -Name $APIKey -SecretValue (ConvertTo-SecureString -String $request.body.$APIKey.APIKey -AsPlainText -Force)
+            }
+            $request.body.$APIKey = @{ APIKey = "SentToKeyVault" }
         }
     }
     $body = $request.body | Select-Object * -ExcludeProperty APIKey, Enabled |  ConvertTo-Json -Depth 10 -Compress
