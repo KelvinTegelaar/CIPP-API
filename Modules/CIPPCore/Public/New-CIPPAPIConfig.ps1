@@ -20,6 +20,7 @@ function New-CIPPAPIConfig {
         Write-Host "Adding serviceprincipal"
         $ServicePrincipal = New-GraphPOSTRequest -uri "https://graph.microsoft.com/v1.0/serviceprincipals"  -NoAuthCheck $true -type POST -body "{`"accountEnabled`":true,`"appId`":`"$($APIApp.appId)`",`"displayName`":`"CIPP-API`",`"tags`":[`"WindowsAzureActiveDirectoryIntegratedApp`",`"AppServiceIntegratedApp`"]}"
         Write-Host "getting settings"
+        $subscription = $($ENV:WEBSITE_OWNER_NAME).Split('+')[0]
         $CurrentSettings = New-GraphGetRequest -uri "https://management.azure.com/subscriptions/$($subscription)/resourceGroups/$ENV:ResourceGroupName/providers/Microsoft.Web/sites/$ENV:WEBSITE_SITE_NAME/Config/authsettingsV2/list?api-version=2018-11-01" -NoAuthCheck $true -scope "https://management.azure.com/.default"
         Write-Host "setting settings"
         $currentSettings.properties.identityProviders.azureActiveDirectory = @{
@@ -32,7 +33,7 @@ function New-CIPPAPIConfig {
             }
         }
         $currentBody = ConvertTo-Json -Depth 15 -InputObject ($currentSettings | Select-Object Properties)
-        $subscription = $($ENV:WEBSITE_OWNER_NAME).Split('+')[0]
+        
         Write-Host "writing to Azure"
         $SetAPIAuth = New-GraphPOSTRequest -type "PUT" -uri "https://management.azure.com/subscriptions/$($subscription)/resourceGroups/$ENV:ResourceGroupName/providers/Microsoft.Web/sites/$ENV:WEBSITE_SITE_NAME/Config/authsettingsV2?api-version=2018-11-01" -scope "https://management.azure.com/.default" -NoAuthCheck $true -body $currentBody
         Write-LogMessage -user $ExecutingUser -API $APINAME -tenant 'None '-message "Succesfully setup CIPP-API Access: $($_.Exception.Message)" -Sev "info"
