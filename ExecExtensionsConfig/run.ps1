@@ -11,7 +11,7 @@ Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -m
 Write-Host 'PowerShell HTTP trigger function processed a request.'
 $results = try { 
     if ($Request.body.CIPPAPI.Enabled) {
-        $APIConfig = New-CIPPAPIConfig -ExecutingUser $request.headers.'x-ms-client-principal'
+        $APIConfig = New-CIPPAPIConfig -ExecutingUser $request.headers.'x-ms-client-principal' -resetpassword $request.body.CIPPAPI.ResetPassword
         $AddedText = $APIConfig.Results
     }
     $Table = Get-CIPPTable -TableName Extensionsconfig
