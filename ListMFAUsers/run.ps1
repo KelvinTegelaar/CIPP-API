@@ -28,7 +28,7 @@ if ($Request.query.TenantFilter -ne 'AllTenants') {
     $SecureDefaultsState = (New-GraphGetRequest -Uri 'https://graph.microsoft.com/beta/policies/identitySecurityDefaultsEnforcementPolicy' -tenantid $Request.query.TenantFilter ).IsEnabled
     $CAState = New-Object System.Collections.ArrayList
 
-    $CAPolicies = (New-GraphGetRequest -Uri 'https://graph.microsoft.com/v1.0/identity/conditionalAccess/policies' -tenantid $Request.query.TenantFilter -ErrorAction Stop )
+    $CAPolicies = (New-GraphGetRequest -Uri 'https://graph.microsoft.com/beta/identity/conditionalAccess/policies' -tenantid $Request.query.TenantFilter -ErrorAction Stop )
 
     try {
         $ExcludeAllUsers = New-Object System.Collections.ArrayList
@@ -39,12 +39,12 @@ if ($Request.query.TenantFilter -ne 'AllTenants') {
                 if ($Policy.conditions.applications.includeApplications -ne 'All') {
                     Write-Host $Policy.conditions.applications.includeApplications
                     $CAState.Add("Specific Applications - $($policy.state)") | Out-Null
-                    $ExcludeSpecific = $Policy.conditions.users.excludeUsers
+                    $Policy.conditions.users.excludeUsers.foreach({ $ExcludeSpecific.Add($_) })
                     continue
                 }
                 if ($Policy.conditions.users.includeUsers -eq 'All') {
                     $CAState.Add("All Users - $($policy.state)") | Out-Null
-                    $ExcludeAllUsers = $Policy.conditions.users.excludeUsers
+                    $Policy.conditions.users.excludeUsers.foreach({ $ExcludeAllUsers.Add($_) })
                     continue
                 }
             } 
@@ -67,11 +67,11 @@ if ($Request.query.TenantFilter -ne 'AllTenants') {
         $UserCAState = New-Object System.Collections.ArrayList
         foreach ($CA in $CAState) {
             Write-Host 'Looping CAState'
-            if ($CA -eq 'All Users') {
+            if ($CA -like '*All Users*') {
                 if ($ExcludeAllUsers -contains $_.ObjectId) { $UserCAState.Add('Excluded from All Users') | Out-Null }
                 else { $UserCAState.Add($CA) | Out-Null }
             }
-            elseif ($CA -eq 'Specific Applications') {
+            elseif ($CA -like '*Specific Applications*') {
                 if ($ExcludeSpecific -contains $_.ObjectId) { $UserCAState.Add('Excluded from Specific Applications') | Out-Null }
                 else { $UserCAState.Add($CA) | Out-Null }
             }
