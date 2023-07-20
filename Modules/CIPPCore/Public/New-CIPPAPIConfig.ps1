@@ -36,7 +36,7 @@ function New-CIPPAPIConfig {
                 openIdIssuer = "https://sts.windows.net/$($ENV:TenantId)/v2.0"
             }
             validation   = @{
-                allowedAudiences = "api://$($APIApp.appId)"
+                allowedAudiences = @("api://$($APIApp.appId)")
             }
         }
         if ($resetpassword) {
