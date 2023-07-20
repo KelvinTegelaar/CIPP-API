@@ -22,10 +22,10 @@ function New-CIPPAPIConfig {
         Write-Host "getting settings"
         $subscription = $($ENV:WEBSITE_OWNER_NAME).Split('+')[0]
         Write-Host "Subscription is $subscription"
-        Write-Host "Resource Group is $($ENV:ResourceGroupName)"
+        Write-Host "Resource Group is $($ENV:WEBSITE_RESOURCE_GROUP)"
         Write-Host "Site Name is $($ENV:WEBSITE_SITE_NAME)"
         
-        $CurrentSettings = New-GraphGetRequest -uri "https://management.azure.com/subscriptions/$($subscription)/resourceGroups/$ENV:ResourceGroupName/providers/Microsoft.Web/sites/$ENV:WEBSITE_SITE_NAME/Config/authsettingsV2/list?api-version=2018-11-01" -NoAuthCheck $true -scope "https://management.azure.com/.default"
+        $CurrentSettings = New-GraphGetRequest -uri "https://management.azure.com/subscriptions/$($subscription)/resourceGroups/$ENV:WEBSITE_RESOURCE_GROUP/providers/Microsoft.Web/sites/$ENV:WEBSITE_SITE_NAME/Config/authsettingsV2/list?api-version=2018-11-01" -NoAuthCheck $true -scope "https://management.azure.com/.default"
         Write-Host "setting settings"
         $currentSettings.properties.identityProviders.azureActiveDirectory = @{
             registration = @{
@@ -39,7 +39,7 @@ function New-CIPPAPIConfig {
         $currentBody = ConvertTo-Json -Depth 15 -InputObject ($currentSettings | Select-Object Properties)
         
         Write-Host "writing to Azure"
-        $SetAPIAuth = New-GraphPOSTRequest -type "PUT" -uri "https://management.azure.com/subscriptions/$($subscription)/resourceGroups/$ENV:ResourceGroupName/providers/Microsoft.Web/sites/$ENV:WEBSITE_SITE_NAME/Config/authsettingsV2?api-version=2018-11-01" -scope "https://management.azure.com/.default" -NoAuthCheck $true -body $currentBody
+        $SetAPIAuth = New-GraphPOSTRequest -type "PUT" -uri "https://management.azure.com/subscriptions/$($subscription)/resourceGroups/$ENV:WEBSITE_RESOURCE_GROUP/providers/Microsoft.Web/sites/$ENV:WEBSITE_SITE_NAME/Config/authsettingsV2?api-version=2018-11-01" -scope "https://management.azure.com/.default" -NoAuthCheck $true -body $currentBody
         Write-LogMessage -user $ExecutingUser -API $APINAME -tenant 'None '-message "Succesfully setup CIPP-API Access: $($_.Exception.Message)" -Sev "info"
 
         return @{
