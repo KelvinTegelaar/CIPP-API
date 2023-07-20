@@ -13,7 +13,6 @@ $results = try {
     if ($Request.body.CIPPAPI.Enabled) {
         $APIConfig = New-CIPPAPIConfig -ExecutingUser $request.headers.'x-ms-client-principal'
         $AddedText = $APIConfig.Results
-        $Request.body.CIPPAPI = @{ APIKey = $APIConfig.APIKey }
     }
     $Table = Get-CIPPTable -TableName Extensionsconfig
     foreach ($APIKey in ([pscustomobject]$request.body).psobject.properties.name) {
