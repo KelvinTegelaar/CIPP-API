@@ -45,7 +45,7 @@ try {
                 'PartitionKey' = 'invite'
                 'RowKey'       = $NewRelationship.id
                 'InviteUrl'    = $InviteUrl
-                'RoleMappings' = [string]($RoleMappings | ConvertTo-Json -Depth 10)
+                'RoleMappings' = [string](@($RoleMappings) | ConvertTo-Json -Depth 10)
             }
             Add-AzDataTableEntity @Table -Entity $InviteEntity
 
