@@ -14,8 +14,6 @@ $results = try {
         $APIConfig = New-CIPPAPIConfig -ExecutingUser $request.headers.'x-ms-client-principal'
         $AddedText = $APIConfig.Result
     }
-
-
     $Table = Get-CIPPTable -TableName Extensionsconfig
     foreach ($APIKey in ([pscustomobject]$request.body).psobject.properties.name) {
         Write-Host "Working on $apikey"
@@ -40,7 +38,7 @@ $results = try {
     "Successfully set the configuration. $AddedText"
 }
 catch {
-    "Failed to set configuration: $($_.Exception.message)"
+    "Failed to set configuration: $($_.Exception.message) Linenumber: $($_.InvocationInfo.ScriptLineNumber)"
 }
 
 
