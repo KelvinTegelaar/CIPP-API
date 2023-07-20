@@ -52,7 +52,7 @@ function New-CIPPAPIConfig {
     
     }
     catch {
-        Write-LogMessage -user $ExecutingUser -API $APINAME -tenant 'None' -message "Failed to setup CIPP-API Access: $($_.Exception.Message)" -Sev "Error"
+        Write-LogMessage -user $ExecutingUser -API $APINAME -tenant 'None' -message "Failed to setup CIPP-API Access: $($_.Exception.Message) Linenumber: $($_.InvocationInfo.ScriptLineNumber)" -Sev "Error"
         return @{
             Results = " but could not set API configuration: $($_.Exception.Message)"
         }
