@@ -11,7 +11,8 @@ $Results = foreach ($Tenant in $tenants) {
     try {
         $TenantID = if ($tenant -ne 'AllTenants') {
             (get-tenants | Where-Object -Property defaultDomainName -EQ $Tenant).customerId
-        } else {
+        }
+        else {
             'AllTenants'
         }
         $CompleteObject = @{
@@ -33,6 +34,8 @@ $Results = foreach ($Tenant in $tenants) {
             DepTokenExpiry    = [bool]$Request.body.DepTokenExpiry
             NoCAConfig        = [bool]$Request.body.NoCAConfig
             SecDefaultsUpsell = [bool]$Request.body.SecDefaultsUpsell
+            SharePointQuota   = [bool]$Request.body.SharePointQuota
+            ExpiringLicenses  = [bool]$Request.body.ExpiringLicenses
             type              = 'Alert'
             RowKey            = $TenantID
             PartitionKey      = 'Alert'
@@ -49,7 +52,8 @@ $Results = foreach ($Tenant in $tenants) {
         Add-AzDataTableEntity @Table -Entity $CompleteObject -Force
         "Successfully added Alert for $($Tenant) to queue."
         Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $tenant -message "Successfully added Alert for $($Tenant) to queue." -Sev 'Info'
-    } catch {
+    }
+    catch {
         Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $tenant -message "Failed to add Alert for for $($Tenant) to queue" -Sev 'Error'
         "Failed to add Alert for for $($Tenant) to queue $($_.Exception.message)"
     }
