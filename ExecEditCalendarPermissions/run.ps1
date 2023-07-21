@@ -12,25 +12,12 @@ $Permissions = @($Request.query.permissions)
 $folderName = $Request.query.folderName
 
 
-$CalParam = [PSCustomObject]@{
-    Identity     = "$($UserID):\$folderName"
-    AccessRights = @($Permissions)
-    User         = $UserToGetPermissions
-}
 try {
     if ($Request.query.removeaccess) {
-        $GraphRequest = New-ExoRequest -tenantid $Tenantfilter -cmdlet "Remove-MailboxFolderPermission" -cmdParams @{Identity = "$($UserID):\$folderName"; User = $Request.query.RemoveAccess }
-        $Result = "Successfully removed access for $($Request.query.RemoveAccess) from calender $($CalParam.Identity)"
+        $result = Set-CIPPCalenderPermission -UserID $UserID -folderName $folderName -RemoveAccess $Request.query.removeaccess -TenantFilter $TenantFilter
     }
     else {
-        try {
-            $GraphRequest = New-ExoRequest -tenantid $Tenantfilter -cmdlet "Set-MailboxFolderPermission" -cmdParams $CalParam -Anchor $($UserID)
-        }
-        catch {
-            $GraphRequest = New-ExoRequest -tenantid $Tenantfilter -cmdlet "Add-MailboxFolderPermission" -cmdParams $CalParam -Anchor $($UserID)
-        }
-        Write-LogMessage -API 'List Calendar Permissions' -tenant $tenantfilter -message "Calendar permissions listed for $($tenantfilter)" -sev Debug
-    
+        $result = Set-CIPPCalenderPermission -UserID $UserID -folderName $folderName -TenantFilter $Tenantfilter -UserToGetPermissions $UserToGetPermissions -Permissions $Permissions
         $Result = "Successfully set permissions on folder $($CalParam.Identity). The user $UserToGetPermissions now has $Permissions permissions on this folder."
     }
 }
