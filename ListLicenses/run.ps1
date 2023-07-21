@@ -13,11 +13,7 @@ Write-Host 'PowerShell HTTP trigger function processed a request.'
 # Interact with query parameters or the body of the request.
 $TenantFilter = $Request.Query.TenantFilter
 $RawGraphRequest = if ($TenantFilter -ne 'AllTenants') {
-    $LicRequest = New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/subscribedSkus' -tenantid $TenantFilter
-    [PSCustomObject]@{
-        Tenant   = $TenantFilter
-        Licenses = $LicRequest
-    }
+    $GraphRequest = Get-CIPPLicenseOverview -TenantFilter $TenantFilter
 }
 else {
     $Table = Get-CIPPTable -TableName cachelicenses
@@ -33,31 +29,7 @@ else {
         $GraphRequest = $Rows
     }
 }
-Set-Location (Get-Item $PSScriptRoot).Parent.FullName
-$ConvertTable = Import-Csv Conversiontable.csv
-$LicenseTable = Get-CIPPTable -TableName ExcludedLicenses
-$ExcludedSkuList = Get-AzDataTableEntity @LicenseTable
-if (!$GraphRequest) {
-    $GraphRequest = foreach ($singlereq in $RawGraphRequest) {
-        $skuid = $singlereq.Licenses
-        foreach ($sku in $skuid) {
-            if ($sku.skuId -in $ExcludedSkuList.GUID) { continue }
-            $PrettyName = ($ConvertTable | Where-Object { $_.guid -eq $sku.skuid }).'Product_Display_Name' | Select-Object -Last 1
-            if (!$PrettyName) { $PrettyName = $sku.skuPartNumber }
-            [PSCustomObject]@{
-                Tenant         = $singlereq.Tenant
-                License        = $PrettyName
-                CountUsed      = "$($sku.consumedUnits)"
-                CountAvailable = $sku.prepaidUnits.enabled - $sku.consumedUnits
-                TotalLicenses  = "$($sku.prepaidUnits.enabled)"
-                skuId          = $sku.skuId
-                skuPartNumber  = $PrettyName
-                availableUnits = $sku.prepaidUnits.enabled - $sku.consumedUnits
 
-            }      
-        }
-    }
-}
 Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
         StatusCode = [HttpStatusCode]::OK
         Body       = @($GraphRequest)

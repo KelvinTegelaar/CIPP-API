@@ -2,17 +2,21 @@ function Set-CIPPForwarding {
     [CmdletBinding()]
     param(
         $userid,
+        $forwardingSMTPAddress,
         $tenantFilter,
         $username,
         $ExecutingUser,
         $APIName = "Forwarding",
         $Forward,
-        $KeepCopy
+        $KeepCopy,
+        $Disable
     )
 
     try {
-        $permissions = New-ExoRequest -tenantid $tenantFilter -cmdlet "Set-mailbox" -cmdParams @{Identity = $userid; ForwardingAddress = $Forward ; DeliverToMailboxAndForward = [bool]$KeepCopy } -Anchor $username
-        "Forwarding all email for $username to $Forward"
+        if (!$username) { $username = $userid }
+        $permissions = New-ExoRequest -tenantid $tenantFilter -cmdlet "Set-mailbox" -cmdParams @{Identity = $userid; ForwardingSMTPAddress = $forwardingSMTPAddress; ForwardingAddress = $Forward ; DeliverToMailboxAndForward = [bool]$KeepCopy } -Anchor $username
+        if (!$Disable) { "Forwarding all email for $username to $Forward" } else { "Disabled forwarding for $username" }
+    
         Write-LogMessage -user $ExecutingUser -API $APIName -message "Set Forwarding for $($username) to $Forward" -Sev "Info" -tenant $TenantFilter
     }
     catch {
