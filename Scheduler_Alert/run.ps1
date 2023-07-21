@@ -91,7 +91,7 @@ try {
                     }
                 }
                 else {
-                    Write-LogMessage -message "Potentially using Duo for MFA, could not check MFA status for Admins with 100% accuracy" -API 'Alerts' -tenant $tenant.tenant -sev Info
+                    Write-LogMessage -message "Potentially using Duo for MFA, could not check MFA status for Admins with 100% accuracy" -API 'MFA Alerts - Informational' -tenant $tenant.tenant -sev Info
 
                 }
             }
