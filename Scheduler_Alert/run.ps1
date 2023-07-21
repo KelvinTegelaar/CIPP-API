@@ -91,7 +91,7 @@ try {
                     }
                 }
                 else {
-                    Write-LogMessage -message "Potentially using Duo for MFA, could not check MFA status for Admins with 100% accuracy" -API 'Alerts' -tenant $tenant.tenant -sev Info
+                    Write-LogMessage -message "Potentially using Duo for MFA, could not check MFA status for Admins with 100% accuracy" -API 'MFA Alerts - Informational' -tenant $tenant.tenant -sev Info
 
                 }
             }
@@ -161,6 +161,16 @@ try {
                 New-GraphGetRequest -uri "https://graph.microsoft.com/beta/reports/getMailboxUsageDetail(period='D7')?`$format=application/json" -tenantid $Tenant.tenant | ForEach-Object {
                     $PercentLeft = [math]::round($_.StorageUsedInBytes / $_.prohibitSendReceiveQuotaInBytes * 100)
                     if ($PercentLeft -gt 90) { "$($_.UserPrincipalName): Mailbox has less than 10% space left. Mailbox is $PercentLeft% full" }
+                }
+            }
+            catch {
+
+            }
+        }
+        { $_.'ExpiringLicenses' -eq $true } {
+            try {
+                Get-CIPPLicenseOverview -TenantFilter $Tenant.tenant | Where-Object -Property TimeUntilRenew -LT 31 | ForEach-Object {
+                    "$($_.License) will expire in $($_.TimeUntilRenew) days" 
                 }
             }
             catch {
