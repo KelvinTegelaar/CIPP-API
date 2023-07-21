@@ -35,6 +35,7 @@ $Results = foreach ($Tenant in $tenants) {
             NoCAConfig        = [bool]$Request.body.NoCAConfig
             SecDefaultsUpsell = [bool]$Request.body.SecDefaultsUpsell
             SharePointQuota   = [bool]$Request.body.SharePointQuota
+            ExpiringLicenses  = [bool]$Request.body.ExpiringLicenses
             type              = 'Alert'
             RowKey            = $TenantID
             PartitionKey      = 'Alert'

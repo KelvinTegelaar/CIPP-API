@@ -167,6 +167,16 @@ try {
 
             }
         }
+        { $_.'ExpiringLicenses' -eq $true } {
+            try {
+                Get-CIPPLicenseOverview -TenantFilter $Tenant.tenant | Where-Object -Property TimeUntilRenew -LT 31 | ForEach-Object {
+                    "$($_.License) will expire in $($_.TimeUntilRenew) days" 
+                }
+            }
+            catch {
+
+            }
+        }
         { $_.'NoCAConfig' -eq $true } {
             try {
                 $CAAvailable = (New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/subscribedSkus' -tenantid $Tenant.Tenant -erroraction stop).serviceplans
