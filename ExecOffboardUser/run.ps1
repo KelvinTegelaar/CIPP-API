@@ -23,7 +23,7 @@ try {
             Set-CIPPResetPassword -tenantFilter $tenantFilter -userid $username -ExecutingUser $request.headers.'x-ms-client-principal' -APIName "ExecOffboardUser"
         }
         { $_.RemoveGroups -eq 'true' } { 
-            Remove-CIPPGroups -userid $userid -tenantFilter $Tenantfilter -ExecutingUser $request.headers.'x-ms-client-principal' -APIName "ExecOffboardUser"
+            Remove-CIPPGroups -userid $userid -tenantFilter $Tenantfilter -ExecutingUser $request.headers.'x-ms-client-principal' -APIName "ExecOffboardUser" -Username "$Username"
         }
 
         { $_."HideFromGAL" -eq 'true' } {
