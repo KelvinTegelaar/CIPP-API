@@ -14,7 +14,7 @@ function Set-CIPPSignInState {
         } | ConvertTo-Json -Compress -Depth 1
         $SignInState = New-GraphPostRequest -uri "https://graph.microsoft.com/v1.0/users/$($userid)" -tenantid $TenantFilter -type PATCH -body $body -verbose
         Write-LogMessage -user $ExecutingUser -API $APIName -message "Disabled $($userid)" -Sev "Info"  -tenant $TenantFilter
-        return "Disabled user account for $userid"
+        return "Set account enabled state to $AccountEnabled for $userid"
     }
     catch {
         Write-LogMessage -user $ExecutingUser -API $APIName -message "Could not disable sign in for $($userid)" -Sev "Error" -tenant $TenantFilter
