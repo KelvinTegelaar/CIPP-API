@@ -23,7 +23,7 @@ try {
   "minimumLifetimeInMinutes":$MinimumLifetime,
   "state":"enabled"}
 "@
-    (New-GraphPostRequest -tenantid $tenant -Uri "https://graph.microsoft.com/beta/policies/authenticationmethodspolicy/authenticationMethodConfigurations/TemporaryAccessPass" -Type patch -Body $body -ContentType "application/json")
+    (New-GraphPostRequest -tenantid $tenant -Uri "https://graph.microsoft.com/beta/policies/authenticationmethodspolicy/authenticationMethodConfigurations/TemporaryAccessPass" -Type patch -asApp $true -Body $body -ContentType "application/json") 
     Write-LogMessage  -API "Standards" -tenant $tenant -message "Enabled Temporary Access Passwords." -sev Info
 }
 catch {

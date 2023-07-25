@@ -11,19 +11,14 @@ try {
     #$userid = (New-GraphGetRequest -uri "https://graph.microsoft.com/beta/users/$($username)" -tenantid $Tenantfilter).id
     $Results = try {
         if (!$Request.Body.Disable) {
-            $OoO = New-ExoRequest -tenantid $TenantFilter -cmdlet "Set-MailboxAutoReplyConfiguration" -cmdParams @{Identity = $request.body.user; AutoReplyState = "Enabled"; InternalMessage = $message; ExternalMessage = $message }
-            "added Out-of-office to $username - Message is $($message)"
-            Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME  -message "Set Out-of-office for $($username)" -Sev "Info" -tenant $TenantFilter
+            Set-CIPPOutOfOffice -userid $Request.body.user -tenantFilter $TenantFilter -APIName $APINAME -ExecutingUser $request.headers.'x-ms-client-principal' -OOO $message -State "Enabled"
         }
         else {
-            $OoO = New-ExoRequest -tenantid $TenantFilter -cmdlet "Set-MailboxAutoReplyConfiguration" -cmdParams @{Identity = $request.body.user; AutoReplyState = "Disabled" }
-            "Removed Out-of-office for $username"
-            Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME  -message "Disable out of office for $($username)" -Sev "Info" -tenant $TenantFilter
+            Set-CIPPOutOfOffice -userid $Request.body.user -tenantFilter $TenantFilter -APIName $APINAME -ExecutingUser $request.headers.'x-ms-client-principal' -OOO $message -State "Disabled"
         }
 
     }
     catch {
-        Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME  -message "Could not add OOO for $($username)" -Sev "Error" -tenant $TenantFilter
         "Could not add out of office message for $($username). Error: $($_.Exception.Message)"
     }
 
