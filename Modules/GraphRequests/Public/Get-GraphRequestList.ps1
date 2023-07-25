@@ -161,7 +161,7 @@ function Get-GraphRequestList {
                 try {
                     $QueueThresholdExceeded = $false
                     if ($Parameters.'$count' -and !$SkipCache -and !$NoPagination) {
-                        $Count = New-GraphGetRequest @GraphRequest -CountOnly -ErrorAction Stop | 
+                        $Count = New-GraphGetRequest @GraphRequest -CountOnly -ErrorAction Stop
                         Write-Host "Total results (`$count): $Count"
                         if ($Count -gt 8000) {
                             $QueueThresholdExceeded = $true
@@ -200,7 +200,7 @@ function Get-GraphRequestList {
                     }
 
                     if (!$QueueThresholdExceeded) {
-                        $GraphRequestResults = New-GraphGetRequest @GraphRequest -ErrorAction Stop
+                        $GraphRequestResults = New-GraphGetRequest @GraphRequest -ErrorAction Stop | Select-Object *, @{l = 'Tenant'; e = { $Tenant } }, @{l = 'CippStatus'; e = { 'Good' } }
                         if ($ReverseTenantLookup -and $GraphRequestResults) {
                             $TenantInfo = $GraphRequestResults.$ReverseTenantLookupProperty | Sort-Object -Unique | ForEach-Object {
                                 New-GraphGetRequest -uri "https://graph.microsoft.com/beta/tenantRelationships/findTenantInformationByTenantId(tenantId='$_')" -noauthcheck $true -asApp:$true -tenant $env:TenantId
