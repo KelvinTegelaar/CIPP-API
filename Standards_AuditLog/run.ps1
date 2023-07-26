@@ -1,10 +1,12 @@
 param($tenant)
 
+$DehydratedTenant = (New-ExoRequest -tenantid $Tenant -cmdlet "Get-OrganizationConfig").IsDehydrated
+if ($DehydratedTenant) {
+    New-ExoRequest -tenantid $Tenant -cmdlet "Enable-OrganizationCustomization"
+}
+    
 try {
-    $DehydratedTenant = (New-ExoRequest -tenantid $Tenant -cmdlet "Get-OrganizationConfig").IsDehydrated
-    if ($DehydratedTenant) {
-        New-ExoRequest -tenantid $Tenant -cmdlet "Enable-OrganizationCustomization"
-    }
+
     $AuditLogEnabled = (New-ExoRequest -tenantid $Tenant -cmdlet "Get-AdminAuditLogConfig").UnifiedAuditLogIngestionEnabled
     if ($AuditLogEnabled) {
         Write-LogMessage -API "Standards" -tenant $tenant -message "Unified Audit Log already enabled." -sev Info
