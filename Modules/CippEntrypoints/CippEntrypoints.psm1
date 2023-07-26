@@ -6,37 +6,17 @@ function Receive-CippHttpTrigger {
     $APIName = $TriggerMetadata.FunctionName
 
     $FunctionVerbs = @{
-        'Get'    = '^(:?Ext)?(?<APIName>List.+$)'
-        'Update' = '^(:?Ext)?(?<APIName>Edit.+$)'
-        'New'    = '^(:?Ext)?(?<APIName>Add.+$)'
+        'Get'    = '^(?<APIName>List.+$)'
+        'Update' = '^(?<APIName>Edit.+$)'
+        'New'    = '^(?<APIName>Add.+$)'
         'Invoke' = '^(?<APIName>Exec.+$)'
-    }
-
-    $PermissionActions = @{
-        'List' = 'readonly'
-        'Edit' = 'editor'
-        'Add'  = 'editor'
-        'Exec' = 'admin'
     }
 
     foreach ($FunctionVerb in $FunctionVerbs.Keys) {
         if ($APIName -match $FunctionVerbs.$FunctionVerb) {
             $FunctionName = '{0}-{1}' -f $FunctionVerb, $Matches.APIName
-            $ApiFunction = $Matches.APIName
-
-            foreach ($Action in $PermissionActions.Keys) {
-                if ($ApiFunction -match "^$Action") {
-                    $ApiPermission = $PermissionActions.$Action
-                    break
-                }
-            }
             break
         }
-    }
-
-    if ($APIName -match '^Ext') {
-        $AccessResult = Confirm-CippApiAccess -Request $Request -AccessLevel $ApiPermission
-        if (!$AccessResult.Authorized) { return }
     }
 
     $HttpTrigger = @{
