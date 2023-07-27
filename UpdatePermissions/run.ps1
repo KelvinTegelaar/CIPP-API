@@ -15,15 +15,19 @@ foreach ($Row in $Tenants ) {
     if (!$CPVRows) {
         Write-Output "No list available"
         Push-OutputBinding -Name Msg -Value $row.customerId
+        continue
     }
 
     if ($Row.customerId -notin $TenantList) {
         Write-Output "Not in the list: $($row.customerId)"
         Push-OutputBinding -Name Msg -Value $row.customerId
+        continue
+
     }
 
     if ($CPVRows | Where-Object { $_.Tenant -eq $row.customerId } | Where-Object { $_.LastApply -EQ $null -or (Get-Date $_.LastApply).AddDays(-14) -gt $currentUTCtime }) {
         Write-Output "In list, Old age."
         Push-OutputBinding -Name Msg -Value $row.customerId
+        continue
     }
 }
