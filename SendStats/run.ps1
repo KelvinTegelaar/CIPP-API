@@ -13,6 +13,7 @@ Set-Location (Get-Item $PSScriptRoot).Parent.FullName
 $APIVersion = Get-Content "version_latest.txt" | Out-String
 
 $SendingObject = [PSCustomObject]@{
+    rgid                = $env:WEBSITE_SITE_NAME
     SetupComplete       = $SetupComplete
     RunningVersionAPI   = $APIVersion.trim()
     CountOfTotalTenants = $tenantcount

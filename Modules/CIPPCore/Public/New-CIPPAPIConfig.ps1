@@ -9,6 +9,7 @@ function New-CIPPAPIConfig {
     )
     $null = Connect-AzAccount -Identity
     $currentapp = (Get-AzKeyVaultSecret -VaultName $ENV:WEBSITE_DEPLOYMENT_ID -Name "CIPPAPIAPP" -AsPlainText)
+    $subscription = $($ENV:WEBSITE_OWNER_NAME).Split('+')[0]
 
     try {
         if ($currentapp) {
@@ -27,18 +28,6 @@ function New-CIPPAPIConfig {
             Write-Host "Adding serviceprincipal"
             $ServicePrincipal = New-GraphPOSTRequest -uri "https://graph.microsoft.com/v1.0/serviceprincipals"  -NoAuthCheck $true -type POST -body "{`"accountEnabled`":true,`"appId`":`"$($APIApp.appId)`",`"displayName`":`"CIPP-API`",`"tags`":[`"WindowsAzureActiveDirectoryIntegratedApp`",`"AppServiceIntegratedApp`"]}"
         }
-        $subscription = $($ENV:WEBSITE_OWNER_NAME).Split('+')[0]
-        $CurrentSettings = New-GraphGetRequest -uri "https://management.azure.com/subscriptions/$($subscription)/resourceGroups/$ENV:WEBSITE_RESOURCE_GROUP/providers/Microsoft.Web/sites/$ENV:WEBSITE_SITE_NAME/Config/authsettingsV2/list?api-version=2018-11-01" -NoAuthCheck $true -scope "https://management.azure.com/.default"
-        Write-Host "setting settings"
-        $currentSettings.properties.identityProviders.azureActiveDirectory = @{
-            registration = @{
-                clientId     = $APIApp.appId
-                openIdIssuer = "https://sts.windows.net/$($ENV:TenantId)/v2.0"
-            }
-            validation   = @{
-                allowedAudiences = @("api://$($APIApp.appId)")
-            }
-        }
         if ($resetpassword) {
             Write-Host "Removing all old passwords"
             $RemovePasswords = New-GraphPOSTRequest -type Patch -uri "https://graph.microsoft.com/v1.0/applications/$($APIApp.id)/" -body '{"passwordCredentials":[]}' -NoAuthCheck $true
@@ -47,6 +36,17 @@ function New-CIPPAPIConfig {
             Write-LogMessage -user $ExecutingUser -API $APINAME -tenant 'None '-message "Reset CIPP API Password." -Sev "info"
         }
         else {
+            $CurrentSettings = New-GraphGetRequest -uri "https://management.azure.com/subscriptions/$($subscription)/resourceGroups/$ENV:WEBSITE_RESOURCE_GROUP/providers/Microsoft.Web/sites/$ENV:WEBSITE_SITE_NAME/Config/authsettingsV2/list?api-version=2018-11-01" -NoAuthCheck $true -scope "https://management.azure.com/.default"
+            Write-Host "setting settings"
+            $currentSettings.properties.identityProviders.azureActiveDirectory = @{
+                registration = @{
+                    clientId     = $APIApp.appId
+                    openIdIssuer = "https://sts.windows.net/$($ENV:TenantId)/v2.0"
+                }
+                validation   = @{
+                    allowedAudiences = @("api://$($APIApp.appId)")
+                }
+            }
             $currentBody = ConvertTo-Json -Depth 15 -InputObject ($currentSettings | Select-Object Properties)
             Write-Host "writing to Azure"
             $SetAPIAuth = New-GraphPOSTRequest -type "PUT" -uri "https://management.azure.com/subscriptions/$($subscription)/resourceGroups/$ENV:WEBSITE_RESOURCE_GROUP/providers/Microsoft.Web/sites/$ENV:WEBSITE_SITE_NAME/Config/authsettingsV2?api-version=2018-11-01" -scope "https://management.azure.com/.default" -NoAuthCheck $true -body $currentBody
