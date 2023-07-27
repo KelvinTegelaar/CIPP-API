@@ -5,13 +5,8 @@ function Get-ListGraphRequest {
 
     $APIName = $TriggerMetadata.FunctionName
 
-    if ($APIName -match '^Ext') {
-        $Message = 'Accessed this API | Endpoint: {0}' -f $Request.Query.Endpoint
-        Write-LogMessage -user $AccessResult.ClientId -API $APINAME -message $Message -Sev 'Debug'
-    } else {
-        $Message = 'Accessed this API | Endpoint: {0}' -f $Request.Query.Endpoint
-        Write-LogMessage -API $APINAME -message $Message -Sev 'Debug'
-    }
+    $Message = 'Accessed this API | Endpoint: {0}' -f $Request.Query.Endpoint
+    Write-LogMessage -API $APINAME -message $Message -Sev 'Debug'
 
     $CippLink = ([System.Uri]$TriggerMetadata.Headers.referer).PathAndQuery
 
