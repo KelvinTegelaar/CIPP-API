@@ -52,13 +52,13 @@ $GraphRequest = $ExpectedPermissions.requiredResourceAccess | ForEach-Object {
         "Could not set CPV permissions for $PermissionsName. Does the Tenant have a license for this API? Error: $($_.Exception.message)"
     }
 }
-$ourSVCPrincipal = New-GraphGETRequest -uri "https://graph.microsoft.com/beta/servicePrincipals(appId='$($ENV:applicationid)')" -tenantid $Tenantfilter
+$ourSVCPrincipal = New-GraphGETRequest -uri "https://graph.microsoft.com/beta/servicePrincipals(appId='$($ENV:applicationid)')" -tenantid $Tenantfilter.customerid
 
 # if the app svc principal exists, consent app permissions
 $apps = $ExpectedPermissions 
 $Grants = foreach ($App in $apps.requiredResourceAccess) {
     try {
-        $svcPrincipalId = New-GraphGETRequest -uri "https://graph.microsoft.com/v1.0/servicePrincipals(appId='$($app.resourceAppId)')" -tenantid $tenantfilter
+        $svcPrincipalId = New-GraphGETRequest -uri "https://graph.microsoft.com/v1.0/servicePrincipals(appId='$($app.resourceAppId)')" -tenantid $Tenantfilter.customerid
     }
     catch {
         continue
@@ -73,7 +73,7 @@ $Grants = foreach ($App in $apps.requiredResourceAccess) {
 } 
 foreach ($Grant in $grants) {
     try {
-        $SettingsRequest = New-GraphPOSTRequest -body ($grant | ConvertTo-Json) -uri "https://graph.microsoft.com/beta/servicePrincipals/$($ourSVCPrincipal.id)/appRoleAssignedTo" -tenantid $tenantfilter -type POST
+        $SettingsRequest = New-GraphPOSTRequest -body ($grant | ConvertTo-Json) -uri "https://graph.microsoft.com/beta/servicePrincipals/$($ourSVCPrincipal.id)/appRoleAssignedTo" -tenantid $Tenantfilter.customerid -type POST
     }
     catch {
         "Failed to grant $($grant.appRoleId) to $($grant.resourceId): $($_.Exception.Message). "
