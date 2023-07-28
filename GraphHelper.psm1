@@ -562,7 +562,11 @@ function New-ExoRequest ($tenantid, $cmdlet, $cmdParams, $useSystemMailbox, $Anc
         catch {
             $ErrorMess = $($_.Exception.Message) 
             $ReportedError = ($_.ErrorDetails | ConvertFrom-Json -ErrorAction SilentlyContinue)
-            $Message = if ($ReportedError.error.details.message) { $ReportedError.error.details.message } else { $ReportedError.error.innererror.internalException.message }
+            $Message = if ($ReportedError.error.details.message) {
+                $ReportedError.error.details.message 
+            }
+            elseif ($ReportedError.error.message) { $ReportedError.error.message } 
+            else { $ReportedError.error.innererror.internalException.message }
             if ($null -eq $Message) { $Message = $ErrorMess }
             throw $Message
         }
