@@ -551,9 +551,10 @@ function New-ExoRequest ($tenantid, $cmdlet, $cmdParams, $useSystemMailbox, $Anc
         }
         Write-Host "Using $Anchor"
         $Headers = @{
-            Authorization     = "Bearer $($token.access_token)"
-            Prefer            = 'odata.maxpagesize = 1000'
-            'X-AnchorMailbox' = $anchor
+            Authorization             = "Bearer $($token.access_token)"
+            Prefer                    = 'odata.maxpagesize = 1000'
+            'parameter-based-routing' = $true
+            'X-AnchorMailbox'         = $anchor
 
         }
         try {
