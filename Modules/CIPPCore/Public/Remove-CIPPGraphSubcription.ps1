@@ -9,9 +9,15 @@ function Remove-CIPPGraphSubscription {
     try {
         $WebhookTable = Get-CIPPTable -TableName webhookTable
         $WebhookRow = Get-AzDataTableEntity @WebhookTable | Where-Object { $_.RowKey -eq $CIPPID }
-        $OldID = (New-GraphGetRequest -uri "https://graph.microsoft.com/beta/subscriptions" -tenantid $TenantFilter) | Where-Object { $_.notificationUrl -eq $WebhookRow.WebhookNotificationUrl }
-        $GraphRequest = New-GraphPostRequest -uri "https://graph.microsoft.com/beta/subscriptions/$($oldId.ID)" -tenantid $TenantFilter -type DELETE -body {} -Verbose
-        $null = Remove-AzDataTableEntity @WebhookTable -Entity $WebhookRow
+        if ($WebhookRow.Resource -eq "M365AuditLogs") {
+            $AuditLog = New-GraphPOSTRequest -uri "https://manage.office.com/api/v1.0/$($TenantFilter)/activity/feed/subscriptions/stop?contentType=$($WebhookRow.EventType)" -tenantid $TenantFilter -type POST -body "{}" -verbose
+
+        }
+        else {
+            $OldID = (New-GraphGetRequest -uri "https://graph.microsoft.com/beta/subscriptions" -tenantid $TenantFilter) | Where-Object { $_.notificationUrl -eq $WebhookRow.WebhookNotificationUrl }
+            $GraphRequest = New-GraphPostRequest -uri "https://graph.microsoft.com/beta/subscriptions/$($oldId.ID)" -tenantid $TenantFilter -type DELETE -body {} -Verbose
+            $null = Remove-AzDataTableEntity @WebhookTable -Entity $WebhookRow
+        }
         return "Remove webhook subscription to $($GraphRequest.value.notificationUrl)" 
 
     }
