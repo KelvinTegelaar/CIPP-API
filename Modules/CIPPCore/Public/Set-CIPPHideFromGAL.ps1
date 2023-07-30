@@ -7,14 +7,11 @@ function Set-CIPPHideFromGAL {
         [bool]$HideFromGAL,
         $ExecutingUser
     )
-
+    $Text = if ($HideFromGAL) { "hidden" } else { "unhidden" }
     try {
-        $body = @{
-            showInAddressList = [bool]$HideFromGAL
-        } | ConvertTo-Json -Compress -Depth 1
-        $HideRequest = New-GraphPostRequest -uri "https://graph.microsoft.com/v1.0/users/$($userid)" -tenantid $tenantFilter -type PATCH -body $body -verbose
-        Write-LogMessage -user $ExecutingUser -API $APIName -message "Hid $($userid) from address list" -Sev "Info"  -tenant $TenantFilter
-        return "Hidden $($userid) from address list"
+        $Request = New-ExoRequest -tenantid $TenantFilter -cmdlet "Set-mailbox" -cmdParams @{Identity = $userid ; HiddenFromAddressListsEnabled = $HideFromGAL }
+        Write-LogMessage -user $ExecutingUser -API $APINAME -tenant $($tenantfilter) -message "$($userid) $Text from GAL" -Sev "Info"
+        return "Successfully $Text $($userid) from GAL."
     }
     catch {
         Write-LogMessage -user $ExecutingUser -API $APIName -message "Could not hide $($userid) from address list" -Sev "Error" -tenant $TenantFilter
