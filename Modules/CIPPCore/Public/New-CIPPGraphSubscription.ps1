@@ -26,7 +26,7 @@ function New-CIPPGraphSubscription {
                     "address" = "https://webhook.site/9650bc4a-0120-41de-8ffd-6616e71244e1/"
                 }
             } | ConvertTo-Json
-            $AuditLog = New-GraphPOSTRequest -uri "https://manage.office.com/api/v1.0/$($TenantFilter)/activity/feed/subscriptions/start?contentType=$EventType&PublisherIdentifier=$($TenantFilter)" -tenantid $TenantFilter -type POST -body $AuditLogparams -verbose
+            $AuditLog = New-GraphPOSTRequest -uri "https://manage.office.com/api/v1.0/$($TenantFilter)/activity/feed/subscriptions/start?contentType=$EventType&PublisherIdentifier=$($TenantFilter)" -tenantid $TenantFilter -type -scope "https://manage.office.com/.default" POST -body $AuditLogparams -verbose
             $WebhookRow = @{
                 PartitionKey           = [string]$TenantFilter
                 RowKey                 = [string]$CIPPID

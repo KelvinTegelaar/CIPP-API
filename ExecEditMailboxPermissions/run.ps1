@@ -79,6 +79,34 @@ foreach ($UserSendAs in $RemoveSendAs) {
     }
 }
 
+$AddSendOnBehalf = ($Request.body.AddSendOnBehalf).value
+
+foreach ($UserSendOnBehalf in $AddSendOnBehalf) { 
+    try {
+        $MailboxPerms = New-ExoRequest -Anchor $username -tenantid $Tenantfilter -cmdlet "Set-Mailbox" -cmdParams @{Identity = $userid; GrantSendonBehalfTo = @{'@odata.type' = '#Exchange.GenericHashTable'; add = $UserSendOnBehalf}; }
+        $results.add( "added $UserSendOnBehalf to $($username) with Send On Behalf Permissions")
+        Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME-message "Gave send on behalf permissions to $($UserSendOnBehalf) on $($username)" -Sev "Info" -tenant $TenantFilter
+    }
+    catch {
+        Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME-message "Could not add send on behalf permissions for $($UserSendOnBehalf) on $($username)" -Sev "Error" -tenant $TenantFilter
+        $results.add("Could not add send on behalf permissions for $($username). Error: $($_.Exception.Message)")
+    }
+}
+
+$RemoveSendOnBehalf = ($Request.body.RemoveSendOnBehalf).value
+
+foreach ($UserSendOnBehalf in $RemoveSendOnBehalf) { 
+    try {
+        $MailboxPerms = New-ExoRequest -Anchor $username -tenantid $Tenantfilter -cmdlet "Set-Mailbox" -cmdParams @{Identity = $userid; GrantSendonBehalfTo = @{'@odata.type' = '#Exchange.GenericHashTable'; remove = $UserSendOnBehalf}; }
+        $results.add( "Removed Send On Behalf Permissions $UserSendOnBehalf on $($username)")
+        Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME-message "Removed Send On Behalf Permissions to $($UserSendOnBehalf) on $($username)" -Sev "Info" -tenant $TenantFilter
+    }
+    catch {
+        Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME-message "Could not Remove send on behalf permissions for $($UserSendOnBehalf) on $($username)" -Sev "Error" -tenant $TenantFilter
+        $results.add("Could not remove send on behalf permissions for $($username). Error: $($_.Exception.Message)")
+    }
+}
+
 $body = [pscustomobject]@{"Results" = @($results) }
 
 # Associate values to output bindings by calling 'Push-OutputBinding'.
