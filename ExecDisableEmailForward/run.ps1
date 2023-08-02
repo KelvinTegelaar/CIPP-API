@@ -8,13 +8,9 @@ try {
     $Username = $request.body.user
     $Tenantfilter = $request.body.tenantfilter
     $Results = try {
-        $OoO = New-ExoRequest -tenantid $TenantFilter -cmdlet "Set-Mailbox" -cmdParams @{Identity = $request.body.user; ForwardingAddress = $null; ForwardingSMTPAddress = $null }
-        "Disabled Email forwarding $username"
-        Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME  -message "Disabled Email forwarding $($username)" -Sev "Info" -tenant $TenantFilter
-
+        Set-CIPPForwarding -userid $Request.body.user -tenantFilter $TenantFilter -APIName $APINAME -ExecutingUser $request.headers.'x-ms-client-principal' -Forward $null -keepCopy $false -ForwardingSMTPAddress $null -Disable $true
     }
     catch {
-        Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME  -message "Could not disable Email forwarding for $($username)" -Sev "Error" -tenant $TenantFilter
         "Could not disable forwarding message for $($username). Error: $($_.Exception.Message)"
     }
 
