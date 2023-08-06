@@ -5,7 +5,7 @@ param($Request, $TriggerMetadata)
 
 $APIName = $TriggerMetadata.FunctionName
 Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME  -message "Accessed this API" -Sev "Debug"
-Import-Module CippCore
+
 try {
     $Results = Remove-CIPPGraphSubscription -TenantFilter $Request.query.TenantFilter -CIPPID $Request.query.CIPPID
     $body = [pscustomobject]@{"Results" = $Results }
