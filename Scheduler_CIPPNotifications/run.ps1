@@ -78,6 +78,8 @@ catch {
   Write-Host "Could not send alerts to email: $($_.Exception.message)"
   Write-LogMessage -API 'Alerts' -message "Could not send alerts to : $($_.Exception.message)" -sev info
 }
+
+
 try {
   Write-Host $($config | ConvertTo-Json)
   Write-Host $config.webhook

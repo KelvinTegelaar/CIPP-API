@@ -18,7 +18,7 @@ function Remove-CIPPGraphSubscription {
             $GraphRequest = New-GraphPostRequest -uri "https://graph.microsoft.com/beta/subscriptions/$($oldId.ID)" -tenantid $TenantFilter -type DELETE -body {} -Verbose
             $null = Remove-AzDataTableEntity @WebhookTable -Entity $WebhookRow
         }
-        return "Remove webhook subscription to $($GraphRequest.value.notificationUrl)" 
+        return "Removed webhook subscription to $($GraphRequest.value.notificationUrl)" 
 
     }
     catch {
