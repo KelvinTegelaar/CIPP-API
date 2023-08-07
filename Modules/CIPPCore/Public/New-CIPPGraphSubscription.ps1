@@ -16,7 +16,7 @@ function New-CIPPGraphSubscription {
     $expiredate = (Get-Date).AddDays(1).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ss.fffZ")
     $params = @{
         changeType         = $TypeofSubscription
-        notificationUrl    = "$BaseURL?EventType=$EventType&CIPPID=$CIPPID"
+        notificationUrl    = "$BaseURL/API/PublicWebhooks?EventType=$EventType&CIPPID=$CIPPID"
         resource           = $Resource
         expirationDateTime = $expiredate
     } | ConvertTo-Json
@@ -26,9 +26,10 @@ function New-CIPPGraphSubscription {
         if ($auditLogAPI) {
             $AuditLogParams = @{
                 webhook = @{
-                    "address" = "$BaseURL?EventType=$EventType&CIPPID=$CIPPID"
+                    "address" = "$BaseURL/API/Publicwebhooks?EventType=$EventType&CIPPID=$CIPPID"
                 }
             } | ConvertTo-Json
+            Write-Host ($AuditLogParams)
             $AuditLog = New-GraphPOSTRequest -uri "https://manage.office.com/api/v1.0/$($TenantFilter)/activity/feed/subscriptions/start?contentType=$EventType&PublisherIdentifier=$($TenantFilter)" -tenantid $TenantFilter -type POST -scope "https://manage.office.com/.default" -body $AuditLogparams -verbose
             $WebhookRow = @{
                 PartitionKey           = [string]$TenantFilter

@@ -45,13 +45,14 @@ $Results = foreach ($Tenant in $tenants) {
         Add-AzDataTableEntity @Table -Entity $CompleteObject -Force
 
         $URL = ($request.headers.'x-ms-original-url').split('/api') | Select-Object -First 1
+        Write-Host $URL
         foreach ($eventype in $Request.body.EventTypes.value) {
             $params = @{
                 TenantFilter     = $tenant
                 auditLogAPI      = $true
                 operations       = ($Request.body.Operations.value -join ',')
                 allowedLocations = ($Request.body.AllowedLocations.value -join ',')
-                BaseURL          = $url
+                BaseURL          = $URL
                 EventType        = $Eventtype
                 ExecutingUser    = $Request.headers.'x-ms-client-principal'
             }
