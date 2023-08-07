@@ -5,11 +5,10 @@ param($Request, $TriggerMetadata)
 $WebhookTable = Get-CIPPTable -TableName webhookTable
 $Webhooks = Get-AzDataTableEntity @WebhookTable
 
-$WebhookAlertTable = Get-CIPPTable -TableName webhookAlertTable
-$WebhookAlerts = Get-AzDataTableEntity $WebhookAlertTable
 $url = ($request.headers.'x-ms-original-url').split('/api') | Select-Object -First 1
   
 if ($Request.CIPPID -in $Webhooks.CIPPID) {
+    $Webhookinfo = $Webhooks | Where-Object -Property CIPPID -EQ $Request.CIPPID
     if ($Request.query.ValidationToken -or $Request.body.validationCode) {
         $body = $request.query.ValidationToken
     }
@@ -25,8 +24,8 @@ if ($Request.CIPPID -in $Webhooks.CIPPID) {
     }
 
     foreach ($Item in $Data) {
-        if ($item.Operation -in $WebhookAlerts.Operation) {
-            Invoke-CippWebhookProcessing -TenantFilter $TenantFilter -Data $Data -CIPPPURL $url
+        if ($item.Operation -in ($Webhooks.Operation -split ',')) {
+            Invoke-CippWebhookProcessing -TenantFilter $TenantFilter -Data $Data -CIPPPURL $url -allowedlocations $Webhookinfo.AllowedLocations
         }
     }
 

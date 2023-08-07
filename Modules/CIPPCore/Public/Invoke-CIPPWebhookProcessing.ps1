@@ -4,13 +4,14 @@ function Invoke-CippWebhookProcessing {
         $TenantFilter,
         $Data,
         $Resource,
+        $AllowedLocations,
         $CIPPPURL,
         $APIName = "Process webhook",
         $ExecutingUser
     )
     $HTML = Get-Content "TemplateEmail.HTML" -Raw | Out-String
     $LocationTable = Get-CIPPTable -TableName knownlocationdb
-
+    $AllowedLocations = $AllowedLocations -split ','
     $GeoTable = Get-CIPPTable -TableName geoipdb
     if ($data.clientip) {
         ($Data.clientIp).split(':')[0].Split(".") | ForEach-Object { $IPAsint = 0; $IPAddressByte = 0 } {

@@ -4,7 +4,9 @@ function New-CIPPGraphSubscription {
         $TenantFilter,
         [bool]$auditLogAPI = $false,
         $TypeofSubscription,
+        $AllowedLocations,
         $BaseURL,
+        $operations,
         $Resource,
         $EventType,
         $APIName = "Create Webhook",
@@ -33,6 +35,8 @@ function New-CIPPGraphSubscription {
                 RowKey                 = [string]$CIPPID
                 EventType              = [string]$EventType
                 Resource               = "M365AuditLogs"
+                Operations             = [string]$operations
+                AllowedLocations       = [string]$AllowedLocations
                 Expiration             = "None"
                 WebhookNotificationUrl = [string]$Auditlog.webhook.address
             }
@@ -49,6 +53,8 @@ function New-CIPPGraphSubscription {
                 EventType              = [string]$EventType
                 Resource               = [string]$Resource
                 Expiration             = [string]$expiredate
+                Operations             = [string]$operations
+                AllowedLocations       = [string]$AllowedLocations
                 WebhookNotificationUrl = [string]$GraphRequest.notificationUrl
             }
             $null = Add-AzDataTableEntity @WebhookTable -Entity $WebhookRow
@@ -60,7 +66,7 @@ function New-CIPPGraphSubscription {
     }
     catch {
         Write-LogMessage -user $ExecutingUser -API $APIName -message "Failed to create Webhook Subscription: $($_.Exception.Message)" -Sev "Error" -tenant $TenantFilter
-        Return "Failed to create Webhook Subscription: $($_.Exception.Message)" 
+        Return "Failed to create Webhook Subscription for $($TenantFilter): $($_.Exception.Message)" 
     }
 
 }

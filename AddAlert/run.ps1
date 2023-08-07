@@ -42,14 +42,21 @@ $Results = foreach ($Tenant in $tenants) {
         }
 
         $Table = get-cipptable -TableName 'SchedulerConfig'
-        <#$TableRow = @{
-            table          = ()
-            property       = $CompleteObject
-            UpdateExisting = $true
-        }#>
-
-        #Add-AzTableRow @TableRow | Out-Null
         Add-AzDataTableEntity @Table -Entity $CompleteObject -Force
+
+        $URL = ($request.headers.'x-ms-original-url').split('/api') | Select-Object -First 1
+        foreach ($eventype in $Request.body.EventTypes.value) {
+            $params = @{
+                TenantFilter     = $tenant
+                auditLogAPI      = $true
+                operations       = ($Request.body.Operations.value -join ',')
+                allowedLocations = ($Request.body.AllowedLocations.value -join ',')
+                BaseURL          = $url
+                EventType        = $Eventtype
+                ExecutingUser    = $Request.headers.'x-ms-client-principal'
+            }
+            New-CIPPGraphSubscription @params
+        }
         "Successfully added Alert for $($Tenant) to queue."
         Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $tenant -message "Successfully added Alert for $($Tenant) to queue." -Sev 'Info'
     }
