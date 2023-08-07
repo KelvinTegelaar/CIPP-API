@@ -31,7 +31,7 @@ if ($Request.CIPPID -in $Webhooks.CIPPID) {
     foreach ($Item in $Data) {
         Write-Host "Data to process found."
 
-        if ($item.Operation -in ($Webhooks.Operation -split ',')) {
+        if ($item.Operation -in ($Webhookinfo.Operations -split ',')) {
             Write-Host "Working on $($item.operation)."
             Invoke-CippWebhookProcessing -TenantFilter $TenantFilter -Data $Data -CIPPPURL $url -allowedlocations $Webhookinfo.AllowedLocations
         }
