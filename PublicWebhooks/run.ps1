@@ -37,9 +37,10 @@ if ($Request.CIPPID -in $Webhooks.CIPPID) {
             Write-Host "Working on $($item.operation)."
             Invoke-CippWebhookProcessing -TenantFilter $TenantFilter -Data $Data -CIPPPURL $url -allowedlocations $Webhookinfo.AllowedLocations
         }
+        $body = "OK"
     }
 
-    $body = "OK"
+
 }
 else {
     $body = "This webhook is not authorized."
