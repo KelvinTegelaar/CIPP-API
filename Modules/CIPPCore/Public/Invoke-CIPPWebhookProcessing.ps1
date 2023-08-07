@@ -9,6 +9,8 @@ function Invoke-CippWebhookProcessing {
         $APIName = "Process webhook",
         $ExecutingUser
     )
+    Set-Location (Get-Item $PSScriptRoot).FullName
+
     $HTML = Get-Content "TemplateEmail.HTML" -Raw | Out-String
     $LocationTable = Get-CIPPTable -TableName knownlocationdb
     $AllowedLocations = $AllowedLocations -split ','
