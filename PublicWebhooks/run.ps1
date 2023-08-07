@@ -11,7 +11,7 @@ $url = ($request.headers.'x-ms-original-url').split('/api') | Select-Object -Fir
 if ($Request.CIPPID -in $Webhooks.CIPPID) {
     Write-Host "Found matching CIPPID"
 
-    $Webhookinfo = $Webhooks | Where-Object -Property CIPPID -EQ $Request.CIPPID
+    $Webhookinfo = $Webhooks | Where-Object -Property RowKey -EQ $Request.query.CIPPID
     Write-Host "Webhookinfo: $($Webhookinfo | ConvertTo-Json -Depth 10)"
     if ($Request.query.ValidationToken -or $Request.body.validationCode) {
         Write-Host "Validation token received"
