@@ -29,7 +29,7 @@ function Invoke-CippWebhookProcessing {
     if ($data.operation -eq "UserloggedIn" -and $data.UserType -eq 2) { $data.operation = "AdminLoggedIn" }
     if ($data.operation -eq "UserLoggedIn" -and $Country -notin $AllowedLocations) { $data.operation = "UserLoggedInFromUnknownLocation" }
     if ($data.operation -eq "UserLoggedIn" -and $Country -notin $PreviousLocations) { $data.operation = "UserLoggedInFromUnknownLocation" }
-
+    Write-Host "Selecting the Operation: $($data.operation)"
     switch ($data.Operation) {
         "New-InboxRule" { 
             $Title = "$($TenantFilter) - New Rule Detected for $($data.UserId)"
@@ -140,7 +140,7 @@ function Invoke-CippWebhookProcessing {
     }
     $HTML = "$HTML" -f $Title, $IntroText, $ButtonUrl, $ButtonText, $AfterButtonText
 
-    #Add IP and potential location to knownlocation db for this specific user
+    Write-Host "Add IP and potential location to knownlocation db for this specific user"
     if ($data.ClientIP) {
         $LocationInfo = @{
             RowKey          = [string]$data.ClientIP.Split(':')[0]
@@ -159,7 +159,10 @@ function Invoke-CippWebhookProcessing {
         PotentialCity    = $City
     } | ConvertTo-Json -Depth 15 -Compress
 
+    Write-Host "Sending alert to email"
     Send-CIPPAlert -Type 'email' -Title $title -HTMLContent $HTML
+    Write-Host "Sending alert to webhook"
     Send-CIPPAlert -Type 'webhook' -Title $title -JSONContent $JsonContent
+    Write-Host "Sending alert to PSA"
     Send-CIPPAlert -Type 'psa' -Title $title -HTMLContent $HTML
 }

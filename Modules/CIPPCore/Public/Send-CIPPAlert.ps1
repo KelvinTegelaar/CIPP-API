@@ -10,11 +10,12 @@ function Send-CIPPAlert {
         $APIName = "Send Alert",
         $ExecutingUser
     )
-
+    Write-Host "Shipping Alert"
     $Table = Get-CIPPTable -TableName SchedulerConfig
     $Filter = "RowKey eq 'CippNotifications' and PartitionKey eq 'CippNotifications'"
     $Config = [pscustomobject](Get-AzDataTableEntity @Table -Filter $Filter)
     if ($Type -eq 'email') {
+        Write-Host "Trying to send email"
         try {
             if ($Config.email -like '*@*') {
                 $Recipients = $Config.email.split(",").trim() | ForEach-Object { if ($_ -like '*@*') { [pscustomobject]@{EmailAddress = @{Address = $_ } } } }
@@ -41,7 +42,10 @@ function Send-CIPPAlert {
         }
 
     }
+    
     if ($Type -eq 'webhook') {
+        Write-Host "Trying to send webhook"
+
         try {
             if ($Config.webhook -ne '') {
                 switch -wildcard ($config.webhook) {
@@ -68,6 +72,8 @@ function Send-CIPPAlert {
             Write-LogMessage -API 'Alerts' -message "Could not send alerts to : $($_.Exception.message)" -sev info
         }
     }
+    Write-Host "Trying to send to PSA"
+
     if ($Type -eq 'psa') {
         if ($config.sendtoIntegration) {
             try {
