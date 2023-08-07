@@ -17,10 +17,8 @@ if ($Request.CIPPID -in $Webhooks.CIPPID) {
         Write-Host "Validation token received"
         $body = $request.query.ValidationToken
     }
-    Write-Host "Request body: $($request.body.gettype())"
     foreach ($ReceivedItem In ($Request.body)) {
         $ReceivedItem = [pscustomobject]$ReceivedItem
-        Write-Host "ContentUri received: $($ReceivedItem.ContentUri)"
         $TenantFilter = (Get-Tenants | Where-Object -Property customerId -EQ $ReceivedItem.TenantId).defaultDomainName
         Write-Host "TenantFilter: $TenantFilter"
         $Data = New-GraphPostRequest -type GET -uri "https://manage.office.com/api/v1.0/$($ReceivedItem.tenantId)/activity/feed/audit/$($ReceivedItem.contentid)" -tenantid $TenantFilter -scope "https://manage.office.com/.default"
