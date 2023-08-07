@@ -17,7 +17,7 @@ if ($Request.CIPPID -in $Webhooks.CIPPID) {
         Write-Host "Validation token received"
         $body = $request.query.ValidationToken
     }
-
+    Write-Host "Request body: $($request.body | ConvertTo-Json -Depth 10)"
     if ($Request.body.ContentUri) {
         Write-Host "ContentUri received"
         if ($Request.body.ContentUri -notlike "https://manage.office.com/api/v1.0/*") { exit }
