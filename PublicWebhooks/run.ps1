@@ -5,7 +5,7 @@ param($Request, $TriggerMetadata)
 $WebhookTable = Get-CIPPTable -TableName webhookTable
 $Webhooks = Get-AzDataTableEntity @WebhookTable
 Write-Host "Received request"
-Write-Host "CIPPID: $($request.CIPPID)"
+Write-Host "CIPPID: $($request.Query.CIPPID)"
 $url = ($request.headers.'x-ms-original-url').split('/api') | Select-Object -First 1
   
 if ($Request.CIPPID -in $Webhooks.CIPPID) {
