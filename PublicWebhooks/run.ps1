@@ -21,13 +21,9 @@ if ($Request.CIPPID -in $Webhooks.CIPPID) {
     foreach ($ReceivedItem In ($Request.body)) {
         $ReceivedItem = [pscustomobject]$ReceivedItem
         Write-Host "ContentUri received: $($ReceivedItem.ContentUri)"
-        if ($ReceivedItem.ContentUri -notlike "https://manage.office.com/api/v1.0/*") {
-            Write-Host "Potential url forgery detected. Quitting to not send headers."
-            exit
-        }
         $TenantFilter = (Get-Tenants | Where-Object -Property customerId -EQ $ReceivedItem.TenantId).defaultDomainName
         Write-Host "TenantFilter: $TenantFilter"
-        $Data = New-GraphPostRequest -type GET -uri $($ReceivedItem.contenturi) -tenantid $TenantFilter -scope "https://manage.office.com/.default"
+        $Data = New-GraphPostRequest -type GET -uri "https://manage.office.com/api/v1.0/$($ReceivedItem.tenantId)/activity/feed/audit/$($ReceivedItem.contentid)" -tenantid $TenantFilter -scope "https://manage.office.com/.default"
         Write-Host "Data to process found: $(($ReceivedItem.operation).count) items"
         $operations = $Webhookinfo.Operations -split ','
         Write-Host "Operations to process for this client: $($Webhookinfo.Operations)"
