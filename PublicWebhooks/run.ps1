@@ -18,9 +18,12 @@ if ($Request.CIPPID -in $Webhooks.CIPPID) {
         $body = $request.query.ValidationToken
     }
     Write-Host "Request body: $($request.body | ConvertTo-Json -Depth 10)"
-    if ($Request.body.ContentUri) {
+    if ($Request.body.contentUri -ne $null) {
         Write-Host "ContentUri received"
-        if ($Request.body.ContentUri -notlike "https://manage.office.com/api/v1.0/*") { exit }
+        if ($Request.body.ContentUri -notlike "https://manage.office.com/api/v1.0/*") {
+            Write-Host "Potential url forgery detected. Quitting to not send headers."
+            exit
+        }
         $TenantFilter = (Get-Tenants | Where-Object -Property customerId -EQ $Request.body.TenantId).defaultDomainName
         Write-Host "TenantFilter: $TenantFilter"
         $Data = New-GraphPostRequest -type GET -uri "$($request.body.contenturi)" -tenantid $TenantFilter -scope "https://manage.office.com/.default"
