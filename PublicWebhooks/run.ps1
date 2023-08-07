@@ -21,13 +21,15 @@ if ($Request.CIPPID -in $Webhooks.CIPPID) {
     if ($Request.body.ContentUri) {
         Write-Host "ContentUri received"
         if ($Request.body.ContentUri -notlike "https://manage.office.com/api/v1.0/*") { exit }
-        $TenantFilter = (Get-Tenants | Where-Object -Property customerId -EQ $Request.body.TenantID).defaultDomainName
+        $TenantFilter = (Get-Tenants | Where-Object -Property customerId -EQ $Request.body.TenantId).defaultDomainName
+        Write-Host "TenantFilter: $TenantFilter"
         $Data = New-GraphPostRequest -type GET -uri "$($request.body.contenturi)" -tenantid $TenantFilter -scope "https://manage.office.com/.default"
     }
     else {
         $TenantFilter = $Data.Tenant
         $Data = $Request.body
     }
+
     Write-Host "Data to process found: $(($data.operation).count) items"
     $operations = $Webhookinfo.Operations -split ','
     Write-Host "Operations to process for this client: $($Webhookinfo.Operations)"
