@@ -26,6 +26,7 @@ if ($Request.CIPPID -in $Webhooks.CIPPID) {
         $operations = $Webhookinfo.Operations -split ','
         Write-Host "Operations to process for this client: $($Webhookinfo.Operations)"
         foreach ($Item in $Data) {
+            Write-Host "Item: $($item | ConvertTo-Json -Depth 10)"
             Write-Host "Processing $($item.operation)"
             if ($item.Operation -in $operations) {
                 Write-Host "Working on $($item.operation)."
