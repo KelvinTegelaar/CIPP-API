@@ -53,7 +53,7 @@ $Results = foreach ($Tenant in $tenants) {
                 operations       = ($Request.body.Operations.value -join ',')
                 allowedLocations = ($Request.body.AllowedLocations.value -join ',')
                 BaseURL          = $URL
-                EventType        = $Eventtype
+                EventType        = $eventype
                 ExecutingUser    = $Request.headers.'x-ms-client-principal'
             }
             New-CIPPGraphSubscription @params
