@@ -34,7 +34,7 @@ if ($Request.CIPPID -in $Webhooks.CIPPID) {
             Write-Host "Processing $($item.operation)"
             if ($item.Operation -in $operations) {
                 Write-Host "Working on $($item.operation)."
-                Invoke-CippWebhookProcessing -TenantFilter $TenantFilter -Data $Data -CIPPPURL $url -allowedlocations $Webhookinfo.AllowedLocations
+                Invoke-CippWebhookProcessing -TenantFilter $TenantFilter -Data $Item -CIPPPURL $url -allowedlocations $Webhookinfo.AllowedLocations
             }
             $body = "OK"
         }
