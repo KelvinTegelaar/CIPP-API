@@ -19,7 +19,7 @@ if ($Request.CIPPID -in $Webhooks.CIPPID) {
     }
     Write-Host "Request body: $($request.body | ConvertTo-Json -Depth 10)"
     foreach ($ReceivedItem in $Request.body) {
-        Write-Host "ContentUri received"
+        Write-Host "ContentUri received: $($ReceivedItem.ContentUri)"
         if ($ReceivedItem.ContentUri -notlike "https://manage.office.com/api/v1.0/*") {
             Write-Host "Potential url forgery detected. Quitting to not send headers."
             exit
