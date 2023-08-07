@@ -18,27 +18,27 @@ if ($Request.CIPPID -in $Webhooks.CIPPID) {
         $body = $request.query.ValidationToken
     }
     Write-Host "Request body: $($request.body | ConvertTo-Json -Depth 10)"
-
-    Write-Host "ContentUri received"
-    if ($Request.body.ContentUri -notlike "https://manage.office.com/api/v1.0/*") {
-        Write-Host "Potential url forgery detected. Quitting to not send headers."
-        exit
-    }
-    $TenantFilter = (Get-Tenants | Where-Object -Property customerId -EQ $Request.body.TenantId).defaultDomainName
-    Write-Host "TenantFilter: $TenantFilter"
-    $Data = New-GraphPostRequest -type GET -uri "$($request.body.contenturi)" -tenantid $TenantFilter -scope "https://manage.office.com/.default"
-    Write-Host "Data to process found: $(($data.operation).count) items"
-    $operations = $Webhookinfo.Operations -split ','
-    Write-Host "Operations to process for this client: $($Webhookinfo.Operations)"
-    foreach ($Item in $Data) {
-        Write-Host "Processing $($item.operation)"
-        if ($item.Operation -in $operations) {
-            Write-Host "Working on $($item.operation)."
-            Invoke-CippWebhookProcessing -TenantFilter $TenantFilter -Data $Data -CIPPPURL $url -allowedlocations $Webhookinfo.AllowedLocations
+    foreach ($ReceivedItem in $Request.body) {
+        Write-Host "ContentUri received"
+        if ($ReceivedItem.ContentUri -notlike "https://manage.office.com/api/v1.0/*") {
+            Write-Host "Potential url forgery detected. Quitting to not send headers."
+            exit
         }
-        $body = "OK"
+        $TenantFilter = (Get-Tenants | Where-Object -Property customerId -EQ $ReceivedItem.TenantId).defaultDomainName
+        Write-Host "TenantFilter: $TenantFilter"
+        $Data = New-GraphPostRequest -type GET -uri $($ReceivedItem.contenturi) -tenantid $TenantFilter -scope "https://manage.office.com/.default"
+        Write-Host "Data to process found: $(($ReceivedItem.operation).count) items"
+        $operations = $Webhookinfo.Operations -split ','
+        Write-Host "Operations to process for this client: $($Webhookinfo.Operations)"
+        foreach ($Item in $Data) {
+            Write-Host "Processing $($item.operation)"
+            if ($item.Operation -in $operations) {
+                Write-Host "Working on $($item.operation)."
+                Invoke-CippWebhookProcessing -TenantFilter $TenantFilter -Data $Data -CIPPPURL $url -allowedlocations $Webhookinfo.AllowedLocations
+            }
+            $body = "OK"
+        }
     }
-
 
 }
 else {
