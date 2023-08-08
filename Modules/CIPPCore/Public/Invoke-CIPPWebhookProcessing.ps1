@@ -11,20 +11,13 @@ function Invoke-CippWebhookProcessing {
         $ExecutingUser
     )
     Set-Location (Get-Item $PSScriptRoot).FullName
-
+    #Create a RO connection or our central geoipdb
     $HTML = Get-Content "TemplateEmail.HTML" -Raw | Out-String
-    $LocationTable = Get-CIPPTable -TableName knownlocationdb
     $AllowedLocations = $AllowedLocations -split ','
-    $GeoTable = Get-CIPPTable -TableName geoipdb
     if ($data.clientip) {
-        ($Data.clientIp).split(':')[0].Split(".") | ForEach-Object { $IPAsint = 0; $IPAddressByte = 0 } {
-            [int]::TryParse($_, [ref] $IPAddressByte) | Out-Null
-            $IPAsint = $IPAsint -shl 8 -bor $IPAddressByte
-        }
-        $location = (Get-AzDataTableEntity @GeoTable -Filter "PartitionKey eq 'GeoIP' and RowKey le '$IPAsint' and ipTo ge '$IPAsint'") | Select-Object -First 1
+        Get-CIPPGeoIPLocation -IP $Request.Query.IP
         $Country = if ($Location.CountryOrRegion) { $Location.CountryOrRegion } else { "Unknown" }
         $City = if ($Location.City) { $Location.City } else { "Unknown" }
-
     }
     #Custom cipp operations.
     if ($data.operation -eq "UserloggedIn" -and $data.UserType -eq 2) { $data.operation = "AdminLoggedIn" }
@@ -140,7 +133,6 @@ function Invoke-CippWebhookProcessing {
             $ButtonUrl = "$CIPPPURL/identity/administration/ViewBec?userId=$($data.ObjectId)&tenantDomain=$($data.OrganizationName)"
             $ButtonText = "User Management"
             $AfterButtonText = "<p>If this is incorrect, use the user management screen to block the user and revoke the sessions</p>"
-
         }
 
     }
@@ -151,6 +143,7 @@ function Invoke-CippWebhookProcessing {
         $LocationInfo = @{
             RowKey          = [string]$data.ClientIP.Split(':')[0]
             PartitionKey    = [string]$data.UserId
+            Tenant          = [string]$TenantFilter
             CountryOrRegion = "$Country"
             City            = "$City"
         }
