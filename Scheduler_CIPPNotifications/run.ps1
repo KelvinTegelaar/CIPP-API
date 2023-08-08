@@ -7,17 +7,22 @@ $Config = [pscustomobject](Get-AzDataTableEntity @Table -Filter $Filter)
 
 $Settings = [System.Collections.ArrayList]@('Alerts')
 $Config.psobject.properties.name | ForEach-Object { $settings.add($_) } 
-
+$severity = $Config.Severity -split ','
+if (!$severity) {
+  $severity = [System.Collections.ArrayList]@('Info', 'Error', 'Warning', 'Critical', 'Alert')
+}
 $Table = Get-CIPPTable
-$PartitionKey = Get-Date -UFormat '%Y%m%d'
-$Filter = "PartitionKey eq '{0}'" -f $PartitionKey
-$Currentlog = Get-AzDataTableEntity @Table -Filter $Filter | Where-Object { $_.API -In $Settings -and $_.SentAsAlert -ne $true }
+$PartitionKey = Get-Date -UFormat '% Y%m%d'
+$Filter = "PartitionKey eq '{ 0 }'" -f $PartitionKey
+$Currentlog = Get-AzDataTableEntity @Table -Filter $Filter | Where-Object { 
+  $_.API -In $Settings -and $_.SentAsAlert -ne $true -and $_.Severity -In $severity
+}
 
 #email try
 try {
   if ($config.onePerTenant) {
     if ($Config.email -like '*@*' -and $null -ne $CurrentLog) {
-      $JSONRecipients = $Config.email.split(",").trim() | ForEach-Object { if ($_ -like '*@*') { '{"EmailAddress": {"Address": "' + $_ + '"}},' } }
+      $JSONRecipients = $Config.email.split(",").trim() | ForEach-Object { if ($_ -like '*@*') { '{ "EmailAddress": { "Address": "' + $_ + '" } }, ' } }
       $JSONRecipients = ([string]$JSONRecipients).Substring(0, ([string]$JSONRecipients).Length - 1)
       foreach ($tenant in ($CurrentLog.Tenant | Sort-Object -Unique)) {
         $HTMLLog = ($CurrentLog | Select-Object Message, API, Tenant, Username, Severity | Where-Object -Property tenant -EQ $tenant | ConvertTo-Html -frag) -replace '<table>', '<table class=blueTable>' | Out-String
@@ -47,7 +52,7 @@ try {
   }
   else {
     if ($Config.email -like '*@*' -and $null -ne $CurrentLog) {
-      $JSONRecipients = $Config.email.split(",").trim() | ForEach-Object { if ($_ -like '*@*') { '{"EmailAddress": {"Address": "' + $_ + '"}},' } }
+      $JSONRecipients = $Config.email.split(",").trim() | ForEach-Object { if ($_ -like '*@*') { '{ "EmailAddress": { "Address": "' + $_ + '" } }, ' } }
       $JSONRecipients = ([string]$JSONRecipients).Substring(0, ([string]$JSONRecipients).Length - 1)
       $HTMLLog = ($CurrentLog | Select-Object Message, API, Tenant, Username, Severity | ConvertTo-Html -frag) -replace '<table>', '<table class=blueTable>' | Out-String
       $JSONBody = @"
