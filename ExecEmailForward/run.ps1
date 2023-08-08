@@ -7,6 +7,7 @@ $Tenantfilter = $request.body.tenantfilter
 $ForwardingAddress = $request.body.ForwardInternal.value
 $ForwardingSMTPAddress = $request.body.ForwardExternal
 $DisableForwarding = $request.body.disableForwarding
+$APIName = $TriggerMetadata.FunctionName
 
 if ($ForwardingAddress) {
     try {

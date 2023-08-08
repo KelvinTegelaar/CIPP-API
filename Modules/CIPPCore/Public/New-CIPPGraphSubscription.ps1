@@ -4,6 +4,9 @@ function New-CIPPGraphSubscription {
         $TenantFilter,
         [bool]$auditLogAPI = $false,
         $TypeofSubscription,
+        $AllowedLocations,
+        $BaseURL,
+        $operations,
         $Resource,
         $EventType,
         $APIName = "Create Webhook",
@@ -13,7 +16,7 @@ function New-CIPPGraphSubscription {
     $expiredate = (Get-Date).AddDays(1).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ss.fffZ")
     $params = @{
         changeType         = $TypeofSubscription
-        notificationUrl    = "https://webhook.site/9650bc4a-0120-41de-8ffd-6616e71244e1?EventType=$EventType&CIPPID=$CIPPID"
+        notificationUrl    = "$BaseURL/API/PublicWebhooks?EventType=$EventType&CIPPID=$CIPPID"
         resource           = $Resource
         expirationDateTime = $expiredate
     } | ConvertTo-Json
@@ -23,15 +26,18 @@ function New-CIPPGraphSubscription {
         if ($auditLogAPI) {
             $AuditLogParams = @{
                 webhook = @{
-                    "address" = "https://webhook.site/9650bc4a-0120-41de-8ffd-6616e71244e1/"
+                    "address" = "$BaseURL/API/Publicwebhooks?EventType=$EventType&CIPPID=$CIPPID"
                 }
             } | ConvertTo-Json
-            $AuditLog = New-GraphPOSTRequest -uri "https://manage.office.com/api/v1.0/$($TenantFilter)/activity/feed/subscriptions/start?contentType=$EventType&PublisherIdentifier=$($TenantFilter)" -tenantid $TenantFilter -type -scope "https://manage.office.com/.default" POST -body $AuditLogparams -verbose
+            Write-Host ($AuditLogParams)
+            $AuditLog = New-GraphPOSTRequest -uri "https://manage.office.com/api/v1.0/$($TenantFilter)/activity/feed/subscriptions/start?contentType=$EventType&PublisherIdentifier=$($TenantFilter)" -tenantid $TenantFilter -type POST -scope "https://manage.office.com/.default" -body $AuditLogparams -verbose
             $WebhookRow = @{
                 PartitionKey           = [string]$TenantFilter
                 RowKey                 = [string]$CIPPID
                 EventType              = [string]$EventType
                 Resource               = "M365AuditLogs"
+                Operations             = [string]$operations
+                AllowedLocations       = [string]$AllowedLocations
                 Expiration             = "None"
                 WebhookNotificationUrl = [string]$Auditlog.webhook.address
             }
@@ -48,6 +54,8 @@ function New-CIPPGraphSubscription {
                 EventType              = [string]$EventType
                 Resource               = [string]$Resource
                 Expiration             = [string]$expiredate
+                Operations             = [string]$operations
+                AllowedLocations       = [string]$AllowedLocations
                 WebhookNotificationUrl = [string]$GraphRequest.notificationUrl
             }
             $null = Add-AzDataTableEntity @WebhookTable -Entity $WebhookRow
@@ -59,7 +67,7 @@ function New-CIPPGraphSubscription {
     }
     catch {
         Write-LogMessage -user $ExecutingUser -API $APIName -message "Failed to create Webhook Subscription: $($_.Exception.Message)" -Sev "Error" -tenant $TenantFilter
-        Return "Failed to create Webhook Subscription: $($_.Exception.Message)" 
+        Return "Failed to create Webhook Subscription for $($TenantFilter): $($_.Exception.Message)" 
     }
 
 }

@@ -26,6 +26,9 @@ $results = try {
     foreach ($logvalue in [pscustomobject]$Request.body.logsToInclude) {
         $SchedulerConfig[([pscustomobject]$logvalue.value)] = $true 
     }
+    foreach ($severityvalue in [pscustomobject]$Request.body.Severity) {
+        $SchedulerConfig[([pscustomobject]$severityvalue.value)] = $true 
+    }
 
 
     Add-AzDataTableEntity @Table -Entity $SchedulerConfig -Force | Out-Null
