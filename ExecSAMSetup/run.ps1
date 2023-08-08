@@ -116,6 +116,12 @@ try {
                                     catch {
                                           Write-Host "didn't deploy spn for defender, probably already there."
                                     }
+                                    try {
+                                          $SPNTeams = (Invoke-RestMethod "https://graph.microsoft.com/v1.0/servicePrincipals" -Headers @{ authorization = "Bearer $($Token.Access_Token)" } -Method POST -Body "{ `"appId`": `"48ac35b8-9aa8-4d74-927d-1f4a14a0b239`" }" -ContentType 'application/json')
+                                    }
+                                    catch {
+                                          Write-Host "didn't deploy spn for Teams, probably already there."
+                                    }
                                     $SPN = (Invoke-RestMethod "https://graph.microsoft.com/v1.0/servicePrincipals" -Headers @{ authorization = "Bearer $($Token.Access_Token)" } -Method POST -Body "{ `"appId`": `"$($AppId.appId)`" }" -ContentType 'application/json')
                                     Start-Sleep 3
                                     $GroupID = (Invoke-RestMethod "https://graph.microsoft.com/v1.0/groups?`$filter=startswith(displayName,'AdminAgents')" -Headers @{ authorization = "Bearer $($Token.Access_Token)" } -Method Get -ContentType 'application/json').value.id

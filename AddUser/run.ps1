@@ -89,21 +89,8 @@ catch {
     $body = $results.add("We've failed to create the Aliases: $($_.Exception.Message)")
 }
 if ($Request.body.CopyFrom -ne "") {
-    $MemberIDs = "https://graph.microsoft.com/v1.0/directoryObjects/" + (New-GraphGetRequest -uri "https://graph.microsoft.com/beta/users/$($GraphRequest.id)" -tenantid $Userobj.tenantid).id 
-    $addmemberbody = "{ `"members@odata.bind`": $(ConvertTo-Json @($MemberIDs)) }"
-        (New-GraphGETRequest -uri "https://graph.microsoft.com/beta/users/$($Request.body.CopyFrom)/memberOf" -tenantid $Userobj.tenantid) | ForEach-Object {
-        try {
-            Write-Host "name: $($_.displayName)"
-            $GroupResult = New-GraphPostRequest -uri "https://graph.microsoft.com/beta/groups/$($_.id)" -tenantid $Userobj.tenantid -type patch -body $addmemberbody -Verbose
-            Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME  -message "Added $($UserprincipalName) to group $($_.displayName)" -Sev "Info"  -tenant $TenantFilter
-            $body = $results.add("Added group: $($_.displayName)")
-        }
-        catch {
-            $body = $results.add("We've failed to add the group $($_.displayName): $($_.Exception.Message)")
-            Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $($userobj.tenantid) -message "Group adding failed for group $($_.displayName):  $($_.Exception.Message)" -Sev "Error"
-        }
-    }
-
+    $CopyFrom = Set-CIPPCopyGroupMembers -ExecutingUser $request.headers.'x-ms-client-principal' -tenantid $Userobj.tenantid -CopyFromId $Request.body.CopyFrom -UserID $UserprincipalName -TenantFilter $Userobj.tenantid
+    $results.AddRange($CopyFrom) 
 }
 $body = @{"Results" = @($results) }
 # Associate values to output bindings by calling 'Push-OutputBinding'.

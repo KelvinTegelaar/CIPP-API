@@ -1,5 +1,12 @@
 [
   {
+    "description": "Allows Exchange Management as app",
+    "displayName": "Manage Exchange As Application ",
+    "id": "dc50a0fb-09a3-484d-be87-e023b12c6440",
+    "origin": "Application (Office 365 Exchange Online)",
+    "value": "Exchange.ManageAsApp"
+  },
+  {
     "description": "Allows the app to read a basic set of profile properties of other users in your organization without a signed-in user. Includes display name, first and last name, email address, open extensions, and photo.",
     "displayName": "Read all users' basic profiles",
     "id": "97235f07-e226-4f63-ace3-39588e11d3a1",
@@ -5278,6 +5285,15 @@
     "userConsentDescription": "Have full control of all site collections",
     "userConsentDisplayName": "Allows the app to have full control of all site collections on your behalf.",
     "value": "AllSites.FullControl"
+  },
+  {
+    "description": "Allows to read the LAPs passwords.",
+    "displayName": "Manage LAPs passwords",
+    "id": "280b3b69-0437-44b1-bc20-3b2fca1ee3e9",
+    "Origin": "Delegated",
+    "userConsentDescription": "Allows to read the LAPs passwords.",
+    "userConsentDisplayName": "Manage LAPs passwords",
+    "value": "DeviceLocalCredential.Read.All"
   },
   {
     "description": "Access Microsoft Teams and Skype for Business data as the signed in user",

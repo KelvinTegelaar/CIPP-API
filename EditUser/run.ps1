@@ -42,16 +42,17 @@ try {
     }
     $GraphRequest = New-GraphPostRequest -uri "https://graph.microsoft.com/beta/users/$($userobj.Userid)" -tenantid $Userobj.tenantid -type PATCH -body $BodyToship  -verbose
     $results.add( "Success. The user has been edited." )
+    Write-LogMessage -API $APINAME -tenant ($UserObj.tenantid) -user $request.headers.'x-ms-client-principal' -message "Edited user $($userobj.displayname) with id $($userobj.Userid)" -Sev "Info"
     if ($userobj.password) {
         $passwordProfile = [pscustomobject]@{"passwordProfile" = @{ "password" = $userobj.password; "forceChangePasswordNextSignIn" = [boolean]$UserObj.mustchangepass } } | ConvertTo-Json
         $GraphRequest = New-GraphPostRequest -uri "https://graph.microsoft.com/beta/users/$($userobj.Userid)" -tenantid $Userobj.tenantid -type PATCH -body $PasswordProfile  -verbose
         $results.add("Success. The password has been set to $($userobj.password)")
+        Write-LogMessage -API $APINAME -tenant ($UserObj.tenantid) -user $request.headers.'x-ms-client-principal' -message "Reset $($userobj.displayname)'s Password" -Sev "Info"
     }
 }
 catch {
     Write-LogMessage -API $APINAME -tenant ($UserObj.tenantid) -user $request.headers.'x-ms-client-principal' -message "User edit API failed. $($_.Exception.Message)" -Sev "Error"
     $results.add( "Failed to edit user. $($_.Exception.Message)")
-    Write-LogMessage -API $APINAME -tenant ($UserObj.tenantid) -user $request.headers.'x-ms-client-principal' -message "Edited user $($userobj.displayname) with id $($userobj.Userid)" -Sev "Info"
 }
 
 
@@ -98,22 +99,8 @@ catch {
 }
 
 if ($Request.body.CopyFrom -ne "") {
-    $MemberIDs = "https://graph.microsoft.com/v1.0/directoryObjects/" + (New-GraphGetRequest -uri "https://graph.microsoft.com/beta/users/$($userobj.Userid)" -tenantid $Userobj.tenantid).id 
-    $addmemberbody = "{ `"members@odata.bind`": $(ConvertTo-Json @($MemberIDs)) }"
-        (New-GraphPostRequest -uri "https://graph.microsoft.com/beta/users/$($Request.body.CopyFrom)/GetMemberGroups" -tenantid $Userobj.tenantid -type POST -body  '{"securityEnabledOnly": false}').value | ForEach-Object {
-        try {
-            $groupname = (New-GraphGetRequest -tenantid $Userobj.tenantid  -uri "https://graph.microsoft.com/beta/groups/$($_)").displayName
-            Write-Host "name: $groupname"
-            $GroupResult = New-GraphPostRequest -uri "https://graph.microsoft.com/beta/groups/$($_)" -tenantid $Userobj.tenantid -type patch -body $addmemberbody -ErrorAction Stop
-            Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME  -message "Added $($UserprincipalName) to group $groupresult.displayName)" -Sev "Info"  -tenant $TenantFilter
-            $body = $results.add("Added group: $($groupname)")
-        }
-        catch {
-            $body = $results.add("We've failed to add the group $($groupname): $($_.Exception.Message)")
-            Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $($userobj.tenantid) -message "Failed to add group. $($_.Exception.Message)" -Sev "Error"
-        }
-    }
-
+    $CopyFrom = Set-CIPPCopyGroupMembers -ExecutingUser $request.headers.'x-ms-client-principal' -tenantid $Userobj.tenantid -CopyFromId $Request.body.CopyFrom -UserID $user -TenantFilter  $Userobj.tenantid
+    $results.AddRange($CopyFrom)
 }
 $body = @{"Results" = @($results) }
 # Associate values to output bindings by calling 'Push-OutputBinding'.
