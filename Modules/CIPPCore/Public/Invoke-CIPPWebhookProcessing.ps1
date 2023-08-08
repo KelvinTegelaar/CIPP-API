@@ -4,6 +4,7 @@ function Invoke-CippWebhookProcessing {
         $TenantFilter,
         $Data,
         $Resource,
+        $Operations,
         $AllowedLocations,
         $CIPPPURL,
         $APIName = "Process webhook",
@@ -28,8 +29,13 @@ function Invoke-CippWebhookProcessing {
     #Custom cipp operations.
     if ($data.operation -eq "UserloggedIn" -and $data.UserType -eq 2) { $data.operation = "AdminLoggedIn" }
     if ($data.operation -eq "UserLoggedIn" -and $Country -notin $AllowedLocations) { $data.operation = "UserLoggedInFromUnknownLocation" }
-    if ($data.operation -eq "UserLoggedIn" -and $Country -notin $PreviousLocations) { $data.operation = "UserLoggedInFromUnknownLocation" }
-    Write-Host "Selecting the Operation: $($data.operation)"
+
+    #Check if the operation is allowed for this webhook.
+    if ($data.operation -notin $Operations) { 
+        Write-Host "No need to process this operation."
+        return "" 
+    }
+    
     switch ($data.Operation) {
         "New-InboxRule" { 
             $Title = "$($TenantFilter) - New Rule Detected for $($data.UserId)"

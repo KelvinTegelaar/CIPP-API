@@ -12,7 +12,6 @@ if ($Request.CIPPID -in $Webhooks.CIPPID) {
     Write-Host "Found matching CIPPID"
 
     $Webhookinfo = $Webhooks | Where-Object -Property RowKey -EQ $Request.query.CIPPID
-    Write-Host "Webhookinfo: $($Webhookinfo | ConvertTo-Json -Depth 10)"
     if ($Request.query.ValidationToken -or $Request.body.validationCode) {
         Write-Host "Validation token received"
         $body = $request.query.ValidationToken
@@ -26,12 +25,8 @@ if ($Request.CIPPID -in $Webhooks.CIPPID) {
         $operations = $Webhookinfo.Operations -split ','
         Write-Host "Operations to process for this client: $($Webhookinfo.Operations)"
         foreach ($Item in $Data) {
-            Write-Host "Item: $($item | ConvertTo-Json -Depth 10)"
             Write-Host "Processing $($item.operation)"
-            if ($item.Operation -in $operations) {
-                Write-Host "Working on $($item.operation)."
-                Invoke-CippWebhookProcessing -TenantFilter $TenantFilter -Data $Item -CIPPPURL $url -allowedlocations $Webhookinfo.AllowedLocations
-            }
+            Invoke-CippWebhookProcessing -TenantFilter $TenantFilter -Data $Item -CIPPPURL $url -allowedlocations $Webhookinfo.AllowedLocations -Operations $operations
             $body = "OK"
         }
     }
