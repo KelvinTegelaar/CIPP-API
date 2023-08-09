@@ -139,8 +139,9 @@ function Invoke-CippWebhookProcessing {
     $HTML = "$HTML" -f $Title, $IntroText, $ButtonUrl, $ButtonText, $AfterButtonText
 
     Write-Host "Add IP and potential location to knownlocation db for this specific user"
-    $IP = $data.ClientIP.Split(':') | Select-Object -Last 1
+    
     if ($data.ClientIP) {
+        $IP = $data.ClientIP.Split(':') | Select-Object -Last 1
         $LocationInfo = @{
             RowKey          = [string]$ip
             PartitionKey    = [string]$data.UserId
