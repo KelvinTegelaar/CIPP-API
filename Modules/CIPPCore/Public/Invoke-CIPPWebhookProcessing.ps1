@@ -17,7 +17,7 @@ function Invoke-CippWebhookProcessing {
     if ($data.clientip) {
         $Location = Get-CIPPGeoIPLocation -IP $data.clientip
         $Country = if ($Location.countryCode) { $Location.CountryCode } else { "Unknown" }
-        $City = if ($Location.cityName) { $Location.cityName } else { "Unknown" }
+        $City = if ($Location.cityyName) { $Location.cityyName } else { "Unknown" }
     }
     #Custom cipp operations.
     if ($data.operation -eq "UserloggedIn" -and $data.UserType -eq 2) { $data.operation = "AdminLoggedIn" }
