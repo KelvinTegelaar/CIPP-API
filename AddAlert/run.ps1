@@ -47,14 +47,14 @@ $Results = foreach ($Tenant in $tenants) {
         $URL = ($request.headers.'x-ms-original-url').split('/api') | Select-Object -First 1
         if ($Tenant -eq 'AllTenants') {
             Get-Tenants | ForEach-Object {
-                foreach ($eventype in $Request.body.EventTypes.value) {
+                foreach ($eventType in $Request.body.EventTypes.value) {
                     $params = @{
                         TenantFilter     = $_.defaultDomainName
                         auditLogAPI      = $true
                         operations       = ($Request.body.Operations.value -join ',')
                         allowedLocations = ($Request.body.AllowedLocations.value -join ',')
                         BaseURL          = $URL
-                        EventType        = $eventype
+                        EventType        = $eventType
                         ExecutingUser    = $Request.headers.'x-ms-client-principal'
                     }
                     New-CIPPGraphSubscription @params
@@ -62,16 +62,18 @@ $Results = foreach ($Tenant in $tenants) {
             }
         }
         else {
-            $params = @{
-                TenantFilter     = $tenant
-                auditLogAPI      = $true
-                operations       = ($Request.body.Operations.value -join ',')
-                allowedLocations = ($Request.body.AllowedLocations.value -join ',')
-                BaseURL          = $URL
-                EventType        = $eventype
-                ExecutingUser    = $Request.headers.'x-ms-client-principal'
+            foreach ($eventType in $Request.body.EventTypes.value) {
+                $params = @{
+                    TenantFilter     = $tenant
+                    auditLogAPI      = $true
+                    operations       = ($Request.body.Operations.value -join ',')
+                    allowedLocations = ($Request.body.AllowedLocations.value -join ',')
+                    BaseURL          = $URL
+                    EventType        = $eventType
+                    ExecutingUser    = $Request.headers.'x-ms-client-principal'
+                }
+                New-CIPPGraphSubscription @params
             }
-            New-CIPPGraphSubscription @params
         }
         "Successfully added Alert for $($Tenant) to queue."
         Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $tenant -message "Successfully added Alert for $($Tenant) to queue." -Sev 'Info'
