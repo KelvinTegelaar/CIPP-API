@@ -157,11 +157,12 @@ function Invoke-CippWebhookProcessing {
         PotentialCountry = $Country
         PotentialCity    = $City
     } | ConvertTo-Json -Depth 15 -Compress
-
-    Write-Host "Sending alert to email"
-    Send-CIPPAlert -Type 'email' -Title $title -HTMLContent $HTML
-    Write-Host "Sending alert to webhook"
-    Send-CIPPAlert -Type 'webhook' -Title $title -JSONContent $JsonContent
-    Write-Host "Sending alert to PSA"
-    Send-CIPPAlert -Type 'psa' -Title $title -HTMLContent $HTML
+    if ($Title) {
+        Write-Host "Sending alert to email"
+        Send-CIPPAlert -Type 'email' -Title $title -HTMLContent $HTML
+        Write-Host "Sending alert to webhook"
+        Send-CIPPAlert -Type 'webhook' -Title $title -JSONContent $JsonContent
+        Write-Host "Sending alert to PSA"
+        Send-CIPPAlert -Type 'psa' -Title $title -HTMLContent $HTML
+    }
 }
