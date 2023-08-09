@@ -19,6 +19,9 @@ function Invoke-CippWebhookProcessing {
         $Country = if ($Location.countryCode) { $Location.CountryCode } else { "Unknown" }
         $City = if ($Location.cityName) { $Location.cityName } else { "Unknown" }
     }
+    #Database for knownlocations
+    $LocationTable = Get-CIPPTable -TableName 'knownlocationdb'
+
     #Custom cipp operations.
     if ($data.operation -eq "UserloggedIn" -and $data.UserType -eq 2) { $data.operation = "AdminLoggedIn" }
     if ($data.operation -eq "UserLoggedIn" -and $Country -notin $AllowedLocations) { $data.operation = "UserLoggedInFromUnknownLocation" }
@@ -141,7 +144,6 @@ function Invoke-CippWebhookProcessing {
     Write-Host "Add IP and potential location to knownlocation db for this specific user"
     
     if ($data.ClientIP) {
-        $LocationTable = Get-CIPPTable -TableName 'knownlocationdb'
         $IP = $data.ClientIP.Split(':') | Select-Object -Last 1
         $LocationInfo = @{
             RowKey          = [string]$ip
