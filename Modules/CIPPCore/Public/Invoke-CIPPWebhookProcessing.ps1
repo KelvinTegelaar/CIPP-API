@@ -15,9 +15,9 @@ function Invoke-CippWebhookProcessing {
     $HTML = Get-Content "TemplateEmail.HTML" -Raw | Out-String
     $AllowedLocations = $AllowedLocations -split ','
     if ($data.clientip) {
-        Get-CIPPGeoIPLocation -IP $Request.Query.IP
-        $Country = if ($Location.CountryOrRegion) { $Location.CountryOrRegion } else { "Unknown" }
-        $City = if ($Location.City) { $Location.City } else { "Unknown" }
+        $Location = Get-CIPPGeoIPLocation -IP $data.clientip
+        $Country = if ($Location.countryCode) { $Location.CountryCode } else { "Unknown" }
+        $City = if ($Location.cityName) { $Location.cityName } else { "Unknown" }
     }
     #Custom cipp operations.
     if ($data.operation -eq "UserloggedIn" -and $data.UserType -eq 2) { $data.operation = "AdminLoggedIn" }
