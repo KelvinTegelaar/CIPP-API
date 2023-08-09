@@ -141,6 +141,7 @@ function Invoke-CippWebhookProcessing {
     Write-Host "Add IP and potential location to knownlocation db for this specific user"
     
     if ($data.ClientIP) {
+        $LocationTable = Get-CIPPTable -TableName 'knownlocationdb'
         $IP = $data.ClientIP.Split(':') | Select-Object -Last 1
         $LocationInfo = @{
             RowKey          = [string]$ip
