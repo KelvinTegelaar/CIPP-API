@@ -23,7 +23,7 @@ function Invoke-CippWebhookProcessing {
     $LocationTable = Get-CIPPTable -TableName 'knownlocationdb'
 
     Write-Host "Result status $($data.ResultStatus)"
-    Write-Host "Result status detail $($data.ExtendedProperties.ResultStatusDetai)"
+    Write-Host "Result status detail $($data.ExtendedProperties.ResultStatusDetail)"
     Write-Host "country: $Country"
     switch ($data.operation) {
         { "UserLoggedIn" -eq $data.operation -and $Country -notin $AllowedLocations -and $data.ResultStatus -eq "Success" -and $data.ExtendedProperties.ResultStatusDetail -eq "Success" } { $data.operation = "UserLoggedInFromUnknownLocation"; break }
