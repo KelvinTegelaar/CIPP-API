@@ -30,8 +30,8 @@ function Invoke-CippWebhookProcessing {
     #Custom cipp operations.
     Write-Host "Processing $($data.operation)"
     switch ($data.operation) {
-        { "UserLoggedIn" -eq $data.operation -and $Country -notin $AllowedLocations -and $data.ResultStatus -eq "Success" } { $data.operation = "UserLoggedInFromUnknownLocation"; break }
-        { "UserloggedIn" -eq $data.operation -and $data.UserType -eq 2 -and $data.ResultStatus -eq "Success" } { $data.operation = "AdminLoggedIn"; break }
+        { "UserLoggedIn" -eq $data.operation -and $Country -notin $AllowedLocations -and $data.ResultStatus -eq "Success" -and $data.ExtendedProperties.resultstatusdetail -eq "Success" } { $data.operation = "UserLoggedInFromUnknownLocation"; break }
+        { "UserloggedIn" -eq $data.operation -and $data.UserType -eq 2 -and $data.ResultStatus -eq "Success" -and $data.ExtendedProperties.resultstatusdetail -eq "Success" } { $data.operation = "AdminLoggedIn"; break }
         default { break }
     }
 
