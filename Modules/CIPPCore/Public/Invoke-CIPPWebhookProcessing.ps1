@@ -23,8 +23,8 @@ function Invoke-CippWebhookProcessing {
     $LocationTable = Get-CIPPTable -TableName 'knownlocationdb'
 
     $TableObj = [PSCustomObject]::new()
-    $Data.ExtendedProperties | ForEach-Object { $TableObj | Add-Member -NotePropertyName $_.Name -NotePropertyValue $_.Value }
-    $Data.DeviceProperties | ForEach-Object { $TableObj | Add-Member -NotePropertyName $_.Name -NotePropertyValue $_.Value }
+    if ( $Data.ExtendedProperties) { $Data.ExtendedProperties | ForEach-Object { $TableObj | Add-Member -NotePropertyName $_.Name -NotePropertyValue $_.Value } }
+    if ($Data.DeviceProperties) { $Data.DeviceProperties | ForEach-Object { $TableObj | Add-Member -NotePropertyName $_.Name -NotePropertyValue $_.Value } }
     $Data.parameters | ForEach-Object { $TableObj | Add-Member -NotePropertyName $_.Name -NotePropertyValue $_.Value }
     switch ($data.operation) {
         { "UserLoggedIn" -eq $data.operation -and $Country -notin $AllowedLocations -and $data.ResultStatus -eq "Success" -and $TableObj.ExtendedProperties.ResultStatusDetail -eq "Success" } { $data.operation = "UserLoggedInFromUnknownLocation"; break }
