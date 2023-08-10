@@ -25,7 +25,7 @@ function Invoke-CippWebhookProcessing {
     #Custom cipp operations.
     switch ($data.operation) {
         { "UserloggedIn" -and $data.UserType -eq 2 } { $data.operation = "AdminLoggedIn"; break }
-        { "UserLoggedIn" -and @($Country) -notin $AllowedLocations } { $data.operation = "UserLoggedInFromUnknownLocation" ; break }
+        { "UserLoggedIn" -and $Country -notin $AllowedLocations } { $data.operation = "UserLoggedInFromUnknownLocation" ; break }
         default { break }
     }
     #Check if the operation is allowed for this webhook.
