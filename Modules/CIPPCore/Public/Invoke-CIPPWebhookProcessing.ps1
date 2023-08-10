@@ -21,13 +21,21 @@ function Invoke-CippWebhookProcessing {
     }
     #Database for knownlocations
     $LocationTable = Get-CIPPTable -TableName 'knownlocationdb'
-
+    Write-Host "Processing $($data.operation)"
+    Write-Host "Country: $Country"
+    Write-Host "City: $City"
+    Write-Host "AllowedLocations: $AllowedLocations"
+    Write-Host "Operations: $Operations"
+    Write-Host "Allowed: $($Country -in $AllowedLocations)"
     #Custom cipp operations.
+    Write-Host "Processing $($data.operation)"
     switch ($data.operation) {
-        { "UserloggedIn" -and $data.UserType -eq 2 } { $data.operation = "AdminLoggedIn"; break }
         { "UserLoggedIn" -and $Country -notin $AllowedLocations } { $data.operation = "UserLoggedInFromUnknownLocation" ; break }
+        { "UserloggedIn" -and $data.UserType -eq 2 } { $data.operation = "AdminLoggedIn"; break }
         default { break }
     }
+
+    Write-Host "Processing $($data.operation)"
     #Check if the operation is allowed for this webhook.
     if ($data.operation -notin $Operations) { 
         Write-Host "No need to process this operation."
