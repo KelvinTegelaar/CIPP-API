@@ -30,8 +30,8 @@ function Invoke-CippWebhookProcessing {
     #Custom cipp operations.
     Write-Host "Processing $($data.operation)"
     switch ($data.operation) {
-        { "UserLoggedIn" -and $Country -notin $AllowedLocations } { $data.operation = "UserLoggedInFromUnknownLocation" ; break }
-        { "UserloggedIn" -and $data.UserType -eq 2 } { $data.operation = "AdminLoggedIn"; break }
+        { "UserLoggedIn" -eq $data.operation -and $Country -notin $AllowedLocations -and $data.ResultStatus -eq "Success" } { $data.operation = "UserLoggedInFromUnknownLocation"; break }
+        { "UserloggedIn" -eq $data.operation -and $data.UserType -eq 2 -and $data.ResultStatus -eq "Success" } { $data.operation = "AdminLoggedIn"; break }
         default { break }
     }
 
@@ -121,7 +121,7 @@ function Invoke-CippWebhookProcessing {
             $AfterButtonText = "<p>If this is incorrect, use the user management screen to unblock the users sign-in</p>"
 
         }
-        { "AdminLoggedIn" -and $data.ResultStatus -eq "Success" } {
+        "AdminLoggedIn" {
             $TableObj = [PSCustomObject]::new()
             $Data.ExtendedProperties | ForEach-Object { $TableObj | Add-Member -NotePropertyName $_.Name -NotePropertyValue $_.Value }
             $Data.DeviceProperties | ForEach-Object { $TableObj | Add-Member -NotePropertyName $_.Name -NotePropertyValue $_.Value }
@@ -135,7 +135,7 @@ function Invoke-CippWebhookProcessing {
             $AfterButtonText = "<p>If this is incorrect, use the user management screen to block the user and revoke the sessions</p>"
 
         }
-        { "UserLoggedInFromUnknownLocation" -and $data.ResultStatus -eq "Success" } {
+        "UserLoggedInFromUnknownLocation" {
             $TableObj = [PSCustomObject]::new()
             $Data.ExtendedProperties | ForEach-Object { $TableObj | Add-Member -NotePropertyName $_.Name -NotePropertyValue $_.Value }
             $Data.DeviceProperties | ForEach-Object { $TableObj | Add-Member -NotePropertyName $_.Name -NotePropertyValue $_.Value }
