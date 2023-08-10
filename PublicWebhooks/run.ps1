@@ -12,6 +12,7 @@ if ($Request.CIPPID -in $Webhooks.CIPPID) {
     Write-Host "Found matching CIPPID"
 
     $Webhookinfo = $Webhooks | Where-Object -Property RowKey -EQ $Request.query.CIPPID
+    $operations = $Webhookinfo.Operations -split ','
     if ($Request.query.ValidationToken -or $Request.body.validationCode) {
         Write-Host "Validation token received"
         $body = $request.query.ValidationToken
@@ -22,7 +23,6 @@ if ($Request.CIPPID -in $Webhooks.CIPPID) {
         Write-Host "TenantFilter: $TenantFilter"
         $Data = New-GraphPostRequest -type GET -uri "https://manage.office.com/api/v1.0/$($ReceivedItem.tenantId)/activity/feed/audit/$($ReceivedItem.contentid)" -tenantid $TenantFilter -scope "https://manage.office.com/.default"
         Write-Host "Data to process found: $(($ReceivedItem.operation).count) items"
-        $operations = $Webhookinfo.Operations -split ','
         Write-Host "Operations to process for this client: $($Webhookinfo.Operations)"
         foreach ($Item in $Data) {
             Write-Host "Processing $($item.operation)"
