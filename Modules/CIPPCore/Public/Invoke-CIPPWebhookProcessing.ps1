@@ -21,7 +21,7 @@ function Invoke-CippWebhookProcessing {
     }
     #Database for knownlocations
     $LocationTable = Get-CIPPTable -TableName 'knownlocationdb'
-
+    Write-Host $Country
     $TableObj = [PSCustomObject]::new()
     if ( $Data.ExtendedProperties) { $Data.ExtendedProperties | ForEach-Object { $TableObj | Add-Member -NotePropertyName $_.Name -NotePropertyValue $_.Value } }
     if ($Data.DeviceProperties) { $Data.DeviceProperties | ForEach-Object { $TableObj | Add-Member -NotePropertyName $_.Name -NotePropertyValue $_.Value } }
