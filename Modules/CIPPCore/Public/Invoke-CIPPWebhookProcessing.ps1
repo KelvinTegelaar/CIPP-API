@@ -25,7 +25,8 @@ function Invoke-CippWebhookProcessing {
     #Custom cipp operations.
     switch ($data.operation) {
         { "UserloggedIn" -and $data.UserType -eq 2 } { $data.operation = "AdminLoggedIn"; break }
-        { "UserLoggedIn" -and $Country -notin $AllowedLocations } { $data.operation = "UserLoggedInFromUnknownLocation" ; break }
+        { "UserLoggedIn" -and @($Country) -notin $AllowedLocations } { $data.operation = "UserLoggedInFromUnknownLocation" ; break }
+        default { break }
     }
     #Check if the operation is allowed for this webhook.
     if ($data.operation -notin $Operations) { 
@@ -33,7 +34,7 @@ function Invoke-CippWebhookProcessing {
         return "" 
     }
     #Make URL frontend URL:
-    $CIPPPURL = $CIPPURL -split '/API' | select-object -first 1
+    $CIPPPURL = $CIPPURL -split '/API' | Select-Object -First 1
     switch ($data.Operation) {
         "New-InboxRule" { 
             $Title = "$($TenantFilter) - New Rule Detected for $($data.UserId)"
