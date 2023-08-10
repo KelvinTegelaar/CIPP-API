@@ -10,7 +10,15 @@ function Invoke-CippWebhookProcessing {
         $APIName = "Process webhook",
         $ExecutingUser
     )
+    Set-Location (Get-Item $PSScriptRoot).FullName
 
+    $HTML = Get-Content "TemplateEmail.HTML" -Raw | Out-String
+    $AllowedLocations = $AllowedLocations -split ','
+    if ($data.clientip) {
+        $Location = Get-CIPPGeoIPLocation -IP $data.clientip
+        $Country = if ($Location.countryCode) { $Location.CountryCode } else { "Unknown" }
+        $City = if ($Location.cityName) { $Location.cityName } else { "Unknown" }
+    }
     $TableObj = [PSCustomObject]::new()
     if ($Data.ExtendedProperties) { $Data.ExtendedProperties | ForEach-Object { $TableObj | Add-Member -NotePropertyName $_.Name -NotePropertyValue $_.Value } }
     if ($Data.DeviceProperties) { $Data.DeviceProperties | ForEach-Object { $TableObj | Add-Member -NotePropertyName $_.Name -NotePropertyValue $_.Value } }
@@ -27,15 +35,7 @@ function Invoke-CippWebhookProcessing {
         Write-Host "No need to process this operation."
         return "" 
     }
-    Set-Location (Get-Item $PSScriptRoot).FullName
-
-    $HTML = Get-Content "TemplateEmail.HTML" -Raw | Out-String
-    $AllowedLocations = $AllowedLocations -split ','
-    if ($data.clientip) {
-        $Location = Get-CIPPGeoIPLocation -IP $data.clientip
-        $Country = if ($Location.countryCode) { $Location.CountryCode } else { "Unknown" }
-        $City = if ($Location.cityName) { $Location.cityName } else { "Unknown" }
-    }
+ 
     #Database for knownlocations
     $LocationTable = Get-CIPPTable -TableName 'knownlocationdb'
 
