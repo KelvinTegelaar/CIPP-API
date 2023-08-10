@@ -23,9 +23,10 @@ function Invoke-CippWebhookProcessing {
     $LocationTable = Get-CIPPTable -TableName 'knownlocationdb'
 
     #Custom cipp operations.
-    if ($data.operation -eq "UserloggedIn" -and $data.UserType -eq 2) { $data.operation = "AdminLoggedIn" }
-    if ($data.operation -eq "UserLoggedIn" -and $Country -notin $AllowedLocations) { $data.operation = "UserLoggedInFromUnknownLocation" }
-
+    switch ($data.operation) {
+        { "UserloggedIn" -and $data.UserType -eq 2 } { $data.operation = "AdminLoggedIn"; break }
+        { "UserLoggedIn" -and $Country -notin $AllowedLocations } { $data.operation = "UserLoggedInFromUnknownLocation" ; break }
+    }
     #Check if the operation is allowed for this webhook.
     if ($data.operation -notin $Operations) { 
         Write-Host "No need to process this operation."
@@ -110,7 +111,7 @@ function Invoke-CippWebhookProcessing {
             $AfterButtonText = "<p>If this is incorrect, use the user management screen to unblock the users sign-in</p>"
 
         }
-        "AdminLoggedIn" {
+        { "AdminLoggedIn" -and $data.ResultStatus -eq "Success" } {
             $TableObj = [PSCustomObject]::new()
             $Data.ExtendedProperties | ForEach-Object { $TableObj | Add-Member -NotePropertyName $_.Name -NotePropertyValue $_.Value }
             $Data.DeviceProperties | ForEach-Object { $TableObj | Add-Member -NotePropertyName $_.Name -NotePropertyValue $_.Value }
@@ -124,7 +125,7 @@ function Invoke-CippWebhookProcessing {
             $AfterButtonText = "<p>If this is incorrect, use the user management screen to block the user and revoke the sessions</p>"
 
         }
-        "UserLoggedInFromUnknownLocation" {
+        { "UserLoggedInFromUnknownLocation" -and $data.ResultStatus -eq "Success" } {
             $TableObj = [PSCustomObject]::new()
             $Data.ExtendedProperties | ForEach-Object { $TableObj | Add-Member -NotePropertyName $_.Name -NotePropertyValue $_.Value }
             $Data.DeviceProperties | ForEach-Object { $TableObj | Add-Member -NotePropertyName $_.Name -NotePropertyValue $_.Value }
