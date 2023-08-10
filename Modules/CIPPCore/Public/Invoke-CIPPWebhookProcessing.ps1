@@ -27,8 +27,8 @@ function Invoke-CippWebhookProcessing {
     if ($Data.DeviceProperties) { $Data.DeviceProperties | ForEach-Object { $TableObj | Add-Member -NotePropertyName $_.Name -NotePropertyValue $_.Value } }
     if ($Data.parameters) { $Data.parameters | ForEach-Object { $TableObj | Add-Member -NotePropertyName $_.Name -NotePropertyValue $_.Value } }
     switch ($data.operation) {
-        { "UserLoggedIn" -eq $data.operation -and $Country -notin $AllowedLocations -and $data.ResultStatus -eq "Success" -and $TableObj.ExtendedProperties.ResultStatusDetail -eq "Success" } { $data.operation = "UserLoggedInFromUnknownLocation"; break }
-        { "UserloggedIn" -eq $data.operation -and $data.UserType -eq 2 -and $data.ResultStatus -eq "Success" -and $TableObj.ExtendedProperties.ResultStatusDetail -eq "Success" } { $data.operation = "AdminLoggedIn"; break }
+        { "UserLoggedIn" -eq $data.operation -and $Country -notin $AllowedLocations -and $data.ResultStatus -eq "Success" -and $TableObj.ResultStatusDetail -eq "Success" } { $data.operation = "UserLoggedInFromUnknownLocation"; break }
+        { "UserloggedIn" -eq $data.operation -and $data.UserType -eq 2 -and $data.ResultStatus -eq "Success" -and $TableObj.ResultStatusDetail -eq "Success" } { $data.operation = "AdminLoggedIn"; break }
         default { break }
     }
 
