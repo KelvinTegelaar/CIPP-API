@@ -23,8 +23,10 @@ function Invoke-CippWebhookProcessing {
     $LocationTable = Get-CIPPTable -TableName 'knownlocationdb'
 
     Write-Host "Result status $($data.ResultStatus)"
-    Write-Host "Result status detail $($data.ExtendedProperties.ResultStatusDetail)"
+    Write-Host "Result status detail $($data.ExtendedProperties['ResultStatusDetail'])"
+    Write-Host "Extended properties as json: $($data.ExtendedProperties | ConvertTo-Json -Depth 10)"
     Write-Host "country: $Country"
+
     switch ($data.operation) {
         { "UserLoggedIn" -eq $data.operation -and $Country -notin $AllowedLocations -and $data.ResultStatus -eq "Success" -and $data.ExtendedProperties.ResultStatusDetail -eq "Success" } { $data.operation = "UserLoggedInFromUnknownLocation"; break }
         { "UserloggedIn" -eq $data.operation -and $data.UserType -eq 2 -and $data.ResultStatus -eq "Success" -and $data.ExtendedProperties.ResultStatusDetail -eq "Success" } { $data.operation = "AdminLoggedIn"; break }
@@ -36,8 +38,7 @@ function Invoke-CippWebhookProcessing {
         Write-Host "No need to process this operation."
         return "" 
     }
-    #Make URL frontend URL:
-    $CIPPPURL = $CIPPURL -split '/API' | Select-Object -First 1
+    
     switch ($data.Operation) {
         "New-InboxRule" { 
             $Title = "$($TenantFilter) - New Rule Detected for $($data.UserId)"
