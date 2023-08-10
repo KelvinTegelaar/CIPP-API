@@ -8,16 +8,18 @@ $Config = [pscustomobject](Get-AzDataTableEntity @Table -Filter $Filter)
 $Settings = [System.Collections.ArrayList]@('Alerts')
 $Config.psobject.properties.name | ForEach-Object { $settings.add($_) } 
 $severity = $Config.Severity -split ','
+Write-Host "Our Severity table is: $severity"
 if (!$severity) {
   $severity = [System.Collections.ArrayList]@('Info', 'Error', 'Warning', 'Critical', 'Alert')
 }
+Write-Host "Our Severity table is: $severity"
 $Table = Get-CIPPTable
-$PartitionKey = Get-Date -UFormat '% Y%m%d'
-$Filter = "PartitionKey eq '{ 0 }'" -f $PartitionKey
+$PartitionKey = Get-Date -UFormat '%Y%m%d'
+$Filter = "PartitionKey eq '{0}'" -f $PartitionKey
 $Currentlog = Get-AzDataTableEntity @Table -Filter $Filter | Where-Object { 
   $_.API -In $Settings -and $_.SentAsAlert -ne $true -and $_.Severity -In $severity
 }
-
+Write-Host ($Currentlog).count
 #email try
 try {
   if ($config.onePerTenant) {
