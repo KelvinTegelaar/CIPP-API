@@ -32,7 +32,8 @@ function Invoke-CippWebhookProcessing {
         Write-Host "No need to process this operation."
         return "" 
     }
-    
+    #Make URL frontend URL:
+    $CIPPPURL = $CIPPURL -split '/API' | select-object -first 1
     switch ($data.Operation) {
         "New-InboxRule" { 
             $Title = "$($TenantFilter) - New Rule Detected for $($data.UserId)"
