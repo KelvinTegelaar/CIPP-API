@@ -148,6 +148,9 @@ function Invoke-CippWebhookProcessing {
             $ButtonText = "User Management"
             $AfterButtonText = "<p>If this is incorrect, use the user management screen to block the user and revoke the sessions</p>"
         }
+        default {
+            break
+        }
 
     }
     $HTML = "$HTML" -f $Title, $IntroText, $ButtonUrl, $ButtonText, $AfterButtonText
