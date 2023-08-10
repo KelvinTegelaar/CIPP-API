@@ -11,7 +11,7 @@ function Invoke-CippWebhookProcessing {
         $ExecutingUser
     )
     Set-Location (Get-Item $PSScriptRoot).FullName
-    #Create a RO connection or our central geoipdb
+
     $HTML = Get-Content "TemplateEmail.HTML" -Raw | Out-String
     $AllowedLocations = $AllowedLocations -split ','
     if ($data.clientip) {
@@ -26,6 +26,7 @@ function Invoke-CippWebhookProcessing {
     if ( $Data.ExtendedProperties) { $Data.ExtendedProperties | ForEach-Object { $TableObj | Add-Member -NotePropertyName $_.Name -NotePropertyValue $_.Value } }
     if ($Data.DeviceProperties) { $Data.DeviceProperties | ForEach-Object { $TableObj | Add-Member -NotePropertyName $_.Name -NotePropertyValue $_.Value } }
     if ($Data.parameters) { $Data.parameters | ForEach-Object { $TableObj | Add-Member -NotePropertyName $_.Name -NotePropertyValue $_.Value } }
+    Write-Host ($TableObj | ConvertTo-Json -Depth 10)
     switch ($data.operation) {
         { "UserLoggedIn" -eq $data.operation -and $Country -notin $AllowedLocations -and $data.ResultStatus -eq "Success" -and $TableObj.ResultStatusDetail -eq "Success" } { $data.operation = "UserLoggedInFromUnknownLocation"; break }
         { "UserloggedIn" -eq $data.operation -and $data.UserType -eq 2 -and $data.ResultStatus -eq "Success" -and $TableObj.ResultStatusDetail -eq "Success" } { $data.operation = "AdminLoggedIn"; break }
