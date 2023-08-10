@@ -107,8 +107,8 @@ function Invoke-CippWebhookProcessing {
         }
 
         "Reset user password." {
-            $Title = "$($TenantFilter) - $($data.UserId) has had their password reset"
-            $IntroText = "$($data.UserId) has had their password reset."
+            $Title = "$($TenantFilter) - $($data.ObjectId) has had their password reset"
+            $IntroText = "$($data.ObjectId) has had their password reset by $($data.userId)."
             $ButtonUrl = "$CIPPPURL/identity/administration/users?customerId=$($data.OrganizationId)"   
             $ButtonText = "User Management"
             $AfterButtonText = "<p>If this is incorrect, use the user management screen to unblock the users sign-in</p>"
