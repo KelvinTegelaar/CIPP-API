@@ -65,6 +65,7 @@ $Grants = foreach ($App in $apps.requiredResourceAccess) {
         continue
     }
     foreach ($SingleResource in $app.ResourceAccess | Where-Object -Property Type -EQ "Role") {
+        if ($singleresource.id -In $currentroles.appRoleId) { continue }
         [pscustomobject]@{
             principalId = $($ourSVCPrincipal.id)
             resourceId  = $($svcPrincipalId.id)
