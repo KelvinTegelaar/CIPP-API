@@ -44,7 +44,23 @@ function Invoke-CippWebhookProcessing {
 
     #Check if the operation is allowed for this webhook.
     if ($data.operation -notin $Operations) { 
-        Write-Host "No need to process this operation."
+        Write-Host "No need to process this operation, but we're saving the IP for future"
+        Write-Host "Add IP and potential location to knownlocation db for this specific user"
+    
+        if ($data.ClientIP) {
+            $IP = $data.ClientIP
+            if ($IP -match '^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}:\d+$') {
+                $IP = $IP -replace ':\d+$', '' # Remove the port number if present
+            }
+            $LocationInfo = @{
+                RowKey          = [string]$ip
+                PartitionKey    = [string]$data.UserId
+                Tenant          = [string]$TenantFilter
+                CountryOrRegion = "$Country"
+                City            = "$City"
+            }
+            $null = Add-AzDataTableEntity @LocationTable -Entity $LocationInfo -Force
+        }
         return "" 
     }
 
