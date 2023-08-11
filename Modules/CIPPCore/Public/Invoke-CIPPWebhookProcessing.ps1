@@ -19,7 +19,7 @@ function Invoke-CippWebhookProcessing {
     if ($data.Userkey -eq "Not Available") { $data.Userkey = $data.userId }
     if ($data.clientip) {
         #First we perform a lookup in the knownlocationdb table to see if we have a location for this IP address.
-        $Location = Get-AzDataTableEntity @LocationTable -Filter "RowKey eq '$($data.clientip)' and PartitionKey eq 'knownlocationdb'"
+        $Location = Get-AzDataTableEntity @LocationTable -Filter "RowKey eq '$($data.clientip)'" | Select-Object -Last 1
         #If we have a location, we use that. If not, we perform a lookup in the GeoIP database.
         if ($Location) {
             $Country = $Location.CountryOrRegion
@@ -154,7 +154,10 @@ function Invoke-CippWebhookProcessing {
     Write-Host "Add IP and potential location to knownlocation db for this specific user"
     
     if ($data.ClientIP) {
-        $IP = $data.ClientIP.Split(':') | Select-Object -Last 1
+        $IP = $data.ClientIP
+        if ($IP -match '^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}:\d+$') {
+            $IP = $IP -replace ':\d+$', '' # Remove the port number if present
+        }
         $LocationInfo = @{
             RowKey          = [string]$ip
             PartitionKey    = [string]$data.UserId
