@@ -233,7 +233,7 @@ function New-GraphPOSTRequest ($uri, $tenantid, $body, $type, $scope, $AsApp, $N
             #setting ErrorMess because the error from a failed json conversion overwrites the exception.
             $ErrorMess = $($_.Exception.Message) 
             try {
-                $Message = ($_.ErrorDetails.Message | ConvertFrom-Json -ErrorAction SilentlyContinue).error.message
+                $Message = ($_.ErrorDetails.Message | ConvertFrom-Json -ErrorAction Stop).error.message
             }
             catch {
                 $Message = $ErrorMess
