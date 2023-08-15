@@ -22,7 +22,7 @@ $AddRow = foreach ($Template in $templates) {
         LastRefresh  = [string]$(Get-Date (Get-Date).ToUniversalTime() -UFormat '+%Y-%m-%dT%H:%M:%S.000Z')
     }
     foreach ($field in $Template.Data.Fields) {
-     
+        if ($field.UseExistingInfo) { continue }
         if ($Field.Where) { $filterscript = [scriptblock]::Create($Field.Where) } else { $filterscript = { $true } }
         try {
             switch ($field.API) {
