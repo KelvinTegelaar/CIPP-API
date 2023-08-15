@@ -34,12 +34,12 @@ function Send-CIPPAlert {
                 $JSONBody = ConvertTo-Json -Compress -Depth 10 -InputObject $PowerShellBody
                 New-GraphPostRequest -uri 'https://graph.microsoft.com/v1.0/me/sendMail' -tenantid $env:TenantID -NoAuthCheck $true -type POST -body ($JSONBody)
             }
-            Write-LogMessage -API 'Alerts' -message "Sent a webhook alert to email: $Title" -sev info
+            Write-LogMessage -API 'Webhook Alerts' -message "Sent a webhook alert to email: $Title" -sev info
    
         }
         catch {
             Write-Host "Could not send webhook alert to email: $($_.Exception.message)"
-            Write-LogMessage -API 'Alerts' -message "Could not send webhook alerts to email. $($_.Exception.message)" -sev info
+            Write-LogMessage -API 'Webhook Alerts' -message "Could not send webhook alerts to email. $($_.Exception.message)" -sev info
         }
 
     }
@@ -66,12 +66,12 @@ function Send-CIPPAlert {
                 }
 
             }
-            Write-LogMessage -API 'Alerts' -message "Sent Webhook alert $title to External webhook" -sev info
+            Write-LogMessage -API 'Webhook Alerts' -message "Sent Webhook alert $title to External webhook" -sev info
 
         }
         catch {
             Write-Host "Could not send alerts to webhook: $($_.Exception.message)"
-            Write-LogMessage -API 'Alerts' -message "Could not send alerts to : $($_.Exception.message)" -sev info
+            Write-LogMessage -API 'Webhook Alerts' -message "Could not send alerts to : $($_.Exception.message)" -sev info
         }
     }
     Write-Host "Trying to send to PSA"
@@ -86,12 +86,12 @@ function Send-CIPPAlert {
                     AlertTitle = "$($Title)"
                 }
                 New-CippExtAlert -Alert $Alert
-                Write-LogMessage -API 'Alerts' -message "Sent PSA alert $title" -sev info
+                Write-LogMessage -API 'Webhook Alerts' -message "Sent PSA alert $title" -sev info
 
             }
             catch {
                 Write-Host "Could not send alerts to ticketing system: $($_.Exception.message)"
-                Write-LogMessage -API 'Alerts' -message "Could not send alerts to : $($_.Exception.message)" -sev info
+                Write-LogMessage -API 'Webhook Alerts' -message "Could not send alerts to : $($_.Exception.message)" -sev info
             }
         }
     }

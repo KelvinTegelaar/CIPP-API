@@ -63,6 +63,9 @@ $ourSVCPrincipal = New-GraphGETRequest -uri "https://graph.microsoft.com/beta/se
 
 # if the app svc principal exists, consent app permissions
 $apps = $ExpectedPermissions 
+#get current roles
+$CurrentRoles = New-GraphGETRequest -uri "https://graph.microsoft.com/beta/servicePrincipals/$($ourSVCPrincipal.id)/appRoleAssignments" -tenantid $tenantfilter
+#If 
 $Grants = foreach ($App in $apps.requiredResourceAccess) {
     try {
         $svcPrincipalId = New-GraphGETRequest -uri "https://graph.microsoft.com/v1.0/servicePrincipals(appId='$($app.resourceAppId)')" -tenantid $tenantfilter
@@ -71,6 +74,7 @@ $Grants = foreach ($App in $apps.requiredResourceAccess) {
         continue
     }
     foreach ($SingleResource in $app.ResourceAccess | Where-Object -Property Type -EQ "Role") {
+        if ($singleresource.id -In $currentroles.appRoleId) { continue }
         [pscustomobject]@{
             principalId = $($ourSVCPrincipal.id)
             resourceId  = $($svcPrincipalId.id)
@@ -91,5 +95,5 @@ $StatusCode = [HttpStatusCode]::OK
 # Associate values to output bindings by calling 'Push-OutputBinding'.
 Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
         StatusCode = $StatusCode
-        Body       = @($GraphRequest)
+        Body       = @(@{Results = $GraphRequest })
     })
