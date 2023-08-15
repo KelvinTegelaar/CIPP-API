@@ -73,42 +73,39 @@ $AddRow = foreach ($Template in $templates) {
         catch {
             Write-Host "Error getting $($field.Name) in $($field.api) for $($TenantName.displayName) with GUID $($TenantName.customerId). Error: $($_.Exception.Message)"
             Write-LogMessage -API "BPA" -tenant $tenant -message "Error getting $($field.Name) for $($TenantName.displayName) with GUID $($TenantName.customerId). Error: $($_.Exception.Message)" -sev Error
-            $fieldinfo = $null
+            $fieldinfo = "FAILED"
+            $field.StoreAs = "string"
+        } 
+        try {
+            switch -Wildcard ($field.StoreAs) {
+                "*bool" {
+                    if ($field.ExtractFields.Count -gt 1) {
+                        Write-LogMessage  -API "BPA" -tenant $tenant -message "The BPA only supports 1 field for a bool. $($field.ExtractFields.Count) fields were specified." -sev Error
+                        break
+                    }
+                    if ($null -eq $FieldInfo.$($field.ExtractFields)) { $FieldInfo = $false }
+
+                    $Result.Add($field.Name, [bool]$FieldInfo.$($field.ExtractFields))
+                }
+                "JSON" {
+                    if ($FieldInfo -eq $null) { $JsonString = '{}' } else { $JsonString = (ConvertTo-Json -Depth 15 -InputObject $FieldInfo) }
+                    $Result.Add($field.Name, $JSONString)
+                }
+                "string" {
+                    $Result.Add($field.Name, [string]$FieldInfo)
+                }
+            }
         }
-        switch ($field.StoreAs) {
-            "bool" {
-                if ($field.ExtractFields.Count -gt 1) {
-                    Write-LogMessage  -API "BPA" -tenant $tenant -message "The BPA only supports 1 field for a bool. $($field.ExtractFields.Count) fields were specified." -sev Error
-                    break
-                }
-                if ($FieldInfo.$($field.ExtractFields) -eq $null) { $FieldInfo.$($field.ExtractFields) = $false }
-                if ($field.Condition) {
-                    $operator = $field.condition.operator
-                    $value = $($field.condition.value)
-                    Write-Host "$FieldInfo.$($field.ExtractFields) -$operator $value"
-                    if (Invoke-Expression "$FieldInfo.$($field.ExtractFields) -$operator $value") {
-                        $fieldInfo = $true
-                    }
-                    else {
-                        $fieldInfo = $false
-                    }
-                }
-                $Result.Add($field.Name, [bool]$FieldInfo.$($field.ExtractFields))
-            }
-            "JSON" {
-                if ($FieldInfo -eq $null) { $JsonString = '{}' } else { $JsonString = (ConvertTo-Json -Depth 15 -InputObject $FieldInfo) }
-                $Result.Add($field.Name, $JSONString)
-            }
-            "string" {
-                $Result.Add($field.Name, [string]$FieldInfo)
-            }
+        catch {
+            Write-LogMessage -API "BPA" -tenant $tenant -message "Error storing $($field.Name) for $($TenantName.displayName) with GUID $($TenantName.customerId). Error: $($_.Exception.Message)" -sev Error
+            $Result.Add($field.Name, "FAILED")
         }
 
     }
  
     if ($Result) {
         try {
-            Add-AzDataTableEntity @Table -Entity $Result
+            Add-AzDataTableEntity @Table -Entity $Result -Force
         }
         catch {
             Write-LogMessage -API "BPA" -tenant $tenant -message "Error getting saving data for $($template.Name) - $($TenantName.customerId). Error: $($_.Exception.Message)" -sev Error

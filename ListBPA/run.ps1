@@ -23,7 +23,7 @@ $Data = (Get-AzDataTableEntity @Table -Filter "RowKey eq '$NAME'") | ForEach-Obj
     $row = $_
     $JSONFields | ForEach-Object {
         $jsonContent = $row.$_
-        if ($jsonContent -ne $null) {
+        if ($jsonContent -ne $null -and $jsonContent -ne "FAILED") {
             $row.$_ = $jsonContent | ConvertFrom-Json -Depth 15
         }
     }
