@@ -132,7 +132,7 @@ if ($Request.query.Tenants -eq 'true') {
                 @{ Name = "Intune Administrator"; Id = "3a2c62db-5318-420d-8d74-23affee5d9d5" },
                 @{ Name = "Exchange Administrator"; Id = "29232cdf-9323-42fd-ade2-1d097af3e4de" },
                 @{ Name = "Security Administrator"; Id = "194ae4cb-b126-40b2-bd5b-6091b380977d" },
-                @{ Name = "Cloud App Security Administrator"; Id = "158c047a-c907-4556-b7ef-446551a6b5f7" },
+                @{ Name = "Cloud App Security Administrator"; Id = "892c5842-a9a6-463a-8041-72aa08ca3cf6" },
                 @{ Name = "Cloud Device Administrator"; Id = "7698a772-787b-4ac8-901f-60d6b08affd2" },
                 @{ Name = "Teams Administrator"; Id = "69091246-20e8-4a56-aa4d-066075b2a7a8" },
                 @{ Name = "Sharepoint Administrator"; Id = "f28a1f50-f6e7-4571-818b-6a12f2af6b6c" },
