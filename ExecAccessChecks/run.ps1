@@ -143,7 +143,7 @@ if ($Request.query.Tenants -eq 'true') {
             $GDAPRoles = foreach ($RoleId in $ExpectedRoles) {
                 $Role = (New-graphGetRequest -uri "https://graph.microsoft.com/beta/roleManagement/directory/roleAssignments?`$filter=roleDefinitionId eq '$($RoleId.id)'&`$expand=principal" -tenantid $tenant).principal | Where-Object -Property organizationId -EQ $ENV:tenantid
                 if (!$role) { 
-                    "$($RoleId.Name) "
+                    "$($RoleId.Name), "
                     $AddedText = "but potentially missing GDAP roles"
                 }
             }
