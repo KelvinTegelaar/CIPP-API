@@ -37,7 +37,7 @@ $AddRow = foreach ($Template in $templates) {
                             $paramsField.Add($_.psobject.properties.name, $_.psobject.properties.value)
                         }
                     }
-                    $FieldInfo = New-GraphGetRequest @paramsField  | Where-Object $filterscript | Select-Object $field.ExtractFields
+                    $FieldInfo = New-GraphGetRequest @paramsField | Where-Object $filterscript | Select-Object $field.ExtractFields
                 }
                 "Exchange" {
                     if ($field.Command -notlike "get-*") {
