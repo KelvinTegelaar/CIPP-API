@@ -12,8 +12,8 @@
 # Authenticate with Azure PowerShell using MSI.
 # Remove this if you are not planning on using MSI or Azure PowerShell.
 Import-Module .\GraphHelper.psm1
-#Import-Module Az.KeyVault
-#Import-Module Az.Accounts
+Import-Module Az.KeyVault
+Import-Module Az.Accounts
 Import-Module GraphRequests
 Import-Module CippExtensions
 Import-Module CippCore
