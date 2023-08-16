@@ -140,8 +140,18 @@ if ($Request.query.Tenants -eq 'true') {
                 @{ Name = "Privileged Role Administrator"; Id = "e8611ab8-c189-46e8-94e1-60213ab1f814" },
                 @{ Name = "Privileged Authentication Administrator"; Id = "7be44c8a-adaf-4e2a-84d6-ab2649e08a13" }
             )
+            $BulkRequests = $ExpectedRoles | ForEach-Object { @(
+                    @{
+                        id     = "roleManagement_$($_.id)"
+                        method = 'GET'
+                        url    = "roleManagement/directory/roleAssignments?`$filter=roleDefinitionId eq '$($_.id)'&`$expand=principal" 
+                    }
+                )
+            }
+            $GDAPRolesGraph = New-GraphBulkRequest -tenantid $tenant -Requests $BulkRequests
             $GDAPRoles = foreach ($RoleId in $ExpectedRoles) {
-                $Role = (New-graphGetRequest -uri "https://graph.microsoft.com/beta/roleManagement/directory/roleAssignments?`$filter=roleDefinitionId eq '$($RoleId.id)'&`$expand=principal" -tenantid $tenant).principal | Where-Object -Property organizationId -EQ $ENV:tenantid
+                $GraphRole = $GDAPRolesGraph.body.value | Where-Object -Property roleDefinitionId -EQ $RoleId.Id
+                $Role = $GraphRole.principal | Where-Object -Property organizationId -EQ $ENV:tenantid
                 if (!$role) { 
                     "$($RoleId.Name), "
                     $AddedText = "but potentially missing GDAP roles"
