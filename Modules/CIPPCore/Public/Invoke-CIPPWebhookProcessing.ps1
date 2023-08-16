@@ -21,7 +21,7 @@ function Invoke-CippWebhookProcessing {
         #First we perform a lookup in the knownlocationdb table to see if we have a location for this IP address.
         $Location = Get-AzDataTableEntity @LocationTable -Filter "RowKey eq '$($data.clientip)'" | Select-Object -Last 1
         #If we have a location, we use that. If not, we perform a lookup in the GeoIP database.
-        if ($Location) {
+        if ($Location -and $location.CountryOrRegion -ne "Unknown") {
             $Country = $Location.CountryOrRegion
             $City = $Location.City 
         }
@@ -35,7 +35,16 @@ function Invoke-CippWebhookProcessing {
     if ($Data.ExtendedProperties) { $Data.ExtendedProperties | ForEach-Object { $TableObj | Add-Member -NotePropertyName $_.Name -NotePropertyValue $_.Value } }
     if ($Data.DeviceProperties) { $Data.DeviceProperties | ForEach-Object { $TableObj | Add-Member -NotePropertyName $_.Name -NotePropertyValue $_.Value } }
     if ($Data.parameters) { $Data.parameters | ForEach-Object { $TableObj | Add-Member -NotePropertyName $_.Name -NotePropertyValue $_.Value } }
-    Write-Host ($TableObj | ConvertTo-Json -Depth 10)
+
+    $ExtendedPropertiesIgnoreList = @(
+        "OAuth2:Authorize"
+        "SAS:EndAuth"
+        "SAS:ProcessAuth"
+    )
+    if ($TableObj.RequestType -in $ExtendedPropertiesIgnoreList) {
+        Write-Host "No need to process this operation."
+        return ""
+    }
     switch ($data.operation) {
         { "UserLoggedIn" -eq $data.operation -and $Country -notin $AllowedLocations -and $data.ResultStatus -eq "Success" -and $TableObj.ResultStatusDetail -eq "Success" } { $data.operation = "UserLoggedInFromUnknownLocation" }
         { "UserloggedIn" -eq $data.operation -and $data.UserType -eq 2 -and $data.ResultStatus -eq "Success" -and $TableObj.ResultStatusDetail -eq "Success" } { $data.operation = "AdminLoggedIn" }
