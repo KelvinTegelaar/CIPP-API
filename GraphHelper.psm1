@@ -233,7 +233,7 @@ function New-GraphPOSTRequest ($uri, $tenantid, $body, $type, $scope, $AsApp, $N
             #setting ErrorMess because the error from a failed json conversion overwrites the exception.
             $ErrorMess = $($_.Exception.Message) 
             try {
-                $Message = ($_.ErrorDetails.Message | ConvertFrom-Json -ErrorAction SilentlyContinue).error.message
+                $Message = ($_.ErrorDetails.Message | ConvertFrom-Json -ErrorAction Stop).error.message
             }
             catch {
                 $Message = $ErrorMess
@@ -551,9 +551,10 @@ function New-ExoRequest ($tenantid, $cmdlet, $cmdParams, $useSystemMailbox, $Anc
         }
         Write-Host "Using $Anchor"
         $Headers = @{
-            Authorization     = "Bearer $($token.access_token)"
-            Prefer            = 'odata.maxpagesize = 1000'
-            'X-AnchorMailbox' = $anchor
+            Authorization             = "Bearer $($token.access_token)"
+            Prefer                    = 'odata.maxpagesize = 1000'
+            'parameter-based-routing' = $true
+            'X-AnchorMailbox'         = $anchor
 
         }
         try {
@@ -562,7 +563,11 @@ function New-ExoRequest ($tenantid, $cmdlet, $cmdParams, $useSystemMailbox, $Anc
         catch {
             $ErrorMess = $($_.Exception.Message) 
             $ReportedError = ($_.ErrorDetails | ConvertFrom-Json -ErrorAction SilentlyContinue)
-            $Message = if ($ReportedError.error.details.message) { $ReportedError.error.details.message } else { $ReportedError.error.innererror.internalException.message }
+            $Message = if ($ReportedError.error.details.message) {
+                $ReportedError.error.details.message 
+            }
+            elseif ($ReportedError.error.message) { $ReportedError.error.message } 
+            else { $ReportedError.error.innererror.internalException.message }
             if ($null -eq $Message) { $Message = $ErrorMess }
             throw $Message
         }
