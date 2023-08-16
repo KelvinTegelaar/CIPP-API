@@ -1,8 +1,7 @@
 param($tenant)
 try {
-    $GraphRequest = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/users/?`$top=999&`$select=id,userPrincipalName,passwordPolicies" -tenantid $Tenant | Where-Object -Property passwordPolicies -EQ $null | ForEach-Object {
-        $userid = $_.id
-        New-GraphPostRequest -type Patch -tenantid $Tenant -uri "https://graph.microsoft.com/beta/users/$($userid)" -body '{"passwordPolicies": "DisablePasswordExpiration"}'
+    $GraphRequest = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/domains" -tenantid $Tenant | Where-Object -Property passwordValidityPeriodInDays -NE '2147483647' | ForEach-Object {
+        New-GraphPostRequest -type Patch -tenantid $Tenant -uri "https://graph.microsoft.com/beta/domains/$($_.id)" -body '{"passwordValidityPeriodInDays": 2147483647 }'
     }
     Write-LogMessage  -API "Standards" -tenant $tenant -message "Disabled Password Expiration" -sev Info
 }
