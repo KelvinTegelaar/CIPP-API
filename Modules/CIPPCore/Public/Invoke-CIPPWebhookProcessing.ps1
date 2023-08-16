@@ -82,7 +82,7 @@ function Invoke-CippWebhookProcessing {
             $RuleTable = ($TableObj | ConvertTo-Html -Fragment | Out-String).Replace('<table>', ' <table class="table-modern">')
             $ParameterName
             $IntroText = "<p>A new rule has been created for the user $($data.UserId). You should check if this rule is not malicious. The rule information can be found in the table below.</p>$RuleTable"
-            $ButtonUrl = "$CIPPPURL/identity/administration/ViewBec?userId=$($data.UserId)&tenantDomain=$($data.OrganizationName)"
+            $ButtonUrl = "$CIPPPURL/identity/administration/ViewBec?userId=$($data.UserId)&tenantDomain=$($data.OrganizationId)"
             $ButtonText = "Start BEC Investigation"
             $AfterButtonText = "<p>If you believe this is a suspect rule, you can click the button above to start the investigation.</p>"
         }
@@ -91,7 +91,7 @@ function Invoke-CippWebhookProcessing {
             $RuleTable = ($TableObj | ConvertTo-Html -Fragment | Out-String).Replace('<table>', ' <table class="table-modern">')
             $ParameterName
             $IntroText = "<p>A rule has been edited for the user $($data.UserId). You should check if this rule is not malicious. The rule information can be found in the table below.</p>$RuleTable"
-            $ButtonUrl = "$CIPPPURL/identity/administration/ViewBec?userId=$($data.UserId)&tenantDomain=$($data.OrganizationName)"
+            $ButtonUrl = "$CIPPPURL/identity/administration/ViewBec?userId=$($data.UserId)&tenantDomain=$($data.OrganizationId)"
             $ButtonText = "Start BEC Investigation"
             $AfterButtonText = "<p>If you believe this is a suspect rule, you can click the button above to start the investigation.</p>"
         }
@@ -155,7 +155,7 @@ function Invoke-CippWebhookProcessing {
             if ($Appname) { $AppName = $AppName.'Application Name' } else { $appName = $data.ApplicationId }
             $Title = "$($TenantFilter) - an admin account has logged on"
             $IntroText = "$($data.UserId) ($($data.Userkey)) has logged on from IP $($data.ClientIP) to the application $($Appname). See the table below for more information. $Table"
-            $ButtonUrl = "$CIPPPURL/identity/administration/ViewBec?userId=$($data.ObjectId)&tenantDomain=$($data.OrganizationName)"
+            $ButtonUrl = "$CIPPPURL/identity/administration/ViewBec?userId=$($data.UserKey)&tenantDomain=$($data.OrganizationId)"
             $ButtonText = "User Management"
             $AfterButtonText = "<p>If this is incorrect, use the user management screen to block the user and revoke the sessions</p>"
 
@@ -165,7 +165,7 @@ function Invoke-CippWebhookProcessing {
             if ($Appname) { $AppName = $AppName.'Application Name' } else { $appName = $data.ApplicationId }
             $Title = "$($TenantFilter) - a user has logged on from a potentially unsafe location"
             $IntroText = "$($data.UserId) ($($data.Userkey)) has logged on from IP $($data.ClientIP) to the application $($Appname). According to our database this is located in $($Country) - $($City). <br/><br> You have set up alerts to be notified when this happens. See the table below for more info.$Table"
-            $ButtonUrl = "$CIPPPURL/identity/administration/ViewBec?userId=$($data.ObjectId)&tenantDomain=$($data.OrganizationName)"
+            $ButtonUrl = "$CIPPPURL/identity/administration/ViewBec?userId=$($data.ObjectId)&tenantDomain=$($data.OrganizationId)"
             $ButtonText = "User Management"
             $AfterButtonText = "<p>If this is incorrect, use the user management screen to block the user and revoke the sessions</p>"
         }
