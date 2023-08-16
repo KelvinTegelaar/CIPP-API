@@ -1,0 +1,70 @@
+{
+  "name": "CIPP SharePoint Report v1.0 - Table view",
+  "style": "Table",
+  "Fields": [
+    {
+      "name": "SharepointSettings",
+      "API": "Graph",
+      "URL": "https://graph.microsoft.com/beta/admin/sharepoint/settings",
+      "Parameters": {
+        "asApp": "True"
+      },
+      "ExtractFields": [
+        "sharingCapability",
+        "isMacSyncAppEnabled",
+        "isResharingByExternalUsersEnabled",
+        "isUnmanagedSyncAppForTenantRestricted",
+        "isSiteCreationEnabled",
+        "deletedUserPersonalSiteRetentionPeriodInDays"
+      ],
+      "StoreAs": "JSON",
+      "FrontendFields": [
+        {
+          "name": "Sharing capability",
+          "value": "SharepointSettings.sharingCapability",
+          "formatter": "string"
+        },
+        {
+          "name": "Mac Sync Enabled",
+          "value": "SharepointSettings.isMacSyncAppEnabled",
+          "formatter": "warnBool"
+        },
+        {
+          "name": "Resharing by external users",
+          "value": "isResharingByExternalUsersEnabled",
+          "formatter": "reverseBool"
+        },
+        {
+          "name": "Allow users to sync from unmanaged devices",
+          "value": "SharepointSettings.isUnmanagedSyncAppForTenantRestricted",
+          "formatter": "bool"
+        },
+        {
+          "name": "Site creation by standards users enabled",
+          "value": "SharepointSettings.isSiteCreationEnabled",
+          "formatter": "reverseBool"
+        },
+        {
+          "name": "Deleted user data rention(days)",
+          "value": "SharepointSettings.deletedUserPersonalSiteRetentionPeriodInDays",
+          "formatter": "string"
+        }
+      ]
+    },
+    {
+      "name": "WebtimeOut",
+      "API": "Graph",
+      "URL": "https://graph.microsoft.com/beta/policies/activityBasedTimeoutPolicies",
+      "ExtractFields": ["definition"],
+      "StoreAs": "bool",
+      "where": "$_.definition -like '*WebSessionIdleTimeout*'",
+      "FrontendFields": [
+        {
+          "name": "Web Time-Out enabled",
+          "value": "WebtimeOut",
+          "formatter": "bool"
+        }
+      ]
+    }
+  ]
+}

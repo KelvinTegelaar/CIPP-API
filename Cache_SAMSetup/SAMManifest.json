@@ -191,6 +191,12 @@
       "resourceAccess": [
         { "id": "e60370c1-e451-437e-aa6e-d76df38e5f15", "type": "Scope" }
       ]
+    },
+    {
+      "resourceAppId": "c5393580-f805-4401-95e8-94b7a6ef2fc2",
+      "resourceAccess": [
+        { "id": "594c1fb6-4f81-4475-ae41-0c394909246c", "type": "Scope" }
+      ]
     }
   ]
 }

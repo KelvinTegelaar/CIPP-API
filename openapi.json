@@ -5734,6 +5734,14 @@
             "schema": {
               "type": "string"
             },
+            "name": "Severity",
+            "in": "body"
+          },
+          {
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
             "name": "onePerTenant",
             "in": "body"
           },
