@@ -42,6 +42,9 @@ if ($JSONObj.conditions.users.excludeGuestsOrExternalUsers.externalTenants.Membe
     $JsonObj.conditions.users.excludeGuestsOrExternalUsers.externalTenants.PSObject.Properties.Remove('@odata.context')
     $JsonObj.conditions.users.excludeGuestsOrExternalUsers.externalTenants.PSObject.Properties.Remove('@odata.type')
 }
+if ($Request.body.newstate -and $Request.body.newstate -ne 'donotchange') {
+    $Jsonobj.state = $Request.body.newstate
+}
 $RawJSON = $JSONObj | ConvertTo-Json -Depth 10
 
 $results = foreach ($Tenant in $tenants) {
