@@ -169,7 +169,7 @@ try {
         }
         { $_.'ExpiringLicenses' -eq $true } {
             try {
-                Get-CIPPLicenseOverview -TenantFilter $Tenant.tenant | Where-Object -Property TimeUntilRenew -LT 31 | ForEach-Object {
+                Get-CIPPLicenseOverview -TenantFilter $Tenant.tenant | Where-Object -Property TimeUntilRenew -LT 29 | ForEach-Object {
                     "$($_.License) will expire in $($_.TimeUntilRenew) days" 
                 }
             }
