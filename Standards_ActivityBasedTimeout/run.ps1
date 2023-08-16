@@ -1,6 +1,6 @@
 ﻿param($tenant)
 try {
-    $State = (New-GraphGetRequest -Uri "https://graph.microsoft.com/beta/policies/activityBasedTimeoutPolicies" -tenantid $tenant)
+    $State = (New-GraphGetRequest -Uri "https://graph.microsoft.com/beta/policies/activityBasedTimeoutPolicies" -tenantid $tenant).id
     if (!$State) {
         $body = @"
 {
