@@ -25,6 +25,7 @@ $GraphRequest = $ExpectedPermissions.requiredResourceAccess | ForEach-Object {
             'fc780465-2017-40d4-a0c5-307022471b92' { 'WindowsDefenderATP' }
             '00000003-0000-0ff1-ce00-000000000000' { 'Sharepoint' }
             '48ac35b8-9aa8-4d74-927d-1f4a14a0b239' { 'Skype and Teams Tenant Admin API' }
+            'c5393580-f805-4401-95e8-94b7a6ef2fc2' { 'Office 365 Management API' }
 
 
         }
@@ -64,6 +65,7 @@ $Grants = foreach ($App in $apps.requiredResourceAccess) {
         continue
     }
     foreach ($SingleResource in $app.ResourceAccess | Where-Object -Property Type -EQ "Role") {
+        if ($singleresource.id -In $currentroles.appRoleId) { continue }
         [pscustomobject]@{
             principalId = $($ourSVCPrincipal.id)
             resourceId  = $($svcPrincipalId.id)
