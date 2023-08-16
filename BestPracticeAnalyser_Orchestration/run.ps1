@@ -8,9 +8,8 @@ $DurableRetryOptions = @{
 $RetryOptions = New-DurableRetryOptions @DurableRetryOptions
 Write-LogMessage -API 'BestPracticeAnalyser' -tenant $tenant -message 'Started BestPracticeAnalyser' -sev info
 
-$TenantFilter = [string]$Context.Input.TenantFilter
-if (![string]::IsNullOrEmpty($TenantFilter)) {
-    $Batch = @($TenantFilter)
+if ($Context.Input -and ![string]::IsNullOrEmpty([string]$Context.Input.TenantFilter)) {
+    $Batch = @([string]$Context.Input.TenantFilter)
 } else {
     $Batch = (Invoke-ActivityFunction -FunctionName 'BestPracticeAnalyser_GetQueue' -Input 'LetsGo')
 }
