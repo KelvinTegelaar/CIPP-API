@@ -19,8 +19,9 @@ try {
     $base64IdentityParam = [Convert]::ToBase64String($Bytes)   
     $PermsRequest = New-GraphGetRequest -uri "https://outlook.office365.com/adminapi/beta/$($tenantfilter)/Mailbox('$($Request.Query.UserID)')/MailboxPermission" -Tenantid $tenantfilter -scope ExchangeOnline 
     $PermsRequest2 = New-GraphGetRequest -uri "https://outlook.office365.com/adminapi/beta/$($tenantfilter)/Recipient('$base64IdentityParam')?`$expand=RecipientPermission&isEncoded=true" -Tenantid $tenantfilter -scope ExchangeOnline 
+    $PermRequest3 = New-ExoRequest -Anchor $Request.Query.UserID -tenantid $Tenantfilter -cmdlet "Get-Mailbox" -cmdParams @{Identity = $($Request.Query.UserID); }
 
-    $GraphRequest = foreach ($Perm in $PermsRequest, $PermsRequest2.RecipientPermission) {
+    $GraphRequest = foreach ($Perm in $PermsRequest, $PermsRequest2.RecipientPermission, $PermRequest3) {
 
         if ($perm.Trustee) {
             $perm | Where-Object Trustee | ForEach-Object { [PSCustomObject]@{
@@ -34,6 +35,13 @@ try {
             $perm |  Where-Object User | ForEach-Object { [PSCustomObject]@{
                     User        = $_.User
                     Permissions = $_.PermissionList.accessRights -join ', '
+                }        
+            }
+        }
+        if ($perm.GrantSendonBehalfTo -ne $null) {
+            $perm.GrantSendonBehalfTo | ForEach-Object { [PSCustomObject]@{
+                    User        = $_
+                    Permissions = "SendOnBehalf"
                 }        
             }
         }
