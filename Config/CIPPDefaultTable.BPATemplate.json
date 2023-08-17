@@ -109,7 +109,7 @@
       "API": "Exchange",
       "Command": "Get-Mailbox",
       "Parameters": {
-        "RecipientTypeDetails": "SharedMailbox"
+        "RecipientTypeDetails": ["SharedMailbox", "UserMailbox"]
       },
       "where": "$_.MessageCopyForSentAsEnabled -eq $false",
       "ExtractFields": ["userprincipalname", "messageCopyForSentAsEnabled"],
