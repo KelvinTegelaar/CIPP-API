@@ -9,7 +9,7 @@ $TenantDomains = $Tenants | ForEach-Object -Parallel {
     $Tenant = $_
     # Get Domains to Lookup
     try {
-        $Domains = New-GraphGetRequest -uri 'https://graph.microsoft.com/v1.0/domains' -tenantid $Tenant.defaultDomainName | Where-Object { ($_.id -notlike '*.onmicrosoft.com' -and $_.id -notlike '*.microsoftonline.com' -and $_.id -NotLike '*.exclaimer.cloud' -and $_.id -NotLike '*.codetwo.online' -and $_.isVerified) }
+        $Domains = New-GraphGetRequest -uri 'https://graph.microsoft.com/v1.0/domains' -tenantid $Tenant.defaultDomainName | Where-Object { ($_.id -notlike '*.onmicrosoft.com' -and $_.id -notlike '*.microsoftonline.com' -and $_.id -NotLike '*.exclaimer.cloud' -and $_.id -NotLike '*.codetwo.online' -and $_.id -NotLike '*.call2teams.com' -and $_.isVerified) }
         foreach ($d in $domains) {
             [PSCustomObject]@{
                 Tenant             = $Tenant.defaultDomainName
@@ -27,7 +27,7 @@ $TenantDomains = $Tenants | ForEach-Object -Parallel {
     catch {
         Write-LogMessage -API 'DomainAnalyser' -tenant $tenant.defaultDomainName -message "DNS Analyser GraphGetRequest Exception: $($_.Exception.Message)" -sev Error
     }
-}
+} | Sort-Object -Unique -Property Domain
 
 # Cleanup domains from tenants with errors, skip domains with manually set selectors or mail providers
 foreach ($Exclude in $ExcludedTenants) {
@@ -36,7 +36,7 @@ foreach ($Exclude in $ExcludedTenants) {
     $CleanupCount = ($CleanupRows | Measure-Object).Count
     if ($CleanupCount -gt 0) {
         Write-LogMessage -API 'DomainAnalyser' -tenant $Exclude.defaultDomainName -message "Cleaning up $CleanupCount domain(s) for excluded tenant" -sev Info
-        Remove-AzDataTableRow @DomainTable -Entity $CleanupRows
+        Remove-AzDataTableEntity @DomainTable -Entity $CleanupRows
     }
 }
 
@@ -60,7 +60,7 @@ if ($TenantCount -gt 0) {
             $Domain = Get-AzDataTableEntity @DomainTable -Filter $Filter
 
             if (!$Domain) {
-                $DomainObject = @{
+                $DomainObject = [pscustomobject]@{
                     DomainAnalyser = ''
                     TenantDetails  = $TenantDetails
                     TenantId       = $Tenant.Tenant
@@ -93,5 +93,5 @@ if ($TenantCount -gt 0) {
         }
         catch { Write-LogMessage -API 'DomainAnalyser' -message "Domain Analyser GetTenantDomains Error $($_.Exception.Message)" -sev info }
     }
-    catch { Write-LogMessage -API 'DomainAnalyser' -message "GetTenantDomains loop exception: $($_.Exception.Message) line $($_.InvocationInfo.ScriptLineNumber)" }
+    catch { Write-LogMessage -API 'DomainAnalyser' -message "GetTenantDomains loop exception: $($_.Exception.Message) line $($_.InvocationInfo.ScriptLineNumber)" -sev "Error"}
 }

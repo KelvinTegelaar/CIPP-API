@@ -38,7 +38,6 @@ try {
       if ($request.body.setkeys) {
             if ($request.body.tenantid) { Set-AzKeyVaultSecret -VaultName $kv -Name 'tenantid' -SecretValue (ConvertTo-SecureString -String $request.body.tenantid -AsPlainText -Force) } 
             if ($request.body.RefreshToken) { Set-AzKeyVaultSecret -VaultName $kv -Name 'RefreshToken' -SecretValue (ConvertTo-SecureString -String $request.body.RefreshToken -AsPlainText -Force) }
-            if ($request.body.exchangeRefreshToken) { Set-AzKeyVaultSecret -VaultName $kv -Name 'ExchangeRefreshToken' -SecretValue (ConvertTo-SecureString -String $request.body.exchangeRefreshToken -AsPlainText -Force) }
             if ($request.body.applicationid) { Set-AzKeyVaultSecret -VaultName $kv -Name 'applicationid' -SecretValue (ConvertTo-SecureString -String $request.body.applicationid -AsPlainText -Force) }
             if ($request.body.applicationsecret) { Set-AzKeyVaultSecret -VaultName $kv -Name 'applicationsecret' -SecretValue (ConvertTo-SecureString -String $request.body.applicationsecret -AsPlainText -Force) }
             $Results = @{ Results = "Replaced keys successfully. Please clear your token cache or wait 24 hours for the cache to be cleared." }
@@ -117,6 +116,12 @@ try {
                                     catch {
                                           Write-Host "didn't deploy spn for defender, probably already there."
                                     }
+                                    try {
+                                          $SPNTeams = (Invoke-RestMethod "https://graph.microsoft.com/v1.0/servicePrincipals" -Headers @{ authorization = "Bearer $($Token.Access_Token)" } -Method POST -Body "{ `"appId`": `"48ac35b8-9aa8-4d74-927d-1f4a14a0b239`" }" -ContentType 'application/json')
+                                    }
+                                    catch {
+                                          Write-Host "didn't deploy spn for Teams, probably already there."
+                                    }
                                     $SPN = (Invoke-RestMethod "https://graph.microsoft.com/v1.0/servicePrincipals" -Headers @{ authorization = "Bearer $($Token.Access_Token)" } -Method POST -Body "{ `"appId`": `"$($AppId.appId)`" }" -ContentType 'application/json')
                                     Start-Sleep 3
                                     $GroupID = (Invoke-RestMethod "https://graph.microsoft.com/v1.0/groups?`$filter=startswith(displayName,'AdminAgents')" -Headers @{ authorization = "Bearer $($Token.Access_Token)" } -Method Get -ContentType 'application/json').value.id
@@ -169,7 +174,7 @@ try {
  
             }
             4 {
-                  Remove-AzDataTableRow @Table -Entity $Rows
+                  Remove-AzDataTableEntity @Table -Entity $Rows
 
                   $step = 5
                   $Results = @{"message" = "Installation completed. You must perform a token cache clear. For instructions click "; step = $step ; url = "https://cipp.app/docs/general/troubleshooting/#clear-token-cache"

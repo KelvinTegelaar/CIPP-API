@@ -13,18 +13,12 @@ Write-Host "PowerShell HTTP trigger function processed a request."
 # Interact with query parameters or the body of the request.
 $TenantFilter = $Request.Query.TenantFilter
 try {
-    $GraphRequest = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/informationProtection/bitlocker/recoveryKeys?`$filter=deviceId eq '$($request.query.guid)'" -tenantid $TenantFilter | ForEach-Object { 
-        (New-GraphGetRequest -uri "https://graph.microsoft.com/beta/informationProtection/bitlocker/recoveryKeys/$($_.id)?`$select=key" -tenantid $TenantFilter).key
-    }
-
-
-    $StatusCode = [HttpStatusCode]::OK
+    $GraphRequest = Get-CIPPBitlockerKey -device $Request.query.GUID -tenantFilter $TenantFilter -APIName $APINAME -ExecutingUser $request.headers.'x-ms-client-principal'
     $Body = [pscustomobject]@{"Results" = $GraphRequest }
 
 }
 catch {
     $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
-    $StatusCode = [HttpStatusCode]::Forbidden
     $Body = [pscustomobject]@{"Results" = "Failed. $ErrorMessage" }
 
 }

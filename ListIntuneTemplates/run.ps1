@@ -22,7 +22,17 @@ $Templates = Get-ChildItem "Config\*.IntuneTemplate.json" | ForEach-Object {
 #List new policies
 $Table = Get-CippTable -tablename 'templates'
 $Filter = "PartitionKey eq 'IntuneTemplate'" 
-$Templates = (Get-AzDataTableRow @Table -Filter $Filter).JSON | ConvertFrom-Json
+$Templates = (Get-AzDataTableEntity @Table -Filter $Filter).JSON | ConvertFrom-Json
+if ($Request.query.View) {
+    $Templates = $Templates | ForEach-Object {
+        $data = $_.RAWJson | ConvertFrom-Json
+        $data | Add-Member -NotePropertyName "displayName" -NotePropertyValue $_.Displayname
+        $data | Add-Member -NotePropertyName "description" -NotePropertyValue $_.Description
+        $data | Add-Member -NotePropertyName "Type" -NotePropertyValue $_.Type
+        $data | Add-Member -NotePropertyName "GUID" -NotePropertyValue $_.GUID
+        $data 
+    }
+}
 
 if ($Request.query.ID) { $Templates = $Templates | Where-Object -Property guid -EQ $Request.query.id }
 

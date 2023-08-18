@@ -11,5 +11,5 @@ try {
     Write-LogMessage -API "Standards" -tenant $tenant -message "Standards API: Security Defaults Enabled." -sev Info
 }
 catch {
-    Write-LogMessage -API "Standards" -tenant $tenant -message  "Failed to enable Security Defaults Error: $($_.exception.message)"
+    Write-LogMessage -API "Standards" -tenant $tenant -message  "Failed to enable Security Defaults Error: $($_.exception.message)" -sev "Error"
 }
