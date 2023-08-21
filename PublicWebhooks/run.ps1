@@ -7,7 +7,7 @@ $Webhooks = Get-AzDataTableEntity @WebhookTable
 Write-Host "Received request"
 Write-Host "CIPPID: $($request.Query.CIPPID)"
 $url = ($request.headers.'x-ms-original-url').split('/API') | Select-Object -First 1
-Write-Host $url
+write-host $url
 if ($Request.CIPPID -in $Webhooks.CIPPID) {
     Write-Host "Found matching CIPPID"
 
@@ -17,7 +17,6 @@ if ($Request.CIPPID -in $Webhooks.CIPPID) {
         Write-Host "Validation token received"
         $body = $request.query.ValidationToken
     }
-
     foreach ($ReceivedItem In ($Request.body)) {
         $ReceivedItem = [pscustomobject]$ReceivedItem
         $TenantFilter = (Get-Tenants | Where-Object -Property customerId -EQ $ReceivedItem.TenantId).defaultDomainName
@@ -27,17 +26,7 @@ if ($Request.CIPPID -in $Webhooks.CIPPID) {
         Write-Host "Operations to process for this client: $($Webhookinfo.Operations)"
         foreach ($Item in $Data) {
             Write-Host "Processing $($item.operation)"
-            if ($item.operation -in $operations) {
-                Invoke-CippWebhookProcessing -TenantFilter $TenantFilter -Data $Item -CIPPPURL $url -allowedlocations $Webhookinfo.AllowedLocations -Operations $operations
-            } 
-            if ($item.operation -eq "UserLoggedIn" -and $operations -contains "UserLoggedInFromUnknownLocation") {
-                Write-Host "User logged in from unknown location"
-                Invoke-CippWebhookProcessing -TenantFilter $TenantFilter -Data $Item -CIPPPURL $url -allowedlocations $Webhookinfo.AllowedLocations -Operations $operations
-            }
-            if ($item.operation -eq "UserLoggedIn" -and $operations -contains "AdminLoggedIn") {
-                Write-Host "Admin logged in"
-                Invoke-CippWebhookProcessing -TenantFilter $TenantFilter -Data $Item -CIPPPURL $url -allowedlocations $Webhookinfo.AllowedLocations -Operations $operations
-            }
+            Invoke-CippWebhookProcessing -TenantFilter $TenantFilter -Data $Item -CIPPPURL $url -allowedlocations $Webhookinfo.AllowedLocations -Operations $operations
             $body = "OK"
         }
     }
