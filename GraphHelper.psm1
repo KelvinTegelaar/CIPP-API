@@ -39,7 +39,7 @@ function Get-NormalizedError {
 
 function Get-GraphToken($tenantid, $scope, $AsApp, $AppID, $refreshToken, $ReturnRefresh) {
     if (!$scope) { $scope = 'https://graph.microsoft.com/.default' }
-
+    if (!$env:setfromprofile) { $CIPPAuth = Get-CIPPAuthentication; Write-Host "Could not get Refreshtoken from environment variable. Reloading token." }
     $AuthBody = @{
         client_id     = $env:ApplicationID
         client_secret = $env:ApplicationSecret
@@ -515,7 +515,7 @@ function Remove-CIPPCache {
         $BPATable = Get-CippTable -tablename 'cachebpa'
         $ClearBPARows = Get-AzDataTableEntity @BPATable
         Remove-AzDataTableEntity @BPATable -Entity $ClearBPARows
-
+        $ENV:SetFromProfile = $null
         $Script:SkipListCache = $Null
         $Script:SkipListCacheEmpty = $Null
         $Script:IncludedTenantsCache = $Null
