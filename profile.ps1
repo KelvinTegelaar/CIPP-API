@@ -26,7 +26,7 @@ catch {}
 try {
     if (!$ENV:SetFromProfile) {
         Write-Host "We're reloading from KV"
-        Get-CIPPAuthentication
+        $Auth = Get-CIPPAuthentication
     }
 }
 catch {
