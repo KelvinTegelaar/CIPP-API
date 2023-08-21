@@ -31,11 +31,9 @@ if ($Request.CIPPID -in $Webhooks.CIPPID) {
                 Invoke-CippWebhookProcessing -TenantFilter $TenantFilter -Data $Item -CIPPPURL $url -allowedlocations $Webhookinfo.AllowedLocations -Operations $operations
             } 
             if ($item.operation -eq "UserLoggedIn" -and "UserLoggedInFromUnknownLocation" -in $operations) {
-                Write-Host "User logged in from unknown location"
                 Invoke-CippWebhookProcessing -TenantFilter $TenantFilter -Data $Item -CIPPPURL $url -allowedlocations $Webhookinfo.AllowedLocations -Operations $operations
             }
             if ($item.operation -eq "UserLoggedIn" -and "AdminLoggedIn" -in $operations) {
-                Write-Host "Admin logged in"
                 Invoke-CippWebhookProcessing -TenantFilter $TenantFilter -Data $Item -CIPPPURL $url -allowedlocations $Webhookinfo.AllowedLocations -Operations $operations
             }
             $body = "OK"
