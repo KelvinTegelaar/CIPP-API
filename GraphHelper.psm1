@@ -29,6 +29,7 @@ function Get-NormalizedError {
         '*invalid or malformed*' { 'The request is malformed. You have entered incorrect tokens or have not performed a clear of the token cache after entering new tokens. Please see the troubleshooting documentation on how to execute a clear of the token cache.' }
         '*Windows Store repository apps feature is not supported for this tenant*' { 'This tenant does not have WinGet support available' }
         '*AADSTS650051*' { 'The application does not exist yet. Try again in 30 seconds.' }
+        '*AADSTS65001*' { 'CIPP cannot access this tenant. Perform a CPV Refresh and Access Check via the settings menu.' }
         '*AppLifecycle_2210*' { 'Failed to call Intune APIs: Does the tenant have a license available?' }
         '*One or more added object references already exist for the following modified properties:*' { 'This user is already a member of this group.' }
         '*Microsoft.Exchange.Management.Tasks.MemberAlreadyExistsException*' { 'This user is already a member of this group.' }
