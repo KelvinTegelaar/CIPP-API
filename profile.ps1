@@ -24,7 +24,7 @@ try {
 catch {}
 
 try {
-    if ($ENV:SetFromProfile -eq $false) {
+    if (!$ENV:SetFromProfile) {
         Write-Host "We're reloading from KV"
         $ENV:applicationid = (Get-AzKeyVaultSecret -VaultName $ENV:WEBSITE_DEPLOYMENT_ID -Name "ApplicationId" -AsPlainText)
         $ENV:applicationsecret = (Get-AzKeyVaultSecret -VaultName $ENV:WEBSITE_DEPLOYMENT_ID -Name "ApplicationSecret" -AsPlainText)
