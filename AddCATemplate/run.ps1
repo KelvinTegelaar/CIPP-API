@@ -5,8 +5,8 @@ param($Request, $TriggerMetadata)
 
 $APIName = $TriggerMetadata.FunctionName
 Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME  -message "Accessed this API" -Sev "Debug"
-Write-Host ($request | ConvertTo-Json -Compress)
 
+$TenantFilter = $Request.Query.TenantFilter
 try {        
     $GUID = (New-Guid).GUID
     $JSON = if ($request.body.rawjson) {
@@ -18,7 +18,19 @@ try {
             $_ | Select-Object -Property $NonEmptyProperties 
         }
     }
-    $JSON = ($JSON | ConvertTo-Json -Depth 10)
+  
+    $IncludeJSON = foreach ($Location in  $JSON.conditions.locations.includeLocations) {
+        Write-Host "There is included JSON"
+        New-GraphGetRequest -uri "https://graph.microsoft.com/beta/identity/conditionalAccess/namedLocations" -tenantid $TenantFilter | Where-Object -Property id -EQ $location | Select-Object * -ExcludeProperty id, *time*
+    }
+    if ($IncludeJSON) { $JSON.conditions.locations.includeLocations = @($IncludeJSON) }
+
+    $ExcludeJSON = foreach ($Location in $JSON.conditions.locations.Excludelocations) {
+        New-GraphGetRequest -uri "https://graph.microsoft.com/beta/identity/conditionalAccess/namedLocations" -tenantid $TenantFilter | Where-Object -Property id -EQ $location | Select-Object * -ExcludeProperty id, *time*
+    }
+    if ($ExcludeJSON) { $JSON.conditions.locations.excludeLocations = @($ExcludeJSON) }
+
+    $JSON = ($JSON | ConvertTo-Json -Depth 100)
     $Table = Get-CippTable -tablename 'templates'
     $Table.Force = $true
     Add-AzDataTableEntity @Table -Entity @{
