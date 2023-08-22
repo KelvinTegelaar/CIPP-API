@@ -4,12 +4,12 @@ using namespace System.Net
 param($Request, $TriggerMetadata)
 
 $APIName = $TriggerMetadata.FunctionName
-Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME  -message "Accessed this API" -Sev "Debug"
+Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -message 'Accessed this API' -Sev 'Debug'
 
 $Subscription = ($ENV:WEBSITE_OWNER_NAME).split('+') | Select-Object -First 1
-$SWAName = $ENV:Website_SITE_NAME -replace "cipp", "CIPP-SWA-"
+$SWAName = $ENV:Website_SITE_NAME -replace 'cipp', 'CIPP-SWA-'
 # Write to the Azure Functions log stream.
-Write-Host "PowerShell HTTP trigger function processed a request."
+Write-Host 'PowerShell HTTP trigger function processed a request.'
 
 $results = [PSCustomObject]@{
     ResourceGroup      = "https://portal.azure.com/#@Go/resource/subscriptions/$Subscription/resourceGroups/$ENV:Website_Resource_Group/overview"
@@ -19,10 +19,14 @@ $results = [PSCustomObject]@{
     FunctionDeployment = "https://portal.azure.com/#@Go/resource/subscriptions/$Subscription/resourceGroups/$ENV:Website_Resource_Group/providers/Microsoft.Web/sites/$($ENV:WEBSITE_SITE_NAME)/vstscd"
     SWADomains         = "https://portal.azure.com/#@Go/resource/subscriptions/$Subscription/resourceGroups/$ENV:Website_Resource_Group/providers/Microsoft.Web/staticSites/$SWAName/customDomains"
     SWARoles           = "https://portal.azure.com/#@Go/resource/subscriptions/$Subscription/resourceGroups/$ENV:Website_Resource_Group/providers/Microsoft.Web/staticSites/$SWAName/Roles"
+    Subscription       = $Subscription
+    RGName             = $ENV:Website_Resource_Group
+    FunctionName       = $ENV:WEBSITE_SITE_NAME
+    SWAName            = $SWAName
 }
 
 
-$body = @{Results = $Results } 
+$body = @{Results = $Results }
 
 # Associate values to output bindings by calling 'Push-OutputBinding'.
 Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
