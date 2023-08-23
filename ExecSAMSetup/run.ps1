@@ -28,6 +28,11 @@ if ($env:MSI_SECRET) {
       Disable-AzContextAutosave -Scope Process | Out-Null
       $AzSession = Connect-AzAccount -Identity
 }
+if (!$ENV:SetFromProfile) {
+      Write-Host "We're reloading from KV"
+      Get-CIPPAuthentication
+}
+
 $KV = $ENV:WEBSITE_DEPLOYMENT_ID
 $Table = Get-CIPPTable -TableName SAMWizard
 $Rows = Get-AzDataTableEntity @Table | Where-Object -Property Timestamp -GT (Get-Date).AddMinutes(-10)

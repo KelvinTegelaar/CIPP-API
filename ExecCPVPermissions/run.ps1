@@ -90,10 +90,10 @@ foreach ($Grant in $grants) {
         "Failed to grant $($grant.appRoleId) to $($grant.resourceId): $($_.Exception.Message). "
     }
 }
-$StatusCode = [HttpStatusCode]::OK
+
 
 # Associate values to output bindings by calling 'Push-OutputBinding'.
 Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
-        StatusCode = $StatusCode
-        Body       = @(@{Results = $GraphRequest })
+        StatusCode = [HttpStatusCode]::OK
+        Body       = @{Results = $GraphRequest }
     })
