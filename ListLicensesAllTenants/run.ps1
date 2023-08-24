@@ -16,9 +16,9 @@ $RawGraphRequest = Get-Tenants | ForEach-Object -Parallel {
     catch {
         [pscustomobject]@{
             Tenant         = [string]$domainName
-            License        = "Could not connect to client"
+            License        = "Could not connect to client: $($_.Exception.Message)"
             'PartitionKey' = 'License'
-            'RowKey'       = "$($domainName) - Could not connect to client: $($_.Exception.Message))"
+            'RowKey'       = "$($domainName)-$(New-Guid)"
         } 
     }
 }
