@@ -19,16 +19,25 @@ try {
         }
     }
   
+    $includelocations = New-Object System.Collections.ArrayList
     $IncludeJSON = foreach ($Location in  $JSON.conditions.locations.includeLocations) {
-        Write-Host "There is included JSON"
-        New-GraphGetRequest -uri "https://graph.microsoft.com/beta/identity/conditionalAccess/namedLocations" -tenantid $TenantFilter | Where-Object -Property id -EQ $location | Select-Object * -ExcludeProperty id, *time*
+        $locationinfo = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/identity/conditionalAccess/namedLocations" -tenantid $TenantFilter | Where-Object -Property id -EQ $location | Select-Object * -ExcludeProperty id, *time*
+        $null = if ($locationinfo) { $includelocations.add($locationinfo.displayName) } else { $includelocations.add($location) }
+        $locationinfo
     }
-    if ($IncludeJSON) { $JSON.conditions.locations.includeLocations = @($IncludeJSON) }
+    if ($includelocations) { $JSON.conditions.locations.includeLocations = $includelocations }
 
-    $ExcludeJSON = foreach ($Location in $JSON.conditions.locations.Excludelocations) {
-        New-GraphGetRequest -uri "https://graph.microsoft.com/beta/identity/conditionalAccess/namedLocations" -tenantid $TenantFilter | Where-Object -Property id -EQ $location | Select-Object * -ExcludeProperty id, *time*
+
+    $excludelocations = New-Object System.Collections.ArrayList
+    $ExcludeJSON = foreach ($Location in $JSON.conditions.locations.excludeLocations) {
+        $locationinfo = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/identity/conditionalAccess/namedLocations" -tenantid $TenantFilter | Where-Object -Property id -EQ $location | Select-Object * -ExcludeProperty id, *time*
+        $null = if ($locationinfo) { $excludelocations.add($locationinfo.displayName) } else { $excludelocations.add($location) }
+        $locationinfo
     }
-    if ($ExcludeJSON) { $JSON.conditions.locations.excludeLocations = @($ExcludeJSON) }
+
+    if ($excludelocations) { $JSON.conditions.locations.excludeLocations = $excludelocations }
+
+    $JSON | Add-Member -NotePropertyName 'LocationInfo' -NotePropertyValue @($IncludeJSON, $ExcludeJSON)
 
     $JSON = ($JSON | ConvertTo-Json -Depth 100)
     $Table = Get-CippTable -tablename 'templates'

@@ -47,52 +47,49 @@ function New-CIPPCAPolicy {
     if ($State -and $State -ne 'donotchange') {
         $Jsonobj.state = $State
     }
-    #If includedlocations set, and it's an object, we check if the named locations exists and if not create it, for each of the included locations. We then replace the included locations with the ID of the named location.
-    if ($JsonObj.conditions.locations.includeLocations) {
-        if ($JsonObj.conditions.locations.includeLocations -is [Object]) {
-            $IncludeJSON = foreach ($Location in $JsonObj.conditions.locations.includeLocations) {
-                $CheckExististing = New-GraphGETRequest -uri "https://graph.microsoft.com/beta/identity/conditionalAccess/namedLocations" -tenantid $TenantFilter
-                if ($Location.displayName -in $CheckExististing.displayName) {
-                    $Location = ($CheckExististing | Where-Object -Property displayName -EQ $Location.displayName).id
-                }
-                else {
-                    $Body = ConvertTo-Json -InputObject $Location
-                    $GraphRequest = New-GraphPOSTRequest -uri "https://graph.microsoft.com/beta/identity/conditionalAccess/namedLocations" -body $body -Type POST -tenantid $tenantfilter
-                    $Location = $GraphRequest.id
-                }
-                $Location.PSObject.Properties.Remove('displayName')
-                $Location.PSObject.Properties.Remove('type')
-                $Location.PSObject.Properties.Remove('@odata.type')
-                $Location
+
+    #for each of the locations, check if they exist, if not create them. These are in $jsonobj.LocationInfo
+    $LocationLookupTable = foreach ($location in $jsonobj.LocationInfo) {
+        if (!$location.displayName) { continue }
+        $CheckExististing = New-GraphGETRequest -uri "https://graph.microsoft.com/beta/identity/conditionalAccess/namedLocations" -tenantid $TenantFilter
+        if ($Location.displayName -in $CheckExististing.displayName) {
+            [pscustomobject]@{
+                id   = ($CheckExististing | Where-Object -Property displayName -EQ $Location.displayName).id
+                name = ($CheckExististing | Where-Object -Property displayName -EQ $Location.displayName).displayName
             }
-            $JsonObj.conditions.locations.includeLocations = @($IncludeJSON)
+            Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME  -message "Matched a CA policy with the existing Named Location: $($location.displayName)" -Sev "Info"
+ 
+        }
+        else {
+            $Body = ConvertTo-Json -InputObject $Location
+            $GraphRequest = New-GraphPOSTRequest -uri "https://graph.microsoft.com/beta/identity/conditionalAccess/namedLocations" -body $body -Type POST -tenantid $tenantfilter
+            Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME  -message "Created new Named Location: $($location.displayName)" -Sev "Info"
+            [pscustomobject]@{
+                id   = $GraphRequest.id
+                name = $GraphRequest.displayName
+            }
         }
     }
-
-    #do the same for excluded locations
-    if ($JsonObj.conditions.locations.excludeLocations) {
-        if ($JsonObj.conditions.locations.excludeLocations -is [Object]) {
-            $ExcludeJSON = foreach ($Location in $JsonObj.conditions.locations.excludeLocations) {
-                $CheckExististing = New-GraphGETRequest -uri "https://graph.microsoft.com/beta/identity/conditionalAccess/namedLocations" -tenantid $TenantFilter
-                if ($Location.displayName -in $CheckExististing.displayName) {
-                    $Location = ($CheckExististing | Where-Object -Property displayName -EQ $Location.displayName).id
-                }
-                else {
-                    $Body = ConvertTo-Json -InputObject $Location
-                    $GraphRequest = New-GraphPOSTRequest -uri "https://graph.microsoft.com/beta/identity/conditionalAccess/namedLocations" -body $body -Type POST -tenantid $tenantfilter
-                    $Location = $GraphRequest.id
-                }
-                $Location.PSObject.Properties.Remove('displayName')
-                $Location.PSObject.Properties.Remove('type')
-                $Location.PSObject.Properties.Remove('@odata.type')
-                $Location
-            }
-            $JsonObj.conditions.locations.excludeLocations = @($ExcludeJSON)
-        }
+    Write-Host ($LocationLookupTable | ConvertTo-Json)
+    foreach ($location in $JSONObj.conditions.locations.includeLocations) {
+        Write-Host "Replacting $location"
+        $lookup = $LocationLookupTable | Where-Object -Property name -EQ $location
+        Write-Host "Found $lookup"
+        if (!$lookup) { continue }
+        $index = [array]::IndexOf($JSONObj.conditions.locations.includeLocations, $location)
+        $JSONObj.conditions.locations.includeLocations[$index] = $lookup.id
     }
 
+    foreach ($location in $JSONObj.conditions.locations.excludeLocations) {
+        $lookup = $LocationLookupTable | Where-Object -Property name -EQ $location
+        if (!$lookup) { continue }
+        $index = [array]::IndexOf($JSONObj.conditions.locations.excludeLocations, $location)
+        $JSONObj.conditions.locations.excludeLocations[$index] = $lookup.id
+    }
 
+    $JsonObj.PSObject.Properties.Remove('LocationInfo')
     $RawJSON = $JSONObj | ConvertTo-Json -Depth 10
+    Write-Host $RawJSON
     try {
         Write-Host "Checking"
         $CheckExististing = New-GraphGETRequest -uri "https://graph.microsoft.com/v1.0/identity/conditionalAccess/policies" -tenantid $TenantFilter
