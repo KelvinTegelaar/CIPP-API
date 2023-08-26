@@ -36,7 +36,7 @@ function Push-ListGraphRequestQueue {
     }
 
     $RawGraphRequest = try {
-        Get-GraphRequestList @GraphRequestParams | Select-Object *, @{l = 'Tenant'; e = { $QueueItem.Tenant } }, @{l = 'CippStatus'; e = { 'Good' } }
+        Get-GraphRequestList @GraphRequestParams
     } catch {
         [PSCustomObject]@{
             Tenant     = $QueueItem.Tenant
