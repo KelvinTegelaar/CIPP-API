@@ -5,8 +5,8 @@ param($Request, $TriggerMetadata)
 
 $APIName = $TriggerMetadata.FunctionName
 Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME  -message "Accessed this API" -Sev "Debug"
-Write-Host ($request | ConvertTo-Json -Compress)
 
+$TenantFilter = $Request.Query.TenantFilter
 try {        
     $GUID = (New-Guid).GUID
     $JSON = if ($request.body.rawjson) {
@@ -18,7 +18,28 @@ try {
             $_ | Select-Object -Property $NonEmptyProperties 
         }
     }
-    $JSON = ($JSON | ConvertTo-Json -Depth 10)
+  
+    $includelocations = New-Object System.Collections.ArrayList
+    $IncludeJSON = foreach ($Location in  $JSON.conditions.locations.includeLocations) {
+        $locationinfo = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/identity/conditionalAccess/namedLocations" -tenantid $TenantFilter | Where-Object -Property id -EQ $location | Select-Object * -ExcludeProperty id, *time*
+        $null = if ($locationinfo) { $includelocations.add($locationinfo.displayName) } else { $includelocations.add($location) }
+        $locationinfo
+    }
+    if ($includelocations) { $JSON.conditions.locations.includeLocations = $includelocations }
+
+
+    $excludelocations = New-Object System.Collections.ArrayList
+    $ExcludeJSON = foreach ($Location in $JSON.conditions.locations.excludeLocations) {
+        $locationinfo = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/identity/conditionalAccess/namedLocations" -tenantid $TenantFilter | Where-Object -Property id -EQ $location | Select-Object * -ExcludeProperty id, *time*
+        $null = if ($locationinfo) { $excludelocations.add($locationinfo.displayName) } else { $excludelocations.add($location) }
+        $locationinfo
+    }
+
+    if ($excludelocations) { $JSON.conditions.locations.excludeLocations = $excludelocations }
+
+    $JSON | Add-Member -NotePropertyName 'LocationInfo' -NotePropertyValue @($IncludeJSON, $ExcludeJSON)
+
+    $JSON = ($JSON | ConvertTo-Json -Depth 100)
     $Table = Get-CippTable -tablename 'templates'
     $Table.Force = $true
     Add-AzDataTableEntity @Table -Entity @{

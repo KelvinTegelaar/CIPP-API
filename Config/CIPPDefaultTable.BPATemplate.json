@@ -20,9 +20,9 @@
     {
       "name": "OAuthAppConsent",
       "API": "Graph",
-      "URL": "https://graph.microsoft.com/beta/policies/authorizationPolicy/authorizationPolicy",
-      "ExtractFields": "permissionGrantPolicyIdsAssignedToDefaultUserRole",
-      "where": "'ManagePermissionGrantsForSelf.microsoft-user-default-legacy' -notin $_.permissionGrantPolicyIdsAssignedToDefaultUserRole",
+      "URL": "https://graph.microsoft.com/v1.0/policies/authorizationPolicy?$select=defaultUserRolePermissions",
+      "ExtractFields": "defaultuserrolepermissions",
+      "where": "'ManagePermissionGrantsForSelf.microsoft-user-default-legacy' -notin $_.defaultuserrolepermissions.permissionGrantPoliciesAssigned",
       "StoreAs": "bool",
       "FrontendFields": [
         {

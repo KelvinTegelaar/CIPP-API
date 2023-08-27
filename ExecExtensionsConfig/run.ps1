@@ -26,7 +26,7 @@ $results = try {
             if ($request.body.$APIKey.APIKey) {
                 $null = Set-AzKeyVaultSecret -VaultName $ENV:WEBSITE_DEPLOYMENT_ID -Name $APIKey -SecretValue (ConvertTo-SecureString -String $request.body.$APIKey.APIKey -AsPlainText -Force)
             }
-            $request.body.$APIKey = @{ APIKey = "SentToKeyVault" }
+            $request.body.$APIKey.APIKey = "SentToKeyVault"
         }
     }
     $body = $request.body | Select-Object * -ExcludeProperty APIKey, Enabled |  ConvertTo-Json -Depth 10 -Compress
