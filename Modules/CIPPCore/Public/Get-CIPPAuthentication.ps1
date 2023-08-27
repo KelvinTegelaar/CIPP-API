@@ -18,7 +18,7 @@ function Get-CIPPAuthentication {
     }
     catch {
         Write-LogMessage -message "Could not retrieve keys from Keyvault: $($_.Exception.Message)" -Sev 'CRITICAL'
-        return $fase
+        return $false
     }
 }
 
