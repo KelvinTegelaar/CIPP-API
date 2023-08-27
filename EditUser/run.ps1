@@ -18,6 +18,7 @@ try {
     $Email = "$($UserObj.username)@$($UserObj.domain)"
     $UserprincipalName = "$($UserObj.username)@$($UserObj.domain)"
     $BodyToship = [pscustomobject] @{
+        "officeLocation"    = $userobj.officeLocation
         "givenName"         = $userobj.firstname
         "surname"           = $userobj.lastname
         "city"              = $userobj.city
