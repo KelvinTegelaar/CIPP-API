@@ -6,7 +6,7 @@ function Get-ListGraphRequest {
     $APIName = $TriggerMetadata.FunctionName
 
     $Message = 'Accessed this API | Endpoint: {0}' -f $Request.Query.Endpoint
-    Write-LogMessage -API $APINAME -message $Message -Sev 'Debug'
+    Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -message $Message -Sev 'Debug'
 
     $CippLink = ([System.Uri]$TriggerMetadata.Headers.referer).PathAndQuery
 
