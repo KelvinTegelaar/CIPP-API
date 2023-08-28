@@ -112,7 +112,7 @@ foreach ($tenant in $tenants) {
             $assign = New-GraphPOSTRequest -uri  "https://graph.microsoft.com/beta/deviceAppManagement/mobileApps/$($NewApp.id)/assign" -tenantid $tenant -type POST -body $AssignBody
             Write-LogMessage -api "AppUpload" -tenant $($Tenant) -message "Assigned application $($chocoApp.ApplicationName) to $AssignTo" -Sev "Info"
         }
-        Write-LogMessage -api "AppUpload" -tenant $($Tenant) -message "Successfully added Application"
+        Write-LogMessage -api "AppUpload" -tenant $($Tenant) -message "Successfully added Application" -Sev "Info"
     }
     catch {
         "Failed to add Application for $($Tenant): $($_.Exception.Message)"

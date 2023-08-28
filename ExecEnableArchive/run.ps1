@@ -13,15 +13,11 @@ Write-Host "PowerShell HTTP trigger function processed a request."
 
 # Interact with query parameters or the body of the request.
 Try {
-    $tenantfilter = $Request.Query.TenantFilter 
-    New-ExoRequest -tenantid $TenantFilter -cmdlet "Enable-Mailbox" -cmdParams @{Identity = $request.query.id; Archive = $true }
-
-    $Results = [pscustomobject]@{"Results" = "Successfully completed task." }
-    Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $($tenantfilter) -message "Added archive to $($request.query.id)" -Sev "Info"
+    $ResultsArch = Set-CIPPMailboxArchive -userid $Request.query.id -tenantFilter $Request.query.TenantFilter -APIName $APINAME -ExecutingUser $request.headers.'x-ms-client-principal' -ArchiveEnabled $true
+    $Results = [pscustomobject]@{"Results" = "$ResultsArch" }
 }
 catch {
-    Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $($tenantfilter) -message "Failed to add archive $($_.Exception.Message)" -Sev "Error"
-    $Results = [pscustomobject]@{"Results" = "Failed. $_.Exception.Message" }
+    $Results = [pscustomobject]@{"Results" = "Failed. $($_.Exception.Message)" }
 }
 # Associate values to output bindings by calling 'Push-OutputBinding'.
 Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{

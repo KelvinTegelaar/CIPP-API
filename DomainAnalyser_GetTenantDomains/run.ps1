@@ -9,7 +9,7 @@ $TenantDomains = $Tenants | ForEach-Object -Parallel {
     $Tenant = $_
     # Get Domains to Lookup
     try {
-        $Domains = New-GraphGetRequest -uri 'https://graph.microsoft.com/v1.0/domains' -tenantid $Tenant.defaultDomainName | Where-Object { ($_.id -notlike '*.onmicrosoft.com' -and $_.id -notlike '*.microsoftonline.com' -and $_.id -NotLike '*.exclaimer.cloud' -and $_.id -NotLike '*.codetwo.online' -and $_.id -NotLike '*.call2teams.com' -and $_.isVerified) }
+        $Domains = New-GraphGetRequest -uri 'https://graph.microsoft.com/v1.0/domains' -tenantid $Tenant.defaultDomainName | Where-Object { ($_.id -notlike '*.microsoftonline.com' -and $_.id -NotLike '*.exclaimer.cloud' -and $_.id -NotLike '*.codetwo.online' -and $_.id -NotLike '*.call2teams.com' -and $_.isVerified) }
         foreach ($d in $domains) {
             [PSCustomObject]@{
                 Tenant             = $Tenant.defaultDomainName
@@ -23,8 +23,7 @@ $TenantDomains = $Tenants | ForEach-Object -Parallel {
                 SupportedServices  = $d.supportedServices
             }
         }
-    }
-    catch {
+    } catch {
         Write-LogMessage -API 'DomainAnalyser' -tenant $tenant.defaultDomainName -message "DNS Analyser GraphGetRequest Exception: $($_.Exception.Message)" -sev Error
     }
 } | Sort-Object -Unique -Property Domain
@@ -39,7 +38,6 @@ foreach ($Exclude in $ExcludedTenants) {
         Remove-AzDataTableEntity @DomainTable -Entity $CleanupRows
     }
 }
-
 
 $TenantCount = ($TenantDomains | Measure-Object).Count
 if ($TenantCount -gt 0) {
@@ -75,8 +73,7 @@ if ($TenantCount -gt 0) {
                     $DomainObject.MailProviders = $OldDomain.MailProviders
                 }
                 $Domain = $DomainObject
-            }
-            else {
+            } else {
                 $Domain.TenantDetails = $TenantDetails
                 if ($OldDomain) {
                     $Domain.DkimSelectors = $OldDomain.DkimSelectors
@@ -90,8 +87,6 @@ if ($TenantCount -gt 0) {
         # Batch insert all tenant domains
         try {
             Add-AzDataTableEntity @DomainTable -Entity $TenantDomainObjects -Force
-        }
-        catch { Write-LogMessage -API 'DomainAnalyser' -message "Domain Analyser GetTenantDomains Error $($_.Exception.Message)" -sev info }
-    }
-    catch { Write-LogMessage -API 'DomainAnalyser' -message "GetTenantDomains loop exception: $($_.Exception.Message) line $($_.InvocationInfo.ScriptLineNumber)" }
+        } catch { Write-LogMessage -API 'DomainAnalyser' -message "Domain Analyser GetTenantDomains Error $($_.Exception.Message)" -sev info }
+    } catch { Write-LogMessage -API 'DomainAnalyser' -message "GetTenantDomains loop exception: $($_.Exception.Message) line $($_.InvocationInfo.ScriptLineNumber)" -sev 'Error' }
 }

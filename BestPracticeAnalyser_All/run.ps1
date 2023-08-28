@@ -1,219 +1,115 @@
 param($tenant)
 
-# Prepare tokens, connections and variables that will be used multiple times later
-
-try {
-    $token = Get-ClassicAPIToken -resource 'https://outlook.office365.com' -tenantid $tenant
-    Write-LogMessage -API 'BestPracticeAnalyser' -tenant $tenant -message "Token retrieved for Best Practice Analyser on $($tenant)" -sev 'Debug'
-}
-catch {
-    Write-LogMessage -API 'BestPracticeAnalyser' -tenant $tenant -message "Unable to Retrieve token for Best Practice Analyser $($tenant) Error: $($_.exception.message)" -sev 'Error'
-}
 $TenantName = Get-Tenants | Where-Object -Property defaultDomainName -EQ $tenant
-# Build up the result object that will be passed back to the durable function
-$Result = @{
-    Tenant                           = "$($TenantName.displayName)"
-    GUID                             = "$($TenantName.customerId)"
-    RowKey                           = "$($TenantName.customerId)"
-    PartitionKey                     = 'bpa'
-    LastRefresh                      = $(Get-Date (Get-Date).ToUniversalTime() -UFormat '+%Y-%m-%dT%H:%M:%S.000Z')
-    SecureDefaultState               = ''
-    PrivacyEnabled                   = ''
-    UnifiedAuditLog                  = ''
-    MessageCopyForSend               = ''
-    MessageCopyForSendAsCount        = ''
-    MessageCopyForSendOnBehalfCount  = ''
-    MessageCopyForSendList           = ''
-    AdminConsentForApplications      = ''
-    DoNotExpirePasswords             = ''
-    SelfServicePasswordReset         = ''
-    DisabledSharedMailboxLogins      = ''
-    DisabledSharedMailboxLoginsCount = ''
-    UnusedLicensesCount              = ''
-    UnusedLicensesTotal              = ''
-    UnusedLicensesResult             = ''
-    UnusedLicenseList                = ''
-    SecureScoreCurrent               = ''
-    SecureScoreMax                   = ''
-    SecureScorePercentage            = ''
-    SentFromAlias                    = ''
-    MFANudge                         = ''
-    TAPEnabled                       = ''
-}
-
-# Starting the Best Practice Analyser
-# Get the TAP state
-try {
-    $TAPEnabled = (New-GraphGetRequest -Uri 'https://graph.microsoft.com/beta/policies/authenticationmethodspolicy/authenticationMethodConfigurations/TemporaryAccessPass' -tenantid $tenant)
-    $Result.TAPEnabled = $TAPEnabled.State
-}
-catch {
-    Write-LogMessage -API 'BestPracticeAnalyser' -tenant $tenant -message "Security Defaults State on $($tenant) Error: $($_.exception.message)" -sev 'Error'
-}
-# Get the nudge State
-try {
-    $NudgeState = (New-GraphGetRequest -Uri 'https://graph.microsoft.com/beta/policies/authenticationMethodsPolicy' -tenantid $tenant)
-    $Result.MFANudge = $NudgeState.registrationEnforcement.authenticationMethodsRegistrationCampaign.state
-}
-catch {
-    Write-LogMessage -API 'BestPracticeAnalyser' -tenant $tenant -message "Security Defaults State on $($tenant) Error: $($_.exception.message)" -sev 'Error'
-}
-
-# Get the Secure Default State
-try {
-    $SecureDefaultsState = (New-GraphGetRequest -Uri 'https://graph.microsoft.com/beta/policies/identitySecurityDefaultsEnforcementPolicy' -tenantid $tenant)
-    $Result.SecureDefaultState = $SecureDefaultsState.IsEnabled
-}
-catch {
-    Write-LogMessage -API 'BestPracticeAnalyser' -tenant $tenant -message "Security Defaults State on $($tenant) Error: $($_.exception.message)" -sev 'Error'
-}
-
-
-# Get the Privacy Enabled State
-try {
-    $Result.PrivacyEnabled = (New-GraphGetRequest -Uri 'https://graph.microsoft.com/beta/admin/reportSettings' -tenantid $tenant).displayConcealedNames
-}
-catch {
-    Write-LogMessage -API 'BestPracticeAnalyser' -tenant $tenant -message "Privacy Enabled State on $($tenant) Error: $($_.exception.message)" -sev 'Error'
-}
-
-# Get Send and Send Behalf Of
-try {
-    # Send and Send Behalf Of
-    $MailboxBPA = New-ExoRequest -tenantid $Tenant -cmdlet 'Get-Mailbox' | Where-Object { $_.RecipientTypeDetails -In @('UserMailbox', 'SharedMailbox') -and $_.userPrincipalName -notlike 'DiscoverySearchMailbox' }
-    $TotalMailboxes = $MailboxBPA | Measure-Object | Select-Object -ExpandProperty Count
-    $TotalMessageCopyForSentAsEnabled = $MailboxBPA | Where-Object { $_.MessageCopyForSentAsEnabled -eq $true } | Measure-Object | Select-Object -ExpandProperty Count
-    $TotalMessageCopyForSendOnBehalfEnabled = $MailboxBPA | Where-Object { $_.MessageCopyForSendOnBehalfEnabled -eq $true } | Measure-Object | Select-Object -ExpandProperty Count
-    If (($TotalMailboxes -eq $TotalMessageCopyForSentAsEnabled) -and ($TotalMailboxes -eq $TotalMessageCopyForSendOnBehalfEnabled)) {
-        $Result.MessageCopyForSend = 'PASS'
-        $Result.MessageCopyForSendAsCount = $TotalMessageCopyForSentAsEnabled
-        $Result.MessageCopyForSendOnBehalfCount = $TotalMessageCopyForSendOnBehalfEnabled
-    }
-    else {
-        $Result.MessageCopyForSend = 'FAIL'
-        $Result.MessageCopyForSendAsCount = $MailboxBPA | Where-Object { $_.MessageCopyForSentAsEnabled -eq $false } | Measure-Object | Select-Object -ExpandProperty Count
-        $Result.MessageCopyForSendOnBehalfCount = $MailboxBPA | Where-Object { $_.MessageCopyForSendOnBehalfEnabled -eq $false } | Measure-Object | Select-Object -ExpandProperty Count
-        $Result.MessageCopyForSendList = ($MailboxBPA | Where-Object { ($_.MessageCopyForSendOnBehalfEnabled -eq $false) -or ( $_.MessageCopyForSendOnBehalfEnabled -eq $false) } | Select-Object -ExpandProperty userPrincipalName) -join '<br />'
+Set-Location (Get-Item $PSScriptRoot).Parent.FullName
+$TemplatesLoc = Get-ChildItem "Config\*.BPATemplate.json"
+$Templates = $TemplatesLoc | ForEach-Object {
+    $Template = $(Get-Content $_) | ConvertFrom-Json
+    [PSCustomObject]@{
+        Data  = $Template
+        Name  = $Template.Name
+        Style = $Template.Style
     }
 }
-catch {
-    Write-LogMessage -API 'BestPracticeAnalyser' -tenant $tenant -message "Send and Send Behalf Of on $($tenant) Error: $($_.exception.message)" -sev 'Error'
-}
+$Table = Get-CippTable -tablename 'cachebpav2'
+$AddRow = foreach ($Template in $templates) {
+    # Build up the result object that will be passed back to the durable function
+    $Result = @{
+        Tenant       = "$($TenantName.displayName)"
+        GUID         = "$($TenantName.customerId)"
+        RowKey       = "$($Template.Name)"
+        PartitionKey = "$($TenantName.customerId)"
+        LastRefresh  = [string]$(Get-Date (Get-Date).ToUniversalTime() -UFormat '+%Y-%m-%dT%H:%M:%S.000Z')
+    }
+    foreach ($field in $Template.Data.Fields) {
+        if ($field.UseExistingInfo) { continue }
+        if ($Field.Where) { $filterscript = [scriptblock]::Create($Field.Where) } else { $filterscript = { $true } }
+        try {
+            switch ($field.API) {
+                "Graph" { 
+                    $paramsField = @{
+                        uri      = $field.URL
+                        tenantid = $TenantName.defaultDomainName
+                    }
+                    if ($Field.parameters) {
+                        $field.Parameters | ForEach-Object {
+                            Write-Host "Doing: $($_.psobject.properties.name) with value $($_.psobject.properties.value)"
+                            $paramsField.Add($_.psobject.properties.name, $_.psobject.properties.value)
+                        }
+                    }
+                    $FieldInfo = New-GraphGetRequest @paramsField | Where-Object $filterscript | Select-Object $field.ExtractFields
+                }
+                "Exchange" {
+                    if ($field.Command -notlike "get-*") {
+                        Write-LogMessage  -API "BPA" -tenant $tenant -message "The BPA only supports get- exchange commands. A set or update command was used." -sev Error
+                        break
+                    }
+                    else {
+                        $paramsField = @{
+                            tenantid = $TenantName.defaultDomainName
+                            cmdlet   = $field.Command
+                        }
+                        if ($Field.Parameters) { $paramsfield.add('cmdparams', $field.parameters) }
+                        $FieldInfo = New-ExoRequest @paramsField | Where-Object $filterscript | Select-Object $field.ExtractFields 
+                    }
+                }
+                "CIPPFunction" {
+                    if ($field.Command -notlike "get-CIPP*") {
+                        Write-LogMessage  -API "BPA" -tenant $tenant -message "The BPA only supports get-CIPP commands. A set or update command was used, or a command that is not allowed." -sev Error
+                        break
+                    }
+                    $paramsField = @{
+                        TenantFilter = $TenantName.defaultDomainName
+                    }
+                    if ($field.parameters) {
+                        $field.Parameters | ForEach-Object {
+                            $paramsField.Add($_.psobject.properties.name, $_.psobject.properties.value)
+                        }
+                    }
+                    $FieldInfo = & $field.Command @paramsField | Where-Object $filterscript  | Select-Object $field.ExtractFields 
+                }
+            }
+        }
+        catch {
+            Write-Host "Error getting $($field.Name) in $($field.api) for $($TenantName.displayName) with GUID $($TenantName.customerId). Error: $($_.Exception.Message)"
+            Write-LogMessage -API "BPA" -tenant $tenant -message "Error getting $($field.Name) for $($TenantName.displayName) with GUID $($TenantName.customerId). Error: $($_.Exception.Message)" -sev Error
+            $fieldinfo = "FAILED"
+            $field.StoreAs = "string"
+        } 
+        try {
+            switch -Wildcard ($field.StoreAs) {
+                "*bool" {
+                    if ($field.ExtractFields.Count -gt 1) {
+                        Write-LogMessage  -API "BPA" -tenant $tenant -message "The BPA only supports 1 field for a bool. $($field.ExtractFields.Count) fields were specified." -sev Error
+                        break
+                    }
+                    if ($null -eq $FieldInfo.$($field.ExtractFields)) { $FieldInfo = $false }
 
+                    $Result.Add($field.Name, [bool]$FieldInfo.$($field.ExtractFields))
+                }
+                "JSON" {
+                    if ($FieldInfo -eq $null) { $JsonString = '{}' } else { $JsonString = (ConvertTo-Json -Depth 15 -InputObject $FieldInfo) }
+                    $Result.Add($field.Name, $JSONString)
+                }
+                "string" {
+                    $Result.Add($field.Name, [string]$FieldInfo)
+                }
+            }
+        }
+        catch {
+            Write-LogMessage -API "BPA" -tenant $tenant -message "Error storing $($field.Name) for $($TenantName.displayName) with GUID $($TenantName.customerId). Error: $($_.Exception.Message)" -sev Error
+            $Result.Add($field.Name, "FAILED")
+        }
 
-# Get Unified Audit Log
-try {
-    $EXOAdminAuditLogConfig = New-ExoRequest -tenantid $Tenant -cmdlet 'Get-AdminAuditLogConfig'
-    $Result.UnifiedAuditLog = $EXOAdminAuditLogConfig | Select-Object -ExpandProperty UnifiedAuditLogIngestionEnabled
-    
-}
-catch {
-    Write-LogMessage -API 'BestPracticeAnalyser' -tenant $tenant -message "Unified Audit Log on $($tenant). Error: $($_.exception.message)" -sev 'Error'
-}
+    }
+ 
+    if ($Result) {
+        try {
+            Add-AzDataTableEntity @Table -Entity $Result -Force
+        }
+        catch {
+            Write-LogMessage -API "BPA" -tenant $tenant -message "Error getting saving data for $($template.Name) - $($TenantName.customerId). Error: $($_.Exception.Message)" -sev Error
 
-# Get Basic Auth States
-try {
-    #No longer used - Basic authentication is deprecated.
-}
-catch {
-    Write-LogMessage -API 'BestPracticeAnalyser' -tenant $tenant -message "Basic Auth States on $($tenant). Error: $($_.exception.message)" -sev 'Error'
-}
-
-
-# Get OAuth Admin Consenst
-try {
-    $GraphRequest = New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/policies/authorizationPolicy/authorizationPolicy' -tenantid $Tenant
-    $Result.AdminConsentForApplications = if ($GraphRequest.permissionGrantPolicyIdsAssignedToDefaultUserRole -eq 'ManagePermissionGrantsForSelf.microsoft-user-default-legacy') { $true } else { $false }
-}
-catch {
-    Write-LogMessage -API 'BestPracticeAnalyser' -tenant $tenant -message "OAuth Admin Consent on $($tenant). Error: $($_.exception.message)" -sev 'Error'   
-}
-
-# Get Self Service Password Reset State
-try {
-    $GraphRequest = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/reports/authenticationMethods/usersRegisteredByFeature(includedUserTypes='all',includedUserRoles='all')" -tenantid $Tenant
-    $RegState = ($GraphRequest.userRegistrationFeatureCounts | Where-Object -Property Feature -EQ "ssprRegistered").usercount
-    $CapableState = ($GraphRequest.userRegistrationFeatureCounts | Where-Object -Property Feature -EQ "ssprCapable").usercount
-    $Result.SelfServicePasswordReset = if ($RegState -ge $CapableState -and $CapableState -ne 0) { $true } else { $false } 
-
-
-}
-catch {
-    Write-LogMessage -API 'BestPracticeAnalyser' -tenant $tenant -message "Self Service Password Reset on $($tenant). Error: $($_.exception.message)" -sev 'Error' 
-}
-
-# Get Passwords set to Never Expire
-try {
-    $ExpirePasswordReq = (New-GraphGetRequest -uri "https://graph.microsoft.com/beta/users/?`$top=999&`$select=userPrincipalName,passwordPolicies" -tenantid $Tenant | Where-Object -Property passwordPolicies -EQ $null).userPrincipalName
-    $Result.DoNotExpirePasswords = if ($ExpirePasswordReq) { $false } else { $true }
-}
-
-catch {
-    Write-LogMessage -API 'BestPracticeAnalyser' -tenant $tenant -message "Passwords never expire setting on $($tenant). Error: $($_.exception.message)" -sev 'Error' 
-}
-
-
-# Get Shared Mailbox Stuff
-try {
-    $SharedMailboxList = (New-GraphGetRequest -uri "https://outlook.office365.com/adminapi/beta/$($tenant)/Mailbox?`$filter=RecipientTypeDetails eq 'SharedMailbox'" -Tenantid $tenant -scope ExchangeOnline)
-    $AllUsersAccountState = New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/users?select=userPrincipalName,accountEnabled' -tenantid $Tenant
-    $EnabledUsersWithSharedMailbox = foreach ($SharedMailbox in $SharedMailboxList) {
-        # Match the User
-        $User = $AllUsersAccountState | Where-Object { $_.userPrincipalName -eq $SharedMailbox.userPrincipalName } | Select-Object -First 1
-        if ($User.accountEnabled) {
-            $User.userPrincipalName
         }
     }
-    
-    if (($EnabledUsersWithSharedMailbox | Measure-Object | Select-Object -ExpandProperty Count) -gt 0) { $Result.DisabledSharedMailboxLogins = ($EnabledUsersWithSharedMailbox) -join '<br />' } else { $Result.DisabledSharedMailboxLogins = 'PASS' } 
-    $Result.DisabledSharedMailboxLoginsCount = $EnabledUsersWithSharedMailbox | Measure-Object | Select-Object -ExpandProperty Count
 }
-catch {
-    Write-LogMessage -API 'BestPracticeAnalyser' -tenant $tenant -message "Shared Mailbox Enabled Accounts on $($tenant). Error: $($_.exception.message)" -sev 'Error'  
-}
-
-# Get unused Licenses
-try {
-    $LicenseUsage = New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/subscribedSkus' -tenantid $Tenant
-    # Import the licenses conversion table
-    Set-Location (Get-Item $PSScriptRoot).Parent.FullName
-    $ConvertTable = Import-Csv Conversiontable.csv | Sort-Object -Property 'guid' -Unique
-    $Table = Get-CIPPTable -TableName ExcludedLicenses
-    $ExcludeList = Get-AzDataTableEntity @Table
-    $UnusedLicenses = $LicenseUsage | Where-Object { ($_.prepaidUnits.enabled -ne $_.consumedUnits) -and ($_.SkuID -notin $ExcludeList.GUID) }
-    $UnusedLicensesCount = $UnusedLicenses | Measure-Object | Select-Object -ExpandProperty Count
-    $UnusedLicensesResult = if ($UnusedLicensesCount -gt 0) { 'FAIL' } else { 'PASS' }
-    $Result.UnusedLicenseList = foreach ($License in $UnusedLicenses) {
-        $PrettyName = ($ConvertTable | Where-Object { $_.guid -eq $License.skuid }).'Product_Display_Name' | Select-Object -Last 1
-        if (!$PrettyName) { $PrettyName = $License.skuPartNumber } 
-        [PSCustomObject]@{
-            License   = $($PrettyName)
-            Purchased = $($License.prepaidUnits.enabled)
-            Consumed  = $($License.consumedUnits)
-        }
-    }
-    
-    $TempCount = 0
-    foreach ($License in $UnusedLicenses) {
-        $TempCount = $TempCount + ($($License.prepaidUnits.enabled) - $($License.ConsumedUnits))
-    }
-    $Result.UnusedLicenseList = ConvertTo-Json -InputObject @($Result.UnusedLicenseList) -Compress
-    $Result.UnusedLicensesTotal = $TempCount
-    $Result.UnusedLicensesCount = $UnusedLicensesCount
-    $Result.UnusedLicensesResult = $UnusedLicensesResult
-}
-catch {
-    Write-LogMessage -API 'BestPracticeAnalyser' -tenant $tenant -message "Unused Licenses on $($tenant). Error: $($_.exception.message)" -sev 'Error'
-}
-
-# Get Secure Score
-try {
-    $SecureScore = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/security/secureScores?`$top=1" -tenantid $tenant -noPagination $true
-    $Result.SecureScoreCurrent = [int]$SecureScore.currentScore
-    $Result.SecureScoreMax = [int]$SecureScore.maxScore
-    $Result.SecureScorePercentage = [int](($SecureScore.currentScore / $SecureScore.maxScore) * 100)
-}
-catch {
-    Write-LogMessage -API 'BestPracticeAnalyser' -tenant $tenant -message "Secure Score Retrieval on $($tenant). Error: $($_.exception.message)" -sev 'Error' 
-}
-$Result
