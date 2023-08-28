@@ -17,7 +17,7 @@ $tokens = try {
     $tenantObjectId = $allTenantsDetails.value | Where-Object { $_.customerContextId -eq $customerContextId } | Select-Object 'objectId'
 }
 catch {
-    "Failed to retrieve list of tenants.  Error: $($_.Exception.Message)"
+    $Results = "Failed to retrieve list of tenants.  Error: $($_.Exception.Message)"
     Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $($tenantDisplayName) -message "Failed to retrieve list of tenants. Error: $($_.Exception.Message)" -Sev 'Error'
 }
 
@@ -27,17 +27,25 @@ if ($tenantObjectId) {
         $bodyToPatch = '{"displayName":"' + $tenantDisplayName + '","defaultDomainName":"' + $tenantDefaultDomainName + '"}'
         $patchTenant = (Invoke-RestMethod -Method PATCH -Uri "https://graph.windows.net/myorganization/contracts/$($tenantObjectId.objectId)?api-version=1.6" -Body $bodyToPatch -ContentType 'application/json' -Headers $AADGraphtoken -ErrorAction Stop)    
         $Filter = "PartitionKey eq 'Tenants' and defaultDomainName eq '{0}'" -f $tenantDefaultDomainName
-        $TenantsTable = Get-CippTable -tablename Tenants
-        $Tenant = Get-AzDataTableEntity @TenantsTable -Filter $Filter 
-        $Tenant.displayName = $tenantDisplayName
-        Update-AzDataTableEntity @TenantsTable -Entity $Tenant
+        try {
+            $TenantsTable = Get-CippTable -tablename Tenants
+            $Tenant = Get-AzDataTableEntity @TenantsTable -Filter $Filter 
+            $Tenant.displayName = $tenantDisplayName
+            Update-AzDataTableEntity @TenantsTable -Entity $Tenant
+        }
+        catch {
+            $AddedText = "but could not edit the tenant cache. Clear the tenant cache to display the updated details"
+        }
         Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $tenantDisplayName -message "Edited tenant $tenantDisplayName" -Sev 'Info'
-        $results = "Successfully amended details for $($Tenant.displayName)"
+        $results = "Successfully amended details for $($Tenant.displayName) $AddedText"
     }
     catch { 
         $results = "Failed to amend details for $tenantDisplayName : $($_.Exception.Message)"
         Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $tenantDisplayName -message "Failed amending details $tenantDisplayName. Error: $($_.Exception.Message)" -Sev 'Error'
     }
+}
+else {
+    $Results = "Could not find the tenant to edit in the contract endpoint. Please ensure you have a reseller relationship with the tenant you are trying to edit."
 }
 
 $body = [pscustomobject]@{'Results' = $results }
