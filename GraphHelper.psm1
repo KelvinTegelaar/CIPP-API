@@ -287,11 +287,11 @@ function Get-ClassicAPIToken($tenantID, $Resource) {
 }
 
 function New-TeamsAPIGetRequest($Uri, $tenantID, $Method = 'GET', $Resource = '48ac35b8-9aa8-4d74-927d-1f4a14a0b239', $ContentType = 'application/json') {
-    $token = Get-ClassicAPIToken -Tenant $tenantid -Resource $Resource
-
-    $NextURL = $Uri
 
     if ((Get-AuthorisedRequest -Uri $uri -TenantID $tenantid)) {
+        $token = Get-ClassicAPIToken -Tenant $tenantid -Resource $Resource
+
+        $NextURL = $Uri
         $ReturnedData = do {
             try {
                 $Data = Invoke-RestMethod -ContentType "$ContentType;charset=UTF-8" -Uri $NextURL -Method $Method -Headers @{
@@ -316,11 +316,11 @@ function New-TeamsAPIGetRequest($Uri, $tenantID, $Method = 'GET', $Resource = '4
 }
 
 function New-ClassicAPIGetRequest($TenantID, $Uri, $Method = 'GET', $Resource = 'https://admin.microsoft.com', $ContentType = 'application/json') {
-    $token = Get-ClassicAPIToken -Tenant $tenantID -Resource $Resource
-
-    $NextURL = $Uri
 
     if ((Get-AuthorisedRequest -Uri $uri -TenantID $tenantid)) {
+        $token = Get-ClassicAPIToken -Tenant $tenantID -Resource $Resource
+
+        $NextURL = $Uri
         $ReturnedData = do {
             try {
                 $Data = Invoke-RestMethod -ContentType "$ContentType;charset=UTF-8" -Uri $NextURL -Method $Method -Headers @{
@@ -344,9 +344,8 @@ function New-ClassicAPIGetRequest($TenantID, $Uri, $Method = 'GET', $Resource = 
 
 function New-ClassicAPIPostRequest($TenantID, $Uri, $Method = 'POST', $Resource = 'https://admin.microsoft.com', $Body) {
 
-    $token = Get-ClassicAPIToken -Tenant $tenantID -Resource $Resource
-
     if ((Get-AuthorisedRequest -Uri $uri -TenantID $tenantid)) {
+        $token = Get-ClassicAPIToken -Tenant $tenantID -Resource $Resource
         try {
             $ReturnedData = Invoke-RestMethod -ContentType 'application/json;charset=UTF-8' -Uri $Uri -Method $Method -Body $Body -Headers @{
                 Authorization                  = "Bearer $($token.access_token)";
@@ -502,8 +501,8 @@ function Remove-CIPPCache {
 }
 
 function New-ExoRequest ($tenantid, $cmdlet, $cmdParams, $useSystemMailbox, $Anchor) {
-    $token = Get-ClassicAPIToken -resource 'https://outlook.office365.com' -Tenantid $tenantid
     if ((Get-AuthorisedRequest -TenantID $tenantid)) {
+        $token = Get-ClassicAPIToken -resource 'https://outlook.office365.com' -Tenantid $tenantid
         $tenant = (get-tenants | Where-Object -Property defaultDomainName -EQ $tenantid).customerId
         if ($cmdParams) {
             $Params = $cmdParams
