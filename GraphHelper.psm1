@@ -155,7 +155,7 @@ function New-GraphGetRequest {
         [switch]$CountOnly
     )
 
-    if ((Get-AuthorisedRequest -Uri $uri -TenantID $tenantid) -or $NoAuthCheck) {
+    if ($NoAuthCheck -or (Get-AuthorisedRequest -Uri $uri -TenantID $tenantid)) {
         if ($scope -eq 'ExchangeOnline') {
             $AccessToken = Get-ClassicAPIToken -resource 'https://outlook.office365.com' -Tenantid $tenantid
             $headers = @{ Authorization = "Bearer $($AccessToken.access_token)" }
@@ -211,7 +211,7 @@ function New-GraphGetRequest {
 }
 
 function New-GraphPOSTRequest ($uri, $tenantid, $body, $type, $scope, $AsApp, $NoAuthCheck) {
-    if ((Get-AuthorisedRequest -Uri $uri -TenantID $tenantid) -or $NoAuthCheck) {
+    if ($NoAuthCheck -or (Get-AuthorisedRequest -Uri $uri -TenantID $tenantid)) {
         $headers = Get-GraphToken -tenantid $tenantid -scope $scope -AsApp $asapp
         Write-Verbose "Using $($uri) as url"
         if (!$type) {
@@ -414,17 +414,47 @@ function Get-Tenants {
     }
     $IncludedTenantsCache = Get-AzDataTableEntity @TenantsTable -Filter $Filter
 
-    $LastRefresh = ($IncludedTenantsCache | Where-Object { $_.customerId } | Sort-Object LastRefresh -Descending | Select-Object -First 1).LastRefresh | Get-Date
-    if ($LastRefresh -lt (Get-Date).Addhours(-24).ToUniversalTime()) {
+    if (($IncludedTenantsCache | Measure-Object).Count -gt 0) {
+        try {
+            $LastRefresh = ($IncludedTenantsCache | Where-Object { $_.customerId } | Sort-Object LastRefresh -Descending | Select-Object -First 1).LastRefresh | Get-Date -ErrorAction Stop
+        } catch { $LastRefresh = $false }
+    } else {
+        $LastRefresh = $false
+    }
+    if (!$LastRefresh -or $LastRefresh -lt (Get-Date).Addhours(-24).ToUniversalTime()) {
         try {
             Write-Host "Renewing. Cache not hit. $LastRefresh"
-            $TenantList = (New-GraphGetRequest -uri "https://graph.microsoft.com/beta/tenantRelationships/managedTenants/tenants?`$top=999" -tenantid $env:TenantID ) | Select-Object id, @{l = 'customerId'; e = { $_.tenantId } }, @{l = 'DefaultdomainName'; e = { [string]($_.contract.defaultDomainName) } } , @{l = 'MigratedToNewTenantAPI'; e = { $true } }, DisplayName, domains, tenantStatusInformation | Where-Object -Property defaultDomainName -NotIn $SkipListCache.defaultDomainName
+            [System.Collections.Generic.List[PSCustomObject]]$BulkRequests = @(
+                @{
+                    id     = 'Contracts'
+                    method = 'GET'
+                    url    = "/contracts?`$top=999"
+                },
+                @{
+                    id     = 'GDAPRelationships'
+                    method = 'GET'
+                    url    = '/tenantRelationships/delegatedAdminRelationships'
+                }
+            )
+
+            $BulkResults = New-GraphBulkRequest -Requests $BulkRequests -tenantid $TenantFilter -NoAuthCheck:$true
+            $Contracts = Get-GraphBulkResultByID -Results $BulkResults -ID 'Contracts' -Value
+            $GDAPRelationships = Get-GraphBulkResultByID -Results $BulkResults -ID 'GDAPRelationships' -Value
+
+            $ContractList = $Contracts | Select-Object id, customerId, DefaultdomainName, DisplayName, domains, @{l = 'MigratedToNewTenantAPI'; e = { $true } }, @{ n = 'delegatedPrivilegeStatus'; exp = { $CustomerId = $_.customerId; if (($GDAPRelationships | Where-Object { $_.customer.tenantId -EQ $CustomerId -and $_.status -EQ 'active' } | Measure-Object).Count -gt 0) { 'delegatedAndGranularDelegetedAdminPrivileges' } else { 'delegatedAdminPrivileges' } } } | Where-Object -Property defaultDomainName -NotIn $SkipListCache.defaultDomainName
+
+            $GDAPOnlyList = $GDAPRelationships | Where-Object { $_.status -eq 'active' -and $Contracts.customerId -notcontains $_.customer.tenantId } | Select-Object id, @{l = 'customerId'; e = { $($_.customer.tenantId) } }, @{l = 'defaultDomainName'; e = { (New-GraphGetRequest -uri "https://graph.microsoft.com/beta/tenantRelationships/findTenantInformationByTenantId(tenantId='$($_.customer.tenantId)')" -noauthcheck $true -asApp:$true -tenant $env:TenantId).defaultDomainName } }, @{l = 'MigratedToNewTenantAPI'; e = { $true } }, @{n = 'displayName'; exp = { $_.customer.displayName } }, domains, @{n = 'delegatedPrivilegeStatus'; exp = { 'granularDelegatedAdminPrivileges' } } | Where-Object -Property defaultDomainName -NotIn $SkipListCache.defaultDomainName | Sort-Object -Property customerId -Unique
+
+            $TenantList = @($ContractList) + @($GDAPOnlyList)
+
+            #$TenantList = (New-GraphGetRequest -uri "https://graph.microsoft.com/beta/tenantRelationships/managedTenants/tenants?`$top=999" -tenantid $env:TenantID ) | Select-Object id, @{l = 'customerId'; e = { $_.tenantId } }, @{l = 'DefaultdomainName'; e = { [string]($_.contract.defaultDomainName) } } , @{l = 'MigratedToNewTenantAPI'; e = { $true } }, DisplayName, domains, tenantStatusInformation | Where-Object -Property defaultDomainName -NotIn $SkipListCache.defaultDomainName
+
         } catch {
             Write-Host 'probably no license for Lighthouse. Using old API.'
         }
-        if (!$TenantList.customerId) {
+        <#if (!$TenantList.customerId) {
             $TenantList = (New-GraphGetRequest -uri "https://graph.microsoft.com/beta/contracts?`$top=999" -tenantid $env:TenantID ) | Select-Object id, customerId, DefaultdomainName, DisplayName, domains | Where-Object -Property defaultDomainName -NotIn $SkipListCache.defaultDomainName
-        }
+        }#>
         $IncludedTenantsCache = [system.collections.generic.list[hashtable]]::new()
         if ($env:PartnerTenantAvailable) {
             $IncludedTenantsCache.Add(@{
@@ -450,7 +480,7 @@ function Get-Tenants {
                     customerId               = [string]$Tenant.customerId
                     defaultDomainName        = [string]$Tenant.defaultDomainName
                     displayName              = [string]$Tenant.DisplayName
-                    delegatedPrivilegeStatus = [string]$Tenant.tenantStatusInformation.delegatedPrivilegeStatus
+                    delegatedPrivilegeStatus = [string]$Tenant.delegatedPrivilegeStatus
                     domains                  = ''
                     Excluded                 = $false
                     ExcludeUser              = ''
@@ -694,7 +724,7 @@ function New-GraphBulkRequest {
         $Requests
     )
 
-    if ((Get-AuthorisedRequest -Uri $uri -TenantID $tenantid) -or $NoAuthCheck) {
+    if ($NoAuthCheck -or (Get-AuthorisedRequest -Uri $uri -TenantID $tenantid)) {
         $headers = Get-GraphToken -tenantid $tenantid -scope $scope -AsApp $asapp
 
         $URL = 'https://graph.microsoft.com/beta/$batch'
@@ -720,7 +750,8 @@ function New-GraphBulkRequest {
             }
 
             foreach ($MoreData in $ReturnedData.Responses | Where-Object { $_.body.'@odata.nextLink' }) {
-                $AdditionalValues = New-GraphGetRequest -ComplexFilter -uri $MoreData.body.'@odata.nextLink' -tenantid $TenantFilter
+                Write-Host 'Getting more'
+                $AdditionalValues = New-GraphGetRequest -ComplexFilter -uri $MoreData.body.'@odata.nextLink' -tenantid $TenantFilter -NoAuthCheck:$NoAuthCheck
                 $NewValues = [System.Collections.Generic.List[PSCustomObject]]$MoreData.body.value
                 $AdditionalValues | ForEach-Object { $NewValues.add($_) }
                 $MoreData.body.value = $NewValues
