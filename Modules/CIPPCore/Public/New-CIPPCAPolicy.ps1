@@ -42,7 +42,6 @@ function New-CIPPCAPolicy {
     $JsonObj.grantControls.PSObject.Properties.Remove('authenticationStrength@odata.context')
     if ($JSONObj.conditions.users.excludeGuestsOrExternalUsers.externalTenants.Members) {
         $JsonObj.conditions.users.excludeGuestsOrExternalUsers.externalTenants.PSObject.Properties.Remove('@odata.context')
-        $JsonObj.conditions.users.excludeGuestsOrExternalUsers.externalTenants.PSObject.Properties.Remove('@odata.type')
     }
     if ($State -and $State -ne 'donotchange') {
         $Jsonobj.state = $State
