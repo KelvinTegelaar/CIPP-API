@@ -424,6 +424,10 @@ function Get-Tenants {
     if (!$LastRefresh -or $LastRefresh -lt (Get-Date).Addhours(-24).ToUniversalTime()) {
         try {
             Write-Host "Renewing. Cache not hit. $LastRefresh"
+            $TenantList = (New-GraphGetRequest -uri "https://graph.microsoft.com/beta/tenantRelationships/managedTenants/tenants?`$top=999" -tenantid $env:TenantID ) | Select-Object id, @{l = 'customerId'; e = { $_.tenantId } }, @{l = 'DefaultdomainName'; e = { [string]($_.contract.defaultDomainName) } } , @{l = 'MigratedToNewTenantAPI'; e = { $true } }, DisplayName, domains, tenantStatusInformation | Where-Object -Property defaultDomainName -NotIn $SkipListCache.defaultDomainName
+
+        } catch {
+            Write-Host "Get-Tenants - Lighthouse Error, using contract/delegatedAdminRelationship calls. Error: $($_.Exception.Message)"
             [System.Collections.Generic.List[PSCustomObject]]$BulkRequests = @(
                 @{
                     id     = 'Contracts'
@@ -446,11 +450,6 @@ function Get-Tenants {
             $GDAPOnlyList = $GDAPRelationships | Where-Object { $_.status -eq 'active' -and $Contracts.customerId -notcontains $_.customer.tenantId } | Select-Object id, @{l = 'customerId'; e = { $($_.customer.tenantId) } }, @{l = 'defaultDomainName'; e = { (New-GraphGetRequest -uri "https://graph.microsoft.com/beta/tenantRelationships/findTenantInformationByTenantId(tenantId='$($_.customer.tenantId)')" -noauthcheck $true -asApp:$true -tenant $env:TenantId).defaultDomainName } }, @{l = 'MigratedToNewTenantAPI'; e = { $true } }, @{n = 'displayName'; exp = { $_.customer.displayName } }, domains, @{n = 'delegatedPrivilegeStatus'; exp = { 'granularDelegatedAdminPrivileges' } } | Where-Object -Property defaultDomainName -NotIn $SkipListCache.defaultDomainName | Sort-Object -Property customerId -Unique
 
             $TenantList = @($ContractList) + @($GDAPOnlyList)
-
-            #$TenantList = (New-GraphGetRequest -uri "https://graph.microsoft.com/beta/tenantRelationships/managedTenants/tenants?`$top=999" -tenantid $env:TenantID ) | Select-Object id, @{l = 'customerId'; e = { $_.tenantId } }, @{l = 'DefaultdomainName'; e = { [string]($_.contract.defaultDomainName) } } , @{l = 'MigratedToNewTenantAPI'; e = { $true } }, DisplayName, domains, tenantStatusInformation | Where-Object -Property defaultDomainName -NotIn $SkipListCache.defaultDomainName
-
-        } catch {
-            Write-Host 'probably no license for Lighthouse. Using old API.'
         }
         <#if (!$TenantList.customerId) {
             $TenantList = (New-GraphGetRequest -uri "https://graph.microsoft.com/beta/contracts?`$top=999" -tenantid $env:TenantID ) | Select-Object id, customerId, DefaultdomainName, DisplayName, domains | Where-Object -Property defaultDomainName -NotIn $SkipListCache.defaultDomainName
