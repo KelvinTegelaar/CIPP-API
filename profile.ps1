@@ -23,6 +23,16 @@ try {
 }
 catch {}
 
+try {
+    if (!$ENV:SetFromProfile) {
+        Write-Host "We're reloading from KV"
+        $Auth = Get-CIPPAuthentication
+    }
+}
+catch {
+    Write-LogMessage -message "Could not retrieve keys from Keyvault: $($_.Exception.Message)" -Sev 'CRITICAL'
+}
+
 # Uncomment the next line to enable legacy AzureRm alias in Azure PowerShell.
 # Enable-AzureRmAlias
 
