@@ -43,7 +43,7 @@ if ($Request.query.Permissions -eq 'true') {
                 $KeyVaultRefresh = Get-AzKeyVaultSecret -VaultName $kv -Name 'RefreshToken' -AsPlainText
                 if ($ENV:RefreshToken -ne $KeyVaultRefresh) {
                     $Success = $false
-                    $Messages.Add('Your refresh token does not match key vault, follow the Clear Token Cache procedure.') | Out-Null
+                    $Messages.Add('Your refresh token does not match key vault, clear your cache or wait 30 minutes.') | Out-Null
                     $Links.Add([PSCustomObject]@{
                             Text = 'Clear Token Cache'
                             Href = 'https://cipp.app/docs/general/troubleshooting/#clear-token-cache'

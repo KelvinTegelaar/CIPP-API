@@ -13,6 +13,7 @@ Write-Host "PowerShell HTTP trigger function processed a request."
 # Input bindings are passed in via param block.
 $Tenants = $request.body.selectedTenants.defaultDomainName
 Write-Host ($Request.body | ConvertTo-Json)
+if ($Tenants -eq "AllTenants") { $Tenants = (Get-Tenants).defaultDomainName }
 $results = foreach ($Tenant in $tenants) {
     try {
         $ObjBody = if ($Request.body.Type -eq "IPLocation") {
