@@ -2983,6 +2983,15 @@
     "value": "AgreementAcceptance.Read.All"
   },
   {
+    "description": "Read activity data for your organization",
+    "displayName": "Allows the application to read activity data for your organization.",
+    "id": "594c1fb6-4f81-4475-ae41-0c394909246c",
+    "Origin": "Delegated",
+    "userConsentDescription": "Read activity data for your organization",
+    "userConsentDisplayName": "Allows the application to read activity data for your organization.",
+    "value": "ActivityFeed.Read"
+  },
+  {
     "description": "Allows the app to read and query your audit log activities, on behalf of the signed-in user.",
     "displayName": "Read audit log data",
     "id": "e4c9e354-4dc5-45b8-9e7c-e1393b0b1a20",

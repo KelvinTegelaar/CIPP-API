@@ -4,14 +4,10 @@ using namespace System.Net
 param($Request, $TriggerMetadata)
 
 $APIName = $TriggerMetadata.FunctionName
-Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME  -message "Accessed this API" -Sev "Debug"
-
-# Interact with query parameters or the body of the request.
-$TenantFilter = $Request.Query.TenantFilter
-$Body = if ($Request.Query.Enable) { '{"accountEnabled":"true"}' } else { '{"accountEnabled":"false"}' }
 try {
-      $GraphRequest = New-GraphPostRequest -uri "https://graph.microsoft.com/v1.0/users/$($Request.query.ID)" -tenantid $TenantFilter -type PATCH -body $Body  -verbose
-      $Results = [pscustomobject]@{"Results" = "Successfully changed state for $($Request.query.ID)" }
+      ([System.Convert]::ToBoolean($Request.Query.Enable))
+      $State = Set-CIPPSignInState -userid $Request.query.ID -TenantFilter $Request.Query.TenantFilter -APIName $APINAME -ExecutingUser $request.headers.'x-ms-client-principal' -AccountEnabled ([System.Convert]::ToBoolean($Request.Query.Enable))
+      $Results = [pscustomobject]@{"Results" = "$State" }
 }
 catch {
       $Results = [pscustomobject]@{"Results" = "Failed. $($_.Exception.Message)" }
