@@ -58,13 +58,17 @@ $GraphRequest = $ExpectedPermissions.requiredResourceAccess | ForEach-Object {
     }
 }
 
+try {
+    $ourSVCPrincipal = New-GraphGETRequest -uri "https://graph.microsoft.com/beta/servicePrincipals(appId='$($ENV:applicationid)')" -tenantid $Tenantfilter
+    $CurrentRoles = New-GraphGETRequest -uri "https://graph.microsoft.com/beta/servicePrincipals/$($ourSVCPrincipal.id)/appRoleAssignments" -tenantid $tenantfilter
 
-$ourSVCPrincipal = New-GraphGETRequest -uri "https://graph.microsoft.com/beta/servicePrincipals(appId='$($ENV:applicationid)')" -tenantid $Tenantfilter
-
+}
+catch {
+    #this try catch exists because of 500 errors when the app principal does not exist. :)
+}
 # if the app svc principal exists, consent app permissions
 $apps = $ExpectedPermissions 
 #get current roles
-$CurrentRoles = New-GraphGETRequest -uri "https://graph.microsoft.com/beta/servicePrincipals/$($ourSVCPrincipal.id)/appRoleAssignments" -tenantid $tenantfilter
 #If 
 $Grants = foreach ($App in $apps.requiredResourceAccess) {
     try {
