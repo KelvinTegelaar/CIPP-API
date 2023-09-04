@@ -24,7 +24,7 @@ try {
 
             }
             catch {
-                "Could not get admin password changes for $($Tenant.tenant): $($_.Exception.message)"
+                "Could not get admin password changes for $($Tenant.tenant): $(Get-NormalizedError -message $_.Exception.message)"
             }
         }
         { $_.'DefenderMalware' -eq $true } {
@@ -96,7 +96,7 @@ try {
                 }
             }
             catch {
-                "Could not get MFA status for admins for $($Tenant.tenant): $($_.Exception.message)"
+                "Could not get MFA status for admins for $($Tenant.tenant): $(Get-NormalizedError -message $_.Exception.message)"
             }
         }
         { $_.'MFAAlertUsers' -eq $true } {
@@ -119,7 +119,7 @@ try {
 
             }
             catch {
-                "Could not get MFA status for users for $($Tenant.tenant): $($_.Exception.message)"
+                "Could not get MFA status for users for $($Tenant.tenant): $(Get-NormalizedError -message $_.Exception.message)"
 
             }
         }
@@ -152,7 +152,7 @@ try {
                 }
             }
             catch {
-                "Could not get get role changes for $($Tenant.tenant): $($_.Exception.message)"
+                "Could not get get role changes for $($Tenant.tenant): $(Get-NormalizedError -message $_.Exception.message)"
 
             }
         }
@@ -169,7 +169,7 @@ try {
         }
         { $_.'ExpiringLicenses' -eq $true } {
             try {
-                Get-CIPPLicenseOverview -TenantFilter $Tenant.tenant | Where-Object -Property TimeUntilRenew -LT 31 | ForEach-Object {
+                Get-CIPPLicenseOverview -TenantFilter $Tenant.tenant | Where-Object -Property TimeUntilRenew -LT 29 | ForEach-Object {
                     "$($_.License) will expire in $($_.TimeUntilRenew) days" 
                 }
             }

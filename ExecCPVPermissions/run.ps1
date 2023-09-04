@@ -33,6 +33,8 @@ $GraphRequest = $ExpectedPermissions.requiredResourceAccess | ForEach-Object {
             'fc780465-2017-40d4-a0c5-307022471b92' { 'WindowsDefenderATP' }
             '00000003-0000-0ff1-ce00-000000000000' { 'Sharepoint' }
             '48ac35b8-9aa8-4d74-927d-1f4a14a0b239' { 'Skype and Teams Tenant Admin API' }
+            'c5393580-f805-4401-95e8-94b7a6ef2fc2' { 'Office 365 Management API' }
+
         }
         $Scope = ($Translator | Where-Object { $_.id -in $Resource.ResourceAccess.id } | Where-Object { $_.value -notin 'profile', 'openid', 'offline_access' }).value -join ', '
         if ($Scope) {
@@ -61,6 +63,9 @@ $ourSVCPrincipal = New-GraphGETRequest -uri "https://graph.microsoft.com/beta/se
 
 # if the app svc principal exists, consent app permissions
 $apps = $ExpectedPermissions 
+#get current roles
+$CurrentRoles = New-GraphGETRequest -uri "https://graph.microsoft.com/beta/servicePrincipals/$($ourSVCPrincipal.id)/appRoleAssignments" -tenantid $tenantfilter
+#If 
 $Grants = foreach ($App in $apps.requiredResourceAccess) {
     try {
         $svcPrincipalId = New-GraphGETRequest -uri "https://graph.microsoft.com/v1.0/servicePrincipals(appId='$($app.resourceAppId)')" -tenantid $tenantfilter
@@ -69,6 +74,7 @@ $Grants = foreach ($App in $apps.requiredResourceAccess) {
         continue
     }
     foreach ($SingleResource in $app.ResourceAccess | Where-Object -Property Type -EQ "Role") {
+        if ($singleresource.id -In $currentroles.appRoleId) { continue }
         [pscustomobject]@{
             principalId = $($ourSVCPrincipal.id)
             resourceId  = $($svcPrincipalId.id)
@@ -84,10 +90,10 @@ foreach ($Grant in $grants) {
         "Failed to grant $($grant.appRoleId) to $($grant.resourceId): $($_.Exception.Message). "
     }
 }
-$StatusCode = [HttpStatusCode]::OK
+
 
 # Associate values to output bindings by calling 'Push-OutputBinding'.
 Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
-        StatusCode = $StatusCode
-        Body       = @($GraphRequest)
+        StatusCode = [HttpStatusCode]::OK
+        Body       = @{Results = $GraphRequest }
     })

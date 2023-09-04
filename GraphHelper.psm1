@@ -23,10 +23,10 @@ function Get-NormalizedError {
         '*Provide valid credential.*' { 'Error 400: There is an issue with your Exchange Token configuration. Please perform an access check for this tenant' }
         '*This indicate that a subscription within the tenant has lapsed*' { 'There is no exchange subscription available, or it has lapsed. Check licensing information.' }
         '*User was not found.*' { 'The relationship between this tenant and the partner has been dissolved from the tenant side.' }
-        '*The user or administrator has not consented to use the application*' { 'Please perform a CPV permissions refresh, or you are using GDAP and have not added the CIPP user to the correct group.' }
+        '*The user or administrator has not consented to use the application*' { 'CIPP cannot access this tenant. Perform a CPV Refresh and Access Check via the settings menu' }
         '*AADSTS50020*' { 'AADSTS50020: The user you have used for your Secure Application Model is a guest in this tenant, or your are using GDAP and have not added the user to the correct group. Please delete the guest user to gain access to this tenant' }
         '*AADSTS50177' { 'AADSTS50177: The user you have used for your Secure Application Model is a guest in this tenant, or your are using GDAP and have not added the user to the correct group. Please delete the guest user to gain access to this tenant' }
-        '*invalid or malformed*' { 'The request is malformed. You have entered incorrect tokens or have not performed a clear of the token cache after entering new tokens. Please see the troubleshooting documentation on how to execute a clear of the token cache.' }
+        '*invalid or malformed*' { 'The request is malformed. Have you finished the SAM Setup?' }
         '*Windows Store repository apps feature is not supported for this tenant*' { 'This tenant does not have WinGet support available' }
         '*AADSTS650051*' { 'The application does not exist yet. Try again in 30 seconds.' }
         '*AppLifecycle_2210*' { 'Failed to call Intune APIs: Does the tenant have a license available?' }
@@ -39,7 +39,7 @@ function Get-NormalizedError {
 
 function Get-GraphToken($tenantid, $scope, $AsApp, $AppID, $refreshToken, $ReturnRefresh) {
     if (!$scope) { $scope = 'https://graph.microsoft.com/.default' }
-
+    if (!$env:setfromprofile) { $CIPPAuth = Get-CIPPAuthentication; Write-Host "Could not get Refreshtoken from environment variable. Reloading token." }
     $AuthBody = @{
         client_id     = $env:ApplicationID
         client_secret = $env:ApplicationSecret
@@ -233,7 +233,7 @@ function New-GraphPOSTRequest ($uri, $tenantid, $body, $type, $scope, $AsApp, $N
             #setting ErrorMess because the error from a failed json conversion overwrites the exception.
             $ErrorMess = $($_.Exception.Message) 
             try {
-                $Message = ($_.ErrorDetails.Message | ConvertFrom-Json -ErrorAction SilentlyContinue).error.message
+                $Message = ($_.ErrorDetails.Message | ConvertFrom-Json -ErrorAction Stop).error.message
             }
             catch {
                 $Message = $ErrorMess
@@ -515,7 +515,7 @@ function Remove-CIPPCache {
         $BPATable = Get-CippTable -tablename 'cachebpa'
         $ClearBPARows = Get-AzDataTableEntity @BPATable
         Remove-AzDataTableEntity @BPATable -Entity $ClearBPARows
-
+        $ENV:SetFromProfile = $null
         $Script:SkipListCache = $Null
         $Script:SkipListCacheEmpty = $Null
         $Script:IncludedTenantsCache = $Null
@@ -551,9 +551,10 @@ function New-ExoRequest ($tenantid, $cmdlet, $cmdParams, $useSystemMailbox, $Anc
         }
         Write-Host "Using $Anchor"
         $Headers = @{
-            Authorization     = "Bearer $($token.access_token)"
-            Prefer            = 'odata.maxpagesize = 1000'
-            'X-AnchorMailbox' = $anchor
+            Authorization             = "Bearer $($token.access_token)"
+            Prefer                    = 'odata.maxpagesize = 1000'
+            'parameter-based-routing' = $true
+            'X-AnchorMailbox'         = $anchor
 
         }
         try {
@@ -562,7 +563,11 @@ function New-ExoRequest ($tenantid, $cmdlet, $cmdParams, $useSystemMailbox, $Anc
         catch {
             $ErrorMess = $($_.Exception.Message) 
             $ReportedError = ($_.ErrorDetails | ConvertFrom-Json -ErrorAction SilentlyContinue)
-            $Message = if ($ReportedError.error.details.message) { $ReportedError.error.details.message } else { $ReportedError.error.innererror.internalException.message }
+            $Message = if ($ReportedError.error.details.message) {
+                $ReportedError.error.details.message 
+            }
+            elseif ($ReportedError.error.message) { $ReportedError.error.message } 
+            else { $ReportedError.error.innererror.internalException.message }
             if ($null -eq $Message) { $Message = $ErrorMess }
             throw $Message
         }
