@@ -28,6 +28,11 @@ if ($env:MSI_SECRET) {
       Disable-AzContextAutosave -Scope Process | Out-Null
       $AzSession = Connect-AzAccount -Identity
 }
+if (!$ENV:SetFromProfile) {
+      Write-Host "We're reloading from KV"
+      Get-CIPPAuthentication
+}
+
 $KV = $ENV:WEBSITE_DEPLOYMENT_ID
 $Table = Get-CIPPTable -TableName SAMWizard
 $Rows = Get-AzDataTableEntity @Table | Where-Object -Property Timestamp -GT (Get-Date).AddMinutes(-10)
@@ -40,7 +45,7 @@ try {
             if ($request.body.RefreshToken) { Set-AzKeyVaultSecret -VaultName $kv -Name 'RefreshToken' -SecretValue (ConvertTo-SecureString -String $request.body.RefreshToken -AsPlainText -Force) }
             if ($request.body.applicationid) { Set-AzKeyVaultSecret -VaultName $kv -Name 'applicationid' -SecretValue (ConvertTo-SecureString -String $request.body.applicationid -AsPlainText -Force) }
             if ($request.body.applicationsecret) { Set-AzKeyVaultSecret -VaultName $kv -Name 'applicationsecret' -SecretValue (ConvertTo-SecureString -String $request.body.applicationsecret -AsPlainText -Force) }
-            $Results = @{ Results = "Replaced keys successfully. Please clear your token cache or wait 24 hours for the cache to be cleared." }
+            $Results = @{ Results = "The keys have been replaced. Please perform a permissions check." }
       }
       if ($Request.query.error -eq 'invalid_client') { $Results = "Client ID was not found in Azure. Try waiting 10 seconds to try again, if you have gotten this error after 5 minutes, please restart the process." }
       if ($request.query.code) {
@@ -177,7 +182,7 @@ try {
                   Remove-AzDataTableEntity @Table -Entity $Rows
 
                   $step = 5
-                  $Results = @{"message" = "Installation completed. You must perform a token cache clear. For instructions click "; step = $step ; url = "https://cipp.app/docs/general/troubleshooting/#clear-token-cache"
+                  $Results = @{"message" = "Installation completed."; step = $step 
                   }
             }
       }
