@@ -15,12 +15,34 @@ $TenantFilter = $Request.Query.TenantFilter
 
 Write-Host "Tenant Filter: $TenantFilter"
 try {
+    $Bytes = [System.Text.Encoding]::UTF8.GetBytes($Request.Query.UserID)
+    $base64IdentityParam = [Convert]::ToBase64String($Bytes)   
     $PermsRequest = New-GraphGetRequest -uri "https://outlook.office365.com/adminapi/beta/$($tenantfilter)/Mailbox('$($Request.Query.UserID)')/MailboxPermission" -Tenantid $tenantfilter -scope ExchangeOnline 
-    $GraphRequest = foreach ($Perm in $PermsRequest) {
-        if ($Perm.User -ne 'NT AUTHORITY\SELF') {
-            [pscustomobject]@{
-                User         = $Perm.User
-                AccessRights = $Perm.PermissionList.AccessRights -join ', '
+    $PermsRequest2 = New-GraphGetRequest -uri "https://outlook.office365.com/adminapi/beta/$($tenantfilter)/Recipient('$base64IdentityParam')?`$expand=RecipientPermission&isEncoded=true" -Tenantid $tenantfilter -scope ExchangeOnline 
+    $PermRequest3 = New-ExoRequest -Anchor $Request.Query.UserID -tenantid $Tenantfilter -cmdlet "Get-Mailbox" -cmdParams @{Identity = $($Request.Query.UserID); }
+
+    $GraphRequest = foreach ($Perm in $PermsRequest, $PermsRequest2.RecipientPermission, $PermRequest3) {
+
+        if ($perm.Trustee) {
+            $perm | Where-Object Trustee | ForEach-Object { [PSCustomObject]@{
+                    User        = $_.Trustee
+                    Permissions = $_.accessRights
+                }
+            }
+            
+        }
+        if ($perm.PermissionList) {
+            $perm |  Where-Object User | ForEach-Object { [PSCustomObject]@{
+                    User        = $_.User
+                    Permissions = $_.PermissionList.accessRights -join ', '
+                }        
+            }
+        }
+        if ($perm.GrantSendonBehalfTo -ne $null) {
+            $perm.GrantSendonBehalfTo | ForEach-Object { [PSCustomObject]@{
+                    User        = $_
+                    Permissions = "SendOnBehalf"
+                }        
             }
         }
     }

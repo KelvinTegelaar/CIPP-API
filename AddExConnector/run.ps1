@@ -11,7 +11,7 @@ $RequestParams = $Request.Body.PowerShellCommand | ConvertFrom-Json | Select-Obj
 $Tenants = ($Request.body | Select-Object Select_*).psobject.properties.value
 $Result = foreach ($Tenantfilter in $tenants) {
     try {
-        $GraphRequest = New-ExoRequest -tenantid $Tenantfilter -cmdlet "New-$($ConnectorType)connector" -cmdParams $RequestParams
+        $GraphRequest = New-ExoRequest -tenantid $Tenantfilter -cmdlet "New-$($ConnectorType)connector" -cmdParams $RequestParams 
         "Successfully created transport rule for $tenantfilter."
         Write-LogMessage -API $APINAME -tenant $tenantfilter -message "Created transport rule for $($tenantfilter)" -sev Debug
     }

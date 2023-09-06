@@ -14,7 +14,7 @@ $SelectedTenants = if ($Request.body.selectedTenants) { $request.body.selectedTe
 Write-Host "PowerShell HTTP trigger function processed a request."
 $results = foreach ($tenant in $SelectedTenants) {
     try {
-        $email = if ($groupobj.domain) { "$($groupobj.username)@$($groupobj.domain)" } else { "$($groupobj.username)@$($tenant.defaultDomainName)" }
+        $email = if ($groupobj.domain) { "$($groupobj.username)@$($groupobj.domain)" } else { "$($groupobj.username)@$($tenant)" }
         if ($groupobj.groupType -in "Generic", "azurerole", "dynamic") {
         
             $BodyToship = [pscustomobject] @{
@@ -27,11 +27,11 @@ $results = foreach ($tenant in $SelectedTenants) {
 
             } 
             if ($groupobj.membershipRules) {
-                $BodyToship | Add-Member  -NotePropertyName "membershipRule" -NotePropertyValue $groupobj.membershipRules
+                $BodyToship | Add-Member  -NotePropertyName "membershipRule" -NotePropertyValue ($groupobj.membershipRules)
                 $BodyToship | Add-Member  -NotePropertyName "groupTypes" -NotePropertyValue @("DynamicMembership")
                 $BodyToship | Add-Member  -NotePropertyName "membershipRuleProcessingState" -NotePropertyValue "On"
             }
-            $GraphRequest = New-GraphPostRequest -AsApp $true -uri "https://graph.microsoft.com/beta/groups" -tenantid $tenant -type POST -body (ConvertTo-Json -InputObject $BodyToship -Depth 10)  -verbose
+            $GraphRequest = New-GraphPostRequest -uri "https://graph.microsoft.com/beta/groups" -tenantid $tenant -type POST -body (ConvertTo-Json -InputObject $BodyToship -Depth 10)  -verbose
         }
         else {
             $Params = @{ 

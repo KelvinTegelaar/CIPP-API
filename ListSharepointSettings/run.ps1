@@ -11,10 +11,13 @@ Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME  -
 Write-Host "PowerShell HTTP trigger function processed a request."
 
 # Interact with query parameters or the body of the request.
-$TenantFilter = $Request.Query.TenantFilter
-Set-Location (Get-Item $PSScriptRoot).Parent.FullName
-$GraphRequest = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/deviceManagement/intents" -tenantid $TenantFilter -erroraction stop -noauthcheck $true
-
+$tenant = $Request.Query.TenantFilter
+$User = $Request.query.user
+$USERToGet = $Request.query.usertoGet
+$body = '{"isResharingByExternalUsersEnabled": "False"}'
+$Request = New-GraphPostRequest -tenantid $tenant -Uri "https://graph.microsoft.com/beta/admin/sharepoint/settings" -Type patch -Body $body -ContentType "application/json"
+    
+Write-LogMessage  -API "Standards" -tenant $tenantFilter -message "Disabled Password Expiration" -sev Info
 # Associate values to output bindings by calling 'Push-OutputBinding'.
 Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
         StatusCode = [HttpStatusCode]::OK

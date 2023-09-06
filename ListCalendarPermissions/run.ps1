@@ -12,7 +12,7 @@ try {
     $GetCalParam = @{Identity = $UserID; FolderScope = 'Calendar' }
     $CalendarFolder = New-ExoRequest -tenantid $Tenantfilter -cmdlet "Get-MailboxFolderStatistics" -cmdParams $GetCalParam | Select-Object -First 1
     $CalParam = @{Identity = "$($UserID):\$($CalendarFolder.name)" }
-    $GraphRequest = New-ExoRequest -tenantid $Tenantfilter -cmdlet "Get-MailboxFolderPermission" -cmdParams $CalParam | Select-Object Identity, User, AccessRights, FolderName
+    $GraphRequest = New-ExoRequest -tenantid $Tenantfilter -cmdlet "Get-MailboxFolderPermission" -cmdParams $CalParam -UseSystemMailbox $true | Select-Object Identity, User, AccessRights, FolderName
     Write-LogMessage -API 'List Calendar Permissions' -tenant $tenantfilter -message "Calendar permissions listed for $($tenantfilter)" -sev Debug
     $StatusCode = [HttpStatusCode]::OK
 }

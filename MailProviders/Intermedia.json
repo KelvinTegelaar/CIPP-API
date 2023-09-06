@@ -1,9 +1,0 @@
-{
-    "Name": "Intermedia",
-    "MxMatch": "(:?east|west).smtp.mx.exch[0-9]+.serverdata.net",
-    "SpfInclude": "spf.intermedia.net",
-    "Selectors": [""],
-    "_MxComment": "https://kb.intermedia.net/article/903",
-    "_SpfComment": "https://kb.intermedia.net/article/1010",
-    "_DkimComment": "https://kb.intermedia.net/article/36857"
-}
