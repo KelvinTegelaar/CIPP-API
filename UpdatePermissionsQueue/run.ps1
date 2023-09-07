@@ -25,6 +25,7 @@ $GraphRequest = $ExpectedPermissions.requiredResourceAccess | ForEach-Object {
             'fc780465-2017-40d4-a0c5-307022471b92' { 'WindowsDefenderATP' }
             '00000003-0000-0ff1-ce00-000000000000' { 'Sharepoint' }
             '48ac35b8-9aa8-4d74-927d-1f4a14a0b239' { 'Skype and Teams Tenant Admin API' }
+            'c5393580-f805-4401-95e8-94b7a6ef2fc2' { 'Office 365 Management API' }
 
 
         }
@@ -52,18 +53,19 @@ $GraphRequest = $ExpectedPermissions.requiredResourceAccess | ForEach-Object {
         "Could not set CPV permissions for $PermissionsName. Does the Tenant have a license for this API? Error: $($_.Exception.message)"
     }
 }
-$ourSVCPrincipal = New-GraphGETRequest -uri "https://graph.microsoft.com/beta/servicePrincipals(appId='$($ENV:applicationid)')" -tenantid $Tenantfilter
+$ourSVCPrincipal = New-GraphGETRequest -uri "https://graph.microsoft.com/beta/servicePrincipals(appId='$($ENV:applicationid)')" -tenantid $Tenantfilter.customerid
 
 # if the app svc principal exists, consent app permissions
 $apps = $ExpectedPermissions 
 $Grants = foreach ($App in $apps.requiredResourceAccess) {
     try {
-        $svcPrincipalId = New-GraphGETRequest -uri "https://graph.microsoft.com/v1.0/servicePrincipals(appId='$($app.resourceAppId)')" -tenantid $tenantfilter
+        $svcPrincipalId = New-GraphGETRequest -uri "https://graph.microsoft.com/v1.0/servicePrincipals(appId='$($app.resourceAppId)')" -tenantid $Tenantfilter.customerid
     }
     catch {
         continue
     }
     foreach ($SingleResource in $app.ResourceAccess | Where-Object -Property Type -EQ "Role") {
+        if ($singleresource.id -In $currentroles.appRoleId) { continue }
         [pscustomobject]@{
             principalId = $($ourSVCPrincipal.id)
             resourceId  = $($svcPrincipalId.id)
@@ -73,7 +75,7 @@ $Grants = foreach ($App in $apps.requiredResourceAccess) {
 } 
 foreach ($Grant in $grants) {
     try {
-        $SettingsRequest = New-GraphPOSTRequest -body ($grant | ConvertTo-Json) -uri "https://graph.microsoft.com/beta/servicePrincipals/$($ourSVCPrincipal.id)/appRoleAssignedTo" -tenantid $tenantfilter -type POST
+        $SettingsRequest = New-GraphPOSTRequest -body ($grant | ConvertTo-Json) -uri "https://graph.microsoft.com/beta/servicePrincipals/$($ourSVCPrincipal.id)/appRoleAssignedTo" -tenantid $Tenantfilter.customerid -type POST
     }
     catch {
         "Failed to grant $($grant.appRoleId) to $($grant.resourceId): $($_.Exception.Message). "
