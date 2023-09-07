@@ -7,7 +7,7 @@ $APIName = $TriggerMetadata.FunctionName
 Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME  -message "Accessed this API" -Sev "Debug"
 
 Try {
-    $MessageResult = New-CIPPOneDriveShortCut -userid $Request.query.id -TenantFilter $Request.query.TenantFilter -URL $Request.query.URL -ExecutingUser $request.headers.'x-ms-client-principal'
+    $MessageResult = New-CIPPOneDriveShortCut -username $username -userid $Request.query.id -TenantFilter $Request.query.TenantFilter -URL $Request.query.URL -ExecutingUser $request.headers.'x-ms-client-principal'
     $Results = [pscustomobject]@{ "Results" = "$MessageResult" }
 }
 catch {
