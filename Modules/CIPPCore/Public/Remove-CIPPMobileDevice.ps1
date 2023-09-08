@@ -9,7 +9,7 @@ function Remove-CIPPMobileDevice {
     )
 
     try {
-        $devices = New-ExoRequest -tenantid $tenantFilter -cmdlet "Get-MobileDevice" -Anchor $username -cmdParams @{mailbox = $userid } | ForEach-Object {
+        $devices = New-ExoRequest -tenantid $tenantFilter -cmdlet "Get-MobileDevice" -Anchor $username -cmdParams @{mailbox = $username } | ForEach-Object {
             try {
                 New-ExoRequest -tenantid $tenantFilter -cmdlet "Remove-MobileDevice" -Anchor $username -cmdParams @{Identity = $_.Identity }
                 "Removed device: $($_.FriendlyName)"
