@@ -13,7 +13,7 @@ Write-Host "PowerShell HTTP trigger function processed a request."
 # Interact with query parameters or the body of the request.
 
 $TenantFilter = $Request.Query.TenantFilter
-$selectstring = "id,createdDateTime,displayName,description,mail,mailEnabled,mailNickname,resourceProvisioningOptions,securityEnabled,visibility,organizationId,onPremisesSamAccountName,membershipRule,grouptypes,onPremisesSyncEnabled,resourceProvisioningOptions,userPrincipalName"
+$selectstring = "id,createdDateTime,displayName,description,mail,mailEnabled,mailNickname,resourceProvisioningOptions,securityEnabled,visibility,organizationId,onPremisesSamAccountName,membershipRule,grouptypes,onPremisesSyncEnabled,resourceProvisioningOptions,userPrincipalName&`$expand=members(`$select=userPrincipalName)"
 
 if ($Request.Query.GroupID) { 
     $groupid = $Request.query.groupid
@@ -30,6 +30,7 @@ if ($Request.Query.owners) {
 }
 try {
     $GraphRequest = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/groups/$($GroupID)/$($members)?`$top=999&select=$selectstring" -tenantid $TenantFilter  | Select-Object *, @{ Name = 'primDomain'; Expression = { $_.mail -split "@" | Select-Object -Last 1 } },
+    @{Name = 'membersCsv'; Expression = { $_.members.userPrincipalName -join "," } },
     @{Name = 'teamsEnabled'; Expression = { if ($_.resourceProvisioningOptions -Like '*Team*') { $true }else { $false } } },
     @{Name = 'calculatedGroupType'; Expression = {
 
