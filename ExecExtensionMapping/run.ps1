@@ -21,15 +21,17 @@ if ($Request.Query.List) {
     $Tenants = Get-Tenants
     #Get available halo clients
     $Table = Get-CIPPTable -TableName Extensionsconfig
-    $Configuration = ((Get-AzDataTableEntity @Table).config | ConvertFrom-Json).HaloPSA
-    $Token = Get-HaloToken -configuration $Configuration
-    $i = 1
-    $RawHaloClients = do {
-        $Result = Invoke-RestMethod -Uri "$($Configuration.ResourceURL)/Client?page_no=$i&page_size=999&pageinate=true" -ContentType 'application/json' -Method GET -Headers @{Authorization = "Bearer $($token.access_token)" }
-        $Result.clients | Select-Object * -ExcludeProperty logo
-        $i++
-        $pagecount = [Math]::Ceiling($Result.record_count / 999)
-    } while ($i -le $pagecount)
+    try {
+        $Configuration = ((Get-AzDataTableEntity @Table).config | ConvertFrom-Json -ErrorAction Stop).HaloPSA
+        $Token = Get-HaloToken -configuration $Configuration
+        $i = 1
+        $RawHaloClients = do {
+            $Result = Invoke-RestMethod -Uri "$($Configuration.ResourceURL)/Client?page_no=$i&page_size=999&pageinate=true" -ContentType 'application/json' -Method GET -Headers @{Authorization = "Bearer $($token.access_token)" }
+            $Result.clients | Select-Object * -ExcludeProperty logo
+            $i++
+            $pagecount = [Math]::Ceiling($Result.record_count / 999)
+        } while ($i -le $pagecount)
+    } catch { $RawHaloClients = @() }
     $HaloClients = $RawHaloClients | ForEach-Object {
         [PSCustomObject]@{
             label = $_.name
@@ -59,12 +61,11 @@ try {
                 'HaloPSAName' = "$($mapping.value.label)"
             }
             Add-AzDataTableEntity @Table -Entity $AddObject -Force
-            Write-LogMessage -API $APINAME -user $request.headers.'x-ms-client-principal' -message "Added mapping for $($mapping.name)." -Sev 'Info' 
+            Write-LogMessage -API $APINAME -user $request.headers.'x-ms-client-principal' -message "Added mapping for $($mapping.name)." -Sev 'Info'
         }
-        $body = [pscustomobject]@{'Results' = "Successfully edited mapping table." }
+        $body = [pscustomobject]@{'Results' = 'Successfully edited mapping table.' }
     }
-}
-catch {
+} catch {
     Write-LogMessage -API $APINAME -user $request.headers.'x-ms-client-principal' -message "mapping API failed. $($_.Exception.Message)" -Sev 'Error'
     $body = [pscustomobject]@{'Results' = "Failed. $($_.Exception.Message)" }
 }
