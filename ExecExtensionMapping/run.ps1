@@ -12,60 +12,55 @@ Write-Host 'PowerShell HTTP trigger function processed a request.'
 $Table = Get-CIPPTable -TableName CippMapping
 
 if ($Request.Query.List) {
-    #Get available mappings
-    $Mappings = [pscustomobject]@{}
-    Get-AzDataTableEntity @Table | ForEach-Object {
-        $Mappings | Add-Member -NotePropertyName $_.RowKey -NotePropertyValue @{ label = "$($_.HaloPSAName)"; value = "$($_.HaloPSA)" }
-    }
-    #Get Available TEnants
-    $Tenants = Get-Tenants
-    #Get available halo clients
-    $Table = Get-CIPPTable -TableName Extensionsconfig
-    try {
-        $Configuration = ((Get-AzDataTableEntity @Table).config | ConvertFrom-Json -ErrorAction Stop).HaloPSA
-        $Token = Get-HaloToken -configuration $Configuration
-        $i = 1
-        $RawHaloClients = do {
-            $Result = Invoke-RestMethod -Uri "$($Configuration.ResourceURL)/Client?page_no=$i&page_size=999&pageinate=true" -ContentType 'application/json' -Method GET -Headers @{Authorization = "Bearer $($token.access_token)" }
-            $Result.clients | Select-Object * -ExcludeProperty logo
-            $i++
-            $pagecount = [Math]::Ceiling($Result.record_count / 999)
-        } while ($i -le $pagecount)
-    } catch { $RawHaloClients = @() }
-    $HaloClients = $RawHaloClients | ForEach-Object {
-        [PSCustomObject]@{
-            label = $_.name
-            value = $_.id
+    switch ($Request.Query.List) {
+        'Halo' {
+            $body = Get-HaloMapping -CIPPMapping $Table
+        }
+
+        'NinjaOrgs' {
+            $Body = Get-NinjaOneOrgMapping -CIPPMapping $Table
+        }
+
+        'NinjaFields' {
+            $Body = Get-NinjaOneFieldMapping -CIPPMapping $Table
         }
     }
-    $HaloClients = $RawHaloClients | ForEach-Object {
-        [PSCustomObject]@{
-            name  = $_.name
-            value = "$($_.id)"
-        }
-    }
-    $MappingObj = [PSCustomObject]@{
-        Tenants     = @($Tenants)
-        HaloClients = @($HaloClients)
-        Mappings    = $Mappings
-    }
-    $body = $MappingObj
 }
+
 try {
     if ($Request.Query.AddMapping) {
-        foreach ($Mapping in ([pscustomobject]$Request.body.mappings).psobject.properties) {
-            $AddObject = @{
-                PartitionKey  = 'Mapping'
-                RowKey        = "$($mapping.name)"
-                'HaloPSA'     = "$($mapping.value.value)"
-                'HaloPSAName' = "$($mapping.value.label)"
+        switch ($Request.Query.AddMapping) {
+            'Halo' {
+                $body = Set-HaloMapping -CIPPMapping $Table -APIName $APIName -Request $Request
             }
-            Add-AzDataTableEntity @Table -Entity $AddObject -Force
-            Write-LogMessage -API $APINAME -user $request.headers.'x-ms-client-principal' -message "Added mapping for $($mapping.name)." -Sev 'Info'
+    
+            'NinjaOrgs' {
+                $Body = Set-NinjaOneOrgMapping -CIPPMapping $Table -APIName $APIName -Request $Request
+            }
+    
+            'NinjaFields' {
+                $Body = Set-NinjaOneFieldMapping -CIPPMapping $Table -APIName $APIName -Request $Request
+            }
         }
-        $body = [pscustomobject]@{'Results' = 'Successfully edited mapping table.' }
     }
-} catch {
+}
+catch {
+    Write-LogMessage -API $APINAME -user $request.headers.'x-ms-client-principal' -message "mapping API failed. $($_.Exception.Message)" -Sev 'Error'
+    $body = [pscustomobject]@{'Results' = "Failed. $($_.Exception.Message)" }
+}
+
+try {
+    if ($Request.Query.AutoMapping) {
+        switch ($Request.Query.AutoMapping) {
+            'NinjaOrgs' {
+                Push-OutputBinding -Name NinjaProcess -Value @{'NinjaAction' = 'StartAutoMapping' }
+                $Body = [pscustomobject]@{'Results' = 'Automapping Request has been queued. Exact name matches will appear first and matches on device names and serials will take longer.' }
+            }
+
+        }
+    }
+}
+catch {
     Write-LogMessage -API $APINAME -user $request.headers.'x-ms-client-principal' -message "mapping API failed. $($_.Exception.Message)" -Sev 'Error'
     $body = [pscustomobject]@{'Results' = "Failed. $($_.Exception.Message)" }
 }
