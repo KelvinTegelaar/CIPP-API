@@ -99,7 +99,7 @@ catch {
 }
 
 if ($Request.body.CopyFrom -ne "") {
-    $CopyFrom = Set-CIPPCopyGroupMembers -ExecutingUser $request.headers.'x-ms-client-principal' -tenantid $Userobj.tenantid -CopyFromId $Request.body.CopyFrom -UserID $user -TenantFilter  $Userobj.tenantid
+    $CopyFrom = Set-CIPPCopyGroupMembers -ExecutingUser $request.headers.'x-ms-client-principal' -tenantid $Userobj.tenantid -CopyFromId $Request.body.CopyFrom -UserID  $UserprincipalName -TenantFilter  $Userobj.tenantid
     $results.AddRange($CopyFrom)
 }
 $body = @{"Results" = @($results) }
