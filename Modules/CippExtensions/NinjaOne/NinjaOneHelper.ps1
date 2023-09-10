@@ -1,10 +1,10 @@
 function Get-NinjaOneTitle($Title, $Icon, $TitleLink, $TitleSize, $TitleClass) {
-    Return $(if ($TitleSize) { "<$TitleSize" }else { '<h5' }) + $(if ($TitleClass) { ' class="' + $TitleClass + '"' }) + '>' + $(if ($Icon) { '<i class="' + $Icon + '"></i>&nbsp;&nbsp;' }) + $Title + $(if ($TitleLink) { '&nbsp;&nbsp;<a href="' + $TitleLink + '" target="_blank" class="text-decoration-none"><i class="fas fa-arrow-up-right-from-square fa-2xs" style="color: #337ab7;"></i></a>' }) + $(if ($TitleSize) { "</$TitleSize>" }else { '</h5>' })
+    Return $(if ($TitleSize) { '<' + $TitleSize + ' style="font-family: sans-serif"' }else { '<span style="font-family: sans-serif"' }) + $(if ($TitleClass) { ' class="' + $TitleClass + '"' }) + '>' + $(if ($Icon) { '<i class="' + $Icon + '"></i>&nbsp;&nbsp;' }) + $Title + $(if ($TitleLink) { '&nbsp;&nbsp;<a href="' + $TitleLink + '" target="_blank" class="text-decoration-none"><i class="fas fa-arrow-up-right-from-square fa-2xs" style="color: #337ab7;"></i></a>' }) + $(if ($TitleSize) { "</$TitleSize>" }else { '</span>' })
 }
 
 ### HTML Formatters ###
 # Bar Graph
-function Get-NinjaInLineBarGraph ($Data, [string]$Title, [string]$Icon, [string]$TitleLink, [switch]$KeyInLine, [switch]$NoCount) {
+function Get-NinjaInLineBarGraph ($Data, [string]$Title, [string]$Icon, [string]$TitleLink, [switch]$KeyInLine, [switch]$NoCount, [switch]$NoSort) {
     <# 
     Example: 
     $Data = @(
@@ -29,7 +29,9 @@ function Get-NinjaInLineBarGraph ($Data, [string]$Title, [string]$Icon, [string]
 
     #>
 
-    $Data = $Data | Sort-Object Amount -Descending
+    if (!$NoSort) {
+        $Data = $Data | Sort-Object Amount -Descending
+    }
 
     $Total = ($Data.Amount | measure-object -sum).sum
     [System.Collections.Generic.List[String]]$OutputHTML = @()
@@ -50,14 +52,14 @@ function Get-NinjaInLineBarGraph ($Data, [string]$Title, [string]$Icon, [string]
     $OutputHTML.add('</div>')
 
     if ($KeyInline) {
-        $OutputHTML.add('<ul class="list-unstyled p-3" style="display: flex; justify-content: space-between; font-family: sans-serif;">')
+        $OutputHTML.add('<ul class="list-unstyled p-3" style="display: flex; justify-content: space-between; font-family: sans-serif;" list-style-type: none;>')
     } else {
-        $OutputHTML.add('<ul class="list-unstyled p-3" style="font-family: sans-serif">')
+        $OutputHTML.add('<ul class="list-unstyled p-3" style="font-family: sans-serif; list-style-type: none;">')
     }
 
     foreach ($Item in $Data) {
         $OutputHTML.add(@"
-        <li><span style="display: inline-block; width: 20px; height: 20px; background-color: $($Item.Colour); margin-right: 10px; font-family: sans-serif;"></span>$($Item.Label) ($($Item.Amount))</li>
+        <li><span style="display: inline-block; width: 20px; height: 20px; background-color: $($Item.Colour); margin-right: 10px;"></span><span style="font-family: sans-serif;"> $($Item.Label) ($($Item.Amount))</span></li>
 "@)
 
     }
@@ -70,7 +72,7 @@ function Get-NinjaInLineBarGraph ($Data, [string]$Title, [string]$Icon, [string]
 }
 
 #### List of Links
-function Get-NinjaOneLinks ($Data, $Title, [string]$Icon, [string]$TitleLink) {
+function Get-NinjaOneLinks ($Data, $Title, [string]$Icon, [string]$TitleLink, [int]$SmallCols, [int]$MedCols, [int]$LargeCols, [int]$XLCols) {
     <#
 $ManagementLinksData = @(
         @{
@@ -94,17 +96,29 @@ $ManagementLinksData = @(
 
     [System.Collections.Generic.List[String]]$OutputHTML = @()
 
-    $OutputHTML.add('<div class="card" style="padding:10px; margin:10px; margin-right:20px; font-family: sans-serif;"><div class="row" style="justify-content: center; font-family: sans-serif;">')
+    $OutputHTML.add('<div class="card" style="padding:10px; margin:10px; margin-right:20px; font-family: sans-serif;">')
 
     if ($Title) {
-        $OutputHTML.add((Get-NinjaOneTitle -Icon $Icon -Title $Title -TitleLink $TitleLink))
+        $OutputHTML.add('<div class="card-title-box"><div class="card-title" style="font-family: sans-serif;">' + $(if ($Icon) { '<i class="' + $Icon + '"></i>&nbsp;&nbsp;' }) + $Title + '</div>')
+
+        if ($TitleLink) {
+            $OutputHTML.add('<div class="card-link-box"><a href="' + $TitleLink + '" target="_blank" class="card-link" style="font-family: sans-serif;"><i class="fas fa-arrow-up-right-from-square" style="color: #337ab7;"></i></a></div>')
+        }
+
+        $OutputHTML.add('</div>')
     }
 
-    foreach ($Item in $Data) {
-        $OutputHTML.add(@"
-        <a href="$($Item.Link)" class="col-lg-2 col-md-4 col-sm-12 btn secondary" target="_blank" style="margin: 10px; font-family: sans-serif;">$(if ($Item.Icon){"<i class=`"$($Item.Icon)`"></i>&nbsp;&nbsp;"})$($Item.Name)</a>
-"@)
+    $OutputHTML.add('<div class="row" style="justify-content: center; font-family: sans-serif; width: 100%;">')
 
+    $CSSCols = Get-NinjaOneCSSCol -SmallCols $SmallCols -MedCols $MedCols -LargeCols $LargeCols -XLCols $XLCols
+
+   
+    foreach ($Item in $Data) {
+
+
+        $OutputHTML.add(@"
+        <div class="$CSSCols" style="margin-bottom: 24px;"><a href="$($Item.Link)" class="btn secondary" target="_blank" style="margin: 10px; font-family: sans-serif; width: 100%; height: 100%;">$(if ($Item.Icon){"<span><i class=`"$($Item.Icon)`"></i>&nbsp;&nbsp;</span>"})<span style="text-align: center;">$($Item.Name)</span></a></div>
+"@)
 
     }
 
@@ -114,7 +128,71 @@ $ManagementLinksData = @(
 
 }
 
-function Get-NinjaOneCard($Title, $Body, [string]$Icon, [string]$TitleLink) {
+
+function Get-NinjaOneWidgetCard($Title, $Data, [string]$Icon, [string]$TitleLink, [int]$SmallCols, [int]$MedCols, [int]$LargeCols, [int]$XLCols, [Switch]$NoCard) {
+    <#
+    $Data = @(
+        @{
+            Value = 20
+            Description = 'Users'
+            Colour = '#CCCCCC'
+            Link = 'https://example.com/users'
+        },
+        @{
+            Value = 42
+            Description = 'Devices'
+            Colour = '#CCCCCC'
+            Link = 'https://example.com/devices'
+        }
+    )
+    
+    $HTML = Get-NinjaOneWidgetCard -Title 'Summary Details' -Data $Data -Icon 'fas fa-building' -TitleLink 'http://example.com' -Columns 3
+
+    #>
+
+    $CSSCols = Get-NinjaOneCSSCol -SmallCols $SmallCols -MedCols $MedCols -LargeCols $LargeCols -XLCols $XLCols
+
+
+    [System.Collections.Generic.List[String]]$OutputHTML = @()
+    
+    $OutputHTML.add('<div class="row" style="justify-content: center; align-items: center; width:100%;">')
+
+
+    foreach ($Item in $Data) {
+
+        $HTML = @"
+    <div class="$CSSCols">
+        <div class="card" style="justify-content: center; align-items: center; margin: 0px; padding-top: 36px; padding-bottom: 36px; text-align: Center; margin-bottom: 24px; height:148px;">
+            <div class="row" style="height: 50%"><a href="$($Item.Link)" target="_blank" style="text-decoration: none;"><span style="font-size: 40px; color: $($Item.Colour); margin-bottom: 10px;">$($Item.Value)</span></a></div>
+            <div class="row" style="height: 50%"><a href="$($Item.Link)" target="_blank" style="text-decoration: none;"><span style="font-size: 18px;"><span style="white-space:nowrap;">$($Item.Description -replace " ",'</span>&nbsp;<span style="white-space:nowrap;">')</span></span></a></div>
+        </div>
+    </div>
+"@
+
+        $OutputHTML.add($HTML)
+
+    }
+
+    $OutputHTML.add('</div>')
+
+    if ($NoCard) {
+        return $OutputHTML -join ''
+    } else {
+        Return Get-NinjaOneCard -Title $Title -Body ($OutputHTML -join '') -Icon $Icon -TitleLink $TitleLink
+    }
+
+}
+
+Function Get-NinjaOneCSSCol($SmallCols, $MedCols, $LargeCols, $XLCols) {
+    $SmallCSS = "col-sm-$([Math]::Floor(12 / $SmallCols))"
+    $MediumCSS = "col-md-$([Math]::Floor(12 / $MedCols))"
+    $LargeCSS = "col-lg-$([Math]::Floor(12 / $LargeCols))"
+    $XLCSS = "col-xl-$([Math]::Floor(12 / $XLCols))"
+
+    Return "$SmallCSS $MediumCSS $LargeCSS $XLCSS"
+}
+
+function Get-NinjaOneCard($Title, $Body, [string]$Icon, [string]$TitleLink, [String]$Classes) {
     <#
     $Info = 'This is the body of a card it is wrapped in a paragraph'
 
@@ -123,13 +201,20 @@ function Get-NinjaOneCard($Title, $Body, [string]$Icon, [string]$TitleLink) {
 
     [System.Collections.Generic.List[String]]$OutputHTML = @()
 
-    $OutputHTML.add('<div class="card"> <div class="card-body" style="font-family: sans-serif>')
+    $OutputHTML.add('<div class="card' + $(if ($classes) { ' ' + $classes }) + '" >')
 
     if ($Title) {
-        $OutputHTML.add((Get-NinjaOneTitle -Icon $Icon -Title $Title -TitleLink $TitleLink -TitleSize 'h4' -TitleClass 'card-title'))
+        $OutputHTML.add('<div class="card-title-box"><div class="card-title" style="font-family: sans-serif;">' + $(if ($Icon) { '<i class="' + $Icon + '"></i>&nbsp;&nbsp;' }) + $Title + '</div>')
+
+        if ($TitleLink) {
+            $OutputHTML.add('<div class="card-link-box"><a href="' + $TitleLink + '" target="_blank" class="card-link" style="font-family: sans-serif;"><i class="fas fa-arrow-up-right-from-square" style="color: #337ab7;"></i></a></div>')
+        }
+
+        $OutputHTML.add('</div>')
     }
 
-    $OutputHTML.add('<p class="card-text" style="font-family: sans-serif>' + $Body + '</p>')
+    $OutputHTML.add('<div class="card-body" style="font-family: sans-serif;">')
+    $OutputHTML.add('<p class="card-text" style="font-family: sans-serif;">' + $Body + '</p>')
        
     $OutputHTML.add('</div></div>')
 
@@ -154,10 +239,10 @@ function Get-NinjaOneInfoCard($Title, $Data, [string]$Icon, [string]$TitleLink) 
     [System.Collections.Generic.List[String]]$ItemsHTML = @()
 
     foreach ($Item in $Data.PSObject.Properties) {
-        $ItemsHTML.add('<p style="font-family: sans-serif"><strong>' + $Item.Name + '</strong><br />' + $Item.Value + '</p>')
+        $ItemsHTML.add('<p style="font-family: sans-serif;"><b style="font-family: sans-serif;">' + $Item.Name + '</b><br />' + $Item.Value + '</p>')
     }
 
     return Get-NinjaOneCard -Title $Title -Body ($ItemsHTML -join '') -Icon $Icon -TitleLink $TitleLink
        
-    
 }
+

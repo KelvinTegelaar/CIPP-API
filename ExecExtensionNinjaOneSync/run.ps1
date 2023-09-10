@@ -23,7 +23,7 @@ foreach ($Tenant in $TenantsToProcess) {
 $AddObject = @{
     PartitionKey   = 'NinjaConfig'
     RowKey         = 'NinjaLastRunTime'
-    'SettingValue' = Get-Date
+    'SettingValue' = (Get-Date).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ss.fffK")
 }
 
 Add-AzDataTableEntity @Table -Entity $AddObject -Force

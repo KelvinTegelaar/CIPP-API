@@ -6,10 +6,11 @@ function Set-NinjaOneOrgMapping {
         $Request
     )
 
+
     foreach ($Mapping in ([pscustomobject]$Request.body.mappings).psobject.properties) {
         $AddObject = @{
-            PartitionKey  = 'NinjaOrgsMapping'
-            RowKey        = "$($mapping.name)"
+            PartitionKey   = 'NinjaOrgsMapping'
+            RowKey         = "$($mapping.name)"
             'NinjaOne'     = "$($mapping.value.value)"
             'NinjaOneName' = "$($mapping.value.label)"
         }

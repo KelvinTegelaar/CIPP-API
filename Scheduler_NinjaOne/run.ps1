@@ -7,7 +7,7 @@ $Settings = (Get-AzDataTableEntity @Table)
 $TimeSetting = ($Settings | Where-Object { $_.RowKey -eq 'NinjaSyncTime' }).SettingValue
 
 if (($TimeSetting | Measure-Object).count -ne 1) {
-    $TimeSetting = Get-Random -Minimum 0 -Maximum 96
+    [int]$TimeSetting = Get-Random -Minimum 0 -Maximum 96
     $AddObject = @{
         PartitionKey   = 'NinjaConfig'
         RowKey         = 'NinjaSyncTime'
@@ -16,7 +16,7 @@ if (($TimeSetting | Measure-Object).count -ne 1) {
     Add-AzDataTableEntity @Table -Entity $AddObject -Force
 }
 
-$LastRunTime = ($Settings | Where-Object { $_.RowKey -eq 'NinjaLastRunTime' }).SettingValue
+$LastRunTime = Get-Date(($Settings | Where-Object { $_.RowKey -eq 'NinjaLastRunTime' }).SettingValue)
 $CurrentInterval = ($currentHour * 4) + [math]::Floor($currentMinute / 15)
 
 if ($Null -eq $LastRunTime -or $LastRunTime -le (Get-Date).addhours(-25) -or $TimeSetting -eq $CurrentInterval) {
@@ -35,7 +35,7 @@ if ($Null -eq $LastRunTime -or $LastRunTime -le (Get-Date).addhours(-25) -or $Ti
     $AddObject = @{
         PartitionKey   = 'NinjaConfig'
         RowKey         = 'NinjaLastRunTime'
-        'SettingValue' = Get-Date
+        'SettingValue' = (Get-Date).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ss.fffK")
     }
     Add-AzDataTableEntity @Table -Entity $AddObject -Force
     
