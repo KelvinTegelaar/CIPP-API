@@ -59,44 +59,46 @@ function Invoke-NinjaOneOrgMapping {
     } while ($ResultCount.count -eq $PageSize)
 
 
-    $NinjaDevices = $NinjaDevicesRaw | Where-Object {$null -ne $_.system.serialNumber -and $_.system.serialNumber -notin $ExcludeSerials} | ForEach-Object {
+    $NinjaDevices = $NinjaDevicesRaw | Where-Object { $null -ne $_.system.serialNumber -and $_.system.serialNumber -notin $ExcludeSerials } | ForEach-Object {
         [pscustomobject]@{
-            ID         = $_.id
-            SystemName = $_.systemName
-            Serial     = $_.system.serialNumber
-            OrgID      = $_.organizationId
+            ID               = $_.id
+            SystemName       = $_.systemName
+            DNSName          = $_.dnsName
+            Serial           = $_.system.serialNumber
+            BiosSerialNumber = $_.system.biosSerialNumber
+            OrgID            = $_.organizationId
         }
     }
 
     # Remove any devices with duplicate serials
-    $ParsedNinjaDevices = $NinjaDevices | Where-Object {$_.Serial -in (($NinjaDevices | Group-Object Serial | where-object {$_.count -eq 1}).name)}
+    $ParsedNinjaDevices = $NinjaDevices | Where-Object { $_.Serial -in (($NinjaDevices | Group-Object Serial | where-object { $_.count -eq 1 }).name) }
 
 
     # First lets match on Org names
-        foreach ($Tenant in $Tenants | Where-Object {$_.customerId -notin $MatchedM365Tenants.customerId}) {
-            $MatchedOrg = $NinjaOrgs | where-object { $_.name -eq $Tenant.displayName }
-            if (($MatchedOrg | Measure-Object).count -eq 1) {
-                $MatchedM365Tenants.add($Tenant)
-                $MatchedNinjaOrgs.add($MatchedOrg)
-                $AddObject = @{
-                    PartitionKey   = 'NinjaOrgsMapping'
-                    RowKey         = "$($Tenant.customerId)"
-                    'NinjaOne'     = "$($MatchedOrg.id)"
-                    'NinjaOneName' = "$($MatchedOrg.name)"
-                }
-                Add-AzDataTableEntity @CIPPMapping -Entity $AddObject -Force
-                Write-LogMessage -API 'NinjaOneAutoMap_Queue' -user 'CIPP' -message "Added mapping from Organization name match for $($Tenant.customerId). to $($($MatchedOrg.name))" -Sev 'Info' 
+    foreach ($Tenant in $Tenants | Where-Object { $_.customerId -notin $MatchedM365Tenants.customerId }) {
+        $MatchedOrg = $NinjaOrgs | where-object { $_.name -eq $Tenant.displayName }
+        if (($MatchedOrg | Measure-Object).count -eq 1) {
+            $MatchedM365Tenants.add($Tenant)
+            $MatchedNinjaOrgs.add($MatchedOrg)
+            $AddObject = @{
+                PartitionKey   = 'NinjaOrgsMapping'
+                RowKey         = "$($Tenant.customerId)"
+                'NinjaOne'     = "$($MatchedOrg.id)"
+                'NinjaOneName' = "$($MatchedOrg.name)"
             }
+            Add-AzDataTableEntity @CIPPMapping -Entity $AddObject -Force
+            Write-LogMessage -API 'NinjaOneAutoMap_Queue' -user 'CIPP' -message "Added mapping from Organization name match for $($Tenant.customerId). to $($($MatchedOrg.name))" -Sev 'Info' 
         }
+    }
 
     # Now Let match on remaining Tenants
 
-    Foreach ($Tenant in $Tenants | Where-Object {$_.customerId -notin $MatchedM365Tenants.customerId}) {
+    Foreach ($Tenant in $Tenants | Where-Object { $_.customerId -notin $MatchedM365Tenants.customerId }) {
 
         Push-OutputBinding -Name NinjaProcess -Value @{
-            'NinjaAction' = 'AutoMapTenant'
-            'M365Tenant' = $Tenant
-            'NinjaOrgs' = $NinjaOrgs | Where-Object {$_.id -notin $MatchedNinjaOrgs}
+            'NinjaAction'  = 'AutoMapTenant'
+            'M365Tenant'   = $Tenant
+            'NinjaOrgs'    = $NinjaOrgs | Where-Object { $_.id -notin $MatchedNinjaOrgs }
             'NinjaDevices' = $ParsedNinjaDevices
         }
 

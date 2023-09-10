@@ -28,9 +28,9 @@ function Invoke-NinjaOneOrgMappingTenant {
     [System.Collections.Generic.List[PSCustomObject]]$MatchedDevices = @()
 
     # Match devices on serial
-    $DevicesToMatchSerial = $M365Devices | where-object { $_.DeviceSerial -notin $ExcludeSerials -and $null -ne $_.DeviceSerial }
+    $DevicesToMatchSerial = $M365Devices | where-object { $null -ne $_.DeviceSerial }
     foreach ($SerialMatchDevice in $DevicesToMatchSerial) {
-        $MatchedDevice = $NinjaDevices | where-object { $_.serial -eq $SerialMatchDevice.DeviceSerial -and $_.OrgID -notin $MatchedNinjaOrgs.id }
+        $MatchedDevice = $NinjaDevices | where-object { $_.Serial -eq $SerialMatchDevice.DeviceSerial -or $_.BiosSerialNumber -eq $SerialMatchDevice.DeviceSerial }
         if (($MatchedDevice | measure-object).count -eq 1) {
             $Match = [pscustomobject]@{
                 M365  = $SerialMatchDevice
@@ -43,7 +43,7 @@ function Invoke-NinjaOneOrgMappingTenant {
     # Try to match on Name
     $DevicesToMatchName = $M365Devices | where-object { $_ -notin $MatchedDevices.M365 }
     foreach ($NameMatchDevice in $DevicesToMatchName) {
-        $MatchedDevice = $NinjaDevices | where-object { $_.SystemName -eq $NameMatchDevice.DeviceName -and $_.OrgID -notin $MatchedNinjaOrgs.id }
+        $MatchedDevice = $NinjaDevices | where-object { $_.SystemName -eq $NameMatchDevice.DeviceName -or $_.DNSName -eq $NameMatchDevice.DeviceName }
         if (($MatchedDevice | measure-object).count -eq 1) {
             $Match = [pscustomobject]@{
                 M365  = $NameMatchDevice

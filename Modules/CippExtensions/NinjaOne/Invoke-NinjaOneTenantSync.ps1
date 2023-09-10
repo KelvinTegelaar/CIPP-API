@@ -5,13 +5,15 @@ function Invoke-NinjaOneTenantSync {
     )
     try {
 
+        $StartTime = Get-Date
+        write-host "$(Get-Date) - Starting NinjaOne Sync $($customer.DisplayName)"
+
+        # Fetch Custom NinjaOne Settings
         $Table = Get-CIPPTable -TableName NinjaOneSettings
         $NinjaSettings = (Get-AzDataTableEntity @Table)
         $CIPPUrl = ($NinjaSettings | Where-Object { $_.RowKey -eq 'CIPPURL' }).SettingValue
         
-
-        $StartTime = Get-Date
-
+        # Parse out the Tenant we are processing
         $MappedTenant = $QueueItem.MappedTenant
         $Customer = Get-Tenants | where-object { $_.customerId -eq $MappedTenant.RowKey }
 
@@ -20,12 +22,14 @@ function Invoke-NinjaOneTenantSync {
         }
 
         $TenantFilter = $Customer.defaultDomainName
+        $NinjaOneOrg = $MappedTenant.NinjaOne
 
-        write-host "$(Get-Date) - Starting NinjaOne Sync $($customer.DisplayName)"
 
+        # Get the NinjaOne general extension settings.
         $Table = Get-CIPPTable -TableName Extensionsconfig
         $Configuration = ((Get-AzDataTableEntity @Table).config | ConvertFrom-Json).NinjaOne
 
+        # Pull the list of field Mappings so we know which fields to render.
         $MappedFields = [pscustomobject]@{}
         $CIPPMapping = Get-CIPPTable -TableName CippMapping
         $Filter = "PartitionKey eq 'NinjaFieldMapping'"
@@ -33,8 +37,21 @@ function Invoke-NinjaOneTenantSync {
             $MappedFields | Add-Member -NotePropertyName $_.RowKey -NotePropertyValue $($_.NinjaOne)
         }
 
-        $NinjaOrgUpdate = [PSCustomObject]@{}
+        # Get NinjaOne Devices
+        $Token = Get-NinjaOneToken -configuration $Configuration
+        $After = 0
+        $PageSize = 1000
+        $NinjaDevices = do {
+            $Result = (Invoke-WebRequest -uri "https://$($Configuration.Instance)/api/v2/devices-detailed?pageSize=$PageSize&after=$After&df=org = $($NinjaOneOrg)" -Method GET -Headers @{Authorization = "Bearer $($token.access_token)" } -ContentType 'application/json').content | ConvertFrom-Json -depth 100
+            $Result
+            $ResultCount = ($Result.id | Measure-Object -Maximum)
+            $After = $ResultCount.maximum
     
+        } while ($ResultCount.count -eq $PageSize)
+    
+        # Create the object we will use for the Org update
+        $NinjaOrgUpdate = [PSCustomObject]@{}
+
         # Build bulk requests array.
         [System.Collections.Generic.List[PSCustomObject]]$TenantRequests = @(
             @{
@@ -408,6 +425,88 @@ function Invoke-NinjaOneTenantSync {
 
         ############################ Format and Synchronize to NinjaOne ############################
 
+
+        # Parse Devices
+        [System.Collections.Generic.List[PSCustomObject]]$ParsedDevices = Foreach ($Device in $Devices) {
+            # Match Users
+            [System.Collections.Generic.List[String]]$DeviceUsers = @()
+            [System.Collections.Generic.List[String]]$DeviceUserIDs = @()
+            [System.Collections.Generic.List[PSCustomObject]]$DeviceUsersDetail = @()
+            Foreach ($DeviceUser in $Device.usersloggedon) {
+                $FoundUser = ($Users | Where-Object { $_.id -eq $DeviceUser.userid })
+                $DeviceUsers.add($FoundUser.DisplayName)
+                $DeviceUserIDs.add($DeviceUser.userId)
+                $DeviceUsersDetail.add([pscustomobject]@{
+                        id        = $FoundUser.Id
+                        name      = $FoundUser.displayName
+                        upn       = $FoundUser.userPrincipalName
+                        lastlogin = ($DeviceUser.lastLogOnDateTime).ToString("yyyy-MM-dd")
+                    }
+                )
+            }
+
+            # Compliance Polciies
+            [System.Collections.Generic.List[PSCustomObject]]$DevicePolcies = @()
+            foreach ($Policy in $DeviceComplianceDetails) {
+                if ($device.deviceName -in $Policy.DeviceStatuses.deviceDisplayName) {
+                    $Status = $Policy.DeviceStatuses | Where-Object { $_.deviceDisplayName -eq $device.deviceName }
+                    foreach ($Stat in $Status) {
+                        if ($Stat.status -ne 'unknown') {
+                            $DevicePolcies.add([PSCustomObject]@{
+                                    Name           = $Policy.DisplayName
+                                    User           = $Stat.username
+                                    Status         = $Stat.status
+                                    'Last Report'  = "$(Get-Date($Stat.lastReportedDateTime[0]) -Format 'yyyy-MM-dd HH:mm:ss')"
+                                    'Grace Expiry' = "$(Get-Date($Stat.complianceGracePeriodExpirationDateTime[0]) -Format 'yyyy-MM-dd HH:mm:ss')"
+                                })
+                        }
+                    }
+               
+                }
+            }
+
+            # Device Groups
+            $DeviceGroups = foreach ($Group in $Groups) {
+                if ($device.azureADDeviceId -in $Group.members.deviceId) {
+                    [PSCustomObject]@{
+                        Name = $Group.displayName
+                    }
+                }
+            }
+
+          
+
+            [PSCustomObject]@{
+                Name                = $Device.deviceName
+                SerialNumber        = $Device.serialNumber
+                OS                  = $Device.operatingSystem
+                OSVersion           = $Device.osversion
+                Compliance          = $Device.complianceState
+                LastSync            = $Device.lastSyncDateTime
+                PrimaryUser         = $Device.userDisplayName
+                Owner               = $Device.ownerType
+                DeviceType          = $Device.DeviceType
+                Make                = $Device.make
+                Model               = $Device.model
+                ManagementState     = $Device.managementState
+                RegistrationState   = $Device.deviceRegistrationState
+                JailBroken          = $Device.jailBroken
+                EnrollmentType      = $Device.deviceEnrollmentType
+                EntraIDRegistration = $Device.azureADRegistered
+                EntraIDID           = $Device.azureADDeviceId
+                JoinType            = $Device.joinType
+                SecurityPatchLevel  = $Device.securityPatchLevel
+                Users               = $DeviceUsers -join ', '
+                UserIDs             = $DeviceUserIDs
+                UserDetails         = $DeviceUsersDetail
+                CompliancePolicies  = $DevicePolcies
+                Groups              = $DeviceGroups
+
+            }        
+
+        }
+
+        ### M365 Links Section
         if ($MappedFields.TenantLinks) {
 
             $ManagementLinksData = @(
@@ -510,7 +609,7 @@ function Invoke-NinjaOneTenantSync {
 
         if ($MappedFields.TenantSummary) {
 
-            # Tenant Overview Card
+            ### Tenant Overview Card
             $ParsedAdmins = [PSCustomObject]@{}
             
             $AdminUsers | Select-Object displayname, userPrincipalName -unique | ForEach-Object { 
@@ -860,188 +959,178 @@ function Invoke-NinjaOneTenantSync {
         }
 
         if ($MappedFields.UsersSummary) {
-
-            [System.Collections.Generic.List[PSCustomObject]]$ParsedDevices = Foreach ($Device in $Devices) {
-                # Match Users
-                [System.Collections.Generic.List[String]]$DeviceUsers = @()
-                [System.Collections.Generic.List[String]]$DeviceUserIDs = @()
-                [System.Collections.Generic.List[PSCustomObject]]$DeviceUsersDetail = @()
-                Foreach ($DeviceUser in $Device.usersloggedon) {
-                    $FoundUser = ($Users | Where-Object { $_.id -eq $DeviceUser.userid })
-                    $DeviceUsers.add($FoundUser.DisplayName)
-                    $DeviceUserIDs.add($DeviceUser.userId)
-                    $DeviceUsersDetail.add([pscustomobject]@{
-                            id        = $FoundUser.Id
-                            name      = $FoundUser.displayName
-                            upn       = $FoundUser.userPrincipalName
-                            lastlogin = ($DeviceUser.lastLogOnDateTime).ToString("yyyy-MM-dd")
-                        }
-                    )
-                }
-
-                # Compliance Polciies
-                [System.Collections.Generic.List[PSCustomObject]]$DevicePolcies = @()
-                foreach ($Policy in $DeviceComplianceDetails) {
-                    if ($device.deviceName -in $Policy.DeviceStatuses.deviceDisplayName) {
-                        $Status = $Policy.DeviceStatuses | Where-Object { $_.deviceDisplayName -eq $device.deviceName }
-                        foreach ($Stat in $Status) {
-                            if ($Stat.status -ne 'unknown') {
-                                $DevicePolcies.add([PSCustomObject]@{
-                                        Name           = $Policy.DisplayName
-                                        User           = $Stat.username
-                                        Status         = $Stat.status
-                                        'Last Report'  = "$(Get-Date($Stat.lastReportedDateTime[0]) -Format 'yyyy-MM-dd HH:mm:ss')"
-                                        'Grace Expiry' = "$(Get-Date($Stat.complianceGracePeriodExpirationDateTime[0]) -Format 'yyyy-MM-dd HH:mm:ss')"
-                                    })
-                            }
-                        }
-                   
-                    }
-                }
-
-                # Device Groups
-                $DeviceGroups = foreach ($Group in $Groups) {
-                    if ($device.azureADDeviceId -in $Group.members.deviceId) {
-                        [PSCustomObject]@{
-                            Name = $Group.displayName
-                        }
-                    }
-                }
-
-              
-
-                [PSCustomObject]@{
-                    Name                = $Device.deviceName
-                    OS                  = $Device.operatingSystem
-                    OSVersion           = $Device.osversion
-                    Compliance          = $Device.complianceState
-                    LastSync            = $Device.lastSyncDateTime
-                    PrimaryUser         = $Device.userDisplayName
-                    Owner               = $Device.ownerType
-                    DeviceType          = $Device.DeviceType
-                    Make                = $Device.make
-                    Model               = $Device.model
-                    ManagementState     = $Device.managementState
-                    RegistrationState   = $Device.deviceRegistrationState
-                    JailBroken          = $Device.jailBroken
-                    EnrollmentType      = $Device.deviceEnrollmentType
-                    EntraIDRegistration = $Device.azureADRegistered
-                    EntraIDID           = $Device.azureADDeviceId
-                    JoinType            = $Device.joinType
-                    SecurityPatchLevel  = $Device.securityPatchLevel
-                    Users               = $DeviceUsers -join ', '
-                    UserIDs             = $DeviceUserIDs
-                    UserDetails         = $DeviceUsersDetail
-                    CompliancePolicies  = $DevicePolcies
-                    Groups              = $DeviceGroups
-
-                }        
-    
-            }
-
-            $TotalDevices = ($Devices | Measure-Object).count
-            $OSGroups = $Devices | Group-Object operatingSystem
-    
-        }
-
-
-        # Parse all users:
-        [System.Collections.Generic.List[PSCustomObject]]$ParsedUsers = Foreach ($User in $Users | where-object { $_.userType -ne 'Guest' -and $_.accountEnabled -eq $True }) {
+            # Parse all users:
+            [System.Collections.Generic.List[PSCustomObject]]$ParsedUsers = Foreach ($User in $Users | where-object { $_.userType -ne 'Guest' -and $_.accountEnabled -eq $True }) {
         
-            $UserDevices = foreach ($UserDevice in $ParsedDevices | where-object { $User.id -in $_.UserIDS }) {
-                "$($UserDevice.Name) (Last Login: $(($UserDevice.UserDetails | where-object {$_.id -eq $User.id}).lastLogin))"
-            }
+                $UserDevices = foreach ($UserDevice in $ParsedDevices | where-object { $User.id -in $_.UserIDS }) {
+                    # First lets match on serial
+                    $MatchedNinjaDevice = $NinjaDevices | Where-Object { $_.system.biosSerialNumber -eq $UserDevice.SerialNumber -or $_.system.serialNumber -eq $UserDevice.SerialNumber }
 
-
-            $userLicenses = ($user.AssignedLicenses.SkuID | ForEach-Object {
-                    $UserLic = $_
-                    $SkuPartNumber = ($Licenses | Where-Object { $_.SkuId -eq $UserLic }).SkuPartNumber
-                    try {
-                        "$((Get-Culture).TextInfo.ToTitleCase((convert-skuname -skuname $SkuPartNumber).Tolower()))"
-                    } catch {
-                        "$SkuPartNumber"
+                    # See if we found just one device, if not match on name
+                    if (($MatchedNinjaDevice | Measure-Object).count -ne 1) {
+                        $MatchedNinjaDevice = $NinjaDevices | Where-Object { $_.systemName -eq $UserDevice.Name -or $_.dnsName -eq $UserDevice.Name }   
                     }
-                }) -join ', '
 
-            $UserMailboxStats = $MailboxStatsFull | where-object { $_.'User Principal Name' -eq $User.userPrincipalName } | Select-Object -First 1
-            $UserMailUse = $UserMailboxStats.'Storage Used (Byte)' / 1GB
-            $UserMailTotal = $UserMailboxStats.'Prohibit Send/Receive Quota (Byte)' / 1GB
-            if ($UserMailTotal) {
-                $MailboxUse = [PSCustomObject]@{
-                    Enabled = $True
-                    Used    = $UserMailUse
-                    Total   = $UserMailTotal
-                    Percent = ($UserMailUse / $UserMailTotal) * 100
-                }
-            } else {
-                $MailboxUse = [PSCustomObject]@{
-                    Enabled = $False
-                    Used    = 0
-                    Total   = 0
-                    Percent = 0
-                }
-            }
+                    # Check on a match again and set name
+                    if (($MatchedNinjaDevice | Measure-Object).count -eq 1) {
+                        $ParsedDeviceName = '<a href="https://' + ($Configuration.Instance -replace '/ws', '') + '/#/deviceDashboard/' + $MatchedNinjaDevice.id + '/overview" target="_blank">' + $UserDevice.Name + '</a>'
+                        Write-Host "Parsed Device Name: $ParsedDeviceName"
+                    } else {
+                        $ParsedDeviceName = $UserDevice.Name
+                    }
+                
+                    # Set Last Login Time
+                    $LastLoginTime = ($UserDevice.UserDetails | where-object { $_.id -eq $User.id }).lastLogin
+                    if (!$LastLoginTime) {
+                        $LastLoginTime = 'Unknown'
+                    }
 
-            $UserOneDriveStats = $OneDriveDetails | where-object { $_.'Owner Principal Name' -eq $User.userPrincipalName } | Select-Object -First 1
-            $UserOneDriveUse = $UserOneDriveStats.'Storage Used (Byte)' / 1GB
-            $UserOneDriveTotal = $UserOneDriveStats.'Storage Allocated (Byte)' / 1GB
-            if ($UserOneDriveTotal) {
-                $OneDriveUse = [PSCustomObject]@{
-                    Enabled = $True
-                    Used    = $UserOneDriveUse
-                    Total   = $UserOneDriveTotal
-                    Percent = ($UserOneDriveUse / $UserOneDriveTotal) * 100
-                }
-            } else {
-                $OneDriveUse = [PSCustomObject]@{
-                    Enabled = $False
-                    Used    = 0
-                    Total   = 0
-                    Percent = 0
-                }
-            }
+                    # Set Compliance Status
+                    if ($UserDevice.Compliance -eq 'compliant') {
+                        $ComplianceIcon = '<i class="fas fa-check-circle" title="Device Compliant" style="color:#008001;"></i>'
+                    } else {
+                        $ComplianceIcon = '<i class="fas fa-times-circle" title="Device Not Compliannt" style="color:red;"></i>'
+                    }
 
-            [PSCustomObject]@{
-                Name     = $User.displayName
-                UPN      = $User.userPrincipalName
-                Aliases  = ($User.proxyAddresses -replace 'SMTP:', '') -join ', '
-                Devices  = $UserDevices -join ', '
-                Licenses = $userLicenses
-                Mailbox  = $MailboxUse
-                OneDrive = $OneDriveUse
-            }
+                    # OS Icon
+                    $OSIcon = Switch ($UserDevice.OS) {
+                        'Windows' { '<i class="fab fa-windows"></i>' }
+                        'iOS' { '<i class="fab fa-apple"></i>' }
+                        'Android' { '<i class="fab fa-android"></i>' }
+                        'macOS' { '<i class="fab fa-apple"></i>' }
+                    }
 
+                    '<li style="font-family: sans-serif;">' + "$ComplianceIcon $OSIcon $($ParsedDeviceName) ($LastLoginTime)</li>"
+                
+                }
+
+
+                $userLicenses = ($user.AssignedLicenses.SkuID | ForEach-Object {
+                        $UserLic = $_
+                        try {
+                            $SkuPartNumber = ($Licenses | Where-Object { $_.SkuId -eq $UserLic }).SkuPartNumber
+                            '<li style="font-family: sans-serif;">' + "$((Get-Culture).TextInfo.ToTitleCase((convert-skuname -skuname $SkuPartNumber).Tolower()))</li>"
+                        } catch {}
+                    }) -join ''
+
+                $UserMailboxStats = $MailboxStatsFull | where-object { $_.'User Principal Name' -eq $User.userPrincipalName } | Select-Object -First 1
+                $UserMailUse = $UserMailboxStats.'Storage Used (Byte)' / 1GB
+                $UserMailTotal = $UserMailboxStats.'Prohibit Send/Receive Quota (Byte)' / 1GB
+                if ($UserMailTotal) {
+                    $MailboxUse = [PSCustomObject]@{
+                        Enabled = $True
+                        Used    = $UserMailUse
+                        Total   = $UserMailTotal
+                        Percent = ($UserMailUse / $UserMailTotal) * 100
+                    }
+
+                    $MailboxUseColor = if ($MailboxUse.Percent -ge 95) {
+                        '#ec1c24'
+                    } elseif ($MailboxUse.Percent -ge 85) {
+                        '#FFA500'
+                    } else {
+                        '#008001'
+                    }
+
+                    $MailboxParsed = '<div class="p-3" style="width: 100%; height: 50px; display: flex;"><div style="width: ' + $MailboxUse.Percent + '%; background-color: #' + $MailboxUseColor + ';"></div><div style="width: ' + (100 - $MailboxUse.Percent) + '%; background-color: #CCCCCC;"></div></div>'
+
+                } else {
+                    $MailboxUse = [PSCustomObject]@{
+                        Enabled = $False
+                        Used    = 0
+                        Total   = 0
+                        Percent = 0
+                    }
+
+                    $MailboxParsed = 'Not Enabled'
+                }
 
             
+                $UserOneDriveStats = $OneDriveDetails | where-object { $_.'Owner Principal Name' -eq $User.userPrincipalName } | Select-Object -First 1
+                $UserOneDriveUse = $UserOneDriveStats.'Storage Used (Byte)' / 1GB
+                $UserOneDriveTotal = $UserOneDriveStats.'Storage Allocated (Byte)' / 1GB
+                if ($UserOneDriveTotal) {
+                    $OneDriveUse = [PSCustomObject]@{
+                        Enabled = $True
+                        Used    = $UserOneDriveUse
+                        Total   = $UserOneDriveTotal
+                        Percent = ($UserOneDriveUse / $UserOneDriveTotal) * 100
+                    }
+
+                    $OneDriveUseColor = if ($OneDriveUse.Percent -ge 95) {
+                        '#ec1c24'
+                    } elseif ($MailboxUse.Percent -ge 85) {
+                        '#FFA500'
+                    } else {
+                        '#008001'
+                    }
+
+                    $OneDriveParsed = '<div class="p-3" style="width: 100%; height: 50px; display: flex;"><div style="width: ' + $OneDriveUse.Percent + '%; background-color: #' + $OneDriveUseColor + ';"></div><div style="width: ' + (100 - $OneDriveUse.Percent) + '%; background-color: #CCCCCC;"></div></div>'
+
+                } else {
+                    $OneDriveUse = [PSCustomObject]@{
+                        Enabled = $False
+                        Used    = 0
+                        Total   = 0
+                        Percent = 0
+                    }
+
+                    $OneDriveParsed = 'Not Enabled'
+                }
+
+                # Actions
+                $ActionsHTML = @"
+                <a href="https://$($CIPPUrl)/identity/administration/users/view?userId=$($User.id)&tenantDomain=$($Customer.defaultDomainName)&userEmail=$($User.userPrincipalName)" title="View in CIPP" class="btn secondary"><i class="fas fa-shield-halved" style="color: #337ab7;"></i></a>&nbsp;
+                <a href="https://entra.microsoft.com/$($Customer.DefaultDomainName)/#view/Microsoft_AAD_UsersAndTenants/UserProfileMenuBlade/~/overview/userId/$($User.id)/hidePreviewBanner~/true" title="View in Entra ID" class="btn secondary"><i class="fab fa-microsoft" style="color: #337ab7;"></i></a>&nbsp;
+                <a href="" title="View in Ninja" class="btn secondary"><i class="fas fa-user-ninja" style="color: #337ab7;"></i></a>&nbsp;
+"@
+
+                [PSCustomObject]@{
+                    Name           = $User.displayName
+                    UPN            = $User.userPrincipalName
+                    Aliases        = ($User.proxyAddresses -replace 'SMTP:', '') -join ', '
+                    Licenses       = "<ul>$userLicenses</ul>"
+                    Mailbox        = $MailboxUse
+                    MailboxParsed  = $MailboxParsed
+                    OneDrive       = $OneDriveUse
+                    OneDriveParsed = $OneDriveParsed
+                    Devices        = "<ul>$($UserDevices -join '')</ul>"
+                    Actions        = $ActionsHTML
+                }
+
+            }
+
+
+
+            $UsersTableFornatted = $ParsedUsers | Select-Object Name, 
+            @{n = 'User Principal Name'; e = { $_.UPN } },
+            #Aliases,
+            Licenses,
+            @{n = 'Mailbox Usage'; e = { $_.MailboxParsed } },
+            @{n = 'One Drive Usage'; e = { $_.OneDriveParsed } },
+            @{n = 'Devices (Last Login)'; e = { $_.Devices } },
+            Actions
+
+            
+            $UsersTableHTML = $UsersTableFornatted | ConvertTo-HTML -As Table -Fragment
+
+            $UsersTableHTML = ([System.Web.HttpUtility]::HtmlDecode($UsersTableHTML) -replace '<th>', '<th style="white-space: nowrap; font-family: sans-serif;">') -replace '<td>', '<td style="white-space: nowrap; font-family: sans-serif;">'
+           
+            $NinjaOrgUpdate | Add-Member -NotePropertyName $MappedFields.UsersSummary -NotePropertyValue @{'html' = $UsersTableHTML }
+
         }
 
 
-        $UsersTable = ($ParsedUsers | ConvertTo-HTML -As Table).Replace('<table>', '<table class="table table-bordered">')
-        $DevicesTable = ($ParsedDevices | ConvertTo-HTML -As Table).Replace('<table>', '<table class="table table-bordered">')
-
-
-        $HTML = @"
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.1/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-4bw+/aepP/YC94hEpVNVgiZdgIC5+VKNBQNGCHeKRQN+PtmoHDEXuppvnDJzQIu9" crossorigin="anonymous">
-    <div style="padding:10px">
-    $TenantSummaryCard
-    $UserSummaryCardHTML
-    <h1>User Details</h1>
-    $UsersTable
-    <h1>Device Details</h1>
-    $DevicesTable
-    </div>
-"@
 
         #Get available Ninja clients
 
     
         $Token = Get-NinjaOneToken -configuration $Configuration
 
-        Write-Host "Got to End. OrgUpdate: $($NinjaOrgUpdate | ConvertTo-Json -Depth 100)"
     
         $Result = Invoke-WebRequest -uri "https://$($Configuration.Instance)/api/v2/organization/$($MappedTenant.NinjaOne)/custom-fields" -Method PATCH -Headers @{Authorization = "Bearer $($token.access_token)" } -ContentType 'application/json' -Body ($NinjaOrgUpdate | ConvertTo-Json -Depth 100)
-   
-        Write-Host "Ninja Result: $($Result.content)"
+        Write-Host "Completed Total Time: $((New-TimeSpan -Start $StartTime -End (Get-Date)).TotalSeconds)" 
+
     } catch {
         Write-Host "FATAL ERROR: $_"
     }
