@@ -13,7 +13,7 @@ try {
 
     $ParallelTasks = foreach ($Item in $Batch) {
       try {
-        Invoke-DurableActivity -FunctionName "Scheduler_$($item['Type'])" -Input $item -NoWait -RetryOptions $RetryOptions
+        Invoke-DurableActivity -FunctionName "Scheduler_$($item['Type'])" -Input $item -NoWait -RetryOptions $RetryOptions -ErrorAction Stop
       }
       catch {
         Write-Host 'Could not start:'
