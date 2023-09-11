@@ -13,7 +13,10 @@
       "includeGroups": [],
       "excludeGuestsOrExternalUsers": {
         "guestOrExternalUserTypes": "b2bCollaborationGuest,serviceProvider",
-        "externalTenants": "@{membershipKind=all; @odata.type=#microsoft.graph.conditionalAccessAllExternalTenants}"
+        "externalTenants": {
+          "membershipKind": "all",
+          "@odata.type": "#microsoft.graph.conditionalAccessAllExternalTenants"
+        }
       },
       "includeGuestsOrExternalUsers": null,
       "includeRoles": [],
