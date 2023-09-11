@@ -4,7 +4,7 @@
   "Fields": [
     {
       "name": "PasswordNeverExpires",
-      "UseExistingInfo": "true",
+      "UseExistingInfo": true,
       "StoreAs": "bool",
       "FrontendFields": [
         {
@@ -17,7 +17,7 @@
     },
     {
       "name": "OAuthAppConsent",
-      "UseExistingInfo": "true",
+      "UseExistingInfo": true,
       "StoreAs": "bool",
       "FrontendFields": [
         {
@@ -30,7 +30,7 @@
     },
     {
       "name": "UnifiedAuditLog",
-      "UseExistingInfo": "true",
+      "UseExistingInfo": true,
       "StoreAs": "bool",
       "FrontendFields": [
         {
@@ -43,7 +43,7 @@
     },
     {
       "name": "MFANudgeState",
-      "UseExistingInfo": "true",
+      "UseExistingInfo": true,
       "StoreAs": "bool",
       "FrontendFields": [
         {
@@ -56,7 +56,7 @@
     },
     {
       "name": "TAPEnabled",
-      "UseExistingInfo": "true",
+      "UseExistingInfo": true,
       "StoreAs": "bool",
       "FrontendFields": [
         {
@@ -69,7 +69,7 @@
     },
     {
       "name": "SecureDefaultState",
-      "UseExistingInfo": "true",
+      "UseExistingInfo": true,
       "StoreAs": "bool",
       "FrontendFields": [
         {
@@ -82,7 +82,7 @@
     },
     {
       "name": "AnonymousPrivacyReports",
-      "UseExistingInfo": "true",
+      "UseExistingInfo": true,
       "StoreAs": "bool",
       "FrontendFields": [
         {
@@ -95,7 +95,7 @@
     },
     {
       "name": "MessageCopyforSentAsDisabled",
-      "UseExistingInfo": "true",
+      "UseExistingInfo": true,
       "StoreAs": "JSON",
       "FrontendFields": [
         {
@@ -108,7 +108,7 @@
     },
     {
       "name": "SharedMailboxeswithenabledusers",
-      "UseExistingInfo": "true",
+      "UseExistingInfo": true,
       "StoreAs": "JSON",
       "FrontendFields": [
         {
@@ -121,7 +121,7 @@
     },
     {
       "name": "Unusedlicenses",
-      "UseExistingInfo": "true",
+      "UseExistingInfo": true,
       "StoreAs": "JSON",
       "FrontendFields": [
         {
@@ -134,7 +134,7 @@
     },
     {
       "name": "CurrentSecureScore",
-      "UseExistingInfo": "true",
+      "UseExistingInfo": true,
       "StoreAs": "JSON",
       "FrontendFields": [
         {
