@@ -554,8 +554,8 @@ function Remove-CIPPCache {
     }
 }
 
-function New-ExoRequest ($tenantid, $cmdlet, $cmdParams, $useSystemMailbox, $Anchor) {
-    if ((Get-AuthorisedRequest -TenantID $tenantid)) {
+function New-ExoRequest ($tenantid, $cmdlet, $cmdParams, $useSystemMailbox, $Anchor, $NoAuthCheck) {
+    if ((Get-AuthorisedRequest -TenantID $tenantid) -or $NoAuthCheck -eq $True) {
         $token = Get-ClassicAPIToken -resource 'https://outlook.office365.com' -Tenantid $tenantid
         $tenant = (get-tenants | Where-Object -Property defaultDomainName -EQ $tenantid).customerId
         if ($cmdParams) {
@@ -576,8 +576,8 @@ function New-ExoRequest ($tenantid, $cmdlet, $cmdParams, $useSystemMailbox, $Anc
             if ($cmdparams.User) { $Anchor = $cmdparams.User }
 
             if (!$Anchor -or $useSystemMailbox) {
-                $OnMicrosoft = (New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/domains?$top=999' -tenantid $tenantid | Where-Object -Property isInitial -EQ $true).id
-                $anchor = "UPN:SystemMailbox{8cc370d3-822a-4ab8-a926-bb94bd0641a9}@$($OnMicrosoft)"
+                $OnMicrosoft = (New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/domains?$top=999' -tenantid $tenantid -NoAuthCheck $NoAuthCheck| Where-Object -Property isInitial -EQ $true).id
+                $anchor = "UPN:SystemMailbox{bb558c35-97f1-4cb9-8ff7-d53741dc928c}@$($OnMicrosoft)"
 
             }
         }
