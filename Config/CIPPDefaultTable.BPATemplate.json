@@ -6,7 +6,7 @@
       "name": "PasswordNeverExpires",
       "API": "Graph",
       "URL": "https://graph.microsoft.com/beta/domains",
-      "ExtractFields": "passwordValidityPeriodInDays",
+      "ExtractFields": ["passwordValidityPeriodInDays"],
       "where": "$_.passwordValidityPeriodInDays -eq 2147483647",
       "StoreAs": "bool",
       "FrontendFields": [
@@ -20,9 +20,9 @@
     {
       "name": "OAuthAppConsent",
       "API": "Graph",
-      "URL": "https://graph.microsoft.com/beta/policies/authorizationPolicy/authorizationPolicy",
-      "ExtractFields": "permissionGrantPolicyIdsAssignedToDefaultUserRole",
-      "where": "'ManagePermissionGrantsForSelf.microsoft-user-default-legacy' -notin $_.permissionGrantPolicyIdsAssignedToDefaultUserRole",
+      "URL": "https://graph.microsoft.com/v1.0/policies/authorizationPolicy?$select=defaultUserRolePermissions",
+      "ExtractFields": ["defaultuserrolepermissions"],
+      "where": "'ManagePermissionGrantsForSelf.microsoft-user-default-legacy' -notin $_.defaultuserrolepermissions.permissionGrantPoliciesAssigned",
       "StoreAs": "bool",
       "FrontendFields": [
         {
@@ -36,7 +36,7 @@
       "name": "UnifiedAuditLog",
       "API": "Exchange",
       "Command": "Get-AdminAuditLogConfig",
-      "ExtractFields": "UnifiedAuditLogIngestionEnabled",
+      "ExtractFields": ["UnifiedAuditLogIngestionEnabled"],
       "StoreAs": "bool",
       "FrontendFields": [
         {
@@ -65,7 +65,7 @@
       "name": "TAPEnabled",
       "API": "Graph",
       "URL": "https://graph.microsoft.com/beta/policies/authenticationmethodspolicy/authenticationMethodConfigurations/TemporaryAccessPass",
-      "ExtractFields": "State",
+      "ExtractFields": ["State"],
       "StoreAs": "bool",
       "FrontendFields": [
         {
@@ -79,7 +79,7 @@
       "name": "SecureDefaultState",
       "API": "Graph",
       "URL": "https://graph.microsoft.com/beta/policies/identitySecurityDefaultsEnforcementPolicy",
-      "ExtractFields": "IsEnabled",
+      "ExtractFields": ["IsEnabled"],
       "StoreAs": "bool",
       "FrontendFields": [
         {
@@ -93,7 +93,7 @@
       "name": "AnonymousPrivacyReports",
       "API": "Graph",
       "URL": "https://graph.microsoft.com/beta/admin/reportSettings",
-      "ExtractFields": "displayConcealedNames",
+      "ExtractFields": ["displayConcealedNames"],
       "StoreAs": "bool",
       "where": "$_.displayConcealedNames -eq $false",
       "FrontendFields": [

@@ -9,14 +9,16 @@ function Remove-CIPPRules {
     )
 
     try {
-        $rules = New-ExoRequest -tenantid $TenantFilter -cmdlet "Get-InboxRule" -cmdParams @{mailbox = $userid } 
+        Write-Host "Checking rules for $username"
+        $rules = New-ExoRequest -tenantid $TenantFilter -cmdlet "Get-InboxRule" -cmdParams @{mailbox = $username }
+        Write-Host "$($rules.count) rules found"
         if ($rules -eq $null) {
             Write-LogMessage -user $ExecutingUser -API $APIName -message "No Rules for $($username) to delete" -Sev "Info" -tenant $TenantFilter
             return "No rules for $($username) to delete"
         }
         else {
             ForEach ($rule in $rules) {
-                New-ExoRequest -tenantid $TenantFilter -cmdlet "Remove-InboxRule" -Anchor $userid -cmdParams @{Identity = $rule.Identity }
+                New-ExoRequest -tenantid $TenantFilter -cmdlet "Remove-InboxRule" -Anchor $username -cmdParams @{Identity = $rule.Identity }
             }
             Write-LogMessage -user $ExecutingUser -API $APIName -message "Deleted Rules for $($username)" -Sev "Info" -tenant $TenantFilter
             return "Deleted Rules for $($username)"

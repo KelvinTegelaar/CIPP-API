@@ -58,13 +58,17 @@ $GraphRequest = $ExpectedPermissions.requiredResourceAccess | ForEach-Object {
     }
 }
 
+try {
+    $ourSVCPrincipal = New-GraphGETRequest -uri "https://graph.microsoft.com/beta/servicePrincipals(appId='$($ENV:applicationid)')" -tenantid $Tenantfilter
+    $CurrentRoles = New-GraphGETRequest -uri "https://graph.microsoft.com/beta/servicePrincipals/$($ourSVCPrincipal.id)/appRoleAssignments" -tenantid $tenantfilter
 
-$ourSVCPrincipal = New-GraphGETRequest -uri "https://graph.microsoft.com/beta/servicePrincipals(appId='$($ENV:applicationid)')" -tenantid $Tenantfilter
-
+}
+catch {
+    #this try catch exists because of 500 errors when the app principal does not exist. :)
+}
 # if the app svc principal exists, consent app permissions
 $apps = $ExpectedPermissions 
 #get current roles
-$CurrentRoles = New-GraphGETRequest -uri "https://graph.microsoft.com/beta/servicePrincipals/$($ourSVCPrincipal.id)/appRoleAssignments" -tenantid $tenantfilter
 #If 
 $Grants = foreach ($App in $apps.requiredResourceAccess) {
     try {
@@ -90,10 +94,10 @@ foreach ($Grant in $grants) {
         "Failed to grant $($grant.appRoleId) to $($grant.resourceId): $($_.Exception.Message). "
     }
 }
-$StatusCode = [HttpStatusCode]::OK
+
 
 # Associate values to output bindings by calling 'Push-OutputBinding'.
 Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
-        StatusCode = $StatusCode
-        Body       = @(@{Results = $GraphRequest })
+        StatusCode = [HttpStatusCode]::OK
+        Body       = @{Results = $GraphRequest }
     })
