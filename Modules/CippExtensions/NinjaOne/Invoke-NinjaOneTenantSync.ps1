@@ -49,8 +49,113 @@ function Invoke-NinjaOneTenantSync {
     
         } while ($ResultCount.count -eq $PageSize)
     
-        # Create the object we will use for the Org update
+        
+        # Get NinjaOne User Documents
+        $UserDocTemplate = [PSCustomObject]@{
+            name          = 'CIPP - Microsoft 365 Users'
+            allowMultiple = $true
+            fields        = @(
+                [PSCustomObject]@{
+                    fieldLabel                = 'User Links'
+                    fieldName                 = 'cippUserLinks'
+                    fieldType                 = 'WYSIWYG'
+                    fieldTechnicianPermission = 'READ_ONLY'
+                    fieldScriptPermission     = 'NONE'
+                    fieldApiPermission        = 'READ_WRITE'
+                    fieldContent              = @{
+                        required         = $False
+                        advancedSettings = @{
+                            expandLargeValueOnRender = $True
+                        }
+                    }
+                },
+                [PSCustomObject]@{
+                    fieldLabel                = 'User Summary'
+                    fieldName                 = 'cippUserSummary'
+                    fieldType                 = 'WYSIWYG'
+                    fieldTechnicianPermission = 'READ_ONLY'
+                    fieldScriptPermission     = 'NONE'
+                    fieldApiPermission        = 'READ_WRITE'
+                    fieldContent              = @{
+                        required         = $False
+                        advancedSettings = @{
+                            expandLargeValueOnRender = $True
+                        }
+                    }
+                },
+                [PSCustomObject]@{
+                    fieldLabel                = 'User Devices'
+                    fieldName                 = 'cippUserDevices'
+                    fieldType                 = 'WYSIWYG'
+                    fieldTechnicianPermission = 'READ_ONLY'
+                    fieldScriptPermission     = 'NONE'
+                    fieldApiPermission        = 'READ_WRITE'
+                    fieldContent              = @{
+                        required         = $False
+                        advancedSettings = @{
+                            expandLargeValueOnRender = $True
+                        }
+                    }
+                },
+                [PSCustomObject]@{
+                    fieldLabel                = 'User Groups'
+                    fieldName                 = 'cippUserGroups'
+                    fieldType                 = 'WYSIWYG'
+                    fieldTechnicianPermission = 'READ_ONLY'
+                    fieldScriptPermission     = 'NONE'
+                    fieldApiPermission        = 'READ_WRITE'
+                    fieldContent              = @{
+                        required         = $False
+                        advancedSettings = @{
+                            expandLargeValueOnRender = $True
+                        }
+                    }
+                },
+                [PSCustomObject]@{
+                    fieldLabel                = 'User ID'
+                    fieldName                 = 'cippUserID'
+                    fieldType                 = 'TEXT'
+                    fieldTechnicianPermission = 'READ_ONLY'
+                    fieldScriptPermission     = 'NONE'
+                    fieldApiPermission        = 'READ_WRITE'
+                },
+                [PSCustomObject]@{
+                    fieldLabel                = 'User UPN'
+                    fieldName                 = 'cippUserUPN'
+                    fieldType                 = 'TEXT'
+                    fieldTechnicianPermission = 'READ_ONLY'
+                    fieldScriptPermission     = 'NONE'
+                    fieldApiPermission        = 'READ_WRITE'
+                }
+            )
+        }
+
+        $NinjaOneUsersTemplate = Invoke-NinjaOneDocumentTemplate -Template $UserDocTemplate -Token $Token
+
+        # Get NinjaOne Users
+        #[System.Collections.Generic.List[PSCustomObject]]$NinjaOneUserDocs = ((Invoke-WebRequest -uri "https://$($Configuration.Instance)/api/v2/organization/documents?organizationIDs=$($NinjaOneOrg)&templateIds=$($NinjaOneUsersTemplate.id)" -Method GET -Headers @{Authorization = "Bearer $($token.access_token)" } -ContentType 'application/json').content | ConvertFrom-Json -depth 100)."$NinjaOneOrg"
+        [System.Collections.Generic.List[PSCustomObject]]$NinjaOneOrgDocs = ((Invoke-WebRequest -uri "https://$($Configuration.Instance)/api/v2/organization/$($NinjaOneOrg)/documents" -Method GET -Headers @{Authorization = "Bearer $($token.access_token)" } -ContentType 'application/json').content | ConvertFrom-Json -depth 100)
+        
+        foreach ($NinjaDoc in $NinjaOneOrgDocs) {
+            $ParsedFields = [pscustomobject]@{}
+            foreach ($Field in $NinjaDoc.Fields) {
+                if ($Field.value.text) {
+                    $FieldVal = $Field.value.text
+                } else {
+                    $FieldVal = $Field.value
+                }
+                $ParsedFields | Add-Member -NotePropertyName $Field.name -NotePropertyValue $FieldVal
+            }
+            $NinjaDoc | Add-Member -NotePropertyName 'ParsedFields' -NotePropertyValue $ParsedFields -Force
+        }
+        
+        
+        [System.Collections.Generic.List[PSCustomObject]]$NinjaOneUserDocs = $NinjaOneOrgDocs | Where-Object { $_.documentTemplateId -eq $NinjaOneUsersTemplate.id }
+
+        # Create the update objects we will use to update NinjaOne
         $NinjaOrgUpdate = [PSCustomObject]@{}
+        $NinjaUserUpdates = [System.Collections.Generic.List[PSCustomObject]]@()
+        $NinjaUserCreation = [System.Collections.Generic.List[PSCustomObject]]@()
 
         # Build bulk requests array.
         [System.Collections.Generic.List[PSCustomObject]]$TenantRequests = @(
@@ -125,8 +230,6 @@ function Invoke-NinjaOneTenantSync {
         }
 
         $Users = Get-GraphBulkResultByID -value -Results $TenantResults -ID 'Users'
-
-        $SignInLogs = Get-GraphBulkResultByID -value -Results $TenantResults -ID 'SignInLogs'
 
         $SecureScore = Get-GraphBulkResultByID -value -Results $TenantResults -ID 'SecureScore'
  
@@ -474,13 +577,27 @@ function Invoke-NinjaOneTenantSync {
                 }
             }
 
-          
+            # First lets match on serial
+            $MatchedNinjaDevice = $NinjaDevices | Where-Object { $_.system.biosSerialNumber -eq $Device.SerialNumber -or $_.system.serialNumber -eq $Device.SerialNumber }
+
+            # See if we found just one device, if not match on name
+            if (($MatchedNinjaDevice | Measure-Object).count -ne 1) {
+                $MatchedNinjaDevice = $NinjaDevices | Where-Object { $_.systemName -eq $Device.Name -or $_.dnsName -eq $Device.Name }   
+            }
+            
+            # Check on a match again and set name
+            if (($MatchedNinjaDevice | Measure-Object).count -eq 1) {
+                $ParsedDeviceName = '<a href="https://' + ($Configuration.Instance -replace '/ws', '') + '/#/deviceDashboard/' + $MatchedNinjaDevice.id + '/overview" target="_blank">' + $Device.deviceName + '</a>'
+            } else {
+                $ParsedDeviceName = $Device.deviceName
+            }
 
             [PSCustomObject]@{
                 Name                = $Device.deviceName
                 SerialNumber        = $Device.serialNumber
                 OS                  = $Device.operatingSystem
                 OSVersion           = $Device.osversion
+                Enrolled            = $Device.enrolledDateTime
                 Compliance          = $Device.complianceState
                 LastSync            = $Device.lastSyncDateTime
                 PrimaryUser         = $Device.userDisplayName
@@ -501,13 +618,431 @@ function Invoke-NinjaOneTenantSync {
                 UserDetails         = $DeviceUsersDetail
                 CompliancePolicies  = $DevicePolcies
                 Groups              = $DeviceGroups
-
+                NinjaDevice         = $MatchedNinjaDevice
+                DeviceLink          = $ParsedDeviceName
             }        
 
         }
 
+        ########## Create / Update User Objects
+        $ParsedUsers = foreach ($user in $licensedUsers) {
+            try {
+                $NinjaOneUser = $NinjaOneUserDocs | Where-Object { $_.ParsedFields.cippUserID -eq $User.ID }
+                if (($NinjaOneUser |  Measure-Object).count -gt 1) {
+                    Throw "Multiple Users with the same ID found"
+                }
+
+                $UserGroups = foreach ($Group in $Groups) {
+                    if ($User.id -in $Group.Members.id) {
+                        $FoundGroup = $AllGroups | Where-Object { $_.id -eq $Group.id }
+                        [PSCustomObject]@{
+                            'Display Name'   = $FoundGroup.displayName
+                            'Mail Enabled'   = $FoundGroup.mailEnabled
+                            'Mail'           = $FoundGroup.mail
+                            'Security Group' = $FoundGroup.securityEnabled
+                            'Group Types'    = $FoundGroup.groupTypes -join ','
+                        }
+                    }
+                }
+
+                $UserPolicies = foreach ($cap in $ConditionalAccessMembers) {
+                    if ($User.id -in $Cap.Members) {
+                        $temp = [PSCustomObject]@{
+                            displayName = $cap.displayName
+                        }
+                        $temp
+                    }
+                }
+
+                $PermsRequest = ''
+                $StatsRequest = ''
+                $MailboxDetailedRequest = ''
+                $CASRequest = ''
+
+                $CASRequest = $CASFull | Where-Object { $_.ExternalDirectoryObjectId -eq $User.iD }
+                $MailboxDetailedRequest = $MailboxDetailedFull | Where-Object { $_.ExternalDirectoryObjectId -eq $User.iD }
+                $StatsRequest = $MailboxStatsFull | Where-Object { $_.'User Principal Name' -eq $User.UserPrincipalName }
+
+                try {
+                    $PermsRequest = New-GraphGetRequest -uri "https://outlook.office365.com/adminapi/beta/$($tenantfilter)/Mailbox('$($User.ID)')/MailboxPermission" -Tenantid $tenantfilter -scope ExchangeOnline -noPagination $true -NoAuthCheck $True
+                } catch {
+                    $PermsRequest = $null
+                }
+
+                $ParsedPerms = foreach ($Perm in $PermsRequest) {
+                    if ($Perm.User -ne 'NT AUTHORITY\SELF') {
+                        [pscustomobject]@{
+                            User         = $Perm.User
+                            AccessRights = $Perm.PermissionList.AccessRights -join ', '
+                        }
+                    }
+                }
+
+                try {
+                    $TotalItemSize = [math]::Round($StatsRequest.'Storage Used (Byte)' / 1Gb, 2)
+                } catch {
+                    $TotalItemSize = 0
+                }
+
+                $UserMailSettings = [pscustomobject]@{
+                    ForwardAndDeliver        = $MailboxDetailedRequest.DeliverToMailboxAndForward
+                    ForwardingAddress        = $MailboxDetailedRequest.ForwardingAddress + ' ' + $MailboxDetailedRequest.ForwardingSmtpAddress
+                    LitiationHold            = $MailboxDetailedRequest.LitigationHoldEnabled
+                    HiddenFromAddressLists   = $MailboxDetailedRequest.HiddenFromAddressListsEnabled
+                    EWSEnabled               = $CASRequest.EwsEnabled
+                    MailboxMAPIEnabled       = $CASRequest.MAPIEnabled
+                    MailboxOWAEnabled        = $CASRequest.OWAEnabled
+                    MailboxImapEnabled       = $CASRequest.ImapEnabled
+                    MailboxPopEnabled        = $CASRequest.PopEnabled
+                    MailboxActiveSyncEnabled = $CASRequest.ActiveSyncEnabled
+                    Permissions              = $ParsedPerms
+                    ProhibitSendQuota        = [math]::Round([float]($MailboxDetailedRequest.ProhibitSendQuota -split ' GB')[0], 2)
+                    ProhibitSendReceiveQuota = [math]::Round([float]($MailboxDetailedRequest.ProhibitSendReceiveQuota -split ' GB')[0], 2)
+                    ItemCount                = [math]::Round($StatsRequest.'Item Count', 2)
+                    TotalItemSize            = $TotalItemSize
+                }
+
+
+                $UserDevicesDetailsRaw = $ParsedDevices | where-object { $User.id -in $_.UserIDS }
+
+                $UserDevices = foreach ($UserDevice in $ParsedDevices | where-object { $User.id -in $_.UserIDS }) {
+
+                    $MatchedNinjaDevice = $UserDevice.NinjaDevice
+                    $ParsedDeviceName = $UserDevice.DeviceLink
+                
+                    # Set Last Login Time
+                    $LastLoginTime = ($UserDevice.UserDetails | where-object { $_.id -eq $User.id }).lastLogin
+                    if (!$LastLoginTime) {
+                        $LastLoginTime = 'Unknown'
+                    }
+
+                    # Set Compliance Status
+                    if ($UserDevice.Compliance -eq 'compliant') {
+                        $ComplianceIcon = '<i class="fas fa-check-circle" title="Device Compliant" style="color:#008001;"></i>'
+                    } else {
+                        $ComplianceIcon = '<i class="fas fa-times-circle" title="Device Not Compliannt" style="color:#ec1c24;"></i>'
+                    }
+
+                    # OS Icon
+                    $OSIcon = Switch ($UserDevice.OS) {
+                        'Windows' { '<i class="fab fa-windows"></i>' }
+                        'iOS' { '<i class="fab fa-apple"></i>' }
+                        'Android' { '<i class="fab fa-android"></i>' }
+                        'macOS' { '<i class="fab fa-apple"></i>' }
+                    }
+
+                    '<li>' + "$ComplianceIcon $OSIcon $($ParsedDeviceName) ($LastLoginTime)</li>"
+                
+                }
+
+                $aliases = (($user.ProxyAddresses | Where-Object { $_ -cnotmatch 'SMTP' -and $_ -notmatch '.onmicrosoft.com' }) -replace 'SMTP:', ' ') -join ', '
+
+                $userLicenses = ($user.AssignedLicenses.SkuID | ForEach-Object {
+                        $UserLic = $_
+                        try {
+                            $SkuPartNumber = ($Licenses | Where-Object { $_.SkuId -eq $UserLic }).SkuPartNumber
+                            '<li>' + "$((Get-Culture).TextInfo.ToTitleCase((convert-skuname -skuname $SkuPartNumber).Tolower()))</li>"
+                        } catch {}
+                    }) -join ''
+
+
+                $UserOneDriveStats = $OneDriveDetails | where-object { $_.'Owner Principal Name' -eq $User.userPrincipalName } | Select-Object -First 1
+                $UserOneDriveUse = $UserOneDriveStats.'Storage Used (Byte)' / 1GB
+                $UserOneDriveTotal = $UserOneDriveStats.'Storage Allocated (Byte)' / 1GB
+                if ($UserOneDriveTotal) {
+                    $OneDriveUse = [PSCustomObject]@{
+                        Enabled = $True
+                        Used    = $UserOneDriveUse
+                        Total   = $UserOneDriveTotal
+                        Percent = ($UserOneDriveUse / $UserOneDriveTotal) * 100
+                    }
+
+                    $OneDriveUseColor = if ($OneDriveUse.Percent -ge 95) {
+                        '#ec1c24'
+                    } elseif ($MailboxUse.Percent -ge 85) {
+                        '#FFA500'
+                    } else {
+                        '#008001'
+                    }
+
+                    $OneDriveParsed = '<div class="p-3 linechart"><div style="width: ' + $OneDriveUse.Percent + '%; background-color: #' + $OneDriveUseColor + ';"></div><div style="width: ' + (100 - $OneDriveUse.Percent) + '%; background-color: #CCCCCC;"></div></div>'
+
+                } else {
+                    $OneDriveUse = [PSCustomObject]@{
+                        Enabled = $False
+                        Used    = 0
+                        Total   = 0
+                        Percent = 0
+                    }
+
+                    $OneDriveParsed = 'Not Enabled'
+                }
+
+                
+                if ($UserOneDriveStats) {
+                    $OneDriveCardData = [PSCustomObject]@{
+                        'One Drive URL'            = '<a href="' + ($UserOneDriveStats.'Site URL') + '">' + ($UserOneDriveStats.'Site URL') + '</a>'
+                        'Is Deleted'               = "$($UserOneDriveStats.'Is Deleted')"
+                        'Last Activity Date'       = "$($UserOneDriveStats.'Last Activity Date')"
+                        'File Count'               = "$($UserOneDriveStats.'File Count')"
+                        'Active File Count'        = "$($UserOneDriveStats.'Active File Count')"
+                        'Storage Used (Byte)'      = "$($UserOneDriveStats.'Storage Used (Byte)')"
+                        'Storage Allocated (Byte)' = "$($UserOneDriveStats.'Storage Allocated (Byte)')"
+                        'One Drive Usage'          = $OneDriveParsed
+
+                    }
+                } else {
+                    $OneDriveCardData = [PSCustomObject]@{
+                        'One Drive' = 'Disabled'
+                    }
+                } 
+                
+                $UserMailboxStats = $MailboxStatsFull | where-object { $_.'User Principal Name' -eq $User.userPrincipalName } | Select-Object -First 1
+                $UserMailUse = $UserMailboxStats.'Storage Used (Byte)' / 1GB
+                $UserMailTotal = $UserMailboxStats.'Prohibit Send/Receive Quota (Byte)' / 1GB
+                if ($UserMailTotal) {
+                    $MailboxUse = [PSCustomObject]@{
+                        Enabled = $True
+                        Used    = $UserMailUse
+                        Total   = $UserMailTotal
+                        Percent = ($UserMailUse / $UserMailTotal) * 100
+                    }
+
+                    $MailboxUseColor = if ($MailboxUse.Percent -ge 95) {
+                        '#ec1c24'
+                    } elseif ($MailboxUse.Percent -ge 85) {
+                        '#FFA500'
+                    } else {
+                        '#008001'
+                    }
+
+                    $MailboxParsed = '<div class="p-3 linechart"><div style="width: ' + $MailboxUse.Percent + '%; background-color: #' + $MailboxUseColor + ';"></div><div style="width: ' + (100 - $MailboxUse.Percent) + '%; background-color: #CCCCCC;"></div></div>'
+
+                } else {
+                    $MailboxUse = [PSCustomObject]@{
+                        Enabled = $False
+                        Used    = 0
+                        Total   = 0
+                        Percent = 0
+                    }
+
+                    $MailboxParsed = 'Not Enabled'
+                }
+
+                if ($UserMailSettings) {
+                    $MailboxDetailsCardData = [PSCustomObject]@{
+                        'Permissions'                 = "$($UserMailSettings.Permissions | ConvertTo-Html -Fragment | Out-String)"
+                        'Prohibit Send Quota'         = "$($UserMailSettings.ProhibitSendQuota)"
+                        'Prohibit Send Receive Quota' = "$($UserMailSettings.ProhibitSendReceiveQuota)"
+                        'Item Count'                  = "$($UserMailSettings.ProhibitSendReceiveQuota)"
+                        'Total Mailbox Size'          = "$($UserMailSettings.ItemCount)"
+                        'Mailbox Usage'               = $MailboxParsed
+                    }
+
+                    $MailboxSettingsCard = [PSCustomObject]@{
+                        'Forward and Deliver'       = "$($UserMailSettings.ForwardAndDeliver)"
+                        'Forwarding Address'        = "$($UserMailSettings.ForwardingAddress)"
+                        'Litiation Hold'            = "$($UserMailSettings.LitiationHold)"
+                        'Hidden From Address Lists' = "$($UserMailSettings.HiddenFromAddressLists)"
+                        'EWS Enabled'               = "$($UserMailSettings.EWSEnabled)"
+                        'MAPI Enabled'              = "$($UserMailSettings.MailboxMAPIEnabled)"
+                        'OWA Enabled'               = "$($UserMailSettings.MailboxOWAEnabled)"
+                        'IMAP Enabled'              = "$($UserMailSettings.MailboxImapEnabled)"
+                        'POP Enabled'               = "$($UserMailSettings.MailboxPopEnabled)"
+                        'Active Sync Enabled'       = "$($UserMailSettings.MailboxActiveSyncEnabled)"
+                    }
+                } else {
+                    $MailboxDetailsCardData = [PSCustomObject]@{
+                        Exchange = 'Disabled'
+                    }
+                    $MailboxSettingsCard = [PSCustomObject]@{
+                        Exchange = 'Disabled'
+                    }
+                }
+
+                # Format Conditional Access Polcies
+                $UserPoliciesFormatted = '<ul>'
+                foreach ($Policy in $UserPolicies) {
+                    $UserPoliciesFormatted = $UserPoliciesFormatted + "<li>$($Policy.displayName)</li>"
+                }
+                $UserPoliciesFormatted = $UserPoliciesFormatted + '</ul>'
+
+                $UserOverviewCard = [PSCustomObject]@{
+                    'User Name'           = "$($User.displayName)"
+                    'User Principal Name' = "$($User.userPrincipalName)"
+                    'User ID'             = "$($User.ID)"
+                    'User Enabled'        = "$($User.accountEnabled)"
+                    'Job Title'           = "$($User.jobTitle)"
+                    'Mobile Phone'        = "$($User.mobilePhone)"
+                    'Business Phones'     = "$($User.businessPhones -join ', ')"
+                    'Office Location'     = "$($User.officeLocation)"
+                    'Aliases'             = "$aliases"
+                    'Licenses'            = "$($userLicenses)"
+                }
+
+                $Microsoft365UserLinksData = @(
+                    @{
+                        Name = 'Entra ID'
+                        Link = "https://aad.portal.azure.com/$($Customer.defaultDomainName)/#blade/Microsoft_AAD_IAM/UserDetailsMenuBlade/Profile/userId/$($User.id)"
+                        Icon = 'fas fa-users-cog'
+                    },
+                    @{
+                        Name = 'Sign-In Logs'
+                        Link = "https://aad.portal.azure.com/$($Customer.defaultDomainName)/#blade/Microsoft_AAD_IAM/UserDetailsMenuBlade/SignIns/userId/$($User.id)"
+                        Icon = 'fas fa-users-cog'
+                    },
+                    @{
+                        Name = 'Teams Admin'
+                        Link = "https://admin.teams.microsoft.com/users/$($User.id)/account?delegatedOrg=$($Customer.defaultDomainName)"
+                        Icon = 'fas fa-users'
+                    },
+                    @{
+                        Name = 'Intune (User)'
+                        Link = "https://endpoint.microsoft.com/$($Customer.defaultDomainName)/#blade/Microsoft_AAD_IAM/UserDetailsMenuBlade/Profile/userId/$($User.ID)"
+                        Icon = 'fas fa-laptop'
+                    },
+                    @{
+                        Name = 'Intune (Devices)'
+                        Link = "https://endpoint.microsoft.com/$($Customer.defaultDomainName)/#blade/Microsoft_AAD_IAM/UserDetailsMenuBlade/Devices/userId/$($User.ID)"
+                        Icon = 'fas fa-laptop'
+                    }
+                )
+
+                $CIPPUserLinksData = @(
+                    @{
+                        Name = 'View User'
+                        Link = "https://$($CIPPURL).auth/login/aad?post_login_redirect_uri=$($CIPPURL)identity/administration/users/view?userId=$($User.id)%26tenantDomain%3D$($Customer.defaultDomainName)"
+                        Icon = 'far fa-eye'
+                    },
+                    @{
+                        Name = 'Edit User'
+                        Link = "https://$($CIPPURL).auth/login/aad?post_login_redirect_uri=$($CIPPURL)identity/administration/users/edit?userId=$($User.id)%26tenantDomain%3D$($Customer.defaultDomainName)"
+                        Icon = 'fas fa-users-cog'
+                    },
+                    @{
+                        Name = 'Research Compromise'
+                        Link = "https://$($CIPPURL).auth/login/aad?post_login_redirect_uri=$($CIPPURL)identity/administration/ViewBec?userId=$($User.id)%26tenantDomain%3D$($Customer.defaultDomainName)"
+                        Icon = 'fas fa-user-secret'
+                    }
+                )
+
+                # Actions
+                $ActionsHTML = @"
+                                <a href="https://$($CIPPUrl)/identity/administration/users/view?userId=$($User.id)&tenantDomain=$($Customer.defaultDomainName)&userEmail=$($User.userPrincipalName)" title="View in CIPP" class="btn secondary"><i class="fas fa-shield-halved" style="color: #337ab7;"></i></a>&nbsp;
+                                <a href="https://entra.microsoft.com/$($Customer.DefaultDomainName)/#view/Microsoft_AAD_UsersAndTenants/UserProfileMenuBlade/~/overview/userId/$($User.id)/hidePreviewBanner~/true" title="View in Entra ID" class="btn secondary"><i class="fab fa-microsoft" style="color: #337ab7;"></i></a>&nbsp;
+                                <a href="" title="View in Ninja" class="btn secondary"><i class="fas fa-user-ninja" style="color: #337ab7;"></i></a>&nbsp;
+"@
+                
+                
+
+                # Return Data for Users Summary Table
+                [PSCustomObject]@{
+                    Name           = $User.displayName
+                    UPN            = $User.userPrincipalName
+                    Aliases        = ($User.proxyAddresses -replace 'SMTP:', '') -join ', '
+                    Licenses       = "<ul>$userLicenses</ul>"
+                    Mailbox        = $MailboxUse
+                    MailboxParsed  = $MailboxParsed
+                    OneDrive       = $OneDriveUse
+                    OneDriveParsed = $OneDriveParsed
+                    Devices        = "<ul>$($UserDevices -join '')</ul>"
+                    Actions        = $ActionsHTML
+                }
+                
+
+                # Format into Ninja HTML
+                # Links
+                $M365UserLinksHTML = Get-NinjaOneLinks -Data $Microsoft365UserLinksData -Title 'Portals' -SmallCols 2 -MedCols 3 -LargeCols 3 -XLCols 3
+                $CIPPUserLinksHTML = Get-NinjaOneLinks -Data $CIPPUserLinksData -Title 'CIPP Links' -SmallCols 2 -MedCols 3 -LargeCols 3 -XLCols 3
+                $UserLinksHTML = '<div class="row"><div class="col-md-12 col-lg-6 d-flex">' + $M365UserLinksHTML + '</div><div class="col-md-12 col-lg-6 d-flex">' + $CIPPUserLinksHTML + '</div></div>'
+
+                # UsersSummaryCards:
+                $UserOverviewCardHTML = Get-NinjaOneInfoCard -Title "User Details" -Data $UserOverviewCard -Icon 'fas fa-user'
+                $MailboxDetailsCardHTML = Get-NinjaOneInfoCard -Title "Mailbox Details" -Data $MailboxDetailsCardData -Icon 'fas fa-envelope'
+                $MailboxSettingsCardHTML = Get-NinjaOneInfoCard -Title "Mailbox Settings" -Data $MailboxSettingsCard -Icon 'fas fa-envelope'
+                $OneDriveCardHTML = Get-NinjaOneInfoCard -Title "OneDrive Details" -Data $OneDriveCardData -Icon 'fas fa-envelope'
+                $UserPolciesCard = Get-NinjaOneCard -Title "Assigned Conditional Access Policies" -Body $UserPoliciesFormatted
+
+
+                $UserSummaryHTML = '<div class="row g-3">' + 
+                '<div class="col-xl-4 col-lg-6 col-md-12 col-sm-12 d-flex">' + $UserOverviewCardHTML + 
+                '</div><div class="col-xl-4 col-lg-6 col-md-12 col-sm-12 d-flex">' + $MailboxDetailsCardHTML +
+                '</div><div class="col-xl-4 col-lg-6 col-md-12 col-sm-12 d-flex">' + $MailboxSettingsCardHTML +
+                '</div><div class="col-xl-4 col-lg-6 col-md-12 col-sm-12 d-flex">' + $OneDriveCardHTML + 
+                '</div><div class="col-xl-4 col-lg-6 col-md-12 col-sm-12 d-flex">' + $UserPolciesCard + 
+                '</div><div class="col-xl-4 col-lg-6 col-md-12 col-sm-12 d-flex">' + $DeviceSummaryCardHTML + 
+                '</div></div></div>'
+
+
+                $UserDeviceDetailsTable = $UserDevicesDetailsRaw | Select-Object @{N = 'Name'; E = { $_.DeviceLink } },
+                @{n = 'Enrolled'; e = { $_.Enrolled } },
+                @{n = 'Last Sync'; e = { $_.LastSync } },
+                @{n = 'OS'; e = { $_.OS } },
+                @{n = 'OS Version'; e = { $_.OSVersion } },
+                @{n = 'State'; e = { $_.Compliance } },
+                @{n = 'Model'; e = { $_.Model } },
+                @{n = 'Manufacturer'; e = { $_.Make } }
+                
+                $UserDeviceDetailHTML = $UserDeviceDetailsTable | ConvertTo-Html -As Table -Fragment
+                $UserDeviceDetailHTML = ([System.Web.HttpUtility]::HtmlDecode($UserDeviceDetailHTML) -replace '<th>', '<th style="white-space: nowrap;">') -replace '<td>', '<td style="white-space: nowrap;">'
+                
+
+                $UserFields = @{
+                    cippUserLinks   = @{'html' = $UserLinksHTML }
+                    cippUserSummary = @{'html' = $UserSummaryHTML }
+                    cippUserGroups  = @{'html' = "$($UserGroups | ConvertTo-HTML -As Table -Fragment)" }
+                    cippUserDevices = @{'html' = $UserDeviceDetailHTML }
+                    cippUserID      = $User.id
+                    cippUserUPN     = $User.userPrincipalName
+                }
+
+                if ($NinjaOneUser) {
+                    $UpdateObject = [PSCustomObject]@{
+                        documentId   = $NinjaOneUser.documentId
+                        documentName = "$($User.displayName) ($($User.userPrincipalName))"
+                        fields       = $UserFields
+                    }
+                    $NinjaUserUpdates.Add($UpdateObject)
+                } else {
+                    $CreateObject = [PSCustomObject]@{
+                        documentName       = "$($User.displayName) ($($User.userPrincipalName))"
+                        documentTemplateId = ($NinjaOneUsersTemplate.id)
+                        organizationId     = [int]$NinjaOneOrg
+                        fields             = $UserFields
+                    }
+                    $NinjaUserCreation.Add($CreateObject)
+                }
+                
+            } catch {
+                Write-Error "User $($User.UserPrincipalName): A fatal error occured while processing user $_"
+            }
+        }
+
+        try {
+            # Create New Users
+            if (($NinjaUserCreation | Measure-Object).count -ge 1) {
+                Write-Host "Creating NinjaOne Users"
+                $CreatedUsers = Invoke-WebRequest -uri "https://$($Configuration.Instance)/api/v2/organization/documents" -Method POST -Headers @{Authorization = "Bearer $($token.access_token)" } -ContentType 'application/json' -Body ($NinjaUserCreation | ConvertTo-Json -Depth 100) -EA Stop
+            }
+        } Catch {
+            Write-Host "Bulk Creation Error, but may have been successful as only 1 record with an issue could have been the cause: $_"
+        }
+        
+        try {
+            # Update Users
+            if (($NinjaUserUpdates | Measure-Object).count -ge 1) {
+                Write-Host "Updating NinjaOne Users"
+                $UpdatedUsers = Invoke-WebRequest -uri "https://$($Configuration.Instance)/api/v2/organization/documents" -Method PATCH -Headers @{Authorization = "Bearer $($token.access_token)" } -ContentType 'application/json' -Body ($NinjaUserUpdates | ConvertTo-Json -Depth 100) -EA Stop
+                Write-Host "Completed Update"
+            }
+        } Catch {
+            Write-Host "Bulk Update Errored, but may have been successful as only 1 record with an issue could have been the cause: $_"
+        }
+
+
         ### M365 Links Section
         if ($MappedFields.TenantLinks) {
+            Write-Host "Tenant Links"
 
             $ManagementLinksData = @(
                 @{
@@ -563,7 +1098,7 @@ function Invoke-NinjaOneTenantSync {
 
             )
 
-            $M365LinksHTML = Get-NinjaOneLinks -Data $ManagementLinksData -Title 'Portals' -SmallCols 2 -MedCols 3 -LargeCols 4 -XLCols 5
+            $M365LinksHTML = Get-NinjaOneLinks -Data $ManagementLinksData -Title 'Portals' -SmallCols 2 -MedCols 3 -LargeCols 3 -XLCols 3
 
             $CIPPLinksData = @(
                 @{
@@ -598,9 +1133,9 @@ function Invoke-NinjaOneTenantSync {
                 }
             )
 
-            $CIPPLinksHTML = Get-NinjaOneLinks -Data $CIPPLinksData -Title 'CIPP Actions' -SmallCols 1 -MedCols 2 -LargeCols 2 -XLCols 3
+            $CIPPLinksHTML = Get-NinjaOneLinks -Data $CIPPLinksData -Title 'CIPP Actions' -SmallCols 2 -MedCols 3 -LargeCols 3 -XLCols 3
 
-            $LinksHtml = '<div class="row"><div class="col-md-12 col-lg-7" style="margin-bottom: 24px;">' + $M365LinksHtml + '</div><div class="col-md-12 col-lg-5" style="margin-bottom: 24px;">' + $CIPPLinksHTML + '</div><div>&nbsp;</div></div>'
+            $LinksHtml = '<div class="row"><div class="col-md-12 col-lg-6 d-flex"' + $M365LinksHtml + '</div><div class="col-md-12 col-lg-6 d-flex">' + $CIPPLinksHTML + '</div></div>'
 
             $NinjaOrgUpdate | Add-Member -NotePropertyName $MappedFields.TenantLinks -NotePropertyValue @{'html' = $LinksHtml }
 
@@ -608,6 +1143,7 @@ function Invoke-NinjaOneTenantSync {
 
 
         if ($MappedFields.TenantSummary) {
+            Write-Host "Tenant Summary"
 
             ### Tenant Overview Card
             $ParsedAdmins = [PSCustomObject]@{}
@@ -629,6 +1165,7 @@ function Invoke-NinjaOneTenantSync {
             $TenantSummaryCard = Get-NinjaOneInfoCard -Title "Tenant Details" -Data $TenantDetailsItems -Icon 'fas fa-building'
 
             ### Users details card
+            Write-Host "User Details"
             $TotalUsersCount = ($Users | measure-object).count
             $GuestUsersCount = ($Users | where-object { $_.UserType -eq 'Guest' } | measure-object).count
             $LicensedUsersCount = ($licensedUsers | measure-object).count
@@ -686,6 +1223,7 @@ function Invoke-NinjaOneTenantSync {
 
 
             ### Device Details Card
+            Write-Host "Device Details"
             $TotalDeviceswCount = ($Devices | Measure-Object).count
             $ComplianceDevicesCount = ($Devices | Where-Object { $_.complianceState -eq 'compliant' } | Measure-Object).count
             $WindowsCount = ($Devices | Where-Object { $_.operatingSystem -eq 'Windows' } | Measure-Object).count
@@ -765,6 +1303,7 @@ function Invoke-NinjaOneTenantSync {
             $DeviceSummaryCardHTML = Get-NinjaOneCard -Title 'Device Details' -Body $DeviceCardBodyHTML -Icon 'fas fa-network-wired' -TitleLink $TitleLink
 
             #### Secure Score Card
+            Write-Host "Secure Score Details"
             $Top5Actions = ($SecureScoreParsed | Where-Object { $_.scoreInPercentage -ne 100 } | Sort-Object 'Score Impact', adjustedRank -Descending) | Select-Object -First 5
 
             # Score Chart
@@ -788,13 +1327,14 @@ function Invoke-NinjaOneTenantSync {
 
             $TitleLink = "https://security.microsoft.com/securescore?viewid=overview&tid=$($Customer.CustomerId)"
 
-            $SecureScoreCardBodyHTML = $SecureScoreHTML + [System.Web.HttpUtility]::HtmlDecode($RecommendedActionsHTML) -replace '<th>', '<th style="white-space: nowrap; font-family: sans-serif;">'
-            $SecureScoreCardBodyHTML = $SecureScoreCardBodyHTML -replace '<td>', '<td style="font-family: sans-serif;">'
+            $SecureScoreCardBodyHTML = $SecureScoreHTML + [System.Web.HttpUtility]::HtmlDecode($RecommendedActionsHTML) -replace '<th>', '<th style="white-space: nowrap;">'
+            $SecureScoreCardBodyHTML = $SecureScoreCardBodyHTML -replace '<td>', '<td>'
 
             $SecureScoreSummaryCardHTML = Get-NinjaOneCard -Title 'Secure Score' -Body $SecureScoreCardBodyHTML -Icon 'fas fa-shield' -TitleLink $TitleLink
 
 
             ### CIPP Applied Standards Cards
+            Write-Host "Applied Standards"
             $StandardsDefinitions = Get-Content 'config/standards.json' | ConvertFrom-Json -Depth 100
 
             $Table = Get-CippTable -tablename 'standards'
@@ -812,7 +1352,7 @@ function Invoke-NinjaOneTenantSync {
                     if ($CheckValue.value) {
                         $MatchedStandard = $StandardsDefinitions | where-object { ($_.name -split 'standards.')[1] -eq $CheckValue.name }
                         if (($MatchedStandard | Measure-Object).count -eq 1) {
-                            '<li><span style="font-family: sans-serif;">' + $($MatchedStandard.label) + ' (' + ($($Standard.Tenant)) + ')</span></li>'
+                            '<li><span>' + $($MatchedStandard.label) + ' (' + ($($Standard.Tenant)) + ')</span></li>'
                         }
                     }
                 }
@@ -826,14 +1366,16 @@ function Invoke-NinjaOneTenantSync {
             $CIPPStandardsSummaryCardHTML = Get-NinjaOneCard -Title 'CIPP Applied Standards' -Body $CIPPStandardsBodyHTML -Icon 'fas fa-shield-halved' -TitleLink $TitleLink
 
             ### License Card
+            Write-Host "License Details"
             $LicenseTableHTML = $LicensesParsed | Sort-Object 'License Name' | ConvertTo-HTML -As Table -Fragment
-            $LicenseTableHTML = ([System.Web.HttpUtility]::HtmlDecode($LicenseTableHTML) -replace '<th>', '<th style="white-space: nowrap; font-family: sans-serif;">') -replace '<td>', '<td style="white-space: nowrap; font-family: sans-serif;">'
+            $LicenseTableHTML = ([System.Web.HttpUtility]::HtmlDecode($LicenseTableHTML) -replace '<th>', '<th style="white-space: nowrap;">') -replace '<td>', '<td style="white-space: nowrap;">'
             
             $TitleLink = "https://$CIPPUrl/tenant/administration/list-licenses?customerId=$($Customer.customerId)"
             $LicensesSummaryCardHTML = Get-NinjaOneCard -Title 'Licenses' -Body $LicenseTableHTML -Icon 'fas fa-chart-bar' -TitleLink $TitleLink
 
 
             ### Summary Stats
+            Write-Host "Widget Details"
 
             [System.Collections.Generic.List[PSCustomObject]]$WidgetData = @()
 
@@ -942,15 +1484,16 @@ function Invoke-NinjaOneTenantSync {
 
 
             # Create the Tenant Summary Field
-            $TenantSummaryHTML = '<div><div class="row" style="font-family: sans-serif; margin-left:24px; margin-right: 24px; margin-top: 14px; width: 100%;">' + $SummaryDetailsCardHTML + '</div>' +
-            '<div class="row" style="width: 100%; margin-bottom:24px;">' + 
-            '<div class="col-xl-4 col-lg-6 col-md-12 col-12" style="margin-bottom:24px;">' + $TenantSummaryCard + 
-            '</div><div class="col-xl-4 col-lg-6 col-md-12 col-sm-12" style="margin-bottom:24px;">' + $LicensesSummaryCardHTML +
-            '</div><div class="col-xl-4 col-lg-6 col-md-12 col-sm-12" style="margin-bottom:24px;">' + $DeviceSummaryCardHTML + 
-            '</div><div class="col-xl-4 col-lg-6 col-md-12 col-sm-12" style="margin-bottom:24px;">' + $CIPPStandardsSummaryCardHTML +
-            '</div><div class="col-xl-4 col-lg-6 col-md-12 col-sm-12" style="margin-bottom:24px;">' + $SecureScoreSummaryCardHTML + 
-            '</div><div class="col-xl-4 col-lg-6 col-md-12 col-sm-12" style="margin-bottom:24px;">' + $UserSummaryCardHTML + 
-            '</div></div></div><div class="row" style="height: 24px;">&nbsp;</div>'
+            Write-Host "Complete Tenant Summary"
+            $TenantSummaryHTML = '<div class="field-container">' + $SummaryDetailsCardHTML + '</div>' +
+            '<div class="row g-3">' + 
+            '<div class="col-xl-4 col-lg-6 col-md-12 col-sm-12 d-flex">' + $TenantSummaryCard + 
+            '</div><div class="col-xl-4 col-lg-6 col-md-12 col-sm-12 d-flex">' + $LicensesSummaryCardHTML +
+            '</div><div class="col-xl-4 col-lg-6 col-md-12 col-sm-12 d-flex">' + $DeviceSummaryCardHTML + 
+            '</div><div class="col-xl-4 col-lg-6 col-md-12 col-sm-12 d-flex">' + $CIPPStandardsSummaryCardHTML +
+            '</div><div class="col-xl-4 col-lg-6 col-md-12 col-sm-12 d-flex">' + $SecureScoreSummaryCardHTML + 
+            '</div><div class="col-xl-4 col-lg-6 col-md-12 col-sm-12 d-flex">' + $UserSummaryCardHTML + 
+            '</div></div></div>'
             
             $NinjaOrgUpdate | Add-Member -NotePropertyName $MappedFields.TenantSummary -NotePropertyValue @{'html' = $TenantSummaryHTML }
 
@@ -959,148 +1502,7 @@ function Invoke-NinjaOneTenantSync {
         }
 
         if ($MappedFields.UsersSummary) {
-            # Parse all users:
-            [System.Collections.Generic.List[PSCustomObject]]$ParsedUsers = Foreach ($User in $Users | where-object { $_.userType -ne 'Guest' -and $_.accountEnabled -eq $True }) {
-        
-                $UserDevices = foreach ($UserDevice in $ParsedDevices | where-object { $User.id -in $_.UserIDS }) {
-                    # First lets match on serial
-                    $MatchedNinjaDevice = $NinjaDevices | Where-Object { $_.system.biosSerialNumber -eq $UserDevice.SerialNumber -or $_.system.serialNumber -eq $UserDevice.SerialNumber }
-
-                    # See if we found just one device, if not match on name
-                    if (($MatchedNinjaDevice | Measure-Object).count -ne 1) {
-                        $MatchedNinjaDevice = $NinjaDevices | Where-Object { $_.systemName -eq $UserDevice.Name -or $_.dnsName -eq $UserDevice.Name }   
-                    }
-
-                    # Check on a match again and set name
-                    if (($MatchedNinjaDevice | Measure-Object).count -eq 1) {
-                        $ParsedDeviceName = '<a href="https://' + ($Configuration.Instance -replace '/ws', '') + '/#/deviceDashboard/' + $MatchedNinjaDevice.id + '/overview" target="_blank">' + $UserDevice.Name + '</a>'
-                        Write-Host "Parsed Device Name: $ParsedDeviceName"
-                    } else {
-                        $ParsedDeviceName = $UserDevice.Name
-                    }
-                
-                    # Set Last Login Time
-                    $LastLoginTime = ($UserDevice.UserDetails | where-object { $_.id -eq $User.id }).lastLogin
-                    if (!$LastLoginTime) {
-                        $LastLoginTime = 'Unknown'
-                    }
-
-                    # Set Compliance Status
-                    if ($UserDevice.Compliance -eq 'compliant') {
-                        $ComplianceIcon = '<i class="fas fa-check-circle" title="Device Compliant" style="color:#008001;"></i>'
-                    } else {
-                        $ComplianceIcon = '<i class="fas fa-times-circle" title="Device Not Compliannt" style="color:red;"></i>'
-                    }
-
-                    # OS Icon
-                    $OSIcon = Switch ($UserDevice.OS) {
-                        'Windows' { '<i class="fab fa-windows"></i>' }
-                        'iOS' { '<i class="fab fa-apple"></i>' }
-                        'Android' { '<i class="fab fa-android"></i>' }
-                        'macOS' { '<i class="fab fa-apple"></i>' }
-                    }
-
-                    '<li style="font-family: sans-serif;">' + "$ComplianceIcon $OSIcon $($ParsedDeviceName) ($LastLoginTime)</li>"
-                
-                }
-
-
-                $userLicenses = ($user.AssignedLicenses.SkuID | ForEach-Object {
-                        $UserLic = $_
-                        try {
-                            $SkuPartNumber = ($Licenses | Where-Object { $_.SkuId -eq $UserLic }).SkuPartNumber
-                            '<li style="font-family: sans-serif;">' + "$((Get-Culture).TextInfo.ToTitleCase((convert-skuname -skuname $SkuPartNumber).Tolower()))</li>"
-                        } catch {}
-                    }) -join ''
-
-                $UserMailboxStats = $MailboxStatsFull | where-object { $_.'User Principal Name' -eq $User.userPrincipalName } | Select-Object -First 1
-                $UserMailUse = $UserMailboxStats.'Storage Used (Byte)' / 1GB
-                $UserMailTotal = $UserMailboxStats.'Prohibit Send/Receive Quota (Byte)' / 1GB
-                if ($UserMailTotal) {
-                    $MailboxUse = [PSCustomObject]@{
-                        Enabled = $True
-                        Used    = $UserMailUse
-                        Total   = $UserMailTotal
-                        Percent = ($UserMailUse / $UserMailTotal) * 100
-                    }
-
-                    $MailboxUseColor = if ($MailboxUse.Percent -ge 95) {
-                        '#ec1c24'
-                    } elseif ($MailboxUse.Percent -ge 85) {
-                        '#FFA500'
-                    } else {
-                        '#008001'
-                    }
-
-                    $MailboxParsed = '<div class="p-3" style="width: 100%; height: 50px; display: flex;"><div style="width: ' + $MailboxUse.Percent + '%; background-color: #' + $MailboxUseColor + ';"></div><div style="width: ' + (100 - $MailboxUse.Percent) + '%; background-color: #CCCCCC;"></div></div>'
-
-                } else {
-                    $MailboxUse = [PSCustomObject]@{
-                        Enabled = $False
-                        Used    = 0
-                        Total   = 0
-                        Percent = 0
-                    }
-
-                    $MailboxParsed = 'Not Enabled'
-                }
-
-            
-                $UserOneDriveStats = $OneDriveDetails | where-object { $_.'Owner Principal Name' -eq $User.userPrincipalName } | Select-Object -First 1
-                $UserOneDriveUse = $UserOneDriveStats.'Storage Used (Byte)' / 1GB
-                $UserOneDriveTotal = $UserOneDriveStats.'Storage Allocated (Byte)' / 1GB
-                if ($UserOneDriveTotal) {
-                    $OneDriveUse = [PSCustomObject]@{
-                        Enabled = $True
-                        Used    = $UserOneDriveUse
-                        Total   = $UserOneDriveTotal
-                        Percent = ($UserOneDriveUse / $UserOneDriveTotal) * 100
-                    }
-
-                    $OneDriveUseColor = if ($OneDriveUse.Percent -ge 95) {
-                        '#ec1c24'
-                    } elseif ($MailboxUse.Percent -ge 85) {
-                        '#FFA500'
-                    } else {
-                        '#008001'
-                    }
-
-                    $OneDriveParsed = '<div class="p-3" style="width: 100%; height: 50px; display: flex;"><div style="width: ' + $OneDriveUse.Percent + '%; background-color: #' + $OneDriveUseColor + ';"></div><div style="width: ' + (100 - $OneDriveUse.Percent) + '%; background-color: #CCCCCC;"></div></div>'
-
-                } else {
-                    $OneDriveUse = [PSCustomObject]@{
-                        Enabled = $False
-                        Used    = 0
-                        Total   = 0
-                        Percent = 0
-                    }
-
-                    $OneDriveParsed = 'Not Enabled'
-                }
-
-                # Actions
-                $ActionsHTML = @"
-                <a href="https://$($CIPPUrl)/identity/administration/users/view?userId=$($User.id)&tenantDomain=$($Customer.defaultDomainName)&userEmail=$($User.userPrincipalName)" title="View in CIPP" class="btn secondary"><i class="fas fa-shield-halved" style="color: #337ab7;"></i></a>&nbsp;
-                <a href="https://entra.microsoft.com/$($Customer.DefaultDomainName)/#view/Microsoft_AAD_UsersAndTenants/UserProfileMenuBlade/~/overview/userId/$($User.id)/hidePreviewBanner~/true" title="View in Entra ID" class="btn secondary"><i class="fab fa-microsoft" style="color: #337ab7;"></i></a>&nbsp;
-                <a href="" title="View in Ninja" class="btn secondary"><i class="fas fa-user-ninja" style="color: #337ab7;"></i></a>&nbsp;
-"@
-
-                [PSCustomObject]@{
-                    Name           = $User.displayName
-                    UPN            = $User.userPrincipalName
-                    Aliases        = ($User.proxyAddresses -replace 'SMTP:', '') -join ', '
-                    Licenses       = "<ul>$userLicenses</ul>"
-                    Mailbox        = $MailboxUse
-                    MailboxParsed  = $MailboxParsed
-                    OneDrive       = $OneDriveUse
-                    OneDriveParsed = $OneDriveParsed
-                    Devices        = "<ul>$($UserDevices -join '')</ul>"
-                    Actions        = $ActionsHTML
-                }
-
-            }
-
-
+            Write-Host "User Details Section"
 
             $UsersTableFornatted = $ParsedUsers | Select-Object Name, 
             @{n = 'User Principal Name'; e = { $_.UPN } },
@@ -1114,7 +1516,7 @@ function Invoke-NinjaOneTenantSync {
             
             $UsersTableHTML = $UsersTableFornatted | ConvertTo-HTML -As Table -Fragment
 
-            $UsersTableHTML = ([System.Web.HttpUtility]::HtmlDecode($UsersTableHTML) -replace '<th>', '<th style="white-space: nowrap; font-family: sans-serif;">') -replace '<td>', '<td style="white-space: nowrap; font-family: sans-serif;">'
+            $UsersTableHTML = ([System.Web.HttpUtility]::HtmlDecode($UsersTableHTML) -replace '<th>', '<th style="white-space: nowrap;">') -replace '<td>', '<td style="white-space: nowrap;">'
            
             $NinjaOrgUpdate | Add-Member -NotePropertyName $MappedFields.UsersSummary -NotePropertyValue @{'html' = $UsersTableHTML }
 
@@ -1122,8 +1524,7 @@ function Invoke-NinjaOneTenantSync {
 
 
 
-        #Get available Ninja clients
-
+        Write-Host "Posting Details"
     
         $Token = Get-NinjaOneToken -configuration $Configuration
 

@@ -1,5 +1,5 @@
 function Get-NinjaOneTitle($Title, $Icon, $TitleLink, $TitleSize, $TitleClass) {
-    Return $(if ($TitleSize) { '<' + $TitleSize + ' style="font-family: sans-serif"' }else { '<span style="font-family: sans-serif"' }) + $(if ($TitleClass) { ' class="' + $TitleClass + '"' }) + '>' + $(if ($Icon) { '<i class="' + $Icon + '"></i>&nbsp;&nbsp;' }) + $Title + $(if ($TitleLink) { '&nbsp;&nbsp;<a href="' + $TitleLink + '" target="_blank" class="text-decoration-none"><i class="fas fa-arrow-up-right-from-square fa-2xs" style="color: #337ab7;"></i></a>' }) + $(if ($TitleSize) { "</$TitleSize>" }else { '</span>' })
+    Return $(if ($TitleSize) { '<' + $TitleSize }else { '<span ' }) + $(if ($TitleClass) { ' class="' + $TitleClass + '"' }) + '>' + $(if ($Icon) { '<i class="' + $Icon + '"></i>&nbsp;&nbsp;' }) + $Title + $(if ($TitleLink) { '&nbsp;&nbsp;<a href="' + $TitleLink + '" target="_blank" class="text-decoration-none"><i class="fas fa-arrow-up-right-from-square fa-2xs" style="color: #337ab7;"></i></a>' }) + $(if ($TitleSize) { "</$TitleSize>" }else { '</span>' })
 }
 
 ### HTML Formatters ###
@@ -24,7 +24,6 @@ function Get-NinjaInLineBarGraph ($Data, [string]$Title, [string]$Icon, [string]
             Colour = '#8063BF'
         }
     )
-    
     Get-NinjaInLineBarGraph -Title "Users" -Data $Data -KeyInLine
 
     #>
@@ -40,7 +39,7 @@ function Get-NinjaInLineBarGraph ($Data, [string]$Title, [string]$Icon, [string]
         $OutputHTML.add((Get-NinjaOneTitle -Icon $Icon -Title ($Title + $(if (!$NoCount) { " ($Total)" })) -TitleLink $TitleLink))
     }
 
-    $OutputHTML.add('<div class="p-3" style="width: 100%; height: 50px; display: flex;">')
+    $OutputHTML.add('<div class="p-3 linechart">')
 
     foreach ($Item in $Data) {
         $OutputHTML.add(@"
@@ -52,14 +51,14 @@ function Get-NinjaInLineBarGraph ($Data, [string]$Title, [string]$Icon, [string]
     $OutputHTML.add('</div>')
 
     if ($KeyInline) {
-        $OutputHTML.add('<ul class="list-unstyled p-3" style="display: flex; justify-content: space-between; font-family: sans-serif;" list-style-type: none;>')
+        $OutputHTML.add('<ul class="unstyled p-3" style="display: flex; justify-content: space-between;">')
     } else {
-        $OutputHTML.add('<ul class="list-unstyled p-3" style="font-family: sans-serif; list-style-type: none;">')
+        $OutputHTML.add('<ul class="unstyled p-3" >')
     }
 
     foreach ($Item in $Data) {
         $OutputHTML.add(@"
-        <li><span style="display: inline-block; width: 20px; height: 20px; background-color: $($Item.Colour); margin-right: 10px;"></span><span style="font-family: sans-serif;"> $($Item.Label) ($($Item.Amount))</span></li>
+        <li><span class="chart-key" style="background-color: $($Item.Colour);"></span><span > $($Item.Label) ($($Item.Amount))</span></li>
 "@)
 
     }
@@ -96,19 +95,20 @@ $ManagementLinksData = @(
 
     [System.Collections.Generic.List[String]]$OutputHTML = @()
 
-    $OutputHTML.add('<div class="card" style="padding:10px; margin:10px; margin-right:20px; font-family: sans-serif;">')
+    $OutputHTML.add('<div class="card flex-grow-1">')
 
     if ($Title) {
-        $OutputHTML.add('<div class="card-title-box"><div class="card-title" style="font-family: sans-serif;">' + $(if ($Icon) { '<i class="' + $Icon + '"></i>&nbsp;&nbsp;' }) + $Title + '</div>')
+        $OutputHTML.add('<div class="card-title-box"><div class="card-title">' + $(if ($Icon) { '<i class="' + $Icon + '"></i>&nbsp;&nbsp;' }) + $Title + '</div>')
 
         if ($TitleLink) {
-            $OutputHTML.add('<div class="card-link-box"><a href="' + $TitleLink + '" target="_blank" class="card-link" style="font-family: sans-serif;"><i class="fas fa-arrow-up-right-from-square" style="color: #337ab7;"></i></a></div>')
+            $OutputHTML.add('<div class="card-link-box"><a href="' + $TitleLink + '" target="_blank" class="card-link"><i class="fas fa-arrow-up-right-from-square"></i></a></div>')
         }
 
         $OutputHTML.add('</div>')
     }
 
-    $OutputHTML.add('<div class="row" style="justify-content: center; font-family: sans-serif; width: 100%;">')
+    $OutputHTML.add('<div class="card-body">')
+    $OutputHTML.add('<ul class="row unstyled">')
 
     $CSSCols = Get-NinjaOneCSSCol -SmallCols $SmallCols -MedCols $MedCols -LargeCols $LargeCols -XLCols $XLCols
 
@@ -117,12 +117,12 @@ $ManagementLinksData = @(
 
 
         $OutputHTML.add(@"
-        <div class="$CSSCols" style="margin-bottom: 24px;"><a href="$($Item.Link)" class="btn secondary" target="_blank" style="margin: 10px; font-family: sans-serif; width: 100%; height: 100%;">$(if ($Item.Icon){"<span><i class=`"$($Item.Icon)`"></i>&nbsp;&nbsp;</span>"})<span style="text-align: center;">$($Item.Name)</span></a></div>
+        <li class="$CSSCols"><a href="$($Item.Link)" target="_blank">$(if ($Item.Icon){"<span><i class=`"$($Item.Icon)`"></i>&nbsp;&nbsp;</span>"})<span style="text-align: center;">$($Item.Name)</span></a></li>
 "@)
 
     }
 
-    $OutputHTML.add('</div></div>')
+    $OutputHTML.add('</ul></div></div>')
 
     return $OutputHTML -join ''
 
@@ -155,16 +155,16 @@ function Get-NinjaOneWidgetCard($Title, $Data, [string]$Icon, [string]$TitleLink
 
     [System.Collections.Generic.List[String]]$OutputHTML = @()
     
-    $OutputHTML.add('<div class="row" style="justify-content: center; align-items: center; width:100%;">')
+    $OutputHTML.add('<div class="row d-flex m-1 justify-content-center align-items-center">')
 
 
     foreach ($Item in $Data) {
 
         $HTML = @"
     <div class="$CSSCols">
-        <div class="card" style="justify-content: center; align-items: center; margin: 0px; padding-top: 36px; padding-bottom: 36px; text-align: Center; margin-bottom: 24px; height:148px;">
-            <div class="row" style="height: 50%"><a href="$($Item.Link)" target="_blank" style="text-decoration: none;"><span style="font-size: 40px; color: $($Item.Colour); margin-bottom: 10px;">$($Item.Value)</span></a></div>
-            <div class="row" style="height: 50%"><a href="$($Item.Link)" target="_blank" style="text-decoration: none;"><span style="font-size: 18px;"><span style="white-space:nowrap;">$($Item.Description -replace " ",'</span>&nbsp;<span style="white-space:nowrap;">')</span></span></a></div>
+    <div class="stat-card">
+    <div class="stat-value"><a href="$($Item.Link)" target="_blank"><span style="color: $($Item.Colour);">$($Item.Value)</span></a></div>
+    <div class="stat-desc"><a href="$($Item.Link)" target="_blank"><span style="font-size: 18px;"><span style="white-space:nowrap;">$($Item.Description)</span></span></a></div>
         </div>
     </div>
 "@
@@ -201,20 +201,20 @@ function Get-NinjaOneCard($Title, $Body, [string]$Icon, [string]$TitleLink, [Str
 
     [System.Collections.Generic.List[String]]$OutputHTML = @()
 
-    $OutputHTML.add('<div class="card' + $(if ($classes) { ' ' + $classes }) + '" >')
+    $OutputHTML.add('<div class="card flex-grow-1' + $(if ($classes) { ' ' + $classes }) + '" >')
 
     if ($Title) {
-        $OutputHTML.add('<div class="card-title-box"><div class="card-title" style="font-family: sans-serif;">' + $(if ($Icon) { '<i class="' + $Icon + '"></i>&nbsp;&nbsp;' }) + $Title + '</div>')
+        $OutputHTML.add('<div class="card-title-box"><div class="card-title" >' + $(if ($Icon) { '<i class="' + $Icon + '"></i>&nbsp;&nbsp;' }) + $Title + '</div>')
 
         if ($TitleLink) {
-            $OutputHTML.add('<div class="card-link-box"><a href="' + $TitleLink + '" target="_blank" class="card-link" style="font-family: sans-serif;"><i class="fas fa-arrow-up-right-from-square" style="color: #337ab7;"></i></a></div>')
+            $OutputHTML.add('<div class="card-link-box"><a href="' + $TitleLink + '" target="_blank" class="card-link" ><i class="fas fa-arrow-up-right-from-square" style="color: #337ab7;"></i></a></div>')
         }
 
         $OutputHTML.add('</div>')
     }
 
-    $OutputHTML.add('<div class="card-body" style="font-family: sans-serif;">')
-    $OutputHTML.add('<p class="card-text" style="font-family: sans-serif;">' + $Body + '</p>')
+    $OutputHTML.add('<div class="card-body" >')
+    $OutputHTML.add('<p class="card-text" >' + $Body + '</p>')
        
     $OutputHTML.add('</div></div>')
 
@@ -239,7 +239,7 @@ function Get-NinjaOneInfoCard($Title, $Data, [string]$Icon, [string]$TitleLink) 
     [System.Collections.Generic.List[String]]$ItemsHTML = @()
 
     foreach ($Item in $Data.PSObject.Properties) {
-        $ItemsHTML.add('<p style="font-family: sans-serif;"><b style="font-family: sans-serif;">' + $Item.Name + '</b><br />' + $Item.Value + '</p>')
+        $ItemsHTML.add('<p ><b >' + $Item.Name + '</b><br />' + $Item.Value + '</p>')
     }
 
     return Get-NinjaOneCard -Title $Title -Body ($ItemsHTML -join '') -Icon $Icon -TitleLink $TitleLink
