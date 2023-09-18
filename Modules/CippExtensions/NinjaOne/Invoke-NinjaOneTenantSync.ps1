@@ -154,8 +154,8 @@ function Invoke-NinjaOneTenantSync {
 
         # Create the update objects we will use to update NinjaOne
         $NinjaOrgUpdate = [PSCustomObject]@{}
-        $NinjaUserUpdates = [System.Collections.Generic.List[PSCustomObject]]@()
-        $NinjaUserCreation = [System.Collections.Generic.List[PSCustomObject]]@()
+        [System.Collections.Generic.List[PSCustomObject]]$NinjaUserUpdates = @()
+        [System.Collections.Generic.List[PSCustomObject]]$NinjaUserCreation = @()
 
         # Build bulk requests array.
         [System.Collections.Generic.List[PSCustomObject]]$TenantRequests = @(
@@ -504,21 +504,6 @@ function Invoke-NinjaOneTenantSync {
             $MailboxStatsFull = $null
         }
      
-        
-
-        # Fetch Standards
-        $Table = Get-CippTable -tablename 'standards'
-
-        $Filter = "PartitionKey eq 'standards'" 
-
-        try { 
-            if ($Request.query.TenantFilter) { 
-                $tenants = (Get-AzDataTableEntity @Table -Filter $Filter).JSON | ConvertFrom-Json -Depth 15 -ErrorAction Stop | Where-Object Tenant -EQ $Request.query.tenantFilter
-            } else {
-                $Tenants = (Get-AzDataTableEntity @Table -Filter $Filter).JSON | ConvertFrom-Json -Depth 15 -ErrorAction Stop
-            }
-        } catch {}
-
 
 
         $FetchEnd = Get-Date
@@ -663,20 +648,20 @@ function Invoke-NinjaOneTenantSync {
                 $MailboxDetailedRequest = $MailboxDetailedFull | Where-Object { $_.ExternalDirectoryObjectId -eq $User.iD }
                 $StatsRequest = $MailboxStatsFull | Where-Object { $_.'User Principal Name' -eq $User.UserPrincipalName }
 
-                try {
-                    $PermsRequest = New-GraphGetRequest -uri "https://outlook.office365.com/adminapi/beta/$($tenantfilter)/Mailbox('$($User.ID)')/MailboxPermission" -Tenantid $tenantfilter -scope ExchangeOnline -noPagination $true -NoAuthCheck $True
-                } catch {
-                    $PermsRequest = $null
-                }
+                #try {
+                #    $PermsRequest = New-GraphGetRequest -uri "https://outlook.office365.com/adminapi/beta/$($tenantfilter)/Mailbox('$($User.ID)')/MailboxPermission" -Tenantid $tenantfilter -scope ExchangeOnline -noPagination $true -NoAuthCheck $True
+                #} catch {
+                #    $PermsRequest = $null
+                #}
 
-                $ParsedPerms = foreach ($Perm in $PermsRequest) {
-                    if ($Perm.User -ne 'NT AUTHORITY\SELF') {
-                        [pscustomobject]@{
-                            User         = $Perm.User
-                            AccessRights = $Perm.PermissionList.AccessRights -join ', '
-                        }
-                    }
-                }
+                #$ParsedPerms = foreach ($Perm in $PermsRequest) {
+                #    if ($Perm.User -ne 'NT AUTHORITY\SELF') {
+                #        [pscustomobject]@{
+                #            User         = $Perm.User
+                #            AccessRights = $Perm.PermissionList.AccessRights -join ', '
+                #        }
+                #    }
+                #}
 
                 try {
                     $TotalItemSize = [math]::Round($StatsRequest.'Storage Used (Byte)' / 1Gb, 2)
@@ -695,7 +680,7 @@ function Invoke-NinjaOneTenantSync {
                     MailboxImapEnabled       = $CASRequest.ImapEnabled
                     MailboxPopEnabled        = $CASRequest.PopEnabled
                     MailboxActiveSyncEnabled = $CASRequest.ActiveSyncEnabled
-                    Permissions              = $ParsedPerms
+                    #Permissions              = $ParsedPerms
                     ProhibitSendQuota        = [math]::Round([float]($MailboxDetailedRequest.ProhibitSendQuota -split ' GB')[0], 2)
                     ProhibitSendReceiveQuota = [math]::Round([float]($MailboxDetailedRequest.ProhibitSendReceiveQuota -split ' GB')[0], 2)
                     ItemCount                = [math]::Round($StatsRequest.'Item Count', 2)
@@ -831,7 +816,7 @@ function Invoke-NinjaOneTenantSync {
 
                 if ($UserMailSettings) {
                     $MailboxDetailsCardData = [PSCustomObject]@{
-                        'Permissions'                 = "$($UserMailSettings.Permissions | ConvertTo-Html -Fragment | Out-String)"
+                        #'Permissions'                 = "$($UserMailSettings.Permissions | ConvertTo-Html -Fragment | Out-String)"
                         'Prohibit Send Quota'         = "$($UserMailSettings.ProhibitSendQuota)"
                         'Prohibit Send Receive Quota' = "$($UserMailSettings.ProhibitSendReceiveQuota)"
                         'Item Count'                  = "$($UserMailSettings.ProhibitSendReceiveQuota)"
@@ -911,17 +896,17 @@ function Invoke-NinjaOneTenantSync {
                 $CIPPUserLinksData = @(
                     @{
                         Name = 'View User'
-                        Link = "https://$($CIPPURL).auth/login/aad?post_login_redirect_uri=$($CIPPURL)identity/administration/users/view?userId=$($User.id)%26tenantDomain%3D$($Customer.defaultDomainName)"
+                        Link = "https://$($CIPPURL)/.auth/login/aad?post_login_redirect_uri=$($CIPPURL)identity/administration/users/view?userId=$($User.id)%26tenantDomain%3D$($Customer.defaultDomainName)"
                         Icon = 'far fa-eye'
                     },
                     @{
                         Name = 'Edit User'
-                        Link = "https://$($CIPPURL).auth/login/aad?post_login_redirect_uri=$($CIPPURL)identity/administration/users/edit?userId=$($User.id)%26tenantDomain%3D$($Customer.defaultDomainName)"
+                        Link = "https://$($CIPPURL)/.auth/login/aad?post_login_redirect_uri=$($CIPPURL)identity/administration/users/edit?userId=$($User.id)%26tenantDomain%3D$($Customer.defaultDomainName)"
                         Icon = 'fas fa-users-cog'
                     },
                     @{
                         Name = 'Research Compromise'
-                        Link = "https://$($CIPPURL).auth/login/aad?post_login_redirect_uri=$($CIPPURL)identity/administration/ViewBec?userId=$($User.id)%26tenantDomain%3D$($Customer.defaultDomainName)"
+                        Link = "https://$($CIPPURL)/.auth/login/aad?post_login_redirect_uri=$($CIPPURL)identity/administration/ViewBec?userId=$($User.id)%26tenantDomain%3D$($Customer.defaultDomainName)"
                         Icon = 'fas fa-user-secret'
                     }
                 )
@@ -1022,7 +1007,7 @@ function Invoke-NinjaOneTenantSync {
             # Create New Users
             if (($NinjaUserCreation | Measure-Object).count -ge 1) {
                 Write-Host "Creating NinjaOne Users"
-                $CreatedUsers = Invoke-WebRequest -uri "https://$($Configuration.Instance)/api/v2/organization/documents" -Method POST -Headers @{Authorization = "Bearer $($token.access_token)" } -ContentType 'application/json' -Body ($NinjaUserCreation | ConvertTo-Json -Depth 100) -EA Stop
+                $CreatedUsers = (Invoke-WebRequest -uri "https://$($Configuration.Instance)/api/v2/organization/documents" -Method POST -Headers @{Authorization = "Bearer $($token.access_token)" } -ContentType 'application/json' -Body ($NinjaUserCreation | ConvertTo-Json -Depth 100 -AsArray) -EA Stop).content | ConvertFrom-Json -Depth 100
             }
         } Catch {
             Write-Host "Bulk Creation Error, but may have been successful as only 1 record with an issue could have been the cause: $_"
@@ -1032,11 +1017,68 @@ function Invoke-NinjaOneTenantSync {
             # Update Users
             if (($NinjaUserUpdates | Measure-Object).count -ge 1) {
                 Write-Host "Updating NinjaOne Users"
-                $UpdatedUsers = Invoke-WebRequest -uri "https://$($Configuration.Instance)/api/v2/organization/documents" -Method PATCH -Headers @{Authorization = "Bearer $($token.access_token)" } -ContentType 'application/json' -Body ($NinjaUserUpdates | ConvertTo-Json -Depth 100) -EA Stop
+                $UpdatedUsers = (Invoke-WebRequest -uri "https://$($Configuration.Instance)/api/v2/organization/documents" -Method PATCH -Headers @{Authorization = "Bearer $($token.access_token)" } -ContentType 'application/json' -Body ($NinjaUserUpdates | ConvertTo-Json -Depth 100 -AsArray) -EA Stop).content | ConvertFrom-Json -Depth 100
                 Write-Host "Completed Update"
             }
         } Catch {
             Write-Host "Bulk Update Errored, but may have been successful as only 1 record with an issue could have been the cause: $_"
+        }
+
+        ### Relationship Mapping
+        # Parse out the NinjaOne ID to MS ID
+        [System.Collections.Generic.List[PSCustomObject]]$UsersMap = @()
+        
+        if (($UpdatedUsers | Measure-Object).count -ge 1) {
+            $UpdatedUsers | ForEach-Object {
+                $User = $_
+                $Field = $User.updatedFields | Where-Object { $_.name -eq 'cippUserID' }
+                $UsersMap.Add([PSCustomObject]@{
+                        NinjaOneID = $User.documentId
+                        M365ID     = $Field.value
+                    })
+            }
+        }
+
+        if (($CreatedUsers | Measure-Object).count -ge 1) {
+            $CreatedUsers | ForEach-Object {
+                $User = $_
+                $Field = $User.fields | Where-Object { $_.name -eq 'cippUserID' }
+                $UsersMap.Add([PSCustomObject]@{
+                        NinjaOneID = $User.documentId
+                        M365ID     = $Field.value
+                    })
+            }
+        }
+
+   
+        # Relate Users to Devices
+        Foreach ($LinkDevice in $ParsedDevices | Where-Object { $null -ne $_.NinjaDevice }) {
+            [System.Collections.Generic.List[PSCustomObject]]$Relations = @()
+            Foreach ($LinkUser in $LinkDevice.UserIDs) {
+                $MatchedUser = $UsersMap | Where-Object { $_.M365ID -eq $LinkUser }
+                if (($MatchedUser | Measure-Object).count -eq 1) {
+                    $Relations.Add(
+                        [PSCustomObject]@{
+                            relEntityType = "DOCUMENT"
+                            relEntityId   = $MatchedUser.NinjaOneID
+                        }
+                    )
+                }
+            }
+
+            $Relations | ConvertTo-Json -Depth 100 -AsArray | Out-File D:\Temp\Relations.json
+            Write-Host "URL: https://$($Configuration.Instance)/api/v2/related-items/entity/NODE/$($LinkDevice.NinjaDevice.id)/relations"
+
+            try {
+                # Update Relations
+                if (($Relations | Measure-Object).count -ge 1) {
+                    Write-Host "Updating Relations"
+                    $RelationResult = Invoke-WebRequest -uri "https://$($Configuration.Instance)/api/v2/related-items/entity/NODE/$($LinkDevice.NinjaDevice.id)/relations" -Method POST -Headers @{Authorization = "Bearer $($token.access_token)" } -ContentType 'application/json' -Body ($NinjaUserUpdates | ConvertTo-Json -Depth 100 -AsArray) -EA Stop
+                    Write-Host "Completed Update"
+                }
+            } Catch {
+                Write-Host "Creating Relations Failed: $_"
+            }
         }
 
 
