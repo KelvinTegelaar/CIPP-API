@@ -14,7 +14,7 @@ function Get-HaloMapping {
     #Get available halo clients
     $Table = Get-CIPPTable -TableName Extensionsconfig
     try {
-        $Configuration = ((Get-AzDataTableEntity @Table).config | ConvertFrom-Json).HaloPSA
+        $Configuration = ((Get-AzDataTableEntity @Table).config | ConvertFrom-Json -ea stop).HaloPSA
         $Token = Get-HaloToken -configuration $Configuration
         $i = 1
         $RawHaloClients = do {
