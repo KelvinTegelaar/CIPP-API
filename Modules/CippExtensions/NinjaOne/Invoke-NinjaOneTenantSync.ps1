@@ -152,6 +152,9 @@ function Invoke-NinjaOneTenantSync {
         
         [System.Collections.Generic.List[PSCustomObject]]$NinjaOneUserDocs = $NinjaOneOrgDocs | Where-Object { $_.documentTemplateId -eq $NinjaOneUsersTemplate.id }
 
+        # Get NinjaOne Related Items
+        $RelatedItems = (Invoke-WebRequest -uri "https://$($Configuration.Instance)/api/v2/related-items" -Method GET -Headers @{Authorization = "Bearer $($token.access_token)" } -ContentType 'application/json').content | ConvertFrom-Json -depth 100
+
         # Create the update objects we will use to update NinjaOne
         $NinjaOrgUpdate = [PSCustomObject]@{}
         [System.Collections.Generic.List[PSCustomObject]]$NinjaUserUpdates = @()
@@ -719,7 +722,7 @@ function Invoke-NinjaOneTenantSync {
                 } 
             }
 
-            if ($MappedFields.DeviceCompliance){
+            if ($MappedFields.DeviceCompliance) {
                 $NinjaDeviceUpdate | Add-Member -NotePropertyName $MappedFields.DeviceCompliance -NotePropertyValue $Device.complianceState
             }
 
@@ -1173,16 +1176,20 @@ function Invoke-NinjaOneTenantSync {
    
         # Relate Users to Devices
         Foreach ($LinkDevice in $ParsedDevices | Where-Object { $null -ne $_.NinjaDevice }) {
+            $RelatedItems = (Invoke-WebRequest -uri "https://$($Configuration.Instance)/api/v2/related-items/with-entity/NODE/$($LinkDevice.NinjaDevice.id)" -Method GET -Headers @{Authorization = "Bearer $($token.access_token)" } -ContentType 'application/json').content | ConvertFrom-Json -depth 100
             [System.Collections.Generic.List[PSCustomObject]]$Relations = @()
             Foreach ($LinkUser in $LinkDevice.UserIDs) {
                 $MatchedUser = $UsersMap | Where-Object { $_.M365ID -eq $LinkUser }
                 if (($MatchedUser | Measure-Object).count -eq 1) {
-                    $Relations.Add(
-                        [PSCustomObject]@{
-                            relEntityType = "DOCUMENT"
-                            relEntityId   = $MatchedUser.NinjaOneID
-                        }
-                    )
+                    $ExistingRelation = $RelatedItems | Where-Object { $_.relEntityType -eq 'DOCUMENT' -and $_.relEntityId -eq $MatchedUser.NinjaOneID }
+                    if (!$ExistingRelation) {
+                        $Relations.Add(
+                            [PSCustomObject]@{
+                                relEntityType = "DOCUMENT"
+                                relEntityId   = $MatchedUser.NinjaOneID
+                            }
+                        )
+                    }
                 }
             }
 
