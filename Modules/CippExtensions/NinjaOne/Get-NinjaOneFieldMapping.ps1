@@ -27,6 +27,18 @@ function Get-NinjaOneFieldMapping {
                 Type         = 'WYSIWYG'
             },
             [PSCustomObject]@{
+                InternalName = 'DeviceLinks'
+                Description  = 'Microsoft 365 Device Links - Field Used to Display Links to Microsoft 365 Portals and CIPP'
+                Scope        = 'Device'
+                Type         = 'WYSIWYG'
+            },
+            [PSCustomObject]@{
+                InternalName = 'DeviceSummary'
+                Description  = 'Microsoft 365 Device Summary - Field Used to Display Device Summary Information'
+                Scope        = 'Device'
+                Type         = 'WYSIWYG'
+            },
+            [PSCustomObject]@{
                 InternalName = 'DeviceCompliance'
                 Description  = 'Intune Device Compliance Status - Field Used to Monitor Device Compliance'
                 Scope        = 'Device'

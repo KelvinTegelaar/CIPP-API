@@ -605,8 +605,128 @@ function Invoke-NinjaOneTenantSync {
                 Groups              = $DeviceGroups
                 NinjaDevice         = $MatchedNinjaDevice
                 DeviceLink          = $ParsedDeviceName
-            }        
+            }
+            
+            ### Update NinjaOne Device Fields
+            if ($MatchedNinjaDevice) {
+                $NinjaDeviceUpdate = [PSCustomObject]@{}
+                if ($MappedFields.DeviceLinks) {
+                    $DeviceLinksData = @(
+                        @{
+                            Name = 'Entra ID'
+                            Link = "https://entra.microsoft.com/$($Customer.defaultDomainName)/#view/Microsoft_AAD_Devices/DeviceDetailsMenuBlade/~/Properties/deviceId/$($Device.azureADDeviceId)/deviceId/"
+                            Icon = 'fab fa-microsoft'
+                        },
+                        @{
+                            Name = 'Intune (Devices)'
+                            Link = "https://intune.microsoft.com/$($Customer.defaultDomainName)/#view/Microsoft_Intune_Devices/DeviceSettingsMenuBlade/~/overview/mdmDeviceId/$($Device.id)/"
+                            Icon = 'fas fa-laptop'
+                        },
+                        @{
+                            Name = 'View Devices in CIPP'
+                            Link = "https://$($CIPPURL)/.auth/login/aad?post_login_redirect_uri=$($CIPPURL)//endpoint/reports/devices?customerId=$($Customer.defaultDomainName)"
+                            Icon = 'far fa-eye'
+                        }
+                    )
 
+
+                
+                    $DeviceLinksHTML = Get-NinjaOneLinks -Data  $DeviceLinksData -SmallCols 2 -MedCols 3 -LargeCols 3 -XLCols 3
+
+                    $DeviceLinksHtml = '<div class="row"><div class="col-md-12 col-lg-6 d-flex">' + $DeviceLinksHTML + '</div></div>'
+
+                    $NinjaDeviceUpdate | Add-Member -NotePropertyName $MappedFields.DeviceLinks -NotePropertyValue @{'html' = $DeviceLinksHtml }
+
+
+                }
+
+                if ($MappedFields.DeviceSummary) {
+                    
+                    # Set Compliance Status
+                    if ($Device.complianceState -eq 'compliant') {
+                        $Compliance = '<i class="fas fa-check-circle" title="Device Compliant" style="color:#008001;"></i>&nbsp;&nbsp; Compliant'
+                    } else {
+                        $Compliance = '<i class="fas fa-times-circle" title="Device Not Compliannt" style="color:#ec1c24;"></i>&nbsp;&nbsp; Not Compliant'
+                    }
+
+                    # Device Details
+                    $DeviceDetailsData = [PSCustomObject]@{
+                        'Device Name'        = $Device.deviceName
+                        'Primary User'       = $Device.userDisplayName
+                        'Primary User Email' = $Device.userPrincipalName
+                        'Owner'              = $Device.ownerType
+                        'Enrolled'           = $Device.enrolledDateTime
+                        'Last Checkin'       = $Device.lastSyncDateTime
+                        'Compliant'          = $Compliance
+                        'Management Type'    = $Device.managementAgent                        
+                    }
+        
+                    $DeviceDetailsCard = Get-NinjaOneInfoCard -Title "Device Details" -Data $DeviceDetailsData -Icon 'fas fa-laptop'
+
+                    # Device Hardware
+                    $DeviceHardwareData = [PSCustomObject]@{
+                        'Serial Number' = $Device.serialNumber
+                        'OS'            = $Device.operatingSystem
+                        'OS Versions'   = $Device.osVersion
+                        'Chassis'       = $Device.chassisType
+                        'Model'         = $Device.model
+                        'Manufacturer'  = $Device.manufacturer
+                    }                     
+                
+                    $DeviceHardwareCard = Get-NinjaOneInfoCard -Title "Device Details" -Data $DeviceHardwareData -Icon 'fas fa-microchip'
+
+                    # Device Enrollment
+                    $DeviceEnrollmentData = [PSCustomObject]@{
+                        'Enrollment Type'                = $Device.deviceEnrollmentType
+                        'Join Type'                      = $Device.joinType
+                        'Registration State'             = $Device.deviceRegistrationState
+                        'Autopilot Enrolled'             = $Device.autopilotEnrolled
+                        'Device Guard Requirements'      = $Device.hardwareinformation.deviceGuardVirtualizationBasedSecurityHardwareRequirementState
+                        'Virtualistation Based Security' = $Device.hardwareinformation.deviceGuardVirtualizationBasedSecurityState
+                        'Credential Guard'               = $Device.hardwareinformation.deviceGuardLocalSystemAuthorityCredentialGuardState
+                    }                     
+                
+                    $DeviceEnrollmentCard = Get-NinjaOneInfoCard -Title "Device Enrollment" -Data $DeviceEnrollmentData -Icon 'fas fa-table-list'
+
+
+                    # Compliance Policies
+                    $DevicePoliciesFormatted = $DevicePolcies | ConvertTo-Html -As Table -Fragment
+                    $DevicePoliciesHTML = ([System.Web.HttpUtility]::HtmlDecode($DevicePoliciesFormatted) -replace '<th>', '<th style="white-space: nowrap;">') -replace '<td>', '<td style="white-space: nowrap;">'
+                    $TitleLink = "https://intune.microsoft.com/$($Customer.defaultDomainName)/#view/Microsoft_Intune_Devices/DeviceSettingsMenuBlade/~/compliance/mdmDeviceId/$($Device.id)/primaryUserId/"
+                    $DeviceCompliancePoliciesCard = Get-NinjaOneCard -Title 'Device Compliance Policies' -Body $DevicePoliciesHTML -Icon 'fas fa-list-check' -TitleLink $TitleLink
+    
+                    # Device Groups
+                    $DeviceGroupsTable = foreach ($Group in $Groups) {
+                        if ($device.azureADDeviceId -in $Group.members.deviceId) {
+                            [PSCustomObject]@{
+                                Name = $Group.displayName
+                            }
+                        }
+                    }
+                    $DeviceGroupsFormatted = $DeviceGroupsTable | ConvertTo-Html -Fragment
+                    $DeviceGroupsHTML = ([System.Web.HttpUtility]::HtmlDecode($DeviceGroupsFormatted) -replace '<th>', '<th style="white-space: nowrap;">') -replace '<td>', '<td style="white-space: nowrap;">'
+                    $DeviceGroupsCard = Get-NinjaOneCard -Title 'Device Groups' -Body $DeviceGroupsHTML -Icon 'fas fa-layer-group'
+
+                    $DeviceSummaryHTML = '<div class="row g-3">' + 
+                    '<div class="col-xl-4 col-lg-6 col-md-12 col-sm-12 d-flex">' + $DeviceDetailsCard + 
+                    '</div><div class="col-xl-4 col-lg-6 col-md-12 col-sm-12 d-flex">' + $DeviceHardwareCard +
+                    '</div><div class="col-xl-4 col-lg-6 col-md-12 col-sm-12 d-flex">' + $DeviceEnrollmentCard + 
+                    '</div><div class="col-xl-8 col-lg-8 col-md-12 col-sm-12 d-flex">' + $DeviceCompliancePoliciesCard +
+                    '</div><div class="col-xl-4 col-lg-6 col-md-12 col-sm-12 d-flex">' + $DeviceGroupsCard 
+                    '</div></div>'
+            
+                    $NinjaDeviceUpdate | Add-Member -NotePropertyName $MappedFields.DeviceSummary -NotePropertyValue @{'html' = $DeviceSummaryHTML }                
+                } 
+            }
+
+            if ($MappedFields.DeviceCompliance){
+                $NinjaDeviceUpdate | Add-Member -NotePropertyName $MappedFields.DeviceCompliance -NotePropertyValue $Device.complianceState
+            }
+
+            # Update Device
+            if ($MappedFields.DeviceSummary -or $MappedFields.DeviceLinks -or $MappedFields.DeviceCompliance) {
+                $Result = Invoke-WebRequest -uri "https://$($Configuration.Instance)/api/v2/device/$($MatchedNinjaDevice.id)/custom-fields" -Method PATCH -Headers @{Authorization = "Bearer $($token.access_token)" } -ContentType 'application/json' -Body ($NinjaDeviceUpdate | ConvertTo-Json -Depth 100)
+            }
         }
 
         ########## Create / Update User Objects
@@ -639,7 +759,7 @@ function Invoke-NinjaOneTenantSync {
                     }
                 }
 
-                $PermsRequest = ''
+                #$PermsRequest = ''
                 $StatsRequest = ''
                 $MailboxDetailedRequest = ''
                 $CASRequest = ''
@@ -1073,7 +1193,7 @@ function Invoke-NinjaOneTenantSync {
                 # Update Relations
                 if (($Relations | Measure-Object).count -ge 1) {
                     Write-Host "Updating Relations"
-                    $RelationResult = Invoke-WebRequest -uri "https://$($Configuration.Instance)/api/v2/related-items/entity/NODE/$($LinkDevice.NinjaDevice.id)/relations" -Method POST -Headers @{Authorization = "Bearer $($token.access_token)" } -ContentType 'application/json' -Body ($NinjaUserUpdates | ConvertTo-Json -Depth 100 -AsArray) -EA Stop
+                    $RelationResult = Invoke-WebRequest -uri "https://$($Configuration.Instance)/api/v2/related-items/entity/NODE/$($LinkDevice.NinjaDevice.id)/relations" -Method POST -Headers @{Authorization = "Bearer $($token.access_token)" } -ContentType 'application/json' -Body ($Relations | ConvertTo-Json -Depth 100 -AsArray) -EA Stop
                     Write-Host "Completed Update"
                 }
             } Catch {
