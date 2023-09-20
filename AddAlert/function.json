@@ -5,10 +5,7 @@
       "type": "httpTrigger",
       "direction": "in",
       "name": "Request",
-      "methods": [
-        "get",
-        "post"
-      ]
+      "methods": ["get", "post"]
     },
     {
       "type": "http",
@@ -16,9 +13,10 @@
       "name": "Response"
     },
     {
-      "name": "starter",
-      "direction": "in",
-      "type": "durableClient"
+      "type": "queue",
+      "direction": "out",
+      "name": "Subscription",
+      "queueName": "AlertSubscriptions"
     }
   ]
 }
