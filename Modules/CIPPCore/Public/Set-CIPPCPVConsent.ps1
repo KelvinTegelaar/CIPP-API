@@ -30,7 +30,8 @@ function Set-CIPPCPVConsent {
             $ourSVCPrincipal = $ServicePrincipalList | Where-Object -Property AppId -EQ $env:ApplicationID
 
         } 
-        
+        #TODO: after doing this, write to the table that we have done this for current applicationId, so that we don't ever have to do it again when running on a schedule.
+
         catch {
             Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME  -message "Could not add our Service Principal to the client tenant: $($_.Exception.message)" -Sev "Error" -tenant $($Tenantfilter)
             return @("Could not add our Service Principal to the client tenant $($Tenantfilter): $($_.Exception.message)")
@@ -40,7 +41,7 @@ function Set-CIPPCPVConsent {
     else {
         $Results.add("Application Exists, adding permissions")
     }
-    #Adding all required Application permissions
+    #TODO: Add this as a function so we can use it for more than just our app
     $CurrentRoles = New-GraphGETRequest -uri "https://graph.microsoft.com/beta/servicePrincipals/$($ourSVCPrincipal.id)/appRoleAssignments" -tenantid $tenantfilter
 
     $Grants = foreach ($App in $ExpectedPermissions.requiredResourceAccess) {  
