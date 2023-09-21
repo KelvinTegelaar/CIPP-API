@@ -8,6 +8,7 @@ Add-AzDataTableEntity @Table -Entity @{
     PartitionKey  = 'ScheduledTask'
     TaskState     = 'Scheduled'
     RowKey        = "$(New-Guid)"
+    Tenant        = $task.Tenant
     Name          = $task.Name
     Command       = $task.Command
     Parameters    = $task.Parameters

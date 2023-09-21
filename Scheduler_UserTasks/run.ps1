@@ -12,8 +12,16 @@ foreach ($task in $tasks) {
                 RowKey       = $task.RowKey
                 TaskState    = 'Running'
             }
-
-            $results = Invoke-Command -ScriptBlock ([ScriptBlock]::Create($task.Command)) -ArgumentList $task.Parameters
+            #todo tomorrow: Replace this with a queue so each task can be run in parallel
+            #todo: Set tenant filter as static object
+            if ($task.Tenant -eq "AllTenants") {
+                Get-Tenants | ForEach-Object {
+                    $results = Invoke-Command -ScriptBlock ([ScriptBlock]::Create($task.Command)) -ArgumentList $task.Parameters
+                }
+            }
+            else {
+                $results = Invoke-Command -ScriptBlock ([ScriptBlock]::Create($task.Command)) -ArgumentList $task.Parameters
+            }
 
             Update-AzDataTableEntity @Table -Entity @{
                 PartitionKey = $task.PartitionKey
