@@ -22,7 +22,7 @@ function Invoke-ListFunctionParameters {
         $CommandQuery.Name = $Function
     }
 
-    $CommonParameters = @('Verbose', 'Debug', 'ErrorAction', 'WarningAction', 'InformationAction', 'ErrorVariable', 'WarningVariable', 'InformationVariable', 'OutVariable', 'OutBuffer', 'PipelineVariable')
+    $CommonParameters = @('Verbose', 'Debug', 'ErrorAction', 'WarningAction', 'InformationAction', 'ErrorVariable', 'WarningVariable', 'InformationVariable', 'OutVariable', 'OutBuffer', 'PipelineVariable', 'TenantFilter', 'APIName', 'ExecutingUser')
 
     try {
         $Functions = Get-Command @CommandQuery
@@ -38,12 +38,13 @@ function Invoke-ListFunctionParameters {
             }
             [PSCustomObject]@{
                 Function   = $Function.Name
-                Parameters = $Parameters
+                Parameters = @($Parameters)
             }
         }
         $StatusCode = [HttpStatusCode]::OK
         $Results
-    } catch {
+    }
+    catch {
         $Results = "Function Error: $($_.Exception.Message)"
         $StatusCode = [HttpStatusCode]::BadRequest
     }

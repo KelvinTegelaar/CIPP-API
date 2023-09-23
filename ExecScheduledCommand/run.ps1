@@ -9,6 +9,9 @@ Write-Host "started task"
 try {
     $results = & $QueueItem.command @commandParameters
     Write-Host "ran the command"
+    if ($results.GetType().Name -eq "String") {
+        $StoredResults = @{ Results = $results }
+    }
 
     $StoredResults = $results | Select-Object * -ExcludeProperty RowKey, PartitionKey | ConvertTo-Json -Compress | Out-String
     if ($StoredResults.Length -gt 64000 -or $task.Tenant -eq "AllTenants") {
