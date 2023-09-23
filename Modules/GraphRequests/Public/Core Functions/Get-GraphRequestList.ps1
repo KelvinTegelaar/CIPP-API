@@ -1,15 +1,15 @@
 function Get-GraphRequestList {
     [CmdletBinding()]
     Param(
-        $Tenant = $env:TenantId,
+        [string]$Tenant = $env:TenantId,
         [Parameter(Mandatory = $true)]
-        $Endpoint,
-        $Parameters = @(),
-        $QueueId,
-        $CippLink,
+        [string]$Endpoint,
+        [hashtable]$Parameters = @{},
+        [string]$QueueId,
+        [string]$CippLink,
         [ValidateSet('v1.0', 'beta')]
-        $Version = 'beta',
-        $QueueNameOverride,
+        [string]$Version = 'beta',
+        [string]$QueueNameOverride,
         [switch]$SkipCache,
         [switch]$ClearCache,
         [switch]$NoPagination,
