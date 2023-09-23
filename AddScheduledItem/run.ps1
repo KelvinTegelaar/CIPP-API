@@ -2,22 +2,27 @@ using namespace System.Net
 param($Request, $TriggerMetadata)
 $APIName = $TriggerMetadata.FunctionName
 Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -message 'Accessed this API' -Sev 'Debug'
-$task = $Request.Body | ConvertFrom-Json
+$task = $Request.Body
 $Table = Get-CIPPTable -TableName 'ScheduledTasks'
-Add-AzDataTableEntity @Table -Entity @{
-    PartitionKey  = 'ScheduledTask'
-    TaskState     = 'Scheduled'
-    RowKey        = "$(New-Guid)"
-    Tenant        = $task.Tenant
-    Name          = $task.Name
-    Command       = $task.Command
-    Parameters    = $task.Parameters
-    ScheduledTime = $task.ScheduledTime
-    PostExecution = $task.PostExecution
-    Results       = 'Not Executed'
-    # add more properties here based on what properties your tasks have
+
+$propertiesToCheck = @('Webhook', 'Email', 'PSA')
+$PostExecution = ($propertiesToCheck | Where-Object { $task.PostExecution.$_ -eq $true }) -join ','
+$entity = @{
+    PartitionKey  = [string]'ScheduledTask'
+    TaskState     = [string]'Planned'
+    RowKey        = [string]"$(New-Guid)"
+    Tenant        = [string]$task.TenantFilter
+    Name          = [string]$task.Name
+    Command       = [string]$task.Command.value
+    Parameters    = [string]$task.Parameters
+    ScheduledTime = [string]$task.ScheduledTime
+    Recurrence    = [string]$task.Recurrence.value
+    PostExecution = [string]$PostExecution
+    Results       = 'Planned'
 }
+Write-Host "entity: $($entity | ConvertTo-Json)"
+Add-AzDataTableEntity @Table -Entity $entity
 Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
         StatusCode = [HttpStatusCode]::OK
-        Body       = 'Task added successfully.'
+        Body       = @{ Results = 'Task added successfully.' }
     })
