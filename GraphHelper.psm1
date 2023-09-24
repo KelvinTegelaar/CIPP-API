@@ -280,6 +280,7 @@ function Get-ClassicAPIToken($tenantID, $Resource) {
                 $Tenant = @{
                     GraphErrorCount     = $null
                     LastGraphTokenError = $null
+                    LastGraphError      = $null
                     PartitionKey        = 'TenantFailed'
                     RowKey              = 'Failed'
                 }
