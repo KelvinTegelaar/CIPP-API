@@ -23,10 +23,12 @@ function Invoke-ListFunctionParameters {
     }
 
     $CommonParameters = @('Verbose', 'Debug', 'ErrorAction', 'WarningAction', 'InformationAction', 'ErrorVariable', 'WarningVariable', 'InformationVariable', 'OutVariable', 'OutBuffer', 'PipelineVariable', 'TenantFilter', 'APIName', 'ExecutingUser')
-
+    #temporary until I clean up the coremodule and move things private.
+    $TemporaryBlacklist = 'Get-CIPPAuthentication', 'Invoke-CippWebhookProcessing', 'Invoke-ListFunctionParameters', 'New-CIPPAPIConfig', 'New-CIPPGraphSubscription.ps1'
     try {
         $Functions = Get-Command @CommandQuery
         $Results = foreach ($Function in $Functions) {
+            if ($Function -In $TemporaryBlacklist) { continue }
             $Parameters = foreach ($Key in $Function.Parameters.Keys) {
                 if ($CommonParameters -notcontains $Key) {
                     $Param = $Function.Parameters.$Key
