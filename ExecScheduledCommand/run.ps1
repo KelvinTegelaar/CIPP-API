@@ -4,13 +4,20 @@ param($QueueItem, $TriggerMetadata)
 $Table = Get-CippTable -tablename 'ScheduledTasks'
 $task = $QueueItem.TaskInfo
 $commandParameters = $QueueItem.Parameters
+
 $tenant = $QueueItem.Parameters['TenantFilter']
 Write-Host "started task"
 try {
-    $results = & $QueueItem.command @commandParameters
+    try {
+        $results = & $QueueItem.command @commandParameters
+    }
+    catch {
+        $results = "Task Failed: $($_.Exception.Message)"
+        
+    }
     Write-Host "ran the command"
-    if ($results.GetType().Name -eq "String") {
-        $StoredResults = @{ Results = $results }
+    if ($results.GetType() -eq [String]) {
+        $results = @{ Results = $results }
     }
 
     $StoredResults = $results | Select-Object * -ExcludeProperty RowKey, PartitionKey | ConvertTo-Json -Compress | Out-String
