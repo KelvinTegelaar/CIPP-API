@@ -71,7 +71,7 @@ function Send-CIPPAlert {
         }
         catch {
             Write-Host "Could not send alerts to webhook: $($_.Exception.message)"
-            Write-LogMessage -API 'Webhook Alerts' -message "Could not send alerts to : $($_.Exception.message)" -sev info
+            Write-LogMessage -API 'Webhook Alerts' -message "Could not send alerts to webhook: $($_.Exception.message)" -sev info
         }
     }
     Write-Host "Trying to send to PSA"
@@ -91,7 +91,7 @@ function Send-CIPPAlert {
             }
             catch {
                 Write-Host "Could not send alerts to ticketing system: $($_.Exception.message)"
-                Write-LogMessage -API 'Webhook Alerts' -message "Could not send alerts to : $($_.Exception.message)" -sev info
+                Write-LogMessage -API 'Webhook Alerts' -message "Could not send alerts to ticketing system: $($_.Exception.message)" -sev info
             }
         }
     }
