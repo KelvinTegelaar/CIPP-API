@@ -15,12 +15,14 @@ try {
         $results = "Task Failed: $($_.Exception.Message)"
         
     }
+    
     Write-Host "ran the command"
     if ($results.GetType() -eq [String]) {
         $results = @{ Results = $results }
     }
+    $results = $results | Select-Object *, @{l = 'TaskInfo'; e = { $QueueItem.TaskInfo } } -ExcludeProperty RowKey, PartitionKey
 
-    $StoredResults = $results | Select-Object * -ExcludeProperty RowKey, PartitionKey | ConvertTo-Json -Compress | Out-String
+    $StoredResults = $results | ConvertTo-Json -Compress -Depth 20 | Out-String
     if ($StoredResults.Length -gt 64000 -or $task.Tenant -eq "AllTenants") {
         $StoredResults = @{ Results = "The results for this query are too long to store in this table, or the query was meant for All Tenants. Please use the options to send the results to another target to be able to view the results. " } | ConvertTo-Json -Compress
     }

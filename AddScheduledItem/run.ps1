@@ -7,6 +7,8 @@ $Table = Get-CIPPTable -TableName 'ScheduledTasks'
 
 $propertiesToCheck = @('Webhook', 'Email', 'PSA')
 $PostExecution = ($propertiesToCheck | Where-Object { $task.PostExecution.$_ -eq $true }) -join ','
+$Parameters = ($task.Parameters | ConvertTo-Json -Compress)
+if ($Parameters -eq 'null') { $Parameters = '' }
 $entity = @{
     PartitionKey  = [string]'ScheduledTask'
     TaskState     = [string]'Planned'
@@ -14,7 +16,7 @@ $entity = @{
     Tenant        = [string]$task.TenantFilter
     Name          = [string]$task.Name
     Command       = [string]$task.Command.value
-    Parameters    = [string]($task.Parameters | ConvertTo-Json -Compress)
+    Parameters    = [string]$Parameters
     ScheduledTime = [string]$task.ScheduledTime
     Recurrence    = [string]$task.Recurrence.value
     PostExecution = [string]$PostExecution
