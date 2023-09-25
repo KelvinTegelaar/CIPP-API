@@ -1,4 +1,6 @@
 ﻿{
+  "scriptFile": "../Modules/CippEntryPoints/CippEntryPoints.psm1",
+  "entryPoint": "Receive-CippHttpTrigger",
   "bindings": [
     {
       "authLevel": "anonymous",
@@ -11,12 +13,6 @@
       "type": "http",
       "direction": "out",
       "name": "Response"
-    },
-    {
-      "type": "queue",
-      "direction": "out",
-      "name": "Subscription",
-      "queueName": "AlertSubscriptions"
     }
   ]
 }
