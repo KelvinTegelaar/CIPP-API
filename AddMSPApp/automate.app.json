@@ -59,5 +59,6 @@
     "v10_1607": true
   },
   "notes": "CIPP Uploaded application",
-  "minimumMemoryInMB": "1"
+  "minimumMemoryInMB": "1",
+  "setupFilePath": "install.ps1"
 }
