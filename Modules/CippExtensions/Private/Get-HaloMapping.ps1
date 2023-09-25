@@ -5,7 +5,7 @@ function Get-HaloMapping {
     )
     #Get available mappings
     $Mappings = [pscustomobject]@{}
-    $Filter = "RowKey eq 'Mapping'"
+    $Filter = "PartitionKey eq 'Mapping'"
     Get-AzDataTableEntity @CIPPMapping -Filter $Filter | ForEach-Object {
         $Mappings | Add-Member -NotePropertyName $_.RowKey -NotePropertyValue @{ label = "$($_.HaloPSAName)"; value = "$($_.HaloPSA)" }
     }
