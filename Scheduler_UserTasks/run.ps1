@@ -15,9 +15,6 @@ foreach ($task in $tasks) {
                 TaskState    = 'Running'
             }
             $task.Parameters = $task.Parameters | ConvertFrom-Json -AsHashtable
-            $task.Parameters
-            $task.Parameters
-            $task.Parameters
 
             if (!$task.Parameters) { $task.Parameters = @{} }
             $ScheduledCommand = [pscustomobject]@{
