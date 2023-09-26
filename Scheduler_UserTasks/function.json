@@ -1,0 +1,16 @@
+{
+  "bindings": [
+    {
+      "name": "Timer",
+      "schedule": "0 */15 * * * *",
+      "direction": "in",
+      "type": "timerTrigger"
+    },
+    {
+      "type": "queue",
+      "direction": "out",
+      "name": "Msg",
+      "queueName": "scheduledcommandprocessor"
+    }
+  ]
+}
