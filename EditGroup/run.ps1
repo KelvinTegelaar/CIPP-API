@@ -9,7 +9,6 @@ $Results = [System.Collections.ArrayList]@()
 
 
 $userobj = $Request.body
-write-host "this is the userobj $($userobj.Addmember)"
 
 # Write to the Azure Functions log stream.
 Write-Host "PowerShell HTTP trigger function processed a request."
