@@ -9,6 +9,7 @@ $Results = [System.Collections.ArrayList]@()
 
 
 $userobj = $Request.body
+write-host "this is the userobj $($userobj.Addmember)"
 
 # Write to the Azure Functions log stream.
 Write-Host "PowerShell HTTP trigger function processed a request."
@@ -18,7 +19,8 @@ if ($AddMembers) {
     $AddMembers | ForEach-Object {
         try {
             $member = $_
-            $MemberIDs = "https://graph.microsoft.com/v1.0/directoryObjects/" + (New-GraphGetRequest -uri "https://graph.microsoft.com/beta/users/$($_)" -tenantid $Userobj.tenantid).id 
+            $MemberIDs = "https://graph.microsoft.com/v1.0/directoryObjects/$($member)"
+            $MemberName = (New-GraphGetRequest -uri "https://graph.microsoft.com/beta/users/$($_)" -tenantid $Userobj.tenantid).mail
             $addmemberbody = "{ `"members@odata.bind`": $(ConvertTo-Json @($MemberIDs)) }"
             if ($userobj.groupType -eq "Distribution list" -or $userobj.groupType -eq "Mail-Enabled Security") {
                 $Params = @{ Identity = $userobj.groupid; Member = $member; BypassSecurityGroupManagerCheck = $true }
@@ -28,10 +30,10 @@ if ($AddMembers) {
                 New-GraphPostRequest -uri "https://graph.microsoft.com/beta/groups/$($userobj.groupid)" -tenantid $Userobj.tenantid -type patch -body $addmemberbody -Verbose
             }
             Write-LogMessage -API $APINAME -tenant $Userobj.tenantid -user $request.headers.'x-ms-client-principal' -message "Added $member to $($userobj.groupid) group" -Sev "Info"
-            $body = $results.add("Success. $member has been added")
+            $body = $results.add("Success. $MemberName has been added")
         }
         catch {
-            $body = $results.add("Failed to add member $member to $($userobj.Groupid): $($_.Exception.Message)")
+            $body = $results.add("Failed to add member $memberName to $($userobj.Groupid): $($_.Exception.Message)")
         }
     }
 
@@ -63,17 +65,17 @@ $RemoveMembers = ($userobj.Removemember).value
 try {
     if ($RemoveMembers) {
         $RemoveMembers | ForEach-Object { 
+            $MemberInfo = (New-GraphGetRequest -uri "https://graph.microsoft.com/beta/users/$($_)" -tenantid $Userobj.tenantid)
             $member = $_
             if ($userobj.groupType -eq "Distribution list" -or $userobj.groupType -eq "Mail-Enabled Security") {
                 $Params = @{ Identity = $userobj.groupid; Member = $member ; BypassSecurityGroupManagerCheck = $true }
                 New-ExoRequest -tenantid $Userobj.tenantid -cmdlet "Remove-DistributionGroupMember" -cmdParams $params  -UseSystemMailbox $true
             }
             else {
-                $MemberInfo = (New-GraphGetRequest -uri "https://graph.microsoft.com/beta/users/$($_)" -tenantid $Userobj.tenantid)
-                New-GraphPostRequest -uri "https://graph.microsoft.com/beta/groups/$($userobj.groupid)/members/$($MemberInfo.id)/`$ref" -tenantid $Userobj.tenantid -type DELETE 
+                New-GraphPostRequest -uri "https://graph.microsoft.com/beta/groups/$($userobj.groupid)/members/$($Member)/`$ref" -tenantid $Userobj.tenantid -type DELETE 
             }
             Write-LogMessage -API $APINAME -tenant $Userobj.tenantid -user $request.headers.'x-ms-client-principal'  -message "Removed $member from $($userobj.groupid) group" -Sev "Info"
-            $body = $results.add("Success. Member $member has been removed")
+            $body = $results.add("Success. Member $($memberinfo.mail) has been removed")
         }  
     }
 }
