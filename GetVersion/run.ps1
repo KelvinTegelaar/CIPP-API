@@ -10,7 +10,7 @@ $APIVersion = Get-Content "version_latest.txt" | Out-String
 $CIPPVersion = $request.query.localversion
 
 $RemoteAPIVersion = Invoke-RestMethod -Uri "https://raw.githubusercontent.com/KelvinTegelaar/CIPP-API/master/version_latest.txt"
-$RemoteCIPPVersion = Invoke-RestMethod -Uri "https://raw.githubusercontent.com/KelvinTegelaar/CIPP/master/version_latest.txt"
+$RemoteCIPPVersion = Invoke-RestMethod -Uri "https://raw.githubusercontent.com/KelvinTegelaar/CIPP/master/public/version_latest.txt"
 
 $version = [PSCustomObject]@{
     LocalCIPPVersion     = $CIPPVersion
