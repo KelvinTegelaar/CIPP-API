@@ -81,7 +81,7 @@ function Send-CIPPAlert {
             try {
 
                 $Alert = @{
-                    TenantId   = $Tenant
+                    TenantId   = $TenantFilter
                     AlertText  = "$HTMLContent"
                     AlertTitle = "$($Title)"
                 }
