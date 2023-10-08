@@ -232,6 +232,21 @@ try {
 
             }
         }
+        { $_.'NewTenant' -eq $true } {
+            try {
+                $Table = Get-CIPPTable -TableName cpvtenants
+                $CPVRows = Get-AzDataTableEntity @Table
+                $AllTenants = get-tenants
+                $NewTenants = $AllTenants | Where-Object { $_.customerId -notin $CPVRows.Tenant
+                    foreach ($NewTenant in $NewTenants) {
+                        "Tenant '{0}' has been detected as a tenant without CPV consent. This could be a new tenant. ID: {1}" -f $NewTenant.displayName, $NewTenant.defaultDomainName
+                    }
+                }
+            }
+            catch {
+
+            }
+        }
         { $_.'AppSecretExpiry' -eq $true } {
             try {
                 $Filter = "RowKey eq 'AppSecretExpiry' and PartitionKey eq '{0}'" -f $Tenant.tenantid

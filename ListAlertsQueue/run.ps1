@@ -34,6 +34,7 @@ $CurrentStandards = foreach ($QueueFile in $QueuedApps) {
         SecDefaultsUpsell = [bool]$QueueFile.SecDefaultsUpsell
         SharepointQuota   = [bool]$QueueFile.SharePointQuota
         ExpiringLicenses  = [bool]$QueueFile.ExpiringLicenses
+        NewTenant         = [bool]$QueueFile.NewTenant
         tenantId          = $QueueFile.tenantid
     }
 }
