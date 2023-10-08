@@ -86,12 +86,12 @@ function Send-CIPPAlert {
                     AlertTitle = "$($Title)"
                 }
                 New-CippExtAlert -Alert $Alert
-                Write-LogMessage -API 'Webhook Alerts' -message "Sent PSA alert $title" -sev info
+                Write-LogMessage -API 'Webhook Alerts' -tenant $TenantFilter -message "Sent PSA alert $title" -sev info
 
             }
             catch {
                 Write-Host "Could not send alerts to ticketing system: $($_.Exception.message)"
-                Write-LogMessage -API 'Webhook Alerts' -message "Could not send alerts to ticketing system: $($_.Exception.message)" -sev info
+                Write-LogMessage -API 'Webhook Alerts' -tenant $TenantFilter -message "Could not send alerts to ticketing system: $($_.Exception.message)" -sev info
             }
         }
     }
