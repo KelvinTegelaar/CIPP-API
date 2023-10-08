@@ -33,6 +33,10 @@ function New-HaloPSATicket {
   }
 ]
 "@
+
+  Write-Host "Sending ticket to HaloPSA"
+  Write-Host $body
+
   Invoke-RestMethod -Uri "$($Configuration.ResourceURL)/Tickets" -ContentType 'application/json' -Method Post -Body $body -Headers @{Authorization = "Bearer $($token.access_token)" }
 
 }
