@@ -32,6 +32,7 @@ function Get-NormalizedError {
         '*AppLifecycle_2210*' { 'Failed to call Intune APIs: Does the tenant have a license available?' }
         '*One or more added object references already exist for the following modified properties:*' { 'This user is already a member of this group.' }
         '*Microsoft.Exchange.Management.Tasks.MemberAlreadyExistsException*' { 'This user is already a member of this group.' }
+        '*The property value exceeds the maximum allowed size (64KB)*' { 'One of the values exceeds the maximum allowed size (64KB).' }
         Default { $message }
 
     }
