@@ -20,6 +20,7 @@ foreach ($Row in $Tenants ) {
 
     if ($Row.customerId -notin $TenantList) {
         Write-Output "Not in the list: $($row.customerId)"
+        Write-LogMessage -message "A New tenant has been added: $($row.defaultDomainName) with id $($row.customerId)" -Sev "Warn" -API "NewTenant"
         Push-OutputBinding -Name Msg -Value $row.customerId
         continue
 
