@@ -379,7 +379,7 @@ try {
 
     $ShippedAlerts | ForEach-Object {
         if ($_ -notin $currentlog.Message) {
-            Write-LogMessage -message $_ -API 'Alerts' -tenant $tenant.tenant -sev Alert
+            Write-LogMessage -message $_ -API 'Alerts' -tenant $tenant.tenant -sev Alert -tenantid $Tenant.tenantid
         }
     }
     [PSCustomObject]@{
