@@ -11,7 +11,7 @@ function New-HaloPSATicket {
 
   $token = Get-HaloToken -configuration $Configuration
   #use the token to create a new ticket in HaloPSA
-  $body = ConvertTo-Json -Compress -Depth 10 -InputObject @(
+  $body = ConvertTo-Json -EscapeHandling EscapeHtml -Compress -Depth 10 -InputObject @(
     [PSCustomObject]@{
       files                      = $null
       usertype                   = 1
