@@ -34,7 +34,7 @@ function New-HaloPSATicket {
   Write-Host $body
 
   $Ticket = Invoke-RestMethod -SkipHttpErrorCheck -Uri "$($Configuration.ResourceURL)/Tickets" -ContentType 'application/json' -Method Post -Body $body -Headers @{Authorization = "Bearer $($token.access_token)" }
-  Write-Host $ticket
+  Write-Host ($ticket | ConvertTo-Json)
 
 
 }
