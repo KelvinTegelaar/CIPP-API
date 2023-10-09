@@ -172,6 +172,7 @@ function Invoke-CippWebhookProcessing {
         'Add service principal.' {
             if ($Appname) { $AppName = $AppName.'Application Name' } else { $appName = $data.ApplicationId }
             $Title = "$($TenantFilter) - Service Principal $($data.ObjectId) has been added."
+            $Table = ($data.ModifiedProperties | ConvertTo-Html -Fragment | Out-String).Replace('<table>', ' <table class="table-modern">')
             $IntroText = "$($data.ObjectId) has been added by $($data.UserId)."
             $ButtonUrl = "$CIPPPURL/tenant/administration/enterprise-apps?customerId=?customerId=$($data.OrganizationId)"
             $ButtonText = 'Enterprise Apps'
@@ -179,6 +180,7 @@ function Invoke-CippWebhookProcessing {
         'Remove service principal.' {
             if ($Appname) { $AppName = $AppName.'Application Name' } else { $appName = $data.ApplicationId }
             $Title = "$($TenantFilter) - Service Principal $($data.ObjectId) has been removed."
+            $Table = ($data.ModifiedProperties | ConvertTo-Html -Fragment | Out-String).Replace('<table>', ' <table class="table-modern">')
             $IntroText = "$($data.ObjectId) has been added by $($data.UserId)."
             $ButtonUrl = "$CIPPPURL/tenant/administration/enterprise-apps?customerId=?customerId=$($data.OrganizationId)"
             $ButtonText = 'Enterprise Apps'
