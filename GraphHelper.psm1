@@ -135,7 +135,6 @@ function Write-LogMessage ($message, $tenant = 'None', $API = 'None', $tenantId 
     $PartitionKey = (Get-Date -UFormat '%Y%m%d').ToString()
     $TableRow = @{
         'Tenant'       = [string]$tenant
-        'TenantID'     = [string]$tenantId
         'API'          = [string]$API
         'Message'      = [string]$message
         'Username'     = [string]$username
