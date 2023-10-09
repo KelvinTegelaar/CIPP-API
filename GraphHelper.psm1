@@ -117,7 +117,7 @@ function Get-GraphToken($tenantid, $scope, $AsApp, $AppID, $refreshToken, $Retur
     }
 }
 
-function Write-LogMessage ($message, $tenant = 'None', $API = 'None', $tenantId = 'None', $user, $sev) {
+function Write-LogMessage ($message, $tenant = 'None', $API = 'None', $tenantId = $null, $user, $sev) {
     try {
         $username = ([System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($user)) | ConvertFrom-Json).userDetails
     }
@@ -145,6 +145,12 @@ function Write-LogMessage ($message, $tenant = 'None', $API = 'None', $tenantId 
         'PartitionKey' = $PartitionKey
         'RowKey'       = ([guid]::NewGuid()).ToString()
     }
+
+    if($tenantId)
+    {
+        $TableRow.Add('TenantID', [string]$tenantId)
+    }
+    
     $Table.Entity = $TableRow
     Add-AzDataTableEntity @Table | Out-Null
 }
