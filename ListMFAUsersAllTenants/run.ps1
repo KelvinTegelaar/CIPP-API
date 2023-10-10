@@ -17,9 +17,20 @@ try {
         Import-Module '.\modules\CippCore'
         $Table = Get-CIPPTable -TableName cachemfa
         $GraphRequest = Get-CIPPMFAState -TenantFilter $domainName
-        if ($GraphRequest) {
-            Add-AzDataTableEntity @Table -Entity $GraphRequest -Force | Out-Null
+        if (!$GraphRequest) {
+            $GraphRequest = @{
+                Tenant          = [string]$tenantName
+                UPN             = [string]$domainName
+                AccountEnabled  = 'none'
+                PerUser         = [string]'Could not connect to tenant'
+                MFARegistration = 'none'
+                CoveredByCA     = [string]'Could not connect to tenant'
+                CoveredBySD     = 'none'
+                RowKey          = [string]"$domainName"
+                PartitionKey    = 'users'
+            }
         }
+        Add-AzDataTableEntity @Table -Entity $GraphRequest -Force | Out-Null
     }
 }
 catch {
