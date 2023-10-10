@@ -38,7 +38,7 @@ function Get-NormalizedError {
     }
 }
 
-function Get-GraphToken($tenantid, $scope, $AsApp, $AppID, $refreshToken, $ReturnRefresh) {
+function Get-GraphToken($tenantid, $scope, $AsApp, $AppID, $refreshToken, $ReturnRefresh, $SkipCache) {
     if (!$scope) { $scope = 'https://graph.microsoft.com/.default' }
     if (!$env:SetFromProfile) { $CIPPAuth = Get-CIPPAuthentication; Write-Host 'Could not get Refreshtoken from environment variable. Reloading token.' }
     $AuthBody = @{
@@ -71,7 +71,7 @@ function Get-GraphToken($tenantid, $scope, $AsApp, $AppID, $refreshToken, $Retur
     $TokenKey = '{0}-{1}-{2}' -f $tenantid, $scope, $asApp
 
     try {
-        if ($script:AccessTokens.$TokenKey -and [int](Get-Date -UFormat %s -Millisecond 0) -lt $script:AccessTokens.$TokenKey.expires_on) {
+        if ($script:AccessTokens.$TokenKey -and [int](Get-Date -UFormat %s -Millisecond 0) -lt $script:AccessTokens.$TokenKey.expires_on -and $SkipCache -ne $true) {
             Write-Host 'Graph: cached token'
             $AccessToken = $script:AccessTokens.$TokenKey
         }
@@ -145,8 +145,7 @@ function Write-LogMessage ($message, $tenant = 'None', $API = 'None', $tenantId 
         'RowKey'       = ([guid]::NewGuid()).ToString()
     }
 
-    if($tenantId)
-    {
+    if ($tenantId) {
         $TableRow.Add('TenantID', [string]$tenantId)
     }
     
@@ -162,6 +161,7 @@ function New-GraphGetRequest {
         $AsApp,
         $noPagination,
         $NoAuthCheck,
+        $skipTokenCache,
         [switch]$ComplexFilter,
         [switch]$CountOnly
     )
@@ -172,7 +172,7 @@ function New-GraphGetRequest {
             $headers = @{ Authorization = "Bearer $($AccessToken.access_token)" }
         }
         else {
-            $headers = Get-GraphToken -tenantid $tenantid -scope $scope -AsApp $asapp
+            $headers = Get-GraphToken -tenantid $tenantid -scope $scope -AsApp $asapp -SkipCache $skipTokenCache
         }
 
         if ($ComplexFilter) {
@@ -225,9 +225,9 @@ function New-GraphGetRequest {
     }
 }
 
-function New-GraphPOSTRequest ($uri, $tenantid, $body, $type, $scope, $AsApp, $NoAuthCheck) {
+function New-GraphPOSTRequest ($uri, $tenantid, $body, $type, $scope, $AsApp, $NoAuthCheck, $skipTokenCache) {
     if ($NoAuthCheck -or (Get-AuthorisedRequest -Uri $uri -TenantID $tenantid)) {
-        $headers = Get-GraphToken -tenantid $tenantid -scope $scope -AsApp $asapp
+        $headers = Get-GraphToken -tenantid $tenantid -scope $scope -AsApp $asapp -SkipCache $skipTokenCache
         Write-Verbose "Using $($uri) as url"
         if (!$type) {
             $type = 'POST'
