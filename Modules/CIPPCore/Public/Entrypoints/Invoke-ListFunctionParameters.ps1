@@ -34,13 +34,16 @@ function Invoke-ListFunctionParameters {
         $Results = foreach ($Function in $Functions) {
             if ($Function -In $TemporaryBlacklist) { continue }
             $Help = Get-Help $Function
+            $ParamsHelp = ($Help | Select-Object -ExpandProperty parameters).parameter | Select-Object name, @{n = 'description'; exp = { $_.description.Text } }
             if ($Help.Functionality -eq 'Entrypoint') { continue }
             $Parameters = foreach ($Key in $Function.Parameters.Keys) {
                 if ($CommonParameters -notcontains $Key) {
                     $Param = $Function.Parameters.$Key
+                    $ParamHelp = $ParamsHelp | Where-Object { $_.name -eq $Key }
                     [PSCustomObject]@{
-                        Name = $Key
-                        Type = $Param.ParameterType.FullName
+                        Name        = $Key
+                        Type        = $Param.ParameterType.FullName
+                        Description = $ParamHelp.description
                     }
                 }
             }
