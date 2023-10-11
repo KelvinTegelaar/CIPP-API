@@ -1,6 +1,10 @@
 using namespace System.Net
 
 function Invoke-ExecUserSettings {
+    <#
+    .FUNCTIONALITY
+    Entrypoint
+    #>
     param($Request, $TriggerMetadata)
 
     $APIName = $TriggerMetadata.FunctionName

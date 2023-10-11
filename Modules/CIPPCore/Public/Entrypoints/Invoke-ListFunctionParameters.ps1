@@ -1,6 +1,10 @@
 using namespace System.Net
 
 function Invoke-ListFunctionParameters {
+    <#
+    .FUNCTIONALITY
+    Entrypoint
+    #>
     # Input bindings are passed in via param block.
     param($Request, $TriggerMetadata)
 
@@ -29,6 +33,8 @@ function Invoke-ListFunctionParameters {
         $Functions = Get-Command @CommandQuery
         $Results = foreach ($Function in $Functions) {
             if ($Function -In $TemporaryBlacklist) { continue }
+            $Help = Get-Help $Function
+            if ($Help.Functionality -eq 'Entrypoint') { continue }
             $Parameters = foreach ($Key in $Function.Parameters.Keys) {
                 if ($CommonParameters -notcontains $Key) {
                     $Param = $Function.Parameters.$Key
@@ -40,13 +46,13 @@ function Invoke-ListFunctionParameters {
             }
             [PSCustomObject]@{
                 Function   = $Function.Name
+                Synopsis   = $Help.Synopsis
                 Parameters = @($Parameters)
             }
         }
         $StatusCode = [HttpStatusCode]::OK
         $Results
-    }
-    catch {
+    } catch {
         $Results = "Function Error: $($_.Exception.Message)"
         $StatusCode = [HttpStatusCode]::BadRequest
     }
