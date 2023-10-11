@@ -1,6 +1,10 @@
 
 function Invoke-ListGraphRequest {
-    # Input bindings are passed in via param block.
+    <#
+    .FUNCTIONALITY
+    Entrypoint
+    #>
+    [CmdletBinding()]
     param($Request, $TriggerMetadata)
 
     $APIName = $TriggerMetadata.FunctionName
@@ -50,7 +54,7 @@ function Invoke-ListGraphRequest {
     }
 
     if ($Request.Query.TenantFilter) {
-        $GraphRequestParams.Tenant = $Request.Query.TenantFilter
+        $GraphRequestParams.TenantFilter = $Request.Query.TenantFilter
     }
 
     if ($Request.Query.QueueId) {
