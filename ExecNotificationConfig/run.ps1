@@ -22,6 +22,7 @@ $results = try {
         'webhook'           = "$($Request.Body.Webhook)"
         'onePerTenant'      = [boolean]$Request.Body.onePerTenant
         'sendtoIntegration' = [boolean]$Request.Body.sendtoIntegration
+        'includeTenantId'   = [boolean]$Request.Body.includeTenantId
         'PartitionKey'      = 'CippNotifications'
         'RowKey'            = 'CippNotifications'
     }
