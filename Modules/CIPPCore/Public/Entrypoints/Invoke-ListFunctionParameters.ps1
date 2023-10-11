@@ -30,7 +30,7 @@ function Invoke-ListFunctionParameters {
     #temporary until I clean up the coremodule and move things private.
     $TemporaryBlacklist = 'Get-CIPPAuthentication', 'Invoke-CippWebhookProcessing', 'Invoke-ListFunctionParameters', 'New-CIPPAPIConfig', 'New-CIPPGraphSubscription.ps1'
     try {
-        $Functions = Get-Command @CommandQuery
+        $Functions = Get-Command @CommandQuery | Where-Object { $_.Visibility -eq 'Public' }
         $Results = foreach ($Function in $Functions) {
             if ($Function -In $TemporaryBlacklist) { continue }
             $Help = Get-Help $Function
