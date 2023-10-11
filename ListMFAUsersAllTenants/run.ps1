@@ -16,7 +16,12 @@ try {
         Import-Module '.\GraphHelper.psm1'
         Import-Module '.\modules\CippCore'
         $Table = Get-CIPPTable -TableName cachemfa
-        $GraphRequest = Get-CIPPMFAState -TenantFilter $domainName
+        Try {
+            $GraphRequest = Get-CIPPMFAState -TenantFilter $domainName -ErrorAction Stop
+        }
+        catch { 
+            $GraphRequest = $null 
+        }
         if (!$GraphRequest) {
             $GraphRequest = @{
                 Tenant          = [string]$tenantName
