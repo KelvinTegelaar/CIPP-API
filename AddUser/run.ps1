@@ -40,7 +40,7 @@ try {
         Write-Host "Found added attribute"
         Write-Host "Added attributes: $($userobj.addedAttributes | ConvertTo-Json)"
         $userobj.addedAttributes.getenumerator() | ForEach-Object {
-            "Adding property $($_.Key) with value $($_.value)"
+            $results.add("Added property $($_.Key) with value $($_.value)")
             $bodytoShip | Add-Member -NotePropertyName $_.Key -NotePropertyValue $_.Value
         }
     }
