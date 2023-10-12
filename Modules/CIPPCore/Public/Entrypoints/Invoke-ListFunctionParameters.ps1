@@ -1,6 +1,10 @@
 using namespace System.Net
 
 function Invoke-ListFunctionParameters {
+    <#
+    .FUNCTIONALITY
+    Entrypoint
+    #>
     # Input bindings are passed in via param block.
     param($Request, $TriggerMetadata)
 
@@ -26,27 +30,32 @@ function Invoke-ListFunctionParameters {
     #temporary until I clean up the coremodule and move things private.
     $TemporaryBlacklist = 'Get-CIPPAuthentication', 'Invoke-CippWebhookProcessing', 'Invoke-ListFunctionParameters', 'New-CIPPAPIConfig', 'New-CIPPGraphSubscription.ps1'
     try {
-        $Functions = Get-Command @CommandQuery
+        $Functions = Get-Command @CommandQuery | Where-Object { $_.Visibility -eq 'Public' }
         $Results = foreach ($Function in $Functions) {
             if ($Function -In $TemporaryBlacklist) { continue }
+            $Help = Get-Help $Function
+            $ParamsHelp = ($Help | Select-Object -ExpandProperty parameters).parameter | Select-Object name, @{n = 'description'; exp = { $_.description.Text } }
+            if ($Help.Functionality -eq 'Entrypoint') { continue }
             $Parameters = foreach ($Key in $Function.Parameters.Keys) {
                 if ($CommonParameters -notcontains $Key) {
                     $Param = $Function.Parameters.$Key
+                    $ParamHelp = $ParamsHelp | Where-Object { $_.name -eq $Key }
                     [PSCustomObject]@{
-                        Name = $Key
-                        Type = $Param.ParameterType.FullName
+                        Name        = $Key
+                        Type        = $Param.ParameterType.FullName
+                        Description = $ParamHelp.description
                     }
                 }
             }
             [PSCustomObject]@{
                 Function   = $Function.Name
+                Synopsis   = $Help.Synopsis
                 Parameters = @($Parameters)
             }
         }
         $StatusCode = [HttpStatusCode]::OK
         $Results
-    }
-    catch {
+    } catch {
         $Results = "Function Error: $($_.Exception.Message)"
         $StatusCode = [HttpStatusCode]::BadRequest
     }
