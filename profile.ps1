@@ -18,7 +18,6 @@ try {
 try {
     Import-Module Az.Accounts
 } catch { $_.Exception.Message }
-Import-Module GraphRequests
 Import-Module CippExtensions
 Import-Module CippCore
 
