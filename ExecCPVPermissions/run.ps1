@@ -9,9 +9,8 @@ Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME  -
 
 # Write to the Azure Functions log stream.
 Write-Host "PowerShell HTTP trigger function processed a request."
-$TenantFilter = (get-tenants -IncludeAll | Where-Object -Property customerId -EQ $Request.query.Tenantfilter).defaultDomainName
+$TenantFilter = (get-tenants -IncludeAll -IncludeErrors | Where-Object -Property customerId -EQ $Request.query.Tenantfilter).defaultDomainName
 Write-Host "Our Tenantfilter is $TenantFilter"
-Write-Host  ((get-tenants | Where-Object -Property customerId -EQ $Request.query.Tenantfilter) | ConvertTo-Json)
 $GraphRequest = try {
     Set-CIPPCPVConsent -Tenantfilter $TenantFilter
     Add-CIPPApplicationPermission -RequiredResourceAccess "CippDefaults" -ApplicationId $ENV:ApplicationID -tenantfilter $TenantFilter
