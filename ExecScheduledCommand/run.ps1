@@ -51,7 +51,7 @@ switch -wildcard ($task.PostExecution) {
             'TaskInfo' = $QueueItem.TaskInfo
             'Results'  = $Results
         }
-        Send-CIPPAlert -Type 'webhook' -Title $title -JSONContent $($Webhook | ConvertTo-Json)
+        Send-CIPPAlert -Type 'webhook' -Title $title -JSONContent $($Webhook | ConvertTo-Json -Depth 20)
     }
 }
 
