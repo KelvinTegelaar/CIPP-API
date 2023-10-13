@@ -49,6 +49,7 @@ try {
                       }
 "@
         New-GraphPostRequest -uri 'https://graph.microsoft.com/v1.0/me/sendMail' -tenantid $env:TenantID -type POST -body ($JSONBody)
+        Write-LogMessage -API 'Alerts' -message "Sent alerts to: $($Config.email)" -tenant $Tenant -sev info
       }
     }
   }
@@ -78,12 +79,13 @@ try {
                       }
 "@
       New-GraphPostRequest -uri 'https://graph.microsoft.com/v1.0/me/sendMail' -tenantid $env:TenantID -type POST -body ($JSONBody)
+      Write-LogMessage -API 'Alerts' -message "Sent alerts to: $($Config.email)" -tenant $Tenant -sev info
     }
   }
 }
 catch {
   Write-Host "Could not send alerts to email: $($_.Exception.message)"
-  Write-LogMessage -API 'Alerts' -message "Could not send alerts to : $($_.Exception.message)" -sev info
+  Write-LogMessage -API 'Alerts' -message "Could not send alerts to: $($_.Exception.message)" -tenant $Tenant -sev error
 }
 
 
@@ -119,7 +121,7 @@ try {
         Invoke-RestMethod -Uri $config.webhook -Method POST -ContentType 'Application/json' -Body $JSONBody
       }
     }
-
+    Write-LogMessage -API 'Alerts' -tenant $Tenant -message "Sent Webhook to $($config.webhook) " -tenant $Tenant -sev info
   }
 
   $UpdateLogs = $CurrentLog | ForEach-Object { 
@@ -132,7 +134,7 @@ try {
 }
 catch {
   Write-Host "Could not send alerts to webhook: $($_.Exception.message)"
-  Write-LogMessage -API 'Alerts' -message "Could not send alerts to : $($_.Exception.message)" -sev info
+  Write-LogMessage -API 'Alerts' -message "Could not send alerts to : $($_.Exception.message)" -tenant $Tenant -sev error
 }
 
 if ($config.sendtoIntegration) {
@@ -153,10 +155,11 @@ if ($config.sendtoIntegration) {
         Add-AzDataTableEntity @Table -Entity $UpdateLogs -Force
       }
     }
+    Write-LogMessage -API 'Alerts' -tenant $Tenant -message "alerts to PSA" -sev info
   }
   catch {
     Write-Host "Could not send alerts to ticketing system: $($_.Exception.message)"
-    Write-LogMessage -API 'Alerts' -tenant $Tenant -message "Could not send alerts to ticketing system: $($_.Exception.message)" -sev info
+    Write-LogMessage -API 'Alerts' -tenant $Tenant -message "Could not send alerts to ticketing system: $($_.Exception.message)" -sev Error
   }
 }
 
