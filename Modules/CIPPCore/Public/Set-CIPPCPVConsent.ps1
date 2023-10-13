@@ -6,7 +6,7 @@ function Set-CIPPCPVConsent {
         $ExecutingUser
     )
     $Results = [System.Collections.ArrayList]@()
-    $Tenant = Get-Tenants | Where-Object -Property defaultDomainName -EQ $Tenantfilter
+    $Tenant = Get-Tenants -IncludeAll -IncludeErrors | Where-Object -Property defaultDomainName -EQ $Tenantfilter
     $TenantName = $Tenant.defaultDomainName
     $TenantFilter = $Tenant.customerId
 
