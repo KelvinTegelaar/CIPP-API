@@ -219,10 +219,10 @@ function Invoke-CippWebhookProcessing {
     } | ConvertTo-Json -Depth 15 -Compress
     if ($Title) {
         Write-Host 'Sending alert to email'
-        Send-CIPPAlert -Type 'email' -Title $title -HTMLContent $HTML
+        Send-CIPPAlert -Type 'email' -Title $title -HTMLContent $HTML -TenantFilter $TenantFilter
         Write-Host 'Sending alert to webhook'
-        Send-CIPPAlert -Type 'webhook' -Title $title -JSONContent $JsonContent
+        Send-CIPPAlert -Type 'webhook' -Title $title -JSONContent $JsonContent -TenantFilter $TenantFilter
         Write-Host 'Sending alert to PSA'
-        Send-CIPPAlert -Type 'psa' -Title $title -HTMLContent $HTML
+        Send-CIPPAlert -Type 'psa' -Title $title -HTMLContent $HTML -TenantFilter $TenantFilter
     }
 }
