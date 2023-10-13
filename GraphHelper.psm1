@@ -145,6 +145,7 @@ function Write-LogMessage ($message, $tenant = 'None', $API = 'None', $tenantId 
         'RowKey'       = ([guid]::NewGuid()).ToString()
     }
 
+
     if ($tenantId) {
         $TableRow.Add('TenantID', [string]$tenantId)
     }
