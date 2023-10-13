@@ -14,8 +14,11 @@ function New-CippExtAlert {
             "HaloPSA" {
                 If ($Configuration.HaloPSA.enabled) {
                     $TenantId = (Get-Tenants | Where-Object defaultDomainName -EQ $Alert.TenantId).customerId
+                    Write-Host "TenantId: $TenantId"
                     $MappedId = ($MappingFile | Where-Object RowKey -EQ $TenantId).HaloPSA
+                    Write-Host "MappedId: $MappedId"
                     if (!$mappedId) { $MappedId = 1 }
+                    Write-Host "MappedId: $MappedId"
                     New-HaloPSATicket -Title $Alert.AlertTitle -Description $Alert.AlertText -Client $mappedId 
                 }
             }
