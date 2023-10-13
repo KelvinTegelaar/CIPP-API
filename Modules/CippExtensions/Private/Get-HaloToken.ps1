@@ -11,9 +11,11 @@ function Get-HaloToken {
             client_secret = (Get-AzKeyVaultSecret -VaultName $ENV:WEBSITE_DEPLOYMENT_ID -Name 'HaloPSA' -AsPlainText)
             scope         = 'all'
         }
-        $token = Invoke-RestMethod -Uri "$($Configuration.AuthURL)/token?tenant=$($Configuration.tenant)" -Method Post -Body $body -ContentType 'application/x-www-form-urlencoded'
+        if (![string]::IsNullOrEmpty($Configuration.tenant)) { $Tenant = "?tenant=$($Configuration.tenant)" }
+        $token = Invoke-RestMethod -Uri "$($Configuration.AuthURL)/token$Tenant" -Method Post -Body $body -ContentType 'application/x-www-form-urlencoded'
         return $token
-    } else {
+    }
+    else {
         throw 'No Halo configuration'
     }
 }

@@ -15,7 +15,7 @@ if ($Config) {
     $Config = @{}
 }
 #$config | Add-Member -NotePropertyValue @() -NotePropertyName 'logsToInclude' -Force
-$config.logsToInclude = @(([pscustomobject]$config | Select-Object * -ExcludeProperty schedule, type, tenantid, onepertenant, sendtoIntegration, partitionkey, rowkey, tenant, ETag, email, logsToInclude, Severity, Alert, Info, Error, timestamp, webhook).psobject.properties.name)
+$config.logsToInclude = @(([pscustomobject]$config | Select-Object * -ExcludeProperty schedule, type, tenantid, onepertenant, sendtoIntegration, partitionkey, rowkey, tenant, ETag, email, logsToInclude, Severity, Alert, Info, Error, timestamp, webhook, includeTenantId).psobject.properties.name)
 if (!$config.logsToInclude) {
     $config.logsToInclude = @('None')
 }

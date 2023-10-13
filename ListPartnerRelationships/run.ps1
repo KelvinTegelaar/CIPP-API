@@ -7,24 +7,24 @@ $APIName = $TriggerMetadata.FunctionName
 Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -message 'Accessed this API' -Sev 'Debug'
 
 try {
-	$GraphRequestList = @{
-		Endpoint            = 'policies/crossTenantAccessPolicy/partners'
-		Tenant              = $Request.Query.TenantFilter
-		QueueNameOverride   = 'Partner Relationships'
-		ReverseTenantLookup = $true
-	}
-	$GraphRequest = Get-GraphRequestList @GraphRequestList
+    $GraphRequestList = @{
+        Endpoint            = 'policies/crossTenantAccessPolicy/partners'
+        TenantFilter        = $Request.Query.TenantFilter
+        QueueNameOverride   = 'Partner Relationships'
+        ReverseTenantLookup = $true
+    }
+    $GraphRequest = Get-GraphRequestList @GraphRequestList
 } catch {
-	$GraphRequest = @()
+    $GraphRequest = @()
 }
 
 $StatusCode = [HttpStatusCode]::OK
 
 $results = [PSCustomObject]@{
-	Results = @($GraphRequest)
+    Results = @($GraphRequest)
 }
 # Associate values to output bindings by calling 'Push-OutputBinding'.
 Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
-		StatusCode = $StatusCode
-		Body       = $results
-	})
+        StatusCode = $StatusCode
+        Body       = $results
+    })

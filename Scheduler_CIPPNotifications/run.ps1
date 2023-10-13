@@ -156,7 +156,7 @@ if ($config.sendtoIntegration) {
   }
   catch {
     Write-Host "Could not send alerts to ticketing system: $($_.Exception.message)"
-    Write-LogMessage -API 'Alerts' -message "Could not send alerts to : $($_.Exception.message)" -sev info
+    Write-LogMessage -API 'Alerts' -tenant $Tenant -message "Could not send alerts to ticketing system: $($_.Exception.message)" -sev info
   }
 }
 
