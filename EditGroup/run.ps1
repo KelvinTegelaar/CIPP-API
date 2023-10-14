@@ -28,11 +28,11 @@ if ($AddMembers) {
             else {
                 New-GraphPostRequest -uri "https://graph.microsoft.com/beta/groups/$($userobj.groupid)" -tenantid $Userobj.tenantid -type patch -body $addmemberbody -Verbose
             }
-            Write-LogMessage -API $APINAME -tenant $Userobj.tenantid -user $request.headers.'x-ms-client-principal' -message "Added $member to $($userobj.groupid) group" -Sev "Info"
+            Write-LogMessage -API $APINAME -tenant $Userobj.tenantid -user $request.headers.'x-ms-client-principal' -message "Added $member to $($userobj.groupName) group" -Sev "Info"
             $body = $results.add("Success. $member has been added")
         }
         catch {
-            $body = $results.add("Failed to add member $member to $($userobj.Groupid): $($_.Exception.Message)")
+            $body = $results.add("Failed to add member $member to $($userobj.groupName): $($_.Exception.Message)")
         }
     }
 
@@ -46,7 +46,7 @@ if ($AddContacts) {
             if ($userobj.groupType -eq "Distribution list" -or $userobj.groupType -eq "Mail-Enabled Security") {
                 $Params = @{ Identity = $userobj.groupid; Member = $member; BypassSecurityGroupManagerCheck = $true }
                 New-ExoRequest -tenantid $Userobj.tenantid -cmdlet "Add-DistributionGroupMember" -cmdParams $params  -UseSystemMailbox $true
-                Write-LogMessage -API $APINAME -tenant $Userobj.tenantid -user $request.headers.'x-ms-client-principal' -message "Added $member to $($userobj.groupid) group" -Sev "Info"
+                Write-LogMessage -API $APINAME -tenant $Userobj.tenantid -user $request.headers.'x-ms-client-principal' -message "Added $member to $($userobj.groupName) group" -Sev "Info"
                 $body = $results.add("Success. $member has been added")
             }
             else {
@@ -55,7 +55,7 @@ if ($AddContacts) {
             }
         }
         catch {
-            $body = $results.add("Failed to add member $member to $($userobj.Groupid): $($_.Exception.Message)")
+            $body = $results.add("Failed to add member $member to $($userobj.groupName): $($_.Exception.Message)")
         }
     }
 
@@ -74,14 +74,14 @@ try {
                 $MemberInfo = (New-GraphGetRequest -uri "https://graph.microsoft.com/beta/users/$($_)" -tenantid $Userobj.tenantid)
                 New-GraphPostRequest -uri "https://graph.microsoft.com/beta/groups/$($userobj.groupid)/members/$($MemberInfo.id)/`$ref" -tenantid $Userobj.tenantid -type DELETE 
             }
-            Write-LogMessage -API $APINAME -tenant $Userobj.tenantid -user $request.headers.'x-ms-client-principal'  -message "Removed $member from $($userobj.groupid) group" -Sev "Info"
+            Write-LogMessage -API $APINAME -tenant $Userobj.tenantid -user $request.headers.'x-ms-client-principal'  -message "Removed $member from $($userobj.groupName) group" -Sev "Info"
             $body = $results.add("Success. Member $member has been removed")
         }  
     }
 }
 catch {
     Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $Userobj.tenantid -message "Add member API failed. $($_.Exception.Message)" -Sev "Error"
-    $body = $results.add("Could not remove $RemoveMembers from $($userobj.Groupid). $($_.Exception.Message)")
+    $body = $results.add("Could not remove $RemoveMembers from $($userobj.groupName). $($_.Exception.Message)")
 }
 
 $AddOwners = $userobj.Addowner.value
@@ -92,11 +92,11 @@ try {
                 $ID = "https://graph.microsoft.com/beta/users/" + (New-GraphGetRequest -uri "https://graph.microsoft.com/beta/users/$($_)" -tenantid $Userobj.tenantid).id
                 Write-Host $ID
                 $AddOwner = New-GraphPostRequest -uri "https://graph.microsoft.com/beta/groups/$($userobj.groupid)/owners/`$ref" -tenantid $Userobj.tenantid -type POST -body ('{"@odata.id": "' + $ID + '"}')
-                Write-LogMessage -API $APINAME -tenant $Userobj.tenantid -user $request.headers.'x-ms-client-principal'  -message "Added owner $_ to $($userobj.groupid) group" -Sev "Info"
+                Write-LogMessage -API $APINAME -tenant $Userobj.tenantid -user $request.headers.'x-ms-client-principal'  -message "Added owner $_ to $($userobj.groupName) group" -Sev "Info"
                 $body = $results.add("Success. $_ has been added")
             }
             catch {
-                $body = $results.add("Failed to add owner $_ to $($userobj.Groupid): $($_.Exception.Message)")
+                $body = $results.add("Failed to add owner $_ to $($userobj.groupName): $($_.Exception.Message)")
             }
         }
 
@@ -115,17 +115,17 @@ try {
                 $MemberInfo = (New-GraphGetRequest -uri "https://graph.microsoft.com/beta/users/$($_)" -tenantid $Userobj.tenantid)
                 New-GraphPostRequest -uri "https://graph.microsoft.com/beta/groups/$($userobj.groupid)/owners/$($MemberInfo.id)/`$ref" -tenantid $Userobj.tenantid -type DELETE 
                 Write-LogMessage -API $APINAME -tenant $Userobj.tenantid -user $request.headers.'x-ms-client-principal'  -message "Removed $($MemberInfo.UserPrincipalname) from $($userobj.displayname) group" -Sev "Info"
-                $body = $results.add("Success. Member $_ has been removed from $($userobj.Groupid)")
+                $body = $results.add("Success. Member $_ has been removed from $($userobj.groupName)")
             }
             catch {
-                $body = $results.add("Failed to remove $_ from $($userobj.Groupid): $($_.Exception.Message)")
+                $body = $results.add("Failed to remove $_ from $($userobj.groupName): $($_.Exception.Message)")
             }
         }  
     }
 }
 catch {
     Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $Userobj.tenantid -message "Add member API failed. $($_.Exception.Message)" -Sev "Error"
-    $body = $results.add("Could not remove $RemoveMembers from $($userobj.Groupid). $($_.Exception.Message)")
+    $body = $results.add("Could not remove $RemoveMembers from $($userobj.groupName). $($_.Exception.Message)")
 }
 
 if ($userobj.allowExternal -eq 'true') {
@@ -138,13 +138,13 @@ if ($userobj.allowExternal -eq 'true') {
             $Params = @{ Identity = $userobj.groupid; RequireSenderAuthenticationEnabled = $false }
             New-ExoRequest -tenantid $Userobj.tenantid -cmdlet "Set-UnifiedGroup" -cmdParams $params
         }
-        $body = $results.add("Allowed external senders to send to $($userobj.Groupid).")
-        Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $Userobj.tenantid -message "Allowed external senders to send to $($userobj.Groupid)" -Sev "Error"
+        $body = $results.add("Allowed external senders to send to $($userobj.groupName).")
+        Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $Userobj.tenantid -message "Allowed external senders to send to $($userobj.groupName)" -Sev "Error"
 
     }
     catch {
-        $body = $results.add("Failed to allow external senders to send to $($userobj.Groupid).")
-        Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $Userobj.tenantid -message "Failed to allow external senders for $($userobj.Groupid). $($_.Exception.Message)" -Sev "Error"
+        $body = $results.add("Failed to allow external senders to send to $($userobj.groupName).")
+        Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $Userobj.tenantid -message "Failed to allow external senders for $($userobj.groupName). $($_.Exception.Message)" -Sev "Error"
     }
 
 }
