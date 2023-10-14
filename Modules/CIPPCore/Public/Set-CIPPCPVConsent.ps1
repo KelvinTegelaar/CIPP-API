@@ -11,14 +11,6 @@ function Set-CIPPCPVConsent {
     $TenantFilter = $Tenant.customerId
 
     try {
-        $DeleteOldPermissions = New-GraphpostRequest -Type DELETE -noauthcheck $true -uri "https://api.partnercenter.microsoft.com/v1/customers/$($TenantFilter)/applicationconsents/$($env:ApplicationID)" -scope "https://api.partnercenter.microsoft.com/.default" -tenantid $env:TenantID
-
-    }
-    catch {
-        "There is no existing CPV Application Consent for $($TenantName). Adding a new application."
-    }
-
-    try {
         $AppBody = @"
 {
   "ApplicationGrants":[ {"EnterpriseApplicationId":"00000003-0000-0000-c000-000000000000","Scope":"Application.ReadWrite.all,DelegatedPermissionGrant.ReadWrite.All,Directory.ReadWrite.All"}],
@@ -41,6 +33,9 @@ function Set-CIPPCPVConsent {
 
     } 
     catch {
+        $ErrorMessage = $_.Exception.Message
+        if ($ErrorMessage -like '*409 (Conflict)*') { return @("We've already added our Service Principal to $($TenantName)") }
+
         Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME  -message "Could not add our Service Principal to the client tenant $($TenantName): $($_.Exception.message)" -Sev "Error" -tenant $($Tenantfilter)
         return @("Could not add our Service Principal to the client tenant $($TenantName): $($_.Exception.message)")
     }
