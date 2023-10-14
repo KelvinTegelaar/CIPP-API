@@ -49,7 +49,7 @@ try {
                       }
 "@
         New-GraphPostRequest -uri 'https://graph.microsoft.com/v1.0/me/sendMail' -tenantid $env:TenantID -type POST -body ($JSONBody)
-        Write-LogMessage -API 'Alerts' -message "Sent alerts to: $($Config.email)" -tenant $Tenant -sev info
+        Write-LogMessage -API 'Alerts' -message "Sent alerts to: $($JSONRecipients)" -tenant $Tenant -sev info
       }
     }
   }
@@ -121,7 +121,7 @@ try {
         Invoke-RestMethod -Uri $config.webhook -Method POST -ContentType 'Application/json' -Body $JSONBody
       }
     }
-    Write-LogMessage -API 'Alerts' -tenant $Tenant -message "Sent Webhook to $($config.webhook) " -tenant $Tenant -sev info
+    Write-LogMessage -API 'Alerts' -tenant $Tenant -message "Sent Webhook to $($config.webhook) " -sev info
   }
 
   $UpdateLogs = $CurrentLog | ForEach-Object { 
