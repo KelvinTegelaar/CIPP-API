@@ -1,4 +1,8 @@
 function Push-ListGraphRequestQueue {
+    <#
+    .FUNCTIONALITY
+    Entrypoint
+    #>
     # Input bindings are passed in via param block.
     param($QueueItem, $TriggerMetadata)
 
@@ -26,7 +30,7 @@ function Push-ListGraphRequestQueue {
     Get-AzDataTableEntity @Table -Filter $Filter | Remove-AzDataTableEntity @Table
 
     $GraphRequestParams = @{
-        Tenant                      = $QueueItem.Tenant
+        TenantFilter                = $QueueItem.TenantFilter
         Endpoint                    = $QueueItem.Endpoint
         Parameters                  = $QueueItem.Parameters
         NoPagination                = $QueueItem.NoPagination
