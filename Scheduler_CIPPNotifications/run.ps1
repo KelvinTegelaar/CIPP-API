@@ -121,7 +121,7 @@ try {
         Invoke-RestMethod -Uri $config.webhook -Method POST -ContentType 'Application/json' -Body $JSONBody
       }
     }
-    Write-LogMessage -API 'Alerts' -tenant $Tenant -message "Sent Webhook to $($config.webhook) " -sev info
+    Write-LogMessage -API 'Alerts' -tenant $Tenant -message "Sent Webhook to $($config.webhook)" -sev Debug
   }
 
   $UpdateLogs = $CurrentLog | ForEach-Object { 
