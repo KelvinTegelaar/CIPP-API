@@ -235,6 +235,7 @@ try {
 
             }
         }
+
         { $_.'AppSecretExpiry' -eq $true } {
             try {
                 $Filter = "RowKey eq 'AppSecretExpiry' and PartitionKey eq '{0}'" -f $Tenant.tenantid
