@@ -1,11 +1,8 @@
 version: "1"
 rules:
   - base: main
-    upstream: KelvinTegelaar:main
+    upstream: KelvinTegelaar:master
     mergeMethod: merge
   - base: dev
     upstream: KelvinTegelaar:dev
     mergeMethod: none
-  - base: website
-    upstream: KelvinTegelaar:website
-    mergeMethod: merge
