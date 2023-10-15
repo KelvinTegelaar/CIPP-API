@@ -155,7 +155,6 @@ if ($config.sendtoIntegration) {
         Add-AzDataTableEntity @Table -Entity $UpdateLogs -Force
       }
     }
-    Write-LogMessage -API 'Alerts' -tenant $Tenant -message "alerts to PSA" -sev info
   }
   catch {
     Write-Host "Could not send alerts to ticketing system: $($_.Exception.message)"
