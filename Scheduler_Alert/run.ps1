@@ -11,6 +11,9 @@ try {
     }
     $Alerts = Get-AzDataTableEntity @Table -Filter $Filter
 
+    $ConfigFilter = "RowKey eq 'CippNotifications' and PartitionKey eq 'CippNotifications'"
+    $Config = [pscustomobject](Get-AzDataTableEntity @Table -Filter $ConfigFilter)
+    
     $DeltaTable = Get-CIPPTable -Table DeltaCompare
     $LastRunTable = Get-CIPPTable -Table AlertLastRun
 
@@ -232,6 +235,7 @@ try {
 
             }
         }
+
         { $_.'AppSecretExpiry' -eq $true } {
             try {
                 $Filter = "RowKey eq 'AppSecretExpiry' and PartitionKey eq '{0}'" -f $Tenant.tenantid
@@ -378,7 +382,12 @@ try {
 
     $ShippedAlerts | ForEach-Object {
         if ($_ -notin $currentlog.Message) {
-            Write-LogMessage -message $_ -API 'Alerts' -tenant $tenant.tenant -sev Alert
+            if ($Config.includeTenantId) {
+                Write-LogMessage -message $_ -API 'Alerts' -tenant $tenant.tenant -sev Alert -tenantid $Tenant.tenantid
+            }
+            else {
+                Write-LogMessage -message $_ -API 'Alerts' -tenant $tenant.tenant -sev Alert
+            }
         }
     }
     [PSCustomObject]@{
