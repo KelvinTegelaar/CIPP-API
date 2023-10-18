@@ -7,20 +7,45 @@ $Table = Get-CIPPTable -TableName 'ScheduledTasks'
 
 $propertiesToCheck = @('Webhook', 'Email', 'PSA')
 $PostExecution = ($propertiesToCheck | Where-Object { $task.PostExecution.$_ -eq $true }) -join ','
-$Parameters = ($task.Parameters | ConvertTo-Json -Compress)
+
+$Parameters = [System.Collections.Hashtable]@{}
+foreach ($Key in $task.Parameters.Keys) {
+    $Param = $task.Parameters.$Key
+    if ($Param.Key) {
+        $ht = @{}
+        foreach ($p in $Param) {
+            Write-Host $p.Key
+            $ht[$p.Key] = $p.Value
+        }
+        $Parameters[$Key] = [PSCustomObject]$ht
+    } else {
+        $Parameters[$Key] = $Param
+    }
+}
+
+$Parameters = ($Parameters | ConvertTo-Json -Compress)
+
+$AdditionalProperties = [System.Collections.Hashtable]@{}
+foreach ($Prop in $task.AdditionalProperties) {
+    $AdditionalProperties[$Prop.Key] = $Prop.Value
+}
+$AdditionalProperties = ([PSCustomObject]$AdditionalProperties | ConvertTo-Json -Compress)
+
+
 if ($Parameters -eq 'null') { $Parameters = '' }
 $entity = @{
-    PartitionKey  = [string]'ScheduledTask'
-    TaskState     = [string]'Planned'
-    RowKey        = [string]"$(New-Guid)"
-    Tenant        = [string]$task.TenantFilter
-    Name          = [string]$task.Name
-    Command       = [string]$task.Command.value
-    Parameters    = [string]$Parameters
-    ScheduledTime = [string]$task.ScheduledTime
-    Recurrence    = [string]$task.Recurrence.value
-    PostExecution = [string]$PostExecution
-    Results       = 'Planned'
+    PartitionKey         = [string]'ScheduledTask'
+    TaskState            = [string]'Planned'
+    RowKey               = [string]"$(New-Guid)"
+    Tenant               = [string]$task.TenantFilter
+    Name                 = [string]$task.Name
+    Command              = [string]$task.Command.value
+    Parameters           = [string]$Parameters
+    ScheduledTime        = [string]$task.ScheduledTime
+    Recurrence           = [string]$task.Recurrence.value
+    PostExecution        = [string]$PostExecution
+    AdditionalProperties = [string]$AdditionalProperties
+    Results              = 'Planned'
 }
 Write-Host "entity: $($entity | ConvertTo-Json)"
 Add-AzDataTableEntity @Table -Entity $entity

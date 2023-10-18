@@ -12,7 +12,7 @@ function Get-CIPPAuthentication {
         $ENV:tenantid = (Get-AzKeyVaultSecret -VaultName $ENV:WEBSITE_DEPLOYMENT_ID -Name "TenantId" -AsPlainText)
         $ENV:refreshtoken = (Get-AzKeyVaultSecret -VaultName $ENV:WEBSITE_DEPLOYMENT_ID -Name "RefreshToken" -AsPlainText)
         $ENV:SetFromProfile = $true
-        Write-LogMessage -message "Reloaded authentication data from KeyVault" -Sev 'info' -API "CIPP Authentication"
+        Write-LogMessage -message "Reloaded authentication data from KeyVault" -Sev 'debug' -API "CIPP Authentication"
 
         return $true 
     }

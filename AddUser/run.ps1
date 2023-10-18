@@ -36,6 +36,14 @@ try {
         }
     } 
     if ($userobj.businessPhone) { $bodytoShip | Add-Member -NotePropertyName businessPhones -NotePropertyValue @($userobj.businessPhone) }
+    if ($userobj.addedAttributes) {
+        Write-Host "Found added attribute"
+        Write-Host "Added attributes: $($userobj.addedAttributes | ConvertTo-Json)"
+        $userobj.addedAttributes.getenumerator() | ForEach-Object {
+            $results.add("Added property $($_.Key) with value $($_.value)")
+            $bodytoShip | Add-Member -NotePropertyName $_.Key -NotePropertyValue $_.Value
+        }
+    }
     $bodyToShip = ConvertTo-Json -Depth 10 -InputObject $BodyToship -Compress
     $GraphRequest = New-GraphPostRequest -uri "https://graph.microsoft.com/beta/users" -tenantid $Userobj.tenantid -type POST -body $BodyToship  -verbose
     Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $($userobj.tenantid)  -message "Created user $($userobj.displayname) with id $($GraphRequest.id) " -Sev "Info"

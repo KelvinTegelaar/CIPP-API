@@ -1,15 +1,62 @@
 function Get-GraphRequestList {
+    <#
+    .SYNOPSIS
+    Execute a Graph query
+
+    .PARAMETER TenantFilter
+    Tenant to query (or AllTenants)
+
+    .PARAMETER Endpoint
+    Graph API endpoint
+
+    .PARAMETER Parameters
+    API Parameters
+
+    .PARAMETER QueueId
+    Queue Id
+
+    .PARAMETER CippLink
+    Reference link for queueing
+
+    .PARAMETER Version
+    API Version - v1.0 or beta
+
+    .PARAMETER QueueNameOverride
+    Queue name to set
+
+    .PARAMETER SkipCache
+    Skip Caching
+
+    .PARAMETER ClearCache
+    Clear cached results
+
+    .PARAMETER NoPagination
+    Disable pagination
+
+    .PARAMETER CountOnly
+    Only return count of results
+
+    .PARAMETER NoAuthCheck
+    Skip auth check
+
+    .PARAMETER ReverseTenantLookup
+    Perform reverse tenant lookup
+
+    .PARAMETER ReverseTenantLookupProperty
+    Property to perform reverse tenant lookup
+
+    #>
     [CmdletBinding()]
     Param(
-        $Tenant = $env:TenantId,
+        [string]$TenantFilter = $env:TenantId,
         [Parameter(Mandatory = $true)]
-        $Endpoint,
-        $Parameters = @(),
-        $QueueId,
-        $CippLink,
+        [string]$Endpoint,
+        [hashtable]$Parameters = @{},
+        [string]$QueueId,
+        [string]$CippLink,
         [ValidateSet('v1.0', 'beta')]
-        $Version = 'beta',
-        $QueueNameOverride,
+        [string]$Version = 'beta',
+        [string]$QueueNameOverride,
         [switch]$SkipCache,
         [switch]$ClearCache,
         [switch]$NoPagination,
@@ -46,12 +93,12 @@ function Get-GraphRequestList {
         $Filter = "QueueId eq '{0}'" -f $QueueId
         $Rows = Get-AzDataTableEntity @Table -Filter $Filter
         $Type = 'Queue'
-    } elseif ($Tenant -eq 'AllTenants' -or (!$SkipCache.IsPresent -and !$ClearCache.IsPresent -and !$CountOnly.IsPresent)) {
+    } elseif ($TenantFilter -eq 'AllTenants' -or (!$SkipCache.IsPresent -and !$ClearCache.IsPresent -and !$CountOnly.IsPresent)) {
         $Table = Get-CIPPTable -TableName $TableName
-        if ($Tenant -eq 'AllTenants') {
+        if ($TenantFilter -eq 'AllTenants') {
             $Filter = "PartitionKey eq '{0}' and QueueType eq 'AllTenants'" -f $PartitionKey
         } else {
-            $Filter = "PartitionKey eq '{0}' and Tenant eq '{1}'" -f $PartitionKey, $Tenant
+            $Filter = "PartitionKey eq '{0}' and Tenant eq '{1}'" -f $PartitionKey, $TenantFilter
         }
         #Write-Host $Filter
         $Rows = Get-AzDataTableEntity @Table -Filter $Filter | Where-Object { $_.Timestamp.DateTime -gt (Get-Date).ToUniversalTime().AddHours(-1) }
@@ -62,17 +109,17 @@ function Get-GraphRequestList {
     }
     Write-Host "Cached: $(($Rows | Measure-Object).Count) rows (Type: $($Type))"
 
-    $QueueReference = '{0}-{1}' -f $Tenant, $PartitionKey
+    $QueueReference = '{0}-{1}' -f $TenantFilter, $PartitionKey
     $RunningQueue = Get-CippQueue | Where-Object { $_.Reference -eq $QueueReference -and $_.Status -ne 'Completed' -and $_.Status -ne 'Failed' }
 
     if (!$Rows) {
-        switch ($Tenant) {
+        switch ($TenantFilter) {
             'AllTenants' {
                 if ($SkipCache) {
                     Get-Tenants -IncludeErrors | ForEach-Object -Parallel {
                         Import-Module .\GraphHelper.psm1
                         $GraphRequestParams = @{
-                            Tenant                      = $_.defaultDomainName
+                            TenantFilter                = $_.defaultDomainName
                             Endpoint                    = $using:Endpoint
                             Parameters                  = $using:Parameters
                             NoPagination                = $using:NoPagination.IsPresent
@@ -95,8 +142,9 @@ function Get-GraphRequestList {
                         Write-Host 'Queue currently running'
                         Write-Host ($RunningQueue | ConvertTo-Json)
                         [PSCustomObject]@{
-                            Tenant  = 'Data still processing, please wait'
-                            QueueId = $RunningQueue.RowKey
+                            QueueMessage = 'Data still processing, please wait'
+                            QueueId      = $RunningQueue.RowKey
+                            Queued       = $true
                         }
                     } else {
                         $Queue = New-CippQueueEntry -Name "$QueueName (All Tenants)" -Link $CippLink -Reference $QueueReference
@@ -108,9 +156,9 @@ function Get-GraphRequestList {
                         Write-Host 'Pushing output bindings'
                         try {
                             Get-Tenants -IncludeErrors | ForEach-Object {
-                                $Tenant = $_.defaultDomainName
+                                $TenantFilter = $_.defaultDomainName
                                 $QueueTenant = @{
-                                    Tenant                      = $Tenant
+                                    TenantFilter                = $TenantFilter
                                     Endpoint                    = $Endpoint
                                     QueueId                     = $Queue.RowKey
                                     QueueName                   = $QueueName
@@ -134,7 +182,7 @@ function Get-GraphRequestList {
             default {
                 $GraphRequest = @{
                     uri           = $GraphQuery.ToString()
-                    tenantid      = $Tenant
+                    tenantid      = $TenantFilter
                     ComplexFilter = $true
                 }
 
@@ -169,7 +217,7 @@ function Get-GraphRequestList {
                             } else {
                                 $Queue = New-CippQueueEntry -Name $QueueName -Link $CippLink -Reference $QueueReference
                                 $QueueTenant = @{
-                                    Tenant                      = $Tenant
+                                    TenantFilter                = $TenantFilter
                                     Endpoint                    = $Endpoint
                                     QueueId                     = $Queue.RowKey
                                     QueueName                   = $QueueName
@@ -183,7 +231,7 @@ function Get-GraphRequestList {
 
                                 Push-OutputBinding -Name QueueItem -Value $QueueTenant
                                 [PSCustomObject]@{
-                                    QueueMessage = ('Loading {0} rows for {1}. Please check back after the job completes' -f $Count, $Tenant)
+                                    QueueMessage = ('Loading {0} rows for {1}. Please check back after the job completes' -f $Count, $TenantFilter)
                                     QueueId      = $Queue.RowKey
                                     Queued       = $true
                                 }
@@ -192,7 +240,7 @@ function Get-GraphRequestList {
                     }
 
                     if (!$QueueThresholdExceeded) {
-                        $GraphRequestResults = New-GraphGetRequest @GraphRequest -ErrorAction Stop | Select-Object *, @{l = 'Tenant'; e = { $Tenant } }, @{l = 'CippStatus'; e = { 'Good' } }
+                        $GraphRequestResults = New-GraphGetRequest @GraphRequest -ErrorAction Stop | Select-Object *, @{l = 'Tenant'; e = { $TenantFilter } }, @{l = 'CippStatus'; e = { 'Good' } }
                         if ($ReverseTenantLookup -and $GraphRequestResults) {
                             $TenantInfo = $GraphRequestResults.$ReverseTenantLookupProperty | Sort-Object -Unique | ForEach-Object {
                                 New-GraphGetRequest -uri "https://graph.microsoft.com/beta/tenantRelationships/findTenantInformationByTenantId(tenantId='$_')" -noauthcheck $true -asApp:$true -tenant $env:TenantId
