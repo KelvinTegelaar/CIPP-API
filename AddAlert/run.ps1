@@ -11,7 +11,8 @@ $Results = foreach ($Tenant in $tenants) {
     try {
         $TenantID = if ($tenant -ne 'AllTenants') {
             (get-tenants | Where-Object -Property defaultDomainName -EQ $Tenant).customerId
-        } else {
+        }
+        else {
             'AllTenants'
         }
         if ($Request.body.SetAlerts) {
@@ -60,7 +61,8 @@ $Results = foreach ($Tenant in $tenants) {
                     Push-OutputBinding -Name Subscription -Value $Params
                 }
             }
-        } else {
+        }
+        else {
             foreach ($eventType in $Request.body.EventTypes.value) {
                 $params = @{
                     TenantFilter     = $tenant
@@ -76,7 +78,8 @@ $Results = foreach ($Tenant in $tenants) {
         }
         "Successfully added Alert for $($Tenant) to queue."
         Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $tenant -message "Successfully added Alert for $($Tenant) to queue." -Sev 'Info'
-    } catch {
+    }
+    catch {
         Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $tenant -message "Failed to add Alert for for $($Tenant) to queue" -Sev 'Error'
         "Failed to add Alert for for $($Tenant) to queue $($_.Exception.message)"
     }
