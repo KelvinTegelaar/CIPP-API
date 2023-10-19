@@ -32,12 +32,13 @@ function Get-NormalizedError {
         '*AppLifecycle_2210*' { 'Failed to call Intune APIs: Does the tenant have a license available?' }
         '*One or more added object references already exist for the following modified properties:*' { 'This user is already a member of this group.' }
         '*Microsoft.Exchange.Management.Tasks.MemberAlreadyExistsException*' { 'This user is already a member of this group.' }
+        '*The property value exceeds the maximum allowed size (64KB)*' { 'One of the values exceeds the maximum allowed size (64KB).' }
         Default { $message }
 
     }
 }
 
-function Get-GraphToken($tenantid, $scope, $AsApp, $AppID, $refreshToken, $ReturnRefresh) {
+function Get-GraphToken($tenantid, $scope, $AsApp, $AppID, $refreshToken, $ReturnRefresh, $SkipCache) {
     if (!$scope) { $scope = 'https://graph.microsoft.com/.default' }
     if (!$env:SetFromProfile) { $CIPPAuth = Get-CIPPAuthentication; Write-Host 'Could not get Refreshtoken from environment variable. Reloading token.' }
     $AuthBody = @{
@@ -70,7 +71,7 @@ function Get-GraphToken($tenantid, $scope, $AsApp, $AppID, $refreshToken, $Retur
     $TokenKey = '{0}-{1}-{2}' -f $tenantid, $scope, $asApp
 
     try {
-        if ($script:AccessTokens.$TokenKey -and [int](Get-Date -UFormat %s -Millisecond 0) -lt $script:AccessTokens.$TokenKey.expires_on) {
+        if ($script:AccessTokens.$TokenKey -and [int](Get-Date -UFormat %s -Millisecond 0) -lt $script:AccessTokens.$TokenKey.expires_on -and $SkipCache -ne $true) {
             Write-Host 'Graph: cached token'
             $AccessToken = $script:AccessTokens.$TokenKey
         }
@@ -116,7 +117,7 @@ function Get-GraphToken($tenantid, $scope, $AsApp, $AppID, $refreshToken, $Retur
     }
 }
 
-function Write-LogMessage ($message, $tenant = 'None', $API = 'None', $user, $sev) {
+function Write-LogMessage ($message, $tenant = 'None', $API = 'None', $tenantId = $null, $user, $sev) {
     try {
         $username = ([System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($user)) | ConvertFrom-Json).userDetails
     }
@@ -143,6 +144,12 @@ function Write-LogMessage ($message, $tenant = 'None', $API = 'None', $user, $se
         'PartitionKey' = $PartitionKey
         'RowKey'       = ([guid]::NewGuid()).ToString()
     }
+
+
+    if ($tenantId) {
+        $TableRow.Add('TenantID', [string]$tenantId)
+    }
+    
     $Table.Entity = $TableRow
     Add-AzDataTableEntity @Table | Out-Null
 }
@@ -155,6 +162,7 @@ function New-GraphGetRequest {
         $AsApp,
         $noPagination,
         $NoAuthCheck,
+        $skipTokenCache,
         [switch]$ComplexFilter,
         [switch]$CountOnly
     )
@@ -165,7 +173,7 @@ function New-GraphGetRequest {
             $headers = @{ Authorization = "Bearer $($AccessToken.access_token)" }
         }
         else {
-            $headers = Get-GraphToken -tenantid $tenantid -scope $scope -AsApp $asapp
+            $headers = Get-GraphToken -tenantid $tenantid -scope $scope -AsApp $asapp -SkipCache $skipTokenCache
         }
 
         if ($ComplexFilter) {
@@ -218,9 +226,9 @@ function New-GraphGetRequest {
     }
 }
 
-function New-GraphPOSTRequest ($uri, $tenantid, $body, $type, $scope, $AsApp, $NoAuthCheck) {
+function New-GraphPOSTRequest ($uri, $tenantid, $body, $type, $scope, $AsApp, $NoAuthCheck, $skipTokenCache) {
     if ($NoAuthCheck -or (Get-AuthorisedRequest -Uri $uri -TenantID $tenantid)) {
-        $headers = Get-GraphToken -tenantid $tenantid -scope $scope -AsApp $asapp
+        $headers = Get-GraphToken -tenantid $tenantid -scope $scope -AsApp $asapp -SkipCache $skipTokenCache
         Write-Verbose "Using $($uri) as url"
         if (!$type) {
             $type = 'POST'
