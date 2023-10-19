@@ -38,10 +38,10 @@ try {
         }
 
         { $_."AccessNoAutomap" -ne "" } { 
-            $request.body.AccessNoAutomap | ForEach-Object { Set-CIPPMailboxAccess -tenantFilter $tenantFilter -userid $username -AccessUser $_.value -Automap $true -AccessRights @("FullAccess") -ExecutingUser $request.headers.'x-ms-client-principal' -APIName "ExecOffboardUser" }
+            $request.body.AccessNoAutomap | ForEach-Object { Set-CIPPMailboxAccess -tenantFilter $tenantFilter -userid $username -AccessUser $_.value -Automap $false -AccessRights @("FullAccess") -ExecutingUser $request.headers.'x-ms-client-principal' -APIName "ExecOffboardUser" }
         }
         { $_."AccessAutomap" -ne "" } { 
-            $request.body.AccessNoAutomap | ForEach-Object { Set-CIPPMailboxAccess -tenantFilter $tenantFilter -userid $username -AccessUser $_.value -Automap $false -AccessRights @("FullAccess") -ExecutingUser $request.headers.'x-ms-client-principal' -APIName "ExecOffboardUser" }
+            $request.body.AccessAutomap | ForEach-Object { Set-CIPPMailboxAccess -tenantFilter $tenantFilter -userid $username -AccessUser $_.value -Automap $true -AccessRights @("FullAccess") -ExecutingUser $request.headers.'x-ms-client-principal' -APIName "ExecOffboardUser" }
         }
     
         { $_."OOO" -ne "" } { 
