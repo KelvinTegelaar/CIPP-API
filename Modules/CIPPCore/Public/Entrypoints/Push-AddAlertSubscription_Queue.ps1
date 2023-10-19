@@ -1,4 +1,8 @@
 function Push-AddAlertSubscription_Queue {
+    <#
+    .FUNCTIONALITY
+    Entrypoint
+    #>
     # Input bindings are passed in via param block.
     param($QueueItem, $TriggerMetadata)
 
