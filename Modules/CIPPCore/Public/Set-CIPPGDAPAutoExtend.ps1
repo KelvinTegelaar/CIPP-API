@@ -11,7 +11,8 @@ function Set-CIPPGDAPAutoExtend {
         $Relationships = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/tenantRelationships/delegatedAdminRelationships" -tenantid $env:tenantid -NoAuthCheck $true
         foreach ($Relation in $Relationships) {
             try {
-                $GraphRequest = New-GraphPostRequest -uri "https://graph.microsoft.com/beta/tenantRelationships/delegatedAdminRelationships/$($Relation.id)" -tenantid $env:tenantid -type PATCH -body '{"autoExtendDuration":"P180D"}' -Verbose -NoAuthCheck $true
+                $AddedHeader = @{"If-Match" = $Relation."@odata.etag" }
+                $GraphRequest = New-GraphPostRequest -uri "https://graph.microsoft.com/beta/tenantRelationships/delegatedAdminRelationships/$($Relation.id)" -tenantid $env:tenantid -type PATCH -body '{"autoExtendDuration":"P180D"}' -Verbose -NoAuthCheck $true -AddedHeaders $AddedHeader
                 write-LogMessage -user $ExecutingUser -API $APIName -message "Successfully set auto renew for $($Relation.id)" -Sev "Info"
                 "Successfully set auto renew for $($Relation.id)" 
     
