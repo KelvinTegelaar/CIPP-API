@@ -13,7 +13,9 @@ $status = if ($Setting.enable -and $Setting.disable) {
 elseif ($setting.enable) { "enabled" } else { "disabled" }
 Write-Output $status
 try {
-    $body = '{"registrationEnforcement":{"authenticationMethodsRegistrationCampaign":{"snoozeDurationInDays":0,"state":"' + $status + '","excludeTargets":[],"includeTargets":[{"id":"all_users","targetType":"group","targetedAuthenticationMethod":"microsoftAuthenticator","displayName":"All users"}]}}}'
+    $Body = (New-GraphGetRequest -tenantid $tenant -Uri "https://graph.microsoft.com/beta/policies/authenticationMethodsPolicy")
+    $body.registrationEnforcement.authenticationMethodsRegistrationCampaign.state = $status
+    $body = ConvertTo-Json -Depth 10 -InputObject ($body | Select-Object registrationEnforcement)
     New-GraphPostRequest -tenantid $tenant -Uri "https://graph.microsoft.com/beta/policies/authenticationMethodsPolicy" -Type patch -Body $body -ContentType "application/json"
     Write-LogMessage -API "Standards" -tenant $tenant -message  "$status Authenticator App Nudge" -sev Info
 }
