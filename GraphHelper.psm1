@@ -226,9 +226,14 @@ function New-GraphGetRequest {
     }
 }
 
-function New-GraphPOSTRequest ($uri, $tenantid, $body, $type, $scope, $AsApp, $NoAuthCheck, $skipTokenCache) {
+function New-GraphPOSTRequest ($uri, $tenantid, $body, $type, $scope, $AsApp, $NoAuthCheck, $skipTokenCache, $AddedHeaders) {
     if ($NoAuthCheck -or (Get-AuthorisedRequest -Uri $uri -TenantID $tenantid)) {
         $headers = Get-GraphToken -tenantid $tenantid -scope $scope -AsApp $asapp -SkipCache $skipTokenCache
+        if ($AddedHeaders) {
+            foreach ($header in $AddedHeaders.getenumerator()) {
+                $headers.Add($header.Key, $header.Value)
+            }
+        }
         Write-Verbose "Using $($uri) as url"
         if (!$type) {
             $type = 'POST'
