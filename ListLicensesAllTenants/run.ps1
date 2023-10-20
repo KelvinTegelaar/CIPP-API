@@ -10,17 +10,20 @@ $RawGraphRequest = Get-Tenants | ForEach-Object -Parallel {
     Import-Module '.\Modules\AzBobbyTables'
     Import-Module '.\Modules\CIPPCore'
     try {
+        Write-Host "Processing $domainName"
         Get-CIPPLicenseOverview -TenantFilter $domainName
     }
     catch {
-       [pscustomobject]@{
+        [pscustomobject]@{
             Tenant         = [string]$domainName
-            License        = "Could not connect to client"
+            License        = "Could not connect to client: $($_.Exception.Message)"
             'PartitionKey' = 'License'
-            'RowKey'       = "$($domainName) - Could not connect to client"
+            'RowKey'       = "$($domainName)-$(New-Guid)"
         } 
     }
 }
 
 $Table = Get-CIPPTable -TableName cachelicenses
-Add-AzDataTableEntity @Table -Entity $RawGraphRequest -Force | Out-Null
+foreach ($GraphRequest in $RawGraphRequest) {
+    Add-AzDataTableEntity @Table -Entity $GraphRequest -Force | Out-Null
+}

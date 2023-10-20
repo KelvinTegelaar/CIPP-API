@@ -27,16 +27,16 @@ $Templates = Get-ChildItem "Config\*.CATemplate.json" | ForEach-Object {
 $Table = Get-CippTable -tablename 'templates'
 $Filter = "PartitionKey eq 'CATemplate'" 
 $Templates = (Get-AzDataTableEntity @Table -Filter $Filter) | ForEach-Object {
-    $data = $_.JSON | ConvertFrom-Json 
-    $data | Add-Member -NotePropertyName "GUID" -NotePropertyValue $_.GUID
+    $data = $_.JSON | ConvertFrom-Json -Depth 100
+    $data | Add-Member -NotePropertyName "GUID" -NotePropertyValue $_.GUID -Force
     $data 
 } | Sort-Object -Property displayName
 
 if ($Request.query.ID) { $Templates = $Templates | Where-Object -Property GUID -EQ $Request.query.id }
 
-
+$Templates = ConvertTo-Json -InputObject @($Templates) -Depth 100
 # Associate values to output bindings by calling 'Push-OutputBinding'.
 Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
         StatusCode = [HttpStatusCode]::OK
-        Body       = @($Templates)
+        Body       = $Templates
     })

@@ -13,8 +13,7 @@ try {
     $ValidResolvers = @('Google', 'CloudFlare', 'Quad9')
     if ($ValidResolvers -contains $Config.Resolver) {
         $Resolver = $Config.Resolver
-    }
-    else {
+    } else {
         $Resolver = 'Google'
         $Config = @{
             PartitionKey = 'Domains'
@@ -23,8 +22,7 @@ try {
         }
         Add-AzDataTableEntity @ConfigTable -Entity $Config -Force
     }
-}
-catch {
+} catch {
     $Resolver = 'Google'
 }
 
@@ -46,6 +44,9 @@ try {
             $Filter = "RowKey eq '{0}'" -f $Request.Query.Domain
             $DomainInfo = Get-AzDataTableEntity @DomainTable -Filter $Filter
             switch ($Request.Query.Action) {
+                'ListDomainInfo' {
+                    $Body = $DomainInfo
+                }
                 'GetDkimSelectors' {
                     $Body = ($DomainInfo.DkimSelectors | ConvertFrom-Json) -join ','
                 }
@@ -73,13 +74,12 @@ try {
                     }
                     if ($Request.Query.Selector) {
                         $DkimQuery.Selectors = ($Request.Query.Selector).trim() -split '\s*,\s*'
-                        
+
                         if ('admin' -in $UserCreds.userRoles -or 'editor' -in $UserCreds.userRoles) {
                             $DkimSelectors = [string]($DkimQuery.Selectors | ConvertTo-Json -Compress)
                             if ($DomainInfo) {
                                 $DomainInfo.DkimSelectors = $DkimSelectors
-                            }
-                            else {
+                            } else {
                                 $DomainInfo = @{
                                     'RowKey'         = $Request.Query.Domain
                                     'PartitionKey'   = 'ManualEntry'
@@ -93,12 +93,11 @@ try {
                             Write-Host $DomainInfo
                             Add-AzDataTableEntity @DomainTable -Entity $DomainInfo -Force
                         }
-                    }
-                    elseif (![string]::IsNullOrEmpty($DomainInfo.DkimSelectors)) {
+                    } elseif (![string]::IsNullOrEmpty($DomainInfo.DkimSelectors)) {
                         $DkimQuery.Selectors = [System.Collections.Generic.List[string]]($DomainInfo.DkimSelectors | ConvertFrom-Json)
                     }
                     $Body = Read-DkimRecord @DkimQuery
- 
+
                 }
                 'ReadMXRecord' {
                     $Body = Read-MXRecord -Domain $Request.Query.Domain
@@ -118,8 +117,7 @@ try {
                     }
                     if ($Request.Query.Subdomains) {
                         $HttpsQuery.Subdomains = ($Request.Query.Subdomains).trim() -split '\s*,\s*'
-                    }
-                    else {
+                    } else {
                         $HttpsQuery.Subdomains = 'www'
                     }
 
@@ -132,13 +130,11 @@ try {
                     $Body = Test-MtaSts @HttpsQuery
                 }
             }
-        }
-        else {
+        } else {
             $body = [pscustomobject]@{'Results' = "Domain: $($Request.Query.Domain) is invalid" }
         }
     }
-}
-catch {
+} catch {
     Write-LogMessage -API $APINAME -tenant $($name) -user $request.headers.'x-ms-client-principal' -message "DNS Helper API failed. $($_.Exception.Message)" -Sev 'Error'
     $body = [pscustomobject]@{'Results' = "Failed. $($_.Exception.Message)" }
 }

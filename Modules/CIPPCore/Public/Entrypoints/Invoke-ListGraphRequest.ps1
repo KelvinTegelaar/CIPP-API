@@ -1,12 +1,16 @@
 
-function Get-ListGraphRequest {
-    # Input bindings are passed in via param block.
+function Invoke-ListGraphRequest {
+    <#
+    .FUNCTIONALITY
+    Entrypoint
+    #>
+    [CmdletBinding()]
     param($Request, $TriggerMetadata)
 
     $APIName = $TriggerMetadata.FunctionName
 
     $Message = 'Accessed this API | Endpoint: {0}' -f $Request.Query.Endpoint
-    Write-LogMessage -API $APINAME -message $Message -Sev 'Debug'
+    Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -message $Message -Sev 'Debug'
 
     $CippLink = ([System.Uri]$TriggerMetadata.Headers.referer).PathAndQuery
 
@@ -50,7 +54,7 @@ function Get-ListGraphRequest {
     }
 
     if ($Request.Query.TenantFilter) {
-        $GraphRequestParams.Tenant = $Request.Query.TenantFilter
+        $GraphRequestParams.TenantFilter = $Request.Query.TenantFilter
     }
 
     if ($Request.Query.QueueId) {
@@ -86,8 +90,21 @@ function Get-ListGraphRequest {
     }
 
     Write-Host ($GraphRequestParams | ConvertTo-Json)
+
+    $Metadata = $GraphRequestParams
+
     try {
-        $GraphRequestData = Get-GraphRequestList @GraphRequestParams
+        $Results = Get-GraphRequestList @GraphRequestParams
+        if ($Results.Queued -eq $true) {
+            $Metadata.Queued = $Results.Queued
+            $Metadata.QueueMessage = $Results.QueueMessage
+            $Metadata.QueuedId = $Results.QueueId
+            $Results = @()
+        }
+        $GraphRequestData = [PSCustomObject]@{
+            Results  = @($Results)
+            Metadata = $Metadata
+        }
         $StatusCode = [HttpStatusCode]::OK
     } catch {
         $GraphRequestData = "Graph Error: $($_.Exception.Message) - Endpoint: $($Request.Query.Endpoint)"
@@ -96,6 +113,6 @@ function Get-ListGraphRequest {
 
     Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
             StatusCode = $StatusCode
-            Body       = @($GraphRequestData)
+            Body       = $GraphRequestData | ConvertTo-Json -Depth 20 -Compress
         })
 }

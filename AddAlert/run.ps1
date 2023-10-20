@@ -58,7 +58,7 @@ $Results = foreach ($Tenant in $tenants) {
                         EventType        = $eventType
                         ExecutingUser    = $Request.headers.'x-ms-client-principal'
                     }
-                    New-CIPPGraphSubscription @params
+                    Push-OutputBinding -Name Subscription -Value $Params
                 }
             }
         }

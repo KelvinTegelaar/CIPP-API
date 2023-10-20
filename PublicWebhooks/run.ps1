@@ -7,7 +7,7 @@ $Webhooks = Get-AzDataTableEntity @WebhookTable
 Write-Host "Received request"
 Write-Host "CIPPID: $($request.Query.CIPPID)"
 $url = ($request.headers.'x-ms-original-url').split('/API') | Select-Object -First 1
-write-host $url
+Write-Host $url
 if ($Request.CIPPID -in $Webhooks.CIPPID) {
     Write-Host "Found matching CIPPID"
 
@@ -17,6 +17,7 @@ if ($Request.CIPPID -in $Webhooks.CIPPID) {
         Write-Host "Validation token received"
         $body = $request.query.ValidationToken
     }
+
     foreach ($ReceivedItem In ($Request.body)) {
         $ReceivedItem = [pscustomobject]$ReceivedItem
         $TenantFilter = (Get-Tenants | Where-Object -Property customerId -EQ $ReceivedItem.TenantId).defaultDomainName
@@ -26,7 +27,15 @@ if ($Request.CIPPID -in $Webhooks.CIPPID) {
         Write-Host "Operations to process for this client: $($Webhookinfo.Operations)"
         foreach ($Item in $Data) {
             Write-Host "Processing $($item.operation)"
-            Invoke-CippWebhookProcessing -TenantFilter $TenantFilter -Data $Item -CIPPPURL $url -allowedlocations $Webhookinfo.AllowedLocations -Operations $operations
+            if ($item.operation -in $operations) {
+                Invoke-CippWebhookProcessing -TenantFilter $TenantFilter -Data $Item -CIPPPURL $url -allowedlocations $Webhookinfo.AllowedLocations -Operations $operations
+            } 
+            if ($item.operation -eq "UserLoggedIn" -and "UserLoggedInFromUnknownLocation" -in $operations) {
+                Invoke-CippWebhookProcessing -TenantFilter $TenantFilter -Data $Item -CIPPPURL $url -allowedlocations $Webhookinfo.AllowedLocations -Operations $operations
+            }
+            if ($item.operation -eq "UserLoggedIn" -and "AdminLoggedIn" -in $operations) {
+                Invoke-CippWebhookProcessing -TenantFilter $TenantFilter -Data $Item -CIPPPURL $url -allowedlocations $Webhookinfo.AllowedLocations -Operations $operations
+            }
             $body = "OK"
         }
     }
