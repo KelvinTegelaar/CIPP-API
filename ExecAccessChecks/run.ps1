@@ -173,8 +173,17 @@ if ($Request.query.Tenants -eq 'true') {
     )
     $Tenants = ($Request.body.tenantid).split(',')
     if (!$Tenants) { $results = 'Could not load the tenants list from cache. Please run permissions check first, or visit the tenants page.' }
+    $TenantList = Get-Tenants
+    $TenantIds = foreach ($Tenant in $Tenants) {
+        ($TenantList | Where-Object { $_.defaultDomainName -eq $Tenant }).customerId
+    }
+    $MyRoles = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/tenantRelationships/managedTenants/myRoles?`$filter=tenantId in ('$($TenantIds -join "','")')"
     $results = foreach ($tenant in $Tenants) {
+        $AddedText = ''
         try {
+            $TenantId = ($TenantList | Where-Object { $_.defaultDomainName -eq $tenant }).customerId
+            $Assignments = ($MyRoles | Where-Object { $_.tenantId -eq $TenantId }).assignments
+            $SAMUserRoles = ($Assignments | Where-Object { $_.assignmentType -eq 'granularDelegatedAdminPrivileges' }).roles
 
             $BulkRequests = $ExpectedRoles | ForEach-Object { @(
                     @{
@@ -185,19 +194,40 @@ if ($Request.query.Tenants -eq 'true') {
                 )
             }
             $GDAPRolesGraph = New-GraphBulkRequest -tenantid $tenant -Requests $BulkRequests
-            $GDAPRoles = foreach ($RoleId in $ExpectedRoles) {
+            $GDAPRoles = [System.Collections.Generic.List[object]]::new()
+            $MissingRoles = [System.Collections.Generic.List[object]]::new()
+            foreach ($RoleId in $ExpectedRoles) {
                 $GraphRole = $GDAPRolesGraph.body.value | Where-Object -Property roleDefinitionId -EQ $RoleId.Id
                 $Role = $GraphRole.principal | Where-Object -Property organizationId -EQ $ENV:tenantid
-                if (!$role) {
-                    "$($RoleId.Name), "
-                    $AddedText = 'but potentially missing GDAP roles'
+                $SAMRole = $SAMUserRoles | Where-Object -Property templateId -EQ $RoleId.Id
+                if (!$Role) {
+                    $MissingRoles.Add(
+                        [PSCustomObject]@{
+                            Name = $RoleId.Name
+                            Type = 'Tenant'
+                        }
+                    )
+                    $AddedText = 'but missing GDAP roles'
+                } else {
+                    $GDAPRoles.Add([PSCustomObject]$RoleId)
+                }
+                if (!$SAMRole) {
+                    $MissingRoles.Add(
+                        [PSCustomObject]@{
+                            Name = $RoleId.Name
+                            Type = 'SAM User'
+                        }
+                    )
+                    $AddedText = 'but missing GDAP roles'
                 }
             }
 
             @{
-                TenantName = "$($Tenant)"
-                Status     = "Successfully connected $($AddedText)"
-                GDAP       = $GDAPRoles
+                TenantName   = "$($Tenant)"
+                Status       = "Successfully connected $($AddedText)"
+                GDAPRoles    = $GDAPRoles
+                MissingRoles = $MissingRoles
+                SAMUserRoles = $SAMUserRoles
             }
             Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $tenant -message 'Tenant access check executed successfully' -Sev 'Info'
 
