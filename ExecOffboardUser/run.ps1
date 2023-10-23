@@ -65,6 +65,15 @@ try {
         { $_."RemoveMobile" -eq 'true' } {
             Remove-CIPPMobileDevice -userid $userid -username $Username -tenantFilter $Tenantfilter -ExecutingUser $request.headers.'x-ms-client-principal' -APIName "ExecOffboardUser"
         }
+        { $_."RemovePermissions" } {
+            $object = [PSCustomObject]@{
+                TenantFilter  = $tenantFilter
+                User          = $username
+                executingUser = $request.headers.'x-ms-client-principal'
+            }
+            Push-OutputBinding -Name Msg -Value $object
+            "Removal of permissions queued. This task will run in the background and send it's results to the logbook."
+        }
     
     }
     $StatusCode = [HttpStatusCode]::OK
