@@ -41,7 +41,9 @@ if ($Request.query.tenantFilter -ne 'AllTenants' -and $Style -eq 'Tenant') {
     }
 
     $Data = $mergedObject
-} else {
+}
+else {
+    $Tenants = Get-Tenants -IncludeErrors
     $Data = (Get-AzDataTableEntity @Table -Filter "RowKey eq '$NAME'") | ForEach-Object {
         $row = $_
         $JSONFields | ForEach-Object {
@@ -50,7 +52,7 @@ if ($Request.query.tenantFilter -ne 'AllTenants' -and $Style -eq 'Tenant') {
                 $row.$_ = $jsonContent | ConvertFrom-Json -Depth 15
             }
         }
-        $row
+        $row | Where-Object -Property PartitionKey -In $Tenants.customerId
     }
 
 
