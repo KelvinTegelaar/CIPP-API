@@ -49,20 +49,17 @@ if ($Request.query.Permissions -eq 'true') {
                             Href = 'https://cipp.app/docs/general/troubleshooting/#clear-token-cache'
                         }
                     ) | Out-Null
-                }
-                else {
+                } else {
                     $Messages.Add('Your refresh token matches key vault.') | Out-Null
                 }
-            }
-            catch {
+            } catch {
                 Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $tenant -message "Key vault exception: $($_) " -Sev 'Error'
             }
         }
 
         try {
             $AccessTokenDetails = Read-JwtAccessDetails -Token $GraphToken.access_token -erroraction SilentlyContinue
-        }
-        catch {
+        } catch {
             $AccessTokenDetails = [PSCustomObject]@{
                 Name        = ''
                 AuthMethods = @()
@@ -74,12 +71,10 @@ if ($Request.query.Permissions -eq 'true') {
         if ($AccessTokenDetails.Name -eq '') {
             $Messages.Add('Your refresh token is invalid, check for line breaks or missing characters.') | Out-Null
             $Success = $false
-        }
-        else {
+        } else {
             if ($AccessTokenDetails.AuthMethods -contains 'mfa') {
                 $Messages.Add('Your access token contains the MFA claim.') | Out-Null
-            }
-            else {
+            } else {
                 $Messages.Add('Your access token does not contain the MFA claim, Refresh your SAM tokens.') | Out-Null
                 $Success = $false
                 $Links.Add([PSCustomObject]@{
@@ -101,8 +96,7 @@ if ($Request.query.Permissions -eq 'true') {
                     Href = 'https://cipp.app/docs/user/gettingstarted/postinstall/permissions/'
                 }
             ) | Out-Null
-        }
-        else {
+        } else {
             $Messages.Add('Your Secure Application Model has all required permissions') | Out-Null
         }
         $CIPPGroupCount = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/groups/`$count?`$filter=startsWith(displayName,'M365 GDAP')" -NoAuthCheck $true -ComplexFilter
@@ -141,12 +135,10 @@ if ($Request.query.Permissions -eq 'true') {
         }
         if (($MissingGroups | Measure-Object).Count -eq 0) {
             $Messages.Add('The SAM user has all the required groups')
-        }
-        else {
+        } else {
             $Success = $false
         }
-    }
-    catch {
+    } catch {
         Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -message "Permissions check failed: $($_) " -Sev 'Error'
         $Messages.Add("We could not connect to the API to retrieve the permissions. There might be a problem with the secure application model configuration. The returned error is: $(Get-NormalizedError -message $_)") | Out-Null
         $Success = $false
@@ -216,8 +208,7 @@ if ($Request.query.Tenants -eq 'true') {
                         }
                     )
                     $AddedText = 'but missing GDAP roles'
-                }
-                else {
+                } else {
                     $GDAPRoles.Add([PSCustomObject]$RoleId)
                 }
                 if (!$SAMRole) {
@@ -230,11 +221,8 @@ if ($Request.query.Tenants -eq 'true') {
                     $AddedText = 'but missing GDAP roles'
                 }
             }
-            $CompareGDAPRoles = Compare-Object -ReferenceObject $GDAPRoles -DifferenceObject $ExpectedRoles -Property Id
-            if (!$CompareGDAPRoles) {
+            if (!($MissingRoles | Measure-Object).Count -gt 0) {
                 $MissingRoles = $true
-                $SAMUserRoles = $true
-                $GDAPRoles = $true
             }
             @{
                 TenantName   = "$($Tenant)"
@@ -245,8 +233,7 @@ if ($Request.query.Tenants -eq 'true') {
             }
             Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $tenant -message 'Tenant access check executed successfully' -Sev 'Info'
 
-        }
-        catch {
+        } catch {
             @{
                 TenantName = "$($tenant)"
                 Status     = "Failed to connect: $(Get-NormalizedError -message $_.Exception.Message)"
@@ -263,8 +250,7 @@ if ($Request.query.Tenants -eq 'true') {
                 Status     = 'Successfully connected to Exchange'
             }
 
-        }
-        catch {
+        } catch {
             $ReportedError = ($_.ErrorDetails | ConvertFrom-Json -ErrorAction SilentlyContinue)
             $Message = if ($ReportedError.error.details.message) { $ReportedError.error.details.message } else { $ReportedError.error.innererror.internalException.message }
             if ($null -eq $Message) { $Message = $($_.Exception.Message) }
