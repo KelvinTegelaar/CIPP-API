@@ -1,4 +1,4 @@
-function Get-CIPPAzDatatableEntity {
+function Get-CIPPAzDataTableEntity {
     [CmdletBinding()]
     param(
         $Context,
@@ -13,11 +13,18 @@ function Get-CIPPAzDatatableEntity {
     $Context = New-AzStorageContext -ConnectionString $ENV:AzureWebJobsStorage
 
     $Results = $Results | ForEach-Object {
-        if ($_.BlobStorageContent) {
-            (Get-AzStorageBlobContent -Container 'tableblobs' -Blob "$($_.RowKey)-$($_.PartitionKey).json" -Context $Context -Force).ICloudBlob.DownloadText() | ConvertFrom-Json
+        $entity = $_
+        if ($entity.SplitOverProps) {
+            $splitInfo = $entity.SplitOverProps | ConvertFrom-Json
+            $mergedData = -join ($splitInfo.SplitHeaders | ForEach-Object { $entity.$_ })
+            $entity | Add-Member -NotePropertyName $splitInfo.OriginalHeader -NotePropertyValue $mergedData -Force
+            $propsToRemove = $splitInfo.SplitHeaders + "SplitOverProps"
+            $entity = $entity | Select-Object * -ExcludeProperty $propsToRemove
+
+            $entity 
         }
         else {
-            $_
+            $entity  
         }
     }
     
