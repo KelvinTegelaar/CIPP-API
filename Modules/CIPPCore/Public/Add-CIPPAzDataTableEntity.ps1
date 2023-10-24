@@ -9,16 +9,12 @@ function Add-CIPPAzDataTableEntity {
     
     foreach ($SingleEnt in $Entity) {
         try {
-            # Attempt to add the entity to the data table
             Add-AzDataTableEntity @PSBoundParameters -Entity $SingleEnt
         }
         catch [System.Exception] {
             if ($_.Exception.ErrorCode -eq "PropertyValueTooLarge" -or $_.Exception.ErrorCode -eq "EntityTooLarge") {
                 try {
-                    # Maximum allowed size for a property in bytes (30KB)
                     $MaxSize = 30kb
-
-                    # Identify which property in the hashtable is too large
                     $largePropertyName = $null
                     foreach ($key in $SingleEnt.Keys) {
                         if ($SingleEnt[$key].Length -gt $MaxSize) {

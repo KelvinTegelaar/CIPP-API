@@ -10,8 +10,6 @@ function Get-CIPPAzDataTableEntity {
         $Count 
     )
     $Results = Get-AzDataTableEntity @PSBoundParameters
-    $Context = New-AzStorageContext -ConnectionString $ENV:AzureWebJobsStorage
-
     $Results = $Results | ForEach-Object {
         $entity = $_
         if ($entity.SplitOverProps) {
@@ -20,7 +18,6 @@ function Get-CIPPAzDataTableEntity {
             $entity | Add-Member -NotePropertyName $splitInfo.OriginalHeader -NotePropertyValue $mergedData -Force
             $propsToRemove = $splitInfo.SplitHeaders + "SplitOverProps"
             $entity = $entity | Select-Object * -ExcludeProperty $propsToRemove
-
             $entity 
         }
         else {
