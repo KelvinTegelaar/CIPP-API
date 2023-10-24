@@ -9,7 +9,7 @@ function Add-CIPPAzDataTableEntity {
     
     foreach ($SingleEnt in $Entity) {
         try {
-            Add-AzDataTableEntity @PSBoundParameters -Entity $SingleEnt
+            Add-CIPPAzDataTableEntity -context $Context -force:$Force -CreateTableIfNotExists:$CreateTableIfNotExists -Entity $SingleEnt
         }
         catch [System.Exception] {
             if ($_.Exception.ErrorCode -eq "PropertyValueTooLarge" -or $_.Exception.ErrorCode -eq "EntityTooLarge") {
@@ -46,7 +46,7 @@ function Add-CIPPAzDataTableEntity {
                             $SingleEnt[$splitPropertyNames[$i]] = $splitData[$i]
                         }
 
-                        Add-AzDataTableEntity @PSBoundParameters -Entity $SingleEnt
+                        Add-CIPPAzDataTableEntity -context $Context -force:$Force -CreateTableIfNotExists:$CreateTableIfNotExists -Entity $SingleEnt
                     }
 
                 }

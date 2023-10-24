@@ -86,7 +86,7 @@ if ($TenantCount -gt 0) {
 
         # Batch insert all tenant domains
         try {
-            Add-AzDataTableEntity @DomainTable -Entity $TenantDomainObjects -Force
+            Add-CIPPAzDataTableEntity @DomainTable -Entity $TenantDomainObjects -Force
         } catch { Write-LogMessage -API 'DomainAnalyser' -message "Domain Analyser GetTenantDomains Error $($_.Exception.Message)" -sev info }
     } catch { Write-LogMessage -API 'DomainAnalyser' -message "GetTenantDomains loop exception: $($_.Exception.Message) line $($_.InvocationInfo.ScriptLineNumber)" -sev 'Error' }
 }

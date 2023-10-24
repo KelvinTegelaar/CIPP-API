@@ -143,7 +143,7 @@ try {
                     RowKey       = [string]$Tenant.tenantid
                     delta        = "$NewDeltatoSave"
                 }
-                Add-AzDataTableEntity @DeltaTable -Entity $DeltaEntity -Force
+                Add-CIPPAzDataTableEntity @DeltaTable -Entity $DeltaEntity -Force
 
                 if ($AdminDelta) {
                     foreach ($Group in $NewDelta) {
@@ -257,7 +257,7 @@ try {
                         RowKey       = 'AppSecretExpiry'
                         PartitionKey = $Tenant.tenantid
                     }
-                    Add-AzDataTableEntity @LastRunTable -Entity $LastRun -Force
+                    Add-CIPPAzDataTableEntity @LastRunTable -Entity $LastRun -Force
                 }
             }
             catch {
@@ -283,7 +283,7 @@ try {
                     RowKey       = 'ApnCertExpiry'
                     PartitionKey = $Tenant.tenantid
                 }
-                Add-AzDataTableEntity @LastRunTable -Entity $LastRun -Force
+                Add-CIPPAzDataTableEntity @LastRunTable -Entity $LastRun -Force
             }
             catch {
                 #$Message = 'Exception on line {0} - {1}' -f $_.InvocationInfo.ScriptLineNumber, $_.Exception.Message
@@ -312,7 +312,7 @@ try {
                         RowKey       = 'VppTokenExpiry'
                         PartitionKey = $Tenant.tenantid
                     }
-                    Add-AzDataTableEntity @LastRunTable -Entity $LastRun -Force
+                    Add-CIPPAzDataTableEntity @LastRunTable -Entity $LastRun -Force
                 }
             }
             catch {
@@ -339,7 +339,7 @@ try {
                         RowKey       = 'DepTokenExpiry'
                         PartitionKey = $Tenant.tenantid
                     }
-                    Add-AzDataTableEntity @LastRunTable -Entity $LastRun -Force
+                    Add-CIPPAzDataTableEntity @LastRunTable -Entity $LastRun -Force
                 }
             }
             catch {
@@ -364,7 +364,7 @@ try {
                         RowKey       = 'SecDefaultsUpsell'
                         PartitionKey = $Tenant.tenantid
                     }
-                    Add-AzDataTableEntity @LastRunTable -Entity $LastRun -Force
+                    Add-CIPPAzDataTableEntity @LastRunTable -Entity $LastRun -Force
                 }
             }
             catch {

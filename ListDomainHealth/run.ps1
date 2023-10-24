@@ -20,7 +20,7 @@ try {
             RowKey       = 'Domains'
             Resolver     = $Resolver
         }
-        Add-AzDataTableEntity @ConfigTable -Entity $Config -Force
+        Add-CIPPAzDataTableEntity @ConfigTable -Entity $Config -Force
     }
 } catch {
     $Resolver = 'Google'
@@ -91,7 +91,7 @@ try {
                                 }
                             }
                             Write-Host $DomainInfo
-                            Add-AzDataTableEntity @DomainTable -Entity $DomainInfo -Force
+                            Add-CIPPAzDataTableEntity @DomainTable -Entity $DomainInfo -Force
                         }
                     } elseif (![string]::IsNullOrEmpty($DomainInfo.DkimSelectors)) {
                         $DkimQuery.Selectors = [System.Collections.Generic.List[string]]($DomainInfo.DkimSelectors | ConvertFrom-Json)

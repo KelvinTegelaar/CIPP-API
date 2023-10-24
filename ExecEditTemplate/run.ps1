@@ -20,7 +20,7 @@ try {
         Set-CIPPIntuneTemplate -RawJSON $RawJSON -GUID $GUID -DisplayName $Request.body.displayName -Description $Request.body.description -templateType $Request.body.type
     }
     else {
-        Add-AzDataTableEntity @Table -Entity @{
+        Add-CIPPAzDataTableEntity @Table -Entity @{
             JSON         = "$JSON"
             RowKey       = "$GUID"
             PartitionKey = "$Type"

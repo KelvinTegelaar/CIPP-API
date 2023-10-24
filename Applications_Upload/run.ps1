@@ -34,7 +34,7 @@ $RemoveCacheFile = if ($chocoapp.Tenant -ne "AllTenants") {
 }
 else {
     $Table.Force = $true
-    Add-AzDataTableEntity @Table -Entity @{
+    Add-CIPPAzDataTableEntity @Table -Entity @{
         JSON         = "$($ChocoApp | ConvertTo-Json)"
         RowKey       = "$($ClearRow.RowKey)"
         PartitionKey = "apps"

@@ -151,7 +151,7 @@ function Write-LogMessage ($message, $tenant = 'None', $API = 'None', $tenantId 
     }
     
     $Table.Entity = $TableRow
-    Add-AzDataTableEntity @Table | Out-Null
+    Add-CIPPAzDataTableEntity @Table | Out-Null
 }
 
 function New-GraphGetRequest {
@@ -525,7 +525,7 @@ function Get-Tenants {
 
         if ($IncludedTenantsCache) {
             $TenantsTable.Force = $true
-            Add-AzDataTableEntity @TenantsTable -Entity $IncludedTenantsCache
+            Add-CIPPAzDataTableEntity @TenantsTable -Entity $IncludedTenantsCache
         }
     }
     return ($IncludedTenantsCache | Sort-Object -Property displayName)

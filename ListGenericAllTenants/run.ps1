@@ -35,7 +35,7 @@ foreach ($Request in $RawGraphRequest) {
         Data         = [string]$Json
 
     }
-    Add-AzDataTableEntity @Table -Entity $GraphRequest -Force | Out-Null
+    Add-CIPPAzDataTableEntity @Table -Entity $GraphRequest -Force | Out-Null
 }
 
 

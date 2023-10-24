@@ -16,7 +16,7 @@ $Templates = Get-ChildItem 'Config\*.IntuneTemplate.json' | ForEach-Object {
         PartitionKey = 'IntuneTemplate'
         GUID         = "$($_.name)"
     }
-    Add-AzDataTableEntity @Table -Entity $Entity -Force
+    Add-CIPPAzDataTableEntity @Table -Entity $Entity -Force
 }
 
 #List new policies

@@ -15,7 +15,7 @@ $Templates = Get-ChildItem "Config\*.TransportRuleTemplate.json" | ForEach-Objec
         PartitionKey = "TransportTemplate"
         GUID         = "$($_.name)"
     }
-    Add-AzDataTableEntity @Table -Entity $Entity -Force
+    Add-CIPPAzDataTableEntity @Table -Entity $Entity -Force
 
 }
 

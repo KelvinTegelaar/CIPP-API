@@ -20,7 +20,7 @@ try {
                 $Row.PartitionKey = 'License'
                 $Row.RowKey = $Row.GUID
                 
-                Add-AzDataTableEntity @Table -Entity ([pscustomobject]$Row) -Force | Out-Null
+                Add-CIPPAzDataTableEntity @Table -Entity ([pscustomobject]$Row) -Force | Out-Null
             }
             
             $Rows = Get-AzDataTableEntity @Table
@@ -39,7 +39,7 @@ try {
             'GUID'                 = $Request.body.GUID
             'Product_Display_Name' = $request.body.SKUName
         }
-        Add-AzDataTableEntity @Table -Entity $AddObject -Force
+        Add-CIPPAzDataTableEntity @Table -Entity $AddObject -Force
 
         Write-LogMessage -API $APINAME -user $request.headers.'x-ms-client-principal' -message "Added exclusion $($request.body.SKUName)" -Sev 'Info' 
         $body = [pscustomobject]@{'Results' = "Success. We've added $($request.body.SKUName) to the excluded list." }

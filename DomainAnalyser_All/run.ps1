@@ -18,7 +18,7 @@ try {
             RowKey       = 'Domains'
             Resolver     = $Resolver
         }
-        Add-AzDataTableEntity @ConfigTable -Entity $Config -Force
+        Add-CIPPAzDataTableEntity @ConfigTable -Entity $Config -Force
     }
 }
 catch {

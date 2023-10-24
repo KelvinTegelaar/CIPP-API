@@ -30,7 +30,7 @@ try {
             RowKey       = 'Domains'
             Resolver     = 'Google'
         }
-        Add-AzDataTableEntity @ConfigTable -Entity $Config -Force
+        Add-CIPPAzDataTableEntity @ConfigTable -Entity $Config -Force
     }
 
     $updated = $false
@@ -51,7 +51,7 @@ try {
                 }
             }
             if ($updated) {
-                Add-AzDataTableEntity @ConfigTable -Entity $Config -Force
+                Add-CIPPAzDataTableEntity @ConfigTable -Entity $Config -Force
                 Write-LogMessage -API $APINAME -tenant 'Global' -user $request.headers.'x-ms-client-principal' -message 'DNS configuration updated' -Sev 'Info'
                 $body = [pscustomobject]@{'Results' = 'Success: DNS configuration updated.' }
             } else {
@@ -79,7 +79,7 @@ try {
                     'DkimSelectors'  = $DkimSelectors
                 }
             }
-            Add-AzDataTableEntity @DomainTable -Entity $DomainInfo -Force
+            Add-CIPPAzDataTableEntity @DomainTable -Entity $DomainInfo -Force
         }
         'GetConfig' {
             $body = [pscustomobject]$Config

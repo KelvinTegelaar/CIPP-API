@@ -20,7 +20,7 @@ $Templates = Get-ChildItem "Config\*.CATemplate.json" | ForEach-Object {
         PartitionKey = "CATemplate"
         GUID         = "$($_.name)"
     }
-    Add-AzDataTableEntity @Table -Entity $Entity -Force
+    Add-CIPPAzDataTableEntity @Table -Entity $Entity -Force
 }
 
 #List new policies

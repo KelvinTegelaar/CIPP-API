@@ -23,7 +23,7 @@ $results = try {
             'RowKey'        = 'settings'
         }
 
-        Add-AzDataTableEntity @Table -Entity $SchedulerConfig -Force | Out-Null
+        Add-CIPPAzDataTableEntity @Table -Entity $SchedulerConfig -Force | Out-Null
         'Successfully set the configuration'
     }
 }

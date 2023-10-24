@@ -129,7 +129,7 @@ try {
     $_
   }
   if ($UpdateLogs) {
-    Add-AzDataTableEntity @Table -Entity $UpdateLogs -Force
+    Add-CIPPAzDataTableEntity @Table -Entity $UpdateLogs -Force
   }
 }
 catch {
@@ -152,7 +152,7 @@ if ($config.sendtoIntegration) {
         $_
       }
       if ($UpdateLogs) {
-        Add-AzDataTableEntity @Table -Entity $UpdateLogs -Force
+        Add-CIPPAzDataTableEntity @Table -Entity $UpdateLogs -Force
       }
     }
     Write-LogMessage -API 'Alerts' -tenant $Tenant -message "alerts to PSA" -sev info
