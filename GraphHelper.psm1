@@ -92,7 +92,7 @@ function Get-GraphToken($tenantid, $scope, $AsApp, $AppID, $refreshToken, $Retur
         # Track consecutive Graph API failures
         $TenantsTable = Get-CippTable -tablename Tenants
         $Filter = "PartitionKey eq 'Tenants' and (defaultDomainName eq '{0}' or customerId eq '{0}')" -f $tenantid
-        $Tenant = Get-AzDataTableEntity @TenantsTable -Filter $Filter
+        $Tenant = Get-CIPPAzDataTableEntity @TenantsTable -Filter $Filter
         if (!$Tenant.RowKey) {
             $donotset = $true
             $Tenant = [pscustomobject]@{
@@ -184,7 +184,7 @@ function New-GraphGetRequest {
         # Track consecutive Graph API failures
         $TenantsTable = Get-CippTable -tablename Tenants
         $Filter = "PartitionKey eq 'Tenants' and (defaultDomainName eq '{0}' or customerId eq '{0}')" -f $tenantid
-        $Tenant = Get-AzDataTableEntity @TenantsTable -Filter $Filter
+        $Tenant = Get-CIPPAzDataTableEntity @TenantsTable -Filter $Filter
         if (!$Tenant) {
             $Tenant = @{
                 GraphErrorCount = 0
@@ -288,7 +288,7 @@ function Get-ClassicAPIToken($tenantID, $Resource) {
             # Track consecutive Graph API failures
             $TenantsTable = Get-CippTable -tablename Tenants
             $Filter = "PartitionKey eq 'Tenants' and (defaultDomainName eq '{0}' or customerId eq '{0}')" -f $tenantid
-            $Tenant = Get-AzDataTableEntity @TenantsTable -Filter $Filter
+            $Tenant = Get-CIPPAzDataTableEntity @TenantsTable -Filter $Filter
             if (!$Tenant) {
                 $Tenant = @{
                     GraphErrorCount     = $null
@@ -428,7 +428,7 @@ function Get-Tenants {
     $TenantsTable = Get-CippTable -tablename 'Tenants'
     $ExcludedFilter = "PartitionKey eq 'Tenants' and Excluded eq true"
 
-    $SkipListCache = Get-AzDataTableEntity @TenantsTable -Filter $ExcludedFilter
+    $SkipListCache = Get-CIPPAzDataTableEntity @TenantsTable -Filter $ExcludedFilter
     if ($SkipList) {
         return $SkipListCache
     }
@@ -442,7 +442,7 @@ function Get-Tenants {
     else {
         $Filter = "PartitionKey eq 'Tenants' and Excluded eq false and GraphErrorCount lt 50"
     }
-    $IncludedTenantsCache = Get-AzDataTableEntity @TenantsTable -Filter $Filter
+    $IncludedTenantsCache = Get-CIPPAzDataTableEntity @TenantsTable -Filter $Filter
 
     if (($IncludedTenantsCache | Measure-Object).Count -gt 0) {
         try {
@@ -539,21 +539,21 @@ function Remove-CIPPCache {
     # Remove all tenants except excluded
     $TenantsTable = Get-CippTable -tablename 'Tenants'
     $Filter = "PartitionKey eq 'Tenants' and Excluded eq false"
-    $ClearIncludedTenants = Get-AzDataTableEntity @TenantsTable -Filter $Filter
+    $ClearIncludedTenants = Get-CIPPAzDataTableEntity @TenantsTable -Filter $Filter
     Remove-AzDataTableEntity @TenantsTable -Entity $ClearIncludedTenants
     if ($tenantsonly -eq 'false') {
         Write-Host 'Clearing all'
         # Remove Domain Analyser cached results
         $DomainsTable = Get-CippTable -tablename 'Domains'
         $Filter = "PartitionKey eq 'TenantDomains'"
-        $ClearDomainAnalyserRows = Get-AzDataTableEntity @DomainsTable -Filter $Filter | ForEach-Object {
+        $ClearDomainAnalyserRows = Get-CIPPAzDataTableEntity @DomainsTable -Filter $Filter | ForEach-Object {
             $_.DomainAnalyser = ''
             $_
         }
         Update-AzDataTableEntity @DomainsTable -Entity $ClearDomainAnalyserRows
         #Clear BPA
         $BPATable = Get-CippTable -tablename 'cachebpa'
-        $ClearBPARows = Get-AzDataTableEntity @BPATable
+        $ClearBPARows = Get-CIPPAzDataTableEntity @BPATable
         Remove-AzDataTableEntity @BPATable -Entity $ClearBPARows
         $ENV:SetFromProfile = $null
         $Script:SkipListCache = $Null
@@ -746,7 +746,7 @@ function New-passwordString {
     )
     Set-Location (Get-Item $PSScriptRoot).FullName
     $SettingsTable = Get-CippTable -tablename 'Settings'
-    $PasswordType = (Get-AzDataTableEntity @SettingsTable).passwordType
+    $PasswordType = (Get-CIPPAzDataTableEntity @SettingsTable).passwordType
     if ($PasswordType -eq 'Correct-Battery-Horse') {
         $Words = Get-Content .\words.txt
         (Get-Random -InputObject $words -Count 4) -join '-'
@@ -773,7 +773,7 @@ function New-GraphBulkRequest {
         # Track consecutive Graph API failures
         $TenantsTable = Get-CippTable -tablename Tenants
         $Filter = "PartitionKey eq 'Tenants' and (defaultDomainName eq '{0}' or customerId eq '{0}')" -f $tenantid
-        $Tenant = Get-AzDataTableEntity @TenantsTable -Filter $Filter
+        $Tenant = Get-CIPPAzDataTableEntity @TenantsTable -Filter $Filter
         if (!$Tenant) {
             $Tenant = @{
                 GraphErrorCount = 0

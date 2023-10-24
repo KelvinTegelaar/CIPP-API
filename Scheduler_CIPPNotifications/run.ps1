@@ -3,7 +3,7 @@ param($tenant)
 
 $Table = Get-CIPPTable -TableName SchedulerConfig
 $Filter = "RowKey eq 'CippNotifications' and PartitionKey eq 'CippNotifications'"
-$Config = [pscustomobject](Get-AzDataTableEntity @Table -Filter $Filter)
+$Config = [pscustomobject](Get-CIPPAzDataTableEntity @Table -Filter $Filter)
 
 $Settings = [System.Collections.ArrayList]@('Alerts')
 $Config.psobject.properties.name | ForEach-Object { $settings.add($_) } 
@@ -16,7 +16,7 @@ Write-Host "Our Severity table is: $severity"
 $Table = Get-CIPPTable
 $PartitionKey = Get-Date -UFormat '%Y%m%d'
 $Filter = "PartitionKey eq '{0}'" -f $PartitionKey
-$Currentlog = Get-AzDataTableEntity @Table -Filter $Filter | Where-Object { 
+$Currentlog = Get-CIPPAzDataTableEntity @Table -Filter $Filter | Where-Object { 
   $_.API -In $Settings -and $_.SentAsAlert -ne $true -and $_.Severity -In $severity
 }
 Write-Host ($Currentlog).count

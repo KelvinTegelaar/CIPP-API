@@ -20,7 +20,7 @@ $StatusCode = [HttpStatusCode]::OK
 try {
     $ConfigTable = Get-CippTable -tablename Config
     $Filter = "PartitionKey eq 'Domains' and RowKey eq 'Domains'"
-    $Config = Get-AzDataTableEntity @ConfigTable -Filter $Filter
+    $Config = Get-CIPPAzDataTableEntity @ConfigTable -Filter $Filter
 
     $DomainTable = Get-CippTable -tablename 'Domains'
 
@@ -64,7 +64,7 @@ try {
             $Selector = ($Request.Query.Selector).trim() -split '\s*,\s*'
             $DomainTable = Get-CIPPTable -Table 'Domains'
             $Filter = "RowKey eq '{0}'" -f $Domain
-            $DomainInfo = Get-AzDataTableEntity @DomainTable -Filter $Filter
+            $DomainInfo = Get-CIPPAzDataTableEntity @DomainTable -Filter $Filter
             $DkimSelectors = [string]($Selector | ConvertTo-Json -Compress)
             if ($DomainInfo) {
                 $DomainInfo.DkimSelectors = $DkimSelectors
@@ -87,7 +87,7 @@ try {
         }
         'RemoveDomain' {
             $Filter = "RowKey eq '{0}'" -f $Request.Query.Domain
-            $DomainRow = Get-AzDataTableEntity @DomainTable -Filter $Filter
+            $DomainRow = Get-CIPPAzDataTableEntity @DomainTable -Filter $Filter
             Remove-AzDataTableEntity @DomainTable -Entity $DomainRow
             Write-LogMessage -API $APINAME -tenant 'Global' -user $request.headers.'x-ms-client-principal' -message "Removed Domain - $($Request.Query.Domain) " -Sev 'Info'
             $body = [pscustomobject]@{ 'Results' = "Domain removed - $($Request.Query.Domain)" }

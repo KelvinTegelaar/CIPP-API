@@ -2,7 +2,7 @@ param($name)
 $Table = Get-CippTable -tablename 'apps'
 $Filter = "PartitionKey eq 'apps' and RowKey eq '$name'" 
 Set-Location (Get-Item $PSScriptRoot).Parent.FullName
-$ChocoApp = (Get-AzDataTableEntity @Table -filter $Filter).JSON | ConvertFrom-Json
+$ChocoApp = (Get-CIPPAzDataTableEntity @Table -filter $Filter).JSON | ConvertFrom-Json
 $intuneBody = $ChocoApp.IntuneBody
 $tenants = if ($chocoapp.Tenant -eq "AllTenants") { 
     (Get-tenants).defaultDomainName
@@ -28,7 +28,7 @@ $ContentBody = ConvertTo-Json @{
     size          = [int64]$intunexml.ApplicationInfo.UnencryptedContentSize
     sizeEncrypted = [int64]($intunewinFilesize).length
 } 
-$ClearRow = Get-AzDataTableEntity @Table -Filter $Filter
+$ClearRow = Get-CIPPAzDataTableEntity @Table -Filter $Filter
 $RemoveCacheFile = if ($chocoapp.Tenant -ne "AllTenants") {
     Remove-AzDataTableEntity @Table -Entity $clearRow
 }

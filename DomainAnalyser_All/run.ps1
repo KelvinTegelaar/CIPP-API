@@ -5,7 +5,7 @@ Import-Module DNSHealth
 try {
     $ConfigTable = Get-CippTable -tablename Config
     $Filter = "PartitionKey eq 'Domains' and RowKey eq 'Domains'"
-    $Config = Get-AzDataTableEntity @ConfigTable -Filter $Filter
+    $Config = Get-CIPPAzDataTableEntity @ConfigTable -Filter $Filter
 
     $ValidResolvers = @('Google', 'CloudFlare', 'Quad9')
     if ($ValidResolvers -contains $Config.Resolver) {

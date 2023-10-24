@@ -13,12 +13,12 @@ $TenantsTable = Get-CippTable -tablename Tenants
 
 if ($Request.Query.List) {
     $ExcludedFilter = "PartitionKey eq 'Tenants' and Excluded eq true" 
-    $ExcludedTenants = Get-AzDataTableEntity @TenantsTable -Filter $ExcludedFilter 
+    $ExcludedTenants = Get-CIPPAzDataTableEntity @TenantsTable -Filter $ExcludedFilter 
     Write-LogMessage -API $APINAME -user $request.headers.'x-ms-client-principal' -message 'got excluded tenants list' -Sev 'Info'
     $body = @($ExcludedTenants)
 }
 elseif ($Request.query.ListAll) {
-    $ExcludedTenants = Get-AzDataTableEntity @TenantsTable -filter "PartitionKey eq 'Tenants'" 
+    $ExcludedTenants = Get-CIPPAzDataTableEntity @TenantsTable -filter "PartitionKey eq 'Tenants'" 
     Write-LogMessage -API $APINAME -user $request.headers.'x-ms-client-principal' -message 'got excluded tenants list' -Sev 'Info'
     $body = @($ExcludedTenants)
 }
@@ -43,7 +43,7 @@ try {
 
     if ($Request.Query.RemoveExclusion) {
         $Filter = "PartitionKey eq 'Tenants' and defaultDomainName eq '{0}'" -f $name
-        $Tenant = Get-AzDataTableEntity @TenantsTable -Filter $Filter 
+        $Tenant = Get-CIPPAzDataTableEntity @TenantsTable -Filter $Filter 
         $Tenant.Excluded = $false
         $Tenant.ExcludeUser = ''
         $Tenant.ExcludeDate = ''

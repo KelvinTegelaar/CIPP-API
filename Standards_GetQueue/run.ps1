@@ -2,7 +2,7 @@ param($name)
 
 Write-Host 'QUEUEQUE'
 $Table = Get-CippTable -tablename 'standards'
-$tenants = (Get-AzDataTableEntity @Table -Filter $Filter).JSON | ConvertFrom-Json
+$tenants = (Get-CIPPAzDataTableEntity @Table -Filter $Filter).JSON | ConvertFrom-Json
 
 $object = foreach ($Tenant in $tenants) {
     $tenant.standards.psobject.properties.name | ForEach-Object { 

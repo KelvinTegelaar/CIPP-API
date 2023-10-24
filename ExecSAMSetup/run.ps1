@@ -35,7 +35,7 @@ if (!$ENV:SetFromProfile) {
 
 $KV = $ENV:WEBSITE_DEPLOYMENT_ID
 $Table = Get-CIPPTable -TableName SAMWizard
-$Rows = Get-AzDataTableEntity @Table | Where-Object -Property Timestamp -GT (Get-Date).AddMinutes(-10)
+$Rows = Get-CIPPAzDataTableEntity @Table | Where-Object -Property Timestamp -GT (Get-Date).AddMinutes(-10)
 
 try {
       if ($Request.query.count -lt 1 ) { $Results = "No authentication code found. Please go back to the wizard." }
@@ -83,7 +83,7 @@ try {
                   tenantid     = "NotStarted"
             }
             Add-CIPPAzDataTableEntity @Table -Entity $Rows -Force | Out-Null
-            $Rows = Get-AzDataTableEntity @Table | Where-Object -Property Timestamp -GT (Get-Date).AddMinutes(-10)
+            $Rows = Get-CIPPAzDataTableEntity @Table | Where-Object -Property Timestamp -GT (Get-Date).AddMinutes(-10)
 
             if ($Request.query.partnersetup) {
                   $SetupPhase = $Rows.partnersetup = $true

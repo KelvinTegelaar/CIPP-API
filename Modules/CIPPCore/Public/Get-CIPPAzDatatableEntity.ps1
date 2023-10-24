@@ -9,7 +9,7 @@ function Get-CIPPAzDataTableEntity {
         $Sort,
         $Count 
     )
-    $Results = Get-AzDataTableEntity @PSBoundParameters
+    $Results = Get-CIPPAzDataTableEntity @PSBoundParameters
     $Results = $Results | ForEach-Object {
         $entity = $_
         if ($entity.SplitOverProps) {

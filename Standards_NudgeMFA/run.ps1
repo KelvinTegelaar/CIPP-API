@@ -1,9 +1,9 @@
 ﻿param($tenant)
 
 $ConfigTable = Get-CippTable -tablename 'standards'
-$Setting = ((Get-AzDataTableEntity @ConfigTable -Filter "PartitionKey eq 'standards' and RowKey eq '$tenant'").JSON | ConvertFrom-Json).standards.NudgeMFA
+$Setting = ((Get-CIPPAzDataTableEntity @ConfigTable -Filter "PartitionKey eq 'standards' and RowKey eq '$tenant'").JSON | ConvertFrom-Json).standards.NudgeMFA
 if (!$Setting) {
-    $Setting = ((Get-AzDataTableEntity @ConfigTable -Filter "PartitionKey eq 'standards' and RowKey eq 'AllTenants'").JSON | ConvertFrom-Json).standards.NudgeMFA
+    $Setting = ((Get-CIPPAzDataTableEntity @ConfigTable -Filter "PartitionKey eq 'standards' and RowKey eq 'AllTenants'").JSON | ConvertFrom-Json).standards.NudgeMFA
 }
 Write-Output $setting
 $status = if ($Setting.enable -and $Setting.disable) {

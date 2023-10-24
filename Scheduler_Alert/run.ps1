@@ -9,10 +9,10 @@ try {
     else {
         $Filter = "RowKey eq '{0}' and PartitionKey eq 'Alert'" -f $Tenant.tenantid
     }
-    $Alerts = Get-AzDataTableEntity @Table -Filter $Filter
+    $Alerts = Get-CIPPAzDataTableEntity @Table -Filter $Filter
 
     $ConfigFilter = "RowKey eq 'CippNotifications' and PartitionKey eq 'CippNotifications'"
-    $Config = [pscustomobject](Get-AzDataTableEntity @Table -Filter $ConfigFilter)
+    $Config = [pscustomobject](Get-CIPPAzDataTableEntity @Table -Filter $ConfigFilter)
     
     $DeltaTable = Get-CIPPTable -Table DeltaCompare
     $LastRunTable = Get-CIPPTable -Table AlertLastRun
@@ -130,7 +130,7 @@ try {
         { $_.'NewRole' -eq $true } {
             try {
                 $Filter = "PartitionKey eq 'AdminDelta' and RowKey eq '{0}'" -f $Tenant.tenantid
-                $AdminDelta = (Get-AzDataTableEntity @Deltatable -Filter $Filter).delta | ConvertFrom-Json -ErrorAction SilentlyContinue
+                $AdminDelta = (Get-CIPPAzDataTableEntity @Deltatable -Filter $Filter).delta | ConvertFrom-Json -ErrorAction SilentlyContinue
                 $NewDelta = (New-GraphGetRequest -uri "https://graph.microsoft.com/v1.0/directoryRoles?`$expand=members" -tenantid $Tenant.tenant) | Select-Object displayname, Members | ForEach-Object {
                     @{
                         GroupName = $_.displayname
@@ -197,7 +197,7 @@ try {
             try {
                 #$ConvertTable = Import-Csv Conversiontable.csv
                 $LicenseTable = Get-CIPPTable -TableName ExcludedLicenses
-                $ExcludedSkuList = Get-AzDataTableEntity @LicenseTable
+                $ExcludedSkuList = Get-CIPPAzDataTableEntity @LicenseTable
                 New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/subscribedSkus' -tenantid $Tenant.tenant | ForEach-Object {
                     $skuid = $_
                     foreach ($sku in $skuid) {
@@ -218,7 +218,7 @@ try {
             try {
                 #$ConvertTable = Import-Csv Conversiontable.csv
                 $LicenseTable = Get-CIPPTable -TableName ExcludedLicenses
-                $ExcludedSkuList = Get-AzDataTableEntity @LicenseTable
+                $ExcludedSkuList = Get-CIPPAzDataTableEntity @LicenseTable
                 New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/subscribedSkus' -tenantid $Tenant.tenant | ForEach-Object {
                     $skuid = $_
                     foreach ($sku in $skuid) {
@@ -239,7 +239,7 @@ try {
         { $_.'AppSecretExpiry' -eq $true } {
             try {
                 $Filter = "RowKey eq 'AppSecretExpiry' and PartitionKey eq '{0}'" -f $Tenant.tenantid
-                $LastRun = Get-AzDataTableEntity @LastRunTable -Filter $Filter
+                $LastRun = Get-CIPPAzDataTableEntity @LastRunTable -Filter $Filter
                 $Yesterday = (Get-Date).AddDays(-1)
                 if (-not $LastRun.Timestamp.DateTime -or ($LastRun.Timestamp.DateTime -le $Yesterday)) {
                     New-GraphGetRequest -uri "https://graph.microsoft.com/beta/applications?`$select=appId,displayName,passwordCredentials" -tenantid $Tenant.tenant | ForEach-Object {
@@ -268,7 +268,7 @@ try {
         { $_.'ApnCertExpiry' -eq $true } {
             try {
                 $Filter = "RowKey eq 'ApnCertExpiry' and PartitionKey eq '{0}'" -f $Tenant.tenantid
-                $LastRun = Get-AzDataTableEntity @LastRunTable -Filter $Filter
+                $LastRun = Get-CIPPAzDataTableEntity @LastRunTable -Filter $Filter
                 $Yesterday = (Get-Date).AddDays(-1)
                 if (-not $LastRun.Timestamp.DateTime -or ($LastRun.Timestamp.DateTime -le $Yesterday)) {
                     try {
@@ -293,7 +293,7 @@ try {
         { $_.'VppTokenExpiry' -eq $true } {
             try {
                 $Filter = "RowKey eq 'VppTokenExpiry' and PartitionKey eq '{0}'" -f $Tenant.tenantid
-                $LastRun = Get-AzDataTableEntity @LastRunTable -Filter $Filter
+                $LastRun = Get-CIPPAzDataTableEntity @LastRunTable -Filter $Filter
                 $Yesterday = (Get-Date).AddDays(-1)
                 if (-not $LastRun.Timestamp.DateTime -or ($LastRun.Timestamp.DateTime -le $Yesterday)) {
                     try {
@@ -323,7 +323,7 @@ try {
         { $_.'DepTokenExpiry' -eq $true } {
             try {
                 $Filter = "RowKey eq 'DepTokenExpiry' and PartitionKey eq '{0}'" -f $Tenant.tenantid
-                $LastRun = Get-AzDataTableEntity @LastRunTable -Filter $Filter
+                $LastRun = Get-CIPPAzDataTableEntity @LastRunTable -Filter $Filter
                 $Yesterday = (Get-Date).AddDays(-1)
                 if (-not $LastRun.Timestamp.DateTime -or ($LastRun.Timestamp.DateTime -le $Yesterday)) {
                     try {
@@ -350,7 +350,7 @@ try {
         { $_.'SecDefaultsUpsell' -eq $true } {
             try {
                 $Filter = "RowKey eq 'SecDefaultsUpsell' and PartitionKey eq '{0}'" -f $Tenant.tenantid
-                $LastRun = Get-AzDataTableEntity @LastRunTable -Filter $Filter
+                $LastRun = Get-CIPPAzDataTableEntity @LastRunTable -Filter $Filter
                 $Yesterday = (Get-Date).AddDays(-1)
                 if (-not $LastRun.Timestamp.DateTime -or ($LastRun.Timestamp.DateTime -le $Yesterday)) {
                     try {
@@ -378,7 +378,7 @@ try {
     $PartitionKey = Get-Date -UFormat '%Y%m%d'
     $Filter = "PartitionKey eq '{0}' and Tenant eq '{1}'" -f $PartitionKey, $tenant.tenant
     Write-Host $Filter
-    $currentlog = Get-AzDataTableEntity @Table -Filter $Filter
+    $currentlog = Get-CIPPAzDataTableEntity @Table -Filter $Filter
 
     $ShippedAlerts | ForEach-Object {
         if ($_ -notin $currentlog.Message) {
