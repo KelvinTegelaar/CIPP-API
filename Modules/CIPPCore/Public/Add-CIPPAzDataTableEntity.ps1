@@ -3,8 +3,8 @@ function Add-CIPPAzDataTableEntity {
     param(
         $Context,
         $Entity,
-        $Force,
-        $CreateTableIfNotExists
+        [switch]$Force,
+        [switch]$CreateTableIfNotExists
     )
     
     foreach ($SingleEnt in $Entity) {
