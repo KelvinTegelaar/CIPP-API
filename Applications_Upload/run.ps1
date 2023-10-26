@@ -69,9 +69,7 @@ foreach ($tenant in $tenants) {
             Write-LogMessage -api "AppUpload" -tenant $($Tenant) -message "$($ChocoApp.ApplicationName) uploaded as WinGet app." -Sev "Info"
             if ($AssignTo -ne "On") {
                 $intent = if ($AssignToIntent) { 'Uninstall' } else { 'Required' }
-                $AssignBody = if ($AssignTo -ne "AllDevicesAndUsers") { '{"mobileAppAssignments":[{"@odata.type":"#microsoft.graph.mobileAppAssignment","target":{"@odata.type":"#microsoft.graph.' + $($AssignTo) + 'AssignmentTarget"},"intent":"' + $($intent) + '","settings":{"@odata.type":"#microsoft.graph.winGetAppAssignmentSettings","notifications":"hideAll","installTimeSettings":null,"restartSettings":null}}]}' } else { '{"mobileAppAssignments":[{"@odata.type":"#microsoft.graph.mobileAppAssignment","target":{"@odata.type":"#microsoft.graph.allDevicesAssignmentTarget"},"intent":"' + $($intent) + '","settings":{"@odata.type":"#microsoft.graph.winGetAppAssignmentSettings","notifications":"hideAll","installTimeSettings":null,"restartSettings":null}},{"@odata.type":"#microsoft.graph.mobileAppAssignment","target":{"@odata.type":"#microsoft.graph.allLicensedUsersAssignmentTarget"},"intent":"' + $($intent) + '","settings":{"@odata.type":"#microsoft.graph.winGetAppAssignmentSettings","notifications":"hideAll","installTimeSettings":null,"restartSettings":null}}]}' }
-                $assign = New-GraphPOSTRequest -uri  "https://graph.microsoft.com/beta/deviceAppManagement/mobileApps/$($NewApp.id)/assign" -tenantid $tenant -type POST -body $AssignBody
-                Write-LogMessage -api "AppUpload" -tenant $($Tenant) -message "Assigned application $($chocoApp.ApplicationName) to $AssignTo" -Sev "Info"
+                Set-CIPPAssignedApplication -ApplicationId $NewApp.Id -Intent $intent -TenantFilter $tenant -groupName "$AssignTo" -AppType "WinGet"
             }
             Write-LogMessage -api "AppUpload" -tenant $($Tenant) -message "$($ChocoApp.ApplicationName) Successfully created" -Sev "Info"
             exit 0
@@ -108,9 +106,8 @@ foreach ($tenant in $tenants) {
         Write-LogMessage -api "AppUpload" -tenant $($Tenant) -message  "Added Application $($chocoApp.ApplicationName)" -Sev "Info"
         if ($AssignTo -ne "On") {
             $intent = if ($AssignToIntent) { 'Uninstall' } else { 'Required' }
-            $AssignBody = if ($AssignTo -ne "AllDevicesAndUsers") { '{"mobileAppAssignments":[{"@odata.type":"#microsoft.graph.mobileAppAssignment","target":{"@odata.type":"#microsoft.graph.' + $($AssignTo) + 'AssignmentTarget"},"intent":"' + $($intent) + '","settings":{"@odata.type":"#microsoft.graph.win32LobAppAssignmentSettings","notifications":"hideAll","installTimeSettings":null,"restartSettings":null,"deliveryOptimizationPriority":"notConfigured"}}]}' } else { '{"mobileAppAssignments":[{"@odata.type":"#microsoft.graph.mobileAppAssignment","target":{"@odata.type":"#microsoft.graph.allDevicesAssignmentTarget"},"intent":"' + $($intent) + '","settings":{"@odata.type":"#microsoft.graph.win32LobAppAssignmentSettings","notifications":"hideAll","installTimeSettings":null,"restartSettings":null,"deliveryOptimizationPriority":"notConfigured"}},{"@odata.type":"#microsoft.graph.mobileAppAssignment","target":{"@odata.type":"#microsoft.graph.allLicensedUsersAssignmentTarget"},"intent":"' + $($intent) + '","settings":{"@odata.type":"#microsoft.graph.win32LobAppAssignmentSettings","notifications":"hideAll","installTimeSettings":null,"restartSettings":null,"deliveryOptimizationPriority":"notConfigured"}}]}' }
-            $assign = New-GraphPOSTRequest -uri  "https://graph.microsoft.com/beta/deviceAppManagement/mobileApps/$($NewApp.id)/assign" -tenantid $tenant -type POST -body $AssignBody
-            Write-LogMessage -api "AppUpload" -tenant $($Tenant) -message "Assigned application $($chocoApp.ApplicationName) to $AssignTo" -Sev "Info"
+            Set-CIPPAssignedApplication -ApplicationId $NewApp.Id -Intent $intent -TenantFilter $tenant -groupName "$AssignTo" -AppType "Win32Lob"
+
         }
         Write-LogMessage -api "AppUpload" -tenant $($Tenant) -message "Successfully added Application" -Sev "Info"
     }
