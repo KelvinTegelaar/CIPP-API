@@ -157,6 +157,10 @@
         {
           "id": "885f682f-a990-4bad-a642-36736a74b0c7",
           "type": "Scope"
+        },
+        {
+          "id": "c2d95988-7604-4ba1-aaed-38a5f82a51c7",
+          "type": "Scope"
         }
       ]
     },
