@@ -8,7 +8,7 @@ function Set-CIPPGDAPAutoExtend {
     )
 
     $ReturnedData = if ($All -eq $true) {
-        $Relationships = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/tenantRelationships/delegatedAdminRelationships" -tenantid $env:tenantid -NoAuthCheck $true | Where-Object -Property autoExtendDuration -eq "PT0S"
+        $Relationships = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/tenantRelationships/delegatedAdminRelationships" -tenantid $env:tenantid -NoAuthCheck $true | Where-Object -Property autoExtendDuration -EQ "PT0S"
         foreach ($Relation in $Relationships) {
             try {
                 $AddedHeader = @{"If-Match" = $Relation."@odata.etag" }
@@ -28,8 +28,8 @@ function Set-CIPPGDAPAutoExtend {
     else {
         try {
             $Relationship = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/tenantRelationships/delegatedAdminRelationships" -tenantid $env:tenantid -NoAuthCheck $true | Where-Object -Property id -EQ $RelationShipid
-
-            $GraphRequest = New-GraphPostRequest -uri "https://graph.microsoft.com/beta/tenantRelationships/delegatedAdminRelationships/$($RelationShipid)" -tenantid $env:tenantid -type PATCH -body '{"autoExtendDuration":"P180D"}' -Verbose -NoAuthCheck $true
+            $AddedHeader = @{"If-Match" = $Relationship."@odata.etag" }
+            $GraphRequest = New-GraphPostRequest -uri "https://graph.microsoft.com/beta/tenantRelationships/delegatedAdminRelationships/$($RelationShipid)" -tenantid $env:tenantid -type PATCH -body '{"autoExtendDuration":"P180D"}' -Verbose -NoAuthCheck $true -AddedHeaders $AddedHeader
             write-LogMessage -user $ExecutingUser -API $APIName -message "Successfully set auto renew for tenant $($Relationship.customer.displayName) with ID $($RelationShipid)" -Sev "Info"
             @("Successfully set auto renew for tenant $($Relationship.customer.displayName) with ID $($RelationShipid)" )
         }
