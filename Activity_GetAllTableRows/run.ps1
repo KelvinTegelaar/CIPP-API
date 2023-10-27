@@ -1,6 +1,6 @@
 param($name)
 
 $Table = Get-CippTable -tablename $name
-$Rows = Get-AzDataTableEntity @Table
+$Rows = Get-CIPPAzDataTableEntity @Table
 
 Write-Output $Rows

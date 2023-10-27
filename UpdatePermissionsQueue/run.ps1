@@ -2,7 +2,7 @@
 param($QueueItem, $TriggerMetadata)
 Write-Host "Applying permissions for $($QueueItem.defaultDomainName)"
 $Table = Get-CIPPTable -TableName cpvtenants
-$CPVRows = Get-AzDataTableEntity @Table | Where-Object -Property Tenant -EQ $QueueItem.customerId
+$CPVRows = Get-CIPPAzDataTableEntity @Table | Where-Object -Property Tenant -EQ $QueueItem.customerId
 if (!$CPVRows -or $ENV:ApplicationID -notin $CPVRows.applicationId) {
     Write-LogMessage -message "A New tenant has been added, or a new CIPP-SAM Application is in use: $($queueitem.defaultDomainName) with id $($queueitem.customerId)" -Sev "Warn" -API "NewTenant"
     Write-Host "Adding CPV permissions"

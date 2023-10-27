@@ -30,7 +30,7 @@ $results = try {
         $SchedulerConfig[([pscustomobject]$logvalue.value)] = $true 
     }
 
-    Add-AzDataTableEntity @Table -Entity $SchedulerConfig -Force | Out-Null
+    Add-CIPPAzDataTableEntity @Table -Entity $SchedulerConfig -Force | Out-Null
     'Successfully set the configuration'
 }
 catch {
