@@ -32,7 +32,7 @@ Get-Tenants | ForEach-Object -Parallel {
         }
     } 
     $Table = Get-CIPPTable -TableName cachebasicauth
-    Add-AzDataTableEntity @Table -Entity $GraphRequest -Force | Out-Null
+    Add-CIPPAzDataTableEntity @Table -Entity $GraphRequest -Force | Out-Null
 
 }
 

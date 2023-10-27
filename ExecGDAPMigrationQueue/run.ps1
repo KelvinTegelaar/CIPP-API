@@ -16,15 +16,15 @@ $logRequest = @{
     startAt      = "$((Get-Date).ToString('s'))"
 }
 
-Add-AzDataTableEntity @Table -Entity $logRequest -Force | Out-Null
+Add-CIPPAzDataTableEntity @Table -Entity $logRequest -Force | Out-Null
 
 if ($RoleMappings) {
     $LogRequest['status'] = 'Step 2: Roles selected, creating new GDAP relationship.'
-    Add-AzDataTableEntity @Table -Entity $logRequest -Force | Out-Null
+    Add-CIPPAzDataTableEntity @Table -Entity $logRequest -Force | Out-Null
 }
 else {
     $LogRequest['status'] = 'Migration failed at Step 2: No role mappings created.'
-    Add-AzDataTableEntity @Table -Entity $logRequest -Force | Out-Null
+    Add-CIPPAzDataTableEntity @Table -Entity $logRequest -Force | Out-Null
     exit 1
 }
 try {
@@ -53,13 +53,13 @@ try {
 }
 catch {
     $LogRequest['status'] = "Migration Failed. Could not create relationship: $($_.Exception.Message)"
-    Add-AzDataTableEntity @Table -Entity $logRequest -Force | Out-Null
+    Add-CIPPAzDataTableEntity @Table -Entity $logRequest -Force | Out-Null
 }
 
 
 if ($CheckActive.status -eq 'Active') {
     $LogRequest['status'] = 'Step 3: GDAP Relationship active. Mapping groups.'
-    Add-AzDataTableEntity @Table -Entity $logRequest -Force | Out-Null
+    Add-CIPPAzDataTableEntity @Table -Entity $logRequest -Force | Out-Null
     foreach ($role in $RoleMappings) {
         try {
             $Mappingbody = ConvertTo-Json -Depth 10 -InputObject @{
@@ -76,17 +76,17 @@ if ($CheckActive.status -eq 'Active') {
             $RoleActiveID = New-GraphPostRequest -NoAuthCheck $True -uri "https://traf-pcsvcadmin-prod.trafficmanager.net/CustomerServiceAdminApi/Web//v1/delegatedAdminRelationships/$($MigrateRequest.id)/accessAssignments" -tenantid $env:TenantID -type POST -body $MappingBody -verbose -scope 'https://api.partnercustomeradministration.microsoft.com/.default'
             Start-Sleep -Milliseconds 400
             $LogRequest['status'] = "Step 3: GDAP Relationship active. Mapping group: $($Role.GroupId)"
-            Add-AzDataTableEntity @Table -Entity $logRequest -Force | Out-Null
+            Add-CIPPAzDataTableEntity @Table -Entity $logRequest -Force | Out-Null
         }
         catch {
             $LogRequest['status'] = "Migration Failed. Could not create group mapping for group $($role.GroupId): $($_.Exception.Message)"
-            Add-AzDataTableEntity @Table -Entity $logRequest -Force | Out-Null
+            Add-CIPPAzDataTableEntity @Table -Entity $logRequest -Force | Out-Null
             exit 1
         }
         #$CheckActiveRole = New-GraphGetRequest -NoAuthCheck $True -uri "https://traf-pcsvcadmin-prod.trafficmanager.net/CustomerServiceAdminApi/Web//v1/delegatedAdminRelationships/$($MigrateRequest.id)/accessAssignments/$($RoleActiveID.id)" -tenantid $env:TenantId  -scope 'https://api.partnercustomeradministration.microsoft.com/.default'
     }
     $LogRequest['status'] = 'Migration Complete'
-    Add-AzDataTableEntity @Table -Entity $logRequest -Force | Out-Null
+    Add-CIPPAzDataTableEntity @Table -Entity $logRequest -Force | Out-Null
 
 }
 

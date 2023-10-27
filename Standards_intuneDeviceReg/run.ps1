@@ -1,9 +1,9 @@
 ﻿param($tenant)
 try {
     $ConfigTable = Get-CippTable -tablename 'standards'
-    $Setting = ((Get-AzDataTableEntity @ConfigTable -Filter "PartitionKey eq 'standards' and RowKey eq '$tenant'").JSON | ConvertFrom-Json).standards.intuneDeviceReg
+    $Setting = ((Get-CIPPAzDataTableEntity @ConfigTable -Filter "PartitionKey eq 'standards' and RowKey eq '$tenant'").JSON | ConvertFrom-Json).standards.intuneDeviceReg
     if (!$Setting) {
-        $Setting = ((Get-AzDataTableEntity @ConfigTable -Filter "PartitionKey eq 'standards' and RowKey eq 'AllTenants'").JSON | ConvertFrom-Json).standards.intuneDeviceReg
+        $Setting = ((Get-CIPPAzDataTableEntity @ConfigTable -Filter "PartitionKey eq 'standards' and RowKey eq 'AllTenants'").JSON | ConvertFrom-Json).standards.intuneDeviceReg
     }
     $PreviousSetting = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/policies/deviceRegistrationPolicy" -tenantid $Tenant
     $PreviousSetting.userDeviceQuota = $Setting.max

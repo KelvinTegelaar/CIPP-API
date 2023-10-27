@@ -6,7 +6,7 @@ param($Request, $TriggerMetadata)
 $body = if ($request.query.GUID) {
     $Table = Get-CippTable -tablename 'cachebec'
     $Filter = "PartitionKey eq 'bec' and RowKey eq '$($request.query.GUID)'" 
-    $JSONOutput = Get-AzDataTableEntity @Table -Filter $Filter
+    $JSONOutput = Get-CIPPAzDataTableEntity @Table -Filter $Filter
     if (!$JSONOutput) {
         @{ Waiting = $true }
     }
