@@ -7,7 +7,7 @@ $Alerts = [System.Collections.ArrayList]@()
 $Table = Get-CippTable -tablename CippAlerts
 $PartitionKey = Get-Date -UFormat '%Y%m%d'
 $Filter = "PartitionKey eq '{0}'" -f $PartitionKey
-$Rows = Get-AzDataTableEntity @Table -Filter $Filter | Sort-Object TableTimestamp -Descending | Select-Object -First 10
+$Rows = Get-CIPPAzDataTableEntity @Table -Filter $Filter | Sort-Object TableTimestamp -Descending | Select-Object -First 10
 
 
 

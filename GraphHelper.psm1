@@ -92,7 +92,7 @@ function Get-GraphToken($tenantid, $scope, $AsApp, $AppID, $refreshToken, $Retur
         # Track consecutive Graph API failures
         $TenantsTable = Get-CippTable -tablename Tenants
         $Filter = "PartitionKey eq 'Tenants' and (defaultDomainName eq '{0}' or customerId eq '{0}')" -f $tenantid
-        $Tenant = Get-AzDataTableEntity @TenantsTable -Filter $Filter
+        $Tenant = Get-CIPPAzDataTableEntity @TenantsTable -Filter $Filter
         if (!$Tenant.RowKey) {
             $donotset = $true
             $Tenant = [pscustomobject]@{
@@ -113,7 +113,7 @@ function Get-GraphToken($tenantid, $scope, $AsApp, $AppID, $refreshToken, $Retur
         $Tenant.GraphErrorCount++
 
         if (!$donotset) { Update-AzDataTableEntity @TenantsTable -Entity $Tenant }
-        throw "$($Tenant.LastGraphError)"
+        throw "Could not get token: $($Tenant.LastGraphError)"
     }
 }
 
@@ -151,7 +151,7 @@ function Write-LogMessage ($message, $tenant = 'None', $API = 'None', $tenantId 
     }
     
     $Table.Entity = $TableRow
-    Add-AzDataTableEntity @Table | Out-Null
+    Add-CIPPAzDataTableEntity @Table | Out-Null
 }
 
 function New-GraphGetRequest {
@@ -184,7 +184,7 @@ function New-GraphGetRequest {
         # Track consecutive Graph API failures
         $TenantsTable = Get-CippTable -tablename Tenants
         $Filter = "PartitionKey eq 'Tenants' and (defaultDomainName eq '{0}' or customerId eq '{0}')" -f $tenantid
-        $Tenant = Get-AzDataTableEntity @TenantsTable -Filter $Filter
+        $Tenant = Get-CIPPAzDataTableEntity @TenantsTable -Filter $Filter
         if (!$Tenant) {
             $Tenant = @{
                 GraphErrorCount = 0
@@ -226,9 +226,14 @@ function New-GraphGetRequest {
     }
 }
 
-function New-GraphPOSTRequest ($uri, $tenantid, $body, $type, $scope, $AsApp, $NoAuthCheck, $skipTokenCache) {
+function New-GraphPOSTRequest ($uri, $tenantid, $body, $type, $scope, $AsApp, $NoAuthCheck, $skipTokenCache, $AddedHeaders) {
     if ($NoAuthCheck -or (Get-AuthorisedRequest -Uri $uri -TenantID $tenantid)) {
         $headers = Get-GraphToken -tenantid $tenantid -scope $scope -AsApp $asapp -SkipCache $skipTokenCache
+        if ($AddedHeaders) {
+            foreach ($header in $AddedHeaders.getenumerator()) {
+                $headers.Add($header.Key, $header.Value)
+            }
+        }
         Write-Verbose "Using $($uri) as url"
         if (!$type) {
             $type = 'POST'
@@ -283,7 +288,7 @@ function Get-ClassicAPIToken($tenantID, $Resource) {
             # Track consecutive Graph API failures
             $TenantsTable = Get-CippTable -tablename Tenants
             $Filter = "PartitionKey eq 'Tenants' and (defaultDomainName eq '{0}' or customerId eq '{0}')" -f $tenantid
-            $Tenant = Get-AzDataTableEntity @TenantsTable -Filter $Filter
+            $Tenant = Get-CIPPAzDataTableEntity @TenantsTable -Filter $Filter
             if (!$Tenant) {
                 $Tenant = @{
                     GraphErrorCount     = $null
@@ -423,7 +428,7 @@ function Get-Tenants {
     $TenantsTable = Get-CippTable -tablename 'Tenants'
     $ExcludedFilter = "PartitionKey eq 'Tenants' and Excluded eq true"
 
-    $SkipListCache = Get-AzDataTableEntity @TenantsTable -Filter $ExcludedFilter
+    $SkipListCache = Get-CIPPAzDataTableEntity @TenantsTable -Filter $ExcludedFilter
     if ($SkipList) {
         return $SkipListCache
     }
@@ -437,7 +442,7 @@ function Get-Tenants {
     else {
         $Filter = "PartitionKey eq 'Tenants' and Excluded eq false and GraphErrorCount lt 50"
     }
-    $IncludedTenantsCache = Get-AzDataTableEntity @TenantsTable -Filter $Filter
+    $IncludedTenantsCache = Get-CIPPAzDataTableEntity @TenantsTable -Filter $Filter
 
     if (($IncludedTenantsCache | Measure-Object).Count -gt 0) {
         try {
@@ -451,7 +456,7 @@ function Get-Tenants {
     if (!$LastRefresh -or $LastRefresh -lt (Get-Date).Addhours(-24).ToUniversalTime()) {
         try {
             Write-Host "Renewing. Cache not hit. $LastRefresh"
-            $TenantList = (New-GraphGetRequest -uri "https://graph.microsoft.com/beta/tenantRelationships/managedTenants/tenants?`$top=999" -tenantid $env:TenantID ) | Select-Object id, @{l = 'customerId'; e = { $_.tenantId } }, @{l = 'DefaultdomainName'; e = { [string]($_.contract.defaultDomainName) } } , @{l = 'MigratedToNewTenantAPI'; e = { $true } }, DisplayName, domains, @{n = 'delegatedPrivilegeStatus'; exp = { $_.tenantStatusInformation.delegatedPrivilegeStatus } } | Where-Object -Property defaultDomainName -NotIn $SkipListCache.defaultDomainName
+            $TenantList = (New-GraphGetRequest -uri "https://graph.microsoft.com/beta/tenantRelationships/managedTenants/tenants?`$top=999" -tenantid $env:TenantID ) | Select-Object id, @{l = 'customerId'; e = { $_.tenantId } }, @{l = 'DefaultdomainName'; e = { [string]($_.contract.defaultDomainName) } } , @{l = 'MigratedToNewTenantAPI'; e = { $true } }, DisplayName, domains, @{n = 'delegatedPrivilegeStatus'; exp = { $_.tenantStatusInformation.delegatedPrivilegeStatus } } | Where-Object { $_.defaultDomainName -NotIn $SkipListCache.defaultDomainName -and $_.defaultDomainName -ne $null }
 
         }
         catch {
@@ -475,7 +480,7 @@ function Get-Tenants {
 
             $ContractList = $Contracts | Select-Object id, customerId, DefaultdomainName, DisplayName, domains, @{l = 'MigratedToNewTenantAPI'; e = { $true } }, @{ n = 'delegatedPrivilegeStatus'; exp = { $CustomerId = $_.customerId; if (($GDAPRelationships | Where-Object { $_.customer.tenantId -EQ $CustomerId -and $_.status -EQ 'active' } | Measure-Object).Count -gt 0) { 'delegatedAndGranularDelegetedAdminPrivileges' } else { 'delegatedAdminPrivileges' } } } | Where-Object -Property defaultDomainName -NotIn $SkipListCache.defaultDomainName
 
-            $GDAPOnlyList = $GDAPRelationships | Where-Object { $_.status -eq 'active' -and $Contracts.customerId -notcontains $_.customer.tenantId } | Select-Object id, @{l = 'customerId'; e = { $($_.customer.tenantId) } }, @{l = 'defaultDomainName'; e = { (New-GraphGetRequest -uri "https://graph.microsoft.com/beta/tenantRelationships/findTenantInformationByTenantId(tenantId='$($_.customer.tenantId)')" -noauthcheck $true -asApp:$true -tenant $env:TenantId).defaultDomainName } }, @{l = 'MigratedToNewTenantAPI'; e = { $true } }, @{n = 'displayName'; exp = { $_.customer.displayName } }, domains, @{n = 'delegatedPrivilegeStatus'; exp = { 'granularDelegatedAdminPrivileges' } } | Where-Object -Property defaultDomainName -NotIn $SkipListCache.defaultDomainName | Sort-Object -Property customerId -Unique
+            $GDAPOnlyList = $GDAPRelationships | Where-Object { $_.status -eq 'active' -and $Contracts.customerId -notcontains $_.customer.tenantId } | Select-Object id, @{l = 'customerId'; e = { $($_.customer.tenantId) } }, @{l = 'defaultDomainName'; e = { (New-GraphGetRequest -uri "https://graph.microsoft.com/beta/tenantRelationships/findTenantInformationByTenantId(tenantId='$($_.customer.tenantId)')" -noauthcheck $true -asApp:$true -tenant $env:TenantId).defaultDomainName } }, @{l = 'MigratedToNewTenantAPI'; e = { $true } }, @{n = 'displayName'; exp = { $_.customer.displayName } }, domains, @{n = 'delegatedPrivilegeStatus'; exp = { 'granularDelegatedAdminPrivileges' } } |  Where-Object { $_.defaultDomainName -NotIn $SkipListCache.defaultDomainName -and $_.defaultDomainName -ne $null }  | Sort-Object -Property customerId -Unique
 
             $TenantList = @($ContractList) + @($GDAPOnlyList)
         }
@@ -520,7 +525,7 @@ function Get-Tenants {
 
         if ($IncludedTenantsCache) {
             $TenantsTable.Force = $true
-            Add-AzDataTableEntity @TenantsTable -Entity $IncludedTenantsCache
+            Add-CIPPAzDataTableEntity @TenantsTable -Entity $IncludedTenantsCache
         }
     }
     return ($IncludedTenantsCache | Sort-Object -Property displayName)
@@ -534,21 +539,21 @@ function Remove-CIPPCache {
     # Remove all tenants except excluded
     $TenantsTable = Get-CippTable -tablename 'Tenants'
     $Filter = "PartitionKey eq 'Tenants' and Excluded eq false"
-    $ClearIncludedTenants = Get-AzDataTableEntity @TenantsTable -Filter $Filter
+    $ClearIncludedTenants = Get-CIPPAzDataTableEntity @TenantsTable -Filter $Filter
     Remove-AzDataTableEntity @TenantsTable -Entity $ClearIncludedTenants
     if ($tenantsonly -eq 'false') {
         Write-Host 'Clearing all'
         # Remove Domain Analyser cached results
         $DomainsTable = Get-CippTable -tablename 'Domains'
         $Filter = "PartitionKey eq 'TenantDomains'"
-        $ClearDomainAnalyserRows = Get-AzDataTableEntity @DomainsTable -Filter $Filter | ForEach-Object {
+        $ClearDomainAnalyserRows = Get-CIPPAzDataTableEntity @DomainsTable -Filter $Filter | ForEach-Object {
             $_.DomainAnalyser = ''
             $_
         }
         Update-AzDataTableEntity @DomainsTable -Entity $ClearDomainAnalyserRows
         #Clear BPA
         $BPATable = Get-CippTable -tablename 'cachebpa'
-        $ClearBPARows = Get-AzDataTableEntity @BPATable
+        $ClearBPARows = Get-CIPPAzDataTableEntity @BPATable
         Remove-AzDataTableEntity @BPATable -Entity $ClearBPARows
         $ENV:SetFromProfile = $null
         $Script:SkipListCache = $Null
@@ -580,7 +585,7 @@ function New-ExoRequest ($tenantid, $cmdlet, $cmdParams, $useSystemMailbox, $Anc
 
             if (!$Anchor -or $useSystemMailbox) {
                 $OnMicrosoft = (New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/domains?$top=999' -tenantid $tenantid -NoAuthCheck $NoAuthCheck | Where-Object -Property isInitial -EQ $true).id
-                $anchor = "UPN:SystemMailbox{bb558c35-97f1-4cb9-8ff7-d53741dc928c}@$($OnMicrosoft)"
+                $anchor = "UPN:SystemMailbox{8cc370d3-822a-4ab8-a926-bb94bd0641a9}@$($OnMicrosoft)"
 
             }
         }
@@ -741,7 +746,7 @@ function New-passwordString {
     )
     Set-Location (Get-Item $PSScriptRoot).FullName
     $SettingsTable = Get-CippTable -tablename 'Settings'
-    $PasswordType = (Get-AzDataTableEntity @SettingsTable).passwordType
+    $PasswordType = (Get-CIPPAzDataTableEntity @SettingsTable).passwordType
     if ($PasswordType -eq 'Correct-Battery-Horse') {
         $Words = Get-Content .\words.txt
         (Get-Random -InputObject $words -Count 4) -join '-'
@@ -768,7 +773,7 @@ function New-GraphBulkRequest {
         # Track consecutive Graph API failures
         $TenantsTable = Get-CippTable -tablename Tenants
         $Filter = "PartitionKey eq 'Tenants' and (defaultDomainName eq '{0}' or customerId eq '{0}')" -f $tenantid
-        $Tenant = Get-AzDataTableEntity @TenantsTable -Filter $Filter
+        $Tenant = Get-CIPPAzDataTableEntity @TenantsTable -Filter $Filter
         if (!$Tenant) {
             $Tenant = @{
                 GraphErrorCount = 0

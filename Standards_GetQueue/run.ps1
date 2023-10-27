@@ -2,27 +2,30 @@ param($name)
 
 Write-Host 'QUEUEQUE'
 $Table = Get-CippTable -tablename 'standards'
-$tenants = (Get-AzDataTableEntity @Table -Filter $Filter).JSON | ConvertFrom-Json
+$SkipList = Get-Tenants -SkipList
+$Tenants = (Get-CIPPAzDataTableEntity @Table -Filter $Filter).JSON | ConvertFrom-Json
 
-$object = foreach ($Tenant in $tenants) {
-    $tenant.standards.psobject.properties.name | ForEach-Object { 
+$object = foreach ($Tenant in $Tenants) {
+    $Tenant.standards.psobject.properties.name | ForEach-Object {
         $Standard = $_
-        if ($tenant.Tenant -ne 'AllTenants') {
+        if ($Tenant.Tenant -ne 'AllTenants' -and $SkipList.defaultDomainName -notcontains $Tenant.Tenant) {
             Write-Host 'Not all tenants. Single object'
-            [pscustomobject]@{ 
+            [pscustomobject]@{
                 Tenant   = $tenant.Tenant
                 Standard = $Standard
             }
-        }
-        else {
-            get-tenants | ForEach-Object {
-                [pscustomobject]@{ 
-                    Tenant   = $_.defaultDomainName
-                    Standard = $Standard 
+        } elseif ($Tenant.Tenant -eq 'AllTenants') {
+            Get-Tenants | ForEach-Object {
+                $Tenant = $_
+                $TenantStandard = $Tenants | Where-Object { $_.Tenant -eq $Tenant.defaultDomainName }
+                if ($TenantStandard.OverrideAllTenants -ne $true) {
+                    [pscustomobject]@{
+                        Tenant   = $_.defaultDomainName
+                        Standard = $Standard
+                    }
                 }
             }
         }
     }
-
 }
 $object
