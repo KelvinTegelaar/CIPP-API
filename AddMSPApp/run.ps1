@@ -67,7 +67,7 @@ $Results = foreach ($Tenant in $tenants) {
         } | ConvertTo-Json -Depth 15
         $Table = Get-CippTable -tablename 'apps'
         $Table.Force = $true
-        Add-AzDataTableEntity @Table -Entity @{
+        Add-CIPPAzDataTableEntity @Table -Entity @{
             JSON         = "$CompleteObject"
             RowKey       = "$((New-Guid).GUID)"
             PartitionKey = "apps"
