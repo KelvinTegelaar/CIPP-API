@@ -5,7 +5,7 @@ function New-GradientServiceSyncRun {
     )
 
     $Table = Get-CIPPTable -TableName Extensionsconfig
-    $Configuration = ((Get-AzDataTableEntity @Table).config | ConvertFrom-Json).Gradient
+    $Configuration = ((Get-CIPPAzDataTableEntity @Table).config | ConvertFrom-Json).Gradient
     $Tenants = Get-Tenants
     #creating accounts in Gradient
     try {
@@ -34,7 +34,7 @@ function New-GradientServiceSyncRun {
     $ConvertTable = Import-Csv Conversiontable.csv
     $Table = Get-CIPPTable -TableName cachelicenses
     $LicenseTable = Get-CIPPTable -TableName ExcludedLicenses
-    $ExcludedSkuList = Get-AzDataTableEntity @LicenseTable
+    $ExcludedSkuList = Get-CIPPAzDataTableEntity @LicenseTable
 
     $RawGraphRequest = $Tenants | ForEach-Object -Parallel { 
         $domainName = $_.defaultDomainName

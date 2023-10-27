@@ -13,7 +13,7 @@ function Send-CIPPAlert {
     Write-Host "Shipping Alert"
     $Table = Get-CIPPTable -TableName SchedulerConfig
     $Filter = "RowKey eq 'CippNotifications' and PartitionKey eq 'CippNotifications'"
-    $Config = [pscustomobject](Get-AzDataTableEntity @Table -Filter $Filter)
+    $Config = [pscustomobject](Get-CIPPAzDataTableEntity @Table -Filter $Filter)
     if ($Type -eq 'email') {
         Write-Host "Trying to send email"
         try {
