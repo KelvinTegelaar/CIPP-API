@@ -27,7 +27,7 @@ function Push-ListGraphRequestQueue {
 
     $Filter = "PartitionKey eq '{0}' and Tenant eq '{1}'" -f $PartitionKey, $QueueItem.Tenant
     Write-Host $Filter
-    Get-AzDataTableEntity @Table -Filter $Filter | Remove-AzDataTableEntity @Table
+    Get-CIPPAzDataTableEntity @Table -Filter $Filter | Remove-AzDataTableEntity @Table
 
     $GraphRequestParams = @{
         TenantFilter                = $QueueItem.TenantFilter
@@ -41,7 +41,8 @@ function Push-ListGraphRequestQueue {
 
     $RawGraphRequest = try {
         Get-GraphRequestList @GraphRequestParams
-    } catch {
+    }
+    catch {
         [PSCustomObject]@{
             Tenant     = $QueueItem.Tenant
             CippStatus = "Could not connect to tenant. $($_.Exception.message)"
@@ -60,9 +61,10 @@ function Push-ListGraphRequestQueue {
         }
     }
     try {
-        Add-AzDataTableEntity @Table -Entity $GraphResults -Force | Out-Null
+        Add-CIPPAzDataTableEntity @Table -Entity $GraphResults -Force | Out-Null
         Update-CippQueueEntry -RowKey $QueueItem.QueueId -Status 'Completed'
-    } catch {
+    }
+    catch {
         Write-Host "Queue Error: $($_.Exception.Message)"
         Update-CippQueueEntry -RowKey $QueueItem.QueueId -Status 'Failed'
     }

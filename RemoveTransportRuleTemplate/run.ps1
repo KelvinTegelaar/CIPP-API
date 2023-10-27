@@ -10,7 +10,7 @@ $ID = $request.query.id
 try {
     $Table = Get-CippTable -tablename 'templates'
     $Filter = "PartitionKey eq 'TransportTemplate' and RowKey eq '$id'" 
-    $ClearRow = Get-AzDataTableEntity @Table -Filter $Filter
+    $ClearRow = Get-CIPPAzDataTableEntity @Table -Filter $Filter
     Remove-AzDataTableEntity @Table -Entity $clearRow
     Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -message "Removed Transport Rule Template with ID $ID." -Sev 'Info'
     $body = [pscustomobject]@{'Results' = 'Successfully removed Transport Rule Template' }

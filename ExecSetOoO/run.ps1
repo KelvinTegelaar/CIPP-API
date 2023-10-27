@@ -7,16 +7,24 @@ try {
     Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME  -message "Accessed this API" -Sev "Debug"
     $Username = $request.body.user
     $Tenantfilter = $request.body.tenantfilter
-    $message = $Request.body.input
-    #$userid = (New-GraphGetRequest -uri "https://graph.microsoft.com/beta/users/$($username)" -tenantid $Tenantfilter).id
+    if ($Request.body.input) {
+        $InternalMessage = $Request.body.input
+        $ExternalMessage = $Request.body.input
+    }
+    else {
+        $InternalMessage = $Request.body.InternalMessage
+        $ExternalMessage = $Request.body.ExternalMessage
+    }
+    $StartTime = $Request.body.StartTime
+    $EndTime = $Request.body.EndTime
+    
     $Results = try {
-        if (!$Request.Body.Disable) {
-            Set-CIPPOutOfOffice -userid $Request.body.user -tenantFilter $TenantFilter -APIName $APINAME -ExecutingUser $request.headers.'x-ms-client-principal' -OOO $message -State "Enabled"
+        if ($Request.Body.AutoReplyState -ne "Scheduled") {
+            Set-CIPPOutOfOffice -userid $Request.body.user -tenantFilter $TenantFilter -APIName $APINAME -ExecutingUser $request.headers.'x-ms-client-principal' -InternalMessage $InternalMessage -ExternalMessage $ExternalMessage -State $Request.Body.AutoReplyState
         }
         else {
-            Set-CIPPOutOfOffice -userid $Request.body.user -tenantFilter $TenantFilter -APIName $APINAME -ExecutingUser $request.headers.'x-ms-client-principal' -OOO $message -State "Disabled"
+            Set-CIPPOutOfOffice -userid $Request.body.user -tenantFilter $TenantFilter -APIName $APINAME -ExecutingUser $request.headers.'x-ms-client-principal' -InternalMessage $InternalMessage -ExternalMessage $ExternalMessage -StartTime $StartTime -EndTime $EndTime -State $Request.Body.AutoReplyState
         }
-
     }
     catch {
         "Could not add out of office message for $($username). Error: $($_.Exception.Message)"
