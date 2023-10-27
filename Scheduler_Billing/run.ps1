@@ -6,7 +6,7 @@ try {
     Write-LogMessage -API "Scheduler_Billing" -tenant "none" -message "Starting billing processing." -sev Info
 
     $Table = Get-CIPPTable -TableName Extensionsconfig
-    $Configuration = (Get-AzDataTableEntity @Table).config | ConvertFrom-Json -Depth 10
+    $Configuration = (Get-CIPPAzDataTableEntity @Table).config | ConvertFrom-Json -Depth 10
     foreach ($ConfigItem in $Configuration.psobject.properties.name) {
         switch ($ConfigItem) {
             "Gradient" {

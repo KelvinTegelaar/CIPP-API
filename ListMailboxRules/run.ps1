@@ -14,7 +14,7 @@ Write-Host 'PowerShell HTTP trigger function processed a request.'
 $TenantFilter = $Request.Query.TenantFilter
 
 $Table = Get-CIPPTable -TableName cachembxrules
-$Rows = Get-AzDataTableEntity @Table | Where-Object -Property Timestamp -GT (Get-Date).AddMinutes(-15)
+$Rows = Get-CIPPAzDataTableEntity @Table | Where-Object -Property Timestamp -GT (Get-Date).AddMinutes(-15)
 if (!$Rows) {
     Push-OutputBinding -Name Msg -Value $TenantFilter
     $GraphRequest = [PSCustomObject]@{
@@ -40,7 +40,7 @@ else {
     }
 }
 #Remove all old cache
-Remove-AzDataTableEntity @Table -Entity (Get-AzDataTableEntity @Table | Where-Object -Property Timestamp -LT (Get-Date).AddMinutes(-15))
+Remove-AzDataTableEntity @Table -Entity (Get-CIPPAzDataTableEntity @Table | Where-Object -Property Timestamp -LT (Get-Date).AddMinutes(-15))
 
 
 Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{

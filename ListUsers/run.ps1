@@ -27,7 +27,7 @@ $GraphRequest = if ($TenantFilter -ne 'AllTenants') {
 }
 else {
     $Table = Get-CIPPTable -TableName 'cacheusers'
-    $Rows = Get-AzDataTableEntity @Table | Where-Object -Property Timestamp -GT (Get-Date).AddHours(-1)
+    $Rows = Get-CIPPAzDataTableEntity @Table | Where-Object -Property Timestamp -GT (Get-Date).AddHours(-1)
     if (!$Rows) {
         $Queue = New-CippQueueEntry -Name 'Users' -Link '/identity/administration/users?customerId=AllTenants'
         Push-OutputBinding -Name Msg -Value "users/$($userid)?`$top=999&`$select=$($selectlist -join ',')&`$filter=$GraphFilter&`$count=true"
