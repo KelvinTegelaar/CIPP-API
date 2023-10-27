@@ -1,8 +1,8 @@
 ﻿param($tenant)
 $ConfigTable = Get-CippTable -tablename 'standards'
-$AllowedAppIdsForTenant = ((Get-AzDataTableEntity @ConfigTable -Filter "PartitionKey eq 'standards' and RowKey eq '$tenant'").JSON | ConvertFrom-Json).Standards.OauthConsent.AllowedApps -split ','
+$AllowedAppIdsForTenant = ((Get-CIPPAzDataTableEntity @ConfigTable -Filter "PartitionKey eq 'standards' and RowKey eq '$tenant'").JSON | ConvertFrom-Json).Standards.OauthConsent.AllowedApps -split ','
 if (!$AllowedAppIdsForTenant) {
-    $AllowedAppIdsForTenant = ((Get-AzDataTableEntity @ConfigTable -Filter "PartitionKey eq 'standards' and RowKey eq 'AllTenants'").JSON | ConvertFrom-Json).Standards.OauthConsent.AllowedApps -split ','
+    $AllowedAppIdsForTenant = ((Get-CIPPAzDataTableEntity @ConfigTable -Filter "PartitionKey eq 'standards' and RowKey eq 'AllTenants'").JSON | ConvertFrom-Json).Standards.OauthConsent.AllowedApps -split ','
 }
 try {
     $State = (New-GraphGetRequest -Uri "https://graph.microsoft.com/beta/policies/authorizationPolicy/authorizationPolicy" -tenantid $tenant)

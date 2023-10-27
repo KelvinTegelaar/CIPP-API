@@ -7,7 +7,7 @@ function New-HaloPSATicket {
   )
   #Get Halo PSA Token based on the config we have.
   $Table = Get-CIPPTable -TableName Extensionsconfig
-  $Configuration = ((Get-AzDataTableEntity @Table).config | ConvertFrom-Json).HaloPSA
+  $Configuration = ((Get-CIPPAzDataTableEntity @Table).config | ConvertFrom-Json).HaloPSA
 
   $token = Get-HaloToken -configuration $Configuration
   $Object = [PSCustomObject]@{

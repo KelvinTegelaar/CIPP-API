@@ -57,7 +57,7 @@ try {
                 'PartitionKey'  = 'Maintenance'
                 'ScriptContent' = $ScriptContent
             }
-            Add-AzDataTableEntity @Table -Entity $MaintenanceScriptRow -Force
+            Add-CIPPAzDataTableEntity @Table -Entity $MaintenanceScriptRow -Force
 
             $Body = @{ Link = "/api/PublicScripts?guid=$LinkGuid" }
         }

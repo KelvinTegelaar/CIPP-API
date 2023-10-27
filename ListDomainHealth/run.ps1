@@ -8,7 +8,7 @@ Import-Module DNSHealth
 try {
     $ConfigTable = Get-CippTable -tablename Config
     $Filter = "PartitionKey eq 'Domains' and RowKey eq 'Domains'"
-    $Config = Get-AzDataTableEntity @ConfigTable -Filter $Filter
+    $Config = Get-CIPPAzDataTableEntity @ConfigTable -Filter $Filter
 
     $ValidResolvers = @('Google', 'CloudFlare', 'Quad9')
     if ($ValidResolvers -contains $Config.Resolver) {
@@ -20,7 +20,7 @@ try {
             RowKey       = 'Domains'
             Resolver     = $Resolver
         }
-        Add-AzDataTableEntity @ConfigTable -Entity $Config -Force
+        Add-CIPPAzDataTableEntity @ConfigTable -Entity $Config -Force
     }
 } catch {
     $Resolver = 'Google'
@@ -42,7 +42,7 @@ try {
         if ($Request.Query.Domain -match '^(((?!-))(xn--|_{1,1})?[a-z0-9-]{0,61}[a-z0-9]{1,1}\.)*(xn--)?([a-z0-9][a-z0-9\-]{0,60}|[a-z0-9-]{1,30}\.[a-z]{2,})$') {
             $DomainTable = Get-CIPPTable -Table 'Domains'
             $Filter = "RowKey eq '{0}'" -f $Request.Query.Domain
-            $DomainInfo = Get-AzDataTableEntity @DomainTable -Filter $Filter
+            $DomainInfo = Get-CIPPAzDataTableEntity @DomainTable -Filter $Filter
             switch ($Request.Query.Action) {
                 'ListDomainInfo' {
                     $Body = $DomainInfo
@@ -91,7 +91,7 @@ try {
                                 }
                             }
                             Write-Host $DomainInfo
-                            Add-AzDataTableEntity @DomainTable -Entity $DomainInfo -Force
+                            Add-CIPPAzDataTableEntity @DomainTable -Entity $DomainInfo -Force
                         }
                     } elseif (![string]::IsNullOrEmpty($DomainInfo.DkimSelectors)) {
                         $DkimQuery.Selectors = [System.Collections.Generic.List[string]]($DomainInfo.DkimSelectors | ConvertFrom-Json)

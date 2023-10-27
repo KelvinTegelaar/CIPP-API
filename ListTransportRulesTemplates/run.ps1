@@ -15,14 +15,14 @@ $Templates = Get-ChildItem "Config\*.TransportRuleTemplate.json" | ForEach-Objec
         PartitionKey = "TransportTemplate"
         GUID         = "$($_.name)"
     }
-    Add-AzDataTableEntity @Table -Entity $Entity -Force
+    Add-CIPPAzDataTableEntity @Table -Entity $Entity -Force
 
 }
 
 #List new policies
 $Table = Get-CippTable -tablename 'templates'
 $Filter = "PartitionKey eq 'TransportTemplate'" 
-$Templates = (Get-AzDataTableEntity @Table -Filter $Filter) | ForEach-Object {
+$Templates = (Get-CIPPAzDataTableEntity @Table -Filter $Filter) | ForEach-Object {
     $GUID = $_.RowKey
     $data = $_.JSON | ConvertFrom-Json 
     $data | Add-Member -NotePropertyName "GUID" -NotePropertyValue $GUID
