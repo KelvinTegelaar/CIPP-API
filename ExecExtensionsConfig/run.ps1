@@ -36,7 +36,7 @@ $results = try {
         'config'       = [string]$body
     }
 
-    Add-AzDataTableEntity @Table -Entity $Config -Force | Out-Null
+    Add-CIPPAzDataTableEntity @Table -Entity $Config -Force | Out-Null
     "Successfully set the configuration. $AddedText"
 }
 catch {

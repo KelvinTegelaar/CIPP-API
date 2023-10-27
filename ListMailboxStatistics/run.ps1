@@ -27,7 +27,7 @@ try {
     }
     else {
         $Table = Get-CIPPTable -TableName "cachereports"
-        $Rows = Get-AzDataTableEntity @Table | Where-Object -Property Timestamp -GT (Get-Date).AddHours(-1)
+        $Rows = Get-CIPPAzDataTableEntity @Table | Where-Object -Property Timestamp -GT (Get-Date).AddHours(-1)
         if (!$Rows) {
             $Queue = New-CippQueueEntry -Name  "Reports" -Link '/email/reports/mailbox-statistics?customerId=AllTenants'
             Push-OutputBinding -Name Msg -Value "reports/getMailboxUsageDetail(period='D7')?`$format=application/json"
