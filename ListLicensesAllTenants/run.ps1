@@ -25,5 +25,5 @@ $RawGraphRequest = Get-Tenants | ForEach-Object -Parallel {
 
 $Table = Get-CIPPTable -TableName cachelicenses
 foreach ($GraphRequest in $RawGraphRequest) {
-    Add-AzDataTableEntity @Table -Entity $GraphRequest -Force | Out-Null
+    Add-CIPPAzDataTableEntity @Table -Entity $GraphRequest -Force | Out-Null
 }
