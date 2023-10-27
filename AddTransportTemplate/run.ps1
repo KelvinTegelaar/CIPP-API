@@ -22,7 +22,7 @@ try {
     $JSON = ($JSON | Select-Object @{n = 'name'; e = { $_.name } }, @{n = 'comments'; e = { $_.comments } }, * | ConvertTo-Json -Depth 10)
     $Table = Get-CippTable -tablename 'templates'
     $Table.Force = $true
-    Add-AzDataTableEntity @Table -Entity @{
+    Add-CIPPAzDataTableEntity @Table -Entity @{
         JSON         = "$json"
         RowKey       = "$GUID"
         PartitionKey = "TransportTemplate"

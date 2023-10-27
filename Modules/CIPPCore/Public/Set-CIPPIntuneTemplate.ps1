@@ -20,7 +20,7 @@ function Set-CIPPIntuneTemplate {
     } | ConvertTo-Json -Depth 10 -Compress
     $Table = Get-CippTable -tablename 'templates'
     $Table.Force = $true
-    Add-AzDataTableEntity @Table -Entity @{
+    Add-CIPPAzDataTableEntity @Table -Entity @{
         JSON         = "$object"
         RowKey       = "$GUID"
         GUID         = "$GUID"

@@ -52,24 +52,26 @@ function New-CIPPCAPolicy {
     }
 
     #for each of the locations, check if they exist, if not create them. These are in $jsonobj.LocationInfo
-    $LocationLookupTable = foreach ($location in $jsonobj.LocationInfo) {
-        if (!$location.displayName) { continue }
-        $CheckExististing = New-GraphGETRequest -uri "https://graph.microsoft.com/beta/identity/conditionalAccess/namedLocations" -tenantid $TenantFilter
-        if ($Location.displayName -in $CheckExististing.displayName) {
-            [pscustomobject]@{
-                id   = ($CheckExististing | Where-Object -Property displayName -EQ $Location.displayName).id
-                name = ($CheckExististing | Where-Object -Property displayName -EQ $Location.displayName).displayName
-            }
-            Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME  -message "Matched a CA policy with the existing Named Location: $($location.displayName)" -Sev "Info"
+    $LocationLookupTable = foreach ($locations in $jsonobj.LocationInfo) {
+        foreach ($location in $locations) {
+            if (!$location.displayName) { continue }
+            $CheckExististing = New-GraphGETRequest -uri "https://graph.microsoft.com/beta/identity/conditionalAccess/namedLocations" -tenantid $TenantFilter
+            if ($Location.displayName -in $CheckExististing.displayName) {
+                [pscustomobject]@{
+                    id   = ($CheckExististing | Where-Object -Property displayName -EQ $Location.displayName).id
+                    name = ($CheckExististing | Where-Object -Property displayName -EQ $Location.displayName).displayName
+                }
+                Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME  -message "Matched a CA policy with the existing Named Location: $($location.displayName)" -Sev "Info"
  
-        }
-        else {
-            $Body = ConvertTo-Json -InputObject $Location
-            $GraphRequest = New-GraphPOSTRequest -uri "https://graph.microsoft.com/beta/identity/conditionalAccess/namedLocations" -body $body -Type POST -tenantid $tenantfilter
-            Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME  -message "Created new Named Location: $($location.displayName)" -Sev "Info"
-            [pscustomobject]@{
-                id   = $GraphRequest.id
-                name = $GraphRequest.displayName
+            }
+            else {
+                $Body = ConvertTo-Json -InputObject $Location
+                $GraphRequest = New-GraphPOSTRequest -uri "https://graph.microsoft.com/beta/identity/conditionalAccess/namedLocations" -body $body -Type POST -tenantid $tenantfilter
+                Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME  -message "Created new Named Location: $($location.displayName)" -Sev "Info"
+                [pscustomobject]@{
+                    id   = $GraphRequest.id
+                    name = $GraphRequest.displayName
+                }
             }
         }
     }

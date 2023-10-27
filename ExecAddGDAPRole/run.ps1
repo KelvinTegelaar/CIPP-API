@@ -52,7 +52,7 @@ $RoleMappings = foreach ($group in $Groups) {
       }
 }
 
-Add-AzDataTableEntity @Table -Entity $RoleMappings -Force
+Add-CIPPAzDataTableEntity @Table -Entity $RoleMappings -Force
 
 $body = @{Results = @($Results) }
 # Associate values to output bindings by calling 'Push-OutputBinding'.
