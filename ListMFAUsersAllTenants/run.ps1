@@ -35,7 +35,7 @@ try {
                 PartitionKey    = 'users'
             }
         }
-        Add-AzDataTableEntity @Table -Entity $GraphRequest -Force | Out-Null
+        Add-CIPPAzDataTableEntity @Table -Entity $GraphRequest -Force | Out-Null
     }
 }
 catch {
@@ -51,7 +51,7 @@ catch {
         RowKey          = [string]"$domainName"
         PartitionKey    = 'users'
     }
-    Add-AzDataTableEntity @Table -Entity $GraphRequest -Force | Out-Null
+    Add-CIPPAzDataTableEntity @Table -Entity $GraphRequest -Force | Out-Null
 }
 finally {
     Update-CippQueueEntry -RowKey $QueueItem -Status "Completed"

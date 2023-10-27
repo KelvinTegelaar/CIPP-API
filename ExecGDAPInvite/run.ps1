@@ -47,7 +47,7 @@ try {
                 'InviteUrl'    = $InviteUrl
                 'RoleMappings' = [string](@($RoleMappings) | ConvertTo-Json -Depth 10)
             }
-            Add-AzDataTableEntity @Table -Entity $InviteEntity
+            Add-CIPPAzDataTableEntity @Table -Entity $InviteEntity
 
             $Results.add("Relationship created - Invite URL: $InviteUrl")
         } else {
