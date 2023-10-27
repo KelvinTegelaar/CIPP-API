@@ -42,7 +42,7 @@ try {
     $JSON = ($JSON | ConvertTo-Json -Depth 100)
     $Table = Get-CippTable -tablename 'templates'
     $Table.Force = $true
-    Add-AzDataTableEntity @Table -Entity @{
+    Add-CIPPAzDataTableEntity @Table -Entity @{
         JSON         = "$JSON"
         RowKey       = "$GUID"
         PartitionKey = "CATemplate"

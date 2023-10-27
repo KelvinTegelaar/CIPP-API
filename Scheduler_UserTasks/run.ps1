@@ -2,7 +2,7 @@ param($Timer)
 
 $Table = Get-CippTable -tablename 'ScheduledTasks'
 $Filter = "TaskState eq 'Planned' or TaskState eq 'Failed - Planned'"
-$tasks = Get-AzDataTableEntity @Table -Filter $Filter
+$tasks = Get-CIPPAzDataTableEntity @Table -Filter $Filter
 foreach ($task in $tasks) {
     $tenant = $task.Tenant
     $currentUnixTime = [int64](([datetime]::UtcNow) - (Get-Date '1/1/1970')).TotalSeconds

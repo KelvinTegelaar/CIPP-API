@@ -20,7 +20,7 @@ Get-Tenants | ForEach-Object -Parallel {
                 Tenant       = $domainName
                 PartitionKey = 'alert'
             }
-            Add-AzDataTableEntity @Table -Entity $GraphRequest -Force | Out-Null
+            Add-CIPPAzDataTableEntity @Table -Entity $GraphRequest -Force | Out-Null
 
         }
 
@@ -46,7 +46,7 @@ Get-Tenants | ForEach-Object -Parallel {
             PartitionKey = 'alert'
             Tenant       = $domainName
         }
-        Add-AzDataTableEntity @Table -Entity $GraphRequest -Force | Out-Null
+        Add-CIPPAzDataTableEntity @Table -Entity $GraphRequest -Force | Out-Null
 
 
     }

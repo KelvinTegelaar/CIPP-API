@@ -7,7 +7,7 @@ $APIName = $TriggerMetadata.FunctionName
 Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -message 'Accessed this API' -Sev 'Debug'
 
 $Table = Get-CIPPTable -TableName Settings
-$PasswordType = (Get-AzDataTableEntity @Table)
+$PasswordType = (Get-CIPPAzDataTableEntity @Table)
 
 # Write to the Azure Functions log stream.
 Write-Host 'PowerShell HTTP trigger function processed a request.'
@@ -23,7 +23,7 @@ $results = try {
             'RowKey'        = 'settings'
         }
 
-        Add-AzDataTableEntity @Table -Entity $SchedulerConfig -Force | Out-Null
+        Add-CIPPAzDataTableEntity @Table -Entity $SchedulerConfig -Force | Out-Null
         'Successfully set the configuration'
     }
 }

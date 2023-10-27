@@ -19,7 +19,7 @@ if ($Request.Query.tenantFilter -ne 'AllTenants') {
 
 try {
     # Extract json from table results
-    $Results = foreach ($DomainAnalyserResult in (Get-AzDataTableEntity @DomainTable).DomainAnalyser) {
+    $Results = foreach ($DomainAnalyserResult in (Get-CIPPAzDataTableEntity @DomainTable).DomainAnalyser) {
         try { 
             if (![string]::IsNullOrEmpty($DomainAnalyserResult)) {
                 $Object = $DomainAnalyserResult | ConvertFrom-Json
