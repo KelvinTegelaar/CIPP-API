@@ -6,7 +6,7 @@ Write-Host "PowerShell queue trigger function processed work item: $QueueItem"
 #$TenantFilter = $env:TenantID
 
 $Table = Get-CIPPTable -TableName 'GDAPInvites'
-$Invite = Get-AzDataTableEntity @Table -Filter "RowKey eq '$QueueItem'"
+$Invite = Get-CIPPAzDataTableEntity @Table -Filter "RowKey eq '$QueueItem'"
 
 $RoleMappings = $Invite.RoleMappings | ConvertFrom-Json
 Write-Host ($Invite | ConvertTo-Json -Compress)

@@ -19,9 +19,9 @@ function Set-CIPPGraphSubscription {
                 $GraphRequest = New-GraphPostRequest -uri "https://graph.microsoft.com/beta/subscriptions/$($_.id)" -tenantid $TenantFilter -type PATCH -body $body -Verbose
                 $WebhookTable = Get-CIPPTable -TableName webhookTable
                 #get the row from the table, grab it by the webhook notification url, and update the expiration date.
-                $WebhookRow = Get-AzDataTableEntity @WebhookTable | Where-Object { $_.WebhookNotificationUrl -eq $GraphRequest.notificationUrl }
+                $WebhookRow = Get-CIPPAzDataTableEntity @WebhookTable | Where-Object { $_.WebhookNotificationUrl -eq $GraphRequest.notificationUrl }
                 $WebhookRow.Expiration = $RenewalDate
-                $null = Add-AzDataTableEntity @WebhookTable -Entity $WebhookRow -Force
+                $null = Add-CIPPAzDataTableEntity @WebhookTable -Entity $WebhookRow -Force
                 return "Renewed $($GraphRequest.notificationUrl)" 
 
             }
