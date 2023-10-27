@@ -16,7 +16,7 @@ if ($Request.query.TenantFilter -ne 'AllTenants') {
 else {
     $Table = Get-CIPPTable -TableName cachemfa
 
-    $Rows = Get-AzDataTableEntity @Table | Where-Object -Property Timestamp -GT (Get-Date).AddHours(-2)
+    $Rows = Get-CIPPAzDataTableEntity @Table | Where-Object -Property Timestamp -GT (Get-Date).AddHours(-2)
     if (!$Rows) {
         $Queue = New-CippQueueEntry -Name 'MFA Users - All Tenants' -Link '/identity/reports/mfa-report?customerId=AllTenants'
         Write-Information ($Queue | ConvertTo-Json)

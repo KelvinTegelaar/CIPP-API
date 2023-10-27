@@ -22,7 +22,7 @@ try {
     }
     $CSVfile = foreach ($CSVTable in $BackupTables) {
         $Table = Get-CippTable -tablename $CSVTable
-        Get-AzDataTableEntity @Table | Select-Object *, @{l = 'table'; e = { $CSVTable } }
+        Get-CIPPAzDataTableEntity @Table | Select-Object *, @{l = 'table'; e = { $CSVTable } }
     }
     Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME  -message "Created backup" -Sev "Debug"
 
