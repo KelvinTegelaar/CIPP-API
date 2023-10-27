@@ -11,7 +11,7 @@ Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -m
 Write-Host 'PowerShell HTTP trigger function processed a request.'
 $Table = Get-CIPPTable -TableName 'knownlocationdb'
 $Filter = "Tenant eq '$($Request.Query.TenantFilter)'"
-$KnownIPDb = Get-AzDataTableEntity @Table -Filter $Filter
+$KnownIPDb = Get-CIPPAzDataTableEntity @Table -Filter $Filter
 
 # Associate values to output bindings by calling 'Push-OutputBinding'.
 Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{

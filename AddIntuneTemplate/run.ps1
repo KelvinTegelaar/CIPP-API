@@ -22,7 +22,7 @@ try {
         } | ConvertTo-Json
         $Table = Get-CippTable -tablename 'templates'
         $Table.Force = $true
-        Add-AzDataTableEntity @Table -Entity @{
+        Add-CIPPAzDataTableEntity @Table -Entity @{
             JSON         = "$object"
             RowKey       = "$GUID"
             PartitionKey = "IntuneTemplate"
@@ -99,7 +99,7 @@ try {
         } | ConvertTo-Json
         $Table = Get-CippTable -tablename 'templates'
         $Table.Force = $true
-        Add-AzDataTableEntity @Table -Entity @{
+        Add-CIPPAzDataTableEntity @Table -Entity @{
             JSON         = "$object"
             RowKey       = "$GUID"
             PartitionKey = "IntuneTemplate"

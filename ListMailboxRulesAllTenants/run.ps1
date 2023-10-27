@@ -27,7 +27,7 @@ $Tenants | ForEach-Object -Parallel {
                 PartitionKey = 'mailboxrules'
             }
             $Table = Get-CIPPTable -TableName cachembxrules
-            Add-AzDataTableEntity @Table -Entity $GraphRequest -Force | Out-Null
+            Add-CIPPAzDataTableEntity @Table -Entity $GraphRequest -Force | Out-Null
         }
     }
     catch {
@@ -42,7 +42,7 @@ $Tenants | ForEach-Object -Parallel {
             PartitionKey = 'mailboxrules'
         }
         $Table = Get-CIPPTable -TableName cachembxrules
-        Add-AzDataTableEntity @Table -Entity $GraphRequest -Force | Out-Null
+        Add-CIPPAzDataTableEntity @Table -Entity $GraphRequest -Force | Out-Null
     }
 }
 
@@ -50,4 +50,4 @@ $Tenants | ForEach-Object -Parallel {
 
 $Table = Get-CIPPTable -TableName cachembxrules
 Write-Host "$($GraphRequest.RowKey) - $($GraphRequest.tenant)"
-Add-AzDataTableEntity @Table -Entity $GraphRequest -Force | Out-Null
+Add-CIPPAzDataTableEntity @Table -Entity $GraphRequest -Force | Out-Null

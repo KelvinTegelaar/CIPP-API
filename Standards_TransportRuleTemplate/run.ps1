@@ -2,15 +2,15 @@ param($tenant)
 
 
 $ConfigTable = Get-CippTable -tablename 'standards'
-$Setting = ((Get-AzDataTableEntity @ConfigTable -Filter "PartitionKey eq 'standards' and RowKey eq '$tenant'").JSON | ConvertFrom-Json).standards.TransportRuleTemplate
+$Setting = ((Get-CIPPAzDataTableEntity @ConfigTable -Filter "PartitionKey eq 'standards' and RowKey eq '$tenant'").JSON | ConvertFrom-Json).standards.TransportRuleTemplate
 if (!$Setting) {
-  $Setting = ((Get-AzDataTableEntity @ConfigTable -Filter "PartitionKey eq 'standards' and RowKey eq 'AllTenants'").JSON | ConvertFrom-Json).standards.TransportRuleTemplate
+  $Setting = ((Get-CIPPAzDataTableEntity @ConfigTable -Filter "PartitionKey eq 'standards' and RowKey eq 'AllTenants'").JSON | ConvertFrom-Json).standards.TransportRuleTemplate
 }
 
 foreach ($Template in $Setting.TemplateList) {
   $Table = Get-CippTable -tablename 'templates'
   $Filter = "PartitionKey eq 'TransportTemplate' and RowKey eq '$($Template.value)'" 
-  $RequestParams = (Get-AzDataTableEntity @Table -Filter $Filter).JSON | ConvertFrom-Json
+  $RequestParams = (Get-CIPPAzDataTableEntity @Table -Filter $Filter).JSON | ConvertFrom-Json
   $Existing = New-ExoRequest -ErrorAction SilentlyContinue -tenantid $Tenant -cmdlet "Get-TransportRule" -useSystemMailbox $true | Where-Object -Property Identity -EQ $RequestParams.name
   
   

@@ -8,7 +8,7 @@ Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -m
 
 $Table = Get-CIPPTable -TableName SchedulerConfig
 $Filter = "RowKey eq 'CippNotifications' and PartitionKey eq 'CippNotifications'"
-$Config = Get-AzDataTableEntity @Table -Filter $Filter
+$Config = Get-CIPPAzDataTableEntity @Table -Filter $Filter
 if ($Config) {
     $Config = $Config | ConvertTo-Json -Depth 10 | ConvertFrom-Json -Depth 10 -AsHashtable
 } else {
