@@ -11,7 +11,7 @@ try {
     $Table = Get-CippTable -tablename 'templates'
 
     $Filter = "PartitionKey eq 'CATemplate' and RowKey eq '$id'" 
-    $ClearRow = Get-AzDataTableEntity @Table -Filter $Filter
+    $ClearRow = Get-CIPPAzDataTableEntity @Table -Filter $Filter
     Remove-AzDataTableEntity @Table -Entity $clearRow
     Write-LogMessage -user $request.headers.'x-ms-client-principal'  -API $APINAME  -message "Removed Conditional Access Template with ID $ID." -Sev "Info"
     $body = [pscustomobject]@{"Results" = "Successfully removed Conditional Access Template" }
