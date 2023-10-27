@@ -20,7 +20,7 @@ $Table = Get-CIPPTable
 
 $ReturnedLog = if ($Request.Query.ListLogs) {
 
-    Get-AzDataTableEntity @Table -Property PartitionKey | Sort-Object -Unique PartitionKey | Select-Object PartitionKey | ForEach-Object {
+    Get-CIPPAzDataTableEntity @Table -Property PartitionKey | Sort-Object -Unique PartitionKey | Select-Object PartitionKey | ForEach-Object {
         @{ 
             value = $_.PartitionKey
             label = $_.PartitionKey
@@ -29,7 +29,7 @@ $ReturnedLog = if ($Request.Query.ListLogs) {
 }
 else {
     $Filter = "PartitionKey eq '{0}'" -f $PartitionKey
-    $Rows = Get-AzDataTableEntity @Table -Filter $Filter | Where-Object { $_.Severity -In $LogLevel -and $_.user -like $username }
+    $Rows = Get-CIPPAzDataTableEntity @Table -Filter $Filter | Where-Object { $_.Severity -In $LogLevel -and $_.user -like $username }
     foreach ($Row in $Rows) {
         @{
             DateTime = $Row.Timestamp
@@ -38,6 +38,11 @@ else {
             Message  = $Row.Message
             User     = $Row.Username
             Severity = $Row.Severity
+            TenantID = if ($Row.TenantID -ne $null) {
+                            $Row.TenantID
+                        } else {
+                            'None'
+                        }
         }
     }
 

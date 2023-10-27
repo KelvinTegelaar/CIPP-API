@@ -14,7 +14,7 @@ Write-Host $Request.query.id
 #List new policies
 $Table = Get-CippTable -tablename 'templates'
 $Filter = "PartitionKey eq 'GroupTemplate'" 
-$Templates = (Get-AzDataTableEntity @Table -Filter $Filter) | ForEach-Object {
+$Templates = (Get-CIPPAzDataTableEntity @Table -Filter $Filter) | ForEach-Object {
     $data = $_.JSON | ConvertFrom-Json 
     $data 
 } | Sort-Object -Property displayName
