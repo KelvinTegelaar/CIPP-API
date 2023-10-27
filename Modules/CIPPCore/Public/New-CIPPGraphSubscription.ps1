@@ -41,7 +41,7 @@ function New-CIPPGraphSubscription {
                 Expiration             = "None"
                 WebhookNotificationUrl = [string]$Auditlog.webhook.address
             }
-            $null = Add-AzDataTableEntity @WebhookTable -Entity $WebhookRow
+            $null = Add-CIPPAzDataTableEntity @WebhookTable -Entity $WebhookRow
         }
         else {
             $GraphRequest = New-GraphPostRequest -uri "https://graph.microsoft.com/beta/subscriptions" -tenantid $TenantFilter -type POST -body $params -verbose
@@ -58,7 +58,7 @@ function New-CIPPGraphSubscription {
                 AllowedLocations       = [string]$AllowedLocations
                 WebhookNotificationUrl = [string]$GraphRequest.notificationUrl
             }
-            $null = Add-AzDataTableEntity @WebhookTable -Entity $WebhookRow
+            $null = Add-CIPPAzDataTableEntity @WebhookTable -Entity $WebhookRow
             #todo: add remove webhook function, add check webhook function, add list webhooks function
             #add refresh webhook function based on table. 
         }

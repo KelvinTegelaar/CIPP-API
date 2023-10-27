@@ -29,7 +29,7 @@ if ($tenantObjectId) {
         $Filter = "PartitionKey eq 'Tenants' and defaultDomainName eq '{0}'" -f $tenantDefaultDomainName
         try {
             $TenantsTable = Get-CippTable -tablename Tenants
-            $Tenant = Get-AzDataTableEntity @TenantsTable -Filter $Filter 
+            $Tenant = Get-CIPPAzDataTableEntity @TenantsTable -Filter $Filter 
             $Tenant.displayName = $tenantDisplayName
             Update-AzDataTableEntity @TenantsTable -Entity $Tenant
         }

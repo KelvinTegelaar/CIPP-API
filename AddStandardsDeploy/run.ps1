@@ -22,7 +22,7 @@ try {
         } | ConvertTo-Json -Depth 10
         $Table = Get-CippTable -tablename 'standards'
         $Table.Force = $true
-        Add-AzDataTableEntity @Table -Entity @{
+        Add-CIPPAzDataTableEntity @Table -Entity @{
             JSON         = "$object"
             RowKey       = "$Tenant"
             PartitionKey = "standards"
