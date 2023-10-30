@@ -18,13 +18,14 @@ function Invoke-CippWebhookProcessing {
     if ($data.Userkey -eq 'Not Available') { $data.Userkey = $data.userId }
     if ($data.clientip) {
         #First we perform a lookup in the knownlocationdb table to see if we have a location for this IP address.
-        $Location = Get-AzDataTableEntity @LocationTable -Filter "RowKey eq '$($data.clientip)'" | Select-Object -Last 1
+        $Location = Get-CIPPAzDataTableEntity @LocationTable -Filter "RowKey eq '$($data.clientip)'" | Select-Object -Last 1
         #If we have a location, we use that. If not, we perform a lookup in the GeoIP database.
         if ($Location) {
             Write-Host 'Using known location'
             $Country = $Location.CountryOrRegion
             $City = $Location.City
-        } else {
+        }
+        else {
             Write-Host 'We have to do a lookup'
             $Location = Get-CIPPGeoIPLocation -IP $data.clientip
             $Country = if ($Location.countryCode) { $Location.CountryCode } else { 'Unknown' }
@@ -68,7 +69,7 @@ function Invoke-CippWebhookProcessing {
                 CountryOrRegion = "$Country"
                 City            = "$City"
             }
-            $null = Add-AzDataTableEntity @LocationTable -Entity $LocationInfo -Force
+            $null = Add-CIPPAzDataTableEntity @LocationTable -Entity $LocationInfo -Force
         }
         return ''
     }
@@ -207,7 +208,7 @@ function Invoke-CippWebhookProcessing {
             CountryOrRegion = "$Country"
             City            = "$City"
         }
-        $null = Add-AzDataTableEntity @LocationTable -Entity $LocationInfo -Force
+        $null = Add-CIPPAzDataTableEntity @LocationTable -Entity $LocationInfo -Force
     }
     $JsonContent = @{
         Title            = $Title

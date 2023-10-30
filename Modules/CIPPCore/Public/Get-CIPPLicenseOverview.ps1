@@ -20,7 +20,7 @@ function Get-CIPPLicenseOverview {
     Set-Location (Get-Item $PSScriptRoot).FullName
     $ConvertTable = Import-Csv Conversiontable.csv
     $LicenseTable = Get-CIPPTable -TableName ExcludedLicenses
-    $ExcludedSkuList = Get-AzDataTableEntity @LicenseTable
+    $ExcludedSkuList = Get-CIPPAzDataTableEntity @LicenseTable
     $GraphRequest = foreach ($singlereq in $RawGraphRequest) {
         $skuid = $singlereq.Licenses
         foreach ($sku in $skuid) {

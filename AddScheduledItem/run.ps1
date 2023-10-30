@@ -48,7 +48,7 @@ $entity = @{
     Results              = 'Planned'
 }
 Write-Host "entity: $($entity | ConvertTo-Json)"
-Add-AzDataTableEntity @Table -Entity $entity
+Add-CIPPAzDataTableEntity @Table -Entity $entity
 Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
         StatusCode = [HttpStatusCode]::OK
         Body       = @{ Results = 'Task added successfully.' }
