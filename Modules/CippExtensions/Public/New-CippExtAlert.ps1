@@ -6,9 +6,9 @@ function New-CippExtAlert {
     )
     #Get the current CIPP Alerts table and see what system is configured to receive alerts
     $Table = Get-CIPPTable -TableName Extensionsconfig
-    $Configuration = (Get-AzDataTableEntity @Table).config | ConvertFrom-Json -Depth 10
+    $Configuration = (Get-CIPPAzDataTableEntity @Table).config | ConvertFrom-Json -Depth 10
     $MappingTable = Get-CIPPTable -TableName CippMapping
-    $MappingFile = (Get-AzDataTableEntity @MappingTable)
+    $MappingFile = (Get-CIPPAzDataTableEntity @MappingTable)
     foreach ($ConfigItem in $Configuration.psobject.properties.name) {
         switch ($ConfigItem) {
             "HaloPSA" {

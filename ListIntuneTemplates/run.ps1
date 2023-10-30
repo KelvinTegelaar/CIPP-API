@@ -16,13 +16,13 @@ $Templates = Get-ChildItem 'Config\*.IntuneTemplate.json' | ForEach-Object {
         PartitionKey = 'IntuneTemplate'
         GUID         = "$($_.name)"
     }
-    Add-AzDataTableEntity @Table -Entity $Entity -Force
+    Add-CIPPAzDataTableEntity @Table -Entity $Entity -Force
 }
 
 #List new policies
 $Table = Get-CippTable -tablename 'templates'
 $Filter = "PartitionKey eq 'IntuneTemplate'"
-$Templates = (Get-AzDataTableEntity @Table -Filter $Filter).JSON | ConvertFrom-Json
+$Templates = (Get-CIPPAzDataTableEntity @Table -Filter $Filter).JSON | ConvertFrom-Json
 if ($Request.query.View) {
     $Templates = $Templates | ForEach-Object {
         $data = $_.RAWJson | ConvertFrom-Json

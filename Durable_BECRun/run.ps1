@@ -134,7 +134,7 @@ catch {
 
 $Table = Get-CippTable -tablename 'cachebec'
 $Table.Force = $true
-Add-AzDataTableEntity @Table -Entity @{
+Add-CIPPAzDataTableEntity @Table -Entity @{
   UserId       = $Context.input.userid
   Results      = "$($results | ConvertTo-Json -Depth 10)"
   RowKey       = $Context.input.userid

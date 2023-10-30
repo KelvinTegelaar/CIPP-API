@@ -20,7 +20,7 @@ $StatusCode = [HttpStatusCode]::OK
 try {
     $ConfigTable = Get-CippTable -tablename Config
     $Filter = "PartitionKey eq 'Domains' and RowKey eq 'Domains'"
-    $Config = Get-AzDataTableEntity @ConfigTable -Filter $Filter
+    $Config = Get-CIPPAzDataTableEntity @ConfigTable -Filter $Filter
 
     $DomainTable = Get-CippTable -tablename 'Domains'
 
@@ -30,7 +30,7 @@ try {
             RowKey       = 'Domains'
             Resolver     = 'Google'
         }
-        Add-AzDataTableEntity @ConfigTable -Entity $Config -Force
+        Add-CIPPAzDataTableEntity @ConfigTable -Entity $Config -Force
     }
 
     $updated = $false
@@ -51,7 +51,7 @@ try {
                 }
             }
             if ($updated) {
-                Add-AzDataTableEntity @ConfigTable -Entity $Config -Force
+                Add-CIPPAzDataTableEntity @ConfigTable -Entity $Config -Force
                 Write-LogMessage -API $APINAME -tenant 'Global' -user $request.headers.'x-ms-client-principal' -message 'DNS configuration updated' -Sev 'Info'
                 $body = [pscustomobject]@{'Results' = 'Success: DNS configuration updated.' }
             } else {
@@ -64,7 +64,7 @@ try {
             $Selector = ($Request.Query.Selector).trim() -split '\s*,\s*'
             $DomainTable = Get-CIPPTable -Table 'Domains'
             $Filter = "RowKey eq '{0}'" -f $Domain
-            $DomainInfo = Get-AzDataTableEntity @DomainTable -Filter $Filter
+            $DomainInfo = Get-CIPPAzDataTableEntity @DomainTable -Filter $Filter
             $DkimSelectors = [string]($Selector | ConvertTo-Json -Compress)
             if ($DomainInfo) {
                 $DomainInfo.DkimSelectors = $DkimSelectors
@@ -79,7 +79,7 @@ try {
                     'DkimSelectors'  = $DkimSelectors
                 }
             }
-            Add-AzDataTableEntity @DomainTable -Entity $DomainInfo -Force
+            Add-CIPPAzDataTableEntity @DomainTable -Entity $DomainInfo -Force
         }
         'GetConfig' {
             $body = [pscustomobject]$Config
@@ -87,7 +87,7 @@ try {
         }
         'RemoveDomain' {
             $Filter = "RowKey eq '{0}'" -f $Request.Query.Domain
-            $DomainRow = Get-AzDataTableEntity @DomainTable -Filter $Filter
+            $DomainRow = Get-CIPPAzDataTableEntity @DomainTable -Filter $Filter
             Remove-AzDataTableEntity @DomainTable -Entity $DomainRow
             Write-LogMessage -API $APINAME -tenant 'Global' -user $request.headers.'x-ms-client-principal' -message "Removed Domain - $($Request.Query.Domain) " -Sev 'Info'
             $body = [pscustomobject]@{ 'Results' = "Domain removed - $($Request.Query.Domain)" }
