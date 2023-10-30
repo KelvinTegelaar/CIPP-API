@@ -41,12 +41,12 @@ function Get-CIPPMFAState {
                     if ($Policy.conditions.applications.includeApplications -ne 'All') {
                         Write-Host $Policy.conditions.applications.includeApplications
                         $CAState.Add("$($policy.displayName) - Specific Applications - $($policy.state)") | Out-Null
-                        $Policy.conditions.users.excludeUsers.foreach({ $ExcludeSpecific.Add($_) })
+                        $Policy.conditions.users.excludeUsers.foreach({ $ExcludeSpecific.Add($_) | Out-Null })
                         continue
                     }
                     if ($Policy.conditions.users.includeUsers -eq 'All') {
                         $CAState.Add("$($policy.displayName) - All Users - $($policy.state)") | Out-Null
-                        $Policy.conditions.users.excludeUsers.foreach({ $ExcludeAllUsers.Add($_) })
+                        $Policy.conditions.users.excludeUsers.foreach({ $ExcludeAllUsers.Add($_) | Out-Null })
                         continue
                     }
                 } 
