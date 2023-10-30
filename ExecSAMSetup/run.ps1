@@ -35,7 +35,7 @@ if (!$ENV:SetFromProfile) {
 
 $KV = $ENV:WEBSITE_DEPLOYMENT_ID
 $Table = Get-CIPPTable -TableName SAMWizard
-$Rows = Get-AzDataTableEntity @Table | Where-Object -Property Timestamp -GT (Get-Date).AddMinutes(-10)
+$Rows = Get-CIPPAzDataTableEntity @Table | Where-Object -Property Timestamp -GT (Get-Date).AddMinutes(-10)
 
 try {
       if ($Request.query.count -lt 1 ) { $Results = "No authentication code found. Please go back to the wizard." }
@@ -62,7 +62,7 @@ try {
                   $Results = "Authentication is now complete. You may now close this window."
                   try {
                         $SetupPhase = $rows.validated = $true
-                        Add-AzDataTableEntity @Table -Entity $Rows -Force | Out-Null
+                        Add-CIPPAzDataTableEntity @Table -Entity $Rows -Force | Out-Null
                   }
                   catch {
                         #no need.
@@ -82,17 +82,17 @@ try {
                   appid        = "NotStarted"
                   tenantid     = "NotStarted"
             }
-            Add-AzDataTableEntity @Table -Entity $Rows -Force | Out-Null
-            $Rows = Get-AzDataTableEntity @Table | Where-Object -Property Timestamp -GT (Get-Date).AddMinutes(-10)
+            Add-CIPPAzDataTableEntity @Table -Entity $Rows -Force | Out-Null
+            $Rows = Get-CIPPAzDataTableEntity @Table | Where-Object -Property Timestamp -GT (Get-Date).AddMinutes(-10)
 
             if ($Request.query.partnersetup) {
                   $SetupPhase = $Rows.partnersetup = $true
-                  Add-AzDataTableEntity @Table -Entity $Rows -Force | Out-Null
+                  Add-CIPPAzDataTableEntity @Table -Entity $Rows -Force | Out-Null
             }
             $step = 1
             $DeviceLogon = New-DeviceLogin -clientid "1b730954-1685-4b74-9bfd-dac224a7b894" -Scope 'https://graph.microsoft.com/.default' -FirstLogon
             $SetupPhase = $rows.SamSetup = [string]($DeviceLogon | ConvertTo-Json) 
-            Add-AzDataTableEntity @Table -Entity $Rows -Force | Out-Null
+            Add-CIPPAzDataTableEntity @Table -Entity $Rows -Force | Out-Null
             $Results = @{ message = "Your code is $($DeviceLogon.user_code). Enter the code"  ; step = $step; url = $DeviceLogon.verification_uri }
       }
       if ($Request.query.CheckSetupProcess -and $request.query.step -eq 1) {
@@ -104,14 +104,14 @@ try {
                   $PartnerSetup = $Rows.partnersetup
                   $TenantId = (Invoke-RestMethod "https://graph.microsoft.com/v1.0/organization" -Headers @{ authorization = "Bearer $($Token.Access_Token)" } -Method GET -ContentType 'application/json').value.id
                   $SetupPhase = $rows.tenantid = [string]($TenantId)
-                  Add-AzDataTableEntity @Table -Entity $Rows -Force | Out-Null
+                  Add-CIPPAzDataTableEntity @Table -Entity $Rows -Force | Out-Null
                   if ($PartnerSetup) {
                         $app = Get-Content '.\Cache_SAMSetup\SAMManifest.json' | ConvertFrom-Json
                         $App.web.redirectUris = @($App.web.redirectUris + $URL)
                         $app = $app | ConvertTo-Json -Depth 15
                         $AppId = (Invoke-RestMethod "https://graph.microsoft.com/v1.0/applications" -Headers @{ authorization = "Bearer $($Token.Access_Token)" } -Method POST -Body $app -ContentType 'application/json')
                         $rows.appid = [string]($AppId.appId)
-                        Add-AzDataTableEntity @Table -Entity $Rows -Force | Out-Null
+                        Add-CIPPAzDataTableEntity @Table -Entity $Rows -Force | Out-Null
                         $attempt = 0
                         do {
                               try {
@@ -144,7 +144,7 @@ try {
                         $app = Get-Content '.\Cache_SAMSetup\SAMManifestNoPartner.json'
                         $AppId = (Invoke-RestMethod "https://graph.microsoft.com/v1.0/applications" -Headers @{ authorization = "Bearer $($Token.Access_Token)" } -Method POST -Body $app -ContentType 'application/json')
                         $rows.appid = [string]($AppId.appId)
-                        Add-AzDataTableEntity @Table -Entity $Rows -Force | Out-Null
+                        Add-CIPPAzDataTableEntity @Table -Entity $Rows -Force | Out-Null
                   }
                   $AppPassword = (Invoke-RestMethod "https://graph.microsoft.com/v1.0/applications/$($AppID.id)/addPassword" -Headers @{ authorization = "Bearer $($Token.Access_Token)" } -Method POST -Body '{"passwordCredential":{"displayName":"CIPPInstall"}}' -ContentType 'application/json').secretText
                   Set-AzKeyVaultSecret -VaultName $kv -Name 'tenantid' -SecretValue (ConvertTo-SecureString -String $TenantId -AsPlainText -Force)
@@ -165,7 +165,7 @@ try {
                   $AppID = $rows.appid
                   $PartnerSetup = $Rows.partnersetup
                   $SetupPhase = $rows.SamSetup = [string]($FirstLogonRefreshtoken | ConvertTo-Json)
-                  Add-AzDataTableEntity @Table -Entity $Rows -Force | Out-Null
+                  Add-CIPPAzDataTableEntity @Table -Entity $Rows -Force | Out-Null
                   $URL = ($Request.headers.'x-ms-original-url').split('?') | Select-Object -First 1
                   $Validated = $Rows.validated
                   if ($Validated) { $step = 3 }

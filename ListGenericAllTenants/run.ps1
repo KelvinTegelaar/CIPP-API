@@ -8,7 +8,7 @@ $QueueKey = (Get-CippQueue | Where-Object -Property Name -EQ $TableURLName | Sel
 Update-CippQueueEntry -RowKey $QueueKey -Status 'Started'
 $Table = Get-CIPPTable -TableName "cache$TableURLName"
 $fullUrl = "https://graph.microsoft.com/beta/$QueueItem"
-Get-AzDataTableEntity @Table | Remove-AzDataTableEntity @table
+Get-CIPPAzDataTableEntity @Table | Remove-AzDataTableEntity @table
 
 $RawGraphRequest = Get-Tenants | ForEach-Object -Parallel { 
     $domainName = $_.defaultDomainName
@@ -35,7 +35,7 @@ foreach ($Request in $RawGraphRequest) {
         Data         = [string]$Json
 
     }
-    Add-AzDataTableEntity @Table -Entity $GraphRequest -Force | Out-Null
+    Add-CIPPAzDataTableEntity @Table -Entity $GraphRequest -Force | Out-Null
 }
 
 

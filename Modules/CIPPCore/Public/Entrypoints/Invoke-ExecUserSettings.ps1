@@ -14,7 +14,7 @@ function Invoke-ExecUserSettings {
         $object = $request.body.currentSettings | Select-Object * -ExcludeProperty CurrentTenant, pageSizes, sidebarShow, sidebarUnfoldable, _persist | ConvertTo-Json -Compress
         $Table = Get-CippTable -tablename 'UserSettings'
         $Table.Force = $true
-        Add-AzDataTableEntity @Table -Entity @{
+        Add-CIPPAzDataTableEntity @Table -Entity @{
             JSON         = "$object"
             RowKey       = "$($Request.body.user)"
             PartitionKey = "UserSettings"
