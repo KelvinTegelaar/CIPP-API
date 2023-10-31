@@ -27,7 +27,7 @@ function Set-CIPPCPVConsent {
             PartitionKey  = 'Tenant'
             RowKey        = "$($tenantfilter)"
         }    
-        Add-AzDataTableEntity @Table -Entity $GraphRequest -Force
+        Add-CIPPAzDataTableEntity @Table -Entity $GraphRequest -Force
         $Results.add("Successfully added CPV Application to tenant $($TenantName)") | Out-Null
         Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME  -message "Added our Service Principal to $($TenantName): $($_.Exception.message)" -Sev "Info" -tenant $($Tenantfilter)
 

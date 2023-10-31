@@ -8,7 +8,7 @@ Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -m
 
 $Table = Get-CIPPTable -TableName Extensionsconfig
 try {
-    $Body = (Get-AzDataTableEntity @Table).config | ConvertFrom-Json -Depth 10 -ErrorAction Stop
+    $Body = (Get-CIPPAzDataTableEntity @Table).config | ConvertFrom-Json -Depth 10 -ErrorAction Stop
 } catch {
     $Body = @{}
 }

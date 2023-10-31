@@ -13,7 +13,7 @@ Write-Host "PowerShell HTTP trigger function processed a request."
 # Interact with query parameters or the body of the request.
 try {
         $Table = Get-CIPPTable -TableName Extensionsconfig
-        $Configuration = ((Get-AzDataTableEntity @Table).config | ConvertFrom-Json).HaloPSA
+        $Configuration = ((Get-CIPPAzDataTableEntity @Table).config | ConvertFrom-Json).HaloPSA
         $Token = Get-HaloToken -configuration $Configuration
         $i = 1
         $RawHaloClients = do {
