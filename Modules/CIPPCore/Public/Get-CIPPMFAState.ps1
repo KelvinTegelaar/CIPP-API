@@ -25,7 +25,7 @@ function Get-CIPPMFAState {
         $MFARegistration = (New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/reports/credentialUserRegistrationDetails' -tenantid $TenantFilter)
     }
     catch {
-        $CAState.Add('Not Licensed for Conditional Access')
+        $CAState.Add('Not Licensed for Conditional Access') | Out-Null
         $MFARegistration = $null
     }
 
