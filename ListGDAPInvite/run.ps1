@@ -13,7 +13,7 @@ Write-Host 'PowerShell HTTP trigger function processed a request.'
 Write-Host ($Request | ConvertTo-Json)
 if (![string]::IsNullOrEmpty($Request.Query.RelationshipId)) {
     $Table = Get-CIPPTable -TableName 'GDAPInvites'
-    $Invite = Get-AzDataTableEntity @Table -Filter "RowKey eq '$($Request.Query.RelationshipId)'"
+    $Invite = Get-CIPPAzDataTableEntity @Table -Filter "RowKey eq '$($Request.Query.RelationshipId)'"
     Write-Host $Invite
 } else {
     $Invite = @{}
