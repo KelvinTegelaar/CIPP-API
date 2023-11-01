@@ -46,7 +46,7 @@ if ($Request.query.Permissions -eq 'true') {
                     $Messages.Add('Your refresh token does not match key vault, clear your cache or wait 30 minutes.') | Out-Null
                     $Links.Add([PSCustomObject]@{
                             Text = 'Clear Token Cache'
-                            Href = 'https://cipp.app/docs/general/troubleshooting/#clear-token-cache'
+                            Href = 'https://docs.cipp.app/setup/installation/cleartokencache'
                         }
                     ) | Out-Null
                 } else {
@@ -79,7 +79,7 @@ if ($Request.query.Permissions -eq 'true') {
                 $Success = $false
                 $Links.Add([PSCustomObject]@{
                         Text = 'MFA Troubleshooting'
-                        Href = 'https://cipp.app/docs/general/troubleshooting/#multi-factor-authentication-troubleshooting'
+                        Href = 'https://docs.cipp.app/troubleshooting/troubleshooting#multi-factor-authentication-troubleshooting'
                     }
                 ) | Out-Null
             }
@@ -93,7 +93,7 @@ if ($Request.query.Permissions -eq 'true') {
             $Success = $false
             $Links.Add([PSCustomObject]@{
                     Text = 'Permissions'
-                    Href = 'https://cipp.app/docs/user/gettingstarted/postinstall/permissions/'
+                    Href = 'https://docs.cipp.app/setup/installation/permissions'
                 }
             ) | Out-Null
         } else {
