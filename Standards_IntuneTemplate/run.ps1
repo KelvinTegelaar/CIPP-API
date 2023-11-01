@@ -1,9 +1,9 @@
 param($tenant)
 
 $ConfigTable = Get-CippTable -tablename 'standards'
-$Setting = ((Get-AzDataTableEntity @ConfigTable -Filter "PartitionKey eq 'standards' and RowKey eq '$tenant'").JSON | ConvertFrom-Json).standards.IntuneTemplate
+$Setting = ((Get-CIPPAzDataTableEntity @ConfigTable -Filter "PartitionKey eq 'standards' and RowKey eq '$tenant'").JSON | ConvertFrom-Json).standards.IntuneTemplate
 if (!$Setting) {
-  $Setting = ((Get-AzDataTableEntity @ConfigTable -Filter "PartitionKey eq 'standards' and RowKey eq 'AllTenants'").JSON | ConvertFrom-Json).standards.IntuneTemplate
+  $Setting = ((Get-CIPPAzDataTableEntity @ConfigTable -Filter "PartitionKey eq 'standards' and RowKey eq 'AllTenants'").JSON | ConvertFrom-Json).standards.IntuneTemplate
 }
 
 $APINAME = "Standards"
@@ -12,7 +12,7 @@ foreach ($Template in $Setting.TemplateList) {
     $Table = Get-CippTable -tablename 'templates'
     $Filter = "PartitionKey eq 'IntuneTemplate'" 
     $Request = @{body = $null }
-    $Request.body = (Get-AzDataTableEntity @Table -Filter $Filter | Where-Object -Property RowKey -Like "$($template.value)*").JSON | ConvertFrom-Json
+    $Request.body = (Get-CIPPAzDataTableEntity @Table -Filter $Filter | Where-Object -Property RowKey -Like "$($template.value)*").JSON | ConvertFrom-Json
     $displayname = $request.body.Displayname
     $description = $request.body.Description
     $AssignTo = if ($request.body.Assignto -ne "on") { $request.body.Assignto }

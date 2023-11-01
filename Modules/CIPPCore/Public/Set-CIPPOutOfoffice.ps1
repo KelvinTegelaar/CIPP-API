@@ -2,18 +2,27 @@ function Set-CIPPOutOfOffice {
     [CmdletBinding()]
     param (
         $userid,
-        $OOO,
+        $InternalMessage,
+        $ExternalMessage,
         $TenantFilter,
         $State,
         $APIName = "Set Out of Office",
-        $ExecutingUser
+        $ExecutingUser,
+        $StartTime,
+        $EndTime
     )
 
     try {
-        if (!$state) { $State = 'Enabled' }
-        $OutOfOffice = New-ExoRequest -tenantid $TenantFilter -cmdlet "Set-MailboxAutoReplyConfiguration" -cmdParams @{Identity = $userid; AutoReplyState = $State; InternalMessage = $OOO; ExternalMessage = $OOO } -Anchor $userid
-        Write-LogMessage -user $ExecutingUser -API $APIName -message "Set Out-of-office for $($userid) to $state" -Sev "Info" -tenant $TenantFilter
-        return "Set Out-of-office for $($userid) to $state"
+        if ($State -ne "Scheduled") {
+            $OutOfOffice = New-ExoRequest -tenantid $TenantFilter -cmdlet "Set-MailboxAutoReplyConfiguration" -cmdParams @{Identity = $userid; AutoReplyState = $State; InternalMessage = $InternalMessage; ExternalMessage = $ExternalMessage } -Anchor $userid
+            Write-LogMessage -user $ExecutingUser -API $APIName -message "Set Out-of-office for $($userid) to $state" -Sev "Info" -tenant $TenantFilter
+            return "Set Out-of-office for $($userid) to $state"
+        }
+        else {
+            $OutOfOffice = New-ExoRequest -tenantid $TenantFilter -cmdlet "Set-MailboxAutoReplyConfiguration" -cmdParams @{Identity = $userid; AutoReplyState = $State; InternalMessage = $InternalMessage; ExternalMessage = $ExternalMessage; StartTime = $StartTime; EndTime = $EndTime } -Anchor $userid
+            Write-LogMessage -user $ExecutingUser -API $APIName -message "Scheduled Out-of-office for $($userid) between $StartTime and $EndTime" -Sev "Info" -tenant $TenantFilter
+            return "Scheduled Out-of-office for $($userid) between $StartTime and $EndTime"
+        }
     }
     catch {
         Write-LogMessage -user $ExecutingUser -API $APIName -message "Could not add OOO for $($userid)" -Sev "Error" -tenant $TenantFilter

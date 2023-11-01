@@ -5,15 +5,18 @@
       "type": "httpTrigger",
       "direction": "in",
       "name": "Request",
-      "methods": [
-        "get",
-        "post"
-      ]
+      "methods": ["get", "post"]
     },
     {
       "type": "http",
       "direction": "out",
       "name": "Response"
+    },
+    {
+      "type": "queue",
+      "direction": "out",
+      "name": "Msg",
+      "queueName": "offboardingmailbox"
     }
   ]
 }

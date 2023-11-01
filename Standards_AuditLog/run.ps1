@@ -21,6 +21,7 @@ try {
 
 }
 catch {
+    
     $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
     Write-LogMessage -API "Standards" -tenant $tenant -message "Failed to apply Unified Audit Log. Error: $ErrorMessage" -sev Error
 }

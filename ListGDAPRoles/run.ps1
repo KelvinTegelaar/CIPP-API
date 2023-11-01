@@ -10,7 +10,7 @@ Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -m
 # Write to the Azure Functions log stream.
 Write-Host 'PowerShell HTTP trigger function processed a request.'
 $Table = Get-CIPPTable -TableName 'GDAPRoles' 
-$Groups = Get-AzDataTableEntity @Table
+$Groups = Get-CIPPAzDataTableEntity @Table
 
 $MappedGroups = foreach ($Group in $Groups) {
     [PSCustomObject]@{
