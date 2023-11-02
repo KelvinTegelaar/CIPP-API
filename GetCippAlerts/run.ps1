@@ -7,7 +7,7 @@ $Alerts = [System.Collections.ArrayList]@()
 $Table = Get-CippTable -tablename CippAlerts
 $PartitionKey = Get-Date -UFormat '%Y%m%d'
 $Filter = "PartitionKey eq '{0}'" -f $PartitionKey
-$Rows = Get-AzDataTableEntity @Table -Filter $Filter | Sort-Object TableTimestamp -Descending | Select-Object -First 10
+$Rows = Get-CIPPAzDataTableEntity @Table -Filter $Filter | Sort-Object TableTimestamp -Descending | Select-Object -First 10
 
 
 
@@ -16,7 +16,7 @@ $APIVersion = Get-Content "version_latest.txt" | Out-String
 $CIPPVersion = $request.query.localversion
 
 $RemoteAPIVersion = Invoke-RestMethod -Uri "https://raw.githubusercontent.com/KelvinTegelaar/CIPP-API/master/version_latest.txt"
-$RemoteCIPPVersion = Invoke-RestMethod -Uri "https://raw.githubusercontent.com/KelvinTegelaar/CIPP/master/version_latest.txt"
+$RemoteCIPPVersion = Invoke-RestMethod -Uri "https://raw.githubusercontent.com/KelvinTegelaar/CIPP/master/public/version_latest.txt"
 
 $version = [PSCustomObject]@{
     LocalCIPPVersion     = $CIPPVersion

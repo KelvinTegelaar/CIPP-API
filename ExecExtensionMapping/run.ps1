@@ -23,6 +23,7 @@ if ($Request.Query.List) {
 
         'NinjaFields' {
             $Body = Get-NinjaOneFieldMapping -CIPPMapping $Table
+
         }
     }
 }
@@ -56,6 +57,7 @@ try {
                 Push-OutputBinding -Name NinjaProcess -Value @{'NinjaAction' = 'StartAutoMapping' }
                 $Body = [pscustomobject]@{'Results' = 'Automapping Request has been queued. Exact name matches will appear first and matches on device names and serials will take longer.' }
             }
+
 
         }
     }

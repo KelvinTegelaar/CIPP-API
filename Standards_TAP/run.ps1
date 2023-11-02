@@ -1,8 +1,8 @@
 param($tenant)
 $ConfigTable = Get-CippTable -tablename 'standards'
-$TAPConfig = ((Get-AzDataTableEntity @ConfigTable -Filter "PartitionKey eq 'standards' and RowKey eq '$tenant'").JSON | ConvertFrom-Json).Standards.TAP.config
+$TAPConfig = ((Get-CIPPAzDataTableEntity @ConfigTable -Filter "PartitionKey eq 'standards' and RowKey eq '$tenant'").JSON | ConvertFrom-Json).Standards.TAP.config
 if (!$TAPConfig) {
-    $TAPConfig = ((Get-AzDataTableEntity @ConfigTable -Filter "PartitionKey eq 'standards' and RowKey eq 'AllTenants'").JSON | ConvertFrom-Json).Standards.TAP.config
+    $TAPConfig = ((Get-CIPPAzDataTableEntity @ConfigTable -Filter "PartitionKey eq 'standards' and RowKey eq 'AllTenants'").JSON | ConvertFrom-Json).Standards.TAP.config
 }
 if (!$TAPConfig) { $TAPConfig = 'true' }
 try {
