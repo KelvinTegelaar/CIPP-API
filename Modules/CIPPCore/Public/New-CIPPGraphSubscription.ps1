@@ -34,7 +34,8 @@ function New-CIPPGraphSubscription {
                 Expiration             = "None"
                 WebhookNotificationUrl = [string]$Auditlog.webhook.address
             }
-            $null = Add-CIPPAzDataTableEntity @WebhookTable -Entity $WebhookRow
+
+             $null = Add-CIPPAzDataTableEntity @WebhookTable -Entity $WebhookRow
 
         } else {
             $expiredate = (Get-Date).AddDays(1).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ss.fffZ")
@@ -45,6 +46,7 @@ function New-CIPPGraphSubscription {
                 expirationDateTime = $expiredate
             } | ConvertTo-Json
             
+
             $GraphRequest = New-GraphPostRequest -uri "https://graph.microsoft.com/beta/subscriptions" -tenantid $TenantFilter -type POST -body $params -verbose
             #If creation is succesfull, we store the GUID in the storage table webhookTable to make sure we can check against this later on. 
             #We store the GUID as rowkey, the event type, the resource, and the expiration date as properties, we also add the Tenant name so we can easily find this later on.
