@@ -12,7 +12,8 @@ function Get-HaloMapping {
     $Tenants = Get-Tenants -IncludeAll
     $Table = Get-CIPPTable -TableName Extensionsconfig
     try {
-        $Configuration = ((Get-CIPPAzDataTableEntity @Table).config | ConvertFrom-Json).HaloPSA
+        $Configuration = ((Get-CIPPAzDataTableEntity @Table).config | ConvertFrom-Json -ea stop).HaloPSA
+
         $Token = Get-HaloToken -configuration $Configuration
         $i = 1
         $RawHaloClients = do {

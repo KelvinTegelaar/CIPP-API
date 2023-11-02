@@ -13,13 +13,6 @@ function New-CIPPGraphSubscription {
         $ExecutingUser
     )
     $CIPPID = (New-Guid).GUID
-    $expiredate = (Get-Date).AddDays(1).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ss.fffZ")
-    $params = @{
-        changeType         = $TypeofSubscription
-        notificationUrl    = "$BaseURL/API/PublicWebhooks?EventType=$EventType&CIPPID=$CIPPID"
-        resource           = $Resource
-        expirationDateTime = $expiredate
-    } | ConvertTo-Json
     $WebhookTable = Get-CIPPTable -TableName webhookTable
 
     try {
@@ -42,8 +35,16 @@ function New-CIPPGraphSubscription {
                 WebhookNotificationUrl = [string]$Auditlog.webhook.address
             }
             $null = Add-CIPPAzDataTableEntity @WebhookTable -Entity $WebhookRow
-        }
-        else {
+
+        } else {
+            $expiredate = (Get-Date).AddDays(1).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ss.fffZ")
+            $params = @{
+                changeType         = $TypeofSubscription
+                notificationUrl    = "$BaseURL/API/PublicWebhooks?EventType=$EventType&CIPPID=$CIPPID?Type=GraphSubscription"
+                resource           = $Resource
+                expirationDateTime = $expiredate
+            } | ConvertTo-Json
+            
             $GraphRequest = New-GraphPostRequest -uri "https://graph.microsoft.com/beta/subscriptions" -tenantid $TenantFilter -type POST -body $params -verbose
             #If creation is succesfull, we store the GUID in the storage table webhookTable to make sure we can check against this later on. 
             #We store the GUID as rowkey, the event type, the resource, and the expiration date as properties, we also add the Tenant name so we can easily find this later on.
@@ -54,8 +55,7 @@ function New-CIPPGraphSubscription {
                 EventType              = [string]$EventType
                 Resource               = [string]$Resource
                 Expiration             = [string]$expiredate
-                Operations             = [string]$operations
-                AllowedLocations       = [string]$AllowedLocations
+                SubscriptionID         = [string]$GraphRequest.id
                 WebhookNotificationUrl = [string]$GraphRequest.notificationUrl
             }
             $null = Add-CIPPAzDataTableEntity @WebhookTable -Entity $WebhookRow
@@ -64,8 +64,7 @@ function New-CIPPGraphSubscription {
         }
         Write-LogMessage -user $ExecutingUser -API $APIName -message "Created Webhook subscription for $($TenantFilter)" -Sev "Info" -tenant $TenantFilter
         return "Created Webhook subscription for $($TenantFilter)"
-    }
-    catch {
+    } catch {
         Write-LogMessage -user $ExecutingUser -API $APIName -message "Failed to create Webhook Subscription: $($_.Exception.Message)" -Sev "Error" -tenant $TenantFilter
         Return "Failed to create Webhook Subscription for $($TenantFilter): $($_.Exception.Message)" 
     }
