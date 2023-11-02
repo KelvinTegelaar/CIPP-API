@@ -13,12 +13,13 @@ function Invoke-ListUserSettings {
 
     try {
         $Table = Get-CippTable -tablename 'UserSettings'
-        $UserSettings = Get-AzDataTableEntity @Table -Filter "RowKey eq 'allUsers'"
-        if (!$UserSettings) { Get-AzDataTableEntity @Table -Filter "RowKey eq '$username'" }
+        $UserSettings = Get-CIPPAzDataTableEntity @Table -Filter "RowKey eq 'allUsers'"
+        if (!$UserSettings) { Get-CIPPAzDataTableEntity @Table -Filter "RowKey eq '$username'" }
         $UserSettings = $UserSettings | Select-Object -ExpandProperty JSON | ConvertFrom-Json -Depth 10 -ErrorAction SilentlyContinue
         $StatusCode = [HttpStatusCode]::OK
         $Results = $UserSettings
-    } catch {
+    }
+    catch {
         $Results = "Function Error: $($_.Exception.Message)"
         $StatusCode = [HttpStatusCode]::BadRequest
     }

@@ -189,13 +189,13 @@ Function Get-CronNextExecutionTime {
 $Table = Get-CippTable -tablename CippLogs
 $PartitionKey = Get-Date -UFormat '%Y%m%d'
 $Filter = "PartitionKey eq '{0}'" -f $PartitionKey
-$Rows = Get-AzDataTableEntity @Table -Filter $Filter | Sort-Object TableTimestamp -Descending | Select-Object -First 10
+$Rows = Get-CIPPAzDataTableEntity @Table -Filter $Filter | Sort-Object TableTimestamp -Descending | Select-Object -First 10
 
 $Standards = Get-CippTable -tablename standards
-$QueuedStandards = (Get-AzDataTableEntity @Standards -Property RowKey | Measure-Object).Count
+$QueuedStandards = (Get-CIPPAzDataTableEntity @Standards -Property RowKey | Measure-Object).Count
 
 $Apps = Get-CippTable -tablename apps
-$QueuedApps = (Get-AzDataTableEntity @Apps -Property RowKey | Measure-Object).Count
+$QueuedApps = (Get-CIPPAzDataTableEntity @Apps -Property RowKey | Measure-Object).Count
 
 $SlimRows = New-Object System.Collections.ArrayList
 foreach ($Row in $Rows) {

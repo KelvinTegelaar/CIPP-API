@@ -1,7 +1,7 @@
 function Set-CIPPGDAPInviteGroups {
     Param()
     $Table = Get-CIPPTable -TableName 'GDAPInvites'
-    $InviteList = Get-AzDataTableEntity @Table
+    $InviteList = Get-CIPPAzDataTableEntity @Table
 
     if (($InviteList | Measure-Object).Count -gt 0) {
         #$LastDay = Get-Date (Get-Date).AddHours(-26) -UFormat '+%Y-%m-%dT%H:%M:%S.000Z'
