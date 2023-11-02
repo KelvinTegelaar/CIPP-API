@@ -43,7 +43,7 @@ $Results = foreach ($Tenant in $tenants) {
             }
 
             $Table = get-cipptable -TableName 'SchedulerConfig'
-            Add-AzDataTableEntity @Table -Entity $CompleteObject -Force
+            Add-CIPPAzDataTableEntity @Table -Entity $CompleteObject -Force
         }
         $URL = ($request.headers.'x-ms-original-url').split('/api') | Select-Object -First 1
         if ($Tenant -eq 'AllTenants') {
@@ -58,7 +58,7 @@ $Results = foreach ($Tenant in $tenants) {
                         EventType        = $eventType
                         ExecutingUser    = $Request.headers.'x-ms-client-principal'
                     }
-                    New-CIPPGraphSubscription @params
+                    Push-OutputBinding -Name Subscription -Value $Params
                 }
             }
         }

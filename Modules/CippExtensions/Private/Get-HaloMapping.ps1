@@ -5,16 +5,15 @@ function Get-HaloMapping {
     )
     #Get available mappings
     $Mappings = [pscustomobject]@{}
-    $Filter = "RowKey eq 'Mapping'"
-    Get-AzDataTableEntity @CIPPMapping -Filter $Filter | ForEach-Object {
+    $Filter = "PartitionKey eq 'Mapping'"
+    Get-CIPPAzDataTableEntity @CIPPMapping -Filter $Filter | ForEach-Object {
         $Mappings | Add-Member -NotePropertyName $_.RowKey -NotePropertyValue @{ label = "$($_.HaloPSAName)"; value = "$($_.HaloPSA)" }
     }
-    #Get Available TEnants
-    $Tenants = Get-Tenants
-    #Get available halo clients
+    $Tenants = Get-Tenants -IncludeAll
     $Table = Get-CIPPTable -TableName Extensionsconfig
     try {
-        $Configuration = ((Get-AzDataTableEntity @Table).config | ConvertFrom-Json -ea stop).HaloPSA
+        $Configuration = ((Get-CIPPAzDataTableEntity @Table).config | ConvertFrom-Json -ea stop).HaloPSA
+
         $Token = Get-HaloToken -configuration $Configuration
         $i = 1
         $RawHaloClients = do {
