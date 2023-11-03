@@ -132,11 +132,11 @@ function Invoke-NinjaOneTenantSync {
 
         $NinjaOneUsersTemplate = Invoke-NinjaOneDocumentTemplate -Template $UserDocTemplate -Token $Token
 
+
         # Get NinjaOne Users
-        #[System.Collections.Generic.List[PSCustomObject]]$NinjaOneUserDocs = ((Invoke-WebRequest -uri "https://$($Configuration.Instance)/api/v2/organization/documents?organizationIDs=$($NinjaOneOrg)&templateIds=$($NinjaOneUsersTemplate.id)" -Method GET -Headers @{Authorization = "Bearer $($token.access_token)" } -ContentType 'application/json').content | ConvertFrom-Json -depth 100)."$NinjaOneOrg"
-        [System.Collections.Generic.List[PSCustomObject]]$NinjaOneOrgDocs = ((Invoke-WebRequest -uri "https://$($Configuration.Instance)/api/v2/organization/$($NinjaOneOrg)/documents" -Method GET -Headers @{Authorization = "Bearer $($token.access_token)" } -ContentType 'application/json').content | ConvertFrom-Json -depth 100)
+        [System.Collections.Generic.List[PSCustomObject]]$NinjaOneUserDocs = ((Invoke-WebRequest -uri "https://$($Configuration.Instance)/api/v2/organization/documents?organizationIds=$($NinjaOneOrg)&templateIds=$($NinjaOneUsersTemplate.id)" -Method GET -Headers @{Authorization = "Bearer $($token.access_token)" } -ContentType 'application/json').content | ConvertFrom-Json -depth 100)
         
-        foreach ($NinjaDoc in $NinjaOneOrgDocs) {
+        foreach ($NinjaDoc in $NinjaOneUserDocs) {
             $ParsedFields = [pscustomobject]@{}
             foreach ($Field in $NinjaDoc.Fields) {
                 if ($Field.value.text) {
@@ -150,15 +150,82 @@ function Invoke-NinjaOneTenantSync {
         }
         
         
-        [System.Collections.Generic.List[PSCustomObject]]$NinjaOneUserDocs = $NinjaOneOrgDocs | Where-Object { $_.documentTemplateId -eq $NinjaOneUsersTemplate.id }
-
         # Get NinjaOne Related Items
         $RelatedItems = (Invoke-WebRequest -uri "https://$($Configuration.Instance)/api/v2/related-items" -Method GET -Headers @{Authorization = "Bearer $($token.access_token)" } -ContentType 'application/json').content | ConvertFrom-Json -depth 100
+
+        
+        # NinjaOne License Documents
+        $LicenseDocTemplate = [PSCustomObject]@{
+            name          = 'CIPP - Microsoft 365 Subscriptions'
+            allowMultiple = $true
+            fields        = @(
+                [PSCustomObject]@{
+                    fieldLabel                = 'Subscription Summary'
+                    fieldName                 = 'cippSubscriptionSummary'
+                    fieldType                 = 'WYSIWYG'
+                    fieldTechnicianPermission = 'READ_ONLY'
+                    fieldScriptPermission     = 'NONE'
+                    fieldApiPermission        = 'READ_WRITE'
+                    fieldContent              = @{
+                        required         = $False
+                        advancedSettings = @{
+                            expandLargeValueOnRender = $True
+                        }
+                    }
+                },
+                [PSCustomObject]@{
+                    fieldLabel                = 'Subscription Users'
+                    fieldName                 = 'cippSubscriptionUsers'
+                    fieldType                 = 'WYSIWYG'
+                    fieldTechnicianPermission = 'READ_ONLY'
+                    fieldScriptPermission     = 'NONE'
+                    fieldApiPermission        = 'READ_WRITE'
+                    fieldContent              = @{
+                        required         = $False
+                        advancedSettings = @{
+                            expandLargeValueOnRender = $True
+                        }
+                    }
+                },
+                [PSCustomObject]@{
+                    fieldLabel                = 'Subscription ID'
+                    fieldName                 = 'cippSubscriptionID'
+                    fieldType                 = 'TEXT'
+                    fieldTechnicianPermission = 'READ_ONLY'
+                    fieldScriptPermission     = 'NONE'
+                    fieldApiPermission        = 'READ_WRITE'
+                    fieldContent              = @{
+                        required = $False
+                    }
+                }
+            )
+        }
+
+        $NinjaOneLicenseTemplate = Invoke-NinjaOneDocumentTemplate -Template $LicenseDocTemplate -Token $Token
+        
+        # Get NinjaOne Licenses
+        [System.Collections.Generic.List[PSCustomObject]]$NinjaOneLicenseDocs = ((Invoke-WebRequest -uri "https://$($Configuration.Instance)/api/v2/organization/documents?organizationIds=$($NinjaOneOrg)&templateIds=$($NinjaOneLicenseTemplate.id)" -Method GET -Headers @{Authorization = "Bearer $($token.access_token)" } -ContentType 'application/json').content | ConvertFrom-Json -depth 100)
+        
+        foreach ($NinjaLic in $NinjaOneLicenseDocs) {
+            $ParsedFields = [pscustomobject]@{}
+            foreach ($Field in $NinjaLic.Fields) {
+                if ($Field.value.text) {
+                    $FieldVal = $Field.value.text
+                } else {
+                    $FieldVal = $Field.value
+                }
+                $ParsedFields | Add-Member -NotePropertyName $Field.name -NotePropertyValue $FieldVal
+            }
+            $NinjaLic | Add-Member -NotePropertyName 'ParsedFields' -NotePropertyValue $ParsedFields -Force
+        }
+
 
         # Create the update objects we will use to update NinjaOne
         $NinjaOrgUpdate = [PSCustomObject]@{}
         [System.Collections.Generic.List[PSCustomObject]]$NinjaUserUpdates = @()
         [System.Collections.Generic.List[PSCustomObject]]$NinjaUserCreation = @()
+        [System.Collections.Generic.List[PSCustomObject]]$NinjaSubscriptionUpdates = @()
+        [System.Collections.Generic.List[PSCustomObject]]$NinjaSubscriptionCreation = @()
 
         # Build bulk requests array.
         [System.Collections.Generic.List[PSCustomObject]]$TenantRequests = @(
@@ -221,6 +288,11 @@ function Invoke-NinjaOneTenantSync {
                 id     = 'SecureScoreControlProfiles'
                 method = 'GET'
                 url    = '/security/secureScoreControlProfiles'
+            },
+            @{
+                id     = 'Subscriptions'
+                method = 'GET'
+                url    = '/directory/subscriptions'
             }           
             
         )
@@ -235,6 +307,8 @@ function Invoke-NinjaOneTenantSync {
         $Users = Get-GraphBulkResultByID -value -Results $TenantResults -ID 'Users'
 
         $SecureScore = Get-GraphBulkResultByID -value -Results $TenantResults -ID 'SecureScore'
+
+        $Subscriptions = Get-GraphBulkResultByID -value -Results $TenantResults -ID 'Subscriptions'
  
         [System.Collections.Generic.List[PSCustomObject]]$SecureScoreProfiles = Get-GraphBulkResultByID -value -Results $TenantResults -ID 'SecureScoreControlProfiles'
 
@@ -1193,8 +1267,6 @@ function Invoke-NinjaOneTenantSync {
                 }
             }
 
-            $Relations | ConvertTo-Json -Depth 100 -AsArray | Out-File D:\Temp\Relations.json
-            Write-Host "URL: https://$($Configuration.Instance)/api/v2/related-items/entity/NODE/$($LinkDevice.NinjaDevice.id)/relations"
 
             try {
                 # Update Relations
@@ -1207,6 +1279,129 @@ function Invoke-NinjaOneTenantSync {
                 Write-Host "Creating Relations Failed: $_"
             }
         }
+
+
+        ### License Document Details
+        #NinjaOneLicenseTemplate
+        
+        foreach ($Subscription in $Subscriptions) {
+            $MatchedLicenseInfo = $Licenses | Where-Object -Property skuid -EQ $Subscription.skuId
+
+            if (($MatchedLicenseInfo | Measure-Object).count -eq 0) {
+                Write-Host "Failed to match license: $($Subscription | ConvertTo-Json -Depth 100)"
+                Continue
+            }
+
+            Write-Host "License Matched"
+
+            $FriendlyLicenseName = $((Get-Culture).TextInfo.ToTitleCase((convert-skuname -skuname $Subscription.SkuPartNumber).Tolower()))
+
+            Write-Host "Friendly Generated: $FriendlyLicenseName"
+            
+            $SubscriptionUsers = $Users | foreach-Object {
+                $SubUser = $_
+                $MatchedPlans = $SubUser.AssignedPlans | Where-Object { $_.servicePlanId -in $Subscription.ServiceStatus.ServicePlanID }
+                if (($MatchedPlans | Measure-Object).count -gt 0 ) {
+                    $SubRelUserID = ($UsersMap | Where-Object { $_.M365ID -eq $SubUser.id }).NinjaOneID
+                    [PSCustomObject]@{
+                        Name               = '<a href="' + "https://$($Configuration.Instance)/#/customerDashboard/$($NinjaOneOrg)/documentation/appsAndServices/$($NinjaOneUsersTemplate.id)/$($SubRelUserID)" + '" target="_blank">' + $SubUser.displayName + '</a>'
+                        UPN                = $SubUser.userPrincipalName
+                        'License Assigned' = $(Get-Date(($MatchedPlans | Group-Object assignedDateTime | Sort-Object Count -Desc | Select-Object -First 1).name) -Format u)
+                        NinjaUserDocID     = $SubRelUserID
+                    }
+                }   
+            }
+
+            Write-Host "Looping Users"
+
+            $SubscriptionUsersHTML = $SubscriptionUsers | Select-Object -ExcludeProperty NinjaUserDocID | ConvertTo-Html -As Table -Fragment
+            $SubscriptionUsersHTML = ([System.Web.HttpUtility]::HtmlDecode($SubscriptionUsersHTML) -replace '<th>', '<th style="white-space: nowrap;">') -replace '<td>', '<td style="white-space: nowrap;">'
+
+            $SubscriptionSummary = [PSCustomObject]@{
+                'Subscription Name'     = $FriendlyLicenseName
+                Created                 = $Subscription.createdDateTime
+                Renewal                 = $Subscription.nextLifecycleDateTime
+                Trial                   = $Subscription.isTrial
+                Status                  = $Subscription.Status
+                'Subscription Licenses' = $Subscription.totalLicenses
+                'Tenant Used'           = $MatchedLicenseInfo.consumedUnits
+                'Tenant Total'          = $MatchedLicenseInfo.prepaidUnits.enabled
+                'Owner Tenant ID'       = $Subscription.ownerTenantId
+                'Owner ID'              = $Subscription.ownerId
+                'Owner Type'            = $Subscription.ownerType
+                'Subscription ID'       = $Subscription.id
+            }
+            $SubscriptionOverviewCardHTML = Get-NinjaOneInfoCard -Title "Subscription Details" -Data $SubscriptionSummary -Icon 'fas fa-file-invoice'
+
+            Write-Host "Summary Card Generated"
+
+            $SubscriptionItemsTable = $Subscription.serviceStatus | Select-Object @{n = 'Plan Name'; e = { convert-skuname -skuname $_.servicePlanName } }, @{n = 'Applies To'; e = { $_.appliesTo } }, @{n = 'Provisioning Status'; e = { $_.provisioningStatus } }
+            $SubscriptionItemsHTML = $SubscriptionItemsTable | ConvertTo-Html -As Table -Fragment
+            $SubscriptionItemsHTML = ([System.Web.HttpUtility]::HtmlDecode($SubscriptionItemsHTML) -replace '<th>', '<th style="white-space: nowrap;">') -replace '<td>', '<td style="white-space: nowrap;">'
+            
+            $SubscriptionItemsCardHTML = Get-NinjaOneCard -Title 'Subscription Items' -Body $SubscriptionItemsHTML -Icon 'fas fa-chart-bar'
+
+            Write-Host "Items Card Generated"
+
+            $SubscriptionSummaryHTML = '<div class="row g-3">' + 
+            '<div class="col-xl-6 col-lg-6 col-md-12 col-sm-12 d-flex">' + $SubscriptionOverviewCardHTML + 
+            '</div><div class="col-xl-6 col-lg-6 col-md-12 col-sm-12 d-flex">' + $SubscriptionItemsCardHTML +
+            '</div></div>'
+
+            $NinjaOneSubscription = $NinjaOneLicenseDocs | Where-Object { $_.ParsedFields.cippSubscriptionID -eq $Subscription.ID }
+
+            $SubscriptionFields = @{
+                cippSubscriptionSummary = @{'html' = $SubscriptionSummaryHTML }
+                cippSubscriptionUsers   = @{'html' = $SubscriptionUsersHTML }
+                cippSubscriptionID      = $Subscription.id
+            }
+
+            Write-Host "Fields Mapped"
+
+            if ($NinjaOneSubscription) {
+                $UpdateObject = [PSCustomObject]@{
+                    documentId   = $NinjaOneSubscription.documentId
+                    documentName = "$FriendlyLicenseName ($($Subscription.id))"
+                    fields       = $SubscriptionFields
+                }
+                $NinjaSubscriptionUpdates.Add($UpdateObject)
+                Write-Host "Upadate Object Added"
+            } else {
+                $CreateObject = [PSCustomObject]@{
+                    documentName       = "$FriendlyLicenseName ($($Subscription.id))"
+                    documentTemplateId = [int]($NinjaOneLicenseTemplate.id)
+                    organizationId     = [int]$NinjaOneOrg
+                    fields             = $SubscriptionFields
+                }
+                $NinjaSubscriptionCreation.Add($CreateObject)
+                Write-Host "Create Object Added"
+            }
+
+        }
+        $NinjaSubscriptionCreation | ConvertTo-Json -Depth 100 | Out-File D:\Temp\SubscriptionCreation.json
+        $NinjaSubscriptionUpdates | ConvertTo-Json -Depth 100 | Out-File D:\Temp\SubscriptionUpdates.json
+
+        try {
+            # Create New Subscriptions
+            if (($NinjaSubscriptionCreation | Measure-Object).count -ge 1) {
+                Write-Host "Creating NinjaOne Subscriptions"
+                $CreatedSubscriptions = (Invoke-WebRequest -uri "https://$($Configuration.Instance)/api/v2/organization/documents" -Method POST -Headers @{Authorization = "Bearer $($token.access_token)" } -ContentType 'application/json' -Body ($NinjaSubscriptionCreation | ConvertTo-Json -Depth 100 -AsArray) -EA Stop).content | ConvertFrom-Json -Depth 100
+            }
+        } Catch {
+            Write-Host "Bulk Creation Error, but may have been successful as only 1 record with an issue could have been the cause: $_"
+        }
+        
+        try {
+            # Update Subscriptions
+            if (($NinjaSubscriptionUpdates | Measure-Object).count -ge 1) {
+                Write-Host "Updating NinjaOne Subscriptions"
+                $UpdatedSubscriptions = (Invoke-WebRequest -uri "https://$($Configuration.Instance)/api/v2/organization/documents" -Method PATCH -Headers @{Authorization = "Bearer $($token.access_token)" } -ContentType 'application/json' -Body ($NinjaSubscriptionUpdates | ConvertTo-Json -Depth 100 -AsArray) -EA Stop).content | ConvertFrom-Json -Depth 100
+                Write-Host "Completed Update"
+            }
+        } Catch {
+            Write-Host "Bulk Update Errored, but may have been successful as only 1 record with an issue could have been the cause: $_"
+        }
+
 
 
         ### M365 Links Section

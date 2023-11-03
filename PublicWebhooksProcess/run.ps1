@@ -11,7 +11,7 @@ Write-Host "Received request"
 Write-Host "CIPPID: $($request.Query.CIPPID)"
 $url = ($request.headers.'x-ms-original-url').split('/API') | Select-Object -First 1
 Write-Host $url
-if ($Request.query.CIPPID-in $Webhooks.CIPPID) {
+if ($Request.query.CIPPID -in $Webhooks.CIPPID) {
     Write-Host "Found matching CIPPID"
     $Webhookinfo = $Webhooks | Where-Object -Property RowKey -EQ $Request.query.CIPPID
 

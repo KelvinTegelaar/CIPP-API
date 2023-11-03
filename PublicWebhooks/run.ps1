@@ -13,14 +13,16 @@ Write-Host $url
 if ($Request.CIPPID -in $Webhooks.CIPPID) {
     Write-Host "Found matching CIPPID"
 
+    Push-OutputBinding -Name QueueWebhook -Value $Request
 
-Push-OutputBinding -Name QueueWebhook -Value $Request
-
-if ($Request.query.ValidationToken -or $Request.body.validationCode) {
-    Write-Host "Validation token received"
-    $body = $request.query.ValidationToken
+    if ($Request.query.ValidationToken -or $Request.body.validationCode) {
+        Write-Host "Validation token received"
+        $body = $request.query.ValidationToken
+    } else {
+        $Body = 'Webhook Recieved'
+    }
 } else {
-    $Body = 'Webhook Recieved'
+    $body = "This webhook is not authorized."
 }
 
 # Associate values to output bindings by calling 'Push-OutputBinding'.
