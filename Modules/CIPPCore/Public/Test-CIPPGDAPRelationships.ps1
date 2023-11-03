@@ -23,7 +23,7 @@ function Test-CIPPGDAPRelationships {
                     }) | Out-Null
             }
             foreach ($Group in $Tenant.Group) {
-                if ("62e90394-69f5-4237-9190-012177145e10" -in $Group.accessDetails) {
+                if ("62e90394-69f5-4237-9190-012177145e10" -in $Group.accessDetails.unifiedRoles.roleDefinitionId) {
                     $GDAPissues.add([PSCustomObject]@{
                             Type         = "Warning"
                             Issue        = "The relationship for $($Tenant.Group.customer.displayName) has global administrator access. This relationship is not available for auto-extend."
