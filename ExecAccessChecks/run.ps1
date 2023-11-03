@@ -49,17 +49,20 @@ if ($Request.query.Permissions -eq 'true') {
                             Href = 'https://docs.cipp.app/setup/installation/cleartokencache'
                         }
                     ) | Out-Null
-                } else {
+                }
+                else {
                     $Messages.Add('Your refresh token matches key vault.') | Out-Null
                 }
-            } catch {
+            }
+            catch {
                 Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $tenant -message "Key vault exception: $($_) " -Sev 'Error'
             }
         }
 
         try {
             $AccessTokenDetails = Read-JwtAccessDetails -Token $GraphToken.access_token -erroraction SilentlyContinue
-        } catch {
+        }
+        catch {
             $AccessTokenDetails = [PSCustomObject]@{
                 Name        = ''
                 AuthMethods = @()
@@ -71,10 +74,12 @@ if ($Request.query.Permissions -eq 'true') {
         if ($AccessTokenDetails.Name -eq '') {
             $Messages.Add('Your refresh token is invalid, check for line breaks or missing characters.') | Out-Null
             $Success = $false
-        } else {
+        }
+        else {
             if ($AccessTokenDetails.AuthMethods -contains 'mfa') {
                 $Messages.Add('Your access token contains the MFA claim.') | Out-Null
-            } else {
+            }
+            else {
                 $Messages.Add('Your access token does not contain the MFA claim, Refresh your SAM tokens.') | Out-Null
                 $Success = $false
                 $Links.Add([PSCustomObject]@{
@@ -96,7 +101,8 @@ if ($Request.query.Permissions -eq 'true') {
                     Href = 'https://docs.cipp.app/setup/installation/permissions'
                 }
             ) | Out-Null
-        } else {
+        }
+        else {
             $Messages.Add('Your Secure Application Model has all required permissions') | Out-Null
         }
         $CIPPGroupCount = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/groups/`$count?`$filter=startsWith(displayName,'M365 GDAP')" -NoAuthCheck $true -ComplexFilter
@@ -135,10 +141,12 @@ if ($Request.query.Permissions -eq 'true') {
         }
         if (($MissingGroups | Measure-Object).Count -eq 0) {
             $Messages.Add('The SAM user has all the required groups')
-        } else {
+        }
+        else {
             $Success = $false
         }
-    } catch {
+    }
+    catch {
         Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -message "Permissions check failed: $($_) " -Sev 'Error'
         $Messages.Add("We could not connect to the API to retrieve the permissions. There might be a problem with the secure application model configuration. The returned error is: $(Get-NormalizedError -message $_)") | Out-Null
         $Success = $false
@@ -177,93 +185,21 @@ if ($Request.query.Tenants -eq 'true') {
     $TenantIds = foreach ($Tenant in $Tenants) {
         ($TenantList | Where-Object { $_.defaultDomainName -eq $Tenant }).customerId
     }
-    $MyRoles = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/tenantRelationships/managedTenants/myRoles?`$filter=tenantId in ('$($TenantIds -join "','")')"
+    try {
+        $MyRoles = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/tenantRelationships/managedTenants/myRoles?`$filter=tenantId in ('$($TenantIds -join "','")')"
+    }
+    catch {
+        $MyRoles = $null
+    }
     $results = foreach ($tenant in $Tenants) {
-        $AddedText = ''
-        try {
-            $TenantId = ($TenantList | Where-Object { $_.defaultDomainName -eq $tenant }).customerId
-            $Assignments = ($MyRoles | Where-Object { $_.tenantId -eq $TenantId }).assignments
-            $SAMUserRoles = ($Assignments | Where-Object { $_.assignmentType -eq 'granularDelegatedAdminPrivileges' }).roles
-
-            $BulkRequests = $ExpectedRoles | ForEach-Object { @(
-                    @{
-                        id     = "roleManagement_$($_.id)"
-                        method = 'GET'
-                        url    = "roleManagement/directory/roleAssignments?`$filter=roleDefinitionId eq '$($_.id)'&`$expand=principal"
-                    }
-                )
-            }
-            $GDAPRolesGraph = New-GraphBulkRequest -tenantid $tenant -Requests $BulkRequests
-            $GDAPRoles = [System.Collections.Generic.List[object]]::new()
-            $MissingRoles = [System.Collections.Generic.List[object]]::new()
-            foreach ($RoleId in $ExpectedRoles) {
-                $GraphRole = $GDAPRolesGraph.body.value | Where-Object -Property roleDefinitionId -EQ $RoleId.Id
-                $Role = $GraphRole.principal | Where-Object -Property organizationId -EQ $ENV:tenantid
-                $SAMRole = $SAMUserRoles | Where-Object -Property templateId -EQ $RoleId.Id
-                if (!$Role) {
-                    $MissingRoles.Add(
-                        [PSCustomObject]@{
-                            Name = $RoleId.Name
-                            Type = 'Tenant'
-                        }
-                    )
-                    $AddedText = 'but missing GDAP roles'
-                } else {
-                    $GDAPRoles.Add([PSCustomObject]$RoleId)
-                }
-                if (!$SAMRole) {
-                    $MissingRoles.Add(
-                        [PSCustomObject]@{
-                            Name = $RoleId.Name
-                            Type = 'SAM User'
-                        }
-                    )
-                    $AddedText = 'but missing GDAP roles'
-                }
-            }
-            if (!($MissingRoles | Measure-Object).Count -gt 0) {
-                $MissingRoles = $true
-            }
-            @{
-                TenantName   = "$($Tenant)"
-                Status       = "Successfully connected $($AddedText)"
-                GDAPRoles    = $GDAPRoles
-                MissingRoles = $MissingRoles
-                SAMUserRoles = $SAMUserRoles
-            }
-            Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $tenant -message 'Tenant access check executed successfully' -Sev 'Info'
-
-        } catch {
-            @{
-                TenantName = "$($tenant)"
-                Status     = "Failed to connect: $(Get-NormalizedError -message $_.Exception.Message)"
-                GDAP       = ''
-            }
-            Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $tenant -message "Tenant access check failed: $(Get-NormalizedError -message $_) " -Sev 'Error'
-
-        }
-
-        try {
-            $GraphRequest = New-ExoRequest -tenantid $Tenant -cmdlet 'Get-OrganizationConfig' -ErrorAction Stop
-            @{
-                TenantName = "$($Tenant)"
-                Status     = 'Successfully connected to Exchange'
-            }
-
-        } catch {
-            $ReportedError = ($_.ErrorDetails | ConvertFrom-Json -ErrorAction SilentlyContinue)
-            $Message = if ($ReportedError.error.details.message) { $ReportedError.error.details.message } else { $ReportedError.error.innererror.internalException.message }
-            if ($null -eq $Message) { $Message = $($_.Exception.Message) }
-            @{
-                TenantName = "$($Tenant)"
-                Status     = "Failed to connect to Exchange: $(Get-NormalizedError -message $Message)"
-            }
-            Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $tenant -message "Tenant access check for Exchange failed: $(Get-NormalizedError -message $Message) " -Sev 'Error'
-        }
+        Test-CIPPTenantAccess -TenantFilter $Tenant -Myroles $Myroles -ExpectedRoles $ExpectedRoles
     }
     if (!$Tenants) { $results = 'Could not load the tenants list from cache. Please run permissions check first, or visit the tenants page.' }
 }
 
+if ($Request.query.GDAP -eq 'true') {
+    $Results = Test-CIPPGDAPConnection
+}
 $body = [pscustomobject]@{'Results' = $Results }
 
 # Associate values to output bindings by calling 'Push-OutputBinding'.
