@@ -19,6 +19,7 @@ function Test-CIPPGDAPRelationships {
                         Issue        = "This tenant only has a MLT(Microsoft Led Transition) relationship. This is a read-only relationship. You must migrate this tenant to GDAP."
                         Tenant       = $Tenant.Group.customer.displayName
                         Relationship = $Tenant.Group.displayName
+                        Link         = "https://docs.cipp.app/setup/gdap/index"
                     }) | Out-Null
             }
             foreach ($Group in $Tenant.Group) {
@@ -28,6 +29,8 @@ function Test-CIPPGDAPRelationships {
                             Issue        = "The relationship for $($Tenant.Group.customer.displayName) has global administrator access. This relationship is not available for auto-extend."
                             Tenant       = $Tenant.Group.customer.displayName
                             Relationship = $group.displayName
+                            Link         = "https://docs.cipp.app/setup/gdap/troubleshooting#autoextend"
+
                         }) | Out-Null
                 }
             }
@@ -67,6 +70,8 @@ function Test-CIPPGDAPRelationships {
                         Issue        = "$($Group) cannot be found in your tenant. If you have migrated outside of CIPP this is to be expected. Please perform an access check to make sure you have the correct set of permissions."
                         Tenant       = "*Partner Tenant"
                         Relationship = "None"
+                        Link         = "https://docs.cipp.app/setup/gdap/troubleshooting#groups"
+
                     }) | Out-Null
             }
         }
