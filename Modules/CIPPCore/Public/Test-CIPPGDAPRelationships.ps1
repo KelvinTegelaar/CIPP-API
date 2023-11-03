@@ -36,6 +36,7 @@ function Test-CIPPGDAPRelationships {
             }
             
         }
+        $me = (New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/me?$select=UserPrincipalName' -NoAuthCheck $true).UserPrincipalName
         $CIPPGroupCount = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/groups/`$count?`$filter=startsWith(displayName,'M365 GDAP')" -NoAuthCheck $true -ComplexFilter
         $SAMUserMemberships = New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/me/memberOf?$select=id,displayName,isAssignableToRole' -NoAuthCheck $true
         $ExpectedGroups = @(
@@ -67,7 +68,17 @@ function Test-CIPPGDAPRelationships {
             if (-not $GroupFound) {
                 $GDAPissues.add([PSCustomObject]@{
                         Type         = "Warning"
-                        Issue        = "$($Group) cannot be found in your tenant. If you have migrated outside of CIPP this is to be expected. Please perform an access check to make sure you have the correct set of permissions."
+                        Issue        = "$($Group) is not assigned to the SAM user $me. If you have migrated outside of CIPP this is to be expected. Please perform an access check to make sure you have the correct set of permissions."
+                        Tenant       = "*Partner Tenant"
+                        Relationship = "None"
+                        Link         = "https://docs.cipp.app/setup/gdap/troubleshooting#groups"
+
+                    }) | Out-Null
+            }
+            if ($CIPPGroupCount -lt 12) {
+                $GDAPissues.add([PSCustomObject]@{
+                        Type         = "Warning"
+                        Issue        = "We could not find all 12 recommended CIPP groups. If you have migrated outside of CIPP this is to be expected. Please perform an access check to make sure you have the correct set of permissions."
                         Tenant       = "*Partner Tenant"
                         Relationship = "None"
                         Link         = "https://docs.cipp.app/setup/gdap/troubleshooting#groups"
