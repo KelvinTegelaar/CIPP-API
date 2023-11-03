@@ -24,8 +24,8 @@ function Remove-CIPPMailboxPermissions {
                 }
              "FullAccess" {
                     $permissions = New-ExoRequest -tenantid $TenantFilter -cmdlet "Remove-MailboxPermission" -cmdParams @{Identity = $userid; user = $AccessUser; accessRights = @("FullAccess") } -Anchor $userid
-                    Write-LogMessage -user $ExecutingUser -API $APIName -message  "Removed FullAcess permissions for $($AccessUser) from $($userid)'s mailbox." -Sev "Info" -tenant $TenantFilter
-                    "Removed FullAcess permissions for $($AccessUser) from $($userid)'s mailbox."
+                    Write-LogMessage -user $ExecutingUser -API $APIName -message  "Removed FullAccess permissions for $($AccessUser) from $($userid)'s mailbox." -Sev "Info" -tenant $TenantFilter
+                    "Removed FullAccess permissions for $($AccessUser) from $($userid)'s mailbox."
                 }
             }
         }
