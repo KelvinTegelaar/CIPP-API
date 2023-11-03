@@ -1,4 +1,4 @@
-function Test-CIPPTenantAccess {
+function Test-CIPPGDAPRelationships {
     [CmdletBinding()]
     param (
         $TenantFilter,
@@ -77,6 +77,9 @@ function Test-CIPPTenantAccess {
     }
 
     return [PSCustomObject]@{
-        GDAPIssues = @($GDAPissues)
+        GDAPIssues     = @($GDAPissues)
+        MissingGroups  = @($MissingGroups)
+        Memberships    = @($SAMUserMemberships)
+        CIPPGroupCount = $CIPPGroupCount
     }
 }
