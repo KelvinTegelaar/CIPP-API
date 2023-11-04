@@ -45,7 +45,7 @@ try {
         }
     
         { $_."OOO" -ne "" } { 
-            Set-CIPPOutOfOffice -tenantFilter $tenantFilter -userid $username -OOO $request.body.OOO -ExecutingUser $request.headers.'x-ms-client-principal' -APIName "ExecOffboardUser"
+            Set-CIPPOutOfOffice -tenantFilter $tenantFilter -userid $username -InternalMessage $request.body.OOO -ExternalMessage $request.body.OOO -ExecutingUser $request.headers.'x-ms-client-principal' -APIName "ExecOffboardUser"
         }
         { $_."forward" -ne "" } { 
             Set-CIPPForwarding -userid $userid -username $username -tenantFilter $Tenantfilter -Forward $request.body.forward -KeepCopy [bool]$request.body.keepCopy -ExecutingUser $request.headers.'x-ms-client-principal' -APIName "ExecOffboardUser"
