@@ -7,19 +7,18 @@ $APIName = $TriggerMetadata.FunctionName
 Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -message 'Accessed this API' -Sev 'Debug'
 
 $RoleMappings = $Request.body.gdapRoles
-$Results = [System.Collections.ArrayList]@()
+$Results = [System.Collections.Generic.List[string]]::new()
+$InviteUrls = [System.Collections.Generic.List[string]]::new()
 
 $Table = Get-CIPPTable -TableName 'GDAPInvites'
 try {
     $JSONBody = @{
-        'displayName'   = "$((New-Guid).GUID)"
-        'partner'       = @{
-            'tenantId' = "$env:tenantid"
-        }
-        'accessDetails' = @{
+        'displayName'        = "$((New-Guid).GUID)"
+        'accessDetails'      = @{
             'unifiedRoles' = @($RoleMappings | Select-Object roleDefinitionId)
         }
-        'duration'      = 'P730D'
+        'autoExtendDuration' = 'P180D'
+        'duration'           = 'P730D'
     } | ConvertTo-Json -Depth 5 -Compress
 
     $NewRelationship = New-GraphPostRequest -NoAuthCheck $True -uri 'https://graph.microsoft.com/beta/tenantRelationships/delegatedAdminRelationships' -type POST -body $JSONBody -verbose -tenantid $env:TenantID
@@ -40,6 +39,7 @@ try {
 
         if ($NewRelationshipRequest.action -eq 'lockForApproval') {
             $InviteUrl = "https://admin.microsoft.com/AdminPortal/Home#/partners/invitation/granularAdminRelationships/$($NewRelationship.id)"
+            $InviteUrls.Add($InviteUrl)
 
             $InviteEntity = [PSCustomObject]@{
                 'PartitionKey' = 'invite'
@@ -58,9 +58,12 @@ try {
     $Results.add('Error creating GDAP relationship')
 }
 
-Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -message "Created GDAP Invite - $InviteUrl" -Sev 'Debug'
+Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -message "Created GDAP Invite - $InviteUrl" -Sev 'Info'
 
-$body = @{Results = @($Results) }
+$body = @{
+    Results    = @($Results)
+    InviteUrls = @($InviteUrls)
+}
 Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
         StatusCode = [HttpStatusCode]::OK
         Body       = $body
