@@ -28,6 +28,7 @@ try {
         @{Parameter = 'GroupMailbox'; Type = 'Bool' }
         @{Parameter = 'PublicFolder'; Type = 'Bool' }
         @{Parameter = 'RecipientTypeDetails'; Type = 'String' }
+        @{Parameter = 'SoftDeletedMailbox'; Type = 'Bool' }
     )
 
     foreach ($Param in $Request.Query.Keys) {
