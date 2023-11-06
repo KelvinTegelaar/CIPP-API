@@ -1,5 +1,5 @@
 {
-  "scriptFile": "../Modules/CippEntryPoints/CippEntryPoints.psm1",
+  "scriptFile": "../Modules/CippEntrypoints/CippEntrypoints.psm1",
   "entryPoint": "Receive-CippHttpTrigger",
   "bindings": [
     {
@@ -7,7 +7,8 @@
       "type": "httpTrigger",
       "direction": "in",
       "name": "Request",
-      "methods": ["get", "post"]
+      "methods": ["get", "post"],
+      "route": "{CIPPEndpoint}"
     },
     {
       "type": "http",
@@ -18,7 +19,12 @@
       "type": "queue",
       "direction": "out",
       "name": "QueueItem",
-      "queueName": "GraphRequestQueue"
+      "queueName": "CIPPGenericQueue"
+    },
+    {
+      "name": "starter",
+      "type": "durableClient",
+      "direction": "in"
     }
   ]
 }
