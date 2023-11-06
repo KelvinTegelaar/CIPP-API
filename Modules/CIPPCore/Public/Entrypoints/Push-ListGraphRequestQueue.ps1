@@ -9,8 +9,6 @@ function Push-ListGraphRequestQueue {
     # Write out the queue message and metadata to the information log.
     Write-Host "PowerShell queue trigger function processed work item: $($QueueItem.Endpoint) - $($QueueItem.Tenant)"
 
-    $QueueItem = $QueueItem.QueueItem
-
     $TenantQueueName = '{0} - {1}' -f $QueueItem.QueueName, $QueueItem.Tenant
     Update-CippQueueEntry -RowKey $QueueItem.QueueId -Status 'Processing' -Name $TenantQueueName
 

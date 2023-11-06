@@ -158,6 +158,7 @@ function Get-GraphRequestList {
                             Get-Tenants -IncludeErrors | ForEach-Object {
                                 $TenantFilter = $_.defaultDomainName
                                 $QueueTenant = [PSCustomObject]@{
+                                    FunctionName                = 'ListGraphRequestQueue'
                                     TenantFilter                = $TenantFilter
                                     Endpoint                    = $Endpoint
                                     QueueId                     = $Queue.RowKey
@@ -171,11 +172,7 @@ function Get-GraphRequestList {
                                     ReverseTenantLookup         = $ReverseTenantLookup.IsPresent
                                 }
 
-                                $QueueItem = [PSCustomObject]@{
-                                    FunctionName = 'ListGraphRequestQueue'
-                                    QueueItem    = $QueueTenant
-                                }
-                                Push-OutputBinding -Name QueueItem -Value $QueueItem
+                                Push-OutputBinding -Name QueueItem -Value $QueueTenant
                             }
                         } catch {
                             Write-Host "QUEUE ERROR: $($_.Exception.Message)"
@@ -221,6 +218,7 @@ function Get-GraphRequestList {
                             } else {
                                 $Queue = New-CippQueueEntry -Name $QueueName -Link $CippLink -Reference $QueueReference
                                 $QueueTenant = [PSCustomObject]@{
+                                    FunctionName                = 'ListGraphRequestQueue'
                                     TenantFilter                = $TenantFilter
                                     Endpoint                    = $Endpoint
                                     QueueId                     = $Queue.RowKey
@@ -233,11 +231,7 @@ function Get-GraphRequestList {
                                     ReverseTenantLookup         = $ReverseTenantLookup.IsPresent
                                 }
 
-                                $QueueItem = [PSCustomObject]@{
-                                    FunctionName = 'ListGraphRequestQueue'
-                                    QueueItem    = $QueueTenant
-                                }
-                                Push-OutputBinding -Name QueueItem -Value $QueueItem
+                                Push-OutputBinding -Name QueueItem -Value $QueueTenant
 
                                 [PSCustomObject]@{
                                     QueueMessage = ('Loading {0} rows for {1}. Please check back after the job completes' -f $Count, $TenantFilter)
