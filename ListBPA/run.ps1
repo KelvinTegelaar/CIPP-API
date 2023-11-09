@@ -27,7 +27,7 @@ $CippRoot = (Get-Item $PSScriptRoot).Parent.FullName
 if ($Request.query.tenantFilter -ne 'AllTenants' -and $Style -eq 'Tenant') {
     $mergedObject = New-Object pscustomobject
 
-    $Data = (Get-AzDataTableEntity @Table -Filter "PartitionKey eq '$($Request.query.tenantFilter)'") | ForEach-Object {
+    $Data = (Get-CIPPAzDataTableEntity @Table -Filter "PartitionKey eq '$($Request.query.tenantFilter)'") | ForEach-Object {
         $row = $_
         $JSONFields | ForEach-Object {
             $jsonContent = $row.$_
@@ -41,8 +41,10 @@ if ($Request.query.tenantFilter -ne 'AllTenants' -and $Style -eq 'Tenant') {
     }
 
     $Data = $mergedObject
-} else {
-    $Data = (Get-AzDataTableEntity @Table -Filter "RowKey eq '$NAME'") | ForEach-Object {
+}
+else {
+    $Tenants = Get-Tenants -IncludeErrors
+    $Data = (Get-CIPPAzDataTableEntity @Table -Filter "RowKey eq '$NAME'") | ForEach-Object {
         $row = $_
         $JSONFields | ForEach-Object {
             $jsonContent = $row.$_
@@ -50,7 +52,7 @@ if ($Request.query.tenantFilter -ne 'AllTenants' -and $Style -eq 'Tenant') {
                 $row.$_ = $jsonContent | ConvertFrom-Json -Depth 15
             }
         }
-        $row
+        $row | Where-Object -Property PartitionKey -In $Tenants.customerId
     }
 
 
