@@ -22,6 +22,7 @@ $results = try {
         'webhook'           = "$($Request.Body.Webhook)"
         'onePerTenant'      = [boolean]$Request.Body.onePerTenant
         'sendtoIntegration' = [boolean]$Request.Body.sendtoIntegration
+        'includeTenantId'   = [boolean]$Request.Body.includeTenantId
         'PartitionKey'      = 'CippNotifications'
         'RowKey'            = 'CippNotifications'
     }
@@ -29,7 +30,7 @@ $results = try {
         $SchedulerConfig[([pscustomobject]$logvalue.value)] = $true 
     }
 
-    Add-AzDataTableEntity @Table -Entity $SchedulerConfig -Force | Out-Null
+    Add-CIPPAzDataTableEntity @Table -Entity $SchedulerConfig -Force | Out-Null
     'Successfully set the configuration'
 }
 catch {

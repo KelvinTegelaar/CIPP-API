@@ -7,7 +7,7 @@ function New-GradientAlert {
     )
 
     $Table = Get-CIPPTable -TableName Extensionsconfig
-    $Configuration = ((Get-AzDataTableEntity @Table).config | ConvertFrom-Json).Gradient
+    $Configuration = ((Get-CIPPAzDataTableEntity @Table).config | ConvertFrom-Json).Gradient
     #creating accounts in Gradient
     try {
         $GradientToken = Get-GradientToken -Configuration $Configuration

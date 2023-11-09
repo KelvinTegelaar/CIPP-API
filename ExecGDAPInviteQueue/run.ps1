@@ -6,8 +6,8 @@ Write-Host "PowerShell queue trigger function processed work item: $QueueItem"
 #$TenantFilter = $env:TenantID
 
 $Table = Get-CIPPTable -TableName 'GDAPInvites'
-$Invite = Get-AzDataTableEntity @Table -Filter "RowKey eq '$QueueItem'"
-
+$Invite = Get-CIPPAzDataTableEntity @Table -Filter "RowKey eq '$QueueItem'"
+$APINAME = 'GDAPInvites'
 $RoleMappings = $Invite.RoleMappings | ConvertFrom-Json
 Write-Host ($Invite | ConvertTo-Json -Compress)
 
@@ -27,9 +27,9 @@ foreach ($role in $RoleMappings) {
         New-GraphPostRequest -NoAuthCheck $True -uri "https://graph.microsoft.com/beta/tenantRelationships/delegatedAdminRelationships/$($QueueItem)/accessAssignments" -tenantid $env:TenantID -type POST -body $MappingBody -verbose
         Start-Sleep -Milliseconds 100
     } catch {
-        Write-LogMessage -API $APINAME -message "GDAP Group mapping failed - $($role.GroupId): $($_.Exception.Message)" -Sev 'Debug'
+        Write-LogMessage -API $APINAME -message "GDAP Group mapping failed - $($role.GroupId): $($_.Exception.Message)" -Sev Error
         exit 1
     }
-    Write-LogMessage -API $APINAME -message "Groups mapped for GDAP Relationship: $($GdapInvite.RowKey)"
+    Write-LogMessage -API $APINAME -message "Groups mapped for GDAP Relationship: $($GdapInvite.RowKey)" -Sev Info
 }
 Remove-AzDataTableEntity @Table -Entity $Invite

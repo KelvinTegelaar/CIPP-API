@@ -2,10 +2,10 @@ param($Timer)
 
 $Table = Get-CippTable -tablename 'ScheduledTasks'
 $Filter = "TaskState eq 'Planned' or TaskState eq 'Failed - Planned'"
-$tasks = Get-AzDataTableEntity @Table -Filter $Filter
+$tasks = Get-CIPPAzDataTableEntity @Table -Filter $Filter
 foreach ($task in $tasks) {
     $tenant = $task.Tenant
-    $currentUnixTime = [int64](([datetime]::UtcNow) - (Get-Date "1/1/1970")).TotalSeconds
+    $currentUnixTime = [int64](([datetime]::UtcNow) - (Get-Date '1/1/1970')).TotalSeconds
     if ($currentUnixTime -ge $task.ScheduledTime) {
         try {
             Update-AzDataTableEntity @Table -Entity @{
@@ -15,27 +15,26 @@ foreach ($task in $tasks) {
                 TaskState    = 'Running'
             }
             $task.Parameters = $task.Parameters | ConvertFrom-Json -AsHashtable
+            $task.AdditionalProperties = $task.AdditionalProperties | ConvertFrom-Json
 
             if (!$task.Parameters) { $task.Parameters = @{} }
             $ScheduledCommand = [pscustomobject]@{
                 Command    = $task.Command
-                Parameters = $task.Parameters 
+                Parameters = $task.Parameters
                 TaskInfo   = $task
             }
 
-            if ($task.Tenant -eq "AllTenants") {
+            if ($task.Tenant -eq 'AllTenants') {
                 $Results = Get-Tenants | ForEach-Object {
                     $ScheduledCommand.Parameters['TenantFilter'] = $_.defaultDomainName
                     Push-OutputBinding -Name Msg -Value $ScheduledCommand
                 }
-            }
-            else {
+            } else {
                 $ScheduledCommand.Parameters['TenantFilter'] = $task.Tenant
                 $Results = Push-OutputBinding -Name Msg -Value $ScheduledCommand
             }
 
-        }
-        catch {
+        } catch {
             $errorMessage = $_.Exception.Message
 
             Update-AzDataTableEntity @Table -Entity @{
@@ -45,7 +44,7 @@ foreach ($task in $tasks) {
                 ExecutedTime = "$currentUnixTime"
                 TaskState    = 'Failed'
             }
-            Write-LogMessage -API "Scheduler_UserTasks" -tenant $tenant -message "Failed to execute task $($task.Name): $errorMessage" -sev Error
+            Write-LogMessage -API 'Scheduler_UserTasks' -tenant $tenant -message "Failed to execute task $($task.Name): $errorMessage" -sev Error
         }
     }
 }
