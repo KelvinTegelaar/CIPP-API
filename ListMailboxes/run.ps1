@@ -16,12 +16,37 @@ try {
     $users = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/users/?`$top=999&`$select=id,userPrincipalName,assignedLicenses" -Tenantid $tenantfilter
 
     $ExoRequest = @{
-        tenantid = $TenantFilter
-        cmdlet   = 'Get-Mailbox'
+        tenantid  = $TenantFilter
+        cmdlet    = 'Get-Mailbox'
+        cmdParams = @{}
     }
 
-    if ([bool]$Request.Query.SoftDeletedMailbox -eq $true) {
-        $ExoRequest.cmdParams = @{ SoftDeletedMailbox = $true }
+    $AllowedParameters = @(
+        @{Parameter = 'Anr'; Type = 'String' }
+        @{Parameter = 'Archive'; Type = 'Bool' }
+        @{Parameter = 'Filter'; Type = 'String' }
+        @{Parameter = 'GroupMailbox'; Type = 'Bool' }
+        @{Parameter = 'PublicFolder'; Type = 'Bool' }
+        @{Parameter = 'RecipientTypeDetails'; Type = 'String' }
+        @{Parameter = 'SoftDeletedMailbox'; Type = 'Bool' }
+    )
+
+    foreach ($Param in $Request.Query.Keys) {
+        $CmdParam = $AllowedParameters | Where-Object { $_.Parameter -eq $Param }
+        if ($CmdParam) {
+            switch ($CmdParam.Type) {
+                'String' {
+                    if (![string]::IsNullOrEmpty($Request.Query.$Param)) {
+                        $ExoRequest.cmdParams.$Param = $Request.Query.$Param
+                    }
+                }
+                'Bool' {
+                    if ([bool]$Request.Query.$Param -eq $true) {
+                        $ExoRequest.cmdParams.$Param = $true
+                    }
+                }
+            }
+        }
     }
 
     Write-Host ($ExoRequest | ConvertTo-Json)

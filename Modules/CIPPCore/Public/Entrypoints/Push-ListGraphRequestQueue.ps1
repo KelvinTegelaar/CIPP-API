@@ -9,8 +9,6 @@ function Push-ListGraphRequestQueue {
     # Write out the queue message and metadata to the information log.
     Write-Host "PowerShell queue trigger function processed work item: $($QueueItem.Endpoint) - $($QueueItem.Tenant)"
 
-    #Write-Host ($QueueItem | ConvertTo-Json -Depth 5)
-
     $TenantQueueName = '{0} - {1}' -f $QueueItem.QueueName, $QueueItem.Tenant
     Update-CippQueueEntry -RowKey $QueueItem.QueueId -Status 'Processing' -Name $TenantQueueName
 
@@ -41,8 +39,7 @@ function Push-ListGraphRequestQueue {
 
     $RawGraphRequest = try {
         Get-GraphRequestList @GraphRequestParams
-    }
-    catch {
+    } catch {
         [PSCustomObject]@{
             Tenant     = $QueueItem.Tenant
             CippStatus = "Could not connect to tenant. $($_.Exception.message)"
@@ -63,8 +60,7 @@ function Push-ListGraphRequestQueue {
     try {
         Add-CIPPAzDataTableEntity @Table -Entity $GraphResults -Force | Out-Null
         Update-CippQueueEntry -RowKey $QueueItem.QueueId -Status 'Completed'
-    }
-    catch {
+    } catch {
         Write-Host "Queue Error: $($_.Exception.Message)"
         Update-CippQueueEntry -RowKey $QueueItem.QueueId -Status 'Failed'
     }
