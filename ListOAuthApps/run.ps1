@@ -17,14 +17,16 @@ if ($TenantFilter -eq "AllTenants") { $Tenants = (Get-Tenants).defaultDomainName
 try {
         $GraphRequest = foreach ($Tenant in $Tenants) {
                 try {
-                        $ServicePrincipals = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/servicePrincipals?`$select=id,displayName" -tenantid $Tenant
+                        $ServicePrincipals = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/servicePrincipals?`$select=id,displayName,appid" -tenantid $Tenant
                         New-GraphGetRequest -uri "https://graph.microsoft.com/beta/oauth2PermissionGrants" -tenantid $Tenant | ForEach-Object {
+                                $CurrentServicePrincipal = ($ServicePrincipals | Where-Object -Property id -EQ $_.clientId)
                                 [PSCustomObject]@{
-                                        Tenant    = $Tenant
-                                        Name      = ($ServicePrincipals | Where-Object -Property id -EQ $_.clientId).displayName
-                                        ID        = $_.clientId
-                                        Scope     = ($_.scope -join ',')
-                                        StartTime = $_.startTime
+                                        Tenant          = $Tenant
+                                        Name            = $CurrentServicePrincipal.displayName
+                                        ApplicationID   = $CurrentServicePrincipal.appid
+                                        ObjectID        = $_.clientId
+                                        Scope           = ($_.scope -join ',')
+                                        StartTime       = $_.startTime
                                 }
                         }
                         $StatusCode = [HttpStatusCode]::OK
