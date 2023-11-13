@@ -1,16 +1,20 @@
 function Remove-CIPPGroups {
     [CmdletBinding()]
     param(
-        $userid,
+        $Username,
         $tenantFilter,
         $APIName = "Remove From Groups",
         $ExecutingUser,
-        $Username
+        $userid
     )
 
-    $AllGroups = (New-GraphGetRequest -uri "https://graph.microsoft.com/beta/groups/?$select=DisplayName,mailEnabled" -tenantid $tenantFilter)
+if (-not $userid) {
+    $userid = (New-GraphGetRequest -uri "https://graph.microsoft.com/beta/users/$($Username)" -tenantid $Tenantfilter).id
+}
+    $AllGroups = (New-GraphGetRequest -uri "https://graph.microsoft.com/beta/groups/?`$select=displayName,mailEnabled,id,groupTypes" -tenantid $tenantFilter)
 
     (New-GraphPostRequest -uri "https://graph.microsoft.com/beta/users/$($userid)/GetMemberGroups" -tenantid $tenantFilter -type POST -body '{"securityEnabledOnly": false}').value | ForEach-Object -Parallel {
+        Import-Module CIPPCore
         Import-Module '.\GraphHelper.psm1'
         $group = $_
         
