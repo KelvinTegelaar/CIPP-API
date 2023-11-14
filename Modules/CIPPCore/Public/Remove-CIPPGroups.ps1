@@ -8,9 +8,9 @@ function Remove-CIPPGroups {
         $userid
     )
 
-if (-not $userid) {
-    $userid = (New-GraphGetRequest -uri "https://graph.microsoft.com/beta/users/$($Username)" -tenantid $Tenantfilter).id
-}
+    if (-not $userid) {
+        $userid = (New-GraphGetRequest -uri "https://graph.microsoft.com/beta/users/$($Username)" -tenantid $Tenantfilter).id
+    }
     $AllGroups = (New-GraphGetRequest -uri "https://graph.microsoft.com/beta/groups/?`$select=displayName,mailEnabled,id,groupTypes" -tenantid $tenantFilter)
 
     $Returnval = (New-GraphPostRequest -uri "https://graph.microsoft.com/beta/users/$($userid)/GetMemberGroups" -tenantid $tenantFilter -type POST -body '{"securityEnabledOnly": false}').value | ForEach-Object -Parallel {
@@ -42,5 +42,5 @@ if (-not $userid) {
             "Could not remove $($using:Username) from group $($Groupname): $($_.Exception.Message). This is likely because its a Dynamic Group or synched with active directory"
         }
     }
-    return $Returnval
+    return ($Returnval | Out-String)
 }
