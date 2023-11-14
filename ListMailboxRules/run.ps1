@@ -21,26 +21,24 @@ if (!$Rows) {
         Tenant   = 'Loading data. Please check back in 1 minute'
         Licenses = 'Loading data. Please check back in 1 minute'
     }
-}         
-else {
-    if ($TenantFilter -ne "AllTenants") {
-        $GraphRequest = $Rows | Where-Object -Property Tenant -EQ $TenantFilter | ForEach-Object { 
+} else {
+    if ($TenantFilter -ne 'AllTenants') {
+        $GraphRequest = $Rows | Where-Object -Property Tenant -EQ $TenantFilter | ForEach-Object {
             $NewObj = $_.Rules | ConvertFrom-Json
-            $NewObj | Add-Member -NotePropertyName "Tenant" -NotePropertyValue $TenantFilter
+            $NewObj | Add-Member -NotePropertyName 'Tenant' -NotePropertyValue $TenantFilter
             $NewObj
         }
-    } 
-    else { 
-        $GraphRequest = $Rows | ForEach-Object { 
+    } else {
+        $GraphRequest = $Rows | ForEach-Object {
             $TenantName = $_.Tenant
             $NewObj = $_.Rules | ConvertFrom-Json
-            $NewObj | Add-Member -NotePropertyName "Tenant" -NotePropertyValue $TenantName
+            $NewObj | Add-Member -NotePropertyName 'Tenant' -NotePropertyValue $TenantName
             $NewObj
         }
     }
 }
 #Remove all old cache
-Remove-AzDataTableEntity @Table -Entity (Get-CIPPAzDataTableEntity @Table | Where-Object -Property Timestamp -LT (Get-Date).AddMinutes(-15))
+Remove-AzDataTableEntity @Table -Entity (Get-CIPPAzDataTableEntity @Table -Property PartitionKey, RowKey, Timestamp | Where-Object -Property Timestamp -LT (Get-Date).AddMinutes(-15))
 
 
 Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
