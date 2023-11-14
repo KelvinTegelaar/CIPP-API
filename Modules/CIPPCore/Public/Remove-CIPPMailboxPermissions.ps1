@@ -13,7 +13,7 @@ function Remove-CIPPMailboxPermissions {
         if ($userid -eq "AllUsers") {
             $Mailboxes = New-ExoRequest -tenantid $QueueItem.TenantFilter -cmdlet "get-mailbox"
             foreach ($Mailbox in $Mailboxes) {
-                Remove-CIPPMailboxPermissions -PermissionsLevel @("FullAccess", "SendAs", "SendOnBehalf") -userid $Mailbox.UserPrincipalName -AccessUser $QueueItem.User -TenantFilter $QueueItem.TenantFilter -APIName $APINAME -ExecutingUser $QueueItem.ExecutingUser
+                Remove-CIPPMailboxPermissions -PermissionsLevel $PermissionsLevel -userid $Mailbox.UserPrincipalName -AccessUser $QueueItem.User -TenantFilter $QueueItem.TenantFilter -APIName $APINAME -ExecutingUser $QueueItem.ExecutingUser
             }        
         }
         else {
