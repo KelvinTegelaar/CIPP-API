@@ -7,9 +7,9 @@ function Push-ListGraphRequestQueue {
     param($QueueItem, $TriggerMetadata)
 
     # Write out the queue message and metadata to the information log.
-    Write-Host "PowerShell queue trigger function processed work item: $($QueueItem.Endpoint) - $($QueueItem.Tenant)"
+    Write-Host "PowerShell queue trigger function processed work item: $($QueueItem.Endpoint) - $($QueueItem.TenantFilter)"
 
-    $TenantQueueName = '{0} - {1}' -f $QueueItem.QueueName, $QueueItem.Tenant
+    $TenantQueueName = '{0} - {1}' -f $QueueItem.QueueName, $QueueItem.TenantFilter
     Update-CippQueueEntry -RowKey $QueueItem.QueueId -Status 'Processing' -Name $TenantQueueName
 
     $ParamCollection = [System.Web.HttpUtility]::ParseQueryString([String]::Empty)
@@ -23,7 +23,7 @@ function Push-ListGraphRequestQueue {
     Write-Host $TableName
     $Table = Get-CIPPTable -TableName $TableName
 
-    $Filter = "PartitionKey eq '{0}' and Tenant eq '{1}'" -f $PartitionKey, $QueueItem.Tenant
+    $Filter = "PartitionKey eq '{0}' and Tenant eq '{1}'" -f $PartitionKey, $QueueItem.TenantFilter
     Write-Host $Filter
     Get-CIPPAzDataTableEntity @Table -Filter $Filter -Property PartitionKey, RowKey | Remove-AzDataTableEntity @Table
 
@@ -49,7 +49,7 @@ function Push-ListGraphRequestQueue {
     $GraphResults = foreach ($Request in $RawGraphRequest) {
         $Json = ConvertTo-Json -Depth 5 -Compress -InputObject $Request
         [PSCustomObject]@{
-            Tenant       = [string]$QueueItem.Tenant
+            TenantFilter = [string]$QueueItem.TenantFilter
             QueueId      = [string]$QueueItem.QueueId
             QueueType    = [string]$QueueItem.QueueType
             RowKey       = [string](New-Guid)
