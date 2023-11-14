@@ -13,7 +13,11 @@ Write-Host 'PowerShell HTTP trigger function processed a request.'
 # Interact with query parameters or the body of the request.
 $TenantFilter = $Request.Query.TenantFilter
 try {
-    $users = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/users/?`$top=999&`$select=id,userPrincipalName,assignedLicenses" -Tenantid $tenantfilter
+    if ([bool]$Request.Query.SkipLicense -ne $true) {
+        $users = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/users/?`$top=999&`$select=id,userPrincipalName,assignedLicenses" -Tenantid $tenantfilter
+    } else {
+        $users = @()
+    }
 
     $ExoRequest = @{
         tenantid  = $TenantFilter
