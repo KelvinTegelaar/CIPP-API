@@ -25,7 +25,7 @@ function Push-ListGraphRequestQueue {
 
     $Filter = "PartitionKey eq '{0}' and Tenant eq '{1}'" -f $PartitionKey, $QueueItem.Tenant
     Write-Host $Filter
-    Get-CIPPAzDataTableEntity @Table -Filter $Filter | Remove-AzDataTableEntity @Table
+    Get-CIPPAzDataTableEntity @Table -Filter $Filter -Property PartitionKey, RowKey | Remove-AzDataTableEntity @Table
 
     $GraphRequestParams = @{
         TenantFilter                = $QueueItem.TenantFilter
