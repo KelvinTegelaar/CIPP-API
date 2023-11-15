@@ -23,7 +23,7 @@ function Add-CIPPScheduledTask {
             $Parameters[$Key] = $Param
         }
     }
-    $Parameters = ($Parameters | ConvertTo-Json -Compress)
+    $Parameters = ($Parameters | ConvertTo-Json -Depth 10 -Compress)
     $AdditionalProperties = [System.Collections.Hashtable]@{}
     foreach ($Prop in $task.AdditionalProperties) {
         $AdditionalProperties[$Prop.Key] = $Prop.Value

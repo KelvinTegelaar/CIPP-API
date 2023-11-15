@@ -46,7 +46,7 @@ function Invoke-CIPPOffboardingJob {
         }
     
         { $_."OOO" -ne "" } { 
-            Set-CIPPOutOfOffice -tenantFilter $tenantFilter -userid $username -InternalMessage $Options.OOO -ExternalMessage $Options.OOO -ExecutingUser $ExecutingUser -APIName $APIName
+            Set-CIPPOutOfOffice -tenantFilter $tenantFilter -userid $username -InternalMessage $Options.OOO -ExternalMessage $Options.OOO -ExecutingUser $ExecutingUser -APIName $APIName -state "Enabled"
         }
         { $_."forward" -ne "" } { 
             Set-CIPPForwarding -userid $userid -username $username -tenantFilter $Tenantfilter -Forward $Options.forward -KeepCopy [bool]$Options.keepCopy -ExecutingUser $ExecutingUser -APIName $APIName

@@ -42,5 +42,5 @@ function Remove-CIPPGroups {
             "Could not remove $($using:Username) from group $($Groupname): $($_.Exception.Message). This is likely because its a Dynamic Group or synched with active directory"
         }
     }
-    return ($Returnval | Out-String)
+    return $Returnval
 }
