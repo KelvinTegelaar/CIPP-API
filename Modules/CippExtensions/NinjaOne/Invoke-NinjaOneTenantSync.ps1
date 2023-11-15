@@ -1246,7 +1246,6 @@ function Invoke-NinjaOneTenantSync {
                     })
             }
         }
-
    
         # Relate Users to Devices
         Foreach ($LinkDevice in $ParsedDevices | Where-Object { $null -ne $_.NinjaDevice }) {
@@ -1284,7 +1283,7 @@ function Invoke-NinjaOneTenantSync {
         ### License Document Details
         #NinjaOneLicenseTemplate
         
-        foreach ($Subscription in $Subscriptions) {
+        $SubscriptionDetails = foreach ($Subscription in $Subscriptions) {
             $MatchedLicenseInfo = $Licenses | Where-Object -Property skuid -EQ $Subscription.skuId
 
             if (($MatchedLicenseInfo | Measure-Object).count -eq 0) {
@@ -1292,11 +1291,9 @@ function Invoke-NinjaOneTenantSync {
                 Continue
             }
 
-            Write-Host "License Matched"
 
             $FriendlyLicenseName = $((Get-Culture).TextInfo.ToTitleCase((convert-skuname -skuname $Subscription.SkuPartNumber).Tolower()))
 
-            Write-Host "Friendly Generated: $FriendlyLicenseName"
             
             $SubscriptionUsers = $Users | foreach-Object {
                 $SubUser = $_
@@ -1311,8 +1308,6 @@ function Invoke-NinjaOneTenantSync {
                     }
                 }   
             }
-
-            Write-Host "Looping Users"
 
             $SubscriptionUsersHTML = $SubscriptionUsers | Select-Object -ExcludeProperty NinjaUserDocID | ConvertTo-Html -As Table -Fragment
             $SubscriptionUsersHTML = ([System.Web.HttpUtility]::HtmlDecode($SubscriptionUsersHTML) -replace '<th>', '<th style="white-space: nowrap;">') -replace '<td>', '<td style="white-space: nowrap;">'
@@ -1333,7 +1328,6 @@ function Invoke-NinjaOneTenantSync {
             }
             $SubscriptionOverviewCardHTML = Get-NinjaOneInfoCard -Title "Subscription Details" -Data $SubscriptionSummary -Icon 'fas fa-file-invoice'
 
-            Write-Host "Summary Card Generated"
 
             $SubscriptionItemsTable = $Subscription.serviceStatus | Select-Object @{n = 'Plan Name'; e = { convert-skuname -skuname $_.servicePlanName } }, @{n = 'Applies To'; e = { $_.appliesTo } }, @{n = 'Provisioning Status'; e = { $_.provisioningStatus } }
             $SubscriptionItemsHTML = $SubscriptionItemsTable | ConvertTo-Html -As Table -Fragment
@@ -1341,7 +1335,6 @@ function Invoke-NinjaOneTenantSync {
             
             $SubscriptionItemsCardHTML = Get-NinjaOneCard -Title 'Subscription Items' -Body $SubscriptionItemsHTML -Icon 'fas fa-chart-bar'
 
-            Write-Host "Items Card Generated"
 
             $SubscriptionSummaryHTML = '<div class="row g-3">' + 
             '<div class="col-xl-6 col-lg-6 col-md-12 col-sm-12 d-flex">' + $SubscriptionOverviewCardHTML + 
@@ -1356,7 +1349,6 @@ function Invoke-NinjaOneTenantSync {
                 cippSubscriptionID      = $Subscription.id
             }
 
-            Write-Host "Fields Mapped"
 
             if ($NinjaOneSubscription) {
                 $UpdateObject = [PSCustomObject]@{
@@ -1365,7 +1357,6 @@ function Invoke-NinjaOneTenantSync {
                     fields       = $SubscriptionFields
                 }
                 $NinjaSubscriptionUpdates.Add($UpdateObject)
-                Write-Host "Upadate Object Added"
             } else {
                 $CreateObject = [PSCustomObject]@{
                     documentName       = "$FriendlyLicenseName ($($Subscription.id))"
@@ -1374,12 +1365,14 @@ function Invoke-NinjaOneTenantSync {
                     fields             = $SubscriptionFields
                 }
                 $NinjaSubscriptionCreation.Add($CreateObject)
-                Write-Host "Create Object Added"
+            }
+
+            [PSCustomObject]@{
+                Name  = "$FriendlyLicenseName ($($Subscription.id))"
+                Users = $SubscriptionUsers.NinjaUserDocID
             }
 
         }
-        $NinjaSubscriptionCreation | ConvertTo-Json -Depth 100 | Out-File D:\Temp\SubscriptionCreation.json
-        $NinjaSubscriptionUpdates | ConvertTo-Json -Depth 100 | Out-File D:\Temp\SubscriptionUpdates.json
 
         try {
             # Create New Subscriptions
@@ -1400,6 +1393,39 @@ function Invoke-NinjaOneTenantSync {
             }
         } Catch {
             Write-Host "Bulk Update Errored, but may have been successful as only 1 record with an issue could have been the cause: $_"
+        }
+
+        $SubscriptionDocs = $CreatedSubscriptions + $UpdatedSubscriptions
+
+        # Relate Subscriptions to Users
+        Foreach ($LinkSub in $SubscriptionDetails) {
+            $MatchedSubDoc = $SubscriptionDocs | Where-Object { $_.documentName -eq $LinkSub.name }
+            if (($MatchedSubDoc | Measure-Object).count -eq 1) {
+                $RelatedItems = (Invoke-WebRequest -uri "https://$($Configuration.Instance)/api/v2/related-items/with-entity/DOCUMENT/$($MatchedSubDoc.documentId)" -Method GET -Headers @{Authorization = "Bearer $($token.access_token)" } -ContentType 'application/json').content | ConvertFrom-Json -depth 100
+                [System.Collections.Generic.List[PSCustomObject]]$Relations = @()
+                Foreach ($LinkUser in $LinkSub.Users) {
+                    $ExistingRelation = $RelatedItems | Where-Object { $_.relEntityType -eq 'DOCUMENT' -and $_.relEntityId -eq $LinkUser }
+                    if (!$ExistingRelation) {
+                        $Relations.Add(
+                            [PSCustomObject]@{
+                                relEntityType = "DOCUMENT"
+                                relEntityId   = $LinkUser
+                            }
+                        )
+                    }
+                }
+
+                try {
+                    # Update Relations
+                    if (($Relations | Measure-Object).count -ge 1) {
+                        Write-Host "Updating Relations"
+                        $RelationResult = Invoke-WebRequest -uri "https://$($Configuration.Instance)/api/v2/related-items/entity/DOCUMENT/$($($MatchedSubDoc.documentId))/relations" -Method POST -Headers @{Authorization = "Bearer $($token.access_token)" } -ContentType 'application/json' -Body ($Relations | ConvertTo-Json -Depth 100 -AsArray) -EA Stop
+                        Write-Host "Completed Update"
+                    }
+                } Catch {
+                    Write-Host "Creating Relations Failed: $_"
+                }
+            }
         }
 
 
