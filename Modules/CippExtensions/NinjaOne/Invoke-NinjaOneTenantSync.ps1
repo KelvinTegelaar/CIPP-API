@@ -1493,11 +1493,6 @@ function Invoke-NinjaOneTenantSync {
                     Name = 'Azure Portal'
                     Link = "https://portal.azure.com/$($customer.DefaultDomainName)"
                     Icon = 'fas fa-server'
-                },
-                @{
-                    Name = 'CIPP Tenant Admin'
-                    Link = "https://$CIPPUrl/home?customerId=$($Customer.CustomerId)"
-                    Icon = 'fas fa-shield-halved'
                 }
 
             )
@@ -1505,6 +1500,12 @@ function Invoke-NinjaOneTenantSync {
             $M365LinksHTML = Get-NinjaOneLinks -Data $ManagementLinksData -Title 'Portals' -SmallCols 2 -MedCols 3 -LargeCols 3 -XLCols 3
 
             $CIPPLinksData = @(
+                
+                @{
+                    Name = 'CIPP Tenant Dashboard'
+                    Link = "https://$CIPPUrl/home?customerId=$($Customer.CustomerId)"
+                    Icon = 'fas fa-shield-halved'
+                },
                 @{
                     Name = 'Edit Tenant'
                     Link = "https://$CIPPUrl/tenant/administration/tenants/Edit?customerId=$($Customer.customerId)&tenantFilter=$($Customer.defaultDomainName)"
