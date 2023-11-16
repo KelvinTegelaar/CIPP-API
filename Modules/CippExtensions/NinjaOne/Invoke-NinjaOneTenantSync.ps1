@@ -6,7 +6,7 @@ function Invoke-NinjaOneTenantSync {
     try {
 
         $StartTime = Get-Date
-        write-host "$(Get-Date) - Starting NinjaOne Sync $($customer.DisplayName)"
+        write-host "$(Get-Date) - Starting NinjaOne Sync"
 
         # Fetch Custom NinjaOne Settings
         $Table = Get-CIPPTable -TableName NinjaOneSettings
@@ -16,6 +16,7 @@ function Invoke-NinjaOneTenantSync {
         # Parse out the Tenant we are processing
         $MappedTenant = $QueueItem.MappedTenant
         $Customer = Get-Tenants | where-object { $_.customerId -eq $MappedTenant.RowKey }
+        Write-Host "Processing: $($Customer.displayName)"
 
         if (($Customer | Measure-Object).count -ne 1) {
             Throw "Unable to match the recieved ID to a tenant QueueItem: $($QueueItem | ConvertTo-Json -Depth 100 | Out-String) Matched Customer: $($Customer| ConvertTo-Json -Depth 100 | Out-String)"
@@ -702,7 +703,7 @@ function Invoke-NinjaOneTenantSync {
                         },
                         @{
                             Name = 'View Devices in CIPP'
-                            Link = "https://$($CIPPURL)/.auth/login/aad?post_login_redirect_uri=$($CIPPURL)//endpoint/reports/devices?customerId=$($Customer.defaultDomainName)"
+                            Link = "https://$($CIPPURL)/endpoint/reports/devices?customerId=$($Customer.defaultDomainName)"
                             Icon = 'far fa-eye'
                         }
                     )
@@ -722,9 +723,9 @@ function Invoke-NinjaOneTenantSync {
                     
                     # Set Compliance Status
                     if ($Device.complianceState -eq 'compliant') {
-                        $Compliance = '<i class="fas fa-check-circle" title="Device Compliant" style="color:#008001;"></i>&nbsp;&nbsp; Compliant'
+                        $Compliance = '<i class="fas fa-check-circle" title="Device Compliant" style="color:#26A644;"></i>&nbsp;&nbsp; Compliant'
                     } else {
-                        $Compliance = '<i class="fas fa-times-circle" title="Device Not Compliannt" style="color:#ec1c24;"></i>&nbsp;&nbsp; Not Compliant'
+                        $Compliance = '<i class="fas fa-times-circle" title="Device Not Compliannt" style="color:#D53948;"></i>&nbsp;&nbsp; Not Compliant'
                     }
 
                     # Device Details
@@ -901,9 +902,9 @@ function Invoke-NinjaOneTenantSync {
 
                     # Set Compliance Status
                     if ($UserDevice.Compliance -eq 'compliant') {
-                        $ComplianceIcon = '<i class="fas fa-check-circle" title="Device Compliant" style="color:#008001;"></i>'
+                        $ComplianceIcon = '<i class="fas fa-check-circle" title="Device Compliant" style="color:#26A644;"></i>'
                     } else {
-                        $ComplianceIcon = '<i class="fas fa-times-circle" title="Device Not Compliannt" style="color:#ec1c24;"></i>'
+                        $ComplianceIcon = '<i class="fas fa-times-circle" title="Device Not Compliannt" style="color:#D53948;"></i>'
                     }
 
                     # OS Icon
@@ -941,14 +942,14 @@ function Invoke-NinjaOneTenantSync {
                     }
 
                     $OneDriveUseColor = if ($OneDriveUse.Percent -ge 95) {
-                        '#ec1c24'
+                        '#D53948'
                     } elseif ($MailboxUse.Percent -ge 85) {
                         '#FFA500'
                     } else {
-                        '#008001'
+                        '#26A644'
                     }
 
-                    $OneDriveParsed = '<div class="p-3 linechart"><div style="width: ' + $OneDriveUse.Percent + '%; background-color: #' + $OneDriveUseColor + ';"></div><div style="width: ' + (100 - $OneDriveUse.Percent) + '%; background-color: #CCCCCC;"></div></div>'
+                    $OneDriveParsed = '<div class="pt-3 pb-3 linechart"><div style="width: ' + $OneDriveUse.Percent + '%; background-color: #' + $OneDriveUseColor + ';"></div><div style="width: ' + (100 - $OneDriveUse.Percent) + '%; background-color: #CCCCCC;"></div></div>'
 
                 } else {
                     $OneDriveUse = [PSCustomObject]@{
@@ -992,14 +993,14 @@ function Invoke-NinjaOneTenantSync {
                     }
 
                     $MailboxUseColor = if ($MailboxUse.Percent -ge 95) {
-                        '#ec1c24'
+                        '#D53948'
                     } elseif ($MailboxUse.Percent -ge 85) {
                         '#FFA500'
                     } else {
-                        '#008001'
+                        '#26A644'
                     }
 
-                    $MailboxParsed = '<div class="p-3 linechart"><div style="width: ' + $MailboxUse.Percent + '%; background-color: #' + $MailboxUseColor + ';"></div><div style="width: ' + (100 - $MailboxUse.Percent) + '%; background-color: #CCCCCC;"></div></div>'
+                    $MailboxParsed = '<div class="pt-3 pb-3 linechart"><div style="width: ' + $MailboxUse.Percent + '%; background-color: #' + $MailboxUseColor + ';"></div><div style="width: ' + (100 - $MailboxUse.Percent) + '%; background-color: #CCCCCC;"></div></div>'
 
                 } else {
                     $MailboxUse = [PSCustomObject]@{
@@ -1094,17 +1095,17 @@ function Invoke-NinjaOneTenantSync {
                 $CIPPUserLinksData = @(
                     @{
                         Name = 'View User'
-                        Link = "https://$($CIPPURL)/.auth/login/aad?post_login_redirect_uri=$($CIPPURL)identity/administration/users/view?userId=$($User.id)%26tenantDomain%3D$($Customer.defaultDomainName)"
+                        Link = "https://$($CIPPURL)/identity/administration/users/view?userId=$($User.id)%26tenantDomain%3D$($Customer.defaultDomainName)"
                         Icon = 'far fa-eye'
                     },
                     @{
                         Name = 'Edit User'
-                        Link = "https://$($CIPPURL)/.auth/login/aad?post_login_redirect_uri=$($CIPPURL)identity/administration/users/edit?userId=$($User.id)%26tenantDomain%3D$($Customer.defaultDomainName)"
+                        Link = "https://$($CIPPURL)/identity/administration/users/edit?userId=$($User.id)%26tenantDomain%3D$($Customer.defaultDomainName)"
                         Icon = 'fas fa-users-cog'
                     },
                     @{
                         Name = 'Research Compromise'
-                        Link = "https://$($CIPPURL)/.auth/login/aad?post_login_redirect_uri=$($CIPPURL)identity/administration/ViewBec?userId=$($User.id)%26tenantDomain%3D$($Customer.defaultDomainName)"
+                        Link = "https://$($CIPPURL)/identity/administration/ViewBec?userId=$($User.id)%26tenantDomain%3D$($Customer.defaultDomainName)"
                         Icon = 'fas fa-user-secret'
                     }
                 )
@@ -1581,12 +1582,12 @@ function Invoke-NinjaOneTenantSync {
                 @{
                     Label  = 'Sign-In Enabled'
                     Amount = $UsersEnabledCount
-                    Colour = '#008001'
+                    Colour = '#26A644'
                 },
                 @{
                     Label  = 'Sign-In Blocked'
                     Amount = $TotalUsersCount - $UsersEnabledCount
-                    Colour = '#ec1c24'
+                    Colour = '#D53948'
                 }
             )
     
@@ -1641,12 +1642,12 @@ function Invoke-NinjaOneTenantSync {
                 @{
                     Label  = 'Compliant'
                     Amount = $ComplianceDevicesCount
-                    Colour = '#008001'
+                    Colour = '#26A644'
                 },
                 @{
                     Label  = 'Non Compliant'
                     Amount = $TotalDeviceswCount - $ComplianceDevicesCount
-                    Colour = '#ec1c24'
+                    Colour = '#D53948'
                 }
             )
     
@@ -1686,7 +1687,7 @@ function Invoke-NinjaOneTenantSync {
                 @{
                     Label  = 'Online in last 30 days'
                     Amount = $OnlineInLast30Days
-                    Colour = '#008001'
+                    Colour = '#26A644'
                 },
                 @{
                     Label  = 'Not seen for 30+ days'
@@ -1714,7 +1715,7 @@ function Invoke-NinjaOneTenantSync {
                 @{
                     Label  = 'Current Score'
                     Amount = $CurrentSecureScore.currentScore
-                    Colour = '#008001'
+                    Colour = '#26A644'
                 },
                 @{
                     Label  = 'Points to Obtain'
@@ -1776,25 +1777,111 @@ function Invoke-NinjaOneTenantSync {
             $TitleLink = "https://$CIPPUrl/tenant/administration/list-licenses?customerId=$($Customer.customerId)"
             $LicensesSummaryCardHTML = Get-NinjaOneCard -Title 'Licenses' -Body $LicenseTableHTML -Icon 'fas fa-chart-bar' -TitleLink $TitleLink
 
-
+            
             ### Summary Stats
             Write-Host "Widget Details"
 
+            [System.Collections.Generic.List[PSCustomObject]]$WidgetData = @()
+
             ### Fetch BPA Data
             $Table = get-cipptable 'cachebpav2'
-            $Tenants = Get-Tenants -IncludeErrors
-            $Data = (Get-CIPPAzDataTableEntity @Table -Filter "RowKey eq '$NAME'") | ForEach-Object {
-                $row = $_
-                $JSONFields | ForEach-Object {
-                    $jsonContent = $row.$_
-                    if ($jsonContent -ne $null -and $jsonContent -ne 'FAILED') {
-                        $row.$_ = $jsonContent | ConvertFrom-Json -Depth 15
-                    }
-                }
-                $row | Where-Object -Property PartitionKey -In $Tenants.customerId
+            $BPAData = (Get-CIPPAzDataTableEntity @Table -Filter "PartitionKey eq '$($Customer.customerId)' and RowKey eq 'CIPP Best Practices v1.0 - Table view'")
+
+            if ($Null -ne $BPAData.Timestamp) {
+                ## BPA Data Widgets
+                # Shared Mailboxes with Enabled Users
+                #$WidgetData.add([PSCustomObject]@{
+                #        Value       = $(
+                #            $SharedSendMailboxCount = ($BpaData.SharedMailboxeswithenabledusers | ConvertFrom-Json | Measure-Object).count
+                #            if ($SharedSendMailboxCount -ne 0) {
+                #                $ResultColour = '#D53948'
+                #            } else {
+                #                $ResultColour = '#26A644'
+                #            }
+                #            $SharedSendMailboxCount
+                #        )
+                #        Description = 'Shared Mailboxes with enabled users'
+                #        Colour      = $ResultColour
+                #        Link        = "https://$CIPPUrl/tenant/standards/bpa-report?SearchNow=true&Report=CIPP+Best+Practices+v1.0+-+Tenant+view&tenantFilter=$($Customer.customerId)"
+                #    })
+                
+                # Unused Licenses
+                $WidgetData.add([PSCustomObject]@{
+                        Value       = $(
+                            $BPAUnusedLicenses = (($BpaData.Unusedlicenses | ConvertFrom-Json).availableUnits | Measure-Object -sum).sum
+                            if ($BPAUnusedLicenses -ne 0) {
+                                $ResultColour = '#D53948'
+                            } else {
+                                $ResultColour = '#26A644'
+                            }
+                            $BPAUnusedLicenses
+                        )
+                        Description = 'Unused Licenses'
+                        Colour      = $ResultColour
+                        Link        = "https://$CIPPUrl/tenant/standards/bpa-report?SearchNow=true&Report=CIPP+Best+Practices+v1.0+-+Tenant+view&tenantFilter=$($Customer.customerId)"
+                    })
+                
+            
+                # Anonymous Reports
+                $WidgetData.add([PSCustomObject]@{
+                        Value       = $(if ($BPAData.AnonymousPrivacyReports -eq $True) {
+                                $ResultColour = '#D53948'      
+                                '<i class="fas fa-circle-check"></i>'
+                            } else {
+                                $ResultColour = '#26A644'      
+                                '<i class="fas fa-circle-xmark"></i>'
+                            }
+                        )
+                        Description = 'Anonymous Privacy Reports'
+                        Colour      = $ResultColour
+                        Link        = "https://$CIPPUrl/tenant/standards/bpa-report?SearchNow=true&Report=CIPP+Best+Practices+v1.0+-+Tenant+view&tenantFilter=$($Customer.customerId)"
+                    })
+    
+                # Unified Audit Log
+                $WidgetData.add([PSCustomObject]@{
+                        Value       = $(if ($BPAData.UnifiedAuditLog -eq $True) {
+                                $ResultColour = '#26A644'      
+                                '<i class="fas fa-circle-check"></i>'
+                            } else {
+                                $ResultColour = '#D53948'      
+                                '<i class="fas fa-circle-xmark"></i>'
+                            }
+                        )
+                        Description = 'Unified Audit Log'
+                        Colour      = $ResultColour
+                        Link        = "https://$CIPPUrl/tenant/standards/bpa-report?SearchNow=true&Report=CIPP+Best+Practices+v1.0+-+Tenant+view&tenantFilter=$($Customer.customerId)"
+                    })
+
+                # oAuth App Consent
+                $WidgetData.add([PSCustomObject]@{
+                        Value       = $(if ($BPAData.OAuthAppConsent -eq $True) {
+                                $ResultColour = '#26A644'      
+                                '<i class="fas fa-circle-check"></i>'
+                            } else {
+                                $ResultColour = '#D53948'      
+                                '<i class="fas fa-circle-xmark"></i>'
+                            }
+                        )
+                        Description = 'OAuth App Consent'
+                        Colour      = $ResultColour
+                        Link        = "https://$CIPPUrl/tenant/standards/bpa-report?SearchNow=true&Report=CIPP+Best+Practices+v1.0+-+Tenant+view&tenantFilter=$($Customer.customerId)"
+                    })
+    
             }
 
-            [System.Collections.Generic.List[PSCustomObject]]$WidgetData = @()
+            # Blocked Senders
+            $BlockedSenderCount = ($BlockedSenders | Measure-Object).count
+            if ($BlockedSenderCount -eq 0) {
+                $BlockedSenderColour = '#26A644'
+            } else {
+                $BlockedSenderColour = '#D53948'
+            }
+            $WidgetData.add([PSCustomObject]@{
+                    Value       = $BlockedSenderCount
+                    Description = 'Blocked Senders'
+                    Colour      = $BlockedSenderColour
+                    Link        = "https://security.microsoft.com/restrictedentities?tid=$($Customer.customerId)"
+                })
 
             # Licensed Users
             $WidgetData.add([PSCustomObject]@{
@@ -1828,18 +1915,6 @@ function Invoke-NinjaOneTenantSync {
                     Link        = "https://$CIPPUrl/identity/administration/roles?customerId=$($Customer.customerId)"
                 })
 
-            # Exchange
-            if ( 'exchange' -in $TenantDetails.assignedPlans.service) {
-                $ExchangeStatus = '<i class="fas fa-circle-check"></i>'
-            } else {
-                $ExchangeStatus = '<i class="fas fa-circle-xmark"></i>'
-            }
-            $WidgetData.add([PSCustomObject]@{
-                    Value       = $ExchangeStatus
-                    Description = 'Exchange'
-                    Colour      = '#CCCCCC'
-                    Link        = "https://admin.exchange.microsoft.com/?landingpage=homepage&form=mac_sidebar&delegatedOrg=$($Customer.DefaultDomainName)#"
-                })
 
             # AAD Premium
             if ( 'AADPremiumService' -in $TenantDetails.assignedPlans.service) {
@@ -1882,20 +1957,10 @@ function Invoke-NinjaOneTenantSync {
 
             
 
-            # Blocked Senders
-            $BlockedSenderCount = ($BlockedSenders | Measure-Object).count
-            if ($BlockedSenderCount -eq 0) {
-                $BlockedSenderColour = '#008001'
-            } else {
-                $BlockedSenderColour = '#ec1c24'
-            }
-            $WidgetData.add([PSCustomObject]@{
-                    Value       = $BlockedSenderCount
-                    Description = 'Blocked Senders'
-                    Colour      = $BlockedSenderColour
-                    Link        = "https://security.microsoft.com/restrictedentities?tid=$($Customer.customerId)"
-                })
-                
+            
+
+
+            
             Write-Host 'Summary Details'
             $SummaryDetailsCardHTML = Get-NinjaOneWidgetCard -Title 'Summary Details' -Data $WidgetData -Icon 'fas fa-building' -TitleLink 'http://example.com' -SmallCols 2 -MedCols 3 -LargeCols 4 -XLCols 6 -NoCard
 

@@ -39,7 +39,7 @@ function Get-NinjaInLineBarGraph ($Data, [string]$Title, [string]$Icon, [string]
         $OutputHTML.add((Get-NinjaOneTitle -Icon $Icon -Title ($Title + $(if (!$NoCount) { " ($Total)" })) -TitleLink $TitleLink))
     }
 
-    $OutputHTML.add('<div class="p-3 linechart">')
+    $OutputHTML.add('<div class="pb-3 pt-3 linechart">')
 
     foreach ($Item in $Data) {
         $OutputHTML.add(@"
