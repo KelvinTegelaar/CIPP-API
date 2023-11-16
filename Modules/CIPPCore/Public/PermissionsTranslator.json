@@ -5312,5 +5312,14 @@
     "userConsentDescription": "Access Microsoft Teams and Skype for Business data as the signed in user",
     "userConsentDisplayName": "Access Microsoft Teams and Skype for Business data based on the user's role membership",
     "value": "user_impersonation"
+  },
+  {
+    "description": "Read and write all on-premises directory synchronization information",
+    "displayName": "Read and write all on-premises directory synchronization information",
+    "id": "c2d95988-7604-4ba1-aaed-38a5f82a51c7",
+    "Origin": "Delegated",
+    "userConsentDescription": "Access Microsoft Teams and Skype for Business data as the signed in user",
+    "userConsentDisplayName": "Access Microsoft Teams and Skype for Business data based on the user's role membership",
+    "value": "OnPremDirectorySynchronization.ReadWrite.All"
   }
 ]

@@ -565,7 +565,7 @@ function Remove-CIPPCache {
 function New-ExoRequest ($tenantid, $cmdlet, $cmdParams, $useSystemMailbox, $Anchor, $NoAuthCheck) {
     if ((Get-AuthorisedRequest -TenantID $tenantid) -or $NoAuthCheck -eq $True) {
         $token = Get-ClassicAPIToken -resource 'https://outlook.office365.com' -Tenantid $tenantid
-        $tenant = (get-tenants -IncludeErrors | Where-Object -Property defaultDomainName -EQ $tenantid).customerId
+        $tenant = (get-tenants -IncludeErrors | Where-Object { $_.defaultDomainName -eq $tenantid -or $_.customerId -eq $tenantid }).customerId
         if ($cmdParams) {
             $Params = $cmdParams
         }
