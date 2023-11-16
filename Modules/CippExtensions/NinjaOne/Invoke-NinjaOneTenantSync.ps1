@@ -338,8 +338,6 @@ function Invoke-NinjaOneTenantSync {
             }
         }
 
-        $SecureScoreParsed | ConvertTo-Json | Out-File D:\Temp\ParsedScore.json
-
         $TenantDetails = Get-GraphBulkResultByID -value -Results $TenantResults -ID 'TenantDetails'
 
         write-verbose "$(Get-Date) - Parsing Users"
