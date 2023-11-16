@@ -40,7 +40,7 @@ try {
             }
     
             'NinjaFields' {
-                $Body = Set-NinjaOneFieldMapping -CIPPMapping $Table -APIName $APIName -Request $Request
+                $Body = Set-NinjaOneFieldMapping -CIPPMapping $Table -APIName $APIName -Request $Request -TriggerMetadata $TriggerMetadata
             }
         }
     }

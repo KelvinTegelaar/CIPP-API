@@ -3,14 +3,15 @@ function Set-NinjaOneFieldMapping {
     param (
         $CIPPMapping,
         $APIName,
-        $Request
+        $Request,
+        $TriggerMetadata
     )
     
     $SettingsTable = Get-CIPPTable -TableName NinjaOneSettings
     $AddObject = @{
         PartitionKey   = 'NinjaConfig'
         RowKey         = 'CIPPURL'
-        'SettingValue' = ($Request.Url -split '/')[2]
+        'SettingValue' = ([System.Uri]$TriggerMetadata.Headers.referer).Host
     }
     Add-AzDataTableEntity @SettingsTable -Entity $AddObject -Force
 
