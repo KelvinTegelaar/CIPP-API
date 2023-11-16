@@ -17,6 +17,12 @@
       "direction": "out",
       "name": "Msg",
       "queueName": "billqueue"
+    },
+    {
+      "type": "queue",
+      "direction": "out",
+      "name": "NinjaProcess",
+      "queueName": "NinjaOneQueue"
     }
   ]
 }

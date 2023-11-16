@@ -26,6 +26,10 @@ try {
             "CIPP-API" {
                   $Results = [pscustomobject]@{"Results" = "You cannot test the CIPP-API from CIPP. Please check the documentation on how to test the CIPP-API." }
             }
+            "NinjaOne" {
+                  $token = Get-NinjaOneToken -configuration $Configuration.NinjaOne
+                  $Results = [pscustomobject]@{"Results" = "Succesfully Connected to NinjaOne" }
+            }
       }
 }
 catch {
