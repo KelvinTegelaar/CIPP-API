@@ -7,11 +7,9 @@ function Push-ListGraphRequestQueue {
     param($QueueItem, $TriggerMetadata)
 
     # Write out the queue message and metadata to the information log.
-    Write-Host "PowerShell queue trigger function processed work item: $($QueueItem.Endpoint) - $($QueueItem.Tenant)"
+    Write-Host "PowerShell queue trigger function processed work item: $($QueueItem.Endpoint) - $($QueueItem.TenantFilter)"
 
-    #Write-Host ($QueueItem | ConvertTo-Json -Depth 5)
-
-    $TenantQueueName = '{0} - {1}' -f $QueueItem.QueueName, $QueueItem.Tenant
+    $TenantQueueName = '{0} - {1}' -f $QueueItem.QueueName, $QueueItem.TenantFilter
     Update-CippQueueEntry -RowKey $QueueItem.QueueId -Status 'Processing' -Name $TenantQueueName
 
     $ParamCollection = [System.Web.HttpUtility]::ParseQueryString([String]::Empty)
@@ -25,9 +23,9 @@ function Push-ListGraphRequestQueue {
     Write-Host $TableName
     $Table = Get-CIPPTable -TableName $TableName
 
-    $Filter = "PartitionKey eq '{0}' and Tenant eq '{1}'" -f $PartitionKey, $QueueItem.Tenant
+    $Filter = "PartitionKey eq '{0}' and Tenant eq '{1}'" -f $PartitionKey, $QueueItem.TenantFilter
     Write-Host $Filter
-    Get-CIPPAzDataTableEntity @Table -Filter $Filter | Remove-AzDataTableEntity @Table
+    Get-CIPPAzDataTableEntity @Table -Filter $Filter -Property PartitionKey, RowKey | Remove-AzDataTableEntity @Table
 
     $GraphRequestParams = @{
         TenantFilter                = $QueueItem.TenantFilter
@@ -41,8 +39,7 @@ function Push-ListGraphRequestQueue {
 
     $RawGraphRequest = try {
         Get-GraphRequestList @GraphRequestParams
-    }
-    catch {
+    } catch {
         [PSCustomObject]@{
             Tenant     = $QueueItem.Tenant
             CippStatus = "Could not connect to tenant. $($_.Exception.message)"
@@ -52,7 +49,7 @@ function Push-ListGraphRequestQueue {
     $GraphResults = foreach ($Request in $RawGraphRequest) {
         $Json = ConvertTo-Json -Depth 5 -Compress -InputObject $Request
         [PSCustomObject]@{
-            Tenant       = [string]$QueueItem.Tenant
+            TenantFilter = [string]$QueueItem.TenantFilter
             QueueId      = [string]$QueueItem.QueueId
             QueueType    = [string]$QueueItem.QueueType
             RowKey       = [string](New-Guid)
@@ -63,8 +60,7 @@ function Push-ListGraphRequestQueue {
     try {
         Add-CIPPAzDataTableEntity @Table -Entity $GraphResults -Force | Out-Null
         Update-CippQueueEntry -RowKey $QueueItem.QueueId -Status 'Completed'
-    }
-    catch {
+    } catch {
         Write-Host "Queue Error: $($_.Exception.Message)"
         Update-CippQueueEntry -RowKey $QueueItem.QueueId -Status 'Failed'
     }
