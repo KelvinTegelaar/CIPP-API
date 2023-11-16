@@ -18,6 +18,8 @@ function Invoke-NinjaOneTenantSync {
         $Customer = Get-Tenants | where-object { $_.customerId -eq $MappedTenant.RowKey }
         Write-Host "Processing: $($Customer.displayName)"
 
+        Write-LogMessage -API 'NinjaOneSync' -user 'CIPP' -message "Processing NinjaOne Synchronization for $($Customer.displayName)" -Sev 'Info' 
+
         if (($Customer | Measure-Object).count -ne 1) {
             Throw "Unable to match the recieved ID to a tenant QueueItem: $($QueueItem | ConvertTo-Json -Depth 100 | Out-String) Matched Customer: $($Customer| ConvertTo-Json -Depth 100 | Out-String)"
         }
@@ -2015,6 +2017,6 @@ function Invoke-NinjaOneTenantSync {
         Write-Host "Completed Total Time: $((New-TimeSpan -Start $StartTime -End (Get-Date)).TotalSeconds)" 
 
     } catch {
-        Write-Host "FATAL ERROR: $_"
+        Write-LogMessage -API 'NinjaOneSync' -user 'CIPP' -message "Failed Processing for $($Customer.displayName) Error: $_" -Sev 'Error' 
     }
 }
