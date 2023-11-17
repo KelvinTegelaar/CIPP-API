@@ -1,6 +1,4 @@
 ﻿{
-  "scriptFile": "../Modules/CippEntryPoints/CippEntryPoints.psm1",
-  "entryPoint": "Receive-CippHttpTrigger",
   "bindings": [
     {
       "authLevel": "anonymous",
