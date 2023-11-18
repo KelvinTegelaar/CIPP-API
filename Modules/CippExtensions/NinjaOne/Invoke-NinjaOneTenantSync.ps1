@@ -805,7 +805,10 @@ function Invoke-NinjaOneTenantSync {
             $SyncUsers = $Users
         }
 
+        $Count = 1
         $ParsedUsers = foreach ($user in $SyncUsers) {
+            Write-LogMessage -API 'NinjaOneSync' -user 'CIPP' -Sev 'info' -message "Processed $($Count) of $($SyncUsers.count) users"
+            $Count ++
             try {
                 $NinjaOneUser = $NinjaOneUserDocs | Where-Object { $_.ParsedFields.cippUserID -eq $User.ID }
                 if (($NinjaOneUser |  Measure-Object).count -gt 1) {
