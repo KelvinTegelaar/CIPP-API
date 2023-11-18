@@ -794,6 +794,9 @@ function Invoke-NinjaOneTenantSync {
             }
         }
 
+        Write-LogMessage -API 'NinjaOneSync' -user 'CIPP' -Sev 'info' -message "Processed Devices"
+
+
         ########## Create / Update User Objects
 
         if ($Configuration.LicensedOnly -eq $True) {
