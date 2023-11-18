@@ -27,7 +27,7 @@ function Remove-CIPPMailboxPermissions {
                         }
                     }
                     "SendAS" {
-                        $MailboxPerms = New-ExoRequest -Anchor $userId-tenantid $Tenantfilter -cmdlet "Remove-RecipientPermission" -cmdParams @{Identity = $userid; Trustee = $AccessUser; accessRights = @("SendAs") }
+                        $MailboxPerms = New-ExoRequest -Anchor $userId -tenantid $Tenantfilter -cmdlet "Remove-RecipientPermission" -cmdParams @{Identity = $userid; Trustee = $AccessUser; accessRights = @("SendAs") }
                         if ($MailboxPerms -notlike "*because the ACE doesn't exist on the object.*") {
                             Write-LogMessage -user $ExecutingUser -API $APIName -message "Removed SendAs permissions for $($AccessUser) from $($userid)'s mailbox." -Sev "Info" -tenant $TenantFilter
                             "Removed SendAs permissions for $($AccessUser) from $($userid)'s mailbox."
