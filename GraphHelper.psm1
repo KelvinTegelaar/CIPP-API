@@ -528,7 +528,7 @@ function Get-Tenants {
             Add-CIPPAzDataTableEntity @TenantsTable -Entity $IncludedTenantsCache
         }
     }
-    return ($IncludedTenantsCache | Where-Object -Property defaultDomainName -ne $null | Sort-Object -Property displayName)
+    return ($IncludedTenantsCache | Where-Object -Property defaultDomainName -NE $null | Sort-Object -Property displayName)
 
 }
 
@@ -599,6 +599,9 @@ function New-ExoRequest ($tenantid, $cmdlet, $cmdParams, $useSystemMailbox, $Anc
         }
         try {
             $ReturnedData = Invoke-RestMethod "https://outlook.office365.com/adminapi/beta/$($tenant)/InvokeCommand" -Method POST -Body $ExoBody -Headers $Headers -ContentType 'application/json; charset=utf-8'
+            if ($ReturnedData.'@adminapi.warnings') {
+                $ReturnedData.value = $ReturnedData.'@adminapi.warnings'
+            }
         }
         catch {
             $ErrorMess = $($_.Exception.Message)
