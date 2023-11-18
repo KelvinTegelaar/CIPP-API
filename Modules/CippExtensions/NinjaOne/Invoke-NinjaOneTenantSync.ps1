@@ -51,6 +51,8 @@ function Invoke-NinjaOneTenantSync {
             $After = $ResultCount.maximum
     
         } while ($ResultCount.count -eq $PageSize)
+
+        Write-LogMessage -API 'NinjaOneSync' -user 'CIPP' -Sev 'info' -message "Fetched NinjaOne Devices"
         
         [System.Collections.Generic.List[PSCustomObject]]$NinjaOneUserDocs = @()
 
@@ -153,6 +155,8 @@ function Invoke-NinjaOneTenantSync {
                 }
                 $NinjaDoc | Add-Member -NotePropertyName 'ParsedFields' -NotePropertyValue $ParsedFields -Force
             }
+
+            Write-LogMessage -API 'NinjaOneSync' -user 'CIPP' -Sev 'info' -message "Fetched NinjaOne User Docs"
         }
         
         [System.Collections.Generic.List[PSCustomObject]]$NinjaOneLicenseDocs = @()
@@ -221,6 +225,8 @@ function Invoke-NinjaOneTenantSync {
                 }
                 $NinjaLic | Add-Member -NotePropertyName 'ParsedFields' -NotePropertyValue $ParsedFields -Force
             }
+
+            Write-LogMessage -API 'NinjaOneSync' -user 'CIPP' -Sev 'info' -message "Fetched NinjaOne License Docs"
         }
 
 
@@ -308,6 +314,8 @@ function Invoke-NinjaOneTenantSync {
             Throw "Failed to fetch bulk company data: $_"
         }
 
+        Write-LogMessage -API 'NinjaOneSync' -user 'CIPP' -Sev 'info' -message "Fetched Bulk M365 Data"
+
         $Users = Get-GraphBulkResultByID -value -Results $TenantResults -ID 'Users'
 
         $SecureScore = Get-GraphBulkResultByID -value -Results $TenantResults -ID 'SecureScore'
@@ -366,6 +374,8 @@ function Invoke-NinjaOneTenantSync {
             $MemberReturn = $null
         }
 
+        Write-LogMessage -API 'NinjaOneSync' -user 'CIPP' -Sev 'info' -message "Fetched M365 Roles"
+
         $Roles = foreach ($Result in $MemberReturn) {
             [PSCustomObject]@{
                 ID            = $Result.id
@@ -422,6 +432,8 @@ function Invoke-NinjaOneTenantSync {
             $PolicyReturn = $null
         }
 
+        Write-LogMessage -API 'NinjaOneSync' -user 'CIPP' -Sev 'info' -message "Fetched M365 Device Compliance"
+
         $DeviceComplianceDetails = foreach ($Result in $PolicyReturn) {
             [pscustomobject]@{
                 ID             = ($DeviceCompliancePolicies | where-object { $_.id -eq $Result.id }).id
@@ -449,6 +461,9 @@ function Invoke-NinjaOneTenantSync {
         } catch {
             $GroupMembersReturn = $null
         }
+
+        Write-LogMessage -API 'NinjaOneSync' -user 'CIPP' -Sev 'info' -message "Fetched M365 Group Membership"
+
         $Groups = foreach ($Result in $GroupMembersReturn) {
             [pscustomobject]@{
                 ID          = $Result.id
@@ -556,6 +571,7 @@ function Invoke-NinjaOneTenantSync {
             $MailboxStatsFull = $null
         }
      
+        Write-LogMessage -API 'NinjaOneSync' -user 'CIPP' -Sev 'info' -message "Fetched M365 Additional Data"
 
 
         $FetchEnd = Get-Date
