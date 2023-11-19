@@ -835,17 +835,17 @@ function Invoke-NinjaOneTenantSync {
             [System.Collections.Generic.List[PSCustomObject]]$NinjaUserCreation = @()
         }
 
-        $Count = 1
+
         foreach ($user in $SyncUsers | where-object { $_.id -notin $ParsedUsers.RowKey }) {
             try {
-            
+                
                 Write-Host "Processing $($User.displayName)"
-                $Count ++
 
                 $NinjaOneUser = $NinjaOneUserDocs | Where-Object { $_.ParsedFields.cippUserID -eq $User.ID }
                 if (($NinjaOneUser |  Measure-Object).count -gt 1) {
                     Throw "Multiple Users with the same ID found"
                 }
+
 
                 $UserGroups = foreach ($Group in $Groups) {
                     if ($User.id -in $Group.Members.id) {
@@ -860,6 +860,7 @@ function Invoke-NinjaOneTenantSync {
                     }
                 }
 
+
                 $UserPolicies = foreach ($cap in $ConditionalAccessMembers) {
                     if ($User.id -in $Cap.Members) {
                         $temp = [PSCustomObject]@{
@@ -868,6 +869,7 @@ function Invoke-NinjaOneTenantSync {
                         $temp
                     }
                 }
+
 
                 #$PermsRequest = ''
                 $StatsRequest = ''
@@ -920,6 +922,7 @@ function Invoke-NinjaOneTenantSync {
 
                 $UserDevicesDetailsRaw = $ParsedDevices | where-object { $User.id -in $_.UserIDS }
 
+
                 $UserDevices = foreach ($UserDevice in $ParsedDevices | where-object { $User.id -in $_.UserIDS }) {
 
                     $MatchedNinjaDevice = $UserDevice.NinjaDevice
@@ -950,7 +953,9 @@ function Invoke-NinjaOneTenantSync {
                 
                 }
 
+
                 $aliases = (($user.ProxyAddresses | Where-Object { $_ -cnotmatch 'SMTP' -and $_ -notmatch '.onmicrosoft.com' }) -replace 'SMTP:', ' ') -join ', '
+
 
                 $userLicenses = ($user.AssignedLicenses.SkuID | ForEach-Object {
                         $UserLic = $_
@@ -960,10 +965,12 @@ function Invoke-NinjaOneTenantSync {
                         } catch {}
                     }) -join ''
 
+               
 
                 $UserOneDriveStats = $OneDriveDetails | where-object { $_.'Owner Principal Name' -eq $User.userPrincipalName } | Select-Object -First 1
                 $UserOneDriveUse = $UserOneDriveStats.'Storage Used (Byte)' / 1GB
                 $UserOneDriveTotal = $UserOneDriveStats.'Storage Allocated (Byte)' / 1GB
+
                 if ($UserOneDriveTotal) {
                     $OneDriveUse = [PSCustomObject]@{
                         Enabled = $True
@@ -1011,10 +1018,13 @@ function Invoke-NinjaOneTenantSync {
                         'One Drive' = 'Disabled'
                     }
                 } 
+
                 
                 $UserMailboxStats = $MailboxStatsFull | where-object { $_.'User Principal Name' -eq $User.userPrincipalName } | Select-Object -First 1
                 $UserMailUse = $UserMailboxStats.'Storage Used (Byte)' / 1GB
                 $UserMailTotal = $UserMailboxStats.'Prohibit Send/Receive Quota (Byte)' / 1GB
+
+
                 if ($UserMailTotal) {
                     $MailboxUse = [PSCustomObject]@{
                         Enabled = $True
@@ -1043,6 +1053,7 @@ function Invoke-NinjaOneTenantSync {
 
                     $MailboxParsed = 'Not Enabled'
                 }
+
 
                 if ($UserMailSettings.ProhibitSendQuota) {
                     $MailboxDetailsCardData = [PSCustomObject]@{
@@ -1075,12 +1086,14 @@ function Invoke-NinjaOneTenantSync {
                     }
                 }
 
+
                 # Format Conditional Access Polcies
                 $UserPoliciesFormatted = '<ul>'
                 foreach ($Policy in $UserPolicies) {
                     $UserPoliciesFormatted = $UserPoliciesFormatted + "<li>$($Policy.displayName)</li>"
                 }
                 $UserPoliciesFormatted = $UserPoliciesFormatted + '</ul>'
+
 
                 $UserOverviewCard = [PSCustomObject]@{
                     'User Name'           = "$($User.displayName)"
@@ -1094,6 +1107,7 @@ function Invoke-NinjaOneTenantSync {
                     'Aliases'             = "$aliases"
                     'Licenses'            = "$($userLicenses)"
                 }
+
 
                 $Microsoft365UserLinksData = @(
                     @{
@@ -1147,7 +1161,6 @@ function Invoke-NinjaOneTenantSync {
                                 <a href="https://entra.microsoft.com/$($Customer.DefaultDomainName)/#view/Microsoft_AAD_UsersAndTenants/UserProfileMenuBlade/~/overview/userId/$($User.id)/hidePreviewBanner~/true" title="View in Entra ID" class="btn secondary"><i class="fab fa-microsoft" style="color: #337ab7;"></i></a>&nbsp;
 "@
                 
-                
 
                 # Return Data for Users Summary Table
                 $ParsedUser = [PSCustomObject]@{
@@ -1165,6 +1178,7 @@ function Invoke-NinjaOneTenantSync {
                     Actions        = "$($ActionsHTML)"
                 }
 
+
                 Add-CIPPAzDataTableEntity @UsersTable -Entity $ParsedUser
                 $ParsedUsers.add($ParsedUser)
                 
@@ -1176,6 +1190,7 @@ function Invoke-NinjaOneTenantSync {
                     $M365UserLinksHTML = Get-NinjaOneLinks -Data $Microsoft365UserLinksData -Title 'Portals' -SmallCols 2 -MedCols 3 -LargeCols 3 -XLCols 3
                     $CIPPUserLinksHTML = Get-NinjaOneLinks -Data $CIPPUserLinksData -Title 'CIPP Links' -SmallCols 2 -MedCols 3 -LargeCols 3 -XLCols 3
                     $UserLinksHTML = '<div class="row"><div class="col-md-12 col-lg-6 d-flex">' + $M365UserLinksHTML + '</div><div class="col-md-12 col-lg-6 d-flex">' + $CIPPUserLinksHTML + '</div></div>'
+
 
                     # UsersSummaryCards:
                     $UserOverviewCardHTML = Get-NinjaOneInfoCard -Title "User Details" -Data $UserOverviewCard -Icon 'fas fa-user'
@@ -1208,7 +1223,6 @@ function Invoke-NinjaOneTenantSync {
                     $UserDeviceDetailHTML = ([System.Web.HttpUtility]::HtmlDecode($UserDeviceDetailHTML) -replace '<th>', '<th style="white-space: nowrap;">') -replace '<td>', '<td style="white-space: nowrap;">'
                 
 
-
                     $UserFields = @{
                         cippUserLinks   = @{'html' = $UserLinksHTML }
                         cippUserSummary = @{'html' = $UserSummaryHTML }
@@ -1217,6 +1231,7 @@ function Invoke-NinjaOneTenantSync {
                         cippUserID      = $User.id
                         cippUserUPN     = $User.userPrincipalName
                     }
+
 
                     if ($NinjaOneUser) {
                         $UpdateObject = [PSCustomObject]@{
@@ -1249,6 +1264,9 @@ function Invoke-NinjaOneTenantSync {
                     }
 
 
+                    $CreatedUsers = $Null
+                    $UpdatedUsers = $Null
+
                     try {
                         # Create New Users
                         if (($NinjaUserCreation | Measure-Object).count -ge 100) {
@@ -1273,31 +1291,43 @@ function Invoke-NinjaOneTenantSync {
                         Write-Host "Bulk Update Errored, but may have been successful as only 1 record with an issue could have been the cause: $_"
                     }
 
+
                     $UserDocResults = $UpdatedUsers + $CreatedUsers
 
-                    if (($UserDocResults | Measure-Object).count -ge 1) {
-                        $UserDocResults | ForEach-Object {
+                    if (($UserDocResults | Where-Object { $Null -ne $_ -and $_ -ne '' } | Measure-Object).count -ge 1) {
+                        $UserDocResults | Where-Object { $Null -ne $_ -and $_ -ne '' } | ForEach-Object {
                             $UserDoc = $_
-                            $Field = $UserDoc.updatedFields | Where-Object { $_.name -eq 'cippUserID' }
+                            if ($UserDoc.updatedFields) {
+                                $Field = $UserDoc.updatedFields | Where-Object { $_.name -eq 'cippUserID' }
+                            } else {
+                                $Field = $UserDoc.fields | Where-Object { $_.name -eq 'cippUserID' }
+                            }
+                            
+                            if ($Null -ne $Field.value -and $Field.value -ne '') {
 
-                            $MappedUser = ($UsersMap | Where-Object { $_.M365ID -eq $Field.value })
-                            if (($MappedUser | Measure-Object).count -eq 0) {
-                                $UserMapItem = [PSCustomObject]@{
-                                    PartitionKey = $Customer.CustomerId
-                                    RowKey       = $User.id
-                                    NinjaOneID   = $UserDoc.documentId
-                                    M365ID       = $Field.value
+                                $MappedUser = ($UsersMap | Where-Object { $_.M365ID -eq $Field.value })
+                                if (($MappedUser | Measure-Object).count -eq 0) {
+                                    $UserMapItem = [PSCustomObject]@{
+                                        PartitionKey = $Customer.CustomerId
+                                        RowKey       = $Field.value
+                                        NinjaOneID   = $UserDoc.documentId
+                                        M365ID       = $Field.value
+                                    }
+                                    $UsersMap.Add($UserMapItem)
+                                    Add-CIPPAzDataTableEntity @UsersMapTable -Entity $UserMapItem
+
+                                } elseif ($MappedUser.NinjaOneID -ne $UserDoc.documentId) {
+                                    $MappedUser.NinjaOneID = $UserDoc.documentId
+                                    Add-CIPPAzDataTableEntity @UsersMapTable -Entity $MappedUser -Force
                                 }
-                                $UsersMap.Add($UserMapItem)
-                                Add-CIPPAzDataTableEntity @UsersMapTable -Entity $UserMapItem
-
-                            } elseif ($MappedUser.NinjaOneID -ne $UserDoc.documentId) {
-                                $MappedUser.NinjaOneID = $UserDoc.documentId
-                                Add-CIPPAzDataTableEntity @UsersMapTable -Entity $MappedUser -Force
+                            } else {
+                                Write-Error "Unmatched Doc: $($UserDoc | convertto-json -depth 100)"
                             }
 
                         }
+
                     }
+
         
                 }
             } catch {
@@ -1307,6 +1337,9 @@ function Invoke-NinjaOneTenantSync {
         }
 
         
+
+        $CreatedUsers = $Null
+        $UpdatedUsers = $Null
 
         if ($Configuration.UserDocumentsEnabled -eq $True) {
             try {
@@ -1338,25 +1371,34 @@ function Invoke-NinjaOneTenantSync {
         
             $UserDocResults = $UpdatedUsers + $CreatedUsers
 
-            if (($UserDocResults | Measure-Object).count -ge 1) {
-                $UserDocResults | ForEach-Object {
+            if (($UserDocResults | Where-Object { $Null -ne $_ -and $_ -ne '' } | Measure-Object).count -ge 1) {
+                $UserDocResults | Where-Object { $Null -ne $_ -and $_ -ne '' } | ForEach-Object {
                     $UserDoc = $_
-                    $Field = $UserDoc.updatedFields | Where-Object { $_.name -eq 'cippUserID' }
+                    if ($UserDoc.updatedFields) {
+                        $Field = $UserDoc.updatedFields | Where-Object { $_.name -eq 'cippUserID' }
+                    } else {
+                        $Field = $UserDoc.fields | Where-Object { $_.name -eq 'cippUserID' }
+                    }
+                    
+                    if ($Null -ne $Field.value -and $Field.value -ne '') {
 
-                    $MappedUser = ($UsersMap | Where-Object { $_.M365ID -eq $Field.value })
-                    if (($MappedUser | Measure-Object).count -eq 0) {
-                        $UserMapItem = [PSCustomObject]@{
-                            PartitionKey = $Customer.CustomerId
-                            RowKey       = $Field.value
-                            NinjaOneID   = $UserDoc.documentId
-                            M365ID       = $Field.value
+                        $MappedUser = ($UsersMap | Where-Object { $_.M365ID -eq $Field.value })
+                        if (($MappedUser | Measure-Object).count -eq 0) {
+                            $UserMapItem = [PSCustomObject]@{
+                                PartitionKey = $Customer.CustomerId
+                                RowKey       = $Field.value
+                                NinjaOneID   = $UserDoc.documentId
+                                M365ID       = $Field.value
+                            }
+                            $UsersMap.Add($UserMapItem)
+                            Add-CIPPAzDataTableEntity @UsersMapTable -Entity $UserMapItem
+
+                        } elseif ($MappedUser.NinjaOneID -ne $UserDoc.documentId) {
+                            $MappedUser.NinjaOneID = $UserDoc.documentId
+                            Add-CIPPAzDataTableEntity @UsersMapTable -Entity $MappedUser -Force
                         }
-                        $UsersMap.Add($UserMapItem)
-                        Add-CIPPAzDataTableEntity @UsersMapTable -Entity $UserMapItem
-
-                    } elseif ($MappedUser.NinjaOneID -ne $UserDoc.documentId) {
-                        $MappedUser.NinjaOneID = $UserDoc.documentId
-                        Add-CIPPAzDataTableEntity @UsersMapTable -Entity $MappedUser -Force
+                    } else {
+                        Write-Error "Unmatched Doc: $($UserDoc | convertto-json -depth 100)"
                     }
 
                 }
@@ -1382,6 +1424,7 @@ function Invoke-NinjaOneTenantSync {
                     }
                 }
 
+                
 
                 try {
                     # Update Relations
@@ -1537,6 +1580,7 @@ function Invoke-NinjaOneTenantSync {
                                 )
                             }
                         }
+                        
 
                         try {
                             # Update Relations
@@ -2109,7 +2153,7 @@ function Invoke-NinjaOneTenantSync {
         if ($MappedFields.UsersSummary) {
             Write-Host "User Details Section"
 
-            $UsersTableFornatted = $ParsedUsers | Select-Object Name, 
+            $UsersTableFornatted = $ParsedUsers | sort-object name | Select-Object -First 100 Name, 
             @{n = 'User Principal Name'; e = { $_.UPN } },
             #Aliases,
             Licenses,
@@ -2122,8 +2166,24 @@ function Invoke-NinjaOneTenantSync {
             $UsersTableHTML = $UsersTableFornatted | ConvertTo-HTML -As Table -Fragment
 
             $UsersTableHTML = ([System.Web.HttpUtility]::HtmlDecode($UsersTableHTML) -replace '<th>', '<th style="white-space: nowrap;">') -replace '<td>', '<td style="white-space: nowrap;">'
+
+            if ($ParsedUsers.count -gt 100) {
+                $Overflow = @"
+                <div class="info-card">
+    <i class="info-icon fa-solid fa-circle-info"></i>
+    <div class="info-text">
+        <div class="info-title">$($ParsedUsers.count) users found in Tenant</div>
+        <div class="info-description">
+            Only the first 100 users are displayed here. To see all users please <a href="https://$CIPPUrl/identity/administration/users?customerId=$($Customer.customerId)" target="_blank">view users in CIPP</a>.
+        </div>
+    </div>
+</div>
+"@
+            } else {
+                $Overflow = ''
+            }
            
-            $NinjaOrgUpdate | Add-Member -NotePropertyName $MappedFields.UsersSummary -NotePropertyValue @{'html' = $UsersTableHTML }
+            $NinjaOrgUpdate | Add-Member -NotePropertyName $MappedFields.UsersSummary -NotePropertyValue @{'html' = $Overflow + $UsersTableHTML }
 
         }
 
