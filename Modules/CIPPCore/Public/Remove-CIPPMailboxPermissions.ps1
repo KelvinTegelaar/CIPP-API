@@ -13,6 +13,10 @@ function Remove-CIPPMailboxPermissions {
         if ($userid -eq "AllUsers") {
             $Mailboxes = New-ExoRequest -tenantid $TenantFilter -cmdlet "get-mailbox"
             $Mailboxes | ForEach-Object -Parallel {
+                Import-Module ".\Modules\CIPPCore"
+                import-module ".\GraphHelper.psm1"
+                Import-Module ".\Modules\AzBobbyTables"
+                Write-Host "Removing permissions from mailbox $($_.UserPrincipalName)"
                 Remove-CIPPMailboxPermissions -PermissionsLevel @("FullAccess", "SendAs", "SendOnBehalf") -userid $_.UserPrincipalName -AccessUser $using:AccessUser -TenantFilter $using:TenantFilter -APIName $using:APINAME -ExecutingUser $using:ExecutingUser
             } -ThrottleLimit 10
         }
