@@ -528,7 +528,7 @@ function Get-Tenants {
             Add-CIPPAzDataTableEntity @TenantsTable -Entity $IncludedTenantsCache
         }
     }
-    return ($IncludedTenantsCache | Where-Object -Property defaultDomainName -ne $null | Sort-Object -Property displayName)
+    return ($IncludedTenantsCache | Where-Object -Property defaultDomainName -NE $null | Sort-Object -Property displayName)
 
 }
 
@@ -565,7 +565,7 @@ function Remove-CIPPCache {
 function New-ExoRequest ($tenantid, $cmdlet, $cmdParams, $useSystemMailbox, $Anchor, $NoAuthCheck) {
     if ((Get-AuthorisedRequest -TenantID $tenantid) -or $NoAuthCheck -eq $True) {
         $token = Get-ClassicAPIToken -resource 'https://outlook.office365.com' -Tenantid $tenantid
-        $tenant = (get-tenants -IncludeErrors | Where-Object -Property defaultDomainName -EQ $tenantid).customerId
+        $tenant = (get-tenants -IncludeErrors | Where-Object { $_.defaultDomainName -eq $tenantid -or $_.customerId -eq $tenantid }).customerId
         if ($cmdParams) {
             $Params = $cmdParams
         }
@@ -599,6 +599,9 @@ function New-ExoRequest ($tenantid, $cmdlet, $cmdParams, $useSystemMailbox, $Anc
         }
         try {
             $ReturnedData = Invoke-RestMethod "https://outlook.office365.com/adminapi/beta/$($tenant)/InvokeCommand" -Method POST -Body $ExoBody -Headers $Headers -ContentType 'application/json; charset=utf-8'
+            if ($ReturnedData.'@adminapi.warnings') {
+                $ReturnedData.value = $ReturnedData.'@adminapi.warnings'
+            }
         }
         catch {
             $ErrorMess = $($_.Exception.Message)
@@ -792,7 +795,7 @@ function New-GraphBulkRequest {
 
             foreach ($MoreData in $ReturnedData.Responses | Where-Object { $_.body.'@odata.nextLink' }) {
                 Write-Host 'Getting more'
-                $AdditionalValues = New-GraphGetRequest -ComplexFilter -uri $MoreData.body.'@odata.nextLink' -tenantid $TenantFilter -NoAuthCheck:$NoAuthCheck
+                $AdditionalValues = New-GraphGetRequest -ComplexFilter -uri $MoreData.body.'@odata.nextLink' -tenantid $tenantid -NoAuthCheck:$NoAuthCheck
                 $NewValues = [System.Collections.Generic.List[PSCustomObject]]$MoreData.body.value
                 $AdditionalValues | ForEach-Object { $NewValues.add($_) }
                 $MoreData.body.value = $NewValues
