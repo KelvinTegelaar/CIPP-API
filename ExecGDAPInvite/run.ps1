@@ -10,6 +10,13 @@ $RoleMappings = $Request.body.gdapRoles
 $Results = [System.Collections.Generic.List[string]]::new()
 $InviteUrls = [System.Collections.Generic.List[string]]::new()
 
+
+if ($RoleMappings.roleDefinitionId -contains '62e90394-69f5-4237-9190-012177145e10') {
+    $AutoExtendDuration = 'PT0S'
+} else {
+    $AutoExtendDuration = 'P180D'
+}
+
 $Table = Get-CIPPTable -TableName 'GDAPInvites'
 try {
     $JSONBody = @{
@@ -17,7 +24,7 @@ try {
         'accessDetails'      = @{
             'unifiedRoles' = @($RoleMappings | Select-Object roleDefinitionId)
         }
-        'autoExtendDuration' = 'P180D'
+        'autoExtendDuration' = $AutoExtendDuration
         'duration'           = 'P730D'
     } | ConvertTo-Json -Depth 5 -Compress
 
@@ -56,6 +63,7 @@ try {
     }
 } catch {
     $Results.add('Error creating GDAP relationship')
+    Write-Host "GDAP ERROR: $($_.Exception.Message)"
 }
 
 Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -message "Created GDAP Invite - $InviteUrl" -Sev 'Info'

@@ -16,11 +16,11 @@ function Remove-CIPPMobileDevice {
             }
             catch {
                 "Could not remove device: $($_.FriendlyName)"
-                continue
             }
         }
 
         Write-LogMessage -user $ExecutingUser -API $APIName -message "Deleted mobile devices for $($username)" -Sev "Info" -tenant $tenantFilter
+        return $devices
     }
     catch {
         Write-LogMessage -user $ExecutingUser -API $APIName -message "Could not delete mobile devices for $($username): $($_.Exception.Message)" -Sev "Error" -tenant $tenantFilter
