@@ -5,7 +5,7 @@ param($Request, $TriggerMetadata)
 
 $body = if ($request.query.GUID) {
     $Table = Get-CippTable -tablename 'cachebec'
-    $Filter = "PartitionKey eq 'bec' and RowKey eq '$($request.query.GUID)'" 
+    $Filter = "PartitionKey eq 'bec' and RowKey eq '$($request.query.GUID)'"
     $JSONOutput = Get-CIPPAzDataTableEntity @Table -Filter $Filter
     if (!$JSONOutput) {
         @{ Waiting = $true }
@@ -18,6 +18,7 @@ else {
     $OrchRequest = [PSCustomObject]@{
         TenantFilter = $request.query.tenantfilter
         UserID       = $request.query.userid
+        userName     = $request.query.userName
     }
     $InstanceId = Start-NewOrchestration -FunctionName 'Durable_BECRun' -InputObject $OrchRequest
     @{ GUID = $request.query.userid }
