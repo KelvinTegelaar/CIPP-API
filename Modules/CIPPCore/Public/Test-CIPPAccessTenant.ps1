@@ -25,7 +25,13 @@ function Test-CIPPAccessTenant {
     $TenantIds = foreach ($Tenant in $Tenants) {
         ($TenantList | Where-Object { $_.defaultDomainName -eq $Tenant }).customerId
     }
-    $MyRoles = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/tenantRelationships/managedTenants/myRoles?`$filter=tenantId in ('$($TenantIds -join "','")')"
+    try {
+        $MyRoles = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/tenantRelationships/managedTenants/myRoles?`$filter=tenantId in ('$($TenantIds -join "','")')"
+    }
+    catch {
+        $MyRoles = @()
+        $AddedText = 'but could not retrieve GDAP roles from Lighthouse API'
+    }
     $results = foreach ($tenant in $Tenants) {
         $AddedText = ''
         try {
