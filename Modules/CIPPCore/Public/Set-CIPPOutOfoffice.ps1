@@ -13,6 +13,13 @@ function Set-CIPPOutOfOffice {
     )
 
     try {
+        if (-not $StartTime) {
+            $State = "Enabled"
+            $StartTime = (Get-Date).ToString("yyyy-MM-dd HH:mm")
+        }
+        if (-not $EndTime) {
+            $EndTime = (Get-Date $StartTime).AddDays(7)
+        }
         if ($State -ne "Scheduled") {
             $OutOfOffice = New-ExoRequest -tenantid $TenantFilter -cmdlet "Set-MailboxAutoReplyConfiguration" -cmdParams @{Identity = $userid; AutoReplyState = $State; InternalMessage = $InternalMessage; ExternalMessage = $ExternalMessage } -Anchor $userid
             Write-LogMessage -user $ExecutingUser -API $APIName -message "Set Out-of-office for $($userid) to $state" -Sev "Info" -tenant $TenantFilter
