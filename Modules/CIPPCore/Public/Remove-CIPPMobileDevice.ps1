@@ -12,16 +12,15 @@ function Remove-CIPPMobileDevice {
         $devices = New-ExoRequest -tenantid $tenantFilter -cmdlet "Get-MobileDevice" -Anchor $username -cmdParams @{mailbox = $username } | ForEach-Object {
             try {
                 New-ExoRequest -tenantid $tenantFilter -cmdlet "Remove-MobileDevice" -Anchor $username -cmdParams @{Identity = $_.Identity }
-                return "Removed device: $($_.FriendlyName)"
+                "Removed device: $($_.FriendlyName)"
             }
             catch {
-                return "Could not remove device: $($_.FriendlyName)"
-                continue
+                "Could not remove device: $($_.FriendlyName)"
             }
         }
 
         Write-LogMessage -user $ExecutingUser -API $APIName -message "Deleted mobile devices for $($username)" -Sev "Info" -tenant $tenantFilter
-        return "Deleted mobile devices for $($username)"
+        return $devices
     }
     catch {
         Write-LogMessage -user $ExecutingUser -API $APIName -message "Could not delete mobile devices for $($username): $($_.Exception.Message)" -Sev "Error" -tenant $tenantFilter
