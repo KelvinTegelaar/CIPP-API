@@ -11,36 +11,42 @@ function Invoke-ExecAddMultiTenantApp {
     $ApplicationResourceAccess = @{ ResourceAppId = '00000003-0000-0000-c000-000000000000'; resourceAccess = $ApplicationResources }
 
     $Results = try {
-        #This needs to be moved to a queue.
-        if ('allTenants' -in $Request.body.SelectedTenants.defaultDomainName) { $TenantFilter = Get-Tenants } else { $TenantFilter = $Request.body.SelectedTenants.defaultDomainName }
         if ($request.body.CopyPermissions -eq $true) {
             try {
                 $ExistingApp = New-GraphGETRequest -uri "https://graph.microsoft.com/beta/applications(appId='$($Request.body.AppId)')" -tenantid $ENV:tenantid -NoAuthCheck $true
                 $DelegateResourceAccess = $Existingapp.requiredResourceAccess
                 $ApplicationResourceAccess = $Existingapp.requiredResourceAccess
-            } catch {
+            }
+            catch {
                 'Failed to get existing permissions. The app does not exist in the partner tenant.'
             }
+        }
+        #This needs to be moved to a queue.
+        if ('allTenants' -in $Request.body.SelectedTenants.defaultDomainName) {
+            $TenantFilter = (Get-Tenants).defaultDomainName 
+        }
+        else {
+            $TenantFilter = $Request.body.SelectedTenants.defaultDomainName 
         }
 
         foreach ($Tenant in $TenantFilter) {
             try {
-                $ServicePrincipalList = New-GraphGETRequest -uri "https://graph.microsoft.com/beta/servicePrincipals?`$select=AppId,id,displayName&`$top=999" -tenantid $Tenant
-                if ($Request.body.AppId -Notin $ServicePrincipalList.appId) {
-                    $PostResults = New-GraphPostRequest 'https://graph.microsoft.com/beta/servicePrincipals' -type POST -tenantid $tenant -body "{ `"appId`": `"$($Request.body.AppId)`" }"
-                    "Added $($Request.body.AppId) to tenant $($Tenant)"
-                } else {
-                    "This app already exists in tenant $($Tenant). We're adding the required permissions."
-                }
-
-                Add-CIPPApplicationPermission -RequiredResourceAccess $applicationResourceAccess -ApplicationId $Request.body.AppId -Tenantfilter $Tenant
-                Add-CIPPDelegatedPermission -RequiredResourceAccess $DelegateResourceAccess -ApplicationId $Request.body.AppId -Tenantfilter $Tenant
-            } catch {
-                "Error adding application to tenant $Tenant - $($_.Exception.Message)"
+                Push-OutputBinding -Name QueueItem -Value ([pscustomobject]@{
+                        FunctionName              = 'ExecAddMultiTenantApp'
+                        Tenant                    = $tenant
+                        appId                     = $Request.body.appid
+                        applicationResourceAccess = $ApplicationResourceAccess
+                        delegateResourceAccess    = $DelegateResourceAccess
+                    })
+                "Queued application to tenant $Tenant. See the logbook for deployment details"
+            }
+            catch {
+                "Error queuing application to tenant $Tenant - $($_.Exception.Message)"
             }
         }
         $StatusCode = [HttpStatusCode]::OK
-    } catch {
+    }
+    catch {
         $ErrorMsg = Get-NormalizedError -message $($_.Exception.Message)
         $Results = "Function Error: $ErrorMsg"
         $StatusCode = [HttpStatusCode]::BadRequest
