@@ -11,7 +11,7 @@ Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -m
 Write-Host 'PowerShell HTTP trigger function processed a request.'
 $Table = Get-CIPPTable -TableName ExcludedLicenses
 try {
-    
+
     if ($Request.Query.List) {
         $Rows = Get-CIPPAzDataTableEntity @Table
         if ($Rows.Count -lt 1) {
@@ -19,10 +19,10 @@ try {
             $TableRows = foreach ($Row in $TableBaseData) {
                 $Row.PartitionKey = 'License'
                 $Row.RowKey = $Row.GUID
-                
+
                 Add-CIPPAzDataTableEntity @Table -Entity ([pscustomobject]$Row) -Force | Out-Null
             }
-            
+
             $Rows = Get-CIPPAzDataTableEntity @Table
 
             Write-LogMessage -API $APINAME -user $request.headers.'x-ms-client-principal' -message 'got excluded licenses list' -Sev 'Info'
@@ -41,13 +41,13 @@ try {
         }
         Add-CIPPAzDataTableEntity @Table -Entity $AddObject -Force
 
-        Write-LogMessage -API $APINAME -user $request.headers.'x-ms-client-principal' -message "Added exclusion $($request.body.SKUName)" -Sev 'Info' 
+        Write-LogMessage -API $APINAME -user $request.headers.'x-ms-client-principal' -message "Added exclusion $($request.body.SKUName)" -Sev 'Info'
         $body = [pscustomobject]@{'Results' = "Success. We've added $($request.body.SKUName) to the excluded list." }
     }
 
     if ($Request.Query.RemoveExclusion) {
         $Filter = "RowKey eq '{0}' and PartitionKey eq 'License'" -f $Request.Query.Guid
-        $Entity = Get-CIPPAzDataTableEntity @Table -Filter $Filter
+        $Entity = Get-CIPPAzDataTableEntity @Table -Filter $Filter -Property PartitionKey, RowKey
         Remove-AzDataTableEntity @Table -Entity $Entity
         Write-LogMessage -API $APINAME -user $request.headers.'x-ms-client-principal' -message "Removed exclusion $($Request.Query.GUID)" -Sev 'Info'
         $body = [pscustomobject]@{'Results' = "Success. We've removed $($Request.query.guid) from the excluded list." }
