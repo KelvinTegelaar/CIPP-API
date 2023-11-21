@@ -72,8 +72,7 @@ function Get-GraphRequestList {
 
     if ($QueueNameOverride) {
         $QueueName = $QueueNameOverride
-    }
-    else {
+    } else {
         $TextInfo = (Get-Culture).TextInfo
         $QueueName = $TextInfo.ToTitleCase($DisplayName -csplit '(?=[A-Z])' -ne '' -join ' ')
     }
@@ -94,20 +93,17 @@ function Get-GraphRequestList {
         $Filter = "QueueId eq '{0}'" -f $QueueId
         $Rows = Get-CIPPAzDataTableEntity @Table -Filter $Filter
         $Type = 'Queue'
-    }
-    elseif ($TenantFilter -eq 'AllTenants' -or (!$SkipCache.IsPresent -and !$ClearCache.IsPresent -and !$CountOnly.IsPresent)) {
+    } elseif ($TenantFilter -eq 'AllTenants' -or (!$SkipCache.IsPresent -and !$ClearCache.IsPresent -and !$CountOnly.IsPresent)) {
         $Table = Get-CIPPTable -TableName $TableName
         if ($TenantFilter -eq 'AllTenants') {
             $Filter = "PartitionKey eq '{0}' and QueueType eq 'AllTenants'" -f $PartitionKey
-        }
-        else {
+        } else {
             $Filter = "PartitionKey eq '{0}' and Tenant eq '{1}'" -f $PartitionKey, $TenantFilter
         }
         #Write-Host $Filter
         $Rows = Get-CIPPAzDataTableEntity @Table -Filter $Filter | Where-Object { $_.Timestamp.DateTime -gt (Get-Date).ToUniversalTime().AddHours(-1) }
         $Type = 'Cache'
-    }
-    else {
+    } else {
         $Type = 'None'
         $Rows = @()
     }
@@ -134,16 +130,14 @@ function Get-GraphRequestList {
 
                         try {
                             Get-GraphRequestList @GraphRequestParams | Select-Object *, @{l = 'Tenant'; e = { $_.defaultDomainName } }, @{l = 'CippStatus'; e = { 'Good' } }
-                        }
-                        catch {
+                        } catch {
                             [PSCustomObject]@{
                                 Tenant     = $_.defaultDomainName
                                 CippStatus = "Could not connect to tenant. $($_.Exception.message)"
                             }
                         }
                     }
-                }
-                else {
+                } else {
                     if ($RunningQueue) {
                         Write-Host 'Queue currently running'
                         Write-Host ($RunningQueue | ConvertTo-Json)
@@ -152,8 +146,7 @@ function Get-GraphRequestList {
                             QueueId      = $RunningQueue.RowKey
                             Queued       = $true
                         }
-                    }
-                    else {
+                    } else {
                         $Queue = New-CippQueueEntry -Name "$QueueName (All Tenants)" -Link $CippLink -Reference $QueueReference
                         [PSCustomObject]@{
                             QueueMessage = 'Loading data for all tenants. Please check back after the job completes'
@@ -164,7 +157,8 @@ function Get-GraphRequestList {
                         try {
                             Get-Tenants -IncludeErrors | ForEach-Object {
                                 $TenantFilter = $_.defaultDomainName
-                                $QueueTenant = @{
+                                $QueueTenant = [PSCustomObject]@{
+                                    FunctionName                = 'ListGraphRequestQueue'
                                     TenantFilter                = $TenantFilter
                                     Endpoint                    = $Endpoint
                                     QueueId                     = $Queue.RowKey
@@ -176,12 +170,11 @@ function Get-GraphRequestList {
                                     NoAuthCheck                 = $NoAuthCheck.IsPresent
                                     ReverseTenantLookupProperty = $ReverseTenantLookupProperty
                                     ReverseTenantLookup         = $ReverseTenantLookup.IsPresent
-                                } | ConvertTo-Json -Depth 5 -Compress
+                                }
 
                                 Push-OutputBinding -Name QueueItem -Value $QueueTenant
                             }
-                        }
-                        catch {
+                        } catch {
                             Write-Host "QUEUE ERROR: $($_.Exception.Message)"
                         }
                     }
@@ -222,10 +215,10 @@ function Get-GraphRequestList {
                                     QueueId      = $RunningQueue.RowKey
                                     Queued       = $true
                                 }
-                            }
-                            else {
+                            } else {
                                 $Queue = New-CippQueueEntry -Name $QueueName -Link $CippLink -Reference $QueueReference
-                                $QueueTenant = @{
+                                $QueueTenant = [PSCustomObject]@{
+                                    FunctionName                = 'ListGraphRequestQueue'
                                     TenantFilter                = $TenantFilter
                                     Endpoint                    = $Endpoint
                                     QueueId                     = $Queue.RowKey
@@ -236,9 +229,10 @@ function Get-GraphRequestList {
                                     NoAuthCheck                 = $NoAuthCheck.IsPresent
                                     ReverseTenantLookupProperty = $ReverseTenantLookupProperty
                                     ReverseTenantLookup         = $ReverseTenantLookup.IsPresent
-                                } | ConvertTo-Json -Depth 5 -Compress
+                                }
 
                                 Push-OutputBinding -Name QueueItem -Value $QueueTenant
+
                                 [PSCustomObject]@{
                                     QueueMessage = ('Loading {0} rows for {1}. Please check back after the job completes' -f $Count, $TenantFilter)
                                     QueueId      = $Queue.RowKey
@@ -257,20 +251,17 @@ function Get-GraphRequestList {
                             foreach ($Result in $GraphRequestResults) {
                                 $Result | Select-Object @{n = 'TenantInfo'; e = { $TenantInfo | Where-Object { $Result.$ReverseTenantLookupProperty -eq $_.tenantId } } }, *
                             }
-                        }
-                        else {
+                        } else {
                             $GraphRequestResults
                         }
                     }
 
-                }
-                catch {
+                } catch {
                     throw $_.Exception
                 }
             }
         }
-    }
-    else {
+    } else {
         $Rows | ForEach-Object {
             $_.Data | ConvertFrom-Json
         }
