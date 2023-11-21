@@ -87,7 +87,7 @@ try {
         }
         'RemoveDomain' {
             $Filter = "RowKey eq '{0}'" -f $Request.Query.Domain
-            $DomainRow = Get-CIPPAzDataTableEntity @DomainTable -Filter $Filter
+            $DomainRow = Get-CIPPAzDataTableEntity @DomainTable -Filter $Filter -Property PartitionKey, RowKey
             Remove-AzDataTableEntity @DomainTable -Entity $DomainRow
             Write-LogMessage -API $APINAME -tenant 'Global' -user $request.headers.'x-ms-client-principal' -message "Removed Domain - $($Request.Query.Domain) " -Sev 'Info'
             $body = [pscustomobject]@{ 'Results' = "Domain removed - $($Request.Query.Domain)" }

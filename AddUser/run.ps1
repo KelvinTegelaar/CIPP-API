@@ -98,9 +98,15 @@ catch {
 }
 if ($Request.body.CopyFrom -ne "") {
     $CopyFrom = Set-CIPPCopyGroupMembers -ExecutingUser $request.headers.'x-ms-client-principal' -tenantid $Userobj.tenantid -CopyFromId $Request.body.CopyFrom -UserID $UserprincipalName -TenantFilter $Userobj.tenantid
-    $results.AddRange($CopyFrom) 
+    $results.Add($CopyFrom.Success -join ', ')
+    $results.Add($CopyFrom.Error -join ', ') 
 }
-$body = @{"Results" = @($results) }
+$body = [pscustomobject] @{
+    "Results" = @($results) 
+    "Username" = $UserprincipalName
+    "Password" = $password
+    "CopyFrom" = $CopyFrom
+}
 # Associate values to output bindings by calling 'Push-OutputBinding'.
 Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
         StatusCode = [HttpStatusCode]::OK

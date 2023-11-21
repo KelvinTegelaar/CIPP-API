@@ -8,22 +8,27 @@ Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME  -
 Write-Host "PowerShell HTTP trigger function processed a request."
 
 $TenantFilter = $request.body.tenantfilter
-$SuspectUser = $($request.body.userid)
+$SuspectUser = $request.body.userid
+$username = $request.body.username
 Write-Host $TenantFilter
 Write-Host $SuspectUser
-try {
-    $password = New-PasswordString
-    $mustChange = 'true'
-    $passwordProfile = @"
-{"passwordProfile": { "forceChangePasswordNextSignIn": $mustChange, "password": "$password" }}'
-"@
-    $GraphRequest = New-GraphPostRequest -uri "https://graph.microsoft.com/v1.0/users/$SuspectUser" -tenantid $TenantFilter -type PATCH -body $passwordProfile  -verbose
-    $GraphRequest = New-GraphPostRequest -uri "https://graph.microsoft.com/v1.0/users/$SuspectUser" -tenantid $TenantFilter -type PATCH -body '{"accountEnabled":"false"}'  -verbose
-    $GraphRequest = New-GraphPostRequest -uri "https://graph.microsoft.com/v1.0/users/$SuspectUser/revokeSignInSessions" -tenantid $TenantFilter -type POST -body '{}'  -verbose
-    $Mailboxes = New-ExoRequest  -anchor $SuspectUser -tenantid $TenantFilter -cmdlet "get-inboxrule" -cmdParams @{Mailbox = $SuspectUser } | ForEach-Object {
-        New-ExoRequest -anchor $SuspectUser  -tenantid $TenantFilter -cmdlet "Disable-InboxRule" -cmdParams @{Confirm = $false; Identity = $_.Identity } 
+$Results = try {
+    Set-CIPPResetPassword -userid $username -tenantFilter $TenantFilter -APIName $APINAME -ExecutingUser $request.headers.'x-ms-client-principal'
+    Set-CIPPSignInState -userid $username -AccountEnabled $false -tenantFilter $TenantFilter -APIName $APINAME -ExecutingUser $request.headers.'x-ms-client-principal'
+    Revoke-CIPPSessions -userid $SuspectUser -username $request.body.username -ExecutingUser $request.headers.'x-ms-client-principal' -APIName $APINAME -tenantFilter $TenantFilter
+    $RuleDisabled = 0
+    New-ExoRequest -anchor $username -tenantid $TenantFilter -cmdlet "get-inboxrule" -cmdParams @{Mailbox = $username } | ForEach-Object {
+        $null = New-ExoRequest -anchor $username -tenantid $TenantFilter -cmdlet "Disable-InboxRule" -cmdParams @{Confirm = $false; Identity = $_.Identity }
+        "Disabled Inbox Rule $($_.Identity) for $username" 
+        $RuleDisabled ++
     } 
-    $results = [pscustomobject]@{"Results" = "Executed Remediation for $SuspectUser and tenant $($TenantFilter). The temporary password is $password and must be changed at next logon." }
+    if ($RuleDisabled) {
+        "Disabled $RuleDisabled Inbox Rules for $username"
+    }
+    else {
+        "No Inbox Rules found for $username. We have not disabled any rules."
+    }
+
     Write-LogMessage -API "BECRemediate" -tenant $tenantfilter -message "Executed Remediation for $SuspectUser" -sev "Info"
 
 }
@@ -32,9 +37,10 @@ catch {
     $results = [pscustomobject]@{"Results" = "Failed to execute remediation. $($_.Exception.Message)" }
     Write-LogMessage -API "BECRemediate" -tenant $tenantfilter -message "Executed Remediation for $SuspectUser failed" -sev "Error"
 }
+$results = [pscustomobject]@{"Results" = @($Results) }
 
 # Associate values to output bindings by calling 'Push-OutputBinding'.
 Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
         StatusCode = [HttpStatusCode]::OK
-        Body       = ($Results)
+        Body       = $Results
     })
