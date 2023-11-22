@@ -14,33 +14,33 @@ Write-Host 'PowerShell HTTP trigger function processed a request.'
 $TenantFilter = $Request.Query.TenantFilter
 
 $Table = Get-CIPPTable -TableName cachembxrules
-$Rows = Get-CIPPAzDataTableEntity @Table | Where-Object -Property Timestamp -GT (Get-Date).AddMinutes(-15)
+$Rows = Get-CIPPAzDataTableEntity @Table | Where-Object -Property Timestamp -GT (Get-Date).Addhours(-1)
 if (!$Rows) {
     Push-OutputBinding -Name Msg -Value $TenantFilter
     $GraphRequest = [PSCustomObject]@{
         Tenant   = 'Loading data. Please check back in 1 minute'
         Licenses = 'Loading data. Please check back in 1 minute'
     }
-}         
+}
 else {
-    if ($TenantFilter -ne "AllTenants") {
-        $GraphRequest = $Rows | Where-Object -Property Tenant -EQ $TenantFilter | ForEach-Object { 
+    if ($TenantFilter -ne 'AllTenants') {
+        $GraphRequest = $Rows | Where-Object -Property Tenant -EQ $TenantFilter | ForEach-Object {
             $NewObj = $_.Rules | ConvertFrom-Json
-            $NewObj | Add-Member -NotePropertyName "Tenant" -NotePropertyValue $TenantFilter
+            $NewObj | Add-Member -NotePropertyName 'Tenant' -NotePropertyValue $TenantFilter
             $NewObj
         }
-    } 
-    else { 
-        $GraphRequest = $Rows | ForEach-Object { 
+    }
+    else {
+        $GraphRequest = $Rows | ForEach-Object {
             $TenantName = $_.Tenant
             $NewObj = $_.Rules | ConvertFrom-Json
-            $NewObj | Add-Member -NotePropertyName "Tenant" -NotePropertyValue $TenantName
+            $NewObj | Add-Member -NotePropertyName 'Tenant' -NotePropertyValue $TenantName
             $NewObj
         }
     }
 }
 #Remove all old cache
-Remove-AzDataTableEntity @Table -Entity (Get-CIPPAzDataTableEntity @Table | Where-Object -Property Timestamp -LT (Get-Date).AddMinutes(-15))
+#Remove-AzDataTableEntity @Table -Entity (Get-CIPPAzDataTableEntity @Table -Property PartitionKey, RowKey, Timestamp | Where-Object -Property Timestamp -LT (Get-Date).AddMinutes(-15))
 
 
 Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{

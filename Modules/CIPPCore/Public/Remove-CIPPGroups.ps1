@@ -1,16 +1,20 @@
 function Remove-CIPPGroups {
     [CmdletBinding()]
     param(
-        $userid,
+        $Username,
         $tenantFilter,
         $APIName = "Remove From Groups",
         $ExecutingUser,
-        $Username
+        $userid
     )
 
-    $AllGroups = (New-GraphGetRequest -uri "https://graph.microsoft.com/beta/groups/?$select=DisplayName,mailEnabled" -tenantid $tenantFilter)
+    if (-not $userid) {
+        $userid = (New-GraphGetRequest -uri "https://graph.microsoft.com/beta/users/$($Username)" -tenantid $Tenantfilter).id
+    }
+    $AllGroups = (New-GraphGetRequest -uri "https://graph.microsoft.com/beta/groups/?`$select=displayName,mailEnabled,id,groupTypes" -tenantid $tenantFilter)
 
-    (New-GraphPostRequest -uri "https://graph.microsoft.com/beta/users/$($userid)/GetMemberGroups" -tenantid $tenantFilter -type POST -body '{"securityEnabledOnly": false}').value | ForEach-Object -Parallel {
+    $Returnval = (New-GraphPostRequest -uri "https://graph.microsoft.com/beta/users/$($userid)/GetMemberGroups" -tenantid $tenantFilter -type POST -body '{"securityEnabledOnly": false}').value | ForEach-Object -Parallel {
+        Import-Module CIPPCore
         Import-Module '.\GraphHelper.psm1'
         $group = $_
         
@@ -31,11 +35,12 @@ function Remove-CIPPGroups {
             }
 
             Write-LogMessage -user $using:ExecutingUser -API $($using:APIName) -message "Removed $($using:Username) from $groupname" -Sev "Info"  -tenant $using:TenantFilter
-            return "Successfully removed $($using:Username) from group $Groupname"
+            "Successfully removed $($using:Username) from group $Groupname"
         }
         catch {
             Write-LogMessage -user $using:ExecutingUser -API $($using:APIName) -message "Could not remove $($using:Username) from group $groupname" -Sev "Error" -tenant $using:TenantFilter
-            return "Could not remove $($using:Username) from group $($Groupname): $($_.Exception.Message). This is likely because its a Dynamic Group or synched with active directory"
+            "Could not remove $($using:Username) from group $($Groupname): $($_.Exception.Message). This is likely because its a Dynamic Group or synched with active directory"
         }
     }
+    return $Returnval
 }

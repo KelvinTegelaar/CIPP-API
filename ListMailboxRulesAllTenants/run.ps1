@@ -14,10 +14,11 @@ else {
 $Tenants | ForEach-Object -Parallel { 
     $domainName = $_.defaultDomainName
     Import-Module '.\GraphHelper.psm1'
+    Import-Module '.\Modules\CIPPcore'
     try {
         
-        $Rules = New-ExoRequest -tenantid $domainName -cmdlet "Get-Mailbox" | ForEach-Object {
-            New-ExoRequest -tenantid $domainName -cmdlet "Get-InboxRule" -cmdParams @{Mailbox = $_.GUID }
+        $Rules = New-ExoRequest -tenantid $domainName -cmdlet "Get-Mailbox" | ForEach-Object -Parallel {
+            New-ExoRequest -Anchor $_.UserPrincipalName -tenantid $domainName -cmdlet "Get-InboxRule" -cmdParams @{Mailbox = $_.GUID }
         }
         foreach ($Rule in $Rules) {
             $GraphRequest = @{
