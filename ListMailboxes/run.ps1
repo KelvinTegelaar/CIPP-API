@@ -15,14 +15,16 @@ $TenantFilter = $Request.Query.TenantFilter
 try {
     if ([bool]$Request.Query.SkipLicense -ne $true) {
         $users = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/users/?`$top=999&`$select=id,userPrincipalName,assignedLicenses" -Tenantid $tenantfilter
-    } else {
+    }
+    else {
         $users = @()
     }
-
+    $Select = "id,ExchangeGuid,ArchiveGuid,UserPrincipalName,DisplayName,PrimarySMTPAddress,RecipientType,RecipientTypeDetails,EmailAddresses"
     $ExoRequest = @{
         tenantid  = $TenantFilter
         cmdlet    = 'Get-Mailbox'
-        cmdParams = @{resultsize = 'unlimited'}
+        cmdParams = @{resultsize = 'unlimited' }
+        Select    = $select
     }
 
     $AllowedParameters = @(
@@ -54,7 +56,6 @@ try {
     }
 
     Write-Host ($ExoRequest | ConvertTo-Json)
-
     $GraphRequest = (New-ExoRequest @ExoRequest) | Select-Object id, ExchangeGuid, ArchiveGuid, @{ Name = 'UPN'; Expression = { $_.'UserPrincipalName' } },
 
     @{ Name = 'displayName'; Expression = { $_.'DisplayName' } },
@@ -70,7 +71,8 @@ try {
     @{ Name = 'recipientTypeDetails'; Expression = { $_.'RecipientTypeDetails' } },
     @{ Name = 'AdditionalEmailAddresses'; Expression = { ($_.'EmailAddresses' | Where-Object { $_ -clike 'smtp:*' }).Replace('smtp:', '') -join ', ' } }
     $StatusCode = [HttpStatusCode]::OK
-} catch {
+}
+catch {
     $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
     $StatusCode = [HttpStatusCode]::Forbidden
     $GraphRequest = $ErrorMessage
