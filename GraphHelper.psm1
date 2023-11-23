@@ -562,7 +562,8 @@ function Remove-CIPPCache {
     }
 }
 
-function New-ExoRequest ($tenantid, $cmdlet, $cmdParams, $useSystemMailbox, $Anchor, $NoAuthCheck) {
+function New-ExoRequest ($tenantid, $cmdlet, $cmdParams, $useSystemMailbox, $Anchor, $NoAuthCheck, $Select) {
+   
     if ((Get-AuthorisedRequest -TenantID $tenantid) -or $NoAuthCheck -eq $True) {
         $token = Get-ClassicAPIToken -resource 'https://outlook.office365.com' -Tenantid $tenantid
         $tenant = (get-tenants -IncludeErrors | Where-Object { $_.defaultDomainName -eq $tenantid -or $_.customerId -eq $tenantid }).customerId
@@ -598,7 +599,8 @@ function New-ExoRequest ($tenantid, $cmdlet, $cmdParams, $useSystemMailbox, $Anc
 
         }
         try {
-            $URL = "https://outlook.office365.com/adminapi/beta/$($tenant)/InvokeCommand"
+            if ($Select) { $Select = "`$select=$Select" }
+            $URL = "https://outlook.office365.com/adminapi/beta/$($tenant)/InvokeCommand?$Select"
             
             $ReturnedData = 
             do {
