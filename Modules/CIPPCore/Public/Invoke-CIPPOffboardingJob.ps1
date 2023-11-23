@@ -68,7 +68,8 @@ function Invoke-CIPPOffboardingJob {
         }
         { $_."RemovePermissions" } {
             if ($RunScheduled) {
-                Remove-CIPPMailboxPermissions #Finish this
+                Remove-CIPPMailboxPermissions -PermissionsLevel @("FullAccess", "SendAs", "SendOnBehalf") -userid "AllUsers" -AccessUser $UserName -TenantFilter $TenantFilter -APIName $APINAME -ExecutingUser $ExecutingUser
+
             }
             else {
                 $object = [PSCustomObject]@{
