@@ -11,7 +11,7 @@ Write-Host "Received request"
 Write-Host "CIPPID: $($request.Query.CIPPID)"
 $url = ($request.headers.'x-ms-original-url').split('/API') | Select-Object -First 1
 Write-Host $url
-if ($Request.query.CIPPID -in $Webhooks.CIPPID) {
+if ($Request.query.CIPPID -in $Webhooks.RowKey) {
     Write-Host "Found matching CIPPID"
     $Webhookinfo = $Webhooks | Where-Object -Property RowKey -EQ $Request.query.CIPPID
 
@@ -42,7 +42,6 @@ if ($Request.query.CIPPID -in $Webhooks.CIPPID) {
                 if ($item.operation -eq "UserLoggedIn" -and "AdminLoggedIn" -in $operations) {
                     Invoke-CippWebhookProcessing -TenantFilter $TenantFilter -Data $Item -CIPPPURL $url -allowedlocations $Webhookinfo.AllowedLocations -Operations $operations
                 }
-                $body = "OK"
             }
         }
     }
@@ -50,10 +49,3 @@ if ($Request.query.CIPPID -in $Webhooks.CIPPID) {
 } else {
     Write-Host 'Unauthorised Webhook'
 }
-
-
-# Associate values to output bindings by calling 'Push-OutputBinding'.
-Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
-        StatusCode = [HttpStatusCode]::OK
-        Body       = $body
-    })

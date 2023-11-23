@@ -5,7 +5,7 @@ function Invoke-NinjaOneDeviceWebhook {
         $Configuration
     )
     try {
-
+        Write-LogMessage -user $ExecutingUser -API $APIName -message "Webhook Recieved - Updating NinjaOne Device compliance for $($Data.resourceData.id) in $($Data.tenantId)" -Sev "Info" -tenant $TenantFilter
         $MappedFields = [pscustomobject]@{}
         $CIPPMapping = Get-CIPPTable -TableName CippMapping
         $Filter = "PartitionKey eq 'NinjaFieldMapping'"
@@ -14,9 +14,9 @@ function Invoke-NinjaOneDeviceWebhook {
         }
 
         if ($MappedFields.DeviceCompliance) {
+            $tenantfilter = $Data.tenantId
+            $M365DeviceID = $Data.resourceData.id
 
-            $tenantfilter = $($Data.value.tenantId)
-            $M365DeviceID = $Data.value.resourceData.id
             $DeviceM365 = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/devices/$($M365DeviceID)" -Tenantid $tenantfilter
    
             $DeviceFilter = "PartitionKey eq '$($tenantfilter)' and RowKey eq '$($DeviceM365.deviceID)'"
@@ -36,9 +36,8 @@ function Invoke-NinjaOneDeviceWebhook {
                     "$($MappedFields.DeviceCompliance)" = $Compliant
                 } | ConvertTo-Json
 
-                Invoke-WebRequest -uri "https://$($Configuration.Instance)/api/v2/device/$($Device.NinjaOneID)" -Method PATCH -Body $ComplianceBody -Headers @{Authorization = "Bearer $($token.access_token)" } -ContentType 'application/json'
+                $Null = Invoke-WebRequest -uri "https://$($Configuration.Instance)/api/v2/device/$($Device.NinjaOneID)/custom-fields" -Method PATCH -Body $ComplianceBody -Headers @{Authorization = "Bearer $($token.access_token)" } -ContentType 'application/json'
             
-                $NinjaDeviceUpdate | Add-Member -NotePropertyName $MappedFields.DeviceCompliance -NotePropertyValue $Device.complianceState
                 Write-Host "Updated NinjaOne Device Compliance"
              
 

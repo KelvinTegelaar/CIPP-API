@@ -47,7 +47,7 @@ function New-CIPPGraphSubscription {
                 $expiredate = (Get-Date).AddDays(1).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ss.fffZ")
                 $params = @{
                     changeType         = $TypeofSubscription
-                    notificationUrl    = "https://$BaseURL/API/PublicWebhooks?EventType=$EventType&CIPPID=$CIPPID?Type=GraphSubscription"
+                    notificationUrl    = "https://$BaseURL/API/PublicWebhooks?EventType=$EventType&CIPPID=$($CIPPID)&Type=GraphSubscription"
                     resource           = $Resource
                     expirationDateTime = $expiredate
                 } | ConvertTo-Json
