@@ -22,7 +22,7 @@ try {
     $ExoRequest = @{
         tenantid  = $TenantFilter
         cmdlet    = 'Get-Mailbox'
-        cmdParams = @{}
+        cmdParams = @{resultsize = 'unlimited'}
     }
 
     $AllowedParameters = @(

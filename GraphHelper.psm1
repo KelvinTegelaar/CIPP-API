@@ -598,8 +598,16 @@ function New-ExoRequest ($tenantid, $cmdlet, $cmdParams, $useSystemMailbox, $Anc
 
         }
         try {
-            $ReturnedData = Invoke-RestMethod "https://outlook.office365.com/adminapi/beta/$($tenant)/InvokeCommand" -Method POST -Body $ExoBody -Headers $Headers -ContentType 'application/json; charset=utf-8'
-            if ($ReturnedData.'@adminapi.warnings') {
+            $URL = "https://outlook.office365.com/adminapi/beta/$($tenant)/InvokeCommand"
+            
+            $ReturnedData = 
+            do {
+                $Return = Invoke-RestMethod $URL  -Method POST -Body $ExoBody -Headers $Headers -ContentType 'application/json; charset=utf-8'
+                $URL = $Return.'@odata.nextLink'
+                $Return
+            } until ($null -eq $URL)
+
+            if ($ReturnedData.'@adminapi.warnings' -and $ReturnedData.value -eq $null) {
                 $ReturnedData.value = $ReturnedData.'@adminapi.warnings'
             }
         }
