@@ -2255,7 +2255,6 @@ function Invoke-NinjaOneTenantSync {
         Write-Host "Cleaning Users Cache"
         Remove-AzDataTableEntity @UsersTable -Entity ($ParsedUsers | Select-Object PartitionKey, RowKey)
         Write-Host "Cleaning Device Cache"
-        $ParsedDevices | ConvertTo-Json -Depth 100 | Out-File D:\Temp\Parseddevices.json
         Remove-AzDataTableEntity @DeviceTable -Entity ($ParsedDevices | Select-Object PartitionKey, RowKey)
         
         Write-Host "Total Fetch Time: $((New-TimeSpan -Start $StartTime -End $FetchEnd).TotalSeconds)"
