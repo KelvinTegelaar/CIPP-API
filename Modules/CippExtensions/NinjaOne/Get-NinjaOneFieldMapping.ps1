@@ -60,11 +60,18 @@ function Get-NinjaOneFieldMapping {
         $Token = Get-NinjaOneToken -configuration $Configuration
     
         $NinjaCustomFieldsNodeRaw = (Invoke-WebRequest -uri "https://$($Configuration.Instance)/api/v2/device-custom-fields?scopes=node" -Method GET -Headers @{Authorization = "Bearer $($token.access_token)" } -ContentType 'application/json').content | ConvertFrom-Json -depth 100
-        [System.Collections.Generic.List[PSCustomObject]]$NinjaCustomFieldsNode = $NinjaCustomFieldsNodeRaw | Where-Object { $_.technicianPermission -eq 'READ_ONLY' -and $_.type -in $CIPPFields.Type } | Select-Object @{n = 'name'; e = { $_.label } }, @{n = 'value'; e = { $_.name } }, type
+        [System.Collections.Generic.List[PSCustomObject]]$NinjaCustomFieldsNode = $NinjaCustomFieldsNodeRaw | Where-Object { $_.apiPermission -eq 'READ_WRITE' -and $_.type -in $CIPPFields.Type } | Select-Object @{n = 'name'; e = { $_.label } }, @{n = 'value'; e = { $_.name } }, type
     
         $NinjaCustomFieldsOrgRaw = (Invoke-WebRequest -uri "https://$($Configuration.Instance)/api/v2/device-custom-fields?scopes=organization" -Method GET -Headers @{Authorization = "Bearer $($token.access_token)" } -ContentType 'application/json').content | ConvertFrom-Json -depth 100
-        [System.Collections.Generic.List[PSCustomObject]]$NinjaCustomFieldsOrg = $NinjaCustomFieldsOrgRaw | Where-Object { $_.technicianPermission -eq 'READ_ONLY' -and $_.type -in $CIPPFields.Type } | Select-Object @{n = 'name'; e = { $_.label } }, @{n = 'value'; e = { $_.name } }, type
+        [System.Collections.Generic.List[PSCustomObject]]$NinjaCustomFieldsOrg = $NinjaCustomFieldsOrgRaw | Where-Object { $_.apiPermission -eq 'READ_WRITE' -and $_.type -in $CIPPFields.Type } | Select-Object @{n = 'name'; e = { $_.label } }, @{n = 'value'; e = { $_.name } }, type
 
+        if ($Null -eq $NinjaCustomFieldsNode){
+            [System.Collections.Generic.List[PSCustomObject]]$NinjaCustomFieldsNode = @()
+        }
+        
+        if ($Null -eq $NinjaCustomFieldsOrg){
+            [System.Collections.Generic.List[PSCustomObject]]$NinjaCustomFieldsOrg = @()
+        }
         
     } catch {
         [System.Collections.Generic.List[PSCustomObject]]$NinjaCustomFieldsNode = @()

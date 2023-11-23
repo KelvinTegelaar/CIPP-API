@@ -13,12 +13,11 @@ Write-Host $url
 if ($Request.CIPPID -in $Webhooks.CIPPID) {
     Write-Host "Found matching CIPPID"
 
-    Push-OutputBinding -Name QueueWebhook -Value $Request
-
     if ($Request.query.ValidationToken -or $Request.body.validationCode) {
         Write-Host "Validation token received"
         $body = $request.query.ValidationToken
     } else {
+        Push-OutputBinding -Name QueueWebhook -Value $Request
         $Body = 'Webhook Recieved'
     }
 } else {

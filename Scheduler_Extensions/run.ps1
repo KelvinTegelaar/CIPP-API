@@ -6,6 +6,8 @@ $Table = Get-CIPPTable -TableName Extensionsconfig
 
 $Configuration = ((Get-AzDataTableEntity @Table).config | ConvertFrom-Json)
 
+Write-Host "Started Schedular"
+
 # NinjaOne Extension
 if ($Configuration.NinjaOne.Enabled -eq $True) {
 
@@ -13,8 +15,10 @@ if ($Configuration.NinjaOne.Enabled -eq $True) {
     $Settings = (Get-AzDataTableEntity @Table)
     $TimeSetting = ($Settings | Where-Object { $_.RowKey -eq 'NinjaSyncTime' }).SettingValue
 
+    
+
     if (($TimeSetting | Measure-Object).count -ne 1) {
-        [int]$TimeSetting = Get-Random -Minimum 0 -Maximum 96
+        [int]$TimeSetting = Get-Random -Minimum 1 -Maximum 95
         $AddObject = @{
             PartitionKey   = 'NinjaConfig'
             RowKey         = 'NinjaSyncTime'
@@ -23,10 +27,19 @@ if ($Configuration.NinjaOne.Enabled -eq $True) {
         Add-AzDataTableEntity @Table -Entity $AddObject -Force
     }
 
+    Write-Host "Ninja Time Setting: $TimeSetting"
+
     $LastRunTime = Get-Date(($Settings | Where-Object { $_.RowKey -eq 'NinjaLastRunTime' }).SettingValue)
-    $CurrentInterval = ($currentHour * 4) + [math]::Floor($currentMinute / 15)
+
+    Write-Host "Last Run: $LastRunTime"
+
+    $CurrentTime = Get-Date
+    $CurrentInterval = ($CurrentTime.Hour * 4) + [math]::Floor($CurrentTime.Minute / 15)
+
+    Write-Host "Current Interval: $CurrentInterval"
 
     if ($Null -eq $LastRunTime -or $LastRunTime -le (Get-Date).addhours(-25) -or $TimeSetting -eq $CurrentInterval) {
+        Write-Host "Executing"
         $CIPPMapping = Get-CIPPTable -TableName CippMapping
         $Filter = "PartitionKey eq 'NinjaOrgsMapping'"
         $TenantsToProcess = Get-AzDataTableEntity @CIPPMapping -Filter $Filter | Where-Object { $Null -ne $_.NinjaOne -and $_.NinjaOne -ne '' }
