@@ -12,7 +12,7 @@ try {
       switch ($Request.query.extensionName) {
             "HaloPSA" {
                   $token = Get-HaloToken -configuration $Configuration.HaloPSA
-                  $Results = [pscustomobject]@{"Results" = "Succesfully Connected to HaloPSA" }
+                  $Results = [pscustomobject]@{"Results" = "Successfully Connected to HaloPSA" }
             }
             "Gradient" {
                   $GradientToken = Get-GradientToken -Configuration $Configuration.Gradient
@@ -25,6 +25,10 @@ try {
             }
             "CIPP-API" {
                   $Results = [pscustomobject]@{"Results" = "You cannot test the CIPP-API from CIPP. Please check the documentation on how to test the CIPP-API." }
+            }
+            "NinjaOne" {
+                  $token = Get-NinjaOneToken -configuration $Configuration.NinjaOne
+                  $Results = [pscustomobject]@{"Results" = "Succesfully Connected to NinjaOne" }
             }
       }
 }
