@@ -3,12 +3,20 @@ function Get-NinjaOneToken {
     param (
         $Configuration 
     )
-    $null = Connect-AzAccount -Identity
+
+
+    if (!$ENV:SetFromProfile) {
+        $null = Connect-AzAccount -Identity
+        $ClientSecret = (Get-AzKeyVaultSecret -VaultName $ENV:WEBSITE_DEPLOYMENT_ID -Name "NinjaOne" -AsPlainText)
+    } else {
+        $ClientSecret = $ENV:NinjaClientSecret
+    }
+
 
     $body = @{
         grant_type    = 'client_credentials'
         client_id     = $Configuration.ClientId
-        client_secret = (Get-AzKeyVaultSecret -VaultName $ENV:WEBSITE_DEPLOYMENT_ID -Name "NinjaOne" -AsPlainText)
+        client_secret = $ClientSecret
         scope         = 'monitoring management'
     }
 

@@ -29,14 +29,15 @@ function Get-NinjaOneOrgMapping {
             $ResultCount = ($Result.id | Measure-Object -Maximum)
             $After = $ResultCount.maximum
 
-        } while ($ResultCount.count -eq $PageSize)
+        } while ($ResultCount.count -eq $PageSize) 
+        
     } catch {
         $NinjaOrgs = @()
     }
 
     $MappingObj = [PSCustomObject]@{
         Tenants   = @($Tenants)
-        NinjaOrgs = @($NinjaOrgs)
+        NinjaOrgs = @($NinjaOrgs | Sort-Object name)
         Mappings  = $Mappings
     }
 
