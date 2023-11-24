@@ -12,7 +12,7 @@ try {
       switch ($Request.query.extensionName) {
             "HaloPSA" {
                   $token = Get-HaloToken -configuration $Configuration.HaloPSA
-                  $Results = [pscustomobject]@{"Results" = "Succesfully Connected to HaloPSA" }
+                  $Results = [pscustomobject]@{"Results" = "Successfully Connected to HaloPSA" }
             }
             "Gradient" {
                   $GradientToken = Get-GradientToken -Configuration $Configuration.Gradient

@@ -55,7 +55,7 @@ try {
         switch ($Request.Query.AutoMapping) {
             'NinjaOrgs' {
                 Push-OutputBinding -Name NinjaProcess -Value @{'NinjaAction' = 'StartAutoMapping' }
-                $Body = [pscustomobject]@{'Results' = 'Automapping Request has been queued. Exact name matches will appear first and matches on device names and serials will take longer.' }
+                $Body = [pscustomobject]@{'Results' = 'Automapping Request has been queued. Exact name matches will appear first and matches on device names and serials will take longer. Please check the CIPP Logbook and refresh the page once complete.' }
             }
 
 
