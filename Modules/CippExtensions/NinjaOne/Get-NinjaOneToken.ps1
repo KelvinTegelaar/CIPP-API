@@ -5,7 +5,7 @@ function Get-NinjaOneToken {
     )
 
 
-    if (!$ENV:SetFromProfile) {
+    if (!$ENV:NinjaClientSecret) {
         $null = Connect-AzAccount -Identity
         $ClientSecret = (Get-AzKeyVaultSecret -VaultName $ENV:WEBSITE_DEPLOYMENT_ID -Name "NinjaOne" -AsPlainText)
     } else {
