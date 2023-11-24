@@ -13,12 +13,6 @@ Write-Host 'PowerShell HTTP trigger function processed a request.'
 # Interact with query parameters or the body of the request.
 $TenantFilter = $Request.Query.TenantFilter
 try {
-    if ([bool]$Request.Query.SkipLicense -ne $true) {
-        $users = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/users/?`$top=999&`$select=id,userPrincipalName,assignedLicenses" -Tenantid $tenantfilter
-    }
-    else {
-        $users = @()
-    }
     $Select = "id,ExchangeGuid,ArchiveGuid,UserPrincipalName,DisplayName,PrimarySMTPAddress,RecipientType,RecipientTypeDetails,EmailAddresses"
     $ExoRequest = @{
         tenantid  = $TenantFilter
@@ -59,13 +53,6 @@ try {
     $GraphRequest = (New-ExoRequest @ExoRequest) | Select-Object id, ExchangeGuid, ArchiveGuid, @{ Name = 'UPN'; Expression = { $_.'UserPrincipalName' } },
 
     @{ Name = 'displayName'; Expression = { $_.'DisplayName' } },
-    @{ Name = 'SharedMailboxWithLicense'; Expression = {
-            $ID = $_.id
-            $Shared = if ($_.'RecipientTypeDetails' -eq 'SharedMailbox') { $true } else { $false }
-            if (($users | Where-Object -Property ID -EQ $ID).assignedLicenses.skuid -and $Shared) { $true } else { $false }
-        }
-    },
-
     @{ Name = 'primarySmtpAddress'; Expression = { $_.'PrimarySMTPAddress' } },
     @{ Name = 'recipientType'; Expression = { $_.'RecipientType' } },
     @{ Name = 'recipientTypeDetails'; Expression = { $_.'RecipientTypeDetails' } },
