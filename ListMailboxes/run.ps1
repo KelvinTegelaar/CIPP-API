@@ -13,15 +13,44 @@ Write-Host 'PowerShell HTTP trigger function processed a request.'
 # Interact with query parameters or the body of the request.
 $TenantFilter = $Request.Query.TenantFilter
 try {
-    $users = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/users/?`$top=999&`$select=id,userPrincipalName,assignedLicenses" -Tenantid $tenantfilter
-
-    $ExoRequest = @{
-        tenantid = $TenantFilter
-        cmdlet   = 'Get-Mailbox'
+    if ([bool]$Request.Query.SkipLicense -ne $true) {
+        $users = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/users/?`$top=999&`$select=id,userPrincipalName,assignedLicenses" -Tenantid $tenantfilter
+    } else {
+        $users = @()
     }
 
-    if ([bool]$Request.Query.SoftDeletedMailbox -eq $true) {
-        $ExoRequest.cmdParams = @{ SoftDeletedMailbox = $true }
+    $ExoRequest = @{
+        tenantid  = $TenantFilter
+        cmdlet    = 'Get-Mailbox'
+        cmdParams = @{}
+    }
+
+    $AllowedParameters = @(
+        @{Parameter = 'Anr'; Type = 'String' }
+        @{Parameter = 'Archive'; Type = 'Bool' }
+        @{Parameter = 'Filter'; Type = 'String' }
+        @{Parameter = 'GroupMailbox'; Type = 'Bool' }
+        @{Parameter = 'PublicFolder'; Type = 'Bool' }
+        @{Parameter = 'RecipientTypeDetails'; Type = 'String' }
+        @{Parameter = 'SoftDeletedMailbox'; Type = 'Bool' }
+    )
+
+    foreach ($Param in $Request.Query.Keys) {
+        $CmdParam = $AllowedParameters | Where-Object { $_.Parameter -eq $Param }
+        if ($CmdParam) {
+            switch ($CmdParam.Type) {
+                'String' {
+                    if (![string]::IsNullOrEmpty($Request.Query.$Param)) {
+                        $ExoRequest.cmdParams.$Param = $Request.Query.$Param
+                    }
+                }
+                'Bool' {
+                    if ([bool]$Request.Query.$Param -eq $true) {
+                        $ExoRequest.cmdParams.$Param = $true
+                    }
+                }
+            }
+        }
     }
 
     Write-Host ($ExoRequest | ConvertTo-Json)
