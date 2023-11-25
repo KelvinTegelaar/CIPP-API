@@ -30,10 +30,10 @@ try {
         "Could not add out of office message for $($username). Error: $($_.Exception.Message)"
     }
 
-    $body = [pscustomobject]@{"Results" = @($results) }
+    $body = [pscustomobject]@{"Results" = $($results) }
 }
 catch {
-    $body = [pscustomobject]@{"Results" = @("Could not set Out of Office user: $($_.Exception.message)") }
+    $body = [pscustomobject]@{"Results" = "Could not set Out of Office user: $($_.Exception.message)"}
 }
 
 # Associate values to output bindings by calling 'Push-OutputBinding'.
