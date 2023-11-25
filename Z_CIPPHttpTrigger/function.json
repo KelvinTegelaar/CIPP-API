@@ -22,6 +22,12 @@
       "queueName": "CIPPGenericQueue"
     },
     {
+      "type": "queue",
+      "direction": "out",
+      "name": "Subscription",
+      "queueName": "AlertSubscriptions"
+    },
+    {
       "name": "starter",
       "type": "durableClient",
       "direction": "in"
