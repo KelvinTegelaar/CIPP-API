@@ -12,7 +12,7 @@ foreach ($Mailbox in $Mailboxes) {
     try {
         New-ExoRequest -tenantid $Tenant -cmdlet "Get-MailboxFolderStatistics" -cmdParams @{identity = $Mailbox.UserPrincipalName; FolderScope = 'Calendar' } -Anchor $Mailbox.UserPrincipalName | ForEach-Object {
             New-ExoRequest -tenantid $Tenant  -cmdlet "Set-MailboxFolderPermission" -cmdparams @{Identity = "$($Mailbox.UserPrincipalName):$($_.FolderId)"; User = 'Default'; AccessRights = $setting.permissionlevel } -Anchor $Mailbox.UserPrincipalName 
-            Write-LogMessage -API "Standards" -tenant $tenant -message "Set default folder permission for $($Mailbox.UserPrincipalName):\$($_.Name) to $($setting.permissionlevel)" -sev Error
+            Write-LogMessage -API "Standards" -tenant $tenant -message "Set default folder permission for $($Mailbox.UserPrincipalName):\$($_.Name) to $($setting.permissionlevel)" -sev Info
         }
     }
     catch {
