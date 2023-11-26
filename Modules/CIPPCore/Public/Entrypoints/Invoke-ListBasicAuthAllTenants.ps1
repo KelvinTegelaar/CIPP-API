@@ -12,6 +12,8 @@ Function Invoke-ListBasicAuthAllTenants {
     Get-Tenants | ForEach-Object -Parallel { 
         $domainName = $_.defaultDomainName
         Import-Module '.\GraphHelper.psm1'
+        Import-Module '.\Modules\AzBobbyTables'
+
         $currentTime = Get-Date -Format 'yyyy-MM-ddTHH:MM:ss'
         $ts = (Get-Date).AddDays(-30)
         $endTime = $ts.ToString('yyyy-MM-ddTHH:MM:ss')

@@ -20,6 +20,8 @@ Function Invoke-ListMFAUsersAllTenants {
             $domainName = $_.defaultDomainName
             Import-Module '.\GraphHelper.psm1'
             Import-Module '.\modules\CippCore'
+            Import-Module '.\Modules\AzBobbyTables'
+
             $Table = Get-CIPPTable -TableName cachemfa
             Try {
                 $GraphRequest = Get-CIPPMFAState -TenantFilter $domainName -ErrorAction Stop

@@ -17,6 +17,8 @@ Function Invoke-ListGenericAllTenants {
 
     $RawGraphRequest = Get-Tenants | ForEach-Object -Parallel { 
         $domainName = $_.defaultDomainName
+        Import-Module '.\Modules\AzBobbyTables'
+
         Import-Module '.\GraphHelper.psm1'
         try {
             Write-Host $using:fullUrl

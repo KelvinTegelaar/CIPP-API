@@ -16,6 +16,8 @@ Function Invoke-ListServiceHealth {
 
     $ResultHealthSummary = Get-Tenants | ForEach-Object -Parallel {
         Import-Module '.\GraphHelper.psm1'
+        Import-Module '.\Modules\AzBobbyTables'
+        Import-Module '.\Modules\CIPPCore'
         $tenantname = $_.displayName
         Write-Host $tenantname
         $prop = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/admin/serviceAnnouncement/issues?`$filter=endDateTime eq null" -tenantid $_.defaultDomainName
