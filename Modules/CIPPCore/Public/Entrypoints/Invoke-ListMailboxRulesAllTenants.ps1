@@ -24,9 +24,9 @@ Function Invoke-ListMailboxRulesAllTenants {
         try {
         
             $Rules = New-ExoRequest -tenantid $domainName -cmdlet 'Get-Mailbox' | ForEach-Object -Parallel {
-                Import-Module CIPPCore
-                Import-Module '.\Modules\AzBobbyTables'
                 Import-Module '.\GraphHelper.psm1'
+                Import-Module '.\Modules\AzBobbyTables'
+                Import-Module '.\Modules\CIPPCore'
                 New-ExoRequest -Anchor $_.UserPrincipalName -tenantid $domainName -cmdlet 'Get-InboxRule' -cmdParams @{Mailbox = $_.GUID }
             }
             foreach ($Rule in $Rules) {

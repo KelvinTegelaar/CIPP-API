@@ -11,8 +11,9 @@ Function Invoke-ExecIncidentsListAllTenants {
         
     Get-Tenants | ForEach-Object -Parallel { 
         $domainName = $_.defaultDomainName
-        Import-Module '.\Modules\AzBobbyTables'
         Import-Module '.\GraphHelper.psm1'
+        Import-Module '.\Modules\AzBobbyTables'
+        Import-Module '.\Modules\CIPPCore'
         $Table = Get-CIPPTable -TableName 'cachealertsandincidents'
 
         try {

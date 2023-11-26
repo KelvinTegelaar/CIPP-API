@@ -13,6 +13,7 @@ Function Invoke-ListBasicAuthAllTenants {
         $domainName = $_.defaultDomainName
         Import-Module '.\GraphHelper.psm1'
         Import-Module '.\Modules\AzBobbyTables'
+        Import-Module '.\Modules\CIPPCore'
 
         $currentTime = Get-Date -Format 'yyyy-MM-ddTHH:MM:ss'
         $ts = (Get-Date).AddDays(-30)

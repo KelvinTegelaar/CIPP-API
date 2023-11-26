@@ -79,9 +79,9 @@ Function Invoke-ExecGraphRequest {
                         $RawGraphRequest = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/$($Request.Query.Endpoint)" -tenantid $TenantFilter -NoPagination [boolean]$Request.query.DisablePagination -ComplexFilter
                 } else {
                         $RawGraphRequest = Get-Tenants | ForEach-Object -Parallel {
+                                Import-Module '.\GraphHelper.psm1'
                                 Import-Module '.\Modules\AzBobbyTables'
-
-                                Import-Module .\GraphHelper.psm1
+                                Import-Module '.\Modules\CIPPCore'
                                 try {
                                         $DefaultDomainName = $_.defaultDomainName
                                         $TenantName = $_.displayName
