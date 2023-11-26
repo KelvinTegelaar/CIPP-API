@@ -58,6 +58,54 @@
       "queueName": "generalAllTenantQueue"
     },
     {
+      "type": "queue",
+      "direction": "out",
+      "name": "gradientqueue",
+      "queueName": "billqueue"
+    },
+    {
+      "type": "queue",
+      "direction": "out",
+      "name": "NinjaProcess",
+      "queueName": "NinjaOneQueue"
+    },
+    {
+      "type": "queue",
+      "direction": "out",
+      "name": "alertqueue",
+      "queueName": "alertqueue"
+    },
+    {
+      "type": "queue",
+      "direction": "out",
+      "name": "gdapinvitequeue",
+      "queueName": "gdapinvitequeue"
+    },
+    {
+      "type": "queue",
+      "direction": "out",
+      "name": "gdapqueue",
+      "queueName": "gdapqueue"
+    },
+    {
+      "type": "queue",
+      "direction": "out",
+      "name": "incidentqueue",
+      "queueName": "incidentqueue"
+    },
+    {
+      "type": "queue",
+      "direction": "out",
+      "name": "offboardingmailbox",
+      "queueName": "offboardingmailbox"
+    },
+    {
+      "type": "queue",
+      "direction": "out",
+      "name": "QueueWebhook",
+      "queueName": "webhooksqueue"
+    },
+    {
       "name": "starter",
       "type": "durableClient",
       "direction": "in"
