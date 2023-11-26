@@ -14,9 +14,6 @@ Function Invoke-GetCippAlerts {
     $Filter = "PartitionKey eq '{0}'" -f $PartitionKey
     $Rows = Get-CIPPAzDataTableEntity @Table -Filter $Filter | Sort-Object TableTimestamp -Descending | Select-Object -First 10
 
-
-
-    Set-Location (Get-Item $PSScriptRoot).Parent.FullName
     $APIVersion = Get-Content 'version_latest.txt' | Out-String
     $CIPPVersion = $request.query.localversion
 
