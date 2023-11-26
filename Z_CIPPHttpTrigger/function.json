@@ -28,6 +28,36 @@
       "queueName": "AlertSubscriptions"
     },
     {
+      "type": "queue",
+      "direction": "out",
+      "name": "LicenseQueue",
+      "queueName": "licqueue"
+    },
+    {
+      "type": "queue",
+      "direction": "out",
+      "name": "mbxrulequeue",
+      "queueName": "mbxrulequeue"
+    },
+    {
+      "type": "queue",
+      "direction": "out",
+      "name": "mfaqueue",
+      "queueName": "mfaqueue"
+    },
+    {
+      "type": "queue",
+      "direction": "out",
+      "name": "mailboxstats",
+      "queueName": "generalAllTenantQueue"
+    },
+    {
+      "type": "queue",
+      "direction": "out",
+      "name": "listusers",
+      "queueName": "generalAllTenantQueue"
+    },
+    {
       "name": "starter",
       "type": "durableClient",
       "direction": "in"
