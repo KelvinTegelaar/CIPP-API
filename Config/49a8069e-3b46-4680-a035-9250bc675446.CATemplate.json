@@ -1,0 +1,41 @@
+{
+  "state": "enabled",
+  "grantControls": {
+    "builtInControls": ["mfa"],
+    "operator": "OR",
+    "termsOfUse": [],
+    "customAuthenticationFactors": []
+  },
+  "conditions": {
+    "times": null,
+    "locations": null,
+    "signInRiskLevels": [],
+    "devices": null,
+    "deviceStates": null,
+    "users": {
+      "excludeRoles": [],
+      "excludeUsers": [],
+      "excludeGroups": [],
+      "includeUsers": ["All"],
+      "includeRoles": [],
+      "includeGroups": []
+    },
+    "servicePrincipalRiskLevels": [],
+    "userRiskLevels": [],
+    "clientAppTypes": [
+      "exchangeActiveSync",
+      "browser",
+      "mobileAppsAndDesktopClients",
+      "other"
+    ],
+    "platforms": null,
+    "clientApplications": null,
+    "applications": {
+      "includeApplications": ["All"],
+      "includeUserActions": [],
+      "includeAuthenticationContextClassReferences": [],
+      "excludeApplications": []
+    }
+  },
+  "displayName": "Enforce Multi factor authentication for each application"
+}
