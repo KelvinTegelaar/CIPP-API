@@ -1,0 +1,36 @@
+{
+  "grantControls": {
+    "termsOfUse": [],
+    "builtInControls": ["mfa"],
+    "customAuthenticationFactors": [],
+    "operator": "OR"
+  },
+  "state": "enabled",
+  "conditions": {
+    "servicePrincipalRiskLevels": [],
+    "userRiskLevels": [],
+    "deviceStates": null,
+    "signInRiskLevels": [],
+    "clientAppTypes": ["all"],
+    "devices": null,
+    "locations": null,
+    "applications": {
+      "includeApplications": ["d414ee2d-73e5-4e5b-bb16-03ef55fea597"],
+      "includeUserActions": [],
+      "includeAuthenticationContextClassReferences": [],
+      "excludeApplications": []
+    },
+    "users": {
+      "includeUsers": ["All"],
+      "excludeRoles": [],
+      "includeRoles": [],
+      "excludeUsers": [],
+      "includeGroups": [],
+      "excludeGroups": []
+    },
+    "platforms": null,
+    "times": null,
+    "clientApplications": null
+  },
+  "displayName": "Enforce Multi-factor authentication for Static Web Apps"
+}

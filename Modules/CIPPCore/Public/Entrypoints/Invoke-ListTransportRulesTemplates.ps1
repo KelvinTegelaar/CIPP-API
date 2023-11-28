@@ -11,7 +11,6 @@ Function Invoke-ListTransportRulesTemplates {
     $APIName = $TriggerMetadata.FunctionName
     Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -message 'Accessed this API' -Sev 'Debug'
     $Table = Get-CippTable -tablename 'templates'
-    Set-Location (Get-Item $PSScriptRoot).Parent.FullName
 
     $Templates = Get-ChildItem 'Config\*.TransportRuleTemplate.json' | ForEach-Object {
     

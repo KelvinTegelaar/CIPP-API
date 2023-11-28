@@ -14,7 +14,6 @@ Function Invoke-ListBPATemplates {
     Write-Host 'PowerShell HTTP trigger function processed a request.'
     Write-Host $Request.query.id
 
-    Set-Location (Get-Item $PSScriptRoot).Parent.FullName
     $Templates = Get-ChildItem 'Config\*.BPATemplate.json'
 
     if ($Request.Query.RawJson) {

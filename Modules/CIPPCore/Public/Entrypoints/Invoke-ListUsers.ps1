@@ -14,7 +14,6 @@ Function Invoke-ListUsers {
     # Write to the Azure Functions log stream.
     Write-Host 'PowerShell HTTP trigger function processed a request.'
     $ConvertTable = Import-Csv Conversiontable.csv | Sort-Object -Property 'guid' -Unique
-    Set-Location (Get-Item $PSScriptRoot).Parent.FullName
     # Interact with query parameters or the body of the request.
     $TenantFilter = $Request.Query.TenantFilter
     $GraphFilter = $Request.Query.graphFilter
