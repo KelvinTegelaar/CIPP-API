@@ -11,7 +11,7 @@ function Set-CIPPGDAPInviteGroups {
         foreach ($Activation in $Activations) {
             if ($InviteList.RowKey -contains $Activation.id) {
                 Write-Host "Mapping groups for GDAP relationship: $($Activation.id)"
-                Push-OutputBinding -Name Msg -Value $Activation.id
+                Push-OutputBinding -Name gdapinvitequeue -Value $Activation.id
             }
         }
     }
