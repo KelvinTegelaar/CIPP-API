@@ -562,7 +562,8 @@ function Remove-CIPPCache {
     }
 }
 
-function New-ExoRequest ($tenantid, $cmdlet, $cmdParams, $useSystemMailbox, $Anchor, $NoAuthCheck) {
+function New-ExoRequest ($tenantid, $cmdlet, $cmdParams, $useSystemMailbox, $Anchor, $NoAuthCheck, $Select) {
+   
     if ((Get-AuthorisedRequest -TenantID $tenantid) -or $NoAuthCheck -eq $True) {
         $token = Get-ClassicAPIToken -resource 'https://outlook.office365.com' -Tenantid $tenantid
         $tenant = (get-tenants -IncludeErrors | Where-Object { $_.defaultDomainName -eq $tenantid -or $_.customerId -eq $tenantid }).customerId
@@ -585,7 +586,9 @@ function New-ExoRequest ($tenantid, $cmdlet, $cmdParams, $useSystemMailbox, $Anc
 
             if (!$Anchor -or $useSystemMailbox) {
                 $OnMicrosoft = (New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/domains?$top=999' -tenantid $tenantid -NoAuthCheck $NoAuthCheck | Where-Object -Property isInitial -EQ $true).id
+
                 $anchor = "UPN:SystemMailbox{8cc370d3-822a-4ab8-a926-bb94bd0641a9}@$($OnMicrosoft)"
+
 
             }
         }
@@ -598,8 +601,17 @@ function New-ExoRequest ($tenantid, $cmdlet, $cmdParams, $useSystemMailbox, $Anc
 
         }
         try {
-            $ReturnedData = Invoke-RestMethod "https://outlook.office365.com/adminapi/beta/$($tenant)/InvokeCommand" -Method POST -Body $ExoBody -Headers $Headers -ContentType 'application/json; charset=utf-8'
-            if ($ReturnedData.'@adminapi.warnings') {
+            if ($Select) { $Select = "`$select=$Select" }
+            $URL = "https://outlook.office365.com/adminapi/beta/$($tenant)/InvokeCommand?$Select"
+            
+            $ReturnedData = 
+            do {
+                $Return = Invoke-RestMethod $URL  -Method POST -Body $ExoBody -Headers $Headers -ContentType 'application/json; charset=utf-8'
+                $URL = $Return.'@odata.nextLink'
+                $Return
+            } until ($null -eq $URL)
+
+            if ($ReturnedData.'@adminapi.warnings' -and $ReturnedData.value -eq $null) {
                 $ReturnedData.value = $ReturnedData.'@adminapi.warnings'
             }
         }
