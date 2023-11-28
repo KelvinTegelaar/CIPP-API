@@ -18,8 +18,7 @@ function Invoke-ListUserSettings {
         $UserSettings = $UserSettings | Select-Object -ExpandProperty JSON | ConvertFrom-Json -Depth 10 -ErrorAction SilentlyContinue
         $StatusCode = [HttpStatusCode]::OK
         $Results = $UserSettings
-    }
-    catch {
+    } catch {
         $Results = "Function Error: $($_.Exception.Message)"
         $StatusCode = [HttpStatusCode]::BadRequest
     }
