@@ -1,0 +1,16 @@
+﻿{
+  "bindings": [
+    {
+      "name": "QueueItem",
+      "type": "queueTrigger",
+      "direction": "in",
+      "queueName": "NinjaOneQueue"
+    },
+    {
+      "type": "queue",
+      "direction": "out",
+      "name": "NinjaProcess",
+      "queueName": "NinjaOneQueue"
+    }
+  ]
+}
