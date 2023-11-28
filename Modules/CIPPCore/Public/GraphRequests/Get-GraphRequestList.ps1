@@ -117,7 +117,11 @@ function Get-GraphRequestList {
             'AllTenants' {
                 if ($SkipCache) {
                     Get-Tenants -IncludeErrors | ForEach-Object -Parallel {
-                        Import-Module .\GraphHelper.psm1
+                        Import-Module '.\GraphHelper.psm1'
+                        Import-Module '.\Modules\AzBobbyTables'
+                        Import-Module '.\Modules\CIPPCore'
+
+
                         $GraphRequestParams = @{
                             TenantFilter                = $_.defaultDomainName
                             Endpoint                    = $using:Endpoint
