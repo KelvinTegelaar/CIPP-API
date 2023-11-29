@@ -14,7 +14,6 @@ function Set-CIPPOutOfOffice {
 
     try {
         if (-not $StartTime) {
-            $State = "Enabled"
             $StartTime = (Get-Date).ToString("yyyy-MM-dd HH:mm")
         }
         if (-not $EndTime) {

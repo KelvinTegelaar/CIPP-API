@@ -17,14 +17,12 @@ Function Invoke-ListMailboxRulesAllTenants {
     }
     $Tenants | ForEach-Object -Parallel { 
         $domainName = $_.defaultDomainName
-        Import-Module '.\GraphHelper.psm1'
         Import-Module '.\Modules\CIPPcore'
         Import-Module '.\Modules\AzBobbyTables'
 
         try {
         
             $Rules = New-ExoRequest -tenantid $domainName -cmdlet 'Get-Mailbox' | ForEach-Object -Parallel {
-                Import-Module '.\GraphHelper.psm1'
                 Import-Module '.\Modules\AzBobbyTables'
                 Import-Module '.\Modules\CIPPCore'
                 New-ExoRequest -Anchor $_.UserPrincipalName -tenantid $domainName -cmdlet 'Get-InboxRule' -cmdParams @{Mailbox = $_.GUID }
