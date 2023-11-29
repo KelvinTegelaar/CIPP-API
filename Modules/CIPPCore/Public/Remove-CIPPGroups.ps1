@@ -14,7 +14,6 @@ function Remove-CIPPGroups {
     $AllGroups = (New-GraphGetRequest -uri "https://graph.microsoft.com/beta/groups/?`$select=displayName,mailEnabled,id,groupTypes" -tenantid $tenantFilter)
 
     $Returnval = (New-GraphPostRequest -uri "https://graph.microsoft.com/beta/users/$($userid)/GetMemberGroups" -tenantid $tenantFilter -type POST -body '{"securityEnabledOnly": false}').value | ForEach-Object -Parallel {
-        Import-Module '.\GraphHelper.psm1'
         Import-Module '.\Modules\AzBobbyTables'
         Import-Module '.\Modules\CIPPCore'
         $group = $_
