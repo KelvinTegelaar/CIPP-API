@@ -11,7 +11,8 @@
 
 # Authenticate with Azure PowerShell using MSI.
 # Remove this if you are not planning on using MSI or Azure PowerShell.
-Import-Module .\GraphHelper.psm1
+Import-Module CippCore
+
 try {
     Import-Module Az.KeyVault -ErrorAction Stop
 } catch { $_.Exception.Message }
@@ -19,7 +20,6 @@ try {
     Import-Module Az.Accounts
 } catch { $_.Exception.Message }
 Import-Module CippExtensions
-Import-Module CippCore
 
 try {
     Disable-AzContextAutosave -Scope Process | Out-Null
