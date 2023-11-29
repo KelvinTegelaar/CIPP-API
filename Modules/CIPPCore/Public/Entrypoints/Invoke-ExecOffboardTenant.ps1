@@ -45,6 +45,63 @@ Function Invoke-ExecOffboardTenant {
             }
         }
 
+        if ($request.body.RemoveCSPnotificationContacts) {
+            Write-Host "DO WE GET HERE?"
+            # Remove all email adresses that match the CSP tenants domains from the contact properties in /organization
+            try {
+                try {
+                    $domains = (New-GraphGETRequest -Uri "https://graph.microsoft.com/v1.0/domains?`$select=id" -tenantid $env:TenantID -NoAuthCheck:$true).id
+                } catch {
+                    throw "Failed to retrieve CSP domains: $($_.Exception.message)"
+                }
+    
+                try {
+                    # Get /organization data
+                    $orgContacts = New-GraphGETRequest -Uri "https://graph.microsoft.com/v1.0/organization?`$select=id,marketingNotificationEmails,securityComplianceNotificationMails,technicalNotificationMails" -tenantid $TenantFilter
+    
+                } catch {
+                    throw "Failed to retrieve CSP domains: $($_.Exception.message)"
+                }
+            } catch {
+                $errors.Add("$($_.Exception.message)")
+            }
+    
+            # foreach through the properties we want to check/update
+            @('marketingNotificationEmails','securityComplianceNotificationMails','technicalNotificationMails') | ForEach-Object {
+                $property = $_
+                $propertyContacts = $orgContacts.($($property))
+    
+                if ($propertyContacts -AND ($domains -notcontains ($propertyContacts | ForEach-Object { $_.Split("@")[1] }))) {
+                    $newPropertyContent = [System.Collections.Generic.List[object]]($propertyContacts | Where-Object { $domains -notcontains $_.Split("@")[1] })
+    
+                    $patchContactBody = if (!($newPropertyContent)) { "{ `"$($property)`" : [] }" } else { [pscustomobject]@{ $property = $newPropertyContent } | ConvertTo-Json }
+    
+                    try {
+                        New-GraphPostRequest -type PATCH -body $patchContactBody -Uri "https://graph.microsoft.com/v1.0/organization/$($orgContacts.id)" -tenantid $Tenantfilter -ContentType "application/json"
+                        $results.Add("Succesfully removed notification contacts from $($property): $(($propertyContacts | Where-Object { $domains -contains $_.Split("@")[1] }))")
+                    } catch {
+                        $errors.Add("Failed to update property $($property): $($_.Exception.message)")
+                    }
+                } else {
+                    $results.Add("No notification contacts found in $($property)")
+                }
+            }
+            # Add logic for privacyProfile later - rvdwegen
+    
+        }
+    
+        if ($request.body.RemoveMSPvendorApps) {
+            # 9fcfb031-1bf6-4848-8732-5573fd64fc09 - Augmentt
+            # 9359814a-7403-4af9-9113-d5c8cab020ed - Rewst CSP connector
+            # 06bfda05-2d5e-4b3b-ac5d-79f07e402973 - Rewst Prod
+            # c19d36e8-6537-4998-9872-ea8b962bd0b6 - Rewst Azure Integration
+            # d7db2a1c-c38b-4bd1-a30f-0915167ba928 - Datto Backupify/Saas Protection
+            # 0c3cdc94-15ba-4b89-9222-29f599727b1c - AutoTask Client Portal SSO
+            # 62603940-b9b0-454f-b138-eb8d571f21d3 - Eshgro Smarter 365?
+            # Possible others, Scapmann, PatchMyPC, Datto M365 management, Kaseya crap, Exclaimer(?), HP, Lenovo, Dell, Apple(???), resellers(all region tenants?), Action1, Liquit 
+            # Current idea, do a filtered serviceprincipals request based on the appOwner tenantids of known MSP vendors, load that data into a multi-select on the GUI
+        }
+
         # All customer tenant specific actions ALWAYS have to be completed before this action!
         if ($request.body.RemoveMultitenantApps) {
             # Remove multi-tenant apps with the CSP tenant as origin
