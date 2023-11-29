@@ -6,7 +6,6 @@ Write-Host "PowerShell queue trigger function processed work item: $QueueItem"
 
 $RawGraphRequest = Get-Tenants | ForEach-Object -Parallel { 
     $domainName = $_.defaultDomainName
-    Import-Module '.\GraphHelper.psm1'
     Import-Module '.\Modules\AzBobbyTables'
     Import-Module '.\Modules\CIPPCore'
     try {
