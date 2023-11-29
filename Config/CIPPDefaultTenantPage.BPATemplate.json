@@ -1,0 +1,155 @@
+{
+  "name": "CIPP Best Practices v1.0 - Tenant view",
+  "style": "Tenant",
+  "Fields": [
+    {
+      "name": "PasswordNeverExpires",
+      "UseExistingInfo": true,
+      "StoreAs": "bool",
+      "FrontendFields": [
+        {
+          "name": "Password Never Expires",
+          "value": "PasswordNeverExpires",
+          "formatter": "bool",
+          "desc": "This setting shows if your environment has enabled the password never expires setting. This setting is expected to be set to 'No'"
+        }
+      ]
+    },
+    {
+      "name": "OAuthAppConsent",
+      "UseExistingInfo": true,
+      "StoreAs": "bool",
+      "FrontendFields": [
+        {
+          "name": "OAuth App Consent",
+          "value": "OAuthAppConsent",
+          "formatter": "bool",
+          "desc": "This setting shows if your environment has enabled OAuth App Consent. This setting is expected to be set to 'Yes'"
+        }
+      ]
+    },
+    {
+      "name": "UnifiedAuditLog",
+      "UseExistingInfo": true,
+      "StoreAs": "bool",
+      "FrontendFields": [
+        {
+          "name": "Unified Audit Log",
+          "value": "UnifiedAuditLog",
+          "formatter": "bool",
+          "desc": "This setting shows if your environment has enabled the unified audit log. This setting is expected to be set to 'Yes'"
+        }
+      ]
+    },
+    {
+      "name": "MFANudgeState",
+      "UseExistingInfo": true,
+      "StoreAs": "bool",
+      "FrontendFields": [
+        {
+          "name": "MFA Registration Campaign Enabled",
+          "value": "MFANudgeState",
+          "formatter": "bool",
+          "desc": "This setting shows if your environment has enabled the MFA registration campaign, also known as the MFA Nudge. This setting is recommended to be set to 'Yes'"
+        }
+      ]
+    },
+    {
+      "name": "TAPEnabled",
+      "UseExistingInfo": true,
+      "StoreAs": "bool",
+      "FrontendFields": [
+        {
+          "name": "Temporary Access Pass Enabled",
+          "value": "TAPEnabled",
+          "formatter": "bool",
+          "desc": "This setting shows if your environment has enabled the temporary access pass feature."
+        }
+      ]
+    },
+    {
+      "name": "SecureDefaultState",
+      "UseExistingInfo": true,
+      "StoreAs": "bool",
+      "FrontendFields": [
+        {
+          "name": "Secure Defaults State Enabled",
+          "value": "SecureDefaultState",
+          "formatter": "warnBool",
+          "desc": "This setting shows if your environment has enabled the secure defaults state. If you are using Conditional Access this setting may be set to `No`"
+        }
+      ]
+    },
+    {
+      "name": "AnonymousPrivacyReports",
+      "UseExistingInfo": true,
+      "StoreAs": "bool",
+      "FrontendFields": [
+        {
+          "name": "Anonymous Privacy Reports",
+          "value": "AnonymousPrivacyReports",
+          "formatter": "reverseBool",
+          "desc": "This setting shows if your environment has enabled the anonymous privacy reports, these will need to be disabled to be able to view mailboxes and onedrive reports"
+        }
+      ]
+    },
+    {
+      "name": "MessageCopyforSentAsDisabled",
+      "UseExistingInfo": true,
+      "StoreAs": "JSON",
+      "FrontendFields": [
+        {
+          "name": "Message Copy for Sent-As Disabled",
+          "formatter": "table",
+          "value": "MessageCopyforSentAsDisabled",
+          "desc": "These are the mailboxes that have the MessageCopyForSentAsDisabled setting enabled."
+        }
+      ]
+    },
+    {
+      "name": "SharedMailboxeswithenabledusers",
+      "UseExistingInfo": true,
+      "StoreAs": "JSON",
+      "FrontendFields": [
+        {
+          "name": "Shared Mailboxes with enabled users",
+          "formatter": "table",
+          "value": "SharedMailboxeswithenabledusers",
+          "desc": "These are the shared mailboxes that have enabled users."
+        }
+      ]
+    },
+    {
+      "name": "Unusedlicenses",
+      "UseExistingInfo": true,
+      "StoreAs": "JSON",
+      "FrontendFields": [
+        {
+          "name": "Unused licenses",
+          "formatter": "table",
+          "value": "Unusedlicenses",
+          "desc": "These are the licenses that are not assigned to an user, but have been purchased."
+        }
+      ]
+    },
+    {
+      "name": "CurrentSecureScore",
+      "UseExistingInfo": true,
+      "StoreAs": "JSON",
+      "FrontendFields": [
+        {
+          "name": "Current Secure Score",
+          "value": "CurrentSecureScore.currentScore",
+          "desc": "The current Secure Score for this tenant. This is the sum of all the individual controls that have been implemented.",
+          "formatter": "number"
+        },
+        {
+          "name": "Max Secure Score",
+          "value": "CurrentSecureScore.maxScore",
+          "desc": "The maximum Secure Score for this tenant. This is the sum of all the individual controls that can be implemented.",
+          "formatter": "number"
+        }
+      ]
+    }
+  ]
+}
