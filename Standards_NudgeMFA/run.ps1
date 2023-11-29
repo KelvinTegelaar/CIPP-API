@@ -17,8 +17,8 @@ try {
     $body.registrationEnforcement.authenticationMethodsRegistrationCampaign.state = $status
     $body = ConvertTo-Json -Depth 10 -InputObject ($body | Select-Object registrationEnforcement)
     New-GraphPostRequest -tenantid $tenant -Uri "https://graph.microsoft.com/beta/policies/authenticationMethodsPolicy" -Type patch -Body $body -ContentType "application/json"
-    Write-LogMessage -API "Standards" -tenant $tenant -message  "$status Authenticator App Nudge" -sev Info
+    Write-LogMessage -API "Standards" -tenant $tenant -message  "Authenticator App Nudge/Registration campaign $status." -sev Info
 }
 catch {
-    Write-LogMessage -API "Standards" -tenant $tenant -message  "Failed to $status Authenticator App Nudge: $($_.exception.message)" -sev Error
+    Write-LogMessage -API "Standards" -tenant $tenant -message  "Failed to $status Authenticator App Nudge/Registration campaign: $($_.exception.message)" -sev Error
 }
