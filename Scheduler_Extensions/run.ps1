@@ -6,7 +6,7 @@ $Table = Get-CIPPTable -TableName Extensionsconfig
 
 $Configuration = ((Get-AzDataTableEntity @Table).config | ConvertFrom-Json)
 
-Write-Host "Started Schedular"
+Write-Host "Started Scheduler for Extensions"
 
 # NinjaOne Extension
 if ($Configuration.NinjaOne.Enabled -eq $True) {
