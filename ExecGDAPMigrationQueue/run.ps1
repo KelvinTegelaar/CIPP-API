@@ -21,8 +21,7 @@ Add-CIPPAzDataTableEntity @Table -Entity $logRequest -Force | Out-Null
 if ($RoleMappings) {
     $LogRequest['status'] = 'Step 2: Roles selected, creating new GDAP relationship.'
     Add-CIPPAzDataTableEntity @Table -Entity $logRequest -Force | Out-Null
-}
-else {
+} else {
     $LogRequest['status'] = 'Migration failed at Step 2: No role mappings created.'
     Add-CIPPAzDataTableEntity @Table -Entity $logRequest -Force | Out-Null
     exit 1
@@ -50,8 +49,7 @@ try {
         $CheckActive = New-GraphGetRequest -NoAuthCheck $True -uri "https://traf-pcsvcadmin-prod.trafficmanager.net/CustomerServiceAdminApi/Web//v1/delegatedAdminRelationships/$($MigrateRequest.id)" -tenantid $env:TenantID -scope 'https://api.partnercustomeradministration.microsoft.com/.default'
         Start-Sleep -Milliseconds 200
     } until ($CheckActive.status -eq 'Active')
-}
-catch {
+} catch {
     $LogRequest['status'] = "Migration Failed. Could not create relationship: $($_.Exception.Message)"
     Add-CIPPAzDataTableEntity @Table -Entity $logRequest -Force | Out-Null
 }
@@ -77,8 +75,7 @@ if ($CheckActive.status -eq 'Active') {
             Start-Sleep -Milliseconds 400
             $LogRequest['status'] = "Step 3: GDAP Relationship active. Mapping group: $($Role.GroupId)"
             Add-CIPPAzDataTableEntity @Table -Entity $logRequest -Force | Out-Null
-        }
-        catch {
+        } catch {
             $LogRequest['status'] = "Migration Failed. Could not create group mapping for group $($role.GroupId): $($_.Exception.Message)"
             Add-CIPPAzDataTableEntity @Table -Entity $logRequest -Force | Out-Null
             exit 1
