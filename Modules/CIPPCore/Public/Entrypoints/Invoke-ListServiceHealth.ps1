@@ -15,7 +15,6 @@ Function Invoke-ListServiceHealth {
 
 
     $ResultHealthSummary = Get-Tenants | ForEach-Object -Parallel {
-        Import-Module '.\GraphHelper.psm1'
         Import-Module '.\Modules\AzBobbyTables'
         Import-Module '.\Modules\CIPPCore'
         $tenantname = $_.displayName
