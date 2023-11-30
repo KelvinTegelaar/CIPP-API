@@ -25,6 +25,7 @@ function New-HaloPSATicket {
     details_html               = $description
     donotapplytemplateintheapi = $true
     attachments                = @()
+    template_id                = 160
   }
 
   if ($Configuration.TicketType) {
