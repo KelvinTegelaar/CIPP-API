@@ -7,7 +7,7 @@ function New-HaloPSATicket {
   )
   #Get Halo PSA Token based on the config we have.
   $Table = Get-CIPPTable -TableName Extensionsconfig
-  $Configuration = ((Get-AzDataTableEntity @Table).config | ConvertFrom-Json).HaloPSA
+  $Configuration = ((Get-CIPPAzDataTableEntity @Table).config | ConvertFrom-Json).HaloPSA
 
   $token = Get-HaloToken -configuration $Configuration
   $Object = [PSCustomObject]@{
@@ -36,8 +36,12 @@ function New-HaloPSATicket {
 
   Write-Host "Sending ticket to HaloPSA"
   Write-Host $body
-
-  $Ticket = Invoke-RestMethod -Uri "$($Configuration.ResourceURL)/Tickets" -ContentType 'application/json; charset=utf-8' -Method Post -Body $body -Headers @{Authorization = "Bearer $($token.access_token)" }
-
+  try {
+    $Ticket = Invoke-RestMethod -Uri "$($Configuration.ResourceURL)/Tickets" -ContentType 'application/json; charset=utf-8' -Method Post -Body $body -Headers @{Authorization = "Bearer $($token.access_token)" }
+  }
+  catch {
+    Write-Host "Failed to send ticket to HaloPSA"
+    Write-Host $_.Exception.Message
+  }
 
 }

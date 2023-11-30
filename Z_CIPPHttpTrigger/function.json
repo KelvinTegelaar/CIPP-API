@@ -1,0 +1,114 @@
+{
+  "scriptFile": "../Modules/CippEntrypoints/CippEntrypoints.psm1",
+  "entryPoint": "Receive-CippHttpTrigger",
+  "bindings": [
+    {
+      "authLevel": "anonymous",
+      "type": "httpTrigger",
+      "direction": "in",
+      "name": "Request",
+      "methods": ["get", "post"],
+      "route": "{CIPPEndpoint}"
+    },
+    {
+      "type": "http",
+      "direction": "out",
+      "name": "Response"
+    },
+    {
+      "type": "queue",
+      "direction": "out",
+      "name": "QueueItem",
+      "queueName": "CIPPGenericQueue"
+    },
+    {
+      "type": "queue",
+      "direction": "out",
+      "name": "Subscription",
+      "queueName": "AlertSubscriptions"
+    },
+    {
+      "type": "queue",
+      "direction": "out",
+      "name": "LicenseQueue",
+      "queueName": "licqueue"
+    },
+    {
+      "type": "queue",
+      "direction": "out",
+      "name": "mbxrulequeue",
+      "queueName": "mbxrulequeue"
+    },
+    {
+      "type": "queue",
+      "direction": "out",
+      "name": "mfaqueue",
+      "queueName": "mfaqueue"
+    },
+    {
+      "type": "queue",
+      "direction": "out",
+      "name": "mailboxstats",
+      "queueName": "generalAllTenantQueue"
+    },
+    {
+      "type": "queue",
+      "direction": "out",
+      "name": "listusers",
+      "queueName": "generalAllTenantQueue"
+    },
+    {
+      "type": "queue",
+      "direction": "out",
+      "name": "gradientqueue",
+      "queueName": "billqueue"
+    },
+    {
+      "type": "queue",
+      "direction": "out",
+      "name": "NinjaProcess",
+      "queueName": "NinjaOneQueue"
+    },
+    {
+      "type": "queue",
+      "direction": "out",
+      "name": "alertqueue",
+      "queueName": "alertqueue"
+    },
+    {
+      "type": "queue",
+      "direction": "out",
+      "name": "gdapinvitequeue",
+      "queueName": "gdapinvitequeue"
+    },
+    {
+      "type": "queue",
+      "direction": "out",
+      "name": "gdapqueue",
+      "queueName": "gdapqueue"
+    },
+    {
+      "type": "queue",
+      "direction": "out",
+      "name": "incidentqueue",
+      "queueName": "incidentqueue"
+    },
+    {
+      "type": "queue",
+      "direction": "out",
+      "name": "offboardingmailbox",
+      "queueName": "offboardingmailbox"
+    },
+    {
+      "type": "queue",
+      "direction": "out",
+      "name": "QueueWebhook",
+      "queueName": "webhooksqueue"
+    },
+    {
+      "name": "starter",
+      "type": "durableClient",
+      "direction": "in"
+    }
+  ]
+}

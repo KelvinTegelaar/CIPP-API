@@ -11,6 +11,12 @@ function Add-CIPPApplicationPermission {
     }
     $ServicePrincipalList = New-GraphGETRequest -uri "https://graph.microsoft.com/beta/servicePrincipals?`$select=AppId,id,displayName&`$top=999" -skipTokenCache $true -tenantid $Tenantfilter
     $ourSVCPrincipal = $ServicePrincipalList | Where-Object -Property AppId -EQ $ApplicationId
+    if(!$ourSVCPrincipal) { 
+        #Our Service Principal isn't available yet. We do a sleep and reexecute after 3 seconds.
+        Start-Sleep -Seconds 5
+        $ServicePrincipalList = New-GraphGETRequest -uri "https://graph.microsoft.com/beta/servicePrincipals?`$select=AppId,id,displayName&`$top=999" -skipTokenCache $true -tenantid $Tenantfilter
+        $ourSVCPrincipal = $ServicePrincipalList | Where-Object -Property AppId -EQ $ApplicationId
+    }
 
     $Results = [System.Collections.ArrayList]@()
     

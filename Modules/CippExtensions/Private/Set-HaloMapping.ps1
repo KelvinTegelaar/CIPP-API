@@ -13,7 +13,9 @@ function Set-HaloMapping {
             'HaloPSA'     = "$($mapping.value.value)"
             'HaloPSAName' = "$($mapping.value.label)"
         }
-        Add-AzDataTableEntity @CIPPMapping -Entity $AddObject -Force
+
+        Add-CIPPAzDataTableEntity @CIPPMapping -Entity $AddObject -Force
+
         Write-LogMessage -API $APINAME -user $request.headers.'x-ms-client-principal' -message "Added mapping for $($mapping.name)." -Sev 'Info' 
     }
     $Result = [pscustomobject]@{'Results' = "Successfully edited mapping table." }
