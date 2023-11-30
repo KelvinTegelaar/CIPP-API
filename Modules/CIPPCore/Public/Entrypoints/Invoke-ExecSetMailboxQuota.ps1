@@ -30,13 +30,13 @@ Function Invoke-ExecSetMailboxQuota {
                 Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -message "Changed IssueWarningQuota for $username - $($message)" -Sev 'Info' -tenant $TenantFilter
             }
         } catch {
-            Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -message "Could not add OOO for $($username)" -Sev 'Error' -tenant $TenantFilter
-            "Could not add out of office message for $($username). Error: $($_.Exception.Message)"
+            Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -message "Could not adjust mailbox quota for $($username)" -Sev 'Error' -tenant $TenantFilter
+            "Could not adjust mailbox quota for $($username). Error: $($_.Exception.Message)"
         }
 
         $body = [pscustomobject]@{'Results' = @($results) }
     } catch {
-        $body = [pscustomobject]@{'Results' = @("Could not set Out of Office user: $($_.Exception.message)") }
+        $body = [pscustomobject]@{'Results' = @("Could not adjust mailbox quota: $($_.Exception.message)") }
     }
 
     # Associate values to output bindings by calling 'Push-OutputBinding'.
