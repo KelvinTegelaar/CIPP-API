@@ -1,0 +1,12 @@
+﻿{
+  "scriptFile": "../Modules/CippEntryPoints/CippEntryPoints.psm1",
+  "entryPoint": "Receive-CippQueueTrigger",
+  "bindings": [
+    {
+      "name": "QueueItem",
+      "type": "queueTrigger",
+      "direction": "in",
+      "queueName": "CIPPGenericQueue"
+    }
+  ]
+}

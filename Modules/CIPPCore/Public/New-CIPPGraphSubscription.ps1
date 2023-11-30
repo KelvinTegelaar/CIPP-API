@@ -13,13 +13,6 @@ function New-CIPPGraphSubscription {
         $ExecutingUser
     )
     $CIPPID = (New-Guid).GUID
-    $expiredate = (Get-Date).AddDays(1).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ss.fffZ")
-    $params = @{
-        changeType         = $TypeofSubscription
-        notificationUrl    = "$BaseURL/API/PublicWebhooks?EventType=$EventType&CIPPID=$CIPPID"
-        resource           = $Resource
-        expirationDateTime = $expiredate
-    } | ConvertTo-Json
     $WebhookTable = Get-CIPPTable -TableName webhookTable
 
     try {
@@ -41,31 +34,46 @@ function New-CIPPGraphSubscription {
                 Expiration             = "None"
                 WebhookNotificationUrl = [string]$Auditlog.webhook.address
             }
-            $null = Add-AzDataTableEntity @WebhookTable -Entity $WebhookRow
-        }
-        else {
-            $GraphRequest = New-GraphPostRequest -uri "https://graph.microsoft.com/beta/subscriptions" -tenantid $TenantFilter -type POST -body $params -verbose
-            #If creation is succesfull, we store the GUID in the storage table webhookTable to make sure we can check against this later on. 
-            #We store the GUID as rowkey, the event type, the resource, and the expiration date as properties, we also add the Tenant name so we can easily find this later on.
-            #We don't store the return, because Ms decided that a renewal or re-authenticate does not change the url, but does change the id...
-            $WebhookRow = @{
-                PartitionKey           = [string]$TenantFilter
-                RowKey                 = [string]$CIPPID
-                EventType              = [string]$EventType
-                Resource               = [string]$Resource
-                Expiration             = [string]$expiredate
-                Operations             = [string]$operations
-                AllowedLocations       = [string]$AllowedLocations
-                WebhookNotificationUrl = [string]$GraphRequest.notificationUrl
+
+            $null = Add-CIPPAzDataTableEntity @WebhookTable -Entity $WebhookRow
+
+        } else {
+            # First check if there is an exsiting Webhook in place
+            $WebhookFilter = "PartitionKey eq '$($TenantFilter)'"
+            $ExistingWebhooks = Get-CIPPAzDataTableEntity @WebhookTable -Filter $WebhookFilter
+            $MatchedWebhook = $ExistingWebhooks | Where-Object { $_.Resource -eq $Resource }
+            if (($MatchedWebhook | Measure-Object).count -eq 0) {
+
+                $expiredate = (Get-Date).AddDays(1).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ss.fffZ")
+                $params = @{
+                    changeType         = $TypeofSubscription
+                    notificationUrl    = "https://$BaseURL/API/PublicWebhooks?EventType=$EventType&CIPPID=$($CIPPID)&Type=GraphSubscription"
+                    resource           = $Resource
+                    expirationDateTime = $expiredate
+                } | ConvertTo-Json
+            
+
+                $GraphRequest = New-GraphPostRequest -uri "https://graph.microsoft.com/beta/subscriptions" -tenantid $TenantFilter -type POST -body $params -verbose
+                #If creation is succesfull, we store the GUID in the storage table webhookTable to make sure we can check against this later on. 
+                #We store the GUID as rowkey, the event type, the resource, and the expiration date as properties, we also add the Tenant name so we can easily find this later on.
+                #We don't store the return, because Ms decided that a renewal or re-authenticate does not change the url, but does change the id...
+                $WebhookRow = @{
+                    PartitionKey           = [string]$TenantFilter
+                    RowKey                 = [string]$CIPPID
+                    EventType              = [string]$EventType
+                    Resource               = [string]$Resource
+                    Expiration             = [string]$expiredate
+                    SubscriptionID         = [string]$GraphRequest.id
+                    WebhookNotificationUrl = [string]$GraphRequest.notificationUrl
+                }
+                $null = Add-CIPPAzDataTableEntity @WebhookTable -Entity $WebhookRow
+                #todo: add remove webhook function, add check webhook function, add list webhooks function
+                #add refresh webhook function based on table. 
             }
-            $null = Add-AzDataTableEntity @WebhookTable -Entity $WebhookRow
-            #todo: add remove webhook function, add check webhook function, add list webhooks function
-            #add refresh webhook function based on table. 
         }
         Write-LogMessage -user $ExecutingUser -API $APIName -message "Created Webhook subscription for $($TenantFilter)" -Sev "Info" -tenant $TenantFilter
         return "Created Webhook subscription for $($TenantFilter)"
-    }
-    catch {
+    } catch {
         Write-LogMessage -user $ExecutingUser -API $APIName -message "Failed to create Webhook Subscription: $($_.Exception.Message)" -Sev "Error" -tenant $TenantFilter
         Return "Failed to create Webhook Subscription for $($TenantFilter): $($_.Exception.Message)" 
     }

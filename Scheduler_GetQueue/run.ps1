@@ -1,7 +1,7 @@
 param($name)
 
 $Table = Get-CIPPTable -TableName SchedulerConfig
-$Tenants = Get-AzDataTableEntity @Table
+$Tenants = Get-CIPPAzDataTableEntity @Table
 
 $object = foreach ($Tenant in $Tenants) {
     if ($Tenant.tenant -ne 'AllTenants') {

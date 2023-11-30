@@ -11,6 +11,12 @@
       "type": "http",
       "direction": "out",
       "name": "Response"
+    },
+    {
+      "type": "queue",
+      "direction": "out",
+      "name": "QueueWebhook",
+      "queueName": "webhooksqueue"
     }
   ]
 }

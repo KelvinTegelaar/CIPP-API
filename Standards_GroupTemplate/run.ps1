@@ -1,9 +1,9 @@
 param($tenant)
 
 $ConfigTable = Get-CippTable -tablename 'standards'
-$Setting = ((Get-AzDataTableEntity @ConfigTable -Filter "PartitionKey eq 'standards' and RowKey eq '$tenant'").JSON | ConvertFrom-Json).standards.GroupTemplate
+$Setting = ((Get-CIPPAzDataTableEntity @ConfigTable -Filter "PartitionKey eq 'standards' and RowKey eq '$tenant'").JSON | ConvertFrom-Json).standards.GroupTemplate
 if (!$Setting) {
-  $Setting = ((Get-AzDataTableEntity @ConfigTable -Filter "PartitionKey eq 'standards' and RowKey eq 'AllTenants'").JSON | ConvertFrom-Json).standards.GroupTemplate
+  $Setting = ((Get-CIPPAzDataTableEntity @ConfigTable -Filter "PartitionKey eq 'standards' and RowKey eq 'AllTenants'").JSON | ConvertFrom-Json).standards.GroupTemplate
 }
 
 
@@ -12,7 +12,7 @@ foreach ($Template in $Setting.TemplateList) {
   try {
     $Table = Get-CippTable -tablename 'templates'
     $Filter = "PartitionKey eq 'GroupTemplate' and RowKey eq '$($Template.value)'" 
-    $groupobj = (Get-AzDataTableEntity @Table -Filter $Filter).JSON | ConvertFrom-Json
+    $groupobj = (Get-CIPPAzDataTableEntity @Table -Filter $Filter).JSON | ConvertFrom-Json
     $email = if ($groupobj.domain) { "$($groupobj.username)@$($groupobj.domain)" } else { "$($groupobj.username)@$($tenant)" }
     $CheckExististing = New-GraphGETRequest -uri "https://graph.microsoft.com/beta/groups" -tenantid $tenant | Where-Object -Property displayName -EQ $groupobj.displayname
     if (!$CheckExististing) {
