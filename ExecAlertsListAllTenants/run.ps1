@@ -6,7 +6,7 @@ Write-Host "PowerShell queue trigger function processed work item: $QueueItem"
 
 Get-Tenants | ForEach-Object -Parallel { 
     $domainName = $_.defaultDomainName
-    Import-Module '.\GraphHelper.psm1'
+    Import-Module CippCore
     $Table = Get-CIPPTable -TableName 'cachealertsandincidents'
 
     try {
@@ -24,8 +24,7 @@ Get-Tenants | ForEach-Object -Parallel {
 
         }
 
-    }
-    catch {
+    } catch {
         $GUID = (New-Guid).Guid
         $AlertText = ConvertTo-Json -InputObject @{
             Title             = "Could not connect to tenant to retrieve data: $($_.Exception.Message)" 
@@ -36,8 +35,8 @@ Get-Tenants | ForEach-Object -Parallel {
             Status            = ''
             userStates        = @('None')
             vendorInformation = @{
-                vendor   = "CIPP"
-                provider = "CIPP"
+                vendor   = 'CIPP'
+                provider = 'CIPP'
             }
         }
         $GraphRequest = @{
