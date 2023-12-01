@@ -26,7 +26,10 @@ function New-HaloPSATicket {
     donotapplytemplateintheapi = $true
     attachments                = @()
     template_id                = 160
-    assets                     = @{id = 56}
+    assets                     = @([pscustomobject]@{
+      id = 56
+      }
+    )
   }
 
   if ($Configuration.TicketType) {
