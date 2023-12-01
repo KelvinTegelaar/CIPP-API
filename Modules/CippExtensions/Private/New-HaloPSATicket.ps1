@@ -26,11 +26,7 @@ function New-HaloPSATicket {
     donotapplytemplateintheapi = $true
     attachments                = @()
     template_id                = 160
-    assets                     = @([pscustomobject]@{
-      id = 56
-      }
-    )
-  }
+    }
 
   if ($Configuration.TicketType) {
     $object | Add-Member -MemberType NoteProperty -Name "tickettype_id" -Value $Configuration.TicketType
