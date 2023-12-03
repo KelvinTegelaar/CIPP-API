@@ -2,12 +2,12 @@ function Set-CIPPAuthenticationPolicy {
     [CmdletBinding()]
     param(
         $TenantFilter,
-        $AuthenticationMethodId,
+        [Parameter(Mandatory = $true)]$AuthenticationMethodId,
         $EnableGroups, # Not sure if i need this, but it's for if the all_users is not the target for enablement
         $OptionalInput, # Used for stuff like the 
-        $APIName = 'Set Authentication Policy', # Should this be 'Standards'
+        $APIName = 'Set Authentication Policy', # Should this be 'Standards'?
         $ExecutingUser,
-        [ValidateSet('enabled', 'disabled')]$State # enabled or disabled
+        [Parameter(Mandatory = $true)][ValidateSet('enabled', 'disabled')]$State # enabled or disabled
     )
         
     switch ($AuthenticationMethodId) {
@@ -125,8 +125,9 @@ function Set-CIPPAuthenticationPolicy {
                         state                    = $State
                     }
                 
+
                     # Convert to JSON and send the request
-                    $body = (ConvertTo-Json -Compress -Depth 10 -InputObject $CurrentInfo)
+                    $body = ConvertTo-Json -Compress -Depth 10 -InputObject $CurrentInfo
                 (New-GraphPostRequest -tenantid $TenantFilter -Uri 'https://graph.microsoft.com/beta/policies/authenticationmethodspolicy/authenticationMethodConfigurations/TemporaryAccessPass' -Type patch -asApp $true -Body $body -ContentType 'application/json') 
                 
                     Write-LogMessage -API $APIName -tenant $TenantFilter -message "Enabled $AuthenticationMethodId Support" -sev Info
