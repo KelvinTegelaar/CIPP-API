@@ -8,7 +8,8 @@ function Set-CIPPCopyGroupMembers(
     $MemberIDs = "https://graph.microsoft.com/v1.0/directoryObjects/" + (New-GraphGetRequest -uri "https://graph.microsoft.com/beta/users/$UserId" -tenantid $TenantFilter).id 
     $AddMemberBody = "{ `"members@odata.bind`": $(ConvertTo-Json @($MemberIDs)) }"
     
-    $Results = New-Object System.Collections.ArrayList
+    $Success = New-Object System.Collections.ArrayList
+    $Errors = New-Object System.Collections.ArrayList
     (New-GraphGETRequest -uri "https://graph.microsoft.com/beta/users/$CopyFromId/memberOf" -tenantid $TenantFilter) | Where-Object { $_.GroupTypes -notin "DynamicMemberShip" } | ForEach-Object {
         try {
             $MailGroup = $_
@@ -20,13 +21,18 @@ function Set-CIPPCopyGroupMembers(
                 $GroupResult = New-GraphPostRequest -uri "https://graph.microsoft.com/beta/groups/$($_.id)" -tenantid $TenantFilter -type patch -body $AddMemberBody -Verbose
             }
             Write-LogMessage -user $ExecutingUser -API $APIName -message "Added $UserId to group $($_.displayName)" -Sev "Info"  -tenant $TenantFilter
-            $Results.Add("Added group: $($MailGroup.displayName)") | Out-Null
+            $Success.Add("Added group: $($MailGroup.displayName)") | Out-Null
         }
         catch {
             $NormalizedError = Get-NormalizedError -message  $($_.Exception.Message)
-            $Results.Add("We've failed to add the group $($MailGroup.displayName): $NormalizedError") | Out-Null
+            $Errors.Add("We've failed to add the group $($MailGroup.displayName): $NormalizedError") | Out-Null
             Write-LogMessage -user $ExecutingUser -API $APIName -tenant $TenantFilter -message "Group adding failed for group $($_.displayName):  $($_.Exception.Message)" -Sev "Error"
         }
+    }
+
+    $Results = [PSCustomObject]@{
+        "Success" = $Success
+        "Error" = $Errors
     }
 
     return $Results
