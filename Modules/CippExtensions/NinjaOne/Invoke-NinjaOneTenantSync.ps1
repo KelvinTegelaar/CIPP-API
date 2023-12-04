@@ -322,7 +322,7 @@ function Invoke-NinjaOneTenantSync {
  
         [System.Collections.Generic.List[PSCustomObject]]$SecureScoreProfiles = Get-GraphBulkResultByID -value -Results $TenantResults -ID 'SecureScoreControlProfiles'
 
-        $CurrentSecureScore = ($SecureScore | Sort-Object createDateTiime -Descending)[0]
+        $CurrentSecureScore = ($SecureScore | Sort-Object createDateTime -Descending | Select-Object -First 1)
         $MaxSecureScoreRank = ($SecureScoreProfiles.rank | Measure-Object -Maximum).maximum
 
         $MaxSecureScore = $CurrentSecureScore.maxScore
