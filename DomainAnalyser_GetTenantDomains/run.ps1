@@ -5,7 +5,7 @@ $ExcludedTenants = Get-Tenants -SkipList
 $DomainTable = Get-CippTable -tablename 'Domains'
 
 $TenantDomains = $Tenants | ForEach-Object -Parallel {
-    Import-Module '.\GraphHelper.psm1'
+    Import-Module CippCore
     $Tenant = $_
     # Get Domains to Lookup
     try {
