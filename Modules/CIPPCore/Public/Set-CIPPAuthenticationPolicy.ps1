@@ -3,13 +3,15 @@ function Set-CIPPAuthenticationPolicy {
     param(
         $TenantFilter,
         [Parameter(Mandatory = $true)]$AuthenticationMethodId,
-        $EnableGroups, # Not sure if i need this, but it's for if the all_users is not the target for enablement
-        $OptionalInput, # Used for stuff like the 
+        [Parameter(Mandatory = $true)][bool]$State, # true = enabled or false = disabled
+        [bool]$MicrosoftAuthenticatorSoftwareOathEnabled, 
         $APIName = 'Set Authentication Policy', # Should this be 'Standards'?
-        $ExecutingUser,
-        [Parameter(Mandatory = $true)][ValidateSet('enabled', 'disabled')]$State # enabled or disabled
+        $ExecutingUser
     )
-        
+
+    # Convert bool input to usable string
+    $State = if ($State) { 'enabled' } else { 'disabled' }
+
     switch ($AuthenticationMethodId) {
 
         # FIDO2
@@ -21,7 +23,8 @@ function Set-CIPPAuthenticationPolicy {
                     $body = '{"@odata.type":"#microsoft.graph.fido2AuthenticationMethodConfiguration","id":"Fido2","includeTargets":[{"id":"all_users","isRegistrationRequired":false,"targetType":"group","displayName":"All users"}],"excludeTargets":[],"isAttestationEnforced":true,"isSelfServiceRegistrationAllowed":true,"keyRestrictions":{"aaGuids":[],"enforcementType":"block","isEnforced":false},"state":"enabled"}'
                     New-GraphPostRequest -tenantid $TenantFilter -Uri 'https://graph.microsoft.com/beta/policies/authenticationmethodspolicy/authenticationMethodConfigurations/Fido2' -Type patch -Body $body -ContentType 'application/json'
                     Write-LogMessage -API $APIName -tenant $TenantFilter -message "Enabled $AuthenticationMethodId Support" -sev Info
-                } catch {
+                }
+                catch {
                     Write-LogMessage -API $APIName -tenant $TenantFilter -message "Failed to $State $AuthenticationMethodId Support: $($_.exception.message)" -sev Error
                 }
             }
@@ -31,14 +34,16 @@ function Set-CIPPAuthenticationPolicy {
                     # Get current state and disable
                     $GraphRequest = New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/policies/authenticationMethodsPolicy/authenticationMethodConfigurations/fido2' -tenantid $TenantFilter
                     $GraphRequest.state = $State
-                    $body = ($GraphRequest | ConvertTo-Json -Depth 10)
+                    $body = ConvertTo-Json -Compress -Depth 10 -InputObject $GraphRequest
                     $GraphRequest = New-GraphPostRequest -tenantid $TenantFilter -Uri 'https://graph.microsoft.com/beta/policies/authenticationMethodsPolicy/authenticationMethodConfigurations/fido2' -Type patch -Body $body -ContentType 'application/json'
                     Write-LogMessage -API $APIName -tenant $TenantFilter -message "Enabled $AuthenticationMethodId Support" -sev Info
     
-                } catch {
+                }
+                catch {
                     Write-LogMessage -API $APIName -tenant $TenantFilter -message "Failed to $State $AuthenticationMethodId Support: $($_.exception.message)" -sev Error
                 }
-            } else {
+            }
+            else {
                 # Catch invalid input
                 Write-LogMessage -API $APIName -tenant $TenantFilter -message "Failed to $State $AuthenticationMethodId Support: $($_.exception.message)" -sev Error
             }
@@ -50,17 +55,37 @@ function Set-CIPPAuthenticationPolicy {
 
             if ($State -eq 'enabled') {
                 try {
+                    $CurrentInfo = New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/policies/authenticationMethodsPolicy/authenticationMethodConfigurations/microsoftAuthenticator' -tenantid $TenantFilter
+                    $CurrentInfo.featureSettings.PSObject.Properties.Remove('numberMatchingRequiredState')
+                    $CurrentInfo.featureSettings.displayAppInformationRequiredState.state = $State
+                    $CurrentInfo.featureSettings.displayLocationInformationRequiredState.state = $State
+                    # Enable MS authenticator OTP if called for
+                    if ($null -ne $MicrosoftAuthenticatorSoftwareOathEnabled ) { $CurrentInfo.isSoftwareOathEnabled = $MicrosoftAuthenticatorSoftwareOathEnabled }
+                    $body = ConvertTo-Json -Compress -Depth 10 -InputObject $CurrentInfo
+                    (New-GraphPostRequest -tenantid $TenantFilter -Uri 'https://graph.microsoft.com/beta/policies/authenticationMethodsPolicy/authenticationMethodConfigurations/microsoftAuthenticator' -Type patch -Body $body -ContentType 'application/json')
+                
                     Write-LogMessage -API $APIName -tenant $TenantFilter -message "Enabled $AuthenticationMethodId Support" -sev Info
-                } catch {
+                }
+                catch {
                     Write-LogMessage -API $APIName -tenant $TenantFilter -message "Failed to $State $AuthenticationMethodId Support: $($_.exception.message)" -sev Error
                 }
-            } elseif ($State -eq 'disabled') {
+            }
+            elseif ($State -eq 'disabled') {
                 try {
-                    Write-LogMessage -API $APIName -tenant $TenantFilter -message "Enabled $AuthenticationMethodId Support" -sev Info
-                } catch {
+                    # Get current state and disable
+                    $CurrentInfo = New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/policies/authenticationMethodsPolicy/authenticationMethodConfigurations/microsoftAuthenticator' -tenantid $TenantFilter
+                    $CurrentInfo.featureSettings.PSObject.Properties.Remove('numberMatchingRequiredState')
+                    $CurrentInfo.state = $State
+                    $body = ConvertTo-Json -Compress -Depth 10 -InputObject $CurrentInfo
+                    (New-GraphPostRequest -tenantid $TenantFilter -Uri 'https://graph.microsoft.com/beta/policies/authenticationMethodsPolicy/authenticationMethodConfigurations/microsoftAuthenticator' -Type patch -Body $body -ContentType 'application/json')
+                
+                    Write-LogMessage -API $APIName -tenant $TenantFilter -message "Disabled $AuthenticationMethodId Support" -sev Info
+                }
+                catch {
                     Write-LogMessage -API $APIName -tenant $TenantFilter -message "Failed to $State $AuthenticationMethodId Support: $($_.exception.message)" -sev Error
                 }
-            } else {
+            }
+            else {
                 # Catch invalid input
                 Write-LogMessage -API $APIName -tenant $TenantFilter -message "Failed to $State $AuthenticationMethodId Support: $($_.exception.message)" -sev Error
             }
@@ -72,16 +97,20 @@ function Set-CIPPAuthenticationPolicy {
             if ($State -eq 'enabled') {
                 try {
                     Write-LogMessage -API $APIName -tenant $TenantFilter -message "Enabled $AuthenticationMethodId Support" -sev Info
-                } catch {
+                }
+                catch {
                     Write-LogMessage -API $APIName -tenant $TenantFilter -message "Failed to $State $AuthenticationMethodId Support: $($_.exception.message)" -sev Error
                 }
-            } elseif ($State -eq 'disabled') {
+            }
+            elseif ($State -eq 'disabled') {
                 try {
-                    Write-LogMessage -API $APIName -tenant $TenantFilter -message "Enabled $AuthenticationMethodId Support" -sev Info
-                } catch {
+                    Write-LogMessage -API $APIName -tenant $TenantFilter -message "Diabled $AuthenticationMethodId Support" -sev Info
+                }
+                catch {
                     Write-LogMessage -API $APIName -tenant $TenantFilter -message "Failed to $State $AuthenticationMethodId Support: $($_.exception.message)" -sev Error
                 }
-            } else {
+            }
+            else {
                 # Catch invalid input
                 Write-LogMessage -API $APIName -tenant $TenantFilter -message "Failed to $State $AuthenticationMethodId Support: $($_.exception.message)" -sev Error
             }
@@ -128,19 +157,29 @@ function Set-CIPPAuthenticationPolicy {
 
                     # Convert to JSON and send the request
                     $body = ConvertTo-Json -Compress -Depth 10 -InputObject $CurrentInfo
-                (New-GraphPostRequest -tenantid $TenantFilter -Uri 'https://graph.microsoft.com/beta/policies/authenticationmethodspolicy/authenticationMethodConfigurations/TemporaryAccessPass' -Type patch -asApp $true -Body $body -ContentType 'application/json') 
+                    (New-GraphPostRequest -tenantid $TenantFilter -Uri 'https://graph.microsoft.com/beta/policies/authenticationmethodspolicy/authenticationMethodConfigurations/TemporaryAccessPass' -Type patch -asApp $true -Body $body -ContentType 'application/json')
                 
                     Write-LogMessage -API $APIName -tenant $TenantFilter -message "Enabled $AuthenticationMethodId Support" -sev Info
-                } catch {
+                }
+                catch {
                     Write-LogMessage -API $APIName -tenant $TenantFilter -message "Failed to $State $AuthenticationMethodId Support: $($_.exception.message)" -sev Error
                 }
-            } elseif ($State -eq 'disabled') {
+            }
+            elseif ($State -eq 'disabled') {
                 try {
-                    Write-LogMessage -API $APIName -tenant $TenantFilter -message "Enabled $AuthenticationMethodId Support" -sev Info
-                } catch {
+                    # Get current state and disable
+                    $CurrentInfo = New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/policies/authenticationMethodsPolicy/authenticationMethodConfigurations/TemporaryAccessPass' -tenantid $TenantFilter
+                    $CurrentInfo.state = $State
+                    $body = ConvertTo-Json -Compress -Depth 10 -InputObject $CurrentInfo
+                    (New-GraphPostRequest -tenantid $TenantFilter -Uri 'https://graph.microsoft.com/beta/policies/authenticationMethodsPolicy/authenticationMethodConfigurations/TemporaryAccessPass' -Type patch -Body $body -ContentType 'application/json')
+
+                    Write-LogMessage -API $APIName -tenant $TenantFilter -message "Diabled $AuthenticationMethodId Support" -sev Info
+                }
+                catch {
                     Write-LogMessage -API $APIName -tenant $TenantFilter -message "Failed to $State $AuthenticationMethodId Support: $($_.exception.message)" -sev Error
                 }
-            } else {
+            }
+            else {
                 # Catch invalid input
                 Write-LogMessage -API $APIName -tenant $TenantFilter -message "Failed to $State $AuthenticationMethodId Support: $($_.exception.message)" -sev Error
             } 
@@ -152,16 +191,20 @@ function Set-CIPPAuthenticationPolicy {
             if ($State -eq 'enabled') {
                 try {
                     Write-LogMessage -API $APIName -tenant $TenantFilter -message "Enabled $AuthenticationMethodId Support" -sev Info
-                } catch {
+                }
+                catch {
                     Write-LogMessage -API $APIName -tenant $TenantFilter -message "Failed to $State $AuthenticationMethodId Support: $($_.exception.message)" -sev Error
                 }
-            } elseif ($State -eq 'disabled') {
+            }
+            elseif ($State -eq 'disabled') {
                 try {
-                    Write-LogMessage -API $APIName -tenant $TenantFilter -message "Enabled $AuthenticationMethodId Support" -sev Info
-                } catch {
+                    Write-LogMessage -API $APIName -tenant $TenantFilter -message "Diabled $AuthenticationMethodId Support" -sev Info
+                }
+                catch {
                     Write-LogMessage -API $APIName -tenant $TenantFilter -message "Failed to $State $AuthenticationMethodId Support: $($_.exception.message)" -sev Error
                 }
-            } else {
+            }
+            else {
                 # Catch invalid input
                 Write-LogMessage -API $APIName -tenant $TenantFilter -message "Failed to $State $AuthenticationMethodId Support: $($_.exception.message)" -sev Error
             }
@@ -171,17 +214,30 @@ function Set-CIPPAuthenticationPolicy {
 
             if ($State -eq 'enabled') {
                 try {
+                    $CurrentInfo = new-graphgetRequest -uri 'https://graph.microsoft.com/beta/policies/authenticationMethodsPolicy/authenticationMethodConfigurations/softwareOath' -tenantid $TenantFilter
+                    $CurrentInfo.state = $State
+                    $body = ConvertTo-Json -Compress -Depth 10 -InputObject $CurrentInfo
+                    (New-GraphPostRequest -tenantid $TenantFilter -Uri 'https://graph.microsoft.com/beta/policies/authenticationMethodsPolicy/authenticationMethodConfigurations/softwareOath' -Type patch -Body $body -ContentType 'application/json')
+
                     Write-LogMessage -API $APIName -tenant $TenantFilter -message "Enabled $AuthenticationMethodId Support" -sev Info
-                } catch {
+                }
+                catch {
                     Write-LogMessage -API $APIName -tenant $TenantFilter -message "Failed to $State $AuthenticationMethodId Support: $($_.exception.message)" -sev Error
                 }
-            } elseif ($State -eq 'disabled') {
+            }
+            elseif ($State -eq 'disabled') {
                 try {
-                    Write-LogMessage -API $APIName -tenant $TenantFilter -message "Enabled $AuthenticationMethodId Support" -sev Info
-                } catch {
+                    $CurrentInfo = new-graphgetRequest -uri 'https://graph.microsoft.com/beta/policies/authenticationMethodsPolicy/authenticationMethodConfigurations/softwareOath' -tenantid $TenantFilter
+                    $CurrentInfo.state = $State
+                    $body = ConvertTo-Json -Compress -Depth 10 -InputObject $CurrentInfo
+                    (New-GraphPostRequest -tenantid $TenantFilter -Uri 'https://graph.microsoft.com/beta/policies/authenticationMethodsPolicy/authenticationMethodConfigurations/softwareOath' -Type patch -Body $body -ContentType 'application/json')
+                    Write-LogMessage -API $APIName -tenant $TenantFilter -message "Diabled $AuthenticationMethodId Support" -sev Info
+                }
+                catch {
                     Write-LogMessage -API $APIName -tenant $TenantFilter -message "Failed to $State $AuthenticationMethodId Support: $($_.exception.message)" -sev Error
                 }
-            } else {
+            }
+            else {
                 # Catch invalid input
                 Write-LogMessage -API $APIName -tenant $TenantFilter -message "Failed to $State $AuthenticationMethodId Support: $($_.exception.message)" -sev Error
             }
@@ -192,16 +248,20 @@ function Set-CIPPAuthenticationPolicy {
             if ($State -eq 'enabled') {
                 try {
                     Write-LogMessage -API $APIName -tenant $TenantFilter -message "Enabled $AuthenticationMethodId Support" -sev Info
-                } catch {
+                }
+                catch {
                     Write-LogMessage -API $APIName -tenant $TenantFilter -message "Failed to $State $AuthenticationMethodId Support: $($_.exception.message)" -sev Error
                 }
-            } elseif ($State -eq 'disabled') {
+            }
+            elseif ($State -eq 'disabled') {
                 try {
-                    Write-LogMessage -API $APIName -tenant $TenantFilter -message "Enabled $AuthenticationMethodId Support" -sev Info
-                } catch {
+                    Write-LogMessage -API $APIName -tenant $TenantFilter -message "Diabled $AuthenticationMethodId Support" -sev Info
+                }
+                catch {
                     Write-LogMessage -API $APIName -tenant $TenantFilter -message "Failed to $State $AuthenticationMethodId Support: $($_.exception.message)" -sev Error
                 }
-            } else {
+            }
+            else {
                 # Catch invalid input
                 Write-LogMessage -API $APIName -tenant $TenantFilter -message "Failed to $State $AuthenticationMethodId Support: $($_.exception.message)" -sev Error
             }
@@ -212,16 +272,20 @@ function Set-CIPPAuthenticationPolicy {
             if ($State -eq 'enabled') {
                 try {
                     Write-LogMessage -API $APIName -tenant $TenantFilter -message "Enabled $AuthenticationMethodId Support" -sev Info
-                } catch {
+                }
+                catch {
                     Write-LogMessage -API $APIName -tenant $TenantFilter -message "Failed to $State $AuthenticationMethodId Support: $($_.exception.message)" -sev Error
                 }
-            } elseif ($State -eq 'disabled') {
+            }
+            elseif ($State -eq 'disabled') {
                 try {
-                    Write-LogMessage -API $APIName -tenant $TenantFilter -message "Enabled $AuthenticationMethodId Support" -sev Info
-                } catch {
+                    Write-LogMessage -API $APIName -tenant $TenantFilter -message "Diabled $AuthenticationMethodId Support" -sev Info
+                }
+                catch {
                     Write-LogMessage -API $APIName -tenant $TenantFilter -message "Failed to $State $AuthenticationMethodId Support: $($_.exception.message)" -sev Error
                 }
-            } else {
+            }
+            else {
                 # Catch invalid input
                 Write-LogMessage -API $APIName -tenant $TenantFilter -message "Failed to $State $AuthenticationMethodId Support: $($_.exception.message)" -sev Error
             }
@@ -232,16 +296,20 @@ function Set-CIPPAuthenticationPolicy {
             if ($State -eq 'enabled') {
                 try {
                     Write-LogMessage -API $APIName -tenant $TenantFilter -message "Enabled $AuthenticationMethodId Support" -sev Info
-                } catch {
+                }
+                catch {
                     Write-LogMessage -API $APIName -tenant $TenantFilter -message "Failed to $State $AuthenticationMethodId Support: $($_.exception.message)" -sev Error
                 }
-            } elseif ($State -eq 'disabled') {
+            }
+            elseif ($State -eq 'disabled') {
                 try {
-                    Write-LogMessage -API $APIName -tenant $TenantFilter -message "Enabled $AuthenticationMethodId Support" -sev Info
-                } catch {
+                    Write-LogMessage -API $APIName -tenant $TenantFilter -message "Diabled $AuthenticationMethodId Support" -sev Info
+                }
+                catch {
                     Write-LogMessage -API $APIName -tenant $TenantFilter -message "Failed to $State $AuthenticationMethodId Support: $($_.exception.message)" -sev Error
                 }
-            } else {
+            }
+            else {
                 # Catch invalid input
                 Write-LogMessage -API $APIName -tenant $TenantFilter -message "Failed to $State $AuthenticationMethodId Support: $($_.exception.message)" -sev Error
             }
