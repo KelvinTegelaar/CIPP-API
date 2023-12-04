@@ -1327,7 +1327,7 @@ function Invoke-NinjaOneTenantSync {
                         # Create New Users
                         if (($NinjaUserCreation | Measure-Object).count -ge 100) {
                             Write-Host "Creating NinjaOne Users"
-                            $CreatedUsers = (Invoke-WebRequest -uri "https://$($Configuration.Instance)/api/v2/organization/documents" -Method POST -Headers @{Authorization = "Bearer $($token.access_token)" } -ContentType 'application/json' -Body ("[$($NinjaUserCreation.body -join ',')]") -EA Stop).content | ConvertFrom-Json -Depth 100
+                            [System.Collections.Generic.List[PSCustomObject]]$CreatedUsers = (Invoke-WebRequest -uri "https://$($Configuration.Instance)/api/v2/organization/documents" -Method POST -Headers @{Authorization = "Bearer $($token.access_token)" } -ContentType 'application/json' -Body ("[$($NinjaUserCreation.body -join ',')]") -EA Stop).content | ConvertFrom-Json -Depth 100
                             Remove-AzDataTableEntity @UsersUpdateTable -Entity $NinjaUserCreation
                             [System.Collections.Generic.List[PSCustomObject]]$NinjaUserCreation = @()
                         }
@@ -1339,7 +1339,7 @@ function Invoke-NinjaOneTenantSync {
                         # Update Users
                         if (($NinjaUserUpdates | Measure-Object).count -ge 100) {
                             Write-Host "Updating NinjaOne Users"
-                            $UpdatedUsers = (Invoke-WebRequest -uri "https://$($Configuration.Instance)/api/v2/organization/documents" -Method PATCH -Headers @{Authorization = "Bearer $($token.access_token)" } -ContentType 'application/json' -Body ("[$($NinjaUserUpdates.body -join ',')]") -EA Stop).content | ConvertFrom-Json -Depth 100
+                            [System.Collections.Generic.List[PSCustomObject]]$UpdatedUsers = (Invoke-WebRequest -uri "https://$($Configuration.Instance)/api/v2/organization/documents" -Method PATCH -Headers @{Authorization = "Bearer $($token.access_token)" } -ContentType 'application/json' -Body ("[$($NinjaUserUpdates.body -join ',')]") -EA Stop).content | ConvertFrom-Json -Depth 100
                             Remove-AzDataTableEntity @UsersUpdateTable -Entity $NinjaUserUpdates
                             [System.Collections.Generic.List[PSCustomObject]]$NinjaUserUpdates = @()
                         }
@@ -1348,7 +1348,7 @@ function Invoke-NinjaOneTenantSync {
                     }
 
 
-                    $UserDocResults = $UpdatedUsers + $CreatedUsers
+                    [System.Collections.Generic.List[PSCustomObject]]$UserDocResults = $UpdatedUsers + $CreatedUsers
 
                     if (($UserDocResults | Where-Object { $Null -ne $_ -and $_ -ne '' } | Measure-Object).count -ge 1) {
                         $UserDocResults | Where-Object { $Null -ne $_ -and $_ -ne '' } | ForEach-Object {
@@ -1402,7 +1402,7 @@ function Invoke-NinjaOneTenantSync {
                 # Create New Users
                 if (($NinjaUserCreation | Measure-Object).count -ge 1) {
                     Write-Host "Creating NinjaOne Users"
-                    $CreatedUsers = (Invoke-WebRequest -uri "https://$($Configuration.Instance)/api/v2/organization/documents" -Method POST -Headers @{Authorization = "Bearer $($token.access_token)" } -ContentType 'application/json' -Body ("[$($NinjaUserCreation.body -join ',')]") -EA Stop).content | ConvertFrom-Json -Depth 100
+                    [System.Collections.Generic.List[PSCustomObject]]$CreatedUsers = (Invoke-WebRequest -uri "https://$($Configuration.Instance)/api/v2/organization/documents" -Method POST -Headers @{Authorization = "Bearer $($token.access_token)" } -ContentType 'application/json' -Body ("[$($NinjaUserCreation.body -join ',')]") -EA Stop).content | ConvertFrom-Json -Depth 100
                     Remove-AzDataTableEntity @UsersUpdateTable -Entity $NinjaUserCreation
                     
                 }
@@ -1414,7 +1414,7 @@ function Invoke-NinjaOneTenantSync {
                 # Update Users
                 if (($NinjaUserUpdates | Measure-Object).count -ge 1) {
                     Write-Host "Updating NinjaOne Users"
-                    $UpdatedUsers = (Invoke-WebRequest -uri "https://$($Configuration.Instance)/api/v2/organization/documents" -Method PATCH -Headers @{Authorization = "Bearer $($token.access_token)" } -ContentType 'application/json' -Body ("[$($NinjaUserUpdates.body -join ',')]") -EA Stop).content | ConvertFrom-Json -Depth 100
+                    [System.Collections.Generic.List[PSCustomObject]]$UpdatedUsers = (Invoke-WebRequest -uri "https://$($Configuration.Instance)/api/v2/organization/documents" -Method PATCH -Headers @{Authorization = "Bearer $($token.access_token)" } -ContentType 'application/json' -Body ("[$($NinjaUserUpdates.body -join ',')]") -EA Stop).content | ConvertFrom-Json -Depth 100
                     Remove-AzDataTableEntity @UsersUpdateTable -Entity $NinjaUserUpdates
                 }
             } Catch {
@@ -1425,7 +1425,7 @@ function Invoke-NinjaOneTenantSync {
             # Parse out the NinjaOne ID to MS ID
             
         
-            $UserDocResults = $UpdatedUsers + $CreatedUsers
+            [System.Collections.Generic.List[PSCustomObject]]$UserDocResults = $UpdatedUsers + $CreatedUsers
 
             if (($UserDocResults | Where-Object { $Null -ne $_ -and $_ -ne '' } | Measure-Object).count -ge 1) {
                 $UserDocResults | Where-Object { $Null -ne $_ -and $_ -ne '' } | ForEach-Object {
@@ -1598,7 +1598,7 @@ function Invoke-NinjaOneTenantSync {
                 # Create New Subscriptions
                 if (($NinjaLicenseCreation | Measure-Object).count -ge 1) {
                     Write-Host "Creating NinjaOne Licenses"
-                    $CreatedLicenses = (Invoke-WebRequest -uri "https://$($Configuration.Instance)/api/v2/organization/documents" -Method POST -Headers @{Authorization = "Bearer $($token.access_token)" } -ContentType 'application/json' -Body ($NinjaLicenseCreation | ConvertTo-Json -Depth 100 -AsArray) -EA Stop).content | ConvertFrom-Json -Depth 100
+                    [System.Collections.Generic.List[PSCustomObject]]$CreatedLicenses = (Invoke-WebRequest -uri "https://$($Configuration.Instance)/api/v2/organization/documents" -Method POST -Headers @{Authorization = "Bearer $($token.access_token)" } -ContentType 'application/json' -Body ($NinjaLicenseCreation | ConvertTo-Json -Depth 100 -AsArray) -EA Stop).content | ConvertFrom-Json -Depth 100
                 }
             } Catch {
                 Write-Host "Bulk Creation Error, but may have been successful as only 1 record with an issue could have been the cause: $_"
@@ -1608,14 +1608,14 @@ function Invoke-NinjaOneTenantSync {
                 # Update Subscriptions
                 if (($NinjaLicenseUpdates | Measure-Object).count -ge 1) {
                     Write-Host "Updating NinjaOne Licenses"
-                    $UpdatedLicenses = (Invoke-WebRequest -uri "https://$($Configuration.Instance)/api/v2/organization/documents" -Method PATCH -Headers @{Authorization = "Bearer $($token.access_token)" } -ContentType 'application/json' -Body ($NinjaLicenseUpdates | ConvertTo-Json -Depth 100 -AsArray) -EA Stop).content | ConvertFrom-Json -Depth 100
+                    [System.Collections.Generic.List[PSCustomObject]]$UpdatedLicenses = (Invoke-WebRequest -uri "https://$($Configuration.Instance)/api/v2/organization/documents" -Method PATCH -Headers @{Authorization = "Bearer $($token.access_token)" } -ContentType 'application/json' -Body ($NinjaLicenseUpdates | ConvertTo-Json -Depth 100 -AsArray) -EA Stop).content | ConvertFrom-Json -Depth 100
                     Write-Host "Completed Update"
                 }
             } Catch {
                 Write-Host "Bulk Update Errored, but may have been successful as only 1 record with an issue could have been the cause: $_"
             }
 
-            $LicenseDocs = $CreatedLicenses + $UpdatedLicenses
+            [System.Collections.Generic.List[PSCustomObject]]$LicenseDocs = $CreatedLicenses + $UpdatedLicenses
 
             if ($Configuration.LicenseDocumentsEnabled -eq $True -and $Configuration.UserDocumentsEnabled -eq $True) {
                 # Relate Subscriptions to Users
