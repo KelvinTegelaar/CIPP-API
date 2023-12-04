@@ -1037,13 +1037,13 @@ function Invoke-NinjaOneTenantSync {
 
                     $OneDriveUseColor = if ($OneDriveUse.Percent -ge 95) {
                         '#D53948'
-                    } elseif ($MailboxUse.Percent -ge 85) {
+                    } elseif ($OneDriveUse.Percent -ge 85) {
                         '#FFA500'
                     } else {
                         '#26A644'
                     }
 
-                    $OneDriveParsed = '<div class="pt-3 pb-3 linechart"><div style="width: ' + $OneDriveUse.Percent + '%; background-color: #' + $OneDriveUseColor + ';"></div><div style="width: ' + (100 - $OneDriveUse.Percent) + '%; background-color: #CCCCCC;"></div></div>'
+                    $OneDriveParsed = '<div class="pt-3 pb-3 linechart"><div style="width: ' + $OneDriveUse.Percent + '%; background-color: ' + $OneDriveUseColor + ';"></div><div style="width: ' + (100 - $OneDriveUse.Percent) + '%; background-color: #CCCCCC;"></div></div>'
 
                 } else {
                     $OneDriveUse = [PSCustomObject]@{
@@ -1097,7 +1097,7 @@ function Invoke-NinjaOneTenantSync {
                         '#26A644'
                     }
 
-                    $MailboxParsed = '<div class="pt-3 pb-3 linechart"><div style="width: ' + $MailboxUse.Percent + '%; background-color: #' + $MailboxUseColor + ';"></div><div style="width: ' + (100 - $MailboxUse.Percent) + '%; background-color: #CCCCCC;"></div></div>'
+                    $MailboxParsed = '<div class="pt-3 pb-3 linechart"><div style="width: ' + $MailboxUse.Percent + '%; background-color: ' + $MailboxUseColor + ';"></div><div style="width: ' + (100 - $MailboxUse.Percent) + '%; background-color: #CCCCCC;"></div></div>'
 
                 } else {
                     $MailboxUse = [PSCustomObject]@{
