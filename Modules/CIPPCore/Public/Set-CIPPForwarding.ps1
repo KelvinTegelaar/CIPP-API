@@ -24,3 +24,4 @@ function Set-CIPPForwarding {
         return "Could not add forwarding for $($username). Error: $($_.Exception.Message)"
     }
 }
+a
