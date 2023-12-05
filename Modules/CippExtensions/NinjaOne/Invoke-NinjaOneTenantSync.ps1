@@ -4,23 +4,28 @@ function Invoke-NinjaOneTenantSync {
         $QueueItem
     )
     try {
-
         $StartTime = Get-Date
         Write-Host "$(Get-Date) - Starting NinjaOne Sync"
 
         # Check Global Rate Limiting
         $CurrentMap = Get-ExtensionRateLimit -ExtensionName 'NinjaOne' -ExtensionPartitionKey 'NinjaOrgsMapping' -RateLimit 5 -WaitTime 60
         
+        # Parse out the Tenant we are processing
+        $MappedTenant = $QueueItem.MappedTenant
+
         # Check for active instances for this tenant
-        $CurrentItem = $CurrentMap | where-object {$_.RowKey -eq $MappedTenant.RowKey}
+        $CurrentItem = $CurrentMap | where-object { $_.RowKey -eq $MappedTenant.RowKey }
+
+        $StartDate = try { Get-Date($CurrentItem.lastStartTime) } catch { $Null }
+        $EndDate = try { Get-Date($CurrentItem.lastEndTime) } catch { $Null }
         
-        if ($CurrentItem.lastStartTime -gt (Get-Date).AddMinutes(-10) -and ($CurrentItem.lastStartTime -gt $CurrentItem.lastEndTime -or $Null -eq $CurrentItem.lastEndTime)){
+        if (($null -ne $CurrentItem.lastStartTime -or $StartDate -gt (Get-Date).AddMinutes(-10)) -and ( $Null -eq $CurrentItem.lastEndTime -or ($StartDate -gt $EndDate))) {
             Throw "NinjaOne Sync for Tenant $($MappedTenant.RowKey) is still running, please wait 10 minutes and try again."
         }
 
         # Set Last Start Time
         $MappingTable = Get-CIPPTable -TableName CippMapping
-        $CurrentItem | Add-Member -NotePropertyName lastStartTime -NotePropertyValue (Get-Date) -Force
+        $CurrentItem | Add-Member -NotePropertyName lastStartTime -NotePropertyValue ([string]$((Get-Date).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ss.fffZ"))) -Force
         Add-CIPPAzDataTableEntity @MappingTable -Entity $CurrentItem -Force
 
         # Fetch Custom NinjaOne Settings
@@ -28,8 +33,7 @@ function Invoke-NinjaOneTenantSync {
         $NinjaSettings = (Get-CIPPAzDataTableEntity @Table)
         $CIPPUrl = ($NinjaSettings | Where-Object { $_.RowKey -eq 'CIPPURL' }).SettingValue
         
-        # Parse out the Tenant we are processing
-        $MappedTenant = $QueueItem.MappedTenant
+        
         $Customer = Get-Tenants | where-object { $_.customerId -eq $MappedTenant.RowKey }
         Write-Host "Processing: $($Customer.displayName)"
 
@@ -2281,7 +2285,7 @@ function Invoke-NinjaOneTenantSync {
         Write-Host "Completed Total Time: $((New-TimeSpan -Start $StartTime -End (Get-Date)).TotalSeconds)" 
 
         # Set Last End Time
-        $CurrentItem | Add-Member -NotePropertyName lastEndTime -NotePropertyValue (Get-Date) -Force
+        $CurrentItem | Add-Member -NotePropertyName lastEndTime -NotePropertyValue ([string]$((Get-Date).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ss.fffZ"))) -Force
         Add-CIPPAzDataTableEntity @MappingTable -Entity $CurrentItem -Force
 
         Write-LogMessage -API 'NinjaOneSync' -user 'CIPP' -message "Completed NinjaOne Sync for $($Customer.displayName). Data fetched in $((New-TimeSpan -Start $StartTime -End $FetchEnd).TotalSeconds) seconds. Total time $((New-TimeSpan -Start $StartTime -End (Get-Date)).TotalSeconds) seconds" -Sev 'info' 
@@ -2289,5 +2293,7 @@ function Invoke-NinjaOneTenantSync {
     } catch {
         Write-Error "Failed NinjaOne Processing for $($Customer.displayName) Linenumber: $($_.InvocationInfo.ScriptLineNumber) Error: $($_.Exception.message)"
         Write-LogMessage -API 'NinjaOneSync' -user 'CIPP' -message "Failed NinjaOne Processing for $($Customer.displayName) Linenumber: $($_.InvocationInfo.ScriptLineNumber) Error: $($_.Exception.message)" -Sev 'Error'
+        $CurrentItem | Add-Member -NotePropertyName lastEndTime -NotePropertyValue ([string]$((Get-Date).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ss.fffZ"))) -Force
+        Add-CIPPAzDataTableEntity @MappingTable -Entity $CurrentItem -Force
     }
 }
