@@ -8,9 +8,24 @@ function Invoke-NinjaOneTenantSync {
         $StartTime = Get-Date
         Write-Host "$(Get-Date) - Starting NinjaOne Sync"
 
+        # Check Global Rate Limiting
+        $CurrentMap = Get-ExtensionRateLimit -ExtensionName 'NinjaOne' -ExtensionPartitionKey 'NinjaOrgsMapping' -RateLimit 5 -WaitTime 60
+        
+        # Check for active instances for this tenant
+        $CurrentItem = $CurrentMap | where-object {$_.RowKey -eq $MappedTenant.RowKey}
+        
+        if ($CurrentItem.lastStartTime -gt (Get-Date).AddMinutes(-10) -and ($CurrentItem.lastStartTime -gt $CurrentItem.lastEndTime -or $Null -eq $CurrentItem.lastEndTime)){
+            Throw "NinjaOne Sync for Tenant $($MappedTenant.RowKey) is still running, please wait 10 minutes and try again."
+        }
+
+        # Set Last Start Time
+        $MappingTable = Get-CIPPTable -TableName CIPPMapping
+        $CurrentItem | Add-Member -NotePropertyName lastStartTime -NotePropertyValue (Get-Date) -Force
+        Add-CIPPAzDataTableEntity @MappingTable -Entity $CurrentItem -Force
+
         # Fetch Custom NinjaOne Settings
         $Table = Get-CIPPTable -TableName NinjaOneSettings
-        $NinjaSettings = (Get-AzDataTableEntity @Table)
+        $NinjaSettings = (Get-CIPPAzDataTableEntity @Table)
         $CIPPUrl = ($NinjaSettings | Where-Object { $_.RowKey -eq 'CIPPURL' }).SettingValue
         
         # Parse out the Tenant we are processing
@@ -30,13 +45,13 @@ function Invoke-NinjaOneTenantSync {
 
         # Get the NinjaOne general extension settings.
         $Table = Get-CIPPTable -TableName Extensionsconfig
-        $Configuration = ((Get-AzDataTableEntity @Table).config | ConvertFrom-Json).NinjaOne
+        $Configuration = ((Get-CIPPAzDataTableEntity @Table).config | ConvertFrom-Json).NinjaOne
 
         # Pull the list of field Mappings so we know which fields to render.
         $MappedFields = [pscustomobject]@{}
         $CIPPMapping = Get-CIPPTable -TableName CippMapping
         $Filter = "PartitionKey eq 'NinjaFieldMapping'"
-        Get-AzDataTableEntity @CIPPMapping -Filter $Filter | Where-Object { $Null -ne $_.NinjaOne -and $_.NinjaOne -ne '' } | ForEach-Object {
+        Get-CIPPAzDataTableEntity @CIPPMapping -Filter $Filter | Where-Object { $Null -ne $_.NinjaOne -and $_.NinjaOne -ne '' } | ForEach-Object {
             $MappedFields | Add-Member -NotePropertyName $_.RowKey -NotePropertyValue $($_.NinjaOne)
         }
 
@@ -1969,7 +1984,7 @@ function Invoke-NinjaOneTenantSync {
 
             $Filter = "PartitionKey eq 'standards'" 
 
-            $AllStandards = (Get-AzDataTableEntity @Table -Filter $Filter).JSON | ConvertFrom-Json -Depth 100
+            $AllStandards = (Get-CIPPAzDataTableEntity @Table -Filter $Filter).JSON | ConvertFrom-Json -Depth 100
 
             $AppliedStandards = ($AllStandards | Where-Object { $_.Tenant -eq $Customer.defaultDomainName -or $_.Tenant -eq 'AllTenants' })
 
@@ -2264,6 +2279,11 @@ function Invoke-NinjaOneTenantSync {
         
         Write-Host "Total Fetch Time: $((New-TimeSpan -Start $StartTime -End $FetchEnd).TotalSeconds)"
         Write-Host "Completed Total Time: $((New-TimeSpan -Start $StartTime -End (Get-Date)).TotalSeconds)" 
+
+        # Set Last End Time
+        $CurrentItem | Add-Member -NotePropertyName lastEndTime -NotePropertyValue (Get-Date) -Force
+        Add-CIPPAzDataTableEntity @MappingTable -Entity $CurrentItem -Force
+
         Write-LogMessage -API 'NinjaOneSync' -user 'CIPP' -message "Completed NinjaOne Sync for $($Customer.displayName). Data fetched in $((New-TimeSpan -Start $StartTime -End $FetchEnd).TotalSeconds) seconds. Total time $((New-TimeSpan -Start $StartTime -End (Get-Date)).TotalSeconds) seconds" -Sev 'info' 
 
     } catch {
