@@ -19,7 +19,7 @@ function Invoke-NinjaOneTenantSync {
         }
 
         # Set Last Start Time
-        $MappingTable = Get-CIPPTable -TableName CIPPMapping
+        $MappingTable = Get-CIPPTable -TableName CippMapping
         $CurrentItem | Add-Member -NotePropertyName lastStartTime -NotePropertyValue (Get-Date) -Force
         Add-CIPPAzDataTableEntity @MappingTable -Entity $CurrentItem -Force
 

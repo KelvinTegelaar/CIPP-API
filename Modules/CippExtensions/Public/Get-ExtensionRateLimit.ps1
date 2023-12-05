@@ -1,6 +1,6 @@
 function Get-ExtensionRateLimit($ExtensionName, $ExtensionPartitionKey, $RateLimit, $WaitTime) {
     
-    $MappingTable = Get-CIPPTable -TableName CIPPMapping
+    $MappingTable = Get-CIPPTable -TableName CippMapping
     $CurrentMap = (Get-CIPPAzDataTableEntity @MappingTable -Filter "PartitionKey eq '$ExtensionPartitionKey'")
 
     # Check Global Rate Limiting
