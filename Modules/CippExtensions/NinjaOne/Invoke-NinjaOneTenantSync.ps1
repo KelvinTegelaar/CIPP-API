@@ -7,6 +7,7 @@ function Invoke-NinjaOneTenantSync {
         $StartTime = Get-Date
         Write-Host "$(Get-Date) - Starting NinjaOne Sync"
 
+        
         # Check Global Rate Limiting
         $CurrentMap = Get-ExtensionRateLimit -ExtensionName 'NinjaOne' -ExtensionPartitionKey 'NinjaOrgsMapping' -RateLimit 5 -WaitTime 60
         
@@ -26,6 +27,7 @@ function Invoke-NinjaOneTenantSync {
         # Set Last Start Time
         $MappingTable = Get-CIPPTable -TableName CippMapping
         $CurrentItem | Add-Member -NotePropertyName lastStartTime -NotePropertyValue ([string]$((Get-Date).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ss.fffZ"))) -Force
+        $CurrentItem | Add-Member -NotePropertyName lastStatus -NotePropertyValue 'Running' -Force
         Add-CIPPAzDataTableEntity @MappingTable -Entity $CurrentItem -Force
 
         # Fetch Custom NinjaOne Settings
@@ -2286,6 +2288,7 @@ function Invoke-NinjaOneTenantSync {
 
         # Set Last End Time
         $CurrentItem | Add-Member -NotePropertyName lastEndTime -NotePropertyValue ([string]$((Get-Date).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ss.fffZ"))) -Force
+        $CurrentItem | Add-Member -NotePropertyName lastStatus -NotePropertyValue 'Completed' -Force
         Add-CIPPAzDataTableEntity @MappingTable -Entity $CurrentItem -Force
 
         Write-LogMessage -API 'NinjaOneSync' -user 'CIPP' -message "Completed NinjaOne Sync for $($Customer.displayName). Data fetched in $((New-TimeSpan -Start $StartTime -End $FetchEnd).TotalSeconds) seconds. Total time $((New-TimeSpan -Start $StartTime -End (Get-Date)).TotalSeconds) seconds" -Sev 'info' 
@@ -2294,6 +2297,7 @@ function Invoke-NinjaOneTenantSync {
         Write-Error "Failed NinjaOne Processing for $($Customer.displayName) Linenumber: $($_.InvocationInfo.ScriptLineNumber) Error: $($_.Exception.message)"
         Write-LogMessage -API 'NinjaOneSync' -user 'CIPP' -message "Failed NinjaOne Processing for $($Customer.displayName) Linenumber: $($_.InvocationInfo.ScriptLineNumber) Error: $($_.Exception.message)" -Sev 'Error'
         $CurrentItem | Add-Member -NotePropertyName lastEndTime -NotePropertyValue ([string]$((Get-Date).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ss.fffZ"))) -Force
+        $CurrentItem | Add-Member -NotePropertyName lastStatus -NotePropertyValue 'Failed' -Force
         Add-CIPPAzDataTableEntity @MappingTable -Entity $CurrentItem -Force
     }
 }
