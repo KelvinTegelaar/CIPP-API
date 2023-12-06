@@ -3,7 +3,7 @@ function Invoke-DisableTenantCreation-Remediate {
     .FUNCTIONALITY
     Internal
     #>
-    param($tenant)
+    param($Tenant, $Settings)
 
     try {
         $body = '{"defaultUserRolePermissions":{"allowedToCreateTenants":false}}'

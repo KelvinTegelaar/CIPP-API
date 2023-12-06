@@ -3,7 +3,7 @@ function Invoke-laps-Remediate {
     .FUNCTIONALITY
     Internal
     #>
-    param($tenant)
+    param($Tenant, $Settings)
     try {
         $PreviousSetting = New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/policies/deviceRegistrationPolicy' -tenantid $Tenant
         $previoussetting.localadminpassword.isEnabled = $true 

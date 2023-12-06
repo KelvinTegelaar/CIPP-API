@@ -3,7 +3,7 @@ function Invoke-DisableViva-Remediate {
     .FUNCTIONALITY
     Internal
     #>
-    param($tenant)
+    param($Tenant, $Settings)
 
     try {
         $MailboxesNoArchive = (New-ExoRequest -tenantid $tenant -cmdlet 'get-mailbox' -cmdparams @{ Filter = 'RecipientTypeDetails -Eq "UserMailbox"' }) | ForEach-Object {

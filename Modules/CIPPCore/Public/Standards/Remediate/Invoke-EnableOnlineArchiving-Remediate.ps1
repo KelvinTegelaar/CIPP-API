@@ -3,7 +3,7 @@ function Invoke-EnableOnlineArchiving-Remediate {
     .FUNCTIONALITY
     Internal
     #>
-    param($tenant)
+    param($Tenant, $Settings)
 
     try {
         $MailboxesNoArchive = (New-ExoRequest -tenantid $tenant -cmdlet 'get-mailbox' -cmdparams @{ Filter = 'ArchiveGuid -Eq "00000000-0000-0000-0000-000000000000" -AND RecipientTypeDetails -Eq "UserMailbox"' }) | ForEach-Object {

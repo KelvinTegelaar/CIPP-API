@@ -3,7 +3,7 @@ function Invoke-PasswordExpireDisabled-Remediate {
     .FUNCTIONALITY
     Internal
     #>
-    param($tenant)
+    param($Tenant, $Settings)
     try {
         $GraphRequest = New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/domains' -tenantid $Tenant | Where-Object -Property passwordValidityPeriodInDays -NE '2147483647' | ForEach-Object {
             New-GraphPostRequest -type Patch -tenantid $Tenant -uri "https://graph.microsoft.com/beta/domains/$($_.id)" -body '{"passwordValidityPeriodInDays": 2147483647 }'

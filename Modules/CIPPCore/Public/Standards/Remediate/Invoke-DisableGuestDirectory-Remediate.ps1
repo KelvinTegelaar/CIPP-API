@@ -3,7 +3,7 @@ function Invoke-DisableGuestDirectory-Remediate {
     .FUNCTIONALITY
     Internal
     #>
-    param($tenant)
+    param($Tenant, $Settings)
 
     try {
         $body = '{guestUserRoleId: "2af84b1e-32c8-42b7-82bc-daa82404023b"}'

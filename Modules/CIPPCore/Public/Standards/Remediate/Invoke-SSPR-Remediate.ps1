@@ -3,7 +3,7 @@ function Invoke-SSPR-Remediate {
     .FUNCTIONALITY
     Internal
     #>
-  param($tenant)
+  param($Tenant, $Settings)
   try {
     Write-LogMessage -API 'Standards' -tenant $tenant -message 'SSPR standard is no longer available' -sev Error
   } catch {

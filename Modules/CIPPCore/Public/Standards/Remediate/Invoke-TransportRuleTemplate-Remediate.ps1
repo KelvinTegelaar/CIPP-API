@@ -3,7 +3,7 @@ function Invoke-TransportRuleTemplate-Remediate {
     .FUNCTIONALITY
     Internal
     #>
-  param($tenant)
+  param($Tenant, $Settings)
 
 
   $ConfigTable = Get-CippTable -tablename 'standards'

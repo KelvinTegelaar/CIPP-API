@@ -3,7 +3,7 @@ function Invoke-DeletedUserRentention-Remediate {
     .FUNCTIONALITY
     Internal
     #>
-    param($tenant)
+    param($Tenant, $Settings)
 
     try {
         $body = '{"deletedUserPersonalSiteRetentionPeriodInDays": 365}'

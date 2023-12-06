@@ -3,7 +3,7 @@ function Invoke-PWdisplayAppInformationRequiredState-Remediate {
     .FUNCTIONALITY
     Internal
     #>
-    param($tenant)
+    param($Tenant, $Settings)
 
     try {
         $body = @'

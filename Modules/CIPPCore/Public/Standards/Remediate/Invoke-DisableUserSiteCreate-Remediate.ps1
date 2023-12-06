@@ -3,7 +3,7 @@ function Invoke-DisableUserSiteCreate-Remediate {
     .FUNCTIONALITY
     Internal
     #>
-    param($tenant)
+    param($Tenant, $Settings)
 
     try {
         $body = '{"isSiteCreationEnabled": false}'

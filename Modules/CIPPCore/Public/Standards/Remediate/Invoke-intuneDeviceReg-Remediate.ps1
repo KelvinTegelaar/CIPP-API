@@ -3,7 +3,7 @@ function Invoke-intuneDeviceReg-Remediate {
     .FUNCTIONALITY
     Internal
     #>
-    param($tenant)
+    param($Tenant, $Settings)
     try {
         $ConfigTable = Get-CippTable -tablename 'standards'
         $Setting = ((Get-AzDataTableEntity @ConfigTable -Filter "PartitionKey eq 'standards' and RowKey eq '$tenant'").JSON | ConvertFrom-Json).standards.intuneDeviceReg

@@ -3,7 +3,7 @@ function Invoke-GroupTemplate-Remediate {
     .FUNCTIONALITY
     Internal
     #>
-  param($tenant)
+  param($Tenant, $Settings)
 
   $ConfigTable = Get-CippTable -tablename 'standards'
   $Setting = ((Get-AzDataTableEntity @ConfigTable -Filter "PartitionKey eq 'standards' and RowKey eq '$tenant'").JSON | ConvertFrom-Json).standards.GroupTemplate
@@ -18,7 +18,7 @@ function Invoke-GroupTemplate-Remediate {
       $Table = Get-CippTable -tablename 'templates'
       $Filter = "PartitionKey eq 'GroupTemplate' and RowKey eq '$($Template.value)'" 
       $groupobj = (Get-AzDataTableEntity @Table -Filter $Filter).JSON | ConvertFrom-Json
-      $email = if ($groupobj.domain) { "$($groupobj.username)@$($groupobj.domain)" } else { "$($groupobj.username)@$($tenant)" }
+      $email = if ($groupobj.domain) { "$($groupobj.username)@$($groupobj.domain)" } else { "$($groupobj.username)@$($Tenant, $Settings)" }
       $CheckExististing = New-GraphGETRequest -uri 'https://graph.microsoft.com/beta/groups' -tenantid $tenant | Where-Object -Property displayName -EQ $groupobj.displayname
       if (!$CheckExististing) {
         if ($groupobj.groupType -in 'Generic', 'azurerole', 'dynamic') {

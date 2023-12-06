@@ -3,7 +3,7 @@ function Invoke-OutBoundSpamAlert-Remediate {
     .FUNCTIONALITY
     Internal
     #>
-    param($tenant)
+    param($Tenant, $Settings)
     $ConfigTable = Get-CippTable -tablename 'standards'
     $Contacts = ((Get-AzDataTableEntity @ConfigTable -Filter "PartitionKey eq 'standards' and RowKey eq '$tenant'").JSON | ConvertFrom-Json).standards.OutBoundSpamAlert
     if (!$Contacts) {

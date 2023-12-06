@@ -3,7 +3,7 @@ function Invoke-ExConnector-Remediate {
     .FUNCTIONALITY
     Internal
     #>
-  param($tenant)
+  param($Tenant, $Settings)
 
   $ConfigTable = Get-CippTable -tablename 'standards'
   $Setting = ((Get-AzDataTableEntity @ConfigTable -Filter "PartitionKey eq 'standards' and RowKey eq '$tenant'").JSON | ConvertFrom-Json).standards.ExConnector
@@ -21,10 +21,10 @@ function Invoke-ExConnector-Remediate {
       if ($Existing) {
         $RequestParams | Add-Member -NotePropertyValue $Existing.Identity -NotePropertyName Identity -Force
         $GraphRequest = New-ExoRequest -tenantid $Tenant -cmdlet "Set-$($ConnectorType)connector" -cmdParams $RequestParams -useSystemMailbox $true
-        Write-LogMessage -API $APINAME -tenant $Tenant -message "Updated transport rule for $($Tenant)" -sev info
+        Write-LogMessage -API $APINAME -tenant $Tenant -message "Updated transport rule for $($Tenant, $Settings)" -sev info
       } else {
         $GraphRequest = New-ExoRequest -tenantid $Tenant -cmdlet "New-$($ConnectorType)connector" -cmdParams $RequestParams -useSystemMailbox $true
-        Write-LogMessage -API $APINAME -tenant $Tenant -message "Created transport rule for $($Tenant)" -sev info
+        Write-LogMessage -API $APINAME -tenant $Tenant -message "Created transport rule for $($Tenant, $Settings)" -sev info
       }
     } catch {
       Write-LogMessage -API 'Standards' -tenant $tenant -message "Failed to create or update Exchange Connector Rule: $($_.exception.message)" -sev 'Error'

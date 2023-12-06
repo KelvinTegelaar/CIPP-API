@@ -3,7 +3,7 @@ function Invoke-DisableReshare-Remediate {
     .FUNCTIONALITY
     Internal
     #>
-    param($tenant)
+    param($Tenant, $Settings)
 
     try {
         $body = '{"isResharingByExternalUsersEnabled": "False"}'

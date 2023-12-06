@@ -3,7 +3,7 @@ function Invoke-DisableAddShortcutsToOneDrive-Remediate {
     .FUNCTIONALITY
     Internal
     #>
-    param($tenant)
+    param($Tenant, $Settings)
 
     function GetTenantRequestXml {
         return @'
@@ -82,7 +82,7 @@ function Invoke-DisableAddShortcutsToOneDrive-Remediate {
             $log.message = "Set DisableAddShortcutsToOneDrive to True on $tenant"
         } else {
             $log.message = "Unable to set DisableAddShortcutsToOneDrive to True `
-            on $($tenant): $($response.ErrorInfo.ErrorMessage)"
+            on $($Tenant, $Settings): $($response.ErrorInfo.ErrorMessage)"
         }
     } catch {
         $log.message = "Failed to set OneDrive shortcut: $($_.Exception.Message)"

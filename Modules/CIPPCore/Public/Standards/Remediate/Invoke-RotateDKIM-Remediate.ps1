@@ -3,7 +3,7 @@ function Invoke-RotateDKIM-Remediate {
     .FUNCTIONALITY
     Internal
     #>
-    param($tenant)
+    param($Tenant, $Settings)
 
     try {
         $DKIM = (New-ExoRequest -tenantid $tenant -cmdlet 'Get-DkimSigningConfig') | Where-Object { $_.Selector1KeySize -EQ 1024 -and $_.Enabled -eq $true } | ForEach-Object {

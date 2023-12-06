@@ -3,7 +3,7 @@ function Invoke-AddDKIM-Remediate {
     .FUNCTIONALITY
     Internal
     #>
-    param($tenant)
+    param($Tenant, $Settings)
 
     try {
         $DKIM = (New-ExoRequest -tenantid $tenant -cmdlet 'Get-DkimSigningConfig') | Where-Object -Property Enabled -EQ $false | ForEach-Object {

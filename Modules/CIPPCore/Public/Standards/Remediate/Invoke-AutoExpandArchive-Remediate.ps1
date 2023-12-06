@@ -3,7 +3,7 @@ function Invoke-AutoExpandArchive-Remediate {
     .FUNCTIONALITY
     Internal
     #>
-    param($tenant)
+    param($Tenant, $Settings)
 
     try {
 

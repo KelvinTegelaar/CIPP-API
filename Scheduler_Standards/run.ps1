@@ -54,13 +54,13 @@ $object = foreach ($Tenant in $Tenants) {
 }
 
 #For each item in our object, run the queue. 
-$object | Where-Object -Property Standard -NE 'v2' #filter out the v2 standard
 
-foreach ($task in $object) {
+foreach ($task in $object | Where-Object -Property Standard -NE 'v2') {
     $QueueItem = [pscustomobject]@{
-        Tenant   = $task.Tenant
-        Standard = $task.Standard
-        Settings = $task.Settings
+        Tenant       = $task.Tenant
+        Standard     = $task.Standard
+        Settings     = $task.Settings
+        FunctionName = 'CIPPStandard'
     }
-    
+    Push-OutputBinding -Name QueueItem -Value $QueueItem
 }

@@ -3,7 +3,7 @@ function Invoke-DisableGuests-Remediate {
     .FUNCTIONALITY
     Internal
     #>
-    param($tenant)
+    param($Tenant, $Settings)
 
     try {
         $lookup = (Get-Date).AddDays(-90).ToUniversalTime().ToString('o')

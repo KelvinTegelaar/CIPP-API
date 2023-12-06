@@ -3,7 +3,7 @@ function Invoke-SendFromAlias-Remediate {
     .FUNCTIONALITY
     Internal
     #>
-    param($tenant)
+    param($Tenant, $Settings)
 
     try {
         $AdminAuditLogParams = @{

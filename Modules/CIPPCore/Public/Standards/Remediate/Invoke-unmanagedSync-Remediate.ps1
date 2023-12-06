@@ -3,7 +3,7 @@ function Invoke-unmanagedSync-Remediate {
     .FUNCTIONALITY
     Internal
     #>
-    param($tenant)
+    param($Tenant, $Settings)
 
     try {
         $body = '{"isUnmanagedSyncAppForTenantRestricted": false}'

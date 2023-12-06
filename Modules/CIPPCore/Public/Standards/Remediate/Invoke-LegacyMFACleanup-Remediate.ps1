@@ -3,7 +3,7 @@ function Invoke-LegacyMFACleanup-Remediate {
     .FUNCTIONALITY
     Internal
     #>
-    param($tenant)
+    param($Tenant, $Settings)
 
     try {
         $AADGraphtoken = (Get-GraphToken -scope 'https://graph.windows.net/.default')

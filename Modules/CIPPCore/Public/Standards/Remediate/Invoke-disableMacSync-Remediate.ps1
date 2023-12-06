@@ -3,7 +3,7 @@ function Invoke-disableMacSync-Remediate {
     .FUNCTIONALITY
     Internal
     #>
-    param($tenant)
+    param($Tenant, $Settings)
 
     try {
         $body = '{"isMacSyncAppEnabled": false}'

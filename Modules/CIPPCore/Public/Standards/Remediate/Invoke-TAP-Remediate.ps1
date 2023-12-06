@@ -3,7 +3,7 @@ function Invoke-TAP-Remediate {
     .FUNCTIONALITY
     Internal
     #>
-    param($tenant)
+    param($Tenant, $Settings)
     $ConfigTable = Get-CippTable -tablename 'standards'
     $TAPConfig = ((Get-AzDataTableEntity @ConfigTable -Filter "PartitionKey eq 'standards' and RowKey eq '$tenant'").JSON | ConvertFrom-Json).Standards.TAP.config
     if (!$TAPConfig) {

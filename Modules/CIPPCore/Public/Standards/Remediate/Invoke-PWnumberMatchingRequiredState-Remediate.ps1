@@ -3,7 +3,7 @@ function Invoke-PWnumberMatchingRequiredState-Remediate {
     .FUNCTIONALITY
     Internal
     #>
-    param($tenant)
+    param($Tenant, $Settings)
 
     try {
         Write-LogMessage -API 'Standards' -tenant $tenant -message 'Passwordless with number matching is now enabled by default.' -sev Info

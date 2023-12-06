@@ -3,7 +3,7 @@ function Invoke-SpoofWarn-Remediate {
     .FUNCTIONALITY
     Internal
     #>
-    param($tenant)
+    param($Tenant, $Settings)
 
     $ConfigTable = Get-CippTable -tablename 'standards'
     $Setting = ((Get-AzDataTableEntity @ConfigTable -Filter "PartitionKey eq 'standards' and RowKey eq '$tenant'").JSON | ConvertFrom-Json).standards.spoofwarn
