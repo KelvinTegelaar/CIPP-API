@@ -6,7 +6,9 @@ function Invoke-NinjaOneTenantSync {
     try {
         $StartTime = Get-Date
         Write-Host "$(Get-Date) - Starting NinjaOne Sync"
-
+        
+        # Stagger start
+        Start-Sleep -Milliseconds (Get-Random -Minimum 0 -Maximum 5001)
         
         # Check Global Rate Limiting
         $CurrentMap = Get-ExtensionRateLimit -ExtensionName 'NinjaOne' -ExtensionPartitionKey 'NinjaOrgsMapping' -RateLimit 5 -WaitTime 60
