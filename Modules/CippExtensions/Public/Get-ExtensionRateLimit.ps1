@@ -6,13 +6,13 @@ function Get-ExtensionRateLimit($ExtensionName, $ExtensionPartitionKey, $RateLim
         if ($Null -ne $_.lastEndTime -and $_.lastEndTime -ne ''){
         $_.lastEndTime = (Get-Date($_.lastEndTime))
         } else {
-            $_.lastEndTime = $Null 
+            $_ | Add-Member -NotePropertyName lastEndTime -NotePropertyValue $Null -Force
         }
 
         if ($Null -ne $_.lastStartTime -and $_.lastStartTime -ne '') {
         $_.lastStartTime = (Get-Date($_.lastStartTime))
         } else {
-            $_.lastStartTime = $Null 
+            $_ | Add-Member -NotePropertyName lastStartTime -NotePropertyValue $Null -Force
         }
     }
 
