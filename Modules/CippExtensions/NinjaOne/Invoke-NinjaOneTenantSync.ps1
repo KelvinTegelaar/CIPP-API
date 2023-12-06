@@ -29,8 +29,7 @@ function Invoke-NinjaOneTenantSync {
         $CurrentItem | Add-Member -NotePropertyName lastStartTime -NotePropertyValue ([string]$((Get-Date).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ss.fffZ"))) -Force
         $CurrentItem | Add-Member -NotePropertyName lastStatus -NotePropertyValue 'Running' -Force
         if ($Null -ne $CurrentItem.lastEndTime -and $CurrentItem.lastEndTime -ne '' ) {
-            $CurrentItem.lastEndTime = ([string]$(($_.lastEndTime).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ss.fffZ")))
-            $_.lastEndTime = (Get-Date($_.lastEndTime))
+            $CurrentItem.lastEndTime = ([string]$(($CurrentItem.lastEndTime).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ss.fffZ")))
         }
         Add-CIPPAzDataTableEntity @MappingTable -Entity $CurrentItem -Force
 
