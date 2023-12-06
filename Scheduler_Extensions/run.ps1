@@ -15,7 +15,6 @@ if ($Configuration.NinjaOne.Enabled -eq $True) {
     $Settings = (Get-AzDataTableEntity @Table)
     $TimeSetting = ($Settings | Where-Object { $_.RowKey -eq 'NinjaSyncTime' }).SettingValue
 
-    
 
     if (($TimeSetting | Measure-Object).count -ne 1) {
         [int]$TimeSetting = Get-Random -Minimum 1 -Maximum 95
@@ -44,7 +43,7 @@ if ($Configuration.NinjaOne.Enabled -eq $True) {
         $Filter = "PartitionKey eq 'NinjaOrgsMapping'"
         $TenantsToProcess = Get-AzDataTableEntity @CIPPMapping -Filter $Filter | Where-Object { $Null -ne $_.NinjaOne -and $_.NinjaOne -ne '' }
 
-        foreach ($Tenant in $TenantsToProcess) {
+        foreach ($Tenant in $TenantsToProcess | Sort-Object lastEndTime) {
             Push-OutputBinding -Name NinjaProcess -Value @{
                 'NinjaAction'  = 'SyncTenant'
                 'MappedTenant' = $Tenant
