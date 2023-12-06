@@ -2,6 +2,19 @@ function Get-ExtensionRateLimit($ExtensionName, $ExtensionPartitionKey, $RateLim
     
     $MappingTable = Get-CIPPTable -TableName CippMapping
     $CurrentMap = (Get-CIPPAzDataTableEntity @MappingTable -Filter "PartitionKey eq '$ExtensionPartitionKey'")
+    $CurrentMap | ForEach-Object {
+        if ($Null -ne $_.lastEndTime -and $_.lastEndTime -ne ''){
+        $_.lastEndTime = (Get-Date($_.lastEndTime))
+        } else {
+            $_.lastEndTime = $Null 
+        }
+
+        if ($Null -ne $_.lastStartTime -and $_.lastStartTime -ne '') {
+        $_.lastStartTime = (Get-Date($_.lastStartTime))
+        } else {
+            $_.lastStartTime = $Null 
+        }
+    }
 
     # Check Global Rate Limiting
     try {
