@@ -1,4 +1,8 @@
 function Write-LogMessage ($message, $tenant = 'None', $API = 'None', $tenantId = $null, $user, $sev) {
+    <#
+    .FUNCTIONALITY
+    Internal
+    #>
     try {
         $username = ([System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($user)) | ConvertFrom-Json).userDetails
     } catch {
