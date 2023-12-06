@@ -35,6 +35,8 @@ function Invoke-NinjaOneTenantSync {
         }
         Add-CIPPAzDataTableEntity @MappingTable -Entity $CurrentItem -Force
 
+        Set-Location (Get-Item $PSScriptRoot).Parent.FullName
+
         # Fetch Custom NinjaOne Settings
         $Table = Get-CIPPTable -TableName NinjaOneSettings
         $NinjaSettings = (Get-CIPPAzDataTableEntity @Table)
