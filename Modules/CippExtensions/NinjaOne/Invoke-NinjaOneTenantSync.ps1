@@ -20,7 +20,7 @@ function Invoke-NinjaOneTenantSync {
         $StartDate = try { Get-Date($CurrentItem.lastStartTime) } catch { $Null }
         $EndDate = try { Get-Date($CurrentItem.lastEndTime) } catch { $Null }
         
-        if (($null -ne $CurrentItem.lastStartTime -or $StartDate -gt (Get-Date).AddMinutes(-10)) -and ( $Null -eq $CurrentItem.lastEndTime -or ($StartDate -gt $EndDate))) {
+        if (($null -ne $CurrentItem.lastStartTime) -and ($StartDate -gt (Get-Date).AddMinutes(-10)) -and ( $Null -eq $CurrentItem.lastEndTime -or ($StartDate -gt $EndDate))) {
             Throw "NinjaOne Sync for Tenant $($MappedTenant.RowKey) is still running, please wait 10 minutes and try again."
         }
 
@@ -28,6 +28,10 @@ function Invoke-NinjaOneTenantSync {
         $MappingTable = Get-CIPPTable -TableName CippMapping
         $CurrentItem | Add-Member -NotePropertyName lastStartTime -NotePropertyValue ([string]$((Get-Date).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ss.fffZ"))) -Force
         $CurrentItem | Add-Member -NotePropertyName lastStatus -NotePropertyValue 'Running' -Force
+        if ($Null -ne $CurrentItem.lastEndTime -and $CurrentItem.lastEndTime -ne '' ) {
+            $CurrentItem.lastEndTime = ([string]$(($_.lastEndTime).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ss.fffZ")))
+            $_.lastEndTime = (Get-Date($_.lastEndTime))
+        }
         Add-CIPPAzDataTableEntity @MappingTable -Entity $CurrentItem -Force
 
         # Fetch Custom NinjaOne Settings
