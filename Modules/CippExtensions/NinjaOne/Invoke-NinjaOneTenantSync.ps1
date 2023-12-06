@@ -1969,12 +1969,12 @@ function Invoke-NinjaOneTenantSync {
                 },
                 @{
                     Label  = 'Points to Obtain'
-                    Amount = $MaxSecureScoreRank - $CurrentSecureScore.currentScore
+                    Amount = $MaxSecureScore - $CurrentSecureScore.currentScore
                     Colour = '#CCCCCC'
                 }
             )
         
-            $SecureScoreHTML = Get-NinjaInLineBarGraph -Title "Secure Score - $([System.Math]::Round((($CurrentSecureScore.currentScore / $MaxSecureScoreRank) * 100),2))%" -Data $Data -KeyInLine -NoCount -NoSort
+            $SecureScoreHTML = Get-NinjaInLineBarGraph -Title "Secure Score - $([System.Math]::Round((($CurrentSecureScore.currentScore / $MaxSecureScore) * 100),2))%" -Data $Data -KeyInLine -NoCount -NoSort
 
             # Recommended Actions HTML
             $RecommendedActionsHTML = $Top5Actions | Select-Object 'Recommended Action', @{n = 'Score Impact'; e = { "+$($_.'Score Impact')%" } }, Category, @{n = 'Link'; e = { '<a href="' + $_.link + '" target="_blank"><i class="fas fa-arrow-up-right-from-square" style="color: #337ab7;"></i></a>' } } | ConvertTo-Html -As Table -Fragment
