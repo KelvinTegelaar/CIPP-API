@@ -13,7 +13,6 @@ try {
 
     $GraphRequest = Get-Tenants | ForEach-Object -Parallel { 
         $domainName = $_.defaultDomainName
-        Import-Module '.\GraphHelper.psm1'
         Import-Module '.\modules\CippCore'
         $Table = Get-CIPPTable -TableName cachemfa
         Try {

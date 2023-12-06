@@ -92,6 +92,9 @@ $AddRow = foreach ($Template in $templates) {
                 'string' {
                     $Result.Add($field.Name, [string]$FieldInfo)
                 }
+                'percentage' {
+
+                }
             }
         } catch {
             Write-LogMessage -API 'BPA' -tenant $tenant -message "Error storing $($field.Name) for $($TenantName.displayName) with GUID $($TenantName.customerId). Error: $($_.Exception.Message)" -sev Error
