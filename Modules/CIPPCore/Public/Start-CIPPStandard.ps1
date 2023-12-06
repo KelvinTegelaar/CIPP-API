@@ -9,22 +9,18 @@ function Start-CIPPStandard {
     
     if ($Remediate) {
         $FunctionName = 'Invoke-{0}-Remediate' -f $Standard
-        try {
-            $RemediateFeedback = & $FunctionName -Tenant $Tenant
+        $RemediateFeedback = & $FunctionName -Tenant $Tenant
+        if ($RemediateFeedback -eq 'Good') {
             $AddedText = 'but we remediated this.'
-        } catch {
-            $AddedText = "but we failed to remediate. Error: $($_.exception.message)"
-            $AlertLevel = 'Alert'
+        } else {
+            $AddedText = 'and we failed to remediate this.'
         }
     }
     
     if ($Alert) {
         $FunctionName = 'Invoke-{0}-Alert' -f $Standard
         $AlertFeedback = & $FunctionName -Tenant $Tenant
-        $AlertText = "The standard $($Standard) is not in the expected state. The alert was $AlertFeedback.  $AddedText"
-        $AlertText
-        #Generate a cipp log alert based on the setting?
+        $AlertText = "The standard $($Standard) is not in the expected state. The alert was $AlertFeedback. $AddedText"
+        Write-LogMessage -API "Standards_$($Standard)" -tenant $tenant -message $AlertText -sev $AlertLevel
     }
-
-    #Create another case for the reporting functionality?
 }
