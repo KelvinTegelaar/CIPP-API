@@ -17,7 +17,7 @@ function Invoke-CippGraphWebhookRenewal {
             Write-LogMessage -user 'CIPP' -API 'Renew_Graph_Subscriptions' -message "Renewed Subscription:$($UpdateSub.SubscriptionID)" -Sev "Info" -tenant $TenantFilter
 
         } catch {
-            Write-LogMessage -user 'CIPP' -API 'Renew_Graph_Subscriptions' -message "Failed to renew Webhook Subscription: $($UpdateSub.SubscriptionID)" -Sev "Error" -tenant $TenantFilter
+            Write-LogMessage -user 'CIPP' -API 'Renew_Graph_Subscriptions' -message "Failed to renew Webhook Subscription: $($UpdateSub.SubscriptionID). Linenumber: $($_.InvocationInfo.ScriptLineNumber) Error: $($_.Exception.message)" -Sev "Error" -tenant $TenantFilter
         }
     }
 }
