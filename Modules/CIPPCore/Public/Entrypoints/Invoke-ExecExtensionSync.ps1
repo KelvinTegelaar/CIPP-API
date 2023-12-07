@@ -42,13 +42,16 @@ Function Invoke-ExecExtensionSync {
             $TenantsToProcess = Get-AzDataTableEntity @CIPPMapping -Filter $Filter | Where-Object { $Null -ne $_.NinjaOne -and $_.NinjaOne -ne '' }
 
             if ($Request.Query.TenantID) {
-                foreach ($Tenant in $TenantsToProcess) {
+                $Tenant = $TenantsToProcess | Where-Object {$_.RowKey -eq $Request.Query.TenantID}
+                if (($Tenant | Measure-Object).count -eq 1){
                     Push-OutputBinding -Name NinjaProcess -Value @{
                         'NinjaAction'  = 'SyncTenant'
                         'MappedTenant' = $Tenant
                     }
                     $Results = [pscustomobject]@{'Results' = "NinjaOne Synchronization Queued for $($Tenant.NinjaOneName)" }
-                }
+                } else {
+                    $Results = [pscustomobject]@{'Results' = "Tenant was not found." }
+                } 
                 
             } else {
         
