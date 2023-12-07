@@ -41,36 +41,26 @@ Function Invoke-ExecExtensionSync {
             $Filter = "PartitionKey eq 'NinjaOrgsMapping'"
             $TenantsToProcess = Get-AzDataTableEntity @CIPPMapping -Filter $Filter | Where-Object { $Null -ne $_.NinjaOne -and $_.NinjaOne -ne '' }
 
-            if ($Request.Query.TenantID){
-                $TenantsToProcess = $TenantsToProcess | Where-Object {$_.RowKey -eq $Request.Query.TenantID}
-            }
-            
-            $Results = [pscustomobject]@{'Results' = "NinjaOne Synchronization Queuing $(($TenantsToProcess | Measure-Object).count) Tenants" }
-            Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
-                StatusCode = [HttpStatusCode]::OK
-                Body       = $Results
-            }) -clobber
-
-            foreach ($Tenant in $TenantsToProcess) {
-                Push-OutputBinding -Name NinjaProcess -Value @{
-                    'NinjaAction'  = 'SyncTenant'
-                    'MappedTenant' = $Tenant
+            if ($Request.Query.TenantID) {
+                foreach ($Tenant in $TenantsToProcess) {
+                    Push-OutputBinding -Name NinjaProcess -Value @{
+                        'NinjaAction'  = 'SyncTenant'
+                        'MappedTenant' = $Tenant
+                    }
+                    $Results = [pscustomobject]@{'Results' = "NinjaOne Synchronization Queued for $($Tenant.NinjaOneName)" }
                 }
-                Start-Sleep -Seconds 1
+                
+            } else {
+        
+                Push-OutputBinding -Name NinjaProcess -Value @{
+                    'NinjaAction' = 'SyncTenants'
+                }
+
+                $Results = [pscustomobject]@{'Results' = "NinjaOne Synchronization Queuing $(($TenantsToProcess | Measure-Object).count) Tenants" }
 
             }
 
-            $AddObject = @{
-                PartitionKey   = 'NinjaConfig'
-                RowKey         = 'NinjaLastRunTime'
-                'SettingValue' = (Get-Date).ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ss.fffK')
-            }
-
-            Add-AzDataTableEntity @Table -Entity $AddObject -Force
-
-            Write-LogMessage -API 'NinjaOneAutoMap_Queue' -user 'CIPP' -message "NinjaOne Synchronization Queued for $(($TenantsToProcess | Measure-Object).count) Tenants" -Sev 'Info' 
-
-            $Results = [pscustomobject]@{'Results' = "NinjaOne Synchronization Queued for $(($TenantsToProcess | Measure-Object).count) Tenants" }
+            
         } catch {
             $Results = [pscustomobject]@{'Results' = "Could not start NinjaOne Sync: $($_.Exception.Message)" }
             Write-LogMessage -API 'Scheduler_Billing' -tenant 'none' -message "Could not start NinjaOne Sync $($_.Exception.Message)" -sev Error
