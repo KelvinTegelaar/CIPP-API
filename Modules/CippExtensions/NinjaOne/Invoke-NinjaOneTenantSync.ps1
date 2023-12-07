@@ -1993,6 +1993,7 @@ function Invoke-NinjaOneTenantSync {
             ### CIPP Applied Standards Cards
             Write-Host "Applied Standards"
             Set-Location (Get-Item $PSScriptRoot).FullName
+            Write-LogMessage -API 'NinjaOneSync' -user 'NinjaOneSync' -message "Script root debug: $((Get-Item $PSScriptRoot).FullName)" -Sev 'info' 
             $StandardsDefinitions = Get-Content 'config/standards.json' | ConvertFrom-Json -Depth 100
 
             $Table = Get-CippTable -tablename 'standards'
