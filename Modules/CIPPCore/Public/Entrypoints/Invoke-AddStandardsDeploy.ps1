@@ -16,7 +16,8 @@ Function Invoke-AddStandardsDeploy {
 
     try {
         $Tenants = ($Request.body | Select-Object Select_*).psobject.properties.value
-        $Settings = ($request.body | Select-Object -Property * -ExcludeProperty Select_*, None )
+        $Settings = ($request.body | Select-Object -Property *, 'v2' -ExcludeProperty Select_*, None )
+        $Settings.v2 = $true
         foreach ($Tenant in $tenants) {
         
             $object = [PSCustomObject]@{
@@ -24,6 +25,7 @@ Function Invoke-AddStandardsDeploy {
                 AddedBy   = $username
                 AppliedAt = (Get-Date).ToString('s')
                 Standards = $Settings
+                v2        = $true
             } | ConvertTo-Json -Depth 10
             $Table = Get-CippTable -tablename 'standards'
             $Table.Force = $true
@@ -37,7 +39,7 @@ Function Invoke-AddStandardsDeploy {
         $body = [pscustomobject]@{'Results' = 'Successfully added standards deployment' }
     }
     catch {
-        Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -message "Standards API failed. $($_.Exception.Message)" -Sev 'Error'
+        Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -message "Standards API failed. Error:$($_.Exception.Message)" -Sev 'Error'
         $body = [pscustomobject]@{'Results' = "Failed to add standard: $($_.Exception.Message)" }
     }
 
