@@ -10,7 +10,8 @@ function New-CIPPGraphSubscription {
         $Resource,
         $EventType,
         $APIName = "Create Webhook",
-        $ExecutingUser
+        $ExecutingUser,
+        [Switch]$Recreate
     )
     $CIPPID = (New-Guid).GUID
     $WebhookTable = Get-CIPPTable -TableName webhookTable
@@ -43,7 +44,7 @@ function New-CIPPGraphSubscription {
             $WebhookFilter = "PartitionKey eq '$($TenantFilter)'"
             $ExistingWebhooks = Get-CIPPAzDataTableEntity @WebhookTable -Filter $WebhookFilter
             $MatchedWebhook = $ExistingWebhooks | Where-Object { $_.Resource -eq $Resource }
-            if (($MatchedWebhook | Measure-Object).count -eq 0) {
+            if (($MatchedWebhook | Measure-Object).count -eq 0 -or $Recreate) {
 
                 $expiredate = (Get-Date).AddDays(1).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ss.fffZ")
                 $params = @{
