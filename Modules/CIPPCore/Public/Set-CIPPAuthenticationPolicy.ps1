@@ -5,6 +5,10 @@ function Set-CIPPAuthenticationPolicy {
         [Parameter(Mandatory = $true)]$AuthenticationMethodId,
         [Parameter(Mandatory = $true)][bool]$State, # true = enabled or false = disabled
         [bool]$MicrosoftAuthenticatorSoftwareOathEnabled, 
+        $TAPMinimumLifetime = '60', #Minutes
+        $TAPMaximumLifetime = '480', #minutes
+        $TAPDefaultLifeTime = '60', #minutes
+        $TAPDefaultLength = '8', #TAP password generated length in chars
         $APIName = 'Set Authentication Policy',
         $ExecutingUser = 'None'
     )
@@ -95,7 +99,7 @@ function Set-CIPPAuthenticationPolicy {
             if ($State -eq 'enabled') {
                 Write-LogMessage -user $ExecutingUser -API $APIName -tenant $TenantFilter -message "Setting $AuthenticationMethodId to enabled is not allowed" -sev Error
             }
-            elseif ($State -eq 'disabled') {
+            else {
                 try {
                     $CurrentInfo = New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/policies/authenticationMethodsPolicy/authenticationMethodConfigurations/SMS' -tenantid $TenantFilter
                     $CurrentInfo.state = $State
@@ -120,13 +124,7 @@ function Set-CIPPAuthenticationPolicy {
                 }
                 if (!$TAPConfig) { $TAPConfig = 'true' }
 
-                try {
-                    # Vaiable values
-                    $MinimumLifetime = '60' #Minutes
-                    $MaximumLifetime = '480' #minutes
-                    $DefaultLifeTime = '60' #minutes
-                    $DefaultLength = '8'
-                
+                try {                
                     # Build the body of the request
                     $CurrentInfo = [PSCustomObject]@{
                         '@odata.type'            = '#microsoft.graph.temporaryAccessPassAuthenticationMethodConfiguration'
@@ -139,11 +137,11 @@ function Set-CIPPAuthenticationPolicy {
                                 displayName            = 'All users'
                             }
                         )
-                        defaultLength            = $DefaultLength
-                        defaultLifetimeInMinutes = $DefaultLifeTime
+                        defaultLength            = $TAPDefaultLength
+                        defaultLifetimeInMinutes = $TAPDefaultLifeTime
                         isUsableOnce             = $TAPConfig
-                        maximumLifetimeInMinutes = $MaximumLifetime
-                        minimumLifetimeInMinutes = $MinimumLifetime
+                        maximumLifetimeInMinutes = $TAPMaximumLifetime
+                        minimumLifetimeInMinutes = $TAPMinimumLifetime
                         state                    = $State
                     }
                 
