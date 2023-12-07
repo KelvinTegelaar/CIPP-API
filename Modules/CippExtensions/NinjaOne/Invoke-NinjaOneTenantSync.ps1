@@ -4,7 +4,7 @@ function Invoke-NinjaOneTenantSync {
         $QueueItem
     )
     try {
-        $StartTime = Get-Date
+        $StartQueueTime = Get-Date
         Write-Host "$(Get-Date) - Starting NinjaOne Sync"
         
         # Stagger start
@@ -12,6 +12,8 @@ function Invoke-NinjaOneTenantSync {
         
         # Check Global Rate Limiting
         $CurrentMap = Get-ExtensionRateLimit -ExtensionName 'NinjaOne' -ExtensionPartitionKey 'NinjaOrgsMapping' -RateLimit 5 -WaitTime 60
+
+        $StartTime = Get-Date
         
         # Parse out the Tenant we are processing
         $MappedTenant = $QueueItem.MappedTenant
@@ -28,13 +30,13 @@ function Invoke-NinjaOneTenantSync {
 
         # Set Last Start Time
         $MappingTable = Get-CIPPTable -TableName CippMapping
-        $CurrentItem | Add-Member -NotePropertyName lastStartTime -NotePropertyValue ([string]$(($StartTime).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ss.fffZ"))) -Force
+        $CurrentItem | Add-Member -NotePropertyName lastStartTime -NotePropertyValue ([string]$(($StartQueueTime).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ss.fffZ"))) -Force
         $CurrentItem | Add-Member -NotePropertyName lastStatus -NotePropertyValue 'Running' -Force
         if ($Null -ne $CurrentItem.lastEndTime -and $CurrentItem.lastEndTime -ne '' ) {
             $CurrentItem.lastEndTime = ([string]$(($CurrentItem.lastEndTime).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ss.fffZ")))
         }
         Add-CIPPAzDataTableEntity @MappingTable -Entity $CurrentItem -Force
-        
+
 
         # Fetch Custom NinjaOne Settings
         $Table = Get-CIPPTable -TableName NinjaOneSettings
@@ -2298,7 +2300,7 @@ function Invoke-NinjaOneTenantSync {
         $CurrentItem | Add-Member -NotePropertyName lastStatus -NotePropertyValue 'Completed' -Force
         Add-CIPPAzDataTableEntity @MappingTable -Entity $CurrentItem -Force
 
-        Write-LogMessage -API 'NinjaOneSync' -user 'NinjaOneSync' -message "Completed NinjaOne Sync for $($Customer.displayName). Data fetched in $((New-TimeSpan -Start $StartTime -End $FetchEnd).TotalSeconds) seconds. Total time $((New-TimeSpan -Start $StartTime -End (Get-Date)).TotalSeconds) seconds" -Sev 'info' 
+        Write-LogMessage -API 'NinjaOneSync' -user 'NinjaOneSync' -message "Completed NinjaOne Sync for $($Customer.displayName). Queued for $((New-TimeSpan -Start $StartQueueTime -End $StartTime).TotalSeconds) seconds. Data fetched in $((New-TimeSpan -Start $StartTime -End $FetchEnd).TotalSeconds) seconds. Total time $((New-TimeSpan -Start $StartTime -End (Get-Date)).TotalSeconds) seconds" -Sev 'info' 
 
     } catch {
         Write-Error "Failed NinjaOne Processing for $($Customer.displayName) Linenumber: $($_.InvocationInfo.ScriptLineNumber) Error: $($_.Exception.message)"
