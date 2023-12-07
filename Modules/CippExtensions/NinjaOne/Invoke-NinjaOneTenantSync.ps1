@@ -47,7 +47,7 @@ function Invoke-NinjaOneTenantSync {
         $Customer = Get-Tenants | where-object { $_.customerId -eq $MappedTenant.RowKey }
         Write-Host "Processing: $($Customer.displayName) - Queued for $((New-TimeSpan -Start $StartQueueTime -End $StartTime).TotalSeconds)"
 
-        Write-LogMessage -API 'NinjaOneSync' -user 'NinjaOneSync' -message "Processing NinjaOne Synchronization for $($Customer.displayName)" -Sev 'Info' 
+        Write-LogMessage -API 'NinjaOneSync' -user 'NinjaOneSync' -message "Processing NinjaOne Synchronization for $($Customer.displayName) - Queued for $((New-TimeSpan -Start $StartQueueTime -End $StartTime).TotalSeconds)" -Sev 'Info' 
 
         if (($Customer | Measure-Object).count -ne 1) {
             Throw "Unable to match the recieved ID to a tenant QueueItem: $($QueueItem | ConvertTo-Json -Depth 100 | Out-String) Matched Customer: $($Customer| ConvertTo-Json -Depth 100 | Out-String)"
@@ -1992,8 +1992,8 @@ function Invoke-NinjaOneTenantSync {
 
             ### CIPP Applied Standards Cards
             Write-Host "Applied Standards"
-            Set-Location (Get-Item $PSScriptRoot).FullName
-            Write-LogMessage -API 'NinjaOneSync' -user 'NinjaOneSync' -message "Script root debug: $((Get-Item $PSScriptRoot).FullName)" -Sev 'info' 
+            Set-Location (Get-Item $PSScriptRoot).Parent.Parent.FullName
+            Write-LogMessage -API 'NinjaOneSync' -user 'NinjaOneSync' -message "Script root debug: $((Get-Item $PSScriptRoot).Parent.Parent.FullName)" -Sev 'info' 
             $StandardsDefinitions = Get-Content 'config/standards.json' | ConvertFrom-Json -Depth 100
 
             $Table = Get-CippTable -tablename 'standards'
