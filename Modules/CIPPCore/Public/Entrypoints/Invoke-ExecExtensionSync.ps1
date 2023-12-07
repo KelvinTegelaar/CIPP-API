@@ -41,6 +41,10 @@ Function Invoke-ExecExtensionSync {
             $Filter = "PartitionKey eq 'NinjaOrgsMapping'"
             $TenantsToProcess = Get-AzDataTableEntity @CIPPMapping -Filter $Filter | Where-Object { $Null -ne $_.NinjaOne -and $_.NinjaOne -ne '' }
 
+            if ($Request.Query.TenantID){
+                $TenantsToProcess = $TenantsToProcess | Where-Object {$_.RowKey -eq $Request.Query.TenantID}
+            }
+            
             $Results = [pscustomobject]@{'Results' = "NinjaOne Synchronization Queuing $(($TenantsToProcess | Measure-Object).count) Tenants" }
             Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
                 StatusCode = [HttpStatusCode]::OK
