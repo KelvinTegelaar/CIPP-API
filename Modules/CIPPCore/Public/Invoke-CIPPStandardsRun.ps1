@@ -1,8 +1,18 @@
  
 function Invoke-CIPPStandardsRun {
-    Write-Host 'Starting process for standards.'
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory = $false)]
+        [string]$TenantFilter = 'allTenants'
+    )
+    Write-Host "Starting process for standards - $($tenantFilter)"
     $Table = Get-CippTable -tablename 'standards'
     $SkipList = Get-Tenants -SkipList
+    if ($tenantfilter -ne 'allTenants') {
+        $Filter = "PartitionKey eq 'standards' and RowKey eq '$($tenantfilter)'"
+    } else {
+        $Filter = "PartitionKey eq 'standards'"
+    }
     $Tenants = (Get-CIPPAzDataTableEntity @Table -Filter $Filter).JSON | ConvertFrom-Json
 
     #Migrate from old standards to new standards.
