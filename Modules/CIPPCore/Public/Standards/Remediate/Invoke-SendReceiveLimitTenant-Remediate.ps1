@@ -5,11 +5,7 @@ function Invoke-SendReceiveLimitTenant-Remediate {
     #>
     param($Tenant, $Settings)
     # Get the tenant standards settings
-    $ConfigTable = Get-CippTable -tablename 'standards'
-    $Limits = ((Get-CIPPAzDataTableEntity @ConfigTable -Filter "PartitionKey eq 'standards' and RowKey eq '$tenant'").JSON | ConvertFrom-Json).standards.SendReceiveLimitTenant.SendReceiveLimit -split ','
-    if (!$Limits) {
-        $Limits = ((Get-CIPPAzDataTableEntity @ConfigTable -Filter "PartitionKey eq 'standards' and RowKey eq 'AllTenants'").JSON | ConvertFrom-Json).standards.SendReceiveLimitTenant.SendReceiveLimit -split ','
-    }
+    $Limits = $Settings.SendReceiveLimit
 
     # Parse the send limits and convert to bytes 
     if ($Limits[0] -like '*MB*') {

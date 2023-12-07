@@ -5,16 +5,12 @@ function Invoke-NudgeMFA-Remediate {
     #>
     param($Tenant, $Settings)
 
-    $ConfigTable = Get-CippTable -tablename 'standards'
-    $Setting = ((Get-AzDataTableEntity @ConfigTable -Filter "PartitionKey eq 'standards' and RowKey eq '$tenant'").JSON | ConvertFrom-Json).standards.NudgeMFA
-    if (!$Setting) {
-        $Setting = ((Get-AzDataTableEntity @ConfigTable -Filter "PartitionKey eq 'standards' and RowKey eq 'AllTenants'").JSON | ConvertFrom-Json).standards.NudgeMFA
-    }
-    Write-Output $setting
-    $status = if ($Setting.enable -and $Setting.disable) {
+    Write-Output $Settings
+    
+    $status = if ($Settings.enable -and $Settings.disable) {
         Write-LogMessage -API 'Standards' -tenant $tenant -message 'You cannot both enable and disable the Nudge MFA setting' -sev Error
         Exit
-    } elseif ($setting.enable) { 'enabled' } else { 'disabled' }
+    } elseif ($Settings.enable) { 'enabled' } else { 'disabled' }
     Write-Output $status
     try {
         $body = '{"registrationEnforcement":{"authenticationMethodsRegistrationCampaign":{"snoozeDurationInDays":0,"state":"' + $status + '","excludeTargets":[],"includeTargets":[{"id":"all_users","targetType":"group","targetedAuthenticationMethod":"microsoftAuthenticator","displayName":"All users"}]}}}'

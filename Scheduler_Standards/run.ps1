@@ -11,7 +11,17 @@ $Tenants = (Get-CIPPAzDataTableEntity @Table -Filter $Filter).JSON | ConvertFrom
 $Tenants | Where-Object -Property 'v2' -NE $true | ForEach-Object {
     $OldStd = $_
     $OldStd.standards.psobject.properties.name | ForEach-Object {
-        $OldStd.Standards.$_ = [pscustomobject]@{ remediate = $true }
+        if ($_ -eq 'MailContacts') {
+            $OldStd.Standards.$_ = [pscustomobject]@{ 
+                GeneralContact   = $OldStd.Standards.MailContacts.GeneralContact.Mail
+                SecurityContact  = $OldStd.Standards.MailContacts.SecurityContact.Mail
+                MarketingContact = $OldStd.Standards.MailContacts.MarketingContact.Mail
+                TechContact      = $OldStd.Standards.MailContacts.TechContact.Mail
+                remediate        = $true
+            }
+        } else {
+            $OldStd.Standards.$_ | Add-Member -NotePropertyName 'remediate' -NotePropertyValue $true 
+        }
     }
     $OldStd | Add-Member -NotePropertyName 'v2' -NotePropertyValue $true -PassThru -Force
     $Entity = @{ 

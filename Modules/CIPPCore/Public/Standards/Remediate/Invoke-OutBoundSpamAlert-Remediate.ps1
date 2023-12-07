@@ -4,11 +4,7 @@ function Invoke-OutBoundSpamAlert-Remediate {
     Internal
     #>
     param($Tenant, $Settings)
-    $ConfigTable = Get-CippTable -tablename 'standards'
-    $Contacts = ((Get-AzDataTableEntity @ConfigTable -Filter "PartitionKey eq 'standards' and RowKey eq '$tenant'").JSON | ConvertFrom-Json).standards.OutBoundSpamAlert
-    if (!$Contacts) {
-        $Contacts = ((Get-AzDataTableEntity @ConfigTable -Filter "PartitionKey eq 'standards' and RowKey eq 'AllTenants'").JSON | ConvertFrom-Json).standards.OutBoundSpamAlert
-    }
+    $Contacts = $settings.OutboundSpamContact
 
     try {
         New-ExoRequest -tenantid $tenant -cmdlet 'Set-HostedOutboundSpamFilterPolicy' -cmdparams @{ Identity = 'Default'; NotifyOutboundSpam = $true; NotifyOutboundSpamRecipients = $Contacts.OutboundSpamContact } -useSystemMailbox $true

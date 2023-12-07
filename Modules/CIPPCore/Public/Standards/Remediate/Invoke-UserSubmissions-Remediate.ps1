@@ -5,15 +5,10 @@ function Invoke-UserSubmissions-Remediate {
     #>
     param($Tenant, $Settings)
 
-    $ConfigTable = Get-CippTable -tablename 'standards'
-    $Setting = ((Get-AzDataTableEntity @ConfigTable -Filter "PartitionKey eq 'standards' and RowKey eq '$tenant'").JSON | ConvertFrom-Json).standards.usersubmissions
-    if (!$Setting) {
-        $Setting = ((Get-AzDataTableEntity @ConfigTable -Filter "PartitionKey eq 'standards' and RowKey eq 'AllTenants'").JSON | ConvertFrom-Json).standards.usersubmissions
-    }
-    if ($Setting.enable -and $Setting.disable) {
+    if ($Settings.enable -and $Settings.disable) {
         Write-LogMessage -API 'Standards' -tenant $tenant -message 'You cannot both enable and disable the User Submission policy' -sev Error
         Exit
-    } elseif ($setting.enable) {
+    } elseif ($Settings.enable) {
         $status = $true
         try {
             $Policy = New-ExoRequest -tenantid $Tenant -cmdlet 'Get-ReportSubmissionPolicy'

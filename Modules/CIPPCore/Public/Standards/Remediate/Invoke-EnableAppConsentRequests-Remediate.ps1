@@ -5,13 +5,6 @@ function Invoke-EnableAppConsentRequests-Remediate {
     #>
     param($Tenant, $Settings)
     try {
-
-        $ConfigTable = Get-CippTable -tablename 'standards'
-        $Setting = ((Get-CIPPAzDataTableEntity @ConfigTable -Filter "PartitionKey eq 'standards' and RowKey eq '$tenant'").JSON | ConvertFrom-Json).standards.EnableAppConsentRequests
-        if (!$Setting) {
-            $Setting = ((Get-CIPPAzDataTableEntity @ConfigTable -Filter "PartitionKey eq 'standards' and RowKey eq 'AllTenants'").JSON | ConvertFrom-Json).standards.EnableAppConsentRequests
-        }
-
         # Get current state
         $CurrentInfo = New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/policies/adminConsentRequestPolicy' -tenantid $Tenant
 
@@ -22,8 +15,8 @@ function Invoke-EnableAppConsentRequests-Remediate {
         $CurrentInfo.requestDurationInDays = 30
 
         # Roles from standards table
-        $RolesToAdd = $Setting.ReviewerRoles.value
-        $RoleNames = $Setting.ReviewerRoles.label -join ', '
+        $RolesToAdd = $Settings.ReviewerRoles.value
+        $RoleNames = $Settings.ReviewerRoles.label -join ', '
 
         # Set default if no roles are selected
         if (!$RolesToAdd) {

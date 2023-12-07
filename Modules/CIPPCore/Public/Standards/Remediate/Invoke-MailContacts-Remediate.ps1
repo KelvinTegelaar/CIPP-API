@@ -4,20 +4,17 @@ function Invoke-MailContacts-Remediate {
     Internal
     #>
     param($Tenant, $Settings)
-    $ConfigTable = Get-CippTable -tablename 'standards'
-    $Contacts = ((Get-AzDataTableEntity @ConfigTable -Filter "PartitionKey eq 'standards' and RowKey eq '$tenant'").JSON | ConvertFrom-Json).standards.MailContacts
-    if (!$Contacts) {
-        $Contacts = ((Get-AzDataTableEntity @ConfigTable -Filter "PartitionKey eq 'standards' and RowKey eq 'AllTenants'").JSON | ConvertFrom-Json).standards.MailContacts
-    }
+
+    $contacts = $settings
 
     try {
         $TenantID = (New-GraphGetRequest -Uri 'https://graph.microsoft.com/beta/organization' -tenantid $tenant)
         $Body = [pscustomobject]@{}
         switch ($Contacts) {
-            { $Contacts.marketingcontact.mail } { $body | Add-Member -NotePropertyName marketingNotificationEmails -NotePropertyValue @($Contacts.marketingcontact.mail) }
-            { $Contacts.SecurityContact.Mail } { $body | Add-Member -NotePropertyName securityComplianceNotificationMails -NotePropertyValue @($Contacts.SecurityContact.Mail) }
-            { $Contacts.TechContact.Mail } { $body | Add-Member -NotePropertyName technicalNotificationMails -NotePropertyValue @($Contacts.TechContact.Mail) }
-            { $Contacts.GeneralContact.Mail } { $body | Add-Member -NotePropertyName privacyProfile -NotePropertyValue @{contactEmail = $Contacts.GeneralContact.Mail } }
+            { $Contacts.MarketingContact } { $body | Add-Member -NotePropertyName marketingNotificationEmails -NotePropertyValue @($Contacts.MarketingContact) }
+            { $Contacts.SecurityContact } { $body | Add-Member -NotePropertyName securityComplianceNotificationMails -NotePropertyValue @($Contacts.SecurityContact) }
+            { $Contacts.TechContact } { $body | Add-Member -NotePropertyName technicalNotificationMails -NotePropertyValue @($Contacts.TechContact) }
+            { $Contacts.GeneralContact } { $body | Add-Member -NotePropertyName privacyProfile -NotePropertyValue @{contactEmail = $Contacts.GeneralContact } }
         }
         Write-Host (ConvertTo-Json -InputObject $body)
         New-GraphPostRequest -tenantid $tenant -Uri "https://graph.microsoft.com/beta/organization/$($TenantID.id)" -Type patch -Body (ConvertTo-Json -InputObject $body) -ContentType 'application/json'

@@ -4,11 +4,7 @@ function Invoke-TAP-Remediate {
     Internal
     #>
     param($Tenant, $Settings)
-    $ConfigTable = Get-CippTable -tablename 'standards'
-    $TAPConfig = ((Get-AzDataTableEntity @ConfigTable -Filter "PartitionKey eq 'standards' and RowKey eq '$tenant'").JSON | ConvertFrom-Json).Standards.TAP.config
-    if (!$TAPConfig) {
-        $TAPConfig = ((Get-AzDataTableEntity @ConfigTable -Filter "PartitionKey eq 'standards' and RowKey eq 'AllTenants'").JSON | ConvertFrom-Json).Standards.TAP.config
-    }
+    $TAPConfig = $Settings.Config
     if (!$TAPConfig) { $TAPConfig = 'true' }
     try {
         $MinimumLifetime = '60' #Minutes

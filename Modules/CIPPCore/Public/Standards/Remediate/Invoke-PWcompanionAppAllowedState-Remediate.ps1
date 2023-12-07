@@ -5,11 +5,7 @@ function Invoke-PWcompanionAppAllowedState-Remediate {
     #>
     param($Tenant, $Settings)
 
-    $ConfigTable = Get-CippTable -tablename 'standards'
-    $Setting = ((Get-AzDataTableEntity @ConfigTable -Filter "PartitionKey eq 'standards' and RowKey eq '$tenant'").JSON | ConvertFrom-Json).standards.PWcompanionAppAllowedState
-    if (!$Setting) {
-        $Setting = ((Get-AzDataTableEntity @ConfigTable -Filter "PartitionKey eq 'standards' and RowKey eq 'AllTenants'").JSON | ConvertFrom-Json).standards.PWcompanionAppAllowedState
-    }
+    $Setting = $Settings
 
     try {
 

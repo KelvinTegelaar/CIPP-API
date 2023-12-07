@@ -3,7 +3,7 @@ function Push-CIPPStandard {
         $QueueItem, $TriggerMetadata
     )
 
-    Write-Host "Received queue item for $($QueueItem.Tenant) and standard $($QueueItem.Standard)"
+    Write-Host "Received queue item for $($QueueItem.Tenant) and standard $($QueueItem.Standard). We will be using this as the settings: $($QueueItem.Settings | ConvertTo-Json -Depth 10)"
     $Tenant = $QueueItem.Tenant
     $Standard = $QueueItem.Standard
     $Remediate = $QueueItem.Settings.remediate
