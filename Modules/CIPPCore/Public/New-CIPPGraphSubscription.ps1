@@ -64,6 +64,7 @@ function New-CIPPGraphSubscription {
                     Resource               = [string]$Resource
                     Expiration             = [string]$expiredate
                     SubscriptionID         = [string]$GraphRequest.id
+                    TypeofSubscription     = [string]$TypeofSubscription
                     WebhookNotificationUrl = [string]$GraphRequest.notificationUrl
                 }
                 $null = Add-CIPPAzDataTableEntity @WebhookTable -Entity $WebhookRow
