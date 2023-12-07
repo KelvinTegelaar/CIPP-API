@@ -34,8 +34,7 @@ function Invoke-NinjaOneTenantSync {
             $CurrentItem.lastEndTime = ([string]$(($CurrentItem.lastEndTime).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ss.fffZ")))
         }
         Add-CIPPAzDataTableEntity @MappingTable -Entity $CurrentItem -Force
-
-        Set-Location (Get-Item $PSScriptRoot).Parent.FullName
+        
 
         # Fetch Custom NinjaOne Settings
         $Table = Get-CIPPTable -TableName NinjaOneSettings
@@ -1991,6 +1990,7 @@ function Invoke-NinjaOneTenantSync {
 
             ### CIPP Applied Standards Cards
             Write-Host "Applied Standards"
+            Set-Location (Get-Item $PSScriptRoot).FullName
             $StandardsDefinitions = Get-Content 'config/standards.json' | ConvertFrom-Json -Depth 100
 
             $Table = Get-CippTable -tablename 'standards'

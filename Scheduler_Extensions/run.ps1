@@ -48,6 +48,7 @@ if ($Configuration.NinjaOne.Enabled -eq $True) {
                 'NinjaAction'  = 'SyncTenant'
                 'MappedTenant' = $Tenant
             }
+            Start-Sleep -Seconds 1
 
         }
 
@@ -81,6 +82,7 @@ if ($Configuration.NinjaOne.Enabled -eq $True) {
                     'NinjaAction'  = 'SyncTenant'
                     'MappedTenant' = $Tenant
                 }
+                Start-Sleep -Seconds 1
             }
             if (($CatchupTenants | Measure-Object).count -gt 0){
             Write-LogMessage -API 'NinjaOneSync' -user 'CIPP' -message "NinjaOne Synchronization Catchup Queued for $(($CatchupTenants | Measure-Object).count) Tenants" -Sev 'Info' 

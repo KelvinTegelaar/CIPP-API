@@ -46,6 +46,7 @@ Function Invoke-ExecExtensionSync {
                     'NinjaAction'  = 'SyncTenant'
                     'MappedTenant' = $Tenant
                 }
+                Start-Sleep -Seconds 1
 
             }
 
