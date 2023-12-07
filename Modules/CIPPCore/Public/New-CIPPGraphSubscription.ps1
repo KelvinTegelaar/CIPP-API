@@ -36,6 +36,7 @@ function New-CIPPGraphSubscription {
             }
 
             $null = Add-CIPPAzDataTableEntity @WebhookTable -Entity $WebhookRow
+            Write-LogMessage -user $ExecutingUser -API $APIName -message "Created Webhook subscription for $($TenantFilter)" -Sev "Info" -tenant $TenantFilter
 
         } else {
             # First check if there is an exsiting Webhook in place
@@ -70,9 +71,11 @@ function New-CIPPGraphSubscription {
                 $null = Add-CIPPAzDataTableEntity @WebhookTable -Entity $WebhookRow
                 #todo: add remove webhook function, add check webhook function, add list webhooks function
                 #add refresh webhook function based on table. 
+                Write-LogMessage -user $ExecutingUser -API $APIName -message "Created Graph Webhook subscription for $($TenantFilter)" -Sev "Info" -tenant $TenantFilter
+            } else {
+                Write-LogMessage -user $ExecutingUser -API $APIName -message "Existing Graph Webhook subscription for $($TenantFilter) found" -Sev "Info" -tenant $TenantFilter
             }
         }
-        Write-LogMessage -user $ExecutingUser -API $APIName -message "Created Webhook subscription for $($TenantFilter)" -Sev "Info" -tenant $TenantFilter
         return "Created Webhook subscription for $($TenantFilter)"
     } catch {
         Write-LogMessage -user $ExecutingUser -API $APIName -message "Failed to create Webhook Subscription: $($_.Exception.Message)" -Sev "Error" -tenant $TenantFilter
