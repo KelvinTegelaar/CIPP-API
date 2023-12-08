@@ -2026,10 +2026,10 @@ function Invoke-NinjaOneTenantSync {
             ### License Card
             Write-Host "License Details"
             $LicenseTableHTML = $LicensesParsed | Sort-Object 'License Name' | ConvertTo-HTML -As Table -Fragment
-            $LicenseTableHTML = ([System.Web.HttpUtility]::HtmlDecode($LicenseTableHTML) -replace '<th>', '<th style="white-space: nowrap;">') -replace '<td>', '<td style="white-space: nowrap;">'
+            $LicenseTableHTML = '<div class="field-container">' + (([System.Web.HttpUtility]::HtmlDecode($LicenseTableHTML) -replace '<th>', '<th style="white-space: nowrap;">') -replace '<td>', '<td style="white-space: nowrap;">') + '</div>'
             
             $TitleLink = "https://$CIPPUrl/tenant/administration/list-licenses?customerId=$($Customer.customerId)"
-            $LicensesSummaryCardHTML = '<div class="field-container">' + "$(Get-NinjaOneCard -Title 'Licenses' -Body $LicenseTableHTML -Icon 'fas fa-chart-bar' -TitleLink $TitleLink)" + '</div>'
+            $LicensesSummaryCardHTML = Get-NinjaOneCard -Title 'Licenses' -Body $LicenseTableHTML -Icon 'fas fa-chart-bar' -TitleLink $TitleLink
 
             
             ### Summary Stats
