@@ -35,9 +35,11 @@ Function Invoke-AddStandardsDeploy {
                 PartitionKey = 'standards'
             }
         }
+        Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -message 'Successfully added standards deployment' -Sev 'Info'
         $body = [pscustomobject]@{'Results' = 'Successfully added standards deployment' }
-    } catch {
-        Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -message "Standards API failed. $($_.Exception.Message)" -Sev 'Error'
+    }
+    catch {
+        Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -message "Standards API failed. Error:$($_.Exception.Message)" -Sev 'Error'
         $body = [pscustomobject]@{'Results' = "Failed to add standard: $($_.Exception.Message)" }
     }
 
