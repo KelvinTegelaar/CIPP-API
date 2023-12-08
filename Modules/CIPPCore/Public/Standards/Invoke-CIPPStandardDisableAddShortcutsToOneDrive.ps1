@@ -5,10 +5,8 @@ function Invoke-DisableAddShortcutsToOneDrive {
     #>
     param($Tenant, $Settings)
     If ($Settings.Remediate) {
-        
-
-    function GetTenantRequestXml {
-        return @'
+        function GetTenantRequestXml {
+            return @'
         <Request AddExpandoFieldTypeSuffix="true" SchemaVersion="15.0.0.0" LibraryVersion="16.0.0.0"
             ApplicationName="SharePoint Online PowerShell (16.0.23814.0)"
             xmlns="http://schemas.microsoft.com/sharepoint/clientquery/2009">
@@ -25,17 +23,17 @@ function Invoke-DisableAddShortcutsToOneDrive {
             </ObjectPaths>
         </Request>
 '@
-    }
+        }
 
-    function GetDisableAddShortcutsToOneDriveXml {
-        param(
-            [string]$identity
-        )
+        function GetDisableAddShortcutsToOneDriveXml {
+            param(
+                [string]$identity
+            )
 
-        # the json object gives us a space and a newline :(
-        $identity = $identity.Replace(' ', '')
-        $identity = $identity.Replace("`n", '&#xA;')
-        return @"
+            # the json object gives us a space and a newline :(
+            $identity = $identity.Replace(' ', '')
+            $identity = $identity.Replace("`n", '&#xA;')
+            return @"
         <Request AddExpandoFieldTypeSuffix="true" SchemaVersion="15.0.0.0"
             LibraryVersion="16.0.0.0" ApplicationName="SharePoint Online PowerShell (16.0.23814.0)"
             xmlns="http://schemas.microsoft.com/sharepoint/clientquery/2009">
@@ -49,48 +47,48 @@ function Invoke-DisableAddShortcutsToOneDrive {
             </ObjectPaths>
         </Request>
 "@
-    }
-
-    $log = @{
-        API     = 'Standards'
-        tenant  = $tenant
-        message = ''
-        sev     = 'Info'
-    }
-
-    try {
-        $OnMicrosoft = (New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/domains?$top=999' -tenantid $tenant |
-            Where-Object -Property isInitial -EQ $true).id.split('.') | Select-Object -First 1
-        $AdminUrl = "https://$($OnMicrosoft)-admin.sharepoint.com"
-        $graphRequest = @{
-            'scope'       = "$AdminURL/.default"
-            'tenantid'    = $tenant
-            'uri'         = "$AdminURL/_vti_bin/client.svc/ProcessQuery"
-            'type'        = 'POST'
-            'body'        = GetTenantRequestXml
-            'ContentType' = 'text/xml'
         }
 
-        $response = New-GraphPostRequest @graphRequest
-        if (!$response.ErrorInfo.ErrorMessage) {
-            $log.message = 'Received Tenant from Sharepoint'
-            Write-LogMessage @log
+        $log = @{
+            API     = 'Standards'
+            tenant  = $tenant
+            message = ''
+            sev     = 'Info'
         }
 
-        $graphRequest.Body = GetDisableAddShortcutsToOneDriveXml -identity $response._ObjectIdentity_
-        $response = New-GraphPostRequest @graphRequest
+        try {
+            $OnMicrosoft = (New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/domains?$top=999' -tenantid $tenant |
+                Where-Object -Property isInitial -EQ $true).id.split('.') | Select-Object -First 1
+            $AdminUrl = "https://$($OnMicrosoft)-admin.sharepoint.com"
+            $graphRequest = @{
+                'scope'       = "$AdminURL/.default"
+                'tenantid'    = $tenant
+                'uri'         = "$AdminURL/_vti_bin/client.svc/ProcessQuery"
+                'type'        = 'POST'
+                'body'        = GetTenantRequestXml
+                'ContentType' = 'text/xml'
+            }
 
-        if (!$response.ErrorInfo.ErrorMessage) {
-            $log.message = "Set DisableAddShortcutsToOneDrive to True on $tenant"
-        } else {
-            $log.message = "Unable to set DisableAddShortcutsToOneDrive to True `
+            $response = New-GraphPostRequest @graphRequest
+            if (!$response.ErrorInfo.ErrorMessage) {
+                $log.message = 'Received Tenant from Sharepoint'
+                Write-LogMessage @log
+            }
+
+            $graphRequest.Body = GetDisableAddShortcutsToOneDriveXml -identity $response._ObjectIdentity_
+            $response = New-GraphPostRequest @graphRequest
+
+            if (!$response.ErrorInfo.ErrorMessage) {
+                $log.message = "Set DisableAddShortcutsToOneDrive to True on $tenant"
+            } else {
+                $log.message = "Unable to set DisableAddShortcutsToOneDrive to True `
             on $($Tenant, $Settings): $($response.ErrorInfo.ErrorMessage)"
+            }
+        } catch {
+            $log.message = "Failed to set OneDrive shortcut: $($_.Exception.Message)"
+            $log.sev = 'Error'
         }
-    } catch {
-        $log.message = "Failed to set OneDrive shortcut: $($_.Exception.Message)"
-        $log.sev = 'Error'
-    }
 
-    Write-LogMessage @log
-}
+        Write-LogMessage @log
+    }
 }

@@ -16,4 +16,12 @@ function Invoke-DisableReshare {
             Write-LogMessage -API 'Standards' -tenant $tenant -message "Failed to disable guests from resharing files: $($_.exception.message)" -sev Error
         }
     }
+    if ($Settings.Alert) {
+        $CurrentInfo = New-GraphGetRequest -Uri 'https://graph.microsoft.com/beta/admin/sharepoint/settings' -tenantid $Tenant -AsApp $true
+        if ($CurrentInfo.isResharingByExternalUsersEnabled -eq $false) {
+            Write-LogMessage -API 'Standards' -tenant $tenant -message 'Guests are not allowed to reshare files' -sev Info
+        } else {
+            Write-LogMessage -API 'Standards' -tenant $tenant -message 'Guests are allowed to reshare files' -sev Alert
+        }
+    }
 }
