@@ -4,6 +4,8 @@ function Invoke-TAP {
     Internal
     #>
     param($Tenant, $Settings)
+    $CurrentInfo = (New-GraphGetRequest -Uri 'https://graph.microsoft.com/beta/policies/authenticationmethodspolicy/authenticationMethodConfigurations/TemporaryAccessPass' -tenantid $Tenant)
+
     If ($Settings.Remediate) {
         
         $TAPConfig = $Settings.Config
@@ -33,11 +35,19 @@ function Invoke-TAP {
         }
     }
     if ($Settings.Alert) {
-        $CurrentInfo = (New-GraphGetRequest -Uri 'https://graph.microsoft.com/beta/policies/authenticationmethodspolicy/authenticationMethodConfigurations/TemporaryAccessPass' -tenantid $Tenant)
         if ($CurrentInfo.state -eq 'enabled') {
             Write-LogMessage -API 'Standards' -tenant $tenant -message 'Temporary Access Passwords is enabled.' -sev Info
         } else {
             Write-LogMessage -API 'Standards' -tenant $tenant -message 'Temporary Access Passwords is not enabled.' -sev Alert
         }
     }
+    if ($Settings.Report) {
+        if ($CurrentInfo.state -eq 'enabled') {
+            $CurrentInfo.state = $true
+        } else {
+            $CurrentInfo.state = $false
+        }
+        Add-CIPPBPAField -FieldName 'TemporaryAccessPass' -FieldValue [bool]$CurrentInfo.state -StoreAs bool -Tenant $tenant
+    }
+
 }

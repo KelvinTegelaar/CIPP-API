@@ -71,4 +71,7 @@ function Invoke-EnableAppConsentRequests {
             Write-LogMessage -API 'Standards' -tenant $tenant -message 'App consent admin requests are disabled' -sev Alert
         }
     }
+    if ($Settings.Report) {
+        Add-CIPPBPAField -FieldName 'EnableAppConsentAdminRequests' -FieldValue [bool]$CurrentInfo.isEnabled -StoreAs bool -Tenant $tenant
+    }
 }

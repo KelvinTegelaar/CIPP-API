@@ -24,4 +24,7 @@ function Invoke-SecurityDefaults {
             Write-LogMessage -API 'Standards' -tenant $tenant -message 'Security Defaults is not enabled.' -sev Alert
         }
     }
+    if ($Settings.Report) {
+        Add-CIPPBPAField -FieldName 'SecurityDefaults' -FieldValue [bool]$SecureDefaultsState.IsEnabled -StoreAs bool -Tenant $tenant
+    }
 }

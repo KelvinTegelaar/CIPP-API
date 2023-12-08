@@ -25,4 +25,7 @@ function Invoke-DisableGuests {
             Write-LogMessage -API 'Standards' -tenant $tenant -message 'No guests accounts with a login longer than 90 days ago.' -sev Info
         }
     }
+    if ($Settings.Report) {
+        Add-CIPPBPAField -FieldName 'DisableGuests' -FieldValue $GraphRequest -StoreAs json -Tenant $tenant
+    }
 }

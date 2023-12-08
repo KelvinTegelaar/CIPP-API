@@ -33,5 +33,17 @@ function Invoke-DisableM365GroupUsers {
             Write-LogMessage -API 'Standards' -tenant $tenant -message 'Users are not disabled from creating M365 Groups.' -sev Alert
         }
     }
+    if ($Settings.Report) {
+        if ($CurrentState) {
+            if (($CurrentState.values | Where-Object { $_.name -eq 'EnableGroupCreation' }).value -eq 'false') {
+                $CurrentState = $true
+            } else {
+                $CurrentState = $false
+            }
+        } else {
+            $CurrentState = $false
+        }
+        Add-CIPPBPAField -FieldName 'DisableM365GroupUsers' -FieldValue [bool]$CurrentState -StoreAs bool -Tenant $tenant
+    }
 
 }

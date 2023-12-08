@@ -20,4 +20,9 @@ function Invoke-PasswordExpireDisabled {
             Write-LogMessage -API 'Standards' -tenant $tenant -message "Password Expiration is not disabled for $($_.name)" -sev Alert
         }
     }
+    if ($Settings.Report) {
+        $DomainswithoutPassExpire = $GraphRequest | Where-Object -Property passwordValidityPeriodInDays -NE '2147483647'
+        Add-CIPPBPAField -FieldName 'PasswordExpireDisabled' -FieldValue $DomainswithoutPassExpire -StoreAs json -Tenant $tenant
+        
+    }
 }

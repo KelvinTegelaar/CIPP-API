@@ -28,4 +28,7 @@ function Invoke-DelegateSentItems {
             Write-LogMessage -API 'Standards' -tenant $tenant -message 'Delegate Sent Items Style is enabled' -sev Info
         }
     }
+    if ($Settings.Report) {
+        Add-CIPPBPAField -FieldName 'DelegateSentItems' -FieldValue $Mailboxes -StoreAs json -Tenant $tenant
+    }
 }

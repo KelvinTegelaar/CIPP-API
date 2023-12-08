@@ -24,4 +24,7 @@ function Invoke-ExcludedfileExt {
             Write-LogMessage -API 'Standards' -tenant $tenant -message "Excluded synced files does not contain $($Settings.ext)" -sev Alert
         }
     }
+    if ($Settings.Report) {
+        Add-CIPPBPAField -FieldName 'ExcludedfileExt' -FieldValue $CurrentInfo.excludedFileExtensionsForSyncApp -StoreAs json -Tenant $tenant
+    }
 }

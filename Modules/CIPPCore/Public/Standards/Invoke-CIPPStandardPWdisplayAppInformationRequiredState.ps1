@@ -4,6 +4,8 @@ function Invoke-PWdisplayAppInformationRequiredState {
     Internal
     #>
     param($Tenant, $Settings)
+    $CurrentInfo = New-GraphGetRequest -Uri 'https://graph.microsoft.com/beta/policies/authenticationMethodsPolicy/authenticationMethodConfigurations/microsoftAuthenticator' -tenantid $Tenant
+
     If ($Settings.Remediate) {
         try {
             $body = @'
@@ -16,11 +18,14 @@ function Invoke-PWdisplayAppInformationRequiredState {
         }
     }
     if ($Settings.Alert) {
-        $CurrentInfo = New-GraphGetRequest -Uri 'https://graph.microsoft.com/beta/policies/authenticationMethodsPolicy/authenticationMethodConfigurations/microsoftAuthenticator' -tenantid $Tenant
         if ($CurrentInfo.featureSettings.displayAppInformationRequiredState.state -eq 'enabled') {
             Write-LogMessage -API 'Standards' -tenant $tenant -message 'Passwordless with Information and Number Matching is enabled.' -sev Info
         } else {
             Write-LogMessage -API 'Standards' -tenant $tenant -message 'Passwordless with Information and Number Matching is not enabled.' -sev Alert
         }
+    }
+    if ($Settings.Report) {
+        if ($CurrentInfo.featureSettings.displayAppInformationRequiredState.state -eq 'enabled') { $authstate = $true } else { $authstate = $false }
+        Add-CIPPBPAField -FieldName 'PWdisplayAppInformationRequiredState' -FieldValue [bool]$authstate -StoreAs bool -Tenant $tenant
     }
 }

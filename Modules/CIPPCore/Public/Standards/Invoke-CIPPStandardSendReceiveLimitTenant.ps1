@@ -48,4 +48,7 @@ function Invoke-SendReceiveLimitTenant {
             }
         }
     }
+    if ($Settings.Report) {
+        Add-CIPPBPAField -FieldName 'SendReceiveLimit' -FieldValue $AllMailBoxPlans -StoreAs json -Tenant $tenant
+    }
 }

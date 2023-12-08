@@ -21,4 +21,7 @@ function Invoke-RotateDKIM {
             Write-LogMessage -API 'Standards' -tenant $tenant -message "DKIM is not rotated for $($_.Identity)" -sev Alert
         }
     }
+    if ($Settings.Report) {
+        Add-CIPPBPAField -FieldName 'DKIM' -FieldValue $DKIM -StoreAs json -Tenant $tenant
+    }
 }

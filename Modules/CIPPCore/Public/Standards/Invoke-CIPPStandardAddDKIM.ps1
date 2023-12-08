@@ -24,4 +24,7 @@ function Invoke-AddDKIM {
             Write-LogMessage -API 'Standards' -tenant $tenant -message 'DKIM is not enabled for all available domains' -sev Alert
         }
     }
+    if ($Settings.Report) {
+        Add-CIPPBPAField -FieldName 'DKIM' -FieldValue [bool]$DKIM -StoreAs bool -Tenant $tenant
+    }
 }

@@ -22,4 +22,7 @@ function Invoke-AutoExpandArchive {
             Write-LogMessage -API 'Standards' -tenant $tenant -message 'Auto Expanding Archives is not enabled' -sev Alert
         }
     }
+    if ($Settings.Report) {
+        Add-CIPPBPAField -FieldName 'AutoExpandingArchive' -FieldValue [bool]$CurrentState.AutoExpandingArchiveEnabled -StoreAs bool -Tenant $tenant
+    }
 }

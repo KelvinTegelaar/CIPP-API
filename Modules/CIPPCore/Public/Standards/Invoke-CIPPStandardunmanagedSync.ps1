@@ -21,4 +21,12 @@ function Invoke-unmanagedSync {
             Write-LogMessage -API 'Standards' -tenant $tenant -message 'Sync for unmanaged devices is not disabled' -sev Alert
         }
     }
+    if ($Settings.Report) {
+        if ($CurrentInfo.isUnmanagedSyncAppForTenantRestricted -eq $false) {
+            $CurrentInfo.isUnmanagedSyncAppForTenantRestricted = $true
+        } else {
+            $CurrentInfo.isUnmanagedSyncAppForTenantRestricted = $false
+        }
+        Add-CIPPBPAField -FieldName 'unmanagedSync' -FieldValue [bool]$CurrentInfo.isUnmanagedSyncAppForTenantRestricted -StoreAs bool -Tenant $tenant
+    }
 }

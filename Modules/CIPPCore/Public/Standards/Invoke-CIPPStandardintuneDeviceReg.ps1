@@ -23,4 +23,8 @@ function Invoke-intuneDeviceReg {
             Write-LogMessage -API 'Standards' -tenant $tenant -message "User device quota is not set to $($Settings.max)" -sev Alert
         }
     }
+    if ($Settings.Report) {
+        if ($PreviousSetting.userDeviceQuota -eq $Settings.max) { $UserQuota = $true } else { $UserQuota = $false }
+        Add-CIPPBPAField -FieldName 'intuneDeviceReg' -FieldValue [bool]$UserQuota -StoreAs bool -Tenant $tenant
+    }
 }

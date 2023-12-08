@@ -25,4 +25,7 @@ function Invoke-DisableSecurityGroupUsers {
             Write-LogMessage -API 'Standards' -tenant $tenant -message 'Users are allowed to create Security Groups.' -sev Alert
         }
     }
+    if ($Settings.Report) {
+        Add-CIPPBPAField -FieldName 'DisableSecurityGroupUsers' -FieldValue [bool]$CurrentInfo.defaultUserRolePermissions.allowedToCreateSecurityGroups -StoreAs bool -Tenant $tenant
+    }
 }

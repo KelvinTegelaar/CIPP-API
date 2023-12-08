@@ -23,4 +23,7 @@ function Invoke-disableMacSync {
             Write-LogMessage -API 'Standards' -tenant $tenant -message 'Mac OneDrive Sync is not disabled' -sev Alert
         }
     }
+    if ($Settings.Report) {
+        Add-CIPPBPAField -FieldName 'MacSync' -FieldValue [bool]$CurrentInfo.isMacSyncAppEnabled -StoreAs bool -Tenant $tenant
+    }
 }

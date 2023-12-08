@@ -38,4 +38,8 @@ function Invoke-PWcompanionAppAllowedState {
             Write-LogMessage -API 'Standards' -tenant $tenant -message 'companionAppAllowedState is not enabled.' -sev Alert
         }
     }
+    if ($Settings.Report) {
+        if ($authenticatorFeaturesState.featureSettings.companionAppAllowedState.state -eq 'enabled') { $authstate = $true } else { $authstate = $false }
+        Add-CIPPBPAField -FieldName 'companionAppAllowedState' -FieldValue [bool]$authstate -StoreAs bool -Tenant $tenant
+    }
 }

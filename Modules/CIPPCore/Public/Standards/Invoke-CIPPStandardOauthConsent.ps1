@@ -41,5 +41,9 @@ function Invoke-OauthConsent {
                 Write-LogMessage -API 'Standards' -tenant $tenant -message 'Application Consent Mode is not enabled.' -sev Alert
             }
         }
+        if ($Settings.Report) {
+            if ($State.permissionGrantPolicyIdsAssignedToDefaultUserRole -eq 'managePermissionGrantsForSelf.cipp-consent-policy') { $UserQuota = $true } else { $UserQuota = $false }
+            Add-CIPPBPAField -FieldName 'OauthConsent' -FieldValue [bool]$UserQuota -StoreAs bool -Tenant $tenant
+        }
     }
 }

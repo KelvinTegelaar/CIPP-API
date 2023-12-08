@@ -20,4 +20,7 @@ function Invoke-sharingCapability {
             Write-LogMessage -API 'Standards' -tenant $tenant -message "Sharing level is not set to $($Settings.level)" -sev Alert
         }
     }
+    if ($Settings.Report) {
+        Add-CIPPBPAField -FieldName 'sharingCapability' -FieldValue $CurrentInfo.sharingCapability -StoreAs string -Tenant $tenant
+    }
 }

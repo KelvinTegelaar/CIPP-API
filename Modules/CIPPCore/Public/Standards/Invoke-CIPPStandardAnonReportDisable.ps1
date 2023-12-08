@@ -20,4 +20,7 @@ function Invoke-AnonReportDisable {
             Write-LogMessage -API 'Standards' -tenant $tenant -message 'Anonymous Reports is not disabled' -sev Alert
         }
     }
+    if ($Settings.Report) {
+        Add-CIPPBPAField -FieldName 'AnonReport' -FieldValue [bool]$CurrentInfo.displayConcealedNames -StoreAs bool -Tenant $tenant
+    }
 }

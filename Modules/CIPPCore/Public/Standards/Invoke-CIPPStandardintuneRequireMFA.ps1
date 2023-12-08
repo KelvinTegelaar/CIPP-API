@@ -23,4 +23,8 @@ function Invoke-intuneRequireMFA {
             Write-LogMessage -API 'Standards' -tenant $tenant -message 'Require to use MFA when joining Intune Devices is not enabled.' -sev Alert
         }
     }
+    if ($Settings.Report) {
+        if ($PreviousSetting.multiFactorAuthConfiguration -eq 'required') { $UserQuota = $true } else { $UserQuota = $false }
+        Add-CIPPBPAField -FieldName 'intuneRequireMFA' -FieldValue [bool]$UserQuota -StoreAs bool -Tenant $tenant
+    }
 }

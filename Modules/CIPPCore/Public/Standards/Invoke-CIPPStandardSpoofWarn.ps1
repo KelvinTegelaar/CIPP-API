@@ -25,4 +25,7 @@ function Invoke-SpoofWarn {
             Write-LogMessage -API 'Standards' -tenant $tenant -message 'Spoofing warnings are not enabled.' -sev Alert
         }
     }
+    if ($Settings.Report) {
+        Add-CIPPBPAField -FieldName 'SpoofingWarnings' -FieldValue [bool]$CurrentInfo.Enabled -StoreAs bool -Tenant $tenant
+    }
 }

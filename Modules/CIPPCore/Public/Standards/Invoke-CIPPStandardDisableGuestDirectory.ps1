@@ -25,4 +25,12 @@ function Invoke-DisableGuestDirectory {
             Write-LogMessage -API 'Standards' -tenant $tenant -message 'Guest access to directory information is not disabled.' -sev Alert
         }
     }
+    if ($Settings.Report) {
+        if ($CurrentInfo.guestUserRoleId -eq '2af84b1e-32c8-42b7-82bc-daa82404023b') {
+            $CurrentInfo.guestUserRoleId = $true
+        } else {
+            $CurrentInfo.guestUserRoleId = $false
+        }
+        Add-CIPPBPAField -FieldName 'DisableGuestDirectory' -FieldValue [bool]$CurrentInfo.guestUserRoleId -StoreAs bool -Tenant $tenant
+    }
 }

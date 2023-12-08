@@ -21,4 +21,7 @@ function Invoke-OutBoundSpamAlert {
             Write-LogMessage -API 'Standards' -tenant $tenant -message 'Outbound spam filter alert is not set' -sev Alert
         }
     }
+    if ($Settings.Report) {
+        Add-CIPPBPAField -FieldName 'OutboundSpamAlert' -FieldValue [bool]$CurrentInfo.NotifyOutboundSpam -StoreAs bool -Tenant $tenant
+    }
 }

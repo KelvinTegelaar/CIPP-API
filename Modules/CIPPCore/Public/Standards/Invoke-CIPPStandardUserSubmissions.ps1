@@ -49,4 +49,11 @@ function Invoke-UserSubmissions {
             }
         }
     }
+    if ($Settings.Report) {
+        if ($Policy.length -eq 0) {
+            Add-CIPPBPAField -FieldName 'UserSubmissionPolicy' -FieldValue $false -StoreAs bool -Tenant $tenant
+        } else {
+            Add-CIPPBPAField -FieldName 'UserSubmissionPolicy' -FieldValue [bool]$Policy.EnableReportToMicrosoft -StoreAs bool -Tenant $tenant
+        }
+    }
 }

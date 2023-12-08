@@ -24,4 +24,7 @@ function Invoke-laps {
             Write-LogMessage -API 'Standards' -tenant $tenant -message 'LAPS is not enabled.' -sev Alert
         }
     }
+    if ($Settings.Report) {
+        Add-CIPPBPAField -FieldName 'laps' -FieldValue [bool]$PreviousSetting.localadminpassword.isEnabled -StoreAs bool -Tenant $tenant
+    }
 }

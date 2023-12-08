@@ -21,4 +21,8 @@ function Invoke-DisableViva {
             Write-LogMessage -API 'Standards' -tenant $tenant -message 'Viva is not disabled' -sev Alert
         }
     }
+    if ($Settings.Report) {
+        Add-CIPPBPAField -FieldName 'DisableViva' -FieldValue [bool]$currentsetting.isEnabled -StoreAs bool -Tenant $tenant
+    }
+
 }

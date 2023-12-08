@@ -26,4 +26,7 @@ function Invoke-allowOTPTokens {
             Write-LogMessage -API 'Standards' -tenant $tenant -message 'MS authenticator OTP/oAuth tokens is not enabled' -sev Alert
         }
     }
+    if ($Settings.Report) {
+        Add-CIPPBPAField -FieldName 'MSAuthenticator' -FieldValue [bool]$CurrentInfo.isSoftwareOathEnabled -StoreAs bool -Tenant $tenant
+    }
 }

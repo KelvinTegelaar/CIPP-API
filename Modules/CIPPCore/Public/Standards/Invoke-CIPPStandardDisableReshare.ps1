@@ -24,4 +24,7 @@ function Invoke-DisableReshare {
             Write-LogMessage -API 'Standards' -tenant $tenant -message 'Guests are allowed to reshare files' -sev Alert
         }
     }
+    if ($Settings.Report) {
+        Add-CIPPBPAField -FieldName 'DisableReshare' -FieldValue [bool]$CurrentInfo.isResharingByExternalUsersEnabled -StoreAs bool -Tenant $tenant
+    }
 }

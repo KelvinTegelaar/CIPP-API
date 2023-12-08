@@ -22,4 +22,9 @@ function Invoke-intuneDeviceRetirementDays {
             Write-LogMessage -API 'Standards' -tenant $tenant -message 'DeviceInactivityBeforeRetirementInDays is not enabled.' -sev Alert
         }
     }
+    if ($Settings.Report) {
+        if ($PreviousSetting.DeviceInactivityBeforeRetirementInDays -eq $Settings.days) { $UserQuota = $true } else { $UserQuota = $false }
+
+        Add-CIPPBPAField -FieldName 'intuneDeviceRetirementDays' -FieldValue [bool]$UserQuota -StoreAs bool -Tenant $tenant
+    }
 }

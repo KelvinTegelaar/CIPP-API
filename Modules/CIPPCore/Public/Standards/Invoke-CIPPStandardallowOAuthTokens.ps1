@@ -24,4 +24,12 @@ function Invoke-allowOAuthTokens {
             Write-LogMessage -API 'Standards' -tenant $tenant -message 'software OTP/oAuth tokens is not enabled' -sev Alert
         }
     }
+    if ($Settings.Report) {
+        if ($CurrentInfo.state -eq 'enabled') {
+            $CurrentInfo.state = $true
+        } else {
+            $CurrentInfo.state = $false
+        }
+        Add-CIPPBPAField -FieldName 'softwareOath' -FieldValue [bool]$CurrentInfo.state -StoreAs bool -Tenant $tenant
+    }
 }

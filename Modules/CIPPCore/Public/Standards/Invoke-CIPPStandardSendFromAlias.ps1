@@ -24,4 +24,7 @@ function Invoke-SendFromAlias {
             Write-LogMessage -API 'Standards' -tenant $tenant -message 'Send from alias is not enabled.' -sev Alert
         }
     }
+    if ($Settings.Report) {
+        Add-CIPPBPAField -FieldName 'SendFromAlias' -FieldValue [bool]$CurrentInfo.SendFromAliasEnabled -StoreAs bool -Tenant $tenant
+    }
 }

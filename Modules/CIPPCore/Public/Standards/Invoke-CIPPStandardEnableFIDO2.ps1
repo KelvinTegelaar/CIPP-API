@@ -24,4 +24,7 @@ function Invoke-EnableFIDO2 {
             Write-LogMessage -API 'Standards' -tenant $tenant -message 'FIDO2 Support is not enabled' -sev Alert
         }
     }
+    if ($Settings.Report) {
+        Add-CIPPBPAField -FieldName 'EnableFIDO2' -FieldValue [bool]$CurrentInfo.state -StoreAs bool -Tenant $tenant
+    }
 }

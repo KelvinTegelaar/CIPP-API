@@ -22,4 +22,7 @@ function Invoke-DisableSharedMailbox {
             Write-LogMessage -API 'Standards' -tenant $tenant -message 'No AAD accounts enables for shared mailboxes.' -sev Info
         }
     }
+    if ($Settings.Report) {
+        Add-CIPPBPAField -FieldName 'DisableSharedMailbox' -FieldValue $SharedMailboxList -StoreAs json -Tenant $tenant
+    }
 }

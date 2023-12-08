@@ -21,4 +21,7 @@ function Invoke-DisableUserSiteCreate {
             Write-LogMessage -API 'Standards' -tenant $tenant -message 'Standard users are allowed to create sites' -sev Alert
         }
     }
+    if ($Settings.Report) {
+        Add-CIPPBPAField -FieldName 'DisableUserSiteCreate' -FieldValue [bool]$CurrentInfo.isSiteCreationEnabled -StoreAs bool -Tenant $tenant
+    }
 }

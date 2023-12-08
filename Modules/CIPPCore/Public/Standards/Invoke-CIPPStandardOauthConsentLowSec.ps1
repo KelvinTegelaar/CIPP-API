@@ -23,4 +23,12 @@ function Invoke-OauthConsentLowSec {
             Write-LogMessage -API 'Standards' -tenant $tenant -message 'Application Consent Mode(microsoft-user-default-low) is enabled.' -sev Info
         }
     }
+    if ($Settings.Report) {
+        if ($State.permissionGrantPolicyIdsAssignedToDefaultUserRole -notin @('managePermissionGrantsForSelf.microsoft-user-default-low')) {
+            $State.permissionGrantPolicyIdsAssignedToDefaultUserRole = $false
+        } else {
+            $State.permissionGrantPolicyIdsAssignedToDefaultUserRole = $true
+        }
+        Add-CIPPBPAField -FieldName 'OauthConsentLowSec' -FieldValue [bool]$State.permissionGrantPolicyIdsAssignedToDefaultUserRole -StoreAs bool -Tenant $tenant
+    }
 }

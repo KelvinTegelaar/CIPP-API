@@ -25,4 +25,7 @@ function Invoke-EnableOnlineArchiving {
             Write-LogMessage -API 'Standards' -tenant $tenant -message 'All mailboxes have Online Archiving enabled' -sev Info
         }
     }
+    if ($Settings.Report) {
+        Add-CIPPBPAField -FieldName 'EnableOnlineArchiving' -FieldValue $MailboxesNoArchive -StoreAs json -Tenant $tenant
+    }
 }

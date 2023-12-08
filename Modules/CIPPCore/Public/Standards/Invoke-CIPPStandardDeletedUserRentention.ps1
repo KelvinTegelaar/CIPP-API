@@ -22,4 +22,12 @@ function Invoke-DeletedUserRentention {
             Write-LogMessage -API 'Standards' -tenant $tenant -message 'Deleted user rentention of OneDrive is not set to 1 year' -sev Alert
         }
     }
+    if ($Settings.Report) {
+        if ($CurrentInfo.deletedUserPersonalSiteRetentionPeriodInDays -eq 365) {
+            $CurrentInfo.deletedUserPersonalSiteRetentionPeriodInDays = $true
+        } else {
+            $CurrentInfo.deletedUserPersonalSiteRetentionPeriodInDays = $false
+        }
+        Add-CIPPBPAField -FieldName 'DeletedUserRentention' -FieldValue [bool]$CurrentInfo.deletedUserPersonalSiteRetentionPeriodInDays -StoreAs bool -Tenant $tenant
+    }
 }

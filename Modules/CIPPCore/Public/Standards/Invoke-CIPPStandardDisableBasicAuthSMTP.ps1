@@ -20,4 +20,7 @@ function Invoke-DisableBasicAuthSMTP {
             Write-LogMessage -API 'Standards' -tenant $tenant -message 'SMTP Basic Authentication is not disabled' -sev Alert
         }
     }
+    if ($Settings.Report) {
+        Add-CIPPBPAField -FieldName 'DisableBasicAuthSMTP' -FieldValue [bool]$CurrentInfo.SmtpClientAuthenticationDisabled -StoreAs bool -Tenant $tenant
+    }
 }

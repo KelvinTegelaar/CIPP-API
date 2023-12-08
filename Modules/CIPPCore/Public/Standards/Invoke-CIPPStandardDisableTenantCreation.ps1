@@ -21,4 +21,7 @@ function Invoke-DisableTenantCreation {
             Write-LogMessage -API 'Standards' -tenant $tenant -message 'Users are allowed to create tenants.' -sev Alert
         }
     }
+    if ($Settings.Report) {
+        Add-CIPPBPAField -FieldName 'DisableTenantCreation' -FieldValue [bool]$CurrentInfo.defaultUserRolePermissions.allowedToCreateTenants -StoreAs bool -Tenant $tenant
+    }
 }
