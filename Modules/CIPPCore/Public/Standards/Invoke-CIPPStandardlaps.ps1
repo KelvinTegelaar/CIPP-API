@@ -1,4 +1,4 @@
-function Invoke-laps {
+function Invoke-CIPPStandardlaps {
     <#
     .FUNCTIONALITY
     Internal

@@ -1,4 +1,4 @@
-function Invoke-intuneDeviceRetirementDays {
+function Invoke-CIPPStandardintuneDeviceRetirementDays {
     <#
     .FUNCTIONALITY
     Internal

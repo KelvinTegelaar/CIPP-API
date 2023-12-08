@@ -1,4 +1,4 @@
-function Invoke-OutBoundSpamAlert {
+function Invoke-CIPPStandardOutBoundSpamAlert {
     <#
     .FUNCTIONALITY
     Internal

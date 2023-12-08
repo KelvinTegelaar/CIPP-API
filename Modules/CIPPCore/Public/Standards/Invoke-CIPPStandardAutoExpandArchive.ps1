@@ -1,4 +1,4 @@
-function Invoke-AutoExpandArchive {
+function Invoke-CIPPStandardAutoExpandArchive {
     <#
     .FUNCTIONALITY
     Internal

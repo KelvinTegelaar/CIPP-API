@@ -1,4 +1,4 @@
-function Invoke-NudgeMFA {
+function Invoke-CIPPStandardNudgeMFA {
     <#
     .FUNCTIONALITY
     Internal

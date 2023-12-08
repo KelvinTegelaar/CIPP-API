@@ -1,4 +1,4 @@
-function Invoke-UndoOauth {
+function Invoke-CIPPStandardUndoOauth {
     <#
     .FUNCTIONALITY
     Internal

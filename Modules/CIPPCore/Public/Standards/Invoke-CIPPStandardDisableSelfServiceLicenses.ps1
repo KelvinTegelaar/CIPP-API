@@ -1,4 +1,4 @@
-function Invoke-DisableSelfServiceLicenses {
+function Invoke-CIPPStandardDisableSelfServiceLicenses {
     <#
     .FUNCTIONALITY
     Internal

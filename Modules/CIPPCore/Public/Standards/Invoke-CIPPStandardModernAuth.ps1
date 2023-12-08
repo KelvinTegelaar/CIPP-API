@@ -1,4 +1,4 @@
-function Invoke-ModernAuth {
+function Invoke-CIPPStandardModernAuth {
     <#
     .FUNCTIONALITY
     Internal

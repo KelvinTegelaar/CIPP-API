@@ -1,4 +1,4 @@
-function Invoke-AnonReportDisable {
+function Invoke-CIPPStandardAnonReportDisable {
     <#
     .FUNCTIONALITY
     Internal

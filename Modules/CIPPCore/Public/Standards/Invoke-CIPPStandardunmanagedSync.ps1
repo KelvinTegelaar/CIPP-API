@@ -1,4 +1,4 @@
-function Invoke-unmanagedSync {
+function Invoke-CIPPStandardunmanagedSync {
     <#
     .FUNCTIONALITY
     Internal

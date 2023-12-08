@@ -1,4 +1,4 @@
-function Invoke-IntuneTemplate {
+function Invoke-CIPPStandardIntuneTemplate {
   <#
     .FUNCTIONALITY
     Internal

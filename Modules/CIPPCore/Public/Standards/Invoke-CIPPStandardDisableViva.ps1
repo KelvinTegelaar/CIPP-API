@@ -1,4 +1,4 @@
-function Invoke-DisableViva {
+function Invoke-CIPPStandardDisableViva {
     <#
     .FUNCTIONALITY
     Internal

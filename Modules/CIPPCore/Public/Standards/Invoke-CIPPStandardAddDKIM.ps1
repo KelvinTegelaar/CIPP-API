@@ -1,4 +1,4 @@
-function Invoke-AddDKIM {
+function Invoke-CIPPStandardAddDKIM {
     <#
     .FUNCTIONALITY
     Internal

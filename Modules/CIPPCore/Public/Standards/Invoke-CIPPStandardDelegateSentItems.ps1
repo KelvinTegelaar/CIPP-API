@@ -1,4 +1,4 @@
-function Invoke-DelegateSentItems {
+function Invoke-CIPPStandardDelegateSentItems {
     <#
     .FUNCTIONALITY
     Internal

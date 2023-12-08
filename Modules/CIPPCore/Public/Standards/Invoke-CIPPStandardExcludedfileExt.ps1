@@ -1,4 +1,4 @@
-function Invoke-ExcludedfileExt {
+function Invoke-CIPPStandardExcludedfileExt {
     <#
     .FUNCTIONALITY
     Internal

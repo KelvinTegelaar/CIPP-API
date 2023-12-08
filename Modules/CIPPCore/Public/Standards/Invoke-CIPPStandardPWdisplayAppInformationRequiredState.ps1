@@ -1,4 +1,4 @@
-function Invoke-PWdisplayAppInformationRequiredState {
+function Invoke-CIPPStandardPWdisplayAppInformationRequiredState {
     <#
     .FUNCTIONALITY
     Internal

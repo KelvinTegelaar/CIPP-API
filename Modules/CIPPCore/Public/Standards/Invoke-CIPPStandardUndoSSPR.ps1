@@ -1,4 +1,4 @@
-function Invoke-UndoSSPR {
+function Invoke-CIPPStandardUndoSSPR {
     <#
     .FUNCTIONALITY
     Internal
@@ -6,6 +6,6 @@ function Invoke-UndoSSPR {
     param($Tenant, $Settings)
     If ($Settings.Remediate) {
         
-    Write-LogMessage -API 'Standards' -tenant $tenant -message 'The standard for SSPR is no longer supported.' -sev Error
-}
+        Write-LogMessage -API 'Standards' -tenant $tenant -message 'The standard for SSPR is no longer supported.' -sev Error
+    }
 }

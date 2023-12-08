@@ -1,4 +1,4 @@
-function Invoke-PWcompanionAppAllowedState {
+function Invoke-CIPPStandardPWcompanionAppAllowedState {
     <#
     .FUNCTIONALITY
     Internal

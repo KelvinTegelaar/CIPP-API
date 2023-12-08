@@ -1,4 +1,4 @@
-function Invoke-OauthConsentLowSec {
+function Invoke-CIPPStandardOauthConsentLowSec {
     <#
     .FUNCTIONALITY
     Internal

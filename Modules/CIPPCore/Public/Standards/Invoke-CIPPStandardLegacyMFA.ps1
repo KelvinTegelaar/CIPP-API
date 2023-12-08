@@ -1,4 +1,4 @@
-function Invoke-LegacyMFA {
+function Invoke-CIPPStandardLegacyMFA {
     <#
     .FUNCTIONALITY
     Internal

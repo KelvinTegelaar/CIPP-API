@@ -1,4 +1,4 @@
-function Invoke-SecurityDefaults {
+function Invoke-CIPPStandardSecurityDefaults {
     <#
     .FUNCTIONALITY
     Internal

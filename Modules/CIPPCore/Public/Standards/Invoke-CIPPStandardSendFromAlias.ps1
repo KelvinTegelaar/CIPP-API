@@ -1,4 +1,4 @@
-function Invoke-SendFromAlias {
+function Invoke-CIPPStandardSendFromAlias {
     <#
     .FUNCTIONALITY
     Internal

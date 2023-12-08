@@ -1,4 +1,4 @@
-function Invoke-EnableOnlineArchiving {
+function Invoke-CIPPStandardEnableOnlineArchiving {
     <#
     .FUNCTIONALITY
     Internal

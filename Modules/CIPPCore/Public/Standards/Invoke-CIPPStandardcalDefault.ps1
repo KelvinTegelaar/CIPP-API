@@ -1,4 +1,4 @@
-function Invoke-calDefault {
+function Invoke-CIPPStandardcalDefault {
     <#
     .FUNCTIONALITY
     Internal

@@ -1,4 +1,4 @@
-function Invoke-TransportRuleTemplate {
+function Invoke-CIPPStandardTransportRuleTemplate {
   <#
     .FUNCTIONALITY
     Internal

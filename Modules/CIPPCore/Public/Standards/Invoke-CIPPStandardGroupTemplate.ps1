@@ -1,4 +1,4 @@
-function Invoke-GroupTemplate {
+function Invoke-CIPPStandardGroupTemplate {
   <#
     .FUNCTIONALITY
     Internal

@@ -1,4 +1,4 @@
-function Invoke-UserSubmissions {
+function Invoke-CIPPStandardUserSubmissions {
     <#
     .FUNCTIONALITY
     Internal

@@ -1,4 +1,4 @@
-function Invoke-DisableGuests {
+function Invoke-CIPPStandardDisableGuests {
     <#
     .FUNCTIONALITY
     Internal

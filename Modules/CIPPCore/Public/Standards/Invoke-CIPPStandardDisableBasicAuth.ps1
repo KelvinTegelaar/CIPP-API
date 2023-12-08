@@ -1,4 +1,4 @@
-function Invoke-DisableBasicAuth {
+function Invoke-CIPPStandardDisableBasicAuth {
     <#
     .FUNCTIONALITY
     Internal

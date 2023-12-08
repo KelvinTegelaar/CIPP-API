@@ -1,4 +1,4 @@
-function Invoke-EnableAppConsentRequests {
+function Invoke-CIPPStandardEnableAppConsentRequests {
     <#
     .FUNCTIONALITY
     Internal

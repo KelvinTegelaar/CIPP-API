@@ -1,4 +1,4 @@
-function Invoke-LegacyMFACleanup {
+function Invoke-CIPPStandardLegacyMFACleanup {
     <#
     .FUNCTIONALITY
     Internal

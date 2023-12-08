@@ -1,4 +1,4 @@
-function Invoke-PasswordExpireDisabled {
+function Invoke-CIPPStandardPasswordExpireDisabled {
     <#
     .FUNCTIONALITY
     Internal

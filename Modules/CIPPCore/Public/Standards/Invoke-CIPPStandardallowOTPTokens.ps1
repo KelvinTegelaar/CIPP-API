@@ -1,4 +1,4 @@
-function Invoke-allowOTPTokens {
+function Invoke-CIPPStandardallowOTPTokens {
     <#
     .FUNCTIONALITY
     Internal

@@ -1,4 +1,4 @@
-function Invoke-AuditLog {
+function Invoke-CIPPStandardAuditLog {
     <#
     .FUNCTIONALITY
     Internal

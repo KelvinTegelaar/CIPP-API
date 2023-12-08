@@ -1,4 +1,4 @@
-function Invoke-DisableSharedMailbox {
+function Invoke-CIPPStandardDisableSharedMailbox {
     <#
     .FUNCTIONALITY
     Internal

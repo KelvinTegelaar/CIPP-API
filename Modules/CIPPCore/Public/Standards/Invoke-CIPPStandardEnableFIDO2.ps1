@@ -1,4 +1,4 @@
-function Invoke-EnableFIDO2 {
+function Invoke-CIPPStandardEnableFIDO2 {
     <#
     .FUNCTIONALITY
     Internal

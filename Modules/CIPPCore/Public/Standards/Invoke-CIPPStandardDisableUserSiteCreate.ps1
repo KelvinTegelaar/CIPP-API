@@ -1,4 +1,4 @@
-function Invoke-DisableUserSiteCreate {
+function Invoke-CIPPStandardDisableUserSiteCreate {
     <#
     .FUNCTIONALITY
     Internal

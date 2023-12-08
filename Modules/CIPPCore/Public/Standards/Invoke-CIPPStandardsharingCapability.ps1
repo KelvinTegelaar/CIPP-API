@@ -1,4 +1,4 @@
-function Invoke-sharingCapability {
+function Invoke-CIPPStandardsharingCapability {
     <#
     .FUNCTIONALITY
     Internal

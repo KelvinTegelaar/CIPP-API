@@ -1,4 +1,4 @@
-function Invoke-DisableAddShortcutsToOneDrive {
+function Invoke-CIPPStandardDisableAddShortcutsToOneDrive {
     <#
     .FUNCTIONALITY
     Internal

@@ -1,4 +1,4 @@
-function Invoke-RotateDKIM {
+function Invoke-CIPPStandardRotateDKIM {
     <#
     .FUNCTIONALITY
     Internal

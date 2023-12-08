@@ -1,4 +1,4 @@
-function Invoke-fwdAdminAlerts {
+function Invoke-CIPPStandardfwdAdminAlerts {
     <#
     .FUNCTIONALITY
     Internal

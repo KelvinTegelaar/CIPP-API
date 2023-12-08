@@ -1,4 +1,4 @@
-function Invoke-ExConnector {
+function Invoke-CIPPStandardExConnector {
   <#
     .FUNCTIONALITY
     Internal
@@ -34,6 +34,6 @@ function Invoke-ExConnector {
     }
 
   }
-  
+
 
 }

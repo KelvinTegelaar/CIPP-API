@@ -1,4 +1,4 @@
-function Invoke-DisableGuestDirectory {
+function Invoke-CIPPStandardDisableGuestDirectory {
     <#
     .FUNCTIONALITY
     Internal

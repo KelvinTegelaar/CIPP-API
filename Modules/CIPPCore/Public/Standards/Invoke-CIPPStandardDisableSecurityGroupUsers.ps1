@@ -1,4 +1,4 @@
-function Invoke-DisableSecurityGroupUsers {
+function Invoke-CIPPStandardDisableSecurityGroupUsers {
     <#
     .FUNCTIONALITY
     Internal

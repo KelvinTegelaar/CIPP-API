@@ -1,4 +1,4 @@
-function Invoke-DisableBasicAuthSMTP {
+function Invoke-CIPPStandardDisableBasicAuthSMTP {
     <#
     .FUNCTIONALITY
     Internal

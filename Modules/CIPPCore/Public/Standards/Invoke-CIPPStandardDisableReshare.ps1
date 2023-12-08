@@ -1,4 +1,4 @@
-function Invoke-DisableReshare {
+function Invoke-CIPPStandardDisableReshare {
     <#
     .FUNCTIONALITY
     Internal

@@ -1,4 +1,4 @@
-function Invoke-ActivityBasedTimeout {
+function Invoke-CIPPStandardActivityBasedTimeout {
     <#
     .FUNCTIONALITY
     Internal

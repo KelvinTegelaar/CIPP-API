@@ -1,4 +1,4 @@
-function Invoke-MailContacts {
+function Invoke-CIPPStandardMailContacts {
     <#
     .FUNCTIONALITY
     Internal

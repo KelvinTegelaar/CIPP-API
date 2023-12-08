@@ -1,4 +1,4 @@
-function Invoke-disableMacSync {
+function Invoke-CIPPStandarddisableMacSync {
     <#
     .FUNCTIONALITY
     Internal

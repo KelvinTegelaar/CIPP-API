@@ -1,4 +1,4 @@
-function Invoke-SafeSendersDisable {
+function Invoke-CIPPStandardSafeSendersDisable {
     <#
     .FUNCTIONALITY
     Internal

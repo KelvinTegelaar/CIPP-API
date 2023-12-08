@@ -1,4 +1,4 @@
-function Invoke-allowOAuthTokens {
+function Invoke-CIPPStandardallowOAuthTokens {
     <#
     .FUNCTIONALITY
     Internal

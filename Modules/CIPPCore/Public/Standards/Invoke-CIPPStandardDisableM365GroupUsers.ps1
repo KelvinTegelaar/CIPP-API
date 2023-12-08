@@ -1,4 +1,4 @@
-function Invoke-DisableM365GroupUsers {
+function Invoke-CIPPStandardDisableM365GroupUsers {
     <#
     .FUNCTIONALITY
     Internal

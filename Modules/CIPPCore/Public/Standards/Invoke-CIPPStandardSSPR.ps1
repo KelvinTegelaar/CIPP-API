@@ -1,4 +1,4 @@
-function Invoke-SSPR {
+function Invoke-CIPPStandardSSPR {
   <#
     .FUNCTIONALITY
     Internal

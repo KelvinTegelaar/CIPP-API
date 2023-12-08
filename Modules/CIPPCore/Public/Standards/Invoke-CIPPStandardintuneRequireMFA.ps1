@@ -1,4 +1,4 @@
-function Invoke-intuneRequireMFA {
+function Invoke-CIPPStandardintuneRequireMFA {
     <#
     .FUNCTIONALITY
     Internal

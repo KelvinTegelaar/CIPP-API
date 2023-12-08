@@ -1,4 +1,4 @@
-function Invoke-DeletedUserRentention {
+function Invoke-CIPPStandardDeletedUserRentention {
     <#
     .FUNCTIONALITY
     Internal

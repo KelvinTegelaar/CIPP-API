@@ -1,4 +1,4 @@
-function Invoke-TAP {
+function Invoke-CIPPStandardTAP {
     <#
     .FUNCTIONALITY
     Internal

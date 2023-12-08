@@ -1,4 +1,4 @@
-function Invoke-PWnumberMatchingRequiredState {
+function Invoke-CIPPStandardPWnumberMatchingRequiredState {
     <#
     .FUNCTIONALITY
     Internal

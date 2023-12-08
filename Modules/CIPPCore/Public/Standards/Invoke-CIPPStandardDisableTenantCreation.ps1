@@ -1,4 +1,4 @@
-function Invoke-DisableTenantCreation {
+function Invoke-CIPPStandardDisableTenantCreation {
     <#
     .FUNCTIONALITY
     Internal

@@ -1,4 +1,4 @@
-function Invoke-intuneDeviceReg {
+function Invoke-CIPPStandardintuneDeviceReg {
     <#
     .FUNCTIONALITY
     Internal

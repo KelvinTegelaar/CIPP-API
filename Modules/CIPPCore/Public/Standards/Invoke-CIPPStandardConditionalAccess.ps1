@@ -1,4 +1,4 @@
-function Invoke-ConditionalAccess {
+function Invoke-CIPPStandardConditionalAccess {
   <#
     .FUNCTIONALITY
     Internal

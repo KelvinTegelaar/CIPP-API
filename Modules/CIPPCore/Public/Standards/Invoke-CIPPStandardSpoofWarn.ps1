@@ -1,4 +1,4 @@
-function Invoke-SpoofWarn {
+function Invoke-CIPPStandardSpoofWarn {
     <#
     .FUNCTIONALITY
     Internal

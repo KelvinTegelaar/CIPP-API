@@ -1,4 +1,4 @@
-function Invoke-SendReceiveLimitTenant {
+function Invoke-CIPPStandardSendReceiveLimitTenant {
     <#
     .FUNCTIONALITY
     Internal

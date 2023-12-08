@@ -1,4 +1,4 @@
-function Invoke-AzurePortal {
+function Invoke-CIPPStandardAzurePortal {
     <#
     .FUNCTIONALITY
     Internal
