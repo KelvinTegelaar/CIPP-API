@@ -42,7 +42,7 @@ function Invoke-NinjaOneDeviceWebhook {
              
 
             } else {
-                Throw "Failed to process device."
+                Write-LogMessage -API 'NinjaOneSync' -user 'CIPP' -message "$($DeviceM365.displayName) ($($M365DeviceID)) was not matched in Ninja for $($tenantfilter)" -Sev 'Info'
             }
 
         }
