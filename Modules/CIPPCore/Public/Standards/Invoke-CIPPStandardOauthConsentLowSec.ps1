@@ -5,7 +5,7 @@ function Invoke-CIPPStandardOauthConsentLowSec {
     #>
     param($Tenant, $Settings)
     $State = (New-GraphGetRequest -Uri 'https://graph.microsoft.com/beta/policies/authorizationPolicy/authorizationPolicy' -tenantid $tenant)
-    If ($Settings.Remediate) {
+    If ($Settings.remediate) {
         try {
             if ($State.permissionGrantPolicyIdsAssignedToDefaultUserRole -notin @('managePermissionGrantsForSelf.microsoft-user-default-low')) {
                 Write-Host 'Going to set'
@@ -16,14 +16,15 @@ function Invoke-CIPPStandardOauthConsentLowSec {
             Write-LogMessage -API 'Standards' -tenant $tenant -message "Failed to apply Application Consent Mode (microsoft-user-default-low) Error: $($_.exception.message)" -sev Error
         }
     }
-    if ($Settings.Alert) {
+    if ($Settings.alert) {
+
         if ($State.permissionGrantPolicyIdsAssignedToDefaultUserRole -notin @('managePermissionGrantsForSelf.microsoft-user-default-low')) {
             Write-LogMessage -API 'Standards' -tenant $tenant -message 'Application Consent Mode(microsoft-user-default-low) is not enabled.' -sev Alert
         } else {
             Write-LogMessage -API 'Standards' -tenant $tenant -message 'Application Consent Mode(microsoft-user-default-low) is enabled.' -sev Info
         }
     }
-    if ($Settings.Report) {
+    if ($Settings.report) {
         if ($State.permissionGrantPolicyIdsAssignedToDefaultUserRole -notin @('managePermissionGrantsForSelf.microsoft-user-default-low')) {
             $State.permissionGrantPolicyIdsAssignedToDefaultUserRole = $false
         } else {

@@ -6,7 +6,7 @@ function Invoke-CIPPStandardDisableM365GroupUsers {
     param($Tenant, $Settings)
     $CurrentState = (New-GraphGetRequest -Uri 'https://graph.microsoft.com/beta/settings' -tenantid $tenant) | Where-Object -Property displayname -EQ 'Group.unified'
 
-    If ($Settings.Remediate) {
+    If ($Settings.remediate) {
         try {
             if (!$CurrentState) {
                 #if no current configuration is found, we set it to the default template supplied by MS.
@@ -22,7 +22,8 @@ function Invoke-CIPPStandardDisableM365GroupUsers {
             Write-LogMessage -API 'Standards' -tenant $tenant -message "Failed to disable users from creating M365 Groups: $($_.exception.message)" -sev 'Error'
         }
     }
-    if ($Settings.Alert) {
+    if ($Settings.alert) {
+
         if ($CurrentState) {
             if (($CurrentState.values | Where-Object { $_.name -eq 'EnableGroupCreation' }).value -eq 'false') {
                 Write-LogMessage -API 'Standards' -tenant $tenant -message 'Users are disabled from creating M365 Groups.' -sev Info
@@ -33,7 +34,7 @@ function Invoke-CIPPStandardDisableM365GroupUsers {
             Write-LogMessage -API 'Standards' -tenant $tenant -message 'Users are not disabled from creating M365 Groups.' -sev Alert
         }
     }
-    if ($Settings.Report) {
+    if ($Settings.report) {
         if ($CurrentState) {
             if (($CurrentState.values | Where-Object { $_.name -eq 'EnableGroupCreation' }).value -eq 'false') {
                 $CurrentState = $true

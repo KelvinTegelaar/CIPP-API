@@ -4,7 +4,7 @@ function Invoke-CIPPStandardExConnector {
     Internal
     #>
   param($Tenant, $Settings)
-  If ($Settings.Remediate) {
+  If ($Settings.remediate) {
         
     $ConfigTable = Get-CippTable -tablename 'standards'
     $Setting = ((Get-AzDataTableEntity @ConfigTable -Filter "PartitionKey eq 'standards' and RowKey eq '$tenant'").JSON | ConvertFrom-Json).standards.ExConnector

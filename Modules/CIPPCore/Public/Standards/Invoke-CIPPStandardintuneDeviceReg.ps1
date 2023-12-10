@@ -6,7 +6,7 @@ function Invoke-CIPPStandardintuneDeviceReg {
     param($Tenant, $Settings)
     $PreviousSetting = New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/policies/deviceRegistrationPolicy' -tenantid $Tenant
 
-    If ($Settings.Remediate) {
+    If ($Settings.remediate) {
         try {
             $PreviousSetting.userDeviceQuota = $Settings.max
             $Newbody = ConvertTo-Json -Compress -InputObject $PreviousSetting
@@ -16,14 +16,15 @@ function Invoke-CIPPStandardintuneDeviceReg {
             Write-LogMessage -API 'Standards' -tenant $tenant -message "Failed to set user device quota to $($Settings.max) : $($_.exception.message)" -sev Error
         }
     }
-    if ($Settings.Alert) {
+    if ($Settings.alert) {
+
         if ($PreviousSetting.userDeviceQuota -eq $Settings.max) {
             Write-LogMessage -API 'Standards' -tenant $tenant -message "User device quota is set to $($Settings.max)" -sev Info
         } else {
             Write-LogMessage -API 'Standards' -tenant $tenant -message "User device quota is not set to $($Settings.max)" -sev Alert
         }
     }
-    if ($Settings.Report) {
+    if ($Settings.report) {
         if ($PreviousSetting.userDeviceQuota -eq $Settings.max) { $UserQuota = $true } else { $UserQuota = $false }
         Add-CIPPBPAField -FieldName 'intuneDeviceReg' -FieldValue [bool]$UserQuota -StoreAs bool -Tenant $tenant
     }

@@ -6,7 +6,7 @@ function Invoke-CIPPStandardallowOTPTokens {
     param($Tenant, $Settings)
     $CurrentInfo = new-graphgetRequest -uri 'https://graph.microsoft.com/beta/policies/authenticationMethodsPolicy/authenticationMethodConfigurations/microsoftAuthenticator' -tenantid $Tenant
 
-    If ($Settings.Remediate) {
+    If ($Settings.remediate) {
         
         try {
             $CurrentInfo.featureSettings.PSObject.Properties.Remove('numberMatchingRequiredState')
@@ -19,14 +19,15 @@ function Invoke-CIPPStandardallowOTPTokens {
             Write-LogMessage -API 'Standards' -tenant $tenant -message "Failed to enable MS authenticator OTP/oAuth tokens. Error: $($_.exception.message)" -sev Error
         }
     }
-    if ($Settings.Alert) {
+    if ($Settings.alert) {
+
         if ($CurrentInfo.isSoftwareOathEnabled) {
             Write-LogMessage -API 'Standards' -tenant $tenant -message 'MS authenticator OTP/oAuth tokens is enabled' -sev Info
         } else {
             Write-LogMessage -API 'Standards' -tenant $tenant -message 'MS authenticator OTP/oAuth tokens is not enabled' -sev Alert
         }
     }
-    if ($Settings.Report) {
+    if ($Settings.report) {
         Add-CIPPBPAField -FieldName 'MSAuthenticator' -FieldValue [bool]$CurrentInfo.isSoftwareOathEnabled -StoreAs bool -Tenant $tenant
     }
 }

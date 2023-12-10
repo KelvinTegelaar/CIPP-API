@@ -4,7 +4,7 @@ function Invoke-CIPPStandardsharingCapability {
     Internal
     #>
     param($Tenant, $Settings)
-    If ($Settings.Remediate) {
+    If ($Settings.remediate) {
         try {
             New-GraphPostRequest -tenantid $tenant -Uri 'https://graph.microsoft.com/beta/admin/sharepoint/settings' -AsApp $true -Type patch -Body "{`"sharingCapability`":`"$($Settings.Level)`"}" -ContentType 'application/json'
             Write-LogMessage -API 'Standards' -tenant $tenant -message "Set sharing level to $($Settings.level)" -sev Info
@@ -12,7 +12,8 @@ function Invoke-CIPPStandardsharingCapability {
             Write-LogMessage -API 'Standards' -tenant $tenant -message "Failed to set sharing level to $($Settings.level): $($_.exception.message)" -sev Error
         }
     }
-    if ($Settings.Alert) {
+    if ($Settings.alert) {
+
         $CurrentInfo = New-GraphGetRequest -Uri 'https://graph.microsoft.com/beta/admin/sharepoint/settings' -tenantid $Tenant -AsApp $true
         if ($CurrentInfo.sharingCapability -eq $Settings.level) {
             Write-LogMessage -API 'Standards' -tenant $tenant -message "Sharing level is set to $($Settings.level)" -sev Info
@@ -20,7 +21,7 @@ function Invoke-CIPPStandardsharingCapability {
             Write-LogMessage -API 'Standards' -tenant $tenant -message "Sharing level is not set to $($Settings.level)" -sev Alert
         }
     }
-    if ($Settings.Report) {
+    if ($Settings.report) {
         Add-CIPPBPAField -FieldName 'sharingCapability' -FieldValue $CurrentInfo.sharingCapability -StoreAs string -Tenant $tenant
     }
 }

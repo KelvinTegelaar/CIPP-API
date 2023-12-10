@@ -6,7 +6,7 @@ function Invoke-CIPPStandardTAP {
     param($Tenant, $Settings)
     $CurrentInfo = (New-GraphGetRequest -Uri 'https://graph.microsoft.com/beta/policies/authenticationmethodspolicy/authenticationMethodConfigurations/TemporaryAccessPass' -tenantid $Tenant)
 
-    If ($Settings.Remediate) {
+    If ($Settings.remediate) {
         
         $TAPConfig = $Settings.Config
         if (!$TAPConfig) { $TAPConfig = 'true' }
@@ -34,14 +34,15 @@ function Invoke-CIPPStandardTAP {
             Write-LogMessage -API 'Standards' -tenant $tenant -message "Failed to enable TAP. Error: $($_.exception.message)" -sev Error
         }
     }
-    if ($Settings.Alert) {
+    if ($Settings.alert) {
+
         if ($CurrentInfo.state -eq 'enabled') {
             Write-LogMessage -API 'Standards' -tenant $tenant -message 'Temporary Access Passwords is enabled.' -sev Info
         } else {
             Write-LogMessage -API 'Standards' -tenant $tenant -message 'Temporary Access Passwords is not enabled.' -sev Alert
         }
     }
-    if ($Settings.Report) {
+    if ($Settings.report) {
         if ($CurrentInfo.state -eq 'enabled') {
             $CurrentInfo.state = $true
         } else {

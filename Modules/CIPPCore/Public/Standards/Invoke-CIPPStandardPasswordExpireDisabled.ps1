@@ -5,7 +5,7 @@ function Invoke-CIPPStandardPasswordExpireDisabled {
     #>
     param($Tenant, $Settings)
     $GraphRequest = New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/domains' -tenantid $Tenant
-    If ($Settings.Remediate) {
+    If ($Settings.remediate) {
         try {
             $GraphRequest | Where-Object -Property passwordValidityPeriodInDays -NE '2147483647' | ForEach-Object {
                 New-GraphPostRequest -type Patch -tenantid $Tenant -uri "https://graph.microsoft.com/beta/domains/$($_.id)" -body '{"passwordValidityPeriodInDays": 2147483647 }'
@@ -15,12 +15,13 @@ function Invoke-CIPPStandardPasswordExpireDisabled {
             Write-LogMessage -API 'Standards' -tenant $tenant -message "Failed to disable Password Expiration. Error: $($_.exception.message)" -sev Error
         }
     }
-    if ($Settings.Alert) {
+    if ($Settings.alert) {
+
         $GraphRequest | Where-Object -Property passwordValidityPeriodInDays -NE '2147483647' | ForEach-Object {
             Write-LogMessage -API 'Standards' -tenant $tenant -message "Password Expiration is not disabled for $($_.name)" -sev Alert
         }
     }
-    if ($Settings.Report) {
+    if ($Settings.report) {
         $DomainswithoutPassExpire = $GraphRequest | Where-Object -Property passwordValidityPeriodInDays -NE '2147483647'
         Add-CIPPBPAField -FieldName 'PasswordExpireDisabled' -FieldValue $DomainswithoutPassExpire -StoreAs json -Tenant $tenant
         

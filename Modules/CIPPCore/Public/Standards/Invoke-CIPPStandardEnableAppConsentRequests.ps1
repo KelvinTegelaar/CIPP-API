@@ -6,7 +6,7 @@ function Invoke-CIPPStandardEnableAppConsentRequests {
     param($Tenant, $Settings)
     $CurrentInfo = New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/policies/adminConsentRequestPolicy' -tenantid $Tenant
 
-    If ($Settings.Remediate) {
+    If ($Settings.remediate) {
         try {
             # Get current state
 
@@ -64,14 +64,15 @@ function Invoke-CIPPStandardEnableAppConsentRequests {
             Write-LogMessage -API 'Standards' -tenant $tenant -message "Failed to enable App consent admin requests. Error: $($_.exception.message)" -sev Error
         }
     }
-    if ($Settings.Alert) {
+    if ($Settings.alert) {
+
         if ($CurrentInfo.isEnabled -eq 'true') {
             Write-LogMessage -API 'Standards' -tenant $tenant -message 'App consent admin requests are enabled.' -sev Info
         } else {
             Write-LogMessage -API 'Standards' -tenant $tenant -message 'App consent admin requests are disabled' -sev Alert
         }
     }
-    if ($Settings.Report) {
+    if ($Settings.report) {
         Add-CIPPBPAField -FieldName 'EnableAppConsentAdminRequests' -FieldValue [bool]$CurrentInfo.isEnabled -StoreAs bool -Tenant $tenant
     }
 }

@@ -5,7 +5,7 @@ function Invoke-CIPPStandardSendReceiveLimitTenant {
     #>
     param($Tenant, $Settings)
     $AllMailBoxPlans = New-ExoRequest -tenantid $Tenant -cmdlet 'Get-MailboxPlan' | Select-Object DisplayName, MaxSendSize, MaxReceiveSize, GUID
-    If ($Settings.Remediate) {
+    If ($Settings.remediate) {
         $Limits = $Settings.SendReceiveLimit
         if ($Limits[0] -like '*MB*') {
             $MaxSendSize = [int]($Limits[0] -Replace '[a-zA-Z]', '') * 1MB
@@ -41,14 +41,15 @@ function Invoke-CIPPStandardSendReceiveLimitTenant {
             Write-LogMessage -API 'Standards' -tenant $tenant -message "Failed to set the tenant send and receive limits. Error: $($_.exception.message)" -sev Error
         }
     }
-    if ($Settings.Alert) {
+    if ($Settings.alert) {
+
         foreach ($MailboxPlan in $AllMailBoxPlans) {
             if ($MailboxPlan.MaxSendSize -ne $MaxSendSize -and $MailboxPlan.MaxReceiveSize -ne $MaxReceiveSize) {
                 Write-LogMessage -API 'Standards' -tenant $tenant -message "The tenant send and receive limits are not set correctly for $($MailboxPlan.DisplayName)" -sev Alert
             }
         }
     }
-    if ($Settings.Report) {
+    if ($Settings.report) {
         Add-CIPPBPAField -FieldName 'SendReceiveLimit' -FieldValue $AllMailBoxPlans -StoreAs json -Tenant $tenant
     }
 }

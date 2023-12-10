@@ -4,7 +4,7 @@ function Invoke-CIPPStandardcalDefault {
     Internal
     #>
     param($Tenant, $Settings)
-    If ($Settings.Remediate) {
+    If ($Settings.remediate) {
         $Mailboxes = New-ExoRequest -tenantid $Tenant -cmdlet 'get-mailbox'
         foreach ($Mailbox in $Mailboxes) {
             try {

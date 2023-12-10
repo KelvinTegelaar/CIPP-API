@@ -5,7 +5,7 @@ function Invoke-CIPPStandardAutoExpandArchive {
     #>
     param($Tenant, $Settings)
     $CurrentState = (New-ExoRequest -tenantid $Tenant -cmdlet 'Get-OrganizationConfig').AutoExpandingArchiveEnabled
-    If ($Settings.Remediate) {
+    If ($Settings.remediate) {
         try {
             if (!$currentstate) {
                 New-ExoRequest -tenantid $Tenant -cmdlet 'Set-OrganizationConfig' -cmdParams @{AutoExpandingArchive = $true }
@@ -15,14 +15,15 @@ function Invoke-CIPPStandardAutoExpandArchive {
             Write-LogMessage -API 'Standards' -tenant $tenant -message "Failed to apply Auto Expanding Archives Error: $($_.exception.message)" -sev Error
         }
     }
-    if ($Settings.Alert) {
+    if ($Settings.alert) {
+
         if ($AuditLogEnabled) {
             Write-LogMessage -API 'Standards' -tenant $tenant -message 'Auto Expanding Archives is enabled' -sev Info
         } else {
             Write-LogMessage -API 'Standards' -tenant $tenant -message 'Auto Expanding Archives is not enabled' -sev Alert
         }
     }
-    if ($Settings.Report) {
+    if ($Settings.report) {
         Add-CIPPBPAField -FieldName 'AutoExpandingArchive' -FieldValue [bool]$CurrentState.AutoExpandingArchiveEnabled -StoreAs bool -Tenant $tenant
     }
 }

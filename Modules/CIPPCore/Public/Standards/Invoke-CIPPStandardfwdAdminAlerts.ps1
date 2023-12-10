@@ -4,7 +4,7 @@ function Invoke-CIPPStandardfwdAdminAlerts {
     Internal
     #>
     param($Tenant, $Settings)
-    If ($Settings.Remediate) {
+    If ($Settings.remediate) {
         
         #This isn't done yet.
     }

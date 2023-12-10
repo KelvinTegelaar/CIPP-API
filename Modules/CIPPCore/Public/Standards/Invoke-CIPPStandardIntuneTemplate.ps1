@@ -4,7 +4,7 @@ function Invoke-CIPPStandardIntuneTemplate {
     Internal
     #>
   param($Tenant, $Settings)
-  If ($Settings.Remediate) {
+  If ($Settings.remediate) {
         
 
     $ConfigTable = Get-CippTable -tablename 'standards'

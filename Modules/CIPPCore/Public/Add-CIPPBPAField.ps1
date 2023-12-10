@@ -8,7 +8,6 @@ function Add-CIPPBPAField {
     )
     $Table = Get-CippTable -tablename 'cachebpav2'
     $TenantName = Get-Tenants | Where-Object -Property defaultDomainName -EQ $Tenant
-
     $CurrentContentsObject = (Get-CIPPAzDataTableEntity @Table -Filter "RowKey eq 'Standards Report V1.0' and PartitionKey eq '$($TenantName.customerId)'")
     Write-Host "Adding $FieldName to $BPAName for $Tenant. content is $($CurrentContents.RowKey)"
     if ($CurrentContentsObject.RowKey) {

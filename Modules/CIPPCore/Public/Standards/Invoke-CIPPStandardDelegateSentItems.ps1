@@ -6,7 +6,7 @@ function Invoke-CIPPStandardDelegateSentItems {
     param($Tenant, $Settings)
     $Mailboxes = New-ExoRequest -tenantid $Tenant -cmdlet 'Get-Mailbox' -cmdParams @{ RecipientTypeDetails = @('UserMailbox', 'SharedMailbox') } | Where-Object { $_.MessageCopyForSendOnBehalfEnabled -eq $false -or $_.MessageCopyForSentAsEnabled -eq $false } 
 
-    If ($Settings.Remediate) {
+    If ($Settings.remediate) {
         try {
             $Mailboxes | ForEach-Object {
                 try {
@@ -21,14 +21,15 @@ function Invoke-CIPPStandardDelegateSentItems {
             Write-LogMessage -API 'Standards' -tenant $tenant -message "Failed to apply Delegate Sent Items Style. Error: $($_.exception.message)" -sev Error
         }
     }
-    if ($Settings.Alert) {
+    if ($Settings.alert) {
+
         if ($Mailboxes) {
             Write-LogMessage -API 'Standards' -tenant $tenant -message "Delegate Sent Items Style is not enabled for $($mailboxes.count) users" -sev Alert
         } else {
             Write-LogMessage -API 'Standards' -tenant $tenant -message 'Delegate Sent Items Style is enabled' -sev Info
         }
     }
-    if ($Settings.Report) {
+    if ($Settings.report) {
         Add-CIPPBPAField -FieldName 'DelegateSentItems' -FieldValue $Mailboxes -StoreAs json -Tenant $tenant
     }
 }

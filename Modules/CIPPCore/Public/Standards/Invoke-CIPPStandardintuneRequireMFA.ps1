@@ -6,7 +6,7 @@ function Invoke-CIPPStandardintuneRequireMFA {
     param($Tenant, $Settings)
     $PreviousSetting = New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/policies/deviceRegistrationPolicy' -tenantid $Tenant
 
-    If ($Settings.Remediate) {
+    If ($Settings.remediate) {
         try {
             $PreviousSetting.multiFactorAuthConfiguration = '1'
             $Newbody = ConvertTo-Json -Compress -InputObject $PreviousSetting
@@ -16,14 +16,15 @@ function Invoke-CIPPStandardintuneRequireMFA {
             Write-LogMessage -API 'Standards' -tenant $tenant -message "Failed to set require to use MFA when joining Intune Devices: $($_.exception.message)" -sev Error
         }
     }
-    if ($Settings.Alert) {
+    if ($Settings.alert) {
+
         if ($PreviousSetting.multiFactorAuthConfiguration -eq 'required') {
             Write-LogMessage -API 'Standards' -tenant $tenant -message 'Require to use MFA when joining Intune Devices is enabled.' -sev Info
         } else {
             Write-LogMessage -API 'Standards' -tenant $tenant -message 'Require to use MFA when joining Intune Devices is not enabled.' -sev Alert
         }
     }
-    if ($Settings.Report) {
+    if ($Settings.report) {
         if ($PreviousSetting.multiFactorAuthConfiguration -eq 'required') { $UserQuota = $true } else { $UserQuota = $false }
         Add-CIPPBPAField -FieldName 'intuneRequireMFA' -FieldValue [bool]$UserQuota -StoreAs bool -Tenant $tenant
     }

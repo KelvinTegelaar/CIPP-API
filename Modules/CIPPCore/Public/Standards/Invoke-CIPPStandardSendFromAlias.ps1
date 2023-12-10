@@ -4,7 +4,7 @@ function Invoke-CIPPStandardSendFromAlias {
     Internal
     #>
     param($Tenant, $Settings)
-    If ($Settings.Remediate) {
+    If ($Settings.remediate) {
         try {
             $AdminAuditLogParams = @{
                 SendFromAliasEnabled = $true
@@ -16,7 +16,8 @@ function Invoke-CIPPStandardSendFromAlias {
             Write-LogMessage -API 'Standards' -tenant $tenant -message "Failed to apply Send from Alias Standard. Error: $($_.exception.message)" -sev Error
         }
     }
-    if ($Settings.Alert) {
+    if ($Settings.alert) {
+
         $CurrentInfo = (New-ExoRequest -tenantid $Tenant -cmdlet 'Get-OrganizationConfig')
         if ($CurrentInfo.SendFromAliasEnabled -eq $true) {
             Write-LogMessage -API 'Standards' -tenant $tenant -message 'Send from alias is enabled.' -sev Info
@@ -24,7 +25,7 @@ function Invoke-CIPPStandardSendFromAlias {
             Write-LogMessage -API 'Standards' -tenant $tenant -message 'Send from alias is not enabled.' -sev Alert
         }
     }
-    if ($Settings.Report) {
+    if ($Settings.report) {
         Add-CIPPBPAField -FieldName 'SendFromAlias' -FieldValue [bool]$CurrentInfo.SendFromAliasEnabled -StoreAs bool -Tenant $tenant
     }
 }

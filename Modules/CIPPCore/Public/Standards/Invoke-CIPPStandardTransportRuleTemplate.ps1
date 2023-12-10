@@ -4,7 +4,7 @@ function Invoke-CIPPStandardTransportRuleTemplate {
     Internal
     #>
   param($Tenant, $Settings)
-  If ($Settings.Remediate) {
+  If ($Settings.remediate) {
         
 
 

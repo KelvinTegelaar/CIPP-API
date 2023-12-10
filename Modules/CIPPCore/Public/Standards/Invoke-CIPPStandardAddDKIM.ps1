@@ -5,7 +5,7 @@ function Invoke-CIPPStandardAddDKIM {
     #>
     param($Tenant, $Settings)
     $DKIM = (New-ExoRequest -tenantid $tenant -cmdlet 'Get-DkimSigningConfig') | Where-Object -Property Enabled -EQ $false 
-    If ($Settings.Remediate) {
+    If ($Settings.remediate) {
         try {
             $DKIM | ForEach-Object {
         (New-ExoRequest -tenantid $tenant -cmdlet 'New-DkimSigningConfig' -cmdparams @{ KeySize = 2048; DomainName = $_.Identity; Enabled = $true } -useSystemMailbox $true)
@@ -17,14 +17,15 @@ function Invoke-CIPPStandardAddDKIM {
         }
     }
 
-    if ($Settings.Alert) {
+    if ($Settings.alert) {
+
         if ($DKIM) {
             Write-LogMessage -API 'Standards' -tenant $tenant -message 'DKIM is enabled for all available domains' -sev Info
         } else {
             Write-LogMessage -API 'Standards' -tenant $tenant -message 'DKIM is not enabled for all available domains' -sev Alert
         }
     }
-    if ($Settings.Report) {
+    if ($Settings.report) {
         Add-CIPPBPAField -FieldName 'DKIM' -FieldValue [bool]$DKIM -StoreAs bool -Tenant $tenant
     }
 }
