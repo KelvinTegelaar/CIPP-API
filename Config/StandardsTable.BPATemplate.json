@@ -4,7 +4,7 @@
   "Fields": [
     {
       "name": "ActivityBasedTimeout",
-      "store": "bool",
+      "StoreAs": "bool",
       "UseExistingInfo": true,
       "FrontendFields": [
         {
@@ -17,7 +17,7 @@
     },
     {
       "name": "softwareOath",
-      "store": "bool",
+      "StoreAs": "bool",
       "UseExistingInfo": true,
       "FrontendFields": [
         {
@@ -30,7 +30,7 @@
     },
     {
       "name": "MSAuthenticator",
-      "store": "bool",
+      "StoreAs": "bool",
       "UseExistingInfo": true,
       "FrontendFields": [
         {
@@ -43,7 +43,7 @@
     },
     {
       "name": "AnonReport",
-      "store": "bool",
+      "StoreAs": "bool",
       "UseExistingInfo": true,
       "FrontendFields": [
         {
@@ -56,7 +56,7 @@
     },
     {
       "name": "AuditLog",
-      "store": "bool",
+      "StoreAs": "bool",
       "UseExistingInfo": true,
       "FrontendFields": [
         {
@@ -69,7 +69,7 @@
     },
     {
       "name": "AutoExpandingArchive",
-      "store": "bool",
+      "StoreAs": "bool",
       "UseExistingInfo": true,
       "FrontendFields": [
         {
@@ -82,7 +82,7 @@
     },
     {
       "name": "DelegateSentItems",
-      "store": "json",
+      "StoreAs": "json",
       "UseExistingInfo": true,
       "FrontendFields": [
         {
@@ -95,7 +95,7 @@
     },
     {
       "name": "DeletedUserRentention",
-      "store": "bool",
+      "StoreAs": "bool",
       "UseExistingInfo": true,
       "FrontendFields": [
         {
@@ -108,7 +108,7 @@
     },
     {
       "name": "DisableBasicAuthSMTP",
-      "store": "bool",
+      "StoreAs": "bool",
       "UseExistingInfo": true,
       "FrontendFields": [
         {
@@ -121,7 +121,7 @@
     },
     {
       "name": "DisableGuestDirectory",
-      "store": "bool",
+      "StoreAs": "bool",
       "UseExistingInfo": true,
       "FrontendFields": [
         {
@@ -134,7 +134,7 @@
     },
     {
       "name": "DisableGuests",
-      "store": "json",
+      "StoreAs": "json",
       "UseExistingInfo": true,
       "FrontendFields": [
         {
@@ -147,7 +147,7 @@
     },
     {
       "name": "DisableM365GroupUsers",
-      "store": "bool",
+      "StoreAs": "bool",
       "UseExistingInfo": true,
       "FrontendFields": [
         {
@@ -160,7 +160,7 @@
     },
     {
       "name": "MacSync",
-      "store": "bool",
+      "StoreAs": "bool",
       "UseExistingInfo": true,
       "FrontendFields": [
         {
@@ -173,7 +173,7 @@
     },
     {
       "name": "DisableReshare",
-      "store": "bool",
+      "StoreAs": "bool",
       "UseExistingInfo": true,
       "FrontendFields": [
         {
@@ -186,7 +186,7 @@
     },
     {
       "name": "DisableSecurityGroupUsers",
-      "store": "bool",
+      "StoreAs": "bool",
       "UseExistingInfo": true,
       "FrontendFields": [
         {
@@ -199,7 +199,7 @@
     },
     {
       "name": "DisableSharedMailbox",
-      "store": "json",
+      "StoreAs": "json",
       "UseExistingInfo": true,
       "FrontendFields": [
         {
@@ -212,7 +212,7 @@
     },
     {
       "name": "DisableTenantCreation",
-      "store": "bool",
+      "StoreAs": "bool",
       "UseExistingInfo": true,
       "FrontendFields": [
         {
@@ -225,7 +225,7 @@
     },
     {
       "name": "DisableUserSiteCreate",
-      "store": "bool",
+      "StoreAs": "bool",
       "UseExistingInfo": true,
       "FrontendFields": [
         {
@@ -238,7 +238,7 @@
     },
     {
       "name": "DisableViva",
-      "store": "bool",
+      "StoreAs": "bool",
       "UseExistingInfo": true,
       "FrontendFields": [
         {
@@ -251,7 +251,7 @@
     },
     {
       "name": "EnableAppConsentAdminRequests",
-      "store": "bool",
+      "StoreAs": "bool",
       "UseExistingInfo": true,
       "FrontendFields": [
         {
@@ -264,7 +264,7 @@
     },
     {
       "name": "EnableFIDO2",
-      "store": "bool",
+      "StoreAs": "bool",
       "UseExistingInfo": true,
       "FrontendFields": [
         {
@@ -277,7 +277,7 @@
     },
     {
       "name": "EnableOnlineArchiving",
-      "store": "json",
+      "StoreAs": "json",
       "UseExistingInfo": true,
       "FrontendFields": [
         {
@@ -290,7 +290,7 @@
     },
     {
       "name": "ExcludedfileExt",
-      "store": "json",
+      "StoreAs": "json",
       "UseExistingInfo": true,
       "FrontendFields": [
         {
@@ -303,7 +303,7 @@
     },
     {
       "name": "intuneDeviceReg",
-      "store": "bool",
+      "StoreAs": "bool",
       "UseExistingInfo": true,
       "FrontendFields": [
         {
@@ -316,7 +316,7 @@
     },
     {
       "name": "intuneDeviceRetirementDays",
-      "store": "bool",
+      "StoreAs": "bool",
       "UseExistingInfo": true,
       "FrontendFields": [
         {
@@ -329,7 +329,7 @@
     },
     {
       "name": "intuneRequireMFA",
-      "store": "bool",
+      "StoreAs": "bool",
       "UseExistingInfo": true,
       "FrontendFields": [
         {
@@ -342,7 +342,7 @@
     },
     {
       "name": "laps",
-      "store": "bool",
+      "StoreAs": "bool",
       "UseExistingInfo": true,
       "FrontendFields": [
         {
@@ -355,7 +355,7 @@
     },
     {
       "name": "MailContacts",
-      "store": "json",
+      "StoreAs": "json",
       "UseExistingInfo": true,
       "FrontendFields": [
         {
@@ -368,7 +368,7 @@
     },
     {
       "name": "NudgeMFA",
-      "store": "bool",
+      "StoreAs": "bool",
       "UseExistingInfo": true,
       "FrontendFields": [
         {
@@ -381,7 +381,7 @@
     },
     {
       "name": "OauthConsent",
-      "store": "bool",
+      "StoreAs": "bool",
       "UseExistingInfo": true,
       "FrontendFields": [
         {
@@ -394,7 +394,7 @@
     },
     {
       "name": "OauthConsentLowSec",
-      "store": "bool",
+      "StoreAs": "bool",
       "UseExistingInfo": true,
       "FrontendFields": [
         {
@@ -407,7 +407,7 @@
     },
     {
       "name": "OutboundSpamAlert",
-      "store": "bool",
+      "StoreAs": "bool",
       "UseExistingInfo": true,
       "FrontendFields": [
         {
@@ -420,7 +420,7 @@
     },
     {
       "name": "PasswordExpireDisabled",
-      "store": "json",
+      "StoreAs": "json",
       "UseExistingInfo": true,
       "FrontendFields": [
         {
@@ -433,7 +433,7 @@
     },
     {
       "name": "companionAppAllowedState",
-      "store": "bool",
+      "StoreAs": "bool",
       "UseExistingInfo": true,
       "FrontendFields": [
         {
@@ -446,7 +446,7 @@
     },
     {
       "name": "PWdisplayAppInformationRequiredState",
-      "store": "bool",
+      "StoreAs": "bool",
       "UseExistingInfo": true,
       "FrontendFields": [
         {
@@ -459,7 +459,7 @@
     },
     {
       "name": "DKIM",
-      "store": "json",
+      "StoreAs": "json",
       "UseExistingInfo": true,
       "FrontendFields": [
         {
@@ -472,7 +472,7 @@
     },
     {
       "name": "SecurityDefaults",
-      "store": "bool",
+      "StoreAs": "bool",
       "UseExistingInfo": true,
       "FrontendFields": [
         {
@@ -485,7 +485,7 @@
     },
     {
       "name": "SendFromAlias",
-      "store": "bool",
+      "StoreAs": "bool",
       "UseExistingInfo": true,
       "FrontendFields": [
         {
@@ -498,7 +498,7 @@
     },
     {
       "name": "SendReceiveLimit",
-      "store": "json",
+      "StoreAs": "json",
       "UseExistingInfo": true,
       "FrontendFields": [
         {
@@ -511,7 +511,7 @@
     },
     {
       "name": "sharingCapability",
-      "store": "string",
+      "StoreAs": "string",
       "UseExistingInfo": true,
       "FrontendFields": [
         {
@@ -524,7 +524,7 @@
     },
     {
       "name": "SpoofingWarnings",
-      "store": "bool",
+      "StoreAs": "bool",
       "UseExistingInfo": true,
       "FrontendFields": [
         {
@@ -537,7 +537,7 @@
     },
     {
       "name": "TemporaryAccessPass",
-      "store": "bool",
+      "StoreAs": "bool",
       "UseExistingInfo": true,
       "FrontendFields": [
         {
@@ -550,7 +550,7 @@
     },
     {
       "name": "unmanagedSync",
-      "store": "bool",
+      "StoreAs": "bool",
       "UseExistingInfo": true,
       "FrontendFields": [
         {
@@ -563,7 +563,7 @@
     },
     {
       "name": "UserSubmissionPolicy",
-      "store": "bool",
+      "StoreAs": "bool",
       "UseExistingInfo": true,
       "FrontendFields": [
         {
@@ -576,7 +576,7 @@
     },
     {
       "name": "UserSubmissionPolicy",
-      "store": "bool",
+      "StoreAs": "bool",
       "UseExistingInfo": true,
       "FrontendFields": [
         {
