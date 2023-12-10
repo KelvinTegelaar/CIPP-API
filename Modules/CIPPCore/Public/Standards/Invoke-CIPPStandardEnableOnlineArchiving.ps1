@@ -27,6 +27,7 @@ function Invoke-CIPPStandardEnableOnlineArchiving {
         }
     }
     if ($Settings.report) {
+        $filtered = $MailboxesNoArchive | Select-Object -Property UserPrincipalName, Archive
         Add-CIPPBPAField -FieldName 'EnableOnlineArchiving' -FieldValue $MailboxesNoArchive -StoreAs json -Tenant $tenant
     }
 }

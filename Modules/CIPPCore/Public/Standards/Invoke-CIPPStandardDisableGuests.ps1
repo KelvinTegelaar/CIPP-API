@@ -27,6 +27,7 @@ function Invoke-CIPPStandardDisableGuests {
         }
     }
     if ($Settings.report) {
-        Add-CIPPBPAField -FieldName 'DisableGuests' -FieldValue $GraphRequest -StoreAs json -Tenant $tenant
+        $filtered = $GraphRequest | Select-Object -Property UserPrincipalName, id, signInActivity, mail, userType, accountEnabled
+        Add-CIPPBPAField -FieldName 'DisableGuests' -FieldValue $filtered -StoreAs json -Tenant $tenant
     }
 }

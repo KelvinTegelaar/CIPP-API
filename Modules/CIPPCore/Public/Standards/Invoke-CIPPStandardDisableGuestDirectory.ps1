@@ -4,6 +4,8 @@ function Invoke-CIPPStandardDisableGuestDirectory {
     Internal
     #>
     param($Tenant, $Settings)
+    $CurrentInfo = New-GraphGetRequest -Uri 'https://graph.microsoft.com/beta/policies/authorizationPolicy/authorizationPolicy' -tenantid $Tenant
+
     If ($Settings.remediate) {
         
 
@@ -19,7 +21,6 @@ function Invoke-CIPPStandardDisableGuestDirectory {
     
     if ($Settings.alert) {
 
-        $CurrentInfo = New-GraphGetRequest -Uri 'https://graph.microsoft.com/beta/policies/authorizationPolicy/authorizationPolicy' -tenantid $Tenant
         if ($CurrentInfo.guestUserRoleId -eq '2af84b1e-32c8-42b7-82bc-daa82404023b') {
             Write-LogMessage -API 'Standards' -tenant $tenant -message 'Guest access to directory information is disabled.' -sev Info
         } else {

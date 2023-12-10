@@ -4,6 +4,8 @@ function Invoke-CIPPStandardDeletedUserRentention {
     Internal
     #>
     param($Tenant, $Settings)
+    $CurrentInfo = New-GraphGetRequest -Uri 'https://graph.microsoft.com/beta/admin/sharepoint/settings' -tenantid $Tenant -AsApp $true
+
     If ($Settings.remediate) {
         try {
             $body = '{"deletedUserPersonalSiteRetentionPeriodInDays": 365}'
@@ -15,8 +17,6 @@ function Invoke-CIPPStandardDeletedUserRentention {
         }
     }
     if ($Settings.alert) {
-
-        $CurrentInfo = New-GraphGetRequest -Uri 'https://graph.microsoft.com/beta/admin/sharepoint/settings' -tenantid $Tenant -AsApp $true
         if ($CurrentInfo.deletedUserPersonalSiteRetentionPeriodInDays -eq 365) {
             Write-LogMessage -API 'Standards' -tenant $tenant -message 'Deleted user rentention of OneDrive is set to 1 year' -sev Info
         } else {

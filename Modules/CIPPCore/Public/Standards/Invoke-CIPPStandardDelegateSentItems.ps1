@@ -30,6 +30,7 @@ function Invoke-CIPPStandardDelegateSentItems {
         }
     }
     if ($Settings.report) {
-        Add-CIPPBPAField -FieldName 'DelegateSentItems' -FieldValue $Mailboxes -StoreAs json -Tenant $tenant
+        $Filtered = $Mailboxes | Select-Object -Property UserPrincipalName, MessageCopyForSendOnBehalfEnabled, MessageCopyForSentAsEnabled
+        Add-CIPPBPAField -FieldName 'DelegateSentItems' -FieldValue $Filtered -StoreAs json -Tenant $tenant
     }
 }

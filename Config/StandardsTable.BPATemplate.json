@@ -10,7 +10,6 @@
         {
           "formatter": "bool",
           "name": "ActivityBasedTimeout",
-          "desc": "YesYes",
           "value": "ActivityBasedTimeout"
         }
       ]
@@ -23,7 +22,6 @@
         {
           "formatter": "bool",
           "name": "softwareOath",
-          "desc": "YesYes",
           "value": "softwareOath"
         }
       ]
@@ -36,7 +34,6 @@
         {
           "formatter": "bool",
           "name": "MSAuthenticator",
-          "desc": "YesYes",
           "value": "MSAuthenticator"
         }
       ]
@@ -49,7 +46,6 @@
         {
           "formatter": "bool",
           "name": "AnonReport",
-          "desc": "YesYes",
           "value": "AnonReport"
         }
       ]
@@ -62,7 +58,6 @@
         {
           "formatter": "bool",
           "name": "AuditLog",
-          "desc": "YesYes",
           "value": "AuditLog"
         }
       ]
@@ -75,7 +70,6 @@
         {
           "formatter": "bool",
           "name": "AutoExpandingArchive",
-          "desc": "YesYes",
           "value": "AutoExpandingArchive"
         }
       ]
@@ -86,9 +80,8 @@
       "UseExistingInfo": true,
       "FrontendFields": [
         {
-          "formatter": "json",
+          "formatter": "table",
           "name": "DelegateSentItems",
-          "desc": "YesYes",
           "value": "DelegateSentItems"
         }
       ]
@@ -101,7 +94,6 @@
         {
           "formatter": "bool",
           "name": "DeletedUserRentention",
-          "desc": "YesYes",
           "value": "DeletedUserRentention"
         }
       ]
@@ -114,7 +106,6 @@
         {
           "formatter": "bool",
           "name": "DisableBasicAuthSMTP",
-          "desc": "YesYes",
           "value": "DisableBasicAuthSMTP"
         }
       ]
@@ -127,7 +118,6 @@
         {
           "formatter": "bool",
           "name": "DisableGuestDirectory",
-          "desc": "YesYes",
           "value": "DisableGuestDirectory"
         }
       ]
@@ -138,9 +128,8 @@
       "UseExistingInfo": true,
       "FrontendFields": [
         {
-          "formatter": "json",
+          "formatter": "table",
           "name": "DisableGuests",
-          "desc": "YesYes",
           "value": "DisableGuests"
         }
       ]
@@ -153,7 +142,6 @@
         {
           "formatter": "bool",
           "name": "DisableM365GroupUsers",
-          "desc": "YesYes",
           "value": "DisableM365GroupUsers"
         }
       ]
@@ -166,7 +154,6 @@
         {
           "formatter": "bool",
           "name": "MacSync",
-          "desc": "YesYes",
           "value": "MacSync"
         }
       ]
@@ -179,7 +166,6 @@
         {
           "formatter": "bool",
           "name": "DisableReshare",
-          "desc": "YesYes",
           "value": "DisableReshare"
         }
       ]
@@ -192,7 +178,6 @@
         {
           "formatter": "bool",
           "name": "DisableSecurityGroupUsers",
-          "desc": "YesYes",
           "value": "DisableSecurityGroupUsers"
         }
       ]
@@ -203,9 +188,8 @@
       "UseExistingInfo": true,
       "FrontendFields": [
         {
-          "formatter": "json",
+          "formatter": "table",
           "name": "DisableSharedMailbox",
-          "desc": "YesYes",
           "value": "DisableSharedMailbox"
         }
       ]
@@ -218,7 +202,6 @@
         {
           "formatter": "bool",
           "name": "DisableTenantCreation",
-          "desc": "YesYes",
           "value": "DisableTenantCreation"
         }
       ]
@@ -231,7 +214,6 @@
         {
           "formatter": "bool",
           "name": "DisableUserSiteCreate",
-          "desc": "YesYes",
           "value": "DisableUserSiteCreate"
         }
       ]
@@ -244,7 +226,6 @@
         {
           "formatter": "bool",
           "name": "DisableViva",
-          "desc": "YesYes",
           "value": "DisableViva"
         }
       ]
@@ -257,7 +238,6 @@
         {
           "formatter": "bool",
           "name": "EnableAppConsentAdminRequests",
-          "desc": "YesYes",
           "value": "EnableAppConsentAdminRequests"
         }
       ]
@@ -270,7 +250,6 @@
         {
           "formatter": "bool",
           "name": "EnableFIDO2",
-          "desc": "YesYes",
           "value": "EnableFIDO2"
         }
       ]
@@ -281,9 +260,8 @@
       "UseExistingInfo": true,
       "FrontendFields": [
         {
-          "formatter": "json",
+          "formatter": "table",
           "name": "EnableOnlineArchiving",
-          "desc": "YesYes",
           "value": "EnableOnlineArchiving"
         }
       ]
@@ -294,9 +272,8 @@
       "UseExistingInfo": true,
       "FrontendFields": [
         {
-          "formatter": "json",
+          "formatter": "table",
           "name": "ExcludedfileExt",
-          "desc": "YesYes",
           "value": "ExcludedfileExt"
         }
       ]
@@ -309,7 +286,6 @@
         {
           "formatter": "bool",
           "name": "intuneDeviceReg",
-          "desc": "YesYes",
           "value": "intuneDeviceReg"
         }
       ]
@@ -322,7 +298,6 @@
         {
           "formatter": "bool",
           "name": "intuneDeviceRetirementDays",
-          "desc": "YesYes",
           "value": "intuneDeviceRetirementDays"
         }
       ]
@@ -335,7 +310,6 @@
         {
           "formatter": "bool",
           "name": "intuneRequireMFA",
-          "desc": "YesYes",
           "value": "intuneRequireMFA"
         }
       ]
@@ -348,7 +322,6 @@
         {
           "formatter": "bool",
           "name": "laps",
-          "desc": "YesYes",
           "value": "laps"
         }
       ]
@@ -359,9 +332,8 @@
       "UseExistingInfo": true,
       "FrontendFields": [
         {
-          "formatter": "json",
+          "formatter": "table",
           "name": "MailContacts",
-          "desc": "YesYes",
           "value": "MailContacts"
         }
       ]
@@ -374,7 +346,6 @@
         {
           "formatter": "bool",
           "name": "NudgeMFA",
-          "desc": "YesYes",
           "value": "NudgeMFA"
         }
       ]
@@ -387,7 +358,6 @@
         {
           "formatter": "bool",
           "name": "OauthConsent",
-          "desc": "YesYes",
           "value": "OauthConsent"
         }
       ]
@@ -400,7 +370,6 @@
         {
           "formatter": "bool",
           "name": "OauthConsentLowSec",
-          "desc": "YesYes",
           "value": "OauthConsentLowSec"
         }
       ]
@@ -413,7 +382,6 @@
         {
           "formatter": "bool",
           "name": "OutboundSpamAlert",
-          "desc": "YesYes",
           "value": "OutboundSpamAlert"
         }
       ]
@@ -424,9 +392,8 @@
       "UseExistingInfo": true,
       "FrontendFields": [
         {
-          "formatter": "json",
+          "formatter": "table",
           "name": "PasswordExpireDisabled",
-          "desc": "YesYes",
           "value": "PasswordExpireDisabled"
         }
       ]
@@ -439,7 +406,6 @@
         {
           "formatter": "bool",
           "name": "companionAppAllowedState",
-          "desc": "YesYes",
           "value": "companionAppAllowedState"
         }
       ]
@@ -452,7 +418,6 @@
         {
           "formatter": "bool",
           "name": "PWdisplayAppInformationRequiredState",
-          "desc": "YesYes",
           "value": "PWdisplayAppInformationRequiredState"
         }
       ]
@@ -463,9 +428,8 @@
       "UseExistingInfo": true,
       "FrontendFields": [
         {
-          "formatter": "json",
+          "formatter": "table",
           "name": "DKIM",
-          "desc": "YesYes",
           "value": "DKIM"
         }
       ]
@@ -476,9 +440,8 @@
       "UseExistingInfo": true,
       "FrontendFields": [
         {
-          "formatter": "bool",
+          "formatter": "warnBool",
           "name": "SecurityDefaults",
-          "desc": "YesYes",
           "value": "SecurityDefaults"
         }
       ]
@@ -491,7 +454,6 @@
         {
           "formatter": "bool",
           "name": "SendFromAlias",
-          "desc": "YesYes",
           "value": "SendFromAlias"
         }
       ]
@@ -502,9 +464,8 @@
       "UseExistingInfo": true,
       "FrontendFields": [
         {
-          "formatter": "json",
+          "formatter": "table",
           "name": "SendReceiveLimit",
-          "desc": "YesYes",
           "value": "SendReceiveLimit"
         }
       ]
@@ -517,7 +478,6 @@
         {
           "formatter": "string",
           "name": "sharingCapability",
-          "desc": "YesYes",
           "value": "sharingCapability"
         }
       ]
@@ -528,9 +488,8 @@
       "UseExistingInfo": true,
       "FrontendFields": [
         {
-          "formatter": "bool",
+          "formatter": "warnBool",
           "name": "SpoofingWarnings",
-          "desc": "YesYes",
           "value": "SpoofingWarnings"
         }
       ]
@@ -541,9 +500,8 @@
       "UseExistingInfo": true,
       "FrontendFields": [
         {
-          "formatter": "bool",
+          "formatter": "warnBool",
           "name": "TemporaryAccessPass",
-          "desc": "YesYes",
           "value": "TemporaryAccessPass"
         }
       ]
@@ -554,9 +512,8 @@
       "UseExistingInfo": true,
       "FrontendFields": [
         {
-          "formatter": "bool",
+          "formatter": "warnBool",
           "name": "unmanagedSync",
-          "desc": "YesYes",
           "value": "unmanagedSync"
         }
       ]
@@ -567,22 +524,8 @@
       "UseExistingInfo": true,
       "FrontendFields": [
         {
-          "formatter": "bool",
+          "formatter": "warnBool",
           "name": "UserSubmissionPolicy",
-          "desc": "YesYes",
-          "value": "UserSubmissionPolicy"
-        }
-      ]
-    },
-    {
-      "name": "UserSubmissionPolicy",
-      "StoreAs": "bool",
-      "UseExistingInfo": true,
-      "FrontendFields": [
-        {
-          "formatter": "bool",
-          "name": "UserSubmissionPolicy",
-          "desc": "YesYes",
           "value": "UserSubmissionPolicy"
         }
       ]
