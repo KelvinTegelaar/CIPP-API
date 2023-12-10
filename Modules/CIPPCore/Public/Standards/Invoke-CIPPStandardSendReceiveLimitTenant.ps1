@@ -6,29 +6,9 @@ function Invoke-CIPPStandardSendReceiveLimitTenant {
     param($Tenant, $Settings)
     $AllMailBoxPlans = New-ExoRequest -tenantid $Tenant -cmdlet 'Get-MailboxPlan' | Select-Object DisplayName, MaxSendSize, MaxReceiveSize, GUID
     If ($Settings.remediate) {
-        $Limits = $Settings.SendReceiveLimit
-        if ($Limits[0] -like '*MB*') {
-            $MaxSendSize = [int]($Limits[0] -Replace '[a-zA-Z]', '') * 1MB
-        } elseif ($Limits[0] -like '*KB*') {
-            $MaxSendSize = [int]($Limits[0] -Replace '[a-zA-Z]', '') * 1KB
-        } # Default to 35MB if invalid input
-        else {
-            $MaxSendSize = 35MB
-        }
-        if ($MaxSendSize -gt 150MB) {
-            $MaxSendSize = 150MB
-        }
-        if ($Limits[1] -like '*MB*') {
-            $MaxReceiveSize = [int]($Limits[1] -Replace '[a-zA-Z]', '') * 1MB
-        } elseif ($Limits[1] -like '*KB*') {
-            $MaxReceiveSize = [int]($Limits[1] -Replace '[a-zA-Z]', '') * 1KB
-        } else {
-            $MaxReceiveSize = 36MB
-        } 
-
-        if ($MaxReceiveSize -gt 150MB) {
-            $MaxReceiveSize = 150MB
-        }
+        Write-Host "Time to remediate. Our Settings are $($Settings.SendLimit)MB and $($Settings.ReceiveLimit)MB"
+        $MaxReceiveSize = [int64]"$($Settings.SendLimit)MB"
+        $MaxSendSize = [int64]"$($Settings.ReceiveLimit)MB"
 
         try {
             foreach ($MailboxPlan in $AllMailBoxPlans) {
