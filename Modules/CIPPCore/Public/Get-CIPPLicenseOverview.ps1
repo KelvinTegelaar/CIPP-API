@@ -55,7 +55,7 @@ function Get-CIPPLicenseOverview {
                 dateCreated    = [string]$sku.createdDateTime
                 dateExpires    = [string]$sku.nextLifecycleDateTime
                 'PartitionKey' = 'License'
-                'RowKey'       = "$($singlereq.Tenant) - $($sku.skuid) - $($term)"
+                'RowKey'       = "$($singlereq.Tenant) - $($sku.skuid) - $($Term)"
             }      
         }
     }
