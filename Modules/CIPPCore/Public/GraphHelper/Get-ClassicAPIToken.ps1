@@ -1,4 +1,8 @@
 function Get-ClassicAPIToken($tenantID, $Resource) {
+    <#
+    .FUNCTIONALITY
+    Internal
+    #>
     $TokenKey = '{0}-{1}' -f $TenantID, $Resource
     if ($script:classictoken.$TokenKey -and [int](Get-Date -UFormat %s -Millisecond 0) -lt $script:classictoken.$TokenKey.expires_on) {
         Write-Host 'Classic: cached token'
