@@ -1,4 +1,8 @@
 function New-TeamsAPIGetRequest($Uri, $tenantID, $Method = 'GET', $Resource = '48ac35b8-9aa8-4d74-927d-1f4a14a0b239', $ContentType = 'application/json') {
+    <#
+    .FUNCTIONALITY
+    Internal
+    #>
 
     if ((Get-AuthorisedRequest -Uri $uri -TenantID $tenantid)) {
         $token = Get-ClassicAPIToken -Tenant $tenantid -Resource $Resource
