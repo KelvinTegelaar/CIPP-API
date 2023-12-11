@@ -78,7 +78,7 @@ function Invoke-CIPPStandardsRun {
 
     #For each item in our object, run the queue. 
 
-    foreach ($task in $object | Where-Object -Property Standard -NE 'v2') {
+    foreach ($task in $object | Where-Object -Property Standard -NotLike 'v2*') {
         $QueueItem = [pscustomobject]@{
             Tenant       = $task.Tenant
             Standard     = $task.Standard
