@@ -23,10 +23,10 @@ Function Invoke-ListUserCounts {
                 $GAs = 'Not Supported'
                 $Guests = 'Not Supported'
         } else {
-                $Users = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/users?`$count=true&`$top=1" -CountOnly -ComplexFilter -tenantid $TenantFilter
-                $LicUsers = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/users?`$count=true&`$top=1&`$filter=assignedLicenses/`$count ne 0" -CountOnly -ComplexFilter -tenantid $TenantFilter
-                $GAs = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/directoryRoles/roleTemplateId=62e90394-69f5-4237-9190-012177145e10/members?`$count=true" -CountOnly -ComplexFilter -tenantid $TenantFilter
-                $guests = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/users?`$count=true&`$top=1&`$filter=userType eq 'Guest'" -CountOnly -ComplexFilter -tenantid $TenantFilter
+                try { $Users = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/users?`$count=true&`$top=1" -CountOnly -ComplexFilter -tenantid $TenantFilter } catch { $Users = 'Not available' }
+                try { $LicUsers = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/users?`$count=true&`$top=1&`$filter=assignedLicenses/`$count ne 0" -CountOnly -ComplexFilter -tenantid $TenantFilter } catch { $Licusers = 'Not available' }
+                try { $GAs = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/directoryRoles/roleTemplateId=62e90394-69f5-4237-9190-012177145e10/members?`$count=true" -CountOnly -ComplexFilter -tenantid $TenantFilter } catch { $Gas = 'Not available' }
+                try { $guests = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/users?`$count=true&`$top=1&`$filter=userType eq 'Guest'" -CountOnly -ComplexFilter -tenantid $TenantFilter } catch { $Guests = 'Not available' }
         }
         $StatusCode = [HttpStatusCode]::OK
         $Counts = @{
