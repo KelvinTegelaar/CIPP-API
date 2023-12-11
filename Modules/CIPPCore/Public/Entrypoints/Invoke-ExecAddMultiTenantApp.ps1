@@ -16,16 +16,14 @@ function Invoke-ExecAddMultiTenantApp {
                 $ExistingApp = New-GraphGETRequest -uri "https://graph.microsoft.com/beta/applications(appId='$($Request.body.AppId)')" -tenantid $ENV:tenantid -NoAuthCheck $true
                 $DelegateResourceAccess = $Existingapp.requiredResourceAccess
                 $ApplicationResourceAccess = $Existingapp.requiredResourceAccess
-            }
-            catch {
+            } catch {
                 'Failed to get existing permissions. The app does not exist in the partner tenant.'
             }
         }
         #This needs to be moved to a queue.
         if ('allTenants' -in $Request.body.SelectedTenants.defaultDomainName) {
             $TenantFilter = (Get-Tenants).defaultDomainName 
-        }
-        else {
+        } else {
             $TenantFilter = $Request.body.SelectedTenants.defaultDomainName 
         }
 
@@ -39,14 +37,12 @@ function Invoke-ExecAddMultiTenantApp {
                         delegateResourceAccess    = $DelegateResourceAccess
                     })
                 "Queued application to tenant $Tenant. See the logbook for deployment details"
-            }
-            catch {
+            } catch {
                 "Error queuing application to tenant $Tenant - $($_.Exception.Message)"
             }
         }
         $StatusCode = [HttpStatusCode]::OK
-    }
-    catch {
+    } catch {
         $ErrorMsg = Get-NormalizedError -message $($_.Exception.Message)
         $Results = "Function Error: $ErrorMsg"
         $StatusCode = [HttpStatusCode]::BadRequest
