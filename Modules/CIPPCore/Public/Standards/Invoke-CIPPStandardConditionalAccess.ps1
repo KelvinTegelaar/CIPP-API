@@ -5,15 +5,11 @@ function Invoke-CIPPStandardConditionalAccess {
     #>
   param($Tenant, $Settings)
   If ($Settings.remediate) {
-    $ConfigTable = Get-CippTable -tablename 'standards'
-    $Setting = ((Get-AzDataTableEntity @ConfigTable -Filter "PartitionKey eq 'standards' and RowKey eq '$tenant'").JSON | ConvertFrom-Json).standards.ConditionalAccess
-    if (!$Setting) {
-      $Setting = ((Get-AzDataTableEntity @ConfigTable -Filter "PartitionKey eq 'standards' and RowKey eq 'AllTenants'").JSON | ConvertFrom-Json).standards.ConditionalAccess
-    }
+
 
     $APINAME = 'Standards'
 
-    foreach ($Template in $Setting.TemplateList) {
+    foreach ($Template in $Settings.TemplateList) {
       try {
         $Table = Get-CippTable -tablename 'templates'
         $Filter = "PartitionKey eq 'CATemplate' and RowKey eq '$($Template.value)'" 
