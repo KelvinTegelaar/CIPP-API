@@ -1,14 +1,7 @@
 function Read-JwtAccessDetails {
     <#
-    .SYNOPSIS
-    Parse Microsoft JWT access tokens
-
-    .DESCRIPTION
-    Extract JWT access token details for verification
-
-    .PARAMETER Token
-    Token to get details for
-
+    .FUNCTIONALITY
+    Internal
     #>
     [cmdletbinding()]
     param(
