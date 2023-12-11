@@ -39,6 +39,7 @@ function Set-CIPPDefaultAPDeploymentProfile {
             }
         }
         $Body = ConvertTo-Json -InputObject $ObjBody
+        Write-Host $Body
         $GraphRequest = New-GraphPostRequest -uri 'https://graph.microsoft.com/beta/deviceManagement/windowsAutopilotDeploymentProfiles' -body $body -tenantid $tenantfilter
         Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APIName -tenant $($tenantfilter) -message "Added Autopilot profile $($Displayname)" -Sev 'Info'
         if ($AssignTo) {
