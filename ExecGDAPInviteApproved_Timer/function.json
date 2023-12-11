@@ -9,7 +9,7 @@
     {
       "type": "queue",
       "direction": "out",
-      "name": "Msg",
+      "name": "gdapinvitequeue",
       "queueName": "gdapinvitequeue"
     }
   ]
