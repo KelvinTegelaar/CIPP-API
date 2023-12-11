@@ -1,6 +1,9 @@
 
 function New-ClassicAPIGetRequest($TenantID, $Uri, $Method = 'GET', $Resource = 'https://admin.microsoft.com', $ContentType = 'application/json') {
-
+    <#
+    .FUNCTIONALITY
+    Internal
+    #>
     if ((Get-AuthorisedRequest -Uri $uri -TenantID $tenantid)) {
         $token = Get-ClassicAPIToken -Tenant $tenantID -Resource $Resource
 
