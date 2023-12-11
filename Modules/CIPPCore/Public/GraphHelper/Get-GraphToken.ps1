@@ -1,4 +1,8 @@
 function Get-GraphToken($tenantid, $scope, $AsApp, $AppID, $refreshToken, $ReturnRefresh, $SkipCache) {
+    <#
+    .FUNCTIONALITY
+    Internal
+    #>
     if (!$scope) { $scope = 'https://graph.microsoft.com/.default' }
     if (!$env:SetFromProfile) { $CIPPAuth = Get-CIPPAuthentication; Write-Host 'Could not get Refreshtoken from environment variable. Reloading token.' }
     $AuthBody = @{

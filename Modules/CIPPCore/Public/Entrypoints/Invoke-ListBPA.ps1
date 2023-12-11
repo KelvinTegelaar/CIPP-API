@@ -62,7 +62,7 @@ Function Invoke-ListBPA {
     }
 
     $Results = [PSCustomObject]@{
-        Data    = $Data
+        Data    = @($Data)
         Columns = $Columns
         Style   = $Style
     }
