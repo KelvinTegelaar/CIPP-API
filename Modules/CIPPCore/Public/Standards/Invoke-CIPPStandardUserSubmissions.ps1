@@ -5,7 +5,7 @@ function Invoke-CIPPStandardUserSubmissions {
     #>
     param($Tenant, $Settings)
     $Policy = New-ExoRequest -tenantid $Tenant -cmdlet 'Get-ReportSubmissionPolicy'
-    If ($Settings.Remediate) {
+    If ($Settings.remediate) {
         if ($Settings.enable -and $Settings.disable) {
             Write-LogMessage -API 'Standards' -tenant $tenant -message 'You cannot both enable and disable the User Submission policy' -sev Error
             Exit
@@ -38,7 +38,8 @@ function Invoke-CIPPStandardUserSubmissions {
             }
         }
     }
-    if ($Settings.Alert) {
+    if ($Settings.alert) {
+
         if ($Policy.length -eq 0) {
             Write-LogMessage -API 'Standards' -tenant $tenant -message 'User Submission policy is not set.' -sev Alert
         } else {
@@ -49,7 +50,7 @@ function Invoke-CIPPStandardUserSubmissions {
             }
         }
     }
-    if ($Settings.Report) {
+    if ($Settings.report) {
         if ($Policy.length -eq 0) {
             Add-CIPPBPAField -FieldName 'UserSubmissionPolicy' -FieldValue $false -StoreAs bool -Tenant $tenant
         } else {

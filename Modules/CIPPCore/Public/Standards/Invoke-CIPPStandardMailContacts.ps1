@@ -6,7 +6,7 @@ function Invoke-CIPPStandardMailContacts {
     param($Tenant, $Settings)
     $TenantID = (New-GraphGetRequest -Uri 'https://graph.microsoft.com/beta/organization' -tenantid $tenant)
 
-    If ($Settings.Remediate) {
+    If ($Settings.remediate) {
     
         $contacts = $settings
         try {
@@ -24,7 +24,8 @@ function Invoke-CIPPStandardMailContacts {
             Write-LogMessage -API 'Standards' -tenant $tenant -message "Failed to set contact emails: $($_.exception.message)" -sev Error
         }
     }
-    if ($Settings.Alert) {
+    if ($Settings.alert) {
+
         $CurrentInfo = New-GraphGetRequest -Uri "https://graph.microsoft.com/beta/organization/$($TenantID.id)" -tenantid $Tenant
         if ($CurrentInfo.marketingNotificationEmails -eq $Contacts.MarketingContact) {
             Write-LogMessage -API 'Standards' -tenant $tenant -message "Marketing contact email is set to $($Contacts.MarketingContact)" -sev Info
@@ -47,7 +48,7 @@ function Invoke-CIPPStandardMailContacts {
             Write-LogMessage -API 'Standards' -tenant $tenant -message "General contact email is not set to $($Contacts.GeneralContact)" -sev Alert
         }
     }
-    if ($Settings.Report) {
+    if ($Settings.report) {
         Add-CIPPBPAField -FieldName 'MailContacts' -FieldValue $CurrentInfo -StoreAs json -Tenant $tenant
     }
 }

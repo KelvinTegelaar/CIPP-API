@@ -1,6 +1,6 @@
 function Add-CIPPBPAField {
     param (
-        $BPAName = 'Standards Report V1.0',
+        $BPAName = 'CIPP Standards v1.0 - Table view',
         $FieldName,
         $FieldValue,
         $StoreAs,
@@ -8,8 +8,7 @@ function Add-CIPPBPAField {
     )
     $Table = Get-CippTable -tablename 'cachebpav2'
     $TenantName = Get-Tenants | Where-Object -Property defaultDomainName -EQ $Tenant
-
-    $CurrentContentsObject = (Get-CIPPAzDataTableEntity @Table -Filter "RowKey eq 'Standards Report V1.0' and PartitionKey eq '$($TenantName.customerId)'")
+    $CurrentContentsObject = (Get-CIPPAzDataTableEntity @Table -Filter "RowKey eq '$BPAName' and PartitionKey eq '$($TenantName.customerId)'")
     Write-Host "Adding $FieldName to $BPAName for $Tenant. content is $($CurrentContents.RowKey)"
     if ($CurrentContentsObject.RowKey) {
         $CurrentContents = @{}
@@ -21,7 +20,7 @@ function Add-CIPPBPAField {
         $Result = @{
             Tenant       = "$($TenantName.displayName)"
             GUID         = "$($TenantName.customerId)"
-            RowKey       = 'Standards Report V1.0'
+            RowKey       = $BPAName
             PartitionKey = "$($TenantName.customerId)"
             LastRefresh  = [string]$(Get-Date (Get-Date).ToUniversalTime() -UFormat '+%Y-%m-%dT%H:%M:%S.000Z')
         }

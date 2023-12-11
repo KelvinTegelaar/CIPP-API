@@ -4,7 +4,7 @@ function Invoke-CIPPStandardEnableFIDO2 {
     Internal
     #>
     param($Tenant, $Settings)
-    If ($Settings.Remediate) {
+    If ($Settings.remediate) {
         
 
         try {
@@ -16,7 +16,8 @@ function Invoke-CIPPStandardEnableFIDO2 {
         }
     }
         
-    if ($Settings.Alert) {
+    if ($Settings.alert) {
+
         $CurrentInfo = New-GraphGetRequest -Uri 'https://graph.microsoft.com/beta/policies/authenticationmethodspolicy/authenticationMethodConfigurations/Fido2' -tenantid $Tenant
         if ($CurrentInfo.state -eq 'enabled') {
             Write-LogMessage -API 'Standards' -tenant $tenant -message 'FIDO2 Support is enabled' -sev Info
@@ -24,7 +25,7 @@ function Invoke-CIPPStandardEnableFIDO2 {
             Write-LogMessage -API 'Standards' -tenant $tenant -message 'FIDO2 Support is not enabled' -sev Alert
         }
     }
-    if ($Settings.Report) {
+    if ($Settings.report) {
         Add-CIPPBPAField -FieldName 'EnableFIDO2' -FieldValue [bool]$CurrentInfo.state -StoreAs bool -Tenant $tenant
     }
 }

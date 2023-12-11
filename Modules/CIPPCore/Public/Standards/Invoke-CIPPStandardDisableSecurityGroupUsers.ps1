@@ -4,7 +4,7 @@ function Invoke-CIPPStandardDisableSecurityGroupUsers {
     Internal
     #>
     param($Tenant, $Settings)
-    If ($Settings.Remediate) {
+    If ($Settings.remediate) {
         
 
         try {
@@ -17,7 +17,8 @@ function Invoke-CIPPStandardDisableSecurityGroupUsers {
         }
     }
         
-    if ($Settings.Alert) {
+    if ($Settings.alert) {
+
         $CurrentInfo = New-GraphGetRequest -Uri 'https://graph.microsoft.com/beta/policies/authorizationPolicy/authorizationPolicy' -tenantid $Tenant
         if ($CurrentInfo.defaultUserRolePermissions.allowedToCreateSecurityGroups -eq $false) {
             Write-LogMessage -API 'Standards' -tenant $tenant -message 'Users are not allowed to create Security Groups.' -sev Info
@@ -25,7 +26,7 @@ function Invoke-CIPPStandardDisableSecurityGroupUsers {
             Write-LogMessage -API 'Standards' -tenant $tenant -message 'Users are allowed to create Security Groups.' -sev Alert
         }
     }
-    if ($Settings.Report) {
+    if ($Settings.report) {
         Add-CIPPBPAField -FieldName 'DisableSecurityGroupUsers' -FieldValue [bool]$CurrentInfo.defaultUserRolePermissions.allowedToCreateSecurityGroups -StoreAs bool -Tenant $tenant
     }
 }

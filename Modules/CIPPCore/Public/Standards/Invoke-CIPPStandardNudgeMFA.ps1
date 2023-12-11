@@ -6,7 +6,7 @@ function Invoke-CIPPStandardNudgeMFA {
     param($Tenant, $Settings)
     $CurrentInfo = New-GraphGetRequest -Uri 'https://graph.microsoft.com/beta/policies/authenticationMethodsPolicy' -tenantid $Tenant
 
-    If ($Settings.Remediate) {
+    If ($Settings.remediate) {
         $status = if ($Settings.enable -and $Settings.disable) {
             Write-LogMessage -API 'Standards' -tenant $tenant -message 'You cannot both enable and disable the Nudge MFA setting' -sev Error
             Exit
@@ -20,14 +20,15 @@ function Invoke-CIPPStandardNudgeMFA {
             Write-LogMessage -API 'Standards' -tenant $tenant -message "Failed to $status Authenticator App Nudge: $($_.exception.message)" -sev Error
         }
     }
-    if ($Settings.Alert) {
+    if ($Settings.alert) {
+
         if ($CurrentInfo.registrationEnforcement.authenticationMethodsRegistrationCampaign.state -eq 'enabled') {
             Write-LogMessage -API 'Standards' -tenant $tenant -message 'Authenticator App Nudge is enabled' -sev Info
         } else {
             Write-LogMessage -API 'Standards' -tenant $tenant -message 'Authenticator App Nudge is not enabled' -sev Alert
         }
     }
-    if ($Settings.Report) {
+    if ($Settings.report) {
         if ($CurrentInfo.registrationEnforcement.authenticationMethodsRegistrationCampaign.state -eq 'enabled') { $actualstate = $true } else { $actualstate = $false }
         Add-CIPPBPAField -FieldName 'NudgeMFA' -FieldValue [bool]$actualstate -StoreAs bool -Tenant $tenant
     }

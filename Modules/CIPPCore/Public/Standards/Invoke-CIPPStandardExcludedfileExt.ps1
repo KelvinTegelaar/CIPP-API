@@ -5,7 +5,7 @@ function Invoke-CIPPStandardExcludedfileExt {
     #>
     param($Tenant, $Settings)
     $Exts = $Settings.ext -split ','
-    If ($Settings.Remediate) {
+    If ($Settings.remediate) {
         
 
         try {
@@ -16,7 +16,8 @@ function Invoke-CIPPStandardExcludedfileExt {
             Write-LogMessage -API 'Standards' -tenant $tenant -message "Failed to add $($Settings.ext) to excluded synced files: $($_.exception.message)" -sev Error
         }
     }
-    if ($Settings.Alert) {
+    if ($Settings.alert) {
+
         $CurrentInfo = New-GraphGetRequest -Uri 'https://graph.microsoft.com/beta/admin/sharepoint/settings' -tenantid $Tenant -AsApp $true
         if ($CurrentInfo.excludedFileExtensionsForSyncApp -contains $Exts) {
             Write-LogMessage -API 'Standards' -tenant $tenant -message "Excluded synced files contains $($Settings.ext)" -sev Info
@@ -24,7 +25,7 @@ function Invoke-CIPPStandardExcludedfileExt {
             Write-LogMessage -API 'Standards' -tenant $tenant -message "Excluded synced files does not contain $($Settings.ext)" -sev Alert
         }
     }
-    if ($Settings.Report) {
+    if ($Settings.report) {
         Add-CIPPBPAField -FieldName 'ExcludedfileExt' -FieldValue $CurrentInfo.excludedFileExtensionsForSyncApp -StoreAs json -Tenant $tenant
     }
 }

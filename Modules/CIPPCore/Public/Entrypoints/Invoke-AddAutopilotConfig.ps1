@@ -24,43 +24,7 @@ Function Invoke-AddAutopilotConfig {
     $usertype = if ($Profbod.NotLocalAdmin -eq 'true') { 'standard' } else { 'administrator' }
     $DeploymentMode = if ($profbod.DeploymentMode -eq 'true') { 'shared' } else { 'singleUser' }
     $results = foreach ($Tenant in $tenants) {
-        try {
-            $ObjBody = [pscustomobject]@{
-                '@odata.type'                            = '#microsoft.graph.azureADWindowsAutopilotDeploymentProfile'
-                'displayName'                            = "$($displayname)"
-                'description'                            = "$($description)"
-                'deviceNameTemplate'                     = "$($profbod.DeviceNameTemplate)"
-                'language'                               = 'os-default'
-                'enableWhiteGlove'                       = $([bool]($profbod.allowWhiteGlove))
-                'deviceType'                             = 'windowsPc'
-                'extractHardwareHash'                    = $([bool]($profbod.CollectHash))
-                'roleScopeTagIds'                        = @()
-                'hybridAzureADJoinSkipConnectivityCheck' = $false
-                'outOfBoxExperienceSettings'             = @{
-                    'deviceUsageType'           = "$DeploymentMode"
-                    'hideEscapeLink'            = $([bool]($Profbod.hideChangeAccount))
-                    'hidePrivacySettings'       = $([bool]($Profbod.hidePrivacy))
-                    'hideEULA'                  = $([bool]($Profbod.hideTerms))
-                    'userType'                  = "$usertype"
-                    'skipKeyboardSelectionPage' = $([bool]($Profbod.Autokeyboard))
-                }
-            }
-            $Body = ConvertTo-Json -InputObject $ObjBody
-            $GraphRequest = New-GraphPostRequest -uri 'https://graph.microsoft.com/beta/deviceManagement/windowsAutopilotDeploymentProfiles' -body $body -tenantid $Tenant
-            Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APIName -tenant $($tenant) -message "Added Autopilot profile $($Displayname)" -Sev 'Info'
-            if ($AssignTo) {
-                $AssignBody = '{"target":{"@odata.type":"#microsoft.graph.allDevicesAssignmentTarget"}}'
-                $assign = New-GraphPOSTRequest -uri "https://graph.microsoft.com/beta/deviceManagement/windowsAutopilotDeploymentProfiles/$($GraphRequest.id)/assignments" -tenantid $Tenant -type POST -body $AssignBody
-                Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APIName -tenant $($tenant) -message "Assigned autopilot profile $($Displayname) to $AssignTo" -Sev 'Info'
-            }
-            "Successfully added profile for $($Tenant)"
-        }
-        catch {
-            "Failed to add profile for $($Tenant): $($_.Exception.Message)"
-            Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APIName -tenant $($tenant) -message "Failed adding Autopilot Profile $($Displayname). Error: $($_.Exception.Message)" -Sev 'Error'
-            continue
-        }
-
+        Set-CIPPDefaultAPDeploymentProfile -tenantFilter $tenant -displayname $displayname -description $description -usertype $usertype -DeploymentMode $DeploymentMode -assignto $AssignTo -devicenameTemplate $Profbod.deviceNameTemplate -allowWhiteGlove $Profbod.allowWhiteGlove -CollectHash $Profbod.collectHash -hideChangeAccount $Profbod.hideChangeAccount -hidePrivacy $Profbod.hidePrivacy -hideTerms $Profbod.hideTerms -Autokeyboard $Profbod.Autokeyboard
     }
 
     $body = [pscustomobject]@{'Results' = $results }

@@ -37,13 +37,14 @@ Function Invoke-AddGroup {
                 }
                 if ($groupobj.AddOwner -AND $groupobj.groupType -in 'generic', 'azurerole', 'security') {
                     $BodyToship | Add-Member -NotePropertyName 'owners@odata.bind' -NotePropertyValue (($groupobj.AddOwner) | ForEach-Object { "https://graph.microsoft.com/v1.0/users/$($_.value)" })
+                    $bodytoship.'owners@odata.bind' = @($bodytoship.'owners@odata.bind')
                 }
                 if ($groupobj.AddMember -AND $groupobj.groupType -in 'generic', 'azurerole', 'security') {
                     $BodyToship | Add-Member -NotePropertyName 'members@odata.bind' -NotePropertyValue (($groupobj.AddMember) | ForEach-Object { "https://graph.microsoft.com/v1.0/users/$($_.value)" })
+                    $BodyToship.'members@odata.bind' = @($BodyToship.'members@odata.bind')
                 }
                 $GraphRequest = New-GraphPostRequest -uri 'https://graph.microsoft.com/beta/groups' -tenantid $tenant -type POST -body (ConvertTo-Json -InputObject $BodyToship -Depth 10) -verbose
-            }
-            else {
+            } else {
                 $Params = @{ 
                     Name                               = $groupobj.Displayname
                     Alias                              = $groupobj.username
@@ -58,8 +59,7 @@ Function Invoke-AddGroup {
             "Successfully created group $($groupobj.displayname) for $($tenant)"
             Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $tenant -message "Created group $($groupobj.displayname) with id $($GraphRequest.id)" -Sev 'Info'
 
-        }
-        catch {
+        } catch {
             Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $tenant -message "Group creation API failed. $($_.Exception.Message)" -Sev 'Error'
             "Failed to create group. $($groupobj.displayname) for $($tenant) $($_.Exception.Message)"
         }

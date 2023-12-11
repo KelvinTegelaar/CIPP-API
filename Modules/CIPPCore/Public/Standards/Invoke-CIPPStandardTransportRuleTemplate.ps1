@@ -4,17 +4,10 @@ function Invoke-CIPPStandardTransportRuleTemplate {
     Internal
     #>
   param($Tenant, $Settings)
-  If ($Settings.Remediate) {
+  If ($Settings.remediate) {
         
-
-
-    $ConfigTable = Get-CippTable -tablename 'standards'
-    $Setting = ((Get-AzDataTableEntity @ConfigTable -Filter "PartitionKey eq 'standards' and RowKey eq '$tenant'").JSON | ConvertFrom-Json).standards.TransportRuleTemplate
-    if (!$Setting) {
-      $Setting = ((Get-AzDataTableEntity @ConfigTable -Filter "PartitionKey eq 'standards' and RowKey eq 'AllTenants'").JSON | ConvertFrom-Json).standards.TransportRuleTemplate
-    }
-
-    foreach ($Template in $Setting.TemplateList) {
+    foreach ($Template in $Settings.TemplateList) {
+      Write-Host "working on $($Template.value)"
       $Table = Get-CippTable -tablename 'templates'
       $Filter = "PartitionKey eq 'TransportTemplate' and RowKey eq '$($Template.value)'" 
       $RequestParams = (Get-AzDataTableEntity @Table -Filter $Filter).JSON | ConvertFrom-Json
@@ -25,11 +18,11 @@ function Invoke-CIPPStandardTransportRuleTemplate {
         if ($Existing) {
           Write-Host 'Found existing'
           $RequestParams | Add-Member -NotePropertyValue $RequestParams.name -NotePropertyName Identity
-          $GraphRequest = New-ExoRequest -tenantid $Tenant -cmdlet 'Set-TransportRule' -cmdParams ($RequestParams | Select-Object -Property * -ExcludeProperty UseLegacyRegex) -useSystemMailbox $true
+          $GraphRequest = New-ExoRequest -tenantid $Tenant -cmdlet 'Set-TransportRule' -cmdParams ($RequestParams | Select-Object -Property * -ExcludeProperty GUID, Comments, HasSenderOverride, ExceptIfHasSenderOverride, ExceptIfMessageContainsDataClassifications, MessageContainsDataClassifications) -useSystemMailbox $true
           Write-LogMessage -API 'Standards' -tenant $tenant -message "Successfully set transport rule for $tenant" -sev 'Info'
         } else {
           Write-Host 'Creating new'
-          $GraphRequest = New-ExoRequest -tenantid $Tenant -cmdlet 'New-TransportRule' -cmdParams $RequestParams -useSystemMailbox $true
+          $GraphRequest = New-ExoRequest -tenantid $Tenant -cmdlet 'New-TransportRule' -cmdParams ($RequestParams | Select-Object -Property * -ExcludeProperty GUID, Comments, HasSenderOverride, ExceptIfHasSenderOverride, ExceptIfMessageContainsDataClassifications, MessageContainsDataClassifications) -useSystemMailbox $true
           Write-LogMessage -API 'Standards' -tenant $tenant -message "Successfully created transport rule for $tenant" -sev 'Info'
         }
         

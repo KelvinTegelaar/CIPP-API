@@ -6,7 +6,7 @@ function Invoke-CIPPStandardOauthConsent {
     param($tenant, $settings) {
         $State = (New-GraphGetRequest -Uri 'https://graph.microsoft.com/beta/policies/authorizationPolicy/authorizationPolicy' -tenantid $tenant)
 
-        If ($Settings.Remediate) {
+        If ($Settings.remediate) {
             $AllowedAppIdsForTenant = $Settings.AllowedApps -split ','
             try {
                 if ($State.permissionGrantPolicyIdsAssignedToDefaultUserRole -notin @('ManagePermissionGrantsForSelf.cipp-1sent-policy')) {
@@ -34,14 +34,15 @@ function Invoke-CIPPStandardOauthConsent {
                 Write-LogMessage -API 'Standards' -tenant $tenant -message "Failed to apply Application Consent Mode Error: $($_.exception.message)" -sev Error
             }
         }
-        if ($Settings.Alert) {
+        if ($Settings.alert) {
+
             if ($State.permissionGrantPolicyIdsAssignedToDefaultUserRole -eq 'managePermissionGrantsForSelf.cipp-consent-policy') {
                 Write-LogMessage -API 'Standards' -tenant $tenant -message 'Application Consent Mode is enabled.' -sev Info
             } else {
                 Write-LogMessage -API 'Standards' -tenant $tenant -message 'Application Consent Mode is not enabled.' -sev Alert
             }
         }
-        if ($Settings.Report) {
+        if ($Settings.report) {
             if ($State.permissionGrantPolicyIdsAssignedToDefaultUserRole -eq 'managePermissionGrantsForSelf.cipp-consent-policy') { $UserQuota = $true } else { $UserQuota = $false }
             Add-CIPPBPAField -FieldName 'OauthConsent' -FieldValue [bool]$UserQuota -StoreAs bool -Tenant $tenant
         }

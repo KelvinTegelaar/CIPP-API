@@ -5,7 +5,7 @@ function Invoke-CIPPStandardPWcompanionAppAllowedState {
     #>
     param($Tenant, $Settings)
     $authenticatorFeaturesState = (New-GraphGetRequest -tenantid $tenant -Uri 'https://graph.microsoft.com/beta/policies/authenticationMethodsPolicy/authenticationMethodConfigurations/microsoftAuthenticator' -Type GET)
-    If ($Settings.Remediate) {
+    If ($Settings.remediate) {
         $Setting = $Settings
         try {
             # Get current state of microsoftAuthenticator policy
@@ -31,14 +31,15 @@ function Invoke-CIPPStandardPWcompanionAppAllowedState {
             Write-LogMessage -API 'Standards' -tenant $tenant -message "Failed to enable companionAppAllowedState. Error: $($_.exception.message)" -sev Error
         }
     }
-    if ($Settings.Alert) {
+    if ($Settings.alert) {
+
         if ($authenticatorFeaturesState.featureSettings.companionAppAllowedState.state -eq 'enabled') {
             Write-LogMessage -API 'Standards' -tenant $tenant -message 'companionAppAllowedState is enabled.' -sev Info
         } else {
             Write-LogMessage -API 'Standards' -tenant $tenant -message 'companionAppAllowedState is not enabled.' -sev Alert
         }
     }
-    if ($Settings.Report) {
+    if ($Settings.report) {
         if ($authenticatorFeaturesState.featureSettings.companionAppAllowedState.state -eq 'enabled') { $authstate = $true } else { $authstate = $false }
         Add-CIPPBPAField -FieldName 'companionAppAllowedState' -FieldValue [bool]$authstate -StoreAs bool -Tenant $tenant
     }

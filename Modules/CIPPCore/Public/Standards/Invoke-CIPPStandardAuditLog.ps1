@@ -7,8 +7,8 @@ function Invoke-CIPPStandardAuditLog {
     
     $AuditLogEnabled = (New-ExoRequest -tenantid $Tenant -cmdlet 'Get-AdminAuditLogConfig').UnifiedAuditLogIngestionEnabled
 
-    If ($Settings.Remediate) {
-   
+    If ($Settings.remediate) {
+        Write-Host 'Time to remediate'
         $DehydratedTenant = (New-ExoRequest -tenantid $Tenant -cmdlet 'Get-OrganizationConfig').IsDehydrated
         if ($DehydratedTenant) {
             New-ExoRequest -tenantid $Tenant -cmdlet 'Enable-OrganizationCustomization'
@@ -30,14 +30,16 @@ function Invoke-CIPPStandardAuditLog {
             Write-LogMessage -API 'Standards' -tenant $tenant -message "Failed to apply Unified Audit Log. Error: $ErrorMessage" -sev Error
         }
     }
-    if ($Settings.Alert) {
+    if ($Settings.alert) {
+
         if ($AuditLogEnabled) {
             Write-LogMessage -API 'Standards' -tenant $tenant -message 'Unified Audit Log is enabled' -sev Info
         } else {
             Write-LogMessage -API 'Standards' -tenant $tenant -message 'Unified Audit Log is not enabled' -sev Alert
         }
     }
-    if ($Settings.Report) {
+    if ($Settings.report) {
+
         Add-CIPPBPAField -FieldName 'AuditLog' -FieldValue [bool]$AuditLogEnabled -StoreAs bool -Tenant $tenant
     }
 }

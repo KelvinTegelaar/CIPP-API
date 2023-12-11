@@ -31,12 +31,13 @@ Function Invoke-ListSharedMailboxAccountEnabled {
                 @{Name = 'givenName'; Expression = { $User.givenName } }, 
                 @{Name = 'surname'; Expression = { $User.surname } }, 
                 @{Name = 'accountEnabled'; Expression = { $User.accountEnabled } },
-                @{Name = 'id'; Expression = { $User.id } }            
+                @{Name = 'id'; Expression = { $User.id } }
+            
             }
         }
     }
     catch {
-        Write-LogMessage -API $APIName -tenant $tenantfilter -message "Shared Mailbox Enabled Accounts on $($tenantfilter). Error: $($_.exception.message)" -sev 'Error' 
+        Write-LogMessage -API 'Tenant' -tenant $tenantfilter -message "Shared Mailbox Enabled Accounts on $($tenantfilter). Error: $($_.exception.message)" -sev 'Error' 
     }
 
     $GraphRequest = $EnabledUsersWithSharedMailbox
