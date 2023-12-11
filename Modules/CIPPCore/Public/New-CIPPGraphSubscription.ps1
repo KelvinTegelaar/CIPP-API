@@ -10,7 +10,8 @@ function New-CIPPGraphSubscription {
         $Resource,
         $EventType,
         $APIName = "Create Webhook",
-        $ExecutingUser
+        $ExecutingUser,
+        [Switch]$Recreate
     )
     $CIPPID = (New-Guid).GUID
     $WebhookTable = Get-CIPPTable -TableName webhookTable
@@ -36,13 +37,14 @@ function New-CIPPGraphSubscription {
             }
 
             $null = Add-CIPPAzDataTableEntity @WebhookTable -Entity $WebhookRow
+            Write-LogMessage -user $ExecutingUser -API $APIName -message "Created Webhook subscription for $($TenantFilter)" -Sev "Info" -tenant $TenantFilter
 
         } else {
             # First check if there is an exsiting Webhook in place
             $WebhookFilter = "PartitionKey eq '$($TenantFilter)'"
             $ExistingWebhooks = Get-CIPPAzDataTableEntity @WebhookTable -Filter $WebhookFilter
             $MatchedWebhook = $ExistingWebhooks | Where-Object { $_.Resource -eq $Resource }
-            if (($MatchedWebhook | Measure-Object).count -eq 0) {
+            if (($MatchedWebhook | Measure-Object).count -eq 0 -or $Recreate) {
 
                 $expiredate = (Get-Date).AddDays(1).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ss.fffZ")
                 $params = @{
@@ -64,14 +66,17 @@ function New-CIPPGraphSubscription {
                     Resource               = [string]$Resource
                     Expiration             = [string]$expiredate
                     SubscriptionID         = [string]$GraphRequest.id
+                    TypeofSubscription     = [string]$TypeofSubscription
                     WebhookNotificationUrl = [string]$GraphRequest.notificationUrl
                 }
                 $null = Add-CIPPAzDataTableEntity @WebhookTable -Entity $WebhookRow
                 #todo: add remove webhook function, add check webhook function, add list webhooks function
                 #add refresh webhook function based on table. 
+                Write-LogMessage -user $ExecutingUser -API $APIName -message "Created Graph Webhook subscription for $($TenantFilter)" -Sev "Info" -tenant $TenantFilter
+            } else {
+                Write-LogMessage -user $ExecutingUser -API $APIName -message "Existing Graph Webhook subscription for $($TenantFilter) found" -Sev "Info" -tenant $TenantFilter
             }
         }
-        Write-LogMessage -user $ExecutingUser -API $APIName -message "Created Webhook subscription for $($TenantFilter)" -Sev "Info" -tenant $TenantFilter
         return "Created Webhook subscription for $($TenantFilter)"
     } catch {
         Write-LogMessage -user $ExecutingUser -API $APIName -message "Failed to create Webhook Subscription: $($_.Exception.Message)" -Sev "Error" -tenant $TenantFilter
