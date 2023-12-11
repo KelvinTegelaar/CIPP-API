@@ -16,7 +16,7 @@ function Invoke-CIPPStandardsRun {
     $Tenants = (Get-CIPPAzDataTableEntity @Table -Filter $Filter).JSON | ConvertFrom-Json
 
     #Migrate from old standards to new standards.
-    $Tenants | Where-Object -Property 'v2' -NE $true | ForEach-Object {
+    $Tenants | Where-Object -Property 'v2.1' -NE $true | ForEach-Object {
         $OldStd = $_
         $OldStd.standards.psobject.properties.name | ForEach-Object {
             if ($_ -eq 'MailContacts') {
@@ -28,10 +28,15 @@ function Invoke-CIPPStandardsRun {
                     remediate        = $true
                 }
             } else {
-                $OldStd.Standards.$_ | Add-Member -NotePropertyName 'remediate' -NotePropertyValue $true 
+                if ($OldStd.Standards.$_ -eq $true) { 
+                    $OldStd.Standards.$_ = @{ remediate = $true } 
+                } else { 
+                    $OldStd.Standards.$_ | Add-Member -NotePropertyName 'remediate' -NotePropertyValue $true -Force 
+                }
+                
             }
         }
-        $OldStd | Add-Member -NotePropertyName 'v2' -NotePropertyValue $true -PassThru -Force
+        $OldStd | Add-Member -NotePropertyName 'v2.1' -NotePropertyValue $true -PassThru -Force
         $Entity = @{ 
             PartitionKey = 'standards'
             RowKey       = "$($OldStd.Tenant)"
@@ -73,7 +78,7 @@ function Invoke-CIPPStandardsRun {
 
     #For each item in our object, run the queue. 
 
-    foreach ($task in $object | Where-Object -Property Standard -NE 'v2') {
+    foreach ($task in $object | Where-Object -Property Standard -NotLike 'v2*') {
         $QueueItem = [pscustomobject]@{
             Tenant       = $task.Tenant
             Standard     = $task.Standard
