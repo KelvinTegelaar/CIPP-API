@@ -17,7 +17,7 @@ Function Invoke-AddStandardsDeploy {
     try {
         $Tenants = ($Request.body | Select-Object Select_*).psobject.properties.value
         $Settings = ($request.body | Select-Object -Property *, v2* -ExcludeProperty Select_*, None )
-        $Settings.v2 = $true
+        $Settings | Add-Member -NotePropertyName 'v2.1' -NotePropertyValue $true -Force
         foreach ($Tenant in $tenants) {
         
             $object = [PSCustomObject]@{
