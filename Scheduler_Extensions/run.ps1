@@ -15,7 +15,6 @@ if ($Configuration.NinjaOne.Enabled -eq $True) {
     $Settings = (Get-AzDataTableEntity @Table)
     $TimeSetting = ($Settings | Where-Object { $_.RowKey -eq 'NinjaSyncTime' }).SettingValue
 
-    
 
     if (($TimeSetting | Measure-Object).count -ne 1) {
         [int]$TimeSetting = Get-Random -Minimum 1 -Maximum 95
@@ -38,17 +37,18 @@ if ($Configuration.NinjaOne.Enabled -eq $True) {
 
     Write-Host "Current Interval: $CurrentInterval"
 
+    $CIPPMapping = Get-CIPPTable -TableName CippMapping
+    $Filter = "PartitionKey eq 'NinjaOrgsMapping'"
+    $TenantsToProcess = Get-AzDataTableEntity @CIPPMapping -Filter $Filter | Where-Object { $Null -ne $_.NinjaOne -and $_.NinjaOne -ne '' }
+
     if ($Null -eq $LastRunTime -or $LastRunTime -le (Get-Date).addhours(-25) -or $TimeSetting -eq $CurrentInterval) {
         Write-Host "Executing"
-        $CIPPMapping = Get-CIPPTable -TableName CippMapping
-        $Filter = "PartitionKey eq 'NinjaOrgsMapping'"
-        $TenantsToProcess = Get-AzDataTableEntity @CIPPMapping -Filter $Filter | Where-Object { $Null -ne $_.NinjaOne -and $_.NinjaOne -ne '' }
-
-        foreach ($Tenant in $TenantsToProcess) {
+        foreach ($Tenant in $TenantsToProcess | Sort-Object lastEndTime) {
             Push-OutputBinding -Name NinjaProcess -Value @{
                 'NinjaAction'  = 'SyncTenant'
                 'MappedTenant' = $Tenant
             }
+            Start-Sleep -Seconds 1
 
         }
 
@@ -59,7 +59,36 @@ if ($Configuration.NinjaOne.Enabled -eq $True) {
         }
         Add-AzDataTableEntity @Table -Entity $AddObject -Force
     
-        Write-LogMessage -API 'NinjaOneAutoMap_Queue' -user 'CIPP' -message "NinjaOne Synchronization Queued for $(($TenantsToProcess | Measure-Object).count) Tenants" -Sev 'Info' 
+        Write-LogMessage -API 'NinjaOneSync' -user 'CIPP' -message "NinjaOne Daily Synchronization Queued for $(($TenantsToProcess | Measure-Object).count) Tenants" -Sev 'Info' 
+
+    } else {
+        if ($LastRunTime -lt (Get-Date).AddMinutes(-90)) {
+            $TenantsToProcess | ForEach-Object {
+                if ($Null -ne $_.lastEndTime -and $_.lastEndTime -ne '') {
+                    $_.lastEndTime = (Get-Date($_.lastEndTime))
+                } else {
+                    $_ | Add-Member -NotePropertyName lastEndTime -NotePropertyValue $Null -Force
+                }
+        
+                if ($Null -ne $_.lastStartTime -and $_.lastStartTime -ne '') {
+                    $_.lastStartTime = (Get-Date($_.lastStartTime))
+                } else {
+                    $_ | Add-Member -NotePropertyName lastStartTime -NotePropertyValue $Null -Force
+                }
+            }
+            $CatchupTenants = $TenantsToProcess | where-object { (((($_.lastEndTime -eq $Null) -or ($_.lastStartTime -gt $_.lastEndTime)) -and ($_.lastStartTime -lt (Get-Date).AddMinutes(-30)))) -or ($_.lastStartTime -lt $LastRunTime) }
+            foreach ($Tenant in $CatchupTenants) {
+                Push-OutputBinding -Name NinjaProcess -Value @{
+                    'NinjaAction'  = 'SyncTenant'
+                    'MappedTenant' = $Tenant
+                }
+                Start-Sleep -Seconds 1
+            }
+            if (($CatchupTenants | Measure-Object).count -gt 0){
+            Write-LogMessage -API 'NinjaOneSync' -user 'CIPP' -message "NinjaOne Synchronization Catchup Queued for $(($CatchupTenants | Measure-Object).count) Tenants" -Sev 'Info' 
+            }
+
+        }
 
     }
 }

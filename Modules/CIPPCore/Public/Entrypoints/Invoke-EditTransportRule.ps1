@@ -21,8 +21,10 @@ Function Invoke-EditTransportRule {
         $cmdlet = if ($request.query.state -eq 'enable') { 'Enable-TransportRule' } else { 'Disable-TransportRule' }
         $GraphRequest = New-ExoRequest -tenantid $Tenantfilter -cmdlet $cmdlet -cmdParams $params -UseSystemMailbox $true
         $Result = "Set transport rule $($Request.query.guid) to $($request.query.State)"
-        Write-LogMessage -API 'TransportRules' -tenant $tenantfilter -message "Set transport rule $($Request.query.guid) to $($request.query.State)" -sev Debug
-    } catch {
+        Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $tenantfilter -message "Set transport rule $($Request.query.guid) to $($request.query.State)" -sev Info
+    }
+    catch {
+        Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $tenantfilter -message "Failed setting transport rule $($Request.query.guid) to $($request.query.State). Error:$($_.Exception.Message)" -Sev 'Error'
         $ErrorMessage = Get-NormalizedError -Message $_.Exception
         $Result = $ErrorMessage
     }

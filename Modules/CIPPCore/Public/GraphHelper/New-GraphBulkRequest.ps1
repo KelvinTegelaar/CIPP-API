@@ -1,4 +1,8 @@
 function New-GraphBulkRequest {
+    <#
+    .FUNCTIONALITY
+    Internal
+    #>
     Param(
         $tenantid,
         $NoAuthCheck,
