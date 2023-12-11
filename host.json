@@ -8,6 +8,11 @@
     "id": "Microsoft.Azure.Functions.ExtensionBundle",
     "version": "[2.*, 3.0.0)"
   },
-  "extensions": {},
-  "logging": {}
+  "extensions": {
+    "queues": {
+      "maxDequeueCount": 5
+    }},
+  "logging": {
+    "fileLoggingMode": "never"
+  }
 }
