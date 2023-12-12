@@ -1,4 +1,8 @@
 function Get-CIPPTable {
+    <#
+    .FUNCTIONALITY
+    Internal
+    #>
     [CmdletBinding()]
     param (
         $tablename = 'CippLogs'

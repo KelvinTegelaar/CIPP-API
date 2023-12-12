@@ -41,25 +41,29 @@ Function Invoke-ExecExtensionSync {
             $Filter = "PartitionKey eq 'NinjaOrgsMapping'"
             $TenantsToProcess = Get-AzDataTableEntity @CIPPMapping -Filter $Filter | Where-Object { $Null -ne $_.NinjaOne -and $_.NinjaOne -ne '' }
 
-            foreach ($Tenant in $TenantsToProcess) {
+            if ($Request.Query.TenantID) {
+                $Tenant = $TenantsToProcess | Where-Object {$_.RowKey -eq $Request.Query.TenantID}
+                if (($Tenant | Measure-Object).count -eq 1){
+                    Push-OutputBinding -Name NinjaProcess -Value @{
+                        'NinjaAction'  = 'SyncTenant'
+                        'MappedTenant' = $Tenant
+                    }
+                    $Results = [pscustomobject]@{'Results' = "NinjaOne Synchronization Queued for $($Tenant.NinjaOneName)" }
+                } else {
+                    $Results = [pscustomobject]@{'Results' = "Tenant was not found." }
+                } 
+                
+            } else {
+        
                 Push-OutputBinding -Name NinjaProcess -Value @{
-                    'NinjaAction'  = 'SyncTenant'
-                    'MappedTenant' = $Tenant
+                    'NinjaAction' = 'SyncTenants'
                 }
 
+                $Results = [pscustomobject]@{'Results' = "NinjaOne Synchronization Queuing $(($TenantsToProcess | Measure-Object).count) Tenants" }
+
             }
 
-            $AddObject = @{
-                PartitionKey   = 'NinjaConfig'
-                RowKey         = 'NinjaLastRunTime'
-                'SettingValue' = (Get-Date).ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ss.fffK')
-            }
-
-            Add-AzDataTableEntity @Table -Entity $AddObject -Force
-
-            Write-LogMessage -API 'NinjaOneAutoMap_Queue' -user 'CIPP' -message "NinjaOne Synchronization Queued for $(($TenantsToProcess | Measure-Object).count) Tenants" -Sev 'Info' 
-
-            $Results = [pscustomobject]@{'Results' = "NinjaOne Synchronization Queued for $(($TenantsToProcess | Measure-Object).count) Tenants" }
+            
         } catch {
             $Results = [pscustomobject]@{'Results' = "Could not start NinjaOne Sync: $($_.Exception.Message)" }
             Write-LogMessage -API 'Scheduler_Billing' -tenant 'none' -message "Could not start NinjaOne Sync $($_.Exception.Message)" -sev Error
