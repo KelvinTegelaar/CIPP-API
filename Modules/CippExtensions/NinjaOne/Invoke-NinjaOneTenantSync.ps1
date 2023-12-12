@@ -2279,8 +2279,9 @@ function Invoke-NinjaOneTenantSync {
     
         $Token = Get-NinjaOneToken -configuration $Configuration
 
-    
+        Write-Host "Ninja Body: $($NinjaOrgUpdate | ConvertTo-Json -Depth 100)"
         $Result = Invoke-WebRequest -uri "https://$($Configuration.Instance)/api/v2/organization/$($MappedTenant.NinjaOne)/custom-fields" -Method PATCH -Headers @{Authorization = "Bearer $($token.access_token)" } -ContentType 'application/json; charset=utf-8' -Body ($NinjaOrgUpdate | ConvertTo-Json -Depth 100)
+
 
         Write-Host "Cleaning Users Cache"
         if (($ParsedUsers | Measure-Object).count -gt 0) {
