@@ -8,13 +8,15 @@ function Invoke-CIPPStandardTAP {
 
     If ($Settings.remediate) {
         try {
+            
             $CurrentInfo.state = 'enabled'
-            $CurrentInfo.isUsableOnce = $Settings.Config
+            $CurrentInfo.isUsableOnce = $Settings.config
             $CurrentInfo.minimumLifetimeInMinutes = '60'
             $CurrentInfo.maximumLifetimeInMinutes = '480'
             $CurrentInfo.defaultLifetimeInMinutes = '60'
             $CurrentInfo.defaultLength = '8'
             $body = ConvertTo-Json -Depth 10 -InputObject $CurrentInfo
+            Write-Host "Sending body $body"
             New-GraphPostRequest -tenantid $tenant -Uri 'https://graph.microsoft.com/beta/policies/authenticationMethodsPolicy/authenticationMethodConfigurations/TemporaryAccessPass' -Type patch -asApp $true -Body $body -ContentType 'application/json'
             Write-LogMessage -API 'Standards' -tenant $tenant -message 'Enabled Temporary Access Passwords.' -sev Info
         } catch {
