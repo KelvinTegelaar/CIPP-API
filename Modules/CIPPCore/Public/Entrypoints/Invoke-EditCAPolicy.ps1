@@ -16,9 +16,10 @@ Function Invoke-EditCAPolicy {
     $results = try {
         $EditBody = "{`"state`": `"$($request.query.state)`"}"
         $Request = New-GraphPOSTRequest -uri "https://graph.microsoft.com/beta//identity/conditionalAccess/policies/$($id)" -tenantid $tenant -type PATCH -body $EditBody
-        Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $($Tenant) -message "Edited CA policy $($ID)" -Sev 'Error'
-        'Successfully edited CA policy'
-    } catch {
+        Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $($Tenant) -message "Edited CA policy: $($ID)" -Sev 'Info'
+        "Successfully edited CA policy: $($ID)"
+    }
+    catch {
         "Failed to add CA policy: $($_.Exception.Message)"
         Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $($Tenant) -message "Failed editing CA policy $($ID). Error: $($_.Exception.Message)" -Sev 'Error'
         continue

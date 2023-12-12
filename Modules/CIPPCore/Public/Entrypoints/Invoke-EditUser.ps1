@@ -10,6 +10,7 @@ Function Invoke-EditUser {
 
     $APIName = $TriggerMetadata.FunctionName
     Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -message 'Accessed this API' -Sev 'Debug'
+    
     $userobj = $Request.body
     $Results = [System.Collections.ArrayList]@()
     $licenses = ($userobj | Select-Object 'License_*').psobject.properties.value
@@ -54,7 +55,8 @@ Function Invoke-EditUser {
             $results.add("Success. The password has been set to $($userobj.password)")
             Write-LogMessage -API $APINAME -tenant ($UserObj.tenantid) -user $request.headers.'x-ms-client-principal' -message "Reset $($userobj.displayname)'s Password" -Sev 'Info'
         }
-    } catch {
+    }
+    catch {
         Write-LogMessage -API $APINAME -tenant ($UserObj.tenantid) -user $request.headers.'x-ms-client-principal' -message "User edit API failed. $($_.Exception.Message)" -Sev 'Error'
         $results.add( "Failed to edit user. $($_.Exception.Message)")
     }
@@ -68,7 +70,7 @@ Function Invoke-EditUser {
             $CurrentLicenses = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/users/$($userobj.Userid)" -tenantid $Userobj.tenantid
             $RemovalList = ($CurrentLicenses.assignedLicenses | Where-Object -Property skuid -NotIn $licenses).skuid
             $LicensesToRemove = if ($RemovalList) { ConvertTo-Json @( $RemovalList ) } else { '[]' }
-   
+
             $liclist = foreach ($license in $Licenses) { '{"disabledPlans": [],"skuId": "' + $license + '" },' }
             $LicenseBody = '{"addLicenses": [' + $LicList + '], "removeLicenses": ' + $LicensesToRemove + '}'
             if ($userobj.RemoveAllLicenses) { $LicenseBody = '{"addLicenses": [], "removeLicenses": ' + $LicensesToRemove + '}' }
@@ -79,7 +81,8 @@ Function Invoke-EditUser {
             $results.add( 'Success. User license has been edited.' )
         }
 
-    } catch {
+    }
+    catch {
         Write-LogMessage -API $APINAME -tenant ($UserObj.tenantid) -user $request.headers.'x-ms-client-principal' -message "License assign API failed. $($_.Exception.Message)" -Sev 'Error'
         $results.add( "We've failed to assign the license. $($_.Exception.Message)")
     }
@@ -95,7 +98,8 @@ Function Invoke-EditUser {
             $results.add( 'Success. added aliasses to user.')
         }
 
-    } catch {
+    }
+    catch {
         Write-LogMessage -API $APINAME -tenant ($UserObj.tenantid) -user $request.headers.'x-ms-client-principal' -message "Alias API failed. $($_.Exception.Message)" -Sev 'Error'
         $results.add( "Successfully edited user. The password is $password. We've failed to create the Aliases: $($_.Exception.Message)")
     }

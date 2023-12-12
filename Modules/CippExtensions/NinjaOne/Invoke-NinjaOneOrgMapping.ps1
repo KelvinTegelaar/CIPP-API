@@ -102,6 +102,8 @@ function Invoke-NinjaOneOrgMapping {
             'NinjaDevices' = $ParsedNinjaDevices
         }
 
+        Start-Sleep -Seconds 1
+
     }
 }
     
