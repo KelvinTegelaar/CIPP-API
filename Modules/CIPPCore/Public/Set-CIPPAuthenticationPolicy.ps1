@@ -65,6 +65,7 @@ function Set-CIPPAuthenticationPolicy {
                 if ($null -ne $MicrosoftAuthenticatorSoftwareOathEnabled ) { $CurrentInfo.isSoftwareOathEnabled = $MicrosoftAuthenticatorSoftwareOathEnabled }
             }
         }
+
         # SMS
         'SMS' {  
             if ($State -eq 'enabled') {
@@ -72,6 +73,7 @@ function Set-CIPPAuthenticationPolicy {
                 return "Setting $AuthenticationMethodId to enabled is not allowed"
             }
         }
+
         # Temporary Access Pass
         'TemporaryAccessPass' {  
 
@@ -88,10 +90,12 @@ function Set-CIPPAuthenticationPolicy {
         'HardwareOATH' {  
             # Nothing special to do here
         }
+
         # Third-party software OATH tokens
         'softwareOath' {  
             # Nothing special to do here
         }
+
         # Voice call
         'Voice' {
             # Disallow enabling voice
@@ -108,6 +112,7 @@ function Set-CIPPAuthenticationPolicy {
                 return "Setting $AuthenticationMethodId to enabled is not allowed"
             }
         }
+        
         # Certificate-based authentication
         'x509Certificate' {  
             Write-LogMessage -user $ExecutingUser -API $APIName -tenant $TenantFilter -message "$AuthenticationMethodId is not yet supported in CIPP" -sev Error
