@@ -23,7 +23,7 @@ $results = try {
     # Check if NinjaOne URL is set correctly and the intance has at least version 5.6
     if ($request.body.NinjaOne) {
         try {
-            [version]$Version = (Invoke-WebRequest -Method GET -Uri "https://$($request.body.NinjaOne.Instance -replace '/ws','')/app-version.txt" -ea stop).content
+            [version]$Version = (Invoke-WebRequest -Method GET -Uri "https://$(($request.body.NinjaOne.Instance -replace '/ws','') -replace 'https://','')/app-version.txt" -ea stop).content
         } catch {
             throw "Failed to connect to NinjaOne check your Instance is set correctly eg 'app.ninjarmmm.com'"
         }

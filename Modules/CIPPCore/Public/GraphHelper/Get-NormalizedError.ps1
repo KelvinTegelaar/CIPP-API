@@ -1,4 +1,8 @@
 function Get-NormalizedError {
+    <#
+    .FUNCTIONALITY
+    Internal
+    #>
     [CmdletBinding()]
     param (
         [string]$message

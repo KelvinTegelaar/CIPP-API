@@ -1,4 +1,8 @@
 function Get-Tenants {
+    <#
+    .FUNCTIONALITY
+    Internal
+    #>
     param (
         [Parameter( ParameterSetName = 'Skip', Mandatory = $True )]
         [switch]$SkipList,
