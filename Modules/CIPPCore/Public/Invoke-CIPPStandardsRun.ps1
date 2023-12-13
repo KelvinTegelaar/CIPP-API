@@ -16,7 +16,7 @@ function Invoke-CIPPStandardsRun {
     $Tenants = (Get-CIPPAzDataTableEntity @Table -Filter $Filter).JSON | ConvertFrom-Json
 
     #Migrate from old standards to new standards.
-    $Tenants | Where-Object -Property 'v2.1' -NE $true | ForEach-Object {
+    $Tenants | Where-Object -Property 'v2.1' -NE $null | ForEach-Object {
         $OldStd = $_
         $OldStd.standards.psobject.properties.name | ForEach-Object {
             if ($_ -eq 'MailContacts') {
@@ -28,7 +28,7 @@ function Invoke-CIPPStandardsRun {
                     remediate        = $true
                 }
             } else {
-                if ($OldStd.Standards.$_ -eq $true) { 
+                if ($OldStd.Standards.$_ -eq $true -and $_ -ne 'v2.1') { 
                     $OldStd.Standards.$_ = @{ remediate = $true } 
                 } else { 
                     $OldStd.Standards.$_ | Add-Member -NotePropertyName 'remediate' -NotePropertyValue $true -Force 
