@@ -180,7 +180,7 @@ Function Invoke-ExecSAMSetup {
                         Remove-AzDataTableEntity @Table -Entity $Rows
 
                         $step = 5
-                        $Results = @{'message' = 'Installation completed.'; step = $step 
+                        $Results = @{'message' = 'setup completed.'; step = $step 
                         }
                   }
             }
