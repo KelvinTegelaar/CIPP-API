@@ -9,6 +9,7 @@ Function Invoke-ExecEmailForward {
     param($Request, $TriggerMetadata)
 
     $Tenantfilter = $request.body.tenantfilter
+    $username = $request.body.userid
     $ForwardingAddress = $request.body.ForwardInternal.value
     $ForwardingSMTPAddress = $request.body.ForwardExternal
     $DisableForwarding = $request.body.disableForwarding

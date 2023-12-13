@@ -14,8 +14,7 @@ function Set-CIPPOutOfOffice {
 
     try {
         if (-not $StartTime) {
-            $State = "Enabled"
-            $StartTime = (Get-Date).ToString("yyyy-MM-dd HH:mm")
+            $StartTime = (Get-Date).ToString()
         }
         if (-not $EndTime) {
             $EndTime = (Get-Date $StartTime).AddDays(7)
@@ -23,12 +22,12 @@ function Set-CIPPOutOfOffice {
         if ($State -ne "Scheduled") {
             $OutOfOffice = New-ExoRequest -tenantid $TenantFilter -cmdlet "Set-MailboxAutoReplyConfiguration" -cmdParams @{Identity = $userid; AutoReplyState = $State; InternalMessage = $InternalMessage; ExternalMessage = $ExternalMessage } -Anchor $userid
             Write-LogMessage -user $ExecutingUser -API $APIName -message "Set Out-of-office for $($userid) to $state" -Sev "Info" -tenant $TenantFilter
-            return "Set Out-of-office for $($userid) to $state. Internal Message is $InternalMessage | External Message is $ExternalMessage"
+            return "Set Out-of-office for $($userid) to $state."
         }
         else {
             $OutOfOffice = New-ExoRequest -tenantid $TenantFilter -cmdlet "Set-MailboxAutoReplyConfiguration" -cmdParams @{Identity = $userid; AutoReplyState = $State; InternalMessage = $InternalMessage; ExternalMessage = $ExternalMessage; StartTime = $StartTime; EndTime = $EndTime } -Anchor $userid
             Write-LogMessage -user $ExecutingUser -API $APIName -message "Scheduled Out-of-office for $($userid) between $StartTime and $EndTime" -Sev "Info" -tenant $TenantFilter
-            return "Scheduled Out-of-office for $($userid) between $StartTime and $EndTime"
+            return "Scheduled Out-of-office for $($userid) between $($StartTime.toString()) and $($EndTime.toString())"
         }
     }
     catch {
