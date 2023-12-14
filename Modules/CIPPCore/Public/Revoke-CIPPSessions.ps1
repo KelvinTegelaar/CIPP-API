@@ -15,7 +15,7 @@ function Revoke-CIPPSessions {
 
     }
     catch {
-        Write-LogMessage -user $ExecutingUser -API $APIName -message "Revoked sessions for $($username)" -Sev "Info" -tenant $TenantFilter
+        Write-LogMessage -user $ExecutingUser -API $APIName -message "Failed to revoke sessions for $($username): $($_.Exception.Message)" -Sev "Error" -tenant $TenantFilter
         return "Revoke Session Failed: $($_.Exception.Message)" 
     }
 }
