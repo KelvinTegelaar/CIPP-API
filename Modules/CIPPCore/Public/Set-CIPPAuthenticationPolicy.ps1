@@ -58,7 +58,6 @@ function Set-CIPPAuthenticationPolicy {
 
         # Temporary Access Pass
         'TemporaryAccessPass' {  
-
             if ($State -eq 'enabled') {
                 $CurrentInfo.isUsableOnce = $TAPisUsableOnce
                 $CurrentInfo.minimumLifetimeInMinutes = $TAPMinimumLifetime
