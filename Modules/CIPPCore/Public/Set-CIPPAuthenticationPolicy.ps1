@@ -96,12 +96,12 @@ function Set-CIPPAuthenticationPolicy {
         
         # Certificate-based authentication
         'x509Certificate' {  
-            Write-LogMessage -user $ExecutingUser -API $APIName -tenant $Tenant -message "$AuthenticationMethodId is not yet supported in CIPP" -sev Error
-            return "$AuthenticationMethodId is not yet supported in CIPP"
+            Write-LogMessage -user $ExecutingUser -API $APIName -tenant $Tenant -message "Setting $AuthenticationMethodId is not yet supported in CIPP" -sev Error
+            return "Setting $AuthenticationMethodId is not yet supported in CIPP"
         }
         Default {
             Write-LogMessage -user $ExecutingUser -API $APIName -tenant $Tenant -message 'Somehow you hit the default case. You probably made a type in the input for AuthenticationMethodId. It''s case sensitive' -sev Error
-            return 'Somehow you hit the default case. You probably made a type in the input for AuthenticationMethodId. It''s case sensitive.'
+            return 'Somehow you hit the default case. You probably made a typo in the input for AuthenticationMethodId. It''s case sensitive.'
         }
     }
     # Set state of the authentication method
