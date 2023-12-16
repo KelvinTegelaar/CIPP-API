@@ -44,7 +44,10 @@ function Set-CIPPAuthenticationPolicy {
                 $CurrentInfo.featureSettings.displayAppInformationRequiredState.state = $State
                 $CurrentInfo.featureSettings.displayLocationInformationRequiredState.state = $State
                 # Set MS authenticator OTP state if parameter is passed in
-                if ($null -ne $MicrosoftAuthenticatorSoftwareOathEnabled ) { $CurrentInfo.isSoftwareOathEnabled = $MicrosoftAuthenticatorSoftwareOathEnabled }
+                if ($null -ne $MicrosoftAuthenticatorSoftwareOathEnabled ) { 
+                    $CurrentInfo.isSoftwareOathEnabled = $MicrosoftAuthenticatorSoftwareOathEnabled 
+                    $OptionalLogMessage = "and Microsoft Authenticator software OTP to $MicrosoftAuthenticatorSoftwareOathEnabled"
+                }
             }
         }
 
@@ -100,7 +103,7 @@ function Set-CIPPAuthenticationPolicy {
             return "Setting $AuthenticationMethodId is not yet supported in CIPP"
         }
         Default {
-            Write-LogMessage -user $ExecutingUser -API $APIName -tenant $Tenant -message 'Somehow you hit the default case. You probably made a type in the input for AuthenticationMethodId. It''s case sensitive' -sev Error
+            Write-LogMessage -user $ExecutingUser -API $APIName -tenant $Tenant -message 'Somehow you hit the default case. You probably made a typo in the input for AuthenticationMethodId. It''s case sensitive' -sev Error
             return 'Somehow you hit the default case. You probably made a typo in the input for AuthenticationMethodId. It''s case sensitive.'
         }
     }
@@ -109,9 +112,10 @@ function Set-CIPPAuthenticationPolicy {
         # Convert body to JSON and send request
         $body = ConvertTo-Json -Compress -Depth 10 -InputObject $CurrentInfo
         New-GraphPostRequest -tenantid $Tenant -Uri "https://graph.microsoft.com/beta/policies/authenticationmethodspolicy/authenticationMethodConfigurations/$AuthenticationMethodId" -Type patch -Body $body -ContentType 'application/json'
-            
-        Write-LogMessage -user $ExecutingUser -API $APIName -tenant $Tenant -message "Set $AuthenticationMethodId state to $State" -sev Info
-        return "Set $AuthenticationMethodId state to $State"
+        
+        
+        Write-LogMessage -user $ExecutingUser -API $APIName -tenant $Tenant -message "Set $AuthenticationMethodId state to $State $OptionalLogMessage" -sev Info
+        return "Set $AuthenticationMethodId state to $State $OptionalLogMessage"
     }
     catch {
         Write-LogMessage -user $ExecutingUser -API $APIName -tenant $Tenant -message "Failed to $State $AuthenticationMethodId Support: $($_.exception.message)" -sev Error
