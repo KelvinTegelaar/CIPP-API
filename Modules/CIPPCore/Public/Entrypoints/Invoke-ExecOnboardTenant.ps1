@@ -53,9 +53,11 @@ function Invoke-ExecOnboardTenant {
                 Add-CIPPAzDataTableEntity @OnboardTable -Entity $TenantOnboarding -Force -ErrorAction Stop
 
                 Push-OutputBinding -Name QueueItem -Value ([pscustomobject]@{
-                        FunctionName = 'ExecOnboardTenantQueue'
-                        id           = $Id
-                        Roles        = $Request.Body.gdapRoles
+                        FunctionName     = 'ExecOnboardTenantQueue'
+                        id               = $Id
+                        Roles            = $Request.Body.gdapRoles
+                        AddMissingGroups = $Request.Body.addMissingGroups
+                        AutoMapRoles     = $Request.Body.autoMapRoles
                     })
             }
 
