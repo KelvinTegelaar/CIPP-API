@@ -256,7 +256,8 @@ Function Push-ExecOnboardTenantQueue {
             }
 
             if ($UserCount -gt 0) {
-                $Logs.Add([PSCustomObject]@{ Date = Get-Date -UFormat $DateFormat; Log = 'API test successful. Onboarding complete.' })
+                $Logs.Add([PSCustomObject]@{ Date = Get-Date -UFormat $DateFormat; Log = 'API test successful' })
+                $Logs.Add([PSCustomObject]@{ Date = Get-Date -UFormat $DateFormat; Log = 'Onboarding complete' })
                 $OnboardingSteps.Step5.Status = 'succeeded'
                 $OnboardingSteps.Step5.Message = 'API Test Successful: {0} users found' -f $UserCount
                 $TenantOnboarding.Status = 'succeeded'
