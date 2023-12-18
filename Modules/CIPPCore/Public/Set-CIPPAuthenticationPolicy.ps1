@@ -111,8 +111,6 @@ function Set-CIPPAuthenticationPolicy {
         # Convert body to JSON and send request
         $body = ConvertTo-Json -Compress -Depth 10 -InputObject $CurrentInfo
         New-GraphPostRequest -tenantid $Tenant -Uri "https://graph.microsoft.com/beta/policies/authenticationmethodspolicy/authenticationMethodConfigurations/$AuthenticationMethodId" -Type patch -Body $body -ContentType 'application/json'
-        
-        
         Write-LogMessage -user $ExecutingUser -API $APIName -tenant $Tenant -message "Set $AuthenticationMethodId state to $State $OptionalLogMessage" -sev Info
         return "Set $AuthenticationMethodId state to $State $OptionalLogMessage"
     } catch {
