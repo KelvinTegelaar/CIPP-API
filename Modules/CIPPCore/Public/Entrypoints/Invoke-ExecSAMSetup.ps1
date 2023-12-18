@@ -8,7 +8,7 @@ Function Invoke-ExecSAMSetup {
       [CmdletBinding()]
       param($Request, $TriggerMetadata)
 
-        
+      $UserCreds = ([System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($request.headers.'x-ms-client-principal')) | ConvertFrom-Json)
       if ($Request.query.error) {
             Add-Type -AssemblyName System.Web
             Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
@@ -180,7 +180,7 @@ Function Invoke-ExecSAMSetup {
                         Remove-AzDataTableEntity @Table -Entity $Rows
 
                         $step = 5
-                        $Results = @{'message' = 'Installation completed.'; step = $step 
+                        $Results = @{'message' = 'setup completed.'; step = $step 
                         }
                   }
             }

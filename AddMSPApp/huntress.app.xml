@@ -1,0 +1,15 @@
+<ApplicationInfo xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" ToolVersion="1.8.3.0">
+  <Name>install.ps1</Name>
+  <UnencryptedContentSize>8859</UnencryptedContentSize>
+  <FileName>huntress.intunewin</FileName>
+  <SetupFile>install.ps1</SetupFile>
+  <EncryptionInfo>
+    <EncryptionKey>0wrFiLHex//63XQZEbX535qvhQE5+MiZmfPho1CMrT4=</EncryptionKey>
+    <MacKey>UOlXFsrh+Pq6ZZNmg2+gzuTCSDAxQNUDVkc6oR5SVAY=</MacKey>
+    <InitializationVector>x0cPnMjK6AZARRPhOfC5pg==</InitializationVector>
+    <Mac>z+N/v0mfq8T871kS07/QZ1Lgay2hRabSxwDWRKz3fG4=</Mac>
+    <ProfileIdentifier>ProfileVersion1</ProfileIdentifier>
+    <FileDigest>z8JuA/5iCrLM1cRkhL3di5eDysNsab62E812KGsrkbY=</FileDigest>
+    <FileDigestAlgorithm>SHA256</FileDigestAlgorithm>
+  </EncryptionInfo>
+</ApplicationInfo>

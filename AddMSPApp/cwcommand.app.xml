@@ -1,0 +1,16 @@
+<ApplicationInfo xmlns:xsd="http://www.w3.org/2001/XMLSchema"
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" ToolVersion="1.8.4.0">
+  <Name>install.ps1</Name>
+  <UnencryptedContentSize>2717</UnencryptedContentSize>
+  <FileName>cwcommand.intunewin</FileName>
+  <SetupFile>install.ps1</SetupFile>
+  <EncryptionInfo>
+    <EncryptionKey>6bilNd8M34xxoOl/marQi04r0PjYRD0YUuVf5hR/cVY=</EncryptionKey>
+    <MacKey>QIeCE2WnKhg/yyyN2Vd7WBqy/9Vo22oOY+jN+o7NsM8=</MacKey>
+    <InitializationVector>fPjQqWF6INy3aAXKeGIlig==</InitializationVector>
+    <Mac>qWx8/p2CoO2vuP/Dkr7KJw7JoxhmcA4XSj2ictbcC7M=</Mac>
+    <ProfileIdentifier>ProfileVersion1</ProfileIdentifier>
+    <FileDigest>fslGge4BZ0F//6xgGCNIIVY5VPr/B2Ms1sGI7RiA9Bo=</FileDigest>
+    <FileDigestAlgorithm>SHA256</FileDigestAlgorithm>
+  </EncryptionInfo>
+</ApplicationInfo>
