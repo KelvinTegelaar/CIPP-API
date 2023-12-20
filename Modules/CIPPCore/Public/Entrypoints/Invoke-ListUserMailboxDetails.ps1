@@ -31,11 +31,17 @@ Function Invoke-ListUserMailboxDetails {
         }
         $MailboxDetailedRequest = New-ExoRequest -TenantID $TenantFilter -cmdlet 'Get-Mailbox' -cmdParams $FetchParam
         try {
-            $Archive = New-ExoRequest -TenantID $TenantFilter -cmdlet 'Get-Mailbox' -cmdParams $FetchParam
-            if ($Archive.ArchiveStatus -eq 'Active') {
+            if ($MailboxDetailedRequest.ArchiveStatus -eq 'Active') {
                 $ArchiveEnabled = $True 
             } else {
                 $ArchiveEnabled = $False
+            }
+            # Get organization config of auto expanding archive if it's disabled on user level
+            if (!$MailboxDetailedRequest.AutoExpandingArchiveEnabled -and $ArchiveEnabled) {
+                $OrgConfig = New-ExoRequest -TenantID $TenantFilter -cmdlet 'Get-OrganizationConfig'
+                $AutoExpandingArchiveEnabled = $OrgConfig.AutoExpandingArchiveEnabled
+            } else {
+                $AutoExpandingArchiveEnabled = $MailboxDetailedRequest.AutoExpandingArchiveEnabled
             }
 
             $FetchParam = @{
@@ -116,7 +122,7 @@ Function Invoke-ListUserMailboxDetails {
             TotalArchiveItemCount    = [math]::Round($ArchiveSize.ItemCount, 2)
             BlockedForSpam           = $BlockedForSpam
             ArchiveMailBox           = $ArchiveEnabled
-            AutoExpandingArchive     = $Archive.AutoExpandingArchiveEnabled
+            AutoExpandingArchive     = $AutoExpandingArchiveEnabled
             RecipientTypeDetails     = $MailboxDetailedRequest.RecipientTypeDetails
         }
     } else {
@@ -140,7 +146,7 @@ Function Invoke-ListUserMailboxDetails {
             TotalArchiveItemCount    = 0
             BlockedForSpam           = $BlockedForSpam
             ArchiveMailBox           = $ArchiveEnabled
-            AutoExpandingArchive     = $Archive.AutoExpandingArchiveEnabled
+            AutoExpandingArchive     = $AutoExpandingArchiveEnabled
             RecipientTypeDetails     = $MailboxDetailedRequest.RecipientTypeDetails
         }
     }
