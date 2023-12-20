@@ -3,8 +3,8 @@ function Set-CIPPAuthenticationPolicy {
     param(
         [Parameter(Mandatory = $true)]$Tenant,
         [Parameter(Mandatory = $true)][ValidateSet('FIDO2', 'MicrosoftAuthenticator', 'SMS', 'TemporaryAccessPass', 'HardwareOATH', 'softwareOath', 'Voice', 'Email', 'x509Certificate')]$AuthenticationMethodId,
-        [Parameter(Mandatory = $true)][bool]$Enable, # true = enabled or false = disabled
-        [bool]$MicrosoftAuthenticatorSoftwareOathEnabled, 
+        [Parameter(Mandatory = $true)][bool]$Enabled, # true = enabled or false = disabled
+        $MicrosoftAuthenticatorSoftwareOathEnabled, 
         $TAPMinimumLifetime = 60, #Minutes
         $TAPMaximumLifetime = 480, #minutes
         $TAPDefaultLifeTime = 60, #minutes
@@ -15,14 +15,14 @@ function Set-CIPPAuthenticationPolicy {
     )
 
     # Convert bool input to usable string
-    $State = if ($Enable) { 'enabled' } else { 'disabled' }
+    $State = if ($Enabled) { 'enabled' } else { 'disabled' }
     # Get current state of the called authentication method and Set state of authentication method to input state
     try {
         $CurrentInfo = New-GraphGetRequest -Uri "https://graph.microsoft.com/beta/policies/authenticationmethodspolicy/authenticationMethodConfigurations/$AuthenticationMethodId" -tenantid $Tenant
         $CurrentInfo.state = $State
-    }
-    catch {
+    } catch {
         Write-LogMessage -user $ExecutingUser -API $APIName -tenant $Tenant -message "Could not get CurrentInfo for $AuthenticationMethodId. Error:$($_.exception.message)" -sev Error
+        Return "Could not get CurrentInfo for $AuthenticationMethodId. Error:$($_.exception.message)"
     }
     
     switch ($AuthenticationMethodId) {
@@ -46,7 +46,7 @@ function Set-CIPPAuthenticationPolicy {
                 # Set MS authenticator OTP state if parameter is passed in
                 if ($null -ne $MicrosoftAuthenticatorSoftwareOathEnabled ) { 
                     $CurrentInfo.isSoftwareOathEnabled = $MicrosoftAuthenticatorSoftwareOathEnabled 
-                    $OptionalLogMessage = "and Microsoft Authenticator software OTP to $MicrosoftAuthenticatorSoftwareOathEnabled"
+                    $OptionalLogMessage = "and MS Authenticator software OTP to $MicrosoftAuthenticatorSoftwareOathEnabled"
                 }
             }
         }
@@ -99,8 +99,7 @@ function Set-CIPPAuthenticationPolicy {
         
         # Certificate-based authentication
         'x509Certificate' {  
-            Write-LogMessage -user $ExecutingUser -API $APIName -tenant $Tenant -message "Setting $AuthenticationMethodId is not yet supported in CIPP" -sev Error
-            return "Setting $AuthenticationMethodId is not yet supported in CIPP"
+            # Nothing special to do here
         }
         Default {
             Write-LogMessage -user $ExecutingUser -API $APIName -tenant $Tenant -message 'Somehow you hit the default case. You probably made a typo in the input for AuthenticationMethodId. It''s case sensitive' -sev Error
@@ -112,12 +111,9 @@ function Set-CIPPAuthenticationPolicy {
         # Convert body to JSON and send request
         $body = ConvertTo-Json -Compress -Depth 10 -InputObject $CurrentInfo
         New-GraphPostRequest -tenantid $Tenant -Uri "https://graph.microsoft.com/beta/policies/authenticationmethodspolicy/authenticationMethodConfigurations/$AuthenticationMethodId" -Type patch -Body $body -ContentType 'application/json'
-        
-        
         Write-LogMessage -user $ExecutingUser -API $APIName -tenant $Tenant -message "Set $AuthenticationMethodId state to $State $OptionalLogMessage" -sev Info
         return "Set $AuthenticationMethodId state to $State $OptionalLogMessage"
-    }
-    catch {
+    } catch {
         Write-LogMessage -user $ExecutingUser -API $APIName -tenant $Tenant -message "Failed to $State $AuthenticationMethodId Support: $($_.exception.message)" -sev Error
         return "Failed to $State $AuthenticationMethodId Support: $($_.exception.message)"
     }
