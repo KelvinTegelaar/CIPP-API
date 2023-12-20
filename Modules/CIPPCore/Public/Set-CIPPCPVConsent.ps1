@@ -22,12 +22,20 @@ function Set-CIPPCPVConsent {
     }
 
     try {
-        $AppBody = @"
-{
-  "ApplicationGrants":[ {"EnterpriseApplicationId":"00000003-0000-0000-c000-000000000000","Scope":"Application.ReadWrite.all,DelegatedPermissionGrant.ReadWrite.All,Directory.ReadWrite.All"}],
-  "ApplicationId": "$($ENV:applicationId)"
-}
-"@
+        $AppBody = @{
+            ApplicationId       = $($ENV:applicationId)
+            ApplicationGrants   = @(
+                @{
+                    EnterpriseApplicationId     = "00000003-0000-0000-c000-000000000000"
+                    Scope                       = @(
+                        "Application.ReadWrite.all",
+                        "DelegatedPermissionGrant.ReadWrite.All",
+                        "Directory.ReadWrite.All"
+                    ) -Join ','
+                }
+            )
+        } | ConvertTo-Json
+
         $CPVConsent = New-GraphpostRequest -body $AppBody -Type POST -noauthcheck $true -uri "https://api.partnercenter.microsoft.com/v1/customers/$($TenantFilter)/applicationconsents" -scope 'https://api.partnercenter.microsoft.com/.default' -tenantid $env:TenantID
         $Table = Get-CIPPTable -TableName cpvtenants
         $unixtime = [int64](([datetime]::UtcNow) - (Get-Date '1/1/1970')).TotalSeconds
