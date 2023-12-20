@@ -59,7 +59,7 @@ Function Invoke-ExecGDAPInvite {
                 }
                 Add-CIPPAzDataTableEntity @Table -Entity $InviteEntity
 
-                $Message = 'GDAP relationship invite created. Copy the URL below and log in as a Global Admin for the new tenant to approve the invite.'
+                $Message = 'GDAP relationship invite created. Log in as a Global Admin in the new tenant to approve the invite.'
             } else {
                 $Message = 'Error creating GDAP relationship request'
             }
