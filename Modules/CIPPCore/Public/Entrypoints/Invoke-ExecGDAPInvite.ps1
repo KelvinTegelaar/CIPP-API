@@ -48,7 +48,7 @@ Function Invoke-ExecGDAPInvite {
             if ($NewRelationshipRequest.action -eq 'lockForApproval') {
                 $InviteUrl = "https://admin.microsoft.com/AdminPortal/Home#/partners/invitation/granularAdminRelationships/$($NewRelationship.id)"
                 $Uri = ([System.Uri]$TriggerMetadata.Headers.referer)
-                $OnboardingUrl = '{0}/tenant/administration/tenant-onboarding-wizard?tableFilter=Complex: id eq {1}' -f ($Uri.AbsoluteUri -replace $Uri.PathAndQuery), $NewRelationship.id
+                $OnboardingUrl = $Uri.AbsoluteUri.Replace($Uri.PathAndQuery, '/tenant/administration/tenant-onboarding-wizard?tableFilter=Complex: id eq {0}' -f $NewRelationship.id)
 
                 $InviteEntity = [PSCustomObject]@{
                     'PartitionKey'  = 'invite'
