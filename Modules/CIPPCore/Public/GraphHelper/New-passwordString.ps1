@@ -1,4 +1,8 @@
 function New-passwordString {
+    <#
+    .FUNCTIONALITY
+    Internal
+    #>
     [CmdletBinding()]
     param (
         [int]$count = 12
