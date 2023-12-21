@@ -8,23 +8,23 @@ function Invoke-CIPPStandardDeletedUserRentention {
 
     If ($Settings.remediate) {
         try {
-            $body = '{"deletedUserPersonalSiteRetentionPeriodInDays": 365}'
+            $body = '{"deletedUserPersonalSiteRetentionPeriodInDays": 3650}'
             New-GraphPostRequest -tenantid $tenant -Uri 'https://graph.microsoft.com/beta/admin/sharepoint/settings' -AsApp $true -Type PATCH -Body $body -ContentType 'application/json'
 
-            Write-LogMessage -API 'Standards' -tenant $tenant -message 'Set deleted user rentention of OneDrive to 1 year' -sev Info
+            Write-LogMessage -API 'Standards' -tenant $tenant -message 'Set deleted user rentention of OneDrive to 10 years' -sev Info
         } catch {
-            Write-LogMessage -API 'Standards' -tenant $tenant -message "Failed to set deleted user rentention of OneDrive to 1 year: $($_.exception.message)" -sev Error
+            Write-LogMessage -API 'Standards' -tenant $tenant -message "Failed to set deleted user rentention of OneDrive to 10 years: $($_.exception.message)" -sev Error
         }
     }
     if ($Settings.alert) {
-        if ($CurrentInfo.deletedUserPersonalSiteRetentionPeriodInDays -eq 365) {
-            Write-LogMessage -API 'Standards' -tenant $tenant -message 'Deleted user rentention of OneDrive is set to 1 year' -sev Info
+        if ($CurrentInfo.deletedUserPersonalSiteRetentionPeriodInDays -eq 3650) {
+            Write-LogMessage -API 'Standards' -tenant $tenant -message 'Deleted user rentention of OneDrive is set to 10 years' -sev Info
         } else {
-            Write-LogMessage -API 'Standards' -tenant $tenant -message 'Deleted user rentention of OneDrive is not set to 1 year' -sev Alert
+            Write-LogMessage -API 'Standards' -tenant $tenant -message 'Deleted user rentention of OneDrive is not set to 10 years' -sev Alert
         }
     }
     if ($Settings.report) {
-        if ($CurrentInfo.deletedUserPersonalSiteRetentionPeriodInDays -eq 365) {
+        if ($CurrentInfo.deletedUserPersonalSiteRetentionPeriodInDays -eq 3650) {
             $CurrentInfo.deletedUserPersonalSiteRetentionPeriodInDays = $true
         } else {
             $CurrentInfo.deletedUserPersonalSiteRetentionPeriodInDays = $false
