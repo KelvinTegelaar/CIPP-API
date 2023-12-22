@@ -129,7 +129,7 @@ Function Push-ExecOnboardTenantQueue {
                     #Write-Host ($AccessAssignments | ConvertTo-Json -Depth 5)
                     if ($QueueItem.Roles -and $QueueItem.AutoMapRoles -eq $true) {
                         foreach ($Role in $QueueItem.Roles) {
-                            if ($AccessAssignments.accessContainer.accessContainerid -notcontains $Role.GroupId) {
+                            if ($AccessAssignments.accessContainer.accessContainerid -notcontains $Role.GroupId -and $Relationship.accessDetails.unifiedRoles.roleDefinitionId -contains $Role.roleDefinitionId) {
                                 $Logs.Add([PSCustomObject]@{ Date = Get-Date -UFormat $DateFormat; Log = "Adding missing group to relationship: $($Role.GroupName)" })
                                 $MissingRoles.Add([PSCustomObject]$Role)
                             }
