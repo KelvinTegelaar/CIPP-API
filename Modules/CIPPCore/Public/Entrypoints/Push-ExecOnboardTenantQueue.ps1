@@ -250,7 +250,7 @@ Function Push-ExecOnboardTenantQueue {
                 Remove-CIPPCache -tenantsOnly $true
             } catch {}
 
-            $Tenant = Get-Tenants | Where-Object { $_.customerId -eq $Relationship.customer.tenantId }
+            $Tenant = Get-Tenants | Where-Object { $_.customerId -eq $Relationship.customer.tenantId } | Select-Object -First 1
             if ($Tenant) {
                 $y = 0
                 $Refreshing = $true
@@ -289,7 +289,7 @@ Function Push-ExecOnboardTenantQueue {
         }
 
         if ($OnboardingSteps.Step4.Status -eq 'succeeded') {
-            $Logs.Add([PSCustomObject]@{ Date = Get-Date -UFormat $DateFormat; Log = 'Testing API access' })
+            $Logs.Add([PSCustomObject]@{ Date = Get-Date -UFormat $DateFormat; Log = "Testing API access for $($Tenant.defaultDomainName)" })
             $OnboardingSteps.Step5.Status = 'running'
             $OnboardingSteps.Step5.Message = 'Testing API access'
             $TenantOnboarding.OnboardingSteps = [string](ConvertTo-Json -InputObject $OnboardingSteps -Compress)
@@ -297,7 +297,8 @@ Function Push-ExecOnboardTenantQueue {
             Add-CIPPAzDataTableEntity @OnboardTable -Entity $TenantOnboarding -Force -ErrorAction Stop
 
             try {
-                $UserCount = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/users?`$count=true&`$top=1" -ComplexFilter -tenantfilter $Tenant.defaultDomainName -CountOnly
+                #Write-Host ($Tenant | ConvertTo-Json)
+                $UserCount = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/users?`$count=true&`$top=1" -ComplexFilter -tenantid $Tenant.defaultDomainName -CountOnly
             } catch {
                 $UserCount = 0
                 $ApiError = $_.Exception.Message
