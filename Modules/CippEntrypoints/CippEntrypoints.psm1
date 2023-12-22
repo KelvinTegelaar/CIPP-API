@@ -2,7 +2,9 @@ using namespace System.Net
 
 function Receive-CippHttpTrigger {
     Param($Request, $TriggerMetadata)
-
+    #force path to CIPP-API
+    Set-Location (Get-Item $PSScriptRoot).Parent.Parent.FullName
+    Write-Host (Get-Item $PSScriptRoot).Parent.Parent.FullName
     $APIName = $TriggerMetadata.FunctionName
 
     $FunctionName = 'Invoke-{0}' -f $APIName
@@ -18,7 +20,7 @@ function Receive-CippHttpTrigger {
 function Receive-CippQueueTrigger {
     Param($QueueItem, $TriggerMetadata)
     $APIName = $TriggerMetadata.FunctionName
-
+    Set-Location (Get-Item $PSScriptRoot).Parent.Parent.FullName
     $FunctionName = 'Push-{0}' -f $APIName
     $QueueTrigger = @{
         QueueItem       = $QueueItem

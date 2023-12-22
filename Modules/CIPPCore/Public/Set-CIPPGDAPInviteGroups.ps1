@@ -1,17 +1,45 @@
 function Set-CIPPGDAPInviteGroups {
-    Param()
+    Param($Relationship)
     $Table = Get-CIPPTable -TableName 'GDAPInvites'
-    $InviteList = Get-CIPPAzDataTableEntity @Table
 
-    if (($InviteList | Measure-Object).Count -gt 0) {
-        #$LastDay = Get-Date (Get-Date).AddHours(-26) -UFormat '+%Y-%m-%dT%H:%M:%S.000Z'
-        #$NewActivations = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/tenantRelationships/delegatedAdminRelationships?`$filter=((status eq 'active') and (activatedDateTime gt $LastDay))"
-        $Activations = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/tenantRelationships/delegatedAdminRelationships?`$filter=status eq 'active'"
+    if ($Relationship) {
+        $Invite = Get-CIPPAzDataTableEntity @Table -Filter "RowKey eq '$($Relationship.id)'"
+        $APINAME = 'GDAPInvites'
+        $RoleMappings = $Invite.RoleMappings | ConvertFrom-Json
 
-        foreach ($Activation in $Activations) {
-            if ($InviteList.RowKey -contains $Activation.id) {
-                Write-Host "Mapping groups for GDAP relationship: $($Activation.id)"
-                Push-OutputBinding -Name Msg -Value $Activation.id
+        foreach ($role in $RoleMappings) {
+            try {
+                $Mappingbody = ConvertTo-Json -Depth 10 -InputObject @{
+                    'accessContainer' = @{
+                        'accessContainerId'   = "$($Role.GroupId)"
+                        'accessContainerType' = 'securityGroup'
+                    }
+                    'accessDetails'   = @{
+                        'unifiedRoles' = @(@{
+                                'roleDefinitionId' = "$($Role.roleDefinitionId)"
+                            })
+                    }
+                }
+                New-GraphPostRequest -NoAuthCheck $True -uri "https://graph.microsoft.com/beta/tenantRelationships/delegatedAdminRelationships/$($Relationship.id)/accessAssignments" -tenantid $env:TenantID -type POST -body $MappingBody -verbose
+                Start-Sleep -Milliseconds 100
+            } catch {
+                Write-LogMessage -API $APINAME -message "GDAP Group mapping failed for $($Relationship.customer.displayName) - Group: $($role.GroupId) - Exception: $($_.Exception.Message)" -Sev Error
+                return $false
+            }
+        }
+        Write-LogMessage -API $APINAME -message "Groups mapped for GDAP Relationship: $($Relationship.customer.displayName) - $($Relationship.customer.displayName)" -Sev Info
+        Remove-AzDataTableEntity @Table -Entity $Invite
+        return $true
+    } else {
+        $InviteList = Get-CIPPAzDataTableEntity @Table
+        if (($InviteList | Measure-Object).Count -gt 0) {
+            $Activations = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/tenantRelationships/delegatedAdminRelationships?`$filter=status eq 'active'"
+
+            foreach ($Activation in $Activations) {
+                if ($InviteList.RowKey -contains $Activation.id) {
+                    Write-Host "Mapping groups for GDAP relationship: $($Activation.customer.displayName) - $($Activation.id)"
+                    Push-OutputBinding -Name gdapinvitequeue -Value $Activation
+                }
             }
         }
     }
