@@ -8,13 +8,17 @@ function Invoke-CIPPStandardcalDefault {
         $Mailboxes = New-ExoRequest -tenantid $Tenant -cmdlet 'Get-Mailbox'
         Write-LogMessage -API 'Standards' -tenant $Tenant -message "Started setting default calendar permissions for $($Mailboxes.Count) mailboxes." -sev Info
 
-        # BRRRRRRRRRR
-        $global:UserSuccesses = 0
+        # Thread safe counter
+        $UserSuccesses = [HashTable]::Synchronized(@{Counter = 0 })
+        
+        # Set default calendar permissions for each mailbox. Run in parallel to speed up the process
         $Mailboxes | ForEach-Object -ThrottleLimit 25 -Parallel {
             Import-Module CIPPcore
             $Tenant = $Using:Tenant
             $Settings = $Using:Settings
             $Mailbox = $_
+            $UserSuccesses = $Using:UserSuccesses
+
             try {
                 $GetRetryCount = 0
                 
@@ -31,16 +35,16 @@ function Invoke-CIPPStandardcalDefault {
                                         Write-LogMessage -API 'Standards' -tenant $Tenant -message "Set default folder permission for $($Mailbox.UserPrincipalName):\$($_.Name) to $($Settings.permissionlevel)" -sev Debug 
                                         $Success = $true
                                     } catch {
-                                        # Set part
+                                        # Retry Set-MailboxFolderStatistics
                                         Start-Sleep -Milliseconds 250
                                         $SetRetryCount++
                                     }
                                 } Until ($SetRetryCount -ge 3 -or $Success -eq $true)
                             }
                             $Success = $true
-                            $global:UserSuccesses++
+                            $UserSuccesses.Counter++
                         } catch {
-                            # Get part
+                            # Retry Get-MailboxFolderStatistics
                             Start-Sleep -Milliseconds 250
                             $GetRetryCount++
                         }
@@ -50,7 +54,7 @@ function Invoke-CIPPStandardcalDefault {
                     Write-LogMessage -API 'Standards' -tenant $Tenant -message "Could not set default calendar permissions for $($Mailbox.UserPrincipalName). Error: $($_.exception.message)" -sev Error
                 }        
             }
-            Write-LogMessage -API 'Standards' -tenant $Tenant -message "Done setting default calendar permissions for $global:UserSuccesses out of $($Mailboxes.Count) mailboxes." -sev Info
+            Write-LogMessage -API 'Standards' -tenant $Tenant -message "Done setting default calendar permissions for $($UserSuccesses.Counter) out of $($Mailboxes.Count) mailboxes." -sev Info
 
         }
     }
