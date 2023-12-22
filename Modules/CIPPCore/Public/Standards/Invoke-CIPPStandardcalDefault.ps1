@@ -54,7 +54,7 @@ function Invoke-CIPPStandardcalDefault {
                     Write-LogMessage -API 'Standards' -tenant $Tenant -message "Could not set default calendar permissions for $($Mailbox.UserPrincipalName). Error: $($_.exception.message)" -sev Error
                 }        
             }
-            Write-LogMessage -API 'Standards' -tenant $Tenant -message "Done setting default calendar permissions for $($UserSuccesses.Counter) out of $($Mailboxes.Count) mailboxes." -sev Info
+            Write-LogMessage -API 'Standards' -tenant $Tenant -message "Successfully set default calendar permissions for $($UserSuccesses.Counter) out of $($Mailboxes.Count) mailboxes." -sev Info
 
         }
     }
