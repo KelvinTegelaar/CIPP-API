@@ -1,4 +1,8 @@
 function Remove-CIPPCache {
+    <#
+    .FUNCTIONALITY
+    Internal
+    #>
     param (
         $TenantsOnly
     )

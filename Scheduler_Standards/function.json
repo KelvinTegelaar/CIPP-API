@@ -1,0 +1,16 @@
+﻿{
+  "bindings": [
+    {
+      "name": "Timer",
+      "schedule": "0 0 */3 * * *",
+      "direction": "in",
+      "type": "timerTrigger"
+    },
+    {
+      "type": "queue",
+      "direction": "out",
+      "name": "QueueItem",
+      "queueName": "CIPPGenericQueue"
+    }
+  ]
+}
