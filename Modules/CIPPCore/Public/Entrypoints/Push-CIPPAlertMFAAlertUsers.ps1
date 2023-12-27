@@ -5,21 +5,23 @@ function Push-CIPPAlertMFAAlertUsers {
         $QueueItem,
         $TriggerMetadata
     )
-
-
     try {
-        $users = New-GraphGETRequest -uri "https://graph.microsoft.com/beta/users?`$select=userPrincipalName,id" -tenantid $($QueueItem.tenant) -erroraction stop
+        $users = New-GraphGETRequest -uri "https://graph.microsoft.com/beta/users?`$select=userPrincipalName,id,accountEnabled,userType&`$filter=userType eq 'Member' and accountEnabled eq true" -tenantid $($QueueItem.tenant)
+        Write-Host "found $($users.count) users"
         $StrongMFAMethods = '#microsoft.graph.fido2AuthenticationMethod', '#microsoft.graph.phoneAuthenticationMethod', '#microsoft.graph.passwordlessmicrosoftauthenticatorauthenticationmethod', '#microsoft.graph.softwareOathAuthenticationMethod', '#microsoft.graph.microsoftAuthenticatorAuthenticationMethod'
-        $users | Where-Object { $_.Usertype -eq 'Member' -and $_.BlockCredential -eq $false } | ForEach-Object {
-            trhy {
-                $CARegistered = $false
-                        (New-GraphGETRequest -uri "https://graph.microsoft.com/beta/users/$($_.ObjectID)/authentication/Methods" -tenantid $($QueueItem.tenant)) | ForEach-Object {
-                    if ($_.'@odata.type' -notin $StrongMFAMethods) {
-                        Write-AlertMessage -tenant $($QueueItem.tenant) -message "User $($_.UserPrincipalName) is enabled but does not have any form of MFA configured." 
+        $users | ForEach-Object {
+            try {
+                $UPN = $_.UserPrincipalName
+                        (New-GraphGETRequest -uri "https://graph.microsoft.com/beta/users/$($_.ID)/authentication/Methods" -tenantid $($QueueItem.tenant)) | ForEach-Object {
+                    $CARegistered = $false
+                    if ($_.'@odata.type' -in $StrongMFAMethods) {
+                        $CARegistered = $true
+                    }
+                    if ($CARegistered -eq $false) {
+                        Write-AlertMessage -tenant $($QueueItem.tenant) -message "User $UPN is enabled but does not have any form of MFA configured."
                     }
                 }
             } catch {
-                $CARegistered = $false
             }
         }
     } catch {

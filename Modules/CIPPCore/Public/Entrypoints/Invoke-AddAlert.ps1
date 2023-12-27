@@ -13,10 +13,11 @@ Function Invoke-AddAlert {
     $Tenants = $Request.body.tenantFilter
     $Results = foreach ($Tenant in $tenants) {
         try {
-            $TenantID = if ($tenant -ne 'AllTenants') {
-            (get-tenants | Where-Object -Property defaultDomainName -EQ $Tenant).customerId
+            Write-Host "Working on $Tenant"
+            if ($tenant -ne 'AllTenants') {
+                $TenantID = (get-tenants | Where-Object -Property defaultDomainName -EQ $Tenant).customerId
             } else {
-                'AllTenants'
+                $TenantID = 'AllTenants'
             }
             if ($Request.body.SetAlerts) {
                 $CompleteObject = @{
@@ -44,10 +45,11 @@ Function Invoke-AddAlert {
                     RowKey            = $TenantID
                     PartitionKey      = 'Alert'
                 }
-
+                Write-Host "$( $CompleteObject | ConvertTo-Json -Depth 100)"
                 $Table = get-cipptable -TableName 'SchedulerConfig'
                 Add-CIPPAzDataTableEntity @Table -Entity $CompleteObject -Force
             }
+
             $URL = ($request.headers.'x-ms-original-url').split('/api') | Select-Object -First 1
             if ($Tenant -eq 'AllTenants') {
                 Get-Tenants | ForEach-Object {

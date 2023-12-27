@@ -23,7 +23,7 @@ function Push-CIPPAlertMFAAdmins {
                             $CARegistered = $true
                         }
                     }
-                    if ($_.StrongAuthenticationRequirements.StrongAuthenticationRequirement.state -eq $null -and $CARegistered -ne $true) { 
+                    if ($CARegistered -ne $true) { 
                         Write-AlertMessage -tenant $($QueueItem.tenant) -message "Admin $($_.UserPrincipalName) is enabled but does not have any form of MFA configured." 
                     }
                 } catch {

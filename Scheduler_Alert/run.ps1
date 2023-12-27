@@ -13,15 +13,14 @@ try {
     
     $DeltaTable = Get-CIPPTable -Table DeltaCompare
     $LastRunTable = Get-CIPPTable -Table AlertLastRun
-    $AlertsTable = Get-CIPPTable -Table cachealerts
     $IgnoreList = @('Etag', 'PartitionKey', 'Timestamp', 'RowKey', 'tenantid', 'tenant', 'type')
     $alertList = $Alerts | Select-Object * -ExcludeProperty $IgnoreList 
     foreach ($task in ($AlertList.psobject.members | Where-Object { $_.MemberType -EQ 'NoteProperty' -and $_.value -eq $True }).name) {
         $QueueItem = [pscustomobject]@{
-            Tenant       = $tenant
+            tenant       = $tenant.tenant
+            tenantid     = $tenant.tenantid
             DeltaTable   = $DeltaTable
             LastRunTable = $LastRunTable
-            AlertsTable  = $AlertsTable
             FunctionName = "CIPPAlert$($Task)"
         }
         Push-OutputBinding -Name QueueItem -Value $QueueItem
@@ -32,14 +31,11 @@ try {
     $Filter = "PartitionKey eq '{0}' and Tenant eq '{1}'" -f $PartitionKey, $tenant.tenant
     $currentlog = Get-CIPPAzDataTableEntity @Table -Filter $Filter
 
-    
+    $AlertsTable = Get-CIPPTable -Table cachealerts
     $CurrentAlerts = (Get-CIPPAzDataTableEntity @AlertsTable -Filter $Filter)
     $CurrentAlerts | ForEach-Object {
-        if ($_.Message -notin $currentlog.Message) {
-            Write-LogMessage -message $_.Message -API 'Alerts' -tenant $tenant.tenant -sev Alert -tenantid $Tenant.tenantid
-
-        }
-        Remove-AzDataTableEntity @AlertsTable -PartitionKey $PartitionKey -RowKey $_.RowKey
+        if ($_.Message -notin $currentlog.Message) { Write-LogMessage -message $_.Message -API 'Alerts' -tenant $tenant.tenant -sev Alert -tenantid $Tenant.tenantid }
+        Remove-AzDataTableEntity @AlertsTable -Entity $_
     }
 
     [PSCustomObject]@{

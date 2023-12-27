@@ -3,11 +3,9 @@ function Push-CIPPAlertAdminPassword {
     [CmdletBinding()]
     param(
         [Parameter(Mandatory = $true)]
-        $QueueItem,
-        
+        [pscustomobject]$QueueItem,
         $TriggerMetadata
     )
-    $AlertsTable = $QueueItem.AlertsTable
     try {
         New-GraphGETRequest -uri "https://graph.microsoft.com/beta/roleManagement/directory/roleAssignments?`$filter=roleDefinitionId eq '62e90394-69f5-4237-9190-012177145e10'&`$expand=principal" -tenantid $($QueueItem.tenant) | Where-Object { ($_.principalOrganizationId -EQ $QueueItem.tenantid) -and ($_.principal.'@odata.type' -eq '#microsoft.graph.user') } | ForEach-Object {
             $LastChanges = New-GraphGETRequest -uri "https://graph.microsoft.com/beta/users/$($_.principalId)?`$select=UserPrincipalName,lastPasswordChangeDateTime" -tenant $($QueueItem.tenant)
