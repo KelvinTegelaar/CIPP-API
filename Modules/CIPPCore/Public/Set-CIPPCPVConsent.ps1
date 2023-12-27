@@ -27,9 +27,9 @@ function Set-CIPPCPVConsent {
                 @{
                     EnterpriseApplicationId = '00000003-0000-0000-c000-000000000000'
                     Scope                   = @(
-                        'Application.ReadWrite.all',
                         'DelegatedPermissionGrant.ReadWrite.All',
-                        'Directory.ReadWrite.All'
+                        'Directory.ReadWrite.All',
+                        'AppRoleAssignment.ReadWrite.All'
                     ) -Join ','
                 }
             )
