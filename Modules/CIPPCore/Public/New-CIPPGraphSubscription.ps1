@@ -18,24 +18,42 @@ function New-CIPPGraphSubscription {
 
     try {
         if ($auditLogAPI) {
-            $AuditLogParams = @{
-                webhook = @{
-                    'address' = "$BaseURL/API/Publicwebhooks?EventType=$EventType&CIPPID=$CIPPID"
+            $EventTypes = @('Audit.AzureActiveDirectory', 'Audit.Exchange', 'Audit.SharePoint', 'Audit.General', 'DLP.All')
+            foreach ($EventType in $EventTypes) {
+                $CIPPID = (New-Guid).GUID
+                $Resource = $EventType
+                $AuditLogParams = @{
+                    webhook = @{
+                        'address' = "$BaseURL/API/Publicwebhooks?EventType=$EventType&CIPPID=$CIPPID"
+                    }
+                } | ConvertTo-Json
+                #List existing webhook subscriptions in table
+                $WebhookFilter = "PartitionKey eq '$($TenantFilter)'"
+                $ExistingWebhooks = Get-CIPPAzDataTableEntity @WebhookTable -Filter $WebhookFilter
+                $MatchedWebhook = $ExistingWebhooks | Where-Object { $_.Resource -eq $Resource }
+                try {
+                    if (!$MatchedWebhook) {
+                        $AuditLog = New-GraphPOSTRequest -uri "https://manage.office.com/api/v1.0/$($TenantFilter)/activity/feed/subscriptions/start?contentType=$EventType&PublisherIdentifier=$($TenantFilter)" -tenantid $TenantFilter -type POST -scope 'https://manage.office.com/.default' -body $AuditLogparams -verbose
+                        $WebhookRow = @{
+                            PartitionKey           = [string]$TenantFilter
+                            RowKey                 = [string]$CIPPID
+                            Resource               = 'M365AuditLogsv2'
+                            Expiration             = 'Does Not Expire'
+                            WebhookNotificationUrl = [string]$Auditlog.webhook.address
+                        }
+                        $null = Add-CIPPAzDataTableEntity @WebhookTable -Entity $WebhookRow
+                        Write-LogMessage -user $ExecutingUser -API $APIName -message "Created Webhook subscription for $($TenantFilter) for the log $($EventType)" -Sev 'Info' -tenant $TenantFilter
+                    } else {
+                        Write-LogMessage -user $ExecutingUser -API $APIName -message "No webhook creation required for $($TenantFilter). Already exists" -Sev 'Info' -tenant $TenantFilter
+                    }
+                } catch {
+                    if ($_.Exception.Message -like '*already exists*') {
+                        Write-LogMessage -user $ExecutingUser -API $APIName -message "Webhook subscription for $($TenantFilter) already exists" -Sev 'Info' -tenant $TenantFilter
+                    } else {
+                        Write-LogMessage -user $ExecutingUser -API $APIName -message "Failed to create Webhook Subscription for $($TenantFilter): $($_.Exception.Message)" -Sev 'Error' -tenant $TenantFilter
+                    }
                 }
-            } | ConvertTo-Json
-            Write-Host ($AuditLogParams)
-            $AuditLog = New-GraphPOSTRequest -uri "https://manage.office.com/api/v1.0/$($TenantFilter)/activity/feed/subscriptions/start?contentType=$EventType&PublisherIdentifier=$($TenantFilter)" -tenantid $TenantFilter -type POST -scope 'https://manage.office.com/.default' -body $AuditLogparams -verbose
-            $WebhookRow = @{
-                PartitionKey           = [string]$TenantFilter
-                RowKey                 = [string]$CIPPID
-                Resource               = 'M365AuditLogs'
-                Expiration             = 'Does Not Expire'
-                WebhookNotificationUrl = [string]$Auditlog.webhook.address
             }
-
-            $null = Add-CIPPAzDataTableEntity @WebhookTable -Entity $WebhookRow
-            Write-LogMessage -user $ExecutingUser -API $APIName -message "Created Webhook subscription for $($TenantFilter)" -Sev 'Info' -tenant $TenantFilter
-
         } else {
             # First check if there is an exsiting Webhook in place
             $WebhookFilter = "PartitionKey eq '$($TenantFilter)'"
