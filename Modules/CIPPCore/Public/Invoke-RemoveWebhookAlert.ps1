@@ -36,7 +36,7 @@ Function Invoke-RemoveWebhookAlert {
             }
     
             $Results = foreach ($Tenant in $Tenants) {
-                Remove-CIPPGraphSubscription -TenantFilter $Tenant -CIPPID $Request.query.CIPPID
+                Remove-CIPPGraphSubscription -TenantFilter $Tenant -Type 'AuditLog'
                 $Entity = $WebhookRow | Where-Object -Property RowKey -EQ $Request.query.ID
                 Remove-AzDataTableEntity @WebhookTable -Entity $Entity | Out-Null
                 "Removed Alert Rule for $($Request.query.TenantFilter)"
