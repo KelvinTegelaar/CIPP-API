@@ -18,7 +18,7 @@ function New-CIPPGraphSubscription {
 
     try {
         if ($auditLogAPI) {
-            $EventTypes = @('Audit.AzureActiveDirectory', 'Audit.Exchange', 'Audit.SharePoint', 'Audit.General,DLP.All')
+            $EventTypes = @('Audit.AzureActiveDirectory', 'Audit.Exchange', 'Audit.SharePoint', 'Audit.General', 'DLP.All')
             foreach ($EventType in $EventTypes) {
                 $CIPPID = (New-Guid).GUID
                 $Resource = $EventType
