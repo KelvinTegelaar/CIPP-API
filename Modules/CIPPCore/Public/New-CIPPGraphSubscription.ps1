@@ -21,6 +21,7 @@ function New-CIPPGraphSubscription {
             $EventTypes = @('Audit.AzureActiveDirectory', 'Audit.Exchange', 'Audit.SharePoint', 'Audit.General,DLP.All')
             foreach ($EventType in $EventTypes) {
                 $CIPPID = (New-Guid).GUID
+                $Resource = $EventType
                 $AuditLogParams = @{
                     webhook = @{
                         'address' = "$BaseURL/API/Publicwebhooks?EventType=$EventType&CIPPID=$CIPPID"
