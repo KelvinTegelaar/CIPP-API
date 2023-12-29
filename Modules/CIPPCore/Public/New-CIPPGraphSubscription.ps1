@@ -18,7 +18,7 @@ function New-CIPPGraphSubscription {
 
     try {
         if ($auditLogAPI) {
-            $EventTypes = @('Audit.AzureActiveDirectory', 'Audit.Exchange', 'Audit.SharePoint', 'Audit.General', 'DLP.All')
+            $EventTypes = @('Audit.AzureActiveDirectory', 'Audit.Exchange', 'Audit.SharePoint', 'Audit.General')
             foreach ($EventType in $EventTypes) {
                 $CIPPID = (New-Guid).GUID
                 $Resource = $EventType
@@ -37,7 +37,7 @@ function New-CIPPGraphSubscription {
                         $WebhookRow = @{
                             PartitionKey           = [string]$TenantFilter
                             RowKey                 = [string]$CIPPID
-                            Resource               = 'M365AuditLogsv2'
+                            Resource               = $Resource
                             Expiration             = 'Does Not Expire'
                             WebhookNotificationUrl = [string]$Auditlog.webhook.address
                         }
