@@ -28,7 +28,7 @@ function New-CIPPGraphSubscription {
             $ExistingWebhooks = Get-CIPPAzDataTableEntity @WebhookTable -Filter $WebhookFilter
             $MatchedWebhook = $ExistingWebhooks | Where-Object { $_.Resource -eq $Resource }
             if (!$MatchedWebhook) {
-                $AuditLog = New-GraphPOSTRequest -uri "https://manage.office.com/api/v1.0/$($TenantFilter)/activity/feed/subscriptions/start?contentType=$EventType&PublisherIdentifier=$($TenantFilter)" -tenantid $TenantFilter -type POST -scope 'https://manage.office.com/.default' -body $AuditLogparams -verbose
+                $AuditLog = New-GraphPOSTRequest -uri "https://manage.office.com/api/v1.0/$($TenantFilter)/activity/feed/subscriptions/start?contentType=Audit.AzureActiveDirectory,Audit.Exchange,Audit.SharePoint,Audit.General,DLP.All&PublisherIdentifier=$($TenantFilter)" -tenantid $TenantFilter -type POST -scope 'https://manage.office.com/.default' -body $AuditLogparams -verbose
                 $WebhookRow = @{
                     PartitionKey           = [string]$TenantFilter
                     RowKey                 = [string]$CIPPID
