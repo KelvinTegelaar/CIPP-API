@@ -31,8 +31,8 @@ function New-CIPPGraphSubscription {
                 $WebhookFilter = "PartitionKey eq '$($TenantFilter)'"
                 $ExistingWebhooks = Get-CIPPAzDataTableEntity @WebhookTable -Filter $WebhookFilter
                 $MatchedWebhook = $ExistingWebhooks | Where-Object { $_.Resource -eq $Resource }
-                if (!$MatchedWebhook) {
-                    try {
+                try {
+                    if (!$MatchedWebhook) {
                         $AuditLog = New-GraphPOSTRequest -uri "https://manage.office.com/api/v1.0/$($TenantFilter)/activity/feed/subscriptions/start?contentType=$EventType&PublisherIdentifier=$($TenantFilter)" -tenantid $TenantFilter -type POST -scope 'https://manage.office.com/.default' -body $AuditLogparams -verbose
                         $WebhookRow = @{
                             PartitionKey           = [string]$TenantFilter
@@ -42,17 +42,17 @@ function New-CIPPGraphSubscription {
                             WebhookNotificationUrl = [string]$Auditlog.webhook.address
                         }
                         $null = Add-CIPPAzDataTableEntity @WebhookTable -Entity $WebhookRow
-                    } catch {
-                        if ($_.Exception.Message -like '*already exists*') {
-                            Write-LogMessage -user $ExecutingUser -API $APIName -message "Webhook subscription for $($TenantFilter) already exists" -Sev 'Info' -tenant $TenantFilter
-                        } else {
-                            Write-LogMessage -user $ExecutingUser -API $APIName -message "Failed to create Webhook Subscription for $($TenantFilter): $($_.Exception.Message)" -Sev 'Error' -tenant $TenantFilter
-                        }
+                        Write-LogMessage -user $ExecutingUser -API $APIName -message "Created Webhook subscription for $($TenantFilter) for the log $($EventType)" -Sev 'Info' -tenant $TenantFilter
+                    } else {
+                        Write-LogMessage -user $ExecutingUser -API $APIName -message "No webhook creation required for $($TenantFilter). Already exists" -Sev 'Info' -tenant $TenantFilter
                     }
-                    Write-LogMessage -user $ExecutingUser -API $APIName -message "Created Webhook subscription for $($TenantFilter) for the log $($EventType)" -Sev 'Info' -tenant $TenantFilter
+                } catch {
+                    if ($_.Exception.Message -like '*already exists*') {
+                        Write-LogMessage -user $ExecutingUser -API $APIName -message "Webhook subscription for $($TenantFilter) already exists" -Sev 'Info' -tenant $TenantFilter
+                    } else {
+                        Write-LogMessage -user $ExecutingUser -API $APIName -message "Failed to create Webhook Subscription for $($TenantFilter): $($_.Exception.Message)" -Sev 'Error' -tenant $TenantFilter
+                    }
                 }
-            } else {
-                Write-LogMessage -user $ExecutingUser -API $APIName -message "No webhook creation required for $($TenantFilter). Already exists" -Sev 'Info' -tenant $TenantFilter
             }
         } else {
             # First check if there is an exsiting Webhook in place
