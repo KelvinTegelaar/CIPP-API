@@ -11,6 +11,8 @@ Function Invoke-AddAlert {
     Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -message 'Accessed this API' -Sev 'Debug'
 
     $Tenants = $Request.body.tenantFilter
+    $Table = get-cipptable -TableName 'SchedulerConfig'
+
     $Results = foreach ($Tenant in $tenants) {
         try {
             Write-Host "Working on $Tenant"
@@ -45,25 +47,29 @@ Function Invoke-AddAlert {
                     RowKey            = $TenantID
                     PartitionKey      = 'Alert'
                 }
-                Write-Host "$( $CompleteObject | ConvertTo-Json -Depth 100)"
                 $Table = get-cipptable -TableName 'SchedulerConfig'
                 Add-CIPPAzDataTableEntity @Table -Entity $CompleteObject -Force
-            }
-
-            $URL = ($request.headers.'x-ms-original-url').split('/api') | Select-Object -First 1
-            if ($Tenant -eq 'AllTenants') {
-                Get-Tenants | ForEach-Object {
-                    $params = @{
-                        TenantFilter  = $_.defaultDomainName
-                        auditLogAPI   = $true
-                        operations    = 'Audit.AzureActiveDirectory,Audit.Exchange,Audit.SharePoint,Audit.General,DLP.All'
-                        BaseURL       = $URL
-                        ExecutingUser = $Request.headers.'x-ms-client-principal'
-                    }
-                    Push-OutputBinding -Name Subscription -Value $Params
-                }
             } else {
-                foreach ($eventType in $Request.body.EventTypes.value) {
+                $URL = ($request.headers.'x-ms-original-url').split('/api') | Select-Object -First 1
+                if ($Tenant -eq 'AllTenants') {
+                    Get-Tenants | ForEach-Object {
+                        $params = @{
+                            TenantFilter  = $_.defaultDomainName
+                            auditLogAPI   = $true
+                            operations    = 'Audit.AzureActiveDirectory,Audit.Exchange,Audit.SharePoint,Audit.General,DLP.All'
+                            BaseURL       = $URL
+                            ExecutingUser = $Request.headers.'x-ms-client-principal'
+                        }
+                        Push-OutputBinding -Name Subscription -Value $Params
+                    }
+                    $CompleteObject = @{
+                        tenant       = 'AllTenants'
+                        type         = 'webhookcreation'
+                        RowKey       = 'AllTenantsWebhookCreation'
+                        PartitionKey = 'webhookcreation'
+                    }
+                    Add-CIPPAzDataTableEntity @Table -Entity $CompleteObject -Force
+                } else {
                     $params = @{
                         TenantFilter  = $tenant
                         auditLogAPI   = $true
@@ -73,6 +79,16 @@ Function Invoke-AddAlert {
                     }
                     New-CIPPGraphSubscription @params
                 }
+                $CompleteObject = @{
+                    Tenant       = [string]$tenant
+                    if           = [string](ConvertTo-Json -Compress -InputObject $Request.body.ifs)
+                    execution    = [string](ConvertTo-Json -Compress -InputObject $Request.body.do)
+                    type         = 'WebhookAlert'
+                    RowKey       = [string](New-Guid)
+                    PartitionKey = 'WebhookAlert'
+                }
+                Add-CIPPAzDataTableEntity @Table -Entity $CompleteObject -Force
+
             }
             "Successfully added Alert for $($Tenant) to queue."
             Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $tenant -message "Successfully added Alert for $($Tenant) to queue." -Sev 'Info'
