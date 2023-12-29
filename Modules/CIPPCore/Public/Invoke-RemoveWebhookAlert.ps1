@@ -29,7 +29,7 @@ Function Invoke-RemoveWebhookAlert {
                     RowKey       = 'AllTenantsWebhookCreation'
                     PartitionKey = 'webhookcreation'
                 }
-                RemoveAzDataTableEntity @Table -Entity $CompleteObject -ErrorAction SilentlyContinue | Out-Null
+                Remove-AzDataTableEntity @Table -Entity $CompleteObject -ErrorAction SilentlyContinue | Out-Null
                 
             } else {
                 $Tenants = $Request.query.TenantFilter

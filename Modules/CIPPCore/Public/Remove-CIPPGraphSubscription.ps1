@@ -10,7 +10,7 @@ function Remove-CIPPGraphSubscription {
         $WebhookTable = Get-CIPPTable -TableName webhookTable
         $WebhookRow = Get-CIPPAzDataTableEntity @WebhookTable | Where-Object { $_.RowKey -eq $CIPPID }
         $Entity = $WebhookRow | Select-Object PartitionKey, RowKey
-        if ($WebhookRow.Resource -eq 'M365AuditLogsv2') {
+        if ($WebhookRow.Resource -in @('Audit.AzureActiveDirectory', 'Audit.Exchange', 'Audit.SharePoint', 'Audit.General')) {
             try {
                 $AuditLog = New-GraphPOSTRequest -uri "https://manage.office.com/api/v1.0/$($TenantFilter)/activity/feed/subscriptions/stop?contentType=$($WebhookRow.EventType)" -scope 'https://manage.office.com/.default' -tenantid $TenantFilter -type POST -body '{}' -verbose
             } catch {
