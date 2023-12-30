@@ -45,19 +45,22 @@ function Invoke-CippWebhookProcessing {
         Write-Host 'No need to process this operation.'
         return ''
     }
+
+    Write-Host "Operation: $($data.operation)"
     switch ($data.operation) {
         { 'UserLoggedIn' -eq $data.operation -and $Country -notin $AllowedLocations -and $data.ResultStatus -eq 'Success' -and $TableObj.ResultStatusDetail -eq 'Success' } { $data.operation = 'UserLoggedInFromUnknownLocation' }
         { 'UserloggedIn' -eq $data.operation -and $data.UserType -eq 2 -and $data.ResultStatus -eq 'Success' -and $TableObj.ResultStatusDetail -eq 'Success' } { $data.operation = 'AdminLoggedIn' }
         default { break }
     }
-
+    Write-Host "Rewrote to operation: $($data.operation)"
     #Check if we actually need to do anything, and if not, break away.
     $Alertconfig = Get-CIPPAzDataTableEntity @ConfigTable -Filter "Tenant eq '$tenantfilter'"
     foreach ($AlertSetting in $Alertconfig) {
         $ifs = $AlertSetting.If | ConvertFrom-Json
         $Dos = $AlertSetting.execution | ConvertFrom-Json
         if ($data.operation -notin $Ifs.selection -and $ifs.selection -ne 'AnyAlert' ) {
-            Write-Host 'Add IP and potential location to knownlocation db for this specific user'
+            Write-Host 'Not an operation to do anything for. storing IP info'
+            Write-Host 'Add IP and potential location to knownlocation db for this specific user.'
             if ($data.ClientIP) {
                 $IP = $data.ClientIP
                 if ($IP -match '^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}:\d+$') {
@@ -75,7 +78,7 @@ function Invoke-CippWebhookProcessing {
                 }
                 $null = Add-CIPPAzDataTableEntity @LocationTable -Entity $LocationInfo -Force
             }
-            return ''
+            Continue
         } else {
             $ConditionMet = $true
         }
@@ -103,6 +106,7 @@ function Invoke-CippWebhookProcessing {
 
         if ($ConditionMet) {
             foreach ($action in $dos) {
+                Write-Host "this is our action: $($action | ConvertTo-Json -Depth 15 -Compress))"
                 switch ($action.execute) {
                     'generateemail' {
                         $GenerateEmail = New-CIPPAlertTemplate -format 'html' -data $Data

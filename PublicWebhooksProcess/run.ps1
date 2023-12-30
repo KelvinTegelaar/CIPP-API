@@ -23,7 +23,6 @@ if ($Request.query.CIPPID -in $Webhooks.RowKey) {
     } else {
         # Auditlog Subscriptions
         $Webhookinfo = $Webhooks | Where-Object -Property RowKey -EQ $Request.query.CIPPID
-        $operations = $Webhookinfo.Operations -split ','
         foreach ($ReceivedItem In ($Request.body)) {
             $ReceivedItem = [pscustomobject]$ReceivedItem
             $TenantFilter = (Get-Tenants | Where-Object -Property customerId -EQ $ReceivedItem.TenantId).defaultDomainName
