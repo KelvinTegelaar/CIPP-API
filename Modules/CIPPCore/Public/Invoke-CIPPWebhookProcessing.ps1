@@ -23,6 +23,9 @@ function Invoke-CippWebhookProcessing {
             $City = $Location.City
         } else {
             Write-Host 'We have to do a lookup'
+            if ($data.clientip -match '^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}:\d+$') {
+                $data.clientip = $data.clientip -replace ':\d+$', '' # Remove the port number if present
+            }
             $Location = Get-CIPPGeoIPLocation -IP $data.clientip
             $Country = if ($Location.countryCode) { $Location.CountryCode } else { 'Unknown' }
             $City = if ($Location.cityName) { $Location.cityName } else { 'Unknown' }
@@ -61,7 +64,7 @@ function Invoke-CippWebhookProcessing {
         if ($data.operation -notin $Ifs.selection -and $ifs.selection -ne 'AnyAlert' ) {
             Write-Host 'Not an operation to do anything for. storing IP info'
             Write-Host 'Add IP and potential location to knownlocation db for this specific user.'
-            if ($data.ClientIP) {
+            if ($data.ClientIP -and $data.operation -like '*LoggedIn*') {
                 $IP = $data.ClientIP
                 if ($IP -match '^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}:\d+$') {
                     $IP = $IP -replace ':\d+$', '' # Remove the port number if present
