@@ -14,8 +14,10 @@ Function Invoke-RemoveWebhookAlert {
 
     try {
         $WebhookTable = Get-CIPPTable -TableName SchedulerConfig 
-        $WebhookRow = Get-CIPPAzDataTableEntity @WebhookTable -Filter "PartitionKey eq 'WebhookAlert'" | Where-Object -Property Tenant -EQ $Request.query.TenantFilter
+
+        $WebhookRow = Get-CIPPAzDataTableEntity @WebhookTable -Filter "PartitionKey eq 'WebhookAlert' and Tenant eq '$($Request.query.TenantFilter)'"
         Write-Host "The webhook count is $($WebhookRow.count)"
+        Write-Host "The tenantfilter is $($Request.query.TenantFilter)"
         Write-Host "Here's the webhook Row: $($WebhookRow | ConvertTo-Json -Depth 10)"
         if ($WebhookRow.count -gt 1) {
             Write-Host 'Multiple webhooks found'
