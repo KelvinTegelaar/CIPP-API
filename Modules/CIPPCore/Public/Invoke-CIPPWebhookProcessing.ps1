@@ -51,6 +51,8 @@ function Invoke-CippWebhookProcessing {
 
     Write-Host "Operation: $($data.operation)"
     switch ($data.operation) {
+        { 'UserLoggedIn' -eq $data.operation -and $proxy -eq $true } { $data.operation = 'BadRepIP' }
+        { 'UserLoggedIn' -eq $data.operation -and $hosting -eq $true } { $data.operation = 'HostedIP' }
         { 'UserLoggedIn' -eq $data.operation -and $Country -notin $AllowedLocations -and $data.ResultStatus -eq 'Success' -and $TableObj.ResultStatusDetail -eq 'Success' } { $data.operation = 'UserLoggedInFromUnknownLocation' }
         { 'UserloggedIn' -eq $data.operation -and $data.UserType -eq 2 -and $data.ResultStatus -eq 'Success' -and $TableObj.ResultStatusDetail -eq 'Success' } { $data.operation = 'AdminLoggedIn' }
         default { break }
@@ -63,8 +65,8 @@ function Invoke-CippWebhookProcessing {
         $Dos = $AlertSetting.execution | ConvertFrom-Json
         if ($data.operation -notin $Ifs.selection -and $ifs.selection -ne 'AnyAlert' ) {
             Write-Host 'Not an operation to do anything for. storing IP info'
-            Write-Host 'Add IP and potential location to knownlocation db for this specific user.'
             if ($data.ClientIP -and $data.operation -like '*LoggedIn*') {
+                Write-Host 'Add IP and potential location to knownlocation db for this specific user.'
                 $IP = $data.ClientIP
                 if ($IP -match '^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}:\d+$') {
                     $IP = $IP -replace ':\d+$', '' # Remove the port number if present
@@ -111,12 +113,12 @@ function Invoke-CippWebhookProcessing {
             foreach ($action in $dos) {
                 Write-Host "this is our action: $($action | ConvertTo-Json -Depth 15 -Compress))"
                 switch ($action.execute) {
-                    'generateemail' {
-                        $GenerateEmail = New-CIPPAlertTemplate -format 'html' -data $Data
+                    'generatemail' {
+                        $GenerateEmail = New-CIPPAlertTemplate -format 'html' -data $Data -LocationInfo $Location
                         Send-CIPPAlert -Type 'email' -Title $GenerateEmail.title -HTMLContent $GenerateEmail.htmlcontent -TenantFilter $TenantFilter
                     }  
                     'generatePSA' {
-                        $GenerateEmail = New-CIPPAlertTemplate -format 'html'-data $Data
+                        $GenerateEmail = New-CIPPAlertTemplate -format 'html'-data $Data -LocationInfo $Location
                         Send-CIPPAlert -Type 'psa' -Title $GenerateEmail.title -HTMLContent $GenerateEmail.htmlcontent -TenantFilter $TenantFilter
                     }
                     'generateWebhook' {
