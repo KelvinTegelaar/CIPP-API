@@ -132,7 +132,7 @@ function Invoke-CippWebhookProcessing {
                             PotentialHosting = $hosting
                             PotentialASName  = $ASName
                         } | ConvertTo-Json -Depth 15 -Compress
-                        Send-CIPPAlert -Type 'webhook' -Title $title -JSONContent $JsonContent -TenantFilter $TenantFilter
+                        Send-CIPPAlert -Type 'webhook' -Title $GenerateJSON.Title -JSONContent $JsonContent -TenantFilter $TenantFilter
                     }
                     'disableUser' {
                         Set-CIPPSignInState -TenantFilter $TenantFilter -User $data.UserId -AccountEnabled $false -APIName 'Alert Engine' -ExecutingUser 'Alert Engine'
