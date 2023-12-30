@@ -11,6 +11,8 @@ function Invoke-CippWebhookProcessing {
     )
     $ConfigTable = get-cipptable -TableName 'SchedulerConfig'
     $LocationTable = Get-CIPPTable -TableName 'knownlocationdb'
+    $Alertconfig = Get-CIPPAzDataTableEntity @ConfigTable -Filter "Tenant eq '$tenantfilter'"
+
     if ($data.userId -eq 'Not Available') { $data.userId = $data.userKey }
     if ($data.Userkey -eq 'Not Available') { $data.Userkey = $data.userId }
     if ($data.clientip) {
@@ -19,12 +21,11 @@ function Invoke-CippWebhookProcessing {
         #If we have a location, we use that. If not, we perform a lookup in the GeoIP database.
         if ($Location) {
             Write-Host 'Using known location'
-            $Country = $Location.CountryOrRegion
+            $Country = $Location.CountryCode
             $City = $Location.City
             $Proxy = $Location.Proxy
             $hosting = $Location.Hosting
             $ASName = $Location.ASName
-            
         } else {
             Write-Host 'We have to do a lookup'
             if ($data.clientip -match '^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}:\d+$') {
@@ -53,6 +54,8 @@ function Invoke-CippWebhookProcessing {
         return ''
     }
 
+    $AllowedLocations = ($Alertconfig.if | ConvertFrom-Json).AllowedLocations.value
+
     Write-Host "Operation: $($data.operation)"
     switch ($data.operation) {
         { 'UserLoggedIn' -eq $data.operation -and $proxy -eq $true } { $data.operation = 'BadRepIP' }
@@ -63,7 +66,6 @@ function Invoke-CippWebhookProcessing {
     }
     Write-Host "Rewrote to operation: $($data.operation)"
     #Check if we actually need to do anything, and if not, break away.
-    $Alertconfig = Get-CIPPAzDataTableEntity @ConfigTable -Filter "Tenant eq '$tenantfilter'"
     foreach ($AlertSetting in $Alertconfig) {
         $ifs = $AlertSetting.If | ConvertFrom-Json
         $Dos = $AlertSetting.execution | ConvertFrom-Json

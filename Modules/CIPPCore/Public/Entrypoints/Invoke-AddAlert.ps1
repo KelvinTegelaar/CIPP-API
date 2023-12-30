@@ -81,8 +81,8 @@ Function Invoke-AddAlert {
                 }
                 $CompleteObject = @{
                     Tenant       = [string]$tenant
-                    if           = [string](ConvertTo-Json -Compress -InputObject $Request.body.ifs)
-                    execution    = [string](ConvertTo-Json -Compress -InputObject $Request.body.do)
+                    if           = [string](ConvertTo-Json -Depth 10 -Compress -InputObject $Request.body.ifs)
+                    execution    = [string](ConvertTo-Json -Depth 10 -Compress -InputObject $Request.body.do)
                     type         = 'WebhookAlert'
                     RowKey       = [string](New-Guid)
                     PartitionKey = 'WebhookAlert'
