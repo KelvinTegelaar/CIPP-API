@@ -21,6 +21,10 @@ function Invoke-CippWebhookProcessing {
             Write-Host 'Using known location'
             $Country = $Location.CountryOrRegion
             $City = $Location.City
+            $Proxy = $Location.Proxy
+            $hosting = $Location.Hosting
+            $ASName = $Location.ASName
+            
         } else {
             Write-Host 'We have to do a lookup'
             if ($data.clientip -match '^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}:\d+$') {
@@ -28,7 +32,7 @@ function Invoke-CippWebhookProcessing {
             }
             $Location = Get-CIPPGeoIPLocation -IP $data.clientip
             $Country = if ($Location.countryCode) { $Location.CountryCode } else { 'Unknown' }
-            $City = if ($Location.cityName) { $Location.cityName } else { 'Unknown' }
+            $City = if ($Location.city) { $Location.cityName } else { 'Unknown' }
             $Proxy = if ($Location.proxy) { $Location.proxy } else { 'Unknown' }
             $hosting = if ($Location.hosting) { $Location.hosting } else { 'Unknown' }
             $ASName = if ($Location.asName) { $Location.asName } else { 'Unknown' }
@@ -161,12 +165,12 @@ function Invoke-CippWebhookProcessing {
                         Write-Host "Using $($action.connectionstring) as connectionstring to ship data"
                         $Context = New-AzDataTableContext -ConnectionString $action.ConnectionString -TableName 'AuditLog'
                         Write-Host 'Creating table if it does not exist'
-                        New-AzDataTable -Context $Context
+                        New-AzDataTable -Context $Context | Out-Null
                         Write-Host 'Uploading data to table'
                         $TableObj = @{
                             RowKey       = [string]$data.id
-                            PartitionKey = [string]$data.tenant
-                            Tenant       = [string]$data.tenant
+                            PartitionKey = [string]$TenantFilter
+                            Tenant       = [string]$tenantfilter
                             Operation    = [string]$data.operation
                             RawData      = [string]($data | ConvertTo-Json -Depth 15 -Compress)
                             IP           = [string]$data.clientip
