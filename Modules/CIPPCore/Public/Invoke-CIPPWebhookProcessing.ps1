@@ -158,8 +158,11 @@ function Invoke-CippWebhookProcessing {
                         Write-LogMessage -API 'BECRemediate' -tenant $tenantfilter -message "Executed Remediation for  $username" -sev 'Info'
                     }
                     'store' {
+                        Write-Host "Using $($action.connectionstring) as connectionstring to ship data"
                         $Context = New-AzDataTableContext -ConnectionString $action.ConnectionString -TableName 'AuditLog'
-                        New-AzDataTable -Context $Context | Out-Null
+                        Write-Host 'Creating table if it does not exist'
+                        New-AzDataTable -Context $Context
+                        Write-Host 'Uploading data to table'
                         $TableObj = @{
                             RowKey       = [string]$data.id
                             PartitionKey = [string]$data.tenant
