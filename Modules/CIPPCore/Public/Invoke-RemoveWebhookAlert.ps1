@@ -23,14 +23,17 @@ Function Invoke-RemoveWebhookAlert {
         } else {
             if ($Request.query.TenantFilter -eq 'AllTenants') {
                 $Tenants = Get-Tenants -IncludeAll -IncludeErrors | Select-Object -ExpandProperty defaultDomainName
-                $CompleteObject = @{
-                    tenant       = 'AllTenants'
-                    type         = 'webhookcreation'
-                    RowKey       = 'AllTenantsWebhookCreation'
-                    PartitionKey = 'webhookcreation'
+                try {
+                    $CompleteObject = @{
+                        tenant       = 'AllTenants'
+                        type         = 'webhookcreation'
+                        RowKey       = 'AllTenantsWebhookCreation'
+                        PartitionKey = 'webhookcreation'
+                    }
+                    Remove-AzDataTableEntity @Table -Entity $CompleteObject -ErrorAction SilentlyContinue | Out-Null
+                } catch {
+                    #
                 }
-                Remove-AzDataTableEntity @Table -Entity $CompleteObject -ErrorAction SilentlyContinue | Out-Null
-                
             } else {
                 $Tenants = $Request.query.TenantFilter
             }
