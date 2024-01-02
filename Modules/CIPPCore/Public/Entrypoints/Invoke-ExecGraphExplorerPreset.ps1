@@ -42,6 +42,7 @@ Function Invoke-ExecGraphExplorerPreset {
     try {
         $Success = $false
         $Table = Get-CIPPTable -TableName 'GraphPresets'
+        $Message = '{0} preset succeeded' -f $Request.Body.Action
         if ($Request.Body.Action -eq 'Copy') {
             Add-CIPPAzDataTableEntity @Table -Entity $Preset
             $Success = $true
@@ -53,7 +54,6 @@ Function Invoke-ExecGraphExplorerPreset {
                 } elseif ($Request.Body.Action -eq 'Save') {
                     Add-CIPPAzDataTableEntity @Table -Entity $Preset -Force
                 }
-                $Message = '{0} preset succeeded' -f $Request.Body.Action
                 $Success = $true
             } else {
                 $Message = 'Error: You can only modify your own presets.'
