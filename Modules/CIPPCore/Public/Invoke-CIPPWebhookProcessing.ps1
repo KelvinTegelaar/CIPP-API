@@ -35,7 +35,7 @@ function Invoke-CippWebhookProcessing {
             $Country = if ($Location.CountryCode) { $Location.CountryCode } else { 'Unknown' }
             $City = if ($Location.City) { $Location.City } else { 'Unknown' }
             $Proxy = if ($Location.Proxy) { $Location.Proxy } else { 'Unknown' }
-            $hosting = if ($Location.hosting) { $Location.Hosting } else { 'Unknown' }
+            $hosting = if ($Location.Hosting) { $Location.Hosting } else { 'Unknown' }
             $ASName = if ($Location.ASName) { $Location.ASName } else { 'Unknown' }
         }
     }
