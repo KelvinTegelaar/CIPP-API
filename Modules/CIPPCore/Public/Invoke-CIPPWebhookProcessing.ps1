@@ -21,7 +21,7 @@ function Invoke-CippWebhookProcessing {
         #If we have a location, we use that. If not, we perform a lookup in the GeoIP database.
         if ($Location) {
             Write-Host 'Using known location'
-            $Country = $Location.CountryCode
+            $Country = $Location.CountryOrRegion
             $City = $Location.City
             $Proxy = $Location.Proxy
             $hosting = $Location.Hosting
@@ -34,8 +34,8 @@ function Invoke-CippWebhookProcessing {
             $Location = Get-CIPPGeoIPLocation -IP $data.clientip
             $Country = if ($Location.CountryCode) { $Location.CountryCode } else { 'Unknown' }
             $City = if ($Location.City) { $Location.City } else { 'Unknown' }
-            $Proxy = if ($Location.Proxy) { $Location.Proxy } else { 'Unknown' }
-            $hosting = if ($Location.Hosting) { $Location.Hosting } else { 'Unknown' }
+            $Proxy = if ($Location.Proxy -ne $null) { $Location.Proxy } else { 'Unknown' }
+            $hosting = if ($Location.Hosting -ne $null) { $Location.Hosting } else { 'Unknown' }
             $ASName = if ($Location.ASName) { $Location.ASName } else { 'Unknown' }
         }
     }
