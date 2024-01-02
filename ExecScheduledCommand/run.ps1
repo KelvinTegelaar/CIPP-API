@@ -10,8 +10,7 @@ Write-Host 'started task'
 try {
     try {
         $results = & $QueueItem.command @commandParameters
-    }
-    catch {
+    } catch {
         $results = "Task Failed: $($_.Exception.Message)"
 
     }
@@ -31,8 +30,7 @@ try {
     if ($StoredResults.Length -gt 64000 -or $task.Tenant -eq 'AllTenants') {
         $StoredResults = @{ Results = 'The results for this query are too long to store in this table, or the query was meant for All Tenants. Please use the options to send the results to another target to be able to view the results. ' } | ConvertTo-Json -Compress
     }
-}
-catch {
+} catch {
     $errorMessage = $_.Exception.Message
     if ($task.Recurrence -gt 0) { $State = 'Failed - Planned' } else { $State = 'Failed' }
     Update-AzDataTableEntity @Table -Entity @{
@@ -71,8 +69,7 @@ if ($task.Recurrence -le '0' -or $task.Recurrence -eq $null) {
         Results      = "$StoredResults"
         TaskState    = 'Completed'
     }
-}
-else {
+} else {
     $nextRun = (Get-Date).AddDays($task.Recurrence)
     $nextRunUnixTime = [int64]($nextRun - (Get-Date '1/1/1970')).TotalSeconds
     Update-AzDataTableEntity @Table -Entity @{
