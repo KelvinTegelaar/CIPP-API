@@ -199,6 +199,7 @@ function Invoke-CippWebhookProcessing {
                             PotentialProxy   = $Proxy
                             PotentialHosting = $hosting
                             PotentialASName  = $ASName
+                            ActionsTaken     = [string]($ActionResults | ConvertTo-Json -Depth 15 -Compress)
                         } | ConvertTo-Json -Depth 15 -Compress
                         Send-CIPPAlert -Type 'webhook' -Title $GenerateJSON.Title -JSONContent $JsonContent -TenantFilter $TenantFilter
                     }
