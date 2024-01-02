@@ -116,32 +116,11 @@ function Invoke-CippWebhookProcessing {
         }
 
         if ($ConditionMet) {
-            foreach ($action in $dos) {
+            #we're doing two loops, one first to collect the results of any action taken, then the second to pass those results via email etc.
+
+            $ActionResults = foreach ($action in $dos) {
                 Write-Host "this is our action: $($action | ConvertTo-Json -Depth 15 -Compress))"
                 switch ($action.execute) {
-                    'generatemail' {
-                        $GenerateEmail = New-CIPPAlertTemplate -format 'html' -data $Data -LocationInfo $Location
-                        Send-CIPPAlert -Type 'email' -Title $GenerateEmail.title -HTMLContent $GenerateEmail.htmlcontent -TenantFilter $TenantFilter
-                    }  
-                    'generatePSA' {
-                        $GenerateEmail = New-CIPPAlertTemplate -format 'html'-data $Data -LocationInfo $Location
-                        Send-CIPPAlert -Type 'psa' -Title $GenerateEmail.title -HTMLContent $GenerateEmail.htmlcontent -TenantFilter $TenantFilter
-                    }
-                    'generateWebhook' {
-                        $GenerateJSON = New-CIPPAlertTemplate -format 'json' -data $Data
-                        $JsonContent = @{
-                            Title            = $GenerateJSON.Title
-                            ActionUrl        = $GenerateJSON.ButtonUrl
-                            RawData          = $Data
-                            IP               = $data.ClientIP
-                            PotentialCountry = $Country
-                            PotentialCity    = $City
-                            PotentialProxy   = $Proxy
-                            PotentialHosting = $hosting
-                            PotentialASName  = $ASName
-                        } | ConvertTo-Json -Depth 15 -Compress
-                        Send-CIPPAlert -Type 'webhook' -Title $GenerateJSON.Title -JSONContent $JsonContent -TenantFilter $TenantFilter
-                    }
                     'disableUser' {
                         Set-CIPPSignInState -TenantFilter $TenantFilter -User $data.UserId -AccountEnabled $false -APIName 'Alert Engine' -ExecutingUser 'Alert Engine'
                     }
@@ -161,6 +140,7 @@ function Invoke-CippWebhookProcessing {
                         } else {
                             "No Inbox Rules found for $username. We have not disabled any rules."
                         }
+                        "Completed BEC Remediate for $username"
                         Write-LogMessage -API 'BECRemediate' -tenant $tenantfilter -message "Executed Remediation for  $username" -sev 'Info'
                     }
                     'store' {
@@ -183,6 +163,7 @@ function Invoke-CippWebhookProcessing {
                             ASName       = [string]$ASName
                         }
                         Add-CIPPAzDataTableEntity -Context $Context -Entity $TableObj
+                        'Succesfully stored log'
                     }
                     'cippcommand' {
                         $CommandSplat = @{}
@@ -193,6 +174,33 @@ function Invoke-CippWebhookProcessing {
                         if ($CommandSplat['user']) { $CommandSplat['user'] = $data.userid }
                         if ($CommandSplat['username']) { $CommandSplat['username'] = $data.userid }
                         & $action.command.value @CommandSplat
+                    }
+                }
+            }
+            foreach ($action in $dos) { 
+                switch ($action.execute) {
+                    'generatemail' {
+                        $GenerateEmail = New-CIPPAlertTemplate -format 'html' -data $Data -LocationInfo $Location -ActionResults $ActionResults
+                        Send-CIPPAlert -Type 'email' -Title $GenerateEmail.title -HTMLContent $GenerateEmail.htmlcontent -TenantFilter $TenantFilter
+                    }  
+                    'generatePSA' {
+                        $GenerateEmail = New-CIPPAlertTemplate -format 'html'-data $Data -LocationInfo $Location -ActionResults $ActionResults
+                        Send-CIPPAlert -Type 'psa' -Title $GenerateEmail.title -HTMLContent $GenerateEmail.htmlcontent -TenantFilter $TenantFilter
+                    }
+                    'generateWebhook' {
+                        $GenerateJSON = New-CIPPAlertTemplate -format 'json' -data $Data -ActionResults $ActionResults
+                        $JsonContent = @{
+                            Title            = $GenerateJSON.Title
+                            ActionUrl        = $GenerateJSON.ButtonUrl
+                            RawData          = $Data
+                            IP               = $data.ClientIP
+                            PotentialCountry = $Country
+                            PotentialCity    = $City
+                            PotentialProxy   = $Proxy
+                            PotentialHosting = $hosting
+                            PotentialASName  = $ASName
+                        } | ConvertTo-Json -Depth 15 -Compress
+                        Send-CIPPAlert -Type 'webhook' -Title $GenerateJSON.Title -JSONContent $JsonContent -TenantFilter $TenantFilter
                     }
                 }
             }
