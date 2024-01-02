@@ -40,9 +40,11 @@ Function Invoke-ExecGraphExplorerPreset {
     }
 
     try {
+        $Success = $false
         $Table = Get-CIPPTable -TableName 'GraphPresets'
         if ($Request.Body.Action -eq 'Copy') {
             Add-CIPPAzDataTableEntity @Table -Entity $Preset
+            $Success = $true
         } else {
             $Entity = Get-CIPPAzDataTableEntity @Table -Filter "RowKey eq '$Id'"
             if ($Entity.Owner -eq $Username ) {
@@ -51,16 +53,26 @@ Function Invoke-ExecGraphExplorerPreset {
                 } elseif ($Request.Body.Action -eq 'Save') {
                     Add-CIPPAzDataTableEntity @Table -Entity $Preset -Force
                 }
+                $Message = '{0} preset succeeded' -f $Request.Body.Action
+                $Success = $true
+            } else {
+                $Message = 'Error: You can only modify your own presets.'
+                $Success = $false
             }
         }
 
         $StatusCode = [HttpStatusCode]::OK
     } catch {
+        $Success = $false
+        $Message = $_.Exception.Message
         $StatusCode = [HttpStatusCode]::BadRequest
     }
     # Associate values to output bindings by calling 'Push-OutputBinding'.
     Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
             StatusCode = $StatusCode
-            Body       = @{ Results = ('{0} preset succeeded' -f $Request.Body.Action) }
+            Body       = @{
+                Results = $Message
+                Success = $Success
+            }
         })
 }

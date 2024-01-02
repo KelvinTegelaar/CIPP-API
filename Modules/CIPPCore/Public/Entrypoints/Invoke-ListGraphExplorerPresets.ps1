@@ -19,10 +19,11 @@ Function Invoke-ListGraphExplorerPresets {
         $Presets = Get-CIPPAzDataTableEntity @Table -Filter "Owner eq '$Username' or IsShared eq true"
         $Results = foreach ($Preset in $Presets) {
             [PSCustomObject]@{
-                id       = $Preset.Id
-                name     = $Preset.name
-                IsShared = $Preset.IsShared
-                params   = ConvertFrom-Json -InputObject $Preset.Params
+                id         = $Preset.Id
+                name       = $Preset.name
+                IsShared   = $Preset.IsShared
+                IsMyPreset = $Preset.Owner -eq $Username
+                params     = ConvertFrom-Json -InputObject $Preset.Params
             }
         }
     } catch {
