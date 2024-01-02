@@ -55,7 +55,7 @@ function Invoke-CippWebhookProcessing {
     }
 
     $AllowedLocations = ($Alertconfig.if | ConvertFrom-Json).AllowedLocations.value
-
+    Write-Host "These are the allowed locations: $($AllowedLocations -join ',')"
     Write-Host "Operation: $($data.operation)"
     switch ($data.operation) {
         { 'UserLoggedIn' -eq $data.operation -and $proxy -eq $true } { $data.operation = 'BadRepIP' }
