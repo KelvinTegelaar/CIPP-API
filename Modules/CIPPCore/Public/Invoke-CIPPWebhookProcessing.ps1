@@ -55,12 +55,15 @@ function Invoke-CippWebhookProcessing {
     }
 
     $AllowedLocations = ($Alertconfig.if | ConvertFrom-Json).allowedcountries.value
-    Write-Host "These are the allowed locations: $($Alertconfig.if)"
+    Write-Host "These are the allowed locations: $($AllowedLocations)"
     Write-Host "Operation: $($data.operation)"
     switch ($data.operation) {
         { 'UserLoggedIn' -eq $data.operation -and $proxy -eq $true } { $data.operation = 'BadRepIP' }
         { 'UserLoggedIn' -eq $data.operation -and $hosting -eq $true } { $data.operation = 'HostedIP' }
-        { 'UserLoggedIn' -eq $data.operation -and $Country -notin $AllowedLocations -and $data.ResultStatus -eq 'Success' -and $TableObj.ResultStatusDetail -eq 'Success' } { $data.operation = 'UserLoggedInFromUnknownLocation' }
+        { 'UserLoggedIn' -eq $data.operation -and $Country -notin $AllowedLocations -and $data.ResultStatus -eq 'Success' -and $TableObj.ResultStatusDetail -eq 'Success' } {
+            Write-Host "$($country) is not in $($AllowedLocations)"
+            $data.operation = 'UserLoggedInFromUnknownLocation' 
+        }
         { 'UserloggedIn' -eq $data.operation -and $data.UserType -eq 2 -and $data.ResultStatus -eq 'Success' -and $TableObj.ResultStatusDetail -eq 'Success' } { $data.operation = 'AdminLoggedIn' }
         default { break }
     }
