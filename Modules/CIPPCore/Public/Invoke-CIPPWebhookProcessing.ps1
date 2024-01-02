@@ -15,7 +15,7 @@ function Invoke-CippWebhookProcessing {
     if (!$Alertconfig) {
         $Alertconfig = Get-CIPPAzDataTableEntity @ConfigTable -Filter "Tenant eq 'AllTenants'"
     }
-    
+
     if ($data.userId -eq 'Not Available') { $data.userId = $data.userKey }
     if ($data.Userkey -eq 'Not Available') { $data.Userkey = $data.userId }
     if ($data.clientip) {
@@ -75,7 +75,7 @@ function Invoke-CippWebhookProcessing {
     foreach ($AlertSetting in $Alertconfig) {
         $ifs = $AlertSetting.If | ConvertFrom-Json
         $Dos = $AlertSetting.execution | ConvertFrom-Json
-        if ($data.operation -notin $Ifs.selection -and $ifs.selection -ne 'AnyAlert' ) {
+        if ($data.operation -notin $Ifs.selection -and $ifs.selection -ne 'AnyAlert' -and ($ifs.count -le 1 -and $ifs.selection -ne 'customField')) {
             Write-Host 'Not an operation to do anything for. storing IP info'
             if ($data.ClientIP -and $data.operation -like '*LoggedIn*') {
                 Write-Host 'Add IP and potential location to knownlocation db for this specific user.'
