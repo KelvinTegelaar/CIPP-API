@@ -54,7 +54,7 @@ function Invoke-CippWebhookProcessing {
         return ''
     }
 
-    $AllowedLocations = ($Alertconfig.if | ConvertFrom-Json).AllowedLocations.value
+    $AllowedLocations = ($Alertconfig.if | ConvertFrom-Json)
     Write-Host "These are the allowed locations: $($AllowedLocations -join ',')"
     Write-Host "Operation: $($data.operation)"
     switch ($data.operation) {
