@@ -32,11 +32,11 @@ function Invoke-CippWebhookProcessing {
                 $data.clientip = $data.clientip -replace ':\d+$', '' # Remove the port number if present
             }
             $Location = Get-CIPPGeoIPLocation -IP $data.clientip
-            $Country = if ($Location.countryCode) { $Location.CountryCode } else { 'Unknown' }
-            $City = if ($Location.city) { $Location.cityName } else { 'Unknown' }
-            $Proxy = if ($Location.proxy) { $Location.proxy } else { 'Unknown' }
-            $hosting = if ($Location.hosting) { $Location.hosting } else { 'Unknown' }
-            $ASName = if ($Location.asName) { $Location.asName } else { 'Unknown' }
+            $Country = if ($Location.CountryCode) { $Location.CountryCode } else { 'Unknown' }
+            $City = if ($Location.City) { $Location.City } else { 'Unknown' }
+            $Proxy = if ($Location.Proxy) { $Location.Proxy } else { 'Unknown' }
+            $hosting = if ($Location.hosting) { $Location.Hosting } else { 'Unknown' }
+            $ASName = if ($Location.ASName) { $Location.ASName } else { 'Unknown' }
         }
     }
     $TableObj = [PSCustomObject]::new()
@@ -55,7 +55,7 @@ function Invoke-CippWebhookProcessing {
     }
 
     $AllowedLocations = ($Alertconfig.if | ConvertFrom-Json)
-    Write-Host "These are the allowed locations: $($AllowedLocations -join ',')"
+    Write-Host "These are the allowed locations: $($Alertconfig.if)"
     Write-Host "Operation: $($data.operation)"
     switch ($data.operation) {
         { 'UserLoggedIn' -eq $data.operation -and $proxy -eq $true } { $data.operation = 'BadRepIP' }
