@@ -11,7 +11,6 @@ Function Invoke-ExecGDAPInvite {
     Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -message 'Accessed this API' -Sev 'Debug'
 
     $RoleMappings = $Request.body.gdapRoles
-    $Results = [System.Collections.Generic.List[string]]::new()
 
     if ($RoleMappings.roleDefinitionId -contains '62e90394-69f5-4237-9190-012177145e10') {
         $AutoExtendDuration = 'PT0S'
@@ -48,29 +47,32 @@ Function Invoke-ExecGDAPInvite {
 
             if ($NewRelationshipRequest.action -eq 'lockForApproval') {
                 $InviteUrl = "https://admin.microsoft.com/AdminPortal/Home#/partners/invitation/granularAdminRelationships/$($NewRelationship.id)"
+                $Uri = ([System.Uri]$TriggerMetadata.Headers.referer)
+                $OnboardingUrl = $Uri.AbsoluteUri.Replace($Uri.PathAndQuery, '/tenant/administration/tenant-onboarding-wizard?tableFilter=Complex: id eq {0}' -f $NewRelationship.id)
 
                 $InviteEntity = [PSCustomObject]@{
-                    'PartitionKey' = 'invite'
-                    'RowKey'       = $NewRelationship.id
-                    'InviteUrl'    = $InviteUrl
-                    'RoleMappings' = [string](@($RoleMappings) | ConvertTo-Json -Depth 10 -Compress)
+                    'PartitionKey'  = 'invite'
+                    'RowKey'        = $NewRelationship.id
+                    'InviteUrl'     = $InviteUrl
+                    'OnboardingUrl' = $OnboardingUrl
+                    'RoleMappings'  = [string](@($RoleMappings) | ConvertTo-Json -Depth 10 -Compress)
                 }
                 Add-CIPPAzDataTableEntity @Table -Entity $InviteEntity
 
-                $Results.add('GDAP relationship invite created. Copy the URL below and log in as a Global Admin for the new tenant to approve the invite.')
+                $Message = 'GDAP relationship invite created. Log in as a Global Admin in the new tenant to approve the invite.'
             } else {
-                $Results.add('Error creating GDAP relationship request')
+                $Message = 'Error creating GDAP relationship request'
             }
         }
     } catch {
-        $Results.add('Error creating GDAP relationship')
+        $Message = 'Error creating GDAP relationship'
         Write-Host "GDAP ERROR: $($_.Exception.Message)"
     }
 
     Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -message "Created GDAP Invite - $InviteUrl" -Sev 'Info'
 
     $body = @{
-        Results = @($Results)
+        Message = $Message
         Invite  = $InviteEntity
     }
     Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{

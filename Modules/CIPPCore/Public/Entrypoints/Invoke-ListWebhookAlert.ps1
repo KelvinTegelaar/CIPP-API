@@ -10,10 +10,9 @@ Function Invoke-ListWebhookAlert {
 
     $APIName = $TriggerMetadata.FunctionName
     Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -message 'Accessed this API' -Sev 'Debug'
-    $WebhookTable = Get-CIPPTable -TableName webhookTable
-    $WebhookRow = Get-CIPPAzDataTableEntity @WebhookTable
-
-    # Associate values to output bindings by calling 'Push-OutputBinding'.
+    $Table = get-cipptable -TableName 'SchedulerConfig'
+    $WebhookRow = Get-CIPPAzDataTableEntity @Table | Where-Object -Property PartitionKey -EQ 'WebhookAlert' 
+    
     Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
             StatusCode = [HttpStatusCode]::OK
             Body       = @($WebhookRow)
