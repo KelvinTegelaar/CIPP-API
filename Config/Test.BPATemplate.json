@@ -1,17 +1,19 @@
 {
-  "name": "Test",
-  "style": "Table",
+  "name": "CIPP Best Practices v1.0 - Tenant view",
+  "style": "Tenant",
   "Fields": [
     {
-      "name": "GDAP Status",
+      "name": "PasswordNeverExpires",
       "UseExistingInfo": true,
+      "StoreAs": "bool",
       "FrontendFields": [
         {
-          "name": "GDAP Status",
-          "value": "delegatedPrivilegeStatus",
-          "formatter": "string"
+          "name": "Password Never Expires",
+          "value": "PasswordNeverExpires",
+          "formatter": "bool",
+          "desc": "This setting shows if your environment has enabled the password never expires setting. This setting is expected to be set to 'No'"
         }
       ]
-    }
+    },
   ]
 }
