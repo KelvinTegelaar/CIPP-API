@@ -5,7 +5,8 @@ function Push-CIPPAlertSecDefaultsUpsell {
         $QueueItem,
         $TriggerMetadata
     )
-    $LastRunTable = $QueueItem.LastRunTable
+    $LastRunTable = Get-CIPPTable -Table AlertLastRun
+
 
     try {
         $Filter = "RowKey eq 'SecDefaultsUpsell' and PartitionKey eq '{0}'" -f $QueueItem.tenantid
