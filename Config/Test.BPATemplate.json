@@ -14,6 +14,6 @@
           "desc": "This setting shows if your environment has enabled the password never expires setting. This setting is expected to be set to 'No'"
         }
       ]
-    },
+    }
   ]
 }
