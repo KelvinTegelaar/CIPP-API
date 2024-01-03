@@ -23,7 +23,6 @@ if ($Request.query.CIPPID -in $Webhooks.RowKey) {
     } else {
         # Auditlog Subscriptions
         $Webhookinfo = $Webhooks | Where-Object -Property RowKey -EQ $Request.query.CIPPID
-        $operations = $Webhookinfo.Operations -split ','
         foreach ($ReceivedItem In ($Request.body)) {
             $ReceivedItem = [pscustomobject]$ReceivedItem
             $TenantFilter = (Get-Tenants | Where-Object -Property customerId -EQ $ReceivedItem.TenantId).defaultDomainName
@@ -33,15 +32,7 @@ if ($Request.query.CIPPID -in $Webhooks.RowKey) {
             Write-Host "Operations to process for this client: $($Webhookinfo.Operations)"
             foreach ($Item in $Data) {
                 Write-Host "Processing $($item.operation)"
-                if ($item.operation -in $operations) {
-                    Invoke-CippWebhookProcessing -TenantFilter $TenantFilter -Data $Item -CIPPPURL $url -allowedlocations $Webhookinfo.AllowedLocations -Operations $operations
-                }
-                if ($item.operation -eq 'UserLoggedIn' -and 'UserLoggedInFromUnknownLocation' -in $operations) {
-                    Invoke-CippWebhookProcessing -TenantFilter $TenantFilter -Data $Item -CIPPPURL $url -allowedlocations $Webhookinfo.AllowedLocations -Operations $operations
-                }
-                if ($item.operation -eq 'UserLoggedIn' -and 'AdminLoggedIn' -in $operations) {
-                    Invoke-CippWebhookProcessing -TenantFilter $TenantFilter -Data $Item -CIPPPURL $url -allowedlocations $Webhookinfo.AllowedLocations -Operations $operations
-                }
+                Invoke-CippWebhookProcessing -TenantFilter $TenantFilter -Data $Item -CIPPPURL $url
             }
         }
     }
