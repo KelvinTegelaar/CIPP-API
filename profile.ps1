@@ -13,11 +13,11 @@
 # Remove this if you are not planning on using MSI or Azure PowerShell.
 
 # Import modules
-@('CippCore','CippExtensions','Az.KeyVault','Az.Accounts') | ForEach-Object {
+@('CippCore', 'CippExtensions', 'Az.KeyVault', 'Az.Accounts') | ForEach-Object {
     try {
         Import-Module -Name $_ -ErrorAction Stop
     } catch {
-        Write-LogMessage -message "Failed to import module $($_): $_.Exception.Message" -Sev 'CRITICAL'
+        Write-LogMessage -message "Failed to import module $($_): $_.Exception.Message" -Sev 'debug'
         $_.Exception.Message
     }
 }
@@ -32,7 +32,7 @@ try {
         $Auth = Get-CIPPAuthentication
     }
 } catch {
-    Write-LogMessage -message "Could not retrieve keys from Keyvault: $($_.Exception.Message)" -Sev 'CRITICAL'
+    Write-LogMessage -message "Could not retrieve keys from Keyvault: $($_.Exception.Message)" -Sev 'debug'
 }
 
 # Uncomment the next line to enable legacy AzureRm alias in Azure PowerShell.
