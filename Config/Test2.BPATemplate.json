@@ -19,6 +19,17 @@
         "passwordValidityPeriodInDays"
       ],
       "URL": "https://graph.microsoft.com/beta/domains"
+    },
+    {
+      "name": "GDAP",
+      "UseExistingInfo": true,
+      "FrontendFields": [
+        {
+          "name": "Delegated Privilege Status",
+          "value": "delegatedPrivilegeStatus",
+          "formatter": "string"
+        }
+      ]
     }
   ]
 }
