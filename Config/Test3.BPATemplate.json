@@ -1,0 +1,218 @@
+{
+  "name": "Test3",
+  "style": "Table",
+  "Fields": [
+    {
+      "name": "PasswordNeverExpires",
+      "UseExistingInfo": false,
+      "FrontendFields": [
+        {
+          "name": "Password Never Expires",
+          "value": "PasswordNeverExpires",
+          "formatter": "bool"
+        }
+      ],
+      "where": "$_.passwordValidityPeriodInDays -eq 2147483647",
+      "StoreAs": "bool",
+      "API": "Graph",
+      "ExtractFields": [
+        "passwordValidityPeriodInDays"
+      ],
+      "URL": "https://graph.microsoft.com/beta/domains"
+    },
+    {
+      "name": "OAuthAppConsent",
+      "UseExistingInfo": false,
+      "FrontendFields": [
+        {
+          "name": "OAuth App Consent",
+          "value": "OAuthAppConsent",
+          "formatter": "bool"
+        }
+      ],
+      "where": "'ManagePermissionGrantsForSelf.microsoft-user-default-legacy' -notin $_.defaultuserrolepermissions.permissionGrantPoliciesAssigned",
+      "StoreAs": "bool",
+      "API": "Graph",
+      "ExtractFields": [
+        "defaultuserrolepermissions"
+      ],
+      "URL": "https://graph.microsoft.com/v1.0/policies/authorizationPolicy?$select=defaultUserRolePermissions"
+    },
+    {
+      "name": "UnifiedAuditLog",
+      "UseExistingInfo": false,
+      "FrontendFields": [
+        {
+          "name": "Unified Audit Log",
+          "value": "UnifiedAuditLog",
+          "formatter": "bool"
+        }
+      ],
+      "StoreAs": "bool",
+      "API": "Exchange",
+      "ExtractFields": [
+        "UnifiedAuditLogIngestionEnabled"
+      ],
+      "Command": "Get-AdminAuditLogConfig"
+    },
+    {
+      "name": "MFANudgeState",
+      "UseExistingInfo": false,
+      "FrontendFields": [
+        {
+          "name": "MFA Registration Campaign Enabled",
+          "value": "MFANudgeState",
+          "formatter": "bool"
+        }
+      ],
+      "where": "$_.registrationEnforcement.authenticationMethodsRegistrationCampaign.state -eq 'Enabled'",
+      "StoreAs": "bool",
+      "API": "Graph",
+      "ExtractFields": [
+        "registrationEnforcement"
+      ],
+      "URL": "https://graph.microsoft.com/beta/policies/authenticationMethodsPolicy"
+    },
+    {
+      "name": "TAPEnabled",
+      "UseExistingInfo": false,
+      "FrontendFields": [
+        {
+          "name": "Temporary Access Pass Enabled",
+          "value": "TAPEnabled",
+          "formatter": "bool"
+        }
+      ],
+      "StoreAs": "bool",
+      "API": "Graph",
+      "ExtractFields": [
+        "State"
+      ],
+      "URL": "https://graph.microsoft.com/beta/policies/authenticationmethodspolicy/authenticationMethodConfigurations/TemporaryAccessPass"
+    },
+    {
+      "name": "SecureDefaultState",
+      "UseExistingInfo": false,
+      "FrontendFields": [
+        {
+          "name": "Secure Defaults State Enabled",
+          "value": "SecureDefaultState",
+          "formatter": "warnBool"
+        }
+      ],
+      "StoreAs": "bool",
+      "API": "Graph",
+      "ExtractFields": [
+        "IsEnabled"
+      ],
+      "URL": "https://graph.microsoft.com/beta/policies/identitySecurityDefaultsEnforcementPolicy"
+    },
+    {
+      "name": "AnonymousPrivacyReports",
+      "UseExistingInfo": false,
+      "FrontendFields": [
+        {
+          "name": "Anonymous Privacy Reports",
+          "value": "AnonymousPrivacyReports",
+          "formatter": "reverseBool"
+        }
+      ],
+      "where": "$_.displayConcealedNames -eq $false",
+      "StoreAs": "bool",
+      "API": "Graph",
+      "ExtractFields": [
+        "displayConcealedNames"
+      ],
+      "URL": "https://graph.microsoft.com/beta/admin/reportSettings"
+    },
+    {
+      "name": "MessageCopyforSentAsDisabled",
+      "UseExistingInfo": false,
+      "FrontendFields": [
+        {
+          "name": "Message Copy for Sent-As Disabled",
+          "value": "MessageCopyforSentAsDisabled",
+          "formatter": "table"
+        }
+      ],
+      "where": "$_.MessageCopyForSentAsEnabled -eq $false",
+      "StoreAs": "JSON",
+      "API": "Exchange",
+      "ExtractFields": [
+        "userprincipalname",
+        "messageCopyForSentAsEnabled"
+      ],
+      "Command": "Get-Mailbox"
+    },
+    {
+      "name": "SharedMailboxeswithenabledusers",
+      "UseExistingInfo": false,
+      "FrontendFields": [
+        {
+          "name": "Shared Mailboxes with enabled users",
+          "value": "SharedMailboxeswithenabledusers",
+          "formatter": "table"
+        }
+      ],
+      "where": "$_.accountDisabled -eq $false",
+      "StoreAs": "JSON",
+      "API": "Exchange",
+      "ExtractFields": [
+        "userprincipalname",
+        "accountDisabled"
+      ],
+      "Command": "Get-Mailbox"
+    },
+    {
+      "name": "Unusedlicenses",
+      "UseExistingInfo": false,
+      "FrontendFields": [
+        {
+          "name": "Unused licenses",
+          "value": "Unusedlicenses",
+          "formatter": "table"
+        }
+      ],
+      "where": "$_.availableUnits -gt 0",
+      "StoreAs": "JSON",
+      "API": "CIPPFunction",
+      "ExtractFields": [
+        "License",
+        "TotalLicenses",
+        "availableUnits",
+        "CountUsed"
+      ],
+      "Command": "Get-CIPPLicenseOverview"
+    },
+    {
+      "name": "CurrentSecureScore",
+      "UseExistingInfo": false,
+      "FrontendFields": [
+        {
+          "name": "Current Secure Score",
+          "value": "CurrentSecureScore.currentScore"
+        },
+        {
+          "name": "Max Secure Score",
+          "value": "CurrentSecureScore.maxScore"
+        },
+        {
+          "name": "Average Comparative Score (All Tenants)",
+          "value": "CurrentSecureScore.averageComparativeScores[0].averageScore"
+        },
+        {
+          "name": "Average Comparative Score (Similiar Size Tenants)",
+          "value": "CurrentSecureScore.averageComparativeScores[1].averageScore"
+        }
+      ],
+      "StoreAs": "JSON",
+      "API": "Graph",
+      "ExtractFields": [
+        "currentScore",
+        "maxScore",
+        "averageComparativeScores"
+      ],
+      "URL": "https://graph.microsoft.com/beta/security/secureScores?$top=1"
+    }
+  ]
+}
