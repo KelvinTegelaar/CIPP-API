@@ -6,7 +6,8 @@ function Invoke-CIPPStandardTAP {
     param($Tenant, $Settings)
     
     If ($Settings.remediate) {
-        Set-CIPPAuthenticationPolicy -Tenant $tenant -APIName 'Standards' -AuthenticationMethodId 'TemporaryAccessPass' -Enabled $true -TAPisUsableOnce $Settings.config
+        $TAPisUsableOnce = if ($Settings.config -match 'true') { $true } else { $false }
+        Set-CIPPAuthenticationPolicy -Tenant $tenant -APIName 'Standards' -AuthenticationMethodId 'TemporaryAccessPass' -Enabled $true -TAPisUsableOnce $TAPisUsableOnce
     }
 
     # This is ugly but done to avoid a second call to the Graph API
