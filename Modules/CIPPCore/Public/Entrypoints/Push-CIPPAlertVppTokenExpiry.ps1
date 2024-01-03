@@ -5,7 +5,8 @@ function Push-CIPPAlertVppTokenExpiry {
         $QueueItem,
         $TriggerMetadata
     )
-    $LastRunTable = $QueueItem.LastRunTable
+    $LastRunTable = Get-CIPPTable -Table AlertLastRun
+
 
     try {
         $Filter = "RowKey eq 'VppTokenExpiry' and PartitionKey eq '{0}'" -f $QueueItem.tenantid

@@ -5,7 +5,7 @@ function Push-CIPPAlertAppSecretExpiry {
         $QueueItem,
         $TriggerMetadata
     )
-    $LastRunTable = $QueueItem.LastRunTable
+    $LastRunTable = Get-CIPPTable -Table AlertLastRun
 
 
     try {
@@ -18,7 +18,7 @@ function Push-CIPPAlertAppSecretExpiry {
                     if ($App.passwordCredentials) {
                         foreach ($Credential in $App.passwordCredentials) {
                             if ($Credential.endDateTime -lt (Get-Date).AddDays(30) -and $Credential.endDateTime -gt (Get-Date).AddDays(-7)) {
-                                Write-AlertMessage -tenant $($QueueItem.tenant) -message ("Application '{0}' has secrets expiring on {1}" -f $App.displayName, $Credential.endDateTime)
+                               ("Application '{0}' has secrets expiring on {1}" -f $App.displayName, $Credential.endDateTime)
                             }
                         }
                     }
@@ -31,7 +31,7 @@ function Push-CIPPAlertAppSecretExpiry {
             Add-CIPPAzDataTableEntity @LastRunTable -Entity $LastRun -Force
         }
     } catch {
-        # Error handling
+        throw $_
     }
 }
 
