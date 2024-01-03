@@ -25,27 +25,32 @@ function Invoke-CIPPStandardcalDefault {
                 do {
                     # Get all calendars for the mailbox, retry if it fails
                     try {
-                        New-ExoRequest -tenantid $Tenant -cmdlet 'Get-MailboxFolderStatistics' -cmdParams @{identity = $Mailbox.UserPrincipalName; FolderScope = 'Calendar' } -Anchor $Mailbox.UserPrincipalName | 
+                        New-ExoRequest -tenantid $Tenant -cmdlet 'Get-MailboxFolderStatistics' -cmdParams @{identity = $Mailbox.UserPrincipalName; FolderScope = 'Calendar' } -Anchor $Mailbox.UserPrincipalName | Where-Object { $_.FolderType -eq 'Calendar' } |
                             # Set permissions for each calendar found
-                            Where-Object { $_.FolderType -eq 'Calendar' } | ForEach-Object {
+                            ForEach-Object {
                                 $SetRetryCount = 0
                                 do {
                                     try {
                                         New-ExoRequest -tenantid $Tenant -cmdlet 'Set-MailboxFolderPermission' -cmdparams @{Identity = "$($Mailbox.UserPrincipalName):$($_.FolderId)"; User = 'Default'; AccessRights = $Settings.permissionlevel } -Anchor $Mailbox.UserPrincipalName 
                                         Write-LogMessage -API 'Standards' -tenant $Tenant -message "Set default folder permission for $($Mailbox.UserPrincipalName):\$($_.Name) to $($Settings.permissionlevel)" -sev Debug 
                                         $Success = $true
+                                        $UserSuccesses.Counter++
                                     } catch {
                                         # Retry Set-MailboxFolderStatistics
-                                        Start-Sleep -Milliseconds 250
+                                        Start-Sleep -Milliseconds (Get-Random -Minimum 200 -Maximum 300)
                                         $SetRetryCount++
+
+                                        # Log error if it fails 3 times
+                                        if ($SetRetryCount -ge 3) {
+                                            Write-LogMessage -API 'Standards' -tenant $Tenant -message "Could not set default calendar permissions for $($Mailbox.UserPrincipalName). Error: $($_.exception.message)" -sev Error
+                                        }
                                     }
                                 } Until ($SetRetryCount -ge 3 -or $Success -eq $true)
                             }
                             $Success = $true
-                            $UserSuccesses.Counter++
                         } catch {
                             # Retry Get-MailboxFolderStatistics
-                            Start-Sleep -Milliseconds 250
+                            Start-Sleep -Milliseconds (Get-Random -Minimum 250 -Maximum 500)
                             $GetRetryCount++
                         }
 
