@@ -1,0 +1,15 @@
+{
+  "name": "Test",
+  "style": "Table",
+  "Fields": [
+    {
+      "name": "GDAP Status",
+      "UseExistingInfo": true,
+      "FrontendFields": [
+        {
+          "name": "Tenant Status"
+        }
+      ]
+    }
+  ]
+}
