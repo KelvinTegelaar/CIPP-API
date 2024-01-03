@@ -5,7 +5,7 @@ function Push-CIPPAlertNewRole {
         $QueueItem,
         $TriggerMetadata
     )
-    $Deltatable = $QueueItem.DeltaTable
+    $Deltatable = Get-CIPPTable -Table DeltaCompare
     try {
         $Filter = "PartitionKey eq 'AdminDelta' and RowKey eq '{0}'" -f $QueueItem.tenantid
         $AdminDelta = (Get-CIPPAzDataTableEntity @Deltatable -Filter $Filter).delta | ConvertFrom-Json -ErrorAction SilentlyContinue

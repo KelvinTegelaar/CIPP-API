@@ -5,7 +5,8 @@ function Push-CIPPAlertDepTokenExpiry {
         $QueueItem,
         $TriggerMetadata
     )
-    $LastRunTable = $QueueItem.LastRunTable
+    $LastRunTable = Get-CIPPTable -Table AlertLastRun
+
 
 
     try {
