@@ -5,13 +5,15 @@
     {
       "name": "PasswordNeverExpires",
       "UseExistingInfo": true,
+      "StoreAs": "bool",
       "FrontendFields": [
         {
           "name": "Password Never Expires",
           "value": "PasswordNeverExpires",
-          "formatter": "bool"
+          "formatter": "bool",
+          "desc": "This setting shows if your environment has enabled the password never expires setting. This setting is expected to be set to 'No'"
         }
       ]
-    }
+    },
   ]
 }
