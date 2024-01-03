@@ -1,0 +1,17 @@
+{
+  "name": "Test2",
+  "style": "Tenant",
+  "Fields": [
+    {
+      "name": "PasswordNeverExpires",
+      "UseExistingInfo": true,
+      "FrontendFields": [
+        {
+          "name": "Password Never Expires",
+          "value": "PasswordNeverExpires",
+          "formatter": "bool"
+        }
+      ]
+    }
+  ]
+}
