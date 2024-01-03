@@ -1,19 +1,24 @@
 {
-  "name": "Test2",
+  "name": "Test3",
   "style": "Table",
   "Fields": [
     {
       "name": "PasswordNeverExpires",
-      "UseExistingInfo": true,
-      "StoreAs": "bool",
+      "UseExistingInfo": false,
       "FrontendFields": [
         {
           "name": "Password Never Expires",
           "value": "PasswordNeverExpires",
-          "formatter": "bool",
-          "desc": "This setting shows if your environment has enabled the password never expires setting. This setting is expected to be set to 'No'"
+          "formatter": "bool"
         }
-      ]
+      ],
+      "where": "$_.passwordValidityPeriodInDays -eq 2147483647",
+      "StoreAs": "bool",
+      "API": "Graph",
+      "ExtractFields": [
+        "passwordValidityPeriodInDays"
+      ],
+      "URL": "https://graph.microsoft.com/beta/domains"
     }
   ]
 }
