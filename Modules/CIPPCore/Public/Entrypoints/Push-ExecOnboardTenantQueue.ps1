@@ -18,6 +18,14 @@ Function Push-ExecOnboardTenantQueue {
         $OnboardingSteps = $TenantOnboarding.OnboardingSteps | ConvertFrom-Json
         $OnboardingSteps.Step1.Status = 'running'
         $OnboardingSteps.Step1.Message = 'Checking GDAP invite status'
+        $OnboardingSteps.Step2.Status = 'pending'
+        $OnboardingSteps.Step2.Message = 'Waiting for Step 1'
+        $OnboardingSteps.Step3.Status = 'pending'
+        $OnboardingSteps.Step3.Message = 'Waiting for Step 2'
+        $OnboardingSteps.Step4.Status = 'pending'
+        $OnboardingSteps.Step4.Message = 'Waiting for Step 3'
+        $OnboardingSteps.Step5.Status = 'pending'
+        $OnboardingSteps.Step5.Message = 'Waiting for Step 4'
         $TenantOnboarding.OnboardingSteps = [string](ConvertTo-Json -InputObject $OnboardingSteps -Compress)
         $TenantOnboarding.Status = 'running'
         $TenantOnboarding.Logs = [string](ConvertTo-Json -InputObject @($Logs) -Compress -AsArray)
@@ -278,7 +286,10 @@ Function Push-ExecOnboardTenantQueue {
                     $CPVConsentParams = @{
                         TenantFilter = $Tenant.defaultDomainName
                     }
-                    Set-CIPPCPVConsent @CPVConsentParams
+                    $Consent = Set-CIPPCPVConsent @CPVConsentParams
+                    if ($Consent -match 'Could not add our Service Principal to the client tenant') {
+                        throw
+                    }
                     $Logs.Add([PSCustomObject]@{ Date = Get-Date -UFormat $DateFormat; Log = 'Added initial CPV consent permissions' })
                 } catch {
                     $Logs.Add([PSCustomObject]@{ Date = Get-Date -UFormat $DateFormat; Log = 'CPV Consent Failed' })
