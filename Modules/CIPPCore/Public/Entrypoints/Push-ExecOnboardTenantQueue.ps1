@@ -212,7 +212,7 @@ Function Push-ExecOnboardTenantQueue {
                 do {
                     $x++
                     $AccessAssignments = New-GraphGetRequest -Uri "https://graph.microsoft.com/beta/tenantRelationships/delegatedAdminRelationships/$Id/accessAssignments"
-                    Start-Sleep -Seconds 10
+                    Start-Sleep -Seconds 15
                 } while ($AccessAssignments.status -contains 'pending' -and $x -le 12)
 
                 if ($AccessAssignments.status -notcontains 'pending') {
