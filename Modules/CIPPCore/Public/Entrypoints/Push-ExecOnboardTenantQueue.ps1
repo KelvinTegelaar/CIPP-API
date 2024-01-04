@@ -175,6 +175,10 @@ Function Push-ExecOnboardTenantQueue {
                         $TenantOnboarding.Status = 'failed'
                         $OnboardingSteps.Step3.Status = 'failed'
                         $OnboardingSteps.Step3.Message = 'No matching roles found, check the relationship and try again.'
+                        $TenantOnboarding.OnboardingSteps = [string](ConvertTo-Json -InputObject $OnboardingSteps -Compress)
+                        $TenantOnboarding.Logs = [string](ConvertTo-Json -InputObject @($Logs) -Compress)
+                        Add-CIPPAzDataTableEntity @OnboardTable -Entity $TenantOnboarding -Force -ErrorAction Stop
+                        return
                     }
                 }
 
@@ -193,6 +197,10 @@ Function Push-ExecOnboardTenantQueue {
                         $TenantOnboarding.Status = 'failed'
                         $OnboardingSteps.Step3.Status = 'failed'
                         $OnboardingSteps.Step3.Message = 'Group mapping failed, check the log book for details.'
+                        $TenantOnboarding.OnboardingSteps = [string](ConvertTo-Json -InputObject $OnboardingSteps -Compress)
+                        $TenantOnboarding.Logs = [string](ConvertTo-Json -InputObject @($Logs) -Compress)
+                        Add-CIPPAzDataTableEntity @OnboardTable -Entity $TenantOnboarding -Force -ErrorAction Stop
+                        return
                     }
                 } elseif (!$GroupSuccess) {
                     $TenantOnboarding.Status = 'failed'
@@ -213,6 +221,11 @@ Function Push-ExecOnboardTenantQueue {
                 } else {
                     $OnboardingSteps.Step3.Message = 'Group check: Access assignments are still pending, try again later'
                     $OnboardingSteps.Step3.Status = 'failed'
+                    $TenantOnboarding.Status = 'failed'
+                    $TenantOnboarding.OnboardingSteps = [string](ConvertTo-Json -InputObject $OnboardingSteps -Compress)
+                    $TenantOnboarding.Logs = [string](ConvertTo-Json -InputObject @($Logs) -Compress)
+                    Add-CIPPAzDataTableEntity @OnboardTable -Entity $TenantOnboarding -Force -ErrorAction Stop
+                    return
                 }
             }
             if ($QueueItem.AddMissingGroups -eq $true) {
