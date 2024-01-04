@@ -5,7 +5,8 @@ function Push-CIPPAlertApnCertExpiry {
         $QueueItem,
         $TriggerMetadata
     )
-    $LastRunTable = $QueueItem.LastRunTable
+    $LastRunTable = Get-CIPPTable -Table AlertLastRun
+
     try {
         $Filter = "RowKey eq 'ApnCertExpiry' and PartitionKey eq '{0}'" -f $QueueItem.tenantid
         $LastRun = Get-CIPPAzDataTableEntity @LastRunTable -Filter $Filter
