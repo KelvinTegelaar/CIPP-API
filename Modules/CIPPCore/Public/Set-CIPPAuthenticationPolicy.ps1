@@ -9,7 +9,7 @@ function Set-CIPPAuthenticationPolicy {
         $TAPMaximumLifetime = 480, #minutes
         $TAPDefaultLifeTime = 60, #minutes
         $TAPDefaultLength = 8, #TAP password generated length in chars
-        [bool]$TAPisUsableOnce = $true,
+        $TAPisUsableOnce = $true,
         $APIName = 'Set Authentication Policy',
         $ExecutingUser
     )
@@ -62,11 +62,12 @@ function Set-CIPPAuthenticationPolicy {
         # Temporary Access Pass
         'TemporaryAccessPass' {  
             if ($State -eq 'enabled') {
-                $CurrentInfo.isUsableOnce = $TAPisUsableOnce
+                $CurrentInfo.isUsableOnce = [System.Convert]::ToBoolean($TAPisUsableOnce)
                 $CurrentInfo.minimumLifetimeInMinutes = $TAPMinimumLifetime
                 $CurrentInfo.maximumLifetimeInMinutes = $TAPMaximumLifetime
                 $CurrentInfo.defaultLifetimeInMinutes = $TAPDefaultLifeTime
                 $CurrentInfo.defaultLength = $TAPDefaultLength
+                $OptionalLogMessage = "with TAP isUsableOnce set to $TAPisUsableOnce"
             }
         }
     
