@@ -5,9 +5,10 @@ function Add-CIPPDelegatedPermission {
         $ApplicationId,
         $Tenantfilter
     )
+    Write-Host 'Adding Delegated Permissions'
     Set-Location (Get-Item $PSScriptRoot).FullName
-
-    if ($RequiredResourceAccess -eq "CIPPDefaults") {
+    Write-Host "RequiredResourceAccess: $($RequiredResourceAccess | ConvertTo-Json -Depth 10)"
+    if ($RequiredResourceAccess -eq 'CIPPDefaults') {
         $RequiredResourceAccess = (Get-Content '.\SAMManifest.json' | ConvertFrom-Json).requiredResourceAccess
     }
     $Translator = Get-Content '.\PermissionsTranslator.json' | ConvertFrom-Json
@@ -26,17 +27,16 @@ function Add-CIPPDelegatedPermission {
         if (!$OldScope) {
             $Createbody = @{
                 clientId    = $ourSVCPrincipal.id
-                consentType = "AllPrincipals"
+                consentType = 'AllPrincipals'
                 resourceId  = $svcPrincipalId.id
                 scope       = $NewScope
             } | ConvertTo-Json -Compress
-            $CreateRequest = New-GraphPOSTRequest -uri "https://graph.microsoft.com/v1.0/oauth2PermissionGrants" -tenantid $Tenantfilter -body $Createbody -type POST
+            $CreateRequest = New-GraphPOSTRequest -uri 'https://graph.microsoft.com/v1.0/oauth2PermissionGrants' -tenantid $Tenantfilter -body $Createbody -type POST
             $Results.add("Successfully added permissions for $($svcPrincipalId.displayName)") | Out-Null
-        }
-        else {
+        } else {
             $compare = Compare-Object -ReferenceObject $OldScope.scope.Split(' ') -DifferenceObject $NewScope.Split(' ')
             if (!$compare) {
-                $Results.add("All delegated permissions exist for $($svcPrincipalId.displayName)")  | Out-Null
+                $Results.add("All delegated permissions exist for $($svcPrincipalId.displayName)") | Out-Null
                 continue
             }
             $Patchbody = @{
