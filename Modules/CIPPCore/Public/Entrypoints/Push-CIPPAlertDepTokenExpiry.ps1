@@ -7,8 +7,6 @@ function Push-CIPPAlertDepTokenExpiry {
     )
     $LastRunTable = Get-CIPPTable -Table AlertLastRun
 
-
-
     try {
         $Filter = "RowKey eq 'DepTokenExpiry' and PartitionKey eq '{0}'" -f $QueueItem.tenantid
         $LastRun = Get-CIPPAzDataTableEntity @LastRunTable -Filter $Filter
