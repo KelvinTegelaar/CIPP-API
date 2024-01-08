@@ -42,7 +42,7 @@ Function Invoke-ListSites {
             $URLs = (New-GraphGetRequest -uri "https://graph.microsoft.com/v1.0/sites?search=*&`$select=sharepointIds" -asapp $true -tenantid $TenantFilter).sharepointIds
         } else {
             #Get all OneDrive Urls
-            $URLs = (New-GraphGetRequest -uri "https://graph.microsoft.com/v1.0/users?`$select=displayName,userPrincipalName" -tenantid $TenantFilter)
+            #$URLs = (New-GraphGetRequest -uri "https://graph.microsoft.com/v1.0/users?`$select=displayName,userPrincipalName" -tenantid $TenantFilter)
         }
 
         $GraphRequest = foreach ($site in $GraphRequest) {
