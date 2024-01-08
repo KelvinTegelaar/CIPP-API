@@ -7,7 +7,7 @@ function Push-CIPPAlertMFAAlertUsers {
     )
     try {
         $users = New-GraphGETRequest -uri "https://graph.microsoft.com/beta/users?`$select=userPrincipalName,id,accountEnabled,userType&`$filter=userType eq 'Member' and accountEnabled eq true" -tenantid $($QueueItem.tenant)
-        Write-Host "found $($users.count) users"
+        Write-Host "found $($users.count) users for $($QueueItem.tenant)"
         $StrongMFAMethods = '#microsoft.graph.fido2AuthenticationMethod', '#microsoft.graph.phoneAuthenticationMethod', '#microsoft.graph.passwordlessmicrosoftauthenticatorauthenticationmethod', '#microsoft.graph.softwareOathAuthenticationMethod', '#microsoft.graph.microsoftAuthenticatorAuthenticationMethod'
 
         $UserBatches = [System.Collections.Generic.List[Object]]@()
@@ -16,35 +16,38 @@ function Push-CIPPAlertMFAAlertUsers {
         }
 
         $UserBatches | ForEach-Object -Parallel {
-            Import-Module CippCore
-            Import-Module AzBobbyTables
-            $UserBatch = $_
-            Write-Host "processing batch of $($UserBatch.count) users"
-            $BatchRequests = $UserBatch | ForEach-Object {
-                @{
-                    id     = $_.id
-                    method = 'GET'
-                    url    = "users/$($_.ID)/authentication/Methods"
-                }
-            }
-            $BatchResponses = New-GraphBulkRequest -tenantid $using:QueueItem.tenant -Requests $BatchRequests
-            foreach ($response in $BatchResponses) {
-                $UPN = ($UserBatch | Where-Object { $_.id -eq $response.id }).UserPrincipalName
-                $CARegistered = $false
-
-                foreach ($method in $response.body.value) {
-                    if ($method.'@odata.type' -in $using:StrongMFAMethods) {
-                        $CARegistered = $true
-                        break
+            try {
+                Write-Host "processing batch of $($_.count) users for $($using:QueueItem.tenant)"
+                Import-Module CippCore
+                Import-Module AzBobbyTables
+                $UserBatch = $_
+                Write-Host "processing batch of $($UserBatch.count) users"
+                $BatchRequests = $UserBatch | ForEach-Object {
+                    @{
+                        id     = $_.id
+                        method = 'GET'
+                        url    = "users/$($_.ID)/authentication/Methods"
                     }
                 }
+                $BatchResponses = New-GraphBulkRequest -tenantid $using:QueueItem.tenant -Requests $BatchRequests
+                foreach ($response in $BatchResponses) {
+                    $UPN = ($UserBatch | Where-Object { $_.id -eq $response.id }).UserPrincipalName
+                    $CARegistered = $false
 
-                if (-not $CARegistered) {
-                    Write-AlertMessage -tenant $using:QueueItem.tenant -message "User $UPN is enabled but does not have any form of MFA configured."
+                    foreach ($method in $response.body.value) {
+                        if ($method.'@odata.type' -in $using:StrongMFAMethods) {
+                            $CARegistered = $true
+                            break
+                        }
+                    }
+
+                    if (-not $CARegistered) {
+                        Write-AlertMessage -tenant $using:QueueItem.tenant -message "User $UPN is enabled but does not have any form of MFA configured."
+                    }
                 }
+            } catch {
             }
         } -ThrottleLimit 25
-
     } catch {
         Write-AlertMessage -tenant $($QueueItem.tenant) -message "Could not get MFA status for users for $($QueueItem.tenant): $(Get-NormalizedError -message $_.Exception.message)"
     }
