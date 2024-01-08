@@ -31,7 +31,7 @@ try {
     $CurrentAlerts = (Get-CIPPAzDataTableEntity @AlertsTable -Filter $Filter)
     $CurrentAlerts | ForEach-Object {
         if ($_.Message -notin $currentlog.Message) { Write-LogMessage -message $_.Message -API 'Alerts' -tenant $tenant.tenant -sev Alert -tenantid $Tenant.tenantid }
-        Remove-AzDataTableEntity @AlertsTable -Entity $_
+        Remove-AzDataTableEntity @AlertsTable -Entity $_ | Out-Null
     }
 
     [PSCustomObject]@{
