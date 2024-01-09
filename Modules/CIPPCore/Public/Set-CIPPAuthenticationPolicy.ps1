@@ -9,7 +9,7 @@ function Set-CIPPAuthenticationPolicy {
         $TAPMaximumLifetime = 480, #minutes
         $TAPDefaultLifeTime = 60, #minutes
         $TAPDefaultLength = 8, #TAP password generated length in chars
-        [bool]$TAPisUsableOnce = $true,
+        $TAPisUsableOnce = $true,
         $APIName = 'Set Authentication Policy',
         $ExecutingUser
     )
@@ -62,11 +62,12 @@ function Set-CIPPAuthenticationPolicy {
         # Temporary Access Pass
         'TemporaryAccessPass' {  
             if ($State -eq 'enabled') {
-                $CurrentInfo.isUsableOnce = $TAPisUsableOnce
+                $CurrentInfo.isUsableOnce = [System.Convert]::ToBoolean($TAPisUsableOnce)
                 $CurrentInfo.minimumLifetimeInMinutes = $TAPMinimumLifetime
                 $CurrentInfo.maximumLifetimeInMinutes = $TAPMaximumLifetime
                 $CurrentInfo.defaultLifetimeInMinutes = $TAPDefaultLifeTime
                 $CurrentInfo.defaultLength = $TAPDefaultLength
+                $OptionalLogMessage = "with TAP isUsableOnce set to $TAPisUsableOnce"
             }
         }
     
@@ -79,7 +80,7 @@ function Set-CIPPAuthenticationPolicy {
         'softwareOath' {  
             # Nothing special to do here
         }
-
+        
         # Voice call
         'Voice' {
             # Disallow enabling voice
@@ -102,8 +103,8 @@ function Set-CIPPAuthenticationPolicy {
             # Nothing special to do here
         }
         Default {
-            Write-LogMessage -user $ExecutingUser -API $APIName -tenant $Tenant -message 'Somehow you hit the default case. You probably made a typo in the input for AuthenticationMethodId. It''s case sensitive' -sev Error
-            return 'Somehow you hit the default case. You probably made a typo in the input for AuthenticationMethodId. It''s case sensitive.'
+            Write-LogMessage -user $ExecutingUser -API $APIName -tenant $Tenant -message "Somehow you hit the default case with an input of $AuthenticationMethodId . You probably made a typo in the input for AuthenticationMethodId. It`'s case sensitive." -sev Error
+            return "Somehow you hit the default case with an input of $AuthenticationMethodId . You probably made a typo in the input for AuthenticationMethodId. It`'s case sensitive."
         }
     }
     # Set state of the authentication method
