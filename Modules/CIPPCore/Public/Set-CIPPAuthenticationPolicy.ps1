@@ -80,7 +80,7 @@ function Set-CIPPAuthenticationPolicy {
         'softwareOath' {  
             # Nothing special to do here
         }
-
+        
         # Voice call
         'Voice' {
             # Disallow enabling voice
@@ -103,8 +103,8 @@ function Set-CIPPAuthenticationPolicy {
             # Nothing special to do here
         }
         Default {
-            Write-LogMessage -user $ExecutingUser -API $APIName -tenant $Tenant -message 'Somehow you hit the default case. You probably made a typo in the input for AuthenticationMethodId. It''s case sensitive' -sev Error
-            return 'Somehow you hit the default case. You probably made a typo in the input for AuthenticationMethodId. It''s case sensitive.'
+            Write-LogMessage -user $ExecutingUser -API $APIName -tenant $Tenant -message "Somehow you hit the default case with an input of $AuthenticationMethodId . You probably made a typo in the input for AuthenticationMethodId. It`'s case sensitive." -sev Error
+            return "Somehow you hit the default case with an input of $AuthenticationMethodId . You probably made a typo in the input for AuthenticationMethodId. It`'s case sensitive."
         }
     }
     # Set state of the authentication method
