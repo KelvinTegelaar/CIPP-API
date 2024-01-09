@@ -41,6 +41,7 @@ function New-CIPPGraphSubscription {
                             Expiration             = 'Does Not Expire'
                             WebhookNotificationUrl = [string]$Auditlog.webhook.address
                         }
+                        Write-Host 'Adding datatable entry after creating webhook'
                         Add-CIPPAzDataTableEntity @WebhookTable -Entity $WebhookRow
                         Write-LogMessage -user $ExecutingUser -API $APIName -message "Created Webhook subscription for $($TenantFilter) for the log $($EventType)" -Sev 'Info' -tenant $TenantFilter
                     } else {
