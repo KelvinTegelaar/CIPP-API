@@ -18,10 +18,10 @@ function Invoke-CIPPStandardcalDefault {
         if ($LastRun -and $LastRun.totalMailboxes -ne $LastRun.processedMailboxes) {
             $startIndex = $LastRun.processedMailboxes
         }
-
-        $UserSuccesses = [HashTable]::Synchronized(@{Counter = 0 })
+        $SuccessCounter = if ($lastrun.currentSuccessCount) { $lastrun.currentSuccessCount }else { 0 }
+        $UserSuccesses = [HashTable]::Synchronized(@{Counter = $SuccessCounter })
         $processedMailboxes = $startIndex
-        $mailboxes = $mailboxes[$startIndex..($mailboxes.Count - 1)]
+        $mailboxes = $mailboxes[$startIndex..($mailboxes.Count)]
         Write-Host "CalDefaults Starting at index $startIndex"
         $Mailboxes | ForEach-Object {
             $Mailbox = $_
@@ -42,10 +42,11 @@ function Invoke-CIPPStandardcalDefault {
             $processedMailboxes++
             if ($processedMailboxes % 25 -eq 0) {
                 $LastRun = @{
-                    RowKey             = 'calDefaults'
-                    PartitionKey       = $Tenant
-                    totalMailboxes     = $Mailboxes.count
-                    processedMailboxes = $processedMailboxes
+                    RowKey              = 'calDefaults'
+                    PartitionKey        = $Tenant
+                    totalMailboxes      = $Mailboxes.count
+                    processedMailboxes  = $processedMailboxes
+                    currentSuccessCount = $UserSuccesses.Counter
                 }
                 Add-CIPPAzDataTableEntity @LastRunTable -Entity $LastRun -Force
                 Write-Host "Processed $processedMailboxes mailboxes"
@@ -53,10 +54,11 @@ function Invoke-CIPPStandardcalDefault {
         }
 
         $LastRun = @{
-            RowKey             = 'calDefaults'
-            PartitionKey       = $Tenant
-            totalMailboxes     = $Mailboxes.count
-            processedMailboxes = $processedMailboxes
+            RowKey              = 'calDefaults'
+            PartitionKey        = $Tenant
+            totalMailboxes      = $Mailboxes.count
+            processedMailboxes  = $processedMailboxes
+            currentSuccessCount = $UserSuccesses.Counter
         }
         Add-CIPPAzDataTableEntity @LastRunTable -Entity $LastRun -Force
 
