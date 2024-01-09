@@ -22,9 +22,10 @@ function New-CIPPGraphSubscription {
             foreach ($EventType in $EventTypes) {
                 $CIPPID = (New-Guid).GUID
                 $Resource = $EventType
+                $CIPPAuditURL = "$BaseURL/API/Publicwebhooks?EventType=$EventType&CIPPID=$CIPPID"
                 $AuditLogParams = @{
                     webhook = @{
-                        'address' = "$BaseURL/API/Publicwebhooks?EventType=$EventType&CIPPID=$CIPPID"
+                        'address' = $CIPPAuditURL
                     }
                 } | ConvertTo-Json
                 #List existing webhook subscriptions in table
@@ -38,7 +39,7 @@ function New-CIPPGraphSubscription {
                             RowKey                 = [string]$CIPPID
                             Resource               = $Resource
                             Expiration             = 'Does Not Expire'
-                            WebhookNotificationUrl = [string]$Auditlog.webhook.address
+                            WebhookNotificationUrl = [string]$CIPPAuditURL
                         }
                         Add-CIPPAzDataTableEntity @WebhookTable -Entity $WebhookRow
 
