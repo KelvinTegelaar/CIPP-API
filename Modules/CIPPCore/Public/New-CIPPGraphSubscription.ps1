@@ -33,7 +33,6 @@ function New-CIPPGraphSubscription {
                 $MatchedWebhook = $ExistingWebhooks | Where-Object { $_.Resource -eq $Resource }
                 try {
                     if (!$MatchedWebhook) {
-                        $AuditLog = New-GraphPOSTRequest -uri "https://manage.office.com/api/v1.0/$($TenantFilter)/activity/feed/subscriptions/start?contentType=$EventType&PublisherIdentifier=$($TenantFilter)" -tenantid $TenantFilter -type POST -scope 'https://manage.office.com/.default' -body $AuditLogparams -verbose
                         $WebhookRow = @{
                             PartitionKey           = [string]$TenantFilter
                             RowKey                 = [string]$CIPPID
@@ -41,8 +40,10 @@ function New-CIPPGraphSubscription {
                             Expiration             = 'Does Not Expire'
                             WebhookNotificationUrl = [string]$Auditlog.webhook.address
                         }
-                        Write-Host 'Adding datatable entry after creating webhook'
                         Add-CIPPAzDataTableEntity @WebhookTable -Entity $WebhookRow
+
+                        $AuditLog = New-GraphPOSTRequest -uri "https://manage.office.com/api/v1.0/$($TenantFilter)/activity/feed/subscriptions/start?contentType=$EventType&PublisherIdentifier=$($TenantFilter)" -tenantid $TenantFilter -type POST -scope 'https://manage.office.com/.default' -body $AuditLogparams -verbose
+
                         Write-LogMessage -user $ExecutingUser -API $APIName -message "Created Webhook subscription for $($TenantFilter) for the log $($EventType)" -Sev 'Info' -tenant $TenantFilter
                     } else {
                         Write-LogMessage -user $ExecutingUser -API $APIName -message "No webhook creation required for $($TenantFilter). Already exists" -Sev 'Info' -tenant $TenantFilter
@@ -51,6 +52,7 @@ function New-CIPPGraphSubscription {
                     if ($_.Exception.Message -like '*already exists*') {
                         Write-LogMessage -user $ExecutingUser -API $APIName -message "Webhook subscription for $($TenantFilter) already exists" -Sev 'Info' -tenant $TenantFilter
                     } else {
+                        Remove-AzDataTableEntity @WebhookTable -Entity @{ PartitionKey = $TenantFilter; RowKey = $CIPPID } | Out-Null
                         Write-LogMessage -user $ExecutingUser -API $APIName -message "Failed to create Webhook Subscription for $($TenantFilter): $($_.Exception.Message)" -Sev 'Error' -tenant $TenantFilter
                     }
                 }
