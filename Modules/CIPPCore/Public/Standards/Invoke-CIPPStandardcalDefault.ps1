@@ -18,7 +18,7 @@ function Invoke-CIPPStandardcalDefault {
         if ($LastRun -and $LastRun.totalMailboxes -ne $LastRun.processedMailboxes) {
             $startIndex = $LastRun.processedMailboxes
         }
-        $SuccessCounter = if ($lastrun.currentSuccessCount) { $lastrun.currentSuccessCount }else { 0 }
+        $SuccessCounter = if ($lastrun.currentSuccessCount) { [int64]$lastrun.currentSuccessCount } else { 0 }
         $UserSuccesses = [HashTable]::Synchronized(@{Counter = $SuccessCounter })
         $processedMailboxes = $startIndex
         $mailboxes = $mailboxes[$startIndex..($mailboxes.Count)]
@@ -33,6 +33,7 @@ function Invoke-CIPPStandardcalDefault {
                         Write-LogMessage -API 'Standards' -tenant $Tenant -message "Set default folder permission for $($Mailbox.UserPrincipalName):\$($_.Name) to $($Settings.permissionlevel)" -sev Debug 
                         $UserSuccesses.Counter++
                     } catch {
+                        Write-Host "Setting cal failed: $($_.exception.message)"
                         Write-LogMessage -API 'Standards' -tenant $Tenant -message "Could not set default calendar permissions for $($Mailbox.UserPrincipalName). Error: $($_.exception.message)" -sev Error
                     }
                 }
