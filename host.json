@@ -10,9 +10,10 @@
   },
   "extensions": {
     "queues": {
-      "maxDequeueCount": 5
-    }},
+      "maxDequeueCount": 3
+    }
+  },
   "logging": {
     "fileLoggingMode": "never"
-  }  
+  }
 }
