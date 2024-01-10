@@ -11,8 +11,5 @@
   "extensions": {
     "queues": {
       "maxDequeueCount": 5
-    }},
-  "logging": {
-    "fileLoggingMode": "never"
-  }
+    }}
 }
