@@ -27,20 +27,21 @@ if ($Request.query.CIPPID -in $Webhooks.RowKey) {
             $ReceivedItem = [pscustomobject]$ReceivedItem
             $TenantFilter = (Get-Tenants | Where-Object -Property customerId -EQ $ReceivedItem.TenantId).defaultDomainName
             Write-Host "TenantFilter: $TenantFilter"
-            try {
-                $Data = New-GraphPostRequest -type GET -uri "https://manage.office.com/api/v1.0/$($ReceivedItem.tenantId)/activity/feed/audit/$($ReceivedItem.contentid)" -tenantid $TenantFilter -scope 'https://manage.office.com/.default'
-                Write-Host "Data to process found: $(($ReceivedItem.operation).count) items"
-                Write-Host "Operations to process for this client: $($Webhookinfo.Operations)"
-                foreach ($Item in $Data) {
-                    Write-Host "Processing $($item.operation)"
-                    Invoke-CippWebhookProcessing -TenantFilter $TenantFilter -Data $Item -CIPPPURL $url
+            if ($TenantFilter) {
+                try {
+                    $Data = New-GraphPostRequest -type GET -uri "https://manage.office.com/api/v1.0/$($ReceivedItem.tenantId)/activity/feed/audit/$($ReceivedItem.contentid)" -tenantid $TenantFilter -scope 'https://manage.office.com/.default' -ErrorAction Stop
+                    Write-Host "Data to process found: $(($ReceivedItem.operation).count) items"
+                    Write-Host "Operations to process for this client: $($Webhookinfo.Operations)"
+                    foreach ($Item in $Data) {
+                        Write-Host "Processing $($item.operation)"
+                        Invoke-CippWebhookProcessing -TenantFilter $TenantFilter -Data $Item -CIPPPURL $url
+                    }
+                } catch {
+                    Write-Host "Exception getting webhook data $($_.Exception.Message)"
                 }
-            } catch {
-                Write-Host "Exception getting webhook data $($_.Exception.Message)"
             }
         }
     }
-
 } else {
     Write-Host 'Unauthorised Webhook'
 }
