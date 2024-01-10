@@ -215,20 +215,24 @@ function Invoke-CippWebhookProcessing {
     }
 
     if ($data.ClientIP) {
-        $IP = $data.ClientIP
-        if ($IP -match '^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}:\d+$') {
-            $IP = $IP -replace ':\d+$', '' # Remove the port number if present
+        try {
+            $IP = $data.ClientIP
+            if ($IP -match '^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}:\d+$') {
+                $IP = $IP -replace ':\d+$', '' # Remove the port number if present
+            }
+            $LocationInfo = @{
+                RowKey          = [string]$ip
+                PartitionKey    = [string]$data.UserId
+                Tenant          = [string]$TenantFilter
+                CountryOrRegion = "$Country"
+                City            = "$City"
+                Proxy           = "$Proxy"
+                Hosting         = "$hosting"
+                ASName          = "$ASName"
+            }
+            $null = Add-CIPPAzDataTableEntity @LocationTable -Entity $LocationInfo -Force
+        } catch {
+            Write-Host "Exception adding IP to table - $IP - $($_.Exception.Message)"
         }
-        $LocationInfo = @{
-            RowKey          = [string]$ip
-            PartitionKey    = [string]$data.UserId
-            Tenant          = [string]$TenantFilter
-            CountryOrRegion = "$Country"
-            City            = "$City"
-            Proxy           = "$Proxy"
-            Hosting         = "$hosting"
-            ASName          = "$ASName"
-        }
-        $null = Add-CIPPAzDataTableEntity @LocationTable -Entity $LocationInfo -Force
     }
 }
