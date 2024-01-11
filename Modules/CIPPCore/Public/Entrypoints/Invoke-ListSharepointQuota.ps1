@@ -19,6 +19,9 @@ Function Invoke-ListSharepointQuota {
 
     if ($Request.Query.TenantFilter -eq 'AllTenants') {
         $UsedStoragePercentage = 'Not Supported'
+    } 
+    elseif ($Request.Query.TenantFilter -eq 'lbsonsulting.com'{
+        $UsedStoragePercentage = 'Not Supported'
     } else {
         try {
             $tenantName = (New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/domains' -tenantid $TenantFilter | Where-Object { $_.isInitial -eq $true }).id.Split('.')[0]
