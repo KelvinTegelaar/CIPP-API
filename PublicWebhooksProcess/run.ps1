@@ -29,6 +29,7 @@ if ($Request.query.CIPPID -in $Webhooks.RowKey) {
             $Webhookinfo = $Webhooks | Where-Object -Property RowKey -EQ $Request.query.CIPPID
             foreach ($ReceivedItem In ($Request.body)) {
                 $ReceivedItem = [pscustomobject]$ReceivedItem
+                Write-Host "Received Item: $($ReceivedItem | ConvertTo-Json -Depth 15 -Compress))"
                 $TenantFilter = (Get-Tenants | Where-Object -Property customerId -EQ $ReceivedItem.TenantId).defaultDomainName
                 Write-Host "Webhook TenantFilter: $TenantFilter"
                 $Data = New-GraphPostRequest -type GET -uri "https://manage.office.com/api/v1.0/$($ReceivedItem.tenantId)/activity/feed/audit/$($ReceivedItem.contentid)" -tenantid $TenantFilter -scope 'https://manage.office.com/.default'
