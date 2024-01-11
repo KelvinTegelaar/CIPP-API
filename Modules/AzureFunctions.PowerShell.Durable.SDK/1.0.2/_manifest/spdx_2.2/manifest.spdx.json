@@ -1,0 +1,614 @@
+{
+  "files": [
+    {
+      "fileName": "./AzureFunctions.PowerShell.Durable.SDK.dll",
+      "SPDXID": "SPDXRef-File--AzureFunctions.PowerShell.Durable.SDK.dll-0CA57E1F20DC5E1F8BF8C27C7ABB781FD7E2C96F",
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "84e6fe5f74cc101e29c0cad94e79903a1acab2b8179cda011e06bebf41deb098"
+        },
+        {
+          "algorithm": "SHA1",
+          "checksumValue": "0ca57e1f20dc5e1f8bf8c27c7abb781fd7e2c96f"
+        }
+      ],
+      "licenseConcluded": "NOASSERTION",
+      "licenseInfoInFiles": [
+        "NOASSERTION"
+      ],
+      "copyrightText": "NOASSERTION"
+    },
+    {
+      "fileName": "./Dependencies/Microsoft.Bcl.AsyncInterfaces.dll",
+      "SPDXID": "SPDXRef-File--Dependencies-Microsoft.Bcl.AsyncInterfaces.dll-2E438AEF830795B2D240CF3160A3353BC6CB0232",
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "5705d245072d3eb78400547b32147dbb6e2c8b02ba8bda76729798f5efdeaecb"
+        },
+        {
+          "algorithm": "SHA1",
+          "checksumValue": "2e438aef830795b2d240cf3160a3353bc6cb0232"
+        }
+      ],
+      "licenseConcluded": "NOASSERTION",
+      "licenseInfoInFiles": [
+        "NOASSERTION"
+      ],
+      "copyrightText": "NOASSERTION"
+    },
+    {
+      "fileName": "./Dependencies/Microsoft.Extensions.Logging.Abstractions.dll",
+      "SPDXID": "SPDXRef-File--Dependencies-Microsoft.Extensions.Logging.Abstractions.dll-02EC010722BBD1740782B502DF30D4475AEBE5F2",
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "d575c9d1543ca726ce14dbdffd103e93ea527cd46bb28316da1f4122dbc55d56"
+        },
+        {
+          "algorithm": "SHA1",
+          "checksumValue": "02ec010722bbd1740782b502df30d4475aebe5f2"
+        }
+      ],
+      "licenseConcluded": "NOASSERTION",
+      "licenseInfoInFiles": [
+        "NOASSERTION"
+      ],
+      "copyrightText": "NOASSERTION"
+    },
+    {
+      "fileName": "./Dependencies/System.Reactive.Linq.dll",
+      "SPDXID": "SPDXRef-File--Dependencies-System.Reactive.Linq.dll-21B3C0F5AE5F6C6A436ECC37E747BF931C141D14",
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "33eb42b7065a01963dbcd762cdc81a4135b6e0e927ddf4c88eae121ad5f69f92"
+        },
+        {
+          "algorithm": "SHA1",
+          "checksumValue": "21b3c0f5ae5f6c6a436ecc37e747bf931c141d14"
+        }
+      ],
+      "licenseConcluded": "NOASSERTION",
+      "licenseInfoInFiles": [
+        "NOASSERTION"
+      ],
+      "copyrightText": "NOASSERTION"
+    },
+    {
+      "fileName": "./AzureFunctions.PowerShell.Durable.SDK.pdb",
+      "SPDXID": "SPDXRef-File--AzureFunctions.PowerShell.Durable.SDK.pdb-A8404C06CFD62F8B32E7333255E790198FB7710B",
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "eb2c5ee08c7b8df836bb796ec57ce1f7fa96fc9adbdcbcc516a975a0b2f3c2f6"
+        },
+        {
+          "algorithm": "SHA1",
+          "checksumValue": "a8404c06cfd62f8b32e7333255e790198fb7710b"
+        }
+      ],
+      "licenseConcluded": "NOASSERTION",
+      "licenseInfoInFiles": [
+        "NOASSERTION"
+      ],
+      "copyrightText": "NOASSERTION"
+    },
+    {
+      "fileName": "./Dependencies/Microsoft.DurableTask.Abstractions.dll",
+      "SPDXID": "SPDXRef-File--Dependencies-Microsoft.DurableTask.Abstractions.dll-D1D43D1F5B80C63EF1E52985922BB90ADEA5DEEC",
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "cc13ef28be5c94860ccadf1b9d9e8e505484b1ab40d2d3f60827e14e109feb0c"
+        },
+        {
+          "algorithm": "SHA1",
+          "checksumValue": "d1d43d1f5b80c63ef1e52985922bb90adea5deec"
+        }
+      ],
+      "licenseConcluded": "NOASSERTION",
+      "licenseInfoInFiles": [
+        "NOASSERTION"
+      ],
+      "copyrightText": "NOASSERTION"
+    },
+    {
+      "fileName": "./Dependencies/Microsoft.Extensions.Options.dll",
+      "SPDXID": "SPDXRef-File--Dependencies-Microsoft.Extensions.Options.dll-6EC0C1FE1332912086247080B55B06623C78326E",
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "786112cb2f6646ef1170219a8c0bb813c9f14a6781e67c6266414f55a679565d"
+        },
+        {
+          "algorithm": "SHA1",
+          "checksumValue": "6ec0c1fe1332912086247080b55b06623c78326e"
+        }
+      ],
+      "licenseConcluded": "NOASSERTION",
+      "licenseInfoInFiles": [
+        "NOASSERTION"
+      ],
+      "copyrightText": "NOASSERTION"
+    },
+    {
+      "fileName": "./Dependencies/System.Reactive.PlatformServices.dll",
+      "SPDXID": "SPDXRef-File--Dependencies-System.Reactive.PlatformServices.dll-8A33FDD641185C66DD4FD3DB88DF5504621D3BF4",
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "2d864b716fbae8c1880143574332a10fbc6d98613aa09f6dd98d9d08b82b65ad"
+        },
+        {
+          "algorithm": "SHA1",
+          "checksumValue": "8a33fdd641185c66dd4fd3db88df5504621d3bf4"
+        }
+      ],
+      "licenseConcluded": "NOASSERTION",
+      "licenseInfoInFiles": [
+        "NOASSERTION"
+      ],
+      "copyrightText": "NOASSERTION"
+    },
+    {
+      "fileName": "./AzureFunctions.PowerShell.Durable.SDK.psd1",
+      "SPDXID": "SPDXRef-File--AzureFunctions.PowerShell.Durable.SDK.psd1-D7759B5867DEBC3071327666924C1CC70028F2F1",
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "41125a20ee9999f330bfcfe22abb43369d4ef568a66a4c8e006d30a110cd503d"
+        },
+        {
+          "algorithm": "SHA1",
+          "checksumValue": "d7759b5867debc3071327666924c1cc70028f2f1"
+        }
+      ],
+      "licenseConcluded": "NOASSERTION",
+      "licenseInfoInFiles": [
+        "NOASSERTION"
+      ],
+      "copyrightText": "NOASSERTION"
+    },
+    {
+      "fileName": "./Dependencies/Microsoft.DurableTask.Client.dll",
+      "SPDXID": "SPDXRef-File--Dependencies-Microsoft.DurableTask.Client.dll-0DE9E1C4F3587BC9C002F935BA5023890ED18B8F",
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "ae75348d5d809c89d700b34e9dd3826e218dbb7e9749372abee72939fe29c426"
+        },
+        {
+          "algorithm": "SHA1",
+          "checksumValue": "0de9e1c4f3587bc9c002f935ba5023890ed18b8f"
+        }
+      ],
+      "licenseConcluded": "NOASSERTION",
+      "licenseInfoInFiles": [
+        "NOASSERTION"
+      ],
+      "copyrightText": "NOASSERTION"
+    },
+    {
+      "fileName": "./Dependencies/Microsoft.Extensions.Primitives.dll",
+      "SPDXID": "SPDXRef-File--Dependencies-Microsoft.Extensions.Primitives.dll-376636C20CEE083DA54D4146479032170EC7231B",
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "8ce9a85927ec7507b11ffe90080e7a811d51304a9e8b1da20c350159ba403902"
+        },
+        {
+          "algorithm": "SHA1",
+          "checksumValue": "376636c20cee083da54d4146479032170ec7231b"
+        }
+      ],
+      "licenseConcluded": "NOASSERTION",
+      "licenseInfoInFiles": [
+        "NOASSERTION"
+      ],
+      "copyrightText": "NOASSERTION"
+    },
+    {
+      "fileName": "./Dependencies/System.Reactive.Providers.dll",
+      "SPDXID": "SPDXRef-File--Dependencies-System.Reactive.Providers.dll-74AA6DBBCB5397BB09D1E69FFCFE9526CBFCEB44",
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "79a12c5227a000f8608520f2cab63becc4412415a1dbeff29179dfcaa13b6a3a"
+        },
+        {
+          "algorithm": "SHA1",
+          "checksumValue": "74aa6dbbcb5397bb09d1e69ffcfe9526cbfceb44"
+        }
+      ],
+      "licenseConcluded": "NOASSERTION",
+      "licenseInfoInFiles": [
+        "NOASSERTION"
+      ],
+      "copyrightText": "NOASSERTION"
+    },
+    {
+      "fileName": "./AzureFunctions.PowerShell.Durable.SDK.psm1",
+      "SPDXID": "SPDXRef-File--AzureFunctions.PowerShell.Durable.SDK.psm1-852079516A56958CFCFFE5EEFCF7B0C10BD163F6",
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "6e1700d07c5c4e13c0959396a2880e983151f42c0560e895d90f39a673f84e30"
+        },
+        {
+          "algorithm": "SHA1",
+          "checksumValue": "852079516a56958cfcffe5eefcf7b0c10bd163f6"
+        }
+      ],
+      "licenseConcluded": "NOASSERTION",
+      "licenseInfoInFiles": [
+        "NOASSERTION"
+      ],
+      "copyrightText": "NOASSERTION"
+    },
+    {
+      "fileName": "./Dependencies/Microsoft.DurableTask.Worker.dll",
+      "SPDXID": "SPDXRef-File--Dependencies-Microsoft.DurableTask.Worker.dll-D3C716C746EB41567EB15E92313871FF5DF6FE1E",
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "d8d460a09a7e51c1a365883f3296394c1b86257a5235ec30dedd597ba5f0fc49"
+        },
+        {
+          "algorithm": "SHA1",
+          "checksumValue": "d3c716c746eb41567eb15e92313871ff5df6fe1e"
+        }
+      ],
+      "licenseConcluded": "NOASSERTION",
+      "licenseInfoInFiles": [
+        "NOASSERTION"
+      ],
+      "copyrightText": "NOASSERTION"
+    },
+    {
+      "fileName": "./Dependencies/Newtonsoft.Json.dll",
+      "SPDXID": "SPDXRef-File--Dependencies-Newtonsoft.Json.dll-E3673D05D46F29E68241D4536BDDF18CDD0A913D",
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "72cf291d4bab0edd08a9b07c6173e1e7ad1abb7ab727fd7044bf6305d7515661"
+        },
+        {
+          "algorithm": "SHA1",
+          "checksumValue": "e3673d05d46f29e68241d4536bddf18cdd0a913d"
+        }
+      ],
+      "licenseConcluded": "NOASSERTION",
+      "licenseInfoInFiles": [
+        "NOASSERTION"
+      ],
+      "copyrightText": "NOASSERTION"
+    },
+    {
+      "fileName": "./Dependencies/Castle.Core.dll",
+      "SPDXID": "SPDXRef-File--Dependencies-Castle.Core.dll-EFB41379A448DA4C368F5694D0675F99662D27C6",
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "aca835865e0f0e19e5e69031d1c4c1288961cf4972c5918868aca513ca6bce51"
+        },
+        {
+          "algorithm": "SHA1",
+          "checksumValue": "efb41379a448da4c368f5694d0675f99662d27c6"
+        }
+      ],
+      "licenseConcluded": "NOASSERTION",
+      "licenseInfoInFiles": [
+        "NOASSERTION"
+      ],
+      "copyrightText": "NOASSERTION"
+    },
+    {
+      "fileName": "./Dependencies/Microsoft.Extensions.Configuration.Abstractions.dll",
+      "SPDXID": "SPDXRef-File--Dependencies-Microsoft.Extensions.Configuration.Abstractions.dll-C524C7D46A343B75A64BF52B19E3C70C453F9061",
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "e4eb5eb7e28a5548cd904fe1a9c3569adef91f52b654db8a3c56a0a5177a09eb"
+        },
+        {
+          "algorithm": "SHA1",
+          "checksumValue": "c524c7d46a343b75a64bf52b19e3c70c453f9061"
+        }
+      ],
+      "licenseConcluded": "NOASSERTION",
+      "licenseInfoInFiles": [
+        "NOASSERTION"
+      ],
+      "copyrightText": "NOASSERTION"
+    },
+    {
+      "fileName": "./Dependencies/System.Diagnostics.EventLog.dll",
+      "SPDXID": "SPDXRef-File--Dependencies-System.Diagnostics.EventLog.dll-96A914148520A9F0AB3733410129FFB7BA2992CC",
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "24a02d97c2fc6d56735e196bb7faaae8faf0068c486d0c3c7fa3e3b73b4f12a4"
+        },
+        {
+          "algorithm": "SHA1",
+          "checksumValue": "96a914148520a9f0ab3733410129ffb7ba2992cc"
+        }
+      ],
+      "licenseConcluded": "NOASSERTION",
+      "licenseInfoInFiles": [
+        "NOASSERTION"
+      ],
+      "copyrightText": "NOASSERTION"
+    },
+    {
+      "fileName": "./Dependencies/DurableEngine.dll",
+      "SPDXID": "SPDXRef-File--Dependencies-DurableEngine.dll-A69A399F97F3634DE3171BAAADE07CFC1549C98D",
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "b22f3247ae1c6f467585e398ea74fa371189ad584859c382f15eb22a8cb27501"
+        },
+        {
+          "algorithm": "SHA1",
+          "checksumValue": "a69a399f97f3634de3171baaade07cfc1549c98d"
+        }
+      ],
+      "licenseConcluded": "NOASSERTION",
+      "licenseInfoInFiles": [
+        "NOASSERTION"
+      ],
+      "copyrightText": "NOASSERTION"
+    },
+    {
+      "fileName": "./Dependencies/Microsoft.Extensions.DependencyInjection.Abstractions.dll",
+      "SPDXID": "SPDXRef-File--Dependencies-Microsoft.Extensions.DependencyInjection.Abstractions.dll-CB8C35306AFD15358104ECFE70E724AD9C753E6F",
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "9ccd830351aa28bc683d4f8d1cefd9e724161f972d25bfb64eee5bf55c48c5e3"
+        },
+        {
+          "algorithm": "SHA1",
+          "checksumValue": "cb8c35306afd15358104ecfe70e724ad9c753e6f"
+        }
+      ],
+      "licenseConcluded": "NOASSERTION",
+      "licenseInfoInFiles": [
+        "NOASSERTION"
+      ],
+      "copyrightText": "NOASSERTION"
+    },
+    {
+      "fileName": "./Dependencies/System.Reactive.Core.dll",
+      "SPDXID": "SPDXRef-File--Dependencies-System.Reactive.Core.dll-A91898005B1CC48E3F6A4CBB835CAFFC8C6A85CB",
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "47411515e22254958ab719d8c312e6bf7904e32dd1869eb27bf2ddc4e590cab4"
+        },
+        {
+          "algorithm": "SHA1",
+          "checksumValue": "a91898005b1cc48e3f6a4cbb835caffc8c6a85cb"
+        }
+      ],
+      "licenseConcluded": "NOASSERTION",
+      "licenseInfoInFiles": [
+        "NOASSERTION"
+      ],
+      "copyrightText": "NOASSERTION"
+    },
+    {
+      "fileName": "./Dependencies/DurableEngine.pdb",
+      "SPDXID": "SPDXRef-File--Dependencies-DurableEngine.pdb-840296DC42A039DE16DAFD9B6108ACB93E637148",
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "70c98ca32e3a42eaeb10210bff55e294b2404121c474d0b13baa31f78efd6a4c"
+        },
+        {
+          "algorithm": "SHA1",
+          "checksumValue": "840296dc42a039de16dafd9b6108acb93e637148"
+        }
+      ],
+      "licenseConcluded": "NOASSERTION",
+      "licenseInfoInFiles": [
+        "NOASSERTION"
+      ],
+      "copyrightText": "NOASSERTION"
+    },
+    {
+      "fileName": "./Dependencies/Microsoft.Extensions.FileProviders.Abstractions.dll",
+      "SPDXID": "SPDXRef-File--Dependencies-Microsoft.Extensions.FileProviders.Abstractions.dll-3029F45A1397291B4E7EEE9DB9B5DCDE5A47AB7D",
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "ecfcef11c42fa4ad5cf2d4d7f553c8f0017e5eb7a4a9b032b4d0505c98ef4ef4"
+        },
+        {
+          "algorithm": "SHA1",
+          "checksumValue": "3029f45a1397291b4e7eee9db9b5dcde5a47ab7d"
+        }
+      ],
+      "licenseConcluded": "NOASSERTION",
+      "licenseInfoInFiles": [
+        "NOASSERTION"
+      ],
+      "copyrightText": "NOASSERTION"
+    },
+    {
+      "fileName": "./Dependencies/System.Reactive.dll",
+      "SPDXID": "SPDXRef-File--Dependencies-System.Reactive.dll-9CBCA70CC79F7476D92B481C6BEC46CE85433328",
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "19f0112cd1f5172ee2688e96ddd44ada39a4bb1cb2315a154b63e9064f6e3dc0"
+        },
+        {
+          "algorithm": "SHA1",
+          "checksumValue": "9cbca70cc79f7476d92b481c6bec46ce85433328"
+        }
+      ],
+      "licenseConcluded": "NOASSERTION",
+      "licenseInfoInFiles": [
+        "NOASSERTION"
+      ],
+      "copyrightText": "NOASSERTION"
+    },
+    {
+      "fileName": "./Dependencies/DurableTask.Core.dll",
+      "SPDXID": "SPDXRef-File--Dependencies-DurableTask.Core.dll-0064DA99C6E1C6FED54FAB9396878975A1D28EAF",
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "7aa8bb6481f2c61d220a73cd2da77adb2d2d28df1fa02e093dda3a29a55dc514"
+        },
+        {
+          "algorithm": "SHA1",
+          "checksumValue": "0064da99c6e1c6fed54fab9396878975a1d28eaf"
+        }
+      ],
+      "licenseConcluded": "NOASSERTION",
+      "licenseInfoInFiles": [
+        "NOASSERTION"
+      ],
+      "copyrightText": "NOASSERTION"
+    },
+    {
+      "fileName": "./Dependencies/Microsoft.Extensions.Hosting.Abstractions.dll",
+      "SPDXID": "SPDXRef-File--Dependencies-Microsoft.Extensions.Hosting.Abstractions.dll-BBA99CBFE0EFD265CA5A2563624884D4F88BA0C3",
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "df9eb42421a85f84ff2fc98ea25c23fd7d8813df23f3afe28e96b83cc302c8a6"
+        },
+        {
+          "algorithm": "SHA1",
+          "checksumValue": "bba99cbfe0efd265ca5a2563624884d4f88ba0c3"
+        }
+      ],
+      "licenseConcluded": "NOASSERTION",
+      "licenseInfoInFiles": [
+        "NOASSERTION"
+      ],
+      "copyrightText": "NOASSERTION"
+    },
+    {
+      "fileName": "./Dependencies/System.Reactive.Interfaces.dll",
+      "SPDXID": "SPDXRef-File--Dependencies-System.Reactive.Interfaces.dll-74F54702F12252A2DAC2D87D89809C7A1A475F81",
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "edee1397e02df23f85d0b242bb098c850d64cd6ca860aabb34426253a6e3adab"
+        },
+        {
+          "algorithm": "SHA1",
+          "checksumValue": "74f54702f12252a2dac2d87d89809c7a1a475f81"
+        }
+      ],
+      "licenseConcluded": "NOASSERTION",
+      "licenseInfoInFiles": [
+        "NOASSERTION"
+      ],
+      "copyrightText": "NOASSERTION"
+    }
+  ],
+  "packages": [
+    {
+      "name": "Azure Pipelines Hosted Image win19",
+      "SPDXID": "SPDXRef-Package-3FF606431CE825232B7BA4675B710470193C4F32ADA943301C6DB7DEEC27B080",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseInfoFromFiles": [
+        "NOASSERTION"
+      ],
+      "licenseDeclared": "NOASSERTION",
+      "copyrightText": "NOASSERTION",
+      "versionInfo": "20230820.1.0",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE_MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "https://github.com/actions/virtual-environments"
+        }
+      ],
+      "supplier": "Microsoft/GitHub"
+    },
+    {
+      "name": "AzureFunctions.PowerShell.Durable.SDK",
+      "SPDXID": "SPDXRef-RootPackage",
+      "downloadLocation": "NOASSERTION",
+      "packageVerificationCode": {
+        "packageVerificationCodeValue": "c909f8fe42dbc3758acaf989869053a1b30779e8"
+      },
+      "filesAnalyzed": true,
+      "licenseConcluded": "NOASSERTION",
+      "licenseInfoFromFiles": [
+        "NOASSERTION"
+      ],
+      "licenseDeclared": "NOASSERTION",
+      "copyrightText": "NOASSERTION",
+      "versionInfo": "152449",
+      "supplier": "Organization: Microsoft",
+      "hasFiles": [
+        "SPDXRef-File--Dependencies-System.Diagnostics.EventLog.dll-96A914148520A9F0AB3733410129FFB7BA2992CC",
+        "SPDXRef-File--Dependencies-Microsoft.Extensions.Configuration.Abstractions.dll-C524C7D46A343B75A64BF52B19E3C70C453F9061",
+        "SPDXRef-File--Dependencies-Castle.Core.dll-EFB41379A448DA4C368F5694D0675F99662D27C6",
+        "SPDXRef-File--Dependencies-System.Reactive.Linq.dll-21B3C0F5AE5F6C6A436ECC37E747BF931C141D14",
+        "SPDXRef-File--Dependencies-Microsoft.Extensions.Logging.Abstractions.dll-02EC010722BBD1740782B502DF30D4475AEBE5F2",
+        "SPDXRef-File--Dependencies-Microsoft.Bcl.AsyncInterfaces.dll-2E438AEF830795B2D240CF3160A3353BC6CB0232",
+        "SPDXRef-File--AzureFunctions.PowerShell.Durable.SDK.dll-0CA57E1F20DC5E1F8BF8C27C7ABB781FD7E2C96F",
+        "SPDXRef-File--Dependencies-Newtonsoft.Json.dll-E3673D05D46F29E68241D4536BDDF18CDD0A913D",
+        "SPDXRef-File--Dependencies-Microsoft.DurableTask.Worker.dll-D3C716C746EB41567EB15E92313871FF5DF6FE1E",
+        "SPDXRef-File--AzureFunctions.PowerShell.Durable.SDK.psm1-852079516A56958CFCFFE5EEFCF7B0C10BD163F6",
+        "SPDXRef-File--Dependencies-System.Reactive.PlatformServices.dll-8A33FDD641185C66DD4FD3DB88DF5504621D3BF4",
+        "SPDXRef-File--Dependencies-Microsoft.Extensions.Options.dll-6EC0C1FE1332912086247080B55B06623C78326E",
+        "SPDXRef-File--Dependencies-Microsoft.DurableTask.Abstractions.dll-D1D43D1F5B80C63EF1E52985922BB90ADEA5DEEC",
+        "SPDXRef-File--AzureFunctions.PowerShell.Durable.SDK.pdb-A8404C06CFD62F8B32E7333255E790198FB7710B",
+        "SPDXRef-File--Dependencies-System.Reactive.Interfaces.dll-74F54702F12252A2DAC2D87D89809C7A1A475F81",
+        "SPDXRef-File--Dependencies-Microsoft.Extensions.Hosting.Abstractions.dll-BBA99CBFE0EFD265CA5A2563624884D4F88BA0C3",
+        "SPDXRef-File--Dependencies-DurableTask.Core.dll-0064DA99C6E1C6FED54FAB9396878975A1D28EAF",
+        "SPDXRef-File--Dependencies-System.Reactive.dll-9CBCA70CC79F7476D92B481C6BEC46CE85433328",
+        "SPDXRef-File--Dependencies-Microsoft.Extensions.FileProviders.Abstractions.dll-3029F45A1397291B4E7EEE9DB9B5DCDE5A47AB7D",
+        "SPDXRef-File--Dependencies-DurableEngine.pdb-840296DC42A039DE16DAFD9B6108ACB93E637148",
+        "SPDXRef-File--Dependencies-System.Reactive.Core.dll-A91898005B1CC48E3F6A4CBB835CAFFC8C6A85CB",
+        "SPDXRef-File--Dependencies-Microsoft.Extensions.DependencyInjection.Abstractions.dll-CB8C35306AFD15358104ECFE70E724AD9C753E6F",
+        "SPDXRef-File--Dependencies-DurableEngine.dll-A69A399F97F3634DE3171BAAADE07CFC1549C98D",
+        "SPDXRef-File--Dependencies-System.Reactive.Providers.dll-74AA6DBBCB5397BB09D1E69FFCFE9526CBFCEB44",
+        "SPDXRef-File--Dependencies-Microsoft.Extensions.Primitives.dll-376636C20CEE083DA54D4146479032170EC7231B",
+        "SPDXRef-File--Dependencies-Microsoft.DurableTask.Client.dll-0DE9E1C4F3587BC9C002F935BA5023890ED18B8F",
+        "SPDXRef-File--AzureFunctions.PowerShell.Durable.SDK.psd1-D7759B5867DEBC3071327666924C1CC70028F2F1"
+      ]
+    }
+  ],
+  "externalDocumentRefs": [],
+  "relationships": [
+    {
+      "relationshipType": "DESCRIBES",
+      "relatedSpdxElement": "SPDXRef-RootPackage",
+      "spdxElementId": "SPDXRef-DOCUMENT"
+    },
+    {
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-Package-3FF606431CE825232B7BA4675B710470193C4F32ADA943301C6DB7DEEC27B080",
+      "spdxElementId": "SPDXRef-RootPackage"
+    }
+  ],
+  "spdxVersion": "SPDX-2.2",
+  "dataLicense": "CC0-1.0",
+  "SPDXID": "SPDXRef-DOCUMENT",
+  "name": "AzureFunctions.PowerShell.Durable.SDK 152449",
+  "documentNamespace": "https://sbom.microsoft/1:vB_F0XdED0q5n_yQEwCaWA:kgyn5ihBn0OAEjgv541jlg/110:152449/zvvi4k5neU2-Hp8eZHDSOw",
+  "creationInfo": {
+    "created": "2023-09-11T21:08:38Z",
+    "creators": [
+      "Organization: Microsoft",
+      "Tool: Microsoft.SBOMTool-2.1.31"
+    ]
+  },
+  "documentDescribes": [
+    "SPDXRef-RootPackage"
+  ]
+}

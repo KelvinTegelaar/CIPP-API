@@ -11,6 +11,10 @@ function Set-CIPPCPVConsent {
     $TenantName = $Tenant.defaultDomainName
     $TenantFilter = $Tenant.customerId
 
+    if ($Tenantfilter -eq $env:TenantID) {
+        return @('Cannot modify CPV consent on partner tenant')
+    }
+
     if ($ResetSP) {
         try {
             $DeleteSP = New-GraphpostRequest -Type DELETE -noauthcheck $true -uri "https://api.partnercenter.microsoft.com/v1/customers/$($TenantFilter)/applicationconsents/$($ENV:applicationId)" -scope 'https://api.partnercenter.microsoft.com/.default' -tenantid $env:TenantID
@@ -51,7 +55,19 @@ function Set-CIPPCPVConsent {
 
     } catch {
         $ErrorMessage = Get-NormalizedError -message $_.Exception.Message
-        if ($ErrorMessage -like '*Permission entry already exists*') { return @("We've already added our Service Principal to $($TenantName)") }
+        if ($ErrorMessage -like '*Permission entry already exists*') {
+            $Table = Get-CIPPTable -TableName cpvtenants
+            $unixtime = [int64](([datetime]::UtcNow) - (Get-Date '1/1/1970')).TotalSeconds
+            $GraphRequest = @{
+                LastApply     = "$unixtime"
+                applicationId = "$($ENV:applicationId)"
+                Tenant        = "$($tenantfilter)"
+                PartitionKey  = 'Tenant'
+                RowKey        = "$($tenantfilter)"
+            }
+            Add-CIPPAzDataTableEntity @Table -Entity $GraphRequest -Force
+            return @("We've already added our Service Principal to $($TenantName)")
+        }
         Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -message "Could not add our Service Principal to the client tenant $($TenantName): $($_.Exception.message)" -Sev 'Error' -tenant $TenantName -tenantId $TenantFilter
         return @("Could not add our Service Principal to the client tenant $($TenantName): $ErrorMessage")
     }
