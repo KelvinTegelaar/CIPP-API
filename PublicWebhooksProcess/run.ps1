@@ -57,6 +57,7 @@ if ($Request.query.CIPPID -in $Webhooks.RowKey) {
                     $Data = New-GraphPostRequest -type GET -uri "https://manage.office.com/api/v1.0/$($ReceivedItem.tenantId)/activity/feed/audit/$($ReceivedItem.contentid)" -tenantid $TenantFilter -scope 'https://manage.office.com/.default'
                 } else {
                     Write-Host "No data to download for $($ReceivedItem.ContentType)"
+                    continue
                 }
                 Write-Host "Data found: $($data.count) items"
                 $DataToProcess = $Data | Where-Object -Property Operation -In $Operations
