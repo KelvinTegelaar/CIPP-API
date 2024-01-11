@@ -33,8 +33,10 @@ if ($Request.query.CIPPID -in $Webhooks.RowKey) {
                 $TenantFilter = (Get-Tenants | Where-Object -Property customerId -EQ $ReceivedItem.TenantId).defaultDomainName
                 Write-Host "Webhook TenantFilter: $TenantFilter"
                 $Data = New-GraphPostRequest -type GET -uri "https://manage.office.com/api/v1.0/$($ReceivedItem.tenantId)/activity/feed/audit/$($ReceivedItem.contentid)" -tenantid $TenantFilter -scope 'https://manage.office.com/.default'
-                Write-Host "Data to process found: $($data.count) items"
-                foreach ($Item in $Data | Where-Object -Property Operation -In $Operations) {
+                Write-Host "Data found: $($data.count) items"
+                $DataToProcess = $Data | Where-Object -Property Operation -In $Operations
+                Write-Host "Data to process found: $($DataToProcess.count) items"
+                foreach ($Item in $DataToProcess) {
                     Write-Host "Processing $($item.operation)"
                     Invoke-CippWebhookProcessing -TenantFilter $TenantFilter -Data $Item -CIPPPURL $url
                 } 
