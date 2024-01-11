@@ -216,12 +216,10 @@ Function Push-ExecOnboardTenantQueue {
                     $OnboardingSteps.Step3.Message = 'Failed to map security groups, no pending invite available'
                 }
 
-                $x = 0
                 do {
-                    $x++
                     $AccessAssignments = New-GraphGetRequest -Uri "https://graph.microsoft.com/beta/tenantRelationships/delegatedAdminRelationships/$Id/accessAssignments"
                     Start-Sleep -Seconds 15
-                } while ($AccessAssignments.status -contains 'pending' -and $x -le 12)
+                } while ($AccessAssignments.status -contains 'pending' -and (Get-Date) -lt $Start.AddMinutes(8))
 
                 if ($AccessAssignments.status -notcontains 'pending') {
                     $OnboardingSteps.Step3.Message = 'Group check: Access assignments are mapped and active'
