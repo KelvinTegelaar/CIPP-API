@@ -192,9 +192,11 @@ function Invoke-CippWebhookProcessing {
                     }
                 }
             }
+            Write-Host 'Going to create the content'
             foreach ($action in $dos) { 
                 switch ($action.execute) {
                     'generatemail' {
+                        Write-Host 'Going to create the email'
                         $GenerateEmail = New-CIPPAlertTemplate -format 'html' -data $Data -LocationInfo $Location -ActionResults $ActionResults
                         Send-CIPPAlert -Type 'email' -Title $GenerateEmail.title -HTMLContent $GenerateEmail.htmlcontent -TenantFilter $TenantFilter
                     }  
