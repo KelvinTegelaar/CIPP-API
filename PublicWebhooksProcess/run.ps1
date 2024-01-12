@@ -68,7 +68,7 @@ if ($Request.query.CIPPID -in $Webhooks.RowKey) {
                 } 
             }
         } catch {
-            Write-Host "Webhook Failed: $($_.Exception.Message)"
+            Write-Host "Webhook Failed: $($_.Exception.Message). Line number $($_.InvocationInfo.ScriptLineNumber)"
         }
     }
 
