@@ -13,7 +13,7 @@
 # Remove this if you are not planning on using MSI or Azure PowerShell.
 
 # Import modules
-@('CippCore', 'CippExtensions', 'Az.KeyVault', 'Az.Accounts') | ForEach-Object {
+@('CippCore', 'CippExtensions', 'Az.KeyVault', 'Az.Accounts', 'AzureFunctions.PowerShell.Durable.SDK') | ForEach-Object {
     try {
         Import-Module -Name $_ -ErrorAction Stop
     } catch {
