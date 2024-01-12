@@ -38,13 +38,14 @@ function Push-CIPPAlertMFAAdmins {
             } else {
                 Write-LogMessage -message 'Potentially using Duo for MFA, could not check MFA status for Admins with 100% accuracy' -API 'MFA Alerts - Informational' -tenant $QueueItem.tenant -sev Info
             }
+            $LastRun = @{
+                RowKey       = 'MFAAllAdmins'
+                PartitionKey = $QueueItem.tenantid
+            }
+            Add-CIPPAzDataTableEntity @LastRunTable -Entity $LastRun -Force
         }
     } catch {
         Write-AlertMessage -tenant $($QueueItem.tenant) -message "Could not get MFA status for admins for $($QueueItem.tenant): $(Get-NormalizedError -message $_.Exception.message)"
     }
-    $LastRun = @{
-        RowKey       = 'MFAAllAdmins'
-        PartitionKey = $QueueItem.tenantid
-    }
-    Add-CIPPAzDataTableEntity @LastRunTable -Entity $LastRun -Force
+
 }

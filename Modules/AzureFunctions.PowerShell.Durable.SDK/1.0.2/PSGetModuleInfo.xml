@@ -1,0 +1,166 @@
+<Objs Version="1.1.0.1" xmlns="http://schemas.microsoft.com/powershell/2004/04">
+  <Obj RefId="0">
+    <TN RefId="0">
+      <T>Microsoft.PowerShell.Commands.PSRepositoryItemInfo</T>
+      <T>System.Management.Automation.PSCustomObject</T>
+      <T>System.Object</T>
+    </TN>
+    <MS>
+      <S N="Name">AzureFunctions.PowerShell.Durable.SDK</S>
+      <S N="Version">1.0.2</S>
+      <S N="Type">Module</S>
+      <S N="Description">Initial release of the Durable Functions SDK for PowerShell. This package is to be used exclusively with the Azure Functions PowerShell worker.</S>
+      <S N="Author">Microsoft Corporation</S>
+      <Obj N="CompanyName" RefId="1">
+        <TN RefId="1">
+          <T>System.Object[]</T>
+          <T>System.Array</T>
+          <T>System.Object</T>
+        </TN>
+        <LST>
+          <S>davidmrdavid</S>
+          <S>michaelpeng</S>
+        </LST>
+      </Obj>
+      <S N="Copyright">(c) Microsoft Corporation. All rights reserved.</S>
+      <DT N="PublishedDate">2023-09-11T21:54:10+02:00</DT>
+      <Nil N="InstalledDate" />
+      <Nil N="UpdatedDate" />
+      <URI N="LicenseUri">https://github.com/Azure/azure-functions-durable-powershell/blob/main/LICENSE</URI>
+      <URI N="ProjectUri">https://github.com/Azure/azure-functions-durable-powershell</URI>
+      <Nil N="IconUri" />
+      <Obj N="Tags" RefId="2">
+        <TNRef RefId="1" />
+        <LST>
+          <S>Microsoft</S>
+          <S>Azure</S>
+          <S>Functions</S>
+          <S>Serverless</S>
+          <S>Cloud</S>
+          <S>Workflows</S>
+          <S>Durable</S>
+          <S>DurableTask</S>
+          <S>PSModule</S>
+          <S>PSEdition_Core</S>
+        </LST>
+      </Obj>
+      <Obj N="Includes" RefId="3">
+        <TN RefId="2">
+          <T>System.Collections.Hashtable</T>
+          <T>System.Object</T>
+        </TN>
+        <DCT>
+          <En>
+            <S N="Key">RoleCapability</S>
+            <Obj N="Value" RefId="4">
+              <TNRef RefId="1" />
+              <LST />
+            </Obj>
+          </En>
+          <En>
+            <S N="Key">Workflow</S>
+            <Ref N="Value" RefId="4" />
+          </En>
+          <En>
+            <S N="Key">Function</S>
+            <Obj N="Value" RefId="5">
+              <TNRef RefId="1" />
+              <LST>
+                <S>Get-DurableStatus</S>
+                <S>New-DurableOrchestrationCheckStatusResponse</S>
+                <S>Send-DurableExternalEvent</S>
+                <S>Start-DurableOrchestration</S>
+                <S>Stop-DurableOrchestration</S>
+              </LST>
+            </Obj>
+          </En>
+          <En>
+            <S N="Key">Cmdlet</S>
+            <Obj N="Value" RefId="6">
+              <TNRef RefId="1" />
+              <LST>
+                <S>Invoke-DurableActivity</S>
+                <S>Invoke-DurableSubOrchestrator</S>
+                <S>New-DurableRetryPolicy</S>
+                <S>Set-DurableCustomStatus</S>
+                <S>Set-FunctionInvocationContext</S>
+                <S>Start-DurableExternalEventListener</S>
+                <S>Start-DurableTimer</S>
+                <S>Stop-DurableTimerTask</S>
+                <S>Wait-DurableTask</S>
+                <S>Get-DurableTaskResult</S>
+              </LST>
+            </Obj>
+          </En>
+          <En>
+            <S N="Key">DscResource</S>
+            <Ref N="Value" RefId="4" />
+          </En>
+          <En>
+            <S N="Key">Command</S>
+            <Obj N="Value" RefId="7">
+              <TNRef RefId="1" />
+              <LST>
+                <S>Invoke-DurableActivity</S>
+                <S>Invoke-DurableSubOrchestrator</S>
+                <S>New-DurableRetryPolicy</S>
+                <S>Set-DurableCustomStatus</S>
+                <S>Set-FunctionInvocationContext</S>
+                <S>Start-DurableExternalEventListener</S>
+                <S>Start-DurableTimer</S>
+                <S>Stop-DurableTimerTask</S>
+                <S>Wait-DurableTask</S>
+                <S>Get-DurableTaskResult</S>
+                <S>Get-DurableStatus</S>
+                <S>New-DurableOrchestrationCheckStatusResponse</S>
+                <S>Send-DurableExternalEvent</S>
+                <S>Start-DurableOrchestration</S>
+                <S>Stop-DurableOrchestration</S>
+              </LST>
+            </Obj>
+          </En>
+        </DCT>
+      </Obj>
+      <Nil N="PowerShellGetFormatVersion" />
+      <Nil N="ReleaseNotes" />
+      <Obj N="Dependencies" RefId="8">
+        <TNRef RefId="1" />
+        <LST />
+      </Obj>
+      <S N="RepositorySourceLocation">https://www.powershellgallery.com/api/v2</S>
+      <S N="Repository">PSGallery</S>
+      <S N="PackageManagementProvider">NuGet</S>
+      <Obj N="AdditionalMetadata" RefId="9">
+        <TN RefId="3">
+          <T>System.Management.Automation.PSCustomObject</T>
+          <T>System.Object</T>
+        </TN>
+        <MS>
+          <S N="copyright">(c) Microsoft Corporation. All rights reserved.</S>
+          <S N="description">Initial release of the Durable Functions SDK for PowerShell. This package is to be used exclusively with the Azure Functions PowerShell worker.</S>
+          <S N="requireLicenseAcceptance">False</S>
+          <S N="isLatestVersion">True</S>
+          <S N="isAbsoluteLatestVersion">True</S>
+          <S N="versionDownloadCount">1287</S>
+          <S N="downloadCount">1768</S>
+          <S N="packageSize">1382604</S>
+          <S N="published">11/09/2023 21:54:10 +02:00</S>
+          <S N="created">11/09/2023 21:54:10 +02:00</S>
+          <S N="lastUpdated">09/01/2024 13:40:21 +01:00</S>
+          <S N="tags">Microsoft Azure Functions Serverless Cloud Workflows Durable DurableTask PSModule PSEdition_Core PSCmdlet_Invoke-DurableActivity PSCommand_Invoke-DurableActivity PSCmdlet_Invoke-DurableSubOrchestrator PSCommand_Invoke-DurableSubOrchestrator PSCmdlet_New-DurableRetryPolicy PSCommand_New-DurableRetryPolicy PSCmdlet_Set-DurableCustomStatus PSCommand_Set-DurableCustomStatus PSCmdlet_Set-FunctionInvocationContext PSCommand_Set-FunctionInvocationContext PSCmdlet_Start-DurableExternalEventListener PSCommand_Start-DurableExternalEventListener PSCmdlet_Start-DurableTimer PSCommand_Start-DurableTimer PSCmdlet_Stop-DurableTimerTask PSCommand_Stop-DurableTimerTask PSCmdlet_Wait-DurableTask PSCommand_Wait-DurableTask PSCmdlet_Get-DurableTaskResult PSCommand_Get-DurableTaskResult PSIncludes_Cmdlet PSFunction_Get-DurableStatus PSCommand_Get-DurableStatus PSFunction_New-DurableOrchestrationCheckStatusResponse PSCommand_New-DurableOrchestrationCheckStatusResponse PSFunction_Send-DurableExternalEvent PSCommand_Send-DurableExternalEvent PSFunction_Start-DurableOrchestration PSCommand_Start-DurableOrchestration PSFunction_Stop-DurableOrchestration PSCommand_Stop-DurableOrchestration PSIncludes_Function</S>
+          <S N="developmentDependency">False</S>
+          <S N="updated">2024-01-09T13:40:21Z</S>
+          <S N="NormalizedVersion">1.0.2</S>
+          <S N="Authors">Microsoft Corporation</S>
+          <S N="IsPrerelease">false</S>
+          <S N="ItemType">Module</S>
+          <S N="FileList">AzureFunctions.PowerShell.Durable.SDK.nuspec|Dependencies\Microsoft.Extensions.FileProviders.Abstractions.dll|Dependencies\Microsoft.Extensions.Options.dll|Dependencies\System.Diagnostics.EventLog.dll|Dependencies\System.Reactive.Interfaces.dll|Dependencies\System.Reactive.PlatformServices.dll|_manifest\manifest.json|AzureFunctions.PowerShell.Durable.SDK.dll|AzureFunctions.PowerShell.Durable.SDK.psd1|Dependencies\DurableEngine.dll|Dependencies\Microsoft.Bcl.AsyncInterfaces.dll|Dependencies\Microsoft.DurableTask.Worker.dll|Dependencies\Microsoft.Extensions.Hosting.Abstractions.dll|Dependencies\Microsoft.Extensions.Primitives.dll|Dependencies\System.Reactive.Core.dll|Dependencies\System.Reactive.Linq.dll|Dependencies\System.Reactive.Providers.dll|_manifest\manifest.json.sha256|_manifest\spdx_2.2\manifest.spdx.json|AzureFunctions.PowerShell.Durable.SDK.psm1|Dependencies\DurableEngine.pdb|Dependencies\Microsoft.DurableTask.Abstractions.dll|Dependencies\Microsoft.Extensions.Configuration.Abstractions.dll|Dependencies\Microsoft.Extensions.Logging.Abstractions.dll|Dependencies\Newtonsoft.Json.dll|Dependencies\System.Reactive.dll|_manifest\spdx_2.2\manifest.spdx.json.sha256|AzureFunctions.PowerShell.Durable.SDK.pdb|Dependencies\Castle.Core.dll|Dependencies\DurableTask.Core.dll|Dependencies\Microsoft.DurableTask.Client.dll|Dependencies\Microsoft.Extensions.DependencyInjection.Abstractions.dll</S>
+          <S N="GUID">841fad61-94f5-4330-89be-613d54165289</S>
+          <S N="PowerShellVersion">7.2</S>
+          <S N="CompanyName">Microsoft Corporation</S>
+        </MS>
+      </Obj>
+      <S N="InstalledLocation">C:\Github\CIPP-API\Modules\AzureFunctions.PowerShell.Durable.SDK\1.0.2</S>
+    </MS>
+  </Obj>
+</Objs>
