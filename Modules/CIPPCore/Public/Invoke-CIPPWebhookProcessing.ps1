@@ -92,6 +92,15 @@ function Invoke-CippWebhookProcessing {
                     Proxy           = "$Proxy"
                     Hosting         = "$hosting"
                     ASName          = "$ASName"
+                    Region          = "$($location.region)"
+                    RegionName      = "$($location.regionName)"
+                    org             = "$($location.org)"
+                    zip             = "$($location.zip)"
+                    mobile          = "$($location.mobile)"
+                    lat             = "$($location.lat)"
+                    lon             = "$($location.lon)"
+                    isp             = "$($location.isp)"
+                    Country         = "$($location.country)"
                 }
                 $null = Add-CIPPAzDataTableEntity @LocationTable -Entity $LocationInfo -Force
             }
