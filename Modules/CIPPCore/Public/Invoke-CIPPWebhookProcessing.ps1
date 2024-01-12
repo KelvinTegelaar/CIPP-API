@@ -92,6 +92,15 @@ function Invoke-CippWebhookProcessing {
                     Proxy           = "$Proxy"
                     Hosting         = "$hosting"
                     ASName          = "$ASName"
+                    Region          = "$($location.region)"
+                    RegionName      = "$($location.regionName)"
+                    org             = "$($location.org)"
+                    zip             = "$($location.zip)"
+                    mobile          = "$($location.mobile)"
+                    lat             = "$($location.lat)"
+                    lon             = "$($location.lon)"
+                    isp             = "$($location.isp)"
+                    Country         = "$($location.country)"
                 }
                 $null = Add-CIPPAzDataTableEntity @LocationTable -Entity $LocationInfo -Force
             }
@@ -183,11 +192,16 @@ function Invoke-CippWebhookProcessing {
                     }
                 }
             }
+            Write-Host 'Going to create the content'
             foreach ($action in $dos) { 
                 switch ($action.execute) {
                     'generatemail' {
+                        Write-Host 'Going to create the email'
                         $GenerateEmail = New-CIPPAlertTemplate -format 'html' -data $Data -LocationInfo $Location -ActionResults $ActionResults
+                        Write-Host 'Going to send the mail'
                         Send-CIPPAlert -Type 'email' -Title $GenerateEmail.title -HTMLContent $GenerateEmail.htmlcontent -TenantFilter $TenantFilter
+                        Write-Host 'email should be sent'
+
                     }  
                     'generatePSA' {
                         $GenerateEmail = New-CIPPAlertTemplate -format 'html'-data $Data -LocationInfo $Location -ActionResults $ActionResults
