@@ -3,7 +3,6 @@ function New-CIPPAlertTemplate {
         [Parameter(Mandatory = $true)]
         $Data,
         [Parameter(Mandatory = $true)]
-        [ValidateSet('html', 'json')]
         $Format,
         $LocationInfo,
         $ActionResults
