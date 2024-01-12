@@ -7,7 +7,11 @@ function Add-CIPPDelegatedPermission {
     )
     Write-Host 'Adding Delegated Permissions'
     Set-Location (Get-Item $PSScriptRoot).FullName
-    Write-Host "RequiredResourceAccess: $($RequiredResourceAccess | ConvertTo-Json -Depth 10)"
+
+    if ($ApplicationId -eq $ENV:ApplicationID -and $Tenantfilter -eq $env:TenantID) {
+        return @('Cannot modify delgated permissions for CIPP-SAM on partner tenant')
+    }
+
     if ($RequiredResourceAccess -eq 'CIPPDefaults') {
         $RequiredResourceAccess = (Get-Content '.\SAMManifest.json' | ConvertFrom-Json).requiredResourceAccess
     }
@@ -15,15 +19,15 @@ function Add-CIPPDelegatedPermission {
     $ServicePrincipalList = New-GraphGETRequest -uri "https://graph.microsoft.com/beta/servicePrincipals?`$select=AppId,id,displayName&`$top=999" -tenantid $Tenantfilter -skipTokenCache $true
     $ourSVCPrincipal = $ServicePrincipalList | Where-Object -Property AppId -EQ $ApplicationId
     $Results = [System.Collections.ArrayList]@()
-    
+
     $CurrentDelegatedScopes = New-GraphGETRequest -uri "https://graph.microsoft.com/beta/servicePrincipals/$($ourSVCPrincipal.id)/oauth2PermissionGrants" -skipTokenCache $true -tenantid $Tenantfilter
-    
+
     foreach ($App in $requiredResourceAccess) {
         $svcPrincipalId = $ServicePrincipalList | Where-Object -Property AppId -EQ $App.resourceAppId
-        if (!$svcPrincipalId) { continue } 
+        if (!$svcPrincipalId) { continue }
         $NewScope = ($Translator | Where-Object { $_.id -in $App.ResourceAccess.id } | Where-Object { $_.value -notin 'profile', 'openid', 'offline_access' }).value -join ' '
         $OldScope = ($CurrentDelegatedScopes | Where-Object -Property Resourceid -EQ $svcPrincipalId.id)
-        
+
         if (!$OldScope) {
             $Createbody = @{
                 clientId    = $ourSVCPrincipal.id
