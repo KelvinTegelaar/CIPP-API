@@ -4,12 +4,12 @@ function Set-CIPPOnedriveAccess {
     $userid,
     $OnedriveAccessUser,
     $TenantFilter,
-    $APIName = "Manage OneDrive Access",
+    $APIName = 'Manage OneDrive Access',
     $ExecutingUser
   )
 
   try {
-    $URL = (New-GraphGetRequest -uri "https://graph.microsoft.com/beta/reports/getOneDriveUsageAccountDetail(period='D7')?`$format=application/json" -tenantid $TenantFilter | Where-Object -Property 'OwnerPrincipalName' -EQ $userid).siteUrl
+    $URL = (New-GraphGetRequest -uri "https://graph.microsoft.com/v1.0/users/$($UserId)/Drives" -asapp $true -tenantid $TenantFilter).WebUrl
     $OnMicrosoft = (New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/domains?$top=999' -tenantid $TenantFilter | Where-Object -Property isInitial -EQ $true).id.split('.') | Select-Object -First 1
     $AdminUrl = "https://$($OnMicrosoft)-admin.sharepoint.com"
     $XML = @"
@@ -31,16 +31,14 @@ function Set-CIPPOnedriveAccess {
 "@
     $request = New-GraphPostRequest -scope "$AdminURL/.default" -tenantid $TenantFilter -Uri "$AdminURL/_vti_bin/client.svc/ProcessQuery" -Type POST -Body $XML -ContentType 'text/xml'
     if (!$request.ErrorInfo.ErrorMessage) {
-      Write-LogMessage -user $ExecutingUser -API $APIName -message "Gave $($OnedriveAccessUser) access to $($userid) OneDrive" -Sev "Info" -tenant $TenantFilter
+      Write-LogMessage -user $ExecutingUser -API $APIName -message "Gave $($OnedriveAccessUser) access to $($userid) OneDrive" -Sev 'Info' -tenant $TenantFilter
       return "User's OneDrive URL is $URL. Access has been given to $($OnedriveAccessUser)"
-    }
-    else {
-      Write-LogMessage -user $ExecutingUser -API $APIName -message "Failed to give OneDrive Access: $($request.ErrorInfo.ErrorMessage)" -Sev "Info" -tenant $TenantFilter
+    } else {
+      Write-LogMessage -user $ExecutingUser -API $APIName -message "Failed to give OneDrive Access: $($request.ErrorInfo.ErrorMessage)" -Sev 'Info' -tenant $TenantFilter
       return "Failed to give OneDrive Access: $($request.ErrorInfo.ErrorMessage)"
     }
-  }
-  catch {
-    Write-LogMessage -user $ExecutingUser -API $APIName -message "Could not add new owner to OneDrive $($OnedriveAccessUser) on $($userid)" -Sev "Error" -tenant $TenantFilter
+  } catch {
+    Write-LogMessage -user $ExecutingUser -API $APIName -message "Could not add new owner to OneDrive $($OnedriveAccessUser) on $($userid)" -Sev 'Error' -tenant $TenantFilter
     return "Could not add owner to OneDrive for $($userid). Error: $($_.Exception.Message)"
   }
 }
