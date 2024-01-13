@@ -5,6 +5,7 @@ function Set-CIPPCAExclusion {
         $ExclusionType,
         $UserID,
         $PolicyId, 
+        $Username,
         $executingUser
     )
     try {
@@ -31,9 +32,10 @@ function Set-CIPPCAExclusion {
             $RawJson = ConvertTo-Json -Depth 10 -InputObject $NewExclusions 
             New-GraphPOSTRequest -uri "https://graph.microsoft.com/beta/identity/conditionalAccess/policies/$($CheckExististing.id)" -tenantid $tenantfilter -type PATCH -body $RawJSON 
         }
-
-        Write-LogMessage -user $executingUser -API 'Set-CIPPConditionalAccessExclusion' -message "Successfully performed $($ExclusionType) user from policy $($PolicyId)" -Sev 'Info' -tenant $TenantFilter
+        "Successfully performed $($ExclusionType) exclusion for $username from policy $($PolicyId)"
+        Write-LogMessage -user $executingUser -API 'Set-CIPPConditionalAccessExclusion' -message "Successfully performed $($ExclusionType) exclusion for $username from policy $($PolicyId)" -Sev 'Info' -tenant $TenantFilter
     } catch {
-        Write-LogMessage -user $executingUser -API 'Set-CIPPConditionalAccessExclusion' -message "Failed to $($ExclusionType) user from policy $($PolicyId): $_" -Sev 'Error' -tenant $TenantFilter
+        "Failed to $($ExclusionType) user exclusion for $username from policy $($PolicyId): $_"
+        Write-LogMessage -user $executingUser -API 'Set-CIPPConditionalAccessExclusion' -message "Failed to $($ExclusionType) user exclusion for $username from policy $($PolicyId): $_" -Sev 'Error' -tenant $TenantFilter
     }
 }
