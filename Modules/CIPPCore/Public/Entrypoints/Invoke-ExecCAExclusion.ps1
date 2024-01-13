@@ -34,7 +34,7 @@ Function Invoke-ExecCAExclusion {
         Add-CIPPScheduledTask -Task $TaskBody -hidden $false
         #Removal of the exclusion
         $TaskBody.Parameters.ExclusionType = 'Remove'
-        $TaskBody.Name = "Remove CA Exclusion Vacation Mode: $($Request.body.UserId) - $($Request.body.TenantFilter)"
+        $TaskBody.Name = "Remove CA Exclusion Vacation Mode: $username - $($Request.body.TenantFilter)"
         $TaskBody.ScheduledTime = $Request.body.EndDate
         Add-CIPPScheduledTask -Task $TaskBody -hidden $false
         $body = @{ Results = "Successfully added vacation mode schedule for $Username." }
