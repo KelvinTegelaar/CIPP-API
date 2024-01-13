@@ -9,10 +9,10 @@
         {
           "name": "Device Register",
           "value": "deviceregister",
+          "desc": "These are all devices found in M365 to add to your CE Device Register.",
           "formatter": "table"
         }
       ],
-      "desc": "These are all devices found in M365 to add to your CE Device Register.",
       "StoreAs": "JSON",
       "API": "Graph",
       "ExtractFields": [
@@ -31,10 +31,10 @@
         {
           "name": "Admins Table",
           "value": "adminsTable",
+          "desc": "The list of admin accounts in your M365 environment. These must all be named and attached to actual users.",
           "formatter": "table"
         }
       ],
-      "desc": "The list of admin accounts in your M365 environment. These must all be named and attached to actual users.",
       "StoreAs": "JSON",
       "API": "Graph",
       "ExtractFields": ["displayName", "userPrincipalName"],
@@ -47,10 +47,10 @@
         {
           "name": "Defender List",
           "value": "windowsProtectionState",
-          "formatter": "table"
+          "formatter": "table",
+          "desc": "List of Defender protected workstations. Add this to your Malware Protection Audit List"
         }
       ],
-      "desc": "List of Defender protected workstations. Add this to your Malware Protection Audit List",
       "StoreAs": "JSON",
       "API": "Graph",
       "ExtractFields": ["windowsProtectionState"],
@@ -64,10 +64,10 @@
         {
           "name": "Detected Apps",
           "value": "detectedApps",
+          "desc": "All Detected Software and their version. Add this to your software audit list",
           "formatter": "table"
         }
       ],
-      "desc": "All Detected Software and their version. Add this to your software audit list",
       "StoreAs": "JSON",
       "API": "Graph",
       "ExtractFields": ["displayName", "version", "platform", "publisher"],
@@ -78,11 +78,12 @@
       "UseExistingInfo": false,
       "FrontendFields": [
         {
-          "name": "User Regsitration Details",
-          "value": "userRegistrationDetails"
+          "name": "User Registration Details",
+          "desc": "All MFA settings (Requires a P1 Subscription)",
+          "value": "userRegistrationDetails",
+          "formatter": "table"
         }
       ],
-      "desc": "All MFA settings (Requires a P1 Subscription)",
       "StoreAs": "JSON",
       "API": "Graph",
       "ExtractFields": [
