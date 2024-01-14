@@ -11,6 +11,7 @@ function Invoke-CippWebhookProcessing {
     )
     $ConfigTable = get-cipptable -TableName 'SchedulerConfig'
     $LocationTable = Get-CIPPTable -TableName 'knownlocationdb'
+    $TrustedIPsTable = Get-CIPPTable -TableName 'trustedIps'
     $Alertconfig = Get-CIPPAzDataTableEntity @ConfigTable -Filter "Tenant eq '$tenantfilter'"
     if (!$Alertconfig) {
         $Alertconfig = Get-CIPPAzDataTableEntity @ConfigTable -Filter "Tenant eq 'AllTenants'"
@@ -19,6 +20,8 @@ function Invoke-CippWebhookProcessing {
     if ($data.userId -eq 'Not Available') { $data.userId = $data.userKey }
     if ($data.Userkey -eq 'Not Available') { $data.Userkey = $data.userId }
     if ($data.clientip) {
+        $TrustedIps = Get-CIPPAzDataTableEntity @TrustedIPsTable -Filter "PartitionKey eq 'trustedIps' and RowKey eq '$($data.clientip)'"
+        Write-Host "TrustedIPs: $($TrustedIps | ConvertTo-Json -Depth 15 -Compress)"
         #First we perform a lookup in the knownlocationdb table to see if we have a location for this IP address.
         $Location = Get-CIPPAzDataTableEntity @LocationTable -Filter "RowKey eq '$($data.clientip)'" | Select-Object -Last 1
         #If we have a location, we use that. If not, we perform a lookup in the GeoIP database.
@@ -61,8 +64,8 @@ function Invoke-CippWebhookProcessing {
     Write-Host "These are the allowed locations: $($AllowedLocations)"
     Write-Host "Operation: $($data.operation)"
     switch ($data.operation) {
-        { 'UserLoggedIn' -eq $data.operation -and $proxy -eq $true } { $data.operation = 'BadRepIP' }
-        { 'UserLoggedIn' -eq $data.operation -and $hosting -eq $true } { $data.operation = 'HostedIP' }
+        { 'UserLoggedIn' -eq $data.operation -and $proxy -eq $true -and !$TrustedIps } { $data.operation = 'BadRepIP' }
+        { 'UserLoggedIn' -eq $data.operation -and $hosting -eq $true -and !$TrustedIps } { $data.operation = 'HostedIP' }
         { 'UserLoggedIn' -eq $data.operation -and $Country -notin $AllowedLocations -and $data.ResultStatus -eq 'Success' -and $TableObj.ResultStatusDetail -eq 'Success' } {
             Write-Host "$($country) is not in $($AllowedLocations)"
             $data.operation = 'UserLoggedInFromUnknownLocation' 

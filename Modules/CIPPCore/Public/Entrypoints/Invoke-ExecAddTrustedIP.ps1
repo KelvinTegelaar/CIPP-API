@@ -11,7 +11,7 @@ Function Invoke-ExecAddTrustedIP {
     $Table = Get-CippTable -tablename 'trustedIps'
     Add-CIPPAzDataTableEntity @Table -Entity @{
         PartitionKey = 'trustedIps'
-        RowKey       = 'trustedIps'
+        RowKey       = $Request.query.ip
         trustedIps   = $request.query.ip
         tenantfilter = $request.query.tenantfilter
         state        = $request.query.State
