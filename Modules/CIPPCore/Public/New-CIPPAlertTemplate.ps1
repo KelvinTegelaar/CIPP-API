@@ -175,7 +175,7 @@ function New-CIPPAlertTemplate {
                 $LocationTable = ($LocationInfo | ConvertTo-Html -Fragment -As List | Out-String).Replace('<table>', ' <table class="table-modern">')
                 $IntroText = $IntroText + "<p>The location information for this IP is as follows:</p>$LocationTable"
             }
-            $ButtonUrl = "$CIPPPURL/tenant/tools/geoiplookup?ip=$($data.ClientIP)&SearchNow=true"
+            $ButtonUrl = "$CIPPPURL/tenant/tools/geoiplookup?ip=$($data.ClientIP)&SearchNow=true&customerId=$($data.OrganizationId)"
             $ButtonText = 'Whitelist IP'
             $AfterButtonText = '<p>If this is incorrect, you can whitelist the following IP.</p>'
         }
@@ -189,7 +189,7 @@ function New-CIPPAlertTemplate {
                 $LocationTable = ($LocationInfo | ConvertTo-Html -Fragment -As List | Out-String).Replace('<table>', ' <table class="table-modern">')
                 $IntroText = $IntroText + "<p>The location information for this IP is as follows:</p>$LocationTable"
             }
-            $ButtonUrl = "$CIPPPURL/tenant/tools/geoiplookup?ip=$($data.ClientIP)&SearchNow=true"
+            $ButtonUrl = "$CIPPPURL/tenant/tools/geoiplookup?ip=$($data.ClientIP)&SearchNow=true&customerId=$($data.OrganizationId)"
             $ButtonText = 'Whitelist IP'
             $AfterButtonText = '<p>If this is incorrect, you can whitelist the following IP.</p>'
         }
