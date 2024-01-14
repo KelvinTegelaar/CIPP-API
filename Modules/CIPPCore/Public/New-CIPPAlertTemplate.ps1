@@ -190,7 +190,7 @@ function New-CIPPAlertTemplate {
                 $IntroText = $IntroText + "<p>The location information for this IP is as follows:</p>$LocationTable"
             }
             $ButtonUrl = "$CIPPPURL/tenant/tools/geoiplookup?ip=$($data.ClientIP)&SearchNow=true"
-            $ButtonText = 'User Management'
+            $ButtonText = 'Whitelist IP'
             $AfterButtonText = '<p>If this is incorrect, you can whitelist the following IP.</p>'
         }
         'Add service principal.' {
