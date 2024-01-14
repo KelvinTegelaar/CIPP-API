@@ -20,7 +20,7 @@ function Invoke-CippWebhookProcessing {
     if ($data.userId -eq 'Not Available') { $data.userId = $data.userKey }
     if ($data.Userkey -eq 'Not Available') { $data.Userkey = $data.userId }
     if ($data.clientip) {
-        $TrustedIps = Get-CIPPAzDataTableEntity @TrustedIPsTable -Filter "PartitionKey eq 'trustedIps' and RowKey eq '$($data.clientip)'"
+        $TrustedIps = Get-CIPPAzDataTableEntity @TrustedIPsTable -Filter "PartitionKey eq '$($TenantFilter)' and RowKey eq '$($data.clientip)' and state eq 'Trusted'"
         Write-Host "TrustedIPs: $($TrustedIps | ConvertTo-Json -Depth 15 -Compress)"
         #First we perform a lookup in the knownlocationdb table to see if we have a location for this IP address.
         $Location = Get-CIPPAzDataTableEntity @LocationTable -Filter "RowKey eq '$($data.clientip)'" | Select-Object -Last 1
