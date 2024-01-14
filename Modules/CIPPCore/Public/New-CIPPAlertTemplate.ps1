@@ -175,9 +175,9 @@ function New-CIPPAlertTemplate {
                 $LocationTable = ($LocationInfo | ConvertTo-Html -Fragment -As List | Out-String).Replace('<table>', ' <table class="table-modern">')
                 $IntroText = $IntroText + "<p>The location information for this IP is as follows:</p>$LocationTable"
             }
-            $ButtonUrl = "$CIPPPURL/identity/administration/ViewBec?userId=$($data.ObjectId)&tenantDomain=$($data.OrganizationId)"
-            $ButtonText = 'User Management'
-            $AfterButtonText = '<p>If this is incorrect, use the user management screen to block the user and revoke the sessions</p>'
+            $ButtonUrl = "$CIPPPURL/tenant/tools/geoiplookup?ip=$($data.ClientIP)&SearchNow=true"
+            $ButtonText = 'Whitelist IP'
+            $AfterButtonText = '<p>If this is incorrect, you can whitelist the following IP.</p>'
         }
         'HostedIP' {
             $Table = ($TableObj | ConvertTo-Html -Fragment -As List | Out-String).Replace('<table>', ' <table class="table-modern">')
@@ -189,9 +189,9 @@ function New-CIPPAlertTemplate {
                 $LocationTable = ($LocationInfo | ConvertTo-Html -Fragment -As List | Out-String).Replace('<table>', ' <table class="table-modern">')
                 $IntroText = $IntroText + "<p>The location information for this IP is as follows:</p>$LocationTable"
             }
-            $ButtonUrl = "$CIPPPURL/identity/administration/ViewBec?userId=$($data.ObjectId)&tenantDomain=$($data.OrganizationId)"
+            $ButtonUrl = "$CIPPPURL/tenant/tools/geoiplookup?ip=$($data.ClientIP)&SearchNow=true"
             $ButtonText = 'User Management'
-            $AfterButtonText = '<p>If this is incorrect, use the user management screen to block the user and revoke the sessions</p>'
+            $AfterButtonText = '<p>If this is incorrect, you can whitelist the following IP.</p>'
         }
         'Add service principal.' {
             if ($Appname) { $AppName = $AppName.'Application Name' } else { $appName = $data.ApplicationId }
