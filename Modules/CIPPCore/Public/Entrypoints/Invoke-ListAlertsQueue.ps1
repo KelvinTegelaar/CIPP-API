@@ -37,7 +37,7 @@ Function Invoke-ListAlertsQueue {
             DepTokenExpiry    = [bool]$QueueFile.DepTokenExpiry
             NoCAConfig        = [bool]$QueueFile.NoCAConfig
             SecDefaultsUpsell = [bool]$QueueFile.SecDefaultsUpsell
-            SharepointQuota   = [bool]$QueueFile.SharePointQuota
+            SharePointQuota   = [bool]$QueueFile.SharePointQuota
             ExpiringLicenses  = [bool]$QueueFile.ExpiringLicenses
             tenantId          = $QueueFile.tenantid
         }
