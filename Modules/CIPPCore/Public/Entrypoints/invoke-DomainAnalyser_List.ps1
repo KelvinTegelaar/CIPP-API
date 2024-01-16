@@ -1,7 +1,7 @@
 
 using namespace System.Net
 
-Function Invoke-ListDomainAnalyser {
+Function Invoke-DomainAnalyser_List {
     <#
     .FUNCTIONALITY
     Entrypoint
