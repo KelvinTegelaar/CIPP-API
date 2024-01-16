@@ -6,7 +6,7 @@ function Invoke-CIPPStandardDisableGuests {
     param($Tenant, $Settings)
     $lookup = (Get-Date).AddDays(-90).ToUniversalTime().ToString('o')
     $GraphRequest = New-GraphgetRequest -uri "https://graph.microsoft.com/beta/users?`$filter=(signInActivity/lastSignInDateTime le $lookup)&`$select=id,UserPrincipalName,signInActivity,mail,userType,accountEnabled" -scope 'https://graph.microsoft.com/.default' -tenantid $Tenant | Where-Object { $_.userType -EQ 'Guest' -and $_.AccountEnabled -EQ $true }
-         
+
     If ($Settings.remediate) {
         try {
             foreach ($guest in $GraphRequest) {
