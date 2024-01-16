@@ -3,7 +3,7 @@ using namespace System.Net
 # Input bindings are passed in via param block.
 param($Request, $TriggerMetadata)
 
-
+Set-Location (Get-Item $PSScriptRoot).Parent.FullName
 $WebhookTable = Get-CIPPTable -TableName webhookTable
 $Webhooks = Get-CIPPAzDataTableEntity @WebhookTable
 Write-Host 'Received request'

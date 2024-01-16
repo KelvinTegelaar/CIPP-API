@@ -11,6 +11,7 @@ function Invoke-CippWebhookProcessing {
     )
     $ConfigTable = get-cipptable -TableName 'SchedulerConfig'
     $LocationTable = Get-CIPPTable -TableName 'knownlocationdb'
+    $TrustedIPsTable = Get-CIPPTable -TableName 'trustedIps'
     $Alertconfig = Get-CIPPAzDataTableEntity @ConfigTable -Filter "Tenant eq '$tenantfilter'"
     if (!$Alertconfig) {
         $Alertconfig = Get-CIPPAzDataTableEntity @ConfigTable -Filter "Tenant eq 'AllTenants'"
@@ -19,6 +20,8 @@ function Invoke-CippWebhookProcessing {
     if ($data.userId -eq 'Not Available') { $data.userId = $data.userKey }
     if ($data.Userkey -eq 'Not Available') { $data.Userkey = $data.userId }
     if ($data.clientip) {
+        $TrustedIps = Get-CIPPAzDataTableEntity @TrustedIPsTable -Filter "PartitionKey eq '$($TenantFilter)' and RowKey eq '$($data.clientip)' and state eq 'Trusted'"
+        Write-Host "TrustedIPs: $($TrustedIps | ConvertTo-Json -Depth 15 -Compress)"
         #First we perform a lookup in the knownlocationdb table to see if we have a location for this IP address.
         $Location = Get-CIPPAzDataTableEntity @LocationTable -Filter "RowKey eq '$($data.clientip)'" | Select-Object -Last 1
         #If we have a location, we use that. If not, we perform a lookup in the GeoIP database.
@@ -57,12 +60,12 @@ function Invoke-CippWebhookProcessing {
         return ''
     }
 
-    $AllowedLocations = ($Alertconfig.if | ConvertFrom-Json).allowedcountries.value
+    $AllowedLocations = ($Alertconfig.if | ConvertFrom-Json -ErrorAction SilentlyContinue).allowedcountries.value
     Write-Host "These are the allowed locations: $($AllowedLocations)"
     Write-Host "Operation: $($data.operation)"
     switch ($data.operation) {
-        { 'UserLoggedIn' -eq $data.operation -and $proxy -eq $true } { $data.operation = 'BadRepIP' }
-        { 'UserLoggedIn' -eq $data.operation -and $hosting -eq $true } { $data.operation = 'HostedIP' }
+        { 'UserLoggedIn' -eq $data.operation -and $proxy -eq $true -and !$TrustedIps } { $data.operation = 'BadRepIP' }
+        { 'UserLoggedIn' -eq $data.operation -and $hosting -eq $true -and !$TrustedIps } { $data.operation = 'HostedIP' }
         { 'UserLoggedIn' -eq $data.operation -and $Country -notin $AllowedLocations -and $data.ResultStatus -eq 'Success' -and $TableObj.ResultStatusDetail -eq 'Success' } {
             Write-Host "$($country) is not in $($AllowedLocations)"
             $data.operation = 'UserLoggedInFromUnknownLocation' 
@@ -75,7 +78,7 @@ function Invoke-CippWebhookProcessing {
     foreach ($AlertSetting in $Alertconfig) {
         $ifs = $AlertSetting.If | ConvertFrom-Json
         $Dos = $AlertSetting.execution | ConvertFrom-Json
-        if ($data.operation -notin $Ifs.selection -and $ifs.selection -ne 'AnyAlert' -and ($ifs.count -le 1 -and $ifs.selection -ne 'customField')) {
+        if ($data.operation -notin $Ifs.selection -and 'AnyAlert' -notin $ifs.selection -and ($ifs.count -le 1 -and $ifs.selection -ne 'customField')) {
             Write-Host 'Not an operation to do anything for. storing IP info'
             if ($data.ClientIP -and $data.operation -like '*LoggedIn*') {
                 Write-Host 'Add IP and potential location to knownlocation db for this specific user.'
@@ -192,11 +195,16 @@ function Invoke-CippWebhookProcessing {
                     }
                 }
             }
+            Write-Host 'Going to create the content'
             foreach ($action in $dos) { 
                 switch ($action.execute) {
                     'generatemail' {
+                        Write-Host 'Going to create the email'
                         $GenerateEmail = New-CIPPAlertTemplate -format 'html' -data $Data -LocationInfo $Location -ActionResults $ActionResults
+                        Write-Host 'Going to send the mail'
                         Send-CIPPAlert -Type 'email' -Title $GenerateEmail.title -HTMLContent $GenerateEmail.htmlcontent -TenantFilter $TenantFilter
+                        Write-Host 'email should be sent'
+
                     }  
                     'generatePSA' {
                         $GenerateEmail = New-CIPPAlertTemplate -format 'html'-data $Data -LocationInfo $Location -ActionResults $ActionResults
