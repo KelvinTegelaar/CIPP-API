@@ -30,7 +30,7 @@ if ($Request.query.CIPPID -in $Webhooks.RowKey) {
                 Write-Host "Webhook TenantFilter: $TenantFilter"
                 $ConfigTable = get-cipptable -TableName 'SchedulerConfig'
                 $Alertconfig = Get-CIPPAzDataTableEntity @ConfigTable | Where-Object { $_.Tenant -eq $TenantFilter -or $_.Tenant -eq 'AllTenants' }
-                $Operations = ($AlertConfig.if | ConvertFrom-Json -ErrorAction SilentlyContinue).selection, 'UserLoggedIn'
+                $Operations = ($AlertConfig.if | ConvertFrom-Json -ErrorAction SilentlyContinue).selection + 'UserLoggedIn'
                 $Webhookinfo = $Webhooks | Where-Object -Property RowKey -EQ $Request.query.CIPPID
                 #Increased download efficiency: only download the data we need for processing. Todo: Change this to load from table or dynamic source.
                 $MappingTable = [pscustomobject]@{
