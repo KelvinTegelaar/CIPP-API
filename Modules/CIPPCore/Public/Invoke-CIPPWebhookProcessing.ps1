@@ -60,7 +60,7 @@ function Invoke-CippWebhookProcessing {
         return ''
     }
 
-    $AllowedLocations = ($Alertconfig.if | ConvertFrom-Json).allowedcountries.value
+    $AllowedLocations = ($Alertconfig.if | ConvertFrom-Json -ErrorAction SilentlyContinue).allowedcountries.value
     Write-Host "These are the allowed locations: $($AllowedLocations)"
     Write-Host "Operation: $($data.operation)"
     switch ($data.operation) {
@@ -78,7 +78,7 @@ function Invoke-CippWebhookProcessing {
     foreach ($AlertSetting in $Alertconfig) {
         $ifs = $AlertSetting.If | ConvertFrom-Json
         $Dos = $AlertSetting.execution | ConvertFrom-Json
-        if ($data.operation -notin $Ifs.selection -and $ifs.selection -ne 'AnyAlert' -and ($ifs.count -le 1 -and $ifs.selection -ne 'customField')) {
+        if ($data.operation -notin $Ifs.selection -and 'AnyAlert' -notin $ifs.selection -and ($ifs.count -le 1 -and $ifs.selection -ne 'customField')) {
             Write-Host 'Not an operation to do anything for. storing IP info'
             if ($data.ClientIP -and $data.operation -like '*LoggedIn*') {
                 Write-Host 'Add IP and potential location to knownlocation db for this specific user.'
