@@ -62,7 +62,7 @@ if ($Request.query.CIPPID -in $Webhooks.RowKey) {
                     continue
                 }
                 Write-Host "Data found: $($data.count) items"
-                $DataToProcess = $Data | Where-Object -Property Operation -In $Operations
+                $DataToProcess = if ('anylog' -NotIn $LogsToDownload) { $Data | Where-Object -Property Operation -In $Operations } else { $Data }
                 Write-Host "Data to process found: $($DataToProcess.count) items"
                 foreach ($Item in $DataToProcess) {
                     Write-Host "Processing $($item.operation)"
