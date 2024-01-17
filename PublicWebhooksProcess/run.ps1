@@ -30,7 +30,7 @@ if ($Request.query.CIPPID -in $Webhooks.RowKey) {
                 Write-Host "Webhook TenantFilter: $TenantFilter"
                 $ConfigTable = get-cipptable -TableName 'SchedulerConfig'
                 $Alertconfig = Get-CIPPAzDataTableEntity @ConfigTable | Where-Object { $_.Tenant -eq $TenantFilter -or $_.Tenant -eq 'AllTenants' }
-                $Operations = ($AlertConfig.if | ConvertFrom-Json -ErrorAction SilentlyContinue).selection, 'UserLoggedIn'
+                $Operations = ($AlertConfig.if | ConvertFrom-Json -ErrorAction SilentlyContinue).selection + 'UserLoggedIn'
                 $Webhookinfo = $Webhooks | Where-Object -Property RowKey -EQ $Request.query.CIPPID
                 #Increased download efficiency: only download the data we need for processing. Todo: Change this to load from table or dynamic source.
                 $MappingTable = [pscustomobject]@{
@@ -53,14 +53,16 @@ if ($Request.query.CIPPID -in $Webhooks.RowKey) {
                 #Compare $Operations to $MappingTable. If there is a match, we make a new variable called $LogsToDownload
                 #Example: $Operations = 'UserLoggedIn', 'Set-InboxRule' makes : $LogsToDownload = @('Audit.AzureActiveDirectory',Audit.Exchange)
                 $LogsToDownload = $Operations | Where-Object { $MappingTable.$_ } | ForEach-Object { $MappingTable.$_ }
-                if ($ReceivedItem.ContentType -in $LogsToDownload -or $LogsToDownload -contains 'AnyLog') {
+                Write-Host "Our operations: $Operations"
+                Write-Host "Logs to download: $LogsToDownload"
+                if ($ReceivedItem.ContentType -in $LogsToDownload -or 'AnyLog' -in $LogsToDownload) {
                     $Data = New-GraphPostRequest -type GET -uri "https://manage.office.com/api/v1.0/$($ReceivedItem.tenantId)/activity/feed/audit/$($ReceivedItem.contentid)" -tenantid $TenantFilter -scope 'https://manage.office.com/.default'
                 } else {
                     Write-Host "No data to download for $($ReceivedItem.ContentType)"
                     continue
                 }
                 Write-Host "Data found: $($data.count) items"
-                $DataToProcess = $Data | Where-Object -Property Operation -In $Operations
+                $DataToProcess = if ('anylog' -NotIn $LogsToDownload) { $Data | Where-Object -Property Operation -In $Operations } else { $Data }
                 Write-Host "Data to process found: $($DataToProcess.count) items"
                 foreach ($Item in $DataToProcess) {
                     Write-Host "Processing $($item.operation)"
@@ -68,7 +70,7 @@ if ($Request.query.CIPPID -in $Webhooks.RowKey) {
                 } 
             }
         } catch {
-            Write-Host "Webhook Failed: $($_.Exception.Message)"
+            Write-Host "Webhook Failed: $($_.Exception.Message). Line number $($_.InvocationInfo.ScriptLineNumber)"
         }
     }
 
