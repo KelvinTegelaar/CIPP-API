@@ -10,9 +10,10 @@ function Invoke-CIPPStandardDisableAdditionalStorageProviders {
     if ($Settings.remediate) {
 
         try {
-            if ($AdditionalStorageProvidersState.AdditionalStorageProvidersEnabled) {
-                New-ExoRequest -tenantid $Tenant -cmdlet 'Set-OwaMailboxPolicy' -cmdParams @{ Identity = $AdditionalStorageProvidersState.Identity; AdditionalStorageProvidersEnabled = $false }
-                Write-LogMessage -API 'Standards' -tenant $tenant -message 'OWA additional storage providers disabled.' -sev Info
+            if ($AdditionalStorageProvidersState.AdditionalStorageProvidersAvailable) {
+                New-ExoRequest -tenantid $Tenant -cmdlet 'Set-OwaMailboxPolicy' -cmdParams @{ Identity = $AdditionalStorageProvidersState.Identity; AdditionalStorageProvidersAvailable = $false } -useSystemMailbox $true
+                Write-LogMessage -API 'Standards' -tenant $tenant -message 'OWA additional storage providers have been disabled.' -sev Info
+                $AdditionalStorageProvidersState.AdditionalStorageProvidersAvailable = $false
             } else {
                 Write-LogMessage -API 'Standards' -tenant $tenant -message 'OWA additional storage providers are already disabled.' -sev Info
             }
@@ -24,7 +25,7 @@ function Invoke-CIPPStandardDisableAdditionalStorageProviders {
 
     if ($Settings.alert) {
             
-        if ($AdditionalStorageProvidersState.AdditionalStorageProvidersEnabled) {
+        if ($AdditionalStorageProvidersState.AdditionalStorageProvidersAvailable) {
             Write-LogMessage -API 'Standards' -tenant $tenant -message 'OWA additional storage providers are enabled' -sev Alert
         } else {
             Write-LogMessage -API 'Standards' -tenant $tenant -message 'OWA additional storage providers are disabled' -sev Info
