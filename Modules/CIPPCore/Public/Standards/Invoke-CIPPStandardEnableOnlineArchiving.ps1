@@ -8,7 +8,7 @@ function Invoke-CIPPStandardEnableOnlineArchiving {
     # {
     #     "name": "standards.EnableOnlineArchiving",
     #     "cat": "Exchange Standards",
-    #     "helpText": "Enables the In-Place Online Archive for all UserMailboxes. Before enabling this standard, makes sure you have the correct licensing for all users.",
+    #     "helpText": "Enables the In-Place Online Archive for all UserMailboxes with a valid license.",
     #     "addedComponent": [],
     #     "label": "Enable Online Archive for all users",
     #     "impact": "Medium Impact",
