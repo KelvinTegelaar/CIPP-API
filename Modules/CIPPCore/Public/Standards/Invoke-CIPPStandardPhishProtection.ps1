@@ -4,6 +4,8 @@ function Invoke-CIPPStandardPhishProtection {
     Internal
     #>
     param($Tenant, $Settings)
+    $TenantId = Get-Tenants | Where-Object -Property defaultDomainName -EQ $tenant 
+
     try {
         $currentBody = (New-GraphGetRequest -Uri "https://graph.microsoft.com/beta/organization/$($TenantId.customerId)/branding/localizations/0/customCSS" -tenantid $tenant)
     } catch {
@@ -11,12 +13,11 @@ function Invoke-CIPPStandardPhishProtection {
     }
     $CSS = @"
 .ext-sign-in-box {
-    background-image: url(https://$($Settings.URL)/api/PublicPhishingCheck?Tenantid=$($tenant));
+    background-image: url($($Settings.URL)/api/PublicPhishingCheck?Tenantid=$($tenant));
 }
 "@
     If ($Settings.remediate) {
         
-        $TenantId = Get-Tenants | Where-Object -Property defaultDomainName -EQ $tenant 
         try {
             if ($currentBody -like "*$CSS*") {
                 Write-Host 'Logon Screen Phising Protection system already active'
