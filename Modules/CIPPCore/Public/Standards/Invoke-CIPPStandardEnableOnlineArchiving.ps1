@@ -17,9 +17,9 @@ function Invoke-CIPPStandardEnableOnlineArchiving {
     
     $MailboxesNoArchive = New-ExoRequest -tenantid $tenant -cmdlet 'Get-Mailbox' -cmdparams @{ Filter = 'ArchiveGuid -Eq "00000000-0000-0000-0000-000000000000" -AND RecipientTypeDetails -Eq "UserMailbox"' }
     $ValidServicePlans = @(
-        '9aaf7827-d63c-4b61-89c3-182f06f82e5c',
-        'efb87545-963c-4e0d-99df-69c6916d9eb0',
-        '176a09a6-7ec5-4039-ac02-b2791c6ba793'
+        '9aaf7827-d63c-4b61-89c3-182f06f82e5c', # Exchange Online (Plan 1)
+        'efb87545-963c-4e0d-99df-69c6916d9eb0', # Exchange Online (Plan 2)
+        '176a09a6-7ec5-4039-ac02-b2791c6ba793' # Exchange Online Archiving
     )
     $KioskServicePlan = '4a82b400-a79f-41a4-b4e2-e94f5787b113'
 
