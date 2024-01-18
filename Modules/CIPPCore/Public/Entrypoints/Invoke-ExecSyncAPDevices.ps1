@@ -14,7 +14,7 @@ Function Invoke-ExecSyncAPDevices {
         New-GraphPOSTRequest -uri 'https://graph.microsoft.com/beta/deviceManagement/windowsAutopilotSettings/sync' -tenantid $TenantFilter
         $Results = "Successfully Started Sync for $($TenantFilter)"
     } catch {
-        $Results = "Failed to start sync for $tenantfilter. Error: $($_.Exception.Message)"
+        $Results = "Failed to start sync for $tenantfilter. Did you try syncing in the last 10 minutes?"
     }
 
     $Results = [pscustomobject]@{'Results' = "$results" }
