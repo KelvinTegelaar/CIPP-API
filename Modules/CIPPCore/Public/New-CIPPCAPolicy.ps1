@@ -45,6 +45,21 @@ function New-CIPPCAPolicy {
         # no issues here.
     }
 
+    #If Grant Controls contains authenticationstrength, create these and then replace the id
+    if ($JSONobj.GrantControls.authenticationStrength.policyType -eq 'custom') {
+        $ExistingStrength = New-GraphGETRequest -uri 'https://graph.microsoft.com/beta/identity/conditionalAccess/authenticationStrength/policies/' -tenantid $TenantFilter | Where-Object -Property displayName -EQ $JSONobj.GrantControls.authenticationStrength.displayName
+        if ($ExistingStrength) {
+            $JSONObj.GrantControls.authenticationStrength = @{ id = $ExistingStrength.id }
+
+        } else {
+            $Body = ConvertTo-Json -InputObject $JSONObj.GrantControls.authenticationStrength
+            $GraphRequest = New-GraphPOSTRequest -uri 'https://graph.microsoft.com/beta/identity/conditionalAccess/authenticationStrength/policies' -body $body -Type POST -tenantid $tenantfilter
+            $JSONObj.GrantControls.authenticationStrength = @{ id = $ExistingStrength.id }
+            Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -message "Created new Authentication Strength Policy: $($JSONObj.GrantControls.authenticationStrength.displayName)" -Sev 'Info'
+        }
+    }
+
+
     #for each of the locations, check if they exist, if not create them. These are in $jsonobj.LocationInfo
     $LocationLookupTable = foreach ($locations in $jsonobj.LocationInfo) {
         foreach ($location in $locations) {
@@ -109,6 +124,7 @@ function New-CIPPCAPolicy {
             return "Created policy $displayname for $tenantfilter"
         }
     } catch {
+        Write-Host "$($_.exception | ConvertTo-Json)"
         throw "Failed to create or update conditional access rule $($JSONObj.displayName): $($_.exception.message)"
         Write-LogMessage -API 'Standards' -tenant $tenant -message "Failed to create or update conditional access rule $($JSONObj.displayName): $($_.exception.message) " -sev 'Error'
     }
