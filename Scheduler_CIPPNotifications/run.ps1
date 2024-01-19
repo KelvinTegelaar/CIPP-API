@@ -31,7 +31,7 @@ try {
         $JSONBody = @"
                     {
                         "message": {
-                          "subject": "CIPP Alert: Alerts found starting at $((Get-Date).AddMinutes(-15))",
+                          "subject": "$($Tenant): CIPP Alert: Alerts found starting at $((Get-Date).AddMinutes(-15))",
                           "body": {
                             "contentType": "HTML",
                             "content": "You've setup your alert policies to be alerted whenever specific events happen. We've found some of these events in the log:<br><br>

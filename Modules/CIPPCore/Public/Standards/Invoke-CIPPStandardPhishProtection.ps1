@@ -19,6 +19,9 @@ function Invoke-CIPPStandardPhishProtection {
     If ($Settings.remediate) {
         
         try {
+            if (!$currentBody) {
+                
+            }
             if ($currentBody -like "*$CSS*") {
                 Write-Host 'Logon Screen Phising Protection system already active'
                 Write-LogMessage -API 'Standards' -tenant $tenant -message 'Logon Screen Phishing Protection system already active' -sev Info
