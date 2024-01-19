@@ -12,6 +12,9 @@ Function Invoke-ExecOffboardTenant {
 
         $Tenantfilter = $request.body.tenantfilter
 
+        # temp fix -rvdwegen
+        $tenantId = (Invoke-RestMethod -Method GET "https://login.windows.net/$Tenantfilter/.well-known/openid-configuration").token_endpoint.Split('/')[3]
+
         $results = [System.Collections.ArrayList]@()
         $errors = [System.Collections.ArrayList]@()
 
@@ -105,7 +108,7 @@ Function Invoke-ExecOffboardTenant {
         }
 
         # All customer tenant specific actions ALWAYS have to be completed before this action!
-        if ($request.body.RemoveMultitenantApps) {
+        if ($request.body.RemoveMultitenantCSPApps) {
             # Remove multi-tenant apps with the CSP tenant as origin
             try {
                 $multitenantCSPApps = (New-GraphGETRequest -Uri "https://graph.microsoft.com/v1.0/servicePrincipals?`$count=true&`$select=displayName,appId,id,appOwnerOrganizationId&`$filter=appOwnerOrganizationId eq $($env:TenantID)" -tenantid $Tenantfilter -ComplexFilter)
@@ -129,18 +132,23 @@ Function Invoke-ExecOffboardTenant {
         if ($request.body.TerminateGDAP) {
             # Terminate GDAP relationships
             try {
-                $delegatedAdminRelationships = (New-GraphGETRequest -Uri "https://graph.microsoft.com/v1.0/tenantRelationships/delegatedAdminRelationships?`$filter=(status eq 'active') AND (customer/tenantId eq '$TenantFilter')" -tenantid $env:TenantID)
+                $TenantFilter
+                $TenantFilter
+                $TenantFilter
+                $delegatedAdminRelationships = (New-GraphGETRequest -Uri "https://graph.microsoft.com/v1.0/tenantRelationships/delegatedAdminRelationships?`$filter=(status eq 'active') AND (customer/tenantId eq '$tenantid')" -tenantid $env:TenantID)
                 $delegatedAdminRelationships | ForEach-Object {
                     try {
                         $terminate = (New-GraphPostRequest -type 'POST' -Uri "https://graph.microsoft.com/v1.0/tenantRelationships/delegatedAdminRelationships/$($_.id)/requests" -body '{"action":"terminate"}' -ContentType 'application/json' -tenantid $env:TenantID)
                         $results.Add("Succesfully terminated GDAP relationship $($_.displayName) from tenant $TenantFilter")
                         Write-LogMessage -user $ExecutingUser -API $APIName -message "GDAP Relationship $($_.displayName) has been terminated" -Sev "Info" -tenant $TenantFilter
                     } catch {
+                        $($_.Exception.message)
                         #$results.Add("Failed to terminate GDAP relationship $($_.displayName): $($_.Exception.message)")
                         $errors.Add("Failed to terminate GDAP relationship $($_.displayName): $($_.Exception.message)")
                     }
                 }
             } catch {
+                $($_.Exception.message)
                 #$results.Add("Failed to retrieve GDAP relationships, no relationships have been terminated: $($_.Exception.message)")
                 $errors.Add("Failed to retrieve GDAP relationships, no relationships have been terminated: $($_.Exception.message)")
             }
