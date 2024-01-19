@@ -18,6 +18,5 @@ function Push-CIPPAlertSharepointQuota {
             }
         }
     } catch {
-        Write-AlertMessage -tenant $($QueueItem.tenant) -message "Could not get SharePoint quota for $($QueueItem.tenant): $(Get-NormalizedError -message $_.Exception.message)"
     }
 }
