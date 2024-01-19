@@ -13,7 +13,7 @@ Function Invoke-ListMailQuarantine {
     $Tenantfilter = $request.Query.tenantfilter
 
     try {
-        $GraphRequest = New-ExoRequest -tenantid $Tenantfilter -cmdlet 'Get-QuarantineMessage'
+        $GraphRequest = New-ExoRequest -tenantid $Tenantfilter -cmdlet 'Get-QuarantineMessage' -cmdParams @{ 'PageSize' = 1000 }
         $StatusCode = [HttpStatusCode]::OK
     } catch {
         $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message

@@ -17,7 +17,7 @@ function New-HaloPSATicket {
       id            = -1
       lookupdisplay = 'Enter Details Manually'
     }
-    client_id                  = $client
+    client_id                  = ($client | Select-Object -Last 1)
     site_id                    = $null
     user_name                  = $null
     reportedby                 = $null
