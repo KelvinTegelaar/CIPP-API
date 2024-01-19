@@ -14,7 +14,6 @@ function Push-CIPPAlertExpiringLicenses {
             }
         }
     } catch {
-        Write-AlertMessage -tenant $($QueueItem.tenant) -message "Error occurred: $(Get-NormalizedError -message $_.Exception.message)"
     }
 }
 
