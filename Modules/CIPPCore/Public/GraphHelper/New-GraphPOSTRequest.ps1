@@ -26,7 +26,7 @@ function New-GraphPOSTRequest ($uri, $tenantid, $body, $type, $scope, $AsApp, $N
             if ($Message.innerError) { $Message = $Message.Innererror.Message } else { $Message = $Message.Message.Error }
             if ($Message -eq $null) { 
                 try {
-                    $Message = ($_.ErrorDetails.Message | ConvertFrom-Json -ErrorAction SilentlyContinue)
+                    $Message = ($_.ErrorDetails.Message | ConvertFrom-Json -ErrorAction SilentlyContinue).message
                 } catch {
                     $Message = $($_.Exception.Message) 
                 }
