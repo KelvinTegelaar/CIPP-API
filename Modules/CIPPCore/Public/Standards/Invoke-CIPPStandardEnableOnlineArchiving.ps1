@@ -16,6 +16,9 @@ function Invoke-CIPPStandardEnableOnlineArchiving {
     #   },
     
     $MailboxesNoArchive = New-ExoRequest -tenantid $tenant -cmdlet 'Get-Mailbox' -cmdparams @{ Filter = 'ArchiveGuid -Eq "00000000-0000-0000-0000-000000000000" -AND RecipientTypeDetails -Eq "UserMailbox"' }
+    $AllLicensedUsers = New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/users?$select=userPrincipalName,id,assignedLicenses,assignedPlans&$filter=assignedLicenses/$count+ne+0&$count=true' -tenantid $tenant
+    
+
     $ValidServicePlans = @(
         '9aaf7827-d63c-4b61-89c3-182f06f82e5c', # Exchange Online (Plan 1)
         'efb87545-963c-4e0d-99df-69c6916d9eb0', # Exchange Online (Plan 2)
