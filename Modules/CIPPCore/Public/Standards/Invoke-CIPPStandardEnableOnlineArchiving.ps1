@@ -5,70 +5,48 @@ function Invoke-CIPPStandardEnableOnlineArchiving {
     #>
     param($Tenant, $Settings)
 
-    # {
-    #     "name": "standards.EnableOnlineArchiving",
-    #     "cat": "Exchange Standards",
-    #     "helpText": "Enables the In-Place Online Archive for all UserMailboxes with a valid license.",
-    #     "addedComponent": [],
-    #     "label": "Enable Online Archive for all users",
-    #     "impact": "Medium Impact",
-    #     "impactColour": "info"
-    #   },
-    
-    $MailboxesNoArchive = New-ExoRequest -tenantid $tenant -cmdlet 'Get-Mailbox' -cmdparams @{ Filter = 'ArchiveGuid -Eq "00000000-0000-0000-0000-000000000000" -AND RecipientTypeDetails -Eq "UserMailbox"' }
-    $AllLicensedUsers = New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/users?$select=userPrincipalName,id,assignedLicenses,assignedPlans&$filter=assignedLicenses/$count+ne+0&$count=true' -tenantid $tenant
-    
-
-    $ValidServicePlans = @(
-        '9aaf7827-d63c-4b61-89c3-182f06f82e5c', # Exchange Online (Plan 1)
-        'efb87545-963c-4e0d-99df-69c6916d9eb0', # Exchange Online (Plan 2)
-        '176a09a6-7ec5-4039-ac02-b2791c6ba793' # Exchange Online Archiving
-    )
-    $KioskServicePlan = '4a82b400-a79f-41a4-b4e2-e94f5787b113'
-
-    foreach ($User in $MailboxesNoArchive) {
-        $UserLicenses = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/users/$($User.UserPrincipalName)/licenseDetails" -tenantid $tenant
-        $UserLicense = $UserLicenses | Where-Object { $_.servicePlans.servicePlanId -in $ValidServicePlans }
+    $MailboxPlans = @('ExchangeOnline', 'ExchangeOnlineEnterprise' )
+    $MailboxesNoArchive = $MailboxPlans | ForEach-Object { 
+        New-ExoRequest -tenantid $Tenant -cmdlet 'Get-Mailbox' -cmdparams @{ MailboxPlan = $_; Filter = 'ArchiveGuid -Eq "00000000-0000-0000-0000-000000000000" -AND RecipientTypeDetails -Eq "UserMailbox"' } 
+        Write-Host "Getting mailboxes without Online Archiving for plan $_"
     }
 
-    # TODO: Test if the user has a valid license for Online Archiving. 
-    # Loop though all licenses in https://graph.microsoft.com/beta/users/$($User.UserPrincipalName)/licenseDetails and check if the service plan is in $ValidServicePlans
-    # If the user has a valid license, add to filtered list
-    # If the user does not have a valid license, test if Kiosk license is assigned. 
-    
-    
     If ($Settings.remediate) {
 
         if ($null -eq $MailboxesNoArchive) {
-            Write-LogMessage -API 'Standards' -tenant $tenant -message 'Online Archiving already enabled for all accounts' -sev Info
+            Write-LogMessage -API 'Standards' -tenant $Tenant -message 'Online Archiving already enabled for all accounts' -sev Info
         } else {
             try {
+                $SuccessCounter = 0
                 $MailboxesNoArchive | ForEach-Object {
                     try {
-                        New-ExoRequest -tenantid $tenant -cmdlet 'Enable-Mailbox' -cmdparams @{ Identity = $_.UserPrincipalName; Archive = $true }
-                        Write-LogMessage -API 'Standards' -tenant $tenant -message "Enabled Online Archiving for $($_.UserPrincipalName)" -sev Debug
+                        New-ExoRequest -tenantid $Tenant -cmdlet 'Enable-Mailbox' -cmdparams @{ Identity = $_.UserPrincipalName; Archive = $true }
+                        Write-LogMessage -API 'Standards' -tenant $Tenant -message "Enabled Online Archiving for $($_.UserPrincipalName)" -sev Info
+                        $SuccessCounter++
                     } catch {
-                        Write-LogMessage -API 'Standards' -tenant $tenant -message "Failed to Enable Online Archiving for $($_.UserPrincipalName). Error: $($_.exception.message)" -sev Error
+                        Write-LogMessage -API 'Standards' -tenant $Tenant -message "Failed to Enable Online Archiving for $($_.UserPrincipalName). Error: $($_.exception.message)" -sev Error
                     }
                 }
-                Write-LogMessage -API 'Standards' -tenant $tenant -message "Enabled Online Archiving for $($MailboxesNoArchive.Count) accounts" -sev Info
+                Write-LogMessage -API 'Standards' -tenant $Tenant -message "Enabled Online Archiving for $SuccessCounter accounts" -sev Info
         
             } catch {
-                Write-LogMessage -API 'Standards' -tenant $tenant -message "Failed to Enable Online Archiving for all accounts. Error: $($_.exception.message)" -sev Error
+                Write-LogMessage -API 'Standards' -tenant $Tenant -message "Failed to Enable Online Archiving for all accounts. Error: $($_.exception.message)" -sev Error
             }
         }
 
     }
+
     if ($Settings.alert) {
 
         if ($MailboxesNoArchive) {
-            Write-LogMessage -API 'Standards' -tenant $tenant -message "Mailboxes without Online Archiving: $($MailboxesNoArchive.Count)" -sev Alert
+            Write-LogMessage -API 'Standards' -tenant $Tenant -message "Mailboxes without Online Archiving: $($MailboxesNoArchive.Count)" -sev Alert
         } else {
-            Write-LogMessage -API 'Standards' -tenant $tenant -message 'All mailboxes have Online Archiving enabled' -sev Info
+            Write-LogMessage -API 'Standards' -tenant $Tenant -message 'All mailboxes have Online Archiving enabled' -sev Info
         }
     }
+
     if ($Settings.report) {
         $filtered = $MailboxesNoArchive | Select-Object -Property UserPrincipalName, Archive
-        Add-CIPPBPAField -FieldName 'EnableOnlineArchiving' -FieldValue $MailboxesNoArchive -StoreAs json -Tenant $tenant
+        Add-CIPPBPAField -FieldName 'EnableOnlineArchiving' -FieldValue $filtered -StoreAs json -Tenant $Tenant
     }
 }
