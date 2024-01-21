@@ -1,5 +1,5 @@
 
-function New-GraphPOSTRequest ($uri, $tenantid, $body, $type, $scope, $AsApp, $NoAuthCheck, $skipTokenCache, $AddedHeaders) {
+function New-GraphPOSTRequest ($uri, $tenantid, $body, $type, $scope, $AsApp, $NoAuthCheck, $skipTokenCache, $AddedHeaders, $contentType) {
     <#
     .FUNCTIONALITY
     Internal
@@ -16,16 +16,26 @@ function New-GraphPOSTRequest ($uri, $tenantid, $body, $type, $scope, $AsApp, $N
             $type = 'POST'
         }
 
+        if (!$contentType) {
+            $contentType = 'application/json; charset=utf-8'
+        }
         try {
-            $ReturnedData = (Invoke-RestMethod -Uri $($uri) -Method $TYPE -Body $body -Headers $headers -ContentType 'application/json; charset=utf-8')
+            $ReturnedData = (Invoke-RestMethod -Uri $($uri) -Method $TYPE -Body $body -Headers $headers -ContentType $contentType)
         } catch {
-            $ErrorMess = $($_.Exception.Message)
-            $Message = ($_.ErrorDetails.Message | ConvertFrom-Json -ErrorAction SilentlyContinue).error.message
-            if (!$Message) { $Message = $ErrorMess }
+            $Message = ($_.ErrorDetails.Message | ConvertFrom-Json -ErrorAction SilentlyContinue).error
+            if ($Message.innerError) { $Message = $Message.Innererror.Message } else { $Message = $Message.Message.Error }
+            if ($Message -eq $null) { 
+                try {
+                    $Message = ($_.ErrorDetails.Message | ConvertFrom-Json -ErrorAction SilentlyContinue).message
+                } catch {
+                    $Message = $($_.Exception.Message) 
+                }
+            }
             throw $Message
         }
         return $ReturnedData
     } else {
         Write-Error 'Not allowed. You cannot manage your own tenant or tenants not under your scope'
+
     }
 }
