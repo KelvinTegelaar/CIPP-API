@@ -55,8 +55,7 @@ Function Invoke-EditUser {
             $results.add("Success. The password has been set to $($userobj.password)")
             Write-LogMessage -API $APINAME -tenant ($UserObj.tenantid) -user $request.headers.'x-ms-client-principal' -message "Reset $($userobj.displayname)'s Password" -Sev 'Info'
         }
-    }
-    catch {
+    } catch {
         Write-LogMessage -API $APINAME -tenant ($UserObj.tenantid) -user $request.headers.'x-ms-client-principal' -message "User edit API failed. $($_.Exception.Message)" -Sev 'Error'
         $results.add( "Failed to edit user. $($_.Exception.Message)")
     }
@@ -81,8 +80,7 @@ Function Invoke-EditUser {
             $results.add( 'Success. User license has been edited.' )
         }
 
-    }
-    catch {
+    } catch {
         Write-LogMessage -API $APINAME -tenant ($UserObj.tenantid) -user $request.headers.'x-ms-client-principal' -message "License assign API failed. $($_.Exception.Message)" -Sev 'Error'
         $results.add( "We've failed to assign the license. $($_.Exception.Message)")
     }
@@ -98,8 +96,7 @@ Function Invoke-EditUser {
             $results.add( 'Success. added aliasses to user.')
         }
 
-    }
-    catch {
+    } catch {
         Write-LogMessage -API $APINAME -tenant ($UserObj.tenantid) -user $request.headers.'x-ms-client-principal' -message "Alias API failed. $($_.Exception.Message)" -Sev 'Error'
         $results.add( "Successfully edited user. The password is $password. We've failed to create the Aliases: $($_.Exception.Message)")
     }
@@ -108,6 +105,26 @@ Function Invoke-EditUser {
         $CopyFrom = Set-CIPPCopyGroupMembers -ExecutingUser $request.headers.'x-ms-client-principal' -tenantid $Userobj.tenantid -CopyFromId $Request.body.CopyFrom -UserID $UserprincipalName -TenantFilter $Userobj.tenantid
         $results.AddRange($CopyFrom)
     }
+
+    if ($Request.body.AddToGroups -ne '') {
+        $Request.body.AddToGroups | ForEach-Object { 
+
+            try {
+                Write-Host 'Adding to groups IM IN HERE'
+                Write-Host $_.groupType
+                $UserBody = [PSCustomObject]@{
+                    '@odata.id' = "https://graph.microsoft.com/beta/directoryObjects/$($UserObj.Userid)"
+                }
+                $UserBodyJSON = ConvertTo-Json -Compress -Depth 10 -InputObject $UserBody
+                New-GraphPostRequest -uri "https://graph.microsoft.com/beta/groups/$($_.value)/members/`$ref" -tenantid $Userobj.tenantid -type POST -body $UserBodyJSON -Verbose
+            } catch {
+                Write-Host $_.Exception.Message
+            }
+        }
+
+            
+    }
+
     $body = @{'Results' = @($results) }
     # Associate values to output bindings by calling 'Push-OutputBinding'.
     Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
