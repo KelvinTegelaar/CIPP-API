@@ -22,20 +22,15 @@ function New-GraphPOSTRequest ($uri, $tenantid, $body, $type, $scope, $AsApp, $N
         try {
             $ReturnedData = (Invoke-RestMethod -Uri $($uri) -Method $TYPE -Body $body -Headers $headers -ContentType $contentType)
         } catch {
-            $Message = ($_.ErrorDetails.Message | ConvertFrom-Json -ErrorAction SilentlyContinue).error
-            if ($Message.innerError) { $Message = $Message.Innererror.Message } else { $Message = $Message.Message.Error }
-            if ($Message -eq $null) { 
-                try {
-                    $Message = ($_.ErrorDetails.Message | ConvertFrom-Json -ErrorAction SilentlyContinue).message
-                } catch {
-                    $Message = $($_.Exception.Message) 
-                }
+            $Message = if ($_.ErrorDetails.Message) {
+                Get-NormalizedError -Message $_.ErrorDetails.Message
+            } else {
+                $_.Exception.message
             }
             throw $Message
         }
         return $ReturnedData
     } else {
         Write-Error 'Not allowed. You cannot manage your own tenant or tenants not under your scope'
-
     }
 }
