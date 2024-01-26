@@ -83,7 +83,7 @@ try {
   }
 } catch {
   Write-Host "Could not send alerts to email: $($_.Exception.message)"
-  Write-LogMessage -API 'Alerts' -message "Could not send alerts to: $($_.Exception.message)" -tenant $'All Tenants' -sev error
+  Write-LogMessage -API 'Alerts' -message "Could not send alerts to: $($_.Exception.message)" -tenant 'All Tenants' -sev error
 }
 
 
