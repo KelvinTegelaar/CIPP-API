@@ -34,7 +34,7 @@ function Invoke-CIPPStandardPhishProtection {
             } else {
                 $currentBody = $currentBody + $CSS
                 Write-Host 'Creating Logon Screen Phising Protection System'
-                New-GraphPostRequest -tenantid $tenant -Uri "https://graph.microsoft.com/beta/organization/$($TenantId.customerId)/branding/localizations/0/customCSS" -ContentType 'text/css' -asApp $true -Type PUT -Body $CSS
+                New-GraphPostRequest -tenantid $tenant -Uri "https://graph.microsoft.com/beta/organization/$($TenantId.customerId)/branding/localizations/0/customCSS" -ContentType 'text/css' -asApp $true -Type PUT -Body $currentBody
                 Write-LogMessage -API 'Standards' -tenant $tenant -message 'Enabled Logon Screen Phishing Protection system' -sev Info
             }
         } catch {
