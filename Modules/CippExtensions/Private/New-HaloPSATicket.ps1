@@ -39,8 +39,13 @@ function New-HaloPSATicket {
   try {
     $Ticket = Invoke-RestMethod -Uri "$($Configuration.ResourceURL)/Tickets" -ContentType 'application/json; charset=utf-8' -Method Post -Body $body -Headers @{Authorization = "Bearer $($token.access_token)" }
   } catch {
-    Write-LogMessage -message "Failed to send ticket to HaloPSA: $($_.Exception.Message)" -API 'HaloPSATicket' -sev Error
-    Write-Host "Failed to send ticket to HaloPSA: $($_.Exception.Message)" 
+    $Message = if ($_.ErrorDetails.Message) {
+      Get-NormalizedError -Message $_.ErrorDetails.Message
+    } else {
+      $_.Exception.message
+    }
+    Write-LogMessage -message "Failed to send ticket to HaloPSA: $Message" -API 'HaloPSATicket' -sev Error
+    Write-Host "Failed to send ticket to HaloPSA: $Message" 
   }
 
 }
