@@ -33,7 +33,7 @@ Function Invoke-AddSharedMailbox {
     }
     catch {
         Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $($groupobj.tenantid) -message "Group creation API failed. $($_.Exception.Message)" -Sev 'Error'
-        $body = [pscustomobject]@{'Results' = "Failed to create group. $($_.Exception.Message)" }
+        $body = [pscustomobject]@{'Results' = "Failed to create Shared Mailbox. $($_.Exception.Message)" }
 
     }
 
