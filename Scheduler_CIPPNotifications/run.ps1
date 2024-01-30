@@ -60,7 +60,7 @@ try {
       $JSONBody = @"
                     {
                         "message": {
-                          "subject": "$tenant CIPP Alert: Alerts found starting at $((Get-Date).AddMinutes(-15))",
+                          "subject": "CIPP Alert: Alerts found starting at $((Get-Date).AddMinutes(-15))",
                           "body": {
                             "contentType": "HTML",
                             "content": "You've setup your alert policies to be alerted whenever specific events happen. We've found some of these events in the log:<br><br>
@@ -78,12 +78,12 @@ try {
                       }
 "@
       New-GraphPostRequest -uri 'https://graph.microsoft.com/v1.0/me/sendMail' -tenantid $env:TenantID -type POST -body ($JSONBody)
-      Write-LogMessage -API 'Alerts' -message "Sent alerts to: $($Config.email)" -tenant $Tenant -sev Debug
+      Write-LogMessage -API 'Alerts' -message "Sent alerts to: $($Config.email)" -tenant 'All Tenants' -sev Debug
     }
   }
 } catch {
   Write-Host "Could not send alerts to email: $($_.Exception.message)"
-  Write-LogMessage -API 'Alerts' -message "Could not send alerts to: $($_.Exception.message)" -tenant $Tenant -sev error
+  Write-LogMessage -API 'Alerts' -message "Could not send alerts to: $($_.Exception.message)" -tenant 'All Tenants' -sev error
 }
 
 
