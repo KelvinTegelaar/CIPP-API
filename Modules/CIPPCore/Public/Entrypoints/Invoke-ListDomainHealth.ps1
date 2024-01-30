@@ -142,6 +142,7 @@ Function Invoke-ListDomainHealth {
     } catch {
         Write-LogMessage -API $APINAME -tenant $($name) -user $request.headers.'x-ms-client-principal' -message "DNS Helper API failed. $($_.Exception.Message)" -Sev 'Error'
         $body = [pscustomobject]@{'Results' = "Failed. $($_.Exception.Message)" }
+        $StatusCode = [HttpStatusCode]::InternalServerError
     }
 
     # Associate values to output bindings by calling 'Push-OutputBinding'.
