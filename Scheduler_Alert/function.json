@@ -4,6 +4,12 @@
       "name": "tenant",
       "direction": "in",
       "type": "activityTrigger"
+    },
+    {
+      "type": "queue",
+      "direction": "out",
+      "name": "QueueItem",
+      "queueName": "CIPPGenericQueue"
     }
   ]
 }
