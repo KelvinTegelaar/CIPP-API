@@ -15,6 +15,8 @@ Function Invoke-EditUser {
     $Results = [System.Collections.ArrayList]@()
     $licenses = ($userobj | Select-Object 'License_*').psobject.properties.value
     $Aliases = if ($userobj.AddedAliases) { ($userobj.AddedAliases).Split([Environment]::NewLine) }
+    $AddToGroups = $Request.body.AddToGroups
+    $RemoveFromGroups = $Request.body.RemoveFromGroups
 
     # Write to the Azure Functions log stream.
     Write-Host 'PowerShell HTTP trigger function processed a request.'
@@ -115,23 +117,74 @@ Function Invoke-EditUser {
         $results.AddRange($CopyFrom)
     }
 
-    if ($Request.body.AddToGroups -ne '') {
-        $Request.body.AddToGroups | ForEach-Object { 
+    if ($AddToGroups) {
+        $AddToGroups | ForEach-Object { 
 
-            try {
-                Write-Host 'Adding to groups IM IN HERE'
-                Write-Host $_.groupType
-                $UserBody = [PSCustomObject]@{
-                    '@odata.id' = "https://graph.microsoft.com/beta/directoryObjects/$($UserObj.Userid)"
-                }
-                $UserBodyJSON = ConvertTo-Json -Compress -Depth 10 -InputObject $UserBody
-                New-GraphPostRequest -uri "https://graph.microsoft.com/beta/groups/$($_.value)/members/`$ref" -tenantid $Userobj.tenantid -type POST -body $UserBodyJSON -Verbose
-            } catch {
-                Write-Host $_.Exception.Message
-            }
-        }
-
+            $GroupType = $_.value.groupType -join ','
+            $GroupID = $_.value.groupid
+            $GroupName = $_.value.groupName
+            Write-Host "About to add $($UserObj.userPrincipalName) to $GroupName. Group ID is: $GroupID and type is: $GroupType"
             
+            try {
+
+                if ($GroupType -eq 'Distribution list' -or $GroupType -eq 'Mail-Enabled Security') {
+
+                    Write-Host 'Adding to group via Add-DistributionGroupMember '
+                    $Params = @{ Identity = $GroupID; Member = $UserObj.Userid; BypassSecurityGroupManagerCheck = $true }
+                    New-ExoRequest -tenantid $Userobj.tenantid -cmdlet 'Add-DistributionGroupMember' -cmdParams $params -UseSystemMailbox $true 
+
+                } else {
+                    
+                    Write-Host 'Adding to group via Graph'
+                    $UserBody = [PSCustomObject]@{
+                        '@odata.id' = "https://graph.microsoft.com/beta/directoryObjects/$($UserObj.Userid)"
+                    }
+                    $UserBodyJSON = ConvertTo-Json -Compress -Depth 10 -InputObject $UserBody
+                    New-GraphPostRequest -uri "https://graph.microsoft.com/beta/groups/$GroupID/members/`$ref" -tenantid $Userobj.tenantid -type POST -body $UserBodyJSON -Verbose
+
+                }
+
+                Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $Userobj.tenantid -message "Added $($UserObj.DisplayName) to $GroupName group" -Sev 'Info'
+                $null = $results.add("Success. $($UserObj.DisplayName) has been added to $GroupName")
+            } catch {
+                Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $Userobj.tenantid -message "Failed to add member $($UserObj.DisplayName) to $GroupName. Error:$($_.Exception.Message)" -Sev 'Error'
+                $null = $results.add("Failed to add member $($UserObj.DisplayName) to $GroupName : $($_.Exception.Message)")
+            }
+
+        }         
+    }
+
+    if ($RemoveFromGroups) {
+        $RemoveFromGroups | ForEach-Object { 
+
+            $GroupType = $_.value.groupType -join ','
+            $GroupID = $_.value.groupid
+            $GroupName = $_.value.groupName
+            Write-Host "About to remove $($UserObj.userPrincipalName) from $GroupName. Group ID is: $GroupID and type is: $GroupType"
+            
+            try {
+
+                if ($GroupType -eq 'Distribution list' -or $GroupType -eq 'Mail-Enabled Security') {
+
+                    Write-Host 'Removing From group via Remove-DistributionGroupMember '
+                    $Params = @{ Identity = $GroupID; Member = $UserObj.Userid; BypassSecurityGroupManagerCheck = $true }
+                    New-ExoRequest -tenantid $Userobj.tenantid -cmdlet 'Remove-DistributionGroupMember' -cmdParams $params -UseSystemMailbox $true 
+
+                } else {
+                    
+                    Write-Host 'Removing From group via Graph'
+                    New-GraphPostRequest -uri "https://graph.microsoft.com/beta/groups/$GroupID/members/$($UserObj.Userid)/`$ref" -tenantid $Userobj.tenantid -type DELETE
+
+                }
+
+                Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $Userobj.tenantid -message "Removed $($UserObj.DisplayName) from $GroupName group" -Sev 'Info'
+                $null = $results.add("Success. $($UserObj.DisplayName) has been removed from $GroupName")
+            } catch {
+                Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $Userobj.tenantid -message "Failed to remove member $($UserObj.DisplayName) from $GroupName. Error:$($_.Exception.Message)" -Sev 'Error'
+                $null = $results.add("Failed to remove member $($UserObj.DisplayName) from $GroupName : $($_.Exception.Message)")
+            }
+
+        }         
     }
 
     $body = @{'Results' = @($results) }
