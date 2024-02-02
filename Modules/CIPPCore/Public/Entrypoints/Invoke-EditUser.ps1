@@ -57,12 +57,12 @@ Function Invoke-EditUser {
             }
         }
         $bodyToShip = ConvertTo-Json -Depth 10 -InputObject $BodyToship -Compress
-        $GraphRequest = New-GraphPostRequest -uri "https://graph.microsoft.com/beta/users/$($userobj.Userid)" -tenantid $Userobj.tenantid -type PATCH -body $BodyToship -verbose
+        $null = New-GraphPostRequest -uri "https://graph.microsoft.com/beta/users/$($userobj.Userid)" -tenantid $Userobj.tenantid -type PATCH -body $BodyToship -verbose
         $results.add( 'Success. The user has been edited.' )
         Write-LogMessage -API $APINAME -tenant ($UserObj.tenantid) -user $request.headers.'x-ms-client-principal' -message "Edited user $($userobj.displayname) with id $($userobj.Userid)" -Sev 'Info'
         if ($userobj.password) {
             $passwordProfile = [pscustomobject]@{'passwordProfile' = @{ 'password' = $userobj.password; 'forceChangePasswordNextSignIn' = [boolean]$UserObj.mustchangepass } } | ConvertTo-Json
-            $GraphRequest = New-GraphPostRequest -uri "https://graph.microsoft.com/beta/users/$($userobj.Userid)" -tenantid $Userobj.tenantid -type PATCH -body $PasswordProfile -verbose
+            $null = New-GraphPostRequest -uri "https://graph.microsoft.com/beta/users/$($userobj.Userid)" -tenantid $Userobj.tenantid -type PATCH -body $PasswordProfile -verbose
             $results.add("Success. The password has been set to $($userobj.password)")
             Write-LogMessage -API $APINAME -tenant ($UserObj.tenantid) -user $request.headers.'x-ms-client-principal' -message "Reset $($userobj.displayname)'s Password" -Sev 'Info'
         }
@@ -85,7 +85,7 @@ Function Invoke-EditUser {
             $LicenseBody = '{"addLicenses": [' + $LicList + '], "removeLicenses": ' + $LicensesToRemove + '}'
             if ($userobj.RemoveAllLicenses) { $LicenseBody = '{"addLicenses": [], "removeLicenses": ' + $LicensesToRemove + '}' }
             Write-Host $LicenseBody
-            $LicRequest = New-GraphPostRequest -uri "https://graph.microsoft.com/beta/users/$($userobj.Userid)/assignlicense" -tenantid $Userobj.tenantid -type POST -body $LicenseBody -verbose
+            $null = New-GraphPostRequest -uri "https://graph.microsoft.com/beta/users/$($userobj.Userid)/assignlicense" -tenantid $Userobj.tenantid -type POST -body $LicenseBody -verbose
 
             Write-LogMessage -API $APINAME -tenant ($UserObj.tenantid) -user $request.headers.'x-ms-client-principal' -message "Changed user $($userobj.displayname) license. Sent info: $licensebody" -Sev 'Info'
             $results.add( 'Success. User license has been edited.' )
