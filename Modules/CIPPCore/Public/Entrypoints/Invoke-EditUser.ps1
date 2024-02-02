@@ -44,8 +44,17 @@ Function Invoke-EditUser {
             }
         } | ForEach-Object {
             $NonEmptyProperties = $_.psobject.Properties | Select-Object -ExpandProperty Name
-            $_ | Select-Object -Property $NonEmptyProperties | ConvertTo-Json
+            $_ | Select-Object -Property $NonEmptyProperties
         }
+        if ($userobj.addedAttributes) {
+            Write-Host 'Found added attribute'
+            Write-Host "Added attributes: $($userobj.addedAttributes | ConvertTo-Json)"
+            $userobj.addedAttributes.getenumerator() | ForEach-Object {
+                $results.add("Edited property $($_.Key) with value $($_.Value)")
+                $bodytoShip | Add-Member -NotePropertyName $_.Key -NotePropertyValue $_.Value -Force
+            }
+        }
+        $bodyToShip = ConvertTo-Json -Depth 10 -InputObject $BodyToship -Compress
         $GraphRequest = New-GraphPostRequest -uri "https://graph.microsoft.com/beta/users/$($userobj.Userid)" -tenantid $Userobj.tenantid -type PATCH -body $BodyToship -verbose
         $results.add( 'Success. The user has been edited.' )
         Write-LogMessage -API $APINAME -tenant ($UserObj.tenantid) -user $request.headers.'x-ms-client-principal' -message "Edited user $($userobj.displayname) with id $($userobj.Userid)" -Sev 'Info'

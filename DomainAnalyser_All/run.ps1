@@ -10,8 +10,7 @@ try {
     $ValidResolvers = @('Google', 'CloudFlare', 'Quad9')
     if ($ValidResolvers -contains $Config.Resolver) {
         $Resolver = $Config.Resolver
-    }
-    else {
+    } else {
         $Resolver = 'Google'
         $Config = @{
             PartitionKey = 'Domains'
@@ -20,8 +19,7 @@ try {
         }
         Add-CIPPAzDataTableEntity @ConfigTable -Entity $Config -Force
     }
-}
-catch {
+} catch {
     $Resolver = 'Google'
 }
 Set-DnsResolver -Resolver $Resolver
@@ -30,8 +28,7 @@ $Domain = $DomainObject.rowKey
 
 try {
     $Tenant = $DomainObject.TenantDetails | ConvertFrom-Json -ErrorAction Stop
-}
-catch {
+} catch {
     $Tenant = @{Tenant = 'None' }
 }
 
@@ -90,15 +87,13 @@ $MXFailCount = $MXRecord.ValidationFails | Measure-Object | Select-Object -Expan
 if ($MXFailCount -eq 0) {
     $Result.MXPassTest = $true
     $ScoreDomain += $Scores.MXRecommended
-}
-else {
+} else {
     $ScoreExplanation.Add('MX record did not pass validation') | Out-Null
 }
 
 if ([string]::IsNullOrEmpty($MXRecord.MailProvider)) {
     $Result.MailProvider = 'Unknown'
-}
-else {
+} else {
     $Result.MailProvider = $MXRecord.MailProvider.Name
 }
 
@@ -109,17 +104,14 @@ try {
         $Result.ActualSPFRecord = $SPFRecord.Record
         if ($SPFRecord.RecordCount -eq 1) {
             $ScoreDomain += $Scores.SPFPresent
-        }
-        else {
+        } else {
             $ScoreExplanation.Add('Multiple SPF records detected') | Out-Null
         }
-    }
-    else {
+    } else {
         $Result.ActualSPFRecord = 'No SPF Record'
         $ScoreExplanation.Add('No SPF Record Found') | Out-Null
     }
-}
-catch {
+} catch {
     $Message = 'SPF Exception: {0} line {1} - {2}' -f $_.InvocationInfo.ScriptName, $_.InvocationInfo.ScriptLineNumber, $_.Exception.Message
     Write-LogMessage -API 'DomainAnalyser' -tenant $tenant.tenant -message $Message -sev Error
     throw $Message
@@ -135,8 +127,7 @@ $SPFFailCount = $SPFRecord.ValidationFails | Measure-Object | Select-Object -Exp
 if ($SPFFailCount -eq 0) {
     $ScoreDomain += $Scores.SPFCorrectAll
     $Result.SPFPassAll = $true
-}
-else {
+} else {
     $ScoreExplanation.Add('SPF record did not pass validation') | Out-Null
 }
 
@@ -147,12 +138,11 @@ try {
     If ([string]::IsNullOrEmpty($DMARCPolicy.Record)) {
         $Result.DMARCPresent = $false
         $ScoreExplanation.Add('No DMARC Records Found') | Out-Null
-    }
-    else {
+    } else {
         $Result.DMARCPresent = $true
         $ScoreDomain += $Scores.DMARCPresent
 
-        $Result.DMARCFullPolicy = $DMARCResults.Record
+        $Result.DMARCFullPolicy = $DMARCPolicy.Record
         if ($DMARCPolicy.Policy -eq 'reject' -and $DMARCPolicy.SubdomainPolicy -eq 'reject') { 
             $Result.DMARCActionPolicy = 'Reject'
             $ScoreDomain += $Scores.DMARCSetReject
@@ -171,8 +161,7 @@ try {
         if ($ReportEmailCount -gt 0) {
             $Result.DMARCReportingActive = $true
             $ScoreDomain += $Scores.DMARCReportingActive
-        }
-        else {
+        } else {
             $Result.DMARCReportingActive = $False
             $ScoreExplanation.Add('DMARC Reporting not Configured') | Out-Null
         }
@@ -180,14 +169,12 @@ try {
         if ($DMARCPolicy.Percent -eq 100) {
             $Result.DMARCPercentagePass = $true
             $ScoreDomain += $Scores.DMARCPercentageGood
-        }
-        else {
+        } else {
             $Result.DMARCPercentagePass = $false
             $ScoreExplanation.Add('DMARC Not Checking All Messages') | Out-Null                
         }
     }
-}
-catch {
+} catch {
     $Message = 'DMARC Exception: {0} line {1} - {2}' -f $_.InvocationInfo.ScriptName, $_.InvocationInfo.ScriptLineNumber, $_.Exception.Message
     Write-LogMessage -API 'DomainAnalyser' -tenant $tenant.tenant -message $Message -sev Error
     throw $Message
@@ -201,13 +188,11 @@ try {
     if (($DNSSECFailCount + $DNSSECWarnCount) -eq 0) {
         $Result.DNSSECPresent = $true
         $ScoreDomain += $Scores.DNSSECPresent
-    }
-    else {
+    } else {
         $Result.DNSSECPresent = $false
         $ScoreExplanation.Add('DNSSEC Not Configured or Enabled') | Out-Null 
     }
-}
-catch {
+} catch {
     $Message = 'DNSSEC Exception: {0} line {1} - {2}' -f $_.InvocationInfo.ScriptName, $_.InvocationInfo.ScriptLineNumber, $_.Exception.Message
     Write-LogMessage -API 'DomainAnalyser' -tenant $tenant.tenant -message $Message -sev Error
     throw $Message
@@ -230,13 +215,11 @@ try {
     if ($DkimRecordCount -gt 0 -and $DkimFailCount -eq 0) {
         $Result.DKIMEnabled = $true
         $ScoreDomain += $Scores.DKIMActiveAndWorking
-    }
-    else {
+    } else {
         $Result.DKIMEnabled = $false
         $ScoreExplanation.Add('DKIM Not Configured') | Out-Null 
     }
-}
-catch {
+} catch {
     $Message = 'DKIM Exception: {0} line {1} - {2}' -f $_.InvocationInfo.ScriptName, $_.InvocationInfo.ScriptLineNumber, $_.Exception.Message
     Write-LogMessage -API 'DomainAnalyser' -tenant $tenant.tenant -message $Message -sev Error
     throw $Message
