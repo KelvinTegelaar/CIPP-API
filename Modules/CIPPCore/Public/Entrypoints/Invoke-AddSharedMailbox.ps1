@@ -22,13 +22,6 @@ Function Invoke-AddSharedMailbox {
     try {
 
         $Email = "$($groupobj.username)@$($groupobj.domain)"
-        Write-Host "Email object is: $Email"
-        # Write-Host 'Group object is:'
-        # $groupobj
-        Write-Host "Aliases are: $($Aliases.Count)"
-        $Aliases | ForEach-Object {
-            Write-Host "Alias: $_"
-        }
         $BodyToship = [pscustomobject] @{
             'displayName'        = $groupobj.Displayname
             'name'               = $groupobj.username
@@ -47,25 +40,23 @@ Function Invoke-AddSharedMailbox {
 
     try {
         if ($Aliases) {
-        
+            
+            Start-Sleep 3 # Sleep since there is apparently a race condition with the mailbox creation if we don't delay for a lil bit
             $AliasBodyToShip = [pscustomobject] @{
-                'Identity'       = $Email
-                'EmailAddresses' = @{Add = $Aliases }
+                'Identity'       = $AddSharedRequest.Guid
+                'EmailAddresses' = @{'@odata.type' = '#Exchange.GenericHashTable'; Add = $Aliases }
             }
             $AliasBodyToShip
-            New-ExoRequest -tenantid $groupobj.tenantid -cmdlet 'Set-Mailbox' -cmdparams $AliasBodyToShip
+            New-ExoRequest -tenantid $groupobj.tenantid -cmdlet 'Set-Mailbox' -cmdparams $AliasBodyToShip -UseSystemMailbox $true
             Write-LogMessage -user $User -API $APINAME -tenant $($groupobj.tenantid) -message "Added aliases to $Email : $($Aliases -join ',')" -Sev 'Info'
             $Body = $results.add("Added Aliases to $Email : $($Aliases -join ',')")
         }
     } catch {
         Write-LogMessage -user $User -API $APINAME -tenant $($groupobj.tenantid) -message "Failed to add aliases to $Email : $($_.Exception.Message)" -Sev 'Error'
-        $Body = $results.add("Failed to add aliases to $Email : $($_.Exception.Message)")
+        $Body = $results.add("ERROR: Failed to add aliases to $Email : $($_.Exception.Message)")
     }
 
-    $Body = [pscustomobject] @{
-        'Results' = @($results) 
-    }
-
+    $Body = [pscustomobject] @{ 'Results' = @($results) }
     # Associate values to output bindings by calling 'Push-OutputBinding'.
     Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
             StatusCode = [HttpStatusCode]::OK
