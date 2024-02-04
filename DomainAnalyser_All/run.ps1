@@ -116,7 +116,7 @@ try {
     Write-LogMessage -API 'DomainAnalyser' -tenant $tenant.tenant -message $Message -sev Error
     throw $Message
 }
-    
+
 # Check SPF Record
 $Result.SPFPassAll = $false
 
@@ -143,13 +143,13 @@ try {
         $ScoreDomain += $Scores.DMARCPresent
 
         $Result.DMARCFullPolicy = $DMARCPolicy.Record
-        if ($DMARCPolicy.Policy -eq 'reject' -and $DMARCPolicy.SubdomainPolicy -eq 'reject') { 
+        if ($DMARCPolicy.Policy -eq 'reject' -and $DMARCPolicy.SubdomainPolicy -eq 'reject') {
             $Result.DMARCActionPolicy = 'Reject'
             $ScoreDomain += $Scores.DMARCSetReject
         }
-        if ($DMARCPolicy.Policy -eq 'none') { 
+        if ($DMARCPolicy.Policy -eq 'none') {
             $Result.DMARCActionPolicy = 'None'
-            $ScoreExplanation.Add('DMARC is not being enforced') | Out-Null 
+            $ScoreExplanation.Add('DMARC is not being enforced') | Out-Null
         }
         if ($DMARCPolicy.Policy -eq 'quarantine') {
             $Result.DMARCActionPolicy = 'Quarantine'
@@ -171,7 +171,7 @@ try {
             $ScoreDomain += $Scores.DMARCPercentageGood
         } else {
             $Result.DMARCPercentagePass = $false
-            $ScoreExplanation.Add('DMARC Not Checking All Messages') | Out-Null                
+            $ScoreExplanation.Add('DMARC Not Checking All Messages') | Out-Null
         }
     }
 } catch {
@@ -190,7 +190,7 @@ try {
         $ScoreDomain += $Scores.DNSSECPresent
     } else {
         $Result.DNSSECPresent = $false
-        $ScoreExplanation.Add('DNSSEC Not Configured or Enabled') | Out-Null 
+        $ScoreExplanation.Add('DNSSEC Not Configured or Enabled') | Out-Null
     }
 } catch {
     $Message = 'DNSSEC Exception: {0} line {1} - {2}' -f $_.InvocationInfo.ScriptName, $_.InvocationInfo.ScriptLineNumber, $_.Exception.Message
@@ -201,14 +201,15 @@ try {
 # DKIM Check
 try {
     $DkimParams = @{
-        Domain = $Domain
+        Domain                       = $Domain
+        FallbackToMicrosoftSelectors = $true
     }
     if (![string]::IsNullOrEmpty($DomainObject.DkimSelectors)) {
         $DkimParams.Selectors = $DomainObject.DkimSelectors | ConvertFrom-Json
     }
 
     $DkimRecord = Read-DkimRecord @DkimParams -ErrorAction Stop
-    
+
     $DkimRecordCount = $DkimRecord.Records | Measure-Object | Select-Object -ExpandProperty Count
     $DkimFailCount = $DkimRecord.ValidationFails | Measure-Object | Select-Object -ExpandProperty Count
     #$DkimWarnCount = $DkimRecord.ValidationWarns | Measure-Object | Select-Object -ExpandProperty Count
@@ -217,7 +218,7 @@ try {
         $ScoreDomain += $Scores.DKIMActiveAndWorking
     } else {
         $Result.DKIMEnabled = $false
-        $ScoreExplanation.Add('DKIM Not Configured') | Out-Null 
+        $ScoreExplanation.Add('DKIM Not Configured') | Out-Null
     }
 } catch {
     $Message = 'DKIM Exception: {0} line {1} - {2}' -f $_.InvocationInfo.ScriptName, $_.InvocationInfo.ScriptLineNumber, $_.Exception.Message
