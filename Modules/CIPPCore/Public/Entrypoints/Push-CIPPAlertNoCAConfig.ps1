@@ -15,7 +15,7 @@ function Push-CIPPAlertNoCAConfig {
             }
         }
     } catch {
-        Write-AlertMessage -tenant $($QueueItem.tenant) -message "Error occurred: $(Get-NormalizedError -message $_.Exception.message)"
+        Write-AlertMessage -tenant $($QueueItem.tenant) -message "Conditional Access Config Alert: Error occurred: $(Get-NormalizedError -message $_.Exception.message)"
     }
 
 }
