@@ -5,17 +5,17 @@ function Set-CIPPCopyGroupMembers(
     [string]$TenantFilter,
     [string]$APIName = "Copy User Groups"
 ) {
-    $MemberIDs = "https://graph.microsoft.com/v1.0/directoryObjects/" + (New-GraphGetRequest -uri "https://graph.microsoft.com/beta/users/$UserId" -tenantid $TenantFilter).id 
+    $MemberIDs = "https://graph.microsoft.com/v1.0/directoryObjects/" + (New-GraphGetRequest -uri "https://graph.microsoft.com/beta/users/$UserId" -tenantid $TenantFilter).id
     $AddMemberBody = "{ `"members@odata.bind`": $(ConvertTo-Json @($MemberIDs)) }"
-    
+
     $Success = New-Object System.Collections.ArrayList
     $Errors = New-Object System.Collections.ArrayList
-    (New-GraphGETRequest -uri "https://graph.microsoft.com/beta/users/$CopyFromId/memberOf" -tenantid $TenantFilter) | Where-Object { $_.GroupTypes -notin "DynamicMemberShip" } | ForEach-Object {
+    (New-GraphGETRequest -uri "https://graph.microsoft.com/beta/users/$CopyFromId/memberOf" -tenantid $TenantFilter) | Where-Object { $_.GroupTypes -notin "herohero" } | ForEach-Object {
         try {
             $MailGroup = $_
             if ($MailGroup.MailEnabled -and $Mailgroup.ResourceProvisioningOptions -notin "Team") {
                 $Params = @{ Identity = $MailGroup.mail; Member = $UserId; BypassSecurityGroupManagerCheck = $true }
-                New-ExoRequest -tenantid $TenantFilter -cmdlet "Add-DistributionGroupMember" -cmdParams $params -UseSystemMailbox $true             
+                New-ExoRequest -tenantid $TenantFilter -cmdlet "Add-DistributionGroupMember" -cmdParams $params -UseSystemMailbox $true
             }
             else {
                 $GroupResult = New-GraphPostRequest -uri "https://graph.microsoft.com/beta/groups/$($_.id)" -tenantid $TenantFilter -type patch -body $AddMemberBody -Verbose
