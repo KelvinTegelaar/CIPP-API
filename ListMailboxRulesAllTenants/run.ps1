@@ -3,51 +3,59 @@ param([string] $QueueItem, $TriggerMetadata)
 
 # Write out the queue message and metadata to the information log.
 Write-Host "PowerShell queue trigger function processed work item: $QueueItem"
-$Tenants = if ($QueueItem -ne "AllTenants") {
+
+$Tenants = if ($QueueItem -ne 'AllTenants') {
     [PSCustomObject]@{
         defaultDomainName = $QueueItem
     }
-}
-else {
+} else {
     Get-Tenants
 }
-$Tenants | ForEach-Object -Parallel { 
+$Tenants | ForEach-Object -Parallel {
     $domainName = $_.defaultDomainName
-    Import-Module '.\Modules\CIPPcore'
+    Import-Module CippCore
+    Import-Module AzBobbyTables
+    $Table = Get-CIPPTable -TableName cachembxrules
     try {
-        
-        $Rules = New-ExoRequest -tenantid $domainName -cmdlet "Get-Mailbox" | ForEach-Object -Parallel {
-            New-ExoRequest -Anchor $_.UserPrincipalName -tenantid $domainName -cmdlet "Get-InboxRule" -cmdParams @{Mailbox = $_.GUID }
+        $Rules = New-ExoRequest -tenantid $domainName -cmdlet 'Get-Mailbox' -Select 'userPrincipalName,GUID' | ForEach-Object -Parallel {
+            Import-Module CippCore
+            $MbxRules = New-ExoRequest -Anchor $_.UserPrincipalName -tenantid $using:domainName -cmdlet 'Get-InboxRule' -cmdParams @{Mailbox = $_.GUID }
+            foreach ($Rule in $MbxRules) {
+                $Rule | Add-Member -NotePropertyName 'UserPrincipalName' -NotePropertyValue $_.userPrincipalName
+                $Rule
+            }
         }
-        foreach ($Rule in $Rules) {
-            $GraphRequest = @{
-                Rules        = [string]($Rule | ConvertTo-Json)
-                RowKey       = [string](New-Guid).guid
+        if (($Rules | Measure-Object).Count -gt 0) {
+            foreach ($Rule in $Rules) {
+                $GraphRequest = [PSCustomObject]@{
+                    Rules        = [string]($Rule | ConvertTo-Json)
+                    RowKey       = [string](New-Guid).guid
+                    Tenant       = [string]$domainName
+                    PartitionKey = 'mailboxrules'
+                }
+
+            }
+        } else {
+            $Rules = @{
+                Name = 'No rules found'
+            } | ConvertTo-Json
+            $GraphRequest = [PSCustomObject]@{
+                Rules        = [string]$Rules
+                RowKey       = [string]$domainName
                 Tenant       = [string]$domainName
                 PartitionKey = 'mailboxrules'
             }
-            $Table = Get-CIPPTable -TableName cachembxrules
-            Add-CIPPAzDataTableEntity @Table -Entity $GraphRequest -Force | Out-Null
         }
-    }
-    catch {
+    } catch {
         $Rules = @{
             Name = "Could not connect to tenant $($_.Exception.message)"
         } | ConvertTo-Json
-        $GraphRequest = @{
+        $GraphRequest = [PSCustomObject]@{
             Rules        = [string]$Rules
             RowKey       = [string]$domainName
             Tenant       = [string]$domainName
-
             PartitionKey = 'mailboxrules'
         }
-        $Table = Get-CIPPTable -TableName cachembxrules
-        Add-CIPPAzDataTableEntity @Table -Entity $GraphRequest -Force | Out-Null
     }
+    Add-CIPPAzDataTableEntity @Table -Entity $GraphRequest -Force | Out-Null
 }
-
-
-
-$Table = Get-CIPPTable -TableName cachembxrules
-Write-Host "$($GraphRequest.RowKey) - $($GraphRequest.tenant)"
-Add-CIPPAzDataTableEntity @Table -Entity $GraphRequest -Force | Out-Null
