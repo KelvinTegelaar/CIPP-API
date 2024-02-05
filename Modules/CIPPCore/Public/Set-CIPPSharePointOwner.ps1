@@ -1,4 +1,4 @@
-function Set-CIPPOnedriveAccess {
+function Set-CIPPSharePointOwner {
   [CmdletBinding()]
   param (
     $userid,
