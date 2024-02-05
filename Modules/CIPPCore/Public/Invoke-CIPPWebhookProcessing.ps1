@@ -52,6 +52,7 @@ function Invoke-CippWebhookProcessing {
 
     $ExtendedPropertiesIgnoreList = @(
         'OAuth2:Authorize'
+        'OAuth2:Token'
         'SAS:EndAuth'
         'SAS:ProcessAuth'
     )
