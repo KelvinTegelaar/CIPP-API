@@ -11,7 +11,7 @@ Function Invoke-ExecOneDrivePermission {
       $APIName = $TriggerMetadata.FunctionName
       $tenantFilter = $Request.Body.TenantFilter
       try {
-            $State = Set-CIPPOnedriveAccess -tenantFilter $tenantFilter -userid $request.body.UPN -OnedriveAccessUser $request.body.input -ExecutingUser $ExecutingUser -APIName $APIName
+            $State = Set-CIPPOnedriveAccess -tenantFilter $tenantFilter -userid $request.body.UPN -OnedriveAccessUser $request.body.input -ExecutingUser $ExecutingUser -APIName $APIName -RemovePermission $request.body.RemovePermission
             $Results = [pscustomobject]@{'Results' = "$State" }
       } catch {
             $Results = [pscustomobject]@{'Results' = "Failed. $($_.Exception.Message)" }
