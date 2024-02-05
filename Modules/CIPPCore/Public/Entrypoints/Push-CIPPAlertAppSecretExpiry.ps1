@@ -33,7 +33,7 @@ function Push-CIPPAlertAppSecretExpiry {
             Add-CIPPAzDataTableEntity @LastRunTable -Entity $LastRun -Force
         }
     } catch {
-        throw $_
+        
     }
 }
 
