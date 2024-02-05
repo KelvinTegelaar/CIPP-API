@@ -1,6 +1,6 @@
 using namespace System.Net
 
-Function Invoke-ExecOneDrivePermission {
+Function Invoke-ExecSharePointOwner {
       <#
     .FUNCTIONALITY
     Entrypoint
@@ -11,7 +11,7 @@ Function Invoke-ExecOneDrivePermission {
       $APIName = $TriggerMetadata.FunctionName
       $tenantFilter = $Request.Body.TenantFilter
       try {
-            $State = Set-CIPPSharePointOwner -tenantFilter $tenantFilter -userid $request.body.UPN -OnedriveAccessUser $request.body.input -ExecutingUser $ExecutingUser -APIName $APIName -RemovePermission $request.body.RemovePermission
+            $State = Set-CIPPSharePointOwner -tenantFilter $tenantFilter -userid $request.body.UPN -OnedriveAccessUser $request.body.input -ExecutingUser $ExecutingUser -APIName $APIName -RemovePermission $request.body.RemovePermission -URL $Request.Body.URL
             $Results = [pscustomobject]@{'Results' = "$State" }
       } catch {
             $Results = [pscustomobject]@{'Results' = "Failed. $($_.Exception.Message)" }
