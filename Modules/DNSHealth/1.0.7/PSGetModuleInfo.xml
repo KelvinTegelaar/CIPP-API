@@ -7,13 +7,13 @@
     </TN>
     <MS>
       <S N="Name">DNSHealth</S>
-      <S N="Version">1.0.6</S>
+      <S N="Version">1.0.7</S>
       <S N="Type">Module</S>
       <S N="Description">CIPP DNS Health Check Module</S>
       <S N="Author">John Duprey</S>
       <S N="CompanyName">johnduprey</S>
       <S N="Copyright">2023 John Duprey</S>
-      <DT N="PublishedDate">2023-06-15T12:02:08-04:00</DT>
+      <DT N="PublishedDate">2024-02-02T21:41:51-05:00</DT>
       <Nil N="InstalledDate" />
       <Nil N="UpdatedDate" />
       <Nil N="LicenseUri" />
@@ -36,7 +36,7 @@
         </TN>
         <DCT>
           <En>
-            <S N="Key">Function</S>
+            <S N="Key">Command</S>
             <Obj N="Value" RefId="3">
               <TNRef RefId="1" />
               <LST>
@@ -58,8 +58,15 @@
             </Obj>
           </En>
           <En>
-            <S N="Key">Command</S>
+            <S N="Key">Cmdlet</S>
             <Obj N="Value" RefId="4">
+              <TNRef RefId="1" />
+              <LST />
+            </Obj>
+          </En>
+          <En>
+            <S N="Key">Function</S>
+            <Obj N="Value" RefId="5">
               <TNRef RefId="1" />
               <LST>
                 <S>Read-DmarcPolicy</S>
@@ -80,23 +87,16 @@
             </Obj>
           </En>
           <En>
+            <S N="Key">DscResource</S>
+            <Ref N="Value" RefId="4" />
+          </En>
+          <En>
             <S N="Key">Workflow</S>
-            <Obj N="Value" RefId="5">
-              <TNRef RefId="1" />
-              <LST />
-            </Obj>
+            <Ref N="Value" RefId="4" />
           </En>
           <En>
             <S N="Key">RoleCapability</S>
-            <Ref N="Value" RefId="5" />
-          </En>
-          <En>
-            <S N="Key">Cmdlet</S>
-            <Ref N="Value" RefId="5" />
-          </En>
-          <En>
-            <S N="Key">DscResource</S>
-            <Ref N="Value" RefId="5" />
+            <Ref N="Value" RefId="4" />
           </En>
         </DCT>
       </Obj>
@@ -121,25 +121,24 @@
           <S N="isLatestVersion">True</S>
           <S N="isAbsoluteLatestVersion">True</S>
           <S N="versionDownloadCount">0</S>
-          <S N="downloadCount">39</S>
-          <S N="packageSize">27746</S>
-          <S N="published">6/15/2023 12:02:08 PM -04:00</S>
-          <S N="created">6/15/2023 12:02:08 PM -04:00</S>
-          <S N="lastUpdated">6/15/2023 12:02:08 PM -04:00</S>
+          <S N="downloadCount">78</S>
+          <S N="packageSize">27851</S>
+          <S N="published">2/2/2024 9:41:51 PM -05:00</S>
+          <S N="created">2/2/2024 9:41:51 PM -05:00</S>
+          <S N="lastUpdated">2/2/2024 9:41:51 PM -05:00</S>
           <S N="tags">PSModule PSFunction_Read-DmarcPolicy PSCommand_Read-DmarcPolicy PSFunction_Read-MtaStsPolicy PSCommand_Read-MtaStsPolicy PSFunction_Read-DkimRecord PSCommand_Read-DkimRecord PSFunction_Read-MtaStsRecord PSCommand_Read-MtaStsRecord PSFunction_Read-MXRecord PSCommand_Read-MXRecord PSFunction_Read-NSRecord PSCommand_Read-NSRecord PSFunction_Read-SPFRecord PSCommand_Read-SPFRecord PSFunction_Read-TlsRptRecord PSCommand_Read-TlsRptRecord PSFunction_Read-WhoisRecord PSCommand_Read-WhoisRecord PSFunction_Resolve-DnsHttpsQuery PSCommand_Resolve-DnsHttpsQuery PSFunction_Set-DnsResolver PSCommand_Set-DnsResolver PSFunction_Test-DNSSEC PSCommand_Test-DNSSEC PSFunction_Test-HttpsCertificate PSCommand_Test-HttpsCertificate PSFunction_Test-MtaSts PSCommand_Test-MtaSts PSIncludes_Function</S>
           <S N="developmentDependency">False</S>
-          <S N="updated">2023-06-15T12:02:08Z</S>
-          <S N="NormalizedVersion">1.0.6</S>
+          <S N="updated">2024-02-02T21:41:51Z</S>
+          <S N="NormalizedVersion">1.0.7</S>
           <S N="Authors">John Duprey</S>
           <S N="IsPrerelease">false</S>
           <S N="ItemType">Module</S>
-          <S N="FileList">DNSHealth.nuspec|MailProviders\SpamTitan.json|DNSHealth.psd1|MailProviders\Null.json|DNSHealth.psm1|MailProviders\BarracudaESS.json|MailProviders\Microsoft365.json|MailProviders\AppRiver.json|MailProviders\Google.json|MailProviders\Sophos.json|MailProviders\_template.json|MailProviders\Reflexion.json|MailProviders\Intermedia.json|MailProviders\Proofpoint.json|MailProviders\Mimecast.json</S>
+          <S N="FileList">DNSHealth.nuspec|MailProviders\BarracudaESS.json|MailProviders\Reflexion.json|MailProviders\Null.json|MailProviders\SpamTitan.json|DNSHealth.psd1|MailProviders\Microsoft365.json|MailProviders\Sophos.json|MailProviders\Proofpoint.json|DNSHealth.psm1|MailProviders\_template.json|MailProviders\Google.json|MailProviders\Intermedia.json|MailProviders\AppRiver.json|MailProviders\Mimecast.json</S>
           <S N="GUID">a300d2b0-d468-46d1-88a3-e442a76b655b</S>
           <S N="PowerShellVersion">7.0</S>
-          <S N="CompanyName">Unknown</S>
         </MS>
       </Obj>
-      <S N="InstalledLocation">C:\Users\JDDoS\Documents\GitHub\CIPP-API\Modules\DNSHealth\1.0.6</S>
+      <S N="InstalledLocation">C:\GitHub\CIPP Workspace\CIPP-API\Modules\DNSHealth\1.0.7</S>
     </MS>
   </Obj>
 </Objs>
