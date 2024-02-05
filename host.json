@@ -12,8 +12,5 @@
     "queues": {
       "maxDequeueCount": 1
     }
-  },
-  "logging": {
-    "fileLoggingMode": "never"
   }
 }
