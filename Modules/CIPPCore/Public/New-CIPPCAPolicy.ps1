@@ -73,7 +73,9 @@ function New-CIPPCAPolicy {
                 Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -message "Matched a CA policy with the existing Named Location: $($location.displayName)" -Sev 'Info'
  
             } else {
+                if ($location.countriesAndRegions) { $location.countriesAndRegions = @($location.countriesAndRegions) }
                 $Body = ConvertTo-Json -InputObject $Location
+                Write-Host "Trying to create named location with: $body"
                 $GraphRequest = New-GraphPOSTRequest -uri 'https://graph.microsoft.com/beta/identity/conditionalAccess/namedLocations' -body $body -Type POST -tenantid $tenantfilter
                 Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -message "Created new Named Location: $($location.displayName)" -Sev 'Info'
                 [pscustomobject]@{
@@ -83,10 +85,9 @@ function New-CIPPCAPolicy {
             }
         }
     }
-    Write-Host 'here5'
 
     foreach ($location in $JSONObj.conditions.locations.includeLocations) {
-        Write-Host "Replacting $location"
+        Write-Host "Replacing $location"
         $lookup = $LocationLookupTable | Where-Object -Property name -EQ $location
         Write-Host "Found $lookup"
         if (!$lookup) { continue }

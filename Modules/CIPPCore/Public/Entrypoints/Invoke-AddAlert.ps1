@@ -56,7 +56,7 @@ Function Invoke-AddAlert {
                         $params = @{
                             TenantFilter  = $_.defaultDomainName
                             auditLogAPI   = $true
-                            operations    = 'Audit.AzureActiveDirectory,Audit.Exchange,Audit.SharePoint,Audit.General'
+                            operations    = $Request.body.ifs.selection
                             BaseURL       = $URL
                             ExecutingUser = $Request.headers.'x-ms-client-principal'
                         }
@@ -73,7 +73,7 @@ Function Invoke-AddAlert {
                     $params = @{
                         TenantFilter  = $tenant
                         auditLogAPI   = $true
-                        operations    = 'Audit.AzureActiveDirectory,Audit.Exchange,Audit.SharePoint,Audit.General'
+                        operations    = $Request.body.ifs.selection
                         BaseURL       = $URL
                         ExecutingUser = $Request.headers.'x-ms-client-principal'
                     }
