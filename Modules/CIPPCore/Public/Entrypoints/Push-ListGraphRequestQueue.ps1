@@ -19,7 +19,7 @@ function Push-ListGraphRequestQueue {
 
     $PartitionKey = $QueueItem.PartitionKey
 
-    $TableName = ('cache{0}' -f ($QueueItem.Endpoint -replace '[^A-Za-z0-9]'))[0..63] -join ''
+    $TableName = ('cache{0}' -f ($QueueItem.Endpoint -replace '[^A-Za-z0-9]'))[0..62] -join ''
     Write-Host $TableName
     $Table = Get-CIPPTable -TableName $TableName
 
