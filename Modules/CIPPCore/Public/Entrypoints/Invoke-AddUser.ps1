@@ -8,7 +8,7 @@ Function Invoke-AddUser {
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
 
-    $APIName = $TriggerMetadata.FunctionName
+    $APIName = "AddUser"
     Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -message 'Accessed this API' -Sev 'Debug'
 
     $Results = [System.Collections.ArrayList]@()
@@ -107,11 +107,17 @@ Function Invoke-AddUser {
         $results.Add($CopyFrom.Success -join ', ')
         $results.Add($CopyFrom.Error -join ', ') 
     }
+
+    $copyFromResults = @{
+        'Success' = $CopyFrom.Success
+        'Error'   = $CopyFrom.Error
+    }
+
     $body = [pscustomobject] @{
         'Results'  = @($results) 
         'Username' = $UserprincipalName
         'Password' = $password
-        'CopyFrom' = $CopyFrom
+        'CopyFrom' = $copyFromResults
     }
     # Associate values to output bindings by calling 'Push-OutputBinding'.
     Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
