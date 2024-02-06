@@ -1,9 +1,9 @@
-param($name)
+param($Timer)
 
 $Table = Get-CIPPTable -TableName SchedulerConfig
 $Tenants = Get-CIPPAzDataTableEntity @Table | Where-Object -Property PartitionKey -NE 'WebhookAlert'
 
-$object = foreach ($Tenant in $Tenants) {
+$Tasks = foreach ($Tenant in $Tenants) {
     if ($Tenant.tenant -ne 'AllTenants') {
         [pscustomobject]@{ 
             Tenant   = $Tenant.tenant
@@ -23,6 +23,19 @@ $object = foreach ($Tenant in $Tenants) {
             }
         }
     }
-}
+}   
 
-$object
+foreach ($Task in $Tasks) {
+    $QueueItem = [pscustomobject]@{
+        Tenant       = $task.tenant
+        Tenantid     = $task.tenantid
+        Tag          = $task.tag
+        Type         = $task.type
+        FunctionName = "Scheduler$($Task.Type)"
+    }
+    try {
+        Push-OutputBinding -Name QueueItem -Value $QueueItem 
+    } catch {
+        Write-Host "Could not launch queue item for $($Task.tenant): $($_.Exception.Message)"
+    }
+}
