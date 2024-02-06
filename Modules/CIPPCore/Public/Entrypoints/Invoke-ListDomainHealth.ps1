@@ -75,7 +75,8 @@ Function Invoke-ListDomainHealth {
                     }
                     'ReadDkimRecord' {
                         $DkimQuery = @{
-                            Domain = $Request.Query.Domain
+                            Domain                       = $Request.Query.Domain
+                            FallbackToMicrosoftSelectors = $true
                         }
                         if ($Request.Query.Selector) {
                             $DkimQuery.Selectors = ($Request.Query.Selector).trim() -split '\s*,\s*'
