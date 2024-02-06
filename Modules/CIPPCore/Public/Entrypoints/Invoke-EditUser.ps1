@@ -44,8 +44,17 @@ Function Invoke-EditUser {
             }
         } | ForEach-Object {
             $NonEmptyProperties = $_.psobject.Properties | Select-Object -ExpandProperty Name
-            $_ | Select-Object -Property $NonEmptyProperties | ConvertTo-Json
+            $_ | Select-Object -Property $NonEmptyProperties
         }
+        if ($userobj.addedAttributes) {
+            Write-Host 'Found added attribute'
+            Write-Host "Added attributes: $($userobj.addedAttributes | ConvertTo-Json)"
+            $userobj.addedAttributes.getenumerator() | ForEach-Object {
+                $results.add("Edited property $($_.Key) with value $($_.Value)")
+                $bodytoShip | Add-Member -NotePropertyName $_.Key -NotePropertyValue $_.Value -Force
+            }
+        }
+        $bodyToShip = ConvertTo-Json -Depth 10 -InputObject $BodyToship -Compress
         $GraphRequest = New-GraphPostRequest -uri "https://graph.microsoft.com/beta/users/$($userobj.Userid)" -tenantid $Userobj.tenantid -type PATCH -body $BodyToship -verbose
         $results.add( 'Success. The user has been edited.' )
         Write-LogMessage -API $APINAME -tenant ($UserObj.tenantid) -user $request.headers.'x-ms-client-principal' -message "Edited user $($userobj.displayname) with id $($userobj.Userid)" -Sev 'Info'
@@ -55,8 +64,7 @@ Function Invoke-EditUser {
             $results.add("Success. The password has been set to $($userobj.password)")
             Write-LogMessage -API $APINAME -tenant ($UserObj.tenantid) -user $request.headers.'x-ms-client-principal' -message "Reset $($userobj.displayname)'s Password" -Sev 'Info'
         }
-    }
-    catch {
+    } catch {
         Write-LogMessage -API $APINAME -tenant ($UserObj.tenantid) -user $request.headers.'x-ms-client-principal' -message "User edit API failed. $($_.Exception.Message)" -Sev 'Error'
         $results.add( "Failed to edit user. $($_.Exception.Message)")
     }
@@ -81,8 +89,7 @@ Function Invoke-EditUser {
             $results.add( 'Success. User license has been edited.' )
         }
 
-    }
-    catch {
+    } catch {
         Write-LogMessage -API $APINAME -tenant ($UserObj.tenantid) -user $request.headers.'x-ms-client-principal' -message "License assign API failed. $($_.Exception.Message)" -Sev 'Error'
         $results.add( "We've failed to assign the license. $($_.Exception.Message)")
     }
@@ -98,8 +105,7 @@ Function Invoke-EditUser {
             $results.add( 'Success. added aliasses to user.')
         }
 
-    }
-    catch {
+    } catch {
         Write-LogMessage -API $APINAME -tenant ($UserObj.tenantid) -user $request.headers.'x-ms-client-principal' -message "Alias API failed. $($_.Exception.Message)" -Sev 'Error'
         $results.add( "Successfully edited user. The password is $password. We've failed to create the Aliases: $($_.Exception.Message)")
     }
