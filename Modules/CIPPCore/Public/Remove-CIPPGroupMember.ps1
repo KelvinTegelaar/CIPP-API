@@ -19,7 +19,6 @@ function Remove-CIPPGroupMember(
         $Message = "Successfully removed user $($Member) from $GroupId."
         Write-LogMessage -user $ExecutingUser -API $APIName -tenant $TenantFilter -message $Message -Sev 'Info'
         return $message
-        return
     } catch {
         $message = "Failed to remove user $($Member) from $($GroupId): $($_.Exception.Message)"
         Write-LogMessage -user $ExecutingUser -API $APIName -tenant $TenantFilter -message $message -Sev 'error'
