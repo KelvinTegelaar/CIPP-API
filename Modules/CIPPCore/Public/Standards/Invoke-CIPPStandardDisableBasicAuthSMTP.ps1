@@ -27,7 +27,6 @@ function Invoke-CIPPStandardDisableBasicAuthSMTP {
                     Write-LogMessage -API 'Standards' -tenant $tenant -message "Disabled SMTP Basic Authentication for $($_.DisplayName), $($_.PrimarySmtpAddress)" -sev Info
                 } catch {
                     Write-LogMessage -API 'Standards' -tenant $tenant -message "Failed to disable SMTP Basic Authentication for $($_.DisplayName), $($_.PrimarySmtpAddress). Error: $($_.exception.message)" -sev Error
-                    
                 }
             }
         }
@@ -38,15 +37,15 @@ function Invoke-CIPPStandardDisableBasicAuthSMTP {
             Write-LogMessage -API 'Standards' -tenant $tenant -message 'SMTP Basic Authentication for tenant and all users is disabled' -sev Info
         } else {
             
-            if ($CurrentInfo.SmtpClientAuthenticationDisabled -eq $false) {
-                $LogMessage = 'SMTP Basic Authentication for tenant is not disabled. '
-            } else {
+            if ($CurrentInfo.SmtpClientAuthenticationDisabled) {
                 $LogMessage = 'SMTP Basic Authentication for tenant is disabled. '
-            }
-            if ($SMTPusers.Count -ne 0) {
-                $LogMessage += "SMTP Basic Authentication for $($SMTPusers.Count) users is not disabled"
             } else {
+                $LogMessage = 'SMTP Basic Authentication for tenant is not disabled. '
+            }
+            if ($SMTPusers.Count -eq 0) {
                 $LogMessage += 'SMTP Basic Authentication for all users is disabled'
+            } else {
+                $LogMessage += "SMTP Basic Authentication for $($SMTPusers.Count) users is not disabled"
             }
             Write-LogMessage -API 'Standards' -tenant $tenant -message $LogMessage -sev Alert
         }
