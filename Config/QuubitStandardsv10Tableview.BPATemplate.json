@@ -1,0 +1,248 @@
+{
+  "name": "Quub.it Standards v1.0 - Table view",
+  "style": "Table",
+  "Fields": [
+    {
+      "name": "softwareOath",
+      "UseExistingInfo": true,
+      "FrontendFields": [
+        {
+          "name": "softwareOath",
+          "value": "softwareOath",
+          "formatter": "bool"
+        }
+      ]
+    },
+    {
+      "name": "MSAuthenticator",
+      "UseExistingInfo": true,
+      "FrontendFields": [
+        {
+          "name": "MSAuthenticator",
+          "value": "MSAuthenticator",
+          "formatter": "bool"
+        }
+      ]
+    },
+    {
+      "name": "DelegateSentItems",
+      "UseExistingInfo": true,
+      "FrontendFields": [
+        {
+          "name": "DelegateSentItems",
+          "value": "DelegateSentItems",
+          "formatter": "table"
+        }
+      ]
+    },
+    {
+      "name": "DisableGuests",
+      "UseExistingInfo": true,
+      "FrontendFields": [
+        {
+          "name": "DisableGuests",
+          "value": "DisableGuests",
+          "formatter": "table"
+        }
+      ]
+    },
+    {
+      "name": "DisableM365GroupUsers",
+      "UseExistingInfo": true,
+      "FrontendFields": [
+        {
+          "name": "DisableM365GroupUsers",
+          "value": "DisableM365GroupUsers",
+          "formatter": "bool"
+        }
+      ]
+    },
+    {
+      "name": "DisableReshare",
+      "UseExistingInfo": true,
+      "FrontendFields": [
+        {
+          "name": "DisableReshare",
+          "value": "DisableReshare",
+          "formatter": "bool"
+        }
+      ]
+    },
+    {
+      "name": "DisableSecurityGroupUsers",
+      "UseExistingInfo": true,
+      "FrontendFields": [
+        {
+          "name": "DisableSecurityGroupUsers",
+          "value": "DisableSecurityGroupUsers",
+          "formatter": "bool"
+        }
+      ]
+    },
+    {
+      "name": "DisableSharedMailbox",
+      "UseExistingInfo": true,
+      "FrontendFields": [
+        {
+          "name": "DisableSharedMailbox",
+          "value": "DisableSharedMailbox",
+          "formatter": "table"
+        }
+      ]
+    },
+    {
+      "name": "DisableUserSiteCreate",
+      "UseExistingInfo": true,
+      "FrontendFields": [
+        {
+          "name": "DisableUserSiteCreate",
+          "value": "DisableUserSiteCreate",
+          "formatter": "bool"
+        }
+      ]
+    },
+    {
+      "name": "EnableOnlineArchiving",
+      "UseExistingInfo": true,
+      "FrontendFields": [
+        {
+          "name": "EnableOnlineArchiving",
+          "value": "EnableOnlineArchiving",
+          "formatter": "table"
+        }
+      ]
+    },
+    {
+      "name": "ExcludedfileExt",
+      "UseExistingInfo": true,
+      "FrontendFields": [
+        {
+          "name": "ExcludedfileExt",
+          "value": "ExcludedfileExt",
+          "formatter": "table"
+        }
+      ]
+    },
+    {
+      "name": "MailContacts",
+      "UseExistingInfo": true,
+      "FrontendFields": [
+        {
+          "name": "MailContacts",
+          "value": "MailContacts",
+          "formatter": "table"
+        }
+      ]
+    },
+    {
+      "name": "OauthConsent",
+      "UseExistingInfo": true,
+      "FrontendFields": [
+        {
+          "name": "OauthConsent",
+          "value": "OauthConsent",
+          "formatter": "bool"
+        }
+      ]
+    },
+    {
+      "name": "OauthConsentLowSec",
+      "UseExistingInfo": true,
+      "FrontendFields": [
+        {
+          "name": "OauthConsentLowSec",
+          "value": "OauthConsentLowSec",
+          "formatter": "bool"
+        }
+      ]
+    },
+    {
+      "name": "PasswordExpireDisabled",
+      "UseExistingInfo": true,
+      "FrontendFields": [
+        {
+          "name": "PasswordExpireDisabled",
+          "value": "PasswordExpireDisabled",
+          "formatter": "table"
+        }
+      ]
+    },
+    {
+      "name": "PWdisplayAppInformationRequiredState",
+      "UseExistingInfo": true,
+      "FrontendFields": [
+        {
+          "name": "PWdisplayAppInformationRequiredState",
+          "value": "PWdisplayAppInformationRequiredState",
+          "formatter": "bool"
+        }
+      ]
+    },
+    {
+      "name": "DKIM",
+      "UseExistingInfo": true,
+      "FrontendFields": [
+        {
+          "name": "DKIM",
+          "value": "DKIM",
+          "formatter": "table"
+        }
+      ]
+    },
+    {
+      "name": "SecurityDefaults",
+      "UseExistingInfo": true,
+      "FrontendFields": [
+        {
+          "name": "SecurityDefaults",
+          "value": "SecurityDefaults",
+          "formatter": "warnBool"
+        }
+      ]
+    },
+    {
+      "name": "SendFromAlias",
+      "UseExistingInfo": true,
+      "FrontendFields": [
+        {
+          "name": "SendFromAlias",
+          "value": "SendFromAlias",
+          "formatter": "bool"
+        }
+      ]
+    },
+    {
+      "name": "SendReceiveLimit",
+      "UseExistingInfo": true,
+      "FrontendFields": [
+        {
+          "name": "SendReceiveLimit",
+          "value": "SendReceiveLimit",
+          "formatter": "table"
+        }
+      ]
+    },
+    {
+      "name": "TemporaryAccessPass",
+      "UseExistingInfo": true,
+      "FrontendFields": [
+        {
+          "name": "TemporaryAccessPass",
+          "value": "TemporaryAccessPass",
+          "formatter": "warnBool"
+        }
+      ]
+    },
+    {
+      "name": "unmanagedSync",
+      "UseExistingInfo": true,
+      "FrontendFields": [
+        {
+          "name": "unmanagedSync",
+          "value": "unmanagedSync",
+          "formatter": "warnBool"
+        }
+      ]
+    }
+  ]
+}
