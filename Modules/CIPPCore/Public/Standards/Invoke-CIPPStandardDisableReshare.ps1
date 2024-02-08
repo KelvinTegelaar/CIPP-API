@@ -8,7 +8,6 @@ function Invoke-CIPPStandardDisableReshare {
     
     If ($Settings.remediate) {
 
-
         if ($CurrentInfo.isResharingByExternalUsersEnabled) {
             try {
                 $body = '{"isResharingByExternalUsersEnabled": "False"}'
@@ -23,13 +22,13 @@ function Invoke-CIPPStandardDisableReshare {
     }
     if ($Settings.alert) {
 
-        if ($CurrentInfo.isResharingByExternalUsersEnabled -eq $false) {
-            Write-LogMessage -API 'Standards' -tenant $tenant -message 'Guests are not allowed to reshare files' -sev Info
-        } else {
+        if ($CurrentInfo.isResharingByExternalUsersEnabled) {
             Write-LogMessage -API 'Standards' -tenant $tenant -message 'Guests are allowed to reshare files' -sev Alert
+        } else {
+            Write-LogMessage -API 'Standards' -tenant $tenant -message 'Guests are not allowed to reshare files' -sev Info
         }
     }
-    
+
     if ($Settings.report) {
         Add-CIPPBPAField -FieldName 'DisableReshare' -FieldValue [bool]$CurrentInfo.isResharingByExternalUsersEnabled -StoreAs bool -Tenant $tenant
     }
