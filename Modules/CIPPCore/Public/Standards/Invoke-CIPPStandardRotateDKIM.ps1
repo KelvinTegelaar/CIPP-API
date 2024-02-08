@@ -18,7 +18,7 @@ function Invoke-CIPPStandardRotateDKIM {
                 }
             }
         } else {
-            Write-LogMessage -API 'Standards' -tenant $tenant -message 'DKIM is rotated for all domains' -sev Info
+            Write-LogMessage -API 'Standards' -tenant $tenant -message 'DKIM is already rotated for all domains' -sev Info
         }
 
     }
