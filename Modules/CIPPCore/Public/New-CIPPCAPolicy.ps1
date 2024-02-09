@@ -45,6 +45,21 @@ function New-CIPPCAPolicy {
         # no issues here.
     }
 
+    #If Grant Controls contains authenticationstrength, create these and then replace the id
+    if ($JSONobj.GrantControls.authenticationStrength.policyType -eq 'custom') {
+        $ExistingStrength = New-GraphGETRequest -uri 'https://graph.microsoft.com/beta/identity/conditionalAccess/authenticationStrength/policies/' -tenantid $TenantFilter | Where-Object -Property displayName -EQ $JSONobj.GrantControls.authenticationStrength.displayName
+        if ($ExistingStrength) {
+            $JSONObj.GrantControls.authenticationStrength = @{ id = $ExistingStrength.id }
+
+        } else {
+            $Body = ConvertTo-Json -InputObject $JSONObj.GrantControls.authenticationStrength
+            $GraphRequest = New-GraphPOSTRequest -uri 'https://graph.microsoft.com/beta/identity/conditionalAccess/authenticationStrength/policies' -body $body -Type POST -tenantid $tenantfilter
+            $JSONObj.GrantControls.authenticationStrength = @{ id = $ExistingStrength.id }
+            Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -message "Created new Authentication Strength Policy: $($JSONObj.GrantControls.authenticationStrength.displayName)" -Sev 'Info'
+        }
+    }
+
+
     #for each of the locations, check if they exist, if not create them. These are in $jsonobj.LocationInfo
     $LocationLookupTable = foreach ($locations in $jsonobj.LocationInfo) {
         foreach ($location in $locations) {
@@ -58,7 +73,9 @@ function New-CIPPCAPolicy {
                 Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -message "Matched a CA policy with the existing Named Location: $($location.displayName)" -Sev 'Info'
  
             } else {
+                if ($location.countriesAndRegions) { $location.countriesAndRegions = @($location.countriesAndRegions) }
                 $Body = ConvertTo-Json -InputObject $Location
+                Write-Host "Trying to create named location with: $body"
                 $GraphRequest = New-GraphPOSTRequest -uri 'https://graph.microsoft.com/beta/identity/conditionalAccess/namedLocations' -body $body -Type POST -tenantid $tenantfilter
                 Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -message "Created new Named Location: $($location.displayName)" -Sev 'Info'
                 [pscustomobject]@{
@@ -68,10 +85,9 @@ function New-CIPPCAPolicy {
             }
         }
     }
-    Write-Host 'here5'
 
     foreach ($location in $JSONObj.conditions.locations.includeLocations) {
-        Write-Host "Replacting $location"
+        Write-Host "Replacing $location"
         $lookup = $LocationLookupTable | Where-Object -Property name -EQ $location
         Write-Host "Found $lookup"
         if (!$lookup) { continue }
@@ -109,6 +125,7 @@ function New-CIPPCAPolicy {
             return "Created policy $displayname for $tenantfilter"
         }
     } catch {
+        Write-Host "$($_.exception | ConvertTo-Json)"
         throw "Failed to create or update conditional access rule $($JSONObj.displayName): $($_.exception.message)"
         Write-LogMessage -API 'Standards' -tenant $tenant -message "Failed to create or update conditional access rule $($JSONObj.displayName): $($_.exception.message) " -sev 'Error'
     }
