@@ -13,32 +13,37 @@ function Invoke-CIPPStandardAddDKIM {
     $SetDomains = $DKIM | Where-Object { $AllDomains -contains $_.Domain -and $_.Enabled -eq $false }
 
     If ($Settings.remediate) {
-        $ErrorCounter = 0
-        # New-domains
-        foreach ($Domain in $NewDomains) {
-            try {
-                (New-ExoRequest -tenantid $tenant -cmdlet 'New-DkimSigningConfig' -cmdparams @{ KeySize = 2048; DomainName = $Domain; Enabled = $true } -useSystemMailbox $true)
-                Write-LogMessage -API 'Standards' -tenant $tenant -message "Enabled DKIM for $Domain" -sev Info
-            } catch {
-                Write-LogMessage -API 'Standards' -tenant $tenant -message "Failed to enable DKIM. Error: $($_.Exception.Message)" -sev Error
-                $ErrorCounter++
-            }
-        }
-
-        # Set-domains
-        foreach ($Domain in $SetDomains) {
-            try {
-                (New-ExoRequest -tenantid $tenant -cmdlet 'Set-DkimSigningConfig' -cmdparams @{ Identity = $Domain.Domain; Enabled = $true } -useSystemMailbox $true)
-                Write-LogMessage -API 'Standards' -tenant $tenant -message "Enabled DKIM for $($Domain.Domain)" -sev Info
-            } catch {
-                Write-LogMessage -API 'Standards' -tenant $tenant -message "Failed to enable DKIM. Error: $($_.Exception.Message)" -sev Error
-                $ErrorCounter++
-            }
-        }
-        if ($ErrorCounter -eq 0) {
-            Write-LogMessage -API 'Standards' -tenant $tenant -message 'Enabled DKIM for all domains in tenant' -sev Info
+        
+        if ($null -eq $NewDomains -and $null -eq $SetDomains) {
+            Write-LogMessage -API 'Standards' -tenant $tenant -message 'DKIM is already enabled for all available domains.' -sev Info
         } else {
-            Write-LogMessage -API 'Standards' -tenant $tenant -message 'Failed to enable DKIM for all domains in tenant' -sev Error
+            $ErrorCounter = 0
+            # New-domains
+            foreach ($Domain in $NewDomains) {
+                try {
+                    (New-ExoRequest -tenantid $tenant -cmdlet 'New-DkimSigningConfig' -cmdparams @{ KeySize = 2048; DomainName = $Domain; Enabled = $true } -useSystemMailbox $true)
+                    Write-LogMessage -API 'Standards' -tenant $tenant -message "Enabled DKIM for $Domain" -sev Info
+                } catch {
+                    Write-LogMessage -API 'Standards' -tenant $tenant -message "Failed to enable DKIM. Error: $($_.Exception.Message)" -sev Error
+                    $ErrorCounter++
+                }
+            }
+    
+            # Set-domains
+            foreach ($Domain in $SetDomains) {
+                try {
+                    (New-ExoRequest -tenantid $tenant -cmdlet 'Set-DkimSigningConfig' -cmdparams @{ Identity = $Domain.Domain; Enabled = $true } -useSystemMailbox $true)
+                    Write-LogMessage -API 'Standards' -tenant $tenant -message "Enabled DKIM for $($Domain.Domain)" -sev Info
+                } catch {
+                    Write-LogMessage -API 'Standards' -tenant $tenant -message "Failed to enable DKIM. Error: $($_.Exception.Message)" -sev Error
+                    $ErrorCounter++
+                }
+            }
+            if ($ErrorCounter -eq 0) {
+                Write-LogMessage -API 'Standards' -tenant $tenant -message 'Enabled DKIM for all domains in tenant' -sev Info
+            } else {
+                Write-LogMessage -API 'Standards' -tenant $tenant -message 'Failed to enable DKIM for all domains in tenant' -sev Error
+            }
         }
     }
 
@@ -51,6 +56,7 @@ function Invoke-CIPPStandardAddDKIM {
             Write-LogMessage -API 'Standards' -tenant $tenant -message "DKIM is not enabled for: $NoDKIM" -sev Alert
         }
     }
+    
     if ($Settings.report) {
         if ($null -eq $NewDomains -and $null -eq $SetDomains) { $DKIMState = $true } else { $DKIMState = $false }
         Add-CIPPBPAField -FieldName 'DKIM' -FieldValue [bool]$DKIMState -StoreAs bool -Tenant $tenant

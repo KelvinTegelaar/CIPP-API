@@ -4,14 +4,15 @@ function Invoke-CIPPStandardEnableMailboxAuditing {
     Internal
     #>
     param($Tenant, $Settings)
-
     $AuditState = (New-ExoRequest -tenantid $Tenant -cmdlet 'Get-OrganizationConfig').AuditDisabled
-    if ( $Settings.remediate) {
+
+    if ($Settings.remediate) {
         if ($AuditState) {
             # Enable tenant level mailbox audit
             try {
                 New-ExoRequest -tenantid $Tenant -cmdlet 'Set-OrganizationConfig' -cmdParams @{AuditDisabled = $false } -useSystemMailbox $true
                 Write-LogMessage -API 'Standards' -tenant $Tenant -message 'Tenant level mailbox audit enabled' -sev Info
+                $LogMessage = 'Tenant level mailbox audit enabled. '
             } catch {
                 Write-LogMessage -API 'Standards' -tenant $Tenant -message "Failed to enable tenant level mailbox audit. Error: $($_.exception.message)" -sev Error
             }
@@ -63,6 +64,7 @@ function Invoke-CIPPStandardEnableMailboxAuditing {
             Write-LogMessage -API 'Standards' -tenant $Tenant -message 'Tenant level mailbox audit is enabled' -sev Info
         }
     }
+    
     if ($Settings.report) {
         Add-CIPPBPAField -FieldName 'MailboxAuditingEnabled' -FieldValue [bool]$AuditState -StoreAs bool -Tenant $Tenant
     }
