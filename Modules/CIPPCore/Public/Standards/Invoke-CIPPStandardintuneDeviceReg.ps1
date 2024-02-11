@@ -7,13 +7,17 @@ function Invoke-CIPPStandardintuneDeviceReg {
     $PreviousSetting = New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/policies/deviceRegistrationPolicy' -tenantid $Tenant
 
     If ($Settings.remediate) {
-        try {
-            $PreviousSetting.userDeviceQuota = $Settings.max
-            $Newbody = ConvertTo-Json -Compress -InputObject $PreviousSetting
-            New-GraphPostRequest -tenantid $tenant -Uri 'https://graph.microsoft.com/beta/policies/deviceRegistrationPolicy' -Type PUT -Body $NewBody -ContentType 'application/json'
-            Write-LogMessage -API 'Standards' -tenant $tenant -message "Set user device quota to $($Settings.max)" -sev Info
-        } catch {
-            Write-LogMessage -API 'Standards' -tenant $tenant -message "Failed to set user device quota to $($Settings.max) : $($_.exception.message)" -sev Error
+        if ($PreviousSetting.userDeviceQuota -eq $Settings.max) {
+            Write-LogMessage -API 'Standards' -tenant $tenant -message "User device quota is already set to $($Settings.max)" -sev Info
+        } else {
+            try {
+                $PreviousSetting.userDeviceQuota = $Settings.max
+                $Newbody = ConvertTo-Json -Compress -InputObject $PreviousSetting
+                $null = New-GraphPostRequest -tenantid $tenant -Uri 'https://graph.microsoft.com/beta/policies/deviceRegistrationPolicy' -Type PUT -Body $NewBody -ContentType 'application/json'
+                Write-LogMessage -API 'Standards' -tenant $tenant -message "Set user device quota to $($Settings.max)" -sev Info
+            } catch {
+                Write-LogMessage -API 'Standards' -tenant $tenant -message "Failed to set user device quota to $($Settings.max) : $($_.exception.message)" -sev Error
+            }
         }
     }
     if ($Settings.alert) {
