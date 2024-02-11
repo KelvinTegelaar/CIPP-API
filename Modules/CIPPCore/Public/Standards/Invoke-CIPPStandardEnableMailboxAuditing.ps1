@@ -66,6 +66,7 @@ function Invoke-CIPPStandardEnableMailboxAuditing {
     }
     
     if ($Settings.report) {
+        $AuditState = -not $AuditState
         Add-CIPPBPAField -FieldName 'MailboxAuditingEnabled' -FieldValue [bool]$AuditState -StoreAs bool -Tenant $Tenant
     }
     

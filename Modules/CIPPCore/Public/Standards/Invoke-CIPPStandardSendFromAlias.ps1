@@ -4,28 +4,31 @@ function Invoke-CIPPStandardSendFromAlias {
     Internal
     #>
     param($Tenant, $Settings)
-    If ($Settings.remediate) {
-        try {
-            $AdminAuditLogParams = @{
-                SendFromAliasEnabled = $true
-            }
-            New-ExoRequest -tenantid $Tenant -cmdlet 'Set-OrganizationConfig' -cmdParams $AdminAuditLogParams
-            Write-LogMessage -API 'Standards' -tenant $tenant -message 'Send from alias Enabled.' -sev Info
+    $CurrentInfo = (New-ExoRequest -tenantid $Tenant -cmdlet 'Get-OrganizationConfig').SendFromAliasEnabled
 
-        } catch {
-            Write-LogMessage -API 'Standards' -tenant $tenant -message "Failed to apply Send from Alias Standard. Error: $($_.exception.message)" -sev Error
+    If ($Settings.remediate) {
+        if ($CurrentInfo -eq $false) {
+            try {
+                New-ExoRequest -tenantid $Tenant -cmdlet 'Set-OrganizationConfig' -cmdParams @{ SendFromAliasEnabled = $true }
+                Write-LogMessage -API 'Standards' -tenant $tenant -message 'Send from alias enabled.' -sev Info
+                $CurrentInfo = $true
+            } catch {
+                Write-LogMessage -API 'Standards' -tenant $tenant -message "Failed to enable send from alias. Error: $($_.exception.message)" -sev Error
+            }
+        } else {
+            Write-LogMessage -API 'Standards' -tenant $tenant -message 'Send from alias is already enabled.' -sev Info
         }
     }
-    if ($Settings.alert) {
 
-        $CurrentInfo = (New-ExoRequest -tenantid $Tenant -cmdlet 'Get-OrganizationConfig')
-        if ($CurrentInfo.SendFromAliasEnabled -eq $true) {
+    if ($Settings.alert) {
+        if ($CurrentInfo -eq $true) {
             Write-LogMessage -API 'Standards' -tenant $tenant -message 'Send from alias is enabled.' -sev Info
         } else {
             Write-LogMessage -API 'Standards' -tenant $tenant -message 'Send from alias is not enabled.' -sev Alert
         }
     }
+
     if ($Settings.report) {
-        Add-CIPPBPAField -FieldName 'SendFromAlias' -FieldValue [bool]$CurrentInfo.SendFromAliasEnabled -StoreAs bool -Tenant $tenant
+        Add-CIPPBPAField -FieldName 'SendFromAlias' -FieldValue [bool]$CurrentInfo -StoreAs bool -Tenant $tenant
     }
 }

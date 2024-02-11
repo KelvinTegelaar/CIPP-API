@@ -4,6 +4,7 @@ function Invoke-CIPPStandardSafeSendersDisable {
     Internal
     #>
     param($Tenant, $Settings)
+
     If ($Settings.remediate) {
         try {
             $Mailboxes = New-ExoRequest -tenantid $Tenant -cmdlet 'Get-Mailbox' | ForEach-Object {
