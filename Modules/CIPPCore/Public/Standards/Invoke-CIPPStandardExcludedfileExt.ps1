@@ -6,17 +6,23 @@ function Invoke-CIPPStandardExcludedfileExt {
     param($Tenant, $Settings)
     $CurrentInfo = New-GraphGetRequest -Uri 'https://graph.microsoft.com/beta/admin/sharepoint/settings' -tenantid $Tenant -AsApp $true
     $Exts = ($Settings.ext -replace ' ', '') -split ','
+    # Add a wildcard to the extensions since thats what the SP admin center does
+    $Exts = $Exts | ForEach-Object { if ($_ -notlike '*.*') { "*.$_" } else { $_ } }
+
     
     $MissingExclutions = foreach ($Exclusion in $Exts) {
         if ($Exclusion -notin $CurrentInfo.excludedFileExtensionsForSyncApp) {
             $Exclusion
         }
     }
+
     Write-Host "MissingExclutions: $($MissingExclutions)"
 
 
     If ($Settings.remediate) {
 
+        # If the number of extensions in the settings does not match the number of extensions in the current settings, we need to update the settings
+        $MissingExclutions = if ($Exts.Count -ne $CurrentInfo.excludedFileExtensionsForSyncApp.Count) { $true } else { $MissingExclutions }
         if ($MissingExclutions) {
             Write-Host "CurrentInfo.excludedFileExtensionsForSyncApp: $($CurrentInfo.excludedFileExtensionsForSyncApp)"
             Write-Host "Exts: $($Exts)"
