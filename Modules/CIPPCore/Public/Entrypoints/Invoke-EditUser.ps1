@@ -12,6 +12,14 @@ Function Invoke-EditUser {
     Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -message 'Accessed this API' -Sev 'Debug'
     
     $userobj = $Request.body
+    if ($userobj.Userid -eq '') {
+        $body = @{'Results' = @('Failed to edit user. No user ID provided') }
+        Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
+                StatusCode = [HttpStatusCode]::BadRequest
+                Body       = $Body
+            })
+        return
+    }
     $Results = [System.Collections.ArrayList]@()
     $licenses = ($userobj | Select-Object 'License_*').psobject.properties.value
     $Aliases = if ($userobj.AddedAliases) { ($userobj.AddedAliases).Split([Environment]::NewLine) }
