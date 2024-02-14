@@ -2,7 +2,7 @@ function Test-CIPPAccessTenant {
     [CmdletBinding()]
     param (
         $TenantCSV,
-        $APIName = "Access Check",
+        $APIName = 'Access Check',
         $ExecutingUser
     )
     $ExpectedRoles = @(
@@ -27,8 +27,7 @@ function Test-CIPPAccessTenant {
     }
     try {
         $MyRoles = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/tenantRelationships/managedTenants/myRoles?`$filter=tenantId in ('$($TenantIds -join "','")')"
-    }
-    catch {
+    } catch {
         $MyRoles = @()
         $AddedText = 'but could not retrieve GDAP roles from Lighthouse API'
     }
@@ -37,7 +36,7 @@ function Test-CIPPAccessTenant {
         try {
             $TenantId = ($TenantList | Where-Object { $_.defaultDomainName -eq $tenant }).customerId
             $Assignments = ($MyRoles | Where-Object { $_.tenantId -eq $TenantId }).assignments
-            $SAMUserRoles = ($Assignments | Where-Object { $_.assignmentType -eq 'granularDelegatedAdminPrivileges' }).roles
+            $SAMUserRoles = $Assignments.roles
 
             $BulkRequests = $ExpectedRoles | ForEach-Object { @(
                     @{
@@ -62,8 +61,7 @@ function Test-CIPPAccessTenant {
                         }
                     )
                     $AddedText = 'but missing GDAP roles'
-                }
-                else {
+                } else {
                     $GDAPRoles.Add([PSCustomObject]$RoleId)
                 }
                 if (!$SAMRole) {
@@ -88,8 +86,7 @@ function Test-CIPPAccessTenant {
             }
             Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $tenant -message 'Tenant access check executed successfully' -Sev 'Info'
 
-        }
-        catch {
+        } catch {
             @{
                 TenantName = "$($tenant)"
                 Status     = "Failed to connect: $(Get-NormalizedError -message $_.Exception.Message)"
@@ -106,8 +103,7 @@ function Test-CIPPAccessTenant {
                 Status     = 'Successfully connected to Exchange'
             }
 
-        }
-        catch {
+        } catch {
             $ReportedError = ($_.ErrorDetails | ConvertFrom-Json -ErrorAction SilentlyContinue)
             $Message = if ($ReportedError.error.details.message) { $ReportedError.error.details.message } else { $ReportedError.error.innererror.internalException.message }
             if ($null -eq $Message) { $Message = $($_.Exception.Message) }
