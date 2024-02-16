@@ -42,6 +42,7 @@ $Result = [PSCustomObject]@{
     ExpectedSPFRecord    = ''
     ActualSPFRecord      = ''
     SPFPassAll           = ''
+    ActualMXRecords      = ''
     MXPassTest           = ''
     DMARCPresent         = ''
     DMARCFullPolicy      = ''
@@ -79,6 +80,7 @@ $MXRecord = Read-MXRecord -Domain $Domain -ErrorAction Stop
 
 $Result.ExpectedSPFRecord = $MXRecord.ExpectedInclude
 $Result.MXPassTest = $false
+$Result.ActualMXRecords = $MXRecord.Records
 
 # Check fail counts to ensure all tests pass
 #$MXWarnCount = $MXRecord.ValidationWarns | Measure-Object | Select-Object -ExpandProperty Count
