@@ -35,8 +35,8 @@ Function Invoke-ListIntuneTemplates {
             $data | Add-Member -NotePropertyName 'Type' -NotePropertyValue $_.Type
             $data | Add-Member -NotePropertyName 'GUID' -NotePropertyValue $_.GUID
             $data
-        }
-    }
+        } | Sort-Object -Property displayName
+    } 
 
     if ($Request.query.ID) { $Templates = $Templates | Where-Object -Property guid -EQ $Request.query.id }
 
