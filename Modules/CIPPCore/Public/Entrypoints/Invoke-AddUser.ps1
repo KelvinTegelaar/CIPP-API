@@ -8,7 +8,7 @@ Function Invoke-AddUser {
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
 
-    $APIName = "AddUser"
+    $APIName = 'AddUser'
     Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -message 'Accessed this API' -Sev 'Debug'
 
     $Results = [System.Collections.ArrayList]@()
@@ -56,8 +56,7 @@ Function Invoke-AddUser {
         $results.add('Created user.')
         $results.add("Username: $($UserprincipalName)")
         $results.add("Password: $password")
-    }
-    catch {
+    } catch {
         Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $($userobj.tenantid) -message "Failed to create user. Error:$($_.Exception.Message)" -Sev 'Error'
         $body = $results.add("Failed to create user. $($_.Exception.Message)" )
     }
@@ -70,8 +69,7 @@ Function Invoke-AddUser {
             $LicenseBody = if ($licenses.count -ge 2) {
                 $liclist = foreach ($license in $Licenses) { '{"disabledPlans": [],"skuId": "' + $license + '" },' }
                 '{"addLicenses": [' + $LicList + '], "removeLicenses": [ ] }'
-            }
-            else {
+            } else {
                 '{"addLicenses": [ {"disabledPlans": [],"skuId": "' + $licenses + '" }],"removeLicenses": [ ]}'
             }
             Write-Host $LicenseBody
@@ -97,8 +95,7 @@ Function Invoke-AddUser {
             Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $($userobj.tenantid) -message "Added alias $($Alias) to $($userobj.displayname)" -Sev 'Info'
             $body = $results.add("Added Aliases: $($Aliases -join ',')")
         }
-    }
-    catch {
+    } catch {
         Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $($userobj.tenantid) -message "Failed to create the Aliases. Error:$($_.Exception.Message)" -Sev 'Error'
         $body = $results.add("Failed to create the Aliases: $($_.Exception.Message)")
     }
@@ -107,7 +104,15 @@ Function Invoke-AddUser {
         $results.Add($CopyFrom.Success -join ', ')
         $results.Add($CopyFrom.Error -join ', ') 
     }
-
+    
+    if ($Request.body.setManager) {
+        $ManagerBody = [PSCustomObject]@{'@odata.id' = "https://graph.microsoft.com/beta/users/$($Request.body.setManager.value)" }
+        $ManagerBodyJSON = ConvertTo-Json -Compress -Depth 10 -InputObject $ManagerBody
+        New-GraphPostRequest -uri "https://graph.microsoft.com/beta/users/$($GraphRequest.id)/manager/`$ref" -tenantid $Userobj.tenantid -type PUT -body $ManagerBodyJSON -Verbose
+        Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $Userobj.tenantid -message "Set $($UserObj.DisplayName)'s manager to $($Request.body.setManager.label)" -Sev 'Info'
+        $results.add("Success. Set $($UserObj.DisplayName)'s manager to $($Request.body.setManager.label)")
+    }
+    
     $copyFromResults = @{
         'Success' = $CopyFrom.Success
         'Error'   = $CopyFrom.Error
@@ -119,6 +124,8 @@ Function Invoke-AddUser {
         'Password' = $password
         'CopyFrom' = $copyFromResults
     }
+
+
     # Associate values to output bindings by calling 'Push-OutputBinding'.
     Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
             StatusCode = [HttpStatusCode]::OK

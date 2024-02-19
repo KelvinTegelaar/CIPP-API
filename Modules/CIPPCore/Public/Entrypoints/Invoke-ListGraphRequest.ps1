@@ -47,6 +47,10 @@ function Invoke-ListGraphRequest {
         $Parameters.'$search' = $Request.Query.'$search'
     }
 
+    if ($Request.Query.'$format') {
+        $Parameters.'$format' = $Request.Query.'$format'
+    }
+
     $GraphRequestParams = @{
         Endpoint   = $Request.Query.Endpoint
         Parameters = $Parameters
