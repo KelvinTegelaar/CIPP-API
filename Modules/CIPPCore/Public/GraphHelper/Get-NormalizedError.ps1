@@ -56,6 +56,7 @@ function Get-NormalizedError {
         '*The property value exceeds the maximum allowed size (64KB)*' { 'One of the values exceeds the maximum allowed size (64KB).' }
         '*Unable to initialize the authorization context*' { 'Your GDAP configuration does not allow us to write to this tenant, please check your group mappings and tenant onboarding.' }
         '*Providers.Common.V1.CoreException*' { '403 (Access Denied) - We cannot connect to this tenant.' }
+        '*Authentication failed. MFA required*' { 'Authentication failed. MFA required' }
         Default { $message }
 
     }

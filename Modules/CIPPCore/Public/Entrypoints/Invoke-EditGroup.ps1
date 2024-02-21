@@ -13,6 +13,7 @@ Function Invoke-EditGroup {
 
     $Results = [System.Collections.ArrayList]@()
     $userobj = $Request.body
+    $GroupType = $userobj.groupType -join ','
 
     # Write to the Azure Functions log stream.
     Write-Host 'PowerShell HTTP trigger function processed a request.'
@@ -22,20 +23,21 @@ Function Invoke-EditGroup {
         $AddMembers | ForEach-Object {
             try {
                 $member = $_
+                
                 if ($member -like '*#EXT#*') { $member = [System.Web.HttpUtility]::UrlEncode($member) }
                 $MemberIDs = 'https://graph.microsoft.com/v1.0/directoryObjects/' + (New-GraphGetRequest -uri "https://graph.microsoft.com/beta/users/$($member)" -tenantid $Userobj.tenantid).id 
                 $addmemberbody = "{ `"members@odata.bind`": $(ConvertTo-Json @($MemberIDs)) }"
-                if ($userobj.groupType -eq 'Distribution list' -or $userobj.groupType -eq 'Mail-Enabled Security') {
+                if ($GroupType -eq 'Distribution list' -or $GroupType -eq 'Mail-Enabled Security') {
                     $Params = @{ Identity = $userobj.groupid; Member = $member; BypassSecurityGroupManagerCheck = $true }
                     New-ExoRequest -tenantid $Userobj.tenantid -cmdlet 'Add-DistributionGroupMember' -cmdParams $params -UseSystemMailbox $true 
                 } else {
                     New-GraphPostRequest -uri "https://graph.microsoft.com/beta/groups/$($userobj.groupid)" -tenantid $Userobj.tenantid -type patch -body $addmemberbody -Verbose
                 }
                 Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $Userobj.tenantid -message "Added $member to $($userobj.groupName) group" -Sev 'Info'
-                $body = $results.add("Success. $member has been added")
+                $null = $results.add("Success. $member has been added to $($userobj.groupName)")
             } catch {
                 Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $Userobj.tenantid -message "Failed to add member $member to $($userobj.groupName). Error:$($_.Exception.Message)" -Sev 'Error'
-                $body = $results.add("Failed to add member $member to $($userobj.groupName): $($_.Exception.Message)")
+                $null = $results.add("Failed to add member $member to $($userobj.groupName): $($_.Exception.Message)")
             }
         }
 
@@ -50,13 +52,13 @@ Function Invoke-EditGroup {
                     $Params = @{ Identity = $userobj.groupid; Member = $member; BypassSecurityGroupManagerCheck = $true }
                     New-ExoRequest -tenantid $Userobj.tenantid -cmdlet 'Add-DistributionGroupMember' -cmdParams $params -UseSystemMailbox $true
                     Write-LogMessage -API $APINAME -tenant $Userobj.tenantid -user $request.headers.'x-ms-client-principal' -message "Added $member to $($userobj.groupName) group" -Sev 'Info'
-                    $body = $results.add("Success. $member has been added")
+                    $null = $results.add("Success. $member has been added to $($userobj.groupName)")
                 } else {
                     Write-LogMessage -API $APINAME -tenant $Userobj.tenantid -user $request.headers.'x-ms-client-principal' -message 'You cannot add a contact to a security group' -Sev 'Error'
-                    $body = $results.add('You cannot add a contact to a security group')
+                    $null = $results.add('You cannot add a contact to a security group')
                 }
             } catch {
-                $body = $results.add("Failed to add member $member to $($userobj.groupName): $($_.Exception.Message)")
+                $null = $results.add("Failed to add member $member to $($userobj.groupName): $($_.Exception.Message)")
             }
         }
 
@@ -67,7 +69,7 @@ Function Invoke-EditGroup {
         if ($RemoveMembers) {
             $RemoveMembers | ForEach-Object { 
                 $member = $_
-                if ($userobj.groupType -eq 'Distribution list' -or $userobj.groupType -eq 'Mail-Enabled Security') {
+                if ($GroupType -eq 'Distribution list' -or $GroupType -eq 'Mail-Enabled Security') {
                     $Params = @{ Identity = $userobj.groupid; Member = $member ; BypassSecurityGroupManagerCheck = $true }
                     New-ExoRequest -tenantid $Userobj.tenantid -cmdlet 'Remove-DistributionGroupMember' -cmdParams $params -UseSystemMailbox $true
                 } else {
@@ -75,12 +77,12 @@ Function Invoke-EditGroup {
                     New-GraphPostRequest -uri "https://graph.microsoft.com/beta/groups/$($userobj.groupid)/members/$($MemberInfo.id)/`$ref" -tenantid $Userobj.tenantid -type DELETE 
                 }
                 Write-LogMessage -API $APINAME -tenant $Userobj.tenantid -user $request.headers.'x-ms-client-principal' -message "Removed $member from $($userobj.groupName) group" -Sev 'Info'
-                $body = $results.add("Success. Member $member has been removed")
+                $null = $results.add("Success. Member $member has been removed from $($userobj.groupName)")
             }  
         }
     } catch {
         Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $Userobj.tenantid -message "Failed to remove $RemoveMembers from $($userobj.groupName). Error:$($_.Exception.Message)" -Sev 'Error'
-        $body = $results.add("Could not remove $RemoveMembers from $($userobj.groupName). $($_.Exception.Message)")
+        $null = $results.add("Could not remove $RemoveMembers from $($userobj.groupName). $($_.Exception.Message)")
     }
 
     $AddOwners = $userobj.Addowner.value
@@ -90,11 +92,11 @@ Function Invoke-EditGroup {
                 try {
                     $ID = 'https://graph.microsoft.com/beta/users/' + (New-GraphGetRequest -uri "https://graph.microsoft.com/beta/users/$($_)" -tenantid $Userobj.tenantid).id
                     Write-Host $ID
-                    $AddOwner = New-GraphPostRequest -uri "https://graph.microsoft.com/beta/groups/$($userobj.groupid)/owners/`$ref" -tenantid $Userobj.tenantid -type POST -body ('{"@odata.id": "' + $ID + '"}')
+                    $null = New-GraphPostRequest -uri "https://graph.microsoft.com/beta/groups/$($userobj.groupid)/owners/`$ref" -tenantid $Userobj.tenantid -type POST -body ('{"@odata.id": "' + $ID + '"}')
                     Write-LogMessage -API $APINAME -tenant $Userobj.tenantid -user $request.headers.'x-ms-client-principal' -message "Added owner $_ to $($userobj.groupName) group" -Sev 'Info'
-                    $body = $results.add("Success. $_ has been added")
+                    $null = $results.add("Success. $_ has been added $($userobj.groupName)")
                 } catch {
-                    $body = $results.add("Failed to add owner $_ to $($userobj.groupName): Error:$($_.Exception.Message)")
+                    $null = $results.add("Failed to add owner $_ to $($userobj.groupName): Error:$($_.Exception.Message)")
                 }
             }
 
@@ -112,9 +114,9 @@ Function Invoke-EditGroup {
                     $MemberInfo = (New-GraphGetRequest -uri "https://graph.microsoft.com/beta/users/$($_)" -tenantid $Userobj.tenantid)
                     New-GraphPostRequest -uri "https://graph.microsoft.com/beta/groups/$($userobj.groupid)/owners/$($MemberInfo.id)/`$ref" -tenantid $Userobj.tenantid -type DELETE 
                     Write-LogMessage -API $APINAME -tenant $Userobj.tenantid -user $request.headers.'x-ms-client-principal' -message "Removed $($MemberInfo.UserPrincipalname) from $($userobj.displayname) group" -Sev 'Info'
-                    $body = $results.add("Success. Member $_ has been removed from $($userobj.groupName)")
+                    $null = $results.add("Success. Member $_ has been removed from $($userobj.groupName)")
                 } catch {
-                    $body = $results.add("Failed to remove $_ from $($userobj.groupName): $($_.Exception.Message)")
+                    $null = $results.add("Failed to remove $_ from $($userobj.groupName): $($_.Exception.Message)")
                 }
             }  
         }

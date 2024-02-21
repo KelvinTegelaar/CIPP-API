@@ -94,7 +94,7 @@ Function Invoke-ListUserMailboxDetails {
     }
 
     $forwardingaddress = if ($MailboxDetailedRequest.ForwardingAddress) {
-        $MailboxDetailedRequest.ForwardingAddress 
+        (New-GraphGetRequest -tenantid $TenantFilter -uri "https://graph.microsoft.com/beta/users/$($MailboxDetailedRequest.ForwardingAddress)").UserPrincipalName
     } elseif ($MailboxDetailedRequest.ForwardingSmtpAddress -and $MailboxDetailedRequest.ForwardingAddress) {
         $MailboxDetailedRequest.ForwardingAddress + ' ' + $MailboxDetailedRequest.ForwardingSmtpAddress
     } else {
