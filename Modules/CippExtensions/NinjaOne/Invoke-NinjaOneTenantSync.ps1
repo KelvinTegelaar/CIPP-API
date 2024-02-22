@@ -2039,7 +2039,7 @@ function Invoke-NinjaOneTenantSync {
 
             ### Fetch BPA Data
             $Table = get-cipptable 'cachebpav2'
-            $BPAData = (Get-CIPPAzDataTableEntity @Table -Filter "PartitionKey eq '$($Customer.customerId)' and RowKey eq 'CIPP Best Practices v1.0 - Table view'")
+            $BPAData = (Get-CIPPAzDataTableEntity @Table -Filter "PartitionKey eq '$($Customer.customerId)'")
 
             if ($Null -ne $BPAData.Timestamp) {
                 ## BPA Data Widgets
@@ -2062,7 +2062,7 @@ function Invoke-NinjaOneTenantSync {
                 # Unused Licenses
                 $WidgetData.add([PSCustomObject]@{
                         Value       = $(
-                            $BPAUnusedLicenses = (($BpaData.Unusedlicenses | ConvertFrom-Json).availableUnits | Measure-Object -Sum).sum
+                            $BPAUnusedLicenses = (($BpaData.Unusedlicenses | ConvertFrom-Json -ErrorAction SilentlyContinue).availableUnits | Measure-Object -Sum).sum
                             if ($BPAUnusedLicenses -ne 0) {
                                 $ResultColour = '#D53948'
                             } else {
@@ -2308,7 +2308,8 @@ function Invoke-NinjaOneTenantSync {
             Get-NormalizedError -Message $_.ErrorDetails.Message
         } else {
             $_.Exception.message
-        }        Write-Error "Failed NinjaOne Processing for $($Customer.displayName) Linenumber: $($_.InvocationInfo.ScriptLineNumber) Error:  $Message"
+        }        
+        Write-Error "Failed NinjaOne Processing for $($Customer.displayName) Linenumber: $($_.InvocationInfo.ScriptLineNumber) Error:  $Message"
         Write-LogMessage -API 'NinjaOneSync' -user 'NinjaOneSync' -message "Failed NinjaOne Processing for $($Customer.displayName) Linenumber: $($_.InvocationInfo.ScriptLineNumber) Error: $Message" -Sev 'Error'
         $CurrentItem | Add-Member -NotePropertyName lastEndTime -NotePropertyValue ([string]$((Get-Date).ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ss.fffZ'))) -Force
         $CurrentItem | Add-Member -NotePropertyName lastStatus -NotePropertyValue 'Failed' -Force
