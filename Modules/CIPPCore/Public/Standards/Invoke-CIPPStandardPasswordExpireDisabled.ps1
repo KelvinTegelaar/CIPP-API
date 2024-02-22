@@ -13,9 +13,9 @@ function Invoke-CIPPStandardPasswordExpireDisabled {
             $DomainswithoutPassExpire | ForEach-Object {
                 try {
                     New-GraphPostRequest -type Patch -tenantid $Tenant -uri "https://graph.microsoft.com/beta/domains/$($_.id)" -body '{"passwordValidityPeriodInDays": 2147483647 }'
-                    Write-LogMessage -API 'Standards' -tenant $tenant -message "Disabled Password Expiration for $($_.name)." -sev Info
+                    Write-LogMessage -API 'Standards' -tenant $tenant -message "Disabled Password Expiration for $($_.id)." -sev Info
                 } catch {
-                    Write-LogMessage -API 'Standards' -tenant $tenant -message "Failed to disable Password Expiration for $($_.name). Error: $($_.exception.message)" -sev Error
+                    Write-LogMessage -API 'Standards' -tenant $tenant -message "Failed to disable Password Expiration for $($_.id). Error: $($_.exception.message)" -sev Error
                 }
             }
         } else {
@@ -26,7 +26,7 @@ function Invoke-CIPPStandardPasswordExpireDisabled {
 
     if ($Settings.alert) {
         if ($DomainswithoutPassExpire) {
-            Write-LogMessage -API 'Standards' -tenant $tenant -message "Password Expiration is not disabled for the following $($DomainswithoutPassExpire.Count) domains: $($DomainswithoutPassExpire -join ', ')" -sev Alert
+            Write-LogMessage -API 'Standards' -tenant $tenant -message "Password Expiration is not disabled for the following $($DomainswithoutPassExpire.Count) domains: $($DomainswithoutPassExpire.id -join ', ')" -sev Alert
         } else {
             Write-LogMessage -API 'Standards' -tenant $tenant -message "Password Expiration is disabled for all $($GraphRequest.Count) domains." -sev Info
         }
