@@ -653,7 +653,7 @@ function Invoke-NinjaOneTenantSync {
                     M365ID       = $device.id
                 }
                 $DeviceMap.Add($DeviceMapItem)
-                Add-CIPPAzDataTableEntity @DeviceMapTable -Entity $DeviceMapItem
+                Add-CIPPAzDataTableEntity @DeviceMapTable -Entity $DeviceMapItem -Force
 
             } elseif ($MappedDevice.NinjaOneID -ne $MatchedNinjaDevice.id) {
                 $MappedDevice.NinjaOneID = $MatchedNinjaDevice.id
@@ -742,7 +742,7 @@ function Invoke-NinjaOneTenantSync {
                 PartitionKey = $Customer.CustomerId
                 RowKey       = $device.AzureADDeviceId
                 RawDevice    = "$($ParsedDevice | ConvertTo-Json -Depth 100 -Compress)"
-            }
+            } -Force
 
             $ParsedDevices.add($ParsedDevice)
             
@@ -1264,7 +1264,7 @@ function Invoke-NinjaOneTenantSync {
                 }
 
 
-                Add-CIPPAzDataTableEntity @UsersTable -Entity $ParsedUser
+                Add-CIPPAzDataTableEntity @UsersTable -Entity $ParsedUser -Force
                 $ParsedUsers.add($ParsedUser)
                 
                 
@@ -1330,7 +1330,7 @@ function Invoke-NinjaOneTenantSync {
                         } | ConvertTo-Json -Depth 100)"
                         }
                         $NinjaUserUpdates.Add($UpdateObject)
-                        Add-CIPPAzDataTableEntity @UsersUpdateTable -Entity $UpdateObject
+                        Add-CIPPAzDataTableEntity @UsersUpdateTable -Entity $UpdateObject -Force
 
                     } else {
                         $CreateObject = [PSCustomObject]@{
@@ -1345,7 +1345,7 @@ function Invoke-NinjaOneTenantSync {
                         } | ConvertTo-Json -Depth 100)"
                         }
                         $NinjaUserCreation.Add($CreateObject)
-                        Add-CIPPAzDataTableEntity @UsersUpdateTable -Entity $CreateObject
+                        Add-CIPPAzDataTableEntity @UsersUpdateTable -Entity $CreateObject -Force
                     }
 
 
@@ -1399,7 +1399,7 @@ function Invoke-NinjaOneTenantSync {
                                         M365ID       = $Field.value
                                     }
                                     $UsersMap.Add($UserMapItem)
-                                    Add-CIPPAzDataTableEntity @UsersMapTable -Entity $UserMapItem
+                                    Add-CIPPAzDataTableEntity @UsersMapTable -Entity $UserMapItem -Force
 
                                 } elseif ($MappedUser.NinjaOneID -ne $UserDoc.documentId) {
                                     $MappedUser.NinjaOneID = $UserDoc.documentId
@@ -1476,7 +1476,7 @@ function Invoke-NinjaOneTenantSync {
                                 M365ID       = $Field.value
                             }
                             $UsersMap.Add($UserMapItem)
-                            Add-CIPPAzDataTableEntity @UsersMapTable -Entity $UserMapItem
+                            Add-CIPPAzDataTableEntity @UsersMapTable -Entity $UserMapItem -Force
 
                         } elseif ($MappedUser.NinjaOneID -ne $UserDoc.documentId) {
                             $MappedUser.NinjaOneID = $UserDoc.documentId
