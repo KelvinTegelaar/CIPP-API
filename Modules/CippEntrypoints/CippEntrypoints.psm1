@@ -19,6 +19,7 @@ function Receive-CippHttpTrigger {
 
 function Receive-CippQueueTrigger {
     Param($QueueItem, $TriggerMetadata)
+    $Start = (Get-Date).ToUniversalTime()
     $APIName = $TriggerMetadata.FunctionName
     Set-Location (Get-Item $PSScriptRoot).Parent.Parent.FullName
     $FunctionName = 'Push-{0}' -f $APIName
@@ -26,8 +27,26 @@ function Receive-CippQueueTrigger {
         QueueItem       = $QueueItem
         TriggerMetadata = $TriggerMetadata
     }
+    try {
+        & $FunctionName @QueueTrigger
+    } catch {
+        $ErrorMsg = $_.Exception.Message
+    }
 
-    & $FunctionName @QueueTrigger
+    $End = (Get-Date).ToUniversalTime()
+    $TimeSpan = New-TimeSpan -Start $Start -End $End
+    $Duration = [int]$TimeSpan.TotalSeconds
+
+    $Stats = @{
+        FunctionType = 'Queue'
+        Entity       = $QueueItem
+        Start        = $Start
+        End          = $End
+        Duration     = $Duration
+        ErrorMsg     = $ErrorMsg
+    }
+    Write-Information '####### Adding stats'
+    Write-CippFunctionStats @Stats
 }
 
 Export-ModuleMember -Function @('Receive-CippHttpTrigger', 'Receive-CippQueueTrigger')
