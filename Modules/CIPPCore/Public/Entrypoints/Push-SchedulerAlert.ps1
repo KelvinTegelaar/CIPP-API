@@ -23,19 +23,6 @@ function Push-SchedulerAlert {
             }
             Push-OutputBinding -Name QueueItemOut -Value $QueueItem
         }
-
-        $Table = Get-CIPPTable
-        $PartitionKey = Get-Date -UFormat '%Y%m%d'
-        $Filter = "PartitionKey eq '{0}' and Tenant eq '{1}'" -f $PartitionKey, $tenant.tenant
-        $currentlog = Get-CIPPAzDataTableEntity @Table -Filter $Filter
-
-        $AlertsTable = Get-CIPPTable -Table cachealerts
-        $CurrentAlerts = (Get-CIPPAzDataTableEntity @AlertsTable -Filter $Filter)
-        $CurrentAlerts | ForEach-Object {
-            if ($_.Message -notin $currentlog.Message) { Write-LogMessage -message $_.Message -API 'Alerts' -tenant $tenant.tenant -sev Alert -tenantid $Tenant.tenantid }
-            Remove-AzDataTableEntity @AlertsTable -Entity $_ | Out-Null
-        }
-
     } catch {
         $Message = 'Exception on line {0} - {1}' -f $_.InvocationInfo.ScriptLineNumber, $_.Exception.Message
         Write-LogMessage -message $Message -API 'Alerts' -tenant $tenant.tenant -sev Error
