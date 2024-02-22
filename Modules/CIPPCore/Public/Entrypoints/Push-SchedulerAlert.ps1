@@ -26,11 +26,11 @@ function Push-SchedulerAlert {
                     FunctionName = "CIPPAlert$($Task)"
                 }
                 Push-OutputBinding -Name QueueItemOut -Value $QueueItem
-                $QueueItem | Add-Member -MemberType NoteProperty -Name 'RowKey' -Value $task
-                $QueueItem | Add-Member -MemberType NoteProperty -Name 'PartitionKey' -Value $tenant.tenant
+                $QueueItem | Add-Member -MemberType NoteProperty -Name 'RowKey' -Value $task -Force
+                $QueueItem | Add-Member -MemberType NoteProperty -Name 'PartitionKey' -Value $tenant.tenant -Force
                 Add-CIPPAzDataTableEntity @Table -Entity $QueueItem -Force
             } else {
-                Write-Host 'Alerts: Duplicate entry found, not writing to log'
+                Write-Host 'ALERTS: Duplicate run found. Ignoring. Tenant: {0}, Task: {1}' -f $tenant.tenant, $task
             }
 
         }
