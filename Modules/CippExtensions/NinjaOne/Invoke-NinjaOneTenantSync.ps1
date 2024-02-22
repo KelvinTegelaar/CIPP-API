@@ -2072,7 +2072,7 @@ function Invoke-NinjaOneTenantSync {
                         )
                         Description = 'Unused Licenses'
                         Colour      = $ResultColour
-                        Link        = "https://$CIPPUrl/tenant/standards/bpa-report?SearchNow=true&Report=CIPP+Best+Practices+v1.0+-+Tenant+view&tenantFilter=$($Customer.customerId)"
+                        Link        = "https://$CIPPUrl/tenant/standards/bpa-report?SearchNow=true&Report=CIPP+Best+Practices+v1.5+-+Tenant+view&tenantFilter=$($Customer.customerId)"
                     })
                 
             
@@ -2103,7 +2103,7 @@ function Invoke-NinjaOneTenantSync {
                         )
                         Description = 'Password Never Expires'
                         Colour      = $ResultColour
-                        Link        = "https://$CIPPUrl/tenant/standards/bpa-report?SearchNow=true&Report=CIPP+Best+Practices+v1.0+-+Tenant+view&tenantFilter=$($Customer.customerId)"
+                        Link        = "https://$CIPPUrl/tenant/standards/bpa-report?SearchNow=true&Report=CIPP+Best+Practices+v1.5+-+Tenant+view&tenantFilter=$($Customer.customerId)"
                     })
 
                 # oAuth App Consent
