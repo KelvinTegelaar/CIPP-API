@@ -8,12 +8,14 @@ function Write-CippFunctionStats {
         $Entity,
         [DateTime]$Start,
         [DateTime]$End,
-        [int]$Duration,
         [string]$ErrorMsg = ''
     )
     try {
         $Table = Get-CIPPTable -tablename CippFunctionStats
         $RowKey = [string](New-Guid).Guid
+        $TimeSpan = New-TimeSpan -Start $Start -End $End
+        $Duration = [int]$TimeSpan.TotalSeconds
+        
         # Flatten data to json string
         $Entity.PartitionKey = $FunctionType
         $Entity.RowKey = $RowKey

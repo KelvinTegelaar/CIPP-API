@@ -34,15 +34,12 @@ function Receive-CippQueueTrigger {
     }
 
     $End = (Get-Date).ToUniversalTime()
-    $TimeSpan = New-TimeSpan -Start $Start -End $End
-    $Duration = [int]$TimeSpan.TotalSeconds
 
     $Stats = @{
         FunctionType = 'Queue'
         Entity       = $QueueItem
         Start        = $Start
         End          = $End
-        Duration     = $Duration
         ErrorMsg     = $ErrorMsg
     }
     Write-Information '####### Adding stats'
