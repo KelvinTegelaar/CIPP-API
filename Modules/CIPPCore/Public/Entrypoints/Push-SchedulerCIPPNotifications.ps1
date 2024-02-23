@@ -7,7 +7,7 @@ function Push-SchedulerCIPPNotifications {
     $Filter = "RowKey eq 'CippNotifications' and PartitionKey eq 'CippNotifications'"
     $Config = [pscustomobject](Get-CIPPAzDataTableEntity @Table -Filter $Filter)
 
-    $Settings = [System.Collections.ArrayList]@('Alerts')
+    $Settings = [System.Collections.ArrayList]@('Alert')
     $Config.psobject.properties.name | ForEach-Object { $settings.add($_) } 
     $severity = $Config.Severity -split ','
     Write-Host "Our Severity table is: $severity"
