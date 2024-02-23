@@ -81,7 +81,7 @@ function Invoke-CippWebhookProcessing {
         { 'UserLoggedIn' -eq $data.operation -and $hosting -eq $true -and !$TrustedIps } { $data.operation = 'HostedIP' }
         { 'UserLoggedIn' -eq $data.operation -and $Country -notin $AllowedLocations -and $data.ResultStatus -eq 'Success' -and $TableObj.ResultStatusDetail -eq 'Success' } {
             Write-Host "$($country) is not in $($AllowedLocations)"
-            $data.operation = 'UserLoggedInFromUnknownLocation'
+            $data.operation = 'UserLoggedInFromUnknownLocation' 
         }
         { 'UserloggedIn' -eq $data.operation -and $data.UserType -eq 2 -and $data.ResultStatus -eq 'Success' -and $TableObj.ResultStatusDetail -eq 'Success' } { $data.operation = 'AdminLoggedIn' }
         default { break }
@@ -129,7 +129,7 @@ function Invoke-CippWebhookProcessing {
             $key = $parts[0]
             $operator = $parts[1]
             $value = $parts[2]
-            if (!$value) {
+            if (!$value) { 
                 Write-Host 'blank value, skip'
                 continue
             }
@@ -164,9 +164,9 @@ function Invoke-CippWebhookProcessing {
                         $RuleDisabled = 0
                         New-ExoRequest -anchor $username -tenantid $TenantFilter -cmdlet 'get-inboxrule' -cmdParams @{Mailbox = $username } | ForEach-Object {
                             $null = New-ExoRequest -anchor $username -tenantid $TenantFilter -cmdlet 'Disable-InboxRule' -cmdParams @{Confirm = $false; Identity = $_.Identity }
-                            "Disabled Inbox Rule $($_.Identity) for $username"
+                            "Disabled Inbox Rule $($_.Identity) for $username" 
                             $RuleDisabled ++
-                        }
+                        } 
                         if ($RuleDisabled) {
                             "Disabled $RuleDisabled Inbox Rules for $username"
                         } else {
@@ -210,7 +210,7 @@ function Invoke-CippWebhookProcessing {
                 }
             }
             Write-Host 'Going to create the content'
-            foreach ($action in $dos) {
+            foreach ($action in $dos) { 
                 switch ($action.execute) {
                     'generatemail' {
                         Write-Host 'Going to create the email'
@@ -219,7 +219,7 @@ function Invoke-CippWebhookProcessing {
                         Send-CIPPAlert -Type 'email' -Title $GenerateEmail.title -HTMLContent $GenerateEmail.htmlcontent -TenantFilter $TenantFilter
                         Write-Host 'email should be sent'
 
-                    }
+                    }  
                     'generatePSA' {
                         $GenerateEmail = New-CIPPAlertTemplate -format 'html'-data $Data -LocationInfo $Location -ActionResults $ActionResults
                         Send-CIPPAlert -Type 'psa' -Title $GenerateEmail.title -HTMLContent $GenerateEmail.htmlcontent -TenantFilter $TenantFilter
@@ -245,28 +245,6 @@ function Invoke-CippWebhookProcessing {
                     }
                 }
             }
-        }
-    }
-
-    if ($data.ClientIP) {
-        try {
-            $IP = $data.ClientIP
-            if ($IP -match '^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}:\d+$') {
-                $IP = $IP -replace ':\d+$', '' # Remove the port number if present
-            }
-            $LocationInfo = @{
-                RowKey          = [string]$ip
-                PartitionKey    = [string]$data.UserId
-                Tenant          = [string]$TenantFilter
-                CountryOrRegion = "$Country"
-                City            = "$City"
-                Proxy           = "$Proxy"
-                Hosting         = "$hosting"
-                ASName          = "$ASName"
-            }
-            $null = Add-CIPPAzDataTableEntity @LocationTable -Entity $LocationInfo -Force
-        } catch {
-            Write-Host "Exception adding IP to table - $IP - $($_.Exception.Message)"
         }
     }
 }
