@@ -42,15 +42,15 @@ function Invoke-CIPPStandardEnableMailboxAuditing {
             }
         }
 
-        if ($Mailboxes.Count -eq 0 -and $BypassMailboxes.Count -eq 0) {
+        $LogMessage = if ($Mailboxes.Count -eq 0 -and $BypassMailboxes.Count -eq 0) {
             # Make log message smaller if both are already in the desired state
-            $LogMessage += 'User level mailbox audit already enabled and mailbox audit bypass already disabled for all mailboxes'
+            'User level mailbox audit already enabled and mailbox audit bypass already disabled for all mailboxes'
         } else {
             if ($Mailboxes.Count -eq 0) {
-                $LogMessage += 'User level mailbox audit already enabled for all mailboxes. '
+                'User level mailbox audit already enabled for all mailboxes. '
             }
             if ($BypassMailboxes.Count -eq 0) {
-                $LogMessage += 'Mailbox audit bypass already disabled for all mailboxes'
+                'Mailbox audit bypass already disabled for all mailboxes'
             }    
         }
         
