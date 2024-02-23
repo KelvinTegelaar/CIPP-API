@@ -13,7 +13,7 @@ Function Invoke-ListBPA {
 
     $Table = get-cipptable 'cachebpav2'
     $name = $Request.query.Report
-    if ($name -eq $null) { $name = 'CIPP Best Practices v1.0 - Table view' }
+    if ($name -eq $null) { $name = 'CIPP Best Practices v1.5 - Table view' }
 
     # Get all possible JSON files for reports, find the correct one, select the Columns
     $JSONFields = @()
