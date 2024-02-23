@@ -22,7 +22,7 @@ Function Invoke-ListExConnectorTemplates {
         $data | Add-Member -NotePropertyName 'GUID' -NotePropertyValue $GUID
         $data | Add-Member -NotePropertyName 'cippconnectortype' -NotePropertyValue $Direction
         $data 
-    }
+    } | Sort-Object -Property displayName
 
     if ($Request.query.ID) { $Templates = $Templates | Where-Object -Property RowKey -EQ $Request.query.id }
 

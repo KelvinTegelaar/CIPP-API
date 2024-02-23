@@ -46,7 +46,7 @@ function New-CIPPCAPolicy {
     }
 
     #If Grant Controls contains authenticationstrength, create these and then replace the id
-    if ($JSONobj.GrantControls.authenticationStrength.policyType -eq 'custom') {
+    if ($JSONobj.GrantControls.authenticationStrength.policyType -eq 'custom' -or $JSONobj.GrantControls.authenticationStrength.policyType -eq 'BuiltIn') {
         $ExistingStrength = New-GraphGETRequest -uri 'https://graph.microsoft.com/beta/identity/conditionalAccess/authenticationStrength/policies/' -tenantid $TenantFilter | Where-Object -Property displayName -EQ $JSONobj.GrantControls.authenticationStrength.displayName
         if ($ExistingStrength) {
             $JSONObj.GrantControls.authenticationStrength = @{ id = $ExistingStrength.id }
