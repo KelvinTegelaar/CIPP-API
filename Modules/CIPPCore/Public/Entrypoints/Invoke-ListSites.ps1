@@ -52,6 +52,10 @@ Function Invoke-ListSites {
         $StatusCode = [HttpStatusCode]::Forbidden
         $GraphRequest = $ErrorMessage
     }
+    if ($Request.query.URLOnly -eq 'true') {
+        $GraphRequest = $GraphRequest | Where-Object { $null -ne $_.URL }
+    }
+
     # Associate values to output bindings by calling 'Push-OutputBinding'.
     Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
             StatusCode = $StatusCode
