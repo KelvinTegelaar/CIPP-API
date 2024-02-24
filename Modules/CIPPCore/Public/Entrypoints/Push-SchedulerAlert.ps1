@@ -30,7 +30,7 @@ function Push-SchedulerAlert {
                 $QueueItem | Add-Member -MemberType NoteProperty -Name 'PartitionKey' -Value $tenant.tenant -Force
                 Add-CIPPAzDataTableEntity @Table -Entity $QueueItem -Force
             } else {
-                Write-Host 'ALERTS: Duplicate run found. Ignoring. Tenant: {0}, Task: {1}' -f $tenant.tenant, $task
+                Write-Host ('ALERTS: Duplicate run found. Ignoring. Tenant: {0}, Task: {1}' -f $tenant.tenant, $task)
             }
 
         }
