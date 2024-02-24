@@ -14,7 +14,7 @@ if ($Request.Query.CIPPID -in $Webhooks.RowKey) {
     Write-Host 'Found matching CIPPID'
     if ($Webhooks.Resource -eq 'M365AuditLogs') {
         Write-Host "Found M365AuditLogs - This is an old entry, we'll deny so Microsoft stops sending it."
-        $body = 'This webhook is not authorized.'
+        $body = 'This webhook is not authorized, its an old entry.'
         $StatusCode = [HttpStatusCode]::Forbidden
     }
     if ($Request.query.ValidationToken -or $Request.body.validationCode) {
