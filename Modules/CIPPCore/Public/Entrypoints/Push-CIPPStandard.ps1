@@ -8,5 +8,9 @@ function Push-CIPPStandard {
     $Standard = $QueueItem.Standard
     $FunctionName = 'Invoke-CIPPStandard{0}' -f $Standard
     Write-Host "We'll be running $FunctionName"
-    & $FunctionName -Tenant $Tenant -Settings $QueueItem.Settings
+    try {
+        & $FunctionName -Tenant $Tenant -Settings $QueueItem.Settings -ErrorAction Stop
+    } catch {
+        throw $_.Exception.Message
+    }
 }
