@@ -18,6 +18,8 @@ Function Invoke-ListMailboxRules {
     # Interact with query parameters or the body of the request.
     $TenantFilter = $Request.Query.TenantFilter
 
+    $Table = Get-CIPPTable -TableName cachembxrules
+    $Rows = Get-CIPPAzDataTableEntity @Table | Where-Object -Property Timestamp -GT (Get-Date).Addhours(-1)
 
     if (!$Rows) {
         Push-OutputBinding -Name mbxrulequeue -Value $TenantFilter
@@ -27,22 +29,14 @@ Function Invoke-ListMailboxRules {
         }
     } else {
         if ($TenantFilter -ne 'AllTenants') {
-            $Table = Get-CIPPTable -TableName cachembxrules
-            $Rows = Get-CIPPAzDataTableEntity @Table | Where-Object -Property Timestamp -GT (Get-Date).Addhours(-1)
-            $GraphRequest = $Rows | Where-Object -Property Tenant -EQ $TenantFilter | ForEach-Object {
-                $NewObj = $_.Rules | ConvertFrom-Json
-                $NewObj | Add-Member -NotePropertyName 'Tenant' -NotePropertyValue $TenantFilter
-                $NewObj
-            }
-        } else {
-            $GraphRequest = New-ExoRequest -tenantid $tenantFilter -cmdlet 'Get-Mailbox' -Select 'userPrincipalName,GUID' | ForEach-Object {
-                New-ExoRequest -Anchor $_.UserPrincipalName -tenantid $tenantFilter -cmdlet 'Get-InboxRule' -cmdParams @{Mailbox = $_.GUID }
-            }
+            $Rows = $Rows | Where-Object -Property Tenant -EQ $TenantFilter
+        }
+        $GraphRequest = $Rows | ForEach-Object {
+            $NewObj = $_.Rules | ConvertFrom-Json
+            $NewObj | Add-Member -NotePropertyName 'Tenant' -NotePropertyValue $_.Tenant
+            $NewObj
         }
     }
-    #Remove all old cache
-    #Remove-AzDataTableEntity @Table -Entity (Get-CIPPAzDataTableEntity @Table -Property PartitionKey, RowKey, Timestamp | Where-Object -Property Timestamp -LT (Get-Date).AddMinutes(-15))
-
 
     Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
             StatusCode = [HttpStatusCode]::OK

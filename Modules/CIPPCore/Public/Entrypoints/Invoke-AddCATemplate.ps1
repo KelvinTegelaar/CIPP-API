@@ -15,9 +15,8 @@ Function Invoke-AddCATemplate {
     try {        
         $GUID = (New-Guid).GUID
         $JSON = if ($request.body.rawjson) {
-        ([pscustomobject]$request.body.rawjson) | ConvertFrom-Json
-        }
-        else {
+            ConvertFrom-Json -InputObject ([pscustomobject]$request.body.rawjson)
+        } else {
         ([pscustomobject]$Request.body) | ForEach-Object {
                 $NonEmptyProperties = $_.psobject.Properties | Where-Object { $null -ne $_.Value } | Select-Object -ExpandProperty Name
                 $_ | Select-Object -Property $NonEmptyProperties 
@@ -44,7 +43,7 @@ Function Invoke-AddCATemplate {
 
         $JSON | Add-Member -NotePropertyName 'LocationInfo' -NotePropertyValue @($IncludeJSON, $ExcludeJSON)
 
-        $JSON = ($JSON | ConvertTo-Json -Depth 100)
+        $JSON = (ConvertTo-Json -Depth 100 -InputObject $JSON )
         $Table = Get-CippTable -tablename 'templates'
         $Table.Force = $true
         Add-CIPPAzDataTableEntity @Table -Entity @{
@@ -53,12 +52,11 @@ Function Invoke-AddCATemplate {
             PartitionKey = 'CATemplate'
             GUID         = "$GUID"
         }
-        Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -message "Created Transport Rule Template $($Request.body.name) with GUID $GUID" -Sev 'Debug'
+        Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -message "Created CA Template $($Request.body.name) with GUID $GUID" -Sev 'Debug'
         $body = [pscustomobject]@{'Results' = 'Successfully added template' }
     
-    }
-    catch {
-        Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -message "Failed to create Transport Rule Template: $($_.Exception.Message)" -Sev 'Error'
+    } catch {
+        Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -message "Failed to create CA Template: $($_.Exception.Message)" -Sev 'Error'
         $body = [pscustomobject]@{'Results' = "Intune Template Deployment failed: $($_.Exception.Message)" }
     }
 
