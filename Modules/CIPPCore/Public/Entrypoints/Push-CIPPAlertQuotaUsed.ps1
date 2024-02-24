@@ -16,6 +16,5 @@ function Push-CIPPAlertQuotaUsed {
             }
         }
     } catch {
-        Write-AlertMessage -tenant $($QueueItem.tenant) -message "Mailbox Quota Alert Error occurred: $(Get-NormalizedError -message $_.Exception.message)"
     }
 }
