@@ -7,12 +7,13 @@ function Push-CIPPAlertAppSecretExpiry {
     )
     $LastRunTable = Get-CIPPTable -Table AlertLastRun
 
-    Write-Host "Checking app expire for $($QueueItem.tenant)"
+    
     try {
         $Filter = "RowKey eq 'AppSecretExpiry' and PartitionKey eq '{0}'" -f $QueueItem.tenantid
         $LastRun = Get-CIPPAzDataTableEntity @LastRunTable -Filter $Filter
         $Yesterday = (Get-Date).AddDays(-1)
         if (-not $LastRun.Timestamp.DateTime -or ($LastRun.Timestamp.DateTime -le $Yesterday)) {
+            Write-Host "Checking app expire for $($QueueItem.tenant)"
             New-GraphGetRequest -uri "https://graph.microsoft.com/beta/applications?`$select=appId,displayName,passwordCredentials" -tenantid $QueueItem.tenant | ForEach-Object {
                 foreach ($App in $_) {
                     Write-Host "checking $($App.displayName)"
