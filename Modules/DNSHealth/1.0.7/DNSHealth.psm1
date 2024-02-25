@@ -1179,7 +1179,7 @@ function Read-MXRecord {
 
             catch { Write-Verbose $_.Exception.Message }
         }
-        $ValidationPasses.Add('Mail exchanger records record(s) are present for this domain.') | Out-Null
+        $ValidationPasses.Add('Mail exchanger record(s) are present for this domain.') | Out-Null
         $MXRecords = $MXRecords | Sort-Object -Property Priority
 
         # Attempt to identify mail provider based on MX record
