@@ -69,6 +69,7 @@ Function Invoke-EditGroup {
         if ($RemoveMembers) {
             $RemoveMembers | ForEach-Object { 
                 $member = $_
+                if ($member -like '*#EXT#*') { $member = [System.Web.HttpUtility]::UrlEncode($member) }
                 if ($GroupType -eq 'Distribution list' -or $GroupType -eq 'Mail-Enabled Security') {
                     $Params = @{ Identity = $userobj.groupid; Member = $member ; BypassSecurityGroupManagerCheck = $true }
                     New-ExoRequest -tenantid $Userobj.tenantid -cmdlet 'Remove-DistributionGroupMember' -cmdParams $params -UseSystemMailbox $true

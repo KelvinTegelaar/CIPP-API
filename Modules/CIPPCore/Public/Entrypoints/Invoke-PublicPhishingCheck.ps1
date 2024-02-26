@@ -13,8 +13,10 @@ Function Invoke-PublicPhishingCheck {
     $validList = @(
         'https://login.microsoftonline.com',
         'https://login.microsoft.net',
-        'https://login.microsoft.com'
-        'https://autologon.microsoftazuread-sso.com'
+        'https://login.microsoft.com',
+        'https://autologon.microsoftazuread-sso.com',
+        'https://tasks.office.com',
+        'https://login.windows.net'
     )
 
     $matchedUrls = $validList | Where-Object { ([uri]$_).Host -in ([uri]$($request.headers.Referer)).Host }
