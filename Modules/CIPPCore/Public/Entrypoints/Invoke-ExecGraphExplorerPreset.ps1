@@ -33,6 +33,8 @@ Function Invoke-ExecGraphExplorerPreset {
     }
 
     $params = $Request.Body.preset | Select-Object endpoint, '$filter', '$select', '$count', '$expand', '$search', NoPagination, '$top', IsShared
+    if ($params.'$select') { $params.'$select' = ($params.'$select').value -join ',' }
+
     $Preset = [PSCustomObject]@{
         PartitionKey = 'Preset'
         RowKey       = [string]$Id
