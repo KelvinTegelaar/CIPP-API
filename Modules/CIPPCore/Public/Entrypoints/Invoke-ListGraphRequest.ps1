@@ -126,7 +126,8 @@ function Invoke-ListGraphRequest {
         $StatusCode = [HttpStatusCode]::OK
     } catch {
         $GraphRequestData = "Graph Error: $($_.Exception.Message) - Endpoint: $($Request.Query.Endpoint)"
-        $StatusCode = [HttpStatusCode]::BadRequest
+        if ($Request.Query.IgnoreErrors) { $StatusCode = [HttpStatusCode]::OK }
+        else { $StatusCode = [HttpStatusCode]::BadRequest }
     }
 
     Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
