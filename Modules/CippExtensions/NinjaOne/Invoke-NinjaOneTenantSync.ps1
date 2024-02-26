@@ -2060,7 +2060,11 @@ function Invoke-NinjaOneTenantSync {
                 # Unused Licenses
                 $WidgetData.add([PSCustomObject]@{
                         Value       = $(
-                            $BPAUnusedLicenses = (($BpaData.Unusedlicenses | ConvertFrom-Json -ErrorAction SilentlyContinue).availableUnits | Measure-Object -Sum).sum
+                            try {
+                                $BPAUnusedLicenses = (($BpaData.Unusedlicenses | ConvertFrom-Json -ErrorAction SilentlyContinue).availableUnits | Measure-Object -Sum).sum
+                            } catch {
+                                $BPAUnusedLicenses = 'Failed to retrieve unused licenses'
+                            }
                             if ($BPAUnusedLicenses -ne 0) {
                                 $ResultColour = '#D53948'
                             } else {
