@@ -26,6 +26,12 @@ Function Invoke-AddStandardsDeploy {
                 URL       = $URL
             }
         }
+        #Get all subobjects in $Settings that are set to false, and remove them.
+        $Settings.psobject.properties.name | Where-Object { $Settings.$_ -eq $false -and $_ -ne 'v2.1' -and $_ -in 'Alert', 'Remediate', 'Report' } | ForEach-Object {
+            $Settings.psobject.properties.remove($_)
+        }
+
+
         foreach ($Tenant in $tenants) {
         
             $object = [PSCustomObject]@{
