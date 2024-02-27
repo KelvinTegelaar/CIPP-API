@@ -43,6 +43,18 @@ function Invoke-CippWebhookProcessing {
             $Proxy = if ($Location.Proxy -ne $null) { $Location.Proxy } else { 'Unknown' }
             $hosting = if ($Location.Hosting -ne $null) { $Location.Hosting } else { 'Unknown' }
             $ASName = if ($Location.ASName) { $Location.ASName } else { 'Unknown' }
+            $IP = $data.ClientIP
+            $LocationInfo = @{
+                RowKey          = [string]$data.clientip
+                PartitionKey    = [string]$data.UserId
+                Tenant          = [string]$TenantFilter
+                CountryOrRegion = "$Country"
+                City            = "$City"
+                Proxy           = "$Proxy"
+                Hosting         = "$hosting"
+                ASName          = "$ASName"
+            }
+            $null = Add-CIPPAzDataTableEntity @LocationTable -Entity $LocationInfo -Force
         }
     }
     $TableObj = [PSCustomObject]::new()
@@ -128,15 +140,16 @@ function Invoke-CippWebhookProcessing {
                 $dynamicIf = "`$data.$key -$operator '$value'"
             }
             if (Invoke-Expression $dynamicIf) {
+                Write-Host "Condition met: $dynamicIf"
                 $ConditionMet = $true
             } else {
+                Write-Host "Condition not met: $dynamicIf"
                 $ConditionMet = $false
             }
         }
 
         if ($ConditionMet) {
             #we're doing two loops, one first to collect the results of any action taken, then the second to pass those results via email etc.
-
             $ActionResults = foreach ($action in $dos) {
                 Write-Host "this is our action: $($action | ConvertTo-Json -Depth 15 -Compress))"
                 switch ($action.execute) {
@@ -212,6 +225,7 @@ function Invoke-CippWebhookProcessing {
                         Send-CIPPAlert -Type 'psa' -Title $GenerateEmail.title -HTMLContent $GenerateEmail.htmlcontent -TenantFilter $TenantFilter
                     }
                     'generateWebhook' {
+                        Write-Host 'Generating the webhook content'
                         $GenerateJSON = New-CIPPAlertTemplate -format 'json' -data $Data -ActionResults $ActionResults
                         $JsonContent = @{
                             Title            = $GenerateJSON.Title
@@ -225,28 +239,12 @@ function Invoke-CippWebhookProcessing {
                             PotentialASName  = $ASName
                             ActionsTaken     = [string]($ActionResults | ConvertTo-Json -Depth 15 -Compress)
                         } | ConvertTo-Json -Depth 15 -Compress
+                        Write-Host 'Sending Webhook Content'
+
                         Send-CIPPAlert -Type 'webhook' -Title $GenerateJSON.Title -JSONContent $JsonContent -TenantFilter $TenantFilter
                     }
                 }
             }
         }
-    }
-
-    if ($data.ClientIP) {
-        $IP = $data.ClientIP
-        if ($IP -match '^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}:\d+$') {
-            $IP = $IP -replace ':\d+$', '' # Remove the port number if present
-        }
-        $LocationInfo = @{
-            RowKey          = [string]$ip
-            PartitionKey    = [string]$data.UserId
-            Tenant          = [string]$TenantFilter
-            CountryOrRegion = "$Country"
-            City            = "$City"
-            Proxy           = "$Proxy"
-            Hosting         = "$hosting"
-            ASName          = "$ASName"
-        }
-        $null = Add-CIPPAzDataTableEntity @LocationTable -Entity $LocationInfo -Force
     }
 }
