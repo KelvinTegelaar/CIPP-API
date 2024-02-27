@@ -3,14 +3,14 @@ function Get-ExtensionRateLimit($ExtensionName, $ExtensionPartitionKey, $RateLim
     $MappingTable = Get-CIPPTable -TableName CippMapping
     $CurrentMap = (Get-CIPPAzDataTableEntity @MappingTable -Filter "PartitionKey eq '$ExtensionPartitionKey'")
     $CurrentMap | ForEach-Object {
-        if ($Null -ne $_.lastEndTime -and $_.lastEndTime -ne ''){
-        $_.lastEndTime = (Get-Date($_.lastEndTime))
+        if ($Null -ne $_.lastEndTime -and $_.lastEndTime -ne '') {
+            $_.lastEndTime = (Get-Date($_.lastEndTime))
         } else {
             $_ | Add-Member -NotePropertyName lastEndTime -NotePropertyValue $Null -Force
         }
 
         if ($Null -ne $_.lastStartTime -and $_.lastStartTime -ne '') {
-        $_.lastStartTime = (Get-Date($_.lastStartTime))
+            $_.lastStartTime = (Get-Date($_.lastStartTime))
         } else {
             $_ | Add-Member -NotePropertyName lastStartTime -NotePropertyValue $Null -Force
         }
@@ -18,7 +18,7 @@ function Get-ExtensionRateLimit($ExtensionName, $ExtensionPartitionKey, $RateLim
 
     # Check Global Rate Limiting
     try {
-    $ActiveJobs = $CurrentMap | Where-Object { ($Null -ne $_.lastStartTime) -and ($_.lastStartTime -gt (Get-Date).AddMinutes(-10)) -and ($Null -eq $_.lastEndTime -or $_.lastStartTime -gt $_.lastEndTime) }
+        $ActiveJobs = $CurrentMap | Where-Object { ($Null -ne $_.lastStartTime) -and ($_.lastStartTime -gt (Get-Date).AddMinutes(-10)) -and ($Null -eq $_.lastEndTime -or $_.lastStartTime -gt $_.lastEndTime) }
     } catch {
         $ActiveJobs = 'FirstRun'
     }
