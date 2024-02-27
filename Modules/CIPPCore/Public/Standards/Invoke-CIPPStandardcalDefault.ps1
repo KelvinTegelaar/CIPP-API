@@ -3,63 +3,69 @@ function Invoke-CIPPStandardcalDefault {
     .FUNCTIONALITY
     Internal
     #>
-    param($Tenant, $Settings)
+    param($Tenant, $Settings, $QueueItem)
+    
     If ($Settings.remediate) {
-        $Mailboxes = New-ExoRequest -tenantid $Tenant -cmdlet 'Get-Mailbox'
-        Write-LogMessage -API 'Standards' -tenant $Tenant -message "Started setting default calendar permissions for $($Mailboxes.Count) mailboxes." -sev Info
+        $Mailboxes = New-ExoRequest -tenantid $Tenant -cmdlet 'Get-Mailbox' | Sort-Object UserPrincipalName
+        $TotalMailboxes = $Mailboxes.Count
+        Write-LogMessage -API 'Standards' -tenant $Tenant -message "Started setting default calendar permissions for $($TotalMailboxes) mailboxes." -sev Info
 
-        # Thread safe counter
-        $UserSuccesses = [HashTable]::Synchronized(@{Counter = 0 })
+        # Retrieve the last run status
+        $LastRunTable = Get-CIPPTable -Table StandardsLastRun
+        $Filter = "RowKey eq 'calDefaults' and PartitionKey eq '{0}'" -f $tenant
+        $LastRun = Get-CIPPAzDataTableEntity @LastRunTable -Filter $Filter
+
+        $startIndex = 0
+        if ($LastRun -and $LastRun.processedMailboxes -lt $LastRun.totalMailboxes ) {
+            $startIndex = $LastRun.processedMailboxes
+        }
         
-        # Set default calendar permissions for each mailbox. Run in parallel to speed up the process
-        $Mailboxes | ForEach-Object -ThrottleLimit 25 -Parallel {
-            Import-Module CIPPcore
-            $Tenant = $Using:Tenant
-            $Settings = $Using:Settings
+        $SuccessCounter = if ($startIndex -eq 0) { 0 } else { [int64]$LastRun.currentSuccessCount }
+        $processedMailboxes = $startIndex
+        $Mailboxes = $Mailboxes[$startIndex..($TotalMailboxes - 1)]
+        Write-Host "CalDefaults Starting at index $startIndex"
+        Write-Host "CalDefaults success counter starting at $SuccessCounter"
+        Write-Host "CalDefaults Processing $($Mailboxes.Count) mailboxes"
+        $Mailboxes | ForEach-Object {
             $Mailbox = $_
-            $UserSuccesses = $Using:UserSuccesses
-
             try {
-                $GetRetryCount = 0
-                
-                do {
-                    # Get all calendars for the mailbox, retry if it fails
-                    try {
-                        New-ExoRequest -tenantid $Tenant -cmdlet 'Get-MailboxFolderStatistics' -cmdParams @{identity = $Mailbox.UserPrincipalName; FolderScope = 'Calendar' } -Anchor $Mailbox.UserPrincipalName | Where-Object { $_.FolderType -eq 'Calendar' } |
-                            # Set permissions for each calendar found
-                            ForEach-Object {
-                                $SetRetryCount = 0
-                                do {
-                                    try {
-                                        New-ExoRequest -tenantid $Tenant -cmdlet 'Set-MailboxFolderPermission' -cmdparams @{Identity = "$($Mailbox.UserPrincipalName):$($_.FolderId)"; User = 'Default'; AccessRights = $Settings.permissionlevel } -Anchor $Mailbox.UserPrincipalName 
-                                        Write-LogMessage -API 'Standards' -tenant $Tenant -message "Set default folder permission for $($Mailbox.UserPrincipalName):\$($_.Name) to $($Settings.permissionlevel)" -sev Debug 
-                                        $Success = $true
-                                        $UserSuccesses.Counter++
-                                    } catch {
-                                        # Retry Set-MailboxFolderStatistics
-                                        Start-Sleep -Milliseconds (Get-Random -Minimum 200 -Maximum 300)
-                                        $SetRetryCount++
-
-                                        # Log error if it fails 3 times
-                                        if ($SetRetryCount -ge 3) {
-                                            Write-LogMessage -API 'Standards' -tenant $Tenant -message "Could not set default calendar permissions for $($Mailbox.UserPrincipalName). Error: $($_.exception.message)" -sev Error
-                                        }
-                                    }
-                                } Until ($SetRetryCount -ge 3 -or $Success -eq $true)
-                            }
-                            $Success = $true
+                New-ExoRequest -tenantid $Tenant -cmdlet 'Get-MailboxFolderStatistics' -cmdParams @{identity = $Mailbox.UserPrincipalName; FolderScope = 'Calendar' } -Anchor $Mailbox.UserPrincipalName | Where-Object { $_.FolderType -eq 'Calendar' } |
+                    ForEach-Object {
+                        try {
+                            New-ExoRequest -tenantid $Tenant -cmdlet 'Set-MailboxFolderPermission' -cmdparams @{Identity = "$($Mailbox.UserPrincipalName):$($_.FolderId)"; User = 'Default'; AccessRights = $Settings.permissionlevel } -Anchor $Mailbox.UserPrincipalName 
+                            Write-LogMessage -API 'Standards' -tenant $Tenant -message "Set default folder permission for $($Mailbox.UserPrincipalName):\$($_.Name) to $($Settings.permissionlevel)" -sev Debug 
+                            $SuccessCounter++
                         } catch {
-                            # Retry Get-MailboxFolderStatistics
-                            Start-Sleep -Milliseconds (Get-Random -Minimum 250 -Maximum 500)
-                            $GetRetryCount++
+                            Write-Host "Setting cal failed: $($_.exception.message)"
+                            Write-LogMessage -API 'Standards' -tenant $Tenant -message "Could not set default calendar permissions for $($Mailbox.UserPrincipalName). Error: $($_.exception.message)" -sev Error
                         }
-
-                    } until ($GetRetryCount -ge 3 -or $Success -eq $true)
+                    }
                 } catch {
                     Write-LogMessage -API 'Standards' -tenant $Tenant -message "Could not set default calendar permissions for $($Mailbox.UserPrincipalName). Error: $($_.exception.message)" -sev Error
-                }        
+                }
+                $processedMailboxes++
+                if ($processedMailboxes % 25 -eq 0) {
+                    $LastRun = @{
+                        RowKey              = 'calDefaults'
+                        PartitionKey        = $Tenant
+                        totalMailboxes      = $TotalMailboxes
+                        processedMailboxes  = $processedMailboxes
+                        currentSuccessCount = $SuccessCounter
+                    }
+                    Add-CIPPAzDataTableEntity @LastRunTable -Entity $LastRun -Force
+                    Write-Host "Processed $processedMailboxes mailboxes"
+                }
             }
-            Write-LogMessage -API 'Standards' -tenant $Tenant -message "Successfully set default calendar permissions for $($UserSuccesses.Counter) out of $($Mailboxes.Count) mailboxes." -sev Info
 
+            $LastRun = @{
+                RowKey              = 'calDefaults'
+                PartitionKey        = $Tenant
+                totalMailboxes      = $TotalMailboxes
+                processedMailboxes  = $processedMailboxes
+                currentSuccessCount = $SuccessCounter
+            }
+            Add-CIPPAzDataTableEntity @LastRunTable -Entity $LastRun -Force
+
+            Write-LogMessage -API 'Standards' -tenant $Tenant -message "Successfully set default calendar permissions for $SuccessCounter out of $TotalMailboxes mailboxes." -sev Info
         }
     }

@@ -48,7 +48,8 @@ Function Invoke-ExecGDAPInvite {
             if ($NewRelationshipRequest.action -eq 'lockForApproval') {
                 $InviteUrl = "https://admin.microsoft.com/AdminPortal/Home#/partners/invitation/granularAdminRelationships/$($NewRelationship.id)"
                 $Uri = ([System.Uri]$TriggerMetadata.Headers.referer)
-                $OnboardingUrl = $Uri.AbsoluteUri.Replace($Uri.PathAndQuery, '/tenant/administration/tenant-onboarding-wizard?tableFilter=Complex: id eq {0}' -f $NewRelationship.id)
+                $TableFilter = [System.Web.HttpUtility]::UrlEncode(('Complex: id eq {0}' -f $NewRelationship.id))
+                $OnboardingUrl = $Uri.AbsoluteUri.Replace($Uri.PathAndQuery, "/tenant/administration/tenant-onboarding-wizard?tableFilter=$TableFilter")
 
                 $InviteEntity = [PSCustomObject]@{
                     'PartitionKey'  = 'invite'
@@ -67,6 +68,7 @@ Function Invoke-ExecGDAPInvite {
     } catch {
         $Message = 'Error creating GDAP relationship'
         Write-Host "GDAP ERROR: $($_.Exception.Message)"
+        Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $env:TenantID -message "$($Message): $($_.Exception.Message)" -Sev 'Error'
     }
 
     Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -message "Created GDAP Invite - $InviteUrl" -Sev 'Info'

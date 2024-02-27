@@ -11,6 +11,7 @@ function Invoke-CippWebhookProcessing {
     )
     $ConfigTable = get-cipptable -TableName 'SchedulerConfig'
     $LocationTable = Get-CIPPTable -TableName 'knownlocationdb'
+    $TrustedIPsTable = Get-CIPPTable -TableName 'trustedIps'
     $Alertconfig = Get-CIPPAzDataTableEntity @ConfigTable -Filter "Tenant eq '$tenantfilter'"
     if (!$Alertconfig) {
         $Alertconfig = Get-CIPPAzDataTableEntity @ConfigTable -Filter "Tenant eq 'AllTenants'"
@@ -19,6 +20,8 @@ function Invoke-CippWebhookProcessing {
     if ($data.userId -eq 'Not Available') { $data.userId = $data.userKey }
     if ($data.Userkey -eq 'Not Available') { $data.Userkey = $data.userId }
     if ($data.clientip) {
+        $TrustedIps = Get-CIPPAzDataTableEntity @TrustedIPsTable -Filter "PartitionKey eq '$($TenantFilter)' and RowKey eq '$($data.clientip)' and state eq 'Trusted'"
+        Write-Host "TrustedIPs: $($TrustedIps | ConvertTo-Json -Depth 15 -Compress)"
         #First we perform a lookup in the knownlocationdb table to see if we have a location for this IP address.
         $Location = Get-CIPPAzDataTableEntity @LocationTable -Filter "RowKey eq '$($data.clientip)'" | Select-Object -Last 1
         #If we have a location, we use that. If not, we perform a lookup in the GeoIP database.
@@ -40,6 +43,18 @@ function Invoke-CippWebhookProcessing {
             $Proxy = if ($Location.Proxy -ne $null) { $Location.Proxy } else { 'Unknown' }
             $hosting = if ($Location.Hosting -ne $null) { $Location.Hosting } else { 'Unknown' }
             $ASName = if ($Location.ASName) { $Location.ASName } else { 'Unknown' }
+            $IP = $data.ClientIP
+            $LocationInfo = @{
+                RowKey          = [string]$data.clientip
+                PartitionKey    = [string]$data.UserId
+                Tenant          = [string]$TenantFilter
+                CountryOrRegion = "$Country"
+                City            = "$City"
+                Proxy           = "$Proxy"
+                Hosting         = "$hosting"
+                ASName          = "$ASName"
+            }
+            $null = Add-CIPPAzDataTableEntity @LocationTable -Entity $LocationInfo -Force
         }
     }
     $TableObj = [PSCustomObject]::new()
@@ -49,6 +64,7 @@ function Invoke-CippWebhookProcessing {
 
     $ExtendedPropertiesIgnoreList = @(
         'OAuth2:Authorize'
+        'OAuth2:Token'
         'SAS:EndAuth'
         'SAS:ProcessAuth'
     )
@@ -57,12 +73,12 @@ function Invoke-CippWebhookProcessing {
         return ''
     }
 
-    $AllowedLocations = ($Alertconfig.if | ConvertFrom-Json).allowedcountries.value
+    $AllowedLocations = ($Alertconfig.if | ConvertFrom-Json -ErrorAction SilentlyContinue).allowedcountries.value
     Write-Host "These are the allowed locations: $($AllowedLocations)"
     Write-Host "Operation: $($data.operation)"
     switch ($data.operation) {
-        { 'UserLoggedIn' -eq $data.operation -and $proxy -eq $true } { $data.operation = 'BadRepIP' }
-        { 'UserLoggedIn' -eq $data.operation -and $hosting -eq $true } { $data.operation = 'HostedIP' }
+        { 'UserLoggedIn' -eq $data.operation -and $proxy -eq $true -and !$TrustedIps } { $data.operation = 'BadRepIP' }
+        { 'UserLoggedIn' -eq $data.operation -and $hosting -eq $true -and !$TrustedIps } { $data.operation = 'HostedIP' }
         { 'UserLoggedIn' -eq $data.operation -and $Country -notin $AllowedLocations -and $data.ResultStatus -eq 'Success' -and $TableObj.ResultStatusDetail -eq 'Success' } {
             Write-Host "$($country) is not in $($AllowedLocations)"
             $data.operation = 'UserLoggedInFromUnknownLocation' 
@@ -75,7 +91,7 @@ function Invoke-CippWebhookProcessing {
     foreach ($AlertSetting in $Alertconfig) {
         $ifs = $AlertSetting.If | ConvertFrom-Json
         $Dos = $AlertSetting.execution | ConvertFrom-Json
-        if ($data.operation -notin $Ifs.selection -and $ifs.selection -ne 'AnyAlert' -and ($ifs.count -le 1 -and $ifs.selection -ne 'customField')) {
+        if ($data.operation -notin $Ifs.selection -and 'AnyAlert' -notin $ifs.selection -and ($ifs.count -le 1 -and $ifs.selection -ne 'customField')) {
             Write-Host 'Not an operation to do anything for. storing IP info'
             if ($data.ClientIP -and $data.operation -like '*LoggedIn*') {
                 Write-Host 'Add IP and potential location to knownlocation db for this specific user.'
@@ -92,6 +108,15 @@ function Invoke-CippWebhookProcessing {
                     Proxy           = "$Proxy"
                     Hosting         = "$hosting"
                     ASName          = "$ASName"
+                    Region          = "$($location.region)"
+                    RegionName      = "$($location.regionName)"
+                    org             = "$($location.org)"
+                    zip             = "$($location.zip)"
+                    mobile          = "$($location.mobile)"
+                    lat             = "$($location.lat)"
+                    lon             = "$($location.lon)"
+                    isp             = "$($location.isp)"
+                    Country         = "$($location.country)"
                 }
                 $null = Add-CIPPAzDataTableEntity @LocationTable -Entity $LocationInfo -Force
             }
@@ -115,15 +140,16 @@ function Invoke-CippWebhookProcessing {
                 $dynamicIf = "`$data.$key -$operator '$value'"
             }
             if (Invoke-Expression $dynamicIf) {
+                Write-Host "Condition met: $dynamicIf"
                 $ConditionMet = $true
             } else {
+                Write-Host "Condition not met: $dynamicIf"
                 $ConditionMet = $false
             }
         }
 
         if ($ConditionMet) {
             #we're doing two loops, one first to collect the results of any action taken, then the second to pass those results via email etc.
-
             $ActionResults = foreach ($action in $dos) {
                 Write-Host "this is our action: $($action | ConvertTo-Json -Depth 15 -Compress))"
                 switch ($action.execute) {
@@ -183,17 +209,23 @@ function Invoke-CippWebhookProcessing {
                     }
                 }
             }
+            Write-Host 'Going to create the content'
             foreach ($action in $dos) { 
                 switch ($action.execute) {
                     'generatemail' {
+                        Write-Host 'Going to create the email'
                         $GenerateEmail = New-CIPPAlertTemplate -format 'html' -data $Data -LocationInfo $Location -ActionResults $ActionResults
+                        Write-Host 'Going to send the mail'
                         Send-CIPPAlert -Type 'email' -Title $GenerateEmail.title -HTMLContent $GenerateEmail.htmlcontent -TenantFilter $TenantFilter
+                        Write-Host 'email should be sent'
+
                     }  
                     'generatePSA' {
                         $GenerateEmail = New-CIPPAlertTemplate -format 'html'-data $Data -LocationInfo $Location -ActionResults $ActionResults
                         Send-CIPPAlert -Type 'psa' -Title $GenerateEmail.title -HTMLContent $GenerateEmail.htmlcontent -TenantFilter $TenantFilter
                     }
                     'generateWebhook' {
+                        Write-Host 'Generating the webhook content'
                         $GenerateJSON = New-CIPPAlertTemplate -format 'json' -data $Data -ActionResults $ActionResults
                         $JsonContent = @{
                             Title            = $GenerateJSON.Title
@@ -207,28 +239,12 @@ function Invoke-CippWebhookProcessing {
                             PotentialASName  = $ASName
                             ActionsTaken     = [string]($ActionResults | ConvertTo-Json -Depth 15 -Compress)
                         } | ConvertTo-Json -Depth 15 -Compress
+                        Write-Host 'Sending Webhook Content'
+
                         Send-CIPPAlert -Type 'webhook' -Title $GenerateJSON.Title -JSONContent $JsonContent -TenantFilter $TenantFilter
                     }
                 }
             }
         }
-    }
-
-    if ($data.ClientIP) {
-        $IP = $data.ClientIP
-        if ($IP -match '^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}:\d+$') {
-            $IP = $IP -replace ':\d+$', '' # Remove the port number if present
-        }
-        $LocationInfo = @{
-            RowKey          = [string]$ip
-            PartitionKey    = [string]$data.UserId
-            Tenant          = [string]$TenantFilter
-            CountryOrRegion = "$Country"
-            City            = "$City"
-            Proxy           = "$Proxy"
-            Hosting         = "$hosting"
-            ASName          = "$ASName"
-        }
-        $null = Add-CIPPAzDataTableEntity @LocationTable -Entity $LocationInfo -Force
     }
 }

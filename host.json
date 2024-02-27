@@ -6,13 +6,11 @@
   "functionTimeout": "00:10:00",
   "extensionBundle": {
     "id": "Microsoft.Azure.Functions.ExtensionBundle",
-    "version": "[2.*, 3.0.0)"
+    "version": "[4.*, 5.0.0)"
   },
   "extensions": {
     "queues": {
-      "maxDequeueCount": 5
-    }},
-  "logging": {
-    "fileLoggingMode": "never"
-  }  
+      "maxDequeueCount": 1
+    }
+  }
 }

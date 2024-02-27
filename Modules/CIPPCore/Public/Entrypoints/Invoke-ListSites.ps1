@@ -27,8 +27,6 @@ Function Invoke-ListSites {
         } else {
             $ParsedRequest = $Result
         }
-
-
         $GraphRequest = $ParsedRequest | Select-Object @{ Name = 'UPN'; Expression = { $_.'Owner Principal Name' } },
         @{ Name = 'displayName'; Expression = { $_.'Owner Display Name' } },
         @{ Name = 'LastActive'; Expression = { $_.'Last Activity Date' } },
@@ -36,13 +34,28 @@ Function Invoke-ListSites {
         @{ Name = 'UsedGB'; Expression = { [math]::round($_.'Storage Used (Byte)' / 1GB, 2) } },
         @{ Name = 'URL'; Expression = { $_.'Site URL' } },
         @{ Name = 'Allocated'; Expression = { [math]::round($_.'Storage Allocated (Byte)' / 1GB, 2) } },
-        @{ Name = 'Template'; Expression = { $_.'Root Web Template' } }
+        @{ Name = 'Template'; Expression = { $_.'Root Web Template' } },
+        @{ Name = 'siteid'; Expression = { $_.'site Id' } }
+
+        #Temporary workaround for url as report is broken. 
+        #This API is so stupid its great.
+        $URLs = (New-GraphGetRequest -uri 'https://graph.microsoft.com/v1.0/sites/getAllSites?$select=SharePointIds' -asapp $true -tenantid $TenantFilter).SharePointIds
+
+        $GraphRequest = foreach ($site in $GraphRequest) {
+            $site.URL = ($URLs | Where-Object { $_.siteId -eq $site.SiteId }).siteUrl
+            $site
+        }
+
         $StatusCode = [HttpStatusCode]::OK
     } catch {
         $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
         $StatusCode = [HttpStatusCode]::Forbidden
         $GraphRequest = $ErrorMessage
     }
+    if ($Request.query.URLOnly -eq 'true') {
+        $GraphRequest = $GraphRequest | Where-Object { $null -ne $_.URL }
+    }
+
     # Associate values to output bindings by calling 'Push-OutputBinding'.
     Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
             StatusCode = $StatusCode

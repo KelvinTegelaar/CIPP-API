@@ -1,0 +1,98 @@
+{
+  "name": "CIPP Cyber Essentials Helper - Tenant view",
+  "style": "Tenant",
+  "Fields": [
+    {
+      "name": "deviceregister",
+      "UseExistingInfo": false,
+      "FrontendFields": [
+        {
+          "name": "Device Register",
+          "value": "deviceregister",
+          "desc": "These are all devices found in M365 to add to your CE Device Register.",
+          "formatter": "table"
+        }
+      ],
+      "StoreAs": "JSON",
+      "API": "Graph",
+      "ExtractFields": [
+        "deviceName",
+        "lastSyncDateTime",
+        "osVersion",
+        "userPrincipalName",
+        "complianceState"
+      ],
+      "URL": "https://graph.microsoft.com/beta/deviceManagement/managedDevices"
+    },
+    {
+      "name": "adminsTable",
+      "UseExistingInfo": false,
+      "FrontendFields": [
+        {
+          "name": "Admins Table",
+          "value": "adminsTable",
+          "desc": "The list of admin accounts in your M365 environment. These must all be named and attached to actual users.",
+          "formatter": "table"
+        }
+      ],
+      "StoreAs": "JSON",
+      "API": "Graph",
+      "ExtractFields": ["displayName", "userPrincipalName"],
+      "URL": "https://graph.microsoft.com/beta/directoryRoles/roleTemplateId=62e90394-69f5-4237-9190-012177145e10/members"
+    },
+    {
+      "name": "windowsProtectionState",
+      "UseExistingInfo": false,
+      "FrontendFields": [
+        {
+          "name": "Defender List",
+          "value": "windowsProtectionState",
+          "formatter": "table",
+          "desc": "List of Defender protected workstations. Add this to your Malware Protection Audit List"
+        }
+      ],
+      "StoreAs": "JSON",
+      "API": "Graph",
+      "ExtractFields": ["windowsProtectionState"],
+      "parameters": {},
+      "URL": "https://graph.microsoft.com/beta/deviceManagement/managedDevices?$expand=windowsProtectionState"
+    },
+    {
+      "name": "detectedApps",
+      "UseExistingInfo": false,
+      "FrontendFields": [
+        {
+          "name": "Detected Apps",
+          "value": "detectedApps",
+          "desc": "All Detected Software and their version. Add this to your software audit list",
+          "formatter": "table"
+        }
+      ],
+      "StoreAs": "JSON",
+      "API": "Graph",
+      "ExtractFields": ["displayName", "version", "platform", "publisher"],
+      "URL": "https://graph.microsoft.com/beta/deviceManagement/detectedApps"
+    },
+    {
+      "name": "userRegistrationDetails",
+      "UseExistingInfo": false,
+      "FrontendFields": [
+        {
+          "name": "User Registration Details",
+          "desc": "All MFA settings (Requires a P1 Subscription)",
+          "value": "userRegistrationDetails",
+          "formatter": "table"
+        }
+      ],
+      "StoreAs": "JSON",
+      "API": "Graph",
+      "ExtractFields": [
+        "userDisplayName",
+        "isAdmin",
+        "isMFARegistered",
+        "defaultMFAMethod"
+      ],
+      "URL": "https://graph.microsoft.com/beta/reports/authenticationMethods/userRegistrationDetails"
+    }
+  ]
+}

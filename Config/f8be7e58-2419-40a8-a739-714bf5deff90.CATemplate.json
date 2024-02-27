@@ -26,11 +26,11 @@
     "platforms": null,
     "clientApplications": null,
     "applications": {
-      "includeApplications": ["None"],
+      "includeApplications": ["All"],
       "includeUserActions": [],
       "includeAuthenticationContextClassReferences": [],
       "excludeApplications": []
     }
   },
-  "displayName": "Block Legacy Authentication"
+  "displayName": "CIPP: Block Legacy Authentication"
 }

@@ -15,9 +15,9 @@ function New-HaloPSATicket {
     usertype                   = 1
     userlookup                 = @{
       id            = -1
-      lookupdisplay = "Enter Details Manually"
+      lookupdisplay = 'Enter Details Manually'
     }
-    client_id                  = $client
+    client_id                  = ($client | Select-Object -Last 1)
     site_id                    = $null
     user_name                  = $null
     reportedby                 = $null
@@ -28,20 +28,24 @@ function New-HaloPSATicket {
   }
 
   if ($Configuration.TicketType) {
-    $object | Add-Member -MemberType NoteProperty -Name "tickettype_id" -Value $Configuration.TicketType
+    $object | Add-Member -MemberType NoteProperty -Name 'tickettype_id' -Value $Configuration.TicketType
   }
   #use the token to create a new ticket in HaloPSA
   $body = ConvertTo-Json -Compress -Depth 10 -InputObject @($Object)
 
 
-  Write-Host "Sending ticket to HaloPSA"
+  Write-Host 'Sending ticket to HaloPSA'
   Write-Host $body
   try {
     $Ticket = Invoke-RestMethod -Uri "$($Configuration.ResourceURL)/Tickets" -ContentType 'application/json; charset=utf-8' -Method Post -Body $body -Headers @{Authorization = "Bearer $($token.access_token)" }
-  }
-  catch {
-    Write-Host "Failed to send ticket to HaloPSA"
-    Write-Host $_.Exception.Message
+  } catch {
+    $Message = if ($_.ErrorDetails.Message) {
+      Get-NormalizedError -Message $_.ErrorDetails.Message
+    } else {
+      $_.Exception.message
+    }
+    Write-LogMessage -message "Failed to send ticket to HaloPSA: $Message" -API 'HaloPSATicket' -sev Error
+    Write-Host "Failed to send ticket to HaloPSA: $Message" 
   }
 
 }

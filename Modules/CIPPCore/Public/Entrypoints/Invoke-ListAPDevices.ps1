@@ -17,7 +17,6 @@ Function Invoke-ListAPDevices {
 
     # Interact with query parameters or the body of the request.
     $TenantFilter = $Request.Query.TenantFilter
-    $userid = $Request.Query.UserID
     try {
         $GraphRequest = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/deviceManagement/windowsAutopilotDeviceIdentities?`$top=999" -tenantid $TenantFilter  
         $StatusCode = [HttpStatusCode]::OK

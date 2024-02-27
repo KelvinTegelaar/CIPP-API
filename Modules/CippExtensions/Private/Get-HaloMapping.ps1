@@ -24,8 +24,16 @@ function Get-HaloMapping {
             $i++
             $pagecount = [Math]::Ceiling($Result.record_count / 999)
         } while ($i -le $pagecount)
+    } catch {
+        $Message = if ($_.ErrorDetails.Message) {
+            Get-NormalizedError -Message $_.ErrorDetails.Message
+        } else {
+            $_.Exception.message
+        }
+        
+        Write-LogMessage -Message "Could not get HaloPSA Clients, error: $Message " -Level Error -tenant 'CIPP' -API 'HaloMapping'
+        $RawHaloClients = @(@{name = "Could not get HaloPSA Clients, error: $Message" }) 
     }
-    catch { $RawHaloClients = @() }
     $HaloClients = $RawHaloClients | ForEach-Object {
         [PSCustomObject]@{
             name  = $_.name

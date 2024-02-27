@@ -8,6 +8,7 @@ Function Invoke-ExecOffboardUser {
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
     try {
+        $APIName = 'ExecOffboardUser'
         Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -message 'Accessed this API' -Sev 'Debug'
         $Username = $request.body.user
         $Tenantfilter = $request.body.tenantfilter

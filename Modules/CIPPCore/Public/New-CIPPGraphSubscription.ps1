@@ -15,16 +15,35 @@ function New-CIPPGraphSubscription {
     )
     $CIPPID = (New-Guid).GUID
     $WebhookTable = Get-CIPPTable -TableName webhookTable
-
+    Write-Host "Operations are: $operations"
     try {
         if ($auditLogAPI) {
-            $EventTypes = @('Audit.AzureActiveDirectory', 'Audit.Exchange', 'Audit.SharePoint', 'Audit.General')
+            $MappingTable = [pscustomobject]@{
+                'UserLoggedIn'                               = 'Audit.AzureActiveDirectory'
+                'Add member to role.'                        = 'Audit.AzureActiveDirectory'
+                'Disable account.'                           = 'Audit.AzureActiveDirectory'
+                'Update StsRefreshTokenValidFrom Timestamp.' = 'Audit.AzureActiveDirectory'
+                'Enable account.'                            = 'Audit.AzureActiveDirectory'
+                'Disable Strong Authentication.'             = 'Audit.AzureActiveDirectory'
+                'Reset user password.'                       = 'Audit.AzureActiveDirectory'
+                'Add service principal.'                     = 'Audit.AzureActiveDirectory'
+                'HostedIP'                                   = 'Audit.AzureActiveDirectory'
+                'badRepIP'                                   = 'Audit.AzureActiveDirectory'
+                'UserLoggedInFromUnknownLocation'            = 'Audit.AzureActiveDirectory'
+                'customfield'                                = 'AnyLog'
+                'anyAlert'                                   = 'AnyLog'
+                'New-InboxRule'                              = 'Audit.Exchange'
+                'Set-InboxRule'                              = 'Audit.Exchange'
+            }
+            $EventTypes = $operations | Where-Object { $MappingTable.$_ } | ForEach-Object { $MappingTable.$_ }
+            if ('anyLog' -in $EventTypes) { $EventTypes = @('Audit.AzureActiveDirectory', 'Audit.Exchange', 'Audit.SharePoint', 'Audit.General') }
             foreach ($EventType in $EventTypes) {
                 $CIPPID = (New-Guid).GUID
                 $Resource = $EventType
+                $CIPPAuditURL = "$BaseURL/API/Publicwebhooks?EventType=$EventType&CIPPID=$CIPPID"
                 $AuditLogParams = @{
                     webhook = @{
-                        'address' = "$BaseURL/API/Publicwebhooks?EventType=$EventType&CIPPID=$CIPPID"
+                        'address' = $CIPPAuditURL
                     }
                 } | ConvertTo-Json
                 #List existing webhook subscriptions in table
@@ -33,15 +52,17 @@ function New-CIPPGraphSubscription {
                 $MatchedWebhook = $ExistingWebhooks | Where-Object { $_.Resource -eq $Resource }
                 try {
                     if (!$MatchedWebhook) {
-                        $AuditLog = New-GraphPOSTRequest -uri "https://manage.office.com/api/v1.0/$($TenantFilter)/activity/feed/subscriptions/start?contentType=$EventType&PublisherIdentifier=$($TenantFilter)" -tenantid $TenantFilter -type POST -scope 'https://manage.office.com/.default' -body $AuditLogparams -verbose
                         $WebhookRow = @{
                             PartitionKey           = [string]$TenantFilter
                             RowKey                 = [string]$CIPPID
                             Resource               = $Resource
                             Expiration             = 'Does Not Expire'
-                            WebhookNotificationUrl = [string]$Auditlog.webhook.address
+                            WebhookNotificationUrl = [string]$CIPPAuditURL
                         }
-                        $null = Add-CIPPAzDataTableEntity @WebhookTable -Entity $WebhookRow
+                        Add-CIPPAzDataTableEntity @WebhookTable -Entity $WebhookRow
+                        Write-Host "Creating webhook subscription for $EventType"
+                        $AuditLog = New-GraphPOSTRequest -uri "https://manage.office.com/api/v1.0/$($TenantFilter)/activity/feed/subscriptions/start?contentType=$EventType&PublisherIdentifier=$($TenantFilter)" -tenantid $TenantFilter -type POST -scope 'https://manage.office.com/.default' -body $AuditLogparams -verbose
+
                         Write-LogMessage -user $ExecutingUser -API $APIName -message "Created Webhook subscription for $($TenantFilter) for the log $($EventType)" -Sev 'Info' -tenant $TenantFilter
                     } else {
                         Write-LogMessage -user $ExecutingUser -API $APIName -message "No webhook creation required for $($TenantFilter). Already exists" -Sev 'Info' -tenant $TenantFilter
@@ -50,6 +71,7 @@ function New-CIPPGraphSubscription {
                     if ($_.Exception.Message -like '*already exists*') {
                         Write-LogMessage -user $ExecutingUser -API $APIName -message "Webhook subscription for $($TenantFilter) already exists" -Sev 'Info' -tenant $TenantFilter
                     } else {
+                        Remove-AzDataTableEntity @WebhookTable -Entity @{ PartitionKey = $TenantFilter; RowKey = $CIPPID } | Out-Null
                         Write-LogMessage -user $ExecutingUser -API $APIName -message "Failed to create Webhook Subscription for $($TenantFilter): $($_.Exception.Message)" -Sev 'Error' -tenant $TenantFilter
                     }
                 }

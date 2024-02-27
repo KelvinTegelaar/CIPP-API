@@ -37,5 +37,5 @@
       "excludeApplications": []
     }
   },
-  "displayName": "Enforce Multi factor authentication for each application"
+  "displayName": "CIPP: Enforce Multi factor authentication for each application"
 }

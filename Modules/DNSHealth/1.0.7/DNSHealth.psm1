@@ -1,4 +1,5 @@
-﻿#Region './Private/Get-DomainMacros.ps1' 0
+﻿#Region './Private/Get-DomainMacros.ps1' -1
+
 function Get-DomainMacros {
     [CmdletBinding()]
     Param(
@@ -25,7 +26,8 @@ function Get-DomainMacros {
     $MacroExpand
 }
 #EndRegion './Private/Get-DomainMacros.ps1' 26
-#Region './Private/Get-RsaPublicKeyInfo.ps1' 0
+#Region './Private/Get-RsaPublicKeyInfo.ps1' -1
+
 function Get-RsaPublicKeyInfo {
     <#
     .SYNOPSIS
@@ -192,7 +194,8 @@ namespace SevenTiny.Bantina.Security {
     [SevenTiny.Bantina.Security.RSACommon]::CreateRsaProviderFromPublicKey($EncodedString)
 }
 #EndRegion './Private/Get-RsaPublicKeyInfo.ps1' 166
-#Region './Private/Get-ServerCertificateValidation.ps1' 0
+#Region './Private/Get-ServerCertificateValidation.ps1' -1
+
 function Get-ServerCertificateValidation {
     <#
     .SYNOPSIS
@@ -274,7 +277,8 @@ namespace CyberDrain.CIPP {
     [CyberDrain.CIPP.CertificateCheck]::GetServerCertificate($Url, $FollowRedirect)
 }
 #EndRegion './Private/Get-ServerCertificateValidation.ps1' 81
-#Region './Public/Policies/Read-DmarcPolicy.ps1' 0
+#Region './Public/Policies/Read-DmarcPolicy.ps1' -1
+
 function Read-DmarcPolicy {
     <#
     .SYNOPSIS
@@ -549,7 +553,8 @@ function Read-DmarcPolicy {
     $DmarcAnalysis
 }
 #EndRegion './Public/Policies/Read-DmarcPolicy.ps1' 274
-#Region './Public/Policies/Read-MtaStsPolicy.ps1' 0
+#Region './Public/Policies/Read-MtaStsPolicy.ps1' -1
+
 function Read-MtaStsPolicy {
     <#
     .SYNOPSIS
@@ -676,7 +681,8 @@ function Read-MtaStsPolicy {
     $StsPolicyAnalysis
 }
 #EndRegion './Public/Policies/Read-MtaStsPolicy.ps1' 126
-#Region './Public/Records/Read-DkimRecord.ps1' 0
+#Region './Public/Records/Read-DkimRecord.ps1' -1
+
 function Read-DkimRecord {
     <#
     .SYNOPSIS
@@ -704,7 +710,10 @@ function Read-DkimRecord {
         [string]$Domain,
 
         [Parameter()]
-        [System.Collections.Generic.List[string]]$Selectors = @()
+        [System.Collections.Generic.List[string]]$Selectors = @(),
+
+        [Parameter()]
+        [switch]$FallbackToMicrosoftSelectors
     )
 
     $MXRecord = $null
@@ -728,21 +737,28 @@ function Read-DkimRecord {
     # MX lookup, check for defined selectors
     try {
         $MXRecord = Read-MXRecord -Domain $Domain
-        foreach ($Selector in $MXRecord.Selectors) {
-            try {
-                $Selectors.Add($Selector) | Out-Null
+        if ($MXRecord.Selectors) {
+            foreach ($Selector in $MXRecord.Selectors) {
+                try {
+                    $Selectors.Add($Selector) | Out-Null
+                } catch { Write-Verbose $_.Exception.Message }
             }
+        }
+        if ($MXRecord.MailProvider) {
+            $DkimAnalysis.MailProvider = $MXRecord.MailProvider
+            if ($MXRecord.MailProvider.PSObject.Properties.Name -contains 'MinimumSelectorPass') {
+                $MinimumSelectorPass = $MXRecord.MailProvider.MinimumSelectorPass
+            }
+            $DkimAnalysis.Selectors = $Selectors
+        }
+    } catch { Write-Verbose $_.Exception.Message }
 
-            catch { Write-Verbose $_.Exception.Message }
-        }
-        $DkimAnalysis.MailProvider = $MXRecord.MailProvider
-        if ($MXRecord.MailProvider.PSObject.Properties.Name -contains 'MinimumSelectorPass') {
-            $MinimumSelectorPass = $MXRecord.MailProvider.MinimumSelectorPass
-        }
-        $DkimAnalysis.Selectors = $Selectors
+    # Fallback to Microsoft DKIM selectors
+    if ($FallbackToMicrosoftSelectors.IsPresent -and ($Selectors | Measure-Object | Select-Object -ExpandProperty Count) -eq 0) {
+        $MinimumSelectorPass = 1
+        $Selectors.Add('selector1')
+        $Selectors.Add('selector2')
     }
-
-    catch { Write-Verbose $_.Exception.Message }
 
     # Get unique selectors
     $Selectors = $Selectors | Sort-Object -Unique
@@ -936,8 +952,9 @@ function Read-DkimRecord {
     # Return analysis
     $DkimAnalysis
 }
-#EndRegion './Public/Records/Read-DkimRecord.ps1' 260
-#Region './Public/Records/Read-MtaStsRecord.ps1' 0
+#EndRegion './Public/Records/Read-DkimRecord.ps1' 270
+#Region './Public/Records/Read-MtaStsRecord.ps1' -1
+
 function Read-MtaStsRecord {
     <#
     .SYNOPSIS
@@ -1074,7 +1091,8 @@ function Read-MtaStsRecord {
     $StsAnalysis
 }
 #EndRegion './Public/Records/Read-MtaStsRecord.ps1' 136
-#Region './Public/Records/Read-MXRecord.ps1' 0
+#Region './Public/Records/Read-MXRecord.ps1' -1
+
 function Read-MXRecord {
     <#
     .SYNOPSIS
@@ -1161,7 +1179,7 @@ function Read-MXRecord {
 
             catch { Write-Verbose $_.Exception.Message }
         }
-        $ValidationPasses.Add('Mail exchanger records record(s) are present for this domain.') | Out-Null
+        $ValidationPasses.Add('Mail exchanger record(s) are present for this domain.') | Out-Null
         $MXRecords = $MXRecords | Sort-Object -Property Priority
 
         # Attempt to identify mail provider based on MX record
@@ -1228,7 +1246,8 @@ function Read-MXRecord {
     $MXResults
 }
 #EndRegion './Public/Records/Read-MXRecord.ps1' 153
-#Region './Public/Records/Read-NSRecord.ps1' 0
+#Region './Public/Records/Read-NSRecord.ps1' -1
+
 function Read-NSRecord {
     <#
     .SYNOPSIS
@@ -1292,7 +1311,8 @@ function Read-NSRecord {
     $NSResults
 }
 #EndRegion './Public/Records/Read-NSRecord.ps1' 63
-#Region './Public/Records/Read-SPFRecord.ps1' 0
+#Region './Public/Records/Read-SPFRecord.ps1' -1
+
 function Read-SpfRecord {
     <#
     .SYNOPSIS
@@ -1846,7 +1866,8 @@ function Read-SpfRecord {
     $SpfResults
 }
 #EndRegion './Public/Records/Read-SPFRecord.ps1' 553
-#Region './Public/Records/Read-TlsRptRecord.ps1' 0
+#Region './Public/Records/Read-TlsRptRecord.ps1' -1
+
 function Read-TlsRptRecord {
     <#
     .SYNOPSIS
@@ -1998,7 +2019,8 @@ function Read-TlsRptRecord {
     $TlsRptAnalysis
 }
 #EndRegion './Public/Records/Read-TlsRptRecord.ps1' 151
-#Region './Public/Records/Read-WhoisRecord.ps1' 0
+#Region './Public/Records/Read-WhoisRecord.ps1' -1
+
 function Read-WhoisRecord {
     <#
     .SYNOPSIS
@@ -2174,7 +2196,8 @@ function Read-WhoisRecord {
     $WhoisResults
 }
 #EndRegion './Public/Records/Read-WhoisRecord.ps1' 175
-#Region './Public/Resolver/Resolve-DnsHttpsQuery.ps1' 0
+#Region './Public/Resolver/Resolve-DnsHttpsQuery.ps1' -1
+
 function Resolve-DnsHttpsQuery {
     <#
     .SYNOPSIS
@@ -2253,7 +2276,8 @@ function Resolve-DnsHttpsQuery {
     return $Results
 }
 #EndRegion './Public/Resolver/Resolve-DnsHttpsQuery.ps1' 78
-#Region './Public/Resolver/Set-DnsResolver.ps1' 0
+#Region './Public/Resolver/Set-DnsResolver.ps1' -1
+
 function Set-DnsResolver {
     [CmdletBinding(SupportsShouldProcess)]
     Param(
@@ -2289,7 +2313,8 @@ function Set-DnsResolver {
     }
 }
 #EndRegion './Public/Resolver/Set-DnsResolver.ps1' 35
-#Region './Public/Tests/Test-DNSSEC.ps1' 0
+#Region './Public/Tests/Test-DNSSEC.ps1' -1
+
 function Test-DNSSEC {
     <#
     .SYNOPSIS
@@ -2368,7 +2393,8 @@ function Test-DNSSEC {
     $DSResults
 }
 #EndRegion './Public/Tests/Test-DNSSEC.ps1' 78
-#Region './Public/Tests/Test-HttpsCertificate.ps1' 0
+#Region './Public/Tests/Test-HttpsCertificate.ps1' -1
+
 function Test-HttpsCertificate {
     <#
     .SYNOPSIS
@@ -2529,7 +2555,8 @@ function Test-HttpsCertificate {
     $CertificateTests
 }
 #EndRegion './Public/Tests/Test-HttpsCertificate.ps1' 160
-#Region './Public/Tests/Test-MtaSts.ps1' 0
+#Region './Public/Tests/Test-MtaSts.ps1' -1
+
 function Test-MtaSts {
     <#
     .SYNOPSIS
