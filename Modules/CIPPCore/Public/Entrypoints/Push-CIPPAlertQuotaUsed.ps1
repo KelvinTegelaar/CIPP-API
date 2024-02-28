@@ -12,12 +12,10 @@ function Push-CIPPAlertQuotaUsed {
             if ($_.StorageUsedInBytes -eq 0) { continue }
             $PercentLeft = [math]::round($_.StorageUsedInBytes / $_.prohibitSendReceiveQuotaInBytes * 100)
             if ($QueueItem.value -eq $true) {
+                if ($QueueItem.value) { $Value = $QueueItem.value } else { $Value = 90 }
                 if ($PercentLeft -gt 90) { 
-                    Write-AlertMessage -tenant $($QueueItem.tenant) -message "$($_.UserPrincipalName): Mailbox is more than $($QueueItem.value)% full. Mailbox is $PercentLeft% full" 
+                    Write-AlertMessage -tenant $($QueueItem.tenant) -message "$($_.UserPrincipalName): Mailbox is more than $($value)% full. Mailbox is $PercentLeft% full" 
                 }
-            }
-            elseif ($PercentLeft -gt $QueueItem.value) { 
-                Write-AlertMessage -tenant $($QueueItem.tenant) -message "$($_.UserPrincipalName): Mailbox is more than $($QueueItem.value)% full. Mailbox is $PercentLeft% full" 
             }
         }
     } catch {
