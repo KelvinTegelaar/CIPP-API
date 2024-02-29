@@ -8,22 +8,26 @@ function Invoke-CIPPStandardRotateDKIM {
 
     If ($Settings.remediate) {
 
-        $DKIM | ForEach-Object {
-            try {
-                (New-ExoRequest -tenantid $tenant -cmdlet 'Rotate-DkimSigningConfig' -cmdparams @{ KeySize = 2048; Identity = $_.Identity } -useSystemMailbox $true)
-                Write-LogMessage -API 'Standards' -tenant $tenant -message "Rotated DKIM for $($_.Identity)" -sev Info
-            } catch {
-                Write-LogMessage -API 'Standards' -tenant $tenant -message "Failed to rotate DKIM Error: $($_.exception.message)" -sev Error
+        if ($DKIM) {
+            $DKIM | ForEach-Object {
+                try {
+                    (New-ExoRequest -tenantid $tenant -cmdlet 'Rotate-DkimSigningConfig' -cmdparams @{ KeySize = 2048; Identity = $_.Identity } -useSystemMailbox $true)
+                    Write-LogMessage -API 'Standards' -tenant $tenant -message "Rotated DKIM for $($_.Identity)" -sev Info
+                } catch {
+                    Write-LogMessage -API 'Standards' -tenant $tenant -message "Failed to rotate DKIM Error: $($_.exception.message)" -sev Error
+                }
             }
+        } else {
+            Write-LogMessage -API 'Standards' -tenant $tenant -message 'DKIM is already rotated for all domains' -sev Info
         }
-        Write-LogMessage -API 'Standards' -tenant $tenant -message 'Rotated DKIM' -sev Info
+
     }
 
     if ($Settings.alert) {
-        if ($null -eq $DKIM) {
-            Write-LogMessage -API 'Standards' -tenant $tenant -message 'DKIM is rotated for all domains' -sev Info
-        } else {
+        if ($DKIM) {
             Write-LogMessage -API 'Standards' -tenant $tenant -message "DKIM is not rotated for $($DKIM.Identity -join ';')" -sev Alert
+        } else {
+            Write-LogMessage -API 'Standards' -tenant $tenant -message 'DKIM is rotated for all domains' -sev Info
         }
     }
 

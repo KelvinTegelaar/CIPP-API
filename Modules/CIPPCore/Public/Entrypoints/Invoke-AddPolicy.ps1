@@ -42,7 +42,10 @@ Function Invoke-AddPolicy {
                     if ($PolicyName -in $CheckExististing.displayName) {
                         Throw "Policy with Display Name $($Displayname) Already exists"
                     }
-                
+                    $PolicyFile = $RawJSON | ConvertFrom-Json
+                    $Null = $PolicyFile | Add-Member -MemberType NoteProperty -Name 'description' -Value $description -Force
+                    $null = $PolicyFile | Add-Member -MemberType NoteProperty -Name 'displayName' -Value $displayname -Force
+                    $RawJSON = ConvertTo-Json -InputObject $PolicyFile -Depth 20
                     $CreateRequest = New-GraphPOSTRequest -uri "https://graph.microsoft.com/beta/deviceManagement/$TemplateTypeURL" -tenantid $tenant -type POST -body $RawJSON
                 }
                 'Catalog' {
@@ -62,8 +65,7 @@ Function Invoke-AddPolicy {
                 Set-CIPPAssignedPolicy -GroupName $AssignTo -PolicyId $CreateRequest.id -Type $TemplateTypeURL -TenantFilter $tenant 
             }
             "Successfully added policy for $($Tenant)"
-        }
-        catch {
+        } catch {
             "Failed to add policy for $($Tenant): $($_.Exception.Message)"
             Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $($Tenant) -message "Failed adding policy $($Displayname). Error: $($_.Exception.Message)" -Sev 'Error'
             continue
