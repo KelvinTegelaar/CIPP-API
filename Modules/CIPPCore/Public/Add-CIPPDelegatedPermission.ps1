@@ -25,7 +25,7 @@ function Add-CIPPDelegatedPermission {
     foreach ($App in $requiredResourceAccess) {
         $svcPrincipalId = $ServicePrincipalList | Where-Object -Property AppId -EQ $App.resourceAppId
         if (!$svcPrincipalId) { continue }
-        $NewScope = ($Translator | Where-Object { $_.id -in $App.ResourceAccess.id } | Where-Object { $_.value -notin 'profile', 'openid', 'offline_access' }).value -join ' '
+        $NewScope = ($Translator | Where-Object { $_.id -in $App.ResourceAccess.id }).value -join ' '
         $OldScope = ($CurrentDelegatedScopes | Where-Object -Property Resourceid -EQ $svcPrincipalId.id)
 
         if (!$OldScope) {
@@ -40,14 +40,14 @@ function Add-CIPPDelegatedPermission {
         } else {
             $compare = Compare-Object -ReferenceObject $OldScope.scope.Split(' ') -DifferenceObject $NewScope.Split(' ')
             if (!$compare) {
-                $Results.add("All delegated permissions exist for $($svcPrincipalId.displayName)") | Out-Null
+                $Results.add("All delegated permissions exist for $($svcPrincipalId.displayName): $($NewScope)") | Out-Null
                 continue
             }
             $Patchbody = @{
                 scope = "$NewScope"
             } | ConvertTo-Json -Compress
             $Patchrequest = New-GraphPOSTRequest -uri "https://graph.microsoft.com/v1.0/oauth2PermissionGrants/$($OldScope.id)" -tenantid $Tenantfilter -body $Patchbody -type PATCH
-            $Results.add("Successfully updated permissions for $($svcPrincipalId.displayName)") | Out-Null
+            $Results.add("Successfully updated permissions for $($svcPrincipalId.displayName): $($NewScope)") | Out-Null
         }
     }
 
