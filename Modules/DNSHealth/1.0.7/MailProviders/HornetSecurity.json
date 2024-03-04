@@ -1,0 +1,9 @@
+{
+  "Name": "Hornet Security",
+  "MxMatch": "mx[0-9][0-9].hornetsecurity.com",
+  "SpfInclude": "spf.hornetsecurity.com",
+  "Selectors": [""],
+  "_MxComment": "https://www.hornetsecurity.com/en/onboarding-information/",
+  "_SpfComment": "https://www.hornetsecurity.com/en/onboarding-information/",
+  "_DkimComment": "https://support.hornetsecurity.com/hc/en-us/articles/15123377800593-How-to-set-up-DKIM"
+}
