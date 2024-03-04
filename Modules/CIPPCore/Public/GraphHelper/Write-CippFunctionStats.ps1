@@ -15,7 +15,7 @@ function Write-CippFunctionStats {
         $RowKey = [string](New-Guid).Guid
         $TimeSpan = New-TimeSpan -Start $Start -End $End
         $Duration = [int]$TimeSpan.TotalSeconds
-        
+
         # Flatten data to json string
         $Entity.PartitionKey = $FunctionType
         $Entity.RowKey = $RowKey

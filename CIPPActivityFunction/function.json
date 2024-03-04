@@ -3,7 +3,7 @@
   "entryPoint": "Receive-CippActivityTrigger",
   "bindings": [
     {
-      "name": "name",
+      "name": "Item",
       "type": "activityTrigger",
       "direction": "in"
     }

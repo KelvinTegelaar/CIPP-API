@@ -98,6 +98,7 @@ function Receive-CippActivityTrigger {
         End          = $End
         ErrorMsg     = $ErrorMsg
     }
+
     Write-Information '####### Adding stats'
     Write-CippFunctionStats @Stats
 }
