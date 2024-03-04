@@ -133,7 +133,7 @@
           <S N="Authors">John Duprey</S>
           <S N="IsPrerelease">false</S>
           <S N="ItemType">Module</S>
-          <S N="FileList">DNSHealth.nuspec|MailProviders\BarracudaESS.json|MailProviders\Reflexion.json|MailProviders\Null.json|MailProviders\SpamTitan.json|DNSHealth.psd1|MailProviders\Microsoft365.json|MailProviders\Sophos.json|MailProviders\Proofpoint.json|DNSHealth.psm1|MailProviders\_template.json|MailProviders\Google.json|MailProviders\Intermedia.json|MailProviders\AppRiver.json|MailProviders\Mimecast.json</S>
+          <S N="FileList">DNSHealth.nuspec|MailProviders\BarracudaESS.json|MailProviders\Reflexion.json|MailProviders\Null.json|MailProviders\SpamTitan.json|DNSHealth.psd1|MailProviders\Microsoft365.json|MailProviders\Sophos.json|MailProviders\Proofpoint.json|DNSHealth.psm1|MailProviders\_template.json|MailProviders\Google.json|MailProviders\Intermedia.json|MailProviders\AppRiver.json|MailProviders\Mimecast.json|MailProviders\HornetSecurity.json|MailProviders\SymantecCloud.json</S>
           <S N="GUID">a300d2b0-d468-46d1-88a3-e442a76b655b</S>
           <S N="PowerShellVersion">7.0</S>
         </MS>
