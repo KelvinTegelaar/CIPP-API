@@ -56,20 +56,26 @@ function Receive-CippOrchestrationTrigger {
         MaxNumberOfAttempts = 3
         BackoffCoefficient  = 2
     }
-    $RetryOptions = New-DurableRetryOptions @DurableRetryOptions
-    Write-LogMessage -API $Context.Input.OrchestratorName -tenant $Context.Input.TenantFilter -message "Started $($Context.Input.OrchestratorName)" -sev info
-
-    if (!$Context.Input.Batch -or ($Context.Input.Batch | Measure-Object).Count -eq 0) {
-        $Batch = (Invoke-ActivityFunction -FunctionName 'CIPPActivityFunction' -Input $Context.Input.QueueFunction)
+    if (Test-Json -Json $Context.Input) {
+        $OrchestratorInput = $Context.Input | ConvertFrom-Json
     } else {
-        $Batch = $Context.Input.Batch
+        $OrchestratorInput = $Context.Input
+    }
+    Write-Host ($Context | ConvertTo-Json -Depth 10)
+    $RetryOptions = New-DurableRetryOptions @DurableRetryOptions
+    Write-LogMessage -API $OrchestratorInput.OrchestratorName -tenant $OrchestratorInput.TenantFilter -message "Started $($OrchestratorInput.OrchestratorName)" -sev info
+
+    if (!$OrchestratorInput.Batch -or ($OrchestratorInput.Batch | Measure-Object).Count -eq 0) {
+        $Batch = (Invoke-ActivityFunction -FunctionName 'CIPPActivityFunction' -Input $OrchestratorInput.QueueFunction)
+    } else {
+        $Batch = $OrchestratorInput.Batch
     }
 
     foreach ($Item in $Batch) {
         Invoke-DurableActivity -FunctionName 'CIPPActivityFunction' -Input $Item -NoWait -RetryOptions $RetryOptions
     }
 
-    Write-LogMessage -API $Context.Input.OrchestratorName -tenant $tenant -message "Finished $($Context.Input.OrchestratorName)" -sev Info
+    Write-LogMessage -API $OrchestratorInput.OrchestratorName -tenant $tenant -message "Finished $($OrchestratorInput.OrchestratorName)" -sev Info
 }
 
 function Receive-CippActivityTrigger {
@@ -81,7 +87,7 @@ function Receive-CippActivityTrigger {
     if ($Item.FunctionName) {
         $FunctionName = 'Push-{0}' -f $Item.FunctionName
         try {
-            & $FunctionName @Item
+            & $FunctionName -Item $Item
         } catch {
             $ErrorMsg = $_.Exception.Message
         }

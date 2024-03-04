@@ -92,7 +92,7 @@ function Invoke-CIPPStandardsRun {
         Batch            = @($Batch)
     }
 
-    $InstanceId = Start-NewOrchestration -FunctionName 'CIPPOrchestrator' -InputObject $InputObject
+    $InstanceId = Start-NewOrchestration -FunctionName 'CIPPOrchestrator' -InputObject ($InputObject | ConvertTo-Json -Depth 5)
     Write-Host "Started orchestration with ID = '$InstanceId'"
     $Orchestrator = New-OrchestrationCheckStatusResponse -Request $Request -InstanceId $InstanceId
 }
