@@ -12,11 +12,14 @@ function Push-CIPPAlertSharepointQuota {
         $sharepointToken.Add('accept', 'application/json')
         $sharepointQuota = (Invoke-RestMethod -Method 'GET' -Headers $sharepointToken -Uri "https://$($tenantName)-admin.sharepoint.com/_api/StorageQuotas()?api-version=1.3.2" -ErrorAction Stop).value
         if ($sharepointQuota) {
+            if ($QueueItem.value) { $Value = $QueueItem.value } else { $Value = 90 }
             $UsedStoragePercentage = [int](($sharepointQuota.GeoUsedStorageMB / $sharepointQuota.TenantStorageMB) * 100)
-            if ($UsedStoragePercentage -gt 90) {
-                Write-AlertMessage -tenant $($QueueItem.tenant) -message "SharePoint Storage is at $($UsedStoragePercentage)%"
+            if ($UsedStoragePercentage -gt $Value) {
+                Write-AlertMessage -tenant $($QueueItem.tenant) -message "SharePoint Storage is at $($UsedStoragePercentage)%. Your alert threshold is $($Value)%"
             }
         }
     } catch {
     }
+
+
 }

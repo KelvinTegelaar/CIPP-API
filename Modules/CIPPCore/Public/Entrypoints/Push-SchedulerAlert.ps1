@@ -15,22 +15,23 @@ function Push-SchedulerAlert {
     
         $IgnoreList = @('Etag', 'PartitionKey', 'Timestamp', 'RowKey', 'tenantid', 'tenant', 'type')
         $alertList = $Alerts | Select-Object * -ExcludeProperty $IgnoreList 
-        foreach ($task in ($AlertList.psobject.members | Where-Object { $_.MemberType -EQ 'NoteProperty' -and $_.value -eq $True }).name) {
+        foreach ($task in ($AlertList.psobject.members | Where-Object { $_.MemberType -EQ 'NoteProperty' -and $_.value -ne $false })) {
             $Table = Get-CIPPTable -TableName AlertRunCheck
-            $Filter = "PartitionKey eq '{0}' and RowKey eq '{1}' and Timestamp ge datetime'{2}'" -f $tenant.tenant, $task, (Get-Date).AddMinutes(-10).ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ss')
+            $Filter = "PartitionKey eq '{0}' and RowKey eq '{1}' and Timestamp ge datetime'{2}'" -f $tenant.tenant, $task.Name, (Get-Date).AddMinutes(-10).ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ss')
             $ExistingMessage = Get-CIPPAzDataTableEntity @Table -Filter $Filter
             if (!$ExistingMessage) {
                 $QueueItem = [pscustomobject]@{
                     tenant       = $tenant.tenant
                     tenantid     = $tenant.tenantid
-                    FunctionName = "CIPPAlert$($Task)"
+                    FunctionName = "CIPPAlert$($Task.Name)"
+                    value        = $Task.value
                 }
                 Push-OutputBinding -Name QueueItemOut -Value $QueueItem
-                $QueueItem | Add-Member -MemberType NoteProperty -Name 'RowKey' -Value $task -Force
+                $QueueItem | Add-Member -MemberType NoteProperty -Name 'RowKey' -Value $task.Name -Force
                 $QueueItem | Add-Member -MemberType NoteProperty -Name 'PartitionKey' -Value $tenant.tenant -Force
                 Add-CIPPAzDataTableEntity @Table -Entity $QueueItem -Force
             } else {
-                Write-Host ('ALERTS: Duplicate run found. Ignoring. Tenant: {0}, Task: {1}' -f $tenant.tenant, $task)
+                Write-Host ('ALERTS: Duplicate run found. Ignoring. Tenant: {0}, Task: {1}' -f $tenant.tenant, $task.Name)
             }
 
         }
