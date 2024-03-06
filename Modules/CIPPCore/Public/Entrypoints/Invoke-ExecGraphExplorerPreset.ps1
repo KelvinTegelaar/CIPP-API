@@ -21,21 +21,27 @@ Function Invoke-ExecGraphExplorerPreset {
             $Id = (New-Guid).Guid
         }
         'Save' {
-            $Id = $Request.Body.values.reportTemplate.value
+            $Id = $Request.Body.preset.reportTemplate.value
         }
         'Delete' {
-            $Id = $Request.Body.values.reportTemplate.value
+            $Id = $Request.Body.preset.reportTemplate.value
+        }
+        default {
+            $Request.Body.Action = 'Copy'
+            $Id = (New-Guid).Guid
         }
     }
 
-    $params = $Request.Body.values | Select-Object endpoint, '$filter', '$select', '$count', '$expand', '$search', NoPagination, '$top', IsShared
+    $params = $Request.Body.preset | Select-Object endpoint, '$filter', '$select', '$count', '$expand', '$search', NoPagination, '$top', IsShared
+    if ($params.'$select') { $params.'$select' = ($params.'$select').value -join ',' }
+
     $Preset = [PSCustomObject]@{
         PartitionKey = 'Preset'
         RowKey       = [string]$Id
         id           = [string]$Id
-        name         = [string]$Request.Body.values.name
+        name         = [string]$Request.Body.preset.name
         Owner        = [string]$Username
-        IsShared     = $Request.Body.values.IsShared
+        IsShared     = $Request.Body.preset.IsShared
         params       = [string](ConvertTo-Json -InputObject $params -Compress)
     }
 
