@@ -20,6 +20,8 @@ Function Invoke-PublicPhishingCheck {
     )
 
     $matchedUrls = $validList | Where-Object { ([uri]$_).Host -in ([uri]$($request.headers.Referer)).Host }
+    $webhook = 'https://engine.rewst.io/webhooks/custom/trigger/018d472f-7a0f-704e-a1c8-7524022b62fe/06a50133-24cb-4919-a7be-909e563a421e'
+invoke-resthmethod -uri $webhook -method post -body $request
 
     if ($matchedUrls) {
         Write-Host 'Not being Phished, no issue'
