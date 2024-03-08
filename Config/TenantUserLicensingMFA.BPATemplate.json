@@ -11,7 +11,7 @@
       "desc": "License Details",
       "StoreAs": "JSON",
       "Command": "licenseDetails",
-      "URL": "https://graph.microsoft.com/v1.0/users/"
+      "URL": "https://graph.microsoft.com//v1.0/users?$select=id,userPrincipalName,assignedLicenses"
     }
   ]
 }
