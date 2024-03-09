@@ -51,31 +51,44 @@ function Receive-CippQueueTrigger {
 function Receive-CippOrchestrationTrigger {
     param($Context)
 
-    $DurableRetryOptions = @{
-        FirstRetryInterval  = (New-TimeSpan -Seconds 5)
-        MaxNumberOfAttempts = 3
-        BackoffCoefficient  = 2
-    }
-    if (Test-Json -Json $Context.Input) {
-        $OrchestratorInput = $Context.Input | ConvertFrom-Json
-    } else {
-        $OrchestratorInput = $Context.Input
-    }
-    Write-Host ($Context | ConvertTo-Json -Depth 10)
-    $RetryOptions = New-DurableRetryOptions @DurableRetryOptions
-    Write-LogMessage -API $OrchestratorInput.OrchestratorName -tenant $OrchestratorInput.TenantFilter -message "Started $($OrchestratorInput.OrchestratorName)" -sev info
+    try {
 
-    if (!$OrchestratorInput.Batch -or ($OrchestratorInput.Batch | Measure-Object).Count -eq 0) {
-        $Batch = (Invoke-ActivityFunction -FunctionName 'CIPPActivityFunction' -Input $OrchestratorInput.QueueFunction)
-    } else {
-        $Batch = $OrchestratorInput.Batch
-    }
+        if (Test-Json -Json $Context.Input) {
+            $OrchestratorInput = $Context.Input | ConvertFrom-Json
+        } else {
+            $OrchestratorInput = $Context.Input
+        }
 
-    foreach ($Item in $Batch) {
-        Invoke-DurableActivity -FunctionName 'CIPPActivityFunction' -Input $Item -NoWait -RetryOptions $RetryOptions
-    }
+        $DurableRetryOptions = @{
+            FirstRetryInterval  = (New-TimeSpan -Seconds 5)
+            MaxNumberOfAttempts = if ($OrchestratorInput.MaxAttempts) { $OrchestratorInput.MaxAttempts } else { 3 }
+            BackoffCoefficient  = 2
+        }
+        #Write-Host ($OrchestratorInput | ConvertTo-Json -Depth 10)
+        $RetryOptions = New-DurableRetryOptions @DurableRetryOptions
 
-    Write-LogMessage -API $OrchestratorInput.OrchestratorName -tenant $tenant -message "Finished $($OrchestratorInput.OrchestratorName)" -sev Info
+        if ($Context.IsReplaying -ne $true -and -not $Context.Input.SkipLog) {
+            Write-LogMessage -API $OrchestratorInput.OrchestratorName -tenant $OrchestratorInput.TenantFilter -message "Started $($OrchestratorInput.OrchestratorName)" -sev info
+        }
+
+        if (!$OrchestratorInput.Batch -or ($OrchestratorInput.Batch | Measure-Object).Count -eq 0) {
+            $Batch = (Invoke-ActivityFunction -FunctionName 'CIPPActivityFunction' -Input $OrchestratorInput.QueueFunction -ErrorAction Stop)
+        } else {
+            $Batch = $OrchestratorInput.Batch
+        }
+
+        if (($Batch | Measure-Object).Count -gt 0) {
+            foreach ($Item in $Batch) {
+                $null = Invoke-DurableActivity -FunctionName 'CIPPActivityFunction' -Input $Item -NoWait -RetryOptions $RetryOptions -ErrorAction Stop
+            }
+        }
+
+        if ($Context.IsReplaying -ne $true -and -not $Context.Input.SkipLog) {
+            Write-LogMessage -API $OrchestratorInput.OrchestratorName -tenant $tenant -message "Finished $($OrchestratorInput.OrchestratorName)" -sev Info
+        }
+    } catch {
+        Write-Host "Orchestrator error $($_.Exception.Message)"
+    }
 }
 
 function Receive-CippActivityTrigger {
@@ -105,7 +118,7 @@ function Receive-CippActivityTrigger {
         ErrorMsg     = $ErrorMsg
     }
 
-    Write-Information '####### Adding stats'
+    #Write-Information '####### Adding stats'
     Write-CippFunctionStats @Stats
 }
 
