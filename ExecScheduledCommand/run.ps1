@@ -19,7 +19,7 @@ try {
     if ($results -is [String]) {
         $results = @{ Results = $results }
     }
-    if ($results -is [array]) {
+    if ($results -is [array] -and $results[0] -is [string]) {
         $results = $results | Where-Object { $_ -is [string] }
         $results = $results | ForEach-Object { @{ Results = $_ } }
     }
