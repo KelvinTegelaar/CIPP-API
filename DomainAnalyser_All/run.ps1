@@ -52,6 +52,7 @@ $Result = [PSCustomObject]@{
     DNSSECPresent        = ''
     MailProvider         = ''
     DKIMEnabled          = ''
+    DKIMRecords          = ''
     Score                = ''
     MaximumScore         = 160
     ScorePercentage      = ''
@@ -218,6 +219,7 @@ try {
     if ($DkimRecordCount -gt 0 -and $DkimFailCount -eq 0) {
         $Result.DKIMEnabled = $true
         $ScoreDomain += $Scores.DKIMActiveAndWorking
+        $Result.DKIMRecords = $DkimRecord.Records | Select-Object Selector, Record
     } else {
         $Result.DKIMEnabled = $false
         $ScoreExplanation.Add('DKIM Not Configured') | Out-Null
