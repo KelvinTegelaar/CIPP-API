@@ -2,15 +2,14 @@ function Push-CIPPAlertExpiringLicenses {
     [CmdletBinding()]
     Param (
         [Parameter(Mandatory = $true)]
-        $QueueItem,
-        $TriggerMetadata
+        $Item
     )
     try {
-        Get-CIPPLicenseOverview -TenantFilter $QueueItem.tenant | ForEach-Object {
+        Get-CIPPLicenseOverview -TenantFilter $Item.tenant | ForEach-Object {
             $timeTorenew = [int64]$_.TimeUntilRenew
             if ($timeTorenew -lt 30 -and $_.TimeUntilRenew -gt 0) {
                 Write-Host "$($_.License) will expire in $($_.TimeUntilRenew) days. The estimated term is $($_.EstTerm)"
-                Write-AlertMessage -tenant $($QueueItem.tenant) -message "$($_.License) will expire in $($_.TimeUntilRenew) days. The estimated term is $($_.EstTerm)"
+                Write-AlertMessage -tenant $($Item.tenant) -message "$($_.License) will expire in $($_.TimeUntilRenew) days. The estimated term is $($_.EstTerm)"
             }
         }
     } catch {
