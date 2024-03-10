@@ -18,12 +18,12 @@ Function Invoke-AddExConnector {
     $Result = foreach ($Tenantfilter in $tenants) {
         try {
             $GraphRequest = New-ExoRequest -tenantid $Tenantfilter -cmdlet "New-$($ConnectorType)connector" -cmdParams $RequestParams 
-            "Successfully created transport rule for $Tenantfilter."
-            Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $Tenantfilter -message "Created transport rule for $($Tenantfilter)" -sev 'Info'
+            "Successfully created Connector for $Tenantfilter."
+            Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $Tenantfilter -message "Created Connector for $($Tenantfilter)" -sev 'Info'
         }
         catch {
-            "Could not create created transport rule for $($Tenantfilter): $($_.Exception.message)"
-            Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $Tenantfilter -message "Could not create created transport rule for $($Tenantfilter): $($_.Exception.message)" -sev 'Error'
+            "Could not create created Connector for $($Tenantfilter): $($_.Exception.message)"
+            Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $Tenantfilter -message "Could not create created Connector for $($Tenantfilter): $($_.Exception.message)" -sev 'Error'
         }
     }
 
