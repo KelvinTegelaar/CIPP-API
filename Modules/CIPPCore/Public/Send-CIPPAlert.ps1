@@ -18,7 +18,7 @@ function Send-CIPPAlert {
         Write-Host "Trying to send email"
         try {
             if ($Config.email -like '*@*') {
-                $Recipients = $Config.email.split(",").trim() | ForEach-Object { if ($_ -like '*@*') { [pscustomobject]@{EmailAddress = @{Address = $_ } } } }
+                $Recipients = $Config.email.split($(if ($Config.email -like "*,*") { ',' } else { ';' })).trim() | ForEach-Object { if ($_ -like '*@*') { [pscustomobject]@{EmailAddress = @{Address = $_ } } } }
                 $PowerShellBody = [PSCustomObject]@{
                     message         = @{
                         subject      = $Title
