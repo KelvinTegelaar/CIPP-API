@@ -4,13 +4,13 @@ function Invoke-CIPPStandardAuditLog {
     Internal
     #>
     param($Tenant, $Settings)
-    
-    $AuditLogEnabled = (New-ExoRequest -tenantid $Tenant -cmdlet 'Get-AdminAuditLogConfig').UnifiedAuditLogIngestionEnabled
+    Write-Host ($Settings | ConvertTo-Json)
+    $AuditLogEnabled = (New-ExoRequest -tenantid $Tenant -cmdlet 'Get-AdminAuditLogConfig' -Select UnifiedAuditLogIngestionEnabled).UnifiedAuditLogIngestionEnabled
 
     If ($Settings.remediate) {
         Write-Host 'Time to remediate'
-        
-        $DehydratedTenant = (New-ExoRequest -tenantid $Tenant -cmdlet 'Get-OrganizationConfig').IsDehydrated
+
+        $DehydratedTenant = (New-ExoRequest -tenantid $Tenant -cmdlet 'Get-OrganizationConfig' -Select IsDehydrated).IsDehydrated
         if ($DehydratedTenant) {
             try {
                 New-ExoRequest -tenantid $Tenant -cmdlet 'Enable-OrganizationCustomization'
@@ -20,7 +20,7 @@ function Invoke-CIPPStandardAuditLog {
                 Write-LogMessage -API 'Standards' -tenant $tenant -message "Failed to enable organization customization. Error: $ErrorMessage" -sev Debug
             }
         }
-        
+
         try {
             if ($AuditLogEnabled) {
                 Write-LogMessage -API 'Standards' -tenant $tenant -message 'Unified Audit Log already enabled.' -sev Info

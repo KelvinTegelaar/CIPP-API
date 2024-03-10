@@ -5,7 +5,7 @@ $Tenants = Get-CIPPAzDataTableEntity @Table | Where-Object -Property PartitionKe
 
 $Tasks = foreach ($Tenant in $Tenants) {
     if ($Tenant.tenant -ne 'AllTenants') {
-        [pscustomobject]@{ 
+        [pscustomobject]@{
             Tenant   = $Tenant.tenant
             Tag      = 'SingleTenant'
             TenantID = $Tenant.tenantid
@@ -15,7 +15,7 @@ $Tasks = foreach ($Tenant in $Tenants) {
         Write-Host 'All tenants, doing them all'
         $TenantList = Get-Tenants
         foreach ($t in $TenantList) {
-            [pscustomobject]@{ 
+            [pscustomobject]@{
                 Tenant   = $t.defaultDomainName
                 Tag      = 'AllTenants'
                 TenantID = $t.customerId
@@ -23,19 +23,22 @@ $Tasks = foreach ($Tenant in $Tenants) {
             }
         }
     }
-}   
+}
 
-foreach ($Task in $Tasks) {
-    $QueueItem = [pscustomobject]@{
+$Batch = foreach ($Task in $Tasks) {
+    [pscustomobject]@{
         Tenant       = $task.tenant
         Tenantid     = $task.tenantid
         Tag          = $task.tag
         Type         = $task.type
         FunctionName = "Scheduler$($Task.Type)"
     }
-    try {
-        Push-OutputBinding -Name QueueItem -Value $QueueItem 
-    } catch {
-        Write-Host "Could not launch queue item for $($Task.tenant): $($_.Exception.Message)"
-    }
 }
+$InputObject = [PSCustomObject]@{
+    OrchestratorName = 'Scheduler'
+    Batch            = @($Batch)
+}
+#Write-Host ($InputObject | ConvertTo-Json)
+$InstanceId = Start-NewOrchestration -FunctionName 'CIPPOrchestrator' -InputObject ($InputObject | ConvertTo-Json -Depth 5)
+Write-Host "Started orchestration with ID = '$InstanceId'"
+#$Orchestrator = New-OrchestrationCheckStatusResponse -Request $Request -InstanceId $InstanceId
