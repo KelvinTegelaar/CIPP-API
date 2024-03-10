@@ -40,9 +40,14 @@ Function Invoke-ListUserSigninLogs {
         @{ Name = 'FailureReason'; Expression = { $_.status.failureReason } },
         @{ Name = 'FullDetails'; Expression = { $_ } }
         # Associate values to output bindings by calling 'Push-OutputBinding'.
+        if ($GraphRequest.FullDetails -eq $null) {
+            $GraphRequest = $null
+        } else {
+            $GraphRequest = @($GraphRequest)
+        }
         Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
                 StatusCode = [HttpStatusCode]::OK
-                Body       = @($GraphRequest)
+                Body       = $GraphRequest
             })
     } catch {
         Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -message "Failed to retrieve Sign In report: $($_.Exception.message) " -Sev 'Error' -tenant $TenantFilter
