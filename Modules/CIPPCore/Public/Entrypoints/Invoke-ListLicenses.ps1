@@ -18,7 +18,11 @@ Function Invoke-ListLicenses {
     # Interact with query parameters or the body of the request.
     $TenantFilter = $Request.Query.TenantFilter
     $RawGraphRequest = if ($TenantFilter -ne 'AllTenants') {
-        $GraphRequest = Get-CIPPLicenseOverview -TenantFilter $TenantFilter
+        $GraphRequest = Get-CIPPLicenseOverview -TenantFilter $TenantFilter | ForEach-Object { 
+            $TermInfo = $_.TermInfo | ConvertFrom-Json -ErrorAction SilentlyContinue
+            $_.TermInfo = $TermInfo
+            $_
+        }
     } else {
         $Table = Get-CIPPTable -TableName cachelicenses
         $Rows = Get-CIPPAzDataTableEntity @Table | Where-Object -Property Timestamp -GT (Get-Date).AddHours(-1)
@@ -29,7 +33,11 @@ Function Invoke-ListLicenses {
                 License = 'Loading data for all tenants. Please check back in 1 minute'
             }
         } else {
-            $GraphRequest = $Rows
+            $GraphRequest = $Rows | ForEach-Object { 
+                $TermInfo = $_.TermInfo | ConvertFrom-Json -ErrorAction SilentlyContinue
+                $_.TermInfo = $TermInfo
+                $_
+            }
         }
     }
 
