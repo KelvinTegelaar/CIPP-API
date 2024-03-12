@@ -43,10 +43,10 @@ function Get-CIPPLicenseOverview {
                     Status            = $SubInfo.status
                     Term              = $Term
                     TotalLicenses     = $SubInfo.totalLicenses
-                    TimeUntilRenew    = $TimeUntilRenew
+                    DaysUntilRenew    = $TimeUntilRenew
                     NextLifecycle     = $SubInfo.nextLifecycleDateTime
-                    SubscriptionId    = $subinfo.id
                     IsTrial           = $SubInfo.isTrial
+                    SubscriptionId    = $subinfo.id
                     CSPSubscriptionId = $SubInfo.commerceSubscriptionId
                     OCPSubscriptionId = $SubInfo.ocpSubscriptionId
                 }
