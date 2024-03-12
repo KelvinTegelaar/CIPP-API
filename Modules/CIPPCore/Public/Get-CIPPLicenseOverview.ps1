@@ -27,7 +27,7 @@ function Get-CIPPLicenseOverview {
             if (!$PrettyName) { $PrettyName = $sku.skuPartNumber }
             
             # Initialize $Term with the default value
-            $TermInfo = foreach ($Subscription in $skuid.subscriptionIds) {
+            $TermInfo = foreach ($Subscription in $sku.subscriptionIds) {
                 $SubInfo = $SkuIDs | Where-Object { $_.id -eq $Subscription }
                 $diff = $SubInfo.nextLifecycleDateTime - $SubInfo.createdDateTime
                 $Term = 'Term unknown or non-NCE license'
