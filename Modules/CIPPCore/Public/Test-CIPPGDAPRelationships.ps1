@@ -38,7 +38,7 @@ function Test-CIPPGDAPRelationships {
         }
         $me = (New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/me?$select=UserPrincipalName' -NoAuthCheck $true).UserPrincipalName
         $CIPPGroupCount = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/groups/`$count?`$filter=startsWith(displayName,'M365 GDAP')" -NoAuthCheck $true -ComplexFilter
-        $SAMUserMemberships = New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/me/memberOf?$select=id,displayName,isAssignableToRole' -NoAuthCheck $true
+        $SAMUserMemberships = New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/me/transitiveMemberOf?$select=id,displayName,isAssignableToRole' -NoAuthCheck $true
         $ExpectedGroups = @(
             'AdminAgents',
             'M365 GDAP Application Administrator',
