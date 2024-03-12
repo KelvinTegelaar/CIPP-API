@@ -158,9 +158,9 @@ function Get-GraphRequestList {
                         }
                         Write-Host 'Pushing output bindings'
                         try {
-                            Get-Tenants -IncludeErrors | ForEach-Object {
+                            $Batch = Get-Tenants -IncludeErrors | ForEach-Object {
                                 $TenantFilter = $_.defaultDomainName
-                                $QueueTenant = [PSCustomObject]@{
+                                [PSCustomObject]@{
                                     FunctionName                = 'ListGraphRequestQueue'
                                     TenantFilter                = $TenantFilter
                                     Endpoint                    = $Endpoint
@@ -175,8 +175,15 @@ function Get-GraphRequestList {
                                     ReverseTenantLookup         = $ReverseTenantLookup.IsPresent
                                 }
 
-                                Push-OutputBinding -Name QueueItem -Value $QueueTenant
+                                #Push-OutputBinding -Name QueueItem -Value $QueueTenant
                             }
+
+                            $InputObject = @{
+                                OrchestratorName = 'GraphRequestOrchestrator'
+                                Batch            = @($Batch)
+                            }
+                            #Write-Host ($InputObject | ConvertTo-Json -Depth 5)
+                            $InstanceId = Start-NewOrchestration -FunctionName 'CIPPOrchestrator' -InputObject ($InputObject | ConvertTo-Json -Depth 5)
                         } catch {
                             Write-Host "QUEUE ERROR: $($_.Exception.Message)"
                         }
@@ -234,7 +241,13 @@ function Get-GraphRequestList {
                                     ReverseTenantLookup         = $ReverseTenantLookup.IsPresent
                                 }
 
-                                Push-OutputBinding -Name QueueItem -Value $QueueTenant
+                                $InputObject = @{
+                                    OrchestratorName = 'GraphRequestOrchestrator'
+                                    Batch            = @($QueueTenant)
+                                }
+                                $InstanceId = Start-NewOrchestration -FunctionName 'CIPPOrchestrator' -InputObject ($InputObject | ConvertTo-Json -Depth 5)
+
+                                #Push-OutputBinding -Name QueueItem -Value $QueueTenant
 
                                 [PSCustomObject]@{
                                     QueueMessage = ('Loading {0} rows for {1}. Please check back after the job completes' -f $Count, $TenantFilter)
