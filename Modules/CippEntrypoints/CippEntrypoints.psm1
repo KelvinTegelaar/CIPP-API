@@ -66,7 +66,7 @@ function Receive-CippOrchestrationTrigger {
         #Write-Host ($OrchestratorInput | ConvertTo-Json -Depth 10)
         $RetryOptions = New-DurableRetryOptions @DurableRetryOptions
 
-        if ($Context.IsReplaying -ne $true -and $Context.Input.SkipLog -ne $true) {
+        if ($Context.IsReplaying -ne $true -and $OrchestratorInput.SkipLog -ne $true) {
             Write-LogMessage -API $OrchestratorInput.OrchestratorName -tenant $OrchestratorInput.TenantFilter -message "Started $($OrchestratorInput.OrchestratorName)" -sev info
         }
 
@@ -82,7 +82,7 @@ function Receive-CippOrchestrationTrigger {
             }
         }
 
-        if ($Context.IsReplaying -ne $true -and $Context.Input.SkipLog -ne $true) {
+        if ($Context.IsReplaying -ne $true -and $OrchestratorInput.SkipLog -ne $true) {
             Write-LogMessage -API $OrchestratorInput.OrchestratorName -tenant $tenant -message "Finished $($OrchestratorInput.OrchestratorName)" -sev Info
         }
     } catch {
