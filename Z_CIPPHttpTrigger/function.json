@@ -30,19 +30,7 @@
     {
       "type": "queue",
       "direction": "out",
-      "name": "mfaqueue",
-      "queueName": "mfaqueue"
-    },
-    {
-      "type": "queue",
-      "direction": "out",
       "name": "mailboxstats",
-      "queueName": "generalAllTenantQueue"
-    },
-    {
-      "type": "queue",
-      "direction": "out",
-      "name": "listusers",
       "queueName": "generalAllTenantQueue"
     },
     {
