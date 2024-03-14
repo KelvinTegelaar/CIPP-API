@@ -30,18 +30,6 @@
     {
       "type": "queue",
       "direction": "out",
-      "name": "LicenseQueue",
-      "queueName": "licqueue"
-    },
-    {
-      "type": "queue",
-      "direction": "out",
-      "name": "mbxrulequeue",
-      "queueName": "mbxrulequeue"
-    },
-    {
-      "type": "queue",
-      "direction": "out",
       "name": "mfaqueue",
       "queueName": "mfaqueue"
     },
