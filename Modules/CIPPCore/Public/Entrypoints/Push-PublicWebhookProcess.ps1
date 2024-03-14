@@ -7,11 +7,11 @@ function Push-PublicWebhookProcess {
         } elseif ($Item.Type -eq 'AuditLog') {
             Invoke-CippWebhookProcessing -TenantFilter $Item.TenantFilter -Data ($Item.Data | ConvertFrom-Json) -CIPPPURL $Item.CIPPURL
         }
-        $WebhookIncoming = Get-CIPPTable -TableName WebhookIncoming
-        $Entity = $Item | Select-Object -Property RowKey, PartitionKey
-        Remove-AzDataTableEntity @WebhookIncoming -Entity $Entity
     } catch {
         Write-Host "Webhook Exception: $($_.Exception.Message)"
+    } finally {
+        $WebhookIncoming = Get-CIPPTable -TableName WebhookIncoming
+        $Entity = $Item | Select-Object -Property RowKey, PartitionKey
+        Remove-AzDataTableEntity @WebhookIncoming -Entity $Entity 
     }
-
 }
