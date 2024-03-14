@@ -6,7 +6,6 @@ function Push-CIPPAlertAppSecretExpiry {
         $TriggerMetadata
     )
     $LastRunTable = Get-CIPPTable -Table AlertLastRun
-
     
     try {
         $Filter = "RowKey eq 'AppSecretExpiry' and PartitionKey eq '{0}'" -f $QueueItem.tenantid
@@ -34,7 +33,7 @@ function Push-CIPPAlertAppSecretExpiry {
             Add-CIPPAzDataTableEntity @LastRunTable -Entity $LastRun -Force
         }
     } catch {
-        
+        Write-AlertMessage -tenant $($QueueItem.tenant) -message "Failed to check App registration expiry for $($QueueItem.tenant): $(Get-NormalizedError -message $_.Exception.message)"
     }
 }
 
