@@ -30,19 +30,7 @@
     {
       "type": "queue",
       "direction": "out",
-      "name": "mfaqueue",
-      "queueName": "mfaqueue"
-    },
-    {
-      "type": "queue",
-      "direction": "out",
       "name": "mailboxstats",
-      "queueName": "generalAllTenantQueue"
-    },
-    {
-      "type": "queue",
-      "direction": "out",
-      "name": "listusers",
       "queueName": "generalAllTenantQueue"
     },
     {
@@ -66,12 +54,6 @@
     {
       "type": "queue",
       "direction": "out",
-      "name": "gdapinvitequeue",
-      "queueName": "gdapinvitequeue"
-    },
-    {
-      "type": "queue",
-      "direction": "out",
       "name": "gdapqueue",
       "queueName": "gdapqueue"
     },
@@ -86,12 +68,6 @@
       "direction": "out",
       "name": "offboardingmailbox",
       "queueName": "offboardingmailbox"
-    },
-    {
-      "type": "queue",
-      "direction": "out",
-      "name": "QueueWebhook",
-      "queueName": "webhooksqueue"
     },
     {
       "name": "starter",
