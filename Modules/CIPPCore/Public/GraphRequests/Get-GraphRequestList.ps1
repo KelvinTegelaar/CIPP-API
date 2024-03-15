@@ -68,6 +68,7 @@ function Get-GraphRequestList {
 
     $TableName = ('cache{0}' -f ($Endpoint -replace '[^A-Za-z0-9]'))[0..62] -join ''
     Write-Host "Table: $TableName"
+    $Endpoint = $Endpoint -replace '^/', ''
     $DisplayName = ($Endpoint -split '/')[0]
 
     if ($QueueNameOverride) {
