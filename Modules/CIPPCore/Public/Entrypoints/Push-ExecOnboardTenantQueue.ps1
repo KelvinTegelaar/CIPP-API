@@ -4,11 +4,11 @@ Function Push-ExecOnboardTenantQueue {
     Entrypoint
     #>
     [CmdletBinding()]
-    param($QueueItem, $TriggerMetadata)
+    param($Item)
     try {
         $DateFormat = '%Y-%m-%d %H:%M:%S'
-        $Id = $QueueItem.id
-        #Write-Host ($QueueItem.Roles | ConvertTo-Json)
+        $Id = $Item.id
+        #Write-Host ($Item.Roles | ConvertTo-Json)
         $Start = Get-Date
         $Logs = [System.Collections.Generic.List[object]]::new()
         $OnboardTable = Get-CIPPTable -TableName 'TenantOnboarding'
@@ -117,7 +117,7 @@ Function Push-ExecOnboardTenantQueue {
         if ($OnboardingSteps.Step2.Status -eq 'succeeded') {
             $Logs.Add([PSCustomObject]@{ Date = Get-Date -UFormat $DateFormat; Log = 'Checking group mapping' })
             $AccessAssignments = New-GraphGetRequest -Uri "https://graph.microsoft.com/beta/tenantRelationships/delegatedAdminRelationships/$Id/accessAssignments"
-            if ($AccessAssignments.id -and $QueueItem.AutoMapRoles -ne $true) {
+            if ($AccessAssignments.id -and $Item.AutoMapRoles -ne $true) {
                 $Logs.Add([PSCustomObject]@{ Date = Get-Date -UFormat $DateFormat; Log = 'Groups mapped' })
                 $OnboardingSteps.Step3.Status = 'succeeded'
                 $OnboardingSteps.Step3.Message = 'Your GDAP relationship already has mapped security groups'
@@ -136,8 +136,8 @@ Function Push-ExecOnboardTenantQueue {
                     $MissingRoles = [System.Collections.Generic.List[object]]::new()
                     $Logs.Add([PSCustomObject]@{ Date = Get-Date -UFormat $DateFormat; Log = 'Relationship has existing access assignments, checking for missing mappings' })
                     #Write-Host ($AccessAssignments | ConvertTo-Json -Depth 5)
-                    if ($QueueItem.Roles -and $QueueItem.AutoMapRoles -eq $true) {
-                        foreach ($Role in $QueueItem.Roles) {
+                    if ($Item.Roles -and $Item.AutoMapRoles -eq $true) {
+                        foreach ($Role in $Item.Roles) {
                             if ($AccessAssignments.accessContainer.accessContainerid -notcontains $Role.GroupId -and $Relationship.accessDetails.unifiedRoles.roleDefinitionId -contains $Role.roleDefinitionId) {
                                 $Logs.Add([PSCustomObject]@{ Date = Get-Date -UFormat $DateFormat; Log = "Adding missing group to relationship: $($Role.GroupName)" })
                                 $MissingRoles.Add([PSCustomObject]$Role)
@@ -161,16 +161,16 @@ Function Push-ExecOnboardTenantQueue {
                     }
                 }
 
-                if (!$AccessAssignments.id -and !$Invite -and $QueueItem.Roles) {
+                if (!$AccessAssignments.id -and !$Invite -and $Item.Roles) {
                     $Logs.Add([PSCustomObject]@{ Date = Get-Date -UFormat $DateFormat; Log = 'No access assignments found, using defined role mapping.' })
                     $MatchingRoles = [System.Collections.Generic.List[object]]::new()
-                    foreach ($Role in $QueueItem.Roles) {
+                    foreach ($Role in $Item.Roles) {
                         if ($Relationship.accessDetails.unifiedRoles.roleDefinitionId -contains $Role.roleDefinitionId) {
                             $MatchingRoles.Add([PSCustomObject]$Role)
                         }
                     }
 
-                    if (($MatchingRoles | Measure-Object).Count -gt 0 -and $QueueItem.AutoMapRoles -eq $true) {
+                    if (($MatchingRoles | Measure-Object).Count -gt 0 -and $Item.AutoMapRoles -eq $true) {
                         $Invite = [PSCustomObject]@{
                             'PartitionKey' = 'invite'
                             'RowKey'       = $Id
@@ -224,11 +224,11 @@ Function Push-ExecOnboardTenantQueue {
                 if ($AccessAssignments.status -notcontains 'pending') {
                     $OnboardingSteps.Step3.Message = 'Group check: Access assignments are mapped and active'
                     $OnboardingSteps.Step3.Status = 'succeeded'
-                    if ($QueueItem.AddMissingGroups -eq $true) {
+                    if ($Item.AddMissingGroups -eq $true) {
                         $Logs.Add([PSCustomObject]@{ Date = Get-Date -UFormat $DateFormat; Log = 'Checking for missing groups for SAM user' })
                         $SamUserId = (New-GraphGetRequest -uri "https://graph.microsoft.com/beta/me?`$select=id").id
                         $CurrentMemberships = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/me/transitiveMemberOf?`$select=id,displayName"
-                        foreach ($Role in $QueueItem.Roles) {
+                        foreach ($Role in $Item.Roles) {
                             if ($CurrentMemberships.id -notcontains $Role.GroupId) {
                                 $PostBody = @{
                                     '@odata.id' = 'https://graph.microsoft.com/v1.0/directoryObjects/{0}' -f $SamUserId

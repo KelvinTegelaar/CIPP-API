@@ -13,7 +13,7 @@ function Push-CIPPAlertMFAAdmins {
         }
         if (!$DuoActive) {
             $users = New-GraphGETRequest -uri 'https://graph.microsoft.com/beta/reports/authenticationMethods/userRegistrationDetails?$top=999&$filter=IsAdmin eq true' -tenantid $($Item.tenant) | Where-Object -Property 'isMfaRegistered' -EQ $false
-            if ($users) {
+            if ($users.UserPrincipalName) {
                 Write-AlertMessage -tenant $Item.tenant -message "The following admins do not have MFA registered: $($users.UserPrincipalName -join ', ')"
             }
         } else {
