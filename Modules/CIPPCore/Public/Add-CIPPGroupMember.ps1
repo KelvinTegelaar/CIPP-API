@@ -16,7 +16,7 @@ function Add-CIPPGroupMember(
         } else {
             New-GraphPostRequest -uri "https://graph.microsoft.com/beta/groups/$($GroupId)" -tenantid $TenantFilter -type patch -body $addmemberbody -Verbose
         }
-        $Message = "Successfully added user $($Member) to $GroupId."
+        $Message = "Successfully added user $($Member) to $($GroupId)."
         Write-LogMessage -user $ExecutingUser -API $APIName -tenant $TenantFilter -message $Message -Sev 'Info'
         return $message
         return
