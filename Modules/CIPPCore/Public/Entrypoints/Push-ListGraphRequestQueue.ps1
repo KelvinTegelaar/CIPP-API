@@ -4,36 +4,36 @@ function Push-ListGraphRequestQueue {
     Entrypoint
     #>
     # Input bindings are passed in via param block.
-    param($QueueItem, $TriggerMetadata)
+    param($Item)
 
     # Write out the queue message and metadata to the information log.
-    Write-Host "PowerShell queue trigger function processed work item: $($QueueItem.Endpoint) - $($QueueItem.TenantFilter)"
+    Write-Host "PowerShell queue trigger function processed work item: $($Item.Endpoint) - $($Item.TenantFilter)"
 
-    $TenantQueueName = '{0} - {1}' -f $QueueItem.QueueName, $QueueItem.TenantFilter
-    Update-CippQueueEntry -RowKey $QueueItem.QueueId -Status 'Processing' -Name $TenantQueueName
+    $TenantQueueName = '{0} - {1}' -f $Item.QueueName, $Item.TenantFilter
+    Update-CippQueueEntry -RowKey $Item.QueueId -Status 'Processing' -Name $TenantQueueName
 
     $ParamCollection = [System.Web.HttpUtility]::ParseQueryString([String]::Empty)
-    foreach ($Item in ($QueueItem.Parameters.GetEnumerator() | Sort-Object -CaseSensitive -Property Key)) {
-        $ParamCollection.Add($Item.Key, $Item.Value)
+    foreach ($Param in ($Item.Parameters.GetEnumerator() | Sort-Object -CaseSensitive -Property Key)) {
+        $ParamCollection.Add($Param.Key, $Param.Value)
     }
 
-    $PartitionKey = $QueueItem.PartitionKey
+    $PartitionKey = $Item.PartitionKey
 
-    $TableName = ('cache{0}' -f ($QueueItem.Endpoint -replace '[^A-Za-z0-9]'))[0..62] -join ''
-    Write-Host $TableName
+    $TableName = ('cache{0}' -f ($Item.Endpoint -replace '[^A-Za-z0-9]'))[0..62] -join ''
+    Write-Host "Queue Table: $TableName"
     $Table = Get-CIPPTable -TableName $TableName
 
-    $Filter = "PartitionKey eq '{0}' and Tenant eq '{1}'" -f $PartitionKey, $QueueItem.TenantFilter
-    Write-Host $Filter
+    $Filter = "PartitionKey eq '{0}' and Tenant eq '{1}'" -f $PartitionKey, $Item.TenantFilter
+    Write-Host "Filter: $Filter"
     Get-CIPPAzDataTableEntity @Table -Filter $Filter -Property PartitionKey, RowKey | Remove-AzDataTableEntity @Table
 
     $GraphRequestParams = @{
-        TenantFilter                = $QueueItem.TenantFilter
-        Endpoint                    = $QueueItem.Endpoint
-        Parameters                  = $QueueItem.Parameters
-        NoPagination                = $QueueItem.NoPagination
-        ReverseTenantLookupProperty = $QueueItem.ReverseTenantLookupProperty
-        ReverseTenantLookup         = $QueueItem.ReverseTenantLookup
+        TenantFilter                = $Item.TenantFilter
+        Endpoint                    = $Item.Endpoint
+        Parameters                  = $Item.Parameters
+        NoPagination                = $Item.NoPagination
+        ReverseTenantLookupProperty = $Item.ReverseTenantLookupProperty
+        ReverseTenantLookup         = $Item.ReverseTenantLookup
         SkipCache                   = $true
     }
 
@@ -41,7 +41,7 @@ function Push-ListGraphRequestQueue {
         Get-GraphRequestList @GraphRequestParams
     } catch {
         [PSCustomObject]@{
-            Tenant     = $QueueItem.Tenant
+            Tenant     = $Item.Tenant
             CippStatus = "Could not connect to tenant. $($_.Exception.message)"
         }
     }
@@ -49,9 +49,9 @@ function Push-ListGraphRequestQueue {
     $GraphResults = foreach ($Request in $RawGraphRequest) {
         $Json = ConvertTo-Json -Depth 5 -Compress -InputObject $Request
         [PSCustomObject]@{
-            TenantFilter = [string]$QueueItem.TenantFilter
-            QueueId      = [string]$QueueItem.QueueId
-            QueueType    = [string]$QueueItem.QueueType
+            TenantFilter = [string]$Item.TenantFilter
+            QueueId      = [string]$Item.QueueId
+            QueueType    = [string]$Item.QueueType
             RowKey       = [string](New-Guid)
             PartitionKey = [string]$PartitionKey
             Data         = [string]$Json
@@ -59,9 +59,9 @@ function Push-ListGraphRequestQueue {
     }
     try {
         Add-CIPPAzDataTableEntity @Table -Entity $GraphResults -Force | Out-Null
-        Update-CippQueueEntry -RowKey $QueueItem.QueueId -Status 'Completed'
+        Update-CippQueueEntry -RowKey $Item.QueueId -Status 'Completed'
     } catch {
         Write-Host "Queue Error: $($_.Exception.Message)"
-        Update-CippQueueEntry -RowKey $QueueItem.QueueId -Status 'Failed'
+        Update-CippQueueEntry -RowKey $Item.QueueId -Status 'Failed'
     }
 }
