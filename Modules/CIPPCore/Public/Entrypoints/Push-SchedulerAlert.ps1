@@ -41,7 +41,7 @@ function Push-SchedulerAlert {
         }
         if (($Batch | Measure-Object).Count -gt 0) {
             $InputObject = [PSCustomObject]@{
-                OrchestratorName = 'Alerts'
+                OrchestratorName = 'AlertsOrchestrator'
                 SkipLog          = $true
                 Batch            = @($Batch)
             }
