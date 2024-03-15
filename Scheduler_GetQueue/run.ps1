@@ -35,7 +35,7 @@ $Batch = foreach ($Task in $Tasks) {
     }
 }
 $InputObject = [PSCustomObject]@{
-    OrchestratorName = 'Scheduler'
+    OrchestratorName = 'SchedulerOrchestrator'
     Batch            = @($Batch)
 }
 #Write-Host ($InputObject | ConvertTo-Json)
