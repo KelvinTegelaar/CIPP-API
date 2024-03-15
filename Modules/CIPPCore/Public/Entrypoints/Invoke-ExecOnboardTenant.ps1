@@ -52,13 +52,19 @@ function Invoke-ExecOnboardTenant {
                 }
                 Add-CIPPAzDataTableEntity @OnboardTable -Entity $TenantOnboarding -Force -ErrorAction Stop
 
-                Push-OutputBinding -Name QueueItem -Value ([pscustomobject]@{
-                        FunctionName     = 'ExecOnboardTenantQueue'
-                        id               = $Id
-                        Roles            = $Request.Body.gdapRoles
-                        AddMissingGroups = $Request.Body.addMissingGroups
-                        AutoMapRoles     = $Request.Body.autoMapRoles
-                    })
+                $Item = [pscustomobject]@{
+                    FunctionName     = 'ExecOnboardTenantQueue'
+                    id               = $Id
+                    Roles            = $Request.Body.gdapRoles
+                    AddMissingGroups = $Request.Body.addMissingGroups
+                    AutoMapRoles     = $Request.Body.autoMapRoles
+                }
+                
+                $InputObject = @{
+                    OrchestratorName = 'OnboardingOrchestrator'
+                    Batch            = @($Item)
+                }
+                $InstanceId = Start-NewOrchestration -FunctionName 'CIPPOrchestrator' -InputObject ($InputObject | ConvertTo-Json -Depth 5)
             }
 
             $Steps = $TenantOnboarding.OnboardingSteps | ConvertFrom-Json
