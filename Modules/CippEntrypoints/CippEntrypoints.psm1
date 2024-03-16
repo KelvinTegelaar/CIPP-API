@@ -19,7 +19,7 @@ function Receive-CippHttpTrigger {
 
 function Receive-CippQueueTrigger {
     Param($QueueItem, $TriggerMetadata)
-  
+
     $Start = (Get-Date).ToUniversalTime()
     $APIName = $TriggerMetadata.FunctionName
     Write-Host "#### Running $APINAME"
@@ -48,5 +48,78 @@ function Receive-CippQueueTrigger {
     Write-CippFunctionStats @Stats
 }
 
-Export-ModuleMember -Function @('Receive-CippHttpTrigger', 'Receive-CippQueueTrigger')
+function Receive-CippOrchestrationTrigger {
+    param($Context)
+
+    try {
+        if (Test-Json -Json $Context.Input) {
+            $OrchestratorInput = $Context.Input | ConvertFrom-Json
+        } else {
+            $OrchestratorInput = $Context.Input
+        }
+
+        $DurableRetryOptions = @{
+            FirstRetryInterval  = (New-TimeSpan -Seconds 5)
+            MaxNumberOfAttempts = if ($OrchestratorInput.MaxAttempts) { $OrchestratorInput.MaxAttempts } else { 3 }
+            BackoffCoefficient  = 2
+        }
+        #Write-Host ($OrchestratorInput | ConvertTo-Json -Depth 10)
+        $RetryOptions = New-DurableRetryOptions @DurableRetryOptions
+
+        if ($Context.IsReplaying -ne $true -and $OrchestratorInput.SkipLog -ne $true) {
+            Write-LogMessage -API $OrchestratorInput.OrchestratorName -tenant $OrchestratorInput.TenantFilter -message "Started $($OrchestratorInput.OrchestratorName)" -sev info
+        }
+
+        if (!$OrchestratorInput.Batch -or ($OrchestratorInput.Batch | Measure-Object).Count -eq 0) {
+            $Batch = (Invoke-ActivityFunction -FunctionName 'CIPPActivityFunction' -Input $OrchestratorInput.QueueFunction -ErrorAction Stop)
+        } else {
+            $Batch = $OrchestratorInput.Batch
+        }
+
+        if (($Batch | Measure-Object).Count -gt 0) {
+            foreach ($Item in $Batch) {
+                $null = Invoke-DurableActivity -FunctionName 'CIPPActivityFunction' -Input $Item -NoWait -RetryOptions $RetryOptions -ErrorAction Stop
+            }
+        }
+
+        if ($Context.IsReplaying -ne $true -and $OrchestratorInput.SkipLog -ne $true) {
+            Write-LogMessage -API $OrchestratorInput.OrchestratorName -tenant $tenant -message "Finished $($OrchestratorInput.OrchestratorName)" -sev Info
+        }
+    } catch {
+        Write-Host "Orchestrator error $($_.Exception.Message)"
+    }
+}
+
+function Receive-CippActivityTrigger {
+    Param($Item)
+
+    $Start = (Get-Date).ToUniversalTime()
+    Set-Location (Get-Item $PSScriptRoot).Parent.Parent.FullName
+
+    if ($Item.FunctionName) {
+        $FunctionName = 'Push-{0}' -f $Item.FunctionName
+        try {
+            & $FunctionName -Item $Item
+        } catch {
+            $ErrorMsg = $_.Exception.Message
+        }
+    } else {
+        $ErrorMsg = 'Function not provided'
+    }
+
+    $End = (Get-Date).ToUniversalTime()
+
+    $Stats = @{
+        FunctionType = 'Durable'
+        Entity       = $Item
+        Start        = $Start
+        End          = $End
+        ErrorMsg     = $ErrorMsg
+    }
+
+    #Write-Information '####### Adding stats'
+    Write-CippFunctionStats @Stats
+}
+
+Export-ModuleMember -Function @('Receive-CippHttpTrigger', 'Receive-CippQueueTrigger', 'Receive-CippOrchestrationTrigger', 'Receive-CippActivityTrigger')
 
