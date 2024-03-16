@@ -35,11 +35,22 @@ function Set-CIPPGDAPInviteGroups {
         if (($InviteList | Measure-Object).Count -gt 0) {
             $Activations = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/tenantRelationships/delegatedAdminRelationships?`$filter=status eq 'active'"
 
-            foreach ($Activation in $Activations) {
+            $Batch = foreach ($Activation in $Activations) {
                 if ($InviteList.RowKey -contains $Activation.id) {
                     Write-Host "Mapping groups for GDAP relationship: $($Activation.customer.displayName) - $($Activation.id)"
-                    Push-OutputBinding -Name gdapinvitequeue -Value $Activation
+                    $Activation | Add-Member -NotePropertyName FunctionName -NotePropertyValue 'ExecGDAPInviteQueue'
+                    $Activation
                 }
+            }
+            if (($Batch | Measure-Object).Count -gt 0) {
+                $InputObject = [PSCustomObject]@{
+                    OrchestratorName = 'GDAPInviteOrchestrator'
+                    Batch            = @($Batch)
+                    SkipLog          = $true
+                }
+                #Write-Host ($InputObject | ConvertTo-Json)
+                $InstanceId = Start-NewOrchestration -FunctionName 'CIPPOrchestrator' -InputObject ($InputObject | ConvertTo-Json -Depth 5)
+                Write-Host "Started GDAP Invite orchestration with ID = '$InstanceId'"
             }
         }
     }
