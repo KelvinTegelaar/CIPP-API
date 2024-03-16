@@ -16,7 +16,7 @@ function Remove-CIPPGroupMember(
         } else {
             New-GraphPostRequest -uri "https://graph.microsoft.com/beta/groups/$($GroupId)/members/$($Member)/`$ref" -tenantid $TenantFilter -type DELETE -body '{}' -Verbose
         }
-        $Message = "Successfully removed user $($Member) from $GroupId."
+        $Message = "Successfully removed user $($Member) from $($GroupId)."
         Write-LogMessage -user $ExecutingUser -API $APIName -tenant $TenantFilter -message $Message -Sev 'Info'
         return $message
     } catch {
