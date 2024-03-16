@@ -1,20 +1,12 @@
-# Input bindings are passed in via param block.
-param([string] $QueueItem, $TriggerMetadata)
+function Push-ListMailboxRulesQueue {
+    # Input bindings are passed in via param block.
+    param($Item)
 
-# Write out the queue message and metadata to the information log.
-Write-Host "PowerShell queue trigger function processed work item: $QueueItem"
+    # Write out the queue message and metadata to the information log.
+    Write-Host "PowerShell queue trigger function processed work item: $($Item.defaultDomainName)"
 
-$Tenants = if ($QueueItem -ne 'AllTenants') {
-    [PSCustomObject]@{
-        defaultDomainName = $QueueItem
-    }
-} else {
-    Get-Tenants
-}
-$Tenants | ForEach-Object -Parallel {
-    $domainName = $_.defaultDomainName
-    Import-Module CippCore
-    Import-Module AzBobbyTables
+    $domainName = $Item.defaultDomainName
+
     $Table = Get-CIPPTable -TableName cachembxrules
     try {
         $Rules = New-ExoRequest -tenantid $domainName -cmdlet 'Get-Mailbox' -Select 'userPrincipalName,GUID' | ForEach-Object -Parallel {
