@@ -26,6 +26,6 @@ function Push-CIPPAlertDepTokenExpiry {
             Add-CIPPAzDataTableEntity @LastRunTable -Entity $LastRun -Force
         }
     } catch {
-        # Error handling
+        Write-AlertMessage -tenant $($QueueItem.tenant) -message "Failed to check Apple Device Enrollment Program token expiry for $($QueueItem.tenant): $(Get-NormalizedError -message $_.Exception.message)"
     }
 }
