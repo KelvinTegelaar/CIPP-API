@@ -68,6 +68,7 @@ function Get-GraphRequestList {
 
     $TableName = ('cache{0}' -f ($Endpoint -replace '[^A-Za-z0-9]'))[0..62] -join ''
     Write-Host "Table: $TableName"
+    $Endpoint = $Endpoint -replace '^/', ''
     $DisplayName = ($Endpoint -split '/')[0]
 
     if ($QueueNameOverride) {
@@ -111,6 +112,17 @@ function Get-GraphRequestList {
 
     $QueueReference = '{0}-{1}' -f $TenantFilter, $PartitionKey
     $RunningQueue = Get-CippQueue | Where-Object { $_.Reference -eq $QueueReference -and $_.Status -ne 'Completed' -and $_.Status -ne 'Failed' }
+
+    if ($TenantFilter -ne 'AllTenants' -and $Endpoint -match '%tenantid%') {
+        $TenantId = (Get-Tenants -IncludeErrors | Where-Object { $_.defaultDomainName -eq $TenantFilter -or $_.customerId -eq $TenantFilter }).customerId
+        $Endpoint = $Endpoint -replace '%tenantid%', $TenantId
+        $GraphQuery = [System.UriBuilder]('https://graph.microsoft.com/{0}/{1}' -f $Version, $Endpoint)
+        $ParamCollection = [System.Web.HttpUtility]::ParseQueryString([String]::Empty)
+        foreach ($Item in ($Parameters.GetEnumerator() | Sort-Object -CaseSensitive -Property Key)) {
+            $ParamCollection.Add($Item.Key, $Item.Value)
+        }
+        $GraphQuery.Query = $ParamCollection.ToString()
+    }
 
     if (!$Rows) {
         switch ($TenantFilter) {
