@@ -39,6 +39,7 @@ $Result = [PSCustomObject]@{
     GUID                 = $($Domain.Replace('.', ''))
     LastRefresh          = $(Get-Date (Get-Date).ToUniversalTime() -UFormat '+%Y-%m-%dT%H:%M:%S.000Z')
     Domain               = $Domain
+    NSRecords            = (Read-NSRecord -Domain $Domain).Records
     ExpectedSPFRecord    = ''
     ActualSPFRecord      = ''
     SPFPassAll           = ''
