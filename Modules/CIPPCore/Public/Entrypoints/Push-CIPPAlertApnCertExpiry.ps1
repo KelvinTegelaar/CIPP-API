@@ -17,7 +17,7 @@ function Push-CIPPAlertApnCertExpiry {
                     Write-AlertMessage -tenant $($Item.tenant) -message ('Intune: Apple Push Notification certificate for {0} is expiring on {1}' -f $Apn.appleIdentifier, $Apn.expirationDateTime)
                 }
             } catch {
-                Write-AlertMessage -tenant $($QueueItem.tenant) -message "Failed to check APN certificate expiry for $($QueueItem.tenant): $(Get-NormalizedError -message $_.Exception.message)"
+                Write-AlertMessage -tenant $($Item.tenant) -message "Failed to check APN certificate expiry for $($Item.tenant): $(Get-NormalizedError -message $_.Exception.message)"
             }
         }
         $LastRun = @{
@@ -26,6 +26,6 @@ function Push-CIPPAlertApnCertExpiry {
         }
         Add-CIPPAzDataTableEntity @LastRunTable -Entity $LastRun -Force
     } catch {
-        Write-AlertMessage -tenant $($QueueItem.tenant) -message "Failed to check APN certificate expiry for $($QueueItem.tenant): $(Get-NormalizedError -message $_.Exception.message)"
+        Write-AlertMessage -tenant $($Item.tenant) -message "Failed to check APN certificate expiry for $($Item.tenant): $(Get-NormalizedError -message $_.Exception.message)"
     }
 }
