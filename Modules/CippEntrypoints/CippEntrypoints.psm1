@@ -60,7 +60,7 @@ function Receive-CippOrchestrationTrigger {
 
         $DurableRetryOptions = @{
             FirstRetryInterval  = (New-TimeSpan -Seconds 5)
-            MaxNumberOfAttempts = if ($OrchestratorInput.MaxAttempts) { $OrchestratorInput.MaxAttempts } else { 3 }
+            MaxNumberOfAttempts = if ($OrchestratorInput.MaxAttempts) { $OrchestratorInput.MaxAttempts } else { 1 }
             BackoffCoefficient  = 2
         }
         #Write-Host ($OrchestratorInput | ConvertTo-Json -Depth 10)
