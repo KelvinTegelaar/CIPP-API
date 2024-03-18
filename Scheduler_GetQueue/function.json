@@ -7,10 +7,9 @@
       "type": "timerTrigger"
     },
     {
-      "type": "queue",
-      "direction": "out",
-      "name": "QueueItem",
-      "queueName": "CIPPGenericQueue"
+      "name": "starter",
+      "type": "durableClient",
+      "direction": "in"
     }
   ]
 }
