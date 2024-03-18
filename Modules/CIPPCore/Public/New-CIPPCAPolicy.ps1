@@ -107,7 +107,7 @@ function New-CIPPCAPolicy {
     Write-Host $RawJSON
     try {
         Write-Host 'Checking'
-        $CheckExististing = New-GraphGETRequest -uri 'https://graph.microsoft.com/v1.0/identity/conditionalAccess/policies' -tenantid $TenantFilter
+        $CheckExististing = New-GraphGETRequest -uri 'https://graph.microsoft.com/beta/identity/conditionalAccess/policies' -tenantid $TenantFilter
         if ($displayname -in $CheckExististing.displayName) {
             if ($Overwrite -ne $true) {
                 Throw "Conditional Access Policy with Display Name $($Displayname) Already exists"
