@@ -135,7 +135,9 @@
     </command:returnValues>
     <maml:alertSet>
       <maml:alert>
-        <maml:para></maml:para>
+        <maml:para>Regarding Dates, DateTime, and DateTimeOffset:</maml:para>
+        <maml:para>The underlying Azure.Data.Tables SDK expects to work with DateTime fields in UTC format for conversion to DateTimeOffset objects. When submitting a DateTimeOffset object to the SDK, it will be converted to UTC timezone rather than preserving the existing timezone/offset info. Similarly, if a `DateTime` object is submitted in the entity with its Kind set to "local" or "unspecified", the SDK will return an error and state that `Azure SDK requires it to be UTC`. While there isn't any change needed to get `DateTimeOffset` objects to work with AzBobbyTables, the workaround for `DateTime` objects is to set the property to a new `DateTime` object with its `Kind` property set to `Utc`. e.g. `$obj.Time = $obj.Time.ToUniversalFormat()`. Related issue (https://github.com/Azure/azure-sdk-for-net/issues/30644).</maml:para>
+        <maml:para>It is possible via the Azure Storage Explorer to set DateTime fields with offsets other than UTC/+00:00. Note that searches with queries set to type `DateTime` do properly calculate to a specific moment, and find equivilent moments. e.g. a `-Filter` set to `Time eq datetime'2023-12-26T18:05:40.5345634+00:00'` will match an entry where the Time property is set to `2023-12-26T17:05:40.5345634-01:00`.</maml:para>
       </maml:alert>
     </maml:alertSet>
     <command:examples>
@@ -610,10 +612,33 @@ PS C:\&gt; New-AzDataTable -Context $Context</dev:code>
     <command:syntax>
       <command:syntaxItem>
         <maml:name>New-AzDataTableContext</maml:name>
-        <command:parameter required="true" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
-          <maml:name>ConnectionString</maml:name>
+        <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
+          <maml:name>ClientId</maml:name>
           <maml:description>
-            <maml:para>The connection string to the storage account.</maml:para>
+            <maml:para>Specifies the client id when using a user-assigned managed identity.</maml:para>
+          </maml:description>
+          <command:parameterValue required="true" variableLength="false">String</command:parameterValue>
+          <dev:type>
+            <maml:name>String</maml:name>
+            <maml:uri />
+          </dev:type>
+          <dev:defaultValue>None</dev:defaultValue>
+        </command:parameter>
+        <command:parameter required="true" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
+          <maml:name>ManagedIdentity</maml:name>
+          <maml:description>
+            <maml:para>Specifies that the command is run by a managed identity (such as in an Azure Function), and authorization will be handled using that identity.</maml:para>
+          </maml:description>
+          <dev:type>
+            <maml:name>SwitchParameter</maml:name>
+            <maml:uri />
+          </dev:type>
+          <dev:defaultValue>False</dev:defaultValue>
+        </command:parameter>
+        <command:parameter required="true" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
+          <maml:name>StorageAccountName</maml:name>
+          <maml:description>
+            <maml:para>The name of the storage account.</maml:para>
           </maml:description>
           <command:parameterValue required="true" variableLength="false">String</command:parameterValue>
           <dev:type>
@@ -638,20 +663,9 @@ PS C:\&gt; New-AzDataTable -Context $Context</dev:code>
       <command:syntaxItem>
         <maml:name>New-AzDataTableContext</maml:name>
         <command:parameter required="true" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
-          <maml:name>ManagedIdentity</maml:name>
+          <maml:name>ConnectionString</maml:name>
           <maml:description>
-            <maml:para>Specifies that the command is run by a managed identity (such as in an Azure Function), and authorization will be handled using that identity.</maml:para>
-          </maml:description>
-          <dev:type>
-            <maml:name>SwitchParameter</maml:name>
-            <maml:uri />
-          </dev:type>
-          <dev:defaultValue>False</dev:defaultValue>
-        </command:parameter>
-        <command:parameter required="true" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
-          <maml:name>StorageAccountName</maml:name>
-          <maml:description>
-            <maml:para>The name of the storage account.</maml:para>
+            <maml:para>The connection string to the storage account.</maml:para>
           </maml:description>
           <command:parameterValue required="true" variableLength="false">String</command:parameterValue>
           <dev:type>
@@ -780,6 +794,18 @@ PS C:\&gt; New-AzDataTable -Context $Context</dev:code>
       </command:syntaxItem>
     </command:syntax>
     <command:parameters>
+      <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
+        <maml:name>ClientId</maml:name>
+        <maml:description>
+          <maml:para>Specifies the client id when using a user-assigned managed identity.</maml:para>
+        </maml:description>
+        <command:parameterValue required="true" variableLength="false">String</command:parameterValue>
+        <dev:type>
+          <maml:name>String</maml:name>
+          <maml:uri />
+        </dev:type>
+        <dev:defaultValue>None</dev:defaultValue>
+      </command:parameter>
       <command:parameter required="true" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
         <maml:name>ConnectionString</maml:name>
         <maml:description>
