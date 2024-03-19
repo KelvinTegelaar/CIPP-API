@@ -29,13 +29,17 @@ function Push-SchedulerAlert {
                 $Item | Add-Member -MemberType NoteProperty -Name 'RowKey' -Value $task.Name -Force
                 $Item | Add-Member -MemberType NoteProperty -Name 'PartitionKey' -Value $Item.Tenant -Force
 
-                try {
-                    $null = Add-CIPPAzDataTableEntity @Table -Entity $Item -Force -ErrorAction Stop
-                } catch {
-                    Write-Host "################### Error updating alert $($_.Exception.Message) - $($Item | ConvertTo-Json)"
+                if ($null -eq $Item.Tenant) {
+                    Write-Host ($Item | ConvertTo-Json)
+                } else {
+                    try {
+                        $null = Add-CIPPAzDataTableEntity @Table -Entity $Item -Force -ErrorAction Stop
+                    } catch {
+                        Write-Host "################### Error updating alert $($_.Exception.Message) - Task:$($Task.Name) PK:$($Item.PartitionKey)"
+                    }
                 }
             } else {
-                Write-Host ('ALERTS: Duplicate run found. Ignoring. Tenant: {0}, Task: {1}' -f $Item.tenant, $task.Name)
+                Write-Host ('ALERTS: Duplicate run found. Ignoring. Tenant: {0}, Task: {1}' -f $Item.Tenant, $task.Name)
             }
 
         }
