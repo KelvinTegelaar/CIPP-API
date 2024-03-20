@@ -59,6 +59,7 @@ Function Invoke-AddUser {
     } catch {
         Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $($userobj.tenantid) -message "Failed to create user. Error:$($_.Exception.Message)" -Sev 'Error'
         $body = $results.add("Failed to create user. $($_.Exception.Message)" )
+        exit 1
     }
 
     try {

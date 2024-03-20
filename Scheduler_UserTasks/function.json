@@ -7,10 +7,9 @@
       "type": "timerTrigger"
     },
     {
-      "type": "queue",
-      "direction": "out",
-      "name": "Msg",
-      "queueName": "scheduledcommandprocessor"
+      "name": "starter",
+      "type": "durableClient",
+      "direction": "in"
     }
   ]
 }
