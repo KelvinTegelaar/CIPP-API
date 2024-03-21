@@ -36,7 +36,7 @@ Function Invoke-ListFunctionStats {
         }
         $Table = Get-CIPPTable -tablename 'CippFunctionStats'
 
-        if (!$PartitionKey) { $PartitionKey = 'Queue' }
+        if (!$PartitionKey) { $PartitionKey = 'Durable' }
         if (![string]::IsNullOrEmpty($TenantFilter) -and $TenantFilter -ne 'AllTenants') {
             $TenantQuery = " and (tenant eq '{0}' or Tenant eq '{0}' or Tenantid eq '{0}' or tenantid eq '{0}')" -f $TenantFilter
         } else {

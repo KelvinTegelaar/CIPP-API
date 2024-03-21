@@ -4,7 +4,7 @@
 RootModule = 'AzBobbyTables.PS.dll'
 
 # Version number of this module.
-ModuleVersion = '3.1.0'
+ModuleVersion = '3.1.3'
 
 # Supported PSEditions
 CompatiblePSEditions = @('Core')
@@ -108,7 +108,14 @@ PrivateData = @{
         # IconUri = ''
 
         # ReleaseNotes of this module
-        # ReleaseNotes = ''
+          ReleaseNotes = '## [3.1.3] - 2024-01-20
+
+### Added
+
+- Added Sampler ([#48](https://github.com/PalmEmanuel/AzBobbyTables/issues/48)).
+- Added support for user-assigned managed identities ([#54](https://github.com/PalmEmanuel/AzBobbyTables/issues/54)).
+
+'
 
         # Prerelease string of this module
         # Prerelease = ''
@@ -130,4 +137,3 @@ PrivateData = @{
 # DefaultCommandPrefix = ''
 
 }
-
