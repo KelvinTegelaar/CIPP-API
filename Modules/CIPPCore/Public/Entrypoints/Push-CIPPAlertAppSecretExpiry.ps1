@@ -21,7 +21,7 @@ function Push-CIPPAlertAppSecretExpiry {
             }
         }
     } catch {
-        Write-AlertMessage -tenant $($Item.Tenant) -message "Failed to check App registration expiry for $($Item.Tenant): $(Get-NormalizedError -message $_.Exception.message)"
+        #Write-AlertMessage -tenant $($Item.Tenant) -message "Failed to check App registration expiry for $($Item.Tenant): $(Get-NormalizedError -message $_.Exception.message)"
     }
 }
 
