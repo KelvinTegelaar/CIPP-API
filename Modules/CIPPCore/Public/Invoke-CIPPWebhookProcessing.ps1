@@ -67,6 +67,7 @@ function Invoke-CippWebhookProcessing {
         'OAuth2:Token'
         'SAS:EndAuth'
         'SAS:ProcessAuth'
+        'Login:reprocess'
     )
     if ($TableObj.RequestType -in $ExtendedPropertiesIgnoreList) {
         Write-Host 'No need to process this operation.'
