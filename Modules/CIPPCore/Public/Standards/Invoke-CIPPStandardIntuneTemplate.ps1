@@ -75,6 +75,7 @@ function Invoke-CIPPStandardIntuneTemplate {
 
         if ($Settings.AssignTo) {
           Write-Host "Assigning Policy to $($Settings.AssignTo) the create ID is $($CreateRequest)"
+          if ($Settings.AssignTo -eq 'customGroup') { $Settings.AssignTo = $Settings.customGroup }
           Set-CIPPAssignedPolicy -PolicyId $CreateRequest.id -TenantFilter $tenant -GroupName $Settings.AssignTo -Type $TemplateTypeURL
         }
         Write-LogMessage -API 'Standards' -tenant $tenant -message "Successfully added Intune Template policy for $($Tenant)" -sev 'Info'
