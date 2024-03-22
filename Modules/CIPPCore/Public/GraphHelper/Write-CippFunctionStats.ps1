@@ -15,21 +15,27 @@ function Write-CippFunctionStats {
         $RowKey = [string](New-Guid).Guid
         $TimeSpan = New-TimeSpan -Start $Start -End $End
         $Duration = [int]$TimeSpan.TotalSeconds
-        
+        $DurationMS = [int]$TimeSpan.TotalMilliseconds
+
+        $StatEntity = @{}
         # Flatten data to json string
-        $Entity.PartitionKey = $FunctionType
-        $Entity.RowKey = $RowKey
-        $Entity.Start = $Start
-        $Entity.End = $End
-        $Entity.Duration = $Duration
-        $Entity.ErrorMsg = $ErrorMsg
+        $StatEntity.PartitionKey = $FunctionType
+        $StatEntity.RowKey = $RowKey
+        $StatEntity.Start = $Start
+        $StatEntity.End = $End
+        $StatEntity.Duration = $Duration
+        $StatEntity.DurationMS = $DurationMS
+        $StatEntity.ErrorMsg = $ErrorMsg
         $Entity = [PSCustomObject]$Entity
         foreach ($Property in $Entity.PSObject.Properties.Name) {
             if ($Entity.$Property.GetType().Name -in ('Hashtable', 'PSCustomObject')) {
-                $Entity.$Property = [string]($Entity.$Property | ConvertTo-Json -Compress)
+                $StatEntity.$Property = [string]($Entity.$Property | ConvertTo-Json -Compress)
+            } elseif ($Property -notin ('ETag', 'RowKey', 'PartitionKey', 'Timestamp', 'LastRefresh')) {
+                $StatEntity.$Property = $Entity.$Property
             }
         }
-        Add-CIPPAzDataTableEntity @Table -Entity $Entity -Force
+        $StatEntity = [PSCustomObject]$StatEntity
+        Add-CIPPAzDataTableEntity @Table -Entity $StatEntity -Force
     } catch {
         Write-Host "Exception logging stats $($_.Exception.Message)"
     }
