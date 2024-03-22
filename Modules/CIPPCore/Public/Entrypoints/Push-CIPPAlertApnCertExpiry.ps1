@@ -11,6 +11,7 @@ function Push-CIPPAlertApnCertExpiry {
             Write-AlertMessage -tenant $($Item.tenant) -message ('Intune: Apple Push Notification certificate for {0} is expiring on {1}' -f $Apn.appleIdentifier, $Apn.expirationDateTime)
         }
     } catch {
-        Write-AlertMessage -tenant $($Item.Tenant) -message "Failed to check APN certificate expiry for $($Item.Tenant): $(Get-NormalizedError -message $_.Exception.message)"
+        #no error because if a tenant does not have an APN, it'll error anyway.
+        #Write-AlertMessage -tenant $($Item.Tenant) -message "Failed to check APN certificate expiry for $($Item.Tenant): $(Get-NormalizedError -message $_.Exception.message)"
     }
 }
