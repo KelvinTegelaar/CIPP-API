@@ -6,22 +6,23 @@ function Invoke-CIPPStandardAntiPhishPolicy {
 
     param($Tenant, $Settings)
     $AntiPhishPolicyState = New-ExoRequest -tenantid $Tenant -cmdlet 'Get-AntiPhishPolicy' | 
-    Where-Object -Property Name -eq "Office365 AntiPhish Default" | 
+    Where-Object -Property Name -eq $PolicyName | 
     Select-Object Name, Enabled, PhishThresholdLevel, EnableMailboxIntelligence, EnableMailboxIntelligenceProtection, EnableSpoofIntelligence, EnableFirstContactSafetyTips, EnableSimilarUsersSafetyTips, EnableSimilarDomainsSafetyTips, EnableUnusualCharactersSafetyTips, EnableUnauthenticatedSender, EnableViaTag, MailboxIntelligenceProtectionAction, MailboxIntelligenceQuarantineTag
 
+    $PolicyName = "Default Anti-Phishing Policy"
     $StateIsCorrect = if (
-        ($AntiPhishPolicyState.Name -eq "Office365 AntiPhish Default") -and
-        ($AntiPhishPolicyState.Enabled -eq $Settings.Enabled) -and 
+        ($AntiPhishPolicyState.Name -eq $PolicyName) -and
+        ($AntiPhishPolicyState.Enabled -eq $true) -and 
         ($AntiPhishPolicyState.PhishThresholdLevel -eq $Settings.PhishThresholdLevel) -and
-        ($AntiPhishPolicyState.EnableMailboxIntelligence -eq $Settings.EnableMailboxIntelligence) -and
-        ($AntiPhishPolicyState.EnableMailboxIntelligenceProtection -eq $Settings.EnableMailboxIntelligenceProtection) -and
-        ($AntiPhishPolicyState.EnableSpoofIntelligence -eq $Settings.EnableSpoofIntelligence) -and
+        ($AntiPhishPolicyState.EnableMailboxIntelligence -eq $true) -and
+        ($AntiPhishPolicyState.EnableMailboxIntelligenceProtection -eq $true) -and
+        ($AntiPhishPolicyState.EnableSpoofIntelligence -eq $true) -and
         ($AntiPhishPolicyState.EnableFirstContactSafetyTips -eq $Settings.EnableFirstContactSafetyTips) -and
         ($AntiPhishPolicyState.EnableSimilarUsersSafetyTips -eq $Settings.EnableSimilarUsersSafetyTips) -and
         ($AntiPhishPolicyState.EnableSimilarDomainsSafetyTips -eq $Settings.EnableSimilarDomainsSafetyTips) -and
         ($AntiPhishPolicyState.EnableUnusualCharactersSafetyTips -eq $Settings.EnableUnusualCharactersSafetyTips) -and
-        ($AntiPhishPolicyState.EnableUnauthenticatedSender -eq $Settings.EnableUnauthenticatedSender) -and
-        ($AntiPhishPolicyState.EnableViaTag -eq $Settings.EnableViaTag) -and
+        ($AntiPhishPolicyState.EnableUnauthenticatedSender -eq $true) -and
+        ($AntiPhishPolicyState.EnableViaTag -eq $true) -and
         ($AntiPhishPolicyState.MailboxIntelligenceProtectionAction -eq $Settings.MailboxIntelligenceProtectionAction) -and
         ($AntiPhishPolicyState.MailboxIntelligenceQuarantineTag -eq $Settings.MailboxIntelligenceQuarantineTag)
     ) { $true } else { $false }
@@ -31,28 +32,28 @@ function Invoke-CIPPStandardAntiPhishPolicy {
             Write-LogMessage -API 'Standards' -tenant $Tenant -message 'Anti-phishing Policy already exists.' -sev Info
         } else {
             $cmdparams = @{
-                Enabled = $Settings.Enabled
+                Enabled = $true
                 PhishThresholdLevel = $Settings.PhishThresholdLevel
-                EnableMailboxIntelligence = $Settings.EnableMailboxIntelligence
-                EnableMailboxIntelligenceProtection = $Settings.EnableMailboxIntelligenceProtection
-                EnableSpoofIntelligence = $Settings.EnableSpoofIntelligence
+                EnableMailboxIntelligence = $true
+                EnableMailboxIntelligenceProtection = $true
+                EnableSpoofIntelligence = $true
                 EnableFirstContactSafetyTips = $Settings.EnableFirstContactSafetyTips
                 EnableSimilarUsersSafetyTips = $Settings.EnableSimilarUsersSafetyTips
                 EnableSimilarDomainsSafetyTips = $Settings.EnableSimilarDomainsSafetyTips
                 EnableUnusualCharactersSafetyTips = $Settings.EnableUnusualCharactersSafetyTips
-                EnableUnauthenticatedSender = $Settings.EnableUnauthenticatedSender
-                EnableViaTag = $Settings.EnableViaTag
+                EnableUnauthenticatedSender = $true
+                EnableViaTag = $true
                 MailboxIntelligenceProtectionAction = $Settings.MailboxIntelligenceProtectionAction
                 MailboxIntelligenceQuarantineTag = $Settings.MailboxIntelligenceQuarantineTag
             }
 
             try {
-                if ($AntiPhishPolicyState.Name -eq "Office365 AntiPhish Default") {
-                    $cmdparams.Add("Identity", "Office365 AntiPhish Default")
+                if ($AntiPhishPolicyState.Name -eq $PolicyName) {
+                    $cmdparams.Add("Identity", $PolicyName)
                     New-ExoRequest -tenantid $Tenant -cmdlet 'Set-AntiPhishPolicy' -cmdparams $cmdparams
                     Write-LogMessage -API 'Standards' -tenant $Tenant -message 'Updated Anti-phishing Policy' -sev Info
                 } else {
-                    $cmdparams.Add("Name", "Office365 AntiPhish Default")
+                    $cmdparams.Add("Name", $PolicyName)
                     New-ExoRequest -tenantid $Tenant -cmdlet 'New-AntiPhishPolicy' -cmdparams $cmdparams
                     Write-LogMessage -API 'Standards' -tenant $Tenant -message 'Created Anti-phishing Policy' -sev Info
                 }
