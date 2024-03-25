@@ -12,7 +12,7 @@ function Invoke-CIPPStandardSafeAttachmentPolicy {
     $PolicyName = "Default Safe Attachment Policy"
     $StateIsCorrect = if (
         ($SafeAttachmentState.Name -eq $PolicyName) -and
-        ($SafeAttachmentState.Enable -eq $Settings.Enable) -and
+        ($SafeAttachmentState.Enable -eq $true) -and
         ($SafeAttachmentState.QuarantineTag -eq $Settings.QuarantineTag) -and
         ($SafeAttachmentState.Redirect -eq $Settings.Redirect) -and
         ($SafeAttachmentState.RedirectAddress -eq $Settings.RedirectAddress)
@@ -24,7 +24,7 @@ function Invoke-CIPPStandardSafeAttachmentPolicy {
             Write-LogMessage -API 'Standards' -tenant $Tenant -message 'Safe Attachment Policy already exists.' -sev Info
         } else {
             $cmdparams = @{
-                Enable = $Settings.Enable
+                Enable = $true
                 QuarantineTag = $Settings.QuarantineTag
                 Redirect = $Settings.Redirect
                 RedirectAddress = $Settings.RedirectAddress
