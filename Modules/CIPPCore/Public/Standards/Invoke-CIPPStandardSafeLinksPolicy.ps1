@@ -43,11 +43,11 @@ function Invoke-CIPPStandardSafeLinksPolicy {
 
             try {
                 if ($SafeLinkState.Name -eq "SafeLinks Policy") {
-                    $cmdparams.Add("Name", "SafeLinks Policy")
+                    $cmdparams.Add("Identity", "SafeLinks Policy")
                     New-ExoRequest -tenantid $Tenant -cmdlet 'Set-SafeLinksPolicy' -cmdparams $cmdparams
                     Write-LogMessage -API 'Standards' -tenant $Tenant -message 'Updated SafeLink Policy' -sev Info
                 } else {
-                    $cmdparams.Add("Identity", "SafeLinks Policy")
+                    $cmdparams.Add("Name", "SafeLinks Policy")
                     New-ExoRequest -tenantid $Tenant -cmdlet 'New-SafeLinksPolicy' -cmdparams $cmdparams
                     Write-LogMessage -API 'Standards' -tenant $Tenant -message 'Created SafeLink Policy' -sev Info
                 }
