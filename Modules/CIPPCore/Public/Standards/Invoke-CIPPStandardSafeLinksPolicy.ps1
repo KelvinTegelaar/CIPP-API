@@ -6,11 +6,12 @@ function Invoke-CIPPStandardSafeLinksPolicy {
 
     param($Tenant, $Settings)
     $SafeLinkState = New-ExoRequest -tenantid $Tenant -cmdlet 'Get-SafeLinksPolicy' | 
-    Where-Object -Property Name -eq "SafeLinks Policy" | 
+    Where-Object -Property Name -eq $PolicyName | 
     Select-Object Name, EnableSafeLinksForEmail, EnableSafeLinksForTeams, EnableSafeLinksForOffice, TrackClicks, AllowClickThrough, ScanUrls, EnableForInternalSenders, DeliverMessageAfterScan, DisableUrlRewrite, EnableOrganizationBranding
 
+    $PolicyName = "Default SafeLinks Policy"
     $StateIsCorrect = if (
-        ($SafeLinkState.Name -eq "SafeLinks Policy") -and
+        ($SafeLinkState.Name -eq $PolicyName) -and
         ($SafeLinkState.EnableSafeLinksForEmail -eq $true) -and 
         ($SafeLinkState.EnableSafeLinksForTeams -eq $true) -and 
         ($SafeLinkState.EnableSafeLinksForOffice -eq $true) -and 
@@ -42,12 +43,12 @@ function Invoke-CIPPStandardSafeLinksPolicy {
             }
 
             try {
-                if ($SafeLinkState.Name -eq "SafeLinks Policy") {
-                    $cmdparams.Add("Identity", "SafeLinks Policy")
+                if ($SafeLinkState.Name -eq $PolicyName) {
+                    $cmdparams.Add("Identity", $PolicyName)
                     New-ExoRequest -tenantid $Tenant -cmdlet 'Set-SafeLinksPolicy' -cmdparams $cmdparams
                     Write-LogMessage -API 'Standards' -tenant $Tenant -message 'Updated SafeLink Policy' -sev Info
                 } else {
-                    $cmdparams.Add("Name", "SafeLinks Policy")
+                    $cmdparams.Add("Name", $PolicyName)
                     New-ExoRequest -tenantid $Tenant -cmdlet 'New-SafeLinksPolicy' -cmdparams $cmdparams
                     Write-LogMessage -API 'Standards' -tenant $Tenant -message 'Created SafeLink Policy' -sev Info
                 }
