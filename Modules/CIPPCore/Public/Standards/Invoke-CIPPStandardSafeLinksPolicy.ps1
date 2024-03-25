@@ -6,18 +6,18 @@ function Invoke-CIPPStandardSafeLinksPolicy {
 
     param($Tenant, $Settings)
     $SafeLinkState = New-ExoRequest -tenantid $Tenant -cmdlet 'Get-SafeLinksPolicy' | 
-    Where-Object -Property Name -eq $Settings.Name | 
+    Where-Object -Property Name -eq "SafeLinks Policy" | 
     Select-Object Name, EnableSafeLinksForEmail, EnableSafeLinksForTeams, EnableSafeLinksForOffice, TrackClicks, AllowClickThrough, ScanUrls, EnableForInternalSenders, DeliverMessageAfterScan, DisableUrlRewrite, EnableOrganizationBranding
 
     $StateIsCorrect = if (
-        ($SafeLinkState.Name -eq $Settings.Name) -and
-        ($SafeLinkState.EnableSafeLinksForEmail -eq $Settings.EnableSafeLinksForEmail) -and 
-        ($SafeLinkState.EnableSafeLinksForTeams -eq $Settings.EnableSafeLinksForTeams) -and 
-        ($SafeLinkState.EnableSafeLinksForOffice -eq $Settings.EnableSafeLinksForOffice) -and 
-        ($SafeLinkState.TrackClicks -eq $Settings.TrackClicks) -and 
-        ($SafeLinkState.ScanUrls -eq $Settings.ScanUrls) -and 
-        ($SafeLinkState.EnableForInternalSenders -eq $Settings.EnableForInternalSenders) -and 
-        ($SafeLinkState.DeliverMessageAfterScan -eq $Settings.DeliverMessageAfterScan) -and 
+        ($SafeLinkState.Name -eq "SafeLinks Policy") -and
+        ($SafeLinkState.EnableSafeLinksForEmail -eq $true) -and 
+        ($SafeLinkState.EnableSafeLinksForTeams -eq $true) -and 
+        ($SafeLinkState.EnableSafeLinksForOffice -eq $true) -and 
+        ($SafeLinkState.TrackClicks -eq $true) -and 
+        ($SafeLinkState.ScanUrls -eq $true) -and 
+        ($SafeLinkState.EnableForInternalSenders -eq $true) -and 
+        ($SafeLinkState.DeliverMessageAfterScan -eq $true) -and 
         ($SafeLinkState.AllowClickThrough -eq $Settings.AllowClickThrough) -and
         ($SafeLinkState.DisableUrlRewrite -eq $Settings.DisableUrlRewrite) -and
         ($SafeLinkState.EnableOrganizationBranding -eq $Settings.EnableOrganizationBranding)
@@ -29,26 +29,25 @@ function Invoke-CIPPStandardSafeLinksPolicy {
             Write-LogMessage -API 'Standards' -tenant $Tenant -message 'SafeLink Policy already exists.' -sev Info
         } else {
             $cmdparams = @{
-                Identity = $Settings.Name
-                EnableSafeLinksForEmail = $Settings.EnableSafeLinksForEmail
-                EnableSafeLinksForTeams = $Settings.EnableSafeLinksForTeams
-                EnableSafeLinksForOffice = $Settings.EnableSafeLinksForOffice
-                TrackClicks = $Settings.TrackClicks
-                ScanUrls = $Settings.ScanUrls
-                EnableForInternalSenders = $Settings.EnableForInternalSenders
-                DeliverMessageAfterScan = $Settings.DeliverMessageAfterScan
+                EnableSafeLinksForEmail = $true
+                EnableSafeLinksForTeams = $true
+                EnableSafeLinksForOffice = $true
+                TrackClicks = $true
+                ScanUrls = $true
+                EnableForInternalSenders = $true
+                DeliverMessageAfterScan = $true
                 AllowClickThrough = $Settings.AllowClickThrough
                 DisableUrlRewrite = $Settings.DisableUrlRewrite
                 EnableOrganizationBranding = $Settings.EnableOrganizationBranding
             }
 
             try {
-                if ($SafeLinkState.Name -eq $Settings.Name) {
-                    $cmdparams.Add("Identity", $Settings.Name)
+                if ($SafeLinkState.Name -eq "SafeLinks Policy") {
+                    $cmdparams.Add("Name", "SafeLinks Policy")
                     New-ExoRequest -tenantid $Tenant -cmdlet 'Set-SafeLinksPolicy' -cmdparams $cmdparams
                     Write-LogMessage -API 'Standards' -tenant $Tenant -message 'Updated SafeLink Policy' -sev Info
                 } else {
-                    $cmdparams.Add("Name", $Settings.Name)
+                    $cmdparams.Add("Identity", "SafeLinks Policy")
                     New-ExoRequest -tenantid $Tenant -cmdlet 'New-SafeLinksPolicy' -cmdparams $cmdparams
                     Write-LogMessage -API 'Standards' -tenant $Tenant -message 'Created SafeLink Policy' -sev Info
                 }
