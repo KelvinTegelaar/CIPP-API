@@ -6,11 +6,12 @@ function Invoke-CIPPStandardSafeAttachmentPolicy {
 
     param($Tenant, $Settings)
     $SafeAttachmentState = New-ExoRequest -tenantid $Tenant -cmdlet 'Get-SafeAttachmentPolicy' | 
-    Where-Object -Property Name -eq $Settings.Name | 
+    Where-Object -Property Name -eq $PolicyName | 
     Select-Object Name, Enable, Action, QuarantineTag, Redirect, RedirectAddress
 
+    $PolicyName = "Default Safe Attachment Policy"
     $StateIsCorrect = if (
-        ($SafeAttachmentState.Name -eq $Settings.Name) -and
+        ($SafeAttachmentState.Name -eq $PolicyName) -and
         ($SafeAttachmentState.Enable -eq $Settings.Enable) -and
         ($SafeAttachmentState.QuarantineTag -eq $Settings.QuarantineTag) -and
         ($SafeAttachmentState.Redirect -eq $Settings.Redirect) -and
@@ -23,7 +24,7 @@ function Invoke-CIPPStandardSafeAttachmentPolicy {
             Write-LogMessage -API 'Standards' -tenant $Tenant -message 'Safe Attachment Policy already exists.' -sev Info
         } else {
             $cmdparams = @{
-                Identity = $Settings.Name
+                Identity = $PolicyName
                 Enable = $Settings.Enable
                 QuarantineTag = $Settings.QuarantineTag
                 Redirect = $Settings.Redirect
@@ -31,12 +32,12 @@ function Invoke-CIPPStandardSafeAttachmentPolicy {
             }
 
             try {
-                if ($SafeAttachmentState.Name -eq $Settings.Name) {
-                    $cmdparams.Add("Identity", $Settings.Name)
+                if ($SafeAttachmentState.Name -eq $PolicyName) {
+                    $cmdparams.Add("Identity", $PolicyName)
                     New-ExoRequest -tenantid $Tenant -cmdlet 'Set-SafeAttachmentPolicy' -cmdparams $cmdparams
                     Write-LogMessage -API 'Standards' -tenant $Tenant -message 'Updated Safe Attachment Policy' -sev Info
                 } else {
-                    $cmdparams.Add("Name", $Settings.Name)
+                    $cmdparams.Add("Name", $PolicyName)
                     New-ExoRequest -tenantid $Tenant -cmdlet 'New-SafeAttachmentPolicy' -cmdparams $cmdparams
                     Write-LogMessage -API 'Standards' -tenant $Tenant -message 'Created Safe Attachment Policy' -sev Info
                 }
