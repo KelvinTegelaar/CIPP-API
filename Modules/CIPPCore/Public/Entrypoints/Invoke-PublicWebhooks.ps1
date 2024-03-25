@@ -18,9 +18,17 @@ function Invoke-PublicWebhooks {
             $body = 'This webhook is not authorized, its an old entry.'
             $StatusCode = [HttpStatusCode]::Forbidden
         }
-        if ($Request.query.ValidationToken -or $Request.body.validationCode) {
-            Write-Host 'Validation token received'
+        if ($Request.query.ValidationToken) {
+            Write-Host 'Validation token received - query ValidationToken'
             $body = $request.query.ValidationToken
+            $StatusCode = [HttpStatusCode]::OK
+        } elseif ($Request.body.validationCode) {
+            Write-Host 'Validation token received - body validationCode'
+            $body = $request.body.validationCode
+            $StatusCode = [HttpStatusCode]::OK
+        } elseif ($Request.query.validationCode) {
+            Write-Host 'Validation token received - query validationCode'
+            $body = $request.query.validationCode
             $StatusCode = [HttpStatusCode]::OK
         } else {
             Write-Host 'Received request'
