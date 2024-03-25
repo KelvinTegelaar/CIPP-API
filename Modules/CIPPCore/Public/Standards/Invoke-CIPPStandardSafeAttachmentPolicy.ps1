@@ -24,7 +24,6 @@ function Invoke-CIPPStandardSafeAttachmentPolicy {
             Write-LogMessage -API 'Standards' -tenant $Tenant -message 'Safe Attachment Policy already exists.' -sev Info
         } else {
             $cmdparams = @{
-                Identity = $PolicyName
                 Enable = $Settings.Enable
                 QuarantineTag = $Settings.QuarantineTag
                 Redirect = $Settings.Redirect
