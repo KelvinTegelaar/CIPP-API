@@ -33,6 +33,14 @@ Function Invoke-AddPolicy {
                     }
                     $CreateRequest = New-GraphPOSTRequest -uri "https://graph.microsoft.com/beta/deviceAppManagement/$TemplateTypeURL" -tenantid $tenant -type POST -body $RawJSON
                 }
+                'deviceCompliancePolicies' {
+                    $TemplateTypeURL = 'deviceCompliancePolicies'
+                    $CheckExististing = New-GraphGETRequest -uri "https://graph.microsoft.com/beta/deviceManagement/$TemplateTypeURL" -tenantid $tenant
+                    if ($displayname -in $CheckExististing.displayName) {
+                        Throw "Policy with Display Name $($Displayname) Already exists"
+                    }
+                    $CreateRequest = New-GraphPOSTRequest -uri "https://graph.microsoft.com/beta/deviceManagement/$TemplateTypeURL" -tenantid $tenant -type POST -body $RawJson
+                }
                 'Admin' {
                     $TemplateTypeURL = 'groupPolicyConfigurations'
                     $CreateBody = '{"description":"' + $description + '","displayName":"' + $displayname + '","roleScopeTagIds":["0"]}'

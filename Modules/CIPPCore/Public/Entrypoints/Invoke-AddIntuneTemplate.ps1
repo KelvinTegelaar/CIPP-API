@@ -40,6 +40,12 @@ Function Invoke-AddIntuneTemplate {
             $URLName = $Request.query.URLName
             $ID = $request.query.id
             switch ($URLName) {
+                'deviceCompliancePolicies' {
+                    $Type = 'deviceCompliancePolicies'
+                    $Template = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/deviceManagement/$($urlname)/$($ID)" -tenantid $tenantfilter
+                    $DisplayName = $template.displayName
+                    $TemplateJson = ConvertTo-Json -InputObject $Template -Depth 10 -Compress
+                }
                 'managedAppPolicies' {
                     $Type = 'AppProtection'
                     $Template = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/deviceAppManagement/$($urlname)('$($ID)')" -tenantid $tenantfilter
