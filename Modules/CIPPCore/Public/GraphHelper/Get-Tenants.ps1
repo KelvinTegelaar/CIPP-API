@@ -36,41 +36,54 @@ function Get-Tenants {
         $LastRefresh = $false
     }
     if (!$LastRefresh -or $LastRefresh -lt (Get-Date).Addhours(-24).ToUniversalTime()) {
-        try {
-            Write-Host "Renewing. Cache not hit. $LastRefresh"
-            $TenantList = (New-GraphGetRequest -uri "https://graph.microsoft.com/beta/tenantRelationships/managedTenants/tenants?`$top=999" -tenantid $env:TenantID ) | Select-Object id, @{l = 'customerId'; e = { $_.tenantId } }, @{l = 'DefaultdomainName'; e = { [string]($_.contract.defaultDomainName) } } , @{l = 'MigratedToNewTenantAPI'; e = { $true } }, DisplayName, domains, @{n = 'delegatedPrivilegeStatus'; exp = { $_.tenantStatusInformation.delegatedPrivilegeStatus } } | Where-Object { $_.defaultDomainName -NotIn $SkipListCache.defaultDomainName -and $_.defaultDomainName -ne $null }
 
-        } catch {
-            Write-Host "Get-Tenants - Lighthouse Error, using contract/delegatedAdminRelationship calls. Error: $($_.Exception.Message)"
-            [System.Collections.Generic.List[PSCustomObject]]$BulkRequests = @(
-                @{
-                    id     = 'Contracts'
-                    method = 'GET'
-                    url    = "/contracts?`$top=999"
-                },
-                @{
-                    id     = 'GDAPRelationships'
-                    method = 'GET'
-                    url    = '/tenantRelationships/delegatedAdminRelationships'
-                }
-            )
+        # Query for active relationships
+        $GDAPRelationships = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/tenantRelationships/delegatedAdminRelationships?`$filter=status eq 'active'&`$select=customer,autoExtendDuration,endDateTime"
 
-            $BulkResults = New-GraphBulkRequest -Requests $BulkRequests -tenantid $TenantFilter -NoAuthCheck:$true
-            $Contracts = Get-GraphBulkResultByID -Results $BulkResults -ID 'Contracts' -Value
-            $GDAPRelationships = Get-GraphBulkResultByID -Results $BulkResults -ID 'GDAPRelationships' -Value
-
-            $ContractList = $Contracts | Select-Object id, customerId, DefaultdomainName, DisplayName, domains, @{l = 'MigratedToNewTenantAPI'; e = { $true } }, @{ n = 'delegatedPrivilegeStatus'; exp = { $CustomerId = $_.customerId; if (($GDAPRelationships | Where-Object { $_.customer.tenantId -EQ $CustomerId -and $_.status -EQ 'active' } | Measure-Object).Count -gt 0) { 'delegatedAndGranularDelegetedAdminPrivileges' } else { 'delegatedAdminPrivileges' } } } | Where-Object -Property defaultDomainName -NotIn $SkipListCache.defaultDomainName
-
-            $GDAPOnlyList = $GDAPRelationships | Where-Object { $_.status -eq 'active' -and $Contracts.customerId -notcontains $_.customer.tenantId } | Select-Object id, @{l = 'customerId'; e = { $($_.customer.tenantId) } }, @{l = 'defaultDomainName'; e = { (New-GraphGetRequest -uri "https://graph.microsoft.com/beta/tenantRelationships/findTenantInformationByTenantId(tenantId='$($_.customer.tenantId)')" -noauthcheck $true -asApp:$true -tenant $env:TenantId).defaultDomainName } }, @{l = 'MigratedToNewTenantAPI'; e = { $true } }, @{n = 'displayName'; exp = { $_.customer.displayName } }, domains, @{n = 'delegatedPrivilegeStatus'; exp = { 'granularDelegatedAdminPrivileges' } } | Where-Object { $_.defaultDomainName -NotIn $SkipListCache.defaultDomainName -and $_.defaultDomainName -ne $null } | Sort-Object -Property customerId -Unique
-
-            $TenantList = @($ContractList) + @($GDAPOnlyList)
+        # Flatten gdap relationship
+        $GDAPList = foreach ($Relationship in $GDAPRelationships) {
+            [PSCustomObject]@{
+                customerId      = $Relationship.customer.tenantId
+                displayName     = $Relationship.customer.displayName
+                autoExtend      = ($Relationship.autoExtendDuration -ne 'PT0S')
+                relationshipEnd = $Relationship.endDateTime
+            }
         }
-        <#if (!$TenantList.customerId) {
-            $TenantList = (New-GraphGetRequest -uri "https://graph.microsoft.com/beta/contracts?`$top=999" -tenantid $env:TenantID ) | Select-Object id, customerId, DefaultdomainName, DisplayName, domains | Where-Object -Property defaultDomainName -NotIn $SkipListCache.defaultDomainName
-        }#>
-        $IncludedTenantsCache = [system.collections.generic.list[hashtable]]::new()
+
+        # Group relationships, build object for adding to tables
+        $ActiveRelationships = $GDAPList | Where-Object { $_.customerId -notin $SkipListCache.customerId }
+        $TenantList = $ActiveRelationships | Group-Object -Property customerId | ForEach-Object -Parallel {
+            Import-Module .\Modules\CIPPCore
+            $LatestRelationship = $_.Group | Sort-Object -Property relationshipEnd | Select-Object -Last 1
+            $AutoExtend = ($_.Group | Where-Object { $_.autoExtend -eq $true } | Measure-Object).Count -gt 0
+
+            # Query domains to get default/initial
+            $Domains = New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/domains' -tenantid $LatestRelationship.customerId -NoAuthCheck:$true
+            [PSCustomObject]@{
+                PartitionKey             = 'Tenants'
+                RowKey                   = $_.Name
+                customerId               = $_.Name
+                displayName              = $LatestRelationship.displayName
+                relationshipEnd          = $LatestRelationship.relationshipEnd
+                relationshipCount        = $_.Count
+                defaultDomainName        = ($Domains | Where-Object { $_.isDefault -eq $true }).id
+                initialDomainName        = ($Domains | Where-Object { $_.isInitial -eq $true }).id
+                hasAutoExtend            = $AutoExtend
+                delegatedPrivilegeStatus = 'granularDelegatedAdminPrivileges'
+                domains                  = ''
+                Excluded                 = $false
+                ExcludeUser              = ''
+                ExcludeDate              = ''
+                GraphErrorCount          = 0
+                LastGraphError           = ''
+                LastRefresh              = (Get-Date).ToUniversalTime()
+            }
+        }
+
+        $IncludedTenantsCache = [system.collections.generic.list[object]]::new()
         if ($env:PartnerTenantAvailable) {
-            $IncludedTenantsCache.Add(@{
+            # Add partner tenant if env is set
+            $IncludedTenantsCache.Add([PSCustomObject]@{
                     RowKey            = $env:TenantID
                     PartitionKey      = 'Tenants'
                     customerId        = $env:TenantID
@@ -87,21 +100,7 @@ function Get-Tenants {
         }
         foreach ($Tenant in $TenantList) {
             if ($Tenant.defaultDomainName -eq 'Invalid' -or !$Tenant.defaultDomainName) { continue }
-            $IncludedTenantsCache.Add(@{
-                    RowKey                   = [string]$Tenant.customerId
-                    PartitionKey             = 'Tenants'
-                    customerId               = [string]$Tenant.customerId
-                    defaultDomainName        = [string]$Tenant.defaultDomainName
-                    displayName              = [string]$Tenant.DisplayName
-                    delegatedPrivilegeStatus = [string]$Tenant.delegatedPrivilegeStatus
-                    domains                  = ''
-                    Excluded                 = $false
-                    ExcludeUser              = ''
-                    ExcludeDate              = ''
-                    GraphErrorCount          = 0
-                    LastGraphError           = ''
-                    LastRefresh              = (Get-Date).ToUniversalTime()
-                }) | Out-Null
+            $IncludedTenantsCache.Add($Tenant) | Out-Null
         }
 
         if ($IncludedTenantsCache) {
