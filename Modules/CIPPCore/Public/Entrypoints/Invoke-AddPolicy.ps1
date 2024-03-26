@@ -39,6 +39,10 @@ Function Invoke-AddPolicy {
                     if ($displayname -in $CheckExististing.displayName) {
                         Throw "Policy with Display Name $($Displayname) Already exists"
                     }
+                    $JSON = $RawJSON | ConvertFrom-Json | Select-Object * -ExcludeProperty id, createdDateTime, lastModifiedDateTime, version, 'scheduledActionsForRule@odata.context', '@odata.context'
+                    $JSON.scheduledActionsForRule = @($JSON.scheduledActionsForRule | Select-Object * -ExcludeProperty 'scheduledActionConfigurations@odata.context')
+                    $RawJSON = ConvertTo-Json -InputObject $JSON -Depth 20 -Compress
+                    Write-Host $RawJSON
                     $CreateRequest = New-GraphPOSTRequest -uri "https://graph.microsoft.com/beta/deviceManagement/$TemplateTypeURL" -tenantid $tenant -type POST -body $RawJson
                 }
                 'Admin' {

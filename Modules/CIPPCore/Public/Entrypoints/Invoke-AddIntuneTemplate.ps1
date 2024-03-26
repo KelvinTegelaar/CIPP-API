@@ -42,7 +42,7 @@ Function Invoke-AddIntuneTemplate {
             switch ($URLName) {
                 'deviceCompliancePolicies' {
                     $Type = 'deviceCompliancePolicies'
-                    $Template = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/deviceManagement/$($urlname)/$($ID)" -tenantid $tenantfilter
+                    $Template = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/deviceManagement/$($urlname)/$($ID)?`$expand=scheduledActionsForRule(`$expand=scheduledActionConfigurations)" -tenantid $tenantfilter
                     $DisplayName = $template.displayName
                     $TemplateJson = ConvertTo-Json -InputObject $Template -Depth 10 -Compress
                 }
