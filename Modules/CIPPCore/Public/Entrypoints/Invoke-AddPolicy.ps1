@@ -24,6 +24,15 @@ Function Invoke-AddPolicy {
         }
         try {
             switch ($Request.body.TemplateType) {
+                'AppProtection' {
+                    $TemplateType = ($RawJSON | ConvertFrom-Json).'@odata.type' -replace '#microsoft.graph.', ''
+                    $TemplateTypeURL = "$($TemplateType)s"
+                    $CheckExististing = New-GraphGETRequest -uri "https://graph.microsoft.com/beta/deviceAppManagement/$TemplateTypeURL" -tenantid $tenant
+                    if ($displayname -in $CheckExististing.displayName) {
+                        Throw "Policy with Display Name $($Displayname) Already exists"
+                    }
+                    $CreateRequest = New-GraphPOSTRequest -uri "https://graph.microsoft.com/beta/deviceAppManagement/$TemplateTypeURL" -tenantid $tenant -type POST -body $RawJSON
+                }
                 'Admin' {
                     $TemplateTypeURL = 'groupPolicyConfigurations'
                     $CreateBody = '{"description":"' + $description + '","displayName":"' + $displayname + '","roleScopeTagIds":["0"]}'
