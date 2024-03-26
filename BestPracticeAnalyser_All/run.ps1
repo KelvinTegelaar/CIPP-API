@@ -92,6 +92,9 @@ $AddRow = foreach ($Template in $templates) {
                 'string' {
                     $Result.Add($field.Name, [string]$FieldInfo)
                 }
+                'percentage' {
+
+                }
             }
         } catch {
             Write-LogMessage -API 'BPA' -tenant $tenant -message "Error storing $($field.Name) for $($TenantName.displayName) with GUID $($TenantName.customerId). Error: $($_.Exception.Message)" -sev Error
@@ -102,7 +105,7 @@ $AddRow = foreach ($Template in $templates) {
 
     if ($Result) {
         try {
-            Add-AzDataTableEntity @Table -Entity $Result -Force
+            Add-CIPPAzDataTableEntity @Table -Entity $Result -Force
         } catch {
             Write-LogMessage -API 'BPA' -tenant $tenant -message "Error getting saving data for $($template.Name) - $($TenantName.customerId). Error: $($_.Exception.Message)" -sev Error
 

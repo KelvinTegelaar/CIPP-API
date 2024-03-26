@@ -2,5 +2,5 @@ param($name)
 
 $Table = Get-CippTable -tablename 'apps'
 
-$Object = (Get-AzDataTableEntity @Table).RowKey
+$Object = (Get-CIPPAzDataTableEntity @Table).RowKey
 $object

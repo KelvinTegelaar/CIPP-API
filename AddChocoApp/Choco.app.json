@@ -1,5 +1,4 @@
 {
- 
   "displayName": "",
   "installCommandLine": "",
   "uninstallCommandLine": "",
@@ -11,7 +10,7 @@
   "fileName": "IntunePackage.intunewin",
   "@odata.type": "#microsoft.graph.win32LobApp",
   "applicableArchitectures": "x86, x64",
- 
+
   "installExperience": {
     "runAsAccount": "user",
     "deviceRestartBehavior": "allow",
@@ -19,39 +18,40 @@
   },
   "detectionRules": [
     {
-  "@odata.type": "#microsoft.graph.win32LobAppFileSystemDetection",
-  "path": "%programfiles%\\7-zip",
-  "fileOrFolderName": "7z.exe",
-  "check32BitOn64System": false,
-  "detectionType": "exists" }
+      "@odata.type": "#microsoft.graph.win32LobAppFileSystemDetection",
+      "path": "%programfiles%\\7-zip",
+      "fileOrFolderName": "7z.exe",
+      "check32BitOn64System": false,
+      "detectionType": "exists"
+    }
   ],
-      "returncode":  [
-                       {
-                           "returnCode":  0,
-                           "type":  "success",
-                           "@odata.type":  "#microsoft.graph.win32LobAppReturnCode"
-                       },
-                       {
-                           "returnCode":  1707,
-                           "type":  "Success",
-                           "@odata.type":  "#microsoft.graph.win32LobAppReturnCode"
-                       },
-                       {
-                           "returnCode":  1641,
-                           "type":  "hardReboot",
-                           "@odata.type":  "#microsoft.graph.win32LobAppReturnCode"
-                       },
-                       {
-                           "returnCode":  1618,
-                           "type":  "retry",
-                           "@odata.type":  "#microsoft.graph.win32LobAppReturnCode"
-                       },
-                       {
-                           "returnCode":  3010,
-                           "type":  "softReboot",
-                           "@odata.type":  "#microsoft.graph.win32LobAppReturnCode"
-                       }
-                       ],
+  "returncode": [
+    {
+      "returnCode": 0,
+      "type": "success",
+      "@odata.type": "#microsoft.graph.win32LobAppReturnCode"
+    },
+    {
+      "returnCode": 1707,
+      "type": "Success",
+      "@odata.type": "#microsoft.graph.win32LobAppReturnCode"
+    },
+    {
+      "returnCode": 1641,
+      "type": "hardReboot",
+      "@odata.type": "#microsoft.graph.win32LobAppReturnCode"
+    },
+    {
+      "returnCode": 1618,
+      "type": "retry",
+      "@odata.type": "#microsoft.graph.win32LobAppReturnCode"
+    },
+    {
+      "returnCode": 3010,
+      "type": "softReboot",
+      "@odata.type": "#microsoft.graph.win32LobAppReturnCode"
+    }
+  ],
   "minimumNumberOfProcessors": "1",
   "minimumFreeDiskSpaceInMB": "8",
   "minimumCpuSpeedInMHz": "4",
@@ -60,7 +60,6 @@
     "v10_1607": true
   },
   "notes": "CIPP Uploaded application",
-  "minimumMemoryInMB": "1"
- 
-   
+  "minimumMemoryInMB": "1",
+  "setupFilePath": "install.ps1"
 }

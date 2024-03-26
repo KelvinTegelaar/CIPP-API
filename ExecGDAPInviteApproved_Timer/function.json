@@ -7,10 +7,9 @@
       "schedule": "0 0 */3 * * *"
     },
     {
-      "type": "queue",
-      "direction": "out",
-      "name": "Msg",
-      "queueName": "gdapinvitequeue"
+      "name": "starter",
+      "type": "durableClient",
+      "direction": "in"
     }
   ]
 }

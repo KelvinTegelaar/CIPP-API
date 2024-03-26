@@ -5,7 +5,7 @@ $ExcludedTenants = Get-Tenants -SkipList
 $DomainTable = Get-CippTable -tablename 'Domains'
 
 $TenantDomains = $Tenants | ForEach-Object -Parallel {
-    Import-Module '.\GraphHelper.psm1'
+    Import-Module CippCore
     $Tenant = $_
     # Get Domains to Lookup
     try {
@@ -31,7 +31,7 @@ $TenantDomains = $Tenants | ForEach-Object -Parallel {
 # Cleanup domains from tenants with errors, skip domains with manually set selectors or mail providers
 foreach ($Exclude in $ExcludedTenants) {
     $Filter = "PartitionKey eq 'TenantDomains' and TenantId eq '{0}'" -f $Exclude.defaultDomainName
-    $CleanupRows = Get-AzDataTableEntity @DomainTable -Filter $Filter
+    $CleanupRows = Get-CIPPAzDataTableEntity @DomainTable -Filter $Filter
     $CleanupCount = ($CleanupRows | Measure-Object).Count
     if ($CleanupCount -gt 0) {
         Write-LogMessage -API 'DomainAnalyser' -tenant $Exclude.defaultDomainName -message "Cleaning up $CleanupCount domain(s) for excluded tenant" -sev Info
@@ -48,14 +48,14 @@ if ($TenantCount -gt 0) {
         $TenantDomainObjects = foreach ($Tenant in $TenantDomains) {
             $TenantDetails = ($Tenant | ConvertTo-Json -Compress).ToString()
             $Filter = "PartitionKey eq '{0}' and RowKey eq '{1}'" -f $Tenant.Tenant, $Tenant.Domain
-            $OldDomain = Get-AzDataTableEntity @DomainTable -Filter $Filter
+            $OldDomain = Get-CIPPAzDataTableEntity @DomainTable -Filter $Filter
 
             if ($OldDomain) {
                 Remove-AzDataTableEntity @DomainTable -Entity $OldDomain | Out-Null
             }
 
             $Filter = "PartitionKey eq 'TenantDomains' and RowKey eq '{0}'" -f $Tenant.Domain
-            $Domain = Get-AzDataTableEntity @DomainTable -Filter $Filter
+            $Domain = Get-CIPPAzDataTableEntity @DomainTable -Filter $Filter
 
             if (!$Domain) {
                 $DomainObject = [pscustomobject]@{
@@ -86,7 +86,7 @@ if ($TenantCount -gt 0) {
 
         # Batch insert all tenant domains
         try {
-            Add-AzDataTableEntity @DomainTable -Entity $TenantDomainObjects -Force
+            Add-CIPPAzDataTableEntity @DomainTable -Entity $TenantDomainObjects -Force
         } catch { Write-LogMessage -API 'DomainAnalyser' -message "Domain Analyser GetTenantDomains Error $($_.Exception.Message)" -sev info }
     } catch { Write-LogMessage -API 'DomainAnalyser' -message "GetTenantDomains loop exception: $($_.Exception.Message) line $($_.InvocationInfo.ScriptLineNumber)" -sev 'Error' }
 }

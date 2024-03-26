@@ -1,8 +1,14 @@
 ﻿{
   "bindings": [
     {
-      "name": "name",
-      "type": "activityTrigger",
+      "name": "Timer",
+      "schedule": "0 0 * * * *",
+      "direction": "in",
+      "type": "timerTrigger"
+    },
+    {
+      "name": "starter",
+      "type": "durableClient",
       "direction": "in"
     }
   ]

@@ -13,7 +13,7 @@ $Table = Get-CippTable -TableName 'MaintenanceScripts'
 
 if (![string]::IsNullOrEmpty($Request.Query.Guid)) {
     $Filter = "PartitionKey eq 'Maintenance' and RowKey eq '{0}'" -f $Request.Query.Guid
-    $ScriptRow = Get-AzDataTableEntity @Table -Filter $Filter
+    $ScriptRow = Get-CIPPAzDataTableEntity @Table -Filter $Filter
     if ($ScriptRow) {
         if ($ScriptRow.Timestamp.DateTime -lt (Get-Date).AddMinutes(-5)) {
             $Body = 'Write-Host "Link expired"'
