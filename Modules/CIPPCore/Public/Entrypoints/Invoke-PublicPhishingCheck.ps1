@@ -31,7 +31,7 @@ Function Invoke-PublicPhishingCheck {
         } else {
             "Potential Phishing page detected. Detected Information:  Access by IP $($request.headers.'x-forwarded-for')" 
         }
-        Write-AlertMessage -message "Potential Phishing page detected. Detected Information: $($request.headers | ConvertTo-Json -Depth 5)" -sev 'Alert' -tenant $Request.query.TenantId    
+        Write-AlertMessage -message $AlertMessage -sev 'Alert' -tenant $Request.query.TenantId    
     }
     
     # Associate values to output bindings by calling 'Push-OutputBinding'.
