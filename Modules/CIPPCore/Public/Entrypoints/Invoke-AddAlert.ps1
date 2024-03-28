@@ -32,7 +32,7 @@ Function Invoke-AddAlert {
                     MFAAlertUsers     = [bool]$Request.body.MFAAlertUsers
                     NewGA             = [bool]$Request.body.NewGA
                     NewRole           = [bool]$Request.body.NewRole
-                    QuotaUsed         = [bool]$Request.body.QuotaUsed
+                    QuotaUsed         = [int]$Request.body.QuotaUsedQuota
                     UnusedLicenses    = [bool]$Request.body.UnusedLicenses
                     OverusedLicenses  = [bool]$Request.body.OverusedLicenses
                     AppSecretExpiry   = [bool]$Request.body.AppSecretExpiry
@@ -41,7 +41,7 @@ Function Invoke-AddAlert {
                     DepTokenExpiry    = [bool]$Request.body.DepTokenExpiry
                     NoCAConfig        = [bool]$Request.body.NoCAConfig
                     SecDefaultsUpsell = [bool]$Request.body.SecDefaultsUpsell
-                    SharePointQuota   = [bool]$Request.body.SharePointQuota
+                    SharePointQuota   = [int]$Request.body.SharePointQuotaQuota
                     ExpiringLicenses  = [bool]$Request.body.ExpiringLicenses
                     type              = 'Alert'
                     RowKey            = $TenantID
