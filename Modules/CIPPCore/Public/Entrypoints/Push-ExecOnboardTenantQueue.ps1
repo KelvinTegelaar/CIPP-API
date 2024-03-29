@@ -326,6 +326,12 @@ Function Push-ExecOnboardTenantQueue {
                         $Logs.Add([PSCustomObject]@{ Date = Get-Date -UFormat $DateFormat; Log = 'CPV permissions refreshed' })
                         $OnboardingSteps.Step4.Status = 'succeeded'
                         $OnboardingSteps.Step4.Message = 'CPV permissions refreshed'
+                        if ($Tenant.defaultDomainName -match 'Domain Error') {
+                            try {
+                                Remove-CIPPCache -tenantsOnly $true
+                            } catch {}
+                            $Tenant = Get-Tenants -IncludeAll | Where-Object { $_.customerId -eq $Relationship.customer.tenantId } | Select-Object -First 1
+                        }
                     } else {
                         $Logs.Add([PSCustomObject]@{ Date = Get-Date -UFormat $DateFormat; Log = 'CPV permissions failed to refresh' })
                         $TenantOnboarding.Status = 'failed'
