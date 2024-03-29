@@ -43,6 +43,7 @@ Function Invoke-AddAlert {
                     SecDefaultsUpsell = [bool]$Request.body.SecDefaultsUpsell
                     SharePointQuota   = [int]$Request.body.SharePointQuotaQuota
                     ExpiringLicenses  = [bool]$Request.body.ExpiringLicenses
+                    NewAppApproval    = [bool]$Request.body.NewAppApproval
                     type              = 'Alert'
                     RowKey            = $TenantID
                     PartitionKey      = 'Alert'
