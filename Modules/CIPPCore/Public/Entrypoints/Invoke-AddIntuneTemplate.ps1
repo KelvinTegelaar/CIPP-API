@@ -35,13 +35,23 @@ Function Invoke-AddIntuneTemplate {
             Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -message "Created intune policy template named $($Request.body.displayname) with GUID $GUID" -Sev 'Debug'
 
             $body = [pscustomobject]@{'Results' = 'Successfully added template' }
-        }
-        else {
+        } else {
             $TenantFilter = $request.query.TenantFilter
             $URLName = $Request.query.URLName
             $ID = $request.query.id
             switch ($URLName) {
-
+                'deviceCompliancePolicies' {
+                    $Type = 'deviceCompliancePolicies'
+                    $Template = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/deviceManagement/$($urlname)/$($ID)?`$expand=scheduledActionsForRule(`$expand=scheduledActionConfigurations)" -tenantid $tenantfilter
+                    $DisplayName = $template.displayName
+                    $TemplateJson = ConvertTo-Json -InputObject $Template -Depth 10 -Compress
+                }
+                'managedAppPolicies' {
+                    $Type = 'AppProtection'
+                    $Template = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/deviceAppManagement/$($urlname)('$($ID)')" -tenantid $tenantfilter
+                    $DisplayName = $template.displayName
+                    $TemplateJson = ConvertTo-Json -InputObject $Template -Depth 10 -Compress
+                }
                 'configurationPolicies' {
                     $Type = 'Catalog'
                     $Template = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/deviceManagement/$($urlname)('$($ID)')?`$expand=settings" -tenantid $tenantfilter | Select-Object name, description, settings, platforms, technologies, templateReference
@@ -112,8 +122,7 @@ Function Invoke-AddIntuneTemplate {
 
             $body = [pscustomobject]@{'Results' = 'Successfully added template' }
         }
-    }
-    catch {
+    } catch {
         Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -message "Intune Template Deployment failed: $($_.Exception.Message)" -Sev 'Error'
         $body = [pscustomobject]@{'Results' = "Intune Template Deployment failed: $($_.Exception.Message)" }
     }
