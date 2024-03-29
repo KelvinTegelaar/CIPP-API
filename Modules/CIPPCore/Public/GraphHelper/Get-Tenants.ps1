@@ -58,7 +58,14 @@ function Get-Tenants {
             $AutoExtend = ($_.Group | Where-Object { $_.autoExtend -eq $true } | Measure-Object).Count -gt 0
 
             # Query domains to get default/initial
-            $Domains = New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/domains' -tenantid $LatestRelationship.customerId -NoAuthCheck:$true
+            try {
+                $Domains = New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/domains' -tenantid $LatestRelationship.customerId -NoAuthCheck:$true -ErrorAction Stop
+                $defaultDomainName = ($Domains | Where-Object { $_.isDefault -eq $true }).id
+                $initialDomainName = ($Domains | Where-Object { $_.isInitial -eq $true }).id
+            } catch {
+                $defaultDomainName = 'Domain Error, check permissions'
+                $initialDomainName = 'Domain Error, check permissions'
+            }
             [PSCustomObject]@{
                 PartitionKey             = 'Tenants'
                 RowKey                   = $_.Name
@@ -66,8 +73,8 @@ function Get-Tenants {
                 displayName              = $LatestRelationship.displayName
                 relationshipEnd          = $LatestRelationship.relationshipEnd
                 relationshipCount        = $_.Count
-                defaultDomainName        = ($Domains | Where-Object { $_.isDefault -eq $true }).id
-                initialDomainName        = ($Domains | Where-Object { $_.isInitial -eq $true }).id
+                defaultDomainName        = $defaultDomainName
+                initialDomainName        = $initialDomainName
                 hasAutoExtend            = $AutoExtend
                 delegatedPrivilegeStatus = 'granularDelegatedAdminPrivileges'
                 domains                  = ''
