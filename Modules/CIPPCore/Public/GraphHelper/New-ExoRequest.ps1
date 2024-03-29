@@ -5,7 +5,8 @@ function New-ExoRequest ($tenantid, $cmdlet, $cmdParams, $useSystemMailbox, $Anc
     #>
     if ((Get-AuthorisedRequest -TenantID $tenantid) -or $NoAuthCheck -eq $True) {
         $token = Get-ClassicAPIToken -resource 'https://outlook.office365.com' -Tenantid $tenantid
-        $tenant = (get-tenants -IncludeErrors | Where-Object { $_.defaultDomainName -eq $tenantid -or $_.customerId -eq $tenantid }).customerId
+        $Tenant = Get-Tenants -IncludeErrors | Where-Object { $_.defaultDomainName -eq $tenantid -or $_.customerId -eq $tenantid }
+
         if ($cmdParams) {
             $Params = $cmdParams
         } else {
@@ -23,11 +24,12 @@ function New-ExoRequest ($tenantid, $cmdlet, $cmdParams, $useSystemMailbox, $Anc
             if ($cmdparams.User) { $Anchor = $cmdparams.User }
 
             if (!$Anchor -or $useSystemMailbox) {
-                $OnMicrosoft = (New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/domains?$top=999' -tenantid $tenantid -NoAuthCheck $NoAuthCheck | Where-Object -Property isInitial -EQ $true).id
-
+                if (!$Tenant.initialDomainName) {
+                    $OnMicrosoft = (New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/domains?$top=999' -tenantid $tenantid -NoAuthCheck $NoAuthCheck | Where-Object -Property isInitial -EQ $true).id
+                } else {
+                    $OnMicrosoft = $Tenant.initialDomainName
+                }
                 $anchor = "UPN:SystemMailbox{8cc370d3-822a-4ab8-a926-bb94bd0641a9}@$($OnMicrosoft)"
-
-
             }
         }
         Write-Host "Using $Anchor"
@@ -40,9 +42,9 @@ function New-ExoRequest ($tenantid, $cmdlet, $cmdParams, $useSystemMailbox, $Anc
         }
         try {
             if ($Select) { $Select = "`$select=$Select" }
-            $URL = "https://outlook.office365.com/adminapi/beta/$($tenant)/InvokeCommand?$Select"
-            
-            $ReturnedData = 
+            $URL = "https://outlook.office365.com/adminapi/beta/$($tenant.customerId)/InvokeCommand?$Select"
+
+            $ReturnedData =
             do {
                 $Return = Invoke-RestMethod $URL -Method POST -Body $ExoBody -Headers $Headers -ContentType 'application/json; charset=utf-8'
                 $URL = $Return.'@odata.nextLink'
