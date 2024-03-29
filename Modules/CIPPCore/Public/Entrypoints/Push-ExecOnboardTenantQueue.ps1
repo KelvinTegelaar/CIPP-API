@@ -263,72 +263,81 @@ Function Push-ExecOnboardTenantQueue {
             $TenantOnboarding.Logs = [string](ConvertTo-Json -InputObject @($Logs) -Compress)
             Add-CIPPAzDataTableEntity @OnboardTable -Entity $TenantOnboarding -Force -ErrorAction Stop
 
-            $Logs.Add([PSCustomObject]@{ Date = Get-Date -UFormat $DateFormat; Log = 'Clearing tenant cache' })
-            $y = 0
-            do {
-                try {
-                    Remove-CIPPCache -tenantsOnly $true
-                } catch {}
+            $IsExcluded = (Get-Tenants -SkipList | Where-Object { $_.customerId -eq $Relationship.customer.tenantId } | Measure-Object).Count -gt 0
+            if ($IsExcluded) {
+                $Logs.Add([PSCustomObject]@{ Date = Get-Date -UFormat $DateFormat; Log = 'Tenant is excluded from CIPP, onboarding cannot continue.' })
+                $TenantOnboarding.Status = 'failed'
+                $OnboardingSteps.Step4.Status = 'failed'
+                $OnboardingSteps.Step4.Message = 'Tenant excluded from CIPP, remove the exclusion and retry onboarding.'
+            } else {
 
-                $Tenant = Get-Tenants | Where-Object { $_.customerId -eq $Relationship.customer.tenantId } | Select-Object -First 1
-                $y++
-                Start-Sleep -Seconds 20
-            } while (!$Tenant -and $y -le 4)
+                $Logs.Add([PSCustomObject]@{ Date = Get-Date -UFormat $DateFormat; Log = 'Clearing tenant cache' })
+                $y = 0
+                do {
+                    try {
+                        Remove-CIPPCache -tenantsOnly $true
+                    } catch {}
 
-            if ($Tenant) {
-                $Logs.Add([PSCustomObject]@{ Date = Get-Date -UFormat $DateFormat; Log = 'Tenant found in customer list' })
-                try {
-                    $CPVConsentParams = @{
-                        TenantFilter = $Tenant.defaultDomainName
+                    $Tenant = Get-Tenants | Where-Object { $_.customerId -eq $Relationship.customer.tenantId } | Select-Object -First 1
+                    $y++
+                    Start-Sleep -Seconds 20
+                } while (!$Tenant -and $y -le 4)
+
+                if ($Tenant) {
+                    $Logs.Add([PSCustomObject]@{ Date = Get-Date -UFormat $DateFormat; Log = 'Tenant found in customer list' })
+                    try {
+                        $CPVConsentParams = @{
+                            TenantFilter = $Tenant.defaultDomainName
+                        }
+                        $Consent = Set-CIPPCPVConsent @CPVConsentParams
+                        if ($Consent -match 'Could not add our Service Principal to the client tenant') {
+                            throw
+                        }
+                        $Logs.Add([PSCustomObject]@{ Date = Get-Date -UFormat $DateFormat; Log = 'Added initial CPV consent permissions' })
+                    } catch {
+                        $Logs.Add([PSCustomObject]@{ Date = Get-Date -UFormat $DateFormat; Log = 'CPV Consent Failed' })
+                        $TenantOnboarding.Status = 'failed'
+                        $OnboardingSteps.Step4.Status = 'failed'
+                        $OnboardingSteps.Step4.Message = 'CPV Consent failed, check the App Registration in your partner tenant for missing admin consent.'
+                        $TenantOnboarding.OnboardingSteps = [string](ConvertTo-Json -InputObject $OnboardingSteps -Compress)
+                        $TenantOnboarding.Logs = [string](ConvertTo-Json -InputObject @($Logs) -Compress)
+                        Add-CIPPAzDataTableEntity @OnboardTable -Entity $TenantOnboarding -Force -ErrorAction Stop
+                        return
                     }
-                    $Consent = Set-CIPPCPVConsent @CPVConsentParams
-                    if ($Consent -match 'Could not add our Service Principal to the client tenant') {
-                        throw
-                    }
-                    $Logs.Add([PSCustomObject]@{ Date = Get-Date -UFormat $DateFormat; Log = 'Added initial CPV consent permissions' })
-                } catch {
-                    $Logs.Add([PSCustomObject]@{ Date = Get-Date -UFormat $DateFormat; Log = 'CPV Consent Failed' })
-                    $TenantOnboarding.Status = 'failed'
-                    $OnboardingSteps.Step4.Status = 'failed'
-                    $OnboardingSteps.Step4.Message = 'CPV Consent failed, check the App Registration in your partner tenant for missing admin consent.'
+                    $Refreshing = $true
+                    $CPVSuccess = $false
+                    $Logs.Add([PSCustomObject]@{ Date = Get-Date -UFormat $DateFormat; Log = 'Refreshing CPV permissions' })
+                    $OnboardingSteps.Step4.Message = 'Refreshing CPV permissions'
                     $TenantOnboarding.OnboardingSteps = [string](ConvertTo-Json -InputObject $OnboardingSteps -Compress)
                     $TenantOnboarding.Logs = [string](ConvertTo-Json -InputObject @($Logs) -Compress)
                     Add-CIPPAzDataTableEntity @OnboardTable -Entity $TenantOnboarding -Force -ErrorAction Stop
-                    return
-                }
-                $Refreshing = $true
-                $CPVSuccess = $false
-                $Logs.Add([PSCustomObject]@{ Date = Get-Date -UFormat $DateFormat; Log = 'Refreshing CPV permissions' })
-                $OnboardingSteps.Step4.Message = 'Refreshing CPV permissions'
-                $TenantOnboarding.OnboardingSteps = [string](ConvertTo-Json -InputObject $OnboardingSteps -Compress)
-                $TenantOnboarding.Logs = [string](ConvertTo-Json -InputObject @($Logs) -Compress)
-                Add-CIPPAzDataTableEntity @OnboardTable -Entity $TenantOnboarding -Force -ErrorAction Stop
-                do {
-                    try {
-                        Add-CIPPApplicationPermission -RequiredResourceAccess 'CippDefaults' -ApplicationId $ENV:ApplicationID -tenantfilter $Tenant.defaultDomainName
-                        Add-CIPPDelegatedPermission -RequiredResourceAccess 'CippDefaults' -ApplicationId $ENV:ApplicationID -tenantfilter $Tenant.defaultDomainName
-                        $CPVSuccess = $true
-                        $Refreshing = $false
-                    } catch {
-                        Start-Sleep -Seconds 30
-                    }
-                } while ($Refreshing -and (Get-Date) -lt $Start.AddMinutes(8))
+                    do {
+                        try {
+                            Add-CIPPApplicationPermission -RequiredResourceAccess 'CippDefaults' -ApplicationId $ENV:ApplicationID -tenantfilter $Tenant.defaultDomainName
+                            Add-CIPPDelegatedPermission -RequiredResourceAccess 'CippDefaults' -ApplicationId $ENV:ApplicationID -tenantfilter $Tenant.defaultDomainName
+                            $CPVSuccess = $true
+                            $Refreshing = $false
+                        } catch {
+                            Start-Sleep -Seconds 30
+                        }
+                    } while ($Refreshing -and (Get-Date) -lt $Start.AddMinutes(8))
 
-                if ($CPVSuccess) {
-                    $Logs.Add([PSCustomObject]@{ Date = Get-Date -UFormat $DateFormat; Log = 'CPV permissions refreshed' })
-                    $OnboardingSteps.Step4.Status = 'succeeded'
-                    $OnboardingSteps.Step4.Message = 'CPV permissions refreshed'
+                    if ($CPVSuccess) {
+                        $Logs.Add([PSCustomObject]@{ Date = Get-Date -UFormat $DateFormat; Log = 'CPV permissions refreshed' })
+                        $OnboardingSteps.Step4.Status = 'succeeded'
+                        $OnboardingSteps.Step4.Message = 'CPV permissions refreshed'
+                    } else {
+                        $Logs.Add([PSCustomObject]@{ Date = Get-Date -UFormat $DateFormat; Log = 'CPV permissions failed to refresh' })
+                        $TenantOnboarding.Status = 'failed'
+                        $OnboardingSteps.Step4.Status = 'failed'
+                        $OnboardingSteps.Step4.Message = 'CPV permissions failed to refresh, try again later'
+                    }
                 } else {
-                    $Logs.Add([PSCustomObject]@{ Date = Get-Date -UFormat $DateFormat; Log = 'CPV permissions failed to refresh' })
+                    $Logs.Add([PSCustomObject]@{ Date = Get-Date -UFormat $DateFormat; Log = 'Tenant not found' })
                     $TenantOnboarding.Status = 'failed'
                     $OnboardingSteps.Step4.Status = 'failed'
-                    $OnboardingSteps.Step4.Message = 'CPV permissions failed to refresh, try again later'
+                    $OnboardingSteps.Step4.Message = 'Tenant not found in customer list, try again later'
                 }
-            } else {
-                $Logs.Add([PSCustomObject]@{ Date = Get-Date -UFormat $DateFormat; Log = 'Tenant not found' })
-                $TenantOnboarding.Status = 'failed'
-                $OnboardingSteps.Step4.Status = 'failed'
-                $OnboardingSteps.Step4.Message = 'Tenant not found in customer list, try again later'
             }
             $TenantOnboarding.OnboardingSteps = [string](ConvertTo-Json -InputObject $OnboardingSteps -Compress)
             $TenantOnboarding.Logs = [string](ConvertTo-Json -InputObject @($Logs) -Compress)
