@@ -32,15 +32,24 @@ function Invoke-CIPPStandardGroupTemplate {
             }
             $GraphRequest = New-GraphPostRequest -uri 'https://graph.microsoft.com/beta/groups' -tenantid $tenant -type POST -body (ConvertTo-Json -InputObject $BodyToship -Depth 10) -verbose
           } else {
-            $Params = @{ 
-              Name                               = $groupobj.Displayname
-              Alias                              = $groupobj.username
-              Description                        = $groupobj.Description
-              PrimarySmtpAddress                 = $email
-              Type                               = $groupobj.groupType
-              RequireSenderAuthenticationEnabled = [bool]!$groupobj.AllowExternal
+            if ($groupobj.groupType -eq 'dynamicdistribution') {
+              $Params = @{ 
+                Name               = $groupobj.Displayname
+                RecipientFilter    = $groupobj.membershipRules
+                PrimarySmtpAddress = $email
+              }
+              $GraphRequest = New-ExoRequest -tenantid $tenant -cmdlet 'New-DynamicDistributionGroup' -cmdParams $params
+            } else {
+              $Params = @{ 
+                Name                               = $groupobj.Displayname
+                Alias                              = $groupobj.username
+                Description                        = $groupobj.Description
+                PrimarySmtpAddress                 = $email
+                Type                               = $groupobj.groupType
+                RequireSenderAuthenticationEnabled = [bool]!$groupobj.AllowExternal
+              }
+              $GraphRequest = New-ExoRequest -tenantid $tenant -cmdlet 'New-DistributionGroup' -cmdParams $params
             }
-            $GraphRequest = New-ExoRequest -tenantid $tenant -cmdlet 'New-DistributionGroup' -cmdParams $params
           }
           Write-LogMessage -user $request.headers.'x-ms-client-principal' -API 'Standards' -tenant $tenant -message "Created group $($groupobj.displayname) with id $($GraphRequest.id) " -Sev 'Info'
 

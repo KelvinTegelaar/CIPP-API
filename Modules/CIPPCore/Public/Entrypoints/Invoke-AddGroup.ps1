@@ -45,13 +45,23 @@ Function Invoke-AddGroup {
                 }
                 $GraphRequest = New-GraphPostRequest -uri 'https://graph.microsoft.com/beta/groups' -tenantid $tenant -type POST -body (ConvertTo-Json -InputObject $BodyToship -Depth 10) -verbose
             } else {
-                $Params = @{ 
-                    Name                               = $groupobj.Displayname
-                    Alias                              = $groupobj.username
-                    Description                        = $groupobj.Description
-                    PrimarySmtpAddress                 = $email
-                    Type                               = $groupobj.groupType
-                    RequireSenderAuthenticationEnabled = [bool]!$groupobj.AllowExternal
+                if ($groupobj.groupType -eq 'dynamicdistribution') {
+                    $Params = @{ 
+                        Name               = $groupobj.Displayname
+                        RecipientFilter    = $groupobj.membershipRules
+                        PrimarySmtpAddress = $email
+                    }
+                    $GraphRequest = New-ExoRequest -tenantid $tenant -cmdlet 'New-DynamicDistributionGroup' -cmdParams $params
+                } else {
+                    $Params = @{ 
+                        Name                               = $groupobj.Displayname
+                        Alias                              = $groupobj.username
+                        Description                        = $groupobj.Description
+                        PrimarySmtpAddress                 = $email
+                        Type                               = $groupobj.groupType
+                        RequireSenderAuthenticationEnabled = [bool]!$groupobj.AllowExternal
+                    }
+                    $GraphRequest = New-ExoRequest -tenantid $tenant -cmdlet 'New-DistributionGroup' -cmdParams $params
                 }
                 $GraphRequest = New-ExoRequest -tenantid $tenant -cmdlet 'New-DistributionGroup' -cmdParams $params
                 # At some point add logic to use AddOwner/AddMember for New-DistributionGroup, but idk how we're going to brr that - rvdwegen
