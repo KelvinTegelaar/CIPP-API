@@ -58,20 +58,20 @@ Function Invoke-ListExternalTenantInfo {
 
         # Invoke
         $response = Invoke-RestMethod -UseBasicParsing -Method Post -Uri 'https://autodiscover-s.outlook.com/autodiscover/autodiscover.svc' -Body $body -Headers $headers
-    
+
         # Return
         $TenantDomains = $response.Envelope.body.GetFederationInformationResponseMessage.response.Domains.Domain | Sort-Object
     }
 
     $results = [PSCustomObject]@{
         GraphRequest = $GraphRequest
-        Domains      = $TenantDomains
+        Domains      = @($TenantDomains)
     }
 
     # Associate values to output bindings by calling 'Push-OutputBinding'.
     Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
-            StatusCode = $StatusCode 
-            Body       = $results 
+            StatusCode = $StatusCode
+            Body       = $results
         })
 
 }

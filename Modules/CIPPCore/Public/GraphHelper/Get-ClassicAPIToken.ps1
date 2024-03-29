@@ -5,10 +5,10 @@ function Get-ClassicAPIToken($tenantID, $Resource) {
     #>
     $TokenKey = '{0}-{1}' -f $TenantID, $Resource
     if ($script:classictoken.$TokenKey -and [int](Get-Date -UFormat %s -Millisecond 0) -lt $script:classictoken.$TokenKey.expires_on) {
-        Write-Host 'Classic: cached token'
+        #Write-Host 'Classic: cached token'
         return $script:classictoken.$TokenKey
     } else {
-        Write-Host 'Using classic'
+        #Write-Host 'Using classic'
         $uri = "https://login.microsoftonline.com/$($TenantID)/oauth2/token"
         $Body = @{
             client_id     = $env:ApplicationID
