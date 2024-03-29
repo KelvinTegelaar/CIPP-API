@@ -243,7 +243,7 @@ function Get-ApplicationNameFromId {
         4660504c-45b3-4674-a709-71951a6b0763 { $return = 'Microsoft Invitation Acceptance Portal' }
         ba23cd2a-306c-48f2-9d62-d3ecd372dfe4 { $return = 'OfficeGraph' }
         d52485ee-4609-4f6b-b3a3-68b6f841fa23 { $return = 'On-Premises Data Gateway Connector' }
-        996def3d-b36c-4153-8607-a6fd3c01b89f { $return = 'Dynamics 365 for Financials' }
+        996def3d-b36c-4153-8607-a6fd3c01b89f { $return = 's 365 for Financials' }
         b6b84568-6c01-4981-a80f-09da9a20bbed { $return = 'Microsoft Invoicing' }
         9d3e55ba-79e0-4b7c-af50-dc460b81dca1 { $return = 'Microsoft Azure Data Catalog' }
         4345a7b9-9a63-4910-a426-35363201d503 { $return = 'O365 Suite UX' }
