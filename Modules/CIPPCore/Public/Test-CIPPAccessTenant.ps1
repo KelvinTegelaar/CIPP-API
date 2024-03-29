@@ -25,19 +25,11 @@ function Test-CIPPAccessTenant {
     $TenantIds = foreach ($Tenant in $Tenants) {
         ($TenantList | Where-Object { $_.defaultDomainName -eq $Tenant }).customerId
     }
-    try {
-        $MyRoles = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/tenantRelationships/managedTenants/myRoles?`$filter=tenantId in ('$($TenantIds -join "','")')"
-    } catch {
-        $MyRoles = @()
-        $AddedText = 'but could not retrieve GDAP roles from Lighthouse API'
-    }
+
     $results = foreach ($tenant in $Tenants) {
         $AddedText = ''
         try {
             $TenantId = ($TenantList | Where-Object { $_.defaultDomainName -eq $tenant }).customerId
-            $Assignments = ($MyRoles | Where-Object { $_.tenantId -eq $TenantId }).assignments
-            $SAMUserRoles = $Assignments.roles
-
             $BulkRequests = $ExpectedRoles | ForEach-Object { @(
                     @{
                         id     = "roleManagement_$($_.id)"
@@ -49,10 +41,12 @@ function Test-CIPPAccessTenant {
             $GDAPRolesGraph = New-GraphBulkRequest -tenantid $tenant -Requests $BulkRequests
             $GDAPRoles = [System.Collections.Generic.List[object]]::new()
             $MissingRoles = [System.Collections.Generic.List[object]]::new()
+
+            #Write-Host ($GDAPRolesGraph.body.value | ConvertTo-Json -Depth 10)
             foreach ($RoleId in $ExpectedRoles) {
                 $GraphRole = $GDAPRolesGraph.body.value | Where-Object -Property roleDefinitionId -EQ $RoleId.Id
                 $Role = $GraphRole.principal | Where-Object -Property organizationId -EQ $ENV:tenantid
-                $SAMRole = $SAMUserRoles | Where-Object -Property templateId -EQ $RoleId.Id
+
                 if (!$Role) {
                     $MissingRoles.Add(
                         [PSCustomObject]@{
@@ -62,16 +56,10 @@ function Test-CIPPAccessTenant {
                     )
                     $AddedText = 'but missing GDAP roles'
                 } else {
-                    $GDAPRoles.Add([PSCustomObject]$RoleId)
-                }
-                if (!$SAMRole) {
-                    $MissingRoles.Add(
-                        [PSCustomObject]@{
-                            Name = $RoleId.Name
-                            Type = 'SAM User'
-                        }
-                    )
-                    $AddedText = 'but missing GDAP roles'
+                    $GDAPRoles.Add([PSCustomObject]@{
+                            Role  = $RoleId.Name
+                            Group = $Role.displayName
+                        })
                 }
             }
             if (!($MissingRoles | Measure-Object).Count -gt 0) {
@@ -82,7 +70,6 @@ function Test-CIPPAccessTenant {
                 Status       = "Successfully connected $($AddedText)"
                 GDAPRoles    = $GDAPRoles
                 MissingRoles = $MissingRoles
-                SAMUserRoles = $SAMUserRoles
             }
             Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $tenant -message 'Tenant access check executed successfully' -Sev 'Info'
 
