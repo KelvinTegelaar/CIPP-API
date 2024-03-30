@@ -42,7 +42,6 @@ Function Invoke-EditUser {
             'displayName'       = $UserObj.Displayname
             'postalCode'        = $userobj.postalCode
             'companyName'       = $userobj.companyName
-            'mailNickname'      = $UserObj.username
             'jobTitle'          = $UserObj.JobTitle
             'userPrincipalName' = $Email
             'usageLocation'     = $UserObj.usageLocation
