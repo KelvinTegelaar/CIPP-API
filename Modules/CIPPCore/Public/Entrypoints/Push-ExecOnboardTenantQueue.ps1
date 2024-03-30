@@ -278,7 +278,7 @@ Function Push-ExecOnboardTenantQueue {
                         Remove-CIPPCache -tenantsOnly $true
                     } catch {}
 
-                    $Tenant = Get-Tenants | Where-Object { $_.customerId -eq $Relationship.customer.tenantId } | Select-Object -First 1
+                    $Tenant = Get-Tenants -IncludeAll | Where-Object { $_.customerId -eq $Relationship.customer.tenantId } | Select-Object -First 1
                     $y++
                     Start-Sleep -Seconds 20
                 } while (!$Tenant -and $y -le 4)
@@ -287,7 +287,7 @@ Function Push-ExecOnboardTenantQueue {
                     $Logs.Add([PSCustomObject]@{ Date = Get-Date -UFormat $DateFormat; Log = 'Tenant found in customer list' })
                     try {
                         $CPVConsentParams = @{
-                            TenantFilter = $Tenant.defaultDomainName
+                            TenantFilter = $Relationship.customer.tenantId
                         }
                         $Consent = Set-CIPPCPVConsent @CPVConsentParams
                         if ($Consent -match 'Could not add our Service Principal to the client tenant') {
@@ -313,8 +313,8 @@ Function Push-ExecOnboardTenantQueue {
                     Add-CIPPAzDataTableEntity @OnboardTable -Entity $TenantOnboarding -Force -ErrorAction Stop
                     do {
                         try {
-                            Add-CIPPApplicationPermission -RequiredResourceAccess 'CippDefaults' -ApplicationId $ENV:ApplicationID -tenantfilter $Tenant.defaultDomainName
-                            Add-CIPPDelegatedPermission -RequiredResourceAccess 'CippDefaults' -ApplicationId $ENV:ApplicationID -tenantfilter $Tenant.defaultDomainName
+                            Add-CIPPApplicationPermission -RequiredResourceAccess 'CippDefaults' -ApplicationId $ENV:ApplicationID -tenantfilter $Relationship.customer.tenantId
+                            Add-CIPPDelegatedPermission -RequiredResourceAccess 'CippDefaults' -ApplicationId $ENV:ApplicationID -tenantfilter $Relationship.customer.tenantId
                             $CPVSuccess = $true
                             $Refreshing = $false
                         } catch {
@@ -326,6 +326,12 @@ Function Push-ExecOnboardTenantQueue {
                         $Logs.Add([PSCustomObject]@{ Date = Get-Date -UFormat $DateFormat; Log = 'CPV permissions refreshed' })
                         $OnboardingSteps.Step4.Status = 'succeeded'
                         $OnboardingSteps.Step4.Message = 'CPV permissions refreshed'
+                        if ($Tenant.defaultDomainName -match 'Domain Error') {
+                            try {
+                                Remove-CIPPCache -tenantsOnly $true
+                            } catch {}
+                            $Tenant = Get-Tenants -IncludeAll | Where-Object { $_.customerId -eq $Relationship.customer.tenantId } | Select-Object -First 1
+                        }
                     } else {
                         $Logs.Add([PSCustomObject]@{ Date = Get-Date -UFormat $DateFormat; Log = 'CPV permissions failed to refresh' })
                         $TenantOnboarding.Status = 'failed'
