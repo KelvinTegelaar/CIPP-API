@@ -37,7 +37,7 @@ Function Invoke-ExecMailTest {
                     Message       = $Message
                     HasMailRead   = $HasMailRead
                     MailUser      = $Me.displayName
-                    MailAddresses = $Emails
+                    MailAddresses = @($Emails)
                 }
             }
             default {
