@@ -43,25 +43,27 @@ Function Invoke-ExecMailTest {
             default {
                 $Messages = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/me/mailFolders/Inbox/messages?`$select=receivedDateTime,subject,sender,internetMessageHeaders,webLink" -NoAuthCheck $true
                 $Results = foreach ($Message in $Messages) {
-                    $AuthResult = ($Message.internetMessageHeaders | Where-Object -Property name -EQ 'Authentication-Results').value
-                    $AuthResult = $AuthResult -split ';\s*'
-                    $AuthResult = $AuthResult | ForEach-Object {
-                        if ($_ -match '^(?<Name>.+?)=\s*(?<Status>.+?)\s(?<Info>.+)$') {
-                            [PSCustomObject]@{
-                                Name   = $Matches.Name
-                                Status = $Matches.Status
-                                Info   = $Matches.Info
+                    if ($Message.receivedDateTime) {
+                        $AuthResult = ($Message.internetMessageHeaders | Where-Object -Property name -EQ 'Authentication-Results').value
+                        $AuthResult = $AuthResult -split ';\s*'
+                        $AuthResult = $AuthResult | ForEach-Object {
+                            if ($_ -match '^(?<Name>.+?)=\s*(?<Status>.+?)\s(?<Info>.+)$') {
+                                [PSCustomObject]@{
+                                    Name   = $Matches.Name
+                                    Status = $Matches.Status
+                                    Info   = $Matches.Info
+                                }
                             }
                         }
-                    }
-                    [PSCustomObject]@{
-                        Received   = $Message.receivedDateTime
-                        Subject    = $Message.subject
-                        Sender     = $Message.sender.emailAddress.name
-                        From       = $Message.sender.emailAddress.address
-                        Link       = $Message.webLink
-                        Headers    = $Message.internetMessageHeaders
-                        AuthResult = $AuthResult
+                        [PSCustomObject]@{
+                            Received   = $Message.receivedDateTime
+                            Subject    = $Message.subject
+                            Sender     = $Message.sender.emailAddress.name
+                            From       = $Message.sender.emailAddress.address
+                            Link       = $Message.webLink
+                            Headers    = $Message.internetMessageHeaders
+                            AuthResult = $AuthResult
+                        }
                     }
                 }
                 $Body = [PSCustomObject]@{
