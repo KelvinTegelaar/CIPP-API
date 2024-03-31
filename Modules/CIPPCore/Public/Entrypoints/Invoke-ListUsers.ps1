@@ -10,7 +10,7 @@ Function Invoke-ListUsers {
 
     Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -message 'Accessed this API' -Sev 'Debug'
 
-    $selectlist = 'id', 'accountEnabled', 'displayName', 'userPrincipalName', 'userType', 'createdDateTime', 'companyName', 'country', 'department', 'businessPhones', 'city', 'faxNumber', 'givenName', 'isResourceAccount', 'jobTitle', 'mobilePhone', 'officeLocation', 'postalCode', 'preferredDataLocation', 'preferredLanguage', 'mail', 'mailNickname', 'proxyAddresses', 'Aliases', 'otherMails', 'showInAddressList', 'state', 'streetAddress', 'surname', 'usageLocation', 'LicJoined', 'assignedLicenses', 'onPremisesSyncEnabled', 'OnPremisesImmutableId', 'onPremisesDistinguishedName', 'onPremisesLastSyncDateTime', 'primDomain', 'Tenant', 'CippStatus'
+    $selectlist = 'id', 'accountEnabled', 'displayName', 'userPrincipalName', 'username', 'userType', 'createdDateTime', 'companyName', 'country', 'department', 'businessPhones', 'city', 'faxNumber', 'givenName', 'isResourceAccount', 'jobTitle', 'mobilePhone', 'officeLocation', 'postalCode', 'preferredDataLocation', 'preferredLanguage', 'mail', 'mailNickname', 'proxyAddresses', 'Aliases', 'otherMails', 'showInAddressList', 'state', 'streetAddress', 'surname', 'usageLocation', 'LicJoined', 'assignedLicenses', 'onPremisesSyncEnabled', 'OnPremisesImmutableId', 'onPremisesDistinguishedName', 'onPremisesLastSyncDateTime', 'primDomain', 'Tenant', 'CippStatus'
     # Write to the Azure Functions log stream.
     Write-Host 'PowerShell HTTP trigger function processed a request.'
     $ConvertTable = Import-Csv Conversiontable.csv | Sort-Object -Property 'guid' -Unique
@@ -22,6 +22,7 @@ Function Invoke-ListUsers {
     $GraphRequest = if ($TenantFilter -ne 'AllTenants') {
         New-GraphGetRequest -uri "https://graph.microsoft.com/beta/users/$($userid)?`$top=999&`$select=$($selectlist -join ',')&`$filter=$GraphFilter&`$count=true" -tenantid $TenantFilter -ComplexFilter | Select-Object $selectlist | ForEach-Object {
             $_.onPremisesSyncEnabled = [bool]($_.onPremisesSyncEnabled)
+            $_.UserName = $_.userPrincipalName -split '@' | Select-Object -First 1
             $_.Aliases = $_.Proxyaddresses -join ', '
             $SkuID = $_.AssignedLicenses.skuid
             $_.LicJoined = ($ConvertTable | Where-Object { $_.guid -in $skuid }).'Product_Display_Name' -join ', '
