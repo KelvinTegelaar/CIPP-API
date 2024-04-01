@@ -20,26 +20,29 @@ Function Invoke-ListAlertsQueue {
 
     $CurrentStandards = foreach ($QueueFile in $QueuedApps) {
         [PSCustomObject]@{
-            tenantName        = $QueueFile.tenant
-            AdminPassword     = [bool]$QueueFile.AdminPassword
-            DefenderMalware   = [bool]$QueueFile.DefenderMalware
-            DefenderStatus    = [bool]$QueueFile.DefenderStatus
-            MFAAdmins         = [bool]$QueueFile.MFAAdmins
-            MFAAlertUsers     = [bool]$QueueFile.MFAAlertUsers
-            NewGA             = [bool]$QueueFile.NewGA
-            NewRole           = [bool]$QueueFile.NewRole
-            QuotaUsed         = [bool]$QueueFile.QuotaUsed
-            UnusedLicenses    = [bool]$QueueFile.UnusedLicenses
-            OverusedLicenses  = [bool]$QueueFile.OverusedLicenses
-            AppSecretExpiry   = [bool]$QueueFile.AppSecretExpiry
-            ApnCertExpiry     = [bool]$QueueFile.ApnCertExpiry
-            VppTokenExpiry    = [bool]$QueueFile.VppTokenExpiry
-            DepTokenExpiry    = [bool]$QueueFile.DepTokenExpiry
-            NoCAConfig        = [bool]$QueueFile.NoCAConfig
-            SecDefaultsUpsell = [bool]$QueueFile.SecDefaultsUpsell
-            SharePointQuota   = [bool]$QueueFile.SharePointQuota
-            ExpiringLicenses  = [bool]$QueueFile.ExpiringLicenses
-            tenantId          = $QueueFile.tenantid
+            tenantName           = $QueueFile.tenant
+            AdminPassword        = [bool]$QueueFile.AdminPassword
+            DefenderMalware      = [bool]$QueueFile.DefenderMalware
+            DefenderStatus       = [bool]$QueueFile.DefenderStatus
+            MFAAdmins            = [bool]$QueueFile.MFAAdmins
+            MFAAlertUsers        = [bool]$QueueFile.MFAAlertUsers
+            NewGA                = [bool]$QueueFile.NewGA
+            NewRole              = [bool]$QueueFile.NewRole
+            QuotaUsed            = [bool]$QueueFile.QuotaUsed
+            UnusedLicenses       = [bool]$QueueFile.UnusedLicenses
+            OverusedLicenses     = [bool]$QueueFile.OverusedLicenses
+            AppSecretExpiry      = [bool]$QueueFile.AppSecretExpiry
+            ApnCertExpiry        = [bool]$QueueFile.ApnCertExpiry
+            VppTokenExpiry       = [bool]$QueueFile.VppTokenExpiry
+            DepTokenExpiry       = [bool]$QueueFile.DepTokenExpiry
+            NoCAConfig           = [bool]$QueueFile.NoCAConfig
+            SecDefaultsUpsell    = [bool]$QueueFile.SecDefaultsUpsell
+            SharePointQuota      = [bool]$QueueFile.SharePointQuota
+            ExpiringLicenses     = [bool]$QueueFile.ExpiringLicenses
+            NewAppApproval       = [bool]$QueueFile.NewAppApproval
+            SharePointQuotaQuota = [int]$QueueFile.SharePointQuota
+            QuotaUsedQuota       = [int]$QueueFile.QuotaUsed
+            tenantId             = $QueueFile.tenantid
         }
     }
 

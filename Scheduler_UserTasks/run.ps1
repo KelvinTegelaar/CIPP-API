@@ -3,7 +3,8 @@ param($Timer)
 $Table = Get-CippTable -tablename 'ScheduledTasks'
 $Filter = "TaskState eq 'Planned' or TaskState eq 'Failed - Planned'"
 $tasks = Get-CIPPAzDataTableEntity @Table -Filter $Filter
-$Batch = foreach ($task in $tasks) {
+$Batch = [System.Collections.Generic.List[object]]::new()
+foreach ($task in $tasks) {
     $tenant = $task.Tenant
     $currentUnixTime = [int64](([datetime]::UtcNow) - (Get-Date '1/1/1970')).TotalSeconds
     if ($currentUnixTime -ge $task.ScheduledTime) {
@@ -26,15 +27,20 @@ $Batch = foreach ($task in $tasks) {
             }
 
             if ($task.Tenant -eq 'AllTenants') {
-                Get-Tenants | ForEach-Object {
-                    $ScheduledCommand.Parameters['TenantFilter'] = $_.defaultDomainName
-                    $ScheduledCommand
-                    #Push-OutputBinding -Name Msg -Value $ScheduledCommand
+                $AllTenantCommands = foreach ($Tenant in Get-Tenants) {
+                    $NewParams = $task.Parameters.Clone()
+                    $NewParams.TenantFilter = $Tenant.defaultDomainName
+                    [pscustomobject]@{
+                        Command      = $task.Command
+                        Parameters   = $NewParams
+                        TaskInfo     = $task
+                        FunctionName = 'ExecScheduledCommand'
+                    }
                 }
+                $Batch.AddRange($AllTenantCommands)
             } else {
                 $ScheduledCommand.Parameters['TenantFilter'] = $task.Tenant
-                $ScheduledCommand
-                #$Results = Push-OutputBinding -Name Msg -Value $ScheduledCommand
+                $Batch.Add($ScheduledCommand)
             }
         } catch {
             $errorMessage = $_.Exception.Message
@@ -56,7 +62,8 @@ if (($Batch | Measure-Object).Count -gt 0) {
         Batch            = @($Batch)
         SkipLog          = $true
     }
-    #Write-Host ($InputObject | ConvertTo-Json)
-    $InstanceId = Start-NewOrchestration -FunctionName 'CIPPOrchestrator' -InputObject ($InputObject | ConvertTo-Json -Depth 5)
+    #Write-Host ($InputObject | ConvertTo-Json -Depth 10)
+    $InstanceId = Start-NewOrchestration -FunctionName 'CIPPOrchestrator' -InputObject ($InputObject | ConvertTo-Json -Depth 10)
+
     Write-Host "Started orchestration with ID = '$InstanceId'"
 }
