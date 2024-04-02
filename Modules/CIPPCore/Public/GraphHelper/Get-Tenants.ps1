@@ -8,7 +8,9 @@ function Get-Tenants {
         [switch]$SkipList,
         [Parameter( ParameterSetName = 'Standard')]
         [switch]$IncludeAll,
-        [switch]$IncludeErrors
+        [switch]$IncludeErrors,
+        [switch]$SkipDomains,
+        [switch]$TriggerRefreshIfNeeded
     )
 
     $TenantsTable = Get-CippTable -tablename 'Tenants'
@@ -57,14 +59,19 @@ function Get-Tenants {
             $LatestRelationship = $_.Group | Sort-Object -Property relationshipEnd | Select-Object -Last 1
             $AutoExtend = ($_.Group | Where-Object { $_.autoExtend -eq $true } | Measure-Object).Count -gt 0
 
-            # Query domains to get default/initial
-            try {
-                $Domains = New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/domains' -tenantid $LatestRelationship.customerId -NoAuthCheck:$true -ErrorAction Stop
-                $defaultDomainName = ($Domains | Where-Object { $_.isDefault -eq $true }).id
-                $initialDomainName = ($Domains | Where-Object { $_.isInitial -eq $true }).id
-            } catch {
-                $defaultDomainName = 'Domain Error, check permissions'
-                $initialDomainName = 'Domain Error, check permissions'
+            if (-not $SkipDomains.IsPresent) {
+                # Query domains to get default/initial
+                try {
+                    $Domains = New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/domains' -tenantid $LatestRelationship.customerId -NoAuthCheck:$true -ErrorAction Stop
+                    $defaultDomainName = ($Domains | Where-Object { $_.isDefault -eq $true }).id
+                    $initialDomainName = ($Domains | Where-Object { $_.isInitial -eq $true }).id
+                } catch {
+                    $defaultDomainName = 'Domain Error, check permissions'
+                    $initialDomainName = 'Domain Error, check permissions'
+                }
+            } else {
+                $defaultDomainName = 'Domain Error, skipped'
+                $initialDomainName = 'Domain Error, skipped'
             }
             [PSCustomObject]@{
                 PartitionKey             = 'Tenants'
@@ -113,6 +120,19 @@ function Get-Tenants {
         if ($IncludedTenantsCache) {
             $TenantsTable.Force = $true
             Add-CIPPAzDataTableEntity @TenantsTable -Entity $IncludedTenantsCache
+        }
+
+        if ($TriggerRefreshIfNeeded.IsPresent -and -not $SkipDomains.IsPresent) {
+            Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
+                    StatusCode = [HttpStatusCode]::OK
+                    Body       = $GraphRequest
+                })
+            $InputObject = [PSCustomObject]@{
+                OrchestratorName = 'UpdateTenantsOrchestrator'
+                Batch            = @(@{'FunctionName' = 'UpdateTenants' })
+            }
+            #Write-Host ($InputObject | ConvertTo-Json)
+            $InstanceId = Start-NewOrchestration -FunctionName 'CIPPOrchestrator' -InputObject ($InputObject | ConvertTo-Json -Depth 5)
         }
     }
     return ($IncludedTenantsCache | Where-Object { $null -ne $_.defaultDomainName -and ($_.defaultDomainName -notmatch 'Domain Error' -or $IncludeAll.IsPresent) } | Sort-Object -Property displayName)
