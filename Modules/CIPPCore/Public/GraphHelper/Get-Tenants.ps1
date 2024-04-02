@@ -8,7 +8,8 @@ function Get-Tenants {
         [switch]$SkipList,
         [Parameter( ParameterSetName = 'Standard')]
         [switch]$IncludeAll,
-        [switch]$IncludeErrors
+        [switch]$IncludeErrors,
+        [switch]$SkipDomains
     )
 
     $TenantsTable = Get-CippTable -tablename 'Tenants'
@@ -57,14 +58,19 @@ function Get-Tenants {
             $LatestRelationship = $_.Group | Sort-Object -Property relationshipEnd | Select-Object -Last 1
             $AutoExtend = ($_.Group | Where-Object { $_.autoExtend -eq $true } | Measure-Object).Count -gt 0
 
-            # Query domains to get default/initial
-            try {
-                $Domains = New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/domains' -tenantid $LatestRelationship.customerId -NoAuthCheck:$true -ErrorAction Stop
-                $defaultDomainName = ($Domains | Where-Object { $_.isDefault -eq $true }).id
-                $initialDomainName = ($Domains | Where-Object { $_.isInitial -eq $true }).id
-            } catch {
-                $defaultDomainName = 'Domain Error, check permissions'
-                $initialDomainName = 'Domain Error, check permissions'
+            if (-not $SkipDomains.IsPresent) {
+                # Query domains to get default/initial
+                try {
+                    $Domains = New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/domains' -tenantid $LatestRelationship.customerId -NoAuthCheck:$true -ErrorAction Stop
+                    $defaultDomainName = ($Domains | Where-Object { $_.isDefault -eq $true }).id
+                    $initialDomainName = ($Domains | Where-Object { $_.isInitial -eq $true }).id
+                } catch {
+                    $defaultDomainName = 'Domain Error, check permissions'
+                    $initialDomainName = 'Domain Error, check permissions'
+                }
+            } else {
+                $defaultDomainName = 'Domain Error, skipped'
+                $initialDomainName = 'Domain Error, skipped'
             }
             [PSCustomObject]@{
                 PartitionKey             = 'Tenants'
