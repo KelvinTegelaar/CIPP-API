@@ -11,14 +11,14 @@ Function Invoke-ExecCPVPermissions {
     $APIName = $TriggerMetadata.FunctionName
     Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -message 'Accessed this API' -Sev 'Debug'
 
-
     # Write to the Azure Functions log stream.
     Write-Host 'PowerShell HTTP trigger function processed a request.'
-    $TenantFilter = (get-tenants -IncludeAll -IncludeErrors | Where-Object -Property customerId -EQ $Request.query.Tenantfilter).defaultDomainName
-    Write-Host "Our Tenantfilter is $TenantFilter"
+    $Tenant = Get-Tenants -IncludeAll | Where-Object -Property customerId -EQ $Request.Query.TenantFilter | Select-Object -First 1
+
+    Write-Host "Our tenant is $($Tenant.displayName) - $($Tenant.defaultDomainName)"
 
     $CPVConsentParams = @{
-        Tenantfilter = $TenantFilter
+        TenantFilter = $Request.Query.TenantFilter
     }
     if ($Request.Query.ResetSP -eq 'true') {
         $CPVConsentParams.ResetSP = $true
@@ -26,15 +26,15 @@ Function Invoke-ExecCPVPermissions {
 
     $GraphRequest = try {
         Set-CIPPCPVConsent @CPVConsentParams
-        Add-CIPPApplicationPermission -RequiredResourceAccess 'CippDefaults' -ApplicationId $ENV:ApplicationID -tenantfilter $TenantFilter
-        Add-CIPPDelegatedPermission -RequiredResourceAccess 'CippDefaults' -ApplicationId $ENV:ApplicationID -tenantfilter $TenantFilter
+        Add-CIPPApplicationPermission -RequiredResourceAccess 'CippDefaults' -ApplicationId $ENV:ApplicationID -tenantfilter $Request.Query.TenantFilter
+        Add-CIPPDelegatedPermission -RequiredResourceAccess 'CippDefaults' -ApplicationId $ENV:ApplicationID -tenantfilter $Request.Query.TenantFilter
         $Success = $true
     } catch {
-        "Failed to update permissions for $($TenantFilter): $($_.Exception.Message)"
+        "Failed to update permissions for $($Tenant.displayName): $($_.Exception.Message)"
         $Success = $false
     }
 
-    $Tenant = Get-Tenants -IncludeAll -IncludeErrors | Where-Object -Property defaultDomainName -EQ $Tenantfilter
+    $Tenant = Get-Tenants -IncludeAll | Where-Object -Property customerId -EQ $TenantFilter
 
     # Associate values to output bindings by calling 'Push-OutputBinding'.
     Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{

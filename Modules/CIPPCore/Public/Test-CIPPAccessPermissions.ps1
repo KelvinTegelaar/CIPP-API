@@ -26,7 +26,7 @@ function Test-CIPPAccessPermissions {
         Set-Location (Get-Item $PSScriptRoot).FullName
         $ExpectedPermissions = Get-Content '.\SAMManifest.json' | ConvertFrom-Json
 
-        $GraphToken = Get-GraphToken -returnRefresh $true
+        $GraphToken = Get-GraphToken -returnRefresh $true -SkipCache $true
         if ($GraphToken) {
             $GraphPermissions = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/myorganization/applications?`$filter=appId eq '$env:ApplicationID'" -NoAuthCheck $true
         }
