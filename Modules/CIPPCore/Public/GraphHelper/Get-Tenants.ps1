@@ -53,7 +53,7 @@ function Get-Tenants {
         # Group relationships, build object for adding to tables
         $ActiveRelationships = $GDAPList | Where-Object { $_.customerId -notin $SkipListCache.customerId }
         $TenantList = $ActiveRelationships | Group-Object -Property customerId | ForEach-Object -Parallel {
-            Import-Module .\Modules\CIPPCore
+            Import-Module CIPPCore
             $LatestRelationship = $_.Group | Sort-Object -Property relationshipEnd | Select-Object -Last 1
             $AutoExtend = ($_.Group | Where-Object { $_.autoExtend -eq $true } | Measure-Object).Count -gt 0
 
