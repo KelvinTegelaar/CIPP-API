@@ -8,7 +8,9 @@ function Get-Tenants {
         [switch]$SkipList,
         [Parameter( ParameterSetName = 'Standard')]
         [switch]$IncludeAll,
-        [switch]$IncludeErrors
+        [switch]$IncludeErrors,
+        [switch]$SkipDomains,
+        [switch]$TriggerRefreshIfNeeded
     )
 
     $TenantsTable = Get-CippTable -tablename 'Tenants'
@@ -38,7 +40,7 @@ function Get-Tenants {
     if (!$LastRefresh -or $LastRefresh -lt (Get-Date).Addhours(-24).ToUniversalTime()) {
 
         # Query for active relationships
-        $GDAPRelationships = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/tenantRelationships/delegatedAdminRelationships?`$filter=status eq 'active'&`$select=customer,autoExtendDuration,endDateTime"
+        $GDAPRelationships = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/tenantRelationships/delegatedAdminRelationships?`$filter=status eq 'active' and not startsWith(displayName,'MLT_')&`$select=customer,autoExtendDuration,endDateTime"
 
         # Flatten gdap relationship
         $GDAPList = foreach ($Relationship in $GDAPRelationships) {
@@ -53,12 +55,24 @@ function Get-Tenants {
         # Group relationships, build object for adding to tables
         $ActiveRelationships = $GDAPList | Where-Object { $_.customerId -notin $SkipListCache.customerId }
         $TenantList = $ActiveRelationships | Group-Object -Property customerId | ForEach-Object -Parallel {
-            Import-Module .\Modules\CIPPCore
+            Import-Module CIPPCore
             $LatestRelationship = $_.Group | Sort-Object -Property relationshipEnd | Select-Object -Last 1
             $AutoExtend = ($_.Group | Where-Object { $_.autoExtend -eq $true } | Measure-Object).Count -gt 0
 
-            # Query domains to get default/initial
-            $Domains = New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/domains' -tenantid $LatestRelationship.customerId -NoAuthCheck:$true
+            if (-not $SkipDomains.IsPresent) {
+                # Query domains to get default/initial
+                try {
+                    $Domains = New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/domains' -tenantid $LatestRelationship.customerId -NoAuthCheck:$true -ErrorAction Stop
+                    $defaultDomainName = ($Domains | Where-Object { $_.isDefault -eq $true }).id
+                    $initialDomainName = ($Domains | Where-Object { $_.isInitial -eq $true }).id
+                } catch {
+                    $defaultDomainName = 'Domain Error, check permissions'
+                    $initialDomainName = 'Domain Error, check permissions'
+                }
+            } else {
+                $defaultDomainName = 'Domain Error, skipped'
+                $initialDomainName = 'Domain Error, skipped'
+            }
             [PSCustomObject]@{
                 PartitionKey             = 'Tenants'
                 RowKey                   = $_.Name
@@ -66,8 +80,8 @@ function Get-Tenants {
                 displayName              = $LatestRelationship.displayName
                 relationshipEnd          = $LatestRelationship.relationshipEnd
                 relationshipCount        = $_.Count
-                defaultDomainName        = ($Domains | Where-Object { $_.isDefault -eq $true }).id
-                initialDomainName        = ($Domains | Where-Object { $_.isInitial -eq $true }).id
+                defaultDomainName        = $defaultDomainName
+                initialDomainName        = $initialDomainName
                 hasAutoExtend            = $AutoExtend
                 delegatedPrivilegeStatus = 'granularDelegatedAdminPrivileges'
                 domains                  = ''
@@ -107,7 +121,19 @@ function Get-Tenants {
             $TenantsTable.Force = $true
             Add-CIPPAzDataTableEntity @TenantsTable -Entity $IncludedTenantsCache
         }
-    }
-    return ($IncludedTenantsCache | Where-Object -Property defaultDomainName -NE $null | Sort-Object -Property displayName)
 
+        if ($TriggerRefreshIfNeeded.IsPresent -and -not $SkipDomains.IsPresent) {
+            Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
+                    StatusCode = [HttpStatusCode]::OK
+                    Body       = $GraphRequest
+                })
+            $InputObject = [PSCustomObject]@{
+                OrchestratorName = 'UpdateTenantsOrchestrator'
+                Batch            = @(@{'FunctionName' = 'UpdateTenants' })
+            }
+            #Write-Host ($InputObject | ConvertTo-Json)
+            $InstanceId = Start-NewOrchestration -FunctionName 'CIPPOrchestrator' -InputObject ($InputObject | ConvertTo-Json -Depth 5)
+        }
+    }
+    return ($IncludedTenantsCache | Where-Object { $null -ne $_.defaultDomainName -and ($_.defaultDomainName -notmatch 'Domain Error' -or $IncludeAll.IsPresent) } | Sort-Object -Property displayName)
 }
