@@ -1,4 +1,4 @@
-function Remove-CippQueue {
+function Invoke-RemoveCippQueue {
     # Input bindings are passed in via param block.
     param($Request, $TriggerMetadata)
 
