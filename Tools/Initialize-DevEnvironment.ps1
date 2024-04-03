@@ -11,5 +11,6 @@ ForEach ($Key in $CIPPSettings.PSObject.Properties.Name) {
 
 Import-Module "$CippRoot\Modules\AzBobbyTables"
 Import-Module "$CippRoot\Modules\DNSHealth"
+Import-Module "$CippRoot\Modules\CippQueue"
 Import-Module "$CippRoot\Modules\CippCore"
 Get-CIPPAuthentication

@@ -3,9 +3,6 @@ function Invoke-ListGraphRequest {
     <#
     .FUNCTIONALITY
     Entrypoint
-
-    .ROLE
-    Core.Read
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
