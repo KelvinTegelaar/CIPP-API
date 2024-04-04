@@ -21,16 +21,22 @@ Function Invoke-ListTenants {
                 StatusCode = [HttpStatusCode]::OK
                 Body       = $GraphRequest
             })
+        $InputObject = [PSCustomObject]@{
+            OrchestratorName = 'UpdateTenantsOrchestrator'
+            Batch            = @(@{'FunctionName' = 'UpdateTenants' })
+        }
+        #Write-Host ($InputObject | ConvertTo-Json)
+        $InstanceId = Start-NewOrchestration -FunctionName 'CIPPOrchestrator' -InputObject ($InputObject | ConvertTo-Json -Depth 5)
         exit
     }
 
     try {
         $tenantfilter = $Request.Query.TenantFilter
-        $Tenants = Get-Tenants -IncludeErrors
+        $Tenants = Get-Tenants -IncludeErrors -SkipDomains
 
         if ($null -eq $TenantFilter -or $TenantFilter -eq 'null') {
             $TenantList = [system.collections.generic.list[object]]::new()
-            if ($Request.Query.AllTenantSelector -eq $true) { 
+            if ($Request.Query.AllTenantSelector -eq $true) {
                 $TenantList.Add(@{
                         customerId        = 'AllTenants'
                         defaultDomainName = 'AllTenants'
@@ -55,7 +61,7 @@ Function Invoke-ListTenants {
         Write-LogMessage -user $request.headers.'x-ms-client-principal' -tenant $Tenantfilter -API $APINAME -message 'Listed Tenant Details' -Sev 'Debug'
     } catch {
         Write-LogMessage -user $request.headers.'x-ms-client-principal' -tenant $Tenantfilter -API $APINAME -message "List Tenant failed. The error is: $($_.Exception.Message)" -Sev 'Error'
-        $body = [pscustomobject]@{ 
+        $body = [pscustomobject]@{
             'Results'         = "Failed to retrieve tenants: $($_.Exception.Message)"
             defaultDomainName = ''
             displayName       = 'Failed to retrieve tenants. Perform a permission check.'
@@ -68,6 +74,6 @@ Function Invoke-ListTenants {
             StatusCode = [HttpStatusCode]::OK
             Body       = @($Body)
         })
-    
+
 
 }
