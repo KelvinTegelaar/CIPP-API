@@ -19,7 +19,7 @@ function Receive-CippHttpTrigger {
 
 function Receive-CippQueueTrigger {
     Param($QueueItem, $TriggerMetadata)
-
+    Set-Location (Get-Item $PSScriptRoot).Parent.Parent.FullName
     $Start = (Get-Date).ToUniversalTime()
     $APIName = $TriggerMetadata.FunctionName
     Write-Host "#### Running $APINAME"
