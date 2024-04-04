@@ -1,13 +1,23 @@
 param($Timer)
 
-$Table = Get-CIPPTable -TableName WebhookIncoming
-$Webhooks = Get-CIPPAzDataTableEntity @Table
-$InputObject = [PSCustomObject]@{
-    OrchestratorName = 'WebhookOrchestrator'
-    Batch            = @($Webhooks)
-    SkipLog          = $true
+try {
+
+    $webhookTable = Get-CIPPTable -tablename webhookTable
+    $Webhooks = Get-CIPPAzDataTableEntity @webhookTable
+    if (($Webhooks | Measure-Object).Count -eq 0) {
+        Write-Host 'No webhook subscriptions found. Exiting.'
+        return
+    }
+
+    $InputObject = [PSCustomObject]@{
+        OrchestratorName = 'WebhookOrchestrator'
+        QueueFunction    = @{
+            FunctionName = 'GetPendingWebhooks'
+        }
+        SkipLog          = $true
+    }
+    $InstanceId = Start-NewOrchestration -FunctionName 'CIPPOrchestrator' -InputObject ($InputObject | ConvertTo-Json -Depth 5)
+    Write-Host "Started orchestration with ID = '$InstanceId'"
+} catch {
+    Write-LogMessage -API 'Webhooks' -message "Error processing webhooks - $($_.Exception.Message)" -sev Error
 }
-#Write-Host ($InputObject | ConvertTo-Json)
-$InstanceId = Start-NewOrchestration -FunctionName 'CIPPOrchestrator' -InputObject ($InputObject | ConvertTo-Json -Depth 5)
-Write-Host "Started orchestration with ID = '$InstanceId'"
-#$Orchestrator = New-OrchestrationCheckStatusResponse -Request $Request -InstanceId $InstanceId
