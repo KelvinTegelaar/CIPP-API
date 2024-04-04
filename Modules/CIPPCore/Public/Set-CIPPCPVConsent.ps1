@@ -53,7 +53,7 @@ function Set-CIPPCPVConsent {
         }
         Add-CIPPAzDataTableEntity @Table -Entity $GraphRequest -Force
         $Results.add("Successfully added CPV Application to tenant $($TenantName)") | Out-Null
-        Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -message "Added our Service Principal to $($TenantName): $($_.Exception.message)" -Sev 'Info' -tenant $Tenant.defaultDomainName -tenantId $TenantFilter
+        Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -message "Added our Service Principal to $($TenantName)" -Sev 'Info' -tenant $Tenant.defaultDomainName -tenantId $TenantFilter
 
     } catch {
         $ErrorMessage = Get-NormalizedError -message $_.Exception.Message
