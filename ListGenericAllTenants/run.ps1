@@ -4,13 +4,13 @@ param([string]$QueueItem, $TriggerMetadata)
 # Write out the queue message and metadata to the information log.
 Write-Host "PowerShell queue trigger function processed work item: $QueueItem"
 $TableURLName = ($QueueItem.tolower().split('?').Split('/') | Select-Object -First 1).toString()
-$QueueKey = (Get-CippQueue | Where-Object -Property Name -EQ $TableURLName | Select-Object -Last 1).RowKey
+$QueueKey = (Invoke-ListCippQueue | Where-Object -Property Name -EQ $TableURLName | Select-Object -Last 1).RowKey
 Update-CippQueueEntry -RowKey $QueueKey -Status 'Started'
 $Table = Get-CIPPTable -TableName "cache$TableURLName"
 $fullUrl = "https://graph.microsoft.com/beta/$QueueItem"
 Get-CIPPAzDataTableEntity @Table | Remove-AzDataTableEntity @table
 
-$RawGraphRequest = Get-Tenants | ForEach-Object -Parallel { 
+$RawGraphRequest = Get-Tenants | ForEach-Object -Parallel {
     $domainName = $_.defaultDomainName
     Import-Module CippCore
     try {
@@ -22,7 +22,7 @@ $RawGraphRequest = Get-Tenants | ForEach-Object -Parallel {
             Tenant     = $domainName
             CippStatus = "Could not connect to tenant. $($_.Exception.message)"
         }
-    } 
+    }
 }
 
 Update-CippQueueEntry -RowKey $QueueKey -Status 'Processing'
