@@ -18,7 +18,7 @@ Function Invoke-ExecMailTest {
             'CheckConfig' {
                 $GraphToken = Get-GraphToken -returnRefresh $true -SkipCache $true
                 $AccessTokenDetails = Read-JwtAccessDetails -Token $GraphToken.access_token
-                $Me = New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/me?$select=displayName,proxyAddresses' -NoAuthCheck $true
+                $Me = New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/me?$select=displayName,userPrincipalName,proxyAddresses' -NoAuthCheck $true
                 if ($AccessTokenDetails.Scope -contains 'Mail.Read') {
                     $Message = 'Mail.Read - Delegated was found in the token scope.'
                     $HasMailRead = $true
@@ -27,35 +27,43 @@ Function Invoke-ExecMailTest {
                     $HasMailRead = $false
                 }
 
+                if ($Me.proxyAddresses) {
+                    $Emails = $Me.proxyAddresses | Select-Object @{n = 'Address'; exp = { ($_ -split ':')[1] } }, @{n = 'IsPrimary'; exp = { $_ -cmatch 'SMTP' } }
+                } else {
+                    $Emails = @(@{ Address = $Me.userPrincipalName; IsPrimary = $true })
+                }
+
                 $Body = [PSCustomObject]@{
                     Message       = $Message
                     HasMailRead   = $HasMailRead
                     MailUser      = $Me.displayName
-                    MailAddresses = $Me.proxyAddresses | Select-Object @{n = 'Address'; exp = { ($_ -split ':')[1] } }, @{n = 'IsPrimary'; exp = { $_ -cmatch 'SMTP' } }
+                    MailAddresses = @($Emails)
                 }
             }
             default {
                 $Messages = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/me/mailFolders/Inbox/messages?`$select=receivedDateTime,subject,sender,internetMessageHeaders,webLink" -NoAuthCheck $true
                 $Results = foreach ($Message in $Messages) {
-                    $AuthResult = ($Message.internetMessageHeaders | Where-Object -Property name -EQ 'Authentication-Results').value
-                    $AuthResult = $AuthResult -split ';\s*'
-                    $AuthResult = $AuthResult | ForEach-Object {
-                        if ($_ -match '^(?<Name>.+?)=\s*(?<Status>.+?)\s(?<Info>.+)$') {
-                            [PSCustomObject]@{
-                                Name   = $Matches.Name
-                                Status = $Matches.Status
-                                Info   = $Matches.Info
+                    if ($Message.receivedDateTime) {
+                        $AuthResult = ($Message.internetMessageHeaders | Where-Object -Property name -EQ 'Authentication-Results').value
+                        $AuthResult = $AuthResult -split ';\s*'
+                        $AuthResult = $AuthResult | ForEach-Object {
+                            if ($_ -match '^(?<Name>.+?)=\s*(?<Status>.+?)\s(?<Info>.+)$') {
+                                [PSCustomObject]@{
+                                    Name   = $Matches.Name
+                                    Status = $Matches.Status
+                                    Info   = $Matches.Info
+                                }
                             }
                         }
-                    }
-                    [PSCustomObject]@{
-                        Received   = $Message.receivedDateTime
-                        Subject    = $Message.subject
-                        Sender     = $Message.sender.emailAddress.name
-                        From       = $Message.sender.emailAddress.address
-                        Link       = $Message.webLink
-                        Headers    = $Message.internetMessageHeaders 
-                        AuthResult = $AuthResult
+                        [PSCustomObject]@{
+                            Received   = $Message.receivedDateTime
+                            Subject    = $Message.subject
+                            Sender     = $Message.sender.emailAddress.name
+                            From       = $Message.sender.emailAddress.address
+                            Link       = $Message.webLink
+                            Headers    = $Message.internetMessageHeaders
+                            AuthResult = $AuthResult
+                        }
                     }
                 }
                 $Body = [PSCustomObject]@{
