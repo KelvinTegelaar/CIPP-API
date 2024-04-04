@@ -2,7 +2,7 @@
 param($Timer)
 
 try {
-    $Tenants = Get-Tenants -IncludeErrors | Where-Object { $_.customerId -ne $env:TenantId } | ForEach-Object { $_ | Add-Member -NotePropertyName FunctionName -NotePropertyValue 'UpdatePermissionsQueue'; $_ }
+    $Tenants = Get-Tenants -IncludeAll -TriggerRefresh | Where-Object { $_.customerId -ne $env:TenantId -and $_.Excluded -eq $false } | ForEach-Object { $_ | Add-Member -NotePropertyName FunctionName -NotePropertyValue 'UpdatePermissionsQueue'; $_ }
 
     if (($Tenants | Measure-Object).Count -gt 0) {
         $InputObject = [PSCustomObject]@{
