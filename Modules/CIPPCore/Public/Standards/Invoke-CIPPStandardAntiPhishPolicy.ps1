@@ -5,11 +5,11 @@ function Invoke-CIPPStandardAntiPhishPolicy {
     #>
 
     param($Tenant, $Settings)
+    $PolicyName = 'Default Anti-Phishing Policy'
     $AntiPhishPolicyState = New-ExoRequest -tenantid $Tenant -cmdlet 'Get-AntiPhishPolicy' | 
-    Where-Object -Property Name -eq $PolicyName | 
-    Select-Object Name, Enabled, PhishThresholdLevel, EnableMailboxIntelligence, EnableMailboxIntelligenceProtection, EnableSpoofIntelligence, EnableFirstContactSafetyTips, EnableSimilarUsersSafetyTips, EnableSimilarDomainsSafetyTips, EnableUnusualCharactersSafetyTips, EnableUnauthenticatedSender, EnableViaTag, MailboxIntelligenceProtectionAction, MailboxIntelligenceQuarantineTag
+        Where-Object -Property Name -EQ $PolicyName | 
+        Select-Object Name, Enabled, PhishThresholdLevel, EnableMailboxIntelligence, EnableMailboxIntelligenceProtection, EnableSpoofIntelligence, EnableFirstContactSafetyTips, EnableSimilarUsersSafetyTips, EnableSimilarDomainsSafetyTips, EnableUnusualCharactersSafetyTips, EnableUnauthenticatedSender, EnableViaTag, MailboxIntelligenceProtectionAction, MailboxIntelligenceQuarantineTag
 
-    $PolicyName = "Default Anti-Phishing Policy"
     $StateIsCorrect = if (
         ($AntiPhishPolicyState.Name -eq $PolicyName) -and
         ($AntiPhishPolicyState.Enabled -eq $true) -and 
@@ -32,28 +32,28 @@ function Invoke-CIPPStandardAntiPhishPolicy {
             Write-LogMessage -API 'Standards' -tenant $Tenant -message 'Anti-phishing Policy already exists.' -sev Info
         } else {
             $cmdparams = @{
-                Enabled = $true
-                PhishThresholdLevel = $Settings.PhishThresholdLevel
-                EnableMailboxIntelligence = $true
+                Enabled                             = $true
+                PhishThresholdLevel                 = $Settings.PhishThresholdLevel
+                EnableMailboxIntelligence           = $true
                 EnableMailboxIntelligenceProtection = $true
-                EnableSpoofIntelligence = $true
-                EnableFirstContactSafetyTips = $Settings.EnableFirstContactSafetyTips
-                EnableSimilarUsersSafetyTips = $Settings.EnableSimilarUsersSafetyTips
-                EnableSimilarDomainsSafetyTips = $Settings.EnableSimilarDomainsSafetyTips
-                EnableUnusualCharactersSafetyTips = $Settings.EnableUnusualCharactersSafetyTips
-                EnableUnauthenticatedSender = $true
-                EnableViaTag = $true
+                EnableSpoofIntelligence             = $true
+                EnableFirstContactSafetyTips        = $Settings.EnableFirstContactSafetyTips
+                EnableSimilarUsersSafetyTips        = $Settings.EnableSimilarUsersSafetyTips
+                EnableSimilarDomainsSafetyTips      = $Settings.EnableSimilarDomainsSafetyTips
+                EnableUnusualCharactersSafetyTips   = $Settings.EnableUnusualCharactersSafetyTips
+                EnableUnauthenticatedSender         = $true
+                EnableViaTag                        = $true
                 MailboxIntelligenceProtectionAction = $Settings.MailboxIntelligenceProtectionAction
-                MailboxIntelligenceQuarantineTag = $Settings.MailboxIntelligenceQuarantineTag
+                MailboxIntelligenceQuarantineTag    = $Settings.MailboxIntelligenceQuarantineTag
             }
 
             try {
                 if ($AntiPhishPolicyState.Name -eq $PolicyName) {
-                    $cmdparams.Add("Identity", $PolicyName)
+                    $cmdparams.Add('Identity', $PolicyName)
                     New-ExoRequest -tenantid $Tenant -cmdlet 'Set-AntiPhishPolicy' -cmdparams $cmdparams
                     Write-LogMessage -API 'Standards' -tenant $Tenant -message 'Updated Anti-phishing Policy' -sev Info
                 } else {
-                    $cmdparams.Add("Name", $PolicyName)
+                    $cmdparams.Add('Name', $PolicyName)
                     New-ExoRequest -tenantid $Tenant -cmdlet 'New-AntiPhishPolicy' -cmdparams $cmdparams
                     Write-LogMessage -API 'Standards' -tenant $Tenant -message 'Created Anti-phishing Policy' -sev Info
                 }
