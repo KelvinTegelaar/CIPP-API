@@ -274,11 +274,7 @@ Function Push-ExecOnboardTenantQueue {
                 $Logs.Add([PSCustomObject]@{ Date = Get-Date -UFormat $DateFormat; Log = 'Clearing tenant cache' })
                 $y = 0
                 do {
-                    try {
-                        Remove-CIPPCache -tenantsOnly $true
-                    } catch {}
-
-                    $Tenant = Get-Tenants -IncludeAll | Where-Object { $_.customerId -eq $Relationship.customer.tenantId } | Select-Object -First 1
+                    $Tenant = Get-Tenants -TriggerRefresh -IncludeAll | Where-Object { $_.customerId -eq $Relationship.customer.tenantId } | Select-Object -First 1
                     $y++
                     Start-Sleep -Seconds 20
                 } while (!$Tenant -and $y -le 4)
@@ -327,10 +323,7 @@ Function Push-ExecOnboardTenantQueue {
                         $OnboardingSteps.Step4.Status = 'succeeded'
                         $OnboardingSteps.Step4.Message = 'CPV permissions refreshed'
                         if ($Tenant.defaultDomainName -match 'Domain Error') {
-                            try {
-                                Remove-CIPPCache -tenantsOnly $true
-                            } catch {}
-                            $Tenant = Get-Tenants -IncludeAll | Where-Object { $_.customerId -eq $Relationship.customer.tenantId } | Select-Object -First 1
+                            $Tenant = Get-Tenants -TriggerRefresh -IncludeAll | Where-Object { $_.customerId -eq $Relationship.customer.tenantId } | Select-Object -First 1
                         }
                     } else {
                         $Logs.Add([PSCustomObject]@{ Date = Get-Date -UFormat $DateFormat; Log = 'CPV permissions failed to refresh' })
