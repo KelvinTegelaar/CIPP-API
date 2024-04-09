@@ -129,7 +129,7 @@ function Get-Tenants {
         Add-CIPPAzDataTableEntity @TenantsTable -Entity $IncludedTenantsCache -Force
         $CurrentTenants = Get-CIPPAzDataTableEntity @TenantsTable -Filter "PartitionKey eq 'Tenants' and Excluded eq false"
         $CurrentTenants | Where-Object { $_.customerId -notin $IncludedTenantsCache.customerId } | ForEach-Object {
-            Remove-AzDataTableEntity @TenantsTable -Entity $_ -Force
+            Remove-AzDataTableEntity @TenantsTable -Entity $_
         }
     }
     return ($IncludedTenantsCache | Where-Object { $null -ne $_.defaultDomainName -and ($_.defaultDomainName -notmatch 'Domain Error' -or $IncludeAll.IsPresent) } | Sort-Object -Property displayName)
