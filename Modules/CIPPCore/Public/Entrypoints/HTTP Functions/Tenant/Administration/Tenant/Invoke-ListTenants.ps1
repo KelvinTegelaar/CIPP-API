@@ -32,7 +32,7 @@ Function Invoke-ListTenants {
 
     try {
         $tenantfilter = $Request.Query.TenantFilter
-        $Tenants = Get-Tenants -IncludeErrors -SkipDomains -TriggerRefreshIfNeeded
+        $Tenants = Get-Tenants -IncludeErrors -SkipDomains
 
         if ($null -eq $TenantFilter -or $TenantFilter -eq 'null') {
             $TenantList = [system.collections.generic.list[object]]::new()
