@@ -54,6 +54,18 @@ function Invoke-PublicWebhooks {
             ## Push webhook data to queue
             #Invoke-CippGraphWebhookProcessing -Data $ReceivedItem -CIPPID $request.Query.CIPPID -WebhookInfo $Webhookinfo
 
+        } elseif ($Request.Query.Type -eq 'PartnerCenter') {
+            [pscustomobject]$ReceivedItem = $Request.Body
+            $Entity = [PSCustomObject]@{
+                PartitionKey = 'Webhook'
+                RowKey       = [string](New-Guid).Guid
+                Type         = $Request.Query.Type
+                Data         = [string]($ReceivedItem | ConvertTo-Json -Depth 10)
+                CIPPID       = $Request.Query.CIPPID
+                WebhookInfo  = [string]($WebhookInfo | ConvertTo-Json -Depth 10)
+                FunctionName = 'PublicWebhookProcess'
+            }
+            Add-CIPPAzDataTableEntity @WebhookIncoming -Entity $Entity
         } else {
             # Auditlog Subscriptions
             try {
