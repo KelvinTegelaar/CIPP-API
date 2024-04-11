@@ -113,10 +113,9 @@ function New-CIPPGraphSubscription {
                         $Method = 'POST'
                         Write-Host 'creating webhook'
                     }
-                    try {
-                        $Uri = 'https://api.partnercenter.microsoft.com/webhooks/v1/registration'
-                        $GraphRequest = New-GraphPOSTRequest -uri $Uri -type $Method -tenantid $env:TenantId -scope 'https://api.partnercenter.microsoft.com/.default' -body ($Body | ConvertTo-Json)
-                    } catch {}
+
+                    $Uri = 'https://api.partnercenter.microsoft.com/webhooks/v1/registration'
+                    $GraphRequest = New-GraphPOSTRequest -uri $Uri -type $Method -tenantid $env:TenantId -scope 'https://api.partnercenter.microsoft.com/.default' -body ($Body | ConvertTo-Json) -NoAuthCheck $true
 
                     $WebhookRow = @{
                         PartitionKey           = [string]$CIPPID
