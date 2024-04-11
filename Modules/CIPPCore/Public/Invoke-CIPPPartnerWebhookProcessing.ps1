@@ -17,6 +17,7 @@ function Invoke-CippPartnerWebhookProcessing {
                 if ($Data.EventName -eq 'granular-admin-relationship-approved') {
                     if ($AuditLog.resourceNewValue) {
                         $AuditObj = $AuditLog.resourceNewValue | ConvertFrom-Json
+                        Write-LogMessage -API 'Webhooks' -message "Partner Webhook: GDAP Relationship for $($AuditObj.customer.organizationDisplayName) was approved, starting onboarding" -LogData $AuditObj -Sev 'Alert'
                         $Id = $AuditObj.Id
                         $OnboardingSteps = [PSCustomObject]@{
                             'Step1' = @{
@@ -51,18 +52,19 @@ function Invoke-CippPartnerWebhookProcessing {
                             CustomerId      = ''
                             Status          = 'queued'
                             OnboardingSteps = [string](ConvertTo-Json -InputObject $OnboardingSteps -Compress)
-                            Relationship    = [string](ConvertTo-Json -InputObject $AuditObj -Compress)
+                            Relationship    = ''
                             Logs            = ''
                             Exception       = ''
                         }
+                        $OnboardTable = Get-CIPPTable -TableName 'TenantOnboarding'
                         Add-CIPPAzDataTableEntity @OnboardTable -Entity $TenantOnboarding -Force -ErrorAction Stop
                         Push-ExecOnboardTenantQueue -Item @{ Id = $Id }
-                    }
-
-                    if ($AuditLog) {
-                        Write-LogMessage -API 'Webhooks' -message "Partner Center $($Data.EventName) audit log webhook received" -LogData $AuditLog -Sev 'Alert'
                     } else {
-                        Write-LogMessage -API 'Webhooks' -message "Partner Center $($Data.EventName) webhook received" -LogData $Data -Sev 'Alert'
+                        if ($AuditLog) {
+                            Write-LogMessage -API 'Webhooks' -message "Partner Center $($Data.EventName) audit log webhook received" -LogData $AuditObj -Sev 'Alert'
+                        } else {
+                            Write-LogMessage -API 'Webhooks' -message "Partner Center $($Data.EventName) webhook received" -LogData $Data -Sev 'Alert'
+                        }
                     }
                 }
             }
