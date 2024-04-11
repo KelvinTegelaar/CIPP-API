@@ -104,7 +104,7 @@ function New-CIPPGraphSubscription {
                     $Existing = New-GraphGetRequest -NoAuthCheck $true -uri $Uri -tenantid $env:TenantId -scope 'https://api.partnercenter.microsoft.com/.default'
                 } catch {}
                 if ($Existing.webhookUrl -ne $MatchedWebhook.WebhookNotificationUrl -or $EventCompare) {
-                    if (![string]::IsNullOrEmpty($MatchedWebhook.WebhookNotificationUrl) -or $Existing.WebhookUrl) {
+                    if ($Existing.WebhookUrl) {
                         $Action = 'Updated'
                         $Method = 'PUT'
                         Write-Host 'updating webhook'
