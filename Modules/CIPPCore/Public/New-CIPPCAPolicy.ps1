@@ -109,19 +109,20 @@ function New-CIPPCAPolicy {
         }
         'AllUsers' {
             Write-Host 'Replacement pattern for inclusions and exclusions is All users. This policy will now apply to everyone.'
-            $JSONObj.conditions.users.includeUsers = @('All')
-            $JSONObj.conditions.users.excludeUsers = @()
-            $JSONObj.conditions.users.includeGroups = @()
-            $JSONObj.conditions.users.excludeGroups = @() 
+            if ($JSONObj.conditions.users.includeUsers -ne 'All') { $JSONObj.conditions.users.includeUsers = @('All') }
+            if ($JSONObj.conditions.users.excludeUsers) { $JSONObj.conditions.users.excludeUsers = @() }
+            if ($JSONObj.conditions.users.includeGroups) { $JSONObj.conditions.users.includeGroups = @() }
+            if ($JSONObj.conditions.users.excludeGroups) { $JSONObj.conditions.users.excludeGroups = @() }
         }
         'displayName' {
             Write-Host 'Replacement pattern for inclusions and exclusions is displayName.'
             $users = New-GraphGETRequest -uri 'https://graph.microsoft.com/beta/users?$select=id,displayName' -tenantid $TenantFilter
             $Groups = New-GraphGETRequest -uri 'https://graph.microsoft.com/beta/groups?$select=id,displayName' -tenantid $TenantFilter
-            $JSONObj.conditions.users.includeUsers = @(($users | Where-Object -Property displayName -In $JSONObj.conditions.users.includeUsers).id)
-            $JSONObj.conditions.users.excludeUsers = @(($users | Where-Object -Property displayName -In $JSONObj.conditions.users.excludeUsers).id)
-            $JSONObj.conditions.users.includeGroups = @(($groups | Where-Object -Property displayName -In $JSONObj.conditions.users.includeGroups).id)
-            $JSONObj.conditions.users.excludeGroups = @(($groups | Where-Object -Property displayName -In $JSONObj.conditions.users.excludeGroups).id)
+            
+            if ($JSONObj.conditions.users.includeUsers -notin 'All', 'None', 'GuestOrExternalUsers') { $JSONObj.conditions.users.includeUsers = @(($users | Where-Object -Property displayName -In $JSONObj.conditions.users.includeUsers).id) }
+            if ($JSONObj.conditions.users.excludeUsers) { $JSONObj.conditions.users.excludeUsers = @(($users | Where-Object -Property displayName -In $JSONObj.conditions.users.excludeUsers).id) }
+            if ($JSONObj.conditions.users.includeGroups) { $JSONObj.conditions.users.includeGroups = @(($groups | Where-Object -Property displayName -In $JSONObj.conditions.users.includeGroups).id) }
+            if ($JSONObj.conditions.users.excludeGroups) { $JSONObj.conditions.users.excludeGroups = @(($groups | Where-Object -Property displayName -In $JSONObj.conditions.users.excludeGroups).id) }
         }
     
     }
