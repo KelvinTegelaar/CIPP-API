@@ -14,6 +14,7 @@
       ],
       "desc": "test by LH",
       "where": "$_.passwordValidityPeriodInDays -eq 2147483647",
+      "StoreAs": "bool",
       "API": "Graph",
       "ExtractFields": [
         "passwordValidityPeriodInDays"
