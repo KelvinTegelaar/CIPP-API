@@ -1,5 +1,5 @@
 {
-  "name": "LHtestV1.1",
+  "name": "LHtestV1.2",
   "style": "Table",
   "Fields": [
     {
@@ -8,7 +8,7 @@
       "FrontendFields": [
         {
           "name": "Password Never Expires",
-          "value": "PasswordNeverExpires",
+          "value": "PasswordNeverExpires.passwordValidityPeriodInDays",
           "formatter": "bool"
         }
       ],
