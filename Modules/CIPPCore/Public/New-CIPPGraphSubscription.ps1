@@ -100,14 +100,14 @@ function New-CIPPGraphSubscription {
             try {
                 $EventCompare = Compare-Object $EventList ($MatchedWebhook.EventType | ConvertFrom-Json)
             } catch {
-                $EventCompare = $false 
+                $EventCompare = $false
             }
             try {
                 $Uri = 'https://api.partnercenter.microsoft.com/webhooks/v1/registration'
                 try {
                     $Existing = New-GraphGetRequest -NoAuthCheck $true -uri $Uri -tenantid $env:TenantId -scope 'https://api.partnercenter.microsoft.com/.default'
-                } catch {}
-                if ($Existing.webhookUrl -ne $MatchedWebhook.WebhookNotificationUrl -or $EventCompare) {
+                } catch { $Existing = $false }
+                if (!$Existing -or $Existing.webhookUrl -ne $MatchedWebhook.WebhookNotificationUrl -or $EventCompare) {
                     if ($Existing.WebhookUrl) {
                         $Action = 'Updated'
                         $Method = 'PUT'
