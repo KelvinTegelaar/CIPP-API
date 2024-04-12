@@ -13,12 +13,12 @@
         }
       ],
       "desc": "",
-      "StoreAs": "string",
+      "StoreAs": "JSON",
       "API": "Graph",
       "ExtractFields": [
         "displayName"
       ],
-      "URL": "https://graph.microsoft.com/beta/me"
+      "URL": "https://graph.microsoft.com/beta/users"
     }
   ]
 }
