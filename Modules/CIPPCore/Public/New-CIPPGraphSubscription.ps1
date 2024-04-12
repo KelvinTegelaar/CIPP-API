@@ -97,7 +97,11 @@ function New-CIPPGraphSubscription {
                 WebhookUrl    = "https://$BaseURL/API/PublicWebhooks?CIPPID=$($CIPPID)&Type=PartnerCenter"
                 WebhookEvents = @($EventList)
             }
-            $EventCompare = Compare-Object $EventList ($MatchedWebhook.EventType | ConvertFrom-Json)
+            try {
+                $EventCompare = Compare-Object $EventList ($MatchedWebhook.EventType | ConvertFrom-Json)
+            } catch {
+                $EventCompare = $false 
+            }
             try {
                 $Uri = 'https://api.partnercenter.microsoft.com/webhooks/v1/registration'
                 try {
