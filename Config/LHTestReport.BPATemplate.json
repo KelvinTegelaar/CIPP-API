@@ -8,7 +8,8 @@
       "FrontendFields": [
         {
           "name": "displayName",
-          "value": "displayName"
+          "value": "displayName",
+          "formatter": "string"
         }
       ],
       "desc": "",
