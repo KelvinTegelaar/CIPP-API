@@ -3,12 +3,12 @@
   "style": "Table",
   "Fields": [
     {
-      "name": "displayName",
+      "name": "displayNameTest",
       "UseExistingInfo": false,
       "FrontendFields": [
         {
           "name": "displayName",
-          "value": "displayName",
+          "value": "displayNameTest",
           "formatter": "string"
         }
       ],
@@ -18,7 +18,7 @@
       "ExtractFields": [
         "displayName"
       ],
-      "URL": "https://graph.microsoft.com/beta/users"
+      "URL": "https://graph.microsoft.com/beta/me"
     }
   ]
 }
