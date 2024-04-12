@@ -3,12 +3,12 @@
   "style": "Table",
   "Fields": [
     {
-      "name": "displayNameTest",
+      "name": "PasswordNeverExpires",
       "UseExistingInfo": false,
       "FrontendFields": [
         {
           "name": "Password Never Expires",
-          "value": "displayNameTest",
+          "value": "PasswordNeverExpires",
           "formatter": "bool"
         }
       ],
