@@ -3,7 +3,7 @@
   "style": "Table",
   "Fields": [
     {
-      "name": "Info",
+      "name": "displayName",
       "UseExistingInfo": false,
       "FrontendFields": [
         {
