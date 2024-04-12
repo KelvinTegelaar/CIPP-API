@@ -4,22 +4,17 @@
   "Fields": [
     {
       "name": "PasswordNeverExpires",
-      "UseExistingInfo": false,
+      "API": "Graph",
+      "URL": "https://graph.microsoft.com/beta/domains",
+      "ExtractFields": ["passwordValidityPeriodInDays"],
+      "where": "$_.passwordValidityPeriodInDays -eq 2147483647",
+      "StoreAs": "bool",
       "FrontendFields": [
         {
           "name": "Password Never Expires",
           "value": "PasswordNeverExpires",
           "formatter": "bool"
         }
-      ],
-      "desc": "",
-      "where": "$_.passwordValidityPeriodInDays -eq 2147483647",
-      "StoreAs": "bool",
-      "API": "Graph",
-      "ExtractFields": [
-        "passwordValidityPeriodInDays"
-      ],
-      "URL": "https://graph.microsoft.com/beta/domains"
+      ]
     }
-  ]
-}
+    }
