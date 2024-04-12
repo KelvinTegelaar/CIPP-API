@@ -1,0 +1,28 @@
+{
+    "name": "LH Test",
+    "style": "Table",
+    "fields": [
+        {
+            "name": "SharepointSettings",
+            "API": "Graph",
+            "URL": "https://graph.microsoft.com/beta/admin/sharepoint/settings",
+            "Parameters": {
+                "asApp": "True"
+            },
+            "ExtractFields": ["sharingCapability", "isMacSyncAppEnabled"],
+            "StoreAs": "JSON",
+            "FrontendFields": [
+                {
+                    "name": "Sharing capability",
+                    "value": "SharepointSettings.sharingCapability",
+                    "formatter": "string"
+                },
+                {
+                    "name": "Mac Sync Enabled",
+                    "value": "SharepointSettings.isMacSyncAppEnabled",
+                    "formatter": "warnBool"
+                }
+            ]
+        }
+    ]
+}
