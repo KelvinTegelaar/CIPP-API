@@ -1,0 +1,23 @@
+{
+  "name": "LHTestReport",
+  "style": "Table",
+  "Fields": [
+    {
+      "name": "Info",
+      "UseExistingInfo": false,
+      "FrontendFields": [
+        {
+          "name": "userPrincipalName",
+          "value": "userPrincipalName"
+        }
+      ],
+      "desc": "",
+      "StoreAs": "JSON",
+      "API": "Graph",
+      "ExtractFields": [
+        "userPrincipalName"
+      ],
+      "URL": "https://graph.microsoft.com/v1.0/me"
+    }
+  ]
+}
