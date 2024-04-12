@@ -40,6 +40,32 @@ Function Invoke-AddCATemplate {
         }
 
         if ($excludelocations) { $JSON.conditions.locations.excludeLocations = $excludelocations }
+        if ($JSON.conditions.users.includeUsers) {
+            $JSON.conditions.users.includeUsers = @($JSON.conditions.users.includeUsers | ForEach-Object {
+                    if ($_ -in 'All', 'None', 'GuestOrExternalUsers') { return $_ }
+                (New-GraphGetRequest -uri "https://graph.microsoft.com/beta/users/$($_)" -tenantid $TenantFilter).displayName
+                })
+        }
+
+        if ($JSON.conditions.users.excludeUsers) {
+            $JSON.conditions.users.excludeUsers = @($JSON.conditions.users.excludeUsers | ForEach-Object {
+                    if ($_ -in 'All', 'None', 'GuestOrExternalUsers') { return $_ }
+                (New-GraphGetRequest -uri "https://graph.microsoft.com/beta/users/$($_)" -tenantid $TenantFilter).displayName
+                })
+        }
+
+        if ($JSON.conditions.users.includeGroups) {
+            $JSON.conditions.users.includeGroups = @($JSON.conditions.users.includeGroups | ForEach-Object {
+                    if ($_ -in 'All', 'None', 'GuestOrExternalUsers') { return $_ }
+                (New-GraphGetRequest -uri "https://graph.microsoft.com/beta/groups/$($_)" -tenantid $TenantFilter).displayName
+                })
+        }
+        if ($JSON.conditions.users.excludeGroups) {
+            $JSON.conditions.users.excludeGroups = @($JSON.conditions.users.excludeGroups | ForEach-Object {
+                    if ($_ -in 'All', 'None', 'GuestOrExternalUsers') { return $_ }
+                (New-GraphGetRequest -uri "https://graph.microsoft.com/beta/groups/$($_)" -tenantid $TenantFilter).displayName
+                })
+        }
 
         $JSON | Add-Member -NotePropertyName 'LocationInfo' -NotePropertyValue @($IncludeJSON, $ExcludeJSON)
 
