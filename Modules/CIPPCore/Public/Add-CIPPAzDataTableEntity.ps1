@@ -9,7 +9,7 @@ function Add-CIPPAzDataTableEntity {
     
     foreach ($SingleEnt in $Entity) {
         try {
-            Add-AzDataTableEntity -context $Context -force:$Force -CreateTableIfNotExists:$CreateTableIfNotExists -Entity $SingleEnt
+            Add-AzDataTableEntity -context $Context -force:$Force -CreateTableIfNotExists:$CreateTableIfNotExists -Entity $SingleEnt -ErrorAction Stop
         } catch [System.Exception] {
             if ($_.Exception.ErrorCode -eq 'PropertyValueTooLarge' -or $_.Exception.ErrorCode -eq 'EntityTooLarge') {
                 try {
@@ -52,6 +52,8 @@ function Add-CIPPAzDataTableEntity {
                     throw "Error processing entity: $($_.Exception.Message)."
                 }
             } else {
+                Write-Host "THE ERROR IS $($_.Exception.ErrorCode)"
+
                 throw $_
             }
         }
