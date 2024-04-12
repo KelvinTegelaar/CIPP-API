@@ -68,6 +68,7 @@ function Get-GraphRequestList {
 
     $TableName = ('cache{0}' -f ($Endpoint -replace '[^A-Za-z0-9]'))[0..62] -join ''
     Write-Host "Table: $TableName"
+    $Endpoint = $Endpoint -replace '^/', ''
     $DisplayName = ($Endpoint -split '/')[0]
 
     if ($QueueNameOverride) {
@@ -110,7 +111,18 @@ function Get-GraphRequestList {
     Write-Host "Cached: $(($Rows | Measure-Object).Count) rows (Type: $($Type))"
 
     $QueueReference = '{0}-{1}' -f $TenantFilter, $PartitionKey
-    $RunningQueue = Get-CippQueue | Where-Object { $_.Reference -eq $QueueReference -and $_.Status -ne 'Completed' -and $_.Status -ne 'Failed' }
+    $RunningQueue = Invoke-ListCippQueue | Where-Object { $_.Reference -eq $QueueReference -and $_.Status -ne 'Completed' -and $_.Status -ne 'Failed' }
+
+    if ($TenantFilter -ne 'AllTenants' -and $Endpoint -match '%tenantid%') {
+        $TenantId = (Get-Tenants -IncludeErrors | Where-Object { $_.defaultDomainName -eq $TenantFilter -or $_.customerId -eq $TenantFilter }).customerId
+        $Endpoint = $Endpoint -replace '%tenantid%', $TenantId
+        $GraphQuery = [System.UriBuilder]('https://graph.microsoft.com/{0}/{1}' -f $Version, $Endpoint)
+        $ParamCollection = [System.Web.HttpUtility]::ParseQueryString([String]::Empty)
+        foreach ($Item in ($Parameters.GetEnumerator() | Sort-Object -CaseSensitive -Property Key)) {
+            $ParamCollection.Add($Item.Key, $Item.Value)
+        }
+        $GraphQuery.Query = $ParamCollection.ToString()
+    }
 
     if (!$Rows) {
         switch ($TenantFilter) {
@@ -158,9 +170,9 @@ function Get-GraphRequestList {
                         }
                         Write-Host 'Pushing output bindings'
                         try {
-                            Get-Tenants -IncludeErrors | ForEach-Object {
+                            $Batch = Get-Tenants -IncludeErrors | ForEach-Object {
                                 $TenantFilter = $_.defaultDomainName
-                                $QueueTenant = [PSCustomObject]@{
+                                [PSCustomObject]@{
                                     FunctionName                = 'ListGraphRequestQueue'
                                     TenantFilter                = $TenantFilter
                                     Endpoint                    = $Endpoint
@@ -175,8 +187,15 @@ function Get-GraphRequestList {
                                     ReverseTenantLookup         = $ReverseTenantLookup.IsPresent
                                 }
 
-                                Push-OutputBinding -Name QueueItem -Value $QueueTenant
+                                #Push-OutputBinding -Name QueueItem -Value $QueueTenant
                             }
+
+                            $InputObject = @{
+                                OrchestratorName = 'GraphRequestOrchestrator'
+                                Batch            = @($Batch)
+                            }
+                            #Write-Host ($InputObject | ConvertTo-Json -Depth 5)
+                            $InstanceId = Start-NewOrchestration -FunctionName 'CIPPOrchestrator' -InputObject ($InputObject | ConvertTo-Json -Depth 5)
                         } catch {
                             Write-Host "QUEUE ERROR: $($_.Exception.Message)"
                         }
@@ -234,7 +253,13 @@ function Get-GraphRequestList {
                                     ReverseTenantLookup         = $ReverseTenantLookup.IsPresent
                                 }
 
-                                Push-OutputBinding -Name QueueItem -Value $QueueTenant
+                                $InputObject = @{
+                                    OrchestratorName = 'GraphRequestOrchestrator'
+                                    Batch            = @($QueueTenant)
+                                }
+                                $InstanceId = Start-NewOrchestration -FunctionName 'CIPPOrchestrator' -InputObject ($InputObject | ConvertTo-Json -Depth 5)
+
+                                #Push-OutputBinding -Name QueueItem -Value $QueueTenant
 
                                 [PSCustomObject]@{
                                     QueueMessage = ('Loading {0} rows for {1}. Please check back after the job completes' -f $Count, $TenantFilter)

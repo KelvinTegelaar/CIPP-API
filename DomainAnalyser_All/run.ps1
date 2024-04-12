@@ -36,9 +36,11 @@ try {
 
 $Result = [PSCustomObject]@{
     Tenant               = $Tenant.Tenant
+    TenantID             = $Tenant.TenantGUID
     GUID                 = $($Domain.Replace('.', ''))
     LastRefresh          = $(Get-Date (Get-Date).ToUniversalTime() -UFormat '+%Y-%m-%dT%H:%M:%S.000Z')
     Domain               = $Domain
+    NSRecords            = (Read-NSRecord -Domain $Domain).Records
     ExpectedSPFRecord    = ''
     ActualSPFRecord      = ''
     SPFPassAll           = ''
@@ -52,6 +54,7 @@ $Result = [PSCustomObject]@{
     DNSSECPresent        = ''
     MailProvider         = ''
     DKIMEnabled          = ''
+    DKIMRecords          = ''
     Score                = ''
     MaximumScore         = 160
     ScorePercentage      = ''
@@ -114,8 +117,8 @@ try {
         $ScoreExplanation.Add('No SPF Record Found') | Out-Null
     }
 } catch {
-    $Message = 'SPF Exception: {0} line {1} - {2}' -f $_.InvocationInfo.ScriptName, $_.InvocationInfo.ScriptLineNumber, $_.Exception.Message
-    Write-LogMessage -API 'DomainAnalyser' -tenant $tenant.tenant -message $Message -sev Error
+    $Message = 'SPF Error'
+    Write-LogMessage -API 'DomainAnalyser' -tenant $tenant.tenant -message $Message -LogData (Get-CippException -Exception $_) -sev Error
     throw $Message
 }
 
@@ -177,8 +180,8 @@ try {
         }
     }
 } catch {
-    $Message = 'DMARC Exception: {0} line {1} - {2}' -f $_.InvocationInfo.ScriptName, $_.InvocationInfo.ScriptLineNumber, $_.Exception.Message
-    Write-LogMessage -API 'DomainAnalyser' -tenant $tenant.tenant -message $Message -sev Error
+    $Message = 'DMARC Error'
+    Write-LogMessage -API 'DomainAnalyser' -tenant $tenant.tenant -message $Message -LogData (Get-CippException -Exception $_) -sev Error
     throw $Message
 }
 
@@ -195,8 +198,8 @@ try {
         $ScoreExplanation.Add('DNSSEC Not Configured or Enabled') | Out-Null
     }
 } catch {
-    $Message = 'DNSSEC Exception: {0} line {1} - {2}' -f $_.InvocationInfo.ScriptName, $_.InvocationInfo.ScriptLineNumber, $_.Exception.Message
-    Write-LogMessage -API 'DomainAnalyser' -tenant $tenant.tenant -message $Message -sev Error
+    $Message = 'DNSSEC Error'
+    Write-LogMessage -API 'DomainAnalyser' -tenant $tenant.tenant -message $Message -LogData (Get-CippException -Exception $_) -sev Error
     throw $Message
 }
 
@@ -218,13 +221,14 @@ try {
     if ($DkimRecordCount -gt 0 -and $DkimFailCount -eq 0) {
         $Result.DKIMEnabled = $true
         $ScoreDomain += $Scores.DKIMActiveAndWorking
+        $Result.DKIMRecords = $DkimRecord.Records | Select-Object Selector, Record
     } else {
         $Result.DKIMEnabled = $false
         $ScoreExplanation.Add('DKIM Not Configured') | Out-Null
     }
 } catch {
-    $Message = 'DKIM Exception: {0} line {1} - {2}' -f $_.InvocationInfo.ScriptName, $_.InvocationInfo.ScriptLineNumber, $_.Exception.Message
-    Write-LogMessage -API 'DomainAnalyser' -tenant $tenant.tenant -message $Message -sev Error
+    $Message = 'DKIM Exception'
+    Write-LogMessage -API 'DomainAnalyser' -tenant $tenant.tenant -message $Message -LogData (Get-CippException -Exception $_) -sev Error
     throw $Message
 }
 # Final Score

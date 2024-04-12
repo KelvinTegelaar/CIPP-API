@@ -21,7 +21,7 @@ function Invoke-CIPPStandardEnableMailboxAuditing {
         }
 
         # Check for mailbox audit on all mailboxes. Enable for all that it's not enabled for
-        $Mailboxes = New-ExoRequest -tenantid $Tenant -cmdlet 'Get-Mailbox' -cmdParams @{ResultSize = 'Unlimited' } | Where-Object { $_.AuditEnabled -ne $true }
+        $Mailboxes = New-ExoRequest -tenantid $Tenant -cmdlet 'Get-Mailbox' -cmdParams @{filter = "auditenabled -eq 'False'" } -useSystemMailbox $true -Select 'AuditEnabled,UserPrincipalName' 
         $Mailboxes | ForEach-Object {
             try {
                 New-ExoRequest -tenantid $Tenant -cmdlet 'Set-Mailbox' -cmdParams @{Identity = $_.UserPrincipalName; AuditEnabled = $true } -Anchor $_.UserPrincipalName 
@@ -32,7 +32,8 @@ function Invoke-CIPPStandardEnableMailboxAuditing {
         }
 
         # Disable audit bypass for all mailboxes that have it enabled
-        $BypassMailboxes = New-ExoRequest -tenantid $Tenant -cmdlet 'Get-MailboxAuditBypassAssociation' -cmdParams @{ResultSize = 'Unlimited' } | Where-Object { $_.AuditBypassEnabled -eq $true }
+        
+        $BypassMailboxes = New-ExoRequest -tenantid $Tenant -cmdlet 'Get-MailboxAuditBypassAssociation' -select 'GUID, AuditBypassEnabled, Name' -useSystemMailbox $true | Where-Object { $_.AuditBypassEnabled -eq $true }
         $BypassMailboxes | ForEach-Object {
             try {
                 New-ExoRequest -tenantid $Tenant -cmdlet 'Set-MailboxAuditBypassAssociation' -cmdParams @{Identity = $_.Guid; AuditBypassEnabled = $false } -UseSystemMailbox $true

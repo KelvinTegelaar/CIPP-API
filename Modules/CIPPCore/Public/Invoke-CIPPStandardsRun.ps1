@@ -1,4 +1,4 @@
- 
+
 function Invoke-CIPPStandardsRun {
     [CmdletBinding()]
     param(
@@ -20,7 +20,7 @@ function Invoke-CIPPStandardsRun {
         $OldStd = $_
         $OldStd.standards.psobject.properties.name | ForEach-Object {
             if ($_ -eq 'MailContacts') {
-                $OldStd.Standards.$_ = [pscustomobject]@{ 
+                $OldStd.Standards.$_ = [pscustomobject]@{
                     GeneralContact   = $OldStd.Standards.MailContacts.GeneralContact.Mail
                     SecurityContact  = $OldStd.Standards.MailContacts.SecurityContact.Mail
                     MarketingContact = $OldStd.Standards.MailContacts.MarketingContact.Mail
@@ -28,16 +28,16 @@ function Invoke-CIPPStandardsRun {
                     remediate        = $true
                 }
             } else {
-                if ($OldStd.Standards.$_ -eq $true -and $_ -ne 'v2.1') { 
-                    $OldStd.Standards.$_ = @{ remediate = $true } 
-                } else { 
-                    $OldStd.Standards.$_ | Add-Member -NotePropertyName 'remediate' -NotePropertyValue $true -Force 
+                if ($OldStd.Standards.$_ -eq $true -and $_ -ne 'v2.1') {
+                    $OldStd.Standards.$_ = @{ remediate = $true }
+                } else {
+                    $OldStd.Standards.$_ | Add-Member -NotePropertyName 'remediate' -NotePropertyValue $true -Force
                 }
-                
+
             }
         }
         $OldStd | Add-Member -NotePropertyName 'v2.1' -NotePropertyValue $true -PassThru -Force
-        $Entity = @{ 
+        $Entity = @{
             PartitionKey = 'standards'
             RowKey       = "$($OldStd.Tenant)"
             JSON         = "$($OldStd | ConvertTo-Json -Depth 10)"
@@ -76,15 +76,23 @@ function Invoke-CIPPStandardsRun {
         }
     }
 
-    #For each item in our object, run the queue. 
+    #For each item in our object, run the queue.
 
-    foreach ($task in $object | Where-Object -Property Standard -NotLike 'v2*') {
-        $QueueItem = [pscustomobject]@{
+    $Batch = foreach ($task in $object | Where-Object { $_.Standard -NotLike 'v2*' -and ($_.Settings.remediate -eq $true -or $_.Settings.alert -eq $true -or $_.Settings.report -eq $true) }) {
+        [PSCustomObject]@{
             Tenant       = $task.Tenant
             Standard     = $task.Standard
             Settings     = $task.Settings
             FunctionName = 'CIPPStandard'
         }
-        Push-OutputBinding -Name QueueItem -Value $QueueItem
     }
+
+    $InputObject = [PSCustomObject]@{
+        OrchestratorName = 'Standards'
+        Batch            = @($Batch)
+    }
+
+    $InstanceId = Start-NewOrchestration -FunctionName 'CIPPOrchestrator' -InputObject ($InputObject | ConvertTo-Json -Depth 5)
+    Write-Host "Started orchestration with ID = '$InstanceId'"
+    #$Orchestrator = New-OrchestrationCheckStatusResponse -Request $Request -InstanceId $InstanceId
 }

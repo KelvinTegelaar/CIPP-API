@@ -1,0 +1,1265 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<helpItems schema="maml" xmlns="http://msh">
+  <command:command xmlns:maml="http://schemas.microsoft.com/maml/2004/10" xmlns:command="http://schemas.microsoft.com/maml/dev/command/2004/10" xmlns:dev="http://schemas.microsoft.com/maml/dev/2004/10" xmlns:MSHelp="http://msdn.microsoft.com/mshelp">
+    <command:details>
+      <command:name>Add-AzDataTableEntity</command:name>
+      <command:verb>Add</command:verb>
+      <command:noun>AzDataTableEntity</command:noun>
+      <maml:description>
+        <maml:para>Add one or more entities to an Azure Table.</maml:para>
+      </maml:description>
+    </command:details>
+    <maml:description>
+      <maml:para>Add one or more entities to an Azure Table, as an array of either Hashtables or PSObjects.</maml:para>
+    </maml:description>
+    <command:syntax>
+      <command:syntaxItem>
+        <maml:name>Add-AzDataTableEntity</maml:name>
+        <command:parameter required="true" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
+          <maml:name>Context</maml:name>
+          <maml:description>
+            <maml:para>A context object created by New-AzDataTableContext, with authentication information for the table to operate on.</maml:para>
+          </maml:description>
+          <command:parameterValue required="true" variableLength="false">AzDataTableContext</command:parameterValue>
+          <dev:type>
+            <maml:name>AzDataTableContext</maml:name>
+            <maml:uri />
+          </dev:type>
+          <dev:defaultValue>None</dev:defaultValue>
+        </command:parameter>
+        <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
+          <maml:name>CreateTableIfNotExists</maml:name>
+          <maml:description>
+            <maml:para>If the table should be created if it does not exist.</maml:para>
+          </maml:description>
+          <dev:type>
+            <maml:name>SwitchParameter</maml:name>
+            <maml:uri />
+          </dev:type>
+          <dev:defaultValue>False</dev:defaultValue>
+        </command:parameter>
+        <command:parameter required="true" variableLength="true" globbing="false" pipelineInput="True (ByValue)" position="named" aliases="none">
+          <maml:name>Entity</maml:name>
+          <maml:description>
+            <maml:para>The entities to add to the table.</maml:para>
+          </maml:description>
+          <command:parameterValue required="true" variableLength="false">Object[]</command:parameterValue>
+          <dev:type>
+            <maml:name>Object[]</maml:name>
+            <maml:uri />
+          </dev:type>
+          <dev:defaultValue>None</dev:defaultValue>
+        </command:parameter>
+        <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
+          <maml:name>Force</maml:name>
+          <maml:description>
+            <maml:para>Overwrites provided entities if they exist.</maml:para>
+          </maml:description>
+          <dev:type>
+            <maml:name>SwitchParameter</maml:name>
+            <maml:uri />
+          </dev:type>
+          <dev:defaultValue>False</dev:defaultValue>
+        </command:parameter>
+      </command:syntaxItem>
+    </command:syntax>
+    <command:parameters>
+      <command:parameter required="true" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
+        <maml:name>Context</maml:name>
+        <maml:description>
+          <maml:para>A context object created by New-AzDataTableContext, with authentication information for the table to operate on.</maml:para>
+        </maml:description>
+        <command:parameterValue required="true" variableLength="false">AzDataTableContext</command:parameterValue>
+        <dev:type>
+          <maml:name>AzDataTableContext</maml:name>
+          <maml:uri />
+        </dev:type>
+        <dev:defaultValue>None</dev:defaultValue>
+      </command:parameter>
+      <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
+        <maml:name>CreateTableIfNotExists</maml:name>
+        <maml:description>
+          <maml:para>If the table should be created if it does not exist.</maml:para>
+        </maml:description>
+        <command:parameterValue required="false" variableLength="false">SwitchParameter</command:parameterValue>
+        <dev:type>
+          <maml:name>SwitchParameter</maml:name>
+          <maml:uri />
+        </dev:type>
+        <dev:defaultValue>False</dev:defaultValue>
+      </command:parameter>
+      <command:parameter required="true" variableLength="true" globbing="false" pipelineInput="True (ByValue)" position="named" aliases="none">
+        <maml:name>Entity</maml:name>
+        <maml:description>
+          <maml:para>The entities to add to the table.</maml:para>
+        </maml:description>
+        <command:parameterValue required="true" variableLength="false">Object[]</command:parameterValue>
+        <dev:type>
+          <maml:name>Object[]</maml:name>
+          <maml:uri />
+        </dev:type>
+        <dev:defaultValue>None</dev:defaultValue>
+      </command:parameter>
+      <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
+        <maml:name>Force</maml:name>
+        <maml:description>
+          <maml:para>Overwrites provided entities if they exist.</maml:para>
+        </maml:description>
+        <command:parameterValue required="false" variableLength="false">SwitchParameter</command:parameterValue>
+        <dev:type>
+          <maml:name>SwitchParameter</maml:name>
+          <maml:uri />
+        </dev:type>
+        <dev:defaultValue>False</dev:defaultValue>
+      </command:parameter>
+    </command:parameters>
+    <command:inputTypes>
+      <command:inputType>
+        <dev:type>
+          <maml:name>System.Collections.Hashtable[] or System.Management.Automation.PSObject[]</maml:name>
+        </dev:type>
+        <maml:description>
+          <maml:para>This cmdlet takes either an array of hashtables or psobjects as input to the Entity parameter, which can also be provided through the pipeline.</maml:para>
+        </maml:description>
+      </command:inputType>
+    </command:inputTypes>
+    <command:returnValues>
+      <command:returnValue>
+        <dev:type>
+          <maml:name>System.Object</maml:name>
+        </dev:type>
+        <maml:description>
+          <maml:para></maml:para>
+        </maml:description>
+      </command:returnValue>
+    </command:returnValues>
+    <maml:alertSet>
+      <maml:alert>
+        <maml:para>Regarding Dates, DateTime, and DateTimeOffset:</maml:para>
+        <maml:para>The underlying Azure.Data.Tables SDK expects to work with DateTime fields in UTC format for conversion to DateTimeOffset objects. When submitting a DateTimeOffset object to the SDK, it will be converted to UTC timezone rather than preserving the existing timezone/offset info. Similarly, if a `DateTime` object is submitted in the entity with its Kind set to "local" or "unspecified", the SDK will return an error and state that `Azure SDK requires it to be UTC`. While there isn't any change needed to get `DateTimeOffset` objects to work with AzBobbyTables, the workaround for `DateTime` objects is to set the property to a new `DateTime` object with its `Kind` property set to `Utc`. e.g. `$obj.Time = $obj.Time.ToUniversalFormat()`. Related issue (https://github.com/Azure/azure-sdk-for-net/issues/30644).</maml:para>
+        <maml:para>It is possible via the Azure Storage Explorer to set DateTime fields with offsets other than UTC/+00:00. Note that searches with queries set to type `DateTime` do properly calculate to a specific moment, and find equivilent moments. e.g. a `-Filter` set to `Time eq datetime'2023-12-26T18:05:40.5345634+00:00'` will match an entry where the Time property is set to `2023-12-26T17:05:40.5345634-01:00`.</maml:para>
+      </maml:alert>
+    </maml:alertSet>
+    <command:examples>
+      <command:example>
+        <maml:title>-------------------------- Example 1 --------------------------</maml:title>
+        <dev:code>PS C:\&gt; $Context = New-AzDataTableContext -TableName $TableName -ConnectionString $ConnectionString
+PS C:\&gt; $User = @{ FirstName = 'Bobby'; LastName = 'Tables'; PartitionKey = 'Example'; RowKey = '1' }
+PS C:\&gt; Add-AzDataTableEntity -Entity $User -Context $Context</dev:code>
+        <dev:remarks>
+          <maml:para>Add the user "Bobby Tables" to a table using a connection string.</maml:para>
+        </dev:remarks>
+      </command:example>
+      <command:example>
+        <maml:title>-------------------------- Example 2 --------------------------</maml:title>
+        <dev:code>PS C:\&gt; $Context = New-AzDataTableContext -TableName $TableName -SharedAccessSignature $SAS
+PS C:\&gt; $Users = @(
+&gt;&gt;  @{ FirstName = 'Bobby'; LastName = 'Tables'; PartitionKey = 'Example'; RowKey = '1' },
+&gt;&gt;  @{ FirstName = 'Bobby Junior'; LastName = 'Tables'; PartitionKey = 'Example'; RowKey = '2' } )
+PS C:\&gt; Add-AzDataTableEntity -Entity $Users -Context $Context -Force</dev:code>
+        <dev:remarks>
+          <maml:para>Add multiple users to a table using a shared access signature URL, overwriting any existing rows.</maml:para>
+        </dev:remarks>
+      </command:example>
+    </command:examples>
+    <command:relatedLinks />
+  </command:command>
+  <command:command xmlns:maml="http://schemas.microsoft.com/maml/2004/10" xmlns:command="http://schemas.microsoft.com/maml/dev/command/2004/10" xmlns:dev="http://schemas.microsoft.com/maml/dev/2004/10" xmlns:MSHelp="http://msdn.microsoft.com/mshelp">
+    <command:details>
+      <command:name>Clear-AzDataTable</command:name>
+      <command:verb>Clear</command:verb>
+      <command:noun>AzDataTable</command:noun>
+      <maml:description>
+        <maml:para>Clear all entities from an Azure Table.</maml:para>
+      </maml:description>
+    </command:details>
+    <maml:description>
+      <maml:para>Clear all entities from an Azure Table.</maml:para>
+    </maml:description>
+    <command:syntax>
+      <command:syntaxItem>
+        <maml:name>Clear-AzDataTable</maml:name>
+        <command:parameter required="true" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
+          <maml:name>Context</maml:name>
+          <maml:description>
+            <maml:para>A context object created by New-AzDataTableContext, with authentication information for the table to operate on.</maml:para>
+          </maml:description>
+          <command:parameterValue required="true" variableLength="false">AzDataTableContext</command:parameterValue>
+          <dev:type>
+            <maml:name>AzDataTableContext</maml:name>
+            <maml:uri />
+          </dev:type>
+          <dev:defaultValue>None</dev:defaultValue>
+        </command:parameter>
+      </command:syntaxItem>
+    </command:syntax>
+    <command:parameters>
+      <command:parameter required="true" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
+        <maml:name>Context</maml:name>
+        <maml:description>
+          <maml:para>A context object created by New-AzDataTableContext, with authentication information for the table to operate on.</maml:para>
+        </maml:description>
+        <command:parameterValue required="true" variableLength="false">AzDataTableContext</command:parameterValue>
+        <dev:type>
+          <maml:name>AzDataTableContext</maml:name>
+          <maml:uri />
+        </dev:type>
+        <dev:defaultValue>None</dev:defaultValue>
+      </command:parameter>
+    </command:parameters>
+    <command:inputTypes>
+      <command:inputType>
+        <dev:type>
+          <maml:name>None</maml:name>
+        </dev:type>
+        <maml:description>
+          <maml:para></maml:para>
+        </maml:description>
+      </command:inputType>
+    </command:inputTypes>
+    <command:returnValues>
+      <command:returnValue>
+        <dev:type>
+          <maml:name>None</maml:name>
+        </dev:type>
+        <maml:description>
+          <maml:para></maml:para>
+        </maml:description>
+      </command:returnValue>
+    </command:returnValues>
+    <maml:alertSet>
+      <maml:alert>
+        <maml:para></maml:para>
+      </maml:alert>
+    </maml:alertSet>
+    <command:examples>
+      <command:example>
+        <maml:title>-------------------------- Example 1 --------------------------</maml:title>
+        <dev:code>PS C:\&gt; $Context = New-AzDataTableContext -TableName $TableName -ConnectionString $ConnectionString
+PS C:\&gt; Clear-AzDataTable -Context $Context</dev:code>
+        <dev:remarks>
+          <maml:para>Clear all entities from a table using a connection string.</maml:para>
+        </dev:remarks>
+      </command:example>
+      <command:example>
+        <maml:title>-------------------------- Example 2 --------------------------</maml:title>
+        <dev:code>PS C:\&gt; $Context = New-AzDataTableContext -TableName $TableName -StorageAccountName $Name -ManagedIdentity
+PS C:\&gt; Clear-AzDataTable $Context</dev:code>
+        <dev:remarks>
+          <maml:para>Clear all entities from a table using a managed identity.</maml:para>
+        </dev:remarks>
+      </command:example>
+    </command:examples>
+    <command:relatedLinks />
+  </command:command>
+  <command:command xmlns:maml="http://schemas.microsoft.com/maml/2004/10" xmlns:command="http://schemas.microsoft.com/maml/dev/command/2004/10" xmlns:dev="http://schemas.microsoft.com/maml/dev/2004/10" xmlns:MSHelp="http://msdn.microsoft.com/mshelp">
+    <command:details>
+      <command:name>Get-AzDataTableEntity</command:name>
+      <command:verb>Get</command:verb>
+      <command:noun>AzDataTableEntity</command:noun>
+      <maml:description>
+        <maml:para>Get one or more entities from an Azure Table.</maml:para>
+      </maml:description>
+    </command:details>
+    <maml:description>
+      <maml:para>Get either all entities from an Azure Table, or those matching a provided OData filter.</maml:para>
+      <maml:para>Documentation on querying tables and entities: &lt;https://docs.microsoft.com/en-gb/rest/api/storageservices/querying-tables-and-entities&gt;</maml:para>
+    </maml:description>
+    <command:syntax>
+      <command:syntaxItem>
+        <maml:name>Get-AzDataTableEntity</maml:name>
+        <command:parameter required="true" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
+          <maml:name>Context</maml:name>
+          <maml:description>
+            <maml:para>A context object created by New-AzDataTableContext, with authentication information for the table to operate on.</maml:para>
+          </maml:description>
+          <command:parameterValue required="true" variableLength="false">AzDataTableContext</command:parameterValue>
+          <dev:type>
+            <maml:name>AzDataTableContext</maml:name>
+            <maml:uri />
+          </dev:type>
+          <dev:defaultValue>None</dev:defaultValue>
+        </command:parameter>
+        <command:parameter required="true" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
+          <maml:name>Count</maml:name>
+          <maml:description>
+            <maml:para>Specifies to only get the number of matching entities in the table, and not the data itself.</maml:para>
+          </maml:description>
+          <dev:type>
+            <maml:name>SwitchParameter</maml:name>
+            <maml:uri />
+          </dev:type>
+          <dev:defaultValue>False</dev:defaultValue>
+        </command:parameter>
+      </command:syntaxItem>
+      <command:syntaxItem>
+        <maml:name>Get-AzDataTableEntity</maml:name>
+        <command:parameter required="true" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
+          <maml:name>Context</maml:name>
+          <maml:description>
+            <maml:para>A context object created by New-AzDataTableContext, with authentication information for the table to operate on.</maml:para>
+          </maml:description>
+          <command:parameterValue required="true" variableLength="false">AzDataTableContext</command:parameterValue>
+          <dev:type>
+            <maml:name>AzDataTableContext</maml:name>
+            <maml:uri />
+          </dev:type>
+          <dev:defaultValue>None</dev:defaultValue>
+        </command:parameter>
+        <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
+          <maml:name>Filter</maml:name>
+          <maml:description>
+            <maml:para>The OData filter to use in the query. Documentation on querying tables and entities: &lt;https://docs.microsoft.com/en-gb/rest/api/storageservices/querying-tables-and-entities&gt;</maml:para>
+          </maml:description>
+          <command:parameterValue required="true" variableLength="false">String</command:parameterValue>
+          <dev:type>
+            <maml:name>String</maml:name>
+            <maml:uri />
+          </dev:type>
+          <dev:defaultValue>None</dev:defaultValue>
+        </command:parameter>
+        <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="Top, Take">
+          <maml:name>First</maml:name>
+          <maml:description>
+            <maml:para>Gets only the specified number of objects. Enter the number of objects to get.</maml:para>
+          </maml:description>
+          <command:parameterValue required="true" variableLength="false">Int32</command:parameterValue>
+          <dev:type>
+            <maml:name>Int32</maml:name>
+            <maml:uri />
+          </dev:type>
+          <dev:defaultValue>None</dev:defaultValue>
+        </command:parameter>
+        <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
+          <maml:name>Property</maml:name>
+          <maml:description>
+            <maml:para>One or several names of properties, to specify data to return for the entities.</maml:para>
+          </maml:description>
+          <command:parameterValue required="true" variableLength="false">String[]</command:parameterValue>
+          <dev:type>
+            <maml:name>String[]</maml:name>
+            <maml:uri />
+          </dev:type>
+          <dev:defaultValue>None</dev:defaultValue>
+        </command:parameter>
+        <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
+          <maml:name>Skip</maml:name>
+          <maml:description>
+            <maml:para>Ignores the specified number of objects and then gets the remaining objects. Enter the number of objects to skip.</maml:para>
+          </maml:description>
+          <command:parameterValue required="true" variableLength="false">Int32</command:parameterValue>
+          <dev:type>
+            <maml:name>Int32</maml:name>
+            <maml:uri />
+          </dev:type>
+          <dev:defaultValue>None</dev:defaultValue>
+        </command:parameter>
+        <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
+          <maml:name>Sort</maml:name>
+          <maml:description>
+            <maml:para>Specifies one or several property names that to sort the entities by. If several properties are provided, the entities are sorted in the order that the property names are provided.</maml:para>
+            <maml:para>Note that using this parameter may slow down the command a lot when working with large data sets!</maml:para>
+          </maml:description>
+          <command:parameterValue required="true" variableLength="false">String[]</command:parameterValue>
+          <dev:type>
+            <maml:name>String[]</maml:name>
+            <maml:uri />
+          </dev:type>
+          <dev:defaultValue>None</dev:defaultValue>
+        </command:parameter>
+      </command:syntaxItem>
+    </command:syntax>
+    <command:parameters>
+      <command:parameter required="true" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
+        <maml:name>Context</maml:name>
+        <maml:description>
+          <maml:para>A context object created by New-AzDataTableContext, with authentication information for the table to operate on.</maml:para>
+        </maml:description>
+        <command:parameterValue required="true" variableLength="false">AzDataTableContext</command:parameterValue>
+        <dev:type>
+          <maml:name>AzDataTableContext</maml:name>
+          <maml:uri />
+        </dev:type>
+        <dev:defaultValue>None</dev:defaultValue>
+      </command:parameter>
+      <command:parameter required="true" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
+        <maml:name>Count</maml:name>
+        <maml:description>
+          <maml:para>Specifies to only get the number of matching entities in the table, and not the data itself.</maml:para>
+        </maml:description>
+        <command:parameterValue required="false" variableLength="false">SwitchParameter</command:parameterValue>
+        <dev:type>
+          <maml:name>SwitchParameter</maml:name>
+          <maml:uri />
+        </dev:type>
+        <dev:defaultValue>False</dev:defaultValue>
+      </command:parameter>
+      <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
+        <maml:name>Filter</maml:name>
+        <maml:description>
+          <maml:para>The OData filter to use in the query. Documentation on querying tables and entities: &lt;https://docs.microsoft.com/en-gb/rest/api/storageservices/querying-tables-and-entities&gt;</maml:para>
+        </maml:description>
+        <command:parameterValue required="true" variableLength="false">String</command:parameterValue>
+        <dev:type>
+          <maml:name>String</maml:name>
+          <maml:uri />
+        </dev:type>
+        <dev:defaultValue>None</dev:defaultValue>
+      </command:parameter>
+      <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="Top, Take">
+        <maml:name>First</maml:name>
+        <maml:description>
+          <maml:para>Gets only the specified number of objects. Enter the number of objects to get.</maml:para>
+        </maml:description>
+        <command:parameterValue required="true" variableLength="false">Int32</command:parameterValue>
+        <dev:type>
+          <maml:name>Int32</maml:name>
+          <maml:uri />
+        </dev:type>
+        <dev:defaultValue>None</dev:defaultValue>
+      </command:parameter>
+      <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
+        <maml:name>Property</maml:name>
+        <maml:description>
+          <maml:para>One or several names of properties, to specify data to return for the entities.</maml:para>
+        </maml:description>
+        <command:parameterValue required="true" variableLength="false">String[]</command:parameterValue>
+        <dev:type>
+          <maml:name>String[]</maml:name>
+          <maml:uri />
+        </dev:type>
+        <dev:defaultValue>None</dev:defaultValue>
+      </command:parameter>
+      <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
+        <maml:name>Skip</maml:name>
+        <maml:description>
+          <maml:para>Ignores the specified number of objects and then gets the remaining objects. Enter the number of objects to skip.</maml:para>
+        </maml:description>
+        <command:parameterValue required="true" variableLength="false">Int32</command:parameterValue>
+        <dev:type>
+          <maml:name>Int32</maml:name>
+          <maml:uri />
+        </dev:type>
+        <dev:defaultValue>None</dev:defaultValue>
+      </command:parameter>
+      <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
+        <maml:name>Sort</maml:name>
+        <maml:description>
+          <maml:para>Specifies one or several property names that to sort the entities by. If several properties are provided, the entities are sorted in the order that the property names are provided.</maml:para>
+          <maml:para>Note that using this parameter may slow down the command a lot when working with large data sets!</maml:para>
+        </maml:description>
+        <command:parameterValue required="true" variableLength="false">String[]</command:parameterValue>
+        <dev:type>
+          <maml:name>String[]</maml:name>
+          <maml:uri />
+        </dev:type>
+        <dev:defaultValue>None</dev:defaultValue>
+      </command:parameter>
+    </command:parameters>
+    <command:inputTypes>
+      <command:inputType>
+        <dev:type>
+          <maml:name>None</maml:name>
+        </dev:type>
+        <maml:description>
+          <maml:para></maml:para>
+        </maml:description>
+      </command:inputType>
+    </command:inputTypes>
+    <command:returnValues>
+      <command:returnValue>
+        <dev:type>
+          <maml:name>System.Management.Automation.PSObject</maml:name>
+        </dev:type>
+        <maml:description>
+          <maml:para></maml:para>
+        </maml:description>
+      </command:returnValue>
+    </command:returnValues>
+    <maml:alertSet>
+      <maml:alert>
+        <maml:para></maml:para>
+      </maml:alert>
+    </maml:alertSet>
+    <command:examples>
+      <command:example>
+        <maml:title>-------------------------- Example 1 --------------------------</maml:title>
+        <dev:code>PS C:\&gt; $Context = New-AzDataTableContext -TableName $TableName -ConnectionString $ConnectionString
+PS C:\&gt; $UserEntity = Get-AzDataTableEntity -Filter "FirstName eq 'Bobby' and LastName eq 'Tables'" -Context $Context</dev:code>
+        <dev:remarks>
+          <maml:para>Get the user "Bobby Tables" from the table using a connection string.</maml:para>
+        </dev:remarks>
+      </command:example>
+      <command:example>
+        <maml:title>-------------------------- Example 2 --------------------------</maml:title>
+        <dev:code>PS C:\&gt; $Context = New-AzDataTableContext -TableName $TableName -ConnectionString $ConnectionString
+PS C:\&gt; $UserCount = Get-AzDataTableEntity -Filter "LastName eq 'Tables'" -Context $Context -Count</dev:code>
+        <dev:remarks>
+          <maml:para>Use the Count parameter to get only the number of users matching the filter, using a connection string.</maml:para>
+        </dev:remarks>
+      </command:example>
+      <command:example>
+        <maml:title>-------------------------- Example 3 --------------------------</maml:title>
+        <dev:code>PS C:\&gt; $Context = New-AzDataTableContext -TableName $TableName -ManagedIdentity -StorageAccountName $Name
+PS C:\&gt; $UserEntities = Get-AzDataTableEntity -Sort 'Id','Age' -First 100 -Skip 500 -Context $Context</dev:code>
+        <dev:remarks>
+          <maml:para>Skipping the first 100 entities, get 500 entities sorted by id and age from the table using a managed identity for authorization.</maml:para>
+        </dev:remarks>
+      </command:example>
+      <command:example>
+        <maml:title>-------------------------- Example 4 --------------------------</maml:title>
+        <dev:code>PS C:\&gt; $Context = New-AzDataTableContext -TableName $TableName -SharedAccessSignature $SAS
+PS C:\&gt; $UserEntities = Get-AzDataTableEntity -Property 'FirstName','Age' -Context $Context</dev:code>
+        <dev:remarks>
+          <maml:para>Get only the properties "FirstName" and "Age" for all entities found in the table using a shared access signature URL.</maml:para>
+        </dev:remarks>
+      </command:example>
+    </command:examples>
+    <command:relatedLinks />
+  </command:command>
+  <command:command xmlns:maml="http://schemas.microsoft.com/maml/2004/10" xmlns:command="http://schemas.microsoft.com/maml/dev/command/2004/10" xmlns:dev="http://schemas.microsoft.com/maml/dev/2004/10" xmlns:MSHelp="http://msdn.microsoft.com/mshelp">
+    <command:details>
+      <command:name>New-AzDataTable</command:name>
+      <command:verb>New</command:verb>
+      <command:noun>AzDataTable</command:noun>
+      <maml:description>
+        <maml:para>Create a new table.</maml:para>
+      </maml:description>
+    </command:details>
+    <maml:description>
+      <maml:para>Create a new table.</maml:para>
+    </maml:description>
+    <command:syntax>
+      <command:syntaxItem>
+        <maml:name>New-AzDataTable</maml:name>
+        <command:parameter required="true" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
+          <maml:name>Context</maml:name>
+          <maml:description>
+            <maml:para>A context object created by New-AzDataTableContext, with authentication information for the table to operate on.</maml:para>
+          </maml:description>
+          <command:parameterValue required="true" variableLength="false">AzDataTableContext</command:parameterValue>
+          <dev:type>
+            <maml:name>AzDataTableContext</maml:name>
+            <maml:uri />
+          </dev:type>
+          <dev:defaultValue>None</dev:defaultValue>
+        </command:parameter>
+      </command:syntaxItem>
+    </command:syntax>
+    <command:parameters>
+      <command:parameter required="true" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
+        <maml:name>Context</maml:name>
+        <maml:description>
+          <maml:para>A context object created by New-AzDataTableContext, with authentication information for the table to operate on.</maml:para>
+        </maml:description>
+        <command:parameterValue required="true" variableLength="false">AzDataTableContext</command:parameterValue>
+        <dev:type>
+          <maml:name>AzDataTableContext</maml:name>
+          <maml:uri />
+        </dev:type>
+        <dev:defaultValue>None</dev:defaultValue>
+      </command:parameter>
+    </command:parameters>
+    <command:inputTypes>
+      <command:inputType>
+        <dev:type>
+          <maml:name>None</maml:name>
+        </dev:type>
+        <maml:description>
+          <maml:para></maml:para>
+        </maml:description>
+      </command:inputType>
+    </command:inputTypes>
+    <command:returnValues>
+      <command:returnValue>
+        <dev:type>
+          <maml:name>None</maml:name>
+        </dev:type>
+        <maml:description>
+          <maml:para></maml:para>
+        </maml:description>
+      </command:returnValue>
+    </command:returnValues>
+    <maml:alertSet>
+      <maml:alert>
+        <maml:para></maml:para>
+      </maml:alert>
+    </maml:alertSet>
+    <command:examples>
+      <command:example>
+        <maml:title>-------------------------- Example 1 --------------------------</maml:title>
+        <dev:code>PS C:\&gt; $Context = New-AzDataTableContext -TableName $TableName -ConnectionString $ConnectionString
+PS C:\&gt; New-AzDataTable -Context $Context</dev:code>
+        <dev:remarks>
+          <maml:para>Create a new table using a connection string for the storage account.</maml:para>
+        </dev:remarks>
+      </command:example>
+    </command:examples>
+    <command:relatedLinks />
+  </command:command>
+  <command:command xmlns:maml="http://schemas.microsoft.com/maml/2004/10" xmlns:command="http://schemas.microsoft.com/maml/dev/command/2004/10" xmlns:dev="http://schemas.microsoft.com/maml/dev/2004/10" xmlns:MSHelp="http://msdn.microsoft.com/mshelp">
+    <command:details>
+      <command:name>New-AzDataTableContext</command:name>
+      <command:verb>New</command:verb>
+      <command:noun>AzDataTableContext</command:noun>
+      <maml:description>
+        <maml:para>Creates a context object with authentication information for the table to operate on, to be used in other commands.</maml:para>
+      </maml:description>
+    </command:details>
+    <maml:description>
+      <maml:para>Creates a context object with authentication information for the table to operate on, to be used in other commands.</maml:para>
+    </maml:description>
+    <command:syntax>
+      <command:syntaxItem>
+        <maml:name>New-AzDataTableContext</maml:name>
+        <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
+          <maml:name>ClientId</maml:name>
+          <maml:description>
+            <maml:para>Specifies the client id when using a user-assigned managed identity.</maml:para>
+          </maml:description>
+          <command:parameterValue required="true" variableLength="false">String</command:parameterValue>
+          <dev:type>
+            <maml:name>String</maml:name>
+            <maml:uri />
+          </dev:type>
+          <dev:defaultValue>None</dev:defaultValue>
+        </command:parameter>
+        <command:parameter required="true" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
+          <maml:name>ManagedIdentity</maml:name>
+          <maml:description>
+            <maml:para>Specifies that the command is run by a managed identity (such as in an Azure Function), and authorization will be handled using that identity.</maml:para>
+          </maml:description>
+          <dev:type>
+            <maml:name>SwitchParameter</maml:name>
+            <maml:uri />
+          </dev:type>
+          <dev:defaultValue>False</dev:defaultValue>
+        </command:parameter>
+        <command:parameter required="true" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
+          <maml:name>StorageAccountName</maml:name>
+          <maml:description>
+            <maml:para>The name of the storage account.</maml:para>
+          </maml:description>
+          <command:parameterValue required="true" variableLength="false">String</command:parameterValue>
+          <dev:type>
+            <maml:name>String</maml:name>
+            <maml:uri />
+          </dev:type>
+          <dev:defaultValue>None</dev:defaultValue>
+        </command:parameter>
+        <command:parameter required="true" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
+          <maml:name>TableName</maml:name>
+          <maml:description>
+            <maml:para>The name of the table.</maml:para>
+          </maml:description>
+          <command:parameterValue required="true" variableLength="false">String</command:parameterValue>
+          <dev:type>
+            <maml:name>String</maml:name>
+            <maml:uri />
+          </dev:type>
+          <dev:defaultValue>None</dev:defaultValue>
+        </command:parameter>
+      </command:syntaxItem>
+      <command:syntaxItem>
+        <maml:name>New-AzDataTableContext</maml:name>
+        <command:parameter required="true" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
+          <maml:name>ConnectionString</maml:name>
+          <maml:description>
+            <maml:para>The connection string to the storage account.</maml:para>
+          </maml:description>
+          <command:parameterValue required="true" variableLength="false">String</command:parameterValue>
+          <dev:type>
+            <maml:name>String</maml:name>
+            <maml:uri />
+          </dev:type>
+          <dev:defaultValue>None</dev:defaultValue>
+        </command:parameter>
+        <command:parameter required="true" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
+          <maml:name>TableName</maml:name>
+          <maml:description>
+            <maml:para>The name of the table.</maml:para>
+          </maml:description>
+          <command:parameterValue required="true" variableLength="false">String</command:parameterValue>
+          <dev:type>
+            <maml:name>String</maml:name>
+            <maml:uri />
+          </dev:type>
+          <dev:defaultValue>None</dev:defaultValue>
+        </command:parameter>
+      </command:syntaxItem>
+      <command:syntaxItem>
+        <maml:name>New-AzDataTableContext</maml:name>
+        <command:parameter required="true" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="SAS">
+          <maml:name>SharedAccessSignature</maml:name>
+          <maml:description>
+            <maml:para>The table service SAS URL. The table endpoint of the storage account, with the shared access token appended to it.</maml:para>
+          </maml:description>
+          <command:parameterValue required="true" variableLength="false">Uri</command:parameterValue>
+          <dev:type>
+            <maml:name>Uri</maml:name>
+            <maml:uri />
+          </dev:type>
+          <dev:defaultValue>None</dev:defaultValue>
+        </command:parameter>
+        <command:parameter required="true" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
+          <maml:name>TableName</maml:name>
+          <maml:description>
+            <maml:para>The name of the table.</maml:para>
+          </maml:description>
+          <command:parameterValue required="true" variableLength="false">String</command:parameterValue>
+          <dev:type>
+            <maml:name>String</maml:name>
+            <maml:uri />
+          </dev:type>
+          <dev:defaultValue>None</dev:defaultValue>
+        </command:parameter>
+      </command:syntaxItem>
+      <command:syntaxItem>
+        <maml:name>New-AzDataTableContext</maml:name>
+        <command:parameter required="true" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
+          <maml:name>StorageAccountKey</maml:name>
+          <maml:description>
+            <maml:para>The storage account access key.</maml:para>
+          </maml:description>
+          <command:parameterValue required="true" variableLength="false">String</command:parameterValue>
+          <dev:type>
+            <maml:name>String</maml:name>
+            <maml:uri />
+          </dev:type>
+          <dev:defaultValue>None</dev:defaultValue>
+        </command:parameter>
+        <command:parameter required="true" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
+          <maml:name>StorageAccountName</maml:name>
+          <maml:description>
+            <maml:para>The name of the storage account.</maml:para>
+          </maml:description>
+          <command:parameterValue required="true" variableLength="false">String</command:parameterValue>
+          <dev:type>
+            <maml:name>String</maml:name>
+            <maml:uri />
+          </dev:type>
+          <dev:defaultValue>None</dev:defaultValue>
+        </command:parameter>
+        <command:parameter required="true" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
+          <maml:name>TableName</maml:name>
+          <maml:description>
+            <maml:para>The name of the table.</maml:para>
+          </maml:description>
+          <command:parameterValue required="true" variableLength="false">String</command:parameterValue>
+          <dev:type>
+            <maml:name>String</maml:name>
+            <maml:uri />
+          </dev:type>
+          <dev:defaultValue>None</dev:defaultValue>
+        </command:parameter>
+      </command:syntaxItem>
+      <command:syntaxItem>
+        <maml:name>New-AzDataTableContext</maml:name>
+        <command:parameter required="true" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
+          <maml:name>StorageAccountName</maml:name>
+          <maml:description>
+            <maml:para>The name of the storage account.</maml:para>
+          </maml:description>
+          <command:parameterValue required="true" variableLength="false">String</command:parameterValue>
+          <dev:type>
+            <maml:name>String</maml:name>
+            <maml:uri />
+          </dev:type>
+          <dev:defaultValue>None</dev:defaultValue>
+        </command:parameter>
+        <command:parameter required="true" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
+          <maml:name>TableName</maml:name>
+          <maml:description>
+            <maml:para>The name of the table.</maml:para>
+          </maml:description>
+          <command:parameterValue required="true" variableLength="false">String</command:parameterValue>
+          <dev:type>
+            <maml:name>String</maml:name>
+            <maml:uri />
+          </dev:type>
+          <dev:defaultValue>None</dev:defaultValue>
+        </command:parameter>
+        <command:parameter required="true" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
+          <maml:name>Token</maml:name>
+          <maml:description>
+            <maml:para>An access token to use for authorization.</maml:para>
+          </maml:description>
+          <command:parameterValue required="true" variableLength="false">String</command:parameterValue>
+          <dev:type>
+            <maml:name>String</maml:name>
+            <maml:uri />
+          </dev:type>
+          <dev:defaultValue>None</dev:defaultValue>
+        </command:parameter>
+      </command:syntaxItem>
+    </command:syntax>
+    <command:parameters>
+      <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
+        <maml:name>ClientId</maml:name>
+        <maml:description>
+          <maml:para>Specifies the client id when using a user-assigned managed identity.</maml:para>
+        </maml:description>
+        <command:parameterValue required="true" variableLength="false">String</command:parameterValue>
+        <dev:type>
+          <maml:name>String</maml:name>
+          <maml:uri />
+        </dev:type>
+        <dev:defaultValue>None</dev:defaultValue>
+      </command:parameter>
+      <command:parameter required="true" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
+        <maml:name>ConnectionString</maml:name>
+        <maml:description>
+          <maml:para>The connection string to the storage account.</maml:para>
+        </maml:description>
+        <command:parameterValue required="true" variableLength="false">String</command:parameterValue>
+        <dev:type>
+          <maml:name>String</maml:name>
+          <maml:uri />
+        </dev:type>
+        <dev:defaultValue>None</dev:defaultValue>
+      </command:parameter>
+      <command:parameter required="true" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
+        <maml:name>ManagedIdentity</maml:name>
+        <maml:description>
+          <maml:para>Specifies that the command is run by a managed identity (such as in an Azure Function), and authorization will be handled using that identity.</maml:para>
+        </maml:description>
+        <command:parameterValue required="false" variableLength="false">SwitchParameter</command:parameterValue>
+        <dev:type>
+          <maml:name>SwitchParameter</maml:name>
+          <maml:uri />
+        </dev:type>
+        <dev:defaultValue>False</dev:defaultValue>
+      </command:parameter>
+      <command:parameter required="true" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="SAS">
+        <maml:name>SharedAccessSignature</maml:name>
+        <maml:description>
+          <maml:para>The table service SAS URL. The table endpoint of the storage account, with the shared access token appended to it.</maml:para>
+        </maml:description>
+        <command:parameterValue required="true" variableLength="false">Uri</command:parameterValue>
+        <dev:type>
+          <maml:name>Uri</maml:name>
+          <maml:uri />
+        </dev:type>
+        <dev:defaultValue>None</dev:defaultValue>
+      </command:parameter>
+      <command:parameter required="true" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
+        <maml:name>StorageAccountKey</maml:name>
+        <maml:description>
+          <maml:para>The storage account access key.</maml:para>
+        </maml:description>
+        <command:parameterValue required="true" variableLength="false">String</command:parameterValue>
+        <dev:type>
+          <maml:name>String</maml:name>
+          <maml:uri />
+        </dev:type>
+        <dev:defaultValue>None</dev:defaultValue>
+      </command:parameter>
+      <command:parameter required="true" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
+        <maml:name>StorageAccountName</maml:name>
+        <maml:description>
+          <maml:para>The name of the storage account.</maml:para>
+        </maml:description>
+        <command:parameterValue required="true" variableLength="false">String</command:parameterValue>
+        <dev:type>
+          <maml:name>String</maml:name>
+          <maml:uri />
+        </dev:type>
+        <dev:defaultValue>None</dev:defaultValue>
+      </command:parameter>
+      <command:parameter required="true" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
+        <maml:name>TableName</maml:name>
+        <maml:description>
+          <maml:para>The name of the table.</maml:para>
+        </maml:description>
+        <command:parameterValue required="true" variableLength="false">String</command:parameterValue>
+        <dev:type>
+          <maml:name>String</maml:name>
+          <maml:uri />
+        </dev:type>
+        <dev:defaultValue>None</dev:defaultValue>
+      </command:parameter>
+      <command:parameter required="true" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
+        <maml:name>Token</maml:name>
+        <maml:description>
+          <maml:para>An access token to use for authorization.</maml:para>
+        </maml:description>
+        <command:parameterValue required="true" variableLength="false">String</command:parameterValue>
+        <dev:type>
+          <maml:name>String</maml:name>
+          <maml:uri />
+        </dev:type>
+        <dev:defaultValue>None</dev:defaultValue>
+      </command:parameter>
+    </command:parameters>
+    <command:inputTypes>
+      <command:inputType>
+        <dev:type>
+          <maml:name>None</maml:name>
+        </dev:type>
+        <maml:description>
+          <maml:para></maml:para>
+        </maml:description>
+      </command:inputType>
+    </command:inputTypes>
+    <command:returnValues>
+      <command:returnValue>
+        <dev:type>
+          <maml:name>System.Object</maml:name>
+        </dev:type>
+        <maml:description>
+          <maml:para></maml:para>
+        </maml:description>
+      </command:returnValue>
+    </command:returnValues>
+    <maml:alertSet>
+      <maml:alert>
+        <maml:para></maml:para>
+      </maml:alert>
+    </maml:alertSet>
+    <command:examples>
+      <command:example>
+        <maml:title>-------------------------- Example 1 --------------------------</maml:title>
+        <dev:code>PS C:\&gt; $Context = New-AzDataTableContext -TableName $TableName -ConnectionString $ConnectionString</dev:code>
+        <dev:remarks>
+          <maml:para>Creates a context object using the table name and a connection string.</maml:para>
+        </dev:remarks>
+      </command:example>
+      <command:example>
+        <maml:title>-------------------------- Example 2 --------------------------</maml:title>
+        <dev:code>PS C:\&gt; $Context = New-AzDataTableContext -TableName $TableName -StorageAccountName $Name -StorageAccountKey $Key</dev:code>
+        <dev:remarks>
+          <maml:para>Creates a context object using the table name, storage account name and a storage account access key.</maml:para>
+        </dev:remarks>
+      </command:example>
+      <command:example>
+        <maml:title>-------------------------- Example 3 --------------------------</maml:title>
+        <dev:code>PS C:\&gt; $Context = New-AzDataTableContext -TableName $TableName -SharedAccessSignature $SAS</dev:code>
+        <dev:remarks>
+          <maml:para>Creates a context object using the table name and a shared access signature URL.</maml:para>
+        </dev:remarks>
+      </command:example>
+      <command:example>
+        <maml:title>-------------------------- Example 4 --------------------------</maml:title>
+        <dev:code>PS C:\&gt; $Context = New-AzDataTableContext -TableName $TableName -StorageAccountName $Name -ManagedIdentity</dev:code>
+        <dev:remarks>
+          <maml:para>Creates a context object using the table name, storage account name and a managed identity for authorization.</maml:para>
+        </dev:remarks>
+      </command:example>
+      <command:example>
+        <maml:title>-------------------------- Example 5 --------------------------</maml:title>
+        <dev:code>PS C:\&gt; $Context = New-AzDataTableContext -TableName $TableName -StorageAccountName $Name -Token $Token</dev:code>
+        <dev:remarks>
+          <maml:para>Creates a context object using the table name, storage account name and an access token.</maml:para>
+        </dev:remarks>
+      </command:example>
+    </command:examples>
+    <command:relatedLinks />
+  </command:command>
+  <command:command xmlns:maml="http://schemas.microsoft.com/maml/2004/10" xmlns:command="http://schemas.microsoft.com/maml/dev/command/2004/10" xmlns:dev="http://schemas.microsoft.com/maml/dev/2004/10" xmlns:MSHelp="http://msdn.microsoft.com/mshelp">
+    <command:details>
+      <command:name>Remove-AzDataTable</command:name>
+      <command:verb>Remove</command:verb>
+      <command:noun>AzDataTable</command:noun>
+      <maml:description>
+        <maml:para>Delete an existing table.</maml:para>
+      </maml:description>
+    </command:details>
+    <maml:description>
+      <maml:para>Delete an existing table.</maml:para>
+    </maml:description>
+    <command:syntax>
+      <command:syntaxItem>
+        <maml:name>Remove-AzDataTable</maml:name>
+        <command:parameter required="true" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
+          <maml:name>Context</maml:name>
+          <maml:description>
+            <maml:para>A context object created by New-AzDataTableContext, with authentication information for the table to operate on.</maml:para>
+          </maml:description>
+          <command:parameterValue required="true" variableLength="false">AzDataTableContext</command:parameterValue>
+          <dev:type>
+            <maml:name>AzDataTableContext</maml:name>
+            <maml:uri />
+          </dev:type>
+          <dev:defaultValue>None</dev:defaultValue>
+        </command:parameter>
+      </command:syntaxItem>
+    </command:syntax>
+    <command:parameters>
+      <command:parameter required="true" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
+        <maml:name>Context</maml:name>
+        <maml:description>
+          <maml:para>A context object created by New-AzDataTableContext, with authentication information for the table to operate on.</maml:para>
+        </maml:description>
+        <command:parameterValue required="true" variableLength="false">AzDataTableContext</command:parameterValue>
+        <dev:type>
+          <maml:name>AzDataTableContext</maml:name>
+          <maml:uri />
+        </dev:type>
+        <dev:defaultValue>None</dev:defaultValue>
+      </command:parameter>
+    </command:parameters>
+    <command:inputTypes>
+      <command:inputType>
+        <dev:type>
+          <maml:name>None</maml:name>
+        </dev:type>
+        <maml:description>
+          <maml:para></maml:para>
+        </maml:description>
+      </command:inputType>
+    </command:inputTypes>
+    <command:returnValues>
+      <command:returnValue>
+        <dev:type>
+          <maml:name>None</maml:name>
+        </dev:type>
+        <maml:description>
+          <maml:para></maml:para>
+        </maml:description>
+      </command:returnValue>
+    </command:returnValues>
+    <maml:alertSet>
+      <maml:alert>
+        <maml:para></maml:para>
+      </maml:alert>
+    </maml:alertSet>
+    <command:examples>
+      <command:example>
+        <maml:title>-------------------------- Example 1 --------------------------</maml:title>
+        <dev:code>PS C:\&gt; $Context = New-AzDataTableContext -TableName $TableName -ConnectionString $ConnectionString
+PS C:\&gt; Remove-AzDataTable -Context $Context</dev:code>
+        <dev:remarks>
+          <maml:para>Remove an existing table using a connection string for the storage account.</maml:para>
+        </dev:remarks>
+      </command:example>
+    </command:examples>
+    <command:relatedLinks />
+  </command:command>
+  <command:command xmlns:maml="http://schemas.microsoft.com/maml/2004/10" xmlns:command="http://schemas.microsoft.com/maml/dev/command/2004/10" xmlns:dev="http://schemas.microsoft.com/maml/dev/2004/10" xmlns:MSHelp="http://msdn.microsoft.com/mshelp">
+    <command:details>
+      <command:name>Remove-AzDataTableEntity</command:name>
+      <command:verb>Remove</command:verb>
+      <command:noun>AzDataTableEntity</command:noun>
+      <maml:description>
+        <maml:para>Remove one or more entities from an Azure Table.</maml:para>
+      </maml:description>
+    </command:details>
+    <maml:description>
+      <maml:para>Remove one or more entities from an Azure Table, as an array of either Hashtables or PSObjects, based on PartitionKey and RowKey.</maml:para>
+    </maml:description>
+    <command:syntax>
+      <command:syntaxItem>
+        <maml:name>Remove-AzDataTableEntity</maml:name>
+        <command:parameter required="true" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
+          <maml:name>Context</maml:name>
+          <maml:description>
+            <maml:para>A context object created by New-AzDataTableContext, with authentication information for the table to operate on.</maml:para>
+          </maml:description>
+          <command:parameterValue required="true" variableLength="false">AzDataTableContext</command:parameterValue>
+          <dev:type>
+            <maml:name>AzDataTableContext</maml:name>
+            <maml:uri />
+          </dev:type>
+          <dev:defaultValue>None</dev:defaultValue>
+        </command:parameter>
+        <command:parameter required="true" variableLength="true" globbing="false" pipelineInput="True (ByValue)" position="named" aliases="none">
+          <maml:name>Entity</maml:name>
+          <maml:description>
+            <maml:para>The entities to remove from the table.</maml:para>
+          </maml:description>
+          <command:parameterValue required="true" variableLength="false">Object[]</command:parameterValue>
+          <dev:type>
+            <maml:name>Object[]</maml:name>
+            <maml:uri />
+          </dev:type>
+          <dev:defaultValue>None</dev:defaultValue>
+        </command:parameter>
+      </command:syntaxItem>
+    </command:syntax>
+    <command:parameters>
+      <command:parameter required="true" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
+        <maml:name>Context</maml:name>
+        <maml:description>
+          <maml:para>A context object created by New-AzDataTableContext, with authentication information for the table to operate on.</maml:para>
+        </maml:description>
+        <command:parameterValue required="true" variableLength="false">AzDataTableContext</command:parameterValue>
+        <dev:type>
+          <maml:name>AzDataTableContext</maml:name>
+          <maml:uri />
+        </dev:type>
+        <dev:defaultValue>None</dev:defaultValue>
+      </command:parameter>
+      <command:parameter required="true" variableLength="true" globbing="false" pipelineInput="True (ByValue)" position="named" aliases="none">
+        <maml:name>Entity</maml:name>
+        <maml:description>
+          <maml:para>The entities to remove from the table.</maml:para>
+        </maml:description>
+        <command:parameterValue required="true" variableLength="false">Object[]</command:parameterValue>
+        <dev:type>
+          <maml:name>Object[]</maml:name>
+          <maml:uri />
+        </dev:type>
+        <dev:defaultValue>None</dev:defaultValue>
+      </command:parameter>
+    </command:parameters>
+    <command:inputTypes>
+      <command:inputType>
+        <dev:type>
+          <maml:name>System.Collections.Hashtable[] or System.Management.Automation.PSObject[]</maml:name>
+        </dev:type>
+        <maml:description>
+          <maml:para>This cmdlet takes either an array of hashtables or psobjects as input to the Entity parameter, which can also be provided through the pipeline.</maml:para>
+        </maml:description>
+      </command:inputType>
+    </command:inputTypes>
+    <command:returnValues>
+      <command:returnValue>
+        <dev:type>
+          <maml:name>None</maml:name>
+        </dev:type>
+        <maml:description>
+          <maml:para></maml:para>
+        </maml:description>
+      </command:returnValue>
+    </command:returnValues>
+    <maml:alertSet>
+      <maml:alert>
+        <maml:para></maml:para>
+      </maml:alert>
+    </maml:alertSet>
+    <command:examples>
+      <command:example>
+        <maml:title>-------------------------- Example 1 --------------------------</maml:title>
+        <dev:code>PS C:\&gt; $Entity = @{ PartitionKey = 'Example'; RowKey = '1' }
+PS C:\&gt; Remove-AzDataTableEntity -Entity $Entity -TableName $TableName -StorageAccountName $Name -StorageAccountKey $Key</dev:code>
+        <dev:remarks>
+          <maml:para>Remove the entity with PartitionKey "Example" and RowKey "1", using the storage account name and an access key.</maml:para>
+        </dev:remarks>
+      </command:example>
+      <command:example>
+        <maml:title>-------------------------- Example 2 --------------------------</maml:title>
+        <dev:code>PS C:\&gt; $UserEntity = Get-AzDataTableEntity -Filter "FirstName eq 'Bobby' and LastName eq 'Tables'" -TableName $TableName -ConnectionString $ConnectionString
+PS C:\&gt; Remove-AzDataTableEntity -Entity $UserEntity -TableName $TableName -StorageAccountName $Name -StorageAccountKey $Key</dev:code>
+        <dev:remarks>
+          <maml:para>Get the user "Bobby Tables" from the table using a connection string, then remove the user using the storage account name and an access key.</maml:para>
+        </dev:remarks>
+      </command:example>
+      <command:example>
+        <maml:title>-------------------------- Example 3 --------------------------</maml:title>
+        <dev:code>PS C:\&gt; $Users = Get-AzDataTableEntity -Filter "LastName eq 'Tables'" -TableName $TableName -ConnectionString $ConnectionString
+PS C:\&gt; Remove-AzDataTableEntity -Entity $Users -TableName $TableName -StorageAccountName $Name -StorageAccountKey $Key</dev:code>
+        <dev:remarks>
+          <maml:para>Gets all users with the last name "Tables" from the table using a connection string, then removes the users using the storage account name and an access key.</maml:para>
+        </dev:remarks>
+      </command:example>
+    </command:examples>
+    <command:relatedLinks />
+  </command:command>
+  <command:command xmlns:maml="http://schemas.microsoft.com/maml/2004/10" xmlns:command="http://schemas.microsoft.com/maml/dev/command/2004/10" xmlns:dev="http://schemas.microsoft.com/maml/dev/2004/10" xmlns:MSHelp="http://msdn.microsoft.com/mshelp">
+    <command:details>
+      <command:name>Update-AzDataTableEntity</command:name>
+      <command:verb>Update</command:verb>
+      <command:noun>AzDataTableEntity</command:noun>
+      <maml:description>
+        <maml:para>Update one or more entities in an Azure Table.</maml:para>
+      </maml:description>
+    </command:details>
+    <maml:description>
+      <maml:para>Update one or more entities already existing in an Azure Table, as an array of either Hashtables or PSObjects.</maml:para>
+      <maml:para>For adding and overwriting, also see the command Add-AzDataTableEntity.</maml:para>
+      <maml:para>The PartitionKey and RowKey cannot be updated.</maml:para>
+    </maml:description>
+    <command:syntax>
+      <command:syntaxItem>
+        <maml:name>Update-AzDataTableEntity</maml:name>
+        <command:parameter required="true" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
+          <maml:name>Context</maml:name>
+          <maml:description>
+            <maml:para>A context object created by New-AzDataTableContext, with authentication information for the table to operate on.</maml:para>
+          </maml:description>
+          <command:parameterValue required="true" variableLength="false">AzDataTableContext</command:parameterValue>
+          <dev:type>
+            <maml:name>AzDataTableContext</maml:name>
+            <maml:uri />
+          </dev:type>
+          <dev:defaultValue>None</dev:defaultValue>
+        </command:parameter>
+        <command:parameter required="true" variableLength="true" globbing="false" pipelineInput="True (ByValue)" position="named" aliases="none">
+          <maml:name>Entity</maml:name>
+          <maml:description>
+            <maml:para>The entities to update in the table.</maml:para>
+          </maml:description>
+          <command:parameterValue required="true" variableLength="false">Object[]</command:parameterValue>
+          <dev:type>
+            <maml:name>Object[]</maml:name>
+            <maml:uri />
+          </dev:type>
+          <dev:defaultValue>None</dev:defaultValue>
+        </command:parameter>
+      </command:syntaxItem>
+    </command:syntax>
+    <command:parameters>
+      <command:parameter required="true" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
+        <maml:name>Context</maml:name>
+        <maml:description>
+          <maml:para>A context object created by New-AzDataTableContext, with authentication information for the table to operate on.</maml:para>
+        </maml:description>
+        <command:parameterValue required="true" variableLength="false">AzDataTableContext</command:parameterValue>
+        <dev:type>
+          <maml:name>AzDataTableContext</maml:name>
+          <maml:uri />
+        </dev:type>
+        <dev:defaultValue>None</dev:defaultValue>
+      </command:parameter>
+      <command:parameter required="true" variableLength="true" globbing="false" pipelineInput="True (ByValue)" position="named" aliases="none">
+        <maml:name>Entity</maml:name>
+        <maml:description>
+          <maml:para>The entities to update in the table.</maml:para>
+        </maml:description>
+        <command:parameterValue required="true" variableLength="false">Object[]</command:parameterValue>
+        <dev:type>
+          <maml:name>Object[]</maml:name>
+          <maml:uri />
+        </dev:type>
+        <dev:defaultValue>None</dev:defaultValue>
+      </command:parameter>
+    </command:parameters>
+    <command:inputTypes>
+      <command:inputType>
+        <dev:type>
+          <maml:name>System.Collections.Hashtable[] or System.Management.Automation.PSObject[]</maml:name>
+        </dev:type>
+        <maml:description>
+          <maml:para>This cmdlet takes either an array of hashtables or psobjects as input to the Entity parameter, which can also be provided through the pipeline.</maml:para>
+        </maml:description>
+      </command:inputType>
+    </command:inputTypes>
+    <command:returnValues>
+      <command:returnValue>
+        <dev:type>
+          <maml:name>None</maml:name>
+        </dev:type>
+        <maml:description>
+          <maml:para></maml:para>
+        </maml:description>
+      </command:returnValue>
+    </command:returnValues>
+    <maml:alertSet>
+      <maml:alert>
+        <maml:para></maml:para>
+      </maml:alert>
+    </maml:alertSet>
+    <command:examples>
+      <command:example>
+        <maml:title>-------------------------- Example 1 --------------------------</maml:title>
+        <dev:code>PS C:\&gt; $UserEntity = Get-AzDataTableEntity -Filter "FirstName eq 'Bobby'" -TableName $TableName -ConnectionString $ConnectionString
+PS C:\&gt; $UserEntity['LastName'] = 'Tables'
+PS C:\&gt; Update-AzDataTableEntity -Entity $UserEntity -TableName $TableName -ConnectionString $ConnectionString</dev:code>
+        <dev:remarks>
+          <maml:para>Update the last name of the user "Bobby" to "Tables" using a connection string.</maml:para>
+        </dev:remarks>
+      </command:example>
+    </command:examples>
+    <command:relatedLinks />
+  </command:command>
+</helpItems>
