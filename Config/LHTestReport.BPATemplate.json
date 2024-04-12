@@ -7,17 +7,17 @@
       "UseExistingInfo": false,
       "FrontendFields": [
         {
-          "name": "userPrincipalName",
-          "value": "userPrincipalName"
+          "name": "displayName",
+          "value": "displayName"
         }
       ],
       "desc": "",
-      "StoreAs": "JSON",
+      "StoreAs": "string",
       "API": "Graph",
       "ExtractFields": [
-        "userPrincipalName"
+        "displayName"
       ],
-      "URL": "https://graph.microsoft.com/v1.0/me"
+      "URL": "https://graph.microsoft.com/beta/me"
     }
   ]
 }
