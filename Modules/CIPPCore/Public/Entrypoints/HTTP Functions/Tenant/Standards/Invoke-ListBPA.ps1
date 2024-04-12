@@ -77,7 +77,7 @@ Function Invoke-ListBPA {
     # Associate values to output bindings by calling 'Push-OutputBinding'.
     Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
             StatusCode = [HttpStatusCode]::OK
-            Body       = ($Results | ConvertTo-Json -Depth 15)
+            Body       = (ConvertTo-Json -Depth 15 -InputObject $Results)
         })
 
 }

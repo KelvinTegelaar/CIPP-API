@@ -16,11 +16,10 @@ Function Invoke-AddCAPolicy {
 
     $results = foreach ($Tenant in $tenants) {
         try {
-            $CAPolicy = New-CIPPCAPolicy -TenantFilter $tenant -state $request.body.NewState -RawJSON $Request.body.RawJSON -APIName $APIName -ExecutingUser $request.headers.'x-ms-client-principal'
+            $CAPolicy = New-CIPPCAPolicy -replacePattern $Request.body.replacename -Overwrite $request.body.overwrite -TenantFilter $tenant -state $request.body.NewState -RawJSON $Request.body.RawJSON -APIName $APIName -ExecutingUser $request.headers.'x-ms-client-principal'
             Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $($Tenant) -message "Added Conditional Access Policy $($Displayname)" -Sev 'Info'
             "Successfully added Conditional Access Policy for $($Tenant)"
-        }
-        catch {
+        } catch {
             "Failed to add policy for $($Tenant): $($_.Exception.Message)"
             Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $($Tenant) -message "Failed to add Conditional Access Policy $($Displayname). Error: $($_.Exception.Message)" -Sev 'Error'
             continue
