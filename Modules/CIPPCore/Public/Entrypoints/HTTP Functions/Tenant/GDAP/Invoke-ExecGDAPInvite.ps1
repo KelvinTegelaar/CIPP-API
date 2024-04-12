@@ -64,14 +64,14 @@ Function Invoke-ExecGDAPInvite {
             } else {
                 $Message = 'Error creating GDAP relationship request'
             }
+
+            Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -message "Created GDAP Invite - $InviteUrl" -Sev 'Info'
         }
     } catch {
         $Message = 'Error creating GDAP relationship'
         Write-Host "GDAP ERROR: $($_.Exception.Message)"
         Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $env:TenantID -message "$($Message): $($_.Exception.Message)" -Sev 'Error'
     }
-
-    Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -message "Created GDAP Invite - $InviteUrl" -Sev 'Info'
 
     $body = @{
         Message = $Message
