@@ -50,7 +50,7 @@ function Receive-CippQueueTrigger {
 
 function Receive-CippOrchestrationTrigger {
     param($Context)
-
+    Write-Host 'Orchestrator started'
     try {
         if (Test-Json -Json $Context.Input) {
             $OrchestratorInput = $Context.Input | ConvertFrom-Json
@@ -77,9 +77,10 @@ function Receive-CippOrchestrationTrigger {
         }
 
         if (($Batch | Measure-Object).Count -gt 0) {
-            foreach ($Item in $Batch) {
-                $null = Invoke-DurableActivity -FunctionName 'CIPPActivityFunction' -Input $Item -NoWait -RetryOptions $RetryOptions -ErrorAction Stop
+            $Tasks = foreach ($Item in $Batch) {
+                Invoke-DurableActivity -FunctionName 'CIPPActivityFunction' -Input $Item -NoWait -RetryOptions $RetryOptions -ErrorAction Stop
             }
+            $null = Wait-ActivityFunction -Task $Tasks
         }
 
         if ($Context.IsReplaying -ne $true -and $OrchestratorInput.SkipLog -ne $true) {
