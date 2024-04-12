@@ -32,11 +32,11 @@ function Get-Tenants {
 
     if (($IncludedTenantsCache | Measure-Object).Count -eq 0) {
         $BuildRequired = $true
-    } 
+    }
 
     if ($BuildRequired -or $TriggerRefresh.IsPresent) {
         #get the full list of tenants
-        $GDAPRelationships = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/tenantRelationships/delegatedAdminRelationships?`$filter=status eq 'active' and not startsWith(displayName,'MLT_')&`$select=customer,autoExtendDuration,endDateTime" -NoAuthCheck:$true 
+        $GDAPRelationships = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/tenantRelationships/delegatedAdminRelationships?`$filter=status eq 'active' and not startsWith(displayName,'MLT_')&`$select=customer,autoExtendDuration,endDateTime" -NoAuthCheck:$true
         $GDAPList = foreach ($Relationship in $GDAPRelationships) {
             [PSCustomObject]@{
                 customerId      = $Relationship.customer.tenantId
@@ -72,13 +72,13 @@ function Get-Tenants {
                         $defaultDomainName = $Domain
                         $initialDomainName = $Domain
                         $RequiresRefresh = $true
-                        
+
                     } catch {
                         Write-LogMessage -API 'Get-Tenants' -message "Tried adding $($LatestRelationship.customerId) to tenant list but failed to get domains - $($_.Exception.Message)" -level 'Critical'
 
                     }
                 }
-       
+
                 [PSCustomObject]@{
                     PartitionKey             = 'Tenants'
                     RowKey                   = $_.Name
@@ -129,7 +129,7 @@ function Get-Tenants {
         Add-CIPPAzDataTableEntity @TenantsTable -Entity $IncludedTenantsCache -Force
         $CurrentTenants = Get-CIPPAzDataTableEntity @TenantsTable -Filter "PartitionKey eq 'Tenants' and Excluded eq false"
         $CurrentTenants | Where-Object { $_.customerId -notin $IncludedTenantsCache.customerId } | ForEach-Object {
-            Remove-AzDataTableEntity -Context $TenantsTable -Entity $_ -Force
+            Remove-AzDataTableEntity @TenantsTable -Entity $_
         }
     }
     return ($IncludedTenantsCache | Where-Object { $null -ne $_.defaultDomainName -and ($_.defaultDomainName -notmatch 'Domain Error' -or $IncludeAll.IsPresent) } | Sort-Object -Property displayName)
