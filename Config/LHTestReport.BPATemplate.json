@@ -1,0 +1,20 @@
+{
+  "name": "LHTestReport",
+  "style": "Table",
+  "Fields": [
+    {
+      "name": "Info",
+      "UseExistingInfo": false,
+      "FrontendFields": [
+        {
+          "name": "displayName",
+          "value": "displayName"
+        }
+      ],
+      "desc": "",
+      "StoreAs": "JSON",
+      "API": "Graph",
+      "URL": "https://graph.microsoft.com/v1.0/me"
+    }
+  ]
+}
