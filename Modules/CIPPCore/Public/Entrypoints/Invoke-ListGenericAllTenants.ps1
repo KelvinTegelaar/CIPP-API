@@ -9,13 +9,13 @@ Function Invoke-ListGenericAllTenants {
     param($Request, $TriggerMetadata)
 
     $TableURLName = ($QueueItem.tolower().split('?').Split('/') | Select-Object -First 1).toString()
-    $QueueKey = (Get-CippQueue | Where-Object -Property Name -EQ $TableURLName | Select-Object -Last 1).RowKey
+    $QueueKey = (Invoke-ListCippQueue | Where-Object -Property Name -EQ $TableURLName | Select-Object -Last 1).RowKey
     Update-CippQueueEntry -RowKey $QueueKey -Status 'Started'
     $Table = Get-CIPPTable -TableName "cache$TableURLName"
     $fullUrl = "https://graph.microsoft.com/beta/$QueueItem"
     Get-CIPPAzDataTableEntity @Table | Remove-AzDataTableEntity @table
 
-    $RawGraphRequest = Get-Tenants | ForEach-Object -Parallel { 
+    $RawGraphRequest = Get-Tenants | ForEach-Object -Parallel {
         $domainName = $_.defaultDomainName
         Import-Module '.\Modules\AzBobbyTables'
         Import-Module '.\Modules\CIPPCore'
@@ -27,7 +27,7 @@ Function Invoke-ListGenericAllTenants {
                 Tenant     = $domainName
                 CippStatus = "Could not connect to tenant. $($_.Exception.message)"
             }
-        } 
+        }
     }
 
     Update-CippQueueEntry -RowKey $QueueKey -Status 'Processing'
