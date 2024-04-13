@@ -1,14 +1,14 @@
 param($name)
 $Table = Get-CippTable -tablename 'apps'
-$Filter = "PartitionKey eq 'apps' and RowKey eq '$name'" 
+$Filter = "PartitionKey eq 'apps' and RowKey eq '$name'"
 Set-Location (Get-Item $PSScriptRoot).Parent.FullName
 $ChocoApp = (Get-CIPPAzDataTableEntity @Table -filter $Filter).JSON | ConvertFrom-Json
 $intuneBody = $ChocoApp.IntuneBody
-$tenants = if ($chocoapp.Tenant -eq 'AllTenants') { 
+$tenants = if ($chocoapp.Tenant -eq 'AllTenants') {
     (Get-tenants).defaultDomainName
 } else {
     $chocoapp.Tenant
-} 
+}
 if ($chocoApp.type -eq 'MSPApp') {
     [xml]$Intunexml = Get-Content "AddMSPApp\$($ChocoApp.MSPAppName).app.xml"
     $intunewinFilesize = (Get-Item "AddMSPApp\$($ChocoApp.MSPAppName).intunewin")
@@ -25,7 +25,7 @@ $ContentBody = ConvertTo-Json @{
     name          = $intunexml.ApplicationInfo.FileName
     size          = [int64]$intunexml.ApplicationInfo.UnencryptedContentSize
     sizeEncrypted = [int64]($intunewinFilesize).length
-} 
+}
 $ClearRow = Get-CIPPAzDataTableEntity @Table -Filter $Filter
 $RemoveCacheFile = if ($chocoapp.Tenant -ne 'AllTenants') {
     Remove-AzDataTableEntity @Table -Entity $clearRow
@@ -54,11 +54,11 @@ foreach ($tenant in $tenants) {
     Try {
 
         $ApplicationList = (New-graphGetRequest -Uri $baseuri -tenantid $Tenant) | Where-Object { $_.DisplayName -eq $ChocoApp.ApplicationName }
-        if ($ApplicationList.displayname.count -ge 1) { 
+        if ($ApplicationList.displayname.count -ge 1) {
             Write-LogMessage -api 'AppUpload' -tenant $($Tenant) -message "$($ChocoApp.ApplicationName) exists. Skipping this application" -Sev 'Info'
             continue
         }
-        if ($chocoApp.type -eq 'WinGet') { 
+        if ($chocoApp.type -eq 'WinGet') {
             Write-Host 'Winget!'
             Write-Host ($intuneBody | ConvertTo-Json -Compress)
             $NewApp = New-GraphPostRequest -Uri $baseuri -Body ($intuneBody | ConvertTo-Json -Compress) -Type POST -tenantid $tenant
@@ -79,8 +79,8 @@ foreach ($tenant in $tenants) {
             $AzFileUri = New-graphGetRequest -Uri "$($BaseURI)/$($NewApp.id)/microsoft.graph.win32lobapp/contentVersions/1/files/$($ContentReq.id)" -tenantid $tenant
             if ($AZfileuri.uploadState -like '*fail*') { break }
             Start-Sleep -Milliseconds 300
-        } while ($AzFileUri.AzureStorageUri -eq $null) 
-        
+        } while ($AzFileUri.AzureStorageUri -eq $null)
+
         $chunkSizeInBytes = 4mb
         [byte[]]$bytes = [System.IO.File]::ReadAllBytes($($intunewinFilesize.fullname))
         $chunks = [Math]::Ceiling($bytes.Length / $chunkSizeInBytes)
@@ -89,15 +89,15 @@ foreach ($tenant in $tenants) {
         $Upload = Invoke-RestMethod -Uri "$($AzFileUri.azureStorageUri)&comp=block&blockid=$id" -Method Put -Headers @{'x-ms-blob-type' = 'BlockBlob' } -InFile $inFile -ContentType 'application/octet-stream'
         $ConfirmUpload = Invoke-RestMethod -Uri "$($AzFileUri.azureStorageUri)&comp=blocklist" -Method Put -Body "<?xml version=`"1.0`" encoding=`"utf-8`"?><BlockList><Latest>$id</Latest></BlockList>"
         $CommitReq = New-graphPostRequest -Uri "$($BaseURI)/$($NewApp.id)/microsoft.graph.win32lobapp/contentVersions/1/files/$($ContentReq.id)/commit" -Body $EncBody -Type POST -tenantid $tenant
-         
+
         do {
             $CommitStateReq = New-graphGetRequest -Uri "$($BaseURI)/$($NewApp.id)/microsoft.graph.win32lobapp/contentVersions/1/files/$($ContentReq.id)" -tenantid $tenant
             if ($CommitStateReq.uploadState -like '*fail*') {
                 Write-LogMessage -api 'AppUpload' -tenant $($Tenant) -message "$($ChocoApp.ApplicationName) Commit failed. Please check if app uploaded succesful" -Sev 'Warning'
-                break 
+                break
             }
             Start-Sleep -Milliseconds 300
-        } while ($CommitStateReq.uploadState -eq 'commitFilePending')        
+        } while ($CommitStateReq.uploadState -eq 'commitFilePending')
         $CommitFinalizeReq = New-graphPostRequest -Uri "$($BaseURI)/$($NewApp.id)" -tenantid $tenant -Body '{"@odata.type":"#microsoft.graph.win32lobapp","committedContentVersion":"1"}' -type PATCH
         Write-LogMessage -api 'AppUpload' -tenant $($Tenant) -message "Added Application $($chocoApp.ApplicationName)" -Sev 'Info'
         if ($AssignTo -ne 'On') {
@@ -108,7 +108,7 @@ foreach ($tenant in $tenants) {
         Write-LogMessage -api 'AppUpload' -tenant $($Tenant) -message 'Successfully added Application' -Sev 'Info'
     } catch {
         "Failed to add Application for $($Tenant): $($_.Exception.Message)"
-        Write-LogMessage -api 'AppUpload' -tenant $($Tenant) -message "Failed adding Application $($ChocoApp.ApplicationName). Error: $($_.Exception.Message)" -Sev 'Error'
+        Write-LogMessage -api 'AppUpload' -tenant $($Tenant) -message "Failed adding Application $($ChocoApp.ApplicationName). Error: $($_.Exception.Message)" -LogData (Get-CippException -Exception $_) -Sev 'Error'
         continue
     }
 
