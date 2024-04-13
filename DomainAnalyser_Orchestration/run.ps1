@@ -33,7 +33,7 @@ try {
         Write-Host "Orchestrator exception UpdateDomains $($_.Exception.Message)"
     }
 } catch {
-    Write-LogMessage -API 'DomainAnalyser' -message "Domain Analyser Orchestrator Error $($_.Exception.Message)" -sev info
+    Write-LogMessage -API 'DomainAnalyser' -message 'Domain Analyser Orchestrator Error' -sev info -LogData (Get-CippException -Exception $_)
     #Write-Host $_.Exception | ConvertTo-Json
 } finally {
     Write-LogMessage -API 'DomainAnalyser' -message 'Domain Analyser has Finished' -sev Info
