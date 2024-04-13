@@ -6,7 +6,7 @@ function Get-CIPPDomainAnalyser {
     # Get all the things
 
     if ($TenantFilter -ne 'AllTenants') {
-        $DomainTable.Filter = "TenantId eq '{0}'" -f $TenantFilter
+        $DomainTable.Filter = "TenantGUID eq '{0}'" -f $TenantFilter
     }
 
     try {
