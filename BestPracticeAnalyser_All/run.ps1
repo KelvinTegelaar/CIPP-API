@@ -107,7 +107,7 @@ $AddRow = foreach ($Template in $templates) {
         try {
             Add-CIPPAzDataTableEntity @Table -Entity $Result -Force
         } catch {
-            Write-LogMessage -API 'BPA' -tenant $tenant -message "Error getting saving data for $($template.Name) - $($TenantName.customerId). Error: $($_.Exception.Message)" -sev Error
+            Write-LogMessage -API 'BPA' -tenant $tenant -message "Error getting saving data for $($template.Name) - $($TenantName.customerId). Error: $($_.Exception.Message)" -LogData (Get-CippException -Exception $_) -sev Error
 
         }
     }
