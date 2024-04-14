@@ -54,6 +54,18 @@ function Invoke-PublicWebhooks {
             ## Push webhook data to queue
             #Invoke-CippGraphWebhookProcessing -Data $ReceivedItem -CIPPID $request.Query.CIPPID -WebhookInfo $Webhookinfo
 
+        } elseif ($Request.Query.Type -eq 'PartnerCenter') {
+            [pscustomobject]$ReceivedItem = $Request.Body
+            $Entity = [PSCustomObject]@{
+                PartitionKey = 'Webhook'
+                RowKey       = [string](New-Guid).Guid
+                Type         = $Request.Query.Type
+                Data         = [string]($ReceivedItem | ConvertTo-Json -Depth 10)
+                CIPPID       = $Request.Query.CIPPID
+                WebhookInfo  = [string]($WebhookInfo | ConvertTo-Json -Depth 10)
+                FunctionName = 'PublicWebhookProcess'
+            }
+            Add-CIPPAzDataTableEntity @WebhookIncoming -Entity $Entity
         } else {
             # Auditlog Subscriptions
             try {
@@ -90,6 +102,7 @@ function Invoke-PublicWebhooks {
                     Write-Host "Our operations: $Operations"
                     Write-Host "Logs to download: $LogsToDownload"
                     if ($ReceivedItem.ContentType -in $LogsToDownload -or 'AnyLog' -in $LogsToDownload) {
+                        if ($ReceivedItem.ContentType -eq 'Audit.SharePoint') { continue }
                         $Data = New-GraphPostRequest -type GET -uri "https://manage.office.com/api/v1.0/$($ReceivedItem.tenantId)/activity/feed/audit/$($ReceivedItem.contentid)" -tenantid $TenantFilter -scope 'https://manage.office.com/.default'
                     } else {
                         Write-Host "No data to download for $($ReceivedItem.ContentType)"
