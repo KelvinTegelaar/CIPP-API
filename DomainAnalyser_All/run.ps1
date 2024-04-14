@@ -236,10 +236,17 @@ $Result.Score = $ScoreDomain
 $Result.ScorePercentage = [int](($Result.Score / $Result.MaximumScore) * 100)
 $Result.ScoreExplanation = ($ScoreExplanation) -join ', '
 
-
 $DomainObject.DomainAnalyser = ($Result | ConvertTo-Json -Compress).ToString()
 
-# Final Write to Output
-Write-LogMessage -API 'DomainAnalyser' -tenant $tenant.tenant -message "DNS Analyser Finished For $Domain" -sev Info
+try {
+    $DomainTable = Get-CippTable -tablename 'Domains'
+    $DomainTable.Entity = $DomainObject
+    $DomainTable.Force = $true
+    Add-CIPPAzDataTableEntity @DomainTable
 
-Write-Output $DomainObject
+    # Final Write to Output
+    Write-LogMessage -API 'DomainAnalyser' -tenant $tenant.tenant -message "DNS Analyser Finished For $Domain" -sev Info
+} catch {
+    Write-LogMessage -API -API 'DomainAnalyser' -tenant $tenant.tenant -message "Error saving domain $Domain to table " -sev Error -LogData (Get-CippException -Exception $_)
+}
+return $null
