@@ -33,7 +33,8 @@ Function Invoke-ExecGraphExplorerPreset {
     }
 
     $params = $Request.Body.preset | Select-Object endpoint, '$filter', '$select', '$count', '$expand', '$search', NoPagination, '$top', IsShared
-    if ($params.'$select' -and -not $params.'$select' -is [string]) {
+
+    if ($params.'$select'.value) {
         $params.'$select' = ($params.'$select').value -join ','
     }
 

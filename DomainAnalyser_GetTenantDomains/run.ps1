@@ -27,7 +27,7 @@ $TenantDomains = $Tenants | ForEach-Object -Parallel {
             }
         }
     } catch {
-        Write-LogMessage -API 'DomainAnalyser' -tenant $tenant.defaultDomainName -message "DNS Analyser GraphGetRequest Exception: $($_.Exception.Message)" -sev Error
+        Write-LogMessage -API 'DomainAnalyser' -tenant $tenant.defaultDomainName -message 'DNS Analyser GraphGetRequest' -LogData (Get-CippException -Exception $_) -sev Error
     }
 } | Sort-Object -Unique -Property Domain
 
@@ -91,6 +91,6 @@ if ($TenantCount -gt 0) {
         # Batch insert all tenant domains
         try {
             Add-CIPPAzDataTableEntity @DomainTable -Entity $TenantDomainObjects -Force
-        } catch { Write-LogMessage -API 'DomainAnalyser' -message "Domain Analyser GetTenantDomains Error $($_.Exception.Message)" -sev info }
-    } catch { Write-LogMessage -API 'DomainAnalyser' -message "GetTenantDomains loop exception: $($_.Exception.Message) line $($_.InvocationInfo.ScriptLineNumber)" -sev 'Error' }
+        } catch { Write-LogMessage -API 'DomainAnalyser' -message 'Domain Analyser GetTenantDomains error' -sev info -LogData (Get-CippException -Exception $_) }
+    } catch { Write-LogMessage -API 'DomainAnalyser' -message 'GetTenantDomains loop error' -sev 'Error' -LogData (Get-CippException -Exception $_) }
 }
