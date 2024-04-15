@@ -15,6 +15,10 @@
     },
     "queues": {
       "maxDequeueCount": 1
+    },
+    "durableTask": {
+      "maxConcurrentActivityFunctions": 4,
+      "maxConcurrentOrchestratorFunctions": 4
     }
   }
 }

@@ -91,6 +91,13 @@ if ($TenantCount -gt 0) {
         # Batch insert all tenant domains
         try {
             Add-CIPPAzDataTableEntity @DomainTable -Entity $TenantDomainObjects -Force
-        } catch { Write-LogMessage -API 'DomainAnalyser' -message 'Domain Analyser GetTenantDomains error' -sev info -LogData (Get-CippException -Exception $_) }
-    } catch { Write-LogMessage -API 'DomainAnalyser' -message 'GetTenantDomains loop error' -sev 'Error' -LogData (Get-CippException -Exception $_) }
+            return $true
+        } catch {
+            Write-LogMessage -API 'DomainAnalyser' -message 'Domain Analyser GetTenantDomains error' -sev info -LogData (Get-CippException -Exception $_)
+            return $false
+        }
+    } catch {
+        Write-LogMessage -API 'DomainAnalyser' -message 'GetTenantDomains loop error' -sev 'Error' -LogData (Get-CippException -Exception $_)
+        return $false
+    }
 }
