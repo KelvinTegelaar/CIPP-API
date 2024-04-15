@@ -24,7 +24,9 @@ Function Invoke-ListTenants {
         Get-Tenants -IncludeAll -TriggerRefresh
 
     }
-
+    if ($Request.query.TriggerRefresh) {
+        Get-Tenants -IncludeAll -TriggerRefresh
+    }
     try {
         $tenantfilter = $Request.Query.TenantFilter
         $Tenants = Get-Tenants -IncludeErrors -SkipDomains
