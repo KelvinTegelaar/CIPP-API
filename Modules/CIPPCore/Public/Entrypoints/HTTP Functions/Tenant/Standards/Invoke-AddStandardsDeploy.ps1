@@ -15,7 +15,7 @@ Function Invoke-AddStandardsDeploy {
     $username = ([System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($user)) | ConvertFrom-Json).userDetails
 
     try {
-        $Tenants = ($Request.body | Select-Object Select_*).psobject.properties.value
+        $Tenants = $Request.body.Tenant
         $Settings = ($request.body | Select-Object -Property *, v2* -ExcludeProperty Select_*, None )
         $Settings | Add-Member -NotePropertyName 'v2.1' -NotePropertyValue $true -Force
         if ($Settings.phishProtection.remediate) {
