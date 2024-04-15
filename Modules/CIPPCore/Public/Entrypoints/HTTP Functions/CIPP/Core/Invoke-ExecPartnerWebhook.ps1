@@ -7,8 +7,17 @@ function Invoke-ExecPartnerWebhook {
             $Results = New-GraphGetRequest -uri $Uri -tenantid $env:TenantID -NoAuthCheck $true -scope 'https://api.partnercenter.microsoft.com/.default'
         }
         'ListSubscription' {
-            $Uri = 'https://api.partnercenter.microsoft.com/webhooks/v1/registration'
-            $Results = New-GraphGetRequest -uri $Uri -tenantid $env:TenantID -NoAuthCheck $true -scope 'https://api.partnercenter.microsoft.com/.default'
+            try {
+                $Uri = 'https://api.partnercenter.microsoft.com/webhooks/v1/registration'
+                $Results = New-GraphGetRequest -uri $Uri -tenantid $env:TenantID -NoAuthCheck $true -scope 'https://api.partnercenter.microsoft.com/.default'
+            } catch {}
+            if (!$Results) {
+                $Results = [PSCustomObject]@{
+                    webhoookUrl           = 'None'
+                    lastModifiedTimestamp = 'Never'
+                    webhookEvents         = @()
+                }
+            }
         }
         'CreateSubscription' {
             $BaseURL = ([System.Uri]$request.headers.'x-ms-original-url').Host
