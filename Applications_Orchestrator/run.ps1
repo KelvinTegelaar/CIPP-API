@@ -17,7 +17,7 @@ try {
   $Outputs = Wait-ActivityFunction -Task $ParallelTasks
   Write-Host $Outputs
 }
-catch { 
+catch {
   Write-Host "Applications_Orchestrator exception: $($_.Exception.Message)"
 }
 finally {
