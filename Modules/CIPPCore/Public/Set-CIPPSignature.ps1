@@ -1,4 +1,4 @@
-function Set-CIPPOutOfOffice {
+function Set-CIPPSignature {
     [CmdletBinding()]
     param (
         $userid,
