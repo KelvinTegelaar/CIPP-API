@@ -36,6 +36,7 @@ try {
 
 $Result = [PSCustomObject]@{
     Tenant               = $Tenant.Tenant
+    TenantID             = $Tenant.TenantGUID
     GUID                 = $($Domain.Replace('.', ''))
     LastRefresh          = $(Get-Date (Get-Date).ToUniversalTime() -UFormat '+%Y-%m-%dT%H:%M:%S.000Z')
     Domain               = $Domain
@@ -116,8 +117,8 @@ try {
         $ScoreExplanation.Add('No SPF Record Found') | Out-Null
     }
 } catch {
-    $Message = 'SPF Exception: {0} line {1} - {2}' -f $_.InvocationInfo.ScriptName, $_.InvocationInfo.ScriptLineNumber, $_.Exception.Message
-    Write-LogMessage -API 'DomainAnalyser' -tenant $tenant.tenant -message $Message -sev Error
+    $Message = 'SPF Error'
+    Write-LogMessage -API 'DomainAnalyser' -tenant $tenant.tenant -message $Message -LogData (Get-CippException -Exception $_) -sev Error
     throw $Message
 }
 
@@ -179,8 +180,8 @@ try {
         }
     }
 } catch {
-    $Message = 'DMARC Exception: {0} line {1} - {2}' -f $_.InvocationInfo.ScriptName, $_.InvocationInfo.ScriptLineNumber, $_.Exception.Message
-    Write-LogMessage -API 'DomainAnalyser' -tenant $tenant.tenant -message $Message -sev Error
+    $Message = 'DMARC Error'
+    Write-LogMessage -API 'DomainAnalyser' -tenant $tenant.tenant -message $Message -LogData (Get-CippException -Exception $_) -sev Error
     throw $Message
 }
 
@@ -197,8 +198,8 @@ try {
         $ScoreExplanation.Add('DNSSEC Not Configured or Enabled') | Out-Null
     }
 } catch {
-    $Message = 'DNSSEC Exception: {0} line {1} - {2}' -f $_.InvocationInfo.ScriptName, $_.InvocationInfo.ScriptLineNumber, $_.Exception.Message
-    Write-LogMessage -API 'DomainAnalyser' -tenant $tenant.tenant -message $Message -sev Error
+    $Message = 'DNSSEC Error'
+    Write-LogMessage -API 'DomainAnalyser' -tenant $tenant.tenant -message $Message -LogData (Get-CippException -Exception $_) -sev Error
     throw $Message
 }
 
@@ -226,8 +227,8 @@ try {
         $ScoreExplanation.Add('DKIM Not Configured') | Out-Null
     }
 } catch {
-    $Message = 'DKIM Exception: {0} line {1} - {2}' -f $_.InvocationInfo.ScriptName, $_.InvocationInfo.ScriptLineNumber, $_.Exception.Message
-    Write-LogMessage -API 'DomainAnalyser' -tenant $tenant.tenant -message $Message -sev Error
+    $Message = 'DKIM Exception'
+    Write-LogMessage -API 'DomainAnalyser' -tenant $tenant.tenant -message $Message -LogData (Get-CippException -Exception $_) -sev Error
     throw $Message
 }
 # Final Score
