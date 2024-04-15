@@ -21,13 +21,22 @@ Function Invoke-ExecSetOoO {
         }
         $StartTime = $Request.body.StartTime
         $EndTime = $Request.body.EndTime
-    
+
+        $OutOfOffice = @{
+            userid          = $Request.body.user
+            InternalMessage = $InternalMessage
+            ExternalMessage = $ExternalMessage
+            TenantFilter    = $TenantFilter
+            State           = $Request.Body.AutoReplyState
+            APIName         = $APINAME
+            ExecutingUser   = $request.headers.'x-ms-client-principal'
+            StartTime       = $StartTime
+            EndTime         = $EndTime
+        }
+        Write-Host ($OutOfOffice | ConvertTo-Json -Depth 10)
+
         $Results = try {
-            if ($Request.Body.AutoReplyState -ne 'Scheduled') {
-                Set-CIPPOutOfOffice -userid $Request.body.user -tenantFilter $TenantFilter -APIName $APINAME -ExecutingUser $request.headers.'x-ms-client-principal' -InternalMessage $InternalMessage -ExternalMessage $ExternalMessage -State $Request.Body.AutoReplyState
-            } else {
-                Set-CIPPOutOfOffice -userid $Request.body.user -tenantFilter $TenantFilter -APIName $APINAME -ExecutingUser $request.headers.'x-ms-client-principal' -InternalMessage $InternalMessage -ExternalMessage $ExternalMessage -StartTime $StartTime -EndTime $EndTime -State $Request.Body.AutoReplyState
-            }
+            Set-CIPPOutOfOffice @OutOfOffice
         } catch {
             "Could not add out of office message for $($username). Error: $($_.Exception.Message)"
         }
