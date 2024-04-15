@@ -9,6 +9,10 @@
     "version": "[4.*, 5.0.0)"
   },
   "extensions": {
+    "durableTask": {
+      "maxConcurrentActivityFunctions": 4,
+      "maxConcurrentOrchestratorFunctions": 4
+    },
     "queues": {
       "maxDequeueCount": 1
     },
