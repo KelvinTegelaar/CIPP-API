@@ -14,13 +14,14 @@ Function Invoke-ListTenantDetails {
 
     try {
         $tenantfilter = $Request.Query.TenantFilter
-        $org = New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/organization' -tenantid $tenantfilter | Select-Object displayName, city, country, countryLetterCode, street, state, postalCode,
+        $org = New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/organization' -tenantid $tenantfilter | Select-Object displayName, id, city, country, countryLetterCode, street, state, postalCode,
         @{ Name = 'businessPhones'; Expression = { $_.businessPhones -join ', ' } },
         @{ Name = 'technicalNotificationMails'; Expression = { $_.technicalNotificationMails -join ', ' } },
         tenantType, createdDateTime, onPremisesLastPasswordSyncDateTime, onPremisesLastSyncDateTime, onPremisesSyncEnabled, assignedPlans
     } catch {
         $org = [PSCustomObject]@{
             displayName                        = 'Error loading tenant'
+            id                                 = ''
             city                               = ''
             country                            = ''
             countryLetterCode                  = ''
