@@ -151,7 +151,7 @@ function Get-Tenants {
             Add-CIPPAzDataTableEntity @TenantsTable -Entity $IncludedTenantsCache -Force | Out-Null
         }
     }
-    if ($PartnerTenantState.state -eq 'owntenant') {
+    if ($PartnerTenantState.state -eq 'owntenant' -and $IncludedTenantsCache.RowKey.count -eq 0) {
         $Domains = New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/domains' -tenantid $env:TenantID -NoAuthCheck:$true
 
         $IncludedTenantsCache = @([PSCustomObject]@{
