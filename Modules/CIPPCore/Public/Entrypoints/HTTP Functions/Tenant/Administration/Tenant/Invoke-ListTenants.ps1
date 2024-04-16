@@ -21,15 +21,12 @@ Function Invoke-ListTenants {
                 StatusCode = [HttpStatusCode]::OK
                 Body       = $GraphRequest
             })
-        $InputObject = [PSCustomObject]@{
-            OrchestratorName = 'UpdateTenantsOrchestrator'
-            Batch            = @(@{'FunctionName' = 'UpdateTenants' })
-        }
-        #Write-Host ($InputObject | ConvertTo-Json)
-        $InstanceId = Start-NewOrchestration -FunctionName 'CIPPOrchestrator' -InputObject ($InputObject | ConvertTo-Json -Depth 5)
-        exit
-    }
+        Get-Tenants -IncludeAll -TriggerRefresh
 
+    }
+    if ($Request.query.TriggerRefresh) {
+        Get-Tenants -IncludeAll -TriggerRefresh
+    }
     try {
         $tenantfilter = $Request.Query.TenantFilter
         $Tenants = Get-Tenants -IncludeErrors -SkipDomains
