@@ -50,13 +50,14 @@ function Receive-CippQueueTrigger {
 
 function Receive-CippOrchestrationTrigger {
     param($Context)
-    Write-Host 'Orchestrator started'
+
     try {
         if (Test-Json -Json $Context.Input) {
             $OrchestratorInput = $Context.Input | ConvertFrom-Json
         } else {
             $OrchestratorInput = $Context.Input
         }
+        Write-Host "Orchestrator started $($OrchestratorInput.OrchestratorName)"
 
         $DurableRetryOptions = @{
             FirstRetryInterval  = (New-TimeSpan -Seconds 5)
@@ -87,7 +88,7 @@ function Receive-CippOrchestrationTrigger {
             Write-LogMessage -API $OrchestratorInput.OrchestratorName -tenant $tenant -message "Finished $($OrchestratorInput.OrchestratorName)" -sev Info
         }
     } catch {
-        Write-Host "Orchestrator error $($_.Exception.Message)"
+        Write-Host "Orchestrator error $($_.Exception.Message) line $($_.InvocationInfo.ScriptLineNumber)"
     }
 }
 
