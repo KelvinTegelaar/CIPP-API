@@ -46,10 +46,9 @@ Function Invoke-AddWinGetApp {
                 status       = 'Not Deployed yet'
             }
             "Successfully added Store App for $($Tenant) to queue."
-            Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $tenant -message "Chocolatey Application $($intunebody.Displayname) queued to add" -Sev 'Info'
-        }
-        catch {
-            Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $tenant -message "Failed to add Chocolatey Application $($intunebody.Displayname) to queue" -Sev 'Error'
+            Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $tenant -message "Successfully added Store App $($intunebody.Displayname) to queue" -Sev 'Info'
+        } catch {
+            Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $tenant -message "Failed to add Store App $($intunebody.Displayname) to queue" -Sev 'Error'
             "Failed added Store App for $($Tenant) to queue"
         }
     }
