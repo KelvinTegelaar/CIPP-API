@@ -10,7 +10,8 @@ function Get-Tenants {
         [switch]$IncludeAll,
         [switch]$IncludeErrors,
         [switch]$SkipDomains,
-        [switch]$TriggerRefresh
+        [switch]$TriggerRefresh,
+        [switch]$CleanOld
     )
 
     $TenantsTable = Get-CippTable -tablename 'Tenants'
@@ -32,11 +33,10 @@ function Get-Tenants {
 
     if (($IncludedTenantsCache | Measure-Object).Count -eq 0) {
         $BuildRequired = $true
-    } 
+    }
 
-    if ($BuildRequired -or $TriggerRefresh.IsPresent) {
-        #get the full list of tenants
-        $GDAPRelationships = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/tenantRelationships/delegatedAdminRelationships?`$filter=status eq 'active' and not startsWith(displayName,'MLT_')&`$select=customer,autoExtendDuration,endDateTime" -NoAuthCheck:$true 
+    if ($CleanOld) {
+        $GDAPRelationships = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/tenantRelationships/delegatedAdminRelationships?`$filter=status eq 'active' and not startsWith(displayName,'MLT_')&`$select=customer,autoExtendDuration,endDateTime" -NoAuthCheck:$true
         $GDAPList = foreach ($Relationship in $GDAPRelationships) {
             [PSCustomObject]@{
                 customerId      = $Relationship.customer.tenantId
@@ -45,16 +45,32 @@ function Get-Tenants {
                 relationshipEnd = $Relationship.endDateTime
             }
         }
+        $CurrentTenants = Get-CIPPAzDataTableEntity @TenantsTable -Filter "PartitionKey eq 'Tenants' and Excluded eq false"
+        $CurrentTenants | Where-Object { $_.customerId -notin $GDAPList.customerId } | ForEach-Object {
+            Remove-AzDataTableEntity @TenantsTable -Entity $_
+        }
+    }
+
+    if ($BuildRequired -or $TriggerRefresh.IsPresent) {
+        #get the full list of tenants
+        $GDAPRelationships = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/tenantRelationships/delegatedAdminRelationships?`$filter=status eq 'active' and not startsWith(displayName,'MLT_')&`$select=customer,autoExtendDuration,endDateTime" -NoAuthCheck:$true
+        $GDAPList = foreach ($Relationship in $GDAPRelationships) {
+            [PSCustomObject]@{
+                customerId      = $Relationship.customer.tenantId
+                displayName     = $Relationship.customer.displayName
+                autoExtend      = ($Relationship.autoExtendDuration -ne 'PT0S')
+                relationshipEnd = $Relationship.endDateTime
+            }
+        }
+
         $ActiveRelationships = $GDAPList | Where-Object { $_.customerId -notin $SkipListCache.customerId }
-        $TenantList = $ActiveRelationships | Group-Object -Property customerId | ForEach-Object -Parallel {
+        $TenantList = $ActiveRelationships | Group-Object -Property customerId | ForEach-Object {
             Write-Host "Processing $($_.Name) to add to tenant list."
-            Import-Module CIPPCore
-            Import-Module AzBobbyTables
-            $ExistingTenantInfo = Get-CIPPAzDataTableEntity @using:TenantsTable -Filter "PartitionKey eq 'Tenants' and RowKey eq '$($_.Name)'"
-            if ($ExistingTenantInfo -and $ExistingInfo.RequiresRefresh -eq $false) {
+            $ExistingTenantInfo = Get-CIPPAzDataTableEntity @TenantsTable -Filter "PartitionKey eq 'Tenants' and RowKey eq '$($_.Name)'"
+            if ($ExistingTenantInfo -and $ExistingTenantInfo.RequiresRefresh -eq $false) {
                 Write-Host 'Existing tenant found. We already have it cached, skipping.'
                 $ExistingTenantInfo
-                continue
+                return
             }
             $LatestRelationship = $_.Group | Sort-Object -Property relationshipEnd | Select-Object -Last 1
             $AutoExtend = ($_.Group | Where-Object { $_.autoExtend -eq $true } | Measure-Object).Count -gt 0
@@ -72,13 +88,12 @@ function Get-Tenants {
                         $defaultDomainName = $Domain
                         $initialDomainName = $Domain
                         $RequiresRefresh = $true
-                        
+
                     } catch {
                         Write-LogMessage -API 'Get-Tenants' -message "Tried adding $($LatestRelationship.customerId) to tenant list but failed to get domains - $($_.Exception.Message)" -level 'Critical'
-
                     }
                 }
-       
+
                 [PSCustomObject]@{
                     PartitionKey             = 'Tenants'
                     RowKey                   = $_.Name
@@ -120,17 +135,17 @@ function Get-Tenants {
                 }) | Out-Null
         }
         foreach ($Tenant in $TenantList) {
-            if ($Tenant.defaultDomainName -eq 'Invalid' -or !$Tenant.defaultDomainName) { continue }
+            if ($Tenant.defaultDomainName -eq 'Invalid' -or !$Tenant.defaultDomainName) {
+                Write-LogMessage -API 'Get-Tenants' -message "We're skipping $($Tenant.displayName) as it has an invalid default domain name. Something is up with this instance." -level 'Critical'
+                continue 
+            }
             $IncludedTenantsCache.Add($Tenant) | Out-Null
+        }
+        if ($IncludedTenantsCache) {
+            Add-CIPPAzDataTableEntity @TenantsTable -Entity $IncludedTenantsCache -Force | Out-Null
         }
     }
 
-    if ($IncludedTenantsCache) {
-        Add-CIPPAzDataTableEntity @TenantsTable -Entity $IncludedTenantsCache -Force
-        $CurrentTenants = Get-CIPPAzDataTableEntity @TenantsTable -Filter "PartitionKey eq 'Tenants' and Excluded eq false"
-        $CurrentTenants | Where-Object { $_.customerId -notin $IncludedTenantsCache.customerId } | ForEach-Object {
-            Remove-AzDataTableEntity -Context $TenantsTable -Entity $_ -Force
-        }
-    }
+
     return ($IncludedTenantsCache | Where-Object { $null -ne $_.defaultDomainName -and ($_.defaultDomainName -notmatch 'Domain Error' -or $IncludeAll.IsPresent) } | Sort-Object -Property displayName)
 }
