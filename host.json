@@ -11,6 +11,10 @@
   "extensions": {
     "queues": {
       "maxDequeueCount": 1
+    },
+    "durableTask": {
+      "maxConcurrentActivityFunctions": 1,
+      "maxConcurrentOrchestratorFunctions": 1
     }
   }
 }
