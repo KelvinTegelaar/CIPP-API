@@ -19,7 +19,7 @@ function Receive-CippHttpTrigger {
 
 function Receive-CippQueueTrigger {
     Param($QueueItem, $TriggerMetadata)
-
+    Set-Location (Get-Item $PSScriptRoot).Parent.Parent.FullName
     $Start = (Get-Date).ToUniversalTime()
     $APIName = $TriggerMetadata.FunctionName
     Write-Host "#### Running $APINAME"
@@ -57,6 +57,7 @@ function Receive-CippOrchestrationTrigger {
         } else {
             $OrchestratorInput = $Context.Input
         }
+        Write-Host "Orchestrator started $($OrchestratorInput.OrchestratorName)"
 
         $DurableRetryOptions = @{
             FirstRetryInterval  = (New-TimeSpan -Seconds 5)
@@ -77,16 +78,17 @@ function Receive-CippOrchestrationTrigger {
         }
 
         if (($Batch | Measure-Object).Count -gt 0) {
-            foreach ($Item in $Batch) {
-                $null = Invoke-DurableActivity -FunctionName 'CIPPActivityFunction' -Input $Item -NoWait -RetryOptions $RetryOptions -ErrorAction Stop
+            $Tasks = foreach ($Item in $Batch) {
+                Invoke-DurableActivity -FunctionName 'CIPPActivityFunction' -Input $Item -NoWait -RetryOptions $RetryOptions -ErrorAction Stop
             }
+            $null = Wait-ActivityFunction -Task $Tasks
         }
 
         if ($Context.IsReplaying -ne $true -and $OrchestratorInput.SkipLog -ne $true) {
             Write-LogMessage -API $OrchestratorInput.OrchestratorName -tenant $tenant -message "Finished $($OrchestratorInput.OrchestratorName)" -sev Info
         }
     } catch {
-        Write-Host "Orchestrator error $($_.Exception.Message)"
+        Write-Host "Orchestrator error $($_.Exception.Message) line $($_.InvocationInfo.ScriptLineNumber)"
     }
 }
 

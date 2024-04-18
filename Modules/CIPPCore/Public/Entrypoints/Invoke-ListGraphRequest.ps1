@@ -3,6 +3,9 @@ function Invoke-ListGraphRequest {
     <#
     .FUNCTIONALITY
     Entrypoint
+
+    .ROLE
+    Core.Read
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
@@ -130,8 +133,13 @@ function Invoke-ListGraphRequest {
         else { $StatusCode = [HttpStatusCode]::BadRequest }
     }
 
+    if ($request.Query.Sort) {
+        $GraphRequestData.Results = $GraphRequestData.Results | Sort-Object -Property $request.Query.Sort
+    } 
+    $Outputdata = $GraphRequestData | ConvertTo-Json -Depth 20 -Compress
+
     Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
             StatusCode = $StatusCode
-            Body       = $GraphRequestData | ConvertTo-Json -Depth 20 -Compress
+            Body       = $Outputdata
         })
 }
