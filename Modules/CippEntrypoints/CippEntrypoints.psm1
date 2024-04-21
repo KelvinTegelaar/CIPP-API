@@ -66,10 +66,20 @@ function Receive-CippOrchestrationTrigger {
         }
 
         switch ($OrchestratorInput.DurableMode) {
-            'FanOut' { $NoWait = $true }
-            'Sequence' { $NoWait = $false }
-            default { $NoWait = $true }
+            'FanOut' {
+                $DurableMode = 'FanOut'
+                $NoWait = $true
+            }
+            'Sequence' {
+                $DurableMode = 'Sequence'
+                $NoWait = $false
+            }
+            default {
+                $DurableMode = 'FanOut (Default)'
+                $NoWait = $true
+            }
         }
+        Write-Host "Durable Mode: $DurableMode"
 
         $RetryOptions = New-DurableRetryOptions @DurableRetryOptions
 
