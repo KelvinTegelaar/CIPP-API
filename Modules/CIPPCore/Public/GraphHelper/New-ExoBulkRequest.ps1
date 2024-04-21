@@ -37,21 +37,30 @@ function New-ExoBulkRequest ($tenantid, $cmdletArray, $useSystemMailbox, $Anchor
             $BatchBodyObj = @{
                 requests = @()
             }
-            $BatchBodyObj.requests = [System.Collections.ArrayList]@()
-            $i = 0
-            #The maximum batch size is 10, so we need to split the requests into batches of 10.
-            $cmdletArray | ForEach-Object {
-                $BatchRequest = @{}
-                $BatchRequest['url'] = $URL
-                $BatchRequest['method'] = 'POST'
-                $BatchRequest['body'] = $_
-                $BatchRequest['headers'] = $Headers
-                $BatchRequest['id'] = "$(New-Guid)"
-                $null = $BatchBodyObj['requests'].add($BatchRequest)
+            # Split the cmdletArray into batches of 10
+            $batches = [System.Collections.ArrayList]@()
+            for ($i = 0; $i -lt $cmdletArray.Length; $i += 10) {
+                $null = $batches.Add($cmdletArray[$i..[math]::Min($i + 9, $cmdletArray.Length - 1)])
             }
-            $ReturnedData = Invoke-RestMethod $BatchURL -ResponseHeadersVariable responseHeaders -Method POST -Body (ConvertTo-Json -InputObject $BatchBodyObj -Depth 10) -Headers $Headers -ContentType 'application/json; charset=utf-8'
-        
-        
+
+            # Process each batch
+            $ReturnedData = foreach ($batch in $batches) {
+                $BatchBodyObj.requests = [System.Collections.ArrayList]@()
+                foreach ($cmd in $batch) {
+                    $BatchRequest = @{
+                        url     = $URL
+                        method  = 'POST'
+                        body    = $cmd
+                        headers = $Headers
+                        id      = "$(New-Guid)"
+                    }
+                    $null = $BatchBodyObj['requests'].add($BatchRequest)
+                }
+                $Results = Invoke-RestMethod $BatchURL -ResponseHeadersVariable responseHeaders -Method POST -Body (ConvertTo-Json -InputObject $BatchBodyObj -Depth 10) -Headers $Headers -ContentType 'application/json; charset=utf-8'
+                $boundary = "--$($responseHeaders.'Content-Type' -split 'boundary=' | Select-Object -Last 1)"
+                $parts = $Results -split $boundary | Where-Object { $_.Trim() -ne '' }
+                $parts 
+            }
         } catch {
             $ErrorMess = $($_.Exception.Message)
             $ReportedError = ($_.ErrorDetails | ConvertFrom-Json -ErrorAction SilentlyContinue)
@@ -67,13 +76,12 @@ function New-ExoBulkRequest ($tenantid, $cmdletArray, $useSystemMailbox, $Anchor
             return 'Task sent to exchange'
         }
         if ($ReturnedData.value) {
-            Write-Host 'found value'
+            return $ReturnedData.value
         } else {
-            $boundary = "--$($responseHeaders.'Content-Type' -split 'boundary=' | Select-Object -Last 1)"
             Write-Host "boundary is $boundary"
-            $parts = $ReturnedData -split $boundary | Where-Object { $_.Trim() -ne '' }
-            $ReturnedDataSplit = foreach ($part in $parts) {
+            $ReturnedDataSplit = foreach ($part in $ReturnedData) {
                 $jsonString = $part -split '\r?\n\r?\n' | Where-Object { $_ -like '*{*' } | Out-String
+                Write-Host $jsonString
                 $jsonObject = $jsonString | ConvertFrom-Json
                 if ($jsonObject.'@adminapi.warnings') {
                     $jsonObject.value = $jsonObject.'@adminapi.warnings'
