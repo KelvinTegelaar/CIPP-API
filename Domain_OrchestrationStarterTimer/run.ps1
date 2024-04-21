@@ -12,7 +12,7 @@ try {
     } else {
         #$InstanceId = Start-NewOrchestration -FunctionName 'DomainAnalyser_Orchestration'
         Write-Host "Started orchestration with ID = '$InstanceId'"
-        #Orchestrator = New-OrchestrationCheckStatusResponse -Request $Timer -InstanceId $InstanceId
+        $#Orchestrator = New-OrchestrationCheckStatusResponse -Request $Timer -InstanceId $InstanceId
         Write-LogMessage -API 'DomainAnalyser' -message 'Starting Domain Analyser' -sev Info
         $Results = [pscustomobject]@{'Results' = 'Starting Domain Analyser' }
 
