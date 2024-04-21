@@ -8,22 +8,6 @@ function New-ExoBulkRequest ($tenantid, $cmdletArray, $useSystemMailbox, $Anchor
     if ((Get-AuthorisedRequest -TenantID $tenantid) -or $NoAuthCheck -eq $True) {
         $token = Get-ClassicAPIToken -resource 'https://outlook.office365.com' -Tenantid $tenantid
         $Tenant = Get-Tenants -IncludeErrors | Where-Object { $_.defaultDomainName -eq $tenantid -or $_.customerId -eq $tenantid }
-        if (!$Anchor) {
-            $cmdparams = [pscustomobject]$cmdletArray[-1].parameters
-            Write-Host "cmdparams are $cmdparams"
-            if ($cmdparams.Identity) { $Anchor = $cmdparams.Identity }
-            if ($cmdparams.anr) { $Anchor = $cmdparams.anr }
-            if ($cmdparams.User) { $Anchor = $cmdparams.User }
-            if (!$Anchor -or $useSystemMailbox) {
-                if (!$Tenant.initialDomainName) {
-                    $OnMicrosoft = (New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/domains?$top=999' -tenantid $tenantid -NoAuthCheck $NoAuthCheck | Where-Object -Property isInitial -EQ $true).id
-                } else {
-                    $OnMicrosoft = $Tenant.initialDomainName
-                }
-                $anchor = "UPN:SystemMailbox{8cc370d3-822a-4ab8-a926-bb94bd0641a9}@$($OnMicrosoft)"
-            }
-        }
-        Write-Host "Using $Anchor for bulk request"
         $Headers = @{
             Authorization             = "Bearer $($token.access_token)"
             Prefer                    = 'odata.maxpagesize = 1000;odata.continue-on-error'
@@ -47,6 +31,15 @@ function New-ExoBulkRequest ($tenantid, $cmdletArray, $useSystemMailbox, $Anchor
             $ReturnedData = foreach ($batch in $batches) {
                 $BatchBodyObj.requests = [System.Collections.ArrayList]@()
                 foreach ($cmd in $batch) {
+                    $cmdparams = $cmd.CmdletInput.Parameters
+                    if ($cmdparams.Identity) { $Anchor = $cmdparams.Identity }
+                    if ($cmdparams.anr) { $Anchor = $cmdparams.anr }
+                    if ($cmdparams.User) { $Anchor = $cmdparams.User }
+                    if (!$Anchor -or $useSystemMailbox) {
+                        $OnMicrosoft = $Tenant.initialDomainName
+                        $anchor = "UPN:SystemMailbox{8cc370d3-822a-4ab8-a926-bb94bd0641a9}@$($OnMicrosoft)"
+                    }
+                    $headers['X-AnchorMailbox'] = $Anchor
                     $BatchRequest = @{
                         url     = $URL
                         method  = 'POST'
@@ -60,6 +53,7 @@ function New-ExoBulkRequest ($tenantid, $cmdletArray, $useSystemMailbox, $Anchor
                 $boundary = "--$($responseHeaders.'Content-Type' -split 'boundary=' | Select-Object -Last 1)"
                 $parts = $Results -split $boundary | Where-Object { $_.Trim() -ne '' }
                 $parts 
+                Write-Host "Batch #$($batches.IndexOf($batch) + 1) of $($batches.Count) processed"
             }
         } catch {
             $ErrorMess = $($_.Exception.Message)
@@ -78,17 +72,21 @@ function New-ExoBulkRequest ($tenantid, $cmdletArray, $useSystemMailbox, $Anchor
         if ($ReturnedData.value) {
             return $ReturnedData.value
         } else {
-            Write-Host "boundary is $boundary"
             $ReturnedDataSplit = foreach ($part in $ReturnedData) {
                 $jsonString = $part -split '\r?\n\r?\n' | Where-Object { $_ -like '*{*' } | Out-String
-                Write-Host $jsonString
                 $jsonObject = $jsonString | ConvertFrom-Json
                 if ($jsonObject.'@adminapi.warnings') {
                     $jsonObject.value = $jsonObject.'@adminapi.warnings'
                 }
                 if ($jsonObject.error) {
-                    $jsonObject | Add-Member -MemberType NoteProperty -Name 'value' -Value $jsonObject.error.message -Force
+                    if ($jsonObject.error.details.message) {
+                        $msg = $jsonObject.error.details.message
+                    } else {
+                        $msg = $jsonObject.error.message
+                    }
+                    $jsonObject | Add-Member -MemberType NoteProperty -Name 'value' -Value $msg -Force
                 }
+                
                 $jsonObject.value
             }
             return $ReturnedDataSplit 
