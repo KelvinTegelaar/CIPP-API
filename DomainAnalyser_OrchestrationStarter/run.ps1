@@ -6,13 +6,14 @@ $Results = [pscustomobject]@{'Results' = 'Domain Analyser started' }
 $InputObject = [PSCustomObject]@{
     QueueFunction    = [PSCustomObject]@{
         FunctionName = 'GetTenants'
-        DurableName = 'DomainAnalyserTenant'
+        DurableName  = 'DomainAnalyserTenant'
         TenantParams = @{
             IncludeAll = $true
         }
     }
     OrchestratorName = 'DomainAnalyser_Tenants'
     SkipLog          = $true
+    DurableMode      = 'Sequence'
 }
 Start-NewOrchestration -FunctionName 'CIPPOrchestrator' -InputObject ($InputObject | ConvertTo-Json -Compress -Depth 5)
 
