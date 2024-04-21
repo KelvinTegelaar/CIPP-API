@@ -5,7 +5,7 @@ function Push-DomainAnalyserTenant {
     #>
     param($Item)
 
-    $Tenant = Get-Tenants | Where-Object { $_.customerId -eq $Item.customerId }
+    $Tenant = Get-Tenants -IncludeAll | Where-Object { $_.customerId -eq $Item.customerId }
     $DomainTable = Get-CippTable -tablename 'Domains'
 
     if ($Tenant.Excluded -eq $true) {
@@ -20,7 +20,7 @@ function Push-DomainAnalyserTenant {
         return
     } else {
         try {
-            $Domains = New-GraphGetRequest -uri 'https://graph.microsoft.com/v1.0/domains' -tenantid $Tenant.defaultDomainName | Where-Object { ($_.id -notlike '*.microsoftonline.com' -and $_.id -NotLike '*.exclaimer.cloud' -and $_.id -Notlike '*.excl.cloud' -and $_.id -NotLike '*.codetwo.online' -and $_.id -NotLike '*.call2teams.com' -and $_.isVerified) }
+            $Domains = New-GraphGetRequest -uri 'https://graph.microsoft.com/v1.0/domains' -tenantid $Tenant.customerId | Where-Object { ($_.id -notlike '*.microsoftonline.com' -and $_.id -NotLike '*.exclaimer.cloud' -and $_.id -Notlike '*.excl.cloud' -and $_.id -NotLike '*.codetwo.online' -and $_.id -NotLike '*.call2teams.com' -and $_.isVerified) }
 
             $TenantDomains = foreach ($d in $domains) {
                 [PSCustomObject]@{
@@ -89,6 +89,7 @@ function Push-DomainAnalyserTenant {
                             Batch            = $TenantDomainObjects | Select-Object RowKey, @{n = 'FunctionName'; exp = { 'DomainAnalyserDomain' } }
                             OrchestratorName = "DomainAnalyser_$($Tenant.defaultDomainName)"
                             SkipLog          = $true
+                            DurableMode      = 'Sequence'
                         }
                         Start-NewOrchestration -FunctionName 'CIPPOrchestrator' -InputObject ($InputObject | ConvertTo-Json -Compress -Depth 5)
                     } catch {
@@ -99,7 +100,7 @@ function Push-DomainAnalyserTenant {
                 }
             }
         } catch {
-            Write-Host (Get-CippException -Exception $_)
+            Write-Host (Get-CippException -Exception $_ | ConvertTo-Json)
             Write-LogMessage -API 'DomainAnalyser' -tenant $tenant.defaultDomainName -message 'DNS Analyser GraphGetRequest' -LogData (Get-CippException -Exception $_) -sev Error
         }
     }
