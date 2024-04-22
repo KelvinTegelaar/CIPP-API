@@ -9,8 +9,8 @@ function Push-ListGraphRequestQueue {
     # Write out the queue message and metadata to the information log.
     Write-Host "PowerShell queue trigger function processed work item: $($Item.Endpoint) - $($Item.TenantFilter)"
 
-    $TenantQueueName = '{0} - {1}' -f $Item.QueueName, $Item.TenantFilter
-    Update-CippQueueEntry -RowKey $Item.QueueId -Status 'Processing' -Name $TenantQueueName
+    #$TenantQueueName = '{0} - {1}' -f $Item.QueueName, $Item.TenantFilter
+    #Update-CippQueueEntry -RowKey $Item.QueueId -Status 'Processing' -Name $TenantQueueName
 
     $ParamCollection = [System.Web.HttpUtility]::ParseQueryString([String]::Empty)
     foreach ($Param in ($Item.Parameters.GetEnumerator() | Sort-Object -CaseSensitive -Property Key)) {
@@ -59,9 +59,8 @@ function Push-ListGraphRequestQueue {
     }
     try {
         Add-CIPPAzDataTableEntity @Table -Entity $GraphResults -Force | Out-Null
-        Update-CippQueueEntry -RowKey $Item.QueueId -Status 'Completed'
     } catch {
         Write-Host "Queue Error: $($_.Exception.Message)"
-        Update-CippQueueEntry -RowKey $Item.QueueId -Status 'Failed'
+        throw $_
     }
 }

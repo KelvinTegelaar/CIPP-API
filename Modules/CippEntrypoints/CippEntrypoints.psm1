@@ -123,15 +123,45 @@ function Receive-CippActivityTrigger {
     $Start = (Get-Date).ToUniversalTime()
     Set-Location (Get-Item $PSScriptRoot).Parent.Parent.FullName
 
+    if ($Item.QueueId) {
+        if ($Item.QueueName) {
+            $QueueName = $Item.QueueName
+        } elseif ($Item.TenantFilter) {
+            $QueueName = $Item.TenantFilter
+        } elseif ($Item.Tenant) {
+            $QueueName = $Item.Tenant
+        }
+        $QueueTask = @{
+            QueueId = $Item.QueueId
+            Name    = $QueueName
+            Status  = 'Running'
+        }
+        $TaskStatus = Set-CippQueueTask @QueueTask
+        $QueueTask.TaskId = $TaskStatus.RowKey
+    }
+
     if ($Item.FunctionName) {
         $FunctionName = 'Push-{0}' -f $Item.FunctionName
         try {
             & $FunctionName -Item $Item
+
+            if ($TaskStatus) {
+                $QueueTask.Status = 'Completed'
+                $null = Set-CippQueueTask @QueueTask
+            }
         } catch {
             $ErrorMsg = $_.Exception.Message
+            if ($TaskStatus) {
+                $QueueTask.Status = 'Failed'
+                $null = Set-CippQueueTask @QueueTask
+            }
         }
     } else {
         $ErrorMsg = 'Function not provided'
+        if ($TaskStatus) {
+            $QueueTask.Status = 'Failed'
+            $null = Set-CippQueueTask @QueueTask
+        }
     }
 
     $End = (Get-Date).ToUniversalTime()
