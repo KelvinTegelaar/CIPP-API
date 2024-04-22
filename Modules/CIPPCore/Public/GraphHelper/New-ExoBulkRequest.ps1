@@ -32,7 +32,6 @@ function New-ExoBulkRequest ($tenantid, $cmdletArray, $useSystemMailbox, $Anchor
                 $BatchBodyObj.requests = [System.Collections.ArrayList]@()
                 foreach ($cmd in $batch) {
                     $cmdparams = $cmd.CmdletInput.Parameters
-                    Write-Host "Our identity param is $($cmdparams.Identity)"
                     if ($cmdparams.Identity) { $Anchor = $cmdparams.Identity }
                     if ($cmdparams.anr) { $Anchor = $cmdparams.anr }
                     if ($cmdparams.User) { $Anchor = $cmdparams.User }
@@ -41,8 +40,6 @@ function New-ExoBulkRequest ($tenantid, $cmdletArray, $useSystemMailbox, $Anchor
                         $anchor = "UPN:SystemMailbox{8cc370d3-822a-4ab8-a926-bb94bd0641a9}@$($OnMicrosoft)"
                     }
                     $headers['X-AnchorMailbox'] = $Anchor
-                    Write-Host "our header now is $($headers['X-AnchorMailbox'])"
-                    Write-Host "Using $Anchor"
                     $BatchRequest = @{
                         url     = $URL
                         method  = 'POST'
