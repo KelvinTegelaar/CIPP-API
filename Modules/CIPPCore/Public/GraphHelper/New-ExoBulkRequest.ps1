@@ -44,7 +44,7 @@ function New-ExoBulkRequest ($tenantid, $cmdletArray, $useSystemMailbox, $Anchor
                         url     = $URL
                         method  = 'POST'
                         body    = $cmd
-                        headers = $Headers
+                        headers = $Headers.Clone()
                         id      = "$(New-Guid)"
                     }
                     $null = $BatchBodyObj['requests'].add($BatchRequest)
@@ -76,18 +76,18 @@ function New-ExoBulkRequest ($tenantid, $cmdletArray, $useSystemMailbox, $Anchor
                 $jsonString = $part -split '\r?\n\r?\n' | Where-Object { $_ -like '*{*' } | Out-String
                 $jsonObject = $jsonString | ConvertFrom-Json
                 if ($jsonObject.'@adminapi.warnings') {
-                    $jsonObject.value = $jsonObject.'@adminapi.warnings'
+                    Write-Warning $($jsonObject.'@adminapi.warnings' | Out-String)
                 }
                 if ($jsonObject.error) {
                     if ($jsonObject.error.details.message) {
-                        $msg = $jsonObject.error.details.message
+                        $msg = @{error = $jsonObject.error.details.message; target = $jsonObject.error.details.target }
                     } else {
-                        $msg = $jsonObject.error.message
+                        $msg = @{error = $jsonObject.error.message; target = $jsonObject.error.details.target }
                     }
                     $jsonObject | Add-Member -MemberType NoteProperty -Name 'value' -Value $msg -Force
                 }
                 
-                $jsonObject.value
+                [pscustomobject]$jsonObject.value
             }
             return $ReturnedDataSplit 
         }
