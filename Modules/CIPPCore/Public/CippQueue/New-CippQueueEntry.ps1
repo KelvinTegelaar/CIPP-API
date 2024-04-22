@@ -1,8 +1,9 @@
 function New-CippQueueEntry {
     Param(
-        $Name,
-        $Link,
-        $Reference
+        [string]$Name,
+        [string]$Link,
+        [string]$Reference,
+        [int]$TotalTasks
     )
 
     $CippQueue = Get-CippTable -TableName CippQueue
@@ -14,6 +15,7 @@ function New-CippQueueEntry {
         Link         = $Link
         Reference    = $Reference
         Status       = 'Queued'
+        TotalTasks   = $TotalTasks
     }
     $CippQueue.Entity = $QueueEntry
 
