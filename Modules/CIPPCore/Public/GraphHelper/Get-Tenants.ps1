@@ -69,6 +69,13 @@ function Get-Tenants {
         $TenantList = $ActiveRelationships | Group-Object -Property customerId | ForEach-Object {
             Write-Host "Processing $($_.Name) to add to tenant list."
             $ExistingTenantInfo = Get-CIPPAzDataTableEntity @TenantsTable -Filter "PartitionKey eq 'Tenants' and RowKey eq '$($_.Name)'"
+
+            if ($TriggerRefresh.IsPresent) {
+                # Reset error count
+                $ExistingTenantInfo.GraphErrorCount = 0
+                Add-CIPPAzDataTableEntity @TenantsTable -Entity $ExistingTenantInfo -Force | Out-Null
+            }
+
             if ($ExistingTenantInfo -and $ExistingTenantInfo.RequiresRefresh -eq $false) {
                 Write-Host 'Existing tenant found. We already have it cached, skipping.'
                 $ExistingTenantInfo
