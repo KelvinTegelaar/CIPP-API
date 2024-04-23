@@ -3,7 +3,7 @@ function New-CippQueueEntry {
         [string]$Name,
         [string]$Link,
         [string]$Reference,
-        [int]$TotalTasks
+        [int]$TotalTasks = 1
     )
 
     $CippQueue = Get-CippTable -TableName CippQueue
