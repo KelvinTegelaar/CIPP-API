@@ -1,4 +1,8 @@
 function New-DeviceLogin {
+    <#
+    .FUNCTIONALITY
+    Internal
+    #>
     [CmdletBinding()]
     param (
         [string]$clientid,

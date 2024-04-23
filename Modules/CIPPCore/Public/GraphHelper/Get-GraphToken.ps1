@@ -1,4 +1,8 @@
 function Get-GraphToken($tenantid, $scope, $AsApp, $AppID, $refreshToken, $ReturnRefresh, $SkipCache) {
+    <#
+    .FUNCTIONALITY
+    Internal
+    #>
     if (!$scope) { $scope = 'https://graph.microsoft.com/.default' }
     if (!$env:SetFromProfile) { $CIPPAuth = Get-CIPPAuthentication; Write-Host 'Could not get Refreshtoken from environment variable. Reloading token.' }
     $AuthBody = @{
@@ -32,10 +36,10 @@ function Get-GraphToken($tenantid, $scope, $AsApp, $AppID, $refreshToken, $Retur
 
     try {
         if ($script:AccessTokens.$TokenKey -and [int](Get-Date -UFormat %s -Millisecond 0) -lt $script:AccessTokens.$TokenKey.expires_on -and $SkipCache -ne $true) {
-            Write-Host 'Graph: cached token'
+            #Write-Host 'Graph: cached token'
             $AccessToken = $script:AccessTokens.$TokenKey
         } else {
-            Write-Host 'Graph: new token'
+            #Write-Host 'Graph: new token'
             $AccessToken = (Invoke-RestMethod -Method post -Uri "https://login.microsoftonline.com/$($tenantid)/oauth2/v2.0/token" -Body $Authbody -ErrorAction Stop)
             $ExpiresOn = [int](Get-Date -UFormat %s -Millisecond 0) + $AccessToken.expires_in
             Add-Member -InputObject $AccessToken -NotePropertyName 'expires_on' -NotePropertyValue $ExpiresOn

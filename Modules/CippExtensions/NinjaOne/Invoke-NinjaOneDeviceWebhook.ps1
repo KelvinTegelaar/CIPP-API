@@ -5,7 +5,7 @@ function Invoke-NinjaOneDeviceWebhook {
         $Configuration
     )
     try {
-        Write-LogMessage -user $ExecutingUser -API $APIName -message "Webhook Recieved - Updating NinjaOne Device compliance for $($Data.resourceData.id) in $($Data.tenantId)" -Sev "Info" -tenant $TenantFilter
+        Write-LogMessage -user $ExecutingUser -API $APIName -message "Webhook Recieved - Updating NinjaOne Device compliance for $($Data.resourceData.id) in $($Data.tenantId)" -Sev 'Info' -tenant $TenantFilter
         $MappedFields = [pscustomobject]@{}
         $CIPPMapping = Get-CIPPTable -TableName CippMapping
         $Filter = "PartitionKey eq 'NinjaFieldMapping'"
@@ -36,20 +36,25 @@ function Invoke-NinjaOneDeviceWebhook {
                     "$($MappedFields.DeviceCompliance)" = $Compliant
                 } | ConvertTo-Json
 
-                $Null = Invoke-WebRequest -uri "https://$($Configuration.Instance)/api/v2/device/$($Device.NinjaOneID)/custom-fields" -Method PATCH -Body $ComplianceBody -Headers @{Authorization = "Bearer $($token.access_token)" } -ContentType 'application/json'
+                $Null = Invoke-WebRequest -Uri "https://$($Configuration.Instance)/api/v2/device/$($Device.NinjaOneID)/custom-fields" -Method PATCH -Body $ComplianceBody -Headers @{Authorization = "Bearer $($token.access_token)" } -ContentType 'application/json'
             
-                Write-Host "Updated NinjaOne Device Compliance"
+                Write-Host 'Updated NinjaOne Device Compliance'
              
 
             } else {
-                Throw "Failed to process device."
+                Write-LogMessage -API 'NinjaOneSync' -user 'CIPP' -message "$($DeviceM365.displayName) ($($M365DeviceID)) was not matched in Ninja for $($tenantfilter)" -Sev 'Info'
             }
 
         }
         
     } catch {
-        Write-Error "Failed NinjaOne Device Webhook for: $($Data | ConvertTo-Json -depth 100) Linenumber: $($_.InvocationInfo.ScriptLineNumber) Error: $($_.Exception.message)"
-        Write-LogMessage -API 'NinjaOneSync' -user 'CIPP' -message "Failed NinjaOne Device Webhook Linenumber: $($_.InvocationInfo.ScriptLineNumber) Error: $($_.Exception.message)" -Sev 'Error'
+        $Message = if ($_.ErrorDetails.Message) {
+            Get-NormalizedError -Message $_.ErrorDetails.Message
+        } else {
+            $_.Exception.message
+        }
+        Write-Error "Failed NinjaOne Device Webhook for: $($Data | ConvertTo-Json -Depth 100) Linenumber: $($_.InvocationInfo.ScriptLineNumber) Error: $Message"
+        Write-LogMessage -API 'NinjaOneSync' -user 'CIPP' -message "Failed NinjaOne Device Webhook Linenumber: $($_.InvocationInfo.ScriptLineNumber) Error: $Message" -Sev 'Error'
     }
         
 

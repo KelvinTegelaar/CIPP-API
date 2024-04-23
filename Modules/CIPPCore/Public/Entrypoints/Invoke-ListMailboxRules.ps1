@@ -19,32 +19,46 @@ Function Invoke-ListMailboxRules {
     $TenantFilter = $Request.Query.TenantFilter
 
     $Table = Get-CIPPTable -TableName cachembxrules
+    if ($TenantFilter -ne 'AllTenants') {
+        $Table.Filter = "Tenant eq '$TenantFilter'"
+    }
     $Rows = Get-CIPPAzDataTableEntity @Table | Where-Object -Property Timestamp -GT (Get-Date).Addhours(-1)
+
     if (!$Rows) {
-        Push-OutputBinding -Name mbxrulequeue -Value $TenantFilter
+        #Push-OutputBinding -Name mbxrulequeue -Value $TenantFilter
         $GraphRequest = [PSCustomObject]@{
             Tenant   = 'Loading data. Please check back in 1 minute'
             Licenses = 'Loading data. Please check back in 1 minute'
         }
-    } else {
-        if ($TenantFilter -ne 'AllTenants') {
-            $GraphRequest = $Rows | Where-Object -Property Tenant -EQ $TenantFilter | ForEach-Object {
-                $NewObj = $_.Rules | ConvertFrom-Json
-                $NewObj | Add-Member -NotePropertyName 'Tenant' -NotePropertyValue $TenantFilter
-                $NewObj
-            }
+        $Batch = if ($TenantFilter -eq 'AllTenants') {
+            Get-Tenants -IncludeErrors | ForEach-Object { $_ | Add-Member -NotePropertyName FunctionName -NotePropertyValue 'ListMailboxRulesQueue'; $_ }
         } else {
-            $GraphRequest = $Rows | ForEach-Object {
-                $TenantName = $_.Tenant
-                $NewObj = $_.Rules | ConvertFrom-Json
-                $NewObj | Add-Member -NotePropertyName 'Tenant' -NotePropertyValue $TenantName
-                $NewObj
+            [PSCustomObject]@{
+                defaultDomainName = $TenantFilter
+                FunctionName      = 'ListMailboxRulesQueue'
             }
         }
-    }
-    #Remove all old cache
-    #Remove-AzDataTableEntity @Table -Entity (Get-CIPPAzDataTableEntity @Table -Property PartitionKey, RowKey, Timestamp | Where-Object -Property Timestamp -LT (Get-Date).AddMinutes(-15))
+        if (($Batch | Measure-Object).Count -gt 0) {
+            $InputObject = [PSCustomObject]@{
+                OrchestratorName = 'ListMailboxRulesOrchestrator'
+                Batch            = @($Batch)
+                SkipLog          = $true
+            }
+            #Write-Host ($InputObject | ConvertTo-Json)
+            $InstanceId = Start-NewOrchestration -FunctionName 'CIPPOrchestrator' -InputObject ($InputObject | ConvertTo-Json -Depth 5)
+            Write-Host "Started permissions orchestration with ID = '$InstanceId'"
+        }
 
+    } else {
+        if ($TenantFilter -ne 'AllTenants') {
+            $Rows = $Rows | Where-Object -Property Tenant -EQ $TenantFilter
+        }
+        $GraphRequest = $Rows | ForEach-Object {
+            $NewObj = $_.Rules | ConvertFrom-Json
+            $NewObj | Add-Member -NotePropertyName 'Tenant' -NotePropertyValue $_.Tenant
+            $NewObj
+        }
+    }
 
     Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
             StatusCode = [HttpStatusCode]::OK

@@ -1,0 +1,11 @@
+﻿{
+  "scriptFile": "../Modules/CippEntryPoints/CippEntryPoints.psm1",
+  "entryPoint": "Receive-CippOrchestrationTrigger",
+  "bindings": [
+    {
+      "name": "Context",
+      "type": "orchestrationTrigger",
+      "direction": "in"
+    }
+  ]
+}

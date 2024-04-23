@@ -11,19 +11,15 @@ Function Invoke-RemoveExConnector {
     $APIName = $TriggerMetadata.FunctionName
     Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -message 'Accessed this API' -Sev 'Debug'
     $Tenantfilter = $request.Query.tenantfilter
-
-
-    $Params = @{
-        Identity = $request.query.guid
-    }
-
+    
     try {
+        
         $Params = @{ Identity = $request.query.GUID }
-
-        $GraphRequest = New-ExoRequest -tenantid $Tenantfilter -cmdlet "Remove-$($Request.query.Type)Connector" -cmdParams $params
+        $GraphRequest = New-ExoRequest -tenantid $Tenantfilter -cmdlet "Remove-$($Request.query.Type)Connector" -cmdParams $params -useSystemMailbox $true
         $Result = "Deleted $($Request.query.guid)"
         Write-LogMessage -API 'TransportRules' -tenant $tenantfilter -message "Deleted transport rule $($Request.query.guid)" -sev Debug
-    } catch {
+    }
+    catch {
         $ErrorMessage = Get-NormalizedError -Message $_.Exception
         $Result = $ErrorMessage
     }

@@ -1,5 +1,9 @@
 
-function New-GraphPOSTRequest ($uri, $tenantid, $body, $type, $scope, $AsApp, $NoAuthCheck, $skipTokenCache, $AddedHeaders) {
+function New-GraphPOSTRequest ($uri, $tenantid, $body, $type, $scope, $AsApp, $NoAuthCheck, $skipTokenCache, $AddedHeaders, $contentType, $IgnoreErrors) {
+    <#
+    .FUNCTIONALITY
+    Internal
+    #>
     if ($NoAuthCheck -or (Get-AuthorisedRequest -Uri $uri -TenantID $tenantid)) {
         $headers = Get-GraphToken -tenantid $tenantid -scope $scope -AsApp $asapp -SkipCache $skipTokenCache
         if ($AddedHeaders) {
@@ -12,12 +16,17 @@ function New-GraphPOSTRequest ($uri, $tenantid, $body, $type, $scope, $AsApp, $N
             $type = 'POST'
         }
 
+        if (!$contentType) {
+            $contentType = 'application/json; charset=utf-8'
+        }
         try {
-            $ReturnedData = (Invoke-RestMethod -Uri $($uri) -Method $TYPE -Body $body -Headers $headers -ContentType 'application/json; charset=utf-8')
+            $ReturnedData = (Invoke-RestMethod -Uri $($uri) -Method $TYPE -Body $body -Headers $headers -ContentType $contentType -SkipHttpErrorCheck:$IgnoreErrors)
         } catch {
-            $ErrorMess = $($_.Exception.Message)
-            $Message = ($_.ErrorDetails.Message | ConvertFrom-Json -ErrorAction SilentlyContinue).error.message
-            if (!$Message) { $Message = $ErrorMess }
+            $Message = if ($_.ErrorDetails.Message) {
+                Get-NormalizedError -Message $_.ErrorDetails.Message
+            } else {
+                $_.Exception.message
+            }
             throw $Message
         }
         return $ReturnedData

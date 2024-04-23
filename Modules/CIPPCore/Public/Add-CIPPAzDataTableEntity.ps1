@@ -9,10 +9,9 @@ function Add-CIPPAzDataTableEntity {
     
     foreach ($SingleEnt in $Entity) {
         try {
-            Add-AzDataTableEntity -context $Context -force:$Force -CreateTableIfNotExists:$CreateTableIfNotExists -Entity $SingleEnt
-        }
-        catch [System.Exception] {
-            if ($_.Exception.ErrorCode -eq "PropertyValueTooLarge" -or $_.Exception.ErrorCode -eq "EntityTooLarge") {
+            Add-AzDataTableEntity -context $Context -force:$Force -CreateTableIfNotExists:$CreateTableIfNotExists -Entity $SingleEnt -ErrorAction Stop
+        } catch [System.Exception] {
+            if ($_.Exception.ErrorCode -eq 'PropertyValueTooLarge' -or $_.Exception.ErrorCode -eq 'EntityTooLarge') {
                 try {
                     $MaxSize = 30kb
                     $largePropertyName = $null
@@ -36,10 +35,10 @@ function Add-CIPPAzDataTableEntity {
                         }
 
                         $splitInfo = @{
-                            OriginalHeader = $largePropertyName;
+                            OriginalHeader = $largePropertyName
                             SplitHeaders   = $splitPropertyNames
                         }
-                        $SingleEnt["SplitOverProps"] = ($splitInfo | ConvertTo-Json).ToString()
+                        $SingleEnt['SplitOverProps'] = ($splitInfo | ConvertTo-Json).ToString()
                         $SingleEnt.Remove($largePropertyName)
 
                         for ($i = 0; $i -lt $splitData.Count; $i++) {
@@ -49,12 +48,12 @@ function Add-CIPPAzDataTableEntity {
                         Add-AzDataTableEntity -context $Context -force:$Force -CreateTableIfNotExists:$CreateTableIfNotExists -Entity $SingleEnt
                     }
 
-                }
-                catch {
+                } catch {
                     throw "Error processing entity: $($_.Exception.Message)."
                 }
-            }
-            else {
+            } else {
+                Write-Host "THE ERROR IS $($_.Exception.ErrorCode)"
+
                 throw $_
             }
         }

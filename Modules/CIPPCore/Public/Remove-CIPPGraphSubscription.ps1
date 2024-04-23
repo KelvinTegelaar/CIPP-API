@@ -4,17 +4,24 @@ function Remove-CIPPGraphSubscription {
         $TenantFilter,
         $CIPPID,
         $APIName = 'Remove Graph Webhook',
+        $Type,
         $ExecutingUser
     )
     try {
         $WebhookTable = Get-CIPPTable -TableName webhookTable
-        $WebhookRow = Get-CIPPAzDataTableEntity @WebhookTable | Where-Object { $_.RowKey -eq $CIPPID }
+        if ($type -eq 'AuditLog') {
+            $WebhookRow = Get-CIPPAzDataTableEntity @WebhookTable | Where-Object { $_.PartitionKey -eq $TenantFilter }
+        } else {
+            $WebhookRow = Get-CIPPAzDataTableEntity @WebhookTable | Where-Object { $_.RowKey -eq $CIPPID }
+        }
         $Entity = $WebhookRow | Select-Object PartitionKey, RowKey
-        if ($WebhookRow.Resource -eq 'M365AuditLogs') {
+        if ($Type -eq 'AuditLog') {
             try {
-                $AuditLog = New-GraphPOSTRequest -uri "https://manage.office.com/api/v1.0/$($TenantFilter)/activity/feed/subscriptions/stop?contentType=$($WebhookRow.EventType)" -scope 'https://manage.office.com/.default' -tenantid $TenantFilter -type POST -body '{}' -verbose
+                foreach ($EventType in $WebhookRow.EventType) {
+                    $AuditLog = New-GraphPOSTRequest -uri "https://manage.office.com/api/v1.0/$($TenantFilter)/activity/feed/subscriptions/stop?contentType=$($EventType)" -scope 'https://manage.office.com/.default' -tenantid $TenantFilter -type POST -body '{}' -verbose
+                }            
             } catch {
-                #allowed to fail if the subscription is already removed
+                Write-LogMessage -user $ExecutingUser -API $APIName -message "Failed to remove webhook subscription at Microsoft's side: $($_.Exception.Message)" -Sev 'Error' -tenant $TenantFilter
             }
             $null = Remove-AzDataTableEntity @WebhookTable -Entity $Entity
         } else {

@@ -1,5 +1,9 @@
 
 function Get-AuthorisedRequest {
+    <#
+    .FUNCTIONALITY
+    Internal
+    #>
     [CmdletBinding()]
     Param(
         [string]$TenantID,

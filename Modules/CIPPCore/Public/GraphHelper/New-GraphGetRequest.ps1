@@ -1,4 +1,8 @@
 function New-GraphGetRequest {
+    <#
+    .FUNCTIONALITY
+    Internal
+    #>
     Param(
         $uri,
         $tenantid,

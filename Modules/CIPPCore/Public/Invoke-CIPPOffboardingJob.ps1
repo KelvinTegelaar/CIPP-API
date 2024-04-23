@@ -35,7 +35,7 @@ function Invoke-CIPPOffboardingJob {
         }
 
         { $_.'OnedriveAccess' -ne '' } { 
-            $Options.OnedriveAccess | ForEach-Object { Set-CIPPOnedriveAccess -tenantFilter $tenantFilter -userid $username -OnedriveAccessUser $_.value -ExecutingUser $ExecutingUser -APIName $APIName }
+            $Options.OnedriveAccess | ForEach-Object { Set-CIPPSharePointOwner -tenantFilter $tenantFilter -userid $username -OnedriveAccessUser $_.value -ExecutingUser $ExecutingUser -APIName $APIName }
         }
 
         { $_.'AccessNoAutomap' -ne '' } { 
