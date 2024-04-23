@@ -1,25 +1,26 @@
 param($Timer)
 
-$Table = Get-CIPPTable -TableName WebhookIncoming
-$Webhooks = Get-CIPPAzDataTableEntity @Table
-$WebhookCount = ($Webhooks | Measure-Object).Count
-$Message = 'Processing {0} webhooks' -f $WebhookCount
-Write-LogMessage -API 'Webhooks' -message $Message -sev Info
-
 try {
-    for ($i = 0; $i -lt $WebhookCount; $i += 2500) {
-        $WebhookBatch = $Webhooks[$i..($i + 2499)]
-        $InputObject = [PSCustomObject]@{
-            OrchestratorName = 'WebhookOrchestrator'
-            Batch            = @($WebhookBatch)
-            SkipLog          = $true
-        }
-        #Write-Host ($InputObject | ConvertTo-Json)
-        $InstanceId = Start-NewOrchestration -FunctionName 'CIPPOrchestrator' -InputObject ($InputObject | ConvertTo-Json -Depth 5)
-        Write-Host "Started orchestration with ID = '$InstanceId'"
+
+    $webhookTable = Get-CIPPTable -tablename webhookTable
+    $Webhooks = Get-CIPPAzDataTableEntity @webhookTable -Property RowKey
+    if (($Webhooks | Measure-Object).Count -eq 0) {
+        Write-Host 'No webhook subscriptions found. Exiting.'
+        return
     }
+    Write-Host 'Processing webhooks'
+
+    $InputObject = [PSCustomObject]@{
+        OrchestratorName = 'WebhookOrchestrator'
+        QueueFunction    = @{
+            FunctionName = 'GetPendingWebhooks'
+        }
+        SkipLog          = $true
+    }
+    Write-Host ($InputObject | ConvertTo-Json -Depth 5)
+    $InstanceId = Start-NewOrchestration -FunctionName 'CIPPOrchestrator' -InputObject ($InputObject | ConvertTo-Json -Depth 5)
+    Write-Host "Started orchestration with ID = '$InstanceId'"
 } catch {
-    Write-LogMessage -API 'Webhooks' -message "Error processing webhooks - $($_.Exception.Message)" -sev Error
-} finally {
-    Write-LogMessage -API 'Webhooks' -message 'Webhook processing completed' -sev Info
+    Write-LogMessage -API 'Webhooks' -message 'Error processing webhooks' -sev Error -LogData (Get-CippException -Exception $_)
+    Write-Host ( 'Webhook error {0} line {1} - {2}' -f $_.InvocationInfo.ScriptName, $_.InvocationInfo.ScriptLineNumber, $_.Exception.Message)
 }

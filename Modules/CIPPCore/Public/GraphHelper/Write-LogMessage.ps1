@@ -1,13 +1,24 @@
-function Write-LogMessage ($message, $tenant = 'None', $API = 'None', $tenantId = $null, $user, $sev) {
+function Write-LogMessage {
     <#
     .FUNCTIONALITY
     Internal
     #>
+    Param(
+        $message,
+        $tenant = 'None',
+        $API = 'None',
+        $tenantId = $null,
+        $user,
+        $sev,
+        $LogData = ''
+    )
     try {
         $username = ([System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($user)) | ConvertFrom-Json).userDetails
     } catch {
         $username = $user
     }
+
+    if ($LogData) { $LogData = ConvertTo-Json -InputObject $LogData -Depth 10 -Compress }
 
     $Table = Get-CIPPTable -tablename CippLogs
 
@@ -27,13 +38,14 @@ function Write-LogMessage ($message, $tenant = 'None', $API = 'None', $tenantId 
         'SentAsAlert'  = $false
         'PartitionKey' = $PartitionKey
         'RowKey'       = ([guid]::NewGuid()).ToString()
+        'LogData'      = [string]$LogData
     }
 
 
     if ($tenantId) {
         $TableRow.Add('TenantID', [string]$tenantId)
     }
-    
+
     $Table.Entity = $TableRow
     Add-CIPPAzDataTableEntity @Table | Out-Null
 }
