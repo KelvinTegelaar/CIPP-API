@@ -16,7 +16,7 @@ Function Invoke-AddStandardsDeploy {
 
     try {
         $Tenant = $Request.body.tenant
-        $Settings = ($request.body | Select-Object -Property *, v2* -ExcludeProperty Select_*, None )
+        $Settings = ($request.body | Select-Object -Property * -ExcludeProperty Select_*, None )
         $Settings | Add-Member -NotePropertyName 'v2.1' -NotePropertyValue $true -Force
         if ($Settings.phishProtection.remediate) {
             $URL = $request.headers.'x-ms-original-url'.split('/api') | Select-Object -First 1
