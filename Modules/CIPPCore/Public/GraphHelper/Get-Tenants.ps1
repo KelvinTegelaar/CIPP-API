@@ -69,6 +69,13 @@ function Get-Tenants {
         $TenantList = $ActiveRelationships | Group-Object -Property customerId | ForEach-Object {
             Write-Host "Processing $($_.Name) to add to tenant list."
             $ExistingTenantInfo = Get-CIPPAzDataTableEntity @TenantsTable -Filter "PartitionKey eq 'Tenants' and RowKey eq '$($_.Name)'"
+
+            if ($TriggerRefresh.IsPresent) {
+                # Reset error count
+                $ExistingTenantInfo.GraphErrorCount = 0
+                Add-CIPPAzDataTableEntity @TenantsTable -Entity $ExistingTenantInfo -Force | Out-Null
+            }
+
             if ($ExistingTenantInfo -and $ExistingTenantInfo.RequiresRefresh -eq $false) {
                 Write-Host 'Existing tenant found. We already have it cached, skipping.'
                 $ExistingTenantInfo
@@ -142,11 +149,11 @@ function Get-Tenants {
         foreach ($Tenant in $TenantList) {
             if ($Tenant.defaultDomainName -eq 'Invalid' -or !$Tenant.defaultDomainName) {
                 Write-LogMessage -API 'Get-Tenants' -message "We're skipping $($Tenant.displayName) as it has an invalid default domain name. Something is up with this instance." -level 'Critical'
-                continue 
+                continue
             }
             $IncludedTenantsCache.Add($Tenant) | Out-Null
         }
-       
+
         if ($IncludedTenantsCache) {
             Add-CIPPAzDataTableEntity @TenantsTable -Entity $IncludedTenantsCache -Force | Out-Null
         }
