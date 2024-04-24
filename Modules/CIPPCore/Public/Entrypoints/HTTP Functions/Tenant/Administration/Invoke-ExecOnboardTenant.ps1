@@ -63,7 +63,7 @@ function Invoke-ExecOnboardTenant {
                     OrchestratorName = 'OnboardingOrchestrator'
                     Batch            = @($Item)
                 }
-                $InstanceId = Start-NewOrchestration -FunctionName 'CIPPOrchestrator' -InputObject ($InputObject | ConvertTo-Json -Depth 5)
+                $InstanceId = Start-NewOrchestration -FunctionName 'CIPPOrchestrator' -InputObject ($InputObject | ConvertTo-Json -Depth 5 -Compress)
             }
 
             $Steps = $TenantOnboarding.OnboardingSteps | ConvertFrom-Json

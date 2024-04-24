@@ -75,14 +75,16 @@ function Invoke-CIPPStandardsRun {
             }
         }
     }
-
+    $AllTasks = $object | Where-Object { $_.Standard -NotLike 'v2*' -and ($_.Settings.remediate -eq $true -or $_.Settings.alert -eq $true -or $_.Settings.report -eq $true) }
     #For each item in our object, run the queue.
-
-    $Batch = foreach ($task in $object | Where-Object { $_.Standard -NotLike 'v2*' -and ($_.Settings.remediate -eq $true -or $_.Settings.alert -eq $true -or $_.Settings.report -eq $true) }) {
+    $Queue = New-CippQueueEntry -Name "Applying Standards ($TenantFilter)" -TotalTasks ($AllTasks | Measure-Object).Count
+    $Batch = foreach ($task in $AllTasks) {
         [PSCustomObject]@{
             Tenant       = $task.Tenant
             Standard     = $task.Standard
             Settings     = $task.Settings
+            QueueId      = $Queue.RowKey
+            QueueName    = '{0} - {1}' -f $task.Tenant, $Task.Standard
             FunctionName = 'CIPPStandard'
         }
     }
@@ -92,7 +94,7 @@ function Invoke-CIPPStandardsRun {
         Batch            = @($Batch)
     }
 
-    $InstanceId = Start-NewOrchestration -FunctionName 'CIPPOrchestrator' -InputObject ($InputObject | ConvertTo-Json -Depth 5)
+    $InstanceId = Start-NewOrchestration -FunctionName 'CIPPOrchestrator' -InputObject ($InputObject | ConvertTo-Json -Depth 5 -Compress)
     Write-Host "Started orchestration with ID = '$InstanceId'"
     #$Orchestrator = New-OrchestrationCheckStatusResponse -Request $Request -InstanceId $InstanceId
 }

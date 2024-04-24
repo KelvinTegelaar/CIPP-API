@@ -200,7 +200,7 @@ function Get-GraphRequestList {
                                 Batch            = @($Batch)
                             }
                             #Write-Host ($InputObject | ConvertTo-Json -Depth 5)
-                            $InstanceId = Start-NewOrchestration -FunctionName 'CIPPOrchestrator' -InputObject ($InputObject | ConvertTo-Json -Depth 5)
+                            $InstanceId = Start-NewOrchestration -FunctionName 'CIPPOrchestrator' -InputObject ($InputObject | ConvertTo-Json -Depth 5 -Compress)
                         } catch {
                             Write-Host "QUEUE ERROR: $($_.Exception.Message)"
                         }
@@ -262,7 +262,7 @@ function Get-GraphRequestList {
                                     OrchestratorName = 'GraphRequestOrchestrator'
                                     Batch            = @($QueueTenant)
                                 }
-                                $InstanceId = Start-NewOrchestration -FunctionName 'CIPPOrchestrator' -InputObject ($InputObject | ConvertTo-Json -Depth 5)
+                                $InstanceId = Start-NewOrchestration -FunctionName 'CIPPOrchestrator' -InputObject ($InputObject | ConvertTo-Json -Depth 5 -Compress)
 
                                 #Push-OutputBinding -Name QueueItem -Value $QueueTenant
 
