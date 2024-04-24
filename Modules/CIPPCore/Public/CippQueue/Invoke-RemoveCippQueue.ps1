@@ -10,6 +10,8 @@ function Invoke-RemoveCippQueue {
 
     $CippQueue = Get-CippTable -TableName 'CippQueue'
     Clear-AzDataTable @CippQueue
+    $CippQueueTasks = Get-CippTable -TableName 'CippQueueTasks'
+    Clear-AzDataTable @CippQueueTasks
 
     Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
             StatusCode = [HttpStatusCode]::OK
