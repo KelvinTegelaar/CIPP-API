@@ -5,8 +5,7 @@ function Invoke-ExecOnboardTenant {
 
     $APIName = 'ExecOnboardTenant'
     Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -message 'Accessed this API' -Sev 'Debug'
-
-    $Id = $Request.Body.Id
+    $Id = $Request.Body.id
     if ($Id) {
         try {
             $OnboardTable = Get-CIPPTable -TableName 'TenantOnboarding'
@@ -59,7 +58,7 @@ function Invoke-ExecOnboardTenant {
                     AddMissingGroups = $Request.Body.addMissingGroups
                     AutoMapRoles     = $Request.Body.autoMapRoles
                 }
-                
+
                 $InputObject = @{
                     OrchestratorName = 'OnboardingOrchestrator'
                     Batch            = @($Item)
