@@ -1,0 +1,24 @@
+{
+  "style": "Table",
+  "Fields": [
+    {
+      "name": "PasswordNeverExpires",
+      "UseExistingInfo": false,
+      "FrontendFields": [
+        {
+          "name": "Password Never Expires",
+          "value": "PasswordNeverExpires",
+          "formatter": "bool"
+        }
+      ],
+      "where": "$_.passwordValidityPeriodInDays -eq 2147483647",
+      "StoreAs": "bool",
+      "API": "Graph",
+      "ExtractFields": [
+        "passwordValidityPeriodInDays"
+      ],
+      "URL": "https://graph.microsoft.com/beta/domains"
+    }
+  ],
+  "name": "LHtestV1.2"
+}
