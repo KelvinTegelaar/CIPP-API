@@ -15,7 +15,7 @@ function Invoke-ListCippQueue {
     $CippQueueData = Get-CIPPAzDataTableEntity @CippQueue | Where-Object { ($_.Timestamp.DateTime) -ge (Get-Date).ToUniversalTime().AddHours(-3) } | Sort-Object -Property Timestamp -Descending
 
     $QueueData = foreach ($Queue in $CippQueueData) {
-        $Tasks = Get-CIPPAzDataTableEntity @CippQueueTasks -Filter "QueueId eq '$($Queue.RowKey)'" | Sort-Object -Property Name -Unique | Select-Object Timestamp, Name, Status
+        $Tasks = Get-CIPPAzDataTableEntity @CippQueueTasks -Filter "QueueId eq '$($Queue.RowKey)'" | Where-Object { $_.Name } | Sort-Object -Property Name -Unique | Select-Object Timestamp, Name, Status
         $TaskStatus = @{}
         $Tasks | Group-Object -Property Status | ForEach-Object {
             $TaskStatus.$($_.Name) = $_.Count
