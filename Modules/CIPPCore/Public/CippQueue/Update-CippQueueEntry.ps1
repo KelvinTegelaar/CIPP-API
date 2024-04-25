@@ -1,4 +1,8 @@
 function Update-CippQueueEntry {
+    <#
+    .FUNCTIONALITY
+        Internal
+    #>
     Param(
         [Parameter(Mandatory = $true)]
         $RowKey,

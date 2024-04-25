@@ -1,4 +1,8 @@
 function Set-CippQueueTask {
+    <#
+    .FUNCTIONALITY
+        Internal
+    #>
     param(
         [string]$QueueId,
         [string]$TaskId = (New-Guid).Guid.ToString(),

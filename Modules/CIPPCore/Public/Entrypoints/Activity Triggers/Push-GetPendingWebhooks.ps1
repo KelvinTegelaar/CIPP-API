@@ -1,4 +1,9 @@
 function Push-GetPendingWebhooks {
+    <#
+    .FUNCTIONALITY
+        Entrypoint
+    #>
+    Param($Item)
     $Table = Get-CIPPTable -TableName WebhookIncoming
     $Webhooks = Get-CIPPAzDataTableEntity @Table -Property RowKey, FunctionName
     $WebhookCount = ($Webhooks | Measure-Object).Count

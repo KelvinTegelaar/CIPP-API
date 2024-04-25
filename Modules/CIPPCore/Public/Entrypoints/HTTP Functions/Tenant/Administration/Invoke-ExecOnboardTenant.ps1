@@ -1,6 +1,10 @@
 using namespace System.Net
 
 function Invoke-ExecOnboardTenant {
+    <#
+    .FUNCTIONALITY
+        Entrypoint
+    #>
     param($Request, $TriggerMetadata)
 
     $APIName = 'ExecOnboardTenant'
