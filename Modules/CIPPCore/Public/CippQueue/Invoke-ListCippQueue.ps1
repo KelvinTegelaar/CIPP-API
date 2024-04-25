@@ -1,5 +1,8 @@
 function Invoke-ListCippQueue {
-    # Input bindings are passed in via param block.
+    <#
+    .FUNCTIONALITY
+        Entrypoint
+    #>
     param($Request = $null, $TriggerMetadata = $null)
 
     if ($Request) {
@@ -12,17 +15,17 @@ function Invoke-ListCippQueue {
 
     $CippQueue = Get-CippTable -TableName 'CippQueue'
     $CippQueueTasks = Get-CippTable -TableName 'CippQueueTasks'
-    $CippQueueData = Get-CIPPAzDataTableEntity @CippQueue | Where-Object { ($_.Timestamp.DateTime) -ge (Get-Date).ToUniversalTime().AddHours(-1) } | Sort-Object -Property Timestamp -Descending
+    $CippQueueData = Get-CIPPAzDataTableEntity @CippQueue | Where-Object { ($_.Timestamp.DateTime) -ge (Get-Date).ToUniversalTime().AddHours(-3) } | Sort-Object -Property Timestamp -Descending
 
     $QueueData = foreach ($Queue in $CippQueueData) {
-        $Tasks = Get-CIPPAzDataTableEntity @CippQueueTasks -Filter "QueueId eq '$($Queue.RowKey)'" -Property Timestamp, Name, Status | Sort-Object -Property Name -Unique
+        $Tasks = Get-CIPPAzDataTableEntity @CippQueueTasks -Filter "QueueId eq '$($Queue.RowKey)'" | Where-Object { $_.Name } | Select-Object Timestamp, Name, Status
         $TaskStatus = @{}
         $Tasks | Group-Object -Property Status | ForEach-Object {
             $TaskStatus.$($_.Name) = $_.Count
         }
 
         if ($Tasks) {
-            if ($Tasks.Status -notcontains 'Running') {
+            if ($Tasks.Status -notcontains 'Running' -and ($TaskStatus.Completed + $TaskStatus.Failed) -eq $Queue.TotalTasks) {
                 if ($Tasks.Status -notcontains 'Failed') {
                     $Queue.Status = 'Completed'
                 } else {
@@ -33,6 +36,10 @@ function Invoke-ListCippQueue {
             }
         }
 
+        $TotalCompleted = $TaskStatus.Completed ?? 0
+        $TotalFailed = $TaskStatus.Failed ?? 0
+        $TotalRunning = $TaskStatus.Running ?? 0
+
         [PSCustomObject]@{
             PartitionKey    = $Queue.PartitionKey
             RowKey          = $Queue.RowKey
@@ -40,12 +47,12 @@ function Invoke-ListCippQueue {
             Link            = $Queue.Link
             Reference       = $Queue.Reference
             TotalTasks      = $Queue.TotalTasks
-            CompletedTasks  = $TaskStatus.Completed ?? 0
-            RunningTasks    = $TaskStatus.Running ?? 0
-            FailedTasks     = $TaskStatus.Failed ?? 0
-            PercentComplete = [math]::Round((($TaskStatus.Completed / $Queue.TotalTasks) * 100), 1)
-            PercentFailed   = [math]::Round((($TaskStatus.Failed / $Queue.TotalTasks) * 100), 1)
-            PercentRunning  = [math]::Round((($TaskStatus.Running / $Queue.TotalTasks) * 100), 1)
+            CompletedTasks  = $TotalCompleted + $TotalFailed
+            RunningTasks    = $TotalRunning
+            FailedTasks     = $TotalFailed
+            PercentComplete = [math]::Round(((($TotalCompleted + $TotalFailed) / $Queue.TotalTasks) * 100), 1)
+            PercentFailed   = [math]::Round((($TotalFailed / $Queue.TotalTasks) * 100), 1)
+            PercentRunning  = [math]::Round((($TotalRunning / $Queue.TotalTasks) * 100), 1)
             Tasks           = $Tasks
             Status          = $Queue.Status
             Timestamp       = $Queue.Timestamp

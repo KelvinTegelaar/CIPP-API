@@ -3,7 +3,6 @@ function Push-ListGraphRequestQueue {
     .FUNCTIONALITY
     Entrypoint
     #>
-    # Input bindings are passed in via param block.
     param($Item)
 
     # Write out the queue message and metadata to the information log.
