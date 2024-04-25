@@ -1,5 +1,8 @@
 function Invoke-ListCippQueue {
-    # Input bindings are passed in via param block.
+    <#
+    .FUNCTIONALITY
+        Entrypoint
+    #>
     param($Request = $null, $TriggerMetadata = $null)
 
     if ($Request) {

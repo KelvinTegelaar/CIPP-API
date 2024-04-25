@@ -1,4 +1,8 @@
 function Push-GetTenants {
+    <#
+    .FUNCTIONALITY
+        Entrypoint
+    #>
     Param($Item)
 
     $Params = $Item.TenantParams | ConvertTo-Json | ConvertFrom-Json -AsHashtable

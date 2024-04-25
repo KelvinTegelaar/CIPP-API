@@ -1,5 +1,8 @@
 function Invoke-RemoveCippQueue {
-    # Input bindings are passed in via param block.
+    <#
+    .FUNCTIONALITY
+        Entrypoint
+    #>
     param($Request, $TriggerMetadata)
 
     $APIName = $TriggerMetadata.FunctionName
