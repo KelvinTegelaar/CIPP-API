@@ -1,4 +1,8 @@
 function Push-SchedulerCIPPNotifications {
+    <#
+    .FUNCTIONALITY
+        Entrypoint
+    #>
     param (
         $QueueItem, $TriggerMetadata
     )
@@ -8,7 +12,7 @@ function Push-SchedulerCIPPNotifications {
     $Config = [pscustomobject](Get-CIPPAzDataTableEntity @Table -Filter $Filter)
 
     $Settings = [System.Collections.ArrayList]@('Alerts')
-    $Config.psobject.properties.name | ForEach-Object { $settings.add($_) } 
+    $Config.psobject.properties.name | ForEach-Object { $settings.add($_) }
     $severity = $Config.Severity -split ','
     Write-Host "Our Severity table is: $severity"
     if (!$severity) {
@@ -18,7 +22,7 @@ function Push-SchedulerCIPPNotifications {
     $Table = Get-CIPPTable
     $PartitionKey = Get-Date -UFormat '%Y%m%d'
     $Filter = "PartitionKey eq '{0}'" -f $PartitionKey
-    $Currentlog = Get-CIPPAzDataTableEntity @Table -Filter $Filter | Where-Object { 
+    $Currentlog = Get-CIPPAzDataTableEntity @Table -Filter $Filter | Where-Object {
         $_.API -In $Settings -and $_.SentAsAlert -ne $true -and $_.Severity -In $severity
     }
     Write-Host ($Currentlog).count
@@ -38,9 +42,9 @@ function Push-SchedulerCIPPNotifications {
                             "contentType": "HTML",
                             "content": "You've setup your alert policies to be alerted whenever specific events happen. We've found some of these events in the log:<br><br>
       <style>table.blueTable{border:1px solid #1C6EA4;background-color:#EEE;width:100%;text-align:left;border-collapse:collapse}table.blueTable td,table.blueTable th{border:1px solid #AAA;padding:3px 2px}table.blueTable tbody td{font-size:13px}table.blueTable tr:nth-child(even){background:#D0E4F5}table.blueTable thead{background:#1C6EA4;background:-moz-linear-gradient(top,#5592bb 0,#327cad 66%,#1C6EA4 100%);background:-webkit-linear-gradient(top,#5592bb 0,#327cad 66%,#1C6EA4 100%);background:linear-gradient(to bottom,#5592bb 0,#327cad 66%,#1C6EA4 100%);border-bottom:2px solid #444}table.blueTable thead th{font-size:15px;font-weight:700;color:#FFF;border-left:2px solid #D0E4F5}table.blueTable thead th:first-child{border-left:none}table.blueTable tfoot{font-size:14px;font-weight:700;color:#FFF;background:#D0E4F5;background:-moz-linear-gradient(top,#dcebf7 0,#d4e6f6 66%,#D0E4F5 100%);background:-webkit-linear-gradient(top,#dcebf7 0,#d4e6f6 66%,#D0E4F5 100%);background:linear-gradient(to bottom,#dcebf7 0,#d4e6f6 66%,#D0E4F5 100%);border-top:2px solid #444}table.blueTable tfoot td{font-size:14px}table.blueTable tfoot .links{text-align:right}table.blueTable tfoot .links a{display:inline-block;background:#1C6EA4;color:#FFF;padding:2px 8px;border-radius:5px}</style>
-                            
+
                             $($HTMLLog)
-                            
+
                             "
                           },
                           "toRecipients": [
@@ -67,9 +71,9 @@ function Push-SchedulerCIPPNotifications {
                             "contentType": "HTML",
                             "content": "You've setup your alert policies to be alerted whenever specific events happen. We've found some of these events in the log:<br><br>
       <style>table.blueTable{border:1px solid #1C6EA4;background-color:#EEE;width:100%;text-align:left;border-collapse:collapse}table.blueTable td,table.blueTable th{border:1px solid #AAA;padding:3px 2px}table.blueTable tbody td{font-size:13px}table.blueTable tr:nth-child(even){background:#D0E4F5}table.blueTable thead{background:#1C6EA4;background:-moz-linear-gradient(top,#5592bb 0,#327cad 66%,#1C6EA4 100%);background:-webkit-linear-gradient(top,#5592bb 0,#327cad 66%,#1C6EA4 100%);background:linear-gradient(to bottom,#5592bb 0,#327cad 66%,#1C6EA4 100%);border-bottom:2px solid #444}table.blueTable thead th{font-size:15px;font-weight:700;color:#FFF;border-left:2px solid #D0E4F5}table.blueTable thead th:first-child{border-left:none}table.blueTable tfoot{font-size:14px;font-weight:700;color:#FFF;background:#D0E4F5;background:-moz-linear-gradient(top,#dcebf7 0,#d4e6f6 66%,#D0E4F5 100%);background:-webkit-linear-gradient(top,#dcebf7 0,#d4e6f6 66%,#D0E4F5 100%);background:linear-gradient(to bottom,#dcebf7 0,#d4e6f6 66%,#D0E4F5 100%);border-top:2px solid #444}table.blueTable tfoot td{font-size:14px}table.blueTable tfoot .links{text-align:right}table.blueTable tfoot .links a{display:inline-block;background:#1C6EA4;color:#FFF;padding:2px 8px;border-radius:5px}</style>
-                            
+
                             $($HTMLLog)
-                            
+
                             "
                           },
                           "toRecipients": [
@@ -97,7 +101,7 @@ function Push-SchedulerCIPPNotifications {
 
                 '*webhook.office.com*' {
                     $Log = $Currentlog | ConvertTo-Html -frag | Out-String
-                    $JSonBody = "{`"text`": `"You've setup your alert policies to be alerted whenever specific events happen. We've found some of these events in the log. <br><br>$Log`"}" 
+                    $JSonBody = "{`"text`": `"You've setup your alert policies to be alerted whenever specific events happen. We've found some of these events in the log. <br><br>$Log`"}"
                     Invoke-RestMethod -Uri $config.webhook -Method POST -ContentType 'Application/json' -Body $JSONBody
                 }
 
@@ -112,7 +116,7 @@ function Push-SchedulerCIPPNotifications {
 
                 '*discord.com*' {
                     $Log = $Currentlog | ConvertTo-Html -frag | Out-String
-                    $JSonBody = "{`"content`": `"You've setup your alert policies to be alerted whenever specific events happen. We've found some of these events in the log. $Log`"}" 
+                    $JSonBody = "{`"content`": `"You've setup your alert policies to be alerted whenever specific events happen. We've found some of these events in the log. $Log`"}"
                     Invoke-RestMethod -Uri $config.webhook -Method POST -ContentType 'Application/json' -Body $JSONBody
                 }
                 default {
@@ -124,7 +128,7 @@ function Push-SchedulerCIPPNotifications {
             Write-LogMessage -API 'Alerts' -tenant $Tenant -message "Sent Webhook to $($config.webhook)" -sev Debug
         }
 
-        $UpdateLogs = $CurrentLog | ForEach-Object { 
+        $UpdateLogs = $CurrentLog | ForEach-Object {
             $_.SentAsAlert = $true
             $_
         }
@@ -146,7 +150,7 @@ function Push-SchedulerCIPPNotifications {
                     AlertTitle = "$tenant CIPP Alert: Alerts found starting at $((Get-Date).AddMinutes(-15))"
                 }
                 New-CippExtAlert -Alert $Alert
-                $UpdateLogs = $CurrentLog | ForEach-Object { 
+                $UpdateLogs = $CurrentLog | ForEach-Object {
                     $_.SentAsAlert = $true
                     $_
                 }

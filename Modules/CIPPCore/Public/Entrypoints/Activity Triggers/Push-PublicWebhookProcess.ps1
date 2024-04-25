@@ -1,4 +1,8 @@
 function Push-PublicWebhookProcess {
+    <#
+    .FUNCTIONALITY
+        Entrypoint
+    #>
     param($Item)
 
     $Table = Get-CIPPTable -TableName WebhookIncoming

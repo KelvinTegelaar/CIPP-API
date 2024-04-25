@@ -1,4 +1,8 @@
 function New-CippQueueEntry {
+    <#
+    .FUNCTIONALITY
+        Internal
+    #>
     Param(
         [string]$Name,
         [string]$Link,

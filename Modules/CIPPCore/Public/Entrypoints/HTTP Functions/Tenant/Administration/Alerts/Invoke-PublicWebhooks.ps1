@@ -1,6 +1,9 @@
 using namespace System.Net
 function Invoke-PublicWebhooks {
-    # Input bindings are passed in via param block.
+    <#
+    .FUNCTIONALITY
+        Entrypoint
+    #>
     param($Request, $TriggerMetadata)
 
     Set-Location (Get-Item $PSScriptRoot).Parent.FullName
