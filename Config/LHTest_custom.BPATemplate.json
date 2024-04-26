@@ -1,22 +1,23 @@
 {
-  "name": "LHTest_custom1.0",
   "style": "Table",
   "Fields": [
     {
-      "name": "displayName",
       "UseExistingInfo": false,
       "FrontendFields": [
         {
-          "name": "Weergave Naam",
-          "value": "displayName"
+          "name": "Password Never Expires",
+          "value": "PasswordNeverExpires",
+          "formatter": "bool"
         }
       ],
-      "StoreAs": "JSON",
+      "name": "PasswordNeverExpires",
       "API": "Graph",
+      "URL": "https://graph.microsoft.com/beta/domains",
       "ExtractFields": [
-        "displayName"
+        "passwordValidityPeriodInDays"
       ],
-      "URL": "https://graph.microsoft.com/v1.0/me"
-    }
-  ]
+      "where": "$_.passwordValidityPeriodInDays -eq 2147483647",
+      "StoreAs": "bool"
+    }],
+  "name": "Leslie Test 1.0"
 }
