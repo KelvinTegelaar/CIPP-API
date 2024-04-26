@@ -10,38 +10,41 @@ Function Invoke-ListStandards {
 
     $APIName = $TriggerMetadata.FunctionName
     Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -message 'Accessed this API' -Sev 'Debug'
-    $Table = Get-CippTable -tablename 'standards'
 
-    $Filter = "PartitionKey eq 'standards'" 
+    if ($Request.Query.ShowConsolidated -eq $true) {
+        $CurrentStandards = @(Get-CIPPStandards -TenantFilter $Request.Query.TenantFilter)
+    } else {
+        $Table = Get-CippTable -tablename 'standards'
+        $Filter = "PartitionKey eq 'standards'"
 
-    try { 
-        if ($Request.query.TenantFilter) { 
-            $tenants = (Get-CIPPAzDataTableEntity @Table -Filter $Filter).JSON | ConvertFrom-Json -Depth 15 -ErrorAction Stop | Where-Object Tenant -EQ $Request.query.tenantFilter
-        } else {
-            $Tenants = (Get-CIPPAzDataTableEntity @Table -Filter $Filter).JSON | ConvertFrom-Json -Depth 15 -ErrorAction Stop
+        try {
+            if ($Request.query.TenantFilter) {
+                $tenants = (Get-CIPPAzDataTableEntity @Table -Filter $Filter).JSON | ConvertFrom-Json -Depth 15 -ErrorAction Stop | Where-Object Tenant -EQ $Request.query.tenantFilter
+            } else {
+                $Tenants = (Get-CIPPAzDataTableEntity @Table -Filter $Filter).JSON | ConvertFrom-Json -Depth 15 -ErrorAction Stop
+            }
+        } catch {}
+
+        $CurrentStandards = foreach ($tenant in $tenants) {
+            [PSCustomObject]@{
+                displayName     = $tenant.tenant
+                appliedBy       = $tenant.addedBy
+                appliedAt       = $tenant.appliedAt
+                standards       = $tenant.Standards
+                StandardsExport = ($tenant.Standards.psobject.properties.name) -join ', '
+            }
         }
-    } catch {}
-
-    $CurrentStandards = foreach ($tenant in $tenants) {
-        [PSCustomObject]@{
-            displayName     = $tenant.tenant
-            appliedBy       = $tenant.addedBy
-            appliedAt       = $tenant.appliedAt
-            standards       = $tenant.Standards
-            StandardsExport = ($tenant.Standards.psobject.properties.name) -join ', '
+        if (!$CurrentStandards) {
+            $CurrentStandards = [PSCustomObject]@{
+                displayName = 'No Standards applied'
+                appliedBy   = $null
+                appliedAt   = $null
+                standards   = @{none = $null }
+            }
         }
+
+        $CurrentStandards = ConvertTo-Json -InputObject @($CurrentStandards) -Depth 15 -Compress
     }
-    if (!$CurrentStandards) {
-        $CurrentStandards = [PSCustomObject]@{
-            displayName = 'No Standards applied'
-            appliedBy   = $null
-            appliedAt   = $null
-            standards   = @{none = $null }
-        }
-    }
-
-    $CurrentStandards = ConvertTo-Json -InputObject @($CurrentStandards) -Depth 15 -Compress
-
     # Associate values to output bindings by calling 'Push-OutputBinding'.
     Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
             StatusCode = [HttpStatusCode]::OK

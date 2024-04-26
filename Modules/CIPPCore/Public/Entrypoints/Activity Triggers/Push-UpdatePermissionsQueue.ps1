@@ -1,5 +1,8 @@
 function Push-UpdatePermissionsQueue {
-    # Input bindings are passed in via param block.
+    <#
+    .FUNCTIONALITY
+        Entrypoint
+    #>
     param($Item)
     Write-Host "Applying permissions for $($Item.defaultDomainName)"
     $Table = Get-CIPPTable -TableName cpvtenants
