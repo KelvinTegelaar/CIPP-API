@@ -1,5 +1,5 @@
 {
-  "name": "LHTest_custom",
+  "name": "LHTest_custom1.0",
   "style": "Table",
   "Fields": [
     {
@@ -11,7 +11,7 @@
           "value": "displayName"
         }
       ],
-      "StoreAs": "string",
+      "StoreAs": "JSON",
       "API": "Graph",
       "ExtractFields": [
         "displayName"
