@@ -1,4 +1,8 @@
 function Push-CIPPAlertSecDefaultsUpsell {
+    <#
+    .FUNCTIONALITY
+        Entrypoint
+    #>
     [CmdletBinding()]
     Param (
         [Parameter(Mandatory = $true)]
