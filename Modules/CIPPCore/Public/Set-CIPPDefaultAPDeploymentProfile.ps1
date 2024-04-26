@@ -52,7 +52,7 @@ function Set-CIPPDefaultAPDeploymentProfile {
         if (!$Profiles) {
             $GraphRequest = New-GraphPostRequest -uri 'https://graph.microsoft.com/beta/deviceManagement/windowsAutopilotDeploymentProfiles' -body $body -tenantid $tenantfilter
             Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APIName -tenant $($tenantfilter) -message "Added Autopilot profile $($Displayname)" -Sev 'Info'
-        }   
+        }
         if ($AssignTo) {
             $AssignBody = '{"target":{"@odata.type":"#microsoft.graph.allDevicesAssignmentTarget"}}'
             $assign = New-GraphPOSTRequest -uri "https://graph.microsoft.com/beta/deviceManagement/windowsAutopilotDeploymentProfiles/$($GraphRequest.id)/assignments" -tenantid $tenantfilter -type POST -body $AssignBody
@@ -60,8 +60,7 @@ function Set-CIPPDefaultAPDeploymentProfile {
         }
         "Successfully added profile for $($tenantfilter)"
     } catch {
-        "Failed to add profile for $($tenantfilter): $($_.Exception.Message)"
         Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APIName -tenant $($tenantfilter) -message "Failed adding Autopilot Profile $($Displayname). Error: $($_.Exception.Message)" -Sev 'Error'
-        continue
+        throw "Failed to add profile for $($tenantfilter): $($_.Exception.Message)"
     }
 }
