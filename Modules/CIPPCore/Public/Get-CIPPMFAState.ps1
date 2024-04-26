@@ -36,7 +36,7 @@ function Get-CIPPMFAState {
             $ExcludeSpecific = New-Object System.Collections.ArrayList
 
             foreach ($Policy in $CAPolicies) {
-                if (($policy.grantControls.builtincontrols -eq 'mfa') -or ($policy.grantControls.customAuthenticationFactors -eq 'RequireDuoMfa')) {
+                if (($policy.grantControls.builtincontrols -eq 'mfa') -or ($policy.grantControls.authenticationStrength.requirementsSatisfied -eq 'mfa') -or ($policy.grantControls.customAuthenticationFactors -eq 'RequireDuoMfa')) {
                     if ($Policy.conditions.applications.includeApplications -ne 'All') {
                         Write-Host $Policy.conditions.applications.includeApplications
                         $CAState.Add("$($policy.displayName) - Specific Applications - $($policy.state)") | Out-Null

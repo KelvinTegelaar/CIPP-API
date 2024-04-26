@@ -25,7 +25,7 @@ function Invoke-NinjaOneSync {
                 Batch            = @($Batch)
             }
             #Write-Host ($InputObject | ConvertTo-Json)
-            $InstanceId = Start-NewOrchestration -FunctionName 'CIPPOrchestrator' -InputObject ($InputObject | ConvertTo-Json -Depth 5)
+            $InstanceId = Start-NewOrchestration -FunctionName 'CIPPOrchestrator' -InputObject ($InputObject | ConvertTo-Json -Depth 5 -Compress)
             Write-Host "Started permissions orchestration with ID = '$InstanceId'"
         }
 

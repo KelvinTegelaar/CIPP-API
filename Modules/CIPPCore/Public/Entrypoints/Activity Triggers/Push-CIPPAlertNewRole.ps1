@@ -1,4 +1,8 @@
 function Push-CIPPAlertNewRole {
+    <#
+    .FUNCTIONALITY
+        Entrypoint
+    #>
     [CmdletBinding()]
     Param (
         [Parameter(Mandatory = $true)]

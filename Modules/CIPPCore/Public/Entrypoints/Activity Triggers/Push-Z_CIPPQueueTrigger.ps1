@@ -1,4 +1,8 @@
 function Push-Z_CIPPQueueTrigger {
+    <#
+    .FUNCTIONALITY
+        Entrypoint
+    #>
     Param($QueueItem, $TriggerMetadata)
     $APIName = $QueueItem.FunctionName
 
