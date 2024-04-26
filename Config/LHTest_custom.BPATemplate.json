@@ -1,0 +1,22 @@
+{
+  "name": "LHTest_custom",
+  "style": "Table",
+  "Fields": [
+    {
+      "name": "displayName",
+      "UseExistingInfo": false,
+      "FrontendFields": [
+        {
+          "name": "Weergave Naam",
+          "value": "displayName"
+        }
+      ],
+      "StoreAs": "string",
+      "API": "Graph",
+      "ExtractFields": [
+        "displayName"
+      ],
+      "URL": "https://graph.microsoft.com/v1.0/me"
+    }
+  ]
+}
