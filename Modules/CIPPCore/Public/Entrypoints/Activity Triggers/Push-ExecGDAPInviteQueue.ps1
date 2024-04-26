@@ -1,5 +1,8 @@
 function Push-ExecGDAPInviteQueue {
-    # Input bindings are passed in via param block.
+    <#
+    .FUNCTIONALITY
+        Entrypoint
+    #>
     param($Item)
 
     # Write out the queue message and metadata to the information log.

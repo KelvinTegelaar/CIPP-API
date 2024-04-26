@@ -1,4 +1,8 @@
 function Update-CippQueueEntry {
+    <#
+    .FUNCTIONALITY
+        Internal
+    #>
     Param(
         [Parameter(Mandatory = $true)]
         $RowKey,
@@ -18,7 +22,7 @@ function Update-CippQueueEntry {
             if ($Name) {
                 $QueueEntry.Name = $Name
             }
-            Update-AzDataTableEntity @CippQueue -Entity $QueueEntry
+            Add-CIPPAzDataTableEntity @CippQueue -Entity $QueueEntry -Force
             $QueueEntry
         } else {
             return $false
