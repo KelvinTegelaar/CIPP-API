@@ -9,6 +9,8 @@ function Set-CIPPSignInState {
     )
     0
     try {
+        if ($userid -like '*#EXT#*') { $userid = [System.Web.HttpUtility]::UrlEncode($userid) }
+
         $body = @{
             accountEnabled = [bool]$AccountEnabled
         } | ConvertTo-Json -Compress -Depth 1
