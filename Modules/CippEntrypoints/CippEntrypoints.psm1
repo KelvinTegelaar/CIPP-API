@@ -64,7 +64,23 @@ function Receive-CippOrchestrationTrigger {
             MaxNumberOfAttempts = if ($OrchestratorInput.MaxAttempts) { $OrchestratorInput.MaxAttempts } else { 1 }
             BackoffCoefficient  = 2
         }
-        #Write-Host ($OrchestratorInput | ConvertTo-Json -Depth 10)
+
+        switch ($OrchestratorInput.DurableMode) {
+            'FanOut' {
+                $DurableMode = 'FanOut'
+                $NoWait = $true
+            }
+            'Sequence' {
+                $DurableMode = 'Sequence'
+                $NoWait = $false
+            }
+            default {
+                $DurableMode = 'FanOut (Default)'
+                $NoWait = $true
+            }
+        }
+        Write-Host "Durable Mode: $DurableMode"
+
         $RetryOptions = New-DurableRetryOptions @DurableRetryOptions
 
         if ($Context.IsReplaying -ne $true -and $OrchestratorInput.SkipLog -ne $true) {
@@ -79,9 +95,18 @@ function Receive-CippOrchestrationTrigger {
 
         if (($Batch | Measure-Object).Count -gt 0) {
             $Tasks = foreach ($Item in $Batch) {
-                Invoke-DurableActivity -FunctionName 'CIPPActivityFunction' -Input $Item -NoWait -RetryOptions $RetryOptions -ErrorAction Stop
+                $DurableActivity = @{
+                    FunctionName = 'CIPPActivityFunction'
+                    Input        = $Item
+                    NoWait       = $NoWait
+                    RetryOptions = $RetryOptions
+                    ErrorAction  = 'Stop'
+                }
+                Invoke-DurableActivity @DurableActivity
             }
-            $null = Wait-ActivityFunction -Task $Tasks
+            if ($NoWait) {
+                $null = Wait-ActivityFunction -Task $Tasks
+            }
         }
 
         if ($Context.IsReplaying -ne $true -and $OrchestratorInput.SkipLog -ne $true) {
@@ -98,15 +123,45 @@ function Receive-CippActivityTrigger {
     $Start = (Get-Date).ToUniversalTime()
     Set-Location (Get-Item $PSScriptRoot).Parent.Parent.FullName
 
+    if ($Item.QueueId) {
+        if ($Item.QueueName) {
+            $QueueName = $Item.QueueName
+        } elseif ($Item.TenantFilter) {
+            $QueueName = $Item.TenantFilter
+        } elseif ($Item.Tenant) {
+            $QueueName = $Item.Tenant
+        }
+        $QueueTask = @{
+            QueueId = $Item.QueueId
+            Name    = $QueueName
+            Status  = 'Running'
+        }
+        $TaskStatus = Set-CippQueueTask @QueueTask
+        $QueueTask.TaskId = $TaskStatus.RowKey
+    }
+
     if ($Item.FunctionName) {
         $FunctionName = 'Push-{0}' -f $Item.FunctionName
         try {
             & $FunctionName -Item $Item
+
+            if ($TaskStatus) {
+                $QueueTask.Status = 'Completed'
+                $null = Set-CippQueueTask @QueueTask
+            }
         } catch {
             $ErrorMsg = $_.Exception.Message
+            if ($TaskStatus) {
+                $QueueTask.Status = 'Failed'
+                $null = Set-CippQueueTask @QueueTask
+            }
         }
     } else {
         $ErrorMsg = 'Function not provided'
+        if ($TaskStatus) {
+            $QueueTask.Status = 'Failed'
+            $null = Set-CippQueueTask @QueueTask
+        }
     }
 
     $End = (Get-Date).ToUniversalTime()

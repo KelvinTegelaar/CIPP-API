@@ -1,4 +1,8 @@
 function Push-CIPPAlertNoCAConfig {
+    <#
+    .FUNCTIONALITY
+        Entrypoint
+    #>
     [CmdletBinding()]
     Param (
         [Parameter(Mandatory = $true)]

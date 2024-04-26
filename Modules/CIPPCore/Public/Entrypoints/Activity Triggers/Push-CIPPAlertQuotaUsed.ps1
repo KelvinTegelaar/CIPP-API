@@ -1,4 +1,8 @@
 function Push-CIPPAlertQuotaUsed {
+    <#
+    .FUNCTIONALITY
+        Entrypoint
+    #>
     [CmdletBinding()]
     Param (
         [Parameter(Mandatory = $true)]

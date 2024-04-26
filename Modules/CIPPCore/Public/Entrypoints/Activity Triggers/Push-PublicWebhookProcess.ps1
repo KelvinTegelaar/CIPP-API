@@ -1,19 +1,24 @@
 function Push-PublicWebhookProcess {
+    <#
+    .FUNCTIONALITY
+        Entrypoint
+    #>
     param($Item)
 
+    $Table = Get-CIPPTable -TableName WebhookIncoming
+    $Webhook = Get-CIPPAzDataTableEntity @Table -Filter "RowKey eq '$($Item.RowKey)'"
     try {
-        if ($Item.Type -eq 'GraphSubscription') {
-            Invoke-CippGraphWebhookProcessing -Data ($Item.Data | ConvertFrom-Json) -CIPPID $Item.CIPPID -WebhookInfo ($Item.Webhookinfo | ConvertFrom-Json)
-        } elseif ($Item.Type -eq 'AuditLog') {
-            Invoke-CippWebhookProcessing -TenantFilter $Item.TenantFilter -Data ($Item.Data | ConvertFrom-Json) -CIPPPURL $Item.CIPPURL
-        } elseif ($Item.Type -eq 'PartnerCenter') {
-            Invoke-CippPartnerWebhookProcessing -Data ($Item.Data | ConvertFrom-Json)
+        if ($Webhook.Type -eq 'GraphSubscription') {
+            Invoke-CippGraphWebhookProcessing -Data ($Webhook.Data | ConvertFrom-Json) -CIPPID $Webhook.CIPPID -WebhookInfo ($Webhook.Webhookinfo | ConvertFrom-Json)
+        } elseif ($Webhook.Type -eq 'AuditLog') {
+            Invoke-CippWebhookProcessing -TenantFilter $Webhook.TenantFilter -Data ($Webhook.Data | ConvertFrom-Json) -CIPPPURL $Webhook.CIPPURL
+        } elseif ($Webhook.Type -eq 'PartnerCenter') {
+            Invoke-CippPartnerWebhookProcessing -Data ($Webhook.Data | ConvertFrom-Json)
         }
     } catch {
         Write-Host "Webhook Exception: $($_.Exception.Message)"
     } finally {
-        $WebhookIncoming = Get-CIPPTable -TableName WebhookIncoming
-        $Entity = $Item | Select-Object -Property RowKey, PartitionKey
-        Remove-AzDataTableEntity @WebhookIncoming -Entity $Entity
+        $Entity = $Webhook | Select-Object -Property RowKey, PartitionKey
+        Remove-AzDataTableEntity @Table -Entity $Entity
     }
 }
