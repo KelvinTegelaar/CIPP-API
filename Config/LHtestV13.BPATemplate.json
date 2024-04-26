@@ -1,5 +1,5 @@
 {
-  "style": "Tenant",
+  "style": "Table",
   "Fields": [
     {
       "name": "PasswordNeverExpires",
