@@ -45,9 +45,8 @@ Function Invoke-AddChocoApp {
                 PartitionKey = 'apps'
             }
             "Successfully added Choco App for $($Tenant) to queue."
-            Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $tenant -message "Chocolatey Application $($intunebody.Displayname) queued to add" -Sev 'Info'
-        }
-        catch {
+            Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $tenant -message "Successfully added Choco App $($intunebody.Displayname) to queue" -Sev 'Info'
+        } catch {
             "Failed adding Choco App for $($Tenant) to queue"
             Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $tenant -message "Failed to add Chocolatey Application $($intunebody.Displayname) to queue" -Sev 'Error'
         }

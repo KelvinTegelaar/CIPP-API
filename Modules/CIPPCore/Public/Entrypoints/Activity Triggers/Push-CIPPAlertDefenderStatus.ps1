@@ -1,4 +1,8 @@
 function Push-CIPPAlertDefenderStatus {
+    <#
+    .FUNCTIONALITY
+        Entrypoint
+    #>
     [CmdletBinding()]
     param(
         [Parameter(Mandatory = $true)]
