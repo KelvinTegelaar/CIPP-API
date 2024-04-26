@@ -1,5 +1,9 @@
 
 function Push-CIPPAlertSharepointQuota {
+    <#
+    .FUNCTIONALITY
+        Entrypoint
+    #>
     [CmdletBinding()]
     param(
         [Parameter(Mandatory = $true)]
