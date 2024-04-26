@@ -89,29 +89,34 @@ function Get-GraphRequestList {
 
     Write-Host ( 'GET [ {0} ]' -f $GraphQuery.ToString())
 
-    if ($QueueId) {
-        $Table = Get-CIPPTable -TableName $TableName
-        $Filter = "QueueId eq '{0}'" -f $QueueId
-        $Rows = Get-CIPPAzDataTableEntity @Table -Filter $Filter
-        $Type = 'Queue'
-    } elseif ($TenantFilter -eq 'AllTenants' -or (!$SkipCache.IsPresent -and !$ClearCache.IsPresent -and !$CountOnly.IsPresent)) {
-        $Table = Get-CIPPTable -TableName $TableName
-        if ($TenantFilter -eq 'AllTenants') {
-            $Filter = "PartitionKey eq '{0}' and QueueType eq 'AllTenants'" -f $PartitionKey
+    try {
+        if ($QueueId) {
+            $Table = Get-CIPPTable -TableName $TableName
+            $Filter = "QueueId eq '{0}'" -f $QueueId
+            $Rows = Get-CIPPAzDataTableEntity @Table -Filter $Filter
+            $Type = 'Queue'
+        } elseif ($TenantFilter -eq 'AllTenants' -or (!$SkipCache.IsPresent -and !$ClearCache.IsPresent -and !$CountOnly.IsPresent)) {
+            $Table = Get-CIPPTable -TableName $TableName
+            if ($TenantFilter -eq 'AllTenants') {
+                $Filter = "PartitionKey eq '{0}' and QueueType eq 'AllTenants'" -f $PartitionKey
+            } else {
+                $Filter = "PartitionKey eq '{0}' and Tenant eq '{1}'" -f $PartitionKey, $TenantFilter
+            }
+            #Write-Host $Filter
+            $Rows = Get-CIPPAzDataTableEntity @Table -Filter $Filter | Where-Object { $_.Timestamp.DateTime -gt (Get-Date).ToUniversalTime().AddHours(-1) }
+            $Type = 'Cache'
         } else {
-            $Filter = "PartitionKey eq '{0}' and Tenant eq '{1}'" -f $PartitionKey, $TenantFilter
+            $Type = 'None'
+            $Rows = @()
         }
-        #Write-Host $Filter
-        $Rows = Get-CIPPAzDataTableEntity @Table -Filter $Filter | Where-Object { $_.Timestamp.DateTime -gt (Get-Date).ToUniversalTime().AddHours(-1) }
-        $Type = 'Cache'
-    } else {
-        $Type = 'None'
-        $Rows = @()
-    }
-    Write-Host "Cached: $(($Rows | Measure-Object).Count) rows (Type: $($Type))"
+        Write-Host "Cached: $(($Rows | Measure-Object).Count) rows (Type: $($Type))"
 
-    $QueueReference = '{0}-{1}' -f $TenantFilter, $PartitionKey
-    $RunningQueue = Invoke-ListCippQueue | Where-Object { $_.Reference -eq $QueueReference -and $_.Status -ne 'Completed' -and $_.Status -ne 'Failed' }
+
+        $QueueReference = '{0}-{1}' -f $TenantFilter, $PartitionKey
+        $RunningQueue = Invoke-ListCippQueue | Where-Object { $_.Reference -eq $QueueReference -and $_.Status -ne 'Completed' -and $_.Status -ne 'Failed' }
+    } catch {
+        Write-Host $_.InvocationInfo.PositionMessage
+    }
 
     if ($TenantFilter -ne 'AllTenants' -and $Endpoint -match '%tenantid%') {
         $TenantId = (Get-Tenants -IncludeErrors | Where-Object { $_.defaultDomainName -eq $TenantFilter -or $_.customerId -eq $TenantFilter }).customerId
@@ -129,9 +134,8 @@ function Get-GraphRequestList {
             'AllTenants' {
                 if ($SkipCache) {
                     Get-Tenants -IncludeErrors | ForEach-Object -Parallel {
-                        Import-Module '.\Modules\AzBobbyTables'
-                        Import-Module '.\Modules\CIPPCore'
-
+                        Import-Module AzBobbyTables
+                        Import-Module CIPPCore
 
                         $GraphRequestParams = @{
                             TenantFilter                = $_.defaultDomainName
@@ -162,7 +166,8 @@ function Get-GraphRequestList {
                             Queued       = $true
                         }
                     } else {
-                        $Queue = New-CippQueueEntry -Name "$QueueName (All Tenants)" -Link $CippLink -Reference $QueueReference
+                        $TenantList = Get-Tenants -IncludeErrors
+                        $Queue = New-CippQueueEntry -Name "$QueueName (All Tenants)" -Link $CippLink -Reference $QueueReference -TotalTasks ($TenantList | Measure-Object).Count
                         [PSCustomObject]@{
                             QueueMessage = 'Loading data for all tenants. Please check back after the job completes'
                             Queued       = $true
@@ -170,14 +175,14 @@ function Get-GraphRequestList {
                         }
                         Write-Host 'Pushing output bindings'
                         try {
-                            $Batch = Get-Tenants -IncludeErrors | ForEach-Object {
+                            $Batch = $TenantList | ForEach-Object {
                                 $TenantFilter = $_.defaultDomainName
                                 [PSCustomObject]@{
                                     FunctionName                = 'ListGraphRequestQueue'
                                     TenantFilter                = $TenantFilter
                                     Endpoint                    = $Endpoint
                                     QueueId                     = $Queue.RowKey
-                                    QueueName                   = $QueueName
+                                    QueueName                   = $TenantFilter
                                     QueueType                   = 'AllTenants'
                                     Parameters                  = $Parameters
                                     PartitionKey                = $PartitionKey
@@ -195,7 +200,7 @@ function Get-GraphRequestList {
                                 Batch            = @($Batch)
                             }
                             #Write-Host ($InputObject | ConvertTo-Json -Depth 5)
-                            $InstanceId = Start-NewOrchestration -FunctionName 'CIPPOrchestrator' -InputObject ($InputObject | ConvertTo-Json -Depth 5)
+                            $InstanceId = Start-NewOrchestration -FunctionName 'CIPPOrchestrator' -InputObject ($InputObject | ConvertTo-Json -Depth 5 -Compress)
                         } catch {
                             Write-Host "QUEUE ERROR: $($_.Exception.Message)"
                         }
@@ -238,13 +243,13 @@ function Get-GraphRequestList {
                                     Queued       = $true
                                 }
                             } else {
-                                $Queue = New-CippQueueEntry -Name $QueueName -Link $CippLink -Reference $QueueReference
+                                $Queue = New-CippQueueEntry -Name $QueueName -Link $CippLink -Reference $QueueReference -TotalTasks 1
                                 $QueueTenant = [PSCustomObject]@{
                                     FunctionName                = 'ListGraphRequestQueue'
                                     TenantFilter                = $TenantFilter
                                     Endpoint                    = $Endpoint
                                     QueueId                     = $Queue.RowKey
-                                    QueueName                   = $QueueName
+                                    QueueName                   = $TenantFilter
                                     QueueType                   = 'SingleTenant'
                                     Parameters                  = $Parameters
                                     PartitionKey                = $PartitionKey
@@ -257,7 +262,7 @@ function Get-GraphRequestList {
                                     OrchestratorName = 'GraphRequestOrchestrator'
                                     Batch            = @($QueueTenant)
                                 }
-                                $InstanceId = Start-NewOrchestration -FunctionName 'CIPPOrchestrator' -InputObject ($InputObject | ConvertTo-Json -Depth 5)
+                                $InstanceId = Start-NewOrchestration -FunctionName 'CIPPOrchestrator' -InputObject ($InputObject | ConvertTo-Json -Depth 5 -Compress)
 
                                 #Push-OutputBinding -Name QueueItem -Value $QueueTenant
 

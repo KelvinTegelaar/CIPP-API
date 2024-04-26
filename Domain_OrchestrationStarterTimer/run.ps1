@@ -16,10 +16,13 @@ try {
         Write-LogMessage -API 'DomainAnalyser' -message 'Starting Domain Analyser' -sev Info
         $Results = [pscustomobject]@{'Results' = 'Starting Domain Analyser' }
 
+        $TenantList = Get-Tenants -IncludeAll
+        $Queue = New-CippQueueEntry -Name 'Domain Analyser' -TotalTasks ($TenantList | Measure-Object).Count
         $InputObject = [PSCustomObject]@{
             QueueFunction    = [PSCustomObject]@{
                 FunctionName = 'GetTenants'
                 DurableName  = 'DomainAnalyserTenant'
+                QueueId      = $Queue.RowKey
                 TenantParams = @{
                     IncludeAll = $true
                 }
