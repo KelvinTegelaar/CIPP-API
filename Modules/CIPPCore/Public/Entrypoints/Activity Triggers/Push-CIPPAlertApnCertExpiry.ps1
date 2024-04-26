@@ -1,4 +1,8 @@
 function Push-CIPPAlertApnCertExpiry {
+    <#
+    .FUNCTIONALITY
+        Entrypoint
+    #>
     [CmdletBinding()]
     Param (
         [Parameter(Mandatory = $true)]
