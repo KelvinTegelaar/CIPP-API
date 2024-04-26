@@ -36,6 +36,31 @@
       ],
       "where": "'ManagePermissionGrantsForSelf.microsoft-user-default-legacy' -notin $_.defaultuserrolepermissions.permissionGrantPoliciesAssigned",
       "StoreAs": "bool"
+    },
+  {
+      "UseExistingInfo": false,
+      "FrontendFields": [
+        {
+          "name": "Message Copy for Sent-As Disabled",
+          "formatter": "table",
+          "value": "MessageCopyforSentAsDisabled"
+        }
+      ],
+      "name": "MessageCopyforSentAsDisabled",
+      "API": "Exchange",
+      "Command": "Get-Mailbox",
+      "Parameters": {
+        "RecipientTypeDetails": [
+          "SharedMailbox",
+          "UserMailbox"
+        ]
+      },
+      "where": "$_.MessageCopyForSentAsEnabled -eq $false",
+      "ExtractFields": [
+        "userprincipalname",
+        "messageCopyForSentAsEnabled"
+      ],
+      "StoreAs": "JSON"
     }],
-  "name": "Leslie Test 1.1"
+  "name": "Leslie Test 1.2"
 }
