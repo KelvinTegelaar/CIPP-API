@@ -1,6 +1,10 @@
 using namespace System.Net
 
 function Invoke-ExecAddMultiTenantApp {
+    <#
+    .FUNCTIONALITY
+        Entrypoint
+    #>
     param($Request, $TriggerMetadata)
 
     $APIName = $TriggerMetadata.FunctionName
@@ -22,9 +26,9 @@ function Invoke-ExecAddMultiTenantApp {
         }
         #This needs to be moved to a queue.
         if ('allTenants' -in $Request.body.SelectedTenants.defaultDomainName) {
-            $TenantFilter = (Get-Tenants).defaultDomainName 
+            $TenantFilter = (Get-Tenants).defaultDomainName
         } else {
-            $TenantFilter = $Request.body.SelectedTenants.defaultDomainName 
+            $TenantFilter = $Request.body.SelectedTenants.defaultDomainName
         }
 
         foreach ($Tenant in $TenantFilter) {
