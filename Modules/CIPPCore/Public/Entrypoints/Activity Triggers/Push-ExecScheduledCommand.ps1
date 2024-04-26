@@ -1,5 +1,8 @@
 function Push-ExecScheduledCommand {
-    # Input bindings are passed in via param block.
+    <#
+    .FUNCTIONALITY
+        Entrypoint
+    #>
     param($Item)
 
     $Table = Get-CippTable -tablename 'ScheduledTasks'

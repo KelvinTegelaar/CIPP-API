@@ -23,6 +23,16 @@
     }
 }
 
+if ($env:ExternalDurablePowerShellSDK -eq $true) {
+    try {
+        Import-Module AzureFunctions.PowerShell.Durable.SDK -ErrorAction Stop
+        Write-Host 'External Durable SDK enabled'
+    } catch {
+        Write-LogMessage -message 'Failed to import module - AzureFunctions.PowerShell.Durable.SDK' -LogData (Get-CippException -Exception $_) -Sev 'debug'
+        $_.Exception.Message
+    }
+}
+
 try {
     Disable-AzContextAutosave -Scope Process | Out-Null
 } catch {}
