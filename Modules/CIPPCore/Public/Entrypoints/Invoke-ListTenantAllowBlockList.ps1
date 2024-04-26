@@ -1,6 +1,6 @@
 using namespace System.Net
 
-Function Invoke-TenantAllowBlockList {
+Function Invoke-ListTenantAllowBlockList {
     <#
     .FUNCTIONALITY
     Entrypoint
