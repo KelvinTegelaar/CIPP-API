@@ -38,8 +38,7 @@ function Set-CIPPDefaultAPEnrollment {
         Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $($TenantFilter) -message "Added Autopilot Enrollment Status Page $($Displayname)" -Sev 'Info'
 
     } catch {
-        "Failed to change default enrollment status page for $($($TenantFilter)): $($_.Exception.Message)"
         Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $($TenantFilter) -message "Failed adding Autopilot Enrollment Status Page $($Displayname). Error: $($_.Exception.Message)" -Sev 'Error'
-        continue
+        throw "Failed to change default enrollment status page for $($($TenantFilter)): $($_.Exception.Message)"
     }
 }
