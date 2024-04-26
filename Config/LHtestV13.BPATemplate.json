@@ -18,25 +18,30 @@
         "passwordValidityPeriodInDays"
       ],
       "URL": "https://graph.microsoft.com/beta/domains"
-    },
-    {
-      "name": "PasswordNeverExpires",
+    },{
+    
+      "name": "CurrentSecureScore",
       "UseExistingInfo": false,
       "FrontendFields": [
         {
-          "name": "Password Never Expires",
-          "value": "PasswordNeverExpires",
-          "formatter": "bool"
+          "name": "Current Secure Score",
+          "value": "CurrentSecureScore.currentScore / CurrentSecureScore.maxScore * 100",
+          "formatter": "math",
+          "showAs": "percentage"
         }
       ],
-      "where": "$_.passwordValidityPeriodInDays -eq 2147483647",
-      "StoreAs": "bool",
       "API": "Graph",
+      "URL": "https://graph.microsoft.com/beta/security/secureScores?$top=1",
+      "Parameters": {
+        "Nopagination": true
+      },
       "ExtractFields": [
-        "passwordValidityPeriodInDays"
+        "currentScore",
+        "maxScore",
+        "averageComparativeScores"
       ],
-      "URL": "https://graph.microsoft.com/beta/domains"
+      "StoreAs": "JSON"
     }
   ],
-  "name": "LHtestV1.4_aanpassing"
+  "name": "LHtestV1.5"
 }
