@@ -63,7 +63,7 @@ if (($Batch | Measure-Object).Count -gt 0) {
         SkipLog          = $true
     }
     #Write-Host ($InputObject | ConvertTo-Json -Depth 10)
-    $InstanceId = Start-NewOrchestration -FunctionName 'CIPPOrchestrator' -InputObject ($InputObject | ConvertTo-Json -Depth 10)
+    $InstanceId = Start-NewOrchestration -FunctionName 'CIPPOrchestrator' -InputObject ($InputObject | ConvertTo-Json -Depth 10 -Compress)
 
     Write-Host "Started orchestration with ID = '$InstanceId'"
 }
