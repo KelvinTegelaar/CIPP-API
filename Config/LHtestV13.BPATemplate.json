@@ -41,6 +41,19 @@
         "averageComparativeScores"
       ],
       "StoreAs": "JSON"
+    },
+    {
+      "name": "Unusedlicenses",
+      "UseExistingInfo": true,
+      "StoreAs": "JSON",
+      "FrontendFields": [
+        {
+          "name": "Unused licenses",
+          "formatter": "table",
+          "value": "Unusedlicenses",
+          "desc": "These are the licenses that are not assigned to an user, but have been purchased."
+        }
+      ]
     }
   ],
   "name": "LHtestV1.5"
