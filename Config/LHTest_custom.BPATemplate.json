@@ -18,6 +18,24 @@
       ],
       "where": "$_.passwordValidityPeriodInDays -eq 2147483647",
       "StoreAs": "bool"
+    },
+    {
+      "UseExistingInfo": false,
+      "FrontendFields": [
+        {
+          "name": "OAuth App Consent",
+          "value": "OAuthAppConsent",
+          "formatter": "bool"
+        }
+      ],
+      "name": "OAuthAppConsent",
+      "API": "Graph",
+      "URL": "https://graph.microsoft.com/v1.0/policies/authorizationPolicy?$select=defaultUserRolePermissions",
+      "ExtractFields": [
+        "defaultuserrolepermissions"
+      ],
+      "where": "'ManagePermissionGrantsForSelf.microsoft-user-default-legacy' -notin $_.defaultuserrolepermissions.permissionGrantPoliciesAssigned",
+      "StoreAs": "bool"
     }],
-  "name": "Leslie Test 1.0"
+  "name": "Leslie Test 1.1"
 }
