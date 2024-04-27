@@ -13,6 +13,7 @@ Function Invoke-GetCippAlerts {
     $PartitionKey = Get-Date -UFormat '%Y%m%d'
     $Filter = "PartitionKey eq '{0}'" -f $PartitionKey
     $Rows = Get-CIPPAzDataTableEntity @Table -Filter $Filter | Sort-Object TableTimestamp -Descending | Select-Object -First 10
+    $role = ([System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($request.headers.'x-ms-client-principal')) | ConvertFrom-Json).userRoles
 
     $APIVersion = Get-Content 'version_latest.txt' | Out-String
     $CIPPVersion = $request.query.localversion
@@ -40,10 +41,7 @@ Function Invoke-GetCippAlerts {
 
 
     if ($env:ApplicationID -eq 'LongApplicationID' -or $null -eq $ENV:ApplicationID) { $Alerts.add(@{Alert = 'You have not yet setup your SAM Setup. Please go to the SAM Wizard in settings to finish setup'; link = '/cipp/setup'; type = 'warning' }) }
-    if ($env:FUNCTIONS_EXTENSION_VERSION -ne '~4') {
-        $Alerts.add(@{Alert = 'Your Function App is running on a Runtime version lower than 4. This impacts performance. Go to Settings -> Backend -> Function App Configuration -> Function Runtime Settings and set this to 4 for maximum performance'; link = '/cipp/setup'; type = 'warning' }) 
-    }
-    if ($psversiontable.psversion.toString() -lt 7.2) { $Alerts.add(@{Alert = 'Your Function App is running on Powershell 7. This impacts performance. Go to Settings -> Backend -> Function App Configuration -> General Settings and set PowerShell Core Version to 7.2 for maximum performance'; link = '/cipp/setup'; type = 'danger' }) }
+    if ($role -like '*superadmin*') { $Alerts.add(@{Alert = 'You are logged in under a superadmin account. This account should not be used for normal usage.'; link = 'https://docs.cipp.app/setup/installation/owntenant'; type = 'danger' }) }
     if ($env:WEBSITE_RUN_FROM_PACKAGE -ne '1') {
         $Alerts.add(
             @{Alert  = 'Your Function App is running in write mode. This will cause performance issues and increase cost. Please check this '

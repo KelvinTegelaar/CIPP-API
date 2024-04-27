@@ -58,7 +58,7 @@ Function Invoke-ExecExtensionSync {
                         Batch            = @($Batch)
                     }
                     #Write-Host ($InputObject | ConvertTo-Json)
-                    $InstanceId = Start-NewOrchestration -FunctionName 'CIPPOrchestrator' -InputObject ($InputObject | ConvertTo-Json -Depth 5)
+                    $InstanceId = Start-NewOrchestration -FunctionName 'CIPPOrchestrator' -InputObject ($InputObject | ConvertTo-Json -Depth 5 -Compress)
                     Write-Host "Started permissions orchestration with ID = '$InstanceId'"
 
                     $Results = [pscustomobject]@{'Results' = "NinjaOne Synchronization Queued for $($Tenant.NinjaOneName)" }
@@ -79,7 +79,7 @@ Function Invoke-ExecExtensionSync {
                     Batch            = @($Batch)
                 }
                 #Write-Host ($InputObject | ConvertTo-Json)
-                $InstanceId = Start-NewOrchestration -FunctionName 'CIPPOrchestrator' -InputObject ($InputObject | ConvertTo-Json -Depth 5)
+                $InstanceId = Start-NewOrchestration -FunctionName 'CIPPOrchestrator' -InputObject ($InputObject | ConvertTo-Json -Depth 5 -Compress)
                 Write-Host "Started permissions orchestration with ID = '$InstanceId'"
                 $Results = [pscustomobject]@{'Results' = "NinjaOne Synchronization Queuing $(($TenantsToProcess | Measure-Object).count) Tenants" }
 
