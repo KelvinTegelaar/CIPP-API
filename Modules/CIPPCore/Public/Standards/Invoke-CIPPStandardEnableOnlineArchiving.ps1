@@ -17,18 +17,22 @@ function Invoke-CIPPStandardEnableOnlineArchiving {
             Write-LogMessage -API 'Standards' -tenant $Tenant -message 'Online Archiving already enabled for all accounts' -sev Info
         } else {
             try {
-                $SuccessCounter = 0
-                $MailboxesNoArchive | ForEach-Object {
-                    try {
-                        New-ExoRequest -tenantid $Tenant -cmdlet 'Enable-Mailbox' -cmdparams @{ Identity = $_.UserPrincipalName; Archive = $true } | Out-Null
-                        Write-LogMessage -API 'Standards' -tenant $Tenant -message "Enabled Online Archiving for $($_.UserPrincipalName)" -sev Info
-                        $SuccessCounter++
-                    } catch {
-                        Write-LogMessage -API 'Standards' -tenant $Tenant -message "Failed to Enable Online Archiving for $($_.UserPrincipalName). Error: $($_.exception.message)" -sev Error
+                $Request = $MailboxesNoArchive | ForEach-Object {
+                    @{
+                        CmdletInput = @{
+                            CmdletName = 'Enable-Mailbox'
+                            Parameters = @{ Identity = $_.UserPrincipalName; Archive = $true }
+                        }
                     }
                 }
-                Write-LogMessage -API 'Standards' -tenant $Tenant -message "Enabled Online Archiving for $SuccessCounter accounts" -sev Info
-        
+
+                $BatchResults = New-ExoBulkRequest -tenantid $tenant -cmdletArray $Request
+                $BatchResults | ForEach-Object {
+                    if ($_.error) {
+                        Write-Host "Failed to Enable Online Archiving for $($_.Target). Error: $($_.error)" 
+                        Write-LogMessage -API 'Standards' -tenant $tenant -message "Failed to Enable Online Archiving for $($_.Target). Error: $($_.error)" -sev Error
+                    }
+                }
             } catch {
                 Write-LogMessage -API 'Standards' -tenant $Tenant -message "Failed to Enable Online Archiving for all accounts. Error: $($_.exception.message)" -sev Error
             }
