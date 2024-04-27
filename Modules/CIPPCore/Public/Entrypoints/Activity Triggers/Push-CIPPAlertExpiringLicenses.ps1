@@ -1,4 +1,8 @@
 function Push-CIPPAlertExpiringLicenses {
+    <#
+    .FUNCTIONALITY
+        Entrypoint
+    #>
     [CmdletBinding()]
     Param (
         [Parameter(Mandatory = $true)]

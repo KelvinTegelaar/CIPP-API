@@ -17,6 +17,8 @@ function Invoke-CIPPStandardMessageExpiration {
                 $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
                 Write-LogMessage -API 'Standards' -tenant $tenant -message "Failed to set transport configuration message expiration to 12 hours. Error: $ErrorMessage" -sev Debug
             }
+        } else {
+            Write-LogMessage -API 'Standards' -tenant $tenant -message 'Transport configuration message expiration is already set to 12 hours' -sev Info
         }
         
     }
