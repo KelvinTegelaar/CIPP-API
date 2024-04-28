@@ -1,4 +1,8 @@
 function Push-DomainAnalyserDomain {
+    <#
+    .FUNCTIONALITY
+        Entrypoint
+    #>
     param($Item)
     $DomainTable = Get-CippTable -tablename 'Domains'
     $Filter = "PartitionKey eq 'TenantDomains' and RowKey eq '{0}'" -f $Item.RowKey

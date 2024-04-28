@@ -28,7 +28,7 @@ function Write-CippFunctionStats {
         $StatEntity.ErrorMsg = $ErrorMsg
         $Entity = [PSCustomObject]$Entity
         foreach ($Property in $Entity.PSObject.Properties.Name) {
-            if ($Entity.$Property.GetType().Name -in ('Hashtable', 'PSCustomObject')) {
+            if ($Entity.$Property.GetType().Name -in ('Hashtable', 'PSCustomObject', 'OrderedHashtable')) {
                 $StatEntity.$Property = [string]($Entity.$Property | ConvertTo-Json -Compress)
             } elseif ($Property -notin ('ETag', 'RowKey', 'PartitionKey', 'Timestamp', 'LastRefresh')) {
                 $StatEntity.$Property = $Entity.$Property
