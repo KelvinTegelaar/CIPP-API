@@ -18,7 +18,7 @@ try {
         SkipLog          = $true
     }
     Write-Host ($InputObject | ConvertTo-Json -Depth 5)
-    $InstanceId = Start-NewOrchestration -FunctionName 'CIPPOrchestrator' -InputObject ($InputObject | ConvertTo-Json -Depth 5)
+    $InstanceId = Start-NewOrchestration -FunctionName 'CIPPOrchestrator' -InputObject ($InputObject | ConvertTo-Json -Depth 5 -Compress)
     Write-Host "Started orchestration with ID = '$InstanceId'"
 } catch {
     Write-LogMessage -API 'Webhooks' -message 'Error processing webhooks' -sev Error -LogData (Get-CippException -Exception $_)
