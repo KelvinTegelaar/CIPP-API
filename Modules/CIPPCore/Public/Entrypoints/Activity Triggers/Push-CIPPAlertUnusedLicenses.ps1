@@ -1,4 +1,8 @@
 function Push-CIPPAlertUnusedLicenses {
+    <#
+    .FUNCTIONALITY
+        Entrypoint
+    #>
     [CmdletBinding()]
     Param (
         [Parameter(Mandatory = $true)]
