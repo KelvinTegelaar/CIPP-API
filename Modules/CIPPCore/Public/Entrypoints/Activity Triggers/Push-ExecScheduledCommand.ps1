@@ -4,6 +4,7 @@ function Push-ExecScheduledCommand {
         Entrypoint
     #>
     param($Item)
+    Write-Host "We are going to be running a scheduled task: $($Item.TaskInfo | ConvertTo-Json)"
 
     $Table = Get-CippTable -tablename 'ScheduledTasks'
     $task = $Item.TaskInfo
