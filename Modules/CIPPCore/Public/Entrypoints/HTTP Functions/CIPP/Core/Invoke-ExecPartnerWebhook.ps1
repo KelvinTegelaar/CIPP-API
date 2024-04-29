@@ -1,4 +1,8 @@
 function Invoke-ExecPartnerWebhook {
+    <#
+    .FUNCTIONALITY
+        Entrypoint
+    #>
     Param($Request, $TriggerMetadata)
 
     switch ($Request.Query.Action) {

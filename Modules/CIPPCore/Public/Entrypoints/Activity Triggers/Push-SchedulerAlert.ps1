@@ -1,4 +1,8 @@
 function Push-SchedulerAlert {
+    <#
+    .FUNCTIONALITY
+        Entrypoint
+    #>
     param (
         $Item
     )
