@@ -18,7 +18,7 @@ function Get-CIPPDomainAnalyser {
 
     # Get all the things
 
-    if ($TenantFilter -ne 'AllTenants') {
+    if ($TenantFilter -ne 'AllTenants' -and ![string]::IsNullOrEmpty($TenantFilter)) {
         $DomainTable.Filter = "TenantGUID eq '{0}'" -f $TenantFilter
     }
 
