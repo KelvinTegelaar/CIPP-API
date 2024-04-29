@@ -5,7 +5,7 @@ function Invoke-CIPPStandardAddDKIM {
     #>
     param($Tenant, $Settings)
 
-    $AllDomains = (New-GraphGetRequest -uri 'https://graph.microsoft.com/v1.0/domains' -tenantid $Tenant | Where-Object { $_.supportedServices -contains 'Email' }).id
+    $AllDomains = (New-GraphGetRequest -uri 'https://graph.microsoft.com/v1.0/domains?$top=999' -tenantid $Tenant | Where-Object { $_.supportedServices -contains 'Email' }).id
     $DKIM = (New-ExoRequest -tenantid $tenant -cmdlet 'Get-DkimSigningConfig') | Select-Object Domain, Enabled, Status
 
     # List of domains for each way to enable DKIM
@@ -19,34 +19,48 @@ function Invoke-CIPPStandardAddDKIM {
         } else {
             $ErrorCounter = 0
             # New-domains
-            foreach ($Domain in $NewDomains) {
-                try {
-                    (New-ExoRequest -tenantid $tenant -cmdlet 'New-DkimSigningConfig' -cmdparams @{ KeySize = 2048; DomainName = $Domain; Enabled = $true } -useSystemMailbox $true)
-                    Write-LogMessage -API 'Standards' -tenant $tenant -message "Enabled DKIM for $Domain" -sev Info
-                } catch {
-                    Write-LogMessage -API 'Standards' -tenant $tenant -message "Failed to enable DKIM. Error: $($_.Exception.Message)" -sev Error
-                    $ErrorCounter++
+            $Request = $NewDomains | ForEach-Object {
+                @{
+                    CmdletInput = @{
+                        CmdletName = 'New-DkimSigningConfig'
+                        Parameters = @{ KeySize = 2048; DomainName = $_; Enabled = $true }
+                    }
                 }
             }
-    
+
+            $BatchResults = New-ExoBulkRequest -tenantid $tenant -cmdletArray @($Request) -useSystemMailbox $true
+            $BatchResults | ForEach-Object {
+                if ($_.error) {
+                    $ErrorCounter ++
+                    Write-LogMessage -API 'Standards' -tenant $tenant -message "Failed to enable DKIM. Error: $($_.Exception.Message)" -sev Error
+                }
+            }
             # Set-domains
-            foreach ($Domain in $SetDomains) {
-                try {
-                    (New-ExoRequest -tenantid $tenant -cmdlet 'Set-DkimSigningConfig' -cmdparams @{ Identity = $Domain.Domain; Enabled = $true } -useSystemMailbox $true)
-                    Write-LogMessage -API 'Standards' -tenant $tenant -message "Enabled DKIM for $($Domain.Domain)" -sev Info
-                } catch {
-                    Write-LogMessage -API 'Standards' -tenant $tenant -message "Failed to enable DKIM. Error: $($_.Exception.Message)" -sev Error
-                    $ErrorCounter++
+            $Request = $SetDomains | ForEach-Object {
+                @{
+                    CmdletInput = @{
+                        CmdletName = 'Set-DkimSigningConfig'
+                        Parameters = @{ Identity = $Domain.Domain; Enabled = $true }
+                    }
                 }
             }
-            if ($ErrorCounter -eq 0) {
-                Write-LogMessage -API 'Standards' -tenant $tenant -message 'Enabled DKIM for all domains in tenant' -sev Info
-            } else {
-                Write-LogMessage -API 'Standards' -tenant $tenant -message 'Failed to enable DKIM for all domains in tenant' -sev Error
+
+            $BatchResults = New-ExoBulkRequest -tenantid $tenant -cmdletArray @($Request) -useSystemMailbox $true
+            $BatchResults | ForEach-Object {
+                if ($_.error) {
+                    Write-LogMessage -API 'Standards' -tenant $tenant -message "Failed to set DKIM. Error: $($_.Exception.Message)" -sev Error
+                    $ErrorCounter ++
+                }
+                
+                if ($ErrorCounter -eq 0) {
+                    Write-LogMessage -API 'Standards' -tenant $tenant -message 'Enabled DKIM for all domains in tenant' -sev Info
+                } else {
+                    Write-LogMessage -API 'Standards' -tenant $tenant -message 'Failed to enable DKIM for all domains in tenant' -sev Error
+                }
             }
         }
     }
-
+    
     if ($Settings.alert) {
 
         if ($null -eq $NewDomains -and $null -eq $SetDomains) {
