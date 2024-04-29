@@ -1,4 +1,8 @@
 function Push-UpdateTenants {
+    <#
+    .FUNCTIONALITY
+        Entrypoint
+    #>
     Param($Item)
     $QueueReference = 'UpdateTenants'
     $RunningQueue = Invoke-ListCippQueue | Where-Object { $_.Reference -eq $QueueReference -and $_.Status -ne 'Completed' -and $_.Status -ne 'Failed' }
