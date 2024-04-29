@@ -24,20 +24,22 @@ Function Invoke-ListMailboxRules {
     }
     $Rows = Get-CIPPAzDataTableEntity @Table | Where-Object -Property Timestamp -GT (Get-Date).Addhours(-1)
 
-    if (!$Rows) {
-        #Push-OutputBinding -Name mbxrulequeue -Value $TenantFilter
+    if (!$Rows -or ($TenantFilter -eq 'AllTenants' -and ($Rows | Measure-Object).Count -eq 1)) {
         $GraphRequest = [PSCustomObject]@{
             Tenant   = 'Loading data. Please check back in 1 minute'
             Licenses = 'Loading data. Please check back in 1 minute'
         }
-        $Batch = if ($TenantFilter -eq 'AllTenants') {
-            Get-Tenants -IncludeErrors | ForEach-Object { $_ | Add-Member -NotePropertyName FunctionName -NotePropertyValue 'ListMailboxRulesQueue'; $_ }
+
+        if ($TenantFilter -eq 'AllTenants') {
+            $Tenants = Get-Tenants -IncludeErrors | Select-Object defaultDomainName
+            $Type = 'All Tenants'
         } else {
-            [PSCustomObject]@{
-                defaultDomainName = $TenantFilter
-                FunctionName      = 'ListMailboxRulesQueue'
-            }
+            $Tenants = @(@{ defaultDomainName = $TenantFilter })
+            $Type = $TenantFilter
         }
+        $Queue = New-CippQueueEntry -Name "Mailbox Rules ($Type)" -TotalTasks ($Tenants | Measure-Object).Count
+        $Batch = $Tenants | Select-Object defaultDomainName, @{Name = 'FunctionName'; Expression = { 'ListMailboxRulesQueue' } }, @{Name = 'QueueName'; Expression = { $_.defaultDomainName } }, @{Name = 'QueueId'; Expression = { $Queue.RowKey } }, @{Name = 'QueueName'; Expression = { $_.defaultDomainName } }
+
         if (($Batch | Measure-Object).Count -gt 0) {
             $InputObject = [PSCustomObject]@{
                 OrchestratorName = 'ListMailboxRulesOrchestrator'
