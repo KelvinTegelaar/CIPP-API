@@ -9,17 +9,18 @@ function Push-ListLicensesQueue {
     Write-Host "PowerShell queue trigger function processed work item: $($Item.defaultDomainName)"
 
     $domainName = $Item.defaultDomainName
-    $GraphRequest = try {
+    try {
         Write-Host "Processing $domainName"
-        Get-CIPPLicenseOverview -TenantFilter $domainName
+        $Overview = Get-CIPPLicenseOverview -TenantFilter $domainName
     } catch {
-        [pscustomobject]@{
+        $Overview = [pscustomobject]@{
             Tenant         = [string]$domainName
             License        = "Could not connect to client: $($_.Exception.Message)"
             'PartitionKey' = 'License'
             'RowKey'       = "$($domainName)-$((New-Guid).Guid)"
         }
+    } finally {
+        $Table = Get-CIPPTable -TableName cachelicenses
+        Add-CIPPAzDataTableEntity @Table -Entity $Overview -Force | Out-Null
     }
-    $Table = Get-CIPPTable -TableName cachelicenses
-    Add-CIPPAzDataTableEntity @Table -Entity $GraphRequest -Force | Out-Null
 }
