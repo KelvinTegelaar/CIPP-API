@@ -18,8 +18,7 @@ function Add-CIPPScheduledTask {
                 $ht[$p.Key] = $p.Value
             }
             $Parameters[$Key] = [PSCustomObject]$ht
-        }
-        else {
+        } else {
             $Parameters[$Key] = $Param
         }
     }
@@ -30,10 +29,15 @@ function Add-CIPPScheduledTask {
     }
     $AdditionalProperties = ([PSCustomObject]$AdditionalProperties | ConvertTo-Json -Compress)
     if ($Parameters -eq 'null') { $Parameters = '' }
+    if (!$Task.RowKey) {
+        $RowKey = (New-Guid).Guid
+    } else {
+        $RowKey = $Task.RowKey
+    }
     $entity = @{
         PartitionKey         = [string]'ScheduledTask'
         TaskState            = [string]'Planned'
-        RowKey               = [string]"$(New-Guid)"
+        RowKey               = [string]$RowKey
         Tenant               = [string]$task.TenantFilter
         Name                 = [string]$task.Name
         Command              = [string]$task.Command.value
@@ -46,10 +50,9 @@ function Add-CIPPScheduledTask {
         Results              = 'Planned'
     }
     try {
-        Add-CIPPAzDataTableEntity @Table -Entity $entity
-    }
-    catch {
+        Add-CIPPAzDataTableEntity @Table -Entity $entity -Force
+    } catch {
         return "Could not add task: $($_.Exception.Message)"
     }
-    return "Successfully added task"
+    return "Successfully added task: $($entity.Name)"
 }

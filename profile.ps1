@@ -15,9 +15,20 @@
 # Import modules
 @('CippCore', 'CippExtensions', 'Az.KeyVault', 'Az.Accounts') | ForEach-Object {
     try {
+        $Module = $_
         Import-Module -Name $_ -ErrorAction Stop
     } catch {
-        Write-LogMessage -message "Failed to import module $($_): $_.Exception.Message" -Sev 'debug'
+        Write-LogMessage -message "Failed to import module - $Module" -LogData (Get-CippException -Exception $_) -Sev 'debug'
+        $_.Exception.Message
+    }
+}
+
+if ($env:ExternalDurablePowerShellSDK -eq $true) {
+    try {
+        Import-Module AzureFunctions.PowerShell.Durable.SDK -ErrorAction Stop
+        Write-Host 'External Durable SDK enabled'
+    } catch {
+        Write-LogMessage -message 'Failed to import module - AzureFunctions.PowerShell.Durable.SDK' -LogData (Get-CippException -Exception $_) -Sev 'debug'
         $_.Exception.Message
     }
 }
@@ -32,7 +43,7 @@ try {
         $Auth = Get-CIPPAuthentication
     }
 } catch {
-    Write-LogMessage -message "Could not retrieve keys from Keyvault: $($_.Exception.Message)" -Sev 'debug'
+    Write-LogMessage -message 'Could not retrieve keys from Keyvault' -LogData (Get-CippException -Exception $_) -Sev 'debug'
 }
 
 # Uncomment the next line to enable legacy AzureRm alias in Azure PowerShell.

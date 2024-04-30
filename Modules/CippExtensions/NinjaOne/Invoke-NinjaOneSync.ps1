@@ -7,12 +7,26 @@ function Invoke-NinjaOneSync {
         $TenantsToProcess = Get-AzDataTableEntity @CIPPMapping -Filter $Filter | Where-Object { $Null -ne $_.NinjaOne -and $_.NinjaOne -ne '' }
 
 
-        foreach ($Tenant in $TenantsToProcess) {
-            Push-OutputBinding -Name NinjaProcess -Value @{
+        $Batch = foreach ($Tenant in $TenantsToProcess) {
+            <#Push-OutputBinding -Name NinjaProcess -Value @{
                 'NinjaAction'  = 'SyncTenant'
                 'MappedTenant' = $Tenant
             }
-            Start-Sleep -Seconds 1
+            Start-Sleep -Seconds 1#>
+            [PSCustomObject]@{
+                'NinjaAction'  = 'SyncTenant'
+                'MappedTenant' = $Tenant
+                'FunctionName' = 'NinjaOneQueue'
+            }
+        }
+        if (($Batch | Measure-Object).Count -gt 0) {
+            $InputObject = [PSCustomObject]@{
+                OrchestratorName = 'NinjaOneOrchestrator'
+                Batch            = @($Batch)
+            }
+            #Write-Host ($InputObject | ConvertTo-Json)
+            $InstanceId = Start-NewOrchestration -FunctionName 'CIPPOrchestrator' -InputObject ($InputObject | ConvertTo-Json -Depth 5 -Compress)
+            Write-Host "Started permissions orchestration with ID = '$InstanceId'"
         }
 
         $AddObject = @{
@@ -23,10 +37,9 @@ function Invoke-NinjaOneSync {
 
         Add-AzDataTableEntity @Table -Entity $AddObject -Force
 
-        Write-LogMessage -API 'NinjaOneAutoMap_Queue' -user 'CIPP' -message "NinjaOne Synchronization Queued for $(($TenantsToProcess | Measure-Object).count) Tenants" -Sev 'Info' 
+        Write-LogMessage -API 'NinjaOneAutoMap_Queue' -user 'CIPP' -message "NinjaOne Synchronization Queued for $(($TenantsToProcess | Measure-Object).count) Tenants" -Sev 'Info'
     } catch {
         Write-LogMessage -API 'Scheduler_Billing' -tenant 'none' -message "Could not start NinjaOne Sync $($_.Exception.Message)" -sev Error
     }
-    
+
 }
-    

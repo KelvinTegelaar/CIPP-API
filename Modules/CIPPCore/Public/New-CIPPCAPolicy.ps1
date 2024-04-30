@@ -6,6 +6,7 @@ function New-CIPPCAPolicy {
         $TenantFilter,
         $State,
         $Overwrite,
+        $ReplacePattern = 'none',
         $APIName = 'Create CA Policy',
         $ExecutingUser
     )
@@ -101,19 +102,42 @@ function New-CIPPCAPolicy {
         $index = [array]::IndexOf($JSONObj.conditions.locations.excludeLocations, $location)
         $JSONObj.conditions.locations.excludeLocations[$index] = $lookup.id
     }
-
+    switch ($ReplacePattern) {
+        'none' {
+            Write-Host 'Replacement pattern for inclusions and exclusions is none'
+            break
+        }
+        'AllUsers' {
+            Write-Host 'Replacement pattern for inclusions and exclusions is All users. This policy will now apply to everyone.'
+            if ($JSONObj.conditions.users.includeUsers -ne 'All') { $JSONObj.conditions.users.includeUsers = @('All') }
+            if ($JSONObj.conditions.users.excludeUsers) { $JSONObj.conditions.users.excludeUsers = @() }
+            if ($JSONObj.conditions.users.includeGroups) { $JSONObj.conditions.users.includeGroups = @() }
+            if ($JSONObj.conditions.users.excludeGroups) { $JSONObj.conditions.users.excludeGroups = @() }
+        }
+        'displayName' {
+            Write-Host 'Replacement pattern for inclusions and exclusions is displayName.'
+            $users = New-GraphGETRequest -uri 'https://graph.microsoft.com/beta/users?$select=id,displayName' -tenantid $TenantFilter
+            $Groups = New-GraphGETRequest -uri 'https://graph.microsoft.com/beta/groups?$select=id,displayName' -tenantid $TenantFilter
+            
+            if ($JSONObj.conditions.users.includeUsers -notin 'All', 'None', 'GuestOrExternalUsers') { $JSONObj.conditions.users.includeUsers = @(($users | Where-Object -Property displayName -In $JSONObj.conditions.users.includeUsers).id) }
+            if ($JSONObj.conditions.users.excludeUsers) { $JSONObj.conditions.users.excludeUsers = @(($users | Where-Object -Property displayName -In $JSONObj.conditions.users.excludeUsers).id) }
+            if ($JSONObj.conditions.users.includeGroups) { $JSONObj.conditions.users.includeGroups = @(($groups | Where-Object -Property displayName -In $JSONObj.conditions.users.includeGroups).id) }
+            if ($JSONObj.conditions.users.excludeGroups) { $JSONObj.conditions.users.excludeGroups = @(($groups | Where-Object -Property displayName -In $JSONObj.conditions.users.excludeGroups).id) }
+        }
+    
+    }
     $JsonObj.PSObject.Properties.Remove('LocationInfo')
     $RawJSON = $JSONObj | ConvertTo-Json -Depth 10
     Write-Host $RawJSON
     try {
         Write-Host 'Checking'
-        $CheckExististing = New-GraphGETRequest -uri 'https://graph.microsoft.com/v1.0/identity/conditionalAccess/policies' -tenantid $TenantFilter
-        if ($displayname -in $CheckExististing.displayName) {
+        $CheckExististing = New-GraphGETRequest -uri 'https://graph.microsoft.com/beta/identity/conditionalAccess/policies' -tenantid $TenantFilter | Where-Object -Property displayName -EQ $displayname
+        if ($CheckExististing) {
             if ($Overwrite -ne $true) {
                 Throw "Conditional Access Policy with Display Name $($Displayname) Already exists"
                 return $false
             } else {
-                Write-Host 'overwriting'
+                Write-Host "overwriting $($CheckExististing.id)"
                 $PatchRequest = New-GraphPOSTRequest -uri "https://graph.microsoft.com/beta/identity/conditionalAccess/policies/$($CheckExististing.id)" -tenantid $tenantfilter -type PATCH -body $RawJSON
                 Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $($Tenant) -message "Updated Conditional Access Policy $($JSONObj.Displayname) to the template standard." -Sev 'Info'
                 return "Updated policy $displayname for $tenantfilter"
