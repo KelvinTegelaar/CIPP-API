@@ -32,7 +32,7 @@ function Send-CIPPAlert {
                 }
 
                 $JSONBody = ConvertTo-Json -Compress -Depth 10 -InputObject $PowerShellBody
-                if ($PSCmdlet.ShouldProcess('Send email', "Sending email to $($Recipients.EmailAddress.Address -join ', ')")) {
+                if ($PSCmdlet.ShouldProcess($($Recipients.EmailAddress.Address -join ', '), 'Sending email')) {
                     New-GraphPostRequest -uri 'https://graph.microsoft.com/v1.0/me/sendMail' -tenantid $env:TenantID -NoAuthCheck $true -type POST -body ($JSONBody)
                 }
             }
@@ -50,7 +50,7 @@ function Send-CIPPAlert {
 
         try {
             if ($Config.webhook -ne '') {
-                if ($PSCmdlet.ShouldProcess('Send Webhook', "Sending webhook to $($Config.webhook)")) {
+                if ($PSCmdlet.ShouldProcess($Config.webhook, 'Sending webhook')) {
                     switch -wildcard ($config.webhook) {
                         '*webhook.office.com*' {
                             $JSonBody = "{`"text`": `"You've setup your alert policies to be alerted whenever specific events happen. We've found some of these events in the log. <br><br>$JSONContent`"}"
@@ -78,7 +78,7 @@ function Send-CIPPAlert {
 
     if ($Type -eq 'psa') {
         if ($config.sendtoIntegration) {
-            if ($PSCmdlet.ShouldProcess('Send PSA', 'Sending PSA alert')) {
+            if ($PSCmdlet.ShouldProcess('PSA', 'Sending alert')) {
                 try {
                     $Alert = @{
                         TenantId   = $TenantFilter

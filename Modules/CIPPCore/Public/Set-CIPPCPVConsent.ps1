@@ -19,8 +19,8 @@ function Set-CIPPCPVConsent {
 
     if ($ResetSP) {
         try {
-            if ($PSCmdlet.ShouldProcess('Delete Service Principal', "Delete Service Principal from $TenantName")) {
-                $null = New-GraphPostRequest -Type DELETE -noauthcheck $true -uri "https://api.partnercenter.microsoft.com/v1/customers/$($TenantFilter)/applicationconsents/$($ENV:applicationId)" -scope 'https://api.partnercenter.microsoft.com/.default' -tenantid $env:TenantID
+            if ($PSCmdlet.ShouldProcess($ENV:ApplicationId, "Delete Service Principal from $TenantName")) {
+                $null = New-GraphPostRequest -Type DELETE -noauthcheck $true -uri "https://api.partnercenter.microsoft.com/v1/customers/$($TenantFilter)/applicationconsents/$($ENV:ApplicationId)" -scope 'https://api.partnercenter.microsoft.com/.default' -tenantid $env:TenantID
             }
             $Results.add("Deleted Service Principal from $TenantName")
         } catch {
@@ -43,7 +43,7 @@ function Set-CIPPCPVConsent {
             )
         } | ConvertTo-Json
 
-        if ($PSCmdlet.ShouldProcess('Add Service Principal', "Add Service Principal to $TenantName")) {
+        if ($PSCmdlet.ShouldProcess($ENV:ApplicationId, "Add Service Principal to $TenantName")) {
             $null = New-GraphpostRequest -body $AppBody -Type POST -noauthcheck $true -uri "https://api.partnercenter.microsoft.com/v1/customers/$($TenantFilter)/applicationconsents" -scope 'https://api.partnercenter.microsoft.com/.default' -tenantid $env:TenantID
             $Table = Get-CIPPTable -TableName cpvtenants
             $unixtime = [int64](([datetime]::UtcNow) - (Get-Date '1/1/1970')).TotalSeconds

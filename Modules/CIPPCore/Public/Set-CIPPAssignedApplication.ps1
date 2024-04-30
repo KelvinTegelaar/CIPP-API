@@ -108,7 +108,7 @@ function Set-CIPPAssignedApplication {
                 $MobileAppAssignment
             )
         }
-        if ($PSCmdlet.ShouldProcess('Assign Application', "Assigning Application to $GroupName")) {
+        if ($PSCmdlet.ShouldProcess($GroupName, "Assigning Application $ApplicationId")) {
             $null = New-GraphPOSTRequest -uri "https://graph.microsoft.com/beta/deviceAppManagement/mobileApps/$($ApplicationId)/assign" -tenantid $TenantFilter -type POST -body ($DefaultAssignmentObject | ConvertTo-Json -Compress -Depth 10)
             Write-LogMessage -user $ExecutingUser -API $APIName -message "Assigned Application to $($GroupName)" -Sev 'Info' -tenant $TenantFilter
         }

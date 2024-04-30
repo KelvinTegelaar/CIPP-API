@@ -12,7 +12,7 @@ $Tasks = foreach ($Tenant in $Tenants) {
             Type     = $Tenant.type
         }
     } else {
-        Write-Host 'All tenants, doing them all'
+        Write-Information 'All tenants, doing them all'
         $TenantList = Get-Tenants
         foreach ($t in $TenantList) {
             [pscustomobject]@{
@@ -43,7 +43,7 @@ $InputObject = [PSCustomObject]@{
     Batch            = @($Batch)
     SkipLog          = $true
 }
-#Write-Host ($InputObject | ConvertTo-Json)
+#Write-Information ($InputObject | ConvertTo-Json)
 $InstanceId = Start-NewOrchestration -FunctionName 'CIPPOrchestrator' -InputObject ($InputObject | ConvertTo-Json -Depth 5 -Compress)
-Write-Host "Started orchestration with ID = '$InstanceId'"
+Write-Information "Started orchestration with ID = '$InstanceId'"
 #$Orchestrator = New-OrchestrationCheckStatusResponse -Request $Request -InstanceId $InstanceId

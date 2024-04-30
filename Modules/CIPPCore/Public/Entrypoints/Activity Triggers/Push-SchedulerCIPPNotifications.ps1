@@ -13,13 +13,13 @@ function Push-SchedulerCIPPNotifications {
 
     $Settings = [System.Collections.Generic.List[string]]@('Alerts')
     $Config.psobject.properties.name | ForEach-Object { if ($Config.$_ -eq $true) { $Settings.Add($_) } }
-    Write-Host "Our APIs are: $($Settings -join ',')"
+    Write-Information "Our APIs are: $($Settings -join ',')"
 
     $severity = $Config.Severity -split ','
     if (!$severity) {
         $severity = [System.Collections.ArrayList]@('Info', 'Error', 'Warning', 'Critical', 'Alert')
     }
-    Write-Host "Our Severity table is: $severity"
+    Write-Information "Our Severity table is: $severity"
 
     $Table = Get-CIPPTable
     $PartitionKey = Get-Date -UFormat '%Y%m%d'
@@ -27,7 +27,7 @@ function Push-SchedulerCIPPNotifications {
     $Currentlog = Get-CIPPAzDataTableEntity @Table -Filter $Filter | Where-Object {
         $_.API -In $Settings -and $_.SentAsAlert -ne $true -and $_.Severity -In $severity
     }
-    Write-Host "Alerts: $($Currentlog.count) found"
+    Write-Information "Alerts: $($Currentlog.count) found"
     #email try
     try {
         if ($Config.email -like '*@*') {
@@ -81,13 +81,13 @@ function Push-SchedulerCIPPNotifications {
             Write-LogMessage -API 'Alerts' -message "Sent $(($LogEmails|Measure-Object).Count) alerts to: $($Addresses -join ', ')" -sev Debug
         }
     } catch {
-        Write-Host "Could not send alerts to email: $($_.Exception.message)"
+        Write-Information "Could not send alerts to email: $($_.Exception.message)"
         Write-LogMessage -API 'Alerts' -message "Could not send alert emails: $($_.Exception.message)" -sev error -LogData (Get-CippException -Exception $_)
     }
 
     try {
-        Write-Host $($config | ConvertTo-Json)
-        Write-Host $config.webhook
+        Write-Information $($config | ConvertTo-Json)
+        Write-Information $config.webhook
         if ($Config.webhook -ne '' -and $null -ne $CurrentLog) {
             switch -wildcard ($config.webhook) {
 
@@ -128,7 +128,7 @@ function Push-SchedulerCIPPNotifications {
             Add-CIPPAzDataTableEntity @Table -Entity $UpdateLogs -Force
         }
     } catch {
-        Write-Host "Could not send alerts to webhook: $($_.Exception.message)"
+        Write-Information "Could not send alerts to webhook: $($_.Exception.message)"
         Write-LogMessage -API 'Alerts' -message "Could not send alerts to : $($_.Exception.message)" -tenant $Tenant -sev error
     }
 
@@ -151,7 +151,7 @@ function Push-SchedulerCIPPNotifications {
                 }
             }
         } catch {
-            Write-Host "Could not send alerts to ticketing system: $($_.Exception.message)"
+            Write-Information "Could not send alerts to ticketing system: $($_.Exception.message)"
             Write-LogMessage -API 'Alerts' -tenant $Tenant -message "Could not send alerts to ticketing system: $($_.Exception.message)" -sev Error
         }
     }

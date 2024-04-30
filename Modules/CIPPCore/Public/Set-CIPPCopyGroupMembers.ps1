@@ -15,7 +15,7 @@ function Set-CIPPCopyGroupMembers {
     (New-GraphGETRequest -uri "https://graph.microsoft.com/beta/users/$CopyFromId/memberOf" -tenantid $TenantFilter) | Where-Object { $_.GroupTypes -notin 'herohero' } | ForEach-Object {
         try {
             $MailGroup = $_
-            if ($PSCmdlet.ShouldProcess('Add group', "Add $UserId to group $($_.displayName)")) {
+            if ($PSCmdlet.ShouldProcess($_.displayName, "Add $UserId to group")) {
                 if ($MailGroup.MailEnabled -and $Mailgroup.ResourceProvisioningOptions -notin 'Team') {
                     $Params = @{ Identity = $MailGroup.mail; Member = $UserId; BypassSecurityGroupManagerCheck = $true }
                     $null = New-ExoRequest -tenantid $TenantFilter -cmdlet 'Add-DistributionGroupMember' -cmdParams $params -UseSystemMailbox $true

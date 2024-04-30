@@ -109,7 +109,7 @@ function Set-CIPPAuthenticationPolicy {
     }
     # Set state of the authentication method
     try {
-        if ($PSCmdlet.ShouldProcess('Set Authentication Method', "Set $AuthenticationMethodId state to $State $OptionalLogMessage")) {
+        if ($PSCmdlet.ShouldProcess($AuthenticationMethodId, "Set state to $State $OptionalLogMessage")) {
             # Convert body to JSON and send request
             $null = New-GraphPostRequest -tenantid $Tenant -Uri "https://graph.microsoft.com/beta/policies/authenticationmethodspolicy/authenticationMethodConfigurations/$AuthenticationMethodId" -Type patch -Body ($CurrentInfo | ConvertTo-Json -Compress -Depth 10) -ContentType 'application/json'
             Write-LogMessage -user $ExecutingUser -API $APIName -tenant $Tenant -message "Set $AuthenticationMethodId state to $State $OptionalLogMessage" -sev Info

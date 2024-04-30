@@ -44,7 +44,7 @@ function Set-CIPPDefaultAPDeploymentProfile {
         if ($Profiles.count -gt 1) {
             $Profiles | ForEach-Object {
                 if ($_.id -ne $Profiles[0].id) {
-                    if ($PSCmdlet.ShouldProcess('Delete Profile', "Delete duplicate Autopilot profile $($_.displayName)")) {
+                    if ($PSCmdlet.ShouldProcess($_.displayName, 'Delete duplicate Autopilot profile')) {
                         $null = New-GraphPOSTRequest -uri "https://graph.microsoft.com/beta/deviceManagement/windowsAutopilotDeploymentProfiles/$($_.id)" -tenantid $tenantfilter -type DELETE
                         Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APIName -tenant $($tenantfilter) -message "Deleted duplicate Autopilot profile $($displayname)" -Sev 'Info'
                     }
@@ -52,14 +52,14 @@ function Set-CIPPDefaultAPDeploymentProfile {
             }
         }
         if (!$Profiles) {
-            if ($PSCmdlet.ShouldProcess('Add Profile', "Add Autopilot profile $displayname")) {
+            if ($PSCmdlet.ShouldProcess($displayName, 'Add Autopilot profile')) {
                 $GraphRequest = New-GraphPostRequest -uri 'https://graph.microsoft.com/beta/deviceManagement/windowsAutopilotDeploymentProfiles' -body $body -tenantid $tenantfilter
                 Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APIName -tenant $($tenantfilter) -message "Added Autopilot profile $($displayname)" -Sev 'Info'
             }
         }
         if ($AssignTo) {
             $AssignBody = '{"target":{"@odata.type":"#microsoft.graph.allDevicesAssignmentTarget"}}'
-            if ($PSCmdlet.ShouldProcess('Assign Profile', "Assign Autopilot profile $displayname to $AssignTo")) {
+            if ($PSCmdlet.ShouldProcess($AssignTo, "Assign Autopilot profile $displayname")) {
                 $null = New-GraphPOSTRequest -uri "https://graph.microsoft.com/beta/deviceManagement/windowsAutopilotDeploymentProfiles/$($GraphRequest.id)/assignments" -tenantid $tenantfilter -type POST -body $AssignBody
                 Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APIName -tenant $($tenantfilter) -message "Assigned autopilot profile $($Displayname) to $AssignTo" -Sev 'Info'
             }
