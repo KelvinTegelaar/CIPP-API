@@ -135,7 +135,7 @@ function Invoke-ListGraphRequest {
 
     if ($request.Query.Sort) {
         $GraphRequestData.Results = $GraphRequestData.Results | Sort-Object -Property $request.Query.Sort
-    } 
+    }
     $Outputdata = $GraphRequestData | ConvertTo-Json -Depth 20 -Compress
 
     Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{

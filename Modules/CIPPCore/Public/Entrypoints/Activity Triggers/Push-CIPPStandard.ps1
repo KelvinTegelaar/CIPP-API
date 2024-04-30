@@ -1,4 +1,8 @@
 function Push-CIPPStandard {
+    <#
+    .FUNCTIONALITY
+        Entrypoint
+    #>
     param (
         $Item
     )

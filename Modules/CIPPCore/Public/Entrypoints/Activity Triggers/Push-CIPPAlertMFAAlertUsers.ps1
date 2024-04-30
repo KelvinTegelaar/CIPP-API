@@ -1,4 +1,8 @@
 function Push-CIPPAlertMFAAlertUsers {
+    <#
+    .FUNCTIONALITY
+        Entrypoint
+    #>
     [CmdletBinding()]
     Param (
         [Parameter(Mandatory = $true)]

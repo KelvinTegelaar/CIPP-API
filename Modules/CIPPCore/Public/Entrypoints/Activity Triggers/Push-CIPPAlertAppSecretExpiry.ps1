@@ -1,4 +1,8 @@
 function Push-CIPPAlertAppSecretExpiry {
+    <#
+    .FUNCTIONALITY
+        Entrypoint
+    #>
     [CmdletBinding()]
     Param (
         [Parameter(Mandatory = $true)]
