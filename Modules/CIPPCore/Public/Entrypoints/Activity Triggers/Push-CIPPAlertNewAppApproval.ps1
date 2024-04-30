@@ -1,5 +1,9 @@
 
 function Push-CIPPAlertNewAppApproval {
+    <#
+    .FUNCTIONALITY
+        Entrypoint
+    #>
     [CmdletBinding()]
     param(
         [Parameter(Mandatory = $true)]

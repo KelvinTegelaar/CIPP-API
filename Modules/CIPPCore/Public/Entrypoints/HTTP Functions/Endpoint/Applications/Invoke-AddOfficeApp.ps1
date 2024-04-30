@@ -68,8 +68,7 @@ Function Invoke-AddOfficeApp {
                 }
                 Write-Host ($ObjBody | ConvertTo-Json -Compress)
                 $OfficeAppID = New-graphPostRequest -Uri 'https://graph.microsoft.com/beta/deviceAppManagement/mobileApps' -tenantid $tenant -Body (ConvertTo-Json -InputObject $ObjBody -Depth 10) -type POST
-            }
-            else { 
+            } else { 
                 "Office deployment already exists for $($Tenant)"
                 Continue
             }
@@ -80,10 +79,9 @@ Function Invoke-AddOfficeApp {
                 Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APIName -tenant $($tenant) -message "Assigned Office to $AssignTo" -Sev 'Info'
             }
             "Successfully added Office App for $($Tenant)"
-        }
-        catch {
+        } catch {
             "Failed to add Office App for $($Tenant): $($_.Exception.Message)"
-            Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APIName -tenant $($tenant) -message "Failed adding Autopilot Profile $($Displayname). Error: $($_.Exception.Message)" -Sev 'Error'
+            Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APIName -tenant $($tenant) -message "Failed to add Office App. Error: $($_.Exception.Message)" -Sev 'Error'
             continue
         }
 
