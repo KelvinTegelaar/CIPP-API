@@ -25,18 +25,23 @@ $Tasks = foreach ($Tenant in $Tenants) {
     }
 }
 
+$Queue = New-CippQueueEntry -Name 'Scheduler' -TotalTasks ($Tasks | Measure-Object).Count
+
 $Batch = foreach ($Task in $Tasks) {
     [pscustomobject]@{
         Tenant       = $task.tenant
         Tenantid     = $task.tenantid
         Tag          = $task.tag
         Type         = $task.type
+        QueueId      = $Queue.RowKey
+        QueueName    = '{0} - {1}' -f $Task.Type, $task.tenant
         FunctionName = "Scheduler$($Task.Type)"
     }
 }
 $InputObject = [PSCustomObject]@{
     OrchestratorName = 'SchedulerOrchestrator'
     Batch            = @($Batch)
+    SkipLog          = $true
 }
 #Write-Host ($InputObject | ConvertTo-Json)
 $InstanceId = Start-NewOrchestration -FunctionName 'CIPPOrchestrator' -InputObject ($InputObject | ConvertTo-Json -Depth 5 -Compress)
