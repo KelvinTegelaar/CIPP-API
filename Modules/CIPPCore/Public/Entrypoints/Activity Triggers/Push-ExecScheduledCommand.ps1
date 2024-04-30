@@ -8,13 +8,13 @@ function Push-ExecScheduledCommand {
 
     $Table = Get-CippTable -tablename 'ScheduledTasks'
     $task = $Item.TaskInfo
-    $commandParameters = $Item.Parameters
+    $commandParameters = $Item.Parameters | ConvertTo-Json | ConvertFrom-Json -AsHashtable
 
     $tenant = $Item.Parameters['TenantFilter']
-    Write-Host 'started task'
+    Write-Host "Started Task: $($Item.Command) for tenant: $tenant"
     try {
         try {
-            $results = & $Item.command @commandParameters
+            $results = & $Item.Command @commandParameters
         } catch {
             $results = "Task Failed: $($_.Exception.Message)"
         }
@@ -28,9 +28,13 @@ function Push-ExecScheduledCommand {
             $results = $results | ForEach-Object { @{ Results = $_ } }
         }
 
-        $results = $results | Select-Object * -ExcludeProperty RowKey, PartitionKey
+        if ($results -is [string]) {
+            $StoredResults = $results
+        } else {
+            $results = $results | Select-Object * -ExcludeProperty RowKey, PartitionKey
+            $StoredResults = $results | ConvertTo-Json -Compress -Depth 20 | Out-String
+        }
 
-        $StoredResults = $results | ConvertTo-Json -Compress -Depth 20 | Out-String
         if ($StoredResults.Length -gt 64000 -or $task.Tenant -eq 'AllTenants') {
             $StoredResults = @{ Results = 'The results for this query are too long to store in this table, or the query was meant for All Tenants. Please use the options to send the results to another target to be able to view the results. ' } | ConvertTo-Json -Compress
         }
