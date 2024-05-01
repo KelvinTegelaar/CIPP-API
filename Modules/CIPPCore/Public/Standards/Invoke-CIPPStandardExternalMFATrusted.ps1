@@ -39,6 +39,6 @@ function Invoke-CIPPStandardExternalMFATrusted {
 
     if ($Settings.report -eq $true) {
 
-        Add-CIPPBPAField -FieldName 'ExternalMFATrusted' -FieldValue [bool]$ExternalMFATrusted.inboundTrust.isMfaAccepted -StoreAs bool -Tenant $tenant
+        Add-CIPPBPAField -FieldName 'ExternalMFATrusted' -FieldValue $ExternalMFATrusted.inboundTrust.isMfaAccepted -StoreAs bool -Tenant $tenant
     }
 }

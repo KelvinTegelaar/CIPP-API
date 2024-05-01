@@ -24,6 +24,6 @@ function Invoke-CIPPStandardDisableEmail {
     }
 
     if ($Settings.report -eq $true) {
-        Add-CIPPBPAField -FieldName 'DisableEmail' -FieldValue [bool]$State -StoreAs bool -Tenant $tenant
+        Add-CIPPBPAField -FieldName 'DisableEmail' -FieldValue $State -StoreAs bool -Tenant $tenant
     }
 }

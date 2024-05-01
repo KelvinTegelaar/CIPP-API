@@ -31,6 +31,6 @@ function Invoke-CIPPStandardEnableCustomerLockbox {
     }
 
     if ($Settings.report -eq $true) {
-        Add-CIPPBPAField -FieldName 'CustomerLockboxEnabled' -FieldValue [bool]$CustomerLockboxStatus -StoreAs bool -Tenant $tenant
+        Add-CIPPBPAField -FieldName 'CustomerLockboxEnabled' -FieldValue $CustomerLockboxStatus -StoreAs bool -Tenant $tenant
     }
 }

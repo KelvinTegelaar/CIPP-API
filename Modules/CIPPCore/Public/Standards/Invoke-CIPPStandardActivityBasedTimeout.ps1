@@ -37,7 +37,7 @@ function Invoke-CIPPStandardActivityBasedTimeout {
     }
 
     if ($Settings.report -eq $true) {
-        Add-CIPPBPAField -FieldName 'ActivityBasedTimeout' -FieldValue [bool]$state -StoreAs bool -Tenant $tenant
+        Add-CIPPBPAField -FieldName 'ActivityBasedTimeout' -FieldValue $state -StoreAs bool -Tenant $tenant
     }
 
 }

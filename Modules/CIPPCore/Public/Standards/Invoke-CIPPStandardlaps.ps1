@@ -32,6 +32,6 @@ function Invoke-CIPPStandardlaps {
     }
 
     if ($Settings.report -eq $true) {
-        Add-CIPPBPAField -FieldName 'laps' -FieldValue [bool]$PreviousSetting.localAdminPassword.isEnabled -StoreAs bool -Tenant $tenant
+        Add-CIPPBPAField -FieldName 'laps' -FieldValue $PreviousSetting.localAdminPassword.isEnabled -StoreAs bool -Tenant $tenant
     }
 }

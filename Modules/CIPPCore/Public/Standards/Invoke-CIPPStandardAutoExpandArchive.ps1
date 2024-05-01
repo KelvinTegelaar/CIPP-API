@@ -29,6 +29,6 @@ function Invoke-CIPPStandardAutoExpandArchive {
     }
 
     if ($Settings.report -eq $true) {
-        Add-CIPPBPAField -FieldName 'AutoExpandingArchive' -FieldValue [bool]$CurrentState -StoreAs bool -Tenant $tenant
+        Add-CIPPBPAField -FieldName 'AutoExpandingArchive' -FieldValue $CurrentState -StoreAs bool -Tenant $tenant
     }
 }

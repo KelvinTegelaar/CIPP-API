@@ -42,6 +42,6 @@ function Invoke-CIPPStandardFocusedInbox {
     }
 
     if ($Settings.report -eq $true) {
-        Add-CIPPBPAField -FieldName 'FocusedInboxCorrectState' -FieldValue [bool]$StateIsCorrect -StoreAs bool -Tenant $tenant
+        Add-CIPPBPAField -FieldName 'FocusedInboxCorrectState' -FieldValue $StateIsCorrect -StoreAs bool -Tenant $tenant
     }
 }

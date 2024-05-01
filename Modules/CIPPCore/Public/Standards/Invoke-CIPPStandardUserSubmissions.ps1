@@ -59,7 +59,7 @@ function Invoke-CIPPStandardUserSubmissions {
         if ($Policy.length -eq 0) {
             Add-CIPPBPAField -FieldName 'UserSubmissionPolicy' -FieldValue $false -StoreAs bool -Tenant $tenant
         } else {
-            Add-CIPPBPAField -FieldName 'UserSubmissionPolicy' -FieldValue [bool]$Policy.EnableReportToMicrosoft -StoreAs bool -Tenant $tenant
+            Add-CIPPBPAField -FieldName 'UserSubmissionPolicy' -FieldValue $Policy.EnableReportToMicrosoft -StoreAs bool -Tenant $tenant
         }
     }
 }

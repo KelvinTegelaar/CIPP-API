@@ -29,6 +29,6 @@ function Invoke-CIPPStandardSendFromAlias {
     }
 
     if ($Settings.report -eq $true) {
-        Add-CIPPBPAField -FieldName 'SendFromAlias' -FieldValue [bool]$CurrentInfo -StoreAs bool -Tenant $tenant
+        Add-CIPPBPAField -FieldName 'SendFromAlias' -FieldValue $CurrentInfo -StoreAs bool -Tenant $tenant
     }
 }

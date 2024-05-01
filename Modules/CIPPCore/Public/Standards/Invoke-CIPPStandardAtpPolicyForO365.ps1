@@ -43,7 +43,7 @@ function Invoke-CIPPStandardAtpPolicyForO365 {
     }
 
     if ($Settings.report -eq $true) {
-        Add-CIPPBPAField -FieldName 'AtpPolicyForO365' -FieldValue [bool]$StateIsCorrect -StoreAs bool -Tenant $tenant
+        Add-CIPPBPAField -FieldName 'AtpPolicyForO365' -FieldValue $StateIsCorrect -StoreAs bool -Tenant $tenant
     }
 
 }

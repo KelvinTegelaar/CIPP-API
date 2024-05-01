@@ -44,6 +44,6 @@ function Invoke-CIPPStandardOauthConsent {
     }
     if ($Settings.report -eq $true) {
         if ($State.permissionGrantPolicyIdsAssignedToDefaultUserRole -eq 'managePermissionGrantsForSelf.cipp-consent-policy') { $UserQuota = $true } else { $UserQuota = $false }
-        Add-CIPPBPAField -FieldName 'OauthConsent' -FieldValue [bool]$UserQuota -StoreAs bool -Tenant $tenant
+        Add-CIPPBPAField -FieldName 'OauthConsent' -FieldValue $UserQuota -StoreAs bool -Tenant $tenant
     }
 }

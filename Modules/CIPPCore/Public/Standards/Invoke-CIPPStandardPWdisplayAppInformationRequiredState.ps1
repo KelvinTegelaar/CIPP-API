@@ -24,6 +24,6 @@ function Invoke-CIPPStandardPWdisplayAppInformationRequiredState {
     }
 
     if ($Settings.report -eq $true) {
-        Add-CIPPBPAField -FieldName 'PWdisplayAppInformationRequiredState' -FieldValue [bool]$State -StoreAs bool -Tenant $tenant
+        Add-CIPPBPAField -FieldName 'PWdisplayAppInformationRequiredState' -FieldValue $State -StoreAs bool -Tenant $tenant
     }
 }

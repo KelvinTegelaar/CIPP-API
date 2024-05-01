@@ -33,6 +33,6 @@ function Invoke-CIPPStandardUndoOauth {
     }
 
     if ($Settings.report -eq $true) {
-        Add-CIPPBPAField -FieldName 'UndoOauth' -FieldValue [bool]$State -StoreAs bool -Tenant $tenant
+        Add-CIPPBPAField -FieldName 'UndoOauth' -FieldValue $State -StoreAs bool -Tenant $tenant
     }
 }

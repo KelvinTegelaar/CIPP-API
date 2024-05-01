@@ -32,6 +32,6 @@ function Invoke-CIPPStandardDisableGuestDirectory {
 
     if ($Settings.report -eq $true) {
         if ($CurrentInfo.guestUserRoleId -eq '2af84b1e-32c8-42b7-82bc-daa82404023b') { $CurrentInfo.guestUserRoleId = $true } else { $CurrentInfo.guestUserRoleId = $false }
-        Add-CIPPBPAField -FieldName 'DisableGuestDirectory' -FieldValue [bool]$CurrentInfo.guestUserRoleId -StoreAs bool -Tenant $tenant
+        Add-CIPPBPAField -FieldName 'DisableGuestDirectory' -FieldValue $CurrentInfo.guestUserRoleId -StoreAs bool -Tenant $tenant
     }
 }

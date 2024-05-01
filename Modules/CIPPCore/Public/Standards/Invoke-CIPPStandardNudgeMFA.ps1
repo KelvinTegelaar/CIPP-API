@@ -38,6 +38,6 @@ function Invoke-CIPPStandardNudgeMFA {
     }
 
     if ($Settings.report -eq $true) {
-        Add-CIPPBPAField -FieldName 'NudgeMFA' -FieldValue [bool]$State -StoreAs bool -Tenant $tenant
+        Add-CIPPBPAField -FieldName 'NudgeMFA' -FieldValue $State -StoreAs bool -Tenant $tenant
     }
 }

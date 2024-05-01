@@ -33,6 +33,6 @@ function Invoke-CIPPStandardSpoofWarn {
     }
 
     if ($Settings.report -eq $true) {
-        Add-CIPPBPAField -FieldName 'SpoofingWarnings' -FieldValue [bool]$CurrentInfo.Enabled -StoreAs bool -Tenant $tenant
+        Add-CIPPBPAField -FieldName 'SpoofingWarnings' -FieldValue $CurrentInfo.Enabled -StoreAs bool -Tenant $tenant
     }
 }

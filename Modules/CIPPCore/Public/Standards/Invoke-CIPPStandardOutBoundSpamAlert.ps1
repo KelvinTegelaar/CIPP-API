@@ -31,6 +31,6 @@ function Invoke-CIPPStandardOutBoundSpamAlert {
     }
 
     if ($Settings.report -eq $true) {
-        Add-CIPPBPAField -FieldName 'OutboundSpamAlert' -FieldValue [bool]$CurrentInfo.NotifyOutboundSpam -StoreAs bool -Tenant $tenant
+        Add-CIPPBPAField -FieldName 'OutboundSpamAlert' -FieldValue $CurrentInfo.NotifyOutboundSpam -StoreAs bool -Tenant $tenant
     }
 }

@@ -55,7 +55,7 @@ function Invoke-CIPPStandardSafeAttachmentPolicy {
     }
 
     if ($Settings.report -eq $true) {
-        Add-CIPPBPAField -FieldName 'SafeAttachmentPolicy' -FieldValue [bool]$StateIsCorrect -StoreAs bool -Tenant $tenant
+        Add-CIPPBPAField -FieldName 'SafeAttachmentPolicy' -FieldValue $StateIsCorrect -StoreAs bool -Tenant $tenant
     }
 
 }

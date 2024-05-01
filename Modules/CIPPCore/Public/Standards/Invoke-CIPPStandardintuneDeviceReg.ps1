@@ -30,6 +30,6 @@ function Invoke-CIPPStandardintuneDeviceReg {
     }
     if ($Settings.report -eq $true) {
         if ($PreviousSetting.userDeviceQuota -eq $Settings.max) { $UserQuota = $true } else { $UserQuota = $false }
-        Add-CIPPBPAField -FieldName 'intuneDeviceReg' -FieldValue [bool]$UserQuota -StoreAs bool -Tenant $tenant
+        Add-CIPPBPAField -FieldName 'intuneDeviceReg' -FieldValue $UserQuota -StoreAs bool -Tenant $tenant
     }
 }

@@ -52,6 +52,6 @@ function Invoke-CIPPStandardPhishProtection {
     }
     if ($Settings.report -eq $true) {
         if ($currentBody -like "*$CSS*") { $authstate = $true } else { $authstate = $false }
-        Add-CIPPBPAField -FieldName 'PhishProtection' -FieldValue [bool]$authstate -StoreAs bool -Tenant $tenant
+        Add-CIPPBPAField -FieldName 'PhishProtection' -FieldValue $authstate -StoreAs bool -Tenant $tenant
     }
 }

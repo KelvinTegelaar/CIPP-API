@@ -33,6 +33,6 @@ function Invoke-CIPPStandardDeletedUserRentention {
 
     if ($Settings.report -eq $true) {
 
-        Add-CIPPBPAField -FieldName 'DeletedUserRentention' -FieldValue [bool]$StateSetCorrectly -StoreAs bool -Tenant $tenant
+        Add-CIPPBPAField -FieldName 'DeletedUserRentention' -FieldValue $StateSetCorrectly -StoreAs bool -Tenant $tenant
     }
 }

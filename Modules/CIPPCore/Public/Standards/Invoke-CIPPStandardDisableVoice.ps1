@@ -24,6 +24,6 @@ function Invoke-CIPPStandardDisableVoice {
     }
 
     if ($Settings.report -eq $true) {
-        Add-CIPPBPAField -FieldName 'DisableVoice' -FieldValue [bool]$State -StoreAs bool -Tenant $tenant
+        Add-CIPPBPAField -FieldName 'DisableVoice' -FieldValue $State -StoreAs bool -Tenant $tenant
     }
 }

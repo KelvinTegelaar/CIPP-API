@@ -47,6 +47,6 @@ function Invoke-CIPPStandardPWcompanionAppAllowedState {
     }
 
     if ($Settings.report -eq $true) {
-        Add-CIPPBPAField -FieldName 'companionAppAllowedState' -FieldValue [bool]$authstate -StoreAs bool -Tenant $tenant
+        Add-CIPPBPAField -FieldName 'companionAppAllowedState' -FieldValue $authstate -StoreAs bool -Tenant $tenant
     }
 }

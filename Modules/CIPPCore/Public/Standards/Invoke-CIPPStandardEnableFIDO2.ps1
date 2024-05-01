@@ -27,7 +27,7 @@ function Invoke-CIPPStandardEnableFIDO2 {
     }
 
     if ($Settings.report -eq $true) {
-        Add-CIPPBPAField -FieldName 'EnableFIDO2' -FieldValue [bool]$State -StoreAs bool -Tenant $tenant
+        Add-CIPPBPAField -FieldName 'EnableFIDO2' -FieldValue $State -StoreAs bool -Tenant $tenant
     }
 
 }

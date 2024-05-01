@@ -23,7 +23,7 @@ function Invoke-CIPPStandardallowOTPTokens {
     }
 
     if ($Settings.report -eq $true) {
-        Add-CIPPBPAField -FieldName 'MSAuthenticator' -FieldValue [bool]$CurrentInfo.isSoftwareOathEnabled -StoreAs bool -Tenant $tenant
+        Add-CIPPBPAField -FieldName 'MSAuthenticator' -FieldValue $CurrentInfo.isSoftwareOathEnabled -StoreAs bool -Tenant $tenant
     }
 
 }

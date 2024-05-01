@@ -32,6 +32,6 @@ function Invoke-CIPPStandardDisableUserSiteCreate {
     }
 
     if ($Settings.report -eq $true) {
-        Add-CIPPBPAField -FieldName 'DisableUserSiteCreate' -FieldValue [bool]$CurrentInfo.isSiteCreationEnabled -StoreAs bool -Tenant $tenant
+        Add-CIPPBPAField -FieldName 'DisableUserSiteCreate' -FieldValue $CurrentInfo.isSiteCreationEnabled -StoreAs bool -Tenant $tenant
     }
 }
