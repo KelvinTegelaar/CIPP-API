@@ -31,7 +31,7 @@ function Invoke-CIPPStandardDisableViva {
     }
 
     if ($Settings.report -eq $true) {
-        Add-CIPPBPAField -FieldName 'DisableViva' -FieldValue [bool]$CurrentSetting.isEnabledInOrganization -StoreAs bool -Tenant $tenant
+        Add-CIPPBPAField -FieldName 'DisableViva' -FieldValue $CurrentSetting.isEnabledInOrganization -StoreAs bool -Tenant $tenant
     }
 
 }

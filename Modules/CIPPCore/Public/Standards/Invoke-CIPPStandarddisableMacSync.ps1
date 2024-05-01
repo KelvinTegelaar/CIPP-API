@@ -32,6 +32,6 @@ function Invoke-CIPPStandarddisableMacSync {
 
     if ($Settings.report -eq $true) {
         $CurrentInfo.isMacSyncAppEnabled = -not $CurrentInfo.isMacSyncAppEnabled
-        Add-CIPPBPAField -FieldName 'MacSync' -FieldValue [bool]$CurrentInfo.isMacSyncAppEnabled -StoreAs bool -Tenant $tenant
+        Add-CIPPBPAField -FieldName 'MacSync' -FieldValue $CurrentInfo.isMacSyncAppEnabled -StoreAs bool -Tenant $tenant
     }
 }

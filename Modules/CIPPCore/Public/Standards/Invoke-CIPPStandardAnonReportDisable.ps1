@@ -28,6 +28,6 @@ function Invoke-CIPPStandardAnonReportDisable {
         }
     }
     if ($Settings.report -eq $true) {
-        Add-CIPPBPAField -FieldName 'AnonReport' -FieldValue [bool]$CurrentInfo.displayConcealedNames -StoreAs bool -Tenant $tenant
+        Add-CIPPBPAField -FieldName 'AnonReport' -FieldValue $CurrentInfo.displayConcealedNames -StoreAs bool -Tenant $tenant
     }
 }

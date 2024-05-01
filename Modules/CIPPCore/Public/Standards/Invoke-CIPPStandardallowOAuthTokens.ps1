@@ -25,6 +25,6 @@ function Invoke-CIPPStandardallowOAuthTokens {
     }
 
     if ($Settings.report -eq $true) {
-        Add-CIPPBPAField -FieldName 'softwareOath' -FieldValue [bool]$State -StoreAs bool -Tenant $tenant
+        Add-CIPPBPAField -FieldName 'softwareOath' -FieldValue $State -StoreAs bool -Tenant $tenant
     }
 }

@@ -24,7 +24,7 @@ function Invoke-CIPPStandardDisablex509Certificate {
     }
 
     if ($Settings.report -eq $true) {
-        Add-CIPPBPAField -FieldName 'Disablex509Certificate' -FieldValue [bool]$State -StoreAs bool -Tenant $tenant
+        Add-CIPPBPAField -FieldName 'Disablex509Certificate' -FieldValue $State -StoreAs bool -Tenant $tenant
     }
 
 }

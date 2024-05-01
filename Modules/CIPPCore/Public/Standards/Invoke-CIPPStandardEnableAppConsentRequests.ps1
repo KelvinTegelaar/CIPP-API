@@ -73,6 +73,6 @@ function Invoke-CIPPStandardEnableAppConsentRequests {
         }
     }
     if ($Settings.report -eq $true) {
-        Add-CIPPBPAField -FieldName 'EnableAppConsentAdminRequests' -FieldValue [bool]$CurrentInfo.isEnabled -StoreAs bool -Tenant $tenant
+        Add-CIPPBPAField -FieldName 'EnableAppConsentAdminRequests' -FieldValue $CurrentInfo.isEnabled -StoreAs bool -Tenant $tenant
     }
 }

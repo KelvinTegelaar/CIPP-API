@@ -33,7 +33,7 @@ function Invoke-CIPPStandardEnableMailTips {
 
     if ($Settings.report -eq $true) {
 
-        Add-CIPPBPAField -FieldName 'MailTipsEnabled' -FieldValue [bool]$StateIsCorrect -StoreAs bool -Tenant $tenant
+        Add-CIPPBPAField -FieldName 'MailTipsEnabled' -FieldValue $StateIsCorrect -StoreAs bool -Tenant $tenant
     }
 
 }

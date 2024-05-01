@@ -44,6 +44,6 @@ function Invoke-CIPPStandardAuditLog {
     }
     if ($Settings.report -eq $true) {
 
-        Add-CIPPBPAField -FieldName 'AuditLog' -FieldValue [bool]$AuditLogEnabled -StoreAs bool -Tenant $tenant
+        Add-CIPPBPAField -FieldName 'AuditLog' -FieldValue $AuditLogEnabled -StoreAs bool -Tenant $tenant
     }
 }

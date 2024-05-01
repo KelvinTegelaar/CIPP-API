@@ -33,6 +33,6 @@ function Invoke-CIPPStandardintuneDeviceRetirementDays {
     if ($Settings.report -eq $true) {
         $UserQuota = if ($PreviousSetting.DeviceInactivityBeforeRetirementInDays -eq $Settings.days) { $true } else { $false }
 
-        Add-CIPPBPAField -FieldName 'intuneDeviceRetirementDays' -FieldValue [bool]$UserQuota -StoreAs bool -Tenant $tenant
+        Add-CIPPBPAField -FieldName 'intuneDeviceRetirementDays' -FieldValue $UserQuota -StoreAs bool -Tenant $tenant
     }
 }

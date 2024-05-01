@@ -31,6 +31,6 @@ function Invoke-CIPPStandardDisableTenantCreation {
         }
     }
     if ($Settings.report -eq $true) {
-        Add-CIPPBPAField -FieldName 'DisableTenantCreation' -FieldValue [bool]$State -StoreAs bool -Tenant $tenant
+        Add-CIPPBPAField -FieldName 'DisableTenantCreation' -FieldValue $State -StoreAs bool -Tenant $tenant
     }
 }

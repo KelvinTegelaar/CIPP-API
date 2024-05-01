@@ -48,7 +48,7 @@ function Invoke-CIPPStandardDisableM365GroupUsers {
         } else {
             $CurrentState = $false
         }
-        Add-CIPPBPAField -FieldName 'DisableM365GroupUsers' -FieldValue [bool]$CurrentState -StoreAs bool -Tenant $tenant
+        Add-CIPPBPAField -FieldName 'DisableM365GroupUsers' -FieldValue $CurrentState -StoreAs bool -Tenant $tenant
     }
 
 }

@@ -32,6 +32,6 @@ function Invoke-CIPPStandardDisableSharePointLegacyAuth {
     }
     if ($Settings.report -eq $true) {
 
-        Add-CIPPBPAField -FieldName 'SharePointLegacyAuthEnabled' -FieldValue [bool]$CurrentInfo.isLegacyAuthProtocolsEnabled -StoreAs bool -Tenant $tenant
+        Add-CIPPBPAField -FieldName 'SharePointLegacyAuthEnabled' -FieldValue $CurrentInfo.isLegacyAuthProtocolsEnabled -StoreAs bool -Tenant $tenant
     }
 }

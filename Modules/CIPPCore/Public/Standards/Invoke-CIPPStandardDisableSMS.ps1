@@ -24,6 +24,6 @@ function Invoke-CIPPStandardDisableSMS {
     }
 
     if ($Settings.report -eq $true) {
-        Add-CIPPBPAField -FieldName 'DisableSMS' -FieldValue [bool]$State -StoreAs bool -Tenant $tenant
+        Add-CIPPBPAField -FieldName 'DisableSMS' -FieldValue $State -StoreAs bool -Tenant $tenant
     }
 }

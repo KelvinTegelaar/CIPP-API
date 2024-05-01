@@ -33,6 +33,6 @@ function Invoke-CIPPStandardDisableExternalCalendarSharing {
 
     if ($Settings.report -eq $true) {
         $CurrentInfo.Enabled = -not $CurrentInfo.Enabled
-        Add-CIPPBPAField -FieldName 'ExternalCalendarSharingDisabled' -FieldValue [bool]$CurrentInfo.Enabled -StoreAs bool -Tenant $tenant
+        Add-CIPPBPAField -FieldName 'ExternalCalendarSharingDisabled' -FieldValue $CurrentInfo.Enabled -StoreAs bool -Tenant $tenant
     }
 }

@@ -30,6 +30,6 @@ function Invoke-CIPPStandardOauthConsentLowSec {
         } else {
             $State.permissionGrantPolicyIdsAssignedToDefaultUserRole = $true
         }
-        Add-CIPPBPAField -FieldName 'OauthConsentLowSec' -FieldValue [bool]$State.permissionGrantPolicyIdsAssignedToDefaultUserRole -StoreAs bool -Tenant $tenant
+        Add-CIPPBPAField -FieldName 'OauthConsentLowSec' -FieldValue $State.permissionGrantPolicyIdsAssignedToDefaultUserRole -StoreAs bool -Tenant $tenant
     }
 }

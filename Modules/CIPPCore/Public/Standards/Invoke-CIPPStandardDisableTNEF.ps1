@@ -33,7 +33,7 @@ function Invoke-CIPPStandardDisableTNEF {
 
     if ($Settings.report -eq $true) {
         $State = if ($CurrentState.TNEFEnabled -ne $false) { $false } else { $true }
-        Add-CIPPBPAField -FieldName 'TNEFDisabled' -FieldValue [bool]$State -StoreAs bool -Tenant $tenant
+        Add-CIPPBPAField -FieldName 'TNEFDisabled' -FieldValue $State -StoreAs bool -Tenant $tenant
     }
 
 }

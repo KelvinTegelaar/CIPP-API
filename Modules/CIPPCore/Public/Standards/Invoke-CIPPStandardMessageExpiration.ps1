@@ -31,6 +31,6 @@ function Invoke-CIPPStandardMessageExpiration {
     }
     if ($Settings.report -eq $true) {
         if ($MessageExpiration -ne '12:00:00') { $MessageExpiration = $false } else { $MessageExpiration = $true }
-        Add-CIPPBPAField -FieldName 'messageExpiration' -FieldValue [bool]$MessageExpiration -StoreAs bool -Tenant $tenant
+        Add-CIPPBPAField -FieldName 'messageExpiration' -FieldValue $MessageExpiration -StoreAs bool -Tenant $tenant
     }
 }
