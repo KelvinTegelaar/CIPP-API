@@ -67,7 +67,7 @@ function Get-GraphRequestList {
     )
 
     $TableName = ('cache{0}' -f ($Endpoint -replace '[^A-Za-z0-9]'))[0..62] -join ''
-    Write-Host "Table: $TableName"
+    Write-Information "Table: $TableName"
     $Endpoint = $Endpoint -replace '^/', ''
     $DisplayName = ($Endpoint -split '/')[0]
 
@@ -85,9 +85,9 @@ function Get-GraphRequestList {
     }
     $GraphQuery.Query = $ParamCollection.ToString()
     $PartitionKey = Get-StringHash -String (@($Endpoint, $ParamCollection.ToString()) -join '-')
-    Write-Host "PK: $PartitionKey"
+    Write-Information "PK: $PartitionKey"
 
-    Write-Host ( 'GET [ {0} ]' -f $GraphQuery.ToString())
+    Write-Information ( 'GET [ {0} ]' -f $GraphQuery.ToString())
 
     try {
         if ($QueueId) {
@@ -97,25 +97,25 @@ function Get-GraphRequestList {
             $Type = 'Queue'
         } elseif ($TenantFilter -eq 'AllTenants' -or (!$SkipCache.IsPresent -and !$ClearCache.IsPresent -and !$CountOnly.IsPresent)) {
             $Table = Get-CIPPTable -TableName $TableName
+            $Timestamp = (Get-Date).AddHours(-1).ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ss.fffK')
             if ($TenantFilter -eq 'AllTenants') {
-                $Filter = "PartitionKey eq '{0}' and QueueType eq 'AllTenants'" -f $PartitionKey
+                $Filter = "PartitionKey eq '{0}' and QueueType eq 'AllTenants' and Timestamp ge datetime'{1}'" -f $PartitionKey, $Timestamp
             } else {
-                $Filter = "PartitionKey eq '{0}' and Tenant eq '{1}'" -f $PartitionKey, $TenantFilter
+                $Filter = "PartitionKey eq '{0}' and Tenant eq '{1}' and Timestamp ge datetime'{2}'" -f $PartitionKey, $TenantFilter, $Timestamp
             }
-            #Write-Host $Filter
-            $Rows = Get-CIPPAzDataTableEntity @Table -Filter $Filter | Where-Object { $_.Timestamp.DateTime -gt (Get-Date).ToUniversalTime().AddHours(-1) }
+            #Write-Information  $Filter
+            $Rows = Get-CIPPAzDataTableEntity @Table -Filter $Filter
             $Type = 'Cache'
         } else {
             $Type = 'None'
             $Rows = @()
         }
-        Write-Host "Cached: $(($Rows | Measure-Object).Count) rows (Type: $($Type))"
-
+        Write-Information "Cached: $(($Rows | Measure-Object).Count) rows (Type: $($Type))"
 
         $QueueReference = '{0}-{1}' -f $TenantFilter, $PartitionKey
         $RunningQueue = Invoke-ListCippQueue | Where-Object { $_.Reference -eq $QueueReference -and $_.Status -ne 'Completed' -and $_.Status -ne 'Failed' }
     } catch {
-        Write-Host $_.InvocationInfo.PositionMessage
+        Write-Information $_.InvocationInfo.PositionMessage
     }
 
     if ($TenantFilter -ne 'AllTenants' -and $Endpoint -match '%tenantid%') {
@@ -158,8 +158,8 @@ function Get-GraphRequestList {
                     }
                 } else {
                     if ($RunningQueue) {
-                        Write-Host 'Queue currently running'
-                        Write-Host ($RunningQueue | ConvertTo-Json)
+                        Write-Information 'Queue currently running'
+                        Write-Information ($RunningQueue | ConvertTo-Json)
                         [PSCustomObject]@{
                             QueueMessage = 'Data still processing, please wait'
                             QueueId      = $RunningQueue.RowKey
@@ -173,7 +173,7 @@ function Get-GraphRequestList {
                             Queued       = $true
                             QueueId      = $Queue.RowKey
                         }
-                        Write-Host 'Pushing output bindings'
+                        Write-Information 'Pushing output bindings'
                         try {
                             $Batch = $TenantList | ForEach-Object {
                                 $TenantFilter = $_.defaultDomainName
@@ -199,10 +199,10 @@ function Get-GraphRequestList {
                                 OrchestratorName = 'GraphRequestOrchestrator'
                                 Batch            = @($Batch)
                             }
-                            #Write-Host ($InputObject | ConvertTo-Json -Depth 5)
+                            #Write-Information  ($InputObject | ConvertTo-Json -Depth 5)
                             $InstanceId = Start-NewOrchestration -FunctionName 'CIPPOrchestrator' -InputObject ($InputObject | ConvertTo-Json -Depth 5 -Compress)
                         } catch {
-                            Write-Host "QUEUE ERROR: $($_.Exception.Message)"
+                            Write-Information "QUEUE ERROR: $($_.Exception.Message)"
                         }
                     }
                 }
@@ -231,12 +231,12 @@ function Get-GraphRequestList {
                     if ($Parameters.'$count' -and !$SkipCache -and !$NoPagination) {
                         $Count = New-GraphGetRequest @GraphRequest -CountOnly -ErrorAction Stop
                         if ($CountOnly.IsPresent) { return $Count }
-                        Write-Host "Total results (`$count): $Count"
+                        Write-Information "Total results (`$count): $Count"
                         if ($Count -gt 8000) {
                             $QueueThresholdExceeded = $true
                             if ($RunningQueue) {
-                                Write-Host 'Queue currently running'
-                                Write-Host ($RunningQueue | ConvertTo-Json)
+                                Write-Information 'Queue currently running'
+                                Write-Information ($RunningQueue | ConvertTo-Json)
                                 [PSCustomObject]@{
                                     QueueMessage = 'Data still processing, please wait'
                                     QueueId      = $RunningQueue.RowKey
