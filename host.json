@@ -4,7 +4,7 @@
     "enabled": false
   },
   "extensionBundle": {
-    "id": "Microsoft.Azure.Functions.ExtensionBundle.preview",
+    "id": "Microsoft.Azure.Functions.ExtensionBundle.Preview",
     "version": "[4.*, 5.0.0)"
   },
   "functionTimeout": "00:10:00",
