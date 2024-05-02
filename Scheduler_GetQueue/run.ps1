@@ -12,7 +12,7 @@ $Tasks = foreach ($Tenant in $Tenants) {
             Type     = $Tenant.type
         }
     } else {
-        Write-Host 'All tenants, doing them all'
+        Write-Information 'All tenants, doing them all'
         $TenantList = Get-Tenants
         foreach ($t in $TenantList) {
             [pscustomobject]@{
@@ -25,20 +25,25 @@ $Tasks = foreach ($Tenant in $Tenants) {
     }
 }
 
+$Queue = New-CippQueueEntry -Name 'Scheduler' -TotalTasks ($Tasks | Measure-Object).Count
+
 $Batch = foreach ($Task in $Tasks) {
     [pscustomobject]@{
         Tenant       = $task.tenant
         Tenantid     = $task.tenantid
         Tag          = $task.tag
         Type         = $task.type
+        QueueId      = $Queue.RowKey
+        QueueName    = '{0} - {1}' -f $Task.Type, $task.tenant
         FunctionName = "Scheduler$($Task.Type)"
     }
 }
 $InputObject = [PSCustomObject]@{
     OrchestratorName = 'SchedulerOrchestrator'
     Batch            = @($Batch)
+    SkipLog          = $true
 }
-#Write-Host ($InputObject | ConvertTo-Json)
+#Write-Information ($InputObject | ConvertTo-Json)
 $InstanceId = Start-NewOrchestration -FunctionName 'CIPPOrchestrator' -InputObject ($InputObject | ConvertTo-Json -Depth 5 -Compress)
-Write-Host "Started orchestration with ID = '$InstanceId'"
+Write-Information "Started orchestration with ID = '$InstanceId'"
 #$Orchestrator = New-OrchestrationCheckStatusResponse -Request $Request -InstanceId $InstanceId

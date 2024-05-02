@@ -15,7 +15,7 @@ function Invoke-ListGraphRequest {
     $Message = 'Accessed this API | Endpoint: {0}' -f $Request.Query.Endpoint
     Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -message $Message -Sev 'Debug'
 
-    $CippLink = ([System.Uri]$TriggerMetadata.Headers.referer).PathAndQuery
+    $CippLink = ([System.Uri]$TriggerMetadata.Headers.Referer).PathAndQuery
 
     $Parameters = @{}
     if ($Request.Query.'$filter') {
@@ -81,7 +81,7 @@ function Invoke-ListGraphRequest {
     }
 
     if ($Request.Query.QueueNameOverride) {
-        $GraphRequestParams.QueueNameOverride = [System.Boolean]$Request.Query.QueueNameOverride
+        $GraphRequestParams.QueueNameOverride = [string]$Request.Query.QueueNameOverride
     }
 
     if ($Request.Query.ReverseTenantLookup) {

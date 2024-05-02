@@ -6,8 +6,8 @@ function Invoke-CIPPStandardunmanagedSync {
     param($Tenant, $Settings)
     $CurrentInfo = New-GraphGetRequest -Uri 'https://graph.microsoft.com/beta/admin/sharepoint/settings' -tenantid $Tenant -AsApp $true
 
-    If ($Settings.remediate) {
-        
+    If ($Settings.remediate -eq $true) {
+
         if ($CurrentInfo.isUnmanagedSyncAppForTenantRestricted -eq $false) {
             try {
                 #$body = '{"isUnmanagedSyncAppForTenantRestricted": true}'
@@ -21,7 +21,7 @@ function Invoke-CIPPStandardunmanagedSync {
         }
     }
 
-    if ($Settings.alert) {
+    if ($Settings.alert -eq $true) {
 
         if ($CurrentInfo.isUnmanagedSyncAppForTenantRestricted -eq $true) {
             Write-LogMessage -API 'Standards' -tenant $tenant -message 'Sync for unmanaged devices is disabled' -sev Info
@@ -30,7 +30,7 @@ function Invoke-CIPPStandardunmanagedSync {
         }
     }
 
-    if ($Settings.report) {
-        Add-CIPPBPAField -FieldName 'unmanagedSync' -FieldValue [bool]$CurrentInfo.isUnmanagedSyncAppForTenantRestricted -StoreAs bool -Tenant $tenant
+    if ($Settings.report -eq $true) {
+        Add-CIPPBPAField -FieldName 'unmanagedSync' -FieldValue $CurrentInfo.isUnmanagedSyncAppForTenantRestricted -StoreAs bool -Tenant $tenant
     }
 }
