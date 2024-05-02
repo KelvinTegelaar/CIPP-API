@@ -1,10 +1,10 @@
 function Set-CIPPAuthenticationPolicy {
-    [CmdletBinding()]
+    [CmdletBinding(SupportsShouldProcess = $true)]
     param(
         [Parameter(Mandatory = $true)]$Tenant,
         [Parameter(Mandatory = $true)][ValidateSet('FIDO2', 'MicrosoftAuthenticator', 'SMS', 'TemporaryAccessPass', 'HardwareOATH', 'softwareOath', 'Voice', 'Email', 'x509Certificate')]$AuthenticationMethodId,
         [Parameter(Mandatory = $true)][bool]$Enabled, # true = enabled or false = disabled
-        $MicrosoftAuthenticatorSoftwareOathEnabled, 
+        $MicrosoftAuthenticatorSoftwareOathEnabled,
         $TAPMinimumLifetime = 60, #Minutes
         $TAPMaximumLifetime = 480, #minutes
         $TAPDefaultLifeTime = 60, #minutes
@@ -24,9 +24,9 @@ function Set-CIPPAuthenticationPolicy {
         Write-LogMessage -user $ExecutingUser -API $APIName -tenant $Tenant -message "Could not get CurrentInfo for $AuthenticationMethodId. Error:$($_.exception.message)" -sev Error
         Return "Could not get CurrentInfo for $AuthenticationMethodId. Error:$($_.exception.message)"
     }
-    
+
     switch ($AuthenticationMethodId) {
-        
+
         # FIDO2
         'FIDO2' {
             if ($State -eq 'enabled') {
@@ -36,23 +36,23 @@ function Set-CIPPAuthenticationPolicy {
         }
 
         # Microsoft Authenticator
-        'MicrosoftAuthenticator' {  
+        'MicrosoftAuthenticator' {
             # Remove numberMatchingRequiredState property if it exists
             $CurrentInfo.featureSettings.PSObject.Properties.Remove('numberMatchingRequiredState')
-            
+
             if ($State -eq 'enabled') {
                 $CurrentInfo.featureSettings.displayAppInformationRequiredState.state = $State
                 $CurrentInfo.featureSettings.displayLocationInformationRequiredState.state = $State
                 # Set MS authenticator OTP state if parameter is passed in
-                if ($null -ne $MicrosoftAuthenticatorSoftwareOathEnabled ) { 
-                    $CurrentInfo.isSoftwareOathEnabled = $MicrosoftAuthenticatorSoftwareOathEnabled 
+                if ($null -ne $MicrosoftAuthenticatorSoftwareOathEnabled ) {
+                    $CurrentInfo.isSoftwareOathEnabled = $MicrosoftAuthenticatorSoftwareOathEnabled
                     $OptionalLogMessage = "and MS Authenticator software OTP to $MicrosoftAuthenticatorSoftwareOathEnabled"
                 }
             }
         }
 
         # SMS
-        'SMS' {  
+        'SMS' {
             if ($State -eq 'enabled') {
                 Write-LogMessage -user $ExecutingUser -API $APIName -tenant $Tenant -message "Setting $AuthenticationMethodId to enabled is not allowed" -sev Error
                 return "Setting $AuthenticationMethodId to enabled is not allowed"
@@ -60,7 +60,7 @@ function Set-CIPPAuthenticationPolicy {
         }
 
         # Temporary Access Pass
-        'TemporaryAccessPass' {  
+        'TemporaryAccessPass' {
             if ($State -eq 'enabled') {
                 $CurrentInfo.isUsableOnce = [System.Convert]::ToBoolean($TAPisUsableOnce)
                 $CurrentInfo.minimumLifetimeInMinutes = $TAPMinimumLifetime
@@ -70,17 +70,17 @@ function Set-CIPPAuthenticationPolicy {
                 $OptionalLogMessage = "with TAP isUsableOnce set to $TAPisUsableOnce"
             }
         }
-    
+
         # Hardware OATH tokens (Preview)
-        'HardwareOATH' {  
+        'HardwareOATH' {
             # Nothing special to do here
         }
 
         # Third-party software OATH tokens
-        'softwareOath' {  
+        'softwareOath' {
             # Nothing special to do here
         }
-        
+
         # Voice call
         'Voice' {
             # Disallow enabling voice
@@ -89,17 +89,17 @@ function Set-CIPPAuthenticationPolicy {
                 return "Setting $AuthenticationMethodId to enabled is not allowed"
             }
         }
-    
+
         # Email OTP
-        'Email' {  
+        'Email' {
             if ($State -eq 'enabled') {
                 Write-LogMessage -user $ExecutingUser -API $APIName -tenant $Tenant -message "Setting $AuthenticationMethodId to enabled is not allowed" -sev Error
                 return "Setting $AuthenticationMethodId to enabled is not allowed"
             }
         }
-        
+
         # Certificate-based authentication
-        'x509Certificate' {  
+        'x509Certificate' {
             # Nothing special to do here
         }
         Default {
@@ -109,13 +109,15 @@ function Set-CIPPAuthenticationPolicy {
     }
     # Set state of the authentication method
     try {
-        # Convert body to JSON and send request
-        $body = ConvertTo-Json -Compress -Depth 10 -InputObject $CurrentInfo
-        New-GraphPostRequest -tenantid $Tenant -Uri "https://graph.microsoft.com/beta/policies/authenticationmethodspolicy/authenticationMethodConfigurations/$AuthenticationMethodId" -Type patch -Body $body -ContentType 'application/json'
-        Write-LogMessage -user $ExecutingUser -API $APIName -tenant $Tenant -message "Set $AuthenticationMethodId state to $State $OptionalLogMessage" -sev Info
+        if ($PSCmdlet.ShouldProcess($AuthenticationMethodId, "Set state to $State $OptionalLogMessage")) {
+            # Convert body to JSON and send request
+            $null = New-GraphPostRequest -tenantid $Tenant -Uri "https://graph.microsoft.com/beta/policies/authenticationmethodspolicy/authenticationMethodConfigurations/$AuthenticationMethodId" -Type patch -Body ($CurrentInfo | ConvertTo-Json -Compress -Depth 10) -ContentType 'application/json'
+            Write-LogMessage -user $ExecutingUser -API $APIName -tenant $Tenant -message "Set $AuthenticationMethodId state to $State $OptionalLogMessage" -sev Info
+        }
         return "Set $AuthenticationMethodId state to $State $OptionalLogMessage"
+
     } catch {
-        Write-LogMessage -user $ExecutingUser -API $APIName -tenant $Tenant -message "Failed to $State $AuthenticationMethodId Support: $($_.exception.message)" -sev Error
+        Write-LogMessage -user $ExecutingUser -API $APIName -tenant $Tenant -message "Failed to $State $AuthenticationMethodId Support: $($_.exception.message)" -sev Error -LogData (Get-CippException -Exception $_)
         return "Failed to $State $AuthenticationMethodId Support: $($_.exception.message)"
     }
 }

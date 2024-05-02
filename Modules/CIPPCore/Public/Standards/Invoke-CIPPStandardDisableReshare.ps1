@@ -5,8 +5,8 @@ function Invoke-CIPPStandardDisableReshare {
     #>
     param($Tenant, $Settings)
     $CurrentInfo = New-GraphGetRequest -Uri 'https://graph.microsoft.com/beta/admin/sharepoint/settings' -tenantid $Tenant -AsApp $true
-    
-    If ($Settings.remediate) {
+
+    If ($Settings.remediate -eq $true) {
 
         if ($CurrentInfo.isResharingByExternalUsersEnabled) {
             try {
@@ -20,7 +20,7 @@ function Invoke-CIPPStandardDisableReshare {
             Write-LogMessage -API 'Standards' -tenant $tenant -message 'Guests are already disabled from resharing files' -sev Info
         }
     }
-    if ($Settings.alert) {
+    if ($Settings.alert -eq $true) {
 
         if ($CurrentInfo.isResharingByExternalUsersEnabled) {
             Write-LogMessage -API 'Standards' -tenant $tenant -message 'Guests are allowed to reshare files' -sev Alert
@@ -29,7 +29,7 @@ function Invoke-CIPPStandardDisableReshare {
         }
     }
 
-    if ($Settings.report) {
-        Add-CIPPBPAField -FieldName 'DisableReshare' -FieldValue [bool]$CurrentInfo.isResharingByExternalUsersEnabled -StoreAs bool -Tenant $tenant
+    if ($Settings.report -eq $true) {
+        Add-CIPPBPAField -FieldName 'DisableReshare' -FieldValue $CurrentInfo.isResharingByExternalUsersEnabled -StoreAs bool -Tenant $tenant
     }
 }

@@ -1,19 +1,25 @@
-param($tenant)
+function Push-BPACollectData {
+    <#
+    .FUNCTIONALITY
+    Entrypoint
+    #>
+    param($Item)
 
-$TenantName = Get-Tenants | Where-Object -Property defaultDomainName -EQ $tenant
-$CippRoot = (Get-Item $PSScriptRoot).Parent.FullName
-$TemplatesLoc = Get-ChildItem "$CippRoot\Config\*.BPATemplate.json"
-$Templates = $TemplatesLoc | ForEach-Object {
-    $Template = $(Get-Content $_) | ConvertFrom-Json
-    [PSCustomObject]@{
-        Data  = $Template
-        Name  = $Template.Name
-        Style = $Template.Style
+    $TenantName = Get-Tenants | Where-Object -Property defaultDomainName -EQ $Item.Tenant
+    $CippRoot = (Get-Item $PSScriptRoot).Parent.Parent.Parent.Parent.Parent.Parent.FullName
+    $TemplatesLoc = Get-ChildItem "$CippRoot\Config\*.BPATemplate.json"
+    $Templates = $TemplatesLoc | ForEach-Object {
+        $Template = $(Get-Content $_) | ConvertFrom-Json
+        [PSCustomObject]@{
+            Data  = $Template
+            Name  = $Template.Name
+            Style = $Template.Style
+        }
     }
-}
-$Table = Get-CippTable -tablename 'cachebpav2'
-$AddRow = foreach ($Template in $templates) {
-    # Build up the result object that will be passed back to the durable function
+    $Table = Get-CippTable -tablename 'cachebpav2'
+
+    $Template = $Templates | Where-Object -Property Name -EQ -Value $Item.Template
+    # Build up the result object that will be stored in tables
     $Result = @{
         Tenant       = "$($TenantName.displayName)"
         GUID         = "$($TenantName.customerId)"
@@ -33,7 +39,7 @@ $AddRow = foreach ($Template in $templates) {
                     }
                     if ($Field.parameters.psobject.properties.name) {
                         $field.Parameters | ForEach-Object {
-                            Write-Host "Doing: $($_.psobject.properties.name) with value $($_.psobject.properties.value)"
+                            Write-Information "Doing: $($_.psobject.properties.name) with value $($_.psobject.properties.value)"
                             $paramsField[$_.psobject.properties.name] = $_.psobject.properties.value
                         }
                     }
@@ -69,7 +75,7 @@ $AddRow = foreach ($Template in $templates) {
                 }
             }
         } catch {
-            Write-Host "Error getting $($field.Name) in $($field.api) for $($TenantName.displayName) with GUID $($TenantName.customerId). Error: $($_.Exception.Message)"
+            Write-Information "Error getting $($field.Name) in $($field.api) for $($TenantName.displayName) with GUID $($TenantName.customerId). Error: $($_.Exception.Message)"
             Write-LogMessage -API 'BPA' -tenant $tenant -message "Error getting $($field.Name) for $($TenantName.displayName) with GUID $($TenantName.customerId). Error: $($_.Exception.Message)" -sev Error
             $fieldinfo = 'FAILED'
             $field.StoreAs = 'string'
@@ -108,7 +114,6 @@ $AddRow = foreach ($Template in $templates) {
             Add-CIPPAzDataTableEntity @Table -Entity $Result -Force
         } catch {
             Write-LogMessage -API 'BPA' -tenant $tenant -message "Error getting saving data for $($template.Name) - $($TenantName.customerId). Error: $($_.Exception.Message)" -LogData (Get-CippException -Exception $_) -sev Error
-
         }
     }
 }
