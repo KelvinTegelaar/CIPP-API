@@ -1,4 +1,8 @@
 function Push-CIPPAlertAppSecretExpiry {
+    <#
+    .FUNCTIONALITY
+        Entrypoint
+    #>
     [CmdletBinding()]
     Param (
         [Parameter(Mandatory = $true)]
@@ -6,9 +10,13 @@ function Push-CIPPAlertAppSecretExpiry {
     )
 
     try {
-        Write-Host "Checking app expire for $($Item.tenant)"
-        New-GraphGetRequest -uri "https://graph.microsoft.com/beta/applications?`$select=appId,displayName,passwordCredentials" -tenantid $Item.tenant | ForEach-Object {
-            foreach ($App in $_) {
+        $Filter = "RowKey eq 'AppSecretExpiry' and PartitionKey eq '{0}'" -f $Item.tenantid
+        $LastRun = Get-CIPPAzDataTableEntity @LastRunTable -Filter $Filter
+        $Yesterday = (Get-Date).AddDays(-1)
+        if (-not $LastRun.Timestamp.DateTime -or ($LastRun.Timestamp.DateTime -le $Yesterday)) {
+            Write-Host "Checking app expire for $($Item.tenant)"
+            $appList = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/applications?`$select=appId,displayName,passwordCredentials" -tenantid $Item.tenant
+            foreach ($App in $applist) {
                 Write-Host "checking $($App.displayName)"
                 if ($App.passwordCredentials) {
                     foreach ($Credential in $App.passwordCredentials) {
@@ -19,6 +27,8 @@ function Push-CIPPAlertAppSecretExpiry {
                     }
                 }
             }
+        } else {
+            Write-Host "Skipping app expire for $($Item.tenant)"
         }
     } catch {
         #Write-AlertMessage -tenant $($Item.Tenant) -message "Failed to check App registration expiry for $($Item.Tenant): $(Get-NormalizedError -message $_.Exception.message)"
