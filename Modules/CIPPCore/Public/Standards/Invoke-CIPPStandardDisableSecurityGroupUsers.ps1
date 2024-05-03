@@ -5,14 +5,14 @@ function Invoke-CIPPStandardDisableSecurityGroupUsers {
     #>
     param($Tenant, $Settings)
     $CurrentInfo = New-GraphGetRequest -Uri 'https://graph.microsoft.com/beta/policies/authorizationPolicy/authorizationPolicy' -tenantid $Tenant
-    
-    If ($Settings.remediate) {
+
+    If ($Settings.remediate -eq $true) {
         if ($CurrentInfo.defaultUserRolePermissions.allowedToCreateSecurityGroups -eq $false) {
             Write-LogMessage -API 'Standards' -tenant $tenant -message 'Users are already not allowed to create Security Groups.' -sev Info
         } else {
             try {
                 $body = '{"defaultUserRolePermissions":{"allowedToCreateSecurityGroups":false}}'
-                $null = New-GraphPostRequest -tenantid $tenant -Uri 'https://graph.microsoft.com/beta/policies/authorizationPolicy/authorizationPolicy' -Type patch -Body $body -ContentType 'application/json'    
+                $null = New-GraphPostRequest -tenantid $tenant -Uri 'https://graph.microsoft.com/beta/policies/authorizationPolicy/authorizationPolicy' -Type patch -Body $body -ContentType 'application/json'
                 Write-LogMessage -API 'Standards' -tenant $tenant -message 'Disabled users from creating Security Groups.' -sev Info
                 $CurrentInfo.defaultUserRolePermissions.allowedToCreateSecurityGroups = $false
             } catch {
@@ -20,8 +20,8 @@ function Invoke-CIPPStandardDisableSecurityGroupUsers {
             }
         }
     }
-        
-    if ($Settings.alert) {
+
+    if ($Settings.alert -eq $true) {
 
         if ($CurrentInfo.defaultUserRolePermissions.allowedToCreateSecurityGroups -eq $false) {
             Write-LogMessage -API 'Standards' -tenant $tenant -message 'Users are not allowed to create Security Groups.' -sev Info
@@ -30,7 +30,7 @@ function Invoke-CIPPStandardDisableSecurityGroupUsers {
         }
     }
 
-    if ($Settings.report) {
-        Add-CIPPBPAField -FieldName 'DisableSecurityGroupUsers' -FieldValue [bool]$CurrentInfo.defaultUserRolePermissions.allowedToCreateSecurityGroups -StoreAs bool -Tenant $tenant
+    if ($Settings.report -eq $true) {
+        Add-CIPPBPAField -FieldName 'DisableSecurityGroupUsers' -FieldValue $CurrentInfo.defaultUserRolePermissions.allowedToCreateSecurityGroups -StoreAs bool -Tenant $tenant
     }
 }

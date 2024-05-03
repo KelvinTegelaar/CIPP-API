@@ -6,7 +6,7 @@ function Invoke-CIPPStandardDisableViva {
     param($Tenant, $Settings)
     $CurrentSetting = New-GraphGetRequest -Uri "https://graph.microsoft.com/beta/organization/$tenant/settings/peopleInsights" -tenantid $Tenant -AsApp $true
 
-    If ($Settings.remediate) {
+    If ($Settings.remediate -eq $true) {
 
         if ($CurrentSetting.isEnabledInOrganization -eq $false) {
             Write-LogMessage -API 'Standards' -tenant $tenant -message 'Viva is already disabled.' -sev Info
@@ -21,7 +21,7 @@ function Invoke-CIPPStandardDisableViva {
         }
     }
 
-    if ($Settings.alert) {
+    if ($Settings.alert -eq $true) {
 
         if ($CurrentSetting.isEnabledInOrganization -eq $false) {
             Write-LogMessage -API 'Standards' -tenant $tenant -message 'Viva is disabled' -sev Info
@@ -30,8 +30,8 @@ function Invoke-CIPPStandardDisableViva {
         }
     }
 
-    if ($Settings.report) {
-        Add-CIPPBPAField -FieldName 'DisableViva' -FieldValue [bool]$CurrentSetting.isEnabledInOrganization -StoreAs bool -Tenant $tenant
+    if ($Settings.report -eq $true) {
+        Add-CIPPBPAField -FieldName 'DisableViva' -FieldValue $CurrentSetting.isEnabledInOrganization -StoreAs bool -Tenant $tenant
     }
 
 }
