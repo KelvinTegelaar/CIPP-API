@@ -1,4 +1,8 @@
 function Push-CIPPAlertVppTokenExpiry {
+    <#
+    .FUNCTIONALITY
+        Entrypoint
+    #>
     [CmdletBinding()]
     Param (
         [Parameter(Mandatory = $true)]
