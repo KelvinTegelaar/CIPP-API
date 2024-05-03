@@ -9,7 +9,7 @@ function Invoke-CIPPStandardExcludedfileExt {
     # Add a wildcard to the extensions since thats what the SP admin center does
     $Exts = $Exts | ForEach-Object { if ($_ -notlike '*.*') { "*.$_" } else { $_ } }
 
-    
+
     $MissingExclutions = foreach ($Exclusion in $Exts) {
         if ($Exclusion -notin $CurrentInfo.excludedFileExtensionsForSyncApp) {
             $Exclusion
@@ -19,7 +19,7 @@ function Invoke-CIPPStandardExcludedfileExt {
     Write-Host "MissingExclutions: $($MissingExclutions)"
 
 
-    If ($Settings.remediate) {
+    If ($Settings.remediate -eq $true) {
 
         # If the number of extensions in the settings does not match the number of extensions in the current settings, we need to update the settings
         $MissingExclutions = if ($Exts.Count -ne $CurrentInfo.excludedFileExtensionsForSyncApp.Count) { $true } else { $MissingExclutions }
@@ -38,7 +38,7 @@ function Invoke-CIPPStandardExcludedfileExt {
         }
     }
 
-    if ($Settings.alert) {
+    if ($Settings.alert -eq $true) {
 
         if ($MissingExclutions) {
             Write-LogMessage -API 'Standards' -tenant $tenant -message "Excluded synced files does not contain $($MissingExclutions -join ',')" -sev Alert
@@ -47,7 +47,7 @@ function Invoke-CIPPStandardExcludedfileExt {
         }
     }
 
-    if ($Settings.report) {
+    if ($Settings.report -eq $true) {
         Add-CIPPBPAField -FieldName 'ExcludedfileExt' -FieldValue $CurrentInfo.excludedFileExtensionsForSyncApp -StoreAs json -Tenant $tenant
     }
 }
