@@ -4,12 +4,12 @@ function Invoke-CIPPStandardUndoOauth {
     Internal
     #>
     param($Tenant, $Settings)
-    $CurrentState = New-GraphGetRequest -tenantid $Tenant -Uri 'https://graph.microsoft.com/beta/policies/authorizationPolicy/authorizationPolicy?$select=permissionGrantPolicyIdsAssignedToDefaultUserRole' 
+    $CurrentState = New-GraphGetRequest -tenantid $Tenant -Uri 'https://graph.microsoft.com/beta/policies/authorizationPolicy/authorizationPolicy?$select=permissionGrantPolicyIdsAssignedToDefaultUserRole'
     $State = if ($CurrentState.permissionGrantPolicyIdsAssignedToDefaultUserRole -eq 'ManagePermissionGrantsForSelf.microsoft-user-default-legacy') { $true } else { $false }
     $State
 
-    If ($Settings.remediate) {
-        
+    If ($Settings.remediate -eq $true) {
+
         if ($State) {
             Write-LogMessage -API 'Standards' -tenant $Tenant -message 'Application Consent Mode is already disabled.' -sev Info
         } else {
@@ -24,7 +24,7 @@ function Invoke-CIPPStandardUndoOauth {
 
     }
 
-    if ($Settings.alert) {
+    if ($Settings.alert -eq $true) {
         if ($State) {
             Write-LogMessage -API 'Standards' -tenant $Tenant -message 'Application Consent Mode is disabled.' -sev Info
         } else {
@@ -32,7 +32,7 @@ function Invoke-CIPPStandardUndoOauth {
         }
     }
 
-    if ($Settings.report) {
-        Add-CIPPBPAField -FieldName 'UndoOauth' -FieldValue [bool]$State -StoreAs bool -Tenant $tenant
+    if ($Settings.report -eq $true) {
+        Add-CIPPBPAField -FieldName 'UndoOauth' -FieldValue $State -StoreAs bool -Tenant $tenant
     }
 }
