@@ -4,8 +4,8 @@ function Invoke-CIPPStandardcalDefault {
     Internal
     #>
     param($Tenant, $Settings, $QueueItem)
-    
-    If ($Settings.remediate) {
+
+    If ($Settings.remediate -eq $true) {
         $Mailboxes = New-ExoRequest -tenantid $Tenant -cmdlet 'Get-Mailbox' | Sort-Object UserPrincipalName
         $TotalMailboxes = $Mailboxes.Count
         Write-LogMessage -API 'Standards' -tenant $Tenant -message "Started setting default calendar permissions for $($TotalMailboxes) mailboxes." -sev Info
@@ -19,7 +19,7 @@ function Invoke-CIPPStandardcalDefault {
         if ($LastRun -and $LastRun.processedMailboxes -lt $LastRun.totalMailboxes ) {
             $startIndex = $LastRun.processedMailboxes
         }
-        
+
         $SuccessCounter = if ($startIndex -eq 0) { 0 } else { [int64]$LastRun.currentSuccessCount }
         $processedMailboxes = $startIndex
         $Mailboxes = $Mailboxes[$startIndex..($TotalMailboxes - 1)]
@@ -32,8 +32,8 @@ function Invoke-CIPPStandardcalDefault {
                 New-ExoRequest -tenantid $Tenant -cmdlet 'Get-MailboxFolderStatistics' -cmdParams @{identity = $Mailbox.UserPrincipalName; FolderScope = 'Calendar' } -Anchor $Mailbox.UserPrincipalName | Where-Object { $_.FolderType -eq 'Calendar' } |
                     ForEach-Object {
                         try {
-                            New-ExoRequest -tenantid $Tenant -cmdlet 'Set-MailboxFolderPermission' -cmdparams @{Identity = "$($Mailbox.UserPrincipalName):$($_.FolderId)"; User = 'Default'; AccessRights = $Settings.permissionlevel } -Anchor $Mailbox.UserPrincipalName 
-                            Write-LogMessage -API 'Standards' -tenant $Tenant -message "Set default folder permission for $($Mailbox.UserPrincipalName):\$($_.Name) to $($Settings.permissionlevel)" -sev Debug 
+                            New-ExoRequest -tenantid $Tenant -cmdlet 'Set-MailboxFolderPermission' -cmdparams @{Identity = "$($Mailbox.UserPrincipalName):$($_.FolderId)"; User = 'Default'; AccessRights = $Settings.permissionlevel } -Anchor $Mailbox.UserPrincipalName
+                            Write-LogMessage -API 'Standards' -tenant $Tenant -message "Set default folder permission for $($Mailbox.UserPrincipalName):\$($_.Name) to $($Settings.permissionlevel)" -sev Debug
                             $SuccessCounter++
                         } catch {
                             Write-Host "Setting cal failed: $($_.exception.message)"
