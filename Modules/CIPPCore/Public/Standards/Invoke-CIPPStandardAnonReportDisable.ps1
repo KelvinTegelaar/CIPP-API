@@ -6,8 +6,8 @@ function Invoke-CIPPStandardAnonReportDisable {
     param($Tenant, $Settings)
     $CurrentInfo = New-GraphGetRequest -Uri 'https://graph.microsoft.com/beta/admin/reportSettings' -tenantid $Tenant -AsApp $true
 
-    If ($Settings.remediate) {
-        
+    If ($Settings.remediate -eq $true) {
+
         if ($CurrentInfo.displayConcealedNames -eq $false) {
             Write-LogMessage -API 'Standards' -tenant $tenant -message 'Anonymous Reports is already disabled.' -sev Info
         } else {
@@ -19,7 +19,7 @@ function Invoke-CIPPStandardAnonReportDisable {
             }
         }
     }
-    if ($Settings.alert) {
+    if ($Settings.alert -eq $true) {
 
         if ($CurrentInfo.displayConcealedNames -eq $false) {
             Write-LogMessage -API 'Standards' -tenant $tenant -message 'Anonymous Reports is disabled' -sev Info
@@ -27,7 +27,7 @@ function Invoke-CIPPStandardAnonReportDisable {
             Write-LogMessage -API 'Standards' -tenant $tenant -message 'Anonymous Reports is not disabled' -sev Alert
         }
     }
-    if ($Settings.report) {
-        Add-CIPPBPAField -FieldName 'AnonReport' -FieldValue [bool]$CurrentInfo.displayConcealedNames -StoreAs bool -Tenant $tenant
+    if ($Settings.report -eq $true) {
+        Add-CIPPBPAField -FieldName 'AnonReport' -FieldValue $CurrentInfo.displayConcealedNames -StoreAs bool -Tenant $tenant
     }
 }
