@@ -9,7 +9,9 @@ function Push-ListGraphRequestQueue {
 
     try {
         $ParamCollection = [System.Web.HttpUtility]::ParseQueryString([String]::Empty)
-        foreach ($Param in ($Item.Parameters.GetEnumerator() | Sort-Object -CaseSensitive -Property Key)) {
+
+        $Parameters = $Item.Parameters | ConvertTo-Json -Depth 5 | ConvertFrom-Json -AsHashtable
+        foreach ($Param in ($Parameters.GetEnumerator() | Sort-Object -CaseSensitive -Property Key)) {
             $ParamCollection.Add($Param.Key, $Param.Value)
         }
 
@@ -28,7 +30,7 @@ function Push-ListGraphRequestQueue {
         $GraphRequestParams = @{
             TenantFilter                = $Item.TenantFilter
             Endpoint                    = $Item.Endpoint
-            Parameters                  = $Item.Parameters
+            Parameters                  = $Parameters
             NoPagination                = $Item.NoPagination
             ReverseTenantLookupProperty = $Item.ReverseTenantLookupProperty
             ReverseTenantLookup         = $Item.ReverseTenantLookup
