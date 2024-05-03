@@ -5,9 +5,9 @@ function Invoke-CIPPStandardintuneDeviceRetirementDays {
     #>
     param($Tenant, $Settings)
     $CurrentInfo = (New-GraphGetRequest -Uri 'https://graph.microsoft.com/beta/deviceManagement/managedDeviceCleanupSettings' -tenantid $Tenant)
-    
-    If ($Settings.remediate) {
-        
+
+    If ($Settings.remediate -eq $true) {
+
         if ($CurrentInfo.DeviceInactivityBeforeRetirementInDays -eq $Settings.days) {
             Write-LogMessage -API 'Standards' -tenant $tenant -message "DeviceInactivityBeforeRetirementInDays for $($Settings.days) days is already enabled." -sev Info
         } else {
@@ -21,7 +21,7 @@ function Invoke-CIPPStandardintuneDeviceRetirementDays {
         }
     }
 
-    if ($Settings.alert) {
+    if ($Settings.alert -eq $true) {
 
         if ($CurrentInfo.DeviceInactivityBeforeRetirementInDays -eq $Settings.days) {
             Write-LogMessage -API 'Standards' -tenant $tenant -message 'DeviceInactivityBeforeRetirementInDays is enabled.' -sev Info
@@ -30,9 +30,9 @@ function Invoke-CIPPStandardintuneDeviceRetirementDays {
         }
     }
 
-    if ($Settings.report) {
+    if ($Settings.report -eq $true) {
         $UserQuota = if ($PreviousSetting.DeviceInactivityBeforeRetirementInDays -eq $Settings.days) { $true } else { $false }
 
-        Add-CIPPBPAField -FieldName 'intuneDeviceRetirementDays' -FieldValue [bool]$UserQuota -StoreAs bool -Tenant $tenant
+        Add-CIPPBPAField -FieldName 'intuneDeviceRetirementDays' -FieldValue $UserQuota -StoreAs bool -Tenant $tenant
     }
 }
