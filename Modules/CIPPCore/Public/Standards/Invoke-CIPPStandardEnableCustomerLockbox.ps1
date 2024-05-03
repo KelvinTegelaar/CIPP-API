@@ -4,9 +4,9 @@ function Invoke-CIPPStandardEnableCustomerLockbox {
     Internal
     #>
     param($Tenant, $Settings)
-    
+
     $CustomerLockboxStatus = (New-ExoRequest -tenantid $Tenant -cmdlet 'Get-OrganizationConfig').CustomerLockboxEnabled
-    if ($Settings.remediate) {
+    if ($Settings.remediate -eq $true) {
         try {
 
             if ($CustomerLockboxStatus) {
@@ -22,7 +22,7 @@ function Invoke-CIPPStandardEnableCustomerLockbox {
         }
     }
 
-    if ($Settings.alert) {
+    if ($Settings.alert -eq $true) {
         if ($CustomerLockboxStatus) {
             Write-LogMessage -API 'Standards' -tenant $tenant -message 'Customer Lockbox is enabled' -sev Info
         } else {
@@ -30,7 +30,7 @@ function Invoke-CIPPStandardEnableCustomerLockbox {
         }
     }
 
-    if ($Settings.report) {
-        Add-CIPPBPAField -FieldName 'CustomerLockboxEnabled' -FieldValue [bool]$CustomerLockboxStatus -StoreAs bool -Tenant $tenant
+    if ($Settings.report -eq $true) {
+        Add-CIPPBPAField -FieldName 'CustomerLockboxEnabled' -FieldValue $CustomerLockboxStatus -StoreAs bool -Tenant $tenant
     }
 }
