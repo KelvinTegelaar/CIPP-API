@@ -9,7 +9,7 @@ function Invoke-CIPPStandardsharingCapability {
     $Settings.Level
     $CurrentInfo.sharingCapability
 
-    If ($Settings.remediate) {
+    If ($Settings.remediate -eq $true) {
 
         if ($CurrentInfo.sharingCapability -eq $Settings.Level) {
             Write-Host "Sharing level is already set to $($Settings.Level)"
@@ -25,7 +25,7 @@ function Invoke-CIPPStandardsharingCapability {
         }
     }
 
-    if ($Settings.alert) {
+    if ($Settings.alert -eq $true) {
 
         if ($CurrentInfo.sharingCapability -eq $Settings.Level) {
             Write-LogMessage -API 'Standards' -tenant $tenant -message "Sharing level is set to $($Settings.Level)" -sev Info
@@ -34,7 +34,7 @@ function Invoke-CIPPStandardsharingCapability {
         }
     }
 
-    if ($Settings.report) {
+    if ($Settings.report -eq $true) {
         Add-CIPPBPAField -FieldName 'sharingCapability' -FieldValue $CurrentInfo.sharingCapability -StoreAs string -Tenant $tenant
     }
 }

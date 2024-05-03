@@ -4,7 +4,7 @@ function Invoke-CIPPStandardFocusedInbox {
     Internal
     #>
     param($Tenant, $Settings)
-    
+
     # Exit if the wanted state is not valid
     if ($Settings.state -ne 'enabled' -and $Settings.state -ne 'disabled') {
         Write-LogMessage -API 'Standards' -tenant $Tenant -message 'Invalid state for Focused Inbox. Please select either "enabled" or "disabled".' -sev Error
@@ -12,13 +12,13 @@ function Invoke-CIPPStandardFocusedInbox {
     }
 
     $CurrentState = (New-ExoRequest -tenantid $Tenant -cmdlet 'Get-OrganizationConfig').FocusedInboxOn
-    
+
     $WantedState = if ($Settings.state -eq 'enabled') { $true } else { $false }
     $StateIsCorrect = if ($CurrentState -eq $WantedState) { $true } else { $false }
 
-    if ($Settings.remediate) {
+    if ($Settings.remediate -eq $true) {
         Write-Host 'Time to remediate'
-        
+
         if ($StateIsCorrect -eq $true) {
             Write-LogMessage -API 'Standards' -tenant $Tenant -message "Focused Inbox is already set to $($Settings.state)." -sev Info
         } else {
@@ -32,7 +32,7 @@ function Invoke-CIPPStandardFocusedInbox {
         }
     }
 
-    if ($Settings.alert) {
+    if ($Settings.alert -eq $true) {
 
         if ($StateIsCorrect -eq $true) {
             Write-LogMessage -API 'Standards' -tenant $Tenant -message "Focused Inbox is set to $($Settings.state)." -sev Info
@@ -41,7 +41,7 @@ function Invoke-CIPPStandardFocusedInbox {
         }
     }
 
-    if ($Settings.report) {
-        Add-CIPPBPAField -FieldName 'FocusedInboxCorrectState' -FieldValue [bool]$StateIsCorrect -StoreAs bool -Tenant $tenant
+    if ($Settings.report -eq $true) {
+        Add-CIPPBPAField -FieldName 'FocusedInboxCorrectState' -FieldValue $StateIsCorrect -StoreAs bool -Tenant $tenant
     }
 }
