@@ -26,7 +26,7 @@ function Invoke-CIPPStandardGlobalQuarantineNotifications {
         Default { $null }
     }
 
-    if ($Settings.remediate) {
+    if ($Settings.remediate -eq $true) {
 
         Write-Host 'Time to remediate'
         if ($CurrentState.EndUserSpamNotificationFrequency -eq $WantedState) {
