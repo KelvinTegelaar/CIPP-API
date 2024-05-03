@@ -6,8 +6,8 @@ function Invoke-CIPPStandardDisableGuestDirectory {
     param($Tenant, $Settings)
     $CurrentInfo = New-GraphGetRequest -Uri 'https://graph.microsoft.com/beta/policies/authorizationPolicy/authorizationPolicy' -tenantid $Tenant
 
-    If ($Settings.remediate) {
-        
+    If ($Settings.remediate -eq $true) {
+
         if ($CurrentInfo.guestUserRoleId -eq '2af84b1e-32c8-42b7-82bc-daa82404023b') {
             Write-LogMessage -API 'Standards' -tenant $tenant -message 'Guest access to directory information is already disabled.' -sev Info
         } else {
@@ -20,8 +20,8 @@ function Invoke-CIPPStandardDisableGuestDirectory {
             }
         }
     }
-    
-    if ($Settings.alert) {
+
+    if ($Settings.alert -eq $true) {
 
         if ($CurrentInfo.guestUserRoleId -eq '2af84b1e-32c8-42b7-82bc-daa82404023b') {
             Write-LogMessage -API 'Standards' -tenant $tenant -message 'Guest access to directory information is disabled.' -sev Info
@@ -29,9 +29,9 @@ function Invoke-CIPPStandardDisableGuestDirectory {
             Write-LogMessage -API 'Standards' -tenant $tenant -message 'Guest access to directory information is not disabled.' -sev Alert
         }
     }
-    
-    if ($Settings.report) {
+
+    if ($Settings.report -eq $true) {
         if ($CurrentInfo.guestUserRoleId -eq '2af84b1e-32c8-42b7-82bc-daa82404023b') { $CurrentInfo.guestUserRoleId = $true } else { $CurrentInfo.guestUserRoleId = $false }
-        Add-CIPPBPAField -FieldName 'DisableGuestDirectory' -FieldValue [bool]$CurrentInfo.guestUserRoleId -StoreAs bool -Tenant $tenant
+        Add-CIPPBPAField -FieldName 'DisableGuestDirectory' -FieldValue $CurrentInfo.guestUserRoleId -StoreAs bool -Tenant $tenant
     }
 }

@@ -5,8 +5,8 @@ function Invoke-CIPPStandardSpoofWarn {
     #>
     param($Tenant, $Settings)
     $CurrentInfo = (New-ExoRequest -tenantid $Tenant -cmdlet 'Get-ExternalInOutlook')
-    
-    If ($Settings.remediate) {
+
+    If ($Settings.remediate -eq $true) {
         $status = if ($Settings.enable -and $Settings.disable) {
             Write-LogMessage -API 'Standards' -tenant $tenant -message 'You cannot both enable and disable the Spoof Warnings setting' -sev Error
             Exit
@@ -24,7 +24,7 @@ function Invoke-CIPPStandardSpoofWarn {
         }
     }
 
-    if ($Settings.alert) {
+    if ($Settings.alert -eq $true) {
         if ($CurrentInfo.Enabled -eq $true) {
             Write-LogMessage -API 'Standards' -tenant $tenant -message 'Outlook external spoof warnings are enabled.' -sev Info
         } else {
@@ -32,7 +32,7 @@ function Invoke-CIPPStandardSpoofWarn {
         }
     }
 
-    if ($Settings.report) {
-        Add-CIPPBPAField -FieldName 'SpoofingWarnings' -FieldValue [bool]$CurrentInfo.Enabled -StoreAs bool -Tenant $tenant
+    if ($Settings.report -eq $true) {
+        Add-CIPPBPAField -FieldName 'SpoofingWarnings' -FieldValue $CurrentInfo.Enabled -StoreAs bool -Tenant $tenant
     }
 }

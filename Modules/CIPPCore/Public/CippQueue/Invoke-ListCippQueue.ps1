@@ -25,7 +25,7 @@ function Invoke-ListCippQueue {
         }
 
         if ($Tasks) {
-            if ($Tasks.Status -notcontains 'Running' -and ($TaskStatus.Completed + $TaskStatus.Failed) -eq $Queue.TotalTasks) {
+            if ($Tasks.Status -notcontains 'Running' -and ($TaskStatus.Completed + $TaskStatus.Failed) -ge $Queue.TotalTasks) {
                 if ($Tasks.Status -notcontains 'Failed') {
                     $Queue.Status = 'Completed'
                 } else {

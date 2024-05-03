@@ -1,4 +1,5 @@
 function Set-CIPPGDAPInviteGroups {
+    [CmdletBinding(SupportsShouldProcess = $true)]
     Param($Relationship)
     $Table = Get-CIPPTable -TableName 'GDAPInvites'
 
@@ -22,15 +23,20 @@ function Set-CIPPGDAPInviteGroups {
                             })
                     }
                 }
-                New-GraphPostRequest -NoAuthCheck $True -uri "https://graph.microsoft.com/beta/tenantRelationships/delegatedAdminRelationships/$($Relationship.id)/accessAssignments" -tenantid $env:TenantID -type POST -body $MappingBody -verbose
-                Start-Sleep -Milliseconds 100
+                if ($PSCmdlet.ShouldProcess($Relationship.id, "Map group $($Role.GroupName) to customer $($Relationship.customer.displayName)")) {
+                    $null = New-GraphPostRequest -NoAuthCheck $True -uri "https://graph.microsoft.com/beta/tenantRelationships/delegatedAdminRelationships/$($Relationship.id)/accessAssignments" -tenantid $env:TenantID -type POST -body $MappingBody -verbose
+                    Start-Sleep -Milliseconds 100
+                }
             } catch {
-                Write-LogMessage -API $APINAME -message "GDAP Group mapping failed for $($Relationship.customer.displayName) - Group: $($role.GroupId) - Exception: $($_.Exception.Message)" -Sev Error
+                Write-LogMessage -API $APINAME -message "GDAP Group mapping failed for $($Relationship.customer.displayName) - Group: $($role.GroupId) - Exception: $($_.Exception.Message)" -Sev Error -LogData (Get-CippException -Exception $_)
                 return $false
             }
         }
-        Write-LogMessage -API $APINAME -message "Groups mapped for GDAP Relationship: $($Relationship.customer.displayName) - $($Relationship.customer.displayName)" -Sev Info
-        Remove-AzDataTableEntity @Table -Entity $Invite
+
+        if ($PSCmdlet.ShouldProcess($Relationship.id, "Remove invite entry for $($Relationship.customer.displayName)")) {
+            Write-LogMessage -API $APINAME -message "Groups mapped for GDAP Relationship: $($Relationship.customer.displayName) - $($Relationship.customer.displayName)" -Sev Info
+            Remove-AzDataTableEntity @Table -Entity $Invite
+        }
         return $true
     } else {
         $InviteList = Get-CIPPAzDataTableEntity @Table
@@ -39,7 +45,7 @@ function Set-CIPPGDAPInviteGroups {
 
             $Batch = foreach ($Activation in $Activations) {
                 if ($InviteList.RowKey -contains $Activation.id) {
-                    Write-Host "Mapping groups for GDAP relationship: $($Activation.customer.displayName) - $($Activation.id)"
+                    Write-Information "Mapping groups for GDAP relationship: $($Activation.customer.displayName) - $($Activation.id)"
                     $Activation | Add-Member -NotePropertyName FunctionName -NotePropertyValue 'ExecGDAPInviteQueue'
                     $Activation
                 }
@@ -50,9 +56,9 @@ function Set-CIPPGDAPInviteGroups {
                     Batch            = @($Batch)
                     SkipLog          = $true
                 }
-                #Write-Host ($InputObject | ConvertTo-Json)
+                #Write-Information ($InputObject | ConvertTo-Json)
                 $InstanceId = Start-NewOrchestration -FunctionName 'CIPPOrchestrator' -InputObject ($InputObject | ConvertTo-Json -Depth 5 -Compress)
-                Write-Host "Started GDAP Invite orchestration with ID = '$InstanceId'"
+                Write-Information "Started GDAP Invite orchestration with ID = '$InstanceId'"
             }
         }
     }
