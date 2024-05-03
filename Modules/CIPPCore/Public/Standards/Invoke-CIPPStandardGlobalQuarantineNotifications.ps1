@@ -42,7 +42,7 @@ function Invoke-CIPPStandardGlobalQuarantineNotifications {
         }
     }
 
-    if ($Settings.alert) {
+    if ($Settings.alert -eq $true) {
         
         if ($CurrentState.EndUserSpamNotificationFrequency -eq $WantedState) {
             Write-LogMessage -API 'Standards' -tenant $tenant -message "Global Quarantine Notifications are set to the desired value of $WantedState" -sev Info
