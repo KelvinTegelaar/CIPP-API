@@ -51,7 +51,7 @@ function Invoke-CIPPStandardGlobalQuarantineNotifications {
         }
     }
 
-    if ($Settings.report) {
+    if ($Settings.report -eq $true) {
 
         Add-CIPPBPAField -FieldName 'GlobalQuarantineNotificationsSet' -FieldValue [string]$CurrentState.EndUserSpamNotificationFrequency -StoreAs string -Tenant $tenant
     }
