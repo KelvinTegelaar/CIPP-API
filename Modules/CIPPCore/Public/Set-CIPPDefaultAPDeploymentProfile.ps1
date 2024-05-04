@@ -1,5 +1,5 @@
 function Set-CIPPDefaultAPDeploymentProfile {
-    [CmdletBinding()]
+    [CmdletBinding(SupportsShouldProcess = $true)]
     param(
         $tenantFilter,
         $displayname,
@@ -10,7 +10,7 @@ function Set-CIPPDefaultAPDeploymentProfile {
         $usertype,
         $DeploymentMode,
         $hideChangeAccount,
-        $assignTo,
+        $AssignTo,
         $hidePrivacy,
         $hideTerms,
         $Autokeyboard,
@@ -44,23 +44,29 @@ function Set-CIPPDefaultAPDeploymentProfile {
         if ($Profiles.count -gt 1) {
             $Profiles | ForEach-Object {
                 if ($_.id -ne $Profiles[0].id) {
-                    $Delete = New-GraphPOSTRequest -uri "https://graph.microsoft.com/beta/deviceManagement/windowsAutopilotDeploymentProfiles/$($_.id)" -tenantid $tenantfilter -type DELETE
-                    Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APIName -tenant $($tenantfilter) -message "Deleted duplicate Autopilot profile $($displayname)" -Sev 'Info'
+                    if ($PSCmdlet.ShouldProcess($_.displayName, 'Delete duplicate Autopilot profile')) {
+                        $null = New-GraphPOSTRequest -uri "https://graph.microsoft.com/beta/deviceManagement/windowsAutopilotDeploymentProfiles/$($_.id)" -tenantid $tenantfilter -type DELETE
+                        Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APIName -tenant $($tenantfilter) -message "Deleted duplicate Autopilot profile $($displayname)" -Sev 'Info'
+                    }
                 }
             }
         }
         if (!$Profiles) {
-            $GraphRequest = New-GraphPostRequest -uri 'https://graph.microsoft.com/beta/deviceManagement/windowsAutopilotDeploymentProfiles' -body $body -tenantid $tenantfilter
-            Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APIName -tenant $($tenantfilter) -message "Added Autopilot profile $($Displayname)" -Sev 'Info'
+            if ($PSCmdlet.ShouldProcess($displayName, 'Add Autopilot profile')) {
+                $GraphRequest = New-GraphPostRequest -uri 'https://graph.microsoft.com/beta/deviceManagement/windowsAutopilotDeploymentProfiles' -body $body -tenantid $tenantfilter
+                Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APIName -tenant $($tenantfilter) -message "Added Autopilot profile $($displayname)" -Sev 'Info'
+            }
         }
         if ($AssignTo) {
             $AssignBody = '{"target":{"@odata.type":"#microsoft.graph.allDevicesAssignmentTarget"}}'
-            $assign = New-GraphPOSTRequest -uri "https://graph.microsoft.com/beta/deviceManagement/windowsAutopilotDeploymentProfiles/$($GraphRequest.id)/assignments" -tenantid $tenantfilter -type POST -body $AssignBody
-            Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APIName -tenant $($tenantfilter) -message "Assigned autopilot profile $($Displayname) to $AssignTo" -Sev 'Info'
+            if ($PSCmdlet.ShouldProcess($AssignTo, "Assign Autopilot profile $displayname")) {
+                $null = New-GraphPOSTRequest -uri "https://graph.microsoft.com/beta/deviceManagement/windowsAutopilotDeploymentProfiles/$($GraphRequest.id)/assignments" -tenantid $tenantfilter -type POST -body $AssignBody
+                Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APIName -tenant $($tenantfilter) -message "Assigned autopilot profile $($Displayname) to $AssignTo" -Sev 'Info'
+            }
         }
         "Successfully added profile for $($tenantfilter)"
     } catch {
-        Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APIName -tenant $($tenantfilter) -message "Failed adding Autopilot Profile $($Displayname). Error: $($_.Exception.Message)" -Sev 'Error'
+        Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APIName -tenant $($tenantfilter) -message "Failed adding Autopilot Profile $($Displayname). Error: $($_.Exception.Message)" -Sev 'Error' -LogData (Get-CippException -Exception $_)
         throw "Failed to add profile for $($tenantfilter): $($_.Exception.Message)"
     }
 }
