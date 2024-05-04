@@ -6,30 +6,29 @@ function Invoke-CIPPStandardAntiPhishPolicy {
 
     param($Tenant, $Settings)
     $PolicyName = 'Default Anti-Phishing Policy'
-    $AntiPhishPolicyState = New-ExoRequest -tenantid $Tenant -cmdlet 'Get-AntiPhishPolicy' | 
-        Where-Object -Property Name -EQ $PolicyName | 
+
+    $CurrentState = New-ExoRequest -tenantid $Tenant -cmdlet 'Get-AntiPhishPolicy' |
+        Where-Object -Property Name -EQ $PolicyName |
         Select-Object Name, Enabled, PhishThresholdLevel, EnableMailboxIntelligence, EnableMailboxIntelligenceProtection, EnableSpoofIntelligence, EnableFirstContactSafetyTips, EnableSimilarUsersSafetyTips, EnableSimilarDomainsSafetyTips, EnableUnusualCharactersSafetyTips, EnableUnauthenticatedSender, EnableViaTag, MailboxIntelligenceProtectionAction, MailboxIntelligenceQuarantineTag
 
-    $StateIsCorrect = if (
-        ($AntiPhishPolicyState.Name -eq $PolicyName) -and
-        ($AntiPhishPolicyState.Enabled -eq $true) -and 
-        ($AntiPhishPolicyState.PhishThresholdLevel -eq $Settings.PhishThresholdLevel) -and
-        ($AntiPhishPolicyState.EnableMailboxIntelligence -eq $true) -and
-        ($AntiPhishPolicyState.EnableMailboxIntelligenceProtection -eq $true) -and
-        ($AntiPhishPolicyState.EnableSpoofIntelligence -eq $true) -and
-        ($AntiPhishPolicyState.EnableFirstContactSafetyTips -eq $Settings.EnableFirstContactSafetyTips) -and
-        ($AntiPhishPolicyState.EnableSimilarUsersSafetyTips -eq $Settings.EnableSimilarUsersSafetyTips) -and
-        ($AntiPhishPolicyState.EnableSimilarDomainsSafetyTips -eq $Settings.EnableSimilarDomainsSafetyTips) -and
-        ($AntiPhishPolicyState.EnableUnusualCharactersSafetyTips -eq $Settings.EnableUnusualCharactersSafetyTips) -and
-        ($AntiPhishPolicyState.EnableUnauthenticatedSender -eq $true) -and
-        ($AntiPhishPolicyState.EnableViaTag -eq $true) -and
-        ($AntiPhishPolicyState.MailboxIntelligenceProtectionAction -eq $Settings.MailboxIntelligenceProtectionAction) -and
-        ($AntiPhishPolicyState.MailboxIntelligenceQuarantineTag -eq $Settings.MailboxIntelligenceQuarantineTag)
-    ) { $true } else { $false }
+    $StateIsCorrect = ($CurrentState.Name -eq $PolicyName) -and
+                      ($CurrentState.Enabled -eq $true) -and
+                      ($CurrentState.PhishThresholdLevel -eq $Settings.PhishThresholdLevel) -and
+                      ($CurrentState.EnableMailboxIntelligence -eq $true) -and
+                      ($CurrentState.EnableMailboxIntelligenceProtection -eq $true) -and
+                      ($CurrentState.EnableSpoofIntelligence -eq $true) -and
+                      ($CurrentState.EnableFirstContactSafetyTips -eq $Settings.EnableFirstContactSafetyTips) -and
+                      ($CurrentState.EnableSimilarUsersSafetyTips -eq $Settings.EnableSimilarUsersSafetyTips) -and
+                      ($CurrentState.EnableSimilarDomainsSafetyTips -eq $Settings.EnableSimilarDomainsSafetyTips) -and
+                      ($CurrentState.EnableUnusualCharactersSafetyTips -eq $Settings.EnableUnusualCharactersSafetyTips) -and
+                      ($CurrentState.EnableUnauthenticatedSender -eq $true) -and
+                      ($CurrentState.EnableViaTag -eq $true) -and
+                      ($CurrentState.MailboxIntelligenceProtectionAction -eq $Settings.MailboxIntelligenceProtectionAction) -and
+                      ($CurrentState.MailboxIntelligenceQuarantineTag -eq $Settings.MailboxIntelligenceQuarantineTag)
 
-    if ($Settings.remediate) {
+    if ($Settings.remediate -eq $true) {
         if ($StateIsCorrect) {
-            Write-LogMessage -API 'Standards' -tenant $Tenant -message 'Anti-phishing Policy already exists.' -sev Info
+            Write-LogMessage -API 'Standards' -tenant $Tenant -message 'Anti-phishing Policy already correctly configured' -sev Info
         } else {
             $cmdparams = @{
                 Enabled                             = $true
@@ -48,7 +47,7 @@ function Invoke-CIPPStandardAntiPhishPolicy {
             }
 
             try {
-                if ($AntiPhishPolicyState.Name -eq $PolicyName) {
+                if ($CurrentState.Name -eq $PolicyName) {
                     $cmdparams.Add('Identity', $PolicyName)
                     New-ExoRequest -tenantid $Tenant -cmdlet 'Set-AntiPhishPolicy' -cmdparams $cmdparams
                     Write-LogMessage -API 'Standards' -tenant $Tenant -message 'Updated Anti-phishing Policy' -sev Info
@@ -64,7 +63,7 @@ function Invoke-CIPPStandardAntiPhishPolicy {
     }
 
 
-    if ($Settings.alert) {
+    if ($Settings.alert -eq $true) {
 
         if ($StateIsCorrect) {
             Write-LogMessage -API 'Standards' -tenant $Tenant -message 'Anti-phishing Policy is enabled' -sev Info
@@ -73,8 +72,8 @@ function Invoke-CIPPStandardAntiPhishPolicy {
         }
     }
 
-    if ($Settings.report) {
-        Add-CIPPBPAField -FieldName 'AntiPhishPolicy' -FieldValue [bool]$StateIsCorrect -StoreAs bool -Tenant $tenant
+    if ($Settings.report -eq $true) {
+        Add-CIPPBPAField -FieldName 'AntiPhishPolicy' -FieldValue $StateIsCorrect -StoreAs bool -Tenant $tenant
     }
-    
+
 }

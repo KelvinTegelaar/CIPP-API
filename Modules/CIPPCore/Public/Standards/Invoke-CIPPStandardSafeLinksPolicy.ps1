@@ -5,50 +5,49 @@ function Invoke-CIPPStandardSafeLinksPolicy {
     #>
 
     param($Tenant, $Settings)
-    $SafeLinkState = New-ExoRequest -tenantid $Tenant -cmdlet 'Get-SafeLinksPolicy' | 
-    Where-Object -Property Name -eq $PolicyName | 
-    Select-Object Name, EnableSafeLinksForEmail, EnableSafeLinksForTeams, EnableSafeLinksForOffice, TrackClicks, AllowClickThrough, ScanUrls, EnableForInternalSenders, DeliverMessageAfterScan, DisableUrlRewrite, EnableOrganizationBranding
+    $PolicyName = 'Default SafeLinks Policy'
 
-    $PolicyName = "Default SafeLinks Policy"
-    $StateIsCorrect = if (
-        ($SafeLinkState.Name -eq $PolicyName) -and
-        ($SafeLinkState.EnableSafeLinksForEmail -eq $true) -and 
-        ($SafeLinkState.EnableSafeLinksForTeams -eq $true) -and 
-        ($SafeLinkState.EnableSafeLinksForOffice -eq $true) -and 
-        ($SafeLinkState.TrackClicks -eq $true) -and 
-        ($SafeLinkState.ScanUrls -eq $true) -and 
-        ($SafeLinkState.EnableForInternalSenders -eq $true) -and 
-        ($SafeLinkState.DeliverMessageAfterScan -eq $true) -and 
-        ($SafeLinkState.AllowClickThrough -eq $Settings.AllowClickThrough) -and
-        ($SafeLinkState.DisableUrlRewrite -eq $Settings.DisableUrlRewrite) -and
-        ($SafeLinkState.EnableOrganizationBranding -eq $Settings.EnableOrganizationBranding)
-    ) { $true } else { $false }
+    $CurrentState = New-ExoRequest -tenantid $Tenant -cmdlet 'Get-SafeLinksPolicy' |
+        Where-Object -Property Name -EQ $PolicyName |
+        Select-Object Name, EnableSafeLinksForEmail, EnableSafeLinksForTeams, EnableSafeLinksForOffice, TrackClicks, AllowClickThrough, ScanUrls, EnableForInternalSenders, DeliverMessageAfterScan, DisableUrlRewrite, EnableOrganizationBranding
 
-    if ($Settings.remediate) {
-        
+    $StateIsCorrect = ($CurrentState.Name -eq $PolicyName) -and
+                      ($CurrentState.EnableSafeLinksForEmail -eq $true) -and
+                      ($CurrentState.EnableSafeLinksForTeams -eq $true) -and
+                      ($CurrentState.EnableSafeLinksForOffice -eq $true) -and
+                      ($CurrentState.TrackClicks -eq $true) -and
+                      ($CurrentState.ScanUrls -eq $true) -and
+                      ($CurrentState.EnableForInternalSenders -eq $true) -and
+                      ($CurrentState.DeliverMessageAfterScan -eq $true) -and
+                      ($CurrentState.AllowClickThrough -eq $Settings.AllowClickThrough) -and
+                      ($CurrentState.DisableUrlRewrite -eq $Settings.DisableUrlRewrite) -and
+                      ($CurrentState.EnableOrganizationBranding -eq $Settings.EnableOrganizationBranding)
+
+    if ($Settings.remediate -eq $true) {
+
         if ($StateIsCorrect) {
-            Write-LogMessage -API 'Standards' -tenant $Tenant -message 'SafeLink Policy already exists.' -sev Info
+            Write-LogMessage -API 'Standards' -tenant $Tenant -message 'SafeLink Policy already correctly configured' -sev Info
         } else {
             $cmdparams = @{
-                EnableSafeLinksForEmail = $true
-                EnableSafeLinksForTeams = $true
-                EnableSafeLinksForOffice = $true
-                TrackClicks = $true
-                ScanUrls = $true
-                EnableForInternalSenders = $true
-                DeliverMessageAfterScan = $true
-                AllowClickThrough = $Settings.AllowClickThrough
-                DisableUrlRewrite = $Settings.DisableUrlRewrite
-                EnableOrganizationBranding = $Settings.EnableOrganizationBranding
+                EnableSafeLinksForEmail     = $true
+                EnableSafeLinksForTeams     = $true
+                EnableSafeLinksForOffice    = $true
+                TrackClicks                 = $true
+                ScanUrls                    = $true
+                EnableForInternalSenders    = $true
+                DeliverMessageAfterScan     = $true
+                AllowClickThrough           = $Settings.AllowClickThrough
+                DisableUrlRewrite           = $Settings.DisableUrlRewrite
+                EnableOrganizationBranding  = $Settings.EnableOrganizationBranding
             }
 
             try {
-                if ($SafeLinkState.Name -eq $PolicyName) {
-                    $cmdparams.Add("Identity", $PolicyName)
+                if ($CurrentState.Name -eq $PolicyName) {
+                    $cmdparams.Add('Identity', $PolicyName)
                     New-ExoRequest -tenantid $Tenant -cmdlet 'Set-SafeLinksPolicy' -cmdparams $cmdparams
                     Write-LogMessage -API 'Standards' -tenant $Tenant -message 'Updated SafeLink Policy' -sev Info
                 } else {
-                    $cmdparams.Add("Name", $PolicyName)
+                    $cmdparams.Add('Name', $PolicyName)
                     New-ExoRequest -tenantid $Tenant -cmdlet 'New-SafeLinksPolicy' -cmdparams $cmdparams
                     Write-LogMessage -API 'Standards' -tenant $Tenant -message 'Created SafeLink Policy' -sev Info
                 }
@@ -58,7 +57,7 @@ function Invoke-CIPPStandardSafeLinksPolicy {
         }
     }
 
-    if ($Settings.alert) {
+    if ($Settings.alert -eq $true) {
 
         if ($StateIsCorrect) {
             Write-LogMessage -API 'Standards' -tenant $Tenant -message 'SafeLink Policy is enabled' -sev Info
@@ -67,8 +66,8 @@ function Invoke-CIPPStandardSafeLinksPolicy {
         }
     }
 
-    if ($Settings.report) {
-        Add-CIPPBPAField -FieldName 'SafeLinksPolicy' -FieldValue [bool]$StateIsCorrect -StoreAs bool -Tenant $tenant
+    if ($Settings.report -eq $true) {
+        Add-CIPPBPAField -FieldName 'SafeLinksPolicy' -FieldValue $StateIsCorrect -StoreAs bool -Tenant $tenant
     }
-    
+
 }

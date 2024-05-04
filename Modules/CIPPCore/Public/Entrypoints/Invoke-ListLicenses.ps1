@@ -32,16 +32,18 @@ Function Invoke-ListLicenses {
                 Tenant  = 'Loading data for all tenants. Please check back in 1 minute'
                 License = 'Loading data for all tenants. Please check back in 1 minute'
             }
-            $Tenants = Get-Tenants -IncludeErrors | ForEach-Object { $_ | Add-Member -NotePropertyName FunctionName -NotePropertyValue 'ListLicensesQueue'; $_ }
+            $Tenants = Get-Tenants -IncludeErrors
 
             if (($Tenants | Measure-Object).Count -gt 0) {
+                $Queue = New-CippQueueEntry -Name 'Licenses (All Tenants)' -TotalTasks ($Tenants | Measure-Object).Count
+                $Tenants = $Tenants | Select-Object customerId, defaultDomainName, @{Name = 'QueueId'; Expression = { $Queue.RowKey } }, @{Name = 'FunctionName'; Expression = { 'ListLicensesQueue' } }, @{Name = 'QueueName'; Expression = { $_.defaultDomainName } }
                 $InputObject = [PSCustomObject]@{
                     OrchestratorName = 'ListLicensesOrchestrator'
                     Batch            = @($Tenants)
                     SkipLog          = $true
                 }
                 #Write-Host ($InputObject | ConvertTo-Json)
-                $InstanceId = Start-NewOrchestration -FunctionName 'CIPPOrchestrator' -InputObject ($InputObject | ConvertTo-Json -Depth 5)
+                $InstanceId = Start-NewOrchestration -FunctionName 'CIPPOrchestrator' -InputObject ($InputObject | ConvertTo-Json -Depth 5 -Compress)
                 Write-Host "Started permissions orchestration with ID = '$InstanceId'"
             }
         } else {
