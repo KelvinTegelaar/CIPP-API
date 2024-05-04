@@ -5,7 +5,7 @@ function Invoke-CIPPStandardAtpPolicyForO365 {
     #>
 
     param($Tenant, $Settings)
-    $AtpPolicyForO365State = New-ExoRequest -tenantid $Tenant -cmdlet 'Get-AtpPolicyForO365' | 
+    $AtpPolicyForO365State = New-ExoRequest -tenantid $Tenant -cmdlet 'Get-AtpPolicyForO365' |
     Select-Object EnableATPForSPOTeamsODB, EnableSafeDocs, AllowSafeDocsOpen
 
     $StateIsCorrect = if (
@@ -14,7 +14,7 @@ function Invoke-CIPPStandardAtpPolicyForO365 {
         ($AtpPolicyForO365State.AllowSafeDocsOpen -eq $Settings.AllowSafeDocsOpen)
     ) { $true } else { $false }
 
-    if ($Settings.remediate) {
+    if ($Settings.remediate -eq $true) {
         if ($StateIsCorrect) {
             Write-LogMessage -API 'Standards' -tenant $Tenant -message 'Atp Policy For O365 already set.' -sev Info
         } else {
@@ -33,7 +33,7 @@ function Invoke-CIPPStandardAtpPolicyForO365 {
         }
     }
 
-    if ($Settings.alert) {
+    if ($Settings.alert -eq $true) {
 
         if ($StateIsCorrect) {
             Write-LogMessage -API 'Standards' -tenant $Tenant -message 'Atp Policy For O365 is enabled' -sev Info
@@ -42,8 +42,8 @@ function Invoke-CIPPStandardAtpPolicyForO365 {
         }
     }
 
-    if ($Settings.report) {
-        Add-CIPPBPAField -FieldName 'AtpPolicyForO365' -FieldValue [bool]$StateIsCorrect -StoreAs bool -Tenant $tenant
+    if ($Settings.report -eq $true) {
+        Add-CIPPBPAField -FieldName 'AtpPolicyForO365' -FieldValue $StateIsCorrect -StoreAs bool -Tenant $tenant
     }
-    
+
 }
