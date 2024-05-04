@@ -7,7 +7,7 @@ function Invoke-CIPPStandardNudgeMFA {
     $CurrentInfo = New-GraphGetRequest -Uri 'https://graph.microsoft.com/beta/policies/authenticationMethodsPolicy' -tenantid $Tenant
     $State = if ($CurrentInfo.registrationEnforcement.authenticationMethodsRegistrationCampaign.state -eq 'enabled') { $true } else { $false }
 
-    If ($Settings.remediate) {
+    If ($Settings.remediate -eq $true) {
 
         if ($Settings.state -ne $CurrentInfo.registrationEnforcement.authenticationMethodsRegistrationCampaign.state -or $Settings.snoozeDurationInDays -ne $CurrentInfo.registrationEnforcement.authenticationMethodsRegistrationCampaign.snoozeDurationInDays) {
             try {
@@ -28,7 +28,7 @@ function Invoke-CIPPStandardNudgeMFA {
         }
     }
 
-    if ($Settings.alert) {
+    if ($Settings.alert -eq $true) {
 
         if ($State) {
             Write-LogMessage -API 'Standards' -tenant $tenant -message "Authenticator App Nudge is enabled with a snooze duration of $($CurrentInfo.registrationEnforcement.authenticationMethodsRegistrationCampaign.snoozeDurationInDays)" -sev Info
@@ -36,8 +36,8 @@ function Invoke-CIPPStandardNudgeMFA {
             Write-LogMessage -API 'Standards' -tenant $tenant -message "Authenticator App Nudge is not enabled with a snooze duration of $($CurrentInfo.registrationEnforcement.authenticationMethodsRegistrationCampaign.snoozeDurationInDays)" -sev Alert
         }
     }
-    
-    if ($Settings.report) {
-        Add-CIPPBPAField -FieldName 'NudgeMFA' -FieldValue [bool]$State -StoreAs bool -Tenant $tenant
+
+    if ($Settings.report -eq $true) {
+        Add-CIPPBPAField -FieldName 'NudgeMFA' -FieldValue $State -StoreAs bool -Tenant $tenant
     }
 }
