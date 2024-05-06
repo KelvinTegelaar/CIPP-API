@@ -1,6 +1,6 @@
 {
   "name": "New Baseline",
-  "style": "Tenant",
+  "style": "Table",
   "Fields": [
     {
       "name": "PasswordNeverExpires",
