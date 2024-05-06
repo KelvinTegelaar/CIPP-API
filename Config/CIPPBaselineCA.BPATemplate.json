@@ -15,9 +15,7 @@
       "StoreAs": "JSON",
       "API": "Graph",
       "ExtractFields": [
-        "id",
-        "displayName",
-        "state"
+        "displayName"
       ],
       "URL": "https://graph.microsoft.com/beta/identity/conditionalAccess/policies"
     }
