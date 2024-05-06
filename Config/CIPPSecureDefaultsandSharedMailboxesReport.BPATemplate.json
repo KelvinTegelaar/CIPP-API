@@ -1,0 +1,32 @@
+{
+  "name": "CIPP - Secure Defaults and Shared Mailboxes Report",
+  "style": "Tenant",
+  "Fields": [
+    {
+      "name": "SecureDefaultState",
+      "UseExistingInfo": true,
+      "StoreAs": "bool",
+      "FrontendFields": [
+        {
+          "name": "Secure Defaults State Enabled",
+          "value": "SecureDefaultState",
+          "formatter": "warnBool",
+          "desc": "This setting shows if your environment has enabled the secure defaults state. If you are using Conditional Access this setting may be set to `No`"
+        }
+      ]
+    },
+    {
+      "name": "SharedMailboxeswithenabledusers",
+      "UseExistingInfo": true,
+      "StoreAs": "JSON",
+      "FrontendFields": [
+        {
+          "name": "Shared Mailboxes with enabled users",
+          "formatter": "table",
+          "value": "SharedMailboxeswithenabledusers",
+          "desc": "These are the shared mailboxes that have enabled users."
+        }
+      ]
+    }
+  ]
+}
