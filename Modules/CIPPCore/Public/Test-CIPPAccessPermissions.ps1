@@ -115,6 +115,9 @@ function Test-CIPPAccessPermissions {
         $Success = $false
     }
 
+    if ($Success -eq $true) {
+        $Messages.Add('No service account issues have been found. CIPP is ready for use.') | Out-Null
+    }
     return [PSCustomObject]@{
         AccessTokenDetails = $AccessTokenDetails
         Messages           = @($Messages)
