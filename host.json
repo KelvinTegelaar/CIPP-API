@@ -3,6 +3,10 @@
   "managedDependency": {
     "enabled": false
   },
+  "extensionBundle": {
+    "id": "Microsoft.Azure.Functions.ExtensionBundle",
+    "version": "[4.*, 5.0.0)"
+  },
   "functionTimeout": "00:10:00",
   "extensions": {
     "queues": {
