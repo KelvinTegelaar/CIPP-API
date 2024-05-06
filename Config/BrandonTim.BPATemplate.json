@@ -1,5 +1,5 @@
 {
-  "name": "Brandon en TimV12",
+  "name": "Brandon en TimV13",
   "style": "Tenant",
   "Fields": [
     {
@@ -130,7 +130,7 @@
     },
     {
       "name": "Conditional Access",
-      "UseExistingInfo": false,
+      "UseExistingInfo": true,
       "FrontendFields": [
         {
           "name": "Conditional Access",
@@ -138,13 +138,7 @@
           "formatter": "table"
         }
       ],
-      "desc": "Conditional Access",
-      "StoreAs": "JSON",
-      "API": "Graph",
-      "ExtractFields": [
-        "displayName"
-      ],
-      "URL": "https://graph.microsoft.com/beta/identity/conditionalAccess/policies"
+      "desc": "Conditional Access"
     }
   ]
 }
