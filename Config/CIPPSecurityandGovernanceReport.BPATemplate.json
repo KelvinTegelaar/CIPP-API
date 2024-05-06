@@ -1,0 +1,94 @@
+{
+  "name": "CIPP - Security and Governance Report",
+  "style": "Tenant",
+  "Fields": [
+    {
+      "name": "SecurityDefaultsDisabled",
+      "UseExistingInfo": true,
+      "FrontendFields": [
+        {
+          "name": "Security Defaults is set to disabled",
+          "value": "securityDefaultsDisabled",
+          "formatter": "bool"
+        }
+      ]
+    },
+    {
+      "name": "ModernAuthenticationStatus",
+      "UseExistingInfo": true,
+      "FrontendFields": [
+        {
+          "name": "Modern Authentication Status",
+          "value": "modernAuthenticationStatus",
+          "formatter": "bool"
+        }
+      ]
+    },
+    {
+      "name": "EnabledAuthenticationMethods",
+      "UseExistingInfo": true,
+      "FrontendFields": [
+        {
+          "name": "Enabled Authentication Methods",
+          "value": "enabledAuthenticationMethods",
+          "formatter": "table"
+        }
+      ]
+    },
+    {
+      "name": "UserConsentToApps",
+      "UseExistingInfo": true,
+      "FrontendFields": [
+        {
+          "name": "Users Can Consent to Applications",
+          "value": "userConsentToApps",
+          "formatter": "bool"
+        }
+      ]
+    },
+    {
+      "name": "UsersAllowedToCreateTenants",
+      "UseExistingInfo": true,
+      "FrontendFields": [
+        {
+          "name": "Users are allowed to create tenants",
+          "value": "usersAllowedToCreateTenants",
+          "formatter": "bool"
+        }
+      ]
+    },
+    {
+      "name": "UsersAllowedToCreateApplications",
+      "UseExistingInfo": true,
+      "FrontendFields": [
+        {
+          "name": "Users are allowed to create applications",
+          "value": "usersAllowedToCreateApplications",
+          "formatter": "bool"
+        }
+      ]
+    },
+    {
+      "name": "UsersAllowedToCreateSecurityGroups",
+      "UseExistingInfo": true,
+      "FrontendFields": [
+        {
+          "name": "Users are allowed to create security groups",
+          "value": "usersAllowedToCreateSecurityGroups",
+          "formatter": "bool"
+        }
+      ]
+    },
+    {
+      "name": "AzureADPortalTimeout",
+      "UseExistingInfo": true,
+      "FrontendFields": [
+        {
+          "name": "Azure AD Portal access has a timeout set",
+          "value": "azureADPortalTimeout",
+          "formatter": "bool"
+        }
+      ]
+    }
+  ]
+}
