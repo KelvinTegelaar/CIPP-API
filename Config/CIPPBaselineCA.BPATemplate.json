@@ -5,19 +5,17 @@
     {
       "name": "CA",
       "UseExistingInfo": false,
+      "StoreAs": "JSON",
+      "API": "Graph",
+      "URL": "https://graph.microsoft.com/beta/identity/conditionalAccess/policies",
       "FrontendFields": [
         {
           "name": "Conditional Access",
-          "value": "CA",
+          "value": "displayName",  // Zorg ervoor dat dit overeenkomt met de structuur van de API response
           "formatter": "table"
         }
       ],
-      "StoreAs": "JSON",
-      "API": "Graph",
-      "ExtractFields": [
-        "displayName"
-      ],
-      "URL": "https://graph.microsoft.com/beta/identity/conditionalAccess/policies"
+      "ExtractFields": ["displayName"]
     }
   ]
 }
