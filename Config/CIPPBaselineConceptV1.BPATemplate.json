@@ -1,153 +1,23 @@
 {
-  "name": "CIPP-Baseline-ConceptV1",
   "style": "Tenant",
   "Fields": [
     {
       "name": "PasswordNeverExpires",
-      "UseExistingInfo": true,
+      "UseExistingInfo": false,
       "FrontendFields": [
         {
           "name": "Password Never Expires",
           "value": "PasswordNeverExpires",
           "formatter": "bool"
         }
-      ]
-    },
-    {
-      "name": "OAuthAppConsent",
-      "UseExistingInfo": true,
-      "FrontendFields": [
-        {
-          "name": "OAuth App Consent",
-          "value": "OAuthAppConsent",
-          "formatter": "bool"
-        }
-      ]
-    },
-    {
-      "name": "UnifiedAuditLog",
-      "UseExistingInfo": true,
-      "FrontendFields": [
-        {
-          "name": "Unified Audit Log",
-          "value": "UnifiedAuditLog",
-          "formatter": "bool"
-        }
-      ]
-    },
-    {
-      "name": "MFANudgeState",
-      "UseExistingInfo": true,
-      "FrontendFields": [
-        {
-          "name": "MFA Registration Campaign Enabled",
-          "value": "MFANudgeState",
-          "formatter": "bool"
-        }
-      ]
-    },
-    {
-      "name": "TAPEnabled",
-      "UseExistingInfo": true,
-      "FrontendFields": [
-        {
-          "name": "Temporary Access Pass Enabled",
-          "value": "TAPEnabled",
-          "formatter": "bool"
-        }
-      ]
-    },
-    {
-      "name": "SecureDefaultState",
-      "UseExistingInfo": true,
-      "FrontendFields": [
-        {
-          "name": "Secure Defaults State Enabled",
-          "value": "SecureDefaultState",
-          "formatter": "warnBool"
-        }
-      ]
-    },
-    {
-      "name": "AnonymousPrivacyReports",
-      "UseExistingInfo": true,
-      "FrontendFields": [
-        {
-          "name": "Anonymous Privacy Reports",
-          "value": "AnonymousPrivacyReports",
-          "formatter": "reverseBool"
-        }
-      ]
-    },
-    {
-      "name": "MessageCopyforSentAsDisabled",
-      "UseExistingInfo": true,
-      "FrontendFields": [
-        {
-          "name": "Message Copy for Sent-As Disabled",
-          "value": "MessageCopyforSentAsDisabled",
-          "formatter": "table"
-        }
-      ]
-    },
-    {
-      "name": "SharedMailboxeswithenabledusers",
-      "UseExistingInfo": true,
-      "FrontendFields": [
-        {
-          "name": "Shared Mailboxes with enabled users",
-          "value": "SharedMailboxeswithenabledusers",
-          "formatter": "table"
-        }
-      ]
-    },
-    {
-      "name": "Unusedlicenses",
-      "UseExistingInfo": true,
-      "FrontendFields": [
-        {
-          "name": "Unused licenses",
-          "value": "Unusedlicenses",
-          "formatter": "table"
-        }
-      ]
-    },
-    {
-      "name": "CurrentSecureScore",
-      "UseExistingInfo": true,
-      "FrontendFields": [
-        {
-          "name": "Current Secure Score",
-          "value": "CurrentSecureScore.currentScore",
-          "formatter": "number"
-        },
-        {
-          "name": "Max Secure Score",
-          "value": "CurrentSecureScore.maxScore",
-          "formatter": "number"
-        }
-      ]
-    },
-    {
-      "name": "ConditionalAccessPolicies",
-      "UseExistingInfo": false,
-      "FrontendFields": [
-        {
-          "name": "Conditional Access Policies",
-          "value": "displayName",
-          "formatter": "table"
-        }
       ],
-      "StoreAs": "JSON",
+      "where": "$_.passwordValidityPeriodInDays -eq 2147483647",
+      "StoreAs": "bool",
       "API": "Graph",
       "ExtractFields": [
-        "displayName",
-        "id",
-        "conditions",
-        "grantControls",
-        "state"
+        "passwordValidityPeriodInDays"
       ],
-      "URL": "https://graph.microsoft.com/v1.0/identity/conditionalAccess/policies"
+      "URL": "https://graph.microsoft.com/beta/domains"
     }
   ]
 }
