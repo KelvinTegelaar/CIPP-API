@@ -8,12 +8,12 @@
       "FrontendFields": [
         {
           "name": "id",
-          "value": "id",
+          "value": "CA",
           "formatter": "table"
         },
         {
           "name": "displayName",
-          "value": "displayName",
+          "value": "CA",
           "formatter": "table"
         }
       ],
