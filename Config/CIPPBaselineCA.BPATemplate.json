@@ -11,7 +11,7 @@
       "FrontendFields": [
         {
           "name": "Conditional Access",
-          "value": "displayName",  // Zorg ervoor dat dit overeenkomt met de structuur van de API response
+          "value": "displayName",
           "formatter": "table"
         }
       ],
