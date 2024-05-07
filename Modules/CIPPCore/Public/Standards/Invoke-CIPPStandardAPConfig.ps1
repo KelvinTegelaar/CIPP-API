@@ -4,7 +4,7 @@ function Invoke-CIPPStandardAPConfig {
     Internal
     #>
     param($Tenant, $Settings)
-    If ($Settings.remediate) {
+    If ($Settings.remediate -eq $true) {
 
 
         $APINAME = 'Standards'

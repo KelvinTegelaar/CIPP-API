@@ -7,7 +7,7 @@ function Invoke-CIPPStandardEnableHardwareOAuth {
     $CurrentInfo = New-GraphGetRequest -Uri 'https://graph.microsoft.com/beta/policies/authenticationmethodspolicy/authenticationMethodConfigurations/HardwareOath' -tenantid $Tenant
     $State = if ($CurrentInfo.state -eq 'enabled') { $true } else { $false }
 
-    If ($Settings.remediate) {
+    If ($Settings.remediate -eq $true) {
 
         if ($State) {
             Write-LogMessage -API 'Standards' -tenant $tenant -message 'HardwareOAuth Support is already enabled.' -sev Info
@@ -15,9 +15,9 @@ function Invoke-CIPPStandardEnableHardwareOAuth {
             Set-CIPPAuthenticationPolicy -Tenant $tenant -APIName 'Standards' -AuthenticationMethodId 'HardwareOath' -Enabled $true
         }
     }
-        
-    if ($Settings.alert) {
-        
+
+    if ($Settings.alert -eq $true) {
+
         if ($State) {
             Write-LogMessage -API 'Standards' -tenant $tenant -message 'HardwareOAuth Support is enabled' -sev Info
         } else {
@@ -25,8 +25,8 @@ function Invoke-CIPPStandardEnableHardwareOAuth {
         }
     }
 
-    if ($Settings.report) {
-        Add-CIPPBPAField -FieldName 'EnableHardwareOAuth' -FieldValue [bool]$State -StoreAs bool -Tenant $tenant
+    if ($Settings.report -eq $true) {
+        Add-CIPPBPAField -FieldName 'EnableHardwareOAuth' -FieldValue $State -StoreAs bool -Tenant $tenant
     }
 }
 

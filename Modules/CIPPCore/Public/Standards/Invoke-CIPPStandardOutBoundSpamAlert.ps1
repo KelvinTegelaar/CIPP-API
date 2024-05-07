@@ -6,8 +6,8 @@ function Invoke-CIPPStandardOutBoundSpamAlert {
     param($Tenant, $Settings)
     $CurrentInfo = New-ExoRequest -tenantid $Tenant -cmdlet 'Get-HostedOutboundSpamFilterPolicy' -useSystemMailbox $true
 
-    If ($Settings.remediate) {
-        
+    If ($Settings.remediate -eq $true) {
+
         if ($CurrentInfo.NotifyOutboundSpam -ne $true -or $CurrentInfo.NotifyOutboundSpamRecipients -ne $settings.OutboundSpamContact) {
             $Contacts = $settings.OutboundSpamContact
             try {
@@ -21,7 +21,7 @@ function Invoke-CIPPStandardOutBoundSpamAlert {
         }
     }
 
-    if ($Settings.alert) {
+    if ($Settings.alert -eq $true) {
 
         if ($CurrentInfo.NotifyOutboundSpam -eq $true) {
             Write-LogMessage -API 'Standards' -tenant $tenant -message "Outbound spam filter alert is set to $($CurrentInfo.NotifyOutboundSpamRecipients)" -sev Info
@@ -30,7 +30,7 @@ function Invoke-CIPPStandardOutBoundSpamAlert {
         }
     }
 
-    if ($Settings.report) {
-        Add-CIPPBPAField -FieldName 'OutboundSpamAlert' -FieldValue [bool]$CurrentInfo.NotifyOutboundSpam -StoreAs bool -Tenant $tenant
+    if ($Settings.report -eq $true) {
+        Add-CIPPBPAField -FieldName 'OutboundSpamAlert' -FieldValue $CurrentInfo.NotifyOutboundSpam -StoreAs bool -Tenant $tenant
     }
 }

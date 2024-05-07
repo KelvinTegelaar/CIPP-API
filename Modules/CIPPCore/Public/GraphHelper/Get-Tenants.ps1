@@ -70,7 +70,7 @@ function Get-Tenants {
             Write-Host "Processing $($_.Name) to add to tenant list."
             $ExistingTenantInfo = Get-CIPPAzDataTableEntity @TenantsTable -Filter "PartitionKey eq 'Tenants' and RowKey eq '$($_.Name)'"
 
-            if ($TriggerRefresh.IsPresent) {
+            if ($TriggerRefresh.IsPresent -and $ExistingTenantInfo.customerId) {
                 # Reset error count
                 $ExistingTenantInfo.GraphErrorCount = 0
                 Add-CIPPAzDataTableEntity @TenantsTable -Entity $ExistingTenantInfo -Force | Out-Null
