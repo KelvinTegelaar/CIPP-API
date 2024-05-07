@@ -3,25 +3,36 @@
   "style": "Tenant",
   "Fields": [
     {
-      "name": "ca",
+      "name": "ca1",
       "UseExistingInfo": false,
       "FrontendFields": [
         {
           "name": "Conditional Access",
-          "value": "displayName",
-          "formatter": "table"
-        },
-        {
-          "name": "Conditional Access",
-          "value": "id",
+          "value": "ca",
           "formatter": "table"
         }
       ],
       "StoreAs": "JSON",
       "API": "Graph",
       "ExtractFields": [
-        "displayName",
         "id"
+      ],
+      "URL": "https://graph.microsoft.com/beta/identity/conditionalAccess/policies"
+    },
+    {
+      "name": "ca2",
+      "UseExistingInfo": false,
+      "FrontendFields": [
+        {
+          "name": "Conditional Access",
+          "value": "ca2",
+          "formatter": "table"
+        }
+      ],
+      "StoreAs": "JSON",
+      "API": "Graph",
+      "ExtractFields": [
+        "displayName"
       ],
       "URL": "https://graph.microsoft.com/beta/identity/conditionalAccess/policies"
     }
