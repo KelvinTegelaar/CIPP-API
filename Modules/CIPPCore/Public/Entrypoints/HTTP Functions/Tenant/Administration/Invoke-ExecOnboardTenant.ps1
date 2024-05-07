@@ -13,7 +13,8 @@ function Invoke-ExecOnboardTenant {
     if ($Id) {
         try {
             $OnboardTable = Get-CIPPTable -TableName 'TenantOnboarding'
-            $TenantOnboarding = Get-CIPPAzDataTableEntity @OnboardTable -Filter "RowKey eq '$Id'"
+            $TenMinutesAgo = (Get-Date).AddMinutes(-10).ToString('yyyy-MM-ddTHH:mm:ssZ')
+            $TenantOnboarding = Get-CIPPAzDataTableEntity @OnboardTable -Filter "RowKey eq '$Id' and Timestamp ge datetime'$TenMinutesAgo'"
 
             if (!$TenantOnboarding -or [bool]$Request.Query.Retry) {
                 $OnboardingSteps = [PSCustomObject]@{
