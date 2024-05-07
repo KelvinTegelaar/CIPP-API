@@ -8,8 +8,8 @@ function Invoke-CIPPStandardEnableMailTips {
     $MailTipsState = New-ExoRequest -tenantid $Tenant -cmdlet 'Get-OrganizationConfig' | Select-Object MailTipsAllTipsEnabled, MailTipsExternalRecipientsTipsEnabled, MailTipsGroupMetricsEnabled, MailTipsLargeAudienceThreshold
     $StateIsCorrect = if ($MailTipsState.MailTipsAllTipsEnabled -and $MailTipsState.MailTipsExternalRecipientsTipsEnabled -and $MailTipsState.MailTipsGroupMetricsEnabled -and $MailTipsState.MailTipsLargeAudienceThreshold -eq $Settings.MailTipsLargeAudienceThreshold) { $true } else { $false }
 
-    if ($Settings.remediate) {
-        
+    if ($Settings.remediate -eq $true) {
+
         if ($StateIsCorrect) {
             Write-LogMessage -API 'Standards' -tenant $Tenant -message 'All MailTips are already enabled.' -sev Info
         } else {
@@ -22,7 +22,7 @@ function Invoke-CIPPStandardEnableMailTips {
         }
     }
 
-    if ($Settings.alert) {
+    if ($Settings.alert -eq $true) {
 
         if ($StateIsCorrect) {
             Write-LogMessage -API 'Standards' -tenant $Tenant -message 'All MailTips are enabled' -sev Info
@@ -31,9 +31,9 @@ function Invoke-CIPPStandardEnableMailTips {
         }
     }
 
-    if ($Settings.report) {
+    if ($Settings.report -eq $true) {
 
-        Add-CIPPBPAField -FieldName 'MailTipsEnabled' -FieldValue [bool]$StateIsCorrect -StoreAs bool -Tenant $tenant
+        Add-CIPPBPAField -FieldName 'MailTipsEnabled' -FieldValue $StateIsCorrect -StoreAs bool -Tenant $tenant
     }
-    
+
 }

@@ -5,8 +5,8 @@ function Invoke-CIPPStandardDisableExternalCalendarSharing {
     #>
     param($Tenant, $Settings)
     $CurrentInfo = New-ExoRequest -tenantid $Tenant -cmdlet 'Get-SharingPolicy' | Where-Object { $_.Default -eq $true }
-    
-    if ($Settings.remediate) {
+
+    if ($Settings.remediate -eq $true) {
         if ($CurrentInfo.Enabled) {
             $CurrentInfo | ForEach-Object {
                 try {
@@ -18,12 +18,12 @@ function Invoke-CIPPStandardDisableExternalCalendarSharing {
             }
         } else {
             Write-LogMessage -API 'Standards' -tenant $tenant -message 'External calendar sharing is already disabled' -sev Info
-        
+
         }
 
     }
 
-    if ($Settings.alert) {
+    if ($Settings.alert -eq $true) {
         if ($CurrentInfo.Enabled) {
             Write-LogMessage -API 'Standards' -tenant $tenant -message 'External calendar sharing is enabled' -sev Alert
         } else {
@@ -31,8 +31,8 @@ function Invoke-CIPPStandardDisableExternalCalendarSharing {
         }
     }
 
-    if ($Settings.report) {
+    if ($Settings.report -eq $true) {
         $CurrentInfo.Enabled = -not $CurrentInfo.Enabled
-        Add-CIPPBPAField -FieldName 'ExternalCalendarSharingDisabled' -FieldValue [bool]$CurrentInfo.Enabled -StoreAs bool -Tenant $tenant
+        Add-CIPPBPAField -FieldName 'ExternalCalendarSharingDisabled' -FieldValue $CurrentInfo.Enabled -StoreAs bool -Tenant $tenant
     }
 }

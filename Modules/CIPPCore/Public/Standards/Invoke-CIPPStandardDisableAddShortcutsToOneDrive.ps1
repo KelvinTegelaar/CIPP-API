@@ -4,7 +4,7 @@ function Invoke-CIPPStandardDisableAddShortcutsToOneDrive {
     Internal
     #>
     param($Tenant, $Settings)
-    If ($Settings.remediate) {
+    If ($Settings.remediate -eq $true) {
         function GetTenantRequestXml {
             return @'
         <Request AddExpandoFieldTypeSuffix="true" SchemaVersion="15.0.0.0" LibraryVersion="16.0.0.0"
