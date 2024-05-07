@@ -3,17 +3,17 @@
   "style": "Tenant",
   "Fields": [
     {
-      "name": "CA",
+      "name": "ca",
       "UseExistingInfo": false,
       "FrontendFields": [
         {
           "name": "id",
-          "value": "CA",
+          "value": "ca",
           "formatter": "table"
         },
         {
           "name": "displayName",
-          "value": "CA",
+          "value": "ca",
           "formatter": "table"
         }
       ],
