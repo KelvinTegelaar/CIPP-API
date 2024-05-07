@@ -10,12 +10,18 @@
           "name": "Conditional Access",
           "value": "displayName",
           "formatter": "table"
+        },
+        {
+          "name": "Conditional Access",
+          "value": "id",
+          "formatter": "table"
         }
       ],
       "StoreAs": "JSON",
       "API": "Graph",
       "ExtractFields": [
-        "displayName"
+        "displayName",
+        "id"
       ],
       "URL": "https://graph.microsoft.com/beta/identity/conditionalAccess/policies"
     }
