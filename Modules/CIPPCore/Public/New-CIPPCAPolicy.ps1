@@ -145,7 +145,7 @@ function New-CIPPCAPolicy {
                 # Check the included and excluded groups
                 foreach ($groupType in 'includeGroups', 'excludeGroups') {
                     if ($JSONObj.conditions.users.PSObject.Properties.Name -contains $groupType) {
-                        $JSONObj.conditions.users.$groupType = Replace-GroupNameWithId -groupNames $JSONObj.conditions.users.$groupType
+                        $JSONObj.conditions.users.$groupType = @(Replace-GroupNameWithId -groupNames $JSONObj.conditions.users.$groupType)
                     }
                 }
             } catch {
@@ -155,7 +155,7 @@ function New-CIPPCAPolicy {
         }    
     }
     $JsonObj.PSObject.Properties.Remove('LocationInfo')
-    $RawJSON = $JSONObj | ConvertTo-Json -Depth 10
+    $RawJSON = $JSONObj | ConvertTo-Json -Depth 10 -Compress
     Write-Host $RawJSON
     try {
         Write-Host 'Checking'
