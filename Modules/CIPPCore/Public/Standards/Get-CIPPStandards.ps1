@@ -38,12 +38,14 @@ function Get-CIPPStandards {
             $CurrentStandard = $StandardsTenant.Standards.$StandardName
 
             if ($CurrentStandard.remediate -eq $true -or $CurrentStandard.alert -eq $true -or $CurrentStandard.report -eq $true) {
+                #Write-Host "`r`nTenant: $StandardName"
                 if (!$ComputedStandards[$StandardName] ) {
                     #Write-Host "Applying tenant level $StandardName"
                     $ComputedStandards[$StandardName] = $CurrentStandard
                 } else {
                     foreach ($Setting in $CurrentStandard.PSObject.Properties.Name) {
-                        if ($CurrentStandard.$Setting -ne $false -and $CurrentStandard.$Setting -ne $ComputedStandards[$StandardName].$($Setting) -and [string]::IsNullOrEmpty($CurrentStandard.$Setting)) {
+                        #Write-Host "$Setting - Current: $($CurrentStandard.$Setting) | Computed: $($ComputedStandards[$StandardName].$($Setting))"
+                        if ($CurrentStandard.$Setting -ne $false -and $CurrentStandard.$Setting -ne $ComputedStandards[$StandardName].$($Setting) -and ![string]::IsNullOrEmpty($CurrentStandard.$Setting)) {
                             #Write-Host "Overriding $Setting for $StandardName at tenant level"
                             if ($ComputedStandards[$StandardName].PSObject.Properties.Name -contains $Setting) {
                                 $ComputedStandards[$StandardName].$($Setting) = $CurrentStandard.$Setting
