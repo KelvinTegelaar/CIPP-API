@@ -86,10 +86,12 @@ function Get-Tenants {
 
             if (-not $SkipDomains.IsPresent) {
                 try {
-                    Write-Host "Getting domains for $($_.Name)."
+                    Write-Host "Getting domains for $($LatestRelationship.displayName)"
                     $Domains = New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/domains?$top=999' -tenantid $LatestRelationship.customerId -NoAuthCheck:$true -ErrorAction Stop
                     $defaultDomainName = ($Domains | Where-Object { $_.isDefault -eq $true }).id
                     $initialDomainName = ($Domains | Where-Object { $_.isInitial -eq $true }).id
+                    Write-Host "Got domains for  $($LatestRelationship.displayName)"
+
                 } catch {
                     try {
                         #doing alternative method to temporarily get domains. Nightly refresh will fix this as it will be marked for renew.
@@ -102,7 +104,7 @@ function Get-Tenants {
                         Write-LogMessage -API 'Get-Tenants' -message "Tried adding $($LatestRelationship.customerId) to tenant list but failed to get domains - $($_.Exception.Message)" -level 'Critical'
                     }
                 }
-
+                Write-Host "Adding to  $($LatestRelationship.displayName) to table"
                 $TenantInfo = [PSCustomObject]@{
                     PartitionKey             = 'Tenants'
                     RowKey                   = $_.Name
@@ -123,7 +125,11 @@ function Get-Tenants {
                     RequiresRefresh          = [bool]$RequiresRefresh
                     LastRefresh              = (Get-Date).ToUniversalTime()
                 }
-                Add-CIPPAzDataTableEntity @TenantsTable -Entity $TenantInfo -Force
+                try {
+                    Add-CIPPAzDataTableEntity @TenantsTable -Entity $TenantInfo -Force
+                } catch {
+                    Write-Host "Failed to add $($LatestRelationship.displayName) to table: $($_.Exception.Message)"
+                }
                 $TenantInfo
             }
         }
