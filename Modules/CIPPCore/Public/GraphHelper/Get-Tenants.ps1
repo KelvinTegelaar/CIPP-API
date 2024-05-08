@@ -103,7 +103,7 @@ function Get-Tenants {
                     }
                 }
 
-                [PSCustomObject]@{
+                $TenantInfo = [PSCustomObject]@{
                     PartitionKey             = 'Tenants'
                     RowKey                   = $_.Name
                     customerId               = $_.Name
@@ -123,6 +123,8 @@ function Get-Tenants {
                     RequiresRefresh          = [bool]$RequiresRefresh
                     LastRefresh              = (Get-Date).ToUniversalTime()
                 }
+                Add-CIPPAzDataTableEntity @TenantsTable -Entity $TenantInfo -Force | Out-Null
+                $TenantInfo
             }
         }
         $IncludedTenantsCache = [system.collections.generic.list[object]]::new()
@@ -151,7 +153,7 @@ function Get-Tenants {
                 Write-LogMessage -API 'Get-Tenants' -message "We're skipping $($Tenant.displayName) as it has an invalid default domain name. Something is up with this instance." -level 'Critical'
                 continue
             }
-            Add-CIPPAzDataTableEntity @TenantsTable -Entity $Tenant -Force | Out-Null
+            $IncludedTenantsCache.Add($Tenant) | Out-Null
         }
 
         if ($IncludedTenantsCache) {
