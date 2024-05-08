@@ -23,10 +23,20 @@ function Invoke-ExecDurableFunctions {
         'ListOrchestrators' {
             $Orchestrators = foreach ($Instance in $Instances) {
                 $Json = $Instance.Input -replace '^"(.+)"$', '$1' -replace '\\"', '"'
-                if (Test-Json -Json $Json -ErrorAction SilentlyContinue) {
-                    $Instance.Input = $Json | ConvertFrom-Json
-                } else {
-                    $Instance.Input = 'No Input'
+
+                if ($Json -notmatch '^http' -and ![string]::IsNullOrEmpty($Json)) {
+                    if (Test-Json -Json $Json -ErrorAction SilentlyContinue) {
+                        $Instance.Input = $Json | ConvertFrom-Json
+                        if (![string]::IsNullOrEmpty($Instance.Input.OrchestratorName)) {
+                            $Instance.Name = $Instance.Input.OrchestratorName
+                        }
+                    } else {
+                        #Write-Host $Instance.Input
+                        if ($Json -match '\"OrchestratorName\":\"(.+?)\"') {
+                            $Instance.Name = $Matches[1]
+                        }
+                        $Instance.Input = 'Invalid JSON'
+                    }
                 }
                 $Instance
             }
@@ -53,7 +63,8 @@ function Invoke-ExecDurableFunctions {
         }
         'ResetDurables' {
             try {
-                $Queues = Get-AzStorageQueue -Context $StorageContext -Name ('{0}*' -f $FunctionName) | Select-Object -Property Name, ApproximateMessageCount
+                $Queues = Get-AzStorageQueue -Context $StorageContext -Name ('{0}*' -f $FunctionName) | Select-Object -Property Name, ApproximateMessageCount, QueueClient
+
                 $RunningQueues = $Queues | Where-Object { $_.ApproximateMessageCount -gt 0 }
                 foreach ($Queue in $RunningQueues) {
                     Write-Information "- Removing queue: $($Queue.Name), message count: $($Queue.ApproximateMessageCount)"
@@ -61,6 +72,7 @@ function Invoke-ExecDurableFunctions {
                         $Queue.QueueClient.ClearMessagesAsync()
                     }
                 }
+
                 $RunningInstances = $Instances | Where-Object { $_.RuntimeStatus -eq 'Running' -or $_.RuntimeStatus -eq 'Pending' }
                 if (($RunningInstances | Measure-Object).Count -gt 0) {
                     if ($PSCmdlet.ShouldProcess('Orchestrators', 'Mark Failed')) {
@@ -70,20 +82,58 @@ function Invoke-ExecDurableFunctions {
                         }
                     }
                 }
-                $BlobContainer = '{0}-largemessages' -f $Function.Name
-                if (Get-AzStorageContainer -Name $BlobContainer -Context $StorageContext -ErrorAction SilentlyContinue) {
-                    Write-Information "- Removing blob container: $BlobContainer"
-                    if ($PSCmdlet.ShouldProcess($BlobContainer, 'Remove Blob Container')) {
-                        Remove-AzStorageContainer -Name $BlobContainer -Context $StorageContext -Confirm:$false -Force
+
+                $QueueTable = Get-CippTable -TableName 'CippQueue'
+                $CippQueue = Invoke-ListCippQueue
+                $QueueEntities = foreach ($Queue in $CippQueue) {
+                    if ($Queue.Status -eq 'Running') {
+                        $Queue.TotalTasks = $Queue.CompletedTasks
+                        $Queue | Select-Object -Property PartitionKey, RowKey, TotalTasks
                     }
                 }
-                $Body = [PSCustomObject]@{
-                    Message = 'Durable functions reset successfully'
+                if (($QueueEntities | Measure-Object).Count -gt 0) {
+                    if ($PSCmdlet.ShouldProcess('Queues', 'Mark Failed')) {
+                        Update-AzDataTableEntity @QueueTable -Entity $QueueEntities
+                    }
                 }
+
+                $CippQueueTasks = Get-CippTable -TableName 'CippQueueTasks'
+                $RunningTasks = Get-CIPPAzDataTableEntity @CippQueueTasks -Filter "Status eq 'Running'" -Property RowKey, PartitionKey, Status
+                if (($RunningTasks | Measure-Object).Count -gt 0) {
+                    if ($PSCmdlet.ShouldProcess('Tasks', 'Mark Failed')) {
+                        $UpdatedTasks = foreach ($Task in $RunningTasks) {
+                            $Task.Status = 'Failed'
+                            $Task
+                        }
+                        Update-AzDataTableEntity @CippQueueTasks -Entity $UpdatedTasks
+                    }
+                }
+
+                $Body = [PSCustomObject]@{
+                    Message = 'Durable Queues reset successfully'
+                }
+
             } catch {
                 $Body = [PSCustomObject]@{
-                    Message = "Error resetting durables: $($_.Exception.Message)"
+                    Message   = "Error resetting durables: $($_.Exception.Message)"
+                    Exception = Get-CippException -Exception $_
                 }
+            }
+        }
+        'PurgeOrchestrators' {
+            Remove-AzDataTable @InstancesTable
+            $HistoryTable = Get-CippTable -TableName ('{0}History' -f $FunctionName)
+            Remove-AzDataTable @HistoryTable
+            $BlobContainer = '{0}-largemessages' -f $Function.Name
+            if (Get-AzStorageContainer -Name $BlobContainer -Context $StorageContext -ErrorAction SilentlyContinue) {
+                Write-Information "- Removing blob container: $BlobContainer"
+                if ($PSCmdlet.ShouldProcess($BlobContainer, 'Remove Blob Container')) {
+                    Remove-AzStorageContainer -Name $BlobContainer -Context $StorageContext -Confirm:$false -Force
+                }
+            }
+            $null = Get-CippTable -TableName ('{0}History' -f $FunctionName)
+            $Body = [PSCustomObject]@{
+                Message = 'Orchestrators purged successfully'
             }
         }
     }
