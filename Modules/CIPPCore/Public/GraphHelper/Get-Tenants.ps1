@@ -55,7 +55,7 @@ function Get-Tenants {
 
     if (($BuildRequired -or $TriggerRefresh.IsPresent) -and $PartnerTenantState.state -ne 'owntenant') {
         #get the full list of tenants
-        $GDAPRelationships = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/tenantRelationships/delegatedAdminRelationships?`$filter=status eq 'active' and not startsWith(displayName,'MLT_')&`$select=customer,autoExtendDuration,endDateTime" -NoAuthCheck:$true
+        $GDAPRelationships = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/tenantRelationships/delegatedAdminRelationships?`$filter=status eq 'active' and not startsWith(displayName,'MLT_')&`$select=customer,autoExtendDuration,endDateTime&`$top=300" -NoAuthCheck:$true
         $GDAPList = foreach ($Relationship in $GDAPRelationships) {
             [PSCustomObject]@{
                 customerId      = $Relationship.customer.tenantId
@@ -86,10 +86,12 @@ function Get-Tenants {
 
             if (-not $SkipDomains.IsPresent) {
                 try {
-                    Write-Host "Getting domains for $($_.Name)."
-                    $Domains = New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/domains' -tenantid $LatestRelationship.customerId -NoAuthCheck:$true -ErrorAction Stop
+                    Write-Host "Getting domains for $($LatestRelationship.displayName)"
+                    $Domains = New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/domains?$top=999' -tenantid $LatestRelationship.customerId -NoAuthCheck:$true -ErrorAction Stop
                     $defaultDomainName = ($Domains | Where-Object { $_.isDefault -eq $true }).id
                     $initialDomainName = ($Domains | Where-Object { $_.isInitial -eq $true }).id
+                    Write-Host "Got domains for  $($LatestRelationship.displayName)"
+
                 } catch {
                     try {
                         #doing alternative method to temporarily get domains. Nightly refresh will fix this as it will be marked for renew.
@@ -102,8 +104,8 @@ function Get-Tenants {
                         Write-LogMessage -API 'Get-Tenants' -message "Tried adding $($LatestRelationship.customerId) to tenant list but failed to get domains - $($_.Exception.Message)" -level 'Critical'
                     }
                 }
-
-                [PSCustomObject]@{
+                Write-Host "Adding to  $($LatestRelationship.displayName) to table"
+                $TenantInfo = [PSCustomObject]@{
                     PartitionKey             = 'Tenants'
                     RowKey                   = $_.Name
                     customerId               = $_.Name
@@ -123,12 +125,18 @@ function Get-Tenants {
                     RequiresRefresh          = [bool]$RequiresRefresh
                     LastRefresh              = (Get-Date).ToUniversalTime()
                 }
+                try {
+                    Add-CIPPAzDataTableEntity @TenantsTable -Entity $TenantInfo -Force
+                } catch {
+                    Write-Host "Failed to add $($LatestRelationship.displayName) to table: $($_.Exception.Message)"
+                }
+                $TenantInfo
             }
         }
         $IncludedTenantsCache = [system.collections.generic.list[object]]::new()
         if ($PartnerTenantState.state -eq 'PartnerTenantAvailable') {
             # Add partner tenant if env is set
-            $Domains = New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/domains' -tenantid $env:TenantID -NoAuthCheck:$true
+            $Domains = New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/domains?$top=999' -tenantid $env:TenantID -NoAuthCheck:$true
             $IncludedTenantsCache.Add([PSCustomObject]@{
                     RowKey            = $env:TenantID
                     PartitionKey      = 'Tenants'
@@ -159,7 +167,7 @@ function Get-Tenants {
         }
     }
     if ($PartnerTenantState.state -eq 'owntenant' -and $IncludedTenantsCache.RowKey.count -eq 0) {
-        $Domains = New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/domains' -tenantid $env:TenantID -NoAuthCheck:$true
+        $Domains = New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/domains?$top=999' -tenantid $env:TenantID -NoAuthCheck:$true
 
         $IncludedTenantsCache = @([PSCustomObject]@{
                 RowKey            = $env:TenantID
