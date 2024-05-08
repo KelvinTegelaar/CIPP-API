@@ -10,7 +10,7 @@ function Invoke-CIPPStandardEnableMailTips {
 
     if ($Settings.remediate -eq $true) {
 
-        if ($StateIsCorrect) {
+        if ($StateIsCorrect -eq $true) {
             Write-LogMessage -API 'Standards' -tenant $Tenant -message 'All MailTips are already enabled.' -sev Info
         } else {
             try {
@@ -24,7 +24,7 @@ function Invoke-CIPPStandardEnableMailTips {
 
     if ($Settings.alert -eq $true) {
 
-        if ($StateIsCorrect) {
+        if ($StateIsCorrect -eq $true) {
             Write-LogMessage -API 'Standards' -tenant $Tenant -message 'All MailTips are enabled' -sev Info
         } else {
             Write-LogMessage -API 'Standards' -tenant $Tenant -message 'Not all MailTips are enabled' -sev Alert

@@ -27,7 +27,7 @@ function Invoke-CIPPStandardAntiPhishPolicy {
                       ($CurrentState.MailboxIntelligenceQuarantineTag -eq $Settings.MailboxIntelligenceQuarantineTag)
 
     if ($Settings.remediate -eq $true) {
-        if ($StateIsCorrect) {
+        if ($StateIsCorrect -eq $true) {
             Write-LogMessage -API 'Standards' -tenant $Tenant -message 'Anti-phishing Policy already correctly configured' -sev Info
         } else {
             $cmdparams = @{
@@ -65,7 +65,7 @@ function Invoke-CIPPStandardAntiPhishPolicy {
 
     if ($Settings.alert -eq $true) {
 
-        if ($StateIsCorrect) {
+        if ($StateIsCorrect -eq $true) {
             Write-LogMessage -API 'Standards' -tenant $Tenant -message 'Anti-phishing Policy is enabled' -sev Info
         } else {
             Write-LogMessage -API 'Standards' -tenant $Tenant -message 'Anti-phishing Policy is not enabled' -sev Alert
