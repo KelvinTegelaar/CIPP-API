@@ -123,7 +123,7 @@ function Get-Tenants {
                     RequiresRefresh          = [bool]$RequiresRefresh
                     LastRefresh              = (Get-Date).ToUniversalTime()
                 }
-                Add-CIPPAzDataTableEntity @TenantsTable -Entity $TenantInfo -Force | Out-Null
+                Add-CIPPAzDataTableEntity @TenantsTable -Entity $TenantInfo -Force
                 $TenantInfo
             }
         }
