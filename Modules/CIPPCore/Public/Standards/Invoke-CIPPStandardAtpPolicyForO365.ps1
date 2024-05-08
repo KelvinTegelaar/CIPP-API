@@ -15,7 +15,7 @@ function Invoke-CIPPStandardAtpPolicyForO365 {
     ) { $true } else { $false }
 
     if ($Settings.remediate -eq $true) {
-        if ($StateIsCorrect) {
+        if ($StateIsCorrect -eq $true) {
             Write-LogMessage -API 'Standards' -tenant $Tenant -message 'Atp Policy For O365 already set.' -sev Info
         } else {
             $cmdparams = @{
@@ -35,7 +35,7 @@ function Invoke-CIPPStandardAtpPolicyForO365 {
 
     if ($Settings.alert -eq $true) {
 
-        if ($StateIsCorrect) {
+        if ($StateIsCorrect -eq $true) {
             Write-LogMessage -API 'Standards' -tenant $Tenant -message 'Atp Policy For O365 is enabled' -sev Info
         } else {
             Write-LogMessage -API 'Standards' -tenant $Tenant -message 'Atp Policy For O365 is not enabled' -sev Alert
