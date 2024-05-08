@@ -33,7 +33,6 @@ function Invoke-ExecDurableFunctions {
                     } else {
                         #Write-Host $Instance.Input
                         if ($Json -match '\"OrchestratorName\":\"(.+?)\"') {
-                            Write-Host $Matches[1]
                             $Instance.Name = $Matches[1]
                         }
                         $Instance.Input = 'Invalid JSON'
