@@ -19,7 +19,7 @@ Function Invoke-RemoveTenantAllowBlockList {
             cmdlet    = 'Remove-TenantAllowBlockListItems'
             cmdParams = @{
                 Entries     = [string[]]$Request.query.entries
-                ListType    = "Url"
+                ListType    = [string]$Request.query.listType
             }
         }
 
