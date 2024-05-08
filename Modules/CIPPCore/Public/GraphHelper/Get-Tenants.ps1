@@ -76,7 +76,7 @@ function Get-Tenants {
                 Add-CIPPAzDataTableEntity @TenantsTable -Entity $ExistingTenantInfo -Force | Out-Null
             }
 
-            if ($ExistingTenantInfo -and $ExistingTenantInfo.RequiresRefresh -eq $true) {
+            if ($ExistingTenantInfo -and $ExistingTenantInfo.RequiresRefresh -eq $false) {
                 Write-Host 'Existing tenant found. We already have it cached, skipping.'
                 $ExistingTenantInfo
                 return
@@ -86,12 +86,10 @@ function Get-Tenants {
 
             if (-not $SkipDomains.IsPresent) {
                 try {
-                    Write-Host "Getting domains for $($LatestRelationship.displayName)"
-                    $Domains = New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/domains?$top=999' -tenantid $LatestRelationship.customerId -NoAuthCheck:$true -ErrorAction Stop
+                    Write-Host "Getting domains for $($_.Name)."
+                    $Domains = New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/domains' -tenantid $LatestRelationship.customerId -NoAuthCheck:$true -ErrorAction Stop
                     $defaultDomainName = ($Domains | Where-Object { $_.isDefault -eq $true }).id
                     $initialDomainName = ($Domains | Where-Object { $_.isInitial -eq $true }).id
-                    Write-Host "Got domains for  $($LatestRelationship.displayName)"
-
                 } catch {
                     try {
                         #doing alternative method to temporarily get domains. Nightly refresh will fix this as it will be marked for renew.
@@ -104,8 +102,8 @@ function Get-Tenants {
                         Write-LogMessage -API 'Get-Tenants' -message "Tried adding $($LatestRelationship.customerId) to tenant list but failed to get domains - $($_.Exception.Message)" -level 'Critical'
                     }
                 }
-                Write-Host "Adding to  $($LatestRelationship.displayName) to table"
-                $TenantInfo = [PSCustomObject]@{
+
+                [PSCustomObject]@{
                     PartitionKey             = 'Tenants'
                     RowKey                   = $_.Name
                     customerId               = $_.Name
@@ -125,18 +123,12 @@ function Get-Tenants {
                     RequiresRefresh          = [bool]$RequiresRefresh
                     LastRefresh              = (Get-Date).ToUniversalTime()
                 }
-                try {
-                    Add-CIPPAzDataTableEntity @TenantsTable -Entity $TenantInfo -Force
-                } catch {
-                    Write-Host "Failed to add $($LatestRelationship.displayName) to table: $($_.Exception.Message)"
-                }
-                $TenantInfo
             }
         }
         $IncludedTenantsCache = [system.collections.generic.list[object]]::new()
         if ($PartnerTenantState.state -eq 'PartnerTenantAvailable') {
             # Add partner tenant if env is set
-            $Domains = New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/domains?$top=999' -tenantid $env:TenantID -NoAuthCheck:$true
+            $Domains = New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/domains' -tenantid $env:TenantID -NoAuthCheck:$true
             $IncludedTenantsCache.Add([PSCustomObject]@{
                     RowKey            = $env:TenantID
                     PartitionKey      = 'Tenants'
@@ -167,7 +159,7 @@ function Get-Tenants {
         }
     }
     if ($PartnerTenantState.state -eq 'owntenant' -and $IncludedTenantsCache.RowKey.count -eq 0) {
-        $Domains = New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/domains?$top=999' -tenantid $env:TenantID -NoAuthCheck:$true
+        $Domains = New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/domains' -tenantid $env:TenantID -NoAuthCheck:$true
 
         $IncludedTenantsCache = @([PSCustomObject]@{
                 RowKey            = $env:TenantID
