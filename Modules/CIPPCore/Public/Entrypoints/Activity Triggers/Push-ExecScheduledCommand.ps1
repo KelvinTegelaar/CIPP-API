@@ -40,7 +40,7 @@ function Push-ExecScheduledCommand {
         }
     } catch {
         $errorMessage = $_.Exception.Message
-        if ($task.Recurrence -gt 0) { $State = 'Failed - Planned' } else { $State = 'Failed' }
+        if ($task.Recurrence -ne 0) { $State = 'Failed - Planned' } else { $State = 'Failed' }
         Update-AzDataTableEntity @Table -Entity @{
             PartitionKey = $task.PartitionKey
             RowKey       = $task.RowKey
@@ -70,7 +70,7 @@ function Push-ExecScheduledCommand {
 
     Write-Host 'ran the command'
 
-    if ($task.Recurrence -le '0' -or $task.Recurrence -eq $null) {
+    if ($task.Recurrence -eq '0' -or $task.Recurrence -eq $null) {
         Update-AzDataTableEntity @Table -Entity @{
             PartitionKey = $task.PartitionKey
             RowKey       = $task.RowKey
@@ -78,8 +78,20 @@ function Push-ExecScheduledCommand {
             TaskState    = 'Completed'
         }
     } else {
-        $nextRun = (Get-Date).AddDays($task.Recurrence)
-        $nextRunUnixTime = [int64]($nextRun - (Get-Date '1/1/1970')).TotalSeconds
+        #if recurrence is just a number, add it in days.
+        if ($task.Recurrence -match '^\d+$') {
+            $task.Recurrence = $task.Recurrence + 'd'
+        }
+        $now = Get-Date
+        $nextRun = switch -Regex ($task.Recurrence) {
+            '(\d+)m$' { $now.AddMinutes($matches[1]) }
+            '(\d+)h$' { $now.AddHours($matches[1]) }
+            '(\d+)d$' { $now.AddDays($matches[1]) }
+            default { throw "Unsupported recurrence format: $($task.Recurrence)" }
+        }
+        # Convert next run time to Unix timestamp, but decrease it by 2 minutes to prevent it from running late, due to the avg time it takes to execute the task.
+        $nextRunUnixTime = [int64]($nextRun - (Get-Date '1/1/1970')).TotalSeconds - 120
+        Write-Host "The job is recurring and should occur again at: $nextRunUnixTime"
         Update-AzDataTableEntity @Table -Entity @{
             PartitionKey  = $task.PartitionKey
             RowKey        = $task.RowKey
