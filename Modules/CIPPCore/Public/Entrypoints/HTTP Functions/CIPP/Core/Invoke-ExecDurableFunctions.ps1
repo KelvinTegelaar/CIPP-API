@@ -23,10 +23,21 @@ function Invoke-ExecDurableFunctions {
         'ListOrchestrators' {
             $Orchestrators = foreach ($Instance in $Instances) {
                 $Json = $Instance.Input -replace '^"(.+)"$', '$1' -replace '\\"', '"'
-                if (Test-Json -Json $Json -ErrorAction SilentlyContinue) {
-                    $Instance.Input = $Json | ConvertFrom-Json
-                } else {
-                    $Instance.Input = 'No Input'
+
+                if ($Json -notmatch '^http' -and ![string]::IsNullOrEmpty($Json)) {
+                    if (Test-Json -Json $Json -ErrorAction SilentlyContinue) {
+                        $Instance.Input = $Json | ConvertFrom-Json
+                        if (![string]::IsNullOrEmpty($Instance.Input.OrchestratorName)) {
+                            $Instance.Name = $Instance.Input.OrchestratorName
+                        }
+                    } else {
+                        #Write-Host $Instance.Input
+                        if ($Json -match '\"OrchestratorName\":\"(.+?)\"') {
+                            Write-Host $Matches[1]
+                            $Instance.Name = $Matches[1]
+                        }
+                        $Instance.Input = 'Invalid JSON'
+                    }
                 }
                 $Instance
             }
