@@ -76,7 +76,7 @@ function Get-Tenants {
                 Add-CIPPAzDataTableEntity @TenantsTable -Entity $ExistingTenantInfo -Force | Out-Null
             }
 
-            if ($ExistingTenantInfo -and $ExistingTenantInfo.RequiresRefresh -eq $false) {
+            if ($ExistingTenantInfo -and $ExistingTenantInfo.RequiresRefresh -eq $true) {
                 Write-Host 'Existing tenant found. We already have it cached, skipping.'
                 $ExistingTenantInfo
                 return
