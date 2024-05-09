@@ -40,7 +40,7 @@ function Push-ExecScheduledCommand {
         }
     } catch {
         $errorMessage = $_.Exception.Message
-        if ($task.Recurrence -gt 0) { $State = 'Failed - Planned' } else { $State = 'Failed' }
+        if ($task.Recurrence -ne 0) { $State = 'Failed - Planned' } else { $State = 'Failed' }
         Update-AzDataTableEntity @Table -Entity @{
             PartitionKey = $task.PartitionKey
             RowKey       = $task.RowKey
@@ -70,7 +70,7 @@ function Push-ExecScheduledCommand {
 
     Write-Host 'ran the command'
 
-    if ($task.Recurrence -le '0' -or $task.Recurrence -eq $null) {
+    if ($task.Recurrence -eq '0' -or $task.Recurrence -eq $null) {
         Update-AzDataTableEntity @Table -Entity @{
             PartitionKey = $task.PartitionKey
             RowKey       = $task.RowKey
@@ -78,8 +78,18 @@ function Push-ExecScheduledCommand {
             TaskState    = 'Completed'
         }
     } else {
-        $nextRun = (Get-Date).AddDays($task.Recurrence)
-        $nextRunUnixTime = [int64]($nextRun - (Get-Date '1/1/1970')).TotalSeconds
+        #if recurrence is just a number, add it in days.
+        if ($task.Recurrence -match '^\d+$') {
+            $task.Recurrence = $task.Recurrence + 'd'
+        }
+        $secondsToAdd = switch -Regex ($task.Recurrence) {
+            '(\d+)m$' { [int64]$matches[1] * 60 }
+            '(\d+)h$' { [int64]$matches[1] * 3600 }
+            '(\d+)d$' { [int64]$matches[1] * 86400 }
+            default { throw "Unsupported recurrence format: $($task.Recurrence)" }
+        }
+        $nextRunUnixTime = [int64]$task.ScheduledTime + [int64]$secondsToAdd
+        Write-Host "The job is recurring and should occur again at: $nextRunUnixTime"
         Update-AzDataTableEntity @Table -Entity @{
             PartitionKey  = $task.PartitionKey
             RowKey        = $task.RowKey
