@@ -83,23 +83,12 @@ function Push-ExecScheduledCommand {
             $task.Recurrence = $task.Recurrence + 'd'
         }
         $secondsToAdd = switch -Regex ($task.Recurrence) {
-            '(\d+)m$' {
-                Write-Host "Adding $($matches[1]) minutes (as seconds) to the last scheduled time."
-                [int]$matches[1] * 60  # Convert minutes to seconds
-            }
-            '(\d+)h$' {
-                Write-Host "Adding $($matches[1]) hours (as seconds) to the last scheduled time."
-                [int]$matches[1] * 3600  # Convert hours to seconds
-            }
-            '(\d+)d$' {
-                Write-Host "Adding $($matches[1]) days (as seconds) to the last scheduled time."
-                [int]$matches[1] * 86400  # Convert days to seconds
-            }
-            default {
-                throw "Unsupported recurrence format: $($task.Recurrence)"
-            }
+            '(\d+)m$' { [int64]$matches[1] * 60 }
+            '(\d+)h$' { [int64]$matches[1] * 3600 }
+            '(\d+)d$' { [int64]$matches[1] * 86400 }
+            default { throw "Unsupported recurrence format: $($task.Recurrence)" }
         }
-        $nextRunUnixTime = [int64]$task.ScheduledTime + $secondsToAdd
+        $nextRunUnixTime = [int64]$task.ScheduledTime + [int64]$secondsToAdd
         Write-Host "The job is recurring and should occur again at: $nextRunUnixTime"
         Update-AzDataTableEntity @Table -Entity @{
             PartitionKey  = $task.PartitionKey

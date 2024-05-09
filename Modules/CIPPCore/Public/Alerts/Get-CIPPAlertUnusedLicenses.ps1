@@ -1,30 +1,31 @@
-function Push-CIPPAlertOverusedLicenses {
+function Get-CIPPAlertUnusedLicenses {
     <#
     .FUNCTIONALITY
         Entrypoint
     #>
     [CmdletBinding()]
     Param (
-        [Parameter(Mandatory = $true)]
-        $Item
+        [Parameter(Mandatory = $false)]
+        $input,
+        $TenantFilter
     )
 
 
     try {
         $LicenseTable = Get-CIPPTable -TableName ExcludedLicenses
         $ExcludedSkuList = Get-CIPPAzDataTableEntity @LicenseTable
-        New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/subscribedSkus' -tenantid $Item.tenant | ForEach-Object {
+        New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/subscribedSkus' -tenantid $TenantFilter | ForEach-Object {
             $skuid = $_
             foreach ($sku in $skuid) {
                 if ($sku.skuId -in $ExcludedSkuList.GUID) { continue }
                 $PrettyName = ($ConvertTable | Where-Object { $_.GUID -eq $sku.skuid }).'Product_Display_Name' | Select-Object -Last 1
                 if (!$PrettyName) { $PrettyName = $sku.skuPartNumber }
-                if ($sku.prepaidUnits.enabled - $sku.consumedUnits -lt 0) {
-                    Write-AlertMessage -tenant $($Item.tenant) -message "$PrettyName has Overused licenses. Using $($_.consumedUnits) of $($_.prepaidUnits.enabled)."
+                if ($sku.prepaidUnits.enabled - $sku.consumedUnits -gt 0) {
+                    Write-AlertMessage -tenant $($TenantFilter) -message "$PrettyName has unused licenses. Using $($_.consumedUnits) of $($_.prepaidUnits.enabled)."
                 }
             }
         }
     } catch {
-        Write-AlertMessage -tenant $($Item.tenant) -message "Overused Licenses Alert Error occurred: $(Get-NormalizedError -message $_.Exception.message)"
+        Write-AlertMessage -tenant $($TenantFilter) -message "Unused Licenses Alert Error occurred: $(Get-NormalizedError -message $_.Exception.message)"
     }
 }
