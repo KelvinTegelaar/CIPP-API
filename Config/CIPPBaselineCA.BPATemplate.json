@@ -9,10 +9,27 @@
         {
           "name": "Conditional Access",
           "value": "ca",
-          "formatter": "string"
+          "formatter": "table"
         }
       ],
-      "StoreAs": "string",
+      "StoreAs": "JSON",
+      "API": "Graph",
+      "ExtractFields": [
+        "id"
+      ],
+      "URL": "https://graph.microsoft.com/beta/identity/conditionalAccess/policies"
+    },
+    {
+      "name": "ca2",
+      "UseExistingInfo": false,
+      "FrontendFields": [
+        {
+          "name": "Conditional Access",
+          "value": "ca2",
+          "formatter": "table"
+        }
+      ],
+      "StoreAs": "JSON",
       "API": "Graph",
       "ExtractFields": [
         "id"
