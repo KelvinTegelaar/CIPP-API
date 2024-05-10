@@ -1,5 +1,5 @@
 {
-  "name": "CIPP-Baseline-CA-v1.5",
+  "name": "CIPP-Baseline-CA-v1.6",
   "style": "Tenant",
   "Fields": [
     {
@@ -9,10 +9,10 @@
         {
           "name": "Conditional Access",
           "value": "ca",
-          "formatter": "table"
+          "formatter": "string"
         }
       ],
-      "where": "$_.state -eq \"enabled\"",
+      "where": "",
       "StoreAs": "string",
       "API": "Graph",
       "ExtractFields": [
