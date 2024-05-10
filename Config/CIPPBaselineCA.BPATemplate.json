@@ -1,5 +1,5 @@
 {
-  "name": "CIPP-Baseline-CA-v1.2",
+  "name": "CIPP-Baseline-CA-v1.3",
   "style": "Tenant",
   "Fields": [
     {
@@ -9,7 +9,7 @@
         {
           "name": "Conditional Access",
           "value": "ca",
-          "formatter": "string"
+          "formatter": "table"
         }
       ],
       "StoreAs": "JSON",
