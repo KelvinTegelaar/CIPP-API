@@ -15,7 +15,7 @@ Function Invoke-ListStandards {
         $StandardQuery = @{
             TenantFilter = $Request.Query.TenantFilter
         }
-        if ($Request.Query.TenantFilter -eq 'allTenants') {
+        if ($Request.Query.TenantFilter -eq 'AllTenants') {
             $StandardQuery.ListAllTenants = $true
         }
         $CurrentStandards = @(Get-CIPPStandards @StandardQuery)

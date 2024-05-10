@@ -17,7 +17,6 @@ function Get-CIPPStandards {
         $Tenants = $Tenants | Where-Object { $_.defaultDomainName -eq $TenantFilter -or $_.customerId -eq $TenantFilter }
     }
 
-
     if ($ListAllTenants.IsPresent) {
         $ComputedStandards = @{}
         foreach ($StandardName in $StandardsAllTenants.Standards.PSObject.Properties.Name) {
@@ -26,6 +25,13 @@ function Get-CIPPStandards {
             if ($CurrentStandard.remediate -eq $true -or $CurrentStandard.alert -eq $true -or $CurrentStandard.report -eq $true) {
                 #Write-Host "AllTenant Standard $StandardName"
                 $ComputedStandards[$StandardName] = $CurrentStandard
+            }
+        }
+        foreach ($Standard in $ComputedStandards.Keys) {
+            [pscustomobject]@{
+                Tenant   = 'AllTenants'
+                Standard = $Standard
+                Settings = $ComputedStandards.$Standard
             }
         }
     } else {
