@@ -1,5 +1,5 @@
 {
-  "name": "CIPP-Baseline-CA-v1.4",
+  "name": "CIPP-Baseline-CA-v1.5",
   "style": "Tenant",
   "Fields": [
     {
@@ -12,6 +12,7 @@
           "formatter": "table"
         }
       ],
+      "where": "$_.state -eq \"enabled\"",
       "StoreAs": "string",
       "API": "Graph",
       "ExtractFields": [
