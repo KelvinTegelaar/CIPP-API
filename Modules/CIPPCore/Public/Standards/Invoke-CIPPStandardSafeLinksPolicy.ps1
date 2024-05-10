@@ -29,16 +29,16 @@ function Invoke-CIPPStandardSafeLinksPolicy {
             Write-LogMessage -API 'Standards' -tenant $Tenant -message 'SafeLink Policy already correctly configured' -sev Info
         } else {
             $cmdparams = @{
-                EnableSafeLinksForEmail     = $true
-                EnableSafeLinksForTeams     = $true
-                EnableSafeLinksForOffice    = $true
-                TrackClicks                 = $true
-                ScanUrls                    = $true
-                EnableForInternalSenders    = $true
-                DeliverMessageAfterScan     = $true
-                AllowClickThrough           = $Settings.AllowClickThrough
-                DisableUrlRewrite           = $Settings.DisableUrlRewrite
-                EnableOrganizationBranding  = $Settings.EnableOrganizationBranding
+                EnableSafeLinksForEmail    = $true
+                EnableSafeLinksForTeams    = $true
+                EnableSafeLinksForOffice   = $true
+                TrackClicks                = $true
+                ScanUrls                   = $true
+                EnableForInternalSenders   = $true
+                DeliverMessageAfterScan    = $true
+                AllowClickThrough          = $Settings.AllowClickThrough
+                DisableUrlRewrite          = $Settings.DisableUrlRewrite
+                EnableOrganizationBranding = $Settings.EnableOrganizationBranding
             }
 
             try {
@@ -52,7 +52,8 @@ function Invoke-CIPPStandardSafeLinksPolicy {
                     Write-LogMessage -API 'Standards' -tenant $Tenant -message 'Created SafeLink Policy' -sev Info
                 }
             } catch {
-                Write-LogMessage -API 'Standards' -tenant $Tenant -message "Failed to create SafeLink Policy. Error: $($_.exception.message)" -sev Error
+                $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
+                Write-LogMessage -API 'Standards' -tenant $Tenant -message "Failed to create SafeLink Policy. Error: $ErrorMessage" -sev Error
             }
         }
     }

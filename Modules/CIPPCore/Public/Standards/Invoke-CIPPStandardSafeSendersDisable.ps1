@@ -13,7 +13,7 @@ function Invoke-CIPPStandardSafeSendersDisable {
                     CmdletInput = @{
                         CmdletName = 'Set-MailboxJunkEmailConfiguration'
                         Parameters = @{
-                            Identity = $_.UserPrincipalName
+                            Identity                    = $_.UserPrincipalName
                             TrustedRecipientsAndDomains = $null
                         }
                     }
@@ -23,13 +23,15 @@ function Invoke-CIPPStandardSafeSendersDisable {
             $BatchResults = New-ExoBulkRequest -tenantid $tenant -cmdletArray $Request
             $BatchResults | ForEach-Object {
                 if ($_.error) {
-                    Write-Host "Failed to Disable SafeSenders for $($_.target). Error: $($_.error)"
-                    Write-LogMessage -API 'Standards' -tenant $tenant -message "Failed to Disable SafeSenders for $($_.target). Error: $($_.error)" -sev Error
+                    $ErrorMessage = Get-NormalizedError -Message $_.error
+                    Write-Host "Failed to Disable SafeSenders for $($_.target). Error: $ErrorMessage"
+                    Write-LogMessage -API 'Standards' -tenant $tenant -message "Failed to Disable SafeSenders for $($_.target). Error: $ErrorMessage" -sev Error
                 }
             }
             Write-LogMessage -API 'Standards' -tenant $tenant -message 'Safe Senders disabled' -sev Info
         } catch {
-            Write-LogMessage -API 'Standards' -tenant $tenant -message "Failed to disable SafeSenders. Error: $($_.exception.message)" -sev Error
+            $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
+            Write-LogMessage -API 'Standards' -tenant $tenant -message "Failed to disable SafeSenders. Error: $ErrorMessage" -sev Error
         }
     }
 

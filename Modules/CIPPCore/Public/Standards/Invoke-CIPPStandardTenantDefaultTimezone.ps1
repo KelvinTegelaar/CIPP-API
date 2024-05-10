@@ -17,7 +17,8 @@ function Invoke-CIPPStandardTenantDefaultTimezone {
                 New-GraphPostRequest -tenantid $tenant -uri 'https://graph.microsoft.com/beta/admin/sharepoint/settings' -AsApp $true -Type PATCH -Body "{`"tenantDefaultTimezone`": `"$ExpectedTimezone`"}" -ContentType 'application/json'
                 Write-LogMessage -API 'Standards' -tenant $tenant -message "Successfully updated Tenant Default Timezone to $ExpectedTimezone" -sev Info
             } catch {
-                Write-LogMessage -API 'Standards' -tenant $tenant -message "Failed to set Tenant Default Timezone. Error: $($_.exception.message)" -sev Error
+                $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
+                Write-LogMessage -API 'Standards' -tenant $tenant -message "Failed to set Tenant Default Timezone. Error: $ErrorMessage" -sev Error
             }
         }
 
