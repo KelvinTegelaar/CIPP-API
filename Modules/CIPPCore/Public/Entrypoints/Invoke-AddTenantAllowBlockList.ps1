@@ -34,11 +34,11 @@ Function Invoke-AddTenantAllowBlockList {
         New-ExoRequest @ExoRequest
 
         $result = "Successfully added $($blocklistobj.Entries) as type $($blocklistobj.ListType) to the $($blocklistobj.listMethod) list"
-
-        Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APIName -tenant $Request.body.tenantid -message "Added $($blocklistobj.Entries) as type $($blocklistobj.ListType) to the $($blocklistobj.listMethod) list" -Sev 'Info'
+        Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APIName -tenant $Request.body.tenantid -message $result -Sev 'Info'
     } catch {
-        Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APIName -tenant $Request.body.tenantid -message "Blocklist creation API failed. $($_.Exception.Message)" -Sev 'Error'
-        $result = "Failed to create blocklist. $($_.Exception.Message)"
+        $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
+        $result = "Failed to create blocklist. Error: $ErrorMessage"
+        Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APIName -tenant $Request.body.tenantid -message $result -Sev 'Error'
     }
 
     # Associate values to output bindings by calling 'Push-OutputBinding'.
