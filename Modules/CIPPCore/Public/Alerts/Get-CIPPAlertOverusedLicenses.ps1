@@ -14,7 +14,7 @@ function Get-CIPPAlertOverusedLicenses {
     try {
         $LicenseTable = Get-CIPPTable -TableName ExcludedLicenses
         $ExcludedSkuList = Get-CIPPAzDataTableEntity @LicenseTable
-        New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/subscribedSkus' -tenantid $TenantFilter | ForEach-Object {
+        $AlertData = New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/subscribedSkus' -tenantid $TenantFilter | ForEach-Object {
             $skuid = $_
             foreach ($sku in $skuid) {
                 if ($sku.skuId -in $ExcludedSkuList.GUID) { continue }
@@ -24,7 +24,10 @@ function Get-CIPPAlertOverusedLicenses {
                     "$PrettyName has Overused licenses. Using $($_.consumedUnits) of $($_.prepaidUnits.enabled)."
                 }
             }
+
         }
+        Write-AlertTrace -cmdletName $MyInvocation.MyCommand -tenantFilter $TenantFilter -data $AlertData
+
     } catch {
         Write-AlertMessage -tenant $($TenantFilter) -message "Overused Licenses Alert Error occurred: $(Get-NormalizedError -message $_.Exception.message)"
     }

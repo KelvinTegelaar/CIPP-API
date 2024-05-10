@@ -12,7 +12,7 @@ function Get-CIPPAlertQuotaUsed {
 
 
     try {
-        New-GraphGetRequest -uri "https://graph.microsoft.com/beta/reports/getMailboxUsageDetail(period='D7')?`$format=application/json" -tenantid $TenantFilter | ForEach-Object {
+        $AlertData = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/reports/getMailboxUsageDetail(period='D7')?`$format=application/json" -tenantid $TenantFilter | ForEach-Object {
             if ($_.StorageUsedInBytes -eq 0) { return }
             $PercentLeft = [math]::round($_.StorageUsedInBytes / $_.prohibitSendReceiveQuotaInBytes * 100)
             if ($Input) { $Value = $input } else { $Value = 90 }
@@ -21,6 +21,7 @@ function Get-CIPPAlertQuotaUsed {
             }
             
         }
+        Write-AlertTrace -cmdletName $MyInvocation.MyCommand -tenantFilter $TenantFilter -data $AlertData
     } catch {
     }
 }

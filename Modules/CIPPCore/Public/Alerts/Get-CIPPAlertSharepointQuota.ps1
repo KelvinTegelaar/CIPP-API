@@ -19,7 +19,8 @@ function Get-CIPPAlertSharepointQuota {
             if ($input -Is [Boolean]) { $Value = 90 } else { $Value = $input }
             $UsedStoragePercentage = [int](($sharepointQuota.GeoUsedStorageMB / $sharepointQuota.TenantStorageMB) * 100)
             if ($UsedStoragePercentage -gt $Value) {
-                Write-AlertMessage -tenant $($TenantFilter) -message "SharePoint Storage is at $($UsedStoragePercentage)%. Your alert threshold is $($Value)%"
+                $AlertData = "SharePoint Storage is at $($UsedStoragePercentage)%. Your alert threshold is $($Value)%"
+                Write-AlertTrace -cmdletName $MyInvocation.MyCommand -tenantFilter $TenantFilter -data $AlertData
             }
         }
     } catch {
