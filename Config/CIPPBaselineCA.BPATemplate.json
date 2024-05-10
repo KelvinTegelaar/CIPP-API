@@ -1,5 +1,5 @@
 {
-  "name": "CIPP-Baseline-CA-v1.6",
+  "name": "CIPP-Baseline-CA-v1.7",
   "style": "Tenant",
   "Fields": [
     {
@@ -13,7 +13,7 @@
         }
       ],
       "where": "",
-      "StoreAs": "string",
+      "StoreAs": "JSON",
       "API": "Graph",
       "ExtractFields": [
         "displayName",
