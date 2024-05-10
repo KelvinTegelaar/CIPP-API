@@ -21,7 +21,7 @@ function Get-CIPPAlertOverusedLicenses {
                 $PrettyName = ($ConvertTable | Where-Object { $_.GUID -eq $sku.skuid }).'Product_Display_Name' | Select-Object -Last 1
                 if (!$PrettyName) { $PrettyName = $sku.skuPartNumber }
                 if ($sku.prepaidUnits.enabled - $sku.consumedUnits -lt 0) {
-                    Write-AlertMessage -tenant $($TenantFilter) -message "$PrettyName has Overused licenses. Using $($_.consumedUnits) of $($_.prepaidUnits.enabled)."
+                    "$PrettyName has Overused licenses. Using $($_.consumedUnits) of $($_.prepaidUnits.enabled)."
                 }
             }
         }

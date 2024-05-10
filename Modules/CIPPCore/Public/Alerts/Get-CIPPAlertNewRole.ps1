@@ -31,7 +31,7 @@ function Get-CIPPAlertNewRole {
             foreach ($Group in $NewDelta) {
                 $OldDelta = $AdminDelta | Where-Object { $_.GroupName -eq $Group.GroupName }
                 $Group.members | Where-Object { $_ -notin $OldDelta.members } | ForEach-Object {
-                    Write-AlertMessage -tenant $($TenantFilter) -message "$_ has been added to the $($Group.GroupName) Role"
+                    "$_ has been added to the $($Group.GroupName) Role"
                 }
             }
         }
