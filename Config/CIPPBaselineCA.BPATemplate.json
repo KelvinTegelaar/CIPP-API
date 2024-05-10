@@ -1,5 +1,5 @@
 {
-  "name": "CIPP-Baseline-CA-v1.1",
+  "name": "CIPP-Baseline-CA-v1.2",
   "style": "Tenant",
   "Fields": [
     {
@@ -15,26 +15,29 @@
       "StoreAs": "JSON",
       "API": "Graph",
       "ExtractFields": [
-        "id"
+        "displayName",
+        "state"
       ],
       "URL": "https://graph.microsoft.com/beta/identity/conditionalAccess/policies"
     },
     {
-      "name": "ca2",
+      "name": "adminsTable",
       "UseExistingInfo": false,
       "FrontendFields": [
         {
-          "name": "Conditional Access",
-          "value": "ca2",
-          "formatter": "string"
+          "name": "Admins Table",
+          "value": "adminsTable",
+          "formatter": "table"
         }
       ],
       "StoreAs": "JSON",
       "API": "Graph",
       "ExtractFields": [
-        "id"
+        "displayName",
+        "userPrincipalName"
       ],
-      "URL": "https://graph.microsoft.com/beta/identity/conditionalAccess/policies"
+      "parameters": {},
+      "URL": "https://graph.microsoft.com/beta/directoryRoles/roleTemplateId=62e90394-69f5-4237-9190-012177145e10/members"
     }
   ]
 }
