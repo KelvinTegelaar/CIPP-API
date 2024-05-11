@@ -7,13 +7,19 @@ function Push-Schedulerwebhookcreation {
         $item
     )
     $Table = Get-CIPPTable -TableName 'SchedulerConfig'
-    $Row = Get-CIPPAzDataTableEntity @Table -Filter "RowKey eq '$($item.SchedulerRow)'"
-    Write-Host "Working on $($Row.tenant) - $($Row.tenantid)"
-    #Temporary cleanup - Find all audit log webhooks, tell Microsoft we no longer want them. 
+    $WebhookTable = Get-CIPPTable -TableName 'WebhookTable'
 
+    $Row = Get-CIPPAzDataTableEntity @Table -Filter "RowKey eq '$($item.SchedulerRow)'"
+
+    Write-Host "Working on $($Row.tenant) - $($Row.tenantid)"
+    #cleanup any v1, Find all audit log webhooks, tell Microsoft we no longer want them
+    $Webhook = Get-CIPPAzDataTableEntity @WebhookTable -Filter "PartitionKey eq '$($Row.tenant)'" | Where-Object { $_.EventType -and $_.Version -ne '2' }
+    if ($Webhook) {
+        Write-Host "Found v1 webhook $($Row.tenant) - $($Row.webhookType)"
+        Remove-CIPPGraphSubscription -TenantFilter $Row.tenant -Type 'AuditLog'
+    }
 
     #use the queueitem to see if we already have a webhook for this tenant + webhooktype. If we do, delete this row from SchedulerConfig.
-    $WebhookTable = Get-CIPPTable -TableName 'WebhookTable'
     $Webhook = Get-CIPPAzDataTableEntity @WebhookTable -Filter "PartitionKey eq '$($Row.tenant)' and Version eq '2' and Resource eq '$($Row.webhookType)'"
     if ($Webhook) {
         Write-Host "Found existing webhook for $($Row.tenant) - $($Row.webhookType)"
