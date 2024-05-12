@@ -21,7 +21,7 @@ function New-CIPPGraphSubscription {
         if ($auditLogAPI) {
             $CIPPID = (New-Guid).GUID
             $Resource = $EventType
-            $CIPPAuditURL = "$BaseURL/API/Publicwebhooks?EventType=$EventType&CIPPID=$CIPPID"
+            $CIPPAuditURL = "$BaseURL/API/Publicwebhooks?EventType=$EventType&CIPPID=$CIPPID&version=2"
             $AuditLogParams = @{
                 webhook = @{
                     'address' = $CIPPAuditURL
@@ -43,7 +43,6 @@ function New-CIPPGraphSubscription {
                     }
                     Add-CIPPAzDataTableEntity @WebhookTable -Entity $WebhookRow
                     Write-Host "Creating webhook subscription for $EventType"
-                    Write-Host "https://manage.office.com/api/v1.0/$($TenantFilter)/activity/feed/subscriptions/start?contentType=$EventType&PublisherIdentifier=$($TenantFilter)" 
 
                     $AuditLog = New-GraphPOSTRequest -uri "https://manage.office.com/api/v1.0/$($TenantFilter)/activity/feed/subscriptions/start?contentType=$EventType&PublisherIdentifier=$($TenantFilter)" -tenantid $TenantFilter -type POST -scope 'https://manage.office.com/.default' -body $AuditLogparams -verbose
                     Write-LogMessage -user $ExecutingUser -API $APIName -message "Created Webhook subscription for $($TenantFilter) for the log $($EventType)" -Sev 'Info' -tenant $TenantFilter
@@ -53,6 +52,7 @@ function New-CIPPGraphSubscription {
                 return @{ success = $true; message = "Created Webhook subscription for $($TenantFilter) for the log $($EventType)" }
             } catch {
                 if ($_.Exception.Message -like '*already exists*') {
+                    return @{ success = $true; message = "Webhook exists for $($TenantFilter) for the log $($EventType)" }
                     Write-LogMessage -user $ExecutingUser -API $APIName -message "Webhook subscription for $($TenantFilter) already exists" -Sev 'Info' -tenant $TenantFilter
                 } else {
                     Remove-AzDataTableEntity @WebhookTable -Entity @{ PartitionKey = $TenantFilter; RowKey = $CIPPID } | Out-Null
@@ -78,7 +78,7 @@ function New-CIPPGraphSubscription {
             }
 
             $Body = [PSCustomObject]@{
-                WebhookUrl    = "https://$BaseURL/API/PublicWebhooks?CIPPID=$($CIPPID)&Type=PartnerCenter&version=2"
+                WebhookUrl    = "https://$BaseURL/API/PublicWebhooks?CIPPID=$($CIPPID)&Type=PartnerCenter"
                 WebhookEvents = @($EventList)
             }
             try {
