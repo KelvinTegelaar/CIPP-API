@@ -173,7 +173,7 @@ function Invoke-PublicWebhooks {
                             ## Push webhook data to table
                             $Entity = [PSCustomObject]@{
                                 PartitionKey = 'Webhook'
-                                RowKey       = [string](New-Guid).Guid
+                                RowKey       = [string]$data.id
                                 Type         = 'AuditLog'
                                 Data         = [string]($Item | ConvertTo-Json -Depth 10)
                                 CIPPURL      = $CIPPURL
