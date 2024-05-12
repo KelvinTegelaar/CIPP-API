@@ -10,7 +10,7 @@ Function Invoke-AddAlert {
     $APIName = $TriggerMetadata.FunctionName
     Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -message 'Accessed this API' -Sev 'Debug'
     $URL = ($request.headers.'x-ms-original-url').split('/api') | Select-Object -First 1
-    $Tenants = $request.body.tenantfilter
+    $Tenants = $request.body.tenantFilter
     $Table = get-cipptable -TableName 'SchedulerConfig'
     $Results = foreach ($Tenant in $Tenants) {
         try {
