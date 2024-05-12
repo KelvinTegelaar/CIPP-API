@@ -105,6 +105,8 @@ function Invoke-PublicWebhooks {
                             if ($Data.ExtendedProperties) { $Data.ExtendedProperties | ForEach-Object { $data | Add-Member -NotePropertyName $_.Name -NotePropertyValue $_.Value -Force } }
                             if ($Data.DeviceProperties) { $Data.DeviceProperties | ForEach-Object { $data | Add-Member -NotePropertyName $_.Name -NotePropertyValue $_.Value -Force } }
                             if ($Data.parameters) { $Data.parameters | ForEach-Object { $data | Add-Member -NotePropertyName $_.Name -NotePropertyValue $_.Value -Force } }
+                            if ($Data.ModifiedProperties) { $Data.parameters | ForEach-Object { $data | Add-Member -NotePropertyName "$($_.Name)" -NotePropertyValue $_.NewValue -Force } }
+                            if ($Data.ModifiedProperties) { $Data.parameters | ForEach-Object { $data | Add-Member -NotePropertyName $("Previous_Value_$($_.Name)") -NotePropertyValue $_.OldValue -Force } }
                             if ($data.clientip) {
                                 if ($data.clientip -match '^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}:\d+$') {
                                     $data.clientip = $data.clientip -replace ':\d+$', '' # Remove the port number if present
@@ -169,7 +171,6 @@ function Invoke-PublicWebhooks {
                         Write-Host "Data to process found: $($DataToProcess.count) items"
                         foreach ($Item in $DataToProcess) {
                             Write-Host "Processing $($item.operation)"
-
                             ## Push webhook data to table
                             $Entity = [PSCustomObject]@{
                                 PartitionKey = 'Webhook'
