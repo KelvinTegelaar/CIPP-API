@@ -74,6 +74,7 @@ function Invoke-PublicWebhooks {
                 return "Not replying to this webhook or processing it, as it's not a version 2 webhook."
             } else {
                 try {
+                    Write-Host 'Going to process each item in request body.'
                     foreach ($ReceivedItem In $Request.body) {
                         $ReceivedItem = [pscustomobject]$ReceivedItem
                         Write-Host "Received Item: $($ReceivedItem | ConvertTo-Json -Depth 15 -Compress))"
