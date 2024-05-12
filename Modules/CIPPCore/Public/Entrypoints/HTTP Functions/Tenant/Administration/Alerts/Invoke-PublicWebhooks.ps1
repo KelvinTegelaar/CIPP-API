@@ -163,7 +163,9 @@ function Invoke-PublicWebhooks {
  
                             $finalCondition 
                         }
+                        
                         $DataToProcess = foreach ($clause in $Where) {
+                            Write-Host "Processing clause: $clause"
                             $ProcessedData | Where-Object { Invoke-Expression $clause }
                         }
 
