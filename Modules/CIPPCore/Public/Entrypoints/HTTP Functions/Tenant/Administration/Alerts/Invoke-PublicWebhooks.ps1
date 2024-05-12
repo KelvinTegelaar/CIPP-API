@@ -152,7 +152,12 @@ function Invoke-PublicWebhooks {
                         $Where = $Configuration | ForEach-Object {
                             $conditions = $_.Conditions | ConvertFrom-Json | Where-Object { $_.Input.value -ne '' }                     
                             $conditionStrings = foreach ($condition in $conditions) {
-                                $value = if ($condition.Input.value -is [array]) { '@(' + ($condition.Input.value | ForEach-Object { "'$_'" }) -join ',' + ')'} else {    "'$($condition.Input.value)'" }
+                                $value = if ($condition.Input.value -is [array]) { 
+                                    $arrayAsString = $condition.Input.value | ForEach-Object {
+                                        "'$_'"  
+                                    } 
+                                    "@($($arrayAsString -join ', '))"
+                                } else { "'$($condition.Input.value)'" }
                                 "`$(`$_.$($condition.Property.label)) -$($condition.Operator.value) $value"
                             }
                             if ($conditionStrings.Count -gt 1) {
