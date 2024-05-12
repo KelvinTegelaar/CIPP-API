@@ -78,7 +78,7 @@ function New-CIPPGraphSubscription {
             }
 
             $Body = [PSCustomObject]@{
-                WebhookUrl    = "https://$BaseURL/API/PublicWebhooks?CIPPID=$($CIPPID)&Type=PartnerCenter"
+                WebhookUrl    = "https://$BaseURL/API/PublicWebhooks?CIPPID=$($CIPPID)&Type=PartnerCenter&version=2"
                 WebhookEvents = @($EventList)
             }
             try {
