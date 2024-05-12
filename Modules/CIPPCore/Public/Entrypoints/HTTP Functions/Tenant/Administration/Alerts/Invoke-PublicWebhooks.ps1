@@ -102,11 +102,12 @@ function Invoke-PublicWebhooks {
                         $PreProccessedData = $Data | Select-Object *, CIPPGeoLocation, CIPPBadRepIP, CIPPHostedIP, CIPPIPDetected -ErrorAction SilentlyContinue
                         $LocationTable = Get-CIPPTable -TableName 'knownlocationdb'
                         $ProcessedData = foreach ($Data in $PreProccessedData) {
-                            if ($Data.ExtendedProperties) { $Data.ExtendedProperties | ForEach-Object { $data | Add-Member -NotePropertyName $_.Name -NotePropertyValue $_.Value -Force } }
-                            if ($Data.DeviceProperties) { $Data.DeviceProperties | ForEach-Object { $data | Add-Member -NotePropertyName $_.Name -NotePropertyValue $_.Value -Force } }
-                            if ($Data.parameters) { $Data.parameters | ForEach-Object { $data | Add-Member -NotePropertyName $_.Name -NotePropertyValue $_.Value -Force } }
-                            if ($Data.ModifiedProperties) { $Data.parameters | ForEach-Object { $data | Add-Member -NotePropertyName "$($_.Name)" -NotePropertyValue $_.NewValue -Force } }
-                            if ($Data.ModifiedProperties) { $Data.parameters | ForEach-Object { $data | Add-Member -NotePropertyName $("Previous_Value_$($_.Name)") -NotePropertyValue $_.OldValue -Force } }
+                            if ($Data.ExtendedProperties) { $Data.ExtendedProperties | ForEach-Object { $data | Add-Member -NotePropertyName $_.Name -NotePropertyValue $_.Value -Force -ErrorAction SilentlyContinue } }
+                            if ($Data.DeviceProperties) { $Data.DeviceProperties | ForEach-Object { $data | Add-Member -NotePropertyName $_.Name -NotePropertyValue $_.Value -Force -ErrorAction SilentlyContinue } }
+                            if ($Data.parameters) { $Data.parameters | ForEach-Object { $data | Add-Member -NotePropertyName $_.Name -NotePropertyValue $_.Value -Force -ErrorAction SilentlyContinue } }
+                            if ($Data.ModifiedProperties) { $Data.parameters | ForEach-Object { $data | Add-Member -NotePropertyName "$($_.Name)" -NotePropertyValue $_.NewValue -Force -ErrorAction SilentlyContinue } }
+                            if ($Data.ModifiedProperties) { $Data.parameters | ForEach-Object { $data | Add-Member -NotePropertyName $("Previous_Value_$($_.Name)") -NotePropertyValue $_.OldValue -Force -ErrorAction SilentlyContinue } }
+                          
                             if ($data.clientip) {
                                 if ($data.clientip -match '^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}:\d+$') {
                                     $data.clientip = $data.clientip -replace ':\d+$', '' # Remove the port number if present
