@@ -74,7 +74,7 @@ function Invoke-PublicWebhooks {
                 return "Not replying to this webhook or processing it, as it's not a version 2 webhook."
             } else {
                 try {
-                    foreach ($ReceivedItem In ($Request.body)) {
+                    foreach ($ReceivedItem In $Request.body) {
                         $ReceivedItem = [pscustomobject]$ReceivedItem
                         Write-Host "Received Item: $($ReceivedItem | ConvertTo-Json -Depth 15 -Compress))"
                         $TenantFilter = (Get-Tenants | Where-Object -Property customerId -EQ $ReceivedItem.TenantId).defaultDomainName
@@ -111,9 +111,9 @@ function Invoke-PublicWebhooks {
                                 if ($data.clientip -match '^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}:\d+$') {
                                     $data.clientip = $data.clientip -replace ':\d+$', '' # Remove the port number if present
                                 }
-                                Write-Host "Filter is: RowKey eq '$($data.clientIp)'"
                                 $Location = Get-CIPPAzDataTableEntity @LocationTable -Filter "RowKey eq '$($data.clientIp)'" | Select-Object -Last 1
                                 if ($Location) {
+                                    Write-Host 'Got IP from cache'
                                     $Country = $Location.CountryOrRegion
                                     $City = $Location.City
                                     $Proxy = $Location.Proxy
@@ -152,7 +152,8 @@ function Invoke-PublicWebhooks {
                         $Where = $Configuration | ForEach-Object {
                             $conditions = $_.Conditions | ConvertFrom-Json | Where-Object { $_.Input.value -ne '' }                     
                             $conditionStrings = foreach ($condition in $conditions) {
-                                "`$(`$_.$($condition.Property.label)) -$($condition.Operator.value) '$($condition.Input.value)'"
+                                $value = if ($condition.Input.value -is [string]) { "'$($condition.Input.value)'" } else { '@(' + ($condition.Input.value | ForEach-Object { "'$_'" }) -join ',' + ')' }
+                                "`$(`$_.$($condition.Property.label)) -$($condition.Operator.value) $value"
                             }
                             if ($conditionStrings.Count -gt 1) {
                                 $finalCondition = $conditionStrings -join ' -AND '
