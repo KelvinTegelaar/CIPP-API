@@ -106,6 +106,9 @@ function Invoke-PublicWebhooks {
                             if ($Data.DeviceProperties) { $Data.DeviceProperties | ForEach-Object { $data | Add-Member -NotePropertyName $_.Name -NotePropertyValue $_.Value -Force } }
                             if ($Data.parameters) { $Data.parameters | ForEach-Object { $data | Add-Member -NotePropertyName $_.Name -NotePropertyValue $_.Value -Force } }
                             if ($data.clientip) {
+                                if ($data.clientip -match '^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}:\d+$') {
+                                    $data.clientip = $data.clientip -replace ':\d+$', '' # Remove the port number if present
+                                }
                                 Write-Host "Filter is: RowKey eq '$($data.clientIp)'"
                                 $Location = Get-CIPPAzDataTableEntity @LocationTable -Filter "RowKey eq '$($data.clientIp)'" | Select-Object -Last 1
                                 if ($Location) {
@@ -116,9 +119,6 @@ function Invoke-PublicWebhooks {
                                     $ASName = $Location.ASName
                                 } else {
                                     Write-Host 'We have to do a lookup'
-                                    if ($data.clientip -match '^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}:\d+$') {
-                                        $data.clientip = $data.clientip -replace ':\d+$', '' # Remove the port number if present
-                                    }
                                     $Location = Get-CIPPGeoIPLocation -IP $data.clientip
                                     $Country = if ($Location.CountryCode) { $Location.CountryCode } else { 'Unknown' }
                                     $City = if ($Location.City) { $Location.City } else { 'Unknown' }
