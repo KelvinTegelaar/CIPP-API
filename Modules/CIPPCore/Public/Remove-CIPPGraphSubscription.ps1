@@ -14,9 +14,13 @@ function Remove-CIPPGraphSubscription {
             #list all subscriptions on the management API
             $Subscriptions = New-GraphPOSTRequest -type GET -uri "https://manage.office.com/api/v1.0/$($TenantFilter)/activity/feed/subscriptions/list" -scope 'https://manage.office.com/.default' -tenantid $TenantFilter -verbose
             foreach ($Sub in $Subscriptions | Where-Object { $_.webhook.address -like '*CIPP*' -and $_.webhook.address -notlike '*version=2*' }) {
-                $AuditLog = New-GraphPOSTRequest -uri "https://manage.office.com/api/v1.0/$($TenantFilter)/activity/feed/subscriptions/stop?contentType=$($sub.contentType)" -scope 'https://manage.office.com/.default' -tenantid $TenantFilter -type POST -body '{}' -verbose
-                $WebhookRow = Get-CIPPAzDataTableEntity @WebhookTable | Where-Object { $_.PartitionKey -eq $TenantFilter -and $_.Resource -eq $EventType -and $_.version -ne '2' }
-                $null = Remove-AzDataTableEntity @WebhookTable -Entity $Entity
+                Try {
+                    $AuditLog = New-GraphPOSTRequest -uri "https://manage.office.com/api/v1.0/$($TenantFilter)/activity/feed/subscriptions/stop?contentType=$($sub.contentType)" -scope 'https://manage.office.com/.default' -tenantid $TenantFilter -type POST -body '{}' -verbose
+                    $WebhookRow = Get-CIPPAzDataTableEntity @WebhookTable | Where-Object { $_.PartitionKey -eq $TenantFilter -and $_.Resource -eq $EventType -and $_.version -ne '2' }
+                    $null = Remove-AzDataTableEntity @WebhookTable -Entity $Entity
+                } catch {
+                    Write-LogMessage -user $ExecutingUser -API $APIName -message "Failed to cleanup old audit logs: $($_.Exception.Message)" -Sev 'Error' -tenant $TenantFilter
+                }
             }
         } else {
             $WebhookTable = Get-CIPPTable -TableName webhookTable
