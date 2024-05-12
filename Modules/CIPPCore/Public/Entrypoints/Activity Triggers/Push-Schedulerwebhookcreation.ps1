@@ -16,7 +16,7 @@ function Push-Schedulerwebhookcreation {
     $Webhook = Get-CIPPAzDataTableEntity @WebhookTable -Filter "PartitionKey eq '$Tenant' and Version eq '2' and Resource eq '$($Row.webhookType)'"
     if ($Webhook) {
         Write-Host "Found existing webhook for $Tenant - $($Row.webhookType)"
-        Remove-CIPPAzDataTableEntity @Table -Entity $Row
+        Remove-AzDataTableEntity @Table -Entity $Row
     } else {
         Write-Host "No existing webhook for $Tenant - $($Row.webhookType) - Time to create."
         try {
