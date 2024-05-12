@@ -105,8 +105,8 @@ function Invoke-PublicWebhooks {
                             if ($Data.ExtendedProperties) { $Data.ExtendedProperties | ForEach-Object { $data | Add-Member -NotePropertyName $_.Name -NotePropertyValue $_.Value -Force -ErrorAction SilentlyContinue } }
                             if ($Data.DeviceProperties) { $Data.DeviceProperties | ForEach-Object { $data | Add-Member -NotePropertyName $_.Name -NotePropertyValue $_.Value -Force -ErrorAction SilentlyContinue } }
                             if ($Data.parameters) { $Data.parameters | ForEach-Object { $data | Add-Member -NotePropertyName $_.Name -NotePropertyValue $_.Value -Force -ErrorAction SilentlyContinue } }
-                            if ($Data.ModifiedProperties) { $Data.parameters | ForEach-Object { $data | Add-Member -NotePropertyName "$($_.Name)" -NotePropertyValue $_.NewValue -Force -ErrorAction SilentlyContinue } }
-                            if ($Data.ModifiedProperties) { $Data.parameters | ForEach-Object { $data | Add-Member -NotePropertyName $("Previous_Value_$($_.Name)") -NotePropertyValue $_.OldValue -Force -ErrorAction SilentlyContinue } }
+                            if ($Data.ModifiedProperties) { $Data.parameters | ForEach-Object { $data | Add-Member -NotePropertyName "$($_.Name)" -NotePropertyValue "$($_.NewValue)" -Force -ErrorAction SilentlyContinue } }
+                            if ($Data.ModifiedProperties) { $Data.parameters | ForEach-Object { $data | Add-Member -NotePropertyName $("Previous_Value_$($_.Name)") -NotePropertyValue "$($_.OldValue)" -Force -ErrorAction SilentlyContinue } }
                           
                             if ($data.clientip) {
                                 if ($data.clientip -match '^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}:\d+$') {
