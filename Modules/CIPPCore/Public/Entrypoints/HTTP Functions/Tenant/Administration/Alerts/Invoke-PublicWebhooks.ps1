@@ -69,7 +69,8 @@ function Invoke-PublicWebhooks {
             }
             Add-CIPPAzDataTableEntity @WebhookIncoming -Entity $Entity
         } else {
-            if ($request.headers.'x-ms-original-url' -notlike '*version2') {
+            if ($request.headers.'x-ms-original-url' -notlike '*version2*') {
+                Write-Host "URL is $($request.headers.'x-ms-original-url')"
                 return "Not replying to this webhook or processing it, as it's not a version 2 webhook."
             } else {
                 try {
