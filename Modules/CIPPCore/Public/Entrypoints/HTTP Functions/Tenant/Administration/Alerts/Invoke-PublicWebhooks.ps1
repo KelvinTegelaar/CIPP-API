@@ -138,11 +138,11 @@ function Invoke-PublicWebhooks {
                                     }
                                     $null = Add-CIPPAzDataTableEntity @LocationTable -Entity $LocationInfo -Force
                                 }
+                                $Data.CIPPGeoLocation = $Country
+                                $Data.CIPPBadRepIP = $Proxy
+                                $Data.CIPPHostedIP = $hosting
+                                $Data.CIPPIPDetected = $IP
                             }
-                            $Data.CIPPGeoLocation = $Country
-                            $Data.CIPPBadRepIP = $Proxy
-                            $Data.CIPPHostedIP = $hosting
-                            $Data.CIPPIPDetected = $IP
                             $Data | Select-Object * -ExcludeProperty ExtendedProperties, DeviceProperties, parameters
                         }
 
@@ -173,7 +173,7 @@ function Invoke-PublicWebhooks {
                             ## Push webhook data to table
                             $Entity = [PSCustomObject]@{
                                 PartitionKey = 'Webhook'
-                                RowKey       = [string]$data.id
+                                RowKey       = [string]$item.id
                                 Type         = 'AuditLog'
                                 Data         = [string]($Item | ConvertTo-Json -Depth 10)
                                 CIPPURL      = $CIPPURL
