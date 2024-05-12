@@ -105,12 +105,9 @@ function Invoke-PublicWebhooks {
                             if ($Data.ExtendedProperties) { $Data.ExtendedProperties | ForEach-Object { $data | Add-Member -NotePropertyName $_.Name -NotePropertyValue $_.Value -Force } }
                             if ($Data.DeviceProperties) { $Data.DeviceProperties | ForEach-Object { $data | Add-Member -NotePropertyName $_.Name -NotePropertyValue $_.Value -Force } }
                             if ($Data.parameters) { $Data.parameters | ForEach-Object { $data | Add-Member -NotePropertyName $_.Name -NotePropertyValue $_.Value -Force } }
-                        
-                            #fill in the CIPP fields
                             if ($data.clientip) {
-                                #First we perform a lookup in the knownlocationdb table to see if we have a location for this IP address.
-                                $Location = Get-CIPPAzDataTableEntity @LocationTable -Filter "RowKey eq '$($data.clientip)'" | Select-Object -Last 1
-                                #If we have a location, we use that. If not, we perform a lookup in the GeoIP database.
+                                Write-Host "Filter is: RowKey eq '$($data.clientIp)'"
+                                $Location = Get-CIPPAzDataTableEntity @LocationTable -Filter "RowKey eq '$($data.clientIp)'" | Select-Object -Last 1
                                 if ($Location) {
                                     $Country = $Location.CountryOrRegion
                                     $City = $Location.City
