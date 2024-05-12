@@ -34,9 +34,11 @@ Function Invoke-AddAlert {
     }
     $Conditions = $request.body.conditions | ConvertTo-Json -Compress -Depth 10 | Out-String
     $TenantsJson = $Tenants | ConvertTo-Json -Compress -Depth 10 | Out-String
+    $Actions = $request.body.actions | ConvertTo-Json -Compress -Depth 10 | Out-String
     $CompleteObject = @{
         Tenants      = [string]$TenantsJson
         Conditions   = [string]$Conditions
+        Actions      = [string]$Actions
         type         = $request.body.logbook.value
         RowKey       = [string](New-Guid)
         PartitionKey = 'Webhookv2'

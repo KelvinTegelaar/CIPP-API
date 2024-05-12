@@ -85,6 +85,7 @@ function Invoke-PublicWebhooks {
                             [pscustomobject]@{
                                 Tenants    = ($_.Tenants | ConvertFrom-Json).fullValue
                                 Conditions = $_.Conditions
+                                Actions    = $_.Actions
                                 LogType    = $_.Type
                             } 
                         }
@@ -152,7 +153,8 @@ function Invoke-PublicWebhooks {
 
                         #Filter data based on conditions.
                         $Where = $Configuration | ForEach-Object {
-                            $conditions = $_.Conditions | ConvertFrom-Json | Where-Object { $_.Input.value -ne '' }                     
+                            $conditions = $_.Conditions | ConvertFrom-Json | Where-Object { $_.Input.value -ne '' }
+                            $actions = $_.Actions                    
                             $conditionStrings = foreach ($condition in $conditions) {
                                 $value = if ($condition.Input.value -is [array]) { 
                                     $arrayAsString = $condition.Input.value | ForEach-Object {
@@ -167,13 +169,20 @@ function Invoke-PublicWebhooks {
                             } else {
                                 $finalCondition = $conditionStrings
                             }
- 
-                            $finalCondition 
+                            [PSCustomObject]@{
+                                clause         = $finalCondition
+                                expectedAction = $actions
+                            }
+                           
                         }
                         
                         $DataToProcess = foreach ($clause in $Where) {
-                            Write-Host "Processing clause: $clause"
-                            $ProcessedData | Where-Object { Invoke-Expression $clause }
+                            Write-Host "Processing clause: $($clause.clause)"
+                            Write-Host "We should be taking action: $($clause.expectedAction)"
+                            $ReturnedData = $ProcessedData | Where-Object { Invoke-Expression $clause.clause } | Select-Object *, CIPPAction, CIPPClause
+                            $ReturnedData.CIPPAction = $clause.expectedAction
+                            $ReturnedData.CIPPClause = $clause.clause
+                            $ReturnedData
                         }
 
                         Write-Host "Data to process found: $($DataToProcess.count) items"
