@@ -20,7 +20,7 @@ function Push-Schedulerwebhookcreation {
     } else {
         Write-Host "No existing webhook for $Tenant - $($Row.webhookType) - Time to create."
         try {
-            $NewSub = New-CIPPGraphSubscription -TenantFilter $Tenant -Resource $Row.webhookType -BaseURL $Row.CIPPURL -auditLogAPI $true
+            $NewSub = New-CIPPGraphSubscription -TenantFilter $Tenant -EventType $Row.webhookType -BaseURL $Row.CIPPURL -auditLogAPI $true
             if ($NewSub.Success) {
                 Remove-CIPPAzDataTableEntity @Table -Entity $Row
             } else {
