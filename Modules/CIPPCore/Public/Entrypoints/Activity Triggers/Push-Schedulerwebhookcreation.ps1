@@ -22,7 +22,7 @@ function Push-Schedulerwebhookcreation {
         try {
             $NewSub = New-CIPPGraphSubscription -TenantFilter $Tenant -EventType $Row.webhookType -BaseURL $Row.CIPPURL -auditLogAPI $true
             if ($NewSub.Success) {
-                Remove-CIPPAzDataTableEntity @Table -Entity $Row
+                Remove-AzDataTableEntity @Table -Entity $Row
             } else {
                 Write-Host "Failed to create webhook for $Tenant - $($Row.webhookType) - $($_.Exception.Message)"
                 Write-LogMessage -message "Failed to create webhook for $Tenant - $($Row.webhookType)" -Sev 'Error' -LogData $_.Exception
