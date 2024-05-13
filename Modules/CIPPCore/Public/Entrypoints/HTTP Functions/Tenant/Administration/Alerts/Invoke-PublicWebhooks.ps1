@@ -178,7 +178,9 @@ function Invoke-PublicWebhooks {
                         
                         $DataToProcess = foreach ($clause in $Where) {
                             Write-Host "Processing clause: $($clause.clause)"
-                            Write-Host "BadRepIP is $($ProcessedData.CIPPBadRepIP)"
+                            Write-Host "CIPPHostedIP is $($ProcessedData.CIPPHostedIP)"
+                            Write-Host "ProcessedData is operations are $($ProcessedData | ConvertTo-Json -Depth 10)"
+                            
                             Write-Host "If this clause would be true, the action would be: $($clause.expectedAction)"
                             $ReturnedData = $ProcessedData | Where-Object { Invoke-Expression $clause.clause } | Select-Object *, CIPPAction, CIPPClause -ErrorAction SilentlyContinue
                             if ($ReturnedData) {
