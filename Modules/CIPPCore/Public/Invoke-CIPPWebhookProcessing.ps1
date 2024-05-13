@@ -20,9 +20,9 @@ function Invoke-CippWebhookProcessing {
     Write-Host "Received data. Our Action List is $($data.CIPPAction)"
 
     $ActionList = ($data.CIPPAction | ConvertFrom-Json -ErrorAction SilentlyContinue).value
-    $ActionResults = foreach ($action in $actionList) {
+    $ActionResults = foreach ($action in $ActionList) {
         Write-Host "this is our action: $($action | ConvertTo-Json -Depth 15 -Compress))"
-        switch ($action.execute) {
+        switch ($action) {
             'disableUser' {
                 Set-CIPPSignInState -TenantFilter $TenantFilter -User $data.UserId -AccountEnabled $false -APIName 'Alert Engine' -ExecutingUser 'Alert Engine'
             }
@@ -58,8 +58,8 @@ function Invoke-CippWebhookProcessing {
         }
     }
     Write-Host 'Going to create the content'
-    foreach ($action in $actionList) {
-        switch ($action.execute) {
+    foreach ($action in $ActionList ) {
+        switch ($action) {
             'generatemail' {
                 Write-Host 'Going to create the email'
                 $GenerateEmail = New-CIPPAlertTemplate -format 'html' -data $Data -ActionResults $ActionResults
