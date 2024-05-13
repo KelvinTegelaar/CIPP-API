@@ -17,7 +17,7 @@ function Invoke-CippWebhookProcessing {
         'SAS:ProcessAuth'
         'Login:reprocess'
     ) #>
-
+    Write-Host "Received data. Our Action List is $($data.CIPPAction)"
 
     $ActionList = ($data.CIPPAction | ConvertFrom-Json -ErrorAction SilentlyContinue).value
     $ActionResults = foreach ($action in $actionList) {
