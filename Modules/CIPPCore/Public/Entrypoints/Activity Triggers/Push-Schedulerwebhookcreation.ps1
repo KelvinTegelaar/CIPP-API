@@ -25,12 +25,14 @@ function Push-Schedulerwebhookcreation {
             $Webhook = Get-CIPPAzDataTableEntity @WebhookTable -Filter "PartitionKey eq '$Tenant' and Version eq '2' and Resource eq '$($Row.webhookType)'"
             if ($Webhook) {
                 Write-Host "Found existing webhook for $Tenant - $($Row.webhookType)"
-                Remove-AzDataTableEntity @Table -Entity $Row
+                if ($Row.tenantid -ne 'AllTenants') {
+                    Remove-AzDataTableEntity @Table -Entity $Row
+                }
             } else {
                 Write-Host "No existing webhook for $Tenant - $($Row.webhookType) - Time to create."
                 try {
                     $NewSub = New-CIPPGraphSubscription -TenantFilter $Tenant -EventType $Row.webhookType -BaseURL $Row.CIPPURL -auditLogAPI $true
-                    if ($NewSub.Success) {
+                    if ($NewSub.Success -and $Row.tenantid -ne 'AllTenants') {
                         Remove-AzDataTableEntity @Table -Entity $Row
                     } else { 
                         Write-Host "Failed to create webhook for $Tenant - $($Row.webhookType) - $($_.Exception.Message)"
@@ -39,7 +41,7 @@ function Push-Schedulerwebhookcreation {
                 } catch {
                     Write-Host "Failed to create webhook for $Tenant - $($Row.webhookType): $($_.Exception.Message)"
                     Write-LogMessage -message "Failed to create webhook for $Tenant - $($Row.webhookType)" -Sev 'Error' -LogData $_.Exception
- 
+
                 }
 
             }
