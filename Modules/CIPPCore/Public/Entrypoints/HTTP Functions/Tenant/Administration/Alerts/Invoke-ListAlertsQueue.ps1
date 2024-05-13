@@ -34,6 +34,7 @@ Function Invoke-ListAlertsQueue {
             EventType    = 'Audit log Alert'
             RowKey       = $Task.RowKey
             PartitionKey = $Task.PartitionKey
+            RepeatsEvery = 'When received'
         }
         $AllTasksArrayList.Add($TaskEntry)
     } 
@@ -47,6 +48,7 @@ Function Invoke-ListAlertsQueue {
             Actions      = $Task.PostExecution
             LogType      = 'Scripted'
             EventType    = 'Scheduled Task'
+            RepeatsEvery = $Task.Recurrence
         }
         $AllTasksArrayList.Add($TaskEntry)
     }
