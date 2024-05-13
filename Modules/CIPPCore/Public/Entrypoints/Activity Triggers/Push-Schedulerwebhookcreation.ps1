@@ -11,7 +11,7 @@ function Push-Schedulerwebhookcreation {
 
     $Row = Get-CIPPAzDataTableEntity @Table -Filter "RowKey eq '$($item.SchedulerRow)'"
     if (!$Row) {
-        Write-Host "No row found for $($item.SchedulerRow)"
+        Write-Host "No row found for $($item.SchedulerRow). Full received item was $($item | ConvertTo-Json)"
         return
     } else {
         $Tenant = (Get-Tenants | Where-Object { $_.customerId -eq $Row.tenantid }).defaultDomainName
