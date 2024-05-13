@@ -14,7 +14,7 @@ function Push-Schedulerwebhookcreation {
         Write-Host "No row found for $($item.SchedulerRow). Full received item was $($item | ConvertTo-Json)"
         return
     } else {
-        if ($Row.tenantid -eq 'AllTEnants') {
+        if ($Row.tenantid -eq 'AllTenants') {
             $Tenants = (Get-Tenants).defaultDomainName
         } else {
             $Tenants = (Get-Tenants | Where-Object { $_.customerId -eq $Row.tenantid }).defaultDomainName
