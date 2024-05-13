@@ -9,13 +9,6 @@ function Invoke-CippWebhookProcessing {
         $APIName = 'Process webhook',
         $ExecutingUser
     )
-    $ConfigTable = get-cipptable -TableName 'SchedulerConfig'
-    $LocationTable = Get-CIPPTable -TableName 'knownlocationdb'
-    $TrustedIPsTable = Get-CIPPTable -TableName 'trustedIps'
-    $Alertconfig = Get-CIPPAzDataTableEntity @ConfigTable -Filter "Tenant eq '$tenantfilter'"
-    if (!$Alertconfig) {
-        $Alertconfig = Get-CIPPAzDataTableEntity @ConfigTable -Filter "Tenant eq 'AllTenants'"
-    }
 
     <# $ExtendedPropertiesIgnoreList = @(
         'OAuth2:Authorize'
