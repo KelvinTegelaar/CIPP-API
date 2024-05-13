@@ -24,27 +24,29 @@ Function Invoke-ListAlertsQueue {
 
     foreach ($Task in $WebhookRules) {
         $Conditions = $Task.Conditions | ConvertFrom-Json -ErrorAction SilentlyContinue
-        $TranslatedConditions = $Conditions | ForEach-Object { "When $($_.Property.label) is $($_.Operator.label) to $($_.input.value)" }
+        $TranslatedConditions = ($Conditions | ForEach-Object { "When $($_.Property.label) is $($_.Operator.label) $($_.input.value)" }) -join ' and '
         $TranslatedActions = ($Task.Actions | ConvertFrom-Json -ErrorAction SilentlyContinue).label -join ','
         $TaskEntry = [PSCustomObject]@{
-            Tenants    = $Task.Tenants | ConvertFrom-Json -ErrorAction SilentlyContinue
-            Conditions = $TranslatedConditions
-            Actions    = $TranslatedActions 
-            LogType    = $Task.type
-            EventType  = 'Audit log Alert'
+            Tenants      = ($Task.Tenants | ConvertFrom-Json -ErrorAction SilentlyContinue).fullValue.defaultDomainName -join ','
+            Conditions   = $TranslatedConditions
+            Actions      = $TranslatedActions 
+            LogType      = $Task.type
+            EventType    = 'Audit log Alert'
+            RowKey       = $Task.RowKey
+            PartitionKey = $Task.PartitionKey
         }
         $AllTasksArrayList.Add($TaskEntry)
     } 
 
     foreach ($Task in $ScheduledTasks) {
         $TaskEntry = [PSCustomObject]@{
-            Tenants    = @(@{
-                    fullValue = @{ defaultDomainName = $Task.Tenant }
-                })
-            Conditions = $Task.Name
-            Actions    = $Task.PostExecution
-            LogType    = 'Scripted'
-            EventType  = 'Scheduled Task'
+            RowKey       = $Task.RowKey
+            PartitionKey = $Task.PartitionKey
+            Tenants      = $Task.Tenant
+            Conditions   = $Task.Name
+            Actions      = $Task.PostExecution
+            LogType      = 'Scripted'
+            EventType    = 'Scheduled Task'
         }
         $AllTasksArrayList.Add($TaskEntry)
     }

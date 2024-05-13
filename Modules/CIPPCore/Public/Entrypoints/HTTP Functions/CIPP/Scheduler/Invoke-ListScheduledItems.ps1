@@ -11,7 +11,13 @@ Function Invoke-ListScheduledItems {
     # Write to the Azure Functions log stream.
     Write-Host 'PowerShell HTTP trigger function processed a request.'
     $Table = Get-CIPPTable -TableName 'ScheduledTasks'
-    $ScheduledTasks = foreach ($Task in Get-CIPPAzDataTableEntity @Table -Filter "PartitionKey eq 'ScheduledTask' and Hidden ne 'True'") {
+    if ($Request.query.Showhidden -eq 'true') {
+        $HiddenTasks = $false
+    } else {
+        $HiddenTasks = $true
+    }
+    $Tasks = Get-CIPPAzDataTableEntity @Table -Filter "PartitionKey eq 'ScheduledTask'" | Where-Object { $_.Hidden -ne $HiddenTasks }
+    $ScheduledTasks = foreach ($Task in $tasks) {
         $Task.Parameters = $Task.Parameters | ConvertFrom-Json
         $Task
     }
