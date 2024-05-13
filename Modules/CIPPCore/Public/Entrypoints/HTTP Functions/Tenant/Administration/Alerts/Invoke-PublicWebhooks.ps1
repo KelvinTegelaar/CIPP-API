@@ -107,8 +107,8 @@ function Invoke-PublicWebhooks {
                             if ($Data.ExtendedProperties) { $Data.ExtendedProperties | ForEach-Object { $data | Add-Member -NotePropertyName $_.Name -NotePropertyValue $_.Value -Force -ErrorAction SilentlyContinue } }
                             if ($Data.DeviceProperties) { $Data.DeviceProperties | ForEach-Object { $data | Add-Member -NotePropertyName $_.Name -NotePropertyValue $_.Value -Force -ErrorAction SilentlyContinue } }
                             if ($Data.parameters) { $Data.parameters | ForEach-Object { $data | Add-Member -NotePropertyName $_.Name -NotePropertyValue $_.Value -Force -ErrorAction SilentlyContinue } }
-                            if ($Data.ModifiedProperties) { $Data.parameters | ForEach-Object { $data | Add-Member -NotePropertyName "$($_.Name)" -NotePropertyValue "$($_.NewValue)" -Force -ErrorAction SilentlyContinue } }
-                            if ($Data.ModifiedProperties) { $Data.parameters | ForEach-Object { $data | Add-Member -NotePropertyName $("Previous_Value_$($_.Name)") -NotePropertyValue "$($_.OldValue)" -Force -ErrorAction SilentlyContinue } }
+                            if ($Data.ModifiedProperties) { $Data.ModifiedProperties | ForEach-Object { $data | Add-Member -NotePropertyName "$($_.Name)" -NotePropertyValue "$($_.NewValue)" -Force -ErrorAction SilentlyContinue } }
+                            if ($Data.ModifiedProperties) { $Data.ModifiedProperties | ForEach-Object { $data | Add-Member -NotePropertyName $("Previous_Value_$($_.Name)") -NotePropertyValue "$($_.OldValue)" -Force -ErrorAction SilentlyContinue } }
                           
                             if ($data.clientip) {
                                 if ($data.clientip -match '^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}:\d+$') {
@@ -179,9 +179,11 @@ function Invoke-PublicWebhooks {
                         $DataToProcess = foreach ($clause in $Where) {
                             Write-Host "Processing clause: $($clause.clause)"
                             Write-Host "We should be taking action: $($clause.expectedAction)"
-                            $ReturnedData = $ProcessedData | Where-Object { Invoke-Expression $clause.clause } | Select-Object *, CIPPAction, CIPPClause
-                            $ReturnedData.CIPPAction = $clause.expectedAction
-                            $ReturnedData.CIPPClause = $clause.clause
+                            $ReturnedData = $ProcessedData | Where-Object { Invoke-Expression $clause.clause } | Select-Object *, CIPPAction, CIPPClause -ErrorAction SilentlyContinue
+                            if ($ReturnedData) {
+                                $ReturnedData.CIPPAction = $clause.expectedAction
+                                $ReturnedData.CIPPClause = $clause.clause
+                            }
                             $ReturnedData
                         }
 
