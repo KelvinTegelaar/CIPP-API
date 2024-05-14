@@ -168,7 +168,7 @@ function New-CIPPAlertTemplate {
         default {
             $Title = 'A custom alert has occured'
             $Table = ($data | ConvertTo-Html -Fragment -As List | Out-String).Replace('<table>', ' <table class="table-modern">')
-            $IntroText = "<p>You have setup CIPP to send you a custom alert for the audit events that follow this filter: $Filter </p>$Table"
+            $IntroText = "<p>You have setup CIPP to send you a custom alert for the audit events that follow this filter: $($data.cippclause) </p>$Table"
             if ($ActionResults) { $IntroText = $IntroText + "<p>Based on the rule, the following actions have been taken: $($ActionResults -join '<br/>' )</p>" }
             if ($LocationInfo) {
                 $LocationTable = ($LocationInfo | ConvertTo-Html -Fragment -As List | Out-String).Replace('<table>', ' <table class="table-modern">')
