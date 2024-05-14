@@ -21,7 +21,7 @@ function Push-ExecScheduledCommand {
 
         Write-Host 'ran the command. Processing results'
         if ($item.command -like 'Get-CIPPAlert*') {
-            $Results = $results
+            $Results = @{ Results = $results }
             $TaskType = 'Alert'
         } else {
             $TaskType = 'Scheduled Task'
