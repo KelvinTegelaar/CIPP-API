@@ -145,7 +145,7 @@ function Invoke-PublicWebhooks {
                                     $IP = $data.ClientIP
                                     $LocationInfo = @{
                                         RowKey          = [string]$data.clientip
-                                        PartitionKey    = [string]$data.UserId
+                                        PartitionKey    = [string]$data.id
                                         Tenant          = [string]$TenantFilter
                                         CountryOrRegion = "$Country"
                                         City            = "$City"
@@ -153,7 +153,12 @@ function Invoke-PublicWebhooks {
                                         Hosting         = "$hosting"
                                         ASName          = "$ASName"
                                     }
-                                    $null = Add-CIPPAzDataTableEntity @LocationTable -Entity $LocationInfo -Force
+                                    try {
+                                        $null = Add-CIPPAzDataTableEntity @LocationTable -Entity $LocationInfo -Force
+                                    } catch {
+                                        Write-Host "Failed to add location info for $($data.clientip) to cache: $($_.Exception.Message)"
+                                
+                                    }
                                 }
                                 $Data.CIPPGeoLocation = $Country
                                 $Data.CIPPBadRepIP = $Proxy
@@ -190,9 +195,7 @@ function Invoke-PublicWebhooks {
                         }
                         
                         $DataToProcess = foreach ($clause in $Where) {
-                            Write-Host "Processing clause: $($clause.clause)"
-                            Write-Host "CIPPHostedIP is $($ProcessedData.CIPPHostedIP)"
-                            
+                            Write-Host "Processing clause: $($clause.clause)"                        
                             Write-Host "If this clause would be true, the action would be: $($clause.expectedAction)"
                             $ReturnedData = $ProcessedData | Where-Object { Invoke-Expression $clause.clause } | Select-Object *, CIPPAction, CIPPClause -ErrorAction SilentlyContinue
                             if ($ReturnedData) {
