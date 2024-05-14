@@ -11,7 +11,6 @@ function Invoke-PublicWebhooks {
     $WebhookIncoming = Get-CIPPTable -TableName WebhookIncoming
     $Webhooks = Get-CIPPAzDataTableEntity @WebhookTable
     Write-Host 'Received request'
-    Write-Host "CIPPID: $($request.Query.CIPPID)"
     $url = ($request.headers.'x-ms-original-url').split('/API') | Select-Object -First 1
     Write-Host $url
     if ($Webhooks.Resource -eq 'M365AuditLogs') {
@@ -33,11 +32,7 @@ function Invoke-PublicWebhooks {
         $StatusCode = [HttpStatusCode]::OK
     } elseif ($Request.Query.CIPPID -in $Webhooks.RowKey) {
         Write-Host 'Found matching CIPPID'
-        Write-Host 'Received request'
-        Write-Host "CIPPID: $($request.Query.CIPPID)"
         $url = ($request.headers.'x-ms-original-url').split('/API') | Select-Object -First 1
-        Write-Host $url
-
         $Webhookinfo = $Webhooks | Where-Object -Property RowKey -EQ $Request.query.CIPPID
 
         if ($Request.Query.Type -eq 'GraphSubscription') {
@@ -70,14 +65,11 @@ function Invoke-PublicWebhooks {
             Add-CIPPAzDataTableEntity @WebhookIncoming -Entity $Entity
         } else {
             if ($request.headers.'x-ms-original-url' -notlike '*version=2*') {
-                Write-Host "URL is $($request.headers.'x-ms-original-url')"
                 return "Not replying to this webhook or processing it, as it's not a version 2 webhook."
             } else {
                 try {
-                    Write-Host 'Going to process each item in request body.'
                     foreach ($ReceivedItem In $Request.body) {
                         $ReceivedItem = [pscustomobject]$ReceivedItem
-                        Write-Host "Received Item: $($ReceivedItem | ConvertTo-Json -Depth 15 -Compress))"
                         $TenantFilter = (Get-Tenants | Where-Object -Property customerId -EQ $ReceivedItem.TenantId).defaultDomainName
                         Write-Host "Webhook TenantFilter: $TenantFilter"
                         $ConfigTable = get-cipptable -TableName 'WebhookRules'
@@ -128,14 +120,14 @@ function Invoke-PublicWebhooks {
                                 }
                                 $Location = Get-CIPPAzDataTableEntity @LocationTable -Filter "RowKey eq '$($data.clientIp)'" | Select-Object -Last 1
                                 if ($Location) {
-                                    Write-Host 'Got IP from cache'
+                                    Write-Host 'Webhook: Got IP from cache'
                                     $Country = $Location.CountryOrRegion
                                     $City = $Location.City
                                     $Proxy = $Location.Proxy
                                     $hosting = $Location.Hosting
                                     $ASName = $Location.ASName
                                 } else {
-                                    Write-Host 'We have to do a lookup'
+                                    Write-Host 'Webhook: We have to do a lookup'
                                     $Location = Get-CIPPGeoIPLocation -IP $data.clientip
                                     $Country = if ($Location.CountryCode) { $Location.CountryCode } else { 'Unknown' }
                                     $City = if ($Location.City) { $Location.City } else { 'Unknown' }
@@ -156,7 +148,7 @@ function Invoke-PublicWebhooks {
                                     try {
                                         $null = Add-CIPPAzDataTableEntity @LocationTable -Entity $LocationInfo -Force
                                     } catch {
-                                        Write-Host "Failed to add location info for $($data.clientip) to cache: $($_.Exception.Message)"
+                                        Write-Host "Webhook: Failed to add location info for $($data.clientip) to cache: $($_.Exception.Message)"
                                 
                                     }
                                 }
@@ -195,8 +187,8 @@ function Invoke-PublicWebhooks {
                         }
                         
                         $DataToProcess = foreach ($clause in $Where) {
-                            Write-Host "Processing clause: $($clause.clause)"                        
-                            Write-Host "If this clause would be true, the action would be: $($clause.expectedAction)"
+                            Write-Host "Webhook: Processing clause: $($clause.clause)"                        
+                            Write-Host "Webhook: If this clause would be true, the action would be: $($clause.expectedAction)"
                             $ReturnedData = $ProcessedData | Where-Object { Invoke-Expression $clause.clause } | Select-Object *, CIPPAction, CIPPClause -ErrorAction SilentlyContinue
                             if ($ReturnedData) {
                                 $ReturnedData.CIPPAction = $clause.expectedAction
