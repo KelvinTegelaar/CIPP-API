@@ -20,8 +20,8 @@ function New-CIPPAlertTemplate {
     switch ($Data.Operation) {
         'New-InboxRule' {
             $Title = "$($TenantFilter) - New Rule Detected for $($data.UserId)"
-            $RuleTable = ($Data | ConvertTo-Html -Fragment | Out-String).Replace('<table>', ' <table class="table-modern">')
-            $ParameterName
+            $RuleTable = ($Data.CIPPParameters | ConvertFrom-Json | ConvertTo-Html -Fragment | Out-String).Replace('<table>', ' <table class="table-modern">')
+            
             $IntroText = "<p>A new rule has been created for the user $($data.UserId). You should check if this rule is not malicious. The rule information can be found in the table below.</p>$RuleTable"
             if ($ActionResults) { $IntroText = $IntroText + "<p>Based on the rule, the following actions have been taken: $($ActionResults -join '<br/>' )</p>" }
             if ($LocationInfo) {
@@ -34,8 +34,7 @@ function New-CIPPAlertTemplate {
         }
         'Set-inboxrule' {
             $Title = "$($TenantFilter) - Rule Edit Detected for $($data.UserId)"
-            $RuleTable = ($TableObj | ConvertTo-Html -Fragment | Out-String).Replace('<table>', ' <table class="table-modern">')
-            $ParameterName
+            $RuleTable = ($Data.CIPPParameters | ConvertFrom-Json | ConvertTo-Html -Fragment | Out-String).Replace('<table>', ' <table class="table-modern">')
             $IntroText = "<p>A rule has been edited for the user $($data.UserId). You should check if this rule is not malicious. The rule information can be found in the table below.</p>$RuleTable"
             if ($ActionResults) { $IntroText = $IntroText + "<p>Based on the rule, the following actions have been taken: $($ActionResults -join '<br/>' )</p>" }
             if ($LocationInfo) {
@@ -48,8 +47,8 @@ function New-CIPPAlertTemplate {
         }
         'Add member to role.' {
             $Title = "$($TenantFilter) - Role change detected for $($data.ObjectId)"
-            $Table = ($data.ModifiedProperties | ConvertTo-Html -Fragment | Out-String).Replace('<table>', ' <table class="table-modern">')
-            $IntroText = "<p>$($data.UserId) has added $($data.ObjectId) to the $(($data.ModifiedProperties.'Role.DisplayName')) role. The information about the role can be found in the table below.</p>$Table"
+            $Table = ($data.CIPPModifiedProperties | ConvertFrom-Json | ConvertTo-Html -Fragment | Out-String).Replace('<table>', ' <table class="table-modern">')
+            $IntroText = "<p>$($data.UserId) has added $($data.ObjectId) to the $(($data.'Role.DisplayName')) role. The information about the role can be found in the table below.</p>$Table"
             if ($ActionResults) { $IntroText = $IntroText + "<p>Based on the rule, the following actions have been taken: $($ActionResults -join '<br/>' )</p>" }
             if ($LocationInfo) {
                 $LocationTable = ($LocationInfo | ConvertTo-Html -Fragment -As List | Out-String).Replace('<table>', ' <table class="table-modern">')
@@ -110,7 +109,7 @@ function New-CIPPAlertTemplate {
         }
         'Remove Member from a role.' {
             $Title = "$($TenantFilter) - Role change detected for $($data.ObjectId)"
-            $Table = ($data.ModifiedProperties | ConvertTo-Html -Fragment | Out-String).Replace('<table>', ' <table class="table-modern">')
+            $Table = ($data.CIPPModifiedProperties | ConvertFrom-Json | ConvertTo-Html -Fragment | Out-String).Replace('<table>', ' <table class="table-modern">')
             $IntroText = "<p>$($data.UserId) has removed $($data.ObjectId) to the $(($data.ModifiedProperties | Where-Object -Property Name -EQ 'Role.DisplayName').NewValue) role. The information about the role can be found in the table below.</p>$Table"
             if ($ActionResults) { $IntroText = $IntroText + "<p>Based on the rule, the following actions have been taken: $($ActionResults -join '<br/>' )</p>" }
             if ($LocationInfo) {
@@ -152,7 +151,7 @@ function New-CIPPAlertTemplate {
         'Remove service principal.' {
             if ($Appname) { $AppName = $AppName.'Application Name' } else { $appName = $data.ApplicationId }
             $Title = "$($TenantFilter) - Service Principal $($data.ObjectId) has been removed."
-            $Table = ($data.ModifiedProperties | ConvertTo-Html -Fragment | Out-String).Replace('<table>', ' <table class="table-modern">')
+            $Table = ($data.CIPPModifiedProperties | ConvertFrom-Json | ConvertTo-Html -Fragment | Out-String).Replace('<table>', ' <table class="table-modern">')
             if ($ActionResults) { $IntroText = $IntroText + "<p>Based on the rule, the following actions have been taken: $($ActionResults -join '<br/>' )</p>" }
             if ($LocationInfo) {
                 $LocationTable = ($LocationInfo | ConvertTo-Html -Fragment -As List | Out-String).Replace('<table>', ' <table class="table-modern">')
