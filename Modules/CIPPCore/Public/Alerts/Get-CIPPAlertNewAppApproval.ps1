@@ -13,7 +13,8 @@ function Get-CIPPAlertNewAppApproval {
     try {
         $Approvals = New-GraphGetRequest -Uri 'https://graph.microsoft.com/beta/identityGovernance/appConsent/appConsentRequests' -tenantid $TenantFilter | Where-Object -Property requestStatus -EQ 'inProgress'
         if ($Approvals.count -gt 1) {
-            Write-AlertMessage -tenant $($TenantFilter) -message "There is are $($Approvals.count) App Approvals waiting."
+            $AlertData = "There are $($Approvals.count) App Approval(s) pending."
+            Write-AlertTrace -cmdletName $MyInvocation.MyCommand -tenantFilter $TenantFilter -data $AlertData
         }
     } catch {
     }

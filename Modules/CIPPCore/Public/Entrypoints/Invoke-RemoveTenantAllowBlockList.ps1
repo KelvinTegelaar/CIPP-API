@@ -25,12 +25,12 @@ Function Invoke-RemoveTenantAllowBlockList {
 
         New-ExoRequest @ExoRequest
 
-        $result = "Successfully Removed $($Request.query.Entries) from Block/Allow list"
-
-        Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APIName -tenant $Request.query.tenantfilter -message "Removed $($Request.query.Entries) from Block/Allow list" -Sev 'Info'
+        $result = "Successfully removed $($Request.query.entries) from Block/Allow list"
+        Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APIName -tenant $Request.query.tenantfilter -message $result -Sev 'Info'
     } catch {
-        Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APIName -tenant $Request.query.tenantfilter -message "Blocklist removal API failed. $($_.Exception.Message)" -Sev 'Error'
-        $result = "Failed to remove $($Request.query.Entries). $($_.Exception.Message)"
+        $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
+        $result = "Failed to remove $($Request.query.entries). Error: $ErrorMessage"
+        Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APIName -tenant $Request.query.tenantfilter -message $result -Sev 'Error'
     }
 
     # Associate values to output bindings by calling 'Push-OutputBinding'.

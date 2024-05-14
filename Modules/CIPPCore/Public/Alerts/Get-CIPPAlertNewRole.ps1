@@ -28,12 +28,13 @@ function Get-CIPPAlertNewRole {
         Add-CIPPAzDataTableEntity @DeltaTable -Entity $DeltaEntity -Force
 
         if ($AdminDelta) {
-            foreach ($Group in $NewDelta) {
+            $AlertData = foreach ($Group in $NewDelta) {
                 $OldDelta = $AdminDelta | Where-Object { $_.GroupName -eq $Group.GroupName }
                 $Group.members | Where-Object { $_ -notin $OldDelta.members } | ForEach-Object {
-                    Write-AlertMessage -tenant $($TenantFilter) -message "$_ has been added to the $($Group.GroupName) Role"
+                    "$_ has been added to the $($Group.GroupName) Role"
                 }
             }
+            Write-AlertTrace -cmdletName $MyInvocation.MyCommand -tenantFilter $TenantFilter -data $AlertData
         }
     } catch {
         Write-AlertMessage -tenant $($TenantFilter) -message "Could not get get role changes for $($TenantFilter): $(Get-NormalizedError -message $_.Exception.message)"

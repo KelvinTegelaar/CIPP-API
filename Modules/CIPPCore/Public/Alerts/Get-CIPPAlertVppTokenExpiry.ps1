@@ -9,31 +9,21 @@ function Get-CIPPAlertVppTokenExpiry {
         $input,
         $TenantFilter
     )
-    $LastRunTable = Get-CIPPTable -Table AlertLastRun
-
-
     try {
-        $Filter = "RowKey eq 'VppTokenExpiry' and PartitionKey eq '{0}'" -f $TenantFilter
-        $LastRun = Get-CIPPAzDataTableEntity @LastRunTable -Filter $Filter
-        $Yesterday = (Get-Date).AddDays(-1)
-        if (-not $LastRun.Timestamp.DateTime -or ($LastRun.Timestamp.DateTime -le $Yesterday)) {
-            try {
-                $VppTokens = (New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/deviceAppManagement/vppTokens' -tenantid $TenantFilter).value
-                foreach ($Vpp in $VppTokens) {
-                    if ($Vpp.state -ne 'valid') {
-                        Write-AlertMessage -tenant $($TenantFilter) -message 'Apple Volume Purchase Program Token is not valid, new token required'
-                    }
-                    if ($Vpp.expirationDateTime -lt (Get-Date).AddDays(30) -and $Vpp.expirationDateTime -gt (Get-Date).AddDays(-7)) {
-                        Write-AlertMessage -tenant $($TenantFilter) -message ('Apple Volume Purchase Program token expiring on {0}' -f $Vpp.expirationDateTime)
-                    }
+        try {
+            $VppTokens = (New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/deviceAppManagement/vppTokens' -tenantid $TenantFilter).value
+            $AlertData = foreach ($Vpp in $VppTokens) {
+                if ($Vpp.state -ne 'valid') {
+                    'Apple Volume Purchase Program Token is not valid, new token required'
                 }
-            } catch {}
-            $LastRun = @{
-                RowKey       = 'VppTokenExpiry'
-                PartitionKey = $TenantFilter
+                if ($Vpp.expirationDateTime -lt (Get-Date).AddDays(30) -and $Vpp.expirationDateTime -gt (Get-Date).AddDays(-7)) {
+                    'Apple Volume Purchase Program token expiring on {0}' -f $Vpp.expirationDateTime
+                }
             }
-            Add-CIPPAzDataTableEntity @LastRunTable -Entity $LastRun -Force
-        }
+            Write-AlertTrace -cmdletName $MyInvocation.MyCommand -tenantFilter $TenantFilter -data $AlertData
+
+        } catch {}
+        
     } catch {
         # Error handling
     }

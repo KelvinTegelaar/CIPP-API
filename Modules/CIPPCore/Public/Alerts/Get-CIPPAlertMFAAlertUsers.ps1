@@ -13,7 +13,9 @@ function Get-CIPPAlertMFAAlertUsers {
 
         $users = New-GraphGETRequest -uri 'https://graph.microsoft.com/beta/reports/authenticationMethods/userRegistrationDetails?$top=999&filter=isMfaRegistered eq false and userType eq ''member''&$select=userPrincipalName,lastUpdatedDateTime,isMfaRegistered' -tenantid $($TenantFilter)
         if ($users.UserPrincipalName) {
-            Write-AlertMessage -tenant $TenantFilter -message "The following $($users.Count) users do not have MFA registered: $($users.UserPrincipalName -join ', ')"
+            $AlertData = "The following $($users.Count) users do not have MFA registered: $($users.UserPrincipalName -join ', ')"
+            Write-AlertTrace -cmdletName $MyInvocation.MyCommand -tenantFilter $TenantFilter -data $AlertData
+
         }
 
     } catch {

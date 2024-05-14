@@ -19,7 +19,9 @@ function Get-CIPPAlertMFAAdmins {
         if (!$DuoActive) {
             $users = New-GraphGETRequest -uri 'https://graph.microsoft.com/beta/reports/authenticationMethods/userRegistrationDetails?$top=999&$filter=IsAdmin eq true' -tenantid $($TenantFilter) | Where-Object -Property 'isMfaRegistered' -EQ $false
             if ($users.UserPrincipalName) {
-                Write-AlertMessage -tenant $TenantFilter -message "The following admins do not have MFA registered: $($users.UserPrincipalName -join ', ')"
+                $AlertData = "The following admins do not have MFA registered: $($users.UserPrincipalName -join ', ')"
+                Write-AlertTrace -cmdletName $MyInvocation.MyCommand -tenantFilter $TenantFilter -data $AlertData
+
             }
         } else {
             Write-LogMessage -message 'Potentially using Duo for MFA, could not check MFA status for Admins with 100% accuracy' -API 'MFA Alerts - Informational' -tenant $TenantFilter -sev Info
