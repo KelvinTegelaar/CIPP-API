@@ -66,7 +66,6 @@ function Invoke-CippWebhookProcessing {
                 Write-Host 'Going to send the mail'
                 Send-CIPPAlert -Type 'email' -Title $GenerateEmail.title -HTMLContent $GenerateEmail.htmlcontent -TenantFilter $TenantFilter
                 Write-Host 'email should be sent'
-
             }
             'generatePSA' {
                 $GenerateEmail = New-CIPPAlertTemplate -format 'html' -data $Data -ActionResults $ActionResults

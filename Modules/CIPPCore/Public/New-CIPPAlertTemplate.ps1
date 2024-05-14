@@ -18,6 +18,7 @@ function New-CIPPAlertTemplate {
     $Table = ''
     $LocationInfo = $LocationInfo | Select-Object * -ExcludeProperty Etag, PartitionKey, RowKey, TimeStamp
     #TODO: This needs to be revised as the variables have incorrect names. how did I miss this?
+    $filter = ($Data.CIPPConditions | ForEach-Object { "When $($_.Property.label) is $($_.Operator.label) $($_.input.value)" }) -join ' and '
     switch ($Data.Operation) {
         'New-InboxRule' {
             $Title = "$($TenantFilter) - New Rule Detected for $($data.UserId)"
@@ -50,7 +51,7 @@ function New-CIPPAlertTemplate {
         'Add member to role.' {
             $Title = "$($TenantFilter) - Role change detected for $($data.ObjectId)"
             $Table = ($data.ModifiedProperties | ConvertTo-Html -Fragment | Out-String).Replace('<table>', ' <table class="table-modern">')
-            $IntroText = "<p>$($data.UserId) has added $($data.ObjectId) to the $(($data.ModifiedProperties | Where-Object -Property Name -EQ 'Role.DisplayName').NewValue) role. The information about the role can be found in the table below.</p>$Table"
+            $IntroText = "<p>$($data.UserId) has added $($data.ObjectId) to the $(($data.ModifiedProperties.'Role.DisplayName')) role. The information about the role can be found in the table below.</p>$Table"
             if ($ActionResults) { $IntroText = $IntroText + "<p>Based on the rule, the following actions have been taken: $($ActionResults -join '<br/>' )</p>" }
             if ($LocationInfo) {
                 $LocationTable = ($LocationInfo | ConvertTo-Html -Fragment -As List | Out-String).Replace('<table>', ' <table class="table-modern">')
@@ -167,7 +168,7 @@ function New-CIPPAlertTemplate {
         default {
             $Title = 'A custom alert has occured'
             $Table = ($data | ConvertTo-Html -Fragment -As List | Out-String).Replace('<table>', ' <table class="table-modern">')
-            $IntroText = "<p>You have setup CIPP to send you a custom alert for the event $($Data.operation)</p>$Table"
+            $IntroText = "<p>You have setup CIPP to send you a custom alert for the audit events that follow this filter: $Filter </p>$Table"
             if ($ActionResults) { $IntroText = $IntroText + "<p>Based on the rule, the following actions have been taken: $($ActionResults -join '<br/>' )</p>" }
             if ($LocationInfo) {
                 $LocationTable = ($LocationInfo | ConvertTo-Html -Fragment -As List | Out-String).Replace('<table>', ' <table class="table-modern">')

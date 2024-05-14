@@ -184,7 +184,7 @@ function Invoke-PublicWebhooks {
                             $ReturnedData = $ProcessedData | Where-Object { Invoke-Expression $clause.clause } | Select-Object *, CIPPAction, CIPPClause -ErrorAction SilentlyContinue
                             if ($ReturnedData) {
                                 $ReturnedData.CIPPAction = $clause.expectedAction
-                                $ReturnedData.CIPPClause = $clause.clause
+                                $ReturnedData.CIPPClause = ($clause.clause | ForEach-Object { "When $($_.Property.label) is $($_.Operator.label) $($_.input.value)" }) -join ' and '
                             }
                             $ReturnedData
                         }
