@@ -185,7 +185,7 @@ function Invoke-PublicWebhooks {
                             }
                            
                         }
-                        Write-Host "Webhook: The list of operations in the data are $($ReturnedData.operation -join ', ')"                        
+                        Write-Host "Webhook: The list of operations in the data are $($ProcessedData.operation -join ', ')"                        
 
                         $DataToProcess = foreach ($clause in $Where) {
                             Write-Host "Webhook: Processing clause: $($clause.clause)"
