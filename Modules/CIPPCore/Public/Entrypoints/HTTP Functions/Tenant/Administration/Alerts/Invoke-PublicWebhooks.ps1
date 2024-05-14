@@ -101,13 +101,25 @@ function Invoke-PublicWebhooks {
                         }
 
 
-                        $PreProccessedData = $Data | Select-Object *, CIPPGeoLocation, CIPPBadRepIP, CIPPHostedIP, CIPPIPDetected, CIPPLocationInfo -ErrorAction SilentlyContinue
+                        $PreProccessedData = $Data | Select-Object *, CIPPGeoLocation, CIPPBadRepIP, CIPPHostedIP, CIPPIPDetected, CIPPLocationInfo, CIPPExtendedProperties, CIPPDeviceProperties, CIPPParameters, CIPPModifiedProperties -ErrorAction SilentlyContinue
                         $LocationTable = Get-CIPPTable -TableName 'knownlocationdb'
                         $ProcessedData = foreach ($Data in $PreProccessedData) {
-                            if ($Data.ExtendedProperties) { $Data.ExtendedProperties | ForEach-Object { $data | Add-Member -NotePropertyName $_.Name -NotePropertyValue $_.Value -Force -ErrorAction SilentlyContinue } }
-                            if ($Data.DeviceProperties) { $Data.DeviceProperties | ForEach-Object { $data | Add-Member -NotePropertyName $_.Name -NotePropertyValue $_.Value -Force -ErrorAction SilentlyContinue } }
-                            if ($Data.parameters) { $Data.parameters | ForEach-Object { $data | Add-Member -NotePropertyName $_.Name -NotePropertyValue $_.Value -Force -ErrorAction SilentlyContinue } }
-                            if ($Data.ModifiedProperties) { $Data.ModifiedProperties | ForEach-Object { $data | Add-Member -NotePropertyName "$($_.Name)" -NotePropertyValue "$($_.NewValue)" -Force -ErrorAction SilentlyContinue } }
+                            if ($Data.ExtendedProperties) {
+                                $Data.CIPPExtendedProperties = ($Data.ExtendedProperties | ConvertTo-Json)
+                                $Data.ExtendedProperties | ForEach-Object { $data | Add-Member -NotePropertyName $_.Name -NotePropertyValue $_.Value -Force -ErrorAction SilentlyContinue } 
+                            }
+                            if ($Data.DeviceProperties) { 
+                                $Data.CIPPDeviceProperties = ($Data.DeviceProperties | ConvertTo-Json)
+                                $Data.DeviceProperties | ForEach-Object { $data | Add-Member -NotePropertyName $_.Name -NotePropertyValue $_.Value -Force -ErrorAction SilentlyContinue } 
+                            }
+                            if ($Data.parameters) { 
+                                $Data.CIPPParameters = ($Data.parameters | ConvertTo-Json)
+                                $Data.parameters | ForEach-Object { $data | Add-Member -NotePropertyName $_.Name -NotePropertyValue $_.Value -Force -ErrorAction SilentlyContinue } 
+                            }
+                            if ($Data.ModifiedProperties) { 
+                                $Data.CIPPModifiedProperties = ($Data.ModifiedProperties | ConvertTo-Json)
+                                $Data.ModifiedProperties | ForEach-Object { $data | Add-Member -NotePropertyName "$($_.Name)" -NotePropertyValue "$($_.NewValue)" -Force -ErrorAction SilentlyContinue } 
+                            }
                             if ($Data.ModifiedProperties) { $Data.ModifiedProperties | ForEach-Object { $data | Add-Member -NotePropertyName $("Previous_Value_$($_.Name)") -NotePropertyValue "$($_.OldValue)" -Force -ErrorAction SilentlyContinue } }
                           
                             if ($data.clientip) {

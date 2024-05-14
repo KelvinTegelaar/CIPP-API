@@ -20,7 +20,7 @@ function New-CIPPAlertTemplate {
     switch ($Data.Operation) {
         'New-InboxRule' {
             $Title = "$($TenantFilter) - New Rule Detected for $($data.UserId)"
-            $RuleTable = ($TableObj | ConvertTo-Html -Fragment | Out-String).Replace('<table>', ' <table class="table-modern">')
+            $RuleTable = ($Data | ConvertTo-Html -Fragment | Out-String).Replace('<table>', ' <table class="table-modern">')
             $ParameterName
             $IntroText = "<p>A new rule has been created for the user $($data.UserId). You should check if this rule is not malicious. The rule information can be found in the table below.</p>$RuleTable"
             if ($ActionResults) { $IntroText = $IntroText + "<p>Based on the rule, the following actions have been taken: $($ActionResults -join '<br/>' )</p>" }
