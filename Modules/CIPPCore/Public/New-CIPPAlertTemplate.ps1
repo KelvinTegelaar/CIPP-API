@@ -17,6 +17,7 @@ function New-CIPPAlertTemplate {
     $RuleTable = ''
     $Table = ''
     $LocationInfo = $LocationInfo | Select-Object * -ExcludeProperty Etag, PartitionKey, RowKey, TimeStamp
+    #TODO: This needs to be revised as the variables have incorrect names. how did I miss this?
     switch ($Data.Operation) {
         'New-InboxRule' {
             $Title = "$($TenantFilter) - New Rule Detected for $($data.UserId)"
@@ -135,63 +136,6 @@ function New-CIPPAlertTemplate {
             $ButtonText = 'User Management'
             $AfterButtonText = '<p>If this is incorrect, use the user management screen to unblock the users sign-in</p>'
 
-        }
-        'AdminLoggedIn' {
-            $Table = ($TableObj | ConvertTo-Html -Fragment -As List | Out-String).Replace('<table>', ' <table class="table-modern">')
-            if ($Appname) { $AppName = $AppName.'Application Name' } else { $appName = $data.ApplicationId }
-            $Title = "$($TenantFilter) - an admin account has logged on"
-            $IntroText = "$($data.UserId) ($($data.Userkey)) has logged on from IP $($data.ClientIP) to the application $($Appname). See the table below for more information. $Table"
-            if ($ActionResults) { $IntroText = $IntroText + "<p>Based on the rule, the following actions have been taken: $($ActionResults -join '<br/>' )</p>" }
-            if ($LocationInfo) {
-                $LocationTable = ($LocationInfo | ConvertTo-Html -Fragment -As List | Out-String).Replace('<table>', ' <table class="table-modern">')
-                $IntroText = $IntroText + "<p>The location information for this IP is as follows:</p>$LocationTable"
-            }
-            $ButtonUrl = "$CIPPPURL/identity/administration/ViewBec?userId=$($data.UserKey)&tenantDomain=$($data.OrganizationId)"
-            $ButtonText = 'User Management'
-            $AfterButtonText = '<p>If this is incorrect, use the user management screen to block the user and revoke the sessions</p>'
-
-        }
-        'UserLoggedInFromUnknownLocation' {
-            $Table = ($TableObj | ConvertTo-Html -Fragment -As List | Out-String).Replace('<table>', ' <table class="table-modern">')
-            if ($Appname) { $AppName = $AppName.'Application Name' } else { $appName = $data.ApplicationId }
-            $Title = "$($TenantFilter) - a user has logged on from a potentially unsafe location"
-            $IntroText = "$($data.UserId) ($($data.Userkey)) has logged on from IP $($data.ClientIP) to the application $($Appname). According to our database this is located in $($LocationInfo.Country) - $($LocationInfo.City). <br/><br> You have set up alerts to be notified when this happens. See the table below for more info.$Table"
-            if ($ActionResults) { $IntroText = $IntroText + "<p>Based on the rule, the following actions have been taken: $($ActionResults -join '<br/>' )</p>" }
-            if ($LocationInfo) {
-                $LocationTable = ($LocationInfo | ConvertTo-Html -Fragment -As List | Out-String).Replace('<table>', ' <table class="table-modern">')
-                $IntroText = $IntroText + "<p>The location information for this IP is as follows:</p>$LocationTable"
-            }
-            $ButtonUrl = "$CIPPPURL/identity/administration/ViewBec?userId=$($data.ObjectId)&tenantDomain=$($data.OrganizationId)"
-            $ButtonText = 'User Management'
-            $AfterButtonText = '<p>If this is incorrect, use the user management screen to block the user and revoke the sessions</p>'
-        }
-        'BadRepIP' {
-            $Table = ($TableObj | ConvertTo-Html -Fragment -As List | Out-String).Replace('<table>', ' <table class="table-modern">')
-            if ($Appname) { $AppName = $AppName.'Application Name' } else { $appName = $data.ApplicationId }
-            $Title = "$($TenantFilter) - a user has logged on from a potentially unsafe location"
-            $IntroText = "$($data.UserId) ($($data.Userkey)) has logged on from IP $($data.ClientIP) to the application $($Appname). According to our database this is located in $($LocationInfo.Country) - $($LocationInfo.City), but is a VPN, Proxy, or IP anonimizing service. <br/><br> You have set up alerts to be notified when this happens. See the table below for more info.$Table"
-            if ($ActionResults) { $IntroText = $IntroText + "<p>Based on the rule, the following actions have been taken: $($ActionResults -join '<br/>' )</p>" }
-            if ($LocationInfo) {
-                $LocationTable = ($LocationInfo | ConvertTo-Html -Fragment -As List | Out-String).Replace('<table>', ' <table class="table-modern">')
-                $IntroText = $IntroText + "<p>The location information for this IP is as follows:</p>$LocationTable"
-            }
-            $ButtonUrl = "$CIPPPURL/tenant/tools/geoiplookup?ip=$($data.ClientIP)&SearchNow=true&customerId=$($data.OrganizationId)"
-            $ButtonText = 'Whitelist IP'
-            $AfterButtonText = '<p>If this is incorrect, you can whitelist the following IP.</p>'
-        }
-        'HostedIP' {
-            $Table = ($TableObj | ConvertTo-Html -Fragment -As List | Out-String).Replace('<table>', ' <table class="table-modern">')
-            if ($Appname) { $AppName = $AppName.'Application Name' } else { $appName = $data.ApplicationId }
-            $Title = "$($TenantFilter) - a user has logged on from a potentially unsafe location"
-            $IntroText = "$($data.UserId) ($($data.Userkey)) has logged on from IP $($data.ClientIP) to the application $($Appname). According to our database this is located in $($LocationInfo.Country) - $($LocationInfo.City), but this IP is also belonging to a Hosting Provider, such as Microsoft, Google, or other cloud service. <br/><br> You have set up alerts to be notified when this happens. See the table below for more info.$Table"
-            if ($ActionResults) { $IntroText = $IntroText + "<p>Based on the rule, the following actions have been taken: $($ActionResults -join '<br/>' )</p>" }
-            if ($LocationInfo) {
-                $LocationTable = ($LocationInfo | ConvertTo-Html -Fragment -As List | Out-String).Replace('<table>', ' <table class="table-modern">')
-                $IntroText = $IntroText + "<p>The location information for this IP is as follows:</p>$LocationTable"
-            }
-            $ButtonUrl = "$CIPPPURL/tenant/tools/geoiplookup?ip=$($data.ClientIP)&SearchNow=true&customerId=$($data.OrganizationId)"
-            $ButtonText = 'Whitelist IP'
-            $AfterButtonText = '<p>If this is incorrect, you can whitelist the following IP.</p>'
         }
         'Add service principal.' {
             if ($Appname) { $AppName = $AppName.'Application Name' } else { $appName = $data.ApplicationId }
