@@ -185,9 +185,10 @@ function Invoke-PublicWebhooks {
                             }
                            
                         }
-                        
+                        Write-Host "Webhook: The list of operations in the data are $($ReturnedData.operation -join ', ')"                        
+
                         $DataToProcess = foreach ($clause in $Where) {
-                            Write-Host "Webhook: Processing clause: $($clause.clause)"                        
+                            Write-Host "Webhook: Processing clause: $($clause.clause)"
                             Write-Host "Webhook: If this clause would be true, the action would be: $($clause.expectedAction)"
                             $ReturnedData = $ProcessedData | Where-Object { Invoke-Expression $clause.clause } | Select-Object *, CIPPAction, CIPPClause -ErrorAction SilentlyContinue
                             if ($ReturnedData) {
