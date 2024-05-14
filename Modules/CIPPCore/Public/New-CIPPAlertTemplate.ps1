@@ -16,9 +16,7 @@ function New-CIPPAlertTemplate {
     $AfterButtonText = ''
     $RuleTable = ''
     $Table = ''
-    $LocationInfo = $LocationInfo | Select-Object * -ExcludeProperty Etag, PartitionKey, RowKey, TimeStamp
-    #TODO: This needs to be revised as the variables have incorrect names. how did I miss this?
-    $filter = ($Data.CIPPConditions | ForEach-Object { "When $($_.Property.label) is $($_.Operator.label) $($_.input.value)" }) -join ' and '
+    $LocationInfo = $Data.CIPPLocationInfo | ConvertFrom-Json -ErrorAction SilentlyContinue | Select-Object * -ExcludeProperty Etag, PartitionKey, RowKey, TimeStamp
     switch ($Data.Operation) {
         'New-InboxRule' {
             $Title = "$($TenantFilter) - New Rule Detected for $($data.UserId)"
@@ -28,7 +26,7 @@ function New-CIPPAlertTemplate {
             if ($ActionResults) { $IntroText = $IntroText + "<p>Based on the rule, the following actions have been taken: $($ActionResults -join '<br/>' )</p>" }
             if ($LocationInfo) {
                 $LocationTable = ($LocationInfo | ConvertTo-Html -Fragment -As List | Out-String).Replace('<table>', ' <table class="table-modern">')
-                $IntroText = $IntroText + "<p>The location information for this IP is as follows:</p>$LocationTable"
+                $IntroText = $IntroText + "<p>The (potential) location information for this IP is as follows:</p>$LocationTable"
             }
             $ButtonUrl = "$CIPPPURL/identity/administration/ViewBec?userId=$($data.UserId)&tenantDomain=$($data.OrganizationId)"
             $ButtonText = 'Start BEC Investigation'
@@ -42,7 +40,7 @@ function New-CIPPAlertTemplate {
             if ($ActionResults) { $IntroText = $IntroText + "<p>Based on the rule, the following actions have been taken: $($ActionResults -join '<br/>' )</p>" }
             if ($LocationInfo) {
                 $LocationTable = ($LocationInfo | ConvertTo-Html -Fragment -As List | Out-String).Replace('<table>', ' <table class="table-modern">')
-                $IntroText = $IntroText + "<p>The location information for this IP is as follows:</p>$LocationTable"
+                $IntroText = $IntroText + "<p>The (potential) location information for this IP is as follows:</p>$LocationTable"
             }
             $ButtonUrl = "$CIPPPURL/identity/administration/ViewBec?userId=$($data.UserId)&tenantDomain=$($data.OrganizationId)"
             $ButtonText = 'Start BEC Investigation'
@@ -55,7 +53,7 @@ function New-CIPPAlertTemplate {
             if ($ActionResults) { $IntroText = $IntroText + "<p>Based on the rule, the following actions have been taken: $($ActionResults -join '<br/>' )</p>" }
             if ($LocationInfo) {
                 $LocationTable = ($LocationInfo | ConvertTo-Html -Fragment -As List | Out-String).Replace('<table>', ' <table class="table-modern">')
-                $IntroText = $IntroText + "<p>The location information for this IP is as follows:</p>$LocationTable"
+                $IntroText = $IntroText + "<p>The (potential) location information for this IP is as follows:</p>$LocationTable"
             }
             $ButtonUrl = "$CIPPPURL/identity/administration/roles?customerId=$($data.OrganizationId)"
             $ButtonText = 'Role Management'
@@ -68,7 +66,7 @@ function New-CIPPAlertTemplate {
             if ($ActionResults) { $IntroText = $IntroText + "<p>Based on the rule, the following actions have been taken: $($ActionResults -join '<br/>' )</p>" }
             if ($LocationInfo) {
                 $LocationTable = ($LocationInfo | ConvertTo-Html -Fragment -As List | Out-String).Replace('<table>', ' <table class="table-modern">')
-                $IntroText = $IntroText + "<p>The location information for this IP is as follows:</p>$LocationTable"
+                $IntroText = $IntroText + "<p>The (potential) location information for this IP is as follows:</p>$LocationTable"
             }
             $ButtonUrl = "$CIPPPURL/identity/administration/users?customerId=$($data.OrganizationId)"
             $ButtonText = 'User Management'
@@ -81,7 +79,7 @@ function New-CIPPAlertTemplate {
             if ($ActionResults) { $IntroText = $IntroText + "<p>Based on the rule, the following actions have been taken: $($ActionResults -join '<br/>' )</p>" }
             if ($LocationInfo) {
                 $LocationTable = ($LocationInfo | ConvertTo-Html -Fragment -As List | Out-String).Replace('<table>', ' <table class="table-modern">')
-                $IntroText = $IntroText + "<p>The location information for this IP is as follows:</p>$LocationTable"
+                $IntroText = $IntroText + "<p>The (potential) location information for this IP is as follows:</p>$LocationTable"
             }
             $ButtonText = 'User Management'
             $AfterButtonText = '<p>If this is incorrect, use the user management screen to unblock the users sign-in</p>'
@@ -93,7 +91,7 @@ function New-CIPPAlertTemplate {
             if ($ActionResults) { $IntroText = $IntroText + "<p>Based on the rule, the following actions have been taken: $($ActionResults -join '<br/>' )</p>" }
             if ($LocationInfo) {
                 $LocationTable = ($LocationInfo | ConvertTo-Html -Fragment -As List | Out-String).Replace('<table>', ' <table class="table-modern">')
-                $IntroText = $IntroText + "<p>The location information for this IP is as follows:</p>$LocationTable"
+                $IntroText = $IntroText + "<p>The (potential) location information for this IP is as follows:</p>$LocationTable"
             }
             $ButtonText = 'User Management'
             $AfterButtonText = '<p>If this is incorrect, use the user management screen to unblock the users sign-in</p>'
@@ -104,7 +102,7 @@ function New-CIPPAlertTemplate {
             if ($ActionResults) { $IntroText = $IntroText + "<p>Based on the rule, the following actions have been taken: $($ActionResults -join '<br/>' )</p>" }
             if ($LocationInfo) {
                 $LocationTable = ($LocationInfo | ConvertTo-Html -Fragment -As List | Out-String).Replace('<table>', ' <table class="table-modern">')
-                $IntroText = $IntroText + "<p>The location information for this IP is as follows:</p>$LocationTable"
+                $IntroText = $IntroText + "<p>The (potential) location information for this IP is as follows:</p>$LocationTable"
             }
             $ButtonUrl = "$CIPPPURL/identity/administration/users?customerId=$($data.OrganizationId)"
             $ButtonText = 'User Management'
@@ -117,7 +115,7 @@ function New-CIPPAlertTemplate {
             if ($ActionResults) { $IntroText = $IntroText + "<p>Based on the rule, the following actions have been taken: $($ActionResults -join '<br/>' )</p>" }
             if ($LocationInfo) {
                 $LocationTable = ($LocationInfo | ConvertTo-Html -Fragment -As List | Out-String).Replace('<table>', ' <table class="table-modern">')
-                $IntroText = $IntroText + "<p>The location information for this IP is as follows:</p>$LocationTable"
+                $IntroText = $IntroText + "<p>The (potential) location information for this IP is as follows:</p>$LocationTable"
             }
             $ButtonUrl = "$CIPPPURL/identity/administration/roles?customerId=$($data.OrganizationId)"
             $ButtonText = 'Role Management'
@@ -131,7 +129,7 @@ function New-CIPPAlertTemplate {
             if ($ActionResults) { $IntroText = $IntroText + "<p>Based on the rule, the following actions have been taken: $($ActionResults -join '<br/>' )</p>" }
             if ($LocationInfo) {
                 $LocationTable = ($LocationInfo | ConvertTo-Html -Fragment -As List | Out-String).Replace('<table>', ' <table class="table-modern">')
-                $IntroText = $IntroText + "<p>The location information for this IP is as follows:</p>$LocationTable"
+                $IntroText = $IntroText + "<p>The (potential) location information for this IP is as follows:</p>$LocationTable"
             }
             $ButtonUrl = "$CIPPPURL/identity/administration/users?customerId=$($data.OrganizationId)"
             $ButtonText = 'User Management'
@@ -145,7 +143,7 @@ function New-CIPPAlertTemplate {
             if ($ActionResults) { $IntroText = $IntroText + "<p>Based on the rule, the following actions have been taken: $($ActionResults -join '<br/>' )</p>" }
             if ($LocationInfo) {
                 $LocationTable = ($LocationInfo | ConvertTo-Html -Fragment -As List | Out-String).Replace('<table>', ' <table class="table-modern">')
-                $IntroText = $IntroText + "<p>The location information for this IP is as follows:</p>$LocationTable"
+                $IntroText = $IntroText + "<p>The (potential) location information for this IP is as follows:</p>$LocationTable"
             }
             $IntroText = "$($data.ObjectId) has been added by $($data.UserId)."
             $ButtonUrl = "$CIPPPURL/tenant/administration/enterprise-apps?customerId=?customerId=$($data.OrganizationId)"
@@ -158,7 +156,7 @@ function New-CIPPAlertTemplate {
             if ($ActionResults) { $IntroText = $IntroText + "<p>Based on the rule, the following actions have been taken: $($ActionResults -join '<br/>' )</p>" }
             if ($LocationInfo) {
                 $LocationTable = ($LocationInfo | ConvertTo-Html -Fragment -As List | Out-String).Replace('<table>', ' <table class="table-modern">')
-                $IntroText = $IntroText + "<p>The location information for this IP is as follows:</p>$LocationTable"
+                $IntroText = $IntroText + "<p>The (potential) location information for this IP is as follows:</p>$LocationTable"
             }
             $IntroText = "$($data.ObjectId) has been added by $($data.UserId)."
             $ButtonUrl = "$CIPPPURL/tenant/administration/enterprise-apps?customerId=?customerId=$($data.OrganizationId)"
@@ -172,7 +170,7 @@ function New-CIPPAlertTemplate {
             if ($ActionResults) { $IntroText = $IntroText + "<p>Based on the rule, the following actions have been taken: $($ActionResults -join '<br/>' )</p>" }
             if ($LocationInfo) {
                 $LocationTable = ($LocationInfo | ConvertTo-Html -Fragment -As List | Out-String).Replace('<table>', ' <table class="table-modern">')
-                $IntroText = $IntroText + "<p>The location information for this IP is as follows:</p>$LocationTable"
+                $IntroText = $IntroText + "<p>The (potential) location information for this IP is as follows:</p>$LocationTable"
             }
             $ButtonUrl = "$CIPPPURL/identity/administration/users?customerId=$($data.OrganizationId)"
             $ButtonText = 'User Management'

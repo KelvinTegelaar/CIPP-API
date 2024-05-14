@@ -147,6 +147,7 @@ function Invoke-PublicWebhooks {
                                 $Data.CIPPBadRepIP = $Proxy
                                 $Data.CIPPHostedIP = $hosting
                                 $Data.CIPPIPDetected = $IP
+                                $Data.CIPPLocationInfo = ($Location | ConvertTo-Json)
                             }
                             $Data | Select-Object * -ExcludeProperty ExtendedProperties, DeviceProperties, parameters
                         }
