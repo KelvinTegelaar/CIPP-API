@@ -161,7 +161,20 @@ function New-CIPPAlertTemplate {
             $ButtonUrl = "$CIPPPURL/tenant/administration/enterprise-apps?customerId=?customerId=$($data.OrganizationId)"
             $ButtonText = 'Enterprise Apps'
         }
-
+        'UserLoggedIn' {
+            $Table = ($data | ConvertTo-Html -Fragment -As List | Out-String).Replace('<table>', ' <table class="table-modern">')
+            if ($Appname) { $AppName = $AppName.'Application Name' } else { $appName = $data.ApplicationId }
+            $Title = "$($TenantFilter) - a user has logged on from a location you've set up to receive alerts for."
+            $IntroText = "$($data.UserId) ($($data.Userkey)) has logged on from IP $($data.ClientIP) to the application $($Appname). According to our database this is located in $($LocationInfo.Country) - $($LocationInfo.City). <br/><br> You have set up alerts to be notified when this happens. See the table below for more info.$Table"
+            if ($ActionResults) { $IntroText = $IntroText + "<p>Based on the rule, the following actions have been taken: $($ActionResults -join '<br/>' )</p>" }
+            if ($LocationInfo) {
+                $LocationTable = ($LocationInfo | ConvertTo-Html -Fragment -As List | Out-String).Replace('<table>', ' <table class="table-modern">')
+                $IntroText = $IntroText + "<p>The (potential) location information for this IP is as follows:</p>$LocationTable"
+            }
+            $ButtonUrl = "$CIPPPURL/identity/administration/ViewBec?userId=$($data.ObjectId)&tenantDomain=$($data.OrganizationId)"
+            $ButtonText = 'User Management'
+            $AfterButtonText = '<p>If this is incorrect, use the user management screen to block the user and revoke the sessions</p>'
+        }
         default {
             $Title = 'A custom alert has occured'
             $Table = ($data | ConvertTo-Html -Fragment -As List | Out-String).Replace('<table>', ' <table class="table-modern">')
