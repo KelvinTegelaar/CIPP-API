@@ -94,7 +94,7 @@ function Invoke-PublicWebhooks {
                         }
 
 
-                        $PreProccessedData = $Data | Select-Object *, CIPPGeoLocation, CIPPBadRepIP, CIPPHostedIP, CIPPIPDetected, CIPPLocationInfo, CIPPExtendedProperties, CIPPDeviceProperties, CIPPParameters, CIPPModifiedProperties -ErrorAction SilentlyContinue
+                        $PreProccessedData = $Data | Select-Object *, CIPPAction, CIPPClause, CIPPGeoLocation, CIPPBadRepIP, CIPPHostedIP, CIPPIPDetected, CIPPLocationInfo, CIPPExtendedProperties, CIPPDeviceProperties, CIPPParameters, CIPPModifiedProperties -ErrorAction SilentlyContinue
                         $LocationTable = Get-CIPPTable -TableName 'knownlocationdb'
                         $ProcessedData = foreach ($Data in $PreProccessedData) {
                             if ($Data.ExtendedProperties) {
@@ -191,15 +191,16 @@ function Invoke-PublicWebhooks {
                         $DataToProcess = foreach ($clause in $Where) {
                             Write-Host "Webhook: Processing clause: $($clause.clause)"
                             Write-Host "Webhook: If this clause would be true, the action would be: $($clause.expectedAction)"
-                            $ReturnedData = $ProcessedData | Where-Object { Invoke-Expression $clause.clause } | Select-Object *, 'CIPPAction', 'CIPPClause' -ErrorAction SilentlyContinue
+                            $ReturnedData = $ProcessedData | Where-Object { Invoke-Expression $clause.clause }
                             if ($ReturnedData) {
+                                Write-Host 'Webhook: The clause is true, we will process the action.'
                                 $ReturnedData.CIPPAction = $clause.expectedAction
                                 $ReturnedData.CIPPClause = ($clause.clause | ForEach-Object { "When $($_.Property.label) is $($_.Operator.label) $($_.input.value)" }) -join ' and '
                             }
                             $ReturnedData
                         }
 
-                        Write-Host "Data to process found: $($DataToProcess.count) items"
+                        Write-Host "Webhook: Data to process found: $($DataToProcess.count) items"
                         foreach ($Item in $DataToProcess) {
                             Write-Host "Processing $($item.operation)"
                             ## Push webhook data to table
