@@ -4,8 +4,8 @@ function Invoke-CIPPStandardAPConfig {
     Internal
     #>
     param($Tenant, $Settings)
-    If ($Settings.remediate -eq $true) {
 
+    If ($Settings.remediate -eq $true) {
 
         $APINAME = 'Standards'
         try {
@@ -14,8 +14,9 @@ function Invoke-CIPPStandardAPConfig {
             $DeploymentMode = if ($settings.DeploymentMode -eq 'true') { 'shared' } else { 'singleUser' }
             Set-CIPPDefaultAPDeploymentProfile -tenantFilter $tenant -displayname $settings.DisplayName -description $settings.Description -usertype $usertype -DeploymentMode $DeploymentMode -assignto $settings.Assignto -devicenameTemplate $Settings.DeviceNameTemplate -allowWhiteGlove $Settings.allowWhiteGlove -CollectHash $Settings.CollectHash -hideChangeAccount $Settings.HideChangeAccount -hidePrivacy $Settings.HidePrivacy -hideTerms $Settings.HideTerms -Autokeyboard $Settings.Autokeyboard
         } catch {
-            #Write-LogMessage -API 'Standards' -tenant $tenant -message "Failed to create Default Autopilot config: $($_.exception.message)" -sev 'Error'
-            throw $_.Exception.Message
+            $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
+            #Write-LogMessage -API 'Standards' -tenant $tenant -message "Failed to create Default Autopilot config: $ErrorMessage" -sev 'Error'
+            throw $ErrorMessage
         }
 
     }
