@@ -16,7 +16,8 @@ function Invoke-CIPPStandardConditionalAccess {
         $JSONObj = (Get-AzDataTableEntity @Table -Filter $Filter).JSON
         $CAPolicy = New-CIPPCAPolicy -TenantFilter $tenant -state $request.body.NewState -RawJSON $JSONObj -Overwrite $true -APIName $APIName -ExecutingUser $request.headers.'x-ms-client-principal' -ReplacePattern 'displayName'
       } catch {
-        Write-LogMessage -API 'Standards' -tenant $tenant -message "Failed to create or update conditional access rule $($JSONObj.displayName): $($_.exception.message)" -sev 'Error'
+        $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
+        Write-LogMessage -API 'Standards' -tenant $tenant -message "Failed to create or update conditional access rule $($JSONObj.displayName). Error: $ErrorMessage" -sev 'Error'
       }
     }
 
