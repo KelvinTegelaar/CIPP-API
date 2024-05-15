@@ -21,7 +21,8 @@ function Set-CIPPAuthenticationPolicy {
         $CurrentInfo = New-GraphGetRequest -Uri "https://graph.microsoft.com/beta/policies/authenticationmethodspolicy/authenticationMethodConfigurations/$AuthenticationMethodId" -tenantid $Tenant
         $CurrentInfo.state = $State
     } catch {
-        Write-LogMessage -user $ExecutingUser -API $APIName -tenant $Tenant -message "Could not get CurrentInfo for $AuthenticationMethodId. Error:$($_.exception.message)" -sev Error
+        $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
+        Write-LogMessage -user $ExecutingUser -API $APIName -tenant $Tenant -message "Could not get CurrentInfo for $AuthenticationMethodId. Error:$ErrorMessage" -sev Error
         Return "Could not get CurrentInfo for $AuthenticationMethodId. Error:$($_.exception.message)"
     }
 
@@ -117,7 +118,8 @@ function Set-CIPPAuthenticationPolicy {
         return "Set $AuthenticationMethodId state to $State $OptionalLogMessage"
 
     } catch {
-        Write-LogMessage -user $ExecutingUser -API $APIName -tenant $Tenant -message "Failed to $State $AuthenticationMethodId Support: $($_.exception.message)" -sev Error -LogData (Get-CippException -Exception $_)
-        return "Failed to $State $AuthenticationMethodId Support: $($_.exception.message)"
+        Get-NormalizedError -Message $_.Exception.Message
+        Write-LogMessage -user $ExecutingUser -API $APIName -tenant $Tenant -message "Failed to $State $AuthenticationMethodId Support: $ErrorMessage" -sev Error -LogData (Get-CippException -Exception $_)
+        return "Failed to $State $AuthenticationMethodId Support: $ErrorMessage"
     }
 }

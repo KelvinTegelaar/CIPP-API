@@ -6,7 +6,7 @@ function Invoke-CIPPStandardAtpPolicyForO365 {
 
     param($Tenant, $Settings)
     $AtpPolicyForO365State = New-ExoRequest -tenantid $Tenant -cmdlet 'Get-AtpPolicyForO365' |
-    Select-Object EnableATPForSPOTeamsODB, EnableSafeDocs, AllowSafeDocsOpen
+        Select-Object EnableATPForSPOTeamsODB, EnableSafeDocs, AllowSafeDocsOpen
 
     $StateIsCorrect = if (
         ($AtpPolicyForO365State.EnableATPForSPOTeamsODB -eq $true) -and
@@ -20,15 +20,16 @@ function Invoke-CIPPStandardAtpPolicyForO365 {
         } else {
             $cmdparams = @{
                 EnableATPForSPOTeamsODB = $true
-                EnableSafeDocs = $true
-                AllowSafeDocsOpen = $Settings.AllowSafeDocsOpen
+                EnableSafeDocs          = $true
+                AllowSafeDocsOpen       = $Settings.AllowSafeDocsOpen
             }
 
             try {
                 New-ExoRequest -tenantid $Tenant -cmdlet 'Set-AntiPhishPolicy' -cmdparams $cmdparams
                 Write-LogMessage -API 'Standards' -tenant $Tenant -message 'Updated Atp Policy For O365' -sev Info
             } catch {
-                Write-LogMessage -API 'Standards' -tenant $Tenant -message "Failed to set Atp Policy For O365. Error: $($_.exception.message)" -sev Error
+                $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
+                Write-LogMessage -API 'Standards' -tenant $Tenant -message "Failed to set Atp Policy For O365. Error: $ErrorMessage" -sev Error
             }
         }
     }
