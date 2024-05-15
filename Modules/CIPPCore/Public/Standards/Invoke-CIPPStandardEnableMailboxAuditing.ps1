@@ -14,7 +14,8 @@ function Invoke-CIPPStandardEnableMailboxAuditing {
                 Write-LogMessage -API 'Standards' -tenant $Tenant -message 'Tenant level mailbox audit enabled' -sev Info
                 $LogMessage = 'Tenant level mailbox audit enabled. '
             } catch {
-                Write-LogMessage -API 'Standards' -tenant $Tenant -message "Failed to enable tenant level mailbox audit. Error: $($_.exception.message)" -sev Error
+                $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
+                Write-LogMessage -API 'Standards' -tenant $Tenant -message "Failed to enable tenant level mailbox audit. Error: $ErrorMessage" -sev Error
             }
         } else {
             $LogMessage = 'Tenant level mailbox audit already enabled. '
@@ -34,8 +35,9 @@ function Invoke-CIPPStandardEnableMailboxAuditing {
         $BatchResults = New-ExoBulkRequest -tenantid $tenant -cmdletArray $Request
         $BatchResults | ForEach-Object {
             if ($_.error) {
-                Write-Host "Failed to enable user level mailbox audit for $($_.target). Error: $($_.error)"
-                Write-LogMessage -API 'Standards' -tenant $Tenant -message "Failed to enable user level mailbox audit for $($_.target). Error: $($_.error)" -sev Error
+                $ErrorMessage = Get-NormalizedError -Message $_.error
+                Write-Host "Failed to enable user level mailbox audit for $($_.target). Error: $ErrorMessage"
+                Write-LogMessage -API 'Standards' -tenant $Tenant -message "Failed to enable user level mailbox audit for $($_.target). Error: $ErrorMessage" -sev Error
             }
         }
 
@@ -54,8 +56,9 @@ function Invoke-CIPPStandardEnableMailboxAuditing {
         $BatchResults = New-ExoBulkRequest -tenantid $tenant -cmdletArray $Request
         $BatchResults | ForEach-Object {
             if ($_.error) {
-                Write-Host "Failed to disable mailbox audit bypass for $($_.target). Error: $($_.error)"
-                Write-LogMessage -API 'Standards' -tenant $tenant -message "Failed to disable mailbox audit bypass for $($_.target). Error: $($_.error)" -sev Error
+                $ErrorMessage = Get-NormalizedError -Message $_.error
+                Write-Host "Failed to disable mailbox audit bypass for $($_.target). Error: $ErrorMessage"
+                Write-LogMessage -API 'Standards' -tenant $tenant -message "Failed to disable mailbox audit bypass for $($_.target). Error: $ErrorMessage" -sev Error
             }
         }
 

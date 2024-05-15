@@ -19,20 +19,26 @@ function Push-ExecScheduledCommand {
             $results = "Task Failed: $($_.Exception.Message)"
         }
 
-        Write-Host 'ran the command'
-        if ($results -is [String]) {
-            $results = @{ Results = $results }
-        }
-        if ($results -is [array] -and $results[0] -is [string]) {
-            $results = $results | Where-Object { $_ -is [string] }
-            $results = $results | ForEach-Object { @{ Results = $_ } }
-        }
-
-        if ($results -is [string]) {
-            $StoredResults = $results
+        Write-Host 'ran the command. Processing results'
+        if ($item.command -like 'Get-CIPPAlert*') {
+            $results = @($results)
+            $TaskType = 'Alert'
         } else {
-            $results = $results | Select-Object * -ExcludeProperty RowKey, PartitionKey
-            $StoredResults = $results | ConvertTo-Json -Compress -Depth 20 | Out-String
+            $TaskType = 'Scheduled Task'
+            if ($results -is [String]) {
+                $results = @{ Results = $results }
+            }
+            if ($results -is [array] -and $results[0] -is [string]) {
+                $results = $results | Where-Object { $_ -is [string] }
+                $results = $results | ForEach-Object { @{ Results = $_ } }
+            }
+
+            if ($results -is [string]) {
+                $StoredResults = $results
+            } else {
+                $results = $results | Select-Object * -ExcludeProperty RowKey, PartitionKey
+                $StoredResults = $results | ConvertTo-Json -Compress -Depth 20 | Out-String
+            }
         }
 
         if ($StoredResults.Length -gt 64000 -or $task.Tenant -eq 'AllTenants') {
@@ -40,7 +46,7 @@ function Push-ExecScheduledCommand {
         }
     } catch {
         $errorMessage = $_.Exception.Message
-        if ($task.Recurrence -gt 0) { $State = 'Failed - Planned' } else { $State = 'Failed' }
+        if ($task.Recurrence -ne 0) { $State = 'Failed - Planned' } else { $State = 'Failed' }
         Update-AzDataTableEntity @Table -Entity @{
             PartitionKey = $task.PartitionKey
             RowKey       = $task.RowKey
@@ -49,28 +55,31 @@ function Push-ExecScheduledCommand {
         }
         Write-LogMessage -API 'Scheduler_UserTasks' -tenant $tenant -message "Failed to execute task $($task.Name): $errorMessage" -sev Error
     }
+    Write-Host 'Sending task results to target. Updating the task state.'
 
-
-    $TableDesign = '<style>table.blueTable{border:1px solid #1C6EA4;background-color:#EEE;width:100%;text-align:left;border-collapse:collapse}table.blueTable td,table.blueTable th{border:1px solid #AAA;padding:3px 2px}table.blueTable tbody td{font-size:13px}table.blueTable tr:nth-child(even){background:#D0E4F5}table.blueTable thead{background:#1C6EA4;background:-moz-linear-gradient(top,#5592bb 0,#327cad 66%,#1C6EA4 100%);background:-webkit-linear-gradient(top,#5592bb 0,#327cad 66%,#1C6EA4 100%);background:linear-gradient(to bottom,#5592bb 0,#327cad 66%,#1C6EA4 100%);border-bottom:2px solid #444}table.blueTable thead th{font-size:15px;font-weight:700;color:#FFF;border-left:2px solid #D0E4F5}table.blueTable thead th:first-child{border-left:none}table.blueTable tfoot{font-size:14px;font-weight:700;color:#FFF;background:#D0E4F5;background:-moz-linear-gradient(top,#dcebf7 0,#d4e6f6 66%,#D0E4F5 100%);background:-webkit-linear-gradient(top,#dcebf7 0,#d4e6f6 66%,#D0E4F5 100%);background:linear-gradient(to bottom,#dcebf7 0,#d4e6f6 66%,#D0E4F5 100%);border-top:2px solid #444}table.blueTable tfoot td{font-size:14px}table.blueTable tfoot .links{text-align:right}table.blueTable tfoot .links a{display:inline-block;background:#1C6EA4;color:#FFF;padding:2px 8px;border-radius:5px}</style>'
-    $HTML = ($results | Select-Object * -ExcludeProperty RowKey, PartitionKey | ConvertTo-Html -Fragment) -replace '<table>', "$TableDesign<table class=blueTable>" | Out-String
-    $title = "Scheduled Task $($task.Name)"
-    Write-Host $title
-    switch -wildcard ($task.PostExecution) {
-        '*psa*' { Send-CIPPAlert -Type 'psa' -Title $title -HTMLContent $HTML }
-        '*email*' { Send-CIPPAlert -Type 'email' -Title $title -HTMLContent $HTML }
-        '*webhook*' {
-            $Webhook = [PSCustomObject]@{
-                'Tenant'   = $tenant
-                'TaskInfo' = $Item.TaskInfo
-                'Results'  = $Results
+    if ($Results) {
+        $TableDesign = '<style>table.blueTable{border:1px solid #1C6EA4;background-color:#EEE;width:100%;text-align:left;border-collapse:collapse}table.blueTable td,table.blueTable th{border:1px solid #AAA;padding:3px 2px}table.blueTable tbody td{font-size:13px}table.blueTable tr:nth-child(even){background:#D0E4F5}table.blueTable thead{background:#1C6EA4;background:-moz-linear-gradient(top,#5592bb 0,#327cad 66%,#1C6EA4 100%);background:-webkit-linear-gradient(top,#5592bb 0,#327cad 66%,#1C6EA4 100%);background:linear-gradient(to bottom,#5592bb 0,#327cad 66%,#1C6EA4 100%);border-bottom:2px solid #444}table.blueTable thead th{font-size:15px;font-weight:700;color:#FFF;border-left:2px solid #D0E4F5}table.blueTable thead th:first-child{border-left:none}table.blueTable tfoot{font-size:14px;font-weight:700;color:#FFF;background:#D0E4F5;background:-moz-linear-gradient(top,#dcebf7 0,#d4e6f6 66%,#D0E4F5 100%);background:-webkit-linear-gradient(top,#dcebf7 0,#d4e6f6 66%,#D0E4F5 100%);background:linear-gradient(to bottom,#dcebf7 0,#d4e6f6 66%,#D0E4F5 100%);border-top:2px solid #444}table.blueTable tfoot td{font-size:14px}table.blueTable tfoot .links{text-align:right}table.blueTable tfoot .links a{display:inline-block;background:#1C6EA4;color:#FFF;padding:2px 8px;border-radius:5px}</style>'
+        $FinalResults = if ($results -is [array] -and $results[0] -is [string]) { $Results | ConvertTo-Html -Fragment -Property @{ l = 'Text'; e = { $_ } } } else { $Results | ConvertTo-Html -Fragment }
+        $HTML = $FinalResults -replace '<table>', "$TableDesign<table class=blueTable>" | Out-String
+        $title = "$TaskType - $($task.Name)"
+        Write-Host 'Scheduler: Sending the results to the target.'
+        Write-Host "The content of results is: $Results"
+        switch -wildcard ($task.PostExecution) {
+            '*psa*' { Send-CIPPAlert -Type 'psa' -Title $title -HTMLContent $HTML }
+            '*email*' { Send-CIPPAlert -Type 'email' -Title $title -HTMLContent $HTML }
+            '*webhook*' {
+                $Webhook = [PSCustomObject]@{
+                    'Tenant'   = $tenant
+                    'TaskInfo' = $Item.TaskInfo
+                    'Results'  = $Results
+                }
+                Send-CIPPAlert -Type 'webhook' -Title $title -JSONContent $($Webhook | ConvertTo-Json -Depth 20)
             }
-            Send-CIPPAlert -Type 'webhook' -Title $title -JSONContent $($Webhook | ConvertTo-Json -Depth 20)
         }
     }
+    Write-Host 'Sent the results to the target. Updating the task state.'
 
-    Write-Host 'ran the command'
-
-    if ($task.Recurrence -le '0' -or $task.Recurrence -eq $null) {
+    if ($task.Recurrence -eq '0' -or $task.Recurrence -eq $null) {
         Update-AzDataTableEntity @Table -Entity @{
             PartitionKey = $task.PartitionKey
             RowKey       = $task.RowKey
@@ -78,8 +87,18 @@ function Push-ExecScheduledCommand {
             TaskState    = 'Completed'
         }
     } else {
-        $nextRun = (Get-Date).AddDays($task.Recurrence)
-        $nextRunUnixTime = [int64]($nextRun - (Get-Date '1/1/1970')).TotalSeconds
+        #if recurrence is just a number, add it in days.
+        if ($task.Recurrence -match '^\d+$') {
+            $task.Recurrence = $task.Recurrence + 'd'
+        }
+        $secondsToAdd = switch -Regex ($task.Recurrence) {
+            '(\d+)m$' { [int64]$matches[1] * 60 }
+            '(\d+)h$' { [int64]$matches[1] * 3600 }
+            '(\d+)d$' { [int64]$matches[1] * 86400 }
+            default { throw "Unsupported recurrence format: $($task.Recurrence)" }
+        }
+        $nextRunUnixTime = [int64]$task.ScheduledTime + [int64]$secondsToAdd
+        Write-Host "The job is recurring and should occur again at: $nextRunUnixTime"
         Update-AzDataTableEntity @Table -Entity @{
             PartitionKey  = $task.PartitionKey
             RowKey        = $task.RowKey
