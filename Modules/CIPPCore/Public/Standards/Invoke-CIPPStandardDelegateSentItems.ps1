@@ -4,7 +4,8 @@ function Invoke-CIPPStandardDelegateSentItems {
     Internal
     #>
     param($Tenant, $Settings)
-    $Mailboxes = New-ExoRequest -tenantid $Tenant -cmdlet 'Get-Mailbox' -cmdParams @{ RecipientTypeDetails = @('UserMailbox', 'SharedMailbox') } | Where-Object { $_.MessageCopyForSendOnBehalfEnabled -eq $false -or $_.MessageCopyForSentAsEnabled -eq $false }
+    $Mailboxes = New-ExoRequest -tenantid $Tenant -cmdlet 'Get-Mailbox' -cmdParams @{ RecipientTypeDetails = @('UserMailbox', 'SharedMailbox') } | 
+        Where-Object { $_.MessageCopyForSendOnBehalfEnabled -eq $false -or $_.MessageCopyForSentAsEnabled -eq $false }
 
     If ($Settings.remediate -eq $true) {
 
@@ -21,12 +22,14 @@ function Invoke-CIPPStandardDelegateSentItems {
                 $BatchResults = New-ExoBulkRequest -tenantid $tenant -cmdletArray $Request
                 $BatchResults | ForEach-Object {
                     if ($_.error) {
-                        Write-Host "Failed to apply Delegate Sent Items Style to $($_.target) Error: $($_.error)"
-                        Write-LogMessage -API 'Standards' -tenant $tenant -message "Failed to apply Delegate Sent Items Style to $($_.error.target) Error: $($_.error)" -sev Error
+                        $ErrorMessage = Get-NormalizedError -Message $_.error
+                        Write-Host "Failed to apply Delegate Sent Items Style to $($_.target) Error: $ErrorMessage"
+                        Write-LogMessage -API 'Standards' -tenant $tenant -message "Failed to apply Delegate Sent Items Style to $($_.error.target) Error: $ErrorMessage" -sev Error
                     }
                 }
             } catch {
-                Write-LogMessage -API 'Standards' -tenant $tenant -message "Failed to apply Delegate Sent Items Style. Error: $($_.exception.message)" -sev Error
+                $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
+                Write-LogMessage -API 'Standards' -tenant $tenant -message "Failed to apply Delegate Sent Items Style. Error: $ErrorMessage" -sev Error
             }
         } else {
             Write-LogMessage -API 'Standards' -tenant $tenant -message 'Delegate Sent Items Style already enabled.' -sev Info
