@@ -7,12 +7,6 @@
       "type": "timerTrigger"
     },
     {
-      "type": "queue",
-      "direction": "out",
-      "name": "NinjaProcess",
-      "queueName": "NinjaOneQueue"
-    },
-    {
       "name": "starter",
       "type": "durableClient",
       "direction": "in"

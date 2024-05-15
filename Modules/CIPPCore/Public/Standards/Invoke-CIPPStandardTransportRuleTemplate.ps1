@@ -28,7 +28,8 @@ function Invoke-CIPPStandardTransportRuleTemplate {
 
         Write-LogMessage -API $APINAME -tenant $Tenant -message "Created transport rule for $($tenantfilter)" -sev 'Debug'
       } catch {
-        Write-LogMessage -API 'Standards' -tenant $tenant -message "Could not create transport rule for $($tenantfilter): $($_.Exception.message)" -sev 'Error'
+        $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
+        Write-LogMessage -API 'Standards' -tenant $tenant -message "Could not create transport rule for $($tenantfilter): $ErrorMessage" -sev 'Error'
       }
     }
   }
