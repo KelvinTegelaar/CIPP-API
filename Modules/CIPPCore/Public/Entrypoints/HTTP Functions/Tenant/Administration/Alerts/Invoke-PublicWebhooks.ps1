@@ -85,6 +85,7 @@ function Invoke-PublicWebhooks {
                             Write-Host 'No tenants found for this webhook, probably an old entry. Skipping.'
                             continue
                         }
+                        Write-Host "Webhook: The received content-type for $($TenantFilter) is $($ReceivedItem.ContentType)"
                         if ($ReceivedItem.ContentType -in $Configuration.LogType) {
                             $Data = New-GraphPostRequest -type GET -uri "https://manage.office.com/api/v1.0/$($ReceivedItem.tenantId)/activity/feed/audit/$($ReceivedItem.contentid)" -tenantid $TenantFilter -scope 'https://manage.office.com/.default'
                         } else {
