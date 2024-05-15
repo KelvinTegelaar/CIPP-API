@@ -30,10 +30,12 @@ function Invoke-CIPPStandardMailContacts {
                 New-GraphPostRequest -tenantid $tenant -Uri "https://graph.microsoft.com/v1.0/organization/$($TenantID.id)" -asApp $true -Type patch -Body (ConvertTo-Json -InputObject $body) -ContentType 'application/json'
                 Write-LogMessage -API 'Standards' -tenant $tenant -message 'Contact emails set.' -sev Info
             } catch {
-                Write-LogMessage -API 'Standards' -tenant $tenant -message "Failed to set contact emails: $($_.exception.message)" -sev Error
+                $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
+                Write-LogMessage -API 'Standards' -tenant $tenant -message "Failed to set contact emails: $ErrorMessage" -sev Error
             }
         }
     }
+
     if ($Settings.alert -eq $true) {
 
         if ($CurrentInfo.marketingNotificationEmails -eq $Contacts.MarketingContact) {
