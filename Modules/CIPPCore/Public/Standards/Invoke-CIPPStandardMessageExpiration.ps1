@@ -4,10 +4,10 @@ function Invoke-CIPPStandardMessageExpiration {
     Internal
     #>
     param($Tenant, $Settings)
-    
+
     $MessageExpiration = (New-ExoRequest -tenantid $Tenant -cmdlet 'Get-TransportConfig').messageExpiration
 
-    If ($Settings.remediate) {
+    If ($Settings.remediate -eq $true) {
         Write-Host 'Time to remediate'
         if ($MessageExpiration -ne '12:00:00') {
             try {
@@ -17,18 +17,20 @@ function Invoke-CIPPStandardMessageExpiration {
                 $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
                 Write-LogMessage -API 'Standards' -tenant $tenant -message "Failed to set transport configuration message expiration to 12 hours. Error: $ErrorMessage" -sev Debug
             }
+        } else {
+            Write-LogMessage -API 'Standards' -tenant $tenant -message 'Transport configuration message expiration is already set to 12 hours' -sev Info
         }
-        
+
     }
-    if ($Settings.alert) {
+    if ($Settings.alert -eq $true) {
         if ($MessageExpiration -ne '12:00:00') {
             Write-LogMessage -API 'Standards' -tenant $tenant -message 'Transport configuration message expiration is set to 12 hours' -sev Info
         } else {
             Write-LogMessage -API 'Standards' -tenant $tenant -message 'Transport configuration message expiration is not set to 12 hours' -sev Alert
         }
     }
-    if ($Settings.report) {
+    if ($Settings.report -eq $true) {
         if ($MessageExpiration -ne '12:00:00') { $MessageExpiration = $false } else { $MessageExpiration = $true }
-        Add-CIPPBPAField -FieldName 'messageExpiration' -FieldValue [bool]$MessageExpiration -StoreAs bool -Tenant $tenant
+        Add-CIPPBPAField -FieldName 'messageExpiration' -FieldValue $MessageExpiration -StoreAs bool -Tenant $tenant
     }
 }

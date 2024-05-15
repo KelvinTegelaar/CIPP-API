@@ -6,6 +6,7 @@ function New-CIPPCAPolicy {
         $TenantFilter,
         $State,
         $Overwrite,
+        $ReplacePattern = 'none',
         $APIName = 'Create CA Policy',
         $ExecutingUser
     )
@@ -28,6 +29,25 @@ function New-CIPPCAPolicy {
             }
         }
     }
+    # Function to check if a string is a GUID
+    function Test-IsGuid($string) {
+        return [guid]::tryparse($string, [ref][guid]::Empty)
+    }
+    # Helper function to replace group display names with GUIDs
+    function Replace-GroupNameWithId {
+        param($groupNames)
+        return $groupNames | ForEach-Object {
+            if (Test-IsGuid $_) {
+                Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -message "Already GUID, no need to replace: $_" -Sev 'Debug'
+                $_ # it's a GUID, so we keep it
+            } else {
+                $groupId = ($groups | Where-Object -Property displayName -EQ $_).id # it's a display name, so we get the group ID
+                Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -message "Replaced group name $_ with ID $groupId" -Sev 'Debug'
+                $groupId
+            }
+        }
+    }
+
     $displayname = ($RawJSON | ConvertFrom-Json).Displayname
 
     $JSONObj = $RawJSON | ConvertFrom-Json | Select-Object * -ExcludeProperty ID, GUID, *time*
@@ -101,19 +121,51 @@ function New-CIPPCAPolicy {
         $index = [array]::IndexOf($JSONObj.conditions.locations.excludeLocations, $location)
         $JSONObj.conditions.locations.excludeLocations[$index] = $lookup.id
     }
-
+    switch ($ReplacePattern) {
+        'none' {
+            Write-Host 'Replacement pattern for inclusions and exclusions is none'
+            break
+        }
+        'AllUsers' {
+            Write-Host 'Replacement pattern for inclusions and exclusions is All users. This policy will now apply to everyone.'
+            if ($JSONObj.conditions.users.includeUsers -ne 'All') { $JSONObj.conditions.users.includeUsers = @('All') }
+            if ($JSONObj.conditions.users.excludeUsers) { $JSONObj.conditions.users.excludeUsers = @() }
+            if ($JSONObj.conditions.users.includeGroups) { $JSONObj.conditions.users.includeGroups = @() }
+            if ($JSONObj.conditions.users.excludeGroups) { $JSONObj.conditions.users.excludeGroups = @() }
+        }
+        'displayName' {
+            try {
+                Write-Host 'Replacement pattern for inclusions and exclusions is displayName.'
+                $users = New-GraphGETRequest -uri 'https://graph.microsoft.com/beta/users?$select=id,displayName' -tenantid $TenantFilter
+                $groups = New-GraphGETRequest -uri 'https://graph.microsoft.com/beta/groups?$select=id,displayName' -tenantid $TenantFilter
+        
+                if ($JSONObj.conditions.users.includeUsers -notin 'All', 'None', 'GuestOrExternalUsers') { $JSONObj.conditions.users.includeUsers = @(($users | Where-Object -Property displayName -In $JSONObj.conditions.users.includeUsers).id) }
+                if ($JSONObj.conditions.users.excludeUsers) { $JSONObj.conditions.users.excludeUsers = @(($users | Where-Object -Property displayName -In $JSONObj.conditions.users.excludeUsers).id) }
+        
+                # Check the included and excluded groups
+                foreach ($groupType in 'includeGroups', 'excludeGroups') {
+                    if ($JSONObj.conditions.users.PSObject.Properties.Name -contains $groupType) {
+                        $JSONObj.conditions.users.$groupType = Replace-GroupNameWithId -groupNames $JSONObj.conditions.users.$groupType
+                    }
+                }
+            } catch {
+                throw "Failed to replace displayNames for conditional access rule $($JSONObj.displayName): $($_.exception.message)"
+                Write-LogMessage -API 'Standards' -tenant $tenant -message "Failed to replace displayNames for conditional access rule $($JSONObj.displayName)" -sev 'Error'
+            }
+        }    
+    }
     $JsonObj.PSObject.Properties.Remove('LocationInfo')
     $RawJSON = $JSONObj | ConvertTo-Json -Depth 10
     Write-Host $RawJSON
     try {
         Write-Host 'Checking'
-        $CheckExististing = New-GraphGETRequest -uri 'https://graph.microsoft.com/beta/identity/conditionalAccess/policies' -tenantid $TenantFilter
-        if ($displayname -in $CheckExististing.displayName) {
+        $CheckExististing = New-GraphGETRequest -uri 'https://graph.microsoft.com/beta/identity/conditionalAccess/policies' -tenantid $TenantFilter | Where-Object -Property displayName -EQ $displayname
+        if ($CheckExististing) {
             if ($Overwrite -ne $true) {
                 Throw "Conditional Access Policy with Display Name $($Displayname) Already exists"
                 return $false
             } else {
-                Write-Host 'overwriting'
+                Write-Host "overwriting $($CheckExististing.id)"
                 $PatchRequest = New-GraphPOSTRequest -uri "https://graph.microsoft.com/beta/identity/conditionalAccess/policies/$($CheckExististing.id)" -tenantid $tenantfilter -type PATCH -body $RawJSON
                 Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $($Tenant) -message "Updated Conditional Access Policy $($JSONObj.Displayname) to the template standard." -Sev 'Info'
                 return "Updated policy $displayname for $tenantfilter"

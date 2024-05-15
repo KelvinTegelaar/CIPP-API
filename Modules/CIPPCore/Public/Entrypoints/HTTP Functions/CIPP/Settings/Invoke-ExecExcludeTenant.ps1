@@ -17,13 +17,13 @@ Function Invoke-ExecExcludeTenant {
     $TenantsTable = Get-CippTable -tablename Tenants
 
     if ($Request.Query.List) {
-        $ExcludedFilter = "PartitionKey eq 'Tenants' and Excluded eq true" 
-        $ExcludedTenants = Get-CIPPAzDataTableEntity @TenantsTable -Filter $ExcludedFilter 
-        Write-LogMessage -API $APINAME -user $request.headers.'x-ms-client-principal' -message 'got excluded tenants list' -Sev 'Info'
+        $ExcludedFilter = "PartitionKey eq 'Tenants' and Excluded eq true"
+        $ExcludedTenants = Get-CIPPAzDataTableEntity @TenantsTable -Filter $ExcludedFilter
+        Write-LogMessage -API $APINAME -user $request.headers.'x-ms-client-principal' -message 'got excluded tenants list' -Sev 'Debug'
         $body = @($ExcludedTenants)
     } elseif ($Request.query.ListAll) {
-        $ExcludedTenants = Get-CIPPAzDataTableEntity @TenantsTable -filter "PartitionKey eq 'Tenants'" 
-        Write-LogMessage -API $APINAME -user $request.headers.'x-ms-client-principal' -message 'got excluded tenants list' -Sev 'Info'
+        $ExcludedTenants = Get-CIPPAzDataTableEntity @TenantsTable -filter "PartitionKey eq 'Tenants'"
+        Write-LogMessage -API $APINAME -user $request.headers.'x-ms-client-principal' -message 'got excluded tenants list' -Sev 'Debug'
         $body = @($ExcludedTenants)
     }
     try {
@@ -31,7 +31,7 @@ Function Invoke-ExecExcludeTenant {
         $name = $Request.Query.TenantFilter
         if ($Request.Query.AddExclusion) {
             $Tenants = Get-Tenants -IncludeAll | Where-Object { $Request.body.value -contains $_.customerId }
-       
+
             $Excluded = foreach ($Tenant in $Tenants) {
                 $Tenant.Excluded = $true
                 $Tenant.ExcludeUser = $username
@@ -41,17 +41,17 @@ Function Invoke-ExecExcludeTenant {
             Write-Host ($Excluded | ConvertTo-Json)
             Update-AzDataTableEntity @TenantsTable -Entity ([pscustomobject]$Excluded)
             #Remove-CIPPCache
-            Write-LogMessage -API $APINAME -tenant $($name) -user $request.headers.'x-ms-client-principal' -message "Added exclusion for customer(s): $($Excluded.defaultDomainName -join ',')" -Sev 'Info' 
+            Write-LogMessage -API $APINAME -tenant $($name) -user $request.headers.'x-ms-client-principal' -message "Added exclusion for customer(s): $($Excluded.defaultDomainName -join ',')" -Sev 'Info'
             $body = [pscustomobject]@{'Results' = "Success. Added exclusions for customer(s): $($Excluded.defaultDomainName -join ',')" }
         }
 
         if ($Request.Query.RemoveExclusion) {
             $Filter = "PartitionKey eq 'Tenants' and defaultDomainName eq '{0}'" -f $name
-            $Tenant = Get-CIPPAzDataTableEntity @TenantsTable -Filter $Filter 
+            $Tenant = Get-CIPPAzDataTableEntity @TenantsTable -Filter $Filter
             $Tenant.Excluded = $false
             $Tenant.ExcludeUser = ''
             $Tenant.ExcludeDate = ''
-            Update-AzDataTableEntity @TenantsTable -Entity $Tenant       
+            Update-AzDataTableEntity @TenantsTable -Entity $Tenant
             #Remove-CIPPCache
             Write-LogMessage -API $APINAME -tenant $($name) -user $request.headers.'x-ms-client-principal' -message "Removed exclusion for customer $($name)" -Sev 'Info'
             $body = [pscustomobject]@{'Results' = "Success. We've removed $name from the excluded tenants." }
