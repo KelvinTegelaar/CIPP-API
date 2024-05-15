@@ -22,7 +22,7 @@ Function Invoke-EditUser {
     }
     $Results = [System.Collections.Generic.List[string]]::new()
     $licenses = ($UserObj | Select-Object 'License_*').psobject.properties.value
-    $Aliases = if ($UserObj.AddedAliases) { ($UserObj.AddedAliases).Split([Environment]::NewLine) }
+    $Aliases = if ($UserObj.AddedAliases) { ($UserObj.AddedAliases) -split '\s' }
     $AddToGroups = $Request.body.AddToGroups
     $RemoveFromGroups = $Request.body.RemoveFromGroups
 
@@ -44,7 +44,7 @@ Function Invoke-EditUser {
             'companyName'       = $UserObj.CompanyName
             'jobTitle'          = $UserObj.JobTitle
             'userPrincipalName' = $Email
-            'usageLocation'     = $UserObj.Usagelocation
+            'usageLocation'     = $UserObj.usagelocation
             'mobilePhone'       = $UserObj.MobilePhone
             'streetAddress'     = $UserObj.streetAddress
             'businessPhones'    = @($UserObj.BusinessPhone)
@@ -106,6 +106,7 @@ Function Invoke-EditUser {
     #Add Aliases, removal currently not supported.
     try {
         if ($Aliases) {
+            Write-Host ($Aliases | ConvertTo-Json)
             foreach ($Alias in $Aliases) {
                 New-GraphPostRequest -uri "https://graph.microsoft.com/beta/users/$($UserObj.UserID)" -tenantid $UserObj.tenantID -type 'patch' -body "{`"mail`": `"$Alias`"}" -verbose
             }

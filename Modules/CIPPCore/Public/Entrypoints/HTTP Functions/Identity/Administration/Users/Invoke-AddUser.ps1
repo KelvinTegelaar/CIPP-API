@@ -17,7 +17,7 @@ Function Invoke-AddUser {
     Write-Host 'PowerShell HTTP trigger function processed a request.'
     try {
         $license = $UserObj.license
-        $Aliases = ($UserObj.AddedAliases).Split([Environment]::NewLine)
+        $Aliases = ($UserObj.AddedAliases) -split '\s'
         $password = if ($UserObj.password) { $UserObj.password } else { New-passwordString }
         $UserprincipalName = "$($UserObj.Username)@$($UserObj.Domain)"
         $BodyToship = [pscustomobject] @{
