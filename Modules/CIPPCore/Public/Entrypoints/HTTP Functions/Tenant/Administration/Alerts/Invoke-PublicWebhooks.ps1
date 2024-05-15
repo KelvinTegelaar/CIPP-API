@@ -191,7 +191,7 @@ function Invoke-PublicWebhooks {
                         $DataToProcess = foreach ($clause in $Where) {
                             Write-Host "Webhook: Processing clause: $($clause.clause)"
                             Write-Host "Webhook: If this clause would be true, the action would be: $($clause.expectedAction)"
-                            $ReturnedData = $ProcessedData | Where-Object { Invoke-Expression $clause.clause } | Select-Object *, CIPPAction, CIPPClause -ErrorAction SilentlyContinue
+                            $ReturnedData = $ProcessedData | Where-Object { Invoke-Expression $clause.clause } | Select-Object *, 'CIPPAction', 'CIPPClause' -ErrorAction SilentlyContinue
                             if ($ReturnedData) {
                                 $ReturnedData.CIPPAction = $clause.expectedAction
                                 $ReturnedData.CIPPClause = ($clause.clause | ForEach-Object { "When $($_.Property.label) is $($_.Operator.label) $($_.input.value)" }) -join ' and '
