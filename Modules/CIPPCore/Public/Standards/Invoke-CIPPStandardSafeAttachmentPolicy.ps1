@@ -19,7 +19,7 @@ function Invoke-CIPPStandardSafeAttachmentPolicy {
 
     if ($Settings.remediate -eq $true) {
 
-        if ($StateIsCorrect) {
+        if ($StateIsCorrect -eq $true) {
             Write-LogMessage -API 'Standards' -tenant $Tenant -message 'Safe Attachment Policy already correctly configured' -sev Info
         } else {
             $cmdparams = @{
@@ -40,14 +40,15 @@ function Invoke-CIPPStandardSafeAttachmentPolicy {
                     Write-LogMessage -API 'Standards' -tenant $Tenant -message 'Created Safe Attachment Policy' -sev Info
                 }
             } catch {
-                Write-LogMessage -API 'Standards' -tenant $Tenant -message "Failed to create Safe Attachment Policy. Error: $($_.exception.message)" -sev Error
+                $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
+                Write-LogMessage -API 'Standards' -tenant $Tenant -message "Failed to create Safe Attachment Policy. Error: $ErrorMessage" -sev Error
             }
         }
     }
 
     if ($Settings.alert -eq $true) {
 
-        if ($StateIsCorrect) {
+        if ($StateIsCorrect -eq $true) {
             Write-LogMessage -API 'Standards' -tenant $Tenant -message 'Safe Attachment Policy is enabled' -sev Info
         } else {
             Write-LogMessage -API 'Standards' -tenant $Tenant -message 'Safe Attachment Policy is not enabled' -sev Alert
