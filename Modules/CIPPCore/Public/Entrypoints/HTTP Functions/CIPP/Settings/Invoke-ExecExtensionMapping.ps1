@@ -39,11 +39,9 @@ Function Invoke-ExecExtensionMapping {
                 'Halo' {
                     $body = Set-HaloMapping -CIPPMapping $Table -APIName $APIName -Request $Request
                 }
-
                 'NinjaOrgs' {
                     $Body = Set-NinjaOneOrgMapping -CIPPMapping $Table -APIName $APIName -Request $Request
                 }
-
                 'NinjaFields' {
                     $Body = Set-NinjaOneFieldMapping -CIPPMapping $Table -APIName $APIName -Request $Request -TriggerMetadata $TriggerMetadata
                 }
@@ -58,7 +56,6 @@ Function Invoke-ExecExtensionMapping {
         if ($Request.Query.AutoMapping) {
             switch ($Request.Query.AutoMapping) {
                 'NinjaOrgs' {
-                    #Push-OutputBinding -Name NinjaProcess -Value @{'NinjaAction' = 'StartAutoMapping' }
                     $Batch = [PSCustomObject]@{
                         'NinjaAction'  = 'StartAutoMapping'
                         'FunctionName' = 'NinjaOneQueue'
