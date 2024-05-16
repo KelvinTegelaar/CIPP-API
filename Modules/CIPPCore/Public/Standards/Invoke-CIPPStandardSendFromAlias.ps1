@@ -13,7 +13,8 @@ function Invoke-CIPPStandardSendFromAlias {
                 Write-LogMessage -API 'Standards' -tenant $tenant -message 'Send from alias enabled.' -sev Info
                 $CurrentInfo = $true
             } catch {
-                Write-LogMessage -API 'Standards' -tenant $tenant -message "Failed to enable send from alias. Error: $($_.exception.message)" -sev Error
+                $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
+                Write-LogMessage -API 'Standards' -tenant $tenant -message "Failed to enable send from alias. Error: $ErrorMessage" -sev Error
             }
         } else {
             Write-LogMessage -API 'Standards' -tenant $tenant -message 'Send from alias is already enabled.' -sev Info
