@@ -42,6 +42,7 @@ function Invoke-CIPPStandardAuditLog {
             Write-LogMessage -API 'Standards' -tenant $tenant -message 'Unified Audit Log is not enabled' -sev Alert
         }
     }
+    
     if ($Settings.report -eq $true) {
 
         Add-CIPPBPAField -FieldName 'AuditLog' -FieldValue $AuditLogEnabled -StoreAs bool -Tenant $tenant

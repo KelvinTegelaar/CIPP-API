@@ -12,7 +12,13 @@ Function Invoke-ListStandards {
     Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -message 'Accessed this API' -Sev 'Debug'
 
     if ($Request.Query.ShowConsolidated -eq $true) {
-        $CurrentStandards = @(Get-CIPPStandards -TenantFilter $Request.Query.TenantFilter)
+        $StandardQuery = @{
+            TenantFilter = $Request.Query.TenantFilter
+        }
+        if ($Request.Query.TenantFilter -eq 'AllTenants') {
+            $StandardQuery.ListAllTenants = $true
+        }
+        $CurrentStandards = @(Get-CIPPStandards @StandardQuery)
     } else {
         $Table = Get-CippTable -tablename 'standards'
         $Filter = "PartitionKey eq 'standards'"

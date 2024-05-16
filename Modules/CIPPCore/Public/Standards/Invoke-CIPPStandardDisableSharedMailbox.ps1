@@ -13,7 +13,8 @@ function Invoke-CIPPStandardDisableSharedMailbox {
                     New-GraphPOSTRequest -uri "https://graph.microsoft.com/v1.0/users/$($_.ObjectKey)" -type PATCH -body '{"accountEnabled":"false"}' -tenantid $tenant
                     Write-LogMessage -API 'Standards' -tenant $tenant -message "AAD account for shared mailbox $($_.DisplayName) disabled." -sev Info
                 } catch {
-                    Write-LogMessage -API 'Standards' -tenant $tenant -message "Failed to disable AAD account for shared mailbox. Error: $($_.exception.message)" -sev Error
+                    $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
+                    Write-LogMessage -API 'Standards' -tenant $tenant -message "Failed to disable AAD account for shared mailbox. Error: $ErrorMessage" -sev Error
                 }
             }
         } else {
