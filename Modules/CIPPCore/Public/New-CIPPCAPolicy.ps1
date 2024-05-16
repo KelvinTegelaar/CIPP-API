@@ -139,13 +139,13 @@ function New-CIPPCAPolicy {
                 $users = New-GraphGETRequest -uri 'https://graph.microsoft.com/beta/users?$select=id,displayName' -tenantid $TenantFilter
                 $groups = New-GraphGETRequest -uri 'https://graph.microsoft.com/beta/groups?$select=id,displayName' -tenantid $TenantFilter
         
-                if ($JSONObj.conditions.users.includeUsers -notin 'All', 'None', 'GuestOrExternalUsers') { $JSONObj.conditions.users.includeUsers = @(($users | Where-Object -Property displayName -In $JSONObj.conditions.users.includeUsers).id) }
+                if ($JSONObj.conditions.users.includeUsers -and $JSONObj.conditions.users.includeUsers -notin 'All', 'None', 'GuestOrExternalUsers') { $JSONObj.conditions.users.includeUsers = @(($users | Where-Object -Property displayName -In $JSONObj.conditions.users.includeUsers).id) }
                 if ($JSONObj.conditions.users.excludeUsers) { $JSONObj.conditions.users.excludeUsers = @(($users | Where-Object -Property displayName -In $JSONObj.conditions.users.excludeUsers).id) }
         
                 # Check the included and excluded groups
                 foreach ($groupType in 'includeGroups', 'excludeGroups') {
                     if ($JSONObj.conditions.users.PSObject.Properties.Name -contains $groupType) {
-                        $JSONObj.conditions.users.$groupType = Replace-GroupNameWithId -groupNames $JSONObj.conditions.users.$groupType
+                        $JSONObj.conditions.users.$groupType = @(Replace-GroupNameWithId -groupNames $JSONObj.conditions.users.$groupType)
                     }
                 }
             } catch {
@@ -155,7 +155,7 @@ function New-CIPPCAPolicy {
         }    
     }
     $JsonObj.PSObject.Properties.Remove('LocationInfo')
-    $RawJSON = $JSONObj | ConvertTo-Json -Depth 10
+    $RawJSON = $JSONObj | ConvertTo-Json -Depth 10 -Compress
     Write-Host $RawJSON
     try {
         Write-Host 'Checking'

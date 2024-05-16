@@ -6,6 +6,6 @@ function Invoke-CIPPStandardfwdAdminAlerts {
     param($Tenant, $Settings)
     If ($Settings.remediate -eq $true) {
 
-        #This isn't done yet.
+        # TODO This isn't done yet.
     }
 }

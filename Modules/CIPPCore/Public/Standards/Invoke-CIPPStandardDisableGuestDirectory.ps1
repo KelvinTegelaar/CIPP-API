@@ -16,7 +16,8 @@ function Invoke-CIPPStandardDisableGuestDirectory {
                 New-GraphPostRequest -tenantid $tenant -Uri 'https://graph.microsoft.com/beta/policies/authorizationPolicy/authorizationPolicy' -Type patch -Body $body -ContentType 'application/json'
                 Write-LogMessage -API 'Standards' -tenant $tenant -message 'Disabled Guest access to directory information.' -sev Info
             } catch {
-                Write-LogMessage -API 'Standards' -tenant $tenant -message "Failed to disable Guest access to directory information.: $($_.exception.message)" -sev 'Error'
+                $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
+                Write-LogMessage -API 'Standards' -tenant $tenant -message "Failed to disable Guest access to directory information.: $ErrorMessage" -sev 'Error'
             }
         }
     }
