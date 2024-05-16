@@ -32,7 +32,8 @@ function Invoke-CIPPStandardPWcompanionAppAllowedState {
                 (New-GraphPostRequest -tenantid $tenant -Uri 'https://graph.microsoft.com/beta/policies/authenticationMethodsPolicy/authenticationMethodConfigurations/microsoftAuthenticator' -Type patch -Body $body -ContentType 'application/json')
                 Write-LogMessage -API 'Standards' -tenant $tenant -message "Set companionAppAllowedState to $($Settings.state)." -sev Info
             } catch {
-                Write-LogMessage -API 'Standards' -tenant $tenant -message "Failed to set companionAppAllowedState to $($Settings.state). Error: $($_.exception.message)" -sev Error
+                $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
+                Write-LogMessage -API 'Standards' -tenant $tenant -message "Failed to set companionAppAllowedState to $($Settings.state). Error: $ErrorMessage" -sev Error
             }
         }
     }
