@@ -61,7 +61,8 @@ function Invoke-CIPPStandardEnableAppConsentRequests {
             Write-LogMessage -API 'Standards' -tenant $tenant -message "Enabled App consent admin requests for the following roles: $RoleNames" -sev Info
 
         } catch {
-            Write-LogMessage -API 'Standards' -tenant $tenant -message "Failed to enable App consent admin requests. Error: $($_.exception.message)" -sev Error
+            $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
+            Write-LogMessage -API 'Standards' -tenant $tenant -message "Failed to enable App consent admin requests. Error: $ErrorMessage" -sev Error
         }
     }
     if ($Settings.alert -eq $true) {
