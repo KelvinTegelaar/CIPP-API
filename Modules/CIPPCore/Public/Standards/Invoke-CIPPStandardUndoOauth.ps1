@@ -6,7 +6,6 @@ function Invoke-CIPPStandardUndoOauth {
     param($Tenant, $Settings)
     $CurrentState = New-GraphGetRequest -tenantid $Tenant -Uri 'https://graph.microsoft.com/beta/policies/authorizationPolicy/authorizationPolicy?$select=permissionGrantPolicyIdsAssignedToDefaultUserRole'
     $State = if ($CurrentState.permissionGrantPolicyIdsAssignedToDefaultUserRole -eq 'ManagePermissionGrantsForSelf.microsoft-user-default-legacy') { $true } else { $false }
-    $State
 
     If ($Settings.remediate -eq $true) {
 
@@ -18,7 +17,8 @@ function Invoke-CIPPStandardUndoOauth {
                 Write-LogMessage -API 'Standards' -tenant $tenant -message 'Application Consent Mode has been disabled.' -sev Info
                 $CurrentState.permissionGrantPolicyIdsAssignedToDefaultUserRole = 'ManagePermissionGrantsForSelf.microsoft-user-default-legacy'
             } catch {
-                Write-LogMessage -API 'Standards' -tenant $tenant -message "Failed to set Application Consent Mode to disabled. Error: $($_.exception.message)" -sev Error
+                $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
+                Write-LogMessage -API 'Standards' -tenant $tenant -message "Failed to set Application Consent Mode to disabled. Error: $ErrorMessage" -sev Error
             }
         }
 

@@ -50,14 +50,18 @@ function Set-CIPPDefaultAPDeploymentProfile {
                     }
                 }
             }
+            $Profiles = $Profiles[0]
         }
         if (!$Profiles) {
             if ($PSCmdlet.ShouldProcess($displayName, 'Add Autopilot profile')) {
                 $GraphRequest = New-GraphPostRequest -uri 'https://graph.microsoft.com/beta/deviceManagement/windowsAutopilotDeploymentProfiles' -body $body -tenantid $tenantfilter
                 Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APIName -tenant $($tenantfilter) -message "Added Autopilot profile $($displayname)" -Sev 'Info'
             }
+        } else {
+            $GraphRequest = $Profiles
         }
-        if ($AssignTo) {
+
+        if ($AssignTo -eq $true) {
             $AssignBody = '{"target":{"@odata.type":"#microsoft.graph.allDevicesAssignmentTarget"}}'
             if ($PSCmdlet.ShouldProcess($AssignTo, "Assign Autopilot profile $displayname")) {
                 $null = New-GraphPOSTRequest -uri "https://graph.microsoft.com/beta/deviceManagement/windowsAutopilotDeploymentProfiles/$($GraphRequest.id)/assignments" -tenantid $tenantfilter -type POST -body $AssignBody

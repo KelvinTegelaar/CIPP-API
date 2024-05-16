@@ -32,7 +32,8 @@ function Invoke-CIPPStandardAddDKIM {
             $BatchResults | ForEach-Object {
                 if ($_.error) {
                     $ErrorCounter ++
-                    Write-LogMessage -API 'Standards' -tenant $tenant -message "Failed to enable DKIM. Error: $($_.Exception.Message)" -sev Error
+                    $ErrorMessage = Get-NormalizedError -Message $_.error
+                    Write-LogMessage -API 'Standards' -tenant $tenant -message "Failed to enable DKIM. Error: $ErrorMessage" -sev Error
                 }
             }
             # Set-domains
@@ -48,7 +49,8 @@ function Invoke-CIPPStandardAddDKIM {
             $BatchResults = New-ExoBulkRequest -tenantid $tenant -cmdletArray @($Request) -useSystemMailbox $true
             $BatchResults | ForEach-Object {
                 if ($_.error) {
-                    Write-LogMessage -API 'Standards' -tenant $tenant -message "Failed to set DKIM. Error: $($_.Exception.Message)" -sev Error
+                    $ErrorMessage = Get-NormalizedError -Message $_.error
+                    Write-LogMessage -API 'Standards' -tenant $tenant -message "Failed to set DKIM. Error: $ErrorMessage" -sev Error
                     $ErrorCounter ++
                 }
 
@@ -72,7 +74,7 @@ function Invoke-CIPPStandardAddDKIM {
     }
 
     if ($Settings.report -eq $true) {
-        if ($null -eq $NewDomains -and $null -eq $SetDomains) { $DKIMState = $true } else { $DKIMState = $false }
+        $DKIMState = if ($null -eq $NewDomains -and $null -eq $SetDomains) { $true } else { $false }
         Add-CIPPBPAField -FieldName 'DKIM' -FieldValue $DKIMState -StoreAs bool -Tenant $tenant
     }
 }

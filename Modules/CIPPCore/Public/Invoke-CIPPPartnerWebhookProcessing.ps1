@@ -56,9 +56,22 @@ function Invoke-CippPartnerWebhookProcessing {
                             Logs            = ''
                             Exception       = ''
                         }
+
+                        $OnboardItem = @{ Id = $Id }
+
+                        # Check for partner webhook onboarding settings
+                        $ConfigTable = Get-CIPPTable -TableName Config
+                        $WebhookConfig = Get-CIPPAzDataTableEntity @ConfigTable -Filter "RowKey eq 'PartnerWebhookOnboarding'"
+                        if ($WebhookConfig.StandardsExcludeAllTenants -eq $true) {
+                            $OnboardItem.StandardsExcludeAllTenants = $true
+                        }
+
+                        # Add onboarding entry to the table
                         $OnboardTable = Get-CIPPTable -TableName 'TenantOnboarding'
                         Add-CIPPAzDataTableEntity @OnboardTable -Entity $TenantOnboarding -Force -ErrorAction Stop
-                        Push-ExecOnboardTenantQueue -Item @{ Id = $Id }
+
+                        # Start onboarding
+                        Push-ExecOnboardTenantQueue -Item $OnboardItem
                     } else {
                         if ($AuditLog) {
                             Write-LogMessage -API 'Webhooks' -message "Partner Center $($Data.EventName) audit log webhook received" -LogData $AuditObj -Sev 'Alert'
