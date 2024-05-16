@@ -58,7 +58,8 @@ function Invoke-CIPPStandardGroupTemplate {
 
         }
       } catch {
-        Write-LogMessage -API 'Standards' -tenant $tenant -message "Failed to create group: $($_.exception.message)" -sev 'Error'
+        $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
+        Write-LogMessage -API 'Standards' -tenant $tenant -message "Failed to create group: $ErrorMessage" -sev 'Error'
       }
     }
 
