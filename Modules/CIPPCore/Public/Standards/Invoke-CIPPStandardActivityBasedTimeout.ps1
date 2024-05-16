@@ -23,7 +23,8 @@ function Invoke-CIPPStandardActivityBasedTimeout {
                 Write-LogMessage -API 'Standards' -tenant $tenant -message 'Activity Based Timeout is already enabled' -sev Info
             }
         } catch {
-            Write-LogMessage -API 'Standards' -tenant $tenant -message "Failed to enable Activity Based Timeout $($_.exception.message)" -sev Error
+            $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
+            Write-LogMessage -API 'Standards' -tenant $tenant -message "Failed to enable Activity Based Timeout $ErrorMessage" -sev Error
         }
     }
 
