@@ -7,8 +7,8 @@ function Invoke-CIPPStandardAntiPhishPolicy {
     param($Tenant, $Settings)
     $PolicyName = 'Default Anti-Phishing Policy'
 
-    $CurrentState = New-ExoRequest -tenantid $Tenant -cmdlet 'Get-AntiPhishPolicy' | 
-        Where-Object -Property Name -EQ $PolicyName | 
+    $CurrentState = New-ExoRequest -tenantid $Tenant -cmdlet 'Get-AntiPhishPolicy' |
+        Where-Object -Property Name -EQ $PolicyName |
         Select-Object Name, Enabled, PhishThresholdLevel, EnableMailboxIntelligence, EnableMailboxIntelligenceProtection, EnableSpoofIntelligence, EnableFirstContactSafetyTips, EnableSimilarUsersSafetyTips, EnableSimilarDomainsSafetyTips, EnableUnusualCharactersSafetyTips, EnableUnauthenticatedSender, EnableViaTag, MailboxIntelligenceProtectionAction, MailboxIntelligenceQuarantineTag
 
     $StateIsCorrect = ($CurrentState.Name -eq $PolicyName) -and
@@ -26,8 +26,8 @@ function Invoke-CIPPStandardAntiPhishPolicy {
                       ($CurrentState.MailboxIntelligenceProtectionAction -eq $Settings.MailboxIntelligenceProtectionAction) -and
                       ($CurrentState.MailboxIntelligenceQuarantineTag -eq $Settings.MailboxIntelligenceQuarantineTag)
 
-    if ($Settings.remediate) {
-        if ($StateIsCorrect) {
+    if ($Settings.remediate -eq $true) {
+        if ($StateIsCorrect -eq $true) {
             Write-LogMessage -API 'Standards' -tenant $Tenant -message 'Anti-phishing Policy already correctly configured' -sev Info
         } else {
             $cmdparams = @{
@@ -57,23 +57,24 @@ function Invoke-CIPPStandardAntiPhishPolicy {
                     Write-LogMessage -API 'Standards' -tenant $Tenant -message 'Created Anti-phishing Policy' -sev Info
                 }
             } catch {
-                Write-LogMessage -API 'Standards' -tenant $Tenant -message "Failed to create Anti-phishing Policy. Error: $($_.exception.message)" -sev Error
+                $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
+                Write-LogMessage -API 'Standards' -tenant $Tenant -message "Failed to create Anti-phishing Policy. Error: $ErrorMessage" -sev Error
             }
         }
     }
 
 
-    if ($Settings.alert) {
+    if ($Settings.alert -eq $true) {
 
-        if ($StateIsCorrect) {
+        if ($StateIsCorrect -eq $true) {
             Write-LogMessage -API 'Standards' -tenant $Tenant -message 'Anti-phishing Policy is enabled' -sev Info
         } else {
             Write-LogMessage -API 'Standards' -tenant $Tenant -message 'Anti-phishing Policy is not enabled' -sev Alert
         }
     }
 
-    if ($Settings.report) {
-        Add-CIPPBPAField -FieldName 'AntiPhishPolicy' -FieldValue [bool]$StateIsCorrect -StoreAs bool -Tenant $tenant
+    if ($Settings.report -eq $true) {
+        Add-CIPPBPAField -FieldName 'AntiPhishPolicy' -FieldValue $StateIsCorrect -StoreAs bool -Tenant $tenant
     }
-    
+
 }

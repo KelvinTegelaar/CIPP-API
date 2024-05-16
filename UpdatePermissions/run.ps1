@@ -2,14 +2,15 @@
 param($Timer)
 
 try {
-    $Tenants = Get-Tenants -IncludeAll -TriggerRefresh | Where-Object { $_.customerId -ne $env:TenantId -and $_.Excluded -eq $false } | ForEach-Object { $_ | Add-Member -NotePropertyName FunctionName -NotePropertyValue 'UpdatePermissionsQueue'; $_ }
+    $Tenants = Get-Tenants -IncludeAll -TriggerRefresh | Where-Object { $_.customerId -ne $env:TenantId -and $_.Excluded -eq $false }
+    $Queue = New-CippQueueEntry -Name 'Update Permissions' -TotalTasks ($Tenants | Measure-Object).Count
+    $TenantBatch = $Tenants | Select-Object defaultDomainName, customerId, displayName, @{n = 'FunctionName'; exp = { 'UpdatePermissionsQueue' } }, @{n = 'QueueId'; exp = { $Queue.RowKey } }
 
     if (($Tenants | Measure-Object).Count -gt 0) {
         $InputObject = [PSCustomObject]@{
             OrchestratorName = 'UpdatePermissionsOrchestrator'
-            Batch            = @($Tenants)
+            Batch            = @($TenantBatch)
         }
-        #Write-Host ($InputObject | ConvertTo-Json)
         $InstanceId = Start-NewOrchestration -FunctionName 'CIPPOrchestrator' -InputObject ($InputObject | ConvertTo-Json -Depth 5 -Compress)
         Write-Host "Started permissions orchestration with ID = '$InstanceId'"
     }

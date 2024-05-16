@@ -9,11 +9,11 @@ function Invoke-CIPPStandardMailContacts {
     $contacts = $settings
     $TechAndSecurityContacts = @($Contacts.SecurityContact, $Contacts.TechContact)
 
-    If ($Settings.remediate) {
-    
+    If ($Settings.remediate -eq $true) {
+
         # TODO: Make this smaller if possible
         if ($CurrentInfo.marketingNotificationEmails -eq $Contacts.MarketingContact -and `
-            ($CurrentInfo.securityComplianceNotificationMails -in $TechAndSecurityContacts -or 
+            ($CurrentInfo.securityComplianceNotificationMails -in $TechAndSecurityContacts -or
                 $CurrentInfo.technicalNotificationMails -in $TechAndSecurityContacts) -and `
                 $CurrentInfo.privacyProfile.contactEmail -eq $Contacts.GeneralContact) {
             Write-LogMessage -API 'Standards' -tenant $tenant -message 'Contact emails are already set.' -sev Info
@@ -30,11 +30,13 @@ function Invoke-CIPPStandardMailContacts {
                 New-GraphPostRequest -tenantid $tenant -Uri "https://graph.microsoft.com/v1.0/organization/$($TenantID.id)" -asApp $true -Type patch -Body (ConvertTo-Json -InputObject $body) -ContentType 'application/json'
                 Write-LogMessage -API 'Standards' -tenant $tenant -message 'Contact emails set.' -sev Info
             } catch {
-                Write-LogMessage -API 'Standards' -tenant $tenant -message "Failed to set contact emails: $($_.exception.message)" -sev Error
+                $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
+                Write-LogMessage -API 'Standards' -tenant $tenant -message "Failed to set contact emails: $ErrorMessage" -sev Error
             }
         }
     }
-    if ($Settings.alert) {
+
+    if ($Settings.alert -eq $true) {
 
         if ($CurrentInfo.marketingNotificationEmails -eq $Contacts.MarketingContact) {
             Write-LogMessage -API 'Standards' -tenant $tenant -message "Marketing contact email is set to $($Contacts.MarketingContact)" -sev Info
@@ -58,7 +60,7 @@ function Invoke-CIPPStandardMailContacts {
         }
 
     }
-    if ($Settings.report) {
+    if ($Settings.report -eq $true) {
         Add-CIPPBPAField -FieldName 'MailContacts' -FieldValue $CurrentInfo -StoreAs json -Tenant $tenant
     }
 }

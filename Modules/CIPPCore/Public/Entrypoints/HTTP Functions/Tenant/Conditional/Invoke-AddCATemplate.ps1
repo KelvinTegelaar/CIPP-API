@@ -54,17 +54,22 @@ Function Invoke-AddCATemplate {
                 })
         }
 
+        # Function to check if a string is a GUID
+        function Test-IsGuid($string) {
+            return [guid]::tryparse($string, [ref][guid]::Empty)
+        }
+
         if ($JSON.conditions.users.includeGroups) {
             $JSON.conditions.users.includeGroups = @($JSON.conditions.users.includeGroups | ForEach-Object {
-                    if ($_ -in 'All', 'None', 'GuestOrExternalUsers') { return $_ }
+                if ($_ -in 'All', 'None', 'GuestOrExternalUsers' -or -not (Test-IsGuid $_)) { return $_ }
                 (New-GraphGetRequest -uri "https://graph.microsoft.com/beta/groups/$($_)" -tenantid $TenantFilter).displayName
-                })
+            })
         }
         if ($JSON.conditions.users.excludeGroups) {
             $JSON.conditions.users.excludeGroups = @($JSON.conditions.users.excludeGroups | ForEach-Object {
-                    if ($_ -in 'All', 'None', 'GuestOrExternalUsers') { return $_ }
+                if ($_ -in 'All', 'None', 'GuestOrExternalUsers' -or -not (Test-IsGuid $_)) { return $_ }
                 (New-GraphGetRequest -uri "https://graph.microsoft.com/beta/groups/$($_)" -tenantid $TenantFilter).displayName
-                })
+            })
         }
 
         $JSON | Add-Member -NotePropertyName 'LocationInfo' -NotePropertyValue @($IncludeJSON, $ExcludeJSON)

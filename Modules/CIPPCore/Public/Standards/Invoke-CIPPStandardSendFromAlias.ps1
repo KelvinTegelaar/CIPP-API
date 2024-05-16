@@ -6,21 +6,22 @@ function Invoke-CIPPStandardSendFromAlias {
     param($Tenant, $Settings)
     $CurrentInfo = (New-ExoRequest -tenantid $Tenant -cmdlet 'Get-OrganizationConfig').SendFromAliasEnabled
 
-    If ($Settings.remediate) {
+    If ($Settings.remediate -eq $true) {
         if ($CurrentInfo -eq $false) {
             try {
                 New-ExoRequest -tenantid $Tenant -cmdlet 'Set-OrganizationConfig' -cmdParams @{ SendFromAliasEnabled = $true }
                 Write-LogMessage -API 'Standards' -tenant $tenant -message 'Send from alias enabled.' -sev Info
                 $CurrentInfo = $true
             } catch {
-                Write-LogMessage -API 'Standards' -tenant $tenant -message "Failed to enable send from alias. Error: $($_.exception.message)" -sev Error
+                $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
+                Write-LogMessage -API 'Standards' -tenant $tenant -message "Failed to enable send from alias. Error: $ErrorMessage" -sev Error
             }
         } else {
             Write-LogMessage -API 'Standards' -tenant $tenant -message 'Send from alias is already enabled.' -sev Info
         }
     }
 
-    if ($Settings.alert) {
+    if ($Settings.alert -eq $true) {
         if ($CurrentInfo -eq $true) {
             Write-LogMessage -API 'Standards' -tenant $tenant -message 'Send from alias is enabled.' -sev Info
         } else {
@@ -28,7 +29,7 @@ function Invoke-CIPPStandardSendFromAlias {
         }
     }
 
-    if ($Settings.report) {
-        Add-CIPPBPAField -FieldName 'SendFromAlias' -FieldValue [bool]$CurrentInfo -StoreAs bool -Tenant $tenant
+    if ($Settings.report -eq $true) {
+        Add-CIPPBPAField -FieldName 'SendFromAlias' -FieldValue $CurrentInfo -StoreAs bool -Tenant $tenant
     }
 }

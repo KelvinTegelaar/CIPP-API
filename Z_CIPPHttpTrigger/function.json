@@ -42,12 +42,6 @@
     {
       "type": "queue",
       "direction": "out",
-      "name": "NinjaProcess",
-      "queueName": "NinjaOneQueue"
-    },
-    {
-      "type": "queue",
-      "direction": "out",
       "name": "alertqueue",
       "queueName": "alertqueue"
     },
