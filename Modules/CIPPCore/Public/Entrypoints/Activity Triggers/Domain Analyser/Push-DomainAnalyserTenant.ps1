@@ -22,7 +22,7 @@ function Push-DomainAnalyserTenant {
         try {
             $Domains = New-GraphGetRequest -uri 'https://graph.microsoft.com/v1.0/domains' -tenantid $Tenant.customerId | Where-Object { ($_.id -notlike '*.microsoftonline.com' -and $_.id -NotLike '*.exclaimer.cloud' -and $_.id -Notlike '*.excl.cloud' -and $_.id -NotLike '*.codetwo.online' -and $_.id -NotLike '*.call2teams.com' -and $_.isVerified) }
 
-            $TenantDomains = foreach ($d in $domains) {
+            $TenantDomains = foreach ($d in $Domains) {
                 [PSCustomObject]@{
                     Tenant             = $Tenant.defaultDomainName
                     TenantGUID         = $Tenant.customerId
@@ -42,27 +42,27 @@ function Push-DomainAnalyserTenant {
             if ($DomainCount -gt 0) {
                 Write-Host "$DomainCount tenant Domains"
                 try {
-                    $TenantDomainObjects = foreach ($Domain in $TenantDomains) {
-                        $TenantDetails = ($Domain | ConvertTo-Json -Compress).ToString()
-                        $Filter = "PartitionKey eq '{0}' and RowKey eq '{1}'" -f $Domain.Tenant, $Domain.Domain
+                    $TenantDomainObjects = foreach ($TenantDomain in $TenantDomains) {
+                        $TenantDetails = ($TenantDomain | ConvertTo-Json -Compress).ToString()
+                        $Filter = "PartitionKey eq '{0}' and RowKey eq '{1}'" -f $TenantDomain.Tenant, $TenantDomain.Domain
                         $OldDomain = Get-CIPPAzDataTableEntity @DomainTable -Filter $Filter
 
                         if ($OldDomain) {
                             Remove-AzDataTableEntity @DomainTable -Entity $OldDomain | Out-Null
                         }
 
-                        $Filter = "PartitionKey eq 'TenantDomains' and RowKey eq '{0}'" -f $Domain.Domain
+                        $Filter = "PartitionKey eq 'TenantDomains' and RowKey eq '{0}'" -f $TenantDomain.Domain
                         $Domain = Get-CIPPAzDataTableEntity @DomainTable -Filter $Filter
 
-                        if (!$Domain -or $null -eq $Domain.TenantGUID) {
-                            $DomainObject = [pscustomobject]@{
+                        if (!$Domain -or $null -eq $TenantDomain.TenantGUID) {
+                            $Domain = [pscustomobject]@{
                                 DomainAnalyser = ''
                                 TenantDetails  = $TenantDetails
-                                TenantId       = $Domain.Tenant
-                                TenantGUID     = $Domain.TenantGUID
+                                TenantId       = $TenantDomain.Tenant
+                                TenantGUID     = $TenantDomain.TenantGUID
                                 DkimSelectors  = ''
                                 MailProviders  = ''
-                                RowKey         = $Domain.Domain
+                                RowKey         = $TenantDomain.Domain
                                 PartitionKey   = 'TenantDomains'
                             }
 
@@ -70,7 +70,6 @@ function Push-DomainAnalyserTenant {
                                 $DomainObject.DkimSelectors = $OldDomain.DkimSelectors
                                 $DomainObject.MailProviders = $OldDomain.MailProviders
                             }
-                            $Domain = $DomainObject
                         } else {
                             $Domain.TenantDetails = $TenantDetails
                             if ($OldDomain) {

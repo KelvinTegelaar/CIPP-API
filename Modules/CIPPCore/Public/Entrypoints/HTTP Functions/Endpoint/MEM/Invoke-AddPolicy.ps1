@@ -9,21 +9,21 @@ Function Invoke-AddPolicy {
     param($Request, $TriggerMetadata)
 
     $APIName = $TriggerMetadata.FunctionName
-    Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -message 'Accessed this API' -Sev 'Debug'
+    Write-LogMessage -user $Request.headers.'x-ms-client-principal' -API $APINAME -message 'Accessed this API' -Sev 'Debug'
 
-    $Tenants = ($Request.body | Select-Object Select_*).psobject.properties.value
+    $Tenants = ($Request.Body | Select-Object Select_*).psobject.properties.value
     if ('AllTenants' -in $Tenants) { $Tenants = (Get-Tenants).defaultDomainName }
-    $displayname = $request.body.Displayname
-    $description = $request.body.Description
-    $AssignTo = if ($request.body.Assignto -ne 'on') { $request.body.Assignto }
-    $RawJSON = $Request.body.RawJSON
+    $displayname = $Request.Body.displayName
+    $description = $Request.Body.Description
+    $AssignTo = if ($Request.Body.AssignTo -ne 'on') { $Request.Body.AssignTo }
+    $RawJSON = $Request.Body.RAWJson
 
     $results = foreach ($Tenant in $tenants) {
-        if ($Request.body.replacemap.$tenant) {
-        ([pscustomobject]$Request.body.replacemap.$tenant).psobject.properties | ForEach-Object { $RawJson = $RawJson -replace $_.name, $_.value }
+        if ($Request.Body.replacemap.$tenant) {
+        ([pscustomobject]$Request.Body.replacemap.$tenant).psobject.properties | ForEach-Object { $RawJson = $RawJson -replace $_.name, $_.value }
         }
         try {
-            switch ($Request.body.TemplateType) {
+            switch ($Request.Body.TemplateType) {
                 'AppProtection' {
                     $TemplateType = ($RawJSON | ConvertFrom-Json).'@odata.type' -replace '#microsoft.graph.', ''
                     $TemplateTypeURL = "$($TemplateType)s"
@@ -81,14 +81,14 @@ Function Invoke-AddPolicy {
                 }
 
             }
-            Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $($Tenant) -message "Added policy $($Displayname)" -Sev 'Info'
+            Write-LogMessage -user $Request.headers.'x-ms-client-principal' -API $APINAME -tenant $($Tenant) -message "Added policy $($Displayname)" -Sev 'Info'
             if ($AssignTo) {
-                Set-CIPPAssignedPolicy -GroupName $AssignTo -PolicyId $CreateRequest.id -Type $TemplateTypeURL -TenantFilter $tenant 
+                Set-CIPPAssignedPolicy -GroupName $AssignTo -PolicyId $CreateRequest.id -Type $TemplateTypeURL -TenantFilter $tenant
             }
             "Successfully added policy for $($Tenant)"
         } catch {
             "Failed to add policy for $($Tenant): $($_.Exception.Message)"
-            Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $($Tenant) -message "Failed adding policy $($Displayname). Error: $($_.Exception.Message)" -Sev 'Error'
+            Write-LogMessage -user $Request.headers.'x-ms-client-principal' -API $APINAME -tenant $($Tenant) -message "Failed adding policy $($Displayname). Error: $($_.Exception.Message)" -Sev 'Error'
             continue
         }
 
