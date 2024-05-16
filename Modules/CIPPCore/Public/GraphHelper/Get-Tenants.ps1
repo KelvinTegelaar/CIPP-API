@@ -103,7 +103,7 @@ function Get-Tenants {
                     }
                 }
 
-                [PSCustomObject]@{
+                $obj = [PSCustomObject]@{
                     PartitionKey             = 'Tenants'
                     RowKey                   = $_.Name
                     customerId               = $_.Name
@@ -111,7 +111,6 @@ function Get-Tenants {
                     relationshipEnd          = $LatestRelationship.relationshipEnd
                     relationshipCount        = $_.Count
                     defaultDomainName        = $defaultDomainName
-                    initialDomainName        = $initialDomainName
                     hasAutoExtend            = $AutoExtend
                     delegatedPrivilegeStatus = 'granularDelegatedAdminPrivileges'
                     domains                  = ''
@@ -123,6 +122,10 @@ function Get-Tenants {
                     RequiresRefresh          = [bool]$RequiresRefresh
                     LastRefresh              = (Get-Date).ToUniversalTime()
                 }
+                if ($Obj.defaultDomainName -eq 'Invalid' -or !$Obj.defaultDomainName) {
+                    continue
+                }
+                Add-CIPPAzDataTableEntity @TenantsTable -Entity $obj -Force | Out-Null
             }
         }
         $IncludedTenantsCache = [system.collections.generic.list[object]]::new()
@@ -145,6 +148,7 @@ function Get-Tenants {
                     RequiresRefresh   = [bool]$RequiresRefresh
                     LastRefresh       = (Get-Date).ToUniversalTime()
                 }) | Out-Null
+                
         }
         foreach ($Tenant in $TenantList) {
             if ($Tenant.defaultDomainName -eq 'Invalid' -or !$Tenant.defaultDomainName) {
