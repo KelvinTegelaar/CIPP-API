@@ -94,12 +94,6 @@ function Invoke-NinjaOneOrgMapping {
     # Now Let match on remaining Tenants
 
     $Batch = Foreach ($Tenant in $Tenants | Where-Object { $_.customerId -notin $MatchedM365Tenants.customerId }) {
-        <#Push-OutputBinding -Name NinjaProcess -Value @{
-            'NinjaAction'  = 'AutoMapTenant'
-            'M365Tenant'   = $Tenant
-            'NinjaOrgs'    = $NinjaOrgs | Where-Object { $_.id -notin $MatchedNinjaOrgs }
-            'NinjaDevices' = $ParsedNinjaDevices
-        }#>
         [PSCustomObject]@{
             'NinjaAction'  = 'AutoMapTenant'
             'M365Tenant'   = $Tenant
