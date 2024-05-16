@@ -8,6 +8,8 @@ function Invoke-CIPPStandardDeletedUserRentention {
     $StateSetCorrectly = if ($CurrentInfo.deletedUserPersonalSiteRetentionPeriodInDays -eq 365) { $true } else { $false }
 
     If ($Settings.remediate -eq $true) {
+        Write-Host 'Time to remediate'
+        
         if ($StateSetCorrectly -eq $false) {
             try {
                 $body = '{"deletedUserPersonalSiteRetentionPeriodInDays": 365}'
@@ -15,7 +17,8 @@ function Invoke-CIPPStandardDeletedUserRentention {
 
                 Write-LogMessage -API 'Standards' -tenant $tenant -message 'Set deleted user rentention of OneDrive to 1 year' -sev Info
             } catch {
-                Write-LogMessage -API 'Standards' -tenant $tenant -message "Failed to set deleted user rentention of OneDrive to 1 year: $($_.exception.message)" -sev Error
+                $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
+                Write-LogMessage -API 'Standards' -tenant $tenant -message "Failed to set deleted user rentention of OneDrive to 1 year. Error: $ErrorMessage" -sev Error
             }
         } else {
             Write-LogMessage -API 'Standards' -tenant $tenant -message 'Deleted user rentention of OneDrive is already set to 1 year' -sev Info

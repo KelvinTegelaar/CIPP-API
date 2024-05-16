@@ -14,7 +14,8 @@ function Invoke-CIPPStandardRotateDKIM {
                     (New-ExoRequest -tenantid $tenant -cmdlet 'Rotate-DkimSigningConfig' -cmdparams @{ KeySize = 2048; Identity = $_.Identity } -useSystemMailbox $true)
                     Write-LogMessage -API 'Standards' -tenant $tenant -message "Rotated DKIM for $($_.Identity)" -sev Info
                 } catch {
-                    Write-LogMessage -API 'Standards' -tenant $tenant -message "Failed to rotate DKIM Error: $($_.exception.message)" -sev Error
+                    $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
+                    Write-LogMessage -API 'Standards' -tenant $tenant -message "Failed to rotate DKIM Error: $ErrorMessage" -sev Error
                 }
             }
         } else {
