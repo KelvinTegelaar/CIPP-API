@@ -12,7 +12,7 @@ function New-ExoBulkRequest ($tenantid, $cmdletArray, $useSystemMailbox, $Anchor
             Authorization             = "Bearer $($token.access_token)"
             Prefer                    = 'odata.maxpagesize = 1000;odata.continue-on-error'
             'parameter-based-routing' = $true
-            'X-AnchorMailbox'         = $anchor
+            'X-AnchorMailbox'         = $Anchor
         }
         try {
             if ($Select) { $Select = "`$select=$Select" }
@@ -37,7 +37,7 @@ function New-ExoBulkRequest ($tenantid, $cmdletArray, $useSystemMailbox, $Anchor
                     if ($cmdparams.User) { $Anchor = $cmdparams.User }
                     if (!$Anchor -or $useSystemMailbox) {
                         $OnMicrosoft = $Tenant.initialDomainName
-                        $anchor = "UPN:SystemMailbox{8cc370d3-822a-4ab8-a926-bb94bd0641a9}@$($OnMicrosoft)"
+                        $Anchor = "UPN:SystemMailbox{8cc370d3-822a-4ab8-a926-bb94bd0641a9}@$($OnMicrosoft)"
                     }
                     $headers['X-AnchorMailbox'] = $Anchor
                     $Headers['X-CmdletName'] = $cmd.CmdletInput.CmdletName
