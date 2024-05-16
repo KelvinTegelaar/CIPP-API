@@ -23,7 +23,8 @@ function Invoke-CIPPStandardExConnector {
           Write-LogMessage -API $APINAME -tenant $Tenant -message "Created transport rule for $($Tenant, $Settings)" -sev info
         }
       } catch {
-        Write-LogMessage -API 'Standards' -tenant $tenant -message "Failed to create or update Exchange Connector Rule: $($_.exception.message)" -sev 'Error'
+        $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
+        Write-LogMessage -API 'Standards' -tenant $tenant -message "Failed to create or update Exchange Connector Rule: $ErrorMessage" -sev 'Error'
       }
 
     }
