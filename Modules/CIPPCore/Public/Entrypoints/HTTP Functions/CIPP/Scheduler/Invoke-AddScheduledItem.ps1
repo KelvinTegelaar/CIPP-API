@@ -7,7 +7,12 @@ Function Invoke-AddScheduledItem {
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
-    $Result = Add-CIPPScheduledTask -Task $Request.body -hidden $false
+    if ($Request.query.hidden -eq $null) {
+        $hidden = $false
+    } else {
+        $hidden = $true
+    }
+    $Result = Add-CIPPScheduledTask -Task $Request.body -hidden $hidden
     Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -message $Result -Sev 'Info'
 
     Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
