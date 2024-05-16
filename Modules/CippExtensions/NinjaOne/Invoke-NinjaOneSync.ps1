@@ -8,11 +8,6 @@ function Invoke-NinjaOneSync {
 
 
         $Batch = foreach ($Tenant in $TenantsToProcess) {
-            <#Push-OutputBinding -Name NinjaProcess -Value @{
-                'NinjaAction'  = 'SyncTenant'
-                'MappedTenant' = $Tenant
-            }
-            Start-Sleep -Seconds 1#>
             [PSCustomObject]@{
                 'NinjaAction'  = 'SyncTenant'
                 'MappedTenant' = $Tenant

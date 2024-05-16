@@ -17,8 +17,9 @@ function Invoke-CIPPStandardlaps {
                 New-GraphPostRequest -tenantid $Tenant -Uri 'https://graph.microsoft.com/beta/policies/deviceRegistrationPolicy' -Type PUT -Body $NewBody -ContentType 'application/json'
                 Write-LogMessage -API 'Standards' -tenant $Tenant -message 'LAPS has been enabled.' -sev Info
             } catch {
+                $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
                 $PreviousSetting.localAdminPassword.isEnabled = $false
-                Write-LogMessage -API 'Standards' -tenant $Tenant -message "Failed to enable LAPS: $($_.exception.message)" -sev Error
+                Write-LogMessage -API 'Standards' -tenant $Tenant -message "Failed to enable LAPS: $ErrorMessage" -sev Error
             }
         }
     }
