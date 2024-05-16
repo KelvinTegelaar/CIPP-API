@@ -15,7 +15,7 @@ Function Invoke-ExecEditTemplate {
         $Table = Get-CippTable -tablename 'templates'
         $Table.Force = $true
         $guid = $request.body.guid
-        $JSON = $request.body | Select-Object * -ExcludeProperty GUID | ConvertTo-Json
+        $JSON = ConvertTo-Json -Compress -Depth 100 -InputObject ($request.body | Select-Object * -ExcludeProperty GUID)
         $Type = $request.Query.Type
 
         if ($Type -eq 'IntuneTemplate') {
