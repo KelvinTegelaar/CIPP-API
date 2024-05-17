@@ -58,6 +58,8 @@ function Invoke-CIPPStandardAddDKIM {
 
             if ($ErrorCounter -eq 0) {
                 Write-LogMessage -API 'Standards' -tenant $tenant -message 'Enabled DKIM for all domains in tenant' -sev Info
+            } elseif ($ErrorCounter -gt 0 -and $ErrorCounter -lt ($NewDomains.Count + $SetDomains.Count)) {
+                Write-LogMessage -API 'Standards' -tenant $tenant -message 'Failed to enable DKIM for some domains in tenant' -sev Error
             } else {
                 Write-LogMessage -API 'Standards' -tenant $tenant -message 'Failed to enable DKIM for all domains in tenant' -sev Error
             }
