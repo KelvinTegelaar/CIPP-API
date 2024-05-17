@@ -66,7 +66,6 @@ function Invoke-CippWebhookProcessing {
                 Write-Host 'Going to send the mail'
                 Send-CIPPAlert -Type 'email' -Title $GenerateEmail.title -HTMLContent $GenerateEmail.htmlcontent -TenantFilter $TenantFilter
                 Write-Host 'email should be sent'
-
             }
             'generatePSA' {
                 $GenerateEmail = New-CIPPAlertTemplate -format 'html' -data $Data -ActionResults $ActionResults
@@ -74,18 +73,15 @@ function Invoke-CippWebhookProcessing {
             }
             'generateWebhook' {
                 Write-Host 'Generating the webhook content'
+                $LocationInfo = $Data.CIPPLocationInfo | ConvertFrom-Json -ErrorAction SilentlyContinue
                 $GenerateJSON = New-CIPPAlertTemplate -format 'json' -data $Data -ActionResults $ActionResults
                 $JsonContent = @{
-                    Title            = $GenerateJSON.Title
-                    ActionUrl        = $GenerateJSON.ButtonUrl
-                    RawData          = $Data
-                    IP               = $data.ClientIP
-                    PotentialCountry = $Country
-                    PotentialCity    = $City
-                    PotentialProxy   = $Proxy
-                    PotentialHosting = $hosting
-                    PotentialASName  = $ASName
-                    ActionsTaken     = [string]($ActionResults | ConvertTo-Json -Depth 15 -Compress)
+                    Title                 = $GenerateJSON.Title
+                    ActionUrl             = $GenerateJSON.ButtonUrl
+                    RawData               = $Data
+                    IP                    = $data.ClientIP
+                    PotentialLocationInfo = $LocationInfo
+                    ActionsTaken          = [string]($ActionResults | ConvertTo-Json -Depth 15 -Compress)
                 } | ConvertTo-Json -Depth 15 -Compress
                 Write-Host 'Sending Webhook Content'
 
