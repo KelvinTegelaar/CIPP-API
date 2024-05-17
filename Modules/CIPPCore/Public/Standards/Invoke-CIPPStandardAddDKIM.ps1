@@ -35,8 +35,6 @@ function Invoke-CIPPStandardAddDKIM {
                     $ErrorCounter ++
                     $ErrorMessage = Get-NormalizedError -Message $_.error
                     Write-LogMessage -API 'Standards' -tenant $tenant -message "Failed to enable DKIM. Error: $ErrorMessage" -sev Error
-                } else {
-                    Write-LogMessage -API 'Standards' -tenant $tenant -message 'Enabled DKIM for a domain' -sev Info
                 }
             }
 
@@ -55,8 +53,6 @@ function Invoke-CIPPStandardAddDKIM {
                     $ErrorCounter ++
                     $ErrorMessage = Get-NormalizedError -Message $_.error
                     Write-LogMessage -API 'Standards' -tenant $tenant -message "Failed to set DKIM. Error: $ErrorMessage" -sev Error
-                } else {
-                    Write-LogMessage -API 'Standards' -tenant $tenant -message 'Enabled DKIM for a domain' -sev Info
                 }
             }
 
