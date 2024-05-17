@@ -6,8 +6,8 @@ function Invoke-CIPPStandardPWcompanionAppAllowedState {
     param($Tenant, $Settings)
     $authenticatorFeaturesState = (New-GraphGetRequest -tenantid $tenant -Uri 'https://graph.microsoft.com/beta/policies/authenticationMethodsPolicy/authenticationMethodConfigurations/microsoftAuthenticator' -Type GET)
     $authstate = if ($authenticatorFeaturesState.featureSettings.companionAppAllowedState.state -eq 'enabled') { $true } else { $false }
-    
-    If ($Settings.remediate) {
+
+    If ($Settings.remediate -eq $true) {
 
         if ($authenticatorFeaturesState.featureSettings.companionAppAllowedState.state -eq $Settings.state) {
             Write-LogMessage -API 'Standards' -tenant $tenant -message "companionAppAllowedState is already set to the desired state of $($Settings.state)." -sev Info
@@ -32,12 +32,13 @@ function Invoke-CIPPStandardPWcompanionAppAllowedState {
                 (New-GraphPostRequest -tenantid $tenant -Uri 'https://graph.microsoft.com/beta/policies/authenticationMethodsPolicy/authenticationMethodConfigurations/microsoftAuthenticator' -Type patch -Body $body -ContentType 'application/json')
                 Write-LogMessage -API 'Standards' -tenant $tenant -message "Set companionAppAllowedState to $($Settings.state)." -sev Info
             } catch {
-                Write-LogMessage -API 'Standards' -tenant $tenant -message "Failed to set companionAppAllowedState to $($Settings.state). Error: $($_.exception.message)" -sev Error
+                $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
+                Write-LogMessage -API 'Standards' -tenant $tenant -message "Failed to set companionAppAllowedState to $($Settings.state). Error: $ErrorMessage" -sev Error
             }
         }
     }
 
-    if ($Settings.alert) {
+    if ($Settings.alert -eq $true) {
 
         if ($authstate) {
             Write-LogMessage -API 'Standards' -tenant $tenant -message 'companionAppAllowedState is enabled.' -sev Info
@@ -46,7 +47,7 @@ function Invoke-CIPPStandardPWcompanionAppAllowedState {
         }
     }
 
-    if ($Settings.report) {
-        Add-CIPPBPAField -FieldName 'companionAppAllowedState' -FieldValue [bool]$authstate -StoreAs bool -Tenant $tenant
+    if ($Settings.report -eq $true) {
+        Add-CIPPBPAField -FieldName 'companionAppAllowedState' -FieldValue $authstate -StoreAs bool -Tenant $tenant
     }
 }

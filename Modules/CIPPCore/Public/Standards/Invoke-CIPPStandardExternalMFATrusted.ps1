@@ -9,7 +9,7 @@ function Invoke-CIPPStandardExternalMFATrusted {
     $WantedState = if ($Settings.state -eq 'true') { $true } else { $false }
     $StateMessage = if ($WantedState) { 'enabled' } else { 'disabled' }
 
-    if ($Settings.remediate) {
+    if ($Settings.remediate -eq $true) {
 
         Write-Host 'Remediate External MFA Trusted'
         if ($ExternalMFATrusted.inboundTrust.isMfaAccepted -eq $WantedState ) {
@@ -22,12 +22,13 @@ function Invoke-CIPPStandardExternalMFATrusted {
                 $null = New-GraphPostRequest -tenantid $tenant -Uri 'https://graph.microsoft.com/v1.0/policies/crossTenantAccessPolicy/default' -Type patch -Body $NewBody -ContentType 'application/json'
                 Write-LogMessage -API 'Standards' -tenant $tenant -message "Set External MFA Trusted to $StateMessage." -sev Info
             } catch {
-                Write-LogMessage -API 'Standards' -tenant $tenant -message "Failed to set External MFA Trusted to $StateMessage. Error: $($_.exception.message)" -sev Error
+                $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
+                Write-LogMessage -API 'Standards' -tenant $tenant -message "Failed to set External MFA Trusted to $StateMessage. Error: $ErrorMessage" -sev Error
             }
         }
     }
 
-    if ($Settings.alert) {
+    if ($Settings.alert -eq $true) {
 
         if ($ExternalMFATrusted.inboundTrust.isMfaAccepted -eq $WantedState) {
             Write-LogMessage -API 'Standards' -tenant $tenant -message "External MFA Trusted is $StateMessage." -sev Info
@@ -37,8 +38,8 @@ function Invoke-CIPPStandardExternalMFATrusted {
 
     }
 
-    if ($Settings.report) {
+    if ($Settings.report -eq $true) {
 
-        Add-CIPPBPAField -FieldName 'ExternalMFATrusted' -FieldValue [bool]$ExternalMFATrusted.inboundTrust.isMfaAccepted -StoreAs bool -Tenant $tenant
+        Add-CIPPBPAField -FieldName 'ExternalMFATrusted' -FieldValue $ExternalMFATrusted.inboundTrust.isMfaAccepted -StoreAs bool -Tenant $tenant
     }
 }

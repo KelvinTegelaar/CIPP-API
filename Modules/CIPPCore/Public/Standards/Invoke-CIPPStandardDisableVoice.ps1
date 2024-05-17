@@ -6,8 +6,8 @@ function Invoke-CIPPStandardDisableVoice {
     param($Tenant, $Settings)
     $CurrentInfo = New-GraphGetRequest -Uri 'https://graph.microsoft.com/beta/policies/authenticationmethodspolicy/authenticationMethodConfigurations/Voice' -tenantid $Tenant
     $State = if ($CurrentInfo.state -eq 'enabled') { $true } else { $false }
-    
-    If ($Settings.remediate) {
+
+    If ($Settings.remediate -eq $true) {
         if ($State) {
             Set-CIPPAuthenticationPolicy -Tenant $tenant -APIName 'Standards' -AuthenticationMethodId 'Voice' -Enabled $false
         } else {
@@ -15,7 +15,7 @@ function Invoke-CIPPStandardDisableVoice {
         }
     }
 
-    if ($Settings.alert) {
+    if ($Settings.alert -eq $true) {
         if ($State) {
             Write-LogMessage -API 'Standards' -tenant $tenant -message 'Voice authentication method is enabled' -sev Alert
         } else {
@@ -23,7 +23,7 @@ function Invoke-CIPPStandardDisableVoice {
         }
     }
 
-    if ($Settings.report) {
-        Add-CIPPBPAField -FieldName 'DisableVoice' -FieldValue [bool]$State -StoreAs bool -Tenant $tenant
+    if ($Settings.report -eq $true) {
+        Add-CIPPBPAField -FieldName 'DisableVoice' -FieldValue $State -StoreAs bool -Tenant $tenant
     }
 }

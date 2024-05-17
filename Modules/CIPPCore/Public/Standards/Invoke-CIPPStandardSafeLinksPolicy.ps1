@@ -6,39 +6,39 @@ function Invoke-CIPPStandardSafeLinksPolicy {
 
     param($Tenant, $Settings)
     $PolicyName = 'Default SafeLinks Policy'
-    
-    $CurrentState = New-ExoRequest -tenantid $Tenant -cmdlet 'Get-SafeLinksPolicy' | 
-        Where-Object -Property Name -EQ $PolicyName | 
+
+    $CurrentState = New-ExoRequest -tenantid $Tenant -cmdlet 'Get-SafeLinksPolicy' |
+        Where-Object -Property Name -EQ $PolicyName |
         Select-Object Name, EnableSafeLinksForEmail, EnableSafeLinksForTeams, EnableSafeLinksForOffice, TrackClicks, AllowClickThrough, ScanUrls, EnableForInternalSenders, DeliverMessageAfterScan, DisableUrlRewrite, EnableOrganizationBranding
 
     $StateIsCorrect = ($CurrentState.Name -eq $PolicyName) -and
-                      ($CurrentState.EnableSafeLinksForEmail -eq $true) -and 
-                      ($CurrentState.EnableSafeLinksForTeams -eq $true) -and 
-                      ($CurrentState.EnableSafeLinksForOffice -eq $true) -and 
-                      ($CurrentState.TrackClicks -eq $true) -and 
-                      ($CurrentState.ScanUrls -eq $true) -and 
-                      ($CurrentState.EnableForInternalSenders -eq $true) -and 
-                      ($CurrentState.DeliverMessageAfterScan -eq $true) -and 
+                      ($CurrentState.EnableSafeLinksForEmail -eq $true) -and
+                      ($CurrentState.EnableSafeLinksForTeams -eq $true) -and
+                      ($CurrentState.EnableSafeLinksForOffice -eq $true) -and
+                      ($CurrentState.TrackClicks -eq $true) -and
+                      ($CurrentState.ScanUrls -eq $true) -and
+                      ($CurrentState.EnableForInternalSenders -eq $true) -and
+                      ($CurrentState.DeliverMessageAfterScan -eq $true) -and
                       ($CurrentState.AllowClickThrough -eq $Settings.AllowClickThrough) -and
                       ($CurrentState.DisableUrlRewrite -eq $Settings.DisableUrlRewrite) -and
                       ($CurrentState.EnableOrganizationBranding -eq $Settings.EnableOrganizationBranding)
 
-    if ($Settings.remediate) {
-        
-        if ($StateIsCorrect) {
+    if ($Settings.remediate -eq $true) {
+
+        if ($StateIsCorrect -eq $true) {
             Write-LogMessage -API 'Standards' -tenant $Tenant -message 'SafeLink Policy already correctly configured' -sev Info
         } else {
             $cmdparams = @{
-                EnableSafeLinksForEmail     = $true
-                EnableSafeLinksForTeams     = $true
-                EnableSafeLinksForOffice    = $true
-                TrackClicks                 = $true
-                ScanUrls                    = $true
-                EnableForInternalSenders    = $true
-                DeliverMessageAfterScan     = $true
-                AllowClickThrough           = $Settings.AllowClickThrough
-                DisableUrlRewrite           = $Settings.DisableUrlRewrite
-                EnableOrganizationBranding  = $Settings.EnableOrganizationBranding
+                EnableSafeLinksForEmail    = $true
+                EnableSafeLinksForTeams    = $true
+                EnableSafeLinksForOffice   = $true
+                TrackClicks                = $true
+                ScanUrls                   = $true
+                EnableForInternalSenders   = $true
+                DeliverMessageAfterScan    = $true
+                AllowClickThrough          = $Settings.AllowClickThrough
+                DisableUrlRewrite          = $Settings.DisableUrlRewrite
+                EnableOrganizationBranding = $Settings.EnableOrganizationBranding
             }
 
             try {
@@ -52,22 +52,23 @@ function Invoke-CIPPStandardSafeLinksPolicy {
                     Write-LogMessage -API 'Standards' -tenant $Tenant -message 'Created SafeLink Policy' -sev Info
                 }
             } catch {
-                Write-LogMessage -API 'Standards' -tenant $Tenant -message "Failed to create SafeLink Policy. Error: $($_.exception.message)" -sev Error
+                $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
+                Write-LogMessage -API 'Standards' -tenant $Tenant -message "Failed to create SafeLink Policy. Error: $ErrorMessage" -sev Error
             }
         }
     }
 
-    if ($Settings.alert) {
+    if ($Settings.alert -eq $true) {
 
-        if ($StateIsCorrect) {
+        if ($StateIsCorrect -eq $true) {
             Write-LogMessage -API 'Standards' -tenant $Tenant -message 'SafeLink Policy is enabled' -sev Info
         } else {
             Write-LogMessage -API 'Standards' -tenant $Tenant -message 'SafeLink Policy is not enabled' -sev Alert
         }
     }
 
-    if ($Settings.report) {
-        Add-CIPPBPAField -FieldName 'SafeLinksPolicy' -FieldValue [bool]$StateIsCorrect -StoreAs bool -Tenant $tenant
+    if ($Settings.report -eq $true) {
+        Add-CIPPBPAField -FieldName 'SafeLinksPolicy' -FieldValue $StateIsCorrect -StoreAs bool -Tenant $tenant
     }
-    
+
 }
