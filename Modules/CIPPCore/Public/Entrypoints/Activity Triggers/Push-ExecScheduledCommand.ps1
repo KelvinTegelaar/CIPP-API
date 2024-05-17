@@ -23,8 +23,10 @@ function Push-ExecScheduledCommand {
         if ($item.command -like 'Get-CIPPAlert*') {
             $results = @($results)
             $TaskType = 'Alert'
+            $Severity = 'Debug'
         } else {
             $TaskType = 'Scheduled Task'
+            $Severity = 'Info'
             if ($results -is [String]) {
                 $results = @{ Results = $results }
             }
@@ -107,5 +109,6 @@ function Push-ExecScheduledCommand {
             ScheduledTime = "$nextRunUnixTime"
         }
     }
-    Write-LogMessage -API 'Scheduler_UserTasks' -tenant $tenant -message "Successfully executed task: $($task.Name)" -sev Debug
+
+    Write-LogMessage -API 'Scheduler_UserTasks' -tenant $tenant -message "Successfully executed task: $($task.Name)" -sev $Severity
 }
