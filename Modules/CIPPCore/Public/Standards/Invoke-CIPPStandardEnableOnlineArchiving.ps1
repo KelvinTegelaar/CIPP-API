@@ -29,12 +29,14 @@ function Invoke-CIPPStandardEnableOnlineArchiving {
                 $BatchResults = New-ExoBulkRequest -tenantid $tenant -cmdletArray $Request
                 $BatchResults | ForEach-Object {
                     if ($_.error) {
-                        Write-Host "Failed to Enable Online Archiving for $($_.Target). Error: $($_.error)"
-                        Write-LogMessage -API 'Standards' -tenant $tenant -message "Failed to Enable Online Archiving for $($_.Target). Error: $($_.error)" -sev Error
+                        $ErrorMessage = Get-NormalizedError -Message $_.error
+                        Write-Host "Failed to Enable Online Archiving for $($_.Target). Error: $ErrorMessage"
+                        Write-LogMessage -API 'Standards' -tenant $tenant -message "Failed to Enable Online Archiving for $($_.Target). Error: $ErrorMessage" -sev Error
                     }
                 }
             } catch {
-                Write-LogMessage -API 'Standards' -tenant $Tenant -message "Failed to Enable Online Archiving for all accounts. Error: $($_.exception.message)" -sev Error
+                $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
+                Write-LogMessage -API 'Standards' -tenant $Tenant -message "Failed to Enable Online Archiving for all accounts. Error: $ErrorMessage" -sev Error
             }
         }
 
