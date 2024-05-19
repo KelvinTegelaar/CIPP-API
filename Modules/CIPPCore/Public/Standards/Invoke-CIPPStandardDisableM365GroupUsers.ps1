@@ -22,7 +22,8 @@ function Invoke-CIPPStandardDisableM365GroupUsers {
                 $null = New-GraphPostRequest -tenantid $tenant -asApp $true -Uri "https://graph.microsoft.com/beta/settings/$($CurrentState.id)" -Type patch -Body $body -ContentType 'application/json'
                 Write-LogMessage -API 'Standards' -tenant $tenant -message 'Disabled users from creating M365 Groups.' -sev Info
             } catch {
-                Write-LogMessage -API 'Standards' -tenant $tenant -message "Failed to disable users from creating M365 Groups: $($_.exception.message)" -sev 'Error'
+                $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
+                Write-LogMessage -API 'Standards' -tenant $tenant -message "Failed to disable users from creating M365 Groups: $ErrorMessage" -sev 'Error'
             }
         }
     }
