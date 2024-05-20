@@ -44,10 +44,6 @@ Function Invoke-ExecExtensionSync {
             if ($Request.Query.TenantID) {
                 $Tenant = $TenantsToProcess | Where-Object { $_.RowKey -eq $Request.Query.TenantID }
                 if (($Tenant | Measure-Object).count -eq 1) {
-                    <#Push-OutputBinding -Name NinjaProcess -Value @{
-                        'NinjaAction'  = 'SyncTenant'
-                        'MappedTenant' = $Tenant
-                    }#>
                     $Batch = [PSCustomObject]@{
                         'NinjaAction'  = 'SyncTenant'
                         'MappedTenant' = $Tenant
@@ -58,7 +54,7 @@ Function Invoke-ExecExtensionSync {
                         Batch            = @($Batch)
                     }
                     #Write-Host ($InputObject | ConvertTo-Json)
-                    $InstanceId = Start-NewOrchestration -FunctionName 'CIPPOrchestrator' -InputObject ($InputObject | ConvertTo-Json -Depth 5)
+                    $InstanceId = Start-NewOrchestration -FunctionName 'CIPPOrchestrator' -InputObject ($InputObject | ConvertTo-Json -Depth 5 -Compress)
                     Write-Host "Started permissions orchestration with ID = '$InstanceId'"
 
                     $Results = [pscustomobject]@{'Results' = "NinjaOne Synchronization Queued for $($Tenant.NinjaOneName)" }
@@ -67,9 +63,6 @@ Function Invoke-ExecExtensionSync {
                 }
 
             } else {
-                <#Push-OutputBinding -Name NinjaProcess -Value @{
-                    'NinjaAction' = 'SyncTenants'
-                }#>
                 $Batch = [PSCustomObject]@{
                     'NinjaAction'  = 'SyncTenants'
                     'FunctionName' = 'NinjaOneQueue'
@@ -79,7 +72,7 @@ Function Invoke-ExecExtensionSync {
                     Batch            = @($Batch)
                 }
                 #Write-Host ($InputObject | ConvertTo-Json)
-                $InstanceId = Start-NewOrchestration -FunctionName 'CIPPOrchestrator' -InputObject ($InputObject | ConvertTo-Json -Depth 5)
+                $InstanceId = Start-NewOrchestration -FunctionName 'CIPPOrchestrator' -InputObject ($InputObject | ConvertTo-Json -Depth 5 -Compress)
                 Write-Host "Started permissions orchestration with ID = '$InstanceId'"
                 $Results = [pscustomobject]@{'Results' = "NinjaOne Synchronization Queuing $(($TenantsToProcess | Measure-Object).count) Tenants" }
 

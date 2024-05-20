@@ -4,7 +4,7 @@ function Invoke-CIPPStandardDisableOutlookAddins {
     Internal
     #>
     param($Tenant, $Settings)
-    
+
     $CurrentInfo = New-ExoRequest -tenantid $Tenant -cmdlet 'Get-RoleAssignmentPolicy' | Where-Object { $_.IsDefault -eq $true }
     $Roles = @('My Custom Apps', 'My Marketplace Apps', 'My ReadWriteMailbox Apps')
     $RolesToRemove = foreach ($Role in $Roles) {
@@ -13,10 +13,10 @@ function Invoke-CIPPStandardDisableOutlookAddins {
         }
     }
 
-    if ($Settings.remediate) {
+    if ($Settings.remediate -eq $true) {
         if ($RolesToRemove) {
             $Errors = [System.Collections.Generic.List[string]]::new()
-            
+
             foreach ($Role in $RolesToRemove) {
                 try {
                     New-ExoRequest -tenantid $Tenant -cmdlet 'Get-ManagementRoleAssignment' -cmdparams @{ RoleAssignee = $CurrentInfo.Identity; Role = $Role } | ForEach-Object {
@@ -24,7 +24,8 @@ function Invoke-CIPPStandardDisableOutlookAddins {
                         Write-LogMessage -API 'Standards' -tenant $tenant -message "Disabled Outlook add-in role: $Role" -sev Debug
                     }
                 } catch {
-                    Write-LogMessage -API 'Standards' -tenant $tenant -message "Failed to disable Outlook add-in role: $Role Error: $($_.exception.message)" -sev Error
+                    $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
+                    Write-LogMessage -API 'Standards' -tenant $tenant -message "Failed to disable Outlook add-in role: $Role Error: $ErrorMessage" -sev Error
                     $Errors.Add($Role)
                 }
             }
@@ -40,15 +41,15 @@ function Invoke-CIPPStandardDisableOutlookAddins {
         }
     }
 
-    if ($Settings.alert) {
+    if ($Settings.alert -eq $true) {
         if ($RolesToRemove) {
             Write-LogMessage -API 'Standards' -tenant $tenant -message 'Users are not disabled from installing Outlook add-ins.' -sev Alert
         } else {
             Write-LogMessage -API 'Standards' -tenant $tenant -message 'Users are disabled from installing Outlook add-ins.' -sev Info
         }
     }
-    if ($Settings.report) {
+    if ($Settings.report -eq $true) {
         if ($RolesToRemove) { $State = $false } else { $State = $true }
-        Add-CIPPBPAField -FieldName 'DisabledOutlookAddins' -FieldValue [bool]$State -StoreAs bool -Tenant $tenant
+        Add-CIPPBPAField -FieldName 'DisabledOutlookAddins' -FieldValue $State -StoreAs bool -Tenant $tenant
     }
 }

@@ -6,7 +6,7 @@ function Invoke-CIPPStandardintuneRequireMFA {
     param($Tenant, $Settings)
     $PreviousSetting = New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/policies/deviceRegistrationPolicy' -tenantid $Tenant
 
-    If ($Settings.remediate) {
+    If ($Settings.remediate -eq $true) {
         if ($PreviousSetting.multiFactorAuthConfiguration -eq 'required') {
             Write-LogMessage -API 'Standards' -tenant $tenant -message 'Require to use MFA when joining/registering Entra Devices is already enabled.' -sev Info
         } else {
@@ -17,12 +17,13 @@ function Invoke-CIPPStandardintuneRequireMFA {
                 New-GraphPostRequest -tenantid $tenant -Uri 'https://graph.microsoft.com/beta/policies/deviceRegistrationPolicy' -Type PUT -Body $NewBody -ContentType 'application/json'
                 Write-LogMessage -API 'Standards' -tenant $tenant -message 'Set required to use MFA when joining/registering Entra Devices' -sev Info
             } catch {
-                Write-LogMessage -API 'Standards' -tenant $tenant -message "Failed to set require to use MFA when joining/registering Entra Devices: $($_.exception.message)" -sev Error
+                $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
+                Write-LogMessage -API 'Standards' -tenant $tenant -message "Failed to set require to use MFA when joining/registering Entra Devices: $ErrorMessage" -sev Error
             }
         }
     }
 
-    if ($Settings.alert) {
+    if ($Settings.alert -eq $true) {
 
         if ($PreviousSetting.multiFactorAuthConfiguration -eq 'required') {
             Write-LogMessage -API 'Standards' -tenant $tenant -message 'Require to use MFA when joining/registering Entra Devices is enabled.' -sev Info
@@ -31,8 +32,8 @@ function Invoke-CIPPStandardintuneRequireMFA {
         }
     }
 
-    if ($Settings.report) {
+    if ($Settings.report -eq $true) {
         $RequireMFA = if ($PreviousSetting.multiFactorAuthConfiguration -eq 'required') { $true } else { $false }
-        Add-CIPPBPAField -FieldName 'intuneRequireMFA' -FieldValue [bool]$RequireMFA -StoreAs bool -Tenant $tenant
+        Add-CIPPBPAField -FieldName 'intuneRequireMFA' -FieldValue $RequireMFA -StoreAs bool -Tenant $tenant
     }
 }

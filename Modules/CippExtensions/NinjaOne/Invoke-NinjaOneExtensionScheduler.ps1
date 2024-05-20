@@ -32,11 +32,6 @@ function Invoke-NinjaOneExtensionScheduler {
     if ($Null -eq $LastRunTime -or $LastRunTime -le (Get-Date).addhours(-25) -or $TimeSetting -eq $CurrentInterval) {
         Write-Host 'Executing'
         $Batch = foreach ($Tenant in $TenantsToProcess | Sort-Object lastEndTime) {
-            <#Push-OutputBinding -Name NinjaProcess -Value @{
-                'NinjaAction'  = 'SyncTenant'
-                'MappedTenant' = $Tenant
-            }
-            Start-Sleep -Seconds 1#>
             [PSCustomObject]@{
                 'NinjaAction'  = 'SyncTenant'
                 'MappedTenant' = $Tenant
@@ -49,7 +44,7 @@ function Invoke-NinjaOneExtensionScheduler {
                 Batch            = @($Batch)
             }
             #Write-Host ($InputObject | ConvertTo-Json)
-            $InstanceId = Start-NewOrchestration -FunctionName 'CIPPOrchestrator' -InputObject ($InputObject | ConvertTo-Json -Depth 5)
+            $InstanceId = Start-NewOrchestration -FunctionName 'CIPPOrchestrator' -InputObject ($InputObject | ConvertTo-Json -Depth 5 -Compress)
             Write-Host "Started permissions orchestration with ID = '$InstanceId'"
         }
 
@@ -79,10 +74,6 @@ function Invoke-NinjaOneExtensionScheduler {
             }
             $CatchupTenants = $TenantsToProcess | Where-Object { (((($_.lastEndTime -eq $Null) -or ($_.lastStartTime -gt $_.lastEndTime)) -and ($_.lastStartTime -lt (Get-Date).AddMinutes(-30)))) -or ($_.lastStartTime -lt $LastRunTime) }
             $Batch = foreach ($Tenant in $CatchupTenants) {
-                #Push-OutputBinding -Name NinjaProcess -Value @{
-                #    'NinjaAction'  = 'SyncTenant'
-                #    'MappedTenant' = $Tenant
-                #}
                 [PSCustomObject]@{
                     NinjaAction  = 'SyncTenant'
                     MappedTenant = $Tenant
@@ -95,7 +86,7 @@ function Invoke-NinjaOneExtensionScheduler {
                     Batch            = @($Batch)
                 }
                 #Write-Host ($InputObject | ConvertTo-Json)
-                $InstanceId = Start-NewOrchestration -FunctionName 'CIPPOrchestrator' -InputObject ($InputObject | ConvertTo-Json -Depth 5)
+                $InstanceId = Start-NewOrchestration -FunctionName 'CIPPOrchestrator' -InputObject ($InputObject | ConvertTo-Json -Depth 5 -Compress)
                 Write-Host "Started permissions orchestration with ID = '$InstanceId'"
             }
 
