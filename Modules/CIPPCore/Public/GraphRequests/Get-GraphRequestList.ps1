@@ -66,6 +66,8 @@ function Get-GraphRequestList {
         [string]$ReverseTenantLookupProperty = 'tenantId'
     )
 
+    $SingleTenantThreshold = 8000
+
     $TableName = ('cache{0}' -f ($Endpoint -replace '[^A-Za-z0-9]'))[0..62] -join ''
     Write-Information "Table: $TableName"
     $Endpoint = $Endpoint -replace '^/', ''
@@ -86,8 +88,32 @@ function Get-GraphRequestList {
     $GraphQuery.Query = $ParamCollection.ToString()
     $PartitionKey = Get-StringHash -String (@($Endpoint, $ParamCollection.ToString()) -join '-')
     Write-Information "PK: $PartitionKey"
-
     Write-Information ( 'GET [ {0} ]' -f $GraphQuery.ToString())
+
+    # Perform $count check before caching
+    $Count = 0
+    if ($TenantFilter -ne 'AllTenants') {
+        $GraphRequest = @{
+            uri           = $GraphQuery.ToString()
+            tenantid      = $TenantFilter
+            ComplexFilter = $true
+        }
+
+        if ($NoPagination.IsPresent) {
+            $GraphRequest.noPagination = $NoPagination.IsPresent
+        }
+        if ($CountOnly.IsPresent) {
+            $GraphRequest.CountOnly = $CountOnly.IsPresent
+        }
+        if ($NoAuthCheck.IsPresent) {
+            $GraphRequest.noauthcheck = $NoAuthCheck.IsPresent
+        }
+        if ($Parameters.'$count' -and !$SkipCache.IsPresent -and !$NoPagination.IsPresent) {
+            $Count = New-GraphGetRequest @GraphRequest -CountOnly -ErrorAction Stop
+            if ($CountOnly.IsPresent) { return $Count }
+            Write-Information "Total results (`$count): $Count"
+        }
+    }
 
     try {
         if ($QueueId) {
@@ -95,30 +121,31 @@ function Get-GraphRequestList {
             $Filter = "QueueId eq '{0}'" -f $QueueId
             $Rows = Get-CIPPAzDataTableEntity @Table -Filter $Filter
             $Type = 'Queue'
-        } elseif ($TenantFilter -eq 'AllTenants' -or (!$SkipCache.IsPresent -and !$ClearCache.IsPresent -and !$CountOnly.IsPresent)) {
-            $Table = Get-CIPPTable -TableName $TableName
-            $Timestamp = (Get-Date).AddHours(-1).ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ss.fffK')
-            if ($TenantFilter -eq 'AllTenants') {
-                $Filter = "PartitionKey eq '{0}' and QueueType eq 'AllTenants' and Timestamp ge datetime'{1}'" -f $PartitionKey, $Timestamp
-            } else {
-                $Filter = "PartitionKey eq '{0}' and Tenant eq '{1}' and Timestamp ge datetime'{2}'" -f $PartitionKey, $TenantFilter, $Timestamp
+            Write-Information "Cached: $(($Rows | Measure-Object).Count) rows (Type: $($Type))"
+            $QueueReference = '{0}-{1}' -f $TenantFilter, $PartitionKey
+            $RunningQueue = Invoke-ListCippQueue | Where-Object { $_.Reference -eq $QueueReference -and $_.Status -ne 'Completed' -and $_.Status -ne 'Failed' }
+        } elseif (!$SkipCache.IsPresent -and !$ClearCache.IsPresent -and !$CountOnly.IsPresent) {
+            if ($TenantFilter -eq 'AllTenants' -or $Count -gt $SingleTenantThreshold) {
+                $Table = Get-CIPPTable -TableName $TableName
+                $Timestamp = (Get-Date).AddHours(-1).ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ss.fffK')
+                if ($TenantFilter -eq 'AllTenants') {
+                    $Filter = "PartitionKey eq '{0}' and QueueType eq 'AllTenants' and Timestamp ge datetime'{1}'" -f $PartitionKey, $Timestamp
+                } else {
+                    $Filter = "PartitionKey eq '{0}' and Tenant eq '{1}' and Timestamp ge datetime'{2}'" -f $PartitionKey, $TenantFilter, $Timestamp
+                }
+                $Rows = Get-CIPPAzDataTableEntity @Table -Filter $Filter
+                $Type = 'Cache'
+                Write-Information "Cached: $(($Rows | Measure-Object).Count) rows (Type: $($Type))"
+                $QueueReference = '{0}-{1}' -f $TenantFilter, $PartitionKey
+                $RunningQueue = Invoke-ListCippQueue | Where-Object { $_.Reference -eq $QueueReference -and $_.Status -ne 'Completed' -and $_.Status -ne 'Failed' }
             }
-            #Write-Information  $Filter
-            $Rows = Get-CIPPAzDataTableEntity @Table -Filter $Filter
-            $Type = 'Cache'
-        } else {
-            $Type = 'None'
-            $Rows = @()
         }
-        Write-Information "Cached: $(($Rows | Measure-Object).Count) rows (Type: $($Type))"
-
-        $QueueReference = '{0}-{1}' -f $TenantFilter, $PartitionKey
-        $RunningQueue = Invoke-ListCippQueue | Where-Object { $_.Reference -eq $QueueReference -and $_.Status -ne 'Completed' -and $_.Status -ne 'Failed' }
     } catch {
         Write-Information $_.InvocationInfo.PositionMessage
     }
 
     if ($TenantFilter -ne 'AllTenants' -and $Endpoint -match '%tenantid%') {
+        Write-Information "Replacing TenantId in endpoint with $TenantFilter"
         $TenantId = (Get-Tenants -IncludeErrors | Where-Object { $_.defaultDomainName -eq $TenantFilter -or $_.customerId -eq $TenantFilter }).customerId
         $Endpoint = $Endpoint -replace '%tenantid%', $TenantId
         $GraphQuery = [System.UriBuilder]('https://graph.microsoft.com/{0}/{1}' -f $Version, $Endpoint)
@@ -127,6 +154,7 @@ function Get-GraphRequestList {
             $ParamCollection.Add($Item.Key, $Item.Value)
         }
         $GraphQuery.Query = $ParamCollection.ToString()
+        $GraphRequest.uri = $GraphQuery.ToString()
     }
 
     if (!$Rows) {
@@ -208,31 +236,10 @@ function Get-GraphRequestList {
                 }
             }
             default {
-                $GraphRequest = @{
-                    uri           = $GraphQuery.ToString()
-                    tenantid      = $TenantFilter
-                    ComplexFilter = $true
-                }
-
-                if ($NoPagination.IsPresent) {
-                    $GraphRequest.noPagination = $NoPagination.IsPresent
-                }
-
-                if ($CountOnly.IsPresent) {
-                    $GraphRequest.CountOnly = $CountOnly.IsPresent
-                }
-
-                if ($NoAuthCheck.IsPresent) {
-                    $GraphRequest.noauthcheck = $NoAuthCheck.IsPresent
-                }
-
                 try {
                     $QueueThresholdExceeded = $false
                     if ($Parameters.'$count' -and !$SkipCache -and !$NoPagination) {
-                        $Count = New-GraphGetRequest @GraphRequest -CountOnly -ErrorAction Stop
-                        if ($CountOnly.IsPresent) { return $Count }
-                        Write-Information "Total results (`$count): $Count"
-                        if ($Count -gt 8000) {
+                        if ($Count -gt $singleTenantThreshold) {
                             $QueueThresholdExceeded = $true
                             if ($RunningQueue) {
                                 Write-Information 'Queue currently running'

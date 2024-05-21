@@ -32,7 +32,7 @@ function Get-HaloMapping {
         }
 
         Write-LogMessage -Message "Could not get HaloPSA Clients, error: $Message " -Level Error -tenant 'CIPP' -API 'HaloMapping'
-        $RawHaloClients = @(@{name = "Could not get HaloPSA Clients, error: $Message" })
+        $RawHaloClients = @(@{name = "Could not get HaloPSA Clients, error: $Message"; value = '-1' })
     }
     $HaloClients = $RawHaloClients | ForEach-Object {
         [PSCustomObject]@{
