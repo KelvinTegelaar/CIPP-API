@@ -21,7 +21,7 @@ $Tasks = foreach ($Tenant in $Tenants) {
                 Tag      = 'AllTenants'
                 TenantID = $t.customerId
                 Type     = $Tenant.type
-                RowKey   = $Tenant.RowKey
+                RowKey   = $t.RowKey
             }
         }
     }
