@@ -21,7 +21,8 @@ function Invoke-CIPPStandardNudgeMFA {
                 $CurrentInfo.registrationEnforcement.authenticationMethodsRegistrationCampaign.state = $Settings.state
                 $CurrentInfo.registrationEnforcement.authenticationMethodsRegistrationCampaign.snoozeDurationInDays = $Settings.snoozeDurationInDays
             } catch {
-                Write-LogMessage -API 'Standards' -tenant $tenant -message "Failed to $($Settings.state) Authenticator App Nudge: $($_.exception.message)" -sev Error
+                $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
+                Write-LogMessage -API 'Standards' -tenant $tenant -message "Failed to $($Settings.state) Authenticator App Nudge: $ErrorMessage" -sev Error
             }
         } else {
             Write-LogMessage -API 'Standards' -tenant $tenant -message "Authenticator App Nudge is already set to $($Settings.state) with a snooze duration of $($Settings.snoozeDurationInDays)" -sev Info
