@@ -76,12 +76,13 @@ function Get-CIPPStandards {
                     }
                 }
             }
-        }
-        foreach ($Standard in $ComputedStandards.Keys) {
-            [pscustomobject]@{
-                Tenant   = $Tenant.defaultDomainName
-                Standard = $Standard
-                Settings = $ComputedStandards.$Standard
+
+            foreach ($Standard in $ComputedStandards.Keys) {
+                [pscustomobject]@{
+                    Tenant   = $Tenant.defaultDomainName
+                    Standard = $Standard
+                    Settings = $ComputedStandards.$Standard
+                }
             }
         }
     }
