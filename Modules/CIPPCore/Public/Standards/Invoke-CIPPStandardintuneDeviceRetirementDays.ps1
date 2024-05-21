@@ -5,6 +5,7 @@ function Invoke-CIPPStandardintuneDeviceRetirementDays {
     #>
     param($Tenant, $Settings)
     $CurrentInfo = (New-GraphGetRequest -Uri 'https://graph.microsoft.com/beta/deviceManagement/managedDeviceCleanupSettings' -tenantid $Tenant)
+    $StateIsCorrect = if ($PreviousSetting.DeviceInactivityBeforeRetirementInDays -eq $Settings.days) { $true } else { $false }
 
     If ($Settings.remediate -eq $true) {
 
@@ -16,14 +17,15 @@ function Invoke-CIPPStandardintuneDeviceRetirementDays {
                 (New-GraphPostRequest -tenantid $tenant -Uri 'https://graph.microsoft.com/beta/deviceManagement/managedDeviceCleanupSettings' -Type PATCH -Body $body -ContentType 'application/json')
                 Write-LogMessage -API 'Standards' -tenant $tenant -message "Enabled DeviceInactivityBeforeRetirementInDays for $($Settings.days) days." -sev Info
             } catch {
-                Write-LogMessage -API 'Standards' -tenant $tenant -message "Failed to enable DeviceInactivityBeforeRetirementInDays. Error: $($_.exception.message)" -sev Error
+                $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
+                Write-LogMessage -API 'Standards' -tenant $tenant -message "Failed to enable DeviceInactivityBeforeRetirementInDays. Error: $ErrorMessage" -sev Error
             }
         }
     }
 
     if ($Settings.alert -eq $true) {
 
-        if ($CurrentInfo.DeviceInactivityBeforeRetirementInDays -eq $Settings.days) {
+        if ($StateIsCorrect -eq $true) {
             Write-LogMessage -API 'Standards' -tenant $tenant -message 'DeviceInactivityBeforeRetirementInDays is enabled.' -sev Info
         } else {
             Write-LogMessage -API 'Standards' -tenant $tenant -message 'DeviceInactivityBeforeRetirementInDays is not enabled.' -sev Alert
@@ -31,8 +33,7 @@ function Invoke-CIPPStandardintuneDeviceRetirementDays {
     }
 
     if ($Settings.report -eq $true) {
-        $UserQuota = if ($PreviousSetting.DeviceInactivityBeforeRetirementInDays -eq $Settings.days) { $true } else { $false }
 
-        Add-CIPPBPAField -FieldName 'intuneDeviceRetirementDays' -FieldValue $UserQuota -StoreAs bool -Tenant $tenant
+        Add-CIPPBPAField -FieldName 'intuneDeviceRetirementDays' -FieldValue $StateIsCorrect -StoreAs bool -Tenant $tenant
     }
 }
