@@ -39,5 +39,9 @@ function Remove-CIPPGroups {
             "Could not remove $($using:Username) from group $($Groupname): $($_.Exception.Message). This is likely because its a Dynamic Group or synched with active directory"
         }
     }
+    if (!$Returnval) {
+        $Returnval = "$($Username) is not a member of any groups."
+        Write-LogMessage -user $ExecutingUser -API $APIName -message "$($Username) is not a member of any groups" -Sev 'Info' -tenant $TenantFilter
+        }
     return $Returnval
 }

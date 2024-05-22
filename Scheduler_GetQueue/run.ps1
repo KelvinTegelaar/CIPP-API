@@ -10,6 +10,7 @@ $Tasks = foreach ($Tenant in $Tenants) {
             Tag      = 'SingleTenant'
             TenantID = $Tenant.tenantid
             Type     = $Tenant.type
+            RowKey   = $Tenant.RowKey
         }
     } else {
         Write-Information 'All tenants, doing them all'
@@ -20,6 +21,7 @@ $Tasks = foreach ($Tenant in $Tenants) {
                 Tag      = 'AllTenants'
                 TenantID = $t.customerId
                 Type     = $Tenant.type
+                RowKey   = $t.RowKey
             }
         }
     }
@@ -34,6 +36,7 @@ $Batch = foreach ($Task in $Tasks) {
         Tag          = $task.tag
         Type         = $task.type
         QueueId      = $Queue.RowKey
+        SchedulerRow = $Task.RowKey
         QueueName    = '{0} - {1}' -f $Task.Type, $task.tenant
         FunctionName = "Scheduler$($Task.Type)"
     }
