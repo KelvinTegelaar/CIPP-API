@@ -13,14 +13,14 @@ function Get-NinjaOneOrgMapping {
             $Mappings | Add-Member -NotePropertyName $_.RowKey -NotePropertyValue @{ label = "$($_.NinjaOneName)"; value = "$($_.NinjaOne)" }
         }
         #Get Available Tenants
-        
+
         #Get available Ninja clients
         $Table = Get-CIPPTable -TableName Extensionsconfig
         $Configuration = ((Get-AzDataTableEntity @Table).config | ConvertFrom-Json -ea stop).NinjaOne
-    
-    
+
+
         $Token = Get-NinjaOneToken -configuration $Configuration
-    
+
         $After = 0
         $PageSize = 1000
         $NinjaOrgs = do {
@@ -29,16 +29,16 @@ function Get-NinjaOneOrgMapping {
             $ResultCount = ($Result.id | Measure-Object -Maximum)
             $After = $ResultCount.maximum
 
-        } while ($ResultCount.count -eq $PageSize) 
-        
+        } while ($ResultCount.count -eq $PageSize)
+
     } catch {
         $Message = if ($_.ErrorDetails.Message) {
             Get-NormalizedError -Message $_.ErrorDetails.Message
         } else {
             $_.Exception.message
         }
-        
-        $NinjaOrgs = @(@{ name = $Message })
+
+        $NinjaOrgs = @(@{ name = 'Could not get NinjaOne Orgs, check your API credentials and try again.'; value = '-1' })
     }
 
     $MappingObj = [PSCustomObject]@{
