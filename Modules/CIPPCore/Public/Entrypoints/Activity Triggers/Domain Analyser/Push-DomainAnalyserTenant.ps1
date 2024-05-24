@@ -95,7 +95,8 @@ function Push-DomainAnalyserTenant {
                             DurableMode      = 'Sequence'
                         }
                         Start-NewOrchestration -FunctionName 'CIPPOrchestrator' -InputObject ($InputObject | ConvertTo-Json -Compress -Depth 5)
-                        Write-Host "Started orchestration for $DomainCount tenant domains in $($Tenant.defaultDomainName)"
+                        Write-Host "Started analysis for $DomainCount tenant domains in $($Tenant.defaultDomainName)"
+                        Write-LogMessage -API 'DomainAnalyser' -tenant $Tenant.defaultDomainName -message "Started analysis for $DomainCount tenant domains" -sev Info
                     } catch {
                         Write-LogMessage -API 'DomainAnalyser' -message 'Domain Analyser GetTenantDomains error' -sev info -LogData (Get-CippException -Exception $_)
                     }
