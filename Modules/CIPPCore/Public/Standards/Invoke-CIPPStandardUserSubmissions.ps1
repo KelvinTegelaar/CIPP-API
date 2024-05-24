@@ -24,8 +24,7 @@ function Invoke-CIPPStandardUserSubmissions {
                         Write-LogMessage -API 'Standards' -tenant $tenant -message "User Submission policy set to $status." -sev Info
                     }
                 } catch {
-                    $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
-                    Write-LogMessage -API 'Standards' -tenant $tenant -message "Could not set User Submission policy to $status. Error: $ErrorMessage" -sev Error
+                    Write-LogMessage -API 'Standards' -tenant $tenant -message "Could not set User Submission policy to $status. Error: $($_.exception.message)" -sev Error
                 }
             } else {
                 # Policy is not set correctly, disable the policy.
@@ -37,8 +36,7 @@ function Invoke-CIPPStandardUserSubmissions {
                         Write-LogMessage -API 'Standards' -tenant $tenant -message "User Submission policy set to $status." -sev Info
                     }
                 } catch {
-                    $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
-                    Write-LogMessage -API 'Standards' -tenant $tenant -message "Could not set User Submission policy to $status. Error: $ErrorMessage" -sev Error
+                    Write-LogMessage -API 'Standards' -tenant $tenant -message "Could not set User Submission policy to $status. Error: $($_.exception.message)" -sev Error
                 }
             }
         }

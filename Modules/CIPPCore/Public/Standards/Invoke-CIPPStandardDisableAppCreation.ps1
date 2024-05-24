@@ -16,8 +16,7 @@ function Invoke-CIPPStandardDisableAppCreation {
                 Write-LogMessage -API 'Standards' -tenant $tenant -message 'Disabled users from creating App registrations.' -sev Info
                 $CurrentInfo.defaultUserRolePermissions.allowedToCreateApps = $false
             } catch {
-                $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
-                Write-LogMessage -API 'Standards' -tenant $tenant -message "Failed to disable users from creating App registrations: $ErrorMessage" -sev Error
+                Write-LogMessage -API 'Standards' -tenant $tenant -message "Failed to disable users from creating App registrations: $($_.exception.message)" -sev Error
             }
         }
     }

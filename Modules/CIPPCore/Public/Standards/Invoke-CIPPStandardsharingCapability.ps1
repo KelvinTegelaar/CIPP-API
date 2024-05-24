@@ -20,8 +20,7 @@ function Invoke-CIPPStandardsharingCapability {
                 $null = New-GraphPostRequest -tenantid $tenant -Uri 'https://graph.microsoft.com/beta/admin/sharepoint/settings' -AsApp $true -Type patch -Body "{`"sharingCapability`":`"$($Settings.Level)`"}" -ContentType 'application/json'
                 Write-LogMessage -API 'Standards' -tenant $tenant -message "Set sharing level to $($Settings.Level) from $($CurrentInfo.sharingCapability)" -sev Info
             } catch {
-                $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
-                Write-LogMessage -API 'Standards' -tenant $tenant -message "Failed to set sharing level to $($Settings.Level): $ErrorMessage" -sev Error
+                Write-LogMessage -API 'Standards' -tenant $tenant -message "Failed to set sharing level to $($Settings.Level): $($_.exception.message)" -sev Error
             }
         }
     }
