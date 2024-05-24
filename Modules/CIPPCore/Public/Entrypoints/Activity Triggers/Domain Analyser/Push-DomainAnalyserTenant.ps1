@@ -92,7 +92,6 @@ function Push-DomainAnalyserTenant {
                             }
                             OrchestratorName = "DomainAnalyser_$($Tenant.defaultDomainName)"
                             SkipLog          = $true
-                            DurableMode      = 'Sequence'
                         }
                         Start-NewOrchestration -FunctionName 'CIPPOrchestrator' -InputObject ($InputObject | ConvertTo-Json -Compress -Depth 5)
                         Write-Host "Started analysis for $DomainCount tenant domains in $($Tenant.defaultDomainName)"
