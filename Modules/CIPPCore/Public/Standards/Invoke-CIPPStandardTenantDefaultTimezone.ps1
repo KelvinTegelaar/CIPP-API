@@ -6,27 +6,25 @@ function Invoke-CIPPStandardTenantDefaultTimezone {
 
     param($Tenant, $Settings)
     $CurrentState = New-GraphGetRequest -Uri 'https://graph.microsoft.com/beta/admin/sharepoint/settings' -tenantid $Tenant -AsApp $true
-    $ExpectedTimezone = $Settings.Timezone.value
-    $StateIsCorrect = $CurrentState.tenantDefaultTimezone -eq $ExpectedTimezone
+    $StateIsCorrect = $CurrentState.tenantDefaultTimezone -eq $Settings.Timezone
 
     If ($Settings.remediate -eq $true) {
-        if ($StateIsCorrect -eq $true) {
-            Write-LogMessage -API 'Standards' -tenant $tenant -message "Tenant Default Timezone is already set to $ExpectedTimezone" -sev Info
+        if ($StateIsCorrect) {
+            Write-LogMessage -API 'Standards' -tenant $tenant -message "Tenant Default Timezone is already set to $($Settings.Timezone)" -sev Info
         } else {
             try {
-                New-GraphPostRequest -tenantid $tenant -uri 'https://graph.microsoft.com/beta/admin/sharepoint/settings' -AsApp $true -Type PATCH -Body "{`"tenantDefaultTimezone`": `"$ExpectedTimezone`"}" -ContentType 'application/json'
-                Write-LogMessage -API 'Standards' -tenant $tenant -message "Successfully updated Tenant Default Timezone to $ExpectedTimezone" -sev Info
+                New-GraphPostRequest -tenantid $tenant -uri 'https://graph.microsoft.com/beta/admin/sharepoint/settings' -AsApp $true -Type PATCH -Body "{`"tenantDefaultTimezone`": `"$($Settings.Timezone)`"}" -ContentType 'application/json'
+                Write-LogMessage -API 'Standards' -tenant $tenant -message "Updated Tenant Default Timezone to $($Settings.Timezone)" -sev Info
             } catch {
-                $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
-                Write-LogMessage -API 'Standards' -tenant $tenant -message "Failed to set Tenant Default Timezone. Error: $ErrorMessage" -sev Error
+                Write-LogMessage -API 'Standards' -tenant $tenant -message "Failed to set Tenant Default Timezone. Error: $($_.exception.message)" -sev Error
             }
         }
 
     }
     if ($Settings.alert -eq $true) {
 
-        if ($StateIsCorrect -eq $true) {
-            Write-LogMessage -API 'Standards' -tenant $tenant -message "Tenant Default Timezone is set to $ExpectedTimezone." -sev Info
+        if ($StateIsCorrect) {
+            Write-LogMessage -API 'Standards' -tenant $tenant -message "Tenant Default Timezone is set to $($Settings.Timezone)." -sev Info
         } else {
             Write-LogMessage -API 'Standards' -tenant $tenant -message 'Tenant Default Timezone is not set to the desired value.' -sev Alert
         }

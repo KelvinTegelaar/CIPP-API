@@ -7,7 +7,6 @@ function Test-CIPPAccessPermissions {
     )
     Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -message 'Started permissions check' -Sev 'Debug'
     $Messages = [System.Collections.Generic.List[string]]::new()
-    $ErrorMessages = [System.Collections.Generic.List[string]]::new()
     $MissingPermissions = [System.Collections.Generic.List[string]]::new()
     $Links = [System.Collections.Generic.List[object]]::new()
     $AccessTokenDetails = [PSCustomObject]@{
@@ -42,7 +41,7 @@ function Test-CIPPAccessPermissions {
                     Write-Host 'Setting success to false due to nonmaching token.'
 
                     $Success = $false
-                    $ErrorMessages.Add('Your refresh token does not match key vault, clear your cache or wait 30 minutes.') | Out-Null
+                    $Messages.Add('Your refresh token does not match key vault, clear your cache or wait 30 minutes.') | Out-Null
                     $Links.Add([PSCustomObject]@{
                             Text = 'Clear Token Cache'
                             Href = 'https://docs.cipp.app/setup/installation/cleartokencache'
@@ -70,7 +69,7 @@ function Test-CIPPAccessPermissions {
         }
 
         if ($AccessTokenDetails.Name -eq '') {
-            $ErrorMessages.Add('Your refresh token is invalid, check for line breaks or missing characters.') | Out-Null
+            $Messages.Add('Your refresh token is invalid, check for line breaks or missing characters.') | Out-Null
             Write-Host 'Setting success to false invalid token.'
 
             $Success = $false
@@ -78,7 +77,7 @@ function Test-CIPPAccessPermissions {
             if ($AccessTokenDetails.AuthMethods -contains 'mfa') {
                 $Messages.Add('Your access token contains the MFA claim.') | Out-Null
             } else {
-                $ErrorMessages.Add('Your access token does not contain the MFA claim, Refresh your SAM tokens.') | Out-Null
+                $Messages.Add('Your access token does not contain the MFA claim, Refresh your SAM tokens.') | Out-Null
                 Write-Host 'Setting success to False due to invalid list of claims.'
 
                 $Success = $false
@@ -109,19 +108,15 @@ function Test-CIPPAccessPermissions {
 
     } catch {
         Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -message "Permissions check failed: $($_) " -Sev 'Error'
-        $ErrorMessages.Add("We could not connect to the API to retrieve the permissions. There might be a problem with the secure application model configuration. The returned error is: $(Get-NormalizedError -message $_)") | Out-Null
+        $Messages.Add("We could not connect to the API to retrieve the permissions. There might be a problem with the secure application model configuration. The returned error is: $(Get-NormalizedError -message $_)") | Out-Null
         Write-Host 'Setting success to False due to not being able to connect.'
 
         $Success = $false
     }
 
-    if ($Success -eq $true) {
-        $Messages.Add('No service account issues have been found. CIPP is ready for use.') | Out-Null
-    }
     return [PSCustomObject]@{
         AccessTokenDetails = $AccessTokenDetails
         Messages           = @($Messages)
-        ErrorMessages      = @($ErrorMessages)
         MissingPermissions = @($MissingPermissions)
         Links              = @($Links)
         Success            = $Success

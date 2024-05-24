@@ -16,8 +16,7 @@ function Invoke-CIPPStandardDisableSecurityGroupUsers {
                 Write-LogMessage -API 'Standards' -tenant $tenant -message 'Disabled users from creating Security Groups.' -sev Info
                 $CurrentInfo.defaultUserRolePermissions.allowedToCreateSecurityGroups = $false
             } catch {
-                $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
-                Write-LogMessage -API 'Standards' -tenant $tenant -message "Failed to disable users from creating Security Groups: $ErrorMessage" -sev 'Error'
+                Write-LogMessage -API 'Standards' -tenant $tenant -message "Failed to disable users from creating Security Groups: $($_.exception.message)" -sev 'Error'
             }
         }
     }
