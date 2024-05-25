@@ -107,5 +107,7 @@ function Push-ExecScheduledCommand {
             ScheduledTime = "$nextRunUnixTime"
         }
     }
-    Write-LogMessage -API 'Scheduler_UserTasks' -tenant $tenant -message "Successfully executed task: $($task.Name)" -sev Info
+    if ($TaskType -ne 'Alert') {
+        Write-LogMessage -API 'Scheduler_UserTasks' -tenant $tenant -message "Successfully executed task: $($task.Name)" -sev Info
+    }
 }
