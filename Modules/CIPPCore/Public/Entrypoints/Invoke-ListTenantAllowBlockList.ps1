@@ -16,7 +16,7 @@ Function Invoke-ListTenantAllowBlockList {
 
     # Interact with query parameters or the body of the request.
     $TenantFilter = $Request.Query.TenantFilter
-    $ListTypes = 'Sender','Url','FileHash'
+    $ListTypes = 'Sender', 'Url', 'FileHash'
     try {
         $cmdletArray = $ListTypes | ForEach-Object {
             @{
@@ -26,7 +26,7 @@ Function Invoke-ListTenantAllowBlockList {
                 }
             }
         }
-        $BatchResults = New-ExoBulkRequest -tenantid $TenantFilter -cmdletArray $cmdletArray
+        $BatchResults = New-ExoBulkRequest -tenantid $TenantFilter -cmdletArray @($cmdletArray)
 
         $StatusCode = [HttpStatusCode]::OK
     } catch {
