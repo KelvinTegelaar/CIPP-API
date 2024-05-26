@@ -3,7 +3,9 @@ using namespace System.Net
 Function Invoke-ListTenants {
     <#
     .FUNCTIONALITY
-    Entrypoint
+        Entrypoint
+    .ROLE
+        CIPP.Core.Read
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)

@@ -3,7 +3,9 @@ using namespace System.Net
 Function Invoke-ExecDeviceDelete {
     <#
     .FUNCTIONALITY
-    Entrypoint
+        Entrypoint
+    .ROLE
+        Identity.Device.ReadWrite
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)

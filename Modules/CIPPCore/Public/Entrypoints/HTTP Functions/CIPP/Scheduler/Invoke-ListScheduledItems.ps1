@@ -3,7 +3,9 @@ using namespace System.Net
 Function Invoke-ListScheduledItems {
     <#
     .FUNCTIONALITY
-    Entrypoint
+        Entrypoint
+    .ROLE
+        CIPP.Scheduler.Read
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)

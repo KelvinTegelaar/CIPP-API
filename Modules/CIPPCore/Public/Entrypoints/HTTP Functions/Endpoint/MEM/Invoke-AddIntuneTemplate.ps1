@@ -3,7 +3,9 @@ using namespace System.Net
 Function Invoke-AddIntuneTemplate {
     <#
     .FUNCTIONALITY
-    Entrypoint
+        Entrypoint
+    .ROLE
+        Endpoint.MEM.ReadWrite
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)

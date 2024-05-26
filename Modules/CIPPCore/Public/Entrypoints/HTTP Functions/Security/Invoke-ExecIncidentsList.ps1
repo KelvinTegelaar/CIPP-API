@@ -3,7 +3,9 @@ using namespace System.Net
 Function Invoke-ExecIncidentsList {
     <#
     .FUNCTIONALITY
-    Entrypoint
+        Entrypoint
+    .ROLE
+        Security.Incident.Read
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
@@ -16,7 +18,7 @@ Function Invoke-ExecIncidentsList {
         $GraphRequest = if ($TenantFilter -ne 'AllTenants') {
             $incidents = New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/security/incidents' -tenantid $Request.Query.TenantFilter -AsApp $true
 
-            foreach ($incident in $incidents) {    
+            foreach ($incident in $incidents) {
                 [PSCustomObject]@{
                     Tenant         = $Request.Query.TenantFilter
                     Id             = $incident.id
@@ -33,7 +35,7 @@ Function Invoke-ExecIncidentsList {
                     Tags           = ($IncidentObj.tags -join ', ')
                     Comments       = $incident.comments
                 }
-            }       
+            }
         } else {
             $Table = Get-CIPPTable -TableName cachealertsandincidents
             $Filter = "PartitionKey eq 'Incident'"
@@ -45,8 +47,8 @@ Function Invoke-ExecIncidentsList {
                 }
             } else {
                 $incidents = $Rows
-                foreach ($incident in $incidents) {  
-                    $IncidentObj = $incident.Incident | ConvertFrom-Json  
+                foreach ($incident in $incidents) {
+                    $IncidentObj = $incident.Incident | ConvertFrom-Json
                     [PSCustomObject]@{
                         Tenant         = $incident.Tenant
                         Id             = $IncidentObj.id
@@ -63,7 +65,7 @@ Function Invoke-ExecIncidentsList {
                         Tags           = ($IncidentObj.tags -join ', ')
                         Comments       = @($IncidentObj.comments)
                     }
-                } 
+                }
             }
         }
     } catch {
@@ -79,6 +81,6 @@ Function Invoke-ExecIncidentsList {
     Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
             StatusCode = $StatusCode
             Body       = $Body
-        }) 
+        })
 
 }

@@ -3,7 +3,9 @@ using namespace System.Net
 Function Invoke-ListAlertsQueue {
     <#
     .FUNCTIONALITY
-    Entrypoint
+        Entrypoint
+    .ROLE
+        CIPP.Alert.Read
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
@@ -15,7 +17,7 @@ Function Invoke-ListAlertsQueue {
     # Write to the Azure Functions log stream.
     Write-Host 'PowerShell HTTP trigger function processed a request.'
     $WebhookTable = Get-CIPPTable -TableName 'WebhookRules'
-    $WebhookRules = Get-CIPPAzDataTableEntity @WebhookTable   
+    $WebhookRules = Get-CIPPAzDataTableEntity @WebhookTable
 
     $ScheduledTasks = Get-CIPPTable -TableName 'ScheduledTasks'
     $ScheduledTasks = Get-CIPPAzDataTableEntity @ScheduledTasks | Where-Object { $_.hidden -eq $true }
@@ -29,7 +31,7 @@ Function Invoke-ListAlertsQueue {
         $TaskEntry = [PSCustomObject]@{
             Tenants      = ($Task.Tenants | ConvertFrom-Json -ErrorAction SilentlyContinue).fullValue.defaultDomainName -join ','
             Conditions   = $TranslatedConditions
-            Actions      = $TranslatedActions 
+            Actions      = $TranslatedActions
             LogType      = $Task.type
             EventType    = 'Audit log Alert'
             RowKey       = $Task.RowKey
@@ -37,7 +39,7 @@ Function Invoke-ListAlertsQueue {
             RepeatsEvery = 'When received'
         }
         $AllTasksArrayList.Add($TaskEntry)
-    } 
+    }
 
     foreach ($Task in $ScheduledTasks) {
         $TaskEntry = [PSCustomObject]@{

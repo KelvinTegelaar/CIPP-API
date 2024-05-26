@@ -3,7 +3,9 @@ using namespace System.Net
 Function Invoke-ListContacts {
     <#
     .FUNCTIONALITY
-    Entrypoint
+        Entrypoint
+    .ROLE
+        Exchange.Contacts.Read
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)

@@ -3,7 +3,9 @@ using namespace System.Net
 Function Invoke-GetCippAlerts {
     <#
     .FUNCTIONALITY
-    Entrypoint
+        Entrypoint
+    .ROLE
+        CIPP.Core.Read
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
@@ -45,9 +47,9 @@ Function Invoke-GetCippAlerts {
     if ($env:WEBSITE_RUN_FROM_PACKAGE -ne '1') {
         $Alerts.add(
             @{Alert  = 'Your Function App is running in write mode. This will cause performance issues and increase cost. Please check this '
-                link = 'https://docs.cipp.app/setup/installation/runfrompackage' 
-                type = 'warning' 
-            }) 
+                link = 'https://docs.cipp.app/setup/installation/runfrompackage'
+                type = 'warning'
+            })
     }
     if ($Rows) { $Rows | ForEach-Object { $alerts.add($_) } }
     $Alerts = @($Alerts)
@@ -56,7 +58,7 @@ Function Invoke-GetCippAlerts {
 
 
     # Write to the Azure Functions log stream.
- 
+
     # Associate values to output bindings by calling 'Push-OutputBinding'.
     Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
             StatusCode = [HttpStatusCode]::OK

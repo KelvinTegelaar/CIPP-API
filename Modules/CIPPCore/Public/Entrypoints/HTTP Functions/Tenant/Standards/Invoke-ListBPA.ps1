@@ -3,7 +3,9 @@ using namespace System.Net
 Function Invoke-ListBPA {
     <#
     .FUNCTIONALITY
-    Entrypoint
+        Entrypoint
+    .ROLE
+        Tenant.BestPracticeAnalyser.Read
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
