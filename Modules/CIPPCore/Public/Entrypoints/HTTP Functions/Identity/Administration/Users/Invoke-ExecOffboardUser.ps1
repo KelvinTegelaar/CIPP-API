@@ -3,7 +3,9 @@ using namespace System.Net
 Function Invoke-ExecOffboardUser {
     <#
     .FUNCTIONALITY
-    Entrypoint
+        Entrypoint
+    .ROLE
+        Identity.User.ReadWrite
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
@@ -38,7 +40,7 @@ Function Invoke-ExecOffboardUser {
                 Invoke-CIPPOffboardingJob -Username $Username -TenantFilter $Tenantfilter -Options $Request.body -APIName $APIName -ExecutingUser $request.headers.'x-ms-client-principal'
             }
             $StatusCode = [HttpStatusCode]::OK
-            
+
         } catch {
             $StatusCode = [HttpStatusCode]::Forbidden
             $body = $_.Exception.message
@@ -48,6 +50,6 @@ Function Invoke-ExecOffboardUser {
     Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
             StatusCode = $StatusCode
             Body       = $Body
-        }) 
+        })
 
 }

@@ -3,7 +3,9 @@ using namespace System.Net
 Function Invoke-ListWebhookAlert {
     <#
     .FUNCTIONALITY
-    Entrypoint
+        Entrypoint
+    .ROLE
+        CIPP.Alert.Read
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)

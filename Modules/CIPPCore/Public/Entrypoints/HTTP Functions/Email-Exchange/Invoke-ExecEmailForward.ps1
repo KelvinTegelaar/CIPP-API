@@ -3,7 +3,9 @@ using namespace System.Net
 Function Invoke-ExecEmailForward {
     <#
     .FUNCTIONALITY
-    Entrypoint
+        Entrypoint
+    .ROLE
+        Exchange.Mailbox.ReadWrite
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
@@ -23,12 +25,12 @@ Function Invoke-ExecEmailForward {
                 $results = "Forwarding all email for $($username) to $($ForwardingAddress) and not keeping a copy"
             } elseif ($request.body.KeepCopy) {
                 Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -message "Set Forwarding for $($username) to $($ForwardingAddress) and keeping a copy" -Sev 'Info' -tenant $TenantFilter
-                $results = "Forwarding all email for $($username) to $($ForwardingAddress) and keeping a copy"  
+                $results = "Forwarding all email for $($username) to $($ForwardingAddress) and keeping a copy"
             }
         } catch {
             Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -message "Could not add forwarding for $($username)" -Sev 'Error' -tenant $TenantFilter
             $results = "Could not add forwarding for $($username). Error: $($_.Exception.Message)"
-        
+
         }
     }
 
@@ -40,12 +42,12 @@ Function Invoke-ExecEmailForward {
                 $results = "Forwarding all email for $($username) to $($ForwardingSMTPAddress) and not keeping a copy"
             } elseif ($request.body.KeepCopy) {
                 Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -message "Set forwarding for $($username) to $($ForwardingSMTPAddress) and keeping a copy" -Sev 'Info' -tenant $TenantFilter
-                $results = "Forwarding all email for $($username) to $($ForwardingSMTPAddress) and keeping a copy"  
+                $results = "Forwarding all email for $($username) to $($ForwardingSMTPAddress) and keeping a copy"
             }
         } catch {
             Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -message "Could not add forwarding for $($username)" -Sev 'Error' -tenant $TenantFilter
             $results = "Could not add forwarding for $($username). Error: $($_.Exception.Message)"
-        
+
         }
 
     }
@@ -58,7 +60,7 @@ Function Invoke-ExecEmailForward {
         } catch {
             Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -message "Could not disable Email forwarding for $($username)" -Sev 'Error' -tenant $TenantFilter
             $results = "Could not disable Email forwarding for $($username). Error: $($_.Exception.Message)"
-    
+
         }
     }
 
