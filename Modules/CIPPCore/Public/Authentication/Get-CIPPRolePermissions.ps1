@@ -24,6 +24,6 @@ function Get-CIPPRolePermissions {
             AllowedTenants = $Role.AllowedTenants | ConvertFrom-Json
         }
     } else {
-        Write-Error "Role $RoleName not found."
+        throw "Role $RoleName not found."
     }
 }

@@ -27,6 +27,7 @@ function Receive-CippHttpTrigger {
                 & $FunctionName @HttpTrigger
             }
         } catch {
+            Write-Information $_.Exception.Message
             Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
                     StatusCode = [HttpStatusCode]::Forbidden
                     Body       = $_.Exception.Message
