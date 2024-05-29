@@ -3,7 +3,7 @@ function Invoke-ExecDurableFunctions {
     .FUNCTIONALITY
         Entrypoint
     .ROLE
-        CIPP.Core.ReadWrite
+        CIPP.AppSettings.ReadWrite
     #>
     [CmdletBinding(SupportsShouldProcess = $true)]
     param($Request, $TriggerMetadata)

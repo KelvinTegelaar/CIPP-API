@@ -5,7 +5,7 @@ Function Invoke-ExecPasswordConfig {
     .FUNCTIONALITY
         Entrypoint
     .ROLE
-        CIPP.Core.ReadWrite
+        CIPP.AppSettings.ReadWrite
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)

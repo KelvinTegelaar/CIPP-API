@@ -5,7 +5,7 @@ Function Invoke-ExecCPVPermissions {
     .FUNCTIONALITY
         Entrypoint
     .ROLE
-        CIPP.Core.ReadWrite
+        CIPP.AppSettings.ReadWrite
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
