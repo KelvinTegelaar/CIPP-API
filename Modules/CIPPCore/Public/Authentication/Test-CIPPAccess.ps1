@@ -63,7 +63,7 @@ function Test-CIPPAccess {
             }
         }
         if (!$APIAllowed) {
-            throw "Access to this API is not allowed, required permission: $APIRole"
+            throw "Access to this API is not allowed, required permission missing: $APIRole"
         }
     } else {
         return $true
