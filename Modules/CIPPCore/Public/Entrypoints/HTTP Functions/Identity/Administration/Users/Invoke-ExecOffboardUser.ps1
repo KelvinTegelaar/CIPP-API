@@ -24,9 +24,10 @@ Function Invoke-ExecOffboardUser {
                         value = 'Invoke-CIPPOffboardingJob'
                     }
                     Parameters    = @{
-                        Username = $Username
-                        APIName  = 'Scheduled Offboarding'
-                        options  = $request.body
+                        Username     = $Username
+                        APIName      = 'Scheduled Offboarding'
+                        options      = $request.body
+                        RunScheduled = $true
                     }
                     ScheduledTime = $Request.body.scheduled.date
                     PostExecution = @{
