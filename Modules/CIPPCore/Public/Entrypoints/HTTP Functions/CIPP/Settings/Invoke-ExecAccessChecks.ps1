@@ -5,7 +5,7 @@ Function Invoke-ExecAccessChecks {
     .FUNCTIONALITY
         Entrypoint
     .ROLE
-        CIPP.Core.Read
+        CIPP.AppSettings.Read
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
