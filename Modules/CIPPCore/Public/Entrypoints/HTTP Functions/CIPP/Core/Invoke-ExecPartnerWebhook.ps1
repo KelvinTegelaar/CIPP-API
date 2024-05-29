@@ -2,6 +2,8 @@ function Invoke-ExecPartnerWebhook {
     <#
     .FUNCTIONALITY
         Entrypoint
+    .ROLE
+        CIPP.Core.ReadWrite
     #>
     Param($Request, $TriggerMetadata)
 

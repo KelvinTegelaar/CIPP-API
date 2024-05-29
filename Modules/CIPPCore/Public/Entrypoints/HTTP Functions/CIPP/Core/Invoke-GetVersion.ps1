@@ -3,7 +3,9 @@ using namespace System.Net
 Function Invoke-GetVersion {
     <#
     .FUNCTIONALITY
-    Entrypoint
+        Entrypoint
+    .ROLE
+        CIPP.Core.Read
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)

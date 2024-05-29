@@ -4,7 +4,9 @@ using namespace System.Net
 Function Invoke-ListDomainAnalyser {
     <#
     .FUNCTIONALITY
-    Entrypoint
+        Entrypoint
+    .ROLE
+        Tenant.DomainAnalyser.Read
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)

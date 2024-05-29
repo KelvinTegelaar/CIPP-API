@@ -2,7 +2,9 @@ using namespace System.Net
 Function Invoke-ExecGDAPInvite {
     <#
     .FUNCTIONALITY
-    Entrypoint
+        Entrypoint
+    .ROLE
+        Tenant.Relationship.ReadWrite
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)

@@ -3,7 +3,9 @@ using namespace System.Net
 Function Invoke-ExecSendPush {
     <#
     .FUNCTIONALITY
-    Entrypoint
+        Entrypoint
+    .ROLE
+        Identity.User.Read
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
@@ -46,7 +48,7 @@ Function Invoke-ExecSendPush {
 
     # Create a serivce principal if needed
     if (!$SPID) {
-    
+
         $SPBody = [pscustomobject]@{
             appId = $MFAAppID
         }
@@ -107,7 +109,7 @@ Function Invoke-ExecSendPush {
             $Body = "Authentication Failed! Does the user have Push/Phone call MFA configured? Errorcode: $($obj.BeginTwoWayAuthenticationResponse.result.value | Out-String)"
             $colour = 'danger'
         }
-    
+
     }
 
     $Results = [pscustomobject]@{'Results' = $Body; colour = $colour }
@@ -117,6 +119,6 @@ Function Invoke-ExecSendPush {
             StatusCode = [HttpStatusCode]::OK
             Body       = $Results
         })
-    
+
 
 }

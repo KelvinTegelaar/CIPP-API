@@ -3,7 +3,9 @@ using namespace System.Net
 Function Invoke-ExecSAMSetup {
     <#
     .FUNCTIONALITY
-    Entrypoint
+        Entrypoint
+    .ROLE
+        CIPP.Core.ReadWrite
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)

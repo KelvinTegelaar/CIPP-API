@@ -3,7 +3,9 @@ using namespace System.Net
 Function Invoke-ListGroupTemplates {
     <#
     .FUNCTIONALITY
-    Entrypoint
+        Entrypoint
+    .ROLE
+        Identity.Group.Read
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
@@ -17,9 +19,9 @@ Function Invoke-ListGroupTemplates {
 
     #List new policies
     $Table = Get-CippTable -tablename 'templates'
-    $Filter = "PartitionKey eq 'GroupTemplate'" 
+    $Filter = "PartitionKey eq 'GroupTemplate'"
     $Templates = (Get-CIPPAzDataTableEntity @Table -Filter $Filter) | ForEach-Object {
-        $data = $_.JSON | ConvertFrom-Json 
+        $data = $_.JSON | ConvertFrom-Json
         $data | Add-Member -MemberType NoteProperty -Name GUID -Value $_.RowKey -Force
         $data
     } | Sort-Object -Property displayName
