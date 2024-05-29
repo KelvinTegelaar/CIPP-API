@@ -18,12 +18,12 @@ function Invoke-ExecCustomRole {
                 'AllowedTenants' = "$($Request.Body.AllowedTenants | ConvertTo-Json -Compress)"
             }
             Add-CIPPAzDataTableEntity @Table -Entity $Role -Force | Out-Null
-            $Body = @{Results = 'Role added' }
+            $Body = @{Results = 'Custom role saved' }
         }
         'Delete' {
             $Role = Get-CIPPAzDataTableEntity @Table -Filter "RowKey eq '$($Request.Body.RoleName)'" -Property RowKey, PartitionKey
             Remove-AzDataTableEntity @Table -Entity $Role
-            $Body = @{Results = 'Role deleted' }
+            $Body = @{Results = 'Custom role deleted' }
         }
         default {
             $Body = Get-CIPPAzDataTableEntity @Table
