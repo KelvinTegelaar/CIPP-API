@@ -16,7 +16,7 @@ function Get-CIPPHttpFunctions {
         }
 
         if ($ByRole.IsPresent -or $ByRoleGroup.IsPresent) {
-            $Results = $Results | Group-Object -Property Role | Select-Object -Property @{l = 'Permission'; e = { $_.Name -eq '' ? 'None' : $_.Name } }, Count, @{l = 'Functions'; e = { $_.Group.Function -replace 'Invoke-' } }
+            $Results = $Results | Group-Object -Property Role | Select-Object -Property @{l = 'Permission'; e = { $_.Name -eq '' ? 'None' : $_.Name } }, Count, @{l = 'Functions'; e = { $_.Group.Function -replace 'Invoke-' } } | Sort-Object -Property Permission
 
             if ($ByRoleGroup.IsPresent) {
                 $RoleGroup = @{}

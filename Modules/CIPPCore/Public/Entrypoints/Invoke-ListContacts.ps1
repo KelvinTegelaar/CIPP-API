@@ -5,7 +5,7 @@ Function Invoke-ListContacts {
     .FUNCTIONALITY
         Entrypoint
     .ROLE
-        Exchange.Contacts.Read
+        Exchange.Contact.Read
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
