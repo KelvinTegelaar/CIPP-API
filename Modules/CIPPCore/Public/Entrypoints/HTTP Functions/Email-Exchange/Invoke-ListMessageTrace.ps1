@@ -5,7 +5,7 @@ Function Invoke-ListMessageTrace {
     .FUNCTIONALITY
         Entrypoint
     .ROLE
-        Exchange.Transport.Read
+        Exchange.TransportRule.Read
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
