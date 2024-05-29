@@ -25,8 +25,6 @@ function Test-CIPPAccess {
     }
     if (($CustomRoles | Measure-Object).Count -gt 0 ) {
         $Tenants = Get-Tenants -IncludeErrors
-        $APIAllowed = $false
-        $TenantAllowed = $false
         $PermissionSet = foreach ($CustomRole in $CustomRoles) {
             try {
                 Get-CIPPRolePermissions -Role $CustomRole
@@ -48,8 +46,12 @@ function Test-CIPPAccess {
         } else {
             $FunctionName = 'Invoke-{0}' -f $Request.Params.CIPPEndpoint
             $Help = Get-Help $FunctionName
+            # Check API for required role
             $APIRole = $Help.Role
             foreach ($Role in $PermissionSet) {
+                # Loop through each custom role permission and check API / Tenant access
+                $TenantAllowed = $false
+                $APIAllowed = $false
                 foreach ($Perm in $Role.Permissions) {
                     if ($Perm -match $APIRole) {
                         $APIAllowed = $true
@@ -57,6 +59,7 @@ function Test-CIPPAccess {
                     }
                 }
                 if ($APIAllowed) {
+                    # Check tenant level access
                     if ($Role.AllowedTenants -contains 'AllTenants') {
                         $TenantAllowed = $true
                     } elseif ($Request.Query.TenantFilter -eq 'AllTenants' -or $Request.Body.TenantFilter -eq 'AllTenants') {
@@ -66,20 +69,23 @@ function Test-CIPPAccess {
 
                         if ($Tenant) {
                             $TenantAllowed = $Role.AllowedTenants -contains $Tenant
+                            if (!$TenantAllowed) { continue }
+                            break
                         } else {
                             $TenantAllowed = $true
+                            break
                         }
-                    }
-                    if ($TenantAllowed) {
-                        return $true
-                    } else {
-                        throw 'Access to this tenant is not allowed'
                     }
                 }
             }
-        }
-        if (!$APIAllowed) {
-            throw "Access to this API is not allowed, required permission missing: $APIRole"
+            if (!$APIAllowed) {
+                throw "Access to this API is not allowed, the '$($Role.Role)' custom role does not have the required permission: $APIRole"
+            }
+            if (!$TenantAllowed) {
+                throw 'Access to this tenant is not allowed'
+            } else {
+                return $true
+            }
         }
     } else {
         return $true
