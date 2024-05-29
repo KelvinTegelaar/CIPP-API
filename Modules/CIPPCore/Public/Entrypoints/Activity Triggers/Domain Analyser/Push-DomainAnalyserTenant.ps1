@@ -41,8 +41,9 @@ function Push-DomainAnalyserTenant {
             $DomainCount = ($TenantDomains | Measure-Object).Count
             if ($DomainCount -gt 0) {
                 Write-Host "$DomainCount tenant Domains"
+                $TenantDomainObjects = [System.Collections.Generic.List[object]]::new()
                 try {
-                    $TenantDomainObjects = foreach ($TenantDomain in $TenantDomains) {
+                    foreach ($TenantDomain in $TenantDomains) {
                         $TenantDetails = ($TenantDomain | ConvertTo-Json -Compress).ToString()
                         $Filter = "PartitionKey eq '{0}' and RowKey eq '{1}'" -f $TenantDomain.Tenant, $TenantDomain.Domain
                         $OldDomain = Get-CIPPAzDataTableEntity @DomainTable -Filter $Filter
@@ -78,19 +79,23 @@ function Push-DomainAnalyserTenant {
                             }
                         }
                         # Return domain object to list
-                        $Domain
+                        $TenantDomainObjects.Add($Domain)
                     }
 
                     # Batch insert tenant domains
                     try {
                         Add-CIPPAzDataTableEntity @DomainTable -Entity $TenantDomainObjects -Force
                         $InputObject = [PSCustomObject]@{
-                            Batch            = $TenantDomainObjects | Select-Object RowKey, @{n = 'FunctionName'; exp = { 'DomainAnalyserDomain' } }
+                            QueueFunction    = @{
+                                FunctionName = 'GetTenantDomains'
+                                TenantGUID   = $Tenant.customerId
+                            }
                             OrchestratorName = "DomainAnalyser_$($Tenant.defaultDomainName)"
                             SkipLog          = $true
-                            DurableMode      = 'Sequence'
                         }
                         Start-NewOrchestration -FunctionName 'CIPPOrchestrator' -InputObject ($InputObject | ConvertTo-Json -Compress -Depth 5)
+                        Write-Host "Started analysis for $DomainCount tenant domains in $($Tenant.defaultDomainName)"
+                        Write-LogMessage -API 'DomainAnalyser' -tenant $Tenant.defaultDomainName -message "Started analysis for $DomainCount tenant domains" -sev Info
                     } catch {
                         Write-LogMessage -API 'DomainAnalyser' -message 'Domain Analyser GetTenantDomains error' -sev info -LogData (Get-CippException -Exception $_)
                     }
@@ -99,7 +104,7 @@ function Push-DomainAnalyserTenant {
                 }
             }
         } catch {
-            Write-Host (Get-CippException -Exception $_ | ConvertTo-Json)
+            #Write-Host (Get-CippException -Exception $_ | ConvertTo-Json)
             Write-LogMessage -API 'DomainAnalyser' -tenant $tenant.defaultDomainName -message 'DNS Analyser GraphGetRequest' -LogData (Get-CippException -Exception $_) -sev Error
         }
     }
