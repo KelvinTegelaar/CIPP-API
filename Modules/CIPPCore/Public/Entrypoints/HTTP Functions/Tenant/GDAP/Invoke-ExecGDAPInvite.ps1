@@ -71,7 +71,7 @@ Function Invoke-ExecGDAPInvite {
         }
     } catch {
         $Message = 'Error creating GDAP relationship'
-        Write-Host "GDAP ERROR: $($_.Exception.Message)"
+        Write-Host "GDAP ERROR: $($_.InvocationInfo.PositionMessage)"
         Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $env:TenantID -message "$($Message): $($_.Exception.Message)" -Sev 'Error' -LogData (Get-CippException -Exception $_)
     }
 
