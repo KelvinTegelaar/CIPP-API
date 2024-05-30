@@ -11,8 +11,7 @@ function Assert-CippVersion {
 
     #>
     Param($CIPPVersion)
-    $CippRoot = (Get-Item $PSScriptRoot).Parent.Parent.Parent.Parent.FullName
-    $APIVersion = (Get-Content "$CippRoot\version_latest.txt" -Raw).trim()
+    $APIVersion = (Get-Content 'version_latest.txt' -Raw).trim()
 
     $RemoteAPIVersion = (Invoke-RestMethod -Uri 'https://raw.githubusercontent.com/KelvinTegelaar/CIPP-API/master/version_latest.txt').trim()
     $RemoteCIPPVersion = (Invoke-RestMethod -Uri 'https://raw.githubusercontent.com/KelvinTegelaar/CIPP/master/public/version_latest.txt').trim()
