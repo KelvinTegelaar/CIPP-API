@@ -5,7 +5,7 @@ Function Invoke-ExecExtensionNinjaOneQueue {
     .FUNCTIONALITY
         Entrypoint
     .ROLE
-        Extension.NinjaOne.ReadWrite
+        CIPP.Extension.ReadWrite
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
