@@ -5,7 +5,7 @@ Function Invoke-ListExtensionsConfig {
     .FUNCTIONALITY
         Entrypoint
     .ROLE
-        Extension.Config.Read
+        CIPP.Extension.Read
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
