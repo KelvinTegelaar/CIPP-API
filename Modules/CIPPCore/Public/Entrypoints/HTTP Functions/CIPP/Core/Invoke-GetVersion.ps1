@@ -13,11 +13,11 @@ Function Invoke-GetVersion {
     $APIName = $TriggerMetadata.FunctionName
     Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -message 'Accessed this API' -Sev 'Debug'
 
-    $APIVersion = Get-Content 'version_latest.txt' | Out-String
+    $APIVersion = (Get-Content 'version_latest.txt' -Raw).trim()
     $CIPPVersion = $request.query.localversion
 
-    $RemoteAPIVersion = Invoke-RestMethod -Uri 'https://raw.githubusercontent.com/KelvinTegelaar/CIPP-API/master/version_latest.txt'
-    $RemoteCIPPVersion = Invoke-RestMethod -Uri 'https://raw.githubusercontent.com/KelvinTegelaar/CIPP/master/public/version_latest.txt'
+    $RemoteAPIVersion = (Invoke-RestMethod -Uri 'https://raw.githubusercontent.com/KelvinTegelaar/CIPP-API/master/version_latest.txt').trim()
+    $RemoteCIPPVersion = (Invoke-RestMethod -Uri 'https://raw.githubusercontent.com/KelvinTegelaar/CIPP/master/public/version_latest.txt').trim()
 
     $version = [PSCustomObject]@{
         LocalCIPPVersion     = $CIPPVersion
