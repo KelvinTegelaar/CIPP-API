@@ -6,7 +6,8 @@ function Get-CIPPAlertAppSecretExpiry {
     [CmdletBinding()]
     Param (
         [Parameter(Mandatory = $false)]
-        $input,
+        [Alias('input')]
+        $InputValue,
         $TenantFilter
     )
 
