@@ -3,7 +3,9 @@ using namespace System.Net
 Function Invoke-ListDefenderTVM {
     <#
     .FUNCTIONALITY
-    Entrypoint
+        Entrypoint
+    .ROLE
+        Endpoint.MEM.Read
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
@@ -40,7 +42,7 @@ Function Invoke-ListDefenderTVM {
         $StatusCode = [HttpStatusCode]::Forbidden
         $GroupObj = $ErrorMessage
     }
-    # Associate values to output bindings by calling 'Push-OutputBinding'. 
+    # Associate values to output bindings by calling 'Push-OutputBinding'.
     Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
             StatusCode = $StatusCode
             Body       = @($GroupObj)

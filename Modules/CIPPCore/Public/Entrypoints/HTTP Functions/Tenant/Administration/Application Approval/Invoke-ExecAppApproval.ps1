@@ -3,7 +3,9 @@ using namespace System.Net
 Function Invoke-ExecAppApproval {
     <#
     .FUNCTIONALITY
-    Entrypoint
+        Entrypoint
+    .ROLE
+        Tenant.Application.Read
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
@@ -16,7 +18,7 @@ Function Invoke-ExecAppApproval {
     Write-Host "$($Request.query.ID)"
     # Interact with query parameters or the body of the request.
 
-    $applicationid = if ($request.query.applicationid) { $request.query.applicationid } else { $env:ApplicationID } 
+    $applicationid = if ($request.query.applicationid) { $request.query.applicationid } else { $env:ApplicationID }
     $Results = get-tenants | ForEach-Object {
         [PSCustomObject]@{
             defaultDomainName = $_.defaultDomainName

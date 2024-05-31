@@ -3,7 +3,9 @@ using namespace System.Net
 Function Invoke-ExecOffboardTenant {
     <#
     .FUNCTIONALITY
-    Entrypoint
+        Entrypoint
+    .ROLE
+        Tenant.Administration.ReadWrite
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
@@ -23,7 +25,7 @@ Function Invoke-ExecOffboardTenant {
             try {
                 try {
                     $domains = (New-GraphGETRequest -Uri "https://graph.microsoft.com/v1.0/domains?`$select=id" -tenantid $env:TenantID -NoAuthCheck:$true).id
-                    $CSPGuestUsers = (New-GraphGETRequest -Uri "https://graph.microsoft.com/v1.0/users?`$select=id,mail&`$filter=userType eq 'Guest' and $(($domains | ForEach-Object { "endswith(mail, '$_')" }) -join ' or ')&`$count=true" -tenantid $Tenantfilter -ComplexFilter)    
+                    $CSPGuestUsers = (New-GraphGETRequest -Uri "https://graph.microsoft.com/v1.0/users?`$select=id,mail&`$filter=userType eq 'Guest' and $(($domains | ForEach-Object { "endswith(mail, '$_')" }) -join ' or ')&`$count=true" -tenantid $Tenantfilter -ComplexFilter)
                 } catch {
                     $errors.Add("Failed to retrieve guest users: $($_.Exception.message)")
                 }
@@ -57,28 +59,28 @@ Function Invoke-ExecOffboardTenant {
                 } catch {
                     throw "Failed to retrieve CSP domains: $($_.Exception.message)"
                 }
-    
+
                 try {
                     # Get /organization data
                     $orgContacts = New-GraphGETRequest -Uri "https://graph.microsoft.com/v1.0/organization?`$select=id,marketingNotificationEmails,securityComplianceNotificationMails,technicalNotificationMails" -tenantid $TenantFilter
-    
+
                 } catch {
                     throw "Failed to retrieve CSP domains: $($_.Exception.message)"
                 }
             } catch {
                 $errors.Add("$($_.Exception.message)")
             }
-    
+
             # foreach through the properties we want to check/update
             @('marketingNotificationEmails','securityComplianceNotificationMails','technicalNotificationMails') | ForEach-Object {
                 $property = $_
                 $propertyContacts = $orgContacts.($($property))
-    
+
                 if ($propertyContacts -AND ($domains -notcontains ($propertyContacts | ForEach-Object { $_.Split("@")[1] }))) {
                     $newPropertyContent = [System.Collections.Generic.List[object]]($propertyContacts | Where-Object { $domains -notcontains $_.Split("@")[1] })
-    
+
                     $patchContactBody = if (!($newPropertyContent)) { "{ `"$($property)`" : [] }" } else { [pscustomobject]@{ $property = $newPropertyContent } | ConvertTo-Json }
-    
+
                     try {
                         New-GraphPostRequest -type PATCH -body $patchContactBody -Uri "https://graph.microsoft.com/v1.0/organization/$($orgContacts.id)" -tenantid $Tenantfilter -ContentType "application/json"
                         $results.Add("Succesfully removed notification contacts from $($property): $(($propertyContacts | Where-Object { $domains -contains $_.Split("@")[1] }))")
@@ -91,9 +93,9 @@ Function Invoke-ExecOffboardTenant {
                 }
             }
             # Add logic for privacyProfile later - rvdwegen
-    
+
         }
-    
+
         if ($request.body.RemoveVendorApps) {
             $request.body.RemoveVendorApps | ForEach-Object {
                 try {
@@ -104,7 +106,7 @@ Function Invoke-ExecOffboardTenant {
                     #$results.Add("Failed to removed app $($_.displayName)")
                     $errors.Add("Failed to removed app $($_.label)")
                 }
-            }    
+            }
         }
 
         # All customer tenant specific actions ALWAYS have to be completed before this action!

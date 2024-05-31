@@ -3,12 +3,14 @@ using namespace System.Net
 Function Invoke-AddSpamFilter {
     <#
     .FUNCTIONALITY
-    Entrypoint
+        Entrypoint
+    .ROLE
+        Exchange.SpamFilter.ReadWrite
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
 
-        
+
     $APIName = $TriggerMetadata.FunctionName
     Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -message 'Accessed this API' -Sev 'Debug'
 

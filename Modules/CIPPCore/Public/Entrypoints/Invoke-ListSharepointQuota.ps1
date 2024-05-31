@@ -3,7 +3,9 @@ using namespace System.Net
 Function Invoke-ListSharepointQuota {
     <#
     .FUNCTIONALITY
-    Entrypoint
+        Entrypoint
+    .ROLE
+        Sharepoint.Admin.Read
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)

@@ -3,7 +3,9 @@ using namespace System.Net
 Function Invoke-ListMailboxCAS {
     <#
     .FUNCTIONALITY
-    Entrypoint
+        Entrypoint
+    .ROLE
+        Exchange.Mailbox.Read
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
