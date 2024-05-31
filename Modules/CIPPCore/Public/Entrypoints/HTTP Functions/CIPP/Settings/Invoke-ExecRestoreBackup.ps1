@@ -3,14 +3,16 @@ using namespace System.Net
 Function Invoke-ExecRestoreBackup {
     <#
     .FUNCTIONALITY
-    Entrypoint
+        Entrypoint
+    .ROLE
+        CIPP.AppSettings.ReadWrite
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
 
     $APIName = $TriggerMetadata.FunctionName
     Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -message 'Accessed this API' -Sev 'Debug'
-    try { 
+    try {
         foreach ($line in ($Request.body | ConvertFrom-Json | Select-Object * -ExcludeProperty ETag)) {
             Write-Host ($line)
             $Table = Get-CippTable -tablename $line.table
@@ -23,7 +25,7 @@ Function Invoke-ExecRestoreBackup {
         Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -message 'Created backup' -Sev 'Debug'
 
         $body = [pscustomobject]@{
-            'Results' = 'Succesfully restored backup.' 
+            'Results' = 'Succesfully restored backup.'
         }
     } catch {
         Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -message "Failed to create backup: $($_.Exception.Message)" -Sev 'Error'

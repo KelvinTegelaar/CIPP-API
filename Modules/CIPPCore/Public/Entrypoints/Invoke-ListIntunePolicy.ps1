@@ -3,7 +3,9 @@ using namespace System.Net
 Function Invoke-ListIntunePolicy {
     <#
     .FUNCTIONALITY
-    Entrypoint
+        Entrypoint
+    .ROLE
+        Endpoint.MEM.Read
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
@@ -46,7 +48,7 @@ Function Invoke-ListIntunePolicy {
                     default { $_.'assignments@odata.context' }
                 }
                 if ($_.displayname -eq $null) { $_ | Add-Member -NotePropertyName displayName -NotePropertyValue $_.name }
-                $_ | Add-Member -NotePropertyName PolicyTypeName -NotePropertyValue $policyTypeName 
+                $_ | Add-Member -NotePropertyName PolicyTypeName -NotePropertyValue $policyTypeName
                 $_ | Add-Member -NotePropertyName URLName -NotePropertyValue $URLName
                 $_
             } | Where-Object { $_.DisplayName -ne $null }
