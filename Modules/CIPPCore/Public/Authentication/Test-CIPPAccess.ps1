@@ -79,7 +79,7 @@ function Test-CIPPAccess {
                 }
             }
             if (!$APIAllowed) {
-                throw "Access to this API is not allowed, the '$($Role.Role)' custom role does not have the required permission: $APIRole"
+                throw "Access to this CIPP API endpoint is not allowed, the '$($Role.Role)' custom role does not have the required permission: $APIRole"
             }
             if (!$TenantAllowed) {
                 throw 'Access to this tenant is not allowed'

@@ -5,7 +5,7 @@ Function Invoke-ListHaloClients {
     .FUNCTIONALITY
         Entrypoint
     .ROLE
-        Extension.HaloPSA.Read
+        CIPP.Extension.Read
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)

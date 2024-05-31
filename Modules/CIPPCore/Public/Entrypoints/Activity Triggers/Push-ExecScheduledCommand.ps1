@@ -54,7 +54,7 @@ function Push-ExecScheduledCommand {
             Results      = "$errorMessage"
             TaskState    = $State
         }
-        Write-LogMessage -API 'Scheduler_UserTasks' -tenant $tenant -message "Failed to execute task $($task.Name): $errorMessage" -sev Error
+        Write-LogMessage -API 'Scheduler_UserTasks' -tenant $tenant -message "Failed to execute task $($task.Name): $errorMessage" -sev Error -LogData (Get-CippExceptionData -Exception $_.Exception)
     }
     Write-Host 'Sending task results to target. Updating the task state.'
 

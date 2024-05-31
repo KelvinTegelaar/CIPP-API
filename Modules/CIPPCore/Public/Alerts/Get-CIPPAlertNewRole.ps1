@@ -6,7 +6,8 @@ function Get-CIPPAlertNewRole {
     [CmdletBinding()]
     Param (
         [Parameter(Mandatory = $false)]
-        $input,
+        [Alias('input')]
+        $InputValue,
         $TenantFilter
     )
     $Deltatable = Get-CIPPTable -Table DeltaCompare
