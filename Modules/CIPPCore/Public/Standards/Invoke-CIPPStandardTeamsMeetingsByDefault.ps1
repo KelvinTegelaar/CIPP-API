@@ -42,7 +42,7 @@ function Invoke-CIPPStandardTeamsMeetingsByDefault {
     if ($Settings.report -eq $true) {
         # Default is not set, not set means it's enabled
         if ($null -eq $CurrentState ) { $CurrentState = $true }
-        Add-CIPPBPAField -FieldName 'MessageRecall' -FieldValue $CurrentState -StoreAs bool -Tenant $tenant
+        Add-CIPPBPAField -FieldName 'TeamsMeetingsByDefault' -FieldValue $CurrentState -StoreAs bool -Tenant $tenant
     }
 
 }
