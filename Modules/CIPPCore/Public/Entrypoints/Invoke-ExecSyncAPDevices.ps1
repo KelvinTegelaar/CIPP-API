@@ -3,7 +3,9 @@ using namespace System.Net
 Function Invoke-ExecSyncAPDevices {
     <#
     .FUNCTIONALITY
-    Entrypoint
+        Entrypoint
+    .ROLE
+        Endpoint.Autopilot.ReadWrite
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
