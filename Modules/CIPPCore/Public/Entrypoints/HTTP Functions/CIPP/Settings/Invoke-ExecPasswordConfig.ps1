@@ -3,7 +3,9 @@ using namespace System.Net
 Function Invoke-ExecPasswordConfig {
     <#
     .FUNCTIONALITY
-    Entrypoint
+        Entrypoint
+    .ROLE
+        CIPP.AppSettings.ReadWrite
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
@@ -16,7 +18,7 @@ Function Invoke-ExecPasswordConfig {
 
     # Write to the Azure Functions log stream.
     Write-Host 'PowerShell HTTP trigger function processed a request.'
-    $results = try { 
+    $results = try {
         if ($Request.Query.List) {
             @{ passwordType = $PasswordType.passwordType }
         } else {

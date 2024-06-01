@@ -3,7 +3,9 @@ using namespace System.Net
 Function Invoke-ExecAddTrustedIP {
     <#
     .FUNCTIONALITY
-    Entrypoint
+        Entrypoint
+    .ROLE
+        CIPP.AppSettings.ReadWrite
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)

@@ -3,7 +3,9 @@ using namespace System.Net
 Function Invoke-AddTeam {
     <#
     .FUNCTIONALITY
-    Entrypoint
+        Entrypoint
+    .ROLE
+        Teams.Group.ReadWrite
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
@@ -18,7 +20,7 @@ Function Invoke-AddTeam {
 
     $Owners = ($userobj.owner).Split([Environment]::NewLine) | Where-Object { $_ -ne $null -or $_ -ne '' }
     try {
-    
+
         $Owners = $Owners | ForEach-Object {
             $OwnerID = "https://graph.microsoft.com/beta/users('" + (New-GraphGetRequest -uri "https://graph.microsoft.com/beta/users/$_" -tenantid $Userobj.tenantid).id + "')"
             @{

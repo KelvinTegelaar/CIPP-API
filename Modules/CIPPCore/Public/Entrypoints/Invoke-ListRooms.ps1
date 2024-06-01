@@ -3,7 +3,9 @@ using namespace System.Net
 Function Invoke-ListRooms {
     <#
     .FUNCTIONALITY
-    Entrypoint
+        Entrypoint
+    .ROLE
+        Exchange.Room.Read
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
