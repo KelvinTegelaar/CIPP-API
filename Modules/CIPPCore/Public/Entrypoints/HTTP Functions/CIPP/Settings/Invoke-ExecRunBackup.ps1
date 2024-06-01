@@ -3,14 +3,16 @@ using namespace System.Net
 Function Invoke-ExecRunBackup {
     <#
     .FUNCTIONALITY
-    Entrypoint
+        Entrypoint
+    .ROLE
+        CIPP.AppSettings.ReadWrite
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
 
     $APIName = $TriggerMetadata.FunctionName
     Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -message 'Accessed this API' -Sev 'Debug'
-    try { 
+    try {
         if ($request.query.Selected) {
             $BackupTables = $request.query.Selected -split ','
         } else {
@@ -31,7 +33,7 @@ Function Invoke-ExecRunBackup {
         Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -message 'Created backup' -Sev 'Debug'
 
         $body = [pscustomobject]@{
-            'Results' = 'Created backup' 
+            'Results' = 'Created backup'
             backup    = $CSVfile
         }
     } catch {

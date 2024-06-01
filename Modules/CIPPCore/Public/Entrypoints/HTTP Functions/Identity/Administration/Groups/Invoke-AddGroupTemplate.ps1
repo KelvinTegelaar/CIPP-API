@@ -3,7 +3,9 @@ using namespace System.Net
 Function Invoke-AddGroupTemplate {
     <#
     .FUNCTIONALITY
-    Entrypoint
+        Entrypoint
+    .ROLE
+        Identity.Group.ReadWrite
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
@@ -12,7 +14,7 @@ Function Invoke-AddGroupTemplate {
     Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -message 'Accessed this API' -Sev 'Debug'
 
     $GUID = (New-Guid).GUID
-    try { 
+    try {
         if (!$Request.body.displayname) { throw 'You must enter a displayname' }
 
         $object = [PSCustomObject]@{

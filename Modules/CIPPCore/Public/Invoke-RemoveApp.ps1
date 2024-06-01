@@ -3,7 +3,9 @@ using namespace System.Net
 Function Invoke-RemoveApp {
     <#
     .FUNCTIONALITY
-    Entrypoint
+        Entrypoint
+    .ROLE
+        Endpoint.Application.ReadWrite
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)

@@ -3,7 +3,9 @@ using namespace System.Net
 Function Invoke-RemoveExConnector {
     <#
     .FUNCTIONALITY
-    Entrypoint
+        Entrypoint
+    .ROLE
+        Exchange.Connector.ReadWrite
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
@@ -11,9 +13,9 @@ Function Invoke-RemoveExConnector {
     $APIName = $TriggerMetadata.FunctionName
     Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -message 'Accessed this API' -Sev 'Debug'
     $Tenantfilter = $request.Query.tenantfilter
-    
+
     try {
-        
+
         $Params = @{ Identity = $request.query.GUID }
         $GraphRequest = New-ExoRequest -tenantid $Tenantfilter -cmdlet "Remove-$($Request.query.Type)Connector" -cmdParams $params -useSystemMailbox $true
         $Result = "Deleted $($Request.query.guid)"
