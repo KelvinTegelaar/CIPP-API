@@ -3,7 +3,9 @@ using namespace System.Net
 Function Invoke-ExecAlertsList {
     <#
     .FUNCTIONALITY
-    Entrypoint
+        Entrypoint
+    .ROLE
+        Security.Alert.Read
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
@@ -26,7 +28,7 @@ Function Invoke-ExecAlertsList {
         # Interact with query parameters or the body of the request.
         $TenantFilter = $Request.Query.TenantFilter
         $GraphRequest = if ($TenantFilter -ne 'AllTenants') {
-            $Alerts = New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/security/alerts' -tenantid $TenantFilter 
+            $Alerts = New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/security/alerts' -tenantid $TenantFilter
             $AlertsObj = foreach ($Alert In $alerts) {
                 @{
                     Tenant        = $TenantFilter
@@ -42,7 +44,7 @@ Function Invoke-ExecAlertsList {
                 }
             }
 
-            $DisplayableAlerts = New-FlatArray $AlertsObj | Where-Object { $_.Id -ne $null } | Sort-Object -Property EventDateTime -Descending  
+            $DisplayableAlerts = New-FlatArray $AlertsObj | Where-Object { $_.Id -ne $null } | Sort-Object -Property EventDateTime -Descending
 
             [PSCustomObject]@{
                 NewAlertsCount             = $DisplayableAlerts | Where-Object { $_.Status -eq 'newAlert' } | Measure-Object | Select-Object -ExpandProperty Count
@@ -79,7 +81,7 @@ Function Invoke-ExecAlertsList {
                         InvolvedUsers = $AlertInfo.userStates
                     }
                 }
-                $DisplayableAlerts = New-FlatArray $AlertsObj | Where-Object { $_.Id -ne $null } | Sort-Object -Property EventDateTime -Descending  
+                $DisplayableAlerts = New-FlatArray $AlertsObj | Where-Object { $_.Id -ne $null } | Sort-Object -Property EventDateTime -Descending
                 [PSCustomObject]@{
                     NewAlertsCount             = $DisplayableAlerts | Where-Object { $_.Status -eq 'newAlert' } | Measure-Object | Select-Object -ExpandProperty Count
                     InProgressAlertsCount      = $DisplayableAlerts | Where-Object { $_.Status -eq 'inProgress' } | Measure-Object | Select-Object -ExpandProperty Count
@@ -103,6 +105,6 @@ Function Invoke-ExecAlertsList {
     Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
             StatusCode = $StatusCode
             Body       = $Body
-        }) 
+        })
 
 }

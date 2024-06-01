@@ -278,7 +278,7 @@ Function Push-ExecOnboardTenantQueue {
                     $Tenant = Get-Tenants -TriggerRefresh -IncludeAll | Where-Object { $_.customerId -eq $Relationship.customer.tenantId } | Select-Object -First 1
                     $y++
                     Start-Sleep -Seconds 20
-                } while (!$Tenant -and $y -le 4)
+                } while (!$Tenant -and $y -le 10)
 
                 if ($Tenant) {
                     $Logs.Add([PSCustomObject]@{ Date = Get-Date -UFormat $DateFormat; Log = 'Tenant found in customer list' })

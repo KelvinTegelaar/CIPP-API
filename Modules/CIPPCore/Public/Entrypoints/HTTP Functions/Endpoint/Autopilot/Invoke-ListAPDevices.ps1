@@ -3,7 +3,9 @@ using namespace System.Net
 Function Invoke-ListAPDevices {
     <#
     .FUNCTIONALITY
-    Entrypoint
+        Entrypoint
+    .ROLE
+        Endpoint.Autopilot.Read
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
@@ -18,7 +20,7 @@ Function Invoke-ListAPDevices {
     # Interact with query parameters or the body of the request.
     $TenantFilter = $Request.Query.TenantFilter
     try {
-        $GraphRequest = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/deviceManagement/windowsAutopilotDeviceIdentities?`$top=999" -tenantid $TenantFilter  
+        $GraphRequest = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/deviceManagement/windowsAutopilotDeviceIdentities?`$top=999" -tenantid $TenantFilter
         $StatusCode = [HttpStatusCode]::OK
     } catch {
         $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message

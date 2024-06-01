@@ -3,7 +3,9 @@ using namespace System.Net
 Function Invoke-ListNotificationConfig {
     <#
     .FUNCTIONALITY
-    Entrypoint
+        Entrypoint
+    .ROLE
+        CIPP.AppSettings.Read
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
