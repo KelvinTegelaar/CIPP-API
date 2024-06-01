@@ -6,7 +6,8 @@ function Get-CIPPAlertApnCertExpiry {
     [CmdletBinding()]
     Param (
         [Parameter(Mandatory = $false)]
-        $input,
+        [Alias('input')]
+        $InputValue,
         $TenantFilter
     )
 

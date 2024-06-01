@@ -3,7 +3,9 @@ using namespace System.Net
 Function Invoke-AddContact {
     <#
     .FUNCTIONALITY
-    Entrypoint
+        Entrypoint
+    .ROLE
+        Exchange.Contact.ReadWrite
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
@@ -31,8 +33,7 @@ Function Invoke-AddContact {
         $body = [pscustomobject]@{'Results' = 'Successfully added a contact.' }
         Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $($contactobj.tenantid) -message "Created contact $($contactobj.displayname) with id $($GraphRequest.id) for " -Sev 'Info'
 
-    }
-    catch {
+    } catch {
         Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $($contactobj.tenantid) -message "Contact creation API failed. $($_.Exception.Message)" -Sev 'Error'
         $body = [pscustomobject]@{'Results' = "Failed to create contact. $($_.Exception.Message)" }
 

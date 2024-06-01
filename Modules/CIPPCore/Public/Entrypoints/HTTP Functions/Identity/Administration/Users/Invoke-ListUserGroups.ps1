@@ -3,7 +3,9 @@ using namespace System.Net
 Function Invoke-ListUserGroups {
     <#
     .FUNCTIONALITY
-    Entrypoint
+        Entrypoint
+    .ROLE
+        Identity.User.Read
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
@@ -20,7 +22,7 @@ Function Invoke-ListUserGroups {
     $UserID = $Request.Query.UserID
 
 
-    $URI = "https://graph.microsoft.com/beta/users/$UserID/memberOf/$/microsoft.graph.group?`$select=id,displayName,mailEnabled,securityEnabled,groupTypes,onPremisesSyncEnabled,mail,isAssignableToRole`&$orderby=displayName asc" 
+    $URI = "https://graph.microsoft.com/beta/users/$UserID/memberOf/$/microsoft.graph.group?`$select=id,displayName,mailEnabled,securityEnabled,groupTypes,onPremisesSyncEnabled,mail,isAssignableToRole`&$orderby=displayName asc"
     Write-Host $URI
     $GraphRequest = New-GraphGetRequest -uri $URI -tenantid $TenantFilter -noPagination $true -verbose | Select-Object id,
     @{ Name = 'DisplayName'; Expression = { $_.displayName } },

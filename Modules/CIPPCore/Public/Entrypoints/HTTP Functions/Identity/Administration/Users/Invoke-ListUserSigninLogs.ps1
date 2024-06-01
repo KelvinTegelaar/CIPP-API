@@ -3,7 +3,9 @@ using namespace System.Net
 Function Invoke-ListUserSigninLogs {
     <#
     .FUNCTIONALITY
-    Entrypoint
+        Entrypoint
+    .ROLE
+        Identity.User.Read
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
@@ -19,7 +21,7 @@ Function Invoke-ListUserSigninLogs {
     $TenantFilter = $Request.Query.TenantFilter
     $UserID = $Request.Query.UserID
     try {
-        $URI = "https://graph.microsoft.com/beta/auditLogs/signIns?`$filter=(userId eq '$UserID')&`$top=50&`$orderby=createdDateTime desc" 
+        $URI = "https://graph.microsoft.com/beta/auditLogs/signIns?`$filter=(userId eq '$UserID')&`$top=50&`$orderby=createdDateTime desc"
         Write-Host $URI
         $GraphRequest = New-GraphGetRequest -uri $URI -tenantid $TenantFilter -noPagination $true -verbose | Select-Object @{ Name = 'Date'; Expression = { $(($_.createdDateTime | Out-String) -replace '\r\n') } },
         id,

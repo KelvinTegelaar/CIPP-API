@@ -3,7 +3,9 @@ using namespace System.Net
 Function Invoke-ListTransportRules {
     <#
     .FUNCTIONALITY
-    Entrypoint
+        Entrypoint
+    .ROLE
+        Exchange.TransportRule.Read
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
