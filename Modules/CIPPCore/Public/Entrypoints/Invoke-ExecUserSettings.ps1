@@ -3,7 +3,9 @@ using namespace System.Net
 function Invoke-ExecUserSettings {
     <#
     .FUNCTIONALITY
-    Entrypoint
+        Entrypoint
+    .ROLE
+        CIPP.Core.ReadWrite
     #>
     param($Request, $TriggerMetadata)
 

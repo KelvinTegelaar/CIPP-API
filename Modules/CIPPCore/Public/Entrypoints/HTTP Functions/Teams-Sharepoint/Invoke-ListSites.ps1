@@ -3,7 +3,9 @@ using namespace System.Net
 Function Invoke-ListSites {
     <#
     .FUNCTIONALITY
-    Entrypoint
+        Entrypoint
+    .ROLE
+        Sharepoint.Site.Read
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
@@ -20,7 +22,7 @@ Function Invoke-ListSites {
     $type = $request.query.Type
     $UserUPN = $request.query.UserUPN
     try {
-        $Result = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/reports/get$($type)Detail(period='D7')" -tenantid $TenantFilter | ConvertFrom-Csv 
+        $Result = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/reports/get$($type)Detail(period='D7')" -tenantid $TenantFilter | ConvertFrom-Csv
 
         if ($UserUPN) {
             $ParsedRequest = $Result | Where-Object { $_.'Owner Principal Name' -eq $UserUPN }
@@ -37,7 +39,7 @@ Function Invoke-ListSites {
         @{ Name = 'Template'; Expression = { $_.'Root Web Template' } },
         @{ Name = 'siteid'; Expression = { $_.'site Id' } }
 
-        #Temporary workaround for url as report is broken. 
+        #Temporary workaround for url as report is broken.
         #This API is so stupid its great.
         $URLs = (New-GraphGetRequest -uri 'https://graph.microsoft.com/v1.0/sites/getAllSites?$select=SharePointIds' -asapp $true -tenantid $TenantFilter).SharePointIds
 

@@ -3,7 +3,9 @@ using namespace System.Net
 Function Invoke-RemoveQueuedAlert {
     <#
     .FUNCTIONALITY
-    Entrypoint
+        Entrypoint
+    .ROLE
+        CIPP.Alert.ReadWrite
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
@@ -24,7 +26,7 @@ Function Invoke-RemoveQueuedAlert {
         $Alert = Get-CIPPAzDataTableEntity @Table -Filter $Filter -Property PartitionKey, RowKey
         Remove-AzDataTableEntity @Table -Entity $Alert
         Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -message "Removed application queue for $ID." -Sev 'Info'
-        
+
         $body = [pscustomobject]@{'Results' = 'Successfully removed from queue.' }
     } catch {
         Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -message "Failed to remove from queue $ID. $($_.Exception.Message)" -Sev 'Error'
