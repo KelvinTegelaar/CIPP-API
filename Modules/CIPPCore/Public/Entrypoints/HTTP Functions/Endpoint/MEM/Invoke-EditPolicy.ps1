@@ -3,7 +3,9 @@ using namespace System.Net
 Function Invoke-EditPolicy {
     <#
     .FUNCTIONALITY
-    Entrypoint
+        Entrypoint
+    .ROLE
+        Endpoint.MEM.ReadWrite
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
@@ -16,7 +18,7 @@ Function Invoke-EditPolicy {
     $displayname = $request.body.Displayname
     $description = $request.body.Description
     $AssignTo = if ($request.body.Assignto -ne 'on') { $request.body.Assignto }
-    
+
     $results = try {
         $CreateBody = '{"description":"' + $description + '","displayName":"' + $displayname + '","roleScopeTagIds":["0"]}'
         $Request = New-GraphPOSTRequest -uri "https://graph.microsoft.com/beta/deviceManagement/groupPolicyConfigurations('$ID')" -tenantid $tenant -type PATCH -body $CreateBody

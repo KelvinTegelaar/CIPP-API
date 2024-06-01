@@ -3,7 +3,9 @@ using namespace System.Net
 Function Invoke-RemoveScheduledItem {
     <#
     .FUNCTIONALITY
-    Entrypoint
+        Entrypoint
+    .ROLE
+        CIPP.Scheduler.ReadWrite
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
@@ -21,7 +23,7 @@ Function Invoke-RemoveScheduledItem {
 
     Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
             StatusCode = [HttpStatusCode]::OK
-            Body       = @{ Results = 'Task removed successfully.' } 
+            Body       = @{ Results = 'Task removed successfully.' }
         })
 
 

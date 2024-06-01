@@ -3,7 +3,9 @@ using namespace System.Net
 Function Invoke-ExecOffboard_Mailboxpermissions {
     <#
     .FUNCTIONALITY
-    Entrypoint
+        Entrypoint
+    .ROLE
+        Exchange.Mailbox.ReadWrite
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)

@@ -2,12 +2,14 @@ using namespace System.Net
 Function Invoke-ExecGDAPInvite {
     <#
     .FUNCTIONALITY
-    Entrypoint
+        Entrypoint
+    .ROLE
+        Tenant.Relationship.ReadWrite
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
 
-    $APIName = $TriggerMetadata.FunctionName
+    $APIName = 'ExecGDAPInvite'
     Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -message 'Accessed this API' -Sev 'Debug'
 
     $RoleMappings = $Request.body.gdapRoles
@@ -47,7 +49,7 @@ Function Invoke-ExecGDAPInvite {
 
             if ($NewRelationshipRequest.action -eq 'lockForApproval') {
                 $InviteUrl = "https://admin.microsoft.com/AdminPortal/Home#/partners/invitation/granularAdminRelationships/$($NewRelationship.id)"
-                $Uri = ([System.Uri]$TriggerMetadata.Headers.referer)
+                $Uri = ([System.Uri]$TriggerMetadata.Headers.Referer)
                 $TableFilter = [System.Web.HttpUtility]::UrlEncode(('Complex: id eq {0}' -f $NewRelationship.id))
                 $OnboardingUrl = $Uri.AbsoluteUri.Replace($Uri.PathAndQuery, "/tenant/administration/tenant-onboarding-wizard?tableFilter=$TableFilter")
 
@@ -69,8 +71,8 @@ Function Invoke-ExecGDAPInvite {
         }
     } catch {
         $Message = 'Error creating GDAP relationship'
-        Write-Host "GDAP ERROR: $($_.Exception.Message)"
-        Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $env:TenantID -message "$($Message): $($_.Exception.Message)" -Sev 'Error'
+        Write-Host "GDAP ERROR: $($_.InvocationInfo.PositionMessage)"
+        Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $env:TenantID -message "$($Message): $($_.Exception.Message)" -Sev 'Error' -LogData (Get-CippException -Exception $_)
     }
 
     $body = @{
