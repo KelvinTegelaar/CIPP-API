@@ -79,7 +79,7 @@ function Invoke-PublicWebhooks {
                                 Conditions = $_.Conditions
                                 Actions    = $_.Actions
                                 LogType    = $_.Type
-                            } 
+                            }
                         }
                         if (!$Configuration.Tenants) {
                             Write-Host 'No tenants found for this webhook, probably an old entry. Skipping.'
@@ -99,22 +99,22 @@ function Invoke-PublicWebhooks {
                         $ProcessedData = foreach ($Data in $PreProccessedData) {
                             if ($Data.ExtendedProperties) {
                                 $Data.CIPPExtendedProperties = ($Data.ExtendedProperties | ConvertTo-Json)
-                                $Data.ExtendedProperties | ForEach-Object { $data | Add-Member -NotePropertyName $_.Name -NotePropertyValue $_.Value -Force -ErrorAction SilentlyContinue } 
+                                $Data.ExtendedProperties | ForEach-Object { $data | Add-Member -NotePropertyName $_.Name -NotePropertyValue $_.Value -Force -ErrorAction SilentlyContinue }
                             }
-                            if ($Data.DeviceProperties) { 
+                            if ($Data.DeviceProperties) {
                                 $Data.CIPPDeviceProperties = ($Data.DeviceProperties | ConvertTo-Json)
-                                $Data.DeviceProperties | ForEach-Object { $data | Add-Member -NotePropertyName $_.Name -NotePropertyValue $_.Value -Force -ErrorAction SilentlyContinue } 
+                                $Data.DeviceProperties | ForEach-Object { $data | Add-Member -NotePropertyName $_.Name -NotePropertyValue $_.Value -Force -ErrorAction SilentlyContinue }
                             }
-                            if ($Data.parameters) { 
+                            if ($Data.parameters) {
                                 $Data.CIPPParameters = ($Data.parameters | ConvertTo-Json)
-                                $Data.parameters | ForEach-Object { $data | Add-Member -NotePropertyName $_.Name -NotePropertyValue $_.Value -Force -ErrorAction SilentlyContinue } 
+                                $Data.parameters | ForEach-Object { $data | Add-Member -NotePropertyName $_.Name -NotePropertyValue $_.Value -Force -ErrorAction SilentlyContinue }
                             }
-                            if ($Data.ModifiedProperties) { 
+                            if ($Data.ModifiedProperties) {
                                 $Data.CIPPModifiedProperties = ($Data.ModifiedProperties | ConvertTo-Json)
-                                $Data.ModifiedProperties | ForEach-Object { $data | Add-Member -NotePropertyName "$($_.Name)" -NotePropertyValue "$($_.NewValue)" -Force -ErrorAction SilentlyContinue } 
+                                $Data.ModifiedProperties | ForEach-Object { $data | Add-Member -NotePropertyName "$($_.Name)" -NotePropertyValue "$($_.NewValue)" -Force -ErrorAction SilentlyContinue }
                             }
                             if ($Data.ModifiedProperties) { $Data.ModifiedProperties | ForEach-Object { $data | Add-Member -NotePropertyName $("Previous_Value_$($_.Name)") -NotePropertyValue "$($_.OldValue)" -Force -ErrorAction SilentlyContinue } }
-                          
+
                             if ($data.clientip) {
                                 if ($data.clientip -match '^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}:\d+$') {
                                     $data.clientip = $data.clientip -replace ':\d+$', '' # Remove the port number if present
@@ -150,7 +150,7 @@ function Invoke-PublicWebhooks {
                                         $null = Add-CIPPAzDataTableEntity @LocationTable -Entity $LocationInfo -Force
                                     } catch {
                                         Write-Host "Webhook: Failed to add location info for $($data.clientip) to cache: $($_.Exception.Message)"
-                                
+
                                     }
                                 }
                                 $Data.CIPPGeoLocation = $Country
@@ -165,12 +165,12 @@ function Invoke-PublicWebhooks {
                         #Filter data based on conditions.
                         $Where = $Configuration | ForEach-Object {
                             $conditions = $_.Conditions | ConvertFrom-Json | Where-Object { $_.Input.value -ne '' }
-                            $actions = $_.Actions                    
+                            $actions = $_.Actions
                             $conditionStrings = foreach ($condition in $conditions) {
-                                $value = if ($condition.Input.value -is [array]) { 
+                                $value = if ($condition.Input.value -is [array]) {
                                     $arrayAsString = $condition.Input.value | ForEach-Object {
-                                        "'$_'"  
-                                    } 
+                                        "'$_'"
+                                    }
                                     "@($($arrayAsString -join ', '))"
                                 } else { "'$($condition.Input.value)'" }
                                 "`$(`$_.$($condition.Property.label)) -$($condition.Operator.value) $value"
@@ -184,9 +184,9 @@ function Invoke-PublicWebhooks {
                                 clause         = $finalCondition
                                 expectedAction = $actions
                             }
-                           
+
                         }
-                        Write-Host "Webhook: The list of operations in the data are $($ProcessedData.operation -join ', ')"                        
+                        Write-Host "Webhook: The list of operations in the data are $($ProcessedData.operation -join ', ')"
 
                         $DataToProcess = foreach ($clause in $Where) {
                             Write-Host "Webhook: Processing clause: $($clause.clause)"

@@ -4,6 +4,8 @@ function Invoke-ExecOnboardTenant {
     <#
     .FUNCTIONALITY
         Entrypoint
+    .ROLE
+        Tenant.Administration.ReadWrite
     #>
     param($Request, $TriggerMetadata)
 

@@ -3,7 +3,9 @@ using namespace System.Net
 Function Invoke-AddCAPolicy {
     <#
     .FUNCTIONALITY
-    Entrypoint
+        Entrypoint
+    .ROLE
+        Tenant.ConditionalAccess.ReadWrite
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)

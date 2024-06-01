@@ -3,7 +3,9 @@ using namespace System.Net
 Function Invoke-ListGDAPInvite {
     <#
     .FUNCTIONALITY
-    Entrypoint
+        Entrypoint
+    .ROLE
+        Tenant.Relationship.Read
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
