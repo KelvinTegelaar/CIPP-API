@@ -3,7 +3,9 @@ using namespace System.Net
 Function Invoke-ExecResetPass {
     <#
     .FUNCTIONALITY
-    Entrypoint
+        Entrypoint
+    .ROLE
+        Identity.User.ReadWrite
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)

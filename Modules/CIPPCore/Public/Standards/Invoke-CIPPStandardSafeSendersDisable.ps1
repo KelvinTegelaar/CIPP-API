@@ -20,7 +20,7 @@ function Invoke-CIPPStandardSafeSendersDisable {
                 }
             }
 
-            $BatchResults = New-ExoBulkRequest -tenantid $tenant -cmdletArray $Request
+            $BatchResults = New-ExoBulkRequest -tenantid $tenant -cmdletArray @($Request)
             $BatchResults | ForEach-Object {
                 if ($_.error) {
                     $ErrorMessage = Get-NormalizedError -Message $_.error
