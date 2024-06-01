@@ -3,7 +3,9 @@ using namespace System.Net
 Function Invoke-ListUserConditionalAccessPolicies {
     <#
     .FUNCTIONALITY
-    Entrypoint
+        Entrypoint
+    .ROLE
+        Identity.User.Read
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
@@ -41,7 +43,7 @@ Function Invoke-ListUserConditionalAccessPolicies {
     # Associate values to output bindings by calling 'Push-OutputBinding'.
     Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
             StatusCode = [HttpStatusCode]::OK
-            Body       = @($GraphRequest) 
+            Body       = @($GraphRequest)
         })
 
 }
