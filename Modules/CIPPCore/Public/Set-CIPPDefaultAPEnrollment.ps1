@@ -20,7 +20,7 @@ function Set-CIPPDefaultAPEnrollment {
             'displayName'                             = 'All users and all devices'
             'description'                             = 'This is the default enrollment status screen configuration applied with the lowest priority to all users and all devices regardless of group membership.'
             'showInstallationProgress'                = [bool]$ShowProgress
-            'blockDeviceSetupRetryByUser'             = [bool]$blockDevice
+            'blockDeviceSetupRetryByUser'             = ![bool]$blockDevice
             'allowDeviceResetOnInstallFailure'        = [bool]$AllowReset
             'allowLogCollectionOnInstallFailure'      = [bool]$EnableLog
             'customErrorMessage'                      = "$ErrorMessage"

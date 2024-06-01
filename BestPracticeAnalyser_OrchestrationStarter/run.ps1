@@ -32,7 +32,6 @@ $InputObject = [PSCustomObject]@{
     Batch            = @($BPAReports)
     OrchestratorName = 'BPAOrchestrator'
     SkipLog          = $true
-    DurableMode      = 'Sequence'
 }
 Start-NewOrchestration -FunctionName 'CIPPOrchestrator' -InputObject ($InputObject | ConvertTo-Json -Compress -Depth 5)
 

@@ -3,7 +3,9 @@ using namespace System.Net
 Function Invoke-ListUserPhoto {
     <#
     .FUNCTIONALITY
-    Entrypoint
+        Entrypoint
+    .ROLE
+        Identity.User.Read
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
