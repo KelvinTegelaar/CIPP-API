@@ -3,7 +3,9 @@ using namespace System.Net
 Function Invoke-AddSharedMailbox {
     <#
     .FUNCTIONALITY
-    Entrypoint
+        Entrypoint
+    .ROLE
+        Exchange.Mailbox.ReadWrite
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
@@ -40,7 +42,7 @@ Function Invoke-AddSharedMailbox {
 
     try {
         if ($Aliases) {
-            
+
             Start-Sleep 3 # Sleep since there is apparently a race condition with the mailbox creation if we don't delay for a lil bit
             $AliasBodyToShip = [pscustomobject] @{
                 'Identity'       = $AddSharedRequest.Guid

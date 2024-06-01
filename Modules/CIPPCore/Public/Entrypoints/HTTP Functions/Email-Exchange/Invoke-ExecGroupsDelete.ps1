@@ -3,7 +3,9 @@ using namespace System.Net
 Function Invoke-ExecGroupsDelete {
     <#
     .FUNCTIONALITY
-    Entrypoint
+        Entrypoint
+    .ROLE
+        Exchange.Mailbox.ReadWrite
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)

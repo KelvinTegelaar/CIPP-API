@@ -3,20 +3,22 @@ using namespace System.Net
 Function Invoke-ExecAlertsListAllTenants {
     <#
     .FUNCTIONALITY
-    Entrypoint
+        Entrypoint
+    .ROLE
+        Security.Alert.Read
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
 
-        
-    Get-Tenants | ForEach-Object -Parallel { 
+
+    Get-Tenants | ForEach-Object -Parallel {
         $domainName = $_.defaultDomainName
         Import-Module '.\Modules\AzBobbyTables'
         Import-Module '.\Modules\CIPPCore'
         $Table = Get-CIPPTable -TableName 'cachealertsandincidents'
 
         try {
-            $Alerts = New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/security/alerts' -tenantid $domainName 
+            $Alerts = New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/security/alerts' -tenantid $domainName
             foreach ($Alert in $Alerts) {
                 $GUID = (New-Guid).Guid
                 $alertJson = $Alert | ConvertTo-Json
@@ -33,7 +35,7 @@ Function Invoke-ExecAlertsListAllTenants {
         } catch {
             $GUID = (New-Guid).Guid
             $AlertText = ConvertTo-Json -InputObject @{
-                Title             = "Could not connect to tenant to retrieve data: $($_.Exception.Message)" 
+                Title             = "Could not connect to tenant to retrieve data: $($_.Exception.Message)"
                 Id                = ''
                 Category          = ''
                 EventDateTime     = ''
@@ -46,7 +48,7 @@ Function Invoke-ExecAlertsListAllTenants {
                 }
             }
             $GraphRequest = @{
-                Alert        = [string]$AlertText 
+                Alert        = [string]$AlertText
                 RowKey       = [string]$GUID
                 PartitionKey = 'alert'
                 Tenant       = $domainName

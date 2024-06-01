@@ -2,7 +2,9 @@ using namespace System.Net
 Function Invoke-ExecGDAPRemoveGArole {
     <#
     .FUNCTIONALITY
-    Entrypoint
+        Entrypoint
+    .ROLE
+        Tenant.Relationship.ReadWrite
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)

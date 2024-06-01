@@ -3,7 +3,9 @@ using namespace System.Net
 Function Invoke-ExecEditTemplate {
     <#
     .FUNCTIONALITY
-    Entrypoint
+        Entrypoint
+    .ROLE
+        CIPP.Core.ReadWrite
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
@@ -11,7 +13,7 @@ Function Invoke-ExecEditTemplate {
     $APIName = $TriggerMetadata.FunctionName
     Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -message 'Accessed this API' -Sev 'Debug'
 
-    try {        
+    try {
         $Table = Get-CippTable -tablename 'templates'
         $Table.Force = $true
         $guid = $request.body.guid
@@ -33,7 +35,7 @@ Function Invoke-ExecEditTemplate {
             Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -message "Edited template $($Request.body.name) with GUID $GUID" -Sev 'Debug'
         }
         $body = [pscustomobject]@{ 'Results' = 'Successfully saved the template' }
-    
+
     } catch {
         Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -message "Failed to edit template: $($_.Exception.Message)" -Sev 'Error'
         $body = [pscustomobject]@{'Results' = "Editing template failed: $($_.Exception.Message)" }

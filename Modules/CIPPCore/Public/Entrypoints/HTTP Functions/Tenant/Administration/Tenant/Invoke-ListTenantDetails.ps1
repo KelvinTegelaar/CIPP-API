@@ -3,7 +3,9 @@ using namespace System.Net
 Function Invoke-ListTenantDetails {
     <#
     .FUNCTIONALITY
-    Entrypoint
+        Entrypoint
+    .ROLE
+        CIPP.Core.Read
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
@@ -44,6 +46,6 @@ Function Invoke-ListTenantDetails {
             StatusCode = [HttpStatusCode]::OK
             Body       = $Body
         })
-    
+
 
 }
