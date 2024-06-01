@@ -3,7 +3,9 @@ using namespace System.Net
 Function Invoke-ListDeviceDetails {
     <#
     .FUNCTIONALITY
-    Entrypoint
+        Entrypoint
+    .ROLE
+        Identity.Device.Read
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
@@ -28,7 +30,7 @@ Function Invoke-ListDeviceDetails {
             $Found = $False
             if ($SeriaNumber -and $DeviceName) {
                 $GraphRequest = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/deviceManagement/managedDevices?`$filter=serialnumber eq '$DeviceSerial' and deviceName eq '$DeviceName'" -Tenantid $tenantfilter
-            
+
                 if (($GraphRequest | Measure-Object).count -eq 1 -and $GraphRequest.'@odata.count' -ne 0 ) {
                     $Found = $True
                 }
@@ -75,7 +77,7 @@ Function Invoke-ListDeviceDetails {
 
             $DeviceGroups = Get-GraphBulkResultByID -Results $BulkResults -ID 'DeviceGroups' -Value
             $CompliancePolicies = Get-GraphBulkResultByID -Results $BulkResults -ID 'CompliancePolicies' -Value
-            $DetectedApps = Get-GraphBulkResultByID -Results $BulkResults -ID 'DetectedApps' 
+            $DetectedApps = Get-GraphBulkResultByID -Results $BulkResults -ID 'DetectedApps'
 
             $Null = $GraphRequest | Add-Member -NotePropertyName 'DetectedApps' -NotePropertyValue ($DetectedApps.DetectedApps | Select-Object id, displayName, version)
             $Null = $GraphRequest | Add-Member -NotePropertyName 'CompliancePolicies' -NotePropertyValue ($CompliancePolicies | Select-Object id, displayname, UserPrincipalName, state)

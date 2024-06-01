@@ -3,7 +3,9 @@ using namespace System.Net
 Function Invoke-RemoveStandardTemplate {
     <#
     .FUNCTIONALITY
-    Entrypoint
+        Entrypoint
+    .ROLE
+        Tenant.Standards.ReadWrite
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)

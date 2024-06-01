@@ -3,7 +3,9 @@ using namespace System.Net
 Function Invoke-ListUsers {
     <#
     .FUNCTIONALITY
-    Entrypoint
+        Entrypoint
+    .ROLE
+        Identity.User.Read
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
@@ -72,11 +74,11 @@ Function Invoke-ListUsers {
             Id              = $AuditlogsLogon.errorNumber
             Status          = $AuditlogsLogon.ResultStatus
         }
-        $GraphRequest = $GraphRequest | Select-Object *, 
+        $GraphRequest = $GraphRequest | Select-Object *,
         @{ Name = 'LastSigninApplication'; Expression = { $LastSignIn.AppDisplayName } },
         @{ Name = 'LastSigninDate'; Expression = { $($LastSignIn.CreatedDateTime | Out-String) } },
         @{ Name = 'LastSigninStatus'; Expression = { $AuditlogsLogon.operation } },
-        @{ Name = 'LastSigninResult'; Expression = { $LastSignIn.status } }, 
+        @{ Name = 'LastSigninResult'; Expression = { $LastSignIn.status } },
         @{ Name = 'LastSigninFailureReason'; Expression = { if ($LastSignIn.Id -eq 0) { 'Sucessfully signed in' } else { $LastSignIn.Id } } }
     }
     # Associate values to output bindings by calling 'Push-OutputBinding'.

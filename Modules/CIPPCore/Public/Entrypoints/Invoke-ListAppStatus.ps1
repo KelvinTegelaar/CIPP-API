@@ -3,7 +3,9 @@ using namespace System.Net
 Function Invoke-ListAppStatus {
     <#
     .FUNCTIONALITY
-    Entrypoint
+        Entrypoint
+    .ROLE
+        Endpoint.Device.Read
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
