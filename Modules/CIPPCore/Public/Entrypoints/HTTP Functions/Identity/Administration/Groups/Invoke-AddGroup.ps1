@@ -3,7 +3,9 @@ using namespace System.Net
 Function Invoke-AddGroup {
     <#
     .FUNCTIONALITY
-    Entrypoint
+        Entrypoint
+    .ROLE
+        Identity.Group.ReadWrite
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
@@ -46,14 +48,14 @@ Function Invoke-AddGroup {
                 $GraphRequest = New-GraphPostRequest -uri 'https://graph.microsoft.com/beta/groups' -tenantid $tenant -type POST -body (ConvertTo-Json -InputObject $BodyToship -Depth 10) -verbose
             } else {
                 if ($groupobj.groupType -eq 'dynamicdistribution') {
-                    $Params = @{ 
+                    $Params = @{
                         Name               = $groupobj.Displayname
                         RecipientFilter    = $groupobj.membershipRules
                         PrimarySmtpAddress = $email
                     }
                     $GraphRequest = New-ExoRequest -tenantid $tenant -cmdlet 'New-DynamicDistributionGroup' -cmdParams $params
                 } else {
-                    $Params = @{ 
+                    $Params = @{
                         Name                               = $groupobj.Displayname
                         Alias                              = $groupobj.username
                         Description                        = $groupobj.Description

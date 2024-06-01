@@ -3,7 +3,9 @@ using namespace System.Net
 Function Invoke-ListExchangeConnectors {
     <#
     .FUNCTIONALITY
-    Entrypoint
+        Entrypoint
+    .ROLE
+        Exchange.Connector.Read
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)

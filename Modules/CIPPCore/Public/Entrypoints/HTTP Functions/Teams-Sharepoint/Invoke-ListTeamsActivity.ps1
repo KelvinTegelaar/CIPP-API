@@ -3,12 +3,14 @@ using namespace System.Net
 Function Invoke-ListTeamsActivity {
     <#
     .FUNCTIONALITY
-    Entrypoint
+        Entrypoint
+    .ROLE
+        Teams.Activity.Read
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
 
-        
+
     # Write to the Azure Functions log stream.
     Write-Host 'PowerShell HTTP trigger function processed a request.'
 
