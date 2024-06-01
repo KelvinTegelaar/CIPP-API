@@ -3,7 +3,9 @@ using namespace System.Net
 Function Invoke-ListScheduledItems {
     <#
     .FUNCTIONALITY
-    Entrypoint
+        Entrypoint
+    .ROLE
+        CIPP.Scheduler.Read
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
@@ -17,6 +19,10 @@ Function Invoke-ListScheduledItems {
         $HiddenTasks = $true
     }
     $Tasks = Get-CIPPAzDataTableEntity @Table -Filter "PartitionKey eq 'ScheduledTask'" | Where-Object { $_.Hidden -ne $HiddenTasks }
+    $AllowedTenants = Test-CIPPAccess -Request $Request -TenantList
+    if ($AllowedTenants -notcontains 'AllTenants') {
+        $Tasks = $Tasks | Where-Object -Property TenantId -In $AllowedTenants
+    }
     $ScheduledTasks = foreach ($Task in $tasks) {
         $Task.Parameters = $Task.Parameters | ConvertFrom-Json
         $Task

@@ -1,7 +1,9 @@
 function Invoke-ExecMailboxRestore {
     <#
     .FUNCTIONALITY
-    Entrypoint
+        Entrypoint
+    .ROLE
+        Exchange.Mailbox.ReadWrite
     #>
     Param($Request, $TriggerMetadata)
 

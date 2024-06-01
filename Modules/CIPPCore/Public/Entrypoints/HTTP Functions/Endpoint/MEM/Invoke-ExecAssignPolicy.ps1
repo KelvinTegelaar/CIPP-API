@@ -3,7 +3,9 @@ using namespace System.Net
 Function Invoke-ExecAssignPolicy {
     <#
     .FUNCTIONALITY
-    Entrypoint
+        Entrypoint
+    .ROLE
+        Endpoint.MEM.ReadWrite
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
@@ -15,7 +17,7 @@ Function Invoke-ExecAssignPolicy {
     $ID = $request.query.id
     $displayname = $request.query.Displayname
     $AssignTo = if ($request.query.Assignto -ne 'on') { $request.query.Assignto }
-    
+
     $results = try {
         if ($AssignTo) {
             $assign = Set-CIPPAssignedPolicy -PolicyId $ID -TenantFilter $tenant -GroupName $AssignTo -Type $Request.query.Type

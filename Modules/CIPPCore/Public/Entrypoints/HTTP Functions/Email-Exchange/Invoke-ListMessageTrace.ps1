@@ -3,7 +3,9 @@ using namespace System.Net
 Function Invoke-ListMessageTrace {
     <#
     .FUNCTIONALITY
-    Entrypoint
+        Entrypoint
+    .ROLE
+        Exchange.TransportRule.Read
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
@@ -18,10 +20,10 @@ Function Invoke-ListMessageTrace {
             StartDate = (Get-Date).AddDays( - $($request.query.days)).ToString('s')
             EndDate   = (Get-Date).ToString('s')
         }
-    
+
         if ($null -ne $request.query.recipient) { $Searchparams.Add('RecipientAddress', $($request.query.recipient)) }
         if ($null -ne $request.query.sender) { $Searchparams.Add('SenderAddress', $($request.query.sender)) }
-        $type = $request.query.Tracedetail    
+        $type = $request.query.Tracedetail
         $trace = if ($Request.Query.Tracedetail) {
             New-ExoRequest -tenantid $Tenantfilter -cmdlet 'Get-MessageTraceDetail' -cmdParams $Searchparams
             Get-MessageTraceDetail -MessageTraceId $Request.Query.ID -RecipientAddress $request.query.recipient -erroraction stop | Select-Object Event, Action, Detail, @{ Name = 'Date'; Expression = { $_.Date.Tostring('s') } }
