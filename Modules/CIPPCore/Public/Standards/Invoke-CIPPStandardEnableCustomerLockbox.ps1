@@ -7,6 +7,7 @@ function Invoke-CIPPStandardEnableCustomerLockbox {
 
     $CustomerLockboxStatus = (New-ExoRequest -tenantid $Tenant -cmdlet 'Get-OrganizationConfig').CustomerLockboxEnabled
     if ($Settings.remediate -eq $true) {
+        Write-Host 'Time to remediate'
         try {
 
             if ($CustomerLockboxStatus) {
@@ -17,7 +18,11 @@ function Invoke-CIPPStandardEnableCustomerLockbox {
             }
         } catch {
             $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
-            Write-LogMessage -API 'Standards' -tenant $tenant -message "Failed to enable Customer Lockbox. Error: $ErrorMessage" -sev Error
+            if ($ErrorMessage -match 'Ex5E8EA4') {
+                Write-LogMessage -API 'Standards' -tenant $tenant -message "Failed to enable Customer Lockbox. E5 license required. Error: $ErrorMessage" -sev Error
+            } else {
+                Write-LogMessage -API 'Standards' -tenant $tenant -message "Failed to enable Customer Lockbox. Error: $ErrorMessage" -sev Error
+            }
         }
     }
 

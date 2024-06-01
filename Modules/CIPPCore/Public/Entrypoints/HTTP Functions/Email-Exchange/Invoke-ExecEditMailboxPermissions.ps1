@@ -3,7 +3,9 @@ using namespace System.Net
 Function Invoke-ExecEditMailboxPermissions {
     <#
     .FUNCTIONALITY
-    Entrypoint
+        Entrypoint
+    .ROLE
+        Exchange.Mailbox.ReadWrite
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
@@ -17,11 +19,11 @@ Function Invoke-ExecEditMailboxPermissions {
     $Results = [System.Collections.ArrayList]@()
 
     $RemoveFullAccess = ($Request.body.RemoveFullAccess).value
-    foreach ($RemoveUser in $RemoveFullAccess) { 
+    foreach ($RemoveUser in $RemoveFullAccess) {
         try {
             $MailboxPerms = New-ExoRequest -Anchor $username -tenantid $Tenantfilter -cmdlet 'Remove-mailboxpermission' -cmdParams @{Identity = $userid; user = $RemoveUser; accessRights = @('FullAccess'); }
             $results.add("Removed $($removeuser) from $($username) Shared Mailbox permissions")
-            Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME-message "Removed $($RemoveUser) from $($username) Shared Mailbox permission" -Sev 'Info' -tenant $TenantFilter 
+            Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME-message "Removed $($RemoveUser) from $($username) Shared Mailbox permission" -Sev 'Info' -tenant $TenantFilter
         } catch {
             Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME-message "Could not remove mailbox permissions for $($removeuser) on $($username)" -Sev 'Error' -tenant $TenantFilter
             $results.add("Could not remove $($removeuser) shared mailbox permissions for $($username). Error: $($_.Exception.Message)")
@@ -29,7 +31,7 @@ Function Invoke-ExecEditMailboxPermissions {
     }
     $AddFullAccess = ($Request.body.AddFullAccess).value
 
-    foreach ($UserAutomap in $AddFullAccess) { 
+    foreach ($UserAutomap in $AddFullAccess) {
         try {
             $MailboxPerms = New-ExoRequest -Anchor $username -tenantid $Tenantfilter -cmdlet 'Add-MailboxPermission' -cmdParams @{Identity = $userid; user = $UserAutomap; accessRights = @('FullAccess'); automapping = $true }
             $results.add( "Granted $($UserAutomap) access to $($username) Mailbox with automapping")
@@ -42,7 +44,7 @@ Function Invoke-ExecEditMailboxPermissions {
     }
     $AddFullAccessNoAutoMap = ($Request.body.AddFullAccessNoAutoMap).value
 
-    foreach ($UserNoAutomap in $AddFullAccessNoAutoMap) { 
+    foreach ($UserNoAutomap in $AddFullAccessNoAutoMap) {
         try {
             $MailboxPerms = New-ExoRequest -Anchor $username -tenantid $Tenantfilter -cmdlet 'Add-MailboxPermission' -cmdParams @{Identity = $userid; user = $UserNoAutomap; accessRights = @('FullAccess'); automapping = $false }
             $results.add( "Granted $UserNoAutomap access to $($username) Mailbox without automapping")
@@ -55,7 +57,7 @@ Function Invoke-ExecEditMailboxPermissions {
 
     $AddSendAS = ($Request.body.AddSendAs).value
 
-    foreach ($UserSendAs in $AddSendAS) { 
+    foreach ($UserSendAs in $AddSendAS) {
         try {
             $MailboxPerms = New-ExoRequest -Anchor $username -tenantid $Tenantfilter -cmdlet 'Add-RecipientPermission' -cmdParams @{Identity = $userid; Trustee = $UserSendAs; accessRights = @('SendAs') }
             $results.add( "Granted $UserSendAs access to $($username) with Send As permissions")
@@ -68,7 +70,7 @@ Function Invoke-ExecEditMailboxPermissions {
 
     $RemoveSendAs = ($Request.body.RemoveSendAs).value
 
-    foreach ($UserSendAs in $RemoveSendAs) { 
+    foreach ($UserSendAs in $RemoveSendAs) {
         try {
             $MailboxPerms = New-ExoRequest -Anchor $username -tenantid $Tenantfilter -cmdlet 'Remove-RecipientPermission' -cmdParams @{Identity = $userid; Trustee = $UserSendAs; accessRights = @('SendAs') }
             $results.add( "Removed $UserSendAs from $($username) with Send As permissions")
@@ -81,7 +83,7 @@ Function Invoke-ExecEditMailboxPermissions {
 
     $AddSendOnBehalf = ($Request.body.AddSendOnBehalf).value
 
-    foreach ($UserSendOnBehalf in $AddSendOnBehalf) { 
+    foreach ($UserSendOnBehalf in $AddSendOnBehalf) {
         try {
             $MailboxPerms = New-ExoRequest -Anchor $username -tenantid $Tenantfilter -cmdlet 'Set-Mailbox' -cmdParams @{Identity = $userid; GrantSendonBehalfTo = @{'@odata.type' = '#Exchange.GenericHashTable'; add = $UserSendOnBehalf }; }
             $results.add( "Granted $UserSendOnBehalf access to $($username) with Send On Behalf Permissions")
@@ -94,7 +96,7 @@ Function Invoke-ExecEditMailboxPermissions {
 
     $RemoveSendOnBehalf = ($Request.body.RemoveSendOnBehalf).value
 
-    foreach ($UserSendOnBehalf in $RemoveSendOnBehalf) { 
+    foreach ($UserSendOnBehalf in $RemoveSendOnBehalf) {
         try {
             $MailboxPerms = New-ExoRequest -Anchor $username -tenantid $Tenantfilter -cmdlet 'Set-Mailbox' -cmdParams @{Identity = $userid; GrantSendonBehalfTo = @{'@odata.type' = '#Exchange.GenericHashTable'; remove = $UserSendOnBehalf }; }
             $results.add( "Removed $UserSendOnBehalf from $($username) Send on Behalf Permissions")

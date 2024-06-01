@@ -3,7 +3,9 @@ using namespace System.Net
 Function Invoke-ListSharedMailboxAccountEnabled {
     <#
     .FUNCTIONALITY
-    Entrypoint
+        Entrypoint
+    .ROLE
+        Exchange.Mailbox.Read
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
@@ -27,18 +29,18 @@ Function Invoke-ListSharedMailboxAccountEnabled {
             if ($User.accountEnabled) {
                 $User | Select-Object `
                 @{Name = 'UserPrincipalName'; Expression = { $User.UserPrincipalName } }, `
-                @{Name = 'displayName'; Expression = { $User.displayName } }, 
-                @{Name = 'givenName'; Expression = { $User.givenName } }, 
-                @{Name = 'surname'; Expression = { $User.surname } }, 
+                @{Name = 'displayName'; Expression = { $User.displayName } },
+                @{Name = 'givenName'; Expression = { $User.givenName } },
+                @{Name = 'surname'; Expression = { $User.surname } },
                 @{Name = 'accountEnabled'; Expression = { $User.accountEnabled } },
                 @{Name = 'id'; Expression = { $User.id } },
                 @{Name = 'onPremisesSyncEnabled'; Expression = { $User.onPremisesSyncEnabled } }
-            
+
             }
         }
     }
     catch {
-        Write-LogMessage -API 'Tenant' -tenant $tenantfilter -message "Shared Mailbox Enabled Accounts on $($tenantfilter). Error: $($_.exception.message)" -sev 'Error' 
+        Write-LogMessage -API 'Tenant' -tenant $tenantfilter -message "Shared Mailbox Enabled Accounts on $($tenantfilter). Error: $($_.exception.message)" -sev 'Error'
     }
 
     $GraphRequest = $EnabledUsersWithSharedMailbox

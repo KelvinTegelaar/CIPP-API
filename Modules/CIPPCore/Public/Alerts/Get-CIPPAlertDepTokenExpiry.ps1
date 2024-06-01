@@ -6,7 +6,8 @@ function Get-CIPPAlertDepTokenExpiry {
     [CmdletBinding()]
     Param (
         [Parameter(Mandatory = $false)]
-        $input,
+        [Alias('input')]
+        $InputValue,
         $TenantFilter
     )
 
@@ -22,7 +23,7 @@ function Get-CIPPAlertDepTokenExpiry {
 
         } catch {}
 
-        
+
     } catch {
         Write-AlertMessage -tenant $($TenantFilter) -message "Failed to check Apple Device Enrollment Program token expiry for $($TenantFilter): $(Get-NormalizedError -message $_.Exception.message)"
     }

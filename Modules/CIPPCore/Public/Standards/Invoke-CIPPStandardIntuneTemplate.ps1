@@ -60,7 +60,7 @@ function Invoke-CIPPStandardIntuneTemplate {
               $DeleteJson.added = @()
               $DeleteJson = ConvertTo-Json -Depth 10 -InputObject $DeleteJson
               $DeleteRequest = New-GraphPOSTRequest -uri "https://graph.microsoft.com/beta/deviceManagement/$TemplateTypeURL('$($existingId.id)')/updateDefinitionValues" -tenantid $tenant -type POST -body $DeleteJson
-              $UpdateRequest = New-GraphPOSTRequest -uri "https://graph.microsoft.com/beta/deviceManagement/$TemplateTypeURL('$($existingId.id)')/updateDefinitionValues" -tenantid $tenant -type POST -body $RawJSON
+              $CreateRequest = New-GraphPOSTRequest -uri "https://graph.microsoft.com/beta/deviceManagement/$TemplateTypeURL('$($existingId.id)')/updateDefinitionValues" -tenantid $tenant -type POST -body $RawJSON
               Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $($Tenant) -message "Updated policy $($Displayname) to template defaults" -Sev 'info'
 
             } else {

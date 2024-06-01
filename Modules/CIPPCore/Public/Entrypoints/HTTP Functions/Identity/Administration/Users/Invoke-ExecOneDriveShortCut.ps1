@@ -3,7 +3,9 @@ using namespace System.Net
 Function Invoke-ExecOneDriveShortCut {
     <#
     .FUNCTIONALITY
-    Entrypoint
+        Entrypoint
+    .ROLE
+        Identity.User.ReadWrite
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)

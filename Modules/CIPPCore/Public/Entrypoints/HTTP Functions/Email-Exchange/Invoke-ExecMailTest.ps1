@@ -2,7 +2,9 @@ using namespace System.Net
 Function Invoke-ExecMailTest {
     <#
     .FUNCTIONALITY
-    Entrypoint
+        Entrypoint
+    .ROLE
+        CIPP.Core.Read
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)

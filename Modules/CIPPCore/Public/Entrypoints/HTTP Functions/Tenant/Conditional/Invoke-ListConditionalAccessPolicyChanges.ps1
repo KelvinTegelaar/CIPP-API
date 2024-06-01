@@ -3,7 +3,9 @@ using namespace System.Net
 Function Invoke-ListConditionalAccessPolicyChanges {
     <#
     .FUNCTIONALITY
-    Entrypoint
+        Entrypoint
+    .ROLE
+        Tenant.ConditionalAccess.Read
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)

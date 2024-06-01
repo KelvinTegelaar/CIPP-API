@@ -3,7 +3,9 @@ using namespace System.Net
 Function Invoke-ExecMaintenanceScripts {
     <#
     .FUNCTIONALITY
-    Entrypoint
+        Entrypoint
+    .ROLE
+        CIPP.AppSettings.Read
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
@@ -17,7 +19,7 @@ Function Invoke-ExecMaintenanceScripts {
         $ReplacementStrings = @{
             '##TENANTID##'      = $env:TenantID
             '##RESOURCEGROUP##' = $env:WEBSITE_RESOURCE_GROUP
-            '##FUNCTIONAPP##'   = $env:WEBSITE_SITE_NAME 
+            '##FUNCTIONAPP##'   = $env:WEBSITE_SITE_NAME
             '##SUBSCRIPTION##'  = (($env:WEBSITE_OWNER_NAME).split('+') | Select-Object -First 1)
             '##TOKENIP##'       = $AccessTokenDetails.IPAddress
         }
