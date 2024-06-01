@@ -3,7 +3,9 @@ using namespace System.Net
 Function Invoke-ListCAtemplates {
     <#
     .FUNCTIONALITY
-    Entrypoint
+        Entrypoint
+    .ROLE
+        Tenant.ConditionalAccess.Read
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
@@ -29,11 +31,11 @@ Function Invoke-ListCAtemplates {
 
     #List new policies
     $Table = Get-CippTable -tablename 'templates'
-    $Filter = "PartitionKey eq 'CATemplate'" 
+    $Filter = "PartitionKey eq 'CATemplate'"
     $Templates = (Get-CIPPAzDataTableEntity @Table -Filter $Filter) | ForEach-Object {
         $data = $_.JSON | ConvertFrom-Json -Depth 100
         $data | Add-Member -NotePropertyName 'GUID' -NotePropertyValue $_.GUID -Force
-        $data 
+        $data
     } | Sort-Object -Property displayName
 
     if ($Request.query.ID) { $Templates = $Templates | Where-Object -Property GUID -EQ $Request.query.id }

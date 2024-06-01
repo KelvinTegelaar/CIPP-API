@@ -2,10 +2,9 @@
 function Invoke-ListGraphRequest {
     <#
     .FUNCTIONALITY
-    Entrypoint
-
+        Entrypoint
     .ROLE
-    Core.Read
+        CIPP.Core.Read
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)

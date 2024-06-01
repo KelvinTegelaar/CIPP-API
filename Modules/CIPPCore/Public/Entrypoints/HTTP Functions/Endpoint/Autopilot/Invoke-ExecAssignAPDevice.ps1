@@ -3,7 +3,9 @@ using namespace System.Net
 Function Invoke-ExecAssignAPDevice {
     <#
     .FUNCTIONALITY
-    Entrypoint
+        Entrypoint
+    .ROLE
+        Endpoint.Autopilot.ReadWrite
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
@@ -15,7 +17,7 @@ Function Invoke-ExecAssignAPDevice {
             UserPrincipalName   = $Request.body.UserPrincipalName
             addressableUserName = $Request.body.addressableUserName
         } | ConvertTo-Json
-        New-GraphPOSTRequest -uri "https://graph.microsoft.com/beta/deviceManagement/windowsAutopilotDeviceIdentities/$($request.body.Device)/UpdateDeviceProperties" -tenantid $TenantFilter -body $body -method POST 
+        New-GraphPOSTRequest -uri "https://graph.microsoft.com/beta/deviceManagement/windowsAutopilotDeviceIdentities/$($request.body.Device)/UpdateDeviceProperties" -tenantid $TenantFilter -body $body -method POST
         $Results = "Successfully assigned device to $($Request.body.UserPrincipalName) for $($tenantfilter)"
     } catch {
         $Results = "Could not $($Request.body.UserPrincipalName) to $($Request.body.device) for $($tenantfilter) Error: $($_.Exception.Message)"

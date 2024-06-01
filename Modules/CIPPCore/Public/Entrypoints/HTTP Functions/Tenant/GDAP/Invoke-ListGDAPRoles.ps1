@@ -3,7 +3,9 @@ using namespace System.Net
 Function Invoke-ListGDAPRoles {
     <#
     .FUNCTIONALITY
-    Entrypoint
+        Entrypoint
+    .ROLE
+        Tenant.Relationship.Read
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
@@ -14,7 +16,7 @@ Function Invoke-ListGDAPRoles {
 
     # Write to the Azure Functions log stream.
     Write-Host 'PowerShell HTTP trigger function processed a request.'
-    $Table = Get-CIPPTable -TableName 'GDAPRoles' 
+    $Table = Get-CIPPTable -TableName 'GDAPRoles'
     $Groups = Get-CIPPAzDataTableEntity @Table
 
     $MappedGroups = foreach ($Group in $Groups) {

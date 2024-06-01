@@ -3,7 +3,9 @@ using namespace System.Net
 Function Invoke-ListTenants {
     <#
     .FUNCTIONALITY
-    Entrypoint
+        Entrypoint
+    .ROLE
+        CIPP.Core.Read
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
@@ -11,7 +13,13 @@ Function Invoke-ListTenants {
     $APIName = $TriggerMetadata.FunctionName
 
     Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -message 'Accessed this API' -Sev 'Debug'
+    $TenantAccess = Test-CIPPAccess -Request $Request -TenantList
 
+    if ($TenantAccess -notcontains 'AllTenants') {
+        $AllTenantSelector = $false
+    } else {
+        $AllTenantSelector = $Request.Query.AllTenantSelector
+    }
 
     # Clear Cache
     if ($request.Query.ClearCache -eq 'true') {
@@ -30,10 +38,13 @@ Function Invoke-ListTenants {
     try {
         $tenantfilter = $Request.Query.TenantFilter
         $Tenants = Get-Tenants -IncludeErrors -SkipDomains
+        if ($TenantAccess -notcontains 'AllTenants') {
+            $Tenants = $Tenants | Where-Object -Property customerId -In $TenantAccess
+        }
 
         if ($null -eq $TenantFilter -or $TenantFilter -eq 'null') {
             $TenantList = [system.collections.generic.list[object]]::new()
-            if ($Request.Query.AllTenantSelector -eq $true) {
+            if ($AllTenantSelector -eq $true) {
                 $TenantList.Add(@{
                         customerId        = 'AllTenants'
                         defaultDomainName = 'AllTenants'
