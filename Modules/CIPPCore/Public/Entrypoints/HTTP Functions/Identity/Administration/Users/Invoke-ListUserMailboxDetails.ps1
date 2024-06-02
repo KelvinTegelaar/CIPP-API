@@ -3,7 +3,9 @@ using namespace System.Net
 Function Invoke-ListUserMailboxDetails {
     <#
     .FUNCTIONALITY
-    Entrypoint
+        Entrypoint
+    .ROLE
+        Exchange.Mailbox.Read
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
@@ -23,7 +25,7 @@ Function Invoke-ListUserMailboxDetails {
     $TenantFilter = $Request.Query.TenantFilter
     try {
         $Bytes = [System.Text.Encoding]::UTF8.GetBytes($Request.Query.UserID)
-        $base64IdentityParam = [Convert]::ToBase64String($Bytes)  
+        $base64IdentityParam = [Convert]::ToBase64String($Bytes)
         $CASRequest = New-GraphGetRequest -uri "https://outlook.office365.com/adminapi/beta/$($tenantfilter)/CasMailbox('$UserID')" -Tenantid $tenantfilter -scope ExchangeOnline -noPagination $true
         $MailRequest = New-GraphGetRequest -uri "https://outlook.office365.com/adminapi/beta/$($tenantfilter)/Mailbox('$UserID')" -Tenantid $tenantfilter -scope ExchangeOnline -noPagination $true
         $FetchParam = @{
@@ -32,7 +34,7 @@ Function Invoke-ListUserMailboxDetails {
         $MailboxDetailedRequest = New-ExoRequest -TenantID $TenantFilter -cmdlet 'Get-Mailbox' -cmdParams $FetchParam
         try {
             if ($MailboxDetailedRequest.ArchiveStatus -eq 'Active') {
-                $ArchiveEnabled = $True 
+                $ArchiveEnabled = $True
             } else {
                 $ArchiveEnabled = $False
             }
@@ -68,7 +70,7 @@ Function Invoke-ListUserMailboxDetails {
         }
         $StatsRequest = New-GraphGetRequest -uri "https://outlook.office365.com/adminapi/beta/$($tenantfilter)/Mailbox('$($MailRequest.PrimarySmtpAddress)')/Exchange.GetMailboxStatistics()" -Tenantid $tenantfilter -scope ExchangeOnline -noPagination $true
         $PermsRequest = New-GraphGetRequest -uri "https://outlook.office365.com/adminapi/beta/$($tenantfilter)/Mailbox('$($MailRequest.PrimarySmtpAddress)')/MailboxPermission" -Tenantid $tenantfilter -scope ExchangeOnline -noPagination $true
-        $PermsRequest2 = New-GraphGetRequest -uri "https://outlook.office365.com/adminapi/beta/$($tenantfilter)/Recipient('$base64IdentityParam')?`$expand=RecipientPermission&isEncoded=true" -Tenantid $tenantfilter -scope ExchangeOnline 
+        $PermsRequest2 = New-GraphGetRequest -uri "https://outlook.office365.com/adminapi/beta/$($tenantfilter)/Recipient('$base64IdentityParam')?`$expand=RecipientPermission&isEncoded=true" -Tenantid $tenantfilter -scope ExchangeOnline
 
     } catch {
         Write-Error "Failed Fetching Data $($_.Exception.message): $($_.InvocationInfo.ScriptLineNumber)"
@@ -79,16 +81,16 @@ Function Invoke-ListUserMailboxDetails {
         if ($perm.Trustee) {
             $perm | Where-Object Trustee | ForEach-Object { [PSCustomObject]@{
                     User         = $_.Trustee
-                    AccessRights = $_.accessRights -join ', ' 
+                    AccessRights = $_.accessRights -join ', '
                 }
             }
-            
+
         }
         if ($perm.PermissionList) {
             $perm | Where-Object User | ForEach-Object { [PSCustomObject]@{
                     User         = $_.User
                     AccessRights = $_.PermissionList.accessRights -join ', '
-                }        
+                }
             }
         }
     }
@@ -98,10 +100,10 @@ Function Invoke-ListUserMailboxDetails {
     } elseif ($MailboxDetailedRequest.ForwardingSmtpAddress -and $MailboxDetailedRequest.ForwardingAddress) {
         $MailboxDetailedRequest.ForwardingAddress + ' ' + $MailboxDetailedRequest.ForwardingSmtpAddress
     } else {
-        $MailboxDetailedRequest.ForwardingSmtpAddress 
+        $MailboxDetailedRequest.ForwardingSmtpAddress
     }
 
-    if ($ArchiveSize) { 
+    if ($ArchiveSize) {
         $GraphRequest = [ordered]@{
             ForwardAndDeliver        = $MailboxDetailedRequest.DeliverToMailboxAndForward
             ForwardingAddress        = $ForwardingAddress

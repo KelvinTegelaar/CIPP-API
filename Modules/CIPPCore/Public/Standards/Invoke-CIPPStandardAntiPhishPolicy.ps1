@@ -26,6 +26,17 @@ function Invoke-CIPPStandardAntiPhishPolicy {
                       ($CurrentState.MailboxIntelligenceProtectionAction -eq $Settings.MailboxIntelligenceProtectionAction) -and
                       ($CurrentState.MailboxIntelligenceQuarantineTag -eq $Settings.MailboxIntelligenceQuarantineTag)
 
+    $AcceptedDomains = New-ExoRequest -tenantid $Tenant -cmdlet 'Get-AcceptedDomain'
+
+    $RuleState = New-ExoRequest -tenantid $Tenant -cmdlet 'Get-AntiPhishRule' |
+        Where-Object -Property Name -EQ "CIPP $PolicyName" |
+        Select-Object Name, AntiPhishPolicy, Priority, RecipientDomainIs
+    
+    $RuleStateIsCorrect = ($RuleState.Name -eq "CIPP $PolicyName") -and
+                          ($RuleState.AntiPhishPolicy -eq $PolicyName) -and
+                          ($RuleState.Priority -eq 0) -and
+                          (!(Compare-Object -ReferenceObject $RuleState.RecipientDomainIs -DifferenceObject $AcceptedDomains.Name))
+
     if ($Settings.remediate -eq $true) {
         if ($StateIsCorrect -eq $true) {
             Write-LogMessage -API 'Standards' -tenant $Tenant -message 'Anti-phishing Policy already correctly configured' -sev Info
@@ -61,8 +72,30 @@ function Invoke-CIPPStandardAntiPhishPolicy {
                 Write-LogMessage -API 'Standards' -tenant $Tenant -message "Failed to create Anti-phishing Policy. Error: $ErrorMessage" -sev Error
             }
         }
-    }
 
+        if ($RuleStateIsCorrect -eq $false) {
+            $cmdparams = @{
+                AntiPhishPolicy     = $PolicyName
+                Priority            = 0
+                RecipientDomainIs   = $AcceptedDomains.Name
+            }
+
+            try {
+                if ($RuleState.Name -eq "CIPP $PolicyName") {
+                    $cmdparams.Add('Identity', "CIPP $PolicyName")
+                    New-ExoRequest -tenantid $Tenant -cmdlet 'Set-AntiPhishRule' -cmdparams $cmdparams
+                    Write-LogMessage -API 'Standards' -tenant $Tenant -message 'Updated AntiPhish Rule' -sev Info
+                } else {
+                    $cmdparams.Add('Name', "CIPP $PolicyName")
+                    New-ExoRequest -tenantid $Tenant -cmdlet 'New-AntiPhishRule' -cmdparams $cmdparams
+                    Write-LogMessage -API 'Standards' -tenant $Tenant -message 'Created AntiPhish Rule' -sev Info
+                }
+            } catch {
+                $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
+                Write-LogMessage -API 'Standards' -tenant $Tenant -message "Failed to create AntiPhish Rule. Error: $ErrorMessage" -sev Error
+            }
+        }
+    }
 
     if ($Settings.alert -eq $true) {
 

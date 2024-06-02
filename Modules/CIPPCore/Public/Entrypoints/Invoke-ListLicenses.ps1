@@ -3,7 +3,9 @@ using namespace System.Net
 Function Invoke-ListLicenses {
     <#
     .FUNCTIONALITY
-    Entrypoint
+        Entrypoint
+    .ROLE
+        Tenant.Directory.Read
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)

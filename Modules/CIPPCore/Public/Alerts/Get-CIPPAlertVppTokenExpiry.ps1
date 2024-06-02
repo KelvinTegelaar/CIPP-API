@@ -6,7 +6,8 @@ function Get-CIPPAlertVppTokenExpiry {
     [CmdletBinding()]
     Param (
         [Parameter(Mandatory = $false)]
-        $input,
+        [Alias('input')]
+        $InputValue,
         $TenantFilter
     )
     try {
@@ -23,7 +24,7 @@ function Get-CIPPAlertVppTokenExpiry {
             Write-AlertTrace -cmdletName $MyInvocation.MyCommand -tenantFilter $TenantFilter -data $AlertData
 
         } catch {}
-        
+
     } catch {
         # Error handling
     }

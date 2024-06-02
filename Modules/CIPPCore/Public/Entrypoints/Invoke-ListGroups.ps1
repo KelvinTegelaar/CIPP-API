@@ -3,7 +3,9 @@ using namespace System.Net
 Function Invoke-ListGroups {
     <#
     .FUNCTIONALITY
-    Entrypoint
+        Entrypoint
+    .ROLE
+        Identity.Group.Read
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
@@ -20,16 +22,16 @@ Function Invoke-ListGroups {
     $TenantFilter = $Request.Query.TenantFilter
     $selectstring = "id,createdDateTime,displayName,description,mail,mailEnabled,mailNickname,resourceProvisioningOptions,securityEnabled,visibility,organizationId,onPremisesSamAccountName,membershipRule,grouptypes,onPremisesSyncEnabled,resourceProvisioningOptions,userPrincipalName&`$expand=members(`$select=userPrincipalName)"
 
-    if ($Request.Query.GroupID) { 
+    if ($Request.Query.GroupID) {
         $groupid = $Request.query.groupid
         $selectstring = 'id,createdDateTime,displayName,description,mail,mailEnabled,mailNickname,resourceProvisioningOptions,securityEnabled,visibility,organizationId,onPremisesSamAccountName,membershipRule,groupTypes,userPrincipalName'
     }
-    if ($Request.Query.members) { 
+    if ($Request.Query.members) {
         $members = 'members'
         $selectstring = 'id,userPrincipalName,displayName,hideFromOutlookClients,hideFromAddressLists,mail,mailEnabled,mailNickname,resourceProvisioningOptions,securityEnabled,visibility,organizationId,onPremisesSamAccountName,membershipRule'
     }
 
-    if ($Request.Query.owners) { 
+    if ($Request.Query.owners) {
         $members = 'owners'
         $selectstring = 'id,userPrincipalName,displayName,hideFromOutlookClients,hideFromAddressLists,mail,mailEnabled,mailNickname,resourceProvisioningOptions,securityEnabled,visibility,organizationId,onPremisesSamAccountName,membershipRule'
     }
