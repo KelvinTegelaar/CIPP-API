@@ -2,6 +2,8 @@ function Invoke-ListCippQueue {
     <#
     .FUNCTIONALITY
         Entrypoint
+    .ROLE
+        CIPP.Core.Read
     #>
     param($Request = $null, $TriggerMetadata = $null)
 
@@ -25,7 +27,7 @@ function Invoke-ListCippQueue {
         }
 
         if ($Tasks) {
-            if ($Tasks.Status -notcontains 'Running' -and ($TaskStatus.Completed + $TaskStatus.Failed) -eq $Queue.TotalTasks) {
+            if ($Tasks.Status -notcontains 'Running' -and ($TaskStatus.Completed + $TaskStatus.Failed) -ge $Queue.TotalTasks) {
                 if ($Tasks.Status -notcontains 'Failed') {
                     $Queue.Status = 'Completed'
                 } else {
@@ -53,7 +55,7 @@ function Invoke-ListCippQueue {
             PercentComplete = [math]::Round(((($TotalCompleted + $TotalFailed) / $Queue.TotalTasks) * 100), 1)
             PercentFailed   = [math]::Round((($TotalFailed / $Queue.TotalTasks) * 100), 1)
             PercentRunning  = [math]::Round((($TotalRunning / $Queue.TotalTasks) * 100), 1)
-            Tasks           = $Tasks
+            Tasks           = @($Tasks)
             Status          = $Queue.Status
             Timestamp       = $Queue.Timestamp
         }

@@ -3,12 +3,14 @@ using namespace System.Net
 Function Invoke-ListSignIns {
     <#
     .FUNCTIONALITY
-    Entrypoint
+        Entrypoint
+    .ROLE
+        Identity.AuditLog.Read
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
 
-        
+
     # Write to the Azure Functions log stream.
     Write-Host 'PowerShell HTTP trigger function processed a request.'
     Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -message 'Accessed this API' -Sev 'Debug'
@@ -18,8 +20,8 @@ Function Invoke-ListSignIns {
         if ($Request.query.failedlogonOnly) {
             $FailedLogons = ' and (status/errorCode eq 50126)'
         }
-    
-        $filters = if ($Request.query.Filter) { 
+
+        $filters = if ($Request.query.Filter) {
             $request.query.filter
         } else {
             $currentTime = Get-Date -Format 'yyyy-MM-dd'
@@ -30,12 +32,12 @@ Function Invoke-ListSignIns {
         Write-Host $Filters
 
         $GraphRequest = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/auditLogs/signIns?api-version=beta&`$filter=$($filters)" -tenantid $TenantFilter -erroraction stop
-        $response = $GraphRequest | Select-Object *, 
+        $response = $GraphRequest | Select-Object *,
         @{l = 'additionalDetails'; e = { $_.status.additionalDetails } } ,
         @{l = 'errorCode'; e = { $_.status.errorCode } },
-        @{l = 'locationcipp'; e = { "$($_.location.city) - $($_.location.countryOrRegion)" } } 
+        @{l = 'locationcipp'; e = { "$($_.location.city) - $($_.location.countryOrRegion)" } }
         Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -message 'Retrieved sign in report' -Sev 'Debug' -tenant $TenantFilter
-    
+
         # Associate values to output bindings by calling 'Push-OutputBinding'.
         Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
                 StatusCode = [HttpStatusCode]::OK

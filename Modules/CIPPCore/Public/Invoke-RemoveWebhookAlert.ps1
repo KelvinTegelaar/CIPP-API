@@ -3,7 +3,9 @@ using namespace System.Net
 Function Invoke-RemoveWebhookAlert {
     <#
     .FUNCTIONALITY
-    Entrypoint
+        Entrypoint
+    .ROLE
+        CIPP.Alert.ReadWrite
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
@@ -13,7 +15,7 @@ Function Invoke-RemoveWebhookAlert {
     $Table = get-cipptable -TableName 'SchedulerConfig'
 
     try {
-        $WebhookTable = Get-CIPPTable -TableName SchedulerConfig 
+        $WebhookTable = Get-CIPPTable -TableName SchedulerConfig
         $WebhookRow = Get-CIPPAzDataTableEntity @WebhookTable -Filter "PartitionKey eq 'WebhookAlert'" | Where-Object -Property Tenant -EQ $Request.query.TenantFilter
         Write-Host "The webhook count is $($WebhookRow.count)"
         if ($WebhookRow.count -gt 1) {
@@ -37,7 +39,7 @@ Function Invoke-RemoveWebhookAlert {
             } else {
                 $Tenants = $Request.query.TenantFilter
             }
-    
+
             $Results = foreach ($Tenant in $Tenants) {
                 Remove-CIPPGraphSubscription -TenantFilter $Tenant -Type 'AuditLog'
                 $Entity = $WebhookRow | Where-Object -Property RowKey -EQ $Request.query.ID

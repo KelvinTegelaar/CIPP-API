@@ -3,7 +3,9 @@ using namespace System.Net
 Function Invoke-ExecEditCalendarPermissions {
     <#
     .FUNCTIONALITY
-    Entrypoint
+        Entrypoint
+    .ROLE
+        Exchange.Mailbox.ReadWrite
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
@@ -19,9 +21,9 @@ Function Invoke-ExecEditCalendarPermissions {
 
     try {
         if ($Request.query.removeaccess) {
-            $result = Set-CIPPCalenderPermission -UserID $UserID -folderName $folderName -RemoveAccess $Request.query.removeaccess -TenantFilter $TenantFilter
+            $result = Set-CIPPCalendarPermission -UserID $UserID -folderName $folderName -RemoveAccess $Request.query.removeaccess -TenantFilter $TenantFilter
         } else {
-            $result = Set-CIPPCalenderPermission -UserID $UserID -folderName $folderName -TenantFilter $Tenantfilter -UserToGetPermissions $UserToGetPermissions -Permissions $Permissions
+            $result = Set-CIPPCalendarPermission -UserID $UserID -folderName $folderName -TenantFilter $Tenantfilter -UserToGetPermissions $UserToGetPermissions -Permissions $Permissions
             $Result = "Successfully set permissions on folder $($CalParam.Identity). The user $UserToGetPermissions now has $Permissions permissions on this folder."
         }
     } catch {

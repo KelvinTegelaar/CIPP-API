@@ -3,7 +3,9 @@ using namespace System.Net
 Function Invoke-ExecExtensionSync {
     <#
     .FUNCTIONALITY
-    Entrypoint
+        Entrypoint
+    .ROLE
+        CIPP.Extension.ReadWrite
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
@@ -44,10 +46,6 @@ Function Invoke-ExecExtensionSync {
             if ($Request.Query.TenantID) {
                 $Tenant = $TenantsToProcess | Where-Object { $_.RowKey -eq $Request.Query.TenantID }
                 if (($Tenant | Measure-Object).count -eq 1) {
-                    <#Push-OutputBinding -Name NinjaProcess -Value @{
-                        'NinjaAction'  = 'SyncTenant'
-                        'MappedTenant' = $Tenant
-                    }#>
                     $Batch = [PSCustomObject]@{
                         'NinjaAction'  = 'SyncTenant'
                         'MappedTenant' = $Tenant
@@ -67,9 +65,6 @@ Function Invoke-ExecExtensionSync {
                 }
 
             } else {
-                <#Push-OutputBinding -Name NinjaProcess -Value @{
-                    'NinjaAction' = 'SyncTenants'
-                }#>
                 $Batch = [PSCustomObject]@{
                     'NinjaAction'  = 'SyncTenants'
                     'FunctionName' = 'NinjaOneQueue'

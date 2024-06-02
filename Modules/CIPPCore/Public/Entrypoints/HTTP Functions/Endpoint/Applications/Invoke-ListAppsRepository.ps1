@@ -3,7 +3,9 @@ using namespace System.Net
 Function Invoke-ListAppsRepository {
     <#
     .FUNCTIONALITY
-    Entrypoint
+        Entrypoint
+    .ROLE
+        Endpoint.Application.Read
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
@@ -39,7 +41,7 @@ Function Invoke-ListAppsRepository {
                         description     = $RepoPackage.summary.'#text'
                         customRepo      = $Repository
                         created         = Get-Date -Date $RepoPackage.properties.Created.'#text' -Format 'MM/dd/yyyy HH:mm:ss'
-                    }  
+                    }
                 }
             } else {
                 $IsError = $true

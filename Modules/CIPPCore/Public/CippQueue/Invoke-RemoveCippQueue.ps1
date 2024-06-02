@@ -2,6 +2,8 @@ function Invoke-RemoveCippQueue {
     <#
     .FUNCTIONALITY
         Entrypoint
+    .ROLE
+        CIPP.Core.ReadWrite
     #>
     param($Request, $TriggerMetadata)
 

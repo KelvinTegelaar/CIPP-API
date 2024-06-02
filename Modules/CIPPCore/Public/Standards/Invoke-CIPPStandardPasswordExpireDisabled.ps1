@@ -7,7 +7,7 @@ function Invoke-CIPPStandardPasswordExpireDisabled {
     $GraphRequest = New-GraphGetRequest -uri 'https://graph.microsoft.com/v1.0/domains' -tenantid $Tenant
     $DomainswithoutPassExpire = $GraphRequest | Where-Object -Property passwordValidityPeriodInDays -NE '2147483647'
 
-    If ($Settings.remediate) {
+    If ($Settings.remediate -eq $true) {
 
         if ($DomainswithoutPassExpire) {
             $DomainswithoutPassExpire | ForEach-Object {
@@ -21,16 +21,17 @@ function Invoke-CIPPStandardPasswordExpireDisabled {
                     New-GraphPostRequest -type Patch -tenantid $Tenant -uri "https://graph.microsoft.com/v1.0/domains/$($_.id)" -body $Body
                     Write-LogMessage -API 'Standards' -tenant $tenant -message "Disabled Password Expiration for $($_.id)." -sev Info
                 } catch {
-                    Write-LogMessage -API 'Standards' -tenant $tenant -message "Failed to disable Password Expiration for $($_.id). Error: $($_.exception.message)" -sev Error
+                    $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
+                    Write-LogMessage -API 'Standards' -tenant $tenant -message "Failed to disable Password Expiration for $($_.id). Error: $ErrorMessage" -sev Error
                 }
             }
         } else {
             Write-LogMessage -API 'Standards' -tenant $tenant -message "Password Expiration is already disabled for all $($GraphRequest.Count) domains." -sev Info
         }
-    
+
     }
 
-    if ($Settings.alert) {
+    if ($Settings.alert -eq $true) {
         if ($DomainswithoutPassExpire) {
             Write-LogMessage -API 'Standards' -tenant $tenant -message "Password Expiration is not disabled for the following $($DomainswithoutPassExpire.Count) domains: $($DomainswithoutPassExpire.id -join ', ')" -sev Alert
         } else {
@@ -38,7 +39,7 @@ function Invoke-CIPPStandardPasswordExpireDisabled {
         }
     }
 
-    if ($Settings.report) {
+    if ($Settings.report -eq $true) {
         Add-CIPPBPAField -FieldName 'PasswordExpireDisabled' -FieldValue $DomainswithoutPassExpire -StoreAs json -Tenant $tenant
     }
 }

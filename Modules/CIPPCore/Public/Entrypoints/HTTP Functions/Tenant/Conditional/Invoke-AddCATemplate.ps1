@@ -3,7 +3,9 @@ using namespace System.Net
 Function Invoke-AddCATemplate {
     <#
     .FUNCTIONALITY
-    Entrypoint
+        Entrypoint
+    .ROLE
+        Tenant.ConditionalAccess.ReadWrite
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
@@ -12,14 +14,14 @@ Function Invoke-AddCATemplate {
     Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -message 'Accessed this API' -Sev 'Debug'
 
     $TenantFilter = $Request.Query.TenantFilter
-    try {        
+    try {
         $GUID = (New-Guid).GUID
         $JSON = if ($request.body.rawjson) {
             ConvertFrom-Json -InputObject ([pscustomobject]$request.body.rawjson)
         } else {
         ([pscustomobject]$Request.body) | ForEach-Object {
                 $NonEmptyProperties = $_.psobject.Properties | Where-Object { $null -ne $_.Value } | Select-Object -ExpandProperty Name
-                $_ | Select-Object -Property $NonEmptyProperties 
+                $_ | Select-Object -Property $NonEmptyProperties
             }
         }
 
@@ -54,17 +56,22 @@ Function Invoke-AddCATemplate {
                 })
         }
 
+        # Function to check if a string is a GUID
+        function Test-IsGuid($string) {
+            return [guid]::tryparse($string, [ref][guid]::Empty)
+        }
+
         if ($JSON.conditions.users.includeGroups) {
             $JSON.conditions.users.includeGroups = @($JSON.conditions.users.includeGroups | ForEach-Object {
-                    if ($_ -in 'All', 'None', 'GuestOrExternalUsers') { return $_ }
+                if ($_ -in 'All', 'None', 'GuestOrExternalUsers' -or -not (Test-IsGuid $_)) { return $_ }
                 (New-GraphGetRequest -uri "https://graph.microsoft.com/beta/groups/$($_)" -tenantid $TenantFilter).displayName
-                })
+            })
         }
         if ($JSON.conditions.users.excludeGroups) {
             $JSON.conditions.users.excludeGroups = @($JSON.conditions.users.excludeGroups | ForEach-Object {
-                    if ($_ -in 'All', 'None', 'GuestOrExternalUsers') { return $_ }
+                if ($_ -in 'All', 'None', 'GuestOrExternalUsers' -or -not (Test-IsGuid $_)) { return $_ }
                 (New-GraphGetRequest -uri "https://graph.microsoft.com/beta/groups/$($_)" -tenantid $TenantFilter).displayName
-                })
+            })
         }
 
         $JSON | Add-Member -NotePropertyName 'LocationInfo' -NotePropertyValue @($IncludeJSON, $ExcludeJSON)
@@ -80,7 +87,7 @@ Function Invoke-AddCATemplate {
         }
         Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -message "Created CA Template $($Request.body.name) with GUID $GUID" -Sev 'Debug'
         $body = [pscustomobject]@{'Results' = 'Successfully added template' }
-    
+
     } catch {
         Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -message "Failed to create CA Template: $($_.Exception.Message)" -Sev 'Error'
         $body = [pscustomobject]@{'Results' = "Intune Template Deployment failed: $($_.Exception.Message)" }

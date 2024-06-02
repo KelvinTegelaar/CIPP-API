@@ -1,23 +1,35 @@
 param($Timer)
 
-if ($env:DEV_SKIP_BPA_TIMER) { 
+if ($env:DEV_SKIP_BPA_TIMER) {
     Write-Host 'Skipping BPA timer'
-    exit 0 
+    exit 0
 }
 
-try {
-    $CurrentlyRunning = Get-Item 'Cache_BestPracticeAnalyser\CurrentlyRunning.txt' -ErrorAction SilentlyContinue | Where-Object -Property LastWriteTime -GT (Get-Date).AddHours(-24)
-    if ($CurrentlyRunning) {
-        $Results = [pscustomobject]@{'Results' = 'Already running. Please wait for the current instance to finish' }
-        Write-LogMessage -API 'BestPracticeAnalyser' -message 'Attempted to start analysis but an instance was already running.' -sev Info
-    }
-    else {
-        $InstanceId = Start-NewOrchestration -FunctionName 'BestPracticeAnalyser_Orchestration'
-        Write-Host "Started orchestration with ID = '$InstanceId'"
-        $Orchestrator = New-OrchestrationCheckStatusResponse -Request $Timer -InstanceId $InstanceId
-        Write-LogMessage -API 'BestPracticeAnalyser' -message 'Started retrieving best practice information' -sev Info
-        $Results = [pscustomobject]@{'Results' = 'Started running analysis' }
-    }
-    Write-Host ($Orchestrator | ConvertTo-Json)
+$TenantList = Get-Tenants
+
+$CippRoot = (Get-Item $PSScriptRoot).Parent.FullName
+$TemplatesLoc = Get-ChildItem "$CippRoot\Config\*.BPATemplate.json"
+$Templates = $TemplatesLoc | ForEach-Object {
+    $Template = $(Get-Content $_) | ConvertFrom-Json
+    $Template.Name
 }
-catch { Write-Host "BestPracticeAnalyser_OrchestratorStarterTimer Exception $($_.Exception.Message)" }
+
+$BPAReports = foreach ($Tenant in $TenantList) {
+    foreach ($Template in $Templates) {
+        [PSCustomObject]@{
+            FunctionName = 'BPACollectData'
+            Tenant       = $Tenant.defaultDomainName
+            Template     = $Template
+            QueueName    = '{0} - {1}' -f $Template, $Tenant.defaultDomainName
+        }
+    }
+}
+
+$Queue = New-CippQueueEntry -Name 'Best Practice Analyser' -TotalTasks ($BPAReports | Measure-Object).Count
+$BPAReports = $BPAReports | Select-Object *, @{Name = 'QueueId'; Expression = { $Queue.RowKey } }
+$InputObject = [PSCustomObject]@{
+    Batch            = @($BPAReports)
+    OrchestratorName = 'BPAOrchestrator'
+    SkipLog          = $true
+}
+Start-NewOrchestration -FunctionName 'CIPPOrchestrator' -InputObject ($InputObject | ConvertTo-Json -Compress -Depth 5)

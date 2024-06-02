@@ -6,8 +6,8 @@ function Write-CippFunctionStats {
     Param(
         [string]$FunctionType,
         $Entity,
-        [DateTime]$Start,
-        [DateTime]$End,
+        $Start,
+        $End,
         [string]$ErrorMsg = ''
     )
     try {
