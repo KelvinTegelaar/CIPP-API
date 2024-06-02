@@ -3,7 +3,9 @@ using namespace System.Net
 Function Invoke-RemoveSpamfilterTemplate {
     <#
     .FUNCTIONALITY
-    Entrypoint
+        Entrypoint
+    .ROLE
+        Exchange.Spamfilter.ReadWrite
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)

@@ -13,6 +13,7 @@ function Invoke-CIPPOffboardingJob {
         $Options = $Options | ConvertFrom-Json
     }
     $userid = (New-GraphGetRequest -uri "https://graph.microsoft.com/beta/users/$($username)" -tenantid $Tenantfilter).id
+    Write-Host "Running offboarding job for $username with options: $($Options | ConvertTo-Json -Depth 10)"
     $Return = switch ($Options) {
         { $_.'ConvertToShared' -eq 'true' } {
             Set-CIPPMailboxType -ExecutingUser $ExecutingUser -tenantFilter $tenantFilter -userid $username -username $username -MailboxType 'Shared' -APIName $APIName
@@ -59,14 +60,15 @@ function Invoke-CIPPOffboardingJob {
             Remove-CIPPUser -userid $userid -username $Username -tenantFilter $Tenantfilter -ExecutingUser $ExecutingUser -APIName $APIName
         }
 
-        { $_.'RemoveRules' -eq 'true' } {
+        { $_.'removeRules' -eq 'true' } {
+            Write-Host "Removing rules for $username"
             Remove-CIPPRules -userid $userid -username $Username -tenantFilter $Tenantfilter -ExecutingUser $ExecutingUser -APIName $APIName
         }
 
-        { $_.'RemoveMobile' -eq 'true' } {
+        { $_.'removeMobile' -eq 'true' } {
             Remove-CIPPMobileDevice -userid $userid -username $Username -tenantFilter $Tenantfilter -ExecutingUser $ExecutingUser -APIName $APIName
         }
-        { $_.'RemovePermissions' } {
+        { $_.'removePermissions' } {
             if ($RunScheduled) {
                 Remove-CIPPMailboxPermissions -PermissionsLevel @('FullAccess', 'SendAs', 'SendOnBehalf') -userid 'AllUsers' -AccessUser $UserName -TenantFilter $TenantFilter -APIName $APINAME -ExecutingUser $ExecutingUser
 

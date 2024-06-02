@@ -3,7 +3,9 @@ using namespace System.Net
 Function Invoke-AddGuest {
     <#
     .FUNCTIONALITY
-    Entrypoint
+        Entrypoint
+    .ROLE
+        Identity.User.ReadWrite
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
@@ -22,7 +24,7 @@ Function Invoke-AddGuest {
                 'InvitedUserEmailAddress' = $($userobj.mail)
                 'inviteRedirectUrl'       = $($userobj.RedirectURL)
                 'sendInvitationMessage'   = [boolean]$userobj.SendInvite
-            } 
+            }
         }
         else {
             $BodyToship = [pscustomobject] @{
@@ -31,14 +33,14 @@ Function Invoke-AddGuest {
                 'sendInvitationMessage'   = [boolean]$userobj.SendInvite
                 'inviteRedirectUrl'       = 'https://myapps.microsoft.com'
             }
-        } 
+        }
         $bodyToShip = ConvertTo-Json -Depth 10 -InputObject $BodyToship -Compress
         $GraphRequest = New-GraphPostRequest -uri 'https://graph.microsoft.com/beta/invitations' -tenantid $Userobj.tenantid -type POST -body $BodyToship -verbose
-        if ($Userobj.sendInvite -eq 'true') { 
+        if ($Userobj.sendInvite -eq 'true') {
             $results.add('Invited Guest. Invite Email sent')
             Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $($userobj.tenantid) -message "Invited Guest $($userobj.displayname) with Email Invite " -Sev 'Info'
         }
-        else { 
+        else {
             $results.add('Invited Guest. No Invite Email was sent')
             Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $($userobj.tenantid) -message "Invited Guest $($userobj.displayname) with no Email Invite " -Sev 'Info'
         }
