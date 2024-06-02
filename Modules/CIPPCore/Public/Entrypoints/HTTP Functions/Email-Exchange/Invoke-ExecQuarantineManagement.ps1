@@ -3,7 +3,9 @@ using namespace System.Net
 Function Invoke-ExecQuarantineManagement {
     <#
     .FUNCTIONALITY
-    Entrypoint
+        Entrypoint
+    .ROLE
+        Exchange.SpamFilter.ReadWrite
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
@@ -18,9 +20,9 @@ Function Invoke-ExecQuarantineManagement {
 
     # Interact with query parameters or the body of the request.
     Try {
-        $tenantfilter = $Request.Query.TenantFilter 
+        $tenantfilter = $Request.Query.TenantFilter
         $params = @{
-            Identity     = $request.query.ID 
+            Identity     = $request.query.ID
             AllowSender  = [boolean]$Request.query.AllowSender
             ReleasetoAll = [boolean]$Request.query.type
             ActionType   = $Request.query.type

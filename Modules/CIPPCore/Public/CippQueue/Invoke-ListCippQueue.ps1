@@ -2,6 +2,8 @@ function Invoke-ListCippQueue {
     <#
     .FUNCTIONALITY
         Entrypoint
+    .ROLE
+        CIPP.Core.Read
     #>
     param($Request = $null, $TriggerMetadata = $null)
 

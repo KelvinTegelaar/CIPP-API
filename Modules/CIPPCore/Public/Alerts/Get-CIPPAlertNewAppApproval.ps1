@@ -7,7 +7,8 @@ function Get-CIPPAlertNewAppApproval {
     [CmdletBinding()]
     param(
         [Parameter(Mandatory = $false)]
-        $input,
+        [Alias('input')]
+        $InputValue,
         $TenantFilter
     )
     try {

@@ -3,7 +3,9 @@ using namespace System.Net
 Function Invoke-RemoveGroupTemplate {
     <#
     .FUNCTIONALITY
-    Entrypoint
+        Entrypoint
+    .ROLE
+        Identity.Group.ReadWrite
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
