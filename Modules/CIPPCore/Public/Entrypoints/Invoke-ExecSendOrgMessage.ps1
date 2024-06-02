@@ -3,7 +3,9 @@ using namespace System.Net
 Function Invoke-ExecSendOrgMessage {
     <#
     .FUNCTIONALITY
-    Entrypoint
+        Entrypoint
+    .ROLE
+        Tenant.Directory.ReadWrite
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
@@ -81,7 +83,7 @@ Function Invoke-ExecSendOrgMessage {
                                         }
                                     })
                             })
-                    }) 
+                    })
             }
 
         }
