@@ -46,9 +46,9 @@ function Set-CIPPUserJITAdmin {
                         $Json = ConvertTo-Json -Depth 5 -InputObject $Body
                         $null = New-GraphPOSTRequest -uri "https://graph.microsoft.com/beta/directoryRoles(roleTemplateId='$($_)')/members/`$ref" -tenantid $TenantFilter -body $Json
                     } finally {}
-                    Set-CIPPUserJITAdminProperties -TenantFilter $TenantFilter -UserId $UserObj.id -Enabled -Expiration $Expiration
-                    return "Added admin roles to user $($UserObj.displayName) ($($UserObj.userPrincipalName))"
                 }
+                Set-CIPPUserJITAdminProperties -TenantFilter $TenantFilter -UserId $UserObj.id -Enabled -Expiration $Expiration
+                return "Added admin roles to user $($UserObj.displayName) ($($UserObj.userPrincipalName))"
             }
             'RemoveRoles' {
                 $Roles = $Roles | ForEach-Object {
