@@ -3,7 +3,9 @@ using namespace System.Net
 Function Invoke-ListServiceHealth {
     <#
     .FUNCTIONALITY
-    Entrypoint
+        Entrypoint
+    .ROLE
+        Tenant.Administration.Read
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)

@@ -3,7 +3,9 @@ using namespace System.Net
 Function Invoke-AddExConnector {
     <#
     .FUNCTIONALITY
-    Entrypoint
+        Entrypoint
+    .ROLE
+        Exchange.Connector.ReadWrite
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
@@ -17,7 +19,7 @@ Function Invoke-AddExConnector {
     $Tenants = ($Request.body | Select-Object Select_*).psobject.properties.value
     $Result = foreach ($Tenantfilter in $tenants) {
         try {
-            $GraphRequest = New-ExoRequest -tenantid $Tenantfilter -cmdlet "New-$($ConnectorType)connector" -cmdParams $RequestParams 
+            $GraphRequest = New-ExoRequest -tenantid $Tenantfilter -cmdlet "New-$($ConnectorType)connector" -cmdParams $RequestParams
             "Successfully created Connector for $Tenantfilter."
             Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $Tenantfilter -message "Created Connector for $($Tenantfilter)" -sev 'Info'
         }
