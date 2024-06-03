@@ -3,7 +3,9 @@ using namespace System.Net
 Function Invoke-AddDefenderDeployment {
     <#
     .FUNCTIONALITY
-    Entrypoint
+        Entrypoint
+    .ROLE
+        Endpoint.MEM.ReadWrite
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
@@ -38,7 +40,7 @@ Function Invoke-AddDefenderDeployment {
 
             $Settings = switch ($PolicySettings) {
                 { $_.ScanArchives } {
-                    @{'@odata.type' = '#microsoft.graph.deviceManagementConfigurationSetting'; settingInstance = @{ '@odata.type' = '#microsoft.graph.deviceManagementConfigurationChoiceSettingInstance'; settingDefinitionId = 'device_vendor_msft_policy_config_defender_allowarchivescanning'; choiceSettingValue = @{'@odata.type' = '#microsoft.graph.deviceManagementConfigurationChoiceSettingValue'; value = 'device_vendor_msft_policy_config_defender_allowarchivescanning_1'; settingValueTemplateReference = @{settingValueTemplateId = '9ead75d4-6f30-4bc5-8cc5-ab0f999d79f0' } }; settingInstanceTemplateReference = @{settingInstanceTemplateId = '7c5c9cde-f74d-4d11-904f-de4c27f72d89' } } } 
+                    @{'@odata.type' = '#microsoft.graph.deviceManagementConfigurationSetting'; settingInstance = @{ '@odata.type' = '#microsoft.graph.deviceManagementConfigurationChoiceSettingInstance'; settingDefinitionId = 'device_vendor_msft_policy_config_defender_allowarchivescanning'; choiceSettingValue = @{'@odata.type' = '#microsoft.graph.deviceManagementConfigurationChoiceSettingValue'; value = 'device_vendor_msft_policy_config_defender_allowarchivescanning_1'; settingValueTemplateReference = @{settingValueTemplateId = '9ead75d4-6f30-4bc5-8cc5-ab0f999d79f0' } }; settingInstanceTemplateReference = @{settingInstanceTemplateId = '7c5c9cde-f74d-4d11-904f-de4c27f72d89' } } }
                 } { $_.AllowBehavior } {
                     @{ '@odata.type' = '#microsoft.graph.deviceManagementConfigurationSetting'; settingInstance = @{'@odata.type' = '#microsoft.graph.deviceManagementConfigurationChoiceSettingInstance' ; settingDefinitionId = 'device_vendor_msft_policy_config_defender_allowbehaviormonitoring' ; choiceSettingValue = @{'@odata.type' = '#microsoft.graph.deviceManagementConfigurationChoiceSettingValue'; value = 'device_vendor_msft_policy_config_defender_allowbehaviormonitoring_1'; settingValueTemplateReference = @{settingValueTemplateId = '905921da-95e2-4a10-9e30-fe5540002ce1' } }; settingInstanceTemplateReference = @{settingInstanceTemplateId = '8eef615a-1aa0-46f4-a25a-12cbe65de5ab' } } }
                 } { $_.AllowCloudProtection } {
@@ -87,7 +89,7 @@ Function Invoke-AddDefenderDeployment {
                     roleScopeTagIds   = @('0')
                     templateReference = @{templateId = '804339ad-1553-4478-a742-138fb5807418_1' }
                     settings          = $Settings
-                } 
+                }
                 $PolicyRequest = New-GraphPOSTRequest -uri 'https://graph.microsoft.com/beta/deviceManagement/configurationPolicies' -tenantid $tenant -type POST -body $PolBody
                 if ($PolicySettings.AssignTo -ne 'None') {
                     $AssignBody = if ($PolicySettings.AssignTo -ne 'AllDevicesAndUsers') { '{"assignments":[{"id":"","target":{"@odata.type":"#microsoft.graph.' + $($PolicySettings.AssignTo) + 'AssignmentTarget"}}]}' } else { '{"assignments":[{"id":"","target":{"@odata.type":"#microsoft.graph.allDevicesAssignmentTarget"}},{"id":"","target":{"@odata.type":"#microsoft.graph.allLicensedUsersAssignmentTarget"}}]}' }
@@ -150,7 +152,7 @@ Function Invoke-AddDefenderDeployment {
             }
 
             $EDRSettings = switch ($EDR) {
-                { $_.SampleSharing } { 
+                { $_.SampleSharing } {
                     @{
                         '@odata.type'   = '#microsoft.graph.deviceManagementConfigurationSetting'
                         settingInstance = @{
@@ -163,9 +165,9 @@ Function Invoke-AddDefenderDeployment {
                             }
                             settingInstanceTemplateReference = @{settingInstanceTemplateId = '6998c81e-2814-4f5e-b492-a6159128a97b' }
                         }
-                    } 
+                    }
                 }
-                { $_.Telemetry } { 
+                { $_.Telemetry } {
                     @{
                         '@odata.type'   = '#microsoft.graph.deviceManagementConfigurationSetting'
                         settingInstance = @{
@@ -178,10 +180,10 @@ Function Invoke-AddDefenderDeployment {
                             }
                             settingInstanceTemplateReference = @{settingInstanceTemplateId = '03de6095-07c4-4f35-be38-c1cd3bae4484' }
                         }
-                    }     
-            
+                    }
+
                 }
-                { $_.Config } { 
+                { $_.Config } {
                     @{
                         '@odata.type'   = '#microsoft.graph.deviceManagementConfigurationSetting'
                         settingInstance = @{
@@ -193,11 +195,11 @@ Function Invoke-AddDefenderDeployment {
                                 settingValueTemplateReference = @{settingValueTemplateId = 'e5c7c98c-c854-4140-836e-bd22db59d651' }
                                 children                      = @(@{'@odata.type' = '#microsoft.graph.deviceManagementConfigurationSimpleSettingInstance' ; settingDefinitionId = 'device_vendor_msft_windowsadvancedthreatprotection_onboarding_fromconnector' ; simpleSettingValue = @{'@odata.type' = '#microsoft.graph.deviceManagementConfigurationSecretSettingValue' ; value = 'Microsoft ATP connector enabled'; valueState = 'NotEncrypted' } } )
                             }
-                
+
                             settingInstanceTemplateReference = @{settingInstanceTemplateId = '23ab0ea3-1b12-429a-8ed0-7390cf699160' }
                         }
-                    }   
-            
+                    }
+
                 }
             }
             $EDRbody = ConvertTo-Json -Depth 15 -Compress -InputObject @{

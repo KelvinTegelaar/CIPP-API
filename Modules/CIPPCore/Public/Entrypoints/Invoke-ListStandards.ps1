@@ -3,7 +3,9 @@ using namespace System.Net
 Function Invoke-ListStandards {
     <#
     .FUNCTIONALITY
-    Entrypoint
+        Entrypoint
+    .ROLE
+        Tenant.Standards.Read
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)

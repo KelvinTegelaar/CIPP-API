@@ -3,13 +3,15 @@ using namespace System.Net
 Function Invoke-ListBasicAuthAllTenants {
     <#
     .FUNCTIONALITY
-    Entrypoint
+        Entrypoint
+    .ROLE
+        Identity.AuditLog.Read
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
 
-        
-    Get-Tenants | ForEach-Object -Parallel { 
+
+    Get-Tenants | ForEach-Object -Parallel {
         $domainName = $_.defaultDomainName
         Import-Module '.\Modules\AzBobbyTables'
         Import-Module '.\Modules\CIPPCore'
@@ -36,7 +38,7 @@ Function Invoke-ListBasicAuthAllTenants {
                 RowKey            = $domainName
                 PartitionKey      = 'basicauth'
             }
-        } 
+        }
         $Table = Get-CIPPTable -TableName cachebasicauth
         Add-CIPPAzDataTableEntity @Table -Entity $GraphRequest -Force | Out-Null
 

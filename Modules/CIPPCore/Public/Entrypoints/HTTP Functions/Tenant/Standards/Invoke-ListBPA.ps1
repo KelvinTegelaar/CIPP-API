@@ -3,7 +3,9 @@ using namespace System.Net
 Function Invoke-ListBPA {
     <#
     .FUNCTIONALITY
-    Entrypoint
+        Entrypoint
+    .ROLE
+        Tenant.BestPracticeAnalyser.Read
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
@@ -46,7 +48,12 @@ Function Invoke-ListBPA {
 
         $Data = $mergedObject
     } else {
+        $AllowedTenants = Test-CIPPAccess -Request $Request -TenantList
         $Tenants = Get-Tenants -IncludeErrors
+        if ($AllowedTenants -notcontains 'AllTenants') {
+            $Tenants = $Tenants | Where-Object -Property customerId -In $AllowedTenants
+        }
+        Write-Information ($tenants.defaultDomainName | ConvertTo-Json)
         $Data = (Get-CIPPAzDataTableEntity @Table -Filter "RowKey eq '$NAME'") | ForEach-Object {
             $row = $_
             $JSONFields | ForEach-Object {
