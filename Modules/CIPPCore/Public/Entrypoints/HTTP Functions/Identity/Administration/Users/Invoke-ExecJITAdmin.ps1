@@ -11,11 +11,48 @@ Function Invoke-ExecJITAdmin {
     param($Request, $TriggerMetadata)
 
     $APIName = $TriggerMetadata.FunctionName
-    Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -message 'Accessed this API' -Sev 'Debug'
-    #If UserId is a guid, get the user's UPN
-    if ($Request.body.UserId -match '^[a-f0-9]{8}-([a-f0-9]{4}-){3}[a-f0-9]{12}$') {
-        $Username = (New-GraphGetRequest -uri "https://graph.microsoft.com/v1.0/users/$($Request.body.UserId)" -tenantid $Request.body.TenantFilter).userPrincipalName
+    Write-LogMessage -user $Request.Headers.'x-ms-client-principal' -API $APINAME -message 'Accessed this API' -Sev 'Debug'
+    Write-Information ($Request.Body | ConvertTo-Json -Depth 10)
+    if ($Request.Query.Action -eq 'List') {
+        $Schema = Get-CIPPSchemaExtensions | Where-Object { $_.id -match '_cippUser' }
+        Write-Information "Schema: $($Schema)"
+        $Query = @{
+            TenantFilter = $Request.Query.TenantFilter
+            Endpoint     = 'users'
+            Parameters   = @{
+                '$count'  = 'true'
+                '$select' = "id,displayName,userPrincipalName,$($Schema.id)"
+                '$filter' = "$($Schema.id)/jitAdminEnabled eq true or $($Schema.id)/jitAdminEnabled eq false"
+            }
+        }
+        $Users = Get-GraphRequestList @Query | Where-Object { $_.id }
+        $Results = $Users | ForEach-Object {
+            $MemberOf = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/users/$($_.id)/memberOf/microsoft.graph.directoryRole/?`$select=id,displayName" -tenantid $Request.Query.TenantFilter -ComplexFilter
+            [PSCustomObject]@{
+                id                 = $_.id
+                displayName        = $_.displayName
+                userPrincipalName  = $_.userPrincipalName
+                jitAdminEnabled    = $_.($Schema.id).jitAdminEnabled
+                jitAdminExpiration = $_.($Schema.id).jitAdminExpiration
+                memberOf           = $MemberOf
+            }
+        }
+
+
+        Write-Information ($Results | ConvertTo-Json -Depth 10)
+        $Body = @{
+            Results  = @($Results)
+            Metadata = @{
+                Parameters = $Query.Parameters
+            }
+        }
+    } else {
+        #If UserId is a guid, get the user's UPN
+        if ($Request.body.UserId -match '^[a-f0-9]{8}-([a-f0-9]{4}-){3}[a-f0-9]{12}$') {
+            $Username = (New-GraphGetRequest -uri "https://graph.microsoft.com/v1.0/users/$($Request.body.UserId)" -tenantid $Request.body.TenantFilter).userPrincipalName
+        }
     }
+
     <#if ($Request.body.vacation -eq 'true') {
         $StartDate = $Request.body.StartDate
         $TaskBody = @{
