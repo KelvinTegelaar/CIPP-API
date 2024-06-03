@@ -3,7 +3,9 @@ using namespace System.Net
 Function Invoke-ExecSetSharePointMember {
     <#
     .FUNCTIONALITY
-    Entrypoint
+        Entrypoint
+    .ROLE
+        Sharepoint.Site.ReadWrite
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)

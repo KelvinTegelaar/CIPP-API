@@ -3,7 +3,9 @@ using namespace System.Net
 Function Invoke-ExecExtensionsConfig {
     <#
     .FUNCTIONALITY
-    Entrypoint
+        Entrypoint
+    .ROLE
+        CIPP.Extension.ReadWrite
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)

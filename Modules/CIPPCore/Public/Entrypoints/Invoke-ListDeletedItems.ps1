@@ -3,7 +3,9 @@ using namespace System.Net
 Function Invoke-ListDeletedItems {
     <#
     .FUNCTIONALITY
-    Entrypoint
+        Entrypoint
+    .ROLE
+        Tenant.Directory.Read
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
@@ -19,7 +21,7 @@ Function Invoke-ListDeletedItems {
     $TenantFilter = $Request.Query.TenantFilter
     $Types = 'Application', 'User', 'Device', 'Group'
     $GraphRequest = foreach ($Type in $Types) {
-    (New-GraphGetRequest -uri "https://graph.microsoft.com/beta/directory/deletedItems/microsoft.graph.$($Type)" -tenantid $TenantFilter) | Where-Object -Property '@odata.context' -NotLike '*graph.microsoft.com*' | Select-Object *, @{ Name = 'TargetType'; Expression = { $Type } } 
+    (New-GraphGetRequest -uri "https://graph.microsoft.com/beta/directory/deletedItems/microsoft.graph.$($Type)" -tenantid $TenantFilter) | Where-Object -Property '@odata.context' -NotLike '*graph.microsoft.com*' | Select-Object *, @{ Name = 'TargetType'; Expression = { $Type } }
     }
     # Associate values to output bindings by calling 'Push-OutputBinding'.
     Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{

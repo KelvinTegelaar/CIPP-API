@@ -3,7 +3,9 @@ using namespace System.Net
 Function Invoke-ExecEnableArchive {
     <#
     .FUNCTIONALITY
-    Entrypoint
+        Entrypoint
+    .ROLE
+        Exchange.Mailbox.ReadWrite
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)

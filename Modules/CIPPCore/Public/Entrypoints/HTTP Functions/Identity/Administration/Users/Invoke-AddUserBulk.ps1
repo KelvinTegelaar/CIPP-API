@@ -3,7 +3,9 @@ using namespace System.Net
 Function Invoke-AddUserBulk {
     <#
     .FUNCTIONALITY
-    Entrypoint
+        Entrypoint
+    .ROLE
+        Identity.User.ReadWrite
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
@@ -37,7 +39,7 @@ Function Invoke-AddUserBulk {
         }
     }
     $body = [pscustomobject] @{
-        'Results'  = @($results) 
+        'Results'  = @($results)
         'Username' = $UserprincipalName
         'Password' = $password
         'CopyFrom' = $copyFromResults

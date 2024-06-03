@@ -3,7 +3,9 @@ using namespace System.Net
 function Invoke-ListFunctionParameters {
     <#
     .FUNCTIONALITY
-    Entrypoint
+        Entrypoint
+    .ROLE
+        CIPP.Core.Read
     #>
     param($Request, $TriggerMetadata)
 

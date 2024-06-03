@@ -3,7 +3,9 @@ using namespace System.Net
 Function Invoke-ExecExcludeTenant {
     <#
     .FUNCTIONALITY
-    Entrypoint
+        Entrypoint
+    .ROLE
+        CIPP.AppSettings.ReadWrite
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)

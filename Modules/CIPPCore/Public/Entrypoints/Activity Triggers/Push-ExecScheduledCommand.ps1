@@ -4,16 +4,17 @@ function Push-ExecScheduledCommand {
         Entrypoint
     #>
     param($Item)
-    Write-Host "We are going to be running a scheduled task: $($Item.TaskInfo | ConvertTo-Json)"
+    Write-Host "We are going to be running a scheduled task: $($Item.TaskInfo | ConvertTo-Json -Depth 10)"
 
     $Table = Get-CippTable -tablename 'ScheduledTasks'
     $task = $Item.TaskInfo
-    $commandParameters = $Item.Parameters | ConvertTo-Json | ConvertFrom-Json -AsHashtable
+    $commandParameters = $Item.Parameters | ConvertTo-Json -Depth 10 | ConvertFrom-Json -AsHashtable
 
     $tenant = $Item.Parameters['TenantFilter']
     Write-Host "Started Task: $($Item.Command) for tenant: $tenant"
     try {
         try {
+            Write-Host "Starting task: $($Item.Command) with parameters:  "
             $results = & $Item.Command @commandParameters
         } catch {
             $results = "Task Failed: $($_.Exception.Message)"
@@ -53,7 +54,7 @@ function Push-ExecScheduledCommand {
             Results      = "$errorMessage"
             TaskState    = $State
         }
-        Write-LogMessage -API 'Scheduler_UserTasks' -tenant $tenant -message "Failed to execute task $($task.Name): $errorMessage" -sev Error
+        Write-LogMessage -API 'Scheduler_UserTasks' -tenant $tenant -message "Failed to execute task $($task.Name): $errorMessage" -sev Error -LogData (Get-CippExceptionData -Exception $_.Exception)
     }
     Write-Host 'Sending task results to target. Updating the task state.'
 
@@ -79,7 +80,8 @@ function Push-ExecScheduledCommand {
     }
     Write-Host 'Sent the results to the target. Updating the task state.'
 
-    if ($task.Recurrence -eq '0' -or $task.Recurrence -eq $null) {
+    if ($task.Recurrence -eq '0' -or [string]::IsNullOrEmpty($task.Recurrence)) {
+        Write-Host 'Recurrence empty or 0. Task is not recurring. Setting task state to completed.'
         Update-AzDataTableEntity @Table -Entity @{
             PartitionKey = $task.PartitionKey
             RowKey       = $task.RowKey
@@ -107,5 +109,7 @@ function Push-ExecScheduledCommand {
             ScheduledTime = "$nextRunUnixTime"
         }
     }
-    Write-LogMessage -API 'Scheduler_UserTasks' -tenant $tenant -message "Successfully executed task: $($task.Name)" -sev Info
+    if ($TaskType -ne 'Alert') {
+        Write-LogMessage -API 'Scheduler_UserTasks' -tenant $tenant -message "Successfully executed task: $($task.Name)" -sev Info
+    }
 }
