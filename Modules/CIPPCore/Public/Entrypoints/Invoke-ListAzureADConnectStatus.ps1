@@ -3,7 +3,9 @@ using namespace System.Net
 Function Invoke-ListAzureADConnectStatus {
     <#
     .FUNCTIONALITY
-    Entrypoint
+        Entrypoint
+    .ROLE
+        Tenant.Directory.Read
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
@@ -41,10 +43,10 @@ Function Invoke-ListAzureADConnectStatus {
         $GraphRequest = foreach ($Type in $types) {
             New-GraphGetRequest -uri "https://graph.microsoft.com/beta/$($Type)?`$select=$($selectlist -join ',')" -tenantid $TenantFilter | ForEach-Object {
                 if ($_.id -ne $null) {
-                    $_ | Add-Member -NotePropertyName ObjectType -NotePropertyValue $Type 
+                    $_ | Add-Member -NotePropertyName ObjectType -NotePropertyValue $Type
                     $_
                 }
-        
+
             }
         }
         $ObjectsInError = @($GraphRequest)

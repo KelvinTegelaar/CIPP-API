@@ -3,7 +3,9 @@ using namespace System.Net
 Function Invoke-AddExConnectorTemplate {
     <#
     .FUNCTIONALITY
-    Entrypoint
+        Entrypoint
+    .ROLE
+        Exchange.Connector.ReadWrite
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
@@ -15,8 +17,8 @@ Function Invoke-AddExConnectorTemplate {
 
     try {
         $GUID = (New-Guid).GUID
-        $Select = if ($Request.body.cippconnectortype -eq 'outbound') { 
-            @( 
+        $Select = if ($Request.body.cippconnectortype -eq 'outbound') {
+            @(
                 'name', 'AllAcceptedDomains', 'CloudServicesMailEnabled', 'Comment', 'Confirm', 'ConnectorSource', 'ConnectorType', 'Enabled', 'IsTransportRuleScoped', 'RecipientDomains', 'RouteAllMessagesViaOnPremises', 'SenderRewritingEnabled', 'SmartHosts', 'TestMode', 'TlsDomain', 'TlsSettings', 'UseMXRecord'
             )
         }
@@ -28,7 +30,7 @@ Function Invoke-AddExConnectorTemplate {
 
         $JSON = ([pscustomobject]$Request.body | Select-Object $Select) | ForEach-Object {
             $NonEmptyProperties = $_.psobject.Properties | Where-Object { $null -ne $_.Value } | Select-Object -ExpandProperty Name
-            $_ | Select-Object -Property $NonEmptyProperties 
+            $_ | Select-Object -Property $NonEmptyProperties
         }
         $JSON = ($JSON | Select-Object @{n = 'name'; e = { $_.name } }, * | ConvertTo-Json -Depth 10)
         $Table = Get-CippTable -tablename 'templates'

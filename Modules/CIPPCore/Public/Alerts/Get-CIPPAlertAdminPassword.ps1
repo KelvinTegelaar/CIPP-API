@@ -7,7 +7,8 @@ function Get-CIPPAlertAdminPassword {
     [CmdletBinding()]
     param(
         [Parameter(Mandatory = $false)]
-        $input,
+        [Alias('input')]
+        $InputValue,
         $TenantFilter
     )
     try {
