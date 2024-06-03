@@ -3,13 +3,15 @@ using namespace System.Net
 Function Invoke-ExecIncidentsListAllTenants {
     <#
     .FUNCTIONALITY
-    Entrypoint
+        Entrypoint
+    .ROLE
+        Security.Incident.Read
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
 
-        
-    Get-Tenants | ForEach-Object -Parallel { 
+
+    Get-Tenants | ForEach-Object -Parallel {
         $domainName = $_.defaultDomainName
         Import-Module '.\Modules\AzBobbyTables'
         Import-Module '.\Modules\CIPPCore'
@@ -17,7 +19,7 @@ Function Invoke-ExecIncidentsListAllTenants {
 
         try {
             $incidents = New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/security/incidents' -tenantid $domainName -AsApp $true
-            $GraphRequest = foreach ($incident in $incidents) {    
+            $GraphRequest = foreach ($incident in $incidents) {
                 $GUID = (New-Guid).Guid
                 $GraphRequest = @{
                     Incident     = [string]($incident | ConvertTo-Json -Depth 10)
@@ -26,7 +28,7 @@ Function Invoke-ExecIncidentsListAllTenants {
                     Tenant       = [string]$domainName
                 }
                 Add-CIPPAzDataTableEntity @Table -Entity $GraphRequest -Force | Out-Null
-            } 
+            }
 
         } catch {
             $GUID = (New-Guid).Guid
@@ -43,7 +45,7 @@ Function Invoke-ExecIncidentsListAllTenants {
                 severity       = 'CIPP'
             }
             $GraphRequest = @{
-                Incident     = [string]$AlertText 
+                Incident     = [string]$AlertText
                 RowKey       = [string]$GUID
                 PartitionKey = 'Incident'
                 Tenant       = [string]$domainName

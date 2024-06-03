@@ -3,7 +3,9 @@ using namespace System.Net
 Function Invoke-ListRoomLists {
     <#
     .FUNCTIONALITY
-    Entrypoint
+        Entrypoint
+    .ROLE
+        Exchange.Room.Read
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
@@ -20,9 +22,9 @@ Function Invoke-ListRoomLists {
 
     try {
         $params = @{
-            uri = 'https://graph.microsoft.com/beta/places/microsoft.graph.roomlist'
+            uri      = 'https://graph.microsoft.com/beta/places/microsoft.graph.roomlist'
             tenantid = $TenantFilter
-            AsApp = $true
+            AsApp    = $true
         }
         $GraphRequest = New-GraphGetRequest @params
 

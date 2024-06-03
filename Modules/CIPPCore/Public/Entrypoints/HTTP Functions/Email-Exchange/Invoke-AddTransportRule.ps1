@@ -3,7 +3,9 @@ using namespace System.Net
 Function Invoke-AddTransportRule {
     <#
     .FUNCTIONALITY
-    Entrypoint
+        Entrypoint
+    .ROLE
+        Exchange.TransportRule.ReadWrite
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
@@ -11,7 +13,7 @@ Function Invoke-AddTransportRule {
     $APIName = $TriggerMetadata.FunctionName
     Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -message 'Accessed this API' -Sev 'Debug'
 
-    $RequestParams = $Request.Body.PowerShellCommand | ConvertFrom-Json | Select-Object -Property * -ExcludeProperty GUID, Comments, HasSenderOverride, ExceptIfHasSenderOverride, ExceptIfMessageContainsDataClassifications, MessageContainsDataClassifications 
+    $RequestParams = $Request.Body.PowerShellCommand | ConvertFrom-Json | Select-Object -Property * -ExcludeProperty GUID, Comments, HasSenderOverride, ExceptIfHasSenderOverride, ExceptIfMessageContainsDataClassifications, MessageContainsDataClassifications
 
     $Tenants = ($Request.body | Select-Object Select_*).psobject.properties.value
     $Result = foreach ($Tenantfilter in $tenants) {
@@ -28,7 +30,7 @@ Function Invoke-AddTransportRule {
                 $GraphRequest = New-ExoRequest -tenantid $Tenantfilter -cmdlet 'New-TransportRule' -cmdParams $RequestParams -useSystemMailbox $true
                 "Successfully created transport rule for $tenantfilter."
             }
-        
+
             Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $tenantfilter -message "Created transport rule for $($tenantfilter)" -sev Info
         }
         catch {

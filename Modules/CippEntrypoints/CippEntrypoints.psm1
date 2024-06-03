@@ -1,20 +1,44 @@
 using namespace System.Net
 
 function Receive-CippHttpTrigger {
-    Param($Request, $TriggerMetadata)
-    #force path to CIPP-API
-    Set-Location (Get-Item $PSScriptRoot).Parent.Parent.FullName
-    Write-Information (Get-Item $PSScriptRoot).Parent.Parent.FullName
-    $APIName = $TriggerMetadata.FunctionName
+    <#
+    .FUNCTIONALITY
+    Entrypoint
+    #>
+    Param(
+        $Request,
+        $TriggerMetadata
+    )
 
-    $FunctionName = 'Invoke-{0}' -f $APIName
+    Set-Location (Get-Item $PSScriptRoot).Parent.Parent.FullName
+    $FunctionName = 'Invoke-{0}' -f $Request.Params.CIPPEndpoint
+    Write-Host "Function: $($Request.Params.CIPPEndpoint)"
 
     $HttpTrigger = @{
         Request         = $Request
         TriggerMetadata = $TriggerMetadata
     }
 
-    & $FunctionName @HttpTrigger
+    if (Get-Command -Name $FunctionName -ErrorAction SilentlyContinue) {
+        try {
+            $Access = Test-CIPPAccess -Request $Request
+            Write-Information "Access: $Access"
+            if ($Access) {
+                & $FunctionName @HttpTrigger
+            }
+        } catch {
+            Write-Information $_.Exception.Message
+            Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
+                    StatusCode = [HttpStatusCode]::Forbidden
+                    Body       = $_.Exception.Message
+                })
+        }
+    } else {
+        Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
+                StatusCode = [HttpStatusCode]::NotFound
+                Body       = 'Endpoint not found'
+            })
+    }
 }
 
 function Receive-CippQueueTrigger {

@@ -3,7 +3,9 @@ using namespace System.Net
 Function Invoke-ListTeams {
     <#
     .FUNCTIONALITY
-    Entrypoint
+        Entrypoint
+    .ROLE
+        Teams.Group.Read
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
@@ -37,7 +39,7 @@ Function Invoke-ListTeams {
             Members       = @($Members)
             Owners        = @($owners)
             InstalledApps = @($AppsList)
-        } 
+        }
     }
 
 
