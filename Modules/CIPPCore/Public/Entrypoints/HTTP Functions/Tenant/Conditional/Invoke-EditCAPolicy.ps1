@@ -3,7 +3,9 @@ using namespace System.Net
 Function Invoke-EditCAPolicy {
     <#
     .FUNCTIONALITY
-    Entrypoint
+        Entrypoint
+    .ROLE
+        Tenant.ConditionalAccess.ReadWrite
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
