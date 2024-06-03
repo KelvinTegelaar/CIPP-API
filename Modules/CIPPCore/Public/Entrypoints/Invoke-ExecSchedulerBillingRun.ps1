@@ -3,7 +3,9 @@ using namespace System.Net
 Function Invoke-ExecSchedulerBillingRun {
     <#
     .FUNCTIONALITY
-    Entrypoint
+        Entrypoint
+    .ROLE
+        Scheduler.Billing.ReadWrite
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)

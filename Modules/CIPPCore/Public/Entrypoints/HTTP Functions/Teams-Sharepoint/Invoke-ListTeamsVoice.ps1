@@ -3,7 +3,9 @@ using namespace System.Net
 Function Invoke-ListTeamsVoice {
     <#
     .FUNCTIONALITY
-    Entrypoint
+        Entrypoint
+    .ROLE
+        Teams.Voice.Read
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
@@ -24,11 +26,11 @@ Function Invoke-ListTeamsVoice {
             $CompleteRequest = $_ | Select-Object *, 'AssignedTo'
             $CompleteRequest.AcquisitionDate = $CompleteRequest.AcquisitionDate -split 'T' | Select-Object -First 1
 
-            if ($CompleteRequest.TargetId -eq '00000000-0000-0000-0000-000000000000') { 
+            if ($CompleteRequest.TargetId -eq '00000000-0000-0000-0000-000000000000') {
                 $CompleteRequest.AssignedTo = 'Unassigned'
             } else {
                 $CompleteRequest.AssignedTo = ($users | Where-Object -Property Id -EQ $CompleteRequest.TargetId).userPrincipalName
-       
+
             }
             $CompleteRequest
         }

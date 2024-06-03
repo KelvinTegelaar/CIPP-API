@@ -3,7 +3,9 @@ using namespace System.Net
 Function Invoke-AddTenantAllowBlockList {
     <#
     .FUNCTIONALITY
-    Entrypoint
+        Entrypoint
+    .ROLE
+        Exchange.SpamFilter.ReadWrite
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
@@ -20,10 +22,10 @@ Function Invoke-AddTenantAllowBlockList {
             tenantid  = $Request.body.tenantid
             cmdlet    = 'New-TenantAllowBlockListItems'
             cmdParams = @{
-                Entries                     = [string[]]$blocklistobj.entries
-                ListType                    = [string]$blocklistobj.listType
-                Notes                       = [string]$blocklistobj.notes
-                $blocklistobj.listMethod    = [bool]$true
+                Entries                  = [string[]]$blocklistobj.entries
+                ListType                 = [string]$blocklistobj.listType
+                Notes                    = [string]$blocklistobj.notes
+                $blocklistobj.listMethod = [bool]$true
             }
         }
 
@@ -43,10 +45,10 @@ Function Invoke-AddTenantAllowBlockList {
 
     # Associate values to output bindings by calling 'Push-OutputBinding'.
     Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
-        StatusCode = [HttpStatusCode]::OK
-        Body       = @{
-            'Results' = $result
-            'Request' = $ExoRequest
-        }
-    })
+            StatusCode = [HttpStatusCode]::OK
+            Body       = @{
+                'Results' = $result
+                'Request' = $ExoRequest
+            }
+        })
 }
