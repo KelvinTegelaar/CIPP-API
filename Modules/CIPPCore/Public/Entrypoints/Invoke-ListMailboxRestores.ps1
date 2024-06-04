@@ -1,4 +1,10 @@
 function Invoke-ListMailboxRestores {
+    <#
+    .FUNCTIONALITY
+        Entrypoint
+    .ROLE
+        Exchange.Mailbox.Read
+    #>
     param($Request, $TriggerMetadata)
 
     $APIName = $TriggerMetadata.FunctionName

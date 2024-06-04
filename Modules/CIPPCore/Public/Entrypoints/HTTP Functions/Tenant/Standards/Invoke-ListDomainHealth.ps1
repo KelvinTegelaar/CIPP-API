@@ -3,7 +3,9 @@ using namespace System.Net
 Function Invoke-ListDomainHealth {
     <#
     .FUNCTIONALITY
-    Entrypoint
+        Entrypoint
+    .ROLE
+        Tenant.DomainAnalyser.Read
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
