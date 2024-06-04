@@ -3,7 +3,9 @@ using namespace System.Net
 Function Invoke-ExecDeleteGDAPRelationship {
     <#
     .FUNCTIONALITY
-    Entrypoint
+        Entrypoint
+    .ROLE
+        Tenant.Relationship.ReadWrite
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)

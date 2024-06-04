@@ -3,7 +3,9 @@ using namespace System.Net
 Function Invoke-ExecCaCheck {
     <#
     .FUNCTIONALITY
-    Entrypoint
+        Entrypoint
+    .ROLE
+        Tenant.ConditionalAccess.Read
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
@@ -42,7 +44,7 @@ Function Invoke-ExecCaCheck {
         $JSONBody = $ConditionalAccessWhatIfDefinition | ConvertTo-Json -Depth 10
         Write-Host $JSONBody
         $Request = New-GraphPOSTRequest -uri 'https://graph.microsoft.com/beta/identity/conditionalAccess/evaluate' -tenantid $tenant -type POST -body $JsonBody -AsApp $true
-        $Request 
+        $Request
     } catch {
         "Failed to execute check: $($_.Exception.Message)"
     }

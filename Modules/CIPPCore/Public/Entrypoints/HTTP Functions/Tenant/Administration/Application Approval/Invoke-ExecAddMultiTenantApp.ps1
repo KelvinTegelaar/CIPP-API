@@ -4,6 +4,8 @@ function Invoke-ExecAddMultiTenantApp {
     <#
     .FUNCTIONALITY
         Entrypoint
+    .ROLE
+        Tenant.Application.ReadWrite
     #>
     param($Request, $TriggerMetadata)
 
