@@ -17,24 +17,31 @@ function Set-CIPPUserJITAdmin {
             'Create' {
                 $Schema = Get-CIPPSchemaExtensions | Where-Object { $_.id -match '_cippUser' }
                 $Body = @{
+                    givenName         = $User.FirstName
+                    surname           = $User.LastName
                     accountEnabled    = $true
                     displayName       = $User.FirstName + ' ' + $User.LastName
                     userPrincipalName = $User.UserPrincipalName
+                    mailNickname      = $User.UserPrincipalName.Split('@')[0]
                     passwordProfile   = @{
-                        forceChangePasswordNextSignIn = $true
-                        password                      = New-passwordString
-                    }
-                    "$($Schema.id)"   = @{
-                        jitAdminEnabled    = $false
-                        jitAdminExpiration = $Expiration.ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ssZ')
+                        forceChangePasswordNextSignIn        = $true
+                        forceChangePasswordNextSignInWithMfa = $false
+                        password                             = New-passwordString
                     }
                 }
                 $Json = ConvertTo-Json -Depth 5 -InputObject $Body
-                $NewUser = New-GraphPOSTRequest -Uri 'https://graph.microsoft.com/beta/users' -Body $Json -tenantid $TenantFilter
-                [PSCustomObject]@{
-                    id                = $NewUser.id
-                    userPrincipalName = $NewUser.userPrincipalName
-                    password          = $Body.passwordProfile.password
+                #Write-Information $Json
+                #Write-Information $TenantFilter
+                try {
+                    $NewUser = New-GraphPOSTRequest -type POST -Uri 'https://graph.microsoft.com/beta/users' -Body $Json -tenantid $TenantFilter
+                    [PSCustomObject]@{
+                        id                = $NewUser.id
+                        userPrincipalName = $NewUser.userPrincipalName
+                        password          = $Body.passwordProfile.password
+                    }
+                } catch {
+                    Write-Information "Error creating user: $($_.Exception.Message)"
+                    throw $_.Exception.Message
                 }
             }
             'AddRoles' {
@@ -44,8 +51,8 @@ function Set-CIPPUserJITAdmin {
                             '@odata.id' = "https://graph.microsoft.com/v1.0/directoryObjects/$($UserObj.id)"
                         }
                         $Json = ConvertTo-Json -Depth 5 -InputObject $Body
-                        $null = New-GraphPOSTRequest -uri "https://graph.microsoft.com/beta/directoryRoles(roleTemplateId='$($_)')/members/`$ref" -tenantid $TenantFilter -body $Json
-                    } finally {}
+                        $null = New-GraphPOSTRequest -uri "https://graph.microsoft.com/beta/directoryRoles(roleTemplateId='$($_)')/members/`$ref" -tenantid $TenantFilter -body $Json -ErrorAction SilentlyContinue
+                    } catch {}
                 }
                 Set-CIPPUserJITAdminProperties -TenantFilter $TenantFilter -UserId $UserObj.id -Enabled -Expiration $Expiration
                 return "Added admin roles to user $($UserObj.displayName) ($($UserObj.userPrincipalName))"
@@ -54,23 +61,31 @@ function Set-CIPPUserJITAdmin {
                 $Roles = $Roles | ForEach-Object {
                     try {
                         $null = New-GraphPOSTRequest -type DELETE -uri "https://graph.microsoft.com/beta/directoryRoles(roleTemplateId='$($_)')/members/$($UserObj.id)/`$ref" -tenantid $TenantFilter
-                    } finally {}
+                    } catch {}
                 }
                 Set-CIPPUserJITAdminProperties -TenantFilter $TenantFilter -UserId $UserObj.id -Clear
                 return "Removed admin roles from user $($UserObj.displayName)"
             }
             'DeleteUser' {
-                $null = New-GraphPOSTRequest -type DELETE -uri "https://graph.microsoft.com/beta/users/$($UserObj.id)" -tenantid $TenantFilter
-                return "Deleted user $($UserObj.displayName) ($($UserObj.userPrincipalName)) with id $($UserObj.id)"
+                try {
+                    $null = New-GraphPOSTRequest -type DELETE -uri "https://graph.microsoft.com/beta/users/$($UserObj.id)" -tenantid $TenantFilter
+                    return "Deleted user $($UserObj.displayName) ($($UserObj.userPrincipalName)) with id $($UserObj.id)"
+                } catch {
+                    return "Error deleting user $($UserObj.displayName) ($($UserObj.userPrincipalName)): $($_.Exception.Message)"
+                }
             }
             'DisableUser' {
                 $Body = @{
                     accountEnabled = $false
                 }
                 $Json = ConvertTo-Json -Depth 5 -InputObject $Body
-                New-GraphPOSTRequest -type PATCH -uri "https://graph.microsoft.com/beta/users/$($UserObj.id)" -tenantid $TenantFilter -body $Json
-                Set-CIPPUserJITAdminProperties -TenantFilter $TenantFilter -UserId $UserObj.id -Enabled:$false
-                return "Disabled user $($UserObj.displayName) ($($UserObj.userPrincipalName))"
+                try {
+                    New-GraphPOSTRequest -type PATCH -uri "https://graph.microsoft.com/beta/users/$($UserObj.id)" -tenantid $TenantFilter -body $Json
+                    Set-CIPPUserJITAdminProperties -TenantFilter $TenantFilter -UserId $UserObj.id -Enabled:$false
+                    return "Disabled user $($UserObj.displayName) ($($UserObj.userPrincipalName))"
+                } catch {
+                    return "Error disabling user $($UserObj.displayName) ($($UserObj.userPrincipalName)): $($_.Exception.Message)"
+                }
             }
         }
     }
