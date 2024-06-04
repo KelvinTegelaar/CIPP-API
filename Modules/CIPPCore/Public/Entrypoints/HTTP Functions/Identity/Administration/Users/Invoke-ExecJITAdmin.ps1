@@ -34,7 +34,7 @@ Function Invoke-ExecJITAdmin {
                 }
             )
         }
-        $RoleResults = New-GraphBulkRequest -tenantid $Request.Query.TenantFilter -Requests $BulkRequests
+        $RoleResults = New-GraphBulkRequest -tenantid $Request.Query.TenantFilter -Requests @($BulkRequests)
         #Write-Information ($RoleResults | ConvertTo-Json -Depth 10 )
         $Results = $Users | ForEach-Object {
             $MemberOf = ($RoleResults | Where-Object -Property id -EQ $_.id).body.value | Select-Object displayName, id
