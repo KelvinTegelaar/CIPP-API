@@ -68,7 +68,7 @@ Function Invoke-ExecJITAdmin {
         if ($Request.Body.useraction -eq 'create') {
             Write-Information "Creating JIT Admin user $($Request.Body.UserPrincipalName)"
             $JITAdmin = @{
-                User         = [PSCustomObject]@{
+                User         = @{
                     'FirstName'         = $Request.Body.FirstName
                     'LastName'          = $Request.Body.LastName
                     'UserPrincipalName' = $Request.Body.UserPrincipalName
