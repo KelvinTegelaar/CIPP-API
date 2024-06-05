@@ -27,5 +27,5 @@ function Set-CIPPUserJITAdminProperties {
 
     $Json = ConvertTo-Json -Depth 5 -InputObject $Body
     Write-Information $Json
-    New-GraphPOSTRequest -type PATCH -Uri "https://graph.microsoft.com/beta/users/$UserId" -Body $Json -tenantid $TenantFilter
+    New-GraphPOSTRequest -type PATCH -Uri "https://graph.microsoft.com/beta/users/$UserId" -Body $Json -tenantid $TenantFilter | Out-Null
 }
