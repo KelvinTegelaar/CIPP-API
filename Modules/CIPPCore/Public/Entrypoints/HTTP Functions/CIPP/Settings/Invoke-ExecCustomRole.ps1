@@ -16,6 +16,7 @@ function Invoke-ExecCustomRole {
                 'RowKey'         = "$($Request.Body.RoleName)"
                 'Permissions'    = "$($Request.Body.Permissions | ConvertTo-Json -Compress)"
                 'AllowedTenants' = "$($Request.Body.AllowedTenants | ConvertTo-Json -Compress)"
+                'BlockedTenants' = "$($Request.Body.BlockedTenants | ConvertTo-Json -Compress)"
             }
             Add-CIPPAzDataTableEntity @Table -Entity $Role -Force | Out-Null
             $Body = @{Results = 'Custom role saved' }
@@ -37,7 +38,16 @@ function Invoke-ExecCustomRole {
             } else {
                 $Body = foreach ($Role in $Body) {
                     $Role.Permissions = $Role.Permissions | ConvertFrom-Json
-                    $Role.AllowedTenants = @($Role.AllowedTenants | ConvertFrom-Json)
+                    if ($Role.AllowedTenants) {
+                        $Role.AllowedTenants = @($Role.AllowedTenants | ConvertFrom-Json)
+                    } else {
+                        $Role | Add-Member -NotePropertyName AllowedTenants -NotePropertyValue @()
+                    }
+                    if ($Role.BlockedTenants) {
+                        $Role.BlockedTenants = @($Role.BlockedTenants | ConvertFrom-Json)
+                    } else {
+                        $Role | Add-Member -NotePropertyName BlockedTenants -NotePropertyValue @()
+                    }
                     $Role
                 }
                 $Body = @($Body)
