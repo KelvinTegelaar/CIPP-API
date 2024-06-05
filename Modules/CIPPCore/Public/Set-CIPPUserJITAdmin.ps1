@@ -49,6 +49,7 @@ function Set-CIPPUserJITAdmin {
 
         switch ($Action) {
             'Create' {
+                $Password = New-passwordString
                 $Body = @{
                     givenName         = $User.FirstName
                     surname           = $User.LastName
@@ -59,16 +60,21 @@ function Set-CIPPUserJITAdmin {
                     passwordProfile   = @{
                         forceChangePasswordNextSignIn        = $true
                         forceChangePasswordNextSignInWithMfa = $false
-                        password                             = New-passwordString
+                        password                             = $Password
                     }
                 }
                 $Json = ConvertTo-Json -Depth 5 -InputObject $Body
                 try {
                     $NewUser = New-GraphPOSTRequest -type POST -Uri 'https://graph.microsoft.com/beta/users' -Body $Json -tenantid $TenantFilter
+                    #PWPush
+                    $PasswordLink = New-PwPushLink -Payload $Password
+                    if ($PasswordLink) {
+                        $Password = $PasswordLink
+                    }
                     [PSCustomObject]@{
                         id                = $NewUser.id
                         userPrincipalName = $NewUser.userPrincipalName
-                        password          = $Body.passwordProfile.password
+                        password          = $Password
                     }
                 } catch {
                     Write-Information "Error creating user: $($_.Exception.Message)"
