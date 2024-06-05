@@ -10,7 +10,7 @@ function Set-PwPushConfig {
         $null = Connect-AzAccount -Identity
         $ApiKey = (Get-AzKeyVaultSecret -VaultName $ENV:WEBSITE_DEPLOYMENT_ID -Name 'PWPush' -AsPlainText)
         if ($ApiKey) {
-            $InitParams.ApiKey = $ApiKey
+            $InitParams.APIKey = $ApiKey
             $InitParams.EmailAddress = $Configuration.EmailAddress
         }
     }
