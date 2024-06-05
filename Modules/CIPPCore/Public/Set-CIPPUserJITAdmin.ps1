@@ -15,7 +15,7 @@ function Set-CIPPUserJITAdmin {
 
         switch ($Action) {
             'Create' {
-                $Schema = Get-CIPPSchemaExtensions | Where-Object { $_.id -match '_cippUser' }
+                #$Schema = Get-CIPPSchemaExtensions | Where-Object { $_.id -match '_cippUser' }
                 $Body = @{
                     givenName         = $User.FirstName
                     surname           = $User.LastName
@@ -54,7 +54,7 @@ function Set-CIPPUserJITAdmin {
                         $null = New-GraphPOSTRequest -uri "https://graph.microsoft.com/beta/directoryRoles(roleTemplateId='$($_)')/members/`$ref" -tenantid $TenantFilter -body $Json -ErrorAction SilentlyContinue
                     } catch {}
                 }
-                Set-CIPPUserJITAdminProperties -TenantFilter $TenantFilter -UserId $UserObj.id -Enabled -Expiration $Expiration
+                Set-CIPPUserJITAdminProperties -TenantFilter $TenantFilter -UserId $UserObj.id -Enabled -Expiration $Expiration | Out-Null
                 return "Added admin roles to user $($UserObj.displayName) ($($UserObj.userPrincipalName))"
             }
             'RemoveRoles' {
@@ -63,7 +63,7 @@ function Set-CIPPUserJITAdmin {
                         $null = New-GraphPOSTRequest -type DELETE -uri "https://graph.microsoft.com/beta/directoryRoles(roleTemplateId='$($_)')/members/$($UserObj.id)/`$ref" -tenantid $TenantFilter
                     } catch {}
                 }
-                Set-CIPPUserJITAdminProperties -TenantFilter $TenantFilter -UserId $UserObj.id -Clear
+                Set-CIPPUserJITAdminProperties -TenantFilter $TenantFilter -UserId $UserObj.id -Clear | Out-Null
                 return "Removed admin roles from user $($UserObj.displayName)"
             }
             'DeleteUser' {
