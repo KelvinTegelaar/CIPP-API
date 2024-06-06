@@ -10,7 +10,7 @@ Function Invoke-ExecJITAdmin {
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
 
-    $APIName = $TriggerMetadata.FunctionName
+    $APIName = 'ExecJITAdmin'
     Write-LogMessage -user $Request.Headers.'x-ms-client-principal' -API $APINAME -message 'Accessed this API' -Sev 'Debug'
 
     if ($Request.Query.Action -eq 'List') {
@@ -56,7 +56,7 @@ Function Invoke-ExecJITAdmin {
             }
         }
     } else {
-        #Write-Information ($Request.Body | ConvertTo-Json -Depth 10)
+        Write-LogMessage -user $Request.Headers.'x-ms-client-principal' -API $APINAME -message "Executing JIT Admin for $($Request.Body.UserPrincipalName)" -Sev 'Info'
         if ($Request.Body.UserId -match '^[a-f0-9]{8}-([a-f0-9]{4}-){3}[a-f0-9]{12}$') {
             $Username = (New-GraphGetRequest -uri "https://graph.microsoft.com/v1.0/users/$($Request.Body.UserId)" -tenantid $Request.Body.TenantFilter).userPrincipalName
         }
@@ -66,9 +66,10 @@ Function Invoke-ExecJITAdmin {
         $Results = [System.Collections.Generic.List[string]]::new()
 
         if ($Request.Body.useraction -eq 'create') {
+            Write-LogMessage -user $Request.Headers.'x-ms-client-principal' -API $APINAME -message "Creating JIT Admin user $($Request.Body.UserPrincipalName)" -Sev 'Info'
             Write-Information "Creating JIT Admin user $($Request.Body.UserPrincipalName)"
             $JITAdmin = @{
-                User         = [PSCustomObject]@{
+                User         = @{
                     'FirstName'         = $Request.Body.FirstName
                     'LastName'          = $Request.Body.LastName
                     'UserPrincipalName' = $Request.Body.UserPrincipalName
