@@ -81,28 +81,19 @@ Function Invoke-ExecSAMSetup {
         if ($Request.query.error -eq 'invalid_client') { $Results = 'Client ID was not found in Azure. Try waiting 10 seconds to try again, if you have gotten this error after 5 minutes, please restart the process.' }
         if ($request.query.code) {
             try {
-                $tries = 0
-                do {
-                    $tries ++
-                    $Auth = Get-CIPPAuthentication
-                    $TenantId = $Rows.tenantid
-                    if (!$TenantId) { $TenantId = $ENV:TenantId }
-                    $AppID = $Rows.appid
-                    if (!$AppID) { $appid = $env:ApplicationId }
-                    $URL = ($Request.headers.'x-ms-original-url').split('?') | Select-Object -First 1
-                    if ($env:AzureWebJobsStorage -eq 'UseDevelopmentStorage=true') {
-                        $clientsecret = $Secret.ApplicationSecret
-                    } else {
-                        $clientsecret = Get-AzKeyVaultSecret -VaultName $kv -Name 'applicationsecret' -AsPlainText
-                    }
-                    if (!$clientsecret) { $clientsecret = $ENV:ApplicationSecret }
-                    try {
-                        $RefreshToken = Invoke-RestMethod -Method POST -Body "client_id=$appid&scope=https://graph.microsoft.com/.default+offline_access+openid+profile&code=$($request.query.code)&grant_type=authorization_code&redirect_uri=$($url)&client_secret=$clientsecret" -Uri "https://login.microsoftonline.com/$TenantId/oauth2/v2.0/token"
-                    } catch {
-                        $RefreshToken = $null
-                    }
-                    if ($tries -ge 1) { Start-Sleep -Seconds 1 }
-                } until ($RefreshToken.refresh_token -or $tries -gt 3)
+                $TenantId = $Rows.tenantid
+                if (!$TenantId) { $TenantId = $ENV:TenantId }
+                $AppID = $Rows.appid
+                if (!$AppID) { $appid = $env:ApplicationId }
+                $URL = ($Request.headers.'x-ms-original-url').split('?') | Select-Object -First 1
+                if ($env:AzureWebJobsStorage -eq 'UseDevelopmentStorage=true') {
+                    $clientsecret = $Secret.ApplicationSecret
+                } else {
+                    $clientsecret = Get-AzKeyVaultSecret -VaultName $kv -Name 'applicationsecret' -AsPlainText
+                }
+                if (!$clientsecret) { $clientsecret = $ENV:ApplicationSecret }
+                Write-Host "client_id=$appid&scope=https://graph.microsoft.com/.default+offline_access+openid+profile&code=$($request.query.code)&grant_type=authorization_code&redirect_uri=$($url)&client_secret=$clientsecret" -Uri "https://login.microsoftonline.com/$TenantId/oauth2/v2.0/token"
+                $RefreshToken = Invoke-RestMethod -Method POST -Body "client_id=$appid&scope=https://graph.microsoft.com/.default+offline_access+openid+profile&code=$($request.query.code)&grant_type=authorization_code&redirect_uri=$($url)&client_secret=$clientsecret" -Uri "https://login.microsoftonline.com/$TenantId/oauth2/v2.0/token"
 
                 if ($env:AzureWebJobsStorage -eq 'UseDevelopmentStorage=true') {
                     $Secret.RefreshToken = $RefreshToken.refresh_token
@@ -110,7 +101,7 @@ Function Invoke-ExecSAMSetup {
                 } else {
                     Set-AzKeyVaultSecret -VaultName $kv -Name 'RefreshToken' -SecretValue (ConvertTo-SecureString -String $RefreshToken.refresh_token -AsPlainText -Force)
                 }
-                
+
                 $Results = 'Authentication is now complete. You may now close this window.'
                 try {
                     $SetupPhase = $rows.validated = $true
