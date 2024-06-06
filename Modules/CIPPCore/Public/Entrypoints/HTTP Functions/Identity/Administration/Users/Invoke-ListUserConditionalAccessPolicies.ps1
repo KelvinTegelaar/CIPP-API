@@ -22,7 +22,7 @@ Function Invoke-ListUserConditionalAccessPolicies {
     $UserID = $Request.Query.UserID
 
     try {
-        $IncludeApplications = 'All'
+        $IncludeApplications = '67ad5377-2d78-4ac2-a867-6300cda00e85'
         $CAContext = @{
             '@odata.type'         = '#microsoft.graph.whatIfApplicationContext'
             'includeApplications' = @($IncludeApplications)
@@ -37,7 +37,7 @@ Function Invoke-ListUserConditionalAccessPolicies {
         }
         $JSONBody = $ConditionalAccessWhatIfDefinition | ConvertTo-Json -Depth 10
 
-        $GraphRequest = New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/identity/conditionalAccess/policies' -tenantid $tenantfilter
+        $GraphRequest = (New-GraphPOSTRequest -uri 'https://graph.microsoft.com/beta/identity/conditionalAccess/evaluate' -tenantid $tenantFilter -type POST -body $JsonBody -AsApp $true).value
     } catch {
         $GraphRequest = @{}
     }
