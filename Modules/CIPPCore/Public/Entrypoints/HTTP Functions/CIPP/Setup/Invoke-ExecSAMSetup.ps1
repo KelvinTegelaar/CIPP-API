@@ -84,6 +84,7 @@ Function Invoke-ExecSAMSetup {
                 $tries = 0
                 do {
                     $tries ++
+                    $Auth = Get-CIPPAuthentication
                     $TenantId = $Rows.tenantid
                     if (!$TenantId) { $TenantId = $ENV:TenantId }
                     $AppID = $Rows.appid
@@ -101,7 +102,7 @@ Function Invoke-ExecSAMSetup {
                         $RefreshToken = $null
                     }
                     if ($tries -ge 1) { Start-Sleep -Seconds 1 }
-                } until ($RefreshToken.access_token -or $tries -gt 3)
+                } until ($RefreshToken.refresh_token -or $tries -gt 3)
 
                 if ($env:AzureWebJobsStorage -eq 'UseDevelopmentStorage=true') {
                     $Secret.RefreshToken = $RefreshToken.refresh_token
