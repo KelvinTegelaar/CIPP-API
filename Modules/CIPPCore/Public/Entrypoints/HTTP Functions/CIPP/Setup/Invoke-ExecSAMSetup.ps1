@@ -14,7 +14,7 @@ Function Invoke-ExecSAMSetup {
     if ($Request.query.error) {
         Add-Type -AssemblyName System.Web
         $ErrorCode = Get-normalizedError -Message [System.Web.HttpUtility]::UrlDecode($Request.Query.error_description)
-        if ($Request.Query.ErrorCount -lt 2) {
+        if ($Request.Query.ErrorCount -lt 2 -or $Request.Query.ErrorCount -eq $null) {
             $NewUrl = "$($Request.headers.'x-ms-original-url')&Errors=$($Request.Query.ErrorCount + 1)" 
             $body = 'An error occurred. We will try again in 3 seconds. The received error was {0}. Reloading... <meta http-equiv="refresh" content="3; URL={1}" /> ' -f $ErrorCode, $NewUrl
         } else {
