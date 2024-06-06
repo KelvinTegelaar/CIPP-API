@@ -13,13 +13,22 @@ Function Invoke-ExecSAMSetup {
     $UserCreds = ([System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($request.headers.'x-ms-client-principal')) | ConvertFrom-Json)
     if ($Request.query.error) {
         Add-Type -AssemblyName System.Web
+        $ErrorCode = Get-normalizedError -Message [System.Web.HttpUtility]::UrlDecode($Request.Query.error_description)
+        if ($Request.Query.ErrorCount -lt 2) {
+            $NewUrl = "$($Request.headers.'x-ms-original-url')&Errors=$($Request.Query.ErrorCount + 1)" 
+            $body = 'An error occurred. We will try again in 3 seconds. The received error was {0}. Reloading... <meta http-equiv="refresh" content="3; URL={1}" /> ' -f $ErrorCode, $NewUrl
+        } else {
+            $body = 'An error occurred, and we have reached the maximum amount of retries. The received error was {0}. ' -f $ErrorCode
+        }
+
         Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
                 ContentType = 'text/html'
                 StatusCode  = [HttpStatusCode]::Forbidden
-                Body        = Get-normalizedError -Message [System.Web.HttpUtility]::UrlDecode($Request.Query.error_description)
+                Body        = $body
             })
         exit
     }
+
     if ('admin' -notin $UserCreds.userRoles) {
         Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
                 ContentType = 'text/html'
