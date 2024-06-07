@@ -114,6 +114,7 @@ function Get-SlackAlertBlocks {
                     emoji = $true
                 }
             })
+
         $Blocks.Add([PSCustomObject]@{
                 type = 'section'
                 text = @{
@@ -122,11 +123,18 @@ function Get-SlackAlertBlocks {
                 }
             })
         $Blocks.Add([PSCustomObject]@{
-                type = 'section'
-                text = @{
-                    type = 'mrkdwn'
-                    text = "*Action URL:*`n<" + $Payload.ActionUrl + '|Go to CIPP>'
-                }
+                type     = 'actions'
+                elements = @(
+                    @{
+                        type  = 'button'
+                        text  = @{
+                            type = 'plain_text'
+                            text = $Payload.ActionText ?? 'Go to CIPP'
+                        }
+                        url   = $Payload.ActionUrl
+                        style = 'primary'
+                    }
+                )
             })
         $Blocks.Add([PSCustomObject]@{
                 type = 'divider'
@@ -230,6 +238,6 @@ function Get-SlackAlertBlocks {
     if (($Blocks | Measure-Object).Count -gt 0) {
         [PSCustomObject]@{
             blocks = $Blocks
-        } | ConvertTo-Json -Depth 10
+        }
     }
 }

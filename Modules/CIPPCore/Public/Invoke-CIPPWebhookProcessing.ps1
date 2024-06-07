@@ -78,6 +78,7 @@ function Invoke-CippWebhookProcessing {
                 $JsonContent = @{
                     Title                 = $GenerateJSON.Title
                     ActionUrl             = $GenerateJSON.ButtonUrl
+                    ActionText            = $GenerateJSON.ButtonText
                     RawData               = $Data
                     IP                    = $data.ClientIP
                     PotentialLocationInfo = $LocationInfo

@@ -197,8 +197,9 @@ function New-CIPPAlertTemplate {
         }
     } elseif ($Format -eq 'json') {
         return [pscustomobject]@{
-            title     = $Title
-            buttonurl = $ButtonUrl
+            title      = $Title
+            buttonurl  = $ButtonUrl
+            buttontext = $ButtonText
         }
     }
 }
