@@ -74,7 +74,7 @@ function Invoke-PublicWebhooks {
                         $TenantFilter = (Get-Tenants | Where-Object -Property customerId -EQ $ReceivedItem.TenantId).defaultDomainName
                         Write-Host "Webhook TenantFilter: $TenantFilter"
                         $ConfigTable = get-cipptable -TableName 'WebhookRules'
-                        $Configuration = (Get-CIPPAzDataTableEntity @ConfigTable) | Where-Object { $_.Tenants -match $TenantFilter -or $_.Tenants -match 'AllTenants' } | ForEach-Object {
+                        $Configuration = (Get-CIPPAzDataTableEntity @ConfigTable) | Where-Object { ($_.Tenants -match $TenantFilter -or $_.Tenants -match 'AllTenants') -and $_.Type -eq $ReceivedItem.ContentType } | ForEach-Object {
                             [pscustomobject]@{
                                 Tenants    = ($_.Tenants | ConvertFrom-Json).fullValue
                                 Conditions = $_.Conditions
