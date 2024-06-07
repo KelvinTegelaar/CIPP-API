@@ -53,12 +53,20 @@ function Send-CIPPAlert {
                 if ($PSCmdlet.ShouldProcess($Config.webhook, 'Sending webhook')) {
                     switch -wildcard ($config.webhook) {
                         '*webhook.office.com*' {
-                            $JSonBody = "{`"text`": `"You've setup your alert policies to be alerted whenever specific events happen. We've found some of these events in the log. <br><br>$JSONContent`"}"
+                            $JSONBody = "{`"text`": `"You've setup your alert policies to be alerted whenever specific events happen. We've found some of these events in the log. <br><br>$JSONContent`"}"
                             Invoke-RestMethod -Uri $config.webhook -Method POST -ContentType 'Application/json' -Body $JSONBody
                         }
-
                         '*discord.com*' {
-                            $JSonBody = "{`"content`": `"You've setup your alert policies to be alerted whenever specific events happen. We've found some of these events in the log. $JSONContent`"}"
+                            $JSONBody = "{`"content`": `"You've setup your alert policies to be alerted whenever specific events happen. We've found some of these events in the log. $JSONContent`"}"
+                            Invoke-RestMethod -Uri $config.webhook -Method POST -ContentType 'Application/json' -Body $JSONBody
+                        }
+                        '*slack.com*' {
+                            $SlackBlocks = Get-SlackAlertBlocks -JSONBody $JSONContent
+                            if ($SlackBlocks.blocks) {
+                                $JSONBody = $SlackBlocks | ConvertTo-Json -Depth 10 -Compress
+                            } else {
+                                $JSONBody = "{`"text`": `"You've setup your alert policies to be alerted whenever specific events happen. We've found some of these events in the log. $JSONContent`"}"
+                            }
                             Invoke-RestMethod -Uri $config.webhook -Method POST -ContentType 'Application/json' -Body $JSONBody
                         }
                         default {
