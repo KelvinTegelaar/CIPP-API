@@ -12,7 +12,7 @@ Function Invoke-ListTenants {
 
     $APIName = $TriggerMetadata.FunctionName
 
-    Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -message 'Accessed this API' -Sev 'Debug'
+    Write-LogMessage -user $Request.Headers.'x-ms-client-principal' -API $APINAME -message 'Accessed this API' -Sev 'Debug'
     $TenantAccess = Test-CIPPAccess -Request $Request -TenantList
 
     if ($TenantAccess -notcontains 'AllTenants') {
@@ -22,17 +22,29 @@ Function Invoke-ListTenants {
     }
 
     # Clear Cache
-    if ($request.Query.ClearCache -eq 'true') {
-        Remove-CIPPCache -tenantsOnly $request.query.TenantsOnly
-        $GraphRequest = [pscustomobject]@{'Results' = 'Successfully completed request.' }
+    if ($Request.Query.ClearCache -eq $true) {
+        Remove-CIPPCache -tenantsOnly $Request.Query.TenantsOnly
+
+        $InputObject = [PSCustomObject]@{
+            Batch            = @(
+                @{
+                    FunctionName = 'UpdateTenants'
+                }
+            )
+            OrchestratorName = 'UpdateTenants'
+            SkipLog          = $true
+        }
+        Start-NewOrchestration -FunctionName 'CIPPOrchestrator' -InputObject ($InputObject | ConvertTo-Json -Compress -Depth 5)
+
+        $GraphRequest = [pscustomobject]@{'Results' = 'Cache has been cleared and a tenant refresh is queued.' }
         Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
                 StatusCode = [HttpStatusCode]::OK
                 Body       = $GraphRequest
             })
-        Get-Tenants -IncludeAll -TriggerRefresh
-
+        #Get-Tenants -IncludeAll -TriggerRefresh
+        return
     }
-    if ($Request.query.TriggerRefresh) {
+    if ($Request.Query.TriggerRefresh) {
         Get-Tenants -IncludeAll -TriggerRefresh
     }
     try {

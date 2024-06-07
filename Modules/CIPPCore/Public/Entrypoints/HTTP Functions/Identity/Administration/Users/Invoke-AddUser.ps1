@@ -55,6 +55,12 @@ Function Invoke-AddUser {
         $bodyToShip = ConvertTo-Json -Depth 10 -InputObject $BodyToship -Compress
         $GraphRequest = New-GraphPostRequest -uri 'https://graph.microsoft.com/beta/users' -tenantid $UserObj.tenantID -type POST -body $BodyToship -verbose
         Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $($UserObj.tenantID) -message "Created user $($UserObj.displayname) with id $($GraphRequest.id) " -Sev 'Info'
+
+        #PWPush
+        $PasswordLink = New-PwPushLink -Payload $password
+        if ($PasswordLink) {
+            $password = $PasswordLink
+        }
         $results.add('Created user.')
         $results.add("Username: $($UserprincipalName)")
         $results.add("Password: $password")
