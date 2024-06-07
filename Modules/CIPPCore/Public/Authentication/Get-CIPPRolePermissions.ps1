@@ -21,7 +21,8 @@ function Get-CIPPRolePermissions {
         [PSCustomObject]@{
             Role           = $Role.RowKey
             Permissions    = $Permissions.PSObject.Properties.Value
-            AllowedTenants = $Role.AllowedTenants | ConvertFrom-Json
+            AllowedTenants = if ($Role.AllowedTenants) { $Role.AllowedTenants | ConvertFrom-Json } else { @() }
+            BlockedTenants = if ($Role.BlockedTenants) { $Role.BlockedTenants | ConvertFrom-Json } else { @() }
         }
     } else {
         throw "Role $RoleName not found."

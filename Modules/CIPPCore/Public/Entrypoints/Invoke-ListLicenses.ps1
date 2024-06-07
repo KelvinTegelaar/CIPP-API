@@ -49,9 +49,13 @@ Function Invoke-ListLicenses {
                 Write-Host "Started permissions orchestration with ID = '$InstanceId'"
             }
         } else {
-            $GraphRequest = $Rows | ForEach-Object {
-                $TermInfo = $_.TermInfo | ConvertFrom-Json -ErrorAction SilentlyContinue
-                $_.TermInfo = $TermInfo
+            $GraphRequest = $Rows | Where-Object { $_.License } | ForEach-Object {
+                if ($_.TermInfo) {
+                    $TermInfo = $_.TermInfo | ConvertFrom-Json -ErrorAction SilentlyContinue
+                    $_.TermInfo = $TermInfo
+                } else {
+                    $_ | Add-Member -NotePropertyName TermInfo -NotePropertyValue $null
+                }
                 $_
             }
         }
