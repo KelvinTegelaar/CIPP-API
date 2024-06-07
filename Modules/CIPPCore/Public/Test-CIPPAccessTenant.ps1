@@ -22,9 +22,6 @@ function Test-CIPPAccessTenant {
     $Tenants = ($TenantCSV).split(',')
     if (!$Tenants) { $results = 'Could not load the tenants list from cache. Please run permissions check first, or visit the tenants page.' }
     $TenantList = Get-Tenants
-    $TenantIds = foreach ($Tenant in $Tenants) {
-        ($TenantList | Where-Object { $_.defaultDomainName -eq $Tenant }).customerId
-    }
 
     $results = foreach ($tenant in $Tenants) {
         $AddedText = ''
@@ -32,9 +29,9 @@ function Test-CIPPAccessTenant {
             $TenantId = ($TenantList | Where-Object { $_.defaultDomainName -eq $tenant }).customerId
             $BulkRequests = $ExpectedRoles | ForEach-Object { @(
                     @{
-                        id     = "roleManagement_$($_.id)"
+                        id     = "roleManagement_$($_.Id)"
                         method = 'GET'
-                        url    = "roleManagement/directory/roleAssignments?`$filter=roleDefinitionId eq '$($_.id)'&`$expand=principal"
+                        url    = "roleManagement/directory/roleAssignments?`$filter=roleDefinitionId eq '$($_.Id)'&`$expand=principal"
                     }
                 )
             }

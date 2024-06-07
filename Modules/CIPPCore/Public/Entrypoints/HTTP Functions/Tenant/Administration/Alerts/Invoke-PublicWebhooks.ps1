@@ -12,6 +12,7 @@ function Invoke-PublicWebhooks {
     $Webhooks = Get-CIPPAzDataTableEntity @WebhookTable
     Write-Host 'Received request'
     $url = ($request.headers.'x-ms-original-url').split('/API') | Select-Object -First 1
+    $CIPPURL = [string]$url
     Write-Host $url
     if ($Webhooks.Resource -eq 'M365AuditLogs') {
         Write-Host "Found M365AuditLogs - This is an old entry, we'll deny so Microsoft stops sending it."
@@ -73,7 +74,7 @@ function Invoke-PublicWebhooks {
                         $TenantFilter = (Get-Tenants | Where-Object -Property customerId -EQ $ReceivedItem.TenantId).defaultDomainName
                         Write-Host "Webhook TenantFilter: $TenantFilter"
                         $ConfigTable = get-cipptable -TableName 'WebhookRules'
-                        $Configuration = (Get-CIPPAzDataTableEntity @ConfigTable) | Where-Object { $_.Tenants -match $TenantFilter -or $_.Tenants -match 'AllTenants' } | ForEach-Object {
+                        $Configuration = (Get-CIPPAzDataTableEntity @ConfigTable) | Where-Object { ($_.Tenants -match $TenantFilter -or $_.Tenants -match 'AllTenants') -and $_.Type -eq $ReceivedItem.ContentType } | ForEach-Object {
                             [pscustomobject]@{
                                 Tenants    = ($_.Tenants | ConvertFrom-Json).fullValue
                                 Conditions = $_.Conditions
@@ -92,7 +93,6 @@ function Invoke-PublicWebhooks {
                             Write-Host "No data to download for $($ReceivedItem.ContentType)"
                             continue
                         }
-
 
                         $PreProccessedData = $Data | Select-Object *, CIPPAction, CIPPClause, CIPPGeoLocation, CIPPBadRepIP, CIPPHostedIP, CIPPIPDetected, CIPPLocationInfo, CIPPExtendedProperties, CIPPDeviceProperties, CIPPParameters, CIPPModifiedProperties -ErrorAction SilentlyContinue
                         $LocationTable = Get-CIPPTable -TableName 'knownlocationdb'
@@ -166,23 +166,25 @@ function Invoke-PublicWebhooks {
                         $Where = $Configuration | ForEach-Object {
                             $conditions = $_.Conditions | ConvertFrom-Json | Where-Object { $_.Input.value -ne '' }
                             $actions = $_.Actions
-                            $conditionStrings = foreach ($condition in $conditions) {
+                            $conditionStrings = [System.Collections.Generic.List[string]]::new()
+                            $CIPPClause = [System.Collections.Generic.List[string]]::new()
+                            foreach ($condition in $conditions) {
                                 $value = if ($condition.Input.value -is [array]) {
                                     $arrayAsString = $condition.Input.value | ForEach-Object {
                                         "'$_'"
                                     }
                                     "@($($arrayAsString -join ', '))"
                                 } else { "'$($condition.Input.value)'" }
-                                "`$(`$_.$($condition.Property.label)) -$($condition.Operator.value) $value"
+
+                                $conditionStrings.Add("`$(`$_.$($condition.Property.label)) -$($condition.Operator.value) $value")
+                                $CIPPClause.Add("$($condition.Property.label) is $($condition.Operator.label) $value")
                             }
-                            if ($conditionStrings.Count -gt 1) {
-                                $finalCondition = $conditionStrings -join ' -AND '
-                            } else {
-                                $finalCondition = $conditionStrings
-                            }
+                            $finalCondition = $conditionStrings -join ' -AND '
+
                             [PSCustomObject]@{
                                 clause         = $finalCondition
                                 expectedAction = $actions
+                                CIPPClause     = $CIPPClause
                             }
 
                         }
@@ -195,7 +197,7 @@ function Invoke-PublicWebhooks {
                             if ($ReturnedData) {
                                 $ReturnedData = foreach ($item in $ReturnedData) {
                                     $item.CIPPAction = $clause.expectedAction
-                                    $item.CIPPClause = ($clause.clause | ForEach-Object { "When $($_.Property.label) is $($_.Operator.label) $($_.input.value)" }) -join ' and '
+                                    $item.CIPPClause = $clause.CIPPClause -join ' and '
                                     $item
                                 }
                             }
