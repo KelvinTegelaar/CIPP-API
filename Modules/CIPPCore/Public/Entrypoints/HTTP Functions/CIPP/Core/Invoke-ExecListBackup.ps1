@@ -1,6 +1,6 @@
 using namespace System.Net
 
-Function Invoke-ExecAddAlert {
+Function Invoke-ExecListBackup {
     <#
     .FUNCTIONALITY
         Entrypoint

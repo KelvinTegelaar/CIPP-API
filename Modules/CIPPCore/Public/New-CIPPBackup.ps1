@@ -23,10 +23,26 @@ function New-CIPPBackup {
                 )
                 $CSVfile = foreach ($CSVTable in $BackupTables) {
                     $Table = Get-CippTable -tablename $CSVTable
-                    Get-CIPPAzDataTableEntity @Table | Select-Object *, @{l = 'table'; e = { $CSVTable } }
+                    Get-CIPPAzDataTableEntity @Table
                 }
                 Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -message 'Created backup' -Sev 'Debug'
                 $CSVfile
+                $RowKey = 'CIPPBackup' + '_' + (Get-Date).ToString('yyyy-MM-dd-HHmm')
+                $entity = [PSCustomObject]@{
+                    PartitionKey = 'CIPPBackup'
+                    RowKey       = $RowKey
+                    TenantFilter = 'CIPPBackup'
+                    Backup       = [string]($CSVfile | ConvertTo-Json -Compress -Depth 100)
+                }
+                $Table = Get-CippTable -tablename 'CIPPBackup'
+                try {
+                    $Result = Add-CIPPAzDataTableEntity @Table -entity $entity -Force
+                    Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -message 'Created CIPP Backup' -Sev 'Debug'
+                } catch {
+                    Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -message "Failed to create backup for CIPP: $($_.Exception.Message)" -Sev 'Error'
+                    [pscustomobject]@{'Results' = "Backup Creation failed: $($_.Exception.Message)" }
+                }
+               
             } catch {
                 Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -message "Failed to create backup: $($_.Exception.Message)" -Sev 'Error'
                 [pscustomobject]@{'Results' = "Backup Creation failed: $($_.Exception.Message)" }
