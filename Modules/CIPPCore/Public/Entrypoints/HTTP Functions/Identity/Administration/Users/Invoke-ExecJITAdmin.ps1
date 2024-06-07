@@ -103,6 +103,11 @@ Function Invoke-ExecJITAdmin {
                 }
                 Parameters    = $Parameters
                 ScheduledTime = $Request.Body.StartDate
+                PostExecution = @{
+                    Webhook = [bool]$Request.Body.PostExecution.Webhook
+                    Email   = [bool]$Request.Body.PostExecution.Email
+                    PSA     = [bool]$Request.Body.PostExecution.PSA
+                }
             }
             Add-CIPPScheduledTask -Task $TaskBody -hidden $false
             Set-CIPPUserJITAdminProperties -TenantFilter $Request.Body.TenantFilter -UserId $Request.Body.UserId -Expiration $Expiration
