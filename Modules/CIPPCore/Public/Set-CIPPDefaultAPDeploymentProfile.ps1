@@ -15,6 +15,7 @@ function Set-CIPPDefaultAPDeploymentProfile {
         $hideTerms,
         $Autokeyboard,
         $ExecutingUser,
+        $Language = 'os-default',
         $APIName = 'Add Default Enrollment Status Page'
     )
     try {
@@ -23,7 +24,7 @@ function Set-CIPPDefaultAPDeploymentProfile {
             'displayName'                            = "$($displayname)"
             'description'                            = "$($description)"
             'deviceNameTemplate'                     = "$($DeviceNameTemplate)"
-            'language'                               = 'os-default'
+            'language'                               = "$($Language)"
             'enableWhiteGlove'                       = $([bool]($allowWhiteGlove))
             'deviceType'                             = 'windowsPc'
             'extractHardwareHash'                    = $([bool]($CollectHash))
