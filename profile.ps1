@@ -46,6 +46,7 @@ try {
     Write-LogMessage -message 'Could not retrieve keys from Keyvault' -LogData (Get-CippException -Exception $_) -Sev 'debug'
 }
 
+Set-Location -Path $PSScriptRoot
 $CurrentVersion = (Get-Content .\version_latest.txt).trim()
 $Table = Get-CippTable -tablename 'Version'
 $LastStartup = Get-CIPPAzDataTableEntity @Table -Filter "PartitionKey eq 'Version' and RowKey eq 'Version'"
