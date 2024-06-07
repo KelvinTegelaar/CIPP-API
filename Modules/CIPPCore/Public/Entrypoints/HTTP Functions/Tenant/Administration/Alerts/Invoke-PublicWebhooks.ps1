@@ -12,6 +12,7 @@ function Invoke-PublicWebhooks {
     $Webhooks = Get-CIPPAzDataTableEntity @WebhookTable
     Write-Host 'Received request'
     $url = ($request.headers.'x-ms-original-url').split('/API') | Select-Object -First 1
+    $CIPPURL = [string]$url
     Write-Host $url
     if ($Webhooks.Resource -eq 'M365AuditLogs') {
         Write-Host "Found M365AuditLogs - This is an old entry, we'll deny so Microsoft stops sending it."
