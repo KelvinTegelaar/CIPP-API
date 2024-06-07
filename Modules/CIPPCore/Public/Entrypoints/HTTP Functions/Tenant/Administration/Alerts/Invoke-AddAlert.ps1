@@ -3,7 +3,9 @@ using namespace System.Net
 Function Invoke-AddAlert {
     <#
     .FUNCTIONALITY
-    Entrypoint
+        Entrypoint
+    .ROLE
+        CIPP.Alert.ReadWrite
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)

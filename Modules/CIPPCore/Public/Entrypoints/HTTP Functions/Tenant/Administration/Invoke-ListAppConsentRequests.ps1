@@ -3,14 +3,16 @@ using namespace System.Net
 function Invoke-ListAppConsentRequests {
     <#
     .FUNCTIONALITY
-    Entrypoint
+        Entrypoint
+    .ROLE
+        Tenant.Administration.Read
     #>
     param($Request, $TriggerMetadata)
 
     $APIName = $TriggerMetadata.FunctionName
     $TenantFilter = $Request.Query.TenantFilter
     Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -message 'Accessed this API' -Sev 'Debug'
-    
+
     try {
         if ($Request.Query.TenantFilter -eq 'AllTenants') {
             throw 'AllTenants is not yet supported'

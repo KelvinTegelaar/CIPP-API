@@ -3,7 +3,9 @@ using namespace System.Net
 Function Invoke-ExecBECRemediate {
     <#
     .FUNCTIONALITY
-    Entrypoint
+        Entrypoint
+    .ROLE
+        Identity.User.ReadWrite
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
@@ -24,9 +26,9 @@ Function Invoke-ExecBECRemediate {
         $RuleDisabled = 0
         New-ExoRequest -anchor $username -tenantid $TenantFilter -cmdlet 'get-inboxrule' -cmdParams @{Mailbox = $username } | ForEach-Object {
             $null = New-ExoRequest -anchor $username -tenantid $TenantFilter -cmdlet 'Disable-InboxRule' -cmdParams @{Confirm = $false; Identity = $_.Identity }
-            "Disabled Inbox Rule $($_.Identity) for $username" 
+            "Disabled Inbox Rule $($_.Identity) for $username"
             $RuleDisabled ++
-        } 
+        }
         if ($RuleDisabled) {
             "Disabled $RuleDisabled Inbox Rules for $username"
         } else {

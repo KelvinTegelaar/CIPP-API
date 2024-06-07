@@ -43,7 +43,7 @@ function Get-CIPPStandards {
             if ($StandardsTenant.Standards.OverrideAllTenants.remediate -ne $true) {
                 #Write-Host 'AllTenant Standards apply to this tenant.'
                 foreach ($StandardName in $StandardsAllTenants.Standards.PSObject.Properties.Name) {
-                    $CurrentStandard = $StandardsAllTenants.Standards.$StandardName
+                    $CurrentStandard = $StandardsAllTenants.Standards.$StandardName.PSObject.Copy()
                     #Write-Host ($CurrentStandard | ConvertTo-Json -Depth 10)
                     if ($CurrentStandard.remediate -eq $true -or $CurrentStandard.alert -eq $true -or $CurrentStandard.report -eq $true) {
                         #Write-Host "AllTenant Standard $StandardName"
@@ -54,16 +54,16 @@ function Get-CIPPStandards {
 
             foreach ($StandardName in $StandardsTenant.Standards.PSObject.Properties.Name) {
                 if ($StandardName -eq 'OverrideAllTenants') { continue }
-                $CurrentStandard = $StandardsTenant.Standards.$StandardName
+                $CurrentStandard = $StandardsTenant.Standards.$StandardName.PSObject.Copy()
 
                 if ($CurrentStandard.remediate -eq $true -or $CurrentStandard.alert -eq $true -or $CurrentStandard.report -eq $true) {
-                    #Write-Host "`r`nTenant: $StandardName"
+                    # Write-Host "`r`nTenant: $StandardName"
                     if (!$ComputedStandards[$StandardName] ) {
                         #Write-Host "Applying tenant level $StandardName"
                         $ComputedStandards[$StandardName] = $CurrentStandard
                     } else {
                         foreach ($Setting in $CurrentStandard.PSObject.Properties.Name) {
-                            #Write-Host "$Setting - Current: $($CurrentStandard.$Setting) | Computed: $($ComputedStandards[$StandardName].$($Setting))"
+                            # Write-Host "$Setting - Current: $($CurrentStandard.$Setting) | Computed: $($ComputedStandards[$StandardName].$($Setting))"
                             if ($CurrentStandard.$Setting -ne $false -and $CurrentStandard.$Setting -ne $ComputedStandards[$StandardName].$($Setting) -and ![string]::IsNullOrEmpty($CurrentStandard.$Setting)) {
                                 #Write-Host "Overriding $Setting for $StandardName at tenant level"
                                 if ($ComputedStandards[$StandardName].PSObject.Properties.Name -contains $Setting) {
@@ -76,12 +76,13 @@ function Get-CIPPStandards {
                     }
                 }
             }
-        }
-        foreach ($Standard in $ComputedStandards.Keys) {
-            [pscustomobject]@{
-                Tenant   = $Tenant.defaultDomainName
-                Standard = $Standard
-                Settings = $ComputedStandards.$Standard
+
+            foreach ($Standard in $ComputedStandards.Keys) {
+                [pscustomobject]@{
+                    Tenant   = $Tenant.defaultDomainName
+                    Standard = $Standard
+                    Settings = $ComputedStandards.$Standard
+                }
             }
         }
     }

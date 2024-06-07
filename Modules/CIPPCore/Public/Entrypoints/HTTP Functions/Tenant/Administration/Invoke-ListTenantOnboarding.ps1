@@ -1,4 +1,10 @@
 function Invoke-ListTenantOnboarding {
+    <#
+    .FUNCTIONALITY
+        Entrypoint
+    .ROLE
+        Tenant.Administration.Read
+    #>
     Param(
         $Request,
         $TriggerMetadata

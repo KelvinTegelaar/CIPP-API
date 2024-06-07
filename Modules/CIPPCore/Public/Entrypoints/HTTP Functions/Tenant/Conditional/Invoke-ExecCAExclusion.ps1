@@ -3,7 +3,9 @@ using namespace System.Net
 Function Invoke-ExecCAExclusion {
     <#
     .FUNCTIONALITY
-    Entrypoint
+        Entrypoint
+    .ROLE
+        Tenant.ConditionalAccess.ReadWrite
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
@@ -46,6 +48,6 @@ Function Invoke-ExecCAExclusion {
     Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
             StatusCode = [HttpStatusCode]::OK
             Body       = $Body
-        }) 
+        })
 
 }

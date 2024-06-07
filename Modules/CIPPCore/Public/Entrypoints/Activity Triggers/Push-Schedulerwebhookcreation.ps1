@@ -7,8 +7,9 @@ function Push-Schedulerwebhookcreation {
         $item
     )
     $Table = Get-CIPPTable -TableName 'SchedulerConfig'
-    $WebhookTable = Get-CIPPTable -TableName 'WebhookTable'
+    $WebhookTable = Get-CIPPTable -TableName 'webhookTable'
 
+    #Write-Information ($item | ConvertTo-Json -Depth 10)
     $Row = Get-CIPPAzDataTableEntity @Table -Filter "RowKey eq '$($item.SchedulerRow)'"
     if (!$Row) {
         Write-Host "No row found for $($item.SchedulerRow). Full received item was $($item | ConvertTo-Json)"
@@ -34,7 +35,7 @@ function Push-Schedulerwebhookcreation {
                     $NewSub = New-CIPPGraphSubscription -TenantFilter $Tenant -EventType $Row.webhookType -BaseURL $Row.CIPPURL -auditLogAPI $true
                     if ($NewSub.Success -and $Row.tenantid -ne 'AllTenants') {
                         Remove-AzDataTableEntity @Table -Entity $Row
-                    } else { 
+                    } else {
                         Write-Host "Failed to create webhook for $Tenant - $($Row.webhookType) - $($_.Exception.Message)"
                         Write-LogMessage -message "Failed to create webhook for $Tenant - $($Row.webhookType)" -Sev 'Error' -LogData $_.Exception
                     }
@@ -47,5 +48,5 @@ function Push-Schedulerwebhookcreation {
             }
         }
     }
-    
+
 }

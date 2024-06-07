@@ -3,7 +3,9 @@ using namespace System.Net
 Function Invoke-EditTenant {
     <#
     .FUNCTIONALITY
-    Entrypoint
+        Entrypoint
+    .ROLE
+        CIPP.Core.ReadWrite
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
@@ -30,11 +32,11 @@ Function Invoke-EditTenant {
     if ($tenantObjectId) {
         try {
             $bodyToPatch = '{"displayName":"' + $tenantDisplayName + '","defaultDomainName":"' + $tenantDefaultDomainName + '"}'
-            $patchTenant = (Invoke-RestMethod -Method PATCH -Uri "https://graph.windows.net/myorganization/contracts/$($tenantObjectId.objectId)?api-version=1.6" -Body $bodyToPatch -ContentType 'application/json' -Headers $AADGraphtoken -ErrorAction Stop)    
+            $patchTenant = (Invoke-RestMethod -Method PATCH -Uri "https://graph.windows.net/myorganization/contracts/$($tenantObjectId.objectId)?api-version=1.6" -Body $bodyToPatch -ContentType 'application/json' -Headers $AADGraphtoken -ErrorAction Stop)
             $Filter = "PartitionKey eq 'Tenants' and defaultDomainName eq '{0}'" -f $tenantDefaultDomainName
             try {
                 $TenantsTable = Get-CippTable -tablename Tenants
-                $Tenant = Get-CIPPAzDataTableEntity @TenantsTable -Filter $Filter 
+                $Tenant = Get-CIPPAzDataTableEntity @TenantsTable -Filter $Filter
                 $Tenant.displayName = $tenantDisplayName
                 Update-AzDataTableEntity @TenantsTable -Entity $Tenant
             }
@@ -44,7 +46,7 @@ Function Invoke-EditTenant {
             Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $tenantDisplayName -message "Edited tenant $tenantDisplayName" -Sev 'Info'
             $results = "Successfully amended details for $($Tenant.displayName) $AddedText"
         }
-        catch { 
+        catch {
             $results = "Failed to amend details for $tenantDisplayName : $($_.Exception.Message)"
             Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $tenantDisplayName -message "Failed amending details $tenantDisplayName. Error:$($_.Exception.Message)" -Sev 'Error'
         }
