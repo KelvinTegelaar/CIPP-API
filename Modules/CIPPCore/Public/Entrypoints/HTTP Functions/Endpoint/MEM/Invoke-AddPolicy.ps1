@@ -82,6 +82,19 @@ Function Invoke-AddPolicy {
                     }
                     $CreateRequest = New-GraphPOSTRequest -uri "https://graph.microsoft.com/beta/deviceManagement/$TemplateTypeURL" -tenantid $tenant -type POST -body $RawJSON
                 }
+                'windowsDriverUpdateProfiles' {
+                    $TemplateTypeURL = 'windowsDriverUpdateProfiles'
+                    $PolicyName = ($RawJSON | ConvertFrom-Json).Name
+                    $CheckExististing = New-GraphGETRequest -uri "https://graph.microsoft.com/beta/deviceManagement/$TemplateTypeURL" -tenantid $tenant
+                    if ($PolicyName -in $CheckExististing.name) {
+                        $ExistingID = $CheckExististing | Where-Object -Property Name -EQ $PolicyName
+                        $CreateRequest = New-GraphPOSTRequest -uri "https://graph.microsoft.com/beta/deviceManagement/$TemplateTypeURL/$($ExistingID.Id)" -tenantid $tenant -type PUT -body $RawJSON
+
+                    } else {
+                        $CreateRequest = New-GraphPOSTRequest -uri "https://graph.microsoft.com/beta/deviceManagement/$TemplateTypeURL" -tenantid $tenant -type POST -body $RawJSON
+                        Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $($Tenant) -message "Added policy $($PolicyName) via template" -Sev 'info'
+                    }
+                }
 
             }
             Write-LogMessage -user $Request.headers.'x-ms-client-principal' -API $APINAME -tenant $($Tenant) -message "Added policy $($Displayname)" -Sev 'Info'
