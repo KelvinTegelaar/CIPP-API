@@ -14,20 +14,20 @@ Function Invoke-RemoveSpamfilter {
     Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -message 'Accessed this API' -Sev 'Debug'
     $Tenantfilter = $request.Query.tenantfilter
 
-
     $Params = @{
         Identity = $request.query.name
     }
 
     try {
         $cmdlet = 'Remove-HostedContentFilterRule'
-        $GraphRequest = New-ExoRequest -tenantid $Tenantfilter -cmdlet $cmdlet -cmdParams $params
+        $GraphRequest = New-ExoRequest -tenantid $Tenantfilter -cmdlet $cmdlet -cmdParams $params -useSystemmailbox $true
         $cmdlet = 'Remove-HostedContentFilterPolicy'
-        $GraphRequest = New-ExoRequest -tenantid $Tenantfilter -cmdlet $cmdlet -cmdParams $params
+        $GraphRequest = New-ExoRequest -tenantid $Tenantfilter -cmdlet $cmdlet -cmdParams $params -useSystemmailbox $true
         $Result = "Deleted $($Request.query.name)"
         Write-LogMessage -API 'TransportRules' -tenant $tenantfilter -message "Deleted transport rule $($Request.query.name)" -sev Debug
     } catch {
         $ErrorMessage = Get-NormalizedError -Message $_.Exception
+        Write-LogMessage -API 'TransportRules' -tenant $tenantfilter -message "Failed deleting transport rule $($Request.query.name). Error:$ErrorMessage" -Sev Error
         $Result = $ErrorMessage
     }
     # Associate values to output bindings by calling 'Push-OutputBinding'.
