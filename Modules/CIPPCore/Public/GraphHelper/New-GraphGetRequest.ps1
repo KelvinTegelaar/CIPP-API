@@ -61,7 +61,7 @@ function New-GraphGetRequest {
                 }
                 throw $Message
             }
-        } until ($null -eq $NextURL)
+        } until ($null -eq $NextURL -or ' ' -eq $NextURL)
         $Tenant.LastGraphError = ''
         Update-AzDataTableEntity @TenantsTable -Entity $Tenant
         return $ReturnedData
