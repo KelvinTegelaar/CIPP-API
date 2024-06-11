@@ -11,6 +11,7 @@ function Get-CIPPAuditLogContent {
     .FUNCTIONALITY
         Internal
     #>
+    [CmdletBinding()]
     Param(
         [Parameter(ValueFromPipelineByPropertyName = $true, Mandatory = $true)]
         [string]$ContentUri,

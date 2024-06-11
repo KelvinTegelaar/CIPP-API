@@ -58,7 +58,7 @@ function New-GraphGetRequest {
                     $Data.'@odata.count'
                     $NextURL = $null
                 } else {
-                    if ($data.value) { $data.value } else { ($Data) }
+                    if ($Data.PSObject.Properties.Name -contains 'value') { $data.value } else { ($Data) }
                     if ($noPagination) {
                         $nextURL = $null
                     } else {

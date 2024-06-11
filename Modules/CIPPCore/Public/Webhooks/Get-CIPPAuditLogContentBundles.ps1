@@ -76,11 +76,12 @@ function Get-CIPPAuditLogContentBundles {
     }
     $GraphQuery.Query = $ParamCollection.ToString()
 
+    Write-Verbose "GET [ $($GraphQuery.ToString()) ]"
     $LogBundles = New-GraphGetRequest -uri $GraphQuery.ToString() -tenantid $TenantFilter -scope 'https://manage.office.com/.default' -IncludeResponseHeaders
     $AuditLogContents = $LogBundles | Select-Object contentUri, contentCreated, @{Name = 'TenantFilter'; Expression = { $TenantFilter } }
-    $LastContent = ($AuditLogContents | Sort-Object contentCreated -Descending | Select-Object -First 1 -ExpandProperty contentCreated) | Get-Date
 
     if (!$ShowAll.IsPresent) {
+        $LastContent = ($AuditLogContents | Sort-Object contentCreated -Descending | Select-Object -First 1 -ExpandProperty contentCreated) | Get-Date
         if ($WebhookConfig.LastContentCreated) {
             $AuditLogContents = $AuditLogContents | Where-Object { ($_.contentCreated | Get-Date).ToLocalTime() -gt $StartTime }
         }
