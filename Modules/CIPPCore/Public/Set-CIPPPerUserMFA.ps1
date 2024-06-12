@@ -9,7 +9,7 @@ function Set-CIPPPerUserMFA {
     )
     try {
         $state = @{ 'perUserMfaState' = "$state" } | ConvertTo-Json
-        New-GraphPOSTRequest -uri "https://graph.microsoft.com/beta/users/$userId/authentication/requirements" -tenantid $tenantfilter -type PUT -body $state -ContentType $ContentType
+        New-GraphPOSTRequest -uri "https://graph.microsoft.com/beta/users/$userId/authentication/requirements" -tenantid $tenantfilter -type PATCH -body $state
         "Successfully set Per user MFA State for $id"
         Write-LogMessage -user $executingUser -API 'Set-CIPPPerUserMFA' -message "Successfully set Per user MFA State for $id" -Sev 'Info' -tenant $TenantFilter
     } catch {
