@@ -47,7 +47,6 @@ function Test-CIPPAccess {
                         $Permission.AllowedTenants | Where-Object { $Permission.BlockedTenants -notcontains $_ }
                     }
                 }
-                Write-Information ($LimitedTenantList | ConvertTo-Json)
                 return $LimitedTenantList
             }
 
@@ -77,11 +76,10 @@ function Test-CIPPAccess {
                         } else {
                             $Tenant = ($Tenants | Where-Object { $Request.Query.TenantFilter -eq $_.customerId -or $Request.Body.TenantFilter -eq $_.customerId -or $Request.Query.TenantFilter -eq $_.defaultDomainName -or $Request.Body.TenantFilter -eq $_.defaultDomainName }).customerId
                             if ($Role.AllowedTenants -contains 'AllTenants') {
-                                $AllowedTenants = $Tenants
+                                $AllowedTenants = $Tenants.customerId
                             } else {
                                 $AllowedTenants = $Role.AllowedTenants
                             }
-
                             if ($Tenant) {
                                 $TenantAllowed = $AllowedTenants -contains $Tenant -and $Role.BlockedTenants -notcontains $Tenant
                                 if (!$TenantAllowed) { continue }
