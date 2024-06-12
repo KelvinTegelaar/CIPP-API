@@ -4,13 +4,25 @@ function Set-CIPPPerUserMFA {
         $TenantFilter,
         $userId,
         [ValidateSet('enabled', 'disabled', 'enforced')]
-        $State = 'users',
+        $State = 'enabled',
         $executingUser
     )
     try {
-        $state = @{ 'perUserMfaState' = "$state" } | ConvertTo-Json
-        New-GraphPOSTRequest -uri "https://graph.microsoft.com/beta/users/$userId/authentication/requirements" -tenantid $tenantfilter -type PATCH -body $state
-        "Successfully set Per user MFA State for $id"
+        $int = 0
+        $Requests = foreach ($id in $userId) {
+            @{
+                id        = $int++
+                method    = 'PATCH'
+                url       = "users/$id/authentication/requirements"
+                body      = @{ 'perUserMfaState' = "$state" }
+                'headers' = @{
+                    'Content-Type' = 'application/json'
+                }
+            }
+        }
+        #Split the requests by batches of 20, we can have anywhere from 1 to 1000 batches and execute New-GraphBulkRequest -tenantid $tenantfilter -scope 'https://graph.microsoft.com/.default' -Requests $batch
+        $Requests = New-GraphBulkRequest -tenantid $tenantfilter -scope 'https://graph.microsoft.com/.default' -Requests $Requests -asapp $true
+        "Successfully set Per user MFA State for $userId"
         Write-LogMessage -user $executingUser -API 'Set-CIPPPerUserMFA' -message "Successfully set Per user MFA State for $id" -Sev 'Info' -tenant $TenantFilter
     } catch {
         "Failed to set MFA State for $id : $_"
