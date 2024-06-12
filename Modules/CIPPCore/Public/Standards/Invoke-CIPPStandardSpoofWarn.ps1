@@ -4,10 +4,18 @@ function Invoke-CIPPStandardSpoofWarn {
     Internal
     #>
     param($Tenant, $Settings)
+
+    # Input validation
+    if ([string]::isNullOrEmpty($Settings.state) -or $Settings.state -eq 'Select a value') {
+        Write-LogMessage -API 'Standards' -tenant $tenant -message 'SpoofWarn: Invalid state parameter set' -sev Error
+        Exit
+    }
+
     $CurrentInfo = (New-ExoRequest -tenantid $Tenant -cmdlet 'Get-ExternalInOutlook')
 
     If ($Settings.remediate -eq $true) {
         $status = if ($Settings.enable -and $Settings.disable) {
+            # Handle legacy settings when this was 2 separate standards
             Write-LogMessage -API 'Standards' -tenant $tenant -message 'You cannot both enable and disable the Spoof Warnings setting' -sev Error
             Exit
         } elseif ($Settings.state -eq 'enabled' -or $Settings.enable) { $true } else { $false }
