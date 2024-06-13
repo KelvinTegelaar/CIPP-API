@@ -65,7 +65,7 @@ function Get-CIPPAuditLogContentBundles {
         if ($EndTime) {
             $Parameters.Add('endTime', $EndTime.ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ss'))
         } else {
-            $Parameters.Add('endTime', (Get-Date).ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ss'))
+            $Parameters.Add('endTime', ($StartTime).AddHours(24).ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ss'))
         }
     }
 
