@@ -54,9 +54,9 @@ function Get-CIPPAuditLogContentBundles {
     }
 
     if (!$ShowAll.IsPresent) {
-        if ($WebhookConfig.LastContentCreated) {
+        if ($null -ne $WebhookConfig.LastContentCreated) {
             $StartTime = $WebhookConfig.LastContentCreated.DateTime.ToLocalTime()
-            $EndTime = $WebhookConfig.LastContentCreated.DateTime.ToLocalTime().AddHours(24)
+            $EndTime = $WebhookConfig.LastContentCreated.DateTime.ToLocalTime().AddHours(12)
         }
     }
 
