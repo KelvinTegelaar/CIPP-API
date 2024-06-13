@@ -9,7 +9,7 @@ try {
     }
 
     try {
-        $RunningQueue = Invoke-ListCippQueue | Where-Object { $_.Reference -eq 'AuditLogCollection' -and $_.Status -ne 'Completed' -and $_.Status -ne 'Failed' }
+        $RunningQueue = Invoke-ListCippQueue | Where-Object { $_.Reference -eq 'AuditLogCollection' -and $_.Status -ne 'Completed' -and $_.Status -ne 'Failed' -and $_.Timestamp.DateTime.ToLocalTime() -lt (Get-Date).AddMinutes(-10) }
         if ($RunningQueue) {
             Write-Host 'Audit log collection already running'
             return
