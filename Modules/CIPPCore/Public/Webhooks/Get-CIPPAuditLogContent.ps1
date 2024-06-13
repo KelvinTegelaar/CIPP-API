@@ -14,7 +14,7 @@ function Get-CIPPAuditLogContent {
     [CmdletBinding()]
     Param(
         [Parameter(ValueFromPipelineByPropertyName = $true, Mandatory = $true)]
-        [string]$ContentUri,
+        [string[]]$ContentUri,
         [Parameter(ValueFromPipelineByPropertyName = $true, Mandatory = $true)]
         [string]$TenantFilter
     )
