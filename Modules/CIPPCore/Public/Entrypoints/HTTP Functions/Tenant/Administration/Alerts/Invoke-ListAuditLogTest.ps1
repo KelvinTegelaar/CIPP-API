@@ -13,9 +13,16 @@ function Invoke-ListAuditLogTest {
         LogType      = $Request.Query.LogType
         ShowAll      = $true
     }
-    $Results = Test-CIPPAuditLogRules @AuditLogQuery
+    $TestResults = Test-CIPPAuditLogRules @AuditLogQuery
     $Body = @{
-        Results = @($Results)
+        Results  = @($TestResults.DataToProcess)
+        Metadata = @{
+            TenantFilter = $AuditLogQuery.TenantFilter
+            LogType      = $AuditLogQuery.LogType
+            TotalLogs    = $TestResults.TotalLogs
+            MatchedLogs  = $TestResults.MatchedLogs
+            MatchedRules = $TestResults.MatchedRules
+        }
     }
     Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
             StatusCode = [HttpStatusCode]::OK

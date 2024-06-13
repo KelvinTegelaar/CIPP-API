@@ -9,6 +9,13 @@ function Test-CIPPAuditLogRules {
         [switch]$ShowAll
     )
 
+    $Results = [PSCustomObject]@{
+        TotalLogs     = 0
+        MatchedLogs   = 0
+        MatchedRules  = @()
+        DataToProcess = @()
+    }
+
     $ExtendedPropertiesIgnoreList = @(
         'OAuth2:Authorize'
         'OAuth2:Token'
@@ -36,6 +43,7 @@ function Test-CIPPAuditLogRules {
     $Data = Get-CIPPAuditLogContentBundles @ContentBundleQuery | Get-CIPPAuditLogContent
     $LogCount = ($Data | Measure-Object).Count
     Write-Information "Logs to process: $LogCount"
+    $Results.TotalLogs = $LogCount
     if ($LogCount -gt 0) {
         $PreProccessedData = $Data | Select-Object *, CIPPAction, CIPPClause, CIPPGeoLocation, CIPPBadRepIP, CIPPHostedIP, CIPPIPDetected, CIPPLocationInfo, CIPPExtendedProperties, CIPPDeviceProperties, CIPPParameters, CIPPModifiedProperties -ErrorAction SilentlyContinue
         $LocationTable = Get-CIPPTable -TableName 'knownlocationdb'
@@ -159,6 +167,7 @@ function Test-CIPPAuditLogRules {
         }
         Write-Information "Webhook: The list of operations in the data are $(($ProcessedData.operation | Select-Object -Unique) -join ', ')"
 
+        $MatchedRules = [System.Collections.Generic.List[string]]::new()
         $DataToProcess = foreach ($clause in $Where) {
             Write-Information "Webhook: Processing clause: $($clause.clause)"
             Write-Information "Webhook: If this clause would be true, the action would be: $($clause.expectedAction)"
@@ -167,11 +176,15 @@ function Test-CIPPAuditLogRules {
                 $ReturnedData = foreach ($item in $ReturnedData) {
                     $item.CIPPAction = $clause.expectedAction
                     $item.CIPPClause = $clause.CIPPClause -join ' and '
+                    $MatchedRules.Add($clause.CIPPClause -join ' and ')
                     $item
                 }
             }
             $ReturnedData
         }
-        $DataToProcess
+        $Results.MatchedRules = $MatchedRules | Select-Object -Unique
+        $Results.MatchedLogs = ($DataToProcess | Measure-Object).Count
+        $Results.DataToProcess = $DataToProcess
     }
+    $Results
 }
