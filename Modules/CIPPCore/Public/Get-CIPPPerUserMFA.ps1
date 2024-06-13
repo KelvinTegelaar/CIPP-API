@@ -3,13 +3,30 @@ function Get-CIPPPerUserMFA {
     param(
         $TenantFilter,
         $userId,
-        $executingUser
+        $executingUser,
+        $AllUsers = $false
     )
     try {
-        $MFAState = New-graphGetRequest -Uri "https://graph.microsoft.com/beta/users/$($userId)/authentication/requirements" -tenantid $tenantfilter
-        return [PSCustomObject]@{
-            user       = $userId
-            PerUserMFA = $MFAState.perUserMfaState
+        if ($AllUsers -eq $true) {
+            $AllUsers = New-graphGetRequest -Uri "https://graph.microsoft.com/beta/users?`$top=999&`$select=UserPrincipalName,Id" -tenantid $tenantfilter
+            $Requests = foreach ($id in $AllUsers.userPrincipalName) {
+                @{
+                    id     = $int++
+                    method = 'GET'
+                    url    = "users/$id/authentication/requirements"
+                }
+            }
+            $Requests = New-GraphBulkRequest -tenantid $tenantfilter -scope 'https://graph.microsoft.com/.default' -Requests @($Requests) -asapp $true
+            if ($Requests.body) {
+                $UsersWithoutMFA = $Requests.body | Select-Object peruserMFAState, @{Name = 'UserPrincipalName'; Expression = { [System.Web.HttpUtility]::UrlDecode($_.'@odata.context'.split("'")[1]) } }
+                return $UsersWithoutMFA
+            }
+        } else {
+            $MFAState = New-graphGetRequest -Uri "https://graph.microsoft.com/beta/users/$($userId)/authentication/requirements" -tenantid $tenantfilter
+            return [PSCustomObject]@{
+                UserPrincipalName = $userId
+                PerUserMFAState   = $MFAState.perUserMfaState
+            }
         }
     } catch {
         "Failed to get MFA State for $id : $_"
