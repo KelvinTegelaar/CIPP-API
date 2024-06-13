@@ -62,12 +62,12 @@ function Test-CIPPAuditLogRules {
                     try {
                         $Data.ModifiedProperties | ForEach-Object { $Data | Add-Member -NotePropertyName "$($_.Name)" -NotePropertyValue "$($_.NewValue)" -Force -ErrorAction SilentlyContinue }
                     } catch {
-                        Write-Information ($Data.ModifiedProperties | ConvertTo-Json -Depth 10)
+                        #Write-Information ($Data.ModifiedProperties | ConvertTo-Json -Depth 10)
                     }
                     try {
                         $Data.ModifiedProperties | ForEach-Object { $Data | Add-Member -NotePropertyName $("Previous_Value_$($_.Name)") -NotePropertyValue "$($_.OldValue)" -Force -ErrorAction SilentlyContinue }
                     } catch {
-                        Write-Information ($Data.ModifiedProperties | ConvertTo-Json -Depth 10)
+                        #Write-Information ($Data.ModifiedProperties | ConvertTo-Json -Depth 10)
                     }
                 }
 
@@ -90,7 +90,11 @@ function Test-CIPPAuditLogRules {
                         $hosting = $Location.Hosting
                         $ASName = $Location.ASName
                     } else {
-                        $Location = Get-CIPPGeoIPLocation -IP $Data.clientip
+                        try {
+                            $Location = Get-CIPPGeoIPLocation -IP $Data.clientip
+                        } catch {
+                            Write-Information "Unable to get IP location for $($Data.clientip): $($_.Exception.Messge)"
+                        }
                         $Country = if ($Location.CountryCode) { $Location.CountryCode } else { 'Unknown' }
                         $City = if ($Location.City) { $Location.City } else { 'Unknown' }
                         $Proxy = if ($Location.Proxy -ne $null) { $Location.Proxy } else { 'Unknown' }
@@ -123,7 +127,7 @@ function Test-CIPPAuditLogRules {
                 $Data | Select-Object * -ExcludeProperty ExtendedProperties, DeviceProperties, parameters
             } catch {
                 Write-Information "Audit log: Error processing data: $($_.Exception.Message)`r`n$($_.InvocationInfo.PositionMessage)"
-                Write-LogMessage -API 'Webhooks' -message 'Error Processing Audit Log Data' -LogData (Get-CippException -Exception $_)
+                Write-LogMessage -API 'Webhooks' -message 'Error Processing Audit Log Data' -LogData (Get-CippException -Exception $_) -sev Error -tenant $TenantFilter
             }
         }
 
