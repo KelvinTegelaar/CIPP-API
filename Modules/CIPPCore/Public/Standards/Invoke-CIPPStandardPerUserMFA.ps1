@@ -15,10 +15,11 @@ function Invoke-CIPPStandardPerUserMFA {
         }
     }
     $UsersWithoutMFA = (New-GraphBulkRequest -tenantid $tenant -scope 'https://graph.microsoft.com/.default' -Requests @($Requests) -asapp $true).body | Where-Object { $_.perUserMfaState -ne 'enforced' } | Select-Object peruserMFAState, @{Name = 'UserPrincipalName'; Expression = { [System.Web.HttpUtility]::UrlDecode($_.'@odata.context'.split("'")[1]) } }
+    
     If ($Settings.remediate -eq $true) {
         if ($UsersWithoutMFA) {
             try {
-                $MFAMessage = Set-CIPPPeruserMFA -TenantFilter $Tenant -UserId $GraphRequest.UserPrincipalName -State 'Enforced'
+                $MFAMessage = Set-CIPPPeruserMFA -TenantFilter $Tenant -UserId $UsersWithoutMFA.UserPrincipalName -State 'Enforced'
                 Write-LogMessage -API 'Standards' -tenant $tenant -message $MFAMessage -sev Info
             } catch {
                 $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
@@ -28,14 +29,13 @@ function Invoke-CIPPStandardPerUserMFA {
     }
     if ($Settings.alert -eq $true) {
 
-        if ($GraphRequest) {
-            Write-LogMessage -API 'Standards' -tenant $tenant -message "Guests accounts with a login longer than 90 days ago: $($GraphRequest.count)" -sev Alert
+        if ($UsersWithoutMFA) {
+            Write-LogMessage -API 'Standards' -tenant $tenant -message "The following accounts do not have Legacy MFA Enforced: $($UsersWithoutMFA.UserPrincipalName -join ', ')" -sev Alert
         } else {
-            Write-LogMessage -API 'Standards' -tenant $tenant -message 'No guests accounts with a login longer than 90 days ago.' -sev Info
+            Write-LogMessage -API 'Standards' -tenant $tenant -message 'No accounts do not have legacy per user MFA Enforced' -sev Info
         }
     }
     if ($Settings.report -eq $true) {
-        $filtered = $GraphRequest | Select-Object -Property UserPrincipalName, id, signInActivity, mail, userType, accountEnabled
-        Add-CIPPBPAField -FieldName 'DisableGuests' -FieldValue $filtered -StoreAs json -Tenant $tenant
+        Add-CIPPBPAField -FieldName 'LegacyMFAUsers' -FieldValue $UsersWithoutMFA -StoreAs json -Tenant $tenant
     }
 }
