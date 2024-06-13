@@ -14,12 +14,14 @@ function Get-CIPPAuditLogContent {
     [CmdletBinding()]
     Param(
         [Parameter(ValueFromPipelineByPropertyName = $true, Mandatory = $true)]
-        [string]$ContentUri,
+        [string[]]$ContentUri,
         [Parameter(ValueFromPipelineByPropertyName = $true, Mandatory = $true)]
         [string]$TenantFilter
     )
 
     Process {
-        New-GraphPOSTRequest -type GET -uri $ContentUri -tenantid $TenantFilter -scope 'https://manage.office.com/.default'
+        foreach ($Uri in $ContentUri) {
+            New-GraphPOSTRequest -type GET -uri $Uri -tenantid $TenantFilter -scope 'https://manage.office.com/.default'
+        }
     }
 }

@@ -54,9 +54,9 @@ function Get-CIPPAuditLogContentBundles {
     }
 
     if (!$ShowAll.IsPresent) {
-        if ($WebhookConfig.LastContentCreated) {
+        if ($null -ne $WebhookConfig.LastContentCreated) {
             $StartTime = $WebhookConfig.LastContentCreated.DateTime.ToLocalTime()
-            $EndTime = Get-Date
+            $EndTime = $WebhookConfig.LastContentCreated.DateTime.ToLocalTime().AddHours(4)
         }
     }
 
@@ -65,7 +65,7 @@ function Get-CIPPAuditLogContentBundles {
         if ($EndTime) {
             $Parameters.Add('endTime', $EndTime.ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ss'))
         } else {
-            $Parameters.Add('endTime', (Get-Date).ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ss'))
+            $Parameters.Add('endTime', ($StartTime).AddHours(24).ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ss'))
         }
     }
 
