@@ -24,8 +24,8 @@ function Get-CIPPPerUserMFA {
         } else {
             $MFAState = New-graphGetRequest -Uri "https://graph.microsoft.com/beta/users/$($userId)/authentication/requirements" -tenantid $tenantfilter
             return [PSCustomObject]@{
-                UserPrincipalName = $userId
                 PerUserMFAState   = $MFAState.perUserMfaState
+                UserPrincipalName = $userId
             }
         }
     } catch {
