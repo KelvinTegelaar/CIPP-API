@@ -6,18 +6,17 @@ function Get-CIPPMFAState {
         $APIName = 'Get MFA Status',
         $ExecutingUser
     )
-
-    $users = foreach ($user in (New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/users?$select=id,UserPrincipalName,DisplayName,accountEnabled,assignedLicenses' -tenantid $TenantFilter)) {
+    $PerUserMFAState = Get-CIPPPerUserMFA -TenantFilter $TenantFilter -AllUsers $true
+    $users = foreach ($user in (New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/users?$top=999&$select=id,UserPrincipalName,DisplayName,accountEnabled,assignedLicenses' -tenantid $TenantFilter)) {
         [PSCustomObject]@{
-            UserPrincipalName                = $user.UserPrincipalName
-            isLicensed                       = [boolean]$user.assignedLicenses.skuid
-            accountEnabled                   = $user.accountEnabled
-            DisplayName                      = $user.DisplayName
-            ObjectId                         = $user.id
-            StrongAuthenticationRequirements = @{StrongAuthenticationRequirement = @{state = 'See Documentation' } }
+            UserPrincipalName = $user.UserPrincipalName
+            isLicensed        = [boolean]$user.assignedLicenses.skuid
+            accountEnabled    = $user.accountEnabled
+            DisplayName       = $user.DisplayName
+            ObjectId          = $user.id
         }
     }
-    
+
     $SecureDefaultsState = (New-GraphGetRequest -Uri 'https://graph.microsoft.com/beta/policies/identitySecurityDefaultsEnforcementPolicy' -tenantid $TenantFilter ).IsEnabled
     $CAState = New-Object System.Collections.ArrayList
 
@@ -62,7 +61,6 @@ function Get-CIPPMFAState {
         Write-Host 'Processing users'
         $UserCAState = New-Object System.Collections.ArrayList
         foreach ($CA in $CAState) {
-            Write-Host 'Looping CAState'
             if ($CA -like '*All Users*') {
                 if ($ExcludeAllUsers -contains $_.ObjectId) { $UserCAState.Add("Excluded from $($policy.displayName) - All Users") | Out-Null }
                 else { $UserCAState.Add($CA) | Out-Null }
@@ -75,7 +73,7 @@ function Get-CIPPMFAState {
             }
         }
 
-        $PerUser = if ($_.StrongAuthenticationRequirements.StrongAuthenticationRequirement.state -ne $null) { $_.StrongAuthenticationRequirements.StrongAuthenticationRequirement.state } else { 'Disabled' }
+        $PerUser = if ($PerUserMFAState -eq $null) { $null } else { ($PerUserMFAState | Where-Object -Property UserPrincipalName -EQ $_.UserPrincipalName).PerUserMFAState }
 
         $MFARegUser = if (($MFARegistration | Where-Object -Property UserPrincipalName -EQ $_.UserPrincipalName).IsMFARegistered -eq $null) { $false } else { ($MFARegistration | Where-Object -Property UserPrincipalName -EQ $_.UserPrincipalName) }
         
