@@ -25,7 +25,7 @@ function New-ExoRequest ($tenantid, $cmdlet, $cmdParams, $useSystemMailbox, $Anc
             if ($cmdparams.mailbox) { $Anchor = $cmdparams.mailbox }
 
             if (!$Anchor -or $useSystemMailbox) {
-                if (!$Tenant.initialDomainName) {
+                if (!$Tenant.initialDomainName -or $Tenant.initialDomainName -notlike '*onmicrosoft.com*') {
                     $OnMicrosoft = (New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/domains?$top=999' -tenantid $tenantid -NoAuthCheck $NoAuthCheck | Where-Object -Property isInitial -EQ $true).id
                 } else {
                     $OnMicrosoft = $Tenant.initialDomainName
