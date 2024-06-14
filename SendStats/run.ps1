@@ -17,6 +17,7 @@ $SendingObject = [PSCustomObject]@{
     SetupComplete       = $SetupComplete
     RunningVersionAPI   = $APIVersion.trim()
     CountOfTotalTenants = $tenantcount
+    uid                 = $env:TenantID
 } | ConvertTo-Json
 
 Invoke-RestMethod -Uri 'https://management.cipp.app/api/stats' -Method POST -Body $SendingObject -ContentType 'application/json'
