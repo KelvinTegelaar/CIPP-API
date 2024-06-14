@@ -3,7 +3,7 @@ function Test-CIPPAccess {
         $Request,
         [switch]$TenantList
     )
-
+    if ($Request.Params.CIPPEndpoint -eq 'ExecSAMSetup') { return $true }
     if (!$Request.Headers.'x-ms-client-principal') {
         # Direct API Access
         $CustomRoles = @('CIPP-API')
