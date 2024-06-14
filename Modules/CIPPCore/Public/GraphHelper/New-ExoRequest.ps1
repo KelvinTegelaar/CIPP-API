@@ -22,6 +22,7 @@ function New-ExoRequest ($tenantid, $cmdlet, $cmdParams, $useSystemMailbox, $Anc
             if ($cmdparams.Identity) { $Anchor = $cmdparams.Identity }
             if ($cmdparams.anr) { $Anchor = $cmdparams.anr }
             if ($cmdparams.User) { $Anchor = $cmdparams.User }
+            if ($cmdparams.mailbox) { $Anchor = $cmdparams.mailbox }
 
             if (!$Anchor -or $useSystemMailbox) {
                 if (!$Tenant.initialDomainName) {
@@ -30,6 +31,15 @@ function New-ExoRequest ($tenantid, $cmdlet, $cmdParams, $useSystemMailbox, $Anc
                     $OnMicrosoft = $Tenant.initialDomainName
                 }
                 $anchor = "UPN:SystemMailbox{8cc370d3-822a-4ab8-a926-bb94bd0641a9}@$($OnMicrosoft)"
+            }
+            #if the anchor is a GUID, try looking up the user.
+            if ($Anchor -match '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$') {
+                $Anchor = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/users/$Anchor" -tenantid $tenantid -NoAuthCheck $NoAuthCheck
+                if ($Anchor) {
+                    $Anchor = $Anchor.UserPrincipalName
+                } else {
+                    Write-Error "Failed to find user with GUID $Anchor"
+                }
             }
         }
         Write-Host "Using $Anchor"
