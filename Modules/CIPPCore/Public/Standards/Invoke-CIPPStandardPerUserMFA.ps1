@@ -19,7 +19,7 @@ function Invoke-CIPPStandardPerUserMFA {
     If ($Settings.remediate -eq $true) {
         if ($UsersWithoutMFA) {
             try {
-                $MFAMessage = Set-CIPPPeruserMFA -TenantFilter $Tenant -UserId $UsersWithoutMFA.UserPrincipalName -State 'Enforced'
+                $MFAMessage = Set-CIPPPeruserMFA -TenantFilter $Tenant -UserId $UsersWithoutMFA.UserPrincipalName -State 'enforced'
                 Write-LogMessage -API 'Standards' -tenant $tenant -message $MFAMessage -sev Info
             } catch {
                 $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
