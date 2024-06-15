@@ -52,7 +52,9 @@ function New-GraphGetRequest {
                     if ($noPagination) { $nextURL = $null } else { $nextURL = $data.'@odata.nextLink' }
                 }
             } catch {
-                $Message = ($_.ErrorDetails.Message | ConvertFrom-Json -ErrorAction SilentlyContinue).error.message
+                try {
+                    $Message = ($_.ErrorDetails.Message | ConvertFrom-Json -ErrorAction SilentlyContinue).error.message
+                } catch { $Message = $null }
                 if ($Message -eq $null) { $Message = $($_.Exception.Message) }
                 if ($Message -ne 'Request not applicable to target tenant.' -and $Tenant) {
                     $Tenant.LastGraphError = $Message
