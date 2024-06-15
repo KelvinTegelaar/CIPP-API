@@ -33,7 +33,8 @@ function New-GraphBulkRequest {
                 $req = @{}
                 # Use select to create hashtables of id, method and url for each call
                 $req['requests'] = ($Requests[$i..($i + 19)])
-                Invoke-RestMethod -Uri $URL -Method POST -Headers $headers -ContentType 'application/json; charset=utf-8' -Body ($req | ConvertTo-Json -Depth 10)
+                $ReqBody = ($req | ConvertTo-Json -Depth 10)
+                Invoke-RestMethod -Uri $URL -Method POST -Headers $headers -ContentType 'application/json; charset=utf-8' -Body $ReqBody
             }
 
             foreach ($MoreData in $ReturnedData.Responses | Where-Object { $_.body.'@odata.nextLink' }) {
