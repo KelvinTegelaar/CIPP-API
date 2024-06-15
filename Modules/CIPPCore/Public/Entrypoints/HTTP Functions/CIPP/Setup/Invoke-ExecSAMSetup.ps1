@@ -11,7 +11,7 @@ Function Invoke-ExecSAMSetup {
     param($Request, $TriggerMetadata)
 
     $UserCreds = ([System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($request.headers.'x-ms-client-principal')) | ConvertFrom-Json)
-    if ($Request.query.error) {
+    if ($Request.Query.error) {
         Add-Type -AssemblyName System.Web
         Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
                 ContentType = 'text/html'
@@ -61,25 +61,25 @@ Function Invoke-ExecSAMSetup {
     $Rows = Get-CIPPAzDataTableEntity @Table | Where-Object -Property Timestamp -GT (Get-Date).AddMinutes(-10)
 
     try {
-        if ($Request.query.count -lt 1 ) { $Results = 'No authentication code found. Please go back to the wizard.' }
+        if ($Request.Query.count -lt 1 ) { $Results = 'No authentication code found. Please go back to the wizard.' }
 
-        if ($request.body.setkeys) {
+        if ($Request.Body.setkeys) {
             if ($env:AzureWebJobsStorage -eq 'UseDevelopmentStorage=true') {
-                if ($request.body.TenantId) { $Secret.TenantId = $Request.body.tenantid }
-                if ($request.body.RefreshToken) { $Secret.RefreshToken = $Request.body.RefreshToken }
-                if ($request.body.applicationid) { $Secret.ApplicationId = $Request.body.ApplicationId }
-                if ($request.body.ApplicationSecret) { $Secret.ApplicationSecret = $Request.body.ApplicationSecret }
+                if ($Request.Body.TenantId) { $Secret.TenantId = $Request.Body.tenantid }
+                if ($Request.Body.RefreshToken) { $Secret.RefreshToken = $Request.Body.RefreshToken }
+                if ($Request.Body.applicationid) { $Secret.ApplicationId = $Request.Body.ApplicationId }
+                if ($Request.Body.ApplicationSecret) { $Secret.ApplicationSecret = $Request.Body.ApplicationSecret }
                 Add-CIPPAzDataTableEntity @DevSecretsTable -Entity $Secret -Force
             } else {
-                if ($request.body.tenantid) { Set-AzKeyVaultSecret -VaultName $kv -Name 'tenantid' -SecretValue (ConvertTo-SecureString -String $request.body.tenantid -AsPlainText -Force) }
-                if ($request.body.RefreshToken) { Set-AzKeyVaultSecret -VaultName $kv -Name 'RefreshToken' -SecretValue (ConvertTo-SecureString -String $request.body.RefreshToken -AsPlainText -Force) }
-                if ($request.body.applicationid) { Set-AzKeyVaultSecret -VaultName $kv -Name 'applicationid' -SecretValue (ConvertTo-SecureString -String $request.body.applicationid -AsPlainText -Force) }
-                if ($request.body.applicationsecret) { Set-AzKeyVaultSecret -VaultName $kv -Name 'applicationsecret' -SecretValue (ConvertTo-SecureString -String $request.body.applicationsecret -AsPlainText -Force) }
+                if ($Request.Body.tenantid) { Set-AzKeyVaultSecret -VaultName $kv -Name 'tenantid' -SecretValue (ConvertTo-SecureString -String $Request.Body.tenantid -AsPlainText -Force) }
+                if ($Request.Body.RefreshToken) { Set-AzKeyVaultSecret -VaultName $kv -Name 'RefreshToken' -SecretValue (ConvertTo-SecureString -String $Request.Body.RefreshToken -AsPlainText -Force) }
+                if ($Request.Body.applicationid) { Set-AzKeyVaultSecret -VaultName $kv -Name 'applicationid' -SecretValue (ConvertTo-SecureString -String $Request.Body.applicationid -AsPlainText -Force) }
+                if ($Request.Body.applicationsecret) { Set-AzKeyVaultSecret -VaultName $kv -Name 'applicationsecret' -SecretValue (ConvertTo-SecureString -String $Request.Body.applicationsecret -AsPlainText -Force) }
             }
             $Results = @{ Results = 'The keys have been replaced. Please perform a permissions check.' }
         }
-        if ($Request.query.error -eq 'invalid_client') { $Results = 'Client ID was not found in Azure. Try waiting 10 seconds to try again, if you have gotten this error after 5 minutes, please restart the process.' }
-        if ($request.query.code) {
+        if ($Request.Query.error -eq 'invalid_client') { $Results = 'Client ID was not found in Azure. Try waiting 10 seconds to try again, if you have gotten this error after 5 minutes, please restart the process.' }
+        if ($Request.Query.code) {
             try {
                 $TenantId = $Rows.tenantid
                 if (!$TenantId) { $TenantId = $ENV:TenantId }
@@ -89,11 +89,11 @@ Function Invoke-ExecSAMSetup {
                 if ($env:AzureWebJobsStorage -eq 'UseDevelopmentStorage=true') {
                     $clientsecret = $Secret.ApplicationSecret
                 } else {
-                    $clientsecret = Get-AzKeyVaultSecret -VaultName $kv -Name 'applicationsecret' -AsPlainText
+                    $clientsecret = Get-AzKeyVaultSecret -VaultName $kv -Name 'ApplicationSecret' -AsPlainText
                 }
                 if (!$clientsecret) { $clientsecret = $ENV:ApplicationSecret }
-                Write-Host "client_id=$appid&scope=https://graph.microsoft.com/.default+offline_access+openid+profile&code=$($request.query.code)&grant_type=authorization_code&redirect_uri=$($url)&client_secret=$clientsecret" -Uri "https://login.microsoftonline.com/$TenantId/oauth2/v2.0/token"
-                $RefreshToken = Invoke-RestMethod -Method POST -Body "client_id=$appid&scope=https://graph.microsoft.com/.default+offline_access+openid+profile&code=$($request.query.code)&grant_type=authorization_code&redirect_uri=$($url)&client_secret=$clientsecret" -Uri "https://login.microsoftonline.com/$TenantId/oauth2/v2.0/token"
+                Write-Host "client_id=$appid&scope=https://graph.microsoft.com/.default+offline_access+openid+profile&code=$($Request.Query.code)&grant_type=authorization_code&redirect_uri=$($url)&client_secret=$clientsecret" -Uri "https://login.microsoftonline.com/$TenantId/oauth2/v2.0/token"
+                $RefreshToken = Invoke-RestMethod -Method POST -Body "client_id=$appid&scope=https://graph.microsoft.com/.default+offline_access+openid+profile&code=$($Request.Query.code)&grant_type=authorization_code&redirect_uri=$($url)&client_secret=$clientsecret" -Uri "https://login.microsoftonline.com/$TenantId/oauth2/v2.0/token" -ContentType 'application/x-www-form-urlencoded'
 
                 if ($env:AzureWebJobsStorage -eq 'UseDevelopmentStorage=true') {
                     $Secret.RefreshToken = $RefreshToken.refresh_token
@@ -113,7 +113,7 @@ Function Invoke-ExecSAMSetup {
                 $Results = "Authentication failed. $($_.Exception.message)"
             }
         }
-        if ($request.query.CreateSAM) {
+        if ($Request.Query.CreateSAM) {
             $Rows = @{
                 RowKey       = 'setup'
                 PartitionKey = 'setup'
@@ -126,7 +126,7 @@ Function Invoke-ExecSAMSetup {
             Add-CIPPAzDataTableEntity @Table -Entity $Rows -Force | Out-Null
             $Rows = Get-CIPPAzDataTableEntity @Table | Where-Object -Property Timestamp -GT (Get-Date).AddMinutes(-10)
 
-            if ($Request.query.partnersetup) {
+            if ($Request.Query.partnersetup) {
                 $SetupPhase = $Rows.partnersetup = $true
                 Add-CIPPAzDataTableEntity @Table -Entity $Rows -Force | Out-Null
             }
@@ -136,46 +136,46 @@ Function Invoke-ExecSAMSetup {
             Add-CIPPAzDataTableEntity @Table -Entity $Rows -Force | Out-Null
             $Results = @{ message = "Your code is $($DeviceLogon.user_code). Enter the code"  ; step = $step; url = $DeviceLogon.verification_uri }
         }
-        if ($Request.query.CheckSetupProcess -and $request.query.step -eq 1) {
+        if ($Request.Query.CheckSetupProcess -and $Request.Query.step -eq 1) {
             $SAMSetup = $Rows.SamSetup | ConvertFrom-Json -ErrorAction SilentlyContinue
             $Token = (New-DeviceLogin -clientid '1b730954-1685-4b74-9bfd-dac224a7b894' -Scope 'https://graph.microsoft.com/.default' -device_code $SAMSetup.device_code)
-            if ($token.Access_Token) {
+            if ($Token.access_token) {
                 $step = 2
                 $URL = ($Request.headers.'x-ms-original-url').split('?') | Select-Object -First 1
                 $PartnerSetup = $Rows.partnersetup
-                $TenantId = (Invoke-RestMethod 'https://graph.microsoft.com/v1.0/organization' -Headers @{ authorization = "Bearer $($Token.Access_Token)" } -Method GET -ContentType 'application/json').value.id
+                $TenantId = (Invoke-RestMethod 'https://graph.microsoft.com/v1.0/organization' -Headers @{ authorization = "Bearer $($Token.access_token)" } -Method GET -ContentType 'application/json').value.id
                 $SetupPhase = $rows.tenantid = [string]($TenantId)
                 Add-CIPPAzDataTableEntity @Table -Entity $Rows -Force | Out-Null
                 if ($PartnerSetup) {
                     $app = Get-Content '.\Cache_SAMSetup\SAMManifest.json' | ConvertFrom-Json
                     $App.web.redirectUris = @($App.web.redirectUris + $URL)
                     $app = $app | ConvertTo-Json -Depth 15
-                    $AppId = (Invoke-RestMethod 'https://graph.microsoft.com/v1.0/applications' -Headers @{ authorization = "Bearer $($Token.Access_Token)" } -Method POST -Body $app -ContentType 'application/json')
+                    $AppId = (Invoke-RestMethod 'https://graph.microsoft.com/v1.0/applications' -Headers @{ authorization = "Bearer $($Token.access_token)" } -Method POST -Body $app -ContentType 'application/json')
                     $rows.appid = [string]($AppId.appId)
                     Add-CIPPAzDataTableEntity @Table -Entity $Rows -Force | Out-Null
                     $attempt = 0
                     do {
                         try {
                             try {
-                                $SPNDefender = (Invoke-RestMethod 'https://graph.microsoft.com/v1.0/servicePrincipals' -Headers @{ authorization = "Bearer $($Token.Access_Token)" } -Method POST -Body "{ `"appId`": `"fc780465-2017-40d4-a0c5-307022471b92`" }" -ContentType 'application/json')
+                                $SPNDefender = (Invoke-RestMethod 'https://graph.microsoft.com/v1.0/servicePrincipals' -Headers @{ authorization = "Bearer $($Token.access_token)" } -Method POST -Body "{ `"appId`": `"fc780465-2017-40d4-a0c5-307022471b92`" }" -ContentType 'application/json')
                             } catch {
                                 Write-Host "didn't deploy spn for defender, probably already there."
                             }
                             try {
-                                $SPNTeams = (Invoke-RestMethod 'https://graph.microsoft.com/v1.0/servicePrincipals' -Headers @{ authorization = "Bearer $($Token.Access_Token)" } -Method POST -Body "{ `"appId`": `"48ac35b8-9aa8-4d74-927d-1f4a14a0b239`" }" -ContentType 'application/json')
+                                $SPNTeams = (Invoke-RestMethod 'https://graph.microsoft.com/v1.0/servicePrincipals' -Headers @{ authorization = "Bearer $($Token.access_token)" } -Method POST -Body "{ `"appId`": `"48ac35b8-9aa8-4d74-927d-1f4a14a0b239`" }" -ContentType 'application/json')
                             } catch {
                                 Write-Host "didn't deploy spn for Teams, probably already there."
                             }
                             try {
-                                $SPNPartnerCenter = (Invoke-RestMethod 'https://graph.microsoft.com/v1.0/servicePrincipals' -Headers @{ authorization = "Bearer $($Token.Access_Token)" } -Method POST -Body "{ `"appId`": `"fa3d9a0c-3fb0-42cc-9193-47c7ecd2edbd`" }" -ContentType 'application/json')
+                                $SPNPartnerCenter = (Invoke-RestMethod 'https://graph.microsoft.com/v1.0/servicePrincipals' -Headers @{ authorization = "Bearer $($Token.access_token)" } -Method POST -Body "{ `"appId`": `"fa3d9a0c-3fb0-42cc-9193-47c7ecd2edbd`" }" -ContentType 'application/json')
                             } catch {
                                 Write-Host "didn't deploy spn for PartnerCenter, probably already there."
                             }
-                            $SPN = (Invoke-RestMethod 'https://graph.microsoft.com/v1.0/servicePrincipals' -Headers @{ authorization = "Bearer $($Token.Access_Token)" } -Method POST -Body "{ `"appId`": `"$($AppId.appId)`" }" -ContentType 'application/json')
+                            $SPN = (Invoke-RestMethod 'https://graph.microsoft.com/v1.0/servicePrincipals' -Headers @{ authorization = "Bearer $($Token.access_token)" } -Method POST -Body "{ `"appId`": `"$($AppId.appId)`" }" -ContentType 'application/json')
                             Start-Sleep 3
-                            $GroupID = (Invoke-RestMethod "https://graph.microsoft.com/v1.0/groups?`$filter=startswith(displayName,'AdminAgents')" -Headers @{ authorization = "Bearer $($Token.Access_Token)" } -Method Get -ContentType 'application/json').value.id
+                            $GroupID = (Invoke-RestMethod "https://graph.microsoft.com/v1.0/groups?`$filter=startswith(displayName,'AdminAgents')" -Headers @{ authorization = "Bearer $($Token.access_token)" } -Method Get -ContentType 'application/json').value.id
                             Write-Host "Id is $GroupID"
-                            $AddingToAdminAgent = (Invoke-RestMethod "https://graph.microsoft.com/v1.0/groups/$($GroupID)/members/`$ref" -Headers @{ authorization = "Bearer $($Token.Access_Token)" } -Method POST -Body "{ `"@odata.id`": `"https://graph.microsoft.com/v1.0/directoryObjects/$($SPN.id)`"}" -ContentType 'application/json')
+                            $AddingToAdminAgent = (Invoke-RestMethod "https://graph.microsoft.com/v1.0/groups/$($GroupID)/members/`$ref" -Headers @{ authorization = "Bearer $($Token.access_token)" } -Method POST -Body "{ `"@odata.id`": `"https://graph.microsoft.com/v1.0/directoryObjects/$($SPN.id)`"}" -ContentType 'application/json')
                             Write-Host 'Added to adminagents'
                             $attempt ++
                         } catch {
@@ -184,21 +184,22 @@ Function Invoke-ExecSAMSetup {
                     } until ($attempt -gt 5)
                 } else {
                     $app = Get-Content '.\Cache_SAMSetup\SAMManifestNoPartner.json'
-                    $AppId = (Invoke-RestMethod 'https://graph.microsoft.com/v1.0/applications' -Headers @{ authorization = "Bearer $($Token.Access_Token)" } -Method POST -Body $app -ContentType 'application/json')
-                    $rows.appid = [string]($AppId.appId)
+                    $AppId = (Invoke-RestMethod 'https://graph.microsoft.com/v1.0/applications' -Headers @{ authorization = "Bearer $($Token.access_token)" } -Method POST -Body $app -ContentType 'application/json')
+                    $Rows.appid = [string]($AppId.appId)
                     Add-CIPPAzDataTableEntity @Table -Entity $Rows -Force | Out-Null
                 }
-                $AppPassword = (Invoke-RestMethod "https://graph.microsoft.com/v1.0/applications/$($AppID.id)/addPassword" -Headers @{ authorization = "Bearer $($Token.Access_Token)" } -Method POST -Body '{"passwordCredential":{"displayName":"CIPPInstall"}}' -ContentType 'application/json').secretText
+                $AppPassword = (Invoke-RestMethod "https://graph.microsoft.com/v1.0/applications/$($AppId.id)/addPassword" -Headers @{ authorization = "Bearer $($Token.access_token)" } -Method POST -Body '{"passwordCredential":{"displayName":"CIPPInstall"}}' -ContentType 'application/json').secretText
 
 
                 if ($env:AzureWebJobsStorage -eq 'UseDevelopmentStorage=true') {
-                    $Secret.TenantId = $Request.body.tenantid
-                    $Secret.ApplicationId = $Request.body.ApplicationId
-                    $Secret.ApplicationSecret = $Request.body.ApplicationSecret
+                    $Secret.TenantId = $TenantId
+                    $Secret.ApplicationId = $AppId.appId
+                    $Secret.ApplicationSecret = $AppPassword
                     Add-CIPPAzDataTableEntity @DevSecretsTable -Entity $Secret -Force
+                    Write-Information ($Secret | ConvertTo-Json -Depth 5)
                 } else {
                     Set-AzKeyVaultSecret -VaultName $kv -Name 'tenantid' -SecretValue (ConvertTo-SecureString -String $TenantId -AsPlainText -Force)
-                    Set-AzKeyVaultSecret -VaultName $kv -Name 'applicationid' -SecretValue (ConvertTo-SecureString -String $Appid.appid -AsPlainText -Force)
+                    Set-AzKeyVaultSecret -VaultName $kv -Name 'applicationid' -SecretValue (ConvertTo-SecureString -String $Appid.appId -AsPlainText -Force)
                     Set-AzKeyVaultSecret -VaultName $kv -Name 'applicationsecret' -SecretValue (ConvertTo-SecureString -String $AppPassword -AsPlainText -Force)
                 }
                 $Results = @{'message' = 'Created application. Waiting 30 seconds for Azure propagation'; step = $step }
@@ -208,7 +209,7 @@ Function Invoke-ExecSAMSetup {
             }
 
         }
-        switch ($request.query.step) {
+        switch ($Request.Query.step) {
             2 {
                 $step = 2
                 $TenantId = $Rows.tenantid
