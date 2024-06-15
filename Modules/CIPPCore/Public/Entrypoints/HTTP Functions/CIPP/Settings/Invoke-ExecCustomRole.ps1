@@ -43,12 +43,12 @@ function Invoke-ExecCustomRole {
                     if ($Role.AllowedTenants) {
                         $Role.AllowedTenants = @($Role.AllowedTenants | ConvertFrom-Json)
                     } else {
-                        $Role | Add-Member -NotePropertyName AllowedTenants -NotePropertyValue @()
+                        $Role | Add-Member -NotePropertyName AllowedTenants -NotePropertyValue @() -Force
                     }
                     if ($Role.BlockedTenants) {
                         $Role.BlockedTenants = @($Role.BlockedTenants | ConvertFrom-Json)
                     } else {
-                        $Role | Add-Member -NotePropertyName BlockedTenants -NotePropertyValue @()
+                        $Role | Add-Member -NotePropertyName BlockedTenants -NotePropertyValue @() -Force
                     }
                     $Role
                 }
