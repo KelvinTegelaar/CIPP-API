@@ -26,7 +26,7 @@ function Push-AuditLogBundleProcessing {
     foreach ($LogType in $LogTypes) {
         Write-Information "Querying for log type: $LogType"
         try {
-            $DataToProcess = Test-CIPPAuditLogRules -TenantFilter $TenantFilter -LogType $LogType
+            $DataToProcess = (Test-CIPPAuditLogRules -TenantFilter $TenantFilter -LogType $LogType).DataToProcess
 
             Write-Information "Webhook: Data to process found: $($DataToProcess.count) items"
             foreach ($AuditLog in $DataToProcess) {
