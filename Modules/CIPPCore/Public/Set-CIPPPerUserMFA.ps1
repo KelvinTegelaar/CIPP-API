@@ -34,7 +34,7 @@ function Set-CIPPPerUserMFA {
     try {
         $int = 0
         $Body = @{
-            state = $State
+            perUserMFAstate = $State
         }
         $Requests = foreach ($id in $userId) {
             @{
@@ -47,7 +47,7 @@ function Set-CIPPPerUserMFA {
                 }
             }
         }
-        $Requests = New-GraphBulkRequest -tenantid $tenantfilter -scope 'https://graph.microsoft.com/.default' -Requests @($Requests) -asapp $true
+        $Requests = New-GraphBulkRequest -tenantid $tenantfilter -scope 'https://graph.microsoft.com/.default' -Requests @($Requests)
         "Successfully set Per user MFA State for $userId"
 
         $Users = foreach ($id in $userId) {
