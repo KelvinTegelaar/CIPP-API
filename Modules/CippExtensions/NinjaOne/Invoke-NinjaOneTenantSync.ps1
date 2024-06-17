@@ -267,7 +267,7 @@ function Invoke-NinjaOneTenantSync {
             @{
                 id     = 'Users'
                 method = 'GET'
-                url    = '/users'
+                url    = '/users?$top=999'
             },
             @{
                 id     = 'TenantDetails'
@@ -292,7 +292,7 @@ function Invoke-NinjaOneTenantSync {
             @{
                 id     = 'Devices'
                 method = 'GET'
-                url    = '/deviceManagement/managedDevices'
+                url    = '/deviceManagement/managedDevices?$top=999'
             },
             @{
                 id     = 'DeviceCompliancePolicies'
@@ -317,12 +317,12 @@ function Invoke-NinjaOneTenantSync {
             @{
                 id     = 'SecureScore'
                 method = 'GET'
-                url    = '/security/secureScores'
+                url    = '/security/secureScores?$top=999'
             },
             @{
                 id     = 'SecureScoreControlProfiles'
                 method = 'GET'
-                url    = '/security/secureScoreControlProfiles'
+                url    = '/security/secureScoreControlProfiles?$top=999'
             },
             @{
                 id     = 'Subscriptions'

@@ -52,7 +52,9 @@ function New-GraphGetRequest {
                     if ($noPagination) { $nextURL = $null } else { $nextURL = $data.'@odata.nextLink' }
                 }
             } catch {
-                $Message = ($_.ErrorDetails.Message | ConvertFrom-Json -ErrorAction SilentlyContinue).error.message
+                try {
+                    $Message = ($_.ErrorDetails.Message | ConvertFrom-Json -ErrorAction SilentlyContinue).error.message
+                } catch { $Message = $null }
                 if ($Message -eq $null) { $Message = $($_.Exception.Message) }
                 if ($Message -ne 'Request not applicable to target tenant.' -and $Tenant) {
                     $Tenant.LastGraphError = $Message
@@ -61,7 +63,7 @@ function New-GraphGetRequest {
                 }
                 throw $Message
             }
-        } until ($null -eq $NextURL)
+        } until ($null -eq $NextURL -or ' ' -eq $NextURL)
         $Tenant.LastGraphError = ''
         Update-AzDataTableEntity @TenantsTable -Entity $Tenant
         return $ReturnedData

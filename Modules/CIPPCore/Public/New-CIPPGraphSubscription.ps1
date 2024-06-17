@@ -55,12 +55,12 @@ function New-CIPPGraphSubscription {
                     return @{ success = $true; message = "Webhook exists for $($TenantFilter) for the log $($EventType)" }
                     Write-LogMessage -user $ExecutingUser -API $APIName -message "Webhook subscription for $($TenantFilter) already exists" -Sev 'Info' -tenant $TenantFilter
                 } else {
-                    Remove-AzDataTableEntity @WebhookTable -Entity @{ PartitionKey = $TenantFilter; RowKey = $CIPPID } | Out-Null
+                    Remove-AzDataTableEntity @WebhookTable -Entity @{ PartitionKey = $TenantFilter; RowKey = [string]$CIPPID } | Out-Null
                     Write-LogMessage -user $ExecutingUser -API $APIName -message "Failed to create Webhook Subscription for $($TenantFilter): $($_.Exception.Message)" -Sev 'Error' -tenant $TenantFilter
                     return @{ success = $false; message = "Failed to create Webhook Subscription for $($TenantFilter): $($_.Exception.Message)" }
                 }
             }
-            
+
         } elseif ($PartnerCenter.IsPresent) {
             $WebhookFilter = "PartitionKey eq '$($env:TenantId)'"
             $ExistingWebhooks = Get-CIPPAzDataTableEntity @WebhookTable -Filter $WebhookFilter

@@ -5,6 +5,7 @@ function Set-CIPPAssignedPolicy {
         $PolicyId,
         $Type,
         $TenantFilter,
+        $PlatformType = 'deviceManagement',
         $APIName = 'Assign Policy',
         $ExecutingUser
     )
@@ -69,7 +70,7 @@ function Set-CIPPAssignedPolicy {
             assignments = @($assignmentsObject)
         }
         if ($PSCmdlet.ShouldProcess($GroupName, "Assigning policy $PolicyId")) {
-            $null = New-GraphPOSTRequest -uri "https://graph.microsoft.com/beta/deviceManagement/$Type('$($PolicyId)')/assign" -tenantid $tenantFilter -type POST -body ($assignmentsObject | ConvertTo-Json -Depth 10)
+            $null = New-GraphPOSTRequest -uri "https://graph.microsoft.com/beta/$($PlatformType)/$Type('$($PolicyId)')/assign" -tenantid $tenantFilter -type POST -body ($assignmentsObject | ConvertTo-Json -Depth 10)
             Write-LogMessage -user $ExecutingUser -API $APIName -message "Assigned Policy to $($GroupName)" -Sev 'Info' -tenant $TenantFilter
         }
         return "Assigned policy to $($GroupName) Policy ID is $($PolicyId)."
