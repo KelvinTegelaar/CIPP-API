@@ -1,4 +1,4 @@
-function Set-CIPPSharePointOwner {
+function Set-CIPPSharePointPerms {
   [CmdletBinding()]
   param (
     $userid,
