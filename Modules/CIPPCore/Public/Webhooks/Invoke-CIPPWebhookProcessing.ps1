@@ -43,7 +43,7 @@ function Invoke-CippWebhookProcessing {
                     "No Inbox Rules found for $username. We have not disabled any rules."
                 }
                 "Completed BEC Remediate for $username"
-                Write-LogMessage -API 'BECRemediate' -tenant $tenantfilter -message "Executed Remediation for  $username" -sev 'Info'
+                Write-LogMessage -API 'BECRemediate' -tenant $tenantfilter -message "Executed Remediation for $username" -sev 'Info'
             }
             'cippcommand' {
                 $CommandSplat = @{}
@@ -85,7 +85,7 @@ function Invoke-CippWebhookProcessing {
                     ActionsTaken          = [string]($ActionResults | ConvertTo-Json -Depth 15 -Compress)
                 } | ConvertTo-Json -Depth 15 -Compress
                 Write-Host 'Sending Webhook Content'
-
+                #Write-Host $JsonContent
                 Send-CIPPAlert -Type 'webhook' -Title $GenerateJSON.Title -JSONContent $JsonContent -TenantFilter $TenantFilter
             }
         }
