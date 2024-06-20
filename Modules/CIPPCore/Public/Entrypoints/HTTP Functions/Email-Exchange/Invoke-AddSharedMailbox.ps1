@@ -35,8 +35,9 @@ Function Invoke-AddSharedMailbox {
         Write-LogMessage -user $User -API $APINAME -tenant $($groupobj.tenantid) -message "Created shared mailbox $($groupobj.displayname) with email $Email" -Sev 'Info'
 
     } catch {
-        Write-LogMessage -user $User -API $APINAME -tenant $($groupobj.tenantid) -message "Failed to create shared mailbox. Error: $($_.Exception.Message)" -Sev 'Error'
-        $Body = $Results.add("Failed to create Shared Mailbox. $($_.Exception.Message)")
+        $ErrorMessage = Get-NormalizedError -message $_.Exception.Message
+        Write-LogMessage -user $User -API $APINAME -tenant $($groupobj.tenantid) -message "Failed to create shared mailbox. Error: $ErrorMessage" -Sev 'Error'
+        $Body = $Results.add("Failed to create Shared Mailbox: $ErrorMessage")
 
     }
 
@@ -54,8 +55,9 @@ Function Invoke-AddSharedMailbox {
             $Body = $results.add("Added Aliases to $Email : $($Aliases -join ',')")
         }
     } catch {
-        Write-LogMessage -user $User -API $APINAME -tenant $($groupobj.tenantid) -message "Failed to add aliases to $Email : $($_.Exception.Message)" -Sev 'Error'
-        $Body = $results.add("ERROR: Failed to add aliases to $Email : $($_.Exception.Message)")
+        $ErrorMessage = Get-NormalizedError -message $_.Exception.Message
+        Write-LogMessage -user $User -API $APINAME -tenant $($groupobj.tenantid) -message "Failed to add aliases to $Email : $ErrorMessage" -Sev 'Error'
+        $Body = $results.add("ERROR: Failed to add aliases to $Email : $ErrorMessage")
     }
 
     $Body = [pscustomobject] @{ 'Results' = @($results) }

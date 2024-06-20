@@ -7,6 +7,7 @@ function Invoke-CIPPStandardDisableSharedMailbox {
     $SharedMailboxList = (New-GraphGetRequest -uri "https://outlook.office365.com/adminapi/beta/$($Tenant)/Mailbox?`$filter=ExchangeUserAccountControl ne 'accountdisabled'" -Tenantid $tenant -scope ExchangeOnline | Where-Object { $_.RecipientTypeDetails -EQ 'SharedMailbox' -or $_.RecipientTypeDetails -eq 'SchedulingMailbox' })
 
     If ($Settings.remediate -eq $true) {
+
         if ($SharedMailboxList) {
             $SharedMailboxList | ForEach-Object {
                 try {
