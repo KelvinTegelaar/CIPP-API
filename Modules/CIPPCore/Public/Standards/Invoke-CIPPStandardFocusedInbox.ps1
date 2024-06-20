@@ -5,9 +5,9 @@ function Invoke-CIPPStandardFocusedInbox {
     #>
     param($Tenant, $Settings)
 
-    # Exit if the wanted state is not valid
-    if ($Settings.state -ne 'enabled' -and $Settings.state -ne 'disabled') {
-        Write-LogMessage -API 'Standards' -tenant $Tenant -message 'Invalid state for Focused Inbox. Please select either "enabled" or "disabled".' -sev Error
+    # Input validation
+    if ([string]::isNullOrEmpty($Settings.state) -or $Settings.state -eq 'Select a value') {
+        Write-LogMessage -API 'Standards' -tenant $tenant -message 'ExternalMFATrusted: Invalid state parameter set' -sev Error
         Exit
     }
 

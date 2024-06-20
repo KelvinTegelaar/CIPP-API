@@ -34,19 +34,16 @@ function Invoke-CIPPStandardEnablePronouns {
     }
 
     if ($Settings.alert -eq $true) {
-            
+
         if ($CurrentState.isEnabledInOrganization -eq $true) {
             Write-LogMessage -API 'Standards' -tenant $tenant -message 'Pronouns are enabled.' -sev Info
         } else {
             Write-LogMessage -API 'Standards' -tenant $tenant -message 'Pronouns are not enabled.' -sev Alert
         }
-        
     }
 
     if ($Settings.report -eq $true) {
-            
-        Add-CIPPBPAField -FieldName 'PronounsEnabled' -FieldValue $CurrentState.isEnabledInOrganization -StoreAs bool -Tenant $tenant
-        
-    }
 
+        Add-CIPPBPAField -FieldName 'PronounsEnabled' -FieldValue $CurrentState.isEnabledInOrganization -StoreAs bool -Tenant $tenant
+    }
 }

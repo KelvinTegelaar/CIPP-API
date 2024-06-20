@@ -20,7 +20,7 @@ Function Invoke-ExecMailboxMobileDevices {
 
     # Interact with query parameters or the body of the request.
     Try {
-        $MobileResults = Set-CIPPMobileDevice -UserId $request.query.Userid -DeviceId $request.query.deviceid -Quarantine $request.query.Quarantine -tenantFilter $request.query.tenantfilter -APIName $APINAME -Delete $Request.query.Delete -ExecutingUser $request.headers.'x-ms-client-principal'
+        $MobileResults = Set-CIPPMobileDevice -UserId $request.query.Userid -Guid $request.query.guid -DeviceId $request.query.deviceid -Quarantine $request.query.Quarantine -tenantFilter $request.query.tenantfilter -APIName $APINAME -Delete $Request.query.Delete -ExecutingUser $request.headers.'x-ms-client-principal'
         $Results = [pscustomobject]@{'Results' = $MobileResults }
     } catch {
         $Results = [pscustomobject]@{'Results' = "Failed  $($request.query.Userid): $($_.Exception.Message)" }

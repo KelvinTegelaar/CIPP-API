@@ -12,10 +12,10 @@ function Invoke-CIPPStandardDisableViva {
         Write-LogMessage -API 'Standards' -tenant $Tenant -message "Failed to get Viva insights settings. Error: $ErrorMessage" -sev Error
         Exit
     }
-    
+
     If ($Settings.remediate -eq $true) {
         Write-Host 'Time to remediate'
-        
+
         if ($CurrentSetting.isEnabledInOrganization -eq $false) {
             Write-LogMessage -API 'Standards' -tenant $Tenant -message 'Viva is already disabled.' -sev Info
         } else {

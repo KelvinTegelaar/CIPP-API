@@ -5,6 +5,12 @@ function Invoke-CIPPStandardExternalMFATrusted {
     #>
     param($Tenant, $Settings)
 
+    # Input validation
+    if ([string]::isNullOrEmpty($Settings.state) -or $Settings.state -eq 'Select a value') {
+        Write-LogMessage -API 'Standards' -tenant $tenant -message 'ExternalMFATrusted: Invalid state parameter set' -sev Error
+        Exit
+    }
+
     $ExternalMFATrusted = (New-GraphGetRequest -uri 'https://graph.microsoft.com/v1.0/policies/crossTenantAccessPolicy/default?$select=inboundTrust' -tenantid $Tenant)
     $WantedState = if ($Settings.state -eq 'true') { $true } else { $false }
     $StateMessage = if ($WantedState) { 'enabled' } else { 'disabled' }
