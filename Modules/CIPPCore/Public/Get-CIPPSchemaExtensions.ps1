@@ -30,6 +30,10 @@ function Get-CIPPSchemaExtensions {
                     name = 'autoExpandingArchiveEnabled'
                     type = 'Boolean'
                 }
+                @{
+                    name = 'perUserMfaState'
+                    type = 'String'
+                }
             )
         }
     )
@@ -40,8 +44,8 @@ function Get-CIPPSchemaExtensions {
                 $SchemaFound = $true
                 $Schema = $Schemas | Where-Object { $_.id -match $SchemaDefinition.id }
                 $Patch = @{}
-                if (Compare-Object -ReferenceObject ($SchemaDefinition.properties | Select-Object name, type) -DifferenceObject $Schema.properties) {
-                    $Patch.properties = $Properties
+                if (Compare-Object -ReferenceObject ($SchemaDefinition.properties | Select-Object name, type) -DifferenceObject ($Schema.properties | Select-Object name, type)) {
+                    $Patch.properties = $SchemaDefinitions.Properties
                 }
                 if ($Schema.status -ne 'Available') {
                     $Patch.status = 'Available'
@@ -49,9 +53,10 @@ function Get-CIPPSchemaExtensions {
                 if ($Schema.targetTypes -ne $SchemaDefinition.targetTypes) {
                     $Patch.targetTypes = $SchemaDefinition.targetTypes
                 }
-                if ($Patch.Keys.Count -gt 0) {
+                if ($Patch -and $Patch.Keys.Count -gt 0) {
                     Write-Information "Updating $($Schema.id)"
                     $Json = ConvertTo-Json -Depth 5 -InputObject $Patch
+                    Write-Information $Json
                     New-GraphPOSTRequest -type PATCH -Uri "https://graph.microsoft.com/v1.0/schemaExtensions/$($Schema.id)" -Body $Json -AsApp $true -NoAuthCheck $true
                 } else {
                     $Schema
