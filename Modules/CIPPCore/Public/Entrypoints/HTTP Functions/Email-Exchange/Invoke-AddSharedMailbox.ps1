@@ -38,7 +38,6 @@ Function Invoke-AddSharedMailbox {
         $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
         Write-LogMessage -user $User -API $APINAME -tenant $($MailboxObject.tenantid) -message "Failed to create shared mailbox. Error: $ErrorMessage" -Sev 'Error'
         $Body = $Results.add("Failed to create Shared Mailbox. $ErrorMessage")
-
     }
 
     # Block sign-in for the mailbox

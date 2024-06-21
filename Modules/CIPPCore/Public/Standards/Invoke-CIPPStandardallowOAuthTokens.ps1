@@ -4,6 +4,13 @@ function Invoke-CIPPStandardallowOAuthTokens {
     Internal
     #>
     param($Tenant, $Settings)
+
+    # Input validation
+    if ([string]::isNullOrEmpty($Settings.state) -or $Settings.state -eq 'Select a value') {
+        Write-LogMessage -API 'Standards' -tenant $tenant -message 'allowOAuthTokens: Invalid state parameter set' -sev Error
+        Exit
+    }
+
     $CurrentInfo = New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/policies/authenticationMethodsPolicy/authenticationMethodConfigurations/softwareOath' -tenantid $Tenant
     $State = if ($CurrentInfo.state -eq 'enabled') { $true } else { $false }
 
