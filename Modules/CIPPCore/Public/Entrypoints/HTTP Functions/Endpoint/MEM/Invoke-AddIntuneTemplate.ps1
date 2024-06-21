@@ -60,7 +60,6 @@ Function Invoke-AddIntuneTemplate {
                     $TemplateJson = $Template | ConvertTo-Json -Depth 100
                     $DisplayName = $Template.name
 
-
                 }
                 'windowsDriverUpdateProfiles' {
                     $Type = 'windowsDriverUpdateProfiles'
