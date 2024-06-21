@@ -26,6 +26,7 @@ Function Invoke-AddSpamFilter {
                 'hostedcontentfilterpolicy' = "$($RequestParams.name)"
                 'recipientdomainis'         = @($domains)
                 'Enabled'                   = $true
+                'Priority'                  = 0
             }
             $GraphRequest = New-ExoRequest -tenantid $Tenantfilter -cmdlet 'New-HostedContentFilterRule' -cmdParams $ruleparams
             "Successfully created spamfilter for $tenantfilter."
