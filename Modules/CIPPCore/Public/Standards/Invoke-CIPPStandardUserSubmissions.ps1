@@ -8,7 +8,7 @@ function Invoke-CIPPStandardUserSubmissions {
     # Input validation
     if ([string]::isNullOrEmpty($Settings.state) -or $Settings.state -eq 'Select a value') {
         Write-LogMessage -API 'Standards' -tenant $tenant -message 'UserSubmissions: Invalid state parameter set' -sev Error
-        Exit
+        Return
     }
 
     $Policy = New-ExoRequest -tenantid $Tenant -cmdlet 'Get-ReportSubmissionPolicy'

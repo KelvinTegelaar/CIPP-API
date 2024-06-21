@@ -9,7 +9,7 @@ function Invoke-CIPPStandardTenantDefaultTimezone {
     # Input validation
     if ([string]::isNullOrEmpty($Settings.Timezone) -or $Settings.Timezone -eq 'Select a value') {
         Write-LogMessage -API 'Standards' -tenant $tenant -message 'TenantDefaultTimezone: Invalid Timezone parameter set' -sev Error
-        Exit
+        Return
     }
 
     $CurrentState = New-GraphGetRequest -Uri 'https://graph.microsoft.com/beta/admin/sharepoint/settings' -tenantid $Tenant -AsApp $true

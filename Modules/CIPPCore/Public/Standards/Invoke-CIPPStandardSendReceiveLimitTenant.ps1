@@ -8,13 +8,13 @@ function Invoke-CIPPStandardSendReceiveLimitTenant {
     # Input validation
     if ($Settings.SendLimit -lt 1 -or $Settings.SendLimit -gt 150) {
         Write-LogMessage -API 'Standards' -tenant $tenant -message 'SendReceiveLimitTenant: Invalid SendLimit parameter set' -sev Error
-        Exit
+        Return
     }
 
     # Input validation
     if ($Settings.ReceiveLimit -lt 1 -or $Settings.ReceiveLimit -gt 150) {
         Write-LogMessage -API 'Standards' -tenant $tenant -message 'SendReceiveLimitTenant: Invalid ReceiveLimit parameter set' -sev Error
-        Exit
+        Return
     }
 
 

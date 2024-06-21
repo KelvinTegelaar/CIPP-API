@@ -10,7 +10,7 @@ function Invoke-CIPPStandardDisableViva {
     } catch {
         $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
         Write-LogMessage -API 'Standards' -tenant $Tenant -message "Failed to get Viva insights settings. Error: $ErrorMessage" -sev Error
-        Exit
+        Return
     }
 
     If ($Settings.remediate -eq $true) {

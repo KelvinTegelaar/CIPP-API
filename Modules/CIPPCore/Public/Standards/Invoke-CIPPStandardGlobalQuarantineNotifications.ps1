@@ -5,13 +5,13 @@ function Invoke-CIPPStandardGlobalQuarantineNotifications {
     #>
     param ($Tenant, $Settings)
 
-    # Exit if invalid state in the frontend is selected
+    # Input validation
     try {
         $WantedState = [timespan]$Settings.NotificationInterval
     } catch {
         $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
         Write-LogMessage -API 'Standards' -tenant $Tenant -message "Invalid state selected for Global Quarantine Notifications. Error: $ErrorMessage" -sev Error
-        Exit
+        Return
     }
 
     $CurrentState = New-ExoRequest -tenantid $Tenant -cmdlet 'Get-QuarantinePolicy' -cmdParams @{ QuarantinePolicyType = 'GlobalQuarantinePolicy' }

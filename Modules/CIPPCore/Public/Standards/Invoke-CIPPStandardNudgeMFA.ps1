@@ -8,12 +8,12 @@ function Invoke-CIPPStandardNudgeMFA {
     # Input validation
     if ([string]::isNullOrEmpty($Settings.state) -or $Settings.state -eq 'Select a value') {
         Write-LogMessage -API 'Standards' -tenant $tenant -message 'NudgeMFA: Invalid state parameter set' -sev Error
-        Exit
+        Return
     }
     # Input validation
     if ($Settings.snoozeDurationInDays -lt 0 -or $Settings.snoozeDurationInDays -gt 15) {
         Write-LogMessage -API 'Standards' -tenant $tenant -message 'NudgeMFA: Invalid snoozeDurationInDays parameter set' -sev Error
-        Exit
+        Return
     }
 
     $CurrentInfo = New-GraphGetRequest -Uri 'https://graph.microsoft.com/beta/policies/authenticationMethodsPolicy' -tenantid $Tenant

@@ -8,7 +8,7 @@ function Invoke-CIPPStandardActivityBasedTimeout {
     # Input validation
     if ([string]::isNullOrEmpty($Settings.timeout) -or $Settings.timeout -eq 'Select a value') {
         Write-LogMessage -API 'Standards' -tenant $tenant -message 'ActivityBasedTimeout: Invalid timeout parameter set' -sev Error
-        Exit
+        Return
     }
 
     # Backwards compatibility for v5.7.0 and older

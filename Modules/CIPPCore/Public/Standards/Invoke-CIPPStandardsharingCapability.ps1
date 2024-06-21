@@ -8,7 +8,7 @@ function Invoke-CIPPStandardsharingCapability {
     # Input validation
     if ([string]::isNullOrEmpty($Settings.sharingCapability) -or $Settings.sharingCapability -eq 'Select a value') {
         Write-LogMessage -API 'Standards' -tenant $tenant -message 'sharingCapability: Invalid sharingCapability parameter set' -sev Error
-        Exit
+        Return
     }
 
     $CurrentInfo = New-GraphGetRequest -Uri 'https://graph.microsoft.com/beta/admin/sharepoint/settings' -tenantid $Tenant -AsApp $true

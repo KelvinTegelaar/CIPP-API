@@ -8,7 +8,7 @@ function Invoke-CIPPStandardFocusedInbox {
     # Input validation
     if ([string]::isNullOrEmpty($Settings.state) -or $Settings.state -eq 'Select a value') {
         Write-LogMessage -API 'Standards' -tenant $tenant -message 'ExternalMFATrusted: Invalid state parameter set' -sev Error
-        Exit
+        Return
     }
 
     $CurrentState = (New-ExoRequest -tenantid $Tenant -cmdlet 'Get-OrganizationConfig').FocusedInboxOn
