@@ -5,14 +5,18 @@ function Invoke-CIPPStandardPWcompanionAppAllowedState {
     #>
     param($Tenant, $Settings)
 
+    $authenticatorFeaturesState = (New-GraphGetRequest -tenantid $tenant -Uri 'https://graph.microsoft.com/beta/policies/authenticationMethodsPolicy/authenticationMethodConfigurations/microsoftAuthenticator' -Type GET)
+    $authstate = if ($authenticatorFeaturesState.featureSettings.companionAppAllowedState.state -eq 'enabled') { $true } else { $false }
+
+    if ($Settings.report -eq $true) {
+        Add-CIPPBPAField -FieldName 'companionAppAllowedState' -FieldValue $authstate -StoreAs bool -Tenant $tenant
+    }
+
     # Input validation
-    if ([string]::isNullOrEmpty($Settings.state) -or $Settings.state -eq 'Select a value') {
+    if (([string]::IsNullOrWhiteSpace($Settings.state) -or $Settings.state -eq 'Select a value') -and ($Settings.remediate -eq $true -or $Settings.alert -eq $true)) {
         Write-LogMessage -API 'Standards' -tenant $tenant -message 'PWcompanionAppAllowedState: Invalid state parameter set' -sev Error
         Return
     }
-
-    $authenticatorFeaturesState = (New-GraphGetRequest -tenantid $tenant -Uri 'https://graph.microsoft.com/beta/policies/authenticationMethodsPolicy/authenticationMethodConfigurations/microsoftAuthenticator' -Type GET)
-    $authstate = if ($authenticatorFeaturesState.featureSettings.companionAppAllowedState.state -eq 'enabled') { $true } else { $false }
 
     If ($Settings.remediate -eq $true) {
 
@@ -52,9 +56,5 @@ function Invoke-CIPPStandardPWcompanionAppAllowedState {
         } else {
             Write-LogMessage -API 'Standards' -tenant $tenant -message 'companionAppAllowedState is not enabled.' -sev Alert
         }
-    }
-
-    if ($Settings.report -eq $true) {
-        Add-CIPPBPAField -FieldName 'companionAppAllowedState' -FieldValue $authstate -StoreAs bool -Tenant $tenant
     }
 }
