@@ -13,7 +13,16 @@ function Invoke-ListAuditLogTest {
         LogType      = $Request.Query.LogType
         ShowAll      = $true
     }
-    $TestResults = Test-CIPPAuditLogRules @AuditLogQuery
+    try {
+        $TestResults = Test-CIPPAuditLogRules @AuditLogQuery
+    } catch {
+        $Body = Get-CippException -Exception $_
+        Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
+                StatusCode = [HttpStatusCode]::InternalServerError
+                Body       = $Body
+            })
+        return
+    }
     $Body = @{
         Results  = @($TestResults.DataToProcess)
         Metadata = @{
