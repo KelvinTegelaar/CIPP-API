@@ -5,11 +5,11 @@ function Set-CIPPAssignedPolicy {
         $PolicyId,
         $Type,
         $TenantFilter,
-        $PlatformType = 'deviceManagement',
+        $PlatformType,
         $APIName = 'Assign Policy',
         $ExecutingUser
     )
-
+    if (!$PlatformType) { $PlatformType = 'deviceManagement' }
     try {
         $assignmentsObject = switch ($GroupName) {
             'allLicensedUsers' {
@@ -70,9 +70,11 @@ function Set-CIPPAssignedPolicy {
             assignments = @($assignmentsObject)
         }
         if ($PSCmdlet.ShouldProcess($GroupName, "Assigning policy $PolicyId")) {
+            Write-Host "https://graph.microsoft.com/beta/$($PlatformType)/$Type('$($PolicyId)')/assign" 
             $null = New-GraphPOSTRequest -uri "https://graph.microsoft.com/beta/$($PlatformType)/$Type('$($PolicyId)')/assign" -tenantid $tenantFilter -type POST -body ($assignmentsObject | ConvertTo-Json -Depth 10)
             Write-LogMessage -user $ExecutingUser -API $APIName -message "Assigned Policy to $($GroupName)" -Sev 'Info' -tenant $TenantFilter
         }
+
         return "Assigned policy to $($GroupName) Policy ID is $($PolicyId)."
     } catch {
         Write-LogMessage -user $ExecutingUser -API $APIName -message "Failed to assign Policy to $GroupName. Policy ID is $($PolicyId)." -Sev 'Error' -tenant $TenantFilter -LogData (Get-CippException -Exception $_)
