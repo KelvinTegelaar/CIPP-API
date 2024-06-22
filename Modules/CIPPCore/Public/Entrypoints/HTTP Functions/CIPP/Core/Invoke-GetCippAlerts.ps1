@@ -29,7 +29,7 @@ Function Invoke-GetCippAlerts {
         Write-LogMessage -message 'Your CIPP API is out of date. Please update to the latest version' -API 'Updates' -tenant 'All Tenants' -sev Alert
     }
 
-    if ($env:ApplicationID -eq 'LongApplicationID' -or $null -eq $ENV:ApplicationID) { $Alerts.Add(@{Alert = 'You have not yet completed your SAM Setup. Please go to the SAM Setup Wizard in settings to connect CIPP to your tenant.'; link = '/cipp/setup'; type = 'warning' }) }
+    if ($env:ApplicationID -eq 'LongApplicationID' -or $null -eq $ENV:ApplicationID) { $Alerts.Add(@{Alert = 'You have not yet completed your SAM Setup. Please go to the SAM Setup Wizard in settings to connect CIPP to your tenant.'; link = '/cipp/setup'; type = 'warning'; setupCompleted = $false }) }
     if ($role -like '*superadmin*') { $Alerts.Add(@{Alert = 'You are logged in under a superadmin account. This account should not be used for normal usage.'; link = 'https://docs.cipp.app/setup/installation/owntenant'; type = 'danger' }) }
     if ($env:WEBSITE_RUN_FROM_PACKAGE -ne '1' -and $env:AzureWebJobsStorage -ne 'UseDevelopmentStorage=true') {
         $Alerts.Add(
