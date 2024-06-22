@@ -5,15 +5,6 @@ function Invoke-CIPPStandardGlobalQuarantineNotifications {
     #>
     param ($Tenant, $Settings)
 
-    # Exit if invalid state in the frontend is selected
-    try {
-        $WantedState = [timespan]$Settings.NotificationInterval
-    } catch {
-        $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
-        Write-LogMessage -API 'Standards' -tenant $Tenant -message "Invalid state selected for Global Quarantine Notifications. Error: $ErrorMessage" -sev Error
-        Exit
-    }
-
     $CurrentState = New-ExoRequest -tenantid $Tenant -cmdlet 'Get-QuarantinePolicy' -cmdParams @{ QuarantinePolicyType = 'GlobalQuarantinePolicy' }
 
     # This might take the cake on ugly hacky stuff i've done,
@@ -24,6 +15,19 @@ function Invoke-CIPPStandardGlobalQuarantineNotifications {
         'P1D' { New-TimeSpan -Days 1 }
         'P7D' { New-TimeSpan -Days 7 }
         Default { $null }
+    }
+
+    if ($Settings.report -eq $true) {
+
+        Add-CIPPBPAField -FieldName 'GlobalQuarantineNotificationsSet' -FieldValue [string]$CurrentState.EndUserSpamNotificationFrequency -StoreAs string -Tenant $tenant
+    }
+    # Input validation
+    try {
+        $WantedState = [timespan]$Settings.NotificationInterval
+    } catch {
+        $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
+        Write-LogMessage -API 'Standards' -tenant $Tenant -message "Invalid state selected for Global Quarantine Notifications. Error: $ErrorMessage" -sev Error
+        Return
     }
 
     if ($Settings.remediate -eq $true) {
@@ -49,10 +53,5 @@ function Invoke-CIPPStandardGlobalQuarantineNotifications {
         } else {
             Write-LogMessage -API 'Standards' -tenant $tenant -message "Global Quarantine Notifications are not set to the desired value of $WantedState" -sev Alert
         }
-    }
-
-    if ($Settings.report -eq $true) {
-
-        Add-CIPPBPAField -FieldName 'GlobalQuarantineNotificationsSet' -FieldValue [string]$CurrentState.EndUserSpamNotificationFrequency -StoreAs string -Tenant $tenant
     }
 }
