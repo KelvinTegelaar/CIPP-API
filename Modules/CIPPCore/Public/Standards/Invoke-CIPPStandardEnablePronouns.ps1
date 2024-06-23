@@ -11,7 +11,7 @@ function Invoke-CIPPStandardEnablePronouns {
     } catch {
         $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
         Write-LogMessage -API 'Standards' -tenant $Tenant -message "Could not get CurrentState for Pronouns. Error: $ErrorMessage" -sev Error
-        Exit
+        Return
     }
     Write-Host $CurrentState
 

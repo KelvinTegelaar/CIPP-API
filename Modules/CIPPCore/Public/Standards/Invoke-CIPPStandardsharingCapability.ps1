@@ -5,16 +5,17 @@ function Invoke-CIPPStandardsharingCapability {
     #>
     param($Tenant, $Settings)
 
-    # Input validation
-    if ([string]::isNullOrEmpty($Settings.sharingCapability) -or $Settings.sharingCapability -eq 'Select a value') {
-        Write-LogMessage -API 'Standards' -tenant $tenant -message 'sharingCapability: Invalid sharingCapability parameter set' -sev Error
-        Exit
+    $CurrentInfo = New-GraphGetRequest -Uri 'https://graph.microsoft.com/beta/admin/sharepoint/settings' -tenantid $Tenant -AsApp $true
+
+    if ($Settings.report -eq $true) {
+        Add-CIPPBPAField -FieldName 'sharingCapability' -FieldValue $CurrentInfo.sharingCapability -StoreAs string -Tenant $tenant
     }
 
-    $CurrentInfo = New-GraphGetRequest -Uri 'https://graph.microsoft.com/beta/admin/sharepoint/settings' -tenantid $Tenant -AsApp $true
-    # $CurrentInfo.sharingCapability.GetType()
-    $Settings.Level
-    $CurrentInfo.sharingCapability
+    # Input validation
+    if (([string]::IsNullOrWhiteSpace($Settings.sharingCapability) -or $Settings.sharingCapability -eq 'Select a value') -and ($Settings.remediate -eq $true -or $Settings.alert -eq $true)) {
+        Write-LogMessage -API 'Standards' -tenant $tenant -message 'sharingCapability: Invalid sharingCapability parameter set' -sev Error
+        Return
+    }
 
     If ($Settings.remediate -eq $true) {
 
@@ -40,9 +41,5 @@ function Invoke-CIPPStandardsharingCapability {
         } else {
             Write-LogMessage -API 'Standards' -tenant $tenant -message "Sharing level is not set to $($Settings.Level)" -sev Alert
         }
-    }
-
-    if ($Settings.report -eq $true) {
-        Add-CIPPBPAField -FieldName 'sharingCapability' -FieldValue $CurrentInfo.sharingCapability -StoreAs string -Tenant $tenant
     }
 }
