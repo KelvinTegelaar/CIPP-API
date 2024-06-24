@@ -56,10 +56,14 @@ function Invoke-CIPPStandardAntiPhishPolicy {
                 EnableUnusualCharactersSafetyTips   = $Settings.EnableUnusualCharactersSafetyTips
                 EnableUnauthenticatedSender         = $true
                 EnableViaTag                        = $true
+                AuthenticationFailAction            = $Settings.AuthenticationFailAction
+                SpoofQuarantineTag                  = $Settings.SpoofQuarantineTag
                 MailboxIntelligenceProtectionAction = $Settings.MailboxIntelligenceProtectionAction
                 MailboxIntelligenceQuarantineTag    = $Settings.MailboxIntelligenceQuarantineTag
                 TargetedUserProtectionAction        = $Settings.TargetedUserProtectionAction
+                TargetedUserQuarantineTag           = $Settings.TargetedUserQuarantineTag
                 TargetedDomainProtectionAction      = $Settings.TargetedDomainProtectionAction
+                TargetedDomainQuarantineTag         = $Settings.TargetedDomainQuarantineTag
                 EnableOrganizationDomainsProtection = $true
             }
 
