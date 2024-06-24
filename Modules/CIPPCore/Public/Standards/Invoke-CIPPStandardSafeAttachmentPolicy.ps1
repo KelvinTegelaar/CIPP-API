@@ -22,7 +22,7 @@ function Invoke-CIPPStandardSafeAttachmentPolicy {
     $RuleState = New-ExoRequest -tenantid $Tenant -cmdlet 'Get-SafeAttachmentRule' |
         Where-Object -Property Name -EQ "CIPP $PolicyName" |
         Select-Object Name, SafeAttachmentPolicy, Priority, RecipientDomainIs
-    
+
     $RuleStateIsCorrect = ($RuleState.Name -eq "CIPP $PolicyName") -and
                           ($RuleState.SafeAttachmentPolicy -eq $PolicyName) -and
                           ($RuleState.Priority -eq 0) -and
@@ -55,12 +55,12 @@ function Invoke-CIPPStandardSafeAttachmentPolicy {
                 Write-LogMessage -API 'Standards' -tenant $Tenant -message "Failed to create Safe Attachment Policy. Error: $ErrorMessage" -sev Error
             }
         }
-    
+
         if ($RuleStateIsCorrect -eq $false) {
             $cmdparams = @{
-                SafeAttachmentPolicy    = $PolicyName
-                Priority                = 0
-                RecipientDomainIs       = $AcceptedDomains.Name
+                SafeAttachmentPolicy = $PolicyName
+                Priority             = 0
+                RecipientDomainIs    = $AcceptedDomains.Name
             }
 
             try {

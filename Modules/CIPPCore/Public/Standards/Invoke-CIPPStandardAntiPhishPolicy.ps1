@@ -34,7 +34,7 @@ function Invoke-CIPPStandardAntiPhishPolicy {
     $RuleState = New-ExoRequest -tenantid $Tenant -cmdlet 'Get-AntiPhishRule' |
         Where-Object -Property Name -EQ "CIPP $PolicyName" |
         Select-Object Name, AntiPhishPolicy, Priority, RecipientDomainIs
-    
+
     $RuleStateIsCorrect = ($RuleState.Name -eq "CIPP $PolicyName") -and
                           ($RuleState.AntiPhishPolicy -eq $PolicyName) -and
                           ($RuleState.Priority -eq 0) -and
@@ -81,9 +81,9 @@ function Invoke-CIPPStandardAntiPhishPolicy {
 
         if ($RuleStateIsCorrect -eq $false) {
             $cmdparams = @{
-                AntiPhishPolicy     = $PolicyName
-                Priority            = 0
-                RecipientDomainIs   = $AcceptedDomains.Name
+                AntiPhishPolicy   = $PolicyName
+                Priority          = 0
+                RecipientDomainIs = $AcceptedDomains.Name
             }
 
             try {
