@@ -30,7 +30,7 @@ function Push-DomainAnalyserDomain {
     }
     Set-DnsResolver -Resolver $Resolver
 
-    $Domain = $DomainObject.rowKey
+    $Domain = $DomainObject.RowKey
 
     try {
         $Tenant = $DomainObject.TenantDetails | ConvertFrom-Json -ErrorAction Stop
@@ -250,7 +250,7 @@ function Push-DomainAnalyserDomain {
         # Final Write to Output
         Write-LogMessage -API 'DomainAnalyser' -tenant $DomainObject.TenantId -message "DNS Analyser Finished For $Domain" -sev Info
     } catch {
-        Write-LogMessage -API -API 'DomainAnalyser' -tenant $DomainObject.TenantId -message "Error saving domain $Domain to table " -sev Error -LogData (Get-CippException -Exception $_)
+        Write-LogMessage -API 'DomainAnalyser' -tenant $DomainObject.TenantId -message "Error saving domain $Domain to table " -sev Error -LogData (Get-CippException -Exception $_)
     }
     return $null
 }

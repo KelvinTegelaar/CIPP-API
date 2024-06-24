@@ -14,7 +14,7 @@ function Invoke-ExecCustomRole {
             Write-LogMessage -user $Request.Headers.'x-ms-client-principal' -API 'ExecCustomRole' -message "Saved custom role $($Request.Body.RoleName)" -Sev 'Info'
             $Role = @{
                 'PartitionKey'   = 'CustomRoles'
-                'RowKey'         = "$($Request.Body.RoleName)"
+                'RowKey'         = "$($Request.Body.RoleName.ToLower())"
                 'Permissions'    = "$($Request.Body.Permissions | ConvertTo-Json -Compress)"
                 'AllowedTenants' = "$($Request.Body.AllowedTenants | ConvertTo-Json -Compress)"
                 'BlockedTenants' = "$($Request.Body.BlockedTenants | ConvertTo-Json -Compress)"
