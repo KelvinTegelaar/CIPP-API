@@ -4,6 +4,7 @@ function Invoke-CIPPStandardintuneDeviceRetirementDays {
     Internal
     #>
     param($Tenant, $Settings)
+
     $CurrentInfo = (New-GraphGetRequest -Uri 'https://graph.microsoft.com/beta/deviceManagement/managedDeviceCleanupSettings' -tenantid $Tenant)
     $StateIsCorrect = if ($PreviousSetting.DeviceInactivityBeforeRetirementInDays -eq $Settings.days) { $true } else { $false }
 
