@@ -28,7 +28,7 @@ function Invoke-CIPPStandardSafeLinksPolicy {
     $RuleState = New-ExoRequest -tenantid $Tenant -cmdlet 'Get-SafeLinksRule' |
         Where-Object -Property Name -EQ "CIPP $PolicyName" |
         Select-Object Name, SafeLinksPolicy, Priority, RecipientDomainIs
-    
+
     $RuleStateIsCorrect = ($RuleState.Name -eq "CIPP $PolicyName") -and
                           ($RuleState.SafeLinksPolicy -eq $PolicyName) -and
                           ($RuleState.Priority -eq 0) -and
@@ -70,9 +70,9 @@ function Invoke-CIPPStandardSafeLinksPolicy {
 
         if ($RuleStateIsCorrect -eq $false) {
             $cmdparams = @{
-                SafeLinksPolicy     = $PolicyName
-                Priority            = 0
-                RecipientDomainIs   = $AcceptedDomains.Name
+                SafeLinksPolicy   = $PolicyName
+                Priority          = 0
+                RecipientDomainIs = $AcceptedDomains.Name
             }
 
             try {

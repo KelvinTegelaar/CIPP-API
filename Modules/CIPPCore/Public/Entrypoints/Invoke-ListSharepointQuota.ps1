@@ -24,7 +24,7 @@ Function Invoke-ListSharepointQuota {
     } 
    else {
         try {
-            $tenantName = (New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/domains' -tenantid $TenantFilter | Where-Object { $_.isInitial -eq $true }).id.Split('.')[0]
+            $tenantName = (New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/sites/root' -tenantid $TenantFilter).id.Split('.')[0]
 
             $sharepointToken = (Get-GraphToken -scope "https://$($tenantName)-admin.sharepoint.com/.default" -tenantid $TenantFilter)
             $sharepointToken.Add('accept', 'application/json')
