@@ -8,7 +8,7 @@ function Invoke-CIPPStandardAutoExpandArchive {
 
     If ($Settings.remediate -eq $true) {
         Write-Host 'Time to remediate'
-        
+
         if ($CurrentState) {
             Write-LogMessage -API 'Standards' -tenant $tenant -message 'Auto Expanding Archive is already enabled.' -sev Info
         } else {

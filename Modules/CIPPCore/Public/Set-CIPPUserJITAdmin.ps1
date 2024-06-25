@@ -91,6 +91,17 @@ function Set-CIPPUserJITAdmin {
                         $null = New-GraphPOSTRequest -uri "https://graph.microsoft.com/beta/directoryRoles(roleTemplateId='$($_)')/members/`$ref" -tenantid $TenantFilter -body $Json -ErrorAction SilentlyContinue
                     } catch {}
                 }
+                $UserEnabled = (New-GraphGetRequest -uri "https://graph.microsoft.com/beta/users/$($UserObj.id)?`$select=accountEnabled" -tenantid $TenantFilter).accountEnabled
+                if (-not $UserEnabled) {
+                    $Body = @{
+                        accountEnabled = $true
+                    }
+                    $Json = ConvertTo-Json -Depth 5 -InputObject $Body
+                    try {
+                        New-GraphPOSTRequest -type PATCH -uri "https://graph.microsoft.com/beta/users/$($UserObj.id)" -tenantid $TenantFilter -body $Json | Out-Null
+                    } catch {}
+                }
+
                 Set-CIPPUserJITAdminProperties -TenantFilter $TenantFilter -UserId $UserObj.id -Enabled -Expiration $Expiration | Out-Null
                 return "Added admin roles to user $($UserObj.displayName) ($($UserObj.userPrincipalName))"
             }
@@ -115,10 +126,13 @@ function Set-CIPPUserJITAdmin {
                 $Body = @{
                     accountEnabled = $false
                 }
-                $Json = ConvertTo-Json -Depth 5 -InputObject $Body
+                $Json = ConvertTo-Json -Depth 5 -InputObject $Body -Compress
                 try {
-                    New-GraphPOSTRequest -type PATCH -uri "https://graph.microsoft.com/beta/users/$($UserObj.id)" -tenantid $TenantFilter -body $Json
-                    Set-CIPPUserJITAdminProperties -TenantFilter $TenantFilter -UserId $UserObj.id -Enabled:$false | Out-Null
+                    Write-Information "Disabling user $($UserObj.displayName) ($($User.UserPrincipalName))"
+                    Write-Information $Json
+                    Write-Information "https://graph.microsoft.com/beta/users/$($User.UserPrincipalName)"
+                    $null = New-GraphPOSTRequest -type PATCH -uri "https://graph.microsoft.com/beta/users/$($User.UserPrincipalName)" -tenantid $TenantFilter -body $Json
+                    Set-CIPPUserJITAdminProperties -TenantFilter $TenantFilter -UserId $User.UserPrincipalName -Clear | Out-Null
                     return "Disabled user $($UserObj.displayName) ($($UserObj.userPrincipalName))"
                 } catch {
                     return "Error disabling user $($UserObj.displayName) ($($UserObj.userPrincipalName)): $($_.Exception.Message)"

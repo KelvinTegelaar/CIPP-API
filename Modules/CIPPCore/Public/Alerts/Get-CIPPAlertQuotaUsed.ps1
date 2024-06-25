@@ -17,9 +17,17 @@ function Get-CIPPAlertQuotaUsed {
         return
     }
     $AlertData | ForEach-Object {
-        if ($_.StorageUsedInBytes -eq 0) { return }
+        if ($_.StorageUsedInBytes -eq 0 -or $_.prohibitSendReceiveQuotaInBytes -eq 0) { return }
         $PercentLeft = [math]::round(($_.storageUsedInBytes / $_.prohibitSendReceiveQuotaInBytes) * 100)
-        if ($InputValue) { $Value = [int]$InputValue } else { $Value = 90 }
+        try {
+            if ([int]$InputValue -gt 0) {
+                $Value = [int]$InputValue
+            } else {
+                $Value = 90
+            }
+        } catch {
+            $Value = 90
+        }
         if ($PercentLeft -gt $Value) {
             "$($_.userPrincipalName): Mailbox is more than $($value)% full. Mailbox is $PercentLeft% full"
         }

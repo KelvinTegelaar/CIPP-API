@@ -7,6 +7,7 @@ function Invoke-CIPPStandardSecurityDefaults {
     $SecureDefaultsState = (New-GraphGetRequest -Uri 'https://graph.microsoft.com/beta/policies/identitySecurityDefaultsEnforcementPolicy' -tenantid $tenant)
 
     If ($Settings.remediate -eq $true) {
+
         if ($SecureDefaultsState.IsEnabled -ne $true) {
             try {
                 Write-Host "Secure Defaults is disabled. Enabling for $tenant" -ForegroundColor Yellow
