@@ -25,7 +25,8 @@ function Add-CIPPDelegatedPermission {
     foreach ($App in $requiredResourceAccess) {
         $svcPrincipalId = $ServicePrincipalList | Where-Object -Property AppId -EQ $App.resourceAppId
         if (!$svcPrincipalId) { continue }
-        $NewScope = ($Translator | Where-Object { $_.id -in $App.ResourceAccess.id }).value -join ' '
+        $Scopes = $App.ResourceAccess | Where-Object -Property Type -EQ 'Scope'
+        $NewScope = ($Translator | Where-Object { $_.id -in $Scopes.id }).value -join ' '
         $OldScope = ($CurrentDelegatedScopes | Where-Object -Property Resourceid -EQ $svcPrincipalId.id)
 
         if (!$OldScope) {
