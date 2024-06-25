@@ -19,7 +19,6 @@ Function Invoke-ListBPA {
 
     # Get all possible JSON files for reports, find the correct one, select the Columns
     $JSONFields = @()
-    $Columns = $null
     $BPATemplateTable = Get-CippTable -tablename 'templates'
     $Filter = "PartitionKey eq 'BPATemplate'"
     $Templates = (Get-CIPPAzDataTableEntity @BPATemplateTable -Filter $Filter).JSON | ConvertFrom-Json
@@ -74,7 +73,7 @@ Function Invoke-ListBPA {
 
     $Results = [PSCustomObject]@{
         Data    = @($Data)
-        Columns = $Columns
+        Columns = @($Columns)
         Style   = $Style
     }
 

@@ -20,9 +20,9 @@ Function Invoke-RemoveSpamfilter {
 
     try {
         $cmdlet = 'Remove-HostedContentFilterRule'
-        $GraphRequest = New-ExoRequest -tenantid $Tenantfilter -cmdlet $cmdlet -cmdParams $params -useSystemmailbox $true
+        $null = New-ExoRequest -tenantid $Tenantfilter -cmdlet $cmdlet -cmdParams $params -useSystemmailbox $true
         $cmdlet = 'Remove-HostedContentFilterPolicy'
-        $GraphRequest = New-ExoRequest -tenantid $Tenantfilter -cmdlet $cmdlet -cmdParams $params -useSystemmailbox $true
+        $null = New-ExoRequest -tenantid $Tenantfilter -cmdlet $cmdlet -cmdParams $params -useSystemmailbox $true
         $Result = "Deleted $($Request.query.name)"
         Write-LogMessage -API 'TransportRules' -tenant $tenantfilter -message "Deleted transport rule $($Request.query.name)" -sev Debug
     } catch {
