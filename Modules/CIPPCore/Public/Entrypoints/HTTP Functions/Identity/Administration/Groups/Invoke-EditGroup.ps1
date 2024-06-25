@@ -130,19 +130,11 @@ Function Invoke-EditGroup {
 
     if ($userobj.allowExternal -eq 'true') {
         try {
-            if ($userobj.groupType -eq 'Distribution list') {
-                $Params = @{ Identity = $userobj.groupid; RequireSenderAuthenticationEnabled = $false }
-                New-ExoRequest -tenantid $Userobj.tenantid -cmdlet 'Set-DistributionGroup' -cmdParams $params
-            } else {
-                $Params = @{ Identity = $userobj.groupid; RequireSenderAuthenticationEnabled = $false }
-                New-ExoRequest -tenantid $Userobj.tenantid -cmdlet 'Set-UnifiedGroup' -cmdParams $params
-            }
-            $body = $results.add("Allowed external senders to send to $($userobj.groupName).")
-            Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $Userobj.tenantid -message "Allowed external senders to send to $($userobj.groupName)" -Sev 'Info'
-
+            Set-CIPPGroupAuthentication -ID $userobj.mail -GroupType $userobj.groupType -tenantFilter $Userobj.tenantid -APIName $APINAME -ExecutingUser $request.headers.'x-ms-client-principal'
+            $body = $results.add("Allowed external senders to send to $($userobj.mail).")
         } catch {
-            $body = $results.add("Failed to allow external senders to send to $($userobj.groupName).")
-            Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $Userobj.tenantid -message "Failed to allow external senders for $($userobj.groupName). Error:$($_.Exception.Message)" -Sev 'Error'
+            $body = $results.add("Failed to allow external senders to send to $($userobj.mail).")
+            Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $Userobj.tenantid -message "Failed to allow external senders for $($userobj.mail). Error:$($_.Exception.Message)" -Sev 'Error'
         }
 
     }

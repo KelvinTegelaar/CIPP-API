@@ -4,7 +4,23 @@ function Invoke-CIPPStandardUserSubmissions {
     Internal
     #>
     param($Tenant, $Settings)
+
     $Policy = New-ExoRequest -tenantid $Tenant -cmdlet 'Get-ReportSubmissionPolicy'
+
+    if ($Settings.report -eq $true) {
+        if ($Policy.length -eq 0) {
+            Add-CIPPBPAField -FieldName 'UserSubmissionPolicy' -FieldValue $false -StoreAs bool -Tenant $tenant
+        } else {
+            Add-CIPPBPAField -FieldName 'UserSubmissionPolicy' -FieldValue $Policy.EnableReportToMicrosoft -StoreAs bool -Tenant $tenant
+        }
+    }
+
+    # Input validation
+    if ([string]::IsNullOrWhiteSpace($Settings.state) -or $Settings.state -eq 'Select a value') {
+        Write-LogMessage -API 'Standards' -tenant $tenant -message 'UserSubmissions: Invalid state parameter set' -sev Error
+        Return
+    }
+
 
     If ($Settings.remediate -eq $true) {
         $Status = if ($Settings.state -eq 'enable') { $true } else { $false }
@@ -54,14 +70,6 @@ function Invoke-CIPPStandardUserSubmissions {
             } else {
                 Write-LogMessage -API 'Standards' -tenant $tenant -message 'User Submission policy is disabled.' -sev Alert
             }
-        }
-    }
-
-    if ($Settings.report -eq $true) {
-        if ($Policy.length -eq 0) {
-            Add-CIPPBPAField -FieldName 'UserSubmissionPolicy' -FieldValue $false -StoreAs bool -Tenant $tenant
-        } else {
-            Add-CIPPBPAField -FieldName 'UserSubmissionPolicy' -FieldValue $Policy.EnableReportToMicrosoft -StoreAs bool -Tenant $tenant
         }
     }
 }
