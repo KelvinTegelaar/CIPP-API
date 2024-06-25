@@ -66,7 +66,7 @@ function Invoke-CIPPStandardAntiPhishPolicy {
             if ($CurrentState.Name -eq $PolicyName) {
                 try {
                     $cmdparams.Add('Identity', $PolicyName)
-                    New-ExoRequest -tenantid $Tenant -cmdlet 'Set-AntiPhishPolicy' -cmdparams $cmdparams
+                    New-ExoRequest -tenantid $Tenant -cmdlet 'Set-AntiPhishPolicy' -cmdparams $cmdparams -UseSystemMailbox $true
                     Write-LogMessage -API 'Standards' -tenant $Tenant -message 'Updated Anti-phishing Policy' -sev Info
                 } catch {
                     $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
@@ -75,7 +75,7 @@ function Invoke-CIPPStandardAntiPhishPolicy {
             } else {
                 try {
                     $cmdparams.Add('Name', $PolicyName)
-                    New-ExoRequest -tenantid $Tenant -cmdlet 'New-AntiPhishPolicy' -cmdparams $cmdparams
+                    New-ExoRequest -tenantid $Tenant -cmdlet 'New-AntiPhishPolicy' -cmdparams $cmdparams -UseSystemMailbox $true
                     Write-LogMessage -API 'Standards' -tenant $Tenant -message 'Created Anti-phishing Policy' -sev Info
                 } catch {
                     $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
@@ -94,7 +94,7 @@ function Invoke-CIPPStandardAntiPhishPolicy {
             if ($RuleState.Name -eq "CIPP $PolicyName") {
                 try {
                     $cmdparams.Add('Identity', "CIPP $PolicyName")
-                    New-ExoRequest -tenantid $Tenant -cmdlet 'Set-AntiPhishRule' -cmdparams $cmdparams
+                    New-ExoRequest -tenantid $Tenant -cmdlet 'Set-AntiPhishRule' -cmdparams $cmdparams -UseSystemMailbox $true
                     Write-LogMessage -API 'Standards' -tenant $Tenant -message 'Updated Anti-phishing Rule' -sev Info
                 } catch {
                     $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
@@ -103,7 +103,7 @@ function Invoke-CIPPStandardAntiPhishPolicy {
             } else {
                 try {
                     $cmdparams.Add('Name', "CIPP $PolicyName")
-                    New-ExoRequest -tenantid $Tenant -cmdlet 'New-AntiPhishRule' -cmdparams $cmdparams
+                    New-ExoRequest -tenantid $Tenant -cmdlet 'New-AntiPhishRule' -cmdparams $cmdparams -UseSystemMailbox $true
                     Write-LogMessage -API 'Standards' -tenant $Tenant -message 'Created Anti-phishing Rule' -sev Info
                 } catch {
                     $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message

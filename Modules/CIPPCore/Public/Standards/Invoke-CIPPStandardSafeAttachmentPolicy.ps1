@@ -43,7 +43,7 @@ function Invoke-CIPPStandardSafeAttachmentPolicy {
             if ($CurrentState.Name -eq $PolicyName) {
                 try {
                     $cmdparams.Add('Identity', $PolicyName)
-                    New-ExoRequest -tenantid $Tenant -cmdlet 'Set-SafeAttachmentPolicy' -cmdparams $cmdparams
+                    New-ExoRequest -tenantid $Tenant -cmdlet 'Set-SafeAttachmentPolicy' -cmdparams $cmdparams -UseSystemMailbox $true
                     Write-LogMessage -API 'Standards' -tenant $Tenant -message 'Updated Safe Attachment Policy' -sev Info
                 } catch {
                     $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
@@ -52,7 +52,7 @@ function Invoke-CIPPStandardSafeAttachmentPolicy {
             } else {
                 try {
                     $cmdparams.Add('Name', $PolicyName)
-                    New-ExoRequest -tenantid $Tenant -cmdlet 'New-SafeAttachmentPolicy' -cmdparams $cmdparams
+                    New-ExoRequest -tenantid $Tenant -cmdlet 'New-SafeAttachmentPolicy' -cmdparams $cmdparams -UseSystemMailbox $true
                     Write-LogMessage -API 'Standards' -tenant $Tenant -message 'Created Safe Attachment Policy' -sev Info
                 } catch {
                     $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
@@ -71,7 +71,7 @@ function Invoke-CIPPStandardSafeAttachmentPolicy {
             if ($RuleState.Name -eq "CIPP $PolicyName") {
                 try {
                     $cmdparams.Add('Identity', "CIPP $PolicyName")
-                    New-ExoRequest -tenantid $Tenant -cmdlet 'Set-SafeAttachmentRule' -cmdparams $cmdparams
+                    New-ExoRequest -tenantid $Tenant -cmdlet 'Set-SafeAttachmentRule' -cmdparams $cmdparams -UseSystemMailbox $true
                     Write-LogMessage -API 'Standards' -tenant $Tenant -message 'Updated Safe Attachment Rule' -sev Info
                 } catch {
                     $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
@@ -80,7 +80,7 @@ function Invoke-CIPPStandardSafeAttachmentPolicy {
             } else {
                 try {
                     $cmdparams.Add('Name', "CIPP $PolicyName")
-                    New-ExoRequest -tenantid $Tenant -cmdlet 'New-SafeAttachmentRule' -cmdparams $cmdparams
+                    New-ExoRequest -tenantid $Tenant -cmdlet 'New-SafeAttachmentRule' -cmdparams $cmdparams -UseSystemMailbox $true
                     Write-LogMessage -API 'Standards' -tenant $Tenant -message 'Created Safe Attachment Rule' -sev Info
                 } catch {
                     $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
