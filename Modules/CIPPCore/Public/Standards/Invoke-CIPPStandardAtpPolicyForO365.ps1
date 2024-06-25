@@ -5,14 +5,12 @@ function Invoke-CIPPStandardAtpPolicyForO365 {
     #>
 
     param($Tenant, $Settings)
-    $AtpPolicyForO365State = New-ExoRequest -tenantid $Tenant -cmdlet 'Get-AtpPolicyForO365' |
+    $CurrentState = New-ExoRequest -tenantid $Tenant -cmdlet 'Get-AtpPolicyForO365' |
         Select-Object EnableATPForSPOTeamsODB, EnableSafeDocs, AllowSafeDocsOpen
 
-    $StateIsCorrect = if (
-        ($AtpPolicyForO365State.EnableATPForSPOTeamsODB -eq $true) -and
-        ($AtpPolicyForO365State.EnableSafeDocs -eq $true) -and
-        ($AtpPolicyForO365State.AllowSafeDocsOpen -eq $Settings.AllowSafeDocsOpen)
-    ) { $true } else { $false }
+    $StateIsCorrect = ($CurrentState.EnableATPForSPOTeamsODB -eq $true) -and
+                      ($CurrentState.EnableSafeDocs -eq $true) -and
+                      ($CurrentState.AllowSafeDocsOpen -eq $Settings.AllowSafeDocsOpen)
 
     if ($Settings.remediate -eq $true) {
         if ($StateIsCorrect -eq $true) {
