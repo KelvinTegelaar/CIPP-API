@@ -20,7 +20,7 @@ function Push-DomainAnalyserTenant {
         return
     } else {
         try {
-            $Domains = New-GraphGetRequest -uri 'https://graph.microsoft.com/v1.0/domains' -tenantid $Tenant.customerId | Where-Object { ($_.id -notlike '*.microsoftonline.com' -and $_.id -NotLike '*.exclaimer.cloud' -and $_.id -Notlike '*.excl.cloud' -and $_.id -NotLike '*.codetwo.online' -and $_.id -NotLike '*.call2teams.com' -and $_.isVerified) }
+            $Domains = New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/domains' -tenantid $Tenant.customerId | Where-Object { ($_.id -notlike '*.microsoftonline.com' -and $_.id -NotLike '*.exclaimer.cloud' -and $_.id -Notlike '*.excl.cloud' -and $_.id -NotLike '*.codetwo.online' -and $_.id -NotLike '*.call2teams.com' -and $_.isVerified) }
 
             $TenantDomains = foreach ($d in $Domains) {
                 [PSCustomObject]@{
@@ -38,9 +38,11 @@ function Push-DomainAnalyserTenant {
                 }
             }
 
+            Write-Information ($TenantDomains | ConvertTo-Json -Depth 10)
+
             $DomainCount = ($TenantDomains | Measure-Object).Count
             if ($DomainCount -gt 0) {
-                Write-Host "$DomainCount tenant Domains"
+                Write-Host "############# $DomainCount tenant Domains"
                 $TenantDomainObjects = [System.Collections.Generic.List[object]]::new()
                 try {
                     foreach ($TenantDomain in $TenantDomains) {
