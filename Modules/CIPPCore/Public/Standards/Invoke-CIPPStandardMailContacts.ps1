@@ -11,7 +11,6 @@ function Invoke-CIPPStandardMailContacts {
 
     If ($Settings.remediate -eq $true) {
 
-        # TODO: Make this smaller if possible
         if ($CurrentInfo.marketingNotificationEmails -eq $Contacts.MarketingContact -and `
             ($CurrentInfo.securityComplianceNotificationMails -in $TechAndSecurityContacts -or
                 $CurrentInfo.technicalNotificationMails -in $TechAndSecurityContacts) -and `

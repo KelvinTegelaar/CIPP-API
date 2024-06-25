@@ -151,7 +151,7 @@ function Get-SlackAlertBlocks {
         $Fields = [system.collections.generic.list[object]]::new()
         foreach ($Key in $Payload.RawData.PSObject.Properties.Name) {
             # if value is json continue to next property
-            if ($Payload.RawData.$Key -is [string] -and ![string]::IsNullOrEmpty($Payload.RawData.$Key)) {
+            if ($Payload.RawData.$Key -is [string] -and ([string]::IsNullOrEmpty($Payload.RawData.$Key) -or (Test-Json $Payload.RawData.$Key -ErrorAction SilentlyContinue))) {
                 continue
             }
             # if value is date object
@@ -187,13 +187,14 @@ function Get-SlackAlertBlocks {
                             })
                     } elseif (Test-Json $Payload.RawData.$Key.$SubKey -ErrorAction SilentlyContinue) {
                         # parse json and iterate through properties
-                        $SubKeyData = $Payload.RawData.$Key.$SubKey | ConvertFrom-Json
+                        continue
+                        <#$SubKeyData = $Payload.RawData.$Key.$SubKey | ConvertFrom-Json
                         foreach ($SubSubKey in $SubKeyData.PSObject.Properties.Name) {
                             $Fields.Add(@{
                                     type = 'mrkdwn'
                                     text = "*$($Key)/$($SubKey)/$($SubSubKey):*`n" + $SubKeyData.$SubSubKey
                                 })
-                        }
+                        }#>
                     } else {
                         $Fields.Add(@{
                                 type = 'mrkdwn'
