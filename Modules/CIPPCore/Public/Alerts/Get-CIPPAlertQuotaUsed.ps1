@@ -16,7 +16,7 @@ function Get-CIPPAlertQuotaUsed {
     } catch {
         return
     }
-    $AlertData | ForEach-Object {
+    $OverQuota = $AlertData | ForEach-Object {
         if ($_.StorageUsedInBytes -eq 0 -or $_.prohibitSendReceiveQuotaInBytes -eq 0) { return }
         $PercentLeft = [math]::round(($_.storageUsedInBytes / $_.prohibitSendReceiveQuotaInBytes) * 100)
         try {
@@ -33,6 +33,5 @@ function Get-CIPPAlertQuotaUsed {
         }
 
     }
-    Write-AlertTrace -cmdletName $MyInvocation.MyCommand -tenantFilter $TenantFilter -data $AlertData
-
+    Write-AlertTrace -cmdletName $MyInvocation.MyCommand -tenantFilter $TenantFilter -data $OverQuota
 }
