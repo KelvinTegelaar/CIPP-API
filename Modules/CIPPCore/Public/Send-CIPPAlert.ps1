@@ -79,7 +79,7 @@ function Send-CIPPAlert {
 
         } catch {
             Write-Information "Could not send alerts to webhook: $($_.Exception.message)"
-            Write-LogMessage -API 'Webhook Alerts' -message "Could not send alerts to webhook: $($_.Exception.message)" -tenant $TenantFilter -sev info
+            Write-LogMessage -API 'Webhook Alerts' -message "Could not send alerts to webhook: $($_.Exception.message)" -tenant $TenantFilter -sev error -LogData (Get-CippException -Exception $_)
         }
     }
     Write-Information 'Trying to send to PSA'
