@@ -4,9 +4,10 @@ function Test-CIPPAuditLogRules {
         [Parameter(Mandatory = $true)]
         $TenantFilter,
         [Parameter(Mandatory = $true)]
+        $ContentUri,
+        [Parameter(Mandatory = $true)]
         [ValidateSet('Audit.AzureActiveDirectory', 'Audit.Exchange')]
-        $LogType,
-        [switch]$ShowAll
+        $LogType
     )
 
     $Results = [PSCustomObject]@{
@@ -34,13 +35,12 @@ function Test-CIPPAuditLogRules {
             LogType    = $_.Type
         }
     }
-    $ContentBundleQuery = @{
+    $AuditLogQuery = @{
         TenantFilter = $TenantFilter
-        ContentType  = $LogType
-        ShowAll      = $ShowAll.IsPresent
+        ContentUri   = $ContentUri
     }
     Write-Information 'Getting data from Office 365 Management Activity API'
-    $Data = Get-CIPPAuditLogContentBundles @ContentBundleQuery | Get-CIPPAuditLogContent
+    $Data = Get-CIPPAuditLogContent @AuditLogQuery
     $LogCount = ($Data | Measure-Object).Count
     Write-Information "Logs to process: $LogCount"
     $Results.TotalLogs = $LogCount
