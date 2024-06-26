@@ -9,7 +9,7 @@ function Invoke-CIPPStandardDeletedUserRentention {
 
     If ($Settings.remediate -eq $true) {
         Write-Host 'Time to remediate'
-        
+
         if ($StateSetCorrectly -eq $false) {
             try {
                 $body = '{"deletedUserPersonalSiteRetentionPeriodInDays": 365}'

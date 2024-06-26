@@ -1,4 +1,4 @@
-function Set-CIPPSharePointOwner {
+function Set-CIPPSharePointPerms {
   [CmdletBinding()]
   param (
     $userid,
@@ -19,8 +19,8 @@ function Set-CIPPSharePointOwner {
     if (!$URL) {
       $URL = (New-GraphGetRequest -uri "https://graph.microsoft.com/v1.0/users/$($UserId)/Drives" -asapp $true -tenantid $TenantFilter).WebUrl
     }
-    $OnMicrosoft = (New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/domains?$top=999' -tenantid $TenantFilter | Where-Object -Property isInitial -EQ $true).id.split('.') | Select-Object -First 1
-    $AdminUrl = "https://$($OnMicrosoft)-admin.sharepoint.com"
+    $tenantName = (New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/sites/root' -tenantid $TenantFilter).id.Split('.')[0]
+    $AdminUrl = "https://$($tenantName)-admin.sharepoint.com"
     $XML = @"
 <Request xmlns="http://schemas.microsoft.com/sharepoint/clientquery/2009" AddExpandoFieldTypeSuffix="true" SchemaVersion="15.0.0.0" LibraryVersion="16.0.0.0" ApplicationName=".NET Library">
   <Actions>

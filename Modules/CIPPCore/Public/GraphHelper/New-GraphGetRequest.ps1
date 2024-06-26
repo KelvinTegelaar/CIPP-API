@@ -12,7 +12,8 @@ function New-GraphGetRequest {
         $NoAuthCheck,
         $skipTokenCache,
         [switch]$ComplexFilter,
-        [switch]$CountOnly
+        [switch]$CountOnly,
+        [switch]$IncludeResponseHeaders
     )
 
     if ($NoAuthCheck -or (Get-AuthorisedRequest -Uri $uri -TenantID $tenantid)) {
@@ -43,13 +44,35 @@ function New-GraphGetRequest {
 
         $ReturnedData = do {
             try {
-                $Data = (Invoke-RestMethod -Uri $nextURL -Method GET -Headers $headers -ContentType 'application/json; charset=utf-8')
+                $GraphRequest = @{
+                    Uri         = $nextURL
+                    Method      = 'GET'
+                    Headers     = $headers
+                    ContentType = 'application/json; charset=utf-8'
+                }
+                if ($IncludeResponseHeaders) {
+                    $GraphRequest.ResponseHeadersVariable = 'ResponseHeaders'
+                }
+                $Data = (Invoke-RestMethod @GraphRequest)
                 if ($CountOnly) {
                     $Data.'@odata.count'
-                    $nextURL = $null
+                    $NextURL = $null
                 } else {
-                    if ($data.value) { $data.value } else { ($Data) }
-                    if ($noPagination) { $nextURL = $null } else { $nextURL = $data.'@odata.nextLink' }
+                    if ($Data.PSObject.Properties.Name -contains 'value') { $data.value } else { ($Data) }
+                    if ($noPagination) {
+                        $nextURL = $null
+                    } else {
+                        $NextPageUriFound = $false
+                        if ($IncludeResponseHeaders) {
+                            if ($ResponseHeaders.NextPageUri) {
+                                $NextURL = $ResponseHeaders.NextPageUri
+                                $NextPageUriFound = $true
+                            }
+                        }
+                        if (!$NextPageUriFound) {
+                            $nextURL = $data.'@odata.nextLink'
+                        }
+                    }
                 }
             } catch {
                 try {
@@ -63,7 +86,7 @@ function New-GraphGetRequest {
                 }
                 throw $Message
             }
-        } until ($null -eq $NextURL -or ' ' -eq $NextURL)
+        } until ([string]::IsNullOrEmpty($NextURL) -or $NextURL -is [object[]] -or ' ' -eq $NextURL)
         $Tenant.LastGraphError = ''
         Update-AzDataTableEntity @TenantsTable -Entity $Tenant
         return $ReturnedData
