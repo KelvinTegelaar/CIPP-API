@@ -57,10 +57,11 @@ Function Invoke-ExecJITAdmin {
             }
         }
     } else {
-        Write-LogMessage -user $Request.Headers.'x-ms-client-principal' -API $APINAME -message "Executing JIT Admin for $($Request.Body.UserPrincipalName)" -Sev 'Info'
+
         if ($Request.Body.UserId -match '^[a-f0-9]{8}-([a-f0-9]{4}-){3}[a-f0-9]{12}$') {
             $Username = (New-GraphGetRequest -uri "https://graph.microsoft.com/v1.0/users/$($Request.Body.UserId)" -tenantid $Request.Body.TenantFilter).userPrincipalName
         }
+        Write-LogMessage -user $Request.Headers.'x-ms-client-principal' -API $APINAME -message "Executing JIT Admin for $Username" -Sev 'Info'
 
         $Start = ([System.DateTimeOffset]::FromUnixTimeSeconds($Request.Body.StartDate)).DateTime.ToLocalTime()
         $Expiration = ([System.DateTimeOffset]::FromUnixTimeSeconds($Request.Body.EndDate)).DateTime.ToLocalTime()
