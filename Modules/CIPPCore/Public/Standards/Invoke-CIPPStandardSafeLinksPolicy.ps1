@@ -52,19 +52,24 @@ function Invoke-CIPPStandardSafeLinksPolicy {
                 EnableOrganizationBranding = $Settings.EnableOrganizationBranding
             }
 
-            try {
-                if ($CurrentState.Name -eq $PolicyName) {
+            if ($CurrentState.Name -eq $Policyname) {
+                try {
                     $cmdparams.Add('Identity', $PolicyName)
-                    New-ExoRequest -tenantid $Tenant -cmdlet 'Set-SafeLinksPolicy' -cmdparams $cmdparams
+                    New-ExoRequest -tenantid $Tenant -cmdlet 'Set-SafeLinksPolicy' -cmdparams $cmdparams -UseSystemMailbox $true
                     Write-LogMessage -API 'Standards' -tenant $Tenant -message 'Updated SafeLink Policy' -sev Info
-                } else {
-                    $cmdparams.Add('Name', $PolicyName)
-                    New-ExoRequest -tenantid $Tenant -cmdlet 'New-SafeLinksPolicy' -cmdparams $cmdparams
-                    Write-LogMessage -API 'Standards' -tenant $Tenant -message 'Created SafeLink Policy' -sev Info
+                } catch {
+                    $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
+                    Write-LogMessage -API 'Standards' -tenant $Tenant -message "Failed to update SafeLink Policy. Error: $ErrorMessage" -sev Error
                 }
-            } catch {
-                $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
-                Write-LogMessage -API 'Standards' -tenant $Tenant -message "Failed to create SafeLink Policy. Error: $ErrorMessage" -sev Error
+            } else {
+                try {
+                    $cmdparams.Add('Name', $PolicyName)
+                    New-ExoRequest -tenantid $Tenant -cmdlet 'New-SafeLinksPolicy' -cmdparams $cmdparams -UseSystemMailbox $true
+                    Write-LogMessage -API 'Standards' -tenant $Tenant -message 'Created SafeLink Policy' -sev Info
+                } catch {
+                    $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
+                    Write-LogMessage -API 'Standards' -tenant $Tenant -message "Failed to create SafeLink Policy. Error: $ErrorMessage" -sev Error
+                }
             }
         }
 
@@ -75,19 +80,24 @@ function Invoke-CIPPStandardSafeLinksPolicy {
                 RecipientDomainIs = $AcceptedDomains.Name
             }
 
-            try {
-                if ($RuleState.Name -eq "CIPP $PolicyName") {
+            if ($RuleState.Name -eq "CIPP $PolicyName") {
+                try {
                     $cmdparams.Add('Identity', "CIPP $PolicyName")
-                    New-ExoRequest -tenantid $Tenant -cmdlet 'Set-SafeLinksRule' -cmdparams $cmdparams
+                    New-ExoRequest -tenantid $Tenant -cmdlet 'Set-SafeLinksRule' -cmdparams $cmdparams -UseSystemMailbox $true
                     Write-LogMessage -API 'Standards' -tenant $Tenant -message 'Updated SafeLink Rule' -sev Info
-                } else {
-                    $cmdparams.Add('Name', "CIPP $PolicyName")
-                    New-ExoRequest -tenantid $Tenant -cmdlet 'New-SafeLinksRule' -cmdparams $cmdparams
-                    Write-LogMessage -API 'Standards' -tenant $Tenant -message 'Created SafeLink Rule' -sev Info
+                } catch {
+                    $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
+                    Write-LogMessage -API 'Standards' -tenant $Tenant -message "Failed to update SafeLink Rule. Error: $ErrorMessage" -sev Error
                 }
-            } catch {
-                $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
-                Write-LogMessage -API 'Standards' -tenant $Tenant -message "Failed to create SafeLink Rule. Error: $ErrorMessage" -sev Error
+            } else {
+                try {
+                    $cmdparams.Add('Name', "CIPP $PolicyName")
+                    New-ExoRequest -tenantid $Tenant -cmdlet 'New-SafeLinksRule' -cmdparams $cmdparams -UseSystemMailbox $true
+                    Write-LogMessage -API 'Standards' -tenant $Tenant -message 'Created SafeLink Rule' -sev Info
+                } catch {
+                    $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
+                    Write-LogMessage -API 'Standards' -tenant $Tenant -message "Failed to create SafeLink Rule. Error: $ErrorMessage" -sev Error
+                }
             }
         }
     }
