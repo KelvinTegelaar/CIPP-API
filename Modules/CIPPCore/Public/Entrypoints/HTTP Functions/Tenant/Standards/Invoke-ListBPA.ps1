@@ -19,15 +19,18 @@ Function Invoke-ListBPA {
 
     # Get all possible JSON files for reports, find the correct one, select the Columns
     $JSONFields = @()
-    $Columns = $null
-(Get-ChildItem -Path 'Config\*.BPATemplate.json' -Recurse | Select-Object -ExpandProperty FullName | ForEach-Object {
-        $Template = $(Get-Content $_) | ConvertFrom-Json
+    $BPATemplateTable = Get-CippTable -tablename 'templates'
+    $Filter = "PartitionKey eq 'BPATemplate'"
+    $Templates = (Get-CIPPAzDataTableEntity @BPATemplateTable -Filter $Filter).JSON | ConvertFrom-Json
+
+    $Templates | ForEach-Object {
+        $Template = $_
         if ($Template.Name -eq $NAME) {
             $JSONFields = $Template.Fields | Where-Object { $_.StoreAs -eq 'JSON' } | ForEach-Object { $_.name }
             $Columns = $Template.fields.FrontendFields | Where-Object -Property name -NE $null
             $Style = $Template.Style
         }
-    })
+    }
 
 
     if ($Request.query.tenantFilter -ne 'AllTenants' -and $Style -eq 'Tenant') {
@@ -70,7 +73,7 @@ Function Invoke-ListBPA {
 
     $Results = [PSCustomObject]@{
         Data    = @($Data)
-        Columns = $Columns
+        Columns = @($Columns)
         Style   = $Style
     }
 

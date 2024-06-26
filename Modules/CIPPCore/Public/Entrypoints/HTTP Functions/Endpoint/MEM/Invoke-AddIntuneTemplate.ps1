@@ -60,7 +60,13 @@ Function Invoke-AddIntuneTemplate {
                     $TemplateJson = $Template | ConvertTo-Json -Depth 100
                     $DisplayName = $Template.name
 
-
+                }
+                'windowsDriverUpdateProfiles' {
+                    $Type = 'windowsDriverUpdateProfiles'
+                    $Template = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/deviceManagement/$($urlname)/$($ID)" -tenantid $tenantfilter | Select-Object * -ExcludeProperty id, lastModifiedDateTime, '@odata.context', 'ScopeTagIds', 'supportsScopeTags', 'createdDateTime'
+                    Write-Host ($Template | ConvertTo-Json)
+                    $DisplayName = $Template.displayName
+                    $TemplateJson = ConvertTo-Json -InputObject $Template -Depth 100 -Compress
                 }
                 'deviceConfigurations' {
                     $Type = 'Device'
