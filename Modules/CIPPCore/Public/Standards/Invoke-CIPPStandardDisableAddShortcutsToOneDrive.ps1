@@ -60,7 +60,7 @@ function Invoke-CIPPStandardDisableAddShortcutsToOneDrive {
         }
 
         try {
-            $tenantName = (New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/sites/root' -tenantid $TenantFilter).id.Split('.')[0]
+                $tenantName = (New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/sites/root' -asApp $true -tenantid $TenantFilter).id.Split('.')[0]
             $AdminUrl = "https://$($tenantName)-admin.sharepoint.com"
             $graphRequest = @{
                 'scope'       = "$AdminURL/.default"
