@@ -22,10 +22,8 @@ Function Invoke-ExecEmailForward {
         try {
             Set-CIPPForwarding -userid $username -tenantFilter $TenantFilter -APIName $APINAME -ExecutingUser $request.headers.'x-ms-client-principal' -Forward $ForwardingAddress -keepCopy $KeepCopy
             if (-not $request.body.KeepCopy) {
-                Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -message "Set Forwarding for $($username) to $($ForwardingAddress) and not keeping a copy" -Sev 'Info' -tenant $TenantFilter
                 $results = "Forwarding all email for $($username) to $($ForwardingAddress) and not keeping a copy"
             } elseif ($request.body.KeepCopy) {
-                Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -message "Set Forwarding for $($username) to $($ForwardingAddress) and keeping a copy" -Sev 'Info' -tenant $TenantFilter
                 $results = "Forwarding all email for $($username) to $($ForwardingAddress) and keeping a copy"
             }
         } catch {
@@ -39,10 +37,8 @@ Function Invoke-ExecEmailForward {
         try {
             Set-CIPPForwarding -userid $username -tenantFilter $TenantFilter -APIName $APINAME -ExecutingUser $request.headers.'x-ms-client-principal' -forwardingSMTPAddress $ForwardingSMTPAddress -keepCopy $KeepCopy
             if (-not $request.body.KeepCopy) {
-                Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -message "Set forwarding for $($username) to $($ForwardingSMTPAddress) and not keeping a copy" -Sev 'Info' -tenant $TenantFilter
                 $results = "Forwarding all email for $($username) to $($ForwardingSMTPAddress) and not keeping a copy"
             } elseif ($request.body.KeepCopy) {
-                Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -message "Set forwarding for $($username) to $($ForwardingSMTPAddress) and keeping a copy" -Sev 'Info' -tenant $TenantFilter
                 $results = "Forwarding all email for $($username) to $($ForwardingSMTPAddress) and keeping a copy"
             }
         } catch {
@@ -56,7 +52,6 @@ Function Invoke-ExecEmailForward {
     elseif ($DisableForwarding -eq 'True') {
         try {
             Set-CIPPForwarding -userid $username -username $username -tenantFilter $Tenantfilter -ExecutingUser $ExecutingUser -APIName $APIName -Disable $true
-            Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -message "Disabled Email forwarding for $($username)" -Sev 'Info' -tenant $TenantFilter
             $results = "Disabled Email Forwarding for $($username)"
         } catch {
             Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -message "Could not disable Email forwarding for $($username)" -Sev 'Error' -tenant $TenantFilter
