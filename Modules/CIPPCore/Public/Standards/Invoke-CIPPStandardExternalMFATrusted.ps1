@@ -9,6 +9,17 @@ function Invoke-CIPPStandardExternalMFATrusted {
     $WantedState = if ($Settings.state -eq 'true') { $true } else { $false }
     $StateMessage = if ($WantedState) { 'enabled' } else { 'disabled' }
 
+    if ($Settings.report -eq $true) {
+
+        Add-CIPPBPAField -FieldName 'ExternalMFATrusted' -FieldValue $ExternalMFATrusted.inboundTrust.isMfaAccepted -StoreAs bool -Tenant $tenant
+    }
+
+    # Input validation
+    if (([string]::IsNullOrWhiteSpace($Settings.state) -or $Settings.state -eq 'Select a value') -and ($Settings.remediate -eq $true -or $Settings.alert -eq $true)) {
+        Write-LogMessage -API 'Standards' -tenant $tenant -message 'ExternalMFATrusted: Invalid state parameter set' -sev Error
+        Return
+    }
+
     if ($Settings.remediate -eq $true) {
 
         Write-Host 'Remediate External MFA Trusted'
@@ -35,11 +46,5 @@ function Invoke-CIPPStandardExternalMFATrusted {
         } else {
             Write-LogMessage -API 'Standards' -tenant $tenant -message "External MFA Trusted is not $StateMessage." -sev Alert
         }
-
-    }
-
-    if ($Settings.report -eq $true) {
-
-        Add-CIPPBPAField -FieldName 'ExternalMFATrusted' -FieldValue $ExternalMFATrusted.inboundTrust.isMfaAccepted -StoreAs bool -Tenant $tenant
     }
 }

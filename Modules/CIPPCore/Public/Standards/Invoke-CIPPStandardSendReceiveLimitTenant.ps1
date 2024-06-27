@@ -4,6 +4,20 @@ function Invoke-CIPPStandardSendReceiveLimitTenant {
     Internal
     #>
     param($Tenant, $Settings)
+
+    # Input validation
+    if ($Settings.SendLimit -lt 1 -or $Settings.SendLimit -gt 150) {
+        Write-LogMessage -API 'Standards' -tenant $tenant -message 'SendReceiveLimitTenant: Invalid SendLimit parameter set' -sev Error
+        Return
+    }
+
+    # Input validation
+    if ($Settings.ReceiveLimit -lt 1 -or $Settings.ReceiveLimit -gt 150) {
+        Write-LogMessage -API 'Standards' -tenant $tenant -message 'SendReceiveLimitTenant: Invalid ReceiveLimit parameter set' -sev Error
+        Return
+    }
+
+
     $AllMailBoxPlans = New-ExoRequest -tenantid $Tenant -cmdlet 'Get-MailboxPlan' | Select-Object DisplayName, MaxSendSize, MaxReceiveSize, GUID
     $MaxSendSize = [int64]"$($Settings.SendLimit)MB"
     $MaxReceiveSize = [int64]"$($Settings.ReceiveLimit)MB"
