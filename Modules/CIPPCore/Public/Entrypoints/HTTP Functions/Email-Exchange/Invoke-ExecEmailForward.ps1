@@ -16,10 +16,11 @@ Function Invoke-ExecEmailForward {
     $ForwardingSMTPAddress = $request.body.ForwardExternal
     $DisableForwarding = $request.body.disableForwarding
     $APIName = $TriggerMetadata.FunctionName
+    [bool]$KeepCopy = if ($request.body.keepCopy -eq "true") { $true } else { $false }
 
     if ($ForwardingAddress) {
         try {
-            New-ExoRequest -tenantid $TenantFilter -cmdlet 'Set-mailbox' -cmdParams @{Identity = $Username; ForwardingAddress = $ForwardingAddress ; DeliverToMailboxAndForward = [bool]$request.body.keepCopy } -Anchor $username
+            Set-CIPPForwarding -userid $username -tenantFilter $TenantFilter -APIName $APINAME -ExecutingUser $request.headers.'x-ms-client-principal' -Forward $ForwardingAddress -keepCopy $KeepCopy
             if (-not $request.body.KeepCopy) {
                 Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -message "Set Forwarding for $($username) to $($ForwardingAddress) and not keeping a copy" -Sev 'Info' -tenant $TenantFilter
                 $results = "Forwarding all email for $($username) to $($ForwardingAddress) and not keeping a copy"
@@ -36,7 +37,7 @@ Function Invoke-ExecEmailForward {
 
     elseif ($ForwardingSMTPAddress) {
         try {
-            New-ExoRequest -tenantid $TenantFilter -cmdlet 'Set-mailbox' -cmdParams @{Identity = $Username; ForwardingSMTPAddress = $ForwardingSMTPAddress ; DeliverToMailboxAndForward = [bool]$request.body.keepCopy } -Anchor $username
+            Set-CIPPForwarding -userid $username -tenantFilter $TenantFilter -APIName $APINAME -ExecutingUser $request.headers.'x-ms-client-principal' -forwardingSMTPAddress $ForwardingSMTPAddress -keepCopy $KeepCopy
             if (-not $request.body.KeepCopy) {
                 Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -message "Set forwarding for $($username) to $($ForwardingSMTPAddress) and not keeping a copy" -Sev 'Info' -tenant $TenantFilter
                 $results = "Forwarding all email for $($username) to $($ForwardingSMTPAddress) and not keeping a copy"
@@ -54,7 +55,7 @@ Function Invoke-ExecEmailForward {
 
     elseif ($DisableForwarding -eq 'True') {
         try {
-            New-ExoRequest -tenantid $TenantFilter -cmdlet 'Set-Mailbox' -cmdParams @{Identity = $Username; ForwardingAddress = $null; ForwardingSMTPAddress = $null; DeliverToMailboxAndForward = $false }
+            Set-CIPPForwarding -userid $username -username $username -tenantFilter $Tenantfilter -ExecutingUser $ExecutingUser -APIName $APIName -Disable $true
             Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -message "Disabled Email forwarding for $($username)" -Sev 'Info' -tenant $TenantFilter
             $results = "Disabled Email Forwarding for $($username)"
         } catch {
