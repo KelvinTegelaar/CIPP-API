@@ -5,7 +5,7 @@ Function Invoke-ListRoles {
     .FUNCTIONALITY
         Entrypoint
     .ROLE
-        Tenant.Directory.Read
+        Identity.Role.Read
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)

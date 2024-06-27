@@ -14,7 +14,7 @@ function Invoke-CIPPStandardBranding {
         Write-LogMessage -API 'Standards' -Tenant $Tenant -Message "Could not get the branding for $Tenant. This tenant might not have premium licenses available: $ErrorMessage" -Sev Error
     }
 
-    $StateIsCorrect =   ($CurrentState.signInPageText -eq $Settings.signInPageText) -and
+    $StateIsCorrect = ($CurrentState.signInPageText -eq $Settings.signInPageText) -and
                         ($CurrentState.usernameHintText -eq $Settings.usernameHintText) -and
                         ($CurrentState.loginPageTextVisibilitySettings.hideAccountResetCredentials -eq $Settings.hideAccountResetCredentials) -and
                         ($CurrentState.loginPageLayoutConfiguration.layoutTemplateType -eq $Settings.layoutTemplateType) -and
@@ -23,30 +23,30 @@ function Invoke-CIPPStandardBranding {
 
     If ($Settings.remediate -eq $true) {
         if ($StateIsCorrect -eq $true) {
-            Write-LogMessage -API 'Standards' -Tenant $Tenant -Message "Branding is already applied correctly." -Sev Info
+            Write-LogMessage -API 'Standards' -Tenant $Tenant -Message 'Branding is already applied correctly.' -Sev Info
         } else {
             try {
                 $GraphRequest = @{
-                    tenantID = $Tenant
-                    uri = "https://graph.microsoft.com/beta/organization/$($TenantId.customerId)/branding/localizations/0"
-                    AsApp = $true
-                    Type = 'PATCH'
+                    tenantID    = $Tenant
+                    uri         = "https://graph.microsoft.com/beta/organization/$($TenantId.customerId)/branding/localizations/0"
+                    AsApp       = $true
+                    Type        = 'PATCH'
                     ContentType = 'application/json; charset=utf-8'
-                    Body = [pscustomobject]@{
-                        signInPageText = $Settings.signInPageText
-                        usernameHintText = $Settings.usernameHintText
+                    Body        = [pscustomobject]@{
+                        signInPageText                  = $Settings.signInPageText
+                        usernameHintText                = $Settings.usernameHintText
                         loginPageTextVisibilitySettings = [pscustomobject]@{
                             hideAccountResetCredentials = $Settings.hideAccountResetCredentials
                         }
-                        loginPageLayoutConfiguration = [pscustomobject]@{
+                        loginPageLayoutConfiguration    = [pscustomobject]@{
                             layoutTemplateType = $Settings.layoutTemplateType
-                            isHeaderShown = $Settings.isHeaderShown
-                            isFooterShown = $Settings.isFooterShown
+                            isHeaderShown      = $Settings.isHeaderShown
+                            isFooterShown      = $Settings.isFooterShown
                         }
                     } | ConvertTo-Json -Compress
                 }
                 New-GraphPostRequest @GraphRequest
-                Write-LogMessage -API 'Standards' -Tenant $Tenant -Message "Successfully updated branding." -Sev Info
+                Write-LogMessage -API 'Standards' -Tenant $Tenant -Message 'Successfully updated branding.' -Sev Info
             } catch {
                 $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
                 Write-LogMessage -API 'Standards' -Tenant $Tenant -Message "Failed to update branding. Error: $($ErrorMessage)" -Sev Error
