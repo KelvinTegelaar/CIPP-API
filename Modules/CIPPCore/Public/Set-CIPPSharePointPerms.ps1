@@ -19,7 +19,7 @@ function Set-CIPPSharePointPerms {
     if (!$URL) {
       $URL = (New-GraphGetRequest -uri "https://graph.microsoft.com/v1.0/users/$($UserId)/Drives" -asapp $true -tenantid $TenantFilter).WebUrl
     }
-    $tenantName = (New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/sites/root' -tenantid $TenantFilter).id.Split('.')[0]
+    $tenantName = (New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/sites/root' -asApp $true -tenantid $TenantFilter).id.Split('.')[0]
     $AdminUrl = "https://$($tenantName)-admin.sharepoint.com"
     $XML = @"
 <Request xmlns="http://schemas.microsoft.com/sharepoint/clientquery/2009" AddExpandoFieldTypeSuffix="true" SchemaVersion="15.0.0.0" LibraryVersion="16.0.0.0" ApplicationName=".NET Library">
