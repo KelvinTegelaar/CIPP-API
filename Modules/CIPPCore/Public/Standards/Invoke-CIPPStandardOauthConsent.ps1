@@ -27,7 +27,7 @@ function Invoke-CIPPStandardOauthConsent {
                 }
                 New-GraphPostRequest -tenantid $tenant -Uri 'https://graph.microsoft.com/beta/policies/authorizationPolicy/authorizationPolicy' -Type PATCH -Body '{"permissionGrantPolicyIdsAssignedToDefaultUserRole":["managePermissionGrantsForSelf.cipp-consent-policy"]}' -ContentType 'application/json'
             }
-     
+
             Write-LogMessage -API 'Standards' -tenant $tenant -message 'Application Consent Mode has been enabled.' -sev Info
         } catch {
             $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message

@@ -3,7 +3,9 @@ using namespace System.Net
 Function Invoke-AddPolicy {
     <#
     .FUNCTIONALITY
-    Entrypoint
+        Entrypoint
+    .ROLE
+        Endpoint.MEM.ReadWrite
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
@@ -25,6 +27,7 @@ Function Invoke-AddPolicy {
         try {
             switch ($Request.Body.TemplateType) {
                 'AppProtection' {
+                    $PlatformType = 'deviceAppManagement'
                     $TemplateType = ($RawJSON | ConvertFrom-Json).'@odata.type' -replace '#microsoft.graph.', ''
                     $TemplateTypeURL = "$($TemplateType)s"
                     $CheckExististing = New-GraphGETRequest -uri "https://graph.microsoft.com/beta/deviceAppManagement/$TemplateTypeURL" -tenantid $tenant
@@ -79,11 +82,24 @@ Function Invoke-AddPolicy {
                     }
                     $CreateRequest = New-GraphPOSTRequest -uri "https://graph.microsoft.com/beta/deviceManagement/$TemplateTypeURL" -tenantid $tenant -type POST -body $RawJSON
                 }
+                'windowsDriverUpdateProfiles' {
+                    $TemplateTypeURL = 'windowsDriverUpdateProfiles'
+                    $PolicyName = ($RawJSON | ConvertFrom-Json).Name
+                    $CheckExististing = New-GraphGETRequest -uri "https://graph.microsoft.com/beta/deviceManagement/$TemplateTypeURL" -tenantid $tenant
+                    if ($PolicyName -in $CheckExististing.name) {
+                        $ExistingID = $CheckExististing | Where-Object -Property Name -EQ $PolicyName
+                        $CreateRequest = New-GraphPOSTRequest -uri "https://graph.microsoft.com/beta/deviceManagement/$TemplateTypeURL/$($ExistingID.Id)" -tenantid $tenant -type PUT -body $RawJSON
+
+                    } else {
+                        $CreateRequest = New-GraphPOSTRequest -uri "https://graph.microsoft.com/beta/deviceManagement/$TemplateTypeURL" -tenantid $tenant -type POST -body $RawJSON
+                        Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $($Tenant) -message "Added policy $($PolicyName) via template" -Sev 'info'
+                    }
+                }
 
             }
             Write-LogMessage -user $Request.headers.'x-ms-client-principal' -API $APINAME -tenant $($Tenant) -message "Added policy $($Displayname)" -Sev 'Info'
             if ($AssignTo) {
-                Set-CIPPAssignedPolicy -GroupName $AssignTo -PolicyId $CreateRequest.id -Type $TemplateTypeURL -TenantFilter $tenant
+                Set-CIPPAssignedPolicy -GroupName $AssignTo -PolicyId $CreateRequest.id -Type $TemplateTypeURL -TenantFilter $tenant -PlatformType $PlatformType
             }
             "Successfully added policy for $($Tenant)"
         } catch {

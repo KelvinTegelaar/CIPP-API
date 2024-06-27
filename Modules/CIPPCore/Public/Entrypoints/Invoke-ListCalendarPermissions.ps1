@@ -3,7 +3,9 @@ using namespace System.Net
 Function Invoke-ListCalendarPermissions {
     <#
     .FUNCTIONALITY
-    Entrypoint
+        Entrypoint
+    .ROLE
+        Exchange.Mailbox.Read
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
@@ -15,9 +17,9 @@ Function Invoke-ListCalendarPermissions {
 
     try {
         $GetCalParam = @{Identity = $UserID; FolderScope = 'Calendar' }
-        $CalendarFolder = New-ExoRequest -tenantid $Tenantfilter -cmdlet 'Get-MailboxFolderStatistics' -cmdParams $GetCalParam | Select-Object -First 1
+        $CalendarFolder = New-ExoRequest -tenantid $Tenantfilter -cmdlet 'Get-MailboxFolderStatistics' -anchor $UserID -cmdParams $GetCalParam | Select-Object -First 1
         $CalParam = @{Identity = "$($UserID):\$($CalendarFolder.name)" }
-        $GraphRequest = New-ExoRequest -tenantid $Tenantfilter -cmdlet 'Get-MailboxFolderPermission' -cmdParams $CalParam -UseSystemMailbox $true | Select-Object Identity, User, AccessRights, FolderName
+        $GraphRequest = New-ExoRequest -tenantid $Tenantfilter -cmdlet 'Get-MailboxFolderPermission' -anchor $UserID -cmdParams $CalParam -UseSystemMailbox $true | Select-Object Identity, User, AccessRights, FolderName
         Write-LogMessage -API 'List Calendar Permissions' -tenant $tenantfilter -message "Calendar permissions listed for $($tenantfilter)" -sev Debug
         $StatusCode = [HttpStatusCode]::OK
     } catch {

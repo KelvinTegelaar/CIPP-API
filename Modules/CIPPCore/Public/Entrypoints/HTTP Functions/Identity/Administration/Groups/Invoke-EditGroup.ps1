@@ -3,7 +3,9 @@ using namespace System.Net
 Function Invoke-EditGroup {
     <#
     .FUNCTIONALITY
-    Entrypoint
+        Entrypoint
+    .ROLE
+        Identity.Group.ReadWrite
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
@@ -23,13 +25,13 @@ Function Invoke-EditGroup {
         $AddMembers | ForEach-Object {
             try {
                 $member = $_
-                
+
                 if ($member -like '*#EXT#*') { $member = [System.Web.HttpUtility]::UrlEncode($member) }
-                $MemberIDs = 'https://graph.microsoft.com/v1.0/directoryObjects/' + (New-GraphGetRequest -uri "https://graph.microsoft.com/beta/users/$($member)" -tenantid $Userobj.tenantid).id 
+                $MemberIDs = 'https://graph.microsoft.com/v1.0/directoryObjects/' + (New-GraphGetRequest -uri "https://graph.microsoft.com/beta/users/$($member)" -tenantid $Userobj.tenantid).id
                 $addmemberbody = "{ `"members@odata.bind`": $(ConvertTo-Json @($MemberIDs)) }"
                 if ($GroupType -eq 'Distribution list' -or $GroupType -eq 'Mail-Enabled Security') {
                     $Params = @{ Identity = $userobj.groupid; Member = $member; BypassSecurityGroupManagerCheck = $true }
-                    New-ExoRequest -tenantid $Userobj.tenantid -cmdlet 'Add-DistributionGroupMember' -cmdParams $params -UseSystemMailbox $true 
+                    New-ExoRequest -tenantid $Userobj.tenantid -cmdlet 'Add-DistributionGroupMember' -cmdParams $params -UseSystemMailbox $true
                 } else {
                     New-GraphPostRequest -uri "https://graph.microsoft.com/beta/groups/$($userobj.groupid)" -tenantid $Userobj.tenantid -type patch -body $addmemberbody -Verbose
                 }
@@ -67,7 +69,7 @@ Function Invoke-EditGroup {
     $RemoveMembers = ($userobj.Removemember).value
     try {
         if ($RemoveMembers) {
-            $RemoveMembers | ForEach-Object { 
+            $RemoveMembers | ForEach-Object {
                 $member = $_
                 if ($member -like '*#EXT#*') { $member = [System.Web.HttpUtility]::UrlEncode($member) }
                 if ($GroupType -eq 'Distribution list' -or $GroupType -eq 'Mail-Enabled Security') {
@@ -75,11 +77,11 @@ Function Invoke-EditGroup {
                     New-ExoRequest -tenantid $Userobj.tenantid -cmdlet 'Remove-DistributionGroupMember' -cmdParams $params -UseSystemMailbox $true
                 } else {
                     $MemberInfo = (New-GraphGetRequest -uri "https://graph.microsoft.com/beta/users/$($_)" -tenantid $Userobj.tenantid)
-                    New-GraphPostRequest -uri "https://graph.microsoft.com/beta/groups/$($userobj.groupid)/members/$($MemberInfo.id)/`$ref" -tenantid $Userobj.tenantid -type DELETE 
+                    New-GraphPostRequest -uri "https://graph.microsoft.com/beta/groups/$($userobj.groupid)/members/$($MemberInfo.id)/`$ref" -tenantid $Userobj.tenantid -type DELETE
                 }
                 Write-LogMessage -API $APINAME -tenant $Userobj.tenantid -user $request.headers.'x-ms-client-principal' -message "Removed $member from $($userobj.groupName) group" -Sev 'Info'
                 $null = $results.add("Success. Member $member has been removed from $($userobj.groupName)")
-            }  
+            }
         }
     } catch {
         Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $Userobj.tenantid -message "Failed to remove $RemoveMembers from $($userobj.groupName). Error:$($_.Exception.Message)" -Sev 'Error'
@@ -89,7 +91,7 @@ Function Invoke-EditGroup {
     $AddOwners = $userobj.Addowner.value
     try {
         if ($AddOwners) {
-            $AddOwners | ForEach-Object { 
+            $AddOwners | ForEach-Object {
                 try {
                     $ID = 'https://graph.microsoft.com/beta/users/' + (New-GraphGetRequest -uri "https://graph.microsoft.com/beta/users/$($_)" -tenantid $Userobj.tenantid).id
                     Write-Host $ID
@@ -110,16 +112,16 @@ Function Invoke-EditGroup {
     $RemoveOwners = ($userobj.RemoveOwner).value
     try {
         if ($RemoveOwners) {
-            $RemoveOwners | ForEach-Object { 
+            $RemoveOwners | ForEach-Object {
                 try {
                     $MemberInfo = (New-GraphGetRequest -uri "https://graph.microsoft.com/beta/users/$($_)" -tenantid $Userobj.tenantid)
-                    New-GraphPostRequest -uri "https://graph.microsoft.com/beta/groups/$($userobj.groupid)/owners/$($MemberInfo.id)/`$ref" -tenantid $Userobj.tenantid -type DELETE 
+                    New-GraphPostRequest -uri "https://graph.microsoft.com/beta/groups/$($userobj.groupid)/owners/$($MemberInfo.id)/`$ref" -tenantid $Userobj.tenantid -type DELETE
                     Write-LogMessage -API $APINAME -tenant $Userobj.tenantid -user $request.headers.'x-ms-client-principal' -message "Removed $($MemberInfo.UserPrincipalname) from $($userobj.displayname) group" -Sev 'Info'
                     $null = $results.add("Success. Member $_ has been removed from $($userobj.groupName)")
                 } catch {
                     $null = $results.add("Failed to remove $_ from $($userobj.groupName): $($_.Exception.Message)")
                 }
-            }  
+            }
         }
     } catch {
         Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $Userobj.tenantid -message "Failed to remove $RemoveMembers from $($userobj.groupName). Error:$($_.Exception.Message)" -Sev 'Error'
@@ -128,19 +130,11 @@ Function Invoke-EditGroup {
 
     if ($userobj.allowExternal -eq 'true') {
         try {
-            if ($userobj.groupType -eq 'Distribution list') {
-                $Params = @{ Identity = $userobj.groupid; RequireSenderAuthenticationEnabled = $false }
-                New-ExoRequest -tenantid $Userobj.tenantid -cmdlet 'Set-DistributionGroup' -cmdParams $params
-            } else {
-                $Params = @{ Identity = $userobj.groupid; RequireSenderAuthenticationEnabled = $false }
-                New-ExoRequest -tenantid $Userobj.tenantid -cmdlet 'Set-UnifiedGroup' -cmdParams $params
-            }
-            $body = $results.add("Allowed external senders to send to $($userobj.groupName).")
-            Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $Userobj.tenantid -message "Allowed external senders to send to $($userobj.groupName)" -Sev 'Info'
-
+            Set-CIPPGroupAuthentication -ID $userobj.mail -GroupType $userobj.groupType -tenantFilter $Userobj.tenantid -APIName $APINAME -ExecutingUser $request.headers.'x-ms-client-principal'
+            $body = $results.add("Allowed external senders to send to $($userobj.mail).")
         } catch {
-            $body = $results.add("Failed to allow external senders to send to $($userobj.groupName).")
-            Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $Userobj.tenantid -message "Failed to allow external senders for $($userobj.groupName). Error:$($_.Exception.Message)" -Sev 'Error'
+            $body = $results.add("Failed to allow external senders to send to $($userobj.mail).")
+            Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $Userobj.tenantid -message "Failed to allow external senders for $($userobj.mail). Error:$($_.Exception.Message)" -Sev 'Error'
         }
 
     }
@@ -157,7 +151,7 @@ Function Invoke-EditGroup {
 
             $subscriberParams = @{ Identity = $userobj.Groupid; LinkType = 'subscribers'; Links = @($MemberSmtpAddresses) }
             New-ExoRequest -tenantid $Userobj.tenantid -cmdlet 'Add-UnifiedGrouplinks' -cmdParams $subscriberParams -Anchor $userobj.mail
-            
+
 
             $body = $results.add("Send Copies of team emails and events to team members inboxes for $($userobj.mail) enabled.")
             Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $Userobj.tenantid -message "Send Copies of team emails and events to team members inboxes for $($userobj.mail) enabled." -Sev 'Info'

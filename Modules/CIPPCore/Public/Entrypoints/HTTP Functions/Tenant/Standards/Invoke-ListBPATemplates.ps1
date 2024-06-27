@@ -3,7 +3,9 @@ using namespace System.Net
 Function Invoke-ListBPATemplates {
     <#
     .FUNCTIONALITY
-    Entrypoint
+        Entrypoint
+    .ROLE
+        Tenant.BestPracticeAnalyser.Read
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
@@ -12,17 +14,27 @@ Function Invoke-ListBPATemplates {
     Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -message 'Accessed this API' -Sev 'Debug'
 
     Write-Host 'PowerShell HTTP trigger function processed a request.'
-    Write-Host $Request.query.id
+  
+    $Table = Get-CippTable -tablename 'templates'
 
-    $Templates = Get-ChildItem 'Config\*.BPATemplate.json'
+    $Templates = Get-ChildItem 'Config\*.BPATemplate.json' | ForEach-Object {
+        $Entity = @{
+            JSON         = "$(Get-Content $_)"
+            RowKey       = "$($_.name)"
+            PartitionKey = 'BPATemplate'
+            GUID         = "$($_.name)"
+        }
+        Add-CIPPAzDataTableEntity @Table -Entity $Entity -Force
+    }
+
+    $Filter = "PartitionKey eq 'BPATemplate'"
+    $Templates = (Get-CIPPAzDataTableEntity @Table -Filter $Filter).JSON | ConvertFrom-Json
 
     if ($Request.Query.RawJson) {
-        $Templates = $Templates | ForEach-Object {
-            $(Get-Content $_) | ConvertFrom-Json
-        }
+        $Templates
     } else {
         $Templates = $Templates | ForEach-Object {
-            $Template = $(Get-Content $_) | ConvertFrom-Json
+            $Template = $_
             @{
                 Data  = $Template.fields
                 Name  = $Template.Name

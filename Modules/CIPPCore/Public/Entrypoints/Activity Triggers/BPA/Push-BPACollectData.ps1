@@ -6,10 +6,12 @@ function Push-BPACollectData {
     param($Item)
 
     $TenantName = Get-Tenants | Where-Object -Property defaultDomainName -EQ $Item.Tenant
-    $CippRoot = (Get-Item $PSScriptRoot).Parent.Parent.Parent.Parent.Parent.Parent.FullName
-    $TemplatesLoc = Get-ChildItem "$CippRoot\Config\*.BPATemplate.json"
+    $BPATemplateTable = Get-CippTable -tablename 'templates'
+    $Filter = "PartitionKey eq 'BPATemplate'"
+    $TemplatesLoc = (Get-CIPPAzDataTableEntity @BPATemplateTable -Filter $Filter).JSON | ConvertFrom-Json
+
     $Templates = $TemplatesLoc | ForEach-Object {
-        $Template = $(Get-Content $_) | ConvertFrom-Json
+        $Template = $_
         [PSCustomObject]@{
             Data  = $Template
             Name  = $Template.Name
@@ -17,7 +19,7 @@ function Push-BPACollectData {
         }
     }
     $Table = Get-CippTable -tablename 'cachebpav2'
-
+    Write-Host "Working on BPA for $($TenantName.displayName) with GUID $($TenantName.customerId) - Report ID $($Item.Template)"
     $Template = $Templates | Where-Object -Property Name -EQ -Value $Item.Template
     # Build up the result object that will be stored in tables
     $Result = @{
@@ -39,13 +41,13 @@ function Push-BPACollectData {
                     }
                     if ($Field.parameters.psobject.properties.name) {
                         $field.Parameters | ForEach-Object {
-                            Write-Information "Doing: $($_.psobject.properties.name) with value $($_.psobject.properties.value)"
                             $paramsField[$_.psobject.properties.name] = $_.psobject.properties.value
                         }
                     }
                     $FieldInfo = New-GraphGetRequest @paramsField | Where-Object $filterscript | Select-Object $field.ExtractFields
                 }
                 'Exchange' {
+                    Write-Host "Trying to execute $($field.Command) for $($TenantName.displayName) with GUID $($TenantName.customerId)"
                     if ($field.Command -notlike 'get-*') {
                         Write-LogMessage -API 'BPA' -tenant $tenant -message 'The BPA only supports get- exchange commands. A set or update command was used.' -sev Error
                         break
@@ -93,6 +95,7 @@ function Push-BPACollectData {
                 }
                 'JSON' {
                     if ($FieldInfo -eq $null) { $JsonString = '{}' } else { $JsonString = (ConvertTo-Json -Depth 15 -InputObject $FieldInfo -Compress) }
+                    Write-Host "Adding $($field.Name) to table with value $JsonString"
                     $Result.Add($field.Name, $JSONString)
                 }
                 'string' {

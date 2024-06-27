@@ -16,7 +16,6 @@ $InputObject = [PSCustomObject]@{
     }
     OrchestratorName = 'DomainAnalyser_Tenants'
     SkipLog          = $true
-    DurableMode      = 'Sequence'
 }
 Start-NewOrchestration -FunctionName 'CIPPOrchestrator' -InputObject ($InputObject | ConvertTo-Json -Compress -Depth 5)
 

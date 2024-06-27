@@ -67,7 +67,7 @@ function Get-Tenants {
 
         $ActiveRelationships = $GDAPList | Where-Object { $_.customerId -notin $SkipListCache.customerId }
         $TenantList = $ActiveRelationships | Group-Object -Property customerId | ForEach-Object {
-            Write-Host "Processing $($_.Name) to add to tenant list."
+            #Write-Host "Processing $($_.Name) to add to tenant list."
             $ExistingTenantInfo = Get-CIPPAzDataTableEntity @TenantsTable -Filter "PartitionKey eq 'Tenants' and RowKey eq '$($_.Name)'"
 
             if ($TriggerRefresh.IsPresent -and $ExistingTenantInfo.customerId) {
@@ -77,7 +77,7 @@ function Get-Tenants {
             }
 
             if ($ExistingTenantInfo -and $ExistingTenantInfo.RequiresRefresh -eq $false) {
-                Write-Host 'Existing tenant found. We already have it cached, skipping.'
+                #Write-Host 'Existing tenant found. We already have it cached, skipping.'
                 $ExistingTenantInfo
                 return
             }
@@ -86,7 +86,7 @@ function Get-Tenants {
 
             if (-not $SkipDomains.IsPresent) {
                 try {
-                    Write-Host "Getting domains for $($_.Name)."
+                    #Write-Host "Getting domains for $($_.Name)."
                     $Domains = New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/domains?$top=999' -tenantid $LatestRelationship.customerId -NoAuthCheck:$true -ErrorAction Stop
                     $defaultDomainName = ($Domains | Where-Object { $_.isDefault -eq $true }).id
                     $initialDomainName = ($Domains | Where-Object { $_.isInitial -eq $true }).id
@@ -103,7 +103,7 @@ function Get-Tenants {
                     }
                 }
 
-                $obj = [PSCustomObject]@{
+                $Obj = [PSCustomObject]@{
                     PartitionKey             = 'Tenants'
                     RowKey                   = $_.Name
                     customerId               = $_.Name
@@ -111,6 +111,7 @@ function Get-Tenants {
                     relationshipEnd          = $LatestRelationship.relationshipEnd
                     relationshipCount        = $_.Count
                     defaultDomainName        = $defaultDomainName
+                    initialDomainName        = $initialDomainName
                     hasAutoExtend            = $AutoExtend
                     delegatedPrivilegeStatus = 'granularDelegatedAdminPrivileges'
                     domains                  = ''
@@ -125,7 +126,8 @@ function Get-Tenants {
                 if ($Obj.defaultDomainName -eq 'Invalid' -or !$Obj.defaultDomainName) {
                     continue
                 }
-                Add-CIPPAzDataTableEntity @TenantsTable -Entity $obj -Force | Out-Null
+                Add-CIPPAzDataTableEntity @TenantsTable -Entity $Obj -Force | Out-Null
+                $Obj
             }
         }
         $IncludedTenantsCache = [system.collections.generic.list[object]]::new()
@@ -136,7 +138,7 @@ function Get-Tenants {
                     RowKey            = $env:TenantID
                     PartitionKey      = 'Tenants'
                     customerId        = $env:TenantID
-                    defaultDomainName = ($Domains | Where-Object { $_.isInitial -eq $true }).id
+                    defaultDomainName = ($Domains | Where-Object { $_.isDefault -eq $true }).id
                     initialDomainName = ($Domains | Where-Object { $_.isInitial -eq $true }).id
                     displayName       = '*Partner Tenant'
                     domains           = 'PartnerTenant'
@@ -148,7 +150,7 @@ function Get-Tenants {
                     RequiresRefresh   = [bool]$RequiresRefresh
                     LastRefresh       = (Get-Date).ToUniversalTime()
                 }) | Out-Null
-                
+
         }
         foreach ($Tenant in $TenantList) {
             if ($Tenant.defaultDomainName -eq 'Invalid' -or !$Tenant.defaultDomainName) {
