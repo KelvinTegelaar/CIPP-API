@@ -1,15 +1,50 @@
 function Set-CIPPForwarding {
+    <#
+    .SYNOPSIS
+    Set forwarding for a user mailbox.
+
+    .DESCRIPTION
+    Set forwarding for a user mailbox.
+
+    .PARAMETER userid
+    User ID to set forwarding for.
+
+    .PARAMETER forwardingSMTPAddress
+    SMTP address to forward to.
+
+    .PARAMETER tenantFilter
+    Tenant to manage for forwarding.
+
+    .PARAMETER username
+    Username to manage for forwarding.
+
+    .PARAMETER ExecutingUser
+    CIPP user executing the command.
+
+    .PARAMETER APIName
+    Name of the API executing the command.
+
+    .PARAMETER Forward
+    Forwarding address.
+
+    .PARAMETER KeepCopy
+    Keep a copy of the email.
+
+    .PARAMETER Disable
+    Disable forwarding.
+
+    #>
     [CmdletBinding(SupportsShouldProcess = $true)]
     param(
-        $userid,
-        $forwardingSMTPAddress,
-        $tenantFilter,
-        $username,
-        $ExecutingUser,
-        $APIName = 'Forwarding',
-        $Forward,
-        $KeepCopy,
-        $Disable
+        [string]$userid,
+        [string]$forwardingSMTPAddress,
+        [string]$tenantFilter,
+        [string]$username,
+        [string]$ExecutingUser,
+        [string]$APIName = 'Forwarding',
+        [string]$Forward,
+        [bool]$KeepCopy,
+        [bool]$Disable
     )
 
     try {

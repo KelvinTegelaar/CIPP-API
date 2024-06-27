@@ -16,7 +16,7 @@ Function Invoke-ExecRevokeSessions {
     # Interact with query parameters or the body of the request.
     $TenantFilter = $Request.Query.TenantFilter
     try {
-        $RevokeSessions = Revoke-CIPPSessions -userid $Request.Query.id -tenantFilter $TenantFilter -APIName $APINAME -ExecutingUser $request.headers.'x-ms-client-principal'
+        $RevokeSessions = Revoke-CIPPSessions -userid $Request.Query.id -tenantFilter $TenantFilter -username $Request.Query.Username -APIName $APINAME -ExecutingUser $request.headers.'x-ms-client-principal'
         $Results = [pscustomobject]@{'Results' = $RevokeSessions }
     } catch {
         $Results = [pscustomobject]@{'Results' = "Failed. $($_.Exception.Message)" }
