@@ -23,10 +23,10 @@ function New-CIPPBackup {
                 )
                 $CSVfile = foreach ($CSVTable in $BackupTables) {
                     $Table = Get-CippTable -tablename $CSVTable
-                    Get-CIPPAzDataTableEntity @Table
+                    Get-CIPPAzDataTableEntity @Table | Select-Object *, @{l = 'table'; e = { $CSVTable } }
                 }
                 Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -message 'Created backup' -Sev 'Debug'
-                $CSVfile
+                $CSVfile 
                 $RowKey = 'CIPPBackup' + '_' + (Get-Date).ToString('yyyy-MM-dd-HHmm')
                 $entity = [PSCustomObject]@{
                     PartitionKey = 'CIPPBackup'
