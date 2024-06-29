@@ -2,6 +2,8 @@ function Invoke-ListCippQueue {
     <#
     .FUNCTIONALITY
         Entrypoint
+    .ROLE
+        CIPP.Core.Read
     #>
     param($Request = $null, $TriggerMetadata = $null)
 
@@ -39,6 +41,7 @@ function Invoke-ListCippQueue {
         $TotalCompleted = $TaskStatus.Completed ?? 0
         $TotalFailed = $TaskStatus.Failed ?? 0
         $TotalRunning = $TaskStatus.Running ?? 0
+        if ($Queue.TotalTasks -eq 0) { $Queue.TotalTasks = 1 }
 
         [PSCustomObject]@{
             PartitionKey    = $Queue.PartitionKey

@@ -3,7 +3,9 @@ using namespace System.Net
 function Invoke-ListFunctionParameters {
     <#
     .FUNCTIONALITY
-    Entrypoint
+        Entrypoint
+    .ROLE
+        CIPP.Core.Read
     #>
     param($Request, $TriggerMetadata)
 
@@ -25,7 +27,7 @@ function Invoke-ListFunctionParameters {
         $CommandQuery.Name = $Function
     }
     $IgnoreList = 'entryPoint', 'internal'
-    $CommonParameters = @('Verbose', 'Debug', 'ErrorAction', 'WarningAction', 'InformationAction', 'ErrorVariable', 'WarningVariable', 'InformationVariable', 'OutVariable', 'OutBuffer', 'PipelineVariable', 'TenantFilter', 'APIName', 'ExecutingUser', 'ProgressAction')
+    $CommonParameters = @('Verbose', 'Debug', 'ErrorAction', 'WarningAction', 'InformationAction', 'ErrorVariable', 'WarningVariable', 'InformationVariable', 'OutVariable', 'OutBuffer', 'PipelineVariable', 'TenantFilter', 'APIName', 'ExecutingUser', 'ProgressAction', 'WhatIf', 'Confirm')
     $TemporaryBlacklist = 'Get-CIPPAuthentication', 'Invoke-CippWebhookProcessing', 'Invoke-ListFunctionParameters', 'New-CIPPAPIConfig', 'New-CIPPGraphSubscription'
     try {
         $Functions = Get-Command @CommandQuery | Where-Object { $_.Visibility -eq 'Public' }

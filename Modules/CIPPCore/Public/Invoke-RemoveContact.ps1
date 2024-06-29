@@ -3,7 +3,9 @@ using namespace System.Net
 Function Invoke-RemoveContact {
     <#
     .FUNCTIONALITY
-    Entrypoint
+        Entrypoint
+    .ROLE
+        Exchange.Contact.ReadWrite
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)

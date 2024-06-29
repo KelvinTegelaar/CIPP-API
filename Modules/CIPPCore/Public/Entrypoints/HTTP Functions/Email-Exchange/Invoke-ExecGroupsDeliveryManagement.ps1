@@ -3,7 +3,9 @@ using namespace System.Net
 Function Invoke-ExecGroupsDeliveryManagement {
     <#
     .FUNCTIONALITY
-    Entrypoint
+        Entrypoint
+    .ROLE
+        Exchange.Group.ReadWrite
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
@@ -18,7 +20,7 @@ Function Invoke-ExecGroupsDeliveryManagement {
 
     # Interact with query parameters or the body of the request.
     Try {
-        $SetResults = Set-CIPPGroupAuthentication -ID $Request.query.id -GroupType $Request.query.GroupType -OnlyAllowInternalString $Request.query.OnlyAllowInternal -tenantFilter $Request.query.TenantFilter -APIName $APINAME -ExecutingUser $request.headers.'x-ms-client-principal'   
+        $SetResults = Set-CIPPGroupAuthentication -ID $Request.query.id -GroupType $Request.query.GroupType -OnlyAllowInternalString $Request.query.OnlyAllowInternal -tenantFilter $Request.query.TenantFilter -APIName $APINAME -ExecutingUser $request.headers.'x-ms-client-principal'
         $Results = [pscustomobject]@{'Results' = $SetResults }
     } catch {
         $Results = [pscustomobject]@{'Results' = "Failed. $($_.Exception.Message)" }

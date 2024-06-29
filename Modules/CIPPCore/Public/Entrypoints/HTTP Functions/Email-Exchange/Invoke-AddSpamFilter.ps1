@@ -3,16 +3,19 @@ using namespace System.Net
 Function Invoke-AddSpamFilter {
     <#
     .FUNCTIONALITY
-    Entrypoint
+        Entrypoint
+    .ROLE
+        Exchange.SpamFilter.ReadWrite
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
 
-        
+
     $APIName = $TriggerMetadata.FunctionName
     Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -message 'Accessed this API' -Sev 'Debug'
 
     $RequestParams = $Request.Body.PowerShellCommand | ConvertFrom-Json | Select-Object -Property * -ExcludeProperty GUID, comments
+    $RequestPriority = $Request.Body.Priority
 
     $Tenants = ($Request.body | Select-Object Select_*).psobject.properties.value
     $Result = foreach ($Tenantfilter in $tenants) {
@@ -24,6 +27,7 @@ Function Invoke-AddSpamFilter {
                 'hostedcontentfilterpolicy' = "$($RequestParams.name)"
                 'recipientdomainis'         = @($domains)
                 'Enabled'                   = $true
+                'Priority'                  = $RequestPriority
             }
             $GraphRequest = New-ExoRequest -tenantid $Tenantfilter -cmdlet 'New-HostedContentFilterRule' -cmdParams $ruleparams
             "Successfully created spamfilter for $tenantfilter."

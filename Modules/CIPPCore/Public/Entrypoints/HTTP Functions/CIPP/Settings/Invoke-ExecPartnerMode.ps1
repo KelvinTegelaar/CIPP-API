@@ -3,7 +3,9 @@ using namespace System.Net
 Function Invoke-ExecPartnerMode {
     <#
     .FUNCTIONALITY
-    Entrypoint
+        Entrypoint
+    .ROLE
+        CIPP.SuperAdmin.ReadWrite
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
@@ -29,7 +31,7 @@ Function Invoke-ExecPartnerMode {
                 })
 
         }
-    
+
         if ($request.query.action -eq 'ListCurrent') {
             $CurrentState = Get-CIPPAzDataTableEntity @Table
             $CurrentState = if (!$CurrentState) {

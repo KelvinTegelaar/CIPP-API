@@ -3,7 +3,9 @@ using namespace System.Net
 Function Invoke-AddIntuneTemplate {
     <#
     .FUNCTIONALITY
-    Entrypoint
+        Entrypoint
+    .ROLE
+        Endpoint.MEM.ReadWrite
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
@@ -44,28 +46,34 @@ Function Invoke-AddIntuneTemplate {
                     $Type = 'deviceCompliancePolicies'
                     $Template = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/deviceManagement/$($urlname)/$($ID)?`$expand=scheduledActionsForRule(`$expand=scheduledActionConfigurations)" -tenantid $tenantfilter
                     $DisplayName = $Template.displayName
-                    $TemplateJson = ConvertTo-Json -InputObject $Template -Depth 10 -Compress
+                    $TemplateJson = ConvertTo-Json -InputObject $Template -Depth 100 -Compress
                 }
                 'managedAppPolicies' {
                     $Type = 'AppProtection'
                     $Template = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/deviceAppManagement/$($urlname)('$($ID)')" -tenantid $tenantfilter
                     $DisplayName = $Template.displayName
-                    $TemplateJson = ConvertTo-Json -InputObject $Template -Depth 10 -Compress
+                    $TemplateJson = ConvertTo-Json -InputObject $Template -Depth 100 -Compress
                 }
                 'configurationPolicies' {
                     $Type = 'Catalog'
                     $Template = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/deviceManagement/$($urlname)('$($ID)')?`$expand=settings" -tenantid $tenantfilter | Select-Object name, description, settings, platforms, technologies, templateReference
-                    $TemplateJson = $Template | ConvertTo-Json -Depth 10
+                    $TemplateJson = $Template | ConvertTo-Json -Depth 100
                     $DisplayName = $Template.name
 
-
+                }
+                'windowsDriverUpdateProfiles' {
+                    $Type = 'windowsDriverUpdateProfiles'
+                    $Template = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/deviceManagement/$($urlname)/$($ID)" -tenantid $tenantfilter | Select-Object * -ExcludeProperty id, lastModifiedDateTime, '@odata.context', 'ScopeTagIds', 'supportsScopeTags', 'createdDateTime'
+                    Write-Host ($Template | ConvertTo-Json)
+                    $DisplayName = $Template.displayName
+                    $TemplateJson = ConvertTo-Json -InputObject $Template -Depth 100 -Compress
                 }
                 'deviceConfigurations' {
                     $Type = 'Device'
                     $Template = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/deviceManagement/$($urlname)/$($ID)" -tenantid $tenantfilter | Select-Object * -ExcludeProperty id, lastModifiedDateTime, '@odata.context', 'ScopeTagIds', 'supportsScopeTags', 'createdDateTime'
                     Write-Host ($Template | ConvertTo-Json)
                     $DisplayName = $Template.displayName
-                    $TemplateJson = ConvertTo-Json -InputObject $Template -Depth 10 -Compress
+                    $TemplateJson = ConvertTo-Json -InputObject $Template -Depth 100 -Compress
                 }
                 'groupPolicyConfigurations' {
                     $Type = 'Admin'
@@ -100,7 +108,7 @@ Function Invoke-AddIntuneTemplate {
                     }
 
 
-                    $TemplateJson = (ConvertTo-Json -InputObject $inputvar -Depth 15 -Compress)
+                    $TemplateJson = (ConvertTo-Json -InputObject $inputvar -Depth 100 -Compress)
                 }
             }
 

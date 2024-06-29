@@ -3,7 +3,9 @@ using namespace System.Net
 Function Invoke-ListAutopilotconfig {
     <#
     .FUNCTIONALITY
-    Entrypoint
+        Entrypoint
+    .ROLE
+        Endpoint.Autopilot.Read
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)

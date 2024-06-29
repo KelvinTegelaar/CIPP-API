@@ -3,7 +3,9 @@ using namespace System.Net
 Function Invoke-ListGDAPQueue {
     <#
     .FUNCTIONALITY
-    Entrypoint
+        Entrypoint
+    .ROLE
+        Tenant.Relationship.Read
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
@@ -14,7 +16,7 @@ Function Invoke-ListGDAPQueue {
 
     # Write to the Azure Functions log stream.
     Write-Host 'PowerShell HTTP trigger function processed a request.'
-    $Table = Get-CIPPTable -TableName 'GDAPMigration' 
+    $Table = Get-CIPPTable -TableName 'GDAPMigration'
     $QueuedApps = Get-CIPPAzDataTableEntity @Table
 
     $CurrentStandards = foreach ($QueueFile in $QueuedApps) {

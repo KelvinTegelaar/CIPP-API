@@ -3,7 +3,9 @@ using namespace System.Net
 Function Invoke-RemoveTransportRule {
     <#
     .FUNCTIONALITY
-    Entrypoint
+        Entrypoint
+    .ROLE
+        Exchange.TransportRule.ReadWrite
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
@@ -19,7 +21,7 @@ Function Invoke-RemoveTransportRule {
 
     try {
         $cmdlet = 'Remove-TransportRule'
-        $GraphRequest = New-ExoRequest -tenantid $Tenantfilter -cmdlet $cmdlet -cmdParams $params -UseSystemMailbox $true
+        $null = New-ExoRequest -tenantid $Tenantfilter -cmdlet $cmdlet -cmdParams $params -UseSystemMailbox $true
         $Result = "Deleted $($Request.query.guid)"
         Write-LogMessage -API 'TransportRules' -tenant $tenantfilter -message "Deleted transport rule $($Request.query.guid)" -sev Debug
     } catch {
