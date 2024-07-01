@@ -49,7 +49,7 @@ function Invoke-CIPPStandardDisableOutlookAddins {
         }
     }
     if ($Settings.report -eq $true) {
-        if ($RolesToRemove) { $State = $false } else { $State = $true }
+        $State = if ($RolesToRemove) { $false } else { $true }
         Add-CIPPBPAField -FieldName 'DisabledOutlookAddins' -FieldValue $State -StoreAs bool -Tenant $tenant
     }
 }
