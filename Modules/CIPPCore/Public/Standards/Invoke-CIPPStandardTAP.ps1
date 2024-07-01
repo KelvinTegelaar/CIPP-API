@@ -13,7 +13,7 @@ function Invoke-CIPPStandardTAP {
     }
 
     # Input validation
-    if (([string]::IsNullOrWhiteSpace($Settings.state) -or $Settings.state -eq 'Select a value') -and ($Settings.remediate -eq $true -or $Settings.alert -eq $true)) {
+    if (([string]::IsNullOrWhiteSpace($Settings.config) -or $Settings.config -eq 'Select a value') -and ($Settings.remediate -eq $true -or $Settings.alert -eq $true)) {
         Write-LogMessage -API 'Standards' -tenant $tenant -message 'TAP: Invalid state parameter set' -sev Error
         Return
     }
