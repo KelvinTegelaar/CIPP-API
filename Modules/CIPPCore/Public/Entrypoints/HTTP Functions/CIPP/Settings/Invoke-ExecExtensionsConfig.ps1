@@ -16,7 +16,7 @@ Function Invoke-ExecExtensionsConfig {
 
     #Connect-AzAccount -UseDeviceAuthentication
     # Write to the Azure Functions log stream.
-    Write-Host 'PowerShell HTTP trigger function processed a request.'
+    Write-Information 'PowerShell HTTP trigger function processed a request.'
     $results = try {
         if ($Request.Body.CIPPAPI.Enabled) {
             $APIConfig = New-CIPPAPIConfig -ExecutingUser $Request.Headers.'x-ms-client-principal' -resetpassword $Request.Body.CIPPAPI.ResetPassword
@@ -37,12 +37,12 @@ Function Invoke-ExecExtensionsConfig {
 
         $Table = Get-CIPPTable -TableName Extensionsconfig
         foreach ($APIKey in ([pscustomobject]$Request.Body).psobject.properties.name) {
-            Write-Host "Working on $apikey"
+            Write-Information "Working on $apikey"
             if ($Request.Body.$APIKey.APIKey -eq 'SentToKeyVault' -or $Request.Body.$APIKey.APIKey -eq '') {
-                Write-Host 'Not sending to keyvault. Key previously set or left blank.'
+                Write-Information 'Not sending to keyvault. Key previously set or left blank.'
             } else {
-                Write-Host 'writing API Key to keyvault, and clearing.'
-                Write-Host "$ENV:WEBSITE_DEPLOYMENT_ID"
+                Write-Information 'writing API Key to keyvault, and clearing.'
+                Write-Information "$ENV:WEBSITE_DEPLOYMENT_ID"
                 if ($Request.Body.$APIKey.APIKey) {
                     if ($env:AzureWebJobsStorage -eq 'UseDevelopmentStorage=true') {
                         $DevSecretsTable = Get-CIPPTable -tablename 'DevSecrets'
