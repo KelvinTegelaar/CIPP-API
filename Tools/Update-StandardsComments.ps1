@@ -79,7 +79,9 @@ foreach ($Standard in $StandardsInfo) {
             $NewComment.Add("   .DOCSDESCRIPTION`n")
             $NewComment.Add("   $($Standard.helpText.ToString())`n")
         }
-
+        # Add header about how to update the comment block with this script
+        $NewComment.Add("   .UPDATECOMMENTBLOCK`n")
+        $NewComment.Add("   Run the Tools\Update-StandardsComments.ps1 script to update this comment block`n")
         $NewComment.Add("   #>`n")
 
         # Write the new comment block to the file
