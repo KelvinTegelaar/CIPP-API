@@ -6,7 +6,7 @@ function Get-NinjaOneOrgMapping {
     try {
         #Get available mappings
         $Mappings = [pscustomobject]@{}
-        $Tenants = Get-Tenants
+        $Tenants = Get-Tenants -IncludeErrors
 
         $Filter = "PartitionKey eq 'NinjaOrgsMapping'"
         Get-AzDataTableEntity @CIPPMapping -Filter $Filter | ForEach-Object {
