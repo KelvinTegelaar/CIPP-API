@@ -9,7 +9,7 @@ function Invoke-CIPPStandardAntiPhishPolicy {
 
     $CurrentState = New-ExoRequest -tenantid $Tenant -cmdlet 'Get-AntiPhishPolicy' |
         Where-Object -Property Name -EQ $PolicyName |
-        Select-Object Name, Enabled, PhishThresholdLevel, EnableMailboxIntelligence, EnableMailboxIntelligenceProtection, EnableSpoofIntelligence, EnableFirstContactSafetyTips, EnableSimilarUsersSafetyTips, EnableSimilarDomainsSafetyTips, EnableUnusualCharactersSafetyTips, EnableUnauthenticatedSender, EnableViaTag, MailboxIntelligenceProtectionAction, MailboxIntelligenceQuarantineTag
+        Select-Object Name, Enabled, PhishThresholdLevel, EnableMailboxIntelligence, EnableMailboxIntelligenceProtection, EnableSpoofIntelligence, EnableFirstContactSafetyTips, EnableSimilarUsersSafetyTips, EnableSimilarDomainsSafetyTips, EnableUnusualCharactersSafetyTips, EnableUnauthenticatedSender, EnableViaTag, AuthenticationFailAction, SpoofQuarantineTag, MailboxIntelligenceProtectionAction, MailboxIntelligenceQuarantineTag, TargetedUserProtectionAction, TargetedUserQuarantineTag, TargetedDomainProtectionAction, TargetedDomainQuarantineTag, EnableOrganizationDomainsProtection
 
     $StateIsCorrect = ($CurrentState.Name -eq $PolicyName) -and
                       ($CurrentState.Enabled -eq $true) -and
@@ -23,10 +23,14 @@ function Invoke-CIPPStandardAntiPhishPolicy {
                       ($CurrentState.EnableUnusualCharactersSafetyTips -eq $Settings.EnableUnusualCharactersSafetyTips) -and
                       ($CurrentState.EnableUnauthenticatedSender -eq $true) -and
                       ($CurrentState.EnableViaTag -eq $true) -and
+                      ($CurrentState.AuthenticationFailAction -eq $Settings.AuthenticationFailAction) -and
+                      ($CurrentState.SpoofQuarantineTag -eq $Settings.SpoofQuarantineTag) -and
                       ($CurrentState.MailboxIntelligenceProtectionAction -eq $Settings.MailboxIntelligenceProtectionAction) -and
                       ($CurrentState.MailboxIntelligenceQuarantineTag -eq $Settings.MailboxIntelligenceQuarantineTag) -and
                       ($CurrentState.TargetedUserProtectionAction -eq $Settings.TargetedUserProtectionAction) -and
+                      ($CurrentState.TargetedUserQuarantineTag -eq $Settings.TargetedUserQuarantineTag) -and
                       ($CurrentState.TargetedDomainProtectionAction -eq $Settings.TargetedDomainProtectionAction) -and
+                      ($CurrentState.TargetedDomainQuarantineTag -eq $Settings.TargetedDomainQuarantineTag) -and
                       ($CurrentState.EnableOrganizationDomainsProtection -eq $true)
 
     $AcceptedDomains = New-ExoRequest -tenantid $Tenant -cmdlet 'Get-AcceptedDomain'
@@ -56,10 +60,14 @@ function Invoke-CIPPStandardAntiPhishPolicy {
                 EnableUnusualCharactersSafetyTips   = $Settings.EnableUnusualCharactersSafetyTips
                 EnableUnauthenticatedSender         = $true
                 EnableViaTag                        = $true
+                AuthenticationFailAction            = $Settings.AuthenticationFailAction
+                SpoofQuarantineTag                  = $Settings.SpoofQuarantineTag
                 MailboxIntelligenceProtectionAction = $Settings.MailboxIntelligenceProtectionAction
                 MailboxIntelligenceQuarantineTag    = $Settings.MailboxIntelligenceQuarantineTag
                 TargetedUserProtectionAction        = $Settings.TargetedUserProtectionAction
+                TargetedUserQuarantineTag           = $Settings.TargetedUserQuarantineTag
                 TargetedDomainProtectionAction      = $Settings.TargetedDomainProtectionAction
+                TargetedDomainQuarantineTag         = $Settings.TargetedDomainQuarantineTag
                 EnableOrganizationDomainsProtection = $true
             }
 

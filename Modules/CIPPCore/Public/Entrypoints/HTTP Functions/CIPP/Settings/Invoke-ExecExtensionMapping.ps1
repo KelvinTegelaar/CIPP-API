@@ -23,14 +23,14 @@ Function Invoke-ExecExtensionMapping {
             'Halo' {
                 $body = Get-HaloMapping -CIPPMapping $Table
             }
-
             'NinjaOrgs' {
                 $Body = Get-NinjaOneOrgMapping -CIPPMapping $Table
             }
-
             'NinjaFields' {
                 $Body = Get-NinjaOneFieldMapping -CIPPMapping $Table
-
+            }
+            'Hudu' {
+                $Body = Get-HuduMapping -CIPPMapping $Table
             }
         }
     }
@@ -46,6 +46,9 @@ Function Invoke-ExecExtensionMapping {
                 }
                 'NinjaFields' {
                     $Body = Set-NinjaOneFieldMapping -CIPPMapping $Table -APIName $APIName -Request $Request -TriggerMetadata $TriggerMetadata
+                }
+                'Hudu' {
+                    $Body = Set-HuduMapping -CIPPMapping $Table -APIName $APIName -Request $Request
                 }
             }
         }
