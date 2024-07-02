@@ -7,6 +7,7 @@ Function Invoke-ExecExtensionsConfig {
     .ROLE
         CIPP.Extension.ReadWrite
     #>
+    [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSAvoidUsingConvertToSecureStringWithPlainText', '', Scope = 'Function')]
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
 
@@ -52,7 +53,7 @@ Function Invoke-ExecExtensionsConfig {
                         }
                         Add-CIPPAzDataTableEntity @DevSecretsTable -Entity $Secret -Force
                     } else {
-                        $null = Set-AzKeyVaultSecret -VaultName $ENV:WEBSITE_DEPLOYMENT_ID -Name $APIKey -SecretValue (ConvertTo-SecureString -String $Request.Body.$APIKey.APIKey -AsPlainText -Force)
+                        $null = Set-AzKeyVaultSecret -VaultName $ENV:WEBSITE_DEPLOYMENT_ID -Name $APIKey -SecretValue (ConvertTo-SecureString -AsPlainText -Force -String $Request.Body.$APIKey.APIKey)
                     }
                 }
                 $Request.Body.$APIKey.APIKey = 'SentToKeyVault'
