@@ -2,7 +2,34 @@ function Invoke-CIPPStandardUserSubmissions {
     <#
     .FUNCTIONALITY
     Internal
+    .APINAME
+    UserSubmissions
+    .CAT
+    Exchange Standards
+    .TAG
+    "mediumimpact"
+    .HELPTEXT
+    Set the state of the spam submission button in Outlook
+    .DOCSDESCRIPTION
+    Set the state of the built-in Report button in Outlook. This gives the users the ability to report emails as spam or phish.
+    .ADDEDCOMPONENT
+    {"type":"Select","label":"Select value","name":"standards.UserSubmissions.state","values":[{"label":"Enabled","value":"enable"},{"label":"Disabled","value":"disable"}]}
+    .LABEL
+    Set the state of the built-in Report button in Outlook
+    .IMPACT
+    Medium Impact
+    .POWERSHELLEQUIVALENT
+    New-ReportSubmissionPolicy or Set-ReportSubmissionPolicy
+    .RECOMMENDEDBY
+    .DOCSDESCRIPTION
+    Set the state of the spam submission button in Outlook
+    .UPDATECOMMENTBLOCK
+    Run the Tools\Update-StandardsComments.ps1 script to update this comment block
     #>
+
+
+
+
     param($Tenant, $Settings)
 
     $Policy = New-ExoRequest -tenantid $Tenant -cmdlet 'Get-ReportSubmissionPolicy'
@@ -73,3 +100,7 @@ function Invoke-CIPPStandardUserSubmissions {
         }
     }
 }
+
+
+
+

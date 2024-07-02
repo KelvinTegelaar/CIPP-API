@@ -2,7 +2,36 @@ function Invoke-CIPPStandardDisableExternalCalendarSharing {
     <#
     .FUNCTIONALITY
     Internal
+    .APINAME
+    DisableExternalCalendarSharing
+    .CAT
+    Exchange Standards
+    .TAG
+    "lowimpact"
+    "CIS"
+    "exo_individualsharing"
+    .HELPTEXT
+    Disables the ability for users to share their calendar with external users. Only for the default policy, so exclusions can be made if needed.
+    .DOCSDESCRIPTION
+    Disables external calendar sharing for the entire tenant. This is not a widely used feature, and it's therefore unlikely that this will impact users. Only for the default policy, so exclusions can be made if needed by making a new policy and assigning it to users.
+    .ADDEDCOMPONENT
+    .LABEL
+    Disable external calendar sharing
+    .IMPACT
+    Low Impact
+    .POWERSHELLEQUIVALENT
+    Get-SharingPolicy | Set-SharingPolicy -Enabled $False
+    .RECOMMENDEDBY
+    "CIS"
+    .DOCSDESCRIPTION
+    Disables the ability for users to share their calendar with external users. Only for the default policy, so exclusions can be made if needed.
+    .UPDATECOMMENTBLOCK
+    Run the Tools\Update-StandardsComments.ps1 script to update this comment block
     #>
+
+
+
+
     param($Tenant, $Settings)
     $CurrentInfo = New-ExoRequest -tenantid $Tenant -cmdlet 'Get-SharingPolicy' | Where-Object { $_.Default -eq $true }
 
@@ -37,3 +66,7 @@ function Invoke-CIPPStandardDisableExternalCalendarSharing {
         Add-CIPPBPAField -FieldName 'ExternalCalendarSharingDisabled' -FieldValue $CurrentInfo.Enabled -StoreAs bool -Tenant $tenant
     }
 }
+
+
+
+

@@ -2,7 +2,35 @@ function Invoke-CIPPStandardEnableMailTips {
     <#
     .FUNCTIONALITY
     Internal
+    .APINAME
+    EnableMailTips
+    .CAT
+    Exchange Standards
+    .TAG
+    "lowimpact"
+    "CIS"
+    "exo_mailtipsenabled"
+    .HELPTEXT
+    Enables all MailTips in Outlook. MailTips are the notifications Outlook and Outlook on the web shows when an email you create, meets some requirements
+    .ADDEDCOMPONENT
+    {"type":"number","name":"standards.EnableMailTips.MailTipsLargeAudienceThreshold","label":"Number of recipients to trigger the large audience MailTip (Default is 25)","placeholder":"Enter a profile name","default":25}
+    .LABEL
+    Enable all MailTips
+    .IMPACT
+    Low Impact
+    .POWERSHELLEQUIVALENT
+    Set-OrganizationConfig
+    .RECOMMENDEDBY
+    "CIS"
+    .DOCSDESCRIPTION
+    Enables all MailTips in Outlook. MailTips are the notifications Outlook and Outlook on the web shows when an email you create, meets some requirements
+    .UPDATECOMMENTBLOCK
+    Run the Tools\Update-StandardsComments.ps1 script to update this comment block
     #>
+
+
+
+
 
     param($Tenant, $Settings)
     $MailTipsState = New-ExoRequest -tenantid $Tenant -cmdlet 'Get-OrganizationConfig' | Select-Object MailTipsAllTipsEnabled, MailTipsExternalRecipientsTipsEnabled, MailTipsGroupMetricsEnabled, MailTipsLargeAudienceThreshold
@@ -38,3 +66,7 @@ function Invoke-CIPPStandardEnableMailTips {
     }
 
 }
+
+
+
+
