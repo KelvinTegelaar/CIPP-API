@@ -17,7 +17,6 @@ function Get-NinjaOneToken {
         $ClientSecret = $ENV:NinjaClientSecret
     }
 
-
     $body = @{
         grant_type    = 'client_credentials'
         client_id     = $Configuration.ClientId

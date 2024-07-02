@@ -22,7 +22,7 @@ Function Invoke-ExecExtensionsConfig {
             $AddedText = $APIConfig.Results
         }
 
-        # Check if NinjaOne URL is set correctly and the intance has at least version 5.6
+        # Check if NinjaOne URL is set correctly and the instance has at least version 5.6
         if ($request.body.NinjaOne) {
             try {
                 [version]$Version = (Invoke-WebRequest -Method GET -Uri "https://$(($request.body.NinjaOne.Instance -replace '/ws','') -replace 'https://','')/app-version.txt" -ea stop).content
