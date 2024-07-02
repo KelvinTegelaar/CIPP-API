@@ -24,8 +24,8 @@ Function Invoke-ListMailboxes {
         $ExoRequest = @{
             tenantid  = $TenantFilter
             cmdlet    = 'Get-Mailbox'
-            cmdParams = @{resultsize = 'unlimited' }
-            Select    = $select
+            cmdParams = @{}
+            Select    = $Select
         }
 
         $AllowedParameters = @(
