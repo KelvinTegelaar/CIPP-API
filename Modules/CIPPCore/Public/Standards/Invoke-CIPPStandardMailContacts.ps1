@@ -2,7 +2,39 @@ function Invoke-CIPPStandardMailContacts {
     <#
     .FUNCTIONALITY
     Internal
+    .APINAME
+    MailContacts
+    .CAT
+    Global Standards
+    .TAG
+    "lowimpact"
+    .HELPTEXT
+    Defines the email address to receive general updates and information related to M365 subscriptions. Leave a contact field blank if you do not want to update the contact information.
+    .DOCSDESCRIPTION
+    Defines the email address to receive general updates and information related to M365 subscriptions. Leave a contact field blank if you do not want to update the contact information.
+    .DISABLEDFEATURES
+    
+    .ADDEDCOMPONENT
+    {"type":"input","name":"standards.MailContacts.GeneralContact","label":"General Contact"}
+    {"type":"input","name":"standards.MailContacts.SecurityContact","label":"Security Contact"}
+    {"type":"input","name":"standards.MailContacts.MarketingContact","label":"Marketing Contact"}
+    {"type":"input","name":"standards.MailContacts.TechContact","label":"Technical Contact"}
+    .LABEL
+    Set contact e-mails
+    .IMPACT
+    Low Impact
+    .POWERSHELLEQUIVALENT
+    Set-MsolCompanyContactInformation
+    .RECOMMENDEDBY
+    .DOCSDESCRIPTION
+    Defines the email address to receive general updates and information related to M365 subscriptions. Leave a contact field blank if you do not want to update the contact information.
+    .UPDATECOMMENTBLOCK
+    Run the Tools\Update-StandardsComments.ps1 script to update this comment block
     #>
+
+
+
+
     param($Tenant, $Settings)
     $TenantID = (New-GraphGetRequest -Uri 'https://graph.microsoft.com/beta/organization' -tenantid $tenant)
     $CurrentInfo = New-GraphGetRequest -Uri "https://graph.microsoft.com/beta/organization/$($TenantID.id)" -tenantid $Tenant
@@ -63,3 +95,7 @@ function Invoke-CIPPStandardMailContacts {
         Add-CIPPBPAField -FieldName 'MailContacts' -FieldValue $CurrentInfo -StoreAs json -Tenant $tenant
     }
 }
+
+
+
+
