@@ -2,7 +2,36 @@ function Invoke-CIPPStandardDisableOutlookAddins {
     <#
     .FUNCTIONALITY
     Internal
+    .APINAME
+    DisableOutlookAddins
+    .CAT
+    Exchange Standards
+    .TAG
+    "mediumimpact"
+    "CIS"
+    "exo_outlookaddins"
+    .HELPTEXT
+    Disables the ability for users to install add-ins in Outlook. This is to prevent users from installing malicious add-ins.
+    .DOCSDESCRIPTION
+    Disables users from being able to install add-ins in Outlook. Only admins are able to approve add-ins for the users. This is done to reduce the threat surface for data exfiltration.
+    .ADDEDCOMPONENT
+    .LABEL
+    Disable users from installing add-ins in Outlook
+    .IMPACT
+    Medium Impact
+    .POWERSHELLEQUIVALENT
+    Get-ManagementRoleAssignment | Remove-ManagementRoleAssignment
+    .RECOMMENDEDBY
+    "CIS"
+    .DOCSDESCRIPTION
+    Disables the ability for users to install add-ins in Outlook. This is to prevent users from installing malicious add-ins.
+    .UPDATECOMMENTBLOCK
+    Run the Tools\Update-StandardsComments.ps1 script to update this comment block
     #>
+
+
+
+
     param($Tenant, $Settings)
 
     $CurrentInfo = New-ExoRequest -tenantid $Tenant -cmdlet 'Get-RoleAssignmentPolicy' | Where-Object { $_.IsDefault -eq $true }
@@ -53,3 +82,7 @@ function Invoke-CIPPStandardDisableOutlookAddins {
         Add-CIPPBPAField -FieldName 'DisabledOutlookAddins' -FieldValue $State -StoreAs bool -Tenant $tenant
     }
 }
+
+
+
+

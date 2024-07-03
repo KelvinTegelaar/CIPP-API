@@ -2,7 +2,31 @@ function Invoke-CIPPStandardDisableSecurityGroupUsers {
     <#
     .FUNCTIONALITY
     Internal
+    .APINAME
+    DisableSecurityGroupUsers
+    .CAT
+    Entra (AAD) Standards
+    .TAG
+    "mediumimpact"
+    .HELPTEXT
+    Completely disables the creation of security groups by users. This also breaks the ability to manage groups themselves, or create Teams
+    .ADDEDCOMPONENT
+    .LABEL
+    Disable Security Group creation by users
+    .IMPACT
+    Medium Impact
+    .POWERSHELLEQUIVALENT
+    Update-MgBetaPolicyAuthorizationPolicy
+    .RECOMMENDEDBY
+    .DOCSDESCRIPTION
+    Completely disables the creation of security groups by users. This also breaks the ability to manage groups themselves, or create Teams
+    .UPDATECOMMENTBLOCK
+    Run the Tools\Update-StandardsComments.ps1 script to update this comment block
     #>
+
+
+
+
     param($Tenant, $Settings)
     $CurrentInfo = New-GraphGetRequest -Uri 'https://graph.microsoft.com/beta/policies/authorizationPolicy/authorizationPolicy' -tenantid $Tenant
 
@@ -35,3 +59,7 @@ function Invoke-CIPPStandardDisableSecurityGroupUsers {
         Add-CIPPBPAField -FieldName 'DisableSecurityGroupUsers' -FieldValue $CurrentInfo.defaultUserRolePermissions.allowedToCreateSecurityGroups -StoreAs bool -Tenant $tenant
     }
 }
+
+
+
+
