@@ -5,7 +5,7 @@ function Invoke-CIPPStandardEnableLitigationHold {
     #>
     param($Tenant, $Settings)
     
-    $MailboxesNoLitHold = New-ExoRequest -tenantid $Tenant -cmdlet 'Get-Mailbox' -cmdparams @{ MailboxPlan = 'ExchangeOnlineEnterprise'; Filter = 'LitigationHoldEnabled -eq "False"'}
+    $MailboxesNoLitHold = New-ExoRequest -tenantid $Tenant -cmdlet 'Get-Mailbox' -cmdparams @{ Filter = 'LitigationHoldEnabled -eq "False"'} | Where-Object {$_.PersistedCapabilities -contains "BPOS_S_DlpAddOn" -or $_.PersistedCapabilities -contains "BPOS_S_Enterprise"}
     
     If ($Settings.remediate -eq $true) {
 
