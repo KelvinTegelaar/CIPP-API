@@ -2,7 +2,31 @@ function Invoke-CIPPStandardEnablePronouns {
     <#
     .FUNCTIONALITY
     Internal
+    .APINAME
+    EnablePronouns
+    .CAT
+    Global Standards
+    .TAG
+    "lowimpact"
+    .HELPTEXT
+    Enables the Pronouns feature for the tenant. This allows users to set their pronouns in their profile.
+    .ADDEDCOMPONENT
+    .LABEL
+    Enable Pronouns
+    .IMPACT
+    Low Impact
+    .POWERSHELLEQUIVALENT
+    Update-MgBetaAdminPeoplePronoun -IsEnabledInOrganization:$true
+    .RECOMMENDEDBY
+    .DOCSDESCRIPTION
+    Enables the Pronouns feature for the tenant. This allows users to set their pronouns in their profile.
+    .UPDATECOMMENTBLOCK
+    Run the Tools\Update-StandardsComments.ps1 script to update this comment block
     #>
+
+
+
+
     param ($Tenant, $Settings)
 
     $Uri = 'https://graph.microsoft.com/v1.0/admin/people/pronouns'
@@ -47,3 +71,7 @@ function Invoke-CIPPStandardEnablePronouns {
         Add-CIPPBPAField -FieldName 'PronounsEnabled' -FieldValue $CurrentState.isEnabledInOrganization -StoreAs bool -Tenant $tenant
     }
 }
+
+
+
+

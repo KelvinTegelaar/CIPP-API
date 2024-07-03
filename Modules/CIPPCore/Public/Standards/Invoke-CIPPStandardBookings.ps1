@@ -2,7 +2,34 @@ function Invoke-CIPPStandardBookings {
     <#
     .FUNCTIONALITY
     Internal
+    .APINAME
+    Bookings
+    .CAT
+    Exchange Standards
+    .TAG
+    "mediumimpact"
+    .HELPTEXT
+    Sets the state of Bookings on the tenant. Bookings is a scheduling tool that allows users to book appointments with others both internal and external.
+    .DOCSDESCRIPTION
+    Sets the state of Bookings on the tenant. Bookings is a scheduling tool that allows users to book appointments with others both internal and external.
+    .ADDEDCOMPONENT
+    {"type":"Select","label":"Select value","name":"standards.Bookings.state","values":[{"label":"Enabled","value":"true"},{"label":"Disabled","value":"false"}]}
+    .LABEL
+    Set Bookings state
+    .IMPACT
+    Medium Impact
+    .POWERSHELLEQUIVALENT
+    Set-OrganizationConfig -BookingsEnabled
+    .RECOMMENDEDBY
+    .DOCSDESCRIPTION
+    Sets the state of Bookings on the tenant. Bookings is a scheduling tool that allows users to book appointments with others both internal and external.
+    .UPDATECOMMENTBLOCK
+    Run the Tools\Update-StandardsComments.ps1 script to update this comment block
     #>
+
+
+
+
     param($Tenant, $Settings)
 
     $CurrentState = (New-ExoRequest -tenantid $Tenant -cmdlet 'Get-OrganizationConfig').BookingsEnabled
@@ -47,3 +74,7 @@ function Invoke-CIPPStandardBookings {
 
 
 }
+
+
+
+

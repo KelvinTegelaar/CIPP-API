@@ -2,7 +2,33 @@ function Invoke-CIPPStandardDeletedUserRentention {
     <#
     .FUNCTIONALITY
     Internal
+    .APINAME
+    DeletedUserRentention
+    .CAT
+    SharePoint Standards
+    .TAG
+    "lowimpact"
+    .HELPTEXT
+    Sets the retention period for deleted users OneDrive to 1 year/365 days
+    .DOCSDESCRIPTION
+    When a OneDrive user gets deleted, the personal SharePoint site is saved for 1 year and data can be retrieved from it.
+    .ADDEDCOMPONENT
+    .LABEL
+    Retain a deleted user OneDrive for 1 year
+    .IMPACT
+    Low Impact
+    .POWERSHELLEQUIVALENT
+    Update-MgBetaAdminSharepointSetting
+    .RECOMMENDEDBY
+    .DOCSDESCRIPTION
+    Sets the retention period for deleted users OneDrive to 1 year/365 days
+    .UPDATECOMMENTBLOCK
+    Run the Tools\Update-StandardsComments.ps1 script to update this comment block
     #>
+
+
+
+
     param($Tenant, $Settings)
     $CurrentInfo = New-GraphGetRequest -Uri 'https://graph.microsoft.com/beta/admin/sharepoint/settings' -tenantid $Tenant -AsApp $true
     $StateSetCorrectly = if ($CurrentInfo.deletedUserPersonalSiteRetentionPeriodInDays -eq 365) { $true } else { $false }
@@ -39,3 +65,7 @@ function Invoke-CIPPStandardDeletedUserRentention {
         Add-CIPPBPAField -FieldName 'DeletedUserRentention' -FieldValue $StateSetCorrectly -StoreAs bool -Tenant $tenant
     }
 }
+
+
+
+

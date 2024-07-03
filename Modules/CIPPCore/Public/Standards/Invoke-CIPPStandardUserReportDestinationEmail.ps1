@@ -1,8 +1,31 @@
-﻿function Invoke-CIPPStandardUserReportDestinationEmail {
+function Invoke-CIPPStandardUserReportDestinationEmail {
     <#
     .FUNCTIONALITY
     Internal
+    .APINAME
+    UserReportDestinationEmail
+    .CAT
+    Exchange Standards
+    .TAG
+    "mediumimpact"
+    .HELPTEXT
+    Sets the destination for email when users report them as spam or phishing. Works well together with the 'Set the state of the built-in Report button in Outlook standard'.
+    .ADDEDCOMPONENT
+    {"type":"input","name":"standards.UserReportDestinationEmail.Email","label":"Destination email address"}
+    .LABEL
+    Set the destination email for user reported emails
+    .IMPACT
+    Medium Impact
+    .POWERSHELLEQUIVALENT
+    New-ReportSubmissionRule or Set-ReportSubmissionRule
+    .RECOMMENDEDBY
+    .DOCSDESCRIPTION
+    Sets the destination for email when users report them as spam or phishing. Works well together with the 'Set the state of the built-in Report button in Outlook standard'.
+    .UPDATECOMMENTBLOCK
+    Run the Tools\Update-StandardsComments.ps1 script to update this comment block
     #>
+
+
     param($Tenant, $Settings)
 
     # Input validation
@@ -52,3 +75,5 @@
         Add-CIPPBPAField -FieldName 'UserReportDestinationEmail' -FieldValue $StateIsCorrect -StoreAs bool -Tenant $tenant
     }
 }
+
+
