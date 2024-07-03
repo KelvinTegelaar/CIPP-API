@@ -3,13 +3,9 @@ function Get-HuduMapping {
     param (
         $CIPPMapping
     )
-    #Get available mappings
-    $Mappings = [pscustomobject]@{}
 
-    $Filter = "PartitionKey eq 'HuduMapping'"
-    Get-CIPPAzDataTableEntity @CIPPMapping -Filter $Filter | ForEach-Object {
-        $Mappings | Add-Member -NotePropertyName $_.RowKey -NotePropertyValue @{ label = "$($_.HuduCompany)"; value = "$($_.HuduCompanyId)" }
-    }
+    $Mappings = Get-ExtensionMapping -Extension 'Hudu'
+
     $Tenants = Get-Tenants -IncludeErrors
     $Table = Get-CIPPTable -TableName Extensionsconfig
     try {
@@ -35,9 +31,9 @@ function Get-HuduMapping {
         }
     }
     $MappingObj = [PSCustomObject]@{
-        Tenants       = @($Tenants)
-        HuduCompanies = @($HuduCompanies)
-        Mappings      = $Mappings
+        Tenants   = @($Tenants)
+        Companies = @($HuduCompanies)
+        Mappings  = $Mappings
     }
 
     return $MappingObj
