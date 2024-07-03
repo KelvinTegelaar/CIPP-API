@@ -9,9 +9,9 @@ function Invoke-NinjaOneOrgMapping {
 
     #Get available mappings
     $Mappings = [pscustomobject]@{}
-    $Filter = "PartitionKey eq 'NinjaOrgsMapping'"
+    $Filter = "PartitionKey eq 'NinjaOneMapping'"
     Get-AzDataTableEntity @CIPPMapping -Filter $Filter | ForEach-Object {
-        $Mappings | Add-Member -NotePropertyName $_.RowKey -NotePropertyValue @{ label = "$($_.NinjaOneName)"; value = "$($_.NinjaOne)" }
+        $Mappings | Add-Member -NotePropertyName $_.RowKey -NotePropertyValue @{ label = "$($_.IntegrationName)"; value = "$($_.IntegrationId)" }
     }
 
     #Get Available Tenants
@@ -81,10 +81,10 @@ function Invoke-NinjaOneOrgMapping {
             $MatchedM365Tenants.add($Tenant)
             $MatchedNinjaOrgs.add($MatchedOrg)
             $AddObject = @{
-                PartitionKey   = 'NinjaOrgsMapping'
-                RowKey         = "$($Tenant.customerId)"
-                'NinjaOne'     = "$($MatchedOrg.id)"
-                'NinjaOneName' = "$($MatchedOrg.name)"
+                PartitionKey    = 'NinjaOneMapping'
+                RowKey          = "$($Tenant.customerId)"
+                IntegrationId   = "$($MatchedOrg.id)"
+                IntegrationName = "$($MatchedOrg.name)"
             }
             Add-AzDataTableEntity @CIPPMapping -Entity $AddObject -Force
             Write-LogMessage -API 'NinjaOneAutoMap_Queue' -user 'CIPP' -message "Added mapping from Organization name match for $($Tenant.customerId). to $($($MatchedOrg.name))" -Sev 'Info'
