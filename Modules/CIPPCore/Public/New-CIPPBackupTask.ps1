@@ -1,25 +1,25 @@
 function New-CIPPBackupTask {
     [CmdletBinding()]
     param (
-        $ScheduledBackup,
+        $Task,
         $TenantFilter
     )
 
-    $BackupData = switch ($ScheduledBackup) {
+    $BackupData = switch ($Task) {
         'users' {
-            New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/users?$top=999' -tenantid $TenantFilter
+            $BackupData = New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/users?$top=999' -tenantid $TenantFilter
         }
         'groups' {
-            New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/groups?$top=999' -tenantid $TenantFilter
+            $BackupData = New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/groups?$top=999' -tenantid $TenantFilter
         }
         'ca' {
-            New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/conditionalAccess/policies?$top=999' -tenantid $TenantFilter
+            $BackupData = New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/conditionalAccess/policies?$top=999' -tenantid $TenantFilter
         }
         'namedlocations' {
-            New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/conditionalAccess/namedLocations?$top=999' -tenantid $TenantFilter
+            $BackupData = New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/conditionalAccess/namedLocations?$top=999' -tenantid $TenantFilter
         }
         'authstrengths' {
-            New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/conditionalAccess/authenticationStrength/policies' -tenantid $TenantFilter
+            $BackupData = New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/conditionalAccess/authenticationStrength/policies' -tenantid $TenantFilter
         }
         'intuneconfig' {
             #alert
@@ -30,16 +30,16 @@ function New-CIPPBackupTask {
     
         'CippWebhookAlerts' {
             $WebhookTable = Get-CIPPTable -TableName 'WebhookRules'
-            Get-CIPPAzDataTableEntity @WebhookTable | Where-Object { $TenantFilter -in ($_.Tenants | ConvertFrom-Json).fullvalue.defaultDomainName }
+            $BackupData = Get-CIPPAzDataTableEntity @WebhookTable | Where-Object { $TenantFilter -in ($_.Tenants | ConvertFrom-Json).fullvalue.defaultDomainName }
         }
         'CippScriptedAlerts' {
             $ScheduledTasks = Get-CIPPTable -TableName 'ScheduledTasks'
-            Get-CIPPAzDataTableEntity @ScheduledTasks | Where-Object { $_.hidden -eq $true -and $_.command -like 'Get-CippAlert*' -and $TenantFilter -in $_.Tenant }
+            $BackupData = Get-CIPPAzDataTableEntity @ScheduledTasks | Where-Object { $_.hidden -eq $true -and $_.command -like 'Get-CippAlert*' -and $TenantFilter -in $_.Tenant }
         }
         'CippStandards' { 
             $Table = Get-CippTable -tablename 'standards'
             $Filter = "PartitionKey eq 'standards' and RowKey eq '$($TenantFilter)'"
-            (Get-CIPPAzDataTableEntity @Table -Filter $Filter)
+            $BackupData = (Get-CIPPAzDataTableEntity @Table -Filter $Filter)
         }
 
     }
