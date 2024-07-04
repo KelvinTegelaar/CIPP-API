@@ -19,6 +19,11 @@ Function Invoke-ListScheduledItems {
         $HiddenTasks = $true
     }
     $Tasks = Get-CIPPAzDataTableEntity @Table -Filter "PartitionKey eq 'ScheduledTask'" | Where-Object { $_.Hidden -ne $HiddenTasks }
+    if ($Request.Query.Type) {
+        $tasks.Command
+        $Tasks = $Tasks | Where-Object { $_.command -eq $Request.Query.Type }
+    }
+    
     $AllowedTenants = Test-CIPPAccess -Request $Request -TenantList
     if ($AllowedTenants -notcontains 'AllTenants') {
         $Tasks = $Tasks | Where-Object -Property TenantId -In $AllowedTenants
