@@ -57,10 +57,14 @@ function Set-CIPPSPOTenant {
             # Get property type
             $PropertyType = $Properties[$Property].GetType().Name
             if ($PropertyType -in $AllowedTypes) {
-                if ($PropertyType -eq 'Boolean') { $Properties[$Property] = $Properties[$Property].ToString().ToLower() }
+                if ($PropertyType -eq 'Boolean') {
+                    $PropertyToSet = $Properties[$Property].ToString().ToLower()
+                } else {
+                    $PropertyToSet = $Properties[$Property]
+                }
                 $xml = @"
     <SetProperty Id="$x" ObjectPathId="110" Name="$Property">
-        <Parameter Type="Boolean">$($Properties[$Property])</Parameter>
+        <Parameter Type="Boolean">$($PropertyToSet)</Parameter>
     </SetProperty>
 "@
                 $SetProperty.Add($xml)
