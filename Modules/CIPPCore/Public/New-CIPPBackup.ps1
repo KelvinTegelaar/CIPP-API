@@ -60,10 +60,10 @@ function New-CIPPBackup {
                 RowKey       = $RowKey
                 TenantFilter = $TenantFilter
             }
-            Write-Host "ScheduledBackupValues: $($ScheduledBackupValues | ConvertTo-Json -Compress -Depth 100)"
-            Write-Host "Scheduled backup value psproperties: $($ScheduledBackupValues.psobject.Properties.Name)"
-            foreach ($ScheduledBackup in $ScheduledBackupValues.psobject.Properties.Name) {
-                $entity[$ScheduledBackup] = New-CIPPBackupTask -Task $ScheduledBackup -TenantFilter $TenantFilter
+            Write-Host "Scheduled backup value psproperties: $(([pscustomobject]$ScheduledBackupValues).psobject.Properties)"
+            foreach ($ScheduledBackup in ([pscustomobject]$ScheduledBackupValues).psobject.Properties.Name) {
+                $BackupResult = New-CIPPBackupTask -Task $ScheduledBackup -TenantFilter $TenantFilter | ConvertTo-Json -Depth 100 -Compress | Out-String
+                $entity[$ScheduledBackup] = "$BackupResult"
             }
             $Table = Get-CippTable -tablename 'ScheduledBackup'
             try {
