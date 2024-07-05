@@ -88,6 +88,7 @@ function New-GraphGetRequest {
             }
         } until ([string]::IsNullOrEmpty($NextURL) -or $NextURL -is [object[]] -or ' ' -eq $NextURL)
         $Tenant.LastGraphError = ''
+        $Tenant.GraphErrorCount = 0
         Update-AzDataTableEntity @TenantsTable -Entity $Tenant
         return $ReturnedData
     } else {
