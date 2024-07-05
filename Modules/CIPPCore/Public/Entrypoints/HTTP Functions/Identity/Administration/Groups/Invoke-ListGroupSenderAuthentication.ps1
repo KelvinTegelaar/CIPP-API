@@ -6,8 +6,6 @@ Function Invoke-ListGroupSenderAuthentication {
 
     $APIName = $TriggerMetadata.FunctionName
     Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -message 'Accessed this API' -Sev 'Debug'
-
-
     # Write to the Azure Functions log stream.
     Write-Host 'PowerShell HTTP trigger function processed a request.'
 
@@ -15,28 +13,34 @@ Function Invoke-ListGroupSenderAuthentication {
 
     $TenantFilter = $Request.Query.TenantFilter
     $groupid = $Request.query.groupid
+    $GroupType = $Request.query.Type
 
     $params = @{
         Identity = $groupid
     }
 
-    Write-Host = "This is the group id $groupid"
-    Write-Host = "This is the tenant filter $TenantFilter"
-    $GroupType = Invoke-ListGroups -tenantFilter $TenantFilter -GroupID $groupid
-    Write-Host = "This is the group type $($GroupType.calculatedGroupType)"
-
+  
     try {
-        $Request = New-ExoRequest -tenantid $TenantFilter -cmdlet 'Get-DistributionGroup' -cmdParams $params -UseSystemMailbox $true
-        $StatusCode = [HttpStatusCode]::OK 
+        switch ($GroupType) {
+            'Distribution List' {
+                Write-Host 'Checking DL'
+                $State = (New-ExoRequest -tenantid $TenantFilter -cmdlet 'Get-DistributionGroup' -cmdParams $params -UseSystemMailbox $true).RequireSenderAuthenticationEnabled 
+            }
+            'Microsoft 365' {
+                Write-Host 'Checking M365 Group'
+                $State = (New-ExoRequest -tenantid $TenantFilter -cmdlet 'get-unifiedgroup' -cmdParams $params -UseSystemMailbox $true).RequireSenderAuthenticationEnabled 
+                
+            }
+            default { $state = $true }
+        }
+
     } catch {
-        $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
-        $StatusCode = [HttpStatusCode]::Forbidden
-        $Request = $ErrorMessage
+        $state = $true
     }
 
-    # Associate values to output bindings by calling 'Push-OutputBinding'.
+    # We flip the value because the API is asking if the group is allowed to receive external mail
     Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
-            StatusCode = $StatusCode
-            Body       = @{ enabled = $Request.RequireSenderAuthenticationEnabled }
+            StatusCode = [HttpStatusCode]::OK 
+            Body       = @{ allowedToReceiveExternal = !$state }
         })
 }
