@@ -11,18 +11,18 @@ function New-CippExtAlert {
     $MappingFile = (Get-CIPPAzDataTableEntity @MappingTable)
     foreach ($ConfigItem in $Configuration.psobject.properties.name) {
         switch ($ConfigItem) {
-            "HaloPSA" {
+            'HaloPSA' {
                 If ($Configuration.HaloPSA.enabled) {
                     $TenantId = (Get-Tenants | Where-Object defaultDomainName -EQ $Alert.TenantId).customerId
                     Write-Host "TenantId: $TenantId"
-                    $MappedId = ($MappingFile | Where-Object RowKey -EQ $TenantId).HaloPSA
+                    $MappedId = ($MappingFile | Where-Object { $_.PartitionKey -eq 'HaloMapping' -and $_.RowKey -eq $TenantId }).IntegrationId
                     Write-Host "MappedId: $MappedId"
                     if (!$mappedId) { $MappedId = 1 }
                     Write-Host "MappedId: $MappedId"
-                    New-HaloPSATicket -Title $Alert.AlertTitle -Description $Alert.AlertText -Client $mappedId 
+                    New-HaloPSATicket -Title $Alert.AlertTitle -Description $Alert.AlertText -Client $mappedId
                 }
             }
-            "Gradient" {
+            'Gradient' {
                 If ($Configuration.Gradient.enabled) {
                     New-GradientAlert -Title $Alert.AlertTitle -Description $Alert.AlertText -Client $Alert.TenantId
                 }

@@ -6,15 +6,27 @@ function Get-HaloMapping {
     #Get available mappings
     $Mappings = [pscustomobject]@{}
 
+    # Migrate legacy mappings
     $Filter = "PartitionKey eq 'Mapping'"
-    Get-CIPPAzDataTableEntity @CIPPMapping -Filter $Filter | ForEach-Object {
-        $Mappings | Add-Member -NotePropertyName $_.RowKey -NotePropertyValue @{ label = "$($_.HaloPSAName)"; value = "$($_.HaloPSA)" }
+    $MigrateRows = Get-CIPPAzDataTableEntity @CIPPMapping -Filter $Filter | ForEach-Object {
+        [PSCustomObject]@{
+            PartitionKey    = 'HaloMapping'
+            RowKey          = $_.RowKey
+            IntegrationId   = $_.HaloPSA
+            IntegrationName = $_.HaloPSAName
+        }
+        Remove-AzDataTableEntity @CIPPMapping -Entity $_ | Out-Null
     }
+    if (($MigrateRows | Measure-Object).Count -gt 0) {
+        Add-CIPPAzDataTableEntity @CIPPMapping -Entity $MigrateRows -Force
+    }
+
+    $Mappings = Get-ExtensionMapping -Extension 'Halo'
+
     $Tenants = Get-Tenants -IncludeErrors
     $Table = Get-CIPPTable -TableName Extensionsconfig
     try {
         $Configuration = ((Get-CIPPAzDataTableEntity @Table).config | ConvertFrom-Json -ea stop).HaloPSA
-
 
         $Token = Get-HaloToken -configuration $Configuration
         $i = 1
@@ -32,7 +44,7 @@ function Get-HaloMapping {
         }
 
         Write-LogMessage -Message "Could not get HaloPSA Clients, error: $Message " -Level Error -tenant 'CIPP' -API 'HaloMapping'
-        $RawHaloClients = @(@{name = "Could not get HaloPSA Clients, error: $Message"; value = '-1' })
+        $RawHaloClients = @(@{name = "Could not get HaloPSA Clients, error: $Message"; id = '-1' })
     }
     $HaloClients = $RawHaloClients | ForEach-Object {
         [PSCustomObject]@{
@@ -41,9 +53,9 @@ function Get-HaloMapping {
         }
     }
     $MappingObj = [PSCustomObject]@{
-        Tenants     = @($Tenants)
-        HaloClients = @($HaloClients)
-        Mappings    = $Mappings
+        Tenants   = @($Tenants)
+        Companies = @($HaloClients)
+        Mappings  = $Mappings
     }
 
     return $MappingObj

@@ -23,7 +23,7 @@ Function Invoke-ExecExtensionSync {
                     'Gradient' {
                         If ($Configuration.Gradient.enabled -and $Configuration.Gradient.BillingEnabled) {
                             Push-OutputBinding -Name gradientqueue -Value 'LetsGo'
-                            $Results = [pscustomobject]@{'Results' = 'Succesfully started Gradient Sync' }
+                            $Results = [pscustomobject]@{'Results' = 'Successfully started Gradient Sync' }
                         }
                     }
                 }
@@ -40,8 +40,8 @@ Function Invoke-ExecExtensionSync {
             $Table = Get-CIPPTable -TableName NinjaOneSettings
 
             $CIPPMapping = Get-CIPPTable -TableName CippMapping
-            $Filter = "PartitionKey eq 'NinjaOrgsMapping'"
-            $TenantsToProcess = Get-AzDataTableEntity @CIPPMapping -Filter $Filter | Where-Object { $Null -ne $_.NinjaOne -and $_.NinjaOne -ne '' }
+            $Filter = "PartitionKey eq 'NinjaOneMapping'"
+            $TenantsToProcess = Get-AzDataTableEntity @CIPPMapping -Filter $Filter | Where-Object { $Null -ne $_.IntegrationId -and $_.IntegrationId -ne '' }
 
             if ($Request.Query.TenantID) {
                 $Tenant = $TenantsToProcess | Where-Object { $_.RowKey -eq $Request.Query.TenantID }
@@ -59,7 +59,7 @@ Function Invoke-ExecExtensionSync {
                     $InstanceId = Start-NewOrchestration -FunctionName 'CIPPOrchestrator' -InputObject ($InputObject | ConvertTo-Json -Depth 5 -Compress)
                     Write-Host "Started permissions orchestration with ID = '$InstanceId'"
 
-                    $Results = [pscustomobject]@{'Results' = "NinjaOne Synchronization Queued for $($Tenant.NinjaOneName)" }
+                    $Results = [pscustomobject]@{'Results' = "NinjaOne Synchronization Queued for $($Tenant.IntegrationName)" }
                 } else {
                     $Results = [pscustomobject]@{'Results' = 'Tenant was not found.' }
                 }

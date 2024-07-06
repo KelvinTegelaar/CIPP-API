@@ -5296,6 +5296,15 @@
     "value": "AllSites.FullControl"
   },
   {
+    "description": "Required for Request-SPOPeronalSite",
+    "displayName": "Manage sharepoint profiles",
+    "id": "ec4fc4c8-872e-442b-a2a2-d095575807b3",
+    "Origin": "Delegated (Office 365 SharePoint Online)",
+    "userConsentDescription": "",
+    "userConsentDisplayName": "Manage sharepoint profiles",
+    "value": "AllProfiles.Manage"
+  },
+  {
     "description": "Allows to read the LAPs passwords.",
     "displayName": "Manage LAPs passwords",
     "id": "280b3b69-0437-44b1-bc20-3b2fca1ee3e9",

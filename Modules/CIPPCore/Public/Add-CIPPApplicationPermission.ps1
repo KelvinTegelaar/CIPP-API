@@ -6,7 +6,8 @@ function Add-CIPPApplicationPermission {
         $Tenantfilter
     )
     if ($ApplicationId -eq $ENV:ApplicationID -and $Tenantfilter -eq $env:TenantID) {
-        return @('Cannot modify application permissions for CIPP-SAM on partner tenant')
+        #return @('Cannot modify application permissions for CIPP-SAM on partner tenant')
+        $RequiredResourceAccess = 'CIPPDefaults'
     }
     Set-Location (Get-Item $PSScriptRoot).FullName
     if ($RequiredResourceAccess -eq 'CIPPDefaults') {

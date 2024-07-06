@@ -2,7 +2,33 @@ function Invoke-CIPPStandardDisableBasicAuthSMTP {
     <#
     .FUNCTIONALITY
     Internal
+    .APINAME
+    DisableBasicAuthSMTP
+    .CAT
+    Global Standards
+    .TAG
+    "mediumimpact"
+    .HELPTEXT
+    Disables SMTP AUTH for the organization and all users. This is the default for new tenants. 
+    .DOCSDESCRIPTION
+    Disables SMTP basic authentication for the tenant and all users with it explicitly enabled.
+    .ADDEDCOMPONENT
+    .LABEL
+    Disable SMTP Basic Authentication
+    .IMPACT
+    Medium Impact
+    .POWERSHELLEQUIVALENT
+    Set-TransportConfig -SmtpClientAuthenticationDisabled $true
+    .RECOMMENDEDBY
+    .DOCSDESCRIPTION
+    Disables SMTP AUTH for the organization and all users. This is the default for new tenants. 
+    .UPDATECOMMENTBLOCK
+    Run the Tools\Update-StandardsComments.ps1 script to update this comment block
     #>
+
+
+
+
     param($Tenant, $Settings)
     $CurrentInfo = New-ExoRequest -tenantid $Tenant -cmdlet 'Get-TransportConfig'
     $SMTPusers = New-ExoRequest -tenantid $Tenant -cmdlet 'Get-CASMailbox' -cmdParams @{ ResultSize = 'Unlimited' } | Where-Object { ($_.SmtpClientAuthenticationDisabled -eq $false) }
@@ -68,3 +94,7 @@ function Invoke-CIPPStandardDisableBasicAuthSMTP {
         }
     }
 }
+
+
+
+

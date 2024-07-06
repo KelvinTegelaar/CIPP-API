@@ -20,7 +20,7 @@ Function Invoke-ListAlertsQueue {
     $WebhookRules = Get-CIPPAzDataTableEntity @WebhookTable
 
     $ScheduledTasks = Get-CIPPTable -TableName 'ScheduledTasks'
-    $ScheduledTasks = Get-CIPPAzDataTableEntity @ScheduledTasks | Where-Object { $_.hidden -eq $true }
+    $ScheduledTasks = Get-CIPPAzDataTableEntity @ScheduledTasks | Where-Object { $_.hidden -eq $true -and $_.command -like 'Get-CippAlert*' }
 
     $AllowedTenants = Test-CIPPAccess -Request $Request -TenantList
     $TenantList = Get-Tenants -IncludeErrors

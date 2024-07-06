@@ -2,7 +2,36 @@ function Invoke-CIPPStandardcalDefault {
     <#
     .FUNCTIONALITY
     Internal
+    .APINAME
+    calDefault
+    .CAT
+    Exchange Standards
+    .TAG
+    "lowimpact"
+    .HELPTEXT
+    Sets the default sharing level for the default calendar, for all users
+    .DOCSDESCRIPTION
+    Sets the default sharing level for the default calendar for all users in the tenant. You can read about the different sharing levels [here.](https://learn.microsoft.com/en-us/powershell/module/exchange/set-mailboxfolderpermission?view=exchange-ps#-accessrights)
+    .DISABLEDFEATURES
+    
+    .ADDEDCOMPONENT
+    {"type":"Select","label":"Select Sharing Level","name":"standards.calDefault.permissionlevel","values":[{"label":"Owner - The user can create, read, edit, and delete all items in the folder, and create subfolders. The user is both folder owner and folder contact.","value":"Owner"},{"label":"Publishing Editor - The user can create, read, edit, and delete all items in the folder, and create subfolders.","value":"PublishingEditor"},{"label":"Editor - The user can create items in the folder. The contents of the folder do not appear.","value":"Editor"},{"label":"Publishing Author.  The user can read, create all items/subfolders. Can modify and delete only items they create.","value":"PublishingAuthor"},{"label":"Author - The user can create and read items, and modify and delete items that they create.","value":"Author"},{"label":"Non Editing Author - The user has full read access and create items. Can can delete only own items.","value":"NonEditingAuthor"},{"label":"Reviewer - The user can read all items in the folder.","value":"Reviewer"},{"label":"Contributor - The user can create items and folders.","value":"Contributor"},{"label":"Availability Only - Indicates that the user can view only free/busy time within the calendar.","value":"AvailabilityOnly"},{"label":"Limited Details - The user can view free/busy time within the calendar and the subject and location of appointments.","value":"LimitedDetails"},{"label":"None - The user has no permissions on the folder.","value":"none"}]}
+    .LABEL
+    Set Sharing Level for Default calendar
+    .IMPACT
+    Low Impact
+    .POWERSHELLEQUIVALENT
+    Set-MailboxFolderPermission
+    .RECOMMENDEDBY
+    .DOCSDESCRIPTION
+    Sets the default sharing level for the default calendar, for all users
+    .UPDATECOMMENTBLOCK
+    Run the Tools\Update-StandardsComments.ps1 script to update this comment block
     #>
+
+
+
+
     param($Tenant, $Settings, $QueueItem)
 
     # Input validation
@@ -77,3 +106,7 @@ function Invoke-CIPPStandardcalDefault {
             Write-LogMessage -API 'Standards' -tenant $Tenant -message "Successfully set default calendar permissions for $SuccessCounter out of $TotalMailboxes mailboxes." -sev Info
         }
     }
+
+
+
+

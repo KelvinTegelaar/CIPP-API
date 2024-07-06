@@ -46,7 +46,7 @@ function Invoke-ExecMailboxRestore {
                 $TenantFilter = $Request.Body.TenantFilter
                 $RequestName = $Request.Body.RequestName
                 $SourceMailbox = $Request.Body.SourceMailbox
-                $TargetMailbox = $Request.Body.TargetMailbox
+                $TargetMailbox = if (!$Request.Body.input) {$Request.Body.TargetMailbox} else {$Request.Body.input}
 
                 $ExoRequest = @{
                     tenantid  = $TenantFilter
