@@ -4,6 +4,7 @@ function Get-CIPPBackup {
         [string]$Type,
         [string]$TenantFilter
     )
+    Write-Host "Getting backup for $Type with TenantFilter $TenantFilter"
     $Table = Get-CippTable -tablename "$($Type)Backup"
     if ($TenantFilter) {
         $Filter = "PartitionKey eq '$($Type)Backup' and TenantFilter eq '$($TenantFilter)'"
