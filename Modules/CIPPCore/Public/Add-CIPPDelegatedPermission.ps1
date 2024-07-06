@@ -9,11 +9,14 @@ function Add-CIPPDelegatedPermission {
     Set-Location (Get-Item $PSScriptRoot).FullName
 
     if ($ApplicationId -eq $ENV:ApplicationID -and $Tenantfilter -eq $env:TenantID) {
-        return @('Cannot modify delgated permissions for CIPP-SAM on partner tenant')
+        #return @('Cannot modify delgated permissions for CIPP-SAM on partner tenant')
+        $RequiredResourceAccess = 'CIPPDefaults'
     }
 
     if ($RequiredResourceAccess -eq 'CIPPDefaults') {
         $RequiredResourceAccess = (Get-Content '.\SAMManifest.json' | ConvertFrom-Json).requiredResourceAccess
+        $AdditionalPermissions = Get-Content '.\AdditionalPermissions.json' | ConvertFrom-Json
+        $RequiredResourceAccess = $RequiredResourceAccess + ($AdditionalPermissions | Where-Object { $RequiredResourceAccess.resourceAppId -notcontains $_.resourceAppId })
     }
     $Translator = Get-Content '.\PermissionsTranslator.json' | ConvertFrom-Json
     $ServicePrincipalList = New-GraphGETRequest -uri "https://graph.microsoft.com/beta/servicePrincipals?`$select=AppId,id,displayName&`$top=999" -tenantid $Tenantfilter -skipTokenCache $true
@@ -22,10 +25,17 @@ function Add-CIPPDelegatedPermission {
 
     $CurrentDelegatedScopes = New-GraphGETRequest -uri "https://graph.microsoft.com/beta/servicePrincipals/$($ourSVCPrincipal.id)/oauth2PermissionGrants" -skipTokenCache $true -tenantid $Tenantfilter
 
-    foreach ($App in $requiredResourceAccess) {
+    foreach ($App in $RequiredResourceAccess) {
         $svcPrincipalId = $ServicePrincipalList | Where-Object -Property AppId -EQ $App.resourceAppId
+        $AdditionalScopes = ($AdditionalPermissions | Where-Object -Property resourceAppId -EQ $App.resourceAppId).resourceAccess
         if (!$svcPrincipalId) { continue }
-        $NewScope = ($Translator | Where-Object { $_.id -in $App.ResourceAccess.id }).value -join ' '
+        if ($AdditionalScopes) {
+            $NewScope = (($Translator | Where-Object { $_.id -in $App.ResourceAccess.id }).value + $AdditionalScopes.id | Select-Object -Unique) -join ' '
+            Write-Host "NEW SCOPE: $NewScope"
+        } else {
+            $NewScope = ($Translator | Where-Object { $_.id -in $App.ResourceAccess.id }).value -join ' '
+        }
+
         $OldScope = ($CurrentDelegatedScopes | Where-Object -Property Resourceid -EQ $svcPrincipalId.id)
 
         if (!$OldScope) {

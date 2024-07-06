@@ -4,13 +4,13 @@ function Get-HuduFieldMapping {
         $CIPPMapping
     )
 
-    $Mappings = Get-ExtensionMapping -Extension 'HuduFields'
+    $Mappings = Get-ExtensionMapping -Extension 'HuduField'
 
     $CIPPFieldHeaders = @(
         [PSCustomObject]@{
             Title       = 'Hudu Asset Layouts'
             FieldType   = 'Layouts'
-            Description = 'Use the table below to map your Hudu Asset Layouts to the correct CIPP Field'
+            Description = 'Use the table below to map your Hudu Asset Layouts to the correct CIPP Data Type. A new Rich Text asset layout field will be created if it does not exist.'
         }
     )
     $CIPPFields = @(
@@ -31,8 +31,6 @@ function Get-HuduFieldMapping {
         }
     )
 
-
-    $Tenants = Get-Tenants -IncludeErrors
     $Table = Get-CIPPTable -TableName Extensionsconfig
     try {
         $Configuration = ((Get-CIPPAzDataTableEntity @Table).config | ConvertFrom-Json -ea stop).Hudu
@@ -46,8 +44,8 @@ function Get-HuduFieldMapping {
             $_.Exception.message
         }
 
-        Write-LogMessage -Message "Could not get Hudu Companies, error: $Message " -Level Error -tenant 'CIPP' -API 'HuduMapping'
-        $HuduCompanies = @(@{name = "Could not get Hudu Companies, error: $Message"; value = '-1' })
+        Write-LogMessage -Message "Could not get Hudu Asset Layouts, error: $Message " -Level Error -tenant 'CIPP' -API 'HuduMapping'
+        $AssetLayouts = @(@{name = "Could not get Hudu Asset Layouts, error: $Message"; value = '-1' })
     }
 
     $Unset = [PSCustomObject]@{
