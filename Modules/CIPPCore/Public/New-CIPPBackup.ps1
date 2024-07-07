@@ -11,7 +11,7 @@ function New-CIPPBackup {
 
     $BackupData = switch ($backupType) {
         #If backup type is CIPP, create CIPP backup.
-        'CIPP' { 
+        'CIPP' {
             try {
                 $BackupTables = @(
                     'bpa'
@@ -27,7 +27,7 @@ function New-CIPPBackup {
                     Get-CIPPAzDataTableEntity @Table | Select-Object *, @{l = 'table'; e = { $CSVTable } }
                 }
                 Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -message 'Created backup' -Sev 'Debug'
-                $CSVfile 
+                $CSVfile
                 $RowKey = 'CIPPBackup' + '_' + (Get-Date).ToString('yyyy-MM-dd-HHmm')
                 $entity = [PSCustomObject]@{
                     PartitionKey = 'CIPPBackup'
@@ -43,7 +43,7 @@ function New-CIPPBackup {
                     Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -message "Failed to create backup for CIPP: $($_.Exception.Message)" -Sev 'Error'
                     [pscustomobject]@{'Results' = "Backup Creation failed: $($_.Exception.Message)" }
                 }
-               
+
             } catch {
                 Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -message "Failed to create backup: $($_.Exception.Message)" -Sev 'Error'
                 [pscustomobject]@{'Results' = "Backup Creation failed: $($_.Exception.Message)" }
@@ -51,7 +51,7 @@ function New-CIPPBackup {
         }
 
         #If Backup type is ConditionalAccess, create Conditional Access backup.
-        'Scheduled' { 
+        'Scheduled' {
             #Do a sub switch here based on the ScheduledBackupValues?
             #Store output in tablestorage for Recovery
             $RowKey = $TenantFilter + '_' + (Get-Date).ToString('yyyy-MM-dd-HHmm')
