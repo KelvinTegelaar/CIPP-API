@@ -1011,8 +1011,15 @@
     "description": "Allows the app to create, read, update, and delete events of all calendars without a signed-in user.",
     "displayName": "Read and write calendars in all mailboxes",
     "id": "ef54d2bf-783f-4e0f-bca1-3210c0444d99",
-    "origin": "Application",
-    "value": "Calendars.ReadWrite"
+    "origin": "Application (Office 365 Exchange Online)",
+    "value": "Calendars.ReadWrite.All"
+  },
+  {
+    "description": "Allows the app to create, read, update, and delete user's mailbox settings without a signed-in user. Does not include permission to send mail.",
+    "displayName": "Read and write all user mailbox settings",
+    "id": "f9156939-25cd-4ba8-abfe-7fabcf003749",
+    "origin": "Application (Office 365 Exchange Online)",
+    "value": "Mailbox.Settings.ReadWrite"
   },
   {
     "description": "Allows the app to read your organization's user flows, without a signed-in user.",
@@ -5294,6 +5301,24 @@
     "value": "Exchange.Manage"
   },
   {
+    "description": "Allows the app to create, read, update and delete events in all calendars in the organization user has permissions to access. This includes delegate and shared calendars",
+    "displayName": "Read and write user and shared calendars",
+    "id": "bbd1ca91-75e0-4814-ad94-9c5dbbae3415",
+    "Origin": "Delegated (Office 365 Exchange Online)",
+    "userConsentDescription": "Allows the app to read, update, create and delete events in all calendars in your organization you have permissions to access. This includes delegate and shared calendars",
+    "userConsentDisplayName": "Read and write to your and shared calendars",
+    "value": "Calendars.ReadWrite.All"
+  },
+  {
+    "description": "Allows the app to create, read, update, and delete user's mailbox settings. Does not include permission to send mail.",
+    "displayName": "Read and write user mailbox settings",
+    "id": "2e83d72d-8895-4b66-9eea-abb43449ab8b",
+    "Origin": "Delegated (Office 365 Exchange Online)",
+    "userConsentDescription": "Allows the app to read, update, create, and delete your mailbox settings.",
+    "userConsentDisplayName": "Read and write to your mailbox settings",
+    "value": "MailboxSettings.ReadWrite"
+  },
+  {
     "description": "Allows the app to have full control of all site collections on behalf of the signed-in user.",
     "displayName": "Manage Sharepoint Online",
     "id": "56680e0d-d2a3-4ae1-80d8-3c4f2100e3d0",
@@ -5301,15 +5326,6 @@
     "userConsentDescription": "Have full control of all site collections",
     "userConsentDisplayName": "Allows the app to have full control of all site collections on your behalf.",
     "value": "AllSites.FullControl"
-  },
-  {
-    "description": "Required for Request-SPOPeronalSite",
-    "displayName": "Manage sharepoint profiles",
-    "id": "ec4fc4c8-872e-442b-a2a2-d095575807b3",
-    "Origin": "Delegated (Office 365 SharePoint Online)",
-    "userConsentDescription": "",
-    "userConsentDisplayName": "Manage sharepoint profiles",
-    "value": "AllProfiles.Manage"
   },
   {
     "description": "Allows to read the LAPs passwords.",

@@ -27,12 +27,32 @@ function New-CIPPBackupTask {
             New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/conditionalAccess/authenticationStrength/policies' -tenantid $TenantFilter
         }
         'intuneconfig' {
-            #alert
-        }
-        'intunecompliance' {}
+            $GraphURLS = @("https://graph.microsoft.com/beta/deviceManagement/deviceConfigurations?`$select=id,displayName,lastModifiedDateTime,roleScopeTagIds,microsoft.graph.unsupportedDeviceConfiguration/originalEntityTypeName&`$expand=assignments&top=1000"
+                'https://graph.microsoft.com/beta/deviceManagement/windowsDriverUpdateProfiles'
+                "https://graph.microsoft.com/beta/deviceManagement/groupPolicyConfigurations?`$expand=assignments&top=999"
+                "https://graph.microsoft.com/beta/deviceAppManagement/mobileAppConfigurations?`$expand=assignments&`$filter=microsoft.graph.androidManagedStoreAppConfiguration/appSupportsOemConfig%20eq%20true"
+                'https://graph.microsoft.com/beta/deviceManagement/configurationPolicies'
+            )
 
-        'intuneprotection' {}
-    
+            $GraphURLS | ForEach-Object {
+                $URLName = (($_).split('?') | Select-Object -First 1) -replace 'https://graph.microsoft.com/beta/deviceManagement/', ''
+                New-GraphGetRequest -uri "$($_)" -tenantid $TenantFilter
+            } | ForEach-Object {
+                New-CIPPIntuneTemplate -TenantFilter $TenantFilter -URLName $URLName -ID $_.ID
+            }
+        }
+        'intunecompliance' {
+            New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/deviceManagement/deviceCompliancePolicies?$top=999' -tenantid $TenantFilter | ForEach-Object {
+                New-CIPPIntuneTemplate -TenantFilter $TenantFilter -URLName 'deviceCompliancePolicies' -ID $_.ID
+            }
+        }
+
+        'intuneprotection' {
+            New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/deviceAppManagement/managedAppPolicies?$top=999' -tenantid $TenantFilter | ForEach-Object {
+                New-CIPPIntuneTemplate -TenantFilter $TenantFilter -URLName 'managedAppPolicies' -ID $_.ID
+            }
+        }
+
         'CippWebhookAlerts' {
             Write-Host "Backup Webhook Alerts for $TenantFilter"
             $WebhookTable = Get-CIPPTable -TableName 'WebhookRules'
@@ -43,7 +63,7 @@ function New-CIPPBackupTask {
             $ScheduledTasks = Get-CIPPTable -TableName 'ScheduledTasks'
             Get-CIPPAzDataTableEntity @ScheduledTasks | Where-Object { $_.hidden -eq $true -and $_.command -like 'Get-CippAlert*' -and $TenantFilter -in $_.Tenant }
         }
-        'CippStandards' { 
+        'CippStandards' {
             Write-Host "Backup Standards for $TenantFilter"
             $Table = Get-CippTable -tablename 'standards'
             $Filter = "PartitionKey eq 'standards' and RowKey eq '$($TenantFilter)'"

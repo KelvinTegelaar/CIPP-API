@@ -3,6 +3,7 @@ function Add-CIPPDelegatedPermission {
     param(
         $RequiredResourceAccess,
         $ApplicationId,
+        $NoTranslateRequired,
         $Tenantfilter
     )
     Write-Host 'Adding Delegated Permissions'
@@ -39,6 +40,11 @@ function Add-CIPPDelegatedPermission {
         if ($AdditionalScopes) {
             $NewScope = (@(($Translator | Where-Object { $_.id -in $App.ResourceAccess.id }).value) + @($AdditionalScopes.id | Select-Object -Unique)) -join ' '
         } else {
+            if ($NoTranslateRequired) {
+                $NewScope = $App.resourceAccess | ForEach-Object { $_.id } -join ' '
+            } else {
+                $NewScope = ($Translator | Where-Object { $_.id -in $App.resourceAccess.id }).value -join ' '
+            }
             $NewScope = ($Translator | Where-Object { $_.id -in $App.ResourceAccess.id }).value -join ' '
         }
 
