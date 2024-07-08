@@ -66,7 +66,11 @@ function Add-CIPPAzDataTableEntity {
                             Write-Host "Entity size is $entitySize. Splitting entity into multiple parts."
                             $newEntity = @{}
                             $newEntity['PartitionKey'] = $originalPartitionKey
-                            $newEntity['RowKey'] = "$($originalRowKey)-part$entityIndex"
+                            if ($entityIndex -eq 0) {
+                                $newEntity['RowKey'] = $originalRowKey
+                            } else {
+                                $newEntity['RowKey'] = "$($originalRowKey)-part$entityIndex"
+                            }
                             $newEntity['OriginalEntityId'] = $originalRowKey
                             $newEntity['PartIndex'] = $entityIndex
                             $entityIndex++
@@ -118,7 +122,7 @@ function Add-CIPPAzDataTableEntity {
                         }
 
                         foreach ($row in $rows) {
-                            Write-Host "current entity is $($row.RowKey) with $($row.PartitionKey). Our size is $([System.Text.Encoding]::UTF8.GetByteCount($($SingleEnt | ConvertTo-Json)))"
+                            Write-Host "current entity is $($row.RowKey) with $($row.PartitionKey). Our size is $([System.Text.Encoding]::UTF8.GetByteCount($($row | ConvertTo-Json)))"
                             Add-AzDataTableEntity -context $Context -force:$Force -CreateTableIfNotExists:$CreateTableIfNotExists -Entity $row
                         }
                     } else {

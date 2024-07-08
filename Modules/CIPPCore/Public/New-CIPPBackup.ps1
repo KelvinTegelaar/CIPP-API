@@ -68,7 +68,7 @@ function New-CIPPBackup {
             $Table = Get-CippTable -tablename 'ScheduledBackup'
             try {
                 $Result = Add-CIPPAzDataTableEntity @Table -entity $entity -Force
-                Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -message 'Created backup for Conditional Access Policies' -Sev 'Debug'
+                Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -message 'Created backup' -Sev 'Debug'
                 $Result
             } catch {
                 Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -message "Failed to create backup for Conditional Access Policies: $($_.Exception.Message)" -Sev 'Error'
