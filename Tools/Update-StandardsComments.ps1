@@ -1,4 +1,4 @@
-﻿<#
+<#
 .SYNOPSIS
     This script updates the comment block in the CIPP standard files.
 
@@ -45,11 +45,11 @@ foreach ($Standard in $StandardsInfo) {
     if ($Content -match $Regex) {
         $NewComment = [System.Collections.Generic.List[string]]::new()
         # Add the initial scatic comments
-        $NewComment.Add("<#`n")
-        $NewComment.Add("   .FUNCTIONALITY`n")
-        $NewComment.Add("   Internal`n")
-        $NewComment.Add("   .APINAME`n")
-        $NewComment.Add("   $($Standard.name -replace 'standards.', '')`n")
+        $NewComment.Add("<#`r`n")
+        $NewComment.Add("   .FUNCTIONALITY`r`n")
+        $NewComment.Add("       Internal`r`n")
+        $NewComment.Add("   .APINAME`r`n")
+        $NewComment.Add("       $($Standard.name -replace 'standards.', '')`r`n")
 
         # Loop through the properties of the standard and add them to the comment block
         foreach ($Property in $Standard.PSObject.Properties) {
@@ -58,38 +58,38 @@ foreach ($Standard in $StandardsInfo) {
 
             # If the property is docsDescription and is empty, use the helpText instead
             if ($Property.Name -eq 'docsDescription' -and ([string]::IsNullOrWhiteSpace($Property.Value))) {
-                $NewComment.Add("   .$('docsDescription'.ToUpper())`n")
-                $NewComment.Add("   $($Standard.helpText.ToString())`n")
+                $NewComment.Add("   .$('docsDescription'.ToUpper())`r`n")
+                $NewComment.Add("       $($Standard.helpText.ToString())`r`n")
                 continue
             }
 
-            $NewComment.Add("   .$($Property.Name.ToUpper())`n")
+            $NewComment.Add("   .$($Property.Name.ToUpper())`r`n")
             # Flatten objects to JSON
             if ($Property.Value -is [System.Object[]]) {
                 foreach ($Value in $Property.Value) {
-                    $NewComment.Add("   $(ConvertTo-Json -InputObject $Value -Depth 5 -Compress)`n")
+                    $NewComment.Add("       $(ConvertTo-Json -InputObject $Value -Depth 5 -Compress)`r`n")
                 }
                 continue
             }
-            $NewComment.Add("   $($Property.Value.ToString())`n")
+            $NewComment.Add("       $($Property.Value.ToString())`r`n")
         }
 
         # Add DOCSDESCRIPTION if it doesn't exist
         if ($NewComment -notcontains '.DOCSDESCRIPTION') {
-            $NewComment.Add("   .DOCSDESCRIPTION`n")
-            $NewComment.Add("   $($Standard.helpText.ToString())`n")
+            $NewComment.Add("   .DOCSDESCRIPTION`r`n")
+            $NewComment.Add("       $($Standard.helpText.ToString())`r`n")
         }
         # Add header about how to update the comment block with this script
-        $NewComment.Add("   .UPDATECOMMENTBLOCK`n")
-        $NewComment.Add("   Run the Tools\Update-StandardsComments.ps1 script to update this comment block`n")
-        $NewComment.Add("   #>`n")
+        $NewComment.Add("   .UPDATECOMMENTBLOCK`r`n")
+        $NewComment.Add("       Run the Tools\Update-StandardsComments.ps1 script to update this comment block`r`n")
+        $NewComment.Add("   #>")
 
         # Write the new comment block to the file
         if ($WhatIf.IsPresent) {
             Write-Host "Would update $StandardsFilePath with the following comment block:"
             $NewComment
         } else {
-            $Content -replace $Regex, $NewComment | Set-Content -Path $StandardsFilePath
+            $Content -replace $Regex, $NewComment | Set-Content -Path $StandardsFilePath -Encoding utf8 -NoNewLine
         }
     } else {
         Write-Host "No comment block found in $StandardsFilePath" -ForegroundColor Yellow
