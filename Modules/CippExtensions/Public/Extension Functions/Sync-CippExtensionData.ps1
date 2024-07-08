@@ -202,23 +202,26 @@ function Sync-CippExtensionData {
                     $ParentId = $AdditionalRequest.ParentId
                     $GraphRequest = $AdditionalRequest.graphRequest.PSObject.Copy()
                     $AdditionalRequestQueries = ($TenantResults | Where-Object { $_.id -eq $ParentId }).body.value | ForEach-Object {
-                        [PSCustomObject]@{
-                            id     = $_.id
-                            method = $GraphRequest.method
-                            url    = $GraphRequest.url -f $_.id
+                        if ($_.id) {
+                            [PSCustomObject]@{
+                                id     = $_.id
+                                method = $GraphRequest.method
+                                url    = $GraphRequest.url -f $_.id
+                            }
                         }
                     }
                     #Write-Information ($AdditionalRequestQueries | ConvertTo-Json -Depth 10 -Compress)
-                    $AdditionalResults = New-GraphBulkRequest -Requests $AdditionalRequestQueries -tenantid $TenantFilter
-                    $AdditionalResults | ForEach-Object {
-                        Write-Information ($_ | ConvertTo-Json -Depth 10 -Compress)
-                        $Entity = @{
-                            PartitionKey = $TenantFilter
-                            SyncType     = $SyncType
-                            RowKey       = '{0}_{1}' -f $ParentId, $_.id
-                            Data         = [string]($_.body.value | ConvertTo-Json -Depth 10 -Compress)
+                    if (($AdditionalRequestQueries | Measure-Object).Count -gt 0) {
+                        $AdditionalResults = New-GraphBulkRequest -Requests $AdditionalRequestQueries -tenantid $TenantFilter
+                        $AdditionalResults | ForEach-Object {
+                            $Entity = @{
+                                PartitionKey = $TenantFilter
+                                SyncType     = $SyncType
+                                RowKey       = '{0}_{1}' -f $ParentId, $_.id
+                                Data         = [string]($_.body.value | ConvertTo-Json -Depth 10 -Compress)
+                            }
+                            Add-CIPPAzDataTableEntity @CacheTable -Entity $Entity -Force
                         }
-                        Add-CIPPAzDataTableEntity @CacheTable -Entity $Entity -Force
                     }
                 }
             }

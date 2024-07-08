@@ -11,6 +11,7 @@ function Register-CIPPExtensionScheduledTasks {
     # Get existing scheduled usertasks
     $ScheduledTasksTable = Get-CIPPTable -TableName ScheduledTasks
     $ScheduledTasks = Get-CIPPAzDataTableEntity @ScheduledTasksTable -Filter 'Hidden eq true' | Where-Object { $_.Command -match 'Sync-CippExtensionData' }
+    $PushTasks = Get-CIPPAzDataTableEntity @ScheduledTasksTable -Filter 'Hidden eq true' | Where-Object { $_.Command -match 'Push-CippExtensionData' }
     $Tenants = Get-Tenants -IncludeErrors
 
     $Extensions = @('Hudu')
@@ -64,6 +65,30 @@ function Register-CIPPExtensionScheduledTasks {
                         }
                         $null = Add-CIPPScheduledTask -Task $Task -hidden $true -SyncType $SyncType
                     }
+                }
+
+                $ExistingPushTask = $PushTasks | Where-Object { $_.Tenant -eq $Tenant.defaultDomainName -and $_.SyncType -eq $Extension }
+                if (!$ExistingPushTask -or $Reschedule.IsPresent) {
+                    # push cached data to extension
+                    $in30mins = [int64](([datetime]::UtcNow.AddMinutes(30)) - (Get-Date '1/1/1970')).TotalSeconds
+                    $Task = @{
+                        Name          = "$Extension Extension Sync"
+                        Command       = @{
+                            value = 'Push-CippExtensionData'
+                            label = 'Push-CippExtensionData'
+                        }
+                        Parameters    = @{
+                            TenantFilter = $Tenant.defaultDomainName
+                            Extension    = $Extension
+                        }
+                        Recurrence    = '1d'
+                        ScheduledTime = $in30mins
+                        TenantFilter  = $Tenant.defaultDomainName
+                    }
+                    if ($ExistingPushTask) {
+                        $Task.RowKey = $ExistingTask.RowKey
+                    }
+                    $null = Add-CIPPScheduledTask -Task $Task -hidden $true -SyncType $Extension
                 }
             }
         }
