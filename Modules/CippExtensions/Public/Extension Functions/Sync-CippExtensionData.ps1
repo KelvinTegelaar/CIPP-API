@@ -48,7 +48,7 @@ function Sync-CippExtensionData {
                     @{
                         id     = 'Licenses'
                         method = 'GET'
-                        url    = '/subscribedSkus?$top=999'
+                        url    = '/subscribedSkus'
                     },
                     @{
                         id     = 'ConditionalAccess'
