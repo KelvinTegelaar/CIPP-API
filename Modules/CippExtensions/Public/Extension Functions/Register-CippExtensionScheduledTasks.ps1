@@ -67,8 +67,8 @@ function Register-CIPPExtensionScheduledTasks {
                     }
                 }
 
-                $ExistingTask = $PushTasks | Where-Object { $_.Tenant -eq $Tenant.defaultDomainName -and $_.SyncType -eq $Extension }
-                if (!$ExistingTask -or $Reschedule.IsPresent) {
+                $ExistingPushTask = $PushTasks | Where-Object { $_.Tenant -eq $Tenant.defaultDomainName -and $_.SyncType -eq $Extension }
+                if (!$ExistingPushTask -or $Reschedule.IsPresent) {
                     # push cached data to extension
                     $in30mins = [int64](([datetime]::UtcNow.AddMinutes(30)) - (Get-Date '1/1/1970')).TotalSeconds
                     $Task = @{
@@ -84,6 +84,9 @@ function Register-CIPPExtensionScheduledTasks {
                         Recurrence    = '1d'
                         ScheduledTime = $in30mins
                         TenantFilter  = $Tenant.defaultDomainName
+                    }
+                    if ($ExistingPushTask) {
+                        $Task.RowKey = $ExistingTask.RowKey
                     }
                     $null = Add-CIPPScheduledTask -Task $Task -hidden $true -SyncType $Extension
                 }

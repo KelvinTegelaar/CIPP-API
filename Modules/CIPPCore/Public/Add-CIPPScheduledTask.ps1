@@ -35,6 +35,13 @@ function Add-CIPPScheduledTask {
     } else {
         $RowKey = $Task.RowKey
     }
+
+    $Recurrence = if ([string]::IsNullOrEmpty($task.Recurrence.value)) {
+        $task.Recurrence
+    } else {
+        $task.Recurrence.value
+    }
+
     $entity = @{
         PartitionKey         = [string]'ScheduledTask'
         TaskState            = [string]'Planned'
@@ -44,7 +51,7 @@ function Add-CIPPScheduledTask {
         Command              = [string]$task.Command.value
         Parameters           = [string]$Parameters
         ScheduledTime        = [string]$task.ScheduledTime
-        Recurrence           = [string]$task.Recurrence.value ?? $task.Recurrence
+        Recurrence           = [string]$Recurrence
         PostExecution        = [string]$PostExecution
         AdditionalProperties = [string]$AdditionalProperties
         Hidden               = [bool]$Hidden
