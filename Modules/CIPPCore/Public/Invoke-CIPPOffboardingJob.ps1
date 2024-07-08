@@ -72,6 +72,9 @@ function Invoke-CIPPOffboardingJob {
         { $_.'removeMobile' -eq 'true' } {
             Remove-CIPPMobileDevice -userid $userid -username $Username -tenantFilter $Tenantfilter -ExecutingUser $ExecutingUser -APIName $APIName
         }
+        { $_.'removeCalendarInvites' -eq 'true' } {
+            Remove-CIPPCalendarInvites -userid $userid -username $Username -tenantFilter $Tenantfilter -ExecutingUser $ExecutingUser -APIName $APIName
+        }
         { $_.'removePermissions' } {
             if ($RunScheduled) {
                 Remove-CIPPMailboxPermissions -PermissionsLevel @('FullAccess', 'SendAs', 'SendOnBehalf') -userid 'AllUsers' -AccessUser $UserName -TenantFilter $TenantFilter -APIName $APINAME -ExecutingUser $ExecutingUser
