@@ -13,23 +13,25 @@ function Get-CIPPAzDataTableEntity {
     $Results = Get-AzDataTableEntity @PSBoundParameters
     $mergedResults = @{}
 
+    # First pass: Collect all parts and complete entities
     foreach ($entity in $Results) {
         if ($entity.OriginalEntityId) {
             $entityId = $entity.OriginalEntityId
             if (-not $mergedResults.ContainsKey($entityId)) {
                 $mergedResults[$entityId] = @{
-                    Parts = @()
+                    Parts = New-Object 'System.Collections.ArrayList'
                 }
             }
-            $mergedResults[$entityId]['Parts'] = $mergedResults[$entityId]['Parts'] + @($entity)
+            $mergedResults[$entityId]['Parts'].Add($entity) > $null
         } else {
             $mergedResults[$entity.RowKey] = @{
                 Entity = $entity
-                Parts  = @()
+                Parts  = New-Object 'System.Collections.ArrayList'
             }
         }
     }
 
+    # Second pass: Reassemble entities from parts
     $finalResults = @()
     foreach ($entityId in $mergedResults.Keys) {
         $entityData = $mergedResults[$entityId]
@@ -38,7 +40,7 @@ function Get-CIPPAzDataTableEntity {
             $parts = $entityData.Parts | Sort-Object PartIndex
             foreach ($part in $parts) {
                 foreach ($key in $part.PSObject.Properties.Name) {
-                    if ($key -notin @('OriginalEntityId', 'PartIndex', 'PartitionKey', 'RowKey', 'ETag', 'Timestamp')) {
+                    if ($key -notin @('OriginalEntityId', 'PartIndex', 'PartitionKey', 'RowKey')) {
                         if ($fullEntity.PSObject.Properties[$key]) {
                             $fullEntity | Add-Member -MemberType NoteProperty -Name $key -Value ($fullEntity.$key + $part.$key) -Force
                         } else {
@@ -55,15 +57,19 @@ function Get-CIPPAzDataTableEntity {
         }
     }
 
+    # Third pass: Process split properties and remerge them
     foreach ($entity in $finalResults) {
         if ($entity.SplitOverProps) {
-            $splitInfo = $entity.SplitOverProps | ConvertFrom-Json
-            $mergedData = [string]::Join('', ($splitInfo.SplitHeaders | ForEach-Object { $entity.$_ }))
-            $entity | Add-Member -NotePropertyName $splitInfo.OriginalHeader -NotePropertyValue $mergedData -Force
-            $propsToRemove = $splitInfo.SplitHeaders + 'SplitOverProps'
-            foreach ($prop in $propsToRemove) {
-                $entity.PSObject.Properties.Remove($prop)
+            $splitInfoList = $entity.SplitOverProps | ConvertFrom-Json
+            foreach ($splitInfo in $splitInfoList) {
+                $mergedData = [string]::Join('', ($splitInfo.SplitHeaders | ForEach-Object { $entity.$_ }))
+                $entity | Add-Member -NotePropertyName $splitInfo.OriginalHeader -NotePropertyValue $mergedData -Force
+                $propsToRemove = $splitInfo.SplitHeaders
+                foreach ($prop in $propsToRemove) {
+                    $entity.PSObject.Properties.Remove($prop)
+                }
             }
+            $entity.PSObject.Properties.Remove('SplitOverProps')
         }
     }
 
