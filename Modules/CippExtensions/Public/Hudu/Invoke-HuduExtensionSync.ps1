@@ -50,7 +50,7 @@ function Invoke-HuduExtensionSync {
     $EnableCIPP = $true
 
     $ConfigTable = Get-Cipptable -tablename 'Config'
-    $Config = Get-CippAzDataTableEntity @ConfigTable -Filter "PartitionKey eq 'InstanceProperties' and RowKey -eq 'CIPPURL'"
+    $Config = Get-CippAzDataTableEntity @ConfigTable -Filter "PartitionKey eq 'InstanceProperties' and RowKey eq 'CIPPURL'"
     $CIPPURL = $Config.Value
 
     $ExtensionCache = Get-ExtensionCacheData -TenantFilter $Tenant.defaultDomainName
@@ -596,9 +596,9 @@ function Invoke-HuduExtensionSync {
 
                     [System.Collections.Generic.List[PSCustomObject]]$CIPPLinksFormatted = @()
                     if ($EnableCIPP) {
-                        $CIPPLinksFormatted.add((Get-HuduLinkBlock -URL "$($CIPPURL)/.auth/login/aad?post_login_redirect_uri=$($CIPPURL)/identity/administration/users/view?userId=$($User.id)%26tenantDomain%3D$($Tenant.defaultDomainName)" -Icon 'far fa-eye' -Title 'CIPP - View User'))
-                        $CIPPLinksFormatted.add((Get-HuduLinkBlock -URL "$($CIPPURL)/.auth/login/aad?post_login_redirect_uri=$($CIPPURL)/identity/administration/users/edit?userId=$($User.id)%26tenantDomain%3D$($Tenant.defaultDomainName)" -Icon 'fas fa-user-cog' -Title 'CIPP - Edit User'))
-                        $CIPPLinksFormatted.add((Get-HuduLinkBlock -URL "$($CIPPURL)/.auth/login/aad?post_login_redirect_uri=$($CIPPURL)/identity/administration/ViewBec?userId=$($User.id)%26tenantDomain%3D$($Tenant.defaultDomainName)" -Icon 'fas fa-user-secret' -Title 'CIPP - Research Compromise'))
+                        $CIPPLinksFormatted.add((Get-HuduLinkBlock -URL "$($CIPPURL)/identity/administration/users/view?userId=$($User.id)%26tenantDomain%3D$($Tenant.defaultDomainName)" -Icon 'far fa-eye' -Title 'CIPP - View User'))
+                        $CIPPLinksFormatted.add((Get-HuduLinkBlock -URL "$($CIPPURL)/identity/administration/users/edit?userId=$($User.id)%26tenantDomain%3D$($Tenant.defaultDomainName)" -Icon 'fas fa-user-cog' -Title 'CIPP - Edit User'))
+                        $CIPPLinksFormatted.add((Get-HuduLinkBlock -URL "$($CIPPURL)/identity/administration/ViewBec?userId=$($User.id)%26tenantDomain%3D$($Tenant.defaultDomainName)" -Icon 'fas fa-user-secret' -Title 'CIPP - Research Compromise'))
                     }
 
                     [System.Collections.Generic.List[PSCustomObject]]$UserLinksFormatted = @()
