@@ -1,4 +1,4 @@
-function Push-ExtensionSyncData {
+function Push-CippExtensionData {
     param(
         $TenantFilter,
         $Extension

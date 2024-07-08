@@ -52,9 +52,11 @@ Function Invoke-ExecExtensionMapping {
                 }
                 'Hudu' {
                     $Body = Set-HuduMapping -CIPPMapping $Table -APIName $APIName -Request $Request
+                    Register-CIPPExtensionScheduledTasks
                 }
                 'HuduFields' {
                     $Body = Set-ExtensionFieldMapping -CIPPMapping $Table -APIName $APIName -Request $Request -Extension 'Hudu'
+                    Register-CIPPExtensionScheduledTasks
                 }
             }
         }
