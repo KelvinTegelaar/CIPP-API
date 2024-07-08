@@ -7,7 +7,7 @@ function Add-CIPPAzDataTableEntity {
         [switch]$CreateTableIfNotExists
     )
 
-    $MaxRowSize = 1mb - 100kb
+    $MaxRowSize = 500000 - 100 #Maximum size of an entity
     $MaxSize = 30kb # maximum size of a property value
 
     foreach ($SingleEnt in $Entity) {
@@ -63,6 +63,7 @@ function Add-CIPPAzDataTableEntity {
                         $entityIndex = 0
 
                         while ($entitySize -gt $MaxRowSize) {
+                            Write-Host "Entity size is $entitySize. Splitting entity into multiple parts."
                             $newEntity = @{}
                             $newEntity['PartitionKey'] = $originalPartitionKey
                             $newEntity['RowKey'] = "$($originalRowKey)-part$entityIndex"
@@ -117,8 +118,7 @@ function Add-CIPPAzDataTableEntity {
                         }
 
                         foreach ($row in $rows) {
-                            Write-Host 'Size is larger than 70kb, splitting entity into multiple rows.'
-                            Write-Host "current entity is $($row.RowKey) with $($row.PartitionKey)"
+                            Write-Host "current entity is $($row.RowKey) with $($row.PartitionKey). Our size is $([System.Text.Encoding]::UTF8.GetByteCount($($SingleEnt | ConvertTo-Json)))"
                             Add-AzDataTableEntity -context $Context -force:$Force -CreateTableIfNotExists:$CreateTableIfNotExists -Entity $row
                         }
                     } else {
@@ -129,7 +129,7 @@ function Add-CIPPAzDataTableEntity {
                     throw "Error processing entity: $($_.Exception.Message)."
                 }
             } else {
-                Write-Host "THE ERROR IS $($_.Exception.ErrorCode)"
+                Write-Host "THE ERROR IS $($_.Exception.ErrorCode). The size of the entity is $entitySize."
                 throw $_
             }
         }
