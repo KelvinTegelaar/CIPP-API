@@ -2,7 +2,8 @@ function Add-CIPPScheduledTask {
     [CmdletBinding()]
     param(
         [pscustomobject]$Task,
-        [bool]$Hidden
+        [bool]$Hidden,
+        [string]$SyncType = $null
     )
 
     $Table = Get-CIPPTable -TableName 'ScheduledTasks'
@@ -48,6 +49,9 @@ function Add-CIPPScheduledTask {
         AdditionalProperties = [string]$AdditionalProperties
         Hidden               = [bool]$Hidden
         Results              = 'Planned'
+    }
+    if ($SyncType) {
+        $entity.SyncType = $SyncType
     }
     try {
         Add-CIPPAzDataTableEntity @Table -Entity $entity -Force

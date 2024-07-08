@@ -3,8 +3,8 @@ function Invoke-NinjaOneSync {
         $Table = Get-CIPPTable -TableName NinjaOneSettings
 
         $CIPPMapping = Get-CIPPTable -TableName CippMapping
-        $Filter = "PartitionKey eq 'NinjaOrgsMapping'"
-        $TenantsToProcess = Get-AzDataTableEntity @CIPPMapping -Filter $Filter | Where-Object { $Null -ne $_.NinjaOne -and $_.NinjaOne -ne '' }
+        $Filter = "PartitionKey eq 'NinjaOneMapping'"
+        $TenantsToProcess = Get-AzDataTableEntity @CIPPMapping -Filter $Filter | Where-Object { $Null -ne $_.IntegrationId -and $_.IntegrationId -ne '' }
 
 
         $Batch = foreach ($Tenant in $TenantsToProcess) {

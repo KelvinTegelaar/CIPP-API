@@ -10,10 +10,10 @@ function Set-HuduMapping {
     }
     foreach ($Mapping in ([pscustomobject]$Request.body.mappings).psobject.properties) {
         $AddObject = @{
-            PartitionKey    = 'Mapping'
+            PartitionKey    = 'HuduMapping'
             RowKey          = "$($mapping.name)"
-            'HuduCompanyId' = "$($mapping.value.value)"
-            'HuduCompany'   = "$($mapping.value.label)"
+            IntegrationId   = "$($mapping.value.value)"
+            IntegrationName = "$($mapping.value.label)"
         }
 
         Add-CIPPAzDataTableEntity @CIPPMapping -Entity $AddObject -Force

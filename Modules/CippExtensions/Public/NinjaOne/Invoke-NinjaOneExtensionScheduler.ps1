@@ -26,8 +26,8 @@ function Invoke-NinjaOneExtensionScheduler {
     Write-Host "Current Interval: $CurrentInterval"
 
     $CIPPMapping = Get-CIPPTable -TableName CippMapping
-    $Filter = "PartitionKey eq 'NinjaOrgsMapping'"
-    $TenantsToProcess = Get-AzDataTableEntity @CIPPMapping -Filter $Filter | Where-Object { $Null -ne $_.NinjaOne -and $_.NinjaOne -ne '' }
+    $Filter = "PartitionKey eq 'NinjaOneMapping'"
+    $TenantsToProcess = Get-AzDataTableEntity @CIPPMapping -Filter $Filter | Where-Object { $Null -ne $_.IntegrationId -and $_.IntegrationId -ne '' }
 
     if ($Null -eq $LastRunTime -or $LastRunTime -le (Get-Date).addhours(-25) -or $TimeSetting -eq $CurrentInterval) {
         Write-Host 'Executing'
