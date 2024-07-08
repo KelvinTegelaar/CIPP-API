@@ -38,7 +38,7 @@ function Sync-CippExtensionData {
                     @{
                         id     = 'AllRoles'
                         method = 'GET'
-                        url    = '/directoryRoles?$top=999'
+                        url    = '/directoryRoles'
                     },
                     @{
                         id     = 'Domains'
@@ -49,11 +49,6 @@ function Sync-CippExtensionData {
                         id     = 'Licenses'
                         method = 'GET'
                         url    = '/subscribedSkus?$top=999'
-                    },
-                    @{
-                        id     = 'Groups'
-                        method = 'GET'
-                        url    = '/groups?$top=999&$select=id,createdDateTime,displayName,description,mail,mailEnabled,mailNickname,resourceProvisioningOptions,securityEnabled,visibility,organizationId,onPremisesSamAccountName,membershipRule,grouptypes,onPremisesSyncEnabled,resourceProvisioningOptions,userPrincipalName'
                     },
                     @{
                         id     = 'ConditionalAccess'
@@ -69,6 +64,16 @@ function Sync-CippExtensionData {
                         id     = 'Subscriptions'
                         method = 'GET'
                         url    = '/directory/subscriptions?$top=999'
+                    },
+                    @{
+                        id     = 'OneDriveUsage'
+                        method = 'GET'
+                        url    = "reports/getOneDriveUsageAccountDetail(period='D7')?`$format=application/json"
+                    },
+                    @{
+                        id     = 'MailboxUsage'
+                        method = 'GET'
+                        url    = "reports/getMailboxUsageDetail(period='D7')?`$format=application/json"
                     }
                 )
 
@@ -79,6 +84,15 @@ function Sync-CippExtensionData {
                             noPagination = $true
                         }
                     })
+                $AdditionalRequests = @(
+                    @{
+                        ParentId     = 'AllRoles'
+                        graphRequest = @{
+                            url    = '/directoryRoles/{0}/members?$select=id,displayName,userPrincipalName'
+                            method = 'GET'
+                        }
+                    }
+                )
             }
             'Users' {
                 [System.Collections.Generic.List[PSCustomObject]]$TenantRequests = @(
@@ -86,6 +100,24 @@ function Sync-CippExtensionData {
                         id     = 'Users'
                         method = 'GET'
                         url    = '/users?$top=999&$select=id,accountEnabled,businessPhones,city,createdDateTime,companyName,country,department,displayName,faxNumber,givenName,isResourceAccount,jobTitle,mail,mailNickname,mobilePhone,onPremisesDistinguishedName,officeLocation,onPremisesLastSyncDateTime,otherMails,postalCode,preferredDataLocation,preferredLanguage,proxyAddresses,showInAddressList,state,streetAddress,surname,usageLocation,userPrincipalName,userType,assignedLicenses,onPremisesSyncEnabled'
+                    }
+                )
+            }
+            'Groups' {
+                [System.Collections.Generic.List[PSCustomObject]]$TenantRequests = @(
+                    @{
+                        id     = 'Groups'
+                        method = 'GET'
+                        url    = '/groups?$top=999&$select=id,createdDateTime,displayName,description,mail,mailEnabled,mailNickname,resourceProvisioningOptions,securityEnabled,visibility,organizationId,onPremisesSamAccountName,membershipRule,grouptypes,onPremisesSyncEnabled,resourceProvisioningOptions,userPrincipalName'
+                    }
+                )
+                $AdditionalRequests = @(
+                    @{
+                        ParentId     = 'Groups'
+                        graphRequest = @{
+                            url    = '/groups/{0}/members?$select=id,displayName,userPrincipalName'
+                            method = 'GET'
+                        }
                     }
                 )
             }
@@ -105,6 +137,16 @@ function Sync-CippExtensionData {
                         id     = 'DeviceApps'
                         method = 'GET'
                         url    = '/deviceAppManagement/mobileApps'
+                    }
+                )
+
+                $AdditionalRequests = @(
+                    @{
+                        ParentId     = 'DeviceCompliancePolicies'
+                        graphRequest = @{
+                            url    = '/deviceManagement/deviceCompliancePolicies/{0}/deviceStatuses?$top=999'
+                            method = 'GET'
+                        }
                     }
                 )
             }
@@ -152,6 +194,32 @@ function Sync-CippExtensionData {
                         Data         = [string]($Data | ConvertTo-Json -Depth 10 -Compress)
                     }
                     Add-CIPPAzDataTableEntity @CacheTable -Entity $Entity -Force
+                }
+            }
+
+            if ($AdditionalRequests) {
+                foreach ($AdditionalRequest in $AdditionalRequests) {
+                    $ParentId = $AdditionalRequest.ParentId
+                    $GraphRequest = $AdditionalRequest.graphRequest.PSObject.Copy()
+                    $AdditionalRequestQueries = ($TenantResults | Where-Object { $_.id -eq $ParentId }).body.value | ForEach-Object {
+                        [PSCustomObject]@{
+                            id     = $_.id
+                            method = $GraphRequest.method
+                            url    = $GraphRequest.url -f $_.id
+                        }
+                    }
+                    #Write-Information ($AdditionalRequestQueries | ConvertTo-Json -Depth 10 -Compress)
+                    $AdditionalResults = New-GraphBulkRequest -Requests $AdditionalRequestQueries -tenantid $TenantFilter
+                    $AdditionalResults | ForEach-Object {
+                        Write-Information ($_ | ConvertTo-Json -Depth 10 -Compress)
+                        $Entity = @{
+                            PartitionKey = $TenantFilter
+                            SyncType     = $SyncType
+                            RowKey       = '{0}_{1}' -f $ParentId, $_.id
+                            Data         = [string]($_.body.value | ConvertTo-Json -Depth 10 -Compress)
+                        }
+                        Add-CIPPAzDataTableEntity @CacheTable -Entity $Entity -Force
+                    }
                 }
             }
 

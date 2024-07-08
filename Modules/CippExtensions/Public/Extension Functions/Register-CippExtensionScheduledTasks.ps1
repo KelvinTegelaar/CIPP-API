@@ -28,6 +28,7 @@ function Register-CIPPExtensionScheduledTasks {
             }
 
             $SyncTypes.Add('Overview')
+            $SyncTypes.Add('Groups')
 
             if ($FieldSync.Users) {
                 $SyncTypes.Add('Users')

@@ -55,7 +55,7 @@ function Add-CIPPAzDataTableEntity {
                             }
                         }
 
-                        $SingleEnt['SplitOverProps'] = ($splitInfoList | ConvertTo-Json).ToString()
+                        $SingleEnt['SplitOverProps'] = ($splitInfoList | ConvertTo-Json -Compress).ToString()
                     }
 
                     # Check if the entity is still too large
