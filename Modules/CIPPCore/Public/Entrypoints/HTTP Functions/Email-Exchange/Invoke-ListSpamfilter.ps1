@@ -3,7 +3,9 @@ using namespace System.Net
 Function Invoke-ListSpamfilter {
     <#
     .FUNCTIONALITY
-    Entrypoint
+        Entrypoint
+    .ROLE
+        Exchange.SpamFilter.Read
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)

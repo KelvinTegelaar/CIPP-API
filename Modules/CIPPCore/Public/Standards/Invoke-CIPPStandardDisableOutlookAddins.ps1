@@ -24,7 +24,8 @@ function Invoke-CIPPStandardDisableOutlookAddins {
                         Write-LogMessage -API 'Standards' -tenant $tenant -message "Disabled Outlook add-in role: $Role" -sev Debug
                     }
                 } catch {
-                    Write-LogMessage -API 'Standards' -tenant $tenant -message "Failed to disable Outlook add-in role: $Role Error: $($_.exception.message)" -sev Error
+                    $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
+                    Write-LogMessage -API 'Standards' -tenant $tenant -message "Failed to disable Outlook add-in role: $Role Error: $ErrorMessage" -sev Error
                     $Errors.Add($Role)
                 }
             }
@@ -48,7 +49,7 @@ function Invoke-CIPPStandardDisableOutlookAddins {
         }
     }
     if ($Settings.report -eq $true) {
-        if ($RolesToRemove) { $State = $false } else { $State = $true }
+        $State = if ($RolesToRemove) { $false } else { $true }
         Add-CIPPBPAField -FieldName 'DisabledOutlookAddins' -FieldValue $State -StoreAs bool -Tenant $tenant
     }
 }

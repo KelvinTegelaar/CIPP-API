@@ -2,6 +2,8 @@ function Invoke-ListCippQueue {
     <#
     .FUNCTIONALITY
         Entrypoint
+    .ROLE
+        CIPP.Core.Read
     #>
     param($Request = $null, $TriggerMetadata = $null)
 
@@ -39,6 +41,7 @@ function Invoke-ListCippQueue {
         $TotalCompleted = $TaskStatus.Completed ?? 0
         $TotalFailed = $TaskStatus.Failed ?? 0
         $TotalRunning = $TaskStatus.Running ?? 0
+        if ($Queue.TotalTasks -eq 0) { $Queue.TotalTasks = 1 }
 
         [PSCustomObject]@{
             PartitionKey    = $Queue.PartitionKey
@@ -53,7 +56,7 @@ function Invoke-ListCippQueue {
             PercentComplete = [math]::Round(((($TotalCompleted + $TotalFailed) / $Queue.TotalTasks) * 100), 1)
             PercentFailed   = [math]::Round((($TotalFailed / $Queue.TotalTasks) * 100), 1)
             PercentRunning  = [math]::Round((($TotalRunning / $Queue.TotalTasks) * 100), 1)
-            Tasks           = $Tasks
+            Tasks           = @($Tasks)
             Status          = $Queue.Status
             Timestamp       = $Queue.Timestamp
         }

@@ -5,37 +5,36 @@ function Invoke-CIPPStandardAtpPolicyForO365 {
     #>
 
     param($Tenant, $Settings)
-    $AtpPolicyForO365State = New-ExoRequest -tenantid $Tenant -cmdlet 'Get-AtpPolicyForO365' |
-    Select-Object EnableATPForSPOTeamsODB, EnableSafeDocs, AllowSafeDocsOpen
+    $CurrentState = New-ExoRequest -tenantid $Tenant -cmdlet 'Get-AtpPolicyForO365' |
+        Select-Object EnableATPForSPOTeamsODB, EnableSafeDocs, AllowSafeDocsOpen
 
-    $StateIsCorrect = if (
-        ($AtpPolicyForO365State.EnableATPForSPOTeamsODB -eq $true) -and
-        ($AtpPolicyForO365State.EnableSafeDocs -eq $true) -and
-        ($AtpPolicyForO365State.AllowSafeDocsOpen -eq $Settings.AllowSafeDocsOpen)
-    ) { $true } else { $false }
+    $StateIsCorrect = ($CurrentState.EnableATPForSPOTeamsODB -eq $true) -and
+                      ($CurrentState.EnableSafeDocs -eq $true) -and
+                      ($CurrentState.AllowSafeDocsOpen -eq $Settings.AllowSafeDocsOpen)
 
     if ($Settings.remediate -eq $true) {
-        if ($StateIsCorrect) {
+        if ($StateIsCorrect -eq $true) {
             Write-LogMessage -API 'Standards' -tenant $Tenant -message 'Atp Policy For O365 already set.' -sev Info
         } else {
             $cmdparams = @{
                 EnableATPForSPOTeamsODB = $true
-                EnableSafeDocs = $true
-                AllowSafeDocsOpen = $Settings.AllowSafeDocsOpen
+                EnableSafeDocs          = $true
+                AllowSafeDocsOpen       = $Settings.AllowSafeDocsOpen
             }
 
             try {
-                New-ExoRequest -tenantid $Tenant -cmdlet 'Set-AntiPhishPolicy' -cmdparams $cmdparams
+                New-ExoRequest -tenantid $Tenant -cmdlet 'Set-AtpPolicyForO365' -cmdparams $cmdparams -UseSystemMailbox $true
                 Write-LogMessage -API 'Standards' -tenant $Tenant -message 'Updated Atp Policy For O365' -sev Info
             } catch {
-                Write-LogMessage -API 'Standards' -tenant $Tenant -message "Failed to set Atp Policy For O365. Error: $($_.exception.message)" -sev Error
+                $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
+                Write-LogMessage -API 'Standards' -tenant $Tenant -message "Failed to set Atp Policy For O365. Error: $ErrorMessage" -sev Error
             }
         }
     }
 
     if ($Settings.alert -eq $true) {
 
-        if ($StateIsCorrect) {
+        if ($StateIsCorrect -eq $true) {
             Write-LogMessage -API 'Standards' -tenant $Tenant -message 'Atp Policy For O365 is enabled' -sev Info
         } else {
             Write-LogMessage -API 'Standards' -tenant $Tenant -message 'Atp Policy For O365 is not enabled' -sev Alert

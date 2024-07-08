@@ -3,7 +3,9 @@ using namespace System.Net
 function Invoke-ListUserSettings {
     <#
     .FUNCTIONALITY
-    Entrypoint
+        Entrypoint
+    .ROLE
+        Identity.User.Read
     #>
     param($Request, $TriggerMetadata)
 

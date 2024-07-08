@@ -5,6 +5,12 @@ function Invoke-CIPPStandardcalDefault {
     #>
     param($Tenant, $Settings, $QueueItem)
 
+    # Input validation
+    if ([string]::IsNullOrWhiteSpace($Settings.permissionlevel) -or $Settings.permissionlevel -eq 'Select a value') {
+        Write-LogMessage -API 'Standards' -tenant $tenant -message 'calDefault: Invalid permissionlevel parameter set' -sev Error
+        Return
+    }
+
     If ($Settings.remediate -eq $true) {
         $Mailboxes = New-ExoRequest -tenantid $Tenant -cmdlet 'Get-Mailbox' | Sort-Object UserPrincipalName
         $TotalMailboxes = $Mailboxes.Count
@@ -36,12 +42,14 @@ function Invoke-CIPPStandardcalDefault {
                             Write-LogMessage -API 'Standards' -tenant $Tenant -message "Set default folder permission for $($Mailbox.UserPrincipalName):\$($_.Name) to $($Settings.permissionlevel)" -sev Debug
                             $SuccessCounter++
                         } catch {
-                            Write-Host "Setting cal failed: $($_.exception.message)"
-                            Write-LogMessage -API 'Standards' -tenant $Tenant -message "Could not set default calendar permissions for $($Mailbox.UserPrincipalName). Error: $($_.exception.message)" -sev Error
+                            $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
+                            Write-Host "Setting cal failed: $ErrorMessage"
+                            Write-LogMessage -API 'Standards' -tenant $Tenant -message "Could not set default calendar permissions for $($Mailbox.UserPrincipalName). Error: $ErrorMessage" -sev Error
                         }
                     }
                 } catch {
-                    Write-LogMessage -API 'Standards' -tenant $Tenant -message "Could not set default calendar permissions for $($Mailbox.UserPrincipalName). Error: $($_.exception.message)" -sev Error
+                    $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
+                    Write-LogMessage -API 'Standards' -tenant $Tenant -message "Could not set default calendar permissions for $($Mailbox.UserPrincipalName). Error: $ErrorMessage" -sev Error
                 }
                 $processedMailboxes++
                 if ($processedMailboxes % 25 -eq 0) {

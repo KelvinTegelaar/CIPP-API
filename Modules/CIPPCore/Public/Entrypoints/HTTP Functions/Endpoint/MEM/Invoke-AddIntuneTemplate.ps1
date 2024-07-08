@@ -3,26 +3,28 @@ using namespace System.Net
 Function Invoke-AddIntuneTemplate {
     <#
     .FUNCTIONALITY
-    Entrypoint
+        Entrypoint
+    .ROLE
+        Endpoint.MEM.ReadWrite
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
 
     $APIName = $TriggerMetadata.FunctionName
-    Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -message 'Accessed this API' -Sev 'Debug'
+    Write-LogMessage -user $Request.headers.'x-ms-client-principal' -API $APINAME -message 'Accessed this API' -Sev 'Debug'
 
     $GUID = (New-Guid).GUID
-    try { 
-        if ($Request.body.rawJSON) {       
-            if (!$Request.body.displayname) { throw 'You must enter a displayname' }
-            if ($null -eq ($Request.body.Rawjson | ConvertFrom-Json)) { throw 'the JSON is invalid' }
-        
+    try {
+        if ($Request.Body.RawJSON) {
+            if (!$Request.Body.displayName) { throw 'You must enter a displayname' }
+            if ($null -eq ($Request.Body.RawJSON | ConvertFrom-Json)) { throw 'the JSON is invalid' }
+
 
             $object = [PSCustomObject]@{
-                Displayname = $request.body.displayname
-                Description = $request.body.description
-                RAWJson     = $request.body.RawJSON
-                Type        = $request.body.TemplateType
+                Displayname = $Request.Body.displayName
+                Description = $Request.Body.description
+                RAWJson     = $Request.Body.RawJSON
+                Type        = $Request.Body.TemplateType
                 GUID        = $GUID
             } | ConvertTo-Json
             $Table = Get-CippTable -tablename 'templates'
@@ -32,40 +34,46 @@ Function Invoke-AddIntuneTemplate {
                 RowKey       = "$GUID"
                 PartitionKey = 'IntuneTemplate'
             }
-            Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -message "Created intune policy template named $($Request.body.displayname) with GUID $GUID" -Sev 'Debug'
+            Write-LogMessage -user $Request.headers.'x-ms-client-principal' -API $APINAME -message "Created intune policy template named $($Request.Body.displayName) with GUID $GUID" -Sev 'Debug'
 
             $body = [pscustomobject]@{'Results' = 'Successfully added template' }
         } else {
-            $TenantFilter = $request.query.TenantFilter
-            $URLName = $Request.query.URLName
-            $ID = $request.query.id
+            $TenantFilter = $Request.Query.TenantFilter
+            $URLName = $Request.Query.URLName
+            $ID = $Request.Query.id
             switch ($URLName) {
                 'deviceCompliancePolicies' {
                     $Type = 'deviceCompliancePolicies'
                     $Template = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/deviceManagement/$($urlname)/$($ID)?`$expand=scheduledActionsForRule(`$expand=scheduledActionConfigurations)" -tenantid $tenantfilter
-                    $DisplayName = $template.displayName
-                    $TemplateJson = ConvertTo-Json -InputObject $Template -Depth 10 -Compress
+                    $DisplayName = $Template.displayName
+                    $TemplateJson = ConvertTo-Json -InputObject $Template -Depth 100 -Compress
                 }
                 'managedAppPolicies' {
                     $Type = 'AppProtection'
                     $Template = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/deviceAppManagement/$($urlname)('$($ID)')" -tenantid $tenantfilter
-                    $DisplayName = $template.displayName
-                    $TemplateJson = ConvertTo-Json -InputObject $Template -Depth 10 -Compress
+                    $DisplayName = $Template.displayName
+                    $TemplateJson = ConvertTo-Json -InputObject $Template -Depth 100 -Compress
                 }
                 'configurationPolicies' {
                     $Type = 'Catalog'
                     $Template = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/deviceManagement/$($urlname)('$($ID)')?`$expand=settings" -tenantid $tenantfilter | Select-Object name, description, settings, platforms, technologies, templateReference
-                    $TemplateJson = $Template | ConvertTo-Json -Depth 10
-                    $DisplayName = $template.name
+                    $TemplateJson = $Template | ConvertTo-Json -Depth 100
+                    $DisplayName = $Template.name
 
-
-                } 
+                }
+                'windowsDriverUpdateProfiles' {
+                    $Type = 'windowsDriverUpdateProfiles'
+                    $Template = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/deviceManagement/$($urlname)/$($ID)" -tenantid $tenantfilter | Select-Object * -ExcludeProperty id, lastModifiedDateTime, '@odata.context', 'ScopeTagIds', 'supportsScopeTags', 'createdDateTime'
+                    Write-Host ($Template | ConvertTo-Json)
+                    $DisplayName = $Template.displayName
+                    $TemplateJson = ConvertTo-Json -InputObject $Template -Depth 100 -Compress
+                }
                 'deviceConfigurations' {
                     $Type = 'Device'
                     $Template = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/deviceManagement/$($urlname)/$($ID)" -tenantid $tenantfilter | Select-Object * -ExcludeProperty id, lastModifiedDateTime, '@odata.context', 'ScopeTagIds', 'supportsScopeTags', 'createdDateTime'
                     Write-Host ($Template | ConvertTo-Json)
-                    $DisplayName = $template.displayName
-                    $TemplateJson = ConvertTo-Json -InputObject $Template -Depth 10 -Compress
+                    $DisplayName = $Template.displayName
+                    $TemplateJson = ConvertTo-Json -InputObject $Template -Depth 100 -Compress
                 }
                 'groupPolicyConfigurations' {
                     $Type = 'Admin'
@@ -98,9 +106,9 @@ Function Invoke-AddIntuneTemplate {
                         deletedIds = @()
 
                     }
-                
 
-                    $TemplateJson = (ConvertTo-Json -InputObject $inputvar -Depth 15 -Compress)
+
+                    $TemplateJson = (ConvertTo-Json -InputObject $inputvar -Depth 100 -Compress)
                 }
             }
 
@@ -118,12 +126,12 @@ Function Invoke-AddIntuneTemplate {
                 RowKey       = "$GUID"
                 PartitionKey = 'IntuneTemplate'
             }
-            Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -message "Created intune policy template $($Request.body.displayname) with GUID $GUID using an original policy from a tenant" -Sev 'Debug'
+            Write-LogMessage -user $Request.headers.'x-ms-client-principal' -API $APINAME -message "Created intune policy template $($Request.Body.displayName) with GUID $GUID using an original policy from a tenant" -Sev 'Debug'
 
             $body = [pscustomobject]@{'Results' = 'Successfully added template' }
         }
     } catch {
-        Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -message "Intune Template Deployment failed: $($_.Exception.Message)" -Sev 'Error'
+        Write-LogMessage -user $Request.headers.'x-ms-client-principal' -API $APINAME -message "Intune Template Deployment failed: $($_.Exception.Message)" -Sev 'Error'
         $body = [pscustomobject]@{'Results' = "Intune Template Deployment failed: $($_.Exception.Message)" }
     }
 

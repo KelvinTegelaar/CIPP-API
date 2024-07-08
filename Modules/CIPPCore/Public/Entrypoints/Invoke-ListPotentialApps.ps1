@@ -3,7 +3,9 @@ using namespace System.Net
 Function Invoke-ListPotentialApps {
     <#
     .FUNCTIONALITY
-    Entrypoint
+        Entrypoint
+    .ROLE
+        Endpoint.Application.Read
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)

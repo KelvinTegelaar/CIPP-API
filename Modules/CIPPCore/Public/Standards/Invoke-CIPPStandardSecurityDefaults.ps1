@@ -7,6 +7,7 @@ function Invoke-CIPPStandardSecurityDefaults {
     $SecureDefaultsState = (New-GraphGetRequest -Uri 'https://graph.microsoft.com/beta/policies/identitySecurityDefaultsEnforcementPolicy' -tenantid $tenant)
 
     If ($Settings.remediate -eq $true) {
+
         if ($SecureDefaultsState.IsEnabled -ne $true) {
             try {
                 Write-Host "Secure Defaults is disabled. Enabling for $tenant" -ForegroundColor Yellow
@@ -15,7 +16,8 @@ function Invoke-CIPPStandardSecurityDefaults {
 
                 Write-LogMessage -API 'Standards' -tenant $tenant -message 'Enabled Security Defaults.' -sev Info
             } catch {
-                Write-LogMessage -API 'Standards' -tenant $tenant -message "Failed to enable Security Defaults. Error: $($_.exception.message)" -sev Error
+                $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
+                Write-LogMessage -API 'Standards' -tenant $tenant -message "Failed to enable Security Defaults. Error: $ErrorMessage" -sev Error
             }
         } else {
             Write-LogMessage -API 'Standards' -tenant $tenant -message 'Security Defaults is already enabled.' -sev Info
