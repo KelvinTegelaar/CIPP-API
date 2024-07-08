@@ -13,18 +13,18 @@ function Add-CIPPApplicationPermission {
     if ($RequiredResourceAccess -eq 'CIPPDefaults') {
         $RequiredResourceAccess = (Get-Content '.\SAMManifest.json' | ConvertFrom-Json).requiredResourceAccess
     }
-    $ServicePrincipalList = New-GraphGETRequest -uri "https://graph.microsoft.com/beta/servicePrincipals?`$select=AppId,id,displayName&`$top=999" -skipTokenCache $true -tenantid $Tenantfilter
+    $ServicePrincipalList = New-GraphGETRequest -uri "https://graph.microsoft.com/beta/servicePrincipals?`$select=AppId,id,displayName&`$top=999" -skipTokenCache $true -tenantid $Tenantfilter -NoAuthCheck $true
     $ourSVCPrincipal = $ServicePrincipalList | Where-Object -Property AppId -EQ $ApplicationId
     if (!$ourSVCPrincipal) {
         #Our Service Principal isn't available yet. We do a sleep and reexecute after 3 seconds.
         Start-Sleep -Seconds 5
-        $ServicePrincipalList = New-GraphGETRequest -uri "https://graph.microsoft.com/beta/servicePrincipals?`$select=AppId,id,displayName&`$top=999" -skipTokenCache $true -tenantid $Tenantfilter
+        $ServicePrincipalList = New-GraphGETRequest -uri "https://graph.microsoft.com/beta/servicePrincipals?`$select=AppId,id,displayName&`$top=999" -skipTokenCache $true -tenantid $Tenantfilter -NoAuthCheck $true
         $ourSVCPrincipal = $ServicePrincipalList | Where-Object -Property AppId -EQ $ApplicationId
     }
 
     $Results = [System.Collections.ArrayList]@()
 
-    $CurrentRoles = New-GraphGETRequest -uri "https://graph.microsoft.com/beta/servicePrincipals/$($ourSVCPrincipal.id)/appRoleAssignments" -tenantid $Tenantfilter -skipTokenCache $true
+    $CurrentRoles = New-GraphGETRequest -uri "https://graph.microsoft.com/beta/servicePrincipals/$($ourSVCPrincipal.id)/appRoleAssignments" -tenantid $Tenantfilter -skipTokenCache $true -NoAuthCheck $true
 
     $Grants = foreach ($App in $RequiredResourceAccess) {
         $svcPrincipalId = $ServicePrincipalList | Where-Object -Property AppId -EQ $App.resourceAppId
@@ -41,7 +41,7 @@ function Add-CIPPApplicationPermission {
     $counter = 0
     foreach ($Grant in $Grants) {
         try {
-            $SettingsRequest = New-GraphPOSTRequest -body ($Grant | ConvertTo-Json) -uri "https://graph.microsoft.com/beta/servicePrincipals/$($ourSVCPrincipal.id)/appRoleAssignedTo" -tenantid $Tenantfilter -type POST
+            $SettingsRequest = New-GraphPOSTRequest -body ($Grant | ConvertTo-Json) -uri "https://graph.microsoft.com/beta/servicePrincipals/$($ourSVCPrincipal.id)/appRoleAssignedTo" -tenantid $Tenantfilter -type POST -NoAuthCheck $true
             $counter++
         } catch {
             $Results.add("Failed to grant $($Grant.appRoleId) to $($Grant.resourceId): $($_.Exception.Message)") | Out-Null

@@ -1,5 +1,12 @@
 [
   {
+    "description": "Allows the app to impersonate the signed-in user to access the Partner Center API.",
+    "displayName": "Partner Center as User",
+    "id": "1cebfa2a-fb4d-419e-b5f9-839b4383e05a",
+    "origin": "Delegated (Microsoft Partner Center)",
+    "value": "user_impersonation"
+  },
+  {
     "description": "Allows Exchange Management as app",
     "displayName": "Manage Exchange As Application ",
     "id": "dc50a0fb-09a3-484d-be87-e023b12c6440",

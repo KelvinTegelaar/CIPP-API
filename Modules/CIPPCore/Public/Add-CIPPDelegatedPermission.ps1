@@ -17,22 +17,28 @@ function Add-CIPPDelegatedPermission {
     if ($RequiredResourceAccess -eq 'CIPPDefaults') {
         $RequiredResourceAccess = (Get-Content '.\SAMManifest.json' | ConvertFrom-Json).requiredResourceAccess
         $AdditionalPermissions = Get-Content '.\AdditionalPermissions.json' | ConvertFrom-Json
+
+        if ($Tenantfilter -eq $env:TenantID) {
+            $RequiredResourceAccess = $RequiredResourceAccess + ($AdditionalPermissions | Where-Object { $RequiredResourceAccess.resourceAppId -notcontains $_.resourceAppId })
+        } else {
+            # remove the partner center permission if not pushing to partner tenant
+            $RequiredResourceAccess = $RequiredResourceAccess | Where-Object { $_.resourceAppId -ne 'fa3d9a0c-3fb0-42cc-9193-47c7ecd2edbd' }
+        }
         $RequiredResourceAccess = $RequiredResourceAccess + ($AdditionalPermissions | Where-Object { $RequiredResourceAccess.resourceAppId -notcontains $_.resourceAppId })
     }
     $Translator = Get-Content '.\PermissionsTranslator.json' | ConvertFrom-Json
-    $ServicePrincipalList = New-GraphGETRequest -uri "https://graph.microsoft.com/beta/servicePrincipals?`$select=AppId,id,displayName&`$top=999" -tenantid $Tenantfilter -skipTokenCache $true
+    $ServicePrincipalList = New-GraphGETRequest -uri "https://graph.microsoft.com/beta/servicePrincipals?`$select=AppId,id,displayName&`$top=999" -tenantid $Tenantfilter -skipTokenCache $true -NoAuthCheck $true
     $ourSVCPrincipal = $ServicePrincipalList | Where-Object -Property AppId -EQ $ApplicationId
     $Results = [System.Collections.ArrayList]@()
 
-    $CurrentDelegatedScopes = New-GraphGETRequest -uri "https://graph.microsoft.com/beta/servicePrincipals/$($ourSVCPrincipal.id)/oauth2PermissionGrants" -skipTokenCache $true -tenantid $Tenantfilter
+    $CurrentDelegatedScopes = New-GraphGETRequest -uri "https://graph.microsoft.com/beta/servicePrincipals/$($ourSVCPrincipal.id)/oauth2PermissionGrants" -skipTokenCache $true -tenantid $Tenantfilter -NoAuthCheck $true
 
     foreach ($App in $RequiredResourceAccess) {
         $svcPrincipalId = $ServicePrincipalList | Where-Object -Property AppId -EQ $App.resourceAppId
         $AdditionalScopes = ($AdditionalPermissions | Where-Object -Property resourceAppId -EQ $App.resourceAppId).resourceAccess
         if (!$svcPrincipalId) { continue }
         if ($AdditionalScopes) {
-            $NewScope = (($Translator | Where-Object { $_.id -in $App.ResourceAccess.id }).value + $AdditionalScopes.id | Select-Object -Unique) -join ' '
-            Write-Host "NEW SCOPE: $NewScope"
+            $NewScope = (@(($Translator | Where-Object { $_.id -in $App.ResourceAccess.id }).value) + @($AdditionalScopes.id | Select-Object -Unique)) -join ' '
         } else {
             if ($NoTranslateRequired) {
                 $NewScope = $App.resourceAccess | ForEach-Object { $_.id } -join ' '
@@ -51,7 +57,7 @@ function Add-CIPPDelegatedPermission {
                 resourceId  = $svcPrincipalId.id
                 scope       = $NewScope
             } | ConvertTo-Json -Compress
-            $CreateRequest = New-GraphPOSTRequest -uri 'https://graph.microsoft.com/v1.0/oauth2PermissionGrants' -tenantid $Tenantfilter -body $Createbody -type POST
+            $CreateRequest = New-GraphPOSTRequest -uri 'https://graph.microsoft.com/v1.0/oauth2PermissionGrants' -tenantid $Tenantfilter -body $Createbody -type POST -NoAuthCheck $true
             $Results.add("Successfully added permissions for $($svcPrincipalId.displayName)") | Out-Null
         } else {
             $compare = Compare-Object -ReferenceObject $OldScope.scope.Split(' ') -DifferenceObject $NewScope.Split(' ')
@@ -62,7 +68,7 @@ function Add-CIPPDelegatedPermission {
             $Patchbody = @{
                 scope = "$NewScope"
             } | ConvertTo-Json -Compress
-            $Patchrequest = New-GraphPOSTRequest -uri "https://graph.microsoft.com/v1.0/oauth2PermissionGrants/$($OldScope.id)" -tenantid $Tenantfilter -body $Patchbody -type PATCH
+            $Patchrequest = New-GraphPOSTRequest -uri "https://graph.microsoft.com/v1.0/oauth2PermissionGrants/$($OldScope.id)" -tenantid $Tenantfilter -body $Patchbody -type PATCH -NoAuthCheck $true
             $Results.add("Successfully updated permissions for $($svcPrincipalId.displayName): $($NewScope)") | Out-Null
         }
     }

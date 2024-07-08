@@ -40,7 +40,7 @@ function Get-CIPPAzDataTableEntity {
             $parts = $entityData.Parts | Sort-Object PartIndex
             foreach ($part in $parts) {
                 foreach ($key in $part.PSObject.Properties.Name) {
-                    if ($key -notin @('OriginalEntityId', 'PartIndex', 'PartitionKey', 'RowKey')) {
+                    if ($key -notin @('OriginalEntityId', 'PartIndex', 'PartitionKey', 'RowKey', 'Timestamp')) {
                         if ($fullEntity.PSObject.Properties[$key]) {
                             $fullEntity | Add-Member -MemberType NoteProperty -Name $key -Value ($fullEntity.$key + $part.$key) -Force
                         } else {
