@@ -8,7 +8,14 @@ function New-CIPPBackupTask {
     $BackupData = switch ($Task) {
         'users' {
             Write-Host "Backup users for $TenantFilter"
-            New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/users?$top=999' -tenantid $TenantFilter
+            $Users = New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/users?$top=999' -tenantid $TenantFilter | Select-Object * -ExcludeProperty mail, provisionedPlans, onPrem*, *passwordProfile*, *serviceProvisioningErrors*, isLicenseReconciliationNeeded, isManagementRestricted, isResourceAccount, *date*, *external*, identities, deletedDateTime, isSipEnabled, assignedPlans, cloudRealtimeCommunicationInfo, deviceKeys, provisionedPlan, securityIdentifier
+            #remove the property if the value is $null
+            $Users | ForEach-Object {
+                $_.psobject.properties | Where-Object { $_.Value -eq $null } | ForEach-Object {
+                    $_.psobject.properties.Remove($_.Name)
+                }
+            }
+            $Users
         }
         'groups' {
             Write-Host "Backup groups for $TenantFilter"
@@ -16,15 +23,10 @@ function New-CIPPBackupTask {
         }
         'ca' {
             Write-Host "Backup Conditional Access Policies for $TenantFilter"
-            New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/conditionalAccess/policies?$top=999' -tenantid $TenantFilter
-        }
-        'namedlocations' {
-            Write-Host "Backup Named Locations for $TenantFilter"
-            New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/conditionalAccess/namedLocations?$top=999' -tenantid $TenantFilter
-        }
-        'authstrengths' {
-            Write-Host "Backup Authentication Strength Policies for $TenantFilter"
-            New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/conditionalAccess/authenticationStrength/policies' -tenantid $TenantFilter
+            $Policies = New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/conditionalAccess/policies?$top=999' -tenantid $TenantFilter
+            $Policies | ForEach-Object {
+                New-CIPPCATemplate -TenantFilter $TenantFilter -JSON $_ -ErrorAction SilentlyContinue
+            }
         }
         'intuneconfig' {
             $GraphURLS = @("https://graph.microsoft.com/beta/deviceManagement/deviceConfigurations?`$select=id,displayName,lastModifiedDateTime,roleScopeTagIds,microsoft.graph.unsupportedDeviceConfiguration/originalEntityTypeName&`$expand=assignments&top=1000"
