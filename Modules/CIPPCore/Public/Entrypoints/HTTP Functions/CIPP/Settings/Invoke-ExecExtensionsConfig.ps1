@@ -68,6 +68,17 @@ Function Invoke-ExecExtensionsConfig {
         }
 
         Add-CIPPAzDataTableEntity @Table -Entity $Config -Force | Out-Null
+
+        $CippUri = [System.Uri]$TriggerMetadata.Headers.'x-ms-original-url'
+        $AddObject = @{
+            PartitionKey = 'InstanceProperties'
+            RowKey       = 'CIPPURL'
+            Value        = '{0}://{1}' -f $CippUri.Scheme, $CippUri.Authority
+        }
+        $ConfigTable = Get-CIPPTable -tablename 'Config'
+        Add-AzDataTableEntity @ConfigTable -Entity $AddObject -Force
+
+        Register-CIPPExtensionScheduledTasks
         "Successfully set the configuration. $AddedText"
     } catch {
         "Failed to set configuration: $($_.Exception.message) Linenumber: $($_.InvocationInfo.ScriptLineNumber)"

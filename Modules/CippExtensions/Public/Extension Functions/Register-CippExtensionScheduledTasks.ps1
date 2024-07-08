@@ -107,14 +107,14 @@ function Register-CIPPExtensionScheduledTasks {
     }
 
     foreach ($Task in $ScheduledTasks) {
-        if ($Task.TenantFilter -notin $Tenants.defaultDomainName) {
+        if ($Task.Tenant -notin $Tenants.defaultDomainName) {
             Write-Information "Tenant Removed: Cleaning up scheduled task $($Task.Name) for tenant $($Task.TenantFilter)"
             $Entity = $Task | Select-Object -Property PartitionKey, RowKey
             Remove-AzDataTableEntity @ScheduledTasksTable -Entity $Entity
         }
     }
     foreach ($Task in $PushTasks) {
-        if ($Task.TenantFilter -notin $Tenants.defaultDomainName) {
+        if ($Task.Tenant -notin $Tenants.defaultDomainName) {
             Write-Information "Tenant Removed: Cleaning up scheduled task $($Task.Name) for tenant $($Task.TenantFilter)"
             $Entity = $Task | Select-Object -Property PartitionKey, RowKey
             Remove-AzDataTableEntity @ScheduledTasksTable -Entity $Entity
