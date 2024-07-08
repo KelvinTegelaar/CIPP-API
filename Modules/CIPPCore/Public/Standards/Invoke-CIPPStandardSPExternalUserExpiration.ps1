@@ -1,30 +1,32 @@
 function Invoke-CIPPStandardSPExternalUserExpiration {
     <#
     .FUNCTIONALITY
-    Internal
-    .APINAME
-    SPExternalUserExpiration
-    .CAT
-    SharePoint Standards
-    .TAG
-    "mediumimpact"
-    "CIS"
-    .HELPTEXT
-    Ensure guest access to a site or OneDrive will expire automatically
-    .ADDEDCOMPONENT
-    {"type":"number","name":"standards.SPExternalUserExpiration.Days","label":"Days until expiration (Default 60)"}
-    .LABEL
-    Set guest access to expire automatically
-    .IMPACT
-    Medium Impact
-    .POWERSHELLEQUIVALENT
-    Set-SPOTenant -ExternalUserExpireInDays 30 -ExternalUserExpirationRequired $True
-    .RECOMMENDEDBY
-    "CIS 3.0"
-    .DOCSDESCRIPTION
-    Ensure guest access to a site or OneDrive will expire automatically
-    .UPDATECOMMENTBLOCK
-    Run the Tools\Update-StandardsComments.ps1 script to update this comment block
+        Internal
+    .COMPONENT
+        (APIName) SPExternalUserExpiration
+    .SYNOPSIS
+        Set guest access to expire automatically
+    .DESCRIPTION
+        (Helptext) Ensure guest access to a site or OneDrive will expire automatically
+        (DocsDescription) Ensure guest access to a site or OneDrive will expire automatically
+    .NOTES
+        CAT
+            SharePoint Standards
+        TAG
+            "mediumimpact"
+            "CIS"
+        ADDEDCOMPONENT
+            {"type":"number","name":"standards.SPExternalUserExpiration.Days","label":"Days until expiration (Default 60)"}
+        LABEL
+            Set guest access to expire automatically
+        IMPACT
+            Medium Impact
+        POWERSHELLEQUIVALENT
+            Set-SPOTenant -ExternalUserExpireInDays 30 -ExternalUserExpirationRequired $True
+        RECOMMENDEDBY
+            "CIS 3.0"
+        UPDATECOMMENTBLOCK
+            Run the Tools\Update-StandardsComments.ps1 script to update this comment block
     #>
 
     param($Tenant, $Settings)

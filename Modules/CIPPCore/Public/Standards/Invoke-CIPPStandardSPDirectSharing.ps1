@@ -1,29 +1,31 @@
 function Invoke-CIPPStandardSPDirectSharing {
     <#
     .FUNCTIONALITY
-    Internal
-    .APINAME
-    SPDirectSharing
-    .CAT
-    SharePoint Standards
-    .TAG
-    "mediumimpact"
-    "CIS"
-    .HELPTEXT
-    Ensure default link sharing is set to Direct in SharePoint and OneDrive
-    .ADDEDCOMPONENT
-    .LABEL
-    Default sharing to Direct users
-    .IMPACT
-    Medium Impact
-    .POWERSHELLEQUIVALENT
-    Set-SPOTenant -DefaultSharingLinkType Direct
-    .RECOMMENDEDBY
-    "CIS 3.0"
-    .DOCSDESCRIPTION
-    Ensure default link sharing is set to Direct in SharePoint and OneDrive
-    .UPDATECOMMENTBLOCK
-    Run the Tools\Update-StandardsComments.ps1 script to update this comment block
+        Internal
+    .COMPONENT
+        (APIName) SPDirectSharing
+    .SYNOPSIS
+        Default sharing to Direct users
+    .DESCRIPTION
+        (Helptext) Ensure default link sharing is set to Direct in SharePoint and OneDrive
+        (DocsDescription) Ensure default link sharing is set to Direct in SharePoint and OneDrive
+    .NOTES
+        CAT
+            SharePoint Standards
+        TAG
+            "mediumimpact"
+            "CIS"
+        ADDEDCOMPONENT
+        LABEL
+            Default sharing to Direct users
+        IMPACT
+            Medium Impact
+        POWERSHELLEQUIVALENT
+            Set-SPOTenant -DefaultSharingLinkType Direct
+        RECOMMENDEDBY
+            "CIS 3.0"
+        UPDATECOMMENTBLOCK
+            Run the Tools\Update-StandardsComments.ps1 script to update this comment block
     #>
 
     param($Tenant, $Settings)

@@ -1,29 +1,31 @@
 function Invoke-CIPPStandardSPAzureB2B {
     <#
     .FUNCTIONALITY
-    Internal
-    .APINAME
-    SPAzureB2B
-    .CAT
-    SharePoint Standards
-    .TAG
-    "lowimpact"
-    "CIS"
-    .HELPTEXT
-    Ensure SharePoint and OneDrive integration with Azure AD B2B is enabled
-    .ADDEDCOMPONENT
-    .LABEL
-    Enable SharePoint and OneDrive integration with Azure AD B2B
-    .IMPACT
-    Low Impact
-    .POWERSHELLEQUIVALENT
-    Set-SPOTenant -EnableAzureADB2BIntegration $true
-    .RECOMMENDEDBY
-    "CIS 3.0"
-    .DOCSDESCRIPTION
-    Ensure SharePoint and OneDrive integration with Azure AD B2B is enabled
-    .UPDATECOMMENTBLOCK
-    Run the Tools\Update-StandardsComments.ps1 script to update this comment block
+        Internal
+    .COMPONENT
+        (APIName) SPAzureB2B
+    .SYNOPSIS
+        Enable SharePoint and OneDrive integration with Azure AD B2B
+    .DESCRIPTION
+        (Helptext) Ensure SharePoint and OneDrive integration with Azure AD B2B is enabled
+        (DocsDescription) Ensure SharePoint and OneDrive integration with Azure AD B2B is enabled
+    .NOTES
+        CAT
+            SharePoint Standards
+        TAG
+            "lowimpact"
+            "CIS"
+        ADDEDCOMPONENT
+        LABEL
+            Enable SharePoint and OneDrive integration with Azure AD B2B
+        IMPACT
+            Low Impact
+        POWERSHELLEQUIVALENT
+            Set-SPOTenant -EnableAzureADB2BIntegration $true
+        RECOMMENDEDBY
+            "CIS 3.0"
+        UPDATECOMMENTBLOCK
+            Run the Tools\Update-StandardsComments.ps1 script to update this comment block
     #>
 
     param($Tenant, $Settings)
