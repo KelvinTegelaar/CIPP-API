@@ -65,6 +65,24 @@ function Register-CIPPExtensionScheduledTasks {
                         $null = Add-CIPPScheduledTask -Task $Task -hidden $true -SyncType $SyncType
                     }
                 }
+
+                # push cached data to extension
+                $in30mins = [int64](([datetime]::UtcNow.AddMinutes(30)) - (Get-Date '1/1/1970')).TotalSeconds
+                $Task = @{
+                    Name          = "$Extension Extension Sync"
+                    Command       = @{
+                        value = 'Push-CippExtensionData'
+                        label = 'Push-CippExtensionData'
+                    }
+                    Parameters    = @{
+                        TenantFilter = $Tenant.defaultDomainName
+                        Extension    = $Extension
+                    }
+                    Recurrence    = '1d'
+                    ScheduledTime = $in30mins
+                    TenantFilter  = $Tenant.defaultDomainName
+                }
+                $null = Add-CIPPScheduledTask -Task $Task -hidden $true -SyncType $Extension
             }
         }
     }

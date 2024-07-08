@@ -44,7 +44,7 @@ function Add-CIPPScheduledTask {
         Command              = [string]$task.Command.value
         Parameters           = [string]$Parameters
         ScheduledTime        = [string]$task.ScheduledTime
-        Recurrence           = [string]$task.Recurrence.value
+        Recurrence           = [string]$task.Recurrence.value ?? $task.Recurrence
         PostExecution        = [string]$PostExecution
         AdditionalProperties = [string]$AdditionalProperties
         Hidden               = [bool]$Hidden
