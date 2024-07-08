@@ -7,7 +7,6 @@ function Invoke-HuduExtensionSync {
         $Configuration,
         $TenantFilter
     )
-
     Connect-HuduAPI -configuration $Configuration
 
     # Get mapping configuration
@@ -41,7 +40,11 @@ function Invoke-HuduExtensionSync {
     #$monitorDomains = [System.Convert]::ToBoolean($env:monitorDomains)
     $IntuneDesktopDeviceTypes = $env:IntuneDesktopDeviceTypes -split ','
     $ExcludeSerials = $env:ExcludeSerials -split ','
-    #$LicenseLookup = Get-LicenseLookup
+
+    Set-Location (Get-Item $PSScriptRoot).Parent.Parent.Parent.Parent.FullName
+    $LicTable = Import-Csv Conversiontable.csv
+
+
     #$AssignedMap = Get-AssignedMap
     #$AssignedNameMap = Get-AssignedNameMap
     $EnableCIPP = $true
@@ -162,7 +165,7 @@ function Invoke-HuduExtensionSync {
 
             $post = '</div>'
 
-            $licenseOut = $Licenses | Where-Object { $_.PrepaidUnits.Enabled -gt 0 } | Select-Object @{N = 'License Name'; E = { $($LicenseLookup.$($_.SkuPartNumber)) } }, @{N = 'Active'; E = { $_.PrepaidUnits.Enabled } }, @{N = 'Consumed'; E = { $_.ConsumedUnits } }, @{N = 'Unused'; E = { $_.PrepaidUnits.Enabled - $_.ConsumedUnits } }
+            $licenseOut = $Licenses | Where-Object { $_.PrepaidUnits.Enabled -gt 0 } | Select-Object @{N = 'License Name'; E = { Convert-SKUname -skuName $_.SkuPartNumber -ConvertTable $LicTable } }, @{N = 'Active'; E = { $_.PrepaidUnits.Enabled } }, @{N = 'Consumed'; E = { $_.ConsumedUnits } }, @{N = 'Unused'; E = { $_.PrepaidUnits.Enabled - $_.ConsumedUnits } }
             $licenseHTML = $licenseOut | ConvertTo-Html -PreContent $pre -PostContent $post -Fragment | Out-String
         }
 
@@ -434,11 +437,11 @@ function Invoke-HuduExtensionSync {
                     $userLicenses = ($user.AssignedLicenses.SkuID | ForEach-Object {
                             $UserLic = $_
                             $SkuPartNumber = ($Licenses | Where-Object { $_.SkuId -eq $UserLic }).SkuPartNumber
-                            try {
-                                "$($LicenseLookup.$SkuPartNumber)"
-                            } catch {
-                                "$SkuPartNumber"
+                            $DisplayName = Convert-SKUname -skuName $SkuPartNumber -ConvertTable $LicTable
+                            if (!$DisplayName) {
+                                $DisplayName = $SkuPartNumber
                             }
+                            $DisplayName
                         }) -join ', '
 
                     $UserOneDriveDetails = $OneDriveDetails | Where-Object { $_.'Owner Principal Name' -eq $user.UserPrincipalName }
@@ -586,7 +589,7 @@ function Invoke-HuduExtensionSync {
                         $UserDevicesDetailsBlock = $null
                     }
 
-                    $HuduUser = $People | Where-Object { $_.primary_mail -eq $user.UserPrincipalName -or ($_.cards.integrator_name -eq 'cw_manage' -and $_.cards.data.communicationItems.communicationType -eq 'Email' -and $_.cards.data.communicationItems.value -eq $user.UserPrincipalName) }
+                    $HuduUser = $People | Where-Object { $_.email_address -eq $user.UserPrincipalName -or $_.primary_mail -eq $user.UserPrincipalName -or ($_.cards.integrator_name -eq 'cw_manage' -and $_.cards.data.communicationItems.communicationType -eq 'Email' -and $_.cards.data.communicationItems.value -eq $user.UserPrincipalName) }
 
                     [System.Collections.Generic.List[PSCustomObject]]$CIPPLinksFormatted = @()
                     if ($EnableCIPP) {
@@ -596,18 +599,17 @@ function Invoke-HuduExtensionSync {
                     }
 
                     [System.Collections.Generic.List[PSCustomObject]]$UserLinksFormatted = @()
-                    $UserLinksFormatted.add((Get-HuduLinkBlock -URL "https://aad.portal.azure.com/$($Tenant.defaultDomainName)/#blade/Microsoft_AAD_IAM/UserDetailsMenuBlade/Profile/userId/$($User.id)" -Icon 'fas fa-users-cog' -Title 'Azure AD'))
+                    $UserLinksFormatted.add((Get-HuduLinkBlock -URL "https://aad.portal.azure.com/$($Tenant.defaultDomainName)/#blade/Microsoft_AAD_IAM/UserDetailsMenuBlade/Profile/userId/$($User.id)" -Icon 'fas fa-users-cog' -Title 'Entra ID'))
                     $UserLinksFormatted.add((Get-HuduLinkBlock -URL "https://aad.portal.azure.com/$($Tenant.defaultDomainName)/#blade/Microsoft_AAD_IAM/UserDetailsMenuBlade/SignIns/userId/$($User.id)" -Icon 'fas fa-history' -Title 'Sign Ins'))
                     $UserLinksFormatted.add((Get-HuduLinkBlock -URL "https://admin.teams.microsoft.com/users/$($User.id)/account?delegatedOrg=$($Tenant.defaultDomainName)" -Icon 'fas fa-users' -Title 'Teams Admin'))
-                    $UserLinksFormatted.add((Get-HuduLinkBlock -URL "https://endpoint.microsoft.com/$($Tenant.defaultDomainName)/#blade/Microsoft_AAD_IAM/UserDetailsMenuBlade/Profile/userId/$($User.ID)" -Icon 'fas fa-laptop' -Title 'EPM (User)'))
-                    $UserLinksFormatted.add((Get-HuduLinkBlock -URL "https://endpoint.microsoft.com/$($Tenant.defaultDomainName)/#blade/Microsoft_AAD_IAM/UserDetailsMenuBlade/Devices/userId/$($User.ID)" -Icon 'fas fa-laptop' -Title 'EPM (Devices)'))
+                    $UserLinksFormatted.add((Get-HuduLinkBlock -URL "https://intune.microsoft.com/$($Tenant.defaultDomainName)/#blade/Microsoft_AAD_IAM/UserDetailsMenuBlade/Profile/userId/$($User.ID)" -Icon 'fas fa-laptop' -Title 'Intune (User)'))
+                    $UserLinksFormatted.add((Get-HuduLinkBlock -URL "https://intune.microsoft.com/$($Tenant.defaultDomainName)/#blade/Microsoft_AAD_IAM/UserDetailsMenuBlade/Devices/userId/$($User.ID)" -Icon 'fas fa-laptop' -Title 'Intune (Devices)'))
 
                     if ($HuduUser) {
                         $HaloCard = $HuduUser.cards | Where-Object { $_.integrator_name -eq 'halo' }
                         if ($HaloCard) {
                             $UserLinksFormatted.add((Get-HuduLinkBlock -URL "$($PSAUserUrl)$($HaloCard.sync_id)" -Icon 'far fa-id-card' -Title 'Halo PSA'))
                         }
-
                     }
 
                     $UserLinksBlock = "<div>Management Links</div><div class='o365'>$($UserLinksFormatted -join '')$($CIPPLinksFormatted -join '')</div>"
