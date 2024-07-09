@@ -74,7 +74,8 @@ Function Invoke-ExecExtensionsConfig {
         $AddObject = @{
             PartitionKey = 'InstanceProperties'
             RowKey       = 'CIPPURL'
-            Value        = '{0}://{1}' -f $CippUri.Scheme, $CippUri.Authority
+            Value        = ('{0}://{1}' -f $CippUri.Scheme, $CippUri.Authority)
+            Original     = $Uri
         }
         $ConfigTable = Get-CIPPTable -tablename 'Config'
         Add-AzDataTableEntity @ConfigTable -Entity $AddObject -Force
