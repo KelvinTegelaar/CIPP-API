@@ -314,13 +314,20 @@ function Invoke-HuduExtensionSync {
             $OneDriveDetails = $null
         }
 
-
         <#try {
             $CASFull = New-GraphGetRequest -uri "https://outlook.office365.com/adminapi/beta/$($tenantfilter)/CasMailbox" -Tenantid $tenantfilter -scope ExchangeOnline -noPagination $true
         } catch {
             $CASFull = $null
             $CompanyResult.Errors.add("Company: Unable to fetch CAS Mailbox Details $_")
         }#>
+
+        if ($ExtensionCache.CASMailbox) {
+            $CASFull = $ExtensionCache.CASMailbox
+        } else {
+            $CompanyResult.Errors.add('Company: Unable to fetch CAS Mailbox Details')
+            $CASFull = $null
+
+        }
 
         <#try {
             $MailboxDetailedFull = New-ExoRequest -TenantID $TenantFilter -cmdlet 'Get-Mailbox'
@@ -344,6 +351,7 @@ function Invoke-HuduExtensionSync {
             $CompanyResult.Errors.add('Company: Unable to fetch Mailbox Statistic Details')
         }
 
+        $Permissions = $ExtensionCache.MailboxPermissions
         if ($licensedUsers) {
             $pre = "<div class=`"nasa__block`"><header class='nasa__block-header'>
 			<h1><i class='fas fa-users icon'></i>Licensed Users</h1>
@@ -383,13 +391,14 @@ function Invoke-HuduExtensionSync {
 
                     $CASRequest = $CASFull | Where-Object { $_.ExternalDirectoryObjectId -eq $User.iD }
                     $MailboxDetailedRequest = $MailboxDetailedFull | Where-Object { $_.ExternalDirectoryObjectId -eq $User.iD }
-                    $StatsRequest = $MailboxStatsFull | Where-Object { $_.'User Principal Name' -eq $User.UserPrincipalName }
+                    $StatsRequest = $MailboxStatsFull | Where-Object { $_.'userPrincipalName' -eq $User.UserPrincipalName }
 
-                    try {
+                    <#try {
                         $PermsRequest = New-GraphGetRequest -uri "https://outlook.office365.com/adminapi/beta/$($tenantfilter)/Mailbox('$($User.ID)')/MailboxPermission" -Tenantid $tenantfilter -scope ExchangeOnline -noPagination $true
                     } catch {
                         $PermsRequest = $null
-                    }
+                    }#>
+                    $PermsRequest = $Permissions | Where-Object { $_.Identity -eq $User.ID }
 
                     $ParsedPerms = foreach ($Perm in $PermsRequest) {
                         if ($Perm.User -ne 'NT AUTHORITY\SELF') {
@@ -401,7 +410,7 @@ function Invoke-HuduExtensionSync {
                     }
 
                     try {
-                        $TotalItemSize = [math]::Round($StatsRequest.'Storage Used (Byte)' / 1Gb, 2)
+                        $TotalItemSize = [math]::Round($StatsRequest.storageUsedInBytes / 1Gb, 2)
                     } catch {
                         $TotalItemSize = 0
                     }
@@ -420,7 +429,7 @@ function Invoke-HuduExtensionSync {
                         Permissions              = $ParsedPerms
                         ProhibitSendQuota        = [math]::Round([float]($MailboxDetailedRequest.ProhibitSendQuota -split ' GB')[0], 2)
                         ProhibitSendReceiveQuota = [math]::Round([float]($MailboxDetailedRequest.ProhibitSendReceiveQuota -split ' GB')[0], 2)
-                        ItemCount                = [math]::Round($StatsRequest.'Item Count', 2)
+                        ItemCount                = [math]::Round($StatsRequest.'itemCount', 2)
                         TotalItemSize            = $TotalItemSize
                     }
 
@@ -456,23 +465,23 @@ function Invoke-HuduExtensionSync {
                     [System.Collections.Generic.List[PSCustomObject]]$OneDriveFormatted = @()
                     if ($UserOneDriveDetails) {
                         try {
-                            $OneDriveUsePercent = [math]::Round([float](($UserOneDriveDetails.'Storage Used (Byte)' / $UserOneDriveDetails.'Storage Allocated (Byte)') * 100), 2)
-                            $StorageUsed = [math]::Round($UserOneDriveDetails.'Storage Used (Byte)' / 1024 / 1024 / 1024, 2)
-                            $StorageAllocated = [math]::Round($UserOneDriveDetails.'Storage Allocated (Byte)' / 1024 / 1024 / 1024, 2)
+                            $OneDriveUsePercent = [math]::Round([float](($UserOneDriveDetails.storageUsedInBytes / $UserOneDriveDetails.storageAllocatedInBytes) * 100), 2)
+                            $StorageUsed = [math]::Round($UserOneDriveDetails.storageUsedInBytes / 1024 / 1024 / 1024, 2)
+                            $StorageAllocated = [math]::Round($UserOneDriveDetails.storageAllocatedInBytes / 1024 / 1024 / 1024, 2)
                         } catch {
                             $OneDriveUsePercent = 100
                             $StorageUsed = 0
                             $StorageAllocated = 0
                         }
 
-                        $OneDriveFormatted.add($(Get-HuduFormattedField -Title 'Owner Principal Name' -Value "$($UserOneDriveDetails.'Owner Principal Name')"))
-                        $OneDriveFormatted.add($(Get-HuduFormattedField -Title 'One Drive URL' -Value "<a href=$($UserOneDriveDetails.'Site URL')>$($UserOneDriveDetails.'Site URL')</a>"))
-                        $OneDriveFormatted.add($(Get-HuduFormattedField -Title 'Is Deleted' -Value "$($UserOneDriveDetails.'Is Deleted')"))
-                        $OneDriveFormatted.add($(Get-HuduFormattedField -Title 'Last Activity Date' -Value "$($UserOneDriveDetails.'Last Activity Date')"))
-                        $OneDriveFormatted.add($(Get-HuduFormattedField -Title 'File Count' -Value "$($UserOneDriveDetails.'File Count')"))
-                        $OneDriveFormatted.add($(Get-HuduFormattedField -Title 'Active File Count' -Value "$($UserOneDriveDetails.'Active File Count')"))
-                        $OneDriveFormatted.add($(Get-HuduFormattedField -Title 'Storage Used (Byte)' -Value "$($UserOneDriveDetails.'Storage Used (Byte)')"))
-                        $OneDriveFormatted.add($(Get-HuduFormattedField -Title 'Storage Allocated (Byte)' -Value "$($UserOneDriveDetails.'Storage Allocated (Byte)')"))
+                        $OneDriveFormatted.add($(Get-HuduFormattedField -Title 'Owner Principal Name' -Value "$($UserOneDriveDetails.ownerPrincipalName)"))
+                        $OneDriveFormatted.add($(Get-HuduFormattedField -Title 'One Drive URL' -Value "<a href=$($UserOneDriveDetails.siteUrl)>$($UserOneDriveDetails.siteUrl)</a>"))
+                        $OneDriveFormatted.add($(Get-HuduFormattedField -Title 'Is Deleted' -Value "$($UserOneDriveDetails.isDeleted)"))
+                        $OneDriveFormatted.add($(Get-HuduFormattedField -Title 'Last Activity Date' -Value "$($UserOneDriveDetails.lastActivityDate)"))
+                        $OneDriveFormatted.add($(Get-HuduFormattedField -Title 'File Count' -Value "$($UserOneDriveDetails.fileCount)"))
+                        $OneDriveFormatted.add($(Get-HuduFormattedField -Title 'Active File Count' -Value "$($UserOneDriveDetails.activeFileCount)"))
+                        $OneDriveFormatted.add($(Get-HuduFormattedField -Title 'Storage Used (Byte)' -Value "$($UserOneDriveDetails.storageUsedInBytes)"))
+                        $OneDriveFormatted.add($(Get-HuduFormattedField -Title 'Storage Allocated (Byte)' -Value "$($UserOneDriveDetails.storageAllocatedInBytes)"))
                         $OneDriveUserUsage = @"
                         <div class="o365-usage">
                         <div class="o365-mailbox">

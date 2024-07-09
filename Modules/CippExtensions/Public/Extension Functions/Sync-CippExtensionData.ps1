@@ -68,12 +68,12 @@ function Sync-CippExtensionData {
                     @{
                         id     = 'OneDriveUsage'
                         method = 'GET'
-                        url    = "reports/getOneDriveUsageAccountDetail(period='D7')?`$format=application/json"
+                        url    = "reports/getOneDriveUsageAccountDetail(period='D7')?`$format=application%2fjson"
                     },
                     @{
                         id     = 'MailboxUsage'
                         method = 'GET'
-                        url    = "reports/getMailboxUsageDetail(period='D7')?`$format=application/json"
+                        url    = "reports/getMailboxUsageDetail(period='D7')?`$format=application%2fjson"
                     }
                 )
 
@@ -173,6 +173,36 @@ function Sync-CippExtensionData {
                     Data         = [string]($Mailboxes | ConvertTo-Json -Depth 10 -Compress)
                 }
                 $null = Add-CIPPAzDataTableEntity @CacheTable -Entity $Entity -Force
+
+                $SingleGraphQueries = @(
+                    @{
+                        id           = 'CASMailbox'
+                        graphRequest = @{
+                            uri          = "https://outlook.office365.com/adminapi/beta/$($tenantfilter)/CasMailbox"
+                            Tenantid     = $tenantfilter
+                            scope        = 'ExchangeOnline'
+                            noPagination = $true
+                        }
+                    }
+                )
+
+                # Bulk request mailbox permissions using New-ExoBulkRequest for each mailbox - mailboxPermissions is not a valid graph query
+                $ExoBulkRequests = foreach ($Mailbox in $Mailboxes) {
+                    @{
+                        CmdletInput = @{
+                            CmdletName = 'Get-MailboxPermission'
+                            Parameters = @{ Identity = $Mailbox.UPN }
+                        }
+                    }
+                }
+                $MailboxPermissions = New-ExoBulkRequest -cmdletArray @($ExoBulkRequests) -tenantid $TenantFilter
+                $Entity = @{
+                    PartitionKey = $TenantFilter
+                    SyncType     = 'Mailboxes'
+                    RowKey       = 'MailboxPermissions'
+                    Data         = [string]($MailboxPermissions | ConvertTo-Json -Depth 10 -Compress)
+                }
+                $null = Add-CIPPAzDataTableEntity @CacheTable -Entity $Entity -Force
             }
         }
 
@@ -184,18 +214,21 @@ function Sync-CippExtensionData {
                 Throw "Failed to fetch bulk company data: $_"
             }
 
-            if ($SingleGraphQueries) {
-                foreach ($SingleGraphQuery in $SingleGraphQueries) {
-                    $Request = $SingleGraphQuery.graphRequest
-                    $Data = New-GraphGetRequest @Request -tenantid $TenantFilter
-                    $Entity = @{
-                        PartitionKey = $TenantFilter
-                        SyncType     = $SyncType
-                        RowKey       = $SingleGraphQuery.id
-                        Data         = [string]($Data | ConvertTo-Json -Depth 10 -Compress)
-                    }
-                    $null = Add-CIPPAzDataTableEntity @CacheTable -Entity $Entity -Force
+            $TenantResults | Select-Object id, body | ForEach-Object {
+                $Data = $_.body.value ?? $_.body
+                if ($Data -match '^eyJ') {
+                    # base64 decode
+                    $Data = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($Data)) | ConvertFrom-Json
+                    $Data = $Data.Value
                 }
+
+                $Entity = @{
+                    PartitionKey = $TenantFilter
+                    RowKey       = $_.id
+                    SyncType     = $SyncType
+                    Data         = [string]($Data | ConvertTo-Json -Depth 10 -Compress)
+                }
+                $null = Add-CIPPAzDataTableEntity @CacheTable -Entity $Entity -Force
             }
 
             if ($AdditionalRequests) {
@@ -219,11 +252,17 @@ function Sync-CippExtensionData {
                         }
                         if ($AdditionalResults) {
                             $AdditionalResults | ForEach-Object {
+                                $Data = $_.body.value ?? $_.body
+                                if ($Data -match '^eyJ') {
+                                    # base64 decode
+                                    $Data = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($Data)) | ConvertFrom-Json
+                                    $Data = $Data.Value
+                                }
                                 $Entity = @{
                                     PartitionKey = $TenantFilter
                                     SyncType     = $SyncType
                                     RowKey       = '{0}_{1}' -f $ParentId, $_.id
-                                    Data         = [string]($_.body.value | ConvertTo-Json -Depth 10 -Compress)
+                                    Data         = [string]($Data | ConvertTo-Json -Depth 10 -Compress)
                                 }
                                 try {
                                     $null = Add-CIPPAzDataTableEntity @CacheTable -Entity $Entity -Force
@@ -236,17 +275,23 @@ function Sync-CippExtensionData {
                     }
                 }
             }
+        }
 
-            $TenantResults | Select-Object id, body | ForEach-Object {
+        if ($SingleGraphQueries) {
+            foreach ($SingleGraphQuery in $SingleGraphQueries) {
+                $Request = $SingleGraphQuery.graphRequest
+                $Data = New-GraphGetRequest @Request -tenantid $TenantFilter
                 $Entity = @{
                     PartitionKey = $TenantFilter
-                    RowKey       = $_.id
                     SyncType     = $SyncType
-                    Data         = [string]($_.body.value | ConvertTo-Json -Depth 10 -Compress)
+                    RowKey       = $SingleGraphQuery.id
+                    Data         = [string]($Data | ConvertTo-Json -Depth 10 -Compress)
                 }
                 $null = Add-CIPPAzDataTableEntity @CacheTable -Entity $Entity -Force
             }
         }
+
+
         $LastSync.LastSync = [datetime]::UtcNow.ToString('yyyy-MM-ddTHH:mm:ssZ')
         $LastSync.Status = 'Completed'
         $LastSync.Error = ''
