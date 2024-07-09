@@ -2,7 +2,31 @@ function Invoke-CIPPStandardEnableOnlineArchiving {
     <#
     .FUNCTIONALITY
     Internal
+    .APINAME
+    EnableOnlineArchiving
+    .CAT
+    Exchange Standards
+    .TAG
+    "lowimpact"
+    .HELPTEXT
+    Enables the In-Place Online Archive for all UserMailboxes with a valid license.
+    .ADDEDCOMPONENT
+    .LABEL
+    Enable Online Archive for all users
+    .IMPACT
+    Low Impact
+    .POWERSHELLEQUIVALENT
+    Enable-Mailbox -Archive $true
+    .RECOMMENDEDBY
+    .DOCSDESCRIPTION
+    Enables the In-Place Online Archive for all UserMailboxes with a valid license.
+    .UPDATECOMMENTBLOCK
+    Run the Tools\Update-StandardsComments.ps1 script to update this comment block
     #>
+
+
+
+
     param($Tenant, $Settings)
 
     $MailboxPlans = @( 'ExchangeOnline', 'ExchangeOnlineEnterprise' )
@@ -56,3 +80,7 @@ function Invoke-CIPPStandardEnableOnlineArchiving {
         Add-CIPPBPAField -FieldName 'EnableOnlineArchiving' -FieldValue $filtered -StoreAs json -Tenant $Tenant
     }
 }
+
+
+
+

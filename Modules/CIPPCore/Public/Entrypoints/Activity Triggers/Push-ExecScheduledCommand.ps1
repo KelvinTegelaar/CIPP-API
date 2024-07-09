@@ -14,7 +14,7 @@ function Push-ExecScheduledCommand {
     Write-Host "Started Task: $($Item.Command) for tenant: $tenant"
     try {
         try {
-            Write-Host "Starting task: $($Item.Command) with parameters:  "
+            Write-Host "Starting task: $($Item.Command) with parameters: $($commandParameters | ConvertTo-Json)"
             $results = & $Item.Command @commandParameters
         } catch {
             $results = "Task Failed: $($_.Exception.Message)"
