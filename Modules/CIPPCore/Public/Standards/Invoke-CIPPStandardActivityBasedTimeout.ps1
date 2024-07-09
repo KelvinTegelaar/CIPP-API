@@ -2,7 +2,35 @@ function Invoke-CIPPStandardActivityBasedTimeout {
     <#
     .FUNCTIONALITY
     Internal
+    .APINAME
+    ActivityBasedTimeout
+    .CAT
+    Global Standards
+    .TAG
+    "mediumimpact"
+    "CIS"
+    "spo_idle_session_timeout"
+    .HELPTEXT
+    Enables and sets Idle session timeout for Microsoft 365 to 1 hour. This policy affects most M365 web apps
+    .ADDEDCOMPONENT
+    {"type":"Select","label":"Select value","name":"standards.ActivityBasedTimeout.timeout","values":[{"label":"1 Hour","value":"01:00:00"},{"label":"3 Hours","value":"03:00:00"},{"label":"6 Hours","value":"06:00:00"},{"label":"12 Hours","value":"12:00:00"},{"label":"24 Hours","value":"1.00:00:00"}]}
+    .LABEL
+    Enable Activity based Timeout
+    .IMPACT
+    Medium Impact
+    .POWERSHELLEQUIVALENT
+    Portal or Graph API
+    .RECOMMENDEDBY
+    "CIS"
+    .DOCSDESCRIPTION
+    Enables and sets Idle session timeout for Microsoft 365 to 1 hour. This policy affects most M365 web apps
+    .UPDATECOMMENTBLOCK
+    Run the Tools\Update-StandardsComments.ps1 script to update this comment block
     #>
+
+
+
+
     param($Tenant, $Settings)
 
     # Input validation
@@ -63,4 +91,8 @@ function Invoke-CIPPStandardActivityBasedTimeout {
     }
 
 }
+
+
+
+
 
