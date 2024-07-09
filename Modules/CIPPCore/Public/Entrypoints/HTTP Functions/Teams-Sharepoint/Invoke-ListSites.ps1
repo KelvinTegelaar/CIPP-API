@@ -29,7 +29,7 @@ Function Invoke-ListSites {
         } else {
             $ParsedRequest = $Result
         }
-        $GraphRequest = $ParsedRequest | Select-Object @{ Name = 'UPN'; Expression = { $_.'Owner Principal Name' } },
+        $GraphRequest = $ParsedRequest | Select-Object AutoMapUrl, @{ Name = 'UPN'; Expression = { $_.'Owner Principal Name' } },
         @{ Name = 'displayName'; Expression = { $_.'Owner Display Name' } },
         @{ Name = 'LastActive'; Expression = { $_.'Last Activity Date' } },
         @{ Name = 'FileCount'; Expression = { [int]$_.'File Count' } },
@@ -41,14 +41,28 @@ Function Invoke-ListSites {
 
         #Temporary workaround for url as report is broken.
         #This API is so stupid its great.
-        $URLs = (New-GraphGetRequest -uri 'https://graph.microsoft.com/v1.0/sites/getAllSites?$select=SharePointIds' -asapp $true -tenantid $TenantFilter).SharePointIds
-
+        $URLs = New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/sites/getAllSites?$select=SharePointIds,name,webUrl,displayName,siteCollection' -asapp $true -tenantid $TenantFilter
+        $int = 0
+        if ($Type -eq 'SharePointSiteUsage') {
+            $Requests = foreach ($url in $URLs) {
+                @{
+                    id     = $int++
+                    method = 'GET'
+                    url    = "sites/$($url.sharepointIds.siteId)/lists?`$select=id,name,list,parentReference"
+                }
+            }
+            $Requests = (New-GraphBulkRequest -tenantid $TenantFilter -scope 'https://graph.microsoft.com/.default' -Requests @($Requests) -asapp $true).body.value | Where-Object { $_.list.template -eq 'DocumentLibrary' }
+        }
         $GraphRequest = foreach ($site in $GraphRequest) {
-            $site.URL = ($URLs | Where-Object { $_.siteId -eq $site.SiteId }).siteUrl
+            $SiteURLs = ($URLs.SharePointIds | Where-Object { $_.siteId -eq $site.SiteId })
+            $site.URL = $SiteURLs.siteUrl
+            $ListId = ($Requests | Where-Object { $_.parentReference.siteId -like "*$($SiteURLs.siteId)*" }).id
+            $site.AutoMapUrl = "tenantId=$($SiteUrls.tenantId)&webId={$($SiteUrls.webId)}&siteid={$($SiteURLs.siteId)}&webUrl=$($SiteURLs.siteUrl)&listId={$($ListId)}"
             $site
         }
 
         $StatusCode = [HttpStatusCode]::OK
+    
     } catch {
         $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
         $StatusCode = [HttpStatusCode]::Forbidden
