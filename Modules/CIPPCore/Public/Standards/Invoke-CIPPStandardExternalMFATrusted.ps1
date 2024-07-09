@@ -2,7 +2,32 @@ function Invoke-CIPPStandardExternalMFATrusted {
     <#
     .FUNCTIONALITY
     Internal
+    .APINAME
+    ExternalMFATrusted
+    .CAT
+    Entra (AAD) Standards
+    .TAG
+    "lowimpact"
+    .HELPTEXT
+    Sets the state of the Cross-tenant access setting to trust external MFA. This allows guest users to use their home tenant MFA to access your tenant.
+    .ADDEDCOMPONENT
+    {"type":"Select","label":"Select value","name":"standards.ExternalMFATrusted.state","values":[{"label":"Enabled","value":"true"},{"label":"Disabled","value":"false"}]}
+    .LABEL
+    Sets the Cross-tenant access setting to trust external MFA
+    .IMPACT
+    Low Impact
+    .POWERSHELLEQUIVALENT
+    Update-MgBetaPolicyCrossTenantAccessPolicyDefault
+    .RECOMMENDEDBY
+    .DOCSDESCRIPTION
+    Sets the state of the Cross-tenant access setting to trust external MFA. This allows guest users to use their home tenant MFA to access your tenant.
+    .UPDATECOMMENTBLOCK
+    Run the Tools\Update-StandardsComments.ps1 script to update this comment block
     #>
+
+
+
+
     param($Tenant, $Settings)
 
     $ExternalMFATrusted = (New-GraphGetRequest -uri 'https://graph.microsoft.com/v1.0/policies/crossTenantAccessPolicy/default?$select=inboundTrust' -tenantid $Tenant)
@@ -48,3 +73,7 @@ function Invoke-CIPPStandardExternalMFATrusted {
         }
     }
 }
+
+
+
+
