@@ -3,10 +3,19 @@ function Add-CIPPScheduledTask {
     param(
         [pscustomobject]$Task,
         [bool]$Hidden,
+        $DisallowDuplicateName = $false,
         [string]$SyncType = $null
     )
 
     $Table = Get-CIPPTable -TableName 'ScheduledTasks'
+    if ($DisallowDuplicateName) {
+        $Filter = "PartitionKey eq 'ScheduledTask' and Name eq '$($Task.Name)'"
+        $ExistingTask = (Get-CIPPAzDataTableEntity @Table -Filter $Filter)
+        if ($ExistingTask) {
+            return "Task with name $($Task.Name) already exists"
+        }
+    }
+
     $propertiesToCheck = @('Webhook', 'Email', 'PSA')
     $PostExecution = ($propertiesToCheck | Where-Object { $task.PostExecution.$_ -eq $true }) -join ','
     $Parameters = [System.Collections.Hashtable]@{}

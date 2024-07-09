@@ -43,7 +43,7 @@ function Set-CIPPForwarding {
         [string]$ExecutingUser,
         [string]$APIName = 'Forwarding',
         [string]$Forward,
-        [bool]$KeepCopy,
+        $KeepCopy,
         [bool]$Disable
     )
 
