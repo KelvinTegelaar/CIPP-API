@@ -607,9 +607,9 @@ function Invoke-HuduExtensionSync {
 
                     [System.Collections.Generic.List[PSCustomObject]]$CIPPLinksFormatted = @()
                     if ($EnableCIPP) {
-                        $CIPPLinksFormatted.add((Get-HuduLinkBlock -URL "$($CIPPURL)/identity/administration/users/view?userId=$($User.id)%26tenantDomain%3D$($Tenant.defaultDomainName)" -Icon 'far fa-eye' -Title 'CIPP - View User'))
-                        $CIPPLinksFormatted.add((Get-HuduLinkBlock -URL "$($CIPPURL)/identity/administration/users/edit?userId=$($User.id)%26tenantDomain%3D$($Tenant.defaultDomainName)" -Icon 'fas fa-user-cog' -Title 'CIPP - Edit User'))
-                        $CIPPLinksFormatted.add((Get-HuduLinkBlock -URL "$($CIPPURL)/identity/administration/ViewBec?userId=$($User.id)%26tenantDomain%3D$($Tenant.defaultDomainName)" -Icon 'fas fa-user-secret' -Title 'CIPP - Research Compromise'))
+                        $CIPPLinksFormatted.add((Get-HuduLinkBlock -URL "$($CIPPURL)/identity/administration/users/view?customerId=$($Tenant.customerid)&userId=$($User.id)&tenantDomain=$($Tenant.defaultDomainName)&userEmail=$($User.UserPrincipalName)" -Icon 'far fa-eye' -Title 'CIPP - View User'))
+                        $CIPPLinksFormatted.add((Get-HuduLinkBlock -URL "$($CIPPURL)/identity/administration/users/edit?customerId=$($Tenant.customerid)&userId=$($User.id)&tenantDomain=$($Tenant.defaultDomainName)&userEmail=$($User.UserPrincipalName)" -Icon 'fas fa-user-cog' -Title 'CIPP - Edit User'))
+                        $CIPPLinksFormatted.add((Get-HuduLinkBlock -URL "$($CIPPURL)/identity/administration/ViewBec?customerId=$($Tenant.customerid)&userId=$($User.id)&tenantDomain=$($Tenant.defaultDomainName)&userEmail=$($User.UserPrincipalName)" -Icon 'fas fa-user-secret' -Title 'CIPP - Research Compromise'))
                     }
 
                     [System.Collections.Generic.List[PSCustomObject]]$UserLinksFormatted = @()
