@@ -69,14 +69,20 @@ function New-CIPPBackup {
             try {
                 $Result = Add-CIPPAzDataTableEntity @Table -entity $entity -Force
                 Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -message 'Created backup' -Sev 'Debug'
+                $State = 'Backup finished succesfully'
                 $Result
             } catch {
+                $State = 'Failed to write backup to table storage'
                 Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -message "Failed to create backup for Conditional Access Policies: $($_.Exception.Message)" -Sev 'Error'
                 [pscustomobject]@{'Results' = "Backup Creation failed: $($_.Exception.Message)" }
             }
         }
 
     }
-    return $BackupData
+    return [pscustomobject]@{
+        BackupName  = $RowKey
+        BackupState = $State
+        BackupData  = $BackupData
+    }
 }
 
