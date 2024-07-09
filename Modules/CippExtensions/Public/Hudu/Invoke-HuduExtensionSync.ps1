@@ -458,7 +458,7 @@ function Invoke-HuduExtensionSync {
                             $DisplayName
                         }) -join ', '
 
-                    $UserOneDriveDetails = $OneDriveDetails | Where-Object { $_.'Owner Principal Name' -eq $user.UserPrincipalName }
+                    $UserOneDriveDetails = $OneDriveDetails | Where-Object { $_.ownerPrincipalName -eq $user.UserPrincipalName }
 
 
 
