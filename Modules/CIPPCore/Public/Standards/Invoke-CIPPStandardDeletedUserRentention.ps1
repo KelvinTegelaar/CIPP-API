@@ -39,7 +39,7 @@ function Invoke-CIPPStandardDeletedUserRentention {
         Return
     }
 
-    # Backwards compatibility for pre v5.10.0
+    # Backwards compatibility for v5.9.4 and back
     if ($null -eq $Settings.Days) {
         $WantedState = 365
     } else {
