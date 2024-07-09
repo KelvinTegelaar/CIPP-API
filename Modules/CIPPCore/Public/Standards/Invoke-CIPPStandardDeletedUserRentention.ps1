@@ -47,7 +47,7 @@ function Invoke-CIPPStandardDeletedUserRentention {
     }
 
     $StateSetCorrectly = if ($CurrentInfo.deletedUserPersonalSiteRetentionPeriodInDays -eq $WantedState) { $true } else { $false }
-    $RetentionInYears = [int]$Settings.Days / 365
+    $RetentionInYears = $WantedState / 365
 
     If ($Settings.remediate -eq $true) {
         Write-Host 'Time to remediate'
