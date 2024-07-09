@@ -2,7 +2,33 @@ function Invoke-CIPPStandardSafeSendersDisable {
     <#
     .FUNCTIONALITY
     Internal
+    .APINAME
+    SafeSendersDisable
+    .CAT
+    Exchange Standards
+    .TAG
+    "mediumimpact"
+    .HELPTEXT
+    Loops through all users and removes the Safe Senders list. This is to prevent SPF bypass attacks, as the Safe Senders list is not checked by SPF.
+    .ADDEDCOMPONENT
+    .DISABLEDFEATURES
+    
+    .LABEL
+    Remove Safe Senders to prevent SPF bypass
+    .IMPACT
+    Medium Impact
+    .POWERSHELLEQUIVALENT
+    Set-MailboxJunkEmailConfiguration
+    .RECOMMENDEDBY
+    .DOCSDESCRIPTION
+    Loops through all users and removes the Safe Senders list. This is to prevent SPF bypass attacks, as the Safe Senders list is not checked by SPF.
+    .UPDATECOMMENTBLOCK
+    Run the Tools\Update-StandardsComments.ps1 script to update this comment block
     #>
+
+
+
+
     param($Tenant, $Settings)
 
     If ($Settings.remediate -eq $true) {
@@ -36,3 +62,7 @@ function Invoke-CIPPStandardSafeSendersDisable {
     }
 
 }
+
+
+
+

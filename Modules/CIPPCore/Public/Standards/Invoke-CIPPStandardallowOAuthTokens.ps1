@@ -2,7 +2,33 @@ function Invoke-CIPPStandardallowOAuthTokens {
     <#
     .FUNCTIONALITY
     Internal
+    .APINAME
+    allowOAuthTokens
+    .CAT
+    Entra (AAD) Standards
+    .TAG
+    "lowimpact"
+    .HELPTEXT
+    Allows you to use any software OAuth token generator
+    .DOCSDESCRIPTION
+    Enables OTP Software OAuth tokens for the tenant. This allows users to use OTP codes generated via software, like a password manager to be used as an authentication method.
+    .ADDEDCOMPONENT
+    .LABEL
+    Enable OTP Software OAuth tokens
+    .IMPACT
+    Low Impact
+    .POWERSHELLEQUIVALENT
+    Update-MgBetaPolicyAuthenticationMethodPolicyAuthenticationMethodConfiguration
+    .RECOMMENDEDBY
+    .DOCSDESCRIPTION
+    Allows you to use any software OAuth token generator
+    .UPDATECOMMENTBLOCK
+    Run the Tools\Update-StandardsComments.ps1 script to update this comment block
     #>
+
+
+
+
     param($Tenant, $Settings)
 
     $CurrentInfo = New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/policies/authenticationMethodsPolicy/authenticationMethodConfigurations/softwareOath' -tenantid $Tenant
@@ -39,3 +65,7 @@ function Invoke-CIPPStandardallowOAuthTokens {
 
 
 }
+
+
+
+
