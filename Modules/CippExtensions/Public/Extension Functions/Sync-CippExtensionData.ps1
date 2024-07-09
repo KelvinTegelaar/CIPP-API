@@ -43,7 +43,7 @@ function Sync-CippExtensionData {
                     @{
                         id     = 'Domains'
                         method = 'GET'
-                        url    = '/domains$top=999'
+                        url    = '/domains?$top=99'
                     },
                     @{
                         id     = 'Licenses'
