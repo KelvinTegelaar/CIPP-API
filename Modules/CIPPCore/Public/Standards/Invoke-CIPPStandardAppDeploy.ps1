@@ -1,31 +1,32 @@
 function Invoke-CIPPStandardAppDeploy {
     <#
     .FUNCTIONALITY
-    Internal
-    .APINAME
-    AppDeploy
-    .CAT
-    Entra Standards
-    .TAG
-    "lowimpact"
-    "CIS"
-    .HELPTEXT
-    Disables the ability for external users to share files they don't own. Sharing links can only be made for People with existing access
-    .DOCSDESCRIPTION
-    Disables the ability for external users to share files they don't own. Sharing links can only be made for People with existing access. This is a tenant wide setting and overrules any settings set on the site level
-    .ADDEDCOMPONENT
-    .LABEL
-    Disable Resharing by External Users
-    .IMPACT
-    High Impact
-    .POWERSHELLEQUIVALENT
-    Update-MgBetaAdminSharepointSetting
-    .RECOMMENDEDBY
-    "CIS"
-    .DOCSDESCRIPTION
-    Disables the ability for external users to share files they don't own. Sharing links can only be made for People with existing access
-    .UPDATECOMMENTBLOCK
-    Run the Tools\Update-StandardsComments.ps1 script to update this comment block
+        Internal
+    .COMPONENT
+        (APIName) AppDeploy
+    .SYNOPSIS
+        Deploy Application
+    .DESCRIPTION
+        (Helptext) Deploys selected applications to the tenant. Use a comma separated list of application IDs to deploy multiple applications. Permissions will be copied from the source application.
+        (DocsDescription) Uses the CIPP functionality that deploys applications across an entire tenant base as a standard.
+    .NOTES
+        CAT
+            Entra (AAD) Standards
+        TAG
+            "lowimpact"
+        ADDEDCOMPONENT
+            {"type":"input","name":"standards.AppDeploy.appids","label":"Application IDs, comma separated"}
+        LABEL
+            Deploy Application
+        IMPACT
+            Low Impact
+        POWERSHELLEQUIVALENT
+            Portal or Graph API
+        RECOMMENDEDBY
+        UPDATECOMMENTBLOCK
+            Run the Tools\Update-StandardsComments.ps1 script to update this comment block
+    .LINK
+        https://docs.cipp.app/user-documentation/tenant/standards/edit-standards
     #>
 
     param($Tenant, $Settings)
@@ -38,13 +39,8 @@ function Invoke-CIPPStandardAppDeploy {
                 Write-LogMessage -API 'Standards' -tenant $tenant -message "Added $App to $Tenant and update it's permissions" -sev Info
             } catch {
                 $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
-                Write-LogMessage -API 'Standards' -tenant $tenant -message "Failed to add app $App" -sev Error
+                Write-LogMessage -API 'Standards' -tenant $tenant -message "Failed to add app $App. Error: $ErrorMessage" -sev Error
             }
         }
     }
 }
-
-
-
-
-
