@@ -53,7 +53,7 @@ function Invoke-HuduExtensionSync {
 
     $ConfigTable = Get-Cipptable -tablename 'Config'
     $Config = Get-CippAzDataTableEntity @ConfigTable -Filter "PartitionKey eq 'InstanceProperties' and RowKey eq 'CIPPURL'"
-    $CIPPURL = $Config.Value
+    $CIPPURL = 'https://{0}' -f $Config.Value
 
     $ExtensionCache = Get-ExtensionCacheData -TenantFilter $Tenant.defaultDomainName
 
