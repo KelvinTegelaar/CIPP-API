@@ -15,7 +15,7 @@ function Register-CIPPExtensionScheduledTasks {
     $Tenants = Get-Tenants -IncludeErrors
 
     $Extensions = @('Hudu')
-
+    $MappedTenants = [System.Collections.Generic.List[string]]::new()
     foreach ($Extension in $Extensions) {
         $ExtensionConfig = $Config.$Extension
         if ($ExtensionConfig.Enabled -eq $true) {
@@ -45,6 +45,7 @@ function Register-CIPPExtensionScheduledTasks {
                     Write-Warning "Tenant $($Mapping.RowKey) not found"
                     continue
                 }
+                $MappedTenants.Add($Tenant.defaultDomainName)
                 foreach ($SyncType in $SyncTypes) {
                     $ExistingTask = $ScheduledTasks | Where-Object { $_.Tenant -eq $Tenant.defaultDomainName -and $_.SyncType -eq $SyncType }
                     if (!$ExistingTask -or $Reschedule.IsPresent) {
@@ -98,23 +99,24 @@ function Register-CIPPExtensionScheduledTasks {
             }
         } else {
             # remove existing scheduled tasks
-            $ScheduledTasks | Where-Object { $_.SyncType -eq $Extension } | ForEach-Object {
+            $PushTasks | Where-Object { $_.SyncType -eq $Extension } | ForEach-Object {
                 Write-Information "Extension Disabled: Cleaning up scheduled task $($_.Name) for tenant $($_.Tenant)"
                 $Entity = $_ | Select-Object -Property PartitionKey, RowKey
                 Remove-AzDataTableEntity @ScheduledTasksTable -Entity $Entity
             }
         }
     }
+    $MappedTenants = $MappedTenants | Sort-Object -Unique
 
     foreach ($Task in $ScheduledTasks) {
-        if ($Task.Tenant -notin $Tenants.defaultDomainName) {
+        if ($Task.Tenant -notin $MappedTenants) {
             Write-Information "Tenant Removed: Cleaning up scheduled task $($Task.Name) for tenant $($Task.TenantFilter)"
             $Entity = $Task | Select-Object -Property PartitionKey, RowKey
             Remove-AzDataTableEntity @ScheduledTasksTable -Entity $Entity
         }
     }
     foreach ($Task in $PushTasks) {
-        if ($Task.Tenant -notin $Tenants.defaultDomainName) {
+        if ($Task.Tenant -notin $MappedTenants) {
             Write-Information "Tenant Removed: Cleaning up scheduled task $($Task.Name) for tenant $($Task.TenantFilter)"
             $Entity = $Task | Select-Object -Property PartitionKey, RowKey
             Remove-AzDataTableEntity @ScheduledTasksTable -Entity $Entity

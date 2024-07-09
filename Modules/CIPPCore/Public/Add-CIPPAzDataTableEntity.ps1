@@ -14,7 +14,7 @@ function Add-CIPPAzDataTableEntity {
         try {
             Add-AzDataTableEntity -Context $Context -Force:$Force -CreateTableIfNotExists:$CreateTableIfNotExists -Entity $SingleEnt -ErrorAction Stop
         } catch [System.Exception] {
-            if ($_.Exception.ErrorCode -eq 'PropertyValueTooLarge' -or $_.Exception.ErrorCode -eq 'EntityTooLarge') {
+            if ($_.Exception.ErrorCode -eq 'PropertyValueTooLarge' -or $_.Exception.ErrorCode -eq 'EntityTooLarge' -or $_.Exception.ErrorCode -eq 'RequestBodyTooLarge') {
                 try {
                     $largePropertyNames = [System.Collections.ArrayList]::new()
                     $entitySize = 0
@@ -67,7 +67,7 @@ function Add-CIPPAzDataTableEntity {
                         $entityIndex = 0
 
                         while ($entitySize -gt $MaxRowSize) {
-                            Write-Host "Entity size is $entitySize. Splitting entity into multiple parts."
+                            Write-Information "Entity size is $entitySize. Splitting entity into multiple parts."
                             $newEntity = @{}
                             $newEntity['PartitionKey'] = $originalPartitionKey
                             if ($entityIndex -eq 0) {
@@ -126,7 +126,7 @@ function Add-CIPPAzDataTableEntity {
                         }
 
                         foreach ($row in $rows) {
-                            Write-Host "current entity is $($row.RowKey) with $($row.PartitionKey). Our size is $([System.Text.Encoding]::UTF8.GetByteCount($($row | ConvertTo-Json)))"
+                            Write-Information "current entity is $($row.RowKey) with $($row.PartitionKey). Our size is $([System.Text.Encoding]::UTF8.GetByteCount($($row | ConvertTo-Json)))"
                             Add-AzDataTableEntity -Context $Context -Force:$Force -CreateTableIfNotExists:$CreateTableIfNotExists -Entity $row
                         }
                     } else {
@@ -137,7 +137,7 @@ function Add-CIPPAzDataTableEntity {
                     throw "Error processing entity: $($_.Exception.Message) Linenumner: $($_.InvocationInfo.ScriptLineNumber)"
                 }
             } else {
-                Write-Host "THE ERROR IS $($_.Exception.ErrorCode). The size of the entity is $entitySize."
+                Write-Information "THE ERROR IS $($_.Exception.ErrorCode). The size of the entity is $entitySize."
                 throw $_
             }
         }
