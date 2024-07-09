@@ -24,11 +24,6 @@ function Get-HuduFieldMapping {
             FieldLabel = 'Asset Layout for M365 Devices'
             FieldType  = 'Layouts'
         }
-        [PSCustomObject]@{
-            FieldName  = 'Licenses'
-            FieldLabel = 'Asset Layout for M365 Licenses'
-            FieldType  = 'Layouts'
-        }
     )
 
     $Table = Get-CIPPTable -TableName Extensionsconfig
