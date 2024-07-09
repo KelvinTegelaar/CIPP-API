@@ -906,10 +906,12 @@ function Invoke-HuduExtensionSync {
             }
         } catch {
             $CompanyResult.Errors.add("Company: Failed to import domain: $_")
+            Write-LogMessage -tenant $Tenant.defaultDomainName -tenantid $Tenant.customerId -API 'Hudu Sync' -message "Company: Failed to import domain: $_" -level 'Error'
         }
-
+        Write-LogMessage -tenant $Tenant.defaultDomainName -tenantid $Tenant.customerId -API 'Hudu Sync' -message 'Company: Completed Sync' -level 'Information'
     } catch {
         $CompanyResult.Errors.add("Company: A fatal error occured: $_")
+        Write-LogMessage -tenant $Tenant.defaultDomainName -tenantid $Tenant.customerId -API 'Hudu Sync' -message "Company: A fatal error occured: $_" -level 'Error'
     }
     return $CompanyResult
 }

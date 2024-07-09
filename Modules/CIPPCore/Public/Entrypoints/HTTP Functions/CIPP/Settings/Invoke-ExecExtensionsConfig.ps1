@@ -69,7 +69,8 @@ Function Invoke-ExecExtensionsConfig {
 
         Add-CIPPAzDataTableEntity @Table -Entity $Config -Force | Out-Null
 
-        $CippUri = [System.Uri]$TriggerMetadata.Headers.'x-ms-original-url'
+        $Uri = $TriggerMetadata.Headers.referer ?? $TriggerMetadata.Headers.'x-ms-original-url'
+        $CippUri = [System.Uri]$Uri
         $AddObject = @{
             PartitionKey = 'InstanceProperties'
             RowKey       = 'CIPPURL'
