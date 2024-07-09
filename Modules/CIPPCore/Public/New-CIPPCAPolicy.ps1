@@ -91,11 +91,10 @@ function New-CIPPCAPolicy {
                     name = ($CheckExististing | Where-Object -Property displayName -EQ $Location.displayName).displayName
                 }
                 Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -message "Matched a CA policy with the existing Named Location: $($location.displayName)" -Sev 'Info'
- 
+
             } else {
                 if ($location.countriesAndRegions) { $location.countriesAndRegions = @($location.countriesAndRegions) }
                 $Body = ConvertTo-Json -InputObject $Location
-                Write-Host "Trying to create named location with: $body"
                 $GraphRequest = New-GraphPOSTRequest -uri 'https://graph.microsoft.com/beta/identity/conditionalAccess/namedLocations' -body $body -Type POST -tenantid $tenantfilter
                 Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -message "Created new Named Location: $($location.displayName)" -Sev 'Info'
                 [pscustomobject]@{
@@ -138,10 +137,10 @@ function New-CIPPCAPolicy {
                 Write-Host 'Replacement pattern for inclusions and exclusions is displayName.'
                 $users = New-GraphGETRequest -uri 'https://graph.microsoft.com/beta/users?$select=id,displayName' -tenantid $TenantFilter
                 $groups = New-GraphGETRequest -uri 'https://graph.microsoft.com/beta/groups?$select=id,displayName' -tenantid $TenantFilter
-        
+
                 if ($JSONObj.conditions.users.includeUsers -and $JSONObj.conditions.users.includeUsers -notin 'All', 'None', 'GuestOrExternalUsers') { $JSONObj.conditions.users.includeUsers = @(($users | Where-Object -Property displayName -In $JSONObj.conditions.users.includeUsers).id) }
                 if ($JSONObj.conditions.users.excludeUsers) { $JSONObj.conditions.users.excludeUsers = @(($users | Where-Object -Property displayName -In $JSONObj.conditions.users.excludeUsers).id) }
-        
+
                 # Check the included and excluded groups
                 foreach ($groupType in 'includeGroups', 'excludeGroups') {
                     if ($JSONObj.conditions.users.PSObject.Properties.Name -contains $groupType) {
@@ -152,7 +151,7 @@ function New-CIPPCAPolicy {
                 throw "Failed to replace displayNames for conditional access rule $($JSONObj.displayName): $($_.exception.message)"
                 Write-LogMessage -API 'Standards' -tenant $tenant -message "Failed to replace displayNames for conditional access rule $($JSONObj.displayName)" -sev 'Error'
             }
-        }    
+        }
     }
     $JsonObj.PSObject.Properties.Remove('LocationInfo')
     $RawJSON = $JSONObj | ConvertTo-Json -Depth 10 -Compress
@@ -177,7 +176,6 @@ function New-CIPPCAPolicy {
             return "Created policy $displayname for $tenantfilter"
         }
     } catch {
-        Write-Host "$($_.exception | ConvertTo-Json)"
         throw "Failed to create or update conditional access rule $($JSONObj.displayName): $($_.exception.message)"
         Write-LogMessage -API 'Standards' -tenant $tenant -message "Failed to create or update conditional access rule $($JSONObj.displayName): $($_.exception.message) " -sev 'Error'
     }
