@@ -69,12 +69,13 @@ Function Invoke-ExecExtensionsConfig {
 
         Add-CIPPAzDataTableEntity @Table -Entity $Config -Force | Out-Null
 
+        #Write-Information ($Request.Headers | ConvertTo-Json)
         $AddObject = @{
             PartitionKey = 'InstanceProperties'
             RowKey       = 'CIPPURL'
-            Value        = ([System.Uri]$TriggerMetadata.Headers.referer).Host
-            Original     = $Uri
+            Value        = [string]([System.Uri]$Request.Headers.'x-ms-original-url').Host
         }
+        Write-Information ($AddObject | ConvertTo-Json -Compress)
         $ConfigTable = Get-CIPPTable -tablename 'Config'
         Add-AzDataTableEntity @ConfigTable -Entity $AddObject -Force
 
