@@ -14,7 +14,7 @@ function Add-CIPPAzDataTableEntity {
         try {
             Add-AzDataTableEntity -Context $Context -Force:$Force -CreateTableIfNotExists:$CreateTableIfNotExists -Entity $SingleEnt -ErrorAction Stop
         } catch [System.Exception] {
-            if ($_.Exception.ErrorCode -eq 'PropertyValueTooLarge' -or $_.Exception.ErrorCode -eq 'EntityTooLarge') {
+            if ($_.Exception.ErrorCode -eq 'PropertyValueTooLarge' -or $_.Exception.ErrorCode -eq 'EntityTooLarge' -or $_.Exception.ErrorCode -eq 'RequestBodyTooLarge') {
                 try {
                     $largePropertyNames = [System.Collections.ArrayList]::new()
                     $entitySize = 0

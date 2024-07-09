@@ -22,7 +22,7 @@ function Sync-CippExtensionData {
             Error        = ''
             LastSync     = 'Never'
         }
-        Add-CIPPAzDataTableEntity @Table -Entity $LastSync
+        $null = Add-CIPPAzDataTableEntity @Table -Entity $LastSync
     }
 
     try {
@@ -172,13 +172,14 @@ function Sync-CippExtensionData {
                     RowKey       = 'Mailboxes'
                     Data         = [string]($Mailboxes | ConvertTo-Json -Depth 10 -Compress)
                 }
-                Add-CIPPAzDataTableEntity @CacheTable -Entity $Entity -Force
+                $null = Add-CIPPAzDataTableEntity @CacheTable -Entity $Entity -Force
             }
         }
 
         if ($TenantRequests) {
+            Write-Information "Requesting tenant information for $TenantFilter $SyncType"
             try {
-                $TenantResults = New-GraphBulkRequest -Requests $TenantRequests -tenantid $TenantFilter
+                $TenantResults = New-GraphBulkRequest -Requests @($TenantRequests) -tenantid $TenantFilter
             } catch {
                 Throw "Failed to fetch bulk company data: $_"
             }
@@ -193,7 +194,7 @@ function Sync-CippExtensionData {
                         RowKey       = $SingleGraphQuery.id
                         Data         = [string]($Data | ConvertTo-Json -Depth 10 -Compress)
                     }
-                    Add-CIPPAzDataTableEntity @CacheTable -Entity $Entity -Force
+                    $null = Add-CIPPAzDataTableEntity @CacheTable -Entity $Entity -Force
                 }
             }
 
@@ -210,18 +211,28 @@ function Sync-CippExtensionData {
                             }
                         }
                     }
-                    #Write-Information ($AdditionalRequestQueries | ConvertTo-Json -Depth 10 -Compress)
                     if (($AdditionalRequestQueries | Measure-Object).Count -gt 0) {
-                        $AdditionalResults = New-GraphBulkRequest -Requests $AdditionalRequestQueries -tenantid $TenantFilter
-                        $AdditionalResults | ForEach-Object {
-                            $Entity = @{
-                                PartitionKey = $TenantFilter
-                                SyncType     = $SyncType
-                                RowKey       = '{0}_{1}' -f $ParentId, $_.id
-                                Data         = [string]($_.body.value | ConvertTo-Json -Depth 10 -Compress)
-                            }
-                            Add-CIPPAzDataTableEntity @CacheTable -Entity $Entity -Force
+                        try {
+                            $AdditionalResults = New-GraphBulkRequest -Requests @($AdditionalRequestQueries) -tenantid $TenantFilter
+                        } catch {
+                            throw $_
                         }
+                        if ($AdditionalResults) {
+                            $AdditionalResults | ForEach-Object {
+                                $Entity = @{
+                                    PartitionKey = $TenantFilter
+                                    SyncType     = $SyncType
+                                    RowKey       = '{0}_{1}' -f $ParentId, $_.id
+                                    Data         = [string]($_.body.value | ConvertTo-Json -Depth 10 -Compress)
+                                }
+                                try {
+                                    $null = Add-CIPPAzDataTableEntity @CacheTable -Entity $Entity -Force
+                                } catch {
+                                    throw $_
+                                }
+                            }
+                        }
+
                     }
                 }
             }
@@ -233,7 +244,7 @@ function Sync-CippExtensionData {
                     SyncType     = $SyncType
                     Data         = [string]($_.body.value | ConvertTo-Json -Depth 10 -Compress)
                 }
-                Add-CIPPAzDataTableEntity @CacheTable -Entity $Entity -Force
+                $null = Add-CIPPAzDataTableEntity @CacheTable -Entity $Entity -Force
             }
         }
         $LastSync.LastSync = [datetime]::UtcNow.ToString('yyyy-MM-ddTHH:mm:ssZ')
