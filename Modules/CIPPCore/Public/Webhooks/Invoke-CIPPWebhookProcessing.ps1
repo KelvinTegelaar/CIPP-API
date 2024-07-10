@@ -10,13 +10,7 @@ function Invoke-CippWebhookProcessing {
         $ExecutingUser
     )
 
-    <# $ExtendedPropertiesIgnoreList = @(
-        'OAuth2:Authorize'
-        'OAuth2:Token'
-        'SAS:EndAuth'
-        'SAS:ProcessAuth'
-        'Login:reprocess'
-    ) #>
+
     Write-Host "Received data. Our Action List is $($data.CIPPAction)"
 
     $ActionList = ($data.CIPPAction | ConvertFrom-Json -ErrorAction SilentlyContinue).value
