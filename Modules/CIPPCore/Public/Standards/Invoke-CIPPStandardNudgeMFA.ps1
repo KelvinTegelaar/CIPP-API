@@ -2,7 +2,35 @@ function Invoke-CIPPStandardNudgeMFA {
     <#
     .FUNCTIONALITY
     Internal
+    .APINAME
+    NudgeMFA
+    .CAT
+    Entra (AAD) Standards
+    .TAG
+    "lowimpact"
+    .HELPTEXT
+    Sets the state of the registration campaign for the tenant
+    .DOCSDESCRIPTION
+    Sets the state of the registration campaign for the tenant. If enabled nudges users to set up the Microsoft Authenticator during sign-in.
+    .ADDEDCOMPONENT
+    {"type":"Select","label":"Select value","name":"standards.NudgeMFA.state","values":[{"label":"Enabled","value":"enabled"},{"label":"Disabled","value":"disabled"}]}
+    {"type":"number","name":"standards.NudgeMFA.snoozeDurationInDays","label":"Number of days to allow users to skip registering Authenticator (0-14, default is 1)","default":1}
+    .LABEL
+    Sets the state for the request to setup Authenticator
+    .IMPACT
+    Low Impact
+    .POWERSHELLEQUIVALENT
+    Update-MgPolicyAuthenticationMethodPolicy
+    .RECOMMENDEDBY
+    .DOCSDESCRIPTION
+    Sets the state of the registration campaign for the tenant
+    .UPDATECOMMENTBLOCK
+    Run the Tools\Update-StandardsComments.ps1 script to update this comment block
     #>
+
+
+
+
     param($Tenant, $Settings)
 
     $CurrentInfo = New-GraphGetRequest -Uri 'https://graph.microsoft.com/beta/policies/authenticationMethodsPolicy' -tenantid $Tenant
@@ -57,3 +85,7 @@ function Invoke-CIPPStandardNudgeMFA {
         }
     }
 }
+
+
+
+

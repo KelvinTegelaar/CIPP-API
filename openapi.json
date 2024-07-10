@@ -4405,46 +4405,6 @@
         }
       }
     },
-    "/ExecDisableEmailForward": {
-      "post": {
-        "description": "ExecDisableEmailForward",
-        "summary": "ExecDisableEmailForward",
-        "tags": [
-          "POST"
-        ],
-        "parameters": [
-          {
-            "required": true,
-            "schema": {
-              "type": "string"
-            },
-            "name": "tenantfilter",
-            "in": "body"
-          },
-          {
-            "required": true,
-            "schema": {
-              "type": "string"
-            },
-            "name": "user",
-            "in": "body"
-          }
-        ],
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "properties": {},
-                  "type": "object"
-                }
-              }
-            },
-            "description": "Successful operation"
-          }
-        }
-      }
-    },
     "/ExecEditCalendarPermissions": {
       "get": {
         "description": "ExecEditCalendarPermissions",

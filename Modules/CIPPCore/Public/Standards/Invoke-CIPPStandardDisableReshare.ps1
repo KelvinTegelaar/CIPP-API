@@ -2,7 +2,35 @@ function Invoke-CIPPStandardDisableReshare {
     <#
     .FUNCTIONALITY
     Internal
+    .APINAME
+    DisableReshare
+    .CAT
+    SharePoint Standards
+    .TAG
+    "highimpact"
+    "CIS"
+    .HELPTEXT
+    Disables the ability for external users to share files they don't own. Sharing links can only be made for People with existing access
+    .DOCSDESCRIPTION
+    Disables the ability for external users to share files they don't own. Sharing links can only be made for People with existing access. This is a tenant wide setting and overrules any settings set on the site level
+    .ADDEDCOMPONENT
+    .LABEL
+    Disable Resharing by External Users
+    .IMPACT
+    High Impact
+    .POWERSHELLEQUIVALENT
+    Update-MgBetaAdminSharepointSetting
+    .RECOMMENDEDBY
+    "CIS"
+    .DOCSDESCRIPTION
+    Disables the ability for external users to share files they don't own. Sharing links can only be made for People with existing access
+    .UPDATECOMMENTBLOCK
+    Run the Tools\Update-StandardsComments.ps1 script to update this comment block
     #>
+
+
+
+
     param($Tenant, $Settings)
     $CurrentInfo = New-GraphGetRequest -Uri 'https://graph.microsoft.com/beta/admin/sharepoint/settings' -tenantid $Tenant -AsApp $true
 
@@ -34,3 +62,7 @@ function Invoke-CIPPStandardDisableReshare {
         Add-CIPPBPAField -FieldName 'DisableReshare' -FieldValue $CurrentInfo.isResharingByExternalUsersEnabled -StoreAs bool -Tenant $tenant
     }
 }
+
+
+
+
