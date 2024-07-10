@@ -2,7 +2,33 @@ function Invoke-CIPPStandardDisableAddShortcutsToOneDrive {
     <#
     .FUNCTIONALITY
     Internal
+    .APINAME
+    DisableAddShortcutsToOneDrive
+    .CAT
+    SharePoint Standards
+    .TAG
+    "mediumimpact"
+    .HELPTEXT
+    When the feature is disabled the option Add shortcut to OneDrive will be removed. Any folders that have already been added will remain on the user's computer.
+    .DISABLEDFEATURES
+    
+    .ADDEDCOMPONENT
+    .LABEL
+    Disable Add Shortcuts To OneDrive
+    .IMPACT
+    Medium Impact
+    .POWERSHELLEQUIVALENT
+    Graph API or Portal
+    .RECOMMENDEDBY
+    .DOCSDESCRIPTION
+    When the feature is disabled the option Add shortcut to OneDrive will be removed. Any folders that have already been added will remain on the user's computer.
+    .UPDATECOMMENTBLOCK
+    Run the Tools\Update-StandardsComments.ps1 script to update this comment block
     #>
+
+
+
+
     param($Tenant, $Settings)
 
     If ($Settings.remediate -eq $true) {
@@ -95,3 +121,7 @@ function Invoke-CIPPStandardDisableAddShortcutsToOneDrive {
         Write-LogMessage @log
     }
 }
+
+
+
+

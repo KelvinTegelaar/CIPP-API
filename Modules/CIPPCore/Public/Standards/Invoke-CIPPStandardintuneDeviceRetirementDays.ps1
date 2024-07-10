@@ -2,7 +2,32 @@ function Invoke-CIPPStandardintuneDeviceRetirementDays {
     <#
     .FUNCTIONALITY
     Internal
+    .APINAME
+    intuneDeviceRetirementDays
+    .CAT
+    Intune Standards
+    .TAG
+    "lowimpact"
+    .HELPTEXT
+    A value between 0 and 270 is supported. A value of 0 disables retirement, retired devices are removed from Intune after the specified number of days.
+    .ADDEDCOMPONENT
+    {"type":"number","name":"standards.intuneDeviceRetirementDays.days","label":"Maximum days (0 equals disabled)"}
+    .LABEL
+    Set inactive device retirement days
+    .IMPACT
+    Low Impact
+    .POWERSHELLEQUIVALENT
+    Graph API
+    .RECOMMENDEDBY
+    .DOCSDESCRIPTION
+    A value between 0 and 270 is supported. A value of 0 disables retirement, retired devices are removed from Intune after the specified number of days.
+    .UPDATECOMMENTBLOCK
+    Run the Tools\Update-StandardsComments.ps1 script to update this comment block
     #>
+
+
+
+
     param($Tenant, $Settings)
 
     $CurrentInfo = (New-GraphGetRequest -Uri 'https://graph.microsoft.com/beta/deviceManagement/managedDeviceCleanupSettings' -tenantid $Tenant)
@@ -38,3 +63,7 @@ function Invoke-CIPPStandardintuneDeviceRetirementDays {
         Add-CIPPBPAField -FieldName 'intuneDeviceRetirementDays' -FieldValue $StateIsCorrect -StoreAs bool -Tenant $tenant
     }
 }
+
+
+
+

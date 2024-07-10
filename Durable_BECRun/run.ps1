@@ -10,7 +10,7 @@ Write-Host "Working on $UserName"
 try {
   $startDate = (Get-Date).AddDays(-7)
   $endDate = (Get-Date)
-  $auditLog = (New-ExoRequest -tenantid $Tenantfilter -cmdlet 'Get-AdminAuditLogConfig').UnifiedAuditLogIngestionEnabled 
+  $auditLog = (New-ExoRequest -tenantid $Tenantfilter -cmdlet 'Get-AdminAuditLogConfig').UnifiedAuditLogIngestionEnabled
   $7dayslog = if ($auditLog -eq $false) {
     $ExtractResult = 'AuditLog is disabled. Cannot perform full analysis'
   } else {
@@ -40,10 +40,10 @@ try {
       Write-Host "Retrieved $($logsTenant.count) logs" -ForegroundColor Yellow
       $logsTenant
     } while ($LogsTenant.count % 5000 -eq 0 -and $LogsTenant.count -ne 0)
-    $ExtractResult = 'Succesfully extracted logs from auditlog'
+    $ExtractResult = 'Successfully extracted logs from auditlog'
   }
   Try {
-    $URI = "https://graph.microsoft.com/beta/auditLogs/signIns?`$filter=(userId eq '$SuspectUser')&`$top=1&`$orderby=createdDateTime desc" 
+    $URI = "https://graph.microsoft.com/beta/auditLogs/signIns?`$filter=(userId eq '$SuspectUser')&`$top=1&`$orderby=createdDateTime desc"
     $LastSignIn = New-GraphGetRequest -uri $URI -tenantid $TenantFilter -noPagination $true -verbose | Select-Object @{ Name = 'CreatedDateTime'; Expression = { $(($_.createdDateTime | Out-String) -replace '\r\n') } },
     id,
     @{ Name = 'AppDisplayName'; Expression = { $_.resourceDisplayName } },
