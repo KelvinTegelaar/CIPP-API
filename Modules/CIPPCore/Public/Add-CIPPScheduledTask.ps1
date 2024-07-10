@@ -72,7 +72,8 @@ function Add-CIPPScheduledTask {
     try {
         Add-CIPPAzDataTableEntity @Table -Entity $entity -Force
     } catch {
-        return "Could not add task: $($_.Exception.Message)"
+        $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
+        return "Could not add task: $ErrorMessage"
     }
     return "Successfully added task: $($entity.Name)"
 }

@@ -30,7 +30,7 @@ function Add-CIPPBPAField {
             $Result["$fieldName"] = [bool]$FieldValue
         }
         'JSON' {
-            if ($FieldValue -eq $null) { $JsonString = '{}' } else { $JsonString = (ConvertTo-Json -Depth 15 -InputObject $FieldValue -Compress) }
+            if ($null -eq $FieldValue) { $JsonString = '{}' } else { $JsonString = (ConvertTo-Json -Depth 15 -InputObject $FieldValue -Compress) }
             $Result[$fieldName] = [string]$JsonString
         }
         'string' {
