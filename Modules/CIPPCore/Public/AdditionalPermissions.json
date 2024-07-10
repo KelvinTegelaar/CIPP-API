@@ -1,0 +1,15 @@
+[
+  {
+    "resourceAppId": "00000003-0000-0ff1-ce00-000000000000",
+    "resourceAccess": [{ "id": "AllProfiles.Manage", "type": "Scope" }]
+  },
+  {
+    "resourceAppId": "fb78d390-0c51-40cd-8e17-fdbfab77341b",
+    "resourceAccess": [
+      { "id": "AdminApi.AccessAsUser.All", "type": "Scope" },
+      { "id": "FfoPowerShell.AccessAsUser.All", "type": "Scope" },
+      { "id": "RemotePowerShell.AccessAsUser.All", "type": "Scope" },
+      { "id": "VivaFeatureAccessPolicy.Manage.All", "type": "Scope" }
+    ]
+  }
+]

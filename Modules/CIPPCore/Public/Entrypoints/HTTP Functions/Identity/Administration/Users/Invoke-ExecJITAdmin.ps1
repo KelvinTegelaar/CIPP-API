@@ -156,7 +156,7 @@ Function Invoke-ExecJITAdmin {
 
         $DisableTaskBody = @{
             TenantFilter  = $Request.Body.TenantFilter
-            Name          = "JIT Admin (disable): $Username"
+            Name          = "JIT Admin ($($Request.Body.ExpireAction)): $Username"
             Command       = @{
                 value = 'Set-CIPPUserJITAdmin'
                 label = 'Set-CIPPUserJITAdmin'
@@ -177,7 +177,7 @@ Function Invoke-ExecJITAdmin {
             ScheduledTime = $Request.Body.EndDate
         }
         Add-CIPPScheduledTask -Task $DisableTaskBody -hidden $false
-        $Results.Add("Scheduling JIT Admin disable task for $Username")
+        $Results.Add("Scheduling JIT Admin $($Request.Body.ExpireAction) task for $Username")
         $Body = @{
             Results = @($Results)
         }
