@@ -2,7 +2,33 @@ function Invoke-CIPPStandardMessageExpiration {
     <#
     .FUNCTIONALITY
     Internal
+    .APINAME
+    MessageExpiration
+    .CAT
+    Exchange Standards
+    .TAG
+    "lowimpact"
+    .HELPTEXT
+    Sets the transport message configuration to timeout a message at 12 hours.
+    .DOCSDESCRIPTION
+    Expires messages in the transport queue after 12 hours. Makes the NDR for failed messages show up faster for users. Default is 24 hours.
+    .ADDEDCOMPONENT
+    .LABEL
+    Lower Transport Message Expiration to 12 hours
+    .IMPACT
+    Low Impact
+    .POWERSHELLEQUIVALENT
+    Set-TransportConfig -MessageExpirationTimeout 12.00:00:00
+    .RECOMMENDEDBY
+    .DOCSDESCRIPTION
+    Sets the transport message configuration to timeout a message at 12 hours.
+    .UPDATECOMMENTBLOCK
+    Run the Tools\Update-StandardsComments.ps1 script to update this comment block
     #>
+
+
+
+
     param($Tenant, $Settings)
 
     $MessageExpiration = (New-ExoRequest -tenantid $Tenant -cmdlet 'Get-TransportConfig').messageExpiration
@@ -34,3 +60,7 @@ function Invoke-CIPPStandardMessageExpiration {
         Add-CIPPBPAField -FieldName 'messageExpiration' -FieldValue $MessageExpiration -StoreAs bool -Tenant $tenant
     }
 }
+
+
+
+
