@@ -70,15 +70,44 @@ function Invoke-HuduExtensionSync {
 
         $HuduDevices = $HuduDesktopDevices
 
-        $CustomerLinks = "<div class=`"nasa__content`">
-        <div class=`"nasa__block`"><button class=`"button`" onclick=`"window.open('https://admin.microsoft.com/Partner/BeginClientSession.aspx?CTID=$($Tenant.customerId)&CSDEST=o365admincenter')`"><h3><i class=`"fas fa-cogs`">&nbsp;&nbsp;&nbsp;</i>M365 Admin Portal</h3></button></div>
-        <div class=`"nasa__block`"><button class=`"button`" onclick=`"window.open('https://outlook.office365.com/ecp/?rfr=Admin_o365&exsvurl=1&delegatedOrg=$($Tenant.defaultDomainName)')`"><h3><i class=`"fas fa-mail-bulk`">&nbsp;&nbsp;&nbsp;</i>Exchange Admin Portal</h3></button></div>
-        <div class=`"nasa__block`"><button class=`"button`" onclick=`"window.open('https://entra.microsoft.com/$($Tenant.defaultDomainName)')`" ><h3><i class=`"fas fa-users-cog`">&nbsp;&nbsp;&nbsp;</i>Entra Portal</h3></button></div>
-		<div class=`"nasa__block`"><button class=`"button`" onclick=`"window.open('https://intune.microsoft.com/$($Tenant.defaultDomainName)/')`"><h3><i class=`"fas fa-laptop`">&nbsp;&nbsp;&nbsp;</i>Intune</h3></button></td></div>
-        <div class=`"nasa__block`"><button class=`"button`" onclick=`"window.open('https://admin.teams.microsoft.com/?delegatedOrg=$($Tenant.defaultDomainName)')`"><h3><i class=`"fas fa-users`">&nbsp;&nbsp;&nbsp;</i>Teams Portal</h3></button></div>
-        <div class=`"nasa__block`"><button class=`"button`" onclick=`"window.open('https://portal.azure.com/$($Tenant.defaultDomainName)')`"><h3><i class=`"fas fa-server`">&nbsp;&nbsp;&nbsp;</i>Azure Portal</h3></button></div>
-		</div>"
+        $Links = @(
+            @{
+                Title = 'M365 Admin Portal'
+                URL   = 'https://admin.microsoft.com/Partner/BeginClientSession.aspx?CTID={0}&CSDEST=o365admincenter' -f $Tenant.customerId
+                Icon  = 'fas fa-cogs'
+            }
+            @{
+                Title = 'Exchange Admin Portal'
+                URL   = 'https://outlook.office365.com/ecp/?rfr=Admin_o365&exsvurl=1&delegatedOrg={0}' -f $Tenant.initialDomainName
+                Icon  = 'fas fa-mail-bulk'
+            }
+            @{
+                Title = 'Entra Portal'
+                URL   = 'https://entra.microsoft.com/{0}' -f $Tenant.defaultDomainName
+                Icon  = 'fas fa-users-cog'
+            }
+            @{
+                Title = 'Intune'
+                URL   = 'https://intune.microsoft.com/{0}/' -f $Tenant.defaultDomainName
+                Icon  = 'fas fa-laptop'
+            }
+            @{
+                Title = 'Teams Portal'
+                URL   = 'https://admin.teams.microsoft.com/?delegatedOrg={0}' -f $Tenant.defaultDomainName
+                Icon  = 'fas fa-users'
+            }
+            @{
+                Title = 'Azure Portal'
+                URL   = 'https://portal.azure.com/{0}' -f $Tenant.defaultDomainName
+                Icon  = 'fas fa-server'
+            }
+        )
+        $FormattedLinks = foreach ($Link in $Links) {
+            Get-HuduLinkBlock @Link
+        }
 
+
+        $CustomerLinks = $FormattedLinks -join "`n"
 
         #$Users = Get-BulkResultByID -Results $TenantResults -ID 'Users'
         $Users = $ExtensionCache.Users
@@ -335,7 +364,13 @@ function Invoke-HuduExtensionSync {
             $CompanyResult.Errors.add("Company: Unable to fetch Mailbox Details $_")
             $MailboxDetailedFull = $null
         }#>
-        $MailboxDetailedFull = $ExtensionCache.Mailboxes
+
+        if ($ExtensionCache.Mailboxes) {
+            $MailboxDetailedFull = $ExtensionCache.Mailboxes
+        } else {
+            $CompanyResult.Errors.add('Company: Unable to fetch Mailbox Details')
+            $MailboxDetailedFull = $null
+        }
 
 
         <#try {
@@ -389,8 +424,8 @@ function Invoke-HuduExtensionSync {
                     $MailboxDetailedRequest = ''
                     $CASRequest = ''
 
-                    $CASRequest = $CASFull | Where-Object { $_.ExternalDirectoryObjectId -eq $User.iD }
-                    $MailboxDetailedRequest = $MailboxDetailedFull | Where-Object { $_.ExternalDirectoryObjectId -eq $User.iD }
+                    $CASRequest = $CASFull | Where-Object { $_.ExternalDirectoryObjectId -eq $User.id }
+                    $MailboxDetailedRequest = $MailboxDetailedFull | Where-Object { $_.Id -eq $User.id }
                     $StatsRequest = $MailboxStatsFull | Where-Object { $_.'userPrincipalName' -eq $User.UserPrincipalName }
 
                     <#try {
@@ -638,7 +673,7 @@ function Invoke-HuduExtensionSync {
 
                     $HuduUserCount = ($HuduUser | Measure-Object).count
                     if ($HuduUserCount -eq 1) {
-                        $ExistingAsset = Get-CIPPAzDataTableEntity @HuduAssetCache -Filter "PartitionKey eq 'HuduUser' and CompanyId eq $company_id and RowKey eq '$($HuduUser.id)'"
+                        $ExistingAsset = Get-CIPPAzDataTableEntity @HuduAssetCache -Filter "PartitionKey eq 'HuduUser' and CompanyId eq '$company_id' and RowKey eq '$($HuduUser.id)'"
                         $ExistingHash = $ExistingAsset.Hash
 
                         if (!$ExistingAsset -or $ExistingHash -ne $NewHash) {
@@ -797,7 +832,7 @@ function Invoke-HuduExtensionSync {
 
                 if ($HuduDevice) {
                     if (($HuduDevice | Measure-Object).count -eq 1) {
-                        $ExistingAsset = Get-CIPPAzDataTableEntity @HuduAssetCache -Filter "PartitionKey eq 'HuduDevice' and CompanyId eq $company_id and RowKey eq '$($HuduDevice.id)'"
+                        $ExistingAsset = Get-CIPPAzDataTableEntity @HuduAssetCache -Filter "PartitionKey eq 'HuduDevice' and CompanyId eq '$company_id' and RowKey eq '$($HuduDevice.id)'"
                         $ExistingHash = $ExistingAsset.Hash
 
                         if (!$ExistingAsset -or $ExistingAsset.Hash -ne $NewHash) {
@@ -864,7 +899,7 @@ function Invoke-HuduExtensionSync {
 			<header class='nasa__block-header'>
 			<h1><i class='fas fa-cogs icon'></i>Administrative Portals</h1>
 	 		</header>
-			<div>$CustomerLinks</div>
+			<div class=`"o365 nasa__content`">$CustomerLinks</div>
 			<br/>
 			</div>
 			<br/>
