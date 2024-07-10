@@ -21,7 +21,7 @@ Function Invoke-ExecUpdateSecureScore {
     }
     try {
         $GraphRequest = New-GraphPostRequest -uri "https://graph.microsoft.com/beta/security/secureScoreControlProfiles/$($Request.body.ControlName)" -tenantid $Request.body.TenantFilter -type PATCH -Body $($Body | ConvertTo-Json -Compress)
-        $Results = [pscustomobject]@{'Results' = "Succesfully set control to $($body.state) " }
+        $Results = [pscustomobject]@{'Results' = "Successfully set control to $($body.state) " }
     } catch {
         $Results = [pscustomobject]@{'Results' = "Failed to set Control to $($body.state) $($_.Exception.Message)" }
     }

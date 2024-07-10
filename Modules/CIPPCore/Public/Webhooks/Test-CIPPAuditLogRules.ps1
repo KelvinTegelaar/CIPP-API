@@ -51,11 +51,13 @@ function Test-CIPPAuditLogRules {
             try {
                 if ($Data.ExtendedProperties) {
                     $Data.CIPPExtendedProperties = ($Data.ExtendedProperties | ConvertTo-Json)
-                    if ($Data.CIPPExtendedProperties.RequestType -in $ExtendedPropertiesIgnoreList) {
-                        Write-Information 'No need to process this operation as its in our ignore list'
-                        continue
+                    $Data.ExtendedProperties | ForEach-Object {
+                        if ($_.Value -in $ExtendedPropertiesIgnoreList) {
+                            Write-Information 'No need to process this operation as its in our ignore list'
+                            continue
+                        }
+                        $Data | Add-Member -NotePropertyName $_.Name -NotePropertyValue $_.Value -Force -ErrorAction SilentlyContinue
                     }
-                    $Data.ExtendedProperties | ForEach-Object { $Data | Add-Member -NotePropertyName $_.Name -NotePropertyValue $_.Value -Force -ErrorAction SilentlyContinue }
                 }
                 if ($Data.DeviceProperties) {
                     $Data.CIPPDeviceProperties = ($Data.DeviceProperties | ConvertTo-Json)
