@@ -27,7 +27,7 @@ Function Invoke-ExecExtensionTest {
                 if ($ExistingIntegrations.Status -ne 'active') {
                     $ActivateRequest = Invoke-RestMethod -Uri 'https://app.usegradient.com/api/vendor-api/organization/status/active' -Method PATCH -Headers $GradientToken
                 }
-                $Results = [pscustomobject]@{'Results' = 'Succesfully Connected to Gradient' }
+                $Results = [pscustomobject]@{'Results' = 'Successfully Connected to Gradient' }
 
             }
             'CIPP-API' {
@@ -35,16 +35,22 @@ Function Invoke-ExecExtensionTest {
             }
             'NinjaOne' {
                 $token = Get-NinjaOneToken -configuration $Configuration.NinjaOne
-                $Results = [pscustomobject]@{'Results' = 'Succesfully Connected to NinjaOne' }
+                $Results = [pscustomobject]@{'Results' = 'Successfully Connected to NinjaOne' }
             }
             'PWPush' {
                 $Payload = 'This is a test from CIPP'
                 $PasswordLink = New-PwPushLink -Payload $Payload
                 if ($PasswordLink) {
-                    $Results = [pscustomobject]@{'Results' = 'Succesfully generated PWPush'; 'Link' = $PasswordLink }
+                    $Results = [pscustomobject]@{'Results' = 'Successfully generated PWPush'; 'Link' = $PasswordLink }
                 } else {
                     $Results = [pscustomobject]@{'Results' = 'PWPush is not enabled' }
                 }
+            }
+            'Hudu' {
+                Connect-HuduAPI -configuration $Configuration.Hudu
+                $Version = Get-HuduAppInfo
+                Write-Host ($Version | ConvertTo-Json)
+                $Results = [pscustomobject]@{'Results' = ('Successfully Connected to Hudu, version: {0}' -f $Version.version) }
             }
         }
     } catch {

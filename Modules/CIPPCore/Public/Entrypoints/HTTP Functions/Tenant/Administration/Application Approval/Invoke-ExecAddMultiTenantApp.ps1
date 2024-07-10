@@ -18,15 +18,10 @@ function Invoke-ExecAddMultiTenantApp {
 
     $Results = try {
         if ($request.body.CopyPermissions -eq $true) {
-            try {
-                $ExistingApp = New-GraphGETRequest -uri "https://graph.microsoft.com/beta/applications(appId='$($Request.body.AppId)')" -tenantid $ENV:tenantid -NoAuthCheck $true
-                $DelegateResourceAccess = $Existingapp.requiredResourceAccess
-                $ApplicationResourceAccess = $Existingapp.requiredResourceAccess
-            } catch {
-                'Failed to get existing permissions. The app does not exist in the partner tenant.'
-            }
+            $Command = 'ExecApplicationCopy'
+        } else {
+            $Command = 'ExecAddMultiTenantApp'
         }
-        #This needs to be moved to a queue.
         if ('allTenants' -in $Request.body.SelectedTenants.defaultDomainName) {
             $TenantFilter = (Get-Tenants).defaultDomainName
         } else {
@@ -36,7 +31,7 @@ function Invoke-ExecAddMultiTenantApp {
         foreach ($Tenant in $TenantFilter) {
             try {
                 Push-OutputBinding -Name QueueItem -Value ([pscustomobject]@{
-                        FunctionName              = 'ExecAddMultiTenantApp'
+                        FunctionName              = $Command
                         Tenant                    = $tenant
                         appId                     = $Request.body.appid
                         applicationResourceAccess = $ApplicationResourceAccess
