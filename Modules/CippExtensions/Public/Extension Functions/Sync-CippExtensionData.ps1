@@ -298,7 +298,7 @@ function Sync-CippExtensionData {
     } catch {
         $LastSync.Status = 'Failed'
         $LastSync.Error = [string](Get-CippException -Exception $_ | ConvertTo-Json -Compress)
-        throw "Failed to sync data: $($_.Exception.Message)"
+        throw "Failed to sync data: $(Get-NormalizedError -message $_.Exception.Message)"
     } finally {
         Add-CIPPAzDataTableEntity @Table -Entity $LastSync -Force
     }
