@@ -2,7 +2,33 @@ function Invoke-CIPPStandardSecurityDefaults {
     <#
     .FUNCTIONALITY
     Internal
+    .APINAME
+    SecurityDefaults
+    .CAT
+    Entra (AAD) Standards
+    .TAG
+    "highimpact"
+    .HELPTEXT
+    Enables security defaults for the tenant, for newer tenants this is enabled by default. Do not enable this feature if you use Conditional Access.
+    .DOCSDESCRIPTION
+    Enables SD for the tenant, which disables all forms of basic authentication and enforces users to configure MFA. Users are only prompted for MFA when a logon is considered 'suspect' by Microsoft.
+    .ADDEDCOMPONENT
+    .LABEL
+    Enable Security Defaults
+    .IMPACT
+    High Impact
+    .POWERSHELLEQUIVALENT
+    [Read more here](https://www.cyberdrain.com/automating-with-powershell-enabling-secure-defaults-and-sd-explained/)
+    .RECOMMENDEDBY
+    .DOCSDESCRIPTION
+    Enables security defaults for the tenant, for newer tenants this is enabled by default. Do not enable this feature if you use Conditional Access.
+    .UPDATECOMMENTBLOCK
+    Run the Tools\Update-StandardsComments.ps1 script to update this comment block
     #>
+
+
+
+
     param($Tenant, $Settings)
     $SecureDefaultsState = (New-GraphGetRequest -Uri 'https://graph.microsoft.com/beta/policies/identitySecurityDefaultsEnforcementPolicy' -tenantid $tenant)
 
@@ -36,3 +62,7 @@ function Invoke-CIPPStandardSecurityDefaults {
         Add-CIPPBPAField -FieldName 'SecurityDefaults' -FieldValue $SecureDefaultsState.IsEnabled -StoreAs bool -Tenant $tenant
     }
 }
+
+
+
+

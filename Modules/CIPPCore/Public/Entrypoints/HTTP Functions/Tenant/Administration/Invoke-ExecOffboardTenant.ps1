@@ -41,7 +41,7 @@ Function Invoke-ExecOffboardTenant {
 
                     $BulkResults = New-GraphBulkRequest -Requests $BulkRequests -tenantid $TenantFilter
 
-                    $results.Add('Succesfully removed guest users')
+                    $results.Add('Successfully removed guest users')
                     Write-LogMessage -user $ExecutingUser -API $APIName -message "CSP Guest users were removed" -Sev "Info" -tenant $TenantFilter
                 } else {
                     $results.Add('No guest users found to remove')
@@ -83,7 +83,7 @@ Function Invoke-ExecOffboardTenant {
 
                     try {
                         New-GraphPostRequest -type PATCH -body $patchContactBody -Uri "https://graph.microsoft.com/v1.0/organization/$($orgContacts.id)" -tenantid $Tenantfilter -ContentType "application/json"
-                        $results.Add("Succesfully removed notification contacts from $($property): $(($propertyContacts | Where-Object { $domains -contains $_.Split("@")[1] }))")
+                        $results.Add("Successfully removed notification contacts from $($property): $(($propertyContacts | Where-Object { $domains -contains $_.Split("@")[1] }))")
                         Write-LogMessage -user $ExecutingUser -API $APIName -message "Contacts were removed from $($property)" -Sev "Info" -tenant $TenantFilter
                     } catch {
                         $errors.Add("Failed to update property $($property): $($_.Exception.message)")
@@ -100,7 +100,7 @@ Function Invoke-ExecOffboardTenant {
             $request.body.RemoveVendorApps | ForEach-Object {
                 try {
                     $delete = (New-GraphPostRequest -type 'DELETE' -Uri "https://graph.microsoft.com/v1.0/serviceprincipals/$($_.value)" -tenantid $Tenantfilter)
-                    $results.Add("Succesfully removed app $($_.label)")
+                    $results.Add("Successfully removed app $($_.label)")
                     Write-LogMessage -user $ExecutingUser -API $APIName -message "App $($_.label) was removed" -Sev "Info" -tenant $TenantFilter
                 } catch {
                     #$results.Add("Failed to removed app $($_.displayName)")
@@ -118,7 +118,7 @@ Function Invoke-ExecOffboardTenant {
                 $sortedArray | ForEach-Object {
                     try {
                         $delete = (New-GraphPostRequest -type 'DELETE' -Uri "https://graph.microsoft.com/v1.0/serviceprincipals/$($_.id)" -tenantid $Tenantfilter)
-                        $results.Add("Succesfully removed app $($_.displayName)")
+                        $results.Add("Successfully removed app $($_.displayName)")
                         Write-LogMessage -user $ExecutingUser -API $APIName -message "App $($_.displayName) was removed" -Sev "Info" -tenant $TenantFilter
                     } catch {
                         #$results.Add("Failed to removed app $($_.displayName)")
@@ -141,7 +141,7 @@ Function Invoke-ExecOffboardTenant {
                 $delegatedAdminRelationships | ForEach-Object {
                     try {
                         $terminate = (New-GraphPostRequest -type 'POST' -Uri "https://graph.microsoft.com/v1.0/tenantRelationships/delegatedAdminRelationships/$($_.id)/requests" -body '{"action":"terminate"}' -ContentType 'application/json' -tenantid $env:TenantID)
-                        $results.Add("Succesfully terminated GDAP relationship $($_.displayName) from tenant $TenantFilter")
+                        $results.Add("Successfully terminated GDAP relationship $($_.displayName) from tenant $TenantFilter")
                         Write-LogMessage -user $ExecutingUser -API $APIName -message "GDAP Relationship $($_.displayName) has been terminated" -Sev "Info" -tenant $TenantFilter
                     } catch {
                         $($_.Exception.message)
@@ -160,7 +160,7 @@ Function Invoke-ExecOffboardTenant {
             # Terminate contract relationship
             try {
                 $terminate = (New-GraphPostRequest -type 'PATCH' -body '{ "relationshipToPartner": "none" }' -Uri "https://api.partnercenter.microsoft.com/v1/customers/$TenantFilter" -ContentType 'application/json' -scope 'https://api.partnercenter.microsoft.com/user_impersonation' -tenantid $env:TenantID)
-                $results.Add('Succesfully terminated contract relationship')
+                $results.Add('Successfully terminated contract relationship')
                 Write-LogMessage -user $ExecutingUser -API $APIName -message "Contract relationship terminated" -Sev "Info" -tenant $TenantFilter
             } catch {
                 #$results.Add("Failed to terminate contract relationship: $($_.Exception.message)")

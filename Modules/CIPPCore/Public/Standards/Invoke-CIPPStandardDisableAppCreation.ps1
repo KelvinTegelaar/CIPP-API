@@ -2,7 +2,35 @@ function Invoke-CIPPStandardDisableAppCreation {
     <#
     .FUNCTIONALITY
     Internal
+    .APINAME
+    DisableAppCreation
+    .CAT
+    Entra (AAD) Standards
+    .TAG
+    "lowimpact"
+    "CIS"
+    .HELPTEXT
+    Disables the ability for users to create App registrations in the tenant.
+    .DOCSDESCRIPTION
+    Disables the ability for users to create applications in Entra. Done to prevent breached accounts from creating an app to maintain access to the tenant, even after the breached account has been secured.
+    .ADDEDCOMPONENT
+    .LABEL
+    Disable App creation by users
+    .IMPACT
+    Low Impact
+    .POWERSHELLEQUIVALENT
+    Update-MgPolicyAuthorizationPolicy
+    .RECOMMENDEDBY
+    "CIS"
+    .DOCSDESCRIPTION
+    Disables the ability for users to create App registrations in the tenant.
+    .UPDATECOMMENTBLOCK
+    Run the Tools\Update-StandardsComments.ps1 script to update this comment block
     #>
+
+
+
+
     param($Tenant, $Settings)
     $CurrentInfo = New-GraphGetRequest -Uri 'https://graph.microsoft.com/beta/policies/authorizationPolicy/authorizationPolicy?$select=defaultUserRolePermissions' -tenantid $Tenant
 
@@ -36,3 +64,7 @@ function Invoke-CIPPStandardDisableAppCreation {
         Add-CIPPBPAField -FieldName 'UserAppCreationDisabled' -FieldValue $State -StoreAs bool -Tenant $tenant
     }
 }
+
+
+
+
