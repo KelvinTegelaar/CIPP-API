@@ -35,8 +35,12 @@ function Invoke-HuduExtensionSync {
     $DeviceLayoutId = $Mappings | Where-Object { $_.RowKey -eq 'Devices' } | Select-Object -ExpandProperty IntegrationId
     $CreateDevices = $Configuration.CreateMissingDevices
 
-    $null = Add-HuduAssetLayoutM365Field -AssetLayoutId $PeopleLayoutId
-    $null = Add-HuduAssetLayoutM365Field -AssetLayoutId $DeviceLayoutId
+    if ($PeopleLayoutId) {
+        $null = Add-HuduAssetLayoutM365Field -AssetLayoutId $PeopleLayoutId
+    }
+    if ($DeviceLayoutId) {
+        $null = Add-HuduAssetLayoutM365Field -AssetLayoutId $DeviceLayoutId
+    }
 
     $importDomains = $false
     #$monitorDomains = [System.Convert]::ToBoolean($env:monitorDomains)
@@ -60,11 +64,15 @@ function Invoke-HuduExtensionSync {
     try {
         $company_id = $TenantMap.IntegrationId
 
-        $PeopleLayout = Get-HuduAssetLayouts -Id $PeopleLayoutId
-        $People = Get-HuduAssets -CompanyId $company_id -AssetLayoutId $PeopleLayout.id
+        if ($PeopleLayoutId) {
+            $PeopleLayout = Get-HuduAssetLayouts -Id $PeopleLayoutId
+            $People = Get-HuduAssets -CompanyId $company_id -AssetLayoutId $PeopleLayout.id
+        }
 
-        $DesktopsLayout = Get-HuduAssetLayouts -Id $DeviceLayoutId
-        $HuduDesktopDevices = Get-HuduAssets -CompanyId $company_id -AssetLayoutId $DesktopsLayout.id
+        if ($DeviceLayoutId) {
+            $DesktopsLayout = Get-HuduAssetLayouts -Id $DeviceLayoutId
+            $HuduDesktopDevices = Get-HuduAssets -CompanyId $company_id -AssetLayoutId $DesktopsLayout.id
+        }
 
         $HuduRelations = Get-HuduRelations
 
@@ -109,13 +117,11 @@ function Invoke-HuduExtensionSync {
 
         $CustomerLinks = $FormattedLinks -join "`n"
 
-        #$Users = Get-BulkResultByID -Results $TenantResults -ID 'Users'
         $Users = $ExtensionCache.Users
         $licensedUsers = $Users | Where-Object { $null -ne $_.assignedLicenses.skuId } | Sort-Object userPrincipalName
 
         $CompanyResult.users = ($licensedUsers | Measure-Object).count
 
-        #$AllRoles = Get-BulkResultByID -Results $TenantResults -ID 'AllRoles'
         $AllRoles = $ExtensionCache.AllRoles
 
 
@@ -190,7 +196,6 @@ function Invoke-HuduExtensionSync {
 						</main>
 						</div>
 "
-        #$Licenses = Get-BulkResultByID -Results $TenantResults -ID 'Licenses'
         $Licenses = $ExtensionCache.Licenses
         if ($Licenses) {
             $pre = "<div class=`"nasa__block`"><header class='nasa__block-header'>
@@ -203,27 +208,10 @@ function Invoke-HuduExtensionSync {
             $licenseHTML = $licenseOut | ConvertTo-Html -PreContent $pre -PostContent $post -Fragment | Out-String
         }
 
-        #$devices = Get-BulkResultByID -Results $TenantResults -ID 'Devices'
         $devices = $ExtensionCache.Devices
         $CompanyResult.Devices = ($Devices | Measure-Object).count
 
-        #$DeviceCompliancePolicies = Get-BulkResultByID -Results $TenantResults -ID 'DeviceCompliancePolicies'
         $DeviceCompliancePolicies = $ExtensionCache.DeviceCompliancePolicies
-        <#[System.Collections.Generic.List[PSCustomObject]]$PolicyRequestArray = @()
-        foreach ($CompliancePolicy in $DeviceCompliancePolicies) {
-            $PolicyRequestArray.add(@{
-                    id     = $CompliancePolicy.id
-                    method = 'GET'
-                    url    = "/deviceManagement/deviceCompliancePolicies/$($CompliancePolicy.id)/deviceStatuses"
-                })
-        }
-
-        try {
-            $PolicyReturn = New-GraphBulkRequest -Headers $AuthHeaders -Requests $PolicyRequestArray -tenantid $TenantFilter
-        } catch {
-            $CompanyResult.Errors.add("Company: Unable to fetch Policies $_")
-            $PolicyReturn = $null
-        }#>
 
         $DeviceComplianceDetails = foreach ($Policy in $DeviceCompliancePolicies) {
             $DeviceStatuses = $ExtensionCache."DeviceCompliancePolicy_$($Policy.id)"
@@ -259,23 +247,7 @@ function Invoke-HuduExtensionSync {
             }
         }
 #>
-        #$AllGroups = Get-BulkResultByID -Results $TenantResults -ID 'Groups'
         $AllGroups = $ExtensionCache.Groups
-
-        <#[System.Collections.Generic.List[PSCustomObject]]$GroupRequestArray = @()
-        foreach ($Group in $AllGroups) {
-            $GroupRequestArray.add(@{
-                    id     = $Group.id
-                    method = 'GET'
-                    url    = "/groups/$($Group.id)/members"
-                })
-        }
-        try {
-            $GroupMembersReturn = New-GraphBulkRequest -Headers $AuthHeaders -Requests $GroupRequestArray -tenantid $TenantFilter
-        } catch {
-            $CompanyResult.Errors.add("Company: Unable to fetch Group Membership Details $_")
-            $GroupMembersReturn = $null
-        }#>
 
         $Groups = foreach ($Group in $AllGroups) {
             $Members = $ExtensionCache."Groups_$($Result.id)"
@@ -286,7 +258,6 @@ function Invoke-HuduExtensionSync {
             }
         }
 
-        #$AllConditionalAccessPolicies = Get-BulkResultByID -Results $TenantResults -ID 'ConditionalAccess'
         $AllConditionalAccessPolicies = $ExtensionCache.ConditionalAccess
 
         $ConditionalAccessMembers = foreach ($CAPolicy in $AllConditionalAccessPolicies) {
@@ -336,19 +307,13 @@ function Invoke-HuduExtensionSync {
         }
 
         if ($ExtensionCache.OneDriveUsage) {
-            #$OneDriveDetails = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/reports/getOneDriveUsageAccountDetail(period='D7')" -tenantid $TenantFilter | ConvertFrom-Csv
             $OneDriveDetails = $ExtensionCache.OneDriveUsage
         } else {
             $CompanyResult.Errors.add("Company: Unable to fetch One Drive Details $_")
             $OneDriveDetails = $null
         }
 
-        <#try {
-            $CASFull = New-GraphGetRequest -uri "https://outlook.office365.com/adminapi/beta/$($tenantfilter)/CasMailbox" -Tenantid $tenantfilter -scope ExchangeOnline -noPagination $true
-        } catch {
-            $CASFull = $null
-            $CompanyResult.Errors.add("Company: Unable to fetch CAS Mailbox Details $_")
-        }#>
+
 
         if ($ExtensionCache.CASMailbox) {
             $CASFull = $ExtensionCache.CASMailbox
@@ -358,12 +323,7 @@ function Invoke-HuduExtensionSync {
 
         }
 
-        <#try {
-            $MailboxDetailedFull = New-ExoRequest -TenantID $TenantFilter -cmdlet 'Get-Mailbox'
-        } catch {
-            $CompanyResult.Errors.add("Company: Unable to fetch Mailbox Details $_")
-            $MailboxDetailedFull = $null
-        }#>
+
 
         if ($ExtensionCache.Mailboxes) {
             $MailboxDetailedFull = $ExtensionCache.Mailboxes
@@ -373,12 +333,6 @@ function Invoke-HuduExtensionSync {
         }
 
 
-        <#try {
-            $MailboxStatsFull = New-GraphGetRequest -uri "https://graph.microsoft.com/v1.0/reports/getMailboxUsageDetail(period='D7')" -tenantid $TenantFilter | ConvertFrom-Csv
-        } catch {
-            $CompanyResult.Errors.add("Company: Unable to fetch Mailbox Statistic Details $_")
-            $MailboxStatsFull = $null
-        }#>
         if ($ExtensionCache.MailboxUsage) {
             $MailboxStatsFull = $ExtensionCache.MailboxUsage
         } else {
@@ -428,11 +382,7 @@ function Invoke-HuduExtensionSync {
                     $MailboxDetailedRequest = $MailboxDetailedFull | Where-Object { $_.Id -eq $User.id }
                     $StatsRequest = $MailboxStatsFull | Where-Object { $_.'userPrincipalName' -eq $User.UserPrincipalName }
 
-                    <#try {
-                        $PermsRequest = New-GraphGetRequest -uri "https://outlook.office365.com/adminapi/beta/$($tenantfilter)/Mailbox('$($User.ID)')/MailboxPermission" -Tenantid $tenantfilter -scope ExchangeOnline -noPagination $true
-                    } catch {
-                        $PermsRequest = $null
-                    }#>
+
                     $PermsRequest = $Permissions | Where-Object { $_.Identity -eq $User.ID }
 
                     $ParsedPerms = foreach ($Perm in $PermsRequest) {
@@ -665,43 +615,44 @@ function Invoke-HuduExtensionSync {
 
                     $UserBody = "<div>$AssignedPlansBlock<br />$UserLinksBlock<br /><div class=`"nasa__content`">$($UserOverviewBlock)$($UserMailDetailsBlock)$($OneDriveBlock)$($UserMailSettingsBlock)$($UserPoliciesBlock)</div><div class=`"nasa__content`">$($UserDevicesDetailsBlock)</div><div class=`"nasa__content`">$($UserGroupsBlock)</div></div>"
 
-                    $UserAssetFields = @{
-                        microsoft_365 = $UserBody
-                        email_address = $user.UserPrincipalName
-                    }
-                    $NewHash = Get-StringHash -String $UserBody
-
-                    $HuduUserCount = ($HuduUser | Measure-Object).count
-                    if ($HuduUserCount -eq 1) {
-                        $ExistingAsset = Get-CIPPAzDataTableEntity @HuduAssetCache -Filter "PartitionKey eq 'HuduUser' and CompanyId eq '$company_id' and RowKey eq '$($HuduUser.id)'"
-                        $ExistingHash = $ExistingAsset.Hash
-
-                        if (!$ExistingAsset -or $ExistingHash -ne $NewHash) {
-                            $null = Set-HuduAsset -asset_id $HuduUser.id -Name $HuduUser.name -company_id $company_id -asset_layout_id $PeopleLayout.id -Fields $UserAssetFields
-                            $AssetCache = [PSCustomObject]@{
-                                PartitionKey = 'HuduUser'
-                                RowKey       = [string]$HuduUser.id
-                                CompanyId    = [string]$company_id
-                                Hash         = [string]$NewHash
-                            }
-                            Add-CIPPAzDataTableEntity @HuduAssetCache -Entity $AssetCache -Force
+                    if ($PeopleLayoutId) {
+                        $UserAssetFields = @{
+                            microsoft_365 = $UserBody
+                            email_address = $user.UserPrincipalName
                         }
+                        $NewHash = Get-StringHash -String $UserBody
 
-                    } elseif ($HuduUserCount -eq 0) {
-                        if ($CreateUsers -eq $True) {
-                            $HuduUser = (New-HuduAsset -Name $User.DisplayName -company_id $company_id -asset_layout_id $PeopleLayout.id -Fields $UserAssetFields -primary_mail $user.UserPrincipalName).asset
-                            $AssetCache = [PSCustomObject]@{
-                                PartitionKey = 'HuduUser'
-                                RowKey       = [string]$HuduUser.id
-                                CompanyId    = [string]$company_id
-                                Hash         = [string]$NewHash
+                        $HuduUserCount = ($HuduUser | Measure-Object).count
+                        if ($HuduUserCount -eq 1) {
+                            $ExistingAsset = Get-CIPPAzDataTableEntity @HuduAssetCache -Filter "PartitionKey eq 'HuduUser' and CompanyId eq '$company_id' and RowKey eq '$($HuduUser.id)'"
+                            $ExistingHash = $ExistingAsset.Hash
+
+                            if (!$ExistingAsset -or $ExistingHash -ne $NewHash) {
+                                $null = Set-HuduAsset -asset_id $HuduUser.id -Name $HuduUser.name -company_id $company_id -asset_layout_id $PeopleLayout.id -Fields $UserAssetFields
+                                $AssetCache = [PSCustomObject]@{
+                                    PartitionKey = 'HuduUser'
+                                    RowKey       = [string]$HuduUser.id
+                                    CompanyId    = [string]$company_id
+                                    Hash         = [string]$NewHash
+                                }
+                                Add-CIPPAzDataTableEntity @HuduAssetCache -Entity $AssetCache -Force
                             }
-                            Add-CIPPAzDataTableEntity @HuduAssetCache -Entity $AssetCache -Force
-                        }
-                    } else {
-                        $CompanyResult.Errors.add("User $($User.UserPrincipalName): Multiple Users Matched to email address in Hudu: ($($HuduUser.name -join ', ') - $($($HuduUser.id -join ', '))) $_")
-                    }
 
+                        } elseif ($HuduUserCount -eq 0) {
+                            if ($CreateUsers -eq $True) {
+                                $HuduUser = (New-HuduAsset -Name $User.DisplayName -company_id $company_id -asset_layout_id $PeopleLayout.id -Fields $UserAssetFields -primary_mail $user.UserPrincipalName).asset
+                                $AssetCache = [PSCustomObject]@{
+                                    PartitionKey = 'HuduUser'
+                                    RowKey       = [string]$HuduUser.id
+                                    CompanyId    = [string]$company_id
+                                    Hash         = [string]$NewHash
+                                }
+                                Add-CIPPAzDataTableEntity @HuduAssetCache -Entity $AssetCache -Force
+                            }
+                        } else {
+                            $CompanyResult.Errors.add("User $($User.UserPrincipalName): Multiple Users Matched to email address in Hudu: ($($HuduUser.name -join ', ') - $($($HuduUser.id -join ', '))) $_")
+                        }
+                    }
 
                     $UserLink = "<a target=_blank href=$($HuduUser.url)>$($user.DisplayName)</a>"
 
@@ -830,13 +781,47 @@ function Invoke-HuduExtensionSync {
                 }
                 $NewHash = Get-StringHash -String $DeviceIntuneDetailshtml
 
-                if ($HuduDevice) {
-                    if (($HuduDevice | Measure-Object).count -eq 1) {
-                        $ExistingAsset = Get-CIPPAzDataTableEntity @HuduAssetCache -Filter "PartitionKey eq 'HuduDevice' and CompanyId eq '$company_id' and RowKey eq '$($HuduDevice.id)'"
-                        $ExistingHash = $ExistingAsset.Hash
+                if ($DeviceLayoutId) {
+                    if ($HuduDevice) {
+                        if (($HuduDevice | Measure-Object).count -eq 1) {
+                            $ExistingAsset = Get-CIPPAzDataTableEntity @HuduAssetCache -Filter "PartitionKey eq 'HuduDevice' and CompanyId eq '$company_id' and RowKey eq '$($HuduDevice.id)'"
+                            $ExistingHash = $ExistingAsset.Hash
 
-                        if (!$ExistingAsset -or $ExistingAsset.Hash -ne $NewHash) {
-                            $null = Set-HuduAsset -asset_id $HuduDevice.id -Name $HuduDevice.name -company_id $company_id -asset_layout_id $HuduDevice.asset_layout_id -Fields $DeviceAssetFields -PrimarySerial $Device.serialNumber
+                            if (!$ExistingAsset -or $ExistingAsset.Hash -ne $NewHash) {
+                                $null = Set-HuduAsset -asset_id $HuduDevice.id -Name $HuduDevice.name -company_id $company_id -asset_layout_id $HuduDevice.asset_layout_id -Fields $DeviceAssetFields -PrimarySerial $Device.serialNumber
+                                $AssetCache = [PSCustomObject]@{
+                                    PartitionKey = 'HuduDevice'
+                                    RowKey       = [string]$HuduDevice.id
+                                    CompanyId    = [string]$company_id
+                                    Hash         = [string]$NewHash
+                                }
+                                Add-CIPPAzDataTableEntity @HuduAssetCache -Entity $AssetCache -Force
+
+                                $HuduUser = $People | Where-Object { $_.primary_mail -eq $Device.userPrincipalName -or ($_.cards.integrator_name -eq 'cw_manage' -and $_.cards.data.communicationItems.communicationType -eq 'Email' -and $_.cards.data.communicationItems.value -eq $Device.userPrincipalName) }
+
+                                if ($HuduUser) {
+                                    $Relation = $HuduRelations | Where-Object { $_.fromable_type -eq 'Asset' -and $_.fromable_id -eq $HuduUser.id -and $_.toable_type -eq 'Asset' -and $_toable_id -eq $HuduDevice.id }
+                                    if (-not $Relation) {
+                                        try {
+                                            $null = New-HuduRelation -FromableType 'Asset' -FromableID $HuduUser.id -ToableType 'Asset' -ToableID $HuduDevice.id -ea stop
+                                        } catch {}
+                                    }
+                                }
+                            }
+                        } else {
+                            $CompanyResult.Errors.add("Device $($HuduDevice.name): Multiple devices matched on name or serial ($($device.serialNumber -join ', '))")
+                        }
+                    } else {
+                        if ($device.deviceType -in $IntuneDesktopDeviceTypes) {
+                            $DeviceLayoutID = $DesktopsLayout.id
+                            $DeviceCreation = $CreateDevices
+                        } else {
+                            $DeviceLayoutID = $MobilesLayout.id
+                            $DeviceCreation = $CreateMobileDevices
+                        }
+                        if ($DeviceCreation -eq $true) {
+                            $HuduDevice = (New-HuduAsset -Name $device.deviceName -company_id $company_id -asset_layout_id $DeviceLayoutID -Fields $DeviceAssetFields -PrimarySerial $Device.serialNumber).asset
+
                             $AssetCache = [PSCustomObject]@{
                                 PartitionKey = 'HuduDevice'
                                 RowKey       = [string]$HuduDevice.id
@@ -846,44 +831,12 @@ function Invoke-HuduExtensionSync {
                             Add-CIPPAzDataTableEntity @HuduAssetCache -Entity $AssetCache -Force
 
                             $HuduUser = $People | Where-Object { $_.primary_mail -eq $Device.userPrincipalName -or ($_.cards.integrator_name -eq 'cw_manage' -and $_.cards.data.communicationItems.communicationType -eq 'Email' -and $_.cards.data.communicationItems.value -eq $Device.userPrincipalName) }
-
                             if ($HuduUser) {
-                                $Relation = $HuduRelations | Where-Object { $_.fromable_type -eq 'Asset' -and $_.fromable_id -eq $HuduUser.id -and $_.toable_type -eq 'Asset' -and $_toable_id -eq $HuduDevice.id }
-                                if (-not $Relation) {
-                                    try {
-                                        $null = New-HuduRelation -FromableType 'Asset' -FromableID $HuduUser.id -ToableType 'Asset' -ToableID $HuduDevice.id -ea stop
-                                    } catch {}
+                                try {
+                                    $null = New-HuduRelation -FromableType 'Asset' -FromableID $HuduUser.id -ToableType 'Asset' -ToableID $HuduDevice.id -ea stop
+                                } catch {
+                                    # No need to do anything here as its will be when relations already exist.
                                 }
-                            }
-                        }
-                    } else {
-                        $CompanyResult.Errors.add("Device $($HuduDevice.name): Multiple devices matched on name or serial ($($device.serialNumber -join ', '))")
-                    }
-                } else {
-                    if ($device.deviceType -in $IntuneDesktopDeviceTypes) {
-                        $DeviceLayoutID = $DesktopsLayout.id
-                        $DeviceCreation = $CreateDevices
-                    } else {
-                        $DeviceLayoutID = $MobilesLayout.id
-                        $DeviceCreation = $CreateMobileDevices
-                    }
-                    if ($DeviceCreation -eq $true) {
-                        $HuduDevice = (New-HuduAsset -Name $device.deviceName -company_id $company_id -asset_layout_id $DeviceLayoutID -Fields $DeviceAssetFields -PrimarySerial $Device.serialNumber).asset
-
-                        $AssetCache = [PSCustomObject]@{
-                            PartitionKey = 'HuduDevice'
-                            RowKey       = [string]$HuduDevice.id
-                            CompanyId    = [string]$company_id
-                            Hash         = [string]$NewHash
-                        }
-                        Add-CIPPAzDataTableEntity @HuduAssetCache -Entity $AssetCache -Force
-
-                        $HuduUser = $People | Where-Object { $_.primary_mail -eq $Device.userPrincipalName -or ($_.cards.integrator_name -eq 'cw_manage' -and $_.cards.data.communicationItems.communicationType -eq 'Email' -and $_.cards.data.communicationItems.value -eq $Device.userPrincipalName) }
-                        if ($HuduUser) {
-                            try {
-                                $null = New-HuduRelation -FromableType 'Asset' -FromableID $HuduUser.id -ToableType 'Asset' -ToableID $HuduDevice.id -ea stop
-                            } catch {
-                                # No need to do anything here as its will be when relations already exist.
                             }
                         }
                     }
