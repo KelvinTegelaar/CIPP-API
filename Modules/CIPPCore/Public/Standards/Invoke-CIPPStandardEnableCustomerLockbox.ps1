@@ -2,7 +2,36 @@ function Invoke-CIPPStandardEnableCustomerLockbox {
     <#
     .FUNCTIONALITY
     Internal
+    .APINAME
+    EnableCustomerLockbox
+    .CAT
+    Global Standards
+    .TAG
+    "lowimpact"
+    "CIS"
+    "CustomerLockBoxEnabled"
+    .HELPTEXT
+    Enables Customer Lockbox that offers an approval process for Microsoft support to access organization data
+    .DOCSDESCRIPTION
+    Customer Lockbox ensures that Microsoft can't access your content to do service operations without your explicit approval. Customer Lockbox ensures only authorized requests allow access to your organizations data.
+    .ADDEDCOMPONENT
+    .LABEL
+    Enable Customer Lockbox
+    .IMPACT
+    Low Impact
+    .POWERSHELLEQUIVALENT
+    Set-OrganizationConfig -CustomerLockBoxEnabled $true
+    .RECOMMENDEDBY
+    "CIS"
+    .DOCSDESCRIPTION
+    Enables Customer Lockbox that offers an approval process for Microsoft support to access organization data
+    .UPDATECOMMENTBLOCK
+    Run the Tools\Update-StandardsComments.ps1 script to update this comment block
     #>
+
+
+
+
     param($Tenant, $Settings)
 
     $CustomerLockboxStatus = (New-ExoRequest -tenantid $Tenant -cmdlet 'Get-OrganizationConfig').CustomerLockboxEnabled
@@ -38,3 +67,7 @@ function Invoke-CIPPStandardEnableCustomerLockbox {
         Add-CIPPBPAField -FieldName 'CustomerLockboxEnabled' -FieldValue $CustomerLockboxStatus -StoreAs bool -Tenant $tenant
     }
 }
+
+
+
+

@@ -2,7 +2,34 @@ function Invoke-CIPPStandardFocusedInbox {
     <#
     .FUNCTIONALITY
     Internal
+    .APINAME
+    FocusedInbox
+    .CAT
+    Exchange Standards
+    .TAG
+    "lowimpact"
+    .HELPTEXT
+    Sets the default Focused Inbox state for the tenant. This can be overridden by the user.
+    .DOCSDESCRIPTION
+    Sets the default Focused Inbox state for the tenant. This can be overridden by the user in their Outlook settings. For more information, see [Microsoft's documentation.](https://support.microsoft.com/en-us/office/focused-inbox-for-outlook-f445ad7f-02f4-4294-a82e-71d8964e3978)
+    .ADDEDCOMPONENT
+    {"type":"Select","label":"Select value","name":"standards.FocusedInbox.state","values":[{"label":"Enabled","value":"enabled"},{"label":"Disabled","value":"disabled"}]}
+    .LABEL
+    Set Focused Inbox state
+    .IMPACT
+    Low Impact
+    .POWERSHELLEQUIVALENT
+    Set-OrganizationConfig -FocusedInboxOn $true or $false
+    .RECOMMENDEDBY
+    .DOCSDESCRIPTION
+    Sets the default Focused Inbox state for the tenant. This can be overridden by the user.
+    .UPDATECOMMENTBLOCK
+    Run the Tools\Update-StandardsComments.ps1 script to update this comment block
     #>
+
+
+
+
     param($Tenant, $Settings)
 
     # Input validation
@@ -45,3 +72,7 @@ function Invoke-CIPPStandardFocusedInbox {
         Add-CIPPBPAField -FieldName 'FocusedInboxCorrectState' -FieldValue $StateIsCorrect -StoreAs bool -Tenant $tenant
     }
 }
+
+
+
+

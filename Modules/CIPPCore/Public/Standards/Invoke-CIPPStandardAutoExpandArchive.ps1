@@ -2,7 +2,33 @@ function Invoke-CIPPStandardAutoExpandArchive {
     <#
     .FUNCTIONALITY
     Internal
+    .APINAME
+    AutoExpandArchive
+    .CAT
+    Exchange Standards
+    .TAG
+    "lowimpact"
+    .HELPTEXT
+    Enables auto-expanding archives for the tenant
+    .DOCSDESCRIPTION
+    Enables auto-expanding archives for the tenant. Does not enable archives for users.
+    .ADDEDCOMPONENT
+    .LABEL
+    Enable Auto-expanding archives
+    .IMPACT
+    Low Impact
+    .POWERSHELLEQUIVALENT
+    Set-OrganizationConfig -AutoExpandingArchive
+    .RECOMMENDEDBY
+    .DOCSDESCRIPTION
+    Enables auto-expanding archives for the tenant
+    .UPDATECOMMENTBLOCK
+    Run the Tools\Update-StandardsComments.ps1 script to update this comment block
     #>
+
+
+
+
     param($Tenant, $Settings)
     $CurrentState = (New-ExoRequest -tenantid $Tenant -cmdlet 'Get-OrganizationConfig').AutoExpandingArchiveEnabled
 
@@ -36,3 +62,7 @@ function Invoke-CIPPStandardAutoExpandArchive {
         Add-CIPPBPAField -FieldName 'AutoExpandingArchive' -FieldValue $CurrentState -StoreAs bool -Tenant $tenant
     }
 }
+
+
+
+
