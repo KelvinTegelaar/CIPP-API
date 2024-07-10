@@ -2,7 +2,34 @@ function Invoke-CIPPStandardCloudMessageRecall {
     <#
     .FUNCTIONALITY
     Internal
+    .APINAME
+    CloudMessageRecall
+    .CAT
+    Exchange Standards
+    .TAG
+    "lowimpact"
+    .HELPTEXT
+    Sets the Cloud Message Recall state for the tenant. This allows users to recall messages from the cloud.
+    .DOCSDESCRIPTION
+    Sets the default state for Cloud Message Recall for the tenant. By default this is enabled. You can read more about the feature [here.](https://techcommunity.microsoft.com/t5/exchange-team-blog/cloud-based-message-recall-in-exchange-online/ba-p/3744714)
+    .ADDEDCOMPONENT
+    {"type":"Select","label":"Select value","name":"standards.CloudMessageRecall.state","values":[{"label":"Enabled","value":"true"},{"label":"Disabled","value":"false"}]}
+    .LABEL
+    Set Cloud Message Recall state
+    .IMPACT
+    Low Impact
+    .POWERSHELLEQUIVALENT
+    Set-OrganizationConfig -MessageRecallEnabled
+    .RECOMMENDEDBY
+    .DOCSDESCRIPTION
+    Sets the Cloud Message Recall state for the tenant. This allows users to recall messages from the cloud.
+    .UPDATECOMMENTBLOCK
+    Run the Tools\Update-StandardsComments.ps1 script to update this comment block
     #>
+
+
+
+
     param($Tenant, $Settings)
 
     $CurrentState = (New-ExoRequest -tenantid $Tenant -cmdlet 'Get-OrganizationConfig').MessageRecallEnabled
@@ -48,3 +75,7 @@ function Invoke-CIPPStandardCloudMessageRecall {
 
 
 }
+
+
+
+

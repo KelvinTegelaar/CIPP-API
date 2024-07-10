@@ -2,7 +2,34 @@ function Invoke-CIPPStandardAtpPolicyForO365 {
     <#
     .FUNCTIONALITY
     Internal
+    .APINAME
+    AtpPolicyForO365
+    .CAT
+    Defender Standards
+    .TAG
+    "lowimpact"
+    "CIS"
+    .HELPTEXT
+    This creates a Atp policy that enables Defender for Office 365 for Sharepoint, OneDrive and Microsoft Teams.
+    .ADDEDCOMPONENT
+    {"type":"boolean","label":"Allow people to click through Protected View even if Safe Documents identified the file as malicious","name":"standards.AtpPolicyForO365.AllowSafeDocsOpen","default":false}
+    .LABEL
+    Default Atp Policy For O365
+    .IMPACT
+    Low Impact
+    .POWERSHELLEQUIVALENT
+    Set-AtpPolicyForO365
+    .RECOMMENDEDBY
+    "CIS"
+    .DOCSDESCRIPTION
+    This creates a Atp policy that enables Defender for Office 365 for Sharepoint, OneDrive and Microsoft Teams.
+    .UPDATECOMMENTBLOCK
+    Run the Tools\Update-StandardsComments.ps1 script to update this comment block
     #>
+
+
+
+
 
     param($Tenant, $Settings)
     $CurrentState = New-ExoRequest -tenantid $Tenant -cmdlet 'Get-AtpPolicyForO365' |
@@ -46,3 +73,7 @@ function Invoke-CIPPStandardAtpPolicyForO365 {
     }
 
 }
+
+
+
+

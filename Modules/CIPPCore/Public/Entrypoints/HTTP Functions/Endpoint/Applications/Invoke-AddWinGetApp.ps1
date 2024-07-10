@@ -24,7 +24,7 @@ Function Invoke-AddWinGetApp {
         'packageIdentifier' = "$($WinGetApp.PackageName)"
         'installExperience' = @{
             '@odata.type'  = 'microsoft.graph.winGetAppInstallExperience'
-            'runAsAccount' = 'user'
+            'runAsAccount' = 'system'
         }
     }
 
