@@ -20,17 +20,20 @@ Function Invoke-ExecExtensionMapping {
 
     if ($Request.Query.List) {
         switch ($Request.Query.List) {
-            'Halo' {
+            'HaloPSA' {
                 $body = Get-HaloMapping -CIPPMapping $Table
             }
-
-            'NinjaOrgs' {
+            'NinjaOne' {
                 $Body = Get-NinjaOneOrgMapping -CIPPMapping $Table
             }
-
-            'NinjaFields' {
+            'NinjaOneFields' {
                 $Body = Get-NinjaOneFieldMapping -CIPPMapping $Table
-
+            }
+            'Hudu' {
+                $Body = Get-HuduMapping -CIPPMapping $Table
+            }
+            'HuduFields' {
+                $Body = Get-HuduFieldMapping -CIPPMapping $Table
             }
         }
     }
@@ -38,14 +41,22 @@ Function Invoke-ExecExtensionMapping {
     try {
         if ($Request.Query.AddMapping) {
             switch ($Request.Query.AddMapping) {
-                'Halo' {
+                'HaloPSA' {
                     $body = Set-HaloMapping -CIPPMapping $Table -APIName $APIName -Request $Request
                 }
-                'NinjaOrgs' {
+                'NinjaOne' {
                     $Body = Set-NinjaOneOrgMapping -CIPPMapping $Table -APIName $APIName -Request $Request
                 }
-                'NinjaFields' {
+                'NinjaOneFields' {
                     $Body = Set-NinjaOneFieldMapping -CIPPMapping $Table -APIName $APIName -Request $Request -TriggerMetadata $TriggerMetadata
+                }
+                'Hudu' {
+                    $Body = Set-HuduMapping -CIPPMapping $Table -APIName $APIName -Request $Request
+                    Register-CIPPExtensionScheduledTasks
+                }
+                'HuduFields' {
+                    $Body = Set-ExtensionFieldMapping -CIPPMapping $Table -APIName $APIName -Request $Request -Extension 'Hudu'
+                    Register-CIPPExtensionScheduledTasks
                 }
             }
         }
