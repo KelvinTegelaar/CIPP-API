@@ -2,7 +2,36 @@ function Invoke-CIPPStandardSpoofWarn {
     <#
     .FUNCTIONALITY
     Internal
+    .APINAME
+    SpoofWarn
+    .CAT
+    Exchange Standards
+    .TAG
+    "lowimpact"
+    "CIS"
+    .HELPTEXT
+    Adds or removes indicators to e-mail messages received from external senders in Outlook. Works on all Outlook clients/OWA
+    .DOCSDESCRIPTION
+    Adds or removes indicators to e-mail messages received from external senders in Outlook. You can read more about this feature on [Microsoft's Exchange Team Blog.](https://techcommunity.microsoft.com/t5/exchange-team-blog/native-external-sender-callouts-on-email-in-outlook/ba-p/2250098)
+    .ADDEDCOMPONENT
+    {"type":"Select","label":"Select value","name":"standards.SpoofWarn.state","values":[{"label":"Enabled","value":"enabled"},{"label":"Disabled","value":"disabled"}]}
+    .LABEL
+    Enable or disable 'external' warning in Outlook
+    .IMPACT
+    Low Impact
+    .POWERSHELLEQUIVALENT
+    et-ExternalInOutlook –Enabled $true or $false
+    .RECOMMENDEDBY
+    "CIS"
+    .DOCSDESCRIPTION
+    Adds or removes indicators to e-mail messages received from external senders in Outlook. Works on all Outlook clients/OWA
+    .UPDATECOMMENTBLOCK
+    Run the Tools\Update-StandardsComments.ps1 script to update this comment block
     #>
+
+
+
+
     param($Tenant, $Settings)
 
     $CurrentInfo = (New-ExoRequest -tenantid $Tenant -cmdlet 'Get-ExternalInOutlook')
@@ -45,3 +74,7 @@ function Invoke-CIPPStandardSpoofWarn {
         }
     }
 }
+
+
+
+
