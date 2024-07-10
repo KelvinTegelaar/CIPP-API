@@ -2,7 +2,32 @@ function Invoke-CIPPStandardintuneDeviceReg {
     <#
     .FUNCTIONALITY
     Internal
+    .APINAME
+    intuneDeviceReg
+    .CAT
+    Intune Standards
+    .TAG
+    "mediumimpact"
+    .HELPTEXT
+    sets the maximum number of devices that can be registered by a user. A value of 0 disables device registration by users
+    .ADDEDCOMPONENT
+    {"type":"number","name":"standards.intuneDeviceReg.max","label":"Maximum devices (Enter 2147483647 for unlimited.)"}
+    .LABEL
+    Set Maximum Number of Devices per user
+    .IMPACT
+    Medium Impact
+    .POWERSHELLEQUIVALENT
+    Update-MgBetaPolicyDeviceRegistrationPolicy
+    .RECOMMENDEDBY
+    .DOCSDESCRIPTION
+    sets the maximum number of devices that can be registered by a user. A value of 0 disables device registration by users
+    .UPDATECOMMENTBLOCK
+    Run the Tools\Update-StandardsComments.ps1 script to update this comment block
     #>
+
+
+
+
     param($Tenant, $Settings)
     $PreviousSetting = New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/policies/deviceRegistrationPolicy' -tenantid $Tenant
     $StateIsCorrect = if ($PreviousSetting.userDeviceQuota -eq $Settings.max) { $true } else { $false }
@@ -38,3 +63,7 @@ function Invoke-CIPPStandardintuneDeviceReg {
         Add-CIPPBPAField -FieldName 'intuneDeviceReg' -FieldValue $StateIsCorrect -StoreAs bool -Tenant $tenant
     }
 }
+
+
+
+

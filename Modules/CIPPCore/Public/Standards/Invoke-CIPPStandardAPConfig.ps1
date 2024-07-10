@@ -20,7 +20,7 @@ function Invoke-CIPPStandardAPConfig {
                 DeploymentMode     = $DeploymentMode
                 assignto           = $settings.Assignto
                 devicenameTemplate = $Settings.DeviceNameTemplate
-                allowWhiteGlove    = $Settings.allowWhiteGlove
+                allowWhiteGlove    = $Settings.allowWhiteglove
                 CollectHash        = $Settings.CollectHash
                 hideChangeAccount  = $Settings.HideChangeAccount
                 hidePrivacy        = $Settings.HidePrivacy

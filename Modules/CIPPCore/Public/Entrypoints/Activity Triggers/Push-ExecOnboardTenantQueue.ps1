@@ -264,14 +264,14 @@ Function Push-ExecOnboardTenantQueue {
             $TenantOnboarding.Logs = [string](ConvertTo-Json -InputObject @($Logs) -Compress)
             Add-CIPPAzDataTableEntity @OnboardTable -Entity $TenantOnboarding -Force -ErrorAction Stop
 
-            $IsExcluded = (Get-Tenants -SkipList | Where-Object { $_.customerId -eq $Relationship.customer.tenantId } | Measure-Object).Count -gt 0
+            $ExcludedTenant = Get-Tenants -SkipList | Where-Object { $_.customerId -eq $Relationship.customer.tenantId }
+            $IsExcluded = ($ExcludedTenant | Measure-Object).Count -gt 0
             if ($IsExcluded) {
-                $Logs.Add([PSCustomObject]@{ Date = Get-Date -UFormat $DateFormat; Log = 'Tenant is excluded from CIPP, onboarding cannot continue.' })
+                $Logs.Add([PSCustomObject]@{ Date = Get-Date -UFormat $DateFormat; Log = ('Tenant is excluded from CIPP, onboarding cannot continue. Remove the exclusion from "{0}" ({1})' -f $ExcludedTenant.displayName, $ExcludedTenant.customerId) })
                 $TenantOnboarding.Status = 'failed'
                 $OnboardingSteps.Step4.Status = 'failed'
                 $OnboardingSteps.Step4.Message = 'Tenant excluded from CIPP, remove the exclusion and retry onboarding.'
             } else {
-
                 $Logs.Add([PSCustomObject]@{ Date = Get-Date -UFormat $DateFormat; Log = 'Clearing tenant cache' })
                 $y = 0
                 do {
