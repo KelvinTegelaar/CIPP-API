@@ -2,7 +2,34 @@ function Invoke-CIPPStandardAuditLog {
     <#
     .FUNCTIONALITY
     Internal
+    .APINAME
+    AuditLog
+    .CAT
+    Global Standards
+    .TAG
+    "lowimpact"
+    "CIS"
+    "mip_search_auditlog"
+    .HELPTEXT
+    Enables the Unified Audit Log for tracking and auditing activities. Also runs Enable-OrganizationCustomization if necessary.
+    .ADDEDCOMPONENT
+    .LABEL
+    Enable the Unified Audit Log
+    .IMPACT
+    Low Impact
+    .POWERSHELLEQUIVALENT
+    Enable-OrganizationCustomization
+    .RECOMMENDEDBY
+    "CIS"
+    .DOCSDESCRIPTION
+    Enables the Unified Audit Log for tracking and auditing activities. Also runs Enable-OrganizationCustomization if necessary.
+    .UPDATECOMMENTBLOCK
+    Run the Tools\Update-StandardsComments.ps1 script to update this comment block
     #>
+
+
+
+
     param($Tenant, $Settings)
     Write-Host ($Settings | ConvertTo-Json)
     $AuditLogEnabled = (New-ExoRequest -tenantid $Tenant -cmdlet 'Get-AdminAuditLogConfig' -Select UnifiedAuditLogIngestionEnabled).UnifiedAuditLogIngestionEnabled
@@ -48,3 +75,7 @@ function Invoke-CIPPStandardAuditLog {
         Add-CIPPBPAField -FieldName 'AuditLog' -FieldValue $AuditLogEnabled -StoreAs bool -Tenant $tenant
     }
 }
+
+
+
+

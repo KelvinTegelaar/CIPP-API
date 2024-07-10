@@ -2,7 +2,33 @@ function Invoke-CIPPStandardDisableM365GroupUsers {
     <#
     .FUNCTIONALITY
     Internal
+    .APINAME
+    DisableM365GroupUsers
+    .CAT
+    Entra (AAD) Standards
+    .TAG
+    "lowimpact"
+    .HELPTEXT
+    Restricts M365 group creation to certain admin roles. This disables the ability to create Teams, Sharepoint sites, Planner, etc
+    .DOCSDESCRIPTION
+    Users by default are allowed to create M365 groups. This restricts M365 group creation to certain admin roles. This disables the ability to create Teams, SharePoint sites, Planner, etc
+    .ADDEDCOMPONENT
+    .LABEL
+    Disable M365 Group creation by users
+    .IMPACT
+    Low Impact
+    .POWERSHELLEQUIVALENT
+    Update-MgBetaDirectorySetting
+    .RECOMMENDEDBY
+    .DOCSDESCRIPTION
+    Restricts M365 group creation to certain admin roles. This disables the ability to create Teams, Sharepoint sites, Planner, etc
+    .UPDATECOMMENTBLOCK
+    Run the Tools\Update-StandardsComments.ps1 script to update this comment block
     #>
+
+
+
+
     param($Tenant, $Settings)
     $CurrentState = (New-GraphGetRequest -Uri 'https://graph.microsoft.com/beta/settings' -tenantid $tenant) | Where-Object -Property displayname -EQ 'Group.unified'
 
@@ -53,3 +79,7 @@ function Invoke-CIPPStandardDisableM365GroupUsers {
     }
 
 }
+
+
+
+
