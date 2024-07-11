@@ -57,6 +57,11 @@ foreach ($task in $tasks) {
     }
 }
 if (($Batch | Measure-Object).Count -gt 0) {
+    # Create queue entry
+    $Queue = New-CippQueueEntry -Name 'Scheduled Tasks' -TotalTasks ($Batch | Measure-Object).Count
+    $QueueId = $Queue.RowKey
+    $Batch = $Batch | Select-Object *, @{Name = 'QueueId'; Expression = { $QueueId } }, @{Name = 'QueueName'; Expression = { '{0} - {1}' -f $_.TaskInfo.Name, ($_.TaskInfo.Tenant -ne 'AllTenants' ? $_.TaskInfo.Tenant : $_.Parameters.TenantFilter) } }
+
     $InputObject = [PSCustomObject]@{
         OrchestratorName = 'UserTaskOrchestrator'
         Batch            = @($Batch)
