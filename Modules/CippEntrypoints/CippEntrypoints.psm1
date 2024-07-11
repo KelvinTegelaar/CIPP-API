@@ -15,7 +15,7 @@ function Receive-CippHttpTrigger {
     Write-Host "Function: $($Request.Params.CIPPEndpoint)"
 
     $HttpTrigger = @{
-        Request         = $Request
+        Request         = [pscustomobject]($Request)
         TriggerMetadata = $TriggerMetadata
     }
 
