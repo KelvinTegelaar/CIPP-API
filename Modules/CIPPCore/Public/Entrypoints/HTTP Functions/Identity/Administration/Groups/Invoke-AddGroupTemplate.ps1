@@ -15,7 +15,7 @@ Function Invoke-AddGroupTemplate {
 
     $GUID = (New-Guid).GUID
     try {
-        if (!$Request.body.displayname) { throw 'You must enter a displayname' }
+        if (!$Request.body.displayName) { throw 'You must enter a displayname' }
 
         $object = [PSCustomObject]@{
             Displayname     = $request.body.displayname
