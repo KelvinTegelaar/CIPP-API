@@ -146,7 +146,7 @@ function Receive-CippOrchestrationTrigger {
 function Receive-CippActivityTrigger {
     Param($Item)
     try {
-        $Start = (Get-Date).ToUniversalTime()
+        $Start = Get-Date
         Set-Location (Get-Item $PSScriptRoot).Parent.Parent.FullName
 
         if ($Item.QueueId) {
@@ -190,7 +190,7 @@ function Receive-CippActivityTrigger {
             }
         }
 
-        $End = (Get-Date).ToUniversalTime()
+        $End = Get-Date
 
         try {
             $Stats = @{
