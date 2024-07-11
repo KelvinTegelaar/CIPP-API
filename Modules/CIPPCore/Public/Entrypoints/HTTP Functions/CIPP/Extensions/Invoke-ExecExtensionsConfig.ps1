@@ -56,7 +56,11 @@ Function Invoke-ExecExtensionsConfig {
                         $null = Set-AzKeyVaultSecret -VaultName $ENV:WEBSITE_DEPLOYMENT_ID -Name $APIKey -SecretValue (ConvertTo-SecureString -AsPlainText -Force -String $Request.Body.$APIKey.APIKey)
                     }
                 }
-                $Request.Body.$APIKey.APIKey = 'SentToKeyVault'
+                if ($Request.Body.$APIKey.PSObject.Properties -notcontains 'APIKey') {
+                    $Request.Body.$APIKey | Add-Member -MemberType NoteProperty -Name APIKey -Value 'SentToKeyVault' -PassThru
+                } else {
+                    $Request.Body.$APIKey.APIKey = 'SentToKeyVault'
+                }
             }
             $Request.Body.$APIKey = $Request.Body.$APIKey | Select-Object * -ExcludeProperty ResetPassword
         }
