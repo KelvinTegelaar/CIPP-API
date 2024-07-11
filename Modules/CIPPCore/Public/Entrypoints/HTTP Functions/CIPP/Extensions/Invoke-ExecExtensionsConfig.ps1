@@ -57,7 +57,7 @@ Function Invoke-ExecExtensionsConfig {
                     }
                 }
                 if ($Request.Body.$APIKey.PSObject.Properties -notcontains 'APIKey') {
-                    $Request.Body.$APIKey | Add-Member -MemberType NoteProperty -Name APIKey -Value 'SentToKeyVault' -PassThru
+                    $Request.Body.$APIKey | Add-Member -MemberType NoteProperty -Name APIKey -Value 'SentToKeyVault'
                 } else {
                     $Request.Body.$APIKey.APIKey = 'SentToKeyVault'
                 }
