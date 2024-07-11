@@ -2,9 +2,52 @@ function Invoke-CIPPStandardUserSubmissions {
     <#
     .FUNCTIONALITY
     Internal
+    .APINAME
+    UserSubmissions
+    .CAT
+    Exchange Standards
+    .TAG
+    "mediumimpact"
+    .HELPTEXT
+    Set the state of the spam submission button in Outlook
+    .DOCSDESCRIPTION
+    Set the state of the built-in Report button in Outlook. This gives the users the ability to report emails as spam or phish.
+    .ADDEDCOMPONENT
+    {"type":"Select","label":"Select value","name":"standards.UserSubmissions.state","values":[{"label":"Enabled","value":"enable"},{"label":"Disabled","value":"disable"}]}
+    .LABEL
+    Set the state of the built-in Report button in Outlook
+    .IMPACT
+    Medium Impact
+    .POWERSHELLEQUIVALENT
+    New-ReportSubmissionPolicy or Set-ReportSubmissionPolicy
+    .RECOMMENDEDBY
+    .DOCSDESCRIPTION
+    Set the state of the spam submission button in Outlook
+    .UPDATECOMMENTBLOCK
+    Run the Tools\Update-StandardsComments.ps1 script to update this comment block
     #>
+
+
+
+
     param($Tenant, $Settings)
+
     $Policy = New-ExoRequest -tenantid $Tenant -cmdlet 'Get-ReportSubmissionPolicy'
+
+    if ($Settings.report -eq $true) {
+        if ($Policy.length -eq 0) {
+            Add-CIPPBPAField -FieldName 'UserSubmissionPolicy' -FieldValue $false -StoreAs bool -Tenant $tenant
+        } else {
+            Add-CIPPBPAField -FieldName 'UserSubmissionPolicy' -FieldValue $Policy.EnableReportToMicrosoft -StoreAs bool -Tenant $tenant
+        }
+    }
+
+    # Input validation
+    if ([string]::IsNullOrWhiteSpace($Settings.state) -or $Settings.state -eq 'Select a value') {
+        Write-LogMessage -API 'Standards' -tenant $tenant -message 'UserSubmissions: Invalid state parameter set' -sev Error
+        Return
+    }
+
 
     If ($Settings.remediate -eq $true) {
         $Status = if ($Settings.state -eq 'enable') { $true } else { $false }
@@ -56,12 +99,8 @@ function Invoke-CIPPStandardUserSubmissions {
             }
         }
     }
-
-    if ($Settings.report -eq $true) {
-        if ($Policy.length -eq 0) {
-            Add-CIPPBPAField -FieldName 'UserSubmissionPolicy' -FieldValue $false -StoreAs bool -Tenant $tenant
-        } else {
-            Add-CIPPBPAField -FieldName 'UserSubmissionPolicy' -FieldValue $Policy.EnableReportToMicrosoft -StoreAs bool -Tenant $tenant
-        }
-    }
 }
+
+
+
+

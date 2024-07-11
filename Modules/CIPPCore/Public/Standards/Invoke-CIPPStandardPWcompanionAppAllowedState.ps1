@@ -2,10 +2,48 @@ function Invoke-CIPPStandardPWcompanionAppAllowedState {
     <#
     .FUNCTIONALITY
     Internal
+    .APINAME
+    PWcompanionAppAllowedState
+    .CAT
+    Entra (AAD) Standards
+    .TAG
+    "lowimpact"
+    .HELPTEXT
+    Sets the state of Authenticator Lite, Authenticator lite is a companion app for passwordless authentication.
+    .DOCSDESCRIPTION
+    Sets the Authenticator Lite state to enabled. This allows users to use the Authenticator Lite built into the Outlook app instead of the full Authenticator app.
+    .ADDEDCOMPONENT
+    {"type":"Select","label":"Select value","name":"standards.PWcompanionAppAllowedState.state","values":[{"label":"Enabled","value":"enabled"},{"label":"Disabled","value":"disabled"}]}
+    .LABEL
+    Set Authenticator Lite state
+    .IMPACT
+    Low Impact
+    .POWERSHELLEQUIVALENT
+    Update-MgBetaPolicyAuthenticationMethodPolicyAuthenticationMethodConfiguration
+    .RECOMMENDEDBY
+    .DOCSDESCRIPTION
+    Sets the state of Authenticator Lite, Authenticator lite is a companion app for passwordless authentication.
+    .UPDATECOMMENTBLOCK
+    Run the Tools\Update-StandardsComments.ps1 script to update this comment block
     #>
+
+
+
+
     param($Tenant, $Settings)
+
     $authenticatorFeaturesState = (New-GraphGetRequest -tenantid $tenant -Uri 'https://graph.microsoft.com/beta/policies/authenticationMethodsPolicy/authenticationMethodConfigurations/microsoftAuthenticator' -Type GET)
     $authstate = if ($authenticatorFeaturesState.featureSettings.companionAppAllowedState.state -eq 'enabled') { $true } else { $false }
+
+    if ($Settings.report -eq $true) {
+        Add-CIPPBPAField -FieldName 'companionAppAllowedState' -FieldValue $authstate -StoreAs bool -Tenant $tenant
+    }
+
+    # Input validation
+    if (([string]::IsNullOrWhiteSpace($Settings.state) -or $Settings.state -eq 'Select a value') -and ($Settings.remediate -eq $true -or $Settings.alert -eq $true)) {
+        Write-LogMessage -API 'Standards' -tenant $tenant -message 'PWcompanionAppAllowedState: Invalid state parameter set' -sev Error
+        Return
+    }
 
     If ($Settings.remediate -eq $true) {
 
@@ -46,8 +84,8 @@ function Invoke-CIPPStandardPWcompanionAppAllowedState {
             Write-LogMessage -API 'Standards' -tenant $tenant -message 'companionAppAllowedState is not enabled.' -sev Alert
         }
     }
-
-    if ($Settings.report -eq $true) {
-        Add-CIPPBPAField -FieldName 'companionAppAllowedState' -FieldValue $authstate -StoreAs bool -Tenant $tenant
-    }
 }
+
+
+
+

@@ -2,7 +2,33 @@ function Invoke-CIPPStandardallowOTPTokens {
     <#
     .FUNCTIONALITY
     Internal
+    .APINAME
+    allowOTPTokens
+    .CAT
+    Entra (AAD) Standards
+    .TAG
+    "lowimpact"
+    .HELPTEXT
+    Allows you to use MS authenticator OTP token generator
+    .DOCSDESCRIPTION
+    Allows you to use Microsoft Authenticator OTP token generator. Useful for using the NPS extension as MFA on VPN clients.
+    .ADDEDCOMPONENT
+    .LABEL
+    Enable OTP via Authenticator
+    .IMPACT
+    Low Impact
+    .POWERSHELLEQUIVALENT
+    Update-MgBetaPolicyAuthenticationMethodPolicyAuthenticationMethodConfiguration
+    .RECOMMENDEDBY
+    .DOCSDESCRIPTION
+    Allows you to use MS authenticator OTP token generator
+    .UPDATECOMMENTBLOCK
+    Run the Tools\Update-StandardsComments.ps1 script to update this comment block
     #>
+
+
+
+
     param($Tenant, $Settings)
     $CurrentInfo = New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/policies/authenticationMethodsPolicy/authenticationMethodConfigurations/microsoftAuthenticator' -tenantid $Tenant
 
@@ -27,3 +53,7 @@ function Invoke-CIPPStandardallowOTPTokens {
     }
 
 }
+
+
+
+

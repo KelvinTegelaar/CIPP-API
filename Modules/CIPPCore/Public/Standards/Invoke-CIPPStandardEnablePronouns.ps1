@@ -2,7 +2,31 @@ function Invoke-CIPPStandardEnablePronouns {
     <#
     .FUNCTIONALITY
     Internal
+    .APINAME
+    EnablePronouns
+    .CAT
+    Global Standards
+    .TAG
+    "lowimpact"
+    .HELPTEXT
+    Enables the Pronouns feature for the tenant. This allows users to set their pronouns in their profile.
+    .ADDEDCOMPONENT
+    .LABEL
+    Enable Pronouns
+    .IMPACT
+    Low Impact
+    .POWERSHELLEQUIVALENT
+    Update-MgBetaAdminPeoplePronoun -IsEnabledInOrganization:$true
+    .RECOMMENDEDBY
+    .DOCSDESCRIPTION
+    Enables the Pronouns feature for the tenant. This allows users to set their pronouns in their profile.
+    .UPDATECOMMENTBLOCK
+    Run the Tools\Update-StandardsComments.ps1 script to update this comment block
     #>
+
+
+
+
     param ($Tenant, $Settings)
 
     $Uri = 'https://graph.microsoft.com/v1.0/admin/people/pronouns'
@@ -11,7 +35,7 @@ function Invoke-CIPPStandardEnablePronouns {
     } catch {
         $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
         Write-LogMessage -API 'Standards' -tenant $Tenant -message "Could not get CurrentState for Pronouns. Error: $ErrorMessage" -sev Error
-        Exit
+        Return
     }
     Write-Host $CurrentState
 
@@ -34,19 +58,20 @@ function Invoke-CIPPStandardEnablePronouns {
     }
 
     if ($Settings.alert -eq $true) {
-            
+
         if ($CurrentState.isEnabledInOrganization -eq $true) {
             Write-LogMessage -API 'Standards' -tenant $tenant -message 'Pronouns are enabled.' -sev Info
         } else {
             Write-LogMessage -API 'Standards' -tenant $tenant -message 'Pronouns are not enabled.' -sev Alert
         }
-        
     }
 
     if ($Settings.report -eq $true) {
-            
-        Add-CIPPBPAField -FieldName 'PronounsEnabled' -FieldValue $CurrentState.isEnabledInOrganization -StoreAs bool -Tenant $tenant
-        
-    }
 
+        Add-CIPPBPAField -FieldName 'PronounsEnabled' -FieldValue $CurrentState.isEnabledInOrganization -StoreAs bool -Tenant $tenant
+    }
 }
+
+
+
+

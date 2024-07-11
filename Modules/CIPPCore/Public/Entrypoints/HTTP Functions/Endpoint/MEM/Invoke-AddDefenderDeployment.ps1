@@ -33,9 +33,9 @@ Function Invoke-AddDefenderDeployment {
                 allowPartnerToCollectIOSPersonalApplicationMetadata = [bool]$Compliance.ConnectIosCompliance
                 androidMobileApplicationManagementEnabled           = [bool]$Compliance.ConnectAndroidCompliance
                 iosMobileApplicationManagementEnabled               = [bool]$Compliance.appSync
-                microsoftDefenderForEndpointAttachEnabled           = [bool]$compliance.AllowMEMEnforceCompliance
+                microsoftDefenderForEndpointAttachEnabled           = [bool]$true
             } | ConvertTo-Json -Compress
-            $SettingsRequest = New-GraphPOSTRequest -uri 'https://graph.microsoft.com/beta/deviceManagement/mobileThreatDefenseConnectors/' -tenantid $tenant -type POST -body $SettingsObj
+            $SettingsRequest = New-GraphPOSTRequest -uri 'https://graph.microsoft.com/beta/deviceManagement/mobileThreatDefenseConnectors/' -tenantid $tenant -type POST -body $SettingsObj -AsApp $true
             "$($Tenant): Successfully set Defender Compliance and Reporting settings"
 
             $Settings = switch ($PolicySettings) {
@@ -79,8 +79,7 @@ Function Invoke-AddDefenderDeployment {
             Write-Host ($CheckExististing | ConvertTo-Json)
             if ('Default AV Policy' -in $CheckExististing.Name) {
                 "$($Tenant): AV Policy already exists. Skipping"
-            }
-            else {
+            } else {
                 $PolBody = ConvertTo-Json -Depth 10 -Compress -InputObject @{
                     name              = 'Default AV Policy'
                     description       = ''
@@ -138,8 +137,7 @@ Function Invoke-AddDefenderDeployment {
             $CheckExististingASR = New-GraphGETRequest -uri 'https://graph.microsoft.com/beta/deviceManagement/configurationPolicies' -tenantid $tenant
             if ('ASR Default rules' -in $CheckExististingASR.Name) {
                 "$($Tenant): ASR Policy already exists. Skipping"
-            }
-            else {
+            } else {
                 Write-Host $ASRbody
                 $ASRRequest = New-GraphPOSTRequest -uri 'https://graph.microsoft.com/beta/deviceManagement/configurationPolicies' -tenantid $tenant -type POST -body $ASRbody
                 Write-Host ($ASRRequest.id)
@@ -215,9 +213,8 @@ Function Invoke-AddDefenderDeployment {
             $CheckExististingEDR = New-GraphGETRequest -uri 'https://graph.microsoft.com/beta/deviceManagement/configurationPolicies' -tenantid $tenant
             if ('EDR Configuration' -in $CheckExististingEDR.Name) {
                 "$($Tenant): EDR Policy already exists. Skipping"
-            }
-            else {
-                $EDRRequest = New-GraphPOSTRequest -uri 'https://graph.microsoft.com/beta/deviceManagement/configurationPolicies' -tenantid $tenant -type POST -body $EDRbody
+            } else {
+                #$EDRRequest = New-GraphPOSTRequest -uri 'https://graph.microsoft.com/beta/deviceManagement/configurationPolicies' -tenantid $tenant -type POST -body $EDRbody
                 if ($ASR.AssignTo -ne 'none') {
                     $AssignBody = if ($ASR.AssignTo -ne 'AllDevicesAndUsers') { '{"assignments":[{"id":"","target":{"@odata.type":"#microsoft.graph.' + $($asr.AssignTo) + 'AssignmentTarget"}}]}' } else { '{"assignments":[{"id":"","target":{"@odata.type":"#microsoft.graph.allDevicesAssignmentTarget"}},{"id":"","target":{"@odata.type":"#microsoft.graph.allLicensedUsersAssignmentTarget"}}]}' }
                     $assign = New-GraphPOSTRequest -uri "https://graph.microsoft.com/beta/deviceManagement/configurationPolicies('$($EDRRequest.id)')/assign" -tenantid $tenant -type POST -body $AssignBody
@@ -226,8 +223,7 @@ Function Invoke-AddDefenderDeployment {
                 "$($Tenant): Successfully added EDR Settings"
             }
 
-        }
-        catch {
+        } catch {
             "Failed to add policy for $($Tenant): $($_.Exception.Message)"
             Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $($Tenant) -message "Failed adding policy $($Displayname). Error: $($_.Exception.Message)" -Sev 'Error'
             continue

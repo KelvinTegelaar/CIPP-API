@@ -4,13 +4,14 @@ function New-CIPPBackup {
         $backupType,
         $StorageOutput = 'default',
         $TenantFilter,
+        $ScheduledBackupValues,
         $APIName = 'CIPP Backup',
         $ExecutingUser
     )
 
     $BackupData = switch ($backupType) {
         #If backup type is CIPP, create CIPP backup.
-        'CIPP' { 
+        'CIPP' {
             try {
                 $BackupTables = @(
                     'bpa'
@@ -23,7 +24,7 @@ function New-CIPPBackup {
                 )
                 $CSVfile = foreach ($CSVTable in $BackupTables) {
                     $Table = Get-CippTable -tablename $CSVTable
-                    Get-CIPPAzDataTableEntity @Table
+                    Get-CIPPAzDataTableEntity @Table | Select-Object *, @{l = 'table'; e = { $CSVTable } }
                 }
                 Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -message 'Created backup' -Sev 'Debug'
                 $CSVfile
@@ -42,7 +43,7 @@ function New-CIPPBackup {
                     Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -message "Failed to create backup for CIPP: $($_.Exception.Message)" -Sev 'Error'
                     [pscustomobject]@{'Results' = "Backup Creation failed: $($_.Exception.Message)" }
                 }
-               
+
             } catch {
                 Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -message "Failed to create backup: $($_.Exception.Message)" -Sev 'Error'
                 [pscustomobject]@{'Results' = "Backup Creation failed: $($_.Exception.Message)" }
@@ -50,40 +51,38 @@ function New-CIPPBackup {
         }
 
         #If Backup type is ConditionalAccess, create Conditional Access backup.
-        'ConditionalAccess' { 
-            $ConditionalAccessPolicyOutput = New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/identity/conditionalAccess/policies' -tenantid $tenantfilter
-            $AllNamedLocations = New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/identity/conditionalAccess/namedLocations' -tenantid $tenantfilter
-            switch ($StorageOutput) {
-                'default' {
-                    [PSCustomObject]@{
-                        ConditionalAccessPolicies = $ConditionalAccessPolicyOutput
-                        NamedLocations            = $AllNamedLocations
-                    }
-                }
-                'table' {
-                    #Store output in tablestorage for Recovery
-                    $RowKey = $TenantFilter + '_' + (Get-Date).ToString('yyyy-MM-dd-HHmm')
-                    $entity = [PSCustomObject]@{
-                        PartitionKey   = 'ConditionalAccessBackup'
-                        RowKey         = $RowKey
-                        TenantFilter   = $TenantFilter
-                        Policies       = [string]($ConditionalAccessPolicyOutput | ConvertTo-Json -Compress -Depth 10)
-                        NamedLocations = [string]($AllNamedLocations | ConvertTo-Json -Compress -Depth 10)
-                    }
-                    $Table = Get-CippTable -tablename 'ConditionalAccessBackup'
-                    try {
-                        $Result = Add-CIPPAzDataTableEntity @Table -entity $entity -Force
-                        Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -message 'Created backup for Conditional Access Policies' -Sev 'Debug'
-                        $Result
-                    } catch {
-                        Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -message "Failed to create backup for Conditional Access Policies: $($_.Exception.Message)" -Sev 'Error'
-                        [pscustomobject]@{'Results' = "Backup Creation failed: $($_.Exception.Message)" }
-                    }
-                }
+        'Scheduled' {
+            #Do a sub switch here based on the ScheduledBackupValues?
+            #Store output in tablestorage for Recovery
+            $RowKey = $TenantFilter + '_' + (Get-Date).ToString('yyyy-MM-dd-HHmm')
+            $entity = @{
+                PartitionKey = 'ScheduledBackup'
+                RowKey       = $RowKey
+                TenantFilter = $TenantFilter
+            }
+            Write-Host "Scheduled backup value psproperties: $(([pscustomobject]$ScheduledBackupValues).psobject.Properties)"
+            foreach ($ScheduledBackup in ([pscustomobject]$ScheduledBackupValues).psobject.Properties.Name) {
+                $BackupResult = New-CIPPBackupTask -Task $ScheduledBackup -TenantFilter $TenantFilter | ConvertTo-Json -Depth 100 -Compress | Out-String
+                $entity[$ScheduledBackup] = "$BackupResult"
+            }
+            $Table = Get-CippTable -tablename 'ScheduledBackup'
+            try {
+                $Result = Add-CIPPAzDataTableEntity @Table -entity $entity -Force
+                Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -message 'Created backup' -Sev 'Debug'
+                $State = 'Backup finished succesfully'
+                $Result
+            } catch {
+                $State = 'Failed to write backup to table storage'
+                Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -message "Failed to create backup for Conditional Access Policies: $($_.Exception.Message)" -Sev 'Error'
+                [pscustomobject]@{'Results' = "Backup Creation failed: $($_.Exception.Message)" }
             }
         }
 
     }
-    return $BackupData
+    return [pscustomobject]@{
+        BackupName  = $RowKey
+        BackupState = $State
+        BackupData  = $BackupData
+    }
 }
 
