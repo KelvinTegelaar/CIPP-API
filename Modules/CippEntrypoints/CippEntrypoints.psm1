@@ -9,13 +9,14 @@ function Receive-CippHttpTrigger {
         $Request,
         $TriggerMetadata
     )
-
+    # Convert the request to a PSCustomObject because the httpContext is case sensitive since 7.3
+    $Request = $Request | ConvertTo-Json -Depth 100 | ConvertFrom-Json
     Set-Location (Get-Item $PSScriptRoot).Parent.Parent.FullName
     $FunctionName = 'Invoke-{0}' -f $Request.Params.CIPPEndpoint
     Write-Host "Function: $($Request.Params.CIPPEndpoint)"
 
     $HttpTrigger = @{
-        Request         = $Request
+        Request         = [pscustomobject]($Request)
         TriggerMetadata = $TriggerMetadata
     }
 
@@ -43,6 +44,7 @@ function Receive-CippHttpTrigger {
 
 function Receive-CippQueueTrigger {
     Param($QueueItem, $TriggerMetadata)
+    
     Set-Location (Get-Item $PSScriptRoot).Parent.Parent.FullName
     $Start = (Get-Date).ToUniversalTime()
     $APIName = $TriggerMetadata.FunctionName
