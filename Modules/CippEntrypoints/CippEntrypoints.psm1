@@ -10,6 +10,7 @@ function Receive-CippHttpTrigger {
         $TriggerMetadata
     )
     $Request = [pscustomobject]($Request)
+    Write-Host "$Request is a: $($Request.GetType().Name)"
     Set-Location (Get-Item $PSScriptRoot).Parent.Parent.FullName
     $FunctionName = 'Invoke-{0}' -f $Request.Params.CIPPEndpoint
     Write-Host "Function: $($Request.Params.CIPPEndpoint)"
