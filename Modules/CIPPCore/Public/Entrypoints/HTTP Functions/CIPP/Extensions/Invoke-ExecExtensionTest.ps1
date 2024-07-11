@@ -49,8 +49,11 @@ Function Invoke-ExecExtensionTest {
             'Hudu' {
                 Connect-HuduAPI -configuration $Configuration.Hudu
                 $Version = Get-HuduAppInfo
-                Write-Host ($Version | ConvertTo-Json)
-                $Results = [pscustomobject]@{'Results' = ('Successfully Connected to Hudu, version: {0}' -f $Version.version) }
+                if ($Version.version) {
+                    $Results = [pscustomobject]@{'Results' = ('Successfully Connected to Hudu, version: {0}' -f $Version.version) }
+                } else {
+                    $Results = [pscustomobject]@{'Results' = 'Failed to connect to Hudu' }
+                }
             }
         }
     } catch {
