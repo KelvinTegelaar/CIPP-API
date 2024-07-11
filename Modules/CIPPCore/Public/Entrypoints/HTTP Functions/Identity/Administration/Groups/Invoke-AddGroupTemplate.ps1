@@ -9,7 +9,7 @@ Function Invoke-AddGroupTemplate {
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
-    $request | ConvertTo-Json -depth 100 | ConvertFrom-Json
+    $Request = $Request | ConvertTo-Json -Depth 100 | ConvertFrom-Json
     $APIName = $TriggerMetadata.FunctionName
     Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -message 'Accessed this API' -Sev 'Debug'
 
