@@ -151,14 +151,14 @@ function Sync-CippExtensionData {
                 )
             }
             'Mailboxes' {
-                $Select = 'id,ExchangeGuid,ArchiveGuid,UserPrincipalName,DisplayName,PrimarySMTPAddress,RecipientType,RecipientTypeDetails,EmailAddresses,WhenSoftDeleted,IsInactiveMailbox'
+                $Select = 'id,ExchangeGuid,ArchiveGuid,UserPrincipalName,DisplayName,PrimarySMTPAddress,RecipientType,RecipientTypeDetails,EmailAddresses,WhenSoftDeleted,IsInactiveMailbox,ProhibitSendQuota,ProhibitSendReceiveQuota,LitigationHoldEnabled,InPlaceHolds,HiddenFromAddressListsEnabled'
                 $ExoRequest = @{
                     tenantid  = $TenantFilter
                     cmdlet    = 'Get-Mailbox'
                     cmdParams = @{}
                     Select    = $Select
                 }
-                $Mailboxes = (New-ExoRequest @ExoRequest) | Select-Object id, ExchangeGuid, ArchiveGuid, WhenSoftDeleted, @{ Name = 'UPN'; Expression = { $_.'UserPrincipalName' } },
+                $Mailboxes = (New-ExoRequest @ExoRequest) | Select-Object id, ExchangeGuid, ArchiveGuid, WhenSoftDeleted, ProhibitSendQuota, ProhibitSendReceiveQuota, LitigationHoldEnabled, InplaceHolds, HiddenFromAddressListsEnabled, @{ Name = 'UPN'; Expression = { $_.'UserPrincipalName' } },
 
                 @{ Name = 'displayName'; Expression = { $_.'DisplayName' } },
                 @{ Name = 'primarySmtpAddress'; Expression = { $_.'PrimarySMTPAddress' } },
@@ -298,7 +298,7 @@ function Sync-CippExtensionData {
     } catch {
         $LastSync.Status = 'Failed'
         $LastSync.Error = [string](Get-CippException -Exception $_ | ConvertTo-Json -Compress)
-        throw "Failed to sync data: $($_.Exception.Message)"
+        throw "Failed to sync data: $(Get-NormalizedError -message $_.Exception.Message)"
     } finally {
         Add-CIPPAzDataTableEntity @Table -Entity $LastSync -Force
     }
