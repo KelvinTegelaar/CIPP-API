@@ -48,7 +48,7 @@ function Write-CippFunctionStats {
             }
         }
         $StatEntity = [PSCustomObject]$StatEntity
-        Write-Information ($StatEntity | ConvertTo-Json -Compress)
+
         Add-CIPPAzDataTableEntity @Table -Entity $StatEntity -Force
     } catch {
         Write-Host "Exception logging stats $($_.Exception.Message)"
