@@ -9,8 +9,8 @@ function Receive-CippHttpTrigger {
         $Request,
         $TriggerMetadata
     )
-    $Request = [pscustomobject]($Request)
-    Write-Host "$Request is a: $($Request.GetType().Name)"
+    # Convert the request to a PSCustomObject because the httpContext is case sensitive since 7.3
+    $Request = $Request | ConvertTo-Json -Depth 100 | ConvertFrom-Json
     Set-Location (Get-Item $PSScriptRoot).Parent.Parent.FullName
     $FunctionName = 'Invoke-{0}' -f $Request.Params.CIPPEndpoint
     Write-Host "Function: $($Request.Params.CIPPEndpoint)"
