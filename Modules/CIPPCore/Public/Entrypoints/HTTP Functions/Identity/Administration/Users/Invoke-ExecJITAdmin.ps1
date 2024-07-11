@@ -12,6 +12,7 @@ Function Invoke-ExecJITAdmin {
 
     $APIName = 'ExecJITAdmin'
     $User = $Request.Headers.'x-ms-client-principal'
+
     Write-LogMessage -user $User -API $APINAME -message 'Accessed this API' -Sev 'Debug'
 
     if ($Request.Query.Action -eq 'List') {
@@ -68,7 +69,7 @@ Function Invoke-ExecJITAdmin {
         $Expiration = ([System.DateTimeOffset]::FromUnixTimeSeconds($Request.Body.EndDate)).DateTime.ToLocalTime()
         $Results = [System.Collections.Generic.List[string]]::new()
 
-        if ($Request.Body.useraction -eq 'create') {
+        if ($Request.Body.useraction -eq 'Create') {
             Write-LogMessage -user $User -API $APINAME -message "Creating JIT Admin user $($Request.Body.UserPrincipalName)" -Sev 'Info'
             Write-Information "Creating JIT Admin user $($Request.Body.UserPrincipalName)"
             $JITAdmin = @{
@@ -98,8 +99,6 @@ Function Invoke-ExecJITAdmin {
                         startDateTime = [System.DateTimeOffset]::FromUnixTimeSeconds($Request.Body.StartDate).DateTime
                     }
                     $TapBody = ConvertTo-Json -Depth 5 -InputObject $TapParams
-                    Write-Information $Username
-                    Write-Information $TapBody
                 } else {
                     $TapBody = '{}'
                 }
@@ -163,7 +162,9 @@ Function Invoke-ExecJITAdmin {
                 }
             }
             Add-CIPPScheduledTask -Task $TaskBody -hidden $false
-            Set-CIPPUserJITAdminProperties -TenantFilter $Request.Body.TenantFilter -UserId $Request.Body.UserId -Expiration $Expiration
+            if ($Request.Body.useraction -ne 'Create') {
+                Set-CIPPUserJITAdminProperties -TenantFilter $Request.Body.TenantFilter -UserId $Request.Body.UserId -Expiration $Expiration
+            }
             $Results.Add("Scheduling JIT Admin enable task for $Username")
         } else {
             $Results.Add("Executing JIT Admin enable task for $Username")
@@ -192,7 +193,7 @@ Function Invoke-ExecJITAdmin {
             }
             ScheduledTime = $Request.Body.EndDate
         }
-        Add-CIPPScheduledTask -Task $DisableTaskBody -hidden $false
+        $null = Add-CIPPScheduledTask -Task $DisableTaskBody -hidden $false
         $Results.Add("Scheduling JIT Admin $($Request.Body.ExpireAction) task for $Username")
         $Body = @{
             Results = @($Results)
