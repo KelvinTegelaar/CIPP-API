@@ -9,7 +9,7 @@ function Receive-CippHttpTrigger {
         $Request,
         $TriggerMetadata
     )
-
+    $Request = [pscustomobject]($Request)
     Set-Location (Get-Item $PSScriptRoot).Parent.Parent.FullName
     $FunctionName = 'Invoke-{0}' -f $Request.Params.CIPPEndpoint
     Write-Host "Function: $($Request.Params.CIPPEndpoint)"
@@ -43,6 +43,7 @@ function Receive-CippHttpTrigger {
 
 function Receive-CippQueueTrigger {
     Param($QueueItem, $TriggerMetadata)
+    
     Set-Location (Get-Item $PSScriptRoot).Parent.Parent.FullName
     $Start = (Get-Date).ToUniversalTime()
     $APIName = $TriggerMetadata.FunctionName
