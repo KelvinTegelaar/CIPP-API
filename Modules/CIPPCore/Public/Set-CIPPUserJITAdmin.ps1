@@ -50,6 +50,8 @@ function Set-CIPPUserJITAdmin {
         switch ($Action) {
             'Create' {
                 $Password = New-passwordString
+                $Schema = Get-CIPPSchemaExtensions | Where-Object { $_.id -match '_cippUser' }
+
                 $Body = @{
                     givenName         = $User.FirstName
                     surname           = $User.LastName
@@ -61,6 +63,10 @@ function Set-CIPPUserJITAdmin {
                         forceChangePasswordNextSignIn        = $true
                         forceChangePasswordNextSignInWithMfa = $false
                         password                             = $Password
+                    }
+                    $Schema.id        = @{
+                        jitAdminEnabled    = $false
+                        jitAdminExpiration = $Expiration.ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ssZ')
                     }
                 }
                 $Json = ConvertTo-Json -Depth 5 -InputObject $Body
@@ -139,6 +145,7 @@ function Set-CIPPUserJITAdmin {
                 } catch {
                     $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
                     return "Error disabling user $($UserObj.displayName) ($($UserObj.userPrincipalName)): $ErrorMessage"
+
                 }
             }
         }
