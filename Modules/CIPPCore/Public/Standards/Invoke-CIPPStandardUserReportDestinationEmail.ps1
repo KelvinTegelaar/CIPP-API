@@ -1,30 +1,31 @@
 function Invoke-CIPPStandardUserReportDestinationEmail {
     <#
     .FUNCTIONALITY
-    Internal
-    .APINAME
-    UserReportDestinationEmail
-    .CAT
-    Exchange Standards
-    .TAG
-    "mediumimpact"
-    .HELPTEXT
-    Sets the destination for email when users report them as spam or phishing. Works well together with the 'Set the state of the built-in Report button in Outlook standard'.
-    .ADDEDCOMPONENT
-    {"type":"input","name":"standards.UserReportDestinationEmail.Email","label":"Destination email address"}
-    .LABEL
-    Set the destination email for user reported emails
-    .IMPACT
-    Medium Impact
-    .POWERSHELLEQUIVALENT
-    New-ReportSubmissionRule or Set-ReportSubmissionRule
-    .RECOMMENDEDBY
-    .DOCSDESCRIPTION
-    Sets the destination for email when users report them as spam or phishing. Works well together with the 'Set the state of the built-in Report button in Outlook standard'.
-    .UPDATECOMMENTBLOCK
-    Run the Tools\Update-StandardsComments.ps1 script to update this comment block
+        Internal
+    .COMPONENT
+        (APIName) UserReportDestinationEmail
+    .SYNOPSIS
+        (Label) Set the destination email for user reported emails
+    .DESCRIPTION
+        (Helptext) Sets the destination for email when users report them as spam or phishing. Works well together with the 'Set the state of the built-in Report button in Outlook standard'.
+        (DocsDescription) Sets the destination for email when users report them as spam or phishing. Works well together with the 'Set the state of the built-in Report button in Outlook standard'.
+    .NOTES
+        CAT
+            Exchange Standards
+        TAG
+            "mediumimpact"
+        ADDEDCOMPONENT
+            {"type":"input","name":"standards.UserReportDestinationEmail.Email","label":"Destination email address"}
+        IMPACT
+            Medium Impact
+        POWERSHELLEQUIVALENT
+            New-ReportSubmissionRule or Set-ReportSubmissionRule
+        RECOMMENDEDBY
+        UPDATECOMMENTBLOCK
+            Run the Tools\Update-StandardsComments.ps1 script to update this comment block
+    .LINK
+        https://docs.cipp.app/user-documentation/tenant/standards/edit-standards
     #>
-
 
     param($Tenant, $Settings)
 
@@ -75,5 +76,3 @@ function Invoke-CIPPStandardUserReportDestinationEmail {
         Add-CIPPBPAField -FieldName 'UserReportDestinationEmail' -FieldValue $StateIsCorrect -StoreAs bool -Tenant $tenant
     }
 }
-
-

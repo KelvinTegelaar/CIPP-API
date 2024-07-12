@@ -5,7 +5,7 @@ function Invoke-CIPPStandardSPDisallowInfectedFiles {
     .COMPONENT
         (APIName) SPDisallowInfectedFiles
     .SYNOPSIS
-        Disallow downloading infected files from SharePoint
+        (Label) Disallow downloading infected files from SharePoint
     .DESCRIPTION
         (Helptext) Ensure Office 365 SharePoint infected files are disallowed for download
         (DocsDescription) Ensure Office 365 SharePoint infected files are disallowed for download
@@ -16,8 +16,6 @@ function Invoke-CIPPStandardSPDisallowInfectedFiles {
             "lowimpact"
             "CIS"
         ADDEDCOMPONENT
-        LABEL
-            Disallow downloading infected files from SharePoint
         IMPACT
             Low Impact
         POWERSHELLEQUIVALENT
@@ -26,6 +24,8 @@ function Invoke-CIPPStandardSPDisallowInfectedFiles {
             "CIS 3.0"
         UPDATECOMMENTBLOCK
             Run the Tools\Update-StandardsComments.ps1 script to update this comment block
+    .LINK
+        https://docs.cipp.app/user-documentation/tenant/standards/edit-standards
     #>
 
     param($Tenant, $Settings)
