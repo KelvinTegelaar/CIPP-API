@@ -1,7 +1,36 @@
 function Invoke-CIPPStandardSafeLinksPolicy {
     <#
     .FUNCTIONALITY
-    Internal
+        Internal
+    .COMPONENT
+        (APIName) SafeLinksPolicy
+    .SYNOPSIS
+        (Label) Default SafeLinks Policy
+    .DESCRIPTION
+        (Helptext) This creates a safelink policy that automatically scans, tracks, and and enables safe links for Email, Office, and Teams for both external and internal senders
+        (DocsDescription) This creates a safelink policy that automatically scans, tracks, and and enables safe links for Email, Office, and Teams for both external and internal senders
+    .NOTES
+        CAT
+            Defender Standards
+        TAG
+            "lowimpact"
+            "CIS"
+            "mdo_safelinksforemail"
+            "mdo_safelinksforOfficeApps"
+        ADDEDCOMPONENT
+            {"type":"boolean","label":"AllowClickThrough","name":"standards.SafeLinksPolicy.AllowClickThrough"}
+            {"type":"boolean","label":"DisableUrlRewrite","name":"standards.SafeLinksPolicy.DisableUrlRewrite"}
+            {"type":"boolean","label":"EnableOrganizationBranding","name":"standards.SafeLinksPolicy.EnableOrganizationBranding"}
+        IMPACT
+            Low Impact
+        POWERSHELLEQUIVALENT
+            Set-SafeLinksPolicy or New-SafeLinksPolicy
+        RECOMMENDEDBY
+            "CIS"
+        UPDATECOMMENTBLOCK
+            Run the Tools\Update-StandardsComments.ps1 script to update this comment block
+    .LINK
+        https://docs.cipp.app/user-documentation/tenant/standards/edit-standards
     #>
 
     param($Tenant, $Settings)

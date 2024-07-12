@@ -1,8 +1,32 @@
 function Invoke-CIPPStandardGlobalQuarantineNotifications {
     <#
     .FUNCTIONALITY
-    Internal
+        Internal
+    .COMPONENT
+        (APIName) GlobalQuarantineNotifications
+    .SYNOPSIS
+        (Label) Set Global Quarantine Notification Interval
+    .DESCRIPTION
+        (Helptext) Sets the Global Quarantine Notification Interval to the selected value. Determines how often the quarantine notification is sent to users.
+        (DocsDescription) Sets the global quarantine notification interval for the tenant. This is the time between the quarantine notification emails are sent out to users. Default is 24 hours.
+    .NOTES
+        CAT
+            Exchange Standards
+        TAG
+            "lowimpact"
+        ADDEDCOMPONENT
+            {"type":"Select","label":"Select value","name":"standards.GlobalQuarantineNotifications.NotificationInterval","values":[{"label":"4 hours","value":"04:00:00"},{"label":"1 day/Daily","value":"1.00:00:00"},{"label":"7 days/Weekly","value":"7.00:00:00"}]}
+        IMPACT
+            Low Impact
+        POWERSHELLEQUIVALENT
+            Set-QuarantinePolicy -EndUserSpamNotificationFrequency
+        RECOMMENDEDBY
+        UPDATECOMMENTBLOCK
+            Run the Tools\Update-StandardsComments.ps1 script to update this comment block
+    .LINK
+        https://docs.cipp.app/user-documentation/tenant/standards/edit-standards
     #>
+
     param ($Tenant, $Settings)
 
     $CurrentState = New-ExoRequest -tenantid $Tenant -cmdlet 'Get-QuarantinePolicy' -cmdParams @{ QuarantinePolicyType = 'GlobalQuarantinePolicy' }
