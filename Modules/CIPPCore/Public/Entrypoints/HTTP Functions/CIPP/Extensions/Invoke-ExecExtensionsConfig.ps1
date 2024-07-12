@@ -56,7 +56,11 @@ Function Invoke-ExecExtensionsConfig {
                         $null = Set-AzKeyVaultSecret -VaultName $ENV:WEBSITE_DEPLOYMENT_ID -Name $APIKey -SecretValue (ConvertTo-SecureString -AsPlainText -Force -String $Request.Body.$APIKey.APIKey)
                     }
                 }
-                $Request.Body.$APIKey.APIKey = 'SentToKeyVault'
+                if ($Request.Body.$APIKey.PSObject.Properties -notcontains 'APIKey') {
+                    $Request.Body.$APIKey | Add-Member -MemberType NoteProperty -Name APIKey -Value 'SentToKeyVault'
+                } else {
+                    $Request.Body.$APIKey.APIKey = 'SentToKeyVault'
+                }
             }
             $Request.Body.$APIKey = $Request.Body.$APIKey | Select-Object * -ExcludeProperty ResetPassword
         }
@@ -69,12 +73,13 @@ Function Invoke-ExecExtensionsConfig {
 
         Add-CIPPAzDataTableEntity @Table -Entity $Config -Force | Out-Null
 
-        $CippUri = [System.Uri]$TriggerMetadata.Headers.'x-ms-original-url'
+        #Write-Information ($Request.Headers | ConvertTo-Json)
         $AddObject = @{
             PartitionKey = 'InstanceProperties'
             RowKey       = 'CIPPURL'
-            Value        = '{0}://{1}' -f $CippUri.Scheme, $CippUri.Authority
+            Value        = [string]([System.Uri]$Request.Headers.'x-ms-original-url').Host
         }
+        Write-Information ($AddObject | ConvertTo-Json -Compress)
         $ConfigTable = Get-CIPPTable -tablename 'Config'
         Add-AzDataTableEntity @ConfigTable -Entity $AddObject -Force
 

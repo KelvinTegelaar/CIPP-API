@@ -14,9 +14,8 @@ function Get-CIPPBitlockerKey {
         }
         return $GraphRequest
     } catch {
+        $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
         Write-LogMessage -user $ExecutingUser -API $APIName -message "Could not add OOO for $($userid)" -Sev 'Error' -tenant $TenantFilter -LogData (Get-CippException -Exception $_)
-        return "Could not add out of office message for $($userid). Error: $($_.Exception.Message)"
+        return "Could not add out of office message for $($userid). Error: $ErrorMessage"
     }
 }
-
-

@@ -1,3 +1,3 @@
 function Get-HuduLinkBlock($URL, $Icon, $Title) {
-    return "<div class='o365__app' style='text-align:center'><a href=$URL target=_blank><h3><i class=`"$Icon`">&nbsp;&nbsp;&nbsp;</i>$Title</h3></a></div>"
+    return '<button class="button" style="background-color: var(--primary)" role="button"><a style="color: white;" role="button" href="{0}" target="_blank"><i class="{1} me-2"></i>{2}</a></button>' -f $URL, $Icon, $Title
 }

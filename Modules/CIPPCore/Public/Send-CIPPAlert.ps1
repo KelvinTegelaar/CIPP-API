@@ -39,8 +39,9 @@ function Send-CIPPAlert {
             Write-LogMessage -API 'Webhook Alerts' -message "Sent a webhook alert to email: $Title" -tenant $TenantFilter -sev info
 
         } catch {
-            Write-Information "Could not send webhook alert to email: $($_.Exception.message)"
-            Write-LogMessage -API 'Webhook Alerts' -message "Could not send webhook alerts to email. $($_.Exception.message)" -tenant $TenantFilter -sev info
+            $ErrorMessage = Get-CippException -Exception $_
+            Write-Information "Could not send webhook alert to email: $($ErrorMessage.NormalizedError)"
+            Write-LogMessage -API 'Webhook Alerts' -message "Could not send webhook alerts to email. $($ErrorMessage.NormalizedError)" -tenant $TenantFilter -sev Error -LogData $ErrorMessage
         }
 
     }
@@ -78,8 +79,9 @@ function Send-CIPPAlert {
             Write-LogMessage -API 'Webhook Alerts' -message "Sent Webhook alert $title to External webhook" -tenant $TenantFilter -sev info
 
         } catch {
-            Write-Information "Could not send alerts to webhook: $($_.Exception.message)"
-            Write-LogMessage -API 'Webhook Alerts' -message "Could not send alerts to webhook: $($_.Exception.message)" -tenant $TenantFilter -sev error -LogData (Get-CippException -Exception $_)
+            $ErrorMessage = Get-CippException -Exception $_
+            Write-Information "Could not send alerts to webhook: $($ErrorMessage.NormalizedError)"
+            Write-LogMessage -API 'Webhook Alerts' -message "Could not send alerts to webhook: $($ErrorMessage.NormalizedError)" -tenant $TenantFilter -sev error -LogData $ErrorMessage
         }
     }
     Write-Information 'Trying to send to PSA'
@@ -97,8 +99,9 @@ function Send-CIPPAlert {
                     Write-LogMessage -API 'Webhook Alerts' -tenant $TenantFilter -message "Sent PSA alert $title" -sev info
 
                 } catch {
-                    Write-Information "Could not send alerts to ticketing system: $($_.Exception.message)"
-                    Write-LogMessage -API 'Webhook Alerts' -tenant $TenantFilter -message "Could not send alerts to ticketing system: $($_.Exception.message)" -sev info
+                    $ErrorMessage = Get-CippException -Exception $_
+                    Write-Information "Could not send alerts to ticketing system: $($ErrorMessage.NormalizedError)"
+                    Write-LogMessage -API 'Webhook Alerts' -tenant $TenantFilter -message "Could not send alerts to ticketing system: $($ErrorMessage.NormalizedError)" -sev Error -LogData $ErrorMessage
                 }
             }
         }

@@ -17,8 +17,9 @@ function Set-CIPPSignInState {
         Write-LogMessage -user $ExecutingUser -API $APIName -message "Set account enabled state to $AccountEnabled for $UserId" -Sev 'Info' -tenant $TenantFilter
         return "Set account enabled state to $AccountEnabled for $UserId"
     } catch {
-        Write-LogMessage -user $ExecutingUser -API $APIName -message "Could not disable sign in for $UserId. Error: $($_.Exception.Message)" -Sev 'Error' -tenant $TenantFilter
-        return "Could not disable $UserId. Error: $($_.Exception.Message)"
+        $ErrorMessage = Get-CippException -Exception $_
+        Write-LogMessage -user $ExecutingUser -API $APIName -message "Could not disable sign in for $UserId. Error: $($ErrorMessage.NormalizedError)" -Sev 'Error' -tenant $TenantFilter -LogData $ErrorMessage
+        return "Could not disable $UserId. Error: $($ErrorMessage.NormalizedError)"
     }
 }
 

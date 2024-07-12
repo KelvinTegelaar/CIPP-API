@@ -58,18 +58,19 @@ function Invoke-CIPPStandardDisableBasicAuthSMTP {
         }
     }
 
+    $LogMessage = [System.Collections.Generic.List[string]]::new()
     if ($Settings.alert -eq $true -or $Settings.report -eq $true) {
 
         # Build the log message for use in the alert and report
         if ($CurrentInfo.SmtpClientAuthenticationDisabled) {
-            $LogMessage = 'SMTP Basic Authentication for tenant is disabled. '
+            $LogMessage.add('SMTP Basic Authentication for tenant is disabled. ')
         } else {
-            $LogMessage = 'SMTP Basic Authentication for tenant is not disabled. '
+            $LogMessage.add('SMTP Basic Authentication for tenant is not disabled. ')
         }
         if ($SMTPusers.Count -eq 0) {
-            $LogMessage += 'SMTP Basic Authentication for all users is disabled'
+            $LogMessage.add('SMTP Basic Authentication for all users is disabled')
         } else {
-            $LogMessage += "SMTP Basic Authentication for the following $($SMTPusers.Count) users is not disabled: $($SMTPusers.PrimarySmtpAddress -join ',')"
+            $LogMessage.add("SMTP Basic Authentication for the following $($SMTPusers.Count) users is not disabled: $($SMTPusers.PrimarySmtpAddress -join ',')")
         }
 
         if ($Settings.alert -eq $true) {
