@@ -1,44 +1,43 @@
 function Invoke-CIPPStandardSendReceiveLimitTenant {
     <#
     .FUNCTIONALITY
-    Internal
-    .APINAME
-    SendReceiveLimitTenant
-    .CAT
-    Exchange Standards
-    .TAG
-    "lowimpact"
-    .HELPTEXT
-    Sets the Send and Receive limits for new users. Valid values are 1MB to 150MB
-    .ADDEDCOMPONENT
-    {"type":"number","name":"standards.SendReceiveLimitTenant.SendLimit","label":"Send limit in MB (Default is 35)","default":35}
-    {"type":"number","name":"standards.SendReceiveLimitTenant.ReceiveLimit","label":"Receive Limit in MB (Default is 36)","default":36}
-    .LABEL
-    Set send/receive size limits
-    .IMPACT
-    Low Impact
-    .POWERSHELLEQUIVALENT
-    Set-MailboxPlan
-    .RECOMMENDEDBY
-    .DOCSDESCRIPTION
-    Sets the Send and Receive limits for new users. Valid values are 1MB to 150MB
-    .UPDATECOMMENTBLOCK
-    Run the Tools\Update-StandardsComments.ps1 script to update this comment block
+        Internal
+    .COMPONENT
+        (APIName) SendReceiveLimitTenant
+    .SYNOPSIS
+        (Label) Set send/receive size limits
+    .DESCRIPTION
+        (Helptext) Sets the Send and Receive limits for new users. Valid values are 1MB to 150MB
+        (DocsDescription) Sets the Send and Receive limits for new users. Valid values are 1MB to 150MB
+    .NOTES
+        CAT
+            Exchange Standards
+        TAG
+            "lowimpact"
+        ADDEDCOMPONENT
+            {"type":"number","name":"standards.SendReceiveLimitTenant.SendLimit","label":"Send limit in MB (Default is 35)","default":35}
+            {"type":"number","name":"standards.SendReceiveLimitTenant.ReceiveLimit","label":"Receive Limit in MB (Default is 36)","default":36}
+        IMPACT
+            Low Impact
+        POWERSHELLEQUIVALENT
+            Set-MailboxPlan
+        RECOMMENDEDBY
+        UPDATECOMMENTBLOCK
+            Run the Tools\Update-StandardsComments.ps1 script to update this comment block
+    .LINK
+        https://docs.cipp.app/user-documentation/tenant/standards/edit-standards
     #>
-
-
-
 
     param($Tenant, $Settings)
 
     # Input validation
-    if ($Settings.SendLimit -lt 1 -or $Settings.SendLimit -gt 150) {
+    if ([Int32]$Settings.SendLimit -lt 1 -or [Int32]$Settings.SendLimit -gt 150) {
         Write-LogMessage -API 'Standards' -tenant $tenant -message 'SendReceiveLimitTenant: Invalid SendLimit parameter set' -sev Error
         Return
     }
 
     # Input validation
-    if ($Settings.ReceiveLimit -lt 1 -or $Settings.ReceiveLimit -gt 150) {
+    if ([Int32]$Settings.ReceiveLimit -lt 1 -or [Int32]$Settings.ReceiveLimit -gt 150) {
         Write-LogMessage -API 'Standards' -tenant $tenant -message 'SendReceiveLimitTenant: Invalid ReceiveLimit parameter set' -sev Error
         Return
     }
@@ -88,7 +87,3 @@ function Invoke-CIPPStandardSendReceiveLimitTenant {
         Add-CIPPBPAField -FieldName 'SendReceiveLimit' -FieldValue $NotSetCorrectly -StoreAs json -Tenant $tenant
     }
 }
-
-
-
-

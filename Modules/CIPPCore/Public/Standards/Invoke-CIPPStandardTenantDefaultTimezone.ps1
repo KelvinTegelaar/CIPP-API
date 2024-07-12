@@ -1,33 +1,31 @@
 function Invoke-CIPPStandardTenantDefaultTimezone {
     <#
     .FUNCTIONALITY
-    Internal
-    .APINAME
-    TenantDefaultTimezone
-    .CAT
-    SharePoint Standards
-    .TAG
-    "lowimpact"
-    .HELPTEXT
-    Sets the default timezone for the tenant. This will be used for all new users and sites.
-    .ADDEDCOMPONENT
-    {"type":"TimezoneSelect","name":"standards.TenantDefaultTimezone.Timezone","label":"Timezone"}
-    .LABEL
-    Set Default Timezone for Tenant
-    .IMPACT
-    Low Impact
-    .POWERSHELLEQUIVALENT
-    Update-MgBetaAdminSharepointSetting
-    .RECOMMENDEDBY
-    .DOCSDESCRIPTION
-    Sets the default timezone for the tenant. This will be used for all new users and sites.
-    .UPDATECOMMENTBLOCK
-    Run the Tools\Update-StandardsComments.ps1 script to update this comment block
+        Internal
+    .COMPONENT
+        (APIName) TenantDefaultTimezone
+    .SYNOPSIS
+        (Label) Set Default Timezone for Tenant
+    .DESCRIPTION
+        (Helptext) Sets the default timezone for the tenant. This will be used for all new users and sites.
+        (DocsDescription) Sets the default timezone for the tenant. This will be used for all new users and sites.
+    .NOTES
+        CAT
+            SharePoint Standards
+        TAG
+            "lowimpact"
+        ADDEDCOMPONENT
+            {"type":"TimezoneSelect","name":"standards.TenantDefaultTimezone.Timezone","label":"Timezone"}
+        IMPACT
+            Low Impact
+        POWERSHELLEQUIVALENT
+            Update-MgBetaAdminSharepointSetting
+        RECOMMENDEDBY
+        UPDATECOMMENTBLOCK
+            Run the Tools\Update-StandardsComments.ps1 script to update this comment block
+    .LINK
+        https://docs.cipp.app/user-documentation/tenant/standards/edit-standards
     #>
-
-
-
-
 
     param($Tenant, $Settings)
 
@@ -68,7 +66,3 @@ function Invoke-CIPPStandardTenantDefaultTimezone {
         }
     }
 }
-
-
-
-
