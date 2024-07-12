@@ -3,7 +3,7 @@ param($Timer)
 try {
 
     $webhookTable = Get-CIPPTable -tablename webhookTable
-    $Webhooks = Get-CIPPAzDataTableEntity @webhookTable -Property RowKey
+    $Webhooks = Get-CIPPAzDataTableEntity @webhookTable -Property PartitionKey, RowKey
     if (($Webhooks | Measure-Object).Count -eq 0) {
         Write-Host 'No webhook subscriptions found. Exiting.'
         return
