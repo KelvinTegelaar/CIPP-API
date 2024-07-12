@@ -1,34 +1,31 @@
 function Invoke-CIPPStandardUserSubmissions {
     <#
     .FUNCTIONALITY
-    Internal
-    .APINAME
-    UserSubmissions
-    .CAT
-    Exchange Standards
-    .TAG
-    "mediumimpact"
-    .HELPTEXT
-    Set the state of the spam submission button in Outlook
-    .DOCSDESCRIPTION
-    Set the state of the built-in Report button in Outlook. This gives the users the ability to report emails as spam or phish.
-    .ADDEDCOMPONENT
-    {"type":"Select","label":"Select value","name":"standards.UserSubmissions.state","values":[{"label":"Enabled","value":"enable"},{"label":"Disabled","value":"disable"}]}
-    .LABEL
-    Set the state of the built-in Report button in Outlook
-    .IMPACT
-    Medium Impact
-    .POWERSHELLEQUIVALENT
-    New-ReportSubmissionPolicy or Set-ReportSubmissionPolicy
-    .RECOMMENDEDBY
-    .DOCSDESCRIPTION
-    Set the state of the spam submission button in Outlook
-    .UPDATECOMMENTBLOCK
-    Run the Tools\Update-StandardsComments.ps1 script to update this comment block
+        Internal
+    .COMPONENT
+        (APIName) UserSubmissions
+    .SYNOPSIS
+        (Label) Set the state of the built-in Report button in Outlook
+    .DESCRIPTION
+        (Helptext) Set the state of the spam submission button in Outlook
+        (DocsDescription) Set the state of the built-in Report button in Outlook. This gives the users the ability to report emails as spam or phish.
+    .NOTES
+        CAT
+            Exchange Standards
+        TAG
+            "mediumimpact"
+        ADDEDCOMPONENT
+            {"type":"Select","label":"Select value","name":"standards.UserSubmissions.state","values":[{"label":"Enabled","value":"enable"},{"label":"Disabled","value":"disable"}]}
+        IMPACT
+            Medium Impact
+        POWERSHELLEQUIVALENT
+            New-ReportSubmissionPolicy or Set-ReportSubmissionPolicy
+        RECOMMENDEDBY
+        UPDATECOMMENTBLOCK
+            Run the Tools\Update-StandardsComments.ps1 script to update this comment block
+    .LINK
+        https://docs.cipp.app/user-documentation/tenant/standards/edit-standards
     #>
-
-
-
 
     param($Tenant, $Settings)
 
@@ -100,7 +97,3 @@ function Invoke-CIPPStandardUserSubmissions {
         }
     }
 }
-
-
-
-

@@ -1,33 +1,30 @@
 function Invoke-CIPPStandardDisableUserSiteCreate {
     <#
     .FUNCTIONALITY
-    Internal
-    .APINAME
-    DisableUserSiteCreate
-    .CAT
-    SharePoint Standards
-    .TAG
-    "highimpact"
-    .HELPTEXT
-    Disables users from creating new SharePoint sites
-    .DOCSDESCRIPTION
-    Disables standard users from creating SharePoint sites, also disables the ability to fully create teams
-    .ADDEDCOMPONENT
-    .LABEL
-    Disable site creation by standard users
-    .IMPACT
-    High Impact
-    .POWERSHELLEQUIVALENT
-    Update-MgAdminSharepointSetting
-    .RECOMMENDEDBY
-    .DOCSDESCRIPTION
-    Disables users from creating new SharePoint sites
-    .UPDATECOMMENTBLOCK
-    Run the Tools\Update-StandardsComments.ps1 script to update this comment block
+        Internal
+    .COMPONENT
+        (APIName) DisableUserSiteCreate
+    .SYNOPSIS
+        (Label) Disable site creation by standard users
+    .DESCRIPTION
+        (Helptext) Disables users from creating new SharePoint sites
+        (DocsDescription) Disables standard users from creating SharePoint sites, also disables the ability to fully create teams
+    .NOTES
+        CAT
+            SharePoint Standards
+        TAG
+            "highimpact"
+        ADDEDCOMPONENT
+        IMPACT
+            High Impact
+        POWERSHELLEQUIVALENT
+            Update-MgAdminSharepointSetting
+        RECOMMENDEDBY
+        UPDATECOMMENTBLOCK
+            Run the Tools\Update-StandardsComments.ps1 script to update this comment block
+    .LINK
+        https://docs.cipp.app/user-documentation/tenant/standards/edit-standards
     #>
-
-
-
 
     param($Tenant, $Settings)
     $CurrentInfo = New-GraphGetRequest -Uri 'https://graph.microsoft.com/beta/admin/sharepoint/settings' -tenantid $Tenant -AsApp $true
@@ -62,7 +59,3 @@ function Invoke-CIPPStandardDisableUserSiteCreate {
         Add-CIPPBPAField -FieldName 'DisableUserSiteCreate' -FieldValue $CurrentInfo.isSiteCreationEnabled -StoreAs bool -Tenant $tenant
     }
 }
-
-
-
-
