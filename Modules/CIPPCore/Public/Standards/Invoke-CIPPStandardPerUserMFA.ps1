@@ -1,31 +1,30 @@
 function Invoke-CIPPStandardPerUserMFA {
     <#
     .FUNCTIONALITY
-    Internal
-    .APINAME
-    PerUserMFA
-    .CAT
-    Entra (AAD) Standards
-    .TAG
-    "highimpact"
-    .HELPTEXT
-    Enables per user MFA for all users.
-    .ADDEDCOMPONENT
-    .LABEL
-    Enables per user MFA for all users.
-    .IMPACT
-    High Impact
-    .POWERSHELLEQUIVALENT
-    Graph API
-    .RECOMMENDEDBY
-    .DOCSDESCRIPTION
-    Enables per user MFA for all users.
-    .UPDATECOMMENTBLOCK
-    Run the Tools\Update-StandardsComments.ps1 script to update this comment block
+        Internal
+    .COMPONENT
+        (APIName) PerUserMFA
+    .SYNOPSIS
+        (Label) Enables per user MFA for all users.
+    .DESCRIPTION
+        (Helptext) Enables per user MFA for all users.
+        (DocsDescription) Enables per user MFA for all users.
+    .NOTES
+        CAT
+            Entra (AAD) Standards
+        TAG
+            "highimpact"
+        ADDEDCOMPONENT
+        IMPACT
+            High Impact
+        POWERSHELLEQUIVALENT
+            Graph API
+        RECOMMENDEDBY
+        UPDATECOMMENTBLOCK
+            Run the Tools\Update-StandardsComments.ps1 script to update this comment block
+    .LINK
+        https://docs.cipp.app/user-documentation/tenant/standards/edit-standards
     #>
-
-
-
 
     param($Tenant, $Settings)
 
@@ -63,7 +62,3 @@ function Invoke-CIPPStandardPerUserMFA {
         Add-CIPPBPAField -FieldName 'LegacyMFAUsers' -FieldValue $UsersWithoutMFA -StoreAs json -Tenant $tenant
     }
 }
-
-
-
-
