@@ -1,33 +1,32 @@
 function Invoke-CIPPStandardAddDKIM {
     <#
     .FUNCTIONALITY
-    Internal
-    .APINAME
-    AddDKIM
-    .CAT
-    Exchange Standards
-    .TAG
-    "lowimpact"
-    "CIS"
-    .HELPTEXT
-    Enables DKIM for all domains that currently support it
-    .ADDEDCOMPONENT
-    .LABEL
-    Enables DKIM for all domains that currently support it
-    .IMPACT
-    Low Impact
-    .POWERSHELLEQUIVALENT
-    New-DkimSigningConfig and Set-DkimSigningConfig
-    .RECOMMENDEDBY
-    "CIS"
-    .DOCSDESCRIPTION
-    Enables DKIM for all domains that currently support it
-    .UPDATECOMMENTBLOCK
-    Run the Tools\Update-StandardsComments.ps1 script to update this comment block
+        Internal
+    .COMPONENT
+        (APIName) AddDKIM
+    .SYNOPSIS
+        (Label) Enables DKIM for all domains that currently support it
+    .DESCRIPTION
+        (Helptext) Enables DKIM for all domains that currently support it
+        (DocsDescription) Enables DKIM for all domains that currently support it
+    .NOTES
+        CAT
+            Exchange Standards
+        TAG
+            "lowimpact"
+            "CIS"
+        ADDEDCOMPONENT
+        IMPACT
+            Low Impact
+        POWERSHELLEQUIVALENT
+            New-DkimSigningConfig and Set-DkimSigningConfig
+        RECOMMENDEDBY
+            "CIS"
+        UPDATECOMMENTBLOCK
+            Run the Tools\Update-StandardsComments.ps1 script to update this comment block
+    .LINK
+        https://docs.cipp.app/user-documentation/tenant/standards/edit-standards
     #>
-
-
-
 
     param($Tenant, $Settings)
 
@@ -107,7 +106,3 @@ function Invoke-CIPPStandardAddDKIM {
         Add-CIPPBPAField -FieldName 'DKIM' -FieldValue $DKIMState -StoreAs bool -Tenant $tenant
     }
 }
-
-
-
-

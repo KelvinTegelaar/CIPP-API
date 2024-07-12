@@ -1,34 +1,33 @@
 function Invoke-CIPPStandardPhishProtection {
     <#
     .FUNCTIONALITY
-    Internal
-    .APINAME
-    PhishProtection
-    .CAT
-    Global Standards
-    .TAG
-    "lowimpact"
-    .HELPTEXT
-    Adds branding to the logon page that only appears if the url is not login.microsoftonline.com. This potentially prevents AITM attacks via EvilNginx. This will also automatically generate alerts if a clone of your login page has been found when set to Remediate.
-    .ADDEDCOMPONENT
-    .LABEL
-    Enable Phishing Protection system via branding CSS
-    .IMPACT
-    Low Impact
-    .DISABLEDFEATURES
-    
-    .POWERSHELLEQUIVALENT
-    Portal only
-    .RECOMMENDEDBY
-    "CIPP"
-    .DOCSDESCRIPTION
-    Adds branding to the logon page that only appears if the url is not login.microsoftonline.com. This potentially prevents AITM attacks via EvilNginx. This will also automatically generate alerts if a clone of your login page has been found when set to Remediate.
-    .UPDATECOMMENTBLOCK
-    Run the Tools\Update-StandardsComments.ps1 script to update this comment block
+        Internal
+    .COMPONENT
+        (APIName) PhishProtection
+    .SYNOPSIS
+        (Label) Enable Phishing Protection system via branding CSS
+    .DESCRIPTION
+        (Helptext) Adds branding to the logon page that only appears if the url is not login.microsoftonline.com. This potentially prevents AITM attacks via EvilNginx. This will also automatically generate alerts if a clone of your login page has been found when set to Remediate.
+        (DocsDescription) Adds branding to the logon page that only appears if the url is not login.microsoftonline.com. This potentially prevents AITM attacks via EvilNginx. This will also automatically generate alerts if a clone of your login page has been found when set to Remediate.
+    .NOTES
+        CAT
+            Global Standards
+        TAG
+            "lowimpact"
+        ADDEDCOMPONENT
+        IMPACT
+            Low Impact
+        DISABLEDFEATURES
+            
+        POWERSHELLEQUIVALENT
+            Portal only
+        RECOMMENDEDBY
+            "CIPP"
+        UPDATECOMMENTBLOCK
+            Run the Tools\Update-StandardsComments.ps1 script to update this comment block
+    .LINK
+        https://docs.cipp.app/user-documentation/tenant/standards/edit-standards
     #>
-
-
-
 
     param($Tenant, $Settings)
     $TenantId = Get-Tenants | Where-Object -Property defaultDomainName -EQ $tenant
@@ -83,7 +82,3 @@ function Invoke-CIPPStandardPhishProtection {
         Add-CIPPBPAField -FieldName 'PhishProtection' -FieldValue $authstate -StoreAs bool -Tenant $tenant
     }
 }
-
-
-
-
