@@ -1,33 +1,32 @@
 function Invoke-CIPPStandardDisableAddShortcutsToOneDrive {
     <#
     .FUNCTIONALITY
-    Internal
-    .APINAME
-    DisableAddShortcutsToOneDrive
-    .CAT
-    SharePoint Standards
-    .TAG
-    "mediumimpact"
-    .HELPTEXT
-    When the feature is disabled the option Add shortcut to OneDrive will be removed. Any folders that have already been added will remain on the user's computer.
-    .DISABLEDFEATURES
-    
-    .ADDEDCOMPONENT
-    .LABEL
-    Disable Add Shortcuts To OneDrive
-    .IMPACT
-    Medium Impact
-    .POWERSHELLEQUIVALENT
-    Graph API or Portal
-    .RECOMMENDEDBY
-    .DOCSDESCRIPTION
-    When the feature is disabled the option Add shortcut to OneDrive will be removed. Any folders that have already been added will remain on the user's computer.
-    .UPDATECOMMENTBLOCK
-    Run the Tools\Update-StandardsComments.ps1 script to update this comment block
+        Internal
+    .COMPONENT
+        (APIName) DisableAddShortcutsToOneDrive
+    .SYNOPSIS
+        (Label) Disable Add Shortcuts To OneDrive
+    .DESCRIPTION
+        (Helptext) When the feature is disabled the option Add shortcut to OneDrive will be removed. Any folders that have already been added will remain on the user's computer.
+        (DocsDescription) When the feature is disabled the option Add shortcut to OneDrive will be removed. Any folders that have already been added will remain on the user's computer.
+    .NOTES
+        CAT
+            SharePoint Standards
+        TAG
+            "mediumimpact"
+        DISABLEDFEATURES
+            
+        ADDEDCOMPONENT
+        IMPACT
+            Medium Impact
+        POWERSHELLEQUIVALENT
+            Graph API or Portal
+        RECOMMENDEDBY
+        UPDATECOMMENTBLOCK
+            Run the Tools\Update-StandardsComments.ps1 script to update this comment block
+    .LINK
+        https://docs.cipp.app/user-documentation/tenant/standards/edit-standards
     #>
-
-
-
 
     param($Tenant, $Settings)
 
@@ -121,7 +120,3 @@ function Invoke-CIPPStandardDisableAddShortcutsToOneDrive {
         Write-LogMessage @log
     }
 }
-
-
-
-
