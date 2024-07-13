@@ -1,36 +1,33 @@
 function Invoke-CIPPStandardEnableAppConsentRequests {
     <#
     .FUNCTIONALITY
-    Internal
-    .APINAME
-    EnableAppConsentRequests
-    .CAT
-    Entra (AAD) Standards
-    .TAG
-    "lowimpact"
-    "CIS"
-    .HELPTEXT
-    Enables App consent admin requests for the tenant via the GA role. Does not overwrite existing reviewer settings
-    .DOCSDESCRIPTION
-    Enables the ability for users to request admin consent for applications. Should be used in conjunction with the "Require admin consent for applications" standards
-    .ADDEDCOMPONENT
-    {"type":"AdminRolesMultiSelect","label":"App Consent Reviewer Roles","name":"standards.EnableAppConsentRequests.ReviewerRoles"}
-    .LABEL
-    Enable App consent admin requests
-    .IMPACT
-    Low Impact
-    .POWERSHELLEQUIVALENT
-    Update-MgPolicyAdminConsentRequestPolicy
-    .RECOMMENDEDBY
-    "CIS"
-    .DOCSDESCRIPTION
-    Enables App consent admin requests for the tenant via the GA role. Does not overwrite existing reviewer settings
-    .UPDATECOMMENTBLOCK
-    Run the Tools\Update-StandardsComments.ps1 script to update this comment block
+        Internal
+    .COMPONENT
+        (APIName) EnableAppConsentRequests
+    .SYNOPSIS
+        (Label) Enable App consent admin requests
+    .DESCRIPTION
+        (Helptext) Enables App consent admin requests for the tenant via the GA role. Does not overwrite existing reviewer settings
+        (DocsDescription) Enables the ability for users to request admin consent for applications. Should be used in conjunction with the "Require admin consent for applications" standards
+    .NOTES
+        CAT
+            Entra (AAD) Standards
+        TAG
+            "lowimpact"
+            "CIS"
+        ADDEDCOMPONENT
+            {"type":"AdminRolesMultiSelect","label":"App Consent Reviewer Roles","name":"standards.EnableAppConsentRequests.ReviewerRoles"}
+        IMPACT
+            Low Impact
+        POWERSHELLEQUIVALENT
+            Update-MgPolicyAdminConsentRequestPolicy
+        RECOMMENDEDBY
+            "CIS"
+        UPDATECOMMENTBLOCK
+            Run the Tools\Update-StandardsComments.ps1 script to update this comment block
+    .LINK
+        https://docs.cipp.app/user-documentation/tenant/standards/edit-standards
     #>
-
-
-
 
     param($Tenant, $Settings)
     $CurrentInfo = New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/policies/adminConsentRequestPolicy' -tenantid $Tenant
@@ -106,7 +103,3 @@ function Invoke-CIPPStandardEnableAppConsentRequests {
         Add-CIPPBPAField -FieldName 'EnableAppConsentAdminRequests' -FieldValue $CurrentInfo.isEnabled -StoreAs bool -Tenant $tenant
     }
 }
-
-
-
-
