@@ -1,33 +1,30 @@
 function Invoke-CIPPStandardEnableFIDO2 {
     <#
     .FUNCTIONALITY
-    Internal
-    .APINAME
-    EnableFIDO2
-    .CAT
-    Entra (AAD) Standards
-    .TAG
-    "lowimpact"
-    .HELPTEXT
-    Enables the FIDO2 authenticationMethod for the tenant
-    .DOCSDESCRIPTION
-    Enables FIDO2 capabilities for the tenant. This allows users to use FIDO2 keys like a Yubikey for authentication.
-    .ADDEDCOMPONENT
-    .LABEL
-    Enable FIDO2 capabilities
-    .IMPACT
-    Low Impact
-    .POWERSHELLEQUIVALENT
-    Update-MgBetaPolicyAuthenticationMethodPolicyAuthenticationMethodConfiguration
-    .RECOMMENDEDBY
-    .DOCSDESCRIPTION
-    Enables the FIDO2 authenticationMethod for the tenant
-    .UPDATECOMMENTBLOCK
-    Run the Tools\Update-StandardsComments.ps1 script to update this comment block
+        Internal
+    .COMPONENT
+        (APIName) EnableFIDO2
+    .SYNOPSIS
+        (Label) Enable FIDO2 capabilities
+    .DESCRIPTION
+        (Helptext) Enables the FIDO2 authenticationMethod for the tenant
+        (DocsDescription) Enables FIDO2 capabilities for the tenant. This allows users to use FIDO2 keys like a Yubikey for authentication.
+    .NOTES
+        CAT
+            Entra (AAD) Standards
+        TAG
+            "lowimpact"
+        ADDEDCOMPONENT
+        IMPACT
+            Low Impact
+        POWERSHELLEQUIVALENT
+            Update-MgBetaPolicyAuthenticationMethodPolicyAuthenticationMethodConfiguration
+        RECOMMENDEDBY
+        UPDATECOMMENTBLOCK
+            Run the Tools\Update-StandardsComments.ps1 script to update this comment block
+    .LINK
+        https://docs.cipp.app/user-documentation/tenant/standards/edit-standards
     #>
-
-
-
 
     param($Tenant, $Settings)
     $CurrentInfo = New-GraphGetRequest -Uri 'https://graph.microsoft.com/beta/policies/authenticationmethodspolicy/authenticationMethodConfigurations/Fido2' -tenantid $Tenant
@@ -57,7 +54,3 @@ function Invoke-CIPPStandardEnableFIDO2 {
     }
 
 }
-
-
-
-
