@@ -28,11 +28,7 @@ function Set-CIPPResetPassword {
         Write-LogMessage -user $ExecutingUser -API $APIName -message "Reset the password for $($userid). User must change password is set to $forceChangePasswordNextSignIn" -Sev 'Info' -tenant $TenantFilter
         
         if($UserDetails.onPremisesSyncEnabled -eq $true){
-            return @"
-Reset the password for $($userid). User must change password is set to $forceChangePasswordNextSignIn. The new password is $password.
-
-WARNING: This user is AD synced. Please confirm passthrough or writeback is enabled.
-"@
+            return "Reset the password for $($userid). User must change password is set to $forceChangePasswordNextSignIn. The new password is $password. WARNING: This user is AD synced. Please confirm passthrough or writeback is enabled."
         }else{
             return "Reset the password for $($userid). User must change password is set to $forceChangePasswordNextSignIn. The new password is $password"
         }
