@@ -1,33 +1,30 @@
 function Invoke-CIPPStandardDisableM365GroupUsers {
     <#
     .FUNCTIONALITY
-    Internal
-    .APINAME
-    DisableM365GroupUsers
-    .CAT
-    Entra (AAD) Standards
-    .TAG
-    "lowimpact"
-    .HELPTEXT
-    Restricts M365 group creation to certain admin roles. This disables the ability to create Teams, Sharepoint sites, Planner, etc
-    .DOCSDESCRIPTION
-    Users by default are allowed to create M365 groups. This restricts M365 group creation to certain admin roles. This disables the ability to create Teams, SharePoint sites, Planner, etc
-    .ADDEDCOMPONENT
-    .LABEL
-    Disable M365 Group creation by users
-    .IMPACT
-    Low Impact
-    .POWERSHELLEQUIVALENT
-    Update-MgBetaDirectorySetting
-    .RECOMMENDEDBY
-    .DOCSDESCRIPTION
-    Restricts M365 group creation to certain admin roles. This disables the ability to create Teams, Sharepoint sites, Planner, etc
-    .UPDATECOMMENTBLOCK
-    Run the Tools\Update-StandardsComments.ps1 script to update this comment block
+        Internal
+    .COMPONENT
+        (APIName) DisableM365GroupUsers
+    .SYNOPSIS
+        (Label) Disable M365 Group creation by users
+    .DESCRIPTION
+        (Helptext) Restricts M365 group creation to certain admin roles. This disables the ability to create Teams, Sharepoint sites, Planner, etc
+        (DocsDescription) Users by default are allowed to create M365 groups. This restricts M365 group creation to certain admin roles. This disables the ability to create Teams, SharePoint sites, Planner, etc
+    .NOTES
+        CAT
+            Entra (AAD) Standards
+        TAG
+            "lowimpact"
+        ADDEDCOMPONENT
+        IMPACT
+            Low Impact
+        POWERSHELLEQUIVALENT
+            Update-MgBetaDirectorySetting
+        RECOMMENDEDBY
+        UPDATECOMMENTBLOCK
+            Run the Tools\Update-StandardsComments.ps1 script to update this comment block
+    .LINK
+        https://docs.cipp.app/user-documentation/tenant/standards/edit-standards
     #>
-
-
-
 
     param($Tenant, $Settings)
     $CurrentState = (New-GraphGetRequest -Uri 'https://graph.microsoft.com/beta/settings' -tenantid $tenant) | Where-Object -Property displayname -EQ 'Group.unified'
@@ -79,7 +76,3 @@ function Invoke-CIPPStandardDisableM365GroupUsers {
     }
 
 }
-
-
-
-

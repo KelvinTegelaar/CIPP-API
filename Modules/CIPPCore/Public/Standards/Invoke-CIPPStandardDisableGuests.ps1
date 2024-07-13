@@ -1,31 +1,30 @@
 function Invoke-CIPPStandardDisableGuests {
     <#
     .FUNCTIONALITY
-    Internal
-    .APINAME
-    DisableGuests
-    .CAT
-    Entra (AAD) Standards
-    .TAG
-    "mediumimpact"
-    .HELPTEXT
-    Blocks login for guest users that have not logged in for 90 days
-    .ADDEDCOMPONENT
-    .LABEL
-    Disable Guest accounts that have not logged on for 90 days
-    .IMPACT
-    Medium Impact
-    .POWERSHELLEQUIVALENT
-    Graph API
-    .RECOMMENDEDBY
-    .DOCSDESCRIPTION
-    Blocks login for guest users that have not logged in for 90 days
-    .UPDATECOMMENTBLOCK
-    Run the Tools\Update-StandardsComments.ps1 script to update this comment block
+        Internal
+    .COMPONENT
+        (APIName) DisableGuests
+    .SYNOPSIS
+        (Label) Disable Guest accounts that have not logged on for 90 days
+    .DESCRIPTION
+        (Helptext) Blocks login for guest users that have not logged in for 90 days
+        (DocsDescription) Blocks login for guest users that have not logged in for 90 days
+    .NOTES
+        CAT
+            Entra (AAD) Standards
+        TAG
+            "mediumimpact"
+        ADDEDCOMPONENT
+        IMPACT
+            Medium Impact
+        POWERSHELLEQUIVALENT
+            Graph API
+        RECOMMENDEDBY
+        UPDATECOMMENTBLOCK
+            Run the Tools\Update-StandardsComments.ps1 script to update this comment block
+    .LINK
+        https://docs.cipp.app/user-documentation/tenant/standards/edit-standards
     #>
-
-
-
 
     param($Tenant, $Settings)
     $Lookup = (Get-Date).AddDays(-90).ToUniversalTime().ToString('o')
@@ -61,7 +60,3 @@ function Invoke-CIPPStandardDisableGuests {
         Add-CIPPBPAField -FieldName 'DisableGuests' -FieldValue $filtered -StoreAs json -Tenant $tenant
     }
 }
-
-
-
-
