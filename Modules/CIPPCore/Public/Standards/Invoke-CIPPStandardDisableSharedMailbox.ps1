@@ -1,35 +1,32 @@
 function Invoke-CIPPStandardDisableSharedMailbox {
     <#
     .FUNCTIONALITY
-    Internal
-    .APINAME
-    DisableSharedMailbox
-    .CAT
-    Exchange Standards
-    .TAG
-    "mediumimpact"
-    "CIS"
-    .HELPTEXT
-    Blocks login for all accounts that are marked as a shared mailbox. This is Microsoft best practice to prevent direct logons to shared mailboxes.
-    .DOCSDESCRIPTION
-    Shared mailboxes can be directly logged into if the password is reset, this presents a security risk as do all shared login credentials. Microsoft's recommendation is to disable the user account for shared mailboxes. It would be a good idea to review the sign-in reports to establish potential impact.
-    .ADDEDCOMPONENT
-    .LABEL
-    Disable Shared Mailbox AAD accounts
-    .IMPACT
-    Medium Impact
-    .POWERSHELLEQUIVALENT
-    Get-Mailbox & Update-MgUser
-    .RECOMMENDEDBY
-    "CIS"
-    .DOCSDESCRIPTION
-    Blocks login for all accounts that are marked as a shared mailbox. This is Microsoft best practice to prevent direct logons to shared mailboxes.
-    .UPDATECOMMENTBLOCK
-    Run the Tools\Update-StandardsComments.ps1 script to update this comment block
+        Internal
+    .COMPONENT
+        (APIName) DisableSharedMailbox
+    .SYNOPSIS
+        (Label) Disable Shared Mailbox AAD accounts
+    .DESCRIPTION
+        (Helptext) Blocks login for all accounts that are marked as a shared mailbox. This is Microsoft best practice to prevent direct logons to shared mailboxes.
+        (DocsDescription) Shared mailboxes can be directly logged into if the password is reset, this presents a security risk as do all shared login credentials. Microsoft's recommendation is to disable the user account for shared mailboxes. It would be a good idea to review the sign-in reports to establish potential impact.
+    .NOTES
+        CAT
+            Exchange Standards
+        TAG
+            "mediumimpact"
+            "CIS"
+        ADDEDCOMPONENT
+        IMPACT
+            Medium Impact
+        POWERSHELLEQUIVALENT
+            Get-Mailbox & Update-MgUser
+        RECOMMENDEDBY
+            "CIS"
+        UPDATECOMMENTBLOCK
+            Run the Tools\Update-StandardsComments.ps1 script to update this comment block
+    .LINK
+        https://docs.cipp.app/user-documentation/tenant/standards/edit-standards
     #>
-
-
-
 
     param($Tenant, $Settings)
     $UserList = New-GraphGetRequest -uri 'https://graph.microsoft.com/v1.0/users?$top=999&$filter=accountEnabled eq true' -Tenantid $tenant -scope 'https://graph.microsoft.com/.default' 
@@ -65,7 +62,3 @@ function Invoke-CIPPStandardDisableSharedMailbox {
         Add-CIPPBPAField -FieldName 'DisableSharedMailbox' -FieldValue $SharedMailboxList -StoreAs json -Tenant $tenant
     }
 }
-
-
-
-

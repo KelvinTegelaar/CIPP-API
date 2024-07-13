@@ -20,13 +20,13 @@ Function Invoke-ExecClrImmId {
     Try {
         $TenantFilter = $Request.Query.TenantFilter
         $UserID = $Request.Query.ID
-        $Body = [pscustomobject] @{
-            onPremisesImmutableId = $null
-        } | ConvertTo-Json
-        $GraphRequest = New-GraphPostRequest -uri "https://graph.microsoft.com/beta/users/$UserID" -tenantid $TenantFilter -type PATCH -body $Body
+        $Body = [pscustomobject]@{ onPremisesImmutableId = $null }
+        $Body = ConvertTo-Json -InputObject $Body -Depth 5 -Compress
+        $null = New-GraphPostRequest -uri "https://graph.microsoft.com/beta/users/$UserID" -tenantid $TenantFilter -type PATCH -body $Body
         $Results = [pscustomobject]@{'Results' = 'Successfully Cleared ImmutableId' }
     } catch {
-        $Results = [pscustomobject]@{'Results' = "Failed. $_.Exception.Message"; colour = 'danger' }
+        $ErrorMessage = Get-NormalizedError -Message $_.Exception
+        $Results = [pscustomobject]@{'Results' = "Failed. $ErrorMessage"; colour = 'danger' }
         $_.Exception
     }
 
@@ -35,5 +35,4 @@ Function Invoke-ExecClrImmId {
             StatusCode = [HttpStatusCode]::OK
             Body       = $Results
         })
-
 }
