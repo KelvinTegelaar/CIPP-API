@@ -1,8 +1,30 @@
 function Invoke-CIPPStandardOauthConsentLowSec {
     <#
     .FUNCTIONALITY
-    Internal
+        Internal
+    .COMPONENT
+        (APIName) OauthConsentLowSec
+    .SYNOPSIS
+        (Label) Allow users to consent to applications with low security risk (Prevent OAuth phishing. Lower impact, less secure)
+    .DESCRIPTION
+        (Helptext) Sets the default oauth consent level so users can consent to applications that have low risks.
+        (DocsDescription) Allows users to consent to applications with low assigned risk.
+    .NOTES
+        CAT
+            Entra (AAD) Standards
+        TAG
+            "mediumimpact"
+        IMPACT
+            Medium Impact
+        POWERSHELLEQUIVALENT
+            Update-MgPolicyAuthorizationPolicy
+        RECOMMENDEDBY
+        UPDATECOMMENTBLOCK
+            Run the Tools\Update-StandardsComments.ps1 script to update this comment block
+    .LINK
+        https://docs.cipp.app/user-documentation/tenant/standards/edit-standards
     #>
+
     param($Tenant, $Settings)
     $State = (New-GraphGetRequest -Uri 'https://graph.microsoft.com/beta/policies/authorizationPolicy/authorizationPolicy' -tenantid $tenant)
     If ($Settings.remediate -eq $true) {

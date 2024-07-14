@@ -19,8 +19,6 @@ Function Invoke-ListConditionalAccessPolicies {
         param (
             [Parameter()]
             $ID,
-
-            [Parameter(Mandatory = $true)]
             $Locations
         )
         if ($id -eq 'All') {
@@ -39,8 +37,6 @@ Function Invoke-ListConditionalAccessPolicies {
         param (
             [Parameter()]
             $ID,
-
-            [Parameter(Mandatory = $true)]
             $RoleDefinitions
         )
         if ($id -eq 'All') {
@@ -59,8 +55,6 @@ Function Invoke-ListConditionalAccessPolicies {
         param (
             [Parameter()]
             $ID,
-
-            [Parameter(Mandatory = $true)]
             $Users
         )
         if ($id -eq 'All') {
@@ -78,8 +72,6 @@ Function Invoke-ListConditionalAccessPolicies {
         param (
             [Parameter()]
             $ID,
-
-            [Parameter(Mandatory = $true)]
             $Groups
         )
         if ($id -eq 'All') {
@@ -98,8 +90,6 @@ Function Invoke-ListConditionalAccessPolicies {
         param (
             [Parameter()]
             $ID,
-
-            [Parameter(Mandatory = $true)]
             $Applications
         )
         if ($id -eq 'All') {

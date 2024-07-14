@@ -1,8 +1,31 @@
 function Invoke-CIPPStandardDisableBasicAuthSMTP {
     <#
     .FUNCTIONALITY
-    Internal
+        Internal
+    .COMPONENT
+        (APIName) DisableBasicAuthSMTP
+    .SYNOPSIS
+        (Label) Disable SMTP Basic Authentication
+    .DESCRIPTION
+        (Helptext) Disables SMTP AUTH for the organization and all users. This is the default for new tenants. 
+        (DocsDescription) Disables SMTP basic authentication for the tenant and all users with it explicitly enabled.
+    .NOTES
+        CAT
+            Global Standards
+        TAG
+            "mediumimpact"
+        ADDEDCOMPONENT
+        IMPACT
+            Medium Impact
+        POWERSHELLEQUIVALENT
+            Set-TransportConfig -SmtpClientAuthenticationDisabled $true
+        RECOMMENDEDBY
+        UPDATECOMMENTBLOCK
+            Run the Tools\Update-StandardsComments.ps1 script to update this comment block
+    .LINK
+        https://docs.cipp.app/user-documentation/tenant/standards/edit-standards
     #>
+
     param($Tenant, $Settings)
     $CurrentInfo = New-ExoRequest -tenantid $Tenant -cmdlet 'Get-TransportConfig'
     $SMTPusers = New-ExoRequest -tenantid $Tenant -cmdlet 'Get-CASMailbox' -cmdParams @{ ResultSize = 'Unlimited' } | Where-Object { ($_.SmtpClientAuthenticationDisabled -eq $false) }
@@ -35,18 +58,19 @@ function Invoke-CIPPStandardDisableBasicAuthSMTP {
         }
     }
 
+    $LogMessage = [System.Collections.Generic.List[string]]::new()
     if ($Settings.alert -eq $true -or $Settings.report -eq $true) {
 
         # Build the log message for use in the alert and report
         if ($CurrentInfo.SmtpClientAuthenticationDisabled) {
-            $LogMessage = 'SMTP Basic Authentication for tenant is disabled. '
+            $LogMessage.add('SMTP Basic Authentication for tenant is disabled. ')
         } else {
-            $LogMessage = 'SMTP Basic Authentication for tenant is not disabled. '
+            $LogMessage.add('SMTP Basic Authentication for tenant is not disabled. ')
         }
         if ($SMTPusers.Count -eq 0) {
-            $LogMessage += 'SMTP Basic Authentication for all users is disabled'
+            $LogMessage.add('SMTP Basic Authentication for all users is disabled')
         } else {
-            $LogMessage += "SMTP Basic Authentication for the following $($SMTPusers.Count) users is not disabled: $($SMTPusers.PrimarySmtpAddress -join ',')"
+            $LogMessage.add("SMTP Basic Authentication for the following $($SMTPusers.Count) users is not disabled: $($SMTPusers.PrimarySmtpAddress -join ',')")
         }
 
         if ($Settings.alert -eq $true) {
