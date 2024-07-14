@@ -1,33 +1,30 @@
 function Invoke-CIPPStandardlaps {
     <#
     .FUNCTIONALITY
-    Internal
-    .APINAME
-    laps
-    .CAT
-    Entra (AAD) Standards
-    .TAG
-    "lowimpact"
-    .HELPTEXT
-    Enables the tenant to use LAPS. You must still create a policy for LAPS to be active on all devices. Use the template standards to deploy this by default.
-    .DOCSDESCRIPTION
-    Enables the LAPS functionality on the tenant. Prerequisite for using Windows LAPS via Azure AD.
-    .ADDEDCOMPONENT
-    .LABEL
-    Enable LAPS on the tenant
-    .IMPACT
-    Low Impact
-    .POWERSHELLEQUIVALENT
-    Portal or Graph API
-    .RECOMMENDEDBY
-    .DOCSDESCRIPTION
-    Enables the tenant to use LAPS. You must still create a policy for LAPS to be active on all devices. Use the template standards to deploy this by default.
-    .UPDATECOMMENTBLOCK
-    Run the Tools\Update-StandardsComments.ps1 script to update this comment block
+        Internal
+    .COMPONENT
+        (APIName) laps
+    .SYNOPSIS
+        (Label) Enable LAPS on the tenant
+    .DESCRIPTION
+        (Helptext) Enables the tenant to use LAPS. You must still create a policy for LAPS to be active on all devices. Use the template standards to deploy this by default.
+        (DocsDescription) Enables the LAPS functionality on the tenant. Prerequisite for using Windows LAPS via Azure AD.
+    .NOTES
+        CAT
+            Entra (AAD) Standards
+        TAG
+            "lowimpact"
+        ADDEDCOMPONENT
+        IMPACT
+            Low Impact
+        POWERSHELLEQUIVALENT
+            Portal or Graph API
+        RECOMMENDEDBY
+        UPDATECOMMENTBLOCK
+            Run the Tools\Update-StandardsComments.ps1 script to update this comment block
+    .LINK
+        https://docs.cipp.app/user-documentation/tenant/standards/edit-standards
     #>
-
-
-
 
     param($Tenant, $Settings)
     $PreviousSetting = New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/policies/deviceRegistrationPolicy' -tenantid $Tenant
@@ -62,7 +59,3 @@ function Invoke-CIPPStandardlaps {
         Add-CIPPBPAField -FieldName 'laps' -FieldValue $PreviousSetting.localAdminPassword.isEnabled -StoreAs bool -Tenant $tenant
     }
 }
-
-
-
-
