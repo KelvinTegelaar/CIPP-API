@@ -1,4 +1,4 @@
-﻿<#
+<#
 .SYNOPSIS
     This script updates the comment block in the CIPP standard files.
 
@@ -38,11 +38,11 @@ foreach ($Standard in $StandardsInfo) {
         Write-Host "No file found for standard $($Standard.name)" -ForegroundColor Yellow
         continue
     }
-    $Content = (Get-Content -Path $StandardsFilePath -Raw).TrimEnd()
+    $Content = (Get-Content -Path $StandardsFilePath -Raw).TrimEnd() + "`r`n"
 
     # Remove random newlines before the param block
     $regexPattern = '#>\s*\r?\n\s*\r?\n\s*param'
-    $Content = $Content -replace $regexPattern, "#>`n`n    param"
+    $Content = $Content -replace $regexPattern, "#>`r`n`r`n    param"
 
     # Regex to match the existing comment block
     $Regex = '<#(.|\n)*?\.FUNCTIONALITY\s*Internal(.|\n)*?#>'
@@ -102,7 +102,7 @@ foreach ($Standard in $StandardsInfo) {
             Write-Host "Would update $StandardsFilePath with the following comment block:"
             $NewComment
         } else {
-            $Content -replace $Regex, $NewComment | Set-Content -Path $StandardsFilePath -Encoding utf8
+            $Content -replace $Regex, $NewComment | Set-Content -Path $StandardsFilePath -Encoding utf8 -NoNewLine
         }
     } else {
         Write-Host "No comment block found in $StandardsFilePath" -ForegroundColor Yellow
