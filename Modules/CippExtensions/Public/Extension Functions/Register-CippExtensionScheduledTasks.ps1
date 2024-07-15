@@ -56,7 +56,7 @@ function Register-CIPPExtensionScheduledTasks {
                                 value = 'Sync-CippExtensionData'
                                 label = 'Sync-CippExtensionData'
                             }
-                            Parameters    = @{
+                            Parameters    = [pscustomobject]@{
                                 TenantFilter = $Tenant.defaultDomainName
                                 SyncType     = $SyncType
                             }
