@@ -9,7 +9,7 @@ function New-ExoRequest {
         [string]$cmdlet,
 
         [Parameter(Mandatory = $false)]
-        [hashtable]$cmdParams,
+        $cmdParams,
 
         [Parameter(Mandatory = $false)]
         [string]$Select,
@@ -42,6 +42,7 @@ function New-ExoRequest {
         }
 
         if ($cmdParams) {
+            #if cmdparams is a pscustomobject, convert to hashtable, otherwise leave as is
             $Params = $cmdParams
         } else {
             $Params = @{}
