@@ -65,7 +65,7 @@ function Register-CIPPExtensionScheduledTasks {
                             TenantFilter  = $Tenant.defaultDomainName
                         }
                         if ($ExistingTask) {
-                            $Task.RowKey = $ExistingTask.RowKey
+                            $Task | Add-Member -NotePropertyName 'RowKey' -NotePropertyValue $ExistingTask.RowKey -Force
                         }
                         $null = Add-CIPPScheduledTask -Task $Task -hidden $true -SyncType $SyncType
                         Write-Information "Creating $SyncType task for tenant $($Tenant.defaultDomainName)"
