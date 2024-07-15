@@ -1,33 +1,32 @@
 function Invoke-CIPPStandardRotateDKIM {
     <#
     .FUNCTIONALITY
-    Internal
-    .APINAME
-    RotateDKIM
-    .CAT
-    Exchange Standards
-    .TAG
-    "lowimpact"
-    "CIS"
-    .HELPTEXT
-    Rotate DKIM keys that are 1024 bit to 2048 bit
-    .ADDEDCOMPONENT
-    .LABEL
-    Rotate DKIM keys that are 1024 bit to 2048 bit
-    .IMPACT
-    Low Impact
-    .POWERSHELLEQUIVALENT
-    Rotate-DkimSigningConfig
-    .RECOMMENDEDBY
-    "CIS"
-    .DOCSDESCRIPTION
-    Rotate DKIM keys that are 1024 bit to 2048 bit
-    .UPDATECOMMENTBLOCK
-    Run the Tools\Update-StandardsComments.ps1 script to update this comment block
+        Internal
+    .COMPONENT
+        (APIName) RotateDKIM
+    .SYNOPSIS
+        (Label) Rotate DKIM keys that are 1024 bit to 2048 bit
+    .DESCRIPTION
+        (Helptext) Rotate DKIM keys that are 1024 bit to 2048 bit
+        (DocsDescription) Rotate DKIM keys that are 1024 bit to 2048 bit
+    .NOTES
+        CAT
+            Exchange Standards
+        TAG
+            "lowimpact"
+            "CIS"
+        ADDEDCOMPONENT
+        IMPACT
+            Low Impact
+        POWERSHELLEQUIVALENT
+            Rotate-DkimSigningConfig
+        RECOMMENDEDBY
+            "CIS"
+        UPDATECOMMENTBLOCK
+            Run the Tools\Update-StandardsComments.ps1 script to update this comment block
+    .LINK
+        https://docs.cipp.app/user-documentation/tenant/standards/edit-standards
     #>
-
-
-
 
     param($Tenant, $Settings)
     $DKIM = (New-ExoRequest -tenantid $tenant -cmdlet 'Get-DkimSigningConfig') | Where-Object { $_.Selector1KeySize -Eq 1024 -and $_.Enabled -eq $true }
@@ -62,7 +61,3 @@ function Invoke-CIPPStandardRotateDKIM {
         Add-CIPPBPAField -FieldName 'DKIM' -FieldValue $DKIM -StoreAs json -Tenant $tenant
     }
 }
-
-
-
-

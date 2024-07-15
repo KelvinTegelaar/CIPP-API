@@ -1,30 +1,27 @@
 function Invoke-CIPPStandardDisableVoice {
     <#
     .FUNCTIONALITY
-    Internal
-    .APINAME
-    DisableVoice
-    .CAT
-    Entra (AAD) Standards
-    .TAG
-    "highimpact"
-    .HELPTEXT
-    This blocks users from using Voice call as an MFA method. If a user only has Voice as a MFA method, they will be unable to log in.
-    .DOCSDESCRIPTION
-    Disables Voice call as an MFA method for the tenant. If a user only has Voice call as a MFA method, they will be unable to sign in.
-    .ADDEDCOMPONENT
-    .LABEL
-    Disables Voice call as an MFA method
-    .IMPACT
-    High Impact
-    .DOCSDESCRIPTION
-    This blocks users from using Voice call as an MFA method. If a user only has Voice as a MFA method, they will be unable to log in.
-    .UPDATECOMMENTBLOCK
-    Run the Tools\Update-StandardsComments.ps1 script to update this comment block
+        Internal
+    .COMPONENT
+        (APIName) DisableVoice
+    .SYNOPSIS
+        (Label) Disables Voice call as an MFA method
+    .DESCRIPTION
+        (Helptext) This blocks users from using Voice call as an MFA method. If a user only has Voice as a MFA method, they will be unable to log in.
+        (DocsDescription) Disables Voice call as an MFA method for the tenant. If a user only has Voice call as a MFA method, they will be unable to sign in.
+    .NOTES
+        CAT
+            Entra (AAD) Standards
+        TAG
+            "highimpact"
+        ADDEDCOMPONENT
+        IMPACT
+            High Impact
+        UPDATECOMMENTBLOCK
+            Run the Tools\Update-StandardsComments.ps1 script to update this comment block
+    .LINK
+        https://docs.cipp.app/user-documentation/tenant/standards/edit-standards
     #>
-
-
-
 
     param($Tenant, $Settings)
     $CurrentInfo = New-GraphGetRequest -Uri 'https://graph.microsoft.com/beta/policies/authenticationmethodspolicy/authenticationMethodConfigurations/Voice' -tenantid $Tenant
@@ -50,7 +47,3 @@ function Invoke-CIPPStandardDisableVoice {
         Add-CIPPBPAField -FieldName 'DisableVoice' -FieldValue $State -StoreAs bool -Tenant $tenant
     }
 }
-
-
-
-

@@ -1,36 +1,33 @@
 function Invoke-CIPPStandardDisableOutlookAddins {
     <#
     .FUNCTIONALITY
-    Internal
-    .APINAME
-    DisableOutlookAddins
-    .CAT
-    Exchange Standards
-    .TAG
-    "mediumimpact"
-    "CIS"
-    "exo_outlookaddins"
-    .HELPTEXT
-    Disables the ability for users to install add-ins in Outlook. This is to prevent users from installing malicious add-ins.
-    .DOCSDESCRIPTION
-    Disables users from being able to install add-ins in Outlook. Only admins are able to approve add-ins for the users. This is done to reduce the threat surface for data exfiltration.
-    .ADDEDCOMPONENT
-    .LABEL
-    Disable users from installing add-ins in Outlook
-    .IMPACT
-    Medium Impact
-    .POWERSHELLEQUIVALENT
-    Get-ManagementRoleAssignment | Remove-ManagementRoleAssignment
-    .RECOMMENDEDBY
-    "CIS"
-    .DOCSDESCRIPTION
-    Disables the ability for users to install add-ins in Outlook. This is to prevent users from installing malicious add-ins.
-    .UPDATECOMMENTBLOCK
-    Run the Tools\Update-StandardsComments.ps1 script to update this comment block
+        Internal
+    .COMPONENT
+        (APIName) DisableOutlookAddins
+    .SYNOPSIS
+        (Label) Disable users from installing add-ins in Outlook
+    .DESCRIPTION
+        (Helptext) Disables the ability for users to install add-ins in Outlook. This is to prevent users from installing malicious add-ins.
+        (DocsDescription) Disables users from being able to install add-ins in Outlook. Only admins are able to approve add-ins for the users. This is done to reduce the threat surface for data exfiltration.
+    .NOTES
+        CAT
+            Exchange Standards
+        TAG
+            "mediumimpact"
+            "CIS"
+            "exo_outlookaddins"
+        ADDEDCOMPONENT
+        IMPACT
+            Medium Impact
+        POWERSHELLEQUIVALENT
+            Get-ManagementRoleAssignment | Remove-ManagementRoleAssignment
+        RECOMMENDEDBY
+            "CIS"
+        UPDATECOMMENTBLOCK
+            Run the Tools\Update-StandardsComments.ps1 script to update this comment block
+    .LINK
+        https://docs.cipp.app/user-documentation/tenant/standards/edit-standards
     #>
-
-
-
 
     param($Tenant, $Settings)
 
@@ -82,7 +79,3 @@ function Invoke-CIPPStandardDisableOutlookAddins {
         Add-CIPPBPAField -FieldName 'DisabledOutlookAddins' -FieldValue $State -StoreAs bool -Tenant $tenant
     }
 }
-
-
-
-
