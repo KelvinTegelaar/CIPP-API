@@ -50,7 +50,7 @@ function Register-CIPPExtensionScheduledTasks {
                     $ExistingTask = $ScheduledTasks | Where-Object { $_.Tenant -eq $Tenant.defaultDomainName -and $_.SyncType -eq $SyncType }
                     if (!$ExistingTask -or $Reschedule.IsPresent) {
                         $unixtime = [int64](([datetime]::UtcNow) - (Get-Date '1/1/1970')).TotalSeconds
-                        $Task = @{
+                        $Task = [pscustomobject]@{
                             Name          = "Extension Sync - $SyncType"
                             Command       = @{
                                 value = 'Sync-CippExtensionData'
