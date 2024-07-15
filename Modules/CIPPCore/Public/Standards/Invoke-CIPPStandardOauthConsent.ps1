@@ -1,36 +1,33 @@
 function Invoke-CIPPStandardOauthConsent {
     <#
     .FUNCTIONALITY
-    Internal
-    .APINAME
-    OauthConsent
-    .CAT
-    Entra (AAD) Standards
-    .TAG
-    "mediumimpact"
-    "CIS"
-    .HELPTEXT
-    Disables users from being able to consent to applications, except for those specified in the field below
-    .DOCSDESCRIPTION
-    Requires users to get administrator consent before sharing data with applications. You can preapprove specific applications.
-    .ADDEDCOMPONENT
-    {"type":"input","name":"standards.OauthConsent.AllowedApps","label":"Allowed application IDs, comma separated"}
-    .LABEL
-    Require admin consent for applications (Prevent OAuth phishing)
-    .IMPACT
-    Medium Impact
-    .POWERSHELLEQUIVALENT
-    Update-MgPolicyAuthorizationPolicy
-    .RECOMMENDEDBY
-    "CIS"
-    .DOCSDESCRIPTION
-    Disables users from being able to consent to applications, except for those specified in the field below
-    .UPDATECOMMENTBLOCK
-    Run the Tools\Update-StandardsComments.ps1 script to update this comment block
+        Internal
+    .COMPONENT
+        (APIName) OauthConsent
+    .SYNOPSIS
+        (Label) Require admin consent for applications (Prevent OAuth phishing)
+    .DESCRIPTION
+        (Helptext) Disables users from being able to consent to applications, except for those specified in the field below
+        (DocsDescription) Requires users to get administrator consent before sharing data with applications. You can preapprove specific applications.
+    .NOTES
+        CAT
+            Entra (AAD) Standards
+        TAG
+            "mediumimpact"
+            "CIS"
+        ADDEDCOMPONENT
+            {"type":"input","name":"standards.OauthConsent.AllowedApps","label":"Allowed application IDs, comma separated"}
+        IMPACT
+            Medium Impact
+        POWERSHELLEQUIVALENT
+            Update-MgPolicyAuthorizationPolicy
+        RECOMMENDEDBY
+            "CIS"
+        UPDATECOMMENTBLOCK
+            Run the Tools\Update-StandardsComments.ps1 script to update this comment block
+    .LINK
+        https://docs.cipp.app/user-documentation/tenant/standards/edit-standards
     #>
-
-
-
 
     param($tenant, $settings)
     $State = New-GraphGetRequest -Uri 'https://graph.microsoft.com/beta/policies/authorizationPolicy/authorizationPolicy' -tenantid $tenant
@@ -75,7 +72,3 @@ function Invoke-CIPPStandardOauthConsent {
         Add-CIPPBPAField -FieldName 'OauthConsent' -FieldValue $StateIsCorrect -StoreAs bool -Tenant $tenant
     }
 }
-
-
-
-
