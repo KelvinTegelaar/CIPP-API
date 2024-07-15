@@ -91,7 +91,7 @@ function Register-CIPPExtensionScheduledTasks {
                         TenantFilter  = $Tenant.defaultDomainName
                     }
                     if ($ExistingPushTask) {
-                        $Task.RowKey = $ExistingTask.RowKey
+                        $task | Add-Member -NotePropertyName 'RowKey' -NotePropertyValue $ExistingPushTask.RowKey -Force
                     }
                     $null = Add-CIPPScheduledTask -Task $Task -hidden $true -SyncType $Extension
                     Write-Information "Creating $Extension task for tenant $($Tenant.defaultDomainName)"
