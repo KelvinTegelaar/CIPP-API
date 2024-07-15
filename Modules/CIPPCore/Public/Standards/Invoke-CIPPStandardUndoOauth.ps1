@@ -1,31 +1,30 @@
 function Invoke-CIPPStandardUndoOauth {
     <#
     .FUNCTIONALITY
-    Internal
-    .APINAME
-    UndoOauth
-    .CAT
-    Entra (AAD) Standards
-    .TAG
-    "highimpact"
-    .HELPTEXT
-    Disables App consent and set to Allow user consent for apps
-    .ADDEDCOMPONENT
-    .LABEL
-    Undo App Consent Standard
-    .IMPACT
-    High Impact
-    .POWERSHELLEQUIVALENT
-    Update-MgPolicyAuthorizationPolicy
-    .RECOMMENDEDBY
-    .DOCSDESCRIPTION
-    Disables App consent and set to Allow user consent for apps
-    .UPDATECOMMENTBLOCK
-    Run the Tools\Update-StandardsComments.ps1 script to update this comment block
+        Internal
+    .COMPONENT
+        (APIName) UndoOauth
+    .SYNOPSIS
+        (Label) Undo App Consent Standard
+    .DESCRIPTION
+        (Helptext) Disables App consent and set to Allow user consent for apps
+        (DocsDescription) Disables App consent and set to Allow user consent for apps
+    .NOTES
+        CAT
+            Entra (AAD) Standards
+        TAG
+            "highimpact"
+        ADDEDCOMPONENT
+        IMPACT
+            High Impact
+        POWERSHELLEQUIVALENT
+            Update-MgPolicyAuthorizationPolicy
+        RECOMMENDEDBY
+        UPDATECOMMENTBLOCK
+            Run the Tools\Update-StandardsComments.ps1 script to update this comment block
+    .LINK
+        https://docs.cipp.app/user-documentation/tenant/standards/edit-standards
     #>
-
-
-
 
     param($Tenant, $Settings)
     $CurrentState = New-GraphGetRequest -tenantid $Tenant -Uri 'https://graph.microsoft.com/beta/policies/authorizationPolicy/authorizationPolicy?$select=permissionGrantPolicyIdsAssignedToDefaultUserRole'
@@ -60,7 +59,3 @@ function Invoke-CIPPStandardUndoOauth {
         Add-CIPPBPAField -FieldName 'UndoOauth' -FieldValue $State -StoreAs bool -Tenant $tenant
     }
 }
-
-
-
-
