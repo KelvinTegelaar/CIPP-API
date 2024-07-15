@@ -5,7 +5,7 @@ function Invoke-CIPPStandardSPExternalUserExpiration {
     .COMPONENT
         (APIName) SPExternalUserExpiration
     .SYNOPSIS
-        Set guest access to expire automatically
+        (Label) Set guest access to expire automatically
     .DESCRIPTION
         (Helptext) Ensure guest access to a site or OneDrive will expire automatically
         (DocsDescription) Ensure guest access to a site or OneDrive will expire automatically
@@ -17,8 +17,6 @@ function Invoke-CIPPStandardSPExternalUserExpiration {
             "CIS"
         ADDEDCOMPONENT
             {"type":"number","name":"standards.SPExternalUserExpiration.Days","label":"Days until expiration (Default 60)"}
-        LABEL
-            Set guest access to expire automatically
         IMPACT
             Medium Impact
         POWERSHELLEQUIVALENT
@@ -27,6 +25,8 @@ function Invoke-CIPPStandardSPExternalUserExpiration {
             "CIS 3.0"
         UPDATECOMMENTBLOCK
             Run the Tools\Update-StandardsComments.ps1 script to update this comment block
+    .LINK
+        https://docs.cipp.app/user-documentation/tenant/standards/edit-standards
     #>
 
     param($Tenant, $Settings)

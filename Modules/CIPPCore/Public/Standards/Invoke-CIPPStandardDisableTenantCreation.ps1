@@ -1,35 +1,32 @@
 function Invoke-CIPPStandardDisableTenantCreation {
     <#
     .FUNCTIONALITY
-    Internal
-    .APINAME
-    DisableTenantCreation
-    .CAT
-    Entra (AAD) Standards
-    .TAG
-    "lowimpact"
-    "CIS"
-    .HELPTEXT
-    Restricts creation of M365 tenants to the Global Administrator or Tenant Creator roles. 
-    .DOCSDESCRIPTION
-    Users by default are allowed to create M365 tenants. This disables that so only admins can create new M365 tenants.
-    .ADDEDCOMPONENT
-    .LABEL
-    Disable M365 Tenant creation by users
-    .IMPACT
-    Low Impact
-    .POWERSHELLEQUIVALENT
-    Update-MgPolicyAuthorizationPolicy
-    .RECOMMENDEDBY
-    "CIS"
-    .DOCSDESCRIPTION
-    Restricts creation of M365 tenants to the Global Administrator or Tenant Creator roles. 
-    .UPDATECOMMENTBLOCK
-    Run the Tools\Update-StandardsComments.ps1 script to update this comment block
+        Internal
+    .COMPONENT
+        (APIName) DisableTenantCreation
+    .SYNOPSIS
+        (Label) Disable M365 Tenant creation by users
+    .DESCRIPTION
+        (Helptext) Restricts creation of M365 tenants to the Global Administrator or Tenant Creator roles. 
+        (DocsDescription) Users by default are allowed to create M365 tenants. This disables that so only admins can create new M365 tenants.
+    .NOTES
+        CAT
+            Entra (AAD) Standards
+        TAG
+            "lowimpact"
+            "CIS"
+        ADDEDCOMPONENT
+        IMPACT
+            Low Impact
+        POWERSHELLEQUIVALENT
+            Update-MgPolicyAuthorizationPolicy
+        RECOMMENDEDBY
+            "CIS"
+        UPDATECOMMENTBLOCK
+            Run the Tools\Update-StandardsComments.ps1 script to update this comment block
+    .LINK
+        https://docs.cipp.app/user-documentation/tenant/standards/edit-standards
     #>
-
-
-
 
     param($Tenant, $Settings)
     $CurrentInfo = New-GraphGetRequest -Uri 'https://graph.microsoft.com/beta/policies/authorizationPolicy/authorizationPolicy' -tenantid $Tenant
@@ -63,7 +60,3 @@ function Invoke-CIPPStandardDisableTenantCreation {
         Add-CIPPBPAField -FieldName 'DisableTenantCreation' -FieldValue $State -StoreAs bool -Tenant $tenant
     }
 }
-
-
-
-

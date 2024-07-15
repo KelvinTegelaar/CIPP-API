@@ -1,33 +1,30 @@
 function Invoke-CIPPStandardDisablex509Certificate {
     <#
     .FUNCTIONALITY
-    Internal
-    .APINAME
-    Disablex509Certificate
-    .CAT
-    Entra (AAD) Standards
-    .TAG
-    "highimpact"
-    .HELPTEXT
-    This blocks users from using Certificates as an MFA method.
-    .DOCSDESCRIPTION
-    This blocks users from using Certificates as an MFA method.
-    .ADDEDCOMPONENT
-    .LABEL
-    Disables Certificates as an MFA method
-    .IMPACT
-    High Impact
-    .POWERSHELLEQUIVALENT
-    Update-MgBetaPolicyAuthenticationMethodPolicyAuthenticationMethodConfiguration
-    .RECOMMENDEDBY
-    .DOCSDESCRIPTION
-    This blocks users from using Certificates as an MFA method.
-    .UPDATECOMMENTBLOCK
-    Run the Tools\Update-StandardsComments.ps1 script to update this comment block
+        Internal
+    .COMPONENT
+        (APIName) Disablex509Certificate
+    .SYNOPSIS
+        (Label) Disables Certificates as an MFA method
+    .DESCRIPTION
+        (Helptext) This blocks users from using Certificates as an MFA method.
+        (DocsDescription) This blocks users from using Certificates as an MFA method.
+    .NOTES
+        CAT
+            Entra (AAD) Standards
+        TAG
+            "highimpact"
+        ADDEDCOMPONENT
+        IMPACT
+            High Impact
+        POWERSHELLEQUIVALENT
+            Update-MgBetaPolicyAuthenticationMethodPolicyAuthenticationMethodConfiguration
+        RECOMMENDEDBY
+        UPDATECOMMENTBLOCK
+            Run the Tools\Update-StandardsComments.ps1 script to update this comment block
+    .LINK
+        https://docs.cipp.app/user-documentation/tenant/standards/edit-standards
     #>
-
-
-
 
     param($Tenant, $Settings)
     $CurrentInfo = New-GraphGetRequest -Uri 'https://graph.microsoft.com/beta/policies/authenticationmethodspolicy/authenticationMethodConfigurations/x509Certificate' -tenantid $Tenant
@@ -54,7 +51,3 @@ function Invoke-CIPPStandardDisablex509Certificate {
     }
 
 }
-
-
-
-
