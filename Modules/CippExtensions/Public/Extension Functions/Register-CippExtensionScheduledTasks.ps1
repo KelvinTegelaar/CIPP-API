@@ -76,13 +76,13 @@ function Register-CIPPExtensionScheduledTasks {
                 if (!$ExistingPushTask -or $Reschedule.IsPresent) {
                     # push cached data to extension
                     $in30mins = [int64](([datetime]::UtcNow.AddMinutes(30)) - (Get-Date '1/1/1970')).TotalSeconds
-                    $Task = @{
+                    $Task = [pscustomobject]@{
                         Name          = "$Extension Extension Sync"
                         Command       = @{
                             value = 'Push-CippExtensionData'
                             label = 'Push-CippExtensionData'
                         }
-                        Parameters    = @{
+                        Parameters    = [pscustomobject]@{
                             TenantFilter = $Tenant.defaultDomainName
                             Extension    = $Extension
                         }
