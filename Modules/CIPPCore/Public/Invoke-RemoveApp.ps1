@@ -11,7 +11,8 @@ Function Invoke-RemoveApp {
     param($Request, $TriggerMetadata)
 
     $APIName = $TriggerMetadata.FunctionName
-    Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -message 'Accessed this API' -Sev 'Debug'
+    $User = $request.headers.'x-ms-client-principal'
+    Write-LogMessage -user $User -API $APINAME -message 'Accessed this API' -Sev 'Debug'
 
     # Interact with query parameters or the body of the request.
     $TenantFilter = $Request.Query.TenantFilter
@@ -19,12 +20,13 @@ Function Invoke-RemoveApp {
     if (!$policyId) { exit }
     try {
         #$unAssignRequest = New-GraphPostRequest -uri "https://graph.microsoft.com/beta/deviceManagement/configurationPolicies('$($policyId)')/assign" -type POST -Body '{"assignments":[]}' -tenant $TenantFilter
-        $GraphRequest = New-GraphPostRequest -uri "https://graph.microsoft.com/beta/deviceAppManagement/mobileApps/$($policyId)" -type DELETE -tenant $TenantFilter
-        Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -message "Deleted $policyId" -Sev 'Info' -tenant $TenantFilter
+        $null = New-GraphPostRequest -uri "https://graph.microsoft.com/beta/deviceAppManagement/mobileApps/$($policyId)" -type DELETE -tenant $TenantFilter
+        Write-LogMessage -user $User -API $APINAME -message "Deleted $policyId" -Sev 'Info' -tenant $TenantFilter
         $body = [pscustomobject]@{'Results' = 'Successfully deleted the application' }
     } catch {
-        Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -message "Could not delete app $policyId. $($_.Exception.Message)" -Sev 'Error' -tenant $TenantFilter
-        $body = [pscustomobject]@{'Results' = "Could not delete this application: $($_.Exception.Message)" }
+        $ErrorMessage = Get-CippException -Exception $_
+        Write-LogMessage -user $User -API $APINAME -message "Could not delete app $policyId. $($ErrorMessage.NormalizedError)" -Sev 'Error' -tenant $TenantFilter -LogData $ErrorMessage
+        $body = [pscustomobject]@{'Results' = "Could not delete this application: $($ErrorMessage.NormalizedError)" }
 
     }
 
