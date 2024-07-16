@@ -4,8 +4,7 @@ $Functions = $Public + $Private
 foreach ($import in @($Functions)) {
     try {
         . $import.FullName
-    }
-    catch {
+    } catch {
         Write-Error -Message "Failed to import function $($import.FullName): $_"
     }
 }
