@@ -43,7 +43,7 @@ function Set-CIPPForwarding {
         [string]$ExecutingUser,
         [string]$APIName = 'Forwarding',
         [string]$Forward,
-        [bool]$KeepCopy,
+        $KeepCopy,
         [bool]$Disable
     )
 
@@ -66,7 +66,8 @@ function Set-CIPPForwarding {
         Write-LogMessage -user $ExecutingUser -API $APIName -message $Message -Sev 'Info' -tenant $TenantFilter
         return $Message
     } catch {
-        Write-LogMessage -user $ExecutingUser -API $APIName -message "Could not add forwarding for $($username)" -Sev 'Error' -tenant $TenantFilter
-        return "Could not add forwarding for $($username). Error: $($_.Exception.Message)"
+        $ErrorMessage = Get-CippException -Exception $_
+        Write-LogMessage -user $ExecutingUser -API $APIName -message "Could not add forwarding for $($username). Error: $($ErrorMessage.NormalizedError)" -Sev 'Error' -tenant $TenantFilter -LogData $ErrorMessage
+        return "Could not add forwarding for $($username). Error: $($ErrorMessage.NormalizedError)"
     }
 }

@@ -1,8 +1,31 @@
 function Invoke-CIPPStandardEnableOnlineArchiving {
     <#
     .FUNCTIONALITY
-    Internal
+        Internal
+    .COMPONENT
+        (APIName) EnableOnlineArchiving
+    .SYNOPSIS
+        (Label) Enable Online Archive for all users
+    .DESCRIPTION
+        (Helptext) Enables the In-Place Online Archive for all UserMailboxes with a valid license.
+        (DocsDescription) Enables the In-Place Online Archive for all UserMailboxes with a valid license.
+    .NOTES
+        CAT
+            Exchange Standards
+        TAG
+            "lowimpact"
+        ADDEDCOMPONENT
+        IMPACT
+            Low Impact
+        POWERSHELLEQUIVALENT
+            Enable-Mailbox -Archive $true
+        RECOMMENDEDBY
+        UPDATECOMMENTBLOCK
+            Run the Tools\Update-StandardsComments.ps1 script to update this comment block
+    .LINK
+        https://docs.cipp.app/user-documentation/tenant/standards/edit-standards
     #>
+
     param($Tenant, $Settings)
 
     $MailboxPlans = @( 'ExchangeOnline', 'ExchangeOnlineEnterprise' )
