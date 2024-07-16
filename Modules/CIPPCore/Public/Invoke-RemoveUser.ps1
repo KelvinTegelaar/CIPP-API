@@ -11,20 +11,22 @@ Function Invoke-RemoveUser {
     param($Request, $TriggerMetadata)
 
     $APIName = $TriggerMetadata.FunctionName
-    Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -message 'Accessed this API' -Sev 'Debug'
+    $User = $request.headers.'x-ms-client-principal'
+    Write-LogMessage -user $User -API $APINAME -message 'Accessed this API' -Sev 'Debug'
 
     # Interact with query parameters or the body of the request.
     $TenantFilter = $Request.Query.TenantFilter
     $userid = $Request.Query.ID
     if (!$userid) { exit }
     try {
-        $GraphRequest = New-GraphPostRequest -uri "https://graph.microsoft.com/beta/users/$($userid)" -type DELETE -tenant $TenantFilter
-        Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -message "Deleted $userid" -Sev 'Info' -tenant $TenantFilter
+        $null = New-GraphPostRequest -uri "https://graph.microsoft.com/beta/users/$($userid)" -type DELETE -tenant $TenantFilter
+        Write-LogMessage -user $User -API $APINAME -message "Deleted $userid" -Sev 'Info' -tenant $TenantFilter
         $body = [pscustomobject]@{'Results' = 'Successfully deleted the user.' }
 
     } catch {
-        Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -message "Could not delete user $userid. $($_.Exception.Message)" -Sev 'Error' -tenant $TenantFilter
-        $body = [pscustomobject]@{'Results' = "Could not delete user: $($_.Exception.Message)" }
+        $ErrorMessage = Get-CippException -Exception $_
+        Write-LogMessage -user $User -API $APINAME -message "Could not delete user $userid. $($ErrorMessage.NormalizedError)" -Sev 'Error' -tenant $TenantFilter -LogData $ErrorMessage
+        $body = [pscustomobject]@{'Results' = "Could not delete user: $($ErrorMessage.NormalizedError)" }
 
     }
 

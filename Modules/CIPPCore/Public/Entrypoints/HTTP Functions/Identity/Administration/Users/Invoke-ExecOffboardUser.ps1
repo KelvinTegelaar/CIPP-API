@@ -23,7 +23,7 @@ Function Invoke-ExecOffboardUser {
                     Command       = @{
                         value = 'Invoke-CIPPOffboardingJob'
                     }
-                    Parameters    = @{
+                    Parameters    = [pscustomobject]@{
                         Username     = $Username
                         APIName      = 'Scheduled Offboarding'
                         options      = $request.body
