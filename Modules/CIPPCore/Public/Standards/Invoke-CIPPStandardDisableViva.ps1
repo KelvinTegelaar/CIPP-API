@@ -1,8 +1,31 @@
 function Invoke-CIPPStandardDisableViva {
     <#
     .FUNCTIONALITY
-    Internal
+        Internal
+    .COMPONENT
+        (APIName) DisableViva
+    .SYNOPSIS
+        (Label) Disable daily Insight/Viva reports
+    .DESCRIPTION
+        (Helptext) Disables the daily viva reports for all users.
+        (DocsDescription) Disables the daily viva reports for all users.
+    .NOTES
+        CAT
+            Exchange Standards
+        TAG
+            "lowimpact"
+        ADDEDCOMPONENT
+        IMPACT
+            Low Impact
+        POWERSHELLEQUIVALENT
+            Set-UserBriefingConfig
+        RECOMMENDEDBY
+        UPDATECOMMENTBLOCK
+            Run the Tools\Update-StandardsComments.ps1 script to update this comment block
+    .LINK
+        https://docs.cipp.app/user-documentation/tenant/standards/edit-standards
     #>
+
     param($Tenant, $Settings)
 
     try {

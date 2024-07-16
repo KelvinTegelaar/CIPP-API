@@ -1,7 +1,32 @@
 function Invoke-CIPPStandardsharingDomainRestriction {
     <#
     .FUNCTIONALITY
-    Internal
+        Internal
+    .COMPONENT
+        (APIName) sharingDomainRestriction
+    .SYNOPSIS
+        (Label) Restrict sharing to a specific domain
+    .DESCRIPTION
+        (Helptext) Restricts sharing to only users with the specified domain. This is useful for organizations that only want to share with their own domain.
+        (DocsDescription) Restricts sharing to only users with the specified domain. This is useful for organizations that only want to share with their own domain.
+    .NOTES
+        CAT
+            SharePoint Standards
+        TAG
+            "highimpact"
+            "CIS"
+        ADDEDCOMPONENT
+            {"type":"Select","name":"standards.sharingDomainRestriction.Mode","label":"Limit external sharing by domains","values":[{"label":"Off","value":"none"},{"label":"Restirct sharing to specific domains","value":"allowList"},{"label":"Block sharing to specific domains","value":"blockList"}]}
+            {"type":"input","name":"standards.sharingDomainRestriction.Domains","label":"Domains to allow/block, comma separated"}
+        IMPACT
+            High Impact
+        POWERSHELLEQUIVALENT
+            Update-MgAdminSharepointSetting
+        RECOMMENDEDBY
+        UPDATECOMMENTBLOCK
+            Run the Tools\Update-StandardsComments.ps1 script to update this comment block
+    .LINK
+        https://docs.cipp.app/user-documentation/tenant/standards/edit-standards
     #>
 
     param($Tenant, $Settings)
