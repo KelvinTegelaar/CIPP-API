@@ -45,7 +45,8 @@ function Request-CIPPSPOPersonalSite {
         Write-LogMessage -user $ExecutingUser -API $APIName -message "Requested personal site for $($Users -join ', ')" -Sev 'Info' -tenant $TenantFilter
         return "Requested personal site for $($Users -join ', ')"
     } catch {
-        Write-LogMessage -user $ExecutingUser -API $APIName -message "Could not request personal site for  $($Users -join ', ')" -Sev 'Error' -tenant $TenantFilter
-        return "Could not request personal site for $($Users -join ', '). Error: $($_.Exception.Message)"
+        $ErrorMessage = Get-CippException -Exception $_
+        Write-LogMessage -user $ExecutingUser -API $APIName -message "Could not request personal site for $($Users -join ', '). Error: $($ErrorMessage.NormalizedError)" -Sev 'Error' -tenant $TenantFilter -LogData $ErrorMessage
+        return "Could not request personal site for $($Users -join ', '). Error: $($ErrorMessage.NormalizedError)"
     }
 }
