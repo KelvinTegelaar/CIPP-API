@@ -3,7 +3,9 @@ using namespace System.Net
 Function Invoke-ListExConnectorTemplates {
     <#
     .FUNCTIONALITY
-    Entrypoint
+        Entrypoint
+    .ROLE
+        Exchange.Connector.Read
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
@@ -14,14 +16,14 @@ Function Invoke-ListExConnectorTemplates {
 
     #List new policies
     $Table = Get-CippTable -tablename 'templates'
-    $Filter = "PartitionKey eq 'ExConnectorTemplate'" 
+    $Filter = "PartitionKey eq 'ExConnectorTemplate'"
     $Templates = (Get-CIPPAzDataTableEntity @Table -Filter $Filter) | ForEach-Object {
         $GUID = $_.RowKey
         $Direction = $_.direction
-        $data = $_.JSON | ConvertFrom-Json 
+        $data = $_.JSON | ConvertFrom-Json
         $data | Add-Member -NotePropertyName 'GUID' -NotePropertyValue $GUID
         $data | Add-Member -NotePropertyName 'cippconnectortype' -NotePropertyValue $Direction
-        $data 
+        $data
     } | Sort-Object -Property displayName
 
     if ($Request.query.ID) { $Templates = $Templates | Where-Object -Property RowKey -EQ $Request.query.id }

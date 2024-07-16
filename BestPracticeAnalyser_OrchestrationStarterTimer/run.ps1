@@ -7,12 +7,10 @@ if ($env:DEV_SKIP_BPA_TIMER) {
 
 $TenantList = Get-Tenants
 
-$CippRoot = (Get-Item $PSScriptRoot).Parent.FullName
-$TemplatesLoc = Get-ChildItem "$CippRoot\Config\*.BPATemplate.json"
-$Templates = $TemplatesLoc | ForEach-Object {
-    $Template = $(Get-Content $_) | ConvertFrom-Json
-    $Template.Name
-}
+$BPATemplateTable = Get-CippTable -tablename 'templates'
+$Filter = "PartitionKey eq 'BPATemplate'"
+$Templates = ((Get-CIPPAzDataTableEntity @BPATemplateTable -Filter $Filter).JSON | ConvertFrom-Json).Name
+
 
 $BPAReports = foreach ($Tenant in $TenantList) {
     foreach ($Template in $Templates) {
@@ -31,6 +29,5 @@ $InputObject = [PSCustomObject]@{
     Batch            = @($BPAReports)
     OrchestratorName = 'BPAOrchestrator'
     SkipLog          = $true
-    DurableMode      = 'Sequence'
 }
 Start-NewOrchestration -FunctionName 'CIPPOrchestrator' -InputObject ($InputObject | ConvertTo-Json -Compress -Depth 5)

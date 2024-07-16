@@ -1,12 +1,39 @@
 function Invoke-CIPPStandardEnableCustomerLockbox {
     <#
     .FUNCTIONALITY
-    Internal
+        Internal
+    .COMPONENT
+        (APIName) EnableCustomerLockbox
+    .SYNOPSIS
+        (Label) Enable Customer Lockbox
+    .DESCRIPTION
+        (Helptext) Enables Customer Lockbox that offers an approval process for Microsoft support to access organization data
+        (DocsDescription) Customer Lockbox ensures that Microsoft can't access your content to do service operations without your explicit approval. Customer Lockbox ensures only authorized requests allow access to your organizations data.
+    .NOTES
+        CAT
+            Global Standards
+        TAG
+            "lowimpact"
+            "CIS"
+            "CustomerLockBoxEnabled"
+        ADDEDCOMPONENT
+        IMPACT
+            Low Impact
+        POWERSHELLEQUIVALENT
+            Set-OrganizationConfig -CustomerLockBoxEnabled $true
+        RECOMMENDEDBY
+            "CIS"
+        UPDATECOMMENTBLOCK
+            Run the Tools\Update-StandardsComments.ps1 script to update this comment block
+    .LINK
+        https://docs.cipp.app/user-documentation/tenant/standards/edit-standards
     #>
+
     param($Tenant, $Settings)
 
     $CustomerLockboxStatus = (New-ExoRequest -tenantid $Tenant -cmdlet 'Get-OrganizationConfig').CustomerLockboxEnabled
     if ($Settings.remediate -eq $true) {
+        Write-Host 'Time to remediate'
         try {
 
             if ($CustomerLockboxStatus) {
@@ -17,7 +44,11 @@ function Invoke-CIPPStandardEnableCustomerLockbox {
             }
         } catch {
             $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
-            Write-LogMessage -API 'Standards' -tenant $tenant -message "Failed to enable Customer Lockbox. Error: $ErrorMessage" -sev Error
+            if ($ErrorMessage -match 'Ex5E8EA4') {
+                Write-LogMessage -API 'Standards' -tenant $tenant -message "Failed to enable Customer Lockbox. E5 license required. Error: $ErrorMessage" -sev Error
+            } else {
+                Write-LogMessage -API 'Standards' -tenant $tenant -message "Failed to enable Customer Lockbox. Error: $ErrorMessage" -sev Error
+            }
         }
     }
 

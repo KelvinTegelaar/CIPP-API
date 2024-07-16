@@ -1,8 +1,37 @@
 function Invoke-CIPPStandardMailContacts {
     <#
     .FUNCTIONALITY
-    Internal
+        Internal
+    .COMPONENT
+        (APIName) MailContacts
+    .SYNOPSIS
+        (Label) Set contact e-mails
+    .DESCRIPTION
+        (Helptext) Defines the email address to receive general updates and information related to M365 subscriptions. Leave a contact field blank if you do not want to update the contact information.
+        (DocsDescription) Defines the email address to receive general updates and information related to M365 subscriptions. Leave a contact field blank if you do not want to update the contact information.
+    .NOTES
+        CAT
+            Global Standards
+        TAG
+            "lowimpact"
+        DISABLEDFEATURES
+            
+        ADDEDCOMPONENT
+            {"type":"input","name":"standards.MailContacts.GeneralContact","label":"General Contact"}
+            {"type":"input","name":"standards.MailContacts.SecurityContact","label":"Security Contact"}
+            {"type":"input","name":"standards.MailContacts.MarketingContact","label":"Marketing Contact"}
+            {"type":"input","name":"standards.MailContacts.TechContact","label":"Technical Contact"}
+        IMPACT
+            Low Impact
+        POWERSHELLEQUIVALENT
+            Set-MsolCompanyContactInformation
+        RECOMMENDEDBY
+        UPDATECOMMENTBLOCK
+            Run the Tools\Update-StandardsComments.ps1 script to update this comment block
+    .LINK
+        https://docs.cipp.app/user-documentation/tenant/standards/edit-standards
     #>
+
     param($Tenant, $Settings)
     $TenantID = (New-GraphGetRequest -Uri 'https://graph.microsoft.com/beta/organization' -tenantid $tenant)
     $CurrentInfo = New-GraphGetRequest -Uri "https://graph.microsoft.com/beta/organization/$($TenantID.id)" -tenantid $Tenant
@@ -11,7 +40,6 @@ function Invoke-CIPPStandardMailContacts {
 
     If ($Settings.remediate -eq $true) {
 
-        # TODO: Make this smaller if possible
         if ($CurrentInfo.marketingNotificationEmails -eq $Contacts.MarketingContact -and `
             ($CurrentInfo.securityComplianceNotificationMails -in $TechAndSecurityContacts -or
                 $CurrentInfo.technicalNotificationMails -in $TechAndSecurityContacts) -and `

@@ -1,14 +1,38 @@
 function Invoke-CIPPStandardFocusedInbox {
     <#
     .FUNCTIONALITY
-    Internal
+        Internal
+    .COMPONENT
+        (APIName) FocusedInbox
+    .SYNOPSIS
+        (Label) Set Focused Inbox state
+    .DESCRIPTION
+        (Helptext) Sets the default Focused Inbox state for the tenant. This can be overridden by the user.
+        (DocsDescription) Sets the default Focused Inbox state for the tenant. This can be overridden by the user in their Outlook settings. For more information, see [Microsoft's documentation.](https://support.microsoft.com/en-us/office/focused-inbox-for-outlook-f445ad7f-02f4-4294-a82e-71d8964e3978)
+    .NOTES
+        CAT
+            Exchange Standards
+        TAG
+            "lowimpact"
+        ADDEDCOMPONENT
+            {"type":"Select","label":"Select value","name":"standards.FocusedInbox.state","values":[{"label":"Enabled","value":"enabled"},{"label":"Disabled","value":"disabled"}]}
+        IMPACT
+            Low Impact
+        POWERSHELLEQUIVALENT
+            Set-OrganizationConfig -FocusedInboxOn $true or $false
+        RECOMMENDEDBY
+        UPDATECOMMENTBLOCK
+            Run the Tools\Update-StandardsComments.ps1 script to update this comment block
+    .LINK
+        https://docs.cipp.app/user-documentation/tenant/standards/edit-standards
     #>
+
     param($Tenant, $Settings)
 
-    # Exit if the wanted state is not valid
-    if ($Settings.state -ne 'enabled' -and $Settings.state -ne 'disabled') {
-        Write-LogMessage -API 'Standards' -tenant $Tenant -message 'Invalid state for Focused Inbox. Please select either "enabled" or "disabled".' -sev Error
-        Exit
+    # Input validation
+    if ([string]::IsNullOrWhiteSpace($Settings.state) -or $Settings.state -eq 'Select a value') {
+        Write-LogMessage -API 'Standards' -tenant $tenant -message 'ExternalMFATrusted: Invalid state parameter set' -sev Error
+        Return
     }
 
     $CurrentState = (New-ExoRequest -tenantid $Tenant -cmdlet 'Get-OrganizationConfig').FocusedInboxOn

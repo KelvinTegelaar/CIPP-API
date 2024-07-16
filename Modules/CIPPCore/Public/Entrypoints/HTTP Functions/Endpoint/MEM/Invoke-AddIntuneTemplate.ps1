@@ -3,7 +3,9 @@ using namespace System.Net
 Function Invoke-AddIntuneTemplate {
     <#
     .FUNCTIONALITY
-    Entrypoint
+        Entrypoint
+    .ROLE
+        Endpoint.MEM.ReadWrite
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
@@ -39,76 +41,13 @@ Function Invoke-AddIntuneTemplate {
             $TenantFilter = $Request.Query.TenantFilter
             $URLName = $Request.Query.URLName
             $ID = $Request.Query.id
-            switch ($URLName) {
-                'deviceCompliancePolicies' {
-                    $Type = 'deviceCompliancePolicies'
-                    $Template = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/deviceManagement/$($urlname)/$($ID)?`$expand=scheduledActionsForRule(`$expand=scheduledActionConfigurations)" -tenantid $tenantfilter
-                    $DisplayName = $Template.displayName
-                    $TemplateJson = ConvertTo-Json -InputObject $Template -Depth 10 -Compress
-                }
-                'managedAppPolicies' {
-                    $Type = 'AppProtection'
-                    $Template = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/deviceAppManagement/$($urlname)('$($ID)')" -tenantid $tenantfilter
-                    $DisplayName = $Template.displayName
-                    $TemplateJson = ConvertTo-Json -InputObject $Template -Depth 10 -Compress
-                }
-                'configurationPolicies' {
-                    $Type = 'Catalog'
-                    $Template = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/deviceManagement/$($urlname)('$($ID)')?`$expand=settings" -tenantid $tenantfilter | Select-Object name, description, settings, platforms, technologies, templateReference
-                    $TemplateJson = $Template | ConvertTo-Json -Depth 10
-                    $DisplayName = $Template.name
-
-
-                }
-                'deviceConfigurations' {
-                    $Type = 'Device'
-                    $Template = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/deviceManagement/$($urlname)/$($ID)" -tenantid $tenantfilter | Select-Object * -ExcludeProperty id, lastModifiedDateTime, '@odata.context', 'ScopeTagIds', 'supportsScopeTags', 'createdDateTime'
-                    Write-Host ($Template | ConvertTo-Json)
-                    $DisplayName = $Template.displayName
-                    $TemplateJson = ConvertTo-Json -InputObject $Template -Depth 10 -Compress
-                }
-                'groupPolicyConfigurations' {
-                    $Type = 'Admin'
-                    $Template = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/deviceManagement/$($urlname)('$($ID)')" -tenantid $tenantfilter
-                    $DisplayName = $Template.displayName
-                    $TemplateJsonItems = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/deviceManagement/$($urlname)('$($ID)')/definitionValues?`$expand=definition" -tenantid $tenantfilter
-                    $TemplateJsonSource = foreach ($TemplateJsonItem in $TemplateJsonItems) {
-                        $presentationValues = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/deviceManagement/$($urlname)('$($ID)')/definitionValues('$($TemplateJsonItem.id)')/presentationValues?`$expand=presentation" -tenantid $tenantfilter | ForEach-Object {
-                            $obj = $_
-                            if ($obj.id) {
-                                $PresObj = @{
-                                    id                        = $obj.id
-                                    'presentation@odata.bind' = "https://graph.microsoft.com/beta/deviceManagement/groupPolicyDefinitions('$($TemplateJsonItem.definition.id)')/presentations('$($obj.presentation.id)')"
-                                }
-                                if ($obj.values) { $PresObj['values'] = $obj.values }
-                                if ($obj.value) { $PresObj['value'] = $obj.value }
-                                if ($obj.'@odata.type') { $PresObj['@odata.type'] = $obj.'@odata.type' }
-                                [pscustomobject]$PresObj
-                            }
-                        }
-                        [PSCustomObject]@{
-                            'definition@odata.bind' = "https://graph.microsoft.com/beta/deviceManagement/groupPolicyDefinitions('$($TemplateJsonItem.definition.id)')"
-                            enabled                 = $TemplateJsonItem.enabled
-                            presentationValues      = @($presentationValues)
-                        }
-                    }
-                    $inputvar = [pscustomobject]@{
-                        added      = @($TemplateJsonSource)
-                        updated    = @()
-                        deletedIds = @()
-
-                    }
-
-
-                    $TemplateJson = (ConvertTo-Json -InputObject $inputvar -Depth 15 -Compress)
-                }
-            }
+            $Template = New-CIPPIntuneTemplate -TenantFilter $TenantFilter -URLName $URLName -ID $ID
 
             $object = [PSCustomObject]@{
-                Displayname = $DisplayName
+                Displayname = $Template.DisplayName
                 Description = $Template.Description
-                RAWJson     = $TemplateJson
-                Type        = $Type
+                RAWJson     = $Template.TemplateJson
+                Type        = $Template.Type
                 GUID        = $GUID
             } | ConvertTo-Json
             $Table = Get-CippTable -tablename 'templates'

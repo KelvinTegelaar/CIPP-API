@@ -2,19 +2,28 @@ function Add-CIPPScheduledTask {
     [CmdletBinding()]
     param(
         [pscustomobject]$Task,
-        [bool]$Hidden
+        [bool]$Hidden,
+        $DisallowDuplicateName = $false,
+        [string]$SyncType = $null
     )
 
     $Table = Get-CIPPTable -TableName 'ScheduledTasks'
+    if ($DisallowDuplicateName) {
+        $Filter = "PartitionKey eq 'ScheduledTask' and Name eq '$($Task.Name)'"
+        $ExistingTask = (Get-CIPPAzDataTableEntity @Table -Filter $Filter)
+        if ($ExistingTask) {
+            return "Task with name $($Task.Name) already exists"
+        }
+    }
+
     $propertiesToCheck = @('Webhook', 'Email', 'PSA')
     $PostExecution = ($propertiesToCheck | Where-Object { $task.PostExecution.$_ -eq $true }) -join ','
     $Parameters = [System.Collections.Hashtable]@{}
-    foreach ($Key in $task.Parameters.Keys) {
+    foreach ($Key in $task.Parameters.PSObject.Properties.Name) {
         $Param = $task.Parameters.$Key
-        if ($Param.Key) {
+        if ($Param -is [System.Collections.IDictionary]) {
             $ht = @{}
-            foreach ($p in $Param) {
-                Write-Host $p.Key
+            foreach ($p in $Param.GetEnumerator()) {
                 $ht[$p.Key] = $p.Value
             }
             $Parameters[$Key] = [PSCustomObject]$ht
@@ -22,6 +31,7 @@ function Add-CIPPScheduledTask {
             $Parameters[$Key] = $Param
         }
     }
+
     $Parameters = ($Parameters | ConvertTo-Json -Depth 10 -Compress)
     $AdditionalProperties = [System.Collections.Hashtable]@{}
     foreach ($Prop in $task.AdditionalProperties) {
@@ -34,6 +44,13 @@ function Add-CIPPScheduledTask {
     } else {
         $RowKey = $Task.RowKey
     }
+
+    $Recurrence = if ([string]::IsNullOrEmpty($task.Recurrence.value)) {
+        $task.Recurrence
+    } else {
+        $task.Recurrence.value
+    }
+
     $entity = @{
         PartitionKey         = [string]'ScheduledTask'
         TaskState            = [string]'Planned'
@@ -43,16 +60,20 @@ function Add-CIPPScheduledTask {
         Command              = [string]$task.Command.value
         Parameters           = [string]$Parameters
         ScheduledTime        = [string]$task.ScheduledTime
-        Recurrence           = [string]$task.Recurrence.value
+        Recurrence           = [string]$Recurrence
         PostExecution        = [string]$PostExecution
         AdditionalProperties = [string]$AdditionalProperties
         Hidden               = [bool]$Hidden
         Results              = 'Planned'
     }
+    if ($SyncType) {
+        $entity.SyncType = $SyncType
+    }
     try {
         Add-CIPPAzDataTableEntity @Table -Entity $entity -Force
     } catch {
-        return "Could not add task: $($_.Exception.Message)"
+        $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
+        return "Could not add task: $ErrorMessage"
     }
     return "Successfully added task: $($entity.Name)"
 }

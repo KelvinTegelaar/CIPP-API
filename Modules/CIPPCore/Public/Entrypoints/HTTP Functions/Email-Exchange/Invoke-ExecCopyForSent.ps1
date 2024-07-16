@@ -3,7 +3,9 @@ using namespace System.Net
 Function Invoke-ExecCopyForSent {
     <#
     .FUNCTIONALITY
-    Entrypoint
+        Entrypoint
+    .ROLE
+        Exchange.Mailbox.ReadWrite
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)

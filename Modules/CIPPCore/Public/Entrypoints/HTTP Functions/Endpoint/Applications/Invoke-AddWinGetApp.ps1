@@ -3,7 +3,9 @@ using namespace System.Net
 Function Invoke-AddWinGetApp {
     <#
     .FUNCTIONALITY
-    Entrypoint
+        Entrypoint
+    .ROLE
+        Endpoint.Application.ReadWrite
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
@@ -22,7 +24,7 @@ Function Invoke-AddWinGetApp {
         'packageIdentifier' = "$($WinGetApp.PackageName)"
         'installExperience' = @{
             '@odata.type'  = 'microsoft.graph.winGetAppInstallExperience'
-            'runAsAccount' = 'user'
+            'runAsAccount' = 'system'
         }
     }
 

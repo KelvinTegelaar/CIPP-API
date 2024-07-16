@@ -14,7 +14,7 @@ function Get-NormalizedError {
     } catch {
     }
     #if the message is valid JSON, there can be multiple fields in which the error resides. These are:
-    # $message.error.Innererror.Message 
+    # $message.error.Innererror.Message
     # $message.error.Message
     # $message.error.details.message
     # $message.error.innererror.internalException.message
@@ -33,8 +33,8 @@ function Get-NormalizedError {
         Write-Host 'error.innererror.internalException.message found'
         $message = $JSONMsg.error.innererror.internalException.message
     }
-    
-    
+
+
     #finally, put the message through the translator. If it's not in the list, just return the original message
     switch -Wildcard ($message) {
         'Request not applicable to target tenant.' { 'Required license not available for this tenant' }
@@ -57,6 +57,7 @@ function Get-NormalizedError {
         '*Unable to initialize the authorization context*' { 'Your GDAP configuration does not allow us to write to this tenant, please check your group mappings and tenant onboarding.' }
         '*Providers.Common.V1.CoreException*' { '403 (Access Denied) - We cannot connect to this tenant.' }
         '*Authentication failed. MFA required*' { 'Authentication failed. MFA required' }
+        '*Your tenant is not licensed for this feature.*' { 'Required license not available for this tenant' }
         Default { $message }
 
     }

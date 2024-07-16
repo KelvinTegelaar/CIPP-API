@@ -3,7 +3,9 @@ using namespace System.Net
 Function Invoke-ExecCAExclusion {
     <#
     .FUNCTIONALITY
-    Entrypoint
+        Entrypoint
+    .ROLE
+        Tenant.ConditionalAccess.ReadWrite
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
@@ -16,14 +18,14 @@ Function Invoke-ExecCAExclusion {
     }
     if ($Request.body.vacation -eq 'true') {
         $StartDate = $Request.body.StartDate
-        $TaskBody = @{
+        $TaskBody = [pscustomobject]@{
             TenantFilter  = $Request.body.TenantFilter
             Name          = "Add CA Exclusion Vacation Mode: $Username - $($Request.body.TenantFilter)"
             Command       = @{
                 value = 'Set-CIPPCAExclusion'
                 label = 'Set-CIPPCAExclusion'
             }
-            Parameters    = @{
+            Parameters    = [pscustomobject]@{
                 ExclusionType = 'Add'
                 UserID        = $Request.body.UserID
                 PolicyId      = $Request.body.PolicyId
@@ -46,6 +48,6 @@ Function Invoke-ExecCAExclusion {
     Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
             StatusCode = [HttpStatusCode]::OK
             Body       = $Body
-        }) 
+        })
 
 }

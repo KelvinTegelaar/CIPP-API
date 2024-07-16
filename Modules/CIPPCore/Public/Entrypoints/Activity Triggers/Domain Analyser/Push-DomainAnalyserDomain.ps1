@@ -30,7 +30,7 @@ function Push-DomainAnalyserDomain {
     }
     Set-DnsResolver -Resolver $Resolver
 
-    $Domain = $DomainObject.rowKey
+    $Domain = $DomainObject.RowKey
 
     try {
         $Tenant = $DomainObject.TenantDetails | ConvertFrom-Json -ErrorAction Stop
@@ -122,8 +122,8 @@ function Push-DomainAnalyserDomain {
         }
     } catch {
         $Message = 'SPF Error'
-        Write-LogMessage -API 'DomainAnalyser' -tenant $tenant.tenant -message $Message -LogData (Get-CippException -Exception $_) -sev Error
-        throw $Message
+        Write-LogMessage -API 'DomainAnalyser' -tenant $DomainObject.TenantId -message $Message -LogData (Get-CippException -Exception $_) -sev Error
+        return $Message
     }
 
     # Check SPF Record
@@ -185,8 +185,8 @@ function Push-DomainAnalyserDomain {
         }
     } catch {
         $Message = 'DMARC Error'
-        Write-LogMessage -API 'DomainAnalyser' -tenant $tenant.tenant -message $Message -LogData (Get-CippException -Exception $_) -sev Error
-        throw $Message
+        Write-LogMessage -API 'DomainAnalyser' -tenant $DomainObject.TenantId -message $Message -LogData (Get-CippException -Exception $_) -sev Error
+        return $Message
     }
 
     # DNS Sec Check
@@ -203,8 +203,8 @@ function Push-DomainAnalyserDomain {
         }
     } catch {
         $Message = 'DNSSEC Error'
-        Write-LogMessage -API 'DomainAnalyser' -tenant $tenant.tenant -message $Message -LogData (Get-CippException -Exception $_) -sev Error
-        throw $Message
+        Write-LogMessage -API 'DomainAnalyser' -tenant $DomainObject.TenantId -message $Message -LogData (Get-CippException -Exception $_) -sev Error
+        return $Message
     }
 
     # DKIM Check
@@ -232,8 +232,8 @@ function Push-DomainAnalyserDomain {
         }
     } catch {
         $Message = 'DKIM Exception'
-        Write-LogMessage -API 'DomainAnalyser' -tenant $tenant.tenant -message $Message -LogData (Get-CippException -Exception $_) -sev Error
-        throw $Message
+        Write-LogMessage -API 'DomainAnalyser' -tenant $DomainObject.TenantId -message $Message -LogData (Get-CippException -Exception $_) -sev Error
+        return $Message
     }
     # Final Score
     $Result.Score = $ScoreDomain
@@ -248,9 +248,9 @@ function Push-DomainAnalyserDomain {
         Add-CIPPAzDataTableEntity @DomainTable -Entity $DomainObject -Force
 
         # Final Write to Output
-        Write-LogMessage -API 'DomainAnalyser' -tenant $tenant.tenant -message "DNS Analyser Finished For $Domain" -sev Info
+        Write-LogMessage -API 'DomainAnalyser' -tenant $DomainObject.TenantId -message "DNS Analyser Finished For $Domain" -sev Info
     } catch {
-        Write-LogMessage -API -API 'DomainAnalyser' -tenant $tenant.tenant -message "Error saving domain $Domain to table " -sev Error -LogData (Get-CippException -Exception $_)
+        Write-LogMessage -API 'DomainAnalyser' -tenant $DomainObject.TenantId -message "Error saving domain $Domain to table " -sev Error -LogData (Get-CippException -Exception $_)
     }
     return $null
 }
