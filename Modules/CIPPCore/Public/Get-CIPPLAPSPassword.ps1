@@ -4,7 +4,7 @@ function Get-CIPPLapsPassword {
     param (
         $device,
         $TenantFilter,
-        $APIName = "Get LAPS Password",
+        $APIName = 'Get LAPS Password',
         $ExecutingUser
     )
 
@@ -15,10 +15,10 @@ function Get-CIPPLapsPassword {
             "The password for $($_.AccountName) is $($PlainText) generated at $($date)"
         }
         if ($GraphRequest) { return $GraphRequest } else { return "No LAPS password found for $device" }
-    }
-    catch {
-        Write-LogMessage -user $ExecutingUser -API $APIName -message "Could not add OOO for $($userid)" -Sev "Error" -tenant $TenantFilter
-        return "Could not add out of office message for $($userid). Error: $($_.Exception.Message)"
+    } catch {
+        $ErrorMessage = Get-CippException -Exception $_
+        Write-LogMessage -user $ExecutingUser -API $APIName -message "Could not add OOO for $($userid). Error: $($ErrorMessage.NormalizedError)" -Sev 'Error' -tenant $TenantFilter -LogData $ErrorMessage
+        return "Could not add out of office message for $($userid). Error: $($ErrorMessage.NormalizedError)"
     }
 }
 
