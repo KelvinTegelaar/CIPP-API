@@ -9,6 +9,7 @@ function Set-CIPPCPVConsent {
     $Results = [System.Collections.Generic.List[string]]::new()
     $Tenant = Get-Tenants -IncludeAll | Where-Object -Property customerId -EQ $TenantFilter | Select-Object -First 1
     $TenantName = $Tenant.displayName
+    $User = $request.headers.'x-ms-client-principal'
 
     if ($TenantFilter -eq $env:TenantID) {
         return @('Cannot modify CPV consent on partner tenant')
@@ -24,7 +25,8 @@ function Set-CIPPCPVConsent {
             }
             $Results.add("Deleted Service Principal from $TenantName")
         } catch {
-            $Results.add("Error deleting SP - $($_.Exception.Message)")
+            $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
+            $Results.add("Error deleting SP - $($ErrorMessage)")
         }
     }
 
@@ -57,10 +59,10 @@ function Set-CIPPCPVConsent {
             Add-CIPPAzDataTableEntity @Table -Entity $GraphRequest -Force
         }
         $Results.add("Successfully added CPV Application to tenant $($TenantName)") | Out-Null
-        Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -message "Added our Service Principal to $($TenantName)" -Sev 'Info' -tenant $Tenant.defaultDomainName -tenantId $TenantFilter
+        Write-LogMessage -user $User -API $APINAME -message "Added our Service Principal to $($TenantName)" -Sev 'Info' -tenant $Tenant.defaultDomainName -tenantId $TenantFilter
     } catch {
-        $ErrorMessage = Get-NormalizedError -message $_.Exception.Message
-        if ($ErrorMessage -like '*Permission entry already exists*') {
+        $ErrorMessage = Get-CippException -Exception $_
+        if ($ErrorMessage.NormalizedError -like '*Permission entry already exists*') {
             $Table = Get-CIPPTable -TableName cpvtenants
             $unixtime = [int64](([datetime]::UtcNow) - (Get-Date '1/1/1970')).TotalSeconds
             $GraphRequest = @{
@@ -73,8 +75,8 @@ function Set-CIPPCPVConsent {
             Add-CIPPAzDataTableEntity @Table -Entity $GraphRequest -Force
             return @("We've already added our Service Principal to $($TenantName)")
         }
-        Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -message "Could not add our Service Principal to the client tenant $($TenantName): $($_.Exception.message)" -Sev 'Error' -tenant $Tenant.defaultDomainName -tenantId $TenantFilter -LogData (Get-CippException -Exception $_)
-        return @("Could not add our Service Principal to the client tenant $($TenantName): $ErrorMessage")
+        Write-LogMessage -user $User -API $APINAME -message "Could not add our Service Principal to the client tenant $($TenantName): $($ErrorMessage.NormalizedError)" -Sev 'Error' -tenant $Tenant.defaultDomainName -tenantId $TenantFilter -LogData $ErrorMessage
+        return @("Could not add our Service Principal to the client tenant $($TenantName). Error: $($ErrorMessage.NormalizedError)")
     }
     return $Results
 }
