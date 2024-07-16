@@ -23,7 +23,7 @@ function New-passwordString {
             $containsUppercase = $Password -cmatch '[A-Z]'
             $containsLowercase = $Password -cmatch '[a-z]'
             $containsDigit = $Password -cmatch '\d'
-            $containsSpecialChar = $Password -cmatch "[$%&*#]"
+            $containsSpecialChar = $Password -cmatch '[$%&*#]'
 
             $isComplex = $containsUppercase -and $containsLowercase -and $containsDigit -and $containsSpecialChar
 

@@ -28,7 +28,8 @@ function Set-CIPPGDAPInviteGroups {
                     Start-Sleep -Milliseconds 100
                 }
             } catch {
-                Write-LogMessage -API $APINAME -message "GDAP Group mapping failed for $($Relationship.customer.displayName) - Group: $($role.GroupId) - Exception: $($_.Exception.Message)" -Sev Error -LogData (Get-CippException -Exception $_)
+                $ErrorMessage = Get-CippException -Exception $_
+                Write-LogMessage -API $APINAME -message "GDAP Group mapping failed for $($Relationship.customer.displayName) - Group: $($role.GroupId) - Exception: $($ErrorMessage.NormalizedError)" -Sev Error -LogData $ErrorMessage
                 return $false
             }
         }
@@ -57,7 +58,7 @@ function Set-CIPPGDAPInviteGroups {
                     SkipLog          = $true
                 }
                 #Write-Information ($InputObject | ConvertTo-Json)
-                $InstanceId = Start-NewOrchestration -FunctionName 'CIPPOrchestrator' -InputObject ($InputObject | ConvertTo-Json -Depth 5 -Compress)
+                $InstanceId = Start-NewOrchestration -FunctionName 'CIPPOrchestrator' -InputObject (ConvertTo-Json -InputObject $InputObject -Depth 5 -Compress)
                 Write-Information "Started GDAP Invite orchestration with ID = '$InstanceId'"
             }
         }
