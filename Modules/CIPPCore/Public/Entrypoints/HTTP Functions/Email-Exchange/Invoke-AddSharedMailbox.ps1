@@ -37,11 +37,9 @@ Function Invoke-AddSharedMailbox {
         # Block sign-in for the mailbox
         try {
             $null = Set-CIPPSignInState -userid $AddSharedRequest.ExternalDirectoryObjectId -TenantFilter $($MailboxObject.tenantid) -APIName $APINAME -ExecutingUser $User -AccountEnabled $false
-            Write-LogMessage -user $User -API $APINAME -tenant $($MailboxObject.tenantid) -message "Blocked sign-in for shared mailbox $Email" -Sev 'Info'
             $Body = $Results.add("Blocked sign-in for shared mailbox $Email")
         } catch {
             $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
-            Write-LogMessage -user $User -API $APINAME -tenant $($MailboxObject.tenantid) -message "Failed to block sign-in for shared mailbox $Email. Error: $ErrorMessage" -Sev 'Error'
             $Body = $Results.add("Failed to block sign-in for shared mailbox $Email. Error: $ErrorMessage")
         }
 
