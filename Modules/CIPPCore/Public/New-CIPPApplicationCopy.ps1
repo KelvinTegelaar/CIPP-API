@@ -35,7 +35,7 @@ function New-CIPPApplicationCopy {
     $TenantInfo = New-GraphGetRequest -Uri 'https://graph.microsoft.com/beta/servicePrincipals?$top=999' -tenantid $Tenant -NoAuthCheck $true
 
     if ($App -Notin $TenantInfo.appId) {
-        $PostResults = New-GraphPostRequest 'https://graph.microsoft.com/beta/servicePrincipals' -type POST -tenantid $Tenant -body "{ `"appId`": `"$($App)`" }"
+        $null = New-GraphPostRequest 'https://graph.microsoft.com/beta/servicePrincipals' -type POST -tenantid $Tenant -body "{ `"appId`": `"$($App)`" }"
         Write-LogMessage -message "Added $App as a service principal" -tenant $tenant -API 'Application Copy' -sev Info
     }
     Add-CIPPApplicationPermission -RequiredResourceAccess $ApplicationResourceAccess -ApplicationId $App -Tenantfilter $Tenant
