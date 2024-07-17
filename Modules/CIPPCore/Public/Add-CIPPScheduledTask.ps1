@@ -19,12 +19,11 @@ function Add-CIPPScheduledTask {
     $propertiesToCheck = @('Webhook', 'Email', 'PSA')
     $PostExecution = ($propertiesToCheck | Where-Object { $task.PostExecution.$_ -eq $true }) -join ','
     $Parameters = [System.Collections.Hashtable]@{}
-    foreach ($Key in $task.Parameters.Keys) {
+    foreach ($Key in $task.Parameters.PSObject.Properties.Name) {
         $Param = $task.Parameters.$Key
-        if ($Param.Key) {
+        if ($Param -is [System.Collections.IDictionary]) {
             $ht = @{}
-            foreach ($p in $Param) {
-                Write-Host $p.Key
+            foreach ($p in $Param.GetEnumerator()) {
                 $ht[$p.Key] = $p.Value
             }
             $Parameters[$Key] = [PSCustomObject]$ht
@@ -32,6 +31,7 @@ function Add-CIPPScheduledTask {
             $Parameters[$Key] = $Param
         }
     }
+
     $Parameters = ($Parameters | ConvertTo-Json -Depth 10 -Compress)
     $AdditionalProperties = [System.Collections.Hashtable]@{}
     foreach ($Prop in $task.AdditionalProperties) {
@@ -72,7 +72,8 @@ function Add-CIPPScheduledTask {
     try {
         Add-CIPPAzDataTableEntity @Table -Entity $entity -Force
     } catch {
-        return "Could not add task: $($_.Exception.Message)"
+        $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
+        return "Could not add task: $ErrorMessage"
     }
     return "Successfully added task: $($entity.Name)"
 }

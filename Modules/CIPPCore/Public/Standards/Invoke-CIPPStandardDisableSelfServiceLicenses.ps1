@@ -1,27 +1,30 @@
 function Invoke-CIPPStandardDisableSelfServiceLicenses {
     <#
     .FUNCTIONALITY
-    Internal
-    .APINAME
-    DisableSelfServiceLicenses
-    .CAT
-    Entra (AAD) Standards
-    .TAG
-    "mediumimpact"
-    .HELPTEXT
-    This standard disables all self service licenses and enables all exclusions
-    .ADDEDCOMPONENT
-    .LABEL
-    Disable Self Service Licensing
-    .IMPACT
-    Medium Impact
-    .POWERSHELLEQUIVALENT
-    Update-MSCommerceProductPolicy -PolicyId AllowSelfServicePurchase -ProductId {productId} -Value "Disabled"
-    .RECOMMENDEDBY
-    .DOCSDESCRIPTION
-    This standard disables all self service licenses and enables all exclusions
-    .UPDATECOMMENTBLOCK
-    Run the Tools\Update-StandardsComments.ps1 script to update this comment block
+        Internal
+    .COMPONENT
+        (APIName) DisableSelfServiceLicenses
+    .SYNOPSIS
+        (Label) Disable Self Service Licensing
+    .DESCRIPTION
+        (Helptext) This standard disables all self service licenses and enables all exclusions
+        (DocsDescription) This standard disables all self service licenses and enables all exclusions
+    .NOTES
+        CAT
+            Entra (AAD) Standards
+        TAG
+            "mediumimpact"
+        ADDEDCOMPONENT
+            {"type":"input","name":"standards.DisableSelfServiceLicenses.Exclusions","label":"License Ids to exclude from this standard"}
+        IMPACT
+            Medium Impact
+        POWERSHELLEQUIVALENT
+            Set-MsolCompanySettings -AllowAdHocSubscriptions $false
+        RECOMMENDEDBY
+        UPDATECOMMENTBLOCK
+            Run the Tools\Update-StandardsComments.ps1 script to update this comment block
+    .LINK
+        https://docs.cipp.app/user-documentation/tenant/standards/edit-standards
     #>
 
     param($Tenant, $Settings)
@@ -91,7 +94,3 @@ function Invoke-CIPPStandardDisableSelfServiceLicenses {
         #Add-CIPPBPAField -FieldName '????' -FieldValue "????" -StoreAs bool -Tenant $tenant
     }
 }
-
-
-
-

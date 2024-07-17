@@ -89,7 +89,8 @@ function Test-CIPPGDAPRelationships {
         }
 
     } catch {
-        Write-LogMessage -user $ExecutingUser -API $APINAME -message "Failed to run GDAP check for $($TenantFilter): $($_.Exception.Message)" -Sev 'Error'
+        $ErrorMessage = Get-CippException -Exception $_
+        Write-LogMessage -user $ExecutingUser -API $APINAME -message "Failed to run GDAP check for $($TenantFilter): $($ErrorMessage.NormalizedError)" -Sev 'Error' -LogData $ErrorMessage
     }
 
     return [PSCustomObject]@{

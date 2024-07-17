@@ -128,7 +128,7 @@ function New-CIPPSharepointSite {
         $Request.Classification = $Classification
     }
 
-    Write-Verbose ($Request | ConvertTo-Json -Compress -Depth 10)
+    Write-Verbose (ConvertTo-Json -InputObject $Request -Compress -Depth 10)
 
     $body = @{
         request = $Request
