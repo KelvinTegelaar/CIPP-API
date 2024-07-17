@@ -12,6 +12,7 @@ Function Invoke-ExecStartManagedFolderAssistant {
 
     $APIName = $TriggerMetadata.FunctionName
     $User = $request.headers.'x-ms-client-principal'
+    $Tenant = $Request.query.TenantFilter
     Write-LogMessage -user $User -API $APINAME -message 'Accessed this API' -Sev 'Debug'
 
     # Write to the Azure Functions log stream.
@@ -21,12 +22,12 @@ Function Invoke-ExecStartManagedFolderAssistant {
     # Interact with query parameters or the body of the request.
 
     try {
-        $null = New-ExoRequest -tenantid $($MailboxObject.tenantid) -cmdlet 'Start-ManagedFolderAssistant' -cmdparams @{Identity = $Request.query.id }
+        $null = New-ExoRequest -tenantid $Tenant -cmdlet 'Start-ManagedFolderAssistant' -cmdparams @{Identity = $Request.query.id }
         $Results.Add("Successfully started Managed Folder Assistant for mailbox $($Request.query.id).")
         $StatusCode = [HttpStatusCode]::OK
     } catch {
         $ErrorMessage = Get-CippException -Exception $_
-        Write-LogMessage -user $User -API $APINAME -tenant $($MailboxObject.tenantid) -message "Failed to create room: $($MailboxObject.DisplayName). Error: $($ErrorMessage.NormalizedError)" -Sev 'Error' -LogData $ErrorMessage
+        Write-LogMessage -user $User -API $APINAME -tenant $Tenant -message "Failed to create room: $($MailboxObject.DisplayName). Error: $($ErrorMessage.NormalizedError)" -Sev 'Error' -LogData $ErrorMessage
         $Results.Add("Failed to start Managed Folder Assistant for mailbox $($Request.query.id). Error: $($ErrorMessage.NormalizedError)")
         $StatusCode = [HttpStatusCode]::Forbidden
     }
