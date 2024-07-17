@@ -11,7 +11,7 @@ function New-CIPPBackupTask {
             $Users = New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/users?$top=999' -tenantid $TenantFilter | Select-Object * -ExcludeProperty mail, provisionedPlans, onPrem*, *passwordProfile*, *serviceProvisioningErrors*, isLicenseReconciliationNeeded, isManagementRestricted, isResourceAccount, *date*, *external*, identities, deletedDateTime, isSipEnabled, assignedPlans, cloudRealtimeCommunicationInfo, deviceKeys, provisionedPlan, securityIdentifier
             #remove the property if the value is $null
             $Users | ForEach-Object {
-                $_.psobject.properties | Where-Object { $_.Value -eq $null } | ForEach-Object {
+                $_.psobject.properties | Where-Object { $null -eq $_.Value } | ForEach-Object {
                     $_.psobject.properties.Remove($_.Name)
                 }
             }
@@ -50,7 +50,8 @@ function New-CIPPBackupTask {
                         try {
                             New-CIPPIntuneTemplate -TenantFilter $TenantFilter -URLName $URLName -ID $Policy.ID
                         } catch {
-                            "Failed to create a template of the Intune Configuration Policy with ID: $($Policy.id). Error: $($_.Exception.Message)"
+                            $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
+                            "Failed to create a template of the Intune Configuration Policy with ID: $($Policy.id). Error: $ErrorMessage"
                         }
                     }
                 } catch {

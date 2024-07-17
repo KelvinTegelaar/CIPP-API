@@ -26,9 +26,9 @@ function Set-CIPPCopyGroupMembers {
             Write-LogMessage -user $ExecutingUser -API $APIName -message "Added $UserId to group $($_.displayName)" -Sev 'Info' -tenant $TenantFilter
             $Success.Add("Added group: $($MailGroup.displayName)") | Out-Null
         } catch {
-            $NormalizedError = Get-NormalizedError -message $($_.Exception.Message)
-            $Errors.Add("We've failed to add the group $($MailGroup.displayName): $NormalizedError") | Out-Null
-            Write-LogMessage -user $ExecutingUser -API $APIName -tenant $TenantFilter -message "Group adding failed for group $($_.displayName):  $($_.Exception.Message)" -Sev 'Error' -LogData (Get-CippException -Exception $_)
+            $ErrorMessage = Get-CippException -Exception $_
+            $Errors.Add("We've failed to add the group $($MailGroup.displayName): $($ErrorMessage.NormalizedError)") | Out-Null
+            Write-LogMessage -user $ExecutingUser -API $APIName -tenant $TenantFilter -message "Group adding failed for group $($_.displayName):  $($ErrorMessage.NormalizedError)" -Sev 'Error' -LogData $ErrorMessage
         }
     }
 
