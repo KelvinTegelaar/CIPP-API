@@ -83,8 +83,9 @@ function Set-CIPPUserJITAdmin {
                         password          = $Password
                     }
                 } catch {
-                    Write-Information "Error creating user: $($_.Exception.Message)"
-                    throw $_.Exception.Message
+                    $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
+                    Write-Information "Error creating user: $ErrorMessage"
+                    throw $ErrorMessage
                 }
             }
             'AddRoles' {
@@ -125,7 +126,8 @@ function Set-CIPPUserJITAdmin {
                     $null = New-GraphPOSTRequest -type DELETE -uri "https://graph.microsoft.com/beta/users/$($UserObj.id)" -tenantid $TenantFilter
                     return "Deleted user $($UserObj.displayName) ($($UserObj.userPrincipalName)) with id $($UserObj.id)"
                 } catch {
-                    return "Error deleting user $($UserObj.displayName) ($($UserObj.userPrincipalName)): $($_.Exception.Message)"
+                    $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
+                    return "Error deleting user $($UserObj.displayName) ($($UserObj.userPrincipalName)): $ErrorMessage"
                 }
             }
             'DisableUser' {
@@ -141,8 +143,9 @@ function Set-CIPPUserJITAdmin {
                     Set-CIPPUserJITAdminProperties -TenantFilter $TenantFilter -UserId $User.UserPrincipalName -Clear | Out-Null
                     return "Disabled user $($UserObj.displayName) ($($UserObj.userPrincipalName))"
                 } catch {
-                    $ErrrorMessage = Get-NormalizedError -Message $_.Exception.Message
-                    return "Error disabling user $($UserObj.displayName) ($($UserObj.userPrincipalName)): $ErrrorMessage"
+                    $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
+                    return "Error disabling user $($UserObj.displayName) ($($UserObj.userPrincipalName)): $ErrorMessage"
+
                 }
             }
         }
