@@ -21,7 +21,7 @@ Function Invoke-ExecAccessChecks {
     }
 
     if ($Request.Query.Tenants -eq 'true') {
-        $Results = Test-CIPPAccessTenant -TenantCSV $Request.Body.tenantid
+        $Results = Test-CIPPAccessTenant -TenantCSV $Request.Body.tenantid -ExecutingUser $Request.Headers.'x-ms-client-principal'
     }
     if ($Request.Query.GDAP -eq 'true') {
         $Results = Test-CIPPGDAPRelationships
