@@ -39,8 +39,9 @@ function New-CIPPRestoreTask {
                         }
                     }
                 } catch {
-                    "Could not restore user $($UPN): $($_.Exception.Message) "
-                    Write-LogMessage -user $ExecutingUser -API $APINAME -message "Could not restore user $($UPN): $($_.Exception.Message) " -Sev 'error'
+                    $ErrorMessage = Get-CippException -Exception $_
+                    "Could not restore user $($UPN): $($ErrorMessage.NormalizedError) "
+                    Write-LogMessage -user $ExecutingUser -API $APINAME -message "Could not restore user $($UPN): $($ErrorMessage.NormalizedError) " -Sev 'Error' -LogData $ErrorMessage
                 }
             }
         }
@@ -74,8 +75,9 @@ function New-CIPPRestoreTask {
                         }
                     }
                 } catch {
-                    "Could not restore group $DisplayName $($_.Exception.Message) "
-                    Write-LogMessage -user $ExecutingUser -API $APINAME -message "Could not restore group $DisplayName $($_.Exception.Message) " -Sev 'error'
+                    $ErrorMessage = Get-CippException -Exception $_
+                    "Could not restore group $DisplayName : $($ErrorMessage.NormalizedError) "
+                    Write-LogMessage -user $ExecutingUser -API $APINAME -message "Could not restore group $DisplayName : $($ErrorMessage.NormalizedError) " -Sev 'Error' -LogData $ErrorMessage
                 }
             }
         }
@@ -87,8 +89,9 @@ function New-CIPPRestoreTask {
                 try {
                     New-CIPPCAPolicy -replacePattern 'displayName' -Overwrite $overwrite -TenantFilter $TenantFilter -state 'donotchange' -RawJSON $JSON -APIName 'CIPP Restore' -ErrorAction SilentlyContinue
                 } catch {
-                    "Could not restore Conditional Access Policy $DisplayName $($_.Exception.Message) "
-                    Write-LogMessage -user $ExecutingUser -API $APINAME -message "Could not restore Conditional Access Policy $DisplayName $($_.Exception.Message) " -Sev 'error'
+                    $ErrorMessage = Get-CippException -Exception $_
+                    "Could not restore Conditional Access Policy $DisplayName : $($ErrorMessage.NormalizedError) "
+                    Write-LogMessage -user $ExecutingUser -API $APINAME -message "Could not restore Conditional Access Policy $DisplayName : $($ErrorMessage.NormalizedError) " -Sev 'Error' -LogData $ErrorMessage
                 }
             }
         }
@@ -98,8 +101,9 @@ function New-CIPPRestoreTask {
                 try {
                     Set-CIPPIntunePolicy -TemplateType $backup.Type -TenantFilter $TenantFilter -DisplayName $backup.DisplayName -Description $backup.Description -RawJSON ($backup.TemplateJson) -ErrorAction SilentlyContinue
                 } catch {
-                    "Could not restore Intune Configuration $DisplayName $($_.Exception.Message) "
-                    Write-LogMessage -user $ExecutingUser -API $APINAME -message "Could not restore Intune Configuration $DisplayName $($_.Exception.Message) " -Sev 'error'
+                    $ErrorMessage = Get-CippException -Exception $_
+                    "Could not restore Intune Configuration $DisplayName : $($ErrorMessage.NormalizedError) "
+                    Write-LogMessage -user $ExecutingUser -API $APINAME -message "Could not restore Intune Configuration $DisplayName : $($ErrorMessage.NormalizedError) " -Sev 'Error' -LogData $ErrorMessage
                 }
             }
             #Convert the manual method to a function
@@ -110,8 +114,9 @@ function New-CIPPRestoreTask {
                 try {
                     Set-CIPPIntunePolicy -TemplateType $backup.Type -TenantFilter $TenantFilter -DisplayName $backup.DisplayName -Description $backup.Description -RawJSON ($backup.TemplateJson) -ErrorAction SilentlyContinue
                 } catch {
-                    "Could not restore Intune Compliance $DisplayName $($_.Exception.Message) "
-                    Write-LogMessage -user $ExecutingUser -API $APINAME -message "Could not restore Intune Configuration $DisplayName $($_.Exception.Message) " -Sev 'error'
+                    $ErrorMessage = Get-CippException -Exception $_
+                    "Could not restore Intune Compliance $DisplayName : $($ErrorMessage.NormalizedError) "
+                    Write-LogMessage -user $ExecutingUser -API $APINAME -message "Could not restore Intune Configuration $DisplayName : $($ErrorMessage.NormalizedError) " -Sev 'Error' -LogData $ErrorMessage
                 }
             }
 
@@ -123,8 +128,9 @@ function New-CIPPRestoreTask {
                 try {
                     Set-CIPPIntunePolicy -TemplateType $backup.Type -TenantFilter $TenantFilter -DisplayName $backup.DisplayName -Description $backup.Description -RawJSON ($backup.TemplateJson) -ErrorAction SilentlyContinue
                 } catch {
-                    "Could not restore Intune Protection $DisplayName $($_.Exception.Message) "
-                    Write-LogMessage -user $ExecutingUser -API $APINAME -message "Could not restore Intune Configuration $DisplayName $($_.Exception.Message) " -Sev 'error'
+                    $ErrorMessage = Get-CippException -Exception $_
+                    "Could not restore Intune Protection $DisplayName : $($ErrorMessage.NormalizedError) "
+                    Write-LogMessage -user $ExecutingUser -API $APINAME -message "Could not restore Intune Configuration $DisplayName : $($ErrorMessage.NormalizedError) " -Sev 'Error' -LogData $ErrorMessage
                 }
             }
 
@@ -137,7 +143,8 @@ function New-CIPPRestoreTask {
             try {
                 Add-CIPPAzDataTableEntity @WebhookTable -Entity $Backup -Force
             } catch {
-                "Could not restore Webhook Alerts $($_.Exception.Message)"
+                $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
+                "Could not restore Webhook Alerts $ErrorMessage"
             }
         }
         'CippScriptedAlerts' {
@@ -147,7 +154,8 @@ function New-CIPPRestoreTask {
             try {
                 Add-CIPPAzDataTableEntity @ScheduledTasks -Entity $Backup -Force
             } catch {
-                "Could not restore Scripted Alerts $($_.Exception.Message) "
+                $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
+                "Could not restore Scripted Alerts $ErrorMessage "
             }
         }
         'CippStandards' {
@@ -157,7 +165,8 @@ function New-CIPPRestoreTask {
             try {
                 Add-CIPPAzDataTableEntity @Table -Entity $StandardsBackup -Force
             } catch {
-                "Could not restore Standards $($_.Exception.Message) "
+                $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
+                "Could not restore Standards $ErrorMessage "
             }
         }
 
