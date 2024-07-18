@@ -80,18 +80,23 @@ foreach ($tenant in $tenants) {
             if ($AZfileuri.uploadState -like '*fail*') { break }
             Start-Sleep -Milliseconds 300
         } while ($AzFileUri.AzureStorageUri -eq $null)
-
+        Write-Host "Uploading file to $($AzFileUri.azureStorageUri)"
+        Write-Host "Complete AZ file uri data: $($AzFileUri | ConvertTo-Json -Depth 10)"
         $chunkSizeInBytes = 4mb
         [byte[]]$bytes = [System.IO.File]::ReadAllBytes($($intunewinFilesize.fullname))
         $chunks = [Math]::Ceiling($bytes.Length / $chunkSizeInBytes)
         $id = [System.Convert]::ToBase64String([System.Text.Encoding]::ASCII.GetBytes($chunks.ToString('0000')))
         #For anyone that reads this, The maximum chunk size is 100MB for blob storage, so we can upload it as one part and just give it the single ID. Easy :)
         $Upload = Invoke-RestMethod -Uri "$($AzFileUri.azureStorageUri)&comp=block&blockid=$id" -Method Put -Headers @{'x-ms-blob-type' = 'BlockBlob' } -InFile $inFile -ContentType 'application/octet-stream'
+        Write-Host "Upload data: $($Upload | ConvertTo-Json -Depth 10)"
         $ConfirmUpload = Invoke-RestMethod -Uri "$($AzFileUri.azureStorageUri)&comp=blocklist" -Method Put -Body "<?xml version=`"1.0`" encoding=`"utf-8`"?><BlockList><Latest>$id</Latest></BlockList>"
+        Write-Host "Confirm Upload data: $($ConfirmUpload | ConvertTo-Json -Depth 10)"
         $CommitReq = New-graphPostRequest -Uri "$($BaseURI)/$($NewApp.id)/microsoft.graph.win32lobapp/contentVersions/1/files/$($ContentReq.id)/commit" -Body $EncBody -Type POST -tenantid $tenant
+        Write-Host "Commit Request: $($CommitReq | ConvertTo-Json -Depth 10)"
 
         do {
             $CommitStateReq = New-graphGetRequest -Uri "$($BaseURI)/$($NewApp.id)/microsoft.graph.win32lobapp/contentVersions/1/files/$($ContentReq.id)" -tenantid $tenant
+            Write-Host "Commit State Request: $($CommitStateReq | ConvertTo-Json -Depth 10)"
             if ($CommitStateReq.uploadState -like '*fail*') {
                 Write-LogMessage -api 'AppUpload' -tenant $($Tenant) -message "$($ChocoApp.ApplicationName) Commit failed. Please check if app uploaded succesful" -Sev 'Warning'
                 break
@@ -99,6 +104,7 @@ foreach ($tenant in $tenants) {
             Start-Sleep -Milliseconds 300
         } while ($CommitStateReq.uploadState -eq 'commitFilePending')
         $CommitFinalizeReq = New-graphPostRequest -Uri "$($BaseURI)/$($NewApp.id)" -tenantid $tenant -Body '{"@odata.type":"#microsoft.graph.win32lobapp","committedContentVersion":"1"}' -type PATCH
+        Write-Host "Commit Finalize Request: $($CommitFinalizeReq | ConvertTo-Json -Depth 10)"
         Write-LogMessage -api 'AppUpload' -tenant $($Tenant) -message "Added Application $($chocoApp.ApplicationName)" -Sev 'Info'
         if ($AssignTo -ne 'On') {
             $intent = if ($AssignToIntent) { 'Uninstall' } else { 'Required' }
