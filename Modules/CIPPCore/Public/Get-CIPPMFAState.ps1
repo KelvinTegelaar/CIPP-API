@@ -47,7 +47,7 @@ function Get-CIPPMFAState {
                         $Policy.conditions.users.excludeUsers.foreach({ $ExcludeAllUsers.Add($_) | Out-Null })
                         continue
                     }
-                } 
+                }
             }
         } catch {
         }
@@ -76,7 +76,7 @@ function Get-CIPPMFAState {
         $PerUser = if ($PerUserMFAState -eq $null) { $null } else { ($PerUserMFAState | Where-Object -Property UserPrincipalName -EQ $_.UserPrincipalName).PerUserMFAState }
 
         $MFARegUser = if (($MFARegistration | Where-Object -Property UserPrincipalName -EQ $_.UserPrincipalName).IsMFARegistered -eq $null) { $false } else { ($MFARegistration | Where-Object -Property UserPrincipalName -EQ $_.UserPrincipalName) }
-        
+
         [PSCustomObject]@{
             Tenant          = $TenantFilter
             ID              = $_.ObjectId
@@ -92,7 +92,7 @@ function Get-CIPPMFAState {
             RowKey          = [string]($_.UserPrincipalName).replace('#', '')
             PartitionKey    = 'users'
         }
-        
+
     }
     return $GraphRequest
 }

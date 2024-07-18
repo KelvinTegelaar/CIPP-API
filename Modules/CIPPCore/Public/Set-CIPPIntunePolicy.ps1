@@ -121,8 +121,9 @@ function Set-CIPPIntunePolicy {
         }
         "Successfully $($PostType) policy for $($tenantFilter) with display name $($Displayname)"
     } catch {
-        "Failed to add or set policy for $($tenantFilter) with display name $($Displayname): $($_.Exception.Message)"
-        Write-LogMessage -user $ExecutingUser -API $APINAME -tenant $($tenantFilter) -message "Failed $($PostType) policy $($Displayname). Error: $($_.Exception.Message)" -Sev 'Error'
+        $ErrorMessage = Get-CippException -Exception $_
+        "Failed to add or set policy for $($tenantFilter) with display name $($Displayname): $($ErrorMessage.NormalizedError)"
+        Write-LogMessage -user $ExecutingUser -API $APINAME -tenant $($tenantFilter) -message "Failed $($PostType) policy $($Displayname). Error: $($ErrorMessage.NormalizedError)" -Sev 'Error' -LogData $ErrorMessage
         continue
     }
 

@@ -1,25 +1,29 @@
 function Set-CIPPGroupGAL(
     [string]$ExecutingUser,
-    [string]$GroupType, 
-    [string]$Id, 
-    [string]$HiddenString, 
+    [string]$GroupType,
+    [string]$Id,
+    [string]$HiddenString,
     [string]$TenantFilter,
-    [string]$APIName = "Group GAL Status"
+    [string]$APIName = 'Group GAL Status'
 ) {
-    $Hidden = if ($HiddenString -eq 'true') { "true" } else { "false" }
-    $messageSuffix = if ($Hidden -eq 'true') { "hidden" } else { "unhidden" }
+    $Hidden = if ($HiddenString -eq 'true') { 'true' } else { 'false' }
+    $messageSuffix = if ($Hidden -eq 'true') { 'hidden' } else { 'unhidden' }
 
-    if ($GroupType -eq "Distribution List" -or $GroupType -eq "Mail-Enabled Security") {
-        New-ExoRequest -tenantid $TenantFilter -cmdlet "Set-DistributionGroup" -cmdParams @{Identity = $Id; HiddenFromAddressListsEnabled = $Hidden }
-    } 
-    elseif ($GroupType -eq "Microsoft 365") {
-        New-ExoRequest -tenantid $TenantFilter -cmdlet "Set-UnifiedGroup" -cmdParams @{Identity = $Id; HiddenFromAddressListsEnabled = $Hidden }
-    } 
-    elseif ($GroupType -eq "Security") {
-        Write-LogMessage -user $ExecutingUser -API $APIName -tenant $TenantFilter -message "This setting cannot be set on a security group." -Sev "Error"
-        return "$GroupType's group cannot have this setting changed"
+    try {
+        if ($GroupType -eq 'Distribution List' -or $GroupType -eq 'Mail-Enabled Security') {
+            New-ExoRequest -tenantid $TenantFilter -cmdlet 'Set-DistributionGroup' -cmdParams @{Identity = $Id; HiddenFromAddressListsEnabled = $Hidden }
+        } elseif ($GroupType -eq 'Microsoft 365') {
+            New-ExoRequest -tenantid $TenantFilter -cmdlet 'Set-UnifiedGroup' -cmdParams @{Identity = $Id; HiddenFromAddressListsEnabled = $Hidden }
+        } elseif ($GroupType -eq 'Security') {
+            Write-LogMessage -user $ExecutingUser -API $APIName -tenant $TenantFilter -message 'This setting cannot be set on a security group.' -Sev 'Error'
+            return "$GroupType's group cannot have this setting changed"
+        }
+    } catch {
+        $ErrorMessage = Get-CippException -Exception $_
+        Write-LogMessage -user $ExecutingUser -API $APIName -tenant $TenantFilter -message "$Id $messageSuffix from GAL failed: $($ErrorMessage.NormalizedError)" -Sev 'Error' -LogData $ErrorMessage
+        return "Failed. $($ErrorMessage.NormalizedError)"
     }
-    
-    Write-LogMessage -user $ExecutingUser -API $APIName -tenant $TenantFilter -message "$Id $messageSuffix from GAL" -Sev "Info"
+
+    Write-LogMessage -user $ExecutingUser -API $APIName -tenant $TenantFilter -message "$Id $messageSuffix from GAL" -Sev 'Info'
     return "Successfully $messageSuffix $GroupType group $Id from GAL."
 }
