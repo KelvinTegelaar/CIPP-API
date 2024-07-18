@@ -41,10 +41,11 @@ function Add-CIPPApplicationPermission {
     $counter = 0
     foreach ($Grant in $Grants) {
         try {
-            $SettingsRequest = New-GraphPOSTRequest -body ($Grant | ConvertTo-Json) -uri "https://graph.microsoft.com/beta/servicePrincipals/$($ourSVCPrincipal.id)/appRoleAssignedTo" -tenantid $Tenantfilter -type POST -NoAuthCheck $true
+            $SettingsRequest = New-GraphPOSTRequest -body (ConvertTo-Json -InputObject $Grant -Depth 5) -uri "https://graph.microsoft.com/beta/servicePrincipals/$($ourSVCPrincipal.id)/appRoleAssignedTo" -tenantid $Tenantfilter -type POST -NoAuthCheck $true
             $counter++
         } catch {
-            $Results.add("Failed to grant $($Grant.appRoleId) to $($Grant.resourceId): $($_.Exception.Message)") | Out-Null
+            $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
+            $Results.add("Failed to grant $($Grant.appRoleId) to $($Grant.resourceId): $ErrorMessage") | Out-Null
         }
     }
     "Added $counter Application permissions to $($ourSVCPrincipal.displayName)"
