@@ -41,7 +41,7 @@ Function Invoke-AddUserBulk {
 
         } catch {
             Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $($TenantFilter) -message "Failed to create user. Error:$($_.Exception.Message)" -Sev 'Error'
-            $results = "Failed to create user. $($_.Exception.Message)"
+            $results = "Failed to create user $($UserprincipalName). $($_.Exception.Message)"
         }
         [PSCustomObject]@{
             'Results'  = $results
