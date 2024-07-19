@@ -16,10 +16,10 @@ function Set-CIPPSignInState {
         $UserDetails = New-GraphGetRequest -uri "https://graph.microsoft.com/v1.0/users/$($UserId)?`$select=onPremisesSyncEnabled" -noPagination $true -tenantid $TenantFilter -verbose
         $null = New-GraphPostRequest -uri "https://graph.microsoft.com/v1.0/users/$($UserId)" -tenantid $TenantFilter -type PATCH -body $body -verbose
         Write-LogMessage -user $ExecutingUser -API $APIName -message "Set account enabled state to $AccountEnabled for $UserId" -Sev 'Info' -tenant $TenantFilter
-        
-        if($UserDetails.onPremisesSyncEnabled -eq $true){
-            return "WARNING: User is AD Sync enabled. Please enable/disable in AD."
-        }else{
+
+        if ($UserDetails.onPremisesSyncEnabled -eq $true) {
+            return 'WARNING: User is AD Sync enabled. Please enable/disable in AD.'
+        } else {
             return "Set account enabled state to $AccountEnabled for $UserId"
         }
 
