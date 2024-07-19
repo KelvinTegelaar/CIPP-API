@@ -18,7 +18,7 @@ function Invoke-CIPPStandardEnableLitigationHold {
         IMPACT
             Low Impact
         POWERSHELLEQUIVALENT
-            Set-Mailbox -LitigationHoldEnabled $true
+            Set-Mailbox -LitigationHoldEnabled \$true
         RECOMMENDEDBY
         UPDATECOMMENTBLOCK
             Run the Tools\Update-StandardsComments.ps1 script to update this comment block

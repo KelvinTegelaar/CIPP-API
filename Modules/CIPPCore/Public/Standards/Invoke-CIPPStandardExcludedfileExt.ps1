@@ -8,7 +8,7 @@ function Invoke-CIPPStandardExcludedfileExt {
         (Label) Exclude File Extensions from Syncing
     .DESCRIPTION
         (Helptext) Sets the file extensions that are excluded from syncing with OneDrive. These files will be blocked from upload. '*.' is automatically added to the extension and can be omitted.
-        (DocsDescription) Sets the file extensions that are excluded from syncing with OneDrive. These files will be blocked from upload. '*.' is automatically added to the extension and can be omitted.
+        (DocsDescription) Sets the file extensions that are excluded from syncing with OneDrive. These files will be blocked from upload. '\*.' is automatically added to the extension and can be omitted.
     .NOTES
         CAT
             SharePoint Standards

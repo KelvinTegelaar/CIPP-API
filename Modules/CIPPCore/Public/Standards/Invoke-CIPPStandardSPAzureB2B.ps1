@@ -19,7 +19,7 @@ function Invoke-CIPPStandardSPAzureB2B {
         IMPACT
             Low Impact
         POWERSHELLEQUIVALENT
-            Set-SPOTenant -EnableAzureADB2BIntegration $true
+            Set-SPOTenant -EnableAzureADB2BIntegration \$true
         RECOMMENDEDBY
             "CIS 3.0"
         UPDATECOMMENTBLOCK
