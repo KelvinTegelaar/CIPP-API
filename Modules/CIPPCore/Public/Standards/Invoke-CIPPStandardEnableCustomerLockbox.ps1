@@ -20,7 +20,7 @@ function Invoke-CIPPStandardEnableCustomerLockbox {
         IMPACT
             Low Impact
         POWERSHELLEQUIVALENT
-            Set-OrganizationConfig -CustomerLockBoxEnabled $true
+            Set-OrganizationConfig -CustomerLockBoxEnabled \$true
         RECOMMENDEDBY
             "CIS"
         UPDATECOMMENTBLOCK
