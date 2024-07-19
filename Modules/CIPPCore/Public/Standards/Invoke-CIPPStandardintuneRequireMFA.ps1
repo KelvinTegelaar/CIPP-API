@@ -1,30 +1,29 @@
 function Invoke-CIPPStandardintuneRequireMFA {
     <#
     .FUNCTIONALITY
-    Internal
-    .APINAME
-    intuneRequireMFA
-    .CAT
-    Intune Standards
-    .TAG
-    "mediumimpact"
-    .HELPTEXT
-    Requires MFA for all users to register devices with Intune. This is useful when not using Conditional Access.
-    .LABEL
-    Require Multifactor Authentication to register or join devices with Microsoft Entra
-    .IMPACT
-    Medium Impact
-    .POWERSHELLEQUIVALENT
-    Update-MgBetaPolicyDeviceRegistrationPolicy
-    .RECOMMENDEDBY
-    .DOCSDESCRIPTION
-    Requires MFA for all users to register devices with Intune. This is useful when not using Conditional Access.
-    .UPDATECOMMENTBLOCK
-    Run the Tools\Update-StandardsComments.ps1 script to update this comment block
+        Internal
+    .COMPONENT
+        (APIName) intuneRequireMFA
+    .SYNOPSIS
+        (Label) Require Multifactor Authentication to register or join devices with Microsoft Entra
+    .DESCRIPTION
+        (Helptext) Requires MFA for all users to register devices with Intune. This is useful when not using Conditional Access.
+        (DocsDescription) Requires MFA for all users to register devices with Intune. This is useful when not using Conditional Access.
+    .NOTES
+        CAT
+            Intune Standards
+        TAG
+            "mediumimpact"
+        IMPACT
+            Medium Impact
+        POWERSHELLEQUIVALENT
+            Update-MgBetaPolicyDeviceRegistrationPolicy
+        RECOMMENDEDBY
+        UPDATECOMMENTBLOCK
+            Run the Tools\Update-StandardsComments.ps1 script to update this comment block
+    .LINK
+        https://docs.cipp.app/user-documentation/tenant/standards/edit-standards
     #>
-
-
-
 
     param($Tenant, $Settings)
     $PreviousSetting = New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/policies/deviceRegistrationPolicy' -tenantid $Tenant
@@ -60,7 +59,3 @@ function Invoke-CIPPStandardintuneRequireMFA {
         Add-CIPPBPAField -FieldName 'intuneRequireMFA' -FieldValue $RequireMFA -StoreAs bool -Tenant $tenant
     }
 }
-
-
-
-

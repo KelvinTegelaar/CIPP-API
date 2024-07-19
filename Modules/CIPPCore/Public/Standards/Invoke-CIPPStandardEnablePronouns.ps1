@@ -1,31 +1,30 @@
 function Invoke-CIPPStandardEnablePronouns {
     <#
     .FUNCTIONALITY
-    Internal
-    .APINAME
-    EnablePronouns
-    .CAT
-    Global Standards
-    .TAG
-    "lowimpact"
-    .HELPTEXT
-    Enables the Pronouns feature for the tenant. This allows users to set their pronouns in their profile.
-    .ADDEDCOMPONENT
-    .LABEL
-    Enable Pronouns
-    .IMPACT
-    Low Impact
-    .POWERSHELLEQUIVALENT
-    Update-MgBetaAdminPeoplePronoun -IsEnabledInOrganization:$true
-    .RECOMMENDEDBY
-    .DOCSDESCRIPTION
-    Enables the Pronouns feature for the tenant. This allows users to set their pronouns in their profile.
-    .UPDATECOMMENTBLOCK
-    Run the Tools\Update-StandardsComments.ps1 script to update this comment block
+        Internal
+    .COMPONENT
+        (APIName) EnablePronouns
+    .SYNOPSIS
+        (Label) Enable Pronouns
+    .DESCRIPTION
+        (Helptext) Enables the Pronouns feature for the tenant. This allows users to set their pronouns in their profile.
+        (DocsDescription) Enables the Pronouns feature for the tenant. This allows users to set their pronouns in their profile.
+    .NOTES
+        CAT
+            Global Standards
+        TAG
+            "lowimpact"
+        ADDEDCOMPONENT
+        IMPACT
+            Low Impact
+        POWERSHELLEQUIVALENT
+            Update-MgBetaAdminPeoplePronoun -IsEnabledInOrganization:\$true
+        RECOMMENDEDBY
+        UPDATECOMMENTBLOCK
+            Run the Tools\Update-StandardsComments.ps1 script to update this comment block
+    .LINK
+        https://docs.cipp.app/user-documentation/tenant/standards/edit-standards
     #>
-
-
-
 
     param ($Tenant, $Settings)
 
@@ -71,7 +70,3 @@ function Invoke-CIPPStandardEnablePronouns {
         Add-CIPPBPAField -FieldName 'PronounsEnabled' -FieldValue $CurrentState.isEnabledInOrganization -StoreAs bool -Tenant $tenant
     }
 }
-
-
-
-

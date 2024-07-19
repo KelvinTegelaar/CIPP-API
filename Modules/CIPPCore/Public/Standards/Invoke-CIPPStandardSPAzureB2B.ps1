@@ -5,7 +5,7 @@ function Invoke-CIPPStandardSPAzureB2B {
     .COMPONENT
         (APIName) SPAzureB2B
     .SYNOPSIS
-        Enable SharePoint and OneDrive integration with Azure AD B2B
+        (Label) Enable SharePoint and OneDrive integration with Azure AD B2B
     .DESCRIPTION
         (Helptext) Ensure SharePoint and OneDrive integration with Azure AD B2B is enabled
         (DocsDescription) Ensure SharePoint and OneDrive integration with Azure AD B2B is enabled
@@ -16,16 +16,16 @@ function Invoke-CIPPStandardSPAzureB2B {
             "lowimpact"
             "CIS"
         ADDEDCOMPONENT
-        LABEL
-            Enable SharePoint and OneDrive integration with Azure AD B2B
         IMPACT
             Low Impact
         POWERSHELLEQUIVALENT
-            Set-SPOTenant -EnableAzureADB2BIntegration $true
+            Set-SPOTenant -EnableAzureADB2BIntegration \$true
         RECOMMENDEDBY
             "CIS 3.0"
         UPDATECOMMENTBLOCK
             Run the Tools\Update-StandardsComments.ps1 script to update this comment block
+    .LINK
+        https://docs.cipp.app/user-documentation/tenant/standards/edit-standards
     #>
 
     param($Tenant, $Settings)

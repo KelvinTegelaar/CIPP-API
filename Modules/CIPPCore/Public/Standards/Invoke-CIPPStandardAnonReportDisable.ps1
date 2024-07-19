@@ -1,33 +1,30 @@
 function Invoke-CIPPStandardAnonReportDisable {
     <#
     .FUNCTIONALITY
-    Internal
-    .APINAME
-    AnonReportDisable
-    .CAT
-    Global Standards
-    .TAG
-    "lowimpact"
-    .HELPTEXT
-    Shows usernames instead of pseudo anonymised names in reports. This standard is required for reporting to work correctly.
-    .DOCSDESCRIPTION
-    Microsoft announced some APIs and reports no longer return names, to comply with compliance and legal requirements in specific countries. This proves an issue for a lot of MSPs because those reports are often helpful for engineers. This standard applies a setting that shows usernames in those API calls / reports.
-    .ADDEDCOMPONENT
-    .LABEL
-    Enable Usernames instead of pseudo anonymised names in reports
-    .IMPACT
-    Low Impact
-    .POWERSHELLEQUIVALENT
-    Update-MgBetaAdminReportSetting -BodyParameter @{displayConcealedNames = $true}
-    .RECOMMENDEDBY
-    .DOCSDESCRIPTION
-    Shows usernames instead of pseudo anonymised names in reports. This standard is required for reporting to work correctly.
-    .UPDATECOMMENTBLOCK
-    Run the Tools\Update-StandardsComments.ps1 script to update this comment block
+        Internal
+    .COMPONENT
+        (APIName) AnonReportDisable
+    .SYNOPSIS
+        (Label) Enable Usernames instead of pseudo anonymised names in reports
+    .DESCRIPTION
+        (Helptext) Shows usernames instead of pseudo anonymised names in reports. This standard is required for reporting to work correctly.
+        (DocsDescription) Microsoft announced some APIs and reports no longer return names, to comply with compliance and legal requirements in specific countries. This proves an issue for a lot of MSPs because those reports are often helpful for engineers. This standard applies a setting that shows usernames in those API calls / reports.
+    .NOTES
+        CAT
+            Global Standards
+        TAG
+            "lowimpact"
+        ADDEDCOMPONENT
+        IMPACT
+            Low Impact
+        POWERSHELLEQUIVALENT
+            Update-MgBetaAdminReportSetting -BodyParameter @{displayConcealedNames = \$true}
+        RECOMMENDEDBY
+        UPDATECOMMENTBLOCK
+            Run the Tools\Update-StandardsComments.ps1 script to update this comment block
+    .LINK
+        https://docs.cipp.app/user-documentation/tenant/standards/edit-standards
     #>
-
-
-
 
     param($Tenant, $Settings)
     $CurrentInfo = New-GraphGetRequest -Uri 'https://graph.microsoft.com/beta/admin/reportSettings' -tenantid $Tenant -AsApp $true
@@ -58,7 +55,3 @@ function Invoke-CIPPStandardAnonReportDisable {
         Add-CIPPBPAField -FieldName 'AnonReport' -FieldValue $CurrentInfo.displayConcealedNames -StoreAs bool -Tenant $tenant
     }
 }
-
-
-
-

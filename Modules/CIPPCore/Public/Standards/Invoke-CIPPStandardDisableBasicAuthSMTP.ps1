@@ -1,33 +1,30 @@
 function Invoke-CIPPStandardDisableBasicAuthSMTP {
     <#
     .FUNCTIONALITY
-    Internal
-    .APINAME
-    DisableBasicAuthSMTP
-    .CAT
-    Global Standards
-    .TAG
-    "mediumimpact"
-    .HELPTEXT
-    Disables SMTP AUTH for the organization and all users. This is the default for new tenants.
-    .DOCSDESCRIPTION
-    Disables SMTP basic authentication for the tenant and all users with it explicitly enabled.
-    .ADDEDCOMPONENT
-    .LABEL
-    Disable SMTP Basic Authentication
-    .IMPACT
-    Medium Impact
-    .POWERSHELLEQUIVALENT
-    Set-TransportConfig -SmtpClientAuthenticationDisabled $true
-    .RECOMMENDEDBY
-    .DOCSDESCRIPTION
-    Disables SMTP AUTH for the organization and all users. This is the default for new tenants.
-    .UPDATECOMMENTBLOCK
-    Run the Tools\Update-StandardsComments.ps1 script to update this comment block
+        Internal
+    .COMPONENT
+        (APIName) DisableBasicAuthSMTP
+    .SYNOPSIS
+        (Label) Disable SMTP Basic Authentication
+    .DESCRIPTION
+        (Helptext) Disables SMTP AUTH for the organization and all users. This is the default for new tenants. 
+        (DocsDescription) Disables SMTP basic authentication for the tenant and all users with it explicitly enabled.
+    .NOTES
+        CAT
+            Global Standards
+        TAG
+            "mediumimpact"
+        ADDEDCOMPONENT
+        IMPACT
+            Medium Impact
+        POWERSHELLEQUIVALENT
+            Set-TransportConfig -SmtpClientAuthenticationDisabled \$true
+        RECOMMENDEDBY
+        UPDATECOMMENTBLOCK
+            Run the Tools\Update-StandardsComments.ps1 script to update this comment block
+    .LINK
+        https://docs.cipp.app/user-documentation/tenant/standards/edit-standards
     #>
-
-
-
 
     param($Tenant, $Settings)
     $CurrentInfo = New-ExoRequest -tenantid $Tenant -cmdlet 'Get-TransportConfig'
@@ -95,7 +92,3 @@ function Invoke-CIPPStandardDisableBasicAuthSMTP {
         }
     }
 }
-
-
-
-

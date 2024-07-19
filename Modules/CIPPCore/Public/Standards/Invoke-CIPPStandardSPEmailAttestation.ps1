@@ -5,7 +5,7 @@ function Invoke-CIPPStandardSPEmailAttestation {
     .COMPONENT
         (APIName) SPEmailAttestation
     .SYNOPSIS
-        Require reauthentication with verification code
+        (Label) Require reauthentication with verification code
     .DESCRIPTION
         (Helptext) Ensure reauthentication with verification code is restricted
         (DocsDescription) Ensure reauthentication with verification code is restricted
@@ -17,16 +17,16 @@ function Invoke-CIPPStandardSPEmailAttestation {
             "CIS"
         ADDEDCOMPONENT
             {"type":"number","name":"standards.SPEmailAttestation.Days","label":"Require reauth every X Days (Default 15)"}
-        LABEL
-            Require reauthentication with verification code
         IMPACT
             Medium Impact
         POWERSHELLEQUIVALENT
-            Set-SPOTenant -EmailAttestationRequired $true -EmailAttestationReAuthDays 15
+            Set-SPOTenant -EmailAttestationRequired \$true -EmailAttestationReAuthDays 15
         RECOMMENDEDBY
             "CIS 3.0"
         UPDATECOMMENTBLOCK
             Run the Tools\Update-StandardsComments.ps1 script to update this comment block
+    .LINK
+        https://docs.cipp.app/user-documentation/tenant/standards/edit-standards
     #>
 
     param($Tenant, $Settings)

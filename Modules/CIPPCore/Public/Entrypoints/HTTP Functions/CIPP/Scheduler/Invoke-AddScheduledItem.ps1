@@ -9,7 +9,7 @@ Function Invoke-AddScheduledItem {
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
-    if ($Request.query.hidden -eq $null) {
+    if ($null -eq $Request.query.hidden) {
         $hidden = $false
     } else {
         $hidden = $true
