@@ -22,7 +22,7 @@ Function Invoke-AddGroup {
     $results = foreach ($tenant in $SelectedTenants) {
         try {
             $email = if ($groupobj.domain) { "$($groupobj.username)@$($groupobj.domain)" } else { "$($groupobj.username)@$($tenant)" }
-            if ($groupobj.groupType -in 'Generic', 'azurerole', 'dynamic') {
+            if ($groupobj.groupType -in 'Generic', 'azurerole', 'dynamic', 'm365') {
 
                 $BodyToship = [pscustomobject] @{
                     'displayName'      = $groupobj.Displayname
@@ -36,6 +36,9 @@ Function Invoke-AddGroup {
                     $BodyToship | Add-Member -NotePropertyName 'membershipRule' -NotePropertyValue ($groupobj.membershipRules)
                     $BodyToship | Add-Member -NotePropertyName 'groupTypes' -NotePropertyValue @('DynamicMembership')
                     $BodyToship | Add-Member -NotePropertyName 'membershipRuleProcessingState' -NotePropertyValue 'On'
+                }
+                if ($groupobj.groupType -eq 'm365') {
+                    $BodyToship | Add-Member -NotePropertyName 'groupTypes' -NotePropertyValue @('Unified')
                 }
                 if ($groupobj.AddOwner -AND $groupobj.groupType -in 'generic', 'azurerole', 'security') {
                     $BodyToship | Add-Member -NotePropertyName 'owners@odata.bind' -NotePropertyValue (($groupobj.AddOwner) | ForEach-Object { "https://graph.microsoft.com/v1.0/users/$($_.value)" })
