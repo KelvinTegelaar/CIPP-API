@@ -18,7 +18,7 @@ function Invoke-CIPPStandardDisableTNEF {
         IMPACT
             Low Impact
         POWERSHELLEQUIVALENT
-            Set-RemoteDomain -Identity 'Default' -TNEFEnabled $false
+            Set-RemoteDomain -Identity 'Default' -TNEFEnabled \$false
         RECOMMENDEDBY
         UPDATECOMMENTBLOCK
             Run the Tools\Update-StandardsComments.ps1 script to update this comment block
