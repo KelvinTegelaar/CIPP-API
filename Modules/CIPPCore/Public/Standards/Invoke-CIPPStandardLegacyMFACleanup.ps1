@@ -18,7 +18,7 @@ function Invoke-CIPPStandardLegacyMFACleanup {
         IMPACT
             Medium Impact
         POWERSHELLEQUIVALENT
-            Set-MsolUser -StrongAuthenticationRequirements $null
+            Set-MsolUser -StrongAuthenticationRequirements \$null
         RECOMMENDEDBY
         UPDATECOMMENTBLOCK
             Run the Tools\Update-StandardsComments.ps1 script to update this comment block

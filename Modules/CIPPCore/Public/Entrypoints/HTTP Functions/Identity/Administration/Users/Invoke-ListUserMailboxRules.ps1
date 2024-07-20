@@ -21,7 +21,7 @@ Function Invoke-ListUserMailboxRules {
     try {
         $TenantFilter = $Request.Query.TenantFilter
         $UserID = $Request.Query.UserID
-        $GraphRequest = New-ExoRequest -tenantid $TenantFilter -cmdlet 'Get-InboxRule' -cmdParams @{mailbox = $UserID } | Select-Object
+        $GraphRequest = New-ExoRequest -Anchor $UserID -tenantid $TenantFilter -cmdlet 'Get-InboxRule' -cmdParams @{mailbox = $UserID } | Select-Object
         @{ Name = 'DisplayName'; Expression = { $_.displayName } },
         @{ Name = 'Description'; Expression = { $_.Description } },
         @{ Name = 'Redirect To'; Expression = { $_.RedirectTo } },
@@ -36,6 +36,7 @@ Function Invoke-ListUserMailboxRules {
                 StatusCode = '500'
                 Body       = $(Get-NormalizedError -message $_.Exception.message)
             })
+        exit
     }
 
     # Associate values to output bindings by calling 'Push-OutputBinding'.
