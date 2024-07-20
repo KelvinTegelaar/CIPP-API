@@ -20,7 +20,7 @@ function Invoke-CIPPStandardSpoofWarn {
         IMPACT
             Low Impact
         POWERSHELLEQUIVALENT
-            et-ExternalInOutlook –Enabled $true or $false
+            et-ExternalInOutlook –Enabled \$true or \$false
         RECOMMENDEDBY
             "CIS"
         UPDATECOMMENTBLOCK
