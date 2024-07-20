@@ -55,7 +55,6 @@ function New-CIPPSharepointSite {
         [string]$WebTemplateExtensionId,
 
         [Parameter(Mandatory = $false)]
-        [ValidatePattern('(\{|\()?[A-Za-z0-9]{4}([A-Za-z0-9]{4}\-?){4}[A-Za-z0-9]{12}(\}|\()?')]
         [string]$SensitivityLabel,
 
         [string]$Classification,
@@ -76,7 +75,7 @@ function New-CIPPSharepointSite {
             $WebTemplate = 'SITEPAGEPUBLISHING#0'
         }
         'Team' {
-            $WebTemplate = 'STS#0'
+            $WebTemplate = 'STS#3'
         }
     }
 
@@ -140,6 +139,14 @@ function New-CIPPSharepointSite {
             'accept'        = 'application/json;odata.metadata=none'
             'odata-version' = '4.0'
         }
-        New-GraphPostRequest -scope "$AdminUrl/.default" -uri "$AdminUrl/_api/SPSiteManager/create" -Body ($body | ConvertTo-Json -Compress -Depth 10) -tenantid $TenantFilter -ContentType 'application/json' -AddedHeaders $AddedHeaders
+        $Results = New-GraphPostRequest -scope "$AdminUrl/.default" -uri "$AdminUrl/_api/SPSiteManager/create" -Body ($body | ConvertTo-Json -Compress -Depth 10) -tenantid $TenantFilter -ContentType 'application/json' -AddedHeaders $AddedHeaders
     }
+
+    if ($Results.SiteStatus -eq '4') {
+        return 'This site already exists. Please choose a different site name.'
+    }
+    if ($Results.SiteStatus -eq '2') {
+        return "The site $($SiteName) was created successfully."
+    }
+
 }

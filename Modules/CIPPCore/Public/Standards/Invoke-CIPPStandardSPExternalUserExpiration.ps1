@@ -20,7 +20,7 @@ function Invoke-CIPPStandardSPExternalUserExpiration {
         IMPACT
             Medium Impact
         POWERSHELLEQUIVALENT
-            Set-SPOTenant -ExternalUserExpireInDays 30 -ExternalUserExpirationRequired $True
+            Set-SPOTenant -ExternalUserExpireInDays 30 -ExternalUserExpirationRequired \$True
         RECOMMENDEDBY
             "CIS 3.0"
         UPDATECOMMENTBLOCK

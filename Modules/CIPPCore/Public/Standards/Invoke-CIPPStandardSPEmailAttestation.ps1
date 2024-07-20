@@ -20,7 +20,7 @@ function Invoke-CIPPStandardSPEmailAttestation {
         IMPACT
             Medium Impact
         POWERSHELLEQUIVALENT
-            Set-SPOTenant -EmailAttestationRequired $true -EmailAttestationReAuthDays 15
+            Set-SPOTenant -EmailAttestationRequired \$true -EmailAttestationReAuthDays 15
         RECOMMENDEDBY
             "CIS 3.0"
         UPDATECOMMENTBLOCK

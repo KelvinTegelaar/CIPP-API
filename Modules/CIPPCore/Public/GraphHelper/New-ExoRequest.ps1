@@ -71,14 +71,16 @@ function New-ExoRequest {
                 if ($cmdlet -in 'Set-AdminAuditLogConfig', 'Get-AdminAuditLogConfig', 'Enable-OrganizationCustomization', 'Get-OrganizationConfig') { $anchor = "UPN:SystemMailbox{8cc370d3-822a-4ab8-a926-bb94bd0641a9}@$($OnMicrosoft)" }
 
             }
-            #if the anchor is a GUID, try looking up the user.
-            if ($Anchor -match '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$') {
-                $Anchor = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/users/$Anchor" -tenantid $tenantid -NoAuthCheck $NoAuthCheck
-                if ($Anchor) {
-                    $Anchor = $Anchor.UserPrincipalName
-                } else {
-                    Write-Error "Failed to find user with GUID $Anchor"
-                }
+        }
+        #if the anchor is a GUID, try looking up the user.
+        if ($Anchor -match '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$') {
+            Write-Host "Anchor is a GUID, looking up user. GUID is $Anchor"
+            $NewAnchor = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/users/$Anchor/?`$select=UserPrincipalName,id" -tenantid $tenantid -NoAuthCheck $NoAuthCheck
+            if ($Anchor) {
+                $Anchor = $NewAnchor.UserPrincipalName
+                Write-Host "Found GUID, using $Anchor"
+            } else {
+                Write-Error "Failed to find user with GUID $Anchor"
             }
         }
 
