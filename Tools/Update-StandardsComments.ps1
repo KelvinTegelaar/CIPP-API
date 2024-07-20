@@ -24,6 +24,27 @@ param (
     [switch]$WhatIf
 )
 
+
+function EscapeMarkdown([object]$InputObject) {
+    # https://github.com/microsoft/FormatPowerShellToMarkdownTable/blob/master/src/FormatMarkdownTable/FormatMarkdownTable.psm1
+    $Temp = ''
+
+    if ($null -eq $InputObject) {
+        return ''
+    } elseif ($InputObject.GetType().BaseType -eq [System.Array]) {
+        $Temp = '{' + [System.String]::Join(', ', $InputObject) + '}'
+    } elseif ($InputObject.GetType() -eq [System.Collections.ArrayList] -or $InputObject.GetType().ToString().StartsWith('System.Collections.Generic.List')) {
+        $Temp = '{' + [System.String]::Join(', ', $InputObject.ToArray()) + '}'
+    } elseif (Get-Member -InputObject $InputObject -Name ToString -MemberType Method) {
+        $Temp = $InputObject.ToString()
+    } else {
+        $Temp = ''
+    }
+
+    return $Temp.Replace('\', '\\').Replace('*', '\*').Replace('_', '\_').Replace("``", "\``").Replace('$', '\$').Replace('|', '\|').Replace('<', '\<').Replace('>', '\>').Replace([System.Environment]::NewLine, '<br />')
+}
+
+
 # Find the paths to the standards.json file based on the current script path
 $StandardsJSONPath = Split-Path (Split-Path $PSScriptRoot)
 $StandardsJSONPath = Resolve-Path "$StandardsJSONPath\*\src\data\standards.json"
@@ -60,10 +81,10 @@ foreach ($Standard in $StandardsInfo) {
         $NewComment.Add("   .DESCRIPTION`r`n")
         if ([string]::IsNullOrWhiteSpace($Standard.docsDescription)) {
             $NewComment.Add("       (Helptext) $($Standard.helpText.ToString())`r`n")
-            $NewComment.Add("       (DocsDescription) $($Standard.helpText.ToString())`r`n")
+            $NewComment.Add("       (DocsDescription) $(EscapeMarkdown($Standard.helpText.ToString()))`r`n")
         } else {
             $NewComment.Add("       (Helptext) $($Standard.helpText.ToString())`r`n")
-            $NewComment.Add("       (DocsDescription) $($Standard.docsDescription.ToString())`r`n")
+            $NewComment.Add("       (DocsDescription) $(EscapeMarkdown($Standard.docsDescription.ToString()))`r`n")
         }
         $NewComment.Add("   .NOTES`r`n")
 
@@ -83,7 +104,7 @@ foreach ($Standard in $StandardsInfo) {
                         }
                         continue
                     }
-                    $NewComment.Add("           $($Property.Value.ToString())`r`n")
+                    $NewComment.Add("           $(EscapeMarkdown($Property.Value.ToString()))`r`n")
                 }
             }
 
@@ -102,7 +123,7 @@ foreach ($Standard in $StandardsInfo) {
             Write-Host "Would update $StandardsFilePath with the following comment block:"
             $NewComment
         } else {
-            $Content -replace $Regex, $NewComment | Set-Content -Path $StandardsFilePath -Encoding utf8 -NoNewLine
+            $Content -replace $Regex, $NewComment | Set-Content -Path $StandardsFilePath -Encoding utf8 -NoNewline
         }
     } else {
         Write-Host "No comment block found in $StandardsFilePath" -ForegroundColor Yellow
