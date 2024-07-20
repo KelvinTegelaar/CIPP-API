@@ -20,7 +20,7 @@ function Invoke-CIPPStandardDisableExternalCalendarSharing {
         IMPACT
             Low Impact
         POWERSHELLEQUIVALENT
-            Get-SharingPolicy | Set-SharingPolicy -Enabled $False
+            Get-SharingPolicy \| Set-SharingPolicy -Enabled \$False
         RECOMMENDEDBY
             "CIS"
         UPDATECOMMENTBLOCK

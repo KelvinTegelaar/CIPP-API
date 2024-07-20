@@ -20,7 +20,18 @@ function New-CIPPAlertTemplate {
     $LocationInfo = $Data.CIPPLocationInfo | ConvertFrom-Json -ErrorAction SilentlyContinue | Select-Object * -ExcludeProperty Etag, PartitionKey, TimeStamp
     switch ($Data.Operation) {
         'New-InboxRule' {
-            $Title = "$($TenantFilter) - New Rule Detected for $($data.UserId)"
+            # Test if the rule is a forwarding or redirect rule
+            $ForwardProperties = @('ForwardTo', 'RedirectTo')
+            foreach ($ForwardProperty in $ForwardProperties) {
+                if ($Data.PSobject.Properties.Name -contains $ForwardProperty) {
+                    $FoundForwarding = $true
+                }
+            }
+            if ($FoundForwarding -eq $true) {
+                $Title = "$($TenantFilter) - New forwarding or redirect Rule Detected for $($data.UserId)"
+            } else {
+                $Title = "$($TenantFilter) - New Rule Detected for $($data.UserId)"
+            }
             $RuleTable = ($Data.CIPPParameters | ConvertFrom-Json | ConvertTo-Html -Fragment | Out-String).Replace('<table>', ' <table class="table-modern">')
 
             $IntroText = "<p>A new rule has been created for the user $($data.UserId). You should check if this rule is not malicious. The rule information can be found in the table below.</p>$RuleTable"
@@ -33,7 +44,7 @@ function New-CIPPAlertTemplate {
             $ButtonText = 'Start BEC Investigation'
             $AfterButtonText = '<p>If you believe this is a suspect rule, you can click the button above to start the investigation.</p>'
         }
-        'Set-inboxrule' {
+        'Set-InboxRule' {
             $Title = "$($TenantFilter) - Rule Edit Detected for $($data.UserId)"
             $RuleTable = ($Data.CIPPParameters | ConvertFrom-Json | ConvertTo-Html -Fragment | Out-String).Replace('<table>', ' <table class="table-modern">')
             $IntroText = "<p>A rule has been edited for the user $($data.UserId). You should check if this rule is not malicious. The rule information can be found in the table below.</p>$RuleTable"
