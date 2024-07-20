@@ -18,7 +18,7 @@ function Invoke-CIPPStandardSPDisableLegacyWorkflows {
         IMPACT
             Low Impact
         POWERSHELLEQUIVALENT
-            Set-SPOTenant -DisableWorkflow2010 $true -DisableWorkflow2013 $true -DisableBackToClassic $true
+            Set-SPOTenant -DisableWorkflow2010 \$true -DisableWorkflow2013 \$true -DisableBackToClassic \$true
         RECOMMENDEDBY
         UPDATECOMMENTBLOCK
             Run the Tools\Update-StandardsComments.ps1 script to update this comment block

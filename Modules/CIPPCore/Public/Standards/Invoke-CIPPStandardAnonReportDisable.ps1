@@ -18,7 +18,7 @@ function Invoke-CIPPStandardAnonReportDisable {
         IMPACT
             Low Impact
         POWERSHELLEQUIVALENT
-            Update-MgBetaAdminReportSetting -BodyParameter @{displayConcealedNames = $true}
+            Update-MgBetaAdminReportSetting -BodyParameter @{displayConcealedNames = \$true}
         RECOMMENDEDBY
         UPDATECOMMENTBLOCK
             Run the Tools\Update-StandardsComments.ps1 script to update this comment block
