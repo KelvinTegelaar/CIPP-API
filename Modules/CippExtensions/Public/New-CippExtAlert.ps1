@@ -13,7 +13,7 @@ function New-CippExtAlert {
         switch ($ConfigItem) {
             'HaloPSA' {
                 If ($Configuration.HaloPSA.enabled) {
-                    $MappingFile = Get-CIPPAzDataTableEntity @MappingTable -Filter 'PartitionKey eq HaloMapping'
+                    $MappingFile = Get-CIPPAzDataTableEntity @MappingTable -Filter "PartitionKey eq 'HaloMapping'"
                     $TenantId = (Get-Tenants | Where-Object defaultDomainName -EQ $Alert.TenantId).customerId
                     Write-Host "TenantId: $TenantId"
                     $MappedId = ($MappingFile | Where-Object { $_.RowKey -eq $TenantId }).IntegrationId
