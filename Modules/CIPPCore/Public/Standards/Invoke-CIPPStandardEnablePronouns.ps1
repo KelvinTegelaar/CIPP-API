@@ -18,7 +18,7 @@ function Invoke-CIPPStandardEnablePronouns {
         IMPACT
             Low Impact
         POWERSHELLEQUIVALENT
-            Update-MgBetaAdminPeoplePronoun -IsEnabledInOrganization:$true
+            Update-MgBetaAdminPeoplePronoun -IsEnabledInOrganization:\$true
         RECOMMENDEDBY
         UPDATECOMMENTBLOCK
             Run the Tools\Update-StandardsComments.ps1 script to update this comment block
