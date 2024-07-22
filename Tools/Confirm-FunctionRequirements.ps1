@@ -16,7 +16,7 @@ $ModuleTests = $Modules | ForEach-Object -Parallel {
     $Success = $true
     $Module = $_
 
-    try { 
+    try {
         # Update module from gallery
         Save-Module -Name $Module -Path $using:CippRoot\Modules
         $ModuleInfo = Get-Module $using:CippRoot\Modules\$Module -ListAvailable
@@ -35,7 +35,7 @@ $ModuleTests = $Modules | ForEach-Object -Parallel {
 
         # Get list of module commands
         $Commands = (Get-Command -Module $Module -ErrorAction Stop).Name
-    
+
         # Review all powershell files and search for module commands
         $Files = foreach ($File in $using:Files) {
             $References = 0
