@@ -11,8 +11,9 @@ Function Invoke-ExecConverttoSharedMailbox {
     param($Request, $TriggerMetadata)
 
     $APIName = $TriggerMetadata.FunctionName
-    Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -message 'Accessed this API' -Sev 'Debug'
-
+    $Tenant = $Request.query.TenantFilter
+    $User = $request.headers.'x-ms-client-principal'
+    Write-LogMessage -user $User -API $APINAME -message 'Accessed this API' -Sev 'Debug'
 
     # Write to the Azure Functions log stream.
     Write-Host 'PowerShell HTTP trigger function processed a request.'
@@ -21,14 +22,17 @@ Function Invoke-ExecConverttoSharedMailbox {
     # Interact with query parameters or the body of the request.
     Try {
         $MailboxType = if ($request.query.ConvertToUser -eq 'true') { 'Regular' } else { 'Shared' }
-        $ConvertedMailbox = Set-CIPPMailboxType -userid $Request.query.id -tenantFilter $Request.query.TenantFilter -APIName $APINAME -ExecutingUser $request.headers.'x-ms-client-principal' -MailboxType $MailboxType
+        $ConvertedMailbox = Set-CIPPMailboxType -userid $Request.query.id -tenantFilter $Tenant -APIName $APINAME -ExecutingUser $User -MailboxType $MailboxType
         $Results = [pscustomobject]@{'Results' = "$ConvertedMailbox" }
+        $StatusCode = [HttpStatusCode]::OK
     } catch {
-        $Results = [pscustomobject]@{'Results' = "Failed to convert $($request.query.id) - $($_.Exception.Message)" }
+        $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
+        $Results = [pscustomobject]@{'Results' = "Failed to convert $($request.query.id) - $ErrorMessage" }
+        $StatusCode = [HttpStatusCode]::Forbidden
     }
     # Associate values to output bindings by calling 'Push-OutputBinding'.
     Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
-            StatusCode = [HttpStatusCode]::OK
+            StatusCode = $StatusCode
             Body       = $Results
         })
 
