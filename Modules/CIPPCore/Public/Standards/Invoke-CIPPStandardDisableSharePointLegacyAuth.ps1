@@ -19,7 +19,7 @@ function Invoke-CIPPStandardDisableSharePointLegacyAuth {
         IMPACT
             Medium Impact
         POWERSHELLEQUIVALENT
-            Set-SPOTenant -LegacyAuthProtocolsEnabled $false
+            Set-SPOTenant -LegacyAuthProtocolsEnabled \$false
         RECOMMENDEDBY
             "CIS"
         UPDATECOMMENTBLOCK
