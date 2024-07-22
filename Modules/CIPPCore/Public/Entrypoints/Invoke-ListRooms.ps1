@@ -22,9 +22,9 @@ Function Invoke-ListRooms {
 
     try {
         $params = @{
-            uri = 'https://graph.microsoft.com/beta/places/microsoft.graph.room'
+            uri      = 'https://graph.microsoft.com/beta/places/microsoft.graph.room'
             tenantid = $TenantFilter
-            AsApp = $true
+            AsApp    = $true
         }
         $GraphRequest = New-GraphGetRequest @params
 

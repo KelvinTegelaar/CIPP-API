@@ -20,7 +20,7 @@ function Invoke-CIPPStandardEnableMailboxAuditing {
         IMPACT
             Low Impact
         POWERSHELLEQUIVALENT
-            Set-OrganizationConfig -AuditDisabled $false
+            Set-OrganizationConfig -AuditDisabled \$false
         RECOMMENDEDBY
             "CIS"
         UPDATECOMMENTBLOCK
