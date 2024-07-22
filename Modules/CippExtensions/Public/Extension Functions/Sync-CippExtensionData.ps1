@@ -131,12 +131,12 @@ function Sync-CippExtensionData {
                     @{
                         id     = 'DeviceCompliancePolicies'
                         method = 'GET'
-                        url    = '/deviceManagement/deviceCompliancePolicies'
+                        url    = '/deviceManagement/deviceCompliancePolicies?$top=999'
                     },
                     @{
                         id     = 'DeviceApps'
                         method = 'GET'
-                        url    = '/deviceAppManagement/mobileApps'
+                        url    = '/deviceAppManagement/mobileApps?$select=displayName,description,publisher,createdDateTime,lastModifiedDateTime&$top=999'
                     }
                 )
 
