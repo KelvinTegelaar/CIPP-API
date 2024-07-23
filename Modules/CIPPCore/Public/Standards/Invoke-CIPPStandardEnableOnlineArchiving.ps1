@@ -18,7 +18,7 @@ function Invoke-CIPPStandardEnableOnlineArchiving {
         IMPACT
             Low Impact
         POWERSHELLEQUIVALENT
-            Enable-Mailbox -Archive $true
+            Enable-Mailbox -Archive \$true
         RECOMMENDEDBY
         UPDATECOMMENTBLOCK
             Run the Tools\Update-StandardsComments.ps1 script to update this comment block

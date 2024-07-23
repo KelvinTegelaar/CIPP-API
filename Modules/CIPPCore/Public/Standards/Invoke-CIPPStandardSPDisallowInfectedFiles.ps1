@@ -19,7 +19,7 @@ function Invoke-CIPPStandardSPDisallowInfectedFiles {
         IMPACT
             Low Impact
         POWERSHELLEQUIVALENT
-            Set-SPOTenant -DisallowInfectedFileDownload $true
+            Set-SPOTenant -DisallowInfectedFileDownload \$true
         RECOMMENDEDBY
             "CIS 3.0"
         UPDATECOMMENTBLOCK
