@@ -19,7 +19,7 @@ function Invoke-CIPPStandardFocusedInbox {
         IMPACT
             Low Impact
         POWERSHELLEQUIVALENT
-            Set-OrganizationConfig -FocusedInboxOn $true or $false
+            Set-OrganizationConfig -FocusedInboxOn \$true or \$false
         RECOMMENDEDBY
         UPDATECOMMENTBLOCK
             Run the Tools\Update-StandardsComments.ps1 script to update this comment block
