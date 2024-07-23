@@ -116,8 +116,8 @@ Function Invoke-AddUser {
     }
     if ($Request.body.CopyFrom -ne '') {
         $CopyFrom = Set-CIPPCopyGroupMembers -ExecutingUser $request.headers.'x-ms-client-principal' -CopyFromId $Request.body.CopyFrom -UserID $UserprincipalName -TenantFilter $UserObj.tenantID
-        $results.Add(($CopyFrom.Success -join ', '))
-        $results.Add(($CopyFrom.Error -join ', '))
+        $CopyFrom.Success | ForEach-Object { $results.Add($_) }
+        $CopyFrom.Error | ForEach-Object { $results.Add($_) }
     }
 
     if ($Request.body.setManager) {
