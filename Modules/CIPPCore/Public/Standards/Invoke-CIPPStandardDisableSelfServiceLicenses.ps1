@@ -19,7 +19,7 @@ function Invoke-CIPPStandardDisableSelfServiceLicenses {
         IMPACT
             Medium Impact
         POWERSHELLEQUIVALENT
-            Set-MsolCompanySettings -AllowAdHocSubscriptions $false
+            Set-MsolCompanySettings -AllowAdHocSubscriptions \$false
         RECOMMENDEDBY
         UPDATECOMMENTBLOCK
             Run the Tools\Update-StandardsComments.ps1 script to update this comment block
