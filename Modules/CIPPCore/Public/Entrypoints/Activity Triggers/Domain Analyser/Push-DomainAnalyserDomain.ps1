@@ -243,7 +243,7 @@ function Push-DomainAnalyserDomain {
         try {
             # Test if DKIM is enabled, skip domain if it is
             if ($Result.DKIMEnabled -eq $true) {
-                # continue
+                continue
             }
             # Test if its a onmicrosft.com domain, skip domain if it is
             if ($Domain -match 'onmicrosoft.com') {
