@@ -2,7 +2,6 @@ class PasswordPush {
     [string]$Payload
     [string] hidden $__UrlToken
     [string] hidden $__LinkBase
-    [string]$Language
     [bool]$RetrievalStep
     [bool]$IsExpired
     [bool]$IsDeleted
@@ -48,23 +47,22 @@ class PasswordPush {
         $this.DateUpdated = $_j.updated_at
         $this.DateExpired = if ($_j.expired_on) { $_j.expired_on } else { [DateTime]0 }
 
-        $this.Language = $Global:PPPLanguage
 
         $this | Add-Member -Name 'UrlToken' -MemberType ScriptProperty -Value {
                 return $this.__UrlToken
             } -SecondValue {
                 $this.__UrlToken = $_
-                $this.__LinkBase = "$Global:PPPBaseUrl/$($this.Language)/p/$($this.__UrlToken)"
+                $this.__LinkBase = "$Global:PPPBaseUrl/p/$($this.__UrlToken)"
             }
         $this.__UrlToken = $_j.url_token
-        $this.__LinkBase = "$Global:PPPBaseUrl/$($this.Language)/p/$($this.__UrlToken)"
+        $this.__LinkBase = "$Global:PPPBaseUrl/p/$($this.__UrlToken)"
         $this | Add-Member -Name 'LinkDirect' -MemberType ScriptProperty -Value { return $this.__LinkBase } -SecondValue {
             Write-Warning 'LinkDirect is a read-only calculated member.'
-            Write-Debug 'Link* members are calculated based on the Global BaseUrl and Language and Push Retrieval Step values'
+            Write-Debug 'Link* members are calculated based on the Global BaseUrl and Push Retrieval Step values'
         }
         $this | Add-Member -Name 'LinkRetrievalStep' -MemberType ScriptProperty -Value { return "$($this.__LinkBase)/r" } -SecondValue {
             Write-Warning 'LinkRetrievalStep is a read-only calculated member.'
-            Write-Debug 'Link* members are calculated based on the Global BaseUrl and Language and Push Retrieval Step values'
+            Write-Debug 'Link* members are calculated based on the Global BaseUrl and Push Retrieval Step values'
         }
         $this | Add-Member -Name 'Link' -MemberType ScriptProperty -Value {
                 $_Link = if ($this.RetrievalStep) { $this.LinkRetrievalStep } else { $this.LinkDirect }
@@ -72,7 +70,7 @@ class PasswordPush {
                 return $_Link
             } -SecondValue {
                 Write-Warning 'Link is a read-only calculated member.'
-                Write-Debug 'Link* members are calculated based on the Global BaseUrl and Language and Push Retrieval Step values'
+                Write-Debug 'Link* members are calculated based on the Global BaseUrl and Push Retrieval Step values'
             }
     }
 }
@@ -84,7 +82,7 @@ function ConvertTo-PasswordPush {
 
     .DESCRIPTION
     Accepts a JSON string returned from the Password Pusher API and converts it to a [PasswordPush] object.
-    This allows calculated push retrieval URLs, language enumeration, and a more "PowerShell" experience.
+    This allows calculated push retrieval URLs and a more "PowerShell" experience.
     Generally you won't need to use this directly, it's automatically invoked within Register-Push and Request-Push.
 
     .INPUTS
@@ -99,12 +97,12 @@ function ConvertTo-PasswordPush {
     PS> $myPush = Register-Push -Payload "This is my secret!"
     PS> $myPush.Link  # The link parameter always presents the URL as it would appear with the same settings selected on pwpush.com
 
-    https://pwpush.com/en/p/rz6nryvl-d4
+    https://pwpush.com/p/rz6nryvl-d4
 
     .EXAMPLE
     # Manually invoking the API
     PS> $rawJson = Invoke-WebRequest  `
-                    -Uri https://pwpush.com/en/p.json `
+                    -Uri https://pwpush.com/p.json `
                     -Method Post `
                     -Body '{"password": { "payload": "This is my secret!"}}' `
                     -ContentType 'application/json' |
@@ -113,11 +111,10 @@ function ConvertTo-PasswordPush {
     {"expire_after_days":7,"expire_after_views":5,"expired":false,"url_token":"rz6nryvl-d4","created_at":"2022-11-18T14:16:29.821Z","updated_at":"2022-11-18T14:16:29.821Z","deleted":false,"deletable_by_viewer":true,"retrieval_step":false,"expired_on":null,"days_remaining":7,"views_remaining":5}
     PS> $rawJson | ConvertTo-PasswordPush
     UrlToken            : rz6nryvl-d4
-    LinkDirect          : https://pwpush.com/en/p/rz6nryvl-d4
-    LinkRetrievalStep   : https://pwpush.com/en/p/rz6nryvl-d4/r
-    Link                : https://pwpush.com/en/p/rz6nryvl-d4
+    LinkDirect          : https://pwpush.com/p/rz6nryvl-d4
+    LinkRetrievalStep   : https://pwpush.com/p/rz6nryvl-d4/r
+    Link                : https://pwpush.com/p/rz6nryvl-d4
     Payload             :
-    Language            : en
     RetrievalStep       : False
     IsExpired           : False
     IsDeleted           : False
@@ -462,16 +459,11 @@ function Get-SecretLink {
 
     .EXAMPLE
     Get-SecretLink -URLToken gzv65wiiuciy
-    https://pwpush.com/en/p/gzv65wiiuciy/r
-
-    .EXAMPLE
-    # En France
-    PS > Get-SecretLink -URLToken gzv65wiiuciy -Language fr
-    https://pwpush.com/fr/p/gzv65wiiuciy/r
+    https://pwpush.com/p/gzv65wiiuciy/r
 
     .EXAMPLE
     Get-SecretLink -URLToken gzv65wiiuciy -Raw
-    { "url": "https://pwpush.com/es/p/0fkapnbo_pwp4gi8uy0/r" }
+    { "url": "https://pwpush.com/p/0fkapnbo_pwp4gi8uy0/r" }
 
     .LINK
     https://github.com/adamburley/PassPushPosh/blob/main/Docs/Get-SecretLink.md
@@ -499,11 +491,6 @@ function Get-SecretLink {
         [ValidateLength(5, 256)]
         [string]$URLToken,
 
-        # Language for returned links. Defaults to system language, can be overridden here.
-        [Parameter()]
-        [string]
-        $Language = $Global:PPPLanguage,
-
         # Return the raw response body from the API call
         [Parameter()]
         [switch]
@@ -512,7 +499,6 @@ function Get-SecretLink {
     begin { Initialize-PassPushPosh -Verbose:$VerbosePreference -Debug:$DebugPreference }
     process {
         try {
-            if ($Language -ine 'en') { $uri += "?push_locale=$Language" }
             $iwrSplat = @{
                 'Method' = 'Get'
                 'ContentType' = 'application/json'
@@ -540,11 +526,10 @@ function Initialize-PassPushPosh {
     Initialize the PassPushPosh module
 
     .DESCRIPTION
-    Sets global variables to handle the server URL, headers (authentication), and language.
+    Sets global variables to handle the server URL and headers (authentication).
     Called automatically by module Functions if it is not called explicitly prior, so you don't actually need
     to call it unless you're going to use the authenticated API or alternate server, etc
-    Default parameters use the pwpush.com domain, anonymous authentication, and whatever language your computer
-    is set to.
+    Default parameters use the pwpush.com domain and anonymous authentication.
 
     .EXAMPLE
     # Initialize with default settings
@@ -572,7 +557,6 @@ function Initialize-PassPushPosh {
     .NOTES
     All variables set by this function start with PPP.
     - PPPHeaders
-    - PPPLanguage
     - PPPUserAgent
     - PPPBaseUrl
 
@@ -601,12 +585,6 @@ function Initialize-PassPushPosh {
         [Parameter(Position=2,ParameterSetName='Authenticated')]
         [ValidatePattern('^https?:\/\/[a-zA-Z0-9-_]+.[a-zA-Z0-9]+')]
         [string]$BaseUrl,
-
-        # Language to render resulting links in. Defaults to host OS language, or English if
-        # host OS language is not available
-        [Parameter()]
-        [string]
-        $Language,
 
         # Set a specific user agent. Default user agent is a combination of the
         # module info, what your OS reports itself as, and a hash based on
@@ -642,40 +620,19 @@ function Initialize-PassPushPosh {
         } elseif ($Global:PPPHeaders) { # Remove if present - covers case where module is reinitialized from an authenticated to an anonymous session
             Remove-Variable -Scope Global -Name PPPHeaders -WhatIf:$false
         }
-        $availableLanguages = ('en','ca','cs','da','de','es','fi','fr','hu','it','nl','no','pl','pt-BR','sr','sv')
-        if (-not $Language) {
-            $Culture = Get-Culture
-            Write-Debug "Detected Culture: $($Culture.DisplayName)"
-            $matchedLanguage = $Culture.TwoLetterISOLanguageName, $Culture.IetfLanguageTag |
-                                Foreach-Object { if ($_ -iin $availableLanguages) { $_ } } |
-                                Select-Object -First 1
-            if ($matchedLanguage) {
-                Write-Debug "Language is supported in Password Pusher."
-                $Language = $matchedLanguage
-            } else { Write-Warning "Detected language $($Culture.DisplayName) is not supported in PasswordPusher. Defaulting to English." }
-        } else {
-            if ($Language -iin $availableLanguages) {
-                Write-Debug "Language [$Language] is available in PasswordPusher."
-            } else
-            {
-                Write-Warning "Language [$Language] is not available in PasswordPusher. Defaulting to english."
-                $Language = 'en'
-            }
-        }
 
         if (-not $UserAgent) {
             $osVersion = [System.Environment]::OSVersion
             $userAtDomain = "{0}@{1}" -f [System.Environment]::UserName, [System.Environment]::UserDomainName
             $uAD64 = [Convert]::ToBase64String([System.Text.Encoding]::Unicode.GetBytes($userAtDomain))
             Write-Debug "$userAtDomain transformed to $uAD64. First 20 characters $($uAD64.Substring(0,20))"
-            $UserAgent = "PassPushPosh/$((Get-Module -Name PassPushPosh).Version.ToString()) $Language $osVersion/$($uAD64.Substring(0,20))"
+            $UserAgent = "PassPushPosh/$((Get-Module -Name PassPushPosh).Version.ToString()) $osVersion/$($uAD64.Substring(0,20))"
             Write-Verbose "Generated user agent: $UserAgent"
         } else {
             Write-Verbose "Using specified user agent: $UserAgent"
         }
 
         Set-Variable -WhatIf:$false -Scope Global -Name PPPBaseURL -Value $BaseUrl.TrimEnd('/')
-        Set-Variable -WhatIf:$false -Scope Global -Name PPPLanguage -Value $Language
         Set-Variable -WhatIf:$false -Scope Global -Name PPPUserAgent -Value $UserAgent
     }
 }
@@ -718,21 +675,21 @@ function New-Push {
     Create a new Push on the specified Password Pusher instance. The
     programmatic equivalent of going to pwpush.com and entering info.
     Returns [PasswordPush] object. Link member is a link created based on
-    1-step setting and language specified, however both 1-step and direct links
+    1-step setting however both 1-step and direct links
     are always provided at LinkRetrievalStep and LinkDirect.
 
     .EXAMPLE
     $myPush = New-Push "Here's my secret!"
     PS > $myPush | Select-Object Link, LinkRetrievalStep, LinkDirect
 
-    Link              : https://pwpush.com/en/p/gzv65wiiuciy   # Requested style
-    LinkRetrievalStep : https://pwpush.com/en/p/gzv65wiiuciy/r # 1-step
-    LinkDirect        : https://pwpush.com/en/p/gzv65wiiuciy   # Direct
+    Link              : https://pwpush.com/p/gzv65wiiuciy   # Requested style
+    LinkRetrievalStep : https://pwpush.com/p/gzv65wiiuciy/r # 1-step
+    LinkDirect        : https://pwpush.com/p/gzv65wiiuciy   # Direct
 
     .EXAMPLE
     "Super secret secret" | New-Push -RetrievalStep | Select-Object -ExpandProperty Link
 
-    https://pwpush.com/en/p/gzv65wiiuciy/r
+    https://pwpush.com/p/gzv65wiiuciy/r
 
 
     .EXAMPLE
@@ -804,14 +761,6 @@ function New-Push {
         [switch]
         $RetrievalStep,
 
-        # Override Language. Useful if sending to someone who speaks a
-        # different language. You can change this after the fact by changing
-        # the URL by hand or by requesting a link for the given token from the
-        # preview helper endpoint ( See Request-SecretLink )
-        [Parameter()]
-        [string]
-        $Language,
-
         # Return the raw response body from the API call
         [Parameter()]
         [switch]
@@ -857,8 +806,6 @@ function New-Push {
             $shouldString += ', with a direct link'
             $false
         }
-        if (-not $Language) { $Language = $Global:PPPLanguage }
-        $shouldString += ' in language "{0}"' -f $Language
         if ($VerbosePreference -eq [System.Management.Automation.ActionPreference]::Continue) {
             # Sanitize input so we're not logging or outputting the payload
             $vBody = $body.Clone()
@@ -871,7 +818,7 @@ function New-Push {
             'Method' = 'Post'
             'ContentType' = 'application/json'
             'Body' = ($body | ConvertTo-Json)
-            'Uri' = "$Global:PPPBaseUrl/$Language/p.json"
+            'Uri' = "$Global:PPPBaseUrl/p.json"
             'UserAgent' = $Global:PPPUserAgent
         }
         if ($Global:PPPHeaders.'X-User-Token') { $iwrSplat['Headers'] = $Global:PPPHeaders }
