@@ -1,7 +1,36 @@
 function Invoke-CIPPStandardSafeLinksPolicy {
     <#
     .FUNCTIONALITY
-    Internal
+        Internal
+    .COMPONENT
+        (APIName) SafeLinksPolicy
+    .SYNOPSIS
+        (Label) Default SafeLinks Policy
+    .DESCRIPTION
+        (Helptext) This creates a safelink policy that automatically scans, tracks, and and enables safe links for Email, Office, and Teams for both external and internal senders
+        (DocsDescription) This creates a safelink policy that automatically scans, tracks, and and enables safe links for Email, Office, and Teams for both external and internal senders
+    .NOTES
+        CAT
+            Defender Standards
+        TAG
+            "lowimpact"
+            "CIS"
+            "mdo_safelinksforemail"
+            "mdo_safelinksforOfficeApps"
+        ADDEDCOMPONENT
+            {"type":"boolean","label":"AllowClickThrough","name":"standards.SafeLinksPolicy.AllowClickThrough"}
+            {"type":"boolean","label":"DisableUrlRewrite","name":"standards.SafeLinksPolicy.DisableUrlRewrite"}
+            {"type":"boolean","label":"EnableOrganizationBranding","name":"standards.SafeLinksPolicy.EnableOrganizationBranding"}
+        IMPACT
+            Low Impact
+        POWERSHELLEQUIVALENT
+            Set-SafeLinksPolicy or New-SafeLinksPolicy
+        RECOMMENDEDBY
+            "CIS"
+        UPDATECOMMENTBLOCK
+            Run the Tools\Update-StandardsComments.ps1 script to update this comment block
+    .LINK
+        https://docs.cipp.app/user-documentation/tenant/standards/edit-standards
     #>
 
     param($Tenant, $Settings)
@@ -28,7 +57,7 @@ function Invoke-CIPPStandardSafeLinksPolicy {
     $RuleState = New-ExoRequest -tenantid $Tenant -cmdlet 'Get-SafeLinksRule' |
         Where-Object -Property Name -EQ "CIPP $PolicyName" |
         Select-Object Name, SafeLinksPolicy, Priority, RecipientDomainIs
-    
+
     $RuleStateIsCorrect = ($RuleState.Name -eq "CIPP $PolicyName") -and
                           ($RuleState.SafeLinksPolicy -eq $PolicyName) -and
                           ($RuleState.Priority -eq 0) -and
@@ -52,42 +81,52 @@ function Invoke-CIPPStandardSafeLinksPolicy {
                 EnableOrganizationBranding = $Settings.EnableOrganizationBranding
             }
 
-            try {
-                if ($CurrentState.Name -eq $PolicyName) {
+            if ($CurrentState.Name -eq $Policyname) {
+                try {
                     $cmdparams.Add('Identity', $PolicyName)
-                    New-ExoRequest -tenantid $Tenant -cmdlet 'Set-SafeLinksPolicy' -cmdparams $cmdparams
+                    New-ExoRequest -tenantid $Tenant -cmdlet 'Set-SafeLinksPolicy' -cmdparams $cmdparams -UseSystemMailbox $true
                     Write-LogMessage -API 'Standards' -tenant $Tenant -message 'Updated SafeLink Policy' -sev Info
-                } else {
-                    $cmdparams.Add('Name', $PolicyName)
-                    New-ExoRequest -tenantid $Tenant -cmdlet 'New-SafeLinksPolicy' -cmdparams $cmdparams
-                    Write-LogMessage -API 'Standards' -tenant $Tenant -message 'Created SafeLink Policy' -sev Info
+                } catch {
+                    $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
+                    Write-LogMessage -API 'Standards' -tenant $Tenant -message "Failed to update SafeLink Policy. Error: $ErrorMessage" -sev Error
                 }
-            } catch {
-                $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
-                Write-LogMessage -API 'Standards' -tenant $Tenant -message "Failed to create SafeLink Policy. Error: $ErrorMessage" -sev Error
+            } else {
+                try {
+                    $cmdparams.Add('Name', $PolicyName)
+                    New-ExoRequest -tenantid $Tenant -cmdlet 'New-SafeLinksPolicy' -cmdparams $cmdparams -UseSystemMailbox $true
+                    Write-LogMessage -API 'Standards' -tenant $Tenant -message 'Created SafeLink Policy' -sev Info
+                } catch {
+                    $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
+                    Write-LogMessage -API 'Standards' -tenant $Tenant -message "Failed to create SafeLink Policy. Error: $ErrorMessage" -sev Error
+                }
             }
         }
 
         if ($RuleStateIsCorrect -eq $false) {
             $cmdparams = @{
-                SafeLinksPolicy     = $PolicyName
-                Priority            = 0
-                RecipientDomainIs   = $AcceptedDomains.Name
+                SafeLinksPolicy   = $PolicyName
+                Priority          = 0
+                RecipientDomainIs = $AcceptedDomains.Name
             }
 
-            try {
-                if ($RuleState.Name -eq "CIPP $PolicyName") {
+            if ($RuleState.Name -eq "CIPP $PolicyName") {
+                try {
                     $cmdparams.Add('Identity', "CIPP $PolicyName")
-                    New-ExoRequest -tenantid $Tenant -cmdlet 'Set-SafeLinksRule' -cmdparams $cmdparams
+                    New-ExoRequest -tenantid $Tenant -cmdlet 'Set-SafeLinksRule' -cmdparams $cmdparams -UseSystemMailbox $true
                     Write-LogMessage -API 'Standards' -tenant $Tenant -message 'Updated SafeLink Rule' -sev Info
-                } else {
-                    $cmdparams.Add('Name', "CIPP $PolicyName")
-                    New-ExoRequest -tenantid $Tenant -cmdlet 'New-SafeLinksRule' -cmdparams $cmdparams
-                    Write-LogMessage -API 'Standards' -tenant $Tenant -message 'Created SafeLink Rule' -sev Info
+                } catch {
+                    $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
+                    Write-LogMessage -API 'Standards' -tenant $Tenant -message "Failed to update SafeLink Rule. Error: $ErrorMessage" -sev Error
                 }
-            } catch {
-                $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
-                Write-LogMessage -API 'Standards' -tenant $Tenant -message "Failed to create SafeLink Rule. Error: $ErrorMessage" -sev Error
+            } else {
+                try {
+                    $cmdparams.Add('Name', "CIPP $PolicyName")
+                    New-ExoRequest -tenantid $Tenant -cmdlet 'New-SafeLinksRule' -cmdparams $cmdparams -UseSystemMailbox $true
+                    Write-LogMessage -API 'Standards' -tenant $Tenant -message 'Created SafeLink Rule' -sev Info
+                } catch {
+                    $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
+                    Write-LogMessage -API 'Standards' -tenant $Tenant -message "Failed to create SafeLink Rule. Error: $ErrorMessage" -sev Error
+                }
             }
         }
     }

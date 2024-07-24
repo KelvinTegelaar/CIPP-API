@@ -1,20 +1,49 @@
 function Invoke-CIPPStandardBookings {
     <#
     .FUNCTIONALITY
-    Internal
+        Internal
+    .COMPONENT
+        (APIName) Bookings
+    .SYNOPSIS
+        (Label) Set Bookings state
+    .DESCRIPTION
+        (Helptext) Sets the state of Bookings on the tenant. Bookings is a scheduling tool that allows users to book appointments with others both internal and external.
+        (DocsDescription) Sets the state of Bookings on the tenant. Bookings is a scheduling tool that allows users to book appointments with others both internal and external.
+    .NOTES
+        CAT
+            Exchange Standards
+        TAG
+            "mediumimpact"
+        ADDEDCOMPONENT
+            {"type":"Select","label":"Select value","name":"standards.Bookings.state","values":[{"label":"Enabled","value":"true"},{"label":"Disabled","value":"false"}]}
+        IMPACT
+            Medium Impact
+        POWERSHELLEQUIVALENT
+            Set-OrganizationConfig -BookingsEnabled
+        RECOMMENDEDBY
+        UPDATECOMMENTBLOCK
+            Run the Tools\Update-StandardsComments.ps1 script to update this comment block
+    .LINK
+        https://docs.cipp.app/user-documentation/tenant/standards/edit-standards
     #>
-    param($Tenant, $Settings)
 
-    # Input validation
-    if ([string]::isNullOrEmpty($Settings.state) -or $Settings.state -eq 'Select a value') {
-        Write-LogMessage -API 'Standards' -tenant $tenant -message 'BookingsEnabled: Invalid state parameter set' -sev Error
-        Exit
-    }
+    param($Tenant, $Settings)
 
     $CurrentState = (New-ExoRequest -tenantid $Tenant -cmdlet 'Get-OrganizationConfig').BookingsEnabled
     $WantedState = if ($Settings.state -eq 'true') { $true } else { $false }
     $StateIsCorrect = if ($CurrentState -eq $WantedState) { $true } else { $false }
 
+    if ($Settings.report -eq $true) {
+        # Default is not set, not set means it's enabled
+        if ($null -eq $CurrentState ) { $CurrentState = $true }
+        Add-CIPPBPAField -FieldName 'BookingsState' -FieldValue $CurrentState -StoreAs bool -Tenant $tenant
+    }
+
+    # Input validation
+    if (([string]::IsNullOrWhiteSpace($Settings.state) -or $Settings.state -eq 'Select a value') -and ($Settings.remediate -eq $true -or $Settings.alert -eq $true)) {
+        Write-LogMessage -API 'Standards' -tenant $tenant -message 'BookingsEnabled: Invalid state parameter set' -sev Error
+        Return
+    }
     if ($Settings.remediate -eq $true) {
         Write-Host 'Time to remediate'
         if ($StateIsCorrect -eq $false) {
@@ -39,10 +68,6 @@ function Invoke-CIPPStandardBookings {
         }
     }
 
-    if ($Settings.report -eq $true) {
-        # Default is not set, not set means it's enabled
-        if ($null -eq $CurrentState ) { $CurrentState = $true }
-        Add-CIPPBPAField -FieldName 'BookingsState' -FieldValue $CurrentState -StoreAs bool -Tenant $tenant
-    }
+
 
 }

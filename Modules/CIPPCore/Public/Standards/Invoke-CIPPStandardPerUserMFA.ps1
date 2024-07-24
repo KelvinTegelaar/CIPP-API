@@ -1,8 +1,31 @@
 function Invoke-CIPPStandardPerUserMFA {
     <#
     .FUNCTIONALITY
-    Internal
+        Internal
+    .COMPONENT
+        (APIName) PerUserMFA
+    .SYNOPSIS
+        (Label) Enables per user MFA for all users.
+    .DESCRIPTION
+        (Helptext) Enables per user MFA for all users.
+        (DocsDescription) Enables per user MFA for all users.
+    .NOTES
+        CAT
+            Entra (AAD) Standards
+        TAG
+            "highimpact"
+        ADDEDCOMPONENT
+        IMPACT
+            High Impact
+        POWERSHELLEQUIVALENT
+            Graph API
+        RECOMMENDEDBY
+        UPDATECOMMENTBLOCK
+            Run the Tools\Update-StandardsComments.ps1 script to update this comment block
+    .LINK
+        https://docs.cipp.app/user-documentation/tenant/standards/edit-standards
     #>
+
     param($Tenant, $Settings)
 
     $GraphRequest = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/users?`$top=999&`$select=UserPrincipalName,accountEnabled" -scope 'https://graph.microsoft.com/.default' -tenantid $Tenant | Where-Object { $_.AccountEnabled -EQ $true }

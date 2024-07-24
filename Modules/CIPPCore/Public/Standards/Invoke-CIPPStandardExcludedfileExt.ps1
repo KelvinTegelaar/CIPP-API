@@ -1,8 +1,32 @@
 function Invoke-CIPPStandardExcludedfileExt {
     <#
     .FUNCTIONALITY
-    Internal
+        Internal
+    .COMPONENT
+        (APIName) ExcludedfileExt
+    .SYNOPSIS
+        (Label) Exclude File Extensions from Syncing
+    .DESCRIPTION
+        (Helptext) Sets the file extensions that are excluded from syncing with OneDrive. These files will be blocked from upload. '*.' is automatically added to the extension and can be omitted.
+        (DocsDescription) Sets the file extensions that are excluded from syncing with OneDrive. These files will be blocked from upload. '\*.' is automatically added to the extension and can be omitted.
+    .NOTES
+        CAT
+            SharePoint Standards
+        TAG
+            "highimpact"
+        ADDEDCOMPONENT
+            {"type":"input","name":"standards.ExcludedfileExt.ext","label":"Extensions, Comma separated"}
+        IMPACT
+            High Impact
+        POWERSHELLEQUIVALENT
+            Update-MgAdminSharepointSetting
+        RECOMMENDEDBY
+        UPDATECOMMENTBLOCK
+            Run the Tools\Update-StandardsComments.ps1 script to update this comment block
+    .LINK
+        https://docs.cipp.app/user-documentation/tenant/standards/edit-standards
     #>
+
     param($Tenant, $Settings)
     $CurrentInfo = New-GraphGetRequest -Uri 'https://graph.microsoft.com/beta/admin/sharepoint/settings' -tenantid $Tenant -AsApp $true
     $Exts = ($Settings.ext -replace ' ', '') -split ','

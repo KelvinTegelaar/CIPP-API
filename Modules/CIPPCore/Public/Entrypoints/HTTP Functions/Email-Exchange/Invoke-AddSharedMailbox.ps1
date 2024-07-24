@@ -16,46 +16,56 @@ Function Invoke-AddSharedMailbox {
     Write-LogMessage -user $User -API $APINAME -message 'Accessed this API' -Sev 'Debug'
 
     $Results = [System.Collections.ArrayList]@()
-    $groupobj = $Request.body
-    $Aliases = $groupobj.addedAliases -Split '\n'
+    $MailboxObject = $Request.body
+    $Aliases = $MailboxObject.addedAliases -Split '\n'
 
     # Write to the Azure Functions log stream.
     Write-Host 'PowerShell HTTP trigger function processed a request.'
     try {
 
-        $Email = "$($groupobj.username)@$($groupobj.domain)"
-        $BodyToship = [pscustomobject] @{
-            'displayName'        = $groupobj.Displayname
-            'name'               = $groupobj.username
+        $Email = "$($MailboxObject.username)@$($MailboxObject.domain)"
+        $BodyToShip = [pscustomobject] @{
+            'displayName'        = $MailboxObject.Displayname
+            'name'               = $MailboxObject.username
             'primarySMTPAddress' = $Email
             Shared               = $true
         }
-        $AddSharedRequest = New-ExoRequest -tenantid $groupobj.tenantid -cmdlet 'New-Mailbox' -cmdparams $BodyToship
+        $AddSharedRequest = New-ExoRequest -tenantid $MailboxObject.tenantid -cmdlet 'New-Mailbox' -cmdparams $BodyToShip
         $Body = $Results.add("Successfully created shared mailbox: $Email.")
-        Write-LogMessage -user $User -API $APINAME -tenant $($groupobj.tenantid) -message "Created shared mailbox $($groupobj.displayname) with email $Email" -Sev 'Info'
+        Write-LogMessage -user $User -API $APINAME -tenant $($MailboxObject.tenantid) -message "Created shared mailbox $($MailboxObject.displayname) with email $Email" -Sev 'Info'
+
+        # Block sign-in for the mailbox
+        try {
+            $null = Set-CIPPSignInState -userid $AddSharedRequest.ExternalDirectoryObjectId -TenantFilter $($MailboxObject.tenantid) -APIName $APINAME -ExecutingUser $User -AccountEnabled $false
+            $Body = $Results.add("Blocked sign-in for shared mailbox $Email")
+        } catch {
+            $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
+            $Body = $Results.add("Failed to block sign-in for shared mailbox $Email. Error: $ErrorMessage")
+        }
 
     } catch {
-        Write-LogMessage -user $User -API $APINAME -tenant $($groupobj.tenantid) -message "Failed to create shared mailbox. Error: $($_.Exception.Message)" -Sev 'Error'
-        $Body = $Results.add("Failed to create Shared Mailbox. $($_.Exception.Message)")
-
+        $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
+        Write-LogMessage -user $User -API $APINAME -tenant $($MailboxObject.tenantid) -message "Failed to create shared mailbox. Error: $ErrorMessage" -Sev 'Error'
+        $Body = $Results.add("Failed to create Shared Mailbox. $ErrorMessage")
     }
 
-    try {
-        if ($Aliases) {
-
+    # Add aliases to the mailbox if any are provided
+    if ($Aliases) {
+        try {
             Start-Sleep 3 # Sleep since there is apparently a race condition with the mailbox creation if we don't delay for a lil bit
             $AliasBodyToShip = [pscustomobject] @{
                 'Identity'       = $AddSharedRequest.Guid
                 'EmailAddresses' = @{'@odata.type' = '#Exchange.GenericHashTable'; Add = $Aliases }
             }
-            $AliasBodyToShip
-            New-ExoRequest -tenantid $groupobj.tenantid -cmdlet 'Set-Mailbox' -cmdparams $AliasBodyToShip -UseSystemMailbox $true
-            Write-LogMessage -user $User -API $APINAME -tenant $($groupobj.tenantid) -message "Added aliases to $Email : $($Aliases -join ',')" -Sev 'Info'
+            $null = New-ExoRequest -tenantid $MailboxObject.tenantid -cmdlet 'Set-Mailbox' -cmdparams $AliasBodyToShip -UseSystemMailbox $true
+            Write-LogMessage -user $User -API $APINAME -tenant $($MailboxObject.tenantid) -message "Added aliases to $Email : $($Aliases -join ',')" -Sev 'Info'
             $Body = $results.add("Added Aliases to $Email : $($Aliases -join ',')")
+
+        } catch {
+            $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
+            Write-LogMessage -user $User -API $APINAME -tenant $($MailboxObject.tenantid) -message "Failed to add aliases to $Email : $ErrorMessage" -Sev 'Error'
+            $Body = $results.add("ERROR: Failed to add aliases to $Email : $ErrorMessage")
         }
-    } catch {
-        Write-LogMessage -user $User -API $APINAME -tenant $($groupobj.tenantid) -message "Failed to add aliases to $Email : $($_.Exception.Message)" -Sev 'Error'
-        $Body = $results.add("ERROR: Failed to add aliases to $Email : $($_.Exception.Message)")
     }
 
     $Body = [pscustomobject] @{ 'Results' = @($results) }

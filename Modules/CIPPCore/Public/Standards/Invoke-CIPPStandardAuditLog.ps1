@@ -1,8 +1,34 @@
 function Invoke-CIPPStandardAuditLog {
     <#
     .FUNCTIONALITY
-    Internal
+        Internal
+    .COMPONENT
+        (APIName) AuditLog
+    .SYNOPSIS
+        (Label) Enable the Unified Audit Log
+    .DESCRIPTION
+        (Helptext) Enables the Unified Audit Log for tracking and auditing activities. Also runs Enable-OrganizationCustomization if necessary.
+        (DocsDescription) Enables the Unified Audit Log for tracking and auditing activities. Also runs Enable-OrganizationCustomization if necessary.
+    .NOTES
+        CAT
+            Global Standards
+        TAG
+            "lowimpact"
+            "CIS"
+            "mip_search_auditlog"
+        ADDEDCOMPONENT
+        IMPACT
+            Low Impact
+        POWERSHELLEQUIVALENT
+            Enable-OrganizationCustomization
+        RECOMMENDEDBY
+            "CIS"
+        UPDATECOMMENTBLOCK
+            Run the Tools\Update-StandardsComments.ps1 script to update this comment block
+    .LINK
+        https://docs.cipp.app/user-documentation/tenant/standards/edit-standards
     #>
+
     param($Tenant, $Settings)
     Write-Host ($Settings | ConvertTo-Json)
     $AuditLogEnabled = (New-ExoRequest -tenantid $Tenant -cmdlet 'Get-AdminAuditLogConfig' -Select UnifiedAuditLogIngestionEnabled).UnifiedAuditLogIngestionEnabled
@@ -42,7 +68,7 @@ function Invoke-CIPPStandardAuditLog {
             Write-LogMessage -API 'Standards' -tenant $tenant -message 'Unified Audit Log is not enabled' -sev Alert
         }
     }
-    
+
     if ($Settings.report -eq $true) {
 
         Add-CIPPBPAField -FieldName 'AuditLog' -FieldValue $AuditLogEnabled -StoreAs bool -Tenant $tenant

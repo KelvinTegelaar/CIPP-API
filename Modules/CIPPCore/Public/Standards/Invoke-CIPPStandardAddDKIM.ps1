@@ -1,8 +1,33 @@
 function Invoke-CIPPStandardAddDKIM {
     <#
     .FUNCTIONALITY
-    Internal
+        Internal
+    .COMPONENT
+        (APIName) AddDKIM
+    .SYNOPSIS
+        (Label) Enables DKIM for all domains that currently support it
+    .DESCRIPTION
+        (Helptext) Enables DKIM for all domains that currently support it
+        (DocsDescription) Enables DKIM for all domains that currently support it
+    .NOTES
+        CAT
+            Exchange Standards
+        TAG
+            "lowimpact"
+            "CIS"
+        ADDEDCOMPONENT
+        IMPACT
+            Low Impact
+        POWERSHELLEQUIVALENT
+            New-DkimSigningConfig and Set-DkimSigningConfig
+        RECOMMENDEDBY
+            "CIS"
+        UPDATECOMMENTBLOCK
+            Run the Tools\Update-StandardsComments.ps1 script to update this comment block
+    .LINK
+        https://docs.cipp.app/user-documentation/tenant/standards/edit-standards
     #>
+
     param($Tenant, $Settings)
 
     $AllDomains = (New-GraphGetRequest -uri 'https://graph.microsoft.com/v1.0/domains?$top=999' -tenantid $Tenant | Where-Object { $_.supportedServices -contains 'Email' -or $_.id -like '*mail.onmicrosoft.com' }).id

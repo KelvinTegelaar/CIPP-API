@@ -11,7 +11,8 @@ Function Invoke-RemoveSpamfilter {
     param($Request, $TriggerMetadata)
 
     $APIName = $TriggerMetadata.FunctionName
-    Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -message 'Accessed this API' -Sev 'Debug'
+    $User = $request.headers.'x-ms-client-principal'
+    Write-LogMessage -user $User -API $APINAME -message 'Accessed this API' -Sev 'Debug'
     $Tenantfilter = $request.Query.tenantfilter
 
     $Params = @{
@@ -20,14 +21,14 @@ Function Invoke-RemoveSpamfilter {
 
     try {
         $cmdlet = 'Remove-HostedContentFilterRule'
-        $GraphRequest = New-ExoRequest -tenantid $Tenantfilter -cmdlet $cmdlet -cmdParams $params -useSystemmailbox $true
+        $null = New-ExoRequest -tenantid $Tenantfilter -cmdlet $cmdlet -cmdParams $params -useSystemmailbox $true
         $cmdlet = 'Remove-HostedContentFilterPolicy'
-        $GraphRequest = New-ExoRequest -tenantid $Tenantfilter -cmdlet $cmdlet -cmdParams $params -useSystemmailbox $true
+        $null = New-ExoRequest -tenantid $Tenantfilter -cmdlet $cmdlet -cmdParams $params -useSystemmailbox $true
         $Result = "Deleted $($Request.query.name)"
-        Write-LogMessage -API 'TransportRules' -tenant $tenantfilter -message "Deleted transport rule $($Request.query.name)" -sev Debug
+        Write-LogMessage -user $User -API 'TransportRules' -tenant $tenantfilter -message "Deleted transport rule $($Request.query.name)" -sev Debug
     } catch {
-        $ErrorMessage = Get-NormalizedError -Message $_.Exception
-        Write-LogMessage -API 'TransportRules' -tenant $tenantfilter -message "Failed deleting transport rule $($Request.query.name). Error:$ErrorMessage" -Sev Error
+        $ErrorMessage = Get-CippException -Exception $_
+        Write-LogMessage -user $User -API 'TransportRules' -tenant $tenantfilter -message "Failed deleting transport rule $($Request.query.name). Error:$($ErrorMessage.NormalizedError)" -Sev Error -LogData $ErrorMessage
         $Result = $ErrorMessage
     }
     # Associate values to output bindings by calling 'Push-OutputBinding'.

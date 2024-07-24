@@ -29,7 +29,8 @@ function Remove-CIPPLicense {
             return "No licenses to remove for $username"
         }
     } catch {
-        Write-LogMessage -user $ExecutingUser -API $APIName -message "Could not remove license for $username" -Sev 'Error' -tenant $TenantFilter -LogData (Get-CippException -Exception $_)
-        return "Could not remove license for $($username). Error: $($_.Exception.Message)"
+        $ErrorMessage = Get-CippException -Exception $_
+        Write-LogMessage -user $ExecutingUser -API $APIName -message "Could not remove license for $username. Error: $($ErrorMessage.NormalizedError)" -Sev 'Error' -tenant $TenantFilter -LogData $ErrorMessage
+        return "Could not remove license for $($username). Error: $($ErrorMessage.NormalizedError)"
     }
 }
