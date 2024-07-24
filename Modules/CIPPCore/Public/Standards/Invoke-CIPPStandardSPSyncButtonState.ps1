@@ -7,8 +7,8 @@ function Invoke-CIPPStandardSPSyncButtonState {
     .SYNOPSIS
         (Label) Set SharePoint sync button state
     .DESCRIPTION
-        (Helptext) If disabled users in the tenant will no longer be able to use the Sync button to sync SharePoint content. However, existing synced content will remain functional on the user's computer.
-        (DocsDescription) If disabled users in the tenant will no longer be able to use the Sync button to sync SharePoint content. However, existing synced content will remain functional on the user's computer.
+        (Helptext) If disabled, users in the tenant will no longer be able to use the Sync button to sync SharePoint content on all sites. However, existing synced content will remain functional on the user's computer.
+        (DocsDescription) If disabled, users in the tenant will no longer be able to use the Sync button to sync SharePoint content on all sites. However, existing synced content will remain functional on the user's computer.
     .NOTES
         CAT
             SharePoint Standards
@@ -19,7 +19,7 @@ function Invoke-CIPPStandardSPSyncButtonState {
         IMPACT
             Medium Impact
         POWERSHELLEQUIVALENT
-            Set-SPOTenant -HideSyncButtonOnTeamSite:\$true or \$false
+            Set-SPOTenant -HideSyncButtonOnTeamSite \$true or \$false
         RECOMMENDEDBY
         UPDATECOMMENTBLOCK
             Run the Tools\Update-StandardsComments.ps1 script to update this comment block
