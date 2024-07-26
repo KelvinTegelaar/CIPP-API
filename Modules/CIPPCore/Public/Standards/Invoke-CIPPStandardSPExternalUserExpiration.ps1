@@ -38,7 +38,7 @@ function Invoke-CIPPStandardSPExternalUserExpiration {
 
     if ($Settings.remediate -eq $true) {
         if ($StateIsCorrect -eq $true) {
-            Write-LogMessage -API 'Standards' -Message 'Sharepoint External User Expiration is already enabled.' -Sev Info
+            Write-LogMessage -API 'Standards' -Tenant $Tenant -Message 'Sharepoint External User Expiration is already enabled.' -Sev Info
         } else {
             $Properties = @{
                 ExternalUserExpireInDays = $Settings.Days
@@ -47,19 +47,19 @@ function Invoke-CIPPStandardSPExternalUserExpiration {
 
             try {
                 Get-CIPPSPOTenant -TenantFilter $Tenant | Set-CIPPSPOTenant -Properties $Properties
-                Write-LogMessage -API 'Standards' -Message 'Successfully set External User Expiration' -Sev Info
+                Write-LogMessage -API 'Standards' -Tenant $Tenant -Message 'Successfully set External User Expiration' -Sev Info
             } catch {
                 $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
-                Write-LogMessage -API 'Standards' -Message "Failed to set External User Expiration. Error: $ErrorMessage" -Sev Error
+                Write-LogMessage -API 'Standards' -Tenant $Tenant -Message "Failed to set External User Expiration. Error: $ErrorMessage" -Sev Error
             }
         }
     }
 
     if ($Settings.alert -eq $true) {
         if ($StateIsCorrect -eq $true) {
-            Write-LogMessage -API 'Standards' -Message 'External User Expiration is enabled' -Sev Info
+            Write-LogMessage -API 'Standards' -Tenant $Tenant -Message 'External User Expiration is enabled' -Sev Info
         } else {
-            Write-LogMessage -API 'Standards' -Message 'External User Expiration is not enabled' -Sev Alert
+            Write-LogMessage -API 'Standards' -Tenant $Tenant -Message 'External User Expiration is not enabled' -Sev Alert
         }
     }
 

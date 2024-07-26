@@ -8,7 +8,11 @@ function Get-ExtensionCacheData {
 
     $Return = @{}
     foreach ($Data in $CacheData) {
-        $Return[$Data.RowKey] = $Data.Data | ConvertFrom-Json -ErrorAction SilentlyContinue
+        try {
+            $Return[$Data.RowKey] = $Data.Data | ConvertFrom-Json -ErrorAction SilentlyContinue
+        } catch {
+            Write-Information "Failed to convert cache data for $($Data.RowKey) to JSON"
+        }
     }
     return [PSCustomObject]$Return
 }
