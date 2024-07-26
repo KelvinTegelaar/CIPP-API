@@ -1,0 +1,27 @@
+<?xml version="1.0"?>
+<doc>
+    <assembly>
+        <name>Microsoft.Teams.Policy.Administration.Cmdlets.Core</name>
+    </assembly>
+    <members>
+        <member name="M:Microsoft.Teams.Policy.Administration.Cmdlets.Core.PSListModifierHelper.ApplyTo``1(System.Management.Automation.PSListModifier{``0},System.Collections.Generic.IList{``0},System.Func{``0,``0,System.Boolean},System.Action{System.String})">
+            <summary>
+            'Applies a PSListModifier to a collection. 
+            The collection either has the items in modifier.Add added and those in modifier.Remove removed,
+            or is replaced entirely with the items in modifier.Replace.
+            keyEqualityPredicate is called during a remove operation to determine if an item in the collection
+            is the same as an item in the modifier - reference equality is not sufficient.
+            </summary>
+        </member>
+        <member name="M:Microsoft.Teams.Policy.Administration.Cmdlets.Core.PSListModifierHelper.ApplyTo``1(System.Management.Automation.PSListModifier{``0},System.Collections.Generic.IList{``0},System.Action{System.String})">
+            <summary>
+            'Applies a PSListModifier to a collection. 
+            The collection either has the items in modifier.Add added and those in modifier.Remove removed,
+            or is replaced entirely with the items in modifier.Replace.
+            This overload is used then the objects in the collection can be compared correctly with those 
+            in the modifier by calling .Equals().
+            </summary>
+        </member>
+        <!-- Badly formed XML comment ignored for member "M:Microsoft.Teams.Policy.Administration.Cmdlets.Core.PSListModifierHelper.GetUnderlyingType(System.Type)" -->
+    </members>
+</doc>
