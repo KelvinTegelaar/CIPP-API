@@ -25,7 +25,7 @@ function New-CIPPGraphSubscription {
             $MatchedWebhook = $ExistingWebhooks
             try {
                 if (!$MatchedWebhook -or ($Recreate.IsPresent)) {
-                    if (!$WebhookRow) {
+                    if (!$MatchedWebhook) {
                         $WebhookRow = [PSCustomObject]@{
                             PartitionKey = [string]$TenantFilter
                             RowKey       = [string]$CIPPID
@@ -37,9 +37,13 @@ function New-CIPPGraphSubscription {
                         }
                         Add-CIPPAzDataTableEntity @WebhookTable -Entity $WebhookRow
                     } else {
-                        $MatchedWebhook | Add-Member -MemberType NoteProperty -NotePropertyName Status -Value 'Enabled' -Force
-                        $MatchedWebhook | Add-Member -MemberType NoteProperty -NotePropertyName Error -Value '' -Force
+                        Write-Host 'Setting webhook back to enabled'
+                        Write-Host ($MatchedWebhook | ConvertTo-Json)
+                        $MatchedWebhook | Add-Member -MemberType NoteProperty -Name Status -Value 'Enabled' -Force
+                        $MatchedWebhook | Add-Member -MemberType NoteProperty -Name Error -Value '' -Force
+
                         $null = Add-CIPPAzDataTableEntity @WebhookTable -Entity $MatchedWebhook -Force
+                        $WebhookRow = $MatchedWebhook
                     }
                     Write-Host "Creating webhook subscription for $EventType"
 
