@@ -13,11 +13,14 @@
 .OUTPUTS
     None. The script modifies the CIPP standard files directly.
 
+.NOTES
+    .FUNCTIONALITY Internal needs to be present in the comment block for the script, otherwise it will not be updated.
+    This is done as a safety measure to avoid updating the wrong files.
+
 .EXAMPLE
     Update-StandardsComments.ps1
 
     This example runs the script to update the comment block in the CIPP standard files.
-
 
 #>
 param (

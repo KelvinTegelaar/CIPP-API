@@ -16,10 +16,11 @@ function Invoke-CIPPStandardUserSubmissions {
             "mediumimpact"
         ADDEDCOMPONENT
             {"type":"Select","label":"Select value","name":"standards.UserSubmissions.state","values":[{"label":"Enabled","value":"enable"},{"label":"Disabled","value":"disable"}]}
+            {"type":"input","name":"standards.UserSubmissions.email","label":"Destination email address"}
         IMPACT
             Medium Impact
         POWERSHELLEQUIVALENT
-            New-ReportSubmissionPolicy or Set-ReportSubmissionPolicy
+            New-ReportSubmissionPolicy or Set-ReportSubmissionPolicy and New-ReportSubmissionRule or Set-ReportSubmissionRule
         RECOMMENDEDBY
         UPDATECOMMENTBLOCK
             Run the Tools\Update-StandardsComments.ps1 script to update this comment block
