@@ -14,8 +14,6 @@ function Invoke-CIPPStandardMailContacts {
             Global Standards
         TAG
             "lowimpact"
-        DISABLEDFEATURES
-            
         ADDEDCOMPONENT
             {"type":"input","name":"standards.MailContacts.GeneralContact","label":"General Contact"}
             {"type":"input","name":"standards.MailContacts.SecurityContact","label":"Security Contact"}
