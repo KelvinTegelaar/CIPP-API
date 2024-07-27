@@ -44,6 +44,7 @@ function Invoke-CIPPStandardSafeAttachmentPolicy {
 
     $StateIsCorrect = ($CurrentState.Name -eq $PolicyName) -and
                       ($CurrentState.Enable -eq $true) -and
+                      ($CurrentState.Action -eq $Settings.Action) -and
                       ($CurrentState.QuarantineTag -eq $Settings.QuarantineTag) -and
                       ($CurrentState.Redirect -eq $Settings.Redirect) -and
                       (($null -eq $Settings.RedirectAddress) -or ($CurrentState.RedirectAddress -eq $Settings.RedirectAddress))
@@ -66,6 +67,7 @@ function Invoke-CIPPStandardSafeAttachmentPolicy {
         } else {
             $cmdparams = @{
                 Enable          = $true
+                Action          = $Settings.Action
                 QuarantineTag   = $Settings.QuarantineTag
                 Redirect        = $Settings.Redirect
                 RedirectAddress = $Settings.RedirectAddress

@@ -80,8 +80,18 @@ function Get-CIPPAuditLogContentBundles {
     $GraphQuery.Query = $ParamCollection.ToString()
 
     Write-Verbose "GET [ $($GraphQuery.ToString()) ]"
-    $LogBundles = New-GraphGetRequest -uri $GraphQuery.ToString() -tenantid $TenantFilter -scope 'https://manage.office.com/.default' -IncludeResponseHeaders
-    $AuditLogContents = $LogBundles | Select-Object contentId, contentUri, contentCreated, contentExpiration, contentType, @{Name = 'TenantFilter'; Expression = { $TenantFilter } }, @{ Name = 'DefaultDomainName'; Expression = { $DefaultDomainName } }
-
-    return $AuditLogContents
+    try {
+        $LogBundles = New-GraphGetRequest -uri $GraphQuery.ToString() -tenantid $TenantFilter -scope 'https://manage.office.com/.default' -IncludeResponseHeaders
+        $AuditLogContents = $LogBundles | Select-Object contentId, contentUri, contentCreated, contentExpiration, contentType, @{Name = 'TenantFilter'; Expression = { $TenantFilter } }, @{ Name = 'DefaultDomainName'; Expression = { $DefaultDomainName } }
+        return $AuditLogContents
+    } catch {
+        # service principal disabled error
+        if ($_.Exception.Message -match "The service principal for resource 'https://manage.office.com' is disabled") {
+            $WebhookConfig.Status = 'Disabled'
+            $WebhookConfig.Error = $_.Exception.Message
+            Add-CIPPAzDataTableEntity @WebhookTable -Entity $WebhookConfig -Force
+            Write-LogMessage -API 'Webhooks' -message 'This tenant may not have an Exchange Online license. Audit log subscription disabled.' -sev Error -LogData (Get-CippException -Exception $_)
+        }
+        Write-Host ( 'Audit log collection error {0} line {1} - {2}' -f $_.InvocationInfo.ScriptName, $_.InvocationInfo.ScriptLineNumber, $_.Exception.Message)
+    }
 }

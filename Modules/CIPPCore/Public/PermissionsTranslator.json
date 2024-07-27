@@ -1019,7 +1019,7 @@
     "displayName": "Read and write all user mailbox settings",
     "id": "f9156939-25cd-4ba8-abfe-7fabcf003749",
     "origin": "Application (Office 365 Exchange Online)",
-    "value": "Mailbox.Settings.ReadWrite"
+    "value": "MailboxSettings.ReadWrite"
   },
   {
     "description": "Allows the app to read your organization's user flows, without a signed-in user.",
