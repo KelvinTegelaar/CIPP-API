@@ -59,6 +59,7 @@ function Push-DomainAnalyserDomain {
         MailProvider         = ''
         DKIMEnabled          = ''
         DKIMRecords          = ''
+        MSCNAMEDKIMSelectors = ''
         Score                = ''
         MaximumScore         = 160
         ScorePercentage      = ''
@@ -235,12 +236,74 @@ function Push-DomainAnalyserDomain {
         Write-LogMessage -API 'DomainAnalyser' -tenant $DomainObject.TenantId -message $Message -LogData (Get-CippException -Exception $_) -sev Error
         return $Message
     }
+
+    # Get Microsoft DKIM CNAME selector Records
+    # Ugly, but i needed to create a scope/loop i could break out of without breaking the rest of the function
+    foreach ($d in $Domain) {
+        try {
+            # Test if DKIM is enabled, skip domain if it is
+            if ($Result.DKIMEnabled -eq $true) {
+                continue
+            }
+            # Test if its a onmicrosft.com domain, skip domain if it is
+            if ($Domain -match 'onmicrosoft.com') {
+                continue
+            }
+            # Test if there are already MSCNAME values set, skip domain if there is
+            $CurrentMSCNAMEInfo = ConvertFrom-Json $DomainObject.DomainAnalyser -Depth 10
+            if (![string]::IsNullOrWhiteSpace($CurrentMSCNAMEInfo.MSCNAMEDKIMSelectors.selector1.Value) -and
+                ![string]::IsNullOrWhiteSpace($CurrentMSCNAMEInfo.MSCNAMEDKIMSelectors.selector2.Value)) {
+                $Result.MSCNAMEDKIMSelectors = $CurrentMSCNAMEInfo.MSCNAMEDKIMSelectors
+                continue
+            }
+
+            # Compute the DKIM CNAME records from $Tenant.InitialDomainName according to this logic: https://learn.microsoft.com/en-us/defender-office-365/email-authentication-dkim-configure#syntax-for-dkim-cname-records
+            # Test if it has a - in the domain name
+            if ($Domain -like '*-*') {
+                Write-Information 'Domain has a - in it. Got to query EXO for the right values'
+                $DKIM = (New-ExoRequest -tenantid $Tenant.Tenant -cmdlet 'Get-DkimSigningConfig') | Where-Object { $_.Domain -eq $Domain } | Select-Object Domain, Selector1CNAME, Selector2CNAME
+
+                # If no DKIM signing record is found, create a new disabled one
+                if ($null -eq $DKIM) {
+                    Write-Information 'No DKIM record found in EXO - Creating new signing'
+                    $NewDKIMSigningRequest = New-ExoRequest -tenantid $Tenant.Tenant -cmdlet 'New-DkimSigningConfig' -cmdParams @{  KeySize = 2048; DomainName = $Domain; Enabled = $false }
+                    $Selector1Value = $NewDKIMSigningRequest.Selector1CNAME
+                    $Selector2Value = $NewDKIMSigningRequest.Selector2CNAME
+                } else {
+                    $Selector1Value = $DKIM.Selector1CNAME
+                    $Selector2Value = $DKIM.Selector2CNAME
+                }
+            } else {
+                $Selector1Value = "selector1-$($Domain -replace '\.', '-' )._domainkey.$($Tenant.InitialDomainName)"
+                $Selector2Value = "selector2-$($Domain -replace '\.', '-' )._domainkey.$($Tenant.InitialDomainName)"
+            }
+
+            # Create the MSCNAME object
+            $MSCNAMERecords = [PSCustomObject]@{
+                Domain    = $Domain
+                selector1 = @{
+                    Hostname = 'selector1._domainkey'
+                    Value    = $Selector1Value
+                }
+                selector2 = @{
+                    Hostname = 'selector2._domainkey'
+                    Value    = $Selector2Value
+                }
+            }
+            $Result.MSCNAMEDKIMSelectors = $MSCNAMERecords
+        } catch {
+            $Message = 'MS DKIM CNAME Error'
+            Write-LogMessage -API 'DomainAnalyser' -tenant $DomainObject.TenantId -message $Message -LogData (Get-CippException -Exception $_) -sev Error
+            return $Message
+        }
+    }
+
     # Final Score
     $Result.Score = $ScoreDomain
     $Result.ScorePercentage = [int](($Result.Score / $Result.MaximumScore) * 100)
     $Result.ScoreExplanation = ($ScoreExplanation) -join ', '
 
-    $DomainObject.DomainAnalyser = ($Result | ConvertTo-Json -Compress).ToString()
+    $DomainObject.DomainAnalyser = (ConvertTo-Json -InputObject $Result -Depth 5 -Compress).ToString()
 
     try {
         $DomainTable.Entity = $DomainObject
