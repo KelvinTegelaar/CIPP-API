@@ -36,7 +36,7 @@ function Invoke-CIPPStandardSPDisallowInfectedFiles {
 
     if ($Settings.remediate -eq $true) {
         if ($StateIsCorrect -eq $true) {
-            Write-LogMessage -API 'Standards' -Message 'Downloading Sharepoint infected files are already disallowed.' -Sev Info
+            Write-LogMessage -API 'Standards' -tenant $tenant -Message 'Downloading Sharepoint infected files are already disallowed.' -Sev Info
         } else {
             $Properties = @{
                 DisallowInfectedFileDownload = $true
@@ -44,19 +44,19 @@ function Invoke-CIPPStandardSPDisallowInfectedFiles {
 
             try {
                 Get-CIPPSPOTenant -TenantFilter $Tenant | Set-CIPPSPOTenant -Properties $Properties
-                Write-LogMessage -API 'Standards' -Message 'Successfully disallowed downloading SharePoint infected files.' -Sev Info
+                Write-LogMessage -API 'Standards' -tenant $tenant -Message 'Successfully disallowed downloading SharePoint infected files.' -Sev Info
             } catch {
                 $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
-                Write-LogMessage -API 'Standards' -Message "Failed to disallow downloading Sharepoint infected files. Error: $ErrorMessage" -Sev Error
+                Write-LogMessage -API 'Standards' -tenant $tenant -Message "Failed to disallow downloading Sharepoint infected files. Error: $ErrorMessage" -Sev Error
             }
         }
     }
 
     if ($Settings.alert -eq $true) {
         if ($StateIsCorrect -eq $true) {
-            Write-LogMessage -API 'Standards' -Message 'Downloading Sharepoint infected files are disallowed.' -Sev Info
+            Write-LogMessage -API 'Standards' -tenant $tenant -Message 'Downloading Sharepoint infected files are disallowed.' -Sev Info
         } else {
-            Write-LogMessage -API 'Standards' -Message 'Downloading Sharepoint infected files are allowed.' -Sev Alert
+            Write-LogMessage -API 'Standards' -tenant $tenant -Message 'Downloading Sharepoint infected files are allowed.' -Sev Alert
         }
     }
 
