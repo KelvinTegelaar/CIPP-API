@@ -99,7 +99,7 @@ function Push-DomainAnalyserTenant {
                         Write-Host "Started analysis for $DomainCount tenant domains in $($Tenant.defaultDomainName)"
                         Write-LogMessage -API 'DomainAnalyser' -tenant $Tenant.defaultDomainName -message "Started analysis for $DomainCount tenant domains" -sev Info
                     } catch {
-                        Write-LogMessage -API 'DomainAnalyser' -message 'Domain Analyser GetTenantDomains error' -sev info -LogData (Get-CippException -Exception $_)
+                        Write-LogMessage -API 'DomainAnalyser' -message 'Domain Analyser GetTenantDomains error' -sev 'Error' -LogData (Get-CippException -Exception $_)
                     }
                 } catch {
                     Write-LogMessage -API 'DomainAnalyser' -message 'GetTenantDomains loop error' -sev 'Error' -LogData (Get-CippException -Exception $_)
