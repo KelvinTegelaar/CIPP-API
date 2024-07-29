@@ -10,7 +10,7 @@ function Remove-CIPPRules {
 
     try {
         Write-Host "Checking rules for $username"
-        $rules = New-ExoRequest -tenantid $TenantFilter -cmdlet 'Get-InboxRule' -cmdParams @{mailbox = $username }
+        $rules = New-ExoRequest -tenantid $TenantFilter -cmdlet 'Get-InboxRule' -cmdParams @{Mailbox = $username; IncludeHidden = $true } | Where-Object { $_.Name -ne 'Junk E-Mail Rule' }
         Write-Host "$($rules.count) rules found"
         if ($null -eq $rules) {
             Write-LogMessage -user $ExecutingUser -API $APIName -message "No Rules for $($username) to delete" -Sev 'Info' -tenant $TenantFilter

@@ -42,10 +42,17 @@ function Invoke-HuduExtensionSync {
         $null = Add-HuduAssetLayoutM365Field -AssetLayoutId $DeviceLayoutId
     }
 
-    $importDomains = $false
-    #$monitorDomains = [System.Convert]::ToBoolean($env:monitorDomains)
-    $IntuneDesktopDeviceTypes = $env:IntuneDesktopDeviceTypes -split ','
-    $ExcludeSerials = $env:ExcludeSerials -split ','
+    $importDomains = $Configuration.ImportDomains
+    $monitordomains = $Configuration.MonitorDomains
+    $IntuneDesktopDeviceTypes = 'windowsRT,macMDM' -split ','
+
+    $DefaultSerials = [System.Collections.Generic.List[string]]@('SystemSerialNumber', 'To Be Filled By O.E.M.', 'System Serial Number', '0123456789', '123456789', 'TobefilledbyO.E.M.')
+
+    if ($Configuration.ExcludeSerials) {
+        $ExcludeSerials = $DefaultSerials.AddRange($Configuration.ExcludeSerials -split ',')
+    } else {
+        $ExcludeSerials = $DefaultSerials
+    }
 
     Set-Location (Get-Item $PSScriptRoot).Parent.Parent.Parent.Parent.FullName
     $LicTable = Import-Csv Conversiontable.csv
@@ -222,6 +229,7 @@ function Invoke-HuduExtensionSync {
             }
         }
 
+        #$DeviceApps = $ExtensionCache.DeviceApps
         <#$DeviceApps = Get-BulkResultByID -Results $TenantResults -ID 'DeviceApps'
 
         [System.Collections.Generic.List[PSCustomObject]]$RequestArray = @()
@@ -237,16 +245,16 @@ function Invoke-HuduExtensionSync {
         } catch {
             $CompanyResult.Errors.add("Company: Unable to fetch Installed Device Details $_")
             $InstalledAppDetailsReturn = $null
-        }
-
-        $DeviceAppInstallDetails = foreach ($Result in $InstalledAppDetailsReturn) {
+        }#>
+        <#
+        $DeviceAppInstallDetails = foreach ($DeviceApp in $DeviceApps) {
             [pscustomobject]@{
-                ID                  = $Result.id
-                DisplayName         = ($DeviceApps | Where-Object { $_.id -eq $Result.id }).DisplayName
-                InstalledAppDetails = $result.body.value
+                ID          = $DeviceApp.id
+                DisplayName = $DeviceApp.displayName
+                #InstalledAppDetails = $DeviceAppStatus
             }
-        }
-#>
+        }#>
+
         $AllGroups = $ExtensionCache.Groups
 
         $Groups = foreach ($Group in $AllGroups) {
@@ -640,14 +648,18 @@ function Invoke-HuduExtensionSync {
 
                         } elseif ($HuduUserCount -eq 0) {
                             if ($CreateUsers -eq $True) {
-                                $HuduUser = (New-HuduAsset -Name $User.DisplayName -company_id $company_id -asset_layout_id $PeopleLayout.id -Fields $UserAssetFields -primary_mail $user.UserPrincipalName).asset
-                                $AssetCache = [PSCustomObject]@{
-                                    PartitionKey = 'HuduUser'
-                                    RowKey       = [string]$HuduUser.id
-                                    CompanyId    = [string]$company_id
-                                    Hash         = [string]$NewHash
+                                $HuduUser = (New-HuduAsset -Name $User.DisplayName -company_id $company_id -asset_layout_id $PeopleLayout.id -Fields $UserAssetFields).asset
+                                if (!$HuduUser) {
+                                    $CompanyResult.Errors.add("User $($User.UserPrincipalName): Unable to create user in Hudu. Check the User asset fields for 'Email Address'")
+                                } else {
+                                    $AssetCache = [PSCustomObject]@{
+                                        PartitionKey = 'HuduUser'
+                                        RowKey       = [string]$HuduUser.id
+                                        CompanyId    = [string]$company_id
+                                        Hash         = [string]$NewHash
+                                    }
+                                    Add-CIPPAzDataTableEntity @HuduAssetCache -Entity $AssetCache -Force
                                 }
-                                Add-CIPPAzDataTableEntity @HuduAssetCache -Entity $AssetCache -Force
                             }
                         } else {
                             $CompanyResult.Errors.add("User $($User.UserPrincipalName): Multiple Users Matched to email address in Hudu: ($($HuduUser.name -join ', ') - $($($HuduUser.id -join ', '))) $_")
@@ -731,7 +743,7 @@ function Invoke-HuduExtensionSync {
                     }
                 }
                 $DeviceGroupsFormatted = $DeviceGroupsTable | ConvertTo-Html -Fragment | Out-String
-
+                <#
                 $DeviceAppsTable = foreach ($App in $DeviceAppInstallDetails) {
                     if ($device.id -in $App.InstalledAppDetails.deviceId) {
                         $Status = $App.InstalledAppDetails | Where-Object { $_.deviceId -eq $device.id }
@@ -742,12 +754,12 @@ function Invoke-HuduExtensionSync {
                     }
                 }
                 $DeviceAppsFormatted = $DeviceAppsTable | ConvertTo-Html -Fragment | Out-String
-
+#>
                 $DeviceOverviewBlock = Get-HuduFormattedBlock -Heading 'Device Details' -Body ($DeviceOverviewFormatted -join '')
                 $DeviceHardwareBlock = Get-HuduFormattedBlock -Heading 'Hardware Details' -Body ($DeviceHardwareFormatted -join '')
                 $DeviceEnrollmentBlock = Get-HuduFormattedBlock -Heading 'Device Enrollment Details' -Body ($DeviceEnrollmentFormatted -join '')
                 $DevicePolicyBlock = Get-HuduFormattedBlock -Heading 'Compliance Policies' -Body ($DevicePoliciesFormatted -join '')
-                $DeviceAppsBlock = Get-HuduFormattedBlock -Heading 'App Details' -Body ($DeviceAppsFormatted -join '')
+                #$DeviceAppsBlock = Get-HuduFormattedBlock -Heading 'App Details' -Body ($DeviceAppsFormatted -join '')
                 $DeviceGroupsBlock = Get-HuduFormattedBlock -Heading 'Device Groups' -Body ($DeviceGroupsFormatted -join '')
 
                 if ("$($device.serialNumber)" -in $ExcludeSerials) {
@@ -822,20 +834,24 @@ function Invoke-HuduExtensionSync {
                         if ($DeviceCreation -eq $true) {
                             $HuduDevice = (New-HuduAsset -Name $device.deviceName -company_id $company_id -asset_layout_id $DeviceLayoutID -Fields $DeviceAssetFields -PrimarySerial $Device.serialNumber).asset
 
-                            $AssetCache = [PSCustomObject]@{
-                                PartitionKey = 'HuduDevice'
-                                RowKey       = [string]$HuduDevice.id
-                                CompanyId    = [string]$company_id
-                                Hash         = [string]$NewHash
-                            }
-                            Add-CIPPAzDataTableEntity @HuduAssetCache -Entity $AssetCache -Force
+                            if (!$HuduDevice) {
+                                $CompanyResult.Errors.add("Device $($device.deviceName): Failed to create device in Hudu, check your device asset fields for 'Primary Serial'.")
+                            } else {
+                                $AssetCache = [PSCustomObject]@{
+                                    PartitionKey = 'HuduDevice'
+                                    RowKey       = [string]$HuduDevice.id
+                                    CompanyId    = [string]$company_id
+                                    Hash         = [string]$NewHash
+                                }
+                                Add-CIPPAzDataTableEntity @HuduAssetCache -Entity $AssetCache -Force
 
-                            $HuduUser = $People | Where-Object { $_.primary_mail -eq $Device.userPrincipalName -or ($_.cards.integrator_name -eq 'cw_manage' -and $_.cards.data.communicationItems.communicationType -eq 'Email' -and $_.cards.data.communicationItems.value -eq $Device.userPrincipalName) }
-                            if ($HuduUser) {
-                                try {
-                                    $null = New-HuduRelation -FromableType 'Asset' -FromableID $HuduUser.id -ToableType 'Asset' -ToableID $HuduDevice.id -ea stop
-                                } catch {
-                                    # No need to do anything here as its will be when relations already exist.
+                                $HuduUser = $People | Where-Object { $_.primary_mail -eq $Device.userPrincipalName -or ($_.cards.integrator_name -eq 'cw_manage' -and $_.cards.data.communicationItems.communicationType -eq 'Email' -and $_.cards.data.communicationItems.value -eq $Device.userPrincipalName) }
+                                if ($HuduUser) {
+                                    try {
+                                        $null = New-HuduRelation -FromableType 'Asset' -FromableID $HuduUser.id -ToableType 'Asset' -ToableID $HuduDevice.id -ea stop
+                                    } catch {
+                                        # No need to do anything here as its will be when relations already exist.
+                                    }
                                 }
                             }
                         }
@@ -877,7 +893,7 @@ function Invoke-HuduExtensionSync {
 
         try {
             if ($importDomains) {
-                $domainstoimport = $RawDomains
+                $domainstoimport = $ExtensionCache.Domains
                 foreach ($imp in $domainstoimport) {
                     $impdomain = $imp.id
                     $huduimpdomain = Get-HuduWebsites -Name "https://$impdomain"
