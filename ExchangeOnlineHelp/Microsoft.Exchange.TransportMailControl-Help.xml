@@ -1,0 +1,2636 @@
+<?xml version="1.0" encoding="utf-8"?>
+<helpItems schema="maml" xmlns="http://msh">
+  <command:command xmlns:maml="http://schemas.microsoft.com/maml/2004/10" xmlns:command="http://schemas.microsoft.com/maml/dev/command/2004/10" xmlns:dev="http://schemas.microsoft.com/maml/dev/2004/10" xmlns:MSHelp="http://msdn.microsoft.com/mshelp">
+    <command:details>
+      <command:name>Disable-JournalRule</command:name>
+      <command:verb>Disable</command:verb>
+      <command:noun>JournalRule</command:noun>
+      <maml:description>
+        <maml:para>This cmdlet is available in on-premises Exchange and in the cloud-based service. Some parameters and settings may be exclusive to one environment or the other.</maml:para>
+        <maml:para>Use the Disable-JournalRule cmdlet to disable a journal rule on a Mailbox server.</maml:para>
+        <maml:para>For information about the parameter sets in the Syntax section below, see Exchange cmdlet syntax (https://docs.microsoft.com/powershell/exchange/exchange-cmdlet-syntax).</maml:para>
+      </maml:description>
+    </command:details>
+    <maml:description>
+      <maml:para>You can enable or disable specific journal rules in your organization at any time using the Disable-JournalRule and Enable-JournalRule cmdlets.</maml:para>
+      <maml:para>You need to be assigned permissions before you can run this cmdlet. Although this topic lists all parameters for the cmdlet, you may not have access to some parameters if they're not included in the permissions assigned to you. To find the permissions required to run any cmdlet or parameter in your organization, see Find the permissions required to run any Exchange cmdlet (https://docs.microsoft.com/powershell/exchange/find-exchange-cmdlet-permissions).</maml:para>
+    </maml:description>
+    <command:syntax>
+      <command:syntaxItem>
+        <maml:name>Disable-JournalRule</maml:name>
+        <command:parameter required="true" variableLength="true" globbing="false" pipelineInput="True" position="1" aliases="none">
+          <maml:name>Identity</maml:name>
+          <maml:description>
+            <maml:para>The Identity parameter specifies the journal rule you want to disable. Enter either the name or the GUID of the journal rule. You can omit this parameter label.</maml:para>
+          </maml:description>
+          <command:parameterValue required="true" variableLength="false">RuleIdParameter</command:parameterValue>
+          <dev:type>
+            <maml:name>RuleIdParameter</maml:name>
+            <maml:uri />
+          </dev:type>
+          <dev:defaultValue>None</dev:defaultValue>
+        </command:parameter>
+        <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="cf">
+          <maml:name>Confirm</maml:name>
+          <maml:description>
+            <maml:para>The Confirm switch specifies whether to show or hide the confirmation prompt. How this switch affects the cmdlet depends on if the cmdlet requires confirmation before proceeding.</maml:para>
+            <maml:para>- Destructive cmdlets (for example, Remove-* cmdlets) have a built-in pause that forces you to acknowledge the command before proceeding. For these cmdlets, you can skip the confirmation prompt by using this exact syntax: `-Confirm:$false`.</maml:para>
+            <maml:para>- Most other cmdlets (for example, New-\ and Set-\ cmdlets) don't have a built-in pause. For these cmdlets, specifying the Confirm switch without a value introduces a pause that forces you acknowledge the command before proceeding.</maml:para>
+          </maml:description>
+          <dev:type>
+            <maml:name>SwitchParameter</maml:name>
+            <maml:uri />
+          </dev:type>
+          <dev:defaultValue>False</dev:defaultValue>
+        </command:parameter>
+        <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="wi">
+          <maml:name>WhatIf</maml:name>
+          <maml:description>
+            <maml:para>The WhatIf switch simulates the actions of the command. You can use this switch to view the changes that would occur without actually applying those changes. You don't need to specify a value with this switch.</maml:para>
+          </maml:description>
+          <dev:type>
+            <maml:name>SwitchParameter</maml:name>
+            <maml:uri />
+          </dev:type>
+          <dev:defaultValue>False</dev:defaultValue>
+        </command:parameter>
+      </command:syntaxItem>
+    </command:syntax>
+    <command:parameters>
+      <command:parameter required="true" variableLength="true" globbing="false" pipelineInput="True" position="1" aliases="none">
+        <maml:name>Identity</maml:name>
+        <maml:description>
+          <maml:para>The Identity parameter specifies the journal rule you want to disable. Enter either the name or the GUID of the journal rule. You can omit this parameter label.</maml:para>
+        </maml:description>
+        <command:parameterValue required="true" variableLength="false">RuleIdParameter</command:parameterValue>
+        <dev:type>
+          <maml:name>RuleIdParameter</maml:name>
+          <maml:uri />
+        </dev:type>
+        <dev:defaultValue>None</dev:defaultValue>
+      </command:parameter>
+      <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="cf">
+        <maml:name>Confirm</maml:name>
+        <maml:description>
+          <maml:para>The Confirm switch specifies whether to show or hide the confirmation prompt. How this switch affects the cmdlet depends on if the cmdlet requires confirmation before proceeding.</maml:para>
+          <maml:para>- Destructive cmdlets (for example, Remove-* cmdlets) have a built-in pause that forces you to acknowledge the command before proceeding. For these cmdlets, you can skip the confirmation prompt by using this exact syntax: `-Confirm:$false`.</maml:para>
+          <maml:para>- Most other cmdlets (for example, New-\ and Set-\ cmdlets) don't have a built-in pause. For these cmdlets, specifying the Confirm switch without a value introduces a pause that forces you acknowledge the command before proceeding.</maml:para>
+        </maml:description>
+        <command:parameterValue required="false" variableLength="false">SwitchParameter</command:parameterValue>
+        <dev:type>
+          <maml:name>SwitchParameter</maml:name>
+          <maml:uri />
+        </dev:type>
+        <dev:defaultValue>False</dev:defaultValue>
+      </command:parameter>
+      <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="wi">
+        <maml:name>WhatIf</maml:name>
+        <maml:description>
+          <maml:para>The WhatIf switch simulates the actions of the command. You can use this switch to view the changes that would occur without actually applying those changes. You don't need to specify a value with this switch.</maml:para>
+        </maml:description>
+        <command:parameterValue required="false" variableLength="false">SwitchParameter</command:parameterValue>
+        <dev:type>
+          <maml:name>SwitchParameter</maml:name>
+          <maml:uri />
+        </dev:type>
+        <dev:defaultValue>False</dev:defaultValue>
+      </command:parameter>
+    </command:parameters>
+    <command:inputTypes>
+      <command:inputType>
+        <dev:type>
+          <maml:name> </maml:name>
+        </dev:type>
+        <maml:description>
+          <maml:para>To see the input types that this cmdlet accepts, see Cmdlet Input and Output Types (https://go.microsoft.com/fwlink/p/?LinkId=616387). If the Input Type field for a cmdlet is blank, the cmdlet doesn't accept input data.</maml:para>
+        </maml:description>
+      </command:inputType>
+    </command:inputTypes>
+    <command:returnValues>
+      <command:returnValue>
+        <dev:type>
+          <maml:name> </maml:name>
+        </dev:type>
+        <maml:description>
+          <maml:para>To see the return types, which are also known as output types, that this cmdlet accepts, see Cmdlet Input and Output Types (https://go.microsoft.com/fwlink/p/?LinkId=616387). If the Output Type field is blank, the cmdlet doesn't return data.</maml:para>
+        </maml:description>
+      </command:returnValue>
+    </command:returnValues>
+    <maml:alertSet>
+      <maml:alert>
+        <maml:para></maml:para>
+      </maml:alert>
+    </maml:alertSet>
+    <command:examples>
+      <command:example>
+        <maml:title>-------------------------- Example 1 --------------------------</maml:title>
+        <dev:code>Disable-JournalRule "Brokerage Communications"</dev:code>
+        <dev:remarks>
+          <maml:para>This example disables the journal rule Brokerage Communications.</maml:para>
+        </dev:remarks>
+      </command:example>
+      <command:example>
+        <maml:title>-------------------------- Example 2 --------------------------</maml:title>
+        <dev:code>Get-JournalRule | Disable-JournalRule</dev:code>
+        <dev:remarks>
+          <maml:para>This example disables all journal rules. The Get-JournalRule cmdlet is used to add all journal rules to the pipeline. The results are piped to the Disable-JournalRule cmdlet.</maml:para>
+        </dev:remarks>
+      </command:example>
+    </command:examples>
+    <command:relatedLinks>
+      <maml:navigationLink>
+        <maml:linkText>Online Version:</maml:linkText>
+        <maml:uri>https://docs.microsoft.com/powershell/module/exchange/disable-journalrule</maml:uri>
+      </maml:navigationLink>
+    </command:relatedLinks>
+  </command:command>
+  <command:command xmlns:maml="http://schemas.microsoft.com/maml/2004/10" xmlns:command="http://schemas.microsoft.com/maml/dev/command/2004/10" xmlns:dev="http://schemas.microsoft.com/maml/dev/2004/10" xmlns:MSHelp="http://msdn.microsoft.com/mshelp">
+    <command:details>
+      <command:name>Enable-JournalRule</command:name>
+      <command:verb>Enable</command:verb>
+      <command:noun>JournalRule</command:noun>
+      <maml:description>
+        <maml:para>This cmdlet is available in on-premises Exchange and in the cloud-based service. Some parameters and settings may be exclusive to one environment or the other.</maml:para>
+        <maml:para>Use the Enable-JournalRule cmdlet to enable an existing journal rule on a Mailbox server.</maml:para>
+        <maml:para>For information about the parameter sets in the Syntax section below, see Exchange cmdlet syntax (https://docs.microsoft.com/powershell/exchange/exchange-cmdlet-syntax).</maml:para>
+      </maml:description>
+    </command:details>
+    <maml:description>
+      <maml:para>You can enable or disable specific journal rules in your organization at any time using the Enable-JournalRule and Disable-JournalRule cmdlets. For more information, see Journaling in Exchange Server (https://docs.microsoft.com/Exchange/policy-and-compliance/journaling/journaling).</maml:para>
+      <maml:para>You need to be assigned permissions before you can run this cmdlet. Although this topic lists all parameters for the cmdlet, you may not have access to some parameters if they're not included in the permissions assigned to you. To find the permissions required to run any cmdlet or parameter in your organization, see Find the permissions required to run any Exchange cmdlet (https://docs.microsoft.com/powershell/exchange/find-exchange-cmdlet-permissions).</maml:para>
+    </maml:description>
+    <command:syntax>
+      <command:syntaxItem>
+        <maml:name>Enable-JournalRule</maml:name>
+        <command:parameter required="true" variableLength="true" globbing="false" pipelineInput="True" position="1" aliases="none">
+          <maml:name>Identity</maml:name>
+          <maml:description>
+            <maml:para>The Identity parameter specifies the journal rule you want to enable. Enter either the name or GUID of the journal rule. You can omit this parameter label.</maml:para>
+          </maml:description>
+          <command:parameterValue required="true" variableLength="false">RuleIdParameter</command:parameterValue>
+          <dev:type>
+            <maml:name>RuleIdParameter</maml:name>
+            <maml:uri />
+          </dev:type>
+          <dev:defaultValue>None</dev:defaultValue>
+        </command:parameter>
+        <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="cf">
+          <maml:name>Confirm</maml:name>
+          <maml:description>
+            <maml:para>The Confirm switch specifies whether to show or hide the confirmation prompt. How this switch affects the cmdlet depends on if the cmdlet requires confirmation before proceeding.</maml:para>
+            <maml:para>- Destructive cmdlets (for example, Remove-* cmdlets) have a built-in pause that forces you to acknowledge the command before proceeding. For these cmdlets, you can skip the confirmation prompt by using this exact syntax: `-Confirm:$false`.</maml:para>
+            <maml:para>- Most other cmdlets (for example, New-\ and Set-\ cmdlets) don't have a built-in pause. For these cmdlets, specifying the Confirm switch without a value introduces a pause that forces you acknowledge the command before proceeding.</maml:para>
+          </maml:description>
+          <dev:type>
+            <maml:name>SwitchParameter</maml:name>
+            <maml:uri />
+          </dev:type>
+          <dev:defaultValue>False</dev:defaultValue>
+        </command:parameter>
+        <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="wi">
+          <maml:name>WhatIf</maml:name>
+          <maml:description>
+            <maml:para>The WhatIf switch simulates the actions of the command. You can use this switch to view the changes that would occur without actually applying those changes. You don't need to specify a value with this switch.</maml:para>
+          </maml:description>
+          <dev:type>
+            <maml:name>SwitchParameter</maml:name>
+            <maml:uri />
+          </dev:type>
+          <dev:defaultValue>False</dev:defaultValue>
+        </command:parameter>
+      </command:syntaxItem>
+    </command:syntax>
+    <command:parameters>
+      <command:parameter required="true" variableLength="true" globbing="false" pipelineInput="True" position="1" aliases="none">
+        <maml:name>Identity</maml:name>
+        <maml:description>
+          <maml:para>The Identity parameter specifies the journal rule you want to enable. Enter either the name or GUID of the journal rule. You can omit this parameter label.</maml:para>
+        </maml:description>
+        <command:parameterValue required="true" variableLength="false">RuleIdParameter</command:parameterValue>
+        <dev:type>
+          <maml:name>RuleIdParameter</maml:name>
+          <maml:uri />
+        </dev:type>
+        <dev:defaultValue>None</dev:defaultValue>
+      </command:parameter>
+      <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="cf">
+        <maml:name>Confirm</maml:name>
+        <maml:description>
+          <maml:para>The Confirm switch specifies whether to show or hide the confirmation prompt. How this switch affects the cmdlet depends on if the cmdlet requires confirmation before proceeding.</maml:para>
+          <maml:para>- Destructive cmdlets (for example, Remove-* cmdlets) have a built-in pause that forces you to acknowledge the command before proceeding. For these cmdlets, you can skip the confirmation prompt by using this exact syntax: `-Confirm:$false`.</maml:para>
+          <maml:para>- Most other cmdlets (for example, New-\ and Set-\ cmdlets) don't have a built-in pause. For these cmdlets, specifying the Confirm switch without a value introduces a pause that forces you acknowledge the command before proceeding.</maml:para>
+        </maml:description>
+        <command:parameterValue required="false" variableLength="false">SwitchParameter</command:parameterValue>
+        <dev:type>
+          <maml:name>SwitchParameter</maml:name>
+          <maml:uri />
+        </dev:type>
+        <dev:defaultValue>False</dev:defaultValue>
+      </command:parameter>
+      <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="wi">
+        <maml:name>WhatIf</maml:name>
+        <maml:description>
+          <maml:para>The WhatIf switch simulates the actions of the command. You can use this switch to view the changes that would occur without actually applying those changes. You don't need to specify a value with this switch.</maml:para>
+        </maml:description>
+        <command:parameterValue required="false" variableLength="false">SwitchParameter</command:parameterValue>
+        <dev:type>
+          <maml:name>SwitchParameter</maml:name>
+          <maml:uri />
+        </dev:type>
+        <dev:defaultValue>False</dev:defaultValue>
+      </command:parameter>
+    </command:parameters>
+    <command:inputTypes>
+      <command:inputType>
+        <dev:type>
+          <maml:name> </maml:name>
+        </dev:type>
+        <maml:description>
+          <maml:para>To see the input types that this cmdlet accepts, see Cmdlet Input and Output Types (https://go.microsoft.com/fwlink/p/?LinkId=616387). If the Input Type field for a cmdlet is blank, the cmdlet doesn't accept input data.</maml:para>
+        </maml:description>
+      </command:inputType>
+    </command:inputTypes>
+    <command:returnValues>
+      <command:returnValue>
+        <dev:type>
+          <maml:name> </maml:name>
+        </dev:type>
+        <maml:description>
+          <maml:para>To see the return types, which are also known as output types, that this cmdlet accepts, see Cmdlet Input and Output Types (https://go.microsoft.com/fwlink/p/?LinkId=616387). If the Output Type field is blank, the cmdlet doesn't return data.</maml:para>
+        </maml:description>
+      </command:returnValue>
+    </command:returnValues>
+    <maml:alertSet>
+      <maml:alert>
+        <maml:para></maml:para>
+      </maml:alert>
+    </maml:alertSet>
+    <command:examples>
+      <command:example>
+        <maml:title>-------------------------- Example 1 --------------------------</maml:title>
+        <dev:code>Enable-JournalRule "Brokerage Communications"</dev:code>
+        <dev:remarks>
+          <maml:para>This example enables the existing journal rule Brokerage Communications.</maml:para>
+        </dev:remarks>
+      </command:example>
+    </command:examples>
+    <command:relatedLinks>
+      <maml:navigationLink>
+        <maml:linkText>Online Version:</maml:linkText>
+        <maml:uri>https://docs.microsoft.com/powershell/module/exchange/enable-journalrule</maml:uri>
+      </maml:navigationLink>
+    </command:relatedLinks>
+  </command:command>
+  <command:command xmlns:maml="http://schemas.microsoft.com/maml/2004/10" xmlns:command="http://schemas.microsoft.com/maml/dev/command/2004/10" xmlns:dev="http://schemas.microsoft.com/maml/dev/2004/10" xmlns:MSHelp="http://msdn.microsoft.com/mshelp">
+    <command:details>
+      <command:name>Get-IRMConfiguration</command:name>
+      <command:verb>Get</command:verb>
+      <command:noun>IRMConfiguration</command:noun>
+      <maml:description>
+        <maml:para>This cmdlet is available in on-premises Exchange and in the cloud-based service. Some parameters and settings may be exclusive to one environment or the other.</maml:para>
+        <maml:para>Use the Get-IRMConfiguration cmdlet to view the Information Rights Management (IRM) configuration in your organization.</maml:para>
+        <maml:para>For information about the parameter sets in the Syntax section below, see Exchange cmdlet syntax (https://docs.microsoft.com/powershell/exchange/exchange-cmdlet-syntax).</maml:para>
+      </maml:description>
+    </command:details>
+    <maml:description>
+      <maml:para>The Get-IRMConfiguration cmdlet provides details about the current IRM configuration, including whether individual IRM features are enabled or disabled and provides the URLs used for ServiceLocation, PublishingLocation and LicensingLocation.</maml:para>
+      <maml:para>You need to be assigned permissions before you can run this cmdlet. Although this topic lists all parameters for the cmdlet, you may not have access to some parameters if they're not included in the permissions assigned to you. To find the permissions required to run any cmdlet or parameter in your organization, see Find the permissions required to run any Exchange cmdlet (https://docs.microsoft.com/powershell/exchange/find-exchange-cmdlet-permissions).</maml:para>
+    </maml:description>
+    <command:syntax>
+      <command:syntaxItem>
+        <maml:name>Get-IRMConfiguration</maml:name>
+      </command:syntaxItem>
+    </command:syntax>
+    <command:parameters />
+    <command:inputTypes>
+      <command:inputType>
+        <dev:type>
+          <maml:name> </maml:name>
+        </dev:type>
+        <maml:description>
+          <maml:para>To see the input types that this cmdlet accepts, see Cmdlet Input and Output Types (https://go.microsoft.com/fwlink/p/?LinkId=616387). If the Input Type field for a cmdlet is blank, the cmdlet doesn't accept input data.</maml:para>
+        </maml:description>
+      </command:inputType>
+    </command:inputTypes>
+    <command:returnValues>
+      <command:returnValue>
+        <dev:type>
+          <maml:name> </maml:name>
+        </dev:type>
+        <maml:description>
+          <maml:para>To see the return types, which are also known as output types, that this cmdlet accepts, see Cmdlet Input and Output Types (https://go.microsoft.com/fwlink/p/?LinkId=616387). If the Output Type field is blank, the cmdlet doesn't return data.</maml:para>
+        </maml:description>
+      </command:returnValue>
+    </command:returnValues>
+    <maml:alertSet>
+      <maml:alert>
+        <maml:para></maml:para>
+      </maml:alert>
+    </maml:alertSet>
+    <command:examples>
+      <command:example>
+        <maml:title>-------------------------- Example 1 --------------------------</maml:title>
+        <dev:code>Get-IRMConfiguration</dev:code>
+        <dev:remarks>
+          <maml:para>This example retrieves the IRM configuration in your organization.</maml:para>
+        </dev:remarks>
+      </command:example>
+    </command:examples>
+    <command:relatedLinks>
+      <maml:navigationLink>
+        <maml:linkText>Online Version:</maml:linkText>
+        <maml:uri>https://docs.microsoft.com/powershell/module/exchange/get-irmconfiguration</maml:uri>
+      </maml:navigationLink>
+    </command:relatedLinks>
+  </command:command>
+  <command:command xmlns:maml="http://schemas.microsoft.com/maml/2004/10" xmlns:command="http://schemas.microsoft.com/maml/dev/command/2004/10" xmlns:dev="http://schemas.microsoft.com/maml/dev/2004/10" xmlns:MSHelp="http://msdn.microsoft.com/mshelp">
+    <command:details>
+      <command:name>Get-JournalRule</command:name>
+      <command:verb>Get</command:verb>
+      <command:noun>JournalRule</command:noun>
+      <maml:description>
+        <maml:para>This cmdlet is available in on-premises Exchange and in the cloud-based service. Some parameters and settings may be exclusive to one environment or the other.</maml:para>
+        <maml:para>Use the Get-JournalRule cmdlet to view the journal rules in your organization.</maml:para>
+        <maml:para>For information about the parameter sets in the Syntax section below, see Exchange cmdlet syntax (https://docs.microsoft.com/powershell/exchange/exchange-cmdlet-syntax).</maml:para>
+      </maml:description>
+    </command:details>
+    <maml:description>
+      <maml:para>The Get-JournalRule cmdlet displays journal rules configured in your organization.</maml:para>
+      <maml:para>You need to be assigned permissions before you can run this cmdlet. Although this topic lists all parameters for the cmdlet, you may not have access to some parameters if they're not included in the permissions assigned to you. To find the permissions required to run any cmdlet or parameter in your organization, see Find the permissions required to run any Exchange cmdlet (https://docs.microsoft.com/powershell/exchange/find-exchange-cmdlet-permissions).</maml:para>
+    </maml:description>
+    <command:syntax>
+      <command:syntaxItem>
+        <maml:name>Get-JournalRule</maml:name>
+        <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="True" position="1" aliases="none">
+          <maml:name>Identity</maml:name>
+          <maml:description>
+            <maml:para>The Identity parameter specifies the rule you want to view. Enter either the name or the GUID of the journal rule. You can omit the parameter label.</maml:para>
+          </maml:description>
+          <command:parameterValue required="true" variableLength="false">RuleIdParameter</command:parameterValue>
+          <dev:type>
+            <maml:name>RuleIdParameter</maml:name>
+            <maml:uri />
+          </dev:type>
+          <dev:defaultValue>None</dev:defaultValue>
+        </command:parameter>
+      </command:syntaxItem>
+    </command:syntax>
+    <command:parameters>
+      <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="True" position="1" aliases="none">
+        <maml:name>Identity</maml:name>
+        <maml:description>
+          <maml:para>The Identity parameter specifies the rule you want to view. Enter either the name or the GUID of the journal rule. You can omit the parameter label.</maml:para>
+        </maml:description>
+        <command:parameterValue required="true" variableLength="false">RuleIdParameter</command:parameterValue>
+        <dev:type>
+          <maml:name>RuleIdParameter</maml:name>
+          <maml:uri />
+        </dev:type>
+        <dev:defaultValue>None</dev:defaultValue>
+      </command:parameter>
+    </command:parameters>
+    <command:inputTypes>
+      <command:inputType>
+        <dev:type>
+          <maml:name> </maml:name>
+        </dev:type>
+        <maml:description>
+          <maml:para>To see the input types that this cmdlet accepts, see Cmdlet Input and Output Types (https://go.microsoft.com/fwlink/p/?LinkId=616387). If the Input Type field for a cmdlet is blank, the cmdlet doesn't accept input data.</maml:para>
+        </maml:description>
+      </command:inputType>
+    </command:inputTypes>
+    <command:returnValues>
+      <command:returnValue>
+        <dev:type>
+          <maml:name> </maml:name>
+        </dev:type>
+        <maml:description>
+          <maml:para>To see the return types, which are also known as output types, that this cmdlet accepts, see Cmdlet Input and Output Types (https://go.microsoft.com/fwlink/p/?LinkId=616387). If the Output Type field is blank, the cmdlet doesn't return data.</maml:para>
+        </maml:description>
+      </command:returnValue>
+    </command:returnValues>
+    <maml:alertSet>
+      <maml:alert>
+        <maml:para></maml:para>
+      </maml:alert>
+    </maml:alertSet>
+    <command:examples>
+      <command:example>
+        <maml:title>-------------------------- Example 1 --------------------------</maml:title>
+        <dev:code>Get-JournalRule</dev:code>
+        <dev:remarks>
+          <maml:para>This example retrieves all journal rules configured in your organization.</maml:para>
+        </dev:remarks>
+      </command:example>
+      <command:example>
+        <maml:title>-------------------------- Example 2 --------------------------</maml:title>
+        <dev:code>Get-JournalRule "Brokerage Communications" | Format-List</dev:code>
+        <dev:remarks>
+          <maml:para>This example retrieves the specific journal rule Brokerage Communications and pipes the output to the Format-List cmdlet to view all the parameters of the rule.</maml:para>
+        </dev:remarks>
+      </command:example>
+    </command:examples>
+    <command:relatedLinks>
+      <maml:navigationLink>
+        <maml:linkText>Online Version:</maml:linkText>
+        <maml:uri>https://docs.microsoft.com/powershell/module/exchange/get-journalrule</maml:uri>
+      </maml:navigationLink>
+    </command:relatedLinks>
+  </command:command>
+  <command:command xmlns:maml="http://schemas.microsoft.com/maml/2004/10" xmlns:command="http://schemas.microsoft.com/maml/dev/command/2004/10" xmlns:dev="http://schemas.microsoft.com/maml/dev/2004/10" xmlns:MSHelp="http://msdn.microsoft.com/mshelp">
+    <command:details>
+      <command:name>Get-OrganizationSegment</command:name>
+      <command:verb>Get</command:verb>
+      <command:noun>OrganizationSegment</command:noun>
+      <maml:description>
+        <maml:para>This cmdlet is available only in Security &amp; Compliance Center PowerShell. For more information, see Security &amp; Compliance Center PowerShell (https://docs.microsoft.com/powershell/exchange/scc-powershell).</maml:para>
+        <maml:para>Use the Get-OrganizationSegment cmdlet to view organization segments in the Security &amp; Compliance Center.</maml:para>
+        <maml:para>For information about the parameter sets in the Syntax section below, see Exchange cmdlet syntax (https://docs.microsoft.com/powershell/exchange/exchange-cmdlet-syntax).</maml:para>
+      </maml:description>
+    </command:details>
+    <maml:description>
+      <maml:para>Segments are defined by using certain attributes (https://docs.microsoft.com/microsoft-365/compliance/information-barriers-attributes)in Azure Active Directory.</maml:para>
+      <maml:para>You need to be assigned permissions in the Security &amp; Compliance Center before you can use this cmdlet. For more information, see Permissions in the Security &amp; Compliance Center (https://docs.microsoft.com/microsoft-365/security/office-365-security/permissions-in-the-security-and-compliance-center).</maml:para>
+    </maml:description>
+    <command:syntax>
+      <command:syntaxItem>
+        <maml:name>Get-OrganizationSegment</maml:name>
+        <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="True (ByPropertyName, ByValue)" position="0" aliases="none">
+          <maml:name>Identity</maml:name>
+          <maml:description>
+            <maml:para>The Identity parameter specifies the organization segment that you want to view. You can use any value that uniquely identifies the segment. For example:</maml:para>
+            <maml:para>- Name</maml:para>
+            <maml:para>- Distinguished name (DN)</maml:para>
+            <maml:para>- GUID</maml:para>
+          </maml:description>
+          <command:parameterValue required="true" variableLength="false">PolicyIdParameter</command:parameterValue>
+          <dev:type>
+            <maml:name>PolicyIdParameter</maml:name>
+            <maml:uri />
+          </dev:type>
+          <dev:defaultValue>None</dev:defaultValue>
+        </command:parameter>
+      </command:syntaxItem>
+    </command:syntax>
+    <command:parameters>
+      <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="True (ByPropertyName, ByValue)" position="0" aliases="none">
+        <maml:name>Identity</maml:name>
+        <maml:description>
+          <maml:para>The Identity parameter specifies the organization segment that you want to view. You can use any value that uniquely identifies the segment. For example:</maml:para>
+          <maml:para>- Name</maml:para>
+          <maml:para>- Distinguished name (DN)</maml:para>
+          <maml:para>- GUID</maml:para>
+        </maml:description>
+        <command:parameterValue required="true" variableLength="false">PolicyIdParameter</command:parameterValue>
+        <dev:type>
+          <maml:name>PolicyIdParameter</maml:name>
+          <maml:uri />
+        </dev:type>
+        <dev:defaultValue>None</dev:defaultValue>
+      </command:parameter>
+    </command:parameters>
+    <command:inputTypes>
+      <command:inputType>
+        <dev:type>
+          <maml:name> </maml:name>
+        </dev:type>
+        <maml:description>
+          <maml:para></maml:para>
+        </maml:description>
+      </command:inputType>
+    </command:inputTypes>
+    <command:returnValues>
+      <command:returnValue>
+        <dev:type>
+          <maml:name> </maml:name>
+        </dev:type>
+        <maml:description>
+          <maml:para></maml:para>
+        </maml:description>
+      </command:returnValue>
+    </command:returnValues>
+    <maml:alertSet>
+      <maml:alert>
+        <maml:para></maml:para>
+      </maml:alert>
+    </maml:alertSet>
+    <command:examples>
+      <command:example>
+        <maml:title>-------------------------- Example 1 --------------------------</maml:title>
+        <dev:code>Get-OrganizationSegment | Format-List Name,UserGroupFilter</dev:code>
+        <dev:remarks>
+          <maml:para>This example returns a summary list of all organization segments.</maml:para>
+        </dev:remarks>
+      </command:example>
+      <command:example>
+        <maml:title>-------------------------- Example 2 --------------------------</maml:title>
+        <dev:code>Get-OrganizationSegment -Identity "Engineering Group"</dev:code>
+        <dev:remarks>
+          <maml:para>This example returns detailed information about the organization segment named Engineering Group.</maml:para>
+        </dev:remarks>
+      </command:example>
+    </command:examples>
+    <command:relatedLinks>
+      <maml:navigationLink>
+        <maml:linkText>Online Version:</maml:linkText>
+        <maml:uri>https://docs.microsoft.com/powershell/module/exchange/get-organizationsegment</maml:uri>
+      </maml:navigationLink>
+      <maml:navigationLink>
+        <maml:linkText>Attributes for information barrier policies</maml:linkText>
+        <maml:uri>https://docs.microsoft.com/microsoft-365/compliance/information-barriers-attributes</maml:uri>
+      </maml:navigationLink>
+      <maml:navigationLink>
+        <maml:linkText>Define policies for information barriers</maml:linkText>
+        <maml:uri>https://docs.microsoft.com/microsoft-365/compliance/information-barriers-policies</maml:uri>
+      </maml:navigationLink>
+      <maml:navigationLink>
+        <maml:linkText>New-InformationBarrierPolicy</maml:linkText>
+        <maml:uri>https://docs.microsoft.com/powershell/module/exchange/new-informationbarrierpolicy</maml:uri>
+      </maml:navigationLink>
+    </command:relatedLinks>
+  </command:command>
+  <command:command xmlns:maml="http://schemas.microsoft.com/maml/2004/10" xmlns:command="http://schemas.microsoft.com/maml/dev/command/2004/10" xmlns:dev="http://schemas.microsoft.com/maml/dev/2004/10" xmlns:MSHelp="http://msdn.microsoft.com/mshelp">
+    <command:details>
+      <command:name>Get-RMSTemplate</command:name>
+      <command:verb>Get</command:verb>
+      <command:noun>RMSTemplate</command:noun>
+      <maml:description>
+        <maml:para>This cmdlet is available in on-premises Exchange and in the cloud-based service. Some parameters and settings may be exclusive to one environment or the other.</maml:para>
+        <maml:para>Use the Get-RMSTemplate cmdlet to retrieve the current list of active rights policy templates from the Active Directory Rights Management Services (AD RMS) deployment for the organization.</maml:para>
+        <maml:para>For information about the parameter sets in the Syntax section below, see Exchange cmdlet syntax (https://docs.microsoft.com/powershell/exchange/exchange-cmdlet-syntax).</maml:para>
+      </maml:description>
+    </command:details>
+    <maml:description>
+      <maml:para>The Get-RMSTemplate cmdlet doesn't return any active rights policy templates if internal licensing isn't enabled. Use the Get-IRMConfiguration cmdlet to check the InternalLicensingEnabled parameter.</maml:para>
+      <maml:para>You need to be assigned permissions before you can run this cmdlet. Although this topic lists all parameters for the cmdlet, you may not have access to some parameters if they're not included in the permissions assigned to you. To find the permissions required to run any cmdlet or parameter in your organization, see Find the permissions required to run any Exchange cmdlet (https://docs.microsoft.com/powershell/exchange/find-exchange-cmdlet-permissions).</maml:para>
+    </maml:description>
+    <command:syntax>
+      <command:syntaxItem>
+        <maml:name>Get-RMSTemplate</maml:name>
+        <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="True" position="1" aliases="none">
+          <maml:name>Identity</maml:name>
+          <maml:description>
+            <maml:para>The Identity parameter specifies the name of the RMS template.</maml:para>
+          </maml:description>
+          <command:parameterValue required="true" variableLength="false">RmsTemplateIdParameter</command:parameterValue>
+          <dev:type>
+            <maml:name>RmsTemplateIdParameter</maml:name>
+            <maml:uri />
+          </dev:type>
+          <dev:defaultValue>None</dev:defaultValue>
+        </command:parameter>
+        <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
+          <maml:name>ResultSize</maml:name>
+          <maml:description>
+            <maml:para>The ResultSize parameter specifies the maximum number of results to return. If you want to return all requests that match the query, use unlimited for the value of this parameter. The default value is 1000.</maml:para>
+          </maml:description>
+          <command:parameterValue required="true" variableLength="false">Unlimited</command:parameterValue>
+          <dev:type>
+            <maml:name>Unlimited</maml:name>
+            <maml:uri />
+          </dev:type>
+          <dev:defaultValue>None</dev:defaultValue>
+        </command:parameter>
+        <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
+          <maml:name>TrustedPublishingDomain</maml:name>
+          <maml:description>
+            <maml:para>This parameter is available only in the cloud-based service.</maml:para>
+            <maml:para>The TrustedPublishingDomain parameter specifies the trusted publishing domain you want to search for RMS templates. You can use any value that uniquely identifies the trusted publishing domain, for example:</maml:para>
+            <maml:para>- Name</maml:para>
+            <maml:para>- Distinguished name (DN)</maml:para>
+            <maml:para>- GUID</maml:para>
+          </maml:description>
+          <command:parameterValue required="true" variableLength="false">RmsTrustedPublishingDomainIdParameter</command:parameterValue>
+          <dev:type>
+            <maml:name>RmsTrustedPublishingDomainIdParameter</maml:name>
+            <maml:uri />
+          </dev:type>
+          <dev:defaultValue>None</dev:defaultValue>
+        </command:parameter>
+        <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
+          <maml:name>Type</maml:name>
+          <maml:description>
+            <maml:para>This parameter is available only in the cloud-based service.</maml:para>
+            <maml:para>The Type parameter specifies the type of RMS template. Use one of the following values:</maml:para>
+            <maml:para>- All</maml:para>
+            <maml:para>- Archived</maml:para>
+            <maml:para>- Distributed</maml:para>
+          </maml:description>
+          <command:parameterValue required="true" variableLength="false">RmsTemplateType</command:parameterValue>
+          <dev:type>
+            <maml:name>RmsTemplateType</maml:name>
+            <maml:uri />
+          </dev:type>
+          <dev:defaultValue>None</dev:defaultValue>
+        </command:parameter>
+      </command:syntaxItem>
+    </command:syntax>
+    <command:parameters>
+      <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="True" position="1" aliases="none">
+        <maml:name>Identity</maml:name>
+        <maml:description>
+          <maml:para>The Identity parameter specifies the name of the RMS template.</maml:para>
+        </maml:description>
+        <command:parameterValue required="true" variableLength="false">RmsTemplateIdParameter</command:parameterValue>
+        <dev:type>
+          <maml:name>RmsTemplateIdParameter</maml:name>
+          <maml:uri />
+        </dev:type>
+        <dev:defaultValue>None</dev:defaultValue>
+      </command:parameter>
+      <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
+        <maml:name>ResultSize</maml:name>
+        <maml:description>
+          <maml:para>The ResultSize parameter specifies the maximum number of results to return. If you want to return all requests that match the query, use unlimited for the value of this parameter. The default value is 1000.</maml:para>
+        </maml:description>
+        <command:parameterValue required="true" variableLength="false">Unlimited</command:parameterValue>
+        <dev:type>
+          <maml:name>Unlimited</maml:name>
+          <maml:uri />
+        </dev:type>
+        <dev:defaultValue>None</dev:defaultValue>
+      </command:parameter>
+      <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
+        <maml:name>TrustedPublishingDomain</maml:name>
+        <maml:description>
+          <maml:para>This parameter is available only in the cloud-based service.</maml:para>
+          <maml:para>The TrustedPublishingDomain parameter specifies the trusted publishing domain you want to search for RMS templates. You can use any value that uniquely identifies the trusted publishing domain, for example:</maml:para>
+          <maml:para>- Name</maml:para>
+          <maml:para>- Distinguished name (DN)</maml:para>
+          <maml:para>- GUID</maml:para>
+        </maml:description>
+        <command:parameterValue required="true" variableLength="false">RmsTrustedPublishingDomainIdParameter</command:parameterValue>
+        <dev:type>
+          <maml:name>RmsTrustedPublishingDomainIdParameter</maml:name>
+          <maml:uri />
+        </dev:type>
+        <dev:defaultValue>None</dev:defaultValue>
+      </command:parameter>
+      <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
+        <maml:name>Type</maml:name>
+        <maml:description>
+          <maml:para>This parameter is available only in the cloud-based service.</maml:para>
+          <maml:para>The Type parameter specifies the type of RMS template. Use one of the following values:</maml:para>
+          <maml:para>- All</maml:para>
+          <maml:para>- Archived</maml:para>
+          <maml:para>- Distributed</maml:para>
+        </maml:description>
+        <command:parameterValue required="true" variableLength="false">RmsTemplateType</command:parameterValue>
+        <dev:type>
+          <maml:name>RmsTemplateType</maml:name>
+          <maml:uri />
+        </dev:type>
+        <dev:defaultValue>None</dev:defaultValue>
+      </command:parameter>
+    </command:parameters>
+    <command:inputTypes>
+      <command:inputType>
+        <dev:type>
+          <maml:name> </maml:name>
+        </dev:type>
+        <maml:description>
+          <maml:para>To see the input types that this cmdlet accepts, see Cmdlet Input and Output Types (https://go.microsoft.com/fwlink/p/?LinkId=616387). If the Input Type field for a cmdlet is blank, the cmdlet doesn't accept input data.</maml:para>
+        </maml:description>
+      </command:inputType>
+    </command:inputTypes>
+    <command:returnValues>
+      <command:returnValue>
+        <dev:type>
+          <maml:name> </maml:name>
+        </dev:type>
+        <maml:description>
+          <maml:para>To see the return types, which are also known as output types, that this cmdlet accepts, see Cmdlet Input and Output Types (https://go.microsoft.com/fwlink/p/?LinkId=616387). If the Output Type field is blank, the cmdlet doesn't return data.</maml:para>
+        </maml:description>
+      </command:returnValue>
+    </command:returnValues>
+    <maml:alertSet>
+      <maml:alert>
+        <maml:para></maml:para>
+      </maml:alert>
+    </maml:alertSet>
+    <command:examples>
+      <command:example>
+        <maml:title>-------------------------- Example 1 --------------------------</maml:title>
+        <dev:code>Get-RMSTemplate -ResultSize unlimited</dev:code>
+        <dev:remarks>
+          <maml:para>This example retrieves all RMS templates available from the RMS deployment.</maml:para>
+        </dev:remarks>
+      </command:example>
+      <command:example>
+        <maml:title>-------------------------- Example 2 --------------------------</maml:title>
+        <dev:code>Get-RMSTemplate -Identity "Company Confidential"</dev:code>
+        <dev:remarks>
+          <maml:para>This example retrieves the Company Confidential RMS template.</maml:para>
+        </dev:remarks>
+      </command:example>
+    </command:examples>
+    <command:relatedLinks>
+      <maml:navigationLink>
+        <maml:linkText>Online Version:</maml:linkText>
+        <maml:uri>https://docs.microsoft.com/powershell/module/exchange/get-rmstemplate</maml:uri>
+      </maml:navigationLink>
+    </command:relatedLinks>
+  </command:command>
+  <command:command xmlns:maml="http://schemas.microsoft.com/maml/2004/10" xmlns:command="http://schemas.microsoft.com/maml/dev/command/2004/10" xmlns:dev="http://schemas.microsoft.com/maml/dev/2004/10" xmlns:MSHelp="http://msdn.microsoft.com/mshelp">
+    <command:details>
+      <command:name>New-JournalRule</command:name>
+      <command:verb>New</command:verb>
+      <command:noun>JournalRule</command:noun>
+      <maml:description>
+        <maml:para>This cmdlet is available in on-premises Exchange and in the cloud-based service. Some parameters and settings may be exclusive to one environment or the other.</maml:para>
+        <maml:para>Use the New-JournalRule cmdlet to create a journal rule in your organization.</maml:para>
+        <maml:para>For information about the parameter sets in the Syntax section below, see Exchange cmdlet syntax (https://docs.microsoft.com/powershell/exchange/exchange-cmdlet-syntax).</maml:para>
+      </maml:description>
+    </command:details>
+    <maml:description>
+      <maml:para>The New-JournalRule cmdlet creates a journal rule in your organization.</maml:para>
+      <maml:para>By default, new journal rules are disabled unless the Enabled parameter is set to $true. For more information about how to enable a new journal rule that was created in a disabled state, see Enable-JournalRule (https://docs.microsoft.com/powershell/module/exchange/enable-journalrule).</maml:para>
+      <maml:para>You need to be assigned permissions before you can run this cmdlet. Although this topic lists all parameters for the cmdlet, you may not have access to some parameters if they're not included in the permissions assigned to you. To find the permissions required to run any cmdlet or parameter in your organization, see Find the permissions required to run any Exchange cmdlet (https://docs.microsoft.com/powershell/exchange/find-exchange-cmdlet-permissions).</maml:para>
+    </maml:description>
+    <command:syntax>
+      <command:syntaxItem>
+        <maml:name>New-JournalRule</maml:name>
+        <command:parameter required="true" variableLength="true" globbing="false" pipelineInput="False" position="1" aliases="none">
+          <maml:name>Name</maml:name>
+          <maml:description>
+            <maml:para>The Name parameter specifies the name of the journal rule. The name of the rule can be up to 64 characters long.</maml:para>
+          </maml:description>
+          <command:parameterValue required="true" variableLength="false">String</command:parameterValue>
+          <dev:type>
+            <maml:name>String</maml:name>
+            <maml:uri />
+          </dev:type>
+          <dev:defaultValue>None</dev:defaultValue>
+        </command:parameter>
+        <command:parameter required="true" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
+          <maml:name>JournalEmailAddress</maml:name>
+          <maml:description>
+            <maml:para>The JournalEmailAddress parameter specifies a recipient object to which journal reports are sent. You ean use any value that uniquely identifies the recipient. For example:</maml:para>
+            <maml:para>- Name</maml:para>
+            <maml:para>- Alias</maml:para>
+            <maml:para>- Distinguished name (DN)</maml:para>
+            <maml:para>- Canonical DN</maml:para>
+            <maml:para>- Email address</maml:para>
+            <maml:para>- GUID</maml:para>
+          </maml:description>
+          <command:parameterValue required="true" variableLength="false">RecipientIdParameter</command:parameterValue>
+          <dev:type>
+            <maml:name>RecipientIdParameter</maml:name>
+            <maml:uri />
+          </dev:type>
+          <dev:defaultValue>None</dev:defaultValue>
+        </command:parameter>
+        <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="cf">
+          <maml:name>Confirm</maml:name>
+          <maml:description>
+            <maml:para>The Confirm switch specifies whether to show or hide the confirmation prompt. How this switch affects the cmdlet depends on if the cmdlet requires confirmation before proceeding.</maml:para>
+            <maml:para>- Destructive cmdlets (for example, Remove-* cmdlets) have a built-in pause that forces you to acknowledge the command before proceeding. For these cmdlets, you can skip the confirmation prompt by using this exact syntax: `-Confirm:$false`.</maml:para>
+            <maml:para>- Most other cmdlets (for example, New-\ and Set-\ cmdlets) don't have a built-in pause. For these cmdlets, specifying the Confirm switch without a value introduces a pause that forces you acknowledge the command before proceeding.</maml:para>
+          </maml:description>
+          <dev:type>
+            <maml:name>SwitchParameter</maml:name>
+            <maml:uri />
+          </dev:type>
+          <dev:defaultValue>False</dev:defaultValue>
+        </command:parameter>
+        <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
+          <maml:name>Enabled</maml:name>
+          <maml:description>
+            <maml:para>The Enabled parameter specifies whether the journal rule is enabled or disabled. If the rule is disabled, it isn't applied to any email messages. The default value is $false.</maml:para>
+          </maml:description>
+          <command:parameterValue required="true" variableLength="false">Boolean</command:parameterValue>
+          <dev:type>
+            <maml:name>Boolean</maml:name>
+            <maml:uri />
+          </dev:type>
+          <dev:defaultValue>None</dev:defaultValue>
+        </command:parameter>
+        <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
+          <maml:name>Recipient</maml:name>
+          <maml:description>
+            <maml:para>The Recipient parameter specifies the SMTP address of a mailbox, contact, or distribution group to journal. If you specify a distribution group, all recipients in that distribution group are journaled. All messages sent to or from a recipient are journaled.</maml:para>
+          </maml:description>
+          <command:parameterValue required="true" variableLength="false">SmtpAddress</command:parameterValue>
+          <dev:type>
+            <maml:name>SmtpAddress</maml:name>
+            <maml:uri />
+          </dev:type>
+          <dev:defaultValue>None</dev:defaultValue>
+        </command:parameter>
+        <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
+          <maml:name>Scope</maml:name>
+          <maml:description>
+            <maml:para>The Scope parameter specifies the scope of email messages to which the journal rule is applied. Valid values for this parameter are as follows:</maml:para>
+            <maml:para>- Global: Global rules process all email messages that pass through a Transport service. This includes email messages that were already processed by the external and internal rules. The default value is Global.</maml:para>
+            <maml:para>- Internal: Internal rules process email messages sent and received by recipients in your organization.</maml:para>
+            <maml:para>- External: External rules process email messages sent to recipients or from senders outside your organization.</maml:para>
+          </maml:description>
+          <command:parameterValue required="true" variableLength="false">JournalRuleScope</command:parameterValue>
+          <dev:type>
+            <maml:name>JournalRuleScope</maml:name>
+            <maml:uri />
+          </dev:type>
+          <dev:defaultValue>None</dev:defaultValue>
+        </command:parameter>
+        <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="wi">
+          <maml:name>WhatIf</maml:name>
+          <maml:description>
+            <maml:para>The WhatIf switch simulates the actions of the command. You can use this switch to view the changes that would occur without actually applying those changes. You don't need to specify a value with this switch.</maml:para>
+          </maml:description>
+          <dev:type>
+            <maml:name>SwitchParameter</maml:name>
+            <maml:uri />
+          </dev:type>
+          <dev:defaultValue>False</dev:defaultValue>
+        </command:parameter>
+      </command:syntaxItem>
+    </command:syntax>
+    <command:parameters>
+      <command:parameter required="true" variableLength="true" globbing="false" pipelineInput="False" position="1" aliases="none">
+        <maml:name>Name</maml:name>
+        <maml:description>
+          <maml:para>The Name parameter specifies the name of the journal rule. The name of the rule can be up to 64 characters long.</maml:para>
+        </maml:description>
+        <command:parameterValue required="true" variableLength="false">String</command:parameterValue>
+        <dev:type>
+          <maml:name>String</maml:name>
+          <maml:uri />
+        </dev:type>
+        <dev:defaultValue>None</dev:defaultValue>
+      </command:parameter>
+      <command:parameter required="true" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
+        <maml:name>JournalEmailAddress</maml:name>
+        <maml:description>
+          <maml:para>The JournalEmailAddress parameter specifies a recipient object to which journal reports are sent. You ean use any value that uniquely identifies the recipient. For example:</maml:para>
+          <maml:para>- Name</maml:para>
+          <maml:para>- Alias</maml:para>
+          <maml:para>- Distinguished name (DN)</maml:para>
+          <maml:para>- Canonical DN</maml:para>
+          <maml:para>- Email address</maml:para>
+          <maml:para>- GUID</maml:para>
+        </maml:description>
+        <command:parameterValue required="true" variableLength="false">RecipientIdParameter</command:parameterValue>
+        <dev:type>
+          <maml:name>RecipientIdParameter</maml:name>
+          <maml:uri />
+        </dev:type>
+        <dev:defaultValue>None</dev:defaultValue>
+      </command:parameter>
+      <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="cf">
+        <maml:name>Confirm</maml:name>
+        <maml:description>
+          <maml:para>The Confirm switch specifies whether to show or hide the confirmation prompt. How this switch affects the cmdlet depends on if the cmdlet requires confirmation before proceeding.</maml:para>
+          <maml:para>- Destructive cmdlets (for example, Remove-* cmdlets) have a built-in pause that forces you to acknowledge the command before proceeding. For these cmdlets, you can skip the confirmation prompt by using this exact syntax: `-Confirm:$false`.</maml:para>
+          <maml:para>- Most other cmdlets (for example, New-\ and Set-\ cmdlets) don't have a built-in pause. For these cmdlets, specifying the Confirm switch without a value introduces a pause that forces you acknowledge the command before proceeding.</maml:para>
+        </maml:description>
+        <command:parameterValue required="false" variableLength="false">SwitchParameter</command:parameterValue>
+        <dev:type>
+          <maml:name>SwitchParameter</maml:name>
+          <maml:uri />
+        </dev:type>
+        <dev:defaultValue>False</dev:defaultValue>
+      </command:parameter>
+      <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
+        <maml:name>Enabled</maml:name>
+        <maml:description>
+          <maml:para>The Enabled parameter specifies whether the journal rule is enabled or disabled. If the rule is disabled, it isn't applied to any email messages. The default value is $false.</maml:para>
+        </maml:description>
+        <command:parameterValue required="true" variableLength="false">Boolean</command:parameterValue>
+        <dev:type>
+          <maml:name>Boolean</maml:name>
+          <maml:uri />
+        </dev:type>
+        <dev:defaultValue>None</dev:defaultValue>
+      </command:parameter>
+      <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
+        <maml:name>Recipient</maml:name>
+        <maml:description>
+          <maml:para>The Recipient parameter specifies the SMTP address of a mailbox, contact, or distribution group to journal. If you specify a distribution group, all recipients in that distribution group are journaled. All messages sent to or from a recipient are journaled.</maml:para>
+        </maml:description>
+        <command:parameterValue required="true" variableLength="false">SmtpAddress</command:parameterValue>
+        <dev:type>
+          <maml:name>SmtpAddress</maml:name>
+          <maml:uri />
+        </dev:type>
+        <dev:defaultValue>None</dev:defaultValue>
+      </command:parameter>
+      <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
+        <maml:name>Scope</maml:name>
+        <maml:description>
+          <maml:para>The Scope parameter specifies the scope of email messages to which the journal rule is applied. Valid values for this parameter are as follows:</maml:para>
+          <maml:para>- Global: Global rules process all email messages that pass through a Transport service. This includes email messages that were already processed by the external and internal rules. The default value is Global.</maml:para>
+          <maml:para>- Internal: Internal rules process email messages sent and received by recipients in your organization.</maml:para>
+          <maml:para>- External: External rules process email messages sent to recipients or from senders outside your organization.</maml:para>
+        </maml:description>
+        <command:parameterValue required="true" variableLength="false">JournalRuleScope</command:parameterValue>
+        <dev:type>
+          <maml:name>JournalRuleScope</maml:name>
+          <maml:uri />
+        </dev:type>
+        <dev:defaultValue>None</dev:defaultValue>
+      </command:parameter>
+      <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="wi">
+        <maml:name>WhatIf</maml:name>
+        <maml:description>
+          <maml:para>The WhatIf switch simulates the actions of the command. You can use this switch to view the changes that would occur without actually applying those changes. You don't need to specify a value with this switch.</maml:para>
+        </maml:description>
+        <command:parameterValue required="false" variableLength="false">SwitchParameter</command:parameterValue>
+        <dev:type>
+          <maml:name>SwitchParameter</maml:name>
+          <maml:uri />
+        </dev:type>
+        <dev:defaultValue>False</dev:defaultValue>
+      </command:parameter>
+    </command:parameters>
+    <command:inputTypes>
+      <command:inputType>
+        <dev:type>
+          <maml:name> </maml:name>
+        </dev:type>
+        <maml:description>
+          <maml:para>To see the input types that this cmdlet accepts, see Cmdlet Input and Output Types (https://go.microsoft.com/fwlink/p/?LinkId=616387). If the Input Type field for a cmdlet is blank, the cmdlet doesn't accept input data.</maml:para>
+        </maml:description>
+      </command:inputType>
+    </command:inputTypes>
+    <command:returnValues>
+      <command:returnValue>
+        <dev:type>
+          <maml:name> </maml:name>
+        </dev:type>
+        <maml:description>
+          <maml:para>To see the return types, which are also known as output types, that this cmdlet accepts, see Cmdlet Input and Output Types (https://go.microsoft.com/fwlink/p/?LinkId=616387). If the Output Type field is blank, the cmdlet doesn't return data.</maml:para>
+        </maml:description>
+      </command:returnValue>
+    </command:returnValues>
+    <maml:alertSet>
+      <maml:alert>
+        <maml:para></maml:para>
+      </maml:alert>
+    </maml:alertSet>
+    <command:examples>
+      <command:example>
+        <maml:title>-------------------------- Example 1 --------------------------</maml:title>
+        <dev:code>New-JournalRule -Name "Brokerage Communications" -JournalEmailAddress "Brokers Journal Mailbox" -Scope Global -Recipient brokers@contoso.com -Enabled $true</dev:code>
+        <dev:remarks>
+          <maml:para>This example creates and enables a journal rule. The rule applies to all email messages that pass through the Transport service and contain at least one recipient or sender who is a member of the brokers@contoso.com distribution list.</maml:para>
+        </dev:remarks>
+      </command:example>
+    </command:examples>
+    <command:relatedLinks>
+      <maml:navigationLink>
+        <maml:linkText>Online Version:</maml:linkText>
+        <maml:uri>https://docs.microsoft.com/powershell/module/exchange/new-journalrule</maml:uri>
+      </maml:navigationLink>
+    </command:relatedLinks>
+  </command:command>
+  <command:command xmlns:maml="http://schemas.microsoft.com/maml/2004/10" xmlns:command="http://schemas.microsoft.com/maml/dev/command/2004/10" xmlns:dev="http://schemas.microsoft.com/maml/dev/2004/10" xmlns:MSHelp="http://msdn.microsoft.com/mshelp">
+    <command:details>
+      <command:name>New-OrganizationSegment</command:name>
+      <command:verb>New</command:verb>
+      <command:noun>OrganizationSegment</command:noun>
+      <maml:description>
+        <maml:para>This cmdlet is available only in Security &amp; Compliance Center PowerShell. For more information, see Security &amp; Compliance Center PowerShell (https://docs.microsoft.com/powershell/exchange/scc-powershell).</maml:para>
+        <maml:para>Use the New-OrganizationSegment cmdlet to create organization segments for use with information barrier policies in the Security &amp; Compliance Center. Organization Segments are not in effect until you apply information barrier policies (https://docs.microsoft.com/microsoft-365/compliance/information-barriers-policies#part-3-apply-information-barrier-policies).</maml:para>
+        <maml:para>For information about the parameter sets in the Syntax section below, see Exchange cmdlet syntax (https://docs.microsoft.com/powershell/exchange/exchange-cmdlet-syntax).</maml:para>
+      </maml:description>
+    </command:details>
+    <maml:description>
+      <maml:para>For more information about the filterable attributes that you can use to define segments, see Attributes for information barrier policies (https://docs.microsoft.com/microsoft-365/compliance/information-barriers-attributes).</maml:para>
+      <maml:para>You need to be assigned permissions in the Security &amp; Compliance Center before you can use this cmdlet. For more information, see Permissions in the Security &amp; Compliance Center (https://docs.microsoft.com/microsoft-365/security/office-365-security/permissions-in-the-security-and-compliance-center).</maml:para>
+    </maml:description>
+    <command:syntax>
+      <command:syntaxItem>
+        <maml:name>New-OrganizationSegment</maml:name>
+        <command:parameter required="true" variableLength="true" globbing="false" pipelineInput="False" position="0" aliases="none">
+          <maml:name>Name</maml:name>
+          <maml:description>
+            <maml:para>The Name parameter specifies the unique name for the organization segment. The maximum length is 64 characters. If the value contains spaces, enclose the value in quotation marks (").</maml:para>
+          </maml:description>
+          <command:parameterValue required="true" variableLength="false">String</command:parameterValue>
+          <dev:type>
+            <maml:name>String</maml:name>
+            <maml:uri />
+          </dev:type>
+          <dev:defaultValue>None</dev:defaultValue>
+        </command:parameter>
+        <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="cf">
+          <maml:name>Confirm</maml:name>
+          <maml:description>
+            <maml:para>The Confirm switch specifies whether to show or hide the confirmation prompt. How this switch affects the cmdlet depends on if the cmdlet requires confirmation before proceeding.</maml:para>
+            <maml:para>- Destructive cmdlets (for example, Remove-* cmdlets) have a built-in pause that forces you to acknowledge the command before proceeding. For these cmdlets, you can skip the confirmation prompt by using this exact syntax: `-Confirm:$false`.</maml:para>
+            <maml:para>- Most other cmdlets (for example, New-\ and Set-\ cmdlets) don't have a built-in pause. For these cmdlets, specifying the Confirm switch without a value introduces a pause that forces you acknowledge the command before proceeding.</maml:para>
+          </maml:description>
+          <dev:type>
+            <maml:name>SwitchParameter</maml:name>
+            <maml:uri />
+          </dev:type>
+          <dev:defaultValue>False</dev:defaultValue>
+        </command:parameter>
+        <command:parameter required="true" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
+          <maml:name>UserGroupFilter</maml:name>
+          <maml:description>
+            <maml:para>The UserGroupFilter parameter uses OPath filter syntax to specify the members of the organization segment. The syntax is `"Property -ComparisonOperator 'Value'"` (for example, `"MemberOf -eq 'Engineering Department'"` or `"ExtensionAttribute1 -eq 'DayTrader'"`).</maml:para>
+            <maml:para>- Enclose the whole OPath filter in double quotation marks " ". If the filter contains system values (for example, `$true`, `$false`, or `$null`), use single quotation marks ' ' instead. Although this parameter is a string (not a system block), you can also use braces { }, but only if the filter doesn't contain variables.</maml:para>
+            <maml:para>- Property is a filterable property. For more information, see Attributes for information barrier policies (https://docs.microsoft.com/microsoft-365/compliance/information-barriers-attributes). - ComparisonOperator is an OPath comparison operator (for example `-eq` for equals and `-like` for string comparison). For more information about comparison operators, see about_Comparison_Operators (https://docs.microsoft.com/powershell/module/microsoft.powershell.core/about/about_comparison_operators). - Value is the property value to search for. Enclose text values and variables in single quotation marks (`'Value'` or `'$Variable'`). If a variable value contains single quotation marks, you need to identify (escape) the single quotation marks to expand the variable correctly. For example, instead of `'$User'`, use `'$($User -Replace "'","''")'`. Don't enclose integers or system values (for example, `500`, `$true`, `$false`, or `$null`).</maml:para>
+            <maml:para>For detailed information about OPath filters in Exchange, see Additional OPATH syntax information (https://docs.microsoft.com/powershell/exchange/recipient-filters#additional-opath-syntax-information).</maml:para>
+            <maml:para>Use the same property for all of your segments, and verify that your segments don't overlap (a user must be assigned to only one segment).</maml:para>
+          </maml:description>
+          <command:parameterValue required="true" variableLength="false">String</command:parameterValue>
+          <dev:type>
+            <maml:name>String</maml:name>
+            <maml:uri />
+          </dev:type>
+          <dev:defaultValue>None</dev:defaultValue>
+        </command:parameter>
+        <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="wi">
+          <maml:name>WhatIf</maml:name>
+          <maml:description>
+            <maml:para>The WhatIf switch doesn't work in Security &amp; Compliance Center PowerShell.</maml:para>
+          </maml:description>
+          <dev:type>
+            <maml:name>SwitchParameter</maml:name>
+            <maml:uri />
+          </dev:type>
+          <dev:defaultValue>False</dev:defaultValue>
+        </command:parameter>
+      </command:syntaxItem>
+    </command:syntax>
+    <command:parameters>
+      <command:parameter required="true" variableLength="true" globbing="false" pipelineInput="False" position="0" aliases="none">
+        <maml:name>Name</maml:name>
+        <maml:description>
+          <maml:para>The Name parameter specifies the unique name for the organization segment. The maximum length is 64 characters. If the value contains spaces, enclose the value in quotation marks (").</maml:para>
+        </maml:description>
+        <command:parameterValue required="true" variableLength="false">String</command:parameterValue>
+        <dev:type>
+          <maml:name>String</maml:name>
+          <maml:uri />
+        </dev:type>
+        <dev:defaultValue>None</dev:defaultValue>
+      </command:parameter>
+      <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="cf">
+        <maml:name>Confirm</maml:name>
+        <maml:description>
+          <maml:para>The Confirm switch specifies whether to show or hide the confirmation prompt. How this switch affects the cmdlet depends on if the cmdlet requires confirmation before proceeding.</maml:para>
+          <maml:para>- Destructive cmdlets (for example, Remove-* cmdlets) have a built-in pause that forces you to acknowledge the command before proceeding. For these cmdlets, you can skip the confirmation prompt by using this exact syntax: `-Confirm:$false`.</maml:para>
+          <maml:para>- Most other cmdlets (for example, New-\ and Set-\ cmdlets) don't have a built-in pause. For these cmdlets, specifying the Confirm switch without a value introduces a pause that forces you acknowledge the command before proceeding.</maml:para>
+        </maml:description>
+        <command:parameterValue required="false" variableLength="false">SwitchParameter</command:parameterValue>
+        <dev:type>
+          <maml:name>SwitchParameter</maml:name>
+          <maml:uri />
+        </dev:type>
+        <dev:defaultValue>False</dev:defaultValue>
+      </command:parameter>
+      <command:parameter required="true" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
+        <maml:name>UserGroupFilter</maml:name>
+        <maml:description>
+          <maml:para>The UserGroupFilter parameter uses OPath filter syntax to specify the members of the organization segment. The syntax is `"Property -ComparisonOperator 'Value'"` (for example, `"MemberOf -eq 'Engineering Department'"` or `"ExtensionAttribute1 -eq 'DayTrader'"`).</maml:para>
+          <maml:para>- Enclose the whole OPath filter in double quotation marks " ". If the filter contains system values (for example, `$true`, `$false`, or `$null`), use single quotation marks ' ' instead. Although this parameter is a string (not a system block), you can also use braces { }, but only if the filter doesn't contain variables.</maml:para>
+          <maml:para>- Property is a filterable property. For more information, see Attributes for information barrier policies (https://docs.microsoft.com/microsoft-365/compliance/information-barriers-attributes). - ComparisonOperator is an OPath comparison operator (for example `-eq` for equals and `-like` for string comparison). For more information about comparison operators, see about_Comparison_Operators (https://docs.microsoft.com/powershell/module/microsoft.powershell.core/about/about_comparison_operators). - Value is the property value to search for. Enclose text values and variables in single quotation marks (`'Value'` or `'$Variable'`). If a variable value contains single quotation marks, you need to identify (escape) the single quotation marks to expand the variable correctly. For example, instead of `'$User'`, use `'$($User -Replace "'","''")'`. Don't enclose integers or system values (for example, `500`, `$true`, `$false`, or `$null`).</maml:para>
+          <maml:para>For detailed information about OPath filters in Exchange, see Additional OPATH syntax information (https://docs.microsoft.com/powershell/exchange/recipient-filters#additional-opath-syntax-information).</maml:para>
+          <maml:para>Use the same property for all of your segments, and verify that your segments don't overlap (a user must be assigned to only one segment).</maml:para>
+        </maml:description>
+        <command:parameterValue required="true" variableLength="false">String</command:parameterValue>
+        <dev:type>
+          <maml:name>String</maml:name>
+          <maml:uri />
+        </dev:type>
+        <dev:defaultValue>None</dev:defaultValue>
+      </command:parameter>
+      <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="wi">
+        <maml:name>WhatIf</maml:name>
+        <maml:description>
+          <maml:para>The WhatIf switch doesn't work in Security &amp; Compliance Center PowerShell.</maml:para>
+        </maml:description>
+        <command:parameterValue required="false" variableLength="false">SwitchParameter</command:parameterValue>
+        <dev:type>
+          <maml:name>SwitchParameter</maml:name>
+          <maml:uri />
+        </dev:type>
+        <dev:defaultValue>False</dev:defaultValue>
+      </command:parameter>
+    </command:parameters>
+    <command:inputTypes>
+      <command:inputType>
+        <dev:type>
+          <maml:name> </maml:name>
+        </dev:type>
+        <maml:description>
+          <maml:para></maml:para>
+        </maml:description>
+      </command:inputType>
+    </command:inputTypes>
+    <command:returnValues>
+      <command:returnValue>
+        <dev:type>
+          <maml:name> </maml:name>
+        </dev:type>
+        <maml:description>
+          <maml:para></maml:para>
+        </maml:description>
+      </command:returnValue>
+    </command:returnValues>
+    <maml:alertSet>
+      <maml:alert>
+        <maml:para></maml:para>
+      </maml:alert>
+    </maml:alertSet>
+    <command:examples>
+      <command:example>
+        <maml:title>-------------------------- Example 1 --------------------------</maml:title>
+        <dev:code>New-OrganizationSegment -Name "HR" -UserGroupFilter "Department -eq 'HR'"</dev:code>
+        <dev:remarks>
+          <maml:para>In this example, a segment called HR is defined using HR, a value in the Department attribute.</maml:para>
+        </dev:remarks>
+      </command:example>
+      <command:example>
+        <maml:title>-------------------------- Example 2 --------------------------</maml:title>
+        <dev:code>New-OrganizationSegment -Name "NotSales" -UserGroupFilter "Department -ne 'Sales'"</dev:code>
+        <dev:remarks>
+          <maml:para>In this example, we defined a segment called NotSales that includes everyone who is not in Sales. The "-ne" portion of the cmdlet refers to "not equals."</maml:para>
+        </dev:remarks>
+      </command:example>
+      <command:example>
+        <maml:title>-------------------------- Example 3 --------------------------</maml:title>
+        <dev:code>New-OrganizationSegment -Name "LocalFTE" -UserGroupFilter "Location -eq 'Local'" -and "Position -ne 'Temporary'"</dev:code>
+        <dev:remarks>
+          <maml:para>In this example, we defined a segment called LocalFTE that includes people who are locally located and whose positions are not listed as Temporary.</maml:para>
+        </dev:remarks>
+      </command:example>
+    </command:examples>
+    <command:relatedLinks>
+      <maml:navigationLink>
+        <maml:linkText>Online Version:</maml:linkText>
+        <maml:uri>https://docs.microsoft.com/powershell/module/exchange/new-organizationsegment</maml:uri>
+      </maml:navigationLink>
+      <maml:navigationLink>
+        <maml:linkText>Attributes for information barrier policies</maml:linkText>
+        <maml:uri>https://docs.microsoft.com/microsoft-365/compliance/information-barriers-attributes</maml:uri>
+      </maml:navigationLink>
+      <maml:navigationLink>
+        <maml:linkText>Define policies for information barriers</maml:linkText>
+        <maml:uri>https://docs.microsoft.com/microsoft-365/compliance/information-barriers-policies</maml:uri>
+      </maml:navigationLink>
+    </command:relatedLinks>
+  </command:command>
+  <command:command xmlns:maml="http://schemas.microsoft.com/maml/2004/10" xmlns:command="http://schemas.microsoft.com/maml/dev/command/2004/10" xmlns:dev="http://schemas.microsoft.com/maml/dev/2004/10" xmlns:MSHelp="http://msdn.microsoft.com/mshelp">
+    <command:details>
+      <command:name>Remove-JournalRule</command:name>
+      <command:verb>Remove</command:verb>
+      <command:noun>JournalRule</command:noun>
+      <maml:description>
+        <maml:para>This cmdlet is available in on-premises Exchange and in the cloud-based service. Some parameters and settings may be exclusive to one environment or the other.</maml:para>
+        <maml:para>Use the Remove-JournalRule cmdlet to remove an existing journal rule.</maml:para>
+        <maml:para>For information about the parameter sets in the Syntax section below, see Exchange cmdlet syntax (https://docs.microsoft.com/powershell/exchange/exchange-cmdlet-syntax).</maml:para>
+      </maml:description>
+    </command:details>
+    <maml:description>
+      <maml:para>The Remove-JournalRule cmdlet removes the specified journal rule from Active Directory.</maml:para>
+      <maml:para>You need to be assigned permissions before you can run this cmdlet. Although this topic lists all parameters for the cmdlet, you may not have access to some parameters if they're not included in the permissions assigned to you. To find the permissions required to run any cmdlet or parameter in your organization, see Find the permissions required to run any Exchange cmdlet (https://docs.microsoft.com/powershell/exchange/find-exchange-cmdlet-permissions).</maml:para>
+    </maml:description>
+    <command:syntax>
+      <command:syntaxItem>
+        <maml:name>Remove-JournalRule</maml:name>
+        <command:parameter required="true" variableLength="true" globbing="false" pipelineInput="True" position="1" aliases="none">
+          <maml:name>Identity</maml:name>
+          <maml:description>
+            <maml:para>The Identity parameter specifies the rule you want to remove. Enter either name or the GUID of the journal rule. You can omit the parameter label.</maml:para>
+          </maml:description>
+          <command:parameterValue required="true" variableLength="false">RuleIdParameter</command:parameterValue>
+          <dev:type>
+            <maml:name>RuleIdParameter</maml:name>
+            <maml:uri />
+          </dev:type>
+          <dev:defaultValue>None</dev:defaultValue>
+        </command:parameter>
+        <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="cf">
+          <maml:name>Confirm</maml:name>
+          <maml:description>
+            <maml:para>The Confirm switch specifies whether to show or hide the confirmation prompt. How this switch affects the cmdlet depends on if the cmdlet requires confirmation before proceeding.</maml:para>
+            <maml:para>- Destructive cmdlets (for example, Remove-* cmdlets) have a built-in pause that forces you to acknowledge the command before proceeding. For these cmdlets, you can skip the confirmation prompt by using this exact syntax: `-Confirm:$false`.</maml:para>
+            <maml:para>- Most other cmdlets (for example, New-\ and Set-\ cmdlets) don't have a built-in pause. For these cmdlets, specifying the Confirm switch without a value introduces a pause that forces you acknowledge the command before proceeding.</maml:para>
+          </maml:description>
+          <dev:type>
+            <maml:name>SwitchParameter</maml:name>
+            <maml:uri />
+          </dev:type>
+          <dev:defaultValue>False</dev:defaultValue>
+        </command:parameter>
+        <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="wi">
+          <maml:name>WhatIf</maml:name>
+          <maml:description>
+            <maml:para>The WhatIf switch simulates the actions of the command. You can use this switch to view the changes that would occur without actually applying those changes. You don't need to specify a value with this switch.</maml:para>
+          </maml:description>
+          <dev:type>
+            <maml:name>SwitchParameter</maml:name>
+            <maml:uri />
+          </dev:type>
+          <dev:defaultValue>False</dev:defaultValue>
+        </command:parameter>
+      </command:syntaxItem>
+    </command:syntax>
+    <command:parameters>
+      <command:parameter required="true" variableLength="true" globbing="false" pipelineInput="True" position="1" aliases="none">
+        <maml:name>Identity</maml:name>
+        <maml:description>
+          <maml:para>The Identity parameter specifies the rule you want to remove. Enter either name or the GUID of the journal rule. You can omit the parameter label.</maml:para>
+        </maml:description>
+        <command:parameterValue required="true" variableLength="false">RuleIdParameter</command:parameterValue>
+        <dev:type>
+          <maml:name>RuleIdParameter</maml:name>
+          <maml:uri />
+        </dev:type>
+        <dev:defaultValue>None</dev:defaultValue>
+      </command:parameter>
+      <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="cf">
+        <maml:name>Confirm</maml:name>
+        <maml:description>
+          <maml:para>The Confirm switch specifies whether to show or hide the confirmation prompt. How this switch affects the cmdlet depends on if the cmdlet requires confirmation before proceeding.</maml:para>
+          <maml:para>- Destructive cmdlets (for example, Remove-* cmdlets) have a built-in pause that forces you to acknowledge the command before proceeding. For these cmdlets, you can skip the confirmation prompt by using this exact syntax: `-Confirm:$false`.</maml:para>
+          <maml:para>- Most other cmdlets (for example, New-\ and Set-\ cmdlets) don't have a built-in pause. For these cmdlets, specifying the Confirm switch without a value introduces a pause that forces you acknowledge the command before proceeding.</maml:para>
+        </maml:description>
+        <command:parameterValue required="false" variableLength="false">SwitchParameter</command:parameterValue>
+        <dev:type>
+          <maml:name>SwitchParameter</maml:name>
+          <maml:uri />
+        </dev:type>
+        <dev:defaultValue>False</dev:defaultValue>
+      </command:parameter>
+      <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="wi">
+        <maml:name>WhatIf</maml:name>
+        <maml:description>
+          <maml:para>The WhatIf switch simulates the actions of the command. You can use this switch to view the changes that would occur without actually applying those changes. You don't need to specify a value with this switch.</maml:para>
+        </maml:description>
+        <command:parameterValue required="false" variableLength="false">SwitchParameter</command:parameterValue>
+        <dev:type>
+          <maml:name>SwitchParameter</maml:name>
+          <maml:uri />
+        </dev:type>
+        <dev:defaultValue>False</dev:defaultValue>
+      </command:parameter>
+    </command:parameters>
+    <command:inputTypes>
+      <command:inputType>
+        <dev:type>
+          <maml:name> </maml:name>
+        </dev:type>
+        <maml:description>
+          <maml:para>To see the input types that this cmdlet accepts, see Cmdlet Input and Output Types (https://go.microsoft.com/fwlink/p/?LinkId=616387). If the Input Type field for a cmdlet is blank, the cmdlet doesn't accept input data.</maml:para>
+        </maml:description>
+      </command:inputType>
+    </command:inputTypes>
+    <command:returnValues>
+      <command:returnValue>
+        <dev:type>
+          <maml:name> </maml:name>
+        </dev:type>
+        <maml:description>
+          <maml:para>To see the return types, which are also known as output types, that this cmdlet accepts, see Cmdlet Input and Output Types (https://go.microsoft.com/fwlink/p/?LinkId=616387). If the Output Type field is blank, the cmdlet doesn't return data.</maml:para>
+        </maml:description>
+      </command:returnValue>
+    </command:returnValues>
+    <maml:alertSet>
+      <maml:alert>
+        <maml:para></maml:para>
+      </maml:alert>
+    </maml:alertSet>
+    <command:examples>
+      <command:example>
+        <maml:title>-------------------------- Example 1 --------------------------</maml:title>
+        <dev:code>Remove-JournalRule "Brokerage Communications"</dev:code>
+        <dev:remarks>
+          <maml:para>This example removes the journal rule Brokerage Communications that's no longer needed.</maml:para>
+        </dev:remarks>
+      </command:example>
+    </command:examples>
+    <command:relatedLinks>
+      <maml:navigationLink>
+        <maml:linkText>Online Version:</maml:linkText>
+        <maml:uri>https://docs.microsoft.com/powershell/module/exchange/remove-journalrule</maml:uri>
+      </maml:navigationLink>
+    </command:relatedLinks>
+  </command:command>
+  <command:command xmlns:maml="http://schemas.microsoft.com/maml/2004/10" xmlns:command="http://schemas.microsoft.com/maml/dev/command/2004/10" xmlns:dev="http://schemas.microsoft.com/maml/dev/2004/10" xmlns:MSHelp="http://msdn.microsoft.com/mshelp">
+    <command:details>
+      <command:name>Remove-OrganizationSegment</command:name>
+      <command:verb>Remove</command:verb>
+      <command:noun>OrganizationSegment</command:noun>
+      <maml:description>
+        <maml:para>This cmdlet is available only in Security &amp; Compliance Center PowerShell. For more information, see Security &amp; Compliance Center PowerShell (https://docs.microsoft.com/powershell/exchange/scc-powershell).</maml:para>
+        <maml:para>Use the Remove-OrganizationSegment cmdlet to remove organization segments from the Security &amp; Compliance Center..</maml:para>
+        <maml:para>For information about the parameter sets in the Syntax section below, see Exchange cmdlet syntax (https://docs.microsoft.com/powershell/exchange/exchange-cmdlet-syntax).</maml:para>
+      </maml:description>
+    </command:details>
+    <maml:description>
+      <maml:para>You need to be assigned permissions in the Security &amp; Compliance Center before you can use this cmdlet. For more information, see Permissions in the Security &amp; Compliance Center (https://docs.microsoft.com/microsoft-365/security/office-365-security/permissions-in-the-security-and-compliance-center).</maml:para>
+    </maml:description>
+    <command:syntax>
+      <command:syntaxItem>
+        <maml:name>Remove-OrganizationSegment</maml:name>
+        <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="True (ByPropertyName, ByValue)" position="0" aliases="none">
+          <maml:name>Identity</maml:name>
+          <maml:description>
+            <maml:para>The Identity parameter specifies the organization segment that you want to remove. You can use any value that uniquely identifies the segment. For example:</maml:para>
+            <maml:para>- Name</maml:para>
+            <maml:para>- Distinguished name (DN)</maml:para>
+            <maml:para>- GUID</maml:para>
+          </maml:description>
+          <command:parameterValue required="true" variableLength="false">PolicyIdParameter</command:parameterValue>
+          <dev:type>
+            <maml:name>PolicyIdParameter</maml:name>
+            <maml:uri />
+          </dev:type>
+          <dev:defaultValue>None</dev:defaultValue>
+        </command:parameter>
+        <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="cf">
+          <maml:name>Confirm</maml:name>
+          <maml:description>
+            <maml:para>The Confirm switch specifies whether to show or hide the confirmation prompt. How this switch affects the cmdlet depends on if the cmdlet requires confirmation before proceeding.</maml:para>
+            <maml:para>- Destructive cmdlets (for example, Remove-* cmdlets) have a built-in pause that forces you to acknowledge the command before proceeding. For these cmdlets, you can skip the confirmation prompt by using this exact syntax: `-Confirm:$false`.</maml:para>
+            <maml:para>- Most other cmdlets (for example, New-\ and Set-\ cmdlets) don't have a built-in pause. For these cmdlets, specifying the Confirm switch without a value introduces a pause that forces you acknowledge the command before proceeding.</maml:para>
+          </maml:description>
+          <dev:type>
+            <maml:name>SwitchParameter</maml:name>
+            <maml:uri />
+          </dev:type>
+          <dev:defaultValue>False</dev:defaultValue>
+        </command:parameter>
+        <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="wi">
+          <maml:name>WhatIf</maml:name>
+          <maml:description>
+            <maml:para>The WhatIf switch doesn't work in Security &amp; Compliance Center PowerShell.</maml:para>
+          </maml:description>
+          <dev:type>
+            <maml:name>SwitchParameter</maml:name>
+            <maml:uri />
+          </dev:type>
+          <dev:defaultValue>False</dev:defaultValue>
+        </command:parameter>
+      </command:syntaxItem>
+    </command:syntax>
+    <command:parameters>
+      <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="True (ByPropertyName, ByValue)" position="0" aliases="none">
+        <maml:name>Identity</maml:name>
+        <maml:description>
+          <maml:para>The Identity parameter specifies the organization segment that you want to remove. You can use any value that uniquely identifies the segment. For example:</maml:para>
+          <maml:para>- Name</maml:para>
+          <maml:para>- Distinguished name (DN)</maml:para>
+          <maml:para>- GUID</maml:para>
+        </maml:description>
+        <command:parameterValue required="true" variableLength="false">PolicyIdParameter</command:parameterValue>
+        <dev:type>
+          <maml:name>PolicyIdParameter</maml:name>
+          <maml:uri />
+        </dev:type>
+        <dev:defaultValue>None</dev:defaultValue>
+      </command:parameter>
+      <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="cf">
+        <maml:name>Confirm</maml:name>
+        <maml:description>
+          <maml:para>The Confirm switch specifies whether to show or hide the confirmation prompt. How this switch affects the cmdlet depends on if the cmdlet requires confirmation before proceeding.</maml:para>
+          <maml:para>- Destructive cmdlets (for example, Remove-* cmdlets) have a built-in pause that forces you to acknowledge the command before proceeding. For these cmdlets, you can skip the confirmation prompt by using this exact syntax: `-Confirm:$false`.</maml:para>
+          <maml:para>- Most other cmdlets (for example, New-\ and Set-\ cmdlets) don't have a built-in pause. For these cmdlets, specifying the Confirm switch without a value introduces a pause that forces you acknowledge the command before proceeding.</maml:para>
+        </maml:description>
+        <command:parameterValue required="false" variableLength="false">SwitchParameter</command:parameterValue>
+        <dev:type>
+          <maml:name>SwitchParameter</maml:name>
+          <maml:uri />
+        </dev:type>
+        <dev:defaultValue>False</dev:defaultValue>
+      </command:parameter>
+      <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="wi">
+        <maml:name>WhatIf</maml:name>
+        <maml:description>
+          <maml:para>The WhatIf switch doesn't work in Security &amp; Compliance Center PowerShell.</maml:para>
+        </maml:description>
+        <command:parameterValue required="false" variableLength="false">SwitchParameter</command:parameterValue>
+        <dev:type>
+          <maml:name>SwitchParameter</maml:name>
+          <maml:uri />
+        </dev:type>
+        <dev:defaultValue>False</dev:defaultValue>
+      </command:parameter>
+    </command:parameters>
+    <command:inputTypes>
+      <command:inputType>
+        <dev:type>
+          <maml:name> </maml:name>
+        </dev:type>
+        <maml:description>
+          <maml:para></maml:para>
+        </maml:description>
+      </command:inputType>
+    </command:inputTypes>
+    <command:returnValues>
+      <command:returnValue>
+        <dev:type>
+          <maml:name> </maml:name>
+        </dev:type>
+        <maml:description>
+          <maml:para></maml:para>
+        </maml:description>
+      </command:returnValue>
+    </command:returnValues>
+    <maml:alertSet>
+      <maml:alert>
+        <maml:para></maml:para>
+      </maml:alert>
+    </maml:alertSet>
+    <command:examples>
+      <command:example>
+        <maml:title>-------------------------- Example 1 --------------------------</maml:title>
+        <dev:code>Remove-OrganizationSegment -Identity "Engineering Group"</dev:code>
+        <dev:remarks>
+          <maml:para>This example removes the organization segment named Engineering Group.</maml:para>
+        </dev:remarks>
+      </command:example>
+    </command:examples>
+    <command:relatedLinks>
+      <maml:navigationLink>
+        <maml:linkText>Online Version:</maml:linkText>
+        <maml:uri>https://docs.microsoft.com/powershell/module/exchange/remove-organizationsegment</maml:uri>
+      </maml:navigationLink>
+      <maml:navigationLink>
+        <maml:linkText>Attributes for information barrier policies</maml:linkText>
+        <maml:uri>https://docs.microsoft.com/microsoft-365/compliance/information-barriers-attributes</maml:uri>
+      </maml:navigationLink>
+      <maml:navigationLink>
+        <maml:linkText>Define policies for information barriers</maml:linkText>
+        <maml:uri>https://docs.microsoft.com/microsoft-365/compliance/information-barriers-policies</maml:uri>
+      </maml:navigationLink>
+      <maml:navigationLink>
+        <maml:linkText>New-InformationBarrierPolicy</maml:linkText>
+        <maml:uri>https://docs.microsoft.com/powershell/module/exchange/new-informationbarrierpolicy</maml:uri>
+      </maml:navigationLink>
+    </command:relatedLinks>
+  </command:command>
+  <command:command xmlns:maml="http://schemas.microsoft.com/maml/2004/10" xmlns:command="http://schemas.microsoft.com/maml/dev/command/2004/10" xmlns:dev="http://schemas.microsoft.com/maml/dev/2004/10" xmlns:MSHelp="http://msdn.microsoft.com/mshelp">
+    <command:details>
+      <command:name>Set-IRMConfiguration</command:name>
+      <command:verb>Set</command:verb>
+      <command:noun>IRMConfiguration</command:noun>
+      <maml:description>
+        <maml:para>This cmdlet is available in on-premises Exchange and in the cloud-based service. Some parameters and settings may be exclusive to one environment or the other.</maml:para>
+        <maml:para>Use the Set-IRMConfiguration cmdlet to configure Information Rights Management (IRM) features on your organization.</maml:para>
+        <maml:para>Configuring and using IRM features in an on-premises Exchange organization requires Active Directory Rights Management Services (AD RMS).</maml:para>
+        <maml:para>For information about the parameter sets in the Syntax section below, see Exchange cmdlet syntax (https://docs.microsoft.com/powershell/exchange/exchange-cmdlet-syntax).</maml:para>
+      </maml:description>
+    </command:details>
+    <maml:description>
+      <maml:para>IRM requires the use of an on-premises AD RMS server or the ILS service. IRM features can be selectively enabled or disabled.</maml:para>
+      <maml:para>You need to be assigned permissions before you can run this cmdlet. Although this topic lists all parameters for the cmdlet, you may not have access to some parameters if they're not included in the permissions assigned to you. To find the permissions required to run any cmdlet or parameter in your organization, see Find the permissions required to run any Exchange cmdlet (https://docs.microsoft.com/powershell/exchange/find-exchange-cmdlet-permissions).</maml:para>
+    </maml:description>
+    <command:syntax>
+      <command:syntaxItem>
+        <maml:name>Set-IRMConfiguration</maml:name>
+        <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="True (ByPropertyName, ByValue)" position="named" aliases="none">
+          <maml:name>Identity</maml:name>
+          <maml:description>
+            <maml:para>This parameter is available only in the cloud-based service.</maml:para>
+            <maml:para>The Identity parameter specifies the organization's IRM configuration object to modify. The valid value for this parameter is "ControlPoint Configuration".</maml:para>
+          </maml:description>
+          <command:parameterValue required="true" variableLength="false">OrganizationIdParameter</command:parameterValue>
+          <dev:type>
+            <maml:name>OrganizationIdParameter</maml:name>
+            <maml:uri />
+          </dev:type>
+          <dev:defaultValue>None</dev:defaultValue>
+        </command:parameter>
+        <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
+          <maml:name>AutomaticServiceUpdateEnabled</maml:name>
+          <maml:description>
+            <maml:para>This parameter is available only in the cloud-based service.</maml:para>
+            <maml:para>The AutomaticServiceUpdateEnabled parameter specifies whether to allow the automatic addition of new features within Azure Information Protection for your cloud-based organization. Valid values are:</maml:para>
+            <maml:para>- $true: New Azure Information Protection features announced through Microsoft 365 message center will be enabled automatically in your cloud-based organization. This is the default value.</maml:para>
+            <maml:para>- $false: Prevents new Azure Information Protection features from automatically being introduced into your tenant organization.</maml:para>
+          </maml:description>
+          <command:parameterValue required="true" variableLength="false">Boolean</command:parameterValue>
+          <dev:type>
+            <maml:name>Boolean</maml:name>
+            <maml:uri />
+          </dev:type>
+          <dev:defaultValue>None</dev:defaultValue>
+        </command:parameter>
+        <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
+          <maml:name>AzureRMSLicensingEnabled</maml:name>
+          <maml:description>
+            <maml:para>This parameter is available only in the cloud-based service.</maml:para>
+            <maml:para>The AzureRMSLicensingEnabled parameter specifies whether the Exchange Online organization can to connect directly to Azure Rights Management. Valid values are:</maml:para>
+            <maml:para>- $true: The Exchange Online organization can connect directly to Azure Rights Management. This enables Office 365 Message Encryption.</maml:para>
+            <maml:para>- $false: The Exchange Online organization can't connect directly to Azure Rights Management.</maml:para>
+          </maml:description>
+          <command:parameterValue required="true" variableLength="false">Boolean</command:parameterValue>
+          <dev:type>
+            <maml:name>Boolean</maml:name>
+            <maml:uri />
+          </dev:type>
+          <dev:defaultValue>None</dev:defaultValue>
+        </command:parameter>
+        <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="cf">
+          <maml:name>Confirm</maml:name>
+          <maml:description>
+            <maml:para>The Confirm switch specifies whether to show or hide the confirmation prompt. How this switch affects the cmdlet depends on if the cmdlet requires confirmation before proceeding.</maml:para>
+            <maml:para>- Destructive cmdlets (for example, Remove-* cmdlets) have a built-in pause that forces you to acknowledge the command before proceeding. For these cmdlets, you can skip the confirmation prompt by using this exact syntax: `-Confirm:$false`.</maml:para>
+            <maml:para>- Most other cmdlets (for example, New-\ and Set-\ cmdlets) don't have a built-in pause. For these cmdlets, specifying the Confirm switch without a value introduces a pause that forces you acknowledge the command before proceeding.</maml:para>
+          </maml:description>
+          <dev:type>
+            <maml:name>SwitchParameter</maml:name>
+            <maml:uri />
+          </dev:type>
+          <dev:defaultValue>False</dev:defaultValue>
+        </command:parameter>
+        <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
+          <maml:name>DecryptAttachmentForEncryptOnly</maml:name>
+          <maml:description>
+            <maml:para>This parameter is available only in the cloud-based service.</maml:para>
+            <maml:para>The DecryptAttachmentForEncryptOnly parameter specifies whether mail recipients have unrestricted rights on the attachment or not for Encrypt-only mails sent using new Office 365 Message Encryption capabilities. Valid values are:</maml:para>
+            <maml:para>- $true: The recipients will have unrestricted rights on attachments sent using Encrypt-Only policy.</maml:para>
+            <maml:para>- $false: The recipients will not have unrestricted rights on attachments sent using Encrypt-Only policy.</maml:para>
+            <maml:para></maml:para>
+            <maml:para>This parameter replaces the deprecated DecryptAttachmentFromPortal parameter.</maml:para>
+          </maml:description>
+          <command:parameterValue required="true" variableLength="false">Boolean</command:parameterValue>
+          <dev:type>
+            <maml:name>Boolean</maml:name>
+            <maml:uri />
+          </dev:type>
+          <dev:defaultValue>None</dev:defaultValue>
+        </command:parameter>
+        <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
+          <maml:name>EDiscoverySuperUserEnabled</maml:name>
+          <maml:description>
+            <maml:para>The EDiscoverySuperUserEnabled parameter specifies whether members of the Discovery Management role group can access IRM-protected messages in a discovery mailbox that were returned by a discovery search. Valid values are:</maml:para>
+            <maml:para>- $true: Members of the Discovery Management role group can access IRM-protected messages in discovery mailboxes.</maml:para>
+            <maml:para>- $false: Members of the Discovery Management role group can't access IRM-protected messages in discovery mailboxes.</maml:para>
+            <maml:para></maml:para>
+            <maml:para>For more information about In-Place eDiscovery and IRM-protected messages, see In-Place eDiscovery in Exchange Server (https://docs.microsoft.com/Exchange/policy-and-compliance/ediscovery/ediscovery).</maml:para>
+          </maml:description>
+          <command:parameterValue required="true" variableLength="false">Boolean</command:parameterValue>
+          <dev:type>
+            <maml:name>Boolean</maml:name>
+            <maml:uri />
+          </dev:type>
+          <dev:defaultValue>None</dev:defaultValue>
+        </command:parameter>
+        <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
+          <maml:name>EnablePdfEncryption</maml:name>
+          <maml:description>
+            <maml:para>This parameter is available only in the cloud-based service.</maml:para>
+            <maml:para>The EnablePdfEncryption parameter specifies whether to enable the encryption of PDF attachments using Office 365 Message Encryption (OME). Valid values are:</maml:para>
+            <maml:para>- $true: Messages that contain PDF attachments can be encrypted.</maml:para>
+            <maml:para>- $false: Messages that contain PDF attachments can't be encrypted.</maml:para>
+          </maml:description>
+          <command:parameterValue required="true" variableLength="false">Boolean</command:parameterValue>
+          <dev:type>
+            <maml:name>Boolean</maml:name>
+            <maml:uri />
+          </dev:type>
+          <dev:defaultValue>None</dev:defaultValue>
+        </command:parameter>
+        <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
+          <maml:name>Force</maml:name>
+          <maml:description>
+            <maml:para>The Force switch specifies whether to suppress the confirmation prompt that appears when you modify the InternalLicensingEnabled parameter. You don't need to specify a value with this switch.</maml:para>
+          </maml:description>
+          <dev:type>
+            <maml:name>SwitchParameter</maml:name>
+            <maml:uri />
+          </dev:type>
+          <dev:defaultValue>False</dev:defaultValue>
+        </command:parameter>
+        <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
+          <maml:name>InternalLicensingEnabled</maml:name>
+          <maml:description>
+            <maml:para>Note : In Exchange Online, this parameter affects both internal and external messages. In on-premises Exchange, this parameter only affects internal messages.</maml:para>
+            <maml:para>The InternalLicensingEnabled parameter specifies whether to enable IRM features for messages that are sent to internal recipients. Valid values are:</maml:para>
+            <maml:para>- $true: IRM features are enabled for internal messages. This is the default value in Exchange Online.</maml:para>
+            <maml:para>- $false: IRM features are disabled for internal messages. This is the default value in on-premises Exchange. Note that this value causes the Get-RMSTemplate to return no AD RMS templates.</maml:para>
+          </maml:description>
+          <command:parameterValue required="true" variableLength="false">Boolean</command:parameterValue>
+          <dev:type>
+            <maml:name>Boolean</maml:name>
+            <maml:uri />
+          </dev:type>
+          <dev:defaultValue>None</dev:defaultValue>
+        </command:parameter>
+        <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
+          <maml:name>JournalReportDecryptionEnabled</maml:name>
+          <maml:description>
+            <maml:para>The JournalReportDecryptionEnabled parameter specifies whether to enable journal report decryption. Valid values are:</maml:para>
+            <maml:para>- $true: Journal report encryption is enabled. A decrypted copy of the IRM-protected message is attached to the journal report. This is the default value. Note that journal report decryption requires additional configuration on AD RMS servers. For more information, see Journal report decryption (https://docs.microsoft.com/exchange/journal-report-decryption-exchange-2013-help). - $false: Journal report decryption is disabled.</maml:para>
+          </maml:description>
+          <command:parameterValue required="true" variableLength="false">Boolean</command:parameterValue>
+          <dev:type>
+            <maml:name>Boolean</maml:name>
+            <maml:uri />
+          </dev:type>
+          <dev:defaultValue>None</dev:defaultValue>
+        </command:parameter>
+        <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
+          <maml:name>LicensingLocation</maml:name>
+          <maml:description>
+            <maml:para>The LicensingLocation parameter specifies the RMS licensing URLs. You can specify multiple URL values separated by commas.</maml:para>
+            <maml:para>Typically, in on-premises Exchange, you only need to use this parameter in cross-forest deployments of AD RMS licensing servers.</maml:para>
+          </maml:description>
+          <command:parameterValue required="true" variableLength="false">MultiValuedProperty</command:parameterValue>
+          <dev:type>
+            <maml:name>MultiValuedProperty</maml:name>
+            <maml:uri />
+          </dev:type>
+          <dev:defaultValue>None</dev:defaultValue>
+        </command:parameter>
+        <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
+          <maml:name>RMSOnlineKeySharingLocation</maml:name>
+          <maml:description>
+            <maml:para>This parameter is available only in the cloud-based service.</maml:para>
+            <maml:para>The RMSOnlineKeySharingLocation parameter specifies the Azure Rights Management URL that's used to get the trusted publishing domain (TPD) for the Exchange Online organization.</maml:para>
+          </maml:description>
+          <command:parameterValue required="true" variableLength="false">Uri</command:parameterValue>
+          <dev:type>
+            <maml:name>Uri</maml:name>
+            <maml:uri />
+          </dev:type>
+          <dev:defaultValue>None</dev:defaultValue>
+        </command:parameter>
+        <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
+          <maml:name>SearchEnabled</maml:name>
+          <maml:description>
+            <maml:para>The SearchEnabled parameter specifies whether to enable searching of IRM-encrypted messages in Outlook on the web (formerly known as Outlook Web App). Valid values are:</maml:para>
+            <maml:para>- $true: Searching IRM-encrypted messages in Outlook on the web is enabled. This is the default value.</maml:para>
+            <maml:para>- $false: Searching IRM-encrypted messages in Outlook on the web is disabled.</maml:para>
+          </maml:description>
+          <command:parameterValue required="true" variableLength="false">Boolean</command:parameterValue>
+          <dev:type>
+            <maml:name>Boolean</maml:name>
+            <maml:uri />
+          </dev:type>
+          <dev:defaultValue>None</dev:defaultValue>
+        </command:parameter>
+        <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
+          <maml:name>SimplifiedClientAccessDoNotForwardDisabled</maml:name>
+          <maml:description>
+            <maml:para>This parameter is available only in the cloud-based service.</maml:para>
+            <maml:para>The SimplifiedClientAccessDoNotForwardDisabled parameter specifies whether to disable Do not forward in Outlook on the web. Valid values are:</maml:para>
+            <maml:para>- $true: Do not forward is not available in Outlook on the web. - $false: Do not forward is available in Outlook on the web.</maml:para>
+          </maml:description>
+          <command:parameterValue required="true" variableLength="false">Boolean</command:parameterValue>
+          <dev:type>
+            <maml:name>Boolean</maml:name>
+            <maml:uri />
+          </dev:type>
+          <dev:defaultValue>None</dev:defaultValue>
+        </command:parameter>
+        <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
+          <maml:name>SimplifiedClientAccessEnabled</maml:name>
+          <maml:description>
+            <maml:para>This parameter is available only in the cloud-based service.</maml:para>
+            <maml:para>The SimplifiedClientAccessEnabled parameter specifies whether to enable the Protect button in Outlook on the web. Valid values are:</maml:para>
+            <maml:para>- $true: The Protect button is enabled in Outlook on the web.</maml:para>
+            <maml:para>- $false: The Protect button is disabled in Outlook on the web. This is the default value.</maml:para>
+          </maml:description>
+          <command:parameterValue required="true" variableLength="false">Boolean</command:parameterValue>
+          <dev:type>
+            <maml:name>Boolean</maml:name>
+            <maml:uri />
+          </dev:type>
+          <dev:defaultValue>None</dev:defaultValue>
+        </command:parameter>
+        <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
+          <maml:name>SimplifiedClientAccessEncryptOnlyDisabled</maml:name>
+          <maml:description>
+            <maml:para>This parameter is available only in the cloud-based service.</maml:para>
+            <maml:para>The SimplifiedClientAccessEncryptOnlyDisabled parameter specifies whether to disable Encrypt only in Outlook on the web. Valid values are:</maml:para>
+            <maml:para>- $true: Encrypt only is not available in Outlook on the web. - $false: Encrypt only is available in Outlook on the web.</maml:para>
+          </maml:description>
+          <command:parameterValue required="true" variableLength="false">Boolean</command:parameterValue>
+          <dev:type>
+            <maml:name>Boolean</maml:name>
+            <maml:uri />
+          </dev:type>
+          <dev:defaultValue>None</dev:defaultValue>
+        </command:parameter>
+        <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
+          <maml:name>TransportDecryptionSetting</maml:name>
+          <maml:description>
+            <maml:para>The TransportDecryptionSetting parameter specifies the transport decryption configuration. Valid values are:</maml:para>
+            <maml:para>- Disabled: Transport decryption is disabled for internal and external messages.</maml:para>
+            <maml:para>- Mandatory: Messages that can't be decrypted are rejected with a non-delivery report (also known as an NDR or bounce message).</maml:para>
+            <maml:para>- Optional: Messages are decrypted if possible, but are delivered even if decryption fails. This is the default value.</maml:para>
+          </maml:description>
+          <command:parameterValue required="true" variableLength="false">TransportDecryptionSetting</command:parameterValue>
+          <dev:type>
+            <maml:name>TransportDecryptionSetting</maml:name>
+            <maml:uri />
+          </dev:type>
+          <dev:defaultValue>None</dev:defaultValue>
+        </command:parameter>
+        <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="wi">
+          <maml:name>WhatIf</maml:name>
+          <maml:description>
+            <maml:para>The WhatIf switch simulates the actions of the command. You can use this switch to view the changes that would occur without actually applying those changes. You don't need to specify a value with this switch.</maml:para>
+          </maml:description>
+          <dev:type>
+            <maml:name>SwitchParameter</maml:name>
+            <maml:uri />
+          </dev:type>
+          <dev:defaultValue>False</dev:defaultValue>
+        </command:parameter>
+      </command:syntaxItem>
+    </command:syntax>
+    <command:parameters>
+      <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="True (ByPropertyName, ByValue)" position="named" aliases="none">
+        <maml:name>Identity</maml:name>
+        <maml:description>
+          <maml:para>This parameter is available only in the cloud-based service.</maml:para>
+          <maml:para>The Identity parameter specifies the organization's IRM configuration object to modify. The valid value for this parameter is "ControlPoint Configuration".</maml:para>
+        </maml:description>
+        <command:parameterValue required="true" variableLength="false">OrganizationIdParameter</command:parameterValue>
+        <dev:type>
+          <maml:name>OrganizationIdParameter</maml:name>
+          <maml:uri />
+        </dev:type>
+        <dev:defaultValue>None</dev:defaultValue>
+      </command:parameter>
+      <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
+        <maml:name>AutomaticServiceUpdateEnabled</maml:name>
+        <maml:description>
+          <maml:para>This parameter is available only in the cloud-based service.</maml:para>
+          <maml:para>The AutomaticServiceUpdateEnabled parameter specifies whether to allow the automatic addition of new features within Azure Information Protection for your cloud-based organization. Valid values are:</maml:para>
+          <maml:para>- $true: New Azure Information Protection features announced through Microsoft 365 message center will be enabled automatically in your cloud-based organization. This is the default value.</maml:para>
+          <maml:para>- $false: Prevents new Azure Information Protection features from automatically being introduced into your tenant organization.</maml:para>
+        </maml:description>
+        <command:parameterValue required="true" variableLength="false">Boolean</command:parameterValue>
+        <dev:type>
+          <maml:name>Boolean</maml:name>
+          <maml:uri />
+        </dev:type>
+        <dev:defaultValue>None</dev:defaultValue>
+      </command:parameter>
+      <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
+        <maml:name>AzureRMSLicensingEnabled</maml:name>
+        <maml:description>
+          <maml:para>This parameter is available only in the cloud-based service.</maml:para>
+          <maml:para>The AzureRMSLicensingEnabled parameter specifies whether the Exchange Online organization can to connect directly to Azure Rights Management. Valid values are:</maml:para>
+          <maml:para>- $true: The Exchange Online organization can connect directly to Azure Rights Management. This enables Office 365 Message Encryption.</maml:para>
+          <maml:para>- $false: The Exchange Online organization can't connect directly to Azure Rights Management.</maml:para>
+        </maml:description>
+        <command:parameterValue required="true" variableLength="false">Boolean</command:parameterValue>
+        <dev:type>
+          <maml:name>Boolean</maml:name>
+          <maml:uri />
+        </dev:type>
+        <dev:defaultValue>None</dev:defaultValue>
+      </command:parameter>
+      <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="cf">
+        <maml:name>Confirm</maml:name>
+        <maml:description>
+          <maml:para>The Confirm switch specifies whether to show or hide the confirmation prompt. How this switch affects the cmdlet depends on if the cmdlet requires confirmation before proceeding.</maml:para>
+          <maml:para>- Destructive cmdlets (for example, Remove-* cmdlets) have a built-in pause that forces you to acknowledge the command before proceeding. For these cmdlets, you can skip the confirmation prompt by using this exact syntax: `-Confirm:$false`.</maml:para>
+          <maml:para>- Most other cmdlets (for example, New-\ and Set-\ cmdlets) don't have a built-in pause. For these cmdlets, specifying the Confirm switch without a value introduces a pause that forces you acknowledge the command before proceeding.</maml:para>
+        </maml:description>
+        <command:parameterValue required="false" variableLength="false">SwitchParameter</command:parameterValue>
+        <dev:type>
+          <maml:name>SwitchParameter</maml:name>
+          <maml:uri />
+        </dev:type>
+        <dev:defaultValue>False</dev:defaultValue>
+      </command:parameter>
+      <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
+        <maml:name>DecryptAttachmentForEncryptOnly</maml:name>
+        <maml:description>
+          <maml:para>This parameter is available only in the cloud-based service.</maml:para>
+          <maml:para>The DecryptAttachmentForEncryptOnly parameter specifies whether mail recipients have unrestricted rights on the attachment or not for Encrypt-only mails sent using new Office 365 Message Encryption capabilities. Valid values are:</maml:para>
+          <maml:para>- $true: The recipients will have unrestricted rights on attachments sent using Encrypt-Only policy.</maml:para>
+          <maml:para>- $false: The recipients will not have unrestricted rights on attachments sent using Encrypt-Only policy.</maml:para>
+          <maml:para></maml:para>
+          <maml:para>This parameter replaces the deprecated DecryptAttachmentFromPortal parameter.</maml:para>
+        </maml:description>
+        <command:parameterValue required="true" variableLength="false">Boolean</command:parameterValue>
+        <dev:type>
+          <maml:name>Boolean</maml:name>
+          <maml:uri />
+        </dev:type>
+        <dev:defaultValue>None</dev:defaultValue>
+      </command:parameter>
+      <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
+        <maml:name>EDiscoverySuperUserEnabled</maml:name>
+        <maml:description>
+          <maml:para>The EDiscoverySuperUserEnabled parameter specifies whether members of the Discovery Management role group can access IRM-protected messages in a discovery mailbox that were returned by a discovery search. Valid values are:</maml:para>
+          <maml:para>- $true: Members of the Discovery Management role group can access IRM-protected messages in discovery mailboxes.</maml:para>
+          <maml:para>- $false: Members of the Discovery Management role group can't access IRM-protected messages in discovery mailboxes.</maml:para>
+          <maml:para></maml:para>
+          <maml:para>For more information about In-Place eDiscovery and IRM-protected messages, see In-Place eDiscovery in Exchange Server (https://docs.microsoft.com/Exchange/policy-and-compliance/ediscovery/ediscovery).</maml:para>
+        </maml:description>
+        <command:parameterValue required="true" variableLength="false">Boolean</command:parameterValue>
+        <dev:type>
+          <maml:name>Boolean</maml:name>
+          <maml:uri />
+        </dev:type>
+        <dev:defaultValue>None</dev:defaultValue>
+      </command:parameter>
+      <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
+        <maml:name>EnablePdfEncryption</maml:name>
+        <maml:description>
+          <maml:para>This parameter is available only in the cloud-based service.</maml:para>
+          <maml:para>The EnablePdfEncryption parameter specifies whether to enable the encryption of PDF attachments using Office 365 Message Encryption (OME). Valid values are:</maml:para>
+          <maml:para>- $true: Messages that contain PDF attachments can be encrypted.</maml:para>
+          <maml:para>- $false: Messages that contain PDF attachments can't be encrypted.</maml:para>
+        </maml:description>
+        <command:parameterValue required="true" variableLength="false">Boolean</command:parameterValue>
+        <dev:type>
+          <maml:name>Boolean</maml:name>
+          <maml:uri />
+        </dev:type>
+        <dev:defaultValue>None</dev:defaultValue>
+      </command:parameter>
+      <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
+        <maml:name>Force</maml:name>
+        <maml:description>
+          <maml:para>The Force switch specifies whether to suppress the confirmation prompt that appears when you modify the InternalLicensingEnabled parameter. You don't need to specify a value with this switch.</maml:para>
+        </maml:description>
+        <command:parameterValue required="false" variableLength="false">SwitchParameter</command:parameterValue>
+        <dev:type>
+          <maml:name>SwitchParameter</maml:name>
+          <maml:uri />
+        </dev:type>
+        <dev:defaultValue>False</dev:defaultValue>
+      </command:parameter>
+      <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
+        <maml:name>InternalLicensingEnabled</maml:name>
+        <maml:description>
+          <maml:para>Note : In Exchange Online, this parameter affects both internal and external messages. In on-premises Exchange, this parameter only affects internal messages.</maml:para>
+          <maml:para>The InternalLicensingEnabled parameter specifies whether to enable IRM features for messages that are sent to internal recipients. Valid values are:</maml:para>
+          <maml:para>- $true: IRM features are enabled for internal messages. This is the default value in Exchange Online.</maml:para>
+          <maml:para>- $false: IRM features are disabled for internal messages. This is the default value in on-premises Exchange. Note that this value causes the Get-RMSTemplate to return no AD RMS templates.</maml:para>
+        </maml:description>
+        <command:parameterValue required="true" variableLength="false">Boolean</command:parameterValue>
+        <dev:type>
+          <maml:name>Boolean</maml:name>
+          <maml:uri />
+        </dev:type>
+        <dev:defaultValue>None</dev:defaultValue>
+      </command:parameter>
+      <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
+        <maml:name>JournalReportDecryptionEnabled</maml:name>
+        <maml:description>
+          <maml:para>The JournalReportDecryptionEnabled parameter specifies whether to enable journal report decryption. Valid values are:</maml:para>
+          <maml:para>- $true: Journal report encryption is enabled. A decrypted copy of the IRM-protected message is attached to the journal report. This is the default value. Note that journal report decryption requires additional configuration on AD RMS servers. For more information, see Journal report decryption (https://docs.microsoft.com/exchange/journal-report-decryption-exchange-2013-help). - $false: Journal report decryption is disabled.</maml:para>
+        </maml:description>
+        <command:parameterValue required="true" variableLength="false">Boolean</command:parameterValue>
+        <dev:type>
+          <maml:name>Boolean</maml:name>
+          <maml:uri />
+        </dev:type>
+        <dev:defaultValue>None</dev:defaultValue>
+      </command:parameter>
+      <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
+        <maml:name>LicensingLocation</maml:name>
+        <maml:description>
+          <maml:para>The LicensingLocation parameter specifies the RMS licensing URLs. You can specify multiple URL values separated by commas.</maml:para>
+          <maml:para>Typically, in on-premises Exchange, you only need to use this parameter in cross-forest deployments of AD RMS licensing servers.</maml:para>
+        </maml:description>
+        <command:parameterValue required="true" variableLength="false">MultiValuedProperty</command:parameterValue>
+        <dev:type>
+          <maml:name>MultiValuedProperty</maml:name>
+          <maml:uri />
+        </dev:type>
+        <dev:defaultValue>None</dev:defaultValue>
+      </command:parameter>
+      <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
+        <maml:name>RMSOnlineKeySharingLocation</maml:name>
+        <maml:description>
+          <maml:para>This parameter is available only in the cloud-based service.</maml:para>
+          <maml:para>The RMSOnlineKeySharingLocation parameter specifies the Azure Rights Management URL that's used to get the trusted publishing domain (TPD) for the Exchange Online organization.</maml:para>
+        </maml:description>
+        <command:parameterValue required="true" variableLength="false">Uri</command:parameterValue>
+        <dev:type>
+          <maml:name>Uri</maml:name>
+          <maml:uri />
+        </dev:type>
+        <dev:defaultValue>None</dev:defaultValue>
+      </command:parameter>
+      <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
+        <maml:name>SearchEnabled</maml:name>
+        <maml:description>
+          <maml:para>The SearchEnabled parameter specifies whether to enable searching of IRM-encrypted messages in Outlook on the web (formerly known as Outlook Web App). Valid values are:</maml:para>
+          <maml:para>- $true: Searching IRM-encrypted messages in Outlook on the web is enabled. This is the default value.</maml:para>
+          <maml:para>- $false: Searching IRM-encrypted messages in Outlook on the web is disabled.</maml:para>
+        </maml:description>
+        <command:parameterValue required="true" variableLength="false">Boolean</command:parameterValue>
+        <dev:type>
+          <maml:name>Boolean</maml:name>
+          <maml:uri />
+        </dev:type>
+        <dev:defaultValue>None</dev:defaultValue>
+      </command:parameter>
+      <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
+        <maml:name>SimplifiedClientAccessDoNotForwardDisabled</maml:name>
+        <maml:description>
+          <maml:para>This parameter is available only in the cloud-based service.</maml:para>
+          <maml:para>The SimplifiedClientAccessDoNotForwardDisabled parameter specifies whether to disable Do not forward in Outlook on the web. Valid values are:</maml:para>
+          <maml:para>- $true: Do not forward is not available in Outlook on the web. - $false: Do not forward is available in Outlook on the web.</maml:para>
+        </maml:description>
+        <command:parameterValue required="true" variableLength="false">Boolean</command:parameterValue>
+        <dev:type>
+          <maml:name>Boolean</maml:name>
+          <maml:uri />
+        </dev:type>
+        <dev:defaultValue>None</dev:defaultValue>
+      </command:parameter>
+      <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
+        <maml:name>SimplifiedClientAccessEnabled</maml:name>
+        <maml:description>
+          <maml:para>This parameter is available only in the cloud-based service.</maml:para>
+          <maml:para>The SimplifiedClientAccessEnabled parameter specifies whether to enable the Protect button in Outlook on the web. Valid values are:</maml:para>
+          <maml:para>- $true: The Protect button is enabled in Outlook on the web.</maml:para>
+          <maml:para>- $false: The Protect button is disabled in Outlook on the web. This is the default value.</maml:para>
+        </maml:description>
+        <command:parameterValue required="true" variableLength="false">Boolean</command:parameterValue>
+        <dev:type>
+          <maml:name>Boolean</maml:name>
+          <maml:uri />
+        </dev:type>
+        <dev:defaultValue>None</dev:defaultValue>
+      </command:parameter>
+      <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
+        <maml:name>SimplifiedClientAccessEncryptOnlyDisabled</maml:name>
+        <maml:description>
+          <maml:para>This parameter is available only in the cloud-based service.</maml:para>
+          <maml:para>The SimplifiedClientAccessEncryptOnlyDisabled parameter specifies whether to disable Encrypt only in Outlook on the web. Valid values are:</maml:para>
+          <maml:para>- $true: Encrypt only is not available in Outlook on the web. - $false: Encrypt only is available in Outlook on the web.</maml:para>
+        </maml:description>
+        <command:parameterValue required="true" variableLength="false">Boolean</command:parameterValue>
+        <dev:type>
+          <maml:name>Boolean</maml:name>
+          <maml:uri />
+        </dev:type>
+        <dev:defaultValue>None</dev:defaultValue>
+      </command:parameter>
+      <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
+        <maml:name>TransportDecryptionSetting</maml:name>
+        <maml:description>
+          <maml:para>The TransportDecryptionSetting parameter specifies the transport decryption configuration. Valid values are:</maml:para>
+          <maml:para>- Disabled: Transport decryption is disabled for internal and external messages.</maml:para>
+          <maml:para>- Mandatory: Messages that can't be decrypted are rejected with a non-delivery report (also known as an NDR or bounce message).</maml:para>
+          <maml:para>- Optional: Messages are decrypted if possible, but are delivered even if decryption fails. This is the default value.</maml:para>
+        </maml:description>
+        <command:parameterValue required="true" variableLength="false">TransportDecryptionSetting</command:parameterValue>
+        <dev:type>
+          <maml:name>TransportDecryptionSetting</maml:name>
+          <maml:uri />
+        </dev:type>
+        <dev:defaultValue>None</dev:defaultValue>
+      </command:parameter>
+      <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="wi">
+        <maml:name>WhatIf</maml:name>
+        <maml:description>
+          <maml:para>The WhatIf switch simulates the actions of the command. You can use this switch to view the changes that would occur without actually applying those changes. You don't need to specify a value with this switch.</maml:para>
+        </maml:description>
+        <command:parameterValue required="false" variableLength="false">SwitchParameter</command:parameterValue>
+        <dev:type>
+          <maml:name>SwitchParameter</maml:name>
+          <maml:uri />
+        </dev:type>
+        <dev:defaultValue>False</dev:defaultValue>
+      </command:parameter>
+    </command:parameters>
+    <command:inputTypes>
+      <command:inputType>
+        <dev:type>
+          <maml:name> </maml:name>
+        </dev:type>
+        <maml:description>
+          <maml:para>To see the input types that this cmdlet accepts, see Cmdlet Input and Output Types (https://go.microsoft.com/fwlink/p/?LinkId=616387). If the Input Type field for a cmdlet is blank, the cmdlet doesn't accept input data.</maml:para>
+        </maml:description>
+      </command:inputType>
+    </command:inputTypes>
+    <command:returnValues>
+      <command:returnValue>
+        <dev:type>
+          <maml:name> </maml:name>
+        </dev:type>
+        <maml:description>
+          <maml:para>To see the return types, which are also known as output types, that this cmdlet accepts, see Cmdlet Input and Output Types (https://go.microsoft.com/fwlink/p/?LinkId=616387). If the Output Type field is blank, the cmdlet doesn't return data.</maml:para>
+        </maml:description>
+      </command:returnValue>
+    </command:returnValues>
+    <maml:alertSet>
+      <maml:alert>
+        <maml:para></maml:para>
+      </maml:alert>
+    </maml:alertSet>
+    <command:examples>
+      <command:example>
+        <maml:title>-------------------------- Example 1 --------------------------</maml:title>
+        <dev:code>Set-IRMConfiguration -JournalReportDecryptionEnabled $true</dev:code>
+        <dev:remarks>
+          <maml:para>This example enables journal report decryption.</maml:para>
+        </dev:remarks>
+      </command:example>
+      <command:example>
+        <maml:title>-------------------------- Example 2 --------------------------</maml:title>
+        <dev:code>Set-IRMConfiguration -TransportDecryptionSetting Mandatory</dev:code>
+        <dev:remarks>
+          <maml:para>This example enables transport decryption and enforces decryption. When decryption is enforced, messages that can't be decrypted are rejected, and an NDR is returned.</maml:para>
+        </dev:remarks>
+      </command:example>
+      <command:example>
+        <maml:title>-------------------------- Example 3 --------------------------</maml:title>
+        <dev:code>Set-IRMConfiguration -ExternalLicensingEnabled $true</dev:code>
+        <dev:remarks>
+          <maml:para>This example enables licensing for external messages.</maml:para>
+        </dev:remarks>
+      </command:example>
+    </command:examples>
+    <command:relatedLinks>
+      <maml:navigationLink>
+        <maml:linkText>Online Version:</maml:linkText>
+        <maml:uri>https://docs.microsoft.com/powershell/module/exchange/set-irmconfiguration</maml:uri>
+      </maml:navigationLink>
+    </command:relatedLinks>
+  </command:command>
+  <command:command xmlns:maml="http://schemas.microsoft.com/maml/2004/10" xmlns:command="http://schemas.microsoft.com/maml/dev/command/2004/10" xmlns:dev="http://schemas.microsoft.com/maml/dev/2004/10" xmlns:MSHelp="http://msdn.microsoft.com/mshelp">
+    <command:details>
+      <command:name>Set-JournalRule</command:name>
+      <command:verb>Set</command:verb>
+      <command:noun>JournalRule</command:noun>
+      <maml:description>
+        <maml:para>This cmdlet is available in on-premises Exchange and in the cloud-based service. Some parameters and settings may be exclusive to one environment or the other.</maml:para>
+        <maml:para>Use the Set-JournalRule cmdlet to modify an existing journal rule in your organization.</maml:para>
+        <maml:para>For information about the parameter sets in the Syntax section below, see Exchange cmdlet syntax (https://docs.microsoft.com/powershell/exchange/exchange-cmdlet-syntax).</maml:para>
+      </maml:description>
+    </command:details>
+    <maml:description>
+      <maml:para>The Set-JournalRule cmdlet modifies an existing journal rule used in your organization.</maml:para>
+      <maml:para>You need to be assigned permissions before you can run this cmdlet. Although this topic lists all parameters for the cmdlet, you may not have access to some parameters if they're not included in the permissions assigned to you. To find the permissions required to run any cmdlet or parameter in your organization, see Find the permissions required to run any Exchange cmdlet (https://docs.microsoft.com/powershell/exchange/find-exchange-cmdlet-permissions).</maml:para>
+    </maml:description>
+    <command:syntax>
+      <command:syntaxItem>
+        <maml:name>Set-JournalRule</maml:name>
+        <command:parameter required="true" variableLength="true" globbing="false" pipelineInput="True" position="1" aliases="none">
+          <maml:name>Identity</maml:name>
+          <maml:description>
+            <maml:para>The Identity parameter specifies the name or GUID of the rule you want to modify.</maml:para>
+            <maml:para>The Identity parameter is a positional parameter. When using positional parameters in a command, you can omit the parameter label.</maml:para>
+          </maml:description>
+          <command:parameterValue required="true" variableLength="false">RuleIdParameter</command:parameterValue>
+          <dev:type>
+            <maml:name>RuleIdParameter</maml:name>
+            <maml:uri />
+          </dev:type>
+          <dev:defaultValue>None</dev:defaultValue>
+        </command:parameter>
+        <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="cf">
+          <maml:name>Confirm</maml:name>
+          <maml:description>
+            <maml:para>The Confirm switch specifies whether to show or hide the confirmation prompt. How this switch affects the cmdlet depends on if the cmdlet requires confirmation before proceeding.</maml:para>
+            <maml:para>- Destructive cmdlets (for example, Remove-* cmdlets) have a built-in pause that forces you to acknowledge the command before proceeding. For these cmdlets, you can skip the confirmation prompt by using this exact syntax: `-Confirm:$false`.</maml:para>
+            <maml:para>- Most other cmdlets (for example, New-\ and Set-\ cmdlets) don't have a built-in pause. For these cmdlets, specifying the Confirm switch without a value introduces a pause that forces you acknowledge the command before proceeding.</maml:para>
+          </maml:description>
+          <dev:type>
+            <maml:name>SwitchParameter</maml:name>
+            <maml:uri />
+          </dev:type>
+          <dev:defaultValue>False</dev:defaultValue>
+        </command:parameter>
+        <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
+          <maml:name>JournalEmailAddress</maml:name>
+          <maml:description>
+            <maml:para>The JournalEmailAddress parameter specifies a journal recipient. Journal reports for the specified rule are sent to the journal recipient. You can use any value that uniquely identifies the recipient. For example:</maml:para>
+            <maml:para>- Name</maml:para>
+            <maml:para>- Alias</maml:para>
+            <maml:para>- Distinguished name (DN)</maml:para>
+            <maml:para>- Canonical DN</maml:para>
+            <maml:para>- Email address</maml:para>
+            <maml:para>- GUID</maml:para>
+          </maml:description>
+          <command:parameterValue required="true" variableLength="false">RecipientIdParameter</command:parameterValue>
+          <dev:type>
+            <maml:name>RecipientIdParameter</maml:name>
+            <maml:uri />
+          </dev:type>
+          <dev:defaultValue>None</dev:defaultValue>
+        </command:parameter>
+        <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
+          <maml:name>Name</maml:name>
+          <maml:description>
+            <maml:para>The Name parameter specifies the name of the journal rule. The name of the rule can be up to 64 characters.</maml:para>
+          </maml:description>
+          <command:parameterValue required="true" variableLength="false">String</command:parameterValue>
+          <dev:type>
+            <maml:name>String</maml:name>
+            <maml:uri />
+          </dev:type>
+          <dev:defaultValue>None</dev:defaultValue>
+        </command:parameter>
+        <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
+          <maml:name>Recipient</maml:name>
+          <maml:description>
+            <maml:para>The Recipient parameter specifies the SMTP address of a mailbox, contact, or distribution group to journal. If you specify a distribution group, all recipients in that distribution group are journaled. All messages sent to or received from a recipient are journaled.</maml:para>
+          </maml:description>
+          <command:parameterValue required="true" variableLength="false">SmtpAddress</command:parameterValue>
+          <dev:type>
+            <maml:name>SmtpAddress</maml:name>
+            <maml:uri />
+          </dev:type>
+          <dev:defaultValue>None</dev:defaultValue>
+        </command:parameter>
+        <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
+          <maml:name>Scope</maml:name>
+          <maml:description>
+            <maml:para>The Scope parameter specifies the scope of email messages to which the journal rule is applied. You can use the following values:</maml:para>
+            <maml:para>- Global: Global rules process all email messages that pass through a Transport service. This includes email messages that were already processed by the external and internal rules.</maml:para>
+            <maml:para>- Internal: Internal rules process email messages sent to and received by recipients in your organization.</maml:para>
+            <maml:para>- External: External rules process email messages sent to recipients or from senders outside your organization.</maml:para>
+          </maml:description>
+          <command:parameterValue required="true" variableLength="false">JournalRuleScope</command:parameterValue>
+          <dev:type>
+            <maml:name>JournalRuleScope</maml:name>
+            <maml:uri />
+          </dev:type>
+          <dev:defaultValue>None</dev:defaultValue>
+        </command:parameter>
+        <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="wi">
+          <maml:name>WhatIf</maml:name>
+          <maml:description>
+            <maml:para>The WhatIf switch simulates the actions of the command. You can use this switch to view the changes that would occur without actually applying those changes. You don't need to specify a value with this switch.</maml:para>
+          </maml:description>
+          <dev:type>
+            <maml:name>SwitchParameter</maml:name>
+            <maml:uri />
+          </dev:type>
+          <dev:defaultValue>False</dev:defaultValue>
+        </command:parameter>
+      </command:syntaxItem>
+    </command:syntax>
+    <command:parameters>
+      <command:parameter required="true" variableLength="true" globbing="false" pipelineInput="True" position="1" aliases="none">
+        <maml:name>Identity</maml:name>
+        <maml:description>
+          <maml:para>The Identity parameter specifies the name or GUID of the rule you want to modify.</maml:para>
+          <maml:para>The Identity parameter is a positional parameter. When using positional parameters in a command, you can omit the parameter label.</maml:para>
+        </maml:description>
+        <command:parameterValue required="true" variableLength="false">RuleIdParameter</command:parameterValue>
+        <dev:type>
+          <maml:name>RuleIdParameter</maml:name>
+          <maml:uri />
+        </dev:type>
+        <dev:defaultValue>None</dev:defaultValue>
+      </command:parameter>
+      <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="cf">
+        <maml:name>Confirm</maml:name>
+        <maml:description>
+          <maml:para>The Confirm switch specifies whether to show or hide the confirmation prompt. How this switch affects the cmdlet depends on if the cmdlet requires confirmation before proceeding.</maml:para>
+          <maml:para>- Destructive cmdlets (for example, Remove-* cmdlets) have a built-in pause that forces you to acknowledge the command before proceeding. For these cmdlets, you can skip the confirmation prompt by using this exact syntax: `-Confirm:$false`.</maml:para>
+          <maml:para>- Most other cmdlets (for example, New-\ and Set-\ cmdlets) don't have a built-in pause. For these cmdlets, specifying the Confirm switch without a value introduces a pause that forces you acknowledge the command before proceeding.</maml:para>
+        </maml:description>
+        <command:parameterValue required="false" variableLength="false">SwitchParameter</command:parameterValue>
+        <dev:type>
+          <maml:name>SwitchParameter</maml:name>
+          <maml:uri />
+        </dev:type>
+        <dev:defaultValue>False</dev:defaultValue>
+      </command:parameter>
+      <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
+        <maml:name>JournalEmailAddress</maml:name>
+        <maml:description>
+          <maml:para>The JournalEmailAddress parameter specifies a journal recipient. Journal reports for the specified rule are sent to the journal recipient. You can use any value that uniquely identifies the recipient. For example:</maml:para>
+          <maml:para>- Name</maml:para>
+          <maml:para>- Alias</maml:para>
+          <maml:para>- Distinguished name (DN)</maml:para>
+          <maml:para>- Canonical DN</maml:para>
+          <maml:para>- Email address</maml:para>
+          <maml:para>- GUID</maml:para>
+        </maml:description>
+        <command:parameterValue required="true" variableLength="false">RecipientIdParameter</command:parameterValue>
+        <dev:type>
+          <maml:name>RecipientIdParameter</maml:name>
+          <maml:uri />
+        </dev:type>
+        <dev:defaultValue>None</dev:defaultValue>
+      </command:parameter>
+      <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
+        <maml:name>Name</maml:name>
+        <maml:description>
+          <maml:para>The Name parameter specifies the name of the journal rule. The name of the rule can be up to 64 characters.</maml:para>
+        </maml:description>
+        <command:parameterValue required="true" variableLength="false">String</command:parameterValue>
+        <dev:type>
+          <maml:name>String</maml:name>
+          <maml:uri />
+        </dev:type>
+        <dev:defaultValue>None</dev:defaultValue>
+      </command:parameter>
+      <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
+        <maml:name>Recipient</maml:name>
+        <maml:description>
+          <maml:para>The Recipient parameter specifies the SMTP address of a mailbox, contact, or distribution group to journal. If you specify a distribution group, all recipients in that distribution group are journaled. All messages sent to or received from a recipient are journaled.</maml:para>
+        </maml:description>
+        <command:parameterValue required="true" variableLength="false">SmtpAddress</command:parameterValue>
+        <dev:type>
+          <maml:name>SmtpAddress</maml:name>
+          <maml:uri />
+        </dev:type>
+        <dev:defaultValue>None</dev:defaultValue>
+      </command:parameter>
+      <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
+        <maml:name>Scope</maml:name>
+        <maml:description>
+          <maml:para>The Scope parameter specifies the scope of email messages to which the journal rule is applied. You can use the following values:</maml:para>
+          <maml:para>- Global: Global rules process all email messages that pass through a Transport service. This includes email messages that were already processed by the external and internal rules.</maml:para>
+          <maml:para>- Internal: Internal rules process email messages sent to and received by recipients in your organization.</maml:para>
+          <maml:para>- External: External rules process email messages sent to recipients or from senders outside your organization.</maml:para>
+        </maml:description>
+        <command:parameterValue required="true" variableLength="false">JournalRuleScope</command:parameterValue>
+        <dev:type>
+          <maml:name>JournalRuleScope</maml:name>
+          <maml:uri />
+        </dev:type>
+        <dev:defaultValue>None</dev:defaultValue>
+      </command:parameter>
+      <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="wi">
+        <maml:name>WhatIf</maml:name>
+        <maml:description>
+          <maml:para>The WhatIf switch simulates the actions of the command. You can use this switch to view the changes that would occur without actually applying those changes. You don't need to specify a value with this switch.</maml:para>
+        </maml:description>
+        <command:parameterValue required="false" variableLength="false">SwitchParameter</command:parameterValue>
+        <dev:type>
+          <maml:name>SwitchParameter</maml:name>
+          <maml:uri />
+        </dev:type>
+        <dev:defaultValue>False</dev:defaultValue>
+      </command:parameter>
+    </command:parameters>
+    <command:inputTypes>
+      <command:inputType>
+        <dev:type>
+          <maml:name> </maml:name>
+        </dev:type>
+        <maml:description>
+          <maml:para>To see the input types that this cmdlet accepts, see Cmdlet Input and Output Types (https://go.microsoft.com/fwlink/p/?LinkId=616387). If the Input Type field for a cmdlet is blank, the cmdlet doesn't accept input data.</maml:para>
+        </maml:description>
+      </command:inputType>
+    </command:inputTypes>
+    <command:returnValues>
+      <command:returnValue>
+        <dev:type>
+          <maml:name> </maml:name>
+        </dev:type>
+        <maml:description>
+          <maml:para>To see the return types, which are also known as output types, that this cmdlet accepts, see Cmdlet Input and Output Types (https://go.microsoft.com/fwlink/p/?LinkId=616387). If the Output Type field is blank, the cmdlet doesn't return data.</maml:para>
+        </maml:description>
+      </command:returnValue>
+    </command:returnValues>
+    <maml:alertSet>
+      <maml:alert>
+        <maml:para></maml:para>
+      </maml:alert>
+    </maml:alertSet>
+    <command:examples>
+      <command:example>
+        <maml:title>-------------------------- Example 1 --------------------------</maml:title>
+        <dev:code>Set-JournalRule "Consolidated Messenger" -JournalEmailAddress "ArchiveMailbox@contoso.com"</dev:code>
+        <dev:remarks>
+          <maml:para>This example modifies the journal email address to which journal reports are sent by the existing journal rule Consolidated Messenger.</maml:para>
+        </dev:remarks>
+      </command:example>
+      <command:example>
+        <maml:title>-------------------------- Example 2 --------------------------</maml:title>
+        <dev:code>Get-JournalRule | Set-JournalRule -JournalEmailAddress "Archive Mailbox"</dev:code>
+        <dev:remarks>
+          <maml:para>This example modifies the journal email address for all journal rules. The Get-JournalRule cmdlet is used to retrieve all journal rules. The results are piped to the Set-JournalRule cmdlet to modify the journal recipient.</maml:para>
+        </dev:remarks>
+      </command:example>
+    </command:examples>
+    <command:relatedLinks>
+      <maml:navigationLink>
+        <maml:linkText>Online Version:</maml:linkText>
+        <maml:uri>https://docs.microsoft.com/powershell/module/exchange/set-journalrule</maml:uri>
+      </maml:navigationLink>
+    </command:relatedLinks>
+  </command:command>
+  <command:command xmlns:maml="http://schemas.microsoft.com/maml/2004/10" xmlns:command="http://schemas.microsoft.com/maml/dev/command/2004/10" xmlns:dev="http://schemas.microsoft.com/maml/dev/2004/10" xmlns:MSHelp="http://msdn.microsoft.com/mshelp">
+    <command:details>
+      <command:name>Set-OrganizationSegment</command:name>
+      <command:verb>Set</command:verb>
+      <command:noun>OrganizationSegment</command:noun>
+      <maml:description>
+        <maml:para>This cmdlet is available only in Security &amp; Compliance Center PowerShell. For more information, see Security &amp; Compliance Center PowerShell (https://docs.microsoft.com/powershell/exchange/scc-powershell).</maml:para>
+        <maml:para>Use the Set-OrganizationSegment cmdlet to modify organization segments in the Security &amp; Compliance Center. Organization Segments are not in effect until you apply information barrier policies (https://docs.microsoft.com/microsoft-365/compliance/information-barriers-policies#part-3-apply-information-barrier-policies).</maml:para>
+        <maml:para>For information about the parameter sets in the Syntax section below, see Exchange cmdlet syntax (https://docs.microsoft.com/powershell/exchange/exchange-cmdlet-syntax).</maml:para>
+      </maml:description>
+    </command:details>
+    <maml:description>
+      <maml:para>Segments are defined by using certain attributes (https://docs.microsoft.com/microsoft-365/compliance/information-barriers-attributes)in Azure Active Directory.</maml:para>
+      <maml:para>You need to be assigned permissions in the Security &amp; Compliance Center before you can use this cmdlet. For more information, see Permissions in the Security &amp; Compliance Center (https://docs.microsoft.com/microsoft-365/security/office-365-security/permissions-in-the-security-and-compliance-center).</maml:para>
+    </maml:description>
+    <command:syntax>
+      <command:syntaxItem>
+        <maml:name>Set-OrganizationSegment</maml:name>
+        <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="True (ByPropertyName, ByValue)" position="0" aliases="none">
+          <maml:name>Identity</maml:name>
+          <maml:description>
+            <maml:para>The Identity parameter specifies the organization segment that you want to modify. You can use any value that uniquely identifies the segment. For example:</maml:para>
+            <maml:para>- Name</maml:para>
+            <maml:para>- Distinguished name (DN)</maml:para>
+            <maml:para>- GUID</maml:para>
+          </maml:description>
+          <command:parameterValue required="true" variableLength="false">PolicyIdParameter</command:parameterValue>
+          <dev:type>
+            <maml:name>PolicyIdParameter</maml:name>
+            <maml:uri />
+          </dev:type>
+          <dev:defaultValue>None</dev:defaultValue>
+        </command:parameter>
+        <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
+          <maml:name>UserGroupFilter</maml:name>
+          <maml:description>
+            <maml:para>The UserGroupFilter parameter uses OPath filter syntax to specify the members of the organization segment. The syntax is `"Property -ComparisonOperator 'Value'"` (for example, `"MemberOf -eq 'Engineering Department'"` or `"ExtensionAttribute1 -eq 'DayTrader'"`).</maml:para>
+            <maml:para>- Enclose the whole OPath filter in double quotation marks " ". If the filter contains system values (for example, `$true`, `$false`, or `$null`), use single quotation marks ' ' instead. Although this parameter is a string (not a system block), you can also use braces { }, but only if the filter doesn't contain variables.</maml:para>
+            <maml:para>- Property is a filterable property. For more information, see Attributes for information barrier policies (https://docs.microsoft.com/microsoft-365/compliance/information-barriers-attributes). - ComparisonOperator is an OPath comparison operator (for example `-eq` for equals and `-like` for string comparison). For more information about comparison operators, see about_Comparison_Operators (https://docs.microsoft.com/powershell/module/microsoft.powershell.core/about/about_comparison_operators). - Value is the property value to search for. Enclose text values and variables in single quotation marks (`'Value'` or `'$Variable'`). If a variable value contains single quotation marks, you need to identify (escape) the single quotation marks to expand the variable correctly. For example, instead of `'$User'`, use `'$($User -Replace "'","''")'`. Don't enclose integers or system values (for example, `500`, `$true`, `$false`, or `$null`).</maml:para>
+            <maml:para>Use the same property for all of your segments, and verify that your segments don't overlap (a user must be assigned to only one segment).</maml:para>
+          </maml:description>
+          <command:parameterValue required="true" variableLength="false">String</command:parameterValue>
+          <dev:type>
+            <maml:name>String</maml:name>
+            <maml:uri />
+          </dev:type>
+          <dev:defaultValue>None</dev:defaultValue>
+        </command:parameter>
+      </command:syntaxItem>
+    </command:syntax>
+    <command:parameters>
+      <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="True (ByPropertyName, ByValue)" position="0" aliases="none">
+        <maml:name>Identity</maml:name>
+        <maml:description>
+          <maml:para>The Identity parameter specifies the organization segment that you want to modify. You can use any value that uniquely identifies the segment. For example:</maml:para>
+          <maml:para>- Name</maml:para>
+          <maml:para>- Distinguished name (DN)</maml:para>
+          <maml:para>- GUID</maml:para>
+        </maml:description>
+        <command:parameterValue required="true" variableLength="false">PolicyIdParameter</command:parameterValue>
+        <dev:type>
+          <maml:name>PolicyIdParameter</maml:name>
+          <maml:uri />
+        </dev:type>
+        <dev:defaultValue>None</dev:defaultValue>
+      </command:parameter>
+      <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
+        <maml:name>UserGroupFilter</maml:name>
+        <maml:description>
+          <maml:para>The UserGroupFilter parameter uses OPath filter syntax to specify the members of the organization segment. The syntax is `"Property -ComparisonOperator 'Value'"` (for example, `"MemberOf -eq 'Engineering Department'"` or `"ExtensionAttribute1 -eq 'DayTrader'"`).</maml:para>
+          <maml:para>- Enclose the whole OPath filter in double quotation marks " ". If the filter contains system values (for example, `$true`, `$false`, or `$null`), use single quotation marks ' ' instead. Although this parameter is a string (not a system block), you can also use braces { }, but only if the filter doesn't contain variables.</maml:para>
+          <maml:para>- Property is a filterable property. For more information, see Attributes for information barrier policies (https://docs.microsoft.com/microsoft-365/compliance/information-barriers-attributes). - ComparisonOperator is an OPath comparison operator (for example `-eq` for equals and `-like` for string comparison). For more information about comparison operators, see about_Comparison_Operators (https://docs.microsoft.com/powershell/module/microsoft.powershell.core/about/about_comparison_operators). - Value is the property value to search for. Enclose text values and variables in single quotation marks (`'Value'` or `'$Variable'`). If a variable value contains single quotation marks, you need to identify (escape) the single quotation marks to expand the variable correctly. For example, instead of `'$User'`, use `'$($User -Replace "'","''")'`. Don't enclose integers or system values (for example, `500`, `$true`, `$false`, or `$null`).</maml:para>
+          <maml:para>Use the same property for all of your segments, and verify that your segments don't overlap (a user must be assigned to only one segment).</maml:para>
+        </maml:description>
+        <command:parameterValue required="true" variableLength="false">String</command:parameterValue>
+        <dev:type>
+          <maml:name>String</maml:name>
+          <maml:uri />
+        </dev:type>
+        <dev:defaultValue>None</dev:defaultValue>
+      </command:parameter>
+    </command:parameters>
+    <command:inputTypes>
+      <command:inputType>
+        <dev:type>
+          <maml:name> </maml:name>
+        </dev:type>
+        <maml:description>
+          <maml:para></maml:para>
+        </maml:description>
+      </command:inputType>
+    </command:inputTypes>
+    <command:returnValues>
+      <command:returnValue>
+        <dev:type>
+          <maml:name> </maml:name>
+        </dev:type>
+        <maml:description>
+          <maml:para></maml:para>
+        </maml:description>
+      </command:returnValue>
+    </command:returnValues>
+    <maml:alertSet>
+      <maml:alert>
+        <maml:para></maml:para>
+      </maml:alert>
+    </maml:alertSet>
+    <command:examples>
+      <command:example>
+        <maml:title>-------------------------- Example 1 --------------------------</maml:title>
+        <dev:code>Set-OrganizationSegment -Identity c96e0837-c232-4a8a-841e-ef45787d8fcd -UserGroupFilter "Department -eq 'HRDept'"</dev:code>
+        <dev:remarks>
+          <maml:para>In this example, for the segment that has the GUID c96e0837-c232-4a8a-841e-ef45787d8fcd, we updated the department name to "HRDept".</maml:para>
+        </dev:remarks>
+      </command:example>
+    </command:examples>
+    <command:relatedLinks>
+      <maml:navigationLink>
+        <maml:linkText>Online Version:</maml:linkText>
+        <maml:uri>https://docs.microsoft.com/powershell/module/exchange/set-organizationsegment</maml:uri>
+      </maml:navigationLink>
+      <maml:navigationLink>
+        <maml:linkText>Attributes for information barrier policies</maml:linkText>
+        <maml:uri>https://docs.microsoft.com/microsoft-365/compliance/information-barriers-attributes</maml:uri>
+      </maml:navigationLink>
+      <maml:navigationLink>
+        <maml:linkText>Define policies for information barriers</maml:linkText>
+        <maml:uri>https://docs.microsoft.com/microsoft-365/compliance/information-barriers-policies</maml:uri>
+      </maml:navigationLink>
+      <maml:navigationLink>
+        <maml:linkText>New-InformationBarrierPolicy</maml:linkText>
+        <maml:uri>https://docs.microsoft.com/powershell/module/exchange/new-informationbarrierpolicy</maml:uri>
+      </maml:navigationLink>
+    </command:relatedLinks>
+  </command:command>
+  <command:command xmlns:maml="http://schemas.microsoft.com/maml/2004/10" xmlns:command="http://schemas.microsoft.com/maml/dev/command/2004/10" xmlns:dev="http://schemas.microsoft.com/maml/dev/2004/10" xmlns:MSHelp="http://msdn.microsoft.com/mshelp">
+    <command:details>
+      <command:name>Test-IRMConfiguration</command:name>
+      <command:verb>Test</command:verb>
+      <command:noun>IRMConfiguration</command:noun>
+      <maml:description>
+        <maml:para>This cmdlet is available in on-premises Exchange and in the cloud-based service. Some parameters and settings may be exclusive to one environment or the other.</maml:para>
+        <maml:para>Use the Test-IRMConfiguration cmdlet to test Information Rights Management (IRM) configuration and functionality.</maml:para>
+        <maml:para>For information about the parameter sets in the Syntax section below, see Exchange cmdlet syntax (https://docs.microsoft.com/powershell/exchange/exchange-cmdlet-syntax).</maml:para>
+      </maml:description>
+    </command:details>
+    <maml:description>
+      <maml:para>The Test-IRMConfiguration cmdlet performs a series of steps to test IRM configuration and functionality, including availability of an Active Directory Rights Management Services (AD RMS) server, prelicensing and journal report decryption. In Exchange Online organizations, it checks connectivity to RMS Online and obtains and validates the organization's Trusted Publishing Domain (TPD).</maml:para>
+      <maml:para>You need to be assigned permissions before you can run this cmdlet. Although this topic lists all parameters for the cmdlet, you may not have access to some parameters if they're not included in the permissions assigned to you. To find the permissions required to run any cmdlet or parameter in your organization, see Find the permissions required to run any Exchange cmdlet (https://docs.microsoft.com/powershell/exchange/find-exchange-cmdlet-permissions).</maml:para>
+    </maml:description>
+    <command:syntax>
+      <command:syntaxItem>
+        <maml:name>Test-IRMConfiguration</maml:name>
+        <command:parameter required="true" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
+          <maml:name>Sender</maml:name>
+          <maml:description>
+            <maml:para>The Sender parameter specifies the SMTP address of the sender to be tested. The cmdlet tests prelicensing and journal report decryption for the sender.</maml:para>
+          </maml:description>
+          <command:parameterValue required="true" variableLength="false">SmtpAddress</command:parameterValue>
+          <dev:type>
+            <maml:name>SmtpAddress</maml:name>
+            <maml:uri />
+          </dev:type>
+          <dev:defaultValue>None</dev:defaultValue>
+        </command:parameter>
+        <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="cf">
+          <maml:name>Confirm</maml:name>
+          <maml:description>
+            <maml:para>The Confirm switch specifies whether to show or hide the confirmation prompt. How this switch affects the cmdlet depends on if the cmdlet requires confirmation before proceeding.</maml:para>
+            <maml:para>- Destructive cmdlets (for example, Remove-* cmdlets) have a built-in pause that forces you to acknowledge the command before proceeding. For these cmdlets, you can skip the confirmation prompt by using this exact syntax: `-Confirm:$false`.</maml:para>
+            <maml:para>- Most other cmdlets (for example, New-\ and Set-\ cmdlets) don't have a built-in pause. For these cmdlets, specifying the Confirm switch without a value introduces a pause that forces you acknowledge the command before proceeding.</maml:para>
+          </maml:description>
+          <dev:type>
+            <maml:name>SwitchParameter</maml:name>
+            <maml:uri />
+          </dev:type>
+          <dev:defaultValue>False</dev:defaultValue>
+        </command:parameter>
+        <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
+          <maml:name>Recipient</maml:name>
+          <maml:description>
+            <maml:para>The Recipient parameter specifies the SMTP address of one or more recipients. The cmdlet tests prelicensing for the specified recipients. You can specify multiple recipient addresses separated by commas.</maml:para>
+            <maml:para>If no recipient is specified, the sender address is used as the recipient.</maml:para>
+          </maml:description>
+          <command:parameterValue required="true" variableLength="false">SmtpAddress[]</command:parameterValue>
+          <dev:type>
+            <maml:name>SmtpAddress[]</maml:name>
+            <maml:uri />
+          </dev:type>
+          <dev:defaultValue>None</dev:defaultValue>
+        </command:parameter>
+        <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
+          <maml:name>RMSOnline</maml:name>
+          <maml:description>
+            <maml:para>This parameter is available only in the cloud-based service.</maml:para>
+            <maml:para>The RMSOnline switch specifies whether to test connectivity from Exchange Online to RMS Online, obtain your Exchange Online organization's TPD, and test its validity. You don't need to specify a value with this switch.</maml:para>
+          </maml:description>
+          <dev:type>
+            <maml:name>SwitchParameter</maml:name>
+            <maml:uri />
+          </dev:type>
+          <dev:defaultValue>False</dev:defaultValue>
+        </command:parameter>
+        <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="wi">
+          <maml:name>WhatIf</maml:name>
+          <maml:description>
+            <maml:para>The WhatIf switch simulates the actions of the command. You can use this switch to view the changes that would occur without actually applying those changes. You don't need to specify a value with this switch.</maml:para>
+          </maml:description>
+          <dev:type>
+            <maml:name>SwitchParameter</maml:name>
+            <maml:uri />
+          </dev:type>
+          <dev:defaultValue>False</dev:defaultValue>
+        </command:parameter>
+      </command:syntaxItem>
+    </command:syntax>
+    <command:parameters>
+      <command:parameter required="true" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
+        <maml:name>Sender</maml:name>
+        <maml:description>
+          <maml:para>The Sender parameter specifies the SMTP address of the sender to be tested. The cmdlet tests prelicensing and journal report decryption for the sender.</maml:para>
+        </maml:description>
+        <command:parameterValue required="true" variableLength="false">SmtpAddress</command:parameterValue>
+        <dev:type>
+          <maml:name>SmtpAddress</maml:name>
+          <maml:uri />
+        </dev:type>
+        <dev:defaultValue>None</dev:defaultValue>
+      </command:parameter>
+      <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="cf">
+        <maml:name>Confirm</maml:name>
+        <maml:description>
+          <maml:para>The Confirm switch specifies whether to show or hide the confirmation prompt. How this switch affects the cmdlet depends on if the cmdlet requires confirmation before proceeding.</maml:para>
+          <maml:para>- Destructive cmdlets (for example, Remove-* cmdlets) have a built-in pause that forces you to acknowledge the command before proceeding. For these cmdlets, you can skip the confirmation prompt by using this exact syntax: `-Confirm:$false`.</maml:para>
+          <maml:para>- Most other cmdlets (for example, New-\ and Set-\ cmdlets) don't have a built-in pause. For these cmdlets, specifying the Confirm switch without a value introduces a pause that forces you acknowledge the command before proceeding.</maml:para>
+        </maml:description>
+        <command:parameterValue required="false" variableLength="false">SwitchParameter</command:parameterValue>
+        <dev:type>
+          <maml:name>SwitchParameter</maml:name>
+          <maml:uri />
+        </dev:type>
+        <dev:defaultValue>False</dev:defaultValue>
+      </command:parameter>
+      <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
+        <maml:name>Recipient</maml:name>
+        <maml:description>
+          <maml:para>The Recipient parameter specifies the SMTP address of one or more recipients. The cmdlet tests prelicensing for the specified recipients. You can specify multiple recipient addresses separated by commas.</maml:para>
+          <maml:para>If no recipient is specified, the sender address is used as the recipient.</maml:para>
+        </maml:description>
+        <command:parameterValue required="true" variableLength="false">SmtpAddress[]</command:parameterValue>
+        <dev:type>
+          <maml:name>SmtpAddress[]</maml:name>
+          <maml:uri />
+        </dev:type>
+        <dev:defaultValue>None</dev:defaultValue>
+      </command:parameter>
+      <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
+        <maml:name>RMSOnline</maml:name>
+        <maml:description>
+          <maml:para>This parameter is available only in the cloud-based service.</maml:para>
+          <maml:para>The RMSOnline switch specifies whether to test connectivity from Exchange Online to RMS Online, obtain your Exchange Online organization's TPD, and test its validity. You don't need to specify a value with this switch.</maml:para>
+        </maml:description>
+        <command:parameterValue required="false" variableLength="false">SwitchParameter</command:parameterValue>
+        <dev:type>
+          <maml:name>SwitchParameter</maml:name>
+          <maml:uri />
+        </dev:type>
+        <dev:defaultValue>False</dev:defaultValue>
+      </command:parameter>
+      <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="wi">
+        <maml:name>WhatIf</maml:name>
+        <maml:description>
+          <maml:para>The WhatIf switch simulates the actions of the command. You can use this switch to view the changes that would occur without actually applying those changes. You don't need to specify a value with this switch.</maml:para>
+        </maml:description>
+        <command:parameterValue required="false" variableLength="false">SwitchParameter</command:parameterValue>
+        <dev:type>
+          <maml:name>SwitchParameter</maml:name>
+          <maml:uri />
+        </dev:type>
+        <dev:defaultValue>False</dev:defaultValue>
+      </command:parameter>
+    </command:parameters>
+    <command:inputTypes>
+      <command:inputType>
+        <dev:type>
+          <maml:name> </maml:name>
+        </dev:type>
+        <maml:description>
+          <maml:para>To see the input types that this cmdlet accepts, see Cmdlet Input and Output Types (https://go.microsoft.com/fwlink/p/?LinkId=616387). If the Input Type field for a cmdlet is blank, the cmdlet doesn't accept input data.</maml:para>
+        </maml:description>
+      </command:inputType>
+    </command:inputTypes>
+    <command:returnValues>
+      <command:returnValue>
+        <dev:type>
+          <maml:name> </maml:name>
+        </dev:type>
+        <maml:description>
+          <maml:para>To see the return types, which are also known as output types, that this cmdlet accepts, see Cmdlet Input and Output Types (https://go.microsoft.com/fwlink/p/?LinkId=616387). If the Output Type field is blank, the cmdlet doesn't return data.</maml:para>
+        </maml:description>
+      </command:returnValue>
+    </command:returnValues>
+    <maml:alertSet>
+      <maml:alert>
+        <maml:para></maml:para>
+      </maml:alert>
+    </maml:alertSet>
+    <command:examples>
+      <command:example>
+        <maml:title>-------------------------- Example 1 --------------------------</maml:title>
+        <dev:code>Test-IRMConfiguration -Sender adams@contoso.com</dev:code>
+        <dev:remarks>
+          <maml:para>This example tests the IRM configuration for messages sent from the sender adams@contoso.com.</maml:para>
+        </dev:remarks>
+      </command:example>
+    </command:examples>
+    <command:relatedLinks>
+      <maml:navigationLink>
+        <maml:linkText>Online Version:</maml:linkText>
+        <maml:uri>https://docs.microsoft.com/powershell/module/exchange/test-irmconfiguration</maml:uri>
+      </maml:navigationLink>
+    </command:relatedLinks>
+  </command:command>
+</helpItems>
