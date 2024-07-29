@@ -4,14 +4,18 @@ function Push-UpdatePermissionsQueue {
         Entrypoint
     #>
     param($Item)
-    Write-Host "Applying permissions for $($Item.defaultDomainName)"
+    Write-Host "Applying permissions for $($Item.defaulomainName)"
     $Table = Get-CIPPTable -TableName cpvtenants
     $CPVRows = Get-CIPPAzDataTableEntity @Table | Where-Object -Property Tenant -EQ $Item.customerId
+    $PermissionUpdateRequired = $false
     if (!$CPVRows -or $ENV:ApplicationID -notin $CPVRows.applicationId) {
         Write-LogMessage -tenant $Item.defaultDomainName -tenantId $Item.customerId -message 'A New tenant has been added, or a new CIPP-SAM Application is in use' -Sev 'Warn' -API 'NewTenant'
         Write-Host 'Adding CPV permissions'
         Set-CIPPCPVConsent -Tenantfilter $Item.customerId
+        $PermissionUpdateRequired = $true
     }
+
+    $CippCorePath = (Get-Item $PSScriptRoot).Parent.Parent.FullName
 
     Add-CIPPApplicationPermission -RequiredResourceAccess 'CippDefaults' -ApplicationId $ENV:ApplicationID -tenantfilter $Item.customerId
     Add-CIPPDelegatedPermission -RequiredResourceAccess 'CippDefaults' -ApplicationId $ENV:ApplicationID -tenantfilter $Item.customerId
