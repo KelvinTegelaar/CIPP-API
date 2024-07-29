@@ -131,12 +131,12 @@ function Sync-CippExtensionData {
                     @{
                         id     = 'DeviceCompliancePolicies'
                         method = 'GET'
-                        url    = '/deviceManagement/deviceCompliancePolicies'
+                        url    = '/deviceManagement/deviceCompliancePolicies?$top=999'
                     },
                     @{
                         id     = 'DeviceApps'
                         method = 'GET'
-                        url    = '/deviceAppManagement/mobileApps'
+                        url    = '/deviceAppManagement/mobileApps?$select=id,displayName,description,publisher,isAssigned,createdDateTime,lastModifiedDateTime&$top=999'
                     }
                 )
 
@@ -233,9 +233,14 @@ function Sync-CippExtensionData {
 
             if ($AdditionalRequests) {
                 foreach ($AdditionalRequest in $AdditionalRequests) {
+                    if ($AdditionalRequest.Filter) {
+                        $Filter = [scriptblock]::Create($AdditionalRequest.Filter)
+                    } else {
+                        $Filter = { $true }
+                    }
                     $ParentId = $AdditionalRequest.ParentId
                     $GraphRequest = $AdditionalRequest.graphRequest.PSObject.Copy()
-                    $AdditionalRequestQueries = ($TenantResults | Where-Object { $_.id -eq $ParentId }).body.value | ForEach-Object {
+                    $AdditionalRequestQueries = ($TenantResults | Where-Object { $_.id -eq $ParentId }).body.value | Where-Object $Filter | ForEach-Object {
                         if ($_.id) {
                             [PSCustomObject]@{
                                 id     = $_.id
