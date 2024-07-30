@@ -38,7 +38,7 @@ function Invoke-CIPPStandardsharingCapability {
     }
 
     # Input validation
-    if (([string]::IsNullOrWhiteSpace($Settings.sharingCapability) -or $Settings.sharingCapability -eq 'Select a value') -and ($Settings.remediate -eq $true -or $Settings.alert -eq $true)) {
+    if (([string]::IsNullOrWhiteSpace($Settings.Level -or $Settings.Level -eq 'Select a value') -and ($Settings.remediate -eq $true -or $Settings.alert -eq $true))) {
         Write-LogMessage -API 'Standards' -tenant $tenant -message 'sharingCapability: Invalid sharingCapability parameter set' -sev Error
         Return
     }
