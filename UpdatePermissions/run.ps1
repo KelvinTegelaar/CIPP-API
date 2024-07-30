@@ -10,7 +10,7 @@ try {
     $AdditionalPermissions = Get-Item -Path "$ModuleRoot\Public\AdditionalPermissions.json"
     $Tenants = $Tenants | ForEach-Object {
         $CPVRow = $CPVRows | Where-Object -Property Tenant -EQ $_.customerId
-        if (!$CPVRow -or $env:ApplicationID -notin $CPVRow.applicationId -or $SAMManifest.LastWriteTime -gt $CPVRow.Timestamp.DateTime -or $AdditionalPermissions.LastWriteTime -ge $CPVRow.Timestamp.DateTime -or $CPVRow.Timestamp.DateTime -le (Get-Date).AddDays(-7).ToUniversalTime() -or !$_.defaultDomainName) {
+        if (!$CPVRow -or $env:ApplicationID -notin $CPVRow.applicationId -or $SAMManifest.LastWriteTime.ToUniversalTime() -gt $CPVRow.Timestamp.DateTime -or $AdditionalPermissions.LastWriteTime.ToUniversalTime() -ge $CPVRow.Timestamp.DateTime -or $CPVRow.Timestamp.DateTime -le (Get-Date).AddDays(-7).ToUniversalTime() -or !$_.defaultDomainName) {
             $_
         }
     }
