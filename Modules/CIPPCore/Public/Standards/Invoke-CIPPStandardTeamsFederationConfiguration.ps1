@@ -65,6 +65,9 @@ Function Invoke-CIPPStandardTeamsFederationConfiguration {
         }
     }
 
+    # TODO : Add proper validation for the domain list
+    # $CurrentState.AllowedDomains returns a PSObject System.Object and adds a Domain= for each allowed domain, ex {Domain=example.com, Domain=example2.com}
+
     $StateIsCorrect =   ($CurrentState.AllowTeamsConsumer -eq $Settings.AllowTeamsConsumer) -and
                         ($CurrentState.AllowPublicUsers -eq $Settings.AllowPublicUsers) -and
                         ($CurrentState.AllowFederatedUsers -eq $AllowFederatedUsers) -and
