@@ -131,12 +131,12 @@ function Sync-CippExtensionData {
                     @{
                         id     = 'DeviceCompliancePolicies'
                         method = 'GET'
-                        url    = '/deviceManagement/deviceCompliancePolicies'
+                        url    = '/deviceManagement/deviceCompliancePolicies?$top=999'
                     },
                     @{
                         id     = 'DeviceApps'
                         method = 'GET'
-                        url    = '/deviceAppManagement/mobileApps'
+                        url    = '/deviceAppManagement/mobileApps?$select=id,displayName,description,publisher,isAssigned,createdDateTime,lastModifiedDateTime&$top=999'
                     }
                 )
 
@@ -151,14 +151,14 @@ function Sync-CippExtensionData {
                 )
             }
             'Mailboxes' {
-                $Select = 'id,ExchangeGuid,ArchiveGuid,UserPrincipalName,DisplayName,PrimarySMTPAddress,RecipientType,RecipientTypeDetails,EmailAddresses,WhenSoftDeleted,IsInactiveMailbox'
+                $Select = 'id,ExchangeGuid,ArchiveGuid,UserPrincipalName,DisplayName,PrimarySMTPAddress,RecipientType,RecipientTypeDetails,EmailAddresses,WhenSoftDeleted,IsInactiveMailbox,ProhibitSendQuota,ProhibitSendReceiveQuota,LitigationHoldEnabled,InPlaceHolds,HiddenFromAddressListsEnabled'
                 $ExoRequest = @{
                     tenantid  = $TenantFilter
                     cmdlet    = 'Get-Mailbox'
                     cmdParams = @{}
                     Select    = $Select
                 }
-                $Mailboxes = (New-ExoRequest @ExoRequest) | Select-Object id, ExchangeGuid, ArchiveGuid, WhenSoftDeleted, @{ Name = 'UPN'; Expression = { $_.'UserPrincipalName' } },
+                $Mailboxes = (New-ExoRequest @ExoRequest) | Select-Object id, ExchangeGuid, ArchiveGuid, WhenSoftDeleted, ProhibitSendQuota, ProhibitSendReceiveQuota, LitigationHoldEnabled, InplaceHolds, HiddenFromAddressListsEnabled, @{ Name = 'UPN'; Expression = { $_.'UserPrincipalName' } },
 
                 @{ Name = 'displayName'; Expression = { $_.'DisplayName' } },
                 @{ Name = 'primarySmtpAddress'; Expression = { $_.'PrimarySMTPAddress' } },
@@ -233,9 +233,14 @@ function Sync-CippExtensionData {
 
             if ($AdditionalRequests) {
                 foreach ($AdditionalRequest in $AdditionalRequests) {
+                    if ($AdditionalRequest.Filter) {
+                        $Filter = [scriptblock]::Create($AdditionalRequest.Filter)
+                    } else {
+                        $Filter = { $true }
+                    }
                     $ParentId = $AdditionalRequest.ParentId
                     $GraphRequest = $AdditionalRequest.graphRequest.PSObject.Copy()
-                    $AdditionalRequestQueries = ($TenantResults | Where-Object { $_.id -eq $ParentId }).body.value | ForEach-Object {
+                    $AdditionalRequestQueries = ($TenantResults | Where-Object { $_.id -eq $ParentId }).body.value | Where-Object $Filter | ForEach-Object {
                         if ($_.id) {
                             [PSCustomObject]@{
                                 id     = $_.id
@@ -298,7 +303,7 @@ function Sync-CippExtensionData {
     } catch {
         $LastSync.Status = 'Failed'
         $LastSync.Error = [string](Get-CippException -Exception $_ | ConvertTo-Json -Compress)
-        throw "Failed to sync data: $($_.Exception.Message)"
+        throw "Failed to sync data: $(Get-NormalizedError -message $_.Exception.Message)"
     } finally {
         Add-CIPPAzDataTableEntity @Table -Entity $LastSync -Force
     }

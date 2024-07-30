@@ -5,7 +5,7 @@ function Invoke-CIPPStandardSPEmailAttestation {
     .COMPONENT
         (APIName) SPEmailAttestation
     .SYNOPSIS
-        Require reauthentication with verification code
+        (Label) Require reauthentication with verification code
     .DESCRIPTION
         (Helptext) Ensure reauthentication with verification code is restricted
         (DocsDescription) Ensure reauthentication with verification code is restricted
@@ -17,16 +17,16 @@ function Invoke-CIPPStandardSPEmailAttestation {
             "CIS"
         ADDEDCOMPONENT
             {"type":"number","name":"standards.SPEmailAttestation.Days","label":"Require reauth every X Days (Default 15)"}
-        LABEL
-            Require reauthentication with verification code
         IMPACT
             Medium Impact
         POWERSHELLEQUIVALENT
-            Set-SPOTenant -EmailAttestationRequired $true -EmailAttestationReAuthDays 15
+            Set-SPOTenant -EmailAttestationRequired \$true -EmailAttestationReAuthDays 15
         RECOMMENDEDBY
             "CIS 3.0"
         UPDATECOMMENTBLOCK
             Run the Tools\Update-StandardsComments.ps1 script to update this comment block
+    .LINK
+        https://docs.cipp.app/user-documentation/tenant/standards/edit-standards
     #>
 
     param($Tenant, $Settings)
@@ -38,7 +38,7 @@ function Invoke-CIPPStandardSPEmailAttestation {
 
     if ($Settings.remediate -eq $true) {
         if ($StateIsCorrect -eq $true) {
-            Write-LogMessage -API 'Standards' -Message 'Sharepoint reauthentication with verification code is already restriction.' -Sev Info
+            Write-LogMessage -API 'Standards' -Tenant $Tenant -Message 'Sharepoint reauthentication with verification code is already restriction.' -Sev Info
         } else {
             $Properties = @{
                 EmailAttestationReAuthDays = $Settings.Days
@@ -47,19 +47,19 @@ function Invoke-CIPPStandardSPEmailAttestation {
 
             try {
                 Get-CIPPSPOTenant -TenantFilter $Tenant | Set-CIPPSPOTenant -Properties $Properties
-                Write-LogMessage -API 'Standards' -Message 'Successfully set reauthentication with verification code restriction.' -Sev Info
+                Write-LogMessage -API 'Standards' -Tenant $Tenant -Message 'Successfully set reauthentication with verification code restriction.' -Sev Info
             } catch {
                 $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
-                Write-LogMessage -API 'Standards' -Message "Failed to set reauthentication with verification code restriction. Error: $ErrorMessage" -Sev Error
+                Write-LogMessage -API 'Standards' -Tenant $Tenant -Message "Failed to set reauthentication with verification code restriction. Error: $ErrorMessage" -Sev Error
             }
         }
     }
 
     if ($Settings.alert -eq $true) {
         if ($StateIsCorrect -eq $true) {
-            Write-LogMessage -API 'Standards' -Message 'Reauthentication with verification code is restriction' -Sev Info
+            Write-LogMessage -API 'Standards' -Tenant $Tenant -Message 'Reauthentication with verification code is restriction' -Sev Info
         } else {
-            Write-LogMessage -API 'Standards' -Message 'Reauthentication with verification code is not restricted' -Sev Alert
+            Write-LogMessage -API 'Standards' -Tenant $Tenant -Message 'Reauthentication with verification code is not restricted' -Sev Alert
         }
     }
 

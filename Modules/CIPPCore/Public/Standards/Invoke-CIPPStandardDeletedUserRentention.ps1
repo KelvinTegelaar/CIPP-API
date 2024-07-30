@@ -1,29 +1,30 @@
 function Invoke-CIPPStandardDeletedUserRentention {
     <#
     .FUNCTIONALITY
-    Internal
-    .APINAME
-    DeletedUserRentention
-    .CAT
-    SharePoint Standards
-    .TAG
-    "lowimpact"
-    .HELPTEXT
-    Sets the retention period for deleted users OneDrive to 1 year/365 days
-    .DOCSDESCRIPTION
-    When a OneDrive user gets deleted, the personal SharePoint site is saved for 1 year and data can be retrieved from it.
-    .ADDEDCOMPONENT
-    .LABEL
-    Retain a deleted user OneDrive for 1 year
-    .IMPACT
-    Low Impact
-    .POWERSHELLEQUIVALENT
-    Update-MgBetaAdminSharepointSetting
-    .RECOMMENDEDBY
-    .DOCSDESCRIPTION
-    Sets the retention period for deleted users OneDrive to 1 year/365 days
-    .UPDATECOMMENTBLOCK
-    Run the Tools\Update-StandardsComments.ps1 script to update this comment block
+        Internal
+    .COMPONENT
+        (APIName) DeletedUserRentention
+    .SYNOPSIS
+        (Label) Set deleted user retention time in OneDrive
+    .DESCRIPTION
+        (Helptext) Sets the retention period for deleted users OneDrive to the specified number of years. The default is 1 year.
+        (DocsDescription) When a OneDrive user gets deleted, the personal SharePoint site is saved for selected time in years and data can be retrieved from it.
+    .NOTES
+        CAT
+            SharePoint Standards
+        TAG
+            "lowimpact"
+        ADDEDCOMPONENT
+            {"type":"Select","name":"standards.DeletedUserRentention.Days","label":"Retention in years (Default 1)","values":[{"label":"1 year","value":"365"},{"label":"2 years","value":"730"},{"label":"3 years","value":"1095"},{"label":"4 years","value":"1460"},{"label":"5 years","value":"1825"},{"label":"6 years","value":"2190"},{"label":"7 years","value":"2555"},{"label":"8 years","value":"2920"},{"label":"9 years","value":"3285"},{"label":"10 years","value":"3650"}]}
+        IMPACT
+            Low Impact
+        POWERSHELLEQUIVALENT
+            Update-MgBetaAdminSharepointSetting
+        RECOMMENDEDBY
+        UPDATECOMMENTBLOCK
+            Run the Tools\Update-StandardsComments.ps1 script to update this comment block
+    .LINK
+        https://docs.cipp.app/user-documentation/tenant/standards/edit-standards
     #>
 
     param($Tenant, $Settings)
@@ -39,7 +40,7 @@ function Invoke-CIPPStandardDeletedUserRentention {
         Return
     }
 
-    # Backwards compatibility for pre v5.10.0
+    # Backwards compatibility for v5.9.4 and back
     if ($null -eq $Settings.Days) {
         $WantedState = 365
     } else {
@@ -78,7 +79,3 @@ function Invoke-CIPPStandardDeletedUserRentention {
         }
     }
 }
-
-
-
-

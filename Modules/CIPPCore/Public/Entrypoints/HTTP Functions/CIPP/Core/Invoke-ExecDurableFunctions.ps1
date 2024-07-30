@@ -51,7 +51,7 @@ function Invoke-ExecDurableFunctions {
             if ($Request.Query.PartitionKey) {
                 $HistoryTable = Get-CippTable -TableName ('{0}History' -f $FunctionName)
                 $Filter = "PartitionKey eq '{0}'" -f $Request.Query.PartitionKey
-                $History = Get-CippAzDataTableEntity @HistoryTable -Filter $Filter -Property RowKey, Timestamp, EventType, Name, IsPlayed, OrchestrationStatus | Select-Object * -ExcludeProperty ETag
+                $History = Get-CippAzDataTableEntity @HistoryTable -Filter $Filter -Property PartitionKey, RowKey, Timestamp, EventType, Name, IsPlayed, OrchestrationStatus | Select-Object * -ExcludeProperty ETag
 
                 $Body = [PSCustomObject]@{
                     Results = @($History)

@@ -1,41 +1,39 @@
 function Invoke-CIPPStandardSafeAttachmentPolicy {
     <#
     .FUNCTIONALITY
-    Internal
-    .APINAME
-    SafeAttachmentPolicy
-    .CAT
-    Defender Standards
-    .TAG
-    "lowimpact"
-    "CIS"
-    "mdo_safedocuments"
-    "mdo_commonattachmentsfilter"
-    "mdo_safeattachmentpolicy"
-    .HELPTEXT
-    This creates a Safe Attachment policy
-    .ADDEDCOMPONENT
-    {"type":"Select","label":"Action","name":"standards.SafeAttachmentPolicy.Action","values":[{"label":"Allow","value":"Allow"},{"label":"Block","value":"Block"},{"label":"DynamicDelivery","value":"DynamicDelivery"}]}
-    {"type":"Select","label":"QuarantineTag","name":"standards.SafeAttachmentPolicy.QuarantineTag","values":[{"label":"AdminOnlyAccessPolicy","value":"AdminOnlyAccessPolicy"},{"label":"DefaultFullAccessPolicy","value":"DefaultFullAccessPolicy"},{"label":"DefaultFullAccessWithNotificationPolicy","value":"DefaultFullAccessWithNotificationPolicy"}]}
-    {"type":"boolean","label":"Redirect","name":"standards.SafeAttachmentPolicy.Redirect"}
-    {"type":"input","name":"standards.SafeAttachmentPolicy.RedirectAddress","label":"Redirect Address"}
-    .LABEL
-    Default Safe Attachment Policy
-    .IMPACT
-    Low Impact
-    .POWERSHELLEQUIVALENT
-    Set-SafeAttachmentPolicy or New-SafeAttachmentPolicy
-    .RECOMMENDEDBY
-    "CIS"
-    .DOCSDESCRIPTION
-    This creates a Safe Attachment policy
-    .UPDATECOMMENTBLOCK
-    Run the Tools\Update-StandardsComments.ps1 script to update this comment block
+        Internal
+    .COMPONENT
+        (APIName) SafeAttachmentPolicy
+    .SYNOPSIS
+        (Label) Default Safe Attachment Policy
+    .DESCRIPTION
+        (Helptext) This creates a Safe Attachment policy
+        (DocsDescription) This creates a Safe Attachment policy
+    .NOTES
+        CAT
+            Defender Standards
+        TAG
+            "lowimpact"
+            "CIS"
+            "mdo_safedocuments"
+            "mdo_commonattachmentsfilter"
+            "mdo_safeattachmentpolicy"
+        ADDEDCOMPONENT
+            {"type":"Select","label":"Action","name":"standards.SafeAttachmentPolicy.Action","values":[{"label":"Allow","value":"Allow"},{"label":"Block","value":"Block"},{"label":"DynamicDelivery","value":"DynamicDelivery"}]}
+            {"type":"Select","label":"QuarantineTag","name":"standards.SafeAttachmentPolicy.QuarantineTag","values":[{"label":"AdminOnlyAccessPolicy","value":"AdminOnlyAccessPolicy"},{"label":"DefaultFullAccessPolicy","value":"DefaultFullAccessPolicy"},{"label":"DefaultFullAccessWithNotificationPolicy","value":"DefaultFullAccessWithNotificationPolicy"}]}
+            {"type":"boolean","label":"Redirect","name":"standards.SafeAttachmentPolicy.Redirect"}
+            {"type":"input","name":"standards.SafeAttachmentPolicy.RedirectAddress","label":"Redirect Address"}
+        IMPACT
+            Low Impact
+        POWERSHELLEQUIVALENT
+            Set-SafeAttachmentPolicy or New-SafeAttachmentPolicy
+        RECOMMENDEDBY
+            "CIS"
+        UPDATECOMMENTBLOCK
+            Run the Tools\Update-StandardsComments.ps1 script to update this comment block
+    .LINK
+        https://docs.cipp.app/user-documentation/tenant/standards/edit-standards
     #>
-
-
-
-
 
     param($Tenant, $Settings)
     $PolicyName = 'Default Safe Attachment Policy'
@@ -46,6 +44,7 @@ function Invoke-CIPPStandardSafeAttachmentPolicy {
 
     $StateIsCorrect = ($CurrentState.Name -eq $PolicyName) -and
                       ($CurrentState.Enable -eq $true) -and
+                      ($CurrentState.Action -eq $Settings.Action) -and
                       ($CurrentState.QuarantineTag -eq $Settings.QuarantineTag) -and
                       ($CurrentState.Redirect -eq $Settings.Redirect) -and
                       (($null -eq $Settings.RedirectAddress) -or ($CurrentState.RedirectAddress -eq $Settings.RedirectAddress))
@@ -68,6 +67,7 @@ function Invoke-CIPPStandardSafeAttachmentPolicy {
         } else {
             $cmdparams = @{
                 Enable          = $true
+                Action          = $Settings.Action
                 QuarantineTag   = $Settings.QuarantineTag
                 Redirect        = $Settings.Redirect
                 RedirectAddress = $Settings.RedirectAddress
@@ -137,7 +137,3 @@ function Invoke-CIPPStandardSafeAttachmentPolicy {
     }
 
 }
-
-
-
-

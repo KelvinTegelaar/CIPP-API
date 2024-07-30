@@ -152,7 +152,9 @@
         { "id": "9e4862a5-b68f-479e-848a-4e07e25c9916", "type": "Scope" },
         { "id": "bb6f654c-d7fd-4ae3-85c3-fc380934f515", "type": "Scope" },
         { "id": "e0a7cdbb-08b0-4697-8264-0069786e9674", "type": "Scope" },
-        { "id": "19da66cb-0fb0-4390-b071-ebc76a349482", "type": "Role" }
+        { "id": "19da66cb-0fb0-4390-b071-ebc76a349482", "type": "Role" },
+        { "id": "818c620a-27a9-40bd-a6a5-d96f7d610b4b", "type": "Scope" },
+        { "id": "6931bccd-447a-43d1-b442-00a195474933", "type": "Role" }
       ]
     },
     {

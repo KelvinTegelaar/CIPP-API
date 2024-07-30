@@ -5,7 +5,7 @@ function Invoke-CIPPStandardSPExternalUserExpiration {
     .COMPONENT
         (APIName) SPExternalUserExpiration
     .SYNOPSIS
-        Set guest access to expire automatically
+        (Label) Set guest access to expire automatically
     .DESCRIPTION
         (Helptext) Ensure guest access to a site or OneDrive will expire automatically
         (DocsDescription) Ensure guest access to a site or OneDrive will expire automatically
@@ -17,16 +17,16 @@ function Invoke-CIPPStandardSPExternalUserExpiration {
             "CIS"
         ADDEDCOMPONENT
             {"type":"number","name":"standards.SPExternalUserExpiration.Days","label":"Days until expiration (Default 60)"}
-        LABEL
-            Set guest access to expire automatically
         IMPACT
             Medium Impact
         POWERSHELLEQUIVALENT
-            Set-SPOTenant -ExternalUserExpireInDays 30 -ExternalUserExpirationRequired $True
+            Set-SPOTenant -ExternalUserExpireInDays 30 -ExternalUserExpirationRequired \$True
         RECOMMENDEDBY
             "CIS 3.0"
         UPDATECOMMENTBLOCK
             Run the Tools\Update-StandardsComments.ps1 script to update this comment block
+    .LINK
+        https://docs.cipp.app/user-documentation/tenant/standards/edit-standards
     #>
 
     param($Tenant, $Settings)
@@ -38,7 +38,7 @@ function Invoke-CIPPStandardSPExternalUserExpiration {
 
     if ($Settings.remediate -eq $true) {
         if ($StateIsCorrect -eq $true) {
-            Write-LogMessage -API 'Standards' -Message 'Sharepoint External User Expiration is already enabled.' -Sev Info
+            Write-LogMessage -API 'Standards' -Tenant $Tenant -Message 'Sharepoint External User Expiration is already enabled.' -Sev Info
         } else {
             $Properties = @{
                 ExternalUserExpireInDays = $Settings.Days
@@ -47,19 +47,19 @@ function Invoke-CIPPStandardSPExternalUserExpiration {
 
             try {
                 Get-CIPPSPOTenant -TenantFilter $Tenant | Set-CIPPSPOTenant -Properties $Properties
-                Write-LogMessage -API 'Standards' -Message 'Successfully set External User Expiration' -Sev Info
+                Write-LogMessage -API 'Standards' -Tenant $Tenant -Message 'Successfully set External User Expiration' -Sev Info
             } catch {
                 $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
-                Write-LogMessage -API 'Standards' -Message "Failed to set External User Expiration. Error: $ErrorMessage" -Sev Error
+                Write-LogMessage -API 'Standards' -Tenant $Tenant -Message "Failed to set External User Expiration. Error: $ErrorMessage" -Sev Error
             }
         }
     }
 
     if ($Settings.alert -eq $true) {
         if ($StateIsCorrect -eq $true) {
-            Write-LogMessage -API 'Standards' -Message 'External User Expiration is enabled' -Sev Info
+            Write-LogMessage -API 'Standards' -Tenant $Tenant -Message 'External User Expiration is enabled' -Sev Info
         } else {
-            Write-LogMessage -API 'Standards' -Message 'External User Expiration is not enabled' -Sev Alert
+            Write-LogMessage -API 'Standards' -Tenant $Tenant -Message 'External User Expiration is not enabled' -Sev Alert
         }
     }
 
