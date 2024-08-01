@@ -12,7 +12,7 @@ function Get-CIPPAlertDeviceCompliance {
         $TenantFilter
     )
     try {
-        $AlertData = New-GraphGETRequest -uri "https://graph.microsoft.com/v1.0/deviceManagement/managedDevices?`$filter=complianceState ne 'compliant'" | ForEach-Object {
+        $AlertData = New-GraphGETRequest -uri "https://graph.microsoft.com/v1.0/deviceManagement/managedDevices?`$top=999" -tenantid $TenantFilter | Where-Object -Property complianceState -NE 'compliant' | ForEach-Object {
             $_ | Select-Object -Property id, deviceName, deviceType, complianceState, lastReportedDateTime
         }
         Write-AlertTrace -cmdletName $MyInvocation.MyCommand -tenantFilter $TenantFilter -data $AlertData
