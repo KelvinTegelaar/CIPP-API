@@ -55,7 +55,7 @@ function Set-CIPPSAMAdminRoles {
                 $null = New-ExoRequest -cmdlet 'New-ServicePrincipal' -cmdParams @{AppId = $env:ApplicationId; ObjectId = $id; DisplayName = 'CIPP-SAM' } -tenantid $TenantFilter -useSystemMailbox $true -AsApp
                 $ActionLogs.Add('Added Service Principal to Exchange Online')
             } catch {
-                $ActionLogs.Add('Service Principal alrady added to Exchange Online')
+                $ActionLogs.Add('Service Principal already added to Exchange Online')
             }
 
             Write-Verbose ($Requests | ConvertTo-Json -Depth 5)
