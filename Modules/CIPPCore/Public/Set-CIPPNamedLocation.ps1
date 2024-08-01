@@ -24,7 +24,7 @@ function Set-CIPPNamedLocation {
                 $NamedLocations.ipRanges = @($NamedLocations.ipRanges | Where-Object -Property cidrAddress -NE $content)
             }
             'removelocation' {
-                $NamedLocations.countriesAndRegions = @($NamedLocations.countriesAndRegions | Where-Object -NE $content)
+                $NamedLocations.countriesAndRegions = @($NamedLocations.countriesAndRegions | Where-Object { $_ -NE $content })
             }
         }
         if ($PSCmdlet.ShouldProcess($GroupName, "Assigning Application $ApplicationId")) {
