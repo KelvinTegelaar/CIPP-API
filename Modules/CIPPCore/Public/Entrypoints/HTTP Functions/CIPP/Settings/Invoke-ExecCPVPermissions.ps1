@@ -35,6 +35,7 @@ Function Invoke-ExecCPVPermissions {
         }
         Add-CIPPApplicationPermission -RequiredResourceAccess 'CippDefaults' -ApplicationId $ENV:ApplicationID -tenantfilter $TenantFilter
         Add-CIPPDelegatedPermission -RequiredResourceAccess 'CippDefaults' -ApplicationId $ENV:ApplicationID -tenantfilter $TenantFilter
+        Set-CIPPSAMAdminRoles -TenantFilter $TenantFilter
         $Success = $true
     } catch {
         "Failed to update permissions for $($Tenant.displayName): $($_.Exception.Message)"
