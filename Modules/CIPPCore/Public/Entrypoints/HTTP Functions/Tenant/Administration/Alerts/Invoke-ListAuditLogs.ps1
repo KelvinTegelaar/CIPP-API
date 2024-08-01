@@ -17,9 +17,15 @@ function Invoke-ListAuditLogs {
     if ($Request.Query.LogId) {
         $FilterConditions.Add("RowKey eq '$($Request.Query.LogId)'")
     } else {
-        if ($TenantFilter) {
+        if ($TenantFilter -and $TenantFilter -ne 'AllTenants') {
             $FilterConditions.Add("Tenant eq '$TenantFilter'")
         }
+
+        if (!$Request.Query.StartDate -and !$Request.Query.EndDate -and !$Request.Query.RelativeTime) {
+            $Request.Query.StartDate = (Get-Date).AddDays(-1).ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ssZ')
+            $Request.Query.EndDate = (Get-Date).ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ssZ')
+        }
+
         if ($Request.Query.RelativeTime) {
             $RelativeTime = $Request.Query.RelativeTime
 
