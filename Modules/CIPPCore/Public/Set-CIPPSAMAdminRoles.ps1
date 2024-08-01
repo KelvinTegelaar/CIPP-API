@@ -25,6 +25,7 @@ function Set-CIPPSAMAdminRoles {
 
     if (($SAMRoles | Measure-Object).count -gt 0 -and $Tenants -contains $TenantFilter -or $Tenants -contains 'AllTenants') {
         $AppMemberOf = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/servicePrincipals(appId='$($env:ApplicationId)')/memberOf/#microsoft.graph.directoryRole" -tenantid $TenantFilter -AsApp $true
+
         $sp = (New-GraphGetRequest -uri "https://graph.microsoft.com/beta/servicePrincipals(appId='$($env:ApplicationId)')?`$select=id,displayName" -tenantid $TenantFilter -AsApp $true)
         $id = $sp.id
 
@@ -76,15 +77,15 @@ function Set-CIPPSAMAdminRoles {
                 'LogData'  = $ActionLogs
             }
             if ($HasFailures) {
-                $LogMessage.message = 'Errors occurred while setting admin roles for CIPP-SAM'
+                $LogMessage.message = 'Errors occurred while setting Admin Roles for CIPP-SAM'
                 $LogMessage.sev = 'Error'
             } else {
-                $LogMessage.message = 'Successfully set admin roles for CIPP-SAM'
+                $LogMessage.message = 'Successfully set Admin Roles for CIPP-SAM'
                 $LogMessage.sev = 'Info'
             }
             Write-LogMessage @LogMessage
         } else {
-            $ActionLogs.Add('Service principal already exists in all requested SAM roles')
+            $ActionLogs.Add('Service principal already exists in all requested Admin Roles')
         }
     } else {
         $ActionLogs.Add('No SAM roles found or tenant not added to CIPP-SAM roles')
