@@ -22,12 +22,14 @@ function Invoke-ExecSAMRoles {
         }
         default {
             $SAMRoles = Get-CIPPAzDataTableEntity @SAMRolesTable
+            $Roles = @($SAMRoles.Roles | ConvertFrom-Json)
+            $Tenants = @($SAMRoles.Tenants | ConvertFrom-Json)
             $Body = @{
-                'Roles'    = $SAMRoles.Roles | ConvertFrom-Json
-                'Tenants'  = $SAMRoles.Tenants | ConvertFrom-Json
+                'Roles'    = $Roles
+                'Tenants'  = $Tenants
                 'Metadata' = @{
-                    'RoleCount'   = $SAMRoles.Roles.Count
-                    'TenantCount' = $SAMRoles.Tenants.Count
+                    'RoleCount'   = ($Roles | Measure-Object).Count
+                    'TenantCount' = ($Tenants | Measure-Object).Count
                 }
             } | ConvertTo-Json -Depth 5
         }
