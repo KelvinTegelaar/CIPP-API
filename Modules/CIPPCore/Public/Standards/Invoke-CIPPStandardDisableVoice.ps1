@@ -17,6 +17,9 @@ function Invoke-CIPPStandardDisableVoice {
         ADDEDCOMPONENT
         IMPACT
             High Impact
+        POWERSHELLEQUIVALENT
+            Update-MgBetaPolicyAuthenticationMethodPolicyAuthenticationMethodConfiguration
+        RECOMMENDEDBY
         UPDATECOMMENTBLOCK
             Run the Tools\Update-StandardsComments.ps1 script to update this comment block
     .LINK
