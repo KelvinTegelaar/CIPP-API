@@ -177,6 +177,7 @@ function Get-GraphRequestList {
 
                         try {
                             $DefaultDomainName = $_.defaultDomainName
+                            Write-Host "Default domain name is $DefaultDomainName"
                             Get-GraphRequestList @GraphRequestParams | Select-Object *, @{l = 'Tenant'; e = { $_.defaultDomainName } }, @{l = 'CippStatus'; e = { 'Good' } }
                         } catch {
                             [PSCustomObject]@{
