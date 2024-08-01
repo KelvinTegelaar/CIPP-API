@@ -51,7 +51,7 @@ function Send-CIPPAlert {
         try {
             $Table = Get-CIPPTable -TableName $TableName
             $Alert = @{
-                PartitionKey = 'Alert'
+                PartitionKey = $TenantFilter ?? 'Alert'
                 RowKey       = [string][guid]::NewGuid()
                 Title        = $Title
                 Data         = [string]$JSONContent
