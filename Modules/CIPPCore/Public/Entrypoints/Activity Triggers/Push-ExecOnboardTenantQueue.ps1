@@ -135,7 +135,7 @@ Function Push-ExecOnboardTenantQueue {
                 if ($AccessAssignments.id -and !$Invite) {
                     $MissingRoles = [System.Collections.Generic.List[object]]::new()
                     $Logs.Add([PSCustomObject]@{ Date = Get-Date -UFormat $DateFormat; Log = 'Relationship has existing access assignments, checking for missing mappings' })
-                    #Write-Host ($AccessAssignments | ConvertTo-Json -Depth 5)
+
                     if ($Item.Roles -and $Item.AutoMapRoles -eq $true) {
                         foreach ($Role in $Item.Roles) {
                             if ($AccessAssignments.accessContainer.accessContainerid -notcontains $Role.GroupId -and $Relationship.accessDetails.unifiedRoles.roleDefinitionId -contains $Role.roleDefinitionId) {
@@ -161,7 +161,7 @@ Function Push-ExecOnboardTenantQueue {
                     }
                 }
 
-                if (!$AccessAssignments.id -and !$Invite -and $Item.Roles) {
+                if (!$AccessAssignments.id -and $Item.Roles) {
                     $Logs.Add([PSCustomObject]@{ Date = Get-Date -UFormat $DateFormat; Log = 'No access assignments found, using defined role mapping.' })
                     $MatchingRoles = [System.Collections.Generic.List[object]]::new()
                     foreach ($Role in $Item.Roles) {
@@ -177,7 +177,7 @@ Function Push-ExecOnboardTenantQueue {
                             'InviteUrl'    = 'https://admin.microsoft.com/AdminPortal/Home#/partners/invitation/granularAdminRelationships/{0}' -f $Id
                             'RoleMappings' = [string](@($MatchingRoles) | ConvertTo-Json -Depth 10 -Compress)
                         }
-                        Add-CIPPAzDataTableEntity @InviteTable -Entity $Invite
+                        Add-CIPPAzDataTableEntity @InviteTable -Entity $Invite -Force
                         $GroupSuccess = $true
                     } else {
                         $TenantOnboarding.Status = 'failed'
@@ -292,10 +292,10 @@ Function Push-ExecOnboardTenantQueue {
                         }
                         $Logs.Add([PSCustomObject]@{ Date = Get-Date -UFormat $DateFormat; Log = 'Added initial CPV consent permissions' })
                     } catch {
-                        $Logs.Add([PSCustomObject]@{ Date = Get-Date -UFormat $DateFormat; Log = 'CPV Consent Failed' })
+                        $Logs.Add([PSCustomObject]@{ Date = Get-Date -UFormat $DateFormat; Log = ('CPV Consent Failed, error: {0}' -f $Consent) })
                         $TenantOnboarding.Status = 'failed'
                         $OnboardingSteps.Step4.Status = 'failed'
-                        $OnboardingSteps.Step4.Message = 'CPV Consent failed, check the App Registration in your partner tenant for missing admin consent.'
+                        $OnboardingSteps.Step4.Message = 'CPV Consent failed, check the logs for more details.'
                         $TenantOnboarding.OnboardingSteps = [string](ConvertTo-Json -InputObject $OnboardingSteps -Compress)
                         $TenantOnboarding.Logs = [string](ConvertTo-Json -InputObject @($Logs) -Compress)
                         Add-CIPPAzDataTableEntity @OnboardTable -Entity $TenantOnboarding -Force -ErrorAction Stop
@@ -309,6 +309,7 @@ Function Push-ExecOnboardTenantQueue {
                     $TenantOnboarding.OnboardingSteps = [string](ConvertTo-Json -InputObject $OnboardingSteps -Compress)
                     $TenantOnboarding.Logs = [string](ConvertTo-Json -InputObject @($Logs) -Compress)
                     Add-CIPPAzDataTableEntity @OnboardTable -Entity $TenantOnboarding -Force -ErrorAction Stop
+                    $LastCPVError = ''
                     do {
                         try {
                             Add-CIPPApplicationPermission -RequiredResourceAccess 'CippDefaults' -ApplicationId $ENV:ApplicationID -tenantfilter $Relationship.customer.tenantId
@@ -316,6 +317,7 @@ Function Push-ExecOnboardTenantQueue {
                             $CPVSuccess = $true
                             $Refreshing = $false
                         } catch {
+                            $LastCPVError = $_.Exception.Message
                             Start-Sleep -Seconds 30
                         }
                     } while ($Refreshing -and (Get-Date) -lt $Start.AddMinutes(8))
@@ -328,10 +330,10 @@ Function Push-ExecOnboardTenantQueue {
                             $Tenant = Get-Tenants -TriggerRefresh -IncludeAll | Where-Object { $_.customerId -eq $Relationship.customer.tenantId } | Select-Object -First 1
                         }
                     } else {
-                        $Logs.Add([PSCustomObject]@{ Date = Get-Date -UFormat $DateFormat; Log = 'CPV permissions failed to refresh' })
+                        $Logs.Add([PSCustomObject]@{ Date = Get-Date -UFormat $DateFormat; Log = 'CPV permissions failed to refresh. {0}' -f $LastCPVError })
                         $TenantOnboarding.Status = 'failed'
                         $OnboardingSteps.Step4.Status = 'failed'
-                        $OnboardingSteps.Step4.Message = 'CPV permissions failed to refresh, try again later'
+                        $OnboardingSteps.Step4.Message = 'CPV permissions failed to refresh, check the logs for more details.'
                     }
                 } else {
                     $Logs.Add([PSCustomObject]@{ Date = Get-Date -UFormat $DateFormat; Log = 'Tenant not found' })
