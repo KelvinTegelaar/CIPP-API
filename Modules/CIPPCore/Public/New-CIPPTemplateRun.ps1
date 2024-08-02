@@ -4,7 +4,6 @@ function New-CIPPTemplateRun {
         $TemplateSettings,
         $TenantFilter
     )
-
     $Table = Get-CippTable -tablename 'templates'
     $ExistingTemplates = (Get-CIPPAzDataTableEntity @Table) | ForEach-Object {
         $data = $_.JSON | ConvertFrom-Json -Depth 100
@@ -12,9 +11,17 @@ function New-CIPPTemplateRun {
         $data | Add-Member -NotePropertyName 'PartitionKey' -NotePropertyValue $_.PartitionKey -Force
         $data
     } | Sort-Object -Property displayName
-    $Tasks = ($TemplateSettings.psobject.properties | Where-Object { $_.Value -eq 'true' }).Name
+
+
+    $Tasks = foreach ($key in $TemplateSettings.Keys) {
+        if ($TemplateSettings[$key] -eq $true) {
+            $key
+        }
+    }
+
 
     foreach ($Task in $Tasks) {
+        Write-Host "Working on task $Task"
         switch ($Task) {
             'ca' {
                 Write-Host "Template Conditional Access Policies for $TenantFilter"
