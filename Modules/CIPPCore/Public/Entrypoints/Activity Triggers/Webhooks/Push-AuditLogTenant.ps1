@@ -49,7 +49,7 @@ function Push-AuditLogTenant {
     }
 
     if (($NewBundles | Measure-Object).Count -gt 0) {
-        Add-CIPPAzDataTableEntity @AuditBundleTable -Entity $NewBundles
+        Add-CIPPAzDataTableEntity @AuditBundleTable -Entity $NewBundles -Force
         Write-Information ($NewBundles | ConvertTo-Json -Depth 5 -Compress)
 
         $Batch = $NewBundles | Select-Object @{Name = 'ContentId'; Expression = { $_.RowKey } }, @{Name = 'TenantFilter'; Expression = { $_.PartitionKey } }, @{Name = 'FunctionName'; Expression = { 'AuditLogBundleProcessing' } }
