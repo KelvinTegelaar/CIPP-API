@@ -106,9 +106,15 @@ function New-ExoRequest {
                 $RedirectedHost = ([System.Uri]($ComplianceHeaders.Location | Select-Object -First 1)).Host
                 $RedirectedHostname = '{0}.ps.compliance.protection.outlook.com' -f ($RedirectedHost -split '\.' | Select-Object -First 1)
                 $Resource = "https://$($RedirectedHostname)"
-                $Tenant | Add-Member -MemberType NoteProperty -Name ComplianceUrl -Value $Resource
-                $TenantTable = Get-CIPPTable -tablename 'Tenants'
-                Add-CIPPAzDataTableEntity @TenantTable -Entity $Tenant -Force
+                try {
+                    $null = [System.Uri]$Resource
+                    $Tenant | Add-Member -MemberType NoteProperty -Name ComplianceUrl -Value $Resource
+                    $TenantTable = Get-CIPPTable -tablename 'Tenants'
+                    Add-CIPPAzDataTableEntity @TenantTable -Entity $Tenant -Force
+                } catch {
+                    Write-Error "Failed to get the Compliance URL for $($tenant.defaultDomainName), invalid URL - check the Anchor and try again."
+                    return
+                }
             } else {
                 $Resource = $Tenant.ComplianceUrl
             }

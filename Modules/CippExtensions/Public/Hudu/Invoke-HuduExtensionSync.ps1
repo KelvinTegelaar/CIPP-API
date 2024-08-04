@@ -93,7 +93,7 @@ function Invoke-HuduExtensionSync {
             }
             @{
                 Title = 'Exchange Admin Portal'
-                URL   = 'https://outlook.office365.com/ecp/?rfr=Admin_o365&exsvurl=1&delegatedOrg={0}' -f $Tenant.initialDomainName
+                URL   = 'https://admin.exchange.microsoft.com/?landingpage=homepage&form=mac_sidebar&delegatedOrg={0}' -f $Tenant.initialDomainName
                 Icon  = 'fas fa-mail-bulk'
             }
             @{
