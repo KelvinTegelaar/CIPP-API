@@ -69,9 +69,12 @@ function Set-CIPPAssignedPolicy {
         $assignmentsObject = [PSCustomObject]@{
             assignments = @($assignmentsObject)
         }
+
+        $AssignJSON = ($assignmentsObject | ConvertTo-Json -Depth 10 -Compress)
+        Write-Host "AssignJSON: $AssignJSON"
         if ($PSCmdlet.ShouldProcess($GroupName, "Assigning policy $PolicyId")) {
             Write-Host "https://graph.microsoft.com/beta/$($PlatformType)/$Type('$($PolicyId)')/assign"
-            $null = New-GraphPOSTRequest -uri "https://graph.microsoft.com/beta/$($PlatformType)/$Type('$($PolicyId)')/assign" -tenantid $tenantFilter -type POST -body ($assignmentsObject | ConvertTo-Json -Depth 10)
+            $null = New-GraphPOSTRequest -uri "https://graph.microsoft.com/beta/$($PlatformType)/$Type('$($PolicyId)')/assign" -tenantid $tenantFilter -type POST -body $AssignJSON
             Write-LogMessage -user $ExecutingUser -API $APIName -message "Assigned $GroupName to Policy $PolicyId" -Sev 'Info' -tenant $TenantFilter
         }
     } catch {

@@ -41,7 +41,7 @@ function Push-ListGraphRequestQueue {
             Get-GraphRequestList @GraphRequestParams
         } catch {
             [PSCustomObject]@{
-                Tenant     = $Item.Tenant
+                Tenant     = $Item.TenantFilter
                 CippStatus = "Could not connect to tenant. $($_.Exception.message)"
             }
         }
