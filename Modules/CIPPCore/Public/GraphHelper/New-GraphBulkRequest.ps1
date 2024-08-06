@@ -33,9 +33,15 @@ function New-GraphBulkRequest {
                 $req = @{}
                 # Use select to create hashtables of id, method and url for each call
                 $req['requests'] = ($Requests[$i..($i + 19)])
-                Invoke-RestMethod -Uri $URL -Method POST -Headers $headers -ContentType 'application/json; charset=utf-8' -Body ($req | ConvertTo-Json -Depth 10)
+                $ReqBody = (ConvertTo-Json -InputObject $req -Compress -Depth 100)
+                $Return = Invoke-RestMethod -Uri $URL -Method POST -Headers $headers -ContentType 'application/json; charset=utf-8' -Body $ReqBody
+                if ($Return.headers.'retry-after') {
+                    #Revist this when we are pushing this data into our custom schema instead.
+                    $headers = Get-GraphToken -tenantid $tenantid -scope $scope -AsApp $asapp
+                    Invoke-RestMethod -Uri $URL -Method POST -Headers $headers -ContentType 'application/json; charset=utf-8' -Body $ReqBody
+                }
+                $Return
             }
-
             foreach ($MoreData in $ReturnedData.Responses | Where-Object { $_.body.'@odata.nextLink' }) {
                 Write-Host 'Getting more'
                 $AdditionalValues = New-GraphGetRequest -ComplexFilter -uri $MoreData.body.'@odata.nextLink' -tenantid $tenantid -NoAuthCheck:$NoAuthCheck
@@ -46,7 +52,7 @@ function New-GraphBulkRequest {
 
         } catch {
             $Message = ($_.ErrorDetails.Message | ConvertFrom-Json -ErrorAction SilentlyContinue).error.message
-            if ($Message -eq $null) { $Message = $($_.Exception.Message) }
+            if ($null -eq $Message) { $Message = $($_.Exception.Message) }
             if ($Message -ne 'Request not applicable to target tenant.') {
                 $Tenant.LastGraphError = $Message
                 $Tenant.GraphErrorCount++

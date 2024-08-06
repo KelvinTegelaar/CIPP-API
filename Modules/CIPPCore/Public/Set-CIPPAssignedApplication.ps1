@@ -1,73 +1,73 @@
 function Set-CIPPAssignedApplication {
-    [CmdletBinding()]
+    [CmdletBinding(SupportsShouldProcess = $true)]
     param(
         $GroupName,
         $Intent,
         $AppType,
         $ApplicationId,
         $TenantFilter,
-        $APIName = "Assign Application",
+        $APIName = 'Assign Application',
         $ExecutingUser
     )
 
-    try { 
+    try {
         $MobileAppAssignment = switch ($GroupName) {
-            "AllUsers" {
+            'AllUsers' {
                 @(@{
-                        "@odata.type" = "#microsoft.graph.mobileAppAssignment"
+                        '@odata.type' = '#microsoft.graph.mobileAppAssignment'
                         target        = @{
-                            "@odata.type" = "#microsoft.graph.allLicensedUsersAssignmentTarget"
+                            '@odata.type' = '#microsoft.graph.allLicensedUsersAssignmentTarget'
                         }
                         intent        = $Intent
                         settings      = @{
-                            "@odata.type"       = "#microsoft.graph.$($appType)AppAssignmentSettings"
-                            notifications       = "hideAll"
+                            '@odata.type'       = "#microsoft.graph.$($appType)AppAssignmentSettings"
+                            notifications       = 'hideAll'
                             installTimeSettings = $null
                             restartSettings     = $null
                         }
                     })
-                break 
+                break
             }
-            "AllDevices" {
+            'AllDevices' {
                 @(@{
-                        "@odata.type" = "#microsoft.graph.mobileAppAssignment"
+                        '@odata.type' = '#microsoft.graph.mobileAppAssignment'
                         target        = @{
-                            "@odata.type" = "#microsoft.graph.allDevicesAssignmentTarget"
+                            '@odata.type' = '#microsoft.graph.allDevicesAssignmentTarget'
                         }
                         intent        = $Intent
                         settings      = @{
-                            "@odata.type"       = "#microsoft.graph.$($appType)AppAssignmentSettings"
-                            notifications       = "hideAll"
+                            '@odata.type'       = "#microsoft.graph.$($appType)AppAssignmentSettings"
+                            notifications       = 'hideAll'
                             installTimeSettings = $null
                             restartSettings     = $null
                         }
                     })
-                break 
+                break
             }
-            "AllDevicesAndUsers" { 
+            'AllDevicesAndUsers' {
                 @(
                     @{
-                        "@odata.type" = "#microsoft.graph.mobileAppAssignment"
+                        '@odata.type' = '#microsoft.graph.mobileAppAssignment'
                         target        = @{
-                            "@odata.type" = "#microsoft.graph.allLicensedUsersAssignmentTarget"
+                            '@odata.type' = '#microsoft.graph.allLicensedUsersAssignmentTarget'
                         }
                         intent        = $Intent
                         settings      = @{
-                            "@odata.type"       = "#microsoft.graph.$($appType)AppAssignmentSettings"
-                            notifications       = "hideAll"
+                            '@odata.type'       = "#microsoft.graph.$($appType)AppAssignmentSettings"
+                            notifications       = 'hideAll'
                             installTimeSettings = $null
                             restartSettings     = $null
                         }
                     },
                     @{
-                        "@odata.type" = "#microsoft.graph.mobileAppAssignment"
+                        '@odata.type' = '#microsoft.graph.mobileAppAssignment'
                         target        = @{
-                            "@odata.type" = "#microsoft.graph.allDevicesAssignmentTarget"
+                            '@odata.type' = '#microsoft.graph.allDevicesAssignmentTarget'
                         }
                         intent        = $Intent
                         settings      = @{
-                            "@odata.type"       = "#microsoft.graph.$($appType)AppAssignmentSettings"
-                            notifications       = "hideAll"
+                            '@odata.type'       = "#microsoft.graph.$($appType)AppAssignmentSettings"
+                            notifications       = 'hideAll'
                             installTimeSettings = $null
                             restartSettings     = $null
                         }
@@ -75,8 +75,8 @@ function Set-CIPPAssignedApplication {
                 )
             }
             default {
-                $GroupNames = $GroupName.Split(",")
-                $GroupIds = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/groups" -tenantid $TenantFilter | ForEach-Object { 
+                $GroupNames = $GroupName.Split(',')
+                $GroupIds = New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/groups' -tenantid $TenantFilter | ForEach-Object {
                     $Group = $_
                     foreach ($SingleName in $GroupNames) {
                         if ($_.displayname -like $SingleName) {
@@ -84,18 +84,18 @@ function Set-CIPPAssignedApplication {
                         }
                     }
                 }
-                Write-Host "found $($GroupIds) groups"
+                Write-Information "found $($GroupIds) groups"
                 foreach ($Group in $GroupIds) {
                     @{
-                        "@odata.type" = "#microsoft.graph.mobileAppAssignment"
+                        '@odata.type' = '#microsoft.graph.mobileAppAssignment'
                         target        = @{
-                            "@odata.type" = "#microsoft.graph.groupAssignmentTarget"
+                            '@odata.type' = '#microsoft.graph.groupAssignmentTarget'
                             groupId       = $Group
                         }
                         intent        = $Intent
                         settings      = @{
-                            "@odata.type"       = "#microsoft.graph.$($appType)AppAssignmentSettings"
-                            notifications       = "hideAll"
+                            '@odata.type'       = "#microsoft.graph.$($appType)AppAssignmentSettings"
+                            notifications       = 'hideAll'
                             installTimeSettings = $null
                             restartSettings     = $null
                         }
@@ -108,12 +108,14 @@ function Set-CIPPAssignedApplication {
                 $MobileAppAssignment
             )
         }
-        $assign = New-GraphPOSTRequest -uri  "https://graph.microsoft.com/beta/deviceAppManagement/mobileApps/$($ApplicationId)/assign" -tenantid $TenantFilter -type POST -body ($DefaultAssignmentObject | ConvertTo-Json -Compress -Depth 10)
-        Write-LogMessage -user $ExecutingUser -API $APIName -message "Assigned Application to $($GroupName)" -Sev "Info" -tenant $TenantFilter
+        if ($PSCmdlet.ShouldProcess($GroupName, "Assigning Application $ApplicationId")) {
+            $null = New-GraphPOSTRequest -uri "https://graph.microsoft.com/beta/deviceAppManagement/mobileApps/$($ApplicationId)/assign" -tenantid $TenantFilter -type POST -body ($DefaultAssignmentObject | ConvertTo-Json -Compress -Depth 10)
+            Write-LogMessage -user $ExecutingUser -API $APIName -message "Assigned Application to $($GroupName)" -Sev 'Info' -tenant $TenantFilter
+        }
         return "Assigned Application to $($GroupName)"
-    }
-    catch {
-        Write-LogMessage -user $ExecutingUser -API $APIName -message "Could not assign application to $GroupName" -Sev "Error" -tenant $TenantFilter
-        return "Could not assign application to $GroupName. Error: $($_.Exception.Message)"
+    } catch {
+        $ErrorMessage = Get-CippException -Exception $_
+        Write-LogMessage -user $ExecutingUser -API $APIName -message "Could not assign application to $GroupName. Error: $($ErrorMessage.NormalizedError)" -Sev 'Error' -tenant $TenantFilter -LogData $ErrorMessage
+        return "Could not assign application to $GroupName. Error: $($ErrorMessage.NormalizedError)"
     }
 }

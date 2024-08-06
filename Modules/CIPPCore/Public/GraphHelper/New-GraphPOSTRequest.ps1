@@ -1,5 +1,5 @@
 
-function New-GraphPOSTRequest ($uri, $tenantid, $body, $type, $scope, $AsApp, $NoAuthCheck, $skipTokenCache, $AddedHeaders, $contentType, $IgnoreErrors) {
+function New-GraphPOSTRequest ($uri, $tenantid, $body, $type, $scope, $AsApp, $NoAuthCheck, $skipTokenCache, $AddedHeaders, $contentType, $IgnoreErrors = $false, $returnHeaders = $false) {
     <#
     .FUNCTIONALITY
     Internal
@@ -20,7 +20,7 @@ function New-GraphPOSTRequest ($uri, $tenantid, $body, $type, $scope, $AsApp, $N
             $contentType = 'application/json; charset=utf-8'
         }
         try {
-            $ReturnedData = (Invoke-RestMethod -Uri $($uri) -Method $TYPE -Body $body -Headers $headers -ContentType $contentType -SkipHttpErrorCheck:$IgnoreErrors)
+            $ReturnedData = (Invoke-RestMethod -Uri $($uri) -Method $TYPE -Body $body -Headers $headers -ContentType $contentType -SkipHttpErrorCheck:$IgnoreErrors -ResponseHeadersVariable responseHeaders)
         } catch {
             $Message = if ($_.ErrorDetails.Message) {
                 Get-NormalizedError -Message $_.ErrorDetails.Message
@@ -29,7 +29,11 @@ function New-GraphPOSTRequest ($uri, $tenantid, $body, $type, $scope, $AsApp, $N
             }
             throw $Message
         }
-        return $ReturnedData
+        if ($returnHeaders) {
+            return $responseHeaders
+        } else {
+            return $ReturnedData
+        }
     } else {
         Write-Error 'Not allowed. You cannot manage your own tenant or tenants not under your scope'
     }

@@ -1,5 +1,10 @@
 function Invoke-RemoveCippQueue {
-    # Input bindings are passed in via param block.
+    <#
+    .FUNCTIONALITY
+        Entrypoint
+    .ROLE
+        CIPP.Core.ReadWrite
+    #>
     param($Request, $TriggerMetadata)
 
     $APIName = $TriggerMetadata.FunctionName
@@ -10,6 +15,8 @@ function Invoke-RemoveCippQueue {
 
     $CippQueue = Get-CippTable -TableName 'CippQueue'
     Clear-AzDataTable @CippQueue
+    $CippQueueTasks = Get-CippTable -TableName 'CippQueueTasks'
+    Clear-AzDataTable @CippQueueTasks
 
     Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
             StatusCode = [HttpStatusCode]::OK

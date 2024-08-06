@@ -5,8 +5,11 @@ function Test-CIPPAccessPermissions {
         $APIName = 'Access Check',
         $ExecutingUser
     )
-    Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -message 'Started permissions check' -Sev 'Debug'
+
+    $User = $request.headers.'x-ms-client-principal-name'
+    Write-LogMessage -user $User -API $APINAME -message 'Started permissions check' -Sev 'Debug'
     $Messages = [System.Collections.Generic.List[string]]::new()
+    $ErrorMessages = [System.Collections.Generic.List[string]]::new()
     $MissingPermissions = [System.Collections.Generic.List[string]]::new()
     $Links = [System.Collections.Generic.List[object]]::new()
     $AccessTokenDetails = [PSCustomObject]@{
@@ -41,7 +44,7 @@ function Test-CIPPAccessPermissions {
                     Write-Host 'Setting success to false due to nonmaching token.'
 
                     $Success = $false
-                    $Messages.Add('Your refresh token does not match key vault, clear your cache or wait 30 minutes.') | Out-Null
+                    $ErrorMessages.Add('Your refresh token does not match key vault, clear your cache or wait 30 minutes.') | Out-Null
                     $Links.Add([PSCustomObject]@{
                             Text = 'Clear Token Cache'
                             Href = 'https://docs.cipp.app/setup/installation/cleartokencache'
@@ -51,25 +54,27 @@ function Test-CIPPAccessPermissions {
                     $Messages.Add('Your refresh token matches key vault.') | Out-Null
                 }
             } catch {
-                Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $tenant -message "Key vault exception: $($_) " -Sev 'Error'
+                $ErrorMessage = Get-CippException -Exception $_
+                Write-LogMessage -user $User -API $APINAME -tenant $tenant -message "Key vault exception: $($ErrorMessage.NormalizedError) " -Sev 'Error' -LogData $ErrorMessage
             }
         }
 
         try {
             $AccessTokenDetails = Read-JwtAccessDetails -Token $GraphToken.access_token -erroraction SilentlyContinue
         } catch {
+            $ErrorMessage = Get-CippException -Exception $_
             $AccessTokenDetails = [PSCustomObject]@{
                 Name        = ''
                 AuthMethods = @()
             }
-            Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $tenant -message "Token exception: $($_) " -Sev 'Error'
+            Write-LogMessage -user $User -API $APINAME -tenant $tenant -message "Token exception: $($ErrorMessage.NormalizedError_) " -Sev 'Error' -LogData $ErrorMessage
             $Success = $false
             Write-Host 'Setting success to false due to not able to decode token.'
 
         }
 
         if ($AccessTokenDetails.Name -eq '') {
-            $Messages.Add('Your refresh token is invalid, check for line breaks or missing characters.') | Out-Null
+            $ErrorMessages.Add('Your refresh token is invalid, check for line breaks or missing characters.') | Out-Null
             Write-Host 'Setting success to false invalid token.'
 
             $Success = $false
@@ -77,7 +82,7 @@ function Test-CIPPAccessPermissions {
             if ($AccessTokenDetails.AuthMethods -contains 'mfa') {
                 $Messages.Add('Your access token contains the MFA claim.') | Out-Null
             } else {
-                $Messages.Add('Your access token does not contain the MFA claim, Refresh your SAM tokens.') | Out-Null
+                $ErrorMessages.Add('Your access token does not contain the MFA claim, Refresh your SAM tokens.') | Out-Null
                 Write-Host 'Setting success to False due to invalid list of claims.'
 
                 $Success = $false
@@ -107,16 +112,21 @@ function Test-CIPPAccessPermissions {
         }
 
     } catch {
-        Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -message "Permissions check failed: $($_) " -Sev 'Error'
-        $Messages.Add("We could not connect to the API to retrieve the permissions. There might be a problem with the secure application model configuration. The returned error is: $(Get-NormalizedError -message $_)") | Out-Null
+        $ErrorMessage = Get-CippException -Exception $_
+        Write-LogMessage -user $User -API $APINAME -message "Permissions check failed: $($ErrorMessage.NormalizedError) " -Sev 'Error' -LogData $ErrorMessage
+        $ErrorMessages.Add("We could not connect to the API to retrieve the permissions. There might be a problem with the secure application model configuration. The returned error is: $($ErrorMessage.NormalizedError)") | Out-Null
         Write-Host 'Setting success to False due to not being able to connect.'
 
         $Success = $false
     }
 
+    if ($Success -eq $true) {
+        $Messages.Add('No service account issues have been found. CIPP is ready for use.') | Out-Null
+    }
     return [PSCustomObject]@{
         AccessTokenDetails = $AccessTokenDetails
         Messages           = @($Messages)
+        ErrorMessages      = @($ErrorMessages)
         MissingPermissions = @($MissingPermissions)
         Links              = @($Links)
         Success            = $Success

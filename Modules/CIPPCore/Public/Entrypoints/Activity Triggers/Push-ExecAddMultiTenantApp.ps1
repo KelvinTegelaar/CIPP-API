@@ -1,4 +1,8 @@
 function Push-ExecAddMultiTenantApp($QueueItem, $TriggerMetadata) {
+    <#
+    .FUNCTIONALITY
+        Entrypoint
+    #>
     try {
         $Queueitem = $QueueItem | ConvertTo-Json -Depth 10 | ConvertFrom-Json
         Write-Host "$($Queueitem | ConvertTo-Json -Depth 10)"

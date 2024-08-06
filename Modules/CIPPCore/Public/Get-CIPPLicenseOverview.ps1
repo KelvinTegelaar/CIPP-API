@@ -7,7 +7,7 @@ function Get-CIPPLicenseOverview {
         $ExecutingUser
     )
 
-   
+
     $LicRequest = New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/subscribedSkus' -tenantid $TenantFilter
     $SkuIDs = New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/directory/subscriptions' -tenantid $TenantFilter
 
@@ -25,7 +25,7 @@ function Get-CIPPLicenseOverview {
             if ($sku.skuId -in $ExcludedSkuList.GUID) { continue }
             $PrettyName = ($ConvertTable | Where-Object { $_.guid -eq $sku.skuid }).'Product_Display_Name' | Select-Object -Last 1
             if (!$PrettyName) { $PrettyName = $sku.skuPartNumber }
-            
+
             # Initialize $Term with the default value
             $TermInfo = foreach ($Subscription in $sku.subscriptionIds) {
                 $SubInfo = $SkuIDs | Where-Object { $_.id -eq $Subscription }
@@ -63,7 +63,7 @@ function Get-CIPPLicenseOverview {
                 TermInfo       = [string]($TermInfo | ConvertTo-Json -Depth 10 -Compress)
                 'PartitionKey' = 'License'
                 'RowKey'       = "$($singlereq.Tenant) - $($sku.skuid)"
-            }      
+            }
         }
     }
     return $GraphRequest

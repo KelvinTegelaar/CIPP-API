@@ -11,7 +11,8 @@ function Get-Tenants {
         [switch]$IncludeErrors,
         [switch]$SkipDomains,
         [switch]$TriggerRefresh,
-        [switch]$CleanOld
+        [switch]$CleanOld,
+        [string]$TenantFilter
     )
 
     $TenantsTable = Get-CippTable -tablename 'Tenants'
@@ -29,6 +30,24 @@ function Get-Tenants {
     } else {
         $Filter = "PartitionKey eq 'Tenants' and Excluded eq false and GraphErrorCount lt 50"
     }
+
+    if ($TenantFilter) {
+        Write-Information "Getting tenant $TenantFilter"
+        if ($TenantFilter -match '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$') {
+            $Filter = "{0} and customerId eq '{1}'" -f $Filter, $TenantFilter
+            # create where-object scriptblock
+            $IncludedTenantFilter = [scriptblock]::Create("`$_.customerId -eq '$TenantFilter'")
+            $RelationshipFilter = " and customer/tenantId eq '$TenantFilter'"
+        } else {
+            $Filter = "{0} and defaultDomainName eq '{1}'" -f $Filter, $TenantFilter
+            $IncludedTenantFilter = [scriptblock]::Create("`$_.defaultDomainName -eq '$TenantFilter'")
+            $RelationshipFilter = ''
+        }
+    } else {
+        $IncludedTenantFilter = [scriptblock]::Create('$true')
+        $RelationshipFilter = ''
+    }
+
     $IncludedTenantsCache = Get-CIPPAzDataTableEntity @TenantsTable -Filter $Filter
 
     if (($IncludedTenantsCache | Measure-Object).Count -eq 0) {
@@ -36,7 +55,7 @@ function Get-Tenants {
     }
 
     if ($CleanOld) {
-        $GDAPRelationships = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/tenantRelationships/delegatedAdminRelationships?`$filter=status eq 'active' and not startsWith(displayName,'MLT_')&`$select=customer,autoExtendDuration,endDateTime" -NoAuthCheck:$true
+        $GDAPRelationships = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/tenantRelationships/delegatedAdminRelationships?`$filter=status eq 'active' and not startsWith(displayName,'MLT_')&`$select=customer,autoExtendDuration,endDateTime`$top=300" -NoAuthCheck:$true
         $GDAPList = foreach ($Relationship in $GDAPRelationships) {
             [PSCustomObject]@{
                 customerId      = $Relationship.customer.tenantId
@@ -50,10 +69,12 @@ function Get-Tenants {
             Remove-AzDataTableEntity @TenantsTable -Entity $_
         }
     }
+    $PartnerModeTable = Get-CippTable -tablename 'tenantMode'
+    $PartnerTenantState = Get-CIPPAzDataTableEntity @PartnerModeTable
 
-    if ($BuildRequired -or $TriggerRefresh.IsPresent) {
+    if (($BuildRequired -or $TriggerRefresh.IsPresent) -and $PartnerTenantState.state -ne 'owntenant') {
         #get the full list of tenants
-        $GDAPRelationships = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/tenantRelationships/delegatedAdminRelationships?`$filter=status eq 'active' and not startsWith(displayName,'MLT_')&`$select=customer,autoExtendDuration,endDateTime" -NoAuthCheck:$true
+        $GDAPRelationships = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/tenantRelationships/delegatedAdminRelationships?`$filter=status eq 'active' and not startsWith(displayName,'MLT_')$RelationshipFilter&`$select=customer,autoExtendDuration,endDateTime&`$top=300" -NoAuthCheck:$true
         $GDAPList = foreach ($Relationship in $GDAPRelationships) {
             [PSCustomObject]@{
                 customerId      = $Relationship.customer.tenantId
@@ -63,12 +84,19 @@ function Get-Tenants {
             }
         }
 
-        $ActiveRelationships = $GDAPList | Where-Object { $_.customerId -notin $SkipListCache.customerId }
+        $ActiveRelationships = $GDAPList | Where-Object $IncludedTenantFilter | Where-Object { $_.customerId -notin $SkipListCache.customerId }
         $TenantList = $ActiveRelationships | Group-Object -Property customerId | ForEach-Object {
-            Write-Host "Processing $($_.Name) to add to tenant list."
+            #Write-Host "Processing $($_.Name) to add to tenant list."
             $ExistingTenantInfo = Get-CIPPAzDataTableEntity @TenantsTable -Filter "PartitionKey eq 'Tenants' and RowKey eq '$($_.Name)'"
+
+            if ($TriggerRefresh.IsPresent -and $ExistingTenantInfo.customerId) {
+                # Reset error count
+                $ExistingTenantInfo.GraphErrorCount = 0
+                Add-CIPPAzDataTableEntity @TenantsTable -Entity $ExistingTenantInfo -Force | Out-Null
+            }
+
             if ($ExistingTenantInfo -and $ExistingTenantInfo.RequiresRefresh -eq $false) {
-                Write-Host 'Existing tenant found. We already have it cached, skipping.'
+                #Write-Host 'Existing tenant found. We already have it cached, skipping.'
                 $ExistingTenantInfo
                 return
             }
@@ -77,8 +105,8 @@ function Get-Tenants {
 
             if (-not $SkipDomains.IsPresent) {
                 try {
-                    Write-Host "Getting domains for $($_.Name)."
-                    $Domains = New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/domains' -tenantid $LatestRelationship.customerId -NoAuthCheck:$true -ErrorAction Stop
+                    #Write-Host "Getting domains for $($_.Name)."
+                    $Domains = New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/domains?$top=999' -tenantid $LatestRelationship.customerId -NoAuthCheck:$true -ErrorAction Stop
                     $defaultDomainName = ($Domains | Where-Object { $_.isDefault -eq $true }).id
                     $initialDomainName = ($Domains | Where-Object { $_.isInitial -eq $true }).id
                 } catch {
@@ -94,7 +122,7 @@ function Get-Tenants {
                     }
                 }
 
-                [PSCustomObject]@{
+                $Obj = [PSCustomObject]@{
                     PartitionKey             = 'Tenants'
                     RowKey                   = $_.Name
                     customerId               = $_.Name
@@ -114,16 +142,23 @@ function Get-Tenants {
                     RequiresRefresh          = [bool]$RequiresRefresh
                     LastRefresh              = (Get-Date).ToUniversalTime()
                 }
+                if ($Obj.defaultDomainName -eq 'Invalid' -or !$Obj.defaultDomainName) {
+                    continue
+                }
+                Add-CIPPAzDataTableEntity @TenantsTable -Entity $Obj -Force | Out-Null
+                $Obj
             }
         }
         $IncludedTenantsCache = [system.collections.generic.list[object]]::new()
-        if ($env:PartnerTenantAvailable) {
+        if ($PartnerTenantState.state -eq 'PartnerTenantAvailable') {
             # Add partner tenant if env is set
+            $Domains = New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/domains?$top=999' -tenantid $env:TenantID -NoAuthCheck:$true
             $IncludedTenantsCache.Add([PSCustomObject]@{
                     RowKey            = $env:TenantID
                     PartitionKey      = 'Tenants'
                     customerId        = $env:TenantID
-                    defaultDomainName = $env:TenantID
+                    defaultDomainName = ($Domains | Where-Object { $_.isDefault -eq $true }).id
+                    initialDomainName = ($Domains | Where-Object { $_.isInitial -eq $true }).id
                     displayName       = '*Partner Tenant'
                     domains           = 'PartnerTenant'
                     Excluded          = $false
@@ -131,21 +166,46 @@ function Get-Tenants {
                     ExcludeDate       = ''
                     GraphErrorCount   = 0
                     LastGraphError    = ''
+                    RequiresRefresh   = [bool]$RequiresRefresh
                     LastRefresh       = (Get-Date).ToUniversalTime()
                 }) | Out-Null
+
         }
-        foreach ($Tenant in $TenantList) {
+        foreach ($Tenant in $TenantList | Where-Object $IncludedTenantFilter) {
             if ($Tenant.defaultDomainName -eq 'Invalid' -or !$Tenant.defaultDomainName) {
                 Write-LogMessage -API 'Get-Tenants' -message "We're skipping $($Tenant.displayName) as it has an invalid default domain name. Something is up with this instance." -level 'Critical'
-                continue 
+                continue
             }
             $IncludedTenantsCache.Add($Tenant) | Out-Null
         }
+
         if ($IncludedTenantsCache) {
             Add-CIPPAzDataTableEntity @TenantsTable -Entity $IncludedTenantsCache -Force | Out-Null
         }
     }
+    if ($PartnerTenantState.state -eq 'owntenant' -and $IncludedTenantsCache.RowKey.count -eq 0) {
+        $Domains = New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/domains' -tenantid $env:TenantID -NoAuthCheck:$true
 
+        $IncludedTenantsCache = @([PSCustomObject]@{
+                RowKey            = $env:TenantID
+                PartitionKey      = 'Tenants'
+                customerId        = $env:TenantID
+                defaultDomainName = ($Domains | Where-Object { $_.isInitial -eq $true }).id
+                initialDomainName = ($Domains | Where-Object { $_.isInitial -eq $true }).id
+                displayName       = ($Domains | Where-Object { $_.isInitial -eq $true }).id
+                domains           = 'PartnerTenant'
+                Excluded          = $false
+                ExcludeUser       = ''
+                ExcludeDate       = ''
+                GraphErrorCount   = 0
+                LastGraphError    = ''
+                RequiresRefresh   = [bool]$RequiresRefresh
+                LastRefresh       = (Get-Date).ToUniversalTime()
+            })
+        if ($IncludedTenantsCache) {
+            Add-CIPPAzDataTableEntity @TenantsTable -Entity $IncludedTenantsCache -Force | Out-Null
+        }
+    }
 
     return ($IncludedTenantsCache | Where-Object { $null -ne $_.defaultDomainName -and ($_.defaultDomainName -notmatch 'Domain Error' -or $IncludeAll.IsPresent) } | Sort-Object -Property displayName)
 }

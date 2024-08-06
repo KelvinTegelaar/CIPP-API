@@ -3,7 +3,9 @@ using namespace System.Net
 Function Invoke-ListIntunePolicy {
     <#
     .FUNCTIONALITY
-    Entrypoint
+        Entrypoint
+    .ROLE
+        Endpoint.MEM.Read
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
@@ -24,7 +26,8 @@ Function Invoke-ListIntunePolicy {
             $GraphRequest = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/deviceManagement/$($urlname)('$ID')" -tenantid $tenantfilter
         } else {
 
-            $GraphURLS = @("https://graph.microsoft.com/beta/deviceManagement/deviceConfigurations?`$select=id,displayName,lastModifiedDateTime,roleScopeTagIds,microsoft.graph.unsupportedDeviceConfiguration/originalEntityTypeName&`$expand=assignments&top=1000",
+            $GraphURLS = @("https://graph.microsoft.com/beta/deviceManagement/deviceConfigurations?`$select=id,displayName,lastModifiedDateTime,roleScopeTagIds,microsoft.graph.unsupportedDeviceConfiguration/originalEntityTypeName&`$expand=assignments&top=1000"
+                'https://graph.microsoft.com/beta/deviceManagement/windowsDriverUpdateProfiles'
                 "https://graph.microsoft.com/beta/deviceManagement/groupPolicyConfigurations?`$expand=assignments&top=1000"
                 "https://graph.microsoft.com/beta/deviceAppManagement/mobileAppConfigurations?`$expand=assignments&`$filter=microsoft.graph.androidManagedStoreAppConfiguration/appSupportsOemConfig%20eq%20true"
                 'https://graph.microsoft.com/beta/deviceManagement/configurationPolicies'
@@ -46,7 +49,7 @@ Function Invoke-ListIntunePolicy {
                     default { $_.'assignments@odata.context' }
                 }
                 if ($_.displayname -eq $null) { $_ | Add-Member -NotePropertyName displayName -NotePropertyValue $_.name }
-                $_ | Add-Member -NotePropertyName PolicyTypeName -NotePropertyValue $policyTypeName 
+                $_ | Add-Member -NotePropertyName PolicyTypeName -NotePropertyValue $policyTypeName
                 $_ | Add-Member -NotePropertyName URLName -NotePropertyValue $URLName
                 $_
             } | Where-Object { $_.DisplayName -ne $null }

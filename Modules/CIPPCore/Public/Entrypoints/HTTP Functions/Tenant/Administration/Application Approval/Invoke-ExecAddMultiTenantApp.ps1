@@ -1,6 +1,12 @@
 using namespace System.Net
 
 function Invoke-ExecAddMultiTenantApp {
+    <#
+    .FUNCTIONALITY
+        Entrypoint
+    .ROLE
+        Tenant.Application.ReadWrite
+    #>
     param($Request, $TriggerMetadata)
 
     $APIName = $TriggerMetadata.FunctionName
@@ -12,25 +18,20 @@ function Invoke-ExecAddMultiTenantApp {
 
     $Results = try {
         if ($request.body.CopyPermissions -eq $true) {
-            try {
-                $ExistingApp = New-GraphGETRequest -uri "https://graph.microsoft.com/beta/applications(appId='$($Request.body.AppId)')" -tenantid $ENV:tenantid -NoAuthCheck $true
-                $DelegateResourceAccess = $Existingapp.requiredResourceAccess
-                $ApplicationResourceAccess = $Existingapp.requiredResourceAccess
-            } catch {
-                'Failed to get existing permissions. The app does not exist in the partner tenant.'
-            }
-        }
-        #This needs to be moved to a queue.
-        if ('allTenants' -in $Request.body.SelectedTenants.defaultDomainName) {
-            $TenantFilter = (Get-Tenants).defaultDomainName 
+            $Command = 'ExecApplicationCopy'
         } else {
-            $TenantFilter = $Request.body.SelectedTenants.defaultDomainName 
+            $Command = 'ExecAddMultiTenantApp'
+        }
+        if ('allTenants' -in $Request.body.SelectedTenants.defaultDomainName) {
+            $TenantFilter = (Get-Tenants).defaultDomainName
+        } else {
+            $TenantFilter = $Request.body.SelectedTenants.defaultDomainName
         }
 
         foreach ($Tenant in $TenantFilter) {
             try {
                 Push-OutputBinding -Name QueueItem -Value ([pscustomobject]@{
-                        FunctionName              = 'ExecAddMultiTenantApp'
+                        FunctionName              = $Command
                         Tenant                    = $tenant
                         appId                     = $Request.body.appid
                         applicationResourceAccess = $ApplicationResourceAccess

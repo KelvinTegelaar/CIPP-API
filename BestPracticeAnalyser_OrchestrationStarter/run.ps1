@@ -1,23 +1,40 @@
 using namespace System.Net
-
 param($Request, $TriggerMetadata)
-if ($CurrentlyRunning) {
-    $Results = [pscustomobject]@{'Results' = 'Already running. Please wait for the current instance to finish' }
-    Write-LogMessage -API 'BestPracticeAnalyser' -message 'Attempted to start analysis but an instance was already running.' -sev Info
+
+if ($Request.Query.TenantFilter) {
+    $TenantList = @($Request.Query.TenantFilter)
+    $Name = "Best Practice Analyser ($($Request.Query.TenantFilter))"
 } else {
-    $InputObject = @{
-        TenantFilter = $Request.Query.TenantFilter
-    }
-    $InstanceId = Start-NewOrchestration -FunctionName 'BestPracticeAnalyser_Orchestration' -InputObject $InputObject
-    Write-Host "Started orchestration with ID = '$InstanceId'"
-    $Orchestrator = New-OrchestrationCheckStatusResponse -Request $Request -InstanceId $InstanceId
-    Write-LogMessage -API 'BestPracticeAnalyser' -message 'Started retrieving best practice information' -sev Info
-    $Results = [pscustomobject]@{'Results' = 'Started running analysis' }
+    $TenantList = Get-Tenants
+    $Name = 'Best Practice Analyser (All Tenants)'
 }
-Write-Host ($Orchestrator | ConvertTo-Json)
 
+$BPATemplateTable = Get-CippTable -tablename 'templates'
+$Filter = "PartitionKey eq 'BPATemplate'"
+$Templates = ((Get-CIPPAzDataTableEntity @BPATemplateTable -Filter $Filter).JSON | ConvertFrom-Json).Name
 
+$BPAReports = foreach ($Tenant in $TenantList) {
+    foreach ($Template in $Templates) {
+        [PSCustomObject]@{
+            FunctionName = 'BPACollectData'
+            Tenant       = $Tenant.defaultDomainName
+            Template     = $Template
+            QueueName    = '{0} - {1}' -f $Template, $Tenant.defaultDomainName
+        }
+    }
+}
+
+$Queue = New-CippQueueEntry -Name $Name -TotalTasks ($BPAReports | Measure-Object).Count
+$BPAReports = $BPAReports | Select-Object *, @{Name = 'QueueId'; Expression = { $Queue.RowKey } }
+$InputObject = [PSCustomObject]@{
+    Batch            = @($BPAReports)
+    OrchestratorName = 'BPAOrchestrator'
+    SkipLog          = $true
+}
+Start-NewOrchestration -FunctionName 'CIPPOrchestrator' -InputObject ($InputObject | ConvertTo-Json -Compress -Depth 5)
+
+$Results = [pscustomobject]@{'Results' = 'BPA started' }
 Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
         StatusCode = [HttpStatusCode]::OK
-        Body       = $results
+        Body       = $Results
     })

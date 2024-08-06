@@ -3,7 +3,9 @@ using namespace System.Net
 Function Invoke-ExecNotificationConfig {
     <#
     .FUNCTIONALITY
-    Entrypoint
+        Entrypoint
+    .ROLE
+        CIPP.AppSettings.ReadWrite
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
@@ -15,7 +17,7 @@ Function Invoke-ExecNotificationConfig {
     # Write to the Azure Functions log stream.
     Write-Host 'PowerShell HTTP trigger function processed a request.'
     $sev = ([pscustomobject]$Request.body.Severity).value -join (',')
-    $results = try { 
+    $results = try {
         $Table = Get-CIPPTable -TableName SchedulerConfig
         $SchedulerConfig = @{
             'tenant'            = 'Any'
@@ -23,8 +25,8 @@ Function Invoke-ExecNotificationConfig {
             'type'              = 'CIPPNotifications'
             'schedule'          = 'Every 15 minutes'
             'Severity'          = [string]$sev
-            'email'             = "$($Request.Body.Email)"
-            'webhook'           = "$($Request.Body.Webhook)"
+            'email'             = "$($Request.Body.email)"
+            'webhook'           = "$($Request.Body.webhook)"
             'onePerTenant'      = [boolean]$Request.Body.onePerTenant
             'sendtoIntegration' = [boolean]$Request.Body.sendtoIntegration
             'includeTenantId'   = [boolean]$Request.Body.includeTenantId
@@ -32,7 +34,7 @@ Function Invoke-ExecNotificationConfig {
             'RowKey'            = 'CippNotifications'
         }
         foreach ($logvalue in [pscustomobject]$Request.body.logsToInclude) {
-            $SchedulerConfig[([pscustomobject]$logvalue.value)] = $true 
+            $SchedulerConfig[([pscustomobject]$logvalue.value)] = $true
         }
 
         Add-CIPPAzDataTableEntity @Table -Entity $SchedulerConfig -Force | Out-Null

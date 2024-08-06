@@ -3,7 +3,7 @@ param($Timer)
 try {
 
     $webhookTable = Get-CIPPTable -tablename webhookTable
-    $Webhooks = Get-CIPPAzDataTableEntity @webhookTable -Property RowKey
+    $Webhooks = Get-CIPPAzDataTableEntity @webhookTable -Property PartitionKey, RowKey
     if (($Webhooks | Measure-Object).Count -eq 0) {
         Write-Host 'No webhook subscriptions found. Exiting.'
         return
@@ -18,7 +18,7 @@ try {
         SkipLog          = $true
     }
     Write-Host ($InputObject | ConvertTo-Json -Depth 5)
-    $InstanceId = Start-NewOrchestration -FunctionName 'CIPPOrchestrator' -InputObject ($InputObject | ConvertTo-Json -Depth 5)
+    $InstanceId = Start-NewOrchestration -FunctionName 'CIPPOrchestrator' -InputObject ($InputObject | ConvertTo-Json -Depth 5 -Compress)
     Write-Host "Started orchestration with ID = '$InstanceId'"
 } catch {
     Write-LogMessage -API 'Webhooks' -message 'Error processing webhooks' -sev Error -LogData (Get-CippException -Exception $_)

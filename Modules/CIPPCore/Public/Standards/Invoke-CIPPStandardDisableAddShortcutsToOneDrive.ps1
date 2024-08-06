@@ -1,94 +1,74 @@
 function Invoke-CIPPStandardDisableAddShortcutsToOneDrive {
     <#
     .FUNCTIONALITY
-    Internal
+        Internal
+    .COMPONENT
+        (APIName) DisableAddShortcutsToOneDrive
+    .SYNOPSIS
+        (Label) Set Add Shortcuts To OneDrive button state
+    .DESCRIPTION
+        (Helptext) If disabled, the button Add shortcut to OneDrive will be removed and users in the tenant will no longer be able to add new shortcuts to their OneDrive. Existing shortcuts will remain functional
+        (DocsDescription) If disabled, the button Add shortcut to OneDrive will be removed and users in the tenant will no longer be able to add new shortcuts to their OneDrive. Existing shortcuts will remain functional
+    .NOTES
+        CAT
+            SharePoint Standards
+        TAG
+            "mediumimpact"
+        ADDEDCOMPONENT
+            {"type":"Select","label":"Add Shortcuts To OneDrive button state","name":"standards.DisableAddShortcutsToOneDrive.state","values":[{"label":"Disabled","value":"true"},{"label":"Enabled","value":"false"}]}
+        IMPACT
+            Medium Impact
+        POWERSHELLEQUIVALENT
+            Set-SPOTenant -DisableAddShortcutsToOneDrive \$true or \$false
+        RECOMMENDEDBY
+        UPDATECOMMENTBLOCK
+            Run the Tools\Update-StandardsComments.ps1 script to update this comment block
+    .LINK
+        https://docs.cipp.app/user-documentation/tenant/standards/edit-standards
     #>
+
     param($Tenant, $Settings)
-    If ($Settings.remediate) {
-        function GetTenantRequestXml {
-            return @'
-        <Request AddExpandoFieldTypeSuffix="true" SchemaVersion="15.0.0.0" LibraryVersion="16.0.0.0"
-            ApplicationName="SharePoint Online PowerShell (16.0.23814.0)"
-            xmlns="http://schemas.microsoft.com/sharepoint/clientquery/2009">
-            <Actions>
-                <ObjectPath Id="4" ObjectPathId="3" />
-                <Query Id="5" ObjectPathId="3">
-                    <Query SelectAllProperties="true">
-                        <Properties />
-                    </Query>
-                </Query>
-            </Actions>
-            <ObjectPaths>
-                <Constructor Id="3" TypeId="{268004ae-ef6b-4e9b-8425-127220d84719}" />
-            </ObjectPaths>
-        </Request>
-'@
-        }
 
-        function GetDisableAddShortcutsToOneDriveXml {
-            param(
-                [string]$identity
-            )
+    $CurrentState = Get-CIPPSPOTenant -TenantFilter $Tenant | Select-Object _ObjectIdentity_, TenantFilter, DisableAddToOneDrive
 
-            # the json object gives us a space and a newline :(
-            $identity = $identity.Replace(' ', '')
-            $identity = $identity.Replace("`n", '&#xA;')
-            return @"
-        <Request AddExpandoFieldTypeSuffix="true" SchemaVersion="15.0.0.0"
-            LibraryVersion="16.0.0.0" ApplicationName="SharePoint Online PowerShell (16.0.23814.0)"
-            xmlns="http://schemas.microsoft.com/sharepoint/clientquery/2009">
-            <Actions>
-                <SetProperty Id="7" ObjectPathId="3" Name="DisableAddToOneDrive">
-                    <Parameter Type="Boolean">true</Parameter>
-                </SetProperty>
-            </Actions>
-            <ObjectPaths>
-                <Identity Id="3" Name="$identity" />
-            </ObjectPaths>
-        </Request>
-"@
-        }
-
-        $log = @{
-            API     = 'Standards'
-            tenant  = $tenant
-            message = ''
-            sev     = 'Info'
-        }
-
-        try {
-            $OnMicrosoft = (New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/domains?$top=999' -tenantid $tenant |
-                Where-Object -Property isInitial -EQ $true).id.split('.') | Select-Object -First 1
-            $AdminUrl = "https://$($OnMicrosoft)-admin.sharepoint.com"
-            $graphRequest = @{
-                'scope'       = "$AdminURL/.default"
-                'tenantid'    = $tenant
-                'uri'         = "$AdminURL/_vti_bin/client.svc/ProcessQuery"
-                'type'        = 'POST'
-                'body'        = GetTenantRequestXml
-                'ContentType' = 'text/xml'
-            }
-
-            $response = New-GraphPostRequest @graphRequest
-            if (!$response.ErrorInfo.ErrorMessage) {
-                $log.message = 'Received Tenant from Sharepoint'
-                Write-LogMessage @log
-            }
-
-            $graphRequest.Body = GetDisableAddShortcutsToOneDriveXml -identity $response._ObjectIdentity_
-            $response = New-GraphPostRequest @graphRequest
-
-            if (!$response.ErrorInfo.ErrorMessage) {
-                $log.message = "Set DisableAddShortcutsToOneDrive to True on $tenant"
-            } else {
-                $log.message = "Unable to set DisableAddShortcutsToOneDrive to True `
-            on $($Tenant, $Settings): $($response.ErrorInfo.ErrorMessage)"
-            }
-        } catch {
-            $log.message = "Failed to set OneDrive shortcut: $($_.Exception.Message)"
-            $log.sev = 'Error'
-        }
-
-        Write-LogMessage @log
+    if ($Settings.report -eq $true) {
+        Add-CIPPBPAField -FieldName 'OneDriveAddShortcutButtonDisabled' -FieldValue $CurrentState.DisableAddToOneDrive -StoreAs bool -Tenant $Tenant
     }
+
+    # Input validation
+    if (([string]::IsNullOrWhiteSpace($Settings.state) -or $Settings.state -eq 'Select a value') -and ($Settings.remediate -eq $true -or $Settings.alert -eq $true)) {
+        Write-LogMessage -API 'Standards' -tenant $tenant -message 'DisableAddShortcutsToOneDrive: Invalid state parameter set' -sev Error
+        Return
+    }
+
+    $WantedState = [System.Convert]::ToBoolean($Settings.state)
+    $StateIsCorrect = if ($CurrentState.DisableAddToOneDrive -eq $WantedState) { $true } else { $false }
+    $HumanReadableState = if ($WantedState -eq $true) { 'disabled' } else { 'enabled' }
+
+    If ($Settings.remediate -eq $true) {
+        Write-Host 'Time to remediate'
+
+        if ($StateIsCorrect -eq $false) {
+            try {
+                $CurrentState | Set-CIPPSPOTenant -Properties @{DisableAddToOneDrive = $WantedState }
+                Write-LogMessage -API 'Standards' -tenant $tenant -message "Successfully set the Add Shortcuts To OneDrive Button to $HumanReadableState" -sev Info
+            } catch {
+                $ErrorMessage = Get-CippException -Exception $_
+                Write-LogMessage -API 'Standards' -tenant $tenant -message "Failed to set the Add Shortcuts To OneDrive Button to $HumanReadableState. Error: $($ErrorMessage.NormalizedError)" -sev Error -LogData $ErrorMessage
+            }
+        } else {
+            Write-LogMessage -API 'Standards' -tenant $tenant -message "The Add Shortcuts To OneDrive Button is already set to the wanted of $HumanReadableState" -sev Info
+        }
+
+    }
+
+    if ($Settings.alert -eq $true) {
+        if ($StateIsCorrect -eq $true) {
+            Write-LogMessage -API 'Standards' -tenant $tenant -message "The Add Shortcuts To OneDrive Button is already set to the wanted state of $HumanReadableState" -sev Info
+        } else {
+            Write-LogMessage -API 'Standards' -tenant $tenant -message "The Add Shortcuts To OneDrive Button Button is not set to the wanted state of $HumanReadableState" -sev Alert
+        }
+    }
+
+
 }

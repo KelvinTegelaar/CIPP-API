@@ -2,15 +2,17 @@ using namespace System.Net
 Function Invoke-ExecGDAPInvite {
     <#
     .FUNCTIONALITY
-    Entrypoint
+        Entrypoint
+    .ROLE
+        Tenant.Relationship.ReadWrite
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
 
-    $APIName = $TriggerMetadata.FunctionName
+    $APIName = 'ExecGDAPInvite'
     Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -message 'Accessed this API' -Sev 'Debug'
 
-    $RoleMappings = $Request.body.gdapRoles
+    $RoleMappings = $Request.Body.gdapRoles
 
     if ($RoleMappings.roleDefinitionId -contains '62e90394-69f5-4237-9190-012177145e10') {
         $AutoExtendDuration = 'PT0S'
@@ -47,9 +49,13 @@ Function Invoke-ExecGDAPInvite {
 
             if ($NewRelationshipRequest.action -eq 'lockForApproval') {
                 $InviteUrl = "https://admin.microsoft.com/AdminPortal/Home#/partners/invitation/granularAdminRelationships/$($NewRelationship.id)"
-                $Uri = ([System.Uri]$TriggerMetadata.Headers.referer)
-                $TableFilter = [System.Web.HttpUtility]::UrlEncode(('Complex: id eq {0}' -f $NewRelationship.id))
-                $OnboardingUrl = $Uri.AbsoluteUri.Replace($Uri.PathAndQuery, "/tenant/administration/tenant-onboarding-wizard?tableFilter=$TableFilter")
+                try {
+                    $Uri = ([System.Uri]$TriggerMetadata.Headers.Referer)
+                    $TableFilter = [System.Web.HttpUtility]::UrlEncode(('Complex: id eq {0}' -f $NewRelationship.id))
+                    $OnboardingUrl = $Uri.AbsoluteUri.Replace($Uri.PathAndQuery, "/tenant/administration/tenant-onboarding-wizard?tableFilter=$TableFilter")
+                } catch {
+                    $OnboardingUrl = $null
+                }
 
                 $InviteEntity = [PSCustomObject]@{
                     'PartitionKey'  = 'invite'
@@ -69,8 +75,8 @@ Function Invoke-ExecGDAPInvite {
         }
     } catch {
         $Message = 'Error creating GDAP relationship'
-        Write-Host "GDAP ERROR: $($_.Exception.Message)"
-        Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $env:TenantID -message "$($Message): $($_.Exception.Message)" -Sev 'Error'
+        Write-Host "GDAP ERROR: $($_.InvocationInfo.PositionMessage)"
+        Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $env:TenantID -message "$($Message): $($_.Exception.Message)" -Sev 'Error' -LogData (Get-CippException -Exception $_)
     }
 
     $body = @{

@@ -1,12 +1,15 @@
 function Push-ListMFAUsersQueue {
-    # Input bindings are passed in via param block.
+    <#
+    .FUNCTIONALITY
+        Entrypoint
+    #>
     param($Item)
 
     # Write out the queue message and metadata to the information log.
     Write-Host "PowerShell queue trigger function processed work item: $($Item.defaultDomainName)"
 
     try {
-        Update-CippQueueEntry -RowKey $Item.QueueId -Status 'Running' -Name $Item.displayName
+        #Update-CippQueueEntry -RowKey $Item.QueueId -Status 'Running' -Name $Item.displayName
         $domainName = $Item.defaultDomainName
         $Table = Get-CIPPTable -TableName cachemfa
         Try {
@@ -26,6 +29,12 @@ function Push-ListMFAUsersQueue {
                 RowKey          = [string]"$domainName"
                 PartitionKey    = 'users'
             }
+        } else {
+            $GraphRequest = foreach ($Request in $GraphRequest) {
+                $Request.CAPolicies = try { [string](@($Request.CAPolicies) | ConvertTo-Json -Compress -Depth 5) } catch { [string]$Request.CAPolicies }
+                $Request.MFAMethods = try { [string](@($Request.MFAMethods) | ConvertTo-Json -Compress -Depth 5) } catch { [string]$Request.MFAMethods }
+                $Request
+            }
         }
         Add-CIPPAzDataTableEntity @Table -Entity $GraphRequest -Force | Out-Null
 
@@ -44,7 +53,7 @@ function Push-ListMFAUsersQueue {
         }
         Add-CIPPAzDataTableEntity @Table -Entity $GraphRequest -Force | Out-Null
     } finally {
-        Update-CippQueueEntry -RowKey $QueueItem -Status 'Completed'
+        #Update-CippQueueEntry -RowKey $QueueItem -Status 'Completed'
     }
 
 }

@@ -3,7 +3,9 @@ using namespace System.Net
 Function Invoke-AddWinGetApp {
     <#
     .FUNCTIONALITY
-    Entrypoint
+        Entrypoint
+    .ROLE
+        Endpoint.Application.ReadWrite
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
@@ -22,7 +24,7 @@ Function Invoke-AddWinGetApp {
         'packageIdentifier' = "$($WinGetApp.PackageName)"
         'installExperience' = @{
             '@odata.type'  = 'microsoft.graph.winGetAppInstallExperience'
-            'runAsAccount' = 'user'
+            'runAsAccount' = 'system'
         }
     }
 
@@ -46,10 +48,9 @@ Function Invoke-AddWinGetApp {
                 status       = 'Not Deployed yet'
             }
             "Successfully added Store App for $($Tenant) to queue."
-            Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $tenant -message "Chocolatey Application $($intunebody.Displayname) queued to add" -Sev 'Info'
-        }
-        catch {
-            Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $tenant -message "Failed to add Chocolatey Application $($intunebody.Displayname) to queue" -Sev 'Error'
+            Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $tenant -message "Successfully added Store App $($intunebody.Displayname) to queue" -Sev 'Info'
+        } catch {
+            Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $tenant -message "Failed to add Store App $($intunebody.Displayname) to queue" -Sev 'Error'
             "Failed added Store App for $($Tenant) to queue"
         }
     }
