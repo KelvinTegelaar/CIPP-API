@@ -167,6 +167,11 @@ Function Invoke-ExecSAMSetup {
                                 Write-Host "didn't deploy spn for Teams, probably already there."
                             }
                             try {
+                                $SPNO365Manage = (Invoke-RestMethod 'https://graph.microsoft.com/v1.0/servicePrincipals' -Headers @{ authorization = "Bearer $($Token.access_token)" } -Method POST -Body "{ `"appId`": `"c5393580-f805-4401-95e8-94b7a6ef2fc2`" }" -ContentType 'application/json')
+                            } catch {
+                                Write-Host "didn't deploy spn for O365 Management, probably already there."
+                            }
+                            try {
                                 $SPNPartnerCenter = (Invoke-RestMethod 'https://graph.microsoft.com/v1.0/servicePrincipals' -Headers @{ authorization = "Bearer $($Token.access_token)" } -Method POST -Body "{ `"appId`": `"fa3d9a0c-3fb0-42cc-9193-47c7ecd2edbd`" }" -ContentType 'application/json')
                             } catch {
                                 Write-Host "didn't deploy spn for PartnerCenter, probably already there."
