@@ -10,7 +10,7 @@ function Invoke-CippWebhookProcessing {
         $ExecutingUser
     )
 
-
+    $Tenant = Get-Tenants -IncludeErrors | Where-Object { $_.defaultDomainName -eq $TenantFilter }
     Write-Host "Received data. Our Action List is $($data.CIPPAction)"
 
     $ActionList = ($data.CIPPAction | ConvertFrom-Json -ErrorAction SilentlyContinue).value
@@ -51,36 +51,64 @@ function Invoke-CippWebhookProcessing {
             }
         }
     }
+
+    # Save audit log entry to table
+    $LocationInfo = $Data.CIPPLocationInfo | ConvertFrom-Json -ErrorAction SilentlyContinue
+    $GenerateJSON = New-CIPPAlertTemplate -format 'json' -data $Data -ActionResults $ActionResults -CIPPURL $CIPPURL
+    $JsonContent = @{
+        Title                 = $GenerateJSON.Title
+        ActionUrl             = $GenerateJSON.ButtonUrl
+        ActionText            = $GenerateJSON.ButtonText
+        RawData               = $Data
+        IP                    = $data.ClientIP
+        PotentialLocationInfo = $LocationInfo
+        ActionsTaken          = $ActionResults
+    } | ConvertTo-Json -Depth 15 -Compress
+
+    $CIPPAlert = @{
+        Type         = 'table'
+        Title        = $GenerateJSON.Title
+        JSONContent  = $JsonContent
+        TenantFilter = $TenantFilter
+        TableName    = 'AuditLogs'
+    }
+    $LogId = Send-CIPPAlert @CIPPAlert
+
+    $AuditLogLink = '{0}/tenant/administration/audit-logs?customerId={1}&logId={2}' -f $CIPPURL, $Tenant.customerId, $LogId
+    $GenerateEmail = New-CIPPAlertTemplate -format 'html' -data $Data -ActionResults $ActionResults -CIPPURL $CIPPURL
+
     Write-Host 'Going to create the content'
     foreach ($action in $ActionList ) {
         switch ($action) {
             'generatemail' {
-                Write-Host 'Going to create the email'
-                $GenerateEmail = New-CIPPAlertTemplate -format 'html' -data $Data -ActionResults $ActionResults -CIPPURL $CIPPURL
+                $CIPPAlert = @{
+                    Type         = 'email'
+                    Title        = $GenerateEmail.title
+                    HTMLContent  = $GenerateEmail.htmlcontent
+                    TenantFilter = $TenantFilter
+                }
                 Write-Host 'Going to send the mail'
-                Send-CIPPAlert -Type 'email' -Title $GenerateEmail.title -HTMLContent $GenerateEmail.htmlcontent -TenantFilter $TenantFilter
+                Send-CIPPAlert @CIPPAlert
                 Write-Host 'email should be sent'
             }
             'generatePSA' {
-                $GenerateEmail = New-CIPPAlertTemplate -format 'html' -data $Data -ActionResults $ActionResults -CIPPURL $CIPPURL
-                Send-CIPPAlert -Type 'psa' -Title $GenerateEmail.title -HTMLContent $GenerateEmail.htmlcontent -TenantFilter $TenantFilter
+                $CIPPAlert = @{
+                    Type         = 'psa'
+                    Title        = $GenerateEmail.title
+                    HTMLContent  = $GenerateEmail.htmlcontent
+                    TenantFilter = $TenantFilter
+                }
+                Send-CIPPAlert @CIPPAlert
             }
             'generateWebhook' {
-                Write-Host 'Generating the webhook content'
-                $LocationInfo = $Data.CIPPLocationInfo | ConvertFrom-Json -ErrorAction SilentlyContinue
-                $GenerateJSON = New-CIPPAlertTemplate -format 'json' -data $Data -ActionResults $ActionResults -CIPPURL $CIPPURL
-                $JsonContent = @{
-                    Title                 = $GenerateJSON.Title
-                    ActionUrl             = $GenerateJSON.ButtonUrl
-                    ActionText            = $GenerateJSON.ButtonText
-                    RawData               = $Data
-                    IP                    = $data.ClientIP
-                    PotentialLocationInfo = $LocationInfo
-                    ActionsTaken          = [string]($ActionResults | ConvertTo-Json -Depth 15 -Compress)
-                } | ConvertTo-Json -Depth 15 -Compress
+                $CippAlert = @{
+                    Type         = 'webhook'
+                    Title        = $GenerateJSON.Title
+                    JSONContent  = $JsonContent
+                    TenantFilter = $TenantFilter
+                }
                 Write-Host 'Sending Webhook Content'
-                #Write-Host $JsonContent
-                Send-CIPPAlert -Type 'webhook' -Title $GenerateJSON.Title -JSONContent $JsonContent -TenantFilter $TenantFilter
+                Send-CIPPAlert @CippAlert
             }
         }
     }
