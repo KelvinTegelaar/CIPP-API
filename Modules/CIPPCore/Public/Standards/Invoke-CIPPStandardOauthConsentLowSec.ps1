@@ -14,6 +14,7 @@ function Invoke-CIPPStandardOauthConsentLowSec {
             Entra (AAD) Standards
         TAG
             "mediumimpact"
+            "IntegratedApps"
         IMPACT
             Medium Impact
         POWERSHELLEQUIVALENT
