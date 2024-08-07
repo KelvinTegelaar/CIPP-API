@@ -148,7 +148,9 @@ function Get-Tenants {
                     Write-Host "We're skipping $($Obj.displayName) as it has an invalid default domain name. Something is up with this instance."
                     return
                 }
-                Add-CIPPAzDataTableEntity @TenantsTable -Entity $Obj -Force | Out-Null
+                Write-Host "Adding $($_.Name) to tenant list."
+                Add-CIPPAzDataTableEntity @TenantsTable -Entity $Obj -Force
+
                 $Obj
             }
         }
