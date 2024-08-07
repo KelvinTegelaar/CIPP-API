@@ -217,6 +217,12 @@ function Push-DomainAnalyserDomain {
         if (![string]::IsNullOrEmpty($DomainObject.DkimSelectors)) {
             $DkimParams.Selectors = $DomainObject.DkimSelectors | ConvertFrom-Json
         }
+        # Check if its a onmicrosoft.com domain and add special selectors for these
+        if ($Domain -match 'onmicrosoft.com' -and $Domain -notmatch 'mail.onmicrosoft.com') {
+            $DKIMSelector1Value = "selector1-$($Domain -replace '\.', '-' )"
+            $DKIMSelector2Value = "selector2-$($Domain -replace '\.', '-' )"
+            $DkimParams.Add('Selectors', @("$DKIMSelector1Value", "$DKIMSelector2Value"))
+        }
 
         $DkimRecord = Read-DkimRecord @DkimParams -ErrorAction Stop
 
