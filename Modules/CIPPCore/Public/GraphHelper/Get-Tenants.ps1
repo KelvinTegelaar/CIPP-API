@@ -102,8 +102,9 @@ function Get-Tenants {
             }
             $LatestRelationship = $_.Group | Sort-Object -Property relationshipEnd | Select-Object -Last 1
             $AutoExtend = ($_.Group | Where-Object { $_.autoExtend -eq $true } | Measure-Object).Count -gt 0
-            Write-Host 'Getting domain.'
+
             if (-not $SkipDomains.IsPresent) {
+                Write-Host 'Getting domain inside'
                 try {
                     Write-Host "Getting domains for $($_.Name)."
                     $Domains = New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/domains?$top=999' -tenantid $LatestRelationship.customerId -NoAuthCheck:$true -ErrorAction Stop
