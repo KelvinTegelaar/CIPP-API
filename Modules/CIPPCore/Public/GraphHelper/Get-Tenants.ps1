@@ -102,7 +102,7 @@ function Get-Tenants {
             }
             $LatestRelationship = $_.Group | Sort-Object -Property relationshipEnd | Select-Object -Last 1
             $AutoExtend = ($_.Group | Where-Object { $_.autoExtend -eq $true } | Measure-Object).Count -gt 0
-
+            Write-Host 'Getting domain.'
             if (-not $SkipDomains.IsPresent) {
                 try {
                     Write-Host "Getting domains for $($_.Name)."
@@ -121,6 +121,7 @@ function Get-Tenants {
                         Write-LogMessage -API 'Get-Tenants' -message "Tried adding $($LatestRelationship.customerId) to tenant list but failed to get domains - $($_.Exception.Message)" -level 'Critical'
                     }
                 }
+                Write-Host 'finished getting domain'
 
                 $Obj = [PSCustomObject]@{
                     PartitionKey             = 'Tenants'
