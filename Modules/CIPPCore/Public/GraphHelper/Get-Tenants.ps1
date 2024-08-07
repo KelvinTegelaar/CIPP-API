@@ -102,8 +102,9 @@ function Get-Tenants {
             }
             $LatestRelationship = $_.Group | Sort-Object -Property relationshipEnd | Select-Object -Last 1
             $AutoExtend = ($_.Group | Where-Object { $_.autoExtend -eq $true } | Measure-Object).Count -gt 0
-
-            if (-not $SkipDomains.IsPresent) {
+            Write-Host "Skipdomains: $SkipDomains"
+            Write-Host "Is skipdomains present: $($SkipDomains.IsPresent)"
+            if (!$SkipDomains.IsPresent) {
                 Write-Host 'Getting domain.'
                 try {
                     Write-Host "Getting domains for $($_.Name)."

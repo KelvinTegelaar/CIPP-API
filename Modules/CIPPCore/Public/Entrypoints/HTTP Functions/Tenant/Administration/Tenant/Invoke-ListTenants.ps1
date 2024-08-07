@@ -45,7 +45,6 @@ Function Invoke-ListTenants {
         return
     }
     if ($Request.Query.TriggerRefresh) {
-        write-hosts 'Triggering refresh of tenants'
         Get-Tenants -IncludeAll -TriggerRefresh
     }
     try {
