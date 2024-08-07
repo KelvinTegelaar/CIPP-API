@@ -103,56 +103,56 @@ function Get-Tenants {
             $LatestRelationship = $_.Group | Sort-Object -Property relationshipEnd | Select-Object -Last 1
             $AutoExtend = ($_.Group | Where-Object { $_.autoExtend -eq $true } | Measure-Object).Count -gt 0
 
-            if (-not $SkipDomains) {
-                Write-Host 'Getting domain inside'
+
+            Write-Host 'Getting domain inside'
+            try {
+                Write-Host "Getting domains for $($_.Name)."
+                $Domains = New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/domains?$top=999' -tenantid $LatestRelationship.customerId -NoAuthCheck:$true -ErrorAction Stop
+                $defaultDomainName = ($Domains | Where-Object { $_.isDefault -eq $true }).id
+                $initialDomainName = ($Domains | Where-Object { $_.isInitial -eq $true }).id
+            } catch {
                 try {
-                    Write-Host "Getting domains for $($_.Name)."
-                    $Domains = New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/domains?$top=999' -tenantid $LatestRelationship.customerId -NoAuthCheck:$true -ErrorAction Stop
-                    $defaultDomainName = ($Domains | Where-Object { $_.isDefault -eq $true }).id
-                    $initialDomainName = ($Domains | Where-Object { $_.isInitial -eq $true }).id
+                    #doing alternative method to temporarily get domains. Nightly refresh will fix this as it will be marked for renew.
+                    $Domain = (New-GraphGetRequest -uri "https://graph.microsoft.com/v1.0/tenantRelationships/findTenantInformationByTenantId(tenantId='$($LatestRelationship.customerId)')" -NoAuthCheck:$true).defaultDomainName
+                    $defaultDomainName = $Domain
+                    $initialDomainName = $Domain
+                    $RequiresRefresh = $true
+
                 } catch {
-                    try {
-                        #doing alternative method to temporarily get domains. Nightly refresh will fix this as it will be marked for renew.
-                        $Domain = (New-GraphGetRequest -uri "https://graph.microsoft.com/v1.0/tenantRelationships/findTenantInformationByTenantId(tenantId='$($LatestRelationship.customerId)')" -NoAuthCheck:$true).defaultDomainName
-                        $defaultDomainName = $Domain
-                        $initialDomainName = $Domain
-                        $RequiresRefresh = $true
-
-                    } catch {
-                        Write-LogMessage -API 'Get-Tenants' -message "Tried adding $($LatestRelationship.customerId) to tenant list but failed to get domains - $($_.Exception.Message)" -level 'Critical'
-                    }
+                    Write-LogMessage -API 'Get-Tenants' -message "Tried adding $($LatestRelationship.customerId) to tenant list but failed to get domains - $($_.Exception.Message)" -level 'Critical'
                 }
-                Write-Host 'finished getting domain'
-
-                $Obj = [PSCustomObject]@{
-                    PartitionKey             = 'Tenants'
-                    RowKey                   = $_.Name
-                    customerId               = $_.Name
-                    displayName              = $LatestRelationship.displayName
-                    relationshipEnd          = $LatestRelationship.relationshipEnd
-                    relationshipCount        = $_.Count
-                    defaultDomainName        = $defaultDomainName
-                    initialDomainName        = $initialDomainName
-                    hasAutoExtend            = $AutoExtend
-                    delegatedPrivilegeStatus = 'granularDelegatedAdminPrivileges'
-                    domains                  = ''
-                    Excluded                 = $false
-                    ExcludeUser              = ''
-                    ExcludeDate              = ''
-                    GraphErrorCount          = 0
-                    LastGraphError           = ''
-                    RequiresRefresh          = [bool]$RequiresRefresh
-                    LastRefresh              = (Get-Date).ToUniversalTime()
-                }
-                if ($Obj.defaultDomainName -eq 'Invalid' -or !$Obj.defaultDomainName) {
-                    Write-Host "We're skipping $($Obj.displayName) as it has an invalid default domain name. Something is up with this instance."
-                    return
-                }
-                Write-Host "Adding $($_.Name) to tenant list."
-                Add-CIPPAzDataTableEntity @TenantsTable -Entity $Obj -Force
-
-                $Obj
             }
+            Write-Host 'finished getting domain'
+
+            $Obj = [PSCustomObject]@{
+                PartitionKey             = 'Tenants'
+                RowKey                   = $_.Name
+                customerId               = $_.Name
+                displayName              = $LatestRelationship.displayName
+                relationshipEnd          = $LatestRelationship.relationshipEnd
+                relationshipCount        = $_.Count
+                defaultDomainName        = $defaultDomainName
+                initialDomainName        = $initialDomainName
+                hasAutoExtend            = $AutoExtend
+                delegatedPrivilegeStatus = 'granularDelegatedAdminPrivileges'
+                domains                  = ''
+                Excluded                 = $false
+                ExcludeUser              = ''
+                ExcludeDate              = ''
+                GraphErrorCount          = 0
+                LastGraphError           = ''
+                RequiresRefresh          = [bool]$RequiresRefresh
+                LastRefresh              = (Get-Date).ToUniversalTime()
+            }
+            if ($Obj.defaultDomainName -eq 'Invalid' -or !$Obj.defaultDomainName) {
+                Write-Host "We're skipping $($Obj.displayName) as it has an invalid default domain name. Something is up with this instance."
+                return
+            }
+            Write-Host "Adding $($_.Name) to tenant list."
+            Add-CIPPAzDataTableEntity @TenantsTable -Entity $Obj -Force
+
+            $Obj
+
         }
         $IncludedTenantsCache = [system.collections.generic.list[object]]::new()
         if ($PartnerTenantState.state -eq 'PartnerTenantAvailable') {
