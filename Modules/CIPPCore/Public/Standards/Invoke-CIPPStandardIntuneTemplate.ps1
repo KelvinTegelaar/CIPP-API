@@ -9,7 +9,7 @@ function Invoke-CIPPStandardIntuneTemplate {
         Write-Host 'starting template deploy'
         $APINAME = 'Standards'
         foreach ($Template in $Settings.TemplateList) {
-            Write-Host 'working on template deploy'
+            Write-Host "working on template deploy: $($Template | ConvertTo-Json)"
             try {
                 $Table = Get-CippTable -tablename 'templates'
                 $Filter = "PartitionKey eq 'IntuneTemplate'"
@@ -92,7 +92,6 @@ function Invoke-CIPPStandardIntuneTemplate {
                         if ($PolicyName -in $CheckExististing.name) {
                             $ExistingID = $CheckExististing | Where-Object -Property Name -EQ $PolicyName
                             $CreateRequest = New-GraphPOSTRequest -uri "https://graph.microsoft.com/beta/deviceManagement/$TemplateTypeURL/$($ExistingID.Id)" -tenantid $tenant -type PUT -body $RawJSON
-
                         } else {
                             $CreateRequest = New-GraphPOSTRequest -uri "https://graph.microsoft.com/beta/deviceManagement/$TemplateTypeURL" -tenantid $tenant -type POST -body $RawJSON
                             Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $($Tenant) -message "Added policy $($PolicyName) via template" -Sev 'info'
@@ -113,16 +112,32 @@ function Invoke-CIPPStandardIntuneTemplate {
                     }
 
                 }
-
+                #Legacy assign.
                 if ($Settings.AssignTo) {
                     Write-Host "Assigning Policy to $($Settings.AssignTo) the create ID is $($CreateRequest)"
                     if ($Settings.AssignTo -eq 'customGroup') { $Settings.AssignTo = $Settings.customGroup }
-                    Set-CIPPAssignedPolicy -PolicyId $CreateRequest.id -TenantFilter $tenant -GroupName $Settings.AssignTo -Type $TemplateTypeURL
+                    if ($ExistingID) {
+                        Set-CIPPAssignedPolicy -PolicyId $ExistingID.id -TenantFilter $tenant -GroupName $Settings.AssignTo -Type $TemplateTypeURL
+                        Write-LogMessage -API 'Standards' -tenant $tenant -message "Successfully updated Intune Template $PolicyName policy for $($Tenant)" -sev 'Info'
+                    } else {
+                        Set-CIPPAssignedPolicy -PolicyId $CreateRequest.id -TenantFilter $tenant -GroupName $Settings.AssignTo -Type $TemplateTypeURL
+                        Write-LogMessage -API 'Standards' -tenant $tenant -message "Successfully created Intune Template $PolicyName policy for $($Tenant)" -sev 'Info'
+                    }
                 }
-                Write-LogMessage -API 'Standards' -tenant $tenant -message "Successfully added Intune Template policy for $($Tenant)" -sev 'Info'
+
+                if ($Template.AssignedTo) {
+                    Write-Host "New: Assigning Policy to $($Template.AssignedTo) the create ID is $($CreateRequest)"
+                    if ($ExistingID) {
+                        Set-CIPPAssignedPolicy -PolicyId $ExistingID.id -TenantFilter $tenant -GroupName $Template.AssignedTo -Type $TemplateTypeURL
+                        Write-LogMessage -API 'Standards' -tenant $tenant -message "Successfully updated Intune Template $PolicyName policy for $($Tenant)" -sev 'Info'
+                    } else {
+                        Set-CIPPAssignedPolicy -PolicyId $CreateRequest.id -TenantFilter $tenant -GroupName $Template.AssignedTo -Type $TemplateTypeURL
+                        Write-LogMessage -API 'Standards' -tenant $tenant -message "Successfully created Intune Template $PolicyName policy for $($Tenant)" -sev 'Info'
+                    }
+                }
             } catch {
                 $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
-                Write-LogMessage -API 'Standards' -tenant $tenant -message "Failed to create or update Intune Template: $ErrorMessage" -sev 'Error'
+                Write-LogMessage -API 'Standards' -tenant $tenant -message "Failed to create or update Intune Template $PolicyName, Error: $ErrorMessage" -sev 'Error'
             }
         }
     }
