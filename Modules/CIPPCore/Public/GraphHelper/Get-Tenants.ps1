@@ -88,9 +88,10 @@ function Get-Tenants {
         $TenantList = $ActiveRelationships | Group-Object -Property customerId | ForEach-Object {
             Write-Host "Processing $($_.Name) to add to tenant list."
             $ExistingTenantInfo = Get-CIPPAzDataTableEntity @TenantsTable -Filter "PartitionKey eq 'Tenants' and RowKey eq '$($_.Name)'"
-
+            Write-Host "ExistingTenantInfo: $ExistingTenantInfo"
             if ($TriggerRefresh.IsPresent -and $ExistingTenantInfo.customerId) {
                 # Reset error count
+                Write-Host "Resetting error count for $($_.Name)"
                 $ExistingTenantInfo.GraphErrorCount = 0
                 Add-CIPPAzDataTableEntity @TenantsTable -Entity $ExistingTenantInfo -Force | Out-Null
             }
@@ -101,6 +102,7 @@ function Get-Tenants {
                 return
             }
             $LatestRelationship = $_.Group | Sort-Object -Property relationshipEnd | Select-Object -Last 1
+            Write-Host "LatestRelationship: $LatestRelationship"
             $AutoExtend = ($_.Group | Where-Object { $_.autoExtend -eq $true } | Measure-Object).Count -gt 0
 
             if (-not $SkipDomains.IsPresent) {
@@ -143,7 +145,8 @@ function Get-Tenants {
                     LastRefresh              = (Get-Date).ToUniversalTime()
                 }
                 if ($Obj.defaultDomainName -eq 'Invalid' -or !$Obj.defaultDomainName) {
-                    continue
+                    Write-Host "We're skipping $($Obj.displayName) as it has an invalid default domain name. Something is up with this instance."
+                    return
                 }
                 Add-CIPPAzDataTableEntity @TenantsTable -Entity $Obj -Force | Out-Null
                 $Obj
