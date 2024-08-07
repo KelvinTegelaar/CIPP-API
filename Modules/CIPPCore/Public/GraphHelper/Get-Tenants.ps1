@@ -86,7 +86,7 @@ function Get-Tenants {
 
         $ActiveRelationships = $GDAPList | Where-Object $IncludedTenantFilter | Where-Object { $_.customerId -notin $SkipListCache.customerId }
         $TenantList = $ActiveRelationships | Group-Object -Property customerId | ForEach-Object {
-            Write-Host "Processing $($_.Name) to add to tenant list."
+            #Write-Host "Processing $($_.Name) to add to tenant list."
             $ExistingTenantInfo = Get-CIPPAzDataTableEntity @TenantsTable -Filter "PartitionKey eq 'Tenants' and RowKey eq '$($_.Name)'"
             if ($TriggerRefresh.IsPresent -and $ExistingTenantInfo.customerId) {
                 # Reset error count
@@ -102,10 +102,7 @@ function Get-Tenants {
             }
             $LatestRelationship = $_.Group | Sort-Object -Property relationshipEnd | Select-Object -Last 1
             $AutoExtend = ($_.Group | Where-Object { $_.autoExtend -eq $true } | Measure-Object).Count -gt 0
-            Write-Host "Skipdomains: $SkipDomains"
-            Write-Host "Is skipdomains present: $($SkipDomains.IsPresent)"
             if (!$SkipDomains.IsPresent) {
-                Write-Host 'Getting domain.'
                 try {
                     Write-Host "Getting domains for $($_.Name)."
                     $Domains = New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/domains?$top=999' -tenantid $LatestRelationship.customerId -NoAuthCheck:$true -ErrorAction Stop
@@ -150,7 +147,7 @@ function Get-Tenants {
                     return
                 }
                 Write-Host "Adding $($_.Name) to tenant list."
-                Add-CIPPAzDataTableEntity @TenantsTable -Entity $Obj -Force
+                Add-CIPPAzDataTableEntity @TenantsTable -Entity $Obj -Force | Out-Null
 
                 $Obj
             }
