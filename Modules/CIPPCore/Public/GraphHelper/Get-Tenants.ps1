@@ -88,7 +88,6 @@ function Get-Tenants {
         $TenantList = $ActiveRelationships | Group-Object -Property customerId | ForEach-Object {
             Write-Host "Processing $($_.Name) to add to tenant list."
             $ExistingTenantInfo = Get-CIPPAzDataTableEntity @TenantsTable -Filter "PartitionKey eq 'Tenants' and RowKey eq '$($_.Name)'"
-            Write-Host "ExistingTenantInfo: $ExistingTenantInfo"
             if ($TriggerRefresh.IsPresent -and $ExistingTenantInfo.customerId) {
                 # Reset error count
                 Write-Host "Resetting error count for $($_.Name)"
@@ -102,7 +101,6 @@ function Get-Tenants {
                 return
             }
             $LatestRelationship = $_.Group | Sort-Object -Property relationshipEnd | Select-Object -Last 1
-            Write-Host "LatestRelationship: $LatestRelationship"
             $AutoExtend = ($_.Group | Where-Object { $_.autoExtend -eq $true } | Measure-Object).Count -gt 0
 
             if (-not $SkipDomains.IsPresent) {
