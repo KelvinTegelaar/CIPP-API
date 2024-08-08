@@ -27,10 +27,8 @@ function Invoke-CIPPStandardPerUserMFA {
     #>
 
     param($Tenant, $Settings)
-    $Rerun = Test-CIPPRerun -Type Standard -Tenant $Tenant -Settings $Settings -API 'PerUserMFA'
-    if ($Rerun -eq $true) {
-        exit 0
-    }
+    #$Rerun = Test-CIPPRerun -Type Standard -Tenant $Tenant -Settings $Settings 'PerUserMFA'
+
 
     $GraphRequest = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/users?`$top=999&`$select=UserPrincipalName,accountEnabled" -scope 'https://graph.microsoft.com/.default' -tenantid $Tenant | Where-Object { $_.AccountEnabled -EQ $true }
     $int = 0

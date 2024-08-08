@@ -4,10 +4,8 @@ function Invoke-CIPPStandardGroupTemplate {
     Internal
     #>
     param($Tenant, $Settings)
-    $Rerun = Test-CIPPRerun -Type Standard -Tenant $Tenant -Settings $Settings -API 'GroupTemplate'
-    if ($Rerun -eq $true) {
-        exit 0
-    }
+    #$Rerun = Test-CIPPRerun -Type Standard -Tenant $Tenant -Settings $Settings 'GroupTemplate'
+
     If ($Settings.remediate -eq $true) {
 
         foreach ($Template in $Settings.TemplateList) {

@@ -27,10 +27,8 @@ Function Invoke-CIPPStandardTeamsGlobalMeetingPolicy {
     .LINK
         https://docs.cipp.app/user-documentation/tenant/standards/edit-standards
     #>
-    $Rerun = Test-CIPPRerun -Type Standard -Tenant $Tenant -Settings $Settings -API 'TeamsGlobalMeetingPolicy'
-    if ($Rerun -eq $true) {
-        exit 0
-    }
+    #$Rerun = Test-CIPPRerun -Type Standard -Tenant $Tenant -Settings $Settings 'TeamsGlobalMeetingPolicy'
+
     param($Tenant, $Settings)
     $CurrentState = New-TeamsRequest -TenantFilter $Tenant -Cmdlet 'Get-CsTeamsMeetingPolicy' -CmdParams @{Identity = 'Global' }
     | Select-Object AllowAnonymousUsersToJoinMeeting, AllowAnonymousUsersToStartMeeting, AutoAdmittedUsers, AllowPSTNUsersToBypassLobby, MeetingChatEnabledType, DesignatedPresenterRoleMode, AllowExternalParticipantGiveRequestControl

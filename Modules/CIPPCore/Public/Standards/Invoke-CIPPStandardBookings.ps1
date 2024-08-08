@@ -28,10 +28,8 @@ function Invoke-CIPPStandardBookings {
     #>
 
     param($Tenant, $Settings)
-    $Rerun = Test-CIPPRerun -Type Standard -Tenant $Tenant -Settings $Settings -API 'Bookings'
-    if ($Rerun -eq $true) {
-        exit 0
-    }
+    #$Rerun = Test-CIPPRerun -Type Standard -Tenant $Tenant -Settings $Settings 'Bookings'
+
     $CurrentState = (New-ExoRequest -tenantid $Tenant -cmdlet 'Get-OrganizationConfig').BookingsEnabled
     $WantedState = if ($Settings.state -eq 'true') { $true } else { $false }
     $StateIsCorrect = if ($CurrentState -eq $WantedState) { $true } else { $false }

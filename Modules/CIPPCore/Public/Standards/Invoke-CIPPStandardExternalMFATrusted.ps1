@@ -28,10 +28,8 @@ function Invoke-CIPPStandardExternalMFATrusted {
     #>
 
     param($Tenant, $Settings)
-    $Rerun = Test-CIPPRerun -Type Standard -Tenant $Tenant -Settings $Settings -API 'ExternalMFATrusted'
-    if ($Rerun -eq $true) {
-        exit 0
-    }
+    #$Rerun = Test-CIPPRerun -Type Standard -Tenant $Tenant -Settings $Settings 'ExternalMFATrusted'
+
     $ExternalMFATrusted = (New-GraphGetRequest -uri 'https://graph.microsoft.com/v1.0/policies/crossTenantAccessPolicy/default?$select=inboundTrust' -tenantid $Tenant)
     $WantedState = if ($Settings.state -eq 'true') { $true } else { $false }
     $StateMessage = if ($WantedState) { 'enabled' } else { 'disabled' }

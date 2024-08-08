@@ -34,10 +34,8 @@ function Invoke-CIPPStandardSafeLinksPolicy {
     #>
 
     param($Tenant, $Settings)
-    $Rerun = Test-CIPPRerun -Type Standard -Tenant $Tenant -Settings $Settings -API 'SafeLinksPolicy'
-    if ($Rerun -eq $true) {
-        exit 0
-    }
+    #$Rerun = Test-CIPPRerun -Type Standard -Tenant $Tenant -Settings $Settings 'SafeLinksPolicy'
+
     $PolicyName = 'Default SafeLinks Policy'
 
     $CurrentState = New-ExoRequest -tenantid $Tenant -cmdlet 'Get-SafeLinksPolicy' |

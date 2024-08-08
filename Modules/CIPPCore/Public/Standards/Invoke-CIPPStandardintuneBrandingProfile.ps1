@@ -37,10 +37,8 @@ function Invoke-CIPPStandardintuneBrandingProfile {
     #>
 
     param($Tenant, $Settings)
-    $Rerun = Test-CIPPRerun -Type Standard -Tenant $Tenant -Settings $Settings -API 'intuneBrandingProfile'
-    if ($Rerun -eq $true) {
-        exit 0
-    }
+    #$Rerun = Test-CIPPRerun -Type Standard -Tenant $Tenant -Settings $Settings 'intuneBrandingProfile'
+
     $CurrentState = New-GraphGetRequest -Uri 'https://graph.microsoft.com/beta/deviceManagement/intuneBrandingProfiles/c3a59481-1bf2-46ce-94b3-66eec07a8d60/' -tenantid $Tenant -AsApp $true
 
     $StateIsCorrect = ((-not $Settings.displayName) -or ($CurrentState.displayName -eq $Settings.displayName)) -and

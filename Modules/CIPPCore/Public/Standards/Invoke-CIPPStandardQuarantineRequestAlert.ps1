@@ -28,10 +28,8 @@ function Invoke-CIPPStandardQuarantineRequestAlert {
     #>
 
     param ($Tenant, $Settings)
-    $Rerun = Test-CIPPRerun -Type Standard -Tenant $Tenant -Settings $Settings -API 'QuarantineRequestAlert'
-    if ($Rerun -eq $true) {
-        exit 0
-    }
+    #$Rerun = Test-CIPPRerun -Type Standard -Tenant $Tenant -Settings $Settings 'QuarantineRequestAlert'
+
     $PolicyName = 'CIPP User requested to release a quarantined message'
 
     $CurrentState = New-ExoRequest -TenantId $Tenant -cmdlet 'Get-ProtectionAlert' -Compliance |

@@ -30,10 +30,8 @@ function Invoke-CIPPStandardcalDefault {
     #>
 
     param($Tenant, $Settings, $QueueItem)
-    $Rerun = Test-CIPPRerun -Type Standard -Tenant $Tenant -Settings $Settings -API 'calDefault'
-    if ($Rerun -eq $true) {
-        exit 0
-    }
+    #$Rerun = Test-CIPPRerun -Type Standard -Tenant $Tenant -Settings $Settings 'calDefault'
+
     # Input validation
     if ([string]::IsNullOrWhiteSpace($Settings.permissionlevel) -or $Settings.permissionlevel -eq 'Select a value') {
         Write-LogMessage -API 'Standards' -tenant $tenant -message 'calDefault: Invalid permissionlevel parameter set' -sev Error

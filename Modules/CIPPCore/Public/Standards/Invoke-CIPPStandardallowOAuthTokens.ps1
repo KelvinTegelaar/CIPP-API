@@ -27,10 +27,8 @@ function Invoke-CIPPStandardallowOAuthTokens {
     #>
 
     param($Tenant, $Settings)
-    $Rerun = Test-CIPPRerun -Type Standard -Tenant $Tenant -API 'AddDKIM' -Settings $Settings
-    if ($Rerun -eq $true) {
-        exit 0
-    }
+    #$Rerun -Type Standard -Tenant $Tenant -API 'AddDKIM' -Settings $Settings
+
     $CurrentInfo = New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/policies/authenticationMethodsPolicy/authenticationMethodConfigurations/softwareOath' -tenantid $Tenant
     $State = if ($CurrentInfo.state -eq 'enabled') { $true } else { $false }
 

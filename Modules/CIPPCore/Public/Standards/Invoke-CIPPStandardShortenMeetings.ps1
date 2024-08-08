@@ -30,10 +30,8 @@ function Invoke-CIPPStandardShortenMeetings {
     #>
 
     param($Tenant, $Settings)
-    $Rerun = Test-CIPPRerun -Type Standard -Tenant $Tenant -Settings $Settings -API 'ShortenMeetings'
-    if ($Rerun -eq $true) {
-        exit 0
-    }
+    #$Rerun = Test-CIPPRerun -Type Standard -Tenant $Tenant -Settings $Settings 'ShortenMeetings'
+
     # Input validation
     if ([Int32]$Settings.DefaultMinutesToReduceShortEventsBy -lt 0 -or [Int32]$Settings.DefaultMinutesToReduceShortEventsBy -gt 29) {
         Write-LogMessage -API 'Standards' -tenant $tenant -message 'Invalid shorten meetings settings specified. DefaultMinutesToReduceShortEventsBy must be an integer between 0 and 29' -sev Error

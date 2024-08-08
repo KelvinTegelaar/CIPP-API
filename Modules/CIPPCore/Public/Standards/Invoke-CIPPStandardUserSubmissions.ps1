@@ -29,10 +29,8 @@ function Invoke-CIPPStandardUserSubmissions {
     #>
 
     param($Tenant, $Settings)
-    $Rerun = Test-CIPPRerun -Type Standard -Tenant $Tenant -Settings $Settings -API 'UserSubmissions'
-    if ($Rerun -eq $true) {
-        exit 0
-    }
+    #$Rerun = Test-CIPPRerun -Type Standard -Tenant $Tenant -Settings $Settings 'UserSubmissions'
+
     # Input validation
     if ($Settings.remediate -eq $true -or $Settings.alert -eq $true) {
         if (!($Settings.state -eq 'enable' -or $Settings.state -eq 'disable')) {

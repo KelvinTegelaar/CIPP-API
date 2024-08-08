@@ -4,10 +4,8 @@ function Invoke-CIPPStandardConditionalAccess {
     Internal
     #>
     param($Tenant, $Settings)
-    $Rerun = Test-CIPPRerun -Type Standard -Tenant $Tenant -Settings $Settings -API 'ConditionalAccess'
-    if ($Rerun -eq $true) {
-        exit 0
-    }
+    #$Rerun = Test-CIPPRerun -Type Standard -Tenant $Tenant -Settings $Settings 'ConditionalAccess'
+
     If ($Settings.remediate -eq $true) {
 
         $APINAME = 'Standards'

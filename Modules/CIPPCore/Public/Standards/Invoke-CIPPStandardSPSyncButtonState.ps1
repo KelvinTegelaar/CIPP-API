@@ -28,10 +28,8 @@ function Invoke-CIPPStandardSPSyncButtonState {
     #>
 
     param($Tenant, $Settings)
-    $Rerun = Test-CIPPRerun -Type Standard -Tenant $Tenant -Settings $Settings -API 'SPSyncButtonState'
-    if ($Rerun -eq $true) {
-        exit 0
-    }
+    #$Rerun = Test-CIPPRerun -Type Standard -Tenant $Tenant -Settings $Settings 'SPSyncButtonState'
+
     $CurrentState = Get-CIPPSPOTenant -TenantFilter $Tenant | Select-Object _ObjectIdentity_, TenantFilter, HideSyncButtonOnDocLib
     $WantedState = [System.Convert]::ToBoolean($Settings.state)
     $StateIsCorrect = if ($CurrentState.HideSyncButtonOnDocLib -eq $WantedState) { $true } else { $false }

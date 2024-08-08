@@ -28,9 +28,7 @@ function Invoke-CIPPStandardAnonReportDisable {
 
     param($Tenant, $Settings)
     $Rerun = Test-CIPPRerun -Type Standard -Tenant $Tenant -API 'allowOTPTokens' -Settings $Settings
-    if ($Rerun -eq $true) {
-        exit 0
-    }
+
     $CurrentInfo = New-GraphGetRequest -Uri 'https://graph.microsoft.com/beta/admin/reportSettings' -tenantid $Tenant -AsApp $true
 
     If ($Settings.remediate -eq $true) {

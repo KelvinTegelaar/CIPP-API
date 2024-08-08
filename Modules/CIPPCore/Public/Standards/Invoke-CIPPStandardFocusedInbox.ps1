@@ -28,10 +28,8 @@ function Invoke-CIPPStandardFocusedInbox {
     #>
 
     param($Tenant, $Settings)
-    $Rerun = Test-CIPPRerun -Type Standard -Tenant $Tenant -Settings $Settings -API 'FocusedInbox'
-    if ($Rerun -eq $true) {
-        exit 0
-    }
+    #$Rerun = Test-CIPPRerun -Type Standard -Tenant $Tenant -Settings $Settings 'FocusedInbox'
+
     # Input validation
     if ([string]::IsNullOrWhiteSpace($Settings.state) -or $Settings.state -eq 'Select a value') {
         Write-LogMessage -API 'Standards' -tenant $tenant -message 'ExternalMFATrusted: Invalid state parameter set' -sev Error

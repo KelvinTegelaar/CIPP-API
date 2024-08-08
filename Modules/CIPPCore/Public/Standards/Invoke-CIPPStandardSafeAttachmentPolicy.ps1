@@ -36,10 +36,8 @@ function Invoke-CIPPStandardSafeAttachmentPolicy {
     #>
 
     param($Tenant, $Settings)
-    $Rerun = Test-CIPPRerun -Type Standard -Tenant $Tenant -Settings $Settings -API 'SafeAttachmentPolicy'
-    if ($Rerun -eq $true) {
-        exit 0
-    }
+    #$Rerun = Test-CIPPRerun -Type Standard -Tenant $Tenant -Settings $Settings 'SafeAttachmentPolicy'
+
     $PolicyName = 'Default Safe Attachment Policy'
 
     $CurrentState = New-ExoRequest -tenantid $Tenant -cmdlet 'Get-SafeAttachmentPolicy' |

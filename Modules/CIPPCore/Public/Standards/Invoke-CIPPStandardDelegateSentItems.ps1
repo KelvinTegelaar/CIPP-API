@@ -27,10 +27,8 @@ function Invoke-CIPPStandardDelegateSentItems {
     #>
 
     param($Tenant, $Settings)
-    $Rerun = Test-CIPPRerun -Type Standard -Tenant $Tenant -API 'DelegateSentItems' -Settings $Settings
-    if ($Rerun -eq $true) {
-        exit 0
-    }
+    #$Rerun -Type Standard -Tenant $Tenant -API 'DelegateSentItems' -Settings $Settings
+
 
 
     $Mailboxes = New-ExoRequest -tenantid $Tenant -cmdlet 'Get-Mailbox' -cmdParams @{ RecipientTypeDetails = @('UserMailbox', 'SharedMailbox') } |
