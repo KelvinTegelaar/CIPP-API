@@ -27,6 +27,7 @@ function Invoke-CIPPStandardEnableOnlineArchiving {
     #>
 
     param($Tenant, $Settings)
+    ##$Rerun -Type Standard -Tenant $Tenant -Settings $Settings 'EnableOnlineArchiving'
 
     $MailboxPlans = @( 'ExchangeOnline', 'ExchangeOnlineEnterprise' )
     $MailboxesNoArchive = $MailboxPlans | ForEach-Object {
