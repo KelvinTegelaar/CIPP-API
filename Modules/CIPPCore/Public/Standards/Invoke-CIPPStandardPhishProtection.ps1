@@ -18,7 +18,7 @@ function Invoke-CIPPStandardPhishProtection {
         IMPACT
             Low Impact
         DISABLEDFEATURES
-            
+
         POWERSHELLEQUIVALENT
             Portal only
         RECOMMENDEDBY
@@ -30,6 +30,8 @@ function Invoke-CIPPStandardPhishProtection {
     #>
 
     param($Tenant, $Settings)
+    ##$Rerun -Type Standard -Tenant $Tenant -Settings $Settings 'PhishProtection'
+
     $TenantId = Get-Tenants | Where-Object -Property defaultDomainName -EQ $tenant
 
     try {

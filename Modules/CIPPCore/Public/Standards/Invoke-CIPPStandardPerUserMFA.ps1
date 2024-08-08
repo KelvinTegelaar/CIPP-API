@@ -27,9 +27,11 @@ function Invoke-CIPPStandardPerUserMFA {
     #>
 
     param($Tenant, $Settings)
+    ##$Rerun -Type Standard -Tenant $Tenant -Settings $Settings 'PerUserMFA'
+
 
     $GraphRequest = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/users?`$top=999&`$select=UserPrincipalName,accountEnabled" -scope 'https://graph.microsoft.com/.default' -tenantid $Tenant | Where-Object { $_.AccountEnabled -EQ $true }
-    $int = 0    
+    $int = 0
     $Requests = foreach ($id in $GraphRequest.userPrincipalName) {
         @{
             id     = $int++
@@ -38,7 +40,7 @@ function Invoke-CIPPStandardPerUserMFA {
         }
     }
     $UsersWithoutMFA = (New-GraphBulkRequest -tenantid $tenant -scope 'https://graph.microsoft.com/.default' -Requests @($Requests) -asapp $true).body | Where-Object { $_.perUserMfaState -ne 'enforced' } | Select-Object peruserMFAState, @{Name = 'UserPrincipalName'; Expression = { [System.Web.HttpUtility]::UrlDecode($_.'@odata.context'.split("'")[1]) } }
-    
+
     If ($Settings.remediate -eq $true) {
         if ($UsersWithoutMFA) {
             try {

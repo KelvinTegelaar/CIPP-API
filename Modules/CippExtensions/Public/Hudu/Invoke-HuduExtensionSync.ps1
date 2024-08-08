@@ -28,6 +28,7 @@ function Invoke-HuduExtensionSync {
         Users   = 0
         Devices = 0
         Errors  = [System.Collections.Generic.List[string]]@()
+        Logs    = [System.Collections.Generic.List[string]]@()
     }
 
     $PeopleLayoutId = $Mappings | Where-Object { $_.RowKey -eq 'Users' } | Select-Object -ExpandProperty IntegrationId
@@ -56,6 +57,8 @@ function Invoke-HuduExtensionSync {
 
     Set-Location (Get-Item $PSScriptRoot).Parent.Parent.Parent.Parent.FullName
     $LicTable = Import-Csv Conversiontable.csv
+
+    $CompanyResult.Logs.Add('Starting Hudu Extension Sync')
 
     #$AssignedMap = Get-AssignedMap
     #$AssignedNameMap = Get-AssignedNameMap
@@ -151,7 +154,7 @@ function Invoke-HuduExtensionSync {
         $post = '</div>'
         $RolesHtml = $Roles | Select-Object DisplayName, Description, ParsedMembers | ConvertTo-Html -PreContent $pre -PostContent $post -Fragment | ForEach-Object { $tmp = $_ -replace '&lt;', '<'; $tmp -replace '&gt;', '>'; } | Out-String
 
-        $AdminUsers = (($Roles | Where-Object { $_.Displayname -match 'Administrator' }).Members | Where-Object { $null -ne $_.displayName } | Select-Object @{N = 'Name'; E = { "<a target='_blank' href='https://entra.microsoft.com/$($Tenant.defaultDomainName)/#blade/Microsoft_AAD_IAM/UserDetailsMenuBlade/Profile/userId/$($_.Id)'>$($_.DisplayName) - $($_.UserPrincipalName)</a>" } } -Unique).name -join '<br/>'
+        $AdminUsers = (($Roles | Where-Object { $_.displayName -match 'Administrator' }).Members | Where-Object { $null -ne $_.displayName } | Select-Object @{N = 'Name'; E = { "<a target='_blank' href='https://entra.microsoft.com/$($Tenant.defaultDomainName)/#blade/Microsoft_AAD_IAM/UserDetailsMenuBlade/Profile/userId/$($_.Id)'>$($_.displayName) - $($_.userPrincipalName)</a>" } } -Unique).name -join '<br/>'
 
         $Domains = $ExtensionCache.Domains
 
@@ -309,7 +312,7 @@ function Invoke-HuduExtensionSync {
 
             [pscustomobject]@{
                 ID          = $CAPolicy.id
-                DisplayName = $CAPolicy.DisplayName
+                DisplayName = $CAPolicy.displayName
                 Members     = $CAMembers
             }
         }
@@ -355,7 +358,7 @@ function Invoke-HuduExtensionSync {
 			 </header>"
 
             $post = '</div>'
-
+            $CompanyResult.Logs.Add('Starting User Processing')
             $OutputUsers = foreach ($user in $licensedUsers) {
                 try {
 
@@ -388,10 +391,10 @@ function Invoke-HuduExtensionSync {
 
                     $CASRequest = $CASFull | Where-Object { $_.ExternalDirectoryObjectId -eq $User.id }
                     $MailboxDetailedRequest = $MailboxDetailedFull | Where-Object { $_.Id -eq $User.id }
-                    $StatsRequest = $MailboxStatsFull | Where-Object { $_.'userPrincipalName' -eq $User.UserPrincipalName }
+                    $StatsRequest = $MailboxStatsFull | Where-Object { $_.'userPrincipalName' -eq $User.userPrincipalName }
 
 
-                    $PermsRequest = $Permissions | Where-Object { $_.Identity -eq $User.ID }
+                    $PermsRequest = $Permissions | Where-Object { $_.Identity -eq $User.id }
 
                     $ParsedPerms = foreach ($Perm in $PermsRequest) {
                         if ($Perm.User -ne 'NT AUTHORITY\SELF') {
@@ -426,9 +429,9 @@ function Invoke-HuduExtensionSync {
                         TotalItemSize            = $TotalItemSize
                     }
 
-                    $userDevices = ($devices | Where-Object { $_.userPrincipalName -eq $user.UserPrincipalName } | Select-Object @{N = 'Name'; E = { "<a target='_blank' href=https://endpoint.microsoft.com/$($Tenant.defaultDomainName)/#blade/Microsoft_Intune_Devices/DeviceSettingsBlade/overview/mdmDeviceId/$($_.id)>$($_.deviceName) ($($_.operatingSystem))" } }).name -join '<br/>'
+                    $userDevices = ($devices | Where-Object { $_.userPrincipalName -eq $user.userPrincipalName } | Select-Object @{N = 'Name'; E = { "<a target='_blank' href=https://endpoint.microsoft.com/$($Tenant.defaultDomainName)/#blade/Microsoft_Intune_Devices/DeviceSettingsBlade/overview/mdmDeviceId/$($_.id)>$($_.deviceName) ($($_.operatingSystem))" } }).name -join '<br/>'
 
-                    $UserDevicesDetailsRaw = $devices | Where-Object { $_.userPrincipalName -eq $user.UserPrincipalName } | Select-Object @{N = 'Name'; E = { "<a target='_blank' href=https://endpoint.microsoft.com/$($Tenant.defaultDomainName)/#blade/Microsoft_Intune_Devices/DeviceSettingsBlade/overview/mdmDeviceId/$($_.id)>$($_.deviceName)</a>" } }, @{n = 'Owner'; e = { $_.managedDeviceOwnerType } }, `
+                    $UserDevicesDetailsRaw = $devices | Where-Object { $_.userPrincipalName -eq $user.userPrincipalName } | Select-Object @{N = 'Name'; E = { "<a target='_blank' href=https://endpoint.microsoft.com/$($Tenant.defaultDomainName)/#blade/Microsoft_Intune_Devices/DeviceSettingsBlade/overview/mdmDeviceId/$($_.id)>$($_.deviceName)</a>" } }, @{n = 'Owner'; e = { $_.managedDeviceOwnerType } }, `
                     @{n = 'Enrolled'; e = { $_.enrolledDateTime } }, `
                     @{n = 'Last Sync'; e = { $_.lastSyncDateTime } }, `
                     @{n = 'OS'; e = { $_.operatingSystem } }, `
@@ -439,7 +442,7 @@ function Invoke-HuduExtensionSync {
                     deviceName,
                     @{n = 'url'; e = { "https://endpoint.microsoft.com/$($Tenant.defaultDomainName)/#blade/Microsoft_Intune_Devices/DeviceSettingsBlade/overview/mdmDeviceId/$($_.id)" } }
 
-                    $aliases = (($user.ProxyAddresses | Where-Object { $_ -cnotmatch 'SMTP' -and $_ -notmatch '.onmicrosoft.com' }) -replace 'SMTP:', ' ') -join ', '
+                    $aliases = (($user.proxyAddresses | Where-Object { $_ -cnotmatch 'SMTP' -and $_ -notmatch '.onmicrosoft.com' }) -replace 'SMTP:', ' ') -join ', '
 
                     $userLicenses = ($user.AssignedLicenses.SkuID | ForEach-Object {
                             $UserLic = $_
@@ -451,7 +454,7 @@ function Invoke-HuduExtensionSync {
                             $DisplayName
                         }) -join ', '
 
-                    $UserOneDriveDetails = $OneDriveDetails | Where-Object { $_.ownerPrincipalName -eq $user.UserPrincipalName }
+                    $UserOneDriveDetails = $OneDriveDetails | Where-Object { $_.ownerPrincipalName -eq $user.userPrincipalName }
 
 
 
@@ -596,13 +599,13 @@ function Invoke-HuduExtensionSync {
                         $UserDevicesDetailsBlock = $null
                     }
 
-                    $HuduUser = $People | Where-Object { $_.email_address -eq $user.UserPrincipalName -or $_.primary_mail -eq $user.UserPrincipalName -or ($_.cards.integrator_name -eq 'cw_manage' -and $_.cards.data.communicationItems.communicationType -eq 'Email' -and $_.cards.data.communicationItems.value -eq $user.UserPrincipalName) }
+                    $HuduUser = $People | Where-Object { ($_.fields.label -eq 'Email Address' -and $_.fields.value -eq $user.userPrincipalName) -or $_.primary_mail -eq $user.userPrincipalName -or ($_.cards.integrator_name -eq 'cw_manage' -and $_.cards.data.communicationItems.communicationType -eq 'Email' -and $_.cards.data.communicationItems.value -eq $user.userPrincipalName) }
 
                     [System.Collections.Generic.List[PSCustomObject]]$CIPPLinksFormatted = @()
                     if ($EnableCIPP) {
-                        $CIPPLinksFormatted.add((Get-HuduLinkBlock -URL "$($CIPPURL)/identity/administration/users/view?customerId=$($Tenant.customerid)&userId=$($User.id)&tenantDomain=$($Tenant.defaultDomainName)&userEmail=$($User.UserPrincipalName)" -Icon 'far fa-eye' -Title 'CIPP - View User'))
-                        $CIPPLinksFormatted.add((Get-HuduLinkBlock -URL "$($CIPPURL)/identity/administration/users/edit?customerId=$($Tenant.customerid)&userId=$($User.id)&tenantDomain=$($Tenant.defaultDomainName)&userEmail=$($User.UserPrincipalName)" -Icon 'fas fa-user-cog' -Title 'CIPP - Edit User'))
-                        $CIPPLinksFormatted.add((Get-HuduLinkBlock -URL "$($CIPPURL)/identity/administration/ViewBec?customerId=$($Tenant.customerid)&userId=$($User.id)&tenantDomain=$($Tenant.defaultDomainName)&userEmail=$($User.UserPrincipalName)" -Icon 'fas fa-user-secret' -Title 'CIPP - BEC Tool'))
+                        $CIPPLinksFormatted.add((Get-HuduLinkBlock -URL "$($CIPPURL)/identity/administration/users/view?customerId=$($Tenant.customerid)&userId=$($User.id)&tenantDomain=$($Tenant.defaultDomainName)&userEmail=$($User.userPrincipalName)" -Icon 'far fa-eye' -Title 'CIPP - View User'))
+                        $CIPPLinksFormatted.add((Get-HuduLinkBlock -URL "$($CIPPURL)/identity/administration/users/edit?customerId=$($Tenant.customerid)&userId=$($User.id)&tenantDomain=$($Tenant.defaultDomainName)&userEmail=$($User.userPrincipalName)" -Icon 'fas fa-user-cog' -Title 'CIPP - Edit User'))
+                        $CIPPLinksFormatted.add((Get-HuduLinkBlock -URL "$($CIPPURL)/identity/administration/ViewBec?customerId=$($Tenant.customerid)&userId=$($User.id)&tenantDomain=$($Tenant.defaultDomainName)&userEmail=$($User.userPrincipalName)" -Icon 'fas fa-user-secret' -Title 'CIPP - BEC Tool'))
                     }
 
                     [System.Collections.Generic.List[PSCustomObject]]$UserLinksFormatted = @()
@@ -626,16 +629,17 @@ function Invoke-HuduExtensionSync {
                     if ($PeopleLayoutId) {
                         $UserAssetFields = @{
                             microsoft_365 = $UserBody
-                            email_address = $user.UserPrincipalName
+                            email_address = $user.userPrincipalName
                         }
                         $NewHash = Get-StringHash -String $UserBody
 
-                        $HuduUserCount = ($HuduUser | Measure-Object).count
+                        $HuduUserCount = ($HuduUser | Measure-Object).Count
                         if ($HuduUserCount -eq 1) {
                             $ExistingAsset = Get-CIPPAzDataTableEntity @HuduAssetCache -Filter "PartitionKey eq 'HuduUser' and CompanyId eq '$company_id' and RowKey eq '$($HuduUser.id)'"
                             $ExistingHash = $ExistingAsset.Hash
 
                             if (!$ExistingAsset -or $ExistingHash -ne $NewHash) {
+                                $CompanyResult.Logs.Add("Updating $($HuduUser.name) in Hudu")
                                 $null = Set-HuduAsset -asset_id $HuduUser.id -Name $HuduUser.name -company_id $company_id -asset_layout_id $PeopleLayout.id -Fields $UserAssetFields
                                 $AssetCache = [PSCustomObject]@{
                                     PartitionKey = 'HuduUser'
@@ -648,9 +652,10 @@ function Invoke-HuduExtensionSync {
 
                         } elseif ($HuduUserCount -eq 0) {
                             if ($CreateUsers -eq $True) {
-                                $HuduUser = (New-HuduAsset -Name $User.DisplayName -company_id $company_id -asset_layout_id $PeopleLayout.id -Fields $UserAssetFields).asset
+                                $CompanyResult.Logs.Add("Creating $($User.displayName) in Hudu")
+                                $HuduUser = (New-HuduAsset -Name $User.displayName -company_id $company_id -asset_layout_id $PeopleLayout.id -Fields $UserAssetFields).asset
                                 if (!$HuduUser) {
-                                    $CompanyResult.Errors.add("User $($User.UserPrincipalName): Unable to create user in Hudu. Check the User asset fields for 'Email Address'")
+                                    $CompanyResult.Errors.add("User $($User.userPrincipalName): Unable to create user in Hudu. Check the User asset fields for 'Email Address'")
                                 } else {
                                     $AssetCache = [PSCustomObject]@{
                                         PartitionKey = 'HuduUser'
@@ -662,21 +667,21 @@ function Invoke-HuduExtensionSync {
                                 }
                             }
                         } else {
-                            $CompanyResult.Errors.add("User $($User.UserPrincipalName): Multiple Users Matched to email address in Hudu: ($($HuduUser.name -join ', ') - $($($HuduUser.id -join ', '))) $_")
+                            $CompanyResult.Errors.add("User $($User.userPrincipalName): Multiple Users Matched to email address in Hudu: ($($HuduUser.name -join ', ') - $($($HuduUser.id -join ', '))) $_")
                         }
                     }
 
-                    $UserLink = "<a target=_blank href=$($HuduUser.url)>$($user.DisplayName)</a>"
+                    $UserLink = "<a target=_blank href=$($HuduUser.url)>$($user.displayName)</a>"
 
                     [PSCustomObject]@{
                         'Display Name'      = $UserLink
-                        'Addresses'         = "<strong>$($user.UserPrincipalName)</strong><br/>$aliases"
+                        'Addresses'         = "<strong>$($user.userPrincipalName)</strong><br/>$aliases"
                         'EPM Devices'       = $userDevices
                         'Assigned Licenses' = $userLicenses
                         'Options'           = "<a target=`"_blank`" href=https://entra.microsoft.com/$($Tenant.defaultDomainName)/#blade/Microsoft_AAD_IAM/UserDetailsMenuBlade/Profile/userId/$($user.id)>Azure AD</a> | <a <a target=`"_blank`" href=https://admin.microsoft.com/Partner/BeginClientSession.aspx?CTID=$($customer.CustomerContextId)&CSDEST=o365admincenter/Adminportal/Home#/users/:/UserDetails/$($user.id)>M365 Admin</a>"
                     }
                 } catch {
-                    $CompanyResult.Errors.add("User $($User.UserPrincipalName): A fatal error occured while processing user $_")
+                    $CompanyResult.Errors.add("User $($User.userPrincipalName): A fatal error occured while processing user $_")
                 }
             }
 
@@ -684,6 +689,7 @@ function Invoke-HuduExtensionSync {
 
         }
 
+        $CompanyResult.Logs.Add('Starting Device Processing')
         foreach ($Device in $Devices) {
             try {
                 [System.Collections.Generic.List[PSCustomObject]]$DeviceOverviewFormatted = @()
@@ -725,7 +731,7 @@ function Invoke-HuduExtensionSync {
                         $Status = $Policy.DeviceStatuses | Where-Object { $_.deviceDisplayName -eq $device.deviceName }
                         if ($Status.status -ne 'unknown') {
                             [PSCustomObject]@{
-                                Name           = $Policy.DisplayName
+                                Name           = $Policy.displayName
                                 Status         = ($Status.status | Select-Object -Unique) -join ', '
                                 'Last Report'  = "$(Get-Date($Status.lastReportedDateTime[0]) -Format 'yyyy-MM-dd HH:mm:ss')"
                                 'Grace Expiry' = "$(Get-Date($Status.complianceGracePeriodExpirationDateTime[0]) -Format 'yyyy-MM-dd HH:mm:ss')"
@@ -748,7 +754,7 @@ function Invoke-HuduExtensionSync {
                     if ($device.id -in $App.InstalledAppDetails.deviceId) {
                         $Status = $App.InstalledAppDetails | Where-Object { $_.deviceId -eq $device.id }
                         [PSCustomObject]@{
-                            Name             = $App.DisplayName
+                            Name             = $App.displayName
                             'Install Status' = ($Status.installState | Select-Object -Unique ) -join ','
                         }
                     }
@@ -800,6 +806,7 @@ function Invoke-HuduExtensionSync {
                             $ExistingHash = $ExistingAsset.Hash
 
                             if (!$ExistingAsset -or $ExistingAsset.Hash -ne $NewHash) {
+                                $CompanyResult.Logs.Add("Updating $($HuduDevice.name) in Hudu")
                                 $null = Set-HuduAsset -asset_id $HuduDevice.id -Name $HuduDevice.name -company_id $company_id -asset_layout_id $HuduDevice.asset_layout_id -Fields $DeviceAssetFields -PrimarySerial $Device.serialNumber
                                 $AssetCache = [PSCustomObject]@{
                                     PartitionKey = 'HuduDevice'
@@ -832,6 +839,7 @@ function Invoke-HuduExtensionSync {
                             $DeviceCreation = $CreateMobileDevices
                         }
                         if ($DeviceCreation -eq $true) {
+                            $CompanyResult.Logs.Add("Creating $($device.deviceName) in Hudu")
                             $HuduDevice = (New-HuduAsset -Name $device.deviceName -company_id $company_id -asset_layout_id $DeviceLayoutID -Fields $DeviceAssetFields -PrimarySerial $Device.serialNumber).asset
 
                             if (!$HuduDevice) {
@@ -887,12 +895,14 @@ function Invoke-HuduExtensionSync {
 
         try {
             $null = Set-HuduMagicDash -Title "Microsoft 365 - $($Tenant.displayName)" -company_name $TenantMap.IntegrationName -Message "$($licensedUsers.count) Licensed Users" -Icon 'fab fa-microsoft' -Content $body -Shade 'success'
+            $CompanyResult.Logs.Add("Updated Magic Dash for $($Tenant.displayName)")
         } catch {
             $CompanyResult.Errors.add("Company: Failed to add Magic Dash to Company: $_")
         }
 
         try {
             if ($importDomains) {
+                $CompanyResult.Logs.Add('Starting Domain Processing')
                 $domainstoimport = $ExtensionCache.Domains
                 foreach ($imp in $domainstoimport) {
                     $impdomain = $imp.id
@@ -913,6 +923,7 @@ function Invoke-HuduExtensionSync {
             Write-LogMessage -tenant $Tenant.defaultDomainName -tenantid $Tenant.customerId -API 'Hudu Sync' -message "Company: Failed to import domain: $_" -level 'Error'
         }
         Write-LogMessage -tenant $Tenant.defaultDomainName -tenantid $Tenant.customerId -API 'Hudu Sync' -message 'Company: Completed Sync' -level 'Information'
+        $CompanyResult.Logs.Add('Hudu Sync Completed')
     } catch {
         $CompanyResult.Errors.add("Company: A fatal error occured: $_")
         Write-LogMessage -tenant $Tenant.defaultDomainName -tenantid $Tenant.customerId -API 'Hudu Sync' -message "Company: A fatal error occured: $_" -level 'Error'
