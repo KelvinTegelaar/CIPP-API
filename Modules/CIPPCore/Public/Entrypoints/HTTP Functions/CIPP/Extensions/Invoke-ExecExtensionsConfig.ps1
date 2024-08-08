@@ -17,21 +17,22 @@ Function Invoke-ExecExtensionsConfig {
     #Connect-AzAccount -UseDeviceAuthentication
     # Write to the Azure Functions log stream.
     Write-Information 'PowerShell HTTP trigger function processed a request.'
+    $Body = [PSCustomObject]$Request.Body
     $results = try {
-        if ($Request.Body.CIPPAPI.Enabled) {
+        if ($Body.CIPPAPI.Enabled) {
             try {
-                $APIConfig = New-CIPPAPIConfig -ExecutingUser $Request.Headers.'x-ms-client-principal' -resetpassword $Request.Body.CIPPAPI.ResetPassword
+                $APIConfig = New-CIPPAPIConfig -ExecutingUser $Request.Headers.'x-ms-client-principal' -resetpassword $Body.CIPPAPI.ResetPassword
                 $AddedText = $APIConfig.Results
             } catch {
                 $AddedText = ' Could not enable CIPP-API. Check the CIPP documentation for API requirements.'
-                $Request.Body = $Request.Body | Select-Object * -ExcludeProperty CIPPAPI
+                $Body = $Body | Select-Object * -ExcludeProperty CIPPAPI
             }
         }
 
         # Check if NinjaOne URL is set correctly and the instance has at least version 5.6
-        if ($Request.Body.NinjaOne) {
+        if ($Body.NinjaOne) {
             try {
-                [version]$Version = (Invoke-WebRequest -Method GET -Uri "https://$(($Request.Body.NinjaOne.Instance -replace '/ws','') -replace 'https://','')/app-version.txt" -ea stop).content
+                [version]$Version = (Invoke-WebRequest -Method GET -Uri "https://$(($Body.NinjaOne.Instance -replace '/ws','') -replace 'https://','')/app-version.txt" -ea stop).content
             } catch {
                 throw "Failed to connect to NinjaOne check your Instance is set correctly eg 'app.ninjarmmm.com'"
             }
@@ -41,39 +42,39 @@ Function Invoke-ExecExtensionsConfig {
         }
 
         $Table = Get-CIPPTable -TableName Extensionsconfig
-        foreach ($APIKey in ([pscustomobject]$Request.Body).psobject.properties.name) {
+        foreach ($APIKey in $Body.PSObject.Properties.Name) {
             Write-Information "Working on $apikey"
-            if ($Request.Body.$APIKey.APIKey -eq 'SentToKeyVault' -or $Request.Body.$APIKey.APIKey -eq '') {
+            if ($Body.$APIKey.APIKey -eq 'SentToKeyVault' -or $Body.$APIKey.APIKey -eq '') {
                 Write-Information 'Not sending to keyvault. Key previously set or left blank.'
             } else {
                 Write-Information 'writing API Key to keyvault, and clearing.'
                 Write-Information "$ENV:WEBSITE_DEPLOYMENT_ID"
-                if ($Request.Body.$APIKey.APIKey) {
+                if ($Body.$APIKey.APIKey) {
                     if ($env:AzureWebJobsStorage -eq 'UseDevelopmentStorage=true') {
                         $DevSecretsTable = Get-CIPPTable -tablename 'DevSecrets'
                         $Secret = [PSCustomObject]@{
                             'PartitionKey' = $APIKey
                             'RowKey'       = $APIKey
-                            'APIKey'       = $Request.Body.$APIKey.APIKey
+                            'APIKey'       = $Body.$APIKey.APIKey
                         }
                         Add-CIPPAzDataTableEntity @DevSecretsTable -Entity $Secret -Force
                     } else {
-                        $null = Set-AzKeyVaultSecret -VaultName $ENV:WEBSITE_DEPLOYMENT_ID -Name $APIKey -SecretValue (ConvertTo-SecureString -AsPlainText -Force -String $Request.Body.$APIKey.APIKey)
+                        $null = Set-AzKeyVaultSecret -VaultName $ENV:WEBSITE_DEPLOYMENT_ID -Name $APIKey -SecretValue (ConvertTo-SecureString -AsPlainText -Force -String $Body.$APIKey.APIKey)
                     }
                 }
-                if ($Request.Body.$APIKey.PSObject.Properties -notcontains 'APIKey') {
-                    $Request.Body.$APIKey | Add-Member -MemberType NoteProperty -Name APIKey -Value 'SentToKeyVault'
+                if ($Body.$APIKey.PSObject.Properties.Name -notcontains 'APIKey') {
+                    $Body.$APIKey | Add-Member -MemberType NoteProperty -Name APIKey -Value 'SentToKeyVault'
                 } else {
-                    $Request.Body.$APIKey.APIKey = 'SentToKeyVault'
+                    $Body.$APIKey.APIKey = 'SentToKeyVault'
                 }
             }
-            $Request.Body.$APIKey = $Request.Body.$APIKey | Select-Object * -ExcludeProperty ResetPassword
+            $Body.$APIKey = $Body.$APIKey | Select-Object * -ExcludeProperty ResetPassword
         }
-        $body = $Request.Body | Select-Object * -ExcludeProperty APIKey, Enabled | ConvertTo-Json -Depth 10 -Compress
+        $Body = $Body | Select-Object * -ExcludeProperty APIKey, Enabled | ConvertTo-Json -Depth 10 -Compress
         $Config = @{
             'PartitionKey' = 'CippExtensions'
             'RowKey'       = 'Config'
-            'config'       = [string]$body
+            'config'       = [string]$Body
         }
 
         Add-CIPPAzDataTableEntity @Table -Entity $Config -Force | Out-Null

@@ -30,6 +30,7 @@ function Invoke-CIPPStandardShortenMeetings {
     #>
 
     param($Tenant, $Settings)
+    ##$Rerun -Type Standard -Tenant $Tenant -Settings $Settings 'ShortenMeetings'
 
     # Input validation
     if ([Int32]$Settings.DefaultMinutesToReduceShortEventsBy -lt 0 -or [Int32]$Settings.DefaultMinutesToReduceShortEventsBy -gt 29) {
@@ -42,7 +43,7 @@ function Invoke-CIPPStandardShortenMeetings {
     }
 
     $CurrentState = New-ExoRequest -tenantid $Tenant -cmdlet 'Get-OrganizationConfig' |
-        Select-Object -Property ShortenEventScopeDefault, DefaultMinutesToReduceShortEventsBy, DefaultMinutesToReduceLongEventsBy
+    Select-Object -Property ShortenEventScopeDefault, DefaultMinutesToReduceShortEventsBy, DefaultMinutesToReduceLongEventsBy
     $CorrectState = if ($CurrentState.ShortenEventScopeDefault -eq $Settings.ShortenEventScopeDefault -and
         $CurrentState.DefaultMinutesToReduceShortEventsBy -eq $Settings.DefaultMinutesToReduceShortEventsBy -and
         $CurrentState.DefaultMinutesToReduceLongEventsBy -eq $Settings.DefaultMinutesToReduceLongEventsBy) { $true } else { $false }
