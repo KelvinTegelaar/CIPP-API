@@ -29,14 +29,15 @@ function Invoke-CIPPStandardUserSubmissions {
     #>
 
     param($Tenant, $Settings)
+    ##$Rerun -Type Standard -Tenant $Tenant -Settings $Settings 'UserSubmissions'
 
     # Input validation
     if ($Settings.remediate -eq $true -or $Settings.alert -eq $true) {
         if (!($Settings.state -eq 'enable' -or $Settings.state -eq 'disable')) {
             Write-LogMessage -API 'Standards' -tenant $tenant -message 'UserSubmissions: Invalid state parameter set' -sev Error
             Return
-        } 
-    
+        }
+
         if (!([string]::IsNullOrWhiteSpace($Settings.email))) {
             if ($Settings.email -notmatch '@') {
                 Write-LogMessage -API 'Standards' -tenant $tenant -message 'UserSubmissions: Invalid Email parameter set' -sev Error
@@ -44,7 +45,7 @@ function Invoke-CIPPStandardUserSubmissions {
             }
         }
     }
-    
+
     $PolicyState = New-ExoRequest -tenantid $Tenant -cmdlet 'Get-ReportSubmissionPolicy'
     $RuleState = New-ExoRequest -tenantid $Tenant -cmdlet 'Get-ReportSubmissionRule'
 
@@ -63,7 +64,7 @@ function Invoke-CIPPStandardUserSubmissions {
                                ($PolicyState.ReportNotJunkAddresses -eq $Settings.email) -and
                                ($PolicyState.ReportPhishToCustomizedAddress -eq $true) -and
                                ($PolicyState.ReportPhishAddresses -eq $Settings.email)
-            $RuleIsCorrect = ($RuleState.State -eq "Enabled") -and
+            $RuleIsCorrect = ($RuleState.State -eq 'Enabled') -and
                              ($RuleSteate.SentTo -eq $Settings.email)
         }
     } else {
@@ -77,10 +78,10 @@ function Invoke-CIPPStandardUserSubmissions {
                                ($PolicyState.ReportPhishToCustomizedAddress -eq $false)
             $RuleIsCorrect = $true
         }
-    } 
+    }
 
     $StateIsCorrect = $PolicyIsCorrect -and $RuleIsCorrect
-    
+
 
     if ($Settings.report -eq $true) {
         if ($PolicyState.length -eq 0) {
@@ -99,73 +100,73 @@ function Invoke-CIPPStandardUserSubmissions {
             if ($Settings.state -eq 'enable') {
                 if (([string]::IsNullOrWhiteSpace($Settings.email))) {
                     $PolicyParams = @{
-                        EnableReportToMicrosoft             = $true
-                        ReportJunkToCustomizedAddress       = $false
-                        ReportNotJunkToCustomizedAddress    = $false
-                        ReportPhishToCustomizedAddress      = $false
+                        EnableReportToMicrosoft          = $true
+                        ReportJunkToCustomizedAddress    = $false
+                        ReportNotJunkToCustomizedAddress = $false
+                        ReportPhishToCustomizedAddress   = $false
                     }
                 } else {
                     $PolicyParams = @{
-                        EnableReportToMicrosoft             = $true
-                        ReportJunkToCustomizedAddress       = $true
-                        ReportJunkAddresses                 = $Settings.email
-                        ReportNotJunkToCustomizedAddress    = $true
-                        ReportNotJunkAddresses              = $Settings.email
-                        ReportPhishToCustomizedAddress      = $true
-                        ReportPhishAddresses                = $Settings.email
+                        EnableReportToMicrosoft          = $true
+                        ReportJunkToCustomizedAddress    = $true
+                        ReportJunkAddresses              = $Settings.email
+                        ReportNotJunkToCustomizedAddress = $true
+                        ReportNotJunkAddresses           = $Settings.email
+                        ReportPhishToCustomizedAddress   = $true
+                        ReportPhishAddresses             = $Settings.email
                     }
                     $RuleParams = @{
-                        SentTo                 = $Settings.email
+                        SentTo = $Settings.email
                     }
                 }
             } else {
                 $PolicyParams = @{
-                    EnableReportToMicrosoft             = $false
-                    ReportJunkToCustomizedAddress       = $false
-                    ReportNotJunkToCustomizedAddress    = $false
-                    ReportPhishToCustomizedAddress      = $false
+                    EnableReportToMicrosoft          = $false
+                    ReportJunkToCustomizedAddress    = $false
+                    ReportNotJunkToCustomizedAddress = $false
+                    ReportPhishToCustomizedAddress   = $false
                 }
-            } 
+            }
 
             if ($PolicyState.length -eq 0) {
                 try {
                     New-ExoRequest -tenantid $Tenant -cmdlet 'New-ReportSubmissionPolicy' -cmdparams $PolicyParams -UseSystemMailbox $true
-                    Write-LogMessage -API 'Standards' -tenant $tenant -message "User Submission policy created." -sev Info
+                    Write-LogMessage -API 'Standards' -tenant $tenant -message 'User Submission policy created.' -sev Info
                 } catch {
                     $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
                     Write-LogMessage -API 'Standards' -tenant $Tenant -message "Failed to create User Submission policy. Error: $ErrorMessage" -sev Error
                 }
             } else {
                 try {
-                    $PolicyParams.Add('Identity',"DefaultReportSubmissionPolicy")
+                    $PolicyParams.Add('Identity', 'DefaultReportSubmissionPolicy')
                     New-ExoRequest -tenantid $Tenant -cmdlet 'Set-ReportSubmissionPolicy' -cmdParams $PolicyParams -UseSystemMailbox $true
                     Write-LogMessage -API 'Standards' -tenant $tenant -message "User Submission policy state set to $($Settings.state)." -sev Info
                 } catch {
                     $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
                     Write-LogMessage -API 'Standards' -tenant $Tenant -message "Failed to set User Submission policy state to $($Settings.state). Error: $ErrorMessage" -sev Error
-                }  
+                }
             }
-            
+
             if ($RuleParams) {
                 if ($RuleState.length -eq 0) {
                     try {
-                        $RuleParams.Add('Name',"DefaultReportSubmissionRule")
-                        $RuleParams.Add('ReportSubmissionPolicy','DefaultReportSubmissionPolicy')
+                        $RuleParams.Add('Name', 'DefaultReportSubmissionRule')
+                        $RuleParams.Add('ReportSubmissionPolicy', 'DefaultReportSubmissionPolicy')
                         New-ExoRequest -tenantid $Tenant -cmdlet 'New-ReportSubmissionRule' -cmdparams $RuleParams -UseSystemMailbox $true
-                        Write-LogMessage -API 'Standards' -tenant $tenant -message "User Submission rule created." -sev Info
+                        Write-LogMessage -API 'Standards' -tenant $tenant -message 'User Submission rule created.' -sev Info
                     } catch {
                         $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
                         Write-LogMessage -API 'Standards' -tenant $Tenant -message "Failed to create User Submission rule. Error: $ErrorMessage" -sev Error
                     }
                 } else {
                     try {
-                        $RuleParams.Add('Identity',"DefaultReportSubmissionRule")
+                        $RuleParams.Add('Identity', 'DefaultReportSubmissionRule')
                         New-ExoRequest -tenantid $Tenant -cmdlet 'Set-ReportSubmissionRule' -cmdParams $RuleParams -UseSystemMailbox $true
-                        Write-LogMessage -API 'Standards' -tenant $tenant -message "User Submission rule set to enabled." -sev Info
+                        Write-LogMessage -API 'Standards' -tenant $tenant -message 'User Submission rule set to enabled.' -sev Info
                     } catch {
                         $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
                         Write-LogMessage -API 'Standards' -tenant $Tenant -message "Failed to enable User Submission rule. Error: $ErrorMessage" -sev Error
-                    }  
+                    }
                 }
             }
         }
