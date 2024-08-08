@@ -21,6 +21,7 @@ function Invoke-CIPPStandardAntiPhishPolicy {
             "mdo_phisspamacation"
             "mdo_spam_notifications_only_for_admins"
             "mdo_antiphishingpolicies"
+            "mdo_phishthresholdlevel"
         ADDEDCOMPONENT
             {"type":"number","label":"Phishing email threshold. (Default 1)","name":"standards.AntiPhishPolicy.PhishThresholdLevel","default":1}
             {"type":"boolean","label":"Show first contact safety tip","name":"standards.AntiPhishPolicy.EnableFirstContactSafetyTips","default":true}
