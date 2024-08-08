@@ -4,6 +4,8 @@ function Invoke-CIPPStandardIntuneTemplate {
     Internal
     #>
     param($Tenant, $Settings)
+    ##$Rerun -Type Standard -Tenant $Tenant -Settings $Settings 'intuneTemplate'
+
     If ($Settings.remediate -eq $true) {
 
         Write-Host 'starting template deploy'
