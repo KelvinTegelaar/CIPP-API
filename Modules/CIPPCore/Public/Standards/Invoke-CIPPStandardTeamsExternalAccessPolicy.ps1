@@ -30,26 +30,30 @@ Function Invoke-CIPPStandardTeamsExternalAccessPolicy {
     #>
 
     param($Tenant, $Settings)
-    $CurrentState = New-TeamsRequest -TenantFilter $Tenant -Cmdlet 'Get-CsExternalAccessPolicy' -CmdParams @{Identity = 'Global'}
-                | Select-Object *
+    $Rerun = Test-CIPPRerun -Type Standard -Tenant $Tenant -Settings $Settings -API 'TeamsExternalAccessPolicy'
+    if ($Rerun -eq $true) {
+        exit 0
+    }
+    $CurrentState = New-TeamsRequest -TenantFilter $Tenant -Cmdlet 'Get-CsExternalAccessPolicy' -CmdParams @{Identity = 'Global' }
+    | Select-Object *
 
-    if ($null -eq $Settings.EnableFederationAccess)     { $Settings.EnableFederationAccess = $false }
-    if ($null -eq $Settings.EnablePublicCloudAccess)    { $Settings.EnablePublicCloudAccess = $false }
-    if ($null -eq $Settings.EnableTeamsConsumerAccess)  { $Settings.EnableTeamsConsumerAccess = $false }
+    if ($null -eq $Settings.EnableFederationAccess) { $Settings.EnableFederationAccess = $false }
+    if ($null -eq $Settings.EnablePublicCloudAccess) { $Settings.EnablePublicCloudAccess = $false }
+    if ($null -eq $Settings.EnableTeamsConsumerAccess) { $Settings.EnableTeamsConsumerAccess = $false }
 
-    $StateIsCorrect =   ($CurrentState.EnableFederationAccess       -eq $Settings.EnableFederationAccess) -and
-                        ($CurrentState.EnablePublicCloudAccess      -eq $Settings.EnablePublicCloudAccess) -and
-                        ($CurrentState.EnableTeamsConsumerAccess    -eq $Settings.EnableTeamsConsumerAccess)
+    $StateIsCorrect = ($CurrentState.EnableFederationAccess -eq $Settings.EnableFederationAccess) -and
+                        ($CurrentState.EnablePublicCloudAccess -eq $Settings.EnablePublicCloudAccess) -and
+                        ($CurrentState.EnableTeamsConsumerAccess -eq $Settings.EnableTeamsConsumerAccess)
 
     if ($Settings.remediate -eq $true) {
         if ($StateIsCorrect -eq $true) {
             Write-LogMessage -API 'Standards' -tenant $Tenant -message 'External Access Policy already set.' -sev Info
         } else {
             $cmdparams = @{
-                Identity = 'Global'
-                EnableFederationAccess      = $Settings.EnableFederationAccess
-                EnablePublicCloudAccess     = $Settings.EnablePublicCloudAccess
-                EnableTeamsConsumerAccess   = $Settings.EnableTeamsConsumerAccess
+                Identity                  = 'Global'
+                EnableFederationAccess    = $Settings.EnableFederationAccess
+                EnablePublicCloudAccess   = $Settings.EnablePublicCloudAccess
+                EnableTeamsConsumerAccess = $Settings.EnableTeamsConsumerAccess
             }
 
             try {

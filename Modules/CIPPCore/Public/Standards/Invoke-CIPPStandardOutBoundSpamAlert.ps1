@@ -30,6 +30,10 @@ function Invoke-CIPPStandardOutBoundSpamAlert {
     #>
 
     param($Tenant, $Settings)
+    $Rerun = Test-CIPPRerun -Type Standard -Tenant $Tenant -Settings $Settings -API 'OutBoundSpamAlert'
+    if ($Rerun -eq $true) {
+        exit 0
+    }
     $CurrentInfo = New-ExoRequest -tenantid $Tenant -cmdlet 'Get-HostedOutboundSpamFilterPolicy' -useSystemMailbox $true
 
     If ($Settings.remediate -eq $true) {

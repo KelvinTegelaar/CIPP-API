@@ -16,7 +16,7 @@ function Invoke-CIPPStandardSafeSendersDisable {
             "mediumimpact"
         ADDEDCOMPONENT
         DISABLEDFEATURES
-            
+
         IMPACT
             Medium Impact
         POWERSHELLEQUIVALENT
@@ -29,7 +29,10 @@ function Invoke-CIPPStandardSafeSendersDisable {
     #>
 
     param($Tenant, $Settings)
-
+    $Rerun = Test-CIPPRerun -Type Standard -Tenant $Tenant -Settings $Settings -API 'SafeSendersDisable'
+    if ($Rerun -eq $true) {
+        exit 0
+    }
     If ($Settings.remediate -eq $true) {
         try {
             $Mailboxes = New-ExoRequest -tenantid $Tenant -cmdlet 'Get-Mailbox' -select 'UserPrincipalName'

@@ -36,11 +36,15 @@ function Invoke-CIPPStandardSafeAttachmentPolicy {
     #>
 
     param($Tenant, $Settings)
+    $Rerun = Test-CIPPRerun -Type Standard -Tenant $Tenant -Settings $Settings -API 'SafeAttachmentPolicy'
+    if ($Rerun -eq $true) {
+        exit 0
+    }
     $PolicyName = 'Default Safe Attachment Policy'
 
     $CurrentState = New-ExoRequest -tenantid $Tenant -cmdlet 'Get-SafeAttachmentPolicy' |
-        Where-Object -Property Name -EQ $PolicyName |
-        Select-Object Name, Enable, Action, QuarantineTag, Redirect, RedirectAddress
+    Where-Object -Property Name -EQ $PolicyName |
+    Select-Object Name, Enable, Action, QuarantineTag, Redirect, RedirectAddress
 
     $StateIsCorrect = ($CurrentState.Name -eq $PolicyName) -and
                       ($CurrentState.Enable -eq $true) -and
@@ -52,8 +56,8 @@ function Invoke-CIPPStandardSafeAttachmentPolicy {
     $AcceptedDomains = New-ExoRequest -tenantid $Tenant -cmdlet 'Get-AcceptedDomain'
 
     $RuleState = New-ExoRequest -tenantid $Tenant -cmdlet 'Get-SafeAttachmentRule' |
-        Where-Object -Property Name -EQ "CIPP $PolicyName" |
-        Select-Object Name, SafeAttachmentPolicy, Priority, RecipientDomainIs
+    Where-Object -Property Name -EQ "CIPP $PolicyName" |
+    Select-Object Name, SafeAttachmentPolicy, Priority, RecipientDomainIs
 
     $RuleStateIsCorrect = ($RuleState.Name -eq "CIPP $PolicyName") -and
                           ($RuleState.SafeAttachmentPolicy -eq $PolicyName) -and

@@ -30,6 +30,10 @@ function Invoke-CIPPStandardPasswordExpireDisabled {
     #>
 
     param($Tenant, $Settings)
+    $Rerun = Test-CIPPRerun -Type Standard -Tenant $Tenant -Settings $Settings -API 'PasswordExpireDisabled'
+    if ($Rerun -eq $true) {
+        exit 0
+    }
     $GraphRequest = New-GraphGetRequest -uri 'https://graph.microsoft.com/v1.0/domains' -tenantid $Tenant
     $DomainswithoutPassExpire = $GraphRequest | Where-Object -Property passwordValidityPeriodInDays -NE '2147483647'
 

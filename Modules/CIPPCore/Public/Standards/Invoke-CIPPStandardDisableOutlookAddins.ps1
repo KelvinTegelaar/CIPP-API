@@ -30,7 +30,10 @@ function Invoke-CIPPStandardDisableOutlookAddins {
     #>
 
     param($Tenant, $Settings)
-
+    $Rerun = Test-CIPPRerun -Type Standard -Tenant $Tenant -Settings $Settings -API 'DisableOutlookAddins'
+    if ($Rerun -eq $true) {
+        exit 0
+    }
     $CurrentInfo = New-ExoRequest -tenantid $Tenant -cmdlet 'Get-RoleAssignmentPolicy' | Where-Object { $_.IsDefault -eq $true }
     $Roles = @('My Custom Apps', 'My Marketplace Apps', 'My ReadWriteMailbox Apps')
     $RolesToRemove = foreach ($Role in $Roles) {

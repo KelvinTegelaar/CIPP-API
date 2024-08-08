@@ -29,8 +29,12 @@ function Invoke-CIPPStandardSPAzureB2B {
     #>
 
     param($Tenant, $Settings)
+    $Rerun = Test-CIPPRerun -Type Standard -Tenant $Tenant -Settings $Settings -API 'SPAzureB2B'
+    if ($Rerun -eq $true) {
+        exit 0
+    }
     $CurrentState = Get-CIPPSPOTenant -TenantFilter $Tenant |
-        Select-Object -Property EnableAzureADB2BIntegration
+    Select-Object -Property EnableAzureADB2BIntegration
 
     $StateIsCorrect = ($CurrentState.EnableAzureADB2BIntegration -eq $true)
 

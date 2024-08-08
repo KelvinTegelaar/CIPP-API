@@ -28,7 +28,10 @@ function Invoke-CIPPStandardGlobalQuarantineNotifications {
     #>
 
     param ($Tenant, $Settings)
-
+    $Rerun = Test-CIPPRerun -Type Standard -Tenant $Tenant -Settings $Settings -API 'GlobalQuarantineNotifications'
+    if ($Rerun -eq $true) {
+        exit 0
+    }
     $CurrentState = New-ExoRequest -tenantid $Tenant -cmdlet 'Get-QuarantinePolicy' -cmdParams @{ QuarantinePolicyType = 'GlobalQuarantinePolicy' }
 
     # This might take the cake on ugly hacky stuff i've done,

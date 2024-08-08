@@ -28,6 +28,10 @@ function Invoke-CIPPStandardintuneDeviceReg {
     #>
 
     param($Tenant, $Settings)
+    $Rerun = Test-CIPPRerun -Type Standard -Tenant $Tenant -Settings $Settings -API 'intuneDeviceReg'
+    if ($Rerun -eq $true) {
+        exit 0
+    }
     $PreviousSetting = New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/policies/deviceRegistrationPolicy' -tenantid $Tenant
     $StateIsCorrect = if ($PreviousSetting.userDeviceQuota -eq $Settings.max) { $true } else { $false }
 

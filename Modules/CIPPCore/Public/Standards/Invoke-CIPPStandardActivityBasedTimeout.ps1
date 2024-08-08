@@ -31,7 +31,10 @@ function Invoke-CIPPStandardActivityBasedTimeout {
     #>
 
     param($Tenant, $Settings)
-
+    $Rerun = Test-CIPPRerun -Type Standard -Tenant $Tenant -API 'ActivityBasedTimeout' -Settings $Settings
+    if ($Rerun -eq $true) {
+        exit 0
+    }
     # Input validation
     if ([string]::IsNullOrWhiteSpace($Settings.timeout) -or $Settings.timeout -eq 'Select a value' ) {
         Write-LogMessage -API 'Standards' -tenant $tenant -message 'ActivityBasedTimeout: Invalid timeout parameter set' -sev Error

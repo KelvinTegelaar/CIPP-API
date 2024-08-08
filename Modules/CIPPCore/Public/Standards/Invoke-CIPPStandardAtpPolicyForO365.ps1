@@ -30,8 +30,12 @@ function Invoke-CIPPStandardAtpPolicyForO365 {
     #>
 
     param($Tenant, $Settings)
+    $Rerun = Test-CIPPRerun -Type Standard -Tenant $Tenant -Settings $Settings -API 'AtpPolicyForO365'
+    if ($Rerun -eq $true) {
+        exit 0
+    }
     $CurrentState = New-ExoRequest -tenantid $Tenant -cmdlet 'Get-AtpPolicyForO365' |
-        Select-Object EnableATPForSPOTeamsODB, EnableSafeDocs, AllowSafeDocsOpen
+    Select-Object EnableATPForSPOTeamsODB, EnableSafeDocs, AllowSafeDocsOpen
 
     $StateIsCorrect = ($CurrentState.EnableATPForSPOTeamsODB -eq $true) -and
                       ($CurrentState.EnableSafeDocs -eq $true) -and

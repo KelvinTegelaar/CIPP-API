@@ -28,7 +28,10 @@ function Invoke-CIPPStandardTenantDefaultTimezone {
     #>
 
     param($Tenant, $Settings)
-
+    $Rerun = Test-CIPPRerun -Type Standard -Tenant $Tenant -Settings $Settings -API 'TenantDefaultTimezone'
+    if ($Rerun -eq $true) {
+        exit 0
+    }
     $CurrentState = New-GraphGetRequest -Uri 'https://graph.microsoft.com/beta/admin/sharepoint/settings' -tenantid $Tenant -AsApp $true
     $ExpectedTimezone = $Settings.Timezone.value
     $StateIsCorrect = $CurrentState.tenantDefaultTimezone -eq $ExpectedTimezone

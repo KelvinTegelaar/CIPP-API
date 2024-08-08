@@ -29,6 +29,10 @@ function Invoke-CIPPStandardPWdisplayAppInformationRequiredState {
     #>
 
     param($Tenant, $Settings)
+    $Rerun = Test-CIPPRerun -Type Standard -Tenant $Tenant -Settings $Settings -API 'PWdisplayAppInformationRequiredState'
+    if ($Rerun -eq $true) {
+        exit 0
+    }
     $CurrentInfo = New-GraphGetRequest -Uri 'https://graph.microsoft.com/beta/policies/authenticationMethodsPolicy/authenticationMethodConfigurations/microsoftAuthenticator' -tenantid $Tenant
     $State = if ($CurrentInfo.state -eq 'enabled') { $true } else { $false }
 

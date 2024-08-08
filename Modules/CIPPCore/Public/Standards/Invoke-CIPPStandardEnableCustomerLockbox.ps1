@@ -30,7 +30,10 @@ function Invoke-CIPPStandardEnableCustomerLockbox {
     #>
 
     param($Tenant, $Settings)
-
+    $Rerun = Test-CIPPRerun -Type Standard -Tenant $Tenant -Settings $Settings -API 'EnableCustomerLockbox'
+    if ($Rerun -eq $true) {
+        exit 0
+    }
     $CustomerLockboxStatus = (New-ExoRequest -tenantid $Tenant -cmdlet 'Get-OrganizationConfig').CustomerLockboxEnabled
     if ($Settings.remediate -eq $true) {
         Write-Host 'Time to remediate'

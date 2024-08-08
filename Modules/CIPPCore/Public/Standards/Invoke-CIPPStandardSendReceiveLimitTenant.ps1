@@ -29,7 +29,10 @@ function Invoke-CIPPStandardSendReceiveLimitTenant {
     #>
 
     param($Tenant, $Settings)
-
+    $Rerun = Test-CIPPRerun -Type Standard -Tenant $Tenant -Settings $Settings -API 'SendReceiveLimitTenant'
+    if ($Rerun -eq $true) {
+        exit 0
+    }
     # Input validation
     if ([Int32]$Settings.SendLimit -lt 1 -or [Int32]$Settings.SendLimit -gt 150) {
         Write-LogMessage -API 'Standards' -tenant $tenant -message 'SendReceiveLimitTenant: Invalid SendLimit parameter set' -sev Error

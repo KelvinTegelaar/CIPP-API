@@ -30,7 +30,10 @@ function Invoke-CIPPStandardsharingCapability {
     #>
 
     param($Tenant, $Settings)
-
+    $Rerun = Test-CIPPRerun -Type Standard -Tenant $Tenant -Settings $Settings -API 'sharingCapability'
+    if ($Rerun -eq $true) {
+        exit 0
+    }
     $CurrentInfo = New-GraphGetRequest -Uri 'https://graph.microsoft.com/beta/admin/sharepoint/settings' -tenantid $Tenant -AsApp $true
 
     if ($Settings.report -eq $true) {

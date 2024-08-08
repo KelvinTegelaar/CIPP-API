@@ -34,11 +34,15 @@ function Invoke-CIPPStandardSafeLinksPolicy {
     #>
 
     param($Tenant, $Settings)
+    $Rerun = Test-CIPPRerun -Type Standard -Tenant $Tenant -Settings $Settings -API 'SafeLinksPolicy'
+    if ($Rerun -eq $true) {
+        exit 0
+    }
     $PolicyName = 'Default SafeLinks Policy'
 
     $CurrentState = New-ExoRequest -tenantid $Tenant -cmdlet 'Get-SafeLinksPolicy' |
-        Where-Object -Property Name -EQ $PolicyName |
-        Select-Object Name, EnableSafeLinksForEmail, EnableSafeLinksForTeams, EnableSafeLinksForOffice, TrackClicks, AllowClickThrough, ScanUrls, EnableForInternalSenders, DeliverMessageAfterScan, DisableUrlRewrite, EnableOrganizationBranding
+    Where-Object -Property Name -EQ $PolicyName |
+    Select-Object Name, EnableSafeLinksForEmail, EnableSafeLinksForTeams, EnableSafeLinksForOffice, TrackClicks, AllowClickThrough, ScanUrls, EnableForInternalSenders, DeliverMessageAfterScan, DisableUrlRewrite, EnableOrganizationBranding
 
     $StateIsCorrect = ($CurrentState.Name -eq $PolicyName) -and
                       ($CurrentState.EnableSafeLinksForEmail -eq $true) -and
@@ -55,8 +59,8 @@ function Invoke-CIPPStandardSafeLinksPolicy {
     $AcceptedDomains = New-ExoRequest -tenantid $Tenant -cmdlet 'Get-AcceptedDomain'
 
     $RuleState = New-ExoRequest -tenantid $Tenant -cmdlet 'Get-SafeLinksRule' |
-        Where-Object -Property Name -EQ "CIPP $PolicyName" |
-        Select-Object Name, SafeLinksPolicy, Priority, RecipientDomainIs
+    Where-Object -Property Name -EQ "CIPP $PolicyName" |
+    Select-Object Name, SafeLinksPolicy, Priority, RecipientDomainIs
 
     $RuleStateIsCorrect = ($RuleState.Name -eq "CIPP $PolicyName") -and
                           ($RuleState.SafeLinksPolicy -eq $PolicyName) -and

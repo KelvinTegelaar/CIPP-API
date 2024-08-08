@@ -30,6 +30,10 @@ function Invoke-CIPPStandardAuditLog {
     #>
 
     param($Tenant, $Settings)
+    $Rerun = Test-CIPPRerun -Type Standard -Tenant $Tenant -Settings $Settings -API 'AuditLog'
+    if ($Rerun -eq $true) {
+        exit 0
+    }
     Write-Host ($Settings | ConvertTo-Json)
     $AuditLogEnabled = (New-ExoRequest -tenantid $Tenant -cmdlet 'Get-AdminAuditLogConfig' -Select UnifiedAuditLogIngestionEnabled).UnifiedAuditLogIngestionEnabled
 

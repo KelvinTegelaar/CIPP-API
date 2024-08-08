@@ -29,6 +29,10 @@ function Invoke-CIPPStandardAddDKIM {
     #>
 
     param($Tenant, $Settings)
+    $Rerun = Test-CIPPRerun -Type Standard -Tenant $Tenant -API 'AddDKIM' -Settings $Settings
+    if ($Rerun -eq $true) {
+        exit 0
+    }
 
     $AllDomains = (New-GraphGetRequest -uri 'https://graph.microsoft.com/v1.0/domains?$top=999' -tenantid $Tenant | Where-Object { $_.supportedServices -contains 'Email' -or $_.id -like '*mail.onmicrosoft.com' }).id
     $DKIM = (New-ExoRequest -tenantid $tenant -cmdlet 'Get-DkimSigningConfig') | Select-Object Domain, Enabled, Status

@@ -29,10 +29,14 @@ Function Invoke-CIPPStandardTeamsEmailIntegration {
     #>
 
     param($Tenant, $Settings)
-    $CurrentState = New-TeamsRequest -TenantFilter $Tenant -Cmdlet 'Get-CsTeamsClientConfiguration' -CmdParams @{Identity = 'Global'}
-                | Select-Object AllowEmailIntoChannel
+    $Rerun = Test-CIPPRerun -Type Standard -Tenant $Tenant -Settings $Settings -API 'TeamsEmailIntegration'
+    if ($Rerun -eq $true) {
+        exit 0
+    }
+    $CurrentState = New-TeamsRequest -TenantFilter $Tenant -Cmdlet 'Get-CsTeamsClientConfiguration' -CmdParams @{Identity = 'Global' }
+    | Select-Object AllowEmailIntoChannel
 
-    if ($null -eq $Settings.AllowEmailIntoChannel)   { $Settings.AllowEmailIntoChannel = $false }
+    if ($null -eq $Settings.AllowEmailIntoChannel) { $Settings.AllowEmailIntoChannel = $false }
 
     $StateIsCorrect = ($CurrentState.AllowEmailIntoChannel -eq $Settings.AllowEmailIntoChannel)
 
@@ -41,8 +45,8 @@ Function Invoke-CIPPStandardTeamsEmailIntegration {
             Write-LogMessage -API 'Standards' -tenant $Tenant -message 'Teams Email Integration settings already set.' -sev Info
         } else {
             $cmdparams = @{
-                Identity                = 'Global'
-                AllowEmailIntoChannel   = $Settings.AllowEmailIntoChannel
+                Identity              = 'Global'
+                AllowEmailIntoChannel = $Settings.AllowEmailIntoChannel
             }
 
             try {

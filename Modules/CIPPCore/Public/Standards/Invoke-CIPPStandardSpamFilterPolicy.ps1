@@ -37,13 +37,17 @@ function Invoke-CIPPStandardSpamFilterPolicy {
     #>
 
     param($Tenant, $Settings)
+    $Rerun = Test-CIPPRerun -Type Standard -Tenant $Tenant -Settings $Settings -API 'SpamFilterPolicy'
+    if ($Rerun -eq $true) {
+        exit 0
+    }
     $PolicyName = 'CIPP Default Spam Filter Policy'
 
     $CurrentState = New-ExoRequest -TenantId $Tenant -cmdlet 'Get-HostedContentFilterPolicy' |
-        Where-Object -Property Name -EQ $PolicyName |
-        Select-Object -Property *
+    Where-Object -Property Name -EQ $PolicyName |
+    Select-Object -Property *
 
-    $StateIsCorrect =   ($CurrentState.Name -eq $PolicyName) -and
+    $StateIsCorrect = ($CurrentState.Name -eq $PolicyName) -and
                         ($CurrentState.SpamAction -eq $Settings.SpamAction) -and
                         ($CurrentState.SpamQuarantineTag -eq $Settings.SpamQuarantineTag) -and
                         ($CurrentState.HighConfidenceSpamAction -eq $Settings.HighConfidenceSpamAction) -and
@@ -71,8 +75,8 @@ function Invoke-CIPPStandardSpamFilterPolicy {
     $AcceptedDomains = New-ExoRequest -TenantId $Tenant -cmdlet 'Get-AcceptedDomain'
 
     $RuleState = New-ExoRequest -TenantId $Tenant -cmdlet 'Get-HostedContentFilterRule' |
-        Where-Object -Property Name -EQ $PolicyName |
-        Select-Object -Property *
+    Where-Object -Property Name -EQ $PolicyName |
+    Select-Object -Property *
 
     $RuleStateIsCorrect = ($RuleState.Name -eq $PolicyName) -and
                           ($RuleState.HostedContentFilterPolicy -eq $PolicyName) -and
@@ -118,8 +122,7 @@ function Invoke-CIPPStandardSpamFilterPolicy {
                     $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
                     Write-LogMessage -API 'Standards' -Tenant $Tenant -message "Failed to update Spam Filter Policy. Error: $ErrorMessage" -sev Error
                 }
-            }
-            else {
+            } else {
                 try {
                     $cmdparams.Add('Name', $PolicyName)
                     New-ExoRequest -TenantId $Tenant -cmdlet 'New-HostedContentFilterPolicy' -cmdparams $cmdparams -UseSystemMailbox $true

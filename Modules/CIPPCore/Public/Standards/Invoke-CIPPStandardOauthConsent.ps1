@@ -30,6 +30,10 @@ function Invoke-CIPPStandardOauthConsent {
     #>
 
     param($tenant, $settings)
+    $Rerun = Test-CIPPRerun -Type Standard -Tenant $Tenant -Settings $Settings -API 'OauthConsent'
+    if ($Rerun -eq $true) {
+        exit 0
+    }
     $State = New-GraphGetRequest -Uri 'https://graph.microsoft.com/beta/policies/authorizationPolicy/authorizationPolicy' -tenantid $tenant
     $StateIsCorrect = if ($State.permissionGrantPolicyIdsAssignedToDefaultUserRole -eq 'managePermissionGrantsForSelf.cipp-consent-policy') { $true } else { $false }
 

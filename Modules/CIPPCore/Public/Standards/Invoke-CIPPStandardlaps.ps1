@@ -27,6 +27,10 @@ function Invoke-CIPPStandardlaps {
     #>
 
     param($Tenant, $Settings)
+    $Rerun = Test-CIPPRerun -Type Standard -Tenant $Tenant -Settings $Settings -API 'laps'
+    if ($Rerun -eq $true) {
+        exit 0
+    }
     $PreviousSetting = New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/policies/deviceRegistrationPolicy' -tenantid $Tenant
 
     If ($Settings.remediate -eq $true) {

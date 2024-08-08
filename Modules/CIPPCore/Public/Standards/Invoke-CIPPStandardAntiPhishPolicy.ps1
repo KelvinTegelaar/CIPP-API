@@ -48,6 +48,10 @@ function Invoke-CIPPStandardAntiPhishPolicy {
     #>
 
     param($Tenant, $Settings)
+    $Rerun = Test-CIPPRerun -Type Standard -Tenant $Tenant -Settings $Settings -API 'AntiPhishPolicy'
+    if ($Rerun -eq $true) {
+        exit 0
+    }
     $PolicyName = 'Default Anti-Phishing Policy'
 
     $CurrentState = New-ExoRequest -tenantid $Tenant -cmdlet 'Get-AntiPhishPolicy' |

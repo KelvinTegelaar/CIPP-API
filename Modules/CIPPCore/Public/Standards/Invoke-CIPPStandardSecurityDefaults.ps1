@@ -27,6 +27,10 @@ function Invoke-CIPPStandardSecurityDefaults {
     #>
 
     param($Tenant, $Settings)
+    $Rerun = Test-CIPPRerun -Type Standard -Tenant $Tenant -Settings $Settings -API 'SecurityDefaults'
+    if ($Rerun -eq $true) {
+        exit 0
+    }
     $SecureDefaultsState = (New-GraphGetRequest -Uri 'https://graph.microsoft.com/beta/policies/identitySecurityDefaultsEnforcementPolicy' -tenantid $tenant)
 
     If ($Settings.remediate -eq $true) {

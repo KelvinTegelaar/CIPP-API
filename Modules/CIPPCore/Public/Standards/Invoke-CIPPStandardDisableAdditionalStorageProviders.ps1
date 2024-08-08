@@ -30,6 +30,10 @@ function Invoke-CIPPStandardDisableAdditionalStorageProviders {
     #>
 
     param($Tenant, $Settings)
+    $Rerun = Test-CIPPRerun -Type Standard -Tenant $Tenant -Settings $Settings -API 'DisableAdditionalStorageProviders'
+    if ($Rerun -eq $true) {
+        exit 0
+    }
     $AdditionalStorageProvidersState = New-ExoRequest -tenantid $Tenant -cmdlet 'Get-OwaMailboxPolicy' -cmdParams @{Identity = 'OwaMailboxPolicy-Default' }
 
     if ($Settings.remediate -eq $true) {

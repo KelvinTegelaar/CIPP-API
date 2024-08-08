@@ -4,7 +4,10 @@ function Invoke-CIPPStandardTransportRuleTemplate {
     Internal
     #>
     param($Tenant, $Settings)
-
+    $Rerun = Test-CIPPRerun -Type Standard -Tenant $Tenant -Settings $Settings -API 'TransportRuleTemplate'
+    if ($Rerun -eq $true) {
+        exit 0
+    }
     If ($Settings.remediate -eq $true) {
 
         foreach ($Template in $Settings.TemplateList) {

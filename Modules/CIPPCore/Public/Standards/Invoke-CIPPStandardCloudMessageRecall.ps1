@@ -28,7 +28,10 @@ function Invoke-CIPPStandardCloudMessageRecall {
     #>
 
     param($Tenant, $Settings)
-
+    $Rerun = Test-CIPPRerun -Type Standard -Tenant $Tenant -Settings $Settings -API 'CloudMessageRecall'
+    if ($Rerun -eq $true) {
+        exit 0
+    }
     $CurrentState = (New-ExoRequest -tenantid $Tenant -cmdlet 'Get-OrganizationConfig').MessageRecallEnabled
     $WantedState = if ($Settings.state -eq 'true') { $true } else { $false }
     $StateIsCorrect = if ($CurrentState -eq $WantedState) { $true } else { $false }

@@ -28,6 +28,10 @@ function Invoke-CIPPStandardExcludedfileExt {
     #>
 
     param($Tenant, $Settings)
+    $Rerun = Test-CIPPRerun -Type Standard -Tenant $Tenant -Settings $Settings -API 'ExcludedfileExt'
+    if ($Rerun -eq $true) {
+        exit 0
+    }
     $CurrentInfo = New-GraphGetRequest -Uri 'https://graph.microsoft.com/beta/admin/sharepoint/settings' -tenantid $Tenant -AsApp $true
     $Exts = ($Settings.ext -replace ' ', '') -split ','
     # Add a wildcard to the extensions since thats what the SP admin center does

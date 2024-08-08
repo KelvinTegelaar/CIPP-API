@@ -27,6 +27,10 @@ function Invoke-CIPPStandardDisableGuestDirectory {
     #>
 
     param($Tenant, $Settings)
+    $Rerun = Test-CIPPRerun -Type Standard -Tenant $Tenant -Settings $Settings -API 'DisableGuestDirectory'
+    if ($Rerun -eq $true) {
+        exit 0
+    }
     $CurrentInfo = New-GraphGetRequest -Uri 'https://graph.microsoft.com/beta/policies/authorizationPolicy/authorizationPolicy' -tenantid $Tenant
 
     If ($Settings.remediate -eq $true) {
