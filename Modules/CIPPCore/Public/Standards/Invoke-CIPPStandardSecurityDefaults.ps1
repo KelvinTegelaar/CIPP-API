@@ -1,12 +1,38 @@
 function Invoke-CIPPStandardSecurityDefaults {
     <#
     .FUNCTIONALITY
-    Internal
+        Internal
+    .COMPONENT
+        (APIName) SecurityDefaults
+    .SYNOPSIS
+        (Label) Enable Security Defaults
+    .DESCRIPTION
+        (Helptext) Enables security defaults for the tenant, for newer tenants this is enabled by default. Do not enable this feature if you use Conditional Access.
+        (DocsDescription) Enables SD for the tenant, which disables all forms of basic authentication and enforces users to configure MFA. Users are only prompted for MFA when a logon is considered 'suspect' by Microsoft.
+    .NOTES
+        CAT
+            Entra (AAD) Standards
+        TAG
+            "highimpact"
+        ADDEDCOMPONENT
+        IMPACT
+            High Impact
+        POWERSHELLEQUIVALENT
+            [Read more here](https://www.cyberdrain.com/automating-with-powershell-enabling-secure-defaults-and-sd-explained/)
+        RECOMMENDEDBY
+        UPDATECOMMENTBLOCK
+            Run the Tools\Update-StandardsComments.ps1 script to update this comment block
+    .LINK
+        https://docs.cipp.app/user-documentation/tenant/standards/edit-standards
     #>
+
     param($Tenant, $Settings)
+    ##$Rerun -Type Standard -Tenant $Tenant -Settings $Settings 'SecurityDefaults'
+
     $SecureDefaultsState = (New-GraphGetRequest -Uri 'https://graph.microsoft.com/beta/policies/identitySecurityDefaultsEnforcementPolicy' -tenantid $tenant)
 
     If ($Settings.remediate -eq $true) {
+
         if ($SecureDefaultsState.IsEnabled -ne $true) {
             try {
                 Write-Host "Secure Defaults is disabled. Enabling for $tenant" -ForegroundColor Yellow
@@ -15,7 +41,8 @@ function Invoke-CIPPStandardSecurityDefaults {
 
                 Write-LogMessage -API 'Standards' -tenant $tenant -message 'Enabled Security Defaults.' -sev Info
             } catch {
-                Write-LogMessage -API 'Standards' -tenant $tenant -message "Failed to enable Security Defaults. Error: $($_.exception.message)" -sev Error
+                $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
+                Write-LogMessage -API 'Standards' -tenant $tenant -message "Failed to enable Security Defaults. Error: $ErrorMessage" -sev Error
             }
         } else {
             Write-LogMessage -API 'Standards' -tenant $tenant -message 'Security Defaults is already enabled.' -sev Info

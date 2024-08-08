@@ -1,9 +1,36 @@
 function Invoke-CIPPStandardDisableTenantCreation {
     <#
     .FUNCTIONALITY
-    Internal
+        Internal
+    .COMPONENT
+        (APIName) DisableTenantCreation
+    .SYNOPSIS
+        (Label) Disable M365 Tenant creation by users
+    .DESCRIPTION
+        (Helptext) Restricts creation of M365 tenants to the Global Administrator or Tenant Creator roles.
+        (DocsDescription) Users by default are allowed to create M365 tenants. This disables that so only admins can create new M365 tenants.
+    .NOTES
+        CAT
+            Entra (AAD) Standards
+        TAG
+            "lowimpact"
+            "CIS"
+        ADDEDCOMPONENT
+        IMPACT
+            Low Impact
+        POWERSHELLEQUIVALENT
+            Update-MgPolicyAuthorizationPolicy
+        RECOMMENDEDBY
+            "CIS"
+        UPDATECOMMENTBLOCK
+            Run the Tools\Update-StandardsComments.ps1 script to update this comment block
+    .LINK
+        https://docs.cipp.app/user-documentation/tenant/standards/edit-standards
     #>
+
     param($Tenant, $Settings)
+    ##$Rerun -Type Standard -Tenant $Tenant -Settings $Settings 'DisableTenantCreation'
+
     $CurrentInfo = New-GraphGetRequest -Uri 'https://graph.microsoft.com/beta/policies/authorizationPolicy/authorizationPolicy' -tenantid $Tenant
     $State = $CurrentInfo.defaultUserRolePermissions.allowedToCreateTenants
 
@@ -16,7 +43,8 @@ function Invoke-CIPPStandardDisableTenantCreation {
                 Write-LogMessage -API 'Standards' -tenant $tenant -message 'Disabled users from creating tenants.' -sev Info
                 $State = $false
             } catch {
-                Write-LogMessage -API 'Standards' -tenant $tenant -message "Failed to disable users from creating tenants:  $($_.exception.message)" -sev 'Error'
+                $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
+                Write-LogMessage -API 'Standards' -tenant $tenant -message "Failed to disable users from creating tenants:  $ErrorMessage" -sev 'Error'
             }
         } else {
             Write-LogMessage -API 'Standards' -tenant $tenant -message 'Users are already disabled from creating tenants.' -sev Info

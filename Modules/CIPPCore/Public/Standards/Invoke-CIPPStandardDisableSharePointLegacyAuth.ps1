@@ -1,9 +1,35 @@
 function Invoke-CIPPStandardDisableSharePointLegacyAuth {
     <#
     .FUNCTIONALITY
-    Internal
+        Internal
+    .COMPONENT
+        (APIName) DisableSharePointLegacyAuth
+    .SYNOPSIS
+        (Label) Disable legacy basic authentication for SharePoint
+    .DESCRIPTION
+        (Helptext) Disables the ability to authenticate with SharePoint using legacy authentication methods. Any applications that use legacy authentication will need to be updated to use modern authentication.
+        (DocsDescription) Disables the ability for users and applications to access SharePoint via legacy basic authentication. This will likely not have any user impact, but will block systems/applications depending on basic auth or the SharePointOnlineCredentials class.
+    .NOTES
+        CAT
+            SharePoint Standards
+        TAG
+            "mediumimpact"
+            "CIS"
+        ADDEDCOMPONENT
+        IMPACT
+            Medium Impact
+        POWERSHELLEQUIVALENT
+            Set-SPOTenant -LegacyAuthProtocolsEnabled \$false
+        RECOMMENDEDBY
+            "CIS"
+        UPDATECOMMENTBLOCK
+            Run the Tools\Update-StandardsComments.ps1 script to update this comment block
+    .LINK
+        https://docs.cipp.app/user-documentation/tenant/standards/edit-standards
     #>
+
     param($Tenant, $Settings)
+    ##$Rerun -Type Standard -Tenant $Tenant -Settings $Settings 'DisableSharePointLegacyAuth'
 
     $CurrentInfo = New-GraphGetRequest -Uri 'https://graph.microsoft.com/beta/admin/sharepoint/settings?$select=isLegacyAuthProtocolsEnabled' -tenantid $Tenant -AsApp $true
 
@@ -16,7 +42,8 @@ function Invoke-CIPPStandardDisableSharePointLegacyAuth {
                 Write-LogMessage -API 'Standards' -tenant $tenant -message 'Disabled SharePoint basic authentication' -sev Info
                 $CurrentInfo.isLegacyAuthProtocolsEnabled = $false
             } catch {
-                Write-LogMessage -API 'Standards' -tenant $tenant -message "Failed to disable SharePoint basic authentication. Error: $($_.exception.message)" -sev Error
+                $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
+                Write-LogMessage -API 'Standards' -tenant $tenant -message "Failed to disable SharePoint basic authentication. Error: $ErrorMessage" -sev Error
             }
         } else {
             Write-LogMessage -API 'Standards' -tenant $tenant -message 'SharePoint basic authentication is already disabled' -sev Info

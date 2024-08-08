@@ -3,7 +3,9 @@ using namespace System.Net
 Function Invoke-BestPracticeAnalyser_List {
     <#
     .FUNCTIONALITY
-    Entrypoint
+        Entrypoint
+    .ROLE
+        Tenant.BestPracticeAnalyser.Read
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
@@ -13,7 +15,7 @@ Function Invoke-BestPracticeAnalyser_List {
 
     $Tenants = Get-Tenants
     $Table = get-cipptable 'cachebpa'
-    $Results = (Get-CIPPAzDataTableEntity @Table) | ForEach-Object { 
+    $Results = (Get-CIPPAzDataTableEntity @Table) | ForEach-Object {
         $_.UnusedLicenseList = @(ConvertFrom-Json -ErrorAction silentlycontinue -InputObject $_.UnusedLicenseList)
         $_
     }

@@ -1,9 +1,33 @@
 function Invoke-CIPPStandardEnableOnlineArchiving {
     <#
     .FUNCTIONALITY
-    Internal
+        Internal
+    .COMPONENT
+        (APIName) EnableOnlineArchiving
+    .SYNOPSIS
+        (Label) Enable Online Archive for all users
+    .DESCRIPTION
+        (Helptext) Enables the In-Place Online Archive for all UserMailboxes with a valid license.
+        (DocsDescription) Enables the In-Place Online Archive for all UserMailboxes with a valid license.
+    .NOTES
+        CAT
+            Exchange Standards
+        TAG
+            "lowimpact"
+        ADDEDCOMPONENT
+        IMPACT
+            Low Impact
+        POWERSHELLEQUIVALENT
+            Enable-Mailbox -Archive \$true
+        RECOMMENDEDBY
+        UPDATECOMMENTBLOCK
+            Run the Tools\Update-StandardsComments.ps1 script to update this comment block
+    .LINK
+        https://docs.cipp.app/user-documentation/tenant/standards/edit-standards
     #>
+
     param($Tenant, $Settings)
+    ##$Rerun -Type Standard -Tenant $Tenant -Settings $Settings 'EnableOnlineArchiving'
 
     $MailboxPlans = @( 'ExchangeOnline', 'ExchangeOnlineEnterprise' )
     $MailboxesNoArchive = $MailboxPlans | ForEach-Object {
@@ -26,15 +50,17 @@ function Invoke-CIPPStandardEnableOnlineArchiving {
                     }
                 }
 
-                $BatchResults = New-ExoBulkRequest -tenantid $tenant -cmdletArray $Request
+                $BatchResults = New-ExoBulkRequest -tenantid $tenant -cmdletArray @($Request)
                 $BatchResults | ForEach-Object {
                     if ($_.error) {
-                        Write-Host "Failed to Enable Online Archiving for $($_.Target). Error: $($_.error)"
-                        Write-LogMessage -API 'Standards' -tenant $tenant -message "Failed to Enable Online Archiving for $($_.Target). Error: $($_.error)" -sev Error
+                        $ErrorMessage = Get-NormalizedError -Message $_.error
+                        Write-Host "Failed to Enable Online Archiving for $($_.Target). Error: $ErrorMessage"
+                        Write-LogMessage -API 'Standards' -tenant $tenant -message "Failed to Enable Online Archiving for $($_.Target). Error: $ErrorMessage" -sev Error
                     }
                 }
             } catch {
-                Write-LogMessage -API 'Standards' -tenant $Tenant -message "Failed to Enable Online Archiving for all accounts. Error: $($_.exception.message)" -sev Error
+                $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
+                Write-LogMessage -API 'Standards' -tenant $Tenant -message "Failed to Enable Online Archiving for all accounts. Error: $ErrorMessage" -sev Error
             }
         }
 

@@ -6,51 +6,58 @@ function Get-CIPPMFAState {
         $APIName = 'Get MFA Status',
         $ExecutingUser
     )
-
-    $users = foreach ($user in (New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/users?$select=id,UserPrincipalName,DisplayName,accountEnabled,assignedLicenses' -tenantid $TenantFilter)) {
+    $PerUserMFAState = Get-CIPPPerUserMFA -TenantFilter $TenantFilter -AllUsers $true
+    $users = foreach ($user in (New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/users?$top=999&$select=id,UserPrincipalName,DisplayName,accountEnabled,assignedLicenses' -tenantid $TenantFilter)) {
         [PSCustomObject]@{
-            UserPrincipalName                = $user.UserPrincipalName
-            isLicensed                       = [boolean]$user.assignedLicenses.skuid
-            accountEnabled                   = $user.accountEnabled
-            DisplayName                      = $user.DisplayName
-            ObjectId                         = $user.id
-            StrongAuthenticationRequirements = @{StrongAuthenticationRequirement = @{state = 'See Documentation' } }
+            UserPrincipalName = $user.UserPrincipalName
+            isLicensed        = [boolean]$user.assignedLicenses.skuid
+            accountEnabled    = $user.accountEnabled
+            DisplayName       = $user.DisplayName
+            ObjectId          = $user.id
         }
     }
-    
-    $SecureDefaultsState = (New-GraphGetRequest -Uri 'https://graph.microsoft.com/beta/policies/identitySecurityDefaultsEnforcementPolicy' -tenantid $TenantFilter ).IsEnabled
-    $CAState = New-Object System.Collections.ArrayList
+
+    try {
+        $SecureDefaultsState = (New-GraphGetRequest -Uri 'https://graph.microsoft.com/beta/policies/identitySecurityDefaultsEnforcementPolicy' -tenantid $TenantFilter ).IsEnabled
+    } catch {
+        Write-Host "Secure Defaults not available: $($_.Exception.Message)"
+    }
+    $CAState = [System.Collections.Generic.List[object]]::new()
 
     Try {
-        $MFARegistration = (New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/reports/credentialUserRegistrationDetails' -tenantid $TenantFilter)
+        $MFARegistration = (New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/reports/authenticationMethods/userRegistrationDetails' -tenantid $TenantFilter)
     } catch {
         $CAState.Add('Not Licensed for Conditional Access') | Out-Null
         $MFARegistration = $null
+        Write-Host "User registration details not available: $($_.Exception.Message)"
     }
 
     if ($null -ne $MFARegistration) {
-        $CAPolicies = (New-GraphGetRequest -Uri 'https://graph.microsoft.com/beta/identity/conditionalAccess/policies' -tenantid $TenantFilter -ErrorAction Stop )
-
+        $CASuccess = $true
         try {
-            $ExcludeAllUsers = New-Object System.Collections.ArrayList
-            $ExcludeSpecific = New-Object System.Collections.ArrayList
-
+            $CAPolicies = (New-GraphGetRequest -Uri 'https://graph.microsoft.com/beta/identity/conditionalAccess/policies' -tenantid $TenantFilter -ErrorAction Stop )
             foreach ($Policy in $CAPolicies) {
-                if (($policy.grantControls.builtincontrols -eq 'mfa') -or ($policy.grantControls.authenticationStrength.requirementsSatisfied -eq 'mfa') -or ($policy.grantControls.customAuthenticationFactors -eq 'RequireDuoMfa')) {
-                    if ($Policy.conditions.applications.includeApplications -ne 'All') {
-                        Write-Host $Policy.conditions.applications.includeApplications
-                        $CAState.Add("$($policy.displayName) - Specific Applications - $($policy.state)") | Out-Null
-                        $Policy.conditions.users.excludeUsers.foreach({ $ExcludeSpecific.Add($_) | Out-Null })
-                        continue
-                    }
-                    if ($Policy.conditions.users.includeUsers -eq 'All') {
-                        $CAState.Add("$($policy.displayName) - All Users - $($policy.state)") | Out-Null
-                        $Policy.conditions.users.excludeUsers.foreach({ $ExcludeAllUsers.Add($_) | Out-Null })
-                        continue
-                    }
-                } 
+                $IsMFAControl = $policy.grantControls.builtincontrols -eq 'mfa' -or $Policy.grantControls.authenticationStrength.requirementsSatisfied -eq 'mfa' -or $Policy.grantControls.customAuthenticationFactors -eq 'RequireDuoMfa'
+                $IsAllApps = [bool]($Policy.conditions.applications.includeApplications -eq 'All')
+                $IsAllUsers = [bool]($Policy.conditions.users.includeUsers -eq 'All')
+                $Platforms = $Policy.conditions.clientAppTypes
+
+                if ($IsMFAControl) {
+                    $CAState.Add([PSCustomObject]@{
+                            DisplayName   = $Policy.displayName
+                            State         = $Policy.state
+                            IncludedApps  = $Policy.conditions.applications.includeApplications
+                            IncludedUsers = $Policy.conditions.users.includeUsers
+                            ExcludedUsers = $Policy.conditions.users.excludeUsers
+                            IsAllApps     = $IsAllApps
+                            IsAllUsers    = $IsAllUsers
+                            Platforms     = $Platforms
+                        })
+                }
             }
         } catch {
+            $CASuccess = $false
+            $CAError = "CA policies not available: $($_.Exception.Message)"
         }
     }
 
@@ -59,26 +66,36 @@ function Get-CIPPMFAState {
 
     # Interact with query parameters or the body of the request.
     $GraphRequest = $Users | ForEach-Object {
-        Write-Host 'Processing users'
-        $UserCAState = New-Object System.Collections.ArrayList
+        $UserCAState = [System.Collections.Generic.List[object]]::new()
         foreach ($CA in $CAState) {
-            Write-Host 'Looping CAState'
-            if ($CA -like '*All Users*') {
-                if ($ExcludeAllUsers -contains $_.ObjectId) { $UserCAState.Add("Excluded from $($policy.displayName) - All Users") | Out-Null }
-                else { $UserCAState.Add($CA) | Out-Null }
-            } elseif ($CA -like '*Specific Applications*') {
-                if ($ExcludeSpecific -contains $_.ObjectId) { $UserCAState.Add("Excluded from $($policy.displayName) - Specific Applications") | Out-Null }
-                else { $UserCAState.Add($CA) | Out-Null }
+            if ($CA.IncludedUsers -eq 'All' -or $CA.IncludedUsers -contains $_.ObjectId) {
+                $UserCAState.Add([PSCustomObject]@{
+                        DisplayName  = $CA.DisplayName
+                        UserIncluded = ($CA.ExcludedUsers -notcontains $_.ObjectId)
+                        AllApps      = $CA.IsAllApps
+                        PolicyState  = $CA.State
+                        Platforms    = $CA.Platforms -join ', '
+                    })
+            }
+        }
+        if ($UserCAState.UserIncluded -eq $true -and $UserCAState.PolicyState -eq 'enabled') {
+            if ($UserCAState.UserIncluded -eq $true -and $UserCAState.PolicyState -eq 'enabled' -and $UserCAState.AllApps) {
+                $CoveredByCA = 'Enforced - All Apps'
             } else {
-                Write-Host 'Adding to CA'
-                $UserCAState.Add($CA) | Out-Null
+                $CoveredByCA = 'Enforced - Specific Apps'
+            }
+        } else {
+            if ($CASuccess -eq $false) {
+                $CoveredByCA = $CAError
+            } else {
+                $CoveredByCA = 'Not Enforced'
             }
         }
 
-        $PerUser = if ($_.StrongAuthenticationRequirements.StrongAuthenticationRequirement.state -ne $null) { $_.StrongAuthenticationRequirements.StrongAuthenticationRequirement.state } else { 'Disabled' }
+        $PerUser = if ($PerUserMFAState -eq $null) { $null } else { ($PerUserMFAState | Where-Object -Property UserPrincipalName -EQ $_.UserPrincipalName).PerUserMFAState }
 
-        $MFARegUser = if (($MFARegistration | Where-Object -Property UserPrincipalName -EQ $_.UserPrincipalName).IsMFARegistered -eq $null) { $false } else { ($MFARegistration | Where-Object -Property UserPrincipalName -EQ $_.UserPrincipalName) }
-        
+        $MFARegUser = if (($MFARegistration | Where-Object -Property UserPrincipalName -EQ $_.userPrincipalName).isMFARegistered -eq $null) { $false } else { ($MFARegistration | Where-Object -Property UserPrincipalName -EQ $_.userPrincipalName) }
+
         [PSCustomObject]@{
             Tenant          = $TenantFilter
             ID              = $_.ObjectId
@@ -87,14 +104,16 @@ function Get-CIPPMFAState {
             AccountEnabled  = $_.accountEnabled
             PerUser         = $PerUser
             isLicensed      = $_.isLicensed
-            MFARegistration = $MFARegUser.IsMFARegistered
-            MFAMethods      = $($MFARegUser.authMethods -join ', ')
-            CoveredByCA     = ($UserCAState -join ', ')
+            MFARegistration = $MFARegUser.isMFARegistered
+            MFACapable      = $MFARegUser.isMFACapable
+            MFAMethods      = $MFARegUser.methodsRegistered
+            CoveredByCA     = $CoveredByCA
+            CAPolicies      = $UserCAState
             CoveredBySD     = $SecureDefaultsState
             RowKey          = [string]($_.UserPrincipalName).replace('#', '')
             PartitionKey    = 'users'
         }
-        
+
     }
     return $GraphRequest
 }

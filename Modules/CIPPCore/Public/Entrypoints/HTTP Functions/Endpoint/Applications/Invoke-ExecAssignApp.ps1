@@ -3,7 +3,9 @@ using namespace System.Net
 Function Invoke-ExecAssignApp {
     <#
     .FUNCTIONALITY
-    Entrypoint
+        Entrypoint
+    .ROLE
+        Endpoint.Application.ReadWrite
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
@@ -24,7 +26,7 @@ Function Invoke-ExecAssignApp {
         'AllUsers' {
             @'
 {"mobileAppAssignments":[{"@odata.type":"#microsoft.graph.mobileAppAssignment","target":{"@odata.type":"#microsoft.graph.allLicensedUsersAssignmentTarget"},"intent":"Required","settings":null}]}
-'@ 
+'@
         }
 
         'AllDevices' {

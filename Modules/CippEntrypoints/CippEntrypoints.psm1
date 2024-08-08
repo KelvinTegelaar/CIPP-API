@@ -1,24 +1,50 @@
 using namespace System.Net
 
 function Receive-CippHttpTrigger {
-    Param($Request, $TriggerMetadata)
-    #force path to CIPP-API
+    <#
+    .FUNCTIONALITY
+    Entrypoint
+    #>
+    Param(
+        $Request,
+        $TriggerMetadata
+    )
+    # Convert the request to a PSCustomObject because the httpContext is case sensitive since 7.3
+    $Request = $Request | ConvertTo-Json -Depth 100 | ConvertFrom-Json
     Set-Location (Get-Item $PSScriptRoot).Parent.Parent.FullName
-    Write-Information (Get-Item $PSScriptRoot).Parent.Parent.FullName
-    $APIName = $TriggerMetadata.FunctionName
-
-    $FunctionName = 'Invoke-{0}' -f $APIName
+    $FunctionName = 'Invoke-{0}' -f $Request.Params.CIPPEndpoint
+    Write-Host "Function: $($Request.Params.CIPPEndpoint)"
 
     $HttpTrigger = @{
-        Request         = $Request
+        Request         = [pscustomobject]($Request)
         TriggerMetadata = $TriggerMetadata
     }
 
-    & $FunctionName @HttpTrigger
+    if (Get-Command -Name $FunctionName -ErrorAction SilentlyContinue) {
+        try {
+            $Access = Test-CIPPAccess -Request $Request
+            Write-Information "Access: $Access"
+            if ($Access) {
+                & $FunctionName @HttpTrigger
+            }
+        } catch {
+            Write-Information $_.Exception.Message
+            Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
+                    StatusCode = [HttpStatusCode]::Forbidden
+                    Body       = $_.Exception.Message
+                })
+        }
+    } else {
+        Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
+                StatusCode = [HttpStatusCode]::NotFound
+                Body       = 'Endpoint not found'
+            })
+    }
 }
 
 function Receive-CippQueueTrigger {
     Param($QueueItem, $TriggerMetadata)
+    
     Set-Location (Get-Item $PSScriptRoot).Parent.Parent.FullName
     $Start = (Get-Date).ToUniversalTime()
     $APIName = $TriggerMetadata.FunctionName
@@ -120,7 +146,7 @@ function Receive-CippOrchestrationTrigger {
 function Receive-CippActivityTrigger {
     Param($Item)
     try {
-        $Start = (Get-Date).ToUniversalTime()
+        $Start = Get-Date
         Set-Location (Get-Item $PSScriptRoot).Parent.Parent.FullName
 
         if ($Item.QueueId) {
@@ -164,7 +190,7 @@ function Receive-CippActivityTrigger {
             }
         }
 
-        $End = (Get-Date).ToUniversalTime()
+        $End = Get-Date
 
         try {
             $Stats = @{

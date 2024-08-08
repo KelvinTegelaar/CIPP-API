@@ -1,9 +1,36 @@
 function Invoke-CIPPStandardPWdisplayAppInformationRequiredState {
     <#
     .FUNCTIONALITY
-    Internal
+        Internal
+    .COMPONENT
+        (APIName) PWdisplayAppInformationRequiredState
+    .SYNOPSIS
+        (Label) Enable Passwordless with Location information and Number Matching
+    .DESCRIPTION
+        (Helptext) Enables the MS authenticator app to display information about the app that is requesting authentication. This displays the application name.
+        (DocsDescription) Allows users to use Passwordless with Number Matching and adds location information from the last request
+    .NOTES
+        CAT
+            Entra (AAD) Standards
+        TAG
+            "lowimpact"
+            "CIS"
+        ADDEDCOMPONENT
+        IMPACT
+            Low Impact
+        POWERSHELLEQUIVALENT
+            Update-MgBetaPolicyAuthenticationMethodPolicyAuthenticationMethodConfiguration
+        RECOMMENDEDBY
+            "CIS"
+        UPDATECOMMENTBLOCK
+            Run the Tools\Update-StandardsComments.ps1 script to update this comment block
+    .LINK
+        https://docs.cipp.app/user-documentation/tenant/standards/edit-standards
     #>
+
     param($Tenant, $Settings)
+    ##$Rerun -Type Standard -Tenant $Tenant -Settings $Settings 'PWdisplayAppInformationRequiredState'
+
     $CurrentInfo = New-GraphGetRequest -Uri 'https://graph.microsoft.com/beta/policies/authenticationMethodsPolicy/authenticationMethodConfigurations/microsoftAuthenticator' -tenantid $Tenant
     $State = if ($CurrentInfo.state -eq 'enabled') { $true } else { $false }
 

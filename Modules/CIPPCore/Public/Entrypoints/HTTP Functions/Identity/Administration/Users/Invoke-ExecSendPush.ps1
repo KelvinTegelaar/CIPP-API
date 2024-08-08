@@ -3,7 +3,9 @@ using namespace System.Net
 Function Invoke-ExecSendPush {
     <#
     .FUNCTIONALITY
-    Entrypoint
+        Entrypoint
+    .ROLE
+        Identity.User.Read
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
@@ -46,11 +48,11 @@ Function Invoke-ExecSendPush {
 
     # Create a serivce principal if needed
     if (!$SPID) {
-    
+
         $SPBody = [pscustomobject]@{
             appId = $MFAAppID
         }
-        $SPID = (New-GraphPostRequest -uri 'https://graph.microsoft.com/v1.0/servicePrincipals' -tenantid $TenantFilter -type POST -body $SPBody -verbose).id
+        $SPID = (New-GraphPostRequest -uri 'https://graph.microsoft.com/v1.0/servicePrincipals' -tenantid $TenantFilter -type POST -body $SPBody ).id
     }
 
 
@@ -62,7 +64,7 @@ Function Invoke-ExecSendPush {
         }
     } | ConvertTo-Json -Depth 5
 
-    $TempPass = (New-GraphPostRequest -uri "https://graph.microsoft.com/v1.0/servicePrincipals/$SPID/addPassword" -tenantid $TenantFilter -type POST -body $PassReqBody -verbose).secretText
+    $TempPass = (New-GraphPostRequest -uri "https://graph.microsoft.com/v1.0/servicePrincipals/$SPID/addPassword" -tenantid $TenantFilter -type POST -body $PassReqBody -AsApp $true).secretText
 
     # Give it a chance to apply
     #Start-Sleep 5
@@ -107,7 +109,7 @@ Function Invoke-ExecSendPush {
             $Body = "Authentication Failed! Does the user have Push/Phone call MFA configured? Errorcode: $($obj.BeginTwoWayAuthenticationResponse.result.value | Out-String)"
             $colour = 'danger'
         }
-    
+
     }
 
     $Results = [pscustomobject]@{'Results' = $Body; colour = $colour }
@@ -117,6 +119,6 @@ Function Invoke-ExecSendPush {
             StatusCode = [HttpStatusCode]::OK
             Body       = $Results
         })
-    
+
 
 }

@@ -8,21 +8,22 @@ function New-CippExtAlert {
     $Table = Get-CIPPTable -TableName Extensionsconfig
     $Configuration = (Get-CIPPAzDataTableEntity @Table).config | ConvertFrom-Json -Depth 10
     $MappingTable = Get-CIPPTable -TableName CippMapping
-    $MappingFile = (Get-CIPPAzDataTableEntity @MappingTable)
+
     foreach ($ConfigItem in $Configuration.psobject.properties.name) {
         switch ($ConfigItem) {
-            "HaloPSA" {
+            'HaloPSA' {
                 If ($Configuration.HaloPSA.enabled) {
+                    $MappingFile = Get-CIPPAzDataTableEntity @MappingTable -Filter "PartitionKey eq 'HaloMapping'"
                     $TenantId = (Get-Tenants | Where-Object defaultDomainName -EQ $Alert.TenantId).customerId
                     Write-Host "TenantId: $TenantId"
-                    $MappedId = ($MappingFile | Where-Object RowKey -EQ $TenantId).HaloPSA
+                    $MappedId = ($MappingFile | Where-Object { $_.RowKey -eq $TenantId }).IntegrationId
                     Write-Host "MappedId: $MappedId"
                     if (!$mappedId) { $MappedId = 1 }
                     Write-Host "MappedId: $MappedId"
-                    New-HaloPSATicket -Title $Alert.AlertTitle -Description $Alert.AlertText -Client $mappedId 
+                    New-HaloPSATicket -Title $Alert.AlertTitle -Description $Alert.AlertText -Client $mappedId
                 }
             }
-            "Gradient" {
+            'Gradient' {
                 If ($Configuration.Gradient.enabled) {
                     New-GradientAlert -Title $Alert.AlertTitle -Description $Alert.AlertText -Client $Alert.TenantId
                 }

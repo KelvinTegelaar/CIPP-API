@@ -1,15 +1,44 @@
 function Invoke-CIPPStandardOauthConsent {
     <#
     .FUNCTIONALITY
-    Internal
+        Internal
+    .COMPONENT
+        (APIName) OauthConsent
+    .SYNOPSIS
+        (Label) Require admin consent for applications (Prevent OAuth phishing)
+    .DESCRIPTION
+        (Helptext) Disables users from being able to consent to applications, except for those specified in the field below
+        (DocsDescription) Requires users to get administrator consent before sharing data with applications. You can preapprove specific applications.
+    .NOTES
+        CAT
+            Entra (AAD) Standards
+        TAG
+            "mediumimpact"
+            "CIS"
+        ADDEDCOMPONENT
+            {"type":"input","name":"standards.OauthConsent.AllowedApps","label":"Allowed application IDs, comma separated"}
+        IMPACT
+            Medium Impact
+        POWERSHELLEQUIVALENT
+            Update-MgPolicyAuthorizationPolicy
+        RECOMMENDEDBY
+            "CIS"
+        UPDATECOMMENTBLOCK
+            Run the Tools\Update-StandardsComments.ps1 script to update this comment block
+    .LINK
+        https://docs.cipp.app/user-documentation/tenant/standards/edit-standards
     #>
+
     param($tenant, $settings)
+    ##$Rerun -Type Standard -Tenant $Tenant -Settings $Settings 'OauthConsent'
+
     $State = New-GraphGetRequest -Uri 'https://graph.microsoft.com/beta/policies/authorizationPolicy/authorizationPolicy' -tenantid $tenant
+    $StateIsCorrect = if ($State.permissionGrantPolicyIdsAssignedToDefaultUserRole -eq 'managePermissionGrantsForSelf.cipp-consent-policy') { $true } else { $false }
 
     If ($Settings.remediate -eq $true) {
-        $AllowedAppIdsForTenant = $Settings.AllowedApps -split ','
+        $AllowedAppIdsForTenant = $settings.AllowedApps -split ','
         try {
-            if ($State.permissionGrantPolicyIdsAssignedToDefaultUserRole -notin @('ManagePermissionGrantsForSelf.cipp-1sent-policy')) {
+            if ($State.permissionGrantPolicyIdsAssignedToDefaultUserRole -notin @('managePermissionGrantsForSelf.cipp-consent-policy')) {
                 $Existing = (New-GraphGetRequest -Uri 'https://graph.microsoft.com/beta/policies/permissionGrantPolicies/' -tenantid $tenant) | Where-Object -Property id -EQ 'cipp-consent-policy'
                 if (!$Existing) {
                     New-GraphPostRequest -tenantid $tenant -Uri 'https://graph.microsoft.com/beta/policies/permissionGrantPolicies' -Type POST -Body '{ "id":"cipp-consent-policy", "displayName":"Application Consent Policy", "description":"This policy controls the current application consent policies."}' -ContentType 'application/json'
@@ -26,24 +55,22 @@ function Invoke-CIPPStandardOauthConsent {
                 }
                 New-GraphPostRequest -tenantid $tenant -Uri 'https://graph.microsoft.com/beta/policies/authorizationPolicy/authorizationPolicy' -Type PATCH -Body '{"permissionGrantPolicyIdsAssignedToDefaultUserRole":["managePermissionGrantsForSelf.cipp-consent-policy"]}' -ContentType 'application/json'
             }
-            if ($AllowedAppIdsForTenant) {
-            }
 
             Write-LogMessage -API 'Standards' -tenant $tenant -message 'Application Consent Mode has been enabled.' -sev Info
         } catch {
-            Write-LogMessage -API 'Standards' -tenant $tenant -message "Failed to apply Application Consent Mode Error: $($_.exception.message)" -sev Error
+            $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
+            Write-LogMessage -API 'Standards' -tenant $tenant -message "Failed to apply Application Consent Mode Error: $ErrorMessage" -sev Error
         }
     }
     if ($Settings.alert -eq $true) {
 
-        if ($State.permissionGrantPolicyIdsAssignedToDefaultUserRole -eq 'managePermissionGrantsForSelf.cipp-consent-policy') {
+        if ($StateIsCorrect -eq $true) {
             Write-LogMessage -API 'Standards' -tenant $tenant -message 'Application Consent Mode is enabled.' -sev Info
         } else {
             Write-LogMessage -API 'Standards' -tenant $tenant -message 'Application Consent Mode is not enabled.' -sev Alert
         }
     }
     if ($Settings.report -eq $true) {
-        if ($State.permissionGrantPolicyIdsAssignedToDefaultUserRole -eq 'managePermissionGrantsForSelf.cipp-consent-policy') { $UserQuota = $true } else { $UserQuota = $false }
-        Add-CIPPBPAField -FieldName 'OauthConsent' -FieldValue $UserQuota -StoreAs bool -Tenant $tenant
+        Add-CIPPBPAField -FieldName 'OauthConsent' -FieldValue $StateIsCorrect -StoreAs bool -Tenant $tenant
     }
 }

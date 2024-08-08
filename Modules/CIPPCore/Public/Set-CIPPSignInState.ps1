@@ -1,7 +1,7 @@
 function Set-CIPPSignInState {
     [CmdletBinding()]
     param (
-        $userid,
+        $UserId,
         [bool]$AccountEnabled,
         $TenantFilter,
         $APIName = 'Disable User Sign-in',
@@ -11,13 +11,21 @@ function Set-CIPPSignInState {
     try {
         $body = @{
             accountEnabled = [bool]$AccountEnabled
-        } | ConvertTo-Json -Compress -Depth 1
-        $SignInState = New-GraphPostRequest -uri "https://graph.microsoft.com/v1.0/users/$($userid)" -tenantid $TenantFilter -type PATCH -body $body -verbose
-        Write-LogMessage -user $ExecutingUser -API $APIName -message "Set account enabled state to $AccountEnabled for $userid" -Sev 'Info' -tenant $TenantFilter
-        return "Set account enabled state to $AccountEnabled for $userid"
+        }
+        $body = ConvertTo-Json -InputObject $body -Compress -Depth 5
+        $UserDetails = New-GraphGetRequest -uri "https://graph.microsoft.com/v1.0/users/$($UserId)?`$select=onPremisesSyncEnabled" -noPagination $true -tenantid $TenantFilter -verbose
+        $null = New-GraphPostRequest -uri "https://graph.microsoft.com/v1.0/users/$($UserId)" -tenantid $TenantFilter -type PATCH -body $body -verbose
+        Write-LogMessage -user $ExecutingUser -API $APIName -message "Set account enabled state to $AccountEnabled for $UserId" -Sev 'Info' -tenant $TenantFilter
+
+        if ($UserDetails.onPremisesSyncEnabled -eq $true) {
+            return 'WARNING: User is AD Sync enabled. Please enable/disable in AD.'
+        } else {
+            return "Set account enabled state to $AccountEnabled for $UserId"
+        }
+
     } catch {
-        Write-LogMessage -user $ExecutingUser -API $APIName -message "Could not disable sign in for $userid. Error: $($_.Exception.Message)" -Sev 'Error' -tenant $TenantFilter
-        return "Could not disable $userid. Error: $($_.Exception.Message)"
+        $ErrorMessage = Get-CippException -Exception $_
+        Write-LogMessage -user $ExecutingUser -API $APIName -message "Could not disable sign in for $UserId. Error: $($ErrorMessage.NormalizedError)" -Sev 'Error' -tenant $TenantFilter -LogData $ErrorMessage
+        return "Could not disable $UserId. Error: $($ErrorMessage.NormalizedError)"
     }
 }
-

@@ -1,9 +1,34 @@
 function Invoke-CIPPStandardunmanagedSync {
     <#
     .FUNCTIONALITY
-    Internal
+        Internal
+    .COMPONENT
+        (APIName) unmanagedSync
+    .SYNOPSIS
+        (Label) Only allow users to sync OneDrive from AAD joined devices
+    .DESCRIPTION
+        (Helptext) The unmanaged Sync standard has been temporarily disabled and does nothing.
+        (DocsDescription) The unmanaged Sync standard has been temporarily disabled and does nothing.
+    .NOTES
+        CAT
+            SharePoint Standards
+        TAG
+            "highimpact"
+        ADDEDCOMPONENT
+        IMPACT
+            High Impact
+        POWERSHELLEQUIVALENT
+            Update-MgAdminSharepointSetting
+        RECOMMENDEDBY
+        UPDATECOMMENTBLOCK
+            Run the Tools\Update-StandardsComments.ps1 script to update this comment block
+    .LINK
+        https://docs.cipp.app/user-documentation/tenant/standards/edit-standards
     #>
+
     param($Tenant, $Settings)
+    ##$Rerun -Type Standard -Tenant $Tenant -Settings $Settings 'unmanagedSync'
+
     $CurrentInfo = New-GraphGetRequest -Uri 'https://graph.microsoft.com/beta/admin/sharepoint/settings' -tenantid $Tenant -AsApp $true
 
     If ($Settings.remediate -eq $true) {
@@ -14,7 +39,8 @@ function Invoke-CIPPStandardunmanagedSync {
                 #$null = New-GraphPostRequest -tenantid $tenant -Uri 'https://graph.microsoft.com/beta/admin/sharepoint/settings' -AsApp $true -Type patch -Body $body -ContentType 'application/json'
                 Write-LogMessage -API 'Standards' -tenant $tenant -message 'The unmanaged Sync standard has been temporarily disabled.' -sev Info
             } catch {
-                Write-LogMessage -API 'Standards' -tenant $tenant -message "Failed to disable Sync for unmanaged devices: $($_.exception.message)" -sev Error
+                $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
+                Write-LogMessage -API 'Standards' -tenant $tenant -message "Failed to disable Sync for unmanaged devices: $ErrorMessage" -sev Error
             }
         } else {
             Write-LogMessage -API 'Standards' -tenant $tenant -message 'Sync for unmanaged devices is already disabled' -sev Info

@@ -5,11 +5,27 @@ function Invoke-CIPPStandardAPESP {
     #>
     param($Tenant, $Settings)
     If ($Settings.remediate -eq $true) {
-        $APINAME = 'Standards'
+        ##$Rerun -Type Standard -Tenant $Tenant -Settings $Settings 'APESP'
+        if ($Rerun -eq $true) {
+            exit 0
+        }
         try {
-            Set-CIPPDefaultAPEnrollment -TenantFilter $Tenant -ShowProgress $Settings.ShowProgress -BlockDevice $Settings.blockDevice -AllowReset $Settings.AllowReset -EnableLog $Settings.EnableLog -ErrorMessage $Settings.ErrorMessage -TimeOutInMinutes $Settings.TimeOutInMinutes -AllowFail $Settings.AllowFail -OBEEOnly $Settings.OBEEOnly
+            $Parameters = @{
+                TenantFilter     = $Tenant
+                ShowProgress     = $Settings.ShowProgress
+                BlockDevice      = $Settings.blockDevice
+                AllowReset       = $Settings.AllowReset
+                EnableLog        = $Settings.EnableLog
+                ErrorMessage     = $Settings.ErrorMessage
+                TimeOutInMinutes = $Settings.TimeOutInMinutes
+                AllowFail        = $Settings.AllowFail
+                OBEEOnly         = $Settings.OBEEOnly
+            }
+
+            Set-CIPPDefaultAPEnrollment @Parameters
         } catch {
-            throw $_.Exception.Message
+            $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
+            throw $ErrorMessage
         }
     }
 

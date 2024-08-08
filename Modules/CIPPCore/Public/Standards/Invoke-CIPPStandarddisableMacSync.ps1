@@ -1,9 +1,34 @@
 function Invoke-CIPPStandarddisableMacSync {
     <#
     .FUNCTIONALITY
-    Internal
+        Internal
+    .COMPONENT
+        (APIName) disableMacSync
+    .SYNOPSIS
+        (Label) Do not allow Mac devices to sync using OneDrive
+    .DESCRIPTION
+        (Helptext) Disables the ability for Mac devices to sync with OneDrive.
+        (DocsDescription) Disables the ability for Mac devices to sync with OneDrive.
+    .NOTES
+        CAT
+            SharePoint Standards
+        TAG
+            "highimpact"
+        ADDEDCOMPONENT
+        IMPACT
+            High Impact
+        POWERSHELLEQUIVALENT
+            Update-MgAdminSharepointSetting
+        RECOMMENDEDBY
+        UPDATECOMMENTBLOCK
+            Run the Tools\Update-StandardsComments.ps1 script to update this comment block
+    .LINK
+        https://docs.cipp.app/user-documentation/tenant/standards/edit-standards
     #>
+
     param($Tenant, $Settings)
+    ##$Rerun -Type Standard -Tenant $Tenant -Settings $Settings 'disableMacSync'
+
     $CurrentInfo = New-GraphGetRequest -Uri 'https://graph.microsoft.com/beta/admin/sharepoint/settings' -tenantid $Tenant -AsApp $true
 
     If ($Settings.remediate -eq $true) {
@@ -14,7 +39,8 @@ function Invoke-CIPPStandarddisableMacSync {
                 New-GraphPostRequest -tenantid $tenant -Uri 'https://graph.microsoft.com/beta/admin/sharepoint/settings' -AsApp $true -Type patch -Body $body -ContentType 'application/json'
                 Write-LogMessage -API 'Standards' -tenant $tenant -message 'Disabled Mac OneDrive Sync' -sev Info
             } catch {
-                Write-LogMessage -API 'Standards' -tenant $tenant -message "Failed to disable Mac OneDrive Sync: $($_.exception.message)" -sev Error
+                $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
+                Write-LogMessage -API 'Standards' -tenant $tenant -message "Failed to disable Mac OneDrive Sync: $ErrorMessage" -sev Error
             }
         } else {
             Write-LogMessage -API 'Standards' -tenant $tenant -message 'Mac OneDrive Sync is already disabled' -sev Info
