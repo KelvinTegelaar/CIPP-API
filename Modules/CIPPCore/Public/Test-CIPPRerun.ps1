@@ -18,8 +18,10 @@ function Test-CIPPRerun {
         $RerunData = Get-CIPPAzDataTableEntity @RerunTable -filter "PartitionKey eq '$($TenantFilter)' and RowKey eq '$($Type)_$($API)'"
         if ($RerunData) {
             if ($Settings -and $RerunData.Settings) {
+                Write-Host 'Testing rerun settings'
                 $PreviousSettings = $RerunData.Settings | ConvertFrom-Json -ErrorAction SilentlyContinue
-                $CompareSettings = Compare-Object -ReferenceObject $Settings -DifferenceObject $PreviousSettings
+                $CompareSettings = Compare-Object -ReferenceObject $Settings -DifferenceObject $PreviousSettings  -ErrorAction SilentlyContinue
+                Write-Host "Compare settings is: $($CompareSettings | ConvertTo-Json -Compress -Depth 10)"
                 if ($CompareSettings) {
                     return $false # Not a rerun because settings have changed.
                 }
