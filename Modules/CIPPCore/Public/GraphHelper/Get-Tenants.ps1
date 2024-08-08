@@ -11,7 +11,8 @@ function Get-Tenants {
         [switch]$IncludeErrors,
         [switch]$SkipDomains,
         [switch]$TriggerRefresh,
-        [switch]$CleanOld
+        [switch]$CleanOld,
+        [string]$TenantFilter
     )
 
     $TenantsTable = Get-CippTable -tablename 'Tenants'
@@ -29,6 +30,24 @@ function Get-Tenants {
     } else {
         $Filter = "PartitionKey eq 'Tenants' and Excluded eq false and GraphErrorCount lt 50"
     }
+
+    if ($TenantFilter) {
+        Write-Information "Getting tenant $TenantFilter"
+        if ($TenantFilter -match '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$') {
+            $Filter = "{0} and customerId eq '{1}'" -f $Filter, $TenantFilter
+            # create where-object scriptblock
+            $IncludedTenantFilter = [scriptblock]::Create("`$_.customerId -eq '$TenantFilter'")
+            $RelationshipFilter = " and customer/tenantId eq '$TenantFilter'"
+        } else {
+            $Filter = "{0} and defaultDomainName eq '{1}'" -f $Filter, $TenantFilter
+            $IncludedTenantFilter = [scriptblock]::Create("`$_.defaultDomainName -eq '$TenantFilter'")
+            $RelationshipFilter = ''
+        }
+    } else {
+        $IncludedTenantFilter = [scriptblock]::Create('$true')
+        $RelationshipFilter = ''
+    }
+
     $IncludedTenantsCache = Get-CIPPAzDataTableEntity @TenantsTable -Filter $Filter
 
     if (($IncludedTenantsCache | Measure-Object).Count -eq 0) {
@@ -55,7 +74,7 @@ function Get-Tenants {
 
     if (($BuildRequired -or $TriggerRefresh.IsPresent) -and $PartnerTenantState.state -ne 'owntenant') {
         #get the full list of tenants
-        $GDAPRelationships = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/tenantRelationships/delegatedAdminRelationships?`$filter=status eq 'active' and not startsWith(displayName,'MLT_')&`$select=customer,autoExtendDuration,endDateTime&`$top=300" -NoAuthCheck:$true
+        $GDAPRelationships = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/tenantRelationships/delegatedAdminRelationships?`$filter=status eq 'active' and not startsWith(displayName,'MLT_')$RelationshipFilter&`$select=customer,autoExtendDuration,endDateTime&`$top=300" -NoAuthCheck:$true
         $GDAPList = foreach ($Relationship in $GDAPRelationships) {
             [PSCustomObject]@{
                 customerId      = $Relationship.customer.tenantId
@@ -65,7 +84,7 @@ function Get-Tenants {
             }
         }
 
-        $ActiveRelationships = $GDAPList | Where-Object { $_.customerId -notin $SkipListCache.customerId }
+        $ActiveRelationships = $GDAPList | Where-Object $IncludedTenantFilter | Where-Object { $_.customerId -notin $SkipListCache.customerId }
         $TenantList = $ActiveRelationships | Group-Object -Property customerId | ForEach-Object {
             #Write-Host "Processing $($_.Name) to add to tenant list."
             $ExistingTenantInfo = Get-CIPPAzDataTableEntity @TenantsTable -Filter "PartitionKey eq 'Tenants' and RowKey eq '$($_.Name)'"
@@ -152,7 +171,7 @@ function Get-Tenants {
                 }) | Out-Null
 
         }
-        foreach ($Tenant in $TenantList) {
+        foreach ($Tenant in $TenantList | Where-Object $IncludedTenantFilter) {
             if ($Tenant.defaultDomainName -eq 'Invalid' -or !$Tenant.defaultDomainName) {
                 Write-LogMessage -API 'Get-Tenants' -message "We're skipping $($Tenant.displayName) as it has an invalid default domain name. Something is up with this instance." -level 'Critical'
                 continue

@@ -19,8 +19,13 @@ Function Invoke-ExecExtensionsConfig {
     Write-Information 'PowerShell HTTP trigger function processed a request.'
     $results = try {
         if ($Request.Body.CIPPAPI.Enabled) {
-            $APIConfig = New-CIPPAPIConfig -ExecutingUser $Request.Headers.'x-ms-client-principal' -resetpassword $Request.Body.CIPPAPI.ResetPassword
-            $AddedText = $APIConfig.Results
+            try {
+                $APIConfig = New-CIPPAPIConfig -ExecutingUser $Request.Headers.'x-ms-client-principal' -resetpassword $Request.Body.CIPPAPI.ResetPassword
+                $AddedText = $APIConfig.Results
+            } catch {
+                $AddedText = ' Could not enable CIPP-API. Check the CIPP documentation for API requirements.'
+                $Request.Body = $Request.Body | Select-Object * -ExcludeProperty CIPPAPI
+            }
         }
 
         # Check if NinjaOne URL is set correctly and the instance has at least version 5.6
@@ -31,7 +36,7 @@ Function Invoke-ExecExtensionsConfig {
                 throw "Failed to connect to NinjaOne check your Instance is set correctly eg 'app.ninjarmmm.com'"
             }
             if ($Version -lt [version]'5.6.0.0') {
-                throw 'NinjaOne 5.6.0.0 is required. This will be rolling out regionally between the end of November and mid-December. Please try again at a later date.'
+                throw 'NinjaOne 5.6.0.0 is required.'
             }
         }
 
@@ -84,9 +89,9 @@ Function Invoke-ExecExtensionsConfig {
         Add-AzDataTableEntity @ConfigTable -Entity $AddObject -Force
 
         Register-CIPPExtensionScheduledTasks
-        "Successfully set the configuration. $AddedText"
+        "Successfully saved the extension configuration. $AddedText"
     } catch {
-        "Failed to set configuration: $($_.Exception.message) Linenumber: $($_.InvocationInfo.ScriptLineNumber)"
+        "Failed to save the extensions configuration: $($_.Exception.message) Linenumber: $($_.InvocationInfo.ScriptLineNumber)"
     }
 
 
