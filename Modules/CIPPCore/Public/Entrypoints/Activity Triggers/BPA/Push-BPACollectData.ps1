@@ -19,12 +19,12 @@ function Push-BPACollectData {
         }
     }
     $Table = Get-CippTable -tablename 'cachebpav2'
-    $Rerun = Test-CIPPRerun -Type BPA -Tenant $TenantName -API $Item.Template
+    $Rerun = Test-CIPPRerun -Type 'BPA' -Tenant $TenantName.defaultDomainName -API $Item.Template
     if ($Rerun) {
         Write-Host 'Detected rerun. Exiting cleanly'
         exit 0
     }
-    Write-Host "Working on BPA for $($TenantName.displayName) with GUID $($TenantName.customerId) - Report ID $($Item.Template)"
+    Write-Host "Working on BPA for $($TenantName.defaultDomainName) with GUID $($TenantName.customerId) - Report ID $($Item.Template)"
     $Template = $Templates | Where-Object -Property Name -EQ -Value $Item.Template
     # Build up the result object that will be stored in tables
     $Result = @{

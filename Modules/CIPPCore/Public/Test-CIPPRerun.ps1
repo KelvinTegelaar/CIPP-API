@@ -14,15 +14,20 @@ function Test-CIPPRerun {
         default { throw "Unknown type: $Type" }
     }
     $CurrentUnixTime = [int][double]::Parse((Get-Date -UFormat %s))
+    $EstimatedNextRun = $CurrentUnixTime + $EstimatedDifference
+
     try {
         $RerunData = Get-CIPPAzDataTableEntity @RerunTable -filter "PartitionKey eq '$($TenantFilter)' and RowKey eq '$($Type)_$($API)'"
         if ($RerunData) {
             if ($Settings -and $RerunData.Settings) {
                 Write-Host 'Testing rerun settings'
-                $PreviousSettings = $RerunData.Settings | ConvertFrom-Json -ErrorAction SilentlyContinue
-                $CompareSettings = Compare-Object -ReferenceObject $Settings -DifferenceObject $PreviousSettings  -ErrorAction SilentlyContinue
-                Write-Host "Compare settings is: $($CompareSettings | ConvertTo-Json -Compress -Depth 10)"
-                if ($CompareSettings) {
+                $PreviousSettings = $RerunData.Settings
+                $NewSettings = $($Settings | ConvertTo-Json -Depth 10 -Compress)
+                if ($NewSettings.Length -ne $PreviousSettings.Length) {
+                    Write-Host "$($NewSettings.Length) vs $($PreviousSettings.Length) - settings have changed."
+                    $RerunData.EstimatedNextRun = $EstimatedNextRun
+                    $RerunData.Settings = "$($Settings | ConvertTo-Json -Depth 10 -Compress)"
+                    Add-CIPPAzDataTableEntity @RerunTable -Entity $RerunData -Force
                     return $false # Not a rerun because settings have changed.
                 }
             }
@@ -30,10 +35,9 @@ function Test-CIPPRerun {
                 Write-LogMessage -message "Standard rerun detected for $($API). Prevented from running again." -tenant $TenantFilter -user $ExecutingUser -Sev 'Info'
                 return $true
             } else {
-                $EstimatedNextRun = $CurrentUnixTime + $EstimatedDifference
                 $RerunData.EstimatedNextRun = $EstimatedNextRun
-                $RerunData.Settings = "$($Settings | ConvertTo-Json -Depth 10)"
-                Add-CIPPAzDataTableEntity @RerunTable -Entity $RerunData
+                $RerunData.Settings = "$($Settings | ConvertTo-Json -Depth 10 -Compress)"
+                Add-CIPPAzDataTableEntity @RerunTable -Entity $RerunData -Force
                 return $false
             }
         } else {
@@ -41,10 +45,10 @@ function Test-CIPPRerun {
             $NewEntity = @{
                 PartitionKey     = "$TenantFilter"
                 RowKey           = "$($Type)_$($API)"
-                Settings         = "$($Settings | ConvertTo-Json -Depth 10)"
+                Settings         = "$($Settings | ConvertTo-Json -Depth 10 -Compress)"
                 EstimatedNextRun = $EstimatedNextRun
             }
-            Add-CIPPAzDataTableEntity @RerunTable -Entity $NewEntity
+            Add-CIPPAzDataTableEntity @RerunTable -Entity $NewEntity -Force
             return $false
         }
     } catch {
