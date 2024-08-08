@@ -30,7 +30,7 @@ function Invoke-CIPPStandardcalDefault {
     #>
 
     param($Tenant, $Settings, $QueueItem)
-    #$Rerun = Test-CIPPRerun -Type Standard -Tenant $Tenant -Settings $Settings 'calDefault'
+    ##$Rerun -Type Standard -Tenant $Tenant -Settings $Settings 'calDefault'
 
     # Input validation
     if ([string]::IsNullOrWhiteSpace($Settings.permissionlevel) -or $Settings.permissionlevel -eq 'Select a value') {

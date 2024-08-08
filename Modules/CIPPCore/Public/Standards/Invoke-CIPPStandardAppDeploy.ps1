@@ -30,7 +30,7 @@ function Invoke-CIPPStandardAppDeploy {
     param($Tenant, $Settings)
 
     If ($Settings.remediate -eq $true) {
-        #$Rerun = Test-CIPPRerun -Type Standard -Tenant $Tenant -Settings $Settings 'AppDeploy'
+        ##$Rerun -Type Standard -Tenant $Tenant -Settings $Settings 'AppDeploy'
         if ($Rerun -eq $true) {
             exit 0
         }

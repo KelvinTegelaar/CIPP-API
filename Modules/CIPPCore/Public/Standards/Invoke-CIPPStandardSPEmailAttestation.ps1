@@ -30,7 +30,7 @@ function Invoke-CIPPStandardSPEmailAttestation {
     #>
 
     param($Tenant, $Settings)
-    #$Rerun = Test-CIPPRerun -Type Standard -Tenant $Tenant -Settings $Settings 'SPEmailAttestation'
+    ##$Rerun -Type Standard -Tenant $Tenant -Settings $Settings 'SPEmailAttestation'
 
     $CurrentState = Get-CIPPSPOTenant -TenantFilter $Tenant |
     Select-Object -Property EmailAttestationReAuthDays, EmailAttestationRequired

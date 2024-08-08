@@ -27,7 +27,7 @@ function Invoke-CIPPStandardDisableSMS {
     #>
 
     param($Tenant, $Settings)
-    #$Rerun = Test-CIPPRerun -Type Standard -Tenant $Tenant -Settings $Settings 'DisableSMS'
+    ##$Rerun -Type Standard -Tenant $Tenant -Settings $Settings 'DisableSMS'
 
     $CurrentInfo = New-GraphGetRequest -Uri 'https://graph.microsoft.com/beta/policies/authenticationmethodspolicy/authenticationMethodConfigurations/SMS' -tenantid $Tenant
     $State = if ($CurrentInfo.state -eq 'enabled') { $true } else { $false }

@@ -4,7 +4,7 @@ function Invoke-CIPPStandardExConnector {
     Internal
     #>
     param($Tenant, $Settings)
-    #$Rerun = Test-CIPPRerun -Type Standard -Tenant $Tenant -Settings $Settings 'ExConnector'
+    ##$Rerun -Type Standard -Tenant $Tenant -Settings $Settings 'ExConnector'
 
     If ($Settings.remediate -eq $true) {
 

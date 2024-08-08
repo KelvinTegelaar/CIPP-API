@@ -30,7 +30,7 @@ Function Invoke-CIPPStandardTeamsExternalAccessPolicy {
     #>
 
     param($Tenant, $Settings)
-    #$Rerun = Test-CIPPRerun -Type Standard -Tenant $Tenant -Settings $Settings 'TeamsExternalAccessPolicy'
+    ##$Rerun -Type Standard -Tenant $Tenant -Settings $Settings 'TeamsExternalAccessPolicy'
 
     $CurrentState = New-TeamsRequest -TenantFilter $Tenant -Cmdlet 'Get-CsExternalAccessPolicy' -CmdParams @{Identity = 'Global' }
     | Select-Object *

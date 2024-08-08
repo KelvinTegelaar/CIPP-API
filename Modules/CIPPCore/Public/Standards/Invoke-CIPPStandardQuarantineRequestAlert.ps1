@@ -28,7 +28,7 @@ function Invoke-CIPPStandardQuarantineRequestAlert {
     #>
 
     param ($Tenant, $Settings)
-    #$Rerun = Test-CIPPRerun -Type Standard -Tenant $Tenant -Settings $Settings 'QuarantineRequestAlert'
+    ##$Rerun -Type Standard -Tenant $Tenant -Settings $Settings 'QuarantineRequestAlert'
 
     $PolicyName = 'CIPP User requested to release a quarantined message'
 

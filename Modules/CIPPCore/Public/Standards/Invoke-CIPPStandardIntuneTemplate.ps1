@@ -4,7 +4,7 @@ function Invoke-CIPPStandardIntuneTemplate {
     Internal
     #>
     param($Tenant, $Settings)
-    #$Rerun = Test-CIPPRerun -Type Standard -Tenant $Tenant -Settings $Settings 'intuneTemplate'
+    ##$Rerun -Type Standard -Tenant $Tenant -Settings $Settings 'intuneTemplate'
 
     If ($Settings.remediate -eq $true) {
 

@@ -28,7 +28,7 @@ function Invoke-CIPPStandardFocusedInbox {
     #>
 
     param($Tenant, $Settings)
-    #$Rerun = Test-CIPPRerun -Type Standard -Tenant $Tenant -Settings $Settings 'FocusedInbox'
+    ##$Rerun -Type Standard -Tenant $Tenant -Settings $Settings 'FocusedInbox'
 
     # Input validation
     if ([string]::IsNullOrWhiteSpace($Settings.state) -or $Settings.state -eq 'Select a value') {

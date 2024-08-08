@@ -4,7 +4,7 @@ function Invoke-CIPPStandardConditionalAccess {
     Internal
     #>
     param($Tenant, $Settings)
-    #$Rerun = Test-CIPPRerun -Type Standard -Tenant $Tenant -Settings $Settings 'ConditionalAccess'
+    ##$Rerun -Type Standard -Tenant $Tenant -Settings $Settings 'ConditionalAccess'
 
     If ($Settings.remediate -eq $true) {
 

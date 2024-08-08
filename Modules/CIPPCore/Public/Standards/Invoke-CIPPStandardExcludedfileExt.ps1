@@ -28,7 +28,7 @@ function Invoke-CIPPStandardExcludedfileExt {
     #>
 
     param($Tenant, $Settings)
-    #$Rerun = Test-CIPPRerun -Type Standard -Tenant $Tenant -Settings $Settings 'ExcludedfileExt'
+    ##$Rerun -Type Standard -Tenant $Tenant -Settings $Settings 'ExcludedfileExt'
 
     $CurrentInfo = New-GraphGetRequest -Uri 'https://graph.microsoft.com/beta/admin/sharepoint/settings' -tenantid $Tenant -AsApp $true
     $Exts = ($Settings.ext -replace ' ', '') -split ','

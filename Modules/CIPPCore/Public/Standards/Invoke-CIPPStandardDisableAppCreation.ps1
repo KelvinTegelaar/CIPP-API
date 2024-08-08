@@ -29,7 +29,7 @@ function Invoke-CIPPStandardDisableAppCreation {
     #>
 
     param($Tenant, $Settings)
-    #$Rerun = Test-CIPPRerun -Type Standard -Tenant $Tenant -Settings $Settings 'DisableAppCreation'
+    ##$Rerun -Type Standard -Tenant $Tenant -Settings $Settings 'DisableAppCreation'
 
 
     $CurrentInfo = New-GraphGetRequest -Uri 'https://graph.microsoft.com/beta/policies/authorizationPolicy/authorizationPolicy?$select=defaultUserRolePermissions' -tenantid $Tenant

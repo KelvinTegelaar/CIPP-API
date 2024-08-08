@@ -4,7 +4,7 @@ function Invoke-CIPPStandardGroupTemplate {
     Internal
     #>
     param($Tenant, $Settings)
-    #$Rerun = Test-CIPPRerun -Type Standard -Tenant $Tenant -Settings $Settings 'GroupTemplate'
+    ##$Rerun -Type Standard -Tenant $Tenant -Settings $Settings 'GroupTemplate'
 
     If ($Settings.remediate -eq $true) {
 

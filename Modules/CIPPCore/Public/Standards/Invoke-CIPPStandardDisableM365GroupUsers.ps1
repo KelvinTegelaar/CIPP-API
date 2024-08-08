@@ -27,7 +27,7 @@ function Invoke-CIPPStandardDisableM365GroupUsers {
     #>
 
     param($Tenant, $Settings)
-    #$Rerun = Test-CIPPRerun -Type Standard -Tenant $Tenant -Settings $Settings 'DisableM365GroupUsers'
+    ##$Rerun -Type Standard -Tenant $Tenant -Settings $Settings 'DisableM365GroupUsers'
 
     $CurrentState = (New-GraphGetRequest -Uri 'https://graph.microsoft.com/beta/settings' -tenantid $tenant) | Where-Object -Property displayname -EQ 'Group.unified'
 

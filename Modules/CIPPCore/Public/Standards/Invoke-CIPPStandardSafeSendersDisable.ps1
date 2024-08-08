@@ -29,7 +29,7 @@ function Invoke-CIPPStandardSafeSendersDisable {
     #>
 
     param($Tenant, $Settings)
-    #$Rerun = Test-CIPPRerun -Type Standard -Tenant $Tenant -Settings $Settings 'SafeSendersDisable'
+    ##$Rerun -Type Standard -Tenant $Tenant -Settings $Settings 'SafeSendersDisable'
 
     If ($Settings.remediate -eq $true) {
         try {

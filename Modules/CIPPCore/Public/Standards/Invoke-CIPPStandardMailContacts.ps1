@@ -31,7 +31,7 @@ function Invoke-CIPPStandardMailContacts {
     #>
 
     param($Tenant, $Settings)
-    #$Rerun = Test-CIPPRerun -Type Standard -Tenant $Tenant -Settings $Settings 'MailContacts'
+    ##$Rerun -Type Standard -Tenant $Tenant -Settings $Settings 'MailContacts'
 
     $TenantID = (New-GraphGetRequest -Uri 'https://graph.microsoft.com/beta/organization' -tenantid $tenant)
     $CurrentInfo = New-GraphGetRequest -Uri "https://graph.microsoft.com/beta/organization/$($TenantID.id)" -tenantid $Tenant

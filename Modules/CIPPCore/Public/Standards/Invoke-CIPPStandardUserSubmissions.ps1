@@ -29,7 +29,7 @@ function Invoke-CIPPStandardUserSubmissions {
     #>
 
     param($Tenant, $Settings)
-    #$Rerun = Test-CIPPRerun -Type Standard -Tenant $Tenant -Settings $Settings 'UserSubmissions'
+    ##$Rerun -Type Standard -Tenant $Tenant -Settings $Settings 'UserSubmissions'
 
     # Input validation
     if ($Settings.remediate -eq $true -or $Settings.alert -eq $true) {

@@ -26,7 +26,7 @@ function Invoke-CIPPStandardintuneRequireMFA {
     #>
 
     param($Tenant, $Settings)
-    #$Rerun = Test-CIPPRerun -Type Standard -Tenant $Tenant -Settings $Settings 'intuneRequireMFA'
+    ##$Rerun -Type Standard -Tenant $Tenant -Settings $Settings 'intuneRequireMFA'
 
     $PreviousSetting = New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/policies/deviceRegistrationPolicy' -tenantid $Tenant
 

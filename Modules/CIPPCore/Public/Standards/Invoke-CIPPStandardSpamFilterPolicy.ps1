@@ -37,7 +37,7 @@ function Invoke-CIPPStandardSpamFilterPolicy {
     #>
 
     param($Tenant, $Settings)
-    #$Rerun = Test-CIPPRerun -Type Standard -Tenant $Tenant -Settings $Settings 'SpamFilterPolicy'
+    ##$Rerun -Type Standard -Tenant $Tenant -Settings $Settings 'SpamFilterPolicy'
 
     $PolicyName = 'CIPP Default Spam Filter Policy'
 

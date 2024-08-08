@@ -30,7 +30,7 @@ function Invoke-CIPPStandardSPExternalUserExpiration {
     #>
 
     param($Tenant, $Settings)
-    #$Rerun = Test-CIPPRerun -Type Standard -Tenant $Tenant -Settings $Settings 'SPExternalUserExpiration'
+    ##$Rerun -Type Standard -Tenant $Tenant -Settings $Settings 'SPExternalUserExpiration'
 
     $CurrentState = Get-CIPPSPOTenant -TenantFilter $Tenant |
     Select-Object -Property ExternalUserExpireInDays, ExternalUserExpirationRequired

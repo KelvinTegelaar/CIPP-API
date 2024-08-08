@@ -27,7 +27,7 @@ function Invoke-CIPPStandardEnableHardwareOAuth {
     #>
 
     param($Tenant, $Settings)
-    #$Rerun = Test-CIPPRerun -Type Standard -Tenant $Tenant -Settings $Settings 'EnableHardwareOAuth'
+    ##$Rerun -Type Standard -Tenant $Tenant -Settings $Settings 'EnableHardwareOAuth'
 
     $CurrentInfo = New-GraphGetRequest -Uri 'https://graph.microsoft.com/beta/policies/authenticationmethodspolicy/authenticationMethodConfigurations/HardwareOath' -tenantid $Tenant
     $State = if ($CurrentInfo.state -eq 'enabled') { $true } else { $false }

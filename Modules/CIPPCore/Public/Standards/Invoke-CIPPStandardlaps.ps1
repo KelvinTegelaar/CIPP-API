@@ -27,7 +27,7 @@ function Invoke-CIPPStandardlaps {
     #>
 
     param($Tenant, $Settings)
-    #$Rerun = Test-CIPPRerun -Type Standard -Tenant $Tenant -Settings $Settings 'laps'
+    ##$Rerun -Type Standard -Tenant $Tenant -Settings $Settings 'laps'
 
     $PreviousSetting = New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/policies/deviceRegistrationPolicy' -tenantid $Tenant
 

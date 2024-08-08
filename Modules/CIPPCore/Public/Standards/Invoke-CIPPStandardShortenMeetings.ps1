@@ -30,7 +30,7 @@ function Invoke-CIPPStandardShortenMeetings {
     #>
 
     param($Tenant, $Settings)
-    #$Rerun = Test-CIPPRerun -Type Standard -Tenant $Tenant -Settings $Settings 'ShortenMeetings'
+    ##$Rerun -Type Standard -Tenant $Tenant -Settings $Settings 'ShortenMeetings'
 
     # Input validation
     if ([Int32]$Settings.DefaultMinutesToReduceShortEventsBy -lt 0 -or [Int32]$Settings.DefaultMinutesToReduceShortEventsBy -gt 29) {

@@ -31,7 +31,7 @@ Function Invoke-CIPPStandardTeamsFederationConfiguration {
     #>
 
     param($Tenant, $Settings)
-    #$Rerun = Test-CIPPRerun -Type Standard -Tenant $Tenant -Settings $Settings 'TeamsFederationConfiguration'
+    ##$Rerun -Type Standard -Tenant $Tenant -Settings $Settings 'TeamsFederationConfiguration'
 
     $CurrentState = New-TeamsRequest -TenantFilter $Tenant -Cmdlet 'Get-CsTenantFederationConfiguration' -CmdParams @{Identity = 'Global' }
     | Select-Object *

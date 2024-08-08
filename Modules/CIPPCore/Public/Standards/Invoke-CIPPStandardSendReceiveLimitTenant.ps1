@@ -29,7 +29,7 @@ function Invoke-CIPPStandardSendReceiveLimitTenant {
     #>
 
     param($Tenant, $Settings)
-    #$Rerun = Test-CIPPRerun -Type Standard -Tenant $Tenant -Settings $Settings 'SendReceiveLimitTenant'
+    ##$Rerun -Type Standard -Tenant $Tenant -Settings $Settings 'SendReceiveLimitTenant'
 
     # Input validation
     if ([Int32]$Settings.SendLimit -lt 1 -or [Int32]$Settings.SendLimit -gt 150) {

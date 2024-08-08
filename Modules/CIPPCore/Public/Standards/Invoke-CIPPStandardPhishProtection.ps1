@@ -30,7 +30,7 @@ function Invoke-CIPPStandardPhishProtection {
     #>
 
     param($Tenant, $Settings)
-    #$Rerun = Test-CIPPRerun -Type Standard -Tenant $Tenant -Settings $Settings 'PhishProtection'
+    ##$Rerun -Type Standard -Tenant $Tenant -Settings $Settings 'PhishProtection'
 
     $TenantId = Get-Tenants | Where-Object -Property defaultDomainName -EQ $tenant
 

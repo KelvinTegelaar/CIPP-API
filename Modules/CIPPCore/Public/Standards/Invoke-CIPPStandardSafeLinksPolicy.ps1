@@ -34,7 +34,7 @@ function Invoke-CIPPStandardSafeLinksPolicy {
     #>
 
     param($Tenant, $Settings)
-    #$Rerun = Test-CIPPRerun -Type Standard -Tenant $Tenant -Settings $Settings 'SafeLinksPolicy'
+    ##$Rerun -Type Standard -Tenant $Tenant -Settings $Settings 'SafeLinksPolicy'
 
     $PolicyName = 'Default SafeLinks Policy'
 

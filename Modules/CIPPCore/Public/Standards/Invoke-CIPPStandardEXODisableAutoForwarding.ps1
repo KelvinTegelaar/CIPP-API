@@ -31,7 +31,7 @@ function Invoke-CIPPStandardEXODisableAutoForwarding {
     #>
 
     param($Tenant, $Settings)
-    #$Rerun = Test-CIPPRerun -Type Standard -Tenant $Tenant -Settings $Settings 'EXODisableAutoForwarding'
+    ##$Rerun -Type Standard -Tenant $Tenant -Settings $Settings 'EXODisableAutoForwarding'
 
     $CurrentInfo = New-ExoRequest -tenantid $Tenant -cmdlet 'Get-HostedOutboundSpamFilterPolicy' -cmdparams @{Identity = 'Default' } -useSystemMailbox $true
     $StateIsCorrect = $CurrentInfo.AutoForwardingMode -eq 'Off' -or $CurrentInfo.AutoForwardingMode -eq 'Automatic'

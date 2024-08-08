@@ -27,7 +27,7 @@ function Invoke-CIPPStandardMessageExpiration {
     #>
 
     param($Tenant, $Settings)
-    #$Rerun = Test-CIPPRerun -Type Standard -Tenant $Tenant -Settings $Settings 'MessageExpiration'
+    ##$Rerun -Type Standard -Tenant $Tenant -Settings $Settings 'MessageExpiration'
 
     $MessageExpiration = (New-ExoRequest -tenantid $Tenant -cmdlet 'Get-TransportConfig').messageExpiration
 
