@@ -30,8 +30,10 @@ function Invoke-CIPPStandardSPEmailAttestation {
     #>
 
     param($Tenant, $Settings)
+    ##$Rerun -Type Standard -Tenant $Tenant -Settings $Settings 'SPEmailAttestation'
+
     $CurrentState = Get-CIPPSPOTenant -TenantFilter $Tenant |
-        Select-Object -Property EmailAttestationReAuthDays, EmailAttestationRequired
+    Select-Object -Property EmailAttestationReAuthDays, EmailAttestationRequired
 
     $StateIsCorrect = ($CurrentState.EmailAttestationReAuthDays -eq $Settings.Days) -and
                       ($CurrentState.EmailAttestationRequired -eq $true)
@@ -42,7 +44,7 @@ function Invoke-CIPPStandardSPEmailAttestation {
         } else {
             $Properties = @{
                 EmailAttestationReAuthDays = $Settings.Days
-                EmailAttestationRequired = $true
+                EmailAttestationRequired   = $true
             }
 
             try {

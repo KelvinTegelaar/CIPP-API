@@ -27,6 +27,7 @@ function Invoke-CIPPStandardEnablePronouns {
     #>
 
     param ($Tenant, $Settings)
+    ##$Rerun -Type Standard -Tenant $Tenant -Settings $Settings 'EnablePronouns'
 
     $Uri = 'https://graph.microsoft.com/v1.0/admin/people/pronouns'
     try {
