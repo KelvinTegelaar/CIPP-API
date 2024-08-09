@@ -13,6 +13,10 @@ function Set-CIPPIntunePolicy {
         switch ($TemplateType) {
             'AppProtection' {
                 $TemplateType = ($RawJSON | ConvertFrom-Json).'@odata.type' -replace '#microsoft.graph.', ''
+                $PolicyFile = $RawJSON | ConvertFrom-Json
+                $Null = $PolicyFile | Add-Member -MemberType NoteProperty -Name 'description' -Value $description -Force
+                $null = $PolicyFile | Add-Member -MemberType NoteProperty -Name 'displayName' -Value $displayname -Force
+                $RawJSON = ConvertTo-Json -InputObject $PolicyFile -Depth 20
                 $TemplateTypeURL = if ($TemplateType -eq 'windowsInformationProtectionPolicy') { 'windowsInformationProtectionPolicies' } else { "$($TemplateType)s" }
                 $CheckExististing = New-GraphGETRequest -uri "https://graph.microsoft.com/beta/deviceAppManagement/$TemplateTypeURL" -tenantid $tenantFilter
                 if ($displayname -in $CheckExististing.displayName) {
