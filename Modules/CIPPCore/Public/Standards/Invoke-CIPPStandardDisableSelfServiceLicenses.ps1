@@ -28,10 +28,11 @@ function Invoke-CIPPStandardDisableSelfServiceLicenses {
     #>
 
     param($Tenant, $Settings)
+    ##$Rerun -Type Standard -Tenant $Tenant -Settings $Settings 'DisableSelfServiceLicenses'
 
     #Write-LogMessage -API 'Standards' -tenant $tenant -message 'Self Service Licenses cannot be disabled' -sev Error
     try {
-        $selfServiceItems = (New-GraphGETRequest -scope "aeb86249-8ea3-49e2-900b-54cc8e308f85/.default" -uri "https://licensing.m365.microsoft.com/v1.0/policies/AllowSelfServicePurchase/products" -tenantid $Tenant).items
+        $selfServiceItems = (New-GraphGETRequest -scope 'aeb86249-8ea3-49e2-900b-54cc8e308f85/.default' -uri 'https://licensing.m365.microsoft.com/v1.0/policies/AllowSelfServicePurchase/products' -tenantid $Tenant).items
         #$selfServiceItems = (Invoke-RestMethod -Method GET -Uri "https://licensing.m365.microsoft.com/v1.0/policies/AllowSelfServicePurchase/products" -Headers $header).items
     } catch {
         Write-LogMessage -API 'Standards' -tenant $tenant -message "Failed to retrieve self service products: $($_.Exception.Message)" -sev Error
@@ -39,34 +40,34 @@ function Invoke-CIPPStandardDisableSelfServiceLicenses {
     }
 
     if ($settings.remediate) {
-        if ($settings.exclusions -like "*;*") {
-            $exclusions = $settings.Exclusions -split(';')
+        if ($settings.exclusions -like '*;*') {
+            $exclusions = $settings.Exclusions -split (';')
         } else {
-            $exclusions = $settings.Exclusions -split(',')
+            $exclusions = $settings.Exclusions -split (',')
         }
 
         $selfServiceItems | ForEach-Object {
             $body = $null
 
-            if ($_.policyValue -eq "Enabled" -AND ($_.productId -in $exclusions)) {
+            if ($_.policyValue -eq 'Enabled' -AND ($_.productId -in $exclusions)) {
                 # Self service is enabled on product and productId is in exclusions, skip
             }
-            if ($_.policyValue -eq "Disabled" -AND ($_.productId -in $exclusions)) {
+            if ($_.policyValue -eq 'Disabled' -AND ($_.productId -in $exclusions)) {
                 # Self service is disabled on product and productId is in exclusions, enable
                 $body = '{ "policyValue": "Enabled" }'
             }
-            if ($_.policyValue -eq "Enabled" -AND ($_.productId -notin $exclusions)) {
+            if ($_.policyValue -eq 'Enabled' -AND ($_.productId -notin $exclusions)) {
                 # Self service is enabled on product and productId is NOT in exclusions, disable
                 $body = '{ "policyValue": "Disabled" }'
             }
-            if ($_.policyValue -eq "Disabled" -AND ($_.productId -notin $exclusions)) {
+            if ($_.policyValue -eq 'Disabled' -AND ($_.productId -notin $exclusions)) {
                 # Self service is disabled on product and productId is NOT in exclusions, skip
             }
 
             try {
                 if ($body) {
                     $product = $_
-                    New-GraphPOSTRequest -scope "aeb86249-8ea3-49e2-900b-54cc8e308f85/.default" -uri "https://licensing.m365.microsoft.com/v1.0/policies/AllowSelfServicePurchase/products/$($product.productId)" -tenantid $Tenant -body $body -type PUT
+                    New-GraphPOSTRequest -scope 'aeb86249-8ea3-49e2-900b-54cc8e308f85/.default' -uri "https://licensing.m365.microsoft.com/v1.0/policies/AllowSelfServicePurchase/products/$($product.productId)" -tenantid $Tenant -body $body -type PUT
                 }
             } catch {
                 Write-LogMessage -API 'Standards' -tenant $tenant -message "Failed to set product status for $($product.productId) with body $($body) for reason: $($_.Exception.Message)" -sev Error
@@ -82,7 +83,7 @@ function Invoke-CIPPStandardDisableSelfServiceLicenses {
     }
 
     if ($Settings.alert) {
-        $selfServiceItemsToAlert = $selfServiceItems | Where-Object { $_.policyValue -eq "Enabled"}
+        $selfServiceItemsToAlert = $selfServiceItems | Where-Object { $_.policyValue -eq 'Enabled' }
         if (!$selfServiceItemsToAlert) {
             Write-LogMessage -API 'Standards' -tenant $tenant -message 'All self-service licenses are disabled' -sev Info
         } else {
