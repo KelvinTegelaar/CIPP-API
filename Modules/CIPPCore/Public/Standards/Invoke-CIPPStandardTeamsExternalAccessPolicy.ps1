@@ -30,26 +30,28 @@ Function Invoke-CIPPStandardTeamsExternalAccessPolicy {
     #>
 
     param($Tenant, $Settings)
-    $CurrentState = New-TeamsRequest -TenantFilter $Tenant -Cmdlet 'Get-CsExternalAccessPolicy' -CmdParams @{Identity = 'Global'}
-                | Select-Object *
+    ##$Rerun -Type Standard -Tenant $Tenant -Settings $Settings 'TeamsExternalAccessPolicy'
 
-    if ($null -eq $Settings.EnableFederationAccess)     { $Settings.EnableFederationAccess = $false }
-    if ($null -eq $Settings.EnablePublicCloudAccess)    { $Settings.EnablePublicCloudAccess = $false }
-    if ($null -eq $Settings.EnableTeamsConsumerAccess)  { $Settings.EnableTeamsConsumerAccess = $false }
+    $CurrentState = New-TeamsRequest -TenantFilter $Tenant -Cmdlet 'Get-CsExternalAccessPolicy' -CmdParams @{Identity = 'Global' }
+    | Select-Object *
 
-    $StateIsCorrect =   ($CurrentState.EnableFederationAccess       -eq $Settings.EnableFederationAccess) -and
-                        ($CurrentState.EnablePublicCloudAccess      -eq $Settings.EnablePublicCloudAccess) -and
-                        ($CurrentState.EnableTeamsConsumerAccess    -eq $Settings.EnableTeamsConsumerAccess)
+    if ($null -eq $Settings.EnableFederationAccess) { $Settings.EnableFederationAccess = $false }
+    if ($null -eq $Settings.EnablePublicCloudAccess) { $Settings.EnablePublicCloudAccess = $false }
+    if ($null -eq $Settings.EnableTeamsConsumerAccess) { $Settings.EnableTeamsConsumerAccess = $false }
+
+    $StateIsCorrect = ($CurrentState.EnableFederationAccess -eq $Settings.EnableFederationAccess) -and
+                        ($CurrentState.EnablePublicCloudAccess -eq $Settings.EnablePublicCloudAccess) -and
+                        ($CurrentState.EnableTeamsConsumerAccess -eq $Settings.EnableTeamsConsumerAccess)
 
     if ($Settings.remediate -eq $true) {
         if ($StateIsCorrect -eq $true) {
             Write-LogMessage -API 'Standards' -tenant $Tenant -message 'External Access Policy already set.' -sev Info
         } else {
             $cmdparams = @{
-                Identity = 'Global'
-                EnableFederationAccess      = $Settings.EnableFederationAccess
-                EnablePublicCloudAccess     = $Settings.EnablePublicCloudAccess
-                EnableTeamsConsumerAccess   = $Settings.EnableTeamsConsumerAccess
+                Identity                  = 'Global'
+                EnableFederationAccess    = $Settings.EnableFederationAccess
+                EnablePublicCloudAccess   = $Settings.EnablePublicCloudAccess
+                EnableTeamsConsumerAccess = $Settings.EnableTeamsConsumerAccess
             }
 
             try {
