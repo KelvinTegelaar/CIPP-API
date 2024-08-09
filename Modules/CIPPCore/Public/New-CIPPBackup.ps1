@@ -21,10 +21,11 @@ function New-CIPPBackup {
                     'templates'
                     'standards'
                     'SchedulerConfig'
+                    'Extensions'
                 )
                 $CSVfile = foreach ($CSVTable in $BackupTables) {
                     $Table = Get-CippTable -tablename $CSVTable
-                    Get-CIPPAzDataTableEntity @Table | Select-Object *, @{l = 'table'; e = { $CSVTable } }
+                    Get-AzDataTableEntity @Table | Select-Object *, @{l = 'table'; e = { $CSVTable } }
                 }
                 Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -message 'Created backup' -Sev 'Debug'
                 $CSVfile
@@ -37,7 +38,7 @@ function New-CIPPBackup {
                 }
                 $Table = Get-CippTable -tablename 'CIPPBackup'
                 try {
-                    $Result = Add-CIPPAzDataTableEntity @Table -entity $entity -Force
+                    $Result = Add-AzDataTableEntity @Table -entity $entity -Force
                     Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -message 'Created CIPP Backup' -Sev 'Debug'
                 } catch {
                     $ErrorMessage = Get-CippException -Exception $_
