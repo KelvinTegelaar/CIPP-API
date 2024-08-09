@@ -28,6 +28,8 @@ function Invoke-CIPPStandardDeletedUserRentention {
     #>
 
     param($Tenant, $Settings)
+    ##$Rerun -Type Standard -Tenant $Tenant -Settings $Settings 'DeletedUserRetention'
+
     $CurrentInfo = New-GraphGetRequest -Uri 'https://graph.microsoft.com/beta/admin/sharepoint/settings' -tenantid $Tenant -AsApp $true
 
     if ($Settings.report -eq $true) {
