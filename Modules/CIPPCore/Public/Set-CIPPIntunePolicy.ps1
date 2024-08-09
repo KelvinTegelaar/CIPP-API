@@ -76,7 +76,7 @@ function Set-CIPPIntunePolicy {
                 $null = $PolicyFile | Add-Member -MemberType NoteProperty -Name 'displayName' -Value $displayname -Force
                 $RawJSON = ConvertTo-Json -InputObject $PolicyFile -Depth 20
                 $CheckExististing = New-GraphGETRequest -uri "https://graph.microsoft.com/beta/deviceManagement/$TemplateTypeURL" -tenantid $tenantFilter
-                if ($PolicyName -in $PolicyFile.displayName) {
+                if ($PolicyFile.displayName -in $CheckExististing.displayName) {
                     $PostType = 'edited'
                     $ExistingID = $CheckExististing | Where-Object -Property displayName -EQ $PolicyName
                     $CreateRequest = New-GraphPOSTRequest -uri "https://graph.microsoft.com/beta/deviceManagement/$TemplateTypeURL/$($ExistingID.Id)" -tenantid $tenantFilter -type PATCH -body $RawJSON
