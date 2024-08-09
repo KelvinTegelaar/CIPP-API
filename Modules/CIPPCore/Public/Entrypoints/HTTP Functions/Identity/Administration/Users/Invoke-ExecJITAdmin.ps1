@@ -136,7 +136,7 @@ Function Invoke-ExecJITAdmin {
             }
         }
 
-        $Parameters = @{
+        $Parameters = [pscustomobject]@{
             TenantFilter = $Request.Body.TenantFilter
             User         = @{
                 'UserPrincipalName' = $Username
