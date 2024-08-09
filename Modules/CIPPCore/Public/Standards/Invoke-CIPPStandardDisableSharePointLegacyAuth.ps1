@@ -15,6 +15,7 @@ function Invoke-CIPPStandardDisableSharePointLegacyAuth {
         TAG
             "mediumimpact"
             "CIS"
+            "spo_legacy_auth"
         ADDEDCOMPONENT
         IMPACT
             Medium Impact
