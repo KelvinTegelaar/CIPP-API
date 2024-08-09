@@ -28,6 +28,7 @@ function Invoke-CIPPStandardSPSyncButtonState {
     #>
 
     param($Tenant, $Settings)
+    ##$Rerun -Type Standard -Tenant $Tenant -Settings $Settings 'SPSyncButtonState'
 
     $CurrentState = Get-CIPPSPOTenant -TenantFilter $Tenant | Select-Object _ObjectIdentity_, TenantFilter, HideSyncButtonOnDocLib
     $WantedState = [System.Convert]::ToBoolean($Settings.state)

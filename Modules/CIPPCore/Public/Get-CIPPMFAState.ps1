@@ -17,20 +17,25 @@ function Get-CIPPMFAState {
         }
     }
 
-    $SecureDefaultsState = (New-GraphGetRequest -Uri 'https://graph.microsoft.com/beta/policies/identitySecurityDefaultsEnforcementPolicy' -tenantid $TenantFilter ).IsEnabled
+    try {
+        $SecureDefaultsState = (New-GraphGetRequest -Uri 'https://graph.microsoft.com/beta/policies/identitySecurityDefaultsEnforcementPolicy' -tenantid $TenantFilter ).IsEnabled
+    } catch {
+        Write-Host "Secure Defaults not available: $($_.Exception.Message)"
+    }
     $CAState = [System.Collections.Generic.List[object]]::new()
 
     Try {
-        $MFARegistration = (New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/reports/credentialUserRegistrationDetails' -tenantid $TenantFilter)
+        $MFARegistration = (New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/reports/authenticationMethods/userRegistrationDetails' -tenantid $TenantFilter)
     } catch {
         $CAState.Add('Not Licensed for Conditional Access') | Out-Null
         $MFARegistration = $null
+        Write-Host "User registration details not available: $($_.Exception.Message)"
     }
 
     if ($null -ne $MFARegistration) {
-        $CAPolicies = (New-GraphGetRequest -Uri 'https://graph.microsoft.com/beta/identity/conditionalAccess/policies' -tenantid $TenantFilter -ErrorAction Stop )
-
+        $CASuccess = $true
         try {
+            $CAPolicies = (New-GraphGetRequest -Uri 'https://graph.microsoft.com/beta/identity/conditionalAccess/policies' -tenantid $TenantFilter -ErrorAction Stop )
             foreach ($Policy in $CAPolicies) {
                 $IsMFAControl = $policy.grantControls.builtincontrols -eq 'mfa' -or $Policy.grantControls.authenticationStrength.requirementsSatisfied -eq 'mfa' -or $Policy.grantControls.customAuthenticationFactors -eq 'RequireDuoMfa'
                 $IsAllApps = [bool]($Policy.conditions.applications.includeApplications -eq 'All')
@@ -51,6 +56,8 @@ function Get-CIPPMFAState {
                 }
             }
         } catch {
+            $CASuccess = $false
+            $CAError = "CA policies not available: $($_.Exception.Message)"
         }
     }
 
@@ -59,7 +66,6 @@ function Get-CIPPMFAState {
 
     # Interact with query parameters or the body of the request.
     $GraphRequest = $Users | ForEach-Object {
-        Write-Host 'Processing users'
         $UserCAState = [System.Collections.Generic.List[object]]::new()
         foreach ($CA in $CAState) {
             if ($CA.IncludedUsers -eq 'All' -or $CA.IncludedUsers -contains $_.ObjectId) {
@@ -79,12 +85,16 @@ function Get-CIPPMFAState {
                 $CoveredByCA = 'Enforced - Specific Apps'
             }
         } else {
-            $CoveredByCA = 'Not Enforced'
+            if ($CASuccess -eq $false) {
+                $CoveredByCA = $CAError
+            } else {
+                $CoveredByCA = 'Not Enforced'
+            }
         }
 
         $PerUser = if ($PerUserMFAState -eq $null) { $null } else { ($PerUserMFAState | Where-Object -Property UserPrincipalName -EQ $_.UserPrincipalName).PerUserMFAState }
 
-        $MFARegUser = if (($MFARegistration | Where-Object -Property UserPrincipalName -EQ $_.UserPrincipalName).IsMFARegistered -eq $null) { $false } else { ($MFARegistration | Where-Object -Property UserPrincipalName -EQ $_.UserPrincipalName) }
+        $MFARegUser = if (($MFARegistration | Where-Object -Property UserPrincipalName -EQ $_.userPrincipalName).isMFARegistered -eq $null) { $false } else { ($MFARegistration | Where-Object -Property UserPrincipalName -EQ $_.userPrincipalName) }
 
         [PSCustomObject]@{
             Tenant          = $TenantFilter
@@ -94,8 +104,9 @@ function Get-CIPPMFAState {
             AccountEnabled  = $_.accountEnabled
             PerUser         = $PerUser
             isLicensed      = $_.isLicensed
-            MFARegistration = $MFARegUser.IsMFARegistered
-            MFAMethods      = $MFARegUser.authMethods
+            MFARegistration = $MFARegUser.isMFARegistered
+            MFACapable      = $MFARegUser.isMFACapable
+            MFAMethods      = $MFARegUser.methodsRegistered
             CoveredByCA     = $CoveredByCA
             CAPolicies      = $UserCAState
             CoveredBySD     = $SecureDefaultsState
