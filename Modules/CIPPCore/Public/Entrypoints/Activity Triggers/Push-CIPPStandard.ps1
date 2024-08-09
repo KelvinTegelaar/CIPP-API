@@ -12,6 +12,13 @@ function Push-CIPPStandard {
     $Standard = $Item.Standard
     $FunctionName = 'Invoke-CIPPStandard{0}' -f $Standard
     Write-Host "We'll be running $FunctionName"
+    $Rerun = Test-CIPPRerun -Type Standard -Tenant $Tenant -Settings $Item.Settings -API $Standard
+    if ($Rerun) {
+        Write-Host 'Detected rerun. Exiting cleanly'
+        exit 0
+    } else {
+        Write-Host "Rerun is set to false. We'll be running $FunctionName"
+    }
     try {
         & $FunctionName -Tenant $Item.Tenant -Settings $Item.Settings -ErrorAction Stop
     } catch {
