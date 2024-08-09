@@ -27,14 +27,15 @@ Function Invoke-CIPPStandardTeamsGlobalMeetingPolicy {
     .LINK
         https://docs.cipp.app/user-documentation/tenant/standards/edit-standards
     #>
+    ##$Rerun -Type Standard -Tenant $Tenant -Settings $Settings 'TeamsGlobalMeetingPolicy'
 
     param($Tenant, $Settings)
-    $CurrentState = New-TeamsRequest -TenantFilter $Tenant -Cmdlet 'Get-CsTeamsMeetingPolicy' -CmdParams @{Identity = 'Global'}
-                | Select-Object AllowAnonymousUsersToJoinMeeting, AllowAnonymousUsersToStartMeeting, AutoAdmittedUsers, AllowPSTNUsersToBypassLobby, MeetingChatEnabledType, DesignatedPresenterRoleMode, AllowExternalParticipantGiveRequestControl
+    $CurrentState = New-TeamsRequest -TenantFilter $Tenant -Cmdlet 'Get-CsTeamsMeetingPolicy' -CmdParams @{Identity = 'Global' }
+    | Select-Object AllowAnonymousUsersToJoinMeeting, AllowAnonymousUsersToStartMeeting, AutoAdmittedUsers, AllowPSTNUsersToBypassLobby, MeetingChatEnabledType, DesignatedPresenterRoleMode, AllowExternalParticipantGiveRequestControl
 
     if ($null -eq $Settings.DesignatedPresenterRoleMode) { $Settings.DesignatedPresenterRoleMode = $CurrentState.DesignatedPresenterRoleMode }
 
-    $StateIsCorrect =   ($CurrentState.AllowAnonymousUsersToJoinMeeting -eq $false) -and
+    $StateIsCorrect = ($CurrentState.AllowAnonymousUsersToJoinMeeting -eq $false) -and
                         ($CurrentState.AllowAnonymousUsersToStartMeeting -eq $false) -and
                         ($CurrentState.AutoAdmittedUsers -eq 'EveryoneInCompanyExcludingGuests') -and
                         ($CurrentState.AllowPSTNUsersToBypassLobby -eq $false)
@@ -47,13 +48,13 @@ Function Invoke-CIPPStandardTeamsGlobalMeetingPolicy {
             Write-LogMessage -API 'Standards' -tenant $Tenant -message 'Teams Global Policy already set.' -sev Info
         } else {
             $cmdparams = @{
-                Identity = 'Global'
-                AllowAnonymousUsersToJoinMeeting = $false
-                AllowAnonymousUsersToStartMeeting = $false
-                AutoAdmittedUsers = 'EveryoneInCompanyExcludingGuests'
-                AllowPSTNUsersToBypassLobby = $false
-                MeetingChatEnabledType = 'EnabledExceptAnonymous'
-                DesignatedPresenterRoleMode = $Settings.DesignatedPresenterRoleMode
+                Identity                                   = 'Global'
+                AllowAnonymousUsersToJoinMeeting           = $false
+                AllowAnonymousUsersToStartMeeting          = $false
+                AutoAdmittedUsers                          = 'EveryoneInCompanyExcludingGuests'
+                AllowPSTNUsersToBypassLobby                = $false
+                MeetingChatEnabledType                     = 'EnabledExceptAnonymous'
+                DesignatedPresenterRoleMode                = $Settings.DesignatedPresenterRoleMode
                 AllowExternalParticipantGiveRequestControl = $false
             }
 

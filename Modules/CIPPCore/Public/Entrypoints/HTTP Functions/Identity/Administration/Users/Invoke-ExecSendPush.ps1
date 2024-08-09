@@ -52,7 +52,7 @@ Function Invoke-ExecSendPush {
         $SPBody = [pscustomobject]@{
             appId = $MFAAppID
         }
-        $SPID = (New-GraphPostRequest -uri 'https://graph.microsoft.com/v1.0/servicePrincipals' -tenantid $TenantFilter -type POST -body $SPBody -verbose).id
+        $SPID = (New-GraphPostRequest -uri 'https://graph.microsoft.com/v1.0/servicePrincipals' -tenantid $TenantFilter -type POST -body $SPBody ).id
     }
 
 
@@ -64,7 +64,7 @@ Function Invoke-ExecSendPush {
         }
     } | ConvertTo-Json -Depth 5
 
-    $TempPass = (New-GraphPostRequest -uri "https://graph.microsoft.com/v1.0/servicePrincipals/$SPID/addPassword" -tenantid $TenantFilter -type POST -body $PassReqBody -verbose).secretText
+    $TempPass = (New-GraphPostRequest -uri "https://graph.microsoft.com/v1.0/servicePrincipals/$SPID/addPassword" -tenantid $TenantFilter -type POST -body $PassReqBody -AsApp $true).secretText
 
     # Give it a chance to apply
     #Start-Sleep 5
