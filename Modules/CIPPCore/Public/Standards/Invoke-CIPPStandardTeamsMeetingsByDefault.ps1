@@ -28,6 +28,7 @@ function Invoke-CIPPStandardTeamsMeetingsByDefault {
     #>
 
     param($Tenant, $Settings)
+    ##$Rerun -Type Standard -Tenant $Tenant -Settings $Settings 'TeamsMeetingsByDefault'
 
     $CurrentState = (New-ExoRequest -tenantid $Tenant -cmdlet 'Get-OrganizationConfig').OnlineMeetingsByDefaultEnabled
     $WantedState = if ($Settings.state -eq 'true') { $true } else { $false }
