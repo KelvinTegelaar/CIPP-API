@@ -30,6 +30,8 @@ function Invoke-CIPPStandardEnableMailboxAuditing {
     #>
 
     param($Tenant, $Settings)
+    ##$Rerun -Type Standard -Tenant $Tenant -Settings $Settings 'EnableMailboxAuditing'
+
     $AuditState = (New-ExoRequest -tenantid $Tenant -cmdlet 'Get-OrganizationConfig').AuditDisabled
 
     if ($Settings.remediate -eq $true) {

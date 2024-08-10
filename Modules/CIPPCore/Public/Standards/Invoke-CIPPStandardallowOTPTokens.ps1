@@ -27,6 +27,8 @@ function Invoke-CIPPStandardallowOTPTokens {
     #>
 
     param($Tenant, $Settings)
+    #$Rerun -Type Standard -Tenant $Tenant -API 'allowOTPTokens' -Settings $Settings
+
     $CurrentInfo = New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/policies/authenticationMethodsPolicy/authenticationMethodConfigurations/microsoftAuthenticator' -tenantid $Tenant
 
     If ($Settings.remediate -eq $true) {
