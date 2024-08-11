@@ -33,14 +33,16 @@ Function Invoke-CIPPStandardTeamsExternalFileSharing {
     #>
 
     param($Tenant, $Settings)
-    $CurrentState = New-TeamsRequest -TenantFilter $Tenant -Cmdlet 'Get-CsTeamsClientConfiguration'
-                | Select-Object AllowGoogleDrive, AllowShareFile, AllowBox, AllowDropBox, AllowEgnyte
+    ##$Rerun -Type Standard -Tenant $Tenant -Settings $Settings 'TeamsExternalFileSharing'
 
-    if ($null -eq $Settings.AllowGoogleDrive)   { $Settings.AllowGoogleDrive = $false }
-    if ($null -eq $Settings.AllowShareFile)     { $Settings.AllowShareFile = $false }
-    if ($null -eq $Settings.AllowBox)           { $Settings.AllowBox = $false }
-    if ($null -eq $Settings.AllowDropBox)       { $Settings.AllowDropBox = $false }
-    if ($null -eq $Settings.AllowEgnyte)        { $Settings.AllowEgnyte = $false }
+    $CurrentState = New-TeamsRequest -TenantFilter $Tenant -Cmdlet 'Get-CsTeamsClientConfiguration'
+    | Select-Object AllowGoogleDrive, AllowShareFile, AllowBox, AllowDropBox, AllowEgnyte
+
+    if ($null -eq $Settings.AllowGoogleDrive) { $Settings.AllowGoogleDrive = $false }
+    if ($null -eq $Settings.AllowShareFile) { $Settings.AllowShareFile = $false }
+    if ($null -eq $Settings.AllowBox) { $Settings.AllowBox = $false }
+    if ($null -eq $Settings.AllowDropBox) { $Settings.AllowDropBox = $false }
+    if ($null -eq $Settings.AllowEgnyte) { $Settings.AllowEgnyte = $false }
 
     $StateIsCorrect = ($CurrentState.AllowGoogleDrive -eq $Settings.AllowGoogleDrive) -and
                       ($CurrentState.AllowShareFile -eq $Settings.AllowShareFile) -and
