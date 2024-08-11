@@ -7,7 +7,7 @@ function Invoke-CIPPStandardDisableTenantCreation {
     .SYNOPSIS
         (Label) Disable M365 Tenant creation by users
     .DESCRIPTION
-        (Helptext) Restricts creation of M365 tenants to the Global Administrator or Tenant Creator roles. 
+        (Helptext) Restricts creation of M365 tenants to the Global Administrator or Tenant Creator roles.
         (DocsDescription) Users by default are allowed to create M365 tenants. This disables that so only admins can create new M365 tenants.
     .NOTES
         CAT
@@ -29,6 +29,8 @@ function Invoke-CIPPStandardDisableTenantCreation {
     #>
 
     param($Tenant, $Settings)
+    ##$Rerun -Type Standard -Tenant $Tenant -Settings $Settings 'DisableTenantCreation'
+
     $CurrentInfo = New-GraphGetRequest -Uri 'https://graph.microsoft.com/beta/policies/authorizationPolicy/authorizationPolicy' -tenantid $Tenant
     $State = $CurrentInfo.defaultUserRolePermissions.allowedToCreateTenants
 
