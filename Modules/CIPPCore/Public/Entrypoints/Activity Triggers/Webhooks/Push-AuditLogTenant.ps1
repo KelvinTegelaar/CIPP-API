@@ -30,7 +30,7 @@ function Push-AuditLogTenant {
         $LogBundles = Get-CIPPAuditLogContentBundles @ContentBundleQuery
 
         foreach ($Bundle in $LogBundles) {
-            if ($ExistingBundles.RowKey -notcontains $Bundle.contentId) {
+            if ($ExistingBundles.ContentUri -notcontains $Bundle.contentUri) {
                 $NewBundles.Add([PSCustomObject]@{
                         PartitionKey      = $TenantFilter
                         RowKey            = $Bundle.contentId
