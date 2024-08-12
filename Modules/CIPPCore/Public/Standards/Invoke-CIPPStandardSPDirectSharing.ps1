@@ -29,8 +29,10 @@ function Invoke-CIPPStandardSPDirectSharing {
     #>
 
     param($Tenant, $Settings)
+    ##$Rerun -Type Standard -Tenant $Tenant -Settings $Settings 'SPDirectSharing'
+
     $CurrentState = Get-CIPPSPOTenant -TenantFilter $Tenant |
-        Select-Object -Property DefaultSharingLinkType
+    Select-Object -Property DefaultSharingLinkType
 
     $StateIsCorrect = ($CurrentState.DefaultSharingLinkType -eq 'Direct')
 

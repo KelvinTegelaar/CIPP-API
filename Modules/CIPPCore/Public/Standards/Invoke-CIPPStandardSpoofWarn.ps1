@@ -30,6 +30,7 @@ function Invoke-CIPPStandardSpoofWarn {
     #>
 
     param($Tenant, $Settings)
+    ##$Rerun -Type Standard -Tenant $Tenant -Settings $Settings 'SpoofWarn'
 
     $CurrentInfo = (New-ExoRequest -tenantid $Tenant -cmdlet 'Get-ExternalInOutlook')
 

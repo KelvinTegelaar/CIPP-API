@@ -88,24 +88,23 @@ function Get-Tenants {
         $TenantList = $ActiveRelationships | Group-Object -Property customerId | ForEach-Object {
             #Write-Host "Processing $($_.Name) to add to tenant list."
             $ExistingTenantInfo = Get-CIPPAzDataTableEntity @TenantsTable -Filter "PartitionKey eq 'Tenants' and RowKey eq '$($_.Name)'"
-
             if ($TriggerRefresh.IsPresent -and $ExistingTenantInfo.customerId) {
                 # Reset error count
+                Write-Host "Resetting error count for $($_.Name)"
                 $ExistingTenantInfo.GraphErrorCount = 0
                 Add-CIPPAzDataTableEntity @TenantsTable -Entity $ExistingTenantInfo -Force | Out-Null
             }
 
             if ($ExistingTenantInfo -and $ExistingTenantInfo.RequiresRefresh -eq $false) {
-                #Write-Host 'Existing tenant found. We already have it cached, skipping.'
+                Write-Host 'Existing tenant found. We already have it cached, skipping.'
                 $ExistingTenantInfo
                 return
             }
             $LatestRelationship = $_.Group | Sort-Object -Property relationshipEnd | Select-Object -Last 1
             $AutoExtend = ($_.Group | Where-Object { $_.autoExtend -eq $true } | Measure-Object).Count -gt 0
-
-            if (-not $SkipDomains.IsPresent) {
+            if (!$SkipDomains.IsPresent) {
                 try {
-                    #Write-Host "Getting domains for $($_.Name)."
+                    Write-Host "Getting domains for $($_.Name)."
                     $Domains = New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/domains?$top=999' -tenantid $LatestRelationship.customerId -NoAuthCheck:$true -ErrorAction Stop
                     $defaultDomainName = ($Domains | Where-Object { $_.isDefault -eq $true }).id
                     $initialDomainName = ($Domains | Where-Object { $_.isInitial -eq $true }).id
@@ -121,6 +120,7 @@ function Get-Tenants {
                         Write-LogMessage -API 'Get-Tenants' -message "Tried adding $($LatestRelationship.customerId) to tenant list but failed to get domains - $($_.Exception.Message)" -level 'Critical'
                     }
                 }
+                Write-Host 'finished getting domain'
 
                 $Obj = [PSCustomObject]@{
                     PartitionKey             = 'Tenants'
@@ -143,9 +143,12 @@ function Get-Tenants {
                     LastRefresh              = (Get-Date).ToUniversalTime()
                 }
                 if ($Obj.defaultDomainName -eq 'Invalid' -or !$Obj.defaultDomainName) {
-                    continue
+                    Write-Host "We're skipping $($Obj.displayName) as it has an invalid default domain name. Something is up with this instance."
+                    return
                 }
+                Write-Host "Adding $($_.Name) to tenant list."
                 Add-CIPPAzDataTableEntity @TenantsTable -Entity $Obj -Force | Out-Null
+
                 $Obj
             }
         }

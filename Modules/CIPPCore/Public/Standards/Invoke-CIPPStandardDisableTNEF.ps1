@@ -27,6 +27,8 @@ function Invoke-CIPPStandardDisableTNEF {
     #>
 
     param ($Tenant, $Settings)
+    ##$Rerun -Type Standard -Tenant $Tenant -Settings $Settings 'DisableTNEF'
+
     $CurrentState = New-ExoRequest -tenantid $Tenant -cmdlet 'Get-RemoteDomain' -cmdParams @{Identity = 'Default' }
 
     if ($Settings.remediate -eq $true) {
