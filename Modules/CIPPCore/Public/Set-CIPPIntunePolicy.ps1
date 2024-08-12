@@ -32,16 +32,16 @@ function Set-CIPPIntunePolicy {
                 $TemplateTypeURL = 'deviceCompliancePolicies'
                 $CheckExististing = New-GraphGETRequest -uri "https://graph.microsoft.com/beta/deviceManagement/$TemplateTypeURL" -tenantid $tenantFilter
                 $JSON = $RawJSON | ConvertFrom-Json | Select-Object * -ExcludeProperty id, createdDateTime, lastModifiedDateTime, version, 'scheduledActionsForRule@odata.context', '@odata.context'
-                $RawJSON = ConvertTo-Json -InputObject $JSON -Depth 20 -Compress
-                Write-Host $RawJSON
+                $JSON.scheduledActionsForRule = @($JSON.scheduledActionsForRule | Select-Object * -ExcludeProperty 'scheduledActionConfigurations@odata.context')
                 if ($displayname -in $CheckExististing.displayName) {
+                    $RawJSON = ConvertTo-Json -InputObject ($JSON | Select-Object * -ExcludeProperty 'scheduledActionsForRule') -Depth 20 -Compress
                     $PostType = 'edited'
                     $ExistingID = $CheckExististing | Where-Object -Property displayName -EQ $DisplayName
                     $CreateRequest = New-GraphPOSTRequest -uri "https://graph.microsoft.com/beta/deviceManagement/$TemplateTypeURL/$($ExistingID.Id)" -tenantid $tenantFilter -type PATCH -body $RawJSON
                     Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $($tenantFilter) -message "Updated policy $($DisplayName) to template defaults" -Sev 'info'
                 } else {
+                    $RawJSON = ConvertTo-Json -InputObject $JSON -Depth 20 -Compress
                     $PostType = 'added'
-                    $JSON.scheduledActionsForRule = @($JSON.scheduledActionsForRule | Select-Object * -ExcludeProperty 'scheduledActionConfigurations@odata.context')
                     $CreateRequest = New-GraphPOSTRequest -uri "https://graph.microsoft.com/beta/deviceManagement/$TemplateTypeURL" -tenantid $tenantFilter -type POST -body $RawJSON
                     Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $($tenantFilter) -message "Added policy $($DisplayName) via template" -Sev 'info'
                 }
