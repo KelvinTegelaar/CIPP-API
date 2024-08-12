@@ -20,10 +20,9 @@ function Get-CIPPAuthentication {
             }
         } else {
             Connect-AzAccount -Identity
-            $SubscriptionId = ($ENV:WEBSITE_OWNER_NAME -split '\+')[0]
-            $Vault = Get-AzKeyVault -ResourceGroupName $ENV:Website_Resource_Group -SubscriptionId $SubscriptionId
+            $VaultName = $ENV:WEBSITE_DEPLOYMENT_ID -replace '-proc$', ''
             $Variables | ForEach-Object {
-                Set-Item -Path ENV:$_ -Value (Get-AzKeyVaultSecret -VaultName $Vault.VaultName -Name $_ -AsPlainText -ErrorAction Stop) -Force
+                Set-Item -Path ENV:$_ -Value (Get-AzKeyVaultSecret -VaultName $VaultName -Name $_ -AsPlainText -ErrorAction Stop) -Force
             }
         }
         $ENV:SetFromProfile = $true
