@@ -58,11 +58,12 @@ function Set-CIPPDefaultAPDeploymentProfile {
         }
         if (!$Profiles) {
             if ($PSCmdlet.ShouldProcess($displayName, 'Add Autopilot profile')) {
+                $Type = 'Add'
                 $GraphRequest = New-GraphPostRequest -uri 'https://graph.microsoft.com/beta/deviceManagement/windowsAutopilotDeploymentProfiles' -body $body -tenantid $tenantfilter
                 Write-LogMessage -user $User -API $APIName -tenant $($tenantfilter) -message "Added Autopilot profile $($displayname)" -Sev 'Info'
             }
         } else {
-            #patch the profile
+            $Type = 'Edit'
             $null = New-GraphPostRequest -uri "https://graph.microsoft.com/beta/deviceManagement/windowsAutopilotDeploymentProfiles/$($Profiles.id)" -tenantid $tenantfilter -body $body -type PATCH
             $GraphRequest = $Profiles | Select-Object -Last 1
         }
@@ -78,10 +79,10 @@ function Set-CIPPDefaultAPDeploymentProfile {
                 Write-LogMessage -user $User -API $APIName -tenant $($tenantfilter) -message "Assigned autopilot profile $($Displayname) to $AssignTo" -Sev 'Info'
             }
         }
-        "Successfully added profile for $($tenantfilter)"
+        "Successfully $($Type)ed profile for $($tenantfilter)"
     } catch {
         $ErrorMessage = Get-CippException -Exception $_
-        Write-LogMessage -user $User -API $APIName -tenant $($tenantfilter) -message "Failed adding Autopilot Profile $($Displayname). Error: $($ErrorMessage.NormalizedError)" -Sev 'Error' -LogData $ErrorMessage
+        Write-LogMessage -user $User -API $APIName -tenant $($tenantfilter) -message "Failed $($Type)ing Autopilot Profile $($Displayname). Error: $($ErrorMessage.NormalizedError)" -Sev 'Error' -LogData $ErrorMessage
         throw "Failed to add profile for $($tenantfilter): $($ErrorMessage.NormalizedError)"
     }
 }
