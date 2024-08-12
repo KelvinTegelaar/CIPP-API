@@ -21,8 +21,8 @@ function Set-CIPPIntunePolicy {
                 $CheckExististing = New-GraphGETRequest -uri "https://graph.microsoft.com/beta/deviceAppManagement/$TemplateTypeURL" -tenantid $tenantFilter
                 if ($displayname -in $CheckExististing.displayName) {
                     $PostType = 'edited'
-                    $ExistingID = $CheckExististing | Where-Object -Property displayName -EQ $DisplayName
                     $CreateRequest = New-GraphPOSTRequest -uri "https://graph.microsoft.com/beta/deviceAppManagement/$TemplateTypeURL/$($ExistingID.Id)" -tenantid $tenantFilter -type PATCH -body $RawJSON
+                    $CreateRequest = $CheckExististing | Where-Object -Property displayName -EQ $DisplayName
                 } else {
                     $PostType = 'added'
                     $CreateRequest = New-GraphPOSTRequest -uri "https://graph.microsoft.com/beta/deviceAppManagement/$TemplateTypeURL" -tenantid $tenantFilter -type POST -body $RawJSON
@@ -36,9 +36,9 @@ function Set-CIPPIntunePolicy {
                 if ($displayname -in $CheckExististing.displayName) {
                     $RawJSON = ConvertTo-Json -InputObject ($JSON | Select-Object * -ExcludeProperty 'scheduledActionsForRule') -Depth 20 -Compress
                     $PostType = 'edited'
-                    $ExistingID = $CheckExististing | Where-Object -Property displayName -EQ $DisplayName
                     $CreateRequest = New-GraphPOSTRequest -uri "https://graph.microsoft.com/beta/deviceManagement/$TemplateTypeURL/$($ExistingID.Id)" -tenantid $tenantFilter -type PATCH -body $RawJSON
                     Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $($tenantFilter) -message "Updated policy $($DisplayName) to template defaults" -Sev 'info'
+                    $CreateRequest = $CheckExististing | Where-Object -Property displayName -EQ $DisplayName
                 } else {
                     $RawJSON = ConvertTo-Json -InputObject $JSON -Depth 20 -Compress
                     $PostType = 'added'
@@ -52,13 +52,14 @@ function Set-CIPPIntunePolicy {
                 $CheckExististing = New-GraphGETRequest -uri "https://graph.microsoft.com/beta/deviceManagement/$TemplateTypeURL" -tenantid $tenantFilter
                 if ($displayname -in $CheckExististing.displayName) {
                     $ExistingID = $CheckExististing | Where-Object -Property displayName -EQ $displayname
-                    $ExistingData = New-GraphGETRequest -uri "https://graph.microsoft.com/beta/deviceManagement/$TemplateTypeURL('$($existingId.id)')/definitionValues" -tenantid $tenantFilter
+                    $ExistingData = New-GraphGETRequest -uri "https://graph.microsoft.com/beta/deviceManagement/$TemplateTypeURL('$($ExistingID.id)')/definitionValues" -tenantid $tenantFilter
                     $DeleteJson = $RawJSON | ConvertFrom-Json -Depth 10
                     $DeleteJson.deletedIds = @($ExistingData.id)
                     $DeleteJson.added = @()
                     $DeleteJson = ConvertTo-Json -Depth 10 -InputObject $DeleteJson
-                    $DeleteRequest = New-GraphPOSTRequest -uri "https://graph.microsoft.com/beta/deviceManagement/$TemplateTypeURL('$($existingId.id)')/updateDefinitionValues" -tenantid $tenantFilter -type POST -body $DeleteJson
-                    $CreateRequest = New-GraphPOSTRequest -uri "https://graph.microsoft.com/beta/deviceManagement/$TemplateTypeURL('$($existingId.id)')/updateDefinitionValues" -tenantid $tenantFilter -type POST -body $RawJSON
+                    $DeleteRequest = New-GraphPOSTRequest -uri "https://graph.microsoft.com/beta/deviceManagement/$TemplateTypeURL('$($ExistingID.id)')/updateDefinitionValues" -tenantid $tenantFilter -type POST -body $DeleteJson
+                    $CreateRequest = New-GraphPOSTRequest -uri "https://graph.microsoft.com/beta/deviceManagement/$TemplateTypeURL('$($ExistingID.id)')/updateDefinitionValues" -tenantid $tenantFilter -type POST -body $RawJSON
+                    $CreateRequest = $CheckExististing | Where-Object -Property displayName -EQ $DisplayName
                     Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $($tenantFilter) -message "Updated policy $($Displayname) to template defaults" -Sev 'info'
                     $PostType = 'edited'
                 } else {
@@ -110,8 +111,9 @@ function Set-CIPPIntunePolicy {
                 $CheckExististing = New-GraphGETRequest -uri "https://graph.microsoft.com/beta/deviceManagement/$TemplateTypeURL" -tenantid $tenantFilter
                 if ($DisplayName -in $CheckExististing.name) {
                     $PostType = 'edited'
-                    $ExistingID = $CheckExististing | Where-Object -Property Name -EQ $DisplayName
                     $CreateRequest = New-GraphPOSTRequest -uri "https://graph.microsoft.com/beta/deviceManagement/$TemplateTypeURL/$($ExistingID.Id)" -tenantid $tenantFilter -type PUT -body $RawJSON
+                    $CreateRequest = $CheckExististing | Where-Object -Property displayName -EQ $DisplayName
+
                 } else {
                     $PostType = 'added'
                     $CreateRequest = New-GraphPOSTRequest -uri "https://graph.microsoft.com/beta/deviceManagement/$TemplateTypeURL" -tenantid $tenantFilter -type POST -body $RawJSON
@@ -123,6 +125,7 @@ function Set-CIPPIntunePolicy {
         Write-LogMessage -user $ExecutingUser -API $APINAME -tenant $($tenantFilter) -message "$($PostType) policy $($Displayname)" -Sev 'Info'
         if ($AssignTo) {
             Write-Host "Assigning policy to $($AssignTo) with ID $($CreateRequest.id) and type $TemplateTypeURL for tenant $tenantFilter"
+            Write-Host "ID is $($CreateRequest.id)"
             Set-CIPPAssignedPolicy -GroupName $AssignTo -PolicyId $CreateRequest.id -Type $TemplateTypeURL -TenantFilter $tenantFilter
         }
         return "Successfully $($PostType) policy for $($tenantFilter) with display name $($Displayname)"
