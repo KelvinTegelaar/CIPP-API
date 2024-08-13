@@ -20,6 +20,7 @@ function Invoke-CIPPStandardIntuneTemplate {
                 $displayname = $request.body.Displayname
                 $description = $request.body.Description
                 $RawJSON = $Request.body.RawJSON
+                $TemplateTypeURL = $Request.body.Type
 
                 Set-CIPPIntunePolicy -TemplateType $Request.body.Type -Description $description -DisplayName $displayname -RawJSON $RawJSON -AssignTo $null -tenantFilter $Tenant
 
