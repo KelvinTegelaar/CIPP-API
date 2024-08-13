@@ -25,7 +25,6 @@ function Write-LogMessage {
     if (!$tenant) { $tenant = 'None' }
     if (!$username) { $username = 'CIPP' }
     if ($sev -eq 'Debug' -and $env:DebugMode -ne $true) {
-        Write-Information 'Not writing to log file - Debug mode is not enabled.'
         return
     }
     $PartitionKey = (Get-Date -UFormat '%Y%m%d').ToString()

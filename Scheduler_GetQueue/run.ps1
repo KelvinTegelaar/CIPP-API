@@ -27,6 +27,10 @@ $Tasks = foreach ($Tenant in $Tenants) {
     }
 }
 
+if (($Tasks | Measure-Object).Count -eq 0) {
+    return
+}
+
 $Queue = New-CippQueueEntry -Name 'Scheduler' -TotalTasks ($Tasks | Measure-Object).Count
 
 $Batch = foreach ($Task in $Tasks) {
