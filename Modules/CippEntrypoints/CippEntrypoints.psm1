@@ -9,6 +9,7 @@ function Receive-CippHttpTrigger {
         $Request,
         $TriggerMetadata
     )
+    Write-Host "Request: $($Request | ConvertTo-Json -Depth 100 -Compress)"
     # Convert the request to a PSCustomObject because the httpContext is case sensitive since 7.3
     $Request = $Request | ConvertTo-Json -Depth 100 | ConvertFrom-Json
     Set-Location (Get-Item $PSScriptRoot).Parent.Parent.FullName
