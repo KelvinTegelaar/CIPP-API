@@ -7,15 +7,15 @@ function Invoke-CIPPStandardDeletedUserRentention {
     .SYNOPSIS
         (Label) Set deleted user retention time in OneDrive
     .DESCRIPTION
-        (Helptext) Sets the retention period for deleted users OneDrive to the specified number of years. The default is 1 year.
-        (DocsDescription) When a OneDrive user gets deleted, the personal SharePoint site is saved for selected time in years and data can be retrieved from it.
+        (Helptext) Sets the retention period for deleted users OneDrive to the specified period of time. The default is 30 days.
+        (DocsDescription) When a OneDrive user gets deleted, the personal SharePoint site is saved for selected amount of time that data can be retrieved from it.
     .NOTES
         CAT
             SharePoint Standards
         TAG
             "lowimpact"
         ADDEDCOMPONENT
-            {"type":"Select","name":"standards.DeletedUserRentention.Days","label":"Retention in years (Default 1)","values":[{"label":"1 year","value":"365"},{"label":"2 years","value":"730"},{"label":"3 years","value":"1095"},{"label":"4 years","value":"1460"},{"label":"5 years","value":"1825"},{"label":"6 years","value":"2190"},{"label":"7 years","value":"2555"},{"label":"8 years","value":"2920"},{"label":"9 years","value":"3285"},{"label":"10 years","value":"3650"}]}
+            {"type":"Select","name":"standards.DeletedUserRentention.Days","label":"Retention time (Default 30 days)","values":[{"label":"30 days","value":"30"},{"label":"90 days","value":"90"},{"label":"1 year","value":"365"},{"label":"2 years","value":"730"},{"label":"3 years","value":"1095"},{"label":"4 years","value":"1460"},{"label":"5 years","value":"1825"},{"label":"6 years","value":"2190"},{"label":"7 years","value":"2555"},{"label":"8 years","value":"2920"},{"label":"9 years","value":"3285"},{"label":"10 years","value":"3650"}]}
         IMPACT
             Low Impact
         POWERSHELLEQUIVALENT
@@ -50,7 +50,6 @@ function Invoke-CIPPStandardDeletedUserRentention {
     }
 
     $StateSetCorrectly = if ($CurrentInfo.deletedUserPersonalSiteRetentionPeriodInDays -eq $WantedState) { $true } else { $false }
-    $RetentionInYears = $WantedState / 365
 
     If ($Settings.remediate -eq $true) {
         Write-Host 'Time to remediate'
@@ -63,21 +62,21 @@ function Invoke-CIPPStandardDeletedUserRentention {
                 $body = ConvertTo-Json -InputObject $body -Depth 5 -Compress
                 New-GraphPostRequest -tenantid $tenant -Uri 'https://graph.microsoft.com/beta/admin/sharepoint/settings' -AsApp $true -Type PATCH -Body $body -ContentType 'application/json'
 
-                Write-LogMessage -API 'Standards' -tenant $tenant -message "Set deleted user rentention of OneDrive to $RetentionInYears year(s)" -sev Info
+                Write-LogMessage -API 'Standards' -tenant $tenant -message "Set deleted user rentention of OneDrive to $WantedState days(s)" -sev Info
             } catch {
                 $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
-                Write-LogMessage -API 'Standards' -tenant $tenant -message "Failed to set deleted user rentention of OneDrive to $RetentionInYears year(s). Error: $ErrorMessage" -sev Error
+                Write-LogMessage -API 'Standards' -tenant $tenant -message "Failed to set deleted user rentention of OneDrive to $WantedState days(s). Error: $ErrorMessage" -sev Error
             }
         } else {
-            Write-LogMessage -API 'Standards' -tenant $tenant -message "Deleted user rentention of OneDrive is already set to $RetentionInYears year(s)" -sev Info
+            Write-LogMessage -API 'Standards' -tenant $tenant -message "Deleted user rentention of OneDrive is already set to $WantedState days(s)" -sev Info
         }
     }
 
     if ($Settings.alert -eq $true) {
         if ($StateSetCorrectly -eq $true) {
-            Write-LogMessage -API 'Standards' -tenant $tenant -message "Deleted user rentention of OneDrive is set to $RetentionInYears year(s)" -sev Info
+            Write-LogMessage -API 'Standards' -tenant $tenant -message "Deleted user rentention of OneDrive is set to $WantedState days(s)" -sev Info
         } else {
-            Write-LogMessage -API 'Standards' -tenant $tenant -message "Deleted user rentention of OneDrive is not set to $RetentionInYears year(s). Value is: $($CurrentInfo.deletedUserPersonalSiteRetentionPeriodInDays) " -sev Alert
+            Write-LogMessage -API 'Standards' -tenant $tenant -message "Deleted user rentention of OneDrive is not set to $WantedState days(s). Value is: $($CurrentInfo.deletedUserPersonalSiteRetentionPeriodInDays) day(s)." -sev Alert
         }
     }
 }
