@@ -1,9 +1,34 @@
 function Invoke-CIPPStandardDisableGuests {
     <#
     .FUNCTIONALITY
-    Internal
+        Internal
+    .COMPONENT
+        (APIName) DisableGuests
+    .SYNOPSIS
+        (Label) Disable Guest accounts that have not logged on for 90 days
+    .DESCRIPTION
+        (Helptext) Blocks login for guest users that have not logged in for 90 days
+        (DocsDescription) Blocks login for guest users that have not logged in for 90 days
+    .NOTES
+        CAT
+            Entra (AAD) Standards
+        TAG
+            "mediumimpact"
+        ADDEDCOMPONENT
+        IMPACT
+            Medium Impact
+        POWERSHELLEQUIVALENT
+            Graph API
+        RECOMMENDEDBY
+        UPDATECOMMENTBLOCK
+            Run the Tools\Update-StandardsComments.ps1 script to update this comment block
+    .LINK
+        https://docs.cipp.app/user-documentation/tenant/standards/edit-standards
     #>
+
     param($Tenant, $Settings)
+    ##$Rerun -Type Standard -Tenant $Tenant -Settings $Settings 'DisableGuests'
+
     $Lookup = (Get-Date).AddDays(-90).ToUniversalTime().ToString('o')
     $GraphRequest = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/users?`$filter=(signInActivity/lastNonInteractiveSignInDateTime le $Lookup)&`$select=id,UserPrincipalName,signInActivity,mail,userType,accountEnabled" -scope 'https://graph.microsoft.com/.default' -tenantid $Tenant | Where-Object { $_.userType -EQ 'Guest' -and $_.AccountEnabled -EQ $true }
 

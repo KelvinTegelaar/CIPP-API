@@ -1,5 +1,12 @@
 [
   {
+    "description": "Allows the app to impersonate the signed-in user to access the Partner Center API.",
+    "displayName": "Partner Center as User",
+    "id": "1cebfa2a-fb4d-419e-b5f9-839b4383e05a",
+    "origin": "Delegated (Microsoft Partner Center)",
+    "value": "user_impersonation"
+  },
+  {
     "description": "Allows Exchange Management as app",
     "displayName": "Manage Exchange As Application ",
     "id": "dc50a0fb-09a3-484d-be87-e023b12c6440",
@@ -1004,8 +1011,15 @@
     "description": "Allows the app to create, read, update, and delete events of all calendars without a signed-in user.",
     "displayName": "Read and write calendars in all mailboxes",
     "id": "ef54d2bf-783f-4e0f-bca1-3210c0444d99",
-    "origin": "Application",
-    "value": "Calendars.ReadWrite"
+    "origin": "Application (Office 365 Exchange Online)",
+    "value": "Calendars.ReadWrite.All"
+  },
+  {
+    "description": "Allows the app to create, read, update, and delete user's mailbox settings without a signed-in user. Does not include permission to send mail.",
+    "displayName": "Read and write all user mailbox settings",
+    "id": "f9156939-25cd-4ba8-abfe-7fabcf003749",
+    "origin": "Application (Office 365 Exchange Online)",
+    "value": "MailboxSettings.ReadWrite"
   },
   {
     "description": "Allows the app to read your organization's user flows, without a signed-in user.",
@@ -5285,6 +5299,24 @@
     "userConsentDescription": "Allows the app to read Threat and Vulnerability Management vulnerability information on behalf of the signed-in user",
     "userConsentDisplayName": "Read Threat and Vulnerability Management vulnerability information",
     "value": "Exchange.Manage"
+  },
+  {
+    "description": "Allows the app to create, read, update and delete events in all calendars in the organization user has permissions to access. This includes delegate and shared calendars",
+    "displayName": "Read and write user and shared calendars",
+    "id": "bbd1ca91-75e0-4814-ad94-9c5dbbae3415",
+    "Origin": "Delegated (Office 365 Exchange Online)",
+    "userConsentDescription": "Allows the app to read, update, create and delete events in all calendars in your organization you have permissions to access. This includes delegate and shared calendars",
+    "userConsentDisplayName": "Read and write to your and shared calendars",
+    "value": "Calendars.ReadWrite.All"
+  },
+  {
+    "description": "Allows the app to create, read, update, and delete user's mailbox settings. Does not include permission to send mail.",
+    "displayName": "Read and write user mailbox settings",
+    "id": "2e83d72d-8895-4b66-9eea-abb43449ab8b",
+    "Origin": "Delegated (Office 365 Exchange Online)",
+    "userConsentDescription": "Allows the app to read, update, create, and delete your mailbox settings.",
+    "userConsentDisplayName": "Read and write to your mailbox settings",
+    "value": "MailboxSettings.ReadWrite"
   },
   {
     "description": "Allows the app to have full control of all site collections on behalf of the signed-in user.",

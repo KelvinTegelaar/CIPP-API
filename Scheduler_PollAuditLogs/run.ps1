@@ -1,20 +1,20 @@
 param($Timer)
 
 try {
+    $ConfigTable = Get-CIPPTable -tablename Config
+    $Config = Get-CIPPAzDataTableEntity @ConfigTable -Filter "PartitionKey eq 'OffloadFunctions' and RowKey eq 'OffloadFunctions'"
+
+    if ($Config -and $Config.state -eq $true) {
+        Write-Host 'Offload functions are enabled. Exiting.'
+        return 0
+    }
+
     $webhookTable = Get-CIPPTable -tablename webhookTable
-    $Webhooks = Get-CIPPAzDataTableEntity @webhookTable -Filter "Version eq '3'" | Where-Object { $_.Resource -match '^Audit' }
+    $Webhooks = Get-CIPPAzDataTableEntity @webhookTable -Filter "Version eq '3'" | Where-Object { $_.Resource -match '^Audit' -and $_.Status -ne 'Disabled' }
     if (($Webhooks | Measure-Object).Count -eq 0) {
         Write-Host 'No webhook subscriptions found. Exiting.'
         return
     }
-
-    <#try {
-        $RunningQueue = Invoke-ListCippQueue | Where-Object { $_.Reference -eq 'AuditLogCollection' -and $_.Status -ne 'Completed' -and $_.Status -ne 'Failed' -and $_.Timestamp.DateTime.ToLocalTime() -lt (Get-Date).AddMinutes(-10) }
-        if ($RunningQueue) {
-            Write-Host 'Audit log collection already running'
-            return
-        }
-    } catch {}#>
 
     $StartTime = (Get-Date).AddMinutes(-30)
     $EndTime = Get-Date

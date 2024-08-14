@@ -1,9 +1,33 @@
 function Invoke-CIPPStandardintuneRequireMFA {
     <#
     .FUNCTIONALITY
-    Internal
+        Internal
+    .COMPONENT
+        (APIName) intuneRequireMFA
+    .SYNOPSIS
+        (Label) Require Multifactor Authentication to register or join devices with Microsoft Entra
+    .DESCRIPTION
+        (Helptext) Requires MFA for all users to register devices with Intune. This is useful when not using Conditional Access.
+        (DocsDescription) Requires MFA for all users to register devices with Intune. This is useful when not using Conditional Access.
+    .NOTES
+        CAT
+            Intune Standards
+        TAG
+            "mediumimpact"
+        IMPACT
+            Medium Impact
+        POWERSHELLEQUIVALENT
+            Update-MgBetaPolicyDeviceRegistrationPolicy
+        RECOMMENDEDBY
+        UPDATECOMMENTBLOCK
+            Run the Tools\Update-StandardsComments.ps1 script to update this comment block
+    .LINK
+        https://docs.cipp.app/user-documentation/tenant/standards/edit-standards
     #>
+
     param($Tenant, $Settings)
+    ##$Rerun -Type Standard -Tenant $Tenant -Settings $Settings 'intuneRequireMFA'
+
     $PreviousSetting = New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/policies/deviceRegistrationPolicy' -tenantid $Tenant
 
     If ($Settings.remediate -eq $true) {

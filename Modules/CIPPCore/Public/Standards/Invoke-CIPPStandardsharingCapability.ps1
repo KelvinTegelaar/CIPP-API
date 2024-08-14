@@ -1,9 +1,36 @@
 function Invoke-CIPPStandardsharingCapability {
     <#
     .FUNCTIONALITY
-    Internal
+        Internal
+    .COMPONENT
+        (APIName) sharingCapability
+    .SYNOPSIS
+        (Label) Set Sharing Level for OneDrive and Sharepoint
+    .DESCRIPTION
+        (Helptext) Sets the default sharing level for OneDrive and Sharepoint. This is a tenant wide setting and overrules any settings set on the site level
+        (DocsDescription) Sets the default sharing level for OneDrive and Sharepoint. This is a tenant wide setting and overrules any settings set on the site level
+    .NOTES
+        CAT
+            SharePoint Standards
+        TAG
+            "highimpact"
+            "CIS"
+        ADDEDCOMPONENT
+            {"type":"Select","label":"Select Sharing Level","name":"standards.sharingCapability.Level","values":[{"label":"Users can share only with people in the organization. No external sharing is allowed.","value":"disabled"},{"label":"Users can share with new and existing guests. Guests must sign in or provide a verification code.","value":"externalUserSharingOnly"},{"label":"Users can share with anyone by using links that do not require sign-in.","value":"externalUserAndGuestSharing"},{"label":"Users can share with existing guests (those already in the directory of the organization).","value":"existingExternalUserSharingOnly"}]}
+        IMPACT
+            High Impact
+        POWERSHELLEQUIVALENT
+            Update-MgBetaAdminSharepointSetting
+        RECOMMENDEDBY
+            "CIS"
+        UPDATECOMMENTBLOCK
+            Run the Tools\Update-StandardsComments.ps1 script to update this comment block
+    .LINK
+        https://docs.cipp.app/user-documentation/tenant/standards/edit-standards
     #>
+
     param($Tenant, $Settings)
+    ##$Rerun -Type Standard -Tenant $Tenant -Settings $Settings 'sharingCapability'
 
     $CurrentInfo = New-GraphGetRequest -Uri 'https://graph.microsoft.com/beta/admin/sharepoint/settings' -tenantid $Tenant -AsApp $true
 
@@ -12,7 +39,7 @@ function Invoke-CIPPStandardsharingCapability {
     }
 
     # Input validation
-    if (([string]::IsNullOrWhiteSpace($Settings.sharingCapability) -or $Settings.sharingCapability -eq 'Select a value') -and ($Settings.remediate -eq $true -or $Settings.alert -eq $true)) {
+    if (([string]::IsNullOrWhiteSpace($Settings.Level -or $Settings.Level -eq 'Select a value') -and ($Settings.remediate -eq $true -or $Settings.alert -eq $true))) {
         Write-LogMessage -API 'Standards' -tenant $tenant -message 'sharingCapability: Invalid sharingCapability parameter set' -sev Error
         Return
     }

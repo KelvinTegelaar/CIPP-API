@@ -1,18 +1,52 @@
 function Invoke-CIPPStandardSafeAttachmentPolicy {
     <#
     .FUNCTIONALITY
-    Internal
+        Internal
+    .COMPONENT
+        (APIName) SafeAttachmentPolicy
+    .SYNOPSIS
+        (Label) Default Safe Attachment Policy
+    .DESCRIPTION
+        (Helptext) This creates a Safe Attachment policy
+        (DocsDescription) This creates a Safe Attachment policy
+    .NOTES
+        CAT
+            Defender Standards
+        TAG
+            "lowimpact"
+            "CIS"
+            "mdo_safedocuments"
+            "mdo_commonattachmentsfilter"
+            "mdo_safeattachmentpolicy"
+        ADDEDCOMPONENT
+            {"type":"Select","label":"Action","name":"standards.SafeAttachmentPolicy.Action","values":[{"label":"Allow","value":"Allow"},{"label":"Block","value":"Block"},{"label":"DynamicDelivery","value":"DynamicDelivery"}]}
+            {"type":"Select","label":"QuarantineTag","name":"standards.SafeAttachmentPolicy.QuarantineTag","values":[{"label":"AdminOnlyAccessPolicy","value":"AdminOnlyAccessPolicy"},{"label":"DefaultFullAccessPolicy","value":"DefaultFullAccessPolicy"},{"label":"DefaultFullAccessWithNotificationPolicy","value":"DefaultFullAccessWithNotificationPolicy"}]}
+            {"type":"boolean","label":"Redirect","name":"standards.SafeAttachmentPolicy.Redirect"}
+            {"type":"input","name":"standards.SafeAttachmentPolicy.RedirectAddress","label":"Redirect Address"}
+        IMPACT
+            Low Impact
+        POWERSHELLEQUIVALENT
+            Set-SafeAttachmentPolicy or New-SafeAttachmentPolicy
+        RECOMMENDEDBY
+            "CIS"
+        UPDATECOMMENTBLOCK
+            Run the Tools\Update-StandardsComments.ps1 script to update this comment block
+    .LINK
+        https://docs.cipp.app/user-documentation/tenant/standards/edit-standards
     #>
 
     param($Tenant, $Settings)
+    ##$Rerun -Type Standard -Tenant $Tenant -Settings $Settings 'SafeAttachmentPolicy'
+
     $PolicyName = 'Default Safe Attachment Policy'
 
     $CurrentState = New-ExoRequest -tenantid $Tenant -cmdlet 'Get-SafeAttachmentPolicy' |
-        Where-Object -Property Name -EQ $PolicyName |
-        Select-Object Name, Enable, Action, QuarantineTag, Redirect, RedirectAddress
+    Where-Object -Property Name -EQ $PolicyName |
+    Select-Object Name, Enable, Action, QuarantineTag, Redirect, RedirectAddress
 
     $StateIsCorrect = ($CurrentState.Name -eq $PolicyName) -and
                       ($CurrentState.Enable -eq $true) -and
+                      ($CurrentState.Action -eq $Settings.Action) -and
                       ($CurrentState.QuarantineTag -eq $Settings.QuarantineTag) -and
                       ($CurrentState.Redirect -eq $Settings.Redirect) -and
                       (($null -eq $Settings.RedirectAddress) -or ($CurrentState.RedirectAddress -eq $Settings.RedirectAddress))
@@ -20,8 +54,8 @@ function Invoke-CIPPStandardSafeAttachmentPolicy {
     $AcceptedDomains = New-ExoRequest -tenantid $Tenant -cmdlet 'Get-AcceptedDomain'
 
     $RuleState = New-ExoRequest -tenantid $Tenant -cmdlet 'Get-SafeAttachmentRule' |
-        Where-Object -Property Name -EQ "CIPP $PolicyName" |
-        Select-Object Name, SafeAttachmentPolicy, Priority, RecipientDomainIs
+    Where-Object -Property Name -EQ "CIPP $PolicyName" |
+    Select-Object Name, SafeAttachmentPolicy, Priority, RecipientDomainIs
 
     $RuleStateIsCorrect = ($RuleState.Name -eq "CIPP $PolicyName") -and
                           ($RuleState.SafeAttachmentPolicy -eq $PolicyName) -and
@@ -35,6 +69,7 @@ function Invoke-CIPPStandardSafeAttachmentPolicy {
         } else {
             $cmdparams = @{
                 Enable          = $true
+                Action          = $Settings.Action
                 QuarantineTag   = $Settings.QuarantineTag
                 Redirect        = $Settings.Redirect
                 RedirectAddress = $Settings.RedirectAddress

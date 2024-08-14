@@ -25,7 +25,7 @@ Function Invoke-ExecRestoreBackup {
         Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -message 'Created backup' -Sev 'Debug'
 
         $body = [pscustomobject]@{
-            'Results' = 'Succesfully restored backup.'
+            'Results' = 'Successfully restored backup.'
         }
     } catch {
         Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -message "Failed to create backup: $($_.Exception.Message)" -Sev 'Error'

@@ -4,6 +4,7 @@ function Invoke-CIPPStandardAPConfig {
     Internal
     #>
     param($Tenant, $Settings)
+    ##$Rerun -Type Standard -Tenant $Tenant -Settings $Settings 'APConfig'
 
     If ($Settings.remediate -eq $true) {
 
@@ -20,7 +21,7 @@ function Invoke-CIPPStandardAPConfig {
                 DeploymentMode     = $DeploymentMode
                 assignto           = $settings.Assignto
                 devicenameTemplate = $Settings.DeviceNameTemplate
-                allowWhiteGlove    = $Settings.allowWhiteGlove
+                allowWhiteGlove    = $Settings.allowWhiteglove
                 CollectHash        = $Settings.CollectHash
                 hideChangeAccount  = $Settings.HideChangeAccount
                 hidePrivacy        = $Settings.HidePrivacy

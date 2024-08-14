@@ -1,9 +1,37 @@
 function Invoke-CIPPStandardOauthConsent {
     <#
     .FUNCTIONALITY
-    Internal
+        Internal
+    .COMPONENT
+        (APIName) OauthConsent
+    .SYNOPSIS
+        (Label) Require admin consent for applications (Prevent OAuth phishing)
+    .DESCRIPTION
+        (Helptext) Disables users from being able to consent to applications, except for those specified in the field below
+        (DocsDescription) Requires users to get administrator consent before sharing data with applications. You can preapprove specific applications.
+    .NOTES
+        CAT
+            Entra (AAD) Standards
+        TAG
+            "mediumimpact"
+            "CIS"
+        ADDEDCOMPONENT
+            {"type":"input","name":"standards.OauthConsent.AllowedApps","label":"Allowed application IDs, comma separated"}
+        IMPACT
+            Medium Impact
+        POWERSHELLEQUIVALENT
+            Update-MgPolicyAuthorizationPolicy
+        RECOMMENDEDBY
+            "CIS"
+        UPDATECOMMENTBLOCK
+            Run the Tools\Update-StandardsComments.ps1 script to update this comment block
+    .LINK
+        https://docs.cipp.app/user-documentation/tenant/standards/edit-standards
     #>
+
     param($tenant, $settings)
+    ##$Rerun -Type Standard -Tenant $Tenant -Settings $Settings 'OauthConsent'
+
     $State = New-GraphGetRequest -Uri 'https://graph.microsoft.com/beta/policies/authorizationPolicy/authorizationPolicy' -tenantid $tenant
     $StateIsCorrect = if ($State.permissionGrantPolicyIdsAssignedToDefaultUserRole -eq 'managePermissionGrantsForSelf.cipp-consent-policy') { $true } else { $false }
 
