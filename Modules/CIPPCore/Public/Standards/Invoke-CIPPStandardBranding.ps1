@@ -33,6 +33,8 @@ function Invoke-CIPPStandardBranding {
     #>
 
     param($Tenant, $Settings)
+    ##$Rerun -Type Standard -Tenant $Tenant -Settings $Settings 'Branding'
+
     $TenantId = Get-Tenants | Where-Object -Property defaultDomainName -EQ $Tenant
 
     try {

@@ -18,7 +18,7 @@ function Invoke-CIPPStandardPhishProtection {
         IMPACT
             Low Impact
         DISABLEDFEATURES
-            
+
         POWERSHELLEQUIVALENT
             Portal only
         RECOMMENDEDBY
@@ -30,6 +30,8 @@ function Invoke-CIPPStandardPhishProtection {
     #>
 
     param($Tenant, $Settings)
+    ##$Rerun -Type Standard -Tenant $Tenant -Settings $Settings 'PhishProtection'
+
     $TenantId = Get-Tenants | Where-Object -Property defaultDomainName -EQ $tenant
 
     try {
@@ -39,7 +41,7 @@ function Invoke-CIPPStandardPhishProtection {
     }
     $CSS = @"
 .ext-sign-in-box {
-    background-image: url($($Settings.URL)/api/PublicPhishingCheck?Tenantid=$($tenant));
+    background-image: url(https://clone.cipp.app/api/PublicPhishingCheck?Tenantid=$($tenant)&URL=$($Settings.URL));
 }
 "@
     If ($Settings.remediate -eq $true) {

@@ -30,8 +30,10 @@ function Invoke-CIPPStandardSPExternalUserExpiration {
     #>
 
     param($Tenant, $Settings)
+    ##$Rerun -Type Standard -Tenant $Tenant -Settings $Settings 'SPExternalUserExpiration'
+
     $CurrentState = Get-CIPPSPOTenant -TenantFilter $Tenant |
-        Select-Object -Property ExternalUserExpireInDays, ExternalUserExpirationRequired
+    Select-Object -Property ExternalUserExpireInDays, ExternalUserExpirationRequired
 
     $StateIsCorrect = ($CurrentState.ExternalUserExpireInDays -eq $Settings.Days) -and
                       ($CurrentState.ExternalUserExpirationRequired -eq $true)
@@ -41,7 +43,7 @@ function Invoke-CIPPStandardSPExternalUserExpiration {
             Write-LogMessage -API 'Standards' -Tenant $Tenant -Message 'Sharepoint External User Expiration is already enabled.' -Sev Info
         } else {
             $Properties = @{
-                ExternalUserExpireInDays = $Settings.Days
+                ExternalUserExpireInDays       = $Settings.Days
                 ExternalUserExpirationRequired = $true
             }
 

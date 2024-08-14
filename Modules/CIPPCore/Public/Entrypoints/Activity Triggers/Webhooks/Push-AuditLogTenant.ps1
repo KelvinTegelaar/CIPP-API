@@ -1,14 +1,23 @@
 function Push-AuditLogTenant {
     Param($Item)
 
+    # Get Table contexts
     $AuditBundleTable = Get-CippTable -tablename 'AuditLogBundles'
-    $SchedulerConfig = Get-CIPPTable -TableName 'SchedulerConfig'
-    $CIPPURL = Get-CIPPAzDataTableEntity @SchedulerConfig -Filter "PartitionKey eq 'webhookcreation'" | Select-Object -First 1 -ExpandProperty CIPPURL
+    $SchedulerConfig = Get-CippTable -TableName 'SchedulerConfig'
     $WebhookTable = Get-CippTable -tablename 'webhookTable'
+    $ConfigTable = Get-CippTable -TableName 'WebhookRules'
+
+    # Query CIPPURL for linking
+    $CIPPURL = Get-CIPPAzDataTableEntity @SchedulerConfig -Filter "PartitionKey eq 'webhookcreation'" | Select-Object -First 1 -ExpandProperty CIPPURL
+
+    # Get all webhooks for the tenant
     $Webhooks = Get-CIPPAzDataTableEntity @WebhookTable -Filter "PartitionKey eq '$($Item.TenantFilter)' and Version eq '3'" | Where-Object { $_.Resource -match '^Audit' }
-    $ExistingBundles = Get-CIPPAzDataTableEntity @AuditBundleTable -Filter "PartitionKey eq '$($Item.TenantFilter)' and ContentType eq '$ContentType'"
-    $ConfigTable = Get-CIPPTable -TableName 'WebhookRules'
+
+    # Get webhook rules
     $ConfigEntries = Get-CIPPAzDataTableEntity @ConfigTable
+
+    # Date filter for existing bundles
+    $LastHour = (Get-Date).AddHours(-1).ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ss')
 
     $NewBundles = [System.Collections.Generic.List[object]]::new()
     foreach ($Webhook in $Webhooks) {
@@ -28,6 +37,7 @@ function Push-AuditLogTenant {
             EndTime      = $Item.EndTime
         }
         $LogBundles = Get-CIPPAuditLogContentBundles @ContentBundleQuery
+        $ExistingBundles = Get-CIPPAzDataTableEntity @AuditBundleTable -Filter "PartitionKey eq '$($Item.TenantFilter)' and ContentType eq '$LogType' and Timestamp ge datetime'$($LastHour)'"
 
         foreach ($Bundle in $LogBundles) {
             if ($ExistingBundles.RowKey -notcontains $Bundle.contentId) {
@@ -61,5 +71,4 @@ function Push-AuditLogTenant {
         $InstanceId = Start-NewOrchestration -FunctionName 'CIPPOrchestrator' -InputObject ($InputObject | ConvertTo-Json -Depth 5 -Compress)
         Write-Host "Started orchestration with ID = '$InstanceId'"
     }
-
 }
