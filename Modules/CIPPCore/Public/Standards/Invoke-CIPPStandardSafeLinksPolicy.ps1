@@ -1,15 +1,46 @@
 function Invoke-CIPPStandardSafeLinksPolicy {
     <#
     .FUNCTIONALITY
-    Internal
+        Internal
+    .COMPONENT
+        (APIName) SafeLinksPolicy
+    .SYNOPSIS
+        (Label) Default SafeLinks Policy
+    .DESCRIPTION
+        (Helptext) This creates a safelink policy that automatically scans, tracks, and and enables safe links for Email, Office, and Teams for both external and internal senders
+        (DocsDescription) This creates a safelink policy that automatically scans, tracks, and and enables safe links for Email, Office, and Teams for both external and internal senders
+    .NOTES
+        CAT
+            Defender Standards
+        TAG
+            "lowimpact"
+            "CIS"
+            "mdo_safelinksforemail"
+            "mdo_safelinksforOfficeApps"
+        ADDEDCOMPONENT
+            {"type":"boolean","label":"AllowClickThrough","name":"standards.SafeLinksPolicy.AllowClickThrough"}
+            {"type":"boolean","label":"DisableUrlRewrite","name":"standards.SafeLinksPolicy.DisableUrlRewrite"}
+            {"type":"boolean","label":"EnableOrganizationBranding","name":"standards.SafeLinksPolicy.EnableOrganizationBranding"}
+        IMPACT
+            Low Impact
+        POWERSHELLEQUIVALENT
+            Set-SafeLinksPolicy or New-SafeLinksPolicy
+        RECOMMENDEDBY
+            "CIS"
+        UPDATECOMMENTBLOCK
+            Run the Tools\Update-StandardsComments.ps1 script to update this comment block
+    .LINK
+        https://docs.cipp.app/user-documentation/tenant/standards/edit-standards
     #>
 
     param($Tenant, $Settings)
+    ##$Rerun -Type Standard -Tenant $Tenant -Settings $Settings 'SafeLinksPolicy'
+
     $PolicyName = 'Default SafeLinks Policy'
 
     $CurrentState = New-ExoRequest -tenantid $Tenant -cmdlet 'Get-SafeLinksPolicy' |
-        Where-Object -Property Name -EQ $PolicyName |
-        Select-Object Name, EnableSafeLinksForEmail, EnableSafeLinksForTeams, EnableSafeLinksForOffice, TrackClicks, AllowClickThrough, ScanUrls, EnableForInternalSenders, DeliverMessageAfterScan, DisableUrlRewrite, EnableOrganizationBranding
+    Where-Object -Property Name -EQ $PolicyName |
+    Select-Object Name, EnableSafeLinksForEmail, EnableSafeLinksForTeams, EnableSafeLinksForOffice, TrackClicks, AllowClickThrough, ScanUrls, EnableForInternalSenders, DeliverMessageAfterScan, DisableUrlRewrite, EnableOrganizationBranding
 
     $StateIsCorrect = ($CurrentState.Name -eq $PolicyName) -and
                       ($CurrentState.EnableSafeLinksForEmail -eq $true) -and
@@ -26,8 +57,8 @@ function Invoke-CIPPStandardSafeLinksPolicy {
     $AcceptedDomains = New-ExoRequest -tenantid $Tenant -cmdlet 'Get-AcceptedDomain'
 
     $RuleState = New-ExoRequest -tenantid $Tenant -cmdlet 'Get-SafeLinksRule' |
-        Where-Object -Property Name -EQ "CIPP $PolicyName" |
-        Select-Object Name, SafeLinksPolicy, Priority, RecipientDomainIs
+    Where-Object -Property Name -EQ "CIPP $PolicyName" |
+    Select-Object Name, SafeLinksPolicy, Priority, RecipientDomainIs
 
     $RuleStateIsCorrect = ($RuleState.Name -eq "CIPP $PolicyName") -and
                           ($RuleState.SafeLinksPolicy -eq $PolicyName) -and

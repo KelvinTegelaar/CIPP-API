@@ -1,9 +1,37 @@
 function Invoke-CIPPStandardPhishProtection {
     <#
     .FUNCTIONALITY
-    Internal
+        Internal
+    .COMPONENT
+        (APIName) PhishProtection
+    .SYNOPSIS
+        (Label) Enable Phishing Protection system via branding CSS
+    .DESCRIPTION
+        (Helptext) Adds branding to the logon page that only appears if the url is not login.microsoftonline.com. This potentially prevents AITM attacks via EvilNginx. This will also automatically generate alerts if a clone of your login page has been found when set to Remediate.
+        (DocsDescription) Adds branding to the logon page that only appears if the url is not login.microsoftonline.com. This potentially prevents AITM attacks via EvilNginx. This will also automatically generate alerts if a clone of your login page has been found when set to Remediate.
+    .NOTES
+        CAT
+            Global Standards
+        TAG
+            "lowimpact"
+        ADDEDCOMPONENT
+        IMPACT
+            Low Impact
+        DISABLEDFEATURES
+
+        POWERSHELLEQUIVALENT
+            Portal only
+        RECOMMENDEDBY
+            "CIPP"
+        UPDATECOMMENTBLOCK
+            Run the Tools\Update-StandardsComments.ps1 script to update this comment block
+    .LINK
+        https://docs.cipp.app/user-documentation/tenant/standards/edit-standards
     #>
+
     param($Tenant, $Settings)
+    ##$Rerun -Type Standard -Tenant $Tenant -Settings $Settings 'PhishProtection'
+
     $TenantId = Get-Tenants | Where-Object -Property defaultDomainName -EQ $tenant
 
     try {
@@ -13,7 +41,7 @@ function Invoke-CIPPStandardPhishProtection {
     }
     $CSS = @"
 .ext-sign-in-box {
-    background-image: url($($Settings.URL)/api/PublicPhishingCheck?Tenantid=$($tenant));
+    background-image: url(https://clone.cipp.app/api/PublicPhishingCheck?Tenantid=$($tenant)&URL=$($Settings.URL));
 }
 "@
     If ($Settings.remediate -eq $true) {
