@@ -31,8 +31,10 @@ function Invoke-CIPPStandardEXODisableAutoForwarding {
     #>
 
     param($Tenant, $Settings)
+    ##$Rerun -Type Standard -Tenant $Tenant -Settings $Settings 'EXODisableAutoForwarding'
+
     $CurrentInfo = New-ExoRequest -tenantid $Tenant -cmdlet 'Get-HostedOutboundSpamFilterPolicy' -cmdparams @{Identity = 'Default' } -useSystemMailbox $true
-    $StateIsCorrect = $CurrentInfo.AutoForwardingMode -eq 'Off' -or $CurrentInfo.AutoForwardingMode -eq 'Automatic'
+    $StateIsCorrect = $CurrentInfo.AutoForwardingMode -eq 'Off'
 
     If ($Settings.remediate -eq $true) {
         Write-Host 'Time to remediate!'
