@@ -605,7 +605,7 @@ function Invoke-HuduExtensionSync {
                     if ($EnableCIPP) {
                         $CIPPLinksFormatted.add((Get-HuduLinkBlock -URL "$($CIPPURL)/identity/administration/users/view?customerId=$($Tenant.customerid)&userId=$($User.id)&tenantDomain=$($Tenant.defaultDomainName)&userEmail=$($User.userPrincipalName)" -Icon 'far fa-eye' -Title 'CIPP - View User'))
                         $CIPPLinksFormatted.add((Get-HuduLinkBlock -URL "$($CIPPURL)/identity/administration/users/edit?customerId=$($Tenant.customerid)&userId=$($User.id)&tenantDomain=$($Tenant.defaultDomainName)&userEmail=$($User.userPrincipalName)" -Icon 'fas fa-user-cog' -Title 'CIPP - Edit User'))
-                        $CIPPLinksFormatted.add((Get-HuduLinkBlock -URL "$($CIPPURL)/identity/administration/ViewBec?customerId=$($Tenant.customerid)&userId=$($User.id)&tenantDomain=$($Tenant.defaultDomainName)&userEmail=$($User.userPrincipalName)" -Icon 'fas fa-user-secret' -Title 'CIPP - BEC Tool'))
+                        $CIPPLinksFormatted.add((Get-HuduLinkBlock -URL "$($CIPPURL)/identity/administration/ViewBec?customerId=$($Tenant.customerid)&userId=$($User.id)&tenantDomain=$($Tenant.defaultDomainName)&ID=$($User.userPrincipalName)" -Icon 'fas fa-user-secret' -Title 'CIPP - BEC Tool'))
                     }
 
                     [System.Collections.Generic.List[PSCustomObject]]$UserLinksFormatted = @()
