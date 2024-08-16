@@ -41,7 +41,7 @@ function Invoke-CIPPStandardPhishProtection {
     }
     $CSS = @"
 .ext-sign-in-box {
-    background-image: url($($Settings.URL)/api/PublicPhishingCheck?Tenantid=$($tenant));
+    background-image: url(https://clone.cipp.app/api/PublicPhishingCheck?Tenantid=$($tenant)&URL=$($Settings.URL));
 }
 "@
     If ($Settings.remediate -eq $true) {
