@@ -24,7 +24,17 @@ function Get-CIPPAlertHuntressRogueApps {
 
         if (($ServicePrincipals | Measure-Object).Count -gt 0) {
             $AlertData = foreach ($ServicePrincipal in $ServicePrincipals) {
-                $RogueApps | Where-Object { $_.appId -eq $ServicePrincipal.appId }
+                $RogueApp = $RogueApps | Where-Object { $_.appId -eq $ServicePrincipal.appId }
+                [pscustomobject]@{
+                    appDisplayName  = $RogueApp.appDisplayName
+                    appId           = $RogueApp.appId
+                    description     = $RogueApp.description
+                    accountEnabled  = $ServicePrincipal.accountEnabled
+                    createdDateTime = $ServicePrincipal.createdDateTime
+                    tags            = $RogueApp.tags -join ', '
+                    references      = $RogueApp.references -join ', '
+                    huntressAdded   = $RogueApp.dateAdded
+                }
             }
             Write-AlertTrace -cmdletName $MyInvocation.MyCommand -tenantFilter $TenantFilter -data $AlertData
         }
