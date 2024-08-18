@@ -136,7 +136,7 @@ Function Invoke-ExecJITAdmin {
             }
         }
 
-        $Parameters = [pscustomobject]@{
+        $Parameters = @{
             TenantFilter = $Request.Body.TenantFilter
             User         = @{
                 'UserPrincipalName' = $Username
@@ -153,7 +153,7 @@ Function Invoke-ExecJITAdmin {
                     value = 'Set-CIPPUserJITAdmin'
                     label = 'Set-CIPPUserJITAdmin'
                 }
-                Parameters    = $Parameters
+                Parameters    = [pscustomobject]$Parameters
                 ScheduledTime = $Request.Body.StartDate
                 PostExecution = @{
                     Webhook = [bool]$Request.Body.PostExecution.Webhook
