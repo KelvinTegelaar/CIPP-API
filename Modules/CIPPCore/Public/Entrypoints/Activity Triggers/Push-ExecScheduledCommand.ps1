@@ -11,7 +11,7 @@ function Push-ExecScheduledCommand {
     $task = $Item.TaskInfo
     $commandParameters = $Item.Parameters | ConvertTo-Json -Depth 10 | ConvertFrom-Json -AsHashtable
 
-    $tenant = $Item.Parameters['TenantFilter']
+    $tenant = $Item.Parameters.TenantFilter
     Write-Host "Started Task: $($Item.Command) for tenant: $tenant"
     try {
         try {
