@@ -100,6 +100,14 @@ function Push-ExecScheduledCommand {
             '(\d+)d$' { [int64]$matches[1] * 86400 }
             default { throw "Unsupported recurrence format: $($task.Recurrence)" }
         }
+
+        if ($secondsToAdd -gt 0) {
+            $unixtimeNow = [int64](([datetime]::UtcNow) - (Get-Date '1/1/1970')).TotalSeconds
+            if ([int64]$task.ScheduledTime -lt ($unixtimeNow - $secondsToAdd)) {
+                $task.ScheduledTime = $unixtimeNow
+            }
+        }
+
         $nextRunUnixTime = [int64]$task.ScheduledTime + [int64]$secondsToAdd
         Write-Host "The job is recurring. It was scheduled for $($task.ScheduledTime). The next runtime should be $nextRunUnixTime"
         Update-AzDataTableEntity @Table -Entity @{
