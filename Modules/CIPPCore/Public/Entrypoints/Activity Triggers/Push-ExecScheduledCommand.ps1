@@ -4,6 +4,7 @@ function Push-ExecScheduledCommand {
         Entrypoint
     #>
     param($Item)
+    $item = $Item | ConvertTo-Json -Depth 100 | ConvertFrom-Json
     Write-Host "We are going to be running a scheduled task: $($Item.TaskInfo | ConvertTo-Json -Depth 10)"
 
     $Table = Get-CippTable -tablename 'ScheduledTasks'
@@ -100,7 +101,7 @@ function Push-ExecScheduledCommand {
             default { throw "Unsupported recurrence format: $($task.Recurrence)" }
         }
         $nextRunUnixTime = [int64]$task.ScheduledTime + [int64]$secondsToAdd
-        Write-Host "The job is recurring and should occur again at: $nextRunUnixTime"
+        Write-Host "The job is recurring. It was scheduled for $($task.ScheduledTime). The next runtime should be $nextRunUnixTime"
         Update-AzDataTableEntity @Table -Entity @{
             PartitionKey  = $task.PartitionKey
             RowKey        = $task.RowKey
