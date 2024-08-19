@@ -75,7 +75,7 @@ function Push-ExecScheduledCommand {
                     'TaskInfo' = $Item.TaskInfo
                     'Results'  = $Results
                 }
-                Send-CIPPAlert -Type 'webhook' -Title $title -JSONContent $($Webhook | ConvertTo-Json -Depth 20)
+                Send-CIPPAlert -Type 'webhook' -Title $title -TenantFilter $tenant -JSONContent $($Webhook | ConvertTo-Json -Depth 20)
             }
         }
     }
