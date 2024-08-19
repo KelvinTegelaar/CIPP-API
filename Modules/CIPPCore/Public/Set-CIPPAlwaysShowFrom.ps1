@@ -8,10 +8,11 @@ Function Set-CIPPAlwaysShowFrom {
         The Set-CIPPAlwaysShowFrom function is used to set the "Always Show From" property for a specified user or all users in a specified tenant. The "Always Show From" property determines whether the from field is always shown in Outlook.
 
     .PARAMETER UserID
-        Specifies the user ID for which to set the "Always Show From" property. This parameter is mandatory unless the RunOnAllUsersInTenant switch is used.
+        Specifies the user ID for which to set the "Always Show From" property. This can be UserPrincipalName, SamAccountName, GUID or Email address.
+        This parameter is mandatory unless the RunOnAllUsersInTenant switch is used.
 
     .PARAMETER TenantFilter
-        Specifies the tenant for which to set the "Always Show From" property.
+        Specifies the tenant for which to set the "Always Show From" property. This parameter is mandatory.
 
     .PARAMETER APIName
         Specifies the name of the API. The default value is "Always Show From".
@@ -20,7 +21,7 @@ Function Set-CIPPAlwaysShowFrom {
         Specifies the user who is executing the function.
 
     .PARAMETER AlwaysShowFrom
-        Specifies whether to set the "Always Show From" property to true or false.
+        Specifies whether to set the "Always Show From" property to true or false. This parameter is mandatory.
 
     .PARAMETER RunOnAllUsersInTenant
         If this switch is present, the function will set the "Always Show From" property for all users in the specified tenant.
@@ -67,7 +68,7 @@ Function Set-CIPPAlwaysShowFrom {
         foreach ($User in $AllUsers) {
             try {
                 $null = New-ExoRequest -tenantid $TenantFilter -cmdlet 'Set-MailboxMessageConfiguration' -anchor $User.UserPrincipalName -cmdParams @{AlwaysShowFrom = $AlwaysShowFrom; Identity = $User.UserPrincipalName }
-                Write-Host "Set Always Show From to $AlwaysShowFrom for $($User.UserPrincipalName)"
+                # Write-Information "Set Always Show From to $AlwaysShowFrom for $($User.UserPrincipalName)"
             } catch {
                 $ErrorCount++
             }
