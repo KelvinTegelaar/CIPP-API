@@ -210,11 +210,11 @@ Function Invoke-AddDefenderDeployment {
                 settings          = @($EDRSettings)
             }
             Write-Host ( $EDRbody)
-            $CheckExististingEDR = New-GraphGETRequest -uri 'https://graph.microsoft.com/beta/deviceManagement/configurationPolicies' -tenantid $tenant
+            $CheckExististingEDR = New-GraphGETRequest -uri 'https://graph.microsoft.com/beta/deviceManagement/configurationPolicies' -tenantid $tenant | Where-Object -Property Name -eq 'EDR Configuration'
             if ('EDR Configuration' -in $CheckExististingEDR.Name) {
                 "$($Tenant): EDR Policy already exists. Skipping"
             } else {
-                #$EDRRequest = New-GraphPOSTRequest -uri 'https://graph.microsoft.com/beta/deviceManagement/configurationPolicies' -tenantid $tenant -type POST -body $EDRbody
+                $EDRRequest = New-GraphPOSTRequest -uri 'https://graph.microsoft.com/beta/deviceManagement/configurationPolicies' -tenantid $tenant -type POST -body $EDRbody
                 if ($ASR.AssignTo -ne 'none') {
                     $AssignBody = if ($ASR.AssignTo -ne 'AllDevicesAndUsers') { '{"assignments":[{"id":"","target":{"@odata.type":"#microsoft.graph.' + $($asr.AssignTo) + 'AssignmentTarget"}}]}' } else { '{"assignments":[{"id":"","target":{"@odata.type":"#microsoft.graph.allDevicesAssignmentTarget"}},{"id":"","target":{"@odata.type":"#microsoft.graph.allLicensedUsersAssignmentTarget"}}]}' }
                     $assign = New-GraphPOSTRequest -uri "https://graph.microsoft.com/beta/deviceManagement/configurationPolicies('$($EDRRequest.id)')/assign" -tenantid $tenant -type POST -body $AssignBody
