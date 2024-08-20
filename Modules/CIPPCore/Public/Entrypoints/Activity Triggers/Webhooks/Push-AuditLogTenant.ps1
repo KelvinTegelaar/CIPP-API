@@ -3,9 +3,9 @@ function Push-AuditLogTenant {
 
     # Get Table contexts
     $AuditBundleTable = Get-CippTable -tablename 'AuditLogBundles'
-    $SchedulerConfig = Get-CIPPTable -TableName 'SchedulerConfig'
+    $SchedulerConfig = Get-CippTable -TableName 'SchedulerConfig'
     $WebhookTable = Get-CippTable -tablename 'webhookTable'
-    $ConfigTable = Get-CIPPTable -TableName 'WebhookRules'
+    $ConfigTable = Get-CippTable -TableName 'WebhookRules'
 
     # Query CIPPURL for linking
     $CIPPURL = Get-CIPPAzDataTableEntity @SchedulerConfig -Filter "PartitionKey eq 'webhookcreation'" | Select-Object -First 1 -ExpandProperty CIPPURL

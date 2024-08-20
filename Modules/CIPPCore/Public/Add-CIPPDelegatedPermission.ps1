@@ -15,8 +15,24 @@ function Add-CIPPDelegatedPermission {
     }
 
     if ($RequiredResourceAccess -eq 'CIPPDefaults') {
-        $RequiredResourceAccess = (Get-Content '.\SAMManifest.json' | ConvertFrom-Json).requiredResourceAccess
-        $AdditionalPermissions = Get-Content '.\AdditionalPermissions.json' | ConvertFrom-Json
+        $Permissions = Get-CippSamPermissions -NoDiff
+        $NoTranslateRequired = $Permissions.Type -eq 'Table'
+        $RequiredResourceAccess = [System.Collections.Generic.List[object]]::new()
+        foreach ($AppId in $Permissions.Permissions.PSObject.Properties.Name) {
+            $DelegatedPermissions = @($Permissions.Permissions.$AppId.delegatedPermissions)
+            $ResourceAccess = [System.Collections.Generic.List[object]]::new()
+            foreach ($Permission in $DelegatedPermissions) {
+                $ResourceAccess.Add(@{
+                        id   = $Permission.value
+                        type = 'Scope'
+                    })
+            }
+            $Resource = @{
+                resourceAppId  = $AppId
+                resourceAccess = @($ResourceAccess)
+            }
+            $RequiredResourceAccess.Add($Resource)
+        }
 
         if ($Tenantfilter -eq $env:TenantID) {
             $RequiredResourceAccess = $RequiredResourceAccess + ($AdditionalPermissions | Where-Object { $RequiredResourceAccess.resourceAppId -notcontains $_.resourceAppId })
@@ -24,7 +40,6 @@ function Add-CIPPDelegatedPermission {
             # remove the partner center permission if not pushing to partner tenant
             $RequiredResourceAccess = $RequiredResourceAccess | Where-Object { $_.resourceAppId -ne 'fa3d9a0c-3fb0-42cc-9193-47c7ecd2edbd' }
         }
-        $RequiredResourceAccess = $RequiredResourceAccess + ($AdditionalPermissions | Where-Object { $RequiredResourceAccess.resourceAppId -notcontains $_.resourceAppId })
     }
     $Translator = Get-Content '.\PermissionsTranslator.json' | ConvertFrom-Json
     $ServicePrincipalList = New-GraphGETRequest -uri "https://graph.microsoft.com/beta/servicePrincipals?`$select=AppId,id,displayName&`$top=999" -tenantid $Tenantfilter -skipTokenCache $true -NoAuthCheck $true
@@ -46,16 +61,22 @@ function Add-CIPPDelegatedPermission {
                 continue
             }
         }
-        $AdditionalScopes = ($AdditionalPermissions | Where-Object -Property resourceAppId -EQ $App.resourceAppId).resourceAccess | Where-Object -Property type -EQ 'Scope'
+
         $DelegatedScopes = $App.resourceAccess | Where-Object -Property type -EQ 'Scope'
-        if ($AdditionalScopes) {
-            $NewScope = (@(($Translator | Where-Object { $_.id -in $DelegatedScopes.id }).value) + @($AdditionalScopes.id | Select-Object -Unique)) -join ' '
+        if ($NoTranslateRequired) {
+            $NewScope = @($DelegatedScopes | ForEach-Object { $_.id } | Sort-Object -Unique) -join ' '
         } else {
-            if ($NoTranslateRequired) {
-                $NewScope = @($DelegatedScopes | ForEach-Object { $_.id } | Sort-Object -Unique) -join ' '
-            } else {
-                $NewScope = @(($Translator | Where-Object { $_.id -in $DelegatedScopes.id }).value | Sort-Object -Unique) -join ' '
+            $NewScope = foreach ($Scope in $DelegatedScopes.id) {
+                if ($Scope -match '^[a-f0-9]{8}-([a-f0-9]{4}-){3}[a-f0-9]{12}$') {
+                    $TranslatedScope = ($Translator | Where-Object -Property id -EQ $Scope).value
+                    if ($TranslatedScope) {
+                        $TranslatedScope
+                    }
+                } else {
+                    $Scope
+                }
             }
+            $NewScope = (@($NewScope) | Sort-Object -Unique) -join ' '
         }
 
         $OldScope = ($CurrentDelegatedScopes | Where-Object -Property Resourceid -EQ $svcPrincipalId.id)
@@ -83,7 +104,7 @@ function Add-CIPPDelegatedPermission {
             # Added permissions
             $Added = ($Compare | Where-Object { $_.SideIndicator -eq '=>' }).InputObject -join ' '
             $Removed = ($Compare | Where-Object { $_.SideIndicator -eq '<=' }).InputObject -join ' '
-            $Results.add("Successfully updated permissions for $($svcPrincipalId.displayName). $(if ($Added) { "Added: $Added"}) $(if ($Removed) { "Removed: $Removed"})") 
+            $Results.add("Successfully updated permissions for $($svcPrincipalId.displayName). $(if ($Added) { "Added: $Added"}) $(if ($Removed) { "Removed: $Removed"})")
         }
     }
 
