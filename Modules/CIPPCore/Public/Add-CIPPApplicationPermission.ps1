@@ -11,7 +11,26 @@ function Add-CIPPApplicationPermission {
     }
     Set-Location (Get-Item $PSScriptRoot).FullName
     if ($RequiredResourceAccess -eq 'CIPPDefaults') {
-        $RequiredResourceAccess = (Get-Content '.\SAMManifest.json' | ConvertFrom-Json).requiredResourceAccess
+        #$RequiredResourceAccess = (Get-Content '.\SAMManifest.json' | ConvertFrom-Json).requiredResourceAccess
+
+        $Permissions = Get-CippSamPermissions -NoDiff
+        $RequiredResourceAccess = [System.Collections.Generic.List[object]]::new()
+
+        foreach ($AppId in $Permissions.Permissions.PSObject.Properties.Name) {
+            $AppPermissions = @($Permissions.Permissions.$AppId.applicationPermissions)
+            $Resource = @{
+                resourceAppId  = $AppId
+                resourceAccess = [System.Collections.Generic.List[object]]::new()
+            }
+            foreach ($Permission in $AppPermissions) {
+                $Resource.ResourceAccess.Add(@{
+                        id   = $Permission.id
+                        type = 'Role'
+                    })
+            }
+
+            $RequiredResourceAccess.Add($Resource)
+        }
     }
     $ServicePrincipalList = New-GraphGETRequest -uri "https://graph.microsoft.com/beta/servicePrincipals?`$select=AppId,id,displayName&`$top=999" -skipTokenCache $true -tenantid $Tenantfilter -NoAuthCheck $true
     $ourSVCPrincipal = $ServicePrincipalList | Where-Object -Property AppId -EQ $ApplicationId

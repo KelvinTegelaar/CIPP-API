@@ -7,87 +7,117 @@ function Invoke-HuduExtensionSync {
         $Configuration,
         $TenantFilter
     )
-    Connect-HuduAPI -configuration $Configuration
-
-    # Get mapping configuration
-    $MappingTable = Get-CIPPTable -TableName 'CippMapping'
-    $Mappings = Get-CIPPAzDataTableEntity @MappingTable -Filter "PartitionKey eq 'HuduMapping' or PartitionKey eq 'HuduFieldMapping'"
-    #Write-Host ($Mappings | ConvertTo-Json)
-    $defaultdomain = $TenantFilter
-    $Tenant = Get-Tenants -IncludeErrors | Where-Object { $_.defaultDomainName -eq $TenantFilter }
-    $TenantMap = $Mappings | Where-Object { $_.RowKey -eq $Tenant.customerId }
-
-    $HuduAssetCache = Get-CippTable -tablename 'CacheHuduAssets'
-
-    if (!$TenantMap) {
-        return 'Tenant not found in mapping table'
-    }
-
-    $CompanyResult = [PSCustomObject]@{
-        Name    = $Tenant.displayName
-        Users   = 0
-        Devices = 0
-        Errors  = [System.Collections.Generic.List[string]]@()
-        Logs    = [System.Collections.Generic.List[string]]@()
-    }
-
-    $PeopleLayoutId = $Mappings | Where-Object { $_.RowKey -eq 'Users' } | Select-Object -ExpandProperty IntegrationId
-    $CreateUsers = $Configuration.CreateMissingUsers
-    $DeviceLayoutId = $Mappings | Where-Object { $_.RowKey -eq 'Devices' } | Select-Object -ExpandProperty IntegrationId
-    $CreateDevices = $Configuration.CreateMissingDevices
-
-    if ($PeopleLayoutId) {
-        $null = Add-HuduAssetLayoutM365Field -AssetLayoutId $PeopleLayoutId
-    }
-    if ($DeviceLayoutId) {
-        $null = Add-HuduAssetLayoutM365Field -AssetLayoutId $DeviceLayoutId
-    }
-
-    $importDomains = $Configuration.ImportDomains
-    $monitordomains = $Configuration.MonitorDomains
-    $IntuneDesktopDeviceTypes = 'windowsRT,macMDM' -split ','
-
-    $DefaultSerials = [System.Collections.Generic.List[string]]@('SystemSerialNumber', 'To Be Filled By O.E.M.', 'System Serial Number', '0123456789', '123456789', 'TobefilledbyO.E.M.')
-
-    if ($Configuration.ExcludeSerials) {
-        $ExcludeSerials = $DefaultSerials.AddRange($Configuration.ExcludeSerials -split ',')
-    } else {
-        $ExcludeSerials = $DefaultSerials
-    }
-
-    Set-Location (Get-Item $PSScriptRoot).Parent.Parent.Parent.Parent.FullName
-    $LicTable = Import-Csv Conversiontable.csv
-
-    $CompanyResult.Logs.Add('Starting Hudu Extension Sync')
-
-    #$AssignedMap = Get-AssignedMap
-    #$AssignedNameMap = Get-AssignedNameMap
-
-    $EnableCIPP = $true
-
-    $ConfigTable = Get-Cipptable -tablename 'Config'
-    $Config = Get-CippAzDataTableEntity @ConfigTable -Filter "PartitionKey eq 'InstanceProperties' and RowKey eq 'CIPPURL'"
-    $CIPPURL = 'https://{0}' -f $Config.Value
-
-    $ExtensionCache = Get-ExtensionCacheData -TenantFilter $Tenant.defaultDomainName
-
     try {
-        $company_id = $TenantMap.IntegrationId
+        Connect-HuduAPI -configuration $Configuration
 
-        if ($PeopleLayoutId) {
-            $PeopleLayout = Get-HuduAssetLayouts -Id $PeopleLayoutId
-            $People = Get-HuduAssets -CompanyId $company_id -AssetLayoutId $PeopleLayout.id
+        $CompanyResult = [PSCustomObject]@{
+            Name    = $Tenant.displayName
+            Users   = 0
+            Devices = 0
+            Errors  = [System.Collections.Generic.List[string]]@()
+            Logs    = [System.Collections.Generic.List[string]]@()
         }
 
-        if ($DeviceLayoutId) {
-            $DesktopsLayout = Get-HuduAssetLayouts -Id $DeviceLayoutId
-            $HuduDesktopDevices = Get-HuduAssets -CompanyId $company_id -AssetLayoutId $DesktopsLayout.id
+        # Get mapping configuration
+        $MappingTable = Get-CIPPTable -TableName 'CippMapping'
+        $Mappings = Get-CIPPAzDataTableEntity @MappingTable -Filter "PartitionKey eq 'HuduMapping' or PartitionKey eq 'HuduFieldMapping'"
+
+        $defaultdomain = $TenantFilter
+        $Tenant = Get-Tenants -IncludeErrors | Where-Object { $_.defaultDomainName -eq $TenantFilter }
+        $TenantMap = $Mappings | Where-Object { $_.RowKey -eq $Tenant.customerId }
+
+        # Get Asset cache
+        $HuduAssetCache = Get-CippTable -tablename 'CacheHuduAssets'
+
+        # Import license mapping
+        Set-Location (Get-Item $PSScriptRoot).Parent.Parent.Parent.Parent.FullName
+        $LicTable = Import-Csv Conversiontable.csv
+
+        $CompanyResult.Logs.Add('Starting Hudu Extension Sync')
+
+        # Get CIPP URL
+        $ConfigTable = Get-Cipptable -tablename 'Config'
+        $Config = Get-CippAzDataTableEntity @ConfigTable -Filter "PartitionKey eq 'InstanceProperties' and RowKey eq 'CIPPURL'"
+        $CIPPURL = 'https://{0}' -f $Config.Value
+        $EnableCIPP = $true
+
+        # Get Hudu Extension Cache
+        $ExtensionCache = Get-ExtensionCacheData -TenantFilter $Tenant.defaultDomainName
+        $company_id = $TenantMap.IntegrationId
+
+        # If tenant not found in mapping table, return error
+        if (!$TenantMap) {
+            return 'Tenant not found in mapping table'
+        }
+
+        # Get Hudu Layout mappings
+        $PeopleLayoutId = $Mappings | Where-Object { $_.RowKey -eq 'Users' } | Select-Object -ExpandProperty IntegrationId
+        $DeviceLayoutId = $Mappings | Where-Object { $_.RowKey -eq 'Devices' } | Select-Object -ExpandProperty IntegrationId
+
+        try {
+            if (![string]::IsNullOrEmpty($PeopleLayoutId)) {
+                $null = Add-HuduAssetLayoutM365Field -AssetLayoutId $PeopleLayoutId
+                $CreateUsers = $Configuration.CreateMissingUsers
+                $PeopleLayout = Get-HuduAssetLayouts -Id $PeopleLayoutId
+                if ($PeopleLayout.id) {
+                    $People = Get-HuduAssets -CompanyId $company_id -AssetLayoutId $PeopleLayout.id
+                } else {
+                    $CreateUsers = $false
+                    $People = @()
+                }
+            } else {
+                $CreateUsers = $false
+                $People = @()
+            }
+        } catch {
+            $CreateUsers = $false
+            $People = @()
+            $CompanyResult.Errors.add("Company: Unable to fetch People $_")
+            Write-Host "Hudu People - Error: $_"
+        }
+
+        Write-Host "CreateUsers: $CreateUsers"
+
+
+        try {
+            if (![string]::IsNullOrEmpty($DeviceLayoutId)) {
+                $null = Add-HuduAssetLayoutM365Field -AssetLayoutId $DeviceLayoutId
+                $CreateDevices = $Configuration.CreateMissingDevices
+                $DesktopsLayout = Get-HuduAssetLayouts -Id $DeviceLayoutId
+                if ($DesktopsLayout.id) {
+                    $HuduDesktopDevices = Get-HuduAssets -CompanyId $company_id -AssetLayoutId $DesktopsLayout.id
+                    $HuduDevices = $HuduDesktopDevices
+                } else {
+                    $CreateDevices = $false
+                    $HuduDevices = @()
+                }
+            } else {
+                $CreateDevices = $false
+                $HuduDevices = @()
+            }
+        } catch {
+            $CreateDevices = $false
+            $HuduDevices = @()
+            $CompanyResult.Errors.add("Company: Unable to fetch Devices $_")
+            Write-Host "Hudu Devices - Error: $_"
+        }
+
+        Write-Host "CreateDevices: $CreateDevices"
+
+        $importDomains = $Configuration.ImportDomains
+        $monitordomains = $Configuration.MonitorDomains
+
+        # Defaults
+        $IntuneDesktopDeviceTypes = 'windowsRT,macMDM' -split ','
+        $DefaultSerials = [System.Collections.Generic.List[string]]@('SystemSerialNumber', 'To Be Filled By O.E.M.', 'System Serial Number', '0123456789', '123456789', 'TobefilledbyO.E.M.')
+
+        if ($Configuration.ExcludeSerials) {
+            $ExcludeSerials = $DefaultSerials.AddRange($Configuration.ExcludeSerials -split ',')
+        } else {
+            $ExcludeSerials = $DefaultSerials
         }
 
         $HuduRelations = Get-HuduRelations
-
-        $HuduDevices = $HuduDesktopDevices
-
         $Links = @(
             @{
                 Title = 'M365 Admin Portal'
@@ -605,7 +635,7 @@ function Invoke-HuduExtensionSync {
                     if ($EnableCIPP) {
                         $CIPPLinksFormatted.add((Get-HuduLinkBlock -URL "$($CIPPURL)/identity/administration/users/view?customerId=$($Tenant.customerid)&userId=$($User.id)&tenantDomain=$($Tenant.defaultDomainName)&userEmail=$($User.userPrincipalName)" -Icon 'far fa-eye' -Title 'CIPP - View User'))
                         $CIPPLinksFormatted.add((Get-HuduLinkBlock -URL "$($CIPPURL)/identity/administration/users/edit?customerId=$($Tenant.customerid)&userId=$($User.id)&tenantDomain=$($Tenant.defaultDomainName)&userEmail=$($User.userPrincipalName)" -Icon 'fas fa-user-cog' -Title 'CIPP - Edit User'))
-                        $CIPPLinksFormatted.add((Get-HuduLinkBlock -URL "$($CIPPURL)/identity/administration/ViewBec?customerId=$($Tenant.customerid)&userId=$($User.id)&tenantDomain=$($Tenant.defaultDomainName)&userEmail=$($User.userPrincipalName)" -Icon 'fas fa-user-secret' -Title 'CIPP - BEC Tool'))
+                        $CIPPLinksFormatted.add((Get-HuduLinkBlock -URL "$($CIPPURL)/identity/administration/ViewBec?customerId=$($Tenant.customerid)&userId=$($User.id)&tenantDomain=$($Tenant.defaultDomainName)&ID=$($User.userPrincipalName)" -Icon 'fas fa-user-secret' -Title 'CIPP - BEC Tool'))
                     }
 
                     [System.Collections.Generic.List[PSCustomObject]]$UserLinksFormatted = @()
@@ -626,7 +656,7 @@ function Invoke-HuduExtensionSync {
 
                     $UserBody = "<div>$AssignedPlansBlock<br />$UserLinksBlock<br /><div class=`"nasa__content`">$($UserOverviewBlock)$($UserMailDetailsBlock)$($OneDriveBlock)$($UserMailSettingsBlock)$($UserPoliciesBlock)</div><div class=`"nasa__content`">$($UserDevicesDetailsBlock)</div><div class=`"nasa__content`">$($UserGroupsBlock)</div></div>"
 
-                    if ($PeopleLayoutId) {
+                    if (![string]::IsNullOrEmpty($PeopleLayoutId)) {
                         $UserAssetFields = @{
                             microsoft_365 = $UserBody
                             email_address = $user.userPrincipalName
@@ -802,7 +832,7 @@ function Invoke-HuduExtensionSync {
                 }
                 $NewHash = Get-StringHash -String $DeviceIntuneDetailshtml
 
-                if ($DeviceLayoutId) {
+                if (![string]::IsNullOrEmpty($DeviceLayoutId)) {
                     if ($HuduDevice) {
                         if (($HuduDevice | Measure-Object).count -eq 1) {
                             $ExistingAsset = Get-CIPPAzDataTableEntity @HuduAssetCache -Filter "PartitionKey eq 'HuduDevice' and CompanyId eq '$company_id' and RowKey eq '$($HuduDevice.id)'"
