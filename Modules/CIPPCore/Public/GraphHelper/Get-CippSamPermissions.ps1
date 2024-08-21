@@ -137,10 +137,14 @@ function Get-CippSamPermissions {
     $SamAppPermissions = @{}
     if (($SavedPermissions.Permissions.PSObject.Properties.Name | Measure-Object).Count -gt 0) {
         $SamAppPermissions.Permissions = $SavedPermissions.Permissions
+        $SamAppPermissions.UpdatedBy = $SavedPermissions.UpdatedBy
+        $SamAppPermissions.Timestamp = $SavedPermissions.Timestamp.DateTime.ToString('yyyy-MM-ddTHH:mm:ssZ')
         $SamAppPermissions.Type = 'Table'
     } else {
         $SamAppPermissions.Permissions = $Permissions
         $SamAppPermissions.Type = 'Manifest'
+        $SamAppPermissions.UpdatedBy = 'CIPP'
+        $SamAppPermissions.Timestamp = $SamManifest.LastWriteTime.ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ssZ')
     }
 
     if (!$NoDiff.IsPresent) {
