@@ -21,16 +21,16 @@ function Get-NormalizedError {
 
     #We need to check if the message is in one of these fields, and if so, return it.
     if ($JSONMsg.error.innererror.message) {
-        Write-Host 'innererror.message found'
+        Write-Host "innererror.message found: $($JSONMsg.error.innererror.message)"
         $message = $JSONMsg.error.innererror.message
     } elseif ($JSONMsg.error.message) {
-        Write-Host 'error.message found'
+        Write-Host "error.message found: $($JSONMsg.error.message)"
         $message = $JSONMsg.error.message
     } elseif ($JSONMsg.error.details.message) {
-        Write-Host 'error.details.message found'
+        Write-Host "error.details.message found: $($JSONMsg.error.details.message)"
         $message = $JSONMsg.error.details.message
     } elseif ($JSONMsg.error.innererror.internalException.message) {
-        Write-Host 'error.innererror.internalException.message found'
+        Write-Host "error.innererror.internalException.message found: $($JSONMsg.error.innererror.internalException.message)"
         $message = $JSONMsg.error.innererror.internalException.message
     }
 
