@@ -51,6 +51,10 @@ function Add-CIPPScheduledTask {
         $task.Recurrence.value
     }
 
+    if ([int64]$task.ScheduledTime -eq 0 -or [string]::IsNullOrEmpty($task.ScheduledTime)) {
+        $task.ScheduledTime = [int64](([datetime]::UtcNow) - (Get-Date '1/1/1970')).TotalSeconds
+    }
+
     $entity = @{
         PartitionKey         = [string]'ScheduledTask'
         TaskState            = [string]'Planned'
