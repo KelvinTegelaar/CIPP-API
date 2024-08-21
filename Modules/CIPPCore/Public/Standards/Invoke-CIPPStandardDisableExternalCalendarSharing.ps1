@@ -30,6 +30,8 @@ function Invoke-CIPPStandardDisableExternalCalendarSharing {
     #>
 
     param($Tenant, $Settings)
+    ##$Rerun -Type Standard -Tenant $Tenant -Settings $Settings 'DisableExternalCalendarSharing'
+
     $CurrentInfo = New-ExoRequest -tenantid $Tenant -cmdlet 'Get-SharingPolicy' | Where-Object { $_.Default -eq $true }
 
     if ($Settings.remediate -eq $true) {

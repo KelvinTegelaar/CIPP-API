@@ -15,15 +15,15 @@ Function Invoke-CIPPStandardTeamsExternalFileSharing {
         TAG
             "lowimpact"
         ADDEDCOMPONENT
-            {"type":"boolean","name":"standards.TeamsExternalFileSharing.AllowGoogleDrive","label":"Allow Google Drive","default":false}
-            {"type":"boolean","name":"standards.TeamsExternalFileSharing.AllowShareFile","label":"Allow ShareFile","default":false}
-            {"type":"boolean","name":"standards.TeamsExternalFileSharing.AllowBox","label":"Allow Box","default":false}
-            {"type":"boolean","name":"standards.TeamsExternalFileSharing.AllowDropbox","label":"Allow Dropbox","default":false}
-            {"type":"boolean","name":"standards.TeamsExternalFileSharing.AllowEgnyte","label":"Allow Egnyte","default":false}
+            {"type":"boolean","name":"standards.TeamsExternalFileSharing.AllowGoogleDrive","label":"Allow Google Drive"}
+            {"type":"boolean","name":"standards.TeamsExternalFileSharing.AllowShareFile","label":"Allow ShareFile"}
+            {"type":"boolean","name":"standards.TeamsExternalFileSharing.AllowBox","label":"Allow Box"}
+            {"type":"boolean","name":"standards.TeamsExternalFileSharing.AllowDropBox","label":"Allow Dropbox"}
+            {"type":"boolean","name":"standards.TeamsExternalFileSharing.AllowEgnyte","label":"Allow Egnyte"}
         IMPACT
             Low Impact
         POWERSHELLEQUIVALENT
-            Set-CsTeamsClientConfiguration -AllowGoogleDrive \$false -AllowShareFile \$false -AllowBox \$false -AllowDroBbox \$false -AllowEgnyte \$false
+            Set-CsTeamsClientConfiguration -AllowGoogleDrive \$false -AllowShareFile \$false -AllowBox \$false -AllowDropBox \$false -AllowEgnyte \$false
         RECOMMENDEDBY
             "CIS 3.0"
         UPDATECOMMENTBLOCK
@@ -33,14 +33,16 @@ Function Invoke-CIPPStandardTeamsExternalFileSharing {
     #>
 
     param($Tenant, $Settings)
-    $CurrentState = New-TeamsRequest -TenantFilter $Tenant -Cmdlet 'Get-CsTeamsClientConfiguration'
-                | Select-Object AllowGoogleDrive, AllowShareFile, AllowBox, AllowDropBox, AllowEgnyte
+    ##$Rerun -Type Standard -Tenant $Tenant -Settings $Settings 'TeamsExternalFileSharing'
 
-    if ($null -eq $Settings.AllowGoogleDrive)   { $Settings.AllowGoogleDrive = $false }
-    if ($null -eq $Settings.AllowShareFile)     { $Settings.AllowShareFile = $false }
-    if ($null -eq $Settings.AllowBox)           { $Settings.AllowBox = $false }
-    if ($null -eq $Settings.AllowDropBox)       { $Settings.AllowDropBox = $false }
-    if ($null -eq $Settings.AllowEgnyte)        { $Settings.AllowEgnyte = $false }
+    $CurrentState = New-TeamsRequest -TenantFilter $Tenant -Cmdlet 'Get-CsTeamsClientConfiguration'
+    | Select-Object AllowGoogleDrive, AllowShareFile, AllowBox, AllowDropBox, AllowEgnyte
+
+    if ($null -eq $Settings.AllowGoogleDrive) { $Settings.AllowGoogleDrive = $false }
+    if ($null -eq $Settings.AllowShareFile) { $Settings.AllowShareFile = $false }
+    if ($null -eq $Settings.AllowBox) { $Settings.AllowBox = $false }
+    if ($null -eq $Settings.AllowDropBox) { $Settings.AllowDropBox = $false }
+    if ($null -eq $Settings.AllowEgnyte) { $Settings.AllowEgnyte = $false }
 
     $StateIsCorrect = ($CurrentState.AllowGoogleDrive -eq $Settings.AllowGoogleDrive) -and
                       ($CurrentState.AllowShareFile -eq $Settings.AllowShareFile) -and

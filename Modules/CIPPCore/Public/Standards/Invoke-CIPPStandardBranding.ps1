@@ -18,7 +18,7 @@ function Invoke-CIPPStandardBranding {
             {"type":"input","name":"standards.Branding.signInPageText","label":"Sign-in page text"}
             {"type":"input","name":"standards.Branding.usernameHintText","label":"Username hint Text"}
             {"type":"boolean","name":"standards.Branding.hideAccountResetCredentials","label":"Hide self-service password reset"}
-            {"type":"Select","label":"Visual Template","name":"standards.Branding.layoutTemplateType","values":[{"label":"Full-screen background","value":"default"},{"label":"Parial-screen background","value":"verticalSplit"}]}
+            {"type":"Select","label":"Visual Template","name":"standards.Branding.layoutTemplateType","values":[{"label":"Full-screen background","value":"default"},{"label":"Partial-screen background","value":"verticalSplit"}]}
             {"type":"boolean","name":"standards.Branding.isHeaderShown","label":"Show header"}
             {"type":"boolean","name":"standards.Branding.isFooterShown","label":"Show footer"}
         IMPACT
@@ -33,6 +33,8 @@ function Invoke-CIPPStandardBranding {
     #>
 
     param($Tenant, $Settings)
+    ##$Rerun -Type Standard -Tenant $Tenant -Settings $Settings 'Branding'
+
     $TenantId = Get-Tenants | Where-Object -Property defaultDomainName -EQ $Tenant
 
     try {
