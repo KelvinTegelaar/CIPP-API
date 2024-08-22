@@ -25,11 +25,11 @@ function Get-CippSamPermissions {
 
     if (!$SavedOnly.IsPresent) {
         $ModuleBase = Get-Module -Name CIPPCore | Select-Object -ExpandProperty ModuleBase
-        $SamManifest = Get-Item "$ModuleBase\Public\SAMManifest.json"
+        $SamManifestFile = Get-Item "$ModuleBase\Public\SAMManifest.json"
         $AdditionalPermissions = Get-Item "$ModuleBase\Public\AdditionalPermissions.json"
 
         $ServicePrincipals = New-GraphGetRequest -Uri 'https://graph.microsoft.com/beta/servicePrincipals?$top=999&$select=appId,displayName,appRoles,publishedPermissionScopes' -tenantid $env:TenantID -NoAuthCheck $true
-        $SAMManifest = Get-Content -Path $SamManifest.FullName | ConvertFrom-Json
+        $SAMManifest = Get-Content -Path $SamManifestFile.FullName | ConvertFrom-Json
         $AdditionalPermissions = Get-Content -Path $AdditionalPermissions.FullName | ConvertFrom-Json
 
         $RequiredResources = $SamManifest.requiredResourceAccess
@@ -144,10 +144,10 @@ function Get-CippSamPermissions {
         $SamAppPermissions.Permissions = $Permissions
         $SamAppPermissions.Type = 'Manifest'
         $SamAppPermissions.UpdatedBy = 'CIPP'
-        $SamAppPermissions.Timestamp = $SamManifest.LastWriteTime.ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ssZ')
+        $SamAppPermissions.Timestamp = $SamManifestFile.LastWriteTime.ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ssZ')
     }
 
-    if (!$NoDiff.IsPresent) {
+    if (!$NoDiff.IsPresent -and $SamAppPermissions.Type -eq 'Table') {
         $SamAppPermissions.MissingPermissions = $DiffPermissions
     }
 
