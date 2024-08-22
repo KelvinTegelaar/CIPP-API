@@ -2,7 +2,7 @@ function Get-CIPPSchemaExtensions {
     [CmdletBinding()]
     Param()
 
-    $Schemas = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/schemaExtensions?`$filter=owner eq '$($env:applicationid)' and status eq 'Available'" -NoAuthCheck $true -AsApp $true
+    $Schemas = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/schemaExtensions?`$filter=owner eq '$($ENV:ApplicationID)' and status eq 'Available'" -NoAuthCheck $true -AsApp $true
 
     $SchemaDefinitions = [PSCustomObject]@(
         @{
