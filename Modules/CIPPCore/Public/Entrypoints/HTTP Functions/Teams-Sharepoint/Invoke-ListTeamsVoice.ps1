@@ -34,7 +34,7 @@ Function Invoke-ListTeamsVoice {
                 }
                 $CompleteRequest
             }
-            $skip += 999
+            $skip = $skip + 999
             $Data
         } while ( $Data.count % 999 -eq 0 )
         $StatusCode = [HttpStatusCode]::OK
