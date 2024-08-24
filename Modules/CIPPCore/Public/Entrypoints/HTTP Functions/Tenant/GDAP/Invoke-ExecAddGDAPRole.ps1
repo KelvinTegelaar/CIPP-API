@@ -17,7 +17,7 @@ Function Invoke-ExecAddGDAPRole {
     $Table = Get-CIPPTable -TableName 'GDAPRoles'
 
     $Results = [System.Collections.Generic.List[string]]::new()
-    $ExistingGroups = New-GraphGetRequest -NoAuthCheck $True -uri 'https://graph.microsoft.com/beta/groups' -tenantid $env:TenantID
+    $ExistingGroups = New-GraphGetRequest -NoAuthCheck $True -uri 'https://graph.microsoft.com/beta/groups' -tenantid $env:TenantID -AsApp $true
 
     $RoleMappings = foreach ($group in $Groups) {
         if ($CustomSuffix) {
@@ -40,7 +40,7 @@ Function Invoke-ExecAddGDAPRole {
                 $Results.Add("M365 GDAP $($Group.Name) already exists")
             } else {
                 $BodyToship = [pscustomobject] @{'displayName' = $GroupName; 'description' = "This group is used to manage M365 partner tenants at the $($group.name) level."; securityEnabled = $true; mailEnabled = $false; mailNickname = $MailNickname } | ConvertTo-Json
-                $GraphRequest = New-GraphPostRequest -NoAuthCheck $True -uri 'https://graph.microsoft.com/beta/groups' -tenantid $env:TenantID -type POST -body $BodyToship -verbose
+                $GraphRequest = New-GraphPostRequest -NoAuthCheck $True -uri 'https://graph.microsoft.com/beta/groups' -tenantid $env:TenantID -type POST -body $BodyToship -AsApp $true
                 @{
                     PartitionKey     = 'Roles'
                     RowKey           = $GraphRequest.Id

@@ -21,6 +21,7 @@ function Set-CIPPIntunePolicy {
                 $CheckExististing = New-GraphGETRequest -uri "https://graph.microsoft.com/beta/deviceAppManagement/$TemplateTypeURL" -tenantid $tenantFilter
                 if ($displayname -in $CheckExististing.displayName) {
                     $PostType = 'edited'
+                    $ExistingID = $CheckExististing | Where-Object -Property displayName -EQ $displayname
                     $CreateRequest = New-GraphPOSTRequest -uri "https://graph.microsoft.com/beta/deviceAppManagement/$TemplateTypeURL/$($ExistingID.Id)" -tenantid $tenantFilter -type PATCH -body $RawJSON
                     $CreateRequest = $CheckExististing | Where-Object -Property displayName -EQ $DisplayName
                 } else {
@@ -36,6 +37,7 @@ function Set-CIPPIntunePolicy {
                 if ($displayname -in $CheckExististing.displayName) {
                     $RawJSON = ConvertTo-Json -InputObject ($JSON | Select-Object * -ExcludeProperty 'scheduledActionsForRule') -Depth 20 -Compress
                     $PostType = 'edited'
+                    $ExistingID = $CheckExististing | Where-Object -Property displayName -EQ $displayname
                     $CreateRequest = New-GraphPOSTRequest -uri "https://graph.microsoft.com/beta/deviceManagement/$TemplateTypeURL/$($ExistingID.Id)" -tenantid $tenantFilter -type PATCH -body $RawJSON
                     Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $($tenantFilter) -message "Updated policy $($DisplayName) to template defaults" -Sev 'info'
                     $CreateRequest = $CheckExististing | Where-Object -Property displayName -EQ $DisplayName
@@ -111,6 +113,7 @@ function Set-CIPPIntunePolicy {
                 $CheckExististing = New-GraphGETRequest -uri "https://graph.microsoft.com/beta/deviceManagement/$TemplateTypeURL" -tenantid $tenantFilter
                 if ($DisplayName -in $CheckExististing.name) {
                     $PostType = 'edited'
+                    $ExistingID = $CheckExististing | Where-Object -Property displayName -EQ $displayname
                     $CreateRequest = New-GraphPOSTRequest -uri "https://graph.microsoft.com/beta/deviceManagement/$TemplateTypeURL/$($ExistingID.Id)" -tenantid $tenantFilter -type PUT -body $RawJSON
                     $CreateRequest = $CheckExististing | Where-Object -Property displayName -EQ $DisplayName
 
