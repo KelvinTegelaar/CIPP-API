@@ -23,7 +23,6 @@ Function Invoke-ExecRemoveMailboxRule {
     Write-Host 'PowerShell HTTP trigger function processed a request.'
 
     # Remove the rule
-    # Write-LogMessage -user $User -API $APINAME -tenant $TenantFilter -message "Tried to remove rule from user $Username from tenant $TenantFilter with name $RuleName" -Sev 'Info'
     $Results = Remove-CIPPMailboxRule -userid $User -username $Username -TenantFilter $TenantFilter -APIName $APINAME -ExecutingUser $User -RuleId $RuleId -RuleName $RuleName
 
     if ($Results -like '*Could not delete*') {

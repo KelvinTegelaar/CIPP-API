@@ -7,7 +7,7 @@ function Remove-CIPPMailboxRule {
         $APIName = 'Mailbox Rules Removal',
         $ExecutingUser,
         $RuleId,
-        [string]$RuleName,
+        $RuleName,
         [switch]$RemoveAllRules
     )
 
@@ -36,8 +36,8 @@ function Remove-CIPPMailboxRule {
         # Only delete 1 rule
         try {
             $null = New-ExoRequest -tenantid $TenantFilter -cmdlet 'Remove-InboxRule' -Anchor $username -cmdParams @{Identity = $RuleId }
-            Write-LogMessage -user $ExecutingUser -API $APIName -message "Deleted mailbox rule for $($username)" -Sev 'Info' -tenant $TenantFilter
-            return "Deleted mailbox rule $RuleName for $username"
+            Write-LogMessage -user $ExecutingUser -API $APIName -message "Deleted mailbox rule $($RuleName) for $($username)" -Sev 'Info' -tenant $TenantFilter
+            return "Deleted mailbox rule $($RuleName) for $($username)"
         } catch {
             $ErrorMessage = Get-CippException -Exception $_
             Write-LogMessage -user $ExecutingUser -API $APIName -message "Could not delete rule for $($username): $($ErrorMessage.NormalizedError)" -Sev 'Error' -tenant $TenantFilter -LogData $ErrorMessage
