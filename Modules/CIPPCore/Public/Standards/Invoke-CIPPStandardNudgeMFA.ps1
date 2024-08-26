@@ -45,8 +45,7 @@ function Invoke-CIPPStandardNudgeMFA {
         Return
     }
     # Input validation
-    [int]$snoozeDurationInDays = $Settings.snoozeDurationInDays
-    if (($snoozeDurationInDays -lt 0 -or $snoozeDurationInDays -gt 14) -and ($Settings.remediate -eq $true -or $Settings.alert -eq $true)) {
+    if (([Int32]$Settings.snoozeDurationInDays -lt 0 -or [Int32]$Settings.snoozeDurationInDays -gt 15) -and ($Settings.remediate -eq $true -or $Settings.alert -eq $true)) {
         Write-LogMessage -API 'Standards' -tenant $tenant -message 'NudgeMFA: Invalid snoozeDurationInDays parameter set' -sev Error
         Return
     }
