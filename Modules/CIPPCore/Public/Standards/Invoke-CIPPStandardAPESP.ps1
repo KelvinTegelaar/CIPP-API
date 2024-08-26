@@ -5,6 +5,10 @@ function Invoke-CIPPStandardAPESP {
     #>
     param($Tenant, $Settings)
     If ($Settings.remediate -eq $true) {
+        ##$Rerun -Type Standard -Tenant $Tenant -Settings $Settings 'APESP'
+        if ($Rerun -eq $true) {
+            exit 0
+        }
         try {
             $Parameters = @{
                 TenantFilter     = $Tenant

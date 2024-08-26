@@ -29,8 +29,10 @@ function Invoke-CIPPStandardSPDisallowInfectedFiles {
     #>
 
     param($Tenant, $Settings)
+    ##$Rerun -Type Standard -Tenant $Tenant -Settings $Settings 'SPDisallowInfectedFiles'
+
     $CurrentState = Get-CIPPSPOTenant -TenantFilter $Tenant |
-        Select-Object -Property DisallowInfectedFileDownload
+    Select-Object -Property DisallowInfectedFileDownload
 
     $StateIsCorrect = ($CurrentState.DisallowInfectedFileDownload -eq $true)
 

@@ -27,6 +27,8 @@ function Invoke-CIPPStandardSendFromAlias {
     #>
 
     param($Tenant, $Settings)
+    ##$Rerun -Type Standard -Tenant $Tenant -Settings $Settings 'SendFromAlias'
+
     $CurrentInfo = (New-ExoRequest -tenantid $Tenant -cmdlet 'Get-OrganizationConfig').SendFromAliasEnabled
 
     If ($Settings.remediate -eq $true) {

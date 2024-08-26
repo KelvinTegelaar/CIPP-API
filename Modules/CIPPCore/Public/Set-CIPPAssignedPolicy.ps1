@@ -80,6 +80,6 @@ function Set-CIPPAssignedPolicy {
     } catch {
         #$ErrorMessage = Get-CippException -Exception $_
         $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
-        Write-LogMessage -user $ExecutingUser -API $APIName -message "Failed to assign $GroupName to Policy $PolicyId. Error:$ErrorMessage" -Sev 'Error' -tenant $TenantFilter -LogData $ErrorMessage
+        Write-LogMessage -user $ExecutingUser -API $APIName -message "Failed to assign $GroupName to Policy $PolicyId, using Platform $PlatformType and $Type. The error is:$ErrorMessage" -Sev 'Error' -tenant $TenantFilter -LogData $ErrorMessage
     }
 }

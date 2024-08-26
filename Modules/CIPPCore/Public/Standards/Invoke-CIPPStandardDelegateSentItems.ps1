@@ -27,8 +27,12 @@ function Invoke-CIPPStandardDelegateSentItems {
     #>
 
     param($Tenant, $Settings)
+    #$Rerun -Type Standard -Tenant $Tenant -API 'DelegateSentItems' -Settings $Settings
+
+
+
     $Mailboxes = New-ExoRequest -tenantid $Tenant -cmdlet 'Get-Mailbox' -cmdParams @{ RecipientTypeDetails = @('UserMailbox', 'SharedMailbox') } |
-        Where-Object { $_.MessageCopyForSendOnBehalfEnabled -eq $false -or $_.MessageCopyForSentAsEnabled -eq $false }
+    Where-Object { $_.MessageCopyForSendOnBehalfEnabled -eq $false -or $_.MessageCopyForSentAsEnabled -eq $false }
     Write-Host "Mailboxes: $($Mailboxes.count)"
     If ($Settings.remediate -eq $true) {
         Write-Host 'Time to remediate'

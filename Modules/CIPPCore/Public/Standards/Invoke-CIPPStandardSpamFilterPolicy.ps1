@@ -15,16 +15,16 @@ function Invoke-CIPPStandardSpamFilterPolicy {
         TAG
             "mediumimpact"
         ADDEDCOMPONENT
-            { "type": "number", "label": "Bulk email threshold (Default 7)", "name": "standards.SpamFilterPolicy.BulkThreshold", "default": 7 }
-            { "type": "Select", "label": "Spam Action", "name": "standards.SpamFilterPolicy.SpamAction", "values": [ { "label": "Move message to Junk Email folder", "value": "MoveToJmf" }, { "label": "Quarantine the message", "value": "Quarantine" } ] }
-            { "type": "Select", "label": "Spam Quarantine Tag", "name": "standards.SpamFilterPolicy.SpamQuarantineTag", "values": [ { "label": "AdminOnlyAccessPolicy", "value": "AdminOnlyAccessPolicy" }, { "label": "DefaultFullAccessPolicy", "value": "DefaultFullAccessPolicy" }, { "label": "DefaultFullAccessWithNotificationPolicy", "value": "DefaultFullAccessWithNotificationPolicy" } ] }
-            { "type": "Select", "label": "High Confidence Spam Action", "name": "standards.SpamFilterPolicy.HighConfidenceSpamAction", "values": [ { "label": "Quarantine the message", "value": "Quarantine" }, { "label": "Move message to Junk Email folder", "value": "MoveToJmf" } ] }
-            { "type": "Select", "label": "High Confidence Spam Quarantine Tag", "name": "standards.SpamFilterPolicy.HighConfidenceSpamQuarantineTag", "values": [ { "label": "AdminOnlyAccessPolicy", "value": "AdminOnlyAccessPolicy" }, { "label": "DefaultFullAccessPolicy", "value": "DefaultFullAccessPolicy" }, { "label": "DefaultFullAccessWithNotificationPolicy", "value": "DefaultFullAccessWithNotificationPolicy" } ] }
-            { "type": "Select", "label": "Bulk Spam Action", "name": "standards.SpamFilterPolicy.BulkSpamAction", "values": [ { "label": "Move message to Junk Email folder", "value": "MoveToJmf" }, { "label": "Quarantine the message", "value": "Quarantine" } ] }
-            { "type": "Select", "label": "Bulk Quarantine Tag", "name": "standards.SpamFilterPolicy.BulkQuarantineTag", "values": [ { "label": "AdminOnlyAccessPolicy", "value": "AdminOnlyAccessPolicy" }, { "label": "DefaultFullAccessPolicy", "value": "DefaultFullAccessPolicy" }, { "label": "DefaultFullAccessWithNotificationPolicy", "value": "DefaultFullAccessWithNotificationPolicy" } ] }
-            { "type": "Select", "label": "Phish Spam Action", "name": "standards.SpamFilterPolicy.PhishSpamAction", "values": [ { "label": "Quarantine the message", "value": "Quarantine" }, { "label": "Move message to Junk Email folder", "value": "MoveToJmf" } ] }
-            { "type": "Select", "label": "Phish Quarantine Tag", "name": "standards.SpamFilterPolicy.PhishQuarantineTag", "values": [ { "label": "AdminOnlyAccessPolicy", "value": "AdminOnlyAccessPolicy" }, { "label": "DefaultFullAccessPolicy", "value": "DefaultFullAccessPolicy" }, { "label": "DefaultFullAccessWithNotificationPolicy", "value": "DefaultFullAccessWithNotificationPolicy" } ] }
-            { "type": "Select", "label": "High Confidence Phish Quarantine Tag", "name": "standards.SpamFilterPolicy.HighConfidencePhishQuarantineTag", "values": [ { "label": "AdminOnlyAccessPolicy", "value": "AdminOnlyAccessPolicy" }, { "label": "DefaultFullAccessPolicy", "value": "DefaultFullAccessPolicy" }, { "label": "DefaultFullAccessWithNotificationPolicy", "value": "DefaultFullAccessWithNotificationPolicy" } ] }
+            {"type":"number","label":"Bulk email threshold (Default 7)","name":"standards.SpamFilterPolicy.BulkThreshold","default":7}
+            {"type":"Select","label":"Spam Action","name":"standards.SpamFilterPolicy.SpamAction","values":[{"label":"Quarantine the message","value":"Quarantine"},{"label":"Move message to Junk Email folder","value":"MoveToJmf"}]}
+            {"type":"Select","label":"Spam Quarantine Tag","name":"standards.SpamFilterPolicy.SpamQuarantineTag","values":[{"label":"AdminOnlyAccessPolicy","value":"AdminOnlyAccessPolicy"},{"label":"DefaultFullAccessPolicy","value":"DefaultFullAccessPolicy"},{"label":"DefaultFullAccessWithNotificationPolicy","value":"DefaultFullAccessWithNotificationPolicy"}]}
+            {"type":"Select","label":"High Confidence Spam Action","name":"standards.SpamFilterPolicy.HighConfidenceSpamAction","values":[{"label":"Quarantine the message","value":"Quarantine"},{"label":"Move message to Junk Email folder","value":"MoveToJmf"}]}
+            {"type":"Select","label":"High Confidence Spam Quarantine Tag","name":"standards.SpamFilterPolicy.HighConfidenceSpamQuarantineTag","values":[{"label":"AdminOnlyAccessPolicy","value":"AdminOnlyAccessPolicy"},{"label":"DefaultFullAccessPolicy","value":"DefaultFullAccessPolicy"},{"label":"DefaultFullAccessWithNotificationPolicy","value":"DefaultFullAccessWithNotificationPolicy"}]}
+            {"type":"Select","label":"Bulk Spam Action","name":"standards.SpamFilterPolicy.BulkSpamAction","values":[{"label":"Quarantine the message","value":"Quarantine"},{"label":"Move message to Junk Email folder","value":"MoveToJmf"}]}
+            {"type":"Select","label":"Bulk Quarantine Tag","name":"standards.SpamFilterPolicy.BulkQuarantineTag","values":[{"label":"AdminOnlyAccessPolicy","value":"AdminOnlyAccessPolicy"},{"label":"DefaultFullAccessPolicy","value":"DefaultFullAccessPolicy"},{"label":"DefaultFullAccessWithNotificationPolicy","value":"DefaultFullAccessWithNotificationPolicy"}]}
+            {"type":"Select","label":"Phish Spam Action","name":"standards.SpamFilterPolicy.PhishSpamAction","values":[{"label":"Quarantine the message","value":"Quarantine"},{"label":"Move message to Junk Email folder","value":"MoveToJmf"}]}
+            {"type":"Select","label":"Phish Quarantine Tag","name":"standards.SpamFilterPolicy.PhishQuarantineTag","values":[{"label":"AdminOnlyAccessPolicy","value":"AdminOnlyAccessPolicy"},{"label":"DefaultFullAccessPolicy","value":"DefaultFullAccessPolicy"},{"label":"DefaultFullAccessWithNotificationPolicy","value":"DefaultFullAccessWithNotificationPolicy"}]}
+            {"type":"Select","label":"High Confidence Phish Quarantine Tag","name":"standards.SpamFilterPolicy.HighConfidencePhishQuarantineTag","values":[{"label":"AdminOnlyAccessPolicy","value":"AdminOnlyAccessPolicy"},{"label":"DefaultFullAccessPolicy","value":"DefaultFullAccessPolicy"},{"label":"DefaultFullAccessWithNotificationPolicy","value":"DefaultFullAccessWithNotificationPolicy"}]}
         IMPACT
             Medium Impact
         POWERSHELLEQUIVALENT
@@ -37,13 +37,15 @@ function Invoke-CIPPStandardSpamFilterPolicy {
     #>
 
     param($Tenant, $Settings)
+    ##$Rerun -Type Standard -Tenant $Tenant -Settings $Settings 'SpamFilterPolicy'
+
     $PolicyName = 'CIPP Default Spam Filter Policy'
 
     $CurrentState = New-ExoRequest -TenantId $Tenant -cmdlet 'Get-HostedContentFilterPolicy' |
-        Where-Object -Property Name -EQ $PolicyName |
-        Select-Object -Property *
+    Where-Object -Property Name -EQ $PolicyName |
+    Select-Object -Property *
 
-    $StateIsCorrect =   ($CurrentState.Name -eq $PolicyName) -and
+    $StateIsCorrect = ($CurrentState.Name -eq $PolicyName) -and
                         ($CurrentState.SpamAction -eq $Settings.SpamAction) -and
                         ($CurrentState.SpamQuarantineTag -eq $Settings.SpamQuarantineTag) -and
                         ($CurrentState.HighConfidenceSpamAction -eq $Settings.HighConfidenceSpamAction) -and
@@ -71,8 +73,8 @@ function Invoke-CIPPStandardSpamFilterPolicy {
     $AcceptedDomains = New-ExoRequest -TenantId $Tenant -cmdlet 'Get-AcceptedDomain'
 
     $RuleState = New-ExoRequest -TenantId $Tenant -cmdlet 'Get-HostedContentFilterRule' |
-        Where-Object -Property Name -EQ $PolicyName |
-        Select-Object -Property *
+    Where-Object -Property Name -EQ $PolicyName |
+    Select-Object -Property *
 
     $RuleStateIsCorrect = ($RuleState.Name -eq $PolicyName) -and
                           ($RuleState.HostedContentFilterPolicy -eq $PolicyName) -and
@@ -118,8 +120,7 @@ function Invoke-CIPPStandardSpamFilterPolicy {
                     $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
                     Write-LogMessage -API 'Standards' -Tenant $Tenant -message "Failed to update Spam Filter Policy. Error: $ErrorMessage" -sev Error
                 }
-            }
-            else {
+            } else {
                 try {
                     $cmdparams.Add('Name', $PolicyName)
                     New-ExoRequest -TenantId $Tenant -cmdlet 'New-HostedContentFilterPolicy' -cmdparams $cmdparams -UseSystemMailbox $true

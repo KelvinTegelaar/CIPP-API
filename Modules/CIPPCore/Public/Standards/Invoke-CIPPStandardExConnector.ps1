@@ -4,6 +4,8 @@ function Invoke-CIPPStandardExConnector {
     Internal
     #>
     param($Tenant, $Settings)
+    ##$Rerun -Type Standard -Tenant $Tenant -Settings $Settings 'ExConnector'
+
     If ($Settings.remediate -eq $true) {
 
         $APINAME = 'Standards'

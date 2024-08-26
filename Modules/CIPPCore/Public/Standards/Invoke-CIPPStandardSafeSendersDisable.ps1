@@ -16,7 +16,7 @@ function Invoke-CIPPStandardSafeSendersDisable {
             "mediumimpact"
         ADDEDCOMPONENT
         DISABLEDFEATURES
-            
+
         IMPACT
             Medium Impact
         POWERSHELLEQUIVALENT
@@ -29,6 +29,7 @@ function Invoke-CIPPStandardSafeSendersDisable {
     #>
 
     param($Tenant, $Settings)
+    ##$Rerun -Type Standard -Tenant $Tenant -Settings $Settings 'SafeSendersDisable'
 
     If ($Settings.remediate -eq $true) {
         try {

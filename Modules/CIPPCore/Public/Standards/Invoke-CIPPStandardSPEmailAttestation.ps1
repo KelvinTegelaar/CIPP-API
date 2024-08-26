@@ -30,19 +30,21 @@ function Invoke-CIPPStandardSPEmailAttestation {
     #>
 
     param($Tenant, $Settings)
+    ##$Rerun -Type Standard -Tenant $Tenant -Settings $Settings 'SPEmailAttestation'
+
     $CurrentState = Get-CIPPSPOTenant -TenantFilter $Tenant |
-        Select-Object -Property EmailAttestationReAuthDays, EmailAttestationRequired
+    Select-Object -Property EmailAttestationReAuthDays, EmailAttestationRequired
 
     $StateIsCorrect = ($CurrentState.EmailAttestationReAuthDays -eq $Settings.Days) -and
                       ($CurrentState.EmailAttestationRequired -eq $true)
 
     if ($Settings.remediate -eq $true) {
         if ($StateIsCorrect -eq $true) {
-            Write-LogMessage -API 'Standards' -Tenant $Tenant -Message 'Sharepoint reauthentication with verification code is already restriction.' -Sev Info
+            Write-LogMessage -API 'Standards' -Tenant $Tenant -Message 'Sharepoint reauthentication with verification code is already restricted.' -Sev Info
         } else {
             $Properties = @{
                 EmailAttestationReAuthDays = $Settings.Days
-                EmailAttestationRequired = $true
+                EmailAttestationRequired   = $true
             }
 
             try {
@@ -57,9 +59,9 @@ function Invoke-CIPPStandardSPEmailAttestation {
 
     if ($Settings.alert -eq $true) {
         if ($StateIsCorrect -eq $true) {
-            Write-LogMessage -API 'Standards' -Tenant $Tenant -Message 'Reauthentication with verification code is restriction' -Sev Info
+            Write-LogMessage -API 'Standards' -Tenant $Tenant -Message 'Reauthentication with verification code is restricted.' -Sev Info
         } else {
-            Write-LogMessage -API 'Standards' -Tenant $Tenant -Message 'Reauthentication with verification code is not restricted' -Sev Alert
+            Write-LogMessage -API 'Standards' -Tenant $Tenant -Message 'Reauthentication with verification code is not restricted.' -Sev Alert
         }
     }
 

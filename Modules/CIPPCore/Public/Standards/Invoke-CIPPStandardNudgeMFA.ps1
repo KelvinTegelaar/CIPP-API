@@ -29,6 +29,7 @@ function Invoke-CIPPStandardNudgeMFA {
     #>
 
     param($Tenant, $Settings)
+    ##$Rerun -Type Standard -Tenant $Tenant -Settings $Settings 'NudgeMFA'
 
     $CurrentInfo = New-GraphGetRequest -Uri 'https://graph.microsoft.com/beta/policies/authenticationMethodsPolicy' -tenantid $Tenant
     $State = if ($CurrentInfo.registrationEnforcement.authenticationMethodsRegistrationCampaign.state -eq 'enabled') { $true } else { $false }
@@ -58,6 +59,7 @@ function Invoke-CIPPStandardNudgeMFA {
                 $Body = $CurrentInfo
                 $body.registrationEnforcement.authenticationMethodsRegistrationCampaign.state = $Settings.state
                 $body.registrationEnforcement.authenticationMethodsRegistrationCampaign.snoozeDurationInDays = $Settings.snoozeDurationInDays
+                $body.registrationEnforcement.authenticationMethodsRegistrationCampaign.enforceRegistrationAfterAllowedSnoozes = $true
 
                 $body = ConvertTo-Json -Depth 10 -InputObject ($body | Select-Object registrationEnforcement)
                 New-GraphPostRequest -tenantid $tenant -Uri 'https://graph.microsoft.com/beta/policies/authenticationMethodsPolicy' -Type patch -Body $body -ContentType 'application/json'
