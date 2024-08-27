@@ -1,4 +1,4 @@
-function Invoke-ListMailQuarantineMessage {
+function Invoke-ListMailQuarantine {
     <#
     .FUNCTIONALITY
         Entrypoint
@@ -10,27 +10,21 @@ function Invoke-ListMailQuarantineMessage {
 
     $APIName = $TriggerMetadata.FunctionName
     Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -message 'Accessed this API' -Sev 'Debug'
-    $Tenantfilter = $Request.Query.Tenantfilter
+    $Tenantfilter = $request.Query.tenantfilter
 
     try {
-        $GraphRequest = New-ExoRequest -tenantid $TenantFilter -cmdlet 'Export-QuarantineMessage' -cmdParams @{ 'Identity' = $Request.Query.Identity }
-        $EmlBase64 = $GraphRequest.Eml
-        $EmlContent = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($EmlBase64))
-        $Body = @{
-            'Identity' = $Request.Query.Identity
-            'Message'  = $EmlContent
-        }
+        $GraphRequest = New-ExoRequest -tenantid $Tenantfilter -cmdlet 'Get-QuarantineMessage' -cmdParams @{ 'PageSize' = 1000 }
         $StatusCode = [HttpStatusCode]::OK
     } catch {
         $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
         $StatusCode = [HttpStatusCode]::Forbidden
-        $Body = $ErrorMessage
+        $GraphRequest = $ErrorMessage
     }
 
     # Associate values to output bindings by calling 'Push-OutputBinding'.
     Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
             StatusCode = $StatusCode
-            Body       = $Body
+            Body       = @($GraphRequest)
         })
 
 }
