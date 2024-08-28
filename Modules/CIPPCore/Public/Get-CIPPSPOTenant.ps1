@@ -7,8 +7,14 @@ function Get-CIPPSPOTenant {
 
     if (!$SharepointPrefix) {
         # get sharepoint admin site
-        $tenantName = (New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/sites/root' -asApp $true -tenantid $TenantFilter).id.Split('.')[0]
-    } else {
+        if ($TenantFilter) {
+            $tenantName = (New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/sites/root' -asApp $true -tenantid $TenantFilter).id.Split('.')[0]
+        }
+        else {
+            $tenantName = (New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/sites/root' -asApp $true).id.Split('.')[0]
+        }
+    }
+    else {
         $tenantName = $SharepointPrefix
     }
     $AdminUrl = "https://$($tenantName)-admin.sharepoint.com"
