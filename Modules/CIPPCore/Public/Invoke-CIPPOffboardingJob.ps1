@@ -66,7 +66,7 @@ function Invoke-CIPPOffboardingJob {
 
         { $_.'removeRules' -eq 'true' } {
             Write-Host "Removing rules for $username"
-            Remove-CIPPRules -userid $userid -username $Username -tenantFilter $Tenantfilter -ExecutingUser $ExecutingUser -APIName $APIName
+            Remove-CIPPMailboxRule -userid $userid -username $Username -tenantFilter $Tenantfilter -ExecutingUser $ExecutingUser -APIName $APIName -RemoveAllRules
         }
 
         { $_.'removeMobile' -eq 'true' } {
