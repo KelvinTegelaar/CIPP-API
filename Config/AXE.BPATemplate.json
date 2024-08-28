@@ -236,7 +236,6 @@
         "asApp": "True"
       },
       "ExtractFields": [
-        "sharingCapability",
         "isResharingByExternalUsersEnabled",
         "isUnmanagedSyncAppForTenantRestricted",
         "isSiteCreationEnabled",
@@ -247,14 +246,9 @@
       "StoreAs": "JSON",
       "FrontendFields": [
         {
-          "name": "SPO: Sharing capability",
-          "value": "SharepointSettings.sharingCapability",
-          "formatter": "string"
-        },
-        {
-          "name": "SPO: Resharing by external users",
+          "name": "SPO: Resharing by external users disabled",
           "value": "SharepointSettings.isResharingByExternalUsersEnabled",
-          "formatter": "bool"
+          "formatter": "reverseBool"
         },
         {
           "name": "SPO: Allow users to sync from unmanaged devices",
@@ -262,9 +256,9 @@
           "formatter": "reverseBool"
         },
         {
-          "name": "SPO: Site creation by standard users enabled",
+          "name": "SPO: Site creation by standard users disabled",
           "value": "SharepointSettings.isSiteCreationEnabled",
-          "formatter": "bool"
+          "formatter": "reverseBool"
         },
         {
           "name": "SPO: Default Timezone",
@@ -277,26 +271,59 @@
           "formatter": "bool"
         },
         {
-          "name": "SPO: Legacy Auth Protocols Enabled",
+          "name": "SPO: Legacy Auth Protocols Disabled",
           "value": "SharepointSettings.isLegacyAuthProtocolsEnabled",
+          "formatter": "reverseBool"
+        }
+      ]
+    },
+    {
+      "name": "SharepointAnonymousSharingEnabled",
+      "API": "Graph",
+      "URL": "https://graph.microsoft.com/beta/admin/sharepoint/settings",
+      "where": "$_.sharingCapability -eq 'ExternalUserAndGuestSharing'",
+      "Parameters": {
+        "asApp": "True"
+      },
+      "ExtractFields": [
+        "sharingCapability"
+      ],
+      "StoreAs": "bool",
+      "FrontendFields": [
+        {
+          "name": "SPO: Anonymous Sharing disabled",
+          "value": "SharepointAnonymousSharingEnabled",
+          "formatter": "reverseBool"
+        }
+      ]
+    },
+    {
+      "name": "BreakGlassAccount",
+      "API": "Graph",
+      "URL": "https://graph.microsoft.com/beta/users?$filter=startswith(displayName,'BreakGlass ')&$select=displayName",
+      "where": "$_.count -eq 1",
+      "FrontendFields": [
+        {
+          "name": "BreakGlass Account",
+          "value": "BreakGlassAccount",
           "formatter": "bool"
         }
       ]
     },
     {
-      "name": "adminsTable",
+      "name": "adminRoles",
       "UseExistingInfo": false,
       "API": "Graph",
-      "URL": "https://graph.microsoft.com/beta/directoryRoles/roleTemplateId=62e90394-69f5-4237-9190-012177145e10/members",
+      "URL": "https://graph.microsoft.com/v1.0/directoryRoles?$expand=members($select=displayName)&$select=displayName",
       "ExtractFields": [
         "displayName",
-        "userPrincipalName"
+        "members"
       ],
       "StoreAs": "JSON",
       "FrontendFields": [
         {
-          "name": "Admins Table",
-          "value": "adminsTable",
+          "name": "Admin Roles",
+          "value": "adminRoles",
           "formatter": "table"
         }
       ]
