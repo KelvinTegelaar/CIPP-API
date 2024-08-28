@@ -359,32 +359,6 @@
       ]
     },
     {
-      "name": "OneDriveAddShortcutButtonDisabled",
-      "StoreAs": "bool",
-      "UseExistingInfo": true,
-      "FrontendFields": [
-        {
-          "name": "SPO: Add Shortcut Button Disabled",
-          "desc": "Check if the Add Shortcut button is disabled for OneDrive",
-          "value": "OneDriveAddShortcutButtonDisabled",
-          "formatter": "bool"
-        }
-      ]
-    },
-    {
-      "name": "HideSyncButtonOnDocLib",
-      "StoreAs": "bool",
-      "UseExistingInfo": true,
-      "FrontendFields": [
-        {
-          "name": "SPO: Sync Button shown",
-          "desc": "Check if the Sync button is shown for document libraries",
-          "value": "HideSyncButtonOnDocLib",
-          "formatter": "reverseBool"
-        }
-      ]
-    },
-    {
       "name": "LAPSEnabled",
       "API": "Graph",
       "URL": "https://graph.microsoft.com/beta/policies/deviceRegistrationPolicy",
@@ -397,19 +371,6 @@
           "name": "LAPS: Enabled",
           "desc": "Check if Local Admin Password Solution is enabled",
           "value": "LAPSEnabled",
-          "formatter": "bool"
-        }
-      ]
-    },
-    {
-      "name": "UnifiedGroupCreationAllowed",
-      "StoreAs": "bool",
-      "UseExistingInfo": true,
-      "FrontendFields": [
-        {
-          "name": "Unified Group Creation Disabled",
-          "desc": "Check if users are allowed to create unified groups (Microsoft 365 Groups)",
-          "value": "DisableM365GroupUsers",
           "formatter": "bool"
         }
       ]
@@ -447,7 +408,6 @@
     },
     {
       "name": "adminRoles",
-      "UseExistingInfo": false,
       "API": "Graph",
       "URL": "https://graph.microsoft.com/v1.0/directoryRoles?$expand=members($select=displayName)&$select=displayName",
       "ExtractFields": [
