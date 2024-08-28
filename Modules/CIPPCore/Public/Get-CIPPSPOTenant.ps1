@@ -1,20 +1,15 @@
 function Get-CIPPSPOTenant {
     [CmdletBinding()]
     Param(
+        [Parameter(Mandatory = $true)]
         [string]$TenantFilter,
         [string]$SharepointPrefix
     )
 
     if (!$SharepointPrefix) {
         # get sharepoint admin site
-        if ($TenantFilter) {
-            $tenantName = (New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/sites/root' -asApp $true -tenantid $TenantFilter).id.Split('.')[0]
-        }
-        else {
-            $tenantName = (New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/sites/root' -asApp $true).id.Split('.')[0]
-        }
-    }
-    else {
+        $tenantName = (New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/sites/root' -asApp $true -tenantid $TenantFilter).id.Split('.')[0]
+    } else {
         $tenantName = $SharepointPrefix
     }
     $AdminUrl = "https://$($tenantName)-admin.sharepoint.com"
