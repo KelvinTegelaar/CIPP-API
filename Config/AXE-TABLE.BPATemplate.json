@@ -1,0 +1,374 @@
+{
+  "name": "AXE Best Practices - Table",
+  "style": "Table",
+  "Fields": [
+    {
+      "name": "PasswordNeverExpires",
+      "desc": "Check if the password never expires for any user",
+      "API": "Graph",
+      "URL": "https://graph.microsoft.com/beta/domains",
+      "ExtractFields": [
+        "passwordValidityPeriodInDays"
+      ],
+      "where": "$_.passwordValidityPeriodInDays -eq 2147483647",
+      "StoreAs": "bool",
+      "FrontendFields": [
+        {
+          "name": "EID: Password Never Expires",
+          "value": "PasswordNeverExpires",
+          "formatter": "bool"
+        }
+      ]
+    },
+    {
+      "name": "MicrosoftAuthenticatorEnabled",
+      "API": "Graph",
+      "URL": "https://graph.microsoft.com/beta/policies/authenticationmethodspolicy/authenticationMethodConfigurations/microsoftAuthenticator",
+      "ExtractFields": [
+        "State"
+      ],
+      "StoreAs": "bool",
+      "FrontendFields": [
+        {
+          "name": "EID: Microsoft Authenticator Enabled",
+          "value": "MicrosoftAuthenticatorEnabled",
+          "formatter": "bool"
+        }
+      ]
+    },
+    {
+      "name": "SoftwareOATHEnabled",
+      "API": "Graph",
+      "URL": "https://graph.microsoft.com/beta/policies/authenticationmethodspolicy/authenticationMethodConfigurations/softwareOath",
+      "ExtractFields": [
+        "State"
+      ],
+      "StoreAs": "bool",
+      "FrontendFields": [
+        {
+          "name": "EID: Software OATH Enabled",
+          "value": "SoftwareOATHEnabled",
+          "formatter": "bool"
+        }
+      ]
+    },
+    {
+      "name": "TAPEnabled",
+      "API": "Graph",
+      "URL": "https://graph.microsoft.com/beta/policies/authenticationmethodspolicy/authenticationMethodConfigurations/TemporaryAccessPass",
+      "ExtractFields": [
+        "State"
+      ],
+      "StoreAs": "bool",
+      "FrontendFields": [
+        {
+          "name": "EID: Temporary Access Pass Enabled",
+          "value": "TAPEnabled",
+          "formatter": "bool"
+        }
+      ]
+    },
+    {
+      "name": "FIDO2Enabled",
+      "API": "Graph",
+      "URL": "https://graph.microsoft.com/beta/policies/authenticationmethodspolicy/authenticationMethodConfigurations/fido2",
+      "ExtractFields": [
+        "State"
+      ],
+      "StoreAs": "bool",
+      "FrontendFields": [
+        {
+          "name": "EID: FIDO2 Enabled",
+          "value": "FIDO2Enabled",
+          "formatter": "bool"
+        }
+      ]
+    },
+    {
+      "name": "voiceEnabled",
+      "API": "Graph",
+      "URL": "https://graph.microsoft.com/beta/policies/authenticationmethodspolicy/authenticationMethodConfigurations/voice",
+      "ExtractFields": [
+        "State"
+      ],
+      "StoreAs": "bool",
+      "FrontendFields": [
+        {
+          "name": "EID: Voice Authentication Enabled",
+          "value": "voiceEnabled",
+          "formatter": "reverseBool"
+        }
+      ]
+    },
+    {
+      "name": "SMSEnabled",
+      "API": "Graph",
+      "URL": "https://graph.microsoft.com/beta/policies/authenticationmethodspolicy/authenticationMethodConfigurations/sms",
+      "ExtractFields": [
+        "State"
+      ],
+      "StoreAs": "bool",
+      "FrontendFields": [
+        {
+          "name": "EID: SMS Authentication Enabled",
+          "value": "SMSEnabled",
+          "formatter": "reverseBool"
+        }
+      ]
+    },
+    {
+      "name": "EmailEnabled",
+      "API": "Graph",
+      "URL": "https://graph.microsoft.com/beta/policies/authenticationmethodspolicy/authenticationMethodConfigurations/email",
+      "ExtractFields": [
+        "State"
+      ],
+      "StoreAs": "bool",
+      "FrontendFields": [
+        {
+          "name": "EID: Email Authentication Enabled",
+          "value": "EmailEnabled",
+          "formatter": "reverseBool"
+        }
+      ]
+    },
+    {
+      "name": "SecureDefaultState",
+      "API": "Graph",
+      "URL": "https://graph.microsoft.com/beta/policies/identitySecurityDefaultsEnforcementPolicy",
+      "ExtractFields": [
+        "IsEnabled"
+      ],
+      "StoreAs": "bool",
+      "FrontendFields": [
+        {
+          "name": "EID: Security Defaults State Enabled",
+          "value": "SecureDefaultState",
+          "formatter": "warnBool"
+        }
+      ]
+    },
+    {
+      "name": "userRegistrationDetails",
+      "API": "Graph",
+      "URL": "https://graph.microsoft.com/beta/reports/authenticationMethods/userRegistrationDetails",
+      "ExtractFields": [
+        "userDisplayName",
+        "isAdmin",
+        "isMFARegistered",
+        "defaultMFAMethod"
+      ],
+      "StoreAs": "JSON",
+      "FrontendFields": [
+        {
+          "name": "EID: MFA User Registration Details",
+          "value": "userRegistrationDetails",
+          "formatter": "table"
+        }
+      ]
+    },
+    {
+      "name": "OAuthAppConsent",
+      "API": "Graph",
+      "URL": "https://graph.microsoft.com/v1.0/policies/authorizationPolicy?$select=defaultUserRolePermissions",
+      "ExtractFields": [
+        "defaultuserrolepermissions"
+      ],
+      "where": "@('ManagePermissionGrantsForSelf.microsoft-user-default-legacy', 'microsoft-user-default-low') -notin $_.defaultuserrolepermissions.permissionGrantPoliciesAssigned",
+      "StoreAs": "bool",
+      "FrontendFields": [
+        {
+          "name": "EID: OAuth App Consent",
+          "value": "OAuthAppConsent",
+          "formatter": "bool"
+        }
+      ]
+    },
+    {
+      "name": "MessageCopyforSentAsDisabled",
+      "API": "Exchange",
+      "Command": "Get-Mailbox",
+      "Parameters": {
+        "RecipientTypeDetails": [
+          "SharedMailbox",
+          "UserMailbox"
+        ]
+      },
+      "where": "$_.MessageCopyForSentAsEnabled -eq $false",
+      "ExtractFields": [
+        "userprincipalname",
+        "messageCopyForSentAsEnabled"
+      ],
+      "StoreAs": "JSON",
+      "FrontendFields": [
+        {
+          "name": "EXO: Message Copy for Sent-As Disabled",
+          "formatter": "table",
+          "value": "MessageCopyforSentAsDisabled"
+        }
+      ]
+    },
+    {
+      "name": "SharedMailboxeswithenabledusers",
+      "API": "Exchange",
+      "Command": "Get-Mailbox",
+      "Parameters": {
+        "RecipientTypeDetails": "SharedMailbox"
+      },
+      "where": "$_.accountDisabled -eq $false",
+      "ExtractFields": [
+        "userprincipalname",
+        "accountDisabled"
+      ],
+      "StoreAs": "JSON",
+      "FrontendFields": [
+        {
+          "name": "EXO: Shared Mailboxes with enabled users",
+          "formatter": "table",
+          "value": "SharedMailboxeswithenabledusers"
+        }
+      ]
+    },
+    {
+      "name": "SharepointSettings",
+      "API": "Graph",
+      "URL": "https://graph.microsoft.com/beta/admin/sharepoint/settings",
+      "Parameters": {
+        "asApp": "True"
+      },
+      "ExtractFields": [
+        "isResharingByExternalUsersEnabled",
+        "isUnmanagedSyncAppForTenantRestricted",
+        "isSiteCreationEnabled",
+        "tenantDefaultTimezone",
+        "isRequireAcceptingUserToMatchInvitedUserEnabled",
+        "isLegacyAuthProtocolsEnabled"
+      ],
+      "StoreAs": "JSON",
+      "FrontendFields": [
+        {
+          "name": "SPO: Resharing by external users disabled",
+          "value": "SharepointSettings.isResharingByExternalUsersEnabled",
+          "formatter": "reverseBool"
+        },
+        {
+          "name": "SPO: Allow users to sync from unmanaged devices",
+          "value": "SharepointSettings.isUnmanagedSyncAppForTenantRestricted",
+          "formatter": "reverseBool"
+        },
+        {
+          "name": "SPO: Site creation by standard users disabled",
+          "value": "SharepointSettings.isSiteCreationEnabled",
+          "formatter": "reverseBool"
+        },
+        {
+          "name": "SPO: Default Timezone",
+          "value": "SharepointSettings.tenantDefaultTimezone",
+          "formatter": "string"
+        },
+        {
+          "name": "SPO: Require accepting user to match invited user",
+          "value": "SharepointSettings.isRequireAcceptingUserToMatchInvitedUserEnabled",
+          "formatter": "bool"
+        },
+        {
+          "name": "SPO: Legacy Auth Protocols Disabled",
+          "value": "SharepointSettings.isLegacyAuthProtocolsEnabled",
+          "formatter": "reverseBool"
+        }
+      ]
+    },
+    {
+      "name": "SharepointAnonymousSharingEnabled",
+      "API": "Graph",
+      "URL": "https://graph.microsoft.com/beta/admin/sharepoint/settings",
+      "where": "$_.sharingCapability -eq 'ExternalUserAndGuestSharing'",
+      "Parameters": {
+        "asApp": "True"
+      },
+      "ExtractFields": [
+        "sharingCapability"
+      ],
+      "StoreAs": "bool",
+      "FrontendFields": [
+        {
+          "name": "SPO: Anonymous Sharing disabled",
+          "value": "SharepointAnonymousSharingEnabled",
+          "formatter": "reverseBool"
+        }
+      ]
+    },
+    {
+      "name": "BreakGlassAccount",
+      "API": "Graph",
+      "URL": "https://graph.microsoft.com/beta/users?$filter=startswith(displayName,'BreakGlass ')&$select=displayName",
+      "where": "$_.count -eq 1",
+      "FrontendFields": [
+        {
+          "name": "BreakGlass Account",
+          "value": "BreakGlassAccount",
+          "formatter": "bool"
+        }
+      ]
+    },
+    {
+      "name": "adminRoles",
+      "UseExistingInfo": false,
+      "API": "Graph",
+      "URL": "https://graph.microsoft.com/v1.0/directoryRoles?$expand=members($select=displayName)&$select=displayName",
+      "ExtractFields": [
+        "displayName",
+        "members"
+      ],
+      "StoreAs": "JSON",
+      "FrontendFields": [
+        {
+          "name": "Admin Roles",
+          "value": "adminRoles",
+          "formatter": "table"
+        }
+      ]
+    },
+    {
+      "name": "Unusedlicenses",
+      "API": "CIPPFunction",
+      "Command": "Get-CIPPLicenseOverview",
+      "ExtractFields": [
+        "License",
+        "TotalLicenses",
+        "availableUnits",
+        "CountUsed"
+      ],
+      "StoreAs": "JSON",
+      "where": "$_.availableUnits -gt 0",
+      "FrontendFields": [
+        {
+          "name": "Unused licenses",
+          "formatter": "table",
+          "value": "Unusedlicenses"
+        }
+      ]
+    },
+    {
+      "name": "CurrentSecureScore",
+      "API": "Graph",
+      "URL": "https://graph.microsoft.com/beta/security/secureScores?$top=1",
+      "Parameters": {
+        "Nopagination": true
+      },
+      "ExtractFields": [
+        "currentScore",
+        "maxScore"
+      ],
+      "StoreAs": "JSON",
+      "FrontendFields": [
+        {
+          "name": "Current Secure Score",
+          "value": "CurrentSecureScore.currentScore / CurrentSecureScore.maxScore * 100",
+          "formatter": "math",
+          "showAs": "percentage"
+        }
+      ]
+    }
+  ]
+}

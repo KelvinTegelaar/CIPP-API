@@ -1,9 +1,10 @@
 {
-  "name": "AXE Best Practices",
-  "style": "Table",
+  "name": "AXE Best Practices - Tenant",
+  "style": "Tenant",
   "Fields": [
     {
       "name": "PasswordNeverExpires",
+      "desc": "Check if the password never expires for any user",
       "API": "Graph",
       "URL": "https://graph.microsoft.com/beta/domains",
       "ExtractFields": [
