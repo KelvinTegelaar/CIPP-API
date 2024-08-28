@@ -284,6 +284,24 @@
       ]
     },
     {
+      "name": "adminsTable",
+      "UseExistingInfo": false,
+      "API": "Graph",
+      "URL": "https://graph.microsoft.com/beta/directoryRoles/roleTemplateId=62e90394-69f5-4237-9190-012177145e10/members",
+      "ExtractFields": [
+        "displayName",
+        "userPrincipalName"
+      ],
+      "StoreAs": "JSON",
+      "FrontendFields": [
+        {
+          "name": "Admins Table",
+          "value": "adminsTable",
+          "formatter": "table"
+        }
+      ]
+    },
+    {
       "name": "Unusedlicenses",
       "API": "CIPPFunction",
       "Command": "Get-CIPPLicenseOverview",
@@ -312,26 +330,13 @@
       },
       "ExtractFields": [
         "currentScore",
-        "maxScore",
-        "averageComparativeScores"
+        "maxScore"
       ],
       "StoreAs": "JSON",
       "FrontendFields": [
         {
           "name": "Current Secure Score",
           "value": "CurrentSecureScore.currentScore / CurrentSecureScore.maxScore * 100",
-          "formatter": "math",
-          "showAs": "percentage"
-        },
-        {
-          "name": "Average Comparative Score (All Tenants)",
-          "value": "CurrentSecureScore.averageComparativeScores[0].averageScore / CurrentSecureScore.maxScore * 100",
-          "formatter": "math",
-          "showAs": "percentage"
-        },
-        {
-          "name": "Average Comparative Score (Similiar Size Tenants)",
-          "value": "CurrentSecureScore.averageComparativeScores[1].averageScore / CurrentSecureScore.maxScore * 100",
           "formatter": "math",
           "showAs": "percentage"
         }
