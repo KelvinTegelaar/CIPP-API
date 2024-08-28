@@ -156,10 +156,10 @@
       "StoreAs": "bool",
       "FrontendFields": [
         {
-          "name": "EID: Security Defaults State Enabled",
+          "name": "Security Defaults Enabled",
           "desc": "Check if Security Defaults are enabled. If using Conditional Access, this should be disabled.",
           "value": "SecureDefaultState",
-          "formatter": "warnBool"
+          "formatter": "string"
         }
       ]
     },
@@ -206,14 +206,14 @@
       "API": "Graph",
       "URL": "https://graph.microsoft.com/beta/policies/authorizationPolicy/authorizationPolicy",
       "ExtractFields": [
-        "defaultUserRolePermissions.allowedToCreateTenants"
+        "defaultUserRolePermissions"
       ],
-      "StoreAs": "bool",
+      "StoreAs": "JSON",
       "FrontendFields": [
         {
           "name": "Tenant Creation Disabled",
           "desc": "Check if users are allowed to create tenants",
-          "value": "AllowedToCreateTenants",
+          "value": "AllowedToCreateTenants.allowedToCreateTenants",
           "formatter": "reverseBool"
         }
       ]
@@ -363,14 +363,14 @@
       "API": "Graph",
       "URL": "https://graph.microsoft.com/beta/policies/deviceRegistrationPolicy",
       "ExtractFields": [
-        "localAdminPassword.isEnabled"
+        "localAdminPassword"
       ],
-      "StoreAs": "bool",
+      "StoreAs": "JSON",
       "FrontendFields": [
         {
           "name": "LAPS: Enabled",
           "desc": "Check if Local Admin Password Solution is enabled",
-          "value": "LAPSEnabled",
+          "value": "LAPSEnabled.IsEnabled",
           "formatter": "bool"
         }
       ]
@@ -380,14 +380,14 @@
       "API": "Graph",
       "URL": "https://graph.microsoft.com/beta/policies/authorizationPolicy/authorizationPolicy",
       "ExtractFields": [
-        "defaultUserRolePermissions.allowedToCreateSecurityGroups"
+        "defaultUserRolePermissions"
       ],
-      "StoreAs": "bool",
+      "StoreAs": "JSON",
       "FrontendFields": [
         {
           "name": "Security Group Creation Disabled",
           "desc": "Check if users are allowed to create security groups",
-          "value": "SecurityGroupCreationAllowed",
+          "value": "SecurityGroupCreationAllowed.allowedToCreateSecurityGroups",
           "formatter": "reverseBool"
         }
       ]
