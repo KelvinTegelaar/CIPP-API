@@ -1,5 +1,27 @@
 {
   "name": "AXE Best Practices - Table",
   "style": "Table",
-  "Fields": []
+  "Fields": [
+    {
+      "name": "Unusedlicenses",
+      "API": "CIPPFunction",
+      "Command": "Get-CIPPLicenseOverview",
+      "ExtractFields": [
+        "License",
+        "TotalLicenses",
+        "availableUnits",
+        "CountUsed"
+      ],
+      "StoreAs": "JSON",
+      "where": "$_.availableUnits -gt 0",
+      "FrontendFields": [
+        {
+          "name": "Unused licenses",
+          "desc": "Check if there are any unused licenses",
+          "formatter": "table",
+          "value": "Unusedlicenses"
+        }
+      ]
+    }
+  ]
 }
