@@ -4,7 +4,6 @@
   "Fields": [
     {
       "name": "PasswordNeverExpires",
-      "desc": "Check if the password never expires for any user",
       "API": "Graph",
       "URL": "https://graph.microsoft.com/beta/domains",
       "ExtractFields": [
@@ -15,6 +14,7 @@
       "FrontendFields": [
         {
           "name": "EID: Password Never Expires",
+          "desc": "Check if the password never expires for any user",
           "value": "PasswordNeverExpires",
           "formatter": "bool"
         }
