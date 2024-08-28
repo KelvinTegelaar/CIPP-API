@@ -8,16 +8,14 @@ Function Invoke-ExecBECCheck {
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
 
-    $body = if ($request.query.GUID) {
-        $Table = Get-CippTable -tablename 'cachebec'
-        $Filter = "PartitionKey eq 'bec' and RowKey eq '$($request.query.GUID)'"
-        $JSONOutput = Get-CIPPAzDataTableEntity @Table -Filter $Filter
-        if (!$JSONOutput -or $JSONOutput.Status -eq 'Waiting') {
-            @{ Waiting = $true }
-        } else {
-            $JSONOutput.Results
-        }
-    } else {
+    $Table = Get-CippTable -tablename 'cachebec'
+
+    $UserId = $Request.Query.userid ?? $Request.Query.GUID
+    $Filter = "PartitionKey eq 'bec' and RowKey eq '$UserId'"
+    $JSONOutput = Get-CIPPAzDataTableEntity @Table -Filter $Filter
+    Write-Host ($Request.Query | ConvertTo-Json)
+
+    $body = if (([string]::IsNullOrEmpty($JSONOutput.Results) -and $JSONOutput.Status -ne 'Waiting' ) -or $Request.Query.overwrite -eq $true) {
         $Batch = @{
             'FunctionName' = 'BECRun'
             'UserID'       = $Request.Query.userid
@@ -45,6 +43,16 @@ Function Invoke-ExecBECCheck {
         $InstanceId = Start-NewOrchestration -FunctionName 'CIPPOrchestrator' -InputObject ($InputObject | ConvertTo-Json -Depth 5 -Compress)
 
         @{ GUID = $Request.Query.userid }
+    } else {
+        if (!$Request.Query.GUID) {
+            @{ GUID = $Request.Query.userid }
+        } else {
+            if (!$JSONOutput -or $JSONOutput.Status -eq 'Waiting') {
+                @{ Waiting = $true }
+            } else {
+                $JSONOutput.Results
+            }
+        }
     }
 
 
