@@ -1,7 +1,6 @@
 function Get-CIPPSPOTenant {
     [CmdletBinding()]
     Param(
-        [Parameter(Mandatory = $true)]
         [string]$TenantFilter,
         [string]$SharepointPrefix
     )
