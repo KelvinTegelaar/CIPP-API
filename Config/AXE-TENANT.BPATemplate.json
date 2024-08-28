@@ -13,8 +13,8 @@
       "StoreAs": "bool",
       "FrontendFields": [
         {
-          "name": "EID: Password Never Expires",
-          "desc": "Check if the password never expires for any user",
+          "name": "Passwords Never Expire",
+          "desc": "Check if the passwords never expire for all users",
           "value": "PasswordNeverExpires",
           "formatter": "bool"
         }
@@ -30,7 +30,8 @@
       "StoreAs": "bool",
       "FrontendFields": [
         {
-          "name": "EID: Microsoft Authenticator Enabled",
+          "name": "MFA: Microsoft Authenticator Enabled",
+          "desc": "Check if Microsoft Authenticator is enabled for MFA",
           "value": "MicrosoftAuthenticatorEnabled",
           "formatter": "bool"
         }
@@ -46,7 +47,8 @@
       "StoreAs": "bool",
       "FrontendFields": [
         {
-          "name": "EID: Software OATH Enabled",
+          "name": "MFA: Software OATH Enabled",
+          "desc": "Check if Software OATH is enabled for MFA",
           "value": "SoftwareOATHEnabled",
           "formatter": "bool"
         }
@@ -62,7 +64,8 @@
       "StoreAs": "bool",
       "FrontendFields": [
         {
-          "name": "EID: Temporary Access Pass Enabled",
+          "name": "MFA: Temporary Access Pass Enabled",
+          "desc": "Check if Temporary Access Pass is enabled for MFA",
           "value": "TAPEnabled",
           "formatter": "bool"
         }
@@ -78,7 +81,8 @@
       "StoreAs": "bool",
       "FrontendFields": [
         {
-          "name": "EID: FIDO2 Enabled",
+          "name": "MFA: FIDO2 Enabled",
+          "desc": "Check if FIDO2 is enabled for MFA",
           "value": "FIDO2Enabled",
           "formatter": "bool"
         }
@@ -94,7 +98,8 @@
       "StoreAs": "bool",
       "FrontendFields": [
         {
-          "name": "EID: Voice Authentication Enabled",
+          "name": "MFA: Voice Authentication Disabled",
+          "desc": "Check if Voice is disabled for MFA",
           "value": "voiceEnabled",
           "formatter": "reverseBool"
         }
@@ -110,7 +115,8 @@
       "StoreAs": "bool",
       "FrontendFields": [
         {
-          "name": "EID: SMS Authentication Enabled",
+          "name": "MFA: SMS Authentication Disabled",
+          "desc": "Check if SMS is disabled for MFA",
           "value": "SMSEnabled",
           "formatter": "reverseBool"
         }
@@ -126,7 +132,8 @@
       "StoreAs": "bool",
       "FrontendFields": [
         {
-          "name": "EID: Email Authentication Enabled",
+          "name": "MFA: Email Disabled",
+          "desc": "Check if Email is disabled for MFA",
           "value": "EmailEnabled",
           "formatter": "reverseBool"
         }
@@ -143,6 +150,7 @@
       "FrontendFields": [
         {
           "name": "EID: Security Defaults State Enabled",
+          "desc": "Check if Security Defaults are enabled. If using Conditional Access, this should be disabled.",
           "value": "SecureDefaultState",
           "formatter": "warnBool"
         }
@@ -161,7 +169,8 @@
       "StoreAs": "JSON",
       "FrontendFields": [
         {
-          "name": "EID: MFA User Registration Details",
+          "name": "MFA User Registration Details",
+          "desc": "Check if users are registered for MFA",
           "value": "userRegistrationDetails",
           "formatter": "table"
         }
@@ -178,7 +187,8 @@
       "StoreAs": "bool",
       "FrontendFields": [
         {
-          "name": "EID: OAuth App Consent",
+          "name": "Enterprise App consent disabled",
+          "desc": "Check if users can self-service consent to apps",
           "value": "OAuthAppConsent",
           "formatter": "bool"
         }
@@ -202,7 +212,8 @@
       "StoreAs": "JSON",
       "FrontendFields": [
         {
-          "name": "EXO: Message Copy for Sent-As Disabled",
+          "name": "Mail: Message Copy for Sent-As Disabled",
+          "desc": "Check if Message Copy for Sent-As is disabled for any mailbox",
           "formatter": "table",
           "value": "MessageCopyforSentAsDisabled"
         }
@@ -223,7 +234,8 @@
       "StoreAs": "JSON",
       "FrontendFields": [
         {
-          "name": "EXO: Shared Mailboxes with enabled users",
+          "name": "Shared Mailboxes with enabled users",
+          "desc": "Check if any shared mailbox has an enabled user",
           "formatter": "table",
           "value": "SharedMailboxeswithenabledusers"
         }
@@ -247,32 +259,38 @@
       "StoreAs": "JSON",
       "FrontendFields": [
         {
-          "name": "SPO: Resharing by external users disabled",
+          "name": "SPO: Resharing disabled",
+          "desc": "Check if resharing by external users is disabled",
           "value": "SharepointSettings.isResharingByExternalUsersEnabled",
           "formatter": "reverseBool"
         },
         {
-          "name": "SPO: Allow users to sync from unmanaged devices",
+          "name": "SPO: Allow sync from unmanaged devices",
+          "desc": "Check if document library sync from unmanaged devices is allowed",
           "value": "SharepointSettings.isUnmanagedSyncAppForTenantRestricted",
           "formatter": "reverseBool"
         },
         {
-          "name": "SPO: Site creation by standard users disabled",
+          "name": "SPO: Site creation disabled",
+          "desc": "Check if SharePoint site creation is disabled for all users",
           "value": "SharepointSettings.isSiteCreationEnabled",
           "formatter": "reverseBool"
         },
         {
           "name": "SPO: Default Timezone",
+          "desc": "Check the default timezone for SharePoint sites",
           "value": "SharepointSettings.tenantDefaultTimezone",
           "formatter": "string"
         },
         {
           "name": "SPO: Require accepting user to match invited user",
+          "desc": "Check if users are required to accept the invitation to match the invited user",
           "value": "SharepointSettings.isRequireAcceptingUserToMatchInvitedUserEnabled",
           "formatter": "bool"
         },
         {
           "name": "SPO: Legacy Auth Protocols Disabled",
+          "desc": "Check if legacy authentication protocols are disabled",
           "value": "SharepointSettings.isLegacyAuthProtocolsEnabled",
           "formatter": "reverseBool"
         }
@@ -293,7 +311,33 @@
       "FrontendFields": [
         {
           "name": "SPO: Anonymous Sharing disabled",
+          "desc": "Check if anonymous sharing is disabled for SharePoint and OneDrive",
           "value": "SharepointAnonymousSharingEnabled",
+          "formatter": "reverseBool"
+        }
+      ]
+    },
+    {
+      "name": "SharePointSyncSettings",
+      "API": "CIPPFunction",
+      "Command": "Get-CIPPSPOTenant",
+      "Parameters": {},
+      "ExtractFields": [
+        "OneDriveAddShortcutButtonDisabled",
+        "HideSyncButtonOnDocLib"
+      ],
+      "StoreAs": "JSON",
+      "FrontendFields": [
+        {
+          "name": "SPO: Add Shortcut Button Disabled",
+          "desc": "Check if the Add Shortcut button is disabled for OneDrive",
+          "value": "SharePointSyncSettings.OneDriveAddShortcutButtonDisabled",
+          "formatter": "bool"
+        },
+        {
+          "name": "SPO: Sync Button shown",
+          "desc": "Check if the Sync button is shown for document libraries",
+          "value": "SharePointSyncSettings.HideSyncButtonOnDocLib",
           "formatter": "reverseBool"
         }
       ]
@@ -306,6 +350,7 @@
       "FrontendFields": [
         {
           "name": "BreakGlass Account",
+          "desc": "Check if there is a BreakGlass account in the tenant",
           "value": "BreakGlassAccount",
           "formatter": "bool"
         }
@@ -324,6 +369,7 @@
       "FrontendFields": [
         {
           "name": "Admin Roles",
+          "desc": "Check the admin roles in the tenant",
           "value": "adminRoles",
           "formatter": "table"
         }
@@ -344,6 +390,7 @@
       "FrontendFields": [
         {
           "name": "Unused licenses",
+          "desc": "Check if there are any unused licenses",
           "formatter": "table",
           "value": "Unusedlicenses"
         }
@@ -364,6 +411,7 @@
       "FrontendFields": [
         {
           "name": "Current Secure Score",
+          "desc": "Check the current secure score for the tenant",
           "value": "CurrentSecureScore.currentScore / CurrentSecureScore.maxScore * 100",
           "formatter": "math",
           "showAs": "percentage"
