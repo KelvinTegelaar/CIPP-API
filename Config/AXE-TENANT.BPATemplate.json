@@ -27,6 +27,7 @@
       "ExtractFields": [
         "State"
       ],
+      "where": "$_.State -eq 'Enabled'",
       "StoreAs": "bool",
       "FrontendFields": [
         {
@@ -44,6 +45,7 @@
       "ExtractFields": [
         "State"
       ],
+      "where": "$_.State -eq 'Enabled'",
       "StoreAs": "bool",
       "FrontendFields": [
         {
@@ -61,6 +63,7 @@
       "ExtractFields": [
         "State"
       ],
+      "where": "$_.State -eq 'Enabled'",
       "StoreAs": "bool",
       "FrontendFields": [
         {
@@ -78,6 +81,7 @@
       "ExtractFields": [
         "State"
       ],
+      "where": "$_.State -eq 'Enabled'",
       "StoreAs": "bool",
       "FrontendFields": [
         {
@@ -95,6 +99,7 @@
       "ExtractFields": [
         "State"
       ],
+      "where": "$_.State -eq 'Enabled'",
       "StoreAs": "bool",
       "FrontendFields": [
         {
@@ -112,6 +117,7 @@
       "ExtractFields": [
         "State"
       ],
+      "where": "$_.State -eq 'Enabled'",
       "StoreAs": "bool",
       "FrontendFields": [
         {
@@ -129,6 +135,7 @@
       "ExtractFields": [
         "State"
       ],
+      "where": "$_.State -eq 'Enabled'",
       "StoreAs": "bool",
       "FrontendFields": [
         {
@@ -191,6 +198,23 @@
           "desc": "Check if users can self-service consent to apps",
           "value": "OAuthAppConsent",
           "formatter": "bool"
+        }
+      ]
+    },
+    {
+      "name": "AllowedToCreateTenants",
+      "API": "Graph",
+      "URL": "https://graph.microsoft.com/beta/policies/authorizationPolicy/authorizationPolicy",
+      "ExtractFields": [
+        "defaultUserRolePermissions.allowedToCreateTenants"
+      ],
+      "StoreAs": "bool",
+      "FrontendFields": [
+        {
+          "name": "Tenant Creation Disabled",
+          "desc": "Check if users are allowed to create tenants",
+          "value": "AllowedToCreateTenants",
+          "formatter": "reverseBool"
         }
       ]
     },
