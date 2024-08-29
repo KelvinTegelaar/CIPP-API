@@ -285,6 +285,31 @@
       ]
     },
     {
+      "name": "SharePointSettings",
+      "API": "CIPPFunction",
+      "Command": "Get-CIPPSPOTenant",
+      "Parameters": {},
+      "ExtractFields": [
+        "OneDriveAddShortcutButtonDisabled",
+        "HideSyncButtonOnDocLib"
+      ],
+      "StoreAs": "JSON",
+      "FrontendFields": [
+        {
+          "name": "Add shortcut button disabled",
+          "desc": "Check if the add shortcut button is disabled for OneDrive",
+          "value": "SharePointSettings.OneDriveAddShortcutButtonDisabled",
+          "formatter": "bool"
+        },
+        {
+          "name": "Sync button shown",
+          "desc": "Check if the Sync button is shown for document libraries",
+          "value": "SharePointSettings.HideSyncButtonOnDocLib",
+          "formatter": "reverseBool"
+        }
+      ]
+    },
+    {
       "name": "SharepointSiteCreationEnabled",
       "API": "Graph",
       "URL": "https://graph.microsoft.com/v1.0/admin/sharepoint/settings?$select=isSiteCreationEnabled",
