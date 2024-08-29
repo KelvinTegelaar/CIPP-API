@@ -159,7 +159,7 @@
           "name": "Security Defaults Enabled",
           "desc": "Check if Security Defaults are enabled. If using Conditional Access, this should be disabled.",
           "value": "SecureDefaultState",
-          "formatter": "string"
+          "formatter": "bool"
         }
       ]
     },
@@ -184,19 +184,19 @@
       ]
     },
     {
-      "name": "OAuthAppConsent",
+      "name": "OAuthAppConsentDisabled",
       "API": "Graph",
       "URL": "https://graph.microsoft.com/v1.0/policies/authorizationPolicy?$select=defaultUserRolePermissions",
       "ExtractFields": [
-        "defaultuserrolepermissions"
+        "defaultUserRolePermissions"
       ],
-      "where": "@('ManagePermissionGrantsForSelf.microsoft-user-default-legacy', 'microsoft-user-default-low') -notin $_.defaultuserrolepermissions.permissionGrantPoliciesAssigned",
+      "where": "@('ManagePermissionGrantsForSelf.microsoft-user-default-legacy', 'ManagePermissionGrantsForSelf.microsoft-user-default-low') -notin $_.defaultUserRolePermissions.permissionGrantPoliciesAssigned",
       "StoreAs": "bool",
       "FrontendFields": [
         {
           "name": "Enterprise App consent disabled",
           "desc": "Check if users can self-service consent to apps",
-          "value": "OAuthAppConsent",
+          "value": "OAuthAppConsentDisabled",
           "formatter": "bool"
         }
       ]
@@ -204,16 +204,17 @@
     {
       "name": "AllowedToCreateTenants",
       "API": "Graph",
-      "URL": "https://graph.microsoft.com/beta/policies/authorizationPolicy/authorizationPolicy",
+      "URL": "https://graph.microsoft.com/v1.0/policies/authorizationPolicy?$select=defaultUserRolePermissions",
       "ExtractFields": [
         "defaultUserRolePermissions"
       ],
-      "StoreAs": "JSON",
+      "where": "$_.defaultUserRolePermissions.allowedToCreateTenants -eq $true",
+      "StoreAs": "bool",
       "FrontendFields": [
         {
           "name": "Tenant Creation Disabled",
           "desc": "Check if users are allowed to create tenants",
-          "value": "AllowedToCreateTenants.allowedToCreateTenants",
+          "value": "AllowedToCreateTenants",
           "formatter": "reverseBool"
         }
       ]
@@ -236,6 +237,29 @@
       ]
     },
     {
+      "name": "MailboxesWithBasicAuthEnabled",
+      "API": "Exchange",
+      "Command": "Get-CASMailbox",
+      "Parameters": {
+        "ResultSize": "Unlimited"
+      },
+      "where": "$_.SmtpClientAuthenticationDisabled -eq $false",
+      "ExtractFields": [
+        "DisplayName",
+        "PrimarySmtpAddress",
+        "SmtpClientAuthenticationDisabled"
+      ],
+      "StoreAs": "JSON",
+      "FrontendFields": [
+        {
+          "name": "Mail: SMTP Basic Auth Enabled",
+          "desc": "Check if SMTP Basic Authentication is enabled for any mailbox",
+          "formatter": "table",
+          "value": "MailboxesWithBasicAuthEnabled"
+        }
+      ]
+    },
+    {
       "name": "MessageCopyforSentAsDisabled",
       "API": "Exchange",
       "Command": "Get-Mailbox",
@@ -247,7 +271,8 @@
       },
       "where": "$_.MessageCopyForSentAsEnabled -eq $false",
       "ExtractFields": [
-        "userprincipalname",
+        "DisplayName",
+        "PrimarySmtpAddress",
         "messageCopyForSentAsEnabled"
       ],
       "StoreAs": "JSON",
@@ -293,6 +318,7 @@
         "isResharingByExternalUsersEnabled",
         "isUnmanagedSyncAppForTenantRestricted",
         "isSiteCreationEnabled",
+        "isSiteCreationUIEnabled",
         "tenantDefaultTimezone",
         "isRequireAcceptingUserToMatchInvitedUserEnabled",
         "isLegacyAuthProtocolsEnabled"
@@ -300,39 +326,70 @@
       "StoreAs": "JSON",
       "FrontendFields": [
         {
-          "name": "SPO: Resharing disabled",
-          "desc": "Check if resharing by external users is disabled",
+          "name": "Guest resharing disabled",
+          "desc": "Check if SharePoint resharing by external users is disabled",
           "value": "SharepointSettings.isResharingByExternalUsersEnabled",
           "formatter": "reverseBool"
         },
         {
-          "name": "SPO: Allow sync from unmanaged devices",
-          "desc": "Check if document library sync from unmanaged devices is allowed",
+          "name": "Disable sync from unmanaged devices",
+          "desc": "Check if document library sync from unmanaged devices is disabled",
           "value": "SharepointSettings.isUnmanagedSyncAppForTenantRestricted",
-          "formatter": "reverseBool"
+          "formatter": "bool"
         },
         {
-          "name": "SPO: Site creation disabled",
+          "name": "Site creation disabled",
           "desc": "Check if SharePoint site creation is disabled for all users",
           "value": "SharepointSettings.isSiteCreationEnabled",
           "formatter": "reverseBool"
         },
         {
-          "name": "SPO: Default Timezone",
+          "name": "Site creation UI disabled",
+          "desc": "Check if SharePoint site creation UI is disabled for all users",
+          "value": "SharepointSettings.isSiteCreationUIEnabled",
+          "formatter": "reverseBool"
+        },
+        {
+          "name": "Default SharePoint timezone",
           "desc": "Check the default timezone for SharePoint sites",
           "value": "SharepointSettings.tenantDefaultTimezone",
           "formatter": "string"
         },
         {
-          "name": "SPO: Require accepting user to match invited user",
+          "name": "Require accepting user to match invited user",
           "desc": "Check if users are required to accept the invitation to match the invited user",
           "value": "SharepointSettings.isRequireAcceptingUserToMatchInvitedUserEnabled",
           "formatter": "bool"
         },
         {
-          "name": "SPO: Legacy Auth Protocols Disabled",
+          "name": "Legacy SharePoint auth protocols disabled",
           "desc": "Check if legacy authentication protocols are disabled",
           "value": "SharepointSettings.isLegacyAuthProtocolsEnabled",
+          "formatter": "reverseBool"
+        }
+      ]
+    },
+    {
+      "name": "SharePointSyncSettings",
+      "API": "CIPPFunction",
+      "Command": "Get-CIPPSPOTenant",
+      "Parameters": {},
+      "ExtractFields": [
+        "OneDriveAddShortcutButtonDisabled",
+        "HideSyncButtonOnDocLib"
+      ],
+      "StoreAs": "JSON",
+      "FrontendFields": [
+        {
+          "name": "Add shortcut button disabled",
+          "desc": "Check if the 'Add shortcut' button is disabled for OneDrive",
+          "value": "SharePointSyncSettings.OneDriveAddShortcutButtonDisabled",
+          "formatter": "bool"
+        },
+        {
+          "name": "Sync button shown",
+          "desc": "Check if the Sync button is shown for document libraries",
+          "value": "SharePointSyncSettings.HideSyncButtonOnDocLib",
           "formatter": "reverseBool"
         }
       ]
@@ -351,7 +408,7 @@
       "StoreAs": "bool",
       "FrontendFields": [
         {
-          "name": "SPO: Anonymous Sharing disabled",
+          "name": "Anonymous link sharing disabled",
           "desc": "Check if anonymous sharing is disabled for SharePoint and OneDrive",
           "value": "SharepointAnonymousSharingEnabled",
           "formatter": "reverseBool"
@@ -361,7 +418,7 @@
     {
       "name": "LAPSEnabled",
       "API": "Graph",
-      "URL": "https://graph.microsoft.com/beta/policies/deviceRegistrationPolicy",
+      "URL": "https://graph.microsoft.com/v1.0/policies/deviceRegistrationPolicy?$select=localAdminPassword",
       "ExtractFields": [
         "localAdminPassword"
       ],
@@ -378,7 +435,7 @@
     {
       "name": "SecurityGroupCreationAllowed",
       "API": "Graph",
-      "URL": "https://graph.microsoft.com/beta/policies/authorizationPolicy/authorizationPolicy",
+      "URL": "https://graph.microsoft.com/beta/policies/authorizationPolicy/?$select=defaultUserRolePermissions",
       "ExtractFields": [
         "defaultUserRolePermissions"
       ],
