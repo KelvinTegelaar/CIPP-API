@@ -218,17 +218,17 @@
       ]
     },
     {
-      "name": "UserAllowedToCreateUnifiedGroups",
+      "name": "UserNotAllowedToCreateUnifiedGroups",
       "API": "Graph",
-      "URL": "https://graph.microsoft.com/v1.0/groupSettings?$select=values",
-      "where": "$_.values | Where-Object { $_.name -eq 'EnableGroupCreation' -and $_.value -eq $true }",
+      "URL": "https://graph.microsoft.com/v1.0/groupSettings?$select=values,displayName",
+      "where": "$_.displayName -eq 'Group.Unified' -and ($_.values | Where-Object { $_.name -eq 'EnableGroupCreation' -and $_.value -eq $false }).Count -gt 0",
       "StoreAs": "bool",
       "FrontendFields": [
         {
           "name": "Unified group creation disabled",
-          "desc": "Check if users are allowed to create Unified groups",
-          "value": "UserAllowedToCreateUnifiedGroups",
-          "formatter": "reverseBool"
+          "desc": "Check if users are allowed to create unified groups (M365 groups) (Currently not working)",
+          "value": "UserNotAllowedToCreateUnifiedGroups",
+          "formatter": "bool"
         }
       ]
     },
@@ -264,6 +264,23 @@
           "desc": "Check if SMTP basic authentication is disabled for the tenant",
           "value": "SmtpClientAuthenticationDisabled",
           "formatter": "bool"
+        }
+      ]
+    },
+    {
+      "name": "OutlookAdditionalStorageProvidersAvailable",
+      "API": "Exchange",
+      "Command": "Get-OwaMailboxPolicy",
+      "ExtractFields": [
+        "AdditionalStorageProvidersAvailable"
+      ],
+      "StoreAs": "bool",
+      "FrontendFields": [
+        {
+          "name": "Outlook additional storage providers disabled",
+          "desc": "Check if additional storage providers are disabled for Outlook",
+          "value": "OutlookAdditionalStorageProvidersAvailable",
+          "formatter": "reverseBool"
         }
       ]
     },
