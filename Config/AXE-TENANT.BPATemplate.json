@@ -3,9 +3,9 @@
   "style": "Tenant",
   "Fields": [
     {
-      "name": "PasswordNeverExpires",
+      "name": "UserPasswordsNeverExpire",
       "API": "Graph",
-      "URL": "https://graph.microsoft.com/beta/domains",
+      "URL": "https://graph.microsoft.com/v1.0/domains?$select=passwordValidityPeriodInDays",
       "ExtractFields": [
         "passwordValidityPeriodInDays"
       ],
@@ -13,17 +13,17 @@
       "StoreAs": "bool",
       "FrontendFields": [
         {
-          "name": "Passwords Never Expire",
+          "name": "User passwords never expire",
           "desc": "Check if the passwords never expire for all users",
-          "value": "PasswordNeverExpires",
+          "value": "UserPasswordsNeverExpire",
           "formatter": "bool"
         }
       ]
     },
     {
-      "name": "MicrosoftAuthenticatorEnabled",
+      "name": "MFAMicrosoftAuthenticatorEnabled",
       "API": "Graph",
-      "URL": "https://graph.microsoft.com/beta/policies/authenticationmethodspolicy/authenticationMethodConfigurations/microsoftAuthenticator",
+      "URL": "https://graph.microsoft.com/v1.0/policies/authenticationmethodspolicy/authenticationMethodConfigurations/microsoftAuthenticator",
       "ExtractFields": [
         "State"
       ],
@@ -33,15 +33,15 @@
         {
           "name": "MFA: Microsoft Authenticator Enabled",
           "desc": "Check if Microsoft Authenticator is enabled for MFA",
-          "value": "MicrosoftAuthenticatorEnabled",
+          "value": "MFAMicrosoftAuthenticatorEnabled",
           "formatter": "bool"
         }
       ]
     },
     {
-      "name": "SoftwareOATHEnabled",
+      "name": "MFASoftwareOATHEnabled",
       "API": "Graph",
-      "URL": "https://graph.microsoft.com/beta/policies/authenticationmethodspolicy/authenticationMethodConfigurations/softwareOath",
+      "URL": "https://graph.microsoft.com/v1.0/policies/authenticationmethodspolicy/authenticationMethodConfigurations/softwareOath",
       "ExtractFields": [
         "State"
       ],
@@ -51,15 +51,15 @@
         {
           "name": "MFA: Software OATH Enabled",
           "desc": "Check if Software OATH is enabled for MFA",
-          "value": "SoftwareOATHEnabled",
+          "value": "MFASoftwareOATHEnabled",
           "formatter": "bool"
         }
       ]
     },
     {
-      "name": "TAPEnabled",
+      "name": "MFATAPEnabled",
       "API": "Graph",
-      "URL": "https://graph.microsoft.com/beta/policies/authenticationmethodspolicy/authenticationMethodConfigurations/TemporaryAccessPass",
+      "URL": "https://graph.microsoft.com/v1.0/policies/authenticationmethodspolicy/authenticationMethodConfigurations/TemporaryAccessPass",
       "ExtractFields": [
         "State"
       ],
@@ -69,15 +69,15 @@
         {
           "name": "MFA: Temporary Access Pass Enabled",
           "desc": "Check if Temporary Access Pass is enabled for MFA",
-          "value": "TAPEnabled",
+          "value": "MFATAPEnabled",
           "formatter": "bool"
         }
       ]
     },
     {
-      "name": "FIDO2Enabled",
+      "name": "MFAFIDO2Enabled",
       "API": "Graph",
-      "URL": "https://graph.microsoft.com/beta/policies/authenticationmethodspolicy/authenticationMethodConfigurations/fido2",
+      "URL": "https://graph.microsoft.com/v1.0/policies/authenticationmethodspolicy/authenticationMethodConfigurations/fido2",
       "ExtractFields": [
         "State"
       ],
@@ -85,17 +85,17 @@
       "StoreAs": "bool",
       "FrontendFields": [
         {
-          "name": "MFA: FIDO2 Enabled",
+          "name": "MFA: FIDO2 enabled",
           "desc": "Check if FIDO2 is enabled for MFA",
-          "value": "FIDO2Enabled",
+          "value": "MFAFIDO2Enabled",
           "formatter": "bool"
         }
       ]
     },
     {
-      "name": "voiceEnabled",
+      "name": "MFAVoiceEnabled",
       "API": "Graph",
-      "URL": "https://graph.microsoft.com/beta/policies/authenticationmethodspolicy/authenticationMethodConfigurations/voice",
+      "URL": "https://graph.microsoft.com/v1.0/policies/authenticationmethodspolicy/authenticationMethodConfigurations/voice",
       "ExtractFields": [
         "State"
       ],
@@ -105,15 +105,15 @@
         {
           "name": "MFA: Voice Authentication Disabled",
           "desc": "Check if Voice is disabled for MFA",
-          "value": "voiceEnabled",
+          "value": "MFAVoiceEnabled",
           "formatter": "reverseBool"
         }
       ]
     },
     {
-      "name": "SMSEnabled",
+      "name": "MFASMSEnabled",
       "API": "Graph",
-      "URL": "https://graph.microsoft.com/beta/policies/authenticationmethodspolicy/authenticationMethodConfigurations/sms",
+      "URL": "https://graph.microsoft.com/v1.0/policies/authenticationmethodspolicy/authenticationMethodConfigurations/sms",
       "ExtractFields": [
         "State"
       ],
@@ -123,15 +123,15 @@
         {
           "name": "MFA: SMS Authentication Disabled",
           "desc": "Check if SMS is disabled for MFA",
-          "value": "SMSEnabled",
+          "value": "MFASMSEnabled",
           "formatter": "reverseBool"
         }
       ]
     },
     {
-      "name": "EmailEnabled",
+      "name": "MFAEmailEnabled",
       "API": "Graph",
-      "URL": "https://graph.microsoft.com/beta/policies/authenticationmethodspolicy/authenticationMethodConfigurations/email",
+      "URL": "https://graph.microsoft.com/v1.0/policies/authenticationmethodspolicy/authenticationMethodConfigurations/email",
       "ExtractFields": [
         "State"
       ],
@@ -141,86 +141,117 @@
         {
           "name": "MFA: Email Disabled",
           "desc": "Check if Email is disabled for MFA",
-          "value": "EmailEnabled",
+          "value": "MFAEmailEnabled",
           "formatter": "reverseBool"
         }
       ]
     },
     {
-      "name": "SecureDefaultState",
+      "name": "MFASecurityDefaultsState",
       "API": "Graph",
-      "URL": "https://graph.microsoft.com/beta/policies/identitySecurityDefaultsEnforcementPolicy?$select=isEnabled",
+      "URL": "https://graph.microsoft.com/v1.0/policies/identitySecurityDefaultsEnforcementPolicy?$select=isEnabled",
       "ExtractFields": [
         "IsEnabled"
       ],
       "StoreAs": "bool",
       "FrontendFields": [
         {
-          "name": "Security Defaults Enabled",
+          "name": "MFA: Security Defaults enabled",
           "desc": "Check if Security Defaults are enabled. If using Conditional Access, this should be disabled.",
-          "value": "SecureDefaultState",
+          "value": "MFASecurityDefaultsState",
           "formatter": "bool"
         }
       ]
     },
     {
-      "name": "userRegistrationDetails",
-      "API": "Graph",
-      "URL": "https://graph.microsoft.com/beta/reports/authenticationMethods/userRegistrationDetails",
-      "ExtractFields": [
-        "userDisplayName",
-        "isAdmin",
-        "isMFARegistered",
-        "defaultMFAMethod"
-      ],
-      "StoreAs": "JSON",
-      "FrontendFields": [
-        {
-          "name": "MFA User Registration Details",
-          "desc": "Check if users are registered for MFA",
-          "value": "userRegistrationDetails",
-          "formatter": "table"
-        }
-      ]
-    },
-    {
-      "name": "OAuthAppConsentDisabled",
+      "name": "EnterpriseAppUserConsentAllowed",
       "API": "Graph",
       "URL": "https://graph.microsoft.com/v1.0/policies/authorizationPolicy?$select=defaultUserRolePermissions",
       "ExtractFields": [
         "defaultUserRolePermissions"
       ],
-      "where": "@('ManagePermissionGrantsForSelf.microsoft-user-default-legacy', 'ManagePermissionGrantsForSelf.microsoft-user-default-low') -notin $_.defaultUserRolePermissions.permissionGrantPoliciesAssigned",
+      "where": "$_.defaultUserRolePermissions.permissionGrantPoliciesAssigned -match 'ManagePermissionGrantsForSelf.microsoft-user-default-legacy|ManagePermissionGrantsForSelf.microsoft-user-default-low'",
       "StoreAs": "bool",
       "FrontendFields": [
         {
-          "name": "Enterprise App consent disabled",
+          "name": "Enterprise App user consent disabled",
           "desc": "Check if users can self-service consent to apps",
-          "value": "OAuthAppConsentDisabled",
-          "formatter": "bool"
-        }
-      ]
-    },
-    {
-      "name": "AllowedToCreateTenants",
-      "API": "Graph",
-      "URL": "https://graph.microsoft.com/v1.0/policies/authorizationPolicy?$select=defaultUserRolePermissions",
-      "ExtractFields": [
-        "defaultUserRolePermissions"
-      ],
-      "where": "$_.defaultUserRolePermissions.allowedToCreateTenants -eq $true",
-      "StoreAs": "bool",
-      "FrontendFields": [
-        {
-          "name": "Tenant Creation Disabled",
-          "desc": "Check if users are allowed to create tenants",
-          "value": "AllowedToCreateTenants",
+          "value": "EnterpriseAppUserConsentAllowed",
           "formatter": "reverseBool"
         }
       ]
     },
     {
-      "name": "BasicAuthDisabled",
+      "name": "UserAllowedToCreateApps",
+      "API": "Graph",
+      "URL": "https://graph.microsoft.com/v1.0/policies/authorizationPolicy/?$select=defaultUserRolePermissions",
+      "where": "$_.defaultUserRolePermissions.allowedToCreateApps -eq $true",
+      "ExtractFields": [
+        "defaultUserRolePermissions"
+      ],
+      "StoreAs": "bool",
+      "FrontendFields": [
+        {
+          "name": "App creation disabled",
+          "desc": "Check if users are allowed to create app registrations",
+          "value": "UserAllowedToCreateApps",
+          "formatter": "reverseBool"
+        }
+      ]
+    },
+    {
+      "name": "UserAllowedToCreateSecurityGroups",
+      "API": "Graph",
+      "URL": "https://graph.microsoft.com/v1.0/policies/authorizationPolicy/?$select=defaultUserRolePermissions",
+      "where": "$_.defaultUserRolePermissions.allowedToCreateSecurityGroups -eq $true",
+      "ExtractFields": [
+        "defaultUserRolePermissions"
+      ],
+      "StoreAs": "bool",
+      "FrontendFields": [
+        {
+          "name": "Security group creation disabled",
+          "desc": "Check if users are allowed to create security groups",
+          "value": "UserAllowedToCreateSecurityGroups",
+          "formatter": "reverseBool"
+        }
+      ]
+    },
+    {
+      "name": "UserAllowedToCreateUnifiedGroups",
+      "API": "Graph",
+      "URL": "https://graph.microsoft.com/v1.0/groupSettings?$select=values",
+      "where": "$_.values | Where-Object { $_.name -eq 'EnableGroupCreation' -and $_.value -eq $true }",
+      "StoreAs": "bool",
+      "FrontendFields": [
+        {
+          "name": "Unified group creation disabled",
+          "desc": "Check if users are allowed to create Unified groups",
+          "value": "UserAllowedToCreateUnifiedGroups",
+          "formatter": "reverseBool"
+        }
+      ]
+    },
+    {
+      "name": "UserAllowedToCreateTenants",
+      "API": "Graph",
+      "URL": "https://graph.microsoft.com/v1.0/policies/authorizationPolicy?$select=defaultUserRolePermissions",
+      "where": "$_.defaultUserRolePermissions.allowedToCreateTenants -eq $true",
+      "ExtractFields": [
+        "defaultUserRolePermissions"
+      ],
+      "StoreAs": "bool",
+      "FrontendFields": [
+        {
+          "name": "Tenant Creation Disabled",
+          "desc": "Check if users are allowed to create tenants",
+          "value": "UserAllowedToCreateTenants",
+          "formatter": "reverseBool"
+        }
+      ]
+    },
+    {
+      "name": "SmtpClientAuthenticationDisabled",
       "API": "Exchange",
       "Command": "Get-TransportConfig",
       "ExtractFields": [
@@ -229,15 +260,193 @@
       "StoreAs": "bool",
       "FrontendFields": [
         {
-          "name": "SMTP Basic Auth Disabled",
-          "desc": "Check if SMTP Basic Authentication is disabled for Exchange Online",
-          "value": "BasicAuthDisabled",
+          "name": "SMTP basic auth disabled",
+          "desc": "Check if SMTP basic authentication is disabled for the tenant",
+          "value": "SmtpClientAuthenticationDisabled",
           "formatter": "bool"
         }
       ]
     },
     {
-      "name": "MailboxesWithBasicAuthEnabled",
+      "name": "SharepointSiteCreationEnabled",
+      "API": "Graph",
+      "URL": "https://graph.microsoft.com/v1.0/admin/sharepoint/settings?$select=isSiteCreationEnabled",
+      "Parameters": {
+        "asApp": "True"
+      },
+      "ExtractFields": [
+        "isSiteCreationEnabled"
+      ],
+      "where": "$_.isSiteCreationEnabled -eq $true",
+      "StoreAs": "bool",
+      "FrontendFields": [
+        {
+          "name": "Site creation disabled",
+          "desc": "Check if SharePoint site creation is disabled for all users",
+          "value": "SharepointSiteCreationEnabled",
+          "formatter": "reverseBool"
+        }
+      ]
+    },
+    {
+      "name": "SharepointSiteCreationUIEnabled",
+      "API": "Graph",
+      "URL": "https://graph.microsoft.com/v1.0/admin/sharepoint/settings?$select=isSiteCreationUIEnabled",
+      "Parameters": {
+        "asApp": "True"
+      },
+      "ExtractFields": [
+        "isSiteCreationUIEnabled"
+      ],
+      "where": "$_.isSiteCreationUIEnabled -eq $true",
+      "StoreAs": "bool",
+      "FrontendFields": [
+        {
+          "name": "Site creation UI disabled",
+          "desc": "Check if SharePoint site creation UI is disabled for all users",
+          "value": "SharepointSiteCreationUIEnabled",
+          "formatter": "reverseBool"
+        }
+      ]
+    },
+    {
+      "name": "SharepointExternalUserReSharingEnabled",
+      "API": "Graph",
+      "URL": "https://graph.microsoft.com/v1.0/admin/sharepoint/settings?$select=isResharingByExternalUsersEnabled",
+      "Parameters": {
+        "asApp": "True"
+      },
+      "ExtractFields": [
+        "isResharingByExternalUsersEnabled"
+      ],
+      "where": "$_.isResharingByExternalUsersEnabled -eq $true",
+      "StoreAs": "bool",
+      "FrontendFields": [
+        {
+          "name": "External user resharing disabled",
+          "desc": "Check if SharePoint resharing by external users is disabled",
+          "value": "SharepointExternalUserReSharingEnabled",
+          "formatter": "reverseBool"
+        }
+      ]
+    },
+    {
+      "name": "SharepointLegacyAuthProtocolsEnabled",
+      "API": "Graph",
+      "URL": "https://graph.microsoft.com/v1.0/admin/sharepoint/settings?$select=isLegacyAuthProtocolsEnabled",
+      "Parameters": {
+        "asApp": "True"
+      },
+      "ExtractFields": [
+        "isLegacyAuthProtocolsEnabled"
+      ],
+      "where": "$_.isLegacyAuthProtocolsEnabled -eq $true",
+      "StoreAs": "bool",
+      "FrontendFields": [
+        {
+          "name": "Legacy SharePoint auth protocols disabled",
+          "desc": "Check if legacy authentication protocols are disabled",
+          "value": "SharepointLegacyAuthProtocolsEnabled",
+          "formatter": "reverseBool"
+        }
+      ]
+    },
+    {
+      "name": "SharePointRequireAcceptingUserToMatchInvitedUser",
+      "API": "Graph",
+      "URL": "https://graph.microsoft.com/v1.0/admin/sharepoint/settings?$select=isRequireAcceptingUserToMatchInvitedUserEnabled",
+      "Parameters": {
+        "asApp": "True"
+      },
+      "ExtractFields": [
+        "isRequireAcceptingUserToMatchInvitedUserEnabled"
+      ],
+      "where": "$_.isRequireAcceptingUserToMatchInvitedUserEnabled -eq $true",
+      "StoreAs": "bool",
+      "FrontendFields": [
+        {
+          "name": "Require accepting user to match invited user",
+          "desc": "Check if SharePoint requires accepting user to match invited user",
+          "value": "SharePointRequireAcceptingUserToMatchInvitedUser",
+          "formatter": "bool"
+        }
+      ]
+    },
+    {
+      "name": "SharepointAnonymousSharingEnabled",
+      "API": "Graph",
+      "URL": "https://graph.microsoft.com/v1.0/admin/sharepoint/settings?$select=sharingCapability",
+      "Parameters": {
+        "asApp": "True"
+      },
+      "ExtractFields": [
+        "sharingCapability"
+      ],
+      "where": "$_.sharingCapability -eq 'ExternalUserAndGuestSharing'",
+      "StoreAs": "bool",
+      "FrontendFields": [
+        {
+          "name": "Anonymous link sharing disabled",
+          "desc": "Check if anonymous sharing is disabled for SharePoint and OneDrive",
+          "value": "SharepointAnonymousSharingEnabled",
+          "formatter": "reverseBool"
+        }
+      ]
+    },
+    {
+      "name": "BreakGlassAccount",
+      "API": "Graph",
+      "URL": "https://graph.microsoft.com/beta/users?$filter=startswith(displayName,'BreakGlass ')&$select=displayName",
+      "where": "$_.count -eq 1",
+      "StoreAs": "bool",
+      "FrontendFields": [
+        {
+          "name": "BreakGlass Account",
+          "desc": "Check if there is a BreakGlass account in the tenant",
+          "value": "BreakGlassAccount",
+          "formatter": "bool"
+        }
+      ]
+    },
+    {
+      "name": "LAPS",
+      "API": "Graph",
+      "URL": "https://graph.microsoft.com/v1.0/policies/deviceRegistrationPolicy?$select=localAdminPassword",
+      "ExtractFields": [
+        "localAdminPassword"
+      ],
+      "StoreAs": "JSON",
+      "FrontendFields": [
+        {
+          "name": "LAPS enabled",
+          "desc": "Check if Local Admin Password Solution is enabled",
+          "value": "LAPS.IsEnabled",
+          "formatter": "bool"
+        }
+      ]
+    },
+    {
+      "name": "usersWithMFADisabled",
+      "API": "Graph",
+      "URL": "https://graph.microsoft.com/beta/reports/authenticationMethods/userRegistrationDetails?$select=userDisplayName,isAdmin,isMFARegistered",
+      "where": "$_.isMFARegistered -eq $false",
+      "ExtractFields": [
+        "userDisplayName",
+        "isAdmin",
+        "isMFARegistered"
+      ],
+      "StoreAs": "JSON",
+      "FrontendFields": [
+        {
+          "name": "User with MFA disabled",
+          "desc": "Check if users are registered for MFA",
+          "value": "usersWithMFADisabled",
+          "formatter": "table"
+        }
+      ]
+    },
+    {
+      "name": "MailboxesWithSmtpClientAuthenticationEnabled",
       "API": "Exchange",
       "Command": "Get-CASMailbox",
       "Parameters": {
@@ -255,7 +464,7 @@
           "name": "Mail: SMTP Basic Auth Enabled",
           "desc": "Check if SMTP Basic Authentication is enabled for any mailbox",
           "formatter": "table",
-          "value": "MailboxesWithBasicAuthEnabled"
+          "value": "MailboxesWithSmtpClientAuthenticationEnabled"
         }
       ]
     },
@@ -282,159 +491,6 @@
           "desc": "Check if Message Copy for Sent-As is disabled for any mailbox",
           "formatter": "table",
           "value": "MessageCopyforSentAsDisabled"
-        }
-      ]
-    },
-    {
-      "name": "SharedMailboxeswithenabledusers",
-      "API": "Exchange",
-      "Command": "Get-Mailbox",
-      "Parameters": {
-        "RecipientTypeDetails": "SharedMailbox"
-      },
-      "where": "$_.accountDisabled -eq $false",
-      "ExtractFields": [
-        "userprincipalname",
-        "accountDisabled"
-      ],
-      "StoreAs": "JSON",
-      "FrontendFields": [
-        {
-          "name": "Shared Mailboxes with enabled users",
-          "desc": "Check if any shared mailbox has an enabled user",
-          "formatter": "table",
-          "value": "SharedMailboxeswithenabledusers"
-        }
-      ]
-    },
-    {
-      "name": "SharepointSettings",
-      "API": "Graph",
-      "URL": "https://graph.microsoft.com/beta/admin/sharepoint/settings",
-      "Parameters": {
-        "asApp": "True"
-      },
-      "ExtractFields": [
-        "isResharingByExternalUsersEnabled",
-        "isUnmanagedSyncAppForTenantRestricted",
-        "isSiteCreationEnabled",
-        "isSiteCreationUIEnabled",
-        "tenantDefaultTimezone",
-        "isRequireAcceptingUserToMatchInvitedUserEnabled",
-        "isLegacyAuthProtocolsEnabled"
-      ],
-      "StoreAs": "JSON",
-      "FrontendFields": [
-        {
-          "name": "Guest resharing disabled",
-          "desc": "Check if SharePoint resharing by external users is disabled",
-          "value": "SharepointSettings.isResharingByExternalUsersEnabled",
-          "formatter": "reverseBool"
-        },
-        {
-          "name": "Disable sync from unmanaged devices",
-          "desc": "Check if document library sync from unmanaged devices is disabled",
-          "value": "SharepointSettings.isUnmanagedSyncAppForTenantRestricted",
-          "formatter": "bool"
-        },
-        {
-          "name": "Site creation disabled",
-          "desc": "Check if SharePoint site creation is disabled for all users",
-          "value": "SharepointSettings.isSiteCreationEnabled",
-          "formatter": "reverseBool"
-        },
-        {
-          "name": "Site creation UI disabled",
-          "desc": "Check if SharePoint site creation UI is disabled for all users",
-          "value": "SharepointSettings.isSiteCreationUIEnabled",
-          "formatter": "reverseBool"
-        },
-        {
-          "name": "Default SharePoint timezone",
-          "desc": "Check the default timezone for SharePoint sites",
-          "value": "SharepointSettings.tenantDefaultTimezone",
-          "formatter": "string"
-        },
-        {
-          "name": "Require accepting user to match invited user",
-          "desc": "Check if users are required to accept the invitation to match the invited user",
-          "value": "SharepointSettings.isRequireAcceptingUserToMatchInvitedUserEnabled",
-          "formatter": "bool"
-        },
-        {
-          "name": "Legacy SharePoint auth protocols disabled",
-          "desc": "Check if legacy authentication protocols are disabled",
-          "value": "SharepointSettings.isLegacyAuthProtocolsEnabled",
-          "formatter": "reverseBool"
-        }
-      ]
-    },
-    {
-      "name": "SharepointAnonymousSharingEnabled",
-      "API": "Graph",
-      "URL": "https://graph.microsoft.com/beta/admin/sharepoint/settings",
-      "where": "$_.sharingCapability -eq 'ExternalUserAndGuestSharing'",
-      "Parameters": {
-        "asApp": "True"
-      },
-      "ExtractFields": [
-        "sharingCapability"
-      ],
-      "StoreAs": "bool",
-      "FrontendFields": [
-        {
-          "name": "Anonymous link sharing disabled",
-          "desc": "Check if anonymous sharing is disabled for SharePoint and OneDrive",
-          "value": "SharepointAnonymousSharingEnabled",
-          "formatter": "reverseBool"
-        }
-      ]
-    },
-    {
-      "name": "LAPS",
-      "API": "Graph",
-      "URL": "https://graph.microsoft.com/v1.0/policies/deviceRegistrationPolicy?$select=localAdminPassword",
-      "ExtractFields": [
-        "localAdminPassword"
-      ],
-      "StoreAs": "JSON",
-      "FrontendFields": [
-        {
-          "name": "LAPS enabled",
-          "desc": "Check if Local Admin Password Solution is enabled",
-          "value": "LAPS.IsEnabled",
-          "formatter": "bool"
-        }
-      ]
-    },
-    {
-      "name": "SecurityGroupCreationAllowed",
-      "API": "Graph",
-      "URL": "https://graph.microsoft.com/beta/policies/authorizationPolicy/?$select=defaultUserRolePermissions",
-      "ExtractFields": [
-        "defaultUserRolePermissions"
-      ],
-      "StoreAs": "JSON",
-      "FrontendFields": [
-        {
-          "name": "Security Group Creation Disabled",
-          "desc": "Check if users are allowed to create security groups",
-          "value": "SecurityGroupCreationAllowed.allowedToCreateSecurityGroups",
-          "formatter": "reverseBool"
-        }
-      ]
-    },
-    {
-      "name": "BreakGlassAccount",
-      "API": "Graph",
-      "URL": "https://graph.microsoft.com/beta/users?$filter=startswith(displayName,'BreakGlass ')&$select=displayName",
-      "where": "$_.count -eq 1",
-      "FrontendFields": [
-        {
-          "name": "BreakGlass Account",
-          "desc": "Check if there is a BreakGlass account in the tenant",
-          "value": "BreakGlassAccount",
-          "formatter": "bool"
         }
       ]
     },
@@ -480,7 +536,7 @@
     {
       "name": "CurrentSecureScore",
       "API": "Graph",
-      "URL": "https://graph.microsoft.com/beta/security/secureScores?$top=1",
+      "URL": "https://graph.microsoft.com/v1.0/security/secureScores?$top=1&$select=currentScore,maxScore",
       "Parameters": {
         "Nopagination": true
       },
