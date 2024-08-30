@@ -75,6 +75,50 @@ function New-CIPPBackupTask {
             }
         }
 
+        'antispam' {
+            Write-Host "Backup Anti-Spam Policies for $TenantFilter"
+
+            $Policies = New-ExoRequest -tenantid $Tenantfilter -cmdlet 'Get-HostedContentFilterPolicy' | Select-Object * -ExcludeProperty *odata*, *data.type*
+            $Rules = New-ExoRequest -tenantid $Tenantfilter -cmdlet 'Get-HostedContentFilterRule' | Select-Object * -ExcludeProperty *odata*, *data.type*
+
+            $Policies | ForEach-Object {
+                $_.psobject.properties | Where-Object { $null -eq $_.Value } | ForEach-Object {
+                    $_.psobject.properties.Remove($_.Name)
+                }
+            }
+
+            $Rules | ForEach-Object {
+                $_.psobject.properties | Where-Object { $null -eq $_.Value } | ForEach-Object {
+                    $_.psobject.properties.Remove($_.Name)
+                }
+            }
+
+            $JSON = @{ policies = $Policies; rules = $Rules } | ConvertTo-Json -Depth 10
+            $JSON
+        }
+
+        'antiphishing' {
+            Write-Host "Backup Anti-Phishing Policies for $TenantFilter"
+
+            $Policies = New-ExoRequest -tenantid $Tenantfilter -cmdlet 'Get-AntiPhishPolicy' | Select-Object * -ExcludeProperty *odata*, *data.type*
+            $Rules = New-ExoRequest -tenantid $Tenantfilter -cmdlet 'Get-AntiPhishRule' | Select-Object * -ExcludeProperty *odata*, *data.type*
+
+            $Policies | ForEach-Object {
+                $_.psobject.properties | Where-Object { $null -eq $_.Value } | ForEach-Object {
+                    $_.psobject.properties.Remove($_.Name)
+                }
+            }
+
+            $Rules | ForEach-Object {
+                $_.psobject.properties | Where-Object { $null -eq $_.Value } | ForEach-Object {
+                    $_.psobject.properties.Remove($_.Name)
+                }
+            }
+
+            $JSON = @{ policies = $Policies; rules = $Rules } | ConvertTo-Json -Depth 10
+            $JSON
+        }
+
         'CippWebhookAlerts' {
             Write-Host "Backup Webhook Alerts for $TenantFilter"
             $WebhookTable = Get-CIPPTable -TableName 'WebhookRules'

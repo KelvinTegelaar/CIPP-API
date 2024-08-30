@@ -20,8 +20,8 @@ function Set-CIPPCPVConsent {
 
     if ($ResetSP) {
         try {
-            if ($PSCmdlet.ShouldProcess($ENV:ApplicationId, "Delete Service Principal from $TenantName")) {
-                $null = New-GraphPostRequest -Type DELETE -noauthcheck $true -uri "https://api.partnercenter.microsoft.com/v1/customers/$($TenantFilter)/applicationconsents/$($ENV:ApplicationId)" -scope 'https://api.partnercenter.microsoft.com/.default' -tenantid $env:TenantID
+            if ($PSCmdlet.ShouldProcess($ENV:ApplicationID, "Delete Service Principal from $TenantName")) {
+                $null = New-GraphPostRequest -Type DELETE -noauthcheck $true -uri "https://api.partnercenter.microsoft.com/v1/customers/$($TenantFilter)/applicationconsents/$($ENV:ApplicationID)" -scope 'https://api.partnercenter.microsoft.com/.default' -tenantid $env:TenantID
             }
             $Results.add("Deleted Service Principal from $TenantName")
         } catch {
@@ -32,7 +32,7 @@ function Set-CIPPCPVConsent {
 
     try {
         $AppBody = @{
-            ApplicationId     = $($ENV:applicationId)
+            ApplicationId     = $($ENV:ApplicationID)
             ApplicationGrants = @(
                 @{
                     EnterpriseApplicationId = '00000003-0000-0000-c000-000000000000'
@@ -45,13 +45,13 @@ function Set-CIPPCPVConsent {
             )
         } | ConvertTo-Json
 
-        if ($PSCmdlet.ShouldProcess($ENV:ApplicationId, "Add Service Principal to $TenantName")) {
+        if ($PSCmdlet.ShouldProcess($ENV:ApplicationID, "Add Service Principal to $TenantName")) {
             $null = New-GraphpostRequest -body $AppBody -Type POST -noauthcheck $true -uri "https://api.partnercenter.microsoft.com/v1/customers/$($TenantFilter)/applicationconsents" -scope 'https://api.partnercenter.microsoft.com/.default' -tenantid $env:TenantID
             $Table = Get-CIPPTable -TableName cpvtenants
             $unixtime = [int64](([datetime]::UtcNow) - (Get-Date '1/1/1970')).TotalSeconds
             $GraphRequest = @{
                 LastApply     = "$unixtime"
-                applicationId = "$($ENV:applicationId)"
+                applicationId = "$($ENV:ApplicationID)"
                 Tenant        = "$($tenantfilter)"
                 PartitionKey  = 'Tenant'
                 RowKey        = "$($tenantfilter)"
@@ -67,7 +67,7 @@ function Set-CIPPCPVConsent {
             $unixtime = [int64](([datetime]::UtcNow) - (Get-Date '1/1/1970')).TotalSeconds
             $GraphRequest = @{
                 LastApply     = "$unixtime"
-                applicationId = "$($ENV:applicationId)"
+                applicationId = "$($ENV:ApplicationID)"
                 Tenant        = "$($tenantfilter)"
                 PartitionKey  = 'Tenant'
                 RowKey        = "$($tenantfilter)"
