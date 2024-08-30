@@ -22,18 +22,21 @@ Function Invoke-ListTeamsVoice {
     $tenantid = (Get-Tenants | Where-Object -Property defaultDomainName -EQ $Request.Query.TenantFilter).customerId
     try {
         $users = (New-GraphGetRequest -uri "https://graph.microsoft.com/beta/users?`$top=999&`$select=id,userPrincipalName,displayname" -tenantid $TenantFilter)
-        $GraphRequest = (New-TeamsAPIGetRequest -uri "https://api.interfaces.records.teams.microsoft.com/Skype.TelephoneNumberMgmt/Tenants/$($Tenantid)/telephone-numbers?locale=en-US" -tenantid $TenantFilter).TelephoneNumbers | ForEach-Object {
-            $CompleteRequest = $_ | Select-Object *, 'AssignedTo'
-            $CompleteRequest.AcquisitionDate = $CompleteRequest.AcquisitionDate -split 'T' | Select-Object -First 1
-
-            if ($CompleteRequest.TargetId -eq '00000000-0000-0000-0000-000000000000') {
-                $CompleteRequest.AssignedTo = 'Unassigned'
-            } else {
-                $CompleteRequest.AssignedTo = ($users | Where-Object -Property Id -EQ $CompleteRequest.TargetId).userPrincipalName
-
+        $skip = 0
+        $GraphRequest = do {
+            $data = (New-TeamsAPIGetRequest -uri "https://api.interfaces.records.teams.microsoft.com/Skype.TelephoneNumberMgmt/Tenants/$($Tenantid)/telephone-numbers?skip=$($skip)&locale=en-US&top=999" -tenantid $TenantFilter).TelephoneNumbers | ForEach-Object {
+                $CompleteRequest = $_ | Select-Object *, 'AssignedTo'
+                $CompleteRequest.AcquisitionDate = $CompleteRequest.AcquisitionDate -split 'T' | Select-Object -First 1
+                if ($CompleteRequest.TargetId -eq '00000000-0000-0000-0000-000000000000') {
+                    $CompleteRequest.AssignedTo = 'Unassigned'
+                } else {
+                    $CompleteRequest.AssignedTo = ($users | Where-Object -Property Id -EQ $CompleteRequest.TargetId).userPrincipalName
+                }
+                $CompleteRequest
             }
-            $CompleteRequest
-        }
+            $skip = $skip + 999
+            $Data
+        } while ( $Data.count % 999 -eq 0 )
         $StatusCode = [HttpStatusCode]::OK
     } catch {
         $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message

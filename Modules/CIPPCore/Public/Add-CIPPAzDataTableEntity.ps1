@@ -10,35 +10,43 @@ function Add-CIPPAzDataTableEntity {
     $MaxRowSize = 500000 - 100 # Maximum size of an entity
     $MaxSize = 30kb # Maximum size of a property value
 
-    foreach ($SingleEnt in $Entity) {
+    foreach ($SingleEnt in @($Entity)) {
         try {
+            if ($null -eq $SingleEnt.PartitionKey -or $null -eq $SingleEnt.RowKey) {
+                throw 'PartitionKey or RowKey is null'
+            }
             Add-AzDataTableEntity -Context $Context -Force:$Force -CreateTableIfNotExists:$CreateTableIfNotExists -Entity $SingleEnt -ErrorAction Stop
         } catch [System.Exception] {
             if ($_.Exception.ErrorCode -eq 'PropertyValueTooLarge' -or $_.Exception.ErrorCode -eq 'EntityTooLarge' -or $_.Exception.ErrorCode -eq 'RequestBodyTooLarge') {
                 try {
-                    $largePropertyNames = [System.Collections.ArrayList]::new()
+                    $largePropertyNames = [System.Collections.Generic.List[string]]::new()
                     $entitySize = 0
+
+                    # Convert $SingleEnt to hashtable if it is a PSObject
+                    if ($SingleEnt -is [System.Management.Automation.PSCustomObject]) {
+                        $SingleEnt = $SingleEnt | ConvertTo-Json -Depth 100 | ConvertFrom-Json -AsHashtable
+                    }
+
                     foreach ($key in $SingleEnt.Keys) {
                         $propertySize = [System.Text.Encoding]::UTF8.GetByteCount($SingleEnt[$key].ToString())
                         $entitySize = $entitySize + $propertySize
                         if ($propertySize -gt $MaxSize) {
                             $largePropertyNames.Add($key)
                         }
-
                     }
 
                     if ($largePropertyNames.Count -gt 0) {
-                        $splitInfoList = [System.Collections.ArrayList]@()
+                        $splitInfoList = [System.Collections.Generic.List[object]]::new()
                         foreach ($largePropertyName in $largePropertyNames) {
                             $dataString = $SingleEnt[$largePropertyName]
                             $splitCount = [math]::Ceiling($dataString.Length / $MaxSize)
-                            $splitData = [System.Collections.ArrayList]@()
+                            $splitData = [System.Collections.Generic.List[object]]::new()
                             for ($i = 0; $i -lt $splitCount; $i++) {
                                 $start = $i * $MaxSize
                                 $splitData.Add($dataString.Substring($start, [Math]::Min($MaxSize, $dataString.Length - $start))) > $null
                             }
 
-                            $splitPropertyNames = [System.Collections.ArrayList]@()
+                            $splitPropertyNames = [System.Collections.Generic.List[object]]::new()
                             for ($i = 0; $i -lt $splitData.Count; $i++) {
                                 $splitPropertyNames.Add("${largePropertyName}_Part$i") > $null
                             }
@@ -61,7 +69,7 @@ function Add-CIPPAzDataTableEntity {
                     # Check if the entity is still too large
                     $entitySize = [System.Text.Encoding]::UTF8.GetByteCount($($SingleEnt | ConvertTo-Json))
                     if ($entitySize -gt $MaxRowSize) {
-                        $rows = [System.Collections.ArrayList]@()
+                        $rows = [System.Collections.Generic.List[object]]::new()
                         $originalPartitionKey = $SingleEnt.PartitionKey
                         $originalRowKey = $SingleEnt.RowKey
                         $entityIndex = 0
@@ -79,7 +87,7 @@ function Add-CIPPAzDataTableEntity {
                             $newEntity['PartIndex'] = $entityIndex
                             $entityIndex++
 
-                            $propertiesToRemove = [System.Collections.ArrayList]@()
+                            $propertiesToRemove = [System.Collections.Generic.List[object]]::new()
                             foreach ($key in $SingleEnt.Keys) {
                                 $newEntitySize = [System.Text.Encoding]::UTF8.GetByteCount($($newEntity | ConvertTo-Json))
                                 if ($newEntitySize -lt $MaxRowSize) {
@@ -87,13 +95,13 @@ function Add-CIPPAzDataTableEntity {
                                     if ($propertySize -gt $MaxRowSize) {
                                         $dataString = $SingleEnt[$key]
                                         $splitCount = [math]::Ceiling($dataString.Length / $MaxSize)
-                                        $splitData = [System.Collections.ArrayList]@()
+                                        $splitData = [System.Collections.Generic.List[object]]::new()
                                         for ($i = 0; $i -lt $splitCount; $i++) {
                                             $start = $i * $MaxSize
                                             $splitData.Add($dataString.Substring($start, [Math]::Min($MaxSize, $dataString.Length - $start))) > $null
                                         }
 
-                                        $splitPropertyNames = [System.Collections.ArrayList]@()
+                                        $splitPropertyNames = [System.Collections.Generic.List[object]]::new()
                                         for ($i = 0; $i -lt $splitData.Count; $i++) {
                                             $splitPropertyNames.Add("${key}_Part$i") > $null
                                         }

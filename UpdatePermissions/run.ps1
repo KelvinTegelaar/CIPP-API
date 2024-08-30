@@ -2,7 +2,7 @@
 param($Timer)
 
 try {
-    $Tenants = Get-Tenants -IncludeAll | Where-Object { $_.customerId -ne $env:TenantId -and $_.Excluded -eq $false }
+    $Tenants = Get-Tenants -IncludeAll | Where-Object { $_.customerId -ne $env:TenantID -and $_.Excluded -eq $false }
     $CPVTable = Get-CIPPTable -TableName cpvtenants
     $CPVRows = Get-CIPPAzDataTableEntity @CPVTable
     $ModuleRoot = (Get-Module CIPPCore).ModuleBase
