@@ -5,7 +5,7 @@ function Get-CIPPHttpFunctions {
     )
 
     try {
-        $Functions = Get-Command -Module CippCore | Where-Object { $_.Visibility -eq 'Public' -and $_.Name -match 'Invoke-*' }
+        $Functions = Get-Command -Module CIPPCore | Where-Object { $_.Visibility -eq 'Public' -and $_.Name -match 'Invoke-*' }
         $Results = foreach ($Function in $Functions) {
             $Help = Get-Help $Function
             if ($Help.Functionality -ne 'Entrypoint') { continue }
