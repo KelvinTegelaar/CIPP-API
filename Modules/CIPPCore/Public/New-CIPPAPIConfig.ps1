@@ -39,7 +39,7 @@ function New-CIPPAPIConfig {
             $currentSettings.properties.identityProviders.azureActiveDirectory = @{
                 registration = @{
                     clientId     = $APIApp.appId
-                    openIdIssuer = "https://sts.windows.net/$($ENV:TenantId)/v2.0"
+                    openIdIssuer = "https://sts.windows.net/$($ENV:TenantID)/v2.0"
                 }
                 validation   = @{
                     allowedAudiences = @("api://$($APIApp.appId)")
