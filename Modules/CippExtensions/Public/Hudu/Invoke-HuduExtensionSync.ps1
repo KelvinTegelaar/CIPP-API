@@ -31,7 +31,7 @@ function Invoke-HuduExtensionSync {
 
         # Import license mapping
         Set-Location (Get-Item $PSScriptRoot).Parent.Parent.Parent.Parent.FullName
-        $LicTable = Import-Csv Conversiontable.csv
+        $LicTable = Import-Csv ConversionTable.csv
 
         $CompanyResult.Logs.Add('Starting Hudu Extension Sync')
 

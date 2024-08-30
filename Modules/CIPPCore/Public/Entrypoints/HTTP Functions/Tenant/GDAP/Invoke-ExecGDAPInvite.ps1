@@ -22,6 +22,7 @@ Function Invoke-ExecGDAPInvite {
 
     $Table = Get-CIPPTable -TableName 'GDAPInvites'
     try {
+        $Step = 'Creating GDAP relationship'
         $JSONBody = @{
             'displayName'        = "$((New-Guid).GUID)"
             'accessDetails'      = @{
@@ -45,7 +46,13 @@ Function Invoke-ExecGDAPInvite {
             $JSONBody = @{
                 'action' = 'lockForApproval'
             } | ConvertTo-Json
-            $NewRelationshipRequest = New-GraphPostRequest -NoAuthCheck $True -uri "https://graph.microsoft.com/beta/tenantRelationships/delegatedAdminRelationships/$($NewRelationship.id)/requests" -type POST -body $JSONBody -verbose -tenantid $env:TenantID
+            $Step = 'Locking GDAP relationship for approval'
+
+            $AddedHeaders = @{
+                'If-Match' = $NewRelationship.'@odata.etag'
+            }
+
+            $NewRelationshipRequest = New-GraphPostRequest -NoAuthCheck $True -uri "https://graph.microsoft.com/beta/tenantRelationships/delegatedAdminRelationships/$($NewRelationship.id)/requests" -type POST -body $JSONBody -verbose -tenantid $env:TenantID -AddedHeaders $AddedHeaders
 
             if ($NewRelationshipRequest.action -eq 'lockForApproval') {
                 $InviteUrl = "https://admin.microsoft.com/AdminPortal/Home#/partners/invitation/granularAdminRelationships/$($NewRelationship.id)"
@@ -74,7 +81,7 @@ Function Invoke-ExecGDAPInvite {
             Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -message "Created GDAP Invite - $InviteUrl" -Sev 'Info'
         }
     } catch {
-        $Message = 'Error creating GDAP relationship'
+        $Message = 'Error creating GDAP relationship, failed at step: ' + $Step
         Write-Host "GDAP ERROR: $($_.InvocationInfo.PositionMessage)"
         Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $env:TenantID -message "$($Message): $($_.Exception.Message)" -Sev 'Error' -LogData (Get-CippException -Exception $_)
     }

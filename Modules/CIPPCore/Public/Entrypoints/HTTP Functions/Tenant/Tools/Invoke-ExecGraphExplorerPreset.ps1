@@ -16,9 +16,9 @@ Function Invoke-ExecGraphExplorerPreset {
     $Username = ([System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($request.headers.'x-ms-client-principal')) | ConvertFrom-Json).userDetails
     # Write to the Azure Functions log stream.
     Write-Host 'PowerShell HTTP trigger function processed a request.'
+    $Action = $Request.Body.Action ?? ''
 
-
-    switch ($Request.Body.Action) {
+    switch ($Action) {
         'Copy' {
             $Id = (New-Guid).Guid
         }
@@ -29,7 +29,7 @@ Function Invoke-ExecGraphExplorerPreset {
             $Id = $Request.Body.preset.reportTemplate.value
         }
         default {
-            $Request.Body.Action = 'Copy'
+            $Action = 'Copy'
             $Id = (New-Guid).Guid
         }
     }
@@ -53,16 +53,16 @@ Function Invoke-ExecGraphExplorerPreset {
     try {
         $Success = $false
         $Table = Get-CIPPTable -TableName 'GraphPresets'
-        $Message = '{0} preset succeeded' -f $Request.Body.Action
-        if ($Request.Body.Action -eq 'Copy') {
+        $Message = '{0} preset succeeded' -f $Action
+        if ($Action -eq 'Copy') {
             Add-CIPPAzDataTableEntity @Table -Entity $Preset
             $Success = $true
         } else {
             $Entity = Get-CIPPAzDataTableEntity @Table -Filter "RowKey eq '$Id'"
             if ($Entity.Owner -eq $Username ) {
-                if ($Request.Body.Action -eq 'Delete') {
+                if ($Action -eq 'Delete') {
                     Remove-AzDataTableEntity @Table -Entity $Entity
-                } elseif ($Request.Body.Action -eq 'Save') {
+                } elseif ($Action -eq 'Save') {
                     Add-CIPPAzDataTableEntity @Table -Entity $Preset -Force
                 }
                 $Success = $true
