@@ -16,7 +16,7 @@ function Invoke-CIPPStandardIntuneTemplate {
                 $Table = Get-CippTable -tablename 'templates'
                 $Filter = "PartitionKey eq 'IntuneTemplate'"
                 $Request = @{body = $null }
-                $Request.body = (Get-AzDataTableEntity @Table -Filter $Filter | Where-Object -Property RowKey -Like "$($template.value)*").JSON | ConvertFrom-Json
+                $Request.body = (Get-CIPPAzDataTableEntity @Table -Filter $Filter | Where-Object -Property RowKey -Like "$($template.value)*").JSON | ConvertFrom-Json
                 $displayname = $request.body.Displayname
                 $description = $request.body.Description
                 $RawJSON = $Request.body.RawJSON
