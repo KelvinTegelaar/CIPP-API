@@ -7,13 +7,12 @@ function Invoke-ListExoRequest {
             'Search'
         )
 
-        Write-Information ($Request.Query | ConvertTo-Json)
-        $Cmdlet = $Request.Query.Cmdlet
-        $cmdParams = if ($Request.Body) { $Request.Body } else { [PSCustomObject]@{} }
+        $Cmdlet = $Request.Body.Cmdlet
+        $cmdParams = if ($Request.Body.cmdParams) { $Request.Body.cmdParams } else { [PSCustomObject]@{} }
         $Verb = ($Cmdlet -split '-')[0]
 
         $AllowedTenants = Test-CIPPAccess -Request $Request -TenantList
-        $TenantFilter = $Request.Query.TenantFilter
+        $TenantFilter = $Request.Body.TenantFilter
         $Tenants = Get-Tenants -IncludeErrors
         $Tenant = $Tenants | Where-Object { $_.defaultDomainName -eq $TenantFilter -or $_.customerId -eq $TenantFilter }
         if ($Tenant.customerId -in $AllowedTenants -or $AllowedTenants -eq 'AllTenants') {
@@ -33,27 +32,26 @@ function Invoke-ListExoRequest {
                 tenantid  = $TenantFilter
             }
 
-            if ($Request.Query.Select) {
-                $ExoParams.Select = $Request.Query.Select
+            if ($Request.Body.Select) {
+                $ExoParams.Select = $Request.Body.Select
             }
 
-            if ($Request.Query.UseSystemMailbox) {
+            if ($Request.Body.UseSystemMailbox -eq $true) {
                 $ExoParams.useSystemMailbox = $true
             }
 
-            if ($Request.Query.Anchor) {
-                $ExoParams.Anchor = $Request.Query.Anchor
+            if ($Request.Body.Anchor) {
+                $ExoParams.Anchor = $Request.Body.Anchor
             }
 
-            if ($Request.Query.Compliance) {
+            if ($Request.Body.Compliance -eq $true) {
                 $ExoParams.Compliance = $true
             }
 
-            if ($Request.Query.AsApp) {
+            if ($Request.Body.AsApp -eq $true) {
                 $ExoParams.AsApp = $true
             }
 
-            Write-Information ($ExoParams | ConvertTo-Json)
             $Results = New-ExoRequest @ExoParams
             $Body = [pscustomobject]@{
                 Results = $Results
