@@ -1,5 +1,5 @@
 ﻿{
-  "scriptFile": "../Modules/CippEntryPoints/CippEntryPoints.psm1",
+  "scriptFile": "../Modules/CippEntrypoints/CippEntrypoints.psm1",
   "entryPoint": "Receive-CippQueueTrigger",
   "bindings": [
     {
