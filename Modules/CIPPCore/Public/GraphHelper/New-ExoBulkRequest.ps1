@@ -65,8 +65,8 @@ function New-ExoBulkRequest {
 
         try {
             if ($Select) { $Select = "`$select=$Select" }
-            $URL = "$ResourceUrl/adminapi/beta/$($tenant.customerId)/InvokeCommand?$Select"
-            $BatchURL = "$ResourceUrl/adminapi/beta/$($tenant.customerId)/`$batch"
+            $URL = "$Resource/adminapi/beta/$($tenant.customerId)/InvokeCommand?$Select"
+            $BatchURL = "$Resource/adminapi/beta/$($tenant.customerId)/`$batch"
             $BatchBodyObj = @{
                 requests = @()
             }
