@@ -31,7 +31,7 @@ function Test-CIPPAccessPermissions {
         $null = Get-CIPPAuthentication
         $GraphToken = Get-GraphToken -returnRefresh $true -SkipCache $true
         if ($GraphToken) {
-            $GraphPermissions = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/myorganization/applications?`$filter=appId eq '$env:ApplicationID'" -NoAuthCheck $true
+            $GraphPermissions = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/myorganization/applications(appId='$env:ApplicationID')" -NoAuthCheck $true
         }
         if ($env:MSI_SECRET) {
             try {

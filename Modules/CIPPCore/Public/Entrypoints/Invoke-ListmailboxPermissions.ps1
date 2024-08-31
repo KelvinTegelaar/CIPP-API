@@ -13,40 +13,50 @@ Function Invoke-ListmailboxPermissions {
     $APIName = $TriggerMetadata.FunctionName
     Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -message 'Accessed this API' -Sev 'Debug'
 
-
-    # Write to the Azure Functions log stream.
-    Write-Host 'PowerShell HTTP trigger function processed a request.'
-
     # Interact with query parameters or the body of the request.
-    $TenantFilter = $Request.Query.TenantFilter
+    $TenantFilter = $Request.Query.tenantFilter
+    $UserID = $Request.Query.userId
 
-    Write-Host "Tenant Filter: $TenantFilter"
     try {
-        $Bytes = [System.Text.Encoding]::UTF8.GetBytes($Request.Query.UserID)
-        $base64IdentityParam = [Convert]::ToBase64String($Bytes)
-        $PermsRequest = New-GraphGetRequest -uri "https://outlook.office365.com/adminapi/beta/$($tenantfilter)/Mailbox('$($Request.Query.UserID)')/MailboxPermission" -Tenantid $tenantfilter -scope ExchangeOnline
-        $PermsRequest2 = New-GraphGetRequest -uri "https://outlook.office365.com/adminapi/beta/$($tenantfilter)/Recipient('$base64IdentityParam')?`$expand=RecipientPermission&isEncoded=true" -Tenantid $tenantfilter -scope ExchangeOnline
-        $PermRequest3 = New-ExoRequest -Anchor $Request.Query.UserID -tenantid $Tenantfilter -cmdlet 'Get-Mailbox' -cmdParams @{Identity = $($Request.Query.UserID); }
+        $Requests = @(
+            @{
+                CmdletInput = @{
+                    CmdletName = 'Get-Mailbox'
+                    Parameters = @{ Identity = $UserID }
+                }
+            }
+            @{
+                CmdletInput = @{
+                    CmdletName = 'Get-MailboxPermission'
+                    Parameters = @{ Identity = $UserID }
+                }
+            }
+            @{
+                CmdletInput = @{
+                    CmdletName = 'Get-RecipientPermission'
+                    Parameters = @{ Identity = $UserID }
+                }
+            }
+        )
 
-        $GraphRequest = foreach ($Perm in $PermsRequest, $PermsRequest2.RecipientPermission, $PermRequest3) {
-
-            if ($perm.Trustee) {
-                $perm | Where-Object Trustee | ForEach-Object { [PSCustomObject]@{
+        $Results = New-ExoBulkRequest -tenantid $TenantFilter -cmdletArray $Requests
+        $GraphRequest = foreach ($Perm in $Results) {
+            if ($Perm.Trustee) {
+                $Perm | Where-Object Trustee | ForEach-Object { [PSCustomObject]@{
                         User        = $_.Trustee
                         Permissions = $_.accessRights
                     }
                 }
-
             }
-            if ($perm.PermissionList) {
-                $perm | Where-Object User | ForEach-Object { [PSCustomObject]@{
+            if ($Perm.AccessRights) {
+                $Perm | Where-Object User | ForEach-Object { [PSCustomObject]@{
                         User        = $_.User
-                        Permissions = $_.PermissionList.accessRights -join ', '
+                        Permissions = $_.AccessRights -join ', '
                     }
                 }
             }
-            if ($perm.GrantSendonBehalfTo -ne $null) {
-                $perm.GrantSendonBehalfTo | ForEach-Object { [PSCustomObject]@{
+            if ($Perm.GrantSendonBehalfTo -ne $null) {
+                $Perm.GrantSendonBehalfTo | ForEach-Object { [PSCustomObject]@{
                         User        = $_
                         Permissions = 'SendOnBehalf'
                     }
@@ -64,7 +74,4 @@ Function Invoke-ListmailboxPermissions {
             StatusCode = $StatusCode
             Body       = @($GraphRequest)
         })
-
-
-
 }
