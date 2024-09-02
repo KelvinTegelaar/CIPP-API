@@ -16,7 +16,7 @@ This example runs the script to update the license SKU files and JSON files in t
 Date: 2024-09-02
 Version: 1.0 - Initial script
 
-Needs to be "Tools" folder in the CIPP-API project.
+Needs to be run from the "Tools" folder in the CIPP-API project.
 #>
 
 
