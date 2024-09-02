@@ -47,7 +47,7 @@ function New-CIPPGraphSubscription {
                     }
                     Write-Host "Creating webhook subscription for $EventType"
 
-                    $AuditLog = New-GraphPOSTRequest -type POST -uri "https://manage.office.com/api/v1.0/$($TenantFilter)/activity/feed/subscriptions/start?contentType=$EventType&PublisherIdentifier=$($env:TenantId)" -tenantid $TenantFilter -scope 'https://manage.office.com/.default' -body '{}' -verbose
+                    $AuditLog = New-GraphPOSTRequest -type POST -uri "https://manage.office.com/api/v1.0/$($TenantFilter)/activity/feed/subscriptions/start?contentType=$EventType&PublisherIdentifier=$($env:TenantID)" -tenantid $TenantFilter -scope 'https://manage.office.com/.default' -body '{}' -verbose
                     Write-LogMessage -user $ExecutingUser -API $APIName -message "Created Webhook subscription for $($TenantFilter) for the log $($EventType)" -Sev 'Info' -tenant $TenantFilter
                     return @{ Success = $true; message = "Created Webhook subscription for $($TenantFilter) for the log $($EventType)" }
                 } else {
@@ -80,9 +80,9 @@ function New-CIPPGraphSubscription {
                 }
             }
         } elseif ($PartnerCenter.IsPresent) {
-            $WebhookFilter = "PartitionKey eq '$($env:TenantId)'"
+            $WebhookFilter = "PartitionKey eq '$($env:TenantID)'"
             $ExistingWebhooks = Get-CIPPAzDataTableEntity @WebhookTable -Filter $WebhookFilter
-            $CIPPID = $env:TenantId
+            $CIPPID = $env:TenantID
             $MatchedWebhook = $ExistingWebhooks | Where-Object { $_.Resource -eq 'PartnerCenter' -and $_.RowKey -eq $CIPPID }
 
             # Required event types
@@ -107,7 +107,7 @@ function New-CIPPGraphSubscription {
             try {
                 $Uri = 'https://api.partnercenter.microsoft.com/webhooks/v1/registration'
                 try {
-                    $Existing = New-GraphGetRequest -NoAuthCheck $true -uri $Uri -tenantid $env:TenantId -scope 'https://api.partnercenter.microsoft.com/.default'
+                    $Existing = New-GraphGetRequest -NoAuthCheck $true -uri $Uri -tenantid $env:TenantID -scope 'https://api.partnercenter.microsoft.com/.default'
                 } catch { $Existing = $false }
                 if (!$Existing -or $Existing.webhookUrl -ne $MatchedWebhook.WebhookNotificationUrl -or $EventCompare) {
                     if ($Existing.WebhookUrl) {
@@ -119,7 +119,7 @@ function New-CIPPGraphSubscription {
                     }
 
                     $Uri = 'https://api.partnercenter.microsoft.com/webhooks/v1/registration'
-                    $GraphRequest = New-GraphPOSTRequest -uri $Uri -type $Method -tenantid $env:TenantId -scope 'https://api.partnercenter.microsoft.com/.default' -body ($Body | ConvertTo-Json) -NoAuthCheck $true
+                    $GraphRequest = New-GraphPOSTRequest -uri $Uri -type $Method -tenantid $env:TenantID -scope 'https://api.partnercenter.microsoft.com/.default' -body ($Body | ConvertTo-Json) -NoAuthCheck $true
 
                     $WebhookRow = @{
                         PartitionKey           = [string]$CIPPID
