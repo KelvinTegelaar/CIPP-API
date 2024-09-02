@@ -15,7 +15,7 @@ Function Invoke-ListUsers {
     $selectlist = 'id', 'accountEnabled', 'displayName', 'userPrincipalName', 'username', 'userType', 'createdDateTime', 'companyName', 'country', 'department', 'businessPhones', 'city', 'faxNumber', 'givenName', 'isResourceAccount', 'jobTitle', 'mobilePhone', 'officeLocation', 'postalCode', 'preferredDataLocation', 'preferredLanguage', 'mail', 'mailNickname', 'proxyAddresses', 'Aliases', 'otherMails', 'showInAddressList', 'state', 'streetAddress', 'surname', 'usageLocation', 'LicJoined', 'assignedLicenses', 'onPremisesSyncEnabled', 'OnPremisesImmutableId', 'onPremisesDistinguishedName', 'onPremisesLastSyncDateTime', 'primDomain', 'Tenant', 'CippStatus'
     # Write to the Azure Functions log stream.
     Write-Host 'PowerShell HTTP trigger function processed a request.'
-    $ConvertTable = Import-Csv Conversiontable.csv | Sort-Object -Property 'guid' -Unique
+    $ConvertTable = Import-Csv ConversionTable.csv | Sort-Object -Property 'guid' -Unique
     # Interact with query parameters or the body of the request.
     $TenantFilter = $Request.Query.TenantFilter
     $GraphFilter = $Request.Query.graphFilter
