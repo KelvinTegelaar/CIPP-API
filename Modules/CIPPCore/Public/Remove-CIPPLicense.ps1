@@ -9,7 +9,7 @@ function Remove-CIPPLicense {
     )
 
     try {
-        $ConvertTable = Import-Csv Conversiontable.csv
+        $ConvertTable = Import-Csv ConversionTable.csv
         $User = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/users/$($userid)" -tenantid $tenantFilter
         if (!$username) { $username = $User.userPrincipalName }
         $CurrentLicenses = $User.assignedlicenses.skuid
