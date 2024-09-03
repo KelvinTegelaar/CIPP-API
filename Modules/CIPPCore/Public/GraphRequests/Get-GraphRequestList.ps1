@@ -48,7 +48,7 @@ function Get-GraphRequestList {
     #>
     [CmdletBinding()]
     Param(
-        [string]$TenantFilter = $env:TenantId,
+        [string]$TenantFilter = $env:TenantID,
         [Parameter(Mandatory = $true)]
         [string]$Endpoint,
         [hashtable]$Parameters = @{},
@@ -176,10 +176,12 @@ function Get-GraphRequestList {
                         }
 
                         try {
+                            $DefaultDomainName = $_.defaultDomainName
+                            Write-Host "Default domain name is $DefaultDomainName"
                             Get-GraphRequestList @GraphRequestParams | Select-Object *, @{l = 'Tenant'; e = { $_.defaultDomainName } }, @{l = 'CippStatus'; e = { 'Good' } }
                         } catch {
                             [PSCustomObject]@{
-                                Tenant     = $_.defaultDomainName
+                                Tenant     = $DefaultDomainName
                                 CippStatus = "Could not connect to tenant. $($_.Exception.message)"
                             }
                         }
@@ -285,12 +287,17 @@ function Get-GraphRequestList {
                     if (!$QueueThresholdExceeded) {
                         $GraphRequestResults = New-GraphGetRequest @GraphRequest -ErrorAction Stop | Select-Object *, @{l = 'Tenant'; e = { $TenantFilter } }, @{l = 'CippStatus'; e = { 'Good' } }
                         if ($ReverseTenantLookup -and $GraphRequestResults) {
-                            $TenantInfo = $GraphRequestResults.$ReverseTenantLookupProperty | Sort-Object -Unique | ForEach-Object {
-                                New-GraphGetRequest -uri "https://graph.microsoft.com/beta/tenantRelationships/findTenantInformationByTenantId(tenantId='$_')" -noauthcheck $true -asApp:$true -tenant $env:TenantId
+                            $ReverseLookupRequests = $GraphRequestResults.$ReverseTenantLookupProperty | Sort-Object -Unique | ForEach-Object {
+                                @{
+                                    id     = $_
+                                    url    = "tenantRelationships/findTenantInformationByTenantId(tenantId='$_')"
+                                    method = 'GET'
+                                }
                             }
-                            foreach ($Result in $GraphRequestResults) {
-                                $Result | Select-Object @{n = 'TenantInfo'; e = { $TenantInfo | Where-Object { $Result.$ReverseTenantLookupProperty -eq $_.tenantId } } }, *
-                            }
+                            $TenantInfo = New-GraphBulkRequest -Requests @($ReverseLookupRequests) -tenantid $env:TenantID -NoAuthCheck $true -asapp $true
+
+                            $GraphRequestResults | Select-Object @{n = 'TenantInfo'; e = { Get-GraphBulkResultByID -Results @($TenantInfo) -ID $_.$ReverseTenantLookupProperty } }, *
+
                         } else {
                             $GraphRequestResults
                         }

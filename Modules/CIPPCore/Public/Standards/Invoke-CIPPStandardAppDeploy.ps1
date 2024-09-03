@@ -5,7 +5,7 @@ function Invoke-CIPPStandardAppDeploy {
     .COMPONENT
         (APIName) AppDeploy
     .SYNOPSIS
-        Deploy Application
+        (Label) Deploy Application
     .DESCRIPTION
         (Helptext) Deploys selected applications to the tenant. Use a comma separated list of application IDs to deploy multiple applications. Permissions will be copied from the source application.
         (DocsDescription) Uses the CIPP functionality that deploys applications across an entire tenant base as a standard.
@@ -16,8 +16,6 @@ function Invoke-CIPPStandardAppDeploy {
             "lowimpact"
         ADDEDCOMPONENT
             {"type":"input","name":"standards.AppDeploy.appids","label":"Application IDs, comma separated"}
-        LABEL
-            Deploy Application
         IMPACT
             Low Impact
         POWERSHELLEQUIVALENT
@@ -32,6 +30,10 @@ function Invoke-CIPPStandardAppDeploy {
     param($Tenant, $Settings)
 
     If ($Settings.remediate -eq $true) {
+        ##$Rerun -Type Standard -Tenant $Tenant -Settings $Settings 'AppDeploy'
+        if ($Rerun -eq $true) {
+            exit 0
+        }
         $AppsToAdd = $Settings.appids -split ','
         foreach ($App In $AppsToAdd) {
             try {

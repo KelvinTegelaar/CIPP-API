@@ -6,11 +6,11 @@ function New-CIPPApplicationCopy {
     )
     $CurrentInfo = New-GraphGetRequest -Uri 'https://graph.microsoft.com/beta/servicePrincipals?$top=999' -tenantid $env:TenantID -NoAuthCheck $true
     try {
-        $ExistingApp = New-GraphGETRequest -uri "https://graph.microsoft.com/beta/Applications(appId='$($app)')" -tenantid $ENV:tenantid -NoAuthCheck $true
+        $ExistingApp = New-GraphGETRequest -uri "https://graph.microsoft.com/beta/Applications(appId='$($app)')" -tenantid $ENV:TenantID -NoAuthCheck $true
         $Type = 'Application'
     } catch {
-        $ExistingApp = New-GraphGETRequest -uri "https://graph.microsoft.com/beta/servicePrincipals(appId='$($app)')/oauth2PermissionGrants" -tenantid $ENV:tenantid -NoAuthCheck $true
-        $ExistingAppRoleAssignments = New-GraphGETRequest -uri "https://graph.microsoft.com/beta/servicePrincipals(appId='$($app)')/appRoleAssignments" -tenantid $ENV:tenantid -NoAuthCheck $true
+        $ExistingApp = New-GraphGETRequest -uri "https://graph.microsoft.com/beta/servicePrincipals(appId='$($app)')/oauth2PermissionGrants" -tenantid $ENV:TenantID -NoAuthCheck $true
+        $ExistingAppRoleAssignments = New-GraphGETRequest -uri "https://graph.microsoft.com/beta/servicePrincipals(appId='$($app)')/appRoleAssignments" -tenantid $ENV:TenantID -NoAuthCheck $true
         $Type = 'ServicePrincipal'
     }
     if (!$ExistingApp) {
@@ -35,7 +35,7 @@ function New-CIPPApplicationCopy {
     $TenantInfo = New-GraphGetRequest -Uri 'https://graph.microsoft.com/beta/servicePrincipals?$top=999' -tenantid $Tenant -NoAuthCheck $true
 
     if ($App -Notin $TenantInfo.appId) {
-        $PostResults = New-GraphPostRequest 'https://graph.microsoft.com/beta/servicePrincipals' -type POST -tenantid $Tenant -body "{ `"appId`": `"$($App)`" }"
+        $null = New-GraphPostRequest 'https://graph.microsoft.com/beta/servicePrincipals' -type POST -tenantid $Tenant -body "{ `"appId`": `"$($App)`" }"
         Write-LogMessage -message "Added $App as a service principal" -tenant $tenant -API 'Application Copy' -sev Info
     }
     Add-CIPPApplicationPermission -RequiredResourceAccess $ApplicationResourceAccess -ApplicationId $App -Tenantfilter $Tenant

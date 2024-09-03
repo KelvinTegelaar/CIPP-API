@@ -1,33 +1,34 @@
 function Invoke-CIPPStandardDisableEmail {
     <#
     .FUNCTIONALITY
-    Internal
-    .APINAME
-    DisableEmail
-    .CAT
-    Entra (AAD) Standards
-    .TAG
-    "highimpact"
-    .HELPTEXT
-    This blocks users from using email as an MFA method. This disables the email OTP option for guest users, and instead promts them to create a Microsoft account.
-    .ADDEDCOMPONENT
-    .LABEL
-    Disables Email as an MFA method
-    .IMPACT
-    High Impact
-    .POWERSHELLEQUIVALENT
-    Update-MgBetaPolicyAuthenticationMethodPolicyAuthenticationMethodConfiguration
-    .RECOMMENDEDBY
-    .DOCSDESCRIPTION
-    This blocks users from using email as an MFA method. This disables the email OTP option for guest users, and instead promts them to create a Microsoft account.
-    .UPDATECOMMENTBLOCK
-    Run the Tools\Update-StandardsComments.ps1 script to update this comment block
+        Internal
+    .COMPONENT
+        (APIName) DisableEmail
+    .SYNOPSIS
+        (Label) Disables Email as an MFA method
+    .DESCRIPTION
+        (Helptext) This blocks users from using email as an MFA method. This disables the email OTP option for guest users, and instead promts them to create a Microsoft account.
+        (DocsDescription) This blocks users from using email as an MFA method. This disables the email OTP option for guest users, and instead promts them to create a Microsoft account.
+    .NOTES
+        CAT
+            Entra (AAD) Standards
+        TAG
+            "highimpact"
+        ADDEDCOMPONENT
+        IMPACT
+            High Impact
+        POWERSHELLEQUIVALENT
+            Update-MgBetaPolicyAuthenticationMethodPolicyAuthenticationMethodConfiguration
+        RECOMMENDEDBY
+        UPDATECOMMENTBLOCK
+            Run the Tools\Update-StandardsComments.ps1 script to update this comment block
+    .LINK
+        https://docs.cipp.app/user-documentation/tenant/standards/edit-standards
     #>
 
-
-
-
     param($Tenant, $Settings)
+    ##$Rerun -Type Standard -Tenant $Tenant -Settings $Settings 'DisableEmail'
+
     $CurrentInfo = New-GraphGetRequest -Uri 'https://graph.microsoft.com/beta/policies/authenticationmethodspolicy/authenticationMethodConfigurations/Email' -tenantid $Tenant
     $State = if ($CurrentInfo.state -eq 'enabled') { $true } else { $false }
 
@@ -51,7 +52,3 @@ function Invoke-CIPPStandardDisableEmail {
         Add-CIPPBPAField -FieldName 'DisableEmail' -FieldValue $State -StoreAs bool -Tenant $tenant
     }
 }
-
-
-
-

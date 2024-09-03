@@ -1,38 +1,37 @@
 function Invoke-CIPPStandardPasswordExpireDisabled {
     <#
     .FUNCTIONALITY
-    Internal
-    .APINAME
-    PasswordExpireDisabled
-    .CAT
-    Entra (AAD) Standards
-    .TAG
-    "lowimpact"
-    "CIS"
-    "PWAgePolicyNew"
-    .HELPTEXT
-    Disables the expiration of passwords for the tenant by setting the password expiration policy to never expire for any user.
-    .DOCSDESCRIPTION
-    Sets passwords to never expire for tenant, recommended to use in conjunction with secure password requirements.
-    .ADDEDCOMPONENT
-    .LABEL
-    Do not expire passwords
-    .IMPACT
-    Low Impact
-    .POWERSHELLEQUIVALENT
-    Update-MgDomain
-    .RECOMMENDEDBY
-    "CIS"
-    .DOCSDESCRIPTION
-    Disables the expiration of passwords for the tenant by setting the password expiration policy to never expire for any user.
-    .UPDATECOMMENTBLOCK
-    Run the Tools\Update-StandardsComments.ps1 script to update this comment block
+        Internal
+    .COMPONENT
+        (APIName) PasswordExpireDisabled
+    .SYNOPSIS
+        (Label) Do not expire passwords
+    .DESCRIPTION
+        (Helptext) Disables the expiration of passwords for the tenant by setting the password expiration policy to never expire for any user.
+        (DocsDescription) Sets passwords to never expire for tenant, recommended to use in conjunction with secure password requirements.
+    .NOTES
+        CAT
+            Entra (AAD) Standards
+        TAG
+            "lowimpact"
+            "CIS"
+            "PWAgePolicyNew"
+        ADDEDCOMPONENT
+        IMPACT
+            Low Impact
+        POWERSHELLEQUIVALENT
+            Update-MgDomain
+        RECOMMENDEDBY
+            "CIS"
+        UPDATECOMMENTBLOCK
+            Run the Tools\Update-StandardsComments.ps1 script to update this comment block
+    .LINK
+        https://docs.cipp.app/user-documentation/tenant/standards/edit-standards
     #>
 
-
-
-
     param($Tenant, $Settings)
+    ##$Rerun -Type Standard -Tenant $Tenant -Settings $Settings 'PasswordExpireDisabled'
+
     $GraphRequest = New-GraphGetRequest -uri 'https://graph.microsoft.com/v1.0/domains' -tenantid $Tenant
     $DomainswithoutPassExpire = $GraphRequest | Where-Object -Property passwordValidityPeriodInDays -NE '2147483647'
 
@@ -72,7 +71,3 @@ function Invoke-CIPPStandardPasswordExpireDisabled {
         Add-CIPPBPAField -FieldName 'PasswordExpireDisabled' -FieldValue $DomainswithoutPassExpire -StoreAs json -Tenant $tenant
     }
 }
-
-
-
-

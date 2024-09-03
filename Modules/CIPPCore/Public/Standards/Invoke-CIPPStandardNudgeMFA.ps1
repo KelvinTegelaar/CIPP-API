@@ -1,37 +1,35 @@
 function Invoke-CIPPStandardNudgeMFA {
     <#
     .FUNCTIONALITY
-    Internal
-    .APINAME
-    NudgeMFA
-    .CAT
-    Entra (AAD) Standards
-    .TAG
-    "lowimpact"
-    .HELPTEXT
-    Sets the state of the registration campaign for the tenant
-    .DOCSDESCRIPTION
-    Sets the state of the registration campaign for the tenant. If enabled nudges users to set up the Microsoft Authenticator during sign-in.
-    .ADDEDCOMPONENT
-    {"type":"Select","label":"Select value","name":"standards.NudgeMFA.state","values":[{"label":"Enabled","value":"enabled"},{"label":"Disabled","value":"disabled"}]}
-    {"type":"number","name":"standards.NudgeMFA.snoozeDurationInDays","label":"Number of days to allow users to skip registering Authenticator (0-14, default is 1)","default":1}
-    .LABEL
-    Sets the state for the request to setup Authenticator
-    .IMPACT
-    Low Impact
-    .POWERSHELLEQUIVALENT
-    Update-MgPolicyAuthenticationMethodPolicy
-    .RECOMMENDEDBY
-    .DOCSDESCRIPTION
-    Sets the state of the registration campaign for the tenant
-    .UPDATECOMMENTBLOCK
-    Run the Tools\Update-StandardsComments.ps1 script to update this comment block
+        Internal
+    .COMPONENT
+        (APIName) NudgeMFA
+    .SYNOPSIS
+        (Label) Sets the state for the request to setup Authenticator
+    .DESCRIPTION
+        (Helptext) Sets the state of the registration campaign for the tenant
+        (DocsDescription) Sets the state of the registration campaign for the tenant. If enabled nudges users to set up the Microsoft Authenticator during sign-in.
+    .NOTES
+        CAT
+            Entra (AAD) Standards
+        TAG
+            "lowimpact"
+        ADDEDCOMPONENT
+            {"type":"Select","label":"Select value","name":"standards.NudgeMFA.state","values":[{"label":"Enabled","value":"enabled"},{"label":"Disabled","value":"disabled"}]}
+            {"type":"number","name":"standards.NudgeMFA.snoozeDurationInDays","label":"Number of days to allow users to skip registering Authenticator (0-14, default is 1)","default":1}
+        IMPACT
+            Low Impact
+        POWERSHELLEQUIVALENT
+            Update-MgPolicyAuthenticationMethodPolicy
+        RECOMMENDEDBY
+        UPDATECOMMENTBLOCK
+            Run the Tools\Update-StandardsComments.ps1 script to update this comment block
+    .LINK
+        https://docs.cipp.app/user-documentation/tenant/standards/edit-standards
     #>
 
-
-
-
     param($Tenant, $Settings)
+    ##$Rerun -Type Standard -Tenant $Tenant -Settings $Settings 'NudgeMFA'
 
     $CurrentInfo = New-GraphGetRequest -Uri 'https://graph.microsoft.com/beta/policies/authenticationMethodsPolicy' -tenantid $Tenant
     $State = if ($CurrentInfo.registrationEnforcement.authenticationMethodsRegistrationCampaign.state -eq 'enabled') { $true } else { $false }
@@ -47,7 +45,7 @@ function Invoke-CIPPStandardNudgeMFA {
         Return
     }
     # Input validation
-    if (($Settings.snoozeDurationInDays -lt 0 -or $Settings.snoozeDurationInDays -gt 15) -and ($Settings.remediate -eq $true -or $Settings.alert -eq $true)) {
+    if (([Int32]$Settings.snoozeDurationInDays -lt 0 -or [Int32]$Settings.snoozeDurationInDays -gt 15) -and ($Settings.remediate -eq $true -or $Settings.alert -eq $true)) {
         Write-LogMessage -API 'Standards' -tenant $tenant -message 'NudgeMFA: Invalid snoozeDurationInDays parameter set' -sev Error
         Return
     }
@@ -61,6 +59,7 @@ function Invoke-CIPPStandardNudgeMFA {
                 $Body = $CurrentInfo
                 $body.registrationEnforcement.authenticationMethodsRegistrationCampaign.state = $Settings.state
                 $body.registrationEnforcement.authenticationMethodsRegistrationCampaign.snoozeDurationInDays = $Settings.snoozeDurationInDays
+                $body.registrationEnforcement.authenticationMethodsRegistrationCampaign.enforceRegistrationAfterAllowedSnoozes = $true
 
                 $body = ConvertTo-Json -Depth 10 -InputObject ($body | Select-Object registrationEnforcement)
                 New-GraphPostRequest -tenantid $tenant -Uri 'https://graph.microsoft.com/beta/policies/authenticationMethodsPolicy' -Type patch -Body $body -ContentType 'application/json'
@@ -85,7 +84,3 @@ function Invoke-CIPPStandardNudgeMFA {
         }
     }
 }
-
-
-
-

@@ -1,34 +1,34 @@
 function Invoke-CIPPStandardExternalMFATrusted {
     <#
     .FUNCTIONALITY
-    Internal
-    .APINAME
-    ExternalMFATrusted
-    .CAT
-    Entra (AAD) Standards
-    .TAG
-    "lowimpact"
-    .HELPTEXT
-    Sets the state of the Cross-tenant access setting to trust external MFA. This allows guest users to use their home tenant MFA to access your tenant.
-    .ADDEDCOMPONENT
-    {"type":"Select","label":"Select value","name":"standards.ExternalMFATrusted.state","values":[{"label":"Enabled","value":"true"},{"label":"Disabled","value":"false"}]}
-    .LABEL
-    Sets the Cross-tenant access setting to trust external MFA
-    .IMPACT
-    Low Impact
-    .POWERSHELLEQUIVALENT
-    Update-MgBetaPolicyCrossTenantAccessPolicyDefault
-    .RECOMMENDEDBY
-    .DOCSDESCRIPTION
-    Sets the state of the Cross-tenant access setting to trust external MFA. This allows guest users to use their home tenant MFA to access your tenant.
-    .UPDATECOMMENTBLOCK
-    Run the Tools\Update-StandardsComments.ps1 script to update this comment block
+        Internal
+    .COMPONENT
+        (APIName) ExternalMFATrusted
+    .SYNOPSIS
+        (Label) Sets the Cross-tenant access setting to trust external MFA
+    .DESCRIPTION
+        (Helptext) Sets the state of the Cross-tenant access setting to trust external MFA. This allows guest users to use their home tenant MFA to access your tenant.
+        (DocsDescription) Sets the state of the Cross-tenant access setting to trust external MFA. This allows guest users to use their home tenant MFA to access your tenant.
+    .NOTES
+        CAT
+            Entra (AAD) Standards
+        TAG
+            "lowimpact"
+        ADDEDCOMPONENT
+            {"type":"Select","label":"Select value","name":"standards.ExternalMFATrusted.state","values":[{"label":"Enabled","value":"true"},{"label":"Disabled","value":"false"}]}
+        IMPACT
+            Low Impact
+        POWERSHELLEQUIVALENT
+            Update-MgBetaPolicyCrossTenantAccessPolicyDefault
+        RECOMMENDEDBY
+        UPDATECOMMENTBLOCK
+            Run the Tools\Update-StandardsComments.ps1 script to update this comment block
+    .LINK
+        https://docs.cipp.app/user-documentation/tenant/standards/edit-standards
     #>
 
-
-
-
     param($Tenant, $Settings)
+    ##$Rerun -Type Standard -Tenant $Tenant -Settings $Settings 'ExternalMFATrusted'
 
     $ExternalMFATrusted = (New-GraphGetRequest -uri 'https://graph.microsoft.com/v1.0/policies/crossTenantAccessPolicy/default?$select=inboundTrust' -tenantid $Tenant)
     $WantedState = if ($Settings.state -eq 'true') { $true } else { $false }
@@ -73,7 +73,3 @@ function Invoke-CIPPStandardExternalMFATrusted {
         }
     }
 }
-
-
-
-

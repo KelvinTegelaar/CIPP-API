@@ -1,39 +1,39 @@
 function Invoke-CIPPStandardAtpPolicyForO365 {
     <#
     .FUNCTIONALITY
-    Internal
-    .APINAME
-    AtpPolicyForO365
-    .CAT
-    Defender Standards
-    .TAG
-    "lowimpact"
-    "CIS"
-    .HELPTEXT
-    This creates a Atp policy that enables Defender for Office 365 for Sharepoint, OneDrive and Microsoft Teams.
-    .ADDEDCOMPONENT
-    {"type":"boolean","label":"Allow people to click through Protected View even if Safe Documents identified the file as malicious","name":"standards.AtpPolicyForO365.AllowSafeDocsOpen","default":false}
-    .LABEL
-    Default Atp Policy For O365
-    .IMPACT
-    Low Impact
-    .POWERSHELLEQUIVALENT
-    Set-AtpPolicyForO365
-    .RECOMMENDEDBY
-    "CIS"
-    .DOCSDESCRIPTION
-    This creates a Atp policy that enables Defender for Office 365 for Sharepoint, OneDrive and Microsoft Teams.
-    .UPDATECOMMENTBLOCK
-    Run the Tools\Update-StandardsComments.ps1 script to update this comment block
+        Internal
+    .COMPONENT
+        (APIName) AtpPolicyForO365
+    .SYNOPSIS
+        (Label) Default Atp Policy For O365
+    .DESCRIPTION
+        (Helptext) This creates a Atp policy that enables Defender for Office 365 for Sharepoint, OneDrive and Microsoft Teams.
+        (DocsDescription) This creates a Atp policy that enables Defender for Office 365 for Sharepoint, OneDrive and Microsoft Teams.
+    .NOTES
+        CAT
+            Defender Standards
+        TAG
+            "lowimpact"
+            "CIS"
+        ADDEDCOMPONENT
+            {"type":"boolean","label":"Allow people to click through Protected View even if Safe Documents identified the file as malicious","name":"standards.AtpPolicyForO365.AllowSafeDocsOpen","default":false}
+        IMPACT
+            Low Impact
+        POWERSHELLEQUIVALENT
+            Set-AtpPolicyForO365
+        RECOMMENDEDBY
+            "CIS"
+        UPDATECOMMENTBLOCK
+            Run the Tools\Update-StandardsComments.ps1 script to update this comment block
+    .LINK
+        https://docs.cipp.app/user-documentation/tenant/standards/edit-standards
     #>
 
-
-
-
-
     param($Tenant, $Settings)
+    ##$Rerun -Type Standard -Tenant $Tenant -Settings $Settings 'AtpPolicyForO365'
+
     $CurrentState = New-ExoRequest -tenantid $Tenant -cmdlet 'Get-AtpPolicyForO365' |
-        Select-Object EnableATPForSPOTeamsODB, EnableSafeDocs, AllowSafeDocsOpen
+    Select-Object EnableATPForSPOTeamsODB, EnableSafeDocs, AllowSafeDocsOpen
 
     $StateIsCorrect = ($CurrentState.EnableATPForSPOTeamsODB -eq $true) -and
                       ($CurrentState.EnableSafeDocs -eq $true) -and
@@ -73,7 +73,3 @@ function Invoke-CIPPStandardAtpPolicyForO365 {
     }
 
 }
-
-
-
-

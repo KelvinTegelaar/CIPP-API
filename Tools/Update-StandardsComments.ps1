@@ -1,4 +1,4 @@
-﻿<#
+<#
 .SYNOPSIS
     This script updates the comment block in the CIPP standard files.
 
@@ -13,16 +13,40 @@
 .OUTPUTS
     None. The script modifies the CIPP standard files directly.
 
+.NOTES
+    .FUNCTIONALITY Internal needs to be present in the comment block for the script, otherwise it will not be updated.
+    This is done as a safety measure to avoid updating the wrong files.
+
 .EXAMPLE
     Update-StandardsComments.ps1
 
     This example runs the script to update the comment block in the CIPP standard files.
 
-
 #>
 param (
     [switch]$WhatIf
 )
+
+
+function EscapeMarkdown([object]$InputObject) {
+    # https://github.com/microsoft/FormatPowerShellToMarkdownTable/blob/master/src/FormatMarkdownTable/FormatMarkdownTable.psm1
+    $Temp = ''
+
+    if ($null -eq $InputObject) {
+        return ''
+    } elseif ($InputObject.GetType().BaseType -eq [System.Array]) {
+        $Temp = '{' + [System.String]::Join(', ', $InputObject) + '}'
+    } elseif ($InputObject.GetType() -eq [System.Collections.ArrayList] -or $InputObject.GetType().ToString().StartsWith('System.Collections.Generic.List')) {
+        $Temp = '{' + [System.String]::Join(', ', $InputObject.ToArray()) + '}'
+    } elseif (Get-Member -InputObject $InputObject -Name ToString -MemberType Method) {
+        $Temp = $InputObject.ToString()
+    } else {
+        $Temp = ''
+    }
+
+    return $Temp.Replace('\', '\\').Replace('*', '\*').Replace('_', '\_').Replace("``", "\``").Replace('$', '\$').Replace('|', '\|').Replace('<', '\<').Replace('>', '\>').Replace([System.Environment]::NewLine, '<br />')
+}
+
 
 # Find the paths to the standards.json file based on the current script path
 $StandardsJSONPath = Split-Path (Split-Path $PSScriptRoot)
@@ -38,11 +62,11 @@ foreach ($Standard in $StandardsInfo) {
         Write-Host "No file found for standard $($Standard.name)" -ForegroundColor Yellow
         continue
     }
-    $Content = (Get-Content -Path $StandardsFilePath -Raw).TrimEnd()
+    $Content = (Get-Content -Path $StandardsFilePath -Raw).TrimEnd() + "`r`n"
 
     # Remove random newlines before the param block
     $regexPattern = '#>\s*\r?\n\s*\r?\n\s*param'
-    $Content = $Content -replace $regexPattern, "#>`n`n    param"
+    $Content = $Content -replace $regexPattern, "#>`r`n`r`n    param"
 
     # Regex to match the existing comment block
     $Regex = '<#(.|\n)*?\.FUNCTIONALITY\s*Internal(.|\n)*?#>'
@@ -60,10 +84,10 @@ foreach ($Standard in $StandardsInfo) {
         $NewComment.Add("   .DESCRIPTION`r`n")
         if ([string]::IsNullOrWhiteSpace($Standard.docsDescription)) {
             $NewComment.Add("       (Helptext) $($Standard.helpText.ToString())`r`n")
-            $NewComment.Add("       (DocsDescription) $($Standard.helpText.ToString())`r`n")
+            $NewComment.Add("       (DocsDescription) $(EscapeMarkdown($Standard.helpText.ToString()))`r`n")
         } else {
             $NewComment.Add("       (Helptext) $($Standard.helpText.ToString())`r`n")
-            $NewComment.Add("       (DocsDescription) $($Standard.docsDescription.ToString())`r`n")
+            $NewComment.Add("       (DocsDescription) $(EscapeMarkdown($Standard.docsDescription.ToString()))`r`n")
         }
         $NewComment.Add("   .NOTES`r`n")
 
@@ -83,7 +107,7 @@ foreach ($Standard in $StandardsInfo) {
                         }
                         continue
                     }
-                    $NewComment.Add("           $($Property.Value.ToString())`r`n")
+                    $NewComment.Add("           $(EscapeMarkdown($Property.Value.ToString()))`r`n")
                 }
             }
 
@@ -102,7 +126,7 @@ foreach ($Standard in $StandardsInfo) {
             Write-Host "Would update $StandardsFilePath with the following comment block:"
             $NewComment
         } else {
-            $Content -replace $Regex, $NewComment | Set-Content -Path $StandardsFilePath -Encoding utf8
+            $Content -replace $Regex, $NewComment | Set-Content -Path $StandardsFilePath -Encoding utf8 -NoNewline
         }
     } else {
         Write-Host "No comment block found in $StandardsFilePath" -ForegroundColor Yellow

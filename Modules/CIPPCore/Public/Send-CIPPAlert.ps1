@@ -8,7 +8,8 @@ function Send-CIPPAlert {
         $JSONContent,
         $TenantFilter,
         $APIName = 'Send Alert',
-        $ExecutingUser
+        $ExecutingUser,
+        $TableName
     )
     Write-Information 'Shipping Alert'
     $Table = Get-CIPPTable -TableName SchedulerConfig
@@ -39,10 +40,30 @@ function Send-CIPPAlert {
             Write-LogMessage -API 'Webhook Alerts' -message "Sent a webhook alert to email: $Title" -tenant $TenantFilter -sev info
 
         } catch {
-            Write-Information "Could not send webhook alert to email: $($_.Exception.message)"
-            Write-LogMessage -API 'Webhook Alerts' -message "Could not send webhook alerts to email. $($_.Exception.message)" -tenant $TenantFilter -sev info
+            $ErrorMessage = Get-CippException -Exception $_
+            Write-Information "Could not send webhook alert to email: $($ErrorMessage.NormalizedError)"
+            Write-LogMessage -API 'Webhook Alerts' -message "Could not send webhook alerts to email. $($ErrorMessage.NormalizedError)" -tenant $TenantFilter -sev Error -LogData $ErrorMessage
         }
+    }
 
+    if ($Type -eq 'table' -and $TableName) {
+        Write-Information 'Trying to send to Table'
+        try {
+            $Table = Get-CIPPTable -TableName $TableName
+            $Alert = @{
+                PartitionKey = $TenantFilter ?? 'Alert'
+                RowKey       = [string][guid]::NewGuid()
+                Title        = $Title
+                Data         = [string]$JSONContent
+                Tenant       = $TenantFilter
+            }
+            Add-CIPPAzDataTableEntity @Table -Entity $Alert
+            return $Alert.RowKey
+        } catch {
+            $ErrorMessage = Get-CippException -Exception $_
+            Write-Information "Could not send alerts to table: $($ErrorMessage.NormalizedError)"
+            Write-LogMessage -API 'Webhook Alerts' -message "Could not send alerts to table: $($ErrorMessage.NormalizedError)" -tenant $TenantFilter -sev Error -LogData $ErrorMessage
+        }
     }
 
     if ($Type -eq 'webhook') {
@@ -78,8 +99,9 @@ function Send-CIPPAlert {
             Write-LogMessage -API 'Webhook Alerts' -message "Sent Webhook alert $title to External webhook" -tenant $TenantFilter -sev info
 
         } catch {
-            Write-Information "Could not send alerts to webhook: $($_.Exception.message)"
-            Write-LogMessage -API 'Webhook Alerts' -message "Could not send alerts to webhook: $($_.Exception.message)" -tenant $TenantFilter -sev error -LogData (Get-CippException -Exception $_)
+            $ErrorMessage = Get-CippException -Exception $_
+            Write-Information "Could not send alerts to webhook: $($ErrorMessage.NormalizedError)"
+            Write-LogMessage -API 'Webhook Alerts' -message "Could not send alerts to webhook: $($ErrorMessage.NormalizedError)" -tenant $TenantFilter -sev error -LogData $ErrorMessage
         }
     }
     Write-Information 'Trying to send to PSA'
@@ -97,8 +119,9 @@ function Send-CIPPAlert {
                     Write-LogMessage -API 'Webhook Alerts' -tenant $TenantFilter -message "Sent PSA alert $title" -sev info
 
                 } catch {
-                    Write-Information "Could not send alerts to ticketing system: $($_.Exception.message)"
-                    Write-LogMessage -API 'Webhook Alerts' -tenant $TenantFilter -message "Could not send alerts to ticketing system: $($_.Exception.message)" -sev info
+                    $ErrorMessage = Get-CippException -Exception $_
+                    Write-Information "Could not send alerts to ticketing system: $($ErrorMessage.NormalizedError)"
+                    Write-LogMessage -API 'Webhook Alerts' -tenant $TenantFilter -message "Could not send alerts to ticketing system: $($ErrorMessage.NormalizedError)" -sev Error -LogData $ErrorMessage
                 }
             }
         }

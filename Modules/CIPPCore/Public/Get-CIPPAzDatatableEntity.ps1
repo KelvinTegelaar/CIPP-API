@@ -17,47 +17,55 @@ function Get-CIPPAzDataTableEntity {
     foreach ($entity in $Results) {
         if ($entity.OriginalEntityId) {
             $entityId = $entity.OriginalEntityId
-            if (-not $mergedResults.ContainsKey($entityId)) {
-                $mergedResults[$entityId] = @{
+            $partitionKey = $entity.PartitionKey
+            if (-not $mergedResults.ContainsKey($partitionKey)) {
+                $mergedResults[$partitionKey] = @{}
+            }
+            if (-not $mergedResults[$partitionKey].ContainsKey($entityId)) {
+                $mergedResults[$partitionKey][$entityId] = @{
                     Parts = New-Object 'System.Collections.ArrayList'
                 }
             }
-            $mergedResults[$entityId]['Parts'].Add($entity) > $null
+            $mergedResults[$partitionKey][$entityId]['Parts'].Add($entity) > $null
         } else {
-            $mergedResults[$entity.RowKey] = @{
+            $partitionKey = $entity.PartitionKey
+            if (-not $mergedResults.ContainsKey($partitionKey)) {
+                $mergedResults[$partitionKey] = @{}
+            }
+            $mergedResults[$partitionKey][$entity.RowKey] = @{
                 Entity = $entity
                 Parts  = New-Object 'System.Collections.ArrayList'
             }
         }
     }
 
-    # Second pass: Reassemble entities from parts
     $finalResults = @()
-    foreach ($entityId in $mergedResults.Keys) {
-        $entityData = $mergedResults[$entityId]
-        if ($entityData.Parts.Count -gt 0) {
-            $fullEntity = [PSCustomObject]@{}
-            $parts = $entityData.Parts | Sort-Object PartIndex
-            foreach ($part in $parts) {
-                foreach ($key in $part.PSObject.Properties.Name) {
-                    if ($key -notin @('OriginalEntityId', 'PartIndex', 'PartitionKey', 'RowKey', 'Timestamp')) {
-                        if ($fullEntity.PSObject.Properties[$key]) {
-                            $fullEntity | Add-Member -MemberType NoteProperty -Name $key -Value ($fullEntity.$key + $part.$key) -Force
-                        } else {
-                            $fullEntity | Add-Member -MemberType NoteProperty -Name $key -Value $part.$key
+    foreach ($partitionKey in $mergedResults.Keys) {
+        foreach ($entityId in $mergedResults[$partitionKey].Keys) {
+            $entityData = $mergedResults[$partitionKey][$entityId]
+            if ($entityData.Parts.Count -gt 0) {
+                $fullEntity = [PSCustomObject]@{}
+                $parts = $entityData.Parts | Sort-Object PartIndex
+                foreach ($part in $parts) {
+                    foreach ($key in $part.PSObject.Properties.Name) {
+                        if ($key -notin @('OriginalEntityId', 'PartIndex', 'PartitionKey', 'RowKey', 'Timestamp')) {
+                            if ($fullEntity.PSObject.Properties[$key]) {
+                                $fullEntity | Add-Member -MemberType NoteProperty -Name $key -Value ($fullEntity.$key + $part.$key) -Force
+                            } else {
+                                $fullEntity | Add-Member -MemberType NoteProperty -Name $key -Value $part.$key
+                            }
                         }
                     }
                 }
+                $fullEntity | Add-Member -MemberType NoteProperty -Name 'PartitionKey' -Value $parts[0].PartitionKey -Force
+                $fullEntity | Add-Member -MemberType NoteProperty -Name 'RowKey' -Value $entityId -Force
+                $finalResults = $finalResults + @($fullEntity)
+            } else {
+                $finalResults = $finalResults + @($entityData.Entity)
             }
-            $fullEntity | Add-Member -MemberType NoteProperty -Name 'PartitionKey' -Value $parts[0].PartitionKey -Force
-            $fullEntity | Add-Member -MemberType NoteProperty -Name 'RowKey' -Value $entityId -Force
-            $finalResults = $finalResults + @($fullEntity)
-        } else {
-            $finalResults = $finalResults + @($entityData.Entity)
         }
     }
 
-    # Third pass: Process split properties and remerge them
     foreach ($entity in $finalResults) {
         if ($entity.SplitOverProps) {
             $splitInfoList = $entity.SplitOverProps | ConvertFrom-Json

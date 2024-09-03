@@ -19,6 +19,7 @@ Function Invoke-ExecCPVPermissions {
 
     Write-Host "Our tenant is $($Tenant.displayName) - $($Tenant.defaultDomainName)"
 
+    $TenantFilter = $Request.Query.TenantFilter
     $CPVConsentParams = @{
         TenantFilter = $Request.Query.TenantFilter
     }
@@ -27,16 +28,21 @@ Function Invoke-ExecCPVPermissions {
     }
 
     $GraphRequest = try {
-        Set-CIPPCPVConsent @CPVConsentParams
-        Add-CIPPApplicationPermission -RequiredResourceAccess 'CippDefaults' -ApplicationId $ENV:ApplicationID -tenantfilter $Request.Query.TenantFilter
-        Add-CIPPDelegatedPermission -RequiredResourceAccess 'CippDefaults' -ApplicationId $ENV:ApplicationID -tenantfilter $Request.Query.TenantFilter
+        if ($TenantFilter -ne 'PartnerTenant') {
+            Set-CIPPCPVConsent @CPVConsentParams
+        } else {
+            $TenantFilter = $env:TenantID
+        }
+        Add-CIPPApplicationPermission -RequiredResourceAccess 'CippDefaults' -ApplicationId $ENV:ApplicationID -tenantfilter $TenantFilter
+        Add-CIPPDelegatedPermission -RequiredResourceAccess 'CippDefaults' -ApplicationId $ENV:ApplicationID -tenantfilter $TenantFilter
+        Set-CIPPSAMAdminRoles -TenantFilter $TenantFilter
         $Success = $true
     } catch {
         "Failed to update permissions for $($Tenant.displayName): $($_.Exception.Message)"
         $Success = $false
     }
 
-    $Tenant = Get-Tenants -IncludeAll | Where-Object -Property customerId -EQ $TenantFilter
+    $Tenant = Get-Tenants -IncludeAll | Where-Object -Property customerId -EQ $TenantFilter | Select-Object -First 1
 
     # Associate values to output bindings by calling 'Push-OutputBinding'.
     Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
@@ -44,7 +50,7 @@ Function Invoke-ExecCPVPermissions {
             Body       = @{
                 Results  = $GraphRequest
                 Metadata = @{
-                    Heading = 'CPV Permission - {0} ({1})' -f $Tenant.displayName, $Tenant.defaultDomainName
+                    Heading = ('CPV Permission - {0} ({1})' -f $Tenant.displayName, $Tenant.defaultDomainName)
                     Success = $Success
                 }
             }

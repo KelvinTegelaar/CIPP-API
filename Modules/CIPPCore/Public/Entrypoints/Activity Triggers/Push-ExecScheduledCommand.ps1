@@ -4,13 +4,14 @@ function Push-ExecScheduledCommand {
         Entrypoint
     #>
     param($Item)
+    $item = $Item | ConvertTo-Json -Depth 100 | ConvertFrom-Json
     Write-Host "We are going to be running a scheduled task: $($Item.TaskInfo | ConvertTo-Json -Depth 10)"
 
     $Table = Get-CippTable -tablename 'ScheduledTasks'
     $task = $Item.TaskInfo
     $commandParameters = $Item.Parameters | ConvertTo-Json -Depth 10 | ConvertFrom-Json -AsHashtable
 
-    $tenant = $Item.Parameters['TenantFilter']
+    $tenant = $Item.Parameters.TenantFilter
     Write-Host "Started Task: $($Item.Command) for tenant: $tenant"
     try {
         try {
@@ -74,7 +75,7 @@ function Push-ExecScheduledCommand {
                     'TaskInfo' = $Item.TaskInfo
                     'Results'  = $Results
                 }
-                Send-CIPPAlert -Type 'webhook' -Title $title -JSONContent $($Webhook | ConvertTo-Json -Depth 20)
+                Send-CIPPAlert -Type 'webhook' -Title $title -TenantFilter $tenant -JSONContent $($Webhook | ConvertTo-Json -Depth 20)
             }
         }
     }
@@ -99,8 +100,16 @@ function Push-ExecScheduledCommand {
             '(\d+)d$' { [int64]$matches[1] * 86400 }
             default { throw "Unsupported recurrence format: $($task.Recurrence)" }
         }
+
+        if ($secondsToAdd -gt 0) {
+            $unixtimeNow = [int64](([datetime]::UtcNow) - (Get-Date '1/1/1970')).TotalSeconds
+            if ([int64]$task.ScheduledTime -lt ($unixtimeNow - $secondsToAdd)) {
+                $task.ScheduledTime = $unixtimeNow
+            }
+        }
+
         $nextRunUnixTime = [int64]$task.ScheduledTime + [int64]$secondsToAdd
-        Write-Host "The job is recurring and should occur again at: $nextRunUnixTime"
+        Write-Host "The job is recurring. It was scheduled for $($task.ScheduledTime). The next runtime should be $nextRunUnixTime"
         Update-AzDataTableEntity @Table -Entity @{
             PartitionKey  = $task.PartitionKey
             RowKey        = $task.RowKey

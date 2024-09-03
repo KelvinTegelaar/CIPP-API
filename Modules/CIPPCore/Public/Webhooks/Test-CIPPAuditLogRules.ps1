@@ -22,6 +22,8 @@ function Test-CIPPAuditLogRules {
         'OAuth2:Token'
         'SAS:EndAuth'
         'SAS:ProcessAuth'
+        'deviceAuth:ReprocessTls'
+        'Consent:Set'
     )
 
     $TrustedIPTable = Get-CIPPTable -TableName 'trustedIps'

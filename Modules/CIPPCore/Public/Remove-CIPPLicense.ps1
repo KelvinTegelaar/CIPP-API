@@ -9,7 +9,7 @@ function Remove-CIPPLicense {
     )
 
     try {
-        $ConvertTable = Import-Csv Conversiontable.csv
+        $ConvertTable = Import-Csv ConversionTable.csv
         $User = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/users/$($userid)" -tenantid $tenantFilter
         if (!$username) { $username = $User.userPrincipalName }
         $CurrentLicenses = $User.assignedlicenses.skuid
@@ -29,7 +29,8 @@ function Remove-CIPPLicense {
             return "No licenses to remove for $username"
         }
     } catch {
-        Write-LogMessage -user $ExecutingUser -API $APIName -message "Could not remove license for $username" -Sev 'Error' -tenant $TenantFilter -LogData (Get-CippException -Exception $_)
-        return "Could not remove license for $($username). Error: $($_.Exception.Message)"
+        $ErrorMessage = Get-CippException -Exception $_
+        Write-LogMessage -user $ExecutingUser -API $APIName -message "Could not remove license for $username. Error: $($ErrorMessage.NormalizedError)" -Sev 'Error' -tenant $TenantFilter -LogData $ErrorMessage
+        return "Could not remove license for $($username). Error: $($ErrorMessage.NormalizedError)"
     }
 }

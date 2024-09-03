@@ -13,8 +13,8 @@ function Push-ListMailboxRulesQueue {
     $Table = Get-CIPPTable -TableName cachembxrules
     try {
         $Rules = New-ExoRequest -tenantid $domainName -cmdlet 'Get-Mailbox' -Select 'userPrincipalName,GUID' | ForEach-Object -Parallel {
-            Import-Module CippCore
-            $MbxRules = New-ExoRequest -Anchor $_.UserPrincipalName -tenantid $using:domainName -cmdlet 'Get-InboxRule' -cmdParams @{Mailbox = $_.GUID }
+            Import-Module CIPPCore
+            $MbxRules = New-ExoRequest -Anchor $_.UserPrincipalName -tenantid $using:domainName -cmdlet 'Get-InboxRule' -cmdParams @{Mailbox = $_.GUID; IncludeHidden = $true } | Where-Object { $_.Name -ne 'Junk E-Mail Rule' }
             foreach ($Rule in $MbxRules) {
                 $Rule | Add-Member -NotePropertyName 'UserPrincipalName' -NotePropertyValue $_.userPrincipalName
                 $Rule

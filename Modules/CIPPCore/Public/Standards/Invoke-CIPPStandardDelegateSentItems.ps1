@@ -1,37 +1,38 @@
 function Invoke-CIPPStandardDelegateSentItems {
     <#
     .FUNCTIONALITY
-    Internal
-    .APINAME
-    DelegateSentItems
-    .CAT
-    Exchange Standards
-    .TAG
-    "mediumimpact"
-    .HELPTEXT
-    Sets emails sent as and on behalf of shared mailboxes to also be stored in the shared mailbox sent items folder
-    .DOCSDESCRIPTION
-    This makes sure that e-mails sent from shared mailboxes or delegate mailboxes, end up in the mailbox of the shared/delegate mailbox instead of the sender, allowing you to keep replies in the same mailbox as the original e-mail.
-    .ADDEDCOMPONENT
-    .LABEL
-    Set mailbox Sent Items delegation (Sent items for shared mailboxes)
-    .IMPACT
-    Medium Impact
-    .POWERSHELLEQUIVALENT
-    Set-Mailbox
-    .RECOMMENDEDBY
-    .DOCSDESCRIPTION
-    Sets emails sent as and on behalf of shared mailboxes to also be stored in the shared mailbox sent items folder
-    .UPDATECOMMENTBLOCK
-    Run the Tools\Update-StandardsComments.ps1 script to update this comment block
+        Internal
+    .COMPONENT
+        (APIName) DelegateSentItems
+    .SYNOPSIS
+        (Label) Set mailbox Sent Items delegation (Sent items for shared mailboxes)
+    .DESCRIPTION
+        (Helptext) Sets emails sent as and on behalf of shared mailboxes to also be stored in the shared mailbox sent items folder
+        (DocsDescription) This makes sure that e-mails sent from shared mailboxes or delegate mailboxes, end up in the mailbox of the shared/delegate mailbox instead of the sender, allowing you to keep replies in the same mailbox as the original e-mail.
+    .NOTES
+        CAT
+            Exchange Standards
+        TAG
+            "mediumimpact"
+        ADDEDCOMPONENT
+        IMPACT
+            Medium Impact
+        POWERSHELLEQUIVALENT
+            Set-Mailbox
+        RECOMMENDEDBY
+        UPDATECOMMENTBLOCK
+            Run the Tools\Update-StandardsComments.ps1 script to update this comment block
+    .LINK
+        https://docs.cipp.app/user-documentation/tenant/standards/edit-standards
     #>
 
-
-
-
     param($Tenant, $Settings)
+    #$Rerun -Type Standard -Tenant $Tenant -API 'DelegateSentItems' -Settings $Settings
+
+
+
     $Mailboxes = New-ExoRequest -tenantid $Tenant -cmdlet 'Get-Mailbox' -cmdParams @{ RecipientTypeDetails = @('UserMailbox', 'SharedMailbox') } |
-        Where-Object { $_.MessageCopyForSendOnBehalfEnabled -eq $false -or $_.MessageCopyForSentAsEnabled -eq $false }
+    Where-Object { $_.MessageCopyForSendOnBehalfEnabled -eq $false -or $_.MessageCopyForSentAsEnabled -eq $false }
     Write-Host "Mailboxes: $($Mailboxes.count)"
     If ($Settings.remediate -eq $true) {
         Write-Host 'Time to remediate'
@@ -77,7 +78,3 @@ function Invoke-CIPPStandardDelegateSentItems {
         Add-CIPPBPAField -FieldName 'DelegateSentItems' -FieldValue $Filtered -StoreAs json -Tenant $tenant
     }
 }
-
-
-
-
