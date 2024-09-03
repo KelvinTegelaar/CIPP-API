@@ -4,6 +4,7 @@ $Table = Get-CippTable -tablename 'ScheduledTasks'
 $Filter = "TaskState eq 'Planned' or TaskState eq 'Failed - Planned'"
 $tasks = Get-CIPPAzDataTableEntity @Table -Filter $Filter
 $Batch = [System.Collections.Generic.List[object]]::new()
+$TenantList = Get-Tenants -IncludeErrors
 foreach ($task in $tasks) {
     $tenant = $task.Tenant
     $currentUnixTime = [int64](([datetime]::UtcNow) - (Get-Date '1/1/1970')).TotalSeconds
@@ -27,7 +28,7 @@ foreach ($task in $tasks) {
             }
 
             if ($task.Tenant -eq 'AllTenants') {
-                $AllTenantCommands = foreach ($Tenant in Get-Tenants) {
+                $AllTenantCommands = foreach ($Tenant in $TenantList) {
                     $NewParams = $task.Parameters.Clone()
                     $NewParams.TenantFilter = $Tenant.defaultDomainName
                     [pscustomobject]@{
