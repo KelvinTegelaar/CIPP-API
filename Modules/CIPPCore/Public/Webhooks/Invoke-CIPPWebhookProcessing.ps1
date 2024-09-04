@@ -15,7 +15,7 @@ function Invoke-CippWebhookProcessing {
 
     $ActionList = ($data.CIPPAction | ConvertFrom-Json -ErrorAction SilentlyContinue).value
     $ActionResults = foreach ($action in $ActionList) {
-        Write-Host "this is our action: $($action | ConvertTo-Json -Depth 15 -Compress))"
+        Write-Host "this is our action: $($action | ConvertTo-Json -Depth 15 -Compress)"
         switch ($action) {
             'disableUser' {
                 Set-CIPPSignInState -TenantFilter $TenantFilter -User $data.UserId -AccountEnabled $false -APIName 'Alert Engine' -ExecutingUser 'Alert Engine'
