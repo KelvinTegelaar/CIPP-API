@@ -10,8 +10,11 @@ function Add-CIPPAzDataTableEntity {
     $MaxRowSize = 500000 - 100 # Maximum size of an entity
     $MaxSize = 30kb # Maximum size of a property value
 
-    foreach ($SingleEnt in $Entity) {
+    foreach ($SingleEnt in @($Entity)) {
         try {
+            if ($null -eq $SingleEnt.PartitionKey -or $null -eq $SingleEnt.RowKey) {
+                throw 'PartitionKey or RowKey is null'
+            }
             Add-AzDataTableEntity -Context $Context -Force:$Force -CreateTableIfNotExists:$CreateTableIfNotExists -Entity $SingleEnt -ErrorAction Stop
         } catch [System.Exception] {
             if ($_.Exception.ErrorCode -eq 'PropertyValueTooLarge' -or $_.Exception.ErrorCode -eq 'EntityTooLarge' -or $_.Exception.ErrorCode -eq 'RequestBodyTooLarge') {
