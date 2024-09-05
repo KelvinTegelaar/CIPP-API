@@ -1,7 +1,8 @@
 function Get-CIPPTimerFunctions {
     [CmdletBinding()]
     param(
-        [switch]$All
+        [switch]$All,
+        [switch]$ResetToDefault
     )
 
     $ConfigTable = Get-CIPPTable -tablename Config
@@ -46,39 +47,39 @@ function Get-CIPPTimerFunctions {
 
         $Now = Get-Date
         if ($All.IsPresent) {
-            $NextOccurrence = $Cron.GetNextOccurrence($Now)
+            $NextOccurrence = [datetime]$Cron.GetNextOccurrence($Now)
         } else {
             $NextOccurrences = $Cron.GetNextOccurrences($Now.AddMinutes(-15), $Now.AddMinutes(15))
             if ($Status.LastOccurrence -eq 'Never') {
-                $NextOccurrence = $NextOccurrences[0]
+                $NextOccurrence = $NextOccurrences | Select-Object -First 1
             } else {
                 $NextOccurrence = $NextOccurrences | Where-Object { $_ -gt $Status.LastRun } | Select-Object -First 1
-                $NextOccurrence = $NextOccurrence
             }
         }
 
         if (Get-Command -Name $Orchestrator.Command -Module CIPPCore -ErrorAction SilentlyContinue) {
-            if (!$Status) {
-                $Status = [pscustomobject]@{
-                    PartitionKey   = 'Timer'
-                    RowKey         = $Orchestrator.Command
-                    Cron           = $CronString
-                    LastOccurrence = 'Never'
-                    NextOccurrence = $NextOccurrence.ToUniversalTime()
-                    Status         = 'Not Scheduled'
-                    OrchestratorId = ''
-                    RunOnProcessor = $RunOnProcessor
-                    IsSystem       = $Orchestrator.IsSystem ?? $false
-                }
-                Add-CIPPAzDataTableEntity @Table -Entity $Status
-            } else {
-                if ($Orchestrator.IsSystem) {
-                    $Status.Cron = $CronString
-                }
-                $Status.NextOccurrence = $NextOccurrence.ToUniversalTime()
-                Add-CIPPAzDataTableEntity @Table -Entity $Status -Force
-            }
             if ($NextOccurrence) {
+                if (!$Status) {
+                    $Status = [pscustomobject]@{
+                        PartitionKey   = 'Timer'
+                        RowKey         = $Orchestrator.Command
+                        Cron           = $CronString
+                        LastOccurrence = 'Never'
+                        NextOccurrence = $NextOccurrence.ToUniversalTime()
+                        Status         = 'Not Scheduled'
+                        OrchestratorId = ''
+                        RunOnProcessor = $RunOnProcessor
+                        IsSystem       = $Orchestrator.IsSystem ?? $false
+                    }
+                    Add-CIPPAzDataTableEntity @Table -Entity $Status
+                } else {
+                    if ($Orchestrator.IsSystem -or $ResetToDefault.IsPresent) {
+                        $Status.Cron = $CronString
+                    }
+                    $Status.NextOccurrence = $NextOccurrence.ToUniversalTime()
+                    Add-CIPPAzDataTableEntity @Table -Entity $Status -Force
+                }
+
                 [PSCustomObject]@{
                     Command        = $Orchestrator.Command
                     Cron           = $CronString

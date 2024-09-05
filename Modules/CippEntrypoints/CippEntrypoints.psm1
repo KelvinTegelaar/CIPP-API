@@ -222,6 +222,7 @@ function Receive-CIPPTimerTrigger {
     $Functions = Get-CIPPAzDataTableEntity @Table
 
     foreach ($Function in $Functions) {
+        Write-Information "CIPPTimer: $($Function.Command) - $($Function.Cron)"
         $Status = $Functions | Where-Object { $_.RowKey -eq $Function.Command }
         try {
             $Results = & $Function.Command @TimerTrigger
