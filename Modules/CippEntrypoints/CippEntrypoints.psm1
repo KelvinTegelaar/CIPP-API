@@ -236,7 +236,7 @@ function Receive-CIPPTimerTrigger {
 
     foreach ($Function in $Functions) {
         Write-Information "CIPPTimer: $($Function.Command) - $($Function.Cron)"
-        $FunctionStatus = $Statuses | Where-Object { $_.Command -eq $Function.Command }
+        $FunctionStatus = $Statuses | Where-Object { $_.RowKey -eq $Function.Command }
         try {
             $Results = & $Function.Command @TimerTrigger
             if ($Results -is [guid]) {
