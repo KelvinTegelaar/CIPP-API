@@ -47,9 +47,9 @@ function Test-CIPPAuditLogRules {
     Write-Information "Logs to process: $LogCount"
     $Results.TotalLogs = $LogCount
     if ($LogCount -gt 0) {
-        $PreProccessedData = $Data | Select-Object *, CIPPAction, CIPPClause, CIPPGeoLocation, CIPPBadRepIP, CIPPHostedIP, CIPPIPDetected, CIPPLocationInfo, CIPPExtendedProperties, CIPPDeviceProperties, CIPPParameters, CIPPModifiedProperties -ErrorAction SilentlyContinue
+        $PreProcessedData = $Data | Select-Object *, CIPPAction, CIPPClause, CIPPGeoLocation, CIPPBadRepIP, CIPPHostedIP, CIPPIPDetected, CIPPLocationInfo, CIPPExtendedProperties, CIPPDeviceProperties, CIPPParameters, CIPPModifiedProperties -ErrorAction SilentlyContinue
         $LocationTable = Get-CIPPTable -TableName 'knownlocationdb'
-        $ProcessedData = foreach ($Data in $PreProccessedData) {
+        $ProcessedData = foreach ($Data in $PreProcessedData) {
             try {
                 if ($Data.ExtendedProperties) {
                     $Data.CIPPExtendedProperties = ($Data.ExtendedProperties | ConvertTo-Json)
@@ -105,7 +105,7 @@ function Test-CIPPAuditLogRules {
                         try {
                             $Location = Get-CIPPGeoIPLocation -IP $Data.clientip
                         } catch {
-                            Write-Information "Unable to get IP location for $($Data.clientip): $($_.Exception.Messge)"
+                            Write-Information "Unable to get IP location for $($Data.clientip): $($_.Exception.Message)"
                         }
                         $Country = if ($Location.CountryCode) { $Location.CountryCode } else { 'Unknown' }
                         $City = if ($Location.City) { $Location.City } else { 'Unknown' }
