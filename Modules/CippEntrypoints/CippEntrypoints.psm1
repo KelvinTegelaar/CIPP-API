@@ -246,7 +246,7 @@ function Receive-CIPPTimerTrigger {
         } catch {
             $Status = 'Failed'
         }
-        $Status.LastRun = $UtcNow
+        $Status.LastOccurrence = $UtcNow
         $Status.Status = $Status
         Add-CIPPAzDataTableEntity @Table -Entity $Status -Force
     }
