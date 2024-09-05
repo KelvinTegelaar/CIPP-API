@@ -40,6 +40,8 @@ function Push-AuditLogTenant {
         $ExistingBundles = Get-CIPPAzDataTableEntity @AuditBundleTable -Filter "PartitionKey eq '$($Item.TenantFilter)' and ContentType eq '$LogType' and Timestamp ge datetime'$($LastHour)'"
 
         foreach ($Bundle in $LogBundles) {
+            Write-Host ($Bundle.contentCreated + ' ' + $Bundle.contentExpiration)
+            Write-Host ($Bundle.contentCreated.GetType())
             if ($ExistingBundles.RowKey -notcontains $Bundle.contentId) {
                 $NewBundles.Add([PSCustomObject]@{
                         PartitionKey      = $TenantFilter
