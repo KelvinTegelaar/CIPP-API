@@ -49,8 +49,8 @@ function Push-AuditLogTenant {
                         DefaultDomainName = $TenantFilter
                         ContentType       = $Bundle.contentType
                         ContentUri        = $Bundle.contentUri
-                        ContentCreated    = [datetime]::SpecifyKind($Bundle.contentCreated, [System.DateTimeKind]::Utc)
-                        ContentExpiration = [datetime]::SpecifyKind($Bundle.contentExpiration, [System.DateTimeKind]::Utc)
+                        ContentCreated    = $Bundle.contentCreated
+                        ContentExpiration = $Bundle.contentExpiration
                         CIPPURL           = [string]$CIPPURL
                         ProcessingStatus  = 'Pending'
                         MatchedRules      = ''
