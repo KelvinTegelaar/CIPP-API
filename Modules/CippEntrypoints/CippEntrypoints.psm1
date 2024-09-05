@@ -236,19 +236,19 @@ function Receive-CIPPTimerTrigger {
 
     foreach ($Function in $Functions) {
         Write-Information "CIPPTimer: $($Function.Command) - $($Function.Cron)"
-        $Status = $Statuses | Where-Object { $_.Command -eq $Function.Command }
+        $FunctionStatus = $Statuses | Where-Object { $_.Command -eq $Function.Command }
         try {
             $Results = & $Function.Command @TimerTrigger
             if ($Results -is [guid]) {
-                $Status.OrchestratorId = $Results
+                $FunctionStatus.OrchestratorId = $Results
             }
             $Status = 'Started'
         } catch {
             $Status = 'Failed'
         }
-        $Status.LastOccurrence = $UtcNow
-        $Status.Status = $Status
-        Add-CIPPAzDataTableEntity @Table -Entity $Status -Force
+        $FunctionStatus.LastOccurrence = $UtcNow
+        $FunctionStatus.Status = $Status
+        Add-CIPPAzDataTableEntity @Table -Entity $FunctionStatus -Force
     }
 }
 
