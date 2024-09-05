@@ -238,7 +238,7 @@ function Receive-CIPPTimerTrigger {
         Write-Information "CIPPTimer: $($Function.Command) - $($Function.Cron)"
         $FunctionStatus = $Statuses | Where-Object { $_.RowKey -eq $Function.Command }
         try {
-            $Results = & $Function.Command @TimerTrigger
+            $Results = Invoke-Command -ScriptBlock { & $Function.Command }
             if ($Results -is [guid]) {
                 $FunctionStatus.OrchestratorId = $Results
             }

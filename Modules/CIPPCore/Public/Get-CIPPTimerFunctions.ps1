@@ -53,7 +53,7 @@ function Get-CIPPTimerFunctions {
             if ($Status.LastOccurrence -eq 'Never') {
                 $NextOccurrence = $NextOccurrences | Select-Object -First 1
             } else {
-                $NextOccurrence = $NextOccurrences | Where-Object { $_ -gt $Status.LastRun } | Select-Object -First 1
+                $NextOccurrence = $NextOccurrences | Where-Object { $_ -gt $Status.LastOccurrence.DateTime } | Select-Object -First 1
             }
         }
 
@@ -84,7 +84,7 @@ function Get-CIPPTimerFunctions {
                     Command        = $Orchestrator.Command
                     Cron           = $CronString
                     NextOccurrence = $NextOccurrence.ToUniversalTime()
-                    LastOccurrence = $Status.LastOccurrence
+                    LastOccurrence = $Status.LastOccurrence.DateTime
                     Status         = $Status.Status
                     OrchestratorId = $Status.OrchestratorId
                     RunOnProcessor = $Orchestrator.RunOnProcessor
