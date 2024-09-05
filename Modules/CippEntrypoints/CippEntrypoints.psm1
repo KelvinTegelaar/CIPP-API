@@ -232,11 +232,11 @@ function Receive-CIPPTimerTrigger {
     $UtcNow = (Get-Date).ToUniversalTime()
     $Functions = Get-CIPPTimerFunctions
     $Table = Get-CIPPTable -tablename CIPPTimers
-    $Functions = Get-CIPPAzDataTableEntity @Table
+    $Statuses = Get-CIPPAzDataTableEntity @Table
 
     foreach ($Function in $Functions) {
         Write-Information "CIPPTimer: $($Function.Command) - $($Function.Cron)"
-        $Status = $Functions | Where-Object { $_.RowKey -eq $Function.Command }
+        $Status = $Statuses | Where-Object { $_.Command -eq $Function.Command }
         try {
             $Results = & $Function.Command @TimerTrigger
             if ($Results -is [guid]) {
