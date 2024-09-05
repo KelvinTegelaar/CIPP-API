@@ -15,7 +15,7 @@ function Receive-CippHttpTrigger {
 
     if ($Config -and $Config.state -eq $true) {
         Write-Information 'No API Calls'
-        if ($env:CIPP_PROCESSOR -ne 'true') {
+        if ($env:CIPP_PROCESSOR -eq 'true') {
             Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
                     StatusCode = [HttpStatusCode]::Forbidden
                     Body       = 'API calls are not accepted on this function app'
