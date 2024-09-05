@@ -53,7 +53,7 @@ function Get-CIPPTimerFunctions {
             if ($Status.LastOccurrence -eq 'Never') {
                 $NextOccurrence = $NextOccurrences | Where-Object { $_ -le (Get-Date) } | Select-Object -First 1
             } else {
-                $NextOccurrence = $NextOccurrences | Where-Object { $_ -gt $Status.LastOccurrence.DateTime -and $_ -le (Get-Date) } | Select-Object -First 1
+                $NextOccurrence = $NextOccurrences | Where-Object { $_ -gt $Status.LastOccurrence.DateTime.ToLocalTime() -and $_ -le (Get-Date) } | Select-Object -First 1
             }
         }
 
