@@ -14,11 +14,13 @@ function Receive-CippHttpTrigger {
     $Config = Get-CIPPAzDataTableEntity @ConfigTable -Filter "PartitionKey eq 'OffloadFunctions' and RowKey eq 'OffloadFunctions'"
 
     if ($Config -and $Config.state -eq $true) {
+        Write-Information 'No API Calls'
         if ($env:CIPP_PROCESSOR -ne 'true') {
             Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
                     StatusCode = [HttpStatusCode]::Forbidden
                     Body       = 'API calls are not accepted on this function app'
                 })
+            return
         }
     }
 
@@ -26,7 +28,7 @@ function Receive-CippHttpTrigger {
     $Request = $Request | ConvertTo-Json -Depth 100 | ConvertFrom-Json
     Set-Location (Get-Item $PSScriptRoot).Parent.Parent.FullName
     $FunctionName = 'Invoke-{0}' -f $Request.Params.CIPPEndpoint
-    Write-Host "Function: $($Request.Params.CIPPEndpoint)"
+    Write-Information "Function: $($Request.Params.CIPPEndpoint)"
 
     $HttpTrigger = @{
         Request         = [pscustomobject]($Request)
