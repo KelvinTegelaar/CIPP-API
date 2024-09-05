@@ -14,7 +14,7 @@ Function Invoke-RemoveWebhookAlert {
     Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -message 'Accessed this API' -Sev 'Debug'
 
     try {
-        $WebhookTable = Get-CIPPTable -TableName SchedulerConfig
+        $WebhookTable = Get-CIPPTable -TableName 'SchedulerConfig'
         $WebhookRow = Get-CIPPAzDataTableEntity @WebhookTable -Filter "PartitionKey eq 'WebhookAlert'" | Where-Object -Property Tenant -EQ $Request.query.TenantFilter
         Write-Host "The webhook count is $($WebhookRow.count)"
         if ($WebhookRow.count -gt 1) {
