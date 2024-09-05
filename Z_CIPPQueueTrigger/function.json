@@ -9,10 +9,9 @@
       "queueName": "CIPPGenericQueue"
     },
     {
-      "type": "queue",
-      "direction": "out",
-      "name": "QueueItemOut",
-      "queueName": "CIPPGenericQueue"
+      "name": "starter",
+      "type": "durableClient",
+      "direction": "in"
     }
   ]
 }

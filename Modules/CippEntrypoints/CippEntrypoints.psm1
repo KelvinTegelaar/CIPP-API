@@ -44,7 +44,7 @@ function Receive-CippHttpTrigger {
 
 function Receive-CippQueueTrigger {
     Param($QueueItem, $TriggerMetadata)
-    
+
     Set-Location (Get-Item $PSScriptRoot).Parent.Parent.FullName
     $Start = (Get-Date).ToUniversalTime()
     $APIName = $TriggerMetadata.FunctionName
@@ -213,5 +213,30 @@ function Receive-CippActivityTrigger {
     }
 }
 
-Export-ModuleMember -Function @('Receive-CippHttpTrigger', 'Receive-CippQueueTrigger', 'Receive-CippOrchestrationTrigger', 'Receive-CippActivityTrigger')
+function Receive-CIPPTimerTrigger {
+    param($Timer)
+
+    $UtcNow = (Get-Date).ToUniversalTime()
+    $Functions = Get-CIPPTimerFunctions
+    $Table = Get-CIPPTable -tablename CIPPTimers
+    $Functions = Get-CIPPAzDataTableEntity @Table
+
+    foreach ($Function in $Functions) {
+        $Status = $Functions | Where-Object { $_.RowKey -eq $Function.Command }
+        try {
+            $Results = & $Function.Command @TimerTrigger
+            if ($Results -is [guid]) {
+                $Status.OrchestratorId = $Results
+            }
+            $Status = 'Started'
+        } catch {
+            $Status = 'Failed'
+        }
+        $Status.LastRun = $UtcNow
+        $Status.Status = $Status
+        Add-CIPPAzDataTableEntity @Table -Entity $Status -Force
+    }
+}
+
+Export-ModuleMember -Function @('Receive-CippHttpTrigger', 'Receive-CippQueueTrigger', 'Receive-CippOrchestrationTrigger', 'Receive-CippActivityTrigger', 'Receive-CIPPTimerTrigger')
 
