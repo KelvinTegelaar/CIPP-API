@@ -73,8 +73,7 @@ function New-ExoRequest {
                     $OnMicrosoft = $Tenant.initialDomainName
                 }
                 $anchor = "UPN:SystemMailbox{bb558c35-97f1-4cb9-8ff7-d53741dc928c}@$($OnMicrosoft)"
-                if ($cmdlet -in 'Set-AdminAuditLogConfig', 'Get-AdminAuditLogConfig', 'Enable-OrganizationCustomization', 'Get-OrganizationConfig') { $anchor = "UPN:SystemMailbox{8cc370d3-822a-4ab8-a926-bb94bd0641a9}@$($OnMicrosoft)" }
-
+                if ($cmdlet -in 'Set-AdminAuditLogConfig', 'Get-AdminAuditLogConfig', 'Enable-OrganizationCustomization', 'Get-OrganizationConfig', 'Set-OrganizationConfig') { $anchor = "UPN:SystemMailbox{8cc370d3-822a-4ab8-a926-bb94bd0641a9}@$($OnMicrosoft)" }
             }
         }
         #if the anchor is a GUID, try looking up the user.

@@ -1,12 +1,12 @@
 ﻿{
   "scriptFile": "../Modules/CippEntrypoints/CippEntrypoints.psm1",
-  "entryPoint": "Receive-CippQueueTrigger",
+  "entryPoint": "Receive-CippTimerTrigger",
   "bindings": [
     {
-      "name": "QueueItem",
-      "type": "queueTrigger",
+      "name": "Timer",
+      "schedule": "0 0/15 * * * *",
       "direction": "in",
-      "queueName": "CIPPGenericQueue"
+      "type": "timerTrigger"
     },
     {
       "name": "starter",

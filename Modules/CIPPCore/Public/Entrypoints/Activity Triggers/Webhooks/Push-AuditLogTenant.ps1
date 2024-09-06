@@ -36,25 +36,29 @@ function Push-AuditLogTenant {
             StartTime    = $Item.StartTime
             EndTime      = $Item.EndTime
         }
-        $LogBundles = Get-CIPPAuditLogContentBundles @ContentBundleQuery
-        $ExistingBundles = Get-CIPPAzDataTableEntity @AuditBundleTable -Filter "PartitionKey eq '$($Item.TenantFilter)' and ContentType eq '$LogType' and Timestamp ge datetime'$($LastHour)'"
+        try {
+            $LogBundles = Get-CIPPAuditLogContentBundles @ContentBundleQuery
+            $ExistingBundles = Get-CIPPAzDataTableEntity @AuditBundleTable -Filter "PartitionKey eq '$($Item.TenantFilter)' and ContentType eq '$LogType' and Timestamp ge datetime'$($LastHour)'"
 
-        foreach ($Bundle in $LogBundles) {
-            if ($ExistingBundles.RowKey -notcontains $Bundle.contentId) {
-                $NewBundles.Add([PSCustomObject]@{
-                        PartitionKey      = $TenantFilter
-                        RowKey            = $Bundle.contentId
-                        DefaultDomainName = $TenantFilter
-                        ContentType       = $Bundle.contentType
-                        ContentUri        = $Bundle.contentUri
-                        ContentCreated    = $Bundle.contentCreated
-                        ContentExpiration = $Bundle.contentExpiration
-                        CIPPURL           = [string]$CIPPURL
-                        ProcessingStatus  = 'Pending'
-                        MatchedRules      = ''
-                        MatchedLogs       = 0
-                    })
+            foreach ($Bundle in $LogBundles) {
+                if ($ExistingBundles.RowKey -notcontains $Bundle.contentId) {
+                    $NewBundles.Add([PSCustomObject]@{
+                            PartitionKey      = $TenantFilter
+                            RowKey            = $Bundle.contentId
+                            DefaultDomainName = $TenantFilter
+                            ContentType       = $Bundle.contentType
+                            ContentUri        = $Bundle.contentUri
+                            ContentCreated    = $Bundle.contentCreated
+                            ContentExpiration = $Bundle.contentExpiration
+                            CIPPURL           = [string]$CIPPURL
+                            ProcessingStatus  = 'Pending'
+                            MatchedRules      = ''
+                            MatchedLogs       = 0
+                        })
+                }
             }
+        } catch {
+            Write-Information "Could not get audit log content bundles for $TenantFilter - $LogType, $($_.Exception.Message)"
         }
     }
 
