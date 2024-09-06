@@ -239,6 +239,16 @@ function Receive-CIPPTimerTrigger {
     foreach ($Function in $Functions) {
         Write-Information "CIPPTimer: $($Function.Command) - $($Function.Cron)"
         $FunctionStatus = $Statuses | Where-Object { $_.RowKey -eq $Function.Command }
+        if ($FunctionStatus.OrchestratorId) {
+            $FunctionName = $env:WEBSITE_SITE_NAME
+            $InstancesTable = Get-CippTable -TableName ('{0}Instances' -f $FunctionName)
+            $Instance = Get-CIPPAzDataTableEntity @InstancesTable -Filter "PartitionKey eq '$($FunctionStatus.OrchestratorId)'"
+            if ($Instance.RuntimeStatus -eq 'Running') {
+                Write-LogMessage -message "CIPP Timer: $($Function.Command) - $($FunctionStatus.OrchestratorId) is still running" -sev Info
+                Write-Information "CIPP Timer: $($Function.Command) - $($FunctionStatus.OrchestratorId) is still running, skipping execution"
+                continue
+            }
+        }
         try {
             $Results = Invoke-Command -ScriptBlock { & $Function.Command }
             if ($Results -match '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$') {
