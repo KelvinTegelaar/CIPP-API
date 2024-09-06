@@ -51,7 +51,7 @@ function Get-CIPPTimerFunctions {
             $NextOccurrence = [datetime]$Cron.GetNextOccurrence($Now)
         } else {
             $NextOccurrences = $Cron.GetNextOccurrences($Now.AddMinutes(-15), $Now.AddMinutes(15))
-            if ($Status.LastOccurrence -eq 'Never') {
+            if (!$Status -or $Status.LastOccurrence -eq 'Never') {
                 $NextOccurrence = $NextOccurrences | Where-Object { $_ -le (Get-Date) } | Select-Object -First 1
             } else {
                 $NextOccurrence = $NextOccurrences | Where-Object { $_ -gt $Status.LastOccurrence.DateTime.ToLocalTime() -and $_ -le (Get-Date) } | Select-Object -First 1
