@@ -11,6 +11,7 @@ function New-GraphGetRequest {
         $noPagination,
         $NoAuthCheck,
         $skipTokenCache,
+        $Caller,
         [switch]$ComplexFilter,
         [switch]$CountOnly,
         [switch]$IncludeResponseHeaders
@@ -58,8 +59,11 @@ function New-GraphGetRequest {
                     $Data.'@odata.count'
                     $NextURL = $null
                 } else {
-                    if ($Data.PSObject.Properties.Name -contains 'value') { $data.value } else { ($Data) }
+                    if ($Data.PSObject.Properties.Name -contains 'value') { $data.value } else { $Data }
                     if ($noPagination) {
+                        if ($Caller -eq 'Get-GraphRequestList') {
+                            @{ 'nextLink' = $data.'@odata.nextLink' }
+                        }
                         $nextURL = $null
                     } else {
                         $NextPageUriFound = $false

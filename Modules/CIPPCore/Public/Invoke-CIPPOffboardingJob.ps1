@@ -50,10 +50,11 @@ function Invoke-CIPPOffboardingJob {
             Set-CIPPOutOfOffice -tenantFilter $tenantFilter -userid $username -InternalMessage $Options.OOO -ExternalMessage $Options.OOO -ExecutingUser $ExecutingUser -APIName $APIName -state 'Enabled'
         }
         { $_.'forward' -ne '' } {
-            if (!$options.keepcopy) {
+            if (!$Options.keepCopy) {
                 Set-CIPPForwarding -userid $userid -username $username -tenantFilter $Tenantfilter -Forward $Options.forward -ExecutingUser $ExecutingUser -APIName $APIName
             } else {
-                Set-CIPPForwarding -userid $userid -username $username -tenantFilter $Tenantfilter -Forward $Options.forward -KeepCopy [boolean]($Options.keepCopy) -ExecutingUser $ExecutingUser -APIName $APIName
+                $KeepCopy = [boolean]$Options.keepCopy
+                Set-CIPPForwarding -userid $userid -username $username -tenantFilter $Tenantfilter -Forward $Options.forward -KeepCopy $KeepCopy -ExecutingUser $ExecutingUser -APIName $APIName
             }
         }
         { $_.'RemoveLicenses' -eq 'true' } {
