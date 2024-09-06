@@ -36,41 +36,44 @@ function Push-AuditLogTenant {
             StartTime    = $Item.StartTime
             EndTime      = $Item.EndTime
         }
-        $LogBundles = Get-CIPPAuditLogContentBundles @ContentBundleQuery
-        $ExistingBundles = Get-CIPPAzDataTableEntity @AuditBundleTable -Filter "PartitionKey eq '$($Item.TenantFilter)' and ContentType eq '$LogType' and Timestamp ge datetime'$($LastHour)'"
+        try {
+            $LogBundles = Get-CIPPAuditLogContentBundles @ContentBundleQuery
+            $ExistingBundles = Get-CIPPAzDataTableEntity @AuditBundleTable -Filter "PartitionKey eq '$($Item.TenantFilter)' and ContentType eq '$LogType' and Timestamp ge datetime'$($LastHour)'"
 
-        foreach ($Bundle in $LogBundles) {
-            Write-Host ($Bundle.contentCreated + ' ' + $Bundle.contentExpiration)
-            Write-Host ($Bundle.contentCreated.GetType())
-            if ($ExistingBundles.RowKey -notcontains $Bundle.contentId) {
-                $NewBundles.Add([PSCustomObject]@{
-                        PartitionKey      = $TenantFilter
-                        RowKey            = $Bundle.contentId
-                        DefaultDomainName = $TenantFilter
-                        ContentType       = $Bundle.contentType
-                        ContentUri        = $Bundle.contentUri
-                        ContentCreated    = $Bundle.contentCreated
-                        ContentExpiration = $Bundle.contentExpiration
-                        CIPPURL           = [string]$CIPPURL
-                        ProcessingStatus  = 'Pending'
-                        MatchedRules      = ''
-                        MatchedLogs       = 0
-                    })
+            foreach ($Bundle in $LogBundles) {
+                Write-Host ($Bundle.contentCreated + ' ' + $Bundle.contentExpiration)
+                Write-Host ($Bundle.contentCreated.GetType())
+                if ($ExistingBundles.RowKey -notcontains $Bundle.contentId) {
+                    $NewBundles.Add([PSCustomObject]@{
+                            PartitionKey      = $TenantFilter
+                            RowKey            = $Bundle.contentId
+                            DefaultDomainName = $TenantFilter
+                            ContentType       = $Bundle.contentType
+                            ContentUri        = $Bundle.contentUri
+                            ContentCreated    = $Bundle.contentCreated
+                            ContentExpiration = $Bundle.contentExpiration
+                            CIPPURL           = [string]$CIPPURL
+                            ProcessingStatus  = 'Pending'
+                            MatchedRules      = ''
+                            MatchedLogs       = 0
+                        })
+                }
             }
+        } catch {
+            Write-Information "Could not get audit log content bundles for $TenantFilter - $LogType, $($_.Exception.Message)"
+        }
+
+        if (($NewBundles | Measure-Object).Count -gt 0) {
+            Add-CIPPAzDataTableEntity @AuditBundleTable -Entity $NewBundles -Force
+            Write-Information ($NewBundles | ConvertTo-Json -Depth 5 -Compress)
+
+            $Batch = $NewBundles | Select-Object @{Name = 'ContentId'; Expression = { $_.RowKey } }, @{Name = 'TenantFilter'; Expression = { $_.PartitionKey } }, @{Name = 'FunctionName'; Expression = { 'AuditLogBundleProcessing' } }
+            $InputObject = [PSCustomObject]@{
+                OrchestratorName = 'AuditLogs'
+                Batch            = @($Batch)
+                SkipLog          = $true
+            }
+            $InstanceId = Start-NewOrchestration -FunctionName 'CIPPOrchestrator' -InputObject ($InputObject | ConvertTo-Json -Depth 5 -Compress)
+            Write-Host "Started orchestration with ID = '$InstanceId'"
         }
     }
-
-    if (($NewBundles | Measure-Object).Count -gt 0) {
-        Add-CIPPAzDataTableEntity @AuditBundleTable -Entity $NewBundles -Force
-        Write-Information ($NewBundles | ConvertTo-Json -Depth 5 -Compress)
-
-        $Batch = $NewBundles | Select-Object @{Name = 'ContentId'; Expression = { $_.RowKey } }, @{Name = 'TenantFilter'; Expression = { $_.PartitionKey } }, @{Name = 'FunctionName'; Expression = { 'AuditLogBundleProcessing' } }
-        $InputObject = [PSCustomObject]@{
-            OrchestratorName = 'AuditLogs'
-            Batch            = @($Batch)
-            SkipLog          = $true
-        }
-        $InstanceId = Start-NewOrchestration -FunctionName 'CIPPOrchestrator' -InputObject ($InputObject | ConvertTo-Json -Depth 5 -Compress)
-        Write-Host "Started orchestration with ID = '$InstanceId'"
-    }
-}
