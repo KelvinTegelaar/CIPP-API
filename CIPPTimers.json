@@ -79,10 +79,24 @@
     "IsSystem": true
   },
   {
+    "Command": "Start-BillingTimer",
+    "Description": "Timer to process billing",
+    "Cron": "0 0 0 * * *",
+    "Priority": 12,
+    "RunOnProcessor": true
+  },
+  {
     "Command": "Start-BPAOrchestrator",
     "Description": "Orchestrator to process BPA reports",
     "Cron": "0 0 3 * * *",
     "Priority": 10,
+    "RunOnProcessor": true
+  },
+  {
+    "Command": "Start-ExtensionOrchestrator",
+    "Description": "Orchestrator to process extensions",
+    "Cron": "0 0 */2 * * *",
+    "Priority": 12,
     "RunOnProcessor": true
   },
   {
