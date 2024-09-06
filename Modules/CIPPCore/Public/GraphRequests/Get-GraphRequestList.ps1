@@ -51,6 +51,7 @@ function Get-GraphRequestList {
         [string]$TenantFilter = $env:TenantID,
         [Parameter(Mandatory = $true)]
         [string]$Endpoint,
+        [string]$nextLink,
         [hashtable]$Parameters = @{},
         [string]$QueueId,
         [string]$CippLink,
@@ -285,7 +286,17 @@ function Get-GraphRequestList {
                     }
 
                     if (!$QueueThresholdExceeded) {
-                        $GraphRequestResults = New-GraphGetRequest @GraphRequest -ErrorAction Stop | Select-Object *, @{l = 'Tenant'; e = { $TenantFilter } }, @{l = 'CippStatus'; e = { 'Good' } }
+                        #nextLink should ONLY be used in direct calls with manual pagination. It should not be used in queueing
+                        if ($nextLink) { $GraphRequest.uri = $nextLink }
+
+                        $GraphRequestResults = New-GraphGetRequest @GraphRequest -Caller 'Get-GraphRequestList' -ErrorAction Stop
+                        if ($GraphRequestResults.nextLink) {
+                            $Metadata['nextLink'] = $GraphRequestResults.nextLink | Select-Object -Last 1
+                            #GraphRequestResults is an array of objects, so we need to remove the last object before returning
+                            $GraphRequestResults = $GraphRequestResults | Select-Object -First ($GraphRequestResults.Count - 1)
+                        }
+                        $GraphRequestResults = $GraphRequestResults | Select-Object *, @{n = 'Tenant'; e = { $TenantFilter } }, @{n = 'CippStatus'; e = { 'Good' } }
+
                         if ($ReverseTenantLookup -and $GraphRequestResults) {
                             $ReverseLookupRequests = $GraphRequestResults.$ReverseTenantLookupProperty | Sort-Object -Unique | ForEach-Object {
                                 @{
