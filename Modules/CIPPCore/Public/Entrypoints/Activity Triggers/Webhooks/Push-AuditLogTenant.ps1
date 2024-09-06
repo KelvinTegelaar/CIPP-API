@@ -62,18 +62,19 @@ function Push-AuditLogTenant {
         } catch {
             Write-Information "Could not get audit log content bundles for $TenantFilter - $LogType, $($_.Exception.Message)"
         }
-
-        if (($NewBundles | Measure-Object).Count -gt 0) {
-            Add-CIPPAzDataTableEntity @AuditBundleTable -Entity $NewBundles -Force
-            Write-Information ($NewBundles | ConvertTo-Json -Depth 5 -Compress)
-
-            $Batch = $NewBundles | Select-Object @{Name = 'ContentId'; Expression = { $_.RowKey } }, @{Name = 'TenantFilter'; Expression = { $_.PartitionKey } }, @{Name = 'FunctionName'; Expression = { 'AuditLogBundleProcessing' } }
-            $InputObject = [PSCustomObject]@{
-                OrchestratorName = 'AuditLogs'
-                Batch            = @($Batch)
-                SkipLog          = $true
-            }
-            $InstanceId = Start-NewOrchestration -FunctionName 'CIPPOrchestrator' -InputObject ($InputObject | ConvertTo-Json -Depth 5 -Compress)
-            Write-Host "Started orchestration with ID = '$InstanceId'"
-        }
     }
+
+    if (($NewBundles | Measure-Object).Count -gt 0) {
+        Add-CIPPAzDataTableEntity @AuditBundleTable -Entity $NewBundles -Force
+        Write-Information ($NewBundles | ConvertTo-Json -Depth 5 -Compress)
+
+        $Batch = $NewBundles | Select-Object @{Name = 'ContentId'; Expression = { $_.RowKey } }, @{Name = 'TenantFilter'; Expression = { $_.PartitionKey } }, @{Name = 'FunctionName'; Expression = { 'AuditLogBundleProcessing' } }
+        $InputObject = [PSCustomObject]@{
+            OrchestratorName = 'AuditLogs'
+            Batch            = @($Batch)
+            SkipLog          = $true
+        }
+        $InstanceId = Start-NewOrchestration -FunctionName 'CIPPOrchestrator' -InputObject ($InputObject | ConvertTo-Json -Depth 5 -Compress)
+        Write-Host "Started orchestration with ID = '$InstanceId'"
+    }
+}
