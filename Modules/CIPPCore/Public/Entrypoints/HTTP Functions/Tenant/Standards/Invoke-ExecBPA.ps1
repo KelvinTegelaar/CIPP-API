@@ -8,11 +8,28 @@ function Invoke-ExecBPA {
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
 
-    Start-BPAOrchestrator -TenantFilter $Request.Query.TenantFilter
 
-    $Results = [pscustomobject]@{'Results' = 'BPA started' }
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
-            StatusCode = [HttpStatusCode]::OK
-            Body       = $Results
-        })
+    $ConfigTable = Get-CIPPTable -tablename Config
+    $Config = Get-CIPPAzDataTableEntity @ConfigTable -Filter "PartitionKey eq 'OffloadFunctions' and RowKey eq 'OffloadFunctions'"
+
+    if ($Config -and $Config.state -eq $true) {
+        if ($env:CIPP_PROCESSOR -ne 'true') {
+            $ProcessorFunction = [PSCustomObject]@{
+                FunctionName      = 'CIPPFunctionProcessor'
+                ProcessorFunction = 'Start-BPAOrchestrator'
+                Parameters        = [PSCustomObject]@{
+                    TenantFilter = $Request.Query.TenantFilter
+                }
+            }
+            Push-OutputBinding -Name QueueItem -Value $ProcessorFunction
+        }
+    } else {
+        Start-BPAOrchestrator -TenantFilter $Request.Query.TenantFilter
+
+        $Results = [pscustomobject]@{'Results' = 'BPA started' }
+        Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
+                StatusCode = [HttpStatusCode]::OK
+                Body       = $Results
+            })
+    }
 }
