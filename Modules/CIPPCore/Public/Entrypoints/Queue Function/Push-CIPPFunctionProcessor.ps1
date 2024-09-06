@@ -18,8 +18,6 @@ function Push-CIPPFunctionProcessor {
     }
 
     $Parameters = $QueueItem.Parameters | ConvertTo-Json -Depth 10 | ConvertFrom-Json -AsHashtable
-    Write-Information "Running $ProcessorFunction"
-    Write-Information ($Parameters | ConvertTo-Json)
     if (Get-Command -Name $QueueItem.ProcessorFunction -Module CIPPCore -ErrorAction SilentlyContinue) {
         & $QueueItem.ProcessorFunction @Parameters
     } else {

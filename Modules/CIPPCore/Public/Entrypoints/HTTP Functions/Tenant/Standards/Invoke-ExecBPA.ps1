@@ -8,7 +8,6 @@ function Invoke-ExecBPA {
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
 
-
     $ConfigTable = Get-CIPPTable -tablename Config
     $Config = Get-CIPPAzDataTableEntity @ConfigTable -Filter "PartitionKey eq 'OffloadFunctions' and RowKey eq 'OffloadFunctions'"
 
