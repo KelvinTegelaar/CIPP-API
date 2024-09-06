@@ -241,7 +241,7 @@ function Receive-CIPPTimerTrigger {
         $FunctionStatus = $Statuses | Where-Object { $_.RowKey -eq $Function.Command }
         if ($FunctionStatus.OrchestratorId) {
             $FunctionName = $env:WEBSITE_SITE_NAME
-            $InstancesTable = Get-CippTable -TableName ('{0}Instances' -f $FunctionName)
+            $InstancesTable = Get-CippTable -TableName ('{0}Instances' -f ($FunctionName -replace '-', ''))
             $Instance = Get-CIPPAzDataTableEntity @InstancesTable -Filter "PartitionKey eq '$($FunctionStatus.OrchestratorId)'" -Property RuntimeStatus
             if ($Instance.RuntimeStatus -eq 'Running') {
                 Write-LogMessage -API 'TimerFunction' -message "$($Function.Command) - $($FunctionStatus.OrchestratorId) is still running" -sev Warn -LogData $FunctionStatus
