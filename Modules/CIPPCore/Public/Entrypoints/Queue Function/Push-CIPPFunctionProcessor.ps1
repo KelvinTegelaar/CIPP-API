@@ -4,7 +4,7 @@ function Push-CIPPFunctionProcessor {
     Starts a specified function on the processor node
     #>
     [CmdletBinding()]
-    param($QueueItem)
+    param($QueueItem, $TriggerMetadata)
 
     Write-Information 'Processor - Received message from queue'
     Write-Information ($QueueItem | ConvertTo-Json)
