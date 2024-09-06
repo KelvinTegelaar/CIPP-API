@@ -59,9 +59,10 @@
   {
     "Command": "Start-CIPPGraphSubscriptionRenewalTimer",
     "Description": "Orchestrator to renew Graph subscriptions",
-    "Cron": "0 10 * * * *",
+    "Cron": "0 15 * * * *",
     "Priority": 8,
-    "RunOnProcessor": true
+    "RunOnProcessor": true,
+    "IsSystem": true
   },
   {
     "Command": "Start-DomainOrchestrator",
