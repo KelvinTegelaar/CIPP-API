@@ -7,7 +7,7 @@ function Push-CIPPFunctionProcessor {
     param($QueueItem, $TriggerMetadata)
 
     Write-Information 'Processor - Received message from queue'
-    Write-Information ($QueueItem | ConvertTo-Json)
+
     $ConfigTable = Get-CIPPTable -tablename Config
     $Config = Get-CIPPAzDataTableEntity @ConfigTable -Filter "PartitionKey eq 'OffloadFunctions' and RowKey eq 'OffloadFunctions'"
 
@@ -18,10 +18,11 @@ function Push-CIPPFunctionProcessor {
     }
 
     $Parameters = $QueueItem.Parameters | ConvertTo-Json -Depth 10 | ConvertFrom-Json -AsHashtable
-
-    if (Get-Command -Name $QueueItem.FunctionName -Module CIPPCore -ErrorAction SilentlyContinue) {
+    Write-Information "Running $ProcessorFunction"
+    Write-Information ($Parameters | ConvertTo-Json)
+    if (Get-Command -Name $QueueItem.ProcessorFunction -Module CIPPCore -ErrorAction SilentlyContinue) {
         & $QueueItem.ProcessorFunction @Parameters
     } else {
-        Write-Warning "Function $($QueueItem.FunctionName) not found"
+        Write-Warning "Function $($QueueItem.ProcessorFunction) not found"
     }
 }
