@@ -14,8 +14,8 @@ function Receive-CippHttpTrigger {
     $Config = Get-CIPPAzDataTableEntity @ConfigTable -Filter "PartitionKey eq 'OffloadFunctions' and RowKey eq 'OffloadFunctions'"
 
     if ($Config -and $Config.state -eq $true) {
-        Write-Information 'No API Calls'
         if ($env:CIPP_PROCESSOR -eq 'true') {
+            Write-Information 'No API Calls'
             Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
                     StatusCode = [HttpStatusCode]::Forbidden
                     Body       = 'API calls are not accepted on this function app'

@@ -6,6 +6,8 @@ function Push-CIPPFunctionProcessor {
     [CmdletBinding()]
     param($QueueItem)
 
+    Write-Information 'Processor - Received message from queue'
+    Write-Information ($QueueItem | ConvertTo-Json)
     $ConfigTable = Get-CIPPTable -tablename Config
     $Config = Get-CIPPAzDataTableEntity @ConfigTable -Filter "PartitionKey eq 'OffloadFunctions' and RowKey eq 'OffloadFunctions'"
 

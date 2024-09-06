@@ -25,11 +25,11 @@ function Invoke-ExecBPA {
         }
     } else {
         Start-BPAOrchestrator -TenantFilter $Request.Query.TenantFilter
-
-        $Results = [pscustomobject]@{'Results' = 'BPA started' }
-        Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
-                StatusCode = [HttpStatusCode]::OK
-                Body       = $Results
-            })
     }
+    $Results = [pscustomobject]@{'Results' = 'BPA started' }
+    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
+            StatusCode = [HttpStatusCode]::OK
+            Body       = $Results
+        })
+
 }
