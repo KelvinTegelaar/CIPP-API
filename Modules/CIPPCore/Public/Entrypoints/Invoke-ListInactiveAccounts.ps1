@@ -21,7 +21,7 @@ Function Invoke-ListInactiveAccounts {
     $TenantFilter = $Request.Query.TenantFilter
     if ($TenantFilter -eq 'AllTenants') { $TenantFilter = (get-tenants).customerId }
     try {
-        $GraphRequest = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/tenantRelationships/managedTenants/inactiveUsers?`$count=true" -tenantid $env:TenantId | Where-Object { $_.tenantId -in $TenantFilter }
+        $GraphRequest = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/tenantRelationships/managedTenants/inactiveUsers?`$count=true" -tenantid $env:TenantID | Where-Object { $_.tenantId -in $TenantFilter }
         $StatusCode = [HttpStatusCode]::OK
     } catch {
         $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message

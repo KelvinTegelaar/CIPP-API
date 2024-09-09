@@ -17,7 +17,7 @@ Function Invoke-ExecAccessChecks {
     # Write to the Azure Functions log stream.
     Write-Host 'PowerShell HTTP trigger function processed a request.'
     if ($Request.Query.Permissions -eq 'true') {
-        $Results = Test-CIPPAccessPermissions -tenantfilter $ENV:tenantid -APIName $APINAME -ExecutingUser $Request.Headers.'x-ms-client-principal'
+        $Results = Test-CIPPAccessPermissions -tenantfilter $ENV:TenantID -APIName $APINAME -ExecutingUser $Request.Headers.'x-ms-client-principal'
     }
 
     if ($Request.Query.Tenants -eq 'true') {
