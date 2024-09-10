@@ -1,4 +1,4 @@
-function Get-GraphToken($tenantid, $scope, $AsApp, $AppID, $refreshToken, $ReturnRefresh, $SkipCache) {
+function Get-GraphToken($tenantid, $scope, $AsApp, $AppID, $AppSecret, $refreshToken, $ReturnRefresh, $SkipCache) {
     <#
     .FUNCTIONALITY
     Internal
@@ -27,6 +27,15 @@ function Get-GraphToken($tenantid, $scope, $AsApp, $AppID, $refreshToken, $Retur
             refresh_token = $RefreshToken
             scope         = $Scope
             grant_type    = 'refresh_token'
+        }
+    }
+
+    if ($null -ne $AppID -and $null -ne $AppSecret) {
+        $AuthBody = @{
+            client_id     = $AppID
+            client_secret = $AppSecret
+            scope         = $Scope
+            grant_type    = 'client_credentials'
         }
     }
 
