@@ -1,5 +1,5 @@
 {
-  "name": "All - Table",
+  "name": "All",
   "style": "Table",
   "Fields": [
     {
@@ -464,6 +464,24 @@
           "desc": "Check if Global Admins Group SID gets added to the local administrators group after Entra ID join",
           "value": "AzureADJoinEnableGlobalAdmins.localAdmins.enableGlobalAdmins",
           "formatter": "reverseBool"
+        }
+      ]
+    },
+    {
+      "name": "EntraIdJoinUserIsNotAdmin",
+      "API": "Graph",
+      "URL": "https://graph.microsoft.com/beta/policies/deviceRegistrationPolicy?$select=azureADJoin",
+      "ExtractFields": [
+        "azureADJoin"
+      ],
+      "where": "$_.azureADJoin.localAdmins.registeringUsers.'@odata.type' -eq '#microsoft.graph.noDeviceRegistrationMembership'",
+      "StoreAs": "bool",
+      "FrontendFields": [
+        {
+          "name": "User device admin disabled",
+          "desc": "Check if user gets added to the local administrators group after Entra ID join",
+          "value": "EntraIdJoinUserIsNotAdmin",
+          "formatter": "bool"
         }
       ]
     },

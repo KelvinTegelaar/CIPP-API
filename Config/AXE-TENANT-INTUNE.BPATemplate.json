@@ -20,6 +20,24 @@
       ]
     },
     {
+      "name": "EntraIdJoinUserIsNotAdmin",
+      "API": "Graph",
+      "URL": "https://graph.microsoft.com/beta/policies/deviceRegistrationPolicy?$select=azureADJoin",
+      "ExtractFields": [
+        "azureADJoin"
+      ],
+      "where": "$_.azureADJoin.localAdmins.registeringUsers.'@odata.type' -eq '#microsoft.graph.noDeviceRegistrationMembership'",
+      "StoreAs": "bool",
+      "FrontendFields": [
+        {
+          "name": "User device admin disabled",
+          "desc": "Check if user gets added to the local administrators group after Entra ID join",
+          "value": "EntraIdJoinUserIsNotAdmin",
+          "formatter": "bool"
+        }
+      ]
+    },
+    {
       "name": "LAPS",
       "API": "Graph",
       "URL": "https://graph.microsoft.com/v1.0/policies/deviceRegistrationPolicy?$select=localAdminPassword",
