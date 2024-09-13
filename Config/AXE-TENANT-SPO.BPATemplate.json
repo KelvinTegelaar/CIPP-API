@@ -1,0 +1,157 @@
+{
+  "name": "SharePoint Online",
+  "style": "Tenant",
+  "Fields": [
+    {
+      "name": "SharePointSettings",
+      "API": "CIPPFunction",
+      "Command": "Get-CIPPSPOTenant",
+      "Parameters": {},
+      "ExtractFields": [
+        "OneDriveAddShortcutButtonDisabled",
+        "HideSyncButtonOnDocLib"
+      ],
+      "StoreAs": "JSON",
+      "FrontendFields": [
+        {
+          "name": "Add shortcut button disabled",
+          "desc": "Check if the add shortcut button is disabled for OneDrive",
+          "value": "SharePointSettings.OneDriveAddShortcutButtonDisabled",
+          "formatter": "bool"
+        },
+        {
+          "name": "Sync button shown",
+          "desc": "Check if the Sync button is shown for document libraries",
+          "value": "SharePointSettings.HideSyncButtonOnDocLib",
+          "formatter": "reverseBool"
+        }
+      ]
+    },
+    {
+      "name": "SharepointSiteCreationEnabled",
+      "API": "Graph",
+      "URL": "https://graph.microsoft.com/v1.0/admin/sharepoint/settings?$select=isSiteCreationEnabled",
+      "Parameters": {
+        "asApp": "True"
+      },
+      "ExtractFields": [
+        "isSiteCreationEnabled"
+      ],
+      "where": "$_.isSiteCreationEnabled -eq $true",
+      "StoreAs": "bool",
+      "FrontendFields": [
+        {
+          "name": "Site creation disabled",
+          "desc": "Check if SharePoint site creation is disabled for all users",
+          "value": "SharepointSiteCreationEnabled",
+          "formatter": "reverseBool"
+        }
+      ]
+    },
+    {
+      "name": "SharepointSiteCreationUIEnabled",
+      "API": "Graph",
+      "URL": "https://graph.microsoft.com/v1.0/admin/sharepoint/settings?$select=isSiteCreationUIEnabled",
+      "Parameters": {
+        "asApp": "True"
+      },
+      "ExtractFields": [
+        "isSiteCreationUIEnabled"
+      ],
+      "where": "$_.isSiteCreationUIEnabled -eq $true",
+      "StoreAs": "bool",
+      "FrontendFields": [
+        {
+          "name": "Site creation UI disabled",
+          "desc": "Check if SharePoint site creation UI is disabled for all users",
+          "value": "SharepointSiteCreationUIEnabled",
+          "formatter": "reverseBool"
+        }
+      ]
+    },
+    {
+      "name": "SharepointExternalUserReSharingEnabled",
+      "API": "Graph",
+      "URL": "https://graph.microsoft.com/v1.0/admin/sharepoint/settings?$select=isResharingByExternalUsersEnabled",
+      "Parameters": {
+        "asApp": "True"
+      },
+      "ExtractFields": [
+        "isResharingByExternalUsersEnabled"
+      ],
+      "where": "$_.isResharingByExternalUsersEnabled -eq $true",
+      "StoreAs": "bool",
+      "FrontendFields": [
+        {
+          "name": "External user resharing disabled",
+          "desc": "Check if SharePoint resharing by external users is disabled",
+          "value": "SharepointExternalUserReSharingEnabled",
+          "formatter": "reverseBool"
+        }
+      ]
+    },
+    {
+      "name": "SharepointLegacyAuthProtocolsEnabled",
+      "API": "Graph",
+      "URL": "https://graph.microsoft.com/v1.0/admin/sharepoint/settings?$select=isLegacyAuthProtocolsEnabled",
+      "Parameters": {
+        "asApp": "True"
+      },
+      "ExtractFields": [
+        "isLegacyAuthProtocolsEnabled"
+      ],
+      "where": "$_.isLegacyAuthProtocolsEnabled -eq $true",
+      "StoreAs": "bool",
+      "FrontendFields": [
+        {
+          "name": "Legacy SharePoint auth protocols disabled",
+          "desc": "Check if legacy authentication protocols are disabled",
+          "value": "SharepointLegacyAuthProtocolsEnabled",
+          "formatter": "reverseBool"
+        }
+      ]
+    },
+    {
+      "name": "SharePointRequireAcceptingUserToMatchInvitedUser",
+      "API": "Graph",
+      "URL": "https://graph.microsoft.com/v1.0/admin/sharepoint/settings?$select=isRequireAcceptingUserToMatchInvitedUserEnabled",
+      "Parameters": {
+        "asApp": "True"
+      },
+      "ExtractFields": [
+        "isRequireAcceptingUserToMatchInvitedUserEnabled"
+      ],
+      "where": "$_.isRequireAcceptingUserToMatchInvitedUserEnabled -eq $true",
+      "StoreAs": "bool",
+      "FrontendFields": [
+        {
+          "name": "Require accepting user to match invited user",
+          "desc": "Check if SharePoint requires accepting user to match invited user",
+          "value": "SharePointRequireAcceptingUserToMatchInvitedUser",
+          "formatter": "bool"
+        }
+      ]
+    },
+    {
+      "name": "SharepointAnonymousSharingEnabled",
+      "API": "Graph",
+      "URL": "https://graph.microsoft.com/v1.0/admin/sharepoint/settings?$select=sharingCapability",
+      "Parameters": {
+        "asApp": "True"
+      },
+      "ExtractFields": [
+        "sharingCapability"
+      ],
+      "where": "$_.sharingCapability -eq 'ExternalUserAndGuestSharing'",
+      "StoreAs": "bool",
+      "FrontendFields": [
+        {
+          "name": "Anonymous link sharing disabled",
+          "desc": "Check if anonymous sharing is disabled for SharePoint and OneDrive",
+          "value": "SharepointAnonymousSharingEnabled",
+          "formatter": "reverseBool"
+        }
+      ]
+    }
+  ]
+}

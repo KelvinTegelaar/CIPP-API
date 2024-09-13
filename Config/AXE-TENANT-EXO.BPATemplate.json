@@ -1,0 +1,89 @@
+{
+  "name": "Exchange Online",
+  "style": "Tenant",
+  "Fields": [
+    {
+      "name": "SmtpClientAuthenticationDisabled",
+      "API": "Exchange",
+      "Command": "Get-TransportConfig",
+      "ExtractFields": [
+        "SmtpClientAuthenticationDisabled"
+      ],
+      "StoreAs": "bool",
+      "FrontendFields": [
+        {
+          "name": "SMTP basic auth disabled",
+          "desc": "Check if SMTP basic authentication is disabled for the tenant",
+          "value": "SmtpClientAuthenticationDisabled",
+          "formatter": "bool"
+        }
+      ]
+    },
+    {
+      "name": "OutlookAdditionalStorageProvidersAvailable",
+      "API": "Exchange",
+      "Command": "Get-OwaMailboxPolicy",
+      "ExtractFields": [
+        "AdditionalStorageProvidersAvailable"
+      ],
+      "StoreAs": "bool",
+      "FrontendFields": [
+        {
+          "name": "Outlook additional storage providers disabled",
+          "desc": "Check if additional storage providers are disabled for Outlook",
+          "value": "OutlookAdditionalStorageProvidersAvailable",
+          "formatter": "reverseBool"
+        }
+      ]
+    },
+    {
+      "name": "MailboxesWithSmtpClientAuthenticationEnabled",
+      "API": "Exchange",
+      "Command": "Get-CASMailbox",
+      "Parameters": {
+        "ResultSize": "Unlimited"
+      },
+      "where": "$_.SmtpClientAuthenticationDisabled -eq $false",
+      "ExtractFields": [
+        "DisplayName",
+        "PrimarySmtpAddress",
+        "SmtpClientAuthenticationDisabled"
+      ],
+      "StoreAs": "JSON",
+      "FrontendFields": [
+        {
+          "name": "Mail: SMTP Basic Auth Enabled",
+          "desc": "Check if SMTP Basic Authentication is enabled for any mailbox",
+          "formatter": "table",
+          "value": "MailboxesWithSmtpClientAuthenticationEnabled"
+        }
+      ]
+    },
+    {
+      "name": "MessageCopyforSentAsDisabled",
+      "API": "Exchange",
+      "Command": "Get-Mailbox",
+      "Parameters": {
+        "RecipientTypeDetails": [
+          "SharedMailbox",
+          "UserMailbox"
+        ]
+      },
+      "where": "$_.MessageCopyForSentAsEnabled -eq $false",
+      "ExtractFields": [
+        "DisplayName",
+        "PrimarySmtpAddress",
+        "messageCopyForSentAsEnabled"
+      ],
+      "StoreAs": "JSON",
+      "FrontendFields": [
+        {
+          "name": "Mail: Message Copy for Sent-As Disabled",
+          "desc": "Check if Message Copy for Sent-As is disabled for any mailbox",
+          "formatter": "table",
+          "value": "MessageCopyforSentAsDisabled"
+        }
+      ]
+    }
+  ]
+}

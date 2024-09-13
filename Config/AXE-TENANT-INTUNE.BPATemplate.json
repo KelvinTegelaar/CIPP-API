@@ -1,0 +1,40 @@
+{
+  "name": "Intune",
+  "style": "Tenant",
+  "Fields": [
+    {
+      "name": "AzureADJoinEnableGlobalAdmins",
+      "API": "Graph",
+      "URL": "https://graph.microsoft.com/beta/policies/deviceRegistrationPolicy?$select=azureADJoin",
+      "ExtractFields": [
+        "azureADJoin"
+      ],
+      "StoreAs": "JSON",
+      "FrontendFields": [
+        {
+          "name": "Global device admins disabled",
+          "desc": "Check if Global Admins Group SID gets added to the local administrators group after Entra ID join",
+          "value": "AzureADJoinEnableGlobalAdmins.localAdmins.enableGlobalAdmins",
+          "formatter": "reverseBool"
+        }
+      ]
+    },
+    {
+      "name": "LAPS",
+      "API": "Graph",
+      "URL": "https://graph.microsoft.com/v1.0/policies/deviceRegistrationPolicy?$select=localAdminPassword",
+      "ExtractFields": [
+        "localAdminPassword"
+      ],
+      "StoreAs": "JSON",
+      "FrontendFields": [
+        {
+          "name": "LAPS enabled",
+          "desc": "Check if Local Admin Password Solution is enabled",
+          "value": "LAPS.IsEnabled",
+          "formatter": "bool"
+        }
+      ]
+    }
+  ]
+}
