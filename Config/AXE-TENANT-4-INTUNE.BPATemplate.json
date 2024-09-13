@@ -1,5 +1,5 @@
 {
-  "name": "Intune",
+  "name": "4 - Intune",
   "style": "Tenant",
   "Fields": [
     {
@@ -9,6 +9,7 @@
       "ExtractFields": [
         "azureADJoin"
       ],
+      "where": "$_.azureADJoin.localAdmins.enableGlobalAdmins -eq true",
       "StoreAs": "JSON",
       "FrontendFields": [
         {
