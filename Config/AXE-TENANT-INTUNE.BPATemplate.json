@@ -39,18 +39,19 @@
       ]
     },
     {
-      "name": "LAPS",
+      "name": "LAPSEnabled",
       "API": "Graph",
       "URL": "https://graph.microsoft.com/v1.0/policies/deviceRegistrationPolicy?$select=localAdminPassword",
       "ExtractFields": [
         "localAdminPassword"
       ],
-      "StoreAs": "JSON",
+      "where": "$_.localAdminPassword.isEnabled -eq $true",
+      "StoreAs": "bool",
       "FrontendFields": [
         {
           "name": "LAPS enabled",
           "desc": "Check if Local Admin Password Solution is enabled",
-          "value": "LAPS.IsEnabled",
+          "value": "LAPSEnabled",
           "formatter": "bool"
         }
       ]
