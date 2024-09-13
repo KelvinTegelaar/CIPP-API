@@ -8,7 +8,7 @@ function Invoke-ExecServicePrincipals {
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
 
-    $TenantFilter = $env:TenantId
+    $TenantFilter = $env:TenantID
 
     $Success = $true
 
