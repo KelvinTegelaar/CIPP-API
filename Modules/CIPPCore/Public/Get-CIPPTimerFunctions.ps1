@@ -19,7 +19,7 @@ function Get-CIPPTimerFunctions {
 
     if (!('NCronTab.Advanced.CrontabSchedule' -as [type])) {
         try {
-            $NCronTab = Join-Path -Path $CIPPCoreModuleRoot -ChildPath 'lib\Ncrontab.Advanced.dll'
+            $NCronTab = Join-Path -Path $CIPPCoreModuleRoot -ChildPath 'lib\NCrontab.Advanced.dll'
             Add-Type -Path $NCronTab
         } catch {}
     }
