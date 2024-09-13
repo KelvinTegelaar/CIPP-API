@@ -1,22 +1,22 @@
 {
-  "name": "4 - Intune",
+  "name": "Intune",
   "style": "Tenant",
   "Fields": [
     {
-      "name": "AzureADJoinEnableGlobalAdmins",
+      "name": "EntraIdJoinGlobalAdminsAreNotLocalAdmins",
       "API": "Graph",
       "URL": "https://graph.microsoft.com/beta/policies/deviceRegistrationPolicy?$select=azureADJoin",
       "ExtractFields": [
         "azureADJoin"
       ],
-      "where": "$_.azureADJoin.localAdmins.enableGlobalAdmins -eq true",
-      "StoreAs": "JSON",
+      "where": "$_.azureADJoin.localAdmins.enableGlobalAdmins -eq $false",
+      "StoreAs": "bool",
       "FrontendFields": [
         {
           "name": "Global device admins disabled",
           "desc": "Check if Global Admins Group SID gets added to the local administrators group after Entra ID join",
-          "value": "AzureADJoinEnableGlobalAdmins.localAdmins.enableGlobalAdmins",
-          "formatter": "reverseBool"
+          "value": "EntraIdJoinGlobalAdminsAreNotLocalAdmins",
+          "formatter": "bool"
         }
       ]
     },
