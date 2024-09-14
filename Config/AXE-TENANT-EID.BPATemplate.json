@@ -3,6 +3,28 @@
   "style": "Tenant",
   "Fields": [
     {
+      "name": "CurrentSecureScore",
+      "API": "Graph",
+      "URL": "https://graph.microsoft.com/v1.0/security/secureScores?$top=1&$select=currentScore,maxScore",
+      "Parameters": {
+        "Nopagination": true
+      },
+      "ExtractFields": [
+        "currentScore",
+        "maxScore"
+      ],
+      "StoreAs": "JSON",
+      "FrontendFields": [
+        {
+          "name": "Current Secure Score",
+          "desc": "Check the current secure score for the tenant",
+          "value": "CurrentSecureScore.currentScore / CurrentSecureScore.maxScore * 100",
+          "formatter": "math",
+          "showAs": "percentage"
+        }
+      ]
+    },
+    {
       "name": "UserPasswordsNeverExpire",
       "API": "Graph",
       "URL": "https://graph.microsoft.com/v1.0/domains?$select=passwordValidityPeriodInDays",
@@ -211,24 +233,27 @@
       "FrontendFields": [
         {
           "name": "Security group creation disabled",
-          "desc": "Check if users are allowed to create security groups",
+          "desc": "Check if users are not allowed to create security groups",
           "value": "UserAllowedToCreateSecurityGroups",
           "formatter": "reverseBool"
         }
       ]
     },
     {
-      "name": "UserNotAllowedToCreateUnifiedGroups",
+      "name": "UserAllowedToCreateUnifiedGroups",
       "API": "Graph",
       "URL": "https://graph.microsoft.com/v1.0/groupSettings?$select=values,displayName",
-      "where": "$_.value.displayName -eq 'Group.Unified' -and ($_.value.values | Where-Object { $_.name -eq 'EnableGroupCreation' -and $_.value -eq $false })",
+      "ExtractFields": [
+        "value"
+      ],
+      "where": "$_.value.displayName -eq 'Group.Unified' -and ($_.value.values | Where-Object { $_.name -eq 'EnableGroupCreation' -and $_.value -eq $true })",
       "StoreAs": "bool",
       "FrontendFields": [
         {
           "name": "Unified group creation disabled",
-          "desc": "Check if users are allowed to create unified groups (M365 groups)",
-          "value": "UserNotAllowedToCreateUnifiedGroups",
-          "formatter": "bool"
+          "desc": "Check if users are not allowed to create unified groups (M365 groups)",
+          "value": "UserAllowedToCreateUnifiedGroups",
+          "formatter": "reverseBool"
         }
       ]
     },
@@ -321,28 +346,6 @@
           "desc": "Check if there are any unused licenses",
           "formatter": "table",
           "value": "Unusedlicenses"
-        }
-      ]
-    },
-    {
-      "name": "CurrentSecureScore",
-      "API": "Graph",
-      "URL": "https://graph.microsoft.com/v1.0/security/secureScores?$top=1&$select=currentScore,maxScore",
-      "Parameters": {
-        "Nopagination": true
-      },
-      "ExtractFields": [
-        "currentScore",
-        "maxScore"
-      ],
-      "StoreAs": "JSON",
-      "FrontendFields": [
-        {
-          "name": "Current Secure Score",
-          "desc": "Check the current secure score for the tenant",
-          "value": "CurrentSecureScore.currentScore / CurrentSecureScore.maxScore * 100",
-          "formatter": "math",
-          "showAs": "percentage"
         }
       ]
     }
