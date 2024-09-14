@@ -52,7 +52,7 @@
       "StoreAs": "JSON",
       "FrontendFields": [
         {
-          "name": "Mail: SMTP Basic Auth Enabled",
+          "name": "SMTP Basic Auth Enabled",
           "desc": "Check if SMTP Basic Authentication is enabled for any mailbox",
           "formatter": "table",
           "value": "MailboxesWithSmtpClientAuthenticationEnabled"
@@ -78,7 +78,7 @@
       "StoreAs": "JSON",
       "FrontendFields": [
         {
-          "name": "Mail: Message Copy for Sent-As Disabled",
+          "name": "Message Copy for Sent-As Disabled",
           "desc": "Check if Message Copy for Sent-As is disabled for any mailbox",
           "formatter": "table",
           "value": "MessageCopyforSentAsDisabled"
