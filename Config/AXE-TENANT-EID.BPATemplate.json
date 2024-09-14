@@ -244,14 +244,15 @@
       "API": "Graph",
       "URL": "https://graph.microsoft.com/v1.0/groupSettings?$select=values,displayName",
       "ExtractFields": [
-        "value"
+        "values",
+        "displayName"
       ],
-      "where": "$_.value.displayName -eq 'Group.Unified' -and ($_.value.values | Where-Object { $_.name -eq 'EnableGroupCreation' -and $_.value -eq 'true' })",
+      "where": "$_.displayName -eq 'Group.Unified' -and ($_.values | Where-Object { $_.name -eq 'EnableGroupCreation' -and $_.value -eq 'true' })",
       "StoreAs": "bool",
       "FrontendFields": [
         {
           "name": "Unified group creation disabled",
-          "desc": "Check if users are not allowed to create unified groups (M365 groups)",
+          "desc": "Check if users are not allowed to create unified groups (M365 groups) (Currently not working)",
           "value": "UserAllowedToCreateUnifiedGroups",
           "formatter": "reverseBool"
         }
@@ -314,6 +315,7 @@
       "name": "adminRoles",
       "API": "Graph",
       "URL": "https://graph.microsoft.com/v1.0/directoryRoles?$expand=members($select=displayName)&$select=displayName",
+      "where": "$_.members.count -gt 0",
       "ExtractFields": [
         "displayName",
         "members"
