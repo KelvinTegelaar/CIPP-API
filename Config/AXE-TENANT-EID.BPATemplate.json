@@ -246,7 +246,7 @@
       "ExtractFields": [
         "value"
       ],
-      "where": "$_.value.displayName -eq 'Group.Unified' -and ($_.value.values | Where-Object { $_.name -eq 'EnableGroupCreation' -and $_.value -eq $true })",
+      "where": "$_.value.displayName -eq 'Group.Unified' -and ($_.value.values | Where-Object { $_.name -eq 'EnableGroupCreation' -and $_.value -eq 'true' })",
       "StoreAs": "bool",
       "FrontendFields": [
         {
