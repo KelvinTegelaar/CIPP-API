@@ -9,7 +9,7 @@ function Get-CIPPAuthentication {
     try {
         if ($env:AzureWebJobsStorage -eq 'UseDevelopmentStorage=true') {
             $Table = Get-CIPPTable -tablename 'DevSecrets'
-            $Secret = Get-CIPPAzDataTableEntity @Table -Filter "PartitionKey eq 'Secret' and RowKey eq 'Secret'"
+            $Secret = Get-AzDataTableEntity @Table -Filter "PartitionKey eq 'Secret' and RowKey eq 'Secret'"
             if (!$Secret) {
                 throw 'Development variables not set'
             }

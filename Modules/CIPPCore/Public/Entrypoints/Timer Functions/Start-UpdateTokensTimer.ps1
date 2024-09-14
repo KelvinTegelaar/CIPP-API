@@ -18,7 +18,7 @@ function Start-UpdateTokensTimer {
             $Secret = Get-CIPPAzDataTableEntity @Table -Filter "PartitionKey eq 'Secret' and RowKey eq 'Secret'"
             if ($Secret) {
                 $Secret.RefreshToken = $Refreshtoken
-                Add-AzDataTableEntity @Table -Entity $Secret
+                Add-AzDataTableEntity @Table -Entity $Secret -Force
             } else {
                 Write-LogMessage -message 'Could not update refresh token. Will try again in 7 days.' -sev 'CRITICAL'
             }
