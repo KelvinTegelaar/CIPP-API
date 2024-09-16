@@ -55,7 +55,7 @@ function Get-Tenants {
     }
 
     if ($CleanOld) {
-        $GDAPRelationships = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/tenantRelationships/delegatedAdminRelationships?`$filter=status eq 'active' and not startsWith(displayName,'MLT_')&`$select=customer,autoExtendDuration,endDateTime`$top=300" -NoAuthCheck:$true
+        $GDAPRelationships = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/tenantRelationships/delegatedAdminRelationships?`$filter=status eq 'active' and not startsWith(displayName,'MLT_')&`$select=customer,autoExtendDuration,endDateTime&`$top=300" -NoAuthCheck:$true
         $GDAPList = foreach ($Relationship in $GDAPRelationships) {
             [PSCustomObject]@{
                 customerId      = $Relationship.customer.tenantId
