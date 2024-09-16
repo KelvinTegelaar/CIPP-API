@@ -111,13 +111,16 @@ function Get-Tenants {
                 } catch {
                     try {
                         #doing alternative method to temporarily get domains. Nightly refresh will fix this as it will be marked for renew.
+                        Write-Host 'Main method failed, trying alternative method.'
                         $Domain = (New-GraphGetRequest -uri "https://graph.microsoft.com/v1.0/tenantRelationships/findTenantInformationByTenantId(tenantId='$($LatestRelationship.customerId)')" -NoAuthCheck:$true).defaultDomainName
+                        Write-Host "Alternative method worked, got domain $Domain."
                         $defaultDomainName = $Domain
                         $initialDomainName = $Domain
                         $RequiresRefresh = $true
 
                     } catch {
-                        Write-LogMessage -API 'Get-Tenants' -message "Tried adding $($LatestRelationship.customerId) to tenant list but failed to get domains - $($_.Exception.Message)" -level 'Critical'
+                        $ErrorMessage = Get-CippException -Exception $_
+                        Write-LogMessage -API 'Get-Tenants' -message "Tried adding $($LatestRelationship.customerId) to tenant list but failed to get domains - $($ErrorMessage.NormalizedError)" -Sev 'Critical' -LogData $ErrorMessage
                     }
                 }
                 Write-Host 'finished getting domain'
