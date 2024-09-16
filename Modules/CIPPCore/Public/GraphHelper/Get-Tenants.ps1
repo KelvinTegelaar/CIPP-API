@@ -86,7 +86,9 @@ function Get-Tenants {
 
         $ActiveRelationships = $GDAPList | Where-Object $IncludedTenantFilter | Where-Object { $_.customerId -notin $SkipListCache.customerId }
         $TenantList = $ActiveRelationships | Group-Object -Property customerId | ForEach-Object {
-            #Write-Host "Processing $($_.Name) to add to tenant list."
+
+            # Write-Host (ConvertTo-Json -InputObject $_ -Depth 10)
+            # Write-Host "Processing $($_.Name), $($_.displayName) to add to tenant list."
             $ExistingTenantInfo = Get-CIPPAzDataTableEntity @TenantsTable -Filter "PartitionKey eq 'Tenants' and RowKey eq '$($_.Name)'"
             if ($TriggerRefresh.IsPresent -and $ExistingTenantInfo.customerId) {
                 # Reset error count
@@ -112,15 +114,16 @@ function Get-Tenants {
                     try {
                         #doing alternative method to temporarily get domains. Nightly refresh will fix this as it will be marked for renew.
                         Write-Host 'Main method failed, trying alternative method.'
-                        $Domain = (New-GraphGetRequest -uri "https://graph.microsoft.com/v1.0/tenantRelationships/findTenantInformationByTenantId(tenantId='$($LatestRelationship.customerId)')" -NoAuthCheck:$true).defaultDomainName
+                        Write-Host "Domain variable is $Domain"
+                        $Domain = (New-GraphGetRequest -uri "https://graph.microsoft.com/v1.0/tenantRelationships/findTenantInformationByTenantId(tenantId='$($LatestRelationship.customerId)')" -NoAuthCheck:$true ).defaultDomainName
                         Write-Host "Alternative method worked, got domain $Domain."
-                        $defaultDomainName = $Domain
-                        $initialDomainName = $Domain
                         $RequiresRefresh = $true
-
                     } catch {
                         $ErrorMessage = Get-CippException -Exception $_
-                        Write-LogMessage -API 'Get-Tenants' -message "Tried adding $($LatestRelationship.customerId) to tenant list but failed to get domains - $($ErrorMessage.NormalizedError)" -Sev 'Critical' -LogData $ErrorMessage
+                        Write-LogMessage -API 'Get-Tenants' -message "Tried adding $($LatestRelationship.customerId) to tenant list but failed to get domains - $($_.Exception.Message)" -Sev 'Critical' -LogData $ErrorMessage
+                    } finally {
+                        $defaultDomainName = $Domain
+                        $initialDomainName = $Domain
                     }
                 }
                 Write-Host 'finished getting domain'
@@ -178,7 +181,7 @@ function Get-Tenants {
 
         }
         foreach ($Tenant in $TenantList | Where-Object $IncludedTenantFilter) {
-            if ($Tenant.defaultDomainName -eq 'Invalid' -or !$Tenant.defaultDomainName) {
+            if ($Tenant.defaultDomainName -eq 'Invalid' -or [string]::IsNullOrWhiteSpace($Tenant.defaultDomainName)) {
                 Write-LogMessage -API 'Get-Tenants' -message "We're skipping $($Tenant.displayName) as it has an invalid default domain name. Something is up with this instance." -level 'Critical'
                 continue
             }
