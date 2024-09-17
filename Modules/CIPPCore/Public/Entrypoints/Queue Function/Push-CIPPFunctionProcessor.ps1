@@ -18,10 +18,11 @@ function Push-CIPPFunctionProcessor {
         $Node = 'http'
     }
 
+    if ($env:CIPP_PROCESSOR -ne 'true') {
+        return
+    }
     if ($Config -and $Config.state -eq $true -and $Node -eq 'proc') {
-        if ($env:CIPP_PROCESSOR -ne 'true') {
-            return
-        }
+        return
     }
 
     $Parameters = $QueueItem.Parameters | ConvertTo-Json -Depth 10 | ConvertFrom-Json -AsHashtable
