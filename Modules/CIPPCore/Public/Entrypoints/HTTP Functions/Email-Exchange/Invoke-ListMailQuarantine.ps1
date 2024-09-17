@@ -1,4 +1,6 @@
-function Invoke-ListMailQuarantine {
+using namespace System.Net
+
+Function Invoke-ListMailQuarantine {
     <#
     .FUNCTIONALITY
         Entrypoint

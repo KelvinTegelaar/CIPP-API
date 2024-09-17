@@ -34,7 +34,7 @@ function Push-UpdatePermissionsQueue {
         $unixtime = [int64](([datetime]::UtcNow) - (Get-Date '1/1/1970')).TotalSeconds
         $GraphRequest = @{
             LastApply     = "$unixtime"
-            applicationId = "$($ENV:ApplicationID)"
+            applicationId = "$($ENV:applicationId)"
             Tenant        = "$($Item.customerId)"
             PartitionKey  = 'Tenant'
             RowKey        = "$($Item.customerId)"

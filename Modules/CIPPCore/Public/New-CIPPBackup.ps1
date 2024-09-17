@@ -14,6 +14,7 @@ function New-CIPPBackup {
         'CIPP' {
             try {
                 $BackupTables = @(
+                    'bpa'
                     'Config'
                     'Domains'
                     'ExcludedLicenses'
@@ -24,19 +25,20 @@ function New-CIPPBackup {
                 )
                 $CSVfile = foreach ($CSVTable in $BackupTables) {
                     $Table = Get-CippTable -tablename $CSVTable
-                    Get-AzDataTableEntity @Table | Select-Object *, @{l = 'table'; e = { $CSVTable } } -ExcludeProperty DomainAnalyser
+                    Get-AzDataTableEntity @Table | Select-Object *, @{l = 'table'; e = { $CSVTable } }
                 }
+                Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -message 'Created backup' -Sev 'Debug'
+                $CSVfile
                 $RowKey = 'CIPPBackup' + '_' + (Get-Date).ToString('yyyy-MM-dd-HHmm')
-                $CSVFile = [string]($CSVfile | ConvertTo-Json -Compress -Depth 100)
-                $entity = @{
+                $entity = [PSCustomObject]@{
                     PartitionKey = 'CIPPBackup'
-                    RowKey       = [string]$RowKey
+                    RowKey       = $RowKey
                     TenantFilter = 'CIPPBackup'
-                    Backup       = $CSVfile
+                    Backup       = [string]($CSVfile | ConvertTo-Json -Compress -Depth 100)
                 }
                 $Table = Get-CippTable -tablename 'CIPPBackup'
                 try {
-                    $Result = Add-CIPPAzDataTableEntity @Table -Entity $entity -Force
+                    $Result = Add-AzDataTableEntity @Table -entity $entity -Force
                     Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -message 'Created CIPP Backup' -Sev 'Debug'
                 } catch {
                     $ErrorMessage = Get-CippException -Exception $_

@@ -33,7 +33,7 @@ function Invoke-ListFunctionParameters {
         if ($Module -eq 'ExchangeOnlineManagement') {
             $ExoRequest = @{
                 AvailableCmdlets = $true
-                tenantid         = $env:TenantID
+                tenantid         = $env:TenantId
                 NoAuthCheck      = $true
             }
             if ($Request.Query.Compliance -eq $true) {

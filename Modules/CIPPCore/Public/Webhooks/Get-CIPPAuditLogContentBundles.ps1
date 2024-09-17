@@ -51,7 +51,7 @@ function Get-CIPPAuditLogContentBundles {
 
     $Parameters = @{
         'contentType'         = $ContentType
-        'PublisherIdentifier' = $env:TenantID
+        'PublisherIdentifier' = $env:TenantId
     }
 
     if (!$ShowAll.IsPresent) {
