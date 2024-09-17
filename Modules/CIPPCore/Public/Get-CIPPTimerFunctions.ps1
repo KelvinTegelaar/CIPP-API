@@ -58,7 +58,7 @@ function Get-CIPPTimerFunctions {
             continue
         }
 
-        if ($AvailableNodes -contains $Orchestrator.PreferredProcessor -and $Node -ne $Orchestrator.PreferredProcessor) {
+        if (($AvailableNodes -contains $Orchestrator.PreferredProcessor -and $Node -ne $Orchestrator.PreferredProcessor) -and ($Node -notin ('http', 'proc'))) {
             # only run on preferred processor when available
             continue
         }
