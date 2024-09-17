@@ -92,7 +92,7 @@ function Get-CIPPTimerFunctions {
                         OrchestratorId     = ''
                         RunOnProcessor     = $RunOnProcessor
                         IsSystem           = $Orchestrator.IsSystem ?? $false
-                        PreferredProcessor = $Orchestrator.PreferredProcessor
+                        PreferredProcessor = $Orchestrator.PreferredProcessor ?? ''
                     }
                     Add-CIPPAzDataTableEntity @Table -Entity $Status
                 } else {
@@ -100,10 +100,11 @@ function Get-CIPPTimerFunctions {
                         $Status.Cron = $CronString
                     }
                     $Status.NextOccurrence = $NextOccurrence.ToUniversalTime()
+                    $PreferredProcessor = $Orchestrator.PreferredProcessor ?? ''
                     if ($Status.PSObject.Properites.Name -notcontains 'PreferredProcessor') {
-                        $Status | Add-Member -MemberType NoteProperty -Name 'PreferredProcessor' -Value $Orchestrator.PreferredProcessor -Force
+                        $Status | Add-Member -MemberType NoteProperty -Name 'PreferredProcessor' -Value $PreferredProcessor -Force
                     } else {
-                        $Status.PreferredProcessor = $Orchestrator.PreferredProcessor
+                        $Status.PreferredProcessor = $PreferredProcessor
                     }
                     Add-CIPPAzDataTableEntity @Table -Entity $Status -Force
                 }
@@ -117,7 +118,7 @@ function Get-CIPPTimerFunctions {
                     OrchestratorId     = $Status.OrchestratorId
                     RunOnProcessor     = $Orchestrator.RunOnProcessor
                     IsSystem           = $Orchestrator.IsSystem ?? $false
-                    PreferredProcessor = $Orchestrator.PreferredProcessor
+                    PreferredProcessor = $Orchestrator.PreferredProcessor ?? ''
                 }
             }
         } else {
