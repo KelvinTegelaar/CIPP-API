@@ -8,9 +8,6 @@ function Clear-CippDurables {
     # Get orchestrators
     $InstancesTable = Get-CippTable -TableName ('{0}Instances' -f $FunctionName)
     $HistoryTable = Get-CippTable -TableName ('{0}History' -f $FunctionName)
-    $Yesterday = (Get-Date).AddDays(-1).ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ssZ')
-    $Filter = "CreatedTime ge datetime'$Yesterday' or RuntimeStatus eq 'Pending' or RuntimeStatus eq 'Running'"
-    $Instances = Get-CippAzDataTableEntity @InstancesTable -Filter $Filter
 
     $Queues = Get-AzStorageQueue -Context $StorageContext -Name ('{0}*' -f $FunctionName) | Select-Object -Property Name, ApproximateMessageCount, QueueClient
 
@@ -50,7 +47,7 @@ function Clear-CippDurables {
 
     Remove-AzDataTable @InstancesTable
     Remove-AzDataTable @HistoryTable
-    $BlobContainer = '{0}-largemessages' -f $Function.Name
+    $BlobContainer = '{0}-largemessages' -f $FunctionName
     if (Get-AzStorageContainer -Name $BlobContainer -Context $StorageContext -ErrorAction SilentlyContinue) {
         Write-Information "- Removing blob container: $BlobContainer"
         if ($PSCmdlet.ShouldProcess($BlobContainer, 'Remove Blob Container')) {
