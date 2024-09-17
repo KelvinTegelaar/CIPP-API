@@ -14,23 +14,27 @@ function Invoke-ExecAppUpload {
     if ($Config -and $Config.state -eq $true) {
         if ($env:CIPP_PROCESSOR -ne 'true') {
             $ProcessorFunction = [PSCustomObject]@{
-                FunctionName      = 'CIPPFunctionProcessor'
+                PartitionKey      = 'Function'
+                RowKey            = 'Start-ApplicationOrchestrator'
                 ProcessorFunction = 'Start-ApplicationOrchestrator'
             }
-            Push-OutputBinding -Name QueueItem -Value $ProcessorFunction
+            $ProcessorQueue = Get-CIPPTable -TableName 'ProcessorQueue'
+            Add-AzDataTableEntity @ProcessorQueue -Entity $ProcessorFunction -Force
+            $Results = [pscustomobject]@{'Results' = 'Queueing application upload' }
         }
     } else {
         try {
             Start-ApplicationOrchestrator
+            $Results = [pscustomobject]@{'Results' = 'Started application upload' }
         } catch {
-            Write-Host "orchestrator error: $($_.Exception.Message)"
+            $Results = [pscustomobject]@{'Results' = "Failed to start application upload. Error: $($_.Exception.Message)" }
         }
     }
 
     $Results = [pscustomobject]@{'Results' = 'Started application queue' }
     Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
             StatusCode = [HttpStatusCode]::OK
-            Body       = $results
+            Body       = $Results
         })
 
 }

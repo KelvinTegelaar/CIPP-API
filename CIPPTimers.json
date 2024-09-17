@@ -8,6 +8,13 @@
     "PreferredProcessor": "usertasks"
   },
   {
+    "Command": "Start-CIPPProcessorQueue",
+    "Description": "Timer to handle user initiated tasks",
+    "Cron": "0 */15 * * * *",
+    "Priority": 1,
+    "RunOnProcessor": true
+  },
+  {
     "Command": "Start-AuditLogOrchestrator",
     "Description": "Orchestrator to process audit logs",
     "Cron": "0 */15 * * * *",
