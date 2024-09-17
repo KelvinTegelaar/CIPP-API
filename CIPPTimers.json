@@ -4,14 +4,16 @@
     "Description": "Orchestrator to process user scheduled tasks",
     "Cron": "0 */15 * * * *",
     "Priority": 1,
-    "RunOnProcessor": true
+    "RunOnProcessor": true,
+    "PreferredProcessor": "usertasks"
   },
   {
     "Command": "Start-AuditLogOrchestrator",
     "Description": "Orchestrator to process audit logs",
     "Cron": "0 */15 * * * *",
     "Priority": 2,
-    "RunOnProcessor": true
+    "RunOnProcessor": true,
+    "PreferredProcessor": "auditlog"
   },
   {
     "Command": "Start-WebhookOrchestrator",
@@ -25,7 +27,8 @@
     "Description": "Orchestrator to process standards",
     "Cron": "0 0 */4 * * *",
     "Priority": 4,
-    "RunOnProcessor": true
+    "RunOnProcessor": true,
+    "PreferredProcessor": "standards"
   },
   {
     "Command": "Start-CIPPGraphSubscriptionCleanupTimer",

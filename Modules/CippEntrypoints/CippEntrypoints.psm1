@@ -235,6 +235,7 @@ function Receive-CIPPTimerTrigger {
     $Functions = Get-CIPPTimerFunctions
     $Table = Get-CIPPTable -tablename CIPPTimers
     $Statuses = Get-CIPPAzDataTableEntity @Table
+    $FunctionName = $env:WEBSITE_SITE_NAME
 
     foreach ($Function in $Functions) {
         Write-Information "CIPPTimer: $($Function.Command) - $($Function.Cron)"

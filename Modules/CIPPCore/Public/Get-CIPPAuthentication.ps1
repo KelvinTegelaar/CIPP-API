@@ -20,7 +20,7 @@ function Get-CIPPAuthentication {
             }
         } else {
             Connect-AzAccount -Identity
-            $keyvaultname = $ENV:WEBSITE_DEPLOYMENT_ID -replace '-proc$', ''
+            $keyvaultname = ($ENV:WEBSITE_DEPLOYMENT_ID -split '-')[0]
             $Variables | ForEach-Object {
                 Set-Item -Path ENV:$_ -Value (Get-AzKeyVaultSecret -VaultName $keyvaultname -Name $_ -AsPlainText -ErrorAction Stop) -Force
             }

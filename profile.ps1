@@ -49,7 +49,7 @@ try {
 Set-Location -Path $PSScriptRoot
 $CurrentVersion = (Get-Content .\version_latest.txt).trim()
 $Table = Get-CippTable -tablename 'Version'
-$LastStartup = Get-CIPPAzDataTableEntity @Table -Filter "PartitionKey eq 'Version' and RowKey eq 'Version'"
+$LastStartup = Get-CIPPAzDataTableEntity @Table -Filter "PartitionKey eq 'Version' and RowKey eq '$($env:WEBSITE_SITE_NAME)'"
 if ($CurrentVersion -ne $LastStartup.Version) {
     Write-Host "Version has changed from $($LastStartup.Version) to $CurrentVersion"
     Clear-CippDurables
@@ -58,7 +58,7 @@ if ($CurrentVersion -ne $LastStartup.Version) {
     } else {
         $LastStartup = [PSCustomObject]@{
             PartitionKey = 'Version'
-            RowKey       = 'Version'
+            RowKey       = $env:WEBSITE_SITE_NAME
             Version      = $CurrentVersion
         }
     }
