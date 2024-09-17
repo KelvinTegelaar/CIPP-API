@@ -14,7 +14,7 @@ function New-CIPPGraphSubscription {
         [switch]$PartnerCenter
     )
     $CIPPID = (New-Guid).GUID
-    $WebhookTable = Get-CIPPTable -TableName webhookTable
+    $WebhookTable = Get-CIPPTable -TableName 'webhookTable'
 
     try {
         if ($auditLogAPI) {
