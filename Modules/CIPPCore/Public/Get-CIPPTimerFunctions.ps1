@@ -12,6 +12,7 @@ function Get-CIPPTimerFunctions {
     $VersionTable = Get-CIPPTable -tablename 'Version'
     $Nodes = Get-CIPPAzDataTableEntity @VersionTable -Filter "PartitionKey eq 'Version' and RowKey ne 'Version'" | Where-Object { $_.RowKey -match '-' }
     $AvailableNodes = $Nodes.RowKey | ForEach-Object { ($_ -split '-')[1] }
+    $FunctionName = $env:WEBSITE_SITE_NAME
 
     # Get node name
     if ($FunctionName -match '-') {
