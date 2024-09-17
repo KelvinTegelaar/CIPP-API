@@ -11,7 +11,14 @@ function Push-CIPPFunctionProcessor {
     $ConfigTable = Get-CIPPTable -tablename Config
     $Config = Get-CIPPAzDataTableEntity @ConfigTable -Filter "PartitionKey eq 'OffloadFunctions' and RowKey eq 'OffloadFunctions'"
 
-    if ($Config -and $Config.state -eq $true) {
+    $FunctionName = $env:WEBSITE_SITE_NAME
+    if ($FunctionName -match '-') {
+        $Node = ($FunctionName -split '-')[1]
+    } else {
+        $Node = 'http'
+    }
+
+    if ($Config -and $Config.state -eq $true -and $Node -eq 'proc') {
         if ($env:CIPP_PROCESSOR -ne 'true') {
             return
         }
