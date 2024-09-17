@@ -3,7 +3,7 @@ function Clear-CippDurables {
     Param()
     # Collect info
     $StorageContext = New-AzStorageContext -ConnectionString $env:AzureWebJobsStorage
-    $FunctionName = $env:WEBSITE_SITE_NAME
+    $FunctionName = $env:WEBSITE_SITE_NAME -replace '-', ''
 
     # Get orchestrators
     $InstancesTable = Get-CippTable -TableName ('{0}Instances' -f $FunctionName)
