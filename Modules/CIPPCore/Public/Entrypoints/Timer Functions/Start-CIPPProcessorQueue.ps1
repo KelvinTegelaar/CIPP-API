@@ -12,11 +12,11 @@ function Start-CIPPProcessorQueue {
     foreach ($QueueItem in $QueueItems) {
         if ($PSCmdlet.ShouldProcess("Processing function $($QueueItem.ProcessorFunction)")) {
             Remove-AzDataTableEntity @QueueTable -Entity $QueueItem
-            $Parameters = $Queue.Parameters | ConvertFrom-Json -AsHashtable
-            if (Get-Command -Name $QueueItem.ProcessorFunction -Module CIPPCore -ErrorAction SilentlyContinue) {
-                & $QueueItem.ProcessorFunction @Parameters
+            $Parameters = $QueueItem.Parameters | ConvertFrom-Json -AsHashtable
+            if (Get-Command -Name $QueueItem.FunctionName -Module CIPPCore -ErrorAction SilentlyContinue) {
+                & $QueueItem.FunctionName @Parameters
             } else {
-                Write-Warning "Function $($QueueItem.ProcessorFunction) not found"
+                Write-Warning "Function $($QueueItem.FunctionName) not found"
             }
         }
     }
