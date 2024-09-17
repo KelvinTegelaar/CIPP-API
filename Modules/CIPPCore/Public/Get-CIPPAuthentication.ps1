@@ -4,7 +4,7 @@ function Get-CIPPAuthentication {
     param (
         $APIName = 'Get Keyvault Authentication'
     )
-    $Variables = @('ApplicationID', 'ApplicationSecret', 'TenantID', 'RefreshToken')
+    $Variables = @('ApplicationId', 'ApplicationSecret', 'TenantId', 'RefreshToken')
 
     try {
         if ($env:AzureWebJobsStorage -eq 'UseDevelopmentStorage=true') {
@@ -34,3 +34,5 @@ function Get-CIPPAuthentication {
         return $false
     }
 }
+
+

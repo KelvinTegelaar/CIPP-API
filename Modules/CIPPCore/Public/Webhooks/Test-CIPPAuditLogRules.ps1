@@ -23,7 +23,6 @@ function Test-CIPPAuditLogRules {
         'SAS:EndAuth'
         'SAS:ProcessAuth'
         'deviceAuth:ReprocessTls'
-        'Consent:Set'
     )
 
     $TrustedIPTable = Get-CIPPTable -TableName 'trustedIps'
