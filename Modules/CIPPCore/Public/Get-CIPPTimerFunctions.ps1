@@ -96,7 +96,11 @@ function Get-CIPPTimerFunctions {
                         $Status.Cron = $CronString
                     }
                     $Status.NextOccurrence = $NextOccurrence.ToUniversalTime()
-                    $Status.PreferredProcessor = $Orchestrator.PreferredProcessor
+                    if (!$Status.PSObject.Properites.Name -Contains 'PreferredProcessor') {
+                        $Status | Add-Member -MemberType NoteProperty -Name 'PreferredProcessor' -Value $Orchestrator.PreferredProcessor
+                    } else {
+                        $Status.PreferredProcessor = $Orchestrator.PreferredProcessor
+                    }
                     Add-CIPPAzDataTableEntity @Table -Entity $Status -Force
                 }
 
