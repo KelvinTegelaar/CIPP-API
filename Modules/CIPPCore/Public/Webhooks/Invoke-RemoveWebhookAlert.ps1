@@ -12,10 +12,9 @@ Function Invoke-RemoveWebhookAlert {
 
     $APIName = $TriggerMetadata.FunctionName
     Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -message 'Accessed this API' -Sev 'Debug'
-    $Table = get-cipptable -TableName 'SchedulerConfig'
 
     try {
-        $WebhookTable = Get-CIPPTable -TableName SchedulerConfig
+        $WebhookTable = Get-CIPPTable -TableName 'SchedulerConfig'
         $WebhookRow = Get-CIPPAzDataTableEntity @WebhookTable -Filter "PartitionKey eq 'WebhookAlert'" | Where-Object -Property Tenant -EQ $Request.query.TenantFilter
         Write-Host "The webhook count is $($WebhookRow.count)"
         if ($WebhookRow.count -gt 1) {
@@ -34,7 +33,7 @@ Function Invoke-RemoveWebhookAlert {
                     }
                     Remove-AzDataTableEntity @Table -Entity $CompleteObject -ErrorAction SilentlyContinue | Out-Null
                 } catch {
-                    #
+                    Write-LogMessage -user $Request.headers.'x-ms-client-principal' -API $APIName -message "Failed to remove webhook for AllTenants. $($_.Exception.Message)" -Sev 'Error'
                 }
             } else {
                 $Tenants = $Request.query.TenantFilter
@@ -52,7 +51,6 @@ Function Invoke-RemoveWebhookAlert {
         Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -message "Failed to remove webhook alert. $($_.Exception.Message)" -Sev 'Error'
         $body = [pscustomobject]@{'Results' = "Failed to remove webhook alert: $($_.Exception.Message)" }
     }
-
 
     # Associate values to output bindings by calling 'Push-OutputBinding'.
     Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
