@@ -14,17 +14,26 @@ function Invoke-ExecDomainAnalyser {
     if ($Config -and $Config.state -eq $true) {
         if ($env:CIPP_PROCESSOR -ne 'true') {
             $ProcessorFunction = [PSCustomObject]@{
-                FunctionName      = 'CIPPFunctionProcessor'
+                PartitionKey      = 'Function'
+                RowKey            = 'Start-DomainOrchestrator'
                 ProcessorFunction = 'Start-DomainOrchestrator'
             }
-            Push-OutputBinding -Name QueueItem -Value $ProcessorFunction
+            $ProcessorQueue = Get-CIPPTable -TableName 'ProcessorQueue'
+            Add-AzDataTableEntity @ProcessorQueue -Entity $ProcessorFunction -Force
+            $Results = [pscustomobject]@{'Results' = 'Queueing Domain Analyser' }
         }
     } else {
-        Start-DomainOrchestrator
+        $OrchStatus = Start-DomainOrchestrator
+        if ($OrchStatus) {
+            $Message = 'Domain Analyser started'
+        } else {
+            $Message = 'Domain Analyser error: check logs'
+        }
+        $Results = [pscustomobject]@{'Results' = $Message }
     }
 
     Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
             StatusCode = [HttpStatusCode]::OK
-            Body       = $results
+            Body       = $Results
         })
 }

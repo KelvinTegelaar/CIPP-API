@@ -19,14 +19,16 @@ Function Invoke-ExecStandardsRun {
     if ($Config -and $Config.state -eq $true) {
         if ($env:CIPP_PROCESSOR -ne 'true') {
             $ProcessorFunction = [PSCustomObject]@{
-                FunctionName      = 'CIPPFunctionProcessor'
+                PartitionKey      = 'Function'
+                RowKey            = "Invoke-CIPPStandardsRun-$tenantfilter"
                 ProcessorFunction = 'Invoke-CIPPStandardsRun'
-                Parameters        = [PSCustomObject]@{
-                    TenantFilter = $tenantfilter
-                    Force        = $true
-                }
+                Parameters        = [string](ConvertTo-Json -Compress -InputObject @{
+                        TenantFilter = $tenantfilter
+                        Force        = $true
+                    })
             }
-            Push-OutputBinding -Name QueueItem -Value $ProcessorFunction
+            $ProcessorQueue = Get-CIPPTable -TableName 'ProcessorQueue'
+            Add-AzDataTableEntity @ProcessorQueue -Entity $ProcessorFunction -Force
             $Results = "Successfully Queued Standards Run for Tenant $tenantfilter"
         }
     } else {

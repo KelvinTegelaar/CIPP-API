@@ -12,9 +12,9 @@ function Start-WebhookOrchestrator {
             Write-Information 'No webhook subscriptions found. Exiting.'
             return
         }
-        
+
         $WebhookIncomingTable = Get-CIPPTable -TableName WebhookIncoming
-        $WebhookIncoming = Get-CIPPAzDataTableEntity @WebhookIncomingTable -Property RowKey
+        $WebhookIncoming = Get-CIPPAzDataTableEntity @WebhookIncomingTable -Property PartitionKey, RowKey
         if (($WebhookIncoming | Measure-Object).Count -eq 0) {
             Write-Information 'No webhook incoming found. Exiting.'
             return
