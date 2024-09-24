@@ -42,12 +42,6 @@
     {
       "type": "queue",
       "direction": "out",
-      "name": "gdapqueue",
-      "queueName": "gdapqueue"
-    },
-    {
-      "type": "queue",
-      "direction": "out",
       "name": "incidentqueue",
       "queueName": "incidentqueue"
     },
