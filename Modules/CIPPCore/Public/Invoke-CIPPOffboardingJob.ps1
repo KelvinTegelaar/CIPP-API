@@ -96,7 +96,7 @@ function Invoke-CIPPOffboardingJob {
                     OrchestratorName = "OffboardingMailboxPermissions_$Username"
                     SkipLog          = $true
                 }
-                Start-NewOrchestration -FunctionName CIPPOrchestrator -InputObject ($InputObject | ConvertTo-Json -Depth 10)
+                $null = Start-NewOrchestration -FunctionName CIPPOrchestrator -InputObject ($InputObject | ConvertTo-Json -Depth 10)
                 "Removal of permissions queued. This task will run in the background and send it's results to the logbook."
             }
         }
