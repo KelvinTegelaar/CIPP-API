@@ -37,7 +37,7 @@ function New-GraphGetRequest {
         if (!$Tenant) {
             $Tenant = @{
                 GraphErrorCount = 0
-                LastGraphError  = $null
+                LastGraphError  = ''
                 PartitionKey    = 'TenantFailed'
                 RowKey          = 'Failed'
             }
@@ -91,7 +91,11 @@ function New-GraphGetRequest {
                 throw $Message
             }
         } until ([string]::IsNullOrEmpty($NextURL) -or $NextURL -is [object[]] -or ' ' -eq $NextURL)
-        $Tenant.LastGraphError = ''
+        if ($Tenant.PSObject.Properties.Name -notcontains 'LastGraphErrror') {
+            $Tenant | Add-Member -MemberType NoteProperty -Name 'LastGraphError' -Value ''
+        } else {
+            $Tenant.LastGraphError = ''
+        }
         $Tenant.GraphErrorCount = 0
         Update-AzDataTableEntity @TenantsTable -Entity $Tenant
         return $ReturnedData

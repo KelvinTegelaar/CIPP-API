@@ -1,12 +1,13 @@
-# Input bindings are passed in via param block.
-param( $QueueItem, $TriggerMetadata)
+function Push-ExecIncidentsListAllTenants {
+    <#
+    .FUNCTIONALITY
+        Entrypoint
+    #>
+    param(
+        $Item
+    )
 
-# Write out the queue message and metadata to the information log.
-Write-Host "PowerShell queue trigger function processed work item: $QueueItem"
-
-Get-Tenants | ForEach-Object -Parallel {
-    $domainName = $_.defaultDomainName
-    Import-Module CIPPCore
+    $domainName = $Item.defaultDomainName
     $Table = Get-CIPPTable -TableName 'cachealertsandincidents'
 
     try {
@@ -43,7 +44,6 @@ Get-Tenants | ForEach-Object -Parallel {
             Tenant       = [string]$domainName
         }
         Add-CIPPAzDataTableEntity @Table -Entity $GraphRequest -Force | Out-Null
-
-
     }
 }
+
