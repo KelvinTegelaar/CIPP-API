@@ -88,7 +88,8 @@ function Invoke-CIPPOffboardingJob {
                             'FunctionName'  = 'ExecOffboardingMailboxPermissions'
                             'TenantFilter'  = $TenantFilter
                             'User'          = $Username
-                            'executingUser' = $ExecutingUser
+                            'ExecutingUser' = $ExecutingUser
+                            'APINAME'       = $APINAME
                             'QueueId'       = $Queue.RowKey
                         }
                     )
