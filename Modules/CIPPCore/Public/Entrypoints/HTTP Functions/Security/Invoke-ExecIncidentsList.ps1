@@ -51,7 +51,7 @@ Function Invoke-ExecIncidentsList {
                             IncludeErrors = $true
                         }
                         QueueId         = $Queue.RowKey
-                        DurableFunction = 'ExecIncidentListAllTenants'
+                        DurableFunction = 'ExecIncidentsListAllTenants'
                     }
                     SkipLog          = $true
                 }

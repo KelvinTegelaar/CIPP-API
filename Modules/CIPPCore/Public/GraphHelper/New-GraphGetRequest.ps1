@@ -91,8 +91,8 @@ function New-GraphGetRequest {
                 throw $Message
             }
         } until ([string]::IsNullOrEmpty($NextURL) -or $NextURL -is [object[]] -or ' ' -eq $NextURL)
-        if ($Tenant.PSObject.Properties.Name -notcontains 'LastGraphErrror') {
-            $Tenant | Add-Member -MemberType NoteProperty -Name 'LastGraphError' -Value ''
+        if ($Tenant.PSObject.Properties.Name -notcontains 'LastGraphError') {
+            $Tenant | Add-Member -MemberType NoteProperty -Name 'LastGraphError' -Value '' -Force
         } else {
             $Tenant.LastGraphError = ''
         }

@@ -6,7 +6,8 @@ function Push-ExecAlertsListAllTenants {
     [CmdletBinding()]
     param($Item)
 
-    $domainName = $Item.defaultDomainName
+    $Tenant = Get-Tenants -TenantFilter $Item.customerId
+    $domainName = $Tenant.defaultDomainName
     $Table = Get-CIPPTable -TableName 'cachealertsandincidents'
 
     try {

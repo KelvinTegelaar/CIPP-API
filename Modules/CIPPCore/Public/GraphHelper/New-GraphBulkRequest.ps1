@@ -61,8 +61,8 @@ function New-GraphBulkRequest {
             throw $Message
         }
 
-        if ($Tenant.PSObject.Properties.Name -notcontains 'LastGraphErrror') {
-            $Tenant | Add-Member -MemberType NoteProperty -Name 'LastGraphError' -Value ''
+        if ($Tenant.PSObject.Properties.Name -notcontains 'LastGraphError') {
+            $Tenant | Add-Member -MemberType NoteProperty -Name 'LastGraphError' -Value '' -Force
         } else {
             $Tenant.LastGraphError = ''
         }
