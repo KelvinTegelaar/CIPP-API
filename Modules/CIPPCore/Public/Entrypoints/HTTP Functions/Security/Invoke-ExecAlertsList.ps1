@@ -70,14 +70,14 @@ Function Invoke-ExecAlertsList {
                         TenantParams = @{
                             IncludeErrors = $true
                         }
-                        DurableName  = 'ExecAlertsAllTenants'
+                        DurableName  = 'ExecAlertsListAllTenants'
                     }
                     SkipLog          = $true
                 } | ConvertTo-Json -Depth 10
-                Start-NewOrchestration -FunctionName CIPPOrchestrator -InputObject $InputObject
-
+                $InstanceId = Start-NewOrchestration -FunctionName CIPPOrchestrator -InputObject $InputObject
                 [PSCustomObject]@{
-                    Waiting = $true
+                    Waiting    = $true
+                    InstanceId = $InstanceId
                 }
             } else {
                 $Alerts = $Rows
