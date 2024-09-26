@@ -223,7 +223,6 @@ function Get-GraphRequestList {
                                     ReverseTenantLookup         = $ReverseTenantLookup.IsPresent
                                 }
 
-                                #Push-OutputBinding -Name QueueItem -Value $QueueTenant
                             }
 
                             $InputObject = @{
@@ -273,8 +272,6 @@ function Get-GraphRequestList {
                                     Batch            = @($QueueTenant)
                                 }
                                 $InstanceId = Start-NewOrchestration -FunctionName 'CIPPOrchestrator' -InputObject ($InputObject | ConvertTo-Json -Depth 5 -Compress)
-
-                                #Push-OutputBinding -Name QueueItem -Value $QueueTenant
 
                                 [PSCustomObject]@{
                                     QueueMessage = ('Loading {0} rows for {1}. Please check back after the job completes' -f $Count, $TenantFilter)

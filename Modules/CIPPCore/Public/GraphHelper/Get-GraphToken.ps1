@@ -66,9 +66,9 @@ function Get-GraphToken($tenantid, $scope, $AsApp, $AppID, $AppSecret, $refreshT
         if (!$Tenant.RowKey) {
             $donotset = $true
             $Tenant = [pscustomobject]@{
-                GraphErrorCount     = $null
-                LastGraphTokenError = $null
-                LastGraphError      = $null
+                GraphErrorCount     = 0
+                LastGraphTokenError = ''
+                LastGraphError      = ''
                 PartitionKey        = 'TenantFailed'
                 RowKey              = 'Failed'
             }
