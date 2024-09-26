@@ -61,7 +61,7 @@ Function Invoke-ExecAlertsList {
             $Rows = Get-CIPPAzDataTableEntity @Table -filter $Filter | Where-Object -Property Timestamp -GT (Get-Date).AddMinutes(-10)
             if (!$Rows) {
                 $TenantList = Get-Tenants -IncludeErrors
-                $Queue = New-CippQueueEntry -Name 'Alerts List' -TotalTasks ($TenantList | Measure-Object).Count
+                $Queue = New-CippQueueEntry -Name 'Alerts List - All Tenants' -TotalTasks ($TenantList | Measure-Object).Count
                 $InputObject = [PSCustomObject]@{
                     OrchestratorName = 'AlertsList'
                     QueueFunction    = [PSCustomObject]@{

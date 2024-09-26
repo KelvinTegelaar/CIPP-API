@@ -81,13 +81,15 @@ function Invoke-CIPPOffboardingJob {
                 Remove-CIPPMailboxPermissions -PermissionsLevel @('FullAccess', 'SendAs', 'SendOnBehalf') -userid 'AllUsers' -AccessUser $UserName -TenantFilter $TenantFilter -APIName $APINAME -ExecutingUser $ExecutingUser
 
             } else {
+                $Queue = New-CippQueueEntry -Name "Offboarding - Mailbox Permissions: $Username" -TotalTasks 1
                 $InputObject = [PSCustomObject]@{
                     Batch            = @(
                         [PSCustomObject]@{
-                            'FunctionName'  = 'OffboardingMailboxPermissions'
+                            'FunctionName'  = 'ExecOffboardingMailboxPermissions'
                             'TenantFilter'  = $TenantFilter
                             'User'          = $Username
                             'executingUser' = $ExecutingUser
+                            'QueueId'       = $Queue.RowKey
                         }
                     )
                     OrchestratorName = "OffboardingMailboxPermissions_$Username"
