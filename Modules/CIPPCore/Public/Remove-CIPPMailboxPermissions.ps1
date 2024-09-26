@@ -11,7 +11,7 @@ function Remove-CIPPMailboxPermissions {
 
     try {
         if ($userid -eq 'AllUsers') {
-            $Mailboxes = New-ExoRequest -tenantid $TenantFilter -cmdlet 'get-mailbox'
+            $Mailboxes = New-ExoRequest -tenantid $TenantFilter -cmdlet 'Get-Mailbox' -Property UserPrincipalName
             $Mailboxes | ForEach-Object -Parallel {
                 Import-Module '.\Modules\AzBobbyTables'
                 Import-Module '.\Modules\CIPPCore'
