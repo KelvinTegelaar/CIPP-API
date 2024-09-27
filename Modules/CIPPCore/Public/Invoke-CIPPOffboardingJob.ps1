@@ -12,7 +12,7 @@ function Invoke-CIPPOffboardingJob {
     if ($Options -is [string]) {
         $Options = $Options | ConvertFrom-Json
     }
-    $userid = (New-GraphGetRequest -uri "https://graph.microsoft.com/beta/users/$($username)" -tenantid $Tenantfilter).id
+    $userid = (New-GraphGetRequest -uri "https://graph.microsoft.com/beta/users/$($username)?`$select=id" -tenantid $Tenantfilter).id
     Write-Host "Running offboarding job for $username with options: $($Options | ConvertTo-Json -Depth 10)"
     $Return = switch ($Options) {
         { $_.'ConvertToShared' -eq 'true' } {
