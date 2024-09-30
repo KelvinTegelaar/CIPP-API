@@ -18,7 +18,7 @@ function Invoke-CIPPStandardSPDisableLegacyWorkflows {
         IMPACT
             Low Impact
         POWERSHELLEQUIVALENT
-            Set-SPOTenant -DisableWorkflow2010 $true -DisableWorkflow2013 $true -DisableBackToClassic $true
+            Set-SPOTenant -DisableWorkflow2010 \$true -DisableWorkflow2013 \$true -DisableBackToClassic \$true
         RECOMMENDEDBY
         UPDATECOMMENTBLOCK
             Run the Tools\Update-StandardsComments.ps1 script to update this comment block
@@ -26,8 +26,10 @@ function Invoke-CIPPStandardSPDisableLegacyWorkflows {
         https://docs.cipp.app/user-documentation/tenant/standards/edit-standards
     #>
     param($Tenant, $Settings)
+    ##$Rerun -Type Standard -Tenant $Tenant -Settings $Settings 'SPDisableLegacyWorkflows'
+
     $CurrentState = Get-CIPPSPOTenant -TenantFilter $Tenant |
-        Select-Object -Property *
+    Select-Object -Property *
 
     $StateIsCorrect = ($CurrentState.StopNew2010Workflows -eq $true) -and
                       ($CurrentState.StopNew2013Workflows -eq $true) -and
@@ -35,7 +37,7 @@ function Invoke-CIPPStandardSPDisableLegacyWorkflows {
 
     if ($Settings.remediate -eq $true) {
         if ($StateIsCorrect -eq $true) {
-            Write-LogMessage -API 'Standards' -Message 'Legacy Workflows are already disabled.' -Sev Info
+            Write-LogMessage -API 'Standards' -Tenant $Tenant -Message 'Legacy Workflows are already disabled.' -Sev Info
         } else {
             $Properties = @{
                 StopNew2010Workflows = $true
@@ -45,19 +47,19 @@ function Invoke-CIPPStandardSPDisableLegacyWorkflows {
 
             try {
                 Get-CIPPSPOTenant -TenantFilter $Tenant | Set-CIPPSPOTenant -Properties $Properties
-                Write-LogMessage -API 'Standards' -Message 'Successfully disabled Legacy Workflows' -Sev Info
+                Write-LogMessage -API 'Standards' -Tenant $Tenant -Message 'Successfully disabled Legacy Workflows' -Sev Info
             } catch {
                 $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
-                Write-LogMessage -API 'Standards' -Message "Failed to disable Legacy Workflows. Error: $ErrorMessage" -Sev Error
+                Write-LogMessage -API 'Standards' -Tenant $Tenant -Message "Failed to disable Legacy Workflows. Error: $ErrorMessage" -Sev Error
             }
         }
     }
 
     if ($Settings.alert -eq $true) {
         if ($StateIsCorrect -eq $true) {
-            Write-LogMessage -API 'Standards' -Message 'Legacy Workflows are disabled' -Sev Info
+            Write-LogMessage -API 'Standards' -Tenant $Tenant -Message 'Legacy Workflows are disabled' -Sev Info
         } else {
-            Write-LogMessage -API 'Standards' -Message 'Legacy Workflows are enabled' -Sev Info
+            Write-LogMessage -API 'Standards' -Tenant $Tenant -Message 'Legacy Workflows are enabled' -Sev Info
         }
     }
 

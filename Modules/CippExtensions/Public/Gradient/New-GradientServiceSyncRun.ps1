@@ -1,8 +1,6 @@
 function New-GradientServiceSyncRun {
-    [CmdletBinding()]
-    param (
-        
-    )
+    [CmdletBinding(SupportsShouldProcess = $true)]
+    param ()
 
     $Table = Get-CIPPTable -TableName Extensionsconfig
     $Configuration = ((Get-CIPPAzDataTableEntity @Table).config | ConvertFrom-Json).Gradient
@@ -30,12 +28,12 @@ function New-GradientServiceSyncRun {
 
 
     Set-Location (Get-Item $PSScriptRoot).Parent.FullName
-    $ConvertTable = Import-Csv Conversiontable.csv
+    $ConvertTable = Import-Csv ConversionTable.csv
     $Table = Get-CIPPTable -TableName cachelicenses
     $LicenseTable = Get-CIPPTable -TableName ExcludedLicenses
     $ExcludedSkuList = Get-CIPPAzDataTableEntity @LicenseTable
 
-    $RawGraphRequest = $Tenants | ForEach-Object -Parallel { 
+    $RawGraphRequest = $Tenants | ForEach-Object -Parallel {
         $domainName = $_.defaultDomainName
         Import-Module '.\Modules\AzBobbyTables'
         Import-Module '.\Modules\CIPPCore'
@@ -45,17 +43,17 @@ function New-GradientServiceSyncRun {
             [PSCustomObject]@{
                 Tenant   = $domainName
                 Licenses = $Licrequest
-            } 
+            }
         } catch {
             [PSCustomObject]@{
                 Tenant   = $domainName
-                Licenses = @{ 
+                Licenses = @{
                     skuid         = "Could not connect to client: $($_.Exception.Message)"
                     skuPartNumber = 'Could not connect to client'
-                    consumedUnits = 0 
+                    consumedUnits = 0
                     prepaidUnits  = { Enabled = 0 }
                 }
-            } 
+            }
         }
     }
     $LicenseTable = foreach ($singlereq in $RawGraphRequest) {
@@ -67,7 +65,7 @@ function New-GradientServiceSyncRun {
                 if (!$PrettyName) { $PrettyName = $sku.skuPartNumber }
                 #Check if serviceID exists by SKUID in gradient
                 $ExistingService = (Invoke-RestMethod -Uri 'https://app.usegradient.com/api/vendor-api' -Method GET -Headers $GradientToken).data.skus | Where-Object name -EQ $PrettyName
-                Write-Host "New service: $($ExistingService.name) ID: $($ExistingService.id)"               
+                Write-Host "New service: $($ExistingService.name) ID: $($ExistingService.id)"
                 if (!$ExistingService) {
                     #Create service
                     $ServiceBody = [PSCustomObject]@{

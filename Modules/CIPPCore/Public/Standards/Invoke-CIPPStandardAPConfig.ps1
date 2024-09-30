@@ -4,6 +4,7 @@ function Invoke-CIPPStandardAPConfig {
     Internal
     #>
     param($Tenant, $Settings)
+    ##$Rerun -Type Standard -Tenant $Tenant -Settings $Settings 'APConfig'
 
     If ($Settings.remediate -eq $true) {
 

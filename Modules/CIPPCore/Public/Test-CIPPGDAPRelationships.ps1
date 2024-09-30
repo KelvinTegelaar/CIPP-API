@@ -93,10 +93,25 @@ function Test-CIPPGDAPRelationships {
         Write-LogMessage -user $ExecutingUser -API $APINAME -message "Failed to run GDAP check for $($TenantFilter): $($ErrorMessage.NormalizedError)" -Sev 'Error' -LogData $ErrorMessage
     }
 
-    return [PSCustomObject]@{
+    $GDAPRelationships = [PSCustomObject]@{
         GDAPIssues     = @($GDAPissues)
         MissingGroups  = @($MissingGroups)
         Memberships    = @($SAMUserMemberships)
         CIPPGroupCount = $CIPPGroupCount
     }
+
+    $Table = Get-CIPPTable -TableName AccessChecks
+    $Data = Get-CIPPAzDataTableEntity @Table -Filter "PartitionKey eq 'AccessCheck' and RowKey eq 'GDAPRelationships'"
+    if ($Data) {
+        $Data.Data = [string](ConvertTo-Json -InputObject $GDAPRelationships -Depth 10 -Compress)
+    } else {
+        $Data = @{
+            PartitionKey = 'AccessCheck'
+            RowKey       = 'GDAPRelationships'
+            Data         = [string](ConvertTo-Json -InputObject $GDAPRelationships -Depth 10 -Compress)
+        }
+    }
+    Add-CIPPAzDataTableEntity @Table -Entity $Data -Force
+
+    return $GDAPRelationships
 }

@@ -16,7 +16,7 @@ function Invoke-CIPPStandardsharingDomainRestriction {
             "highimpact"
             "CIS"
         ADDEDCOMPONENT
-            {"type":"Select","name":"standards.sharingDomainRestriction.Mode","label":"Limit external sharing by domains","values":[{"label":"Off","value":"none"},{"label":"Restirct sharing to specific domains","value":"allowList"},{"label":"Block sharing to specific domains","value":"blockList"}]}
+            {"type":"Select","name":"standards.sharingDomainRestriction.Mode","label":"Limit external sharing by domains","values":[{"label":"Off","value":"none"},{"label":"Restrict sharing to specific domains","value":"allowList"},{"label":"Block sharing to specific domains","value":"blockList"}]}
             {"type":"input","name":"standards.sharingDomainRestriction.Domains","label":"Domains to allow/block, comma separated"}
         IMPACT
             High Impact
@@ -30,6 +30,8 @@ function Invoke-CIPPStandardsharingDomainRestriction {
     #>
 
     param($Tenant, $Settings)
+    ##$Rerun -Type Standard -Tenant $Tenant -Settings $Settings 'sharingDomainRestriction'
+
     $CurrentState = New-GraphGetRequest -Uri 'https://graph.microsoft.com/beta/admin/sharepoint/settings' -tenantid $Tenant -AsApp $true
 
     if ($Settings.Mode -eq 'none' -or $null -eq $Settings.Mode) {

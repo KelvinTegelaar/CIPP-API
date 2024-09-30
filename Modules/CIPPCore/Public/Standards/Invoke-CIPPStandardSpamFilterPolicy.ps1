@@ -15,10 +15,14 @@ function Invoke-CIPPStandardSpamFilterPolicy {
         TAG
             "mediumimpact"
         ADDEDCOMPONENT
-            {"type":"Select","label":"Spam Action","name":"standards.SpamFilterPolicy.SpamAction","values":[{"label":"Move message to Junk Email folder","value":"MoveToJmf"},{"label":"Quarantine the message","value":"Quarantine"}]}
+            {"type":"number","label":"Bulk email threshold (Default 7)","name":"standards.SpamFilterPolicy.BulkThreshold","default":7}
+            {"type":"Select","label":"Spam Action","name":"standards.SpamFilterPolicy.SpamAction","values":[{"label":"Quarantine the message","value":"Quarantine"},{"label":"Move message to Junk Email folder","value":"MoveToJmf"}]}
             {"type":"Select","label":"Spam Quarantine Tag","name":"standards.SpamFilterPolicy.SpamQuarantineTag","values":[{"label":"AdminOnlyAccessPolicy","value":"AdminOnlyAccessPolicy"},{"label":"DefaultFullAccessPolicy","value":"DefaultFullAccessPolicy"},{"label":"DefaultFullAccessWithNotificationPolicy","value":"DefaultFullAccessWithNotificationPolicy"}]}
+            {"type":"Select","label":"High Confidence Spam Action","name":"standards.SpamFilterPolicy.HighConfidenceSpamAction","values":[{"label":"Quarantine the message","value":"Quarantine"},{"label":"Move message to Junk Email folder","value":"MoveToJmf"}]}
             {"type":"Select","label":"High Confidence Spam Quarantine Tag","name":"standards.SpamFilterPolicy.HighConfidenceSpamQuarantineTag","values":[{"label":"AdminOnlyAccessPolicy","value":"AdminOnlyAccessPolicy"},{"label":"DefaultFullAccessPolicy","value":"DefaultFullAccessPolicy"},{"label":"DefaultFullAccessWithNotificationPolicy","value":"DefaultFullAccessWithNotificationPolicy"}]}
+            {"type":"Select","label":"Bulk Spam Action","name":"standards.SpamFilterPolicy.BulkSpamAction","values":[{"label":"Quarantine the message","value":"Quarantine"},{"label":"Move message to Junk Email folder","value":"MoveToJmf"}]}
             {"type":"Select","label":"Bulk Quarantine Tag","name":"standards.SpamFilterPolicy.BulkQuarantineTag","values":[{"label":"AdminOnlyAccessPolicy","value":"AdminOnlyAccessPolicy"},{"label":"DefaultFullAccessPolicy","value":"DefaultFullAccessPolicy"},{"label":"DefaultFullAccessWithNotificationPolicy","value":"DefaultFullAccessWithNotificationPolicy"}]}
+            {"type":"Select","label":"Phish Spam Action","name":"standards.SpamFilterPolicy.PhishSpamAction","values":[{"label":"Quarantine the message","value":"Quarantine"},{"label":"Move message to Junk Email folder","value":"MoveToJmf"}]}
             {"type":"Select","label":"Phish Quarantine Tag","name":"standards.SpamFilterPolicy.PhishQuarantineTag","values":[{"label":"AdminOnlyAccessPolicy","value":"AdminOnlyAccessPolicy"},{"label":"DefaultFullAccessPolicy","value":"DefaultFullAccessPolicy"},{"label":"DefaultFullAccessWithNotificationPolicy","value":"DefaultFullAccessWithNotificationPolicy"}]}
             {"type":"Select","label":"High Confidence Phish Quarantine Tag","name":"standards.SpamFilterPolicy.HighConfidencePhishQuarantineTag","values":[{"label":"AdminOnlyAccessPolicy","value":"AdminOnlyAccessPolicy"},{"label":"DefaultFullAccessPolicy","value":"DefaultFullAccessPolicy"},{"label":"DefaultFullAccessWithNotificationPolicy","value":"DefaultFullAccessWithNotificationPolicy"}]}
         IMPACT
@@ -33,24 +37,26 @@ function Invoke-CIPPStandardSpamFilterPolicy {
     #>
 
     param($Tenant, $Settings)
+    ##$Rerun -Type Standard -Tenant $Tenant -Settings $Settings 'SpamFilterPolicy'
+
     $PolicyName = 'CIPP Default Spam Filter Policy'
 
     $CurrentState = New-ExoRequest -TenantId $Tenant -cmdlet 'Get-HostedContentFilterPolicy' |
-        Where-Object -Property Name -EQ $PolicyName |
-        Select-Object -Property *
+    Where-Object -Property Name -EQ $PolicyName |
+    Select-Object -Property *
 
-    $StateIsCorrect =   ($CurrentState.Name -eq $PolicyName) -and
-                        ($CurrentState.HighConfidenceSpamAction -eq 'Quarantine') -and
-                        ($CurrentState.HighConfidenceSpamQuarantineTag -eq $Settings.HighConfidenceSpamQuarantineTag) -and
+    $StateIsCorrect = ($CurrentState.Name -eq $PolicyName) -and
                         ($CurrentState.SpamAction -eq $Settings.SpamAction) -and
                         ($CurrentState.SpamQuarantineTag -eq $Settings.SpamQuarantineTag) -and
-                        ($CurrentState.PhishSpamAction -eq 'MoveToJmf') -and
-                        ($CurrentState.BulkSpamAction -eq 'MoveToJmf') -and
+                        ($CurrentState.HighConfidenceSpamAction -eq $Settings.HighConfidenceSpamAction) -and
+                        ($CurrentState.HighConfidenceSpamQuarantineTag -eq $Settings.HighConfidenceSpamQuarantineTag) -and
+                        ($CurrentState.BulkSpamAction -eq $Settings.BulkSpamAction) -and
                         ($CurrentState.BulkQuarantineTag -eq $Settings.BulkQuarantineTag) -and
+                        ($CurrentState.PhishSpamAction -eq $Settings.PhishSpamAction) -and
                         ($CurrentState.PhishQuarantineTag -eq $Settings.PhishQuarantineTag) -and
                         ($CurrentState.HighConfidencePhishAction -eq 'Quarantine') -and
                         ($CurrentState.HighConfidencePhishQuarantineTag -eq $Settings.HighConfidencePhishQuarantineTag) -and
-                        ($CurrentState.BulkThreshold -eq 7) -and
+                        ($CurrentState.BulkThreshold -eq $Settings.BulkThreshold) -and
                         ($CurrentState.QuarantineRetentionPeriod -eq 30) -and
                         ($CurrentState.IncreaseScoreWithNumericIps -eq 'On') -and
                         ($CurrentState.IncreaseScoreWithRedirectToOtherPort -eq 'On') -and
@@ -67,8 +73,8 @@ function Invoke-CIPPStandardSpamFilterPolicy {
     $AcceptedDomains = New-ExoRequest -TenantId $Tenant -cmdlet 'Get-AcceptedDomain'
 
     $RuleState = New-ExoRequest -TenantId $Tenant -cmdlet 'Get-HostedContentFilterRule' |
-        Where-Object -Property Name -EQ $PolicyName |
-        Select-Object -Property *
+    Where-Object -Property Name -EQ $PolicyName |
+    Select-Object -Property *
 
     $RuleStateIsCorrect = ($RuleState.Name -eq $PolicyName) -and
                           ($RuleState.HostedContentFilterPolicy -eq $PolicyName) -and
@@ -80,29 +86,29 @@ function Invoke-CIPPStandardSpamFilterPolicy {
             Write-LogMessage -API 'Standards' -Tenant $Tenant -message 'Spam Filter Policy already correctly configured' -sev Info
         } else {
             $cmdparams = @{
-                HighConfidenceSpamAction            = 'Quarantine'
-                HighConfidenceSpamQuarantineTag     = $Settings.HighConfidenceSpamQuarantineTag
-                SpamAction                          = $Settings.SpamAction
-                SpamQuarantineTag                   = $Settings.SpamQuarantineTag
-                PhishSpamAction                     = 'MoveToJmf'
-                BulkSpamAction                      = 'MoveToJmf'
-                BulkQuarantineTag                   = $Settings.BulkQuarantineTag
-                PhishQuarantineTag                  = $Settings.PhishQuarantineTag
-                HighConfidencePhishAction           = 'Quarantine'
-                HighConfidencePhishQuarantineTag    = $Settings.HighConfidencePhishQuarantineTag
-                BulkThreshold                       = 7
-                QuarantineRetentionPeriod           = 30
-                IncreaseScoreWithNumericIps         = 'On'
-                IncreaseScoreWithRedirectToOtherPort= 'On'
-                MarkAsSpamEmptyMessages             = 'On'
-                MarkAsSpamJavaScriptInHtml          = 'On'
-                MarkAsSpamSpfRecordHardFail         = 'On'
-                MarkAsSpamFromAddressAuthFail       = 'On'
-                MarkAsSpamNdrBackscatter            = 'On'
-                MarkAsSpamBulkMail                  = 'On'
-                InlineSafetyTipsEnabled             = $true
-                PhishZapEnabled                     = $true
-                SpamZapEnabled                      = $true
+                SpamAction                           = $Settings.SpamAction
+                SpamQuarantineTag                    = $Settings.SpamQuarantineTag
+                HighConfidenceSpamAction             = $Settings.HighConfidenceSpamAction
+                HighConfidenceSpamQuarantineTag      = $Settings.HighConfidenceSpamQuarantineTag
+                BulkSpamAction                       = $Settings.BulkSpamAction
+                BulkQuarantineTag                    = $Settings.BulkQuarantineTag
+                PhishSpamAction                      = $Settings.PhishSpamAction
+                PhishQuarantineTag                   = $Settings.PhishQuarantineTag
+                HighConfidencePhishAction            = 'Quarantine'
+                HighConfidencePhishQuarantineTag     = $Settings.HighConfidencePhishQuarantineTag
+                BulkThreshold                        = $Settings.BulkThreshold
+                QuarantineRetentionPeriod            = 30
+                IncreaseScoreWithNumericIps          = 'On'
+                IncreaseScoreWithRedirectToOtherPort = 'On'
+                MarkAsSpamEmptyMessages              = 'On'
+                MarkAsSpamJavaScriptInHtml           = 'On'
+                MarkAsSpamSpfRecordHardFail          = 'On'
+                MarkAsSpamFromAddressAuthFail        = 'On'
+                MarkAsSpamNdrBackscatter             = 'On'
+                MarkAsSpamBulkMail                   = 'On'
+                InlineSafetyTipsEnabled              = $true
+                PhishZapEnabled                      = $true
+                SpamZapEnabled                       = $true
             }
 
             if ($CurrentState.Name -eq $PolicyName) {
@@ -129,8 +135,8 @@ function Invoke-CIPPStandardSpamFilterPolicy {
         if ($RuleStateIsCorrect -eq $false) {
             $cmdparams = @{
                 HostedContentFilterPolicy = $PolicyName
-                Priority = 0
-                RecipientDomainIs = $AcceptedDomains.Name
+                Priority                  = 0
+                RecipientDomainIs         = $AcceptedDomains.Name
             }
 
             if ($RuleState.Name -eq $PolicyName) {

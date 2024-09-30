@@ -18,7 +18,7 @@ function Invoke-CIPPStandardDisableTNEF {
         IMPACT
             Low Impact
         POWERSHELLEQUIVALENT
-            Set-RemoteDomain -Identity 'Default' -TNEFEnabled $false
+            Set-RemoteDomain -Identity 'Default' -TNEFEnabled \$false
         RECOMMENDEDBY
         UPDATECOMMENTBLOCK
             Run the Tools\Update-StandardsComments.ps1 script to update this comment block
@@ -27,6 +27,8 @@ function Invoke-CIPPStandardDisableTNEF {
     #>
 
     param ($Tenant, $Settings)
+    ##$Rerun -Type Standard -Tenant $Tenant -Settings $Settings 'DisableTNEF'
+
     $CurrentState = New-ExoRequest -tenantid $Tenant -cmdlet 'Get-RemoteDomain' -cmdParams @{Identity = 'Default' }
 
     if ($Settings.remediate -eq $true) {

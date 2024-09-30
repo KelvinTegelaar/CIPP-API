@@ -17,6 +17,9 @@ function Invoke-CIPPStandardDisableVoice {
         ADDEDCOMPONENT
         IMPACT
             High Impact
+        POWERSHELLEQUIVALENT
+            Update-MgBetaPolicyAuthenticationMethodPolicyAuthenticationMethodConfiguration
+        RECOMMENDEDBY
         UPDATECOMMENTBLOCK
             Run the Tools\Update-StandardsComments.ps1 script to update this comment block
     .LINK
@@ -24,6 +27,8 @@ function Invoke-CIPPStandardDisableVoice {
     #>
 
     param($Tenant, $Settings)
+    ##$Rerun -Type Standard -Tenant $Tenant -Settings $Settings 'DisableVoice'
+
     $CurrentInfo = New-GraphGetRequest -Uri 'https://graph.microsoft.com/beta/policies/authenticationmethodspolicy/authenticationMethodConfigurations/Voice' -tenantid $Tenant
     $State = if ($CurrentInfo.state -eq 'enabled') { $true } else { $false }
 

@@ -24,13 +24,13 @@ Function Invoke-ListMFAUsers {
 
         $Rows = Get-CIPPAzDataTableEntity @Table | Where-Object -Property Timestamp -GT (Get-Date).AddHours(-2)
         if (!$Rows) {
-            $Queue = New-CippQueueEntry -Name 'MFA Users - All Tenants' -Link '/identity/reports/mfa-report?customerId=AllTenants'
+            $TenantList = Get-Tenants -IncludeErrors
+            $Queue = New-CippQueueEntry -Name 'MFA Users - All Tenants' -Link '/identity/reports/mfa-report?customerId=AllTenants' -TotalTasks ($TenantList | Measure-Object).Count
             Write-Information ($Queue | ConvertTo-Json)
-            #Push-OutputBinding -Name mfaqueue -Value $Queue.RowKey
             $GraphRequest = [PSCustomObject]@{
                 UPN = 'Loading data for all tenants. Please check back in a few minutes'
             }
-            $Batch = Get-Tenants -IncludeErrors | ForEach-Object {
+            $Batch = $TenantList | ForEach-Object {
                 $_ | Add-Member -NotePropertyName FunctionName -NotePropertyValue 'ListMFAUsersQueue'
                 $_ | Add-Member -NotePropertyName QueueId -NotePropertyValue $Queue.RowKey
                 $_
@@ -46,6 +46,15 @@ Function Invoke-ListMFAUsers {
                 Write-Host "Started permissions orchestration with ID = '$InstanceId'"
             }
         } else {
+            $Rows = foreach ($Row in $Rows) {
+                if ($Row.CAPolicies) {
+                    $Row.CAPolicies = try { $Row.CAPolicies | ConvertFrom-Json } catch { $Row.CAPolicies }
+                }
+                if ($Row.MFAMethods) {
+                    $Row.MFAMethods = try { $Row.MFAMethods | ConvertFrom-Json } catch { $Row.MFAMethods }
+                }
+                $Row
+            }
             $GraphRequest = $Rows
         }
     }

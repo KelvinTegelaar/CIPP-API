@@ -20,7 +20,7 @@ function Invoke-CIPPStandardEnableCustomerLockbox {
         IMPACT
             Low Impact
         POWERSHELLEQUIVALENT
-            Set-OrganizationConfig -CustomerLockBoxEnabled $true
+            Set-OrganizationConfig -CustomerLockBoxEnabled \$true
         RECOMMENDEDBY
             "CIS"
         UPDATECOMMENTBLOCK
@@ -30,6 +30,7 @@ function Invoke-CIPPStandardEnableCustomerLockbox {
     #>
 
     param($Tenant, $Settings)
+    ##$Rerun -Type Standard -Tenant $Tenant -Settings $Settings 'EnableCustomerLockbox'
 
     $CustomerLockboxStatus = (New-ExoRequest -tenantid $Tenant -cmdlet 'Get-OrganizationConfig').CustomerLockboxEnabled
     if ($Settings.remediate -eq $true) {

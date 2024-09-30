@@ -18,7 +18,7 @@ function Invoke-CIPPStandardEnablePronouns {
         IMPACT
             Low Impact
         POWERSHELLEQUIVALENT
-            Update-MgBetaAdminPeoplePronoun -IsEnabledInOrganization:$true
+            Update-MgBetaAdminPeoplePronoun -IsEnabledInOrganization:\$true
         RECOMMENDEDBY
         UPDATECOMMENTBLOCK
             Run the Tools\Update-StandardsComments.ps1 script to update this comment block
@@ -27,6 +27,7 @@ function Invoke-CIPPStandardEnablePronouns {
     #>
 
     param ($Tenant, $Settings)
+    ##$Rerun -Type Standard -Tenant $Tenant -Settings $Settings 'EnablePronouns'
 
     $Uri = 'https://graph.microsoft.com/v1.0/admin/people/pronouns'
     try {

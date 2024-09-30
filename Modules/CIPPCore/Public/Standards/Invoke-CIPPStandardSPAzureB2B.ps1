@@ -19,7 +19,7 @@ function Invoke-CIPPStandardSPAzureB2B {
         IMPACT
             Low Impact
         POWERSHELLEQUIVALENT
-            Set-SPOTenant -EnableAzureADB2BIntegration $true
+            Set-SPOTenant -EnableAzureADB2BIntegration \$true
         RECOMMENDEDBY
             "CIS 3.0"
         UPDATECOMMENTBLOCK
@@ -29,14 +29,16 @@ function Invoke-CIPPStandardSPAzureB2B {
     #>
 
     param($Tenant, $Settings)
+    ##$Rerun -Type Standard -Tenant $Tenant -Settings $Settings 'SPAzureB2B'
+
     $CurrentState = Get-CIPPSPOTenant -TenantFilter $Tenant |
-        Select-Object -Property EnableAzureADB2BIntegration
+    Select-Object -Property EnableAzureADB2BIntegration
 
     $StateIsCorrect = ($CurrentState.EnableAzureADB2BIntegration -eq $true)
 
     if ($Settings.remediate -eq $true) {
         if ($StateIsCorrect -eq $true) {
-            Write-LogMessage -API 'Standards' -Message 'SharePoint Azure B2B is already enabled' -Sev Info
+            Write-LogMessage -API 'Standards' -Tenant $Tenant -Message 'SharePoint Azure B2B is already enabled' -Sev Info
         } else {
             $Properties = @{
                 EnableAzureADB2BIntegration = $true
@@ -44,19 +46,19 @@ function Invoke-CIPPStandardSPAzureB2B {
 
             try {
                 Get-CIPPSPOTenant -TenantFilter $Tenant | Set-CIPPSPOTenant -Properties $Properties
-                Write-LogMessage -API 'Standards' -Message 'Successfully set the SharePoint Azure B2B to enabled' -Sev Info
+                Write-LogMessage -API 'Standards' -Tenant $Tenant -Message 'Successfully set the SharePoint Azure B2B to enabled' -Sev Info
             } catch {
                 $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
-                Write-LogMessage -API 'Standards' -Message "Failed to set the SharePoint Azure B2B to enabled. Error: $ErrorMessage" -Sev Error
+                Write-LogMessage -API 'Standards' -Tenant $Tenant -Message "Failed to set the SharePoint Azure B2B to enabled. Error: $ErrorMessage" -Sev Error
             }
         }
     }
 
     if ($Settings.alert -eq $true) {
         if ($StateIsCorrect -eq $true) {
-            Write-LogMessage -API 'Standards' -Message 'SharePoint Azure B2B is enabled' -Sev Info
+            Write-LogMessage -API 'Standards' -Tenant $Tenant -Message 'SharePoint Azure B2B is enabled' -Sev Info
         } else {
-            Write-LogMessage -API 'Standards' -Message 'SharePoint Azure B2B is not enabled' -Sev Alert
+            Write-LogMessage -API 'Standards' -Tenant $Tenant -Message 'SharePoint Azure B2B is not enabled' -Sev Alert
         }
     }
 

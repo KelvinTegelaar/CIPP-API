@@ -14,30 +14,30 @@ function New-CIPPBackup {
         'CIPP' {
             try {
                 $BackupTables = @(
-                    'bpa'
                     'Config'
                     'Domains'
                     'ExcludedLicenses'
                     'templates'
                     'standards'
                     'SchedulerConfig'
+                    'Extensions'
                 )
                 $CSVfile = foreach ($CSVTable in $BackupTables) {
                     $Table = Get-CippTable -tablename $CSVTable
-                    Get-CIPPAzDataTableEntity @Table | Select-Object *, @{l = 'table'; e = { $CSVTable } }
+                    Get-AzDataTableEntity @Table | Select-Object *, @{l = 'table'; e = { $CSVTable } } -ExcludeProperty DomainAnalyser
                 }
-                Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -message 'Created backup' -Sev 'Debug'
-                $CSVfile
                 $RowKey = 'CIPPBackup' + '_' + (Get-Date).ToString('yyyy-MM-dd-HHmm')
-                $entity = [PSCustomObject]@{
+                $CSVfile
+                $CSVFile = [string]($CSVfile | ConvertTo-Json -Compress -Depth 100)
+                $entity = @{
                     PartitionKey = 'CIPPBackup'
-                    RowKey       = $RowKey
+                    RowKey       = [string]$RowKey
                     TenantFilter = 'CIPPBackup'
-                    Backup       = [string]($CSVfile | ConvertTo-Json -Compress -Depth 100)
+                    Backup       = $CSVfile
                 }
                 $Table = Get-CippTable -tablename 'CIPPBackup'
                 try {
-                    $Result = Add-CIPPAzDataTableEntity @Table -entity $entity -Force
+                    $Result = Add-CIPPAzDataTableEntity @Table -Entity $entity -Force
                     Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -message 'Created CIPP Backup' -Sev 'Debug'
                 } catch {
                     $ErrorMessage = Get-CippException -Exception $_

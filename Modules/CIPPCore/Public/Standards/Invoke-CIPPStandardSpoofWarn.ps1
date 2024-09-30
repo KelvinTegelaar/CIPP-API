@@ -20,7 +20,7 @@ function Invoke-CIPPStandardSpoofWarn {
         IMPACT
             Low Impact
         POWERSHELLEQUIVALENT
-            et-ExternalInOutlook –Enabled $true or $false
+            et-ExternalInOutlook –Enabled \$true or \$false
         RECOMMENDEDBY
             "CIS"
         UPDATECOMMENTBLOCK
@@ -30,6 +30,7 @@ function Invoke-CIPPStandardSpoofWarn {
     #>
 
     param($Tenant, $Settings)
+    ##$Rerun -Type Standard -Tenant $Tenant -Settings $Settings 'SpoofWarn'
 
     $CurrentInfo = (New-ExoRequest -tenantid $Tenant -cmdlet 'Get-ExternalInOutlook')
 

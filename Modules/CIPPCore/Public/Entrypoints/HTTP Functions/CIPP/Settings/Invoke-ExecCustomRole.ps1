@@ -39,14 +39,26 @@ function Invoke-ExecCustomRole {
                 )
             } else {
                 $Body = foreach ($Role in $Body) {
-                    $Role.Permissions = $Role.Permissions | ConvertFrom-Json
+                    try {
+                        $Role.Permissions = $Role.Permissions | ConvertFrom-Json
+                    } catch {
+                        $Role.Permissions = ''
+                    }
                     if ($Role.AllowedTenants) {
-                        $Role.AllowedTenants = @($Role.AllowedTenants | ConvertFrom-Json)
+                        try {
+                            $Role.AllowedTenants = @($Role.AllowedTenants | ConvertFrom-Json)
+                        } catch {
+                            $Role.AllowedTenants = ''
+                        }
                     } else {
                         $Role | Add-Member -NotePropertyName AllowedTenants -NotePropertyValue @() -Force
                     }
                     if ($Role.BlockedTenants) {
-                        $Role.BlockedTenants = @($Role.BlockedTenants | ConvertFrom-Json)
+                        try {
+                            $Role.BlockedTenants = @($Role.BlockedTenants | ConvertFrom-Json)
+                        } catch {
+                            $Role.BlockedTenants = ''
+                        }
                     } else {
                         $Role | Add-Member -NotePropertyName BlockedTenants -NotePropertyValue @() -Force
                     }

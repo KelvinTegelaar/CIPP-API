@@ -48,9 +48,10 @@ function Get-GraphRequestList {
     #>
     [CmdletBinding()]
     Param(
-        [string]$TenantFilter = $env:TenantId,
+        [string]$TenantFilter = $env:TenantID,
         [Parameter(Mandatory = $true)]
         [string]$Endpoint,
+        [string]$nextLink,
         [hashtable]$Parameters = @{},
         [string]$QueueId,
         [string]$CippLink,
@@ -176,10 +177,12 @@ function Get-GraphRequestList {
                         }
 
                         try {
+                            $DefaultDomainName = $_.defaultDomainName
+                            Write-Host "Default domain name is $DefaultDomainName"
                             Get-GraphRequestList @GraphRequestParams | Select-Object *, @{l = 'Tenant'; e = { $_.defaultDomainName } }, @{l = 'CippStatus'; e = { 'Good' } }
                         } catch {
                             [PSCustomObject]@{
-                                Tenant     = $_.defaultDomainName
+                                Tenant     = $DefaultDomainName
                                 CippStatus = "Could not connect to tenant. $($_.Exception.message)"
                             }
                         }
@@ -220,7 +223,6 @@ function Get-GraphRequestList {
                                     ReverseTenantLookup         = $ReverseTenantLookup.IsPresent
                                 }
 
-                                #Push-OutputBinding -Name QueueItem -Value $QueueTenant
                             }
 
                             $InputObject = @{
@@ -271,8 +273,6 @@ function Get-GraphRequestList {
                                 }
                                 $InstanceId = Start-NewOrchestration -FunctionName 'CIPPOrchestrator' -InputObject ($InputObject | ConvertTo-Json -Depth 5 -Compress)
 
-                                #Push-OutputBinding -Name QueueItem -Value $QueueTenant
-
                                 [PSCustomObject]@{
                                     QueueMessage = ('Loading {0} rows for {1}. Please check back after the job completes' -f $Count, $TenantFilter)
                                     QueueId      = $Queue.RowKey
@@ -283,7 +283,17 @@ function Get-GraphRequestList {
                     }
 
                     if (!$QueueThresholdExceeded) {
-                        $GraphRequestResults = New-GraphGetRequest @GraphRequest -ErrorAction Stop | Select-Object *, @{l = 'Tenant'; e = { $TenantFilter } }, @{l = 'CippStatus'; e = { 'Good' } }
+                        #nextLink should ONLY be used in direct calls with manual pagination. It should not be used in queueing
+                        if ($nextLink) { $GraphRequest.uri = $nextLink }
+
+                        $GraphRequestResults = New-GraphGetRequest @GraphRequest -Caller 'Get-GraphRequestList' -ErrorAction Stop
+                        if ($GraphRequestResults.nextLink) {
+                            $Metadata['nextLink'] = $GraphRequestResults.nextLink | Select-Object -Last 1
+                            #GraphRequestResults is an array of objects, so we need to remove the last object before returning
+                            $GraphRequestResults = $GraphRequestResults | Select-Object -First ($GraphRequestResults.Count - 1)
+                        }
+                        $GraphRequestResults = $GraphRequestResults | Select-Object *, @{n = 'Tenant'; e = { $TenantFilter } }, @{n = 'CippStatus'; e = { 'Good' } }
+
                         if ($ReverseTenantLookup -and $GraphRequestResults) {
                             $ReverseLookupRequests = $GraphRequestResults.$ReverseTenantLookupProperty | Sort-Object -Unique | ForEach-Object {
                                 @{
@@ -292,7 +302,7 @@ function Get-GraphRequestList {
                                     method = 'GET'
                                 }
                             }
-                            $TenantInfo = New-GraphBulkRequest -Requests @($ReverseLookupRequests) -tenantid $env:TenantId -NoAuthCheck $true -asapp $true
+                            $TenantInfo = New-GraphBulkRequest -Requests @($ReverseLookupRequests) -tenantid $env:TenantID -NoAuthCheck $true -asapp $true
 
                             $GraphRequestResults | Select-Object @{n = 'TenantInfo'; e = { Get-GraphBulkResultByID -Results @($TenantInfo) -ID $_.$ReverseTenantLookupProperty } }, *
 

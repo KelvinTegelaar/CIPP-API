@@ -18,7 +18,7 @@ function Invoke-CIPPStandardAnonReportDisable {
         IMPACT
             Low Impact
         POWERSHELLEQUIVALENT
-            Update-MgBetaAdminReportSetting -BodyParameter @{displayConcealedNames = $true}
+            Update-MgBetaAdminReportSetting -BodyParameter @{displayConcealedNames = \$true}
         RECOMMENDEDBY
         UPDATECOMMENTBLOCK
             Run the Tools\Update-StandardsComments.ps1 script to update this comment block
@@ -27,6 +27,8 @@ function Invoke-CIPPStandardAnonReportDisable {
     #>
 
     param($Tenant, $Settings)
+    #$Rerun -Type Standard -Tenant $Tenant -API 'allowOTPTokens' -Settings $Settings
+
     $CurrentInfo = New-GraphGetRequest -Uri 'https://graph.microsoft.com/beta/admin/reportSettings' -tenantid $Tenant -AsApp $true
 
     If ($Settings.remediate -eq $true) {

@@ -19,7 +19,7 @@ function Invoke-CIPPStandardSPDisallowInfectedFiles {
         IMPACT
             Low Impact
         POWERSHELLEQUIVALENT
-            Set-SPOTenant -DisallowInfectedFileDownload $true
+            Set-SPOTenant -DisallowInfectedFileDownload \$true
         RECOMMENDEDBY
             "CIS 3.0"
         UPDATECOMMENTBLOCK
@@ -29,14 +29,16 @@ function Invoke-CIPPStandardSPDisallowInfectedFiles {
     #>
 
     param($Tenant, $Settings)
+    ##$Rerun -Type Standard -Tenant $Tenant -Settings $Settings 'SPDisallowInfectedFiles'
+
     $CurrentState = Get-CIPPSPOTenant -TenantFilter $Tenant |
-        Select-Object -Property DisallowInfectedFileDownload
+    Select-Object -Property DisallowInfectedFileDownload
 
     $StateIsCorrect = ($CurrentState.DisallowInfectedFileDownload -eq $true)
 
     if ($Settings.remediate -eq $true) {
         if ($StateIsCorrect -eq $true) {
-            Write-LogMessage -API 'Standards' -Message 'Downloading Sharepoint infected files are already disallowed.' -Sev Info
+            Write-LogMessage -API 'Standards' -tenant $tenant -Message 'Downloading Sharepoint infected files are already disallowed.' -Sev Info
         } else {
             $Properties = @{
                 DisallowInfectedFileDownload = $true
@@ -44,19 +46,19 @@ function Invoke-CIPPStandardSPDisallowInfectedFiles {
 
             try {
                 Get-CIPPSPOTenant -TenantFilter $Tenant | Set-CIPPSPOTenant -Properties $Properties
-                Write-LogMessage -API 'Standards' -Message 'Successfully disallowed downloading SharePoint infected files.' -Sev Info
+                Write-LogMessage -API 'Standards' -tenant $tenant -Message 'Successfully disallowed downloading SharePoint infected files.' -Sev Info
             } catch {
                 $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
-                Write-LogMessage -API 'Standards' -Message "Failed to disallow downloading Sharepoint infected files. Error: $ErrorMessage" -Sev Error
+                Write-LogMessage -API 'Standards' -tenant $tenant -Message "Failed to disallow downloading Sharepoint infected files. Error: $ErrorMessage" -Sev Error
             }
         }
     }
 
     if ($Settings.alert -eq $true) {
         if ($StateIsCorrect -eq $true) {
-            Write-LogMessage -API 'Standards' -Message 'Downloading Sharepoint infected files are disallowed.' -Sev Info
+            Write-LogMessage -API 'Standards' -tenant $tenant -Message 'Downloading Sharepoint infected files are disallowed.' -Sev Info
         } else {
-            Write-LogMessage -API 'Standards' -Message 'Downloading Sharepoint infected files are allowed.' -Sev Alert
+            Write-LogMessage -API 'Standards' -tenant $tenant -Message 'Downloading Sharepoint infected files are allowed.' -Sev Alert
         }
     }
 

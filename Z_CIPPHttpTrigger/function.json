@@ -30,12 +30,6 @@
     {
       "type": "queue",
       "direction": "out",
-      "name": "mailboxstats",
-      "queueName": "generalAllTenantQueue"
-    },
-    {
-      "type": "queue",
-      "direction": "out",
       "name": "gradientqueue",
       "queueName": "billqueue"
     },
@@ -44,12 +38,6 @@
       "direction": "out",
       "name": "alertqueue",
       "queueName": "alertqueue"
-    },
-    {
-      "type": "queue",
-      "direction": "out",
-      "name": "gdapqueue",
-      "queueName": "gdapqueue"
     },
     {
       "type": "queue",
