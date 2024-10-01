@@ -41,7 +41,7 @@ function Test-CIPPAuditLogRules {
     #Write-Information 'Getting data from Office 365 Management Activity API'
     #$Data = Get-CIPPAuditLogContent @AuditLogQuery
     Write-Information 'Getting audit records from Graph API'
-    $Data = Get-CippAuditLogSearchResults -TenantFilter $TenantFilter -SearchId $SearchId
+    $Data = Get-CippAuditLogSearchResults -TenantFilter $TenantFilter -QueryId $SearchId
     $LogCount = ($Data | Measure-Object).Count
     Write-Information "Logs to process: $LogCount"
     $Results.TotalLogs = $LogCount
