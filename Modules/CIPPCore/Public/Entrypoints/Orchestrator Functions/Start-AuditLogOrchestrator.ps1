@@ -12,7 +12,7 @@ function Start-AuditLogOrchestrator {
 
         # Round time down to nearest minute
         $Now = Get-Date
-        $StartTime = (Get-Date).AddSeconds(-$Now.Seconds).AddMinutes(-15)
+        $DefaultStartTime = (Get-Date).AddSeconds(-$Now.Seconds).AddMinutes(-15)
         $EndTime = $Now.AddSeconds(-$Now.Seconds)
 
         if (($AuditLogSearches | Measure-Object).Count -eq 0) {
@@ -36,6 +36,12 @@ function Start-AuditLogOrchestrator {
         Write-Information 'Audit Logs: Creating new searches'
         foreach ($Tenant in $TenantList) {
             try {
+                $LastSearch = Get-CippLastAuditLogSearch -TenantFilter $Tenant.defaultDomainName
+                if ($LastSearch) {
+                    $StartTime = $LastSearch.EndTime
+                } else {
+                    $StartTime = $DefaultStartTime
+                }
                 $null = New-CippAuditLogSearch -TenantFilter $Tenant.defaultDomainName -StartTime $StartTime -EndTime $EndTime -ProcessLogs
             } catch {
             }
