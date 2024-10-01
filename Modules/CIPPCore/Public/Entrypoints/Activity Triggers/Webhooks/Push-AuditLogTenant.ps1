@@ -21,7 +21,7 @@ function Push-AuditLogTenant {
             Write-Information ('Audit Logs: Found {0} searches, begin processing' -f $LogSearches.Count)
             foreach ($Search in $LogSearches) {
                 $SearchEntity = Get-CIPPAzDataTableEntity @LogSearchesTable -Filter "PartitionKey eq '$($TenantFilter)' and RowKey eq '$($Search.id)'"
-                $SearchEntity.Status = 'Processing'
+                $SearchEntity.CippStatus = 'Processing'
                 Add-CIPPAzDataTableEntity @LogSearchesTable -Entity $SearchEntity -Force
                 try {
                     # Test the audit log rules against the search results
