@@ -33,6 +33,7 @@ function Push-AuditLogTenant {
                     $SearchEntity | Add-Member -MemberType NoteProperty -Name TotalLogs -Value $AuditLogTest.TotalLogs
                 } catch {
                     $SearchEntity.CippStatus = 'Failed'
+                    Write-Information "Error processing audit log rules: $($_.Exception.Message)"
                     $SearchEntity | Add-Member -MemberType NoteProperty -Name Error -Value (Get-CippException -Exception $_ | ConvertTo-Json)
                 }
                 Add-CIPPAzDataTableEntity @LogSearchesTable -Entity $SearchEntity -Force
