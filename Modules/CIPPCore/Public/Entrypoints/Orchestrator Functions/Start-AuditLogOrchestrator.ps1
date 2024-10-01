@@ -40,8 +40,6 @@ function Start-AuditLogOrchestrator {
             try {
                 $null = New-CippAuditLogSearch -TenantFilter $Tenant.defaultDomainName -StartTime $StartTime -EndTime $EndTime -ProcessLogs
             } catch {
-                Write-LogMessage -API 'Audit Logs' -message 'Error creating audit log search' -sev Error -LogData (Get-CippException -Exception $_)
-                Write-Information ( 'Audit logs error {0} line {1} - {2}' -f $_.InvocationInfo.ScriptName, $_.InvocationInfo.ScriptLineNumber, $_.Exception.Message)
             }
         }
     } catch {

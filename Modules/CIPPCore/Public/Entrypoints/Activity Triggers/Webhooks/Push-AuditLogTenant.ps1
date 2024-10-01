@@ -3,6 +3,7 @@ function Push-AuditLogTenant {
 
     $SchedulerConfig = Get-CippTable -TableName 'SchedulerConfig'
     $ConfigTable = Get-CippTable -TableName 'WebhookRules'
+    $TenantFilter = $Item.defaultDomainName
 
     # Query CIPPURL for linking
     $CIPPURL = Get-CIPPAzDataTableEntity @SchedulerConfig -Filter "PartitionKey eq 'webhookcreation'" | Select-Object -First 1 -ExpandProperty CIPPURL
@@ -13,14 +14,14 @@ function Push-AuditLogTenant {
 
     $Configuration = $ConfigEntries | Where-Object { ($_.Tenants -match $TenantFilter -or $_.Tenants -match 'AllTenants') }
     if ($Configuration) {
-        $LogSearches = Get-CippAuditLogSearches -TenantFilter $Item.TenantFilter -ReadyToProcess
+        $LogSearches = Get-CippAuditLogSearches -TenantFilter $Item.defaultDomainName -ReadyToProcess
         foreach ($Search in $LogSearches) {
-            $SearchEntity = Get-CIPPAzDataTableEntity @LogSearchesTable -Filter "PartitionKey eq '$($Item.TenantFilter)' and RowKey eq '$($Search.id)'"
+            $SearchEntity = Get-CIPPAzDataTableEntity @LogSearchesTable -Filter "PartitionKey eq '$($Item.defaultDomainName)' and RowKey eq '$($Search.id)'"
             $SearchEntity.Status = 'Processing'
             Add-CIPPAzDataTableEntity @LogSearchesTable -Entity $SearchEntity -Force
             try {
                 # Test the audit log rules against the search results
-                $AuditLogTest = Test-CIPPAuditLogRules -TenantFilter $Item.TenantFilter -SearchId $Search.id
+                $AuditLogTest = Test-CIPPAuditLogRules -TenantFilter $Item.defaultDomainName -SearchId $Search.id
 
                 $SearchEntity.CippStatus = 'Completed'
                 $SearchEntity | Add-Member -MemberType NoteProperty -Name MatchedRules -Value [string](ConvertTo-Json -Compress -Depth 10 -InputObject $AuditLogTest.MatchedRules)
@@ -39,7 +40,7 @@ function Push-AuditLogTenant {
                     $Webhook = @{
                         Data         = $AuditLog
                         CIPPURL      = [string]$CIPPURL
-                        TenantFilter = $Item.TenantFilter
+                        TenantFilter = $Item.defaultDomainName
                     }
                     Invoke-CippWebhookProcessing @Webhook
                 }
