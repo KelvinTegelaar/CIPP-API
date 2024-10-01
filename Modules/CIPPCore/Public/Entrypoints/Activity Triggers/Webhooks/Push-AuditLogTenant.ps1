@@ -3,8 +3,8 @@ function Push-AuditLogTenant {
 
     $SchedulerConfig = Get-CippTable -TableName 'SchedulerConfig'
     $ConfigTable = Get-CippTable -TableName 'WebhookRules'
-    $Tenant = Get-Tenants -TenantFilter $Item.customerId -IncludeErrors
-    $TenantFilter = $Tenant.defaultDomainName
+    #$Tenant = Get-Tenants -TenantFilter $Item.customerId -IncludeErrors
+    $TenantFilter = $Item.TenantFilter
 
     Write-Information "Audit Logs: Processing $($TenantFilter)"
     # Query CIPPURL for linking

@@ -6,34 +6,35 @@ function Start-AuditLogOrchestrator {
     [CmdletBinding(SupportsShouldProcess = $true)]
     param()
     try {
-        #$webhookTable = Get-CIPPTable -tablename webhookTable
-        #$Webhooks = Get-CIPPAzDataTableEntity @webhookTable -Filter "Version eq '3'" | Where-Object { $_.Resource -match '^Audit' -and $_.Status -ne 'Disabled' }
-        #if (($Webhooks | Measure-Object).Count -eq 0) {
-        #    Write-Information 'No webhook subscriptions found. Exiting.'
-        #    return
-        #}
 
-        $StartTime = (Get-Date).AddMinutes(-15)
-        $EndTime = Get-Date
+        $AuditLogSearchesTable = Get-CIPPTable -TableName 'AuditLogSearches'
+        $AuditLogSearches = Get-CIPPAzDataTableEntity @AuditLogSearchesTable -Filter "CippStatus eq 'Pending'"
+        if (($AuditLogSearches | Measure-Object).Count -gt 0) {
+            Write-Information 'No audit log searches available'
+        } else {
+            #$webhookTable = Get-CIPPTable -tablename webhookTable
+            #$Webhooks = Get-CIPPAzDataTableEntity @webhookTable -Filter "Version eq '3'" | Where-Object { $_.Resource -match '^Audit' -and $_.Status -ne 'Disabled' }
+            #if (($Webhooks | Measure-Object).Count -eq 0) {
+            #    Write-Information 'No webhook subscriptions found. Exiting.'
+            #    return
+            #}
 
-        $TenantList = Get-Tenants -IncludeErrors
-        $Queue = New-CippQueueEntry -Name 'Audit Log Collection' -Reference 'AuditLogCollection' -TotalTasks ($TenantList | Measure-Object).Count
+            $StartTime = (Get-Date).AddMinutes(-15)
+            $EndTime = Get-Date
 
-        #$Batch = $Webhooks | Sort-Object -Property PartitionKey -Unique | Select-Object @{Name = 'TenantFilter'; Expression = { $_.PartitionKey } }, @{Name = 'QueueId'; Expression = { $Queue.RowKey } }, @{Name = 'FunctionName'; Expression = { 'AuditLogTenant' } }, @{Name = 'StartTime'; Expression = { $StartTime } }, @{Name = 'EndTime'; Expression = { $EndTime } }
-        $InputObject = [PSCustomObject]@{
-            OrchestratorName = 'AuditLogs'
-            QueueFunction    = @{
-                FunctionName    = 'GetTenants'
-                TenantParams    = @{
-                    IncludeErrors = $true
-                }
-                QueueId         = $Queue.RowKey
-                DurableFunction = 'AuditLogTenant'
+            $TenantList = Get-Tenants -IncludeErrors
+            $Queue = New-CippQueueEntry -Name 'Audit Log Collection' -Reference 'AuditLogCollection' -TotalTasks ($AuditLogSearches).Count
+
+            $Batch = $AuditLogSearches | Sort-Object -Property Tenant -Unique | Select-Object @{Name = 'TenantFilter'; Expression = { $_.Tenant } }, @{Name = 'QueueId'; Expression = { $Queue.RowKey } }, @{Name = 'FunctionName'; Expression = { 'AuditLogTenant' } }
+
+            $InputObject = [PSCustomObject]@{
+                OrchestratorName = 'AuditLogs'
+                Batch            = @( $Batch )
+                SkipLog          = $true
             }
-            SkipLog          = $true
-        }
-        if ($PSCmdlet.ShouldProcess('Start-AuditLogOrchestrator', 'Starting Audit Log Polling')) {
-            Start-NewOrchestration -FunctionName 'CIPPOrchestrator' -InputObject ($InputObject | ConvertTo-Json -Depth 5 -Compress)
+            if ($PSCmdlet.ShouldProcess('Start-AuditLogOrchestrator', 'Starting Audit Log Polling')) {
+                Start-NewOrchestration -FunctionName 'CIPPOrchestrator' -InputObject ($InputObject | ConvertTo-Json -Depth 5 -Compress)
+            }
         }
 
         foreach ($Tenant in $TenantList) {
