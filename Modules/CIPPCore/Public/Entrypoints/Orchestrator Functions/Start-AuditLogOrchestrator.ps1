@@ -9,8 +9,12 @@ function Start-AuditLogOrchestrator {
 
         $AuditLogSearchesTable = Get-CIPPTable -TableName 'AuditLogSearches'
         $AuditLogSearches = Get-CIPPAzDataTableEntity @AuditLogSearchesTable -Filter "CippStatus eq 'Pending'"
-        $StartTime = (Get-Date).AddMinutes(-15)
-        $EndTime = Get-Date
+
+        # Round time down to nearest minute
+        $Now = Get-Date
+        $StartTime = (Get-Date).AddSeconds(-$Now.Seconds).AddMinutes(-15)
+        $EndTime = $Now.AddSeconds(-$Now.Seconds)
+
         if (($AuditLogSearches | Measure-Object).Count -eq 0) {
             Write-Information 'No audit log searches available'
         } else {
