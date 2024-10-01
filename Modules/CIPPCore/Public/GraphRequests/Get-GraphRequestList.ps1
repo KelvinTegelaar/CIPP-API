@@ -95,11 +95,12 @@ function Get-GraphRequestList {
     $Count = 0
     if ($TenantFilter -ne 'AllTenants') {
         $GraphRequest = @{
-            uri           = $GraphQuery.ToString()
-            tenantid      = $TenantFilter
-            ComplexFilter = $true
+            uri      = $GraphQuery.ToString()
+            tenantid = $TenantFilter
         }
-
+        if ($Parameters.'$filter') {
+            $GraphRequest.ComplexFilter = $true
+        }
         if ($NoPagination.IsPresent) {
             $GraphRequest.noPagination = $NoPagination.IsPresent
         }
