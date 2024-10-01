@@ -34,10 +34,10 @@ function Test-CIPPAuditLogRules {
             LogType    = $_.Type
         }
     }
-    $AuditLogQuery = @{
-        TenantFilter = $TenantFilter
-        ContentUri   = $ContentUri
-    }
+    #$AuditLogQuery = @{
+    #    TenantFilter = $TenantFilter
+    #    ContentUri   = $ContentUri
+    #}
     #Write-Information 'Getting data from Office 365 Management Activity API'
     #$Data = Get-CIPPAuditLogContent @AuditLogQuery
     Write-Information 'Getting audit records from Graph API'

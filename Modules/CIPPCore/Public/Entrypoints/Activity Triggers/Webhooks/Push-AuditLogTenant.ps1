@@ -33,7 +33,7 @@ function Push-AuditLogTenant {
                     $SearchEntity | Add-Member -MemberType NoteProperty -Name TotalLogs -Value $AuditLogTest.TotalLogs
                 } catch {
                     $SearchEntity.CippStatus = 'Failed'
-                    $SearchEntity | Add-Member -MemberType NoteProperty -Name Error -Value $_.InvocationInfo.PositionMessage
+                    $SearchEntity | Add-Member -MemberType NoteProperty -Name Error -Value (Get-CippException -Exception $_ | ConvertTo-Json)
                 }
                 Add-CIPPAzDataTableEntity @LogSearchesTable -Entity $SearchEntity -Force
                 $DataToProcess = ($AuditLogTest).DataToProcess
