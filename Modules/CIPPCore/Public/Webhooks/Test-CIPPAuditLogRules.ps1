@@ -4,10 +4,7 @@ function Test-CIPPAuditLogRules {
         [Parameter(Mandatory = $true)]
         $TenantFilter,
         [Parameter(Mandatory = $true)]
-        $ContentUri,
-        [Parameter(Mandatory = $true)]
-        [ValidateSet('Audit.AzureActiveDirectory', 'Audit.Exchange')]
-        $LogType
+        $SearchId
     )
 
     $Results = [PSCustomObject]@{
@@ -41,13 +38,15 @@ function Test-CIPPAuditLogRules {
         TenantFilter = $TenantFilter
         ContentUri   = $ContentUri
     }
-    Write-Information 'Getting data from Office 365 Management Activity API'
-    $Data = Get-CIPPAuditLogContent @AuditLogQuery
+    #Write-Information 'Getting data from Office 365 Management Activity API'
+    #$Data = Get-CIPPAuditLogContent @AuditLogQuery
+    Write-Information 'Getting audit records from Graph API'
+    $Data = Get-CippAuditLogSearchResults -TenantFilter $TenantFilter -SearchId $SearchId
     $LogCount = ($Data | Measure-Object).Count
     Write-Information "Logs to process: $LogCount"
     $Results.TotalLogs = $LogCount
     if ($LogCount -gt 0) {
-        $PreProcessedData = $Data | Select-Object *, CIPPAction, CIPPClause, CIPPGeoLocation, CIPPBadRepIP, CIPPHostedIP, CIPPIPDetected, CIPPLocationInfo, CIPPExtendedProperties, CIPPDeviceProperties, CIPPParameters, CIPPModifiedProperties -ErrorAction SilentlyContinue
+        $PreProcessedData = $Data.auditData | Select-Object *, CIPPAction, CIPPClause, CIPPGeoLocation, CIPPBadRepIP, CIPPHostedIP, CIPPIPDetected, CIPPLocationInfo, CIPPExtendedProperties, CIPPDeviceProperties, CIPPParameters, CIPPModifiedProperties -ErrorAction SilentlyContinue
         $LocationTable = Get-CIPPTable -TableName 'knownlocationdb'
         $ProcessedData = foreach ($Data in $PreProcessedData) {
             try {

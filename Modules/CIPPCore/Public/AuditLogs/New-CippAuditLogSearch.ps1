@@ -28,6 +28,8 @@ function New-CippAuditLogSearch {
         The object IDs to filter on.
     .PARAMETER AdministrativeUnitFilters
         The administrative units to filter on.
+    .PARAMETER ProcessLogs
+        Store the search in the CIPP AuditLogSearches table for alert processing.
     #>
     [CmdletBinding(SupportsShouldProcess = $true)]
     param(
@@ -117,7 +119,9 @@ function New-CippAuditLogSearch {
         [Parameter()]
         [string[]]$ObjectIdFilters,
         [Parameter()]
-        [string[]]$AdministrativeUnitFilters
+        [string[]]$AdministrativeUnitFilters,
+        [Parameter()]
+        [switch]$ProcessLogs
     )
 
     $SearchParams = @{
@@ -151,6 +155,22 @@ function New-CippAuditLogSearch {
     }
 
     if ($PSCmdlet.ShouldProcess('Create a new audit log search for tenant ' + $TenantFilter)) {
-        New-GraphPOSTRequest -uri 'https://graph.microsoft.com/beta/security/auditLog/queries' -body ($SearchParams | ConvertTo-Json -Compress) -tenantid $TenantFilter -AsApp $true
+        $Query = New-GraphPOSTRequest -uri 'https://graph.microsoft.com/beta/security/auditLog/queries' -body ($SearchParams | ConvertTo-Json -Compress) -tenantid $TenantFilter -AsApp $true
+
+        if ($ProcessLogs.IsPresent) {
+            $Entity = [PSCustomObject]@{
+                PartitionKey = [string]'Search'
+                RowKey       = [string]$Query.id
+                Tenant       = [string]$TenantFilter
+                DisplayName  = [string]$DisplayName
+                StartTime    = [datetime]$StartTime.ToUniversalTime()
+                EndTime      = [datetime]$EndTime.ToUniversalTime()
+                Query        = [string]($Query | ConvertTo-Json -Compress)
+                CippStatus   = [string]'Pending'
+            }
+            $Table = Get-CIPPTable -TableName 'AuditLogSearches'
+            Add-CIPPAzDataTableEntity @Table -Entity $Entity -Force | Out-Null
+        }
+        return $Query
     }
 }

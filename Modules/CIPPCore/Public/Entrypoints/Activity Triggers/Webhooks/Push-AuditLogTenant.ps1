@@ -1,78 +1,49 @@
 function Push-AuditLogTenant {
     Param($Item)
 
-    # Get Table contexts
-    $AuditBundleTable = Get-CippTable -tablename 'AuditLogBundles'
     $SchedulerConfig = Get-CippTable -TableName 'SchedulerConfig'
-    $WebhookTable = Get-CippTable -tablename 'webhookTable'
     $ConfigTable = Get-CippTable -TableName 'WebhookRules'
 
     # Query CIPPURL for linking
     $CIPPURL = Get-CIPPAzDataTableEntity @SchedulerConfig -Filter "PartitionKey eq 'webhookcreation'" | Select-Object -First 1 -ExpandProperty CIPPURL
 
-    # Get all webhooks for the tenant
-    $Webhooks = Get-CIPPAzDataTableEntity @WebhookTable -Filter "PartitionKey eq '$($Item.TenantFilter)' and Version eq '3'" | Where-Object { $_.Resource -match '^Audit' }
-
     # Get webhook rules
     $ConfigEntries = Get-CIPPAzDataTableEntity @ConfigTable
+    $LogSearchesTable = Get-CippTable -TableName 'AuditLogSearches'
 
-    # Date filter for existing bundles
-    $LastHour = (Get-Date).AddHours(-1).ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ss')
+    $Configuration = $ConfigEntries | Where-Object { ($_.Tenants -match $TenantFilter -or $_.Tenants -match 'AllTenants') }
+    if ($Configuration) {
+        $LogSearches = Get-CippAuditLogSearches -TenantFilter $Item.TenantFilter -ReadyToProcess
+        foreach ($Search in $LogSearches) {
+            $SearchEntity = Get-CIPPAzDataTableEntity @LogSearchesTable -Filter "PartitionKey eq '$($Item.TenantFilter)' and RowKey eq '$($Search.id)'"
+            $SearchEntity.Status = 'Processing'
+            Add-CIPPAzDataTableEntity @LogSearchesTable -Entity $SearchEntity -Force
+            try {
+                # Test the audit log rules against the search results
+                $AuditLogTest = Test-CIPPAuditLogRules -TenantFilter $Item.TenantFilter -SearchId $Search.id
 
-    $NewBundles = [System.Collections.Generic.List[object]]::new()
-    foreach ($Webhook in $Webhooks) {
-        # only process webhooks that are configured in the webhookrules table
-        $Configuration = $ConfigEntries | Where-Object { ($_.Tenants -match $TenantFilter -or $_.Tenants -match 'AllTenants') }
-        if ($Configuration.Type -notcontains $Webhook.Resource) {
-            continue
-        }
-
-        $TenantFilter = $Webhook.PartitionKey
-        $LogType = $Webhook.Resource
-        Write-Information "Querying for $LogType on $TenantFilter"
-        $ContentBundleQuery = @{
-            TenantFilter = $TenantFilter
-            ContentType  = $LogType
-            StartTime    = $Item.StartTime
-            EndTime      = $Item.EndTime
-        }
-        try {
-            $LogBundles = Get-CIPPAuditLogContentBundles @ContentBundleQuery
-            $ExistingBundles = Get-CIPPAzDataTableEntity @AuditBundleTable -Filter "PartitionKey eq '$($Item.TenantFilter)' and ContentType eq '$LogType' and Timestamp ge datetime'$($LastHour)'"
-
-            foreach ($Bundle in $LogBundles) {
-                if ($ExistingBundles.RowKey -notcontains $Bundle.contentId) {
-                    $NewBundles.Add([PSCustomObject]@{
-                            PartitionKey      = $TenantFilter
-                            RowKey            = $Bundle.contentId
-                            DefaultDomainName = $TenantFilter
-                            ContentType       = $Bundle.contentType
-                            ContentUri        = $Bundle.contentUri
-                            ContentCreated    = $Bundle.contentCreated
-                            ContentExpiration = $Bundle.contentExpiration
-                            CIPPURL           = [string]$CIPPURL
-                            ProcessingStatus  = 'Pending'
-                            MatchedRules      = ''
-                            MatchedLogs       = 0
-                        })
+                $SearchEntity.CippStatus = 'Completed'
+                $SearchEntity | Add-Member -MemberType NoteProperty -Name MatchedRules -Value [string](ConvertTo-Json -Compress -Depth 10 -InputObject $AuditLogTest.MatchedRules)
+                $SearchEntity | Add-Member -MemberType NoteProperty -Name MatchedLogs -Value $AuditLogTest.MatchedLogs
+                $SearchEntity | Add-Member -MemberType NoteProperty -Name TotalLogs -Value $AuditLogTest.TotalLogs
+            } catch {
+                $SearchEntity.CippStatus = 'Failed'
+                $SearchEntity | Add-Member -MemberType NoteProperty -Name Error -Value $_.InvocationInfo.PositionMessage
+            }
+            Add-CIPPAzDataTableEntity @LogSearchesTable -Entity $SearchEntity -Force
+            $DataToProcess = ($AuditLogTest).DataToProcess
+            Write-Information "Audit Logs: Data to process found: $($DataToProcess.count) items"
+            if ($DataToProcess) {
+                foreach ($AuditLog in $DataToProcess) {
+                    Write-Information "Processing $($AuditLog.operation)"
+                    $Webhook = @{
+                        Data         = $AuditLog
+                        CIPPURL      = [string]$CIPPURL
+                        TenantFilter = $Item.TenantFilter
+                    }
+                    Invoke-CippWebhookProcessing @Webhook
                 }
             }
-        } catch {
-            Write-Information "Could not get audit log content bundles for $TenantFilter - $LogType, $($_.Exception.Message)"
         }
-    }
-
-    if (($NewBundles | Measure-Object).Count -gt 0) {
-        Add-CIPPAzDataTableEntity @AuditBundleTable -Entity $NewBundles -Force
-        Write-Information ($NewBundles | ConvertTo-Json -Depth 5 -Compress)
-
-        $Batch = $NewBundles | Select-Object @{Name = 'ContentId'; Expression = { $_.RowKey } }, @{Name = 'TenantFilter'; Expression = { $_.PartitionKey } }, @{Name = 'FunctionName'; Expression = { 'AuditLogBundleProcessing' } }
-        $InputObject = [PSCustomObject]@{
-            OrchestratorName = 'AuditLogs'
-            Batch            = @($Batch)
-            SkipLog          = $true
-        }
-        $InstanceId = Start-NewOrchestration -FunctionName 'CIPPOrchestrator' -InputObject ($InputObject | ConvertTo-Json -Depth 5 -Compress)
-        Write-Host "Started orchestration with ID = '$InstanceId'"
     }
 }
