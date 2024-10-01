@@ -17,7 +17,7 @@
   {
     "Command": "Start-AuditLogOrchestrator",
     "Description": "Orchestrator to process audit logs",
-    "Cron": "0 */15 * * * *",
+    "Cron": "0 */30 * * * *",
     "Priority": 2,
     "RunOnProcessor": true,
     "PreferredProcessor": "auditlog"
