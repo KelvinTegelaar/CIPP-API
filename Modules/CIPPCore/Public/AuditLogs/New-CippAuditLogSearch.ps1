@@ -157,7 +157,7 @@ function New-CippAuditLogSearch {
     if ($PSCmdlet.ShouldProcess('Create a new audit log search for tenant ' + $TenantFilter)) {
         $Query = New-GraphPOSTRequest -uri 'https://graph.microsoft.com/beta/security/auditLog/queries' -body ($SearchParams | ConvertTo-Json -Compress) -tenantid $TenantFilter -AsApp $true
 
-        if ($ProcessLogs.IsPresent) {
+        if ($ProcessLogs.IsPresent -and $Query.id) {
             $Entity = [PSCustomObject]@{
                 PartitionKey = [string]'Search'
                 RowKey       = [string]$Query.id

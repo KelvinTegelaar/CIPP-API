@@ -9,19 +9,11 @@ function Start-AuditLogOrchestrator {
 
         $AuditLogSearchesTable = Get-CIPPTable -TableName 'AuditLogSearches'
         $AuditLogSearches = Get-CIPPAzDataTableEntity @AuditLogSearchesTable -Filter "CippStatus eq 'Pending'"
-        if (($AuditLogSearches | Measure-Object).Count -gt 0) {
+        $StartTime = (Get-Date).AddMinutes(-15)
+        $EndTime = Get-Date
+        if (($AuditLogSearches | Measure-Object).Count -eq 0) {
             Write-Information 'No audit log searches available'
         } else {
-            #$webhookTable = Get-CIPPTable -tablename webhookTable
-            #$Webhooks = Get-CIPPAzDataTableEntity @webhookTable -Filter "Version eq '3'" | Where-Object { $_.Resource -match '^Audit' -and $_.Status -ne 'Disabled' }
-            #if (($Webhooks | Measure-Object).Count -eq 0) {
-            #    Write-Information 'No webhook subscriptions found. Exiting.'
-            #    return
-            #}
-
-            $StartTime = (Get-Date).AddMinutes(-15)
-            $EndTime = Get-Date
-
             $TenantList = Get-Tenants -IncludeErrors
             $Queue = New-CippQueueEntry -Name 'Audit Log Collection' -Reference 'AuditLogCollection' -TotalTasks ($AuditLogSearches).Count
 
@@ -29,7 +21,7 @@ function Start-AuditLogOrchestrator {
 
             $InputObject = [PSCustomObject]@{
                 OrchestratorName = 'AuditLogs'
-                Batch            = @( $Batch )
+                Batch            = @($Batch)
                 SkipLog          = $true
             }
             if ($PSCmdlet.ShouldProcess('Start-AuditLogOrchestrator', 'Starting Audit Log Polling')) {
@@ -37,6 +29,7 @@ function Start-AuditLogOrchestrator {
             }
         }
 
+        Write-Information 'Audit Logs: Creating new searches'
         foreach ($Tenant in $TenantList) {
             try {
                 $null = New-CippAuditLogSearch -TenantFilter $Tenant.defaultDomainName -StartTime $StartTime -EndTime $EndTime -ProcessLogs
