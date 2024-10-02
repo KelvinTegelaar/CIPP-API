@@ -6,10 +6,9 @@ function Start-AuditLogOrchestrator {
     [CmdletBinding(SupportsShouldProcess = $true)]
     param()
     try {
-
         $AuditLogSearchesTable = Get-CIPPTable -TableName 'AuditLogSearches'
         $AuditLogSearches = Get-CIPPAzDataTableEntity @AuditLogSearchesTable -Filter "CippStatus eq 'Pending'"
-
+        $TenantList = Get-Tenants -IncludeErrors
         # Round time down to nearest minute
         $Now = Get-Date
         $DefaultStartTime = $Now.AddSeconds(-$Now.Seconds).AddHours(-1)
@@ -18,9 +17,7 @@ function Start-AuditLogOrchestrator {
         if (($AuditLogSearches | Measure-Object).Count -eq 0) {
             Write-Information 'No audit log searches available'
         } else {
-            $TenantList = Get-Tenants -IncludeErrors
             $Queue = New-CippQueueEntry -Name 'Audit Log Collection' -Reference 'AuditLogCollection' -TotalTasks ($AuditLogSearches).Count
-
             $Batch = $AuditLogSearches | Sort-Object -Property Tenant -Unique | Select-Object @{Name = 'TenantFilter'; Expression = { $_.Tenant } }, @{Name = 'QueueId'; Expression = { $Queue.RowKey } }, @{Name = 'FunctionName'; Expression = { 'AuditLogTenant' } }
 
             $InputObject = [PSCustomObject]@{
@@ -43,7 +40,7 @@ function Start-AuditLogOrchestrator {
                     $StartTime = $DefaultStartTime
                 }
                 $NewSearch = New-CippAuditLogSearch -TenantFilter $Tenant.defaultDomainName -StartTime $StartTime -EndTime $EndTime -ProcessLogs
-                Write-Information "Created audit log search $($Tenant.defaultDomainName) - $($NewSearch|ConvertTo-Json -Depth 5 -Compress)"
+                Write-Information "Created audit log search $($Tenant.defaultDomainName) - $($NewSearch.displayName)"
             } catch {
                 Write-Information "Error creating audit log search $($Tenant.defaultDomainName) - $($_.Exception.Message)"
             }
