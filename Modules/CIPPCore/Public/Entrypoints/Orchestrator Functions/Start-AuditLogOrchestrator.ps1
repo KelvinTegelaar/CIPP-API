@@ -11,8 +11,8 @@ function Start-AuditLogOrchestrator {
         $TenantList = Get-Tenants -IncludeErrors
         # Round time down to nearest minute
         $Now = Get-Date
-        $DefaultStartTime = $Now.AddSeconds(-$Now.Seconds).AddHours(-1)
-        $EndTime = $Now.AddSeconds(-$Now.Seconds).AddMinutes(-30)
+        $DefaultStartTime = $Now.AddSeconds(-$Now.Seconds).AddMinutes(-30)
+        $EndTime = $Now.AddSeconds(-$Now.Seconds)
 
         if (($AuditLogSearches | Measure-Object).Count -eq 0) {
             Write-Information 'No audit log searches available'
@@ -33,12 +33,6 @@ function Start-AuditLogOrchestrator {
         Write-Information 'Audit Logs: Creating new searches'
         foreach ($Tenant in $TenantList) {
             try {
-                $LastSearch = Get-CippLastAuditLogSearch -TenantFilter $Tenant.defaultDomainName
-                if ($LastSearch -and $LastSearch.EndTime -le $DefaultStartTime) {
-                    $StartTime = $LastSearch.EndTime.DateTime
-                } else {
-                    $StartTime = $DefaultStartTime
-                }
                 $NewSearch = New-CippAuditLogSearch -TenantFilter $Tenant.defaultDomainName -StartTime $StartTime -EndTime $EndTime -ProcessLogs
                 Write-Information "Created audit log search $($Tenant.defaultDomainName) - $($NewSearch.displayName)"
             } catch {
