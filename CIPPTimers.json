@@ -20,7 +20,8 @@
     "Cron": "0 */15 * * * *",
     "Priority": 2,
     "RunOnProcessor": true,
-    "PreferredProcessor": "auditlog"
+    "PreferredProcessor": "auditlog",
+    "IsSystem": true
   },
   {
     "Command": "Start-WebhookOrchestrator",
