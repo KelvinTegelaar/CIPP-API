@@ -42,7 +42,8 @@ function Start-AuditLogOrchestrator {
                 } else {
                     $StartTime = $DefaultStartTime
                 }
-                $null = New-CippAuditLogSearch -TenantFilter $Tenant.defaultDomainName -StartTime $StartTime -EndTime $EndTime -ProcessLogs
+                $NewSearch = New-CippAuditLogSearch -TenantFilter $Tenant.defaultDomainName -StartTime $StartTime -EndTime $EndTime -ProcessLogs
+                Write-Information "Created audit log search $($Tenant.defaultDomainName) - $($NewSearch|ConvertTo-Json -Depth 5 -Compress)"
             } catch {
                 Write-Information "Error creating audit log search $($Tenant.defaultDomainName) - $($_.Exception.Message)"
             }
