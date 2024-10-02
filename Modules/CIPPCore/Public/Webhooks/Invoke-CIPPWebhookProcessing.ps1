@@ -10,6 +10,14 @@ function Invoke-CippWebhookProcessing {
         $ExecutingUser
     )
 
+    $AuditLogTable = Get-CIPPTable -TableName 'AuditLogs'
+    $AuditLog = Get-CIPPAzDataTableEntity @AuditLogTable -Filter "PartitionKey eq '$TenantFilter' and RowKey eq '$($Data.Id)'"
+
+    if ($AuditLog) {
+        Write-Host "Audit Log already exists for $($Data.Id). Skipping processing."
+        return
+    }
+
     $Tenant = Get-Tenants -IncludeErrors | Where-Object { $_.defaultDomainName -eq $TenantFilter }
     Write-Host "Received data. Our Action List is $($data.CIPPAction)"
 
@@ -71,6 +79,7 @@ function Invoke-CippWebhookProcessing {
         JSONContent  = $JsonContent
         TenantFilter = $TenantFilter
         TableName    = 'AuditLogs'
+        RowKey       = $Data.Id
     }
     $LogId = Send-CIPPAlert @CIPPAlert
 

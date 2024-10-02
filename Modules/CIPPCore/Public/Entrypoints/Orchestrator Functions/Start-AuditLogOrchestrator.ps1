@@ -11,6 +11,7 @@ function Start-AuditLogOrchestrator {
 
         $ConfigTable = Get-CippTable -TableName 'WebhookRules'
         $ConfigEntries = Get-CIPPAzDataTableEntity @ConfigTable
+
         $TenantList = Get-Tenants -IncludeErrors
         # Round time down to nearest minute
         $Now = Get-Date
