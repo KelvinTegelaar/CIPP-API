@@ -143,7 +143,7 @@ function Test-CIPPAuditLogRules {
         }
 
         #Filter data based on conditions.
-        $Where = $Configuration | Where-Object { $_.LogType -eq $LogType } | ForEach-Object {
+        $Where = $Configuration | ForEach-Object {
             $conditions = $_.Conditions | ConvertFrom-Json | Where-Object { $_.Input.value -ne '' }
             $actions = $_.Actions
             $conditionStrings = [System.Collections.Generic.List[string]]::new()
