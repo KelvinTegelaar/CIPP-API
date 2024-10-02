@@ -107,15 +107,15 @@ function New-CippAuditLogSearch {
         )]
         [string[]]$RecordTypeFilters,
         [Parameter()]
-        [string]$KeywordFilter,
+        [string]$KeywordFilters,
         [Parameter()]
-        [string]$ServiceFilter,
+        [string[]]$ServiceFilters,
         [Parameter()]
         [string[]]$OperationsFilters,
         [Parameter()]
         [string[]]$UserPrincipalNameFilters,
         [Parameter()]
-        [string[]]$IPAddressFilter,
+        [string[]]$IPAddressFilters,
         [Parameter()]
         [string[]]$ObjectIdFilters,
         [Parameter()]
@@ -135,19 +135,19 @@ function New-CippAuditLogSearch {
     if ($RecordTypeFilters) {
         $SearchParams.recordTypeFilters = @($RecordTypeFilters)
     }
-    if ($KeywordFilter) {
-        $SearchParams.keywordFilter = $KeywordFilter
+    if ($KeywordFilters) {
+        $SearchParams.keywordFilters = $KeywordFilters
     }
-    if ($ServiceFilter) {
-        $SearchParams.serviceFilter = $ServiceFilter
+    if ($ServiceFilters) {
+        $SearchParams.serviceFilters = $ServiceFilters
     }
     if ($UserPrincipalNameFilters) {
         $SearchParams.userPrincipalNameFilters = @($UserPrincipalNameFilters)
     }
-    if ($IPAddressFilter) {
-        $SearchParams.ipAddressFilter = @($IPAddressFilter)
+    if ($IPAddressFilters) {
+        $SearchParams.ipAddressFilters = @($IPAddressFilters)
     }
-    if ($ObjectIdFilters) {
+    if ($ObjectIdFilterss) {
         $SearchParams.objectIdFilters = @($ObjectIdFilters)
     }
     if ($AdministrativeUnitFilters) {
