@@ -11,7 +11,7 @@ function Start-AuditLogOrchestrator {
         $TenantList = Get-Tenants -IncludeErrors
         # Round time down to nearest minute
         $Now = Get-Date
-        $DefaultStartTime = $Now.AddSeconds(-$Now.Seconds).AddMinutes(-30)
+        $StartTime = $Now.AddSeconds(-$Now.Seconds).AddMinutes(-30)
         $EndTime = $Now.AddSeconds(-$Now.Seconds)
 
         if (($AuditLogSearches | Measure-Object).Count -eq 0) {

@@ -17,10 +17,11 @@
   {
     "Command": "Start-AuditLogOrchestrator",
     "Description": "Orchestrator to process audit logs",
-    "Cron": "0 */30 * * * *",
+    "Cron": "0 */15 * * * *",
     "Priority": 2,
     "RunOnProcessor": true,
-    "PreferredProcessor": "auditlog"
+    "PreferredProcessor": "auditlog",
+    "IsSystem": true
   },
   {
     "Command": "Start-WebhookOrchestrator",
