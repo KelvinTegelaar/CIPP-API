@@ -8,6 +8,9 @@ function Start-AuditLogOrchestrator {
     try {
         $AuditLogSearchesTable = Get-CIPPTable -TableName 'AuditLogSearches'
         $AuditLogSearches = Get-CIPPAzDataTableEntity @AuditLogSearchesTable -Filter "CippStatus eq 'Pending'"
+
+        $ConfigTable = Get-CippTable -TableName 'WebhookRules'
+        $ConfigEntries = Get-CIPPAzDataTableEntity @ConfigTable
         $TenantList = Get-Tenants -IncludeErrors
         # Round time down to nearest minute
         $Now = Get-Date
@@ -32,11 +35,22 @@ function Start-AuditLogOrchestrator {
 
         Write-Information 'Audit Logs: Creating new searches'
         foreach ($Tenant in $TenantList) {
-            try {
-                $NewSearch = New-CippAuditLogSearch -TenantFilter $Tenant.defaultDomainName -StartTime $StartTime -EndTime $EndTime -ProcessLogs
-                Write-Information "Created audit log search $($Tenant.defaultDomainName) - $($NewSearch.displayName)"
-            } catch {
-                Write-Information "Error creating audit log search $($Tenant.defaultDomainName) - $($_.Exception.Message)"
+            $Configuration = $ConfigEntries | Where-Object { ($_.Tenants -match $TenantFilter -or $_.Tenants -match 'AllTenants') }
+            if ($Configuration) {
+                $ServiceFilters = $Configuration | Select-Object -Property type | Sort-Object -Property type -Unique | ForEach-Object { $_.type.split('.')[1] }
+                try {
+                    $LogSearch = @{
+                        StartTime      = $StartTime
+                        EndTime        = $EndTime
+                        ServiceFilters = $ServiceFilters
+                        TenantFilter   = $Tenant.defaultDomainName
+                        ProcessLogs    = $true
+                    }
+                    $NewSearch = New-CippAuditLogSearch @LogSearch
+                    Write-Information "Created audit log search $($Tenant.defaultDomainName) - $($NewSearch.displayName)"
+                } catch {
+                    Write-Information "Error creating audit log search $($Tenant.defaultDomainName) - $($_.Exception.Message)"
+                }
             }
         }
     } catch {
