@@ -35,7 +35,7 @@ function Start-AuditLogOrchestrator {
             try {
                 $LastSearch = Get-CippLastAuditLogSearch -TenantFilter $Tenant.defaultDomainName
                 if ($LastSearch -and $LastSearch.EndTime -le $DefaultStartTime) {
-                    $StartTime = $LastSearch.EndTime
+                    $StartTime = $LastSearch.EndTime.DateTime
                 } else {
                     $StartTime = $DefaultStartTime
                 }
