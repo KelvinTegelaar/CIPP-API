@@ -1,14 +1,33 @@
 function Push-AuditLogTenant {
     Param($Item)
-
-    $SchedulerConfig = Get-CippTable -TableName 'SchedulerConfig'
     $ConfigTable = Get-CippTable -TableName 'WebhookRules'
-    #$Tenant = Get-Tenants -TenantFilter $Item.customerId -IncludeErrors
     $TenantFilter = $Item.TenantFilter
 
     Write-Information "Audit Logs: Processing $($TenantFilter)"
-    # Query CIPPURL for linking
-    $CIPPURL = Get-CIPPAzDataTableEntity @SchedulerConfig -Filter "PartitionKey eq 'webhookcreation'" | Select-Object -First 1 -ExpandProperty CIPPURL
+
+    # Get CIPP Url, cleanup legacy tasks
+    $SchedulerConfig = Get-CippTable -TableName 'SchedulerConfig'
+    $LegacyWebhookTasks = Get-CIPPAzDataTableEntity @SchedulerConfig -Filter "PartitionKey eq 'webhookcreation'"
+    $LegacyUrl = $LegacyWebhookTasks | Select-Object -First 1 -ExpandProperty CIPPURL
+    $CippConfigTable = Get-CippTable -tablename Config
+    $CippConfig = Get-CIPPAzDataTableEntity @CippConfigTable -Filter "PartitionKey eq 'InstanceProperties' and RowKey eq 'CIPPURL'"
+    if ($LegacyUrl) {
+        if (!$CippConfig) {
+            $Entity = @{
+                PartitionKey = 'InstanceProperties'
+                RowKey       = 'CIPPURL'
+                Value        = [string]([System.Uri]$LegacyUrl).Host
+            }
+            Add-CIPPAzDataTableEntity @CippConfigTable -Entity $Entity -Force
+        }
+        # remove legacy webhooks
+        foreach ($Task in $LegacyWebhookTasks) {
+            Remove-CIPPAzDataTableEntity @SchedulerConfig -Entity $Task
+        }
+        $CIPPURL = $LegacyUrl
+    } else {
+        $CIPPURL = 'https://{0}' -f $CippConfig.Value
+    }
 
     # Get webhook rules
     $ConfigEntries = Get-CIPPAzDataTableEntity @ConfigTable
