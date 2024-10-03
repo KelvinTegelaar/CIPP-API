@@ -36,7 +36,7 @@ function Test-CIPPAuditLogRules {
     }
     Write-Information 'Getting audit records from Graph API'
     $SearchResults = Get-CippAuditLogSearchResults -TenantFilter $TenantFilter -QueryId $SearchId
-    $LogCount = ($Data | Measure-Object).Count
+    $LogCount = ($SearchResults | Measure-Object).Count
     Write-Information "Logs to process: $LogCount"
     $Results.TotalLogs = $LogCount
     if ($LogCount -gt 0) {
@@ -129,7 +129,7 @@ function Test-CIPPAuditLogRules {
                     $Data.CIPPHostedIP = $hosting
                     $Data.CIPPIPDetected = $IP
                     $Data.CIPPLocationInfo = ($Location | ConvertTo-Json)
-                    $Data.AuditRecord = ($AuditRecord | ConvertTo-Json)
+                    $Data.AuditRecord = ($RootProperties | ConvertTo-Json)
                 }
                 $Data | Select-Object * -ExcludeProperty ExtendedProperties, DeviceProperties, parameters
             } catch {
