@@ -112,6 +112,10 @@ function Invoke-ListGraphRequest {
         }
     }
 
+    if ($Request.Query.AsApp) {
+        $GraphRequestParams.AsApp = $true
+    }
+
     Write-Host ($GraphRequestParams | ConvertTo-Json)
 
     $Metadata = $GraphRequestParams
