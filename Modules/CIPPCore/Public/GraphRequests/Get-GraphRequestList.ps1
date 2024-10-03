@@ -64,7 +64,8 @@ function Get-GraphRequestList {
         [switch]$CountOnly,
         [switch]$NoAuthCheck,
         [switch]$ReverseTenantLookup,
-        [string]$ReverseTenantLookupProperty = 'tenantId'
+        [string]$ReverseTenantLookupProperty = 'tenantId',
+        [boolean]$AsApp = $false
     )
 
     $SingleTenantThreshold = 8000
@@ -109,6 +110,9 @@ function Get-GraphRequestList {
         }
         if ($NoAuthCheck.IsPresent) {
             $GraphRequest.noauthcheck = $NoAuthCheck.IsPresent
+        }
+        if ($AsApp) {
+            $GraphRequest.asApp = $AsApp
         }
         if ($Parameters.'$count' -and !$SkipCache.IsPresent -and !$NoPagination.IsPresent) {
             $Count = New-GraphGetRequest @GraphRequest -CountOnly -ErrorAction Stop
@@ -174,6 +178,8 @@ function Get-GraphRequestList {
                             NoPagination                = $using:NoPagination.IsPresent
                             ReverseTenantLookupProperty = $using:ReverseTenantLookupProperty
                             ReverseTenantLookup         = $using:ReverseTenantLookup.IsPresent
+                            NoAuthCheck                 = $using:NoAuthCheck.IsPresent
+                            AsApp                       = $using:AsApp
                             SkipCache                   = $true
                         }
 
@@ -220,6 +226,7 @@ function Get-GraphRequestList {
                                     PartitionKey                = $PartitionKey
                                     NoPagination                = $NoPagination.IsPresent
                                     NoAuthCheck                 = $NoAuthCheck.IsPresent
+                                    AsApp                       = $AsApp
                                     ReverseTenantLookupProperty = $ReverseTenantLookupProperty
                                     ReverseTenantLookup         = $ReverseTenantLookup.IsPresent
                                 }
