@@ -62,6 +62,7 @@ function Invoke-CippWebhookProcessing {
 
     # Save audit log entry to table
     $LocationInfo = $Data.CIPPLocationInfo | ConvertFrom-Json -ErrorAction SilentlyContinue
+    $AuditRecord = $Data.AuditRecord | ConvertFrom-Json -ErrorAction SilentlyContinue
     $GenerateJSON = New-CIPPAlertTemplate -format 'json' -data $Data -ActionResults $ActionResults -CIPPURL $CIPPURL
     $JsonContent = @{
         Title                 = $GenerateJSON.Title
@@ -71,6 +72,7 @@ function Invoke-CippWebhookProcessing {
         IP                    = $data.ClientIP
         PotentialLocationInfo = $LocationInfo
         ActionsTaken          = $ActionResults
+        AuditRecord           = $AuditRecord
     } | ConvertTo-Json -Depth 15 -Compress
 
     $CIPPAlert = @{

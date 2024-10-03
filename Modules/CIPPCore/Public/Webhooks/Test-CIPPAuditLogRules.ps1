@@ -34,21 +34,16 @@ function Test-CIPPAuditLogRules {
             LogType    = $_.Type
         }
     }
-    #$AuditLogQuery = @{
-    #    TenantFilter = $TenantFilter
-    #    ContentUri   = $ContentUri
-    #}
-    #Write-Information 'Getting data from Office 365 Management Activity API'
-    #$Data = Get-CIPPAuditLogContent @AuditLogQuery
     Write-Information 'Getting audit records from Graph API'
-    $Data = Get-CippAuditLogSearchResults -TenantFilter $TenantFilter -QueryId $SearchId
+    $SearchResults = Get-CippAuditLogSearchResults -TenantFilter $TenantFilter -QueryId $SearchId
     $LogCount = ($Data | Measure-Object).Count
     Write-Information "Logs to process: $LogCount"
     $Results.TotalLogs = $LogCount
     if ($LogCount -gt 0) {
-        $PreProcessedData = $Data.auditData | Select-Object *, CIPPAction, CIPPClause, CIPPGeoLocation, CIPPBadRepIP, CIPPHostedIP, CIPPIPDetected, CIPPLocationInfo, CIPPExtendedProperties, CIPPDeviceProperties, CIPPParameters, CIPPModifiedProperties -ErrorAction SilentlyContinue
         $LocationTable = Get-CIPPTable -TableName 'knownlocationdb'
-        $ProcessedData = foreach ($Data in $PreProcessedData) {
+        $ProcessedData = foreach ($AuditRecord in $SearchResults) {
+            $RootProperties = $AuditRecord | Select-Object * -ExcludeProperty auditData
+            $Data = $AuditRecord.auditData | Select-Object *, CIPPAction, CIPPClause, CIPPGeoLocation, CIPPBadRepIP, CIPPHostedIP, CIPPIPDetected, CIPPLocationInfo, CIPPExtendedProperties, CIPPDeviceProperties, CIPPParameters, CIPPModifiedProperties, AuditRecord -ErrorAction SilentlyContinue
             try {
                 if ($Data.ExtendedProperties) {
                     $Data.CIPPExtendedProperties = ($Data.ExtendedProperties | ConvertTo-Json)
@@ -134,6 +129,7 @@ function Test-CIPPAuditLogRules {
                     $Data.CIPPHostedIP = $hosting
                     $Data.CIPPIPDetected = $IP
                     $Data.CIPPLocationInfo = ($Location | ConvertTo-Json)
+                    $Data.AuditRecord = ($AuditRecord | ConvertTo-Json)
                 }
                 $Data | Select-Object * -ExcludeProperty ExtendedProperties, DeviceProperties, parameters
             } catch {
