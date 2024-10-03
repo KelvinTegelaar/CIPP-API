@@ -56,6 +56,8 @@ function Set-CIPPCopyGroupMembers {
                             } else {
                                 throw $_
                             }
+                        } else {
+                            throw $_
                         }
                     }
                 } elseif (!$ExchangeOnly.IsPresent) {
