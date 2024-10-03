@@ -296,7 +296,7 @@ function Get-GraphRequestList {
 
                         $GraphRequestResults = New-GraphGetRequest @GraphRequest -Caller 'Get-GraphRequestList' -ErrorAction Stop
                         if ($GraphRequestResults.nextLink) {
-                            $Metadata['nextLink'] = $GraphRequestResults.nextLink | Select-Object -Last 1
+                            #$Metadata['nextLink'] = $GraphRequestResults.nextLink | Select-Object -Last 1
                             #GraphRequestResults is an array of objects, so we need to remove the last object before returning
                             $GraphRequestResults = $GraphRequestResults | Select-Object -First ($GraphRequestResults.Count - 1)
                         }
