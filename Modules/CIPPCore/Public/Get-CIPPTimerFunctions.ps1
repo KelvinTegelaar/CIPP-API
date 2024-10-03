@@ -96,7 +96,7 @@ function Get-CIPPTimerFunctions {
                     }
                     Add-CIPPAzDataTableEntity @Table -Entity $Status
                 } else {
-                    if ($Orchestrator.IsSystem -or $ResetToDefault.IsPresent) {
+                    if ($Orchestrator.IsSystem -eq $true -or $ResetToDefault.IsPresent) {
                         $Status.Cron = $CronString
                     }
                     $Status.NextOccurrence = $NextOccurrence.ToUniversalTime()
