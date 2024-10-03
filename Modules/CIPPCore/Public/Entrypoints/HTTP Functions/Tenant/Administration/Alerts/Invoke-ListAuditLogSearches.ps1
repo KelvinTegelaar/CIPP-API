@@ -12,7 +12,7 @@ function Invoke-ListAuditLogSearches {
             'Searches' {
                 $Results = Get-CippAuditLogSearches -TenantFilter $Request.Query.TenantFilter
                 $Body = @{
-                    Results  = $Results
+                    Results  = @($Results)
                     Metadata = @{
                         TenantFilter  = $Request.Query.TenantFilter
                         TotalSearches = $Results.Count
@@ -22,7 +22,7 @@ function Invoke-ListAuditLogSearches {
             'SearchResults' {
                 $Results = Get-CippAuditLogSearchResults -TenantFilter $Request.Query.TenantFilter -QueryId $Request.Query.SearchId
                 $Body = @{
-                    Results  = $Results
+                    Results  = @($Results)
                     Metadata = @{
                         SearchId     = $Request.Query.SearchId
                         TenantFilter = $Request.Query.TenantFilter
@@ -55,7 +55,7 @@ function Invoke-ListAuditLogSearches {
                 }
 
                 $Body = @{
-                    Results  = $Results
+                    Results  = @($Results)
                     Metadata = @{
                         StartTime    = $StartTime
                         TenantFilter = $Request.Query.TenantFilter
