@@ -185,7 +185,7 @@ function Test-CIPPAuditLogRules {
             }
             $ReturnedData
         }
-        $Results.MatchedRules = $MatchedRules | Select-Object -Unique
+        $Results.MatchedRules = @($MatchedRules | Select-Object -Unique)
         $Results.MatchedLogs = ($DataToProcess | Measure-Object).Count
         $Results.DataToProcess = $DataToProcess
     }

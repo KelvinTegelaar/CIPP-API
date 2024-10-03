@@ -29,9 +29,9 @@ function Push-AuditLogTenant {
 
                     $SearchEntity.CippStatus = 'Completed'
                     $MatchedRules = [string](ConvertTo-Json -Compress -InputObject $AuditLogTest.MatchedRules)
-                    $SearchEntity | Add-Member -MemberType NoteProperty -Name MatchedRules -Value $MatchedRules
-                    $SearchEntity | Add-Member -MemberType NoteProperty -Name MatchedLogs -Value $AuditLogTest.MatchedLogs
-                    $SearchEntity | Add-Member -MemberType NoteProperty -Name TotalLogs -Value $AuditLogTest.TotalLogs
+                    $SearchEntity | Add-Member -MemberType NoteProperty -Name MatchedRules -Value $MatchedRules -Force
+                    $SearchEntity | Add-Member -MemberType NoteProperty -Name MatchedLogs -Value $AuditLogTest.MatchedLogs -Force
+                    $SearchEntity | Add-Member -MemberType NoteProperty -Name TotalLogs -Value $AuditLogTest.TotalLogs -Force
                 } catch {
                     $SearchEntity.CippStatus = 'Failed'
                     Write-Information "Error processing audit log rules: $($_.Exception.Message)"
