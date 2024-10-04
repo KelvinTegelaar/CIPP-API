@@ -49,7 +49,7 @@ function Test-CIPPAuditLogRules {
                     $Data.CIPPExtendedProperties = ($Data.ExtendedProperties | ConvertTo-Json)
                     $Data.ExtendedProperties | ForEach-Object {
                         if ($_.Value -in $ExtendedPropertiesIgnoreList) {
-                            Write-Information 'No need to process this operation as its in our ignore list'
+                            Write-Information "No need to process this operation as its in our ignore list. Some extended information: $($data.operation) - $($TenantFilter)"
                             continue
                         }
                         $Data | Add-Member -NotePropertyName $_.Name -NotePropertyValue $_.Value -Force -ErrorAction SilentlyContinue
@@ -78,6 +78,7 @@ function Test-CIPPAuditLogRules {
                 }
 
                 if ($Data.clientip) {
+                    Write-Information "Doing an IP lookup for $($data.clientIp) - $($TenantFilter)"
                     if ($Data.clientip -match '^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}:\d+$') {
                         $Data.clientip = $Data.clientip -replace ':\d+$', '' # Remove the port number if present
                     }
@@ -138,7 +139,8 @@ function Test-CIPPAuditLogRules {
             }
         }
 
-        #Filter data based on conditions.
+        Write-Information "Creating filters - $($data.operation) - $($TenantFilter)"
+
         $Where = $Configuration | ForEach-Object {
             $conditions = $_.Conditions | ConvertFrom-Json | Where-Object { $_.Input.value -ne '' }
             $actions = $_.Actions
@@ -172,6 +174,7 @@ function Test-CIPPAuditLogRules {
             Write-Information "Webhook: If this clause would be true, the action would be: $($clause.expectedAction)"
             $ReturnedData = $ProcessedData | Where-Object { Invoke-Expression $clause.clause }
             if ($ReturnedData) {
+                Write-Information "Webhook: There is matching data: $(($ReturnedData.operation | Select-Object -Unique) -join ', ')"
                 $ReturnedData = foreach ($item in $ReturnedData) {
                     $item.CIPPAction = $clause.expectedAction
                     $item.CIPPClause = $clause.CIPPClause -join ' and '
