@@ -58,7 +58,7 @@ function Invoke-CIPPOffboardingJob {
             }
         }
         { $_.'RemoveLicenses' -eq 'true' } {
-            Remove-CIPPLicense -userid $userid -username $Username -tenantFilter $Tenantfilter -ExecutingUser $ExecutingUser -APIName $APIName
+            Remove-CIPPLicense -userid $userid -username $Username -tenantFilter $Tenantfilter -ExecutingUser $ExecutingUser -APIName $APIName -Schedule
         }
 
         { $_.'Deleteuser' -eq 'true' } {
