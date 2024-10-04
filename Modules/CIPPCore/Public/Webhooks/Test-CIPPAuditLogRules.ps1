@@ -138,7 +138,7 @@ function Test-CIPPAuditLogRules {
                 Write-LogMessage -API 'Webhooks' -message 'Error Processing Audit Log Data' -LogData (Get-CippException -Exception $_) -sev Error -tenant $TenantFilter
             }
         }
-        Write-Host "Processed Data: $(($ProcessedData | Measure-Object).Count) - This should be higher than 0 in many cases, because the where object has not run yet."
+        Write-Warning "Processed Data: $(($ProcessedData | Measure-Object).Count) - This should be higher than 0 in many cases, because the where object has not run yet."
         Write-Warning "Creating filters - $($ProcessedData.operation -join ',') - $($TenantFilter)"
 
         $Where = $Configuration | ForEach-Object {
