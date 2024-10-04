@@ -35,7 +35,7 @@ function Test-CIPPAuditLogRules {
         }
     }
     #write-warning 'Getting audit records from Graph API'
-    $SearchResults = Get-CippAuditLogSearchResults -TenantFilter $TenantFilter -QueryId $SearchId
+    #$SearchResults = Get-CippAuditLogSearchResults -TenantFilter $TenantFilter -QueryId $SearchId
     $LogCount = ($SearchResults | Measure-Object).Count
     $RunGuid = New-Guid
     Write-Warning "Logs to process: $LogCount - RunGuid: $($RunGuid) - $($TenantFilter)"
