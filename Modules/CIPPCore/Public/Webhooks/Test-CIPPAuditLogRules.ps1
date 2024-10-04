@@ -78,7 +78,6 @@ function Test-CIPPAuditLogRules {
                 }
 
                 if ($Data.clientip) {
-                    Write-Information "Doing an IP lookup for $($data.clientIp) - $($TenantFilter)"
                     if ($Data.clientip -match '^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}:\d+$') {
                         $Data.clientip = $Data.clientip -replace ':\d+$', '' # Remove the port number if present
                     }
@@ -132,13 +131,14 @@ function Test-CIPPAuditLogRules {
                     $Data.CIPPLocationInfo = ($Location | ConvertTo-Json)
                     $Data.AuditRecord = ($RootProperties | ConvertTo-Json)
                 }
+                Write-Information "Audit log: Finished IP lookup if required, creating data object. $($Data.operation) - $($TenantFilter)"
                 $Data | Select-Object * -ExcludeProperty ExtendedProperties, DeviceProperties, parameters
             } catch {
                 Write-Information "Audit log: Error processing data: $($_.Exception.Message)`r`n$($_.InvocationInfo.PositionMessage)"
                 Write-LogMessage -API 'Webhooks' -message 'Error Processing Audit Log Data' -LogData (Get-CippException -Exception $_) -sev Error -tenant $TenantFilter
             }
         }
-
+        Write-Host "Processed Data: $(($ProcessedData | Measure-Object).Count) - This should be higher than 0 in many cases, because the where object has not run yet."
         Write-Information "Creating filters - $($data.operation) - $($TenantFilter)"
 
         $Where = $Configuration | ForEach-Object {
@@ -166,7 +166,6 @@ function Test-CIPPAuditLogRules {
             }
 
         }
-        Write-Information "Webhook: The list of operations in the data are $(($ProcessedData.operation | Select-Object -Unique) -join ', ')"
 
         $MatchedRules = [System.Collections.Generic.List[string]]::new()
         $DataToProcess = foreach ($clause in $Where) {
