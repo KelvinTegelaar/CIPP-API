@@ -127,7 +127,7 @@ function New-CippAuditLogSearch {
     $SearchParams = @{
         displayName         = 'CIPP Audit Search - ' + (Get-Date).ToString('yyyy-MM-dd HH:mm:ss')
         filterStartDateTime = $StartTime.ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ss')
-        filterEndDateTime   = $EndTime.ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ss')
+        filterEndDateTime   = $EndTime.AddHours(1).ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ss')
     }
     if ($OperationsFilters) {
         $SearchParams.operationsFilters = $OperationsFilters
