@@ -85,53 +85,53 @@ function Test-CIPPAuditLogRules {
                     $TrustedIP = Get-CIPPAzDataTableEntity @TrustedIPTable -Filter "PartitionKey eq '$TenantFilter' and RowKey eq '$($Data.clientip)' and state eq 'Trusted'"
                     if ($TrustedIP) {
                         Write-Information "IP $($Data.clientip) is trusted"
-                        continue
+                        $Trusted = $true
                     }
+                    if (!$Trusted) {
+                        $Location = Get-CIPPAzDataTableEntity @LocationTable -Filter "RowKey eq '$($Data.clientIp)'" | Select-Object -Last 1
+                        if ($Location) {
+                            $Country = $Location.CountryOrRegion
+                            $City = $Location.City
+                            $Proxy = $Location.Proxy
+                            $hosting = $Location.Hosting
+                            $ASName = $Location.ASName
+                        } else {
+                            try {
+                                $Location = Get-CIPPGeoIPLocation -IP $Data.clientip
+                            } catch {
+                                Write-Information "Unable to get IP location for $($Data.clientip): $($_.Exception.Message)"
+                            }
+                            $Country = if ($Location.CountryCode) { $Location.CountryCode } else { 'Unknown' }
+                            $City = if ($Location.City) { $Location.City } else { 'Unknown' }
+                            $Proxy = if ($Location.Proxy -ne $null) { $Location.Proxy } else { 'Unknown' }
+                            $hosting = if ($Location.Hosting -ne $null) { $Location.Hosting } else { 'Unknown' }
+                            $ASName = if ($Location.ASName) { $Location.ASName } else { 'Unknown' }
+                            $IP = $Data.ClientIP
+                            $LocationInfo = @{
+                                RowKey          = [string]$Data.clientip
+                                PartitionKey    = [string]$Data.id
+                                Tenant          = [string]$TenantFilter
+                                CountryOrRegion = "$Country"
+                                City            = "$City"
+                                Proxy           = "$Proxy"
+                                Hosting         = "$hosting"
+                                ASName          = "$ASName"
+                            }
+                            try {
+                                $null = Add-CIPPAzDataTableEntity @LocationTable -Entity $LocationInfo -Force
+                            } catch {
+                                Write-Information "Failed to add location info for $($Data.clientip) to cache: $($_.Exception.Message)"
 
-                    $Location = Get-CIPPAzDataTableEntity @LocationTable -Filter "RowKey eq '$($Data.clientIp)'" | Select-Object -Last 1
-                    if ($Location) {
-                        $Country = $Location.CountryOrRegion
-                        $City = $Location.City
-                        $Proxy = $Location.Proxy
-                        $hosting = $Location.Hosting
-                        $ASName = $Location.ASName
-                    } else {
-                        try {
-                            $Location = Get-CIPPGeoIPLocation -IP $Data.clientip
-                        } catch {
-                            Write-Information "Unable to get IP location for $($Data.clientip): $($_.Exception.Message)"
+                            }
                         }
-                        $Country = if ($Location.CountryCode) { $Location.CountryCode } else { 'Unknown' }
-                        $City = if ($Location.City) { $Location.City } else { 'Unknown' }
-                        $Proxy = if ($Location.Proxy -ne $null) { $Location.Proxy } else { 'Unknown' }
-                        $hosting = if ($Location.Hosting -ne $null) { $Location.Hosting } else { 'Unknown' }
-                        $ASName = if ($Location.ASName) { $Location.ASName } else { 'Unknown' }
-                        $IP = $Data.ClientIP
-                        $LocationInfo = @{
-                            RowKey          = [string]$Data.clientip
-                            PartitionKey    = [string]$Data.id
-                            Tenant          = [string]$TenantFilter
-                            CountryOrRegion = "$Country"
-                            City            = "$City"
-                            Proxy           = "$Proxy"
-                            Hosting         = "$hosting"
-                            ASName          = "$ASName"
-                        }
-                        try {
-                            $null = Add-CIPPAzDataTableEntity @LocationTable -Entity $LocationInfo -Force
-                        } catch {
-                            Write-Information "Failed to add location info for $($Data.clientip) to cache: $($_.Exception.Message)"
-
-                        }
+                        $Data.CIPPGeoLocation = $Country
+                        $Data.CIPPBadRepIP = $Proxy
+                        $Data.CIPPHostedIP = $hosting
+                        $Data.CIPPIPDetected = $IP
+                        $Data.CIPPLocationInfo = ($Location | ConvertTo-Json)
+                        $Data.AuditRecord = ($RootProperties | ConvertTo-Json)
                     }
-                    $Data.CIPPGeoLocation = $Country
-                    $Data.CIPPBadRepIP = $Proxy
-                    $Data.CIPPHostedIP = $hosting
-                    $Data.CIPPIPDetected = $IP
-                    $Data.CIPPLocationInfo = ($Location | ConvertTo-Json)
-                    $Data.AuditRecord = ($RootProperties | ConvertTo-Json)
                 }
-                Write-Information "Audit log: Finished IP lookup if required, creating data object. $($Data.operation) - $($TenantFilter)"
                 $Data | Select-Object * -ExcludeProperty ExtendedProperties, DeviceProperties, parameters
             } catch {
                 Write-Information "Audit log: Error processing data: $($_.Exception.Message)`r`n$($_.InvocationInfo.PositionMessage)"
