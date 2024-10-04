@@ -139,7 +139,7 @@ function Test-CIPPAuditLogRules {
             }
         }
         Write-Warning "Processed Data: $(($ProcessedData | Measure-Object).Count) - This should be higher than 0 in many cases, because the where object has not run yet."
-        Write-Warning "Creating filters - $($ProcessedData.operation -join ',') - $($TenantFilter)"
+        Write-Warning "Creating filters - $(($ProcessedData.operation | Sort-Object -Unique) -join ',') - $($TenantFilter)"
 
         $Where = $Configuration | ForEach-Object {
             $conditions = $_.Conditions | ConvertFrom-Json | Where-Object { $_.Input.value -ne '' }
