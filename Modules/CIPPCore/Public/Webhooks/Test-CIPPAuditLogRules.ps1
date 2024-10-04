@@ -49,7 +49,7 @@ function Test-CIPPAuditLogRules {
                     $Data.CIPPExtendedProperties = ($Data.ExtendedProperties | ConvertTo-Json)
                     $Data.ExtendedProperties | ForEach-Object {
                         if ($_.Value -in $ExtendedPropertiesIgnoreList) {
-                            Write-Warning "No need to process this operation as its in our ignore list. Some extended information: $($data.operation) - $($TenantFilter)"
+                            Write-Warning "No need to process this operation as its in our ignore list. Some extended information: $($data.operation):$($_.Value) - $($TenantFilter)"
                             continue
                         }
                         $Data | Add-Member -NotePropertyName $_.Name -NotePropertyValue $_.Value -Force -ErrorAction SilentlyContinue
