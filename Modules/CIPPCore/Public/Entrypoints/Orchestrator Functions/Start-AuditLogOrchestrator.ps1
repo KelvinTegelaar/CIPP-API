@@ -44,7 +44,7 @@ function Start-AuditLogOrchestrator {
                         StartTime         = $StartTime
                         EndTime           = $EndTime
                         ServiceFilters    = $ServiceFilters
-                        TenantFilter      = '7ngn50.onmicrosoft.com'
+                        TenantFilter      = $Tenant.defaultDomainName
                         ProcessLogs       = $true
                         RecordTypeFilters = @(
                             'exchangeAdmin', 'azureActiveDirectory', 'azureActiveDirectoryAccountLogon', 'dataCenterSecurityCmdlet',
