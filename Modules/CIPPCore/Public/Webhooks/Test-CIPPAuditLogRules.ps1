@@ -34,10 +34,10 @@ function Test-CIPPAuditLogRules {
             LogType    = $_.Type
         }
     }
-    write-warning 'Getting audit records from Graph API'
+    Write-Warning 'Getting audit records from Graph API'
     $SearchResults = Get-CippAuditLogSearchResults -TenantFilter $TenantFilter -QueryId $SearchId
     $LogCount = ($SearchResults | Measure-Object).Count
-    write-warning "Logs to process: $LogCount"
+    Write-Warning "Logs to process: $LogCount"
     $Results.TotalLogs = $LogCount
     if ($LogCount -gt 0) {
         $LocationTable = Get-CIPPTable -TableName 'knownlocationdb'
@@ -49,7 +49,7 @@ function Test-CIPPAuditLogRules {
                     $Data.CIPPExtendedProperties = ($Data.ExtendedProperties | ConvertTo-Json)
                     $Data.ExtendedProperties | ForEach-Object {
                         if ($_.Value -in $ExtendedPropertiesIgnoreList) {
-                            write-warning "No need to process this operation as its in our ignore list. Some extended information: $($data.operation) - $($TenantFilter)"
+                            Write-Warning "No need to process this operation as its in our ignore list. Some extended information: $($data.operation) - $($TenantFilter)"
                             continue
                         }
                         $Data | Add-Member -NotePropertyName $_.Name -NotePropertyValue $_.Value -Force -ErrorAction SilentlyContinue
@@ -84,7 +84,7 @@ function Test-CIPPAuditLogRules {
                     # Check if IP is on trusted IP list
                     $TrustedIP = Get-CIPPAzDataTableEntity @TrustedIPTable -Filter "PartitionKey eq '$TenantFilter' and RowKey eq '$($Data.clientip)' and state eq 'Trusted'"
                     if ($TrustedIP) {
-                        write-warning "IP $($Data.clientip) is trusted"
+                        Write-Warning "IP $($Data.clientip) is trusted"
                         $Trusted = $true
                     }
                     if (!$Trusted) {
@@ -99,7 +99,7 @@ function Test-CIPPAuditLogRules {
                             try {
                                 $Location = Get-CIPPGeoIPLocation -IP $Data.clientip
                             } catch {
-                                write-warning "Unable to get IP location for $($Data.clientip): $($_.Exception.Message)"
+                                Write-Warning "Unable to get IP location for $($Data.clientip): $($_.Exception.Message)"
                             }
                             $Country = if ($Location.CountryCode) { $Location.CountryCode } else { 'Unknown' }
                             $City = if ($Location.City) { $Location.City } else { 'Unknown' }
@@ -120,7 +120,7 @@ function Test-CIPPAuditLogRules {
                             try {
                                 $null = Add-CIPPAzDataTableEntity @LocationTable -Entity $LocationInfo -Force
                             } catch {
-                                write-warning "Failed to add location info for $($Data.clientip) to cache: $($_.Exception.Message)"
+                                Write-Warning "Failed to add location info for $($Data.clientip) to cache: $($_.Exception.Message)"
 
                             }
                         }
@@ -134,12 +134,12 @@ function Test-CIPPAuditLogRules {
                 }
                 $Data | Select-Object * -ExcludeProperty ExtendedProperties, DeviceProperties, parameters
             } catch {
-                write-warning "Audit log: Error processing data: $($_.Exception.Message)`r`n$($_.InvocationInfo.PositionMessage)"
+                Write-Warning "Audit log: Error processing data: $($_.Exception.Message)`r`n$($_.InvocationInfo.PositionMessage)"
                 Write-LogMessage -API 'Webhooks' -message 'Error Processing Audit Log Data' -LogData (Get-CippException -Exception $_) -sev Error -tenant $TenantFilter
             }
         }
         Write-Host "Processed Data: $(($ProcessedData | Measure-Object).Count) - This should be higher than 0 in many cases, because the where object has not run yet."
-        write-warning "Creating filters - $($ProcessedData.operation -join ',') - $($TenantFilter)"
+        Write-Warning "Creating filters - $($ProcessedData.operation -join ',') - $($TenantFilter)"
 
         $Where = $Configuration | ForEach-Object {
             $conditions = $_.Conditions | ConvertFrom-Json | Where-Object { $_.Input.value -ne '' }
@@ -169,11 +169,10 @@ function Test-CIPPAuditLogRules {
 
         $MatchedRules = [System.Collections.Generic.List[string]]::new()
         $DataToProcess = foreach ($clause in $Where) {
-            write-warning "Webhook: Processing clause: $($clause.clause)"
-            write-warning "Webhook: If this clause would be true, the action would be: $($clause.expectedAction)"
+            Write-Warning "Webhook: Processing clause: $($clause.clause)"
             $ReturnedData = $ProcessedData | Where-Object { Invoke-Expression $clause.clause }
             if ($ReturnedData) {
-                write-warning "Webhook: There is matching data: $(($ReturnedData.operation | Select-Object -Unique) -join ', ')"
+                Write-Warning "Webhook: There is matching data: $(($ReturnedData.operation | Select-Object -Unique) -join ', ')"
                 $ReturnedData = foreach ($item in $ReturnedData) {
                     $item.CIPPAction = $clause.expectedAction
                     $item.CIPPClause = $clause.CIPPClause -join ' and '
