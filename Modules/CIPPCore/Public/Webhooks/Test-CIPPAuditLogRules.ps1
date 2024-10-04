@@ -52,7 +52,7 @@ function Start-AuditLogOrchestrator {
                             'skypeForBusinessUsersBlocked', 'securityComplianceCenterEOPCmdlet', 'microsoftFlow', 'aeD', 'microsoftStream',
                             'threatFinder', 'project', 'dataGovernance', 'securityComplianceAlerts', 'threatIntelligenceUrl',
                             'securityComplianceInsights', 'mipLabel', 'workplaceAnalytics', 'powerAppsApp', 'powerAppsPlan',
-                            'threatIntelligenceAtpContent', 'labelContentExplorer', 'exchangeItemAggregated', 'hygieneEvent',
+                            'threatIntelligenceAtpContent', 'labelContentExplorer', 'hygieneEvent',
                             'dataInsightsRestApiAudit', 'informationBarrierPolicyApplication', 'microsoftTeamsAdmin', 'hrSignal',
                             'informationWorkerProtection', 'campaign', 'dlpEndpoint', 'airInvestigation', 'quarantine', 'microsoftForms',
                             'applicationAudit', 'complianceSupervisionExchange', 'customerKeyServiceEncryption', 'officeNative',
