@@ -5,7 +5,7 @@ Function Invoke-AddSiteBulk {
     .FUNCTIONALITY
         Entrypoint
     .ROLE
-        Teams.Group.ReadWrite
+        Sharepoint.Site.ReadWrite
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
