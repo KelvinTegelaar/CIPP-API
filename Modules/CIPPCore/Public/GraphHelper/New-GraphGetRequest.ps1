@@ -11,6 +11,7 @@ function New-GraphGetRequest {
         $noPagination,
         $NoAuthCheck,
         $skipTokenCache,
+        $Caller,
         [switch]$ComplexFilter,
         [switch]$CountOnly,
         [switch]$IncludeResponseHeaders
@@ -36,7 +37,7 @@ function New-GraphGetRequest {
         if (!$Tenant) {
             $Tenant = @{
                 GraphErrorCount = 0
-                LastGraphError  = $null
+                LastGraphError  = ''
                 PartitionKey    = 'TenantFailed'
                 RowKey          = 'Failed'
             }
@@ -58,8 +59,11 @@ function New-GraphGetRequest {
                     $Data.'@odata.count'
                     $NextURL = $null
                 } else {
-                    if ($Data.PSObject.Properties.Name -contains 'value') { $data.value } else { ($Data) }
+                    if ($Data.PSObject.Properties.Name -contains 'value') { $data.value } else { $Data }
                     if ($noPagination) {
+                        if ($Caller -eq 'Get-GraphRequestList') {
+                            @{ 'nextLink' = $data.'@odata.nextLink' }
+                        }
                         $nextURL = $null
                     } else {
                         $NextPageUriFound = $false
@@ -87,7 +91,11 @@ function New-GraphGetRequest {
                 throw $Message
             }
         } until ([string]::IsNullOrEmpty($NextURL) -or $NextURL -is [object[]] -or ' ' -eq $NextURL)
-        $Tenant.LastGraphError = ''
+        if ($Tenant.PSObject.Properties.Name -notcontains 'LastGraphError') {
+            $Tenant | Add-Member -MemberType NoteProperty -Name 'LastGraphError' -Value '' -Force
+        } else {
+            $Tenant.LastGraphError = ''
+        }
         $Tenant.GraphErrorCount = 0
         Update-AzDataTableEntity @TenantsTable -Entity $Tenant
         return $ReturnedData
