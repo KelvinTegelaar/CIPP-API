@@ -10,23 +10,31 @@ function Invoke-CippWebhookProcessing {
         $ExecutingUser
     )
 
+    $AuditLogTable = Get-CIPPTable -TableName 'AuditLogs'
+    $AuditLog = Get-CIPPAzDataTableEntity @AuditLogTable -Filter "PartitionKey eq '$TenantFilter' and RowKey eq '$($Data.Id)'"
+
+    if ($AuditLog) {
+        Write-Host "Audit Log already exists for $($Data.Id). Skipping processing."
+        return
+    }
+
     $Tenant = Get-Tenants -IncludeErrors | Where-Object { $_.defaultDomainName -eq $TenantFilter }
     Write-Host "Received data. Our Action List is $($data.CIPPAction)"
 
     $ActionList = ($data.CIPPAction | ConvertFrom-Json -ErrorAction SilentlyContinue).value
     $ActionResults = foreach ($action in $ActionList) {
-        Write-Host "this is our action: $($action | ConvertTo-Json -Depth 15 -Compress))"
+        Write-Host "this is our action: $($action | ConvertTo-Json -Depth 15 -Compress)"
         switch ($action) {
             'disableUser' {
                 Set-CIPPSignInState -TenantFilter $TenantFilter -User $data.UserId -AccountEnabled $false -APIName 'Alert Engine' -ExecutingUser 'Alert Engine'
             }
             'becremediate' {
                 $username = (New-GraphGetRequest -uri "https://graph.microsoft.com/beta/users/$($data.UserId)" -tenantid $TenantFilter).UserPrincipalName
-                Set-CIPPResetPassword -userid $username -tenantFilter $TenantFilter -APIName 'Alert Engine' -ExecutingUser 'Alert Engine'
+                Set-CIPPResetPassword -UserID $username -tenantFilter $TenantFilter -APIName 'Alert Engine' -ExecutingUser 'Alert Engine'
                 Set-CIPPSignInState -userid $username -AccountEnabled $false -tenantFilter $TenantFilter -APIName 'Alert Engine' -ExecutingUser 'Alert Engine'
                 Revoke-CIPPSessions -userid $username -username $username -ExecutingUser 'Alert Engine' -APIName 'Alert Engine' -tenantFilter $TenantFilter
                 $RuleDisabled = 0
-                New-ExoRequest -anchor $username -tenantid $TenantFilter -cmdlet 'Get-InboxRule' -cmdParams @{Mailbox = $username; IncludeHidden = $true } | Where-Object { $_.Name -ne 'Junk E-Mail Rule' } | ForEach-Object {
+                New-ExoRequest -anchor $username -tenantid $TenantFilter -cmdlet 'Get-InboxRule' -cmdParams @{Mailbox = $username; IncludeHidden = $true } | Where-Object { $_.Name -ne 'Junk E-Mail Rule' -and $_.Name -notlike 'Microsoft.Exchange.OOF.*' } | ForEach-Object {
                     $null = New-ExoRequest -anchor $username -tenantid $TenantFilter -cmdlet 'Disable-InboxRule' -cmdParams @{Confirm = $false; Identity = $_.Identity }
                     "Disabled Inbox Rule $($_.Identity) for $username"
                     $RuleDisabled++
@@ -54,6 +62,7 @@ function Invoke-CippWebhookProcessing {
 
     # Save audit log entry to table
     $LocationInfo = $Data.CIPPLocationInfo | ConvertFrom-Json -ErrorAction SilentlyContinue
+    $AuditRecord = $Data.AuditRecord | ConvertFrom-Json -ErrorAction SilentlyContinue
     $GenerateJSON = New-CIPPAlertTemplate -format 'json' -data $Data -ActionResults $ActionResults -CIPPURL $CIPPURL
     $JsonContent = @{
         Title                 = $GenerateJSON.Title
@@ -63,6 +72,7 @@ function Invoke-CippWebhookProcessing {
         IP                    = $data.ClientIP
         PotentialLocationInfo = $LocationInfo
         ActionsTaken          = $ActionResults
+        AuditRecord           = $AuditRecord
     } | ConvertTo-Json -Depth 15 -Compress
 
     $CIPPAlert = @{
@@ -71,6 +81,7 @@ function Invoke-CippWebhookProcessing {
         JSONContent  = $JsonContent
         TenantFilter = $TenantFilter
         TableName    = 'AuditLogs'
+        RowKey       = $Data.Id
     }
     $LogId = Send-CIPPAlert @CIPPAlert
 

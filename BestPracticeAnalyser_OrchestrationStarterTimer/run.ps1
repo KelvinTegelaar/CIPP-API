@@ -1,3 +1,0 @@
-param($Timer)
-
-Start-BPAOrchestrator
