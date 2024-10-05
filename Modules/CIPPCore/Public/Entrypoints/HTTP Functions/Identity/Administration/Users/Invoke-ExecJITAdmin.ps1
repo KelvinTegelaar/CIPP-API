@@ -63,14 +63,14 @@ Function Invoke-ExecJITAdmin {
         if ($Request.Body.UserId -match '^[a-f0-9]{8}-([a-f0-9]{4}-){3}[a-f0-9]{12}$') {
             $Username = (New-GraphGetRequest -uri "https://graph.microsoft.com/v1.0/users/$($Request.Body.UserId)" -tenantid $Request.Body.TenantFilter).userPrincipalName
         }
-        Write-LogMessage -user $User -API $APINAME -message "Executing JIT Admin for $Username" -Sev 'Info'
+        Write-LogMessage -user $User -API $APINAME -message "Executing JIT Admin for $Username" -tenant $Request.Body.TenantFilter -Sev 'Info'
 
         $Start = ([System.DateTimeOffset]::FromUnixTimeSeconds($Request.Body.StartDate)).DateTime.ToLocalTime()
         $Expiration = ([System.DateTimeOffset]::FromUnixTimeSeconds($Request.Body.EndDate)).DateTime.ToLocalTime()
         $Results = [System.Collections.Generic.List[string]]::new()
 
         if ($Request.Body.useraction -eq 'Create') {
-            Write-LogMessage -user $User -API $APINAME -message "Creating JIT Admin user $($Request.Body.UserPrincipalName)" -Sev 'Info'
+            Write-LogMessage -user $User -API $APINAME -tenant $Request.Body.TenantFilter -message "Creating JIT Admin user $($Request.Body.UserPrincipalName)" -Sev 'Info'
             Write-Information "Creating JIT Admin user $($Request.Body.UserPrincipalName)"
             $JITAdmin = @{
                 User         = @{

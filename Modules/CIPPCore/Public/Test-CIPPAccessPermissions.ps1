@@ -123,7 +123,8 @@ function Test-CIPPAccessPermissions {
     if ($Success -eq $true) {
         $Messages.Add('No service account issues have been found. CIPP is ready for use.') | Out-Null
     }
-    return [PSCustomObject]@{
+
+    $AccessCheck = [PSCustomObject]@{
         AccessTokenDetails = $AccessTokenDetails
         Messages           = @($Messages)
         ErrorMessages      = @($ErrorMessages)
@@ -131,4 +132,19 @@ function Test-CIPPAccessPermissions {
         Links              = @($Links)
         Success            = $Success
     }
+
+    $Table = Get-CIPPTable -TableName AccessChecks
+    $Data = Get-CIPPAzDataTableEntity @Table -Filter "PartitionKey eq 'AccessCheck' and RowKey eq 'AccessPermissions'"
+    if ($Data) {
+        $Data.Data = [string](ConvertTo-Json -InputObject $AccessCheck -Depth 10 -Compress)
+    } else {
+        $Data = @{
+            PartitionKey = 'AccessCheck'
+            RowKey       = 'AccessPermissions'
+            Data         = [string](ConvertTo-Json -InputObject $AccessCheck -Depth 10 -Compress)
+        }
+    }
+    Add-CIPPAzDataTableEntity @Table -Entity $Data -Force
+
+    return $AccessCheck
 }
