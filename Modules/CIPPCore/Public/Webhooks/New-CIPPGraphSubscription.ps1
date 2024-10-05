@@ -2,7 +2,6 @@ function New-CIPPGraphSubscription {
     [CmdletBinding()]
     param (
         $TenantFilter,
-        [bool]$auditLogAPI = $false,
         $TypeofSubscription,
         $AllowedLocations,
         $BaseURL,
@@ -14,72 +13,10 @@ function New-CIPPGraphSubscription {
         [switch]$PartnerCenter
     )
     $CIPPID = (New-Guid).GUID
-    $WebhookTable = Get-CIPPTable -TableName webhookTable
+    $WebhookTable = Get-CIPPTable -TableName 'webhookTable'
 
     try {
-        if ($auditLogAPI) {
-            $CIPPID = (New-Guid).GUID
-            $Resource = $EventType
-            $WebhookFilter = "PartitionKey eq '$($TenantFilter)' and Resource eq '$Resource' and Version eq '3'"
-            $ExistingWebhooks = Get-CIPPAzDataTableEntity @WebhookTable -Filter $WebhookFilter
-            $MatchedWebhook = $ExistingWebhooks
-            try {
-                if (!$MatchedWebhook -or ($Recreate.IsPresent)) {
-                    if (!$MatchedWebhook) {
-                        $WebhookRow = [PSCustomObject]@{
-                            PartitionKey = [string]$TenantFilter
-                            RowKey       = [string]$CIPPID
-                            Status       = 'Enabled'
-                            Error        = ''
-                            Resource     = [string]$Resource
-                            Expiration   = [string]'Does Not Expire'
-                            Version      = [string]'3'
-                        }
-                        Add-CIPPAzDataTableEntity @WebhookTable -Entity $WebhookRow
-                    } else {
-                        Write-Host 'Setting webhook back to enabled'
-                        Write-Host ($MatchedWebhook | ConvertTo-Json)
-                        $MatchedWebhook | Add-Member -MemberType NoteProperty -Name Status -Value 'Enabled' -Force
-                        $MatchedWebhook | Add-Member -MemberType NoteProperty -Name Error -Value '' -Force
-
-                        $null = Add-CIPPAzDataTableEntity @WebhookTable -Entity $MatchedWebhook -Force
-                        $WebhookRow = $MatchedWebhook
-                    }
-                    Write-Host "Creating webhook subscription for $EventType"
-
-                    $AuditLog = New-GraphPOSTRequest -type POST -uri "https://manage.office.com/api/v1.0/$($TenantFilter)/activity/feed/subscriptions/start?contentType=$EventType&PublisherIdentifier=$($env:TenantID)" -tenantid $TenantFilter -scope 'https://manage.office.com/.default' -body '{}' -verbose
-                    Write-LogMessage -user $ExecutingUser -API $APIName -message "Created Webhook subscription for $($TenantFilter) for the log $($EventType)" -Sev 'Info' -tenant $TenantFilter
-                    return @{ Success = $true; message = "Created Webhook subscription for $($TenantFilter) for the log $($EventType)" }
-                } else {
-                    if ($MatchedWebhook.Status -eq 'Disabled') {
-                        return @{ success = $false; message = "Webhook subscription for $($TenantFilter) is disabled due to an error"; WebhookID = $MatchedWebhook.RowKey }
-                    } else {
-                        return @{ success = $true; message = "Webhook exists for $($TenantFilter) for the log $($EventType)"; WebhookID = $MatchedWebhook.RowKey }
-                    }
-                }
-            } catch {
-                if ($_.Exception.Message -eq 'The subscription is already enabled. No property change.' -or $_.Exception.Message -like '*already exists*') {
-                    Write-LogMessage -user $ExecutingUser -API $APIName -message "Webhook subscription for $($TenantFilter) already exists" -Sev 'Info' -tenant $TenantFilter
-                    return @{ success = $true; message = "Webhook exists for $($TenantFilter) for the log $($EventType)" }
-                } elseif ($_.Exception.Message -match "The service principal for resource 'https://manage.office.com' is disabled") {
-                    Write-LogMessage -user $ExecutingUser -API $APIName -message "Failed to create Webhook Subscription for $($TenantFilter): This tenant may not have an Exchange Online license. Audit Log subscription disabled." -Sev 'Error' -tenant $TenantFilter -LogData (Get-CippException -Exception $_)
-                    $WebhookRow.Status = 'Disabled'
-                    $WebhookRow.Error = $_.Exception.Message
-                    $null = Add-CIPPAzDataTableEntity @WebhookTable -Entity $WebhookRow -Force
-                    return @{ success = $false; message = "Failed to create Webhook Subscription for $($TenantFilter): $($_.Exception.Message)" }
-                } elseif ($_.Exception.Message -match 'Retry the request.') {
-                    Remove-AzDataTableEntity @WebhookTable -Entity @{ PartitionKey = $TenantFilter; RowKey = [string]$CIPPID } | Out-Null
-                    Write-LogMessage -user $ExecutingUser -API $APIName -message "Failed to create Webhook Subscription for $($TenantFilter): $($_.Exception.Message)" -Sev 'Error' -tenant $TenantFilter -LogData (Get-CippException -Exception $_)
-                    return @{ success = $false; message = "Failed to create Webhook Subscription for $($TenantFilter): A temporary error occurred, we will try to subscribe again later" }
-                } else {
-                    $WebhookRow.Status = 'Disabled'
-                    $WebhookRow.Error = $_.Exception.Message
-                    $null = Add-CIPPAzDataTableEntity @WebhookTable -Entity $WebhookRow -Force
-                    Write-LogMessage -user $ExecutingUser -API $APIName -message "Failed to create Webhook Subscription for $($TenantFilter): $($_.Exception.Message)" -Sev 'Error' -tenant $TenantFilter -LogData (Get-CippException -Exception $_)
-                    return @{ success = $false; message = "Failed to create Webhook Subscription for $($TenantFilter): $($_.Exception.Message). Audit log subscription disabled." }
-                }
-            }
-        } elseif ($PartnerCenter.IsPresent) {
+        if ($PartnerCenter.IsPresent) {
             $WebhookFilter = "PartitionKey eq '$($env:TenantID)'"
             $ExistingWebhooks = Get-CIPPAzDataTableEntity @WebhookTable -Filter $WebhookFilter
             $CIPPID = $env:TenantID
@@ -143,7 +80,7 @@ function New-CIPPGraphSubscription {
             }
 
         } else {
-            # First check if there is an exsiting Webhook in place
+            # First check if there is an existing Webhook in place
             $WebhookFilter = "PartitionKey eq '$($TenantFilter)'"
             $ExistingWebhooks = Get-CIPPAzDataTableEntity @WebhookTable -Filter $WebhookFilter
             $MatchedWebhook = $ExistingWebhooks | Where-Object { $_.Resource -eq $Resource }
