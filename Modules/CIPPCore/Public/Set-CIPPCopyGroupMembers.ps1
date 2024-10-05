@@ -5,26 +5,92 @@ function Set-CIPPCopyGroupMembers {
         [string]$UserId,
         [string]$CopyFromId,
         [string]$TenantFilter,
-        [string]$APIName = 'Copy User Groups'
+        [string]$APIName = 'Copy User Groups',
+        [switch]$ExchangeOnly
     )
-    $MemberIDs = 'https://graph.microsoft.com/v1.0/directoryObjects/' + (New-GraphGetRequest -uri "https://graph.microsoft.com/beta/users/$UserId" -tenantid $TenantFilter).id
-    $AddMemberBody = "{ `"members@odata.bind`": $(ConvertTo-Json @($MemberIDs)) }"
+
+    $Requests = @(
+        @{
+            id     = 'User'
+            url    = 'users/{0}' -f $UserId
+            method = 'GET'
+        }
+        @{
+            id     = 'UserMembership'
+            url    = 'users/{0}/memberOf' -f $UserId
+            method = 'GET'
+        }
+        @{
+            id     = 'CopyFromMembership'
+            url    = 'users/{0}/memberOf' -f $CopyFromId
+            method = 'GET'
+        }
+    )
+    $Results = New-GraphBulkRequest -Requests $Requests -tenantid $TenantFilter
+    $User = ($Results | Where-Object { $_.id -eq 'User' }).body
+    $CurrentMemberships = ($Results | Where-Object { $_.id -eq 'UserMembership' }).body.value
+    $CopyFromMemberships = ($Results | Where-Object { $_.id -eq 'CopyFromMembership' }).body.value
+
+    Write-Information ($Results | ConvertTo-Json -Depth 10)
+
+    $ODataBind = 'https://graph.microsoft.com/v1.0/directoryObjects/{0}' -f $User.id
+    $AddMemberBody = @{
+        '@odata.id' = $ODataBind
+    } | ConvertTo-Json -Compress
 
     $Success = [System.Collections.Generic.List[string]]::new()
     $Errors = [System.Collections.Generic.List[string]]::new()
-    (New-GraphGETRequest -uri "https://graph.microsoft.com/beta/users/$CopyFromId/memberOf" -tenantid $TenantFilter) | Where-Object { $_.GroupTypes -notin 'herohero' } | ForEach-Object {
+    $Memberships = $CopyFromMemberships | Where-Object { $_.'@odata.type' -eq '#microsoft.graph.group' -and $_.groupTypes -notcontains 'DynamicMembership' -and $_.onPremisesSyncEnabled -ne $true -and $_.visibility -ne 'Public' -and $CurrentMemberships.id -notcontains $_.id }
+    $ScheduleExchangeGroupTask = $false
+    foreach ($MailGroup in $Memberships) {
         try {
-            $MailGroup = $_
-            if ($PSCmdlet.ShouldProcess($_.displayName, "Add $UserId to group")) {
-                if ($MailGroup.MailEnabled -and $Mailgroup.ResourceProvisioningOptions -notin 'Team') {
-                    $Params = @{ Identity = $MailGroup.mail; Member = $UserId; BypassSecurityGroupManagerCheck = $true }
-                    $null = New-ExoRequest -tenantid $TenantFilter -cmdlet 'Add-DistributionGroupMember' -cmdParams $params -UseSystemMailbox $true
-                } else {
-                    $null = New-GraphPostRequest -uri "https://graph.microsoft.com/beta/groups/$($_.id)" -tenantid $TenantFilter -type patch -body $AddMemberBody -Verbose
+            if ($PSCmdlet.ShouldProcess($MailGroup.displayName, "Add $UserId to group")) {
+                if ($MailGroup.MailEnabled -and $Mailgroup.ResourceProvisioningOptions -notcontains 'Team' -and $MailGroup.groupTypes -notcontains 'Unified') {
+                    $Params = @{ Identity = $MailGroup.mailNickname; Member = $UserId; BypassSecurityGroupManagerCheck = $true }
+                    try {
+                        $null = New-ExoRequest -tenantid $TenantFilter -cmdlet 'Add-DistributionGroupMember' -cmdParams $params -UseSystemMailbox $true
+                    } catch {
+                        if ($_.Exception.Message -match 'Ex94914C|Microsoft.Exchange.Configuration.Tasks.ManagementObjectNotFoundException') {
+                            if (($User.assignedLicenses | Measure-Object).Count -gt 0 -and !$ExchangeOnly.IsPresent) {
+                                $ScheduleExchangeGroupTask = $true
+                            } else {
+                                throw $_
+                            }
+                        } else {
+                            throw $_
+                        }
+                    }
+                } elseif (!$ExchangeOnly.IsPresent) {
+                    $null = New-GraphPostRequest -uri "https://graph.microsoft.com/beta/groups/$($MailGroup.id)/members/`$ref" -tenantid $TenantFilter -body $AddMemberBody -Verbose
                 }
             }
-            Write-LogMessage -user $ExecutingUser -API $APIName -message "Added $UserId to group $($_.displayName)" -Sev 'Info' -tenant $TenantFilter
-            $Success.Add("Added group: $($MailGroup.displayName)") | Out-Null
+
+            if ($ScheduleExchangeGroupTask) {
+                $TaskBody = [PSCustomObject]@{
+                    TenantFilter  = $TenantFilter
+                    Name          = "Copy Exchange Group Membership: $UserId from $CopyFromId"
+                    Command       = @{
+                        value = 'Set-CIPPCopyGroupMembers'
+                    }
+                    Parameters    = [PSCustomObject]@{
+                        UserId       = $UserId
+                        CopyFromId   = $CopyFromId
+                        TenantFilter = $TenantFilter
+                        ExchangeOnly = $true
+                    }
+                    ScheduledTime = [int64](([datetime]::UtcNow).AddMinutes(5) - (Get-Date '1/1/1970')).TotalSeconds
+                    PostExecution = @{
+                        Webhook = $false
+                        Email   = $false
+                        PSA     = $false
+                    }
+                }
+                Add-CIPPScheduledTask -Task $TaskBody -hidden $false
+                $Errors.Add("We've scheduled a task to add $UserId to the Exchange group $($MailGroup.displayName)") | Out-Null
+            } else {
+                Write-LogMessage -user $ExecutingUser -API $APIName -message "Added $UserId to group $($MailGroup.displayName)" -Sev 'Info' -tenant $TenantFilter
+                $Success.Add("Added user to group: $($MailGroup.displayName)") | Out-Null
+            }
         } catch {
             $ErrorMessage = Get-CippException -Exception $_
             $Errors.Add("We've failed to add the group $($MailGroup.displayName): $($ErrorMessage.NormalizedError)") | Out-Null
