@@ -23,7 +23,7 @@ function New-GraphBulkRequest {
         if (!$Tenant) {
             $Tenant = @{
                 GraphErrorCount = 0
-                LastGraphError  = $null
+                LastGraphError  = ''
                 PartitionKey    = 'TenantFailed'
                 RowKey          = 'Failed'
             }
@@ -54,14 +54,18 @@ function New-GraphBulkRequest {
             $Message = ($_.ErrorDetails.Message | ConvertFrom-Json -ErrorAction SilentlyContinue).error.message
             if ($null -eq $Message) { $Message = $($_.Exception.Message) }
             if ($Message -ne 'Request not applicable to target tenant.') {
-                $Tenant.LastGraphError = $Message
+                $Tenant.LastGraphError = $Message ?? ''
                 $Tenant.GraphErrorCount++
                 Update-AzDataTableEntity @TenantsTable -Entity $Tenant
             }
             throw $Message
         }
 
-        $Tenant.LastGraphError = ''
+        if ($Tenant.PSObject.Properties.Name -notcontains 'LastGraphError') {
+            $Tenant | Add-Member -MemberType NoteProperty -Name 'LastGraphError' -Value '' -Force
+        } else {
+            $Tenant.LastGraphError = ''
+        }
         Update-AzDataTableEntity @TenantsTable -Entity $Tenant
 
         return $ReturnedData.responses
