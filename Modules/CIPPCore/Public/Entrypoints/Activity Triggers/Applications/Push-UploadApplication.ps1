@@ -100,7 +100,7 @@ function Push-UploadApplication {
                 #For anyone that reads this, The maximum chunk size is 100MB for blob storage, so we can upload it as one part and just give it the single ID. Easy :)
                 $Upload = Invoke-RestMethod -Uri "$($AzFileUri.azureStorageUri)&comp=block&blockid=$id" -Method Put -Headers @{'x-ms-blob-type' = 'BlockBlob' } -InFile $inFile -ContentType 'application/octet-stream'
                 Write-Host "Upload data: $($Upload | ConvertTo-Json -Depth 10)"
-                $ConfirmUpload = Invoke-RestMethod -Uri "$($AzFileUri.azureStorageUri)&comp=blocklist" -Method Put -Body "<?xml version=`"1.0`" encoding=`"utf-8`"?><BlockList><Latest>$id</Latest></BlockList>"
+                $ConfirmUpload = Invoke-RestMethod -Uri "$($AzFileUri.azureStorageUri)&comp=blocklist" -Method Put -Body "<?xml version=`"1.0`" encoding=`"utf-8`"?><BlockList><Latest>$id</Latest></BlockList>" -ContentType 'application/xml'
                 Write-Host "Confirm Upload data: $($ConfirmUpload | ConvertTo-Json -Depth 10)"
                 $CommitReq = New-graphPostRequest -Uri "$($BaseURI)/$($NewApp.id)/microsoft.graph.win32lobapp/contentVersions/1/files/$($ContentReq.id)/commit" -Body $EncBody -Type POST -tenantid $tenant
                 Write-Host "Commit Request: $($CommitReq | ConvertTo-Json -Depth 10)"
