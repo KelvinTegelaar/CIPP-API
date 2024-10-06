@@ -91,6 +91,20 @@ function Add-CIPPDelegatedPermission {
             $CreateRequest = New-GraphPOSTRequest -uri 'https://graph.microsoft.com/v1.0/oauth2PermissionGrants' -tenantid $Tenantfilter -body $Createbody -type POST -NoAuthCheck $true
             $Results.add("Successfully added permissions for $($svcPrincipalId.displayName)")
         } else {
+            # Cleanup multiple scope entries and patch first id
+            if (($OldScope.id | Measure-Object).Count -gt 1) {
+                $OldScopeId = $OldScope.id[0]
+                $OldScope.id | ForEach-Object {
+                    if ($_ -ne $OldScopeId) {
+                        try {
+                            $null = New-GraphPOSTRequest -uri "https://graph.microsoft.com/v1.0/oauth2PermissionGrants/$_" -tenantid $Tenantfilter -type DELETE -NoAuthCheck $true
+                        } catch {
+                        }
+                    }
+                }
+            } else {
+                $OldScopeId = $OldScope.id
+            }
             $compare = Compare-Object -ReferenceObject $OldScope.scope.Split(' ') -DifferenceObject $NewScope.Split(' ')
             if (!$compare) {
                 $Results.add("All delegated permissions exist for $($svcPrincipalId.displayName)")
@@ -99,8 +113,12 @@ function Add-CIPPDelegatedPermission {
             $Patchbody = @{
                 scope = "$NewScope"
             } | ConvertTo-Json -Compress
-            $null = New-GraphPOSTRequest -uri "https://graph.microsoft.com/v1.0/oauth2PermissionGrants/$($OldScope.id)" -tenantid $Tenantfilter -body $Patchbody -type PATCH -NoAuthCheck $true
-
+            try {
+                $null = New-GraphPOSTRequest -uri "https://graph.microsoft.com/v1.0/oauth2PermissionGrants/$($OldScopeId)" -tenantid $Tenantfilter -body $Patchbody -type PATCH -NoAuthCheck $true
+            } catch {
+                $Results.add("Failed to update permissions for $($svcPrincipalId.displayName): $(Get-NormalizedError -message $_.Exception.Message)")
+                continue
+            }
             # Added permissions
             $Added = ($Compare | Where-Object { $_.SideIndicator -eq '=>' }).InputObject -join ' '
             $Removed = ($Compare | Where-Object { $_.SideIndicator -eq '<=' }).InputObject -join ' '
