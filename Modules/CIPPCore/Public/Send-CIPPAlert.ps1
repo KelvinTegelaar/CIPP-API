@@ -9,7 +9,8 @@ function Send-CIPPAlert {
         $TenantFilter,
         $APIName = 'Send Alert',
         $ExecutingUser,
-        $TableName
+        $TableName,
+        $RowKey = [string][guid]::NewGuid()
     )
     Write-Information 'Shipping Alert'
     $Table = Get-CIPPTable -TableName SchedulerConfig
@@ -52,7 +53,7 @@ function Send-CIPPAlert {
             $Table = Get-CIPPTable -TableName $TableName
             $Alert = @{
                 PartitionKey = $TenantFilter ?? 'Alert'
-                RowKey       = [string][guid]::NewGuid()
+                RowKey       = $RowKey
                 Title        = $Title
                 Data         = [string]$JSONContent
                 Tenant       = $TenantFilter
