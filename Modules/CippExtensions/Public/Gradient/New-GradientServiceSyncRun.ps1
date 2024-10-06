@@ -1,8 +1,6 @@
 function New-GradientServiceSyncRun {
-    [CmdletBinding()]
-    param (
-
-    )
+    [CmdletBinding(SupportsShouldProcess = $true)]
+    param ()
 
     $Table = Get-CIPPTable -TableName Extensionsconfig
     $Configuration = ((Get-CIPPAzDataTableEntity @Table).config | ConvertFrom-Json).Gradient

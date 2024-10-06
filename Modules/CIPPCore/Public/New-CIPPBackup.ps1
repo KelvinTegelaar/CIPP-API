@@ -27,6 +27,7 @@ function New-CIPPBackup {
                     Get-AzDataTableEntity @Table | Select-Object *, @{l = 'table'; e = { $CSVTable } } -ExcludeProperty DomainAnalyser
                 }
                 $RowKey = 'CIPPBackup' + '_' + (Get-Date).ToString('yyyy-MM-dd-HHmm')
+                $CSVfile
                 $CSVFile = [string]($CSVfile | ConvertTo-Json -Compress -Depth 100)
                 $entity = @{
                     PartitionKey = 'CIPPBackup'
