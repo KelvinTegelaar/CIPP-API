@@ -6,7 +6,7 @@ function Push-Schedulerwebhookcreation {
     param (
         $item
     )
-    $Table = Get-CIPPTable -TableName 'SchedulerConfig'
+    <#$Table = Get-CIPPTable -TableName 'SchedulerConfig'
     $WebhookTable = Get-CIPPTable -TableName 'webhookTable'
     $Tenant = $Item.Tenant
     $Row = Get-CIPPAzDataTableEntity @Table -Filter "RowKey eq '$($item.SchedulerRow)'"
@@ -42,6 +42,6 @@ function Push-Schedulerwebhookcreation {
                 Write-Information "Failed to create webhook for $Tenant - $($Row.webhookType): $($_.Exception.Message)"
             }
         }
-    }
+    }#>
 
 }
