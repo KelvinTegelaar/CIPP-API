@@ -303,7 +303,6 @@ function Push-DomainAnalyserDomain {
         } catch {
             $ErrorMessage = Get-CippException -Exception $_
             Write-LogMessage -API 'DomainAnalyser' -tenant $DomainObject.TenantId -message "MS CNAME DKIM error: $($ErrorMessage.NormalizedError)" -LogData $ErrorMessage -sev Error
-            return $ErrorMessage.NormalizedError
         }
     }
 
