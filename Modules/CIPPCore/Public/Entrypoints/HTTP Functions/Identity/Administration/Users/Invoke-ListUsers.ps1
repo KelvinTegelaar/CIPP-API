@@ -35,11 +35,8 @@ Function Invoke-ListUsers {
         $Table = Get-CIPPTable -TableName 'cacheusers'
         $Rows = Get-CIPPAzDataTableEntity @Table | Where-Object -Property Timestamp -GT (Get-Date).AddHours(-1)
         if (!$Rows) {
-            $Queue = New-CippQueueEntry -Name 'Users' -Link '/identity/administration/users?customerId=AllTenants'
-            Push-OutputBinding -Name listusers -Value "users/$($userid)?`$top=999&`$select=$($selectlist -join ',')&`$filter=$GraphFilter&`$count=true"
             [PSCustomObject]@{
-                Tenant  = 'Loading data for all tenants. Please check back after the job completes'
-                QueueId = $Queue.RowKey
+                Message = 'This function has been deprecated for all users, please use ListGraphRequest instead'
             }
         } else {
             $Rows.Data | ConvertFrom-Json | Select-Object $selectlist | ForEach-Object {
