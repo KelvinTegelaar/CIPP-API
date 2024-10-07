@@ -158,7 +158,8 @@ function Invoke-HuduExtensionSync {
         $CustomerLinks = $FormattedLinks -join "`n"
 
         $Users = $ExtensionCache.Users
-        $licensedUsers = $Users | Where-Object { $null -ne $_.assignedLicenses.skuId } | Sort-Object userPrincipalName
+        #$licensedUsers = $Users | Where-Object { $null -ne $_.assignedLicenses.skuId } | Sort-Object userPrincipalName
+        $licensedUsers = $Users | Sort-Object userPrincipalName
 
         $CompanyResult.users = ($licensedUsers | Measure-Object).count
 
