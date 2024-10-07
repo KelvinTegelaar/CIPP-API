@@ -102,7 +102,7 @@ function Get-NinjaOneFieldMapping {
 
     } catch {
         [System.Collections.Generic.List[object]]$NinjaCustomFieldsNode = @()
-        [System.Collections.Generic.List[objecgt]]$NinjaCustomFieldsOrg = @()
+        [System.Collections.Generic.List[object]]$NinjaCustomFieldsOrg = @()
     }
 
     $MappingObj = [PSCustomObject]@{
