@@ -28,7 +28,7 @@ function Remove-CIPPGraphSubscription {
                 }
             }
         } else {
-            $WebhookTable = Get-CIPPTable -TableName webhookTable
+            $WebhookTable = Get-CIPPTable -TableName 'webhookTable'
             if ($type -eq 'AuditLog') {
                 $WebhookRow = Get-CIPPAzDataTableEntity @WebhookTable | Where-Object { $_.PartitionKey -eq $TenantFilter -and $_.Resource -eq $EventType }
             } else {

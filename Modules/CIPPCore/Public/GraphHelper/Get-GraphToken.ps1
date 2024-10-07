@@ -1,4 +1,4 @@
-function Get-GraphToken($tenantid, $scope, $AsApp, $AppID, $refreshToken, $ReturnRefresh, $SkipCache) {
+function Get-GraphToken($tenantid, $scope, $AsApp, $AppID, $AppSecret, $refreshToken, $ReturnRefresh, $SkipCache) {
     <#
     .FUNCTIONALITY
     Internal
@@ -30,6 +30,15 @@ function Get-GraphToken($tenantid, $scope, $AsApp, $AppID, $refreshToken, $Retur
         }
     }
 
+    if ($null -ne $AppID -and $null -ne $AppSecret) {
+        $AuthBody = @{
+            client_id     = $AppID
+            client_secret = $AppSecret
+            scope         = $Scope
+            grant_type    = 'client_credentials'
+        }
+    }
+
     if (!$tenantid) { $tenantid = $env:TenantID }
 
     $TokenKey = '{0}-{1}-{2}' -f $tenantid, $scope, $asApp
@@ -57,9 +66,9 @@ function Get-GraphToken($tenantid, $scope, $AsApp, $AppID, $refreshToken, $Retur
         if (!$Tenant.RowKey) {
             $donotset = $true
             $Tenant = [pscustomobject]@{
-                GraphErrorCount     = $null
-                LastGraphTokenError = $null
-                LastGraphError      = $null
+                GraphErrorCount     = 0
+                LastGraphTokenError = ''
+                LastGraphError      = ''
                 PartitionKey        = 'TenantFailed'
                 RowKey              = 'Failed'
             }
