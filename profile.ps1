@@ -26,7 +26,7 @@
 if ($env:ExternalDurablePowerShellSDK -eq $true) {
     try {
         Import-Module AzureFunctions.PowerShell.Durable.SDK -ErrorAction Stop
-        Write-Host 'External Durable SDK enabled'
+        Write-Information 'External Durable SDK enabled'
     } catch {
         Write-LogMessage -message 'Failed to import module - AzureFunctions.PowerShell.Durable.SDK' -LogData (Get-CippException -Exception $_) -Sev 'debug'
         $_.Exception.Message
@@ -39,7 +39,7 @@ try {
 
 try {
     if (!$ENV:SetFromProfile) {
-        Write-Host "We're reloading from KV"
+        Write-Information "We're reloading from KV"
         $Auth = Get-CIPPAuthentication
     }
 } catch {
@@ -49,16 +49,17 @@ try {
 Set-Location -Path $PSScriptRoot
 $CurrentVersion = (Get-Content .\version_latest.txt).trim()
 $Table = Get-CippTable -tablename 'Version'
-$LastStartup = Get-CIPPAzDataTableEntity @Table -Filter "PartitionKey eq 'Version' and RowKey eq 'Version'"
-if ($CurrentVersion -ne $LastStartup.Version) {
-    Write-Host "Version has changed from $($LastStartup.Version) to $CurrentVersion"
+Write-Information "Function: $($env:WEBSITE_SITE_NAME) Version: $CurrentVersion"
+$LastStartup = Get-CIPPAzDataTableEntity @Table -Filter "PartitionKey eq 'Version' and RowKey eq '$($env:WEBSITE_SITE_NAME)'"
+if (!$LastStartup -or $CurrentVersion -ne $LastStartup.Version) {
+    Write-Information "Version has changed from $($LastStartup.Version ?? 'None') to $CurrentVersion"
     Clear-CippDurables
     if ($LastStartup) {
         $LastStartup.Version = $CurrentVersion
     } else {
         $LastStartup = [PSCustomObject]@{
             PartitionKey = 'Version'
-            RowKey       = 'Version'
+            RowKey       = $env:WEBSITE_SITE_NAME
             Version      = $CurrentVersion
         }
     }

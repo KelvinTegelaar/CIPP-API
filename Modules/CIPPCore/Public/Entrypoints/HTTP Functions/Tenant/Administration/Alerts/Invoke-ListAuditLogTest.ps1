@@ -10,8 +10,7 @@ function Invoke-ListAuditLogTest {
 
     $AuditLogQuery = @{
         TenantFilter = $Request.Query.TenantFilter
-        LogType      = $Request.Query.LogType
-        ShowAll      = $true
+        SearchId     = $Request.Query.SearchId
     }
     try {
         $TestResults = Test-CIPPAuditLogRules @AuditLogQuery
