@@ -563,11 +563,15 @@ function Invoke-HuduExtensionSync {
                     }
                     $UserPoliciesFormatted = $UserPoliciesFormatted + '</ul>'
 
+                    $isAdmin = $AdminUsers | Where-Object $_ -Contains $user.name
+
                     [System.Collections.Generic.List[PSCustomObject]]$UserOverviewFormatted = @()
                     $UserOverviewFormatted.add($(Get-HuduFormattedField -Title 'User Name' -Value "$($User.displayName)"))
                     $UserOverviewFormatted.add($(Get-HuduFormattedField -Title 'User Principal Name' -Value "$($User.userPrincipalName)"))
                     $UserOverviewFormatted.add($(Get-HuduFormattedField -Title 'User ID' -Value "$($User.ID)"))
                     $UserOverviewFormatted.add($(Get-HuduFormattedField -Title 'User Enabled' -Value "$($User.accountEnabled)"))
+                    $UserOverviewFormatted.add($(Get-HuduFormattedField -Title 'Privileged Account' -Value "$($isadmin)"))
+                    $UserOverviewFormatted.add($(Get-HuduFormattedField -Title 'Active Directory Sync' -Value "$($User.OnPremisesSyncEnabled)"))
                     $UserOverviewFormatted.add($(Get-HuduFormattedField -Title 'Job Title' -Value "$($User.jobTitle)"))
                     $UserOverviewFormatted.add($(Get-HuduFormattedField -Title 'Mobile Phone' -Value "$($User.mobilePhone)"))
                     $UserOverviewFormatted.add($(Get-HuduFormattedField -Title 'Business Phones' -Value "$($User.businessPhones -join ', ')"))
