@@ -27,7 +27,6 @@ Function Invoke-ListMFAUsers {
             $TenantList = Get-Tenants -IncludeErrors
             $Queue = New-CippQueueEntry -Name 'MFA Users - All Tenants' -Link '/identity/reports/mfa-report?customerId=AllTenants' -TotalTasks ($TenantList | Measure-Object).Count
             Write-Information ($Queue | ConvertTo-Json)
-            #Push-OutputBinding -Name mfaqueue -Value $Queue.RowKey
             $GraphRequest = [PSCustomObject]@{
                 UPN = 'Loading data for all tenants. Please check back in a few minutes'
             }
