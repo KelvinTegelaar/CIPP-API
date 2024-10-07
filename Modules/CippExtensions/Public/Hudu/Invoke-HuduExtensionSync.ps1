@@ -385,7 +385,7 @@ function Invoke-HuduExtensionSync {
         $Permissions = $ExtensionCache.MailboxPermissions
         if ($licensedUsers) {
             $pre = "<div class=`"nasa__block`"><header class='nasa__block-header'>
-			<h1><i class='fas fa-users icon'></i>Licensed Users</h1>
+			<h1><i class='fas fa-users icon'></i>All Users</h1>
 			 </header>"
 
             $post = '</div>'
@@ -932,7 +932,7 @@ function Invoke-HuduExtensionSync {
 			 </div>"
 
         try {
-            $null = Set-HuduMagicDash -Title "Microsoft 365 - $($Tenant.displayName)" -company_name $TenantMap.IntegrationName -Message "$($licensedUsers.count) Licensed Users" -Icon 'fab fa-microsoft' -Content $body -Shade 'success'
+            $null = Set-HuduMagicDash -Title "Microsoft 365 - $($Tenant.displayName)" -company_name $TenantMap.IntegrationName -Message "$($CompanyResult.users) Licensed Users" -Icon 'fab fa-microsoft' -Content $body -Shade 'success'
             $CompanyResult.Logs.Add("Updated Magic Dash for $($Tenant.displayName)")
         } catch {
             $CompanyResult.Errors.add("Company: Failed to add Magic Dash to Company: $_")
