@@ -4,6 +4,14 @@
     "Description": "Orchestrator to process user scheduled tasks",
     "Cron": "0 */15 * * * *",
     "Priority": 1,
+    "RunOnProcessor": true,
+    "PreferredProcessor": "usertasks"
+  },
+  {
+    "Command": "Start-CIPPProcessorQueue",
+    "Description": "Timer to handle user initiated tasks",
+    "Cron": "0 */15 * * * *",
+    "Priority": 1,
     "RunOnProcessor": true
   },
   {
@@ -11,7 +19,9 @@
     "Description": "Orchestrator to process audit logs",
     "Cron": "0 */15 * * * *",
     "Priority": 2,
-    "RunOnProcessor": true
+    "RunOnProcessor": true,
+    "PreferredProcessor": "auditlog",
+    "IsSystem": true
   },
   {
     "Command": "Start-WebhookOrchestrator",
@@ -25,7 +35,8 @@
     "Description": "Orchestrator to process standards",
     "Cron": "0 0 */4 * * *",
     "Priority": 4,
-    "RunOnProcessor": true
+    "RunOnProcessor": true,
+    "PreferredProcessor": "standards"
   },
   {
     "Command": "Start-CIPPGraphSubscriptionCleanupTimer",
@@ -59,9 +70,10 @@
   {
     "Command": "Start-CIPPGraphSubscriptionRenewalTimer",
     "Description": "Orchestrator to renew Graph subscriptions",
-    "Cron": "0 10 * * * *",
+    "Cron": "0 15 * * * *",
     "Priority": 8,
-    "RunOnProcessor": true
+    "RunOnProcessor": true,
+    "IsSystem": true
   },
   {
     "Command": "Start-DomainOrchestrator",

@@ -9,7 +9,7 @@ function Get-CIPPAuthentication {
     try {
         if ($env:AzureWebJobsStorage -eq 'UseDevelopmentStorage=true') {
             $Table = Get-CIPPTable -tablename 'DevSecrets'
-            $Secret = Get-CIPPAzDataTableEntity @Table -Filter "PartitionKey eq 'Secret' and RowKey eq 'Secret'"
+            $Secret = Get-AzDataTableEntity @Table -Filter "PartitionKey eq 'Secret' and RowKey eq 'Secret'"
             if (!$Secret) {
                 throw 'Development variables not set'
             }
@@ -20,9 +20,9 @@ function Get-CIPPAuthentication {
             }
         } else {
             Connect-AzAccount -Identity
-
+            $keyvaultname = ($ENV:WEBSITE_DEPLOYMENT_ID -split '-')[0]
             $Variables | ForEach-Object {
-                Set-Item -Path ENV:$_ -Value (Get-AzKeyVaultSecret -VaultName $ENV:WEBSITE_DEPLOYMENT_ID -Name $_ -AsPlainText -ErrorAction Stop) -Force
+                Set-Item -Path ENV:$_ -Value (Get-AzKeyVaultSecret -VaultName $keyvaultname -Name $_ -AsPlainText -ErrorAction Stop) -Force
             }
         }
         $ENV:SetFromProfile = $true

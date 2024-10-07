@@ -57,38 +57,6 @@ function Receive-CippHttpTrigger {
     }
 }
 
-function Receive-CippQueueTrigger {
-    Param($QueueItem, $TriggerMetadata)
-
-    Set-Location (Get-Item $PSScriptRoot).Parent.Parent.FullName
-    $Start = (Get-Date).ToUniversalTime()
-    $APIName = $TriggerMetadata.FunctionName
-    Write-Information "#### Running $APINAME"
-    Set-Location (Get-Item $PSScriptRoot).Parent.Parent.FullName
-    $FunctionName = 'Push-{0}' -f $APIName
-    $QueueTrigger = @{
-        QueueItem       = $QueueItem
-        TriggerMetadata = $TriggerMetadata
-    }
-    try {
-        & $FunctionName @QueueTrigger
-    } catch {
-        $ErrorMsg = $_.Exception.Message
-    }
-
-    $End = (Get-Date).ToUniversalTime()
-
-    $Stats = @{
-        FunctionType = 'Queue'
-        Entity       = $QueueItem
-        Start        = $Start
-        End          = $End
-        ErrorMsg     = $ErrorMsg
-    }
-    Write-Information '####### Adding stats'
-    Write-CippFunctionStats @Stats
-}
-
 function Receive-CippOrchestrationTrigger {
     param($Context)
 
@@ -235,6 +203,7 @@ function Receive-CIPPTimerTrigger {
     $Functions = Get-CIPPTimerFunctions
     $Table = Get-CIPPTable -tablename CIPPTimers
     $Statuses = Get-CIPPAzDataTableEntity @Table
+    $FunctionName = $env:WEBSITE_SITE_NAME
 
     foreach ($Function in $Functions) {
         Write-Information "CIPPTimer: $($Function.Command) - $($Function.Cron)"
@@ -242,7 +211,7 @@ function Receive-CIPPTimerTrigger {
         if ($FunctionStatus.OrchestratorId) {
             $FunctionName = $env:WEBSITE_SITE_NAME
             $InstancesTable = Get-CippTable -TableName ('{0}Instances' -f ($FunctionName -replace '-', ''))
-            $Instance = Get-CIPPAzDataTableEntity @InstancesTable -Filter "PartitionKey eq '$($FunctionStatus.OrchestratorId)'" -Property RuntimeStatus
+            $Instance = Get-CIPPAzDataTableEntity @InstancesTable -Filter "PartitionKey eq '$($FunctionStatus.OrchestratorId)'" -Property PartitionKey, RowKey, RuntimeStatus
             if ($Instance.RuntimeStatus -eq 'Running') {
                 Write-LogMessage -API 'TimerFunction' -message "$($Function.Command) - $($FunctionStatus.OrchestratorId) is still running" -sev Warn -LogData $FunctionStatus
                 Write-Warning "CIPP Timer: $($Function.Command) - $($FunctionStatus.OrchestratorId) is still running, skipping execution"
@@ -266,5 +235,5 @@ function Receive-CIPPTimerTrigger {
     }
 }
 
-Export-ModuleMember -Function @('Receive-CippHttpTrigger', 'Receive-CippQueueTrigger', 'Receive-CippOrchestrationTrigger', 'Receive-CippActivityTrigger', 'Receive-CIPPTimerTrigger')
+Export-ModuleMember -Function @('Receive-CippHttpTrigger', 'Receive-CippOrchestrationTrigger', 'Receive-CippActivityTrigger', 'Receive-CIPPTimerTrigger')
 
