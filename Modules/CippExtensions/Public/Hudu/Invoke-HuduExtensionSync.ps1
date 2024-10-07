@@ -158,8 +158,8 @@ function Invoke-HuduExtensionSync {
         $CustomerLinks = $FormattedLinks -join "`n"
 
         $Users = $ExtensionCache.Users
-        #$licensedUsers = $Users | Where-Object { $null -ne $_.assignedLicenses.skuId } | Sort-Object userPrincipalName
-        $licensedUsers = $Users | Sort-Object userPrincipalName
+        $licensedUsers = $Users | Where-Object { $null -ne $_.assignedLicenses.skuId } | Sort-Object userPrincipalName
+        #$licensedUsers = $Users | Sort-Object userPrincipalName
 
         $CompanyResult.users = ($licensedUsers | Measure-Object).count
 
@@ -385,7 +385,7 @@ function Invoke-HuduExtensionSync {
         $Permissions = $ExtensionCache.MailboxPermissions
         if ($licensedUsers) {
             $pre = "<div class=`"nasa__block`"><header class='nasa__block-header'>
-			<h1><i class='fas fa-users icon'></i>All Users</h1>
+			<h1><i class='fas fa-users icon'></i>Licensed Users</h1>
 			 </header>"
 
             $post = '</div>'
@@ -564,7 +564,7 @@ function Invoke-HuduExtensionSync {
                     }
                     $UserPoliciesFormatted = $UserPoliciesFormatted + '</ul>'
 
-                    $isAdmin = $AdminUsers | Where-Object $_ -Contains $user.name
+                    $isAdmin = $AdminUsers | Where-Object $_ -Match $user.name
 
                     [System.Collections.Generic.List[PSCustomObject]]$UserOverviewFormatted = @()
                     $UserOverviewFormatted.add($(Get-HuduFormattedField -Title 'User Name' -Value "$($User.displayName)"))
