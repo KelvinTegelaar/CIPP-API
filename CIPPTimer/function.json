@@ -1,0 +1,17 @@
+﻿{
+  "scriptFile": "../Modules/CippEntrypoints/CippEntrypoints.psm1",
+  "entryPoint": "Receive-CippTimerTrigger",
+  "bindings": [
+    {
+      "name": "Timer",
+      "schedule": "0 0/15 * * * *",
+      "direction": "in",
+      "type": "timerTrigger"
+    },
+    {
+      "name": "starter",
+      "type": "durableClient",
+      "direction": "in"
+    }
+  ]
+}
