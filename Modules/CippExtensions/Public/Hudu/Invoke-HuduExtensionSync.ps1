@@ -194,6 +194,7 @@ function Invoke-HuduExtensionSync {
         $RolesHtml = $Roles | Select-Object DisplayName, Description, ParsedMembers | ConvertTo-Html -PreContent $pre -PostContent $post -Fragment | ForEach-Object { $tmp = $_ -replace '&lt;', '<'; $tmp -replace '&gt;', '>'; } | Out-String
 
         $AdminUsers = (($Roles | Where-Object { $_.displayName -match 'Administrator' }).Members | Where-Object { $null -ne $_.displayName } | Select-Object @{N = 'Name'; E = { "<a target='_blank' href='https://entra.microsoft.com/$($Tenant.defaultDomainName)/#blade/Microsoft_AAD_IAM/UserDetailsMenuBlade/Profile/userId/$($_.Id)'>$($_.displayName) - $($_.userPrincipalName)</a>" } } -Unique).name -join '<br/>'
+        $AdminUsersSimple = (($Roles | Where-Object { $_.displayName -match 'Administrator' }).Members | Where-Object { $null -ne $_.displayName } | Select-Object $_.displayName -Unique).name -join ','
 
         $Domains = $ExtensionCache.Domains
 
@@ -974,9 +975,9 @@ function Invoke-HuduExtensionSync {
         Write-LogMessage -tenant $Tenant.defaultDomainName -tenantid $Tenant.customerId -API 'Hudu Sync' -message "Company: A fatal error occured: $_" -level 'Error'
     }
     if ($OnPremisesSyncEnabled) {
-        Set-HuduAsset -asset_id $huduCustomerDetails.id -Name $($huduCustomerDetails.name) -company_id $($company_id) -asset_layout_id 101 -Fields @(@{ 'Organization Display Name' = $($Tenant.DisplayName); 'Microsoft 365 Default Domain' = $($defaultdomain); 'Microsoft 365 All Domains' = $($customerDomains) ; 'Microsoft 365 TenantID' = $($Tenant.customerId); 'Microsoft 365 Last Sync' = $(Get-Date -Format 'yyyy-MM-dd HH:mm'); 'Microsoft 365 Active Directory Sync' = $OnPremisesSyncEnabled; 'Microsoft 365 Summary' = "Users: $($CompanyResult.Users), Devices: $($CompanyResult.Devices)`r`nLast Sync: $(Get-Date -Format 'yyyy-MM-dd HH:mm')" })
+        Set-HuduAsset -asset_id $huduCustomerDetails.id -Name $($huduCustomerDetails.name) -company_id $($company_id) -asset_layout_id 101 -Fields @(@{ 'Organization Display Name' = $($Tenant.DisplayName); 'Microsoft 365 Default Domain' = $($defaultdomain); 'Microsoft 365 All Domains' = $($customerDomains) ; 'Microsoft 365 TenantID' = $($Tenant.customerId); 'Microsoft 365 Last Sync' = $(Get-Date -Format 'yyyy-MM-dd HH:mm'); 'Microsoft 365 Active Directory Sync' = $OnPremisesSyncEnabled; 'Microsoft 365 Administrators' = $AdminUsersSimple; 'Microsoft 365 Summary' = "Users: $($CompanyResult.Users), Devices: $($CompanyResult.Devices), Sync: $(Get-Date -Format 'yy-MM-dd HH:mm')" })
     } else {
-        Set-HuduAsset -asset_id $huduCustomerDetails.id -Name $($huduCustomerDetails.name) -company_id $($company_id) -asset_layout_id 101 -Fields @(@{ 'Organization Display Name' = $($Tenant.DisplayName); 'Microsoft 365 Default Domain' = $($defaultdomain); 'Microsoft 365 All Domains' = $($customerDomains) ; 'Microsoft 365 TenantID' = $($Tenant.customerId); 'Microsoft 365 Last Sync' = $(Get-Date -Format 'yyyy-MM-dd HH:mm'); 'Microsoft 365 Active Directory Sync' = $false; 'Microsoft 365 Summary' = "Users: $($CompanyResult.Users), Devices: $($CompanyResult.Devices)`r`nLast Sync: $(Get-Date -Format 'yyyy-MM-dd HH:mm')" })
+        Set-HuduAsset -asset_id $huduCustomerDetails.id -Name $($huduCustomerDetails.name) -company_id $($company_id) -asset_layout_id 101 -Fields @(@{ 'Organization Display Name' = $($Tenant.DisplayName); 'Microsoft 365 Default Domain' = $($defaultdomain); 'Microsoft 365 All Domains' = $($customerDomains) ; 'Microsoft 365 TenantID' = $($Tenant.customerId); 'Microsoft 365 Last Sync' = $(Get-Date -Format 'yyyy-MM-dd HH:mm'); 'Microsoft 365 Active Directory Sync' = $false; 'Microsoft 365 Administrators' = $AdminUsersSimple; 'Microsoft 365 Summary' = "Users: $($CompanyResult.Users), Devices: $($CompanyResult.Devices), Sync: $(Get-Date -Format 'yy-MM-dd HH:mm')" })
     }
     return $CompanyResult
 }
