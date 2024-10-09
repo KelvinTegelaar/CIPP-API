@@ -12,7 +12,16 @@ function Start-CIPPProcessorQueue {
     foreach ($QueueItem in $QueueItems) {
         if ($PSCmdlet.ShouldProcess("Processing function $($QueueItem.ProcessorFunction)")) {
             Remove-AzDataTableEntity @QueueTable -Entity $QueueItem
-            $Parameters = $QueueItem.Parameters | ConvertFrom-Json -AsHashtable
+
+            if ($QueueItem.Parameters) {
+                try {
+                    $Parameters = $QueueItem.Parameters | ConvertFrom-Json -AsHashtable
+                } catch {
+                    $Parameters = @{}
+                }
+            } else {
+                $Parameters = @{}
+            }
             if (Get-Command -Name $QueueItem.FunctionName -Module CIPPCore -ErrorAction SilentlyContinue) {
                 & $QueueItem.FunctionName @Parameters
             } else {
