@@ -11,8 +11,7 @@ function Start-CIPPProcessorQueue {
 
     foreach ($QueueItem in $QueueItems) {
         if ($PSCmdlet.ShouldProcess("Processing function $($QueueItem.ProcessorFunction)")) {
-            Remove-AzDataTableEntity @QueueTable -Entity $QueueItem
-
+            Write-Information "Running queued function $($QueueItem.ProcessorFunction)"
             if ($QueueItem.Parameters) {
                 try {
                     $Parameters = $QueueItem.Parameters | ConvertFrom-Json -AsHashtable
@@ -27,6 +26,7 @@ function Start-CIPPProcessorQueue {
             } else {
                 Write-Warning "Function $($QueueItem.FunctionName) not found"
             }
+            Remove-AzDataTableEntity @QueueTable -Entity $QueueItem
         }
     }
 }
