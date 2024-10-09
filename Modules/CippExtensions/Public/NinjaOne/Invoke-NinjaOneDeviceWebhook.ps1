@@ -5,7 +5,6 @@ function Invoke-NinjaOneDeviceWebhook {
         $Configuration
     )
     try {
-        Write-LogMessage -user $ExecutingUser -API $APIName -message "Webhook Recieved - Updating NinjaOne Device compliance for $($Data.resourceData.id) in $($Data.tenantId)" -Sev 'Info' -tenant $TenantFilter
         $MappedFields = [pscustomobject]@{}
         $CIPPMapping = Get-CIPPTable -TableName CippMapping
         $Filter = "PartitionKey eq 'NinjaOneFieldMapping'"
@@ -14,6 +13,7 @@ function Invoke-NinjaOneDeviceWebhook {
         }
 
         if ($MappedFields.DeviceCompliance) {
+            Write-LogMessage -user $ExecutingUser -API $APIName -message "Webhook Recieved - Updating NinjaOne Device compliance for $($Data.resourceData.id) in $($Data.tenantId)" -Sev 'Info' -tenant $TenantFilter
             $tenantfilter = $Data.tenantId
             $M365DeviceID = $Data.resourceData.id
 
