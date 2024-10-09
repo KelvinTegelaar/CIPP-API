@@ -22,7 +22,11 @@ function Start-CIPPProcessorQueue {
                 $Parameters = @{}
             }
             if (Get-Command -Name $QueueItem.FunctionName -Module CIPPCore -ErrorAction SilentlyContinue) {
-                & $QueueItem.FunctionName @Parameters
+                try {
+                    Invoke-Command -ScriptBlock { & $QueueItem.FunctionName @Parameters }
+                } catch {
+                    Write-Warning "Failed to run function $($QueueItem.FunctionName). Error: $($_.Exception.Message)"
+                }
             } else {
                 Write-Warning "Function $($QueueItem.FunctionName) not found"
             }
