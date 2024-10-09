@@ -37,6 +37,7 @@ function Write-LogMessage {
         'SentAsAlert'  = $false
         'PartitionKey' = $PartitionKey
         'RowKey'       = ([guid]::NewGuid()).ToString()
+        'FunctionNode' = $env:WEBSITE_SITE_NAME
         'LogData'      = [string]$LogData
     }
 
