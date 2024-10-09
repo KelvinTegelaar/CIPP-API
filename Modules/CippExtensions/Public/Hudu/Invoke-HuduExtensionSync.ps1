@@ -673,6 +673,10 @@ function Invoke-HuduExtensionSync {
                             microsoft_365         = $UserBody
                             email_address         = $user.userPrincipalName
                             microsoft_365_Account = $user.userPrincipalName
+                            last_name             = $user.surname
+                            first_name            = $user.givenName
+                            department            = $user.department
+                            title                 = $user.jobTitle
                         }
                         $NewHash = Get-StringHash -String $UserBody
 
