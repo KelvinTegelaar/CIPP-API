@@ -670,8 +670,9 @@ function Invoke-HuduExtensionSync {
 
                     if (![string]::IsNullOrEmpty($PeopleLayoutId)) {
                         $UserAssetFields = @{
-                            microsoft_365 = $UserBody
-                            email_address = $user.userPrincipalName
+                            microsoft_365         = $UserBody
+                            email_address         = $user.userPrincipalName
+                            microsoft_365_Account = $user.userPrincipalName
                         }
                         $NewHash = Get-StringHash -String $UserBody
 
