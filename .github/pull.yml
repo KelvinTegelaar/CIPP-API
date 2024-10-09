@@ -6,3 +6,6 @@ rules:
   - base: dev
     upstream: KelvinTegelaar:dev
     mergeMethod: none
+  - base: website
+    upstream: KelvinTegelaar:website
+    mergeMethod: merge
