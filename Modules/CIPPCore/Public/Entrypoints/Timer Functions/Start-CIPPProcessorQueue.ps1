@@ -21,14 +21,14 @@ function Start-CIPPProcessorQueue {
             } else {
                 $Parameters = @{}
             }
-            if (Get-Command -Name $QueueItem.FunctionName -Module CIPPCore -ErrorAction SilentlyContinue) {
+            if (Get-Command -Name $QueueItem.ProcessorFunction -Module CIPPCore -ErrorAction SilentlyContinue) {
                 try {
-                    Invoke-Command -ScriptBlock { & $QueueItem.FunctionName @Parameters }
+                    Invoke-Command -ScriptBlock { & $QueueItem.ProcessorFunction @Parameters }
                 } catch {
-                    Write-Warning "Failed to run function $($QueueItem.FunctionName). Error: $($_.Exception.Message)"
+                    Write-Warning "Failed to run function $($QueueItem.ProcessorFunction). Error: $($_.Exception.Message)"
                 }
             } else {
-                Write-Warning "Function $($QueueItem.FunctionName) not found"
+                Write-Warning "Function $($QueueItem.ProcessorFunction) not found"
             }
             Remove-AzDataTableEntity @QueueTable -Entity $QueueItem
         }
