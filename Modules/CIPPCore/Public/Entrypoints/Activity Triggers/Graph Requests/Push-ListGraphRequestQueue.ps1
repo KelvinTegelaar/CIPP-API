@@ -34,6 +34,7 @@ function Push-ListGraphRequestQueue {
             NoPagination                = $Item.NoPagination
             ReverseTenantLookupProperty = $Item.ReverseTenantLookupProperty
             ReverseTenantLookup         = $Item.ReverseTenantLookup
+            AsApp                       = $Item.AsApp ?? $false
             SkipCache                   = $true
         }
 

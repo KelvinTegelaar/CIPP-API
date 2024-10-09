@@ -256,12 +256,15 @@ function Push-DomainAnalyserDomain {
                 continue
             }
             # Test if there are already MSCNAME values set, skip domain if there is
-            $CurrentMSCNAMEInfo = ConvertFrom-Json $DomainObject.DomainAnalyser -Depth 10
-            if (![string]::IsNullOrWhiteSpace($CurrentMSCNAMEInfo.MSCNAMEDKIMSelectors.selector1.Value) -and
-                ![string]::IsNullOrWhiteSpace($CurrentMSCNAMEInfo.MSCNAMEDKIMSelectors.selector2.Value)) {
-                $Result.MSCNAMEDKIMSelectors = $CurrentMSCNAMEInfo.MSCNAMEDKIMSelectors
-                continue
+            if ($null -ne $DomainObject.DomainAnalyser) {
+                $CurrentMSCNAMEInfo = ConvertFrom-Json $DomainObject.DomainAnalyser -Depth 10
+                if (![string]::IsNullOrWhiteSpace($CurrentMSCNAMEInfo.MSCNAMEDKIMSelectors.selector1.Value) -and
+                    ![string]::IsNullOrWhiteSpace($CurrentMSCNAMEInfo.MSCNAMEDKIMSelectors.selector2.Value)) {
+                    $Result.MSCNAMEDKIMSelectors = $CurrentMSCNAMEInfo.MSCNAMEDKIMSelectors
+                    continue
+                }
             }
+
 
             # Compute the DKIM CNAME records from $Tenant.InitialDomainName according to this logic: https://learn.microsoft.com/en-us/defender-office-365/email-authentication-dkim-configure#syntax-for-dkim-cname-records
             # Test if it has a - in the domain name
@@ -298,9 +301,9 @@ function Push-DomainAnalyserDomain {
             }
             $Result.MSCNAMEDKIMSelectors = $MSCNAMERecords
         } catch {
-            $Message = 'MS DKIM CNAME Error'
-            Write-LogMessage -API 'DomainAnalyser' -tenant $DomainObject.TenantId -message $Message -LogData (Get-CippException -Exception $_) -sev Error
-            return $Message
+            $ErrorMessage = Get-CippException -Exception $_
+            Write-LogMessage -API 'DomainAnalyser' -tenant $DomainObject.TenantId -message "MS CNAME DKIM error: $($ErrorMessage.NormalizedError)" -LogData $ErrorMessage -sev Error
+            return $ErrorMessage.NormalizedError
         }
     }
 
