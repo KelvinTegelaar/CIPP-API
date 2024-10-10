@@ -7,7 +7,7 @@ function Start-ApplicationOrchestrator {
     Param()
 
     Write-LogMessage -API 'IntuneApps' -message 'Started uploading applications to tenants' -sev Info
-
+    Write-Information 'Started uploading applications to tenants'
     $InputObject = [PSCustomObject]@{
         OrchestratorName = 'ApplicationOrchestrator'
         SkipLog          = $true
