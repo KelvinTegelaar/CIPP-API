@@ -1,6 +1,6 @@
 version: "1"
 rules:
   - base: master
-    upstream: KelvinTegelaar:master
+    upstream: KelvinTegelaar/CIPP-API:master
     mergeMethod: merge
 
