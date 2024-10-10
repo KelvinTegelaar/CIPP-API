@@ -35,7 +35,7 @@ try {
 
     try {
         $localprograms = & "$chocoPath" list
-        $CustomRepoString = if ($CustomRepo) { "--source $customrepo" } else { $null }
+        $CustomRepoString = if ($CustomRepo) { "--source=$customrepo" } else { $null }
         if ($localprograms -like "*$Packagename*" ) {
             Write-Host "Upgrading $packagename"
             & "$chocoPath" upgrade $Packagename $CustomRepoString
