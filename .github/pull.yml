@@ -2,5 +2,5 @@ version: "1"
 rules:
   - base: master
     upstream: KelvinTegelaar/CIPP-API:master
-    mergeMethod: merge
+    mergeMethod: hardreset
 
