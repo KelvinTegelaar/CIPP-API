@@ -311,11 +311,11 @@ function Invoke-NinjaOneTenantSync {
                 method = 'GET'
                 url    = '/deviceManagement/deviceCompliancePolicies/'
             },
-            @{
+            <#@{
                 id     = 'DeviceApps'
                 method = 'GET'
                 url    = '/deviceAppManagement/mobileApps'
-            },
+            },#>
             @{
                 id     = 'Groups'
                 method = 'GET'
