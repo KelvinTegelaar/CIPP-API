@@ -16,7 +16,8 @@ function Get-CippAuditLogSearches {
 
     if ($ReadyToProcess.IsPresent) {
         $AuditLogSearchesTable = Get-CippTable -TableName 'AuditLogSearches'
-        $PendingQueries = Get-CIPPAzDataTableEntity @AuditLogSearchesTable -Filter "Tenant eq '$TenantFilter' and CippStatus eq 'Pending'"
+        $15MinutesAgo = (Get-Date).AddMinutes(-15).ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ssZ')
+        $PendingQueries = Get-CIPPAzDataTableEntity @AuditLogSearchesTable -Filter "Tenant eq '$TenantFilter' and (CippStatus eq 'Pending' or (CippStatus eq 'Processing' and Timestamp le datetime'$15MinutesAgo'))" | Sort-Object Timestamp
 
         $BulkRequests = foreach ($PendingQuery in $PendingQueries) {
             @{
