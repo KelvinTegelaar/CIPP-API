@@ -24,6 +24,13 @@
     "IsSystem": true
   },
   {
+    "Command": "Start-ApplicationOrchestrator",
+    "Description": "Orchestrator to process application uploads",
+    "Cron": "0 0 */12 * * *",
+    "Priority": 2,
+    "RunOnProcessor": true
+  },
+  {
     "Command": "Start-WebhookOrchestrator",
     "Description": "Orchestrator to process webhooks",
     "Cron": "0 */15 * * * *",
