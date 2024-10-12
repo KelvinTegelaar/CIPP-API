@@ -60,10 +60,10 @@ function Invoke-NinjaOneTenantSync {
         $Configuration = ((Get-CIPPAzDataTableEntity @Table).config | ConvertFrom-Json).NinjaOne
 
         $AllowedNinjaHostnames = @(
-            'app.ninjarmmm.com',
-            'eu.ninjarmmm.com',
-            'oc.ninjarmmm.com',
-            'ca.ninjarmmm.com',
+            'app.ninjarmm.com',
+            'eu.ninjarmm.com',
+            'oc.ninjarmm.com',
+            'ca.ninjarmm.com',
             'us2.ninjarmm.com'
         )
 
