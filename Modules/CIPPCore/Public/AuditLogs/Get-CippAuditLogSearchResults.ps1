@@ -18,6 +18,6 @@ function Get-CippAuditLogSearchResults {
     )
 
     process {
-        New-GraphGetRequest -uri ('https://graph.microsoft.com/beta/security/auditLog/queries/{0}/records?$top=999' -f $QueryId) -AsApp $true -tenantid $TenantFilter
+        New-GraphGetRequest -uri ('https://graph.microsoft.com/beta/security/auditLog/queries/{0}/records?$top=999' -f $QueryId) -AsApp $true -tenantid $TenantFilter -ErrorAction Stop
     }
 }
