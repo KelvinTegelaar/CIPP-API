@@ -116,13 +116,15 @@ function Invoke-ListGraphRequest {
         $GraphRequestParams.AsApp = $true
     }
 
-    Write-Host ($GraphRequestParams | ConvertTo-Json)
-
     $Metadata = $GraphRequestParams
 
     try {
         $Results = Get-GraphRequestList @GraphRequestParams
-
+        if ($Results.nextLink -and $Request.Query.NoPagination) {
+            $Metadata['nextLink'] = $Results.nextLink | Select-Object -Last 1
+            #Results is an array of objects, so we need to remove the last object before returning
+            $Results = $Results | Select-Object -First ($Results.Count - 1)
+        }
         if ($Request.Query.ListProperties) {
             $Columns = ($Results | Select-Object -First 1).PSObject.Properties.Name
             $Results = $Columns | Where-Object { @('Tenant', 'CippStatus') -notcontains $_ }
