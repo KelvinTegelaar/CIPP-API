@@ -9,7 +9,7 @@ function Set-CIPPCAExclusion {
         $executingUser
     )
     try {
-        $CheckExististing = New-GraphGETRequest -uri "https://graph.microsoft.com/beta/identity/conditionalAccess/policies/$($PolicyId)" -tenantid $TenantFilter
+        $CheckExististing = New-GraphGETRequest -uri "https://graph.microsoft.com/beta/identity/conditionalAccess/policies/$($PolicyId)" -tenantid $TenantFilter -AsApp $true
         if ($ExclusionType -eq 'add') {
             $NewExclusions = [pscustomobject]@{
                 conditions = [pscustomobject]@{ users = [pscustomobject]@{
@@ -19,7 +19,7 @@ function Set-CIPPCAExclusion {
             }
             $RawJson = ConvertTo-Json -Depth 10 -InputObject $NewExclusions
             if ($PSCmdlet.ShouldProcess($PolicyId, "Add exclusion for $UserID")) {
-                New-GraphPOSTRequest -uri "https://graph.microsoft.com/beta/identity/conditionalAccess/policies/$($CheckExististing.id)" -tenantid $tenantfilter -type PATCH -body $RawJSON
+                New-GraphPOSTRequest -uri "https://graph.microsoft.com/beta/identity/conditionalAccess/policies/$($CheckExististing.id)" -tenantid $tenantfilter -type PATCH -body $RawJSON -AsApp $true
             }
         }
 
@@ -32,7 +32,7 @@ function Set-CIPPCAExclusion {
             }
             $RawJson = ConvertTo-Json -Depth 10 -InputObject $NewExclusions
             if ($PSCmdlet.ShouldProcess($PolicyId, "Remove exclusion for $UserID")) {
-                New-GraphPOSTRequest -uri "https://graph.microsoft.com/beta/identity/conditionalAccess/policies/$($CheckExististing.id)" -tenantid $tenantfilter -type PATCH -body $RawJSON
+                New-GraphPOSTRequest -uri "https://graph.microsoft.com/beta/identity/conditionalAccess/policies/$($CheckExististing.id)" -tenantid $tenantfilter -type PATCH -body $RawJSON -AsApp $true
             }
         }
         "Successfully performed $($ExclusionType) exclusion for $username from policy $($PolicyId)"
