@@ -17,26 +17,34 @@ function Invoke-ExecAddMultiTenantApp {
     $ApplicationResourceAccess = @{ ResourceAppId = '00000003-0000-0000-c000-000000000000'; resourceAccess = $ApplicationResources }
 
     $Results = try {
-        if ($request.body.CopyPermissions -eq $true) {
+        if ($Request.Body.CopyPermissions -eq $true) {
             $Command = 'ExecApplicationCopy'
         } else {
             $Command = 'ExecAddMultiTenantApp'
         }
-        if ('allTenants' -in $Request.body.SelectedTenants.defaultDomainName) {
+        if ('allTenants' -in $Request.Body.SelectedTenants.defaultDomainName) {
             $TenantFilter = (Get-Tenants).defaultDomainName
         } else {
-            $TenantFilter = $Request.body.SelectedTenants.defaultDomainName
+            $TenantFilter = $Request.Body.SelectedTenants.defaultDomainName
         }
 
+        $TenantCount = ($TenantFilter | Measure-Object).Count
+        $Queue = New-CippQueueEntry -Name 'Application Approval' -TotalTasks $TenantCount
         foreach ($Tenant in $TenantFilter) {
             try {
-                Push-OutputBinding -Name QueueItem -Value ([pscustomobject]@{
-                        FunctionName              = $Command
-                        Tenant                    = $tenant
-                        appId                     = $Request.body.appid
-                        applicationResourceAccess = $ApplicationResourceAccess
-                        delegateResourceAccess    = $DelegateResourceAccess
-                    })
+                $InputObject = @{
+                    OrchestratorName = 'ExecMultiTenantAppOrchestrator'
+                    Batch            = @([pscustomobject]@{
+                            FunctionName              = $Command
+                            Tenant                    = $tenant
+                            AppId                     = $Request.Body.AppId
+                            applicationResourceAccess = $ApplicationResourceAccess
+                            delegateResourceAccess    = $DelegateResourceAccess
+                            QueueId                   = $Queue.RowKey
+                        })
+                    SkipLog          = $true
+                }
+                $null = Start-NewOrchestration -FunctionName 'CIPPOrchestrator' -InputObject ($InputObject | ConvertTo-Json -Depth 5 -Compress)
                 "Queued application to tenant $Tenant. See the logbook for deployment details"
             } catch {
                 "Error queuing application to tenant $Tenant - $($_.Exception.Message)"

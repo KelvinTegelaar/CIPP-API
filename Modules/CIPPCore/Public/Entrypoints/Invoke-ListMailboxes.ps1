@@ -38,7 +38,7 @@ Function Invoke-ListMailboxes {
             @{Parameter = 'SoftDeletedMailbox'; Type = 'Bool' }
         )
 
-        foreach ($Param in $Request.Query.Keys) {
+        foreach ($Param in $Request.Query.PSObject.Properties.Name) {
             $CmdParam = $AllowedParameters | Where-Object { $_.Parameter -eq $Param }
             if ($CmdParam) {
                 switch ($CmdParam.Type) {
@@ -48,7 +48,9 @@ Function Invoke-ListMailboxes {
                         }
                     }
                     'Bool' {
-                        if ([bool]$Request.Query.$Param -eq $true) {
+                        $ParamIsTrue = $false
+                        [bool]::TryParse($Request.Query.$Param, [ref]$ParamIsTrue) | Out-Null
+                        if ($ParamIsTrue -eq $true) {
                             $ExoRequest.cmdParams.$Param = $true
                         }
                     }
