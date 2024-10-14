@@ -12,8 +12,9 @@ Function Invoke-AddStandardsTemplate {
 
     $APIName = $TriggerMetadata.FunctionName
     Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -message 'Accessed this API' -Sev 'Debug'
-    $GUID = (New-Guid).GUID
-    $JSON = (ConvertTo-Json -Depth 100 -InputObject ($Request.body | Select-Object standards, name))
+
+    $GUID = $Request.body.GUID ? $request.body.GUID : (New-Guid).GUID
+    $JSON = (ConvertTo-Json -Depth 100 -InputObject ($Request.body))
     $Table = Get-CippTable -tablename 'templates'
     $Table.Force = $true
     Add-CIPPAzDataTableEntity @Table -Entity @{
