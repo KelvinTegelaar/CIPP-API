@@ -34,7 +34,7 @@ function Add-CIPPDelegatedPermission {
             $RequiredResourceAccess.Add($Resource)
         }
 
-        if ($Tenantfilter -eq $env:TenantID) {
+        if ($Tenantfilter -eq $env:TenantID -or $Tenantfilter -eq 'PartnerTenant') {
             $RequiredResourceAccess = $RequiredResourceAccess + ($AdditionalPermissions | Where-Object { $RequiredResourceAccess.resourceAppId -notcontains $_.resourceAppId })
         } else {
             # remove the partner center permission if not pushing to partner tenant
@@ -42,20 +42,23 @@ function Add-CIPPDelegatedPermission {
         }
     }
     $Translator = Get-Content '.\PermissionsTranslator.json' | ConvertFrom-Json
-    $ServicePrincipalList = New-GraphGETRequest -uri "https://graph.microsoft.com/beta/servicePrincipals?`$select=AppId,id,displayName&`$top=999" -tenantid $Tenantfilter -skipTokenCache $true -NoAuthCheck $true
+    $ServicePrincipalList = New-GraphGETRequest -uri "https://graph.microsoft.com/beta/servicePrincipals?`$select=appId,id,displayName&`$top=999" -tenantid $Tenantfilter -skipTokenCache $true -NoAuthCheck $true
     $ourSVCPrincipal = $ServicePrincipalList | Where-Object -Property appId -EQ $ApplicationId
     $Results = [System.Collections.Generic.List[string]]::new()
 
     $CurrentDelegatedScopes = New-GraphGETRequest -uri "https://graph.microsoft.com/beta/servicePrincipals/$($ourSVCPrincipal.id)/oauth2PermissionGrants" -skipTokenCache $true -tenantid $Tenantfilter -NoAuthCheck $true
 
     foreach ($App in $RequiredResourceAccess) {
+        if (!$App) {
+            continue
+        }
         $svcPrincipalId = $ServicePrincipalList | Where-Object -Property appId -EQ $App.resourceAppId
         if (!$svcPrincipalId) {
             try {
                 $Body = @{
                     appId = $App.resourceAppId
                 } | ConvertTo-Json -Compress
-                $svcPrincipalId = New-GraphPOSTRequest -uri 'https://graph.microsoft.com/v1.0/servicePrincipals' -tenantid $Tenantfilter -body $Body -type POST
+                $svcPrincipalId = New-GraphPOSTRequest -uri 'https://graph.microsoft.com/v1.0/servicePrincipals' -tenantid $Tenantfilter -body $Body -type POST -NoAuthCheck $true
             } catch {
                 $Results.add("Failed to create service principal for $($App.resourceAppId): $(Get-NormalizedError -message $_.Exception.Message)")
                 continue
