@@ -40,8 +40,11 @@ Function Invoke-ListBPA {
             $row = $_
             $JSONFields | ForEach-Object {
                 $jsonContent = $row.$_
-                if ($jsonContent -ne $null -and $jsonContent -ne 'FAILED') {
-                    $row.$_ = $jsonContent | ConvertFrom-Json -Depth 15
+                if (![string]::IsNullOrEmpty($jsonContent) -and $jsonContent -ne 'FAILED') {
+                    try {
+                        $row.$_ = $jsonContent | ConvertFrom-Json -Depth 15
+                    } catch {
+                    }
                 }
             }
             $row.PSObject.Properties | ForEach-Object {
@@ -61,8 +64,11 @@ Function Invoke-ListBPA {
             $row = $_
             $JSONFields | ForEach-Object {
                 $jsonContent = $row.$_
-                if ($jsonContent -ne $null -and $jsonContent -ne 'FAILED') {
-                    $row.$_ = $jsonContent | ConvertFrom-Json -Depth 15
+                if (![string]::IsNullOrEmpty($jsonContent) -and $jsonContent -ne 'FAILED') {
+                    try {
+                        $row.$_ = $jsonContent | ConvertFrom-Json -Depth 15
+                    } catch {
+                    }
                 }
             }
             $row | Where-Object -Property PartitionKey -In $Tenants.customerId
