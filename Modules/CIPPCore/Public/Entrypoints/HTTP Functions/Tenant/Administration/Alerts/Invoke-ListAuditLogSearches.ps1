@@ -20,7 +20,11 @@ function Invoke-ListAuditLogSearches {
                 } | ConvertTo-Json -Depth 10 -Compress
             }
             'SearchResults' {
-                $Results = Get-CippAuditLogSearchResults -TenantFilter $Request.Query.TenantFilter -QueryId $Request.Query.SearchId
+                try {
+                    $Results = Get-CippAuditLogSearchResults -TenantFilter $Request.Query.TenantFilter -QueryId $Request.Query.SearchId
+                } catch {
+                    $Results = @{ Error = $_.Exception.Message }
+                }
                 $Body = @{
                     Results  = @($Results)
                     Metadata = @{

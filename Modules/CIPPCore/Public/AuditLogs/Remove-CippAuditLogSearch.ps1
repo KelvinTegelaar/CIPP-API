@@ -1,4 +1,4 @@
-function Get-CippAuditLogSearchResults {
+function Remove-CippAuditLogSearch {
     <#
     .SYNOPSIS
         Get the results of an audit log search
@@ -18,6 +18,6 @@ function Get-CippAuditLogSearchResults {
     )
 
     process {
-        New-GraphGetRequest -uri ('https://graph.microsoft.com/beta/security/auditLog/queries/{0}/records?$top=999' -f $QueryId) -AsApp $true -tenantid $TenantFilter -ErrorAction Stop
+        New-GraphPostRequest -type DELETE -body '{}' -uri ('https://graph.microsoft.com/beta/security/auditLog/queries/{0}' -f $QueryId) -AsApp $true -tenantid $TenantFilter
     }
 }
