@@ -38,9 +38,9 @@ Function Invoke-CIPPStandardTeamsGlobalMeetingPolicy {
     $StateIsCorrect = ($CurrentState.AllowAnonymousUsersToJoinMeeting -eq $false) -and
                         ($CurrentState.AllowAnonymousUsersToStartMeeting -eq $false) -and
                         ($CurrentState.AutoAdmittedUsers -eq 'EveryoneInCompanyExcludingGuests') -and
-                        ($CurrentState.AllowPSTNUsersToBypassLobby -eq $false)
-                        ($CurrentState.MeetingChatEnabledType -eq 'EnabledExceptAnonymous')
-                        ($CurrentState.DesignatedPresenterRoleMode -eq $Settings.DesignatedPresenterRoleMode)
+                        ($CurrentState.AllowPSTNUsersToBypassLobby -eq $false) -and
+                        ($CurrentState.MeetingChatEnabledType -eq 'EnabledExceptAnonymous') -and
+                        ($CurrentState.DesignatedPresenterRoleMode -eq $Settings.DesignatedPresenterRoleMode) -and
                         ($CurrentState.AllowExternalParticipantGiveRequestControl -eq $false)
 
     if ($Settings.remediate -eq $true) {

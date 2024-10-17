@@ -51,6 +51,7 @@ function Get-GraphRequestList {
         [string]$TenantFilter = $env:TenantID,
         [Parameter(Mandatory = $true)]
         [string]$Endpoint,
+        [string]$nextLink,
         [hashtable]$Parameters = @{},
         [string]$QueueId,
         [string]$CippLink,
@@ -63,7 +64,8 @@ function Get-GraphRequestList {
         [switch]$CountOnly,
         [switch]$NoAuthCheck,
         [switch]$ReverseTenantLookup,
-        [string]$ReverseTenantLookupProperty = 'tenantId'
+        [string]$ReverseTenantLookupProperty = 'tenantId',
+        [boolean]$AsApp = $false
     )
 
     $SingleTenantThreshold = 8000
@@ -98,7 +100,6 @@ function Get-GraphRequestList {
             tenantid      = $TenantFilter
             ComplexFilter = $true
         }
-
         if ($NoPagination.IsPresent) {
             $GraphRequest.noPagination = $NoPagination.IsPresent
         }
@@ -107,6 +108,9 @@ function Get-GraphRequestList {
         }
         if ($NoAuthCheck.IsPresent) {
             $GraphRequest.noauthcheck = $NoAuthCheck.IsPresent
+        }
+        if ($AsApp) {
+            $GraphRequest.asApp = $AsApp
         }
         if ($Parameters.'$count' -and !$SkipCache.IsPresent -and !$NoPagination.IsPresent) {
             $Count = New-GraphGetRequest @GraphRequest -CountOnly -ErrorAction Stop
@@ -172,6 +176,8 @@ function Get-GraphRequestList {
                             NoPagination                = $using:NoPagination.IsPresent
                             ReverseTenantLookupProperty = $using:ReverseTenantLookupProperty
                             ReverseTenantLookup         = $using:ReverseTenantLookup.IsPresent
+                            NoAuthCheck                 = $using:NoAuthCheck.IsPresent
+                            AsApp                       = $using:AsApp
                             SkipCache                   = $true
                         }
 
@@ -218,11 +224,11 @@ function Get-GraphRequestList {
                                     PartitionKey                = $PartitionKey
                                     NoPagination                = $NoPagination.IsPresent
                                     NoAuthCheck                 = $NoAuthCheck.IsPresent
+                                    AsApp                       = $AsApp
                                     ReverseTenantLookupProperty = $ReverseTenantLookupProperty
                                     ReverseTenantLookup         = $ReverseTenantLookup.IsPresent
                                 }
 
-                                #Push-OutputBinding -Name QueueItem -Value $QueueTenant
                             }
 
                             $InputObject = @{
@@ -273,8 +279,6 @@ function Get-GraphRequestList {
                                 }
                                 $InstanceId = Start-NewOrchestration -FunctionName 'CIPPOrchestrator' -InputObject ($InputObject | ConvertTo-Json -Depth 5 -Compress)
 
-                                #Push-OutputBinding -Name QueueItem -Value $QueueTenant
-
                                 [PSCustomObject]@{
                                     QueueMessage = ('Loading {0} rows for {1}. Please check back after the job completes' -f $Count, $TenantFilter)
                                     QueueId      = $Queue.RowKey
@@ -285,7 +289,12 @@ function Get-GraphRequestList {
                     }
 
                     if (!$QueueThresholdExceeded) {
-                        $GraphRequestResults = New-GraphGetRequest @GraphRequest -ErrorAction Stop | Select-Object *, @{l = 'Tenant'; e = { $TenantFilter } }, @{l = 'CippStatus'; e = { 'Good' } }
+                        #nextLink should ONLY be used in direct calls with manual pagination. It should not be used in queueing
+                        if ($nextLink) { $GraphRequest.uri = $nextLink }
+
+                        $GraphRequestResults = New-GraphGetRequest @GraphRequest -Caller 'Get-GraphRequestList' -ErrorAction Stop
+                        $GraphRequestResults = $GraphRequestResults | Select-Object *, @{n = 'Tenant'; e = { $TenantFilter } }, @{n = 'CippStatus'; e = { 'Good' } }
+
                         if ($ReverseTenantLookup -and $GraphRequestResults) {
                             $ReverseLookupRequests = $GraphRequestResults.$ReverseTenantLookupProperty | Sort-Object -Unique | ForEach-Object {
                                 @{

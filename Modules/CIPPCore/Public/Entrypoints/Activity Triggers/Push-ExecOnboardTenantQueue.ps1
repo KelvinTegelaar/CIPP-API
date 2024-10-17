@@ -275,7 +275,7 @@ Function Push-ExecOnboardTenantQueue {
                 $Logs.Add([PSCustomObject]@{ Date = Get-Date -UFormat $DateFormat; Log = 'Clearing tenant cache' })
                 $y = 0
                 do {
-                    $Tenant = Get-Tenants -TriggerRefresh -IncludeAll | Where-Object { $_.customerId -eq $Relationship.customer.tenantId } | Select-Object -First 1
+                    $Tenant = Get-Tenants -TriggerRefresh -TenantFilter $Relationship.customer.tenantId | Select-Object -First 1
                     $y++
                     Start-Sleep -Seconds 20
                 } while (!$Tenant -and $y -le 10)
@@ -312,8 +312,8 @@ Function Push-ExecOnboardTenantQueue {
                     $LastCPVError = ''
                     do {
                         try {
-                            Add-CIPPApplicationPermission -RequiredResourceAccess 'CippDefaults' -ApplicationId $ENV:ApplicationID -tenantfilter $Relationship.customer.tenantId
-                            Add-CIPPDelegatedPermission -RequiredResourceAccess 'CippDefaults' -ApplicationId $ENV:ApplicationID -tenantfilter $Relationship.customer.tenantId
+                            Add-CIPPApplicationPermission -RequiredResourceAccess 'CIPPDefaults' -ApplicationId $ENV:ApplicationID -tenantfilter $Relationship.customer.tenantId
+                            Add-CIPPDelegatedPermission -RequiredResourceAccess 'CIPPDefaults' -ApplicationId $ENV:ApplicationID -tenantfilter $Relationship.customer.tenantId
                             $CPVSuccess = $true
                             $Refreshing = $false
                         } catch {

@@ -1,0 +1,129 @@
+[
+  {
+    "Command": "Start-UserTasksOrchestrator",
+    "Description": "Orchestrator to process user scheduled tasks",
+    "Cron": "0 */15 * * * *",
+    "Priority": 1,
+    "RunOnProcessor": true,
+    "PreferredProcessor": "usertasks"
+  },
+  {
+    "Command": "Start-CIPPProcessorQueue",
+    "Description": "Timer to handle user initiated tasks",
+    "Cron": "0 */15 * * * *",
+    "Priority": 1,
+    "RunOnProcessor": true
+  },
+  {
+    "Command": "Start-AuditLogOrchestrator",
+    "Description": "Orchestrator to process audit logs",
+    "Cron": "0 */15 * * * *",
+    "Priority": 2,
+    "RunOnProcessor": true,
+    "PreferredProcessor": "auditlog",
+    "IsSystem": true
+  },
+  {
+    "Command": "Start-ApplicationOrchestrator",
+    "Description": "Orchestrator to process application uploads",
+    "Cron": "0 0 */12 * * *",
+    "Priority": 2,
+    "RunOnProcessor": true
+  },
+  {
+    "Command": "Start-WebhookOrchestrator",
+    "Description": "Orchestrator to process webhooks",
+    "Cron": "0 */15 * * * *",
+    "Priority": 3,
+    "RunOnProcessor": true
+  },
+  {
+    "Command": "Start-StandardsOrchestrator",
+    "Description": "Orchestrator to process standards",
+    "Cron": "0 0 */4 * * *",
+    "Priority": 4,
+    "RunOnProcessor": true,
+    "PreferredProcessor": "standards"
+  },
+  {
+    "Command": "Start-CIPPGraphSubscriptionCleanupTimer",
+    "Description": "Orchestrator to cleanup old Graph subscriptions",
+    "Cron": "0 0 0 * * *",
+    "Priority": 5,
+    "RunOnProcessor": true
+  },
+  {
+    "Command": "Start-SchedulerOrchestrator",
+    "Description": "Orchestrator to process system scheduled tasks",
+    "Cron": "0 0 * * * *",
+    "Priority": 6,
+    "RunOnProcessor": true
+  },
+  {
+    "Command": "Set-CIPPGDAPInviteGroups",
+    "Description": "Orchestrator to map the groups for GDAP invites",
+    "Cron": "0 0 */3 * * *",
+    "Priority": 5,
+    "RunOnProcessor": true
+  },
+  {
+    "Command": "Start-UpdateTokensTimer",
+    "Description": "Orchestrator to update tokens",
+    "Cron": "0 0 0 * * 0",
+    "Priority": 7,
+    "RunOnProcessor": true,
+    "IsSystem": true
+  },
+  {
+    "Command": "Start-CIPPGraphSubscriptionRenewalTimer",
+    "Description": "Orchestrator to renew Graph subscriptions",
+    "Cron": "0 15 * * * *",
+    "Priority": 8,
+    "RunOnProcessor": true,
+    "IsSystem": true
+  },
+  {
+    "Command": "Start-DomainOrchestrator",
+    "Description": "Orchestrator to process domains",
+    "Cron": "0 0 0 * * *",
+    "Priority": 10,
+    "RunOnProcessor": true
+  },
+  {
+    "Command": "Start-UpdatePermissionsOrchestrator",
+    "Description": "Orchestrator to update CPV permissions",
+    "Cron": "0 0 0 * * *",
+    "Priority": 10,
+    "RunOnProcessor": true,
+    "IsSystem": true
+  },
+  {
+    "Command": "Start-BillingTimer",
+    "Description": "Timer to process billing",
+    "Cron": "0 0 0 * * *",
+    "Priority": 12,
+    "RunOnProcessor": true
+  },
+  {
+    "Command": "Start-BPAOrchestrator",
+    "Description": "Orchestrator to process BPA reports",
+    "Cron": "0 0 3 * * *",
+    "Priority": 10,
+    "RunOnProcessor": true
+  },
+  {
+    "Command": "Start-ExtensionOrchestrator",
+    "Description": "Orchestrator to process extensions",
+    "Cron": "0 0 */2 * * *",
+    "Priority": 12,
+    "RunOnProcessor": true
+  },
+  {
+    "Command": "Start-CIPPStatsTimer",
+    "Description": "Timer to process CIPP stats",
+    "Cron": "0 0 0 * * *",
+    "Priority": 15,
+    "RunOnProcessor": true,
+    "IsSystem": true
+  }
+]
