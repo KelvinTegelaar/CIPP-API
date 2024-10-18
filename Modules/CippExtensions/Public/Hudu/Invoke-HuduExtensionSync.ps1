@@ -687,7 +687,7 @@ function Invoke-HuduExtensionSync {
 
                             if (!$ExistingAsset -or $ExistingHash -ne $NewHash) {
                                 $CompanyResult.Logs.Add("Updating $($HuduUser.name) in Hudu")
-                                $null = Set-HuduAsset -asset_id $HuduUser.id -Name $HuduUser.name -company_id $company_id -asset_layout_id $PeopleLayout.id -Fields $UserAssetFields
+                                $null = Set-HuduAsset -asset_id $HuduUser.id -PrimaryMail $HuduUser.userPrincipalName -Name $HuduUser.name -company_id $company_id -asset_layout_id $PeopleLayout.id -Fields $UserAssetFields
                                 $AssetCache = [PSCustomObject]@{
                                     PartitionKey = 'HuduUser'
                                     RowKey       = [string]$HuduUser.id
@@ -700,7 +700,7 @@ function Invoke-HuduExtensionSync {
                         } elseif ($HuduUserCount -eq 0) {
                             if ($CreateUsers -eq $True) {
                                 $CompanyResult.Logs.Add("Creating $($User.displayName) in Hudu")
-                                $HuduUser = (New-HuduAsset -Name $User.displayName -company_id $company_id -asset_layout_id $PeopleLayout.id -Fields $UserAssetFields).asset
+                                $HuduUser = (New-HuduAsset -Name $User.displayName -PrimaryMail $user.userPrincipalName -company_id $company_id -asset_layout_id $PeopleLayout.id -Fields $UserAssetFields).asset
                                 if (!$HuduUser) {
                                     $CompanyResult.Errors.add("User $($User.userPrincipalName): Unable to create user in Hudu. Check the User asset fields for 'Email Address'")
                                 } else {
