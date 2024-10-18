@@ -37,9 +37,9 @@ function Invoke-NinjaOneTenantSync {
 
 
         # Fetch Custom NinjaOne Settings
-        $Table = Get-CIPPTable -TableName NinjaOneSettings
+        $Table = Get-CIPPTable -TableName Config
         $NinjaSettings = (Get-CIPPAzDataTableEntity @Table)
-        $CIPPUrl = ($NinjaSettings | Where-Object { $_.RowKey -eq 'CIPPURL' }).SettingValue
+        $CIPPUrl = ($NinjaSettings | Where-Object { $_.RowKey -eq 'CIPPURL' }).Value
 
 
         $Customer = Get-Tenants -IncludeErrors | Where-Object { $_.customerId -eq $MappedTenant.RowKey }
