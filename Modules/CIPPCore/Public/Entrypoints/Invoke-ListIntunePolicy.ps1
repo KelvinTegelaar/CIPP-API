@@ -24,7 +24,7 @@ Function Invoke-ListIntunePolicy {
         if ($ID) {
             $GraphRequest = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/deviceManagement/$($urlname)('$ID')" -tenantid $tenantfilter
         } else {
-            $Groups = New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/groups' -tenantid $tenantfilter | Select-Object -Property id, displayName
+            $Groups = New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/groups?$top=999' -tenantid $tenantfilter | Select-Object -Property id, displayName
 
             $BulkRequests = [PSCustomObject]@(
                 @{
@@ -56,7 +56,9 @@ Function Invoke-ListIntunePolicy {
 
             $BulkResults = New-GraphBulkRequest -Requests $BulkRequests -tenantid $TenantFilter
 
-            $GraphRequest = $BulkResults.body.value | ForEach-Object {
+            $GraphRequest = $BulkResults | ForEach-Object {
+            $URLName = $_.Id
+            $_.body.Value | ForEach-Object {
                 $policyTypeName = switch -Wildcard ($_.'assignments@odata.context') {
                     '*microsoft.graph.windowsIdentityProtectionConfiguration*' { 'Identity Protection' }
                     '*microsoft.graph.windows10EndpointProtectionConfiguration*' { 'Endpoint Protection' }
@@ -95,7 +97,7 @@ Function Invoke-ListIntunePolicy {
                 $_ | Add-Member -NotePropertyName PolicyExclude -NotePropertyValue ($PolicyExclude -join ', ')
                 $_
             } | Where-Object { $_.DisplayName -ne $null }
-
+        }
         }
         $StatusCode = [HttpStatusCode]::OK
     } catch {
