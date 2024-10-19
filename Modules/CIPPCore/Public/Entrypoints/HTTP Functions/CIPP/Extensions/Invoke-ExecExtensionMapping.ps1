@@ -68,7 +68,7 @@ Function Invoke-ExecExtensionMapping {
     try {
         if ($Request.Query.AutoMapping) {
             switch ($Request.Query.AutoMapping) {
-                'NinjaOrgs' {
+                'NinjaOne' {
                     $Batch = [PSCustomObject]@{
                         'NinjaAction'  = 'StartAutoMapping'
                         'FunctionName' = 'NinjaOneQueue'

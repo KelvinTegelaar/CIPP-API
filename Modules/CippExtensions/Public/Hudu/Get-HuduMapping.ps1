@@ -13,7 +13,8 @@ function Get-HuduMapping {
         if ($Tenant) {
             [PSCustomObject]@{
                 TenantId        = $Tenant.customerId
-                Tenant          = $Tenant.defaultDomainName
+                Tenant          = $Tenant.displayName
+                TenantDomain    = $Tenant.defaultDomainName
                 IntegrationId   = $Mapping.IntegrationId
                 IntegrationName = $Mapping.IntegrationName
             }
