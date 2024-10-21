@@ -30,7 +30,7 @@ function Start-CIPPProcessorQueue {
             } else {
                 Write-Warning "Function $($QueueItem.FunctionName) not found"
             }
-            Remove-AzDataTableEntity @QueueTable -Entity $QueueItem
+            Remove-AzDataTableEntity -Force @QueueTable -Entity $QueueItem
         }
     }
 }

@@ -20,7 +20,7 @@ Function Invoke-RemoveStandardTemplate {
 
         $Filter = "PartitionKey eq 'StandardsTemplate' and RowKey eq '$id'"
         $ClearRow = Get-CIPPAzDataTableEntity @Table -Filter $Filter -Property PartitionKey, RowKey
-        Remove-AzDataTableEntity @Table -Entity $clearRow
+        Remove-AzDataTableEntity -Force @Table -Entity $clearRow
         Write-LogMessage -user $User -API $APINAME -message "Removed Standards Template named $($ClearRow.name) and id $($id)" -Sev 'Info'
         $body = [pscustomobject]@{'Results' = 'Successfully removed Template' }
     } catch {
