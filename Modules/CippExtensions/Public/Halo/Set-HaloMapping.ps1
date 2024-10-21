@@ -6,7 +6,7 @@ function Set-HaloMapping {
         $Request
     )
     Get-CIPPAzDataTableEntity @CIPPMapping -Filter "PartitionKey eq 'HaloMapping'" | ForEach-Object {
-        Remove-AzDataTableEntity @CIPPMapping -Entity $_
+        Remove-AzDataTableEntity -Force @CIPPMapping -Entity $_
     }
     foreach ($Mapping in ([pscustomobject]$Request.body.mappings).psobject.properties) {
         $AddObject = @{
