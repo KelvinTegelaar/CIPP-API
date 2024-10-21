@@ -17,8 +17,8 @@ function Add-CIPPScheduledTask {
     }
 
     $propertiesToCheck = @('Webhook', 'Email', 'PSA')
-    $PostExecutionObject = ($propertiesToCheck | Where-Object { $task.PostExecution.$_ -eq $true }) -join ','
-    $PostExecution = $PostExecutionObject ? $PostExecutionObject : ($Task.PostExecution.value -join ',')
+    $PostExecutionObject = ($propertiesToCheck | Where-Object { $task.PostExecution.$_ -eq $true })
+    $PostExecution = $PostExecutionObject ? ($PostExecutionObject -join ',') : ($Task.PostExecution.value -join ',')
     $Parameters = [System.Collections.Hashtable]@{}
     foreach ($Key in $task.Parameters.PSObject.Properties.Name) {
         $Param = $task.Parameters.$Key
