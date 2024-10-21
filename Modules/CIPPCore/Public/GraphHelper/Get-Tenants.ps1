@@ -66,7 +66,7 @@ function Get-Tenants {
         }
         $CurrentTenants = Get-CIPPAzDataTableEntity @TenantsTable -Filter "PartitionKey eq 'Tenants' and Excluded eq false"
         $CurrentTenants | Where-Object { $_.customerId -notin $GDAPList.customerId } | ForEach-Object {
-            Remove-AzDataTableEntity @TenantsTable -Entity $_
+            Remove-AzDataTableEntity -Force @TenantsTable -Entity $_
         }
     }
     $PartnerModeTable = Get-CippTable -tablename 'tenantMode'

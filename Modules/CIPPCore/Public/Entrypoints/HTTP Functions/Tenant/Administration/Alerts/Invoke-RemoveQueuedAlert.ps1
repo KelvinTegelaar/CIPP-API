@@ -24,7 +24,7 @@ Function Invoke-RemoveQueuedAlert {
     try {
         $Filter = "RowKey eq '{0}'" -f $ID
         $Alert = Get-CIPPAzDataTableEntity @Table -Filter $Filter -Property PartitionKey, RowKey
-        Remove-AzDataTableEntity @Table -Entity $Alert
+        Remove-AzDataTableEntity -Force @Table -Entity $Alert
         Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -message "Removed application queue for $ID." -Sev 'Info'
 
         $body = [pscustomobject]@{'Results' = 'Successfully removed from queue.' }
