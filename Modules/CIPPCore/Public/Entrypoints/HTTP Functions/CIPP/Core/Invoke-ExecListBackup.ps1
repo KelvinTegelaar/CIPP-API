@@ -20,6 +20,9 @@ Function Invoke-ExecListBackup {
     if ($Request.Query.NameOnly) {
         $CippBackupParams.NameOnly = $true
     }
+    if ($Request.Query.BackupName) {
+        $CippBackupParams.Name = $Request.Query.BackupName
+    }
 
     $Result = Get-CIPPBackup @CippBackupParams
     if ($request.Query.NameOnly) {
