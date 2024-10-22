@@ -1,6 +1,7 @@
 function New-CIPPBackup {
     [CmdletBinding()]
     param (
+        $BackupName = 
         $backupType,
         $StorageOutput = 'default',
         $TenantFilter,
