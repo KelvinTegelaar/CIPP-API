@@ -103,6 +103,7 @@ function Receive-CippOrchestrationTrigger {
         }
 
         if (($Batch | Measure-Object).Count -gt 0) {
+            Write-Information "Batch Count: $($Batch.Count)"
             $Tasks = foreach ($Item in $Batch) {
                 $DurableActivity = @{
                     FunctionName = 'CIPPActivityFunction'
@@ -113,7 +114,7 @@ function Receive-CippOrchestrationTrigger {
                 }
                 Invoke-DurableActivity @DurableActivity
             }
-            if ($NoWait) {
+            if ($NoWait -and $Tasks) {
                 $null = Wait-ActivityFunction -Task $Tasks
             }
         }
@@ -152,7 +153,7 @@ function Receive-CippActivityTrigger {
         if ($Item.FunctionName) {
             $FunctionName = 'Push-{0}' -f $Item.FunctionName
             try {
-                & $FunctionName -Item $Item
+                Invoke-Command -ScriptBlock { & $FunctionName -Item $Item }
 
                 if ($TaskStatus) {
                     $QueueTask.Status = 'Completed'
