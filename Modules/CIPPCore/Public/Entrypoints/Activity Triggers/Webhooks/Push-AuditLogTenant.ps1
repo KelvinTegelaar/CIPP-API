@@ -55,7 +55,7 @@ function Push-AuditLogTenant {
                         if ($_.Exception.Message -match 'Request rate is large. More Request Units may be needed, so no changes were made. Please retry this request later.') {
                             $SearchEntity.CippStatus = 'Pending'
                             Write-Information "Audit Log search: Rate limit hit for $($SearchEntity.RowKey)."
-                            if ($SearchEntity.PSObject.Properties.Name -eq 'RetryCount') {
+                            if ($SearchEntity.PSObject.Properties.Name -contains 'RetryCount') {
                                 $SearchEntity.RetryCount++
                             } else {
                                 $SearchEntity | Add-Member -MemberType NoteProperty -Name RetryCount -Value 1
