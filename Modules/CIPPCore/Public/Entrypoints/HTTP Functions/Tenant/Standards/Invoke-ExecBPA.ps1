@@ -13,7 +13,7 @@ function Invoke-ExecBPA {
 
     if ($Config -and $Config.state -eq $true) {
         if ($env:CIPP_PROCESSOR -ne 'true') {
-            $Parameters = @{}
+            $Parameters = @{Force = $true }
             if ($Request.Query.TenantFilter) {
                 $Parameters.TenantFilter = $Request.Query.TenantFilter
                 $RowKey = "Start-BPAOrchestrator-$($Request.Query.TenantFilter)"
