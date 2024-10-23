@@ -52,10 +52,20 @@ function Push-AuditLogTenant {
                         $SearchEntity | Add-Member -MemberType NoteProperty -Name MatchedLogs -Value $AuditLogTest.MatchedLogs -Force
                         $SearchEntity | Add-Member -MemberType NoteProperty -Name TotalLogs -Value $AuditLogTest.TotalLogs -Force
                     } catch {
-                        $SearchEntity.CippStatus = 'Failed'
-                        Write-Information "Error processing audit log rules: $($_.Exception.Message)"
-                        $Exception = [string](ConvertTo-Json -Compress -InputObject (Get-CippException -Exception $_))
-                        $SearchEntity | Add-Member -MemberType NoteProperty -Name Error -Value $Exception
+                        if ($_.Exception.Message -match 'Request rate is large. More Request Units may be needed, so no changes were made. Please retry this request later.') {
+                            $SearchEntity.CippStatus = 'Pending'
+                            Write-Information "Audit Log search: Rate limit hit for $($SearchEntity.RowKey)."
+                            if ($SearchEntity.PSObject.Properties.Name -eq 'RetryCount') {
+                                $SearchEntity.RetryCount++
+                            } else {
+                                $SearchEntity | Add-Member -MemberType NoteProperty -Name RetryCount -Value 1
+                            }
+                        } else {
+                            $Exception = [string](ConvertTo-Json -Compress -InputObject (Get-CippException -Exception $_))
+                            $SearchEntity | Add-Member -MemberType NoteProperty -Name Error -Value $Exception
+                            $SearchEntity.CippStatus = 'Failed'
+                            Write-Information "Error processing audit log rules: $($_.Exception.Message)"
+                        }
                         $AuditLogTest = [PSCustomObject]@{
                             DataToProcess = @()
                         }
