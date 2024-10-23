@@ -22,7 +22,7 @@ function Push-AuditLogTenant {
         }
         # remove legacy webhooks
         foreach ($Task in $LegacyWebhookTasks) {
-            Remove-AzDataTableEntity @SchedulerConfig -Entity $Task
+            Remove-AzDataTableEntity -Force @SchedulerConfig -Entity $Task
         }
         $CIPPURL = $LegacyUrl
     } else {
