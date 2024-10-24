@@ -24,7 +24,12 @@ function New-CIPPBackup {
                 )
                 $CSVfile = foreach ($CSVTable in $BackupTables) {
                     $Table = Get-CippTable -tablename $CSVTable
-                    Get-AzDataTableEntity @Table | Select-Object *, @{l = 'table'; e = { $CSVTable } } -ExcludeProperty DomainAnalyser
+                    $Data = Get-AzDataTableEntity @Table
+                    if ($Data.PSObject.Properties.Name -notcontains 'table') {
+                        $Data | Select-Object *, @{l = 'table'; e = { $CSVTable } } -ExcludeProperty DomainAnalyser
+                    } else {
+                        $Data | Select-Object * -ExcludeProperty DomainAnalyser
+                    }
                 }
                 $RowKey = 'CIPPBackup' + '_' + (Get-Date).ToString('yyyy-MM-dd-HHmm')
                 $CSVfile
