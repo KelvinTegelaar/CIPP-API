@@ -15,26 +15,29 @@ Function Invoke-ExecAccessChecks {
 
     $Table = Get-CIPPTable -tablename 'AccessChecks'
 
-    # Write to the Azure Functions log stream.
-    Write-Host 'PowerShell HTTP trigger function processed a request.'
-    if ($Request.Query.Permissions -eq 'true') {
-        if ($Request.Query.Cached -eq 'true') {
-            $Data = (Get-CIPPAzDataTableEntity @Table -Filter "RowKey eq 'AccessPermissions'").Data | ConvertFrom-Json
-            $Results = $Data
-        } else {
-            $Results = Test-CIPPAccessPermissions -tenantfilter $ENV:TenantID -APIName $APINAME -ExecutingUser $Request.Headers.'x-ms-client-principal'
+    switch ($Request.Query.Type) {
+        'Permissions' {
+            if (!$Request.Query.SkipCache) {
+                $Results = (Get-CIPPAzDataTableEntity @Table -Filter "RowKey eq 'AccessPermissions'").Data | ConvertFrom-Json
+                if (!$Results) {
+                    $Results = Test-CIPPAccessPermissions -tenantfilter $ENV:TenantID -APIName $APINAME -ExecutingUser $Request.Headers.'x-ms-client-principal'
+                }
+            } else {
+                $Results = Test-CIPPAccessPermissions -tenantfilter $ENV:TenantID -APIName $APINAME -ExecutingUser $Request.Headers.'x-ms-client-principal'
+            }
         }
-    }
-
-    if ($Request.Query.Tenants -eq 'true') {
-        $Results = Test-CIPPAccessTenant -TenantCSV $Request.Body.tenantid -ExecutingUser $Request.Headers.'x-ms-client-principal'
-    }
-    if ($Request.Query.GDAP -eq 'true') {
-        if ($Request.Query.Cached -eq 'true') {
-            $Data = (Get-CIPPAzDataTableEntity @Table -Filter "RowKey eq 'GDAPRelationships'").Data | ConvertFrom-Json
-            $Results = $Data
-        } else {
-            $Results = Test-CIPPGDAPRelationships
+        'Tenants' {
+            $Results = Test-CIPPAccessTenant -TenantCSV $Request.Body.tenantid -ExecutingUser $Request.Headers.'x-ms-client-principal'
+        }
+        'GDAP' {
+            if (!$Request.Query.SkipCache) {
+                $Results = (Get-CIPPAzDataTableEntity @Table -Filter "RowKey eq 'GDAPRelationships'").Data | ConvertFrom-Json
+                if (!$Results) {
+                    $Results = Test-CIPPGDAPRelationships
+                }
+            } else {
+                $Results = Test-CIPPGDAPRelationships
+            }
         }
     }
 
