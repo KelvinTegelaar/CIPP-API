@@ -16,7 +16,7 @@ function Start-UserTasksOrchestrator {
         $currentUnixTime = [int64](([datetime]::UtcNow) - (Get-Date '1/1/1970')).TotalSeconds
         if ($currentUnixTime -ge $task.ScheduledTime) {
             try {
-                $null = Update-AzDataTableEntity @Table -Entity @{
+                $null = Update-AzDataTableEntity -Force @Table -Entity @{
                     PartitionKey = $task.PartitionKey
                     RowKey       = $task.RowKey
                     ExecutedTime = "$currentUnixTime"
@@ -52,7 +52,7 @@ function Start-UserTasksOrchestrator {
             } catch {
                 $errorMessage = $_.Exception.Message
 
-                $null = Update-AzDataTableEntity @Table -Entity @{
+                $null = Update-AzDataTableEntity -Force @Table -Entity @{
                     PartitionKey = $task.PartitionKey
                     RowKey       = $task.RowKey
                     Results      = "$errorMessage"

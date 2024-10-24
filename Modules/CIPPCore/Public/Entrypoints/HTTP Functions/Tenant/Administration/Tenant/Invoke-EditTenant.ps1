@@ -38,7 +38,7 @@ Function Invoke-EditTenant {
                 $TenantsTable = Get-CippTable -tablename Tenants
                 $Tenant = Get-CIPPAzDataTableEntity @TenantsTable -Filter $Filter
                 $Tenant.displayName = $tenantDisplayName
-                Update-AzDataTableEntity @TenantsTable -Entity $Tenant
+                Update-AzDataTableEntity -Force @TenantsTable -Entity $Tenant
             }
             catch {
                 $AddedText = 'but could not edit the tenant cache. Clear the tenant cache to display the updated details'

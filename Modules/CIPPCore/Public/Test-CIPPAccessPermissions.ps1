@@ -27,11 +27,12 @@ function Test-CIPPAccessPermissions {
     $Success = $true
     try {
         Set-Location (Get-Item $PSScriptRoot).FullName
-        $ExpectedPermissions = Get-Content '.\SAMManifest.json' | ConvertFrom-Json
+        #$ExpectedPermissions = Get-Content '.\SAMManifest.json' | ConvertFrom-Json
         $null = Get-CIPPAuthentication
         $GraphToken = Get-GraphToken -returnRefresh $true -SkipCache $true
         if ($GraphToken) {
-            $GraphPermissions = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/myorganization/applications(appId='$env:ApplicationID')" -NoAuthCheck $true
+            #$GraphPermissions = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/myorganization/applications(appId='$env:ApplicationID')" -NoAuthCheck $true
+            $GraphPermissions = Get-CippSamPermissions
         }
         if ($env:MSI_SECRET) {
             try {
@@ -94,13 +95,33 @@ function Test-CIPPAccessPermissions {
             }
         }
 
-        $MissingPermissions = $ExpectedPermissions.requiredResourceAccess.ResourceAccess.id | Where-Object { $_ -notin $GraphPermissions.requiredResourceAccess.ResourceAccess.id }
-        if ($MissingPermissions) {
+
+        $MissingSamPermissions = $GraphPermissions.MissingPermissions
+        #Write-Host $MissingPermissions
+        if ($MissingSamPermissions) {
             Write-Host "Setting success to False due to permissions issues: $($MissingPermissions | ConvertTo-Json)"
 
-            $Translator = Get-Content '.\PermissionsTranslator.json' | ConvertFrom-Json
-            $TranslatedPermissions = $Translator | Where-Object id -In $MissingPermissions | ForEach-Object { "$($_.value) - $($_.Origin)" }
-            $MissingPermissions = @($TranslatedPermissions)
+
+            $MissingPermissions = foreach ($AppId in $MissingSamPermissions.PSObject.Properties.Name) {
+                $ServicePrincipal = $GraphPermissions.UsedServicePrincipals | Where-Object -Property appId -EQ $AppId
+
+                foreach ($Permission in $MissingSamPermissions.$AppId.applicationPermissions) {
+                    [PSCustomObject]@{
+                        Application  = $ServicePrincipal.displayName
+                        Type         = 'Application'
+                        PermissionId = $Permission.id
+                        Permission   = $Permission.value
+                    }
+                }
+                foreach ($Permission in $MissingSamPermissions.$AppId.delegatedPermissions) {
+                    [PSCustomObject]@{
+                        Application  = $ServicePrincipal.displayName
+                        Type         = 'Delegated'
+                        PermissionId = $Permission.id
+                        Permission   = $Permission.value
+                    }
+                }
+            }
             $Success = $false
             $Links.Add([PSCustomObject]@{
                     Text = 'Permissions'

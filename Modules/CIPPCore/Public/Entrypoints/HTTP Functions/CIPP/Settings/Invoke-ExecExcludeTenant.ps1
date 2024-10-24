@@ -39,7 +39,7 @@ Function Invoke-ExecExcludeTenant {
                 $Tenant.ExcludeDate = $date
                 $Tenant
             }
-            Update-AzDataTableEntity @TenantsTable -Entity ([pscustomobject]$Excluded)
+            Update-AzDataTableEntity -Force @TenantsTable -Entity ([pscustomobject]$Excluded)
             Write-LogMessage -API $APINAME -tenant $($name) -user $request.headers.'x-ms-client-principal' -message "Added exclusion for customer(s): $($Excluded.defaultDomainName -join ',')" -Sev 'Info'
             $body = [pscustomobject]@{'Results' = "Success. Added exclusions for customer(s): $($Excluded.defaultDomainName -join ',')" }
         }
@@ -50,7 +50,7 @@ Function Invoke-ExecExcludeTenant {
                 $Tenant.Excluded = $false
                 $Tenant.ExcludeUser = ''
                 $Tenant.ExcludeDate = ''
-                Update-AzDataTableEntity @TenantsTable -Entity $Tenant
+                Update-AzDataTableEntity -Force @TenantsTable -Entity $Tenant
             }
             Write-LogMessage -API $APINAME -tenant $($name) -user $request.headers.'x-ms-client-principal' -message "Removed exclusion for customer $($name)" -Sev 'Info'
             $body = [pscustomobject]@{'Results' = "Success. We've removed $name from the excluded tenants." }

@@ -86,7 +86,7 @@ function New-GraphGetRequest {
                 if ($Message -ne 'Request not applicable to target tenant.' -and $Tenant) {
                     $Tenant.LastGraphError = $Message
                     $Tenant.GraphErrorCount++
-                    Update-AzDataTableEntity @TenantsTable -Entity $Tenant
+                    Update-AzDataTableEntity -Force @TenantsTable -Entity $Tenant
                 }
                 throw $Message
             }
@@ -97,7 +97,7 @@ function New-GraphGetRequest {
             $Tenant.LastGraphError = ''
         }
         $Tenant.GraphErrorCount = 0
-        Update-AzDataTableEntity @TenantsTable -Entity $Tenant
+        Update-AzDataTableEntity -Force @TenantsTable -Entity $Tenant
         return $ReturnedData
     } else {
         Write-Error 'Not allowed. You cannot manage your own tenant or tenants not under your scope'

@@ -63,7 +63,7 @@ if (!$LastStartup -or $CurrentVersion -ne $LastStartup.Version) {
             Version      = $CurrentVersion
         }
     }
-    Update-AzDataTableEntity @Table -Entity $LastStartup
+    Update-AzDataTableEntity -Force @Table -Entity $LastStartup
 }
 # Uncomment the next line to enable legacy AzureRm alias in Azure PowerShell.
 # Enable-AzureRmAlias
