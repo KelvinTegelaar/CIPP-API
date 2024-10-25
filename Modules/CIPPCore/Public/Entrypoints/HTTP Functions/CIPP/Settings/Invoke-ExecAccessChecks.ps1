@@ -73,15 +73,17 @@ Function Invoke-ExecAccessChecks {
                     $Results = @()
                 }
             }
-            if (!$Results) {
-                if (!$Request.Body.TenantId) {
-                    $Tenant = 'AllTenants'
-                } else {
-                    $Tenant = $Request.Body.TenantId
-                }
-                $TenantCheck = Test-CIPPAccessTenant -Tenant $Tenant -ExecutingUser $Request.Headers.'x-ms-client-principal'
-                $Results = @($TenantCheck)
+
+            if ($Request.Query.SkipCache -eq 'true') {
+                $null = Test-CIPPAccessTenant -ExecutingUser $Request.Headers.'x-ms-client-principal'
             }
+
+            if ($Request.Body.TenantId) {
+                $Tenant = $Request.Body.TenantId
+                $null = Test-CIPPAccessTenant -Tenant $Tenant -ExecutingUser $Request.Headers.'x-ms-client-principal'
+                $Results = "Refreshing tenant $Tenant"
+            }
+
         }
         'GDAP' {
             if (!$Request.Query.SkipCache -eq 'true') {
