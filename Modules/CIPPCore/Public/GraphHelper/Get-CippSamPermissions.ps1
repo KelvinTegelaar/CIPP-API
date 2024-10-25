@@ -166,6 +166,15 @@ function Get-CippSamPermissions {
         $SamAppPermissions.Type = 'Manifest'
         $SamAppPermissions.UpdatedBy = 'CIPP'
         $SamAppPermissions.Timestamp = $SamManifestFile.LastWriteTime.ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ssZ')
+
+        $Entity = @{
+            'PartitionKey' = 'CIPP-SAM'
+            'RowKey'       = 'CIPP-SAM'
+            'Permissions'  = [string]([PSCustomObject]$Permissions | ConvertTo-Json -Depth 10 -Compress)
+            'UpdatedBy'    = 'CIPP'
+        }
+        $Table = Get-CIPPTable -TableName 'AppPermissions'
+        $null = Add-CIPPAzDataTableEntity @Table -Entity $Entity -Force
     }
 
     if (!$NoDiff.IsPresent -and $SamAppPermissions.Type -eq 'Table') {
