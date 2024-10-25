@@ -42,13 +42,16 @@ Function Invoke-ExecAccessChecks {
                     $Results = foreach ($Tenant in $Tenants) {
                         $TenantCheck = $AccessChecks | Where-Object -Property RowKey -EQ $Tenant.customerId | Select-Object -Property Data
                         $TenantResult = [PSCustomObject]@{
-                            TenantId       = $Tenant.customerId
-                            TenantName     = $Tenant.defaultDomainName
-                            GraphStatus    = $null
-                            ExchangeStatus = $null
-                            GDAPRoles      = ''
-                            MissingRoles   = ''
-                            LastRun        = ''
+                            TenantId          = $Tenant.customerId
+                            TenantName        = $Tenant.displayName
+                            DefaultDomainName = $Tenant.defaultDomainName
+                            GraphStatus       = $null
+                            ExchangeStatus    = $null
+                            GDAPRoles         = ''
+                            MissingRoles      = ''
+                            LastRun           = ''
+                            GraphTest         = ''
+                            ExchangeTest      = ''
                         }
                         if ($TenantCheck) {
                             $Data = @($TenantCheck.Data | ConvertFrom-Json)
@@ -57,11 +60,13 @@ Function Invoke-ExecAccessChecks {
                             $TenantResult.GDAPRoles = $Data.GDAPRoles
                             $TenantResult.MissingRoles = $Data.MissingRoles
                             $TenantResult.LastRun = $Data.LastRun
+                            $TenantResult.GraphTest = $Data.GraphTest
+                            $TenantResult.ExchangeTest = $Data.ExchangeTest
                         }
                         $TenantResult
                     }
 
-                    
+
                     $LastRunTime = $AccessChecks | Sort-Object Timestamp | Select-Object -Property Timestamp -Last 1
                     $LastRun = [DateTime]::SpecifyKind($LastRunTime.Timestamp.DateTime, [DateTimeKind]::Utc)
                 } catch {
