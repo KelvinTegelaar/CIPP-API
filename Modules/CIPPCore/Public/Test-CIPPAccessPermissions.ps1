@@ -23,15 +23,12 @@ function Test-CIPPAccessPermissions {
         TenantId          = ''
         UserPrincipalName = ''
     }
-    Write-Host 'Setting success to true by default.'
     $Success = $true
     try {
         Set-Location (Get-Item $PSScriptRoot).FullName
-        #$ExpectedPermissions = Get-Content '.\SAMManifest.json' | ConvertFrom-Json
         $null = Get-CIPPAuthentication
         $GraphToken = Get-GraphToken -returnRefresh $true -SkipCache $true
         if ($GraphToken) {
-            #$GraphPermissions = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/myorganization/applications(appId='$env:ApplicationID')" -NoAuthCheck $true
             $GraphPermissions = Get-CippSamPermissions
         }
         if ($env:MSI_SECRET) {
@@ -42,15 +39,8 @@ function Test-CIPPAccessPermissions {
                 $KV = $ENV:WEBSITE_DEPLOYMENT_ID
                 $KeyVaultRefresh = Get-AzKeyVaultSecret -VaultName $kv -Name 'RefreshToken' -AsPlainText
                 if ($ENV:RefreshToken -ne $KeyVaultRefresh) {
-                    Write-Host 'Setting success to false due to nonmaching token.'
-
                     $Success = $false
-                    $ErrorMessages.Add('Your refresh token does not match key vault, clear your cache or wait 30 minutes.') | Out-Null
-                    $Links.Add([PSCustomObject]@{
-                            Text = 'Clear Token Cache'
-                            Href = 'https://docs.cipp.app/setup/installation/cleartokencache'
-                        }
-                    ) | Out-Null
+                    $ErrorMessages.Add('Your refresh token does not match key vault, wait 30 minutes for the function app to update.') | Out-Null
                 } else {
                     $Messages.Add('Your refresh token matches key vault.') | Out-Null
                 }
@@ -58,6 +48,8 @@ function Test-CIPPAccessPermissions {
                 $ErrorMessage = Get-CippException -Exception $_
                 Write-LogMessage -user $User -API $APINAME -tenant $tenant -message "Key vault exception: $($ErrorMessage.NormalizedError) " -Sev 'Error' -LogData $ErrorMessage
             }
+        } else {
+            $Messages.Add('Your refresh token matches key vault.') | Out-Null
         }
 
         try {
@@ -70,21 +62,28 @@ function Test-CIPPAccessPermissions {
             }
             Write-LogMessage -user $User -API $APINAME -tenant $tenant -message "Token exception: $($ErrorMessage.NormalizedError_) " -Sev 'Error' -LogData $ErrorMessage
             $Success = $false
-            Write-Host 'Setting success to false due to not able to decode token.'
-
         }
 
         if ($AccessTokenDetails.Name -eq '') {
             $ErrorMessages.Add('Your refresh token is invalid, check for line breaks or missing characters.') | Out-Null
-            Write-Host 'Setting success to false invalid token.'
-
             $Success = $false
         } else {
+            if ($AccessTokenDetails.Name -match 'CIPP' -or $AccessTokenDetails.UserPrincipalName -match 'CIPP' -or $AccessTokenDetails.Name -match 'Service' -or $AccessTokenDetails.UserPrincipalName -match 'Service') {
+                $Messages.Add('You are running CIPP as a service account.') | Out-Null
+            } else {
+                $ErrorMessages.Add('You do not appear to be running CIPP as a service account.') | Out-Null
+                $Success = $false
+                $Links.Add([PSCustomObject]@{
+                        Text = 'Creating the CIPP Service Account'
+                        Href = 'https://docs.cipp.app/setup/installation/creating-the-cipp-service-account-gdap-ready'
+                    }
+                ) | Out-Null
+            }
+
             if ($AccessTokenDetails.AuthMethods -contains 'mfa') {
                 $Messages.Add('Your access token contains the MFA claim.') | Out-Null
             } else {
                 $ErrorMessages.Add('Your access token does not contain the MFA claim, Refresh your SAM tokens.') | Out-Null
-                Write-Host 'Setting success to False due to invalid list of claims.'
 
                 $Success = $false
                 $Links.Add([PSCustomObject]@{
@@ -97,10 +96,7 @@ function Test-CIPPAccessPermissions {
 
 
         $MissingSamPermissions = $GraphPermissions.MissingPermissions
-        #Write-Host $MissingPermissions
-        if ($MissingSamPermissions) {
-            Write-Host "Setting success to False due to permissions issues: $($MissingPermissions | ConvertTo-Json)"
-
+        if (($MissingSamPermissions.PSObject.Properties.Name | Measure-Object).Count -gt 0) {
 
             $MissingPermissions = foreach ($AppId in $MissingSamPermissions.PSObject.Properties.Name) {
                 $ServicePrincipal = $GraphPermissions.UsedServicePrincipals | Where-Object -Property appId -EQ $AppId
@@ -129,15 +125,13 @@ function Test-CIPPAccessPermissions {
                 }
             ) | Out-Null
         } else {
-            $Messages.Add('Your Secure Application Model has all required permissions') | Out-Null
+            $Messages.Add('You have all the required permissions.') | Out-Null
         }
 
     } catch {
         $ErrorMessage = Get-CippException -Exception $_
         Write-LogMessage -user $User -API $APINAME -message "Permissions check failed: $($ErrorMessage.NormalizedError) " -Sev 'Error' -LogData $ErrorMessage
         $ErrorMessages.Add("We could not connect to the API to retrieve the permissions. There might be a problem with the secure application model configuration. The returned error is: $($ErrorMessage.NormalizedError)") | Out-Null
-        Write-Host 'Setting success to False due to not being able to connect.'
-
         $Success = $false
     }
 
