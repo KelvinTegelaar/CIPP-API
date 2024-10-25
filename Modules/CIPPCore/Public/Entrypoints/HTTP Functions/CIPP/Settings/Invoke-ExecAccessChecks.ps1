@@ -17,8 +17,10 @@ Function Invoke-ExecAccessChecks {
 
     switch ($Request.Query.Type) {
         'Permissions' {
-            if (!$Request.Query.SkipCache) {
-                $Results = (Get-CIPPAzDataTableEntity @Table -Filter "RowKey eq 'AccessPermissions'").Data | ConvertFrom-Json
+            if ($Request.Query.SkipCache -ne 'true') {
+                $Cache = Get-CIPPAzDataTableEntity @Table -Filter "RowKey eq 'AccessPermissions'"
+                Write-Host $Cache
+                $Results = $Cache.Data | ConvertFrom-Json
                 if (!$Results) {
                     $Results = Test-CIPPAccessPermissions -tenantfilter $ENV:TenantID -APIName $APINAME -ExecutingUser $Request.Headers.'x-ms-client-principal'
                 }
@@ -30,8 +32,9 @@ Function Invoke-ExecAccessChecks {
             $Results = Test-CIPPAccessTenant -TenantCSV $Request.Body.tenantid -ExecutingUser $Request.Headers.'x-ms-client-principal'
         }
         'GDAP' {
-            if (!$Request.Query.SkipCache) {
-                $Results = (Get-CIPPAzDataTableEntity @Table -Filter "RowKey eq 'GDAPRelationships'").Data | ConvertFrom-Json
+            if (!$Request.Query.SkipCache -eq 'true') {
+                $Cache = Get-CIPPAzDataTableEntity @Table -Filter "RowKey eq 'GDAPRelationships'"
+                $Results = $Cache.Data | ConvertFrom-Json
                 if (!$Results) {
                     $Results = Test-CIPPGDAPRelationships
                 }
@@ -41,7 +44,12 @@ Function Invoke-ExecAccessChecks {
         }
     }
 
-    $body = [pscustomobject]@{'Results' = $Results }
+    $body = [pscustomobject]@{
+        'Results'  = $Results
+        'Metadata' = @{
+            'LastRun' = [DateTime]::SpecifyKind($Cache.Timestamp.DateTime, [DateTimeKind]::Utc) ?? (Get-Date).ToUniversalTime()
+        }
+    }
 
     # Associate values to output bindings by calling 'Push-OutputBinding'.
     Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
