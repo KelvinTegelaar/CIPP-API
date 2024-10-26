@@ -19,7 +19,6 @@ Function Invoke-ExecAccessChecks {
         'Permissions' {
             if ($Request.Query.SkipCache -ne 'true') {
                 $Cache = Get-CIPPAzDataTableEntity @Table -Filter "RowKey eq 'AccessPermissions'"
-                Write-Host $Cache
                 try {
                     $Results = $Cache.Data | ConvertFrom-Json
                 } catch {
