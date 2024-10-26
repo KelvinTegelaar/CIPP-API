@@ -1,7 +1,7 @@
 function Test-CIPPAccessTenant {
     [CmdletBinding()]
     param (
-        $Tenant,
+        $Tenant = 'AllTenants',
         $APIName = 'Access Check',
         $ExecutingUser
     )
@@ -29,10 +29,10 @@ function Test-CIPPAccessTenant {
 
         $InputObject = [PSCustomObject]@{
             QueueFunction    = @{
-                FunctionName    = 'GetTenants'
-                TenantParams    = $TenantParams
-                DurableFunction = 'CIPPAccessTenantTest'
-                QueueId         = $Queue.RowKey
+                FunctionName = 'GetTenants'
+                TenantParams = $TenantParams
+                DurableName  = 'CIPPAccessTenantTest'
+                QueueId      = $Queue.RowKey
             }
             OrchestratorName = 'CippAccessTenantTest'
             SkipLog          = $true
