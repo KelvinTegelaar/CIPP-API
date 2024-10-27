@@ -32,7 +32,7 @@ Function Invoke-ListAlertsQueue {
         $TranslatedActions = ($Task.Actions | ConvertFrom-Json -Depth 10 -ErrorAction SilentlyContinue).label -join ','
         $Tenants = ($Task.Tenants | ConvertFrom-Json -Depth 10 -ErrorAction SilentlyContinue)
         $TaskEntry = [PSCustomObject]@{
-            Tenants      = $Tenants.defaultDomainName -join ','
+            Tenants      = @($Tenants.label)
             Conditions   = $TranslatedConditions
             Actions      = $TranslatedActions
             LogType      = $Task.type
@@ -67,7 +67,7 @@ Function Invoke-ListAlertsQueue {
         $TaskEntry = [PSCustomObject]@{
             RowKey       = $Task.RowKey
             PartitionKey = $Task.PartitionKey
-            Tenants      = $Task.Tenant
+            Tenants      = @($Task.Tenant)
             Conditions   = $Task.Name
             Actions      = $Task.PostExecution
             LogType      = 'Scripted'
