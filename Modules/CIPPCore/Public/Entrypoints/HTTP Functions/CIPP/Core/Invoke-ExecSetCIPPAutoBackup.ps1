@@ -20,7 +20,7 @@ Function Invoke-ExecSetCIPPAutoBackup {
         Remove-AzDataTableEntity -Force @Table -Entity $task | Out-Null
 
         $TaskBody = [pscustomobject]@{
-            TenantFilter  = 'AllTenants'
+            TenantFilter  = 'PartnerTenant'
             Name          = 'Automated CIPP Backup'
             Command       = @{
                 value = 'New-CIPPBackup'
