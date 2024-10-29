@@ -27,7 +27,15 @@ Function Invoke-ExecPartnerMode {
             } -Force
             Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
                     StatusCode = [HttpStatusCode]::OK
-                    Body       = @{ results = "Set Tenant mode to $($Request.body.TenantMode)" }
+                    Body       = @{
+                        results = @(
+                            @{
+                                result   = "Set Tenant mode to $($Request.body.TenantMode)"
+                                copyInfo = $null
+                                state    = 'info'
+                            }
+                        )
+                    }
                 })
 
         }
@@ -43,10 +51,11 @@ Function Invoke-ExecPartnerMode {
                     TenantMode = $CurrentState.state
                 }
             }
+
+            Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
+                    StatusCode = [HttpStatusCode]::OK
+                    Body       = $CurrentState
+                })
         }
-        Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
-                StatusCode = [HttpStatusCode]::OK
-                Body       = $CurrentState
-            })
     }
 }
