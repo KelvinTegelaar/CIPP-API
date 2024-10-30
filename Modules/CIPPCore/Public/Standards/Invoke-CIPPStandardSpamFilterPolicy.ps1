@@ -115,47 +115,46 @@ function Invoke-CIPPStandardSpamFilterPolicy {
                 try {
                     $cmdparams.Add('Identity', $PolicyName)
                     New-ExoRequest -TenantId $Tenant -cmdlet 'Set-HostedContentFilterPolicy' -cmdparams $cmdparams -UseSystemMailbox $true
-                    Write-LogMessage -API 'Standards' -Tenant $Tenant -message 'Updated Spam Filter Policy' -sev Info
+                    Write-LogMessage -API 'Standards' -Tenant $Tenant -message "Updated Spam Filter policy $PolicyName." -sev Info
                 } catch {
-                    $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
-                    Write-LogMessage -API 'Standards' -Tenant $Tenant -message "Failed to update Spam Filter Policy. Error: $ErrorMessage" -sev Error
+                    Write-LogMessage -API 'Standards' -Tenant $Tenant -message "Failed to update Spam Filter policy $PolicyName." -sev Error -LogData $_
                 }
             } else {
                 try {
                     $cmdparams.Add('Name', $PolicyName)
                     New-ExoRequest -TenantId $Tenant -cmdlet 'New-HostedContentFilterPolicy' -cmdparams $cmdparams -UseSystemMailbox $true
-                    Write-LogMessage -API 'Standards' -Tenant $Tenant -message 'Created Spam Filter Policy' -sev Info
+                    Write-LogMessage -API 'Standards' -Tenant $Tenant -message "Created Spam Filter policy $PolicyName." -sev Info
                 } catch {
-                    $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
-                    Write-LogMessage -API 'Standards' -Tenant $Tenant -message "Failed to create Spam Filter Policy. Error: $ErrorMessage" -sev Error
+                    Write-LogMessage -API 'Standards' -Tenant $Tenant -message "Failed to create Spam Filter policy $PolicyName." -sev Error -LogData $_
                 }
             }
         }
 
         if ($RuleStateIsCorrect -eq $false) {
             $cmdparams = @{
-                HostedContentFilterPolicy = $PolicyName
                 Priority                  = 0
                 RecipientDomainIs         = $AcceptedDomains.Name
+            }
+
+            if ($RuleState.HostedContentFilterPolicy -ne $PolicyName) {
+                $cmdparams.Add('HostedContentFilterPolicy', $PolicyName)
             }
 
             if ($RuleState.Name -eq $PolicyName) {
                 try {
                     $cmdparams.Add('Identity', "$PolicyName")
                     New-ExoRequest -TenantId $Tenant -cmdlet 'Set-HostedContentFilterRule' -cmdparams $cmdparams -UseSystemMailbox $true
-                    Write-LogMessage -API 'Standards' -Tenant $Tenant -message 'Updated Spam Filter Rule' -sev Info
+                    Write-LogMessage -API 'Standards' -Tenant $Tenant -message "Updated Spam Filter rule $PolicyName." -sev Info
                 } catch {
-                    $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
-                    Write-LogMessage -API 'Standards' -Tenant $Tenant -message "Failed to update Spam Filter Rule. Error: $ErrorMessage" -sev Error
+                    Write-LogMessage -API 'Standards' -Tenant $Tenant -message "Failed to update Spam Filter rule $PolicyName." -sev Error -LogData $_
                 }
             } else {
                 try {
                     $cmdparams.Add('Name', "$PolicyName")
                     New-ExoRequest -TenantId $Tenant -cmdlet 'New-HostedContentFilterRule' -cmdparams $cmdparams -UseSystemMailbox $true
-                    Write-LogMessage -API 'Standards' -Tenant $Tenant -message 'Created Spam Filter Rule' -sev Info
+                    Write-LogMessage -API 'Standards' -Tenant $Tenant -message "Created Spam Filter rule $PolicyName." -sev Info
                 } catch {
-                    $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
-                    Write-LogMessage -API 'Standards' -Tenant $Tenant -message "Failed to create Spam Filter Rule. Error: $ErrorMessage" -sev Error
+                    Write-LogMessage -API 'Standards' -Tenant $Tenant -message "Failed to create Spam Filter rule $PolicyName." -sev Error -LogData $_
                 }
             }
         }
