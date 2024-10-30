@@ -21,7 +21,7 @@ function Test-CIPPRerun {
         $RerunData = Get-CIPPAzDataTableEntity @RerunTable -filter "PartitionKey eq '$($TenantFilter)' and RowKey eq '$($Type)_$($API)'"
         if ($Clear.IsPresent) {
             if ($RerunData) {
-                Remove-CIPPAzDataTableEntity @RerunTable -Entity $RerunData
+                Remove-AzDataTableEntity @RerunTable -Entity $RerunData
             }
             return $false
         } elseif ($RerunData) {
