@@ -36,7 +36,7 @@ function Set-CIPPGDAPInviteGroups {
 
         if ($PSCmdlet.ShouldProcess($Relationship.id, "Remove invite entry for $($Relationship.customer.displayName)")) {
             Write-LogMessage -API $APINAME -message "Groups mapped for GDAP Relationship: $($Relationship.customer.displayName) - $($Relationship.customer.displayName)" -Sev Info
-            Remove-AzDataTableEntity @Table -Entity $Invite
+            Remove-AzDataTableEntity -Force @Table -Entity $Invite
         }
         return $true
     } else {
