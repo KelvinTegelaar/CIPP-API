@@ -42,8 +42,8 @@ function Invoke-CIPPStandardSpamFilterPolicy {
     $PolicyName = 'CIPP Default Spam Filter Policy'
 
     $CurrentState = New-ExoRequest -TenantId $Tenant -cmdlet 'Get-HostedContentFilterPolicy' |
-    Where-Object -Property Name -EQ $PolicyName |
-    Select-Object -Property *
+        Where-Object -Property Name -EQ $PolicyName |
+        Select-Object -Property *
 
     $StateIsCorrect = ($CurrentState.Name -eq $PolicyName) -and
                         ($CurrentState.SpamAction -eq $Settings.SpamAction) -and
@@ -73,8 +73,8 @@ function Invoke-CIPPStandardSpamFilterPolicy {
     $AcceptedDomains = New-ExoRequest -TenantId $Tenant -cmdlet 'Get-AcceptedDomain'
 
     $RuleState = New-ExoRequest -TenantId $Tenant -cmdlet 'Get-HostedContentFilterRule' |
-    Where-Object -Property Name -EQ $PolicyName |
-    Select-Object -Property *
+        Where-Object -Property Name -EQ $PolicyName |
+        Select-Object -Property *
 
     $RuleStateIsCorrect = ($RuleState.Name -eq $PolicyName) -and
                           ($RuleState.HostedContentFilterPolicy -eq $PolicyName) -and
