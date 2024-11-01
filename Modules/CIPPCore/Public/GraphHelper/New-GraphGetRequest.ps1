@@ -85,6 +85,9 @@ function New-GraphGetRequest {
                 if ($Message -eq $null) { $Message = $($_.Exception.Message) }
                 if ($Message -ne 'Request not applicable to target tenant.' -and $Tenant) {
                     $Tenant.LastGraphError = $Message
+                    if ($Tenant.PSObject.Properties.Name -notcontains 'GraphErrorCount') {
+                        $Tenant | Add-Member -MemberType NoteProperty -Name 'GraphErrorCount' -Value 0 -Force
+                    }
                     $Tenant.GraphErrorCount++
                     Update-AzDataTableEntity -Force @TenantsTable -Entity $Tenant
                 }
@@ -96,7 +99,11 @@ function New-GraphGetRequest {
         } else {
             $Tenant.LastGraphError = ''
         }
-        $Tenant.GraphErrorCount = 0
+        if ($Tenant.PSObject.Properties.Name -notcontains 'GraphErrorCount') {
+            $Tenant | Add-Member -MemberType NoteProperty -Name 'GraphErrorCount' -Value 0 -Force
+        } else {
+            $Tenant.GraphErrorCount = 0
+        }
         Update-AzDataTableEntity -Force @TenantsTable -Entity $Tenant
         return $ReturnedData
     } else {

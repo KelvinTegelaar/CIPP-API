@@ -38,7 +38,7 @@ function Test-CIPPRerun {
                 }
             }
             if ($RerunData.EstimatedNextRun -gt $CurrentUnixTime) {
-                Write-LogMessage -message "Standard rerun detected for $($API). Prevented from running again." -tenant $TenantFilter -user $ExecutingUser -Sev 'Info'
+                Write-LogMessage -API $API -message "Standard rerun detected for $($API). Prevented from running again." -tenant $TenantFilter -user $ExecutingUser -Sev 'Info'
                 return $true
             } else {
                 $RerunData.EstimatedNextRun = $EstimatedNextRun
