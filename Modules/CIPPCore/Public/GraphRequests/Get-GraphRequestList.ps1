@@ -96,11 +96,9 @@ function Get-GraphRequestList {
     $Count = 0
     if ($TenantFilter -ne 'AllTenants') {
         $GraphRequest = @{
-            uri      = $GraphQuery.ToString()
-            tenantid = $TenantFilter
-        }
-        if ($Parameters.'$filter') {
-            $GraphRequest.ComplexFilter = $true
+            uri           = $GraphQuery.ToString()
+            tenantid      = $TenantFilter
+            ComplexFilter = $true
         }
         if ($NoPagination.IsPresent) {
             $GraphRequest.noPagination = $NoPagination.IsPresent
@@ -295,11 +293,6 @@ function Get-GraphRequestList {
                         if ($nextLink) { $GraphRequest.uri = $nextLink }
 
                         $GraphRequestResults = New-GraphGetRequest @GraphRequest -Caller 'Get-GraphRequestList' -ErrorAction Stop
-                        if ($GraphRequestResults.nextLink) {
-                            #$Metadata['nextLink'] = $GraphRequestResults.nextLink | Select-Object -Last 1
-                            #GraphRequestResults is an array of objects, so we need to remove the last object before returning
-                            $GraphRequestResults = $GraphRequestResults | Select-Object -First ($GraphRequestResults.Count - 1)
-                        }
                         $GraphRequestResults = $GraphRequestResults | Select-Object *, @{n = 'Tenant'; e = { $TenantFilter } }, @{n = 'CippStatus'; e = { 'Good' } }
 
                         if ($ReverseTenantLookup -and $GraphRequestResults) {
