@@ -128,6 +128,28 @@ function Test-CIPPAccessPermissions {
             $Messages.Add('You have all the required permissions.') | Out-Null
         }
 
+        $LastUpdate = $GraphPermissions.Timestamp
+        $CpvTable = Get-CippTable -tablename 'cpvtenants'
+        $CpvRefresh = Get-CippAzDataTableEntity @CpvTable -Filter "PartitionKey eq 'Tenant'"
+        $TenantList = Get-Tenants -IncludeErrors
+        $CPVRefreshList = [System.Collections.Generic.List[object]]::new()
+        $CPVSuccess = $true
+        foreach ($Tenant in $TenantList) {
+            $LastRefresh = ($CpvRefresh | Where-Object -Property RowKey -EQ $Tenant.customerId).Timestamp.DateTime
+            if ($LastRefresh -lt $LastUpdate) {
+                $CPVSuccess = $false
+                $CPVRefreshList.Add([PSCustomObject]@{
+                        CustomerId        = $Tenant.customerId
+                        DisplayName       = $Tenant.displayName
+                        DefaultDomainName = $Tenant.DefaultDomainName
+                        LastRefresh       = $LastRefresh
+                    })
+            }
+        }
+        if (!$CPVSuccess) {
+            $ErrorMessages.Add('Some tenants need a CPV refresh.') | Out-Null
+            $Success = $false
+        }
     } catch {
         $ErrorMessage = Get-CippException -Exception $_
         Write-LogMessage -user $User -API $APINAME -message "Permissions check failed: $($ErrorMessage.NormalizedError) " -Sev 'Error' -LogData $ErrorMessage
@@ -144,6 +166,7 @@ function Test-CIPPAccessPermissions {
         Messages           = @($Messages)
         ErrorMessages      = @($ErrorMessages)
         MissingPermissions = @($MissingPermissions)
+        CPVRefreshList     = @($CPVRefreshList)
         Links              = @($Links)
         Success            = $Success
     }
