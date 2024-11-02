@@ -22,7 +22,7 @@ function Invoke-ExecServicePrincipals {
                         'appId' = $Request.Query.AppId
                     } | ConvertTo-Json -Compress
                     try {
-                        $Results = New-GraphPostRequest -Uri 'https://graph.microsoft.com/beta/servicePrincipals' -tenantid $TenantFilter -type POST -body $Body
+                        $Results = New-GraphPostRequest -Uri 'https://graph.microsoft.com/beta/servicePrincipals' -tenantid $TenantFilter -type POST -body $Body -NoAuthCheck $true
                     } catch {
                         $Results = "Unable to create service principal: $($_.Exception.Message)"
                         $Success = $false
@@ -39,8 +39,7 @@ function Invoke-ExecServicePrincipals {
                 } elseif ($Request.Query.Id) {
                     $Action = 'Get'
                     $Results = New-GraphGetRequest -Uri "https://graph.microsoft.com/beta/servicePrincipals/$($Request.Query.Id)" -tenantid $TenantFilter -NoAuthCheck $true
-                }
-                else {
+                } else {
                     $Action = 'List'
                     $Results = New-GraphGetRequest -Uri 'https://graph.microsoft.com/beta/servicePrincipals?$top=999&$orderby=displayName&$count=true' -ComplexFilter -tenantid $TenantFilter -NoAuthCheck $true
                 }
