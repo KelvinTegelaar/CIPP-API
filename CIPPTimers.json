@@ -1,5 +1,13 @@
 [
   {
+    "Command": "Start-DurableCleanup",
+    "Description": "Timer function to cleanup durable functions",
+    "Cron": "0 */15 * * * *",
+    "Priority": 0,
+    "RunOnProcessor": true,
+    "IsSystem": true
+  },
+  {
     "Command": "Start-UserTasksOrchestrator",
     "Description": "Orchestrator to process user scheduled tasks",
     "Cron": "0 */15 * * * *",
