@@ -229,6 +229,7 @@ function Receive-CIPPTimerTrigger {
             }
         } catch {
             $Status = 'Failed'
+            Write-Information "Error in CIPPTimer for $($Function.Command): $($_.Exception.Message)"
         }
         $FunctionStatus.LastOccurrence = $UtcNow
         $FunctionStatus.Status = $Status
