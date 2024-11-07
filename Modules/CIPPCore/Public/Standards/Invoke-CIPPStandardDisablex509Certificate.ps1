@@ -29,19 +29,24 @@ function Invoke-CIPPStandardDisablex509Certificate {
     param($Tenant, $Settings)
     ##$Rerun -Type Standard -Tenant $Tenant -Settings $Settings 'Disablex509Certificate'
 
-    $CurrentInfo = New-GraphGetRequest -Uri 'https://graph.microsoft.com/beta/policies/authenticationmethodspolicy/authenticationMethodConfigurations/x509Certificate' -tenantid $Tenant
-    $State = if ($CurrentInfo.state -eq 'enabled') { $true } else { $false }
+    $CurrentState = New-GraphGetRequest -Uri 'https://graph.microsoft.com/beta/policies/authenticationmethodspolicy/authenticationMethodConfigurations/x509Certificate' -tenantid $Tenant
+    $StateIsCorrect = ($CurrentState.state -eq 'disabled')
 
     If ($Settings.remediate -eq $true) {
-        if ($State) {
-            Set-CIPPAuthenticationPolicy -Tenant $tenant -APIName 'Standards' -AuthenticationMethodId 'x509Certificate' -Enabled $false
-        } else {
+        if ($StateIsCorrect -eq $true) {
             Write-LogMessage -API 'Standards' -tenant $tenant -message 'x509Certificate authentication method is already disabled.' -sev Info
+        } else {
+            try {
+                Set-CIPPAuthenticationPolicy -Tenant $tenant -APIName 'Standards' -AuthenticationMethodId 'x509Certificate' -Enabled $false
+                Write-LogMessage -API 'Standards' -tenant $tenant -message 'x509Certificate authentication method disabled' -sev Info
+            } catch {
+                Write-LogMessage -API 'Standards' -tenant $tenant -message 'Failed to disable x509Certificate authentication method' -sev Error -LogData $_
+            }
         }
     }
 
     if ($Settings.alert -eq $true) {
-        if ($State) {
+        if ($StateIsCorrect -eq $true) {
             Write-LogMessage -API 'Standards' -tenant $tenant -message 'x509Certificate authentication method is enabled' -sev Alert
         } else {
             Write-LogMessage -API 'Standards' -tenant $tenant -message 'x509Certificate authentication method is not enabled' -sev Info
@@ -49,7 +54,7 @@ function Invoke-CIPPStandardDisablex509Certificate {
     }
 
     if ($Settings.report -eq $true) {
-        Add-CIPPBPAField -FieldName 'Disablex509Certificate' -FieldValue $State -StoreAs bool -Tenant $tenant
+        Add-CIPPBPAField -FieldName 'Disablex509Certificate' -FieldValue $StateIsCorrect -StoreAs bool -Tenant $tenant
     }
 
 }
