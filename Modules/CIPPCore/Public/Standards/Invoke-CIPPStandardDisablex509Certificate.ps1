@@ -36,12 +36,7 @@ function Invoke-CIPPStandardDisablex509Certificate {
         if ($StateIsCorrect -eq $true) {
             Write-LogMessage -API 'Standards' -tenant $tenant -message 'x509Certificate authentication method is already disabled.' -sev Info
         } else {
-            try {
-                Set-CIPPAuthenticationPolicy -Tenant $tenant -APIName 'Standards' -AuthenticationMethodId 'x509Certificate' -Enabled $false
-                Write-LogMessage -API 'Standards' -tenant $tenant -message 'x509Certificate authentication method disabled' -sev Info
-            } catch {
-                Write-LogMessage -API 'Standards' -tenant $tenant -message 'Failed to disable x509Certificate authentication method' -sev Error -LogData $_
-            }
+            Set-CIPPAuthenticationPolicy -Tenant $tenant -APIName 'Standards' -AuthenticationMethodId 'x509Certificate' -Enabled $false
         }
     }
 

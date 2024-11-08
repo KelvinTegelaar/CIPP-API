@@ -36,12 +36,7 @@ function Invoke-CIPPStandardEnableFIDO2 {
         if ($StateIsCorrect -eq $true) {
             Write-LogMessage -API 'Standards' -tenant $tenant -message 'FIDO2 Support is already enabled.' -sev Info
         } else {
-            try {
-                Set-CIPPAuthenticationPolicy -Tenant $tenant -APIName 'Standards' -AuthenticationMethodId 'Fido2' -Enabled $true
-                Write-LogMessage -API 'Standards' -tenant $tenant -message 'FIDO2 Support enabled' -sev Info
-            } catch {
-                Write-LogMessage -API 'Standards' -tenant $tenant -message 'Failed to enable FIDO2 Support' -sev Error -LogData $_
-            }
+            Set-CIPPAuthenticationPolicy -Tenant $tenant -APIName 'Standards' -AuthenticationMethodId 'Fido2' -Enabled $true
         }
     }
 

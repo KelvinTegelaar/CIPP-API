@@ -36,12 +36,7 @@ function Invoke-CIPPStandardallowOAuthTokens {
         if ($StateIsCorrect -eq $true) {
             Write-LogMessage -API 'Standards' -tenant $tenant -message 'Software OTP/oAuth tokens is already enabled.' -sev Info
         } else {
-            try {
-                Set-CIPPAuthenticationPolicy -Tenant $tenant -APIName 'Standards' -AuthenticationMethodId 'softwareOath' -Enabled $true
-                Write-LogMessage -API 'Standards' -tenant $tenant -message 'Software OTP/oAuth tokens enabled' -sev Info
-            } catch {
-                Write-LogMessage -API 'Standards' -tenant $tenant -message 'Failed to enable Software OTP/oAuth tokens' -sev Error -LogData $_
-            }
+            Set-CIPPAuthenticationPolicy -Tenant $tenant -APIName 'Standards' -AuthenticationMethodId 'softwareOath' -Enabled $true
         }
     }
 

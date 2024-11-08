@@ -36,12 +36,7 @@ function Invoke-CIPPStandardEnableHardwareOAuth {
         if ($StateIsCorrect -eq $true) {
             Write-LogMessage -API 'Standards' -tenant $tenant -message 'HardwareOAuth Support is already enabled.' -sev Info
         } else {
-            try {
-                Set-CIPPAuthenticationPolicy -Tenant $tenant -APIName 'Standards' -AuthenticationMethodId 'HardwareOath' -Enabled $true
-                Write-LogMessage -API 'Standards' -tenant $tenant -message 'HardwareOAuth Support enabled' -sev Info
-            } catch {
-                Write-LogMessage -API 'Standards' -tenant $tenant -message 'Failed to enable HardwareOAuth Support' -sev Error -LogData $_
-            }
+            Set-CIPPAuthenticationPolicy -Tenant $tenant -APIName 'Standards' -AuthenticationMethodId 'HardwareOath' -Enabled $true
         }
     }
 

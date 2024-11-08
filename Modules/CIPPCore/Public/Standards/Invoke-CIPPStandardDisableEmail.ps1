@@ -36,12 +36,7 @@ function Invoke-CIPPStandardDisableEmail {
         if ($StateIsCorrect -eq $true) {
             Write-LogMessage -API 'Standards' -tenant $tenant -message 'Email authentication method is already disabled.' -sev Info
         } else {
-            try {
-                Set-CIPPAuthenticationPolicy -Tenant $tenant -APIName 'Standards' -AuthenticationMethodId 'Email' -Enabled $false
-                Write-LogMessage -API 'Standards' -tenant $tenant -message 'Email authentication method disabled' -sev Info
-            } catch {
-                Write-LogMessage -API 'Standards' -tenant $tenant -message 'Failed to disable Email authentication method' -sev Error -LogData $_
-            }
+            Set-CIPPAuthenticationPolicy -Tenant $tenant -APIName 'Standards' -AuthenticationMethodId 'Email' -Enabled $false
         }
     }
 
