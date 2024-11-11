@@ -2,6 +2,7 @@ function New-CIPPApplicationCopy {
     [CmdletBinding()]
     param(
         $App,
+        [Alias('TenantFilter')]
         $Tenant
     )
     $CurrentInfo = New-GraphGetRequest -Uri 'https://graph.microsoft.com/beta/servicePrincipals?$top=999' -tenantid $env:TenantID -NoAuthCheck $true
