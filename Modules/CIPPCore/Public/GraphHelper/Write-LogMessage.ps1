@@ -35,8 +35,9 @@ function Write-LogMessage {
         'Username'     = [string]$username
         'Severity'     = [string]$sev
         'SentAsAlert'  = $false
-        'PartitionKey' = $PartitionKey
-        'RowKey'       = ([guid]::NewGuid()).ToString()
+        'PartitionKey' = [string]$PartitionKey
+        'RowKey'       = [string]([guid]::NewGuid()).ToString()
+        'FunctionNode' = [string]$env:WEBSITE_SITE_NAME
         'LogData'      = [string]$LogData
     }
 
