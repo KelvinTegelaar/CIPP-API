@@ -32,6 +32,15 @@
     "IsSystem": true
   },
   {
+    "Command": "Start-AuditLogSearchCreation",
+    "Description": "Timer to create audit log searches",
+    "Cron": "0 */30 * * * *",
+    "Priority": 3,
+    "RunOnProcessor": true,
+    "PreferredProcessor": "auditlog",
+    "IsSystem": true
+  },
+  {
     "Command": "Start-ApplicationOrchestrator",
     "Description": "Orchestrator to process application uploads",
     "Cron": "0 0 */12 * * *",

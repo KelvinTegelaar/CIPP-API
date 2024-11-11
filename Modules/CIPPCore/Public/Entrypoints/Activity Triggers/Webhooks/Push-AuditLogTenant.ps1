@@ -36,7 +36,7 @@ function Push-AuditLogTenant {
         $Configuration = $ConfigEntries | Where-Object { ($_.Tenants -match $TenantFilter -or $_.Tenants -match 'AllTenants') }
         if ($Configuration) {
             try {
-                $LogSearches = Get-CippAuditLogSearches -TenantFilter $TenantFilter -ReadyToProcess | Select-Object -First 20
+                $LogSearches = Get-CippAuditLogSearches -TenantFilter $TenantFilter -ReadyToProcess | Select-Object -First 10
                 Write-Information ('Audit Logs: Found {0} searches, begin processing' -f $LogSearches.Count)
                 foreach ($Search in $LogSearches) {
                     $SearchEntity = Get-CIPPAzDataTableEntity @LogSearchesTable -Filter "Tenant eq '$($TenantFilter)' and RowKey eq '$($Search.id)'"
