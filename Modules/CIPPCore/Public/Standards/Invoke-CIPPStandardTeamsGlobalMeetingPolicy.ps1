@@ -34,8 +34,9 @@ Function Invoke-CIPPStandardTeamsGlobalMeetingPolicy {
     | Select-Object AllowAnonymousUsersToJoinMeeting, AllowAnonymousUsersToStartMeeting, AutoAdmittedUsers, AllowPSTNUsersToBypassLobby, MeetingChatEnabledType, DesignatedPresenterRoleMode, AllowExternalParticipantGiveRequestControl
 
     if ($null -eq $Settings.DesignatedPresenterRoleMode) { $Settings.DesignatedPresenterRoleMode = $CurrentState.DesignatedPresenterRoleMode }
+    if ($null -eq $Settings.AllowAnonymousUsersToJoinMeeting) { $Settings.AllowAnonymousUsersToJoinMeeting = $CurrentState.AllowAnonymousUsersToJoinMeeting }
 
-    $StateIsCorrect = ($CurrentState.AllowAnonymousUsersToJoinMeeting -eq $false) -and
+    $StateIsCorrect = ($CurrentState.AllowAnonymousUsersToJoinMeeting -eq $Settings.AllowAnonymousUsersToJoinMeeting) -and
                         ($CurrentState.AllowAnonymousUsersToStartMeeting -eq $false) -and
                         ($CurrentState.AutoAdmittedUsers -eq 'EveryoneInCompanyExcludingGuests') -and
                         ($CurrentState.AllowPSTNUsersToBypassLobby -eq $false) -and
