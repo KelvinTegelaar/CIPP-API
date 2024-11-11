@@ -1,4 +1,4 @@
-function Push-ExecAddMultiTenantApp {
+function Add-MultiTenantApp {
     <#
     .FUNCTIONALITY
         Entrypoint
