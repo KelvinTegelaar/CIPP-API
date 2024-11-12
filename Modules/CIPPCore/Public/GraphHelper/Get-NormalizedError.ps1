@@ -44,7 +44,6 @@ function Get-NormalizedError {
         '*Provide valid credential.*' { 'Error 400: There is an issue with your Exchange Token configuration. Please perform an access check for this tenant' }
         '*This indicate that a subscription within the tenant has lapsed*' { 'There is subscription for this service available, Check licensing information.' }
         '*User was not found.*' { 'The relationship between this tenant and the partner has been dissolved from the tenant side.' }
-        '*The user or administrator has not consented to use the application*' { 'CIPP cannot access this tenant. Perform a CPV Refresh and Access Check via the settings menu' }
         '*AADSTS50020*' { 'AADSTS50020: The user you have used for your Secure Application Model is a guest in this tenant, or your are using GDAP and have not added the user to the correct group. Please delete the guest user to gain access to this tenant' }
         '*AADSTS50177' { 'AADSTS50177: The user you have used for your Secure Application Model is a guest in this tenant, or your are using GDAP and have not added the user to the correct group. Please delete the guest user to gain access to this tenant' }
         '*invalid or malformed*' { 'The request is malformed. Have you finished the SAM Setup?' }
@@ -58,6 +57,8 @@ function Get-NormalizedError {
         '*Providers.Common.V1.CoreException*' { '403 (Access Denied) - We cannot connect to this tenant.' }
         '*Authentication failed. MFA required*' { 'Authentication failed. MFA required' }
         '*Your tenant is not licensed for this feature.*' { 'Required license not available for this tenant' }
+        '*AADSTS65001*' { 'We cannot access this tenant as consent has not been given, please try refreshing the CPV permissions in the application settings menu.' }
+        '*AADSTS700082*' { 'The CIPP user access token has expired. Run the SAM Setup wizard to refresh your tokens.' }
         Default { $message }
 
     }

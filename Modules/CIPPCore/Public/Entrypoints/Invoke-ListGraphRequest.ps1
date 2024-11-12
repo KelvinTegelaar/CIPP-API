@@ -142,7 +142,7 @@ function Invoke-ListGraphRequest {
         }
         $StatusCode = [HttpStatusCode]::OK
     } catch {
-        $GraphRequestData = "Graph Error: $($_.Exception.Message) - Endpoint: $($Request.Query.Endpoint)"
+        $GraphRequestData = "Graph Error: $(Get-NormalizedError $_.Exception.Message) - Endpoint: $($Request.Query.Endpoint)"
         if ($Request.Query.IgnoreErrors) { $StatusCode = [HttpStatusCode]::OK }
         else { $StatusCode = [HttpStatusCode]::BadRequest }
     }
