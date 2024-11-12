@@ -6,7 +6,7 @@ function Push-DomainAnalyserDomain {
     param($Item)
     $DomainTable = Get-CippTable -tablename 'Domains'
     $Filter = "PartitionKey eq 'TenantDomains' and RowKey eq '{0}'" -f $Item.RowKey
-    $DomainObject = Get-CIPPAzDataTableEntity @DomainTable -Filter $Filter
+    $DomainObject = Get-CIPPAzDataTableEntity @DomainTable -Filter $Filter | Select-Object * -ExcludeProperty table
 
     try {
         $ConfigTable = Get-CippTable -tablename Config
@@ -35,7 +35,7 @@ function Push-DomainAnalyserDomain {
     try {
         $Tenant = $DomainObject.TenantDetails | ConvertFrom-Json -ErrorAction Stop
     } catch {
-        $Tenant = @{Tenant = 'None' }
+        $Tenant = @{ Tenant = 'None' }
     }
 
     $Result = [PSCustomObject]@{
