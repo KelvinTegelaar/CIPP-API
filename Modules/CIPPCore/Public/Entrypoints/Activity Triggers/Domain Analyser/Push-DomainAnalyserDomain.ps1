@@ -310,7 +310,13 @@ function Push-DomainAnalyserDomain {
     $Result.ScorePercentage = [int](($Result.Score / $Result.MaximumScore) * 100)
     $Result.ScoreExplanation = ($ScoreExplanation) -join ', '
 
-    $DomainObject.DomainAnalyser = (ConvertTo-Json -InputObject $Result -Depth 5 -Compress).ToString()
+    $Json = (ConvertTo-Json -InputObject $Result -Depth 5 -Compress).ToString()
+
+    if ($DomainObject.PSObject.Properties.Name -notcontains 'DomainAnalyser') {
+        $DomainObject | Add-Member -MemberType NoteProperty -Name DomainAnalyser -Value $Json
+    } else {
+        $DomainObject.DomainAnalyser = $Json
+    }
 
     try {
         $DomainTable.Entity = $DomainObject
