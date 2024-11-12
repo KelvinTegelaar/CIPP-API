@@ -17,6 +17,7 @@ function Start-DurableCleanup {
     param(
         [int]$MaxDuration = 3600
     )
+
     $WarningPreference = 'SilentlyContinue'
     $StorageContext = New-AzStorageContext -ConnectionString $env:AzureWebJobsStorage
     $TargetTime = (Get-Date).ToUniversalTime().AddSeconds(-$MaxDuration)
@@ -30,15 +31,14 @@ function Start-DurableCleanup {
         $ClearQueues = $false
         $FunctionName = $Table.TableName -replace 'Instances', ''
         $Orchestrators = Get-CIPPAzDataTableEntity @Table -Filter "RuntimeStatus eq 'Running'" | Select-Object * -ExcludeProperty Input
-        $Orchestrators | Where-Object { $_.CreatedTime.DateTime -lt $TargetTime } | ForEach-Object {
-            $CreatedTime = [DateTime]::SpecifyKind($_.CreatedTime.DateTime, [DateTimeKind]::Utc)
+        $LongRunningOrchestrators = $Orchestrators | Where-Object { $_.CreatedTime.DateTime -lt $TargetTime }
+        foreach ($Orchestrator in $LongRunningOrchestrators) {
+            $CreatedTime = [DateTime]::SpecifyKind($Orchestrator.CreatedTime.DateTime, [DateTimeKind]::Utc)
             $TimeSpan = New-TimeSpan -Start $CreatedTime -End (Get-Date).ToUniversalTime()
             $RunningDuration = [math]::Round($TimeSpan.TotalMinutes, 2)
-            Write-Information "Orchestrator: $($_.PartitionKey), created: $CreatedTime, running for: $RunningDuration minutes"
+            Write-Information "Orchestrator: $($Orchestrator.PartitionKey), created: $CreatedTime, running for: $RunningDuration minutes"
             $ClearQueues = $true
-            $_.RuntimeStatus = 'Failed'
             if ($PSCmdlet.ShouldProcess($_.PartitionKey, 'Terminate Orchestrator')) {
-                $Orchestrator = Get-CIPPAzDataTableEntity @Table -PartitionKey $_.PartitionKey -RowKey $_.RowKey
                 $Orchestrator.RuntimeStatus = 'Failed'
                 Update-AzDataTableEntity @Table -Entity $Orchestrator
                 $CleanupCount++

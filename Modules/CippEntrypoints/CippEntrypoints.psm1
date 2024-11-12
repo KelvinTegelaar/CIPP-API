@@ -220,6 +220,9 @@ function Receive-CIPPTimerTrigger {
             }
         }
         try {
+            if ($FunctionStatus.PSObject.Properties.Name -contains 'ErrorMsg') {
+                $FunctionStatus.ErrorMsg = ''
+            }
             $Results = Invoke-Command -ScriptBlock { & $Function.Command }
             if ($Results -match '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$') {
                 $FunctionStatus.OrchestratorId = $Results
@@ -229,9 +232,17 @@ function Receive-CIPPTimerTrigger {
             }
         } catch {
             $Status = 'Failed'
+            $ErrorMsg = $_.Exception.Message
+            if ($FunctionStatus.PSObject.Properties.Name -contains 'ErrorMsg') {
+                $FunctionStatus.ErrorMsg = $ErrorMsg
+            } else {
+                $FunctionStatus | Add-Member -MemberType NoteProperty -Name ErrorMsg -Value $ErrorMsg
+            }
+            Write-Information "Error in CIPPTimer for $($Function.Command): $($_.Exception.Message)"
         }
         $FunctionStatus.LastOccurrence = $UtcNow
         $FunctionStatus.Status = $Status
+
         Add-CIPPAzDataTableEntity @Table -Entity $FunctionStatus -Force
     }
 }
