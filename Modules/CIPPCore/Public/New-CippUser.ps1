@@ -11,7 +11,7 @@ function New-CIPPUser {
     try {
         $Aliases = ($UserObj.AddedAliases) -split '\s'
         $password = if ($UserObj.password) { $UserObj.password } else { New-passwordString }
-        $UserprincipalName = "$($UserObj.Username)@$($UserObj.Domain)"
+        $UserprincipalName = "$($UserObj.Username)@$($UserObj.Domain ? $UserObj.Domain : $UserObj.tenantID)"
         $BodyToship = [pscustomobject] @{
             'givenName'         = $UserObj.FirstName
             'surname'           = $UserObj.LastName
@@ -20,7 +20,7 @@ function New-CIPPUser {
             'department'        = $UserObj.Department
             'mailNickname'      = $UserObj.Username
             'userPrincipalName' = $UserprincipalName
-            'usageLocation'     = $UserObj.usageLocation
+            'usageLocation'     = $UserObj.usageLocation.value ? $UserObj.usageLocation.value : $UserObj.usageLocation
             'city'              = $UserObj.City
             'country'           = $UserObj.Country
             'jobtitle'          = $UserObj.Jobtitle
