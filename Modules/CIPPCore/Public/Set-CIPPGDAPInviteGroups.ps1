@@ -60,6 +60,7 @@ function Set-CIPPGDAPInviteGroups {
                 #Write-Information ($InputObject | ConvertTo-Json)
                 $InstanceId = Start-NewOrchestration -FunctionName 'CIPPOrchestrator' -InputObject (ConvertTo-Json -InputObject $InputObject -Depth 5 -Compress)
                 Write-Information "Started GDAP Invite orchestration with ID = '$InstanceId'"
+                return $InstanceId
             }
         }
     }
