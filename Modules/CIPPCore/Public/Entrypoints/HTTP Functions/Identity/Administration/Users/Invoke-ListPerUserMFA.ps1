@@ -18,7 +18,7 @@ function Invoke-ListPerUserMFA {
     Write-Host 'PowerShell HTTP trigger function processed a request.'
 
     # Parse query parameters
-    $Tenant = $Request.query.TenantFilter
+    $Tenant = $Request.query.tenantFilter
     try {
         $AllUsers = [System.Convert]::ToBoolean($Request.query.allUsers)
     } catch {
