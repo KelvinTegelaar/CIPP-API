@@ -9,7 +9,8 @@ function Start-BPAOrchestrator {
     #>
     [CmdletBinding(SupportsShouldProcess = $true)]
     param(
-        $TenantFilter = 'AllTenants'
+        $TenantFilter = 'AllTenants',
+        [switch]$Force
     )
 
     try {
@@ -42,6 +43,13 @@ function Start-BPAOrchestrator {
                     Template     = $Template
                     QueueName    = '{0} - {1}' -f $Template, $Tenant
                 }
+            }
+        }
+
+        if ($Force.IsPresent) {
+            Write-Host 'Clearing Rerun Cache'
+            foreach ($Report in $BPAReports) {
+                $null = Test-CIPPRerun -Type BPA -Tenant $Report.Tenant -API $Report.Template -Clear
             }
         }
 

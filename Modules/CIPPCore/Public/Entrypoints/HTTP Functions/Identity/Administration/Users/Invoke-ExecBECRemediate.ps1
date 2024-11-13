@@ -27,8 +27,9 @@ Function Invoke-ExecBECRemediate {
         $Step = 'Disable Account'
         Set-CIPPSignInState -userid $username -AccountEnabled $false -tenantFilter $TenantFilter -APIName $APINAME -ExecutingUser $User
         $Step = 'Revoke Sessions'
-        Revoke-CIPPSessions -userid $SuspectUser -username $request.body.username -ExecutingUser $User -APIName $APINAME -tenantFilter $TenantFilter
-
+        Revoke-CIPPSessions -userid $SuspectUser -username $username -ExecutingUser $User -APIName $APINAME -tenantFilter $TenantFilter
+        $Step = 'Remove MFA methods'
+        Remove-CIPPUserMFA -UserPrincipalName $username -TenantFilter $TenantFilter -ExecutingUser $User
         $Step = 'Disable Inbox Rules'
         $Rules = New-ExoRequest -anchor $username -tenantid $TenantFilter -cmdlet 'Get-InboxRule' -cmdParams @{Mailbox = $username; IncludeHidden = $true }
         $RuleDisabled = 0
