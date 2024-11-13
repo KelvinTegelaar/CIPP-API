@@ -85,14 +85,19 @@ function Add-CIPPDelegatedPermission {
         $OldScope = ($CurrentDelegatedScopes | Where-Object -Property Resourceid -EQ $svcPrincipalId.id)
 
         if (!$OldScope) {
-            $Createbody = @{
-                clientId    = $ourSVCPrincipal.id
-                consentType = 'AllPrincipals'
-                resourceId  = $svcPrincipalId.id
-                scope       = $NewScope
-            } | ConvertTo-Json -Compress
-            $CreateRequest = New-GraphPOSTRequest -uri 'https://graph.microsoft.com/v1.0/oauth2PermissionGrants' -tenantid $Tenantfilter -body $Createbody -type POST -NoAuthCheck $true
-            $Results.add("Successfully added permissions for $($svcPrincipalId.displayName)")
+            try {
+                $Createbody = @{
+                    clientId    = $ourSVCPrincipal.id
+                    consentType = 'AllPrincipals'
+                    resourceId  = $svcPrincipalId.id
+                    scope       = $NewScope
+                } | ConvertTo-Json -Compress
+                $CreateRequest = New-GraphPOSTRequest -uri 'https://graph.microsoft.com/v1.0/oauth2PermissionGrants' -tenantid $Tenantfilter -body $Createbody -type POST -NoAuthCheck $true
+                $Results.add("Successfully added permissions for $($svcPrincipalId.displayName)")
+            } catch {
+                $Results.add("Failed to add permissions for $($svcPrincipalId.displayName): $(Get-NormalizedError -message $_.Exception.Message)")
+                continue
+            }
         } else {
             # Cleanup multiple scope entries and patch first id
             if (($OldScope.id | Measure-Object).Count -gt 1) {

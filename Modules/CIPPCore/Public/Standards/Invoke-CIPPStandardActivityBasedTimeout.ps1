@@ -42,12 +42,14 @@ function Invoke-CIPPStandardActivityBasedTimeout {
     # Backwards compatibility for v5.7.0 and older
     if ($null -eq $Settings.timeout ) { $Settings.timeout = '01:00:00' }
 
-    $State = New-GraphGetRequest -Uri 'https://graph.microsoft.com/beta/policies/activityBasedTimeoutPolicies' -tenantid $tenant
-    $StateIsCorrect = $State.definition -like "*$($Settings.timeout)*"
+    $CurrentState = New-GraphGetRequest -Uri 'https://graph.microsoft.com/beta/policies/activityBasedTimeoutPolicies' -tenantid $tenant
+    $StateIsCorrect = if ($CurrentState.definition -like "*$($Settings.timeout)*") { $true } else { $false }
 
     If ($Settings.remediate -eq $true) {
         try {
-            if (!$StateIsCorrect) {
+            if ($StateIsCorrect -eq $true) {
+                Write-LogMessage -API 'Standards' -tenant $tenant -message "Activity Based Timeout is already enabled and set to $($Settings.timeout)" -sev Info
+            } else {
                 $PolicyTemplate = @{
                     displayName           = 'DefaultTimeoutPolicy'
                     isOrganizationDefault = $true
@@ -58,27 +60,24 @@ function Invoke-CIPPStandardActivityBasedTimeout {
                 $body = ConvertTo-Json -InputObject $PolicyTemplate -Depth 10 -Compress
 
                 # Switch between parameter sets if the policy already exists
-                if ($null -eq $State.id) {
+                if ($null -eq $CurrentState.id) {
                     $RequestType = 'POST'
                     $URI = 'https://graph.microsoft.com/beta/policies/activityBasedTimeoutPolicies'
                 } else {
                     $RequestType = 'PATCH'
-                    $URI = "https://graph.microsoft.com/beta/policies/activityBasedTimeoutPolicies/$($State.id)"
+                    $URI = "https://graph.microsoft.com/beta/policies/activityBasedTimeoutPolicies/$($CurrentState.id)"
                 }
                 New-GraphPostRequest -tenantid $tenant -Uri $URI -Type $RequestType -Body $body -ContentType 'application/json'
                 Write-LogMessage -API 'Standards' -tenant $tenant -message "Enabled Activity Based Timeout with a value of $($Settings.timeout)" -sev Info
-            } else {
-                Write-LogMessage -API 'Standards' -tenant $tenant -message "Activity Based Timeout is already enabled and set to $($Settings.timeout)" -sev Info
             }
         } catch {
-            $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
-            Write-LogMessage -API 'Standards' -tenant $tenant -message "Failed to enable Activity Based Timeout a value of $($Settings.timeout). Error: $ErrorMessage" -sev Error
+            Write-LogMessage -API 'Standards' -tenant $tenant -message "Failed to enable Activity Based Timeout a value of $($Settings.timeout)." -sev Error -LogData $_
         }
     }
 
     if ($Settings.alert -eq $true) {
 
-        if ($StateIsCorrect) {
+        if ($StateIsCorrect -eq $true) {
             Write-LogMessage -API 'Standards' -tenant $tenant -message "Activity Based Timeout is enabled and set to $($Settings.timeout)" -sev Info
         } else {
             Write-LogMessage -API 'Standards' -tenant $tenant -message "Activity Based Timeout is not set to $($Settings.timeout)" -sev Alert
