@@ -6,7 +6,7 @@ function Push-DomainAnalyserDomain {
     param($Item)
     $DomainTable = Get-CippTable -tablename 'Domains'
     $Filter = "PartitionKey eq 'TenantDomains' and RowKey eq '{0}'" -f $Item.RowKey
-    $DomainObject = Get-CIPPAzDataTableEntity @DomainTable -Filter $Filter
+    $DomainObject = Get-CIPPAzDataTableEntity @DomainTable -Filter $Filter | Select-Object * -ExcludeProperty table
 
     try {
         $ConfigTable = Get-CippTable -tablename Config
@@ -35,7 +35,7 @@ function Push-DomainAnalyserDomain {
     try {
         $Tenant = $DomainObject.TenantDetails | ConvertFrom-Json -ErrorAction Stop
     } catch {
-        $Tenant = @{Tenant = 'None' }
+        $Tenant = @{ Tenant = 'None' }
     }
 
     $Result = [PSCustomObject]@{
@@ -310,7 +310,13 @@ function Push-DomainAnalyserDomain {
     $Result.ScorePercentage = [int](($Result.Score / $Result.MaximumScore) * 100)
     $Result.ScoreExplanation = ($ScoreExplanation) -join ', '
 
-    $DomainObject.DomainAnalyser = (ConvertTo-Json -InputObject $Result -Depth 5 -Compress).ToString()
+    $Json = (ConvertTo-Json -InputObject $Result -Depth 5 -Compress).ToString()
+
+    if ($DomainObject.PSObject.Properties.Name -notcontains 'DomainAnalyser') {
+        $DomainObject | Add-Member -MemberType NoteProperty -Name DomainAnalyser -Value $Json
+    } else {
+        $DomainObject.DomainAnalyser = $Json
+    }
 
     try {
         $DomainTable.Entity = $DomainObject
