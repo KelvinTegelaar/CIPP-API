@@ -39,6 +39,7 @@ function Start-DurableCleanup {
             Write-Information "Orchestrator: $($Orchestrator.PartitionKey), created: $CreatedTime, running for: $RunningDuration minutes"
             $ClearQueues = $true
             if ($PSCmdlet.ShouldProcess($_.PartitionKey, 'Terminate Orchestrator')) {
+                $Orchestrator = Get-CIPPAzDataTableEntity @Table -Filter "PartitionKey eq '$($Orchestrator.PartitionKey)'"
                 $Orchestrator.RuntimeStatus = 'Failed'
                 Update-AzDataTableEntity @Table -Entity $Orchestrator
                 $CleanupCount++
