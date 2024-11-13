@@ -124,7 +124,7 @@ function Get-CIPPTimerFunctions {
         } else {
             if ($Status) {
                 Write-Warning "Timer function: $($Orchestrator.Command) does not exist"
-                Remove-CIPPAzDataTableEntity @Table -Entity $Status
+                Remove-AzDataTableEntity @Table -Entity $Status
             }
         }
     }
