@@ -20,7 +20,7 @@ Function Invoke-RemoveCATemplate {
 
         $Filter = "PartitionKey eq 'CATemplate' and RowKey eq '$id'"
         $ClearRow = Get-CIPPAzDataTableEntity @Table -Filter $Filter -Property PartitionKey, RowKey
-        Remove-AzDataTableEntity @Table -Entity $clearRow
+        Remove-AzDataTableEntity -Force @Table -Entity $clearRow
         Write-LogMessage -user $User -API $APINAME -message "Removed Conditional Access Template with ID $ID." -Sev 'Info'
         $body = [pscustomobject]@{'Results' = 'Successfully removed Conditional Access Template' }
     } catch {

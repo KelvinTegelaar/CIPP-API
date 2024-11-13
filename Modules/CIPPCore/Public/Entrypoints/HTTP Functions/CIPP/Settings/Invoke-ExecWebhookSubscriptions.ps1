@@ -14,7 +14,7 @@ function Invoke-ExecWebhookSubscriptions {
             $Webhook = Get-AzDataTableEntity @Table -Filter "RowKey eq '$($Request.Query.WebhookID)'" -Property PartitionKey, RowKey
             if ($Webhook) {
                 Remove-CIPPGraphSubscription -TenantFilter $Webhook.PartitionKey -CIPPID $Webhook.RowKey
-                Remove-AzDataTableEntity @Table -Entity $Webhook
+                Remove-AzDataTableEntity -Force @Table -Entity $Webhook
                 Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
                         StatusCode = [HttpStatusCode]::OK
                         Body       = @{ Results = "Deleted subscription $($Webhook.RowKey) for $($Webhook.PartitionKey)" }
@@ -48,7 +48,7 @@ function Invoke-ExecWebhookSubscriptions {
                     return
                 }
                 Remove-CIPPGraphSubscription @Unsubscribe
-                Remove-AzDataTableEntity @Table -Entity $Webhook
+                Remove-AzDataTableEntity -Force @Table -Entity $Webhook
                 Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
                         StatusCode = [HttpStatusCode]::OK
                         Body       = @{ Results = "Unsubscribed from $($Webhook.Resource) for $($Webhook.PartitionKey)" }
