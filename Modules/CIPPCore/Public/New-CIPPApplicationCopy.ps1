@@ -1,3 +1,4 @@
+# Added TenantFilter Alias to fix error when copying applications about parameter missing.
 function New-CIPPApplicationCopy {
     [CmdletBinding()]
     param(
