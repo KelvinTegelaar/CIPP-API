@@ -13,14 +13,20 @@ function Invoke-ExecBPA {
 
     if ($Config -and $Config.state -eq $true) {
         if ($env:CIPP_PROCESSOR -ne 'true') {
+            $Parameters = @{Force = $true }
+            if ($Request.Query.TenantFilter) {
+                $Parameters.TenantFilter = $Request.Query.TenantFilter
+                $RowKey = "Start-BPAOrchestrator-$($Request.Query.TenantFilter)"
+            } else {
+                $RowKey = 'Start-BPAOrchestrator'
+            }
+
             $ProcessorQueue = Get-CIPPTable -TableName 'ProcessorQueue'
             $ProcessorFunction = [PSCustomObject]@{
                 PartitionKey = 'Function'
-                RowKey       = "Start-BPAOrchestrator-$($Request.Query.TenantFilter)"
+                RowKey       = $RowKey
                 FunctionName = 'Start-BPAOrchestrator'
-                Parameters   = [string](ConvertTo-Json -Compress -InputObject @{
-                        TenantFilter = $Request.Query.TenantFilter
-                    })
+                Parameters   = [string](ConvertTo-Json -Compress -InputObject $Parameters)
             }
             Add-AzDataTableEntity @ProcessorQueue -Entity $ProcessorFunction -Force
             $Results = [pscustomobject]@{'Results' = 'BPA queued for execution' }

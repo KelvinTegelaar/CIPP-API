@@ -40,7 +40,7 @@ function Push-UploadApplication {
         }
         $ClearRow = Get-CIPPAzDataTableEntity @Table -Filter $Filter
         $RemoveCacheFile = if ($chocoapp.Tenant -ne 'AllTenants') {
-            Remove-AzDataTableEntity @Table -Entity $clearRow
+            Remove-AzDataTableEntity -Force @Table -Entity $clearRow
         } else {
             $Table.Force = $true
             Add-CIPPAzDataTableEntity @Table -Entity @{

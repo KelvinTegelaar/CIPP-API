@@ -19,7 +19,7 @@ Function Invoke-RemoveQueuedApp {
         $Table = Get-CippTable -tablename 'apps'
         $Filter = "PartitionKey eq 'apps' and RowKey eq '$id'"
         $ClearRow = Get-CIPPAzDataTableEntity @Table -Filter $Filter -Property PartitionKey, RowKey
-        Remove-AzDataTableEntity @Table -Entity $clearRow
+        Remove-AzDataTableEntity -Force @Table -Entity $clearRow
         Write-LogMessage -user $User -API $APINAME -message "Removed application queue for $ID." -Sev 'Info'
         $body = [pscustomobject]@{'Results' = 'Successfully removed from queue.' }
     } catch {
