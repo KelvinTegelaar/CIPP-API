@@ -20,7 +20,7 @@ function New-CIPPUserTask {
 
     try {
         if ($userobj.licenses.value) {
-            $LicenseResults = Set-CIPPUserLicense -userid $CreationResults.username -TenantFilter $UserObj.tenantFilter -Licenses $userobj.licenses.value
+            $LicenseResults = Set-CIPPUserLicense -UserId $CreationResults.username -TenantFilter $UserObj.tenantFilter -AddLicenses $UserObj.licenses.value
             $Results.Add($LicenseResults)
         }
     } catch {
