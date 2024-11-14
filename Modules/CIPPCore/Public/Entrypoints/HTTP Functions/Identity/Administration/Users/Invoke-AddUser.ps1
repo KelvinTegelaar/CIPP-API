@@ -17,7 +17,7 @@ Function Invoke-AddUser {
 
     if ($UserObj.Scheduled.Enabled) {
         $TaskBody = [pscustomobject]@{
-            TenantFilter  = $UserObj.tenantID
+            TenantFilter  = $UserObj.tenantfilter
             Name          = "New user creation: $($UserObj.mailNickname)@$($UserObj.PrimDomain.value)"
             Command       = @{
                 value = 'New-CIPPUserTask'

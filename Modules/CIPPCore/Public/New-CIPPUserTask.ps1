@@ -3,7 +3,8 @@ function New-CIPPUserTask {
     param (
         $userobj,
         $APIName = 'New User Task',
-        $ExecutingUser
+        $ExecutingUser,
+        $TenantFilter
     )
     $Results = [System.Collections.Generic.List[string]]::new()
 
@@ -36,8 +37,9 @@ function New-CIPPUserTask {
         Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $($userobj.tenantFilter) -message "Failed to create the Aliases. Error:$($_.Exception.Message)" -Sev 'Error'
         $body = $results.add("Failed to create the Aliases: $($_.Exception.Message)")
     }
-    if ($userobj.CopyFrom -ne '') {
-        $CopyFrom = Set-CIPPCopyGroupMembers -ExecutingUser $request.headers.'x-ms-client-principal' -CopyFromId $userObj.CopyFrom -UserID $CreationResults.Username -TenantFilter $UserObj.tenantFilter
+    if ($userobj.copyFrom.value) {
+        Write-Host "Copying from $($userObj.copyFrom.value)"
+        $CopyFrom = Set-CIPPCopyGroupMembers -ExecutingUser $request.headers.'x-ms-client-principal' -CopyFromId $userObj.copyFrom.value -UserID $CreationResults.Username -TenantFilter $UserObj.tenantFilter
         $CopyFrom.Success | ForEach-Object { $results.Add($_) }
         $CopyFrom.Error | ForEach-Object { $results.Add($_) }
     }

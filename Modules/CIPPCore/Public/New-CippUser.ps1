@@ -9,6 +9,7 @@ function New-CIPPUser {
     )
 
     try {
+        $userobj = $userobj | ConvertTo-Json -Depth 10 | ConvertFrom-Json -Depth 10
         Write-Host $UserObj.PrimDomain.value
         $Aliases = ($UserObj.AddedAliases) -split '\s'
         $password = if ($UserObj.password) { $UserObj.password } else { New-passwordString }
@@ -16,10 +17,10 @@ function New-CIPPUser {
         Write-Host "Creating user $UserprincipalName"
         Write-Host "tenant filter is $($UserObj.tenantFilter)"
         $BodyToship = [pscustomobject] @{
-            'givenName'         = $UserObj.FirstName
-            'surname'           = $UserObj.LastName
+            'givenName'         = $UserObj.givenname
+            'surname'           = $UserObj.surname
             'accountEnabled'    = $true
-            'displayName'       = $UserObj.DisplayName
+            'displayName'       = $UserObj.displayName
             'department'        = $UserObj.Department
             'mailNickname'      = $UserObj.Username ? $userobj.username :$userobj.mailNickname
             'userPrincipalName' = $UserprincipalName
