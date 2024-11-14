@@ -80,6 +80,11 @@ Function Invoke-ListBPA {
     $Results = [PSCustomObject]@{
         Data    = @($Data)
         Columns = @($Columns)
+        Keys    = $Data | ForEach-Object {
+            $_.PSObject.Properties |
+            Where-Object { $_.Name -ne 'PartitionKey' -and $_.Name -ne 'RowKey' -and $_.Name -ne 'Timestamp' } |
+            ForEach-Object { $_.Name }
+        } | Select-Object -Unique
         Style   = $Style
     }
 
@@ -87,6 +92,7 @@ Function Invoke-ListBPA {
         $Results = @{
             Columns = @( value = 'Results'; name = 'Results')
             Data    = @(@{ Results = 'The BPA has not yet run.' })
+            Keys    = @()
         }
     }
 

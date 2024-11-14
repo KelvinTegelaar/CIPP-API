@@ -17,7 +17,7 @@ Function Invoke-ExecRestoreBackup {
             Write-Host ($line)
             $Table = Get-CippTable -tablename $line.table
             $ht2 = @{}
-            $line.psobject.properties | ForEach-Object { $ht2[$_.Name] = [string]$_.Value }
+            $line.psobject.properties | Where-Object { $_.Name -ne 'table' } | ForEach-Object { $ht2[$_.Name] = [string]$_.Value }
             $Table.Entity = $ht2
             Add-CIPPAzDataTableEntity @Table -Force
 

@@ -235,7 +235,7 @@ Function Invoke-ExecSAMSetup {
 
             }
             4 {
-                Remove-AzDataTableEntity @Table -Entity $Rows
+                Remove-AzDataTableEntity -Force @Table -Entity $Rows
 
                 $step = 5
                 $Results = @{'message' = 'setup completed.'; step = $step
