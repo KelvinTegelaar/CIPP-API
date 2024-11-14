@@ -25,7 +25,7 @@ function Push-ListGraphRequestQueue {
         Write-Information "Filter: $Filter"
         $Existing = Get-CIPPAzDataTableEntity @Table -Filter $Filter -Property PartitionKey, RowKey
         if ($Existing) {
-            $null = Remove-AzDataTableEntity @Table -Entity $Existing
+            $null = Remove-AzDataTableEntity -Force @Table -Entity $Existing
         }
         $GraphRequestParams = @{
             TenantFilter                = $Item.TenantFilter
