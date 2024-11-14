@@ -20,13 +20,13 @@ function Push-Schedulerwebhookcreation {
         if ($Webhook) {
             Write-Information "Found existing webhook for $Tenant - $($Row.webhookType)"
             if ($Row.tenantid -ne 'AllTenants') {
-                Remove-AzDataTableEntity @Table -Entity $Row
+                Remove-AzDataTableEntity -Force @Table -Entity $Row
             }
             if (($Webhook | Measure-Object).Count -gt 1) {
                 $Webhook = $Webhook | Select-Object -First 1
                 $WebhooksToRemove = $ExistingWebhooks | Where-Object { $_.RowKey -ne $Webhook.RowKey }
                 foreach ($RemoveWebhook in $WebhooksToRemove) {
-                    Remove-AzDataTableEntity @WebhookTable -Entity $RemoveWebhook
+                    Remove-AzDataTableEntity -Force @WebhookTable -Entity $RemoveWebhook
                 }
             }
         } else {
@@ -34,7 +34,7 @@ function Push-Schedulerwebhookcreation {
             try {
                 $NewSub = New-CIPPGraphSubscription -TenantFilter $Tenant -EventType $Row.webhookType -auditLogAPI $true
                 if ($NewSub.Success -and $Row.tenantid -ne 'AllTenants') {
-                    Remove-AzDataTableEntity @Table -Entity $Row
+                    Remove-AzDataTableEntity -Force @Table -Entity $Row
                 } else {
                     Write-Information "Failed to create webhook for $Tenant - $($Row.webhookType) - $($_.Exception.Message)"
                 }
