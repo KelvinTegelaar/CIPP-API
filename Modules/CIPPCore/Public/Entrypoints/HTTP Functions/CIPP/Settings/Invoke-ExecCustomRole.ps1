@@ -25,7 +25,7 @@ function Invoke-ExecCustomRole {
         'Delete' {
             Write-LogMessage -user $Request.Headers.'x-ms-client-principal' -API 'ExecCustomRole' -message "Deleted custom role $($Request.Body.RoleName)" -Sev 'Info'
             $Role = Get-CIPPAzDataTableEntity @Table -Filter "RowKey eq '$($Request.Body.RoleName)'" -Property RowKey, PartitionKey
-            Remove-AzDataTableEntity @Table -Entity $Role
+            Remove-AzDataTableEntity -Force @Table -Entity $Role
             $Body = @{Results = 'Custom role deleted' }
         }
         default {
