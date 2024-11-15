@@ -131,11 +131,11 @@ function Test-CIPPAccessPermissions {
         $LastUpdate = $GraphPermissions.Timestamp
         $CpvTable = Get-CippTable -tablename 'cpvtenants'
         $CpvRefresh = Get-CippAzDataTableEntity @CpvTable -Filter "PartitionKey eq 'Tenant'"
-        $TenantList = Get-Tenants -IncludeErrors
+        $TenantList = Get-Tenants -IncludeErrors | Where-Object { $_.customerId -ne $env:TenantID -and $_.Excluded -eq $false }
         $CPVRefreshList = [System.Collections.Generic.List[object]]::new()
         $CPVSuccess = $true
         foreach ($Tenant in $TenantList) {
-            $LastRefresh = ($CpvRefresh | Where-Object -Property RowKey -EQ $Tenant.customerId).Timestamp.DateTime
+            $LastRefresh = ($CpvRefresh | Where-Object { $_.RowKey -EQ $Tenant.customerId }).Timestamp.DateTime
             if ($LastRefresh -lt $LastUpdate) {
                 $CPVSuccess = $false
                 $CPVRefreshList.Add([PSCustomObject]@{
