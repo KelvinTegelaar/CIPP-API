@@ -1,5 +1,13 @@
 [
   {
+    "Command": "Start-DurableCleanup",
+    "Description": "Timer function to cleanup durable functions",
+    "Cron": "0 */15 * * * *",
+    "Priority": 0,
+    "RunOnProcessor": true,
+    "IsSystem": true
+  },
+  {
     "Command": "Start-UserTasksOrchestrator",
     "Description": "Orchestrator to process user scheduled tasks",
     "Cron": "0 */15 * * * *",
@@ -19,6 +27,15 @@
     "Description": "Orchestrator to process audit logs",
     "Cron": "0 */15 * * * *",
     "Priority": 2,
+    "RunOnProcessor": true,
+    "PreferredProcessor": "auditlog",
+    "IsSystem": true
+  },
+  {
+    "Command": "Start-AuditLogSearchCreation",
+    "Description": "Timer to create audit log searches",
+    "Cron": "0 */30 * * * *",
+    "Priority": 3,
     "RunOnProcessor": true,
     "PreferredProcessor": "auditlog",
     "IsSystem": true
