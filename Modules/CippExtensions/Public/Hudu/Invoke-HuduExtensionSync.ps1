@@ -641,7 +641,7 @@ function Invoke-HuduExtensionSync {
                         $UserDevicesDetailsBlock = $null
                     }
 
-                    $HuduUser = $People | Where-Object { ($_.fields.label -eq 'Email Address' -and $_.fields.value -eq $user.userPrincipalName) -or $_.primary_mail -eq $user.userPrincipalName -or $_.name -eq $user.displayName }
+                    $HuduUser = $People | Where-Object { $_.fields.value -match $user.userPrincipalName -or $_.primary_mail -eq $user.userPrincipalName -or $_.name -eq $user.displayName }
 
                     [System.Collections.Generic.List[PSCustomObject]]$CIPPLinksFormatted = @()
                     if ($EnableCIPP) {
