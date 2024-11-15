@@ -139,7 +139,7 @@ function New-ExoRequest {
                         Method      = 'POST'
                         Body        = $ExoBody
                         Headers     = $Headers
-                        ContentType = 'application/json'
+                        ContentType = 'application/json; charset=utf-8'
                     }
 
                     $Return = Invoke-RestMethod @ExoRequestParams -ResponseHeadersVariable ResponseHeaders

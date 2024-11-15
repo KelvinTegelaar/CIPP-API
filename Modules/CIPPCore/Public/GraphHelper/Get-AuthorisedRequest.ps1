@@ -12,7 +12,7 @@ function Get-AuthorisedRequest {
     if (!$TenantID) {
         $TenantID = $env:TenantID
     }
-    if ($Uri -like 'https://graph.microsoft.com/beta/contracts*' -or $Uri -like '*/customers/*' -or $Uri -eq 'https://graph.microsoft.com/v1.0/me/sendMail' -or $Uri -like '*/tenantRelationships/*') {
+    if ($Uri -like 'https://graph.microsoft.com/beta/contracts*' -or $Uri -like '*/customers/*' -or $Uri -eq 'https://graph.microsoft.com/v1.0/me/sendMail' -or $Uri -like '*/tenantRelationships/*' -or $Uri -like '*/security/partner/*') {
         return $true
     }
     $Tenants = Get-Tenants -IncludeErrors

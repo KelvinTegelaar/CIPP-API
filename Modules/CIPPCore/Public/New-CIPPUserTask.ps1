@@ -30,7 +30,7 @@ function New-CIPPUserTask {
 
     try {
         if ($Userobj.AddedAliases) {
-            $AliasResults = Add-CIPPAlias -user $CreationResults.username -Aliases ($UserObj.AddedAliases -split '\s') -UserprincipalName $UserObj.UserprincipalName -TenantFilter $UserObj.tenantID -APIName $APINAME -ExecutingUser $request.headers.'x-ms-client-principal'
+            $AliasResults = Add-CIPPAlias -user $CreationResults.username -Aliases ($UserObj.AddedAliases -split '\s') -UserprincipalName $CreationResults.Username -TenantFilter $UserObj.tenantID -APIName $APINAME -ExecutingUser $request.headers.'x-ms-client-principal'
             $results.add($AliasResults)
         }
     } catch {
@@ -38,7 +38,7 @@ function New-CIPPUserTask {
         $body = $results.add("Failed to create the Aliases: $($_.Exception.Message)")
     }
     if ($userobj.CopyFrom -ne '') {
-        $CopyFrom = Set-CIPPCopyGroupMembers -ExecutingUser $request.headers.'x-ms-client-principal' -CopyFromId $userObj.CopyFrom -UserID $UserObj.UserprincipalName -TenantFilter $UserObj.tenantID
+        $CopyFrom = Set-CIPPCopyGroupMembers -ExecutingUser $request.headers.'x-ms-client-principal' -CopyFromId $userObj.CopyFrom -UserID $CreationResults.Username -TenantFilter $UserObj.tenantID
         $CopyFrom.Success | ForEach-Object { $results.Add($_) }
         $CopyFrom.Error | ForEach-Object { $results.Add($_) }
     }

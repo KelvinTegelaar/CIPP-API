@@ -31,10 +31,22 @@ Function Invoke-ExecExtensionsConfig {
 
         # Check if NinjaOne URL is set correctly and the instance has at least version 5.6
         if ($Body.NinjaOne) {
+            $AllowedNinjaHostnames = @(
+                'app.ninjarmm.com',
+                'eu.ninjarmm.com',
+                'oc.ninjarmm.com',
+                'ca.ninjarmm.com',
+                'us2.ninjarmm.com'
+            )
+            $SetNinjaHostname = $Body.NinjaOne.Instance -replace '/ws', '' -replace 'https://', ''
+            if ($AllowedNinjaHostnames -notcontains $SetNinjaHostname) {
+                throw "NinjaOne URL is not allowed. Allowed hostnames are: $($AllowedNinjaHostnames -join ', ')"
+            }
+
             try {
-                [version]$Version = (Invoke-WebRequest -Method GET -Uri "https://$(($Body.NinjaOne.Instance -replace '/ws','') -replace 'https://','')/app-version.txt" -ea stop).content
+                [version]$Version = (Invoke-WebRequest -Method GET -Uri "$SetNinjaHostname/app-version.txt" -ea stop).content
             } catch {
-                throw "Failed to connect to NinjaOne check your Instance is set correctly eg 'app.ninjarmmm.com'"
+                throw "Failed to connect to NinjaOne check your Instance is set correctly eg 'app.ninjarmm.com'"
             }
             if ($Version -lt [version]'5.6.0.0') {
                 throw 'NinjaOne 5.6.0.0 is required.'

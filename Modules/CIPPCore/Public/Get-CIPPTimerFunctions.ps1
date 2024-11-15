@@ -96,7 +96,7 @@ function Get-CIPPTimerFunctions {
                     }
                     Add-CIPPAzDataTableEntity @Table -Entity $Status
                 } else {
-                    if ($Orchestrator.IsSystem -or $ResetToDefault.IsPresent) {
+                    if ($Orchestrator.IsSystem -eq $true -or $ResetToDefault.IsPresent) {
                         $Status.Cron = $CronString
                     }
                     $Status.NextOccurrence = $NextOccurrence.ToUniversalTime()
@@ -124,7 +124,7 @@ function Get-CIPPTimerFunctions {
         } else {
             if ($Status) {
                 Write-Warning "Timer function: $($Orchestrator.Command) does not exist"
-                Remove-CIPPAzDataTableEntity @Table -Entity $Status
+                Remove-AzDataTableEntity @Table -Entity $Status
             }
         }
     }

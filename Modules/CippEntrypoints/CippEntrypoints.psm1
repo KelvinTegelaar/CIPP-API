@@ -57,38 +57,6 @@ function Receive-CippHttpTrigger {
     }
 }
 
-function Receive-CippQueueTrigger {
-    Param($QueueItem, $TriggerMetadata)
-
-    Set-Location (Get-Item $PSScriptRoot).Parent.Parent.FullName
-    $Start = (Get-Date).ToUniversalTime()
-    $APIName = $TriggerMetadata.FunctionName
-    Write-Information "#### Running $APINAME"
-    Set-Location (Get-Item $PSScriptRoot).Parent.Parent.FullName
-    $FunctionName = 'Push-{0}' -f $APIName
-    $QueueTrigger = @{
-        QueueItem       = $QueueItem
-        TriggerMetadata = $TriggerMetadata
-    }
-    try {
-        & $FunctionName @QueueTrigger
-    } catch {
-        $ErrorMsg = $_.Exception.Message
-    }
-
-    $End = (Get-Date).ToUniversalTime()
-
-    $Stats = @{
-        FunctionType = 'Queue'
-        Entity       = $QueueItem
-        Start        = $Start
-        End          = $End
-        ErrorMsg     = $ErrorMsg
-    }
-    Write-Information '####### Adding stats'
-    Write-CippFunctionStats @Stats
-}
-
 function Receive-CippOrchestrationTrigger {
     param($Context)
 
@@ -135,6 +103,7 @@ function Receive-CippOrchestrationTrigger {
         }
 
         if (($Batch | Measure-Object).Count -gt 0) {
+            Write-Information "Batch Count: $($Batch.Count)"
             $Tasks = foreach ($Item in $Batch) {
                 $DurableActivity = @{
                     FunctionName = 'CIPPActivityFunction'
@@ -145,7 +114,7 @@ function Receive-CippOrchestrationTrigger {
                 }
                 Invoke-DurableActivity @DurableActivity
             }
-            if ($NoWait) {
+            if ($NoWait -and $Tasks) {
                 $null = Wait-ActivityFunction -Task $Tasks
             }
         }
@@ -184,7 +153,7 @@ function Receive-CippActivityTrigger {
         if ($Item.FunctionName) {
             $FunctionName = 'Push-{0}' -f $Item.FunctionName
             try {
-                & $FunctionName -Item $Item
+                Invoke-Command -ScriptBlock { & $FunctionName -Item $Item }
 
                 if ($TaskStatus) {
                     $QueueTask.Status = 'Completed'
@@ -251,6 +220,9 @@ function Receive-CIPPTimerTrigger {
             }
         }
         try {
+            if ($FunctionStatus.PSObject.Properties.Name -contains 'ErrorMsg') {
+                $FunctionStatus.ErrorMsg = ''
+            }
             $Results = Invoke-Command -ScriptBlock { & $Function.Command }
             if ($Results -match '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$') {
                 $FunctionStatus.OrchestratorId = $Results
@@ -260,12 +232,20 @@ function Receive-CIPPTimerTrigger {
             }
         } catch {
             $Status = 'Failed'
+            $ErrorMsg = $_.Exception.Message
+            if ($FunctionStatus.PSObject.Properties.Name -contains 'ErrorMsg') {
+                $FunctionStatus.ErrorMsg = $ErrorMsg
+            } else {
+                $FunctionStatus | Add-Member -MemberType NoteProperty -Name ErrorMsg -Value $ErrorMsg
+            }
+            Write-Information "Error in CIPPTimer for $($Function.Command): $($_.Exception.Message)"
         }
         $FunctionStatus.LastOccurrence = $UtcNow
         $FunctionStatus.Status = $Status
+
         Add-CIPPAzDataTableEntity @Table -Entity $FunctionStatus -Force
     }
 }
 
-Export-ModuleMember -Function @('Receive-CippHttpTrigger', 'Receive-CippQueueTrigger', 'Receive-CippOrchestrationTrigger', 'Receive-CippActivityTrigger', 'Receive-CIPPTimerTrigger')
+Export-ModuleMember -Function @('Receive-CippHttpTrigger', 'Receive-CippOrchestrationTrigger', 'Receive-CippActivityTrigger', 'Receive-CIPPTimerTrigger')
 
