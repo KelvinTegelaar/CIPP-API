@@ -25,7 +25,6 @@ function Write-LogMessage {
     if (!$tenant) { $tenant = 'None' }
     if (!$username) { $username = 'CIPP' }
     if ($sev -eq 'Debug' -and $env:DebugMode -ne $true) {
-        Write-Information 'Not writing to log file - Debug mode is not enabled.'
         return
     }
     $PartitionKey = (Get-Date -UFormat '%Y%m%d').ToString()
@@ -36,8 +35,9 @@ function Write-LogMessage {
         'Username'     = [string]$username
         'Severity'     = [string]$sev
         'SentAsAlert'  = $false
-        'PartitionKey' = $PartitionKey
-        'RowKey'       = ([guid]::NewGuid()).ToString()
+        'PartitionKey' = [string]$PartitionKey
+        'RowKey'       = [string]([guid]::NewGuid()).ToString()
+        'FunctionNode' = [string]$env:WEBSITE_SITE_NAME
         'LogData'      = [string]$LogData
     }
 

@@ -18,11 +18,11 @@ function Invoke-ListGraphRequest {
 
     $Parameters = @{}
     if ($Request.Query.'$filter') {
-        $Parameters.'$filter' = $Request.Query.'$filter'
+        $Parameters.'$filter' = $Request.Query.'$filter' -replace '%tenantid%', $env:TenantId
     }
 
     if (!$Request.Query.'$filter' -and $Request.Query.graphFilter) {
-        $Parameters.'$filter' = $Request.Query.graphFilter
+        $Parameters.'$filter' = $Request.Query.graphFilter -replace '%tenantid%', $env:TenantId
     }
 
     if ($Request.Query.'$select') {
@@ -40,6 +40,7 @@ function Invoke-ListGraphRequest {
     if ($Request.Query.'$count') {
         $Parameters.'$count' = ([string]([System.Boolean]$Request.Query.'$count')).ToLower()
     }
+
 
     if ($Request.Query.'$orderby') {
         $Parameters.'$orderby' = $Request.Query.'$orderby'
@@ -75,6 +76,14 @@ function Invoke-ListGraphRequest {
         $GraphRequestParams.NoPagination = [System.Boolean]$Request.Query.NoPagination
     }
 
+    if ($Request.Query.manualPagination) {
+        $GraphRequestParams.NoPagination = [System.Boolean]$Request.Query.manualPagination
+    }
+
+    if ($Request.Query.nextLink) {
+        $GraphRequestParams.nextLink = $Request.Query.nextLink
+    }
+
     if ($Request.Query.CountOnly) {
         $GraphRequestParams.CountOnly = [System.Boolean]$Request.Query.CountOnly
     }
@@ -103,13 +112,19 @@ function Invoke-ListGraphRequest {
         }
     }
 
-    Write-Host ($GraphRequestParams | ConvertTo-Json)
+    if ($Request.Query.AsApp) {
+        $GraphRequestParams.AsApp = $true
+    }
 
     $Metadata = $GraphRequestParams
 
     try {
         $Results = Get-GraphRequestList @GraphRequestParams
-
+        if ($Results.nextLink -and $Request.Query.NoPagination) {
+            $Metadata['nextLink'] = $Results.nextLink | Select-Object -Last 1
+            #Results is an array of objects, so we need to remove the last object before returning
+            $Results = $Results | Select-Object -First ($Results.Count - 1)
+        }
         if ($Request.Query.ListProperties) {
             $Columns = ($Results | Select-Object -First 1).PSObject.Properties.Name
             $Results = $Columns | Where-Object { @('Tenant', 'CippStatus') -notcontains $_ }

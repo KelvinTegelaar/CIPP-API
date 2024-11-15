@@ -9,11 +9,26 @@ function Receive-CippHttpTrigger {
         $Request,
         $TriggerMetadata
     )
+
+    $ConfigTable = Get-CIPPTable -tablename Config
+    $Config = Get-CIPPAzDataTableEntity @ConfigTable -Filter "PartitionKey eq 'OffloadFunctions' and RowKey eq 'OffloadFunctions'"
+
+    if ($Config -and $Config.state -eq $true) {
+        if ($env:CIPP_PROCESSOR -eq 'true') {
+            Write-Information 'No API Calls'
+            Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
+                    StatusCode = [HttpStatusCode]::Forbidden
+                    Body       = 'API calls are not accepted on this function app'
+                })
+            return
+        }
+    }
+
     # Convert the request to a PSCustomObject because the httpContext is case sensitive since 7.3
     $Request = $Request | ConvertTo-Json -Depth 100 | ConvertFrom-Json
     Set-Location (Get-Item $PSScriptRoot).Parent.Parent.FullName
     $FunctionName = 'Invoke-{0}' -f $Request.Params.CIPPEndpoint
-    Write-Host "Function: $($Request.Params.CIPPEndpoint)"
+    Write-Information "Function: $($Request.Params.CIPPEndpoint)"
 
     $HttpTrigger = @{
         Request         = [pscustomobject]($Request)
@@ -40,38 +55,6 @@ function Receive-CippHttpTrigger {
                 Body       = 'Endpoint not found'
             })
     }
-}
-
-function Receive-CippQueueTrigger {
-    Param($QueueItem, $TriggerMetadata)
-    
-    Set-Location (Get-Item $PSScriptRoot).Parent.Parent.FullName
-    $Start = (Get-Date).ToUniversalTime()
-    $APIName = $TriggerMetadata.FunctionName
-    Write-Information "#### Running $APINAME"
-    Set-Location (Get-Item $PSScriptRoot).Parent.Parent.FullName
-    $FunctionName = 'Push-{0}' -f $APIName
-    $QueueTrigger = @{
-        QueueItem       = $QueueItem
-        TriggerMetadata = $TriggerMetadata
-    }
-    try {
-        & $FunctionName @QueueTrigger
-    } catch {
-        $ErrorMsg = $_.Exception.Message
-    }
-
-    $End = (Get-Date).ToUniversalTime()
-
-    $Stats = @{
-        FunctionType = 'Queue'
-        Entity       = $QueueItem
-        Start        = $Start
-        End          = $End
-        ErrorMsg     = $ErrorMsg
-    }
-    Write-Information '####### Adding stats'
-    Write-CippFunctionStats @Stats
 }
 
 function Receive-CippOrchestrationTrigger {
@@ -120,6 +103,7 @@ function Receive-CippOrchestrationTrigger {
         }
 
         if (($Batch | Measure-Object).Count -gt 0) {
+            Write-Information "Batch Count: $($Batch.Count)"
             $Tasks = foreach ($Item in $Batch) {
                 $DurableActivity = @{
                     FunctionName = 'CIPPActivityFunction'
@@ -130,7 +114,7 @@ function Receive-CippOrchestrationTrigger {
                 }
                 Invoke-DurableActivity @DurableActivity
             }
-            if ($NoWait) {
+            if ($NoWait -and $Tasks) {
                 $null = Wait-ActivityFunction -Task $Tasks
             }
         }
@@ -169,7 +153,7 @@ function Receive-CippActivityTrigger {
         if ($Item.FunctionName) {
             $FunctionName = 'Push-{0}' -f $Item.FunctionName
             try {
-                & $FunctionName -Item $Item
+                Invoke-Command -ScriptBlock { & $FunctionName -Item $Item }
 
                 if ($TaskStatus) {
                     $QueueTask.Status = 'Completed'
@@ -213,5 +197,55 @@ function Receive-CippActivityTrigger {
     }
 }
 
-Export-ModuleMember -Function @('Receive-CippHttpTrigger', 'Receive-CippQueueTrigger', 'Receive-CippOrchestrationTrigger', 'Receive-CippActivityTrigger')
+function Receive-CIPPTimerTrigger {
+    param($Timer)
+
+    $UtcNow = (Get-Date).ToUniversalTime()
+    $Functions = Get-CIPPTimerFunctions
+    $Table = Get-CIPPTable -tablename CIPPTimers
+    $Statuses = Get-CIPPAzDataTableEntity @Table
+    $FunctionName = $env:WEBSITE_SITE_NAME
+
+    foreach ($Function in $Functions) {
+        Write-Information "CIPPTimer: $($Function.Command) - $($Function.Cron)"
+        $FunctionStatus = $Statuses | Where-Object { $_.RowKey -eq $Function.Command }
+        if ($FunctionStatus.OrchestratorId) {
+            $FunctionName = $env:WEBSITE_SITE_NAME
+            $InstancesTable = Get-CippTable -TableName ('{0}Instances' -f ($FunctionName -replace '-', ''))
+            $Instance = Get-CIPPAzDataTableEntity @InstancesTable -Filter "PartitionKey eq '$($FunctionStatus.OrchestratorId)'" -Property PartitionKey, RowKey, RuntimeStatus
+            if ($Instance.RuntimeStatus -eq 'Running') {
+                Write-LogMessage -API 'TimerFunction' -message "$($Function.Command) - $($FunctionStatus.OrchestratorId) is still running" -sev Warn -LogData $FunctionStatus
+                Write-Warning "CIPP Timer: $($Function.Command) - $($FunctionStatus.OrchestratorId) is still running, skipping execution"
+                continue
+            }
+        }
+        try {
+            if ($FunctionStatus.PSObject.Properties.Name -contains 'ErrorMsg') {
+                $FunctionStatus.ErrorMsg = ''
+            }
+            $Results = Invoke-Command -ScriptBlock { & $Function.Command }
+            if ($Results -match '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$') {
+                $FunctionStatus.OrchestratorId = $Results
+                $Status = 'Started'
+            } else {
+                $Status = 'Completed'
+            }
+        } catch {
+            $Status = 'Failed'
+            $ErrorMsg = $_.Exception.Message
+            if ($FunctionStatus.PSObject.Properties.Name -contains 'ErrorMsg') {
+                $FunctionStatus.ErrorMsg = $ErrorMsg
+            } else {
+                $FunctionStatus | Add-Member -MemberType NoteProperty -Name ErrorMsg -Value $ErrorMsg
+            }
+            Write-Information "Error in CIPPTimer for $($Function.Command): $($_.Exception.Message)"
+        }
+        $FunctionStatus.LastOccurrence = $UtcNow
+        $FunctionStatus.Status = $Status
+
+        Add-CIPPAzDataTableEntity @Table -Entity $FunctionStatus -Force
+    }
+}
+
+Export-ModuleMember -Function @('Receive-CippHttpTrigger', 'Receive-CippOrchestrationTrigger', 'Receive-CippActivityTrigger', 'Receive-CIPPTimerTrigger')
 

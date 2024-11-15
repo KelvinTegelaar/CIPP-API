@@ -15,7 +15,7 @@ Function Invoke-ListUsers {
     $selectlist = 'id', 'accountEnabled', 'displayName', 'userPrincipalName', 'username', 'userType', 'createdDateTime', 'companyName', 'country', 'department', 'businessPhones', 'city', 'faxNumber', 'givenName', 'isResourceAccount', 'jobTitle', 'mobilePhone', 'officeLocation', 'postalCode', 'preferredDataLocation', 'preferredLanguage', 'mail', 'mailNickname', 'proxyAddresses', 'Aliases', 'otherMails', 'showInAddressList', 'state', 'streetAddress', 'surname', 'usageLocation', 'LicJoined', 'assignedLicenses', 'onPremisesSyncEnabled', 'OnPremisesImmutableId', 'onPremisesDistinguishedName', 'onPremisesLastSyncDateTime', 'primDomain', 'Tenant', 'CippStatus'
     # Write to the Azure Functions log stream.
     Write-Host 'PowerShell HTTP trigger function processed a request.'
-    $ConvertTable = Import-Csv Conversiontable.csv | Sort-Object -Property 'guid' -Unique
+    $ConvertTable = Import-Csv ConversionTable.csv | Sort-Object -Property 'guid' -Unique
     # Interact with query parameters or the body of the request.
     $TenantFilter = $Request.Query.TenantFilter
     $GraphFilter = $Request.Query.graphFilter
@@ -35,11 +35,8 @@ Function Invoke-ListUsers {
         $Table = Get-CIPPTable -TableName 'cacheusers'
         $Rows = Get-CIPPAzDataTableEntity @Table | Where-Object -Property Timestamp -GT (Get-Date).AddHours(-1)
         if (!$Rows) {
-            $Queue = New-CippQueueEntry -Name 'Users' -Link '/identity/administration/users?customerId=AllTenants'
-            Push-OutputBinding -Name listusers -Value "users/$($userid)?`$top=999&`$select=$($selectlist -join ',')&`$filter=$GraphFilter&`$count=true"
             [PSCustomObject]@{
-                Tenant  = 'Loading data for all tenants. Please check back after the job completes'
-                QueueId = $Queue.RowKey
+                Message = 'This function has been deprecated for all users, please use ListGraphRequest instead'
             }
         } else {
             $Rows.Data | ConvertFrom-Json | Select-Object $selectlist | ForEach-Object {

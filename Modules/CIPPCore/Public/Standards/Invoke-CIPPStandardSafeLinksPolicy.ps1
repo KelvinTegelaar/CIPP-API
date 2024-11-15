@@ -34,7 +34,22 @@ function Invoke-CIPPStandardSafeLinksPolicy {
     #>
 
     param($Tenant, $Settings)
-    $PolicyName = 'Default SafeLinks Policy'
+    ##$Rerun -Type Standard -Tenant $Tenant -Settings $Settings 'SafeLinksPolicy'
+
+    $PolicyList = @('CIPP Default SafeLinks Policy','Default SafeLinks Policy')
+    $ExistingPolicy = New-ExoRequest -tenantid $Tenant -cmdlet 'Get-SafeLinksPolicy' | Where-Object -Property Name -In $PolicyList
+    if ($null -eq $ExistingPolicy.Name) {
+        $PolicyName = $PolicyList[0]
+    } else {
+        $PolicyName = $ExistingPolicy.Name
+    }
+    $RuleList = @( 'CIPP Default SafeLinks Rule','CIPP Default SafeLinks Policy')
+    $ExistingRule = New-ExoRequest -tenantid $Tenant -cmdlet 'Get-SafeLinksRule' | Where-Object -Property Name -In $RuleList
+    if ($null -eq $ExistingRule.Name) {
+        $RuleName = $RuleList[0]
+    } else {
+        $RuleName = $ExistingRule.Name
+    }
 
     $CurrentState = New-ExoRequest -tenantid $Tenant -cmdlet 'Get-SafeLinksPolicy' |
         Where-Object -Property Name -EQ $PolicyName |
@@ -55,10 +70,10 @@ function Invoke-CIPPStandardSafeLinksPolicy {
     $AcceptedDomains = New-ExoRequest -tenantid $Tenant -cmdlet 'Get-AcceptedDomain'
 
     $RuleState = New-ExoRequest -tenantid $Tenant -cmdlet 'Get-SafeLinksRule' |
-        Where-Object -Property Name -EQ "CIPP $PolicyName" |
+        Where-Object -Property Name -EQ $RuleName |
         Select-Object Name, SafeLinksPolicy, Priority, RecipientDomainIs
 
-    $RuleStateIsCorrect = ($RuleState.Name -eq "CIPP $PolicyName") -and
+    $RuleStateIsCorrect = ($RuleState.Name -eq $RuleName) -and
                           ($RuleState.SafeLinksPolicy -eq $PolicyName) -and
                           ($RuleState.Priority -eq 0) -and
                           (!(Compare-Object -ReferenceObject $RuleState.RecipientDomainIs -DifferenceObject $AcceptedDomains.Name))
@@ -85,47 +100,46 @@ function Invoke-CIPPStandardSafeLinksPolicy {
                 try {
                     $cmdparams.Add('Identity', $PolicyName)
                     New-ExoRequest -tenantid $Tenant -cmdlet 'Set-SafeLinksPolicy' -cmdparams $cmdparams -UseSystemMailbox $true
-                    Write-LogMessage -API 'Standards' -tenant $Tenant -message 'Updated SafeLink Policy' -sev Info
+                    Write-LogMessage -API 'Standards' -tenant $Tenant -message "Updated SafeLink policy $PolicyName." -sev Info
                 } catch {
-                    $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
-                    Write-LogMessage -API 'Standards' -tenant $Tenant -message "Failed to update SafeLink Policy. Error: $ErrorMessage" -sev Error
+                    Write-LogMessage -API 'Standards' -tenant $Tenant -message "Failed to update SafeLink policy $PolicyName." -sev Error -LogData $_
                 }
             } else {
                 try {
                     $cmdparams.Add('Name', $PolicyName)
                     New-ExoRequest -tenantid $Tenant -cmdlet 'New-SafeLinksPolicy' -cmdparams $cmdparams -UseSystemMailbox $true
-                    Write-LogMessage -API 'Standards' -tenant $Tenant -message 'Created SafeLink Policy' -sev Info
+                    Write-LogMessage -API 'Standards' -tenant $Tenant -message "Created SafeLink policy $PolicyName." -sev Info
                 } catch {
-                    $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
-                    Write-LogMessage -API 'Standards' -tenant $Tenant -message "Failed to create SafeLink Policy. Error: $ErrorMessage" -sev Error
+                    Write-LogMessage -API 'Standards' -tenant $Tenant -message "Failed to create SafeLink policy $PolicyName." -sev Error -LogData $_
                 }
             }
         }
 
         if ($RuleStateIsCorrect -eq $false) {
             $cmdparams = @{
-                SafeLinksPolicy   = $PolicyName
                 Priority          = 0
                 RecipientDomainIs = $AcceptedDomains.Name
             }
 
-            if ($RuleState.Name -eq "CIPP $PolicyName") {
+            if ($RuleState.SafeLinksPolicy -ne $PolicyName) {
+                $cmdparams.Add('SafeLinksPolicy', $PolicyName)
+            }
+
+            if ($RuleState.Name -eq $RuleName) {
                 try {
-                    $cmdparams.Add('Identity', "CIPP $PolicyName")
+                    $cmdparams.Add('Identity', $RuleName)
                     New-ExoRequest -tenantid $Tenant -cmdlet 'Set-SafeLinksRule' -cmdparams $cmdparams -UseSystemMailbox $true
-                    Write-LogMessage -API 'Standards' -tenant $Tenant -message 'Updated SafeLink Rule' -sev Info
+                    Write-LogMessage -API 'Standards' -tenant $Tenant -message "Updated SafeLink rule $RuleName." -sev Info
                 } catch {
-                    $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
-                    Write-LogMessage -API 'Standards' -tenant $Tenant -message "Failed to update SafeLink Rule. Error: $ErrorMessage" -sev Error
+                    Write-LogMessage -API 'Standards' -tenant $Tenant -message "Failed to update SafeLink rule $RuleName." -sev Error -LogData $_
                 }
             } else {
                 try {
-                    $cmdparams.Add('Name', "CIPP $PolicyName")
+                    $cmdparams.Add('Name', $RuleName)
                     New-ExoRequest -tenantid $Tenant -cmdlet 'New-SafeLinksRule' -cmdparams $cmdparams -UseSystemMailbox $true
-                    Write-LogMessage -API 'Standards' -tenant $Tenant -message 'Created SafeLink Rule' -sev Info
+                    Write-LogMessage -API 'Standards' -tenant $Tenant -message "Created SafeLink rule $RuleName." -sev Info
                 } catch {
-                    $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
-                    Write-LogMessage -API 'Standards' -tenant $Tenant -message "Failed to create SafeLink Rule. Error: $ErrorMessage" -sev Error
+                    Write-LogMessage -API 'Standards' -tenant $Tenant -message "Failed to create SafeLink rule $RuleName." -sev Error -LogData $_
                 }
             }
         }

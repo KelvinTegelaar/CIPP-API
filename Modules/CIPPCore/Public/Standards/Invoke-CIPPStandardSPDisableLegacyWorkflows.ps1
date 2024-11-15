@@ -26,8 +26,10 @@ function Invoke-CIPPStandardSPDisableLegacyWorkflows {
         https://docs.cipp.app/user-documentation/tenant/standards/edit-standards
     #>
     param($Tenant, $Settings)
+    ##$Rerun -Type Standard -Tenant $Tenant -Settings $Settings 'SPDisableLegacyWorkflows'
+
     $CurrentState = Get-CIPPSPOTenant -TenantFilter $Tenant |
-        Select-Object -Property *
+    Select-Object -Property *
 
     $StateIsCorrect = ($CurrentState.StopNew2010Workflows -eq $true) -and
                       ($CurrentState.StopNew2013Workflows -eq $true) -and

@@ -8,7 +8,8 @@ function New-CIPPAPIConfig {
         $resetpassword
     )
     $null = Connect-AzAccount -Identity
-    $currentapp = (Get-AzKeyVaultSecret -VaultName $ENV:WEBSITE_DEPLOYMENT_ID -Name 'CIPPAPIAPP' -AsPlainText)
+    $VaultName = ($ENV:WEBSITE_DEPLOYMENT_ID -split '-')[0]
+    $currentapp = (Get-AzKeyVaultSecret -VaultName $VaultName -Name 'CIPPAPIAPP' -AsPlainText)
     $subscription = $($ENV:WEBSITE_OWNER_NAME).Split('+')[0]
 
     try {
@@ -39,7 +40,7 @@ function New-CIPPAPIConfig {
             $currentSettings.properties.identityProviders.azureActiveDirectory = @{
                 registration = @{
                     clientId     = $APIApp.appId
-                    openIdIssuer = "https://sts.windows.net/$($ENV:TenantId)/v2.0"
+                    openIdIssuer = "https://sts.windows.net/$($ENV:TenantID)/v2.0"
                 }
                 validation   = @{
                     allowedAudiences = @("api://$($APIApp.appId)")

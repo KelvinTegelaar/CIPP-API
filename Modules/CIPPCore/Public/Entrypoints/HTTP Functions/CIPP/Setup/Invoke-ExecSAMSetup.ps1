@@ -82,9 +82,9 @@ Function Invoke-ExecSAMSetup {
         if ($Request.Query.code) {
             try {
                 $TenantId = $Rows.tenantid
-                if (!$TenantId) { $TenantId = $ENV:TenantId }
+                if (!$TenantId) { $TenantId = $ENV:TenantID }
                 $AppID = $Rows.appid
-                if (!$AppID) { $appid = $env:ApplicationId }
+                if (!$AppID) { $appid = $ENV:ApplicationID }
                 $URL = ($Request.headers.'x-ms-original-url').split('?') | Select-Object -First 1
                 if ($env:AzureWebJobsStorage -eq 'UseDevelopmentStorage=true') {
                     $clientsecret = $Secret.ApplicationSecret
@@ -235,7 +235,7 @@ Function Invoke-ExecSAMSetup {
 
             }
             4 {
-                Remove-AzDataTableEntity @Table -Entity $Rows
+                Remove-AzDataTableEntity -Force @Table -Entity $Rows
 
                 $step = 5
                 $Results = @{'message' = 'setup completed.'; step = $step

@@ -25,7 +25,7 @@ function Invoke-ExecCustomRole {
         'Delete' {
             Write-LogMessage -user $Request.Headers.'x-ms-client-principal' -API 'ExecCustomRole' -message "Deleted custom role $($Request.Body.RoleName)" -Sev 'Info'
             $Role = Get-CIPPAzDataTableEntity @Table -Filter "RowKey eq '$($Request.Body.RoleName)'" -Property RowKey, PartitionKey
-            Remove-AzDataTableEntity @Table -Entity $Role
+            Remove-AzDataTableEntity -Force @Table -Entity $Role
             $Body = @{Results = 'Custom role deleted' }
         }
         default {
@@ -39,14 +39,26 @@ function Invoke-ExecCustomRole {
                 )
             } else {
                 $Body = foreach ($Role in $Body) {
-                    $Role.Permissions = $Role.Permissions | ConvertFrom-Json
+                    try {
+                        $Role.Permissions = $Role.Permissions | ConvertFrom-Json
+                    } catch {
+                        $Role.Permissions = ''
+                    }
                     if ($Role.AllowedTenants) {
-                        $Role.AllowedTenants = @($Role.AllowedTenants | ConvertFrom-Json)
+                        try {
+                            $Role.AllowedTenants = @($Role.AllowedTenants | ConvertFrom-Json)
+                        } catch {
+                            $Role.AllowedTenants = ''
+                        }
                     } else {
                         $Role | Add-Member -NotePropertyName AllowedTenants -NotePropertyValue @() -Force
                     }
                     if ($Role.BlockedTenants) {
-                        $Role.BlockedTenants = @($Role.BlockedTenants | ConvertFrom-Json)
+                        try {
+                            $Role.BlockedTenants = @($Role.BlockedTenants | ConvertFrom-Json)
+                        } catch {
+                            $Role.BlockedTenants = ''
+                        }
                     } else {
                         $Role | Add-Member -NotePropertyName BlockedTenants -NotePropertyValue @() -Force
                     }

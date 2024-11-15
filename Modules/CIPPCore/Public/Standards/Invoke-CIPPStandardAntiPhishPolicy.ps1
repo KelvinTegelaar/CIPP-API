@@ -21,6 +21,7 @@ function Invoke-CIPPStandardAntiPhishPolicy {
             "mdo_phisspamacation"
             "mdo_spam_notifications_only_for_admins"
             "mdo_antiphishingpolicies"
+            "mdo_phishthresholdlevel"
         ADDEDCOMPONENT
             {"type":"number","label":"Phishing email threshold. (Default 1)","name":"standards.AntiPhishPolicy.PhishThresholdLevel","default":1}
             {"type":"boolean","label":"Show first contact safety tip","name":"standards.AntiPhishPolicy.EnableFirstContactSafetyTips","default":true}
@@ -48,10 +49,24 @@ function Invoke-CIPPStandardAntiPhishPolicy {
     #>
 
     param($Tenant, $Settings)
-    $PolicyName = 'Default Anti-Phishing Policy'
+    ##$Rerun -Type Standard -Tenant $Tenant -Settings $Settings 'AntiPhishPolicy'
 
-    $CurrentState = New-ExoRequest -tenantid $Tenant -cmdlet 'Get-AntiPhishPolicy' |
-        Where-Object -Property Name -EQ $PolicyName |
+    $PolicyList = @('CIPP Default Anti-Phishing Policy','Default Anti-Phishing Policy')
+    $ExistingPolicy = New-ExoRequest -tenantid $Tenant -cmdlet 'Get-AntiPhishPolicy' | Where-Object -Property Name -In $PolicyList
+    if ($null -eq $ExistingPolicy.Name) {
+        $PolicyName = $PolicyList[0]
+    } else {
+        $PolicyName = $ExistingPolicy.Name
+    }
+    $RuleList = @( 'CIPP Default Anti-Phishing Rule','CIPP Default Anti-Phishing Policy')
+    $ExistingRule = New-ExoRequest -tenantid $Tenant -cmdlet 'Get-AntiPhishRule' | Where-Object -Property Name -In $RuleList
+    if ($null -eq $ExistingRule.Name) {
+        $RuleName = $RuleList[0]
+    } else {
+        $RuleName = $ExistingRule.Name
+    }
+
+    $CurrentState = $ExistingPolicy |
         Select-Object Name, Enabled, PhishThresholdLevel, EnableMailboxIntelligence, EnableMailboxIntelligenceProtection, EnableSpoofIntelligence, EnableFirstContactSafetyTips, EnableSimilarUsersSafetyTips, EnableSimilarDomainsSafetyTips, EnableUnusualCharactersSafetyTips, EnableUnauthenticatedSender, EnableViaTag, AuthenticationFailAction, SpoofQuarantineTag, MailboxIntelligenceProtectionAction, MailboxIntelligenceQuarantineTag, TargetedUserProtectionAction, TargetedUserQuarantineTag, TargetedDomainProtectionAction, TargetedDomainQuarantineTag, EnableOrganizationDomainsProtection
 
     $StateIsCorrect = ($CurrentState.Name -eq $PolicyName) -and
@@ -79,17 +94,17 @@ function Invoke-CIPPStandardAntiPhishPolicy {
     $AcceptedDomains = New-ExoRequest -tenantid $Tenant -cmdlet 'Get-AcceptedDomain'
 
     $RuleState = New-ExoRequest -tenantid $Tenant -cmdlet 'Get-AntiPhishRule' |
-        Where-Object -Property Name -EQ "CIPP $PolicyName" |
+        Where-Object -Property Name -EQ $RuleName |
         Select-Object Name, AntiPhishPolicy, Priority, RecipientDomainIs
 
-    $RuleStateIsCorrect = ($RuleState.Name -eq "CIPP $PolicyName") -and
+    $RuleStateIsCorrect = ($RuleState.Name -eq $RuleName) -and
                           ($RuleState.AntiPhishPolicy -eq $PolicyName) -and
                           ($RuleState.Priority -eq 0) -and
                           (!(Compare-Object -ReferenceObject $RuleState.RecipientDomainIs -DifferenceObject $AcceptedDomains.Name))
 
     if ($Settings.remediate -eq $true) {
         if ($StateIsCorrect -eq $true) {
-            Write-LogMessage -API 'Standards' -tenant $Tenant -message 'Anti-phishing Policy already correctly configured' -sev Info
+            Write-LogMessage -API 'Standards' -tenant $Tenant -message 'Anti-phishing policy already correctly configured' -sev Info
         } else {
             $cmdparams = @{
                 Enabled                             = $true
@@ -118,47 +133,46 @@ function Invoke-CIPPStandardAntiPhishPolicy {
                 try {
                     $cmdparams.Add('Identity', $PolicyName)
                     New-ExoRequest -tenantid $Tenant -cmdlet 'Set-AntiPhishPolicy' -cmdparams $cmdparams -UseSystemMailbox $true
-                    Write-LogMessage -API 'Standards' -tenant $Tenant -message 'Updated Anti-phishing Policy' -sev Info
+                    Write-LogMessage -API 'Standards' -tenant $Tenant -message "Updated Anti-phishing policy $PolicyName." -sev Info
                 } catch {
-                    $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
-                    Write-LogMessage -API 'Standards' -tenant $Tenant -message "Failed to update Anti-phishing Policy. Error: $ErrorMessage" -sev Error
+                    Write-LogMessage -API 'Standards' -tenant $Tenant -message "Failed to update Anti-phishing policy $PolicyName." -sev Error -LogData $_
                 }
             } else {
                 try {
                     $cmdparams.Add('Name', $PolicyName)
                     New-ExoRequest -tenantid $Tenant -cmdlet 'New-AntiPhishPolicy' -cmdparams $cmdparams -UseSystemMailbox $true
-                    Write-LogMessage -API 'Standards' -tenant $Tenant -message 'Created Anti-phishing Policy' -sev Info
+                    Write-LogMessage -API 'Standards' -tenant $Tenant -message "Created Anti-phishing policy $PolicyName." -sev Info
                 } catch {
-                    $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
-                    Write-LogMessage -API 'Standards' -tenant $Tenant -message "Failed to create Anti-phishing Policy. Error: $ErrorMessage" -sev Error
+                    Write-LogMessage -API 'Standards' -tenant $Tenant -message "Failed to create Anti-phishing policy $PolicyName." -sev Error -LogData $_
                 }
             }
         }
 
         if ($RuleStateIsCorrect -eq $false) {
             $cmdparams = @{
-                AntiPhishPolicy   = $PolicyName
                 Priority          = 0
                 RecipientDomainIs = $AcceptedDomains.Name
             }
 
-            if ($RuleState.Name -eq "CIPP $PolicyName") {
+            if ($RuleState.AntiPhishPolicy -ne $PolicyName) {
+                $cmdparams.Add('AntiPhishPolicy', $PolicyName)
+            }
+
+            if ($RuleState.Name -eq $RuleName) {
                 try {
-                    $cmdparams.Add('Identity', "CIPP $PolicyName")
+                    $cmdparams.Add('Identity', $RuleName)
                     New-ExoRequest -tenantid $Tenant -cmdlet 'Set-AntiPhishRule' -cmdparams $cmdparams -UseSystemMailbox $true
-                    Write-LogMessage -API 'Standards' -tenant $Tenant -message 'Updated Anti-phishing Rule' -sev Info
+                    Write-LogMessage -API 'Standards' -tenant $Tenant -message "Updated Anti-phishing rule $RuleName." -sev Info
                 } catch {
-                    $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
-                    Write-LogMessage -API 'Standards' -tenant $Tenant -message "Failed to update Anti-phishing Rule. Error: $ErrorMessage" -sev Error
+                    Write-LogMessage -API 'Standards' -tenant $Tenant -message "Failed to update Anti-phishing rule $RuleName." -sev Error -LogData $_
                 }
             } else {
                 try {
-                    $cmdparams.Add('Name', "CIPP $PolicyName")
+                    $cmdparams.Add('Name', $RuleName)
                     New-ExoRequest -tenantid $Tenant -cmdlet 'New-AntiPhishRule' -cmdparams $cmdparams -UseSystemMailbox $true
-                    Write-LogMessage -API 'Standards' -tenant $Tenant -message 'Created Anti-phishing Rule' -sev Info
+                    Write-LogMessage -API 'Standards' -tenant $Tenant -message "Created Anti-phishing rule $RuleName." -sev Info
                 } catch {
-                    $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
-                    Write-LogMessage -API 'Standards' -tenant $Tenant -message "Failed to create Anti-phishing Rule. Error: $ErrorMessage" -sev Error
+                    Write-LogMessage -API 'Standards' -tenant $Tenant -message "Failed to create Anti-phishing rule $RuleName." -sev Error -LogData $_
                 }
             }
         }
@@ -167,9 +181,9 @@ function Invoke-CIPPStandardAntiPhishPolicy {
     if ($Settings.alert -eq $true) {
 
         if ($StateIsCorrect -eq $true) {
-            Write-LogMessage -API 'Standards' -tenant $Tenant -message 'Anti-phishing Policy is enabled' -sev Info
+            Write-LogMessage -API 'Standards' -tenant $Tenant -message 'Anti-phishing policy is enabled' -sev Info
         } else {
-            Write-LogMessage -API 'Standards' -tenant $Tenant -message 'Anti-phishing Policy is not enabled' -sev Alert
+            Write-LogMessage -API 'Standards' -tenant $Tenant -message 'Anti-phishing policy is not enabled' -sev Alert
         }
     }
 
