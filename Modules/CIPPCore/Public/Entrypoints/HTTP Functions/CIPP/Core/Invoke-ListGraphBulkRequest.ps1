@@ -29,10 +29,17 @@ function Invoke-ListGraphBulkRequest {
 
     if ($BulkRequests) {
         $GraphRequestParams.Requests = @($BulkRequests)
-        $Body = New-GraphBulkRequest @GraphRequestParams
-        $Results = @{
-            StatusCode = [System.Net.HttpStatusCode]::OK
-            Body       = $Body
+        try {
+            $Body = New-GraphBulkRequest @GraphRequestParams
+            $Results = @{
+                StatusCode = [System.Net.HttpStatusCode]::OK
+                Body       = $Body
+            }
+        } catch {
+            $Results = @{
+                StatusCode = [System.Net.HttpStatusCode]::BadRequest
+                Body       = $_.Exception.Message
+            }
         }
     } else {
         $Results = @{
