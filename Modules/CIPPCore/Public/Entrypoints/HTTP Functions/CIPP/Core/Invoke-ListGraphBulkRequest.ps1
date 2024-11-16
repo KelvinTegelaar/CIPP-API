@@ -9,15 +9,15 @@ function Invoke-ListGraphBulkRequest {
     param($Request, $TriggerMetadata)
 
     $GraphRequestParams = @{
-        tenantid = $Request.Query.TenantFilter
+        tenantid = $Request.Body.tenantFilter
         Requests = @()
     }
 
     if ($Request.Body.asapp) {
-        $GraphRequestParams.asapp = $Request.Body.asapp
+        $GraphRequestParams.asapp = $Request.Body.asApp
     }
 
-    $BulkRequests = foreach ($GraphRequest in $Request.Body.Requests) {
+    $BulkRequests = foreach ($GraphRequest in $Request.Body.requests) {
         if ($GraphRequest.method -eq 'GET') {
             @{
                 id     = $GraphRequest.id
