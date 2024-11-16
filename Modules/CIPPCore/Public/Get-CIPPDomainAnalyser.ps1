@@ -17,7 +17,8 @@ function Get-CIPPDomainAnalyser {
     $DomainTable = Get-CIPPTable -Table 'Domains'
 
     # Get all the things
-
+    #Transform the tenantFilter to the GUID.
+    $TenantFilter = (Get-Tenants -TenantFilter $tenantFilter).customerId
     if ($TenantFilter -ne 'AllTenants' -and ![string]::IsNullOrEmpty($TenantFilter)) {
         $DomainTable.Filter = "TenantGUID eq '{0}'" -f $TenantFilter
     }
