@@ -19,7 +19,7 @@ Function Invoke-RemoveSpamfilterTemplate {
         $Table = Get-CippTable -tablename 'templates'
         $Filter = "PartitionKey eq 'SpamfilterTemplate' and RowKey eq '$id'"
         $ClearRow = Get-CIPPAzDataTableEntity @Table -Filter $Filter -Property PartitionKey, RowKey
-        Remove-AzDataTableEntity @Table -Entity $clearRow
+        Remove-AzDataTableEntity -Force @Table -Entity $clearRow
         Write-LogMessage -user $User -API $APINAME -message "Removed Transport Rule Template with ID $ID." -Sev 'Info'
         $body = [pscustomobject]@{'Results' = 'Successfully removed Transport Rule Template' }
     } catch {
