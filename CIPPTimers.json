@@ -150,5 +150,16 @@
     "Priority": 20,
     "RunOnProcessor": true,
     "IsSystem": true
+  },
+  {
+    "Command": "Get-Tenants",
+    "Parameters": {
+      "CleanOld": true
+    },
+    "Description": "Timer to cleanup old tenants",
+    "Cron": "0 0 0 * * *",
+    "Priority": 20,
+    "RunOnProcessor": true,
+    "IsSystem": true
   }
 ]
