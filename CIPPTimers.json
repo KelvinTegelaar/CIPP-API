@@ -107,6 +107,17 @@
     "RunOnProcessor": true
   },
   {
+    "Command": "Get-Tenants",
+    "Parameters": {
+      "TriggerRefresh": true
+    },
+    "Description": "Update tenants",
+    "Cron": "0 0 23 * * *",
+    "Priority": 10,
+    "RunOnProcessor": true,
+    "IsSystem": true
+  },
+  {
     "Command": "Start-UpdatePermissionsOrchestrator",
     "Description": "Orchestrator to update CPV permissions",
     "Cron": "0 0 0 * * *",
