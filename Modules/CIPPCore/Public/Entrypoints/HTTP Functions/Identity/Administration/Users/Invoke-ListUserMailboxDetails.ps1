@@ -119,15 +119,19 @@ Function Invoke-ListUserMailboxDetails {
     }
 
     # Parse permissions
-    $ParsedPerms = foreach ($Perm in $PermsRequest, $PermsRequest2) {
-        $Perm | ForEach-Object {
-            [PSCustomObject]@{
-                User         = $_.Trustee ? $_.Trustee : $_.User
-                AccessRights = ($_.AccessRights) -join ', '
+
+    $ParsedPerms = foreach ($PermSet in @($PermsRequest, $PermsRequest2)) {
+        foreach ($Perm in $PermSet) {
+            # Check if Trustee or User is not NT AUTHORITY\SELF
+            $user = $Perm.Trustee ? $Perm.Trustee : $Perm.User
+            if ($user -ne 'NT AUTHORITY\SELF') {
+                [PSCustomObject]@{
+                    User         = $user
+                    AccessRights = ($Perm.AccessRights) -join ', '
+                }
             }
         }
     }
-
 
     # Get forwarding address
     $ForwardingAddress = if ($MailboxDetailedRequest.ForwardingAddress) {
