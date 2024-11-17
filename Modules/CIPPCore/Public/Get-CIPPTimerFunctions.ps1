@@ -38,7 +38,7 @@ function Get-CIPPTimerFunctions {
     }
 
     $CIPPRoot = (Get-Item $CIPPCoreModuleRoot).Parent.Parent
-    $Orchestrators = Get-Content -Path $CIPPRoot\CIPPTimers.json | ConvertFrom-Json | Where-Object { $_.RunOnProcessor -eq $RunOnProcessor }
+    $Orchestrators = Get-Content -Path $CIPPRoot\CIPPTimers.json | ConvertFrom-Json | Where-Object { $_.RunOnProcessor -eq $RunOnProcessor } | Sort-Object -Property Priority
     $Table = Get-CIPPTable -TableName 'CIPPTimers'
     $RunOnProcessorTxt = if ($RunOnProcessor) { 'true' } else { 'false' }
     $OrchestratorStatus = Get-CIPPAzDataTableEntity @Table -Filter "RunOnProcessor eq $RunOnProcessorTxt"
@@ -110,7 +110,9 @@ function Get-CIPPTimerFunctions {
                 }
 
                 [PSCustomObject]@{
+                    Priority           = $Orchestrator.Priority
                     Command            = $Orchestrator.Command
+                    Parameters         = $Orchestrator.Parameters ?? @{}
                     Cron               = $CronString
                     NextOccurrence     = $NextOccurrence.ToUniversalTime()
                     LastOccurrence     = $Status.LastOccurrence.DateTime

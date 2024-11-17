@@ -54,7 +54,7 @@ function Get-Tenants {
         $BuildRequired = $true
     }
 
-    if ($CleanOld) {
+    if ($CleanOld.IsPresent) {
         $GDAPRelationships = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/tenantRelationships/delegatedAdminRelationships?`$filter=status eq 'active' and not startsWith(displayName,'MLT_')&`$select=customer,autoExtendDuration,endDateTime&`$top=300" -NoAuthCheck:$true
         $GDAPList = foreach ($Relationship in $GDAPRelationships) {
             [PSCustomObject]@{
@@ -65,7 +65,7 @@ function Get-Tenants {
             }
         }
         $CurrentTenants = Get-CIPPAzDataTableEntity @TenantsTable -Filter "PartitionKey eq 'Tenants' and Excluded eq false"
-        $CurrentTenants | Where-Object { $_.customerId -notin $GDAPList.customerId } | ForEach-Object {
+        $CurrentTenants | Where-Object { $_.customerId -notin $GDAPList.customerId -and $_.customerId -ne $env:TenantID } | ForEach-Object {
             Remove-AzDataTableEntity -Force @TenantsTable -Entity $_
         }
     }
