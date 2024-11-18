@@ -7,17 +7,17 @@ function Push-CIPPStandard {
         $Item
     )
 
-    Write-Host "Received queue item for $($Item.Tenant) and standard $($Item.Standard)."
+    Write-Information "Received queue item for $($Item.Tenant) and standard $($Item.Standard)."
     $Tenant = $Item.Tenant
     $Standard = $Item.Standard
     $FunctionName = 'Invoke-CIPPStandard{0}' -f $Standard
-    Write-Host "We'll be running $FunctionName"
-    $Rerun = Test-CIPPRerun -Type Standard -Tenant $Tenant -Settings $Item.Settings -API $Standard
+    Write-Information "We'll be running $FunctionName"
+    $Rerun = Test-CIPPRerun -Type Standard -Tenant $Tenant -API $Standard
     if ($Rerun) {
-        Write-Host 'Detected rerun. Exiting cleanly'
+        Write-Information 'Detected rerun. Exiting cleanly'
         exit 0
     } else {
-        Write-Host "Rerun is set to false. We'll be running $FunctionName"
+        Write-Information "Rerun is set to false. We'll be running $FunctionName"
     }
     try {
         & $FunctionName -Tenant $Item.Tenant -Settings $Item.Settings -ErrorAction Stop

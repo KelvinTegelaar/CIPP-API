@@ -2,7 +2,8 @@ function Get-CIPPStandards {
     param(
         [Parameter(Mandatory = $false)]
         [string]$TenantFilter = 'allTenants',
-        [switch]$ListAllTenants
+        [switch]$ListAllTenants,
+        [switch]$SkipGetTenants
     )
 
     #Write-Host "Getting standards for tenant - $($tenantFilter)"
@@ -12,7 +13,12 @@ function Get-CIPPStandards {
     $StandardsAllTenants = $Standards | Where-Object { $_.Tenant -eq 'AllTenants' }
 
     # Get tenant list based on filter
-    $Tenants = Get-Tenants
+    if ($SkipGetTenants.IsPresent) {
+        # Debugging flag to skip Get-Tenants
+        $Tenants = $Standards.Tenant | Sort-Object -Unique | ForEach-Object { [pscustomobject]@{ defaultDomainName = $_ } }
+    } else {
+        $Tenants = Get-Tenants
+    }
     if ($TenantFilter -ne 'allTenants') {
         $Tenants = $Tenants | Where-Object { $_.defaultDomainName -eq $TenantFilter -or $_.customerId -eq $TenantFilter }
     }
@@ -63,8 +69,7 @@ function Get-CIPPStandards {
                         $ComputedStandards[$StandardName] = $CurrentStandard
                     } else {
                         foreach ($Setting in $CurrentStandard.PSObject.Properties.Name) {
-                            # Write-Host "$Setting - Current: $($CurrentStandard.$Setting) | Computed: $($ComputedStandards[$StandardName].$($Setting))"
-                            if ($CurrentStandard.$Setting -ne $false -and ($CurrentStandard.$Setting -ne $ComputedStandards[$StandardName].$($Setting) -and ![string]::IsNullOrWhiteSpace($CurrentStandard.$Setting -or (Compare-Object $CurrentStandard.$Setting $ComputedStandards[$StandardName].$($Setting))))) {
+                            if ($CurrentStandard.$Setting -ne $false -and ($CurrentStandard.$Setting -ne $ComputedStandards[$StandardName].$($Setting) -and ![string]::IsNullOrWhiteSpace($CurrentStandard.$Setting) -or ($null -ne $CurrentStandard.$Setting -and $null -ne $ComputedStandards[$StandardName].$($Setting) -and (Compare-Object $CurrentStandard.$Setting $ComputedStandards[$StandardName].$($Setting))))) {
                                 #Write-Host "Overriding $Setting for $StandardName at tenant level"
                                 if ($ComputedStandards[$StandardName].PSObject.Properties.Name -contains $Setting) {
                                     $ComputedStandards[$StandardName].$($Setting) = $CurrentStandard.$Setting
