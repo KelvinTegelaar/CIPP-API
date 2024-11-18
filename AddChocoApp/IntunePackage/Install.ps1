@@ -17,45 +17,61 @@ param (
     $Trace
 )
 
-try {
-    if ($Trace) { Start-Transcript -Path (Join-Path $env:windir "\temp\choco-$Packagename-trace.log") }
+try
+{
+    if ($Trace)
+    { Start-Transcript -Path (Join-Path $env:windir "\temp\choco-$Packagename-trace.log") 
+    }
     $chocoPath = "$($ENV:SystemDrive)\ProgramData\chocolatey\bin\choco.exe"
 
-    if ($InstallChoco) {
-        if (-not (Test-Path $chocoPath)) {
-            try {
-                Set-ExecutionPolicy Bypass -Scope Process -Force; [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor 3072; Invoke-Expression ((New-Object System.Net.WebClient).DownloadString('https://chocolatey.org/install.ps1'))
+    if ($InstallChoco)
+    {
+        if (-not (Test-Path $chocoPath))
+        {
+            try
+            {
+                Set-ExecutionPolicy Bypass -Scope Process -Force
+                [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor 3072
+                Invoke-Expression ((New-Object System.Net.WebClient).DownloadString('https://chocolatey.org/install.ps1'))
                 $chocoPath = "$($ENV:SystemDrive)\ProgramData\chocolatey\bin\choco.exe"
-            }
-            catch {
+            } catch
+            {
                 Write-Host "InstallChoco Error: $($_.Exception.Message)"
             }
         }
     }
 
-    try {
+    try
+    {
         $localprograms = & "$chocoPath" list
-        $CustomRepoString = if ($CustomRepo) { "--source=$customrepo" } else { $null }
-        if ($localprograms -like "*$Packagename*" ) {
+        $CustomRepoString = if ($CustomRepo)
+        { "--source=$customrepo" 
+        } else
+        { $null 
+        }
+        if ($localprograms -like "*$Packagename*" )
+        {
             Write-Host "Upgrading $packagename"
             & "$chocoPath" upgrade $Packagename $CustomRepoString
-        }
-        else {
+        } else
+        {
             Write-Host "Installing $packagename"
             & "$chocoPath" install $Packagename -y $CustomRepoString
         }
         Write-Host 'Completed.'
-    }  
-    catch {
+    } catch
+    {
         Write-Host "Install/upgrade error: $($_.Exception.Message)"
     }
 
-}
-catch {
+} catch
+{
     Write-Host "Error encountered: $($_.Exception.Message)"
-}
-finally {
-    if ($Trace) { Stop-Transcript }
+} finally
+{
+    if ($Trace)
+    { Stop-Transcript 
+    }
 }
 
 exit $?
