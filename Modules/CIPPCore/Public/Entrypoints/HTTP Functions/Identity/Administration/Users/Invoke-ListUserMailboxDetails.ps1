@@ -71,7 +71,7 @@ Function Invoke-ListUserMailboxDetails {
             }
         )
         Write-Host $UserID
-        $username = (New-GraphGetRequest -tenantid $TenantFilter -uri "https://graph.microsoft.com/beta/users/$UserID").userPrincipalName
+        #$username = (New-GraphGetRequest -tenantid $TenantFilter -uri "https://graph.microsoft.com/beta/users/$UserID").userPrincipalName
         $Results = New-ExoBulkRequest -TenantId $TenantFilter -CmdletArray $Requests -returnWithCommand $true -Anchor $username
 
         # Assign variables from $Results
@@ -154,7 +154,7 @@ Function Invoke-ListUserMailboxDetails {
         MailboxImapEnabled       = $CASRequest.ImapEnabled
         MailboxPopEnabled        = $CASRequest.PopEnabled
         MailboxActiveSyncEnabled = $CASRequest.ActiveSyncEnabled
-        Permissions              = $ParsedPerms
+        Permissions              = @($ParsedPerms)
         ProhibitSendQuota        = [math]::Round([float]($MailboxDetailedRequest.ProhibitSendQuota -split ' GB')[0], 2)
         ProhibitSendReceiveQuota = [math]::Round([float]($MailboxDetailedRequest.ProhibitSendReceiveQuota -split ' GB')[0], 2)
         ItemCount                = [math]::Round($StatsRequest.ItemCount, 2)
@@ -165,6 +165,7 @@ Function Invoke-ListUserMailboxDetails {
         ArchiveMailBox           = $ArchiveEnabled
         AutoExpandingArchive     = $AutoExpandingArchiveEnabled
         RecipientTypeDetails     = $MailboxDetailedRequest.RecipientTypeDetails
+        Mailbox                  = $MailboxDetailedRequest
     }
 
     Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
