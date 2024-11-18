@@ -53,12 +53,6 @@ Function Invoke-ListUserMailboxDetails {
             },
             @{
                 CmdletInput = @{
-                    CmdletName = 'Get-MailboxStatistics'
-                    Parameters = @{ Identity = $UserID }
-                }
-            },
-            @{
-                CmdletInput = @{
                     CmdletName = 'Get-BlockedSenderAddress'
                     Parameters = @{ Identity = $UserID }
                 }
