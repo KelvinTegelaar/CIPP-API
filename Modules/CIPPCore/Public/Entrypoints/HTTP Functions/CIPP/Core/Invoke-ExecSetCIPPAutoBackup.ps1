@@ -17,7 +17,7 @@ Function Invoke-ExecSetCIPPAutoBackup {
             RowKey       = $AutomatedCIPPBackupTask.RowKey
             PartitionKey = 'ScheduledTask'
         }
-        Remove-AzDataTableEntity @Table -Entity $task | Out-Null
+        Remove-AzDataTableEntity -Force @Table -Entity $task | Out-Null
 
         $TaskBody = [pscustomobject]@{
             TenantFilter  = 'AllTenants'

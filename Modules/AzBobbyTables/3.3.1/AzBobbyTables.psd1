@@ -4,7 +4,7 @@
 RootModule = 'AzBobbyTables.PS.dll'
 
 # Version number of this module.
-ModuleVersion = '3.1.3'
+ModuleVersion = '3.3.1'
 
 # Supported PSEditions
 CompatiblePSEditions = @('Core')
@@ -67,6 +67,7 @@ FunctionsToExport = @()
 CmdletsToExport = @(
     'Add-AzDataTableEntity'
     'Clear-AzDataTable'
+    'Get-AzDataTable'
     'Get-AzDataTableEntity'
     'Remove-AzDataTableEntity'
     'Update-AzDataTableEntity'
@@ -108,12 +109,11 @@ PrivateData = @{
         # IconUri = ''
 
         # ReleaseNotes of this module
-          ReleaseNotes = '## [3.1.3] - 2024-01-20
+          ReleaseNotes = '## [3.3.1] - 2024-10-19
 
 ### Added
 
-- Added Sampler ([#48](https://github.com/PalmEmanuel/AzBobbyTables/issues/48)).
-- Added support for user-assigned managed identities ([#54](https://github.com/PalmEmanuel/AzBobbyTables/issues/54)).
+- Added `-OperationType` parameter to `Add-AzDataTableEntity` and `Update-AzDataTableEntity` to support merge or replace operations [#81](https://github.com/PalmEmanuel/AzBobbyTables/pull/81)
 
 '
 
