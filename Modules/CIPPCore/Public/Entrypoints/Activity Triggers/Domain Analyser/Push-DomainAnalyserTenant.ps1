@@ -14,13 +14,30 @@ function Push-DomainAnalyserTenant {
         $CleanupCount = ($CleanupRows | Measure-Object).Count
         if ($CleanupCount -gt 0) {
             Write-LogMessage -API 'DomainAnalyser' -tenant $Tenant.defaultDomainName -message "Cleaning up $CleanupCount domain(s) for excluded tenant" -sev Info
-            Remove-AzDataTableEntity @DomainTable -Entity $CleanupRows
+            Remove-AzDataTableEntity -Force @DomainTable -Entity $CleanupRows
         }
     } elseif ($Tenant.GraphErrorCount -gt 50) {
         return
     } else {
         try {
-            $Domains = New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/domains' -tenantid $Tenant.customerId | Where-Object { ($_.id -notlike '*.microsoftonline.com' -and $_.id -NotLike '*.exclaimer.cloud' -and $_.id -Notlike '*.excl.cloud' -and $_.id -NotLike '*.codetwo.online' -and $_.id -NotLike '*.call2teams.com' -and $_.id -notlike '*signature365.net' -and $_.isVerified) }
+            # Remove domains that are not wanted, and used for cloud signature services
+            $ExclusionDomains = @(
+                '*.microsoftonline.com'
+                '*.exclaimer.cloud'
+                '*.excl.cloud'
+                '*.codetwo.online'
+                '*.call2teams.com'
+                '*signature365.net'
+            )
+            $Domains = New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/domains' -tenantid $Tenant.customerId | Where-Object { $_.isVerified -eq $true } | ForEach-Object {
+                $Domain = $_
+                foreach ($ExclusionDomain in $ExclusionDomains) {
+                    if ($Domain.id -like $ExclusionDomain) {
+                        $Domain = $null
+                    }
+                }
+                $Domain
+            } | Where-Object { $_ -ne $null }
 
             $TenantDomains = foreach ($d in $Domains) {
                 [PSCustomObject]@{
@@ -51,7 +68,7 @@ function Push-DomainAnalyserTenant {
                         $OldDomain = Get-CIPPAzDataTableEntity @DomainTable -Filter $Filter
 
                         if ($OldDomain) {
-                            Remove-AzDataTableEntity @DomainTable -Entity $OldDomain | Out-Null
+                            Remove-AzDataTableEntity -Force @DomainTable -Entity $OldDomain | Out-Null
                         }
 
                         $Filter = "PartitionKey eq 'TenantDomains' and RowKey eq '{0}'" -f $TenantDomain.Domain

@@ -66,7 +66,7 @@ function Get-NinjaOneFieldMapping {
                 IntegrationId   = $_.NinjaOne
                 IntegrationName = $_.NinjaOneName
             }
-            Remove-AzDataTableEntity @CIPPMapping -Entity $_
+            Remove-AzDataTableEntity -Force @CIPPMapping -Entity $_
         }
         if (($MappingFieldMigrate | Measure-Object).count -gt 0) {
             Add-CIPPAzDataTableEntity @CIPPMapping -Entity $MappingFieldMigrate -Force
