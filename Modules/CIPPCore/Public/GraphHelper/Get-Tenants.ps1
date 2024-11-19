@@ -66,7 +66,7 @@ function Get-Tenants {
         }
         $CurrentTenants = Get-CIPPAzDataTableEntity @TenantsTable -Filter "PartitionKey eq 'Tenants' and Excluded eq false"
         $CurrentTenants | Where-Object { $_.customerId -notin $GDAPList.customerId } | ForEach-Object {
-            Remove-AzDataTableEntity @TenantsTable -Entity $_
+            Remove-AzDataTableEntity -Force @TenantsTable -Entity $_
         }
     }
     $PartnerModeTable = Get-CippTable -tablename 'tenantMode'
@@ -162,34 +162,32 @@ function Get-Tenants {
         if ($PartnerTenantState.state -eq 'PartnerTenantAvailable') {
             # Add partner tenant if env is set
             $Domains = New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/domains?$top=999' -tenantid $env:TenantID -NoAuthCheck:$true
-            $IncludedTenantsCache.Add([PSCustomObject]@{
-                    RowKey            = $env:TenantID
-                    PartitionKey      = 'Tenants'
-                    customerId        = $env:TenantID
-                    defaultDomainName = ($Domains | Where-Object { $_.isDefault -eq $true }).id
-                    initialDomainName = ($Domains | Where-Object { $_.isInitial -eq $true }).id
-                    displayName       = '*Partner Tenant'
-                    domains           = 'PartnerTenant'
-                    Excluded          = $false
-                    ExcludeUser       = ''
-                    ExcludeDate       = ''
-                    GraphErrorCount   = 0
-                    LastGraphError    = ''
-                    RequiresRefresh   = [bool]$RequiresRefresh
-                    LastRefresh       = (Get-Date).ToUniversalTime()
-                }) | Out-Null
+            $PartnerTenant = [PSCustomObject]@{
+                RowKey            = $env:TenantID
+                PartitionKey      = 'Tenants'
+                customerId        = $env:TenantID
+                defaultDomainName = ($Domains | Where-Object { $_.isDefault -eq $true }).id
+                initialDomainName = ($Domains | Where-Object { $_.isInitial -eq $true }).id
+                displayName       = '*Partner Tenant'
+                domains           = 'PartnerTenant'
+                Excluded          = $false
+                ExcludeUser       = ''
+                ExcludeDate       = ''
+                GraphErrorCount   = 0
+                LastGraphError    = ''
+                RequiresRefresh   = [bool]$RequiresRefresh
+                LastRefresh       = (Get-Date).ToUniversalTime()
+            }
+            $IncludedTenantsCache.Add($PartnerTenant)
+            Add-AzDataTableEntity @TenantsTable -Entity $PartnerTenant -Force | Out-Null
 
         }
-        foreach ($Tenant in $TenantList | Where-Object $IncludedTenantFilter) {
+        foreach ($Tenant in $TenantList) {
             if ($Tenant.defaultDomainName -eq 'Invalid' -or [string]::IsNullOrWhiteSpace($Tenant.defaultDomainName)) {
                 Write-LogMessage -API 'Get-Tenants' -message "We're skipping $($Tenant.displayName) as it has an invalid default domain name. Something is up with this instance." -level 'Critical'
                 continue
             }
-            $IncludedTenantsCache.Add($Tenant) | Out-Null
-        }
-
-        if ($IncludedTenantsCache) {
-            Add-CIPPAzDataTableEntity @TenantsTable -Entity $IncludedTenantsCache -Force | Out-Null
+            $IncludedTenantsCache.Add($Tenant)
         }
     }
     if ($PartnerTenantState.state -eq 'owntenant' -and $IncludedTenantsCache.RowKey.count -eq 0) {
@@ -215,6 +213,5 @@ function Get-Tenants {
             Add-CIPPAzDataTableEntity @TenantsTable -Entity $IncludedTenantsCache -Force | Out-Null
         }
     }
-
-    return ($IncludedTenantsCache | Where-Object { $null -ne $_.defaultDomainName -and ($_.defaultDomainName -notmatch 'Domain Error' -or $IncludeAll.IsPresent) } | Sort-Object -Property displayName)
+    return $IncludedTenantsCache | Where-Object { ($null -ne $_.defaultDomainName -and ($_.defaultDomainName -notmatch 'Domain Error' -or $IncludeAll.IsPresent)) } | Where-Object $IncludedTenantFilter | Sort-Object -Property displayName
 }
