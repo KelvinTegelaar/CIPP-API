@@ -23,6 +23,9 @@ function Start-UserTasksOrchestrator {
                     TaskState    = 'Running'
                 }
                 $task.Parameters = $task.Parameters | ConvertFrom-Json -AsHashtable
+                if ($task.Parameters.Parameters) {
+                    $task.Parameters.Parameters = $task.Parameters.Parameters | ConvertFrom-Json -AsHashtable
+                }
                 $task.AdditionalProperties = $task.AdditionalProperties | ConvertFrom-Json
 
                 if (!$task.Parameters) { $task.Parameters = @{} }
@@ -36,7 +39,9 @@ function Start-UserTasksOrchestrator {
                 if ($task.Tenant -eq 'AllTenants') {
                     $AllTenantCommands = foreach ($Tenant in $TenantList) {
                         $NewParams = $task.Parameters.Clone()
-                        $NewParams.TenantFilter = $Tenant.defaultDomainName
+                        if ((Get-Command $task.Command).Parameters.TenantFilter) {
+                            $NewParams.TenantFilter = $Tenant.defaultDomainName
+                        }
                         [pscustomobject]@{
                             Command      = $task.Command
                             Parameters   = $NewParams
@@ -46,7 +51,9 @@ function Start-UserTasksOrchestrator {
                     }
                     $Batch.AddRange($AllTenantCommands)
                 } else {
-                    $ScheduledCommand.Parameters['TenantFilter'] = $task.Tenant
+                    if ((Get-Command $task.Command).Parameters.TenantFilter) {
+                        $ScheduledCommand.Parameters['TenantFilter'] = $task.Tenant
+                    }
                     $Batch.Add($ScheduledCommand)
                 }
             } catch {
