@@ -16,16 +16,13 @@ function Start-UserTasksOrchestrator {
         $currentUnixTime = [int64](([datetime]::UtcNow) - (Get-Date '1/1/1970')).TotalSeconds
         if ($currentUnixTime -ge $task.ScheduledTime) {
             try {
-                $null = Update-AzDataTableEntity @Table -Entity @{
+                $null = Update-AzDataTableEntity -Force @Table -Entity @{
                     PartitionKey = $task.PartitionKey
                     RowKey       = $task.RowKey
                     ExecutedTime = "$currentUnixTime"
                     TaskState    = 'Running'
                 }
                 $task.Parameters = $task.Parameters | ConvertFrom-Json -AsHashtable
-                if ($task.Parameters.Parameters) {
-                    $task.Parameters.Parameters = $task.Parameters.Parameters | ConvertFrom-Json -AsHashtable
-                }
                 $task.AdditionalProperties = $task.AdditionalProperties | ConvertFrom-Json
 
                 if (!$task.Parameters) { $task.Parameters = @{} }
@@ -59,7 +56,7 @@ function Start-UserTasksOrchestrator {
             } catch {
                 $errorMessage = $_.Exception.Message
 
-                $null = Update-AzDataTableEntity @Table -Entity @{
+                $null = Update-AzDataTableEntity -Force @Table -Entity @{
                     PartitionKey = $task.PartitionKey
                     RowKey       = $task.RowKey
                     Results      = "$errorMessage"
