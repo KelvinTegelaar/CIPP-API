@@ -23,9 +23,6 @@ function Start-UserTasksOrchestrator {
                     TaskState    = 'Running'
                 }
                 $task.Parameters = $task.Parameters | ConvertFrom-Json -AsHashtable
-                if ($task.Parameters.Parameters) {
-                    $task.Parameters.Parameters = $task.Parameters.Parameters | ConvertTo-Json -Depth 5 | ConvertFrom-Json -AsHashtable
-                }
                 $task.AdditionalProperties = $task.AdditionalProperties | ConvertFrom-Json
 
                 if (!$task.Parameters) { $task.Parameters = @{} }
