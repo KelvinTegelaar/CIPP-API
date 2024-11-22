@@ -60,6 +60,7 @@ function Get-NormalizedError {
         '*AADSTS65001*' { 'We cannot access this tenant as consent has not been given, please try refreshing the CPV permissions in the application settings menu.' }
         '*AADSTS700082*' { 'The CIPP user access token has expired. Run the SAM Setup wizard to refresh your tokens.' }
         '*Account is not provisioned.' { 'The account is not provisioned. You do not the correct M365 license to access this information..' }
+        '*AADSTS5000224*' { 'This resource is not available - Has this tenant been deleted?' }
         Default { $message }
 
     }
