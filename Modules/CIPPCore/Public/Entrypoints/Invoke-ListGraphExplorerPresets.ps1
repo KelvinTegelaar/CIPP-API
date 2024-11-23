@@ -18,7 +18,7 @@ Function Invoke-ListGraphExplorerPresets {
     Write-Host 'PowerShell HTTP trigger function processed a request.'
     try {
         $Table = Get-CIPPTable -TableName 'GraphPresets'
-        $Presets = Get-CIPPAzDataTableEntity @Table -Filter "Owner eq '$Username' or IsShared eq true"
+        $Presets = Get-CIPPAzDataTableEntity @Table -Filter "Owner eq '$Username' or IsShared eq true" | Sort-Object -Property name
         $Results = foreach ($Preset in $Presets) {
             [PSCustomObject]@{
                 id         = $Preset.Id
