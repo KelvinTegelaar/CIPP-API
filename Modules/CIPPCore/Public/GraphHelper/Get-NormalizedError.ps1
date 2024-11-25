@@ -61,6 +61,7 @@ function Get-NormalizedError {
         '*AADSTS700082*' { 'The CIPP user access token has expired. Run the SAM Setup wizard to refresh your tokens.' }
         '*Account is not provisioned.' { 'The account is not provisioned. You do not the correct M365 license to access this information..' }
         '*AADSTS5000224*' { 'This resource is not available - Has this tenant been deleted?' }
+        '*AADSTS53003*' { 'Access has been blocked by Conditional Access policies. Please check the Conditional Access configuration documentation' }
         Default { $message }
 
     }
