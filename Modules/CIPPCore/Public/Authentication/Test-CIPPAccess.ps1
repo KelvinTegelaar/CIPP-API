@@ -4,9 +4,26 @@ function Test-CIPPAccess {
         [switch]$TenantList
     )
     if ($Request.Params.CIPPEndpoint -eq 'ExecSAMSetup') { return $true }
-    if (!$Request.Headers.'x-ms-client-principal') {
+    if (!$Request.Headers.'x-ms-client-principal' -or ($Request.Headers.'x-ms-client-principal-id' -and $Request.Headers.'x-ms-client-principal-idp' -eq 'aad')) {
         # Direct API Access
+        $IPAddress = $Request.Headers.'x-forwarded-for' -replace ':(?=[^:]*$)', '' -replace '[\[\]]', ''
+        Write-Information "API Access: AppId=$($Request.Headers.'x-ms-client-principal-id') IP=$IPAddress"
+
+        # TODO: Implement API Client support, create Get-CippApiClient function
+        <#$Client = Get-CippApiClient -AppId $Request.Headers.'x-ms-client-principal-id'
+        if ($Client) {
+            if ($Client.AllowedIPs -contains $IPAddress -or $Client.AllowedIPs -contains 'All')) {
+                if ($Client.CustomRoles) {
+                    $CustomRoles = @($Client.CustomRoles)
+                } else {
+                    $CustomRoles = @('CIPP-API')
+                }
+            } else {
+                throw 'Access to this CIPP API endpoint is not allowed, the API Client does not have the required permission'
+            }
+        } else { #>
         $CustomRoles = @('CIPP-API')
+        # }
     } else {
         $DefaultRoles = @('admin', 'editor', 'readonly', 'anonymous', 'authenticated')
         $User = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($Request.Headers.'x-ms-client-principal')) | ConvertFrom-Json
