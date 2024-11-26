@@ -64,7 +64,7 @@ Function Invoke-ExecGDAPRoleTemplate {
             }
         }
         'Delete' {
-            $RowKey = $Request.Query.TemplateId
+            $RowKey = $Request.Body.TemplateId
             $Template = $Templates | Where-Object -Property RowKey -EQ $RowKey
             if ($Template) {
                 Remove-AzDataTableEntity -Force @Table -Entity $Template
