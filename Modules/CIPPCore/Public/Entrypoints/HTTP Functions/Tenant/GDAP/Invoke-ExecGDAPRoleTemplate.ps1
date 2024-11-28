@@ -13,81 +13,68 @@ Function Invoke-ExecGDAPRoleTemplate {
     $Table = Get-CIPPTable -TableName 'GDAPRoleTemplates'
     $Templates = Get-CIPPAzDataTableEntity @Table
 
-    switch ($Request.Query.Action) {
-        'Add' {
-            $RowKey = ($Request.Body | Select-Object -First 1 -ExpandProperty TemplateId).value
-            $RoleMappings = $Request.Body | Select-Object -ExcludeProperty TemplateId
-            if ($Templates.RowKey -contains $RowKey) {
-                $ExistingTemplate = $Templates | Where-Object -Property RowKey -EQ $RowKey
-                $ExistingRoleMappings = $ExistingTemplate.RoleMappings | ConvertFrom-Json
-                $NewRoleMappings = [System.Collections.Generic.List[object]]@()
-
-                $ExistingRoleMappings | ForEach-Object {
-                    $NewRoleMappings.Add($_)
+    if ($Request.Query.TemplateId) {
+        $Template = $Templates | Where-Object -Property RowKey -EQ $Request.Query.TemplateId
+        if (!$Template) {
+            $Body = @{}
+        } else {
+            $Body = @{
+                TemplateId   = $Template.RowKey
+                RoleMappings = @($Template.RoleMappings | ConvertFrom-Json)
+            }
+        }
+    } else {
+        switch ($Request.Query.Action) {
+            'Add' {
+                $RowKey = ($Request.Body | Select-Object -First 1 -ExpandProperty TemplateId).value ?? $Request.Body.TemplateId
+                $RoleMappings = $Request.Body.roleMappings ?? $Request.Body | Select-Object -ExcludeProperty TemplateId
+                Add-CIPPGDAPRoleTemplate -TemplateId $RowKey -RoleMappings $RoleMappings
+                Write-Information ($Template | ConvertTo-Json)
+                $Body = @{
+                    Results = "Added role mappings to template $RowKey"
                 }
-                # Merge the new role mappings with the existing role mappings, exclude ones that have a duplicate roleDefinitionId
-                $RoleMappings | ForEach-Object {
-                    if ($_.roleDefinitionId -notin $ExistingRoleMappings.roleDefinitionId) {
-                        $NewRoleMappings.Add($_)
+            }
+            'Edit' {
+                $RowKey = $Request.Body.TemplateId
+                $Template = $Templates | Where-Object -Property RowKey -EQ $RowKey
+                if ($Template) {
+                    $RoleMappings = $Request.Body.RoleMappings
+                    Add-CIPPGDAPRoleTemplate -TemplateId $RowKey -RoleMappings $RoleMappings -Overwrite
+                    $Body = @{
+                        Results = "Updated role mappings for template $RowKey"
+                    }
+                } else {
+                    $Body = @{
+                        Results = "Template $RowKey not found"
                     }
                 }
-                $NewRoleMappings = @($NewRoleMappings | Sort-Object -Property GroupName) | ConvertTo-Json -Compress
-                $ExistingTemplate.RoleMappings = [string]$NewRoleMappings
-                $Template = $ExistingTemplate
-            } else {
-                $Template = [PSCustomObject]@{
-                    PartitionKey = 'RoleTemplate'
-                    RowKey       = $RowKey
-                    RoleMappings = [string](@($RoleMappings | Sort-Object -Property GroupName) | ConvertTo-Json -Compress)
+            }
+            'Delete' {
+                $RowKey = $Request.Body.TemplateId
+                $Template = $Templates | Where-Object -Property RowKey -EQ $RowKey
+                if ($Template) {
+                    Remove-AzDataTableEntity -Force @Table -Entity $Template
+                    $Body = @{
+                        Results = "Deleted template $RowKey"
+                    }
+                } else {
+                    $Body = @{
+                        Results = "Template $RowKey not found"
+                    }
                 }
             }
-            Add-CIPPAzDataTableEntity @Table -Entity $Template -Force
-            Write-Information ($Template | ConvertTo-Json)
-            $Body = @{
-                Results = "Added role mappings to template $RowKey"
-            }
-        }
-        'Edit' {
-            $RowKey = $Request.Body.TemplateId
-            $Template = $Templates | Where-Object -Property RowKey -EQ $RowKey
-            if ($Template) {
-                $RoleMappings = $Request.Body.RoleMappings
-                $Template.RoleMappings = [string](@($RoleMappings | Sort-Object -Property GroupName) | ConvertTo-Json -Compress)
-                Add-CIPPAzDataTableEntity @Table -Entity $Template -Force
+            default {
+                $Results = foreach ($Template in $Templates) {
+                    [PSCustomObject]@{
+                        TemplateId   = $Template.RowKey
+                        RoleMappings = @($Template.RoleMappings | ConvertFrom-Json)
+                    }
+                }
                 $Body = @{
-                    Results = "Updated role mappings for template $RowKey"
-                }
-            } else {
-                $Body = @{
-                    Results = "Template $RowKey not found"
-                }
-            }
-        }
-        'Delete' {
-            $RowKey = $Request.Body.TemplateId
-            $Template = $Templates | Where-Object -Property RowKey -EQ $RowKey
-            if ($Template) {
-                Remove-AzDataTableEntity -Force @Table -Entity $Template
-                $Body = @{
-                    Results = "Deleted template $RowKey"
-                }
-            } else {
-                $Body = @{
-                    Results = "Template $RowKey not found"
-                }
-            }
-        }
-        default {
-            $Results = foreach ($Template in $Templates) {
-                [PSCustomObject]@{
-                    TemplateId   = $Template.RowKey
-                    RoleMappings = @($Template.RoleMappings | ConvertFrom-Json)
-                }
-            }
-            $Body = @{
-                Results  = @($Results)
-                Metadata = @{
-                    Count = $Results.Count
+                    Results  = @($Results)
+                    Metadata = @{
+                        Count = $Results.Count
+                    }
                 }
             }
         }

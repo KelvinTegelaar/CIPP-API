@@ -12,7 +12,7 @@ Function Invoke-ExecGDAPInvite {
     $APIName = 'ExecGDAPInvite'
     Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -message 'Accessed this API' -Sev 'Debug'
 
-    $RoleMappings = $Request.Body.gdapRoles
+    $RoleMappings = $Request.Body.roleMappings
 
     if ($RoleMappings.roleDefinitionId -contains '62e90394-69f5-4237-9190-012177145e10') {
         $AutoExtendDuration = 'PT0S'
