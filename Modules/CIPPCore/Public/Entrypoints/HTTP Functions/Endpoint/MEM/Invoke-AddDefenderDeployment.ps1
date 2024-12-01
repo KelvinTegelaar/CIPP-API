@@ -13,7 +13,7 @@ Function Invoke-AddDefenderDeployment {
     $APIName = $TriggerMetadata.FunctionName
     Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -message 'Accessed this API' -Sev 'Debug'
 
-    $Tenants = ($Request.body.selectedTenants).defaultDomainName
+    $Tenants = ($Request.body.selectedTenants).value
     if ('AllTenants' -in $Tenants) { $Tenants = (Get-Tenants).defaultDomainName }
     $Compliance = $request.body.Compliance
     $PolicySettings = $request.body.Policy
