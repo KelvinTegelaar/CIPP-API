@@ -15,9 +15,13 @@ function Add-CIPPGDAPRoleTemplate {
 
     $Table = Get-CIPPTable -TableName 'GDAPRoleTemplates'
     $Templates = Get-CIPPAzDataTableEntity @Table
-    if ($Templates.RowKey -contains $RowKey -and !$Overwrite.IsPresent) {
+    if ($Templates.RowKey -contains $TemplateId -and !$Overwrite.IsPresent) {
         $ExistingTemplate = $Templates | Where-Object -Property RowKey -EQ $RowKey
-        $ExistingRoleMappings = $ExistingTemplate.RoleMappings | ConvertFrom-Json
+        try {
+            $ExistingRoleMappings = $ExistingTemplate.RoleMappings | ConvertFrom-Json
+        } catch {
+            $ExistingRoleMappings = @()
+        }
         $NewRoleMappings = [System.Collections.Generic.List[object]]@()
 
         $ExistingRoleMappings | ForEach-Object {

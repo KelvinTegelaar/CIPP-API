@@ -74,6 +74,7 @@ function Invoke-ExecOnboardTenant {
                         id                         = $Id
                         Roles                      = $Request.Body.gdapRoles
                         AddMissingGroups           = $Request.Body.addMissingGroups
+                        IgnoreMissingRoles         = $Request.Body.ignoreMissingRoles
                         AutoMapRoles               = $Request.Body.autoMapRoles
                         StandardsExcludeAllTenants = $Request.Body.standardsExcludeAllTenants
                     }

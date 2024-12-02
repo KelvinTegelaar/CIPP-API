@@ -37,7 +37,7 @@ Function Invoke-ExecAddGDAPRole {
     $Requests = [System.Collections.Generic.List[object]]::new()
     $ExistingGroups = New-GraphGetRequest -NoAuthCheck $True -uri 'https://graph.microsoft.com/beta/groups' -tenantid $env:TenantID -AsApp $true
 
-    $RoleMappings = foreach ($Group in $Groups) {
+    $ExistingRoleMappings = foreach ($Group in $Groups) {
         $RoleName = $Group.label ?? $Group.Name
         $Value = $Group.value ?? $Group.ObjectId
 
@@ -77,10 +77,13 @@ Function Invoke-ExecAddGDAPRole {
                 })
         }
     }
+    if ($ExistingRoleMappings) {
+        Add-CIPPAzDataTableEntity @Table -Entity $ExistingRoleMappings -Force
+    }
 
     if ($Requests) {
         $ReturnedData = New-GraphBulkRequest -Requests $Requests -tenantid $env:TenantID -NoAuthCheck $True -asapp $true
-        foreach ($Return in $ReturnedData) {
+        $NewRoleMappings = foreach ($Return in $ReturnedData) {
             if ($Return.body.error) {
                 $Results.Add("Could not create GDAP group: $($Return.body.error.message)")
             } else {
@@ -91,13 +94,24 @@ Function Invoke-ExecAddGDAPRole {
                     RoleName         = $Return.body.displayName -replace '^M365 GDAP ', '' -replace " - $CustomSuffix$", ''
                     GroupName        = $Return.body.displayName
                     GroupId          = $Return.body.id
-                    roleDefinitionId = $group.ObjectId
+                    roleDefinitionId = $Return.id
                 }
                 $Results.Add("Created $($GroupName)")
             }
         }
+        Write-Information ($NewRoleMappings | ConvertTo-Json -Depth 10 -Compress)
+        if ($NewRoleMappings) {
+            Add-CIPPAzDataTableEntity @Table -Entity $NewRoleMappings -Force
+        }
     }
-    Add-CIPPAzDataTableEntity @Table -Entity $RoleMappings -Force
+
+    $RoleMappings = [System.Collections.Generic.List[object]]::new()
+    if ($ExistingRoleMappings) {
+        $RoleMappings.AddRange($ExistingRoleMappings)
+    }
+    if ($NewRoleMappings) {
+        $RoleMappings.AddRange($NewRoleMappings)
+    }
 
     if ($Request.Body.templateId) {
         Add-CIPPGDAPRoleTemplate -TemplateId $Request.Body.templateId -RoleMappings ($RoleMappings | Select-Object -Property RoleName, GroupName, GroupId, roleDefinitionId)
