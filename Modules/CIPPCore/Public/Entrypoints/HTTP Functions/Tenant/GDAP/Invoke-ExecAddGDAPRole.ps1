@@ -37,7 +37,7 @@ Function Invoke-ExecAddGDAPRole {
     $Requests = [System.Collections.Generic.List[object]]::new()
     $ExistingGroups = New-GraphGetRequest -NoAuthCheck $True -uri 'https://graph.microsoft.com/beta/groups' -tenantid $env:TenantID -AsApp $true
 
-    $RoleMappings = foreach ($Group in $Groups) {
+    $ExistingRoleMappings = foreach ($Group in $Groups) {
         $RoleName = $Group.label ?? $Group.Name
         $Value = $Group.value ?? $Group.ObjectId
 
@@ -77,8 +77,8 @@ Function Invoke-ExecAddGDAPRole {
                 })
         }
     }
-    if ($RoleMappings) {
-        Add-CIPPAzDataTableEntity @Table -Entity $RoleMappings -Force
+    if ($ExistingRoleMappings) {
+        Add-CIPPAzDataTableEntity @Table -Entity $ExistingRoleMappings -Force
     }
 
     if ($Requests) {
@@ -105,6 +105,13 @@ Function Invoke-ExecAddGDAPRole {
         }
     }
 
+    $RoleMappings = [System.Collections.Generic.List[object]]::new()
+    if ($ExistingRoleMappings) {
+        $RoleMappings.AddRange($ExistingRoleMappings)
+    }
+    if ($NewRoleMappings) {
+        $RoleMappings.AddRange($NewRoleMappings)
+    }
 
     if ($Request.Body.templateId) {
         Add-CIPPGDAPRoleTemplate -TemplateId $Request.Body.templateId -RoleMappings ($RoleMappings | Select-Object -Property RoleName, GroupName, GroupId, roleDefinitionId)
