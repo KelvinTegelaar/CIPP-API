@@ -77,10 +77,13 @@ Function Invoke-ExecAddGDAPRole {
                 })
         }
     }
+    if ($RoleMappings) {
+        Add-CIPPAzDataTableEntity @Table -Entity $RoleMappings -Force
+    }
 
     if ($Requests) {
         $ReturnedData = New-GraphBulkRequest -Requests $Requests -tenantid $env:TenantID -NoAuthCheck $True -asapp $true
-        foreach ($Return in $ReturnedData) {
+        $NewRoleMappings = foreach ($Return in $ReturnedData) {
             if ($Return.body.error) {
                 $Results.Add("Could not create GDAP group: $($Return.body.error.message)")
             } else {
@@ -91,13 +94,17 @@ Function Invoke-ExecAddGDAPRole {
                     RoleName         = $Return.body.displayName -replace '^M365 GDAP ', '' -replace " - $CustomSuffix$", ''
                     GroupName        = $Return.body.displayName
                     GroupId          = $Return.body.id
-                    roleDefinitionId = $group.ObjectId
+                    roleDefinitionId = $Return.id
                 }
                 $Results.Add("Created $($GroupName)")
             }
         }
+        Write-Information ($NewRoleMappings | ConvertTo-Json -Depth 10 -Compress)
+        if ($NewRoleMappings) {
+            Add-CIPPAzDataTableEntity @Table -Entity $NewRoleMappings -Force
+        }
     }
-    Add-CIPPAzDataTableEntity @Table -Entity $RoleMappings -Force
+
 
     if ($Request.Body.templateId) {
         Add-CIPPGDAPRoleTemplate -TemplateId $Request.Body.templateId -RoleMappings ($RoleMappings | Select-Object -Property RoleName, GroupName, GroupId, roleDefinitionId)
