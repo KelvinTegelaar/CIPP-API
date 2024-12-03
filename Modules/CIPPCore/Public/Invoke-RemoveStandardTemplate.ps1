@@ -14,7 +14,7 @@ Function Invoke-RemoveStandardTemplate {
     $User = $request.headers.'x-ms-client-principal'
     Write-LogMessage -user $User -API $APINAME -message 'Accessed this API' -Sev 'Debug'
 
-    $ID = $request.body.ID
+    $ID = $Request.Body.ID ?? $Request.Query.ID
     try {
         $Table = Get-CippTable -tablename 'templates'
 
