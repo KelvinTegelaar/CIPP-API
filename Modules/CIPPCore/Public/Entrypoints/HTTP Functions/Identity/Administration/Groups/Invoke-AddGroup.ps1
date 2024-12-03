@@ -68,7 +68,6 @@ Function Invoke-AddGroup {
                     }
                     $GraphRequest = New-ExoRequest -tenantid $tenant -cmdlet 'New-DistributionGroup' -cmdParams $params
                 }
-                $GraphRequest = New-ExoRequest -tenantid $tenant -cmdlet 'New-DistributionGroup' -cmdParams $params
                 # At some point add logic to use AddOwner/AddMember for New-DistributionGroup, but idk how we're going to brr that - rvdwegen
             }
             "Successfully created group $($groupobj.displayname) for $($tenant)"
