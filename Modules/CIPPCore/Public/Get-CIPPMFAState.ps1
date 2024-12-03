@@ -92,9 +92,9 @@ function Get-CIPPMFAState {
             }
         }
 
-        $PerUser = if ($PerUserMFAState -eq $null) { $null } else { ($PerUserMFAState | Where-Object -Property UserPrincipalName -EQ $_.UserPrincipalName).PerUserMFAState }
+        $PerUser = if ($null -eq $PerUserMFAState) { $null } else { ($PerUserMFAState | Where-Object -Property UserPrincipalName -EQ $_.UserPrincipalName).PerUserMFAState }
 
-        $MFARegUser = if (($MFARegistration | Where-Object -Property UserPrincipalName -EQ $_.userPrincipalName).isMFARegistered -eq $null) { $false } else { ($MFARegistration | Where-Object -Property UserPrincipalName -EQ $_.userPrincipalName) }
+        $MFARegUser = if ($null -eq ($MFARegistration | Where-Object -Property UserPrincipalName -EQ $_.userPrincipalName).isMFARegistered) { $false } else { ($MFARegistration | Where-Object -Property UserPrincipalName -EQ $_.userPrincipalName) }
 
         [PSCustomObject]@{
             Tenant          = $TenantFilter
