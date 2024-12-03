@@ -27,9 +27,13 @@ Function Invoke-ExecGDAPRoleTemplate {
         switch ($Request.Query.Action) {
             'Add' {
                 $RowKey = ($Request.Body | Select-Object -First 1 -ExpandProperty TemplateId).value ?? $Request.Body.TemplateId
-                $RoleMappings = $Request.Body.roleMappings ?? $Request.Body | Select-Object -ExcludeProperty TemplateId
+                if ($Request.Body.GroupId) {
+                    $RoleMappings = $Request.Body | Select-Object * -ExcludeProperty TemplateId
+                } else {
+                    $RoleMappings = $Request.Body.RoleMappings
+                }
+                Write-Information ($RoleMappings | ConvertTo-Json)
                 Add-CIPPGDAPRoleTemplate -TemplateId $RowKey -RoleMappings $RoleMappings
-                Write-Information ($Template | ConvertTo-Json)
                 $Body = @{
                     Results = "Added role mappings to template $RowKey"
                 }
