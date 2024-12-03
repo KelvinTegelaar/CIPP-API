@@ -31,17 +31,12 @@ function Invoke-CIPPStandardTAP {
     ##$Rerun -Type Standard -Tenant $Tenant -Settings $Settings 'TAP'
 
     $CurrentState = New-GraphGetRequest -Uri 'https://graph.microsoft.com/beta/policies/authenticationmethodspolicy/authenticationMethodConfigurations/TemporaryAccessPass' -tenantid $Tenant
+    if ($null -eq $Settings.config) { $Settings.config = $True }
     $StateIsCorrect =   ($CurrentState.state -eq 'enabled') -and
-                        ($CurrentState.isUsableOnce -eq $Settings.config)
+                        ([System.Convert]::ToBoolean($CurrentState.isUsableOnce) -eq [System.Convert]::ToBoolean($Settings.config))
 
     if ($Settings.report -eq $true) {
         Add-CIPPBPAField -FieldName 'TemporaryAccessPass' -FieldValue $StateIsCorrect -StoreAs bool -Tenant $tenant
-    }
-
-    # Input validation
-    if (([string]::IsNullOrWhiteSpace($Settings.config) -or $Settings.config -eq 'Select a value') -and ($Settings.remediate -eq $true -or $Settings.alert -eq $true)) {
-        Write-LogMessage -API 'Standards' -tenant $tenant -message 'TAP: Invalid state parameter set' -sev Error
-        Return
     }
 
     If ($Settings.remediate -eq $true) {
