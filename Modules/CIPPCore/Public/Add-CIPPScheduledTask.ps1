@@ -21,7 +21,7 @@ function Add-CIPPScheduledTask {
     $Parameters = [System.Collections.Hashtable]@{}
     foreach ($Key in $task.Parameters.PSObject.Properties.Name) {
         $Param = $task.Parameters.$Key
-        if ($Param -is [System.Collections.IDictionary]) {
+        if ($Param -is [System.Collections.IDictionary] -or $Param.Key) {
             $ht = @{}
             foreach ($p in $Param.GetEnumerator()) {
                 $ht[$p.Key] = $p.Value
