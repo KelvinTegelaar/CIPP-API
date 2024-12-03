@@ -51,6 +51,11 @@ function Invoke-CIPPStandardAntiPhishPolicy {
     param($Tenant, $Settings)
     ##$Rerun -Type Standard -Tenant $Tenant -Settings $Settings 'AntiPhishPolicy'
 
+    $ServicePlans = New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/subscribedSkus?$select=servicePlans' -tenantid $Tenant
+    $ServicePlans = $ServicePlans.servicePlans.servicePlanName
+    $MDOLicensed = $ServicePlans -contains "ATP_ENTERPRISE"
+    Write-Information "MDOLicensed: $MDOLicensed"
+
     $PolicyList = @('CIPP Default Anti-Phishing Policy','Default Anti-Phishing Policy')
     $ExistingPolicy = New-ExoRequest -tenantid $Tenant -cmdlet 'Get-AntiPhishPolicy' | Where-Object -Property Name -In $PolicyList
     if ($null -eq $ExistingPolicy.Name) {
@@ -69,27 +74,38 @@ function Invoke-CIPPStandardAntiPhishPolicy {
     $CurrentState = $ExistingPolicy |
         Select-Object Name, Enabled, PhishThresholdLevel, EnableMailboxIntelligence, EnableMailboxIntelligenceProtection, EnableSpoofIntelligence, EnableFirstContactSafetyTips, EnableSimilarUsersSafetyTips, EnableSimilarDomainsSafetyTips, EnableUnusualCharactersSafetyTips, EnableUnauthenticatedSender, EnableViaTag, AuthenticationFailAction, SpoofQuarantineTag, MailboxIntelligenceProtectionAction, MailboxIntelligenceQuarantineTag, TargetedUserProtectionAction, TargetedUserQuarantineTag, TargetedDomainProtectionAction, TargetedDomainQuarantineTag, EnableOrganizationDomainsProtection
 
-    $StateIsCorrect = ($CurrentState.Name -eq $PolicyName) -and
-                      ($CurrentState.Enabled -eq $true) -and
-                      ($CurrentState.PhishThresholdLevel -eq $Settings.PhishThresholdLevel) -and
-                      ($CurrentState.EnableMailboxIntelligence -eq $true) -and
-                      ($CurrentState.EnableMailboxIntelligenceProtection -eq $true) -and
-                      ($CurrentState.EnableSpoofIntelligence -eq $true) -and
-                      ($CurrentState.EnableFirstContactSafetyTips -eq $Settings.EnableFirstContactSafetyTips) -and
-                      ($CurrentState.EnableSimilarUsersSafetyTips -eq $Settings.EnableSimilarUsersSafetyTips) -and
-                      ($CurrentState.EnableSimilarDomainsSafetyTips -eq $Settings.EnableSimilarDomainsSafetyTips) -and
-                      ($CurrentState.EnableUnusualCharactersSafetyTips -eq $Settings.EnableUnusualCharactersSafetyTips) -and
-                      ($CurrentState.EnableUnauthenticatedSender -eq $true) -and
-                      ($CurrentState.EnableViaTag -eq $true) -and
-                      ($CurrentState.AuthenticationFailAction -eq $Settings.AuthenticationFailAction) -and
-                      ($CurrentState.SpoofQuarantineTag -eq $Settings.SpoofQuarantineTag) -and
-                      ($CurrentState.MailboxIntelligenceProtectionAction -eq $Settings.MailboxIntelligenceProtectionAction) -and
-                      ($CurrentState.MailboxIntelligenceQuarantineTag -eq $Settings.MailboxIntelligenceQuarantineTag) -and
-                      ($CurrentState.TargetedUserProtectionAction -eq $Settings.TargetedUserProtectionAction) -and
-                      ($CurrentState.TargetedUserQuarantineTag -eq $Settings.TargetedUserQuarantineTag) -and
-                      ($CurrentState.TargetedDomainProtectionAction -eq $Settings.TargetedDomainProtectionAction) -and
-                      ($CurrentState.TargetedDomainQuarantineTag -eq $Settings.TargetedDomainQuarantineTag) -and
-                      ($CurrentState.EnableOrganizationDomainsProtection -eq $true)
+    if ($MDOLicensed) {
+        $StateIsCorrect = ($CurrentState.Name -eq $PolicyName) -and
+                          ($CurrentState.Enabled -eq $true) -and
+                          ($CurrentState.PhishThresholdLevel -eq $Settings.PhishThresholdLevel) -and
+                          ($CurrentState.EnableMailboxIntelligence -eq $true) -and
+                          ($CurrentState.EnableMailboxIntelligenceProtection -eq $true) -and
+                          ($CurrentState.EnableSpoofIntelligence -eq $true) -and
+                          ($CurrentState.EnableFirstContactSafetyTips -eq $Settings.EnableFirstContactSafetyTips) -and
+                          ($CurrentState.EnableSimilarUsersSafetyTips -eq $Settings.EnableSimilarUsersSafetyTips) -and
+                          ($CurrentState.EnableSimilarDomainsSafetyTips -eq $Settings.EnableSimilarDomainsSafetyTips) -and
+                          ($CurrentState.EnableUnusualCharactersSafetyTips -eq $Settings.EnableUnusualCharactersSafetyTips) -and
+                          ($CurrentState.EnableUnauthenticatedSender -eq $true) -and
+                          ($CurrentState.EnableViaTag -eq $true) -and
+                          ($CurrentState.AuthenticationFailAction -eq $Settings.AuthenticationFailAction) -and
+                          ($CurrentState.SpoofQuarantineTag -eq $Settings.SpoofQuarantineTag) -and
+                          ($CurrentState.MailboxIntelligenceProtectionAction -eq $Settings.MailboxIntelligenceProtectionAction) -and
+                          ($CurrentState.MailboxIntelligenceQuarantineTag -eq $Settings.MailboxIntelligenceQuarantineTag) -and
+                          ($CurrentState.TargetedUserProtectionAction -eq $Settings.TargetedUserProtectionAction) -and
+                          ($CurrentState.TargetedUserQuarantineTag -eq $Settings.TargetedUserQuarantineTag) -and
+                          ($CurrentState.TargetedDomainProtectionAction -eq $Settings.TargetedDomainProtectionAction) -and
+                          ($CurrentState.TargetedDomainQuarantineTag -eq $Settings.TargetedDomainQuarantineTag) -and
+                          ($CurrentState.EnableOrganizationDomainsProtection -eq $true)
+    } else {
+        $StateIsCorrect = ($CurrentState.Name -eq $PolicyName) -and
+                          ($CurrentState.Enabled -eq $true) -and
+                          ($CurrentState.EnableSpoofIntelligence -eq $true) -and
+                          ($CurrentState.EnableFirstContactSafetyTips -eq $Settings.EnableFirstContactSafetyTips) -and
+                          ($CurrentState.EnableUnauthenticatedSender -eq $true) -and
+                          ($CurrentState.EnableViaTag -eq $true) -and
+                          ($CurrentState.AuthenticationFailAction -eq $Settings.AuthenticationFailAction) -and
+                          ($CurrentState.SpoofQuarantineTag -eq $Settings.SpoofQuarantineTag)
+    }
 
     $AcceptedDomains = New-ExoRequest -tenantid $Tenant -cmdlet 'Get-AcceptedDomain'
 
@@ -106,27 +122,39 @@ function Invoke-CIPPStandardAntiPhishPolicy {
         if ($StateIsCorrect -eq $true) {
             Write-LogMessage -API 'Standards' -tenant $Tenant -message 'Anti-phishing policy already correctly configured' -sev Info
         } else {
-            $cmdparams = @{
-                Enabled                             = $true
-                PhishThresholdLevel                 = $Settings.PhishThresholdLevel
-                EnableMailboxIntelligence           = $true
-                EnableMailboxIntelligenceProtection = $true
-                EnableSpoofIntelligence             = $true
-                EnableFirstContactSafetyTips        = $Settings.EnableFirstContactSafetyTips
-                EnableSimilarUsersSafetyTips        = $Settings.EnableSimilarUsersSafetyTips
-                EnableSimilarDomainsSafetyTips      = $Settings.EnableSimilarDomainsSafetyTips
-                EnableUnusualCharactersSafetyTips   = $Settings.EnableUnusualCharactersSafetyTips
-                EnableUnauthenticatedSender         = $true
-                EnableViaTag                        = $true
-                AuthenticationFailAction            = $Settings.AuthenticationFailAction
-                SpoofQuarantineTag                  = $Settings.SpoofQuarantineTag
-                MailboxIntelligenceProtectionAction = $Settings.MailboxIntelligenceProtectionAction
-                MailboxIntelligenceQuarantineTag    = $Settings.MailboxIntelligenceQuarantineTag
-                TargetedUserProtectionAction        = $Settings.TargetedUserProtectionAction
-                TargetedUserQuarantineTag           = $Settings.TargetedUserQuarantineTag
-                TargetedDomainProtectionAction      = $Settings.TargetedDomainProtectionAction
-                TargetedDomainQuarantineTag         = $Settings.TargetedDomainQuarantineTag
-                EnableOrganizationDomainsProtection = $true
+            if ($MDOLicensed) {
+                $cmdparams = @{
+                    Enabled                             = $true
+                    PhishThresholdLevel                 = $Settings.PhishThresholdLevel
+                    EnableMailboxIntelligence           = $true
+                    EnableMailboxIntelligenceProtection = $true
+                    EnableSpoofIntelligence             = $true
+                    EnableFirstContactSafetyTips        = $Settings.EnableFirstContactSafetyTips
+                    EnableSimilarUsersSafetyTips        = $Settings.EnableSimilarUsersSafetyTips
+                    EnableSimilarDomainsSafetyTips      = $Settings.EnableSimilarDomainsSafetyTips
+                    EnableUnusualCharactersSafetyTips   = $Settings.EnableUnusualCharactersSafetyTips
+                    EnableUnauthenticatedSender         = $true
+                    EnableViaTag                        = $true
+                    AuthenticationFailAction            = $Settings.AuthenticationFailAction
+                    SpoofQuarantineTag                  = $Settings.SpoofQuarantineTag
+                    MailboxIntelligenceProtectionAction = $Settings.MailboxIntelligenceProtectionAction
+                    MailboxIntelligenceQuarantineTag    = $Settings.MailboxIntelligenceQuarantineTag
+                    TargetedUserProtectionAction        = $Settings.TargetedUserProtectionAction
+                    TargetedUserQuarantineTag           = $Settings.TargetedUserQuarantineTag
+                    TargetedDomainProtectionAction      = $Settings.TargetedDomainProtectionAction
+                    TargetedDomainQuarantineTag         = $Settings.TargetedDomainQuarantineTag
+                    EnableOrganizationDomainsProtection = $true
+                }
+            } else {
+                $cmdparams = @{
+                    Enabled                             = $true
+                    EnableSpoofIntelligence             = $true
+                    EnableFirstContactSafetyTips        = $Settings.EnableFirstContactSafetyTips
+                    EnableUnauthenticatedSender         = $true
+                    EnableViaTag                        = $true
+                    AuthenticationFailAction            = $Settings.AuthenticationFailAction
+                    SpoofQuarantineTag                  = $Settings.SpoofQuarantineTag
+                }
             }
 
             if ($CurrentState.Name -eq $PolicyName) {
