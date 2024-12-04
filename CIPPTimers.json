@@ -142,5 +142,13 @@
     "Priority": 15,
     "RunOnProcessor": true,
     "IsSystem": true
+  },
+  {
+    "Command": "Start-TableCleanup",
+    "Description": "Timer to cleanup tables",
+    "Cron": "0 0 23 * * *",
+    "Priority": 20,
+    "RunOnProcessor": true,
+    "IsSystem": true
   }
 ]
