@@ -16,7 +16,7 @@ function Start-UserTasksOrchestrator {
         $currentUnixTime = [int64](([datetime]::UtcNow) - (Get-Date '1/1/1970')).TotalSeconds
         if ($currentUnixTime -ge $task.ScheduledTime) {
             try {
-                $null = Update-AzDataTableEntity @Table -Entity @{
+                $null = Update-AzDataTableEntity -Force @Table -Entity @{
                     PartitionKey = $task.PartitionKey
                     RowKey       = $task.RowKey
                     ExecutedTime = "$currentUnixTime"
@@ -36,7 +36,9 @@ function Start-UserTasksOrchestrator {
                 if ($task.Tenant -eq 'AllTenants') {
                     $AllTenantCommands = foreach ($Tenant in $TenantList) {
                         $NewParams = $task.Parameters.Clone()
-                        $NewParams.TenantFilter = $Tenant.defaultDomainName
+                        if ((Get-Command $task.Command).Parameters.TenantFilter) {
+                            $NewParams.TenantFilter = $Tenant.defaultDomainName
+                        }
                         [pscustomobject]@{
                             Command      = $task.Command
                             Parameters   = $NewParams
@@ -46,13 +48,15 @@ function Start-UserTasksOrchestrator {
                     }
                     $Batch.AddRange($AllTenantCommands)
                 } else {
-                    $ScheduledCommand.Parameters['TenantFilter'] = $task.Tenant
+                    if ((Get-Command $task.Command).Parameters.TenantFilter) {
+                        $ScheduledCommand.Parameters['TenantFilter'] = $task.Tenant
+                    }
                     $Batch.Add($ScheduledCommand)
                 }
             } catch {
                 $errorMessage = $_.Exception.Message
 
-                $null = Update-AzDataTableEntity @Table -Entity @{
+                $null = Update-AzDataTableEntity -Force @Table -Entity @{
                     PartitionKey = $task.PartitionKey
                     RowKey       = $task.RowKey
                     Results      = "$errorMessage"
