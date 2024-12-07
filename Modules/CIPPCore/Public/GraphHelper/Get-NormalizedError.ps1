@@ -62,6 +62,7 @@ function Get-NormalizedError {
         '*Account is not provisioned.' { 'The account is not provisioned. You do not the correct M365 license to access this information..' }
         '*AADSTS5000224*' { 'This resource is not available - Has this tenant been deleted?' }
         '*AADSTS53003*' { 'Access has been blocked by Conditional Access policies. Please check the Conditional Access configuration documentation' }
+        '*AADSTS900023*' { 'This tenant is not available for this operation. Please check the selected tenant and try again.' }
         Default { $message }
 
     }
