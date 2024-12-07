@@ -13,7 +13,7 @@ Function Invoke-ExecRestoreBackup {
     $APIName = $TriggerMetadata.FunctionName
     Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -message 'Accessed this API' -Sev 'Debug'
     try {
-        foreach ($line in ($Request.body | ConvertFrom-Json | Select-Object * -ExcludeProperty ETag)) {
+        foreach ($line in ($Request.body | ConvertFrom-Json | Select-Object * -ExcludeProperty ETag, Timestamp)) {
             Write-Host ($line)
             $Table = Get-CippTable -tablename $line.table
             $ht2 = @{}
