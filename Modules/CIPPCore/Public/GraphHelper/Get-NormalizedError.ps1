@@ -63,6 +63,7 @@ function Get-NormalizedError {
         '*AADSTS5000224*' { 'This resource is not available - Has this tenant been deleted?' }
         '*AADSTS53003*' { 'Access has been blocked by Conditional Access policies. Please check the Conditional Access configuration documentation' }
         '*AADSTS900023*' { 'This tenant is not available for this operation. Please check the selected tenant and try again.' }
+        '*AADSTS9002313*' { 'The credentials used to connect to the Graph API are not available, please retry. If this issue persists you may need to execute the SAM wizard.' }
         Default { $message }
 
     }
