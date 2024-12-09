@@ -22,7 +22,7 @@ function Invoke-ListGDAPAccessAssignments {
     $ContainerMembers = foreach ($AccessContainer in $AccessContainers) {
         @{
             'id'     = $AccessContainer
-            'url'    = "groups/$AccessContainer/members?`$select=id,displayName,userPrincipalName&`$top=999"
+            'url'    = "groups/$AccessContainer/members?`$select=id,displayName,userPrincipalName,isAssignableToRole&`$top=999"
             'method' = 'GET'
         }
     }
