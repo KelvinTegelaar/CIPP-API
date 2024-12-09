@@ -101,10 +101,14 @@ Function Push-ExecOnboardTenantQueue {
             }
             if (($MissingRoles | Measure-Object).Count -gt 0) {
                 $Logs.Add([PSCustomObject]@{ Date = Get-Date -UFormat $DateFormat; Log = 'Missing roles for relationship' })
-                if ($QueueItem.IgnoreMissingRoles -ne $true) {
+                if ($Item.IgnoreMissingRoles -ne $true) {
                     $TenantOnboarding.Status = 'failed'
                     $OnboardingSteps.Step2.Status = 'failed'
                     $OnboardingSteps.Step2.Message = "Your GDAP relationship is missing the following roles: $($MissingRoles -join ', ')"
+                } else {
+                    $Logs.Add([PSCustomObject]@{ Date = Get-Date -UFormat $DateFormat; Log = 'Ignoring missing roles' })
+                    $OnboardingSteps.Step2.Status = 'succeeded'
+                    $OnboardingSteps.Step2.Message = 'Your GDAP relationship is missing some roles, but the onboarding will continue'
                 }
             } else {
                 $Logs.Add([PSCustomObject]@{ Date = Get-Date -UFormat $DateFormat; Log = 'Required roles found' })
