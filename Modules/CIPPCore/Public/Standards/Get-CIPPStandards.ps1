@@ -1,3 +1,4 @@
+
 function Get-CIPPStandards {
     param(
         [Parameter(Mandatory = $false)]
@@ -7,6 +8,7 @@ function Get-CIPPStandards {
 
     $Table = Get-CippTable -tablename 'templates'
     $Filter = "PartitionKey eq 'StandardsTemplateV2'"
+    # Sorting by TimeStamp to ensure a consistent order if desired
     $Templates = (Get-CIPPAzDataTableEntity @Table -Filter $Filter | Sort-Object TimeStamp).JSON | ConvertFrom-Json
 
     $AllTenantsList = Get-Tenants
@@ -39,7 +41,7 @@ function Get-CIPPStandards {
         }
 
         foreach ($Standard in $ComputedStandards.Keys) {
-            $Normalized = Normalize-Standard $ComputedStandards[$Standard]
+            $Normalized = ConvertTo-CippStandardObject $ComputedStandards[$Standard]
             [pscustomobject]@{
                 Tenant   = 'AllTenants'
                 Standard = $Standard
@@ -50,6 +52,7 @@ function Get-CIPPStandards {
     } else {
         foreach ($Tenant in $AllTenantsList) {
             $TenantName = $Tenant.defaultDomainName
+            # Determine applicable templates
             $ApplicableTemplates = $Templates | ForEach-Object {
                 $template = $_
                 $tenantFilterValues = $template.tenantFilter | ForEach-Object { $_.value }
@@ -74,8 +77,19 @@ function Get-CIPPStandards {
                 }
             }
 
+            # Separate AllTenants and Tenant-Specific templates
+            $AllTenantTemplatesSet = $ApplicableTemplates | Where-Object {
+                $_.tenantFilter.value -contains 'AllTenants'
+            }
+
+            $TenantSpecificTemplatesSet = $ApplicableTemplates | Where-Object {
+                $_.tenantFilter.value -notcontains 'AllTenants'
+            }
+
             $ComputedStandards = [ordered]@{}
-            foreach ($Template in $ApplicableTemplates) {
+
+            # First merge AllTenants templates
+            foreach ($Template in $AllTenantTemplatesSet) {
                 $Standards = $Template.standards
                 foreach ($StandardName in $Standards.PSObject.Properties.Name) {
                     $CurrentStandard = $Standards.$StandardName.PSObject.Copy()
@@ -89,6 +103,25 @@ function Get-CIPPStandards {
                     }
                 }
             }
+
+            # Then merge Tenant-Specific templates (overriding AllTenants where needed)
+            foreach ($Template in $TenantSpecificTemplatesSet) {
+                $Standards = $Template.standards
+                foreach ($StandardName in $Standards.PSObject.Properties.Name) {
+                    $CurrentStandard = $Standards.$StandardName.PSObject.Copy()
+                    $Actions = $CurrentStandard.action.value
+                    if ($Actions -contains 'Remediate' -or $Actions -contains 'warn' -or $Actions -contains 'Report') {
+                        if (-not $ComputedStandards.Contains($StandardName)) {
+                            $ComputedStandards[$StandardName] = $CurrentStandard
+                        } else {
+                            # Tenant-specific overrides any previous AllTenants settings
+                            $ComputedStandards[$StandardName] = Merge-CippStandards $ComputedStandards[$StandardName] $CurrentStandard
+                        }
+                    }
+                }
+            }
+
+            # Normalize and output
             foreach ($Standard in $ComputedStandards.Keys) {
                 $Normalized = ConvertTo-CippStandardObject $ComputedStandards[$Standard]
                 [pscustomobject]@{
