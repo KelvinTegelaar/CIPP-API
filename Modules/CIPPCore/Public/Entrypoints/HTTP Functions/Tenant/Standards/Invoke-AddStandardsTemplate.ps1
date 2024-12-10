@@ -20,7 +20,7 @@ Function Invoke-AddStandardsTemplate {
     Add-CIPPAzDataTableEntity @Table -Entity @{
         JSON         = "$JSON"
         RowKey       = "$GUID"
-        PartitionKey = 'StandardsTemplate'
+        PartitionKey = 'StandardsTemplateV2'
         GUID         = "$GUID"
     }
     Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -message "Created CA Template $($Request.body.name) with GUID $GUID" -Sev 'Debug'
