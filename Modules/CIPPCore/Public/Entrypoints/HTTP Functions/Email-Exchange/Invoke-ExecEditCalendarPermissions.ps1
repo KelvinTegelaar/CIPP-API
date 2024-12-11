@@ -11,20 +11,21 @@ Function Invoke-ExecEditCalendarPermissions {
     param($Request, $TriggerMetadata)
 
     $APIName = $TriggerMetadata.FunctionName
-    Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -message 'Accessed this API' -Sev 'Debug'
-    $UserID = ($request.query.UserID)
+    $User = $Request.headers.'x-ms-client-principal'
+    Write-LogMessage -user $User -API $APINAME -message 'Accessed this API' -Sev 'Debug'
+
+    $UserID = ($Request.query.UserID)
+    $LoggingName = $Request.query.LoggingName
     $UserToGetPermissions = $Request.query.UserToGetPermissions
-    $Tenantfilter = $request.Query.tenantfilter
+    $Tenantfilter = $Request.Query.tenantfilter
     $Permissions = @($Request.query.permissions)
     $folderName = $Request.query.folderName
 
-
     try {
         if ($Request.query.removeaccess) {
-            $result = Set-CIPPCalendarPermission -UserID $UserID -folderName $folderName -RemoveAccess $Request.query.removeaccess -TenantFilter $TenantFilter
+            $Result = Set-CIPPCalendarPermission -UserID $UserID -folderName $folderName -RemoveAccess $Request.query.removeaccess -TenantFilter $TenantFilter -LoggingName $LoggingName
         } else {
-            $result = Set-CIPPCalendarPermission -UserID $UserID -folderName $folderName -TenantFilter $Tenantfilter -UserToGetPermissions $UserToGetPermissions -Permissions $Permissions
-            $Result = "Successfully set permissions on folder $($CalParam.Identity). The user $UserToGetPermissions now has $Permissions permissions on this folder."
+            $Result = Set-CIPPCalendarPermission -UserID $UserID -folderName $folderName -TenantFilter $Tenantfilter -UserToGetPermissions $UserToGetPermissions -LoggingName $LoggingName -Permissions $Permissions
         }
     } catch {
         $ErrorMessage = Get-NormalizedError -Message $_.Exception

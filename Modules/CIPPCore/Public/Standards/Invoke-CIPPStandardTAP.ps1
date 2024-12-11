@@ -30,21 +30,17 @@ function Invoke-CIPPStandardTAP {
     param($Tenant, $Settings)
     ##$Rerun -Type Standard -Tenant $Tenant -Settings $Settings 'TAP'
 
-    $CurrentInfo = New-GraphGetRequest -Uri 'https://graph.microsoft.com/beta/policies/authenticationmethodspolicy/authenticationMethodConfigurations/TemporaryAccessPass' -tenantid $Tenant
-    $State = if ($CurrentInfo.state -eq 'enabled') { $true } else { $false }
+    $CurrentState = New-GraphGetRequest -Uri 'https://graph.microsoft.com/beta/policies/authenticationmethodspolicy/authenticationMethodConfigurations/TemporaryAccessPass' -tenantid $Tenant
+    if ($null -eq $Settings.config) { $Settings.config = $True }
+    $StateIsCorrect =   ($CurrentState.state -eq 'enabled') -and
+                        ([System.Convert]::ToBoolean($CurrentState.isUsableOnce) -eq [System.Convert]::ToBoolean($Settings.config))
 
     if ($Settings.report -eq $true) {
-        Add-CIPPBPAField -FieldName 'TemporaryAccessPass' -FieldValue $State -StoreAs bool -Tenant $tenant
-    }
-
-    # Input validation
-    if (([string]::IsNullOrWhiteSpace($Settings.config) -or $Settings.config -eq 'Select a value') -and ($Settings.remediate -eq $true -or $Settings.alert -eq $true)) {
-        Write-LogMessage -API 'Standards' -tenant $tenant -message 'TAP: Invalid state parameter set' -sev Error
-        Return
+        Add-CIPPBPAField -FieldName 'TemporaryAccessPass' -FieldValue $StateIsCorrect -StoreAs bool -Tenant $tenant
     }
 
     If ($Settings.remediate -eq $true) {
-        if ($State) {
+        if ($StateIsCorrect -eq $true) {
             Write-LogMessage -API 'Standards' -tenant $tenant -message 'Temporary Access Passwords is already enabled.' -sev Info
         } else {
             Set-CIPPAuthenticationPolicy -Tenant $tenant -APIName 'Standards' -AuthenticationMethodId 'TemporaryAccessPass' -Enabled $true -TAPisUsableOnce $Settings.config
@@ -52,7 +48,7 @@ function Invoke-CIPPStandardTAP {
     }
 
     if ($Settings.alert -eq $true) {
-        if ($State) {
+        if ($StateIsCorrect -eq $true) {
             Write-LogMessage -API 'Standards' -tenant $tenant -message 'Temporary Access Passwords is enabled.' -sev Info
         } else {
             Write-LogMessage -API 'Standards' -tenant $tenant -message 'Temporary Access Passwords is not enabled.' -sev Alert

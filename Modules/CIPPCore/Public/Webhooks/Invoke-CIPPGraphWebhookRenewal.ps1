@@ -32,11 +32,11 @@ function Invoke-CippGraphWebhookRenewal {
                 $CreateResult = New-CIPPGraphSubscription -TenantFilter $TenantFilter -TypeofSubscription $TypeofSubscription -BaseURL $BaseURL -Resource $Resource -EventType $EventType -ExecutingUser 'GraphSubscriptionRenewal' -Recreate
 
                 if ($CreateResult -match 'Created Webhook subscription for') {
-                    Remove-AzDataTableEntity @WebhookTable -Entity $UpdateSub
+                    Remove-AzDataTableEntity -Force @WebhookTable -Entity $UpdateSub
                 }
-                
+
             }
-            
+
 
         } catch {
             Write-LogMessage -user 'CIPP' -API 'Renew_Graph_Subscriptions' -message "Failed to renew Webhook Subscription: $($UpdateSub.SubscriptionID). Linenumber: $($_.InvocationInfo.ScriptLineNumber) Error: $($_.Exception.message)" -Sev "Error" -tenant $TenantFilter
