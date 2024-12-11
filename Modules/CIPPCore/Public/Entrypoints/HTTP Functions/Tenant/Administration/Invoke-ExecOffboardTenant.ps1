@@ -130,19 +130,18 @@ Function Invoke-ExecOffboardTenant {
                 $errors.Add("Failed to retrieve multitenant CSP apps, no apps have been removed: $($_.Exception.message)")
             }
         }
-
+        $ClearCache = $false
         if ($request.body.TerminateGDAP -eq $true) {
             # Terminate GDAP relationships
+            $ClearCache = $true
             try {
-                $TenantFilter
-                $TenantFilter
-                $TenantFilter
                 $delegatedAdminRelationships = (New-GraphGETRequest -Uri "https://graph.microsoft.com/v1.0/tenantRelationships/delegatedAdminRelationships?`$filter=(status eq 'active') AND (customer/tenantId eq '$tenantid')" -tenantid $env:TenantID)
                 $delegatedAdminRelationships | ForEach-Object {
                     try {
                         $terminate = (New-GraphPostRequest -type 'POST' -Uri "https://graph.microsoft.com/v1.0/tenantRelationships/delegatedAdminRelationships/$($_.id)/requests" -body '{"action":"terminate"}' -ContentType 'application/json' -tenantid $env:TenantID)
                         $results.Add("Successfully terminated GDAP relationship $($_.displayName) from tenant $TenantFilter")
                         Write-LogMessage -user $ExecutingUser -API $APIName -message "GDAP Relationship $($_.displayName) has been terminated" -Sev 'Info' -tenant $TenantFilter
+
                     } catch {
                         $($_.Exception.message)
                         #$results.Add("Failed to terminate GDAP relationship $($_.displayName): $($_.Exception.message)")
@@ -166,6 +165,11 @@ Function Invoke-ExecOffboardTenant {
                 #$results.Add("Failed to terminate contract relationship: $($_.Exception.message)")
                 $errors.Add("Failed to terminate contract relationship: $($_.Exception.message)")
             }
+        }
+
+        if ($ClearCache) {
+            $null = Get-Tenants -CleanOld
+            $Results.Add('Tenant cache has been cleared')
         }
 
         $StatusCode = [HttpStatusCode]::OK
