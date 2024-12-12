@@ -3,13 +3,18 @@ function Get-CIPPStandards {
     param(
         [Parameter(Mandatory = $false)]
         [string]$TenantFilter = 'allTenants',
-        [switch]$ListAllTenants
+        [Parameter(Mandatory = $false)]
+        [switch]$ListAllTenants,
+        [Parameter(Mandatory = $false)]
+        $TemplateId = '*'
+
     )
 
     $Table = Get-CippTable -tablename 'templates'
     $Filter = "PartitionKey eq 'StandardsTemplateV2'"
-    # Sorting by TimeStamp to ensure a consistent order if desired
-    $Templates = (Get-CIPPAzDataTableEntity @Table -Filter $Filter | Sort-Object TimeStamp).JSON | ConvertFrom-Json
+    $Templates = (Get-CIPPAzDataTableEntity @Table -Filter $Filter | Sort-Object TimeStamp).JSON | ConvertFrom-Json | Where-Object {
+        $_.guid -like $TemplateId
+    }
 
     $AllTenantsList = Get-Tenants
     if ($TenantFilter -ne 'allTenants') {
