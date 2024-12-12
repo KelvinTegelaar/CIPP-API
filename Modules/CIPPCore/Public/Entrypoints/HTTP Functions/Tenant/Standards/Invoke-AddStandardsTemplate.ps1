@@ -16,6 +16,7 @@ Function Invoke-AddStandardsTemplate {
     $GUID = $Request.body.GUID ? $request.body.GUID : (New-Guid).GUID
     #updatedBy    = $request.headers.'x-ms-client-principal'
     #updatedAt    = (Get-Date).ToUniversalTime()
+    $request.body | Add-Member -NotePropertyName 'GUID' -NotePropertyValue $GUID -Force
     $request.body | Add-Member -NotePropertyName 'createdAt' -NotePropertyValue ($Request.body.createdAt ? $Request.body.createdAt : (Get-Date).ToUniversalTime()) -Force
     $Request.body | Add-Member -NotePropertyName 'updatedBy' -NotePropertyValue ([System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($request.headers.'x-ms-client-principal')) | ConvertFrom-Json).userDetails -Force
     $Request.body | Add-Member -NotePropertyName 'updatedAt' -NotePropertyValue (Get-Date).ToUniversalTime() -Force

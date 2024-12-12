@@ -4,32 +4,56 @@ function ConvertTo-CippStandardObject {
         $StandardObject
     )
 
-    $StandardObject = [pscustomobject]$StandardObject
+    # If $StandardObject is an array (like for ConditionalAccessTemplate or IntuneTemplate),
+    # we need to process each item individually.
+    if ($StandardObject -is [System.Collections.IEnumerable] -and -not ($StandardObject -is [string])) {
+        $ProcessedItems = New-Object System.Collections.ArrayList
+        foreach ($Item in $StandardObject) {
+            $ProcessedItems.Add((Convert-SingleStandardObject $Item)) | Out-Null
+        }
+        return [System.Collections.ArrayList]$ProcessedItems
+    } else {
+        # Single object scenario
+        return Convert-SingleStandardObject $StandardObject
+    }
+}
+
+function Convert-SingleStandardObject {
+    param(
+        [Parameter(Mandatory = $true)]
+        $Obj
+    )
+
+    $Obj = [pscustomobject]$Obj
 
     $AllActionValues = @()
-    if ($StandardObject.PSObject.Properties.Name -contains 'combinedActions') {
-        $AllActionValues = $StandardObject.combinedActions
-        $null = $StandardObject.PSObject.Properties.Remove('combinedActions')
-    } elseif ($StandardObject.PSObject.Properties.Name -contains 'action') {
-        $AllActionValues = $StandardObject.action.value
-        $null = $StandardObject.PSObject.Properties.Remove('action')
+    if ($Obj.PSObject.Properties.Name -contains 'combinedActions') {
+        $AllActionValues = $Obj.combinedActions
+        $null = $Obj.PSObject.Properties.Remove('combinedActions')
+    } elseif ($Obj.PSObject.Properties.Name -contains 'action') {
+        if ($Obj.action -and $Obj.action.value) {
+            $AllActionValues = $Obj.action.value
+        }
+        $null = $Obj.PSObject.Properties.Remove('action')
     }
 
-    $StandardObject | Add-Member -NotePropertyName 'remediate' -NotePropertyValue ($AllActionValues -contains 'Remediate') -Force
-    $StandardObject | Add-Member -NotePropertyName 'alert' -NotePropertyValue ($AllActionValues -contains 'warn') -Force
-    $StandardObject | Add-Member -NotePropertyName 'report' -NotePropertyValue ($AllActionValues -contains 'Report') -Force
+    # Convert actions to booleans
+    $Obj | Add-Member -NotePropertyName 'remediate' -NotePropertyValue ($AllActionValues -contains 'Remediate') -Force
+    $Obj | Add-Member -NotePropertyName 'alert' -NotePropertyValue ($AllActionValues -contains 'warn') -Force
+    $Obj | Add-Member -NotePropertyName 'report' -NotePropertyValue ($AllActionValues -contains 'Report') -Force
 
-    if ($StandardObject.PSObject.Properties.Name -contains 'standards' -and $StandardObject.standards) {
-        foreach ($standardKey in $StandardObject.standards.PSObject.Properties.Name) {
-            $NestedStandard = $StandardObject.standards.$standardKey
+    # Flatten standards if present
+    if ($Obj.PSObject.Properties.Name -contains 'standards' -and $Obj.standards) {
+        foreach ($standardKey in $Obj.standards.PSObject.Properties.Name) {
+            $NestedStandard = $Obj.standards.$standardKey
             if ($NestedStandard) {
                 foreach ($nsProp in $NestedStandard.PSObject.Properties) {
-                    $StandardObject | Add-Member -NotePropertyName $nsProp.Name -NotePropertyValue $nsProp.Value -Force
+                    $Obj | Add-Member -NotePropertyName $nsProp.Name -NotePropertyValue $nsProp.Value -Force
                 }
             }
         }
-        $null = $StandardObject.PSObject.Properties.Remove('standards')
+        $null = $Obj.PSObject.Properties.Remove('standards')
     }
 
-    return $StandardObject
+    return $Obj
 }
