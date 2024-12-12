@@ -6,15 +6,17 @@ function Get-CIPPStandards {
         [Parameter(Mandatory = $false)]
         [switch]$ListAllTenants,
         [Parameter(Mandatory = $false)]
-        $TemplateId = '*'
-
+        $TemplateId = '*',
+        [Parameter(Mandatory = $false)]
+        $runManually = $false
     )
 
     $Table = Get-CippTable -tablename 'templates'
     $Filter = "PartitionKey eq 'StandardsTemplateV2'"
     $Templates = (Get-CIPPAzDataTableEntity @Table -Filter $Filter | Sort-Object TimeStamp).JSON | ConvertFrom-Json | Where-Object {
-        $_.guid -like $TemplateId
+        $_.guid -like $TemplateId -and $_.runManually -eq $runManually
     }
+
 
     $AllTenantsList = Get-Tenants
     if ($TenantFilter -ne 'allTenants') {

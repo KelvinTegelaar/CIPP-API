@@ -4,11 +4,17 @@ function Invoke-CIPPStandardsRun {
     param(
         [Parameter(Mandatory = $false)]
         [string]$TenantFilter = 'allTenants',
-        [switch]$Force
+        [Parameter(Mandatory = $false)]
+        [switch]$Force,
+        [Parameter(Mandatory = $false)]
+        $TemplateID,
+        [Parameter(Mandatory = $false)]
+        $runManually = $false
+
     )
     Write-Host "Starting process for standards - $($tenantFilter)"
 
-    $AllTasks = Get-CIPPStandards -TenantFilter $TenantFilter
+    $AllTasks = Get-CIPPStandards
 
     if ($Force.IsPresent) {
         Write-Host 'Clearing Rerun Cache'
@@ -27,10 +33,14 @@ function Invoke-CIPPStandardsRun {
             QueueId        = $Queue.RowKey
             StandardParams = @{
                 TenantFilter = $TenantFilter
+                runManually  = $runManually
             }
         }
     }
-
+    if ($TemplateID) {
+        $InputObject.QueueFunction.StandardParams['TemplateId'] = $TemplateID
+    }
+    Write-Host "InputObject: $($InputObject | ConvertTo-Json -Depth 5 -Compress)"
     $InstanceId = Start-NewOrchestration -FunctionName 'CIPPOrchestrator' -InputObject ($InputObject | ConvertTo-Json -Depth 5 -Compress)
     Write-Host "Started orchestration with ID = '$InstanceId'"
     #$Orchestrator = New-OrchestrationCheckStatusResponse -Request $Request -InstanceId $InstanceId

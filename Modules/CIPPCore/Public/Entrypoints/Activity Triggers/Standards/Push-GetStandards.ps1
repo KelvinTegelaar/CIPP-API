@@ -6,6 +6,7 @@ function Push-GetStandards {
     Param($Item)
 
     $Params = $Item.StandardParams | ConvertTo-Json | ConvertFrom-Json -AsHashtable
+    Write-Host "My params are $Params"
     try {
         $AllTasks = Get-CIPPStandards @Params
         foreach ($task in $AllTasks) {
