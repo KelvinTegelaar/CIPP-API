@@ -15,9 +15,15 @@ Function Invoke-ListMessageTrace {
 
     try {
         $TenantFilter = $Request.Body.tenantFilter
-        $SearchParams = @{
-            StartDate = (Get-Date).AddDays( - $($Request.Body.days)).ToUniversalTime().ToString('s')
-            EndDate   = (Get-Date).ToUniversalTime().ToString('s')
+
+        if ($Request.Body.MessageId) {
+            $SearchParams = @{ 'MessageId' = $Request.Body.messageId }
+        } else {
+            $Days = $Request.Body.days
+            $SearchParams = @{
+                StartDate = (Get-Date).AddDays(-$Days).ToUniversalTime().ToString('s')
+                EndDate   = (Get-Date).ToUniversalTime().ToString('s')
+            }
         }
 
         if (![string]::IsNullOrEmpty($Request.Body.recipient)) {
