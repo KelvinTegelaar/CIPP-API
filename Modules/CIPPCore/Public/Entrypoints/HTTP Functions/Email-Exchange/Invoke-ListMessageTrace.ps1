@@ -23,10 +23,18 @@ Function Invoke-ListMessageTrace {
                 $SearchParams.EndDate = (Get-Date).ToUniversalTime().ToString('s')
             } else {
                 if ($Request.Body.startDate) {
-                    $SearchParams.StartDate = [DateTime]::ParseExact($Request.Body.startDate, 'yyyy-MM-ddTHH:mm:ssZ', $null).ToUniversalTime().ToString('s')
+                    if ($Request.Body.startDate -match '^\d+$') {
+                        $SearchParams.StartDate = [DateTimeOffset]::FromUnixTimeSeconds([int64]$Request.Body.startDate).UtcDateTime.ToString('s')
+                    } else {
+                        $SearchParams.StartDate = [DateTime]::ParseExact($Request.Body.startDate, 'yyyy-MM-ddTHH:mm:ssZ', $null).ToUniversalTime().ToString('s')
+                    }
                 }
                 if ($Request.Body.endDate) {
-                    $SearchParams.EndDate = [DateTime]::ParseExact($Request.Body.endDate, 'yyyy-MM-ddTHH:mm:ssZ', $null).ToUniversalTime().ToString('s')
+                    if ($Request.Body.endDate -match '^\d+$') {
+                        $SearchParams.EndDate = [DateTimeOffset]::FromUnixTimeSeconds([int64]$Request.Body.endDate).UtcDateTime.ToString('s')
+                    } else {
+                        $SearchParams.EndDate = [DateTime]::ParseExact($Request.Body.endDate, 'yyyy-MM-ddTHH:mm:ssZ', $null).ToUniversalTime().ToString('s')
+                    }
                 }
             }
 
