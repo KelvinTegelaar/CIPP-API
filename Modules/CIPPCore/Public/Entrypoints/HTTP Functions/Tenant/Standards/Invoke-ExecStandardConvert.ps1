@@ -223,7 +223,11 @@ function Invoke-ExecStandardConvert {
         $StandardsToConvert | ForEach-Object {
             $Table = Get-CippTable -tablename 'standards'
             $OldStdsTableItems = Get-CIPPAzDataTableEntity @Table -Filter $Filter
-            Remove-AzDataTableEntity @Table -Entity $OldStdsTableItems -Force
+            try {
+                Remove-AzDataTableEntity @Table -Entity $OldStdsTableItems -Force
+            } catch {
+                #donothing
+            }
         }
     }
 

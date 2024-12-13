@@ -42,14 +42,6 @@ Function Invoke-ListStandards {
                 StandardsExport = ($tenant.Standards.psobject.properties.name) -join ', '
             }
         }
-        if (!$CurrentStandards) {
-            $CurrentStandards = [PSCustomObject]@{
-                displayName = 'No Standards applied'
-                appliedBy   = $null
-                appliedAt   = $null
-                standards   = @{none = $null }
-            }
-        }
 
         $CurrentStandards = ConvertTo-Json -InputObject @($CurrentStandards) -Depth 15 -Compress
     }
