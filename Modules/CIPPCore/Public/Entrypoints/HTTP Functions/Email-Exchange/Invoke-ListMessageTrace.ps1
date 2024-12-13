@@ -10,27 +10,42 @@ Function Invoke-ListMessageTrace {
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
 
-    $APIName = $TriggerMetadata.FunctionName
-    Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -message 'Accessed this API' -Sev 'Debug'
-
     try {
         $TenantFilter = $Request.Body.tenantFilter
 
         if ($Request.Body.MessageId) {
             $SearchParams = @{ 'MessageId' = $Request.Body.messageId }
         } else {
-            $Days = $Request.Body.days
-            $SearchParams = @{
-                StartDate = (Get-Date).AddDays(-$Days).ToUniversalTime().ToString('s')
-                EndDate   = (Get-Date).ToUniversalTime().ToString('s')
+            $SearchParams = @{}
+            if ($Request.Body.days) {
+                $Days = $Request.Body.days
+                $SearchParams.StartDate = (Get-Date).AddDays(-$Days).ToUniversalTime().ToString('s')
+                $SearchParams.EndDate = (Get-Date).ToUniversalTime().ToString('s')
+            } else {
+                if ($Request.Body.startDate) {
+                    $SearchParams.StartDate = [DateTime]::ParseExact($Request.Body.startDate, 'yyyy-MM-ddTHH:mm:ssZ', $null).ToUniversalTime().ToString('s')
+                }
+                if ($Request.Body.endDate) {
+                    $SearchParams.EndDate = [DateTime]::ParseExact($Request.Body.endDate, 'yyyy-MM-ddTHH:mm:ssZ', $null).ToUniversalTime().ToString('s')
+                }
+            }
+
+            if ($Request.Body.status) {
+                $SearchParams.Add('Status', $Request.Body.status.value)
+            }
+            if (![string]::IsNullOrEmpty($Request.Body.fromIP)) {
+                $SearchParams.Add('FromIP', $Request.Body.fromIP)
+            }
+            if (![string]::IsNullOrEmpty($Request.Body.toIP)) {
+                $SearchParams.Add('ToIP', $Request.Body.toIP)
             }
         }
 
         if (![string]::IsNullOrEmpty($Request.Body.recipient)) {
-            $Searchparams.Add('RecipientAddress', $($Request.Body.recipient))
+            $Searchparams.Add('RecipientAddress', $($Request.Body.recipient.value ?? $Request.Body.recipient))
         }
         if (![string]::IsNullOrEmpty($Request.Body.sender)) {
-            $Searchparams.Add('SenderAddress', $($Request.Body.sender))
+            $Searchparams.Add('SenderAddress', $($Request.Body.sender.value ?? $Request.Body.sender))
         }
 
         $trace = if ($Request.Body.traceDetail) {
@@ -40,7 +55,9 @@ Function Invoke-ListMessageTrace {
             }
             New-ExoRequest -TenantId $TenantFilter -Cmdlet 'Get-MessageTraceDetail' -CmdParams $CmdParams | Select-Object @{ Name = 'Date'; Expression = { $_.Date.ToString('u') } }, Event, Action, Detail
         } else {
-            New-ExoRequest -TenantId $TenantFilter -Cmdlet 'Get-MessageTrace' -CmdParams $SearchParams | Select-Object MessageTraceId, Status, Subject, RecipientAddress, SenderAddress, @{ Name = 'Received'; Expression = { $_.Received.ToString('u') } }
+            Write-Information ($SearchParams | ConvertTo-Json)
+
+            New-ExoRequest -TenantId $TenantFilter -Cmdlet 'Get-MessageTrace' -CmdParams $SearchParams | Select-Object MessageTraceId, Status, Subject, RecipientAddress, SenderAddress, @{ Name = 'Received'; Expression = { $_.Received.ToString('u') } }, FromIP, ToIP
             Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APIName -tenant $($TenantFilter) -message 'Executed message trace' -Sev 'Info'
 
         }
