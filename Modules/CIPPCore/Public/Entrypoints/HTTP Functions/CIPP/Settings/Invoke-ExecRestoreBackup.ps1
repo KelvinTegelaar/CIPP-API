@@ -13,11 +13,11 @@ Function Invoke-ExecRestoreBackup {
     $APIName = $TriggerMetadata.FunctionName
     Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -message 'Accessed this API' -Sev 'Debug'
     try {
-        if ($Request.Body.BackupName) {
+        if ($Request.Body.BackupName -like 'CippBackup_*') {
             $Table = Get-CippTable -tablename 'CIPPBackup'
             $Backup = Get-CippAzDataTableEntity @Table -Filter "RowKey eq '$($Request.Body.BackupName)'"
             if ($Backup) {
-                $BackupData = $Backup.Backup | ConvertFrom-Json | Select-Object * -ExcludeProperty ETag, Timestamp
+                $BackupData = $Backup.Backup | ConvertFrom-Json -ErrorAction SilentlyContinue | Select-Object * -ExcludeProperty ETag, Timestamp
                 $BackupData | ForEach-Object {
 
                     $Table = Get-CippTable -tablename $_.table
@@ -36,7 +36,7 @@ Function Invoke-ExecRestoreBackup {
                 }
             }
         } else {
-            foreach ($line in ($Request.body | ConvertFrom-Json | Select-Object * -ExcludeProperty ETag, Timestamp)) {
+            foreach ($line in ($Request.body | Select-Object * -ExcludeProperty ETag, Timestamp)) {
                 $Table = Get-CippTable -tablename $line.table
                 $ht2 = @{}
                 $line.psobject.properties | ForEach-Object { $ht2[$_.Name] = [string]$_.Value }
