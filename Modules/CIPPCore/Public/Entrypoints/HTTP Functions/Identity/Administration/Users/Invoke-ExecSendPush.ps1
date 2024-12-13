@@ -107,12 +107,12 @@ Function Invoke-ExecSendPush {
         }
         if ($obj.BeginTwoWayAuthenticationResponse.AuthenticationResult -ne $true) {
             $Body = "Authentication Failed! Does the user have Push/Phone call MFA configured? Errorcode: $($obj.BeginTwoWayAuthenticationResponse.result.value | Out-String)"
-            $colour = 'danger'
+            $colour = 'error'
         }
 
     }
 
-    $Results = [pscustomobject]@{'Results' = $Body; colour = $colour }
+    $Results = [pscustomobject]@{'Results' = $Body; state = $colour }
     Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -message "Sent push request to $UserEmail - Result: $($obj.BeginTwoWayAuthenticationResponse.result.value | Out-String)" -Sev 'Info'
 
     Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
