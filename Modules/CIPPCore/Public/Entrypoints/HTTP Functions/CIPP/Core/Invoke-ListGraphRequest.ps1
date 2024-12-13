@@ -120,7 +120,8 @@ function Invoke-ListGraphRequest {
 
     try {
         $Results = Get-GraphRequestList @GraphRequestParams
-        if ($Results.nextLink -and $Request.Query.NoPagination) {
+        if ($Results.nextLink -and $Request.Query.manualPagination) {
+            Write-Host "NextLink: $($Results.nextLink | Select-Object -Last 1)"
             $Metadata['nextLink'] = $Results.nextLink | Select-Object -Last 1
             #Results is an array of objects, so we need to remove the last object before returning
             $Results = $Results | Select-Object -First ($Results.Count - 1)
