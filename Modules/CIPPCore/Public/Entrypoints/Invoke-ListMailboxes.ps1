@@ -58,7 +58,6 @@ Function Invoke-ListMailboxes {
             }
         }
 
-        Write-Host ($ExoRequest | ConvertTo-Json)
         $GraphRequest = (New-ExoRequest @ExoRequest) | Select-Object id, ExchangeGuid, ArchiveGuid, WhenSoftDeleted, @{ Name = 'UPN'; Expression = { $_.'UserPrincipalName' } },
 
         @{ Name = 'displayName'; Expression = { $_.'DisplayName' } },
