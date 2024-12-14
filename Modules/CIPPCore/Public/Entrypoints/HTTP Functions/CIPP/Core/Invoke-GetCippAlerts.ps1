@@ -42,7 +42,7 @@ Function Invoke-GetCippAlerts {
     if ($env:ApplicationID -eq 'LongApplicationID' -or $null -eq $ENV:ApplicationID) {
         $Alerts.Add(@{
                 title          = 'SAM Setup Incomplete'
-                Alert          = 'You have not yet completed your setup. Please go to the Setup Wizard in Application Settings to connect CIPP to your tenant.'
+                Alert          = 'You have not yet completed your setup. Please go to the Setup Wizard in Application Settings to connect CIPP to your tenants.'
                 link           = '/cipp/setup'
                 type           = 'warning'
                 setupCompleted = $false
