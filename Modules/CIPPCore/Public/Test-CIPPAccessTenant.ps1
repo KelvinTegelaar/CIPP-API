@@ -98,7 +98,7 @@ function Test-CIPPAccessTenant {
         } catch {
             $ErrorMessage = Get-CippException -Exception $_
             $GraphTest = "Failed to connect to Graph: $($ErrorMessage.NormalizedError)"
-            Write-LogMessage -user $ExecutingUser -API $APINAME -tenant $tenant -message "Tenant access check failed: $($ErrorMessage.NormalizedError) " -Sev 'Error' -LogData $ErrorMessage
+            Write-LogMessage -user $ExecutingUser -API $APINAME -tenant $tenant.defaultDomainName -message "Tenant access check failed: $($ErrorMessage.NormalizedError) " -Sev 'Error' -LogData $ErrorMessage
         }
 
         try {
@@ -112,7 +112,7 @@ function Test-CIPPAccessTenant {
             if ($null -eq $Message) { $Message = $($_.Exception.Message) }
 
             $ExchangeTest = "Failed to connect to Exchange: $($ErrorMessage.NormalizedError)"
-            Write-LogMessage -user $ExecutingUser -API $APINAME -tenant $tenant -message "Tenant access check for Exchange failed: $($ErrorMessage.NormalizedError) " -Sev 'Error' -LogData $ErrorMessage
+            Write-LogMessage -user $ExecutingUser -API $APINAME -tenant $tenant.defaultDomainName -message "Tenant access check for Exchange failed: $($ErrorMessage.NormalizedError) " -Sev 'Error' -LogData $ErrorMessage
         }
 
         if ($GraphStatus -and $ExchangeStatus) {
