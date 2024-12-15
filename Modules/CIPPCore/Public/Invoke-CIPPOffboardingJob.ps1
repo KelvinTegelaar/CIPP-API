@@ -51,10 +51,10 @@ function Invoke-CIPPOffboardingJob {
         }
         { $_.'forward' -ne '' } {
             if (!$Options.keepCopy) {
-                Set-CIPPForwarding -userid $userid -username $username -tenantFilter $Tenantfilter -Forward $Options.forward -ExecutingUser $ExecutingUser -APIName $APIName
+                Set-CIPPForwarding -userid $userid -username $username -tenantFilter $Tenantfilter -Forward $Options.forward.value -ExecutingUser $ExecutingUser -APIName $APIName
             } else {
                 $KeepCopy = [boolean]$Options.keepCopy
-                Set-CIPPForwarding -userid $userid -username $username -tenantFilter $Tenantfilter -Forward $Options.forward -KeepCopy $KeepCopy -ExecutingUser $ExecutingUser -APIName $APIName
+                Set-CIPPForwarding -userid $userid -username $username -tenantFilter $Tenantfilter -Forward $Options.forward.value -KeepCopy $KeepCopy -ExecutingUser $ExecutingUser -APIName $APIName
             }
         }
         { $_.'RemoveLicenses' -eq $true } {
