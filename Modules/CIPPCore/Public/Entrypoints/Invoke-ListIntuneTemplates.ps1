@@ -15,7 +15,7 @@ Function Invoke-ListIntuneTemplates {
 
     $Table = Get-CippTable -tablename 'templates'
     $Imported = Get-CIPPAzDataTableEntity @Table -Filter "PartitionKey eq 'settings'"
-    if ($Imported.IntuneTemplate) {
+    if ($Imported.IntuneTemplate -ne $true) {
         $Templates = Get-ChildItem 'Config\*.IntuneTemplate.json' | ForEach-Object {
             $Entity = @{
                 JSON         = "$(Get-Content $_)"
@@ -27,8 +27,8 @@ Function Invoke-ListIntuneTemplates {
         }
         Add-CIPPAzDataTableEntity @Table -Entity @{
             IntuneTemplate = $true
-            RowKey         = 'settings'
-            PartitionKey   = 'IntuneTemplate'
+            RowKey         = 'IntuneTemplate'
+            PartitionKey   = 'settings'
         } -Force
     }
     #List new policies
