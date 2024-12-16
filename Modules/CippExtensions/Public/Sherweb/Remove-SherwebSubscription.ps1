@@ -8,7 +8,7 @@ function Remove-SherwebSubscription {
 
     $AuthHeader = Get-SherwebAuthentication
     $Body = ConvertTo-Json -Depth 10 -InputObject @{
-        subscriptionIds = $SubscriptionIds
+        subscriptionIds = @($SubscriptionIds)
     }
 
     $Uri = "https://api.sherweb.com/service-provider/v1/billing/subscriptions/cancellations?customerId=$CustomerId"

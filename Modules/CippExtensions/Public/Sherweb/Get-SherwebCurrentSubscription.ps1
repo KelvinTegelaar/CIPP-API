@@ -1,4 +1,4 @@
-function Get-CurrentSherwebSubscription {
+function Get-SherwebCurrentSubscription {
     param(
         [Parameter(Mandatory = $true)]
         [string]$CustomerId,
