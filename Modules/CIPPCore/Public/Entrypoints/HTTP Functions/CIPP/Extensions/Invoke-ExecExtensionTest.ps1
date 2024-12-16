@@ -55,6 +55,10 @@ Function Invoke-ExecExtensionTest {
                     $Results = [pscustomobject]@{'Results' = 'Failed to connect to Hudu' }
                 }
             }
+            'Sherweb' {
+                $token = Get-SherwebAuthentication
+                $Results = [pscustomobject]@{'Results' = 'Successfully Connected to Sherweb' }
+            }
         }
     } catch {
         $Results = [pscustomobject]@{'Results' = "Failed to connect: $($_.Exception.Message) $($_.InvocationInfo.ScriptLineNumber)" }
