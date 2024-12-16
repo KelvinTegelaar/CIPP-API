@@ -1,4 +1,4 @@
-function Set-SherwebSubscriptionQuantity {
+function Set-SherwebSubscription {
     param(
         [Parameter(Mandatory = $true)]
         [string]$CustomerId,
