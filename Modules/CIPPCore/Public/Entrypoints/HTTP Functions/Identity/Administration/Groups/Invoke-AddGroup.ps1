@@ -14,7 +14,7 @@ Function Invoke-AddGroup {
     Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -message 'Accessed this API' -Sev 'Debug'
 
     $groupobj = $Request.body
-    $SelectedTenants = $request.body.tenantfilter
+    $SelectedTenants = $request.body.tenantfilter.value ? $request.body.tenantfilter.value : $request.body.tenantfilter
     if ('AllTenants' -in $SelectedTenants) { $SelectedTenants = (Get-Tenants).defaultDomainName }
 
     # Write to the Azure Functions log stream.
