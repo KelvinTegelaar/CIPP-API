@@ -35,6 +35,9 @@ Function Invoke-ExecExtensionMapping {
             'HuduFields' {
                 $Body = Get-HuduFieldMapping -CIPPMapping $Table
             }
+            'Sherweb' {
+                $Body = Get-SherwebMapping -CIPPMapping $Table
+            }
         }
     }
 
