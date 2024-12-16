@@ -14,7 +14,6 @@ Function Invoke-ExecEmailForward {
     $username = $request.body.userid
     $ForwardingAddress = $request.body.ForwardInternal.value
     $ForwardingSMTPAddress = $request.body.ForwardExternal
-    $DisableForwarding = $request.body.disableForwarding
     $ForwardOption = $request.body.forwardOption
     $APIName = $TriggerMetadata.FunctionName
     [bool]$KeepCopy = if ($request.body.keepCopy -eq 'true') { $true } else { $false }
