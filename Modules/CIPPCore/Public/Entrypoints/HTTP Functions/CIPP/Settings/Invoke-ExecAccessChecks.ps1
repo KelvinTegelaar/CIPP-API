@@ -27,7 +27,11 @@ Function Invoke-ExecAccessChecks {
                 if (!$Results) {
                     $Results = Test-CIPPAccessPermissions -tenantfilter $ENV:TenantID -APIName $APINAME -ExecutingUser $Request.Headers.'x-ms-client-principal'
                 } else {
-                    $LastRun = [DateTime]::SpecifyKind($Cache.Timestamp.DateTime, [DateTimeKind]::Utc)
+                    try {
+                        $LastRun = [DateTime]::SpecifyKind($Cache.Timestamp.DateTime, [DateTimeKind]::Utc)
+                    } catch {
+                        $LastRun = $null
+                    }
                 }
             } else {
                 $Results = Test-CIPPAccessPermissions -tenantfilter $ENV:TenantID -APIName $APINAME -ExecutingUser $Request.Headers.'x-ms-client-principal'
@@ -44,8 +48,8 @@ Function Invoke-ExecAccessChecks {
                             TenantId          = $Tenant.customerId
                             TenantName        = $Tenant.displayName
                             DefaultDomainName = $Tenant.defaultDomainName
-                            GraphStatus       = $null
-                            ExchangeStatus    = $null
+                            GraphStatus       = 'Not run yet'
+                            ExchangeStatus    = 'Not run yet'
                             GDAPRoles         = ''
                             MissingRoles      = ''
                             LastRun           = ''
@@ -65,10 +69,14 @@ Function Invoke-ExecAccessChecks {
                         $TenantResult
                     }
 
-
                     $LastRunTime = $AccessChecks | Sort-Object Timestamp | Select-Object -Property Timestamp -Last 1
-                    $LastRun = [DateTime]::SpecifyKind($LastRunTime.Timestamp.DateTime, [DateTimeKind]::Utc)
+                    try {
+                        $LastRun = [DateTime]::SpecifyKind($LastRunTime.Timestamp.DateTime, [DateTimeKind]::Utc)
+                    } catch {
+                        $LastRun = $null
+                    }
                 } catch {
+                    Write-Host $_.Exception.Message
                     $Results = @()
                 }
             }
@@ -95,7 +103,11 @@ Function Invoke-ExecAccessChecks {
                 if (!$Results) {
                     $Results = Test-CIPPGDAPRelationships
                 } else {
-                    $LastRun = [DateTime]::SpecifyKind($Cache.Timestamp.DateTime, [DateTimeKind]::Utc)
+                    try {
+                        $LastRun = [DateTime]::SpecifyKind($Cache.Timestamp.DateTime, [DateTimeKind]::Utc)
+                    } catch {
+                        $LastRun = $null
+                    }
                 }
             } else {
                 $Results = Test-CIPPGDAPRelationships
