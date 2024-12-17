@@ -18,8 +18,8 @@ Function Invoke-ExecAccessChecks {
     switch ($Request.Query.Type) {
         'Permissions' {
             if ($Request.Query.SkipCache -ne 'true') {
-                $Cache = Get-CIPPAzDataTableEntity @Table -Filter "RowKey eq 'AccessPermissions'"
                 try {
+                    $Cache = Get-CIPPAzDataTableEntity @Table -Filter "RowKey eq 'AccessPermissions'"
                     $Results = $Cache.Data | ConvertFrom-Json
                 } catch {
                     $Results = $null
@@ -94,8 +94,8 @@ Function Invoke-ExecAccessChecks {
         }
         'GDAP' {
             if (!$Request.Query.SkipCache -eq 'true') {
-                $Cache = Get-CIPPAzDataTableEntity @Table -Filter "RowKey eq 'GDAPRelationships'"
                 try {
+                    $Cache = Get-CIPPAzDataTableEntity @Table -Filter "RowKey eq 'GDAPRelationships'"
                     $Results = $Cache.Data | ConvertFrom-Json
                 } catch {
                     $Results = $null
