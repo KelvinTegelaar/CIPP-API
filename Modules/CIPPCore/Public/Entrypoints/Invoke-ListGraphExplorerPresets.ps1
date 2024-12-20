@@ -28,8 +28,8 @@ Function Invoke-ListGraphExplorerPresets {
         }
 
         if ($Request.Query.Endpoint) {
-            $Endpoint  = $Request.Query.Endpoint -replace '^/', ''
-            $Results = $Results | Where-Object { $_.params.endpoint -eq $Endpoint }
+            $Endpoint = $Request.Query.Endpoint -replace '^/', ''
+            $Results = $Results | Where-Object { ($_.params.endpoint -replace '^/', '') -eq $Endpoint }
         }
     } catch {
         $Results = @()
