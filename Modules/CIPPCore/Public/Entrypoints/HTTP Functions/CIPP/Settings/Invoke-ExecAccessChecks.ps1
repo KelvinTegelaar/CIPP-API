@@ -86,9 +86,9 @@ Function Invoke-ExecAccessChecks {
             }
 
             if ($Request.Body.TenantId) {
-                $Tenant = $Request.Body.TenantId
-                $null = Test-CIPPAccessTenant -Tenant $Tenant -ExecutingUser $Request.Headers.'x-ms-client-principal'
-                $Results = "Refreshing tenant $Tenant"
+                $Tenant = Get-Tenants -TenantFilter $Request.Body.TenantId
+                $null = Test-CIPPAccessTenant -Tenant $Tenant.customerId -ExecutingUser $Request.Headers.'x-ms-client-principal'
+                $Results = "Refreshing tenant $($Tenant.displayName)"
             }
 
         }
