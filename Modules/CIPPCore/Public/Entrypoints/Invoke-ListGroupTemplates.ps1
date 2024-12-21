@@ -23,6 +23,9 @@ Function Invoke-ListGroupTemplates {
     $Templates = (Get-CIPPAzDataTableEntity @Table -Filter $Filter) | ForEach-Object {
         $data = $_.JSON | ConvertFrom-Json
         $data | Add-Member -MemberType NoteProperty -Name GUID -Value $_.RowKey -Force
+        #Output casing of Displayname does not match front-ends expectations. Lazy fix for now, I think this may be related to templates table layout.
+        $data | Add-Member -MemberType NoteProperty -Name displayName -Value $data.Displayname -Force
+        $data.PSObject.Properties.Remove('Displayname')
         $data
     } | Sort-Object -Property displayName
 
