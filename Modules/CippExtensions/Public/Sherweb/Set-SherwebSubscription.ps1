@@ -16,7 +16,7 @@ function Set-SherwebSubscription {
         }
     }
     $AuthHeader = Get-SherwebAuthentication
-    $ExistingSubscription = Get-CurrentSherwebSubscription -ClientId $ClientId -ClientSecret $ClientSecret -SubscriptionKey $SubscriptionKey -CustomerId $CustomerId -SKU $SKU
+    $ExistingSubscription = Get-SherwebCurrentSubscription -CustomerId $CustomerId -SKU $SKU
 
     if (-not $ExistingSubscription) {
         if ($Add -or $Remove) {
