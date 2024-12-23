@@ -33,6 +33,9 @@ Function Invoke-ExecCSPLicense {
         if ($Action -eq 'NewSub') {
             $GraphRequest = Set-SherwebSubscription -tenantFilter $TenantFilter -SKU $Request.body.sku -Quantity $Request.body.Quantity
         }
+        if ($Action -eq 'Cancel') {
+            $GraphRequest = Remove-SherwebSubscription -tenantFilter $TenantFilter -SubscriptionIds $Request.body.SubscriptionIds
+        }
         $Message = 'License change executed successfully.'
     } catch {
         $Message = "Failed to execute license change. Error: $_"
