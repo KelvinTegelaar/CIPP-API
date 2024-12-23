@@ -44,6 +44,9 @@ Function Invoke-ExecExtensionMapping {
     try {
         if ($Request.Query.AddMapping) {
             switch ($Request.Query.AddMapping) {
+                'Sherweb' {
+                    $Body = Set-SherwebMapping -CIPPMapping $Table -APIName $APIName -Request $Request
+                }
                 'HaloPSA' {
                     $body = Set-HaloMapping -CIPPMapping $Table -APIName $APIName -Request $Request
                 }

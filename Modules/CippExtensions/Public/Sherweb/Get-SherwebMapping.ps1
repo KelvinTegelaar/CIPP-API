@@ -9,7 +9,7 @@ function Get-SherwebMapping {
     $Tenants = Get-Tenants -IncludeErrors
 
     $Mappings = foreach ($Mapping in $ExtensionMappings) {
-        $Tenant = $Tenants | Where-Object { $_.RowKey -eq $Mapping.RowKey }
+        $Tenant = $Tenants | Where-Object { $_.defaultDomainName -eq $Mapping.RowKey }
         if ($Tenant) {
             [PSCustomObject]@{
                 TenantId        = $Tenant.customerId
@@ -42,7 +42,7 @@ function Get-SherwebMapping {
     }
     $MappingObj = [PSCustomObject]@{
         Companies = @($SherwebCustomers)
-        Mappings  = $Mappings
+        Mappings  = @($Mappings)
     }
 
     return $MappingObj
