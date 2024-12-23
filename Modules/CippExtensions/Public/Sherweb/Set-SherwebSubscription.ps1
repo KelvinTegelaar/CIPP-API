@@ -1,13 +1,20 @@
 function Set-SherwebSubscription {
     param(
-        [Parameter(Mandatory = $true)]
+        [Parameter(Mandatory = $false)]
         [string]$CustomerId,
         [Parameter(Mandatory = $true)]
         [string]$SKU,
         [int]$Quantity,
         [int]$Add,
-        [int]$Remove
+        [int]$Remove,
+        [string]$TenantFilter
     )
+    if ($TenantFilter) {
+        Get-ExtensionMapping -Extension 'Sherweb' | Where-Object { $_.RowKey -eq $TenantFilter } | ForEach-Object {
+            Write-Host "Extracted customer id from tenant filter - It's $($_.IntegrationId)"
+            $CustomerId = $_.IntegrationId
+        }
+    }
     $AuthHeader = Get-SherwebAuthentication
     $ExistingSubscription = Get-CurrentSherwebSubscription -ClientId $ClientId -ClientSecret $ClientSecret -SubscriptionKey $SubscriptionKey -CustomerId $CustomerId -SKU $SKU
 
