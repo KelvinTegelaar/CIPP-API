@@ -20,7 +20,6 @@ Function Invoke-ExecCSPLicense {
     # Interact with query parameters or the body of the request.
     $TenantFilter = $Request.body.TenantFilter
     $Action = $Request.body.Action
-
     try {
         if ($Action -eq 'Add') {
             $GraphRequest = Set-SherwebSubscription -tenantFilter $TenantFilter -SKU $Request.body.sku -add $Request.body.Add
@@ -31,7 +30,7 @@ Function Invoke-ExecCSPLicense {
         }
 
         if ($Action -eq 'NewSub') {
-            $GraphRequest = Set-SherwebSubscription -tenantFilter $TenantFilter -SKU $Request.body.sku -Quantity $Request.body.Quantity
+            $GraphRequest = Set-SherwebSubscription -tenantFilter $TenantFilter -SKU $Request.body.sku.value -Quantity $Request.body.Quantity
         }
         if ($Action -eq 'Cancel') {
             $GraphRequest = Remove-SherwebSubscription -tenantFilter $TenantFilter -SubscriptionIds $Request.body.SubscriptionIds
