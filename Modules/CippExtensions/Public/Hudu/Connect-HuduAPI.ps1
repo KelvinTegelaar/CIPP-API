@@ -12,7 +12,7 @@ function Connect-HuduAPI {
         $null = Connect-AzAccount -Identity
         $APIKey = (Get-AzKeyVaultSecret -VaultName $keyvaultname -Name 'Hudu' -AsPlainText)
     }
-    # Add logic to check if we're using CloudFlare Tunnel, and if so, pull CloudFlare API Key and add as a header
+    # Add logic to check if we're using CloudFlare Tunnel (if Hudu.CFEnabled checkbox is checked from Extensions.json). If the checkbox is checked, pull CloudFlare ClientID and API Key and add as a header
     if ($Configuration.CFEnabled) {
         $CFClientID = (Get-AzKeyVaultSecret -VaultName $keyvaultname -Name 'CloudFlareClientID' -AsPlainText)
         $CFAPIKey = (Get-AzKeyVaultSecret -VaultName $keyvaultname -Name 'CloudFlareAPIKey' -AsPlainText)
