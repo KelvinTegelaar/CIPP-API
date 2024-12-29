@@ -15,23 +15,23 @@ function Invoke-CIPPOffboardingJob {
     $userid = (New-GraphGetRequest -uri "https://graph.microsoft.com/beta/users/$($username)?`$select=id" -tenantid $Tenantfilter).id
     Write-Host "Running offboarding job for $username with options: $($Options | ConvertTo-Json -Depth 10)"
     $Return = switch ($Options) {
-        { $_.'ConvertToShared' -eq 'true' } {
+        { $_.'ConvertToShared' -eq $true } {
             Set-CIPPMailboxType -ExecutingUser $ExecutingUser -tenantFilter $tenantFilter -userid $username -username $username -MailboxType 'Shared' -APIName $APIName
         }
-        { $_.RevokeSessions -eq 'true' } {
+        { $_.RevokeSessions -eq $true } {
             Revoke-CIPPSessions -tenantFilter $tenantFilter -username $username -userid $userid -ExecutingUser $ExecutingUser -APIName $APIName
         }
-        { $_.ResetPass -eq 'true' } {
+        { $_.ResetPass -eq $true } {
             Set-CIPPResetPassword -tenantFilter $tenantFilter -userid $username -ExecutingUser $ExecutingUser -APIName $APIName
         }
-        { $_.RemoveGroups -eq 'true' } {
+        { $_.RemoveGroups -eq $true } {
             Remove-CIPPGroups -userid $userid -tenantFilter $Tenantfilter -ExecutingUser $ExecutingUser -APIName $APIName -Username "$Username"
         }
 
-        { $_.'HideFromGAL' -eq 'true' } {
+        { $_.'HideFromGAL' -eq $true } {
             Set-CIPPHideFromGAL -tenantFilter $tenantFilter -userid $username -HideFromGAL $true -ExecutingUser $ExecutingUser -APIName $APIName
         }
-        { $_.'DisableSignIn' -eq 'true' } {
+        { $_.'DisableSignIn' -eq $true } {
             Set-CIPPSignInState -TenantFilter $tenantFilter -userid $username -AccountEnabled $false -ExecutingUser $ExecutingUser -APIName $APIName
         }
 
@@ -57,23 +57,23 @@ function Invoke-CIPPOffboardingJob {
                 Set-CIPPForwarding -userid $userid -username $username -tenantFilter $Tenantfilter -Forward $Options.forward -KeepCopy $KeepCopy -ExecutingUser $ExecutingUser -APIName $APIName
             }
         }
-        { $_.'RemoveLicenses' -eq 'true' } {
+        { $_.'RemoveLicenses' -eq $true } {
             Remove-CIPPLicense -userid $userid -username $Username -tenantFilter $Tenantfilter -ExecutingUser $ExecutingUser -APIName $APIName -Schedule
         }
 
-        { $_.'Deleteuser' -eq 'true' } {
+        { $_.'deleteuser' -eq $true } {
             Remove-CIPPUser -userid $userid -username $Username -tenantFilter $Tenantfilter -ExecutingUser $ExecutingUser -APIName $APIName
         }
 
-        { $_.'removeRules' -eq 'true' } {
+        { $_.'removeRules' -eq $true } {
             Write-Host "Removing rules for $username"
             Remove-CIPPMailboxRule -userid $userid -username $Username -tenantFilter $Tenantfilter -ExecutingUser $ExecutingUser -APIName $APIName -RemoveAllRules
         }
 
-        { $_.'removeMobile' -eq 'true' } {
+        { $_.'removeMobile' -eq $true } {
             Remove-CIPPMobileDevice -userid $userid -username $Username -tenantFilter $Tenantfilter -ExecutingUser $ExecutingUser -APIName $APIName
         }
-        { $_.'removeCalendarInvites' -eq 'true' } {
+        { $_.'removeCalendarInvites' -eq $true } {
             Remove-CIPPCalendarInvites -userid $userid -username $Username -tenantFilter $Tenantfilter -ExecutingUser $ExecutingUser -APIName $APIName
         }
         { $_.'removePermissions' } {
