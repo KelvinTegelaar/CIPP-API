@@ -5,7 +5,7 @@ Function Invoke-RemoveConnectionfilterTemplate {
     .FUNCTIONALITY
         Entrypoint
     .ROLE
-        Exchange.Spamfilter.ReadWrite
+        Exchange.ConnectionFilter.ReadWrite
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)

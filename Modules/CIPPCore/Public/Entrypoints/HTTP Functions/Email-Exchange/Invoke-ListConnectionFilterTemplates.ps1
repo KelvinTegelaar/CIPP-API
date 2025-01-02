@@ -5,7 +5,7 @@ Function Invoke-ListConnectionFilterTemplates {
     .FUNCTIONALITY
         Entrypoint
     .ROLE
-        Exchange.SpamFilter.Read
+        Exchange.ConnectionFilter.Read
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)

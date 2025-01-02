@@ -5,7 +5,7 @@ Function Invoke-AddConnectionFilter {
     .FUNCTIONALITY
         Entrypoint
     .ROLE
-        Exchange.SpamFilter.ReadWrite
+        Exchange.ConnectionFilter.ReadWrite
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
