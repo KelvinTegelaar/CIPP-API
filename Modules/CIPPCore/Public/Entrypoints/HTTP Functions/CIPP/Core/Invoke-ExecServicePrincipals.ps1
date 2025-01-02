@@ -22,7 +22,8 @@ function Invoke-ExecServicePrincipals {
                         'appId' = $Request.Query.AppId
                     } | ConvertTo-Json -Compress
                     try {
-                        $Results = New-GraphPostRequest -Uri 'https://graph.microsoft.com/beta/servicePrincipals' -tenantid $TenantFilter -type POST -body $Body -NoAuthCheck $true
+                        $ServicePrincipal = New-GraphPostRequest -Uri 'https://graph.microsoft.com/beta/servicePrincipals' -tenantid $TenantFilter -type POST -body $Body -NoAuthCheck $true
+                        $Results = "Created service principal for $($ServicePrincipal.displayName) ($($ServicePrincipal.appId))"
                     } catch {
                         $Results = "Unable to create service principal: $($_.Exception.Message)"
                         $Success = $false
@@ -53,6 +54,10 @@ function Invoke-ExecServicePrincipals {
     $Metadata = @{
         'Action'  = $Action
         'Success' = $Success
+    }
+
+    if ($ServicePrincipal) {
+        $Metadata.ServicePrincipal = $ServicePrincipal
     }
 
     if ($Request.Query.AppId) {
