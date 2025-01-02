@@ -13,7 +13,11 @@ Function Invoke-ListCSPsku {
     $APIName = $TriggerMetadata.FunctionName
     Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -message 'Accessed this API' -Sev 'Debug'
 
-    $GraphRequest = Get-SherwebCatalog -TenantFilter $Request.Query.TenantFilter
+    if ($Request.Query.currentSkuOnly) {
+        $GraphRequest = Get-SherwebCurrentSubscription -TenantFilter $Request.Query.TenantFilter
+    } else {
+        $GraphRequest = Get-SherwebCatalog -TenantFilter $Request.Query.TenantFilter
+    }
 
 
     Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
