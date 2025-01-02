@@ -33,7 +33,7 @@ Function Invoke-EditUser {
     #Edit the user
     try {
         Write-Host "$([boolean]$UserObj.mustchangepass)"
-        $UserprincipalName = "$($UserObj.Username ? $userobj.username :$userobj.mailNickname)@$($UserObj.Domain ? $UserObj.Domain : $UserObj.primDomain)"
+        $UserprincipalName = "$($UserObj.Username ? $userobj.username :$userobj.mailNickname)@$($UserObj.Domain ? $UserObj.Domain : $UserObj.primDomain.value)"
         $BodyToship = [pscustomobject] @{
             'givenName'         = $UserObj.givenname
             'surname'           = $UserObj.surname
