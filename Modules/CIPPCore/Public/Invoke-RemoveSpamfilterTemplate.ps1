@@ -24,7 +24,7 @@ Function Invoke-RemoveSpamfilterTemplate {
         $body = [pscustomobject]@{'Results' = 'Successfully Spamfilter template' }
     } catch {
         $ErrorMessage = Get-CippException -Exception $_
-        Write-LogMessage -user $User -API $APINAME -message "Failed to remove Spam filter Rule template $ID. $($ErrorMessage.NormalizedError)" -Sev 'Error' -LogData $ErrorMessage
+        Write-LogMessage -user $User -API $APINAME -message "Failed to remove Spam filter    Rule template $ID. $($ErrorMessage.NormalizedError)" -Sev 'Error' -LogData $ErrorMessage
         $body = [pscustomobject]@{'Results' = "Failed to remove template: $($ErrorMessage.NormalizedError)" }
     }
 
