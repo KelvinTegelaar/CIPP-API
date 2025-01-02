@@ -20,11 +20,11 @@ Function Invoke-RemoveSpamfilterTemplate {
         $Filter = "PartitionKey eq 'SpamfilterTemplate' and RowKey eq '$id'"
         $ClearRow = Get-CIPPAzDataTableEntity @Table -Filter $Filter -Property PartitionKey, RowKey
         Remove-AzDataTableEntity -Force @Table -Entity $clearRow
-        Write-LogMessage -user $User -API $APINAME -message "Removed Transport Rule Template with ID $ID." -Sev 'Info'
-        $body = [pscustomobject]@{'Results' = 'Successfully removed Transport Rule Template' }
+        Write-LogMessage -user $User -API $APINAME -message "Removed Spamfilter Template with ID $ID." -Sev 'Info'
+        $body = [pscustomobject]@{'Results' = 'Successfully Spamfilter template' }
     } catch {
         $ErrorMessage = Get-CippException -Exception $_
-        Write-LogMessage -user $User -API $APINAME -message "Failed to remove Transport Rule template $ID. $($ErrorMessage.NormalizedError)" -Sev 'Error' -LogData $ErrorMessage
+        Write-LogMessage -user $User -API $APINAME -message "Failed to remove Spam filter Rule template $ID. $($ErrorMessage.NormalizedError)" -Sev 'Error' -LogData $ErrorMessage
         $body = [pscustomobject]@{'Results' = "Failed to remove template: $($ErrorMessage.NormalizedError)" }
     }
 
