@@ -100,6 +100,9 @@ function Invoke-CIPPOffboardingJob {
                 "Removal of permissions queued. This task will run in the background and send it's results to the logbook."
             }
         }
+        { $_.'RemoveMFADevices' } {
+            Remove-CIPPUserMFA -UserPrincipalName $Username -TenantFilter $TenantFilter -ExecutingUser $ExecutingUser
+        }
 
     }
     return $Return
