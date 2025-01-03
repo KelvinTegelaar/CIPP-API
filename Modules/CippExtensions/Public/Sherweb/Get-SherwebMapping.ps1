@@ -7,9 +7,8 @@ function Get-SherwebMapping {
     $ExtensionMappings = Get-ExtensionMapping -Extension 'Sherweb'
 
     $Tenants = Get-Tenants -IncludeErrors
-
     $Mappings = foreach ($Mapping in $ExtensionMappings) {
-        $Tenant = $Tenants | Where-Object { $_.defaultDomainName -eq $Mapping.RowKey }
+        $Tenant = $Tenants | Where-Object { $_.customerId -eq $Mapping.RowKey }
         if ($Tenant) {
             [PSCustomObject]@{
                 TenantId        = $Tenant.customerId
@@ -20,10 +19,13 @@ function Get-SherwebMapping {
             }
         }
     }
-    $Tenants = Get-Tenants -IncludeErrors
     try {
-        $SherwebCustomers = Get-SherwebCustomers
-
+        $SherwebCustomers = Get-SherwebCustomers | ForEach-Object {
+            [PSCustomObject]@{
+                name  = $_.displayName
+                value = "$($_.id)"
+            }
+        }
     } catch {
         $Message = if ($_.ErrorDetails.Message) {
             Get-NormalizedError -Message $_.ErrorDetails.Message
@@ -34,12 +36,7 @@ function Get-SherwebMapping {
         Write-LogMessage -Message "Could not get Sherweb Companies, error: $Message " -Level Error -tenant 'CIPP' -API 'SherwebMapping'
         $SherwebCustomers = @(@{name = "Could not get Sherweb Companies, error: $Message"; value = '-1' })
     }
-    $SherwebCustomers = $SherwebCustomers | ForEach-Object {
-        [PSCustomObject]@{
-            name  = $_.displayName
-            value = "$($_.id)"
-        }
-    }
+
     $MappingObj = [PSCustomObject]@{
         Companies = @($SherwebCustomers)
         Mappings  = @($Mappings)
