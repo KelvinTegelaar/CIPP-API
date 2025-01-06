@@ -51,8 +51,6 @@ jobs:
         id: changelog
         if: env.tag_exists == 'false'
         uses: mikepenz/release-changelog-builder-action@v5.0.0
-        with:
-          configuration: .github/release-changelog-config.yml
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
