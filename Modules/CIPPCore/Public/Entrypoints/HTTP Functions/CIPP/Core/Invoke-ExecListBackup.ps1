@@ -25,6 +25,7 @@ Function Invoke-ExecListBackup {
     }
 
     $Result = Get-CIPPBackup @CippBackupParams
+    Write-Host ($Result | ConvertTo-Json)
     if ($request.Query.NameOnly) {
         $Result = $Result | Select-Object @{Name = 'BackupName'; exp = { $_.RowKey } }, Timestamp | Sort-Object Timestamp -Descending
     }

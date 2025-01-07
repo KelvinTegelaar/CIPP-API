@@ -16,11 +16,11 @@ function Get-CIPPBackup {
         $Conditions.Add("TenantFilter eq '$($TenantFilter)'")
     }
     if ($Name) {
-        $Conditions.Add("RowKey eq '$($Name)'")
+        $Conditions.Add("RowKey eq '$($Name)' or OriginalEntityId eq '$($Name)'")
     }
 
     if ($NameOnly.IsPresent) {
-        $Table.Property = @('PartitionKey', 'RowKey', 'Timestamp')
+        $Table.Property = @('PartitionKey', 'RowKey', 'Timestamp', 'OriginalEntityId')
     }
 
     $Filter = $Conditions -join ' and '
