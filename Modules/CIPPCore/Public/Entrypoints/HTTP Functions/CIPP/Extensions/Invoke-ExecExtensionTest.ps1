@@ -59,9 +59,13 @@ Function Invoke-ExecExtensionTest {
                 $token = Get-SherwebAuthentication
                 $Results = [pscustomobject]@{'Results' = 'Successfully Connected to Sherweb' }
             }
+            'HIBP' {
+                $ConnectionTest = Get-HIBPConnectionTest
+                $Results = [pscustomobject]@{'Results' = 'Successfully Connected to HIBP' }
+            }
         }
     } catch {
-        $Results = [pscustomobject]@{'Results' = "Failed to connect: $($_.Exception.Message) $($_.InvocationInfo.ScriptLineNumber)" }
+        $Results = [pscustomobject]@{'Results' = "Failed to connect: $($_.Exception.Message). Line $($_.InvocationInfo.ScriptLineNumber)" }
     }
 
     # Associate values to output bindings by calling 'Push-OutputBinding'.
