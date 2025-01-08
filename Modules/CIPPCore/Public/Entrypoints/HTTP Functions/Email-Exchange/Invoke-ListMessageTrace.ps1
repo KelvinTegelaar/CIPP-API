@@ -49,10 +49,10 @@ Function Invoke-ListMessageTrace {
             }
         }
 
-        if (![string]::IsNullOrEmpty($Request.Body.recipient)) {
+        if ($Request.Body.recipient) {
             $Searchparams.Add('RecipientAddress', $($Request.Body.recipient.value ?? $Request.Body.recipient))
         }
-        if (![string]::IsNullOrEmpty($Request.Body.sender)) {
+        if ($Request.Body.sender) {
             $Searchparams.Add('SenderAddress', $($Request.Body.sender.value ?? $Request.Body.sender))
         }
 
