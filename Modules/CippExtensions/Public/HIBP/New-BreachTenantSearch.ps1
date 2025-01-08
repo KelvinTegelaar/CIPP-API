@@ -31,6 +31,6 @@ function New-BreachTenantSearch {
     #Add user breaches to table
     if ($usersResults) {
         $entity = Add-CIPPAzDataTableEntity @Table -Entity $usersResults -Force
-        Write-Host "Added $($usersResults.Count) breaches to table for tenant $TenantFilter"
+        return $LatestBreach.Result
     }
 }
