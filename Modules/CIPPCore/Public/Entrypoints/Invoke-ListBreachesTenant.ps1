@@ -18,7 +18,9 @@ Function Invoke-ListBreachesTenant {
         $filter = $null
     }
     $usersResults = (Get-CIPPAzDataTableEntity @Table -Filter $filter).breaches | ConvertFrom-Json -ErrorAction SilentlyContinue
-
+    if ($usersResults -eq $null) {
+        $usersResults = @()
+    }
     # Associate values to output bindings by calling 'Push-OutputBinding'.
     Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
             StatusCode = [HttpStatusCode]::OK
