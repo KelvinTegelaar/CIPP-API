@@ -116,7 +116,7 @@ function Get-CIPPStandards {
                 $Standards = $Template.standards
                 foreach ($StandardName in $Standards.PSObject.Properties.Name) {
                     $CurrentStandard = $Standards.$StandardName.PSObject.Copy()
-                    $Actions = $CurrentStandard.action.value
+                    $Actions = $CurrentStandard.action.value | Where-Object { $_ -in 'Remediate', 'warn', 'report' }
                     if ($Actions -contains 'Remediate' -or $Actions -contains 'warn' -or $Actions -contains 'Report') {
                         if (-not $ComputedStandards.Contains($StandardName)) {
                             $ComputedStandards[$StandardName] = $CurrentStandard
