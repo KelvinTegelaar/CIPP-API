@@ -353,26 +353,27 @@ Function Push-ExecOnboardTenantQueue {
 
         if ($OnboardingSteps.Step4.Status -eq 'succeeded') {
             if ($Item.StandardsExcludeAllTenants -eq $true) {
-                $Settings = @{
-                    'OverrideAllTenants' = @{
-                        'remediate' = $true
+                $AddExclusionObj = [PSCustomObject]@{
+                    label       = $Tenant.defaultDomainName
+                    value       = $Tenant.defaultDomainName
+                    addedFields = @{}
+                }
+                $Table = Get-CippTable -tablename 'templates'
+                $ExistingTemplates = Get-CippazDataTableEntity @Table -Filter "PartitionKey eq 'StandardsTemplateV2'" | Where-Object { $_.JSON -match 'AllTenants' }
+                foreach ($AllTenantesTemplate in $ExistingTemplates) {
+                    $object = $AllTenantesTemplate.JSON | ConvertFrom-Json
+                    $NewExcludedTenants = $object.excludedTenants + $AddExclusionObj
+                    $object.excludedTenants = $NewExcludedTenants
+                    $JSON = ConvertTo-Json -InputObject $object -Compress -Depth 10
+                    $Table.Force = $true
+                    Add-CIPPAzDataTableEntity @Table -Entity @{
+                        JSON         = "$JSON"
+                        RowKey       = $AllTenantesTemplate.RowKey
+                        GUID         = $AllTenantesTemplate.GUID
+                        PartitionKey = 'StandardsTemplateV2'
                     }
                 }
-                $object = [PSCustomObject]@{
-                    Tenant    = $Tenant.defaultDomainName
-                    AddedBy   = 'Onboarding'
-                    AppliedAt = (Get-Date).ToString('s')
-                    Standards = $Settings
-                    v2        = $true
-                } | ConvertTo-Json -Depth 10
 
-                $Table = Get-CippTable -tablename 'standards'
-                $Table.Force = $true
-                Add-CIPPAzDataTableEntity @Table -Entity @{
-                    JSON         = "$object"
-                    RowKey       = [string]$Tenant.defaultDomainName
-                    PartitionKey = 'standards'
-                }
                 $Logs.Add([PSCustomObject]@{ Date = (Get-Date).ToUniversalTime(); Log = 'Set All Tenant Standards Exclusion' })
             }
             $Logs.Add([PSCustomObject]@{ Date = (Get-Date).ToUniversalTime(); Log = "Testing API access for $($Tenant.defaultDomainName)" })
