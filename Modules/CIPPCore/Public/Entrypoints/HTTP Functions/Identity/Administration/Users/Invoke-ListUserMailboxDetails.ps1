@@ -136,6 +136,22 @@ Function Invoke-ListUserMailboxDetails {
         $MailboxDetailedRequest.ForwardingSmtpAddress
     }
 
+    $ProhibitSendQuotaString = $MailboxDetailedRequest.ProhibitSendQuota -split ' '
+    $ProhibitSendReceiveQuotaString = $MailboxDetailedRequest.ProhibitSendReceiveQuota -split ' '
+    $TotalItemSizeString = $StatsRequest.TotalItemSize -split ' '
+    $TotalArchiveItemSizeString = $ArchiveSizeRequest.TotalItemSize -split ' '
+
+    $ProhibitSendQuota = try { [math]::Round([float]($ProhibitSendQuotaString[0]), 2) } catch { 0 }
+    $ProhibitSendReceiveQuota = try { [math]::Round([float]($ProhibitSendReceiveQuotaString[0]), 2) } catch { 0 }
+
+    $ItemSizeType = '1{0}' -f ($TotalItemSizeString[1] ?? 'Gb')
+    $TotalItemSize = try { [math]::Round([float]($TotalItemSizeString[0]) / $ItemSizeType, 2) } catch { 0 }
+
+    if ($ArchiveEnabled) {
+        $ArchiveSizeType = '1{0}' -f ($TotalArchiveItemSizeString[1] ?? 'Gb')
+        $TotalArchiveItemSize = [math]::Round([float]($TotalArchiveItemSizeString[0]) / $ArchiveSizeType, 2)
+    }
+
     # Build the GraphRequest object
     $GraphRequest = [ordered]@{
         ForwardAndDeliver        = $MailboxDetailedRequest.DeliverToMailboxAndForward
@@ -149,12 +165,12 @@ Function Invoke-ListUserMailboxDetails {
         MailboxPopEnabled        = $CASRequest.PopEnabled
         MailboxActiveSyncEnabled = $CASRequest.ActiveSyncEnabled
         Permissions              = @($ParsedPerms)
-        ProhibitSendQuota        = [math]::Round([float]($MailboxDetailedRequest.ProhibitSendQuota -split ' GB')[0], 2)
-        ProhibitSendReceiveQuota = [math]::Round([float]($MailboxDetailedRequest.ProhibitSendReceiveQuota -split ' GB')[0], 2)
+        ProhibitSendQuota        = $ProhibitSendQuota
+        ProhibitSendReceiveQuota = $ProhibitSendReceiveQuota
         ItemCount                = [math]::Round($StatsRequest.ItemCount, 2)
-        TotalItemSize            = [math]::Round($StatsRequest.TotalItemSize / 1Gb, 2)
-        TotalArchiveItemSize     = if ($ArchiveEnabled) { [math]::Round($ArchiveSizeRequest.TotalItemSize / 1Gb, 2) } else { '0' }
-        TotalArchiveItemCount    = if ($ArchiveEnabled) { [math]::Round($ArchiveSizeRequest.ItemCount, 2) } else { 0 }
+        TotalItemSize            = $TotalItemSize
+        TotalArchiveItemSize     = if ($ArchiveEnabled) { $TotalArchiveItemSize } else { '0' }
+        TotalArchiveItemCount    = if ($ArchiveEnabled) { try { [math]::Round($ArchiveSizeRequest.ItemCount, 2) } catch { 0 } } else { 0 }
         BlockedForSpam           = $BlockedForSpam
         ArchiveMailBox           = $ArchiveEnabled
         AutoExpandingArchive     = $AutoExpandingArchiveEnabled
