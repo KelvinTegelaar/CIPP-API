@@ -139,6 +139,7 @@ function Get-CIPPTimerFunctions {
                     RunOnProcessor     = $Orchestrator.RunOnProcessor
                     IsSystem           = $Orchestrator.IsSystem ?? $false
                     PreferredProcessor = $Orchestrator.PreferredProcessor ?? ''
+                    ErrorMsg           = $Status.ErrorMsg ?? ''
                 }
             }
         } else {
