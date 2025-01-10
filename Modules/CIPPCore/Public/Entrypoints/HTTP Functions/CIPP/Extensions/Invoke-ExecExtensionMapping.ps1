@@ -35,12 +35,18 @@ Function Invoke-ExecExtensionMapping {
             'HuduFields' {
                 $Body = Get-HuduFieldMapping -CIPPMapping $Table
             }
+            'Sherweb' {
+                $Body = Get-SherwebMapping -CIPPMapping $Table
+            }
         }
     }
 
     try {
         if ($Request.Query.AddMapping) {
             switch ($Request.Query.AddMapping) {
+                'Sherweb' {
+                    $Body = Set-SherwebMapping -CIPPMapping $Table -APIName $APIName -Request $Request
+                }
                 'HaloPSA' {
                     $body = Set-HaloMapping -CIPPMapping $Table -APIName $APIName -Request $Request
                 }
@@ -68,7 +74,7 @@ Function Invoke-ExecExtensionMapping {
     try {
         if ($Request.Query.AutoMapping) {
             switch ($Request.Query.AutoMapping) {
-                'NinjaOrgs' {
+                'NinjaOne' {
                     $Batch = [PSCustomObject]@{
                         'NinjaAction'  = 'StartAutoMapping'
                         'FunctionName' = 'NinjaOneQueue'

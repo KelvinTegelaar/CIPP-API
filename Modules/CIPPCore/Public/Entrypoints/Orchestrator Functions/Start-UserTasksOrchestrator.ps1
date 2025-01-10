@@ -7,7 +7,8 @@ function Start-UserTasksOrchestrator {
     param()
 
     $Table = Get-CippTable -tablename 'ScheduledTasks'
-    $Filter = "TaskState eq 'Planned' or TaskState eq 'Failed - Planned'"
+    $1HourAgo = (Get-Date).AddHours(-1).ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ssZ')
+    $Filter = "TaskState eq 'Planned' or TaskState eq 'Failed - Planned' or (TaskState eq 'Running' and Timestamp lt datetime'$1HourAgo')"
     $tasks = Get-CIPPAzDataTableEntity @Table -Filter $Filter
     $Batch = [System.Collections.Generic.List[object]]::new()
     $TenantList = Get-Tenants -IncludeErrors

@@ -18,7 +18,7 @@ Function Invoke-AddEnrollment {
     Write-Host 'PowerShell HTTP trigger function processed a request.'
 
     # Input bindings are passed in via param block.
-    $Tenants = ($Request.body | Select-Object Select_*).psobject.properties.value
+    $Tenants = $Request.body.selectedTenants.value
     $Profbod = $Request.body
     $results = foreach ($Tenant in $tenants) {
         Set-CIPPDefaultAPEnrollment -TenantFilter $Tenant -ShowProgress $Profbod.ShowProgress -BlockDevice $Profbod.blockDevice -AllowReset $Profbod.AllowReset -EnableLog $Profbod.EnableLog -ErrorMessage $Profbod.ErrorMessage -TimeOutInMinutes $Profbod.TimeOutInMinutes -AllowFail $Profbod.AllowFail -OBEEOnly $Profbod.OBEEOnly

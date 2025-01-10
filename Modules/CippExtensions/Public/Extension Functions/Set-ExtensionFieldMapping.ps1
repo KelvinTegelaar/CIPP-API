@@ -8,7 +8,7 @@ function Set-ExtensionFieldMapping {
         $TriggerMetadata
     )
 
-    foreach ($Mapping in ([pscustomobject]$Request.body.mappings).psobject.properties) {
+    foreach ($Mapping in ([pscustomobject]$Request.Body).psobject.properties) {
         $AddObject = @{
             PartitionKey    = "$($Extension)FieldMapping"
             RowKey          = "$($mapping.name)"

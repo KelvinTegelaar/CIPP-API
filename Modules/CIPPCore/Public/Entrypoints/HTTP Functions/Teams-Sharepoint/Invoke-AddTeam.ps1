@@ -18,11 +18,11 @@ Function Invoke-AddTeam {
     # Write to the Azure Functions log stream.
     Write-Host 'PowerShell HTTP trigger function processed a request.'
 
-    $Owners = ($userobj.owner).Split([Environment]::NewLine) | Where-Object { $_ -ne $null -or $_ -ne '' }
+    $Owners = ($userobj.owner).value
     try {
 
         $Owners = $Owners | ForEach-Object {
-            $OwnerID = "https://graph.microsoft.com/beta/users('" + (New-GraphGetRequest -uri "https://graph.microsoft.com/beta/users/$_" -tenantid $Userobj.tenantid).id + "')"
+            $OwnerID = "https://graph.microsoft.com/beta/users('$($_)')"
             @{
                 '@odata.type'     = '#microsoft.graph.aadUserConversationMember'
                 'roles'           = @('owner')
@@ -44,8 +44,7 @@ Function Invoke-AddTeam {
         Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $($userobj.tenantid) -message "Added Team $($userobj.displayname)" -Sev 'Info'
         $body = [pscustomobject]@{'Results' = 'Success. Team has been added' }
 
-    }
-    catch {
+    } catch {
         Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $($userobj.tenantid) -message "Adding Team failed. Error: $($_.Exception.Message)" -Sev 'Error'
         $body = [pscustomobject]@{'Results' = "Failed. Error message: $($_.Exception.Message)" }
     }
