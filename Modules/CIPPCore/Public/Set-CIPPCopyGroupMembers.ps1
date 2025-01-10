@@ -103,5 +103,5 @@ function Set-CIPPCopyGroupMembers {
         'Error'   = $Errors
     }
 
-    return $Results
+    return @($Results)
 }
