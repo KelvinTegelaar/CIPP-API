@@ -29,7 +29,7 @@ Function Invoke-AddChocoApp {
     $intunebody.detectionRules[0].path = "$($ENV:SystemDrive)\programdata\chocolatey\lib"
     $intunebody.detectionRules[0].fileOrFolderName = "$($chocoapp.PackageName)"
 
-    $Tenants = ($Request.body | Select-Object Select_*).psobject.properties.value
+    $Tenants = $Request.body.selectedTenants.defaultDomainName
     $Results = foreach ($Tenant in $tenants) {
         try {
             $CompleteObject = [PSCustomObject]@{

@@ -23,7 +23,6 @@ Function Invoke-EditCAPolicy {
     } catch {
         "Failed to add CA policy: $($_.Exception.Message)"
         Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $($Tenant) -message "Failed editing CA policy $($ID). Error: $($_.Exception.Message)" -Sev 'Error'
-        continue
     }
 
     $body = [pscustomobject]@{'Results' = $results }

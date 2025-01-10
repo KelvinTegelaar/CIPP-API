@@ -32,8 +32,7 @@ function Push-AuditLogTenant {
         # Get webhook rules
         $ConfigEntries = Get-CIPPAzDataTableEntity @ConfigTable
         $LogSearchesTable = Get-CippTable -TableName 'AuditLogSearches'
-        Write-Information ("Audit: Memory usage before processing $([System.GC]::GetTotalMemory($false))")
-        $SearchCount = 0
+
         $Configuration = $ConfigEntries | Where-Object { ($_.Tenants -match $TenantFilter -or $_.Tenants -match 'AllTenants') }
         if ($Configuration) {
             try {
@@ -89,8 +88,6 @@ function Push-AuditLogTenant {
                             }
                         }
                     }
-                    $SearchCount++
-                    Write-Information "Audit: Memory usage after processing $SearchCount searches: $([System.GC]::GetTotalMemory($false))"
                 }
             } catch {
                 Write-Information ( 'Audit Log search: Error {0} line {1} - {2}' -f $_.InvocationInfo.ScriptName, $_.InvocationInfo.ScriptLineNumber, $_.Exception.Message)
@@ -98,8 +95,5 @@ function Push-AuditLogTenant {
         }
     } catch {
         Write-Information ( 'Push-AuditLogTenant: Error {0} line {1} - {2}' -f $_.InvocationInfo.ScriptName, $_.InvocationInfo.ScriptLineNumber, $_.Exception.Message)
-    } finally {
-        Write-Information "Audit Logs: Completed processing $($TenantFilter)"
-        Write-Information "Audit Logs: Memory usage after processing $([System.GC]::GetTotalMemory($false))"
     }
 }

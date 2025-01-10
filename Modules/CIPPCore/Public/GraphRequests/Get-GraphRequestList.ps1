@@ -160,7 +160,19 @@ function Get-GraphRequestList {
         $GraphQuery = [System.UriBuilder]('https://graph.microsoft.com/{0}/{1}' -f $Version, $Endpoint)
         $ParamCollection = [System.Web.HttpUtility]::ParseQueryString([String]::Empty)
         foreach ($Item in ($Parameters.GetEnumerator() | Sort-Object -CaseSensitive -Property Key)) {
-            $ParamCollection.Add($Item.Key, $Item.Value)
+            $ParamCollection.Add($Item.Key, $Item.Value -replace '%tenantid%', $TenantId)
+        }
+        $GraphQuery.Query = $ParamCollection.ToString()
+        $GraphRequest.uri = $GraphQuery.ToString()
+    }
+
+    if ($TenantFilter -ne 'AllTenants' -and $Endpoint -match '%appid%') {
+        Write-Information "Replacing AppId in endpoint with $env:ApplicationID"
+        $Endpoint = $Endpoint -replace '%appid%', $env:ApplicationID
+        $GraphQuery = [System.UriBuilder]('https://graph.microsoft.com/{0}/{1}' -f $Version, $Endpoint)
+        $ParamCollection = [System.Web.HttpUtility]::ParseQueryString([String]::Empty)
+        foreach ($Item in ($Parameters.GetEnumerator() | Sort-Object -CaseSensitive -Property Key)) {
+            $ParamCollection.Add($Item.Key, $Item.Value -replace '%appid%', $env:ApplicationID)
         }
         $GraphQuery.Query = $ParamCollection.ToString()
         $GraphRequest.uri = $GraphQuery.ToString()
