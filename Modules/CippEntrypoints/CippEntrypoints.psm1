@@ -223,7 +223,13 @@ function Receive-CIPPTimerTrigger {
             if ($FunctionStatus.PSObject.Properties.Name -contains 'ErrorMsg') {
                 $FunctionStatus.ErrorMsg = ''
             }
-            $Results = Invoke-Command -ScriptBlock { & $Function.Command }
+
+            $Parameters = @{}
+            if ($Function.Parameters) {
+                $Parameters = $Function.Parameters | ConvertTo-Json | ConvertFrom-Json -AsHashtable
+            }
+
+            $Results = Invoke-Command -ScriptBlock { & $Function.Command @Parameters }
             if ($Results -match '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$') {
                 $FunctionStatus.OrchestratorId = $Results
                 $Status = 'Started'

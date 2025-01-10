@@ -29,7 +29,7 @@ function Test-CIPPAuditLogRules {
     $ConfigEntries = Get-CIPPAzDataTableEntity @ConfigTable
     $Configuration = $ConfigEntries | Where-Object { ($_.Tenants -match $TenantFilter -or $_.Tenants -match 'AllTenants') } | ForEach-Object {
         [pscustomobject]@{
-            Tenants    = ($_.Tenants | ConvertFrom-Json).fullValue
+            Tenants    = ($_.Tenants | ConvertFrom-Json)
             Conditions = $_.Conditions
             Actions    = $_.Actions
             LogType    = $_.Type

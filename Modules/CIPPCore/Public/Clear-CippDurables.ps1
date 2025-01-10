@@ -29,7 +29,7 @@ function Clear-CippDurables {
     }
     if (($QueueEntities | Measure-Object).Count -gt 0) {
         if ($PSCmdlet.ShouldProcess('Queues', 'Mark Failed')) {
-            Update-AzDataTableEntity @QueueTable -Entity $QueueEntities
+            Update-AzDataTableEntity -Force @QueueTable -Entity $QueueEntities
         }
     }
 
@@ -41,7 +41,7 @@ function Clear-CippDurables {
                 $Task.Status = 'Failed'
                 $Task
             }
-            Update-AzDataTableEntity @CippQueueTasks -Entity $UpdatedTasks
+            Update-AzDataTableEntity -Force @CippQueueTasks -Entity $UpdatedTasks
         }
     }
 

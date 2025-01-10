@@ -9,14 +9,16 @@ function Set-NinjaOneOrgMapping {
     Get-CIPPAzDataTableEntity @CIPPMapping -Filter "PartitionKey eq 'NinjaOneMapping'" | ForEach-Object {
         Remove-AzDataTableEntity -Force @CIPPMapping -Entity $_
     }
-    foreach ($Mapping in ([pscustomobject]$Request.body.mappings).psobject.properties) {
+    foreach ($Mapping in $Request.Body) {
         $AddObject = @{
             PartitionKey    = 'NinjaOneMapping'
-            RowKey          = "$($mapping.name)"
-            IntegrationId   = "$($mapping.value.value)"
-            IntegrationName = "$($mapping.value.label)"
+            RowKey          = "$($mapping.TenantId)"
+            IntegrationId   = "$($mapping.IntegrationId)"
+            IntegrationName = "$($mapping.IntegrationName)"
         }
-        Add-AzDataTableEntity @CIPPMapping -Entity $AddObject -Force
+
+        Add-CIPPAzDataTableEntity @CIPPMapping -Entity $AddObject -Force
+
         Write-LogMessage -API $APINAME -user $request.headers.'x-ms-client-principal' -message "Added mapping for $($mapping.name)." -Sev 'Info'
     }
     $Result = [pscustomobject]@{'Results' = 'Successfully edited mapping table.' }

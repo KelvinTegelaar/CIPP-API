@@ -17,10 +17,11 @@ function Invoke-ListCippQueue {
 
     $CippQueue = Get-CippTable -TableName 'CippQueue'
     $CippQueueTasks = Get-CippTable -TableName 'CippQueueTasks'
-    $CippQueueData = Get-CIPPAzDataTableEntity @CippQueue | Where-Object { ($_.Timestamp.DateTime) -ge (Get-Date).ToUniversalTime().AddHours(-3) } | Sort-Object -Property Timestamp -Descending
+    $3HoursAgo = (Get-Date).ToUniversalTime().AddHours(-3).ToString('yyyy-MM-ddTHH:mm:ssZ')
+    $CippQueueData = Get-CIPPAzDataTableEntity @CippQueue -Filter "Timestamp ge datetime'$3HoursAgo'" | Sort-Object -Property Timestamp -Descending
 
     $QueueData = foreach ($Queue in $CippQueueData) {
-        $Tasks = Get-CIPPAzDataTableEntity @CippQueueTasks -Filter "QueueId eq '$($Queue.RowKey)'" | Where-Object { $_.Name } | Select-Object Timestamp, Name, Status
+        $Tasks = Get-CIPPAzDataTableEntity @CippQueueTasks -Filter "QueueId eq '$($Queue.RowKey)'" | Where-Object { $_.Name } | Select-Object @{n = 'Timestamp'; exp = { $_.Timestamp.DateTime.ToUniversalTime() } }, Name, Status
         $TaskStatus = @{}
         $Tasks | Group-Object -Property Status | ForEach-Object {
             $TaskStatus.$($_.Name) = $_.Count
@@ -58,7 +59,7 @@ function Invoke-ListCippQueue {
             PercentRunning  = [math]::Round((($TotalRunning / $Queue.TotalTasks) * 100), 1)
             Tasks           = @($Tasks)
             Status          = $Queue.Status
-            Timestamp       = $Queue.Timestamp
+            Timestamp       = $Queue.Timestamp.DateTime.ToUniversalTime()
         }
 
     }

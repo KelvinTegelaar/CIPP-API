@@ -11,11 +11,11 @@ Function Invoke-ExecSetSharePointMember {
     param($Request, $TriggerMetadata)
 
     if ($Request.body.SharePointType -eq 'Group') {
-        $GroupId = (New-GraphGetRequest -uri "https://graph.microsoft.com/beta/groups?`$filter=mail eq '$($Request.Body.GroupID)'" -tenantid $Request.Body.TenantFilter).id
+        $GroupId = (New-GraphGetRequest -uri "https://graph.microsoft.com/beta/groups?`$filter=mail eq '$($Request.Body.GroupID)' or proxyAddresses/any(x:endsWith(x,'$($Request.Body.GroupID)'))&`$count=true" -ComplexFilter -tenantid $Request.Body.TenantFilter).id
         if ($Request.body.Add -eq $true) {
-            $Results = Add-CIPPGroupMember -GroupType 'Team' -GroupID $GroupID -Member $Request.Body.input -TenantFilter $Request.Body.TenantFilter -ExecutingUser $request.headers.'x-ms-client-principal'
+            $Results = Add-CIPPGroupMember -GroupType 'Team' -GroupID $GroupID -Member $Request.Body.user.value -TenantFilter $Request.Body.TenantFilter -ExecutingUser $request.headers.'x-ms-client-principal'
         } else {
-            $UserID = (New-GraphGetRequest -uri "https://graph.microsoft.com/v1.0/users/$($Request.Body.input)" -tenantid $Request.Body.TenantFilter).id
+            $UserID = (New-GraphGetRequest -uri "https://graph.microsoft.com/v1.0/users/$($Request.Body.user.value)" -tenantid $Request.Body.TenantFilter).id
             $Results = Remove-CIPPGroupMember -GroupType 'Team' -GroupID $GroupID -Member $UserID -TenantFilter $Request.Body.TenantFilter -ExecutingUser $request.headers.'x-ms-client-principal'
         }
     } else {
