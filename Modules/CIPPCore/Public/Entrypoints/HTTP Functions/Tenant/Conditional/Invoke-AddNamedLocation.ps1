@@ -18,7 +18,7 @@ Function Invoke-AddNamedLocation {
     Write-Host 'PowerShell HTTP trigger function processed a request.'
 
     # Input bindings are passed in via param block.
-    $Tenants = $request.body.selectedTenants.defaultDomainName
+    $Tenants = $request.body.selectedTenants.value
     Write-Host ($Request.body | ConvertTo-Json)
     if ($Tenants -eq 'AllTenants') { $Tenants = (Get-Tenants).defaultDomainName }
     $results = foreach ($Tenant in $tenants) {
@@ -32,8 +32,7 @@ Function Invoke-AddNamedLocation {
                     ipRanges      = @($IPRanges)
                     isTrusted     = $Request.body.Trusted
                 }
-            }
-            else {
+            } else {
                 [pscustomobject]@{
                     '@odata.type'                     = '#microsoft.graph.countryNamedLocation'
                     displayName                       = $request.body.policyName
@@ -46,8 +45,7 @@ Function Invoke-AddNamedLocation {
             "Successfully added Named Location for $($Tenant)"
             Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $tenant -message "Added Named Location $($Displayname)" -Sev 'Info'
 
-        }
-        catch {
+        } catch {
             "Failed to add Named Location $($Tenant): $($_.Exception.Message)"
             Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $tenant -message "Failed adding Named Location$($Displayname). Error: $($_.Exception.Message)" -Sev 'Error'
             continue

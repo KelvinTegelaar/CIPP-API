@@ -22,7 +22,7 @@ function Invoke-ListAuditLogs {
         }
 
         if (!$Request.Query.StartDate -and !$Request.Query.EndDate -and !$Request.Query.RelativeTime) {
-            $Request.Query.StartDate = (Get-Date).AddDays(-1).ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ssZ')
+            $Request.Query.StartDate = (Get-Date).AddDays(-7).ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ssZ')
             $Request.Query.EndDate = (Get-Date).ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ssZ')
         }
 
@@ -42,7 +42,7 @@ function Invoke-ListAuditLogs {
         } else {
             if ($Request.Query.StartDate) {
                 if ($Request.Query.StartDate -match '^\d+$') {
-                    $Request.Query.StartDate = [DateTimeOffset]::FromUnixTimeSeconds($Request.Query.StartDate).DateTime.ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ssZ')
+                    $StartDate = [DateTimeOffset]::FromUnixTimeSeconds([int]$Request.Query.StartDate).DateTime.ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ssZ')
                 } else {
                     $StartDate = (Get-Date $Request.Query.StartDate).ToString('yyyy-MM-ddTHH:mm:ssZ')
                 }
@@ -50,7 +50,7 @@ function Invoke-ListAuditLogs {
 
                 if ($Request.Query.EndDate) {
                     if ($Request.Query.EndDate -match '^\d+$') {
-                        $Request.Query.EndDate = [DateTimeOffset]::FromUnixTimeSeconds($Request.Query.EndDate).DateTime.ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ssZ')
+                        $EndDate = [DateTimeOffset]::FromUnixTimeSeconds([int]$Request.Query.EndDate).DateTime.ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ssZ')
                     } else {
                         $EndDate = (Get-Date $Request.Query.EndDate).ToString('yyyy-MM-ddTHH:mm:ssZ')
                     }
@@ -66,7 +66,7 @@ function Invoke-ListAuditLogs {
     }
     $AuditLogs = Get-CIPPAzDataTableEntity @Table | ForEach-Object {
         $_.Data = try { $_.Data | ConvertFrom-Json } catch { $_.AuditData }
-        $_
+        $_ | Select-Object @{n = 'LogId'; exp = { $_.RowKey } }, @{ n = 'Timestamp'; exp = { $_.Data.RawData.CreationTime } }, Tenant, Title, Data
     }
 
     $Body = @{
