@@ -208,7 +208,7 @@ function Receive-CIPPTimerTrigger {
 
     foreach ($Function in $Functions) {
         Write-Information "CIPPTimer: $($Function.Command) - $($Function.Cron)"
-        $FunctionStatus = $Statuses | Where-Object { $_.RowKey -eq $Function.Command }
+        $FunctionStatus = $Statuses | Where-Object { $_.RowKey -eq $Function.Id }
         if ($FunctionStatus.OrchestratorId) {
             $FunctionName = $env:WEBSITE_SITE_NAME
             $InstancesTable = Get-CippTable -TableName ('{0}Instances' -f ($FunctionName -replace '-', ''))
