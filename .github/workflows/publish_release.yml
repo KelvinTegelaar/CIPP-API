@@ -1,0 +1,93 @@
+name: Generate Release Notes and Upload Production to Azure
+
+on:
+  push:
+    branches:
+      - master
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    if: github.event.repository.fork == false && github.event_name == 'push'
+    name: Generate Release Notes and Upload to Azure
+    runs-on: ubuntu-latest
+
+    steps:
+      # Checkout the repository
+      - name: Checkout Code
+        uses: actions/checkout@v3
+
+      # Read and Trim Version
+      - name: Read and Trim Version
+        id: get_version
+        run: |
+          if [ ! -f version_latest.txt ]; then
+            echo "Error: version_latest.txt not found!"
+            exit 1
+          fi
+          VERSION=$(cat version_latest.txt | tr -d '[:space:]')
+          if [ -z "$VERSION" ]; then
+            echo "Error: version_latest.txt is empty after trimming!"
+            exit 1
+          fi
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+
+      # Exit if Tag Already Exists
+      - name: Check if Tag Exists
+        id: tag_check
+        run: |
+          git fetch --tags
+          if git rev-parse "refs/tags/${{ steps.get_version.outputs.version }}" >/dev/null 2>&1; then
+            echo "tag_exists=true" >> $GITHUB_ENV
+            echo "Tag ${{ steps.get_version.outputs.version }} already exists. Exiting workflow successfully."
+          else
+            echo "tag_exists=false" >> $GITHUB_ENV
+          fi
+
+      # Generate Release Notes
+      - name: Generate Release Notes
+        id: changelog
+        if: env.tag_exists == 'false'
+        uses: mikepenz/release-changelog-builder-action@v5.0.0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      # Create a new release tag
+      - name: Create GitHub Release
+        if: env.tag_exists == 'false'
+        uses: ncipollo/release-action@v1.14.0
+        with:
+          tag: ${{ steps.get_version.outputs.version }}
+          name: "v${{ steps.get_version.outputs.version }}"
+          draft: false
+          prerelease: true
+          body: ${{ steps.changelog.outputs.changelog }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      # Create ZIP File in a New Source Directory
+      - name: Prepare and Zip Release Files
+        if: env.tag_exists == 'false'
+        run: |
+          mkdir -p src/releases
+          zip -r src/releases/release_${{ steps.get_version.outputs.version }}.zip . \
+            --exclude "./src/releases/*" \
+            --exclude ".*" \
+            --exclude ".*/**"
+          zip -r src/releases/latest.zip . \
+            --exclude "./src/releases/*" \
+            --exclude ".*" \
+            --exclude ".*/**"
+
+      # Upload to Azure Blob Storage
+      - name: Azure Blob Upload with Destination folder defined
+        if: env.tag_exists == 'false'
+        uses: LanceMcCarthy/Action-AzureBlobUpload@v3.3.0
+        with:
+          connection_string: ${{ secrets.AZURE_CONNECTION_STRING }}
+          container_name: cipp-api
+          source_folder: src/releases/
+          destination_folder: /
+          delete_if_exists: true
