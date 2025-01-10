@@ -52,12 +52,9 @@ function Get-CIPPTimerFunctions {
         $OrchestratorStatus = Get-CIPPAzDataTableEntity @Table -Filter "RunOnProcessor eq $RunOnProcessorTxt"
     }
 
-    Write-Host ($OrchestratorStatus | ConvertTo-Json)
-
     $OrchestratorStatus | Where-Object { $_.RowKey -notmatch '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$' } | Select-Object ETag, PartitionKey, RowKey | ForEach-Object {
         Remove-AzDataTableEntity @Table -Entity $_ -Force
     }
-
 
     foreach ($Orchestrator in $Orchestrators) {
         $Status = $OrchestratorStatus | Where-Object { $_.RowKey -eq $Orchestrator.Id }
