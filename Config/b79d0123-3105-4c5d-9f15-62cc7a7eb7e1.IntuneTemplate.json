@@ -3,5 +3,5 @@
   "Description": "Configures the first profile on a device to always use the e-mail address of the currently logged on user.",
   "RAWJson": "{\"name\":\"Automatic configuration of Outlook\",\"description\":\"\",\"platforms\":\"windows10\",\"technologies\":\"mdm\",\"roleScopeTagIds\":[\"0\"],\"settings\":[{\"@odata.type\":\"#microsoft.graph.deviceManagementConfigurationSetting\",\"settingInstance\":{\"@odata.type\":\"#microsoft.graph.deviceManagementConfigurationChoiceSettingInstance\",\"settingDefinitionId\":\"user_vendor_msft_policy_config_outlk16v2~policy~l_microsoftofficeoutlook~l_toolsaccounts~l_exchangesettings_l_automaticallyconfigureprofilebasedonactiveonce\",\"choiceSettingValue\":{\"@odata.type\":\"#microsoft.graph.deviceManagementConfigurationChoiceSettingValue\",\"value\":\"user_vendor_msft_policy_config_outlk16v2~policy~l_microsoftofficeoutlook~l_toolsaccounts~l_exchangesettings_l_automaticallyconfigureprofilebasedonactiveonce_1\",\"children\":[]}}}]}",
   "Type": "Catalog",
-  "GUID": "b79d0123-3105-4c5d-9f15-62cc7a7eb7e1"
+  "GUID": "b79d0123-3105-4c5d-9f15-62cc7a7eb7e1.IntuneTemplate.json"
 }

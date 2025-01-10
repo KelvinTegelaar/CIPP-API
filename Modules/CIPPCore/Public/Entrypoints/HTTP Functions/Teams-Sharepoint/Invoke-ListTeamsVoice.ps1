@@ -25,7 +25,7 @@ Function Invoke-ListTeamsVoice {
         $skip = 0
         $GraphRequest = do {
             $data = (New-TeamsAPIGetRequest -uri "https://api.interfaces.records.teams.microsoft.com/Skype.TelephoneNumberMgmt/Tenants/$($Tenantid)/telephone-numbers?skip=$($skip)&locale=en-US&top=999" -tenantid $TenantFilter).TelephoneNumbers | ForEach-Object {
-                $CompleteRequest = $_ | Select-Object *, 'AssignedTo'
+                $CompleteRequest = $_ | Select-Object *, 'AssignedTo', 'AcquisitionDate' -ErrorAction SilentlyContinue
                 $CompleteRequest.AcquisitionDate = $CompleteRequest.AcquisitionDate -split 'T' | Select-Object -First 1
                 if ($CompleteRequest.TargetId -eq '00000000-0000-0000-0000-000000000000') {
                     $CompleteRequest.AssignedTo = 'Unassigned'

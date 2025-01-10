@@ -13,7 +13,7 @@ Function Invoke-AddCATemplate {
     $APIName = $TriggerMetadata.FunctionName
     Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -message 'Accessed this API' -Sev 'Debug'
 
-    $TenantFilter = $Request.Query.TenantFilter
+    $TenantFilter = $Request.Body.TenantFilter
     try {
         $GUID = (New-Guid).GUID
         $JSON = New-CIPPCATemplate -TenantFilter $TenantFilter -JSON $request.body

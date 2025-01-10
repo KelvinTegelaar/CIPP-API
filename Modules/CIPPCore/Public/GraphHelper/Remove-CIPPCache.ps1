@@ -24,7 +24,7 @@ function Remove-CIPPCache {
             $_
         }
         if ($ClearDomainAnalyserRows) {
-            Update-AzDataTableEntity @DomainsTable -Entity $ClearDomainAnalyserRows
+            Update-AzDataTableEntity -Force @DomainsTable -Entity $ClearDomainAnalyserRows
         }
         #Clear BPA
         $BPATable = Get-CippTable -tablename 'cachebpav2'
