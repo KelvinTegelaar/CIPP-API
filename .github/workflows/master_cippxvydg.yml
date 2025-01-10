@@ -6,7 +6,7 @@ name: Build and deploy Powershell project to Azure Function App - cippxvydg
 on:
   push:
     branches:
-      - interface-rewrite
+      - master
   workflow_dispatch:
 
 env:
