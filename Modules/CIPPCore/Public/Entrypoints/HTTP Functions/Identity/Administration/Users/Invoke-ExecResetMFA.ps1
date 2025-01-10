@@ -17,6 +17,7 @@ Function Invoke-ExecResetMFA {
     $TenantFilter = $Request.Query.TenantFilter
     $UserID = $Request.Query.ID
     try {
+
         $Body = @{
             Results = Remove-CIPPUserMFA -UserPrincipalName $UserID -TenantFilter $TenantFilter -ExecutingUser $request.headers.'x-ms-client-principal'
         }

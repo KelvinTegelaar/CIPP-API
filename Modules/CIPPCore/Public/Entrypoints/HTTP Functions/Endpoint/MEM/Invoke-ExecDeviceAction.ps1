@@ -20,7 +20,20 @@ Function Invoke-ExecDeviceAction {
         if ($Request.Body.Action -eq 'setDeviceName') {
             $ActionBody = @{ deviceName = $Request.Body.input } | ConvertTo-Json -Compress
         }
-        $ActionResult = New-CIPPDeviceAction -Action $Request.Body.Action -ActionBody $ActionBody -DeviceFilter $Request.Body.GUID -TenantFilter $Request.Body.TenantFilter -ExecutingUser $request.headers.'x-ms-client-principal' -APINAME $APINAME
+        else {
+            $ActionBody = $Request.Body | ConvertTo-Json -Compress
+        }
+
+        $cmdparams = @{
+            Action = $Request.Body.Action
+            ActionBody = $ActionBody
+            DeviceFilter = $Request.Body.GUID
+            TenantFilter = $Request.Body.TenantFilter
+            ExecutingUser = $request.headers.'x-ms-client-principal'
+            APINAME = $APINAME
+        }
+        $ActionResult = New-CIPPDeviceAction @cmdparams
+
         $body = [pscustomobject]@{'Results' = "$ActionResult" }
 
     } catch {

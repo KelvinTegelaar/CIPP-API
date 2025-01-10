@@ -20,7 +20,26 @@ function Push-DomainAnalyserTenant {
         return
     } else {
         try {
-            $Domains = New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/domains' -tenantid $Tenant.customerId | Where-Object { ($_.id -notlike '*.microsoftonline.com' -and $_.id -NotLike '*.exclaimer.cloud' -and $_.id -Notlike '*.excl.cloud' -and $_.id -NotLike '*.codetwo.online' -and $_.id -NotLike '*.call2teams.com' -and $_.id -notlike '*signature365.net' -and $_.isVerified) }
+            # Remove domains that are not wanted, and used for cloud signature services
+            $ExclusionDomains = @(
+                '*.microsoftonline.com'
+                '*.exclaimer.cloud'
+                '*.excl.cloud'
+                '*.codetwo.online'
+                '*.call2teams.com'
+                '*.signature365.net'
+                '*.myteamsconnect.io'
+                '*.teams.dstny.com'
+            )
+            $Domains = New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/domains' -tenantid $Tenant.customerId | Where-Object { $_.isVerified -eq $true } | ForEach-Object {
+                $Domain = $_
+                foreach ($ExclusionDomain in $ExclusionDomains) {
+                    if ($Domain.id -like $ExclusionDomain) {
+                        $Domain = $null
+                    }
+                }
+                $Domain
+            } | Where-Object { $_ -ne $null }
 
             $TenantDomains = foreach ($d in $Domains) {
                 [PSCustomObject]@{

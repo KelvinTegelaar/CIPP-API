@@ -37,16 +37,18 @@ function Test-CIPPAuditLogRules {
     }
     #write-warning 'Getting audit records from Graph API'
     try {
+        $LogCount = Get-CippAuditLogSearchResults -TenantFilter $TenantFilter -QueryId $SearchId -CountOnly
+        $RunGuid = (New-Guid).Guid
+        Write-Warning "Logs to process: $LogCount - SearchId: $SearchId - RunGuid: $($RunGuid) - $($TenantFilter)"
+        $Results.TotalLogs = $LogCount
+        Write-Information "RunGuid: $RunGud - Collecting logs"
         $SearchResults = Get-CippAuditLogSearchResults -TenantFilter $TenantFilter -QueryId $SearchId
     } catch {
         Write-Warning "Error getting audit logs: $($_.Exception.Message)"
         Write-LogMessage -API 'Webhooks' -message "Error getting audit logs for search $($SearchId)" -LogData (Get-CippException -Exception $_) -sev Error -tenant $TenantFilter
         throw $_
     }
-    $LogCount = ($SearchResults | Measure-Object).Count
-    $RunGuid = New-Guid
-    Write-Warning "Logs to process: $LogCount - RunGuid: $($RunGuid) - $($TenantFilter)"
-    $Results.TotalLogs = $LogCount
+
     if ($LogCount -gt 0) {
         $LocationTable = Get-CIPPTable -TableName 'knownlocationdb'
         $ProcessedData = foreach ($AuditRecord in $SearchResults) {
