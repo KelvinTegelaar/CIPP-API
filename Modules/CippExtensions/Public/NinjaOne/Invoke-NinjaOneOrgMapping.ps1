@@ -15,7 +15,7 @@ function Invoke-NinjaOneOrgMapping {
     }
 
     #Get Available Tenants
-    $Tenants = Get-Tenants
+    $Tenants = Get-Tenants -IncludeErrors
     #Get available Ninja clients
     $Table = Get-CIPPTable -TableName Extensionsconfig
     $Configuration = ((Get-AzDataTableEntity @Table).config | ConvertFrom-Json).NinjaOne
