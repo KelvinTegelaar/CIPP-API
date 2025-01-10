@@ -17,7 +17,7 @@ Function Invoke-AddSpamFilter {
     $RequestParams = $Request.Body.PowerShellCommand | ConvertFrom-Json | Select-Object -Property * -ExcludeProperty GUID, comments
     $RequestPriority = $Request.Body.Priority
 
-    $Tenants = ($Request.body | Select-Object Select_*).psobject.properties.value
+    $Tenants = ($Request.body.selectedTenants).value
     $Result = foreach ($Tenantfilter in $tenants) {
         try {
             $GraphRequest = New-ExoRequest -tenantid $Tenantfilter -cmdlet 'New-HostedContentFilterPolicy' -cmdParams $RequestParams
@@ -32,8 +32,7 @@ Function Invoke-AddSpamFilter {
             $GraphRequest = New-ExoRequest -tenantid $Tenantfilter -cmdlet 'New-HostedContentFilterRule' -cmdParams $ruleparams
             "Successfully created spamfilter for $tenantfilter."
             Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $tenantfilter -message "Created spamfilter rule for $($tenantfilter)" -sev Info
-        }
-        catch {
+        } catch {
             "Could not create create spamfilter rule for $($tenantfilter): $($_.Exception.message)"
             Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $tenantfilter -message "Could not create create spamfilter rule for $($tenantfilter): $($_.Exception.message)" -sev Error
         }
