@@ -29,7 +29,7 @@ function Test-CIPPAuditLogRules {
     $ConfigEntries = Get-CIPPAzDataTableEntity @ConfigTable
     $Configuration = $ConfigEntries | Where-Object { ($_.Tenants -match $TenantFilter -or $_.Tenants -match 'AllTenants') } | ForEach-Object {
         [pscustomobject]@{
-            Tenants    = ($_.Tenants | ConvertFrom-Json).fullValue
+            Tenants    = ($_.Tenants | ConvertFrom-Json)
             Conditions = $_.Conditions
             Actions    = $_.Actions
             LogType    = $_.Type
@@ -92,7 +92,7 @@ function Test-CIPPAuditLogRules {
                         $Data.clientip = $Data.clientip -replace ':\d+$', '' # Remove the port number if present
                     }
                     # Check if IP is on trusted IP list
-                    $TrustedIP = Get-CIPPAzDataTableEntity @TrustedIPTable -Filter "PartitionKey eq '$TenantFilter' and RowKey eq '$($Data.clientip)' and state eq 'Trusted'"
+                    $TrustedIP = Get-CIPPAzDataTableEntity @TrustedIPTable -Filter "((PartitionKey eq '$TenantFilter') or (PartitionKey eq 'AllTenants'))  and RowKey eq '$($Data.clientip)'  and state eq 'Trusted'"
                     if ($TrustedIP) {
                         #write-warning "IP $($Data.clientip) is trusted"
                         $Trusted = $true
