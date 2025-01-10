@@ -133,7 +133,7 @@ function Get-CIPPTimerFunctions {
                     Parameters         = $Orchestrator.Parameters ?? @{}
                     Cron               = $CronString
                     NextOccurrence     = $NextOccurrence.ToUniversalTime()
-                    LastOccurrence     = $Status.LastOccurrence.DateTime
+                    LastOccurrence     = $Status.LastOccurrence
                     Status             = $Status.Status
                     OrchestratorId     = $Status.OrchestratorId
                     RunOnProcessor     = $Orchestrator.RunOnProcessor
