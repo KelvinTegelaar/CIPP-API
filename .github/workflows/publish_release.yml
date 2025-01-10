@@ -62,7 +62,8 @@ jobs:
           tag: ${{ steps.get_version.outputs.version }}
           name: "v${{ steps.get_version.outputs.version }}"
           draft: false
-          prerelease: true
+          prerelease: false
+          makeLatest: true
           body: ${{ steps.changelog.outputs.changelog }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
