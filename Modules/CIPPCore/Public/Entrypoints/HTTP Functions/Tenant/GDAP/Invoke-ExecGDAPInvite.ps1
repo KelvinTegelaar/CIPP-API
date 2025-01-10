@@ -12,7 +12,7 @@ Function Invoke-ExecGDAPInvite {
     $APIName = 'ExecGDAPInvite'
     Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -message 'Accessed this API' -Sev 'Debug'
 
-    $RoleMappings = $Request.Body.gdapRoles
+    $RoleMappings = $Request.Body.roleMappings
 
     if ($RoleMappings.roleDefinitionId -contains '62e90394-69f5-4237-9190-012177145e10') {
         $AutoExtendDuration = 'PT0S'
@@ -24,7 +24,7 @@ Function Invoke-ExecGDAPInvite {
     try {
         $Step = 'Creating GDAP relationship'
         $JSONBody = @{
-            'displayName'        = "$((New-Guid).GUID)"
+            'displayName'        = "CIPP_$((New-Guid).GUID)"
             'accessDetails'      = @{
                 'unifiedRoles' = @($RoleMappings | Select-Object roleDefinitionId)
             }
@@ -58,8 +58,7 @@ Function Invoke-ExecGDAPInvite {
                 $InviteUrl = "https://admin.microsoft.com/AdminPortal/Home#/partners/invitation/granularAdminRelationships/$($NewRelationship.id)"
                 try {
                     $Uri = ([System.Uri]$TriggerMetadata.Headers.Referer)
-                    $TableFilter = [System.Web.HttpUtility]::UrlEncode(('Complex: id eq {0}' -f $NewRelationship.id))
-                    $OnboardingUrl = $Uri.AbsoluteUri.Replace($Uri.PathAndQuery, "/tenant/administration/tenant-onboarding-wizard?tableFilter=$TableFilter")
+                    $OnboardingUrl = $Uri.AbsoluteUri.Replace($Uri.PathAndQuery, "/tenant/gdap-management/onboarding/start?id=$($NewRelationship.id)")
                 } catch {
                     $OnboardingUrl = $null
                 }

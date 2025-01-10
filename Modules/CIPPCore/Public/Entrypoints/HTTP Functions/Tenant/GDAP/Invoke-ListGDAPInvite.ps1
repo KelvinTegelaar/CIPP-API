@@ -22,13 +22,13 @@ Function Invoke-ListGDAPInvite {
         $Invite = Get-CIPPAzDataTableEntity @Table -Filter "RowKey eq '$($Request.Query.RelationshipId)'"
     } else {
         $Invite = Get-CIPPAzDataTableEntity @Table | ForEach-Object {
-            $_.RoleMappings = try { $_.RoleMappings | ConvertFrom-Json } catch { $_.RoleMappings }
+            $_.RoleMappings = @(try { $_.RoleMappings | ConvertFrom-Json } catch { $_.RoleMappings })
             $_
         }
     }
     # Associate values to output bindings by calling 'Push-OutputBinding'.
     Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
             StatusCode = [HttpStatusCode]::OK
-            Body       = $Invite
+            Body       = @($Invite)
         })
 }
