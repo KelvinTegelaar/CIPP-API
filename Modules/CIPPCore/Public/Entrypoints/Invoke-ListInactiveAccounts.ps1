@@ -11,15 +11,21 @@ Function Invoke-ListInactiveAccounts {
     param($Request, $TriggerMetadata)
 
     $APIName = $TriggerMetadata.FunctionName
-    Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -message 'Accessed this API' -Sev 'Debug'
+    $User = $request.headers.'x-ms-client-principal'
+    Write-LogMessage -user $User -API $APINAME -message 'Accessed this API' -Sev 'Debug'
 
 
     # Write to the Azure Functions log stream.
     Write-Host 'PowerShell HTTP trigger function processed a request.'
 
-    # Interact with query parameters or the body of the request.
+    # Convert the TenantFilter parameter to a list of tenant IDs for AllTenants or a single tenant ID
     $TenantFilter = $Request.Query.TenantFilter
-    if ($TenantFilter -eq 'AllTenants') { $TenantFilter = (get-tenants).customerId }
+    if ($TenantFilter -eq 'AllTenants') {
+        $TenantFilter = (Get-Tenants).customerId
+    } else {
+        $TenantFilter = (Get-Tenants -TenantFilter $TenantFilter).customerId
+    }
+
     try {
         $GraphRequest = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/tenantRelationships/managedTenants/inactiveUsers?`$count=true" -tenantid $env:TenantID | Where-Object { $_.tenantId -in $TenantFilter }
         $StatusCode = [HttpStatusCode]::OK
@@ -34,5 +40,4 @@ Function Invoke-ListInactiveAccounts {
             StatusCode = $StatusCode
             Body       = @($GraphRequest)
         })
-
 }

@@ -12,7 +12,6 @@ Function Invoke-ListUsers {
 
     Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -message 'Accessed this API' -Sev 'Debug'
 
-    $selectlist = 'id', 'accountEnabled', 'displayName', 'userPrincipalName', 'username', 'userType', 'createdDateTime', 'companyName', 'country', 'department', 'businessPhones', 'city', 'faxNumber', 'givenName', 'isResourceAccount', 'jobTitle', 'mobilePhone', 'officeLocation', 'postalCode', 'preferredDataLocation', 'preferredLanguage', 'mail', 'mailNickname', 'proxyAddresses', 'Aliases', 'otherMails', 'showInAddressList', 'state', 'streetAddress', 'surname', 'usageLocation', 'LicJoined', 'assignedLicenses', 'onPremisesSyncEnabled', 'OnPremisesImmutableId', 'onPremisesDistinguishedName', 'onPremisesLastSyncDateTime', 'primDomain', 'Tenant', 'CippStatus'
     # Write to the Azure Functions log stream.
     Write-Host 'PowerShell HTTP trigger function processed a request.'
     $ConvertTable = Import-Csv ConversionTable.csv | Sort-Object -Property 'guid' -Unique
@@ -22,13 +21,13 @@ Function Invoke-ListUsers {
     $userid = $Request.Query.UserID
 
     $GraphRequest = if ($TenantFilter -ne 'AllTenants') {
-        New-GraphGetRequest -uri "https://graph.microsoft.com/beta/users/$($userid)?`$top=999&`$select=$($selectlist -join ',')&`$filter=$GraphFilter&`$count=true" -tenantid $TenantFilter -ComplexFilter | Select-Object $selectlist | ForEach-Object {
-            $_.onPremisesSyncEnabled = [bool]($_.onPremisesSyncEnabled)
-            $_.UserName = $_.userPrincipalName -split '@' | Select-Object -First 1
-            $_.Aliases = $_.Proxyaddresses -join ', '
+        New-GraphGetRequest -uri "https://graph.microsoft.com/beta/users/$($userid)?`$top=999&`$filter=$GraphFilter&`$count=true" -tenantid $TenantFilter -ComplexFilter | ForEach-Object {
+            $_ | Add-Member -MemberType NoteProperty -Name 'onPremisesSyncEnabled' -Value ([bool]($_.onPremisesSyncEnabled)) -Force
+            $_ | Add-Member -MemberType NoteProperty -Name 'username' -Value ($_.userPrincipalName -split '@' | Select-Object -First 1) -Force
+            $_ | Add-Member -MemberType NoteProperty -Name 'Aliases' -Value ($_.ProxyAddresses -join ', ') -Force
             $SkuID = $_.AssignedLicenses.skuid
-            $_.LicJoined = ($ConvertTable | Where-Object { $_.guid -in $skuid }).'Product_Display_Name' -join ', '
-            $_.primDomain = ($_.userPrincipalName -split '@' | Select-Object -Last 1)
+            $_ | Add-Member -MemberType NoteProperty -Name 'LicJoined' -Value (($ConvertTable | Where-Object { $_.guid -in $skuid }).'Product_Display_Name' -join ', ') -Force
+            $_ | Add-Member -MemberType NoteProperty -Name 'primDomain' -Value @{value = ($_.userPrincipalName -split '@' | Select-Object -Last 1); label = ($_.userPrincipalName -split '@' | Select-Object -Last 1); } -Force
             $_
         }
     } else {
@@ -44,7 +43,7 @@ Function Invoke-ListUsers {
                 $_.Aliases = $_.Proxyaddresses -join ', '
                 $SkuID = $_.AssignedLicenses.skuid
                 $_.LicJoined = ($ConvertTable | Where-Object { $_.guid -in $skuid }).'Product_Display_Name' -join ', '
-                $_.primDomain = ($_.userPrincipalName -split '@' | Select-Object -Last 1)
+                $_.primDomain = @{value = ($_.userPrincipalName -split '@' | Select-Object -Last 1) }
                 $_
             }
         }
