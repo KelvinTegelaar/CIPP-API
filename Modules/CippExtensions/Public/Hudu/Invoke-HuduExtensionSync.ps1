@@ -56,7 +56,9 @@ function Invoke-HuduExtensionSync {
 
         try {
             if (![string]::IsNullOrEmpty($PeopleLayoutId)) {
-                $null = Add-HuduAssetLayoutM365Field -AssetLayoutId $PeopleLayoutId
+                # Add required fields to People Layout
+                $null = Add-HuduAssetLayoutField -AssetLayoutId $PeopleLayoutId -Label 'Microsoft 365'
+                $null = Add-HuduAssetLayoutField -AssetLayoutId $PeopleLayoutId -Label 'Email Address' -Position 1 -ShowInList $true -FieldType 'Text'
                 $CreateUsers = $Configuration.CreateMissingUsers
                 $PeopleLayout = Get-HuduAssetLayouts -Id $PeopleLayoutId
                 if ($PeopleLayout.id) {

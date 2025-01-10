@@ -31,11 +31,12 @@ function New-CIPPCATemplate {
     if ($excludelocations) { $JSON.conditions.locations.excludeLocations = $excludelocations }
     if ($JSON.conditions.users.includeUsers) {
         $JSON.conditions.users.includeUsers = @($JSON.conditions.users.includeUsers | ForEach-Object {
+                $originalID = $_
                 if ($_ -in 'All', 'None', 'GuestOrExternalUsers') { return $_ }
                 try {
                 (New-GraphGetRequest -uri "https://graph.microsoft.com/beta/users/$($_)" -tenantid $TenantFilter).displayName
                 } catch {
-                    return $_
+                    return $originalID
                 }
             })
     }
@@ -43,10 +44,12 @@ function New-CIPPCATemplate {
     if ($JSON.conditions.users.excludeUsers) {
         $JSON.conditions.users.excludeUsers = @($JSON.conditions.users.excludeUsers | ForEach-Object {
                 if ($_ -in 'All', 'None', 'GuestOrExternalUsers') { return $_ }
+                $originalID = $_
+
                 try {
                 (New-GraphGetRequest -uri "https://graph.microsoft.com/beta/users/$($_)" -tenantid $TenantFilter).displayName
                 } catch {
-                    return $_
+                    return $originalID
                 }
             })
     }
@@ -58,21 +61,25 @@ function New-CIPPCATemplate {
 
     if ($JSON.conditions.users.includeGroups) {
         $JSON.conditions.users.includeGroups = @($JSON.conditions.users.includeGroups | ForEach-Object {
+                $originalID = $_
                 if ($_ -in 'All', 'None', 'GuestOrExternalUsers' -or -not (Test-IsGuid $_)) { return $_ }
                 try {
                 (New-GraphGetRequest -uri "https://graph.microsoft.com/beta/groups/$($_)" -tenantid $TenantFilter).displayName
                 } catch {
-                    return $_
+                    return $originalID
                 }
             })
     }
     if ($JSON.conditions.users.excludeGroups) {
         $JSON.conditions.users.excludeGroups = @($JSON.conditions.users.excludeGroups | ForEach-Object {
+                $originalID = $_
+
                 if ($_ -in 'All', 'None', 'GuestOrExternalUsers' -or -not (Test-IsGuid $_)) { return $_ }
                 try {
                 (New-GraphGetRequest -uri "https://graph.microsoft.com/beta/groups/$($_)" -tenantid $TenantFilter).displayName
                 } catch {
-                    return $_
+                    return $originalID
+
                 }
             })
     }
