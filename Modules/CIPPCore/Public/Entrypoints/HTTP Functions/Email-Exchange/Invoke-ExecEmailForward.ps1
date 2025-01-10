@@ -14,11 +14,11 @@ Function Invoke-ExecEmailForward {
     $username = $request.body.userid
     $ForwardingAddress = $request.body.ForwardInternal.value
     $ForwardingSMTPAddress = $request.body.ForwardExternal
-    $DisableForwarding = $request.body.disableForwarding
+    $ForwardOption = $request.body.forwardOption
     $APIName = $TriggerMetadata.FunctionName
     [bool]$KeepCopy = if ($request.body.keepCopy -eq 'true') { $true } else { $false }
 
-    if ($ForwardingAddress) {
+    if ($ForwardOption -eq 'internalAddress') {
         try {
             Set-CIPPForwarding -userid $username -tenantFilter $TenantFilter -APIName $APINAME -ExecutingUser $request.headers.'x-ms-client-principal' -Forward $ForwardingAddress -keepCopy $KeepCopy
             if (-not $request.body.KeepCopy) {
@@ -33,7 +33,7 @@ Function Invoke-ExecEmailForward {
         }
     }
 
-    if ($ForwardingSMTPAddress) {
+    if ($ForwardOption -eq 'ExternalAddress') {
         try {
             Set-CIPPForwarding -userid $username -tenantFilter $TenantFilter -APIName $APINAME -ExecutingUser $request.headers.'x-ms-client-principal' -forwardingSMTPAddress $ForwardingSMTPAddress -keepCopy $KeepCopy
             if (-not $request.body.KeepCopy) {
@@ -49,7 +49,7 @@ Function Invoke-ExecEmailForward {
 
     }
 
-    if ($DisableForwarding -eq 'True') {
+    if ($ForwardOption -eq 'disabled') {
         try {
             Set-CIPPForwarding -userid $username -username $username -tenantFilter $Tenantfilter -ExecutingUser $ExecutingUser -APIName $APIName -Disable $true
             $results = "Disabled Email Forwarding for $($username)"

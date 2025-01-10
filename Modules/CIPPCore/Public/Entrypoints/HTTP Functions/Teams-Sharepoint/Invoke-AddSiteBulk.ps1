@@ -16,7 +16,7 @@ Function Invoke-AddSiteBulk {
 
     $Results = [System.Collections.ArrayList]@()
 
-    foreach ($sharepointObj in $Request.body.BulkSite) {
+    foreach ($sharepointObj in $Request.Body.bulkSites) {
         try {
             $SharePointSite = New-CIPPSharepointSite -SiteName $SharePointObj.siteName -SiteDescription $SharePointObj.siteDescription -SiteOwner $SharePointObj.siteOwner -TemplateName $SharePointObj.templateName -SiteDesign $SharePointObj.siteDesign -SensitivityLabel $SharePointObj.sensitivityLabel -TenantFilter $Request.body.TenantFilter
             $Results.add($SharePointSite)

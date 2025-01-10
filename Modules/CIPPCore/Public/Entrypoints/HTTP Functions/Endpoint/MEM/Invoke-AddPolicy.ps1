@@ -13,7 +13,7 @@ Function Invoke-AddPolicy {
     $APIName = $TriggerMetadata.FunctionName
     Write-LogMessage -user $Request.headers.'x-ms-client-principal' -API $APINAME -message 'Accessed this API' -Sev 'Debug'
 
-    $Tenants = ($Request.Body | Select-Object Select_*).psobject.properties.value
+    $Tenants = ($Request.Body.tenantFilter.value)
     if ('AllTenants' -in $Tenants) { $Tenants = (Get-Tenants).defaultDomainName }
     $displayname = $Request.Body.displayName
     $description = $Request.Body.Description

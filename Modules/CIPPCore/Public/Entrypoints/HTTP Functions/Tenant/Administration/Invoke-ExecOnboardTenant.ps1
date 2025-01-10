@@ -16,7 +16,7 @@ function Invoke-ExecOnboardTenant {
         try {
             $OnboardTable = Get-CIPPTable -TableName 'TenantOnboarding'
 
-            if ($Request.Query.Cancel -eq $true) {
+            if ($Request.Body.Cancel -eq $true) {
                 $TenantOnboarding = Get-CIPPAzDataTableEntity @OnboardTable -Filter "RowKey eq '$Id'"
                 if ($TenantOnboarding) {
                     Remove-AzDataTableEntity -Force @OnboardTable -Entity $TenantOnboarding
@@ -27,9 +27,9 @@ function Invoke-ExecOnboardTenant {
                     $StatusCode = [HttpStatusCode]::NotFound
                 }
             } else {
-                $TenMinutesAgo = (Get-Date).AddMinutes(-10).ToString('yyyy-MM-ddTHH:mm:ssZ')
+                $TenMinutesAgo = (Get-Date).AddMinutes(-10).ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ssZ')
                 $TenantOnboarding = Get-CIPPAzDataTableEntity @OnboardTable -Filter "RowKey eq '$Id' and Timestamp ge datetime'$TenMinutesAgo'"
-                if (!$TenantOnboarding -or [bool]$Request.Query.Retry) {
+                if (!$TenantOnboarding -or [bool]$Request.Body.Retry) {
                     $OnboardingSteps = [PSCustomObject]@{
                         'Step1' = @{
                             'Status'  = 'pending'
@@ -74,6 +74,7 @@ function Invoke-ExecOnboardTenant {
                         id                         = $Id
                         Roles                      = $Request.Body.gdapRoles
                         AddMissingGroups           = $Request.Body.addMissingGroups
+                        IgnoreMissingRoles         = $Request.Body.ignoreMissingRoles
                         AutoMapRoles               = $Request.Body.autoMapRoles
                         StandardsExcludeAllTenants = $Request.Body.standardsExcludeAllTenants
                     }
