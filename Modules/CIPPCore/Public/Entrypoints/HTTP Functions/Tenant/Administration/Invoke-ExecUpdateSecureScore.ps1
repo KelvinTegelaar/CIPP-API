@@ -16,7 +16,7 @@ Function Invoke-ExecUpdateSecureScore {
     # Interact with query parameters or the body of the request.
     $Body = @{
         comment           = $request.body.reason
-        state             = $request.body.resolutionType
+        state             = $request.body.resolutionType.value
         vendorInformation = $request.body.vendorInformation
     }
     try {

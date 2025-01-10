@@ -37,7 +37,7 @@ function New-CIPPGraphSubscription {
                 WebhookEvents = @($EventList)
             }
             try {
-                $EventCompare = Compare-Object $EventList ($MatchedWebhook.EventType | ConvertFrom-Json)
+                $EventCompare = Compare-Object $EventList ($MatchedWebhook.EventType | ConvertFrom-Json -ErrorAction Stop)
             } catch {
                 $EventCompare = $false
             }
