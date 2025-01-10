@@ -29,7 +29,7 @@ Function Invoke-ExecCPVPermissions {
         }
 
         $GraphRequest = try {
-            if ($TenantFilter -notin @('PartnerTenant', $env:TenantId)) {
+            if ($TenantFilter -notin @('PartnerTenant', $env:TenantID)) {
                 Set-CIPPCPVConsent @CPVConsentParams
             } else {
                 $TenantFilter = $env:TenantID
@@ -40,7 +40,7 @@ Function Invoke-ExecCPVPermissions {
             }
             Add-CIPPApplicationPermission -RequiredResourceAccess 'CIPPDefaults' -ApplicationId $ENV:ApplicationID -tenantfilter $TenantFilter
             Add-CIPPDelegatedPermission -RequiredResourceAccess 'CIPPDefaults' -ApplicationId $ENV:ApplicationID -tenantfilter $TenantFilter
-            if ($TenantFilter -notin @('PartnerTenant', $env:TenantId)) {
+            if ($TenantFilter -notin @('PartnerTenant', $env:TenantID)) {
                 Set-CIPPSAMAdminRoles -TenantFilter $TenantFilter
             }
             $Success = $true

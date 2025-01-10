@@ -9,7 +9,7 @@ function Get-HIBPAuth {
     }
 
     return @{
-        'User-Agent'   = "CIPP-$($ENV:TenantId)"
+        'User-Agent'   = "CIPP-$($ENV:TenantID)"
         'Accept'       = 'application/json'
         'api-version'  = '3'
         'hibp-api-key' = $Secret
