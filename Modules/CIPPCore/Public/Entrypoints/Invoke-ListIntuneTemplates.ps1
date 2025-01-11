@@ -41,7 +41,7 @@ Function Invoke-ListIntuneTemplates {
             $data | Add-Member -NotePropertyName 'displayName' -NotePropertyValue $_.Displayname -Force
             $data | Add-Member -NotePropertyName 'description' -NotePropertyValue $_.Description -Force
             $data | Add-Member -NotePropertyName 'Type' -NotePropertyValue $_.Type -Force
-            $data | Add-Member -NotePropertyName 'GUID' -NotePropertyValue $_.GUID -Force
+            $data | Add-Member -NotePropertyName 'GUID' -NotePropertyValue $_.RowKey -Force
             $data
         } | Sort-Object -Property displayName
     }
