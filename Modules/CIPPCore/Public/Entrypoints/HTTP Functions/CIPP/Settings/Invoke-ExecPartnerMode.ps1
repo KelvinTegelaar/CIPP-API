@@ -35,6 +35,17 @@ Function Invoke-ExecPartnerMode {
                     } catch {
                     }
                 }
+            } elseif ($Request.Body.TenantMode -eq 'PartnerTenantAvailable') {
+                $InputObject = [PSCustomObject]@{
+                    Batch            = @(
+                        @{
+                            FunctionName = 'UpdateTenants'
+                        }
+                    )
+                    OrchestratorName = 'UpdateTenants'
+                    SkipLog          = $true
+                }
+                Start-NewOrchestration -FunctionName 'CIPPOrchestrator' -InputObject ($InputObject | ConvertTo-Json -Compress -Depth 5)
             }
 
             Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
