@@ -162,7 +162,7 @@ function Invoke-ExecStandardConvert {
 
         if ($Tenant -eq 'AllTenants' -and $Excluded) {
             $ExcludedArr = $Excluded | ForEach-Object { $_ }
-            $NewTemplate | Add-Member -NotePropertyName 'excludedTenants' -NotePropertyValue $ExcludedArr -Force
+            $NewTemplate | Add-Member -NotePropertyName 'excludedTenants' -NotePropertyValue @($ExcludedArr) -Force
         }
 
         return $NewTemplate
