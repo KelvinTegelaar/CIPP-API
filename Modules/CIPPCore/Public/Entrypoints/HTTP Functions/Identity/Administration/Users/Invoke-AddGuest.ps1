@@ -34,7 +34,7 @@ Function Invoke-AddGuest {
             }
         }
         $bodyToShip = ConvertTo-Json -Depth 10 -InputObject $BodyToship -Compress
-        $GraphRequest = New-GraphPostRequest -uri 'https://graph.microsoft.com/beta/invitations' -tenantFilter $Userobj.tenantFilter -type POST -body $BodyToship -verbose
+        $GraphRequest = New-GraphPostRequest -uri 'https://graph.microsoft.com/beta/invitations' -tenantid $Userobj.tenantFilter -type POST -body $BodyToship -verbose
         if ($Userobj.sendInvite -eq 'true') {
             $results.add('Invited Guest. Invite Email sent')
             Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $($userobj.tenantFilter) -message "Invited Guest $($userobj.displayname) with Email Invite " -Sev 'Info'
