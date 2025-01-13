@@ -14,10 +14,10 @@ Function Invoke-RemoveExConnectorTemplate {
     $User = $request.headers.'x-ms-client-principal'
     Write-LogMessage -user $User -API $APINAME -message 'Accessed this API' -Sev 'Debug'
 
-    $ID = $request.query.id
+    $ID = $Request.Query.ID ?? $Request.Body.ID
     try {
         $Table = Get-CippTable -tablename 'templates'
-        $Filter = "PartitionKey eq 'ExConnectorTemplate' and RowKey eq '$id'"
+        $Filter = "PartitionKey eq 'ExConnectorTemplate' and RowKey eq '$ID'"
         $ClearRow = Get-CIPPAzDataTableEntity @Table -Filter $Filter -Property PartitionKey, RowKey
         Remove-AzDataTableEntity -Force @Table -Entity $clearRow
         Write-LogMessage -user $User -API $APINAME -message "Removed Exchange Connector Template with ID $ID." -Sev 'Info'

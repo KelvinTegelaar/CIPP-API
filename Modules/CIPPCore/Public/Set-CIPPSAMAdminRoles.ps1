@@ -22,6 +22,9 @@ function Set-CIPPSAMAdminRoles {
 
     $SAMRoles = $Roles.Roles | ConvertFrom-Json
     $Tenants = $Roles.Tenants | ConvertFrom-Json
+    if ($Tenants.value) {
+        $Tenants = $Tenants.value
+    }
 
     if (($SAMRoles | Measure-Object).count -gt 0 -and $Tenants -contains $TenantFilter -or $Tenants -contains 'AllTenants') {
         $AppMemberOf = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/servicePrincipals(appId='$($ENV:ApplicationID)')/memberOf/#microsoft.graph.directoryRole" -tenantid $TenantFilter -AsApp $true

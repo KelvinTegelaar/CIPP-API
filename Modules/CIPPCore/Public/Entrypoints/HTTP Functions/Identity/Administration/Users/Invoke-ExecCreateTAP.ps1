@@ -16,7 +16,7 @@ Function Invoke-ExecCreateTAP {
     # Interact with query parameters or the body of the request.
     try {
         $TAP = New-CIPPTAP -userid $Request.query.ID -TenantFilter $Request.query.tenantfilter -APIName $APINAME -ExecutingUser $request.headers.'x-ms-client-principal'
-        $Results = [pscustomobject]@{'Results' = "$TAP" }
+        $Results = [pscustomobject]@{'Results' = $TAP }
     } catch {
         $Results = [pscustomobject]@{'Results' = "Failed. $($_.Exception.Message)" }
     }
