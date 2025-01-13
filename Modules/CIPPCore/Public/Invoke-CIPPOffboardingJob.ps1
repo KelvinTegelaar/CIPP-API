@@ -51,10 +51,10 @@ function Invoke-CIPPOffboardingJob {
         }
         { $_.'forward' -ne '' } {
             if (!$Options.keepCopy) {
-                Set-CIPPForwarding -userid $userid -username $username -tenantFilter $Tenantfilter -Forward $Options.forward -ExecutingUser $ExecutingUser -APIName $APIName
+                Set-CIPPForwarding -userid $userid -username $username -tenantFilter $Tenantfilter -Forward $Options.forward.value -ExecutingUser $ExecutingUser -APIName $APIName
             } else {
                 $KeepCopy = [boolean]$Options.keepCopy
-                Set-CIPPForwarding -userid $userid -username $username -tenantFilter $Tenantfilter -Forward $Options.forward -KeepCopy $KeepCopy -ExecutingUser $ExecutingUser -APIName $APIName
+                Set-CIPPForwarding -userid $userid -username $username -tenantFilter $Tenantfilter -Forward $Options.forward.value -KeepCopy $KeepCopy -ExecutingUser $ExecutingUser -APIName $APIName
             }
         }
         { $_.'RemoveLicenses' -eq $true } {
@@ -99,6 +99,9 @@ function Invoke-CIPPOffboardingJob {
                 $null = Start-NewOrchestration -FunctionName CIPPOrchestrator -InputObject ($InputObject | ConvertTo-Json -Depth 10)
                 "Removal of permissions queued. This task will run in the background and send it's results to the logbook."
             }
+        }
+        { $_.'RemoveMFADevices' } {
+            Remove-CIPPUserMFA -UserPrincipalName $Username -TenantFilter $TenantFilter -ExecutingUser $ExecutingUser
         }
 
     }
