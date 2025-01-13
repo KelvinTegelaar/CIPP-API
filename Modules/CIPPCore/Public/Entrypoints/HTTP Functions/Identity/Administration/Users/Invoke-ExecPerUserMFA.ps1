@@ -14,7 +14,7 @@ function Invoke-ExecPerUserMFA {
     $Request = @{
         userId        = $Request.Body.userId
         TenantFilter  = $Request.Body.TenantFilter
-        State         = $Request.Body.State
+        State         = $Request.Body.State.value ?  $Request.Body.State.value : $Request.Body.State
         executingUser = $Request.Headers.'x-ms-client-principal'
     }
     $Result = Set-CIPPPerUserMFA @Request

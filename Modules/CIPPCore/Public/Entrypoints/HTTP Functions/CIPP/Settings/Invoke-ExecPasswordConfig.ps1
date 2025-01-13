@@ -22,14 +22,14 @@ Function Invoke-ExecPasswordConfig {
         if ($Request.Query.List) {
             @{ passwordType = $PasswordType.passwordType }
         } else {
-            $SchedulerConfig = @{
+            $PasswordConfig = @{
                 'passwordType'  = "$($Request.Body.passwordType)"
                 'passwordCount' = '12'
                 'PartitionKey'  = 'settings'
                 'RowKey'        = 'settings'
             }
 
-            Add-CIPPAzDataTableEntity @Table -Entity $SchedulerConfig -Force | Out-Null
+            Add-CIPPAzDataTableEntity @Table -Entity $PasswordConfig -Force | Out-Null
             'Successfully set the configuration'
         }
     } catch {

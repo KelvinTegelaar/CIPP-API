@@ -14,8 +14,11 @@ function Start-CIPPStatsTimer {
         }
         $TenantCount = (Get-Tenants -IncludeAll).count
 
-        Set-Location (Get-Item $PSScriptRoot).Parent.FullName
-        $APIVersion = Get-Content 'version_latest.txt' | Out-String
+
+        $ModuleBase = Get-Module CIPPCore | Select-Object -ExpandProperty ModuleBase
+        $CIPPRoot = (Get-Item $ModuleBase).Parent.Parent.FullName
+
+        $APIVersion = Get-Content "$CIPPRoot\version_latest.txt" | Out-String
 
         $SendingObject = [PSCustomObject]@{
             rgid                = $env:WEBSITE_SITE_NAME
