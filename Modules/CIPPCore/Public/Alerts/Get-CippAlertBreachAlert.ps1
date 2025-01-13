@@ -1,5 +1,5 @@
 
-function Get-CippBreachAlert {
+function Get-CippAlertBreachAlert {
     <#
     .FUNCTIONALITY
         Entrypoint

@@ -28,6 +28,9 @@ function Invoke-ExecCippFunction {
     if (Get-Command -Module CIPPCore -Name $Function -and $BlockList -notcontains $Function) {
         try {
             $Results = & $Function @Params
+            if (!$Results) {
+                $Results = "Function $Function executed successfully"
+            }
             $StatusCode = [HttpStatusCode]::OK
         } catch {
             $Results = $_.Exception.Message
