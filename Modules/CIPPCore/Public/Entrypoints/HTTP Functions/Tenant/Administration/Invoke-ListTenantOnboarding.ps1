@@ -12,16 +12,16 @@ function Invoke-ListTenantOnboarding {
     try {
         $OnboardTable = Get-CIPPTable -TableName 'TenantOnboarding'
         $TenantOnboardings = Get-CIPPAzDataTableEntity @OnboardTable
-        $Results = foreach ($TenantOnboarding in $TenantOnboardings) {
-            $Steps = $TenantOnboarding.OnboardingSteps | ConvertFrom-Json
-            $OnboardingSteps = foreach ($Step in $Steps.PSObject.Properties.Name) { $Steps.$Step }
-            $Relationship = try { $TenantOnboarding.Relationship | ConvertFrom-Json -ErrorAction Stop } catch { @{} }
-            $Logs = try { $TenantOnboarding.Logs | ConvertFrom-Json -ErrorAction Stop } catch { @{} }
-            $TenantOnboarding.OnboardingSteps = $OnboardingSteps
-            $TenantOnboarding.Relationship = $Relationship
-            $TenantOnboarding.Logs = $Logs
-            $TenantOnboarding
-        }
+        $Results = @(foreach ($TenantOnboarding in $TenantOnboardings) {
+                $Steps = $TenantOnboarding.OnboardingSteps | ConvertFrom-Json
+                $OnboardingSteps = foreach ($Step in $Steps.PSObject.Properties.Name) { $Steps.$Step }
+                $Relationship = try { $TenantOnboarding.Relationship | ConvertFrom-Json -ErrorAction Stop } catch { @{} }
+                $Logs = try { $TenantOnboarding.Logs | ConvertFrom-Json -ErrorAction Stop } catch { @{} }
+                $TenantOnboarding.OnboardingSteps = $OnboardingSteps
+                $TenantOnboarding.Relationship = $Relationship
+                $TenantOnboarding.Logs = $Logs
+                $TenantOnboarding
+            })
         $StatusCode = [HttpStatusCode]::OK
     } catch {
         $ErrorMsg = Get-NormalizedError -message $($_.Exception.Message)

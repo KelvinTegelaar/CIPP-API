@@ -53,7 +53,7 @@ Function Invoke-ExecExcludeLicenses {
         }
 
         if ($Request.Query.RemoveExclusion) {
-            $Filter = "RowKey eq '{0}' and PartitionKey eq 'License'" -f $Request.Query.Guid
+            $Filter = "RowKey eq '{0}' and PartitionKey eq 'License'" -f $Request.Body.GUID
             $Entity = Get-CIPPAzDataTableEntity @Table -Filter $Filter -Property PartitionKey, RowKey
             Remove-AzDataTableEntity -Force @Table -Entity $Entity
             Write-LogMessage -API $APINAME -user $request.headers.'x-ms-client-principal' -message "Removed exclusion $($Request.Query.GUID)" -Sev 'Info'

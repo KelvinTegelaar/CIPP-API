@@ -49,7 +49,7 @@ function Push-ExecScheduledCommand {
     } catch {
         $errorMessage = $_.Exception.Message
         if ($task.Recurrence -ne 0) { $State = 'Failed - Planned' } else { $State = 'Failed' }
-        Update-AzDataTableEntity @Table -Entity @{
+        Update-AzDataTableEntity -Force @Table -Entity @{
             PartitionKey = $task.PartitionKey
             RowKey       = $task.RowKey
             Results      = "$errorMessage"
@@ -83,7 +83,7 @@ function Push-ExecScheduledCommand {
 
     if ($task.Recurrence -eq '0' -or [string]::IsNullOrEmpty($task.Recurrence)) {
         Write-Host 'Recurrence empty or 0. Task is not recurring. Setting task state to completed.'
-        Update-AzDataTableEntity @Table -Entity @{
+        Update-AzDataTableEntity -Force @Table -Entity @{
             PartitionKey = $task.PartitionKey
             RowKey       = $task.RowKey
             Results      = "$StoredResults"
@@ -110,7 +110,7 @@ function Push-ExecScheduledCommand {
 
         $nextRunUnixTime = [int64]$task.ScheduledTime + [int64]$secondsToAdd
         Write-Host "The job is recurring. It was scheduled for $($task.ScheduledTime). The next runtime should be $nextRunUnixTime"
-        Update-AzDataTableEntity @Table -Entity @{
+        Update-AzDataTableEntity -Force @Table -Entity @{
             PartitionKey  = $task.PartitionKey
             RowKey        = $task.RowKey
             Results       = "$StoredResults"

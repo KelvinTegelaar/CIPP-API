@@ -3,7 +3,7 @@ function Invoke-ExecWebhookSubscriptions {
     .FUNCTIONALITY
         Entrypoint
     .ROLE
-        Tenant.Alerts.ReadWrite
+        Tenant.Alert.ReadWrite
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
