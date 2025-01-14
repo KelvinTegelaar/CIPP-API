@@ -10,7 +10,7 @@ function New-GraphGetRequest {
         [string]$scope,
         [bool]$AsApp,
         [bool]$noPagination,
-        [bool]$NoAuthCheck,
+        $NoAuthCheck = $false,
         [bool]$skipTokenCache,
         $Caller,
         [switch]$ComplexFilter,
