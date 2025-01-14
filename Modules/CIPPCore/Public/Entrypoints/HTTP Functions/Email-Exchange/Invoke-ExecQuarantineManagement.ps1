@@ -11,7 +11,7 @@ Function Invoke-ExecQuarantineManagement {
     param($Request, $TriggerMetadata)
 
     $APIName = $TriggerMetadata.FunctionName
-    Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -message 'Accessed this API' -Sev 'Debug'
+    Write-LogMessage -user $Request.headers.'x-ms-client-principal' -API $APINAME -message 'Accessed this API' -Sev 'Debug'
 
 
     # Write to the Azure Functions log stream.
@@ -20,19 +20,19 @@ Function Invoke-ExecQuarantineManagement {
 
     # Interact with query parameters or the body of the request.
     Try {
-        $tenantfilter = $Request.Query.TenantFilter
+        $TenantFilter = $Request.Body.tenantFilter
         $params = @{
-            Identity     = $request.query.ID
-            AllowSender  = [boolean]$Request.query.AllowSender
-            ReleasetoAll = [boolean]$Request.query.type
-            ActionType   = $Request.query.type
+            Identity     = $Request.Body.Identity
+            AllowSender  = [boolean]$Request.Body.AllowSender
+            ReleaseToAll = [boolean]$Request.Body.Type
+            ActionType   = $Request.Body.Type
         }
-        Write-Host $params
+
         New-ExoRequest -tenantid $TenantFilter -cmdlet 'Release-QuarantineMessage' -cmdParams $Params
-        $Results = [pscustomobject]@{'Results' = "Successfully processed $($request.query.ID)" }
-        Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $($tenantfilter) -message "$($request.query.id)" -Sev 'Info'
+        $Results = [pscustomobject]@{'Results' = "Successfully processed $($Request.Body.Identity)" }
+        Write-LogMessage -user $Request.headers.'x-ms-client-principal' -API $APINAME -tenant $TenantFilter -message "Successfully processed Quarantine ID $($Request.Body.Identity)" -Sev 'Info'
     } catch {
-        Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $($tenantfilter) -message "Quarantine Management failed: $($_.Exception.Message)" -Sev 'Error'
+        Write-LogMessage -user $Request.headers.'x-ms-client-principal' -API $APINAME -tenant $TenantFilter -message "Quarantine Management failed: $($_.Exception.Message)" -Sev 'Error' -LogData $_
         $Results = [pscustomobject]@{'Results' = "Failed. $($_.Exception.Message)" }
     }
     # Associate values to output bindings by calling 'Push-OutputBinding'.
