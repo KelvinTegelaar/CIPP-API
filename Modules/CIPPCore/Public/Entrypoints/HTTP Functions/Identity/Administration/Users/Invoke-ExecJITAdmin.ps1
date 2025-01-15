@@ -92,6 +92,7 @@ Function Invoke-ExecJITAdmin {
             Start-Sleep -Seconds 1
         }
 
+        #Region TAP creation
         if ($Request.Body.UseTAP) {
             try {
                 if ($Start -gt (Get-Date)) {
@@ -102,7 +103,7 @@ Function Invoke-ExecJITAdmin {
                 } else {
                     $TapBody = '{}'
                 }
-                Write-Information "https://graph.microsoft.com/beta/users/$Username/authentication/temporaryAccessPassMethods"
+                # Write-Information "https://graph.microsoft.com/beta/users/$Username/authentication/temporaryAccessPassMethods"
                 # Retry creating the TAP up to 10 times, since it can fail due to the user not being fully created yet. Sometimes it takes 2 reties, sometimes it takes 8+. Very annoying. -Bobby
                 $Retries = 0
                 $MAX_TAP_RETRIES = 10
@@ -136,6 +137,7 @@ Function Invoke-ExecJITAdmin {
                 }
             }
         }
+        #EndRegion TAP creation
 
         $Parameters = @{
             TenantFilter = $TenantFilter
