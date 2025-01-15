@@ -33,7 +33,7 @@ Function Invoke-EditUser {
     Write-Host 'PowerShell HTTP trigger function processed a request.'
     #Edit the user
     try {
-        Write-Host "$([boolean]$UserObj.mustchangepass)"
+        Write-Host "$([boolean]$UserObj.MustChangePass)"
         $UserPrincipalName = "$($UserObj.Username ? $UserObj.username :$UserObj.mailNickname)@$($UserObj.Domain ? $UserObj.Domain : $UserObj.primDomain.value)"
         $BodyToship = [pscustomobject] @{
             'givenName'         = $UserObj.givenName
@@ -72,7 +72,7 @@ Function Invoke-EditUser {
         $null = $results.Add( 'Success. The user has been edited.' )
         Write-LogMessage -API $ApiName -tenant ($UserObj.tenantFilter) -user $User -message "Edited user $($UserObj.DisplayName) with id $($UserObj.id)" -Sev Info
         if ($UserObj.password) {
-            $passwordProfile = [pscustomobject]@{'passwordProfile' = @{ 'password' = $UserObj.password; 'forceChangePasswordNextSignIn' = [boolean]$UserObj.mustchangepass } } | ConvertTo-Json
+            $passwordProfile = [pscustomobject]@{'passwordProfile' = @{ 'password' = $UserObj.password; 'forceChangePasswordNextSignIn' = [boolean]$UserObj.MustChangePass } } | ConvertTo-Json
             $null = New-GraphPostRequest -uri "https://graph.microsoft.com/beta/users/$($UserObj.id)" -tenantid $UserObj.tenantFilter -type PATCH -body $PasswordProfile -verbose
             $null = $results.Add("Success. The password has been set to $($UserObj.password)")
             Write-LogMessage -API $ApiName -tenant ($UserObj.tenantFilter) -user $User -message "Reset $($UserObj.DisplayName)'s Password" -Sev Info
