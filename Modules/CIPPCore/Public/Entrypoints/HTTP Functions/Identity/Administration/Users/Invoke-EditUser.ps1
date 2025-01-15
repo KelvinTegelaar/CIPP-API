@@ -63,24 +63,24 @@ Function Invoke-EditUser {
             Write-Host 'Found added attribute'
             Write-Host "Added attributes: $($UserObj.addedAttributes | ConvertTo-Json)"
             $UserObj.addedAttributes.GetEnumerator() | ForEach-Object {
-                $results.Add("Edited property $($_.Key) with value $($_.Value)")
+                $null = $results.Add("Edited property $($_.Key) with value $($_.Value)")
                 $bodytoShip | Add-Member -NotePropertyName $_.Key -NotePropertyValue $_.Value -Force
             }
         }
         $bodyToShip = ConvertTo-Json -Depth 10 -InputObject $BodyToship -Compress
         $null = New-GraphPostRequest -uri "https://graph.microsoft.com/beta/users/$($UserObj.id)" -tenantid $UserObj.tenantFilter -type PATCH -body $BodyToship -verbose
-        $results.Add( 'Success. The user has been edited.' )
+        $null = $results.Add( 'Success. The user has been edited.' )
         Write-LogMessage -API $ApiName -tenant ($UserObj.tenantFilter) -user $User -message "Edited user $($UserObj.DisplayName) with id $($UserObj.id)" -Sev Info
         if ($UserObj.password) {
             $passwordProfile = [pscustomobject]@{'passwordProfile' = @{ 'password' = $UserObj.password; 'forceChangePasswordNextSignIn' = [boolean]$UserObj.mustchangepass } } | ConvertTo-Json
             $null = New-GraphPostRequest -uri "https://graph.microsoft.com/beta/users/$($UserObj.id)" -tenantid $UserObj.tenantFilter -type PATCH -body $PasswordProfile -verbose
-            $results.Add("Success. The password has been set to $($UserObj.password)")
+            $null = $results.Add("Success. The password has been set to $($UserObj.password)")
             Write-LogMessage -API $ApiName -tenant ($UserObj.tenantFilter) -user $User -message "Reset $($UserObj.DisplayName)'s Password" -Sev Info
         }
     } catch {
         $ErrorMessage = Get-CippException -Exception $_
         Write-LogMessage -API $ApiName -tenant ($UserObj.tenantFilter) -user $User -message "User edit API failed. $($ErrorMessage.NormalizedError)" -Sev Error -LogData $ErrorMessage
-        $results.Add( "Failed to edit user. $($ErrorMessage.NormalizedError)")
+        $null = $results.Add( "Failed to edit user. $($ErrorMessage.NormalizedError)")
     }
 
 
@@ -92,16 +92,16 @@ Function Invoke-EditUser {
             #if the list of skuIds in $CurrentLicenses.assignedLicenses is EXACTLY the same as $licenses, we don't need to do anything, but the order in both can be different.
             if (($CurrentLicenses.assignedLicenses.skuId -join ',') -eq ($licenses -join ',') -and $UserObj.removeLicenses -eq $false) {
                 Write-Host "$($CurrentLicenses.assignedLicenses.skuId -join ',') $(($licenses -join ','))"
-                $results.Add( 'Success. User license is already correct.' )
+                $null = $results.Add( 'Success. User license is already correct.' )
             } else {
                 if ($UserObj.removeLicenses) {
                     $licResults = Set-CIPPUserLicense -UserId $UserObj.id -TenantFilter $UserObj.tenantFilter -RemoveLicenses $CurrentLicenses.assignedLicenses.skuId
-                    $results.Add($licResults)
+                    $null = $results.Add($licResults)
                 } else {
                     #Remove all objects from $CurrentLicenses.assignedLicenses.skuId that are in $licenses
                     $RemoveLicenses = $CurrentLicenses.assignedLicenses.skuId | Where-Object { $_ -notin $licenses }
                     $licResults = Set-CIPPUserLicense -UserId $UserObj.id -TenantFilter $UserObj.tenantFilter -RemoveLicenses $RemoveLicenses -AddLicenses $licenses
-                    $results.Add($licResults)
+                    $null = $results.Add($licResults)
                 }
 
             }
@@ -110,7 +110,7 @@ Function Invoke-EditUser {
     } catch {
         $ErrorMessage = Get-CippException -Exception $_
         Write-LogMessage -API $ApiName -tenant ($UserObj.tenantFilter) -user $User -message "License assign API failed. $($ErrorMessage.NormalizedError)" -Sev Error -LogData $ErrorMessage
-        $results.Add( "We've failed to assign the license. $($ErrorMessage.NormalizedError)")
+        $null = $results.Add( "We've failed to assign the license. $($ErrorMessage.NormalizedError)")
     }
 
     #Add Aliases, removal currently not supported.
@@ -118,22 +118,22 @@ Function Invoke-EditUser {
         if ($Aliases) {
             Write-Host ($Aliases | ConvertTo-Json)
             foreach ($Alias in $Aliases) {
-                New-GraphPostRequest -uri "https://graph.microsoft.com/beta/users/$($UserObj.id)" -tenantid $UserObj.tenantFilter -type 'patch' -body "{`"mail`": `"$Alias`"}" -Verbose
+                $null = New-GraphPostRequest -uri "https://graph.microsoft.com/beta/users/$($UserObj.id)" -tenantid $UserObj.tenantFilter -type 'patch' -body "{`"mail`": `"$Alias`"}" -Verbose
             }
-            New-GraphPostRequest -uri "https://graph.microsoft.com/beta/users/$($UserObj.id)" -tenantid $UserObj.tenantFilter -type 'patch' -body "{`"mail`": `"$UserPrincipalName`"}" -Verbose
+            $null = New-GraphPostRequest -uri "https://graph.microsoft.com/beta/users/$($UserObj.id)" -tenantid $UserObj.tenantFilter -type 'patch' -body "{`"mail`": `"$UserPrincipalName`"}" -Verbose
             Write-LogMessage -API $ApiName -tenant ($UserObj.tenantFilter) -user $User -message "Added Aliases to $($UserObj.DisplayName)" -Sev Info
-            $results.Add( 'Success. added aliases to user.')
+            $null = $results.Add( 'Success. added aliases to user.')
         }
 
     } catch {
         $ErrorMessage = Get-CippException -Exception $_
         Write-LogMessage -API $ApiName -tenant ($UserObj.tenantFilter) -user $User -message "Alias API failed. $($ErrorMessage.NormalizedError)" -Sev Error -LogData $ErrorMessage
-        $results.Add( "Successfully edited user. The password is $password. We've failed to create the Aliases: $($ErrorMessage.NormalizedError)")
+        $null = $results.Add( "Successfully edited user. The password is $password. We've failed to create the Aliases: $($ErrorMessage.NormalizedError)")
     }
 
     if ($Request.body.CopyFrom.value) {
         $CopyFrom = Set-CIPPCopyGroupMembers -ExecutingUser $User -CopyFromId $Request.body.CopyFrom.value -UserID $UserPrincipalName -TenantFilter $UserObj.tenantFilter
-        $results.AddRange($CopyFrom)
+        $null = $results.AddRange($CopyFrom)
     }
 
     if ($AddToGroups) {
@@ -178,7 +178,7 @@ Function Invoke-EditUser {
         $ManagerBodyJSON = ConvertTo-Json -Compress -Depth 10 -InputObject $ManagerBody
         $null = New-GraphPostRequest -uri "https://graph.microsoft.com/beta/users/$($UserObj.id)/manager/`$ref" -tenantid $UserObj.tenantFilter -type PUT -body $ManagerBodyJSON -Verbose
         Write-LogMessage -user $User -API $ApiName -tenant $UserObj.tenantFilter -message "Set $($UserObj.DisplayName)'s manager to $($Request.body.setManager.label)" -Sev Info
-        $results.Add("Success. Set $($UserObj.DisplayName)'s manager to $($Request.body.setManager.label)")
+        $null = $results.Add("Success. Set $($UserObj.DisplayName)'s manager to $($Request.body.setManager.label)")
     }
 
     if ($RemoveFromGroups) {
@@ -195,12 +195,12 @@ Function Invoke-EditUser {
 
                     Write-Host 'Removing From group via Remove-DistributionGroupMember '
                     $Params = @{ Identity = $GroupID; Member = $UserObj.id; BypassSecurityGroupManagerCheck = $true }
-                    New-ExoRequest -tenantid $UserObj.tenantFilter -cmdlet 'Remove-DistributionGroupMember' -cmdParams $params -UseSystemMailbox $true
+                    $null = New-ExoRequest -tenantid $UserObj.tenantFilter -cmdlet 'Remove-DistributionGroupMember' -cmdParams $params -UseSystemMailbox $true
 
                 } else {
 
                     Write-Host 'Removing From group via Graph'
-                    New-GraphPostRequest -uri "https://graph.microsoft.com/beta/groups/$GroupID/members/$($UserObj.id)/`$ref" -tenantid $UserObj.tenantFilter -type DELETE
+                    $null = New-GraphPostRequest -uri "https://graph.microsoft.com/beta/groups/$GroupID/members/$($UserObj.id)/`$ref" -tenantid $UserObj.tenantFilter -type DELETE
 
                 }
 
