@@ -10,8 +10,6 @@ Function Invoke-listStandardTemplates {
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
 
-    $APIName = $TriggerMetadata.FunctionName
-
     $Table = Get-CippTable -tablename 'templates'
     $Filter = "PartitionKey eq 'StandardsTemplateV2'"
     $Templates = (Get-CIPPAzDataTableEntity @Table -Filter $Filter) | ForEach-Object {
