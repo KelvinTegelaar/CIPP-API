@@ -9,10 +9,7 @@ Function Invoke-ExecGDAPRemoveGArole {
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
 
-    $APIName = $TriggerMetadata.FunctionName
-    Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -message 'Accessed this API' -Sev 'Debug'
-
-    $GDAPID = $request.query.GDAPId
+    $GDAPID = $request.query.GDAPId ?? $request.Body.GDAPId
 
     try {
         $CheckActive = New-GraphGetRequest -NoAuthCheck $True -uri "https://graph.microsoft.com/beta/tenantRelationships/delegatedAdminRelationships/$($GDAPID)" -tenantid $env:TenantID
@@ -36,7 +33,7 @@ Function Invoke-ExecGDAPRemoveGArole {
                 $Message = "Relationship status is currently $($CheckActive.status), it is not possible to remove the Global Administrator role in this state."
             }
             if ('62e90394-69f5-4237-9190-012177145e10' -notin $CheckActive.accessDetails.unifiedRoles.roleDefinitionId) {
-                $Message = "This relationship does not contain the Global Administrator role."
+                $Message = 'This relationship does not contain the Global Administrator role.'
             }
         }
     } catch {
