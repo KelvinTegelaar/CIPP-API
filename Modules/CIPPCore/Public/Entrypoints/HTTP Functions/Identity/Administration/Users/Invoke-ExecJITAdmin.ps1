@@ -92,6 +92,7 @@ Function Invoke-ExecJITAdmin {
             Start-Sleep -Seconds 1
         }
 
+        #Region TAP creation
         if ($Request.Body.UseTAP) {
             try {
                 if ($Start -gt (Get-Date)) {
@@ -102,19 +103,20 @@ Function Invoke-ExecJITAdmin {
                 } else {
                     $TapBody = '{}'
                 }
-                Write-Information "https://graph.microsoft.com/beta/users/$Username/authentication/temporaryAccessPassMethods"
-                # Retry creating the TAP up to 5 times, since it can fail due to the user not being fully created yet
+                # Write-Information "https://graph.microsoft.com/beta/users/$Username/authentication/temporaryAccessPassMethods"
+                # Retry creating the TAP up to 10 times, since it can fail due to the user not being fully created yet. Sometimes it takes 2 reties, sometimes it takes 8+. Very annoying. -Bobby
                 $Retries = 0
+                $MAX_TAP_RETRIES = 10
                 do {
                     try {
                         $TapRequest = New-GraphPostRequest -uri "https://graph.microsoft.com/beta/users/$($Username)/authentication/temporaryAccessPassMethods" -tenantid $TenantFilter -type POST -body $TapBody
                     } catch {
                         Start-Sleep -Seconds 2
-                        Write-Information 'ERROR: Failed to create TAP, retrying'
-                        Write-Information ( ConvertTo-Json -Depth 5 -InputObject (Get-CippException -Exception $_))
+                        Write-Information "ERROR: Run $Retries of $MAX_TAP_RETRIES : Failed to create TAP, retrying"
+                        # Write-Information ( ConvertTo-Json -Depth 5 -InputObject (Get-CippException -Exception $_))
                     }
                     $Retries++
-                } while ( $null -eq $TapRequest.temporaryAccessPass -and $Retries -le 5 )
+                } while ( $null -eq $TapRequest.temporaryAccessPass -and $Retries -le $MAX_TAP_RETRIES )
 
                 $TempPass = $TapRequest.temporaryAccessPass
                 $PasswordExpiration = $TapRequest.LifetimeInMinutes
@@ -135,6 +137,7 @@ Function Invoke-ExecJITAdmin {
                 }
             }
         }
+        #EndRegion TAP creation
 
         $Parameters = @{
             TenantFilter = $TenantFilter
