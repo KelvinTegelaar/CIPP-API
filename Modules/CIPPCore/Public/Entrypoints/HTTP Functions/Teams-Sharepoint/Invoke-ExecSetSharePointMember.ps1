@@ -10,13 +10,21 @@ Function Invoke-ExecSetSharePointMember {
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
 
+
+    $APIName = $TriggerMetadata.FunctionName
+    $ExecutingUser = $request.headers.'x-ms-client-principal'
+    Write-LogMessage -user $ExecutingUser -API $APINAME -message 'Accessed this API' -Sev 'Debug'
+    $TenantFilter = $Request.body.tenantFilter
+
+
+
     if ($Request.body.SharePointType -eq 'Group') {
-        $GroupId = (New-GraphGetRequest -uri "https://graph.microsoft.com/beta/groups?`$filter=mail eq '$($Request.Body.GroupID)' or proxyAddresses/any(x:endsWith(x,'$($Request.Body.GroupID)'))&`$count=true" -ComplexFilter -tenantid $Request.Body.TenantFilter).id
+        $GroupId = (New-GraphGetRequest -uri "https://graph.microsoft.com/beta/groups?`$filter=mail eq '$($Request.Body.GroupID)' or proxyAddresses/any(x:endsWith(x,'$($Request.Body.GroupID)'))&`$count=true" -ComplexFilter -tenantid $TenantFilter).id
         if ($Request.body.Add -eq $true) {
-            $Results = Add-CIPPGroupMember -GroupType 'Team' -GroupID $GroupID -Member $Request.Body.user.value -TenantFilter $Request.Body.TenantFilter -ExecutingUser $request.headers.'x-ms-client-principal'
+            $Results = Add-CIPPGroupMember -GroupType 'Team' -GroupID $GroupID -Member $Request.Body.user.value -TenantFilter $TenantFilter -ExecutingUser $ExecutingUser
         } else {
-            $UserID = (New-GraphGetRequest -uri "https://graph.microsoft.com/v1.0/users/$($Request.Body.user.value)" -tenantid $Request.Body.TenantFilter).id
-            $Results = Remove-CIPPGroupMember -GroupType 'Team' -GroupID $GroupID -Member $UserID -TenantFilter $Request.Body.TenantFilter -ExecutingUser $request.headers.'x-ms-client-principal'
+            $UserID = (New-GraphGetRequest -uri "https://graph.microsoft.com/v1.0/users/$($Request.Body.user.value)" -tenantid $TenantFilter).id
+            $Results = Remove-CIPPGroupMember -GroupType 'Team' -GroupID $GroupID -Member $UserID -TenantFilter $TenantFilter -ExecutingUser $ExecutingUser
         }
     } else {
         $Results = 'This type of SharePoint site is not supported.'

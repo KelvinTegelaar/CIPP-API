@@ -1,8 +1,8 @@
 function Set-CIPPSharePointPerms {
     [CmdletBinding()]
     param (
-        $userid,
-        $OnedriveAccessUser,
+        $UserId, # The UPN or ID of the users OneDrive we are changing permissions on
+        $OnedriveAccessUser, # The UPN of the user we are adding or removing permissions for
         $TenantFilter,
         $APIName = 'Manage SharePoint Owner',
         $RemovePermission,
@@ -17,6 +17,7 @@ function Set-CIPPSharePointPerms {
 
     try {
         if (!$URL) {
+            Write-Information 'No URL provided, getting URL from Graph'
             $URL = (New-GraphGetRequest -uri "https://graph.microsoft.com/v1.0/users/$($UserId)/Drives" -asapp $true -tenantid $TenantFilter).WebUrl
         }
         $tenantName = (New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/sites/root' -asApp $true -tenantid $TenantFilter).id.Split('.')[0]
@@ -39,19 +40,19 @@ function Set-CIPPSharePointPerms {
 </Request>
 "@
         $request = New-GraphPostRequest -scope "$AdminURL/.default" -tenantid $TenantFilter -Uri "$AdminURL/_vti_bin/client.svc/ProcessQuery" -Type POST -Body $XML -ContentType 'text/xml'
-        Write-Host $($request)
+        # Write-Host $($request)
         if (!$request.ErrorInfo.ErrorMessage) {
             $Message = "$($OnedriveAccessUser) has been $($RemovePermission ? 'removed from' : 'given') access to $URL"
-            Write-LogMessage -user $ExecutingUser -API $APIName -message $Message -Sev 'Info' -tenant $TenantFilter
+            Write-LogMessage -user $ExecutingUser -API $APIName -message $Message -Sev Info -tenant $TenantFilter
             return $Message
         } else {
             $message = "Failed to change access: $($request.ErrorInfo.ErrorMessage)"
-            Write-LogMessage -user $ExecutingUser -API $APIName -message $message -Sev 'Info' -tenant $TenantFilter
-            return $message
+            Write-LogMessage -user $ExecutingUser -API $APIName -message $message -Sev Error -tenant $TenantFilter
+            throw $Message
         }
     } catch {
         $ErrorMessage = Get-CippException -Exception $_
-        Write-LogMessage -user $ExecutingUser -API $APIName -message "Could not add new owner to  $($OnedriveAccessUser) on $URL. Error: $($ErrorMessage.NormalizedError)" -Sev 'Error' -tenant $TenantFilter -LogData $ErrorMessage
+        Write-LogMessage -user $ExecutingUser -API $APIName -message "Could not add new owner to $($OnedriveAccessUser) on $URL. Error: $($ErrorMessage.NormalizedError)" -Sev Error -tenant $TenantFilter -LogData $ErrorMessage
         return "Could not add owner for $($URL). Error: $($ErrorMessage.NormalizedError)"
     }
 }
