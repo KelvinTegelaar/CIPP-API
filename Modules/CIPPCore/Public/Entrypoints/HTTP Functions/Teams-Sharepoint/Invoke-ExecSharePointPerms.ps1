@@ -11,17 +11,36 @@ Function Invoke-ExecSharePointPerms {
     param($Request, $TriggerMetadata)
 
     $APIName = $TriggerMetadata.FunctionName
-    $tenantFilter = $Request.Body.TenantFilter
+    $tenantFilter = $Request.Body.tenantFilter
+    $ExecutingUser = $Request.Headers.'x-ms-client-principal'
+
+    Write-LogMessage -user $ExecutingUser -API $APIName -message 'Accessed this API' -Sev Debug
+
+    # The UPN or ID of the users OneDrive we are changing permissions on
+    $UserId = $Request.body.UPN
+    # The UPN of the user we are adding or removing permissions for
+    $OnedriveAccessUser = $Request.body.onedriveAccessUser.value
+
     try {
-        $State = Set-CIPPSharePointPerms -tenantFilter $tenantFilter -userid $request.body.UPN -OnedriveAccessUser $request.body.input -ExecutingUser $ExecutingUser -APIName $APIName -RemovePermission $request.body.RemovePermission -URL $Request.Body.URL
+
+        $State = Set-CIPPSharePointPerms -tenantFilter $tenantFilter `
+            -UserId $UserId `
+            -OnedriveAccessUser $OnedriveAccessUser `
+            -ExecutingUser $ExecutingUser `
+            -APIName $APIName `
+            -RemovePermission $Request.body.RemovePermission `
+            -URL $Request.Body.URL
         $Results = [pscustomobject]@{'Results' = "$State" }
+        $StatusCode = [HttpStatusCode]::OK
     } catch {
-        $Results = [pscustomobject]@{'Results' = "Failed. $($_.Exception.Message)" }
+        $ErrorMessage = Get-CippException -Exception $_
+        $Results = [pscustomobject]@{'Results' = "Failed. $($ErrorMessage.NormalizedError)" }
+        $StatusCode = [HttpStatusCode]::BadRequest
     }
 
     # Associate values to output bindings by calling 'Push-OutputBinding'.
     Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
-            StatusCode = [HttpStatusCode]::OK
+            StatusCode = $StatusCode
             Body       = $Results
         })
 
