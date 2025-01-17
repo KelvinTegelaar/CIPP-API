@@ -56,7 +56,7 @@ function New-GraphBulkRequest {
             if ($Message -ne 'Request not applicable to target tenant.') {
                 $Tenant.LastGraphError = $Message ?? ''
                 $Tenant.GraphErrorCount++
-                Update-AzDataTableEntity @TenantsTable -Entity $Tenant
+                Update-AzDataTableEntity -Force @TenantsTable -Entity $Tenant
             }
             throw $Message
         }
@@ -66,7 +66,7 @@ function New-GraphBulkRequest {
         } else {
             $Tenant.LastGraphError = ''
         }
-        Update-AzDataTableEntity @TenantsTable -Entity $Tenant
+        Update-AzDataTableEntity -Force @TenantsTable -Entity $Tenant
 
         return $ReturnedData.responses
     } else {
