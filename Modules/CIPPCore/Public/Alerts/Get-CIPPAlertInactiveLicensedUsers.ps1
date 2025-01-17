@@ -18,6 +18,7 @@ function Get-CIPPAlertInactiveLicensedUsers {
             $GraphRequest = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/users?`$filter=(signInActivity/lastNonInteractiveSignInDateTime le $Lookup)&`$select=id,UserPrincipalName,signInActivity,mail,userType,accountEnabled,assignedLicenses" -scope 'https://graph.microsoft.com/.default' -tenantid $TenantFilter |
                 Where-Object { $null -ne $_.assignedLicenses.skuId }
 
+            # true = only active users
             if ($InputValue -eq $true) { $GraphRequest = $GraphRequest | Where-Object { $_.accountEnabled -eq $true } }
             $AlertData = foreach ($user in $GraphRequest) {
                 $Message = 'User {0} has been inactive for 90 days, but still has a license assigned.' -f $user.UserPrincipalName
