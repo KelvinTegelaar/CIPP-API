@@ -17,7 +17,8 @@ Function Invoke-listStandardTemplates {
         try {
             $data = $_.JSON | ConvertFrom-Json -Depth 100 -ErrorAction SilentlyContinue
         } catch {
-            Write-Host "Could not load standard template: $($_.Exception.Message). Content of the template is: $($JSON)"
+            Write-Host "Could not load standard template: $($_.Exception.Message). Content of the template is: $($JSON)."
+            Write-Host "Template GUID: $($_.GUID)"
             return
         }
         $data | Add-Member -NotePropertyName 'GUID' -NotePropertyValue $_.GUID -Force
