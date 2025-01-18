@@ -64,44 +64,44 @@ function Invoke-CIPPStandardcalDefault {
             $Mailbox = $_
             try {
                 New-ExoRequest -tenantid $Tenant -cmdlet 'Get-MailboxFolderStatistics' -cmdParams @{identity = $Mailbox.UserPrincipalName; FolderScope = 'Calendar' } -Anchor $Mailbox.UserPrincipalName | Where-Object { $_.FolderType -eq 'Calendar' } |
-                ForEach-Object {
-                    try {
-                        New-ExoRequest -tenantid $Tenant -cmdlet 'Set-MailboxFolderPermission' -cmdparams @{Identity = "$($Mailbox.UserPrincipalName):$($_.FolderId)"; User = 'Default'; AccessRights = $Settings.permissionlevel } -Anchor $Mailbox.UserPrincipalName
-                        Write-LogMessage -API 'Standards' -tenant $Tenant -message "Set default folder permission for $($Mailbox.UserPrincipalName):\$($_.Name) to $($Settings.permissionlevel)" -sev Debug
-                        $SuccessCounter++
-                    } catch {
-                        $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
-                        Write-Host "Setting cal failed: $ErrorMessage"
-                        Write-LogMessage -API 'Standards' -tenant $Tenant -message "Could not set default calendar permissions for $($Mailbox.UserPrincipalName). Error: $ErrorMessage" -sev Error
+                    ForEach-Object {
+                        try {
+                            $null = New-ExoRequest -tenantid $Tenant -cmdlet 'Set-MailboxFolderPermission' -cmdparams @{Identity = "$($Mailbox.UserPrincipalName):$($_.FolderId)"; User = 'Default'; AccessRights = $Settings.permissionlevel } -Anchor $Mailbox.UserPrincipalName
+                            Write-LogMessage -API 'Standards' -tenant $Tenant -message "Set default folder permission for $($Mailbox.UserPrincipalName):\$($_.Name) to $($Settings.permissionlevel)" -sev Debug
+                            $SuccessCounter++
+                        } catch {
+                            $ErrorMessage = Get-CippException -Exception $_
+                            Write-Host "Setting cal failed: $ErrorMessage"
+                            Write-LogMessage -API 'Standards' -tenant $Tenant -message "Could not set default calendar permissions for $($Mailbox.UserPrincipalName). Error: $($ErrorMessage.NormalizedError)" -sev Error -LogData $ErrorMessage
+                        }
                     }
+                } catch {
+                    $ErrorMessage = Get-CippException -Exception $_
+                    Write-LogMessage -API 'Standards' -tenant $Tenant -message "Could not set default calendar permissions for $($Mailbox.UserPrincipalName). Error: $($ErrorMessage.NormalizedError)" -sev Error -LogData $ErrorMessage
                 }
-            } catch {
-                $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
-                Write-LogMessage -API 'Standards' -tenant $Tenant -message "Could not set default calendar permissions for $($Mailbox.UserPrincipalName). Error: $ErrorMessage" -sev Error
-            }
-            $processedMailboxes++
-            if ($processedMailboxes % 25 -eq 0) {
-                $LastRun = @{
-                    RowKey              = 'calDefaults'
-                    PartitionKey        = $Tenant
-                    totalMailboxes      = $TotalMailboxes
-                    processedMailboxes  = $processedMailboxes
-                    currentSuccessCount = $SuccessCounter
+                $processedMailboxes++
+                if ($processedMailboxes % 25 -eq 0) {
+                    $LastRun = @{
+                        RowKey              = 'calDefaults'
+                        PartitionKey        = $Tenant
+                        totalMailboxes      = $TotalMailboxes
+                        processedMailboxes  = $processedMailboxes
+                        currentSuccessCount = $SuccessCounter
+                    }
+                    Add-CIPPAzDataTableEntity @LastRunTable -Entity $LastRun -Force
+                    Write-Host "Processed $processedMailboxes mailboxes"
                 }
-                Add-CIPPAzDataTableEntity @LastRunTable -Entity $LastRun -Force
-                Write-Host "Processed $processedMailboxes mailboxes"
             }
-        }
 
-        $LastRun = @{
-            RowKey              = 'calDefaults'
-            PartitionKey        = $Tenant
-            totalMailboxes      = $TotalMailboxes
-            processedMailboxes  = $processedMailboxes
-            currentSuccessCount = $SuccessCounter
-        }
-        Add-CIPPAzDataTableEntity @LastRunTable -Entity $LastRun -Force
+            $LastRun = @{
+                RowKey              = 'calDefaults'
+                PartitionKey        = $Tenant
+                totalMailboxes      = $TotalMailboxes
+                processedMailboxes  = $processedMailboxes
+                currentSuccessCount = $SuccessCounter
+            }
+            Add-CIPPAzDataTableEntity @LastRunTable -Entity $LastRun -Force
 
-        Write-LogMessage -API 'Standards' -tenant $Tenant -message "Successfully set default calendar permissions for $SuccessCounter out of $TotalMailboxes mailboxes." -sev Info
+            Write-LogMessage -API 'Standards' -tenant $Tenant -message "Successfully set default calendar permissions for $SuccessCounter out of $TotalMailboxes mailboxes." -sev Info
+        }
     }
-}
