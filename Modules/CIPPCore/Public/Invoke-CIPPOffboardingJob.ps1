@@ -35,21 +35,21 @@ function Invoke-CIPPOffboardingJob {
             Set-CIPPSignInState -TenantFilter $tenantFilter -userid $username -AccountEnabled $false -ExecutingUser $ExecutingUser -APIName $APIName
         }
 
-        { $_.'OnedriveAccess' -ne '' } {
+        { $_.'OnedriveAccess' } {
             $Options.OnedriveAccess | ForEach-Object { Set-CIPPSharePointPerms -tenantFilter $tenantFilter -userid $username -OnedriveAccessUser $_.value -ExecutingUser $ExecutingUser -APIName $APIName }
         }
 
-        { $_.'AccessNoAutomap' -ne '' } {
+        { $_.'AccessNoAutomap' } {
             $Options.AccessNoAutomap | ForEach-Object { Set-CIPPMailboxAccess -tenantFilter $tenantFilter -userid $username -AccessUser $_.value -Automap $false -AccessRights @('FullAccess') -ExecutingUser $ExecutingUser -APIName $APIName }
         }
-        { $_.'AccessAutomap' -ne '' } {
+        { $_.'AccessAutomap' } {
             $Options.AccessAutomap | ForEach-Object { Set-CIPPMailboxAccess -tenantFilter $tenantFilter -userid $username -AccessUser $_.value -Automap $true -AccessRights @('FullAccess') -ExecutingUser $ExecutingUser -APIName $APIName }
         }
 
-        { $_.'OOO' -ne '' } {
+        { $_.'OOO' } {
             Set-CIPPOutOfOffice -tenantFilter $tenantFilter -userid $username -InternalMessage $Options.OOO -ExternalMessage $Options.OOO -ExecutingUser $ExecutingUser -APIName $APIName -state 'Enabled'
         }
-        { $_.'forward' -ne '' } {
+        { $_.'forward' } {
             if (!$Options.keepCopy) {
                 Set-CIPPForwarding -userid $userid -username $username -tenantFilter $Tenantfilter -Forward $Options.forward.value -ExecutingUser $ExecutingUser -APIName $APIName
             } else {
