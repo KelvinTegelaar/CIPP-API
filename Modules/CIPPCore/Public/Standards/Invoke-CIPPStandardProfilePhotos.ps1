@@ -35,6 +35,11 @@
     # true if wanted state is enabled, false if disabled
     $DesiredState = $Settings.state -eq 'enabled'
 
+    <#
+    HACK This does not work, as the API endpoint is not available via GDAP it seems? It works in the Graph Explorer, but not here.
+    The error is: "Authorization failed because of missing requirement(s)."
+    I'm keeping the code here for now, so it's much easier to re-enable if Microsoft makes it possible someday. -Bobby
+    #>
 
     # Get current Graph policy state
     # $Uri = 'https://graph.microsoft.com/beta/admin/people/photoUpdateSettings'
