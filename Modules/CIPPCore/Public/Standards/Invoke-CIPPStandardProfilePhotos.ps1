@@ -41,12 +41,12 @@
     # $CurrentGraphState = New-GraphGetRequest -uri $Uri -tenantid $Tenant
     # $UsersCanChangePhotos = if (($CurrentGraphState.allowedRoles -contains 'fe930be7-5e62-47db-91af-98c3a49a38b1' -and $CurrentGraphState.allowedRoles -contains '62e90394-69f5-4237-9190-012177145e10') -or
     #     $null -ne $CurrentGraphState.allowedRoles) { $false } else { $true }
+    # $GraphStateCorrect = $UsersCanChangePhotos -eq $DesiredState
 
 
     # Get current OWA mailbox policy state
     $CurrentOWAState = New-ExoRequest -tenantid $Tenant -cmdlet 'Get-OwaMailboxPolicy' -cmdParams @{Identity = 'OwaMailboxPolicy-Default' } -Select 'Identity,SetPhotoEnabled'
     $OWAStateCorrect = $CurrentOWAState.SetPhotoEnabled -eq $DesiredState
-    # $GraphStateCorrect = $UsersCanChangePhotos -eq $DesiredState
     # $CurrentStatesCorrect = $GraphStateCorrect -eq $true -and $OWAStateCorrect -eq $true
     $CurrentStatesCorrect = $OWAStateCorrect -eq $true
 
