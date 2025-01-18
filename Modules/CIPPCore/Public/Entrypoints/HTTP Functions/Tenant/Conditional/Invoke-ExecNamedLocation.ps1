@@ -17,10 +17,10 @@ Function Invoke-ExecNamedLocation {
     # Write to the Azure Functions log stream.
     Write-Host 'PowerShell HTTP trigger function processed a request.'
 
-    $TenantFilter = $Request.Body.TenantFilter
-    $NamedLocationId = $Request.Body.NamedLocationId
-    $change = $Request.Body.change
-    $content = $Request.Body.input
+    $TenantFilter = $Request.Body.TenantFilter ?? $Request.Query.TenantFilter
+    $NamedLocationId = $Request.Body.NamedLocationId ?? $Request.Query.NamedLocationId
+    $change = $Request.Body.change ?? $Request.Query.change
+    $content = $Request.Body.input ?? $Request.Query.input
 
     try {
         $results = Set-CIPPNamedLocation -NamedLocationId $NamedLocationId -TenantFilter $TenantFilter -change $change -content $content -ExecutingUser $request.headers.'x-ms-client-principal'
