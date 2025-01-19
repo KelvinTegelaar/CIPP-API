@@ -12,10 +12,10 @@ Function Invoke-ExecDeviceDelete {
 
     $APIName = $TriggerMetadata.FunctionName
     $ExecutingUser = $Request.headers.'x-ms-client-principal'
-    $TenantFilter = $Request.body.tenantFilter
     Write-LogMessage -user $ExecutingUser -API $APINAME -message 'Accessed this API' -Sev 'Debug'
 
     # Interact with body parameters or the body of the request.
+    $TenantFilter = $Request.body.tenantFilter ?? $Request.Query.tenantFilter
     $Action = $Request.body.action ?? $Request.Query.action
     $DeviceID = $Request.body.ID ?? $Request.Query.ID
 
