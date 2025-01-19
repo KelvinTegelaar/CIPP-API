@@ -2,6 +2,32 @@
     <#
     .FUNCTIONALITY
         Internal
+    .COMPONENT
+        (APIName) StaleEntraDevices
+    .SYNOPSIS
+        (Label) Cleanup stale Entra devices
+    .DESCRIPTION
+        (Helptext) Cleans up Entra devices that have not connected/signed in for the specified number of days.
+        (DocsDescription) Cleans up Entra devices that have not connected/signed in for the specified number of days. First disables and later deletes the devices. More info can be found in the [Microsoft documentation](https://learn.microsoft.com/en-us/entra/identity/devices/manage-stale-devices)
+    .NOTES
+        CAT
+            Entra (AAD) Standards
+        TAG
+            "highimpact"
+            "CIS"
+        ADDEDCOMPONENT
+            {"type":"number","name":"standards.StaleEntraDevices.deviceAgeThreshold","label":"Days before stale(Dont set below 30)"}
+        DISABLEDFEATURES
+
+        IMPACT
+            High Impact
+        POWERSHELLEQUIVALENT
+            Remove-MgDevice, Update-MgDevice or Graph API
+        RECOMMENDEDBY
+        UPDATECOMMENTBLOCK
+            Run the Tools\Update-StandardsComments.ps1 script to update this comment block
+    .LINK
+        https://docs.cipp.app/user-documentation/tenant/standards/list-standards/entra-aad-standards#high-impact
     #>
 
     param($Tenant, $Settings)
