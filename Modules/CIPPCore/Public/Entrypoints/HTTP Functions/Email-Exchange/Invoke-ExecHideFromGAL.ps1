@@ -17,9 +17,10 @@ Function Invoke-ExecHideFromGAL {
 
 
     # Support if the request is a POST or a GET. So to support legacy(GET) and new(POST) requests
-    $UserId = if (-not [string]::IsNullOrWhiteSpace($Request.Query.ID)) { $Request.Query.ID } else { $Request.body.ID }
-    $TenantFilter = if (-not [string]::IsNullOrWhiteSpace($Request.Query.TenantFilter)) { $Request.Query.TenantFilter } else { $Request.body.tenantFilter }
-    $Hidden = if (-not [string]::IsNullOrWhiteSpace($Request.Query.HideFromGAL)) { [System.Convert]::ToBoolean($Request.Query.HideFromGAL) } else { [System.Convert]::ToBoolean($Request.body.HideFromGAL) }
+    $UserId = $Request.Query.ID ?? $Request.body.ID
+    $TenantFilter = $Request.Query.TenantFilter ?? $Request.body.tenantFilter
+    $Hidden = -not [string]::IsNullOrWhiteSpace($Request.Query.HideFromGAL) ? [System.Convert]::ToBoolean($Request.Query.HideFromGAL) : [System.Convert]::ToBoolean($Request.body.HideFromGAL)
+
 
     Try {
         $HideResults = Set-CIPPHideFromGAL -tenantFilter $TenantFilter -UserID $UserId -hidefromgal $Hidden -ExecutingUser $ExecutingUser -APIName $APIName
