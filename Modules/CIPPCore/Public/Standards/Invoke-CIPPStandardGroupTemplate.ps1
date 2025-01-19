@@ -1,7 +1,29 @@
 function Invoke-CIPPStandardGroupTemplate {
     <#
     .FUNCTIONALITY
-    Internal
+        Internal
+    .COMPONENT
+        (APIName) GroupTemplate
+    .SYNOPSIS
+        (Label) Group Template
+    .DESCRIPTION
+        (Helptext) Deploy and manage group templates.
+        (DocsDescription) Deploy and manage group templates.
+    .NOTES
+        MULTI
+            True
+        CAT
+            Templates
+        DISABLEDFEATURES
+            
+        IMPACT
+            Medium
+        ADDEDCOMPONENT
+            {"type":"autoComplete","name":"groupTemplate","label":"Select Group Template","api":{"url":"/api/ListGroupTemplates","labelField":"Displayname","valueField":"GUID","queryKey":"ListGroupTemplates"}}
+        UPDATECOMMENTBLOCK
+            Run the Tools\Update-StandardsComments.ps1 script to update this comment block
+    .LINK
+        https://docs.cipp.app/user-documentation/tenant/standards/list-standards/
     #>
     param($Tenant, $Settings)
     ##$Rerun -Type Standard -Tenant $Tenant -Settings $Settings 'GroupTemplate'
