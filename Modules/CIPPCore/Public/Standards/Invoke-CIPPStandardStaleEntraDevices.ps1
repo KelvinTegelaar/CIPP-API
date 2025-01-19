@@ -11,9 +11,6 @@
     $Date = (Get-Date).AddDays( - [int]$Settings.deviceAgeThreshold)
     $StaleDevices = $AllDevices | Where-Object { $_.approximateLastSignInDateTime -lt $Date }
 
-
-    # Sort
-
     If ($Settings.remediate -eq $true) {
 
         Write-Host 'Remediation not implemented yet'
