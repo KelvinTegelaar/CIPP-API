@@ -11,22 +11,30 @@ Function Invoke-ExecHideFromGAL {
     param($Request, $TriggerMetadata)
 
     $APIName = $TriggerMetadata.FunctionName
-    Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -message 'Accessed this API' -Sev 'Debug'
+    $ExecutingUser = $Request.headers.'x-ms-client-principal'
+    $APIName = $TriggerMetadata.FunctionName
+    Write-LogMessage -user $ExecutingUser -API $APINAME -message 'Accessed this API' -Sev 'Debug'
 
 
-    $TenantFilter = $request.query.tenantfilter
+    # Support if the request is a POST or a GET. So to support legacy(GET) and new(POST) requests
+    $UserId = $Request.Query.ID ?? $Request.body.ID
+    $TenantFilter = $Request.Query.TenantFilter ?? $Request.body.tenantFilter
+    $Hidden = -not [string]::IsNullOrWhiteSpace($Request.Query.HideFromGAL) ? [System.Convert]::ToBoolean($Request.Query.HideFromGAL) : [System.Convert]::ToBoolean($Request.body.HideFromGAL)
+
+
     Try {
-        $Hidden = [System.Convert]::ToBoolean($Request.query.HideFromGal)
-        $HideResults = Set-CIPPHideFromGAL -tenantFilter $tenantFilter -userid $Request.query.ID -HideFromGAL $Hidden -ExecutingUser $request.headers.'x-ms-client-principal' -APIName 'ExecOffboardUser'
+        $HideResults = Set-CIPPHideFromGAL -tenantFilter $TenantFilter -UserID $UserId -hidefromgal $Hidden -ExecutingUser $ExecutingUser -APIName $APIName
         $Results = [pscustomobject]@{'Results' = $HideResults }
+        $StatusCode = [HttpStatusCode]::OK
 
     } catch {
-        $Results = [pscustomobject]@{'Results' = "Failed. $($_.Exception.Message)" }
-        Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $($tenantfilter) -message "Hide/UnHide from GAL failed: $($_.Exception.Message)" -Sev 'Error'
+        $ErrorMessage = Get-CippException -Exception $_
+        $Results = [pscustomobject]@{'Results' = "Failed. $($ErrorMessage.NormalizedError)" }
+        $StatusCode = [HttpStatusCode]::Forbidden
     }
     # Associate values to output bindings by calling 'Push-OutputBinding'.
     Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
-            StatusCode = [HttpStatusCode]::OK
+            StatusCode = $StatusCode
             Body       = $Results
         })
 
