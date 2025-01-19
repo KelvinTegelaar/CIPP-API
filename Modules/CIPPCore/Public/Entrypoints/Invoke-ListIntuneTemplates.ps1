@@ -48,6 +48,8 @@ Function Invoke-ListIntuneTemplates {
 
     if ($Request.query.ID) { $Templates = $Templates | Where-Object -Property guid -EQ $Request.query.id }
 
+    # Sort all output regardless of view condition
+    $Templates = $Templates | Sort-Object -Property displayName
 
     # Associate values to output bindings by calling 'Push-OutputBinding'.
     Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
