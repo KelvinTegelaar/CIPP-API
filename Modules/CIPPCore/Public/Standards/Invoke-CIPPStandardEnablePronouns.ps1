@@ -33,8 +33,8 @@ function Invoke-CIPPStandardEnablePronouns {
     try {
         $CurrentState = New-GraphGetRequest -Uri $Uri -tenantid $Tenant
     } catch {
-        $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
-        Write-LogMessage -API 'Standards' -tenant $Tenant -message "Could not get CurrentState for Pronouns. Error: $ErrorMessage" -sev Error
+        $ErrorMessage = Get-CippException -Exception $_
+        Write-LogMessage -API 'Standards' -tenant $Tenant -message "Could not get CurrentState for Pronouns. Error: $($ErrorMessage.NormalizedError)" -sev Error
         Return
     }
     Write-Host $CurrentState
