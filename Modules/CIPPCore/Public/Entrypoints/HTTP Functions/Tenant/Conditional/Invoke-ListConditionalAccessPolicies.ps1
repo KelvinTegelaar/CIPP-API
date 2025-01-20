@@ -174,8 +174,8 @@ Function Invoke-ListConditionalAccessPolicies {
                 displayName                                 = $cap.displayName
                 customer                                    = $cap.Customer
                 tenantID                                    = $cap.TenantID
-                createdDateTime                             = $(if (![string]::IsNullOrEmpty($cap.createdDateTime)) { [datetime]$cap.createdDateTime | Get-Date -Format 'yyyy-MM-dd HH:mm' }else { '' })
-                modifiedDateTime                            = $(if (![string]::IsNullOrEmpty($cap.modifiedDateTime)) { [datetime]$cap.modifiedDateTime | Get-Date -Format 'yyyy-MM-dd HH:mm' }else { '' })
+                createdDateTime                             = $(if (![string]::IsNullOrEmpty($cap.createdDateTime)) { [datetime]$cap.createdDateTime } else { '' })
+                modifiedDateTime                            = $(if (![string]::IsNullOrEmpty($cap.modifiedDateTime)) { [datetime]$cap.modifiedDateTime }else { '' })
                 state                                       = $cap.state
                 clientAppTypes                              = ($cap.conditions.clientAppTypes) -join ','
                 includePlatforms                            = ($cap.conditions.platforms.includePlatforms) -join ','

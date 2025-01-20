@@ -1,20 +1,24 @@
-function Add-HuduAssetLayoutM365Field {
+function Add-HuduAssetLayoutField {
     Param(
-        $AssetLayoutId
+        $AssetLayoutId,
+        $Label = 'Microsoft 365',
+        $FieldType = 'RichText',
+        $Position = 0,
+        $ShowInList = $false
     )
 
     $M365Field = @{
-        position     = 0
-        label        = 'Microsoft 365'
-        field_type   = 'RichText'
-        show_in_list = $false
+        position     = $Position
+        label        = $Label
+        field_type   = $FieldType
+        show_in_list = $ShowInList
         required     = $false
         expiration   = $false
     }
 
     $AssetLayout = Get-HuduAssetLayouts -LayoutId $AssetLayoutId
 
-    if ($AssetLayout.fields.label -contains 'Microsoft 365') {
+    if ($AssetLayout.fields.label -contains $Label) {
         return $AssetLayout
     }
 

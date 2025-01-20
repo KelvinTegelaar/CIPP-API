@@ -14,11 +14,8 @@ Function Invoke-AddOfficeApp {
     Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -message 'Accessed this API' -Sev 'Debug'
 
 
-    # Write to the Azure Functions log stream.
-    Write-Host 'PowerShell HTTP trigger function processed a request.'
-
     # Input bindings are passed in via param block.
-    $Tenants = ($Request.body | Select-Object Select_*).psobject.properties.value
+    $Tenants = $Request.body.selectedTenants.defaultDomainName
     if ('AllTenants' -in $Tenants) { $Tenants = (Get-Tenants).defaultDomainName }
     $AssignTo = if ($request.body.Assignto -ne 'on') { $request.body.Assignto }
 
