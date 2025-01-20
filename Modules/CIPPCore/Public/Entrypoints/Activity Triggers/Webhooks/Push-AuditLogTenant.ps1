@@ -26,7 +26,15 @@ function Push-AuditLogTenant {
             }
             $CIPPURL = $LegacyUrl
         } else {
-            $CIPPURL = 'https://{0}' -f $CippConfig.Value
+            if (!$CippConfig) {
+                    $CippConfig = @{
+                        PartitionKey = 'InstanceProperties'
+                        RowKey       = 'CIPPURL'
+                        Value        = [string]([System.Uri]$Request.Headers.'x-ms-original-url').Host
+                    }
+                    Add-AzDataTableEntity @ConfigTable -Entity $CippConfig -Force
+                    $CIPPURL = 'https://{0}' -f $CippConfig.Value
+            } else { $CIPPURL = 'https://{0}' -f $CippConfig.Value }
         }
 
         # Get webhook rules
