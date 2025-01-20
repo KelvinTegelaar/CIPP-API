@@ -17,7 +17,7 @@ Function Invoke-EditTransportRule {
 
 
     $Params = @{
-        Identity = $request.query.guid
+        Identity = $request.query.guid ?? $request.body.guid
     }
 
     try {
