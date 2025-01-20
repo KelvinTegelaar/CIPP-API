@@ -15,10 +15,10 @@ Function Invoke-CIPPStandardTeamsFederationConfiguration {
         TAG
             "mediumimpact"
         ADDEDCOMPONENT
-            {"type":"boolean","name":"standards.TeamsFederationConfiguration.AllowTeamsConsumer","label":"Allow users to communicate with other organizations"}
-            {"type":"boolean","name":"standards.TeamsFederationConfiguration.AllowPublicUsers","label":"Allow users to communicate with Skype Users"}
-            {"type":"Select","name":"standards.TeamsFederationConfiguration.DomainControl","label":"Communication Mode","values":[{"label":"Allow all external domains","value":"AllowAllExternal"},{"label":"Block all external domains","value":"BlockAllExternal"},{"label":"Allow specific external domains","value":"AllowSpecificExternal"},{"label":"Block specific external domains","value":"BlockSpecificExternal"}]}
-            {"type":"input","name":"standards.TeamsFederationConfiguration.DomainList","label":"Domains, Comma separated"}
+            {"type":"switch","name":"standards.TeamsFederationConfiguration.AllowTeamsConsumer","label":"Allow users to communicate with other organizations"}
+            {"type":"switch","name":"standards.TeamsFederationConfiguration.AllowPublicUsers","label":"Allow users to communicate with Skype Users"}
+            {"type":"autoComplete","multiple":false,"name":"standards.TeamsFederationConfiguration.DomainControl","label":"Communication Mode","options":[{"label":"Allow all external domains","value":"AllowAllExternal"},{"label":"Block all external domains","value":"BlockAllExternal"},{"label":"Allow specific external domains","value":"AllowSpecificExternal"},{"label":"Block specific external domains","value":"BlockSpecificExternal"}]}
+            {"type":"textField","name":"standards.TeamsFederationConfiguration.DomainList","label":"Domains, Comma separated","required":false}
         IMPACT
             Medium Impact
         POWERSHELLEQUIVALENT
@@ -27,7 +27,7 @@ Function Invoke-CIPPStandardTeamsFederationConfiguration {
         UPDATECOMMENTBLOCK
             Run the Tools\Update-StandardsComments.ps1 script to update this comment block
     .LINK
-        https://docs.cipp.app/user-documentation/tenant/standards/edit-standards
+        https://docs.cipp.app/user-documentation/tenant/standards/list-standards/teams-standards#medium-impact
     #>
 
     param($Tenant, $Settings)

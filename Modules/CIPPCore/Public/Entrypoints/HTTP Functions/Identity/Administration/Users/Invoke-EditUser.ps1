@@ -23,7 +23,7 @@ Function Invoke-EditUser {
             })
         return
     }
-    $Results = [System.Collections.Generic.List[string]]::new()
+    $Results = [System.Collections.Generic.List[object]]::new()
     $licenses = ($UserObj.licenses).value
     $Aliases = if ($UserObj.AddedAliases) { ($UserObj.AddedAliases) -split '\s' }
     $AddToGroups = $Request.body.AddToGroups
@@ -133,7 +133,7 @@ Function Invoke-EditUser {
 
     if ($Request.body.CopyFrom.value) {
         $CopyFrom = Set-CIPPCopyGroupMembers -ExecutingUser $User -CopyFromId $Request.body.CopyFrom.value -UserID $UserPrincipalName -TenantFilter $UserObj.tenantFilter
-        $null = $results.AddRange($CopyFrom)
+        $null = $results.AddRange(@($CopyFrom))
     }
 
     if ($AddToGroups) {
