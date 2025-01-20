@@ -18,11 +18,7 @@ Function Invoke-RemoveTransportRule {
     $Identity = $Request.Query.guid ?? $Request.body.guid
 
     $Params = @{
-<<<<<<< HEAD
         Identity = $Identity
-=======
-        Identity = $request.query.guid ?? $request.body.guid
->>>>>>> upstream/dev
     }
 
     try {
