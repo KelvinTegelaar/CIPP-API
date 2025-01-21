@@ -128,7 +128,7 @@ function Test-CIPPAccessPermissions {
             $Messages.Add('You have all the required permissions.') | Out-Null
         }
 
-        $LastUpdate = $GraphPermissions.Timestamp
+        $LastUpdate = [DateTime]::SpecifyKind($GraphPermissions.Timestamp.DateTime, [DateTimeKind]::Utc)
         $CpvTable = Get-CippTable -tablename 'cpvtenants'
         $CpvRefresh = Get-CippAzDataTableEntity @CpvTable -Filter "PartitionKey eq 'Tenant'"
         $TenantList = Get-Tenants -IncludeErrors | Where-Object { $_.customerId -ne $env:TenantID -and $_.Excluded -eq $false }
