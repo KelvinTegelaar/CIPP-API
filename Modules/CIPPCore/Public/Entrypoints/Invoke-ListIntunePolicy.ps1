@@ -57,48 +57,56 @@ Function Invoke-ListIntunePolicy {
             $BulkResults = New-GraphBulkRequest -Requests $BulkRequests -tenantid $TenantFilter
 
             $GraphRequest = $BulkResults | ForEach-Object {
-            $URLName = $_.Id
-            $_.body.Value | ForEach-Object {
-                $policyTypeName = switch -Wildcard ($_.'assignments@odata.context') {
-                    '*microsoft.graph.windowsIdentityProtectionConfiguration*' { 'Identity Protection' }
-                    '*microsoft.graph.windows10EndpointProtectionConfiguration*' { 'Endpoint Protection' }
-                    '*microsoft.graph.windows10CustomConfiguration*' { 'Custom' }
-                    '*microsoft.graph.windows10DeviceFirmwareConfigurationInterface*' { 'Firmware Configuration' }
-                    '*groupPolicyConfigurations*' { 'Administrative Templates' }
-                    '*windowsDomainJoinConfiguration*' { 'Domain Join configuration' }
-                    '*windowsUpdateForBusinessConfiguration*' { 'Update Configuration' }
-                    '*windowsHealthMonitoringConfiguration*' { 'Health Monitoring' }
-                    '*microsoft.graph.macOSGeneralDeviceConfiguration*' { 'MacOS Configuration' }
-                    '*microsoft.graph.macOSEndpointProtectionConfiguration*' { 'MacOS Endpoint Protection' }
-                    '*microsoft.graph.androidWorkProfileGeneralDeviceConfiguration*' { 'Android Configuration' }
-                    default { $_.'assignments@odata.context' }
-                }
-                $Assignments = $_.assignments.target | Select-Object -Property '@odata.type', groupId
-                $PolicyAssignment = [System.Collections.Generic.List[string]]::new()
-                $PolicyExclude = [System.Collections.Generic.List[string]]::new()
-                ForEach ($target in $Assignments) {
-                    switch ($target.'@odata.type') {
-                        '#microsoft.graph.allDevicesAssignmentTarget' { $PolicyAssignment.Add('All Devices') }
-                        '#microsoft.graph.exclusionallDevicesAssignmentTarget' { $PolicyExclude.Add('All Devices') }
-                        '#microsoft.graph.allUsersAssignmentTarget' { $PolicyAssignment.Add('All Users') }
-                        '#microsoft.graph.exclusionallUsersAssignmentTarget' { $PolicyExclude.Add('All Users') }
-                        '#microsoft.graph.groupAssignmentTarget' { $PolicyAssignment.Add($Groups.Where({ $_.id -eq $target.groupId }).displayName) }
-                        '#microsoft.graph.exclusionGroupAssignmentTarget' { $PolicyExclude.Add($Groups.Where({ $_.id -eq $target.groupId }).displayName) }
-                        default {
-                            $PolicyAssignment.Add($null)
-                            $PolicyExclude.Add($null)
+                $URLName = $_.Id
+                $_.body.Value | ForEach-Object {
+                    $policyTypeName = switch -Wildcard ($_.'assignments@odata.context') {
+                        '*microsoft.graph.windowsIdentityProtectionConfiguration*' { 'Identity Protection' }
+                        '*microsoft.graph.windows10EndpointProtectionConfiguration*' { 'Endpoint Protection' }
+                        '*microsoft.graph.windows10CustomConfiguration*' { 'Custom' }
+                        '*microsoft.graph.windows10DeviceFirmwareConfigurationInterface*' { 'Firmware Configuration' }
+                        '*groupPolicyConfigurations*' { 'Administrative Templates' }
+                        '*windowsDomainJoinConfiguration*' { 'Domain Join configuration' }
+                        '*windowsUpdateForBusinessConfiguration*' { 'Update Configuration' }
+                        '*windowsHealthMonitoringConfiguration*' { 'Health Monitoring' }
+                        '*microsoft.graph.macOSGeneralDeviceConfiguration*' { 'MacOS Configuration' }
+                        '*microsoft.graph.macOSEndpointProtectionConfiguration*' { 'MacOS Endpoint Protection' }
+                        '*microsoft.graph.androidWorkProfileGeneralDeviceConfiguration*' { 'Android Configuration' }
+                        default { $_.'assignments@odata.context' }
+                    }
+                    $Assignments = $_.assignments.target | Select-Object -Property '@odata.type', groupId
+                    $PolicyAssignment = [System.Collections.Generic.List[string]]::new()
+                    $PolicyExclude = [System.Collections.Generic.List[string]]::new()
+                    ForEach ($target in $Assignments) {
+                        switch ($target.'@odata.type') {
+                            '#microsoft.graph.allDevicesAssignmentTarget' { $PolicyAssignment.Add('All Devices') }
+                            '#microsoft.graph.exclusionallDevicesAssignmentTarget' { $PolicyExclude.Add('All Devices') }
+                            '#microsoft.graph.allUsersAssignmentTarget' { $PolicyAssignment.Add('All Users') }
+                            '#microsoft.graph.exclusionallUsersAssignmentTarget' { $PolicyExclude.Add('All Users') }
+                            '#microsoft.graph.groupAssignmentTarget' { $PolicyAssignment.Add($Groups.Where({ $_.id -eq $target.groupId }).displayName) }
+                            '#microsoft.graph.exclusionGroupAssignmentTarget' { $PolicyExclude.Add($Groups.Where({ $_.id -eq $target.groupId }).displayName) }
+                            default {
+                                $PolicyAssignment.Add($null)
+                                $PolicyExclude.Add($null)
+                            }
                         }
                     }
-                }
-                if ($_.displayname -eq $null) { $_ | Add-Member -NotePropertyName displayName -NotePropertyValue $_.name }
-                $_ | Add-Member -NotePropertyName PolicyTypeName -NotePropertyValue $policyTypeName
-                $_ | Add-Member -NotePropertyName URLName -NotePropertyValue $URLName
-                $_ | Add-Member -NotePropertyName PolicyAssignment -NotePropertyValue ($PolicyAssignment -join ', ')
-                $_ | Add-Member -NotePropertyName PolicyExclude -NotePropertyValue ($PolicyExclude -join ', ')
-                $_
-            } | Where-Object { $_.DisplayName -ne $null }
+                    if ($null -eq $_.displayname) { $_ | Add-Member -NotePropertyName displayName -NotePropertyValue $_.name }
+                    $_ | Add-Member -NotePropertyName PolicyTypeName -NotePropertyValue $policyTypeName
+                    $_ | Add-Member -NotePropertyName URLName -NotePropertyValue $URLName
+                    $_ | Add-Member -NotePropertyName PolicyAssignment -NotePropertyValue ($PolicyAssignment -join ', ')
+                    $_ | Add-Member -NotePropertyName PolicyExclude -NotePropertyValue ($PolicyExclude -join ', ')
+                    $_
+                } | Where-Object { $null -ne $_.DisplayName }
+            }
         }
+
+        # Filter the results to only include linux scripts or sort out linux scripts
+        if ($Request.Query.type -eq 'linuxScript') {
+            $GraphRequest = $GraphRequest | Where-Object { $_.platforms -eq 'linux' -and $_.templateReference.templateFamily -eq 'deviceConfigurationScripts' }
+        } else {
+            $GraphRequest = $GraphRequest | Where-Object { $_.platforms -ne 'linux' -and $_.templateReference.templateFamily -ne 'deviceConfigurationScripts' }
         }
+
         $StatusCode = [HttpStatusCode]::OK
     } catch {
         $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
