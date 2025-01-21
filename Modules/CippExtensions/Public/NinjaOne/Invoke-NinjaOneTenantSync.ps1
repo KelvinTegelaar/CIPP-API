@@ -763,7 +763,7 @@ function Invoke-NinjaOneTenantSync {
                     $DeviceLinksData = @(
                         @{
                             Name = 'Entra ID'
-                            Link = "https://entra.microsoft.com/$($Customer.defaultDomainName)/#view/Microsoft_AAD_Devices/DeviceDetailsMenuBlade/~/Properties/deviceId/$($Device.azureADDeviceId)/deviceId/"
+                            Link = "https://entra.microsoft.com/$($Customer.defaultDomainName)/#view/Microsoft_AAD_Devices/DeviceDetailsMenuBlade/~/Properties/deviceId/$($Device.azureADDeviceId)"
                             Icon = 'fab fa-microsoft'
                         },
                         @{
@@ -1748,7 +1748,7 @@ function Invoke-NinjaOneTenantSync {
                 },
                 @{
                     Name = 'Compliance Portal'
-                    Link = "https://compliance.microsoft.com/?tid=$($Customer.CustomerId)"
+                    Link = "https://purview.microsoft.com/?tid=$($Customer.CustomerId)"
                     Icon = 'fas fa-user-shield'
                 },
                 @{

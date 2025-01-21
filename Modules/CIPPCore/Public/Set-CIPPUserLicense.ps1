@@ -1,25 +1,39 @@
 function Set-CIPPUserLicense {
     [CmdletBinding()]
     param (
-        $userid,
-        $TenantFilter,
-        $Licenses
+        [Parameter(Mandatory)][string]$UserId,
+        [Parameter(Mandatory)][string]$TenantFilter,
+        [Parameter()][array]$AddLicenses = @(),
+        [Parameter()][array]$RemoveLicenses = @()
     )
 
-    Write-Host "Lics are: $licences"
-    $LicenseBody = if ($licenses.count -ge 2) {
-        $liclist = foreach ($license in $Licenses) { '{"disabledPlans": [],"skuId": "' + $license + '" },' }
-        '{"addLicenses": [' + $LicList + '], "removeLicenses": [ ] }'
-    } else {
-        '{"addLicenses": [ {"disabledPlans": [],"skuId": "' + $licenses + '" }],"removeLicenses": [ ]}'
+    # Build the addLicenses array
+    $AddLicensesArray = foreach ($license in $AddLicenses) {
+        @{
+            'disabledPlans' = @()
+            'skuId'         = $license
+        }
     }
-    Write-Host $LicenseBody
+
+    # Build the LicenseBody hashtable
+    $LicenseBody = @{
+        'addLicenses'    = @($AddLicensesArray)
+        'removeLicenses' = @($RemoveLicenses) ? @($RemoveLicenses) : @()
+    }
+
+    # Convert the LicenseBody to JSON
+    $LicenseBodyJson = ConvertTo-Json -InputObject $LicenseBody -Depth 10 -Compress
+
+    Write-Host "License body JSON: $LicenseBodyJson"
+
     try {
-        $LicRequest = New-GraphPostRequest -uri "https://graph.microsoft.com/beta/users/$($UserId)/assignlicense" -tenantid $TenantFilter -type POST -body $LicenseBody -verbose
+        $null = New-GraphPostRequest -uri "https://graph.microsoft.com/beta/users/$UserId/assignLicense" -tenantid $TenantFilter -type POST -body $LicenseBodyJson -Verbose
     } catch {
-        Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $($UserObj.tenantid) -message "Failed to assign the license. Error:$($_.Exception.Message)" -Sev 'Error'
-        throw "Failed to assign the license. $($_.Exception.Message)"
+        $ErrorMessage = Get-CippException -Exception $_
+        Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APIName -tenant $TenantFilter -message "Failed to assign the license. Error: $($ErrorMessage.NormalizedError)" -Sev Error -LogData $ErrorMessage
+        throw "Failed to assign the license. $($ErrorMessage.NormalizedError)"
     }
-    Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $($UserObj.tenantid) -message "Assigned user $($UserObj.DisplayName) license $($licences)" -Sev 'Info'
-    return 'Assigned licenses.'
+
+    Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APIName -tenant $TenantFilter -message "Assigned licenses to user $UserId. Added: $AddLicenses; Removed: $RemoveLicenses" -Sev 'Info'
+    return 'Set licenses successfully'
 }

@@ -20,15 +20,12 @@ Function Invoke-ListDefenderState {
     # Interact with query parameters or the body of the request.
     $TenantFilter = $Request.Query.TenantFilter
     try {
-        $GraphRequest = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/tenantRelationships/managedTenants/windowsProtectionStates?`$top=999&`$filter=tenantId eq '$TenantFilter'"
-        if ($GraphRequest.tenantDisplayName.length -lt 1) {
-            $StatusCode = [HttpStatusCode]::Forbidden
-            $GraphRequest = 'No data found - This client might not be onboarded in Lighthouse'
-        }
+        $GraphRequest = New-GraphGetRequest -tenantid $TenantFilter -uri "https://graph.microsoft.com/beta/deviceManagement/managedDevices?`$expand=windowsProtectionState&`$select=id,deviceName,deviceType,operatingSystem,windowsProtectionState"
+        $StatusCode = [HttpStatusCode]::OK
     } catch {
         $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
         $StatusCode = [HttpStatusCode]::Forbidden
-        $GraphRequest = "Could not connect to Azure Lighthouse API: $($ErrorMessage)"
+        $GraphRequest = "$($ErrorMessage)"
     }
     # Associate values to output bindings by calling 'Push-OutputBinding'.
     Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
