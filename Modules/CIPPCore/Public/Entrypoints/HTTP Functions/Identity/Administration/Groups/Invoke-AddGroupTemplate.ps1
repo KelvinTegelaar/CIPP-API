@@ -20,7 +20,7 @@ Function Invoke-AddGroupTemplate {
             Displayname     = $request.body.displayname
             Description     = $request.body.description
             groupType       = $request.body.groupType
-            MembershipRules = $request.body.membershipRule
+            MembershipRules = $request.body.membershipRules
             allowExternal   = $request.body.allowExternal
             username        = $request.body.username
             GUID            = $GUID

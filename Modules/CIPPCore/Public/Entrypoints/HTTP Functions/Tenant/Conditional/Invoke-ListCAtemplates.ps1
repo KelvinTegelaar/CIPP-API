@@ -18,17 +18,23 @@ Function Invoke-ListCAtemplates {
     Write-Host $Request.query.id
     #Migrating old policies whenever you do a list
     $Table = Get-CippTable -tablename 'templates'
-
-    $Templates = Get-ChildItem 'Config\*.CATemplate.json' | ForEach-Object {
-        $Entity = @{
-            JSON         = "$(Get-Content $_)"
-            RowKey       = "$($_.name)"
-            PartitionKey = 'CATemplate'
-            GUID         = "$($_.name)"
+    $Imported = Get-CIPPAzDataTableEntity @Table -Filter "PartitionKey eq 'settings'"
+    if ($Imported.CATemplate -ne $true) {
+        $Templates = Get-ChildItem 'Config\*.CATemplate.json' | ForEach-Object {
+            $Entity = @{
+                JSON         = "$(Get-Content $_)"
+                RowKey       = "$($_.name)"
+                PartitionKey = 'CATemplate'
+                GUID         = "$($_.name)"
+            }
+            Add-CIPPAzDataTableEntity @Table -Entity $Entity -Force
         }
-        Add-CIPPAzDataTableEntity @Table -Entity $Entity -Force
+        Add-CIPPAzDataTableEntity @Table -Entity @{
+            CATemplate   = $true
+            RowKey       = 'CATemplate'
+            PartitionKey = 'settings'
+        } -Force
     }
-
     #List new policies
     $Table = Get-CippTable -tablename 'templates'
     $Filter = "PartitionKey eq 'CATemplate'"
