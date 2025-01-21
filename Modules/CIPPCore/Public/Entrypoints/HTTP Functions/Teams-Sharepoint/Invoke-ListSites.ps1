@@ -44,12 +44,12 @@ Function Invoke-ListSites {
             @{
                 id     = 'listAllSites'
                 method = 'GET'
-                url    = "sites/getAllSites?`$filter=$($Filter)&`$select=id,createdDateTime,description,name,displayName,isPersonalSite,lastModifiedDateTime,webUrl,siteCollection,sharepointIds"
+                url    = "sites/getAllSites?`$filter=$($Filter)&`$select=id,createdDateTime,description,name,displayName,isPersonalSite,lastModifiedDateTime,webUrl,siteCollection,sharepointIds&`$top=999"
             }
             @{
                 id     = 'usage'
                 method = 'GET'
-                url    = "reports/get$($type)Detail(period='D7')?`$format=application/json"
+                url    = "reports/get$($type)Detail(period='D7')?`$format=application/json&`$top=999"
             }
         )
 
