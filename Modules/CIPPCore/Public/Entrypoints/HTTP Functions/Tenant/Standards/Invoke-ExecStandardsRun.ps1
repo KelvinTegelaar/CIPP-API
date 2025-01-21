@@ -26,7 +26,7 @@ Function Invoke-ExecStandardsRun {
 
     if ($Config -and $Config.state -eq $true) {
         if ($env:CIPP_PROCESSOR -ne 'true') {
-            
+
             $ProcessorFunction = [PSCustomObject]@{
                 PartitionKey = 'Function'
                 RowKey       = "Invoke-CIPPStandardsRun-$tenantfilter"

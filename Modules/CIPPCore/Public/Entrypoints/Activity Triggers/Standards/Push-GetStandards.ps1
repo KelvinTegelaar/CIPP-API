@@ -16,6 +16,7 @@ function Push-GetStandards {
                 Standard     = $task.Standard
                 Settings     = $task.Settings
                 QueueId      = $Item.QueueId
+                templateId   = $task.templateId
                 QueueName    = '{0} - {1}' -f $task.Standard, $Task.Tenant
                 FunctionName = 'CIPPStandard'
             }
