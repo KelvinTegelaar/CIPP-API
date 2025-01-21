@@ -22,6 +22,7 @@ function Invoke-ListTenantOnboarding {
                 $TenantOnboarding.Logs = $Logs
                 $TenantOnboarding
             })
+        $Results = $Results | Sort-Object Timestamp -Descending
         $StatusCode = [HttpStatusCode]::OK
     } catch {
         $ErrorMsg = Get-NormalizedError -message $($_.Exception.Message)
