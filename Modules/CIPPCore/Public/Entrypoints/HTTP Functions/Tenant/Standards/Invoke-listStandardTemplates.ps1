@@ -18,8 +18,7 @@ Function Invoke-listStandardTemplates {
             $RowKey = $_.RowKey
             $data = $_.JSON | ConvertFrom-Json -Depth 100 -ErrorAction SilentlyContinue
         } catch {
-            Write-Host "Could not load standard template: $($_.Exception.Message)."
-            Write-Host "Template GUID: $($RowKey)"
+            Write-Host "$($RowKey)"
             return
         }
         $data | Add-Member -NotePropertyName 'GUID' -NotePropertyValue $_.GUID -Force
