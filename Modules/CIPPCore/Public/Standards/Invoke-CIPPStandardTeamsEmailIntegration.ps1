@@ -15,7 +15,7 @@ Function Invoke-CIPPStandardTeamsEmailIntegration {
         TAG
             "lowimpact"
         ADDEDCOMPONENT
-            {"type":"boolean","name":"standards.TeamsEmailIntegration.AllowEmailIntoChannel","label":"Allow channel emails"}
+            {"type":"switch","name":"standards.TeamsEmailIntegration.AllowEmailIntoChannel","label":"Allow channel emails"}
         IMPACT
             Low Impact
         POWERSHELLEQUIVALENT
@@ -25,7 +25,7 @@ Function Invoke-CIPPStandardTeamsEmailIntegration {
         UPDATECOMMENTBLOCK
             Run the Tools\Update-StandardsComments.ps1 script to update this comment block
     .LINK
-        https://docs.cipp.app/user-documentation/tenant/standards/edit-standards
+        https://docs.cipp.app/user-documentation/tenant/standards/list-standards/teams-standards#low-impact
     #>
 
     param($Tenant, $Settings)

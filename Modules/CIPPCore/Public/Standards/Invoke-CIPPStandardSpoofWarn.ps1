@@ -16,7 +16,7 @@ function Invoke-CIPPStandardSpoofWarn {
             "lowimpact"
             "CIS"
         ADDEDCOMPONENT
-            {"type":"Select","label":"Select value","name":"standards.SpoofWarn.state","values":[{"label":"Enabled","value":"enabled"},{"label":"Disabled","value":"disabled"}]}
+            {"type":"select","multiple":false,"label":"Select value","name":"standards.SpoofWarn.state","options":[{"label":"Enabled","value":"enabled"},{"label":"Disabled","value":"disabled"}]}
         IMPACT
             Low Impact
         POWERSHELLEQUIVALENT
@@ -26,7 +26,7 @@ function Invoke-CIPPStandardSpoofWarn {
         UPDATECOMMENTBLOCK
             Run the Tools\Update-StandardsComments.ps1 script to update this comment block
     .LINK
-        https://docs.cipp.app/user-documentation/tenant/standards/edit-standards
+        https://docs.cipp.app/user-documentation/tenant/standards/list-standards/exchange-standards#low-impact
     #>
 
     param($Tenant, $Settings)

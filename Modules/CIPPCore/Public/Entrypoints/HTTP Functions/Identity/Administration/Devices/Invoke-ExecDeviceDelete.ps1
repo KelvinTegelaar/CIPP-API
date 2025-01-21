@@ -11,29 +11,28 @@ Function Invoke-ExecDeviceDelete {
     param($Request, $TriggerMetadata)
 
     $APIName = $TriggerMetadata.FunctionName
-    Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -message 'Accessed this API' -Sev 'Debug'
+    $ExecutingUser = $Request.headers.'x-ms-client-principal'
+    Write-LogMessage -user $ExecutingUser -API $APINAME -message 'Accessed this API' -Sev 'Debug'
 
-    # Interact with query parameters or the body of the request.
-
+    # Interact with body parameters or the body of the request.
+    $TenantFilter = $Request.body.tenantFilter ?? $Request.Query.tenantFilter
+    $Action = $Request.body.action ?? $Request.Query.action
+    $DeviceID = $Request.body.ID ?? $Request.Query.ID
 
     try {
-        $url = "https://graph.microsoft.com/beta/devices/$($request.query.id)"
-        if ($Request.query.action -eq 'delete') {
-            $ActionResult = New-GraphPOSTRequest -uri $url -type DELETE -tenantid $Request.Query.TenantFilter
-        } elseif ($Request.query.action -eq 'disable') {
-            $ActionResult = New-GraphPOSTRequest -uri $url -type PATCH -tenantid $Request.Query.TenantFilter -body '{"accountEnabled": false }'
-        } elseif ($Request.query.action -eq 'enable') {
-            $ActionResult = New-GraphPOSTRequest -uri $url -type PATCH -tenantid $Request.Query.TenantFilter -body '{"accountEnabled": true }'
-        }
-        Write-Host $ActionResult
-        $body = [pscustomobject]@{'Results' = "Executed action $($Request.query.action) on $($Request.query.id)" }
+        $Results = Set-CIPPDeviceState -Action $Action -DeviceID $DeviceID -TenantFilter $TenantFilter -ExecutingUser $ExecutingUser -APIName $APINAME
+        $StatusCode = [HttpStatusCode]::OK
     } catch {
-        $body = [pscustomobject]@{'Results' = "Failed to queue action $($Request.query.action) on $($request.query.id): $($_.Exception.Message)" }
+        $Results = $_.Exception.Message
+        $StatusCode = [HttpStatusCode]::BadRequest
     }
+
+    Write-Host $Results
+    $body = [pscustomobject]@{'Results' = "$Results" }
 
     # Associate values to output bindings by calling 'Push-OutputBinding'.
     Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
-            StatusCode = [HttpStatusCode]::OK
+            StatusCode = $StatusCode
             Body       = $body
         })
 

@@ -15,12 +15,12 @@ function Invoke-CIPPStandardBranding {
         TAG
             "lowimpact"
         ADDEDCOMPONENT
-            {"type":"input","name":"standards.Branding.signInPageText","label":"Sign-in page text"}
-            {"type":"input","name":"standards.Branding.usernameHintText","label":"Username hint Text"}
-            {"type":"boolean","name":"standards.Branding.hideAccountResetCredentials","label":"Hide self-service password reset"}
-            {"type":"Select","label":"Visual Template","name":"standards.Branding.layoutTemplateType","values":[{"label":"Full-screen background","value":"default"},{"label":"Partial-screen background","value":"verticalSplit"}]}
-            {"type":"boolean","name":"standards.Branding.isHeaderShown","label":"Show header"}
-            {"type":"boolean","name":"standards.Branding.isFooterShown","label":"Show footer"}
+            {"type":"textField","name":"standards.Branding.signInPageText","label":"Sign-in page text","required":false}
+            {"type":"textField","name":"standards.Branding.usernameHintText","label":"Username hint Text","required":false}
+            {"type":"switch","name":"standards.Branding.hideAccountResetCredentials","label":"Hide self-service password reset"}
+            {"type":"select","multiple":false,"label":"Visual Template","name":"standards.Branding.layoutTemplateType","options":[{"label":"Full-screen background","value":"default"},{"label":"Partial-screen background","value":"verticalSplit"}]}
+            {"type":"switch","name":"standards.Branding.isHeaderShown","label":"Show header"}
+            {"type":"switch","name":"standards.Branding.isFooterShown","label":"Show footer"}
         IMPACT
             Low Impact
         POWERSHELLEQUIVALENT
@@ -29,7 +29,7 @@ function Invoke-CIPPStandardBranding {
         UPDATECOMMENTBLOCK
             Run the Tools\Update-StandardsComments.ps1 script to update this comment block
     .LINK
-        https://docs.cipp.app/user-documentation/tenant/standards/edit-standards
+        https://docs.cipp.app/user-documentation/tenant/standards/list-standards/global-standards#low-impact
     #>
 
     param($Tenant, $Settings)

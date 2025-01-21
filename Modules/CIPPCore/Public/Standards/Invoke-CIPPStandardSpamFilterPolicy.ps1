@@ -16,15 +16,15 @@ function Invoke-CIPPStandardSpamFilterPolicy {
             "mediumimpact"
         ADDEDCOMPONENT
             {"type":"number","label":"Bulk email threshold (Default 7)","name":"standards.SpamFilterPolicy.BulkThreshold","default":7}
-            {"type":"Select","label":"Spam Action","name":"standards.SpamFilterPolicy.SpamAction","values":[{"label":"Quarantine the message","value":"Quarantine"},{"label":"Move message to Junk Email folder","value":"MoveToJmf"}]}
-            {"type":"Select","label":"Spam Quarantine Tag","name":"standards.SpamFilterPolicy.SpamQuarantineTag","values":[{"label":"AdminOnlyAccessPolicy","value":"AdminOnlyAccessPolicy"},{"label":"DefaultFullAccessPolicy","value":"DefaultFullAccessPolicy"},{"label":"DefaultFullAccessWithNotificationPolicy","value":"DefaultFullAccessWithNotificationPolicy"}]}
-            {"type":"Select","label":"High Confidence Spam Action","name":"standards.SpamFilterPolicy.HighConfidenceSpamAction","values":[{"label":"Quarantine the message","value":"Quarantine"},{"label":"Move message to Junk Email folder","value":"MoveToJmf"}]}
-            {"type":"Select","label":"High Confidence Spam Quarantine Tag","name":"standards.SpamFilterPolicy.HighConfidenceSpamQuarantineTag","values":[{"label":"AdminOnlyAccessPolicy","value":"AdminOnlyAccessPolicy"},{"label":"DefaultFullAccessPolicy","value":"DefaultFullAccessPolicy"},{"label":"DefaultFullAccessWithNotificationPolicy","value":"DefaultFullAccessWithNotificationPolicy"}]}
-            {"type":"Select","label":"Bulk Spam Action","name":"standards.SpamFilterPolicy.BulkSpamAction","values":[{"label":"Quarantine the message","value":"Quarantine"},{"label":"Move message to Junk Email folder","value":"MoveToJmf"}]}
-            {"type":"Select","label":"Bulk Quarantine Tag","name":"standards.SpamFilterPolicy.BulkQuarantineTag","values":[{"label":"AdminOnlyAccessPolicy","value":"AdminOnlyAccessPolicy"},{"label":"DefaultFullAccessPolicy","value":"DefaultFullAccessPolicy"},{"label":"DefaultFullAccessWithNotificationPolicy","value":"DefaultFullAccessWithNotificationPolicy"}]}
-            {"type":"Select","label":"Phish Spam Action","name":"standards.SpamFilterPolicy.PhishSpamAction","values":[{"label":"Quarantine the message","value":"Quarantine"},{"label":"Move message to Junk Email folder","value":"MoveToJmf"}]}
-            {"type":"Select","label":"Phish Quarantine Tag","name":"standards.SpamFilterPolicy.PhishQuarantineTag","values":[{"label":"AdminOnlyAccessPolicy","value":"AdminOnlyAccessPolicy"},{"label":"DefaultFullAccessPolicy","value":"DefaultFullAccessPolicy"},{"label":"DefaultFullAccessWithNotificationPolicy","value":"DefaultFullAccessWithNotificationPolicy"}]}
-            {"type":"Select","label":"High Confidence Phish Quarantine Tag","name":"standards.SpamFilterPolicy.HighConfidencePhishQuarantineTag","values":[{"label":"AdminOnlyAccessPolicy","value":"AdminOnlyAccessPolicy"},{"label":"DefaultFullAccessPolicy","value":"DefaultFullAccessPolicy"},{"label":"DefaultFullAccessWithNotificationPolicy","value":"DefaultFullAccessWithNotificationPolicy"}]}
+            {"type":"autoComplete","multiple":false,"label":"Spam Action","name":"standards.SpamFilterPolicy.SpamAction","options":[{"label":"Quarantine the message","value":"Quarantine"},{"label":"Move message to Junk Email folder","value":"MoveToJmf"}]}
+            {"type":"autoComplete","multiple":false,"label":"Spam Quarantine Tag","name":"standards.SpamFilterPolicy.SpamQuarantineTag","options":[{"label":"AdminOnlyAccessPolicy","value":"AdminOnlyAccessPolicy"},{"label":"DefaultFullAccessPolicy","value":"DefaultFullAccessPolicy"},{"label":"DefaultFullAccessWithNotificationPolicy","value":"DefaultFullAccessWithNotificationPolicy"}]}
+            {"type":"autoComplete","multiple":false,"label":"High Confidence Spam Action","name":"standards.SpamFilterPolicy.HighConfidenceSpamAction","options":[{"label":"Quarantine the message","value":"Quarantine"},{"label":"Move message to Junk Email folder","value":"MoveToJmf"}]}
+            {"type":"autoComplete","multiple":false,"label":"High Confidence Spam Quarantine Tag","name":"standards.SpamFilterPolicy.HighConfidenceSpamQuarantineTag","options":[{"label":"AdminOnlyAccessPolicy","value":"AdminOnlyAccessPolicy"},{"label":"DefaultFullAccessPolicy","value":"DefaultFullAccessPolicy"},{"label":"DefaultFullAccessWithNotificationPolicy","value":"DefaultFullAccessWithNotificationPolicy"}]}
+            {"type":"autoComplete","multiple":false,"label":"Bulk Spam Action","name":"standards.SpamFilterPolicy.BulkSpamAction","options":[{"label":"Quarantine the message","value":"Quarantine"},{"label":"Move message to Junk Email folder","value":"MoveToJmf"}]}
+            {"type":"autoComplete","multiple":false,"label":"Bulk Quarantine Tag","name":"standards.SpamFilterPolicy.BulkQuarantineTag","options":[{"label":"AdminOnlyAccessPolicy","value":"AdminOnlyAccessPolicy"},{"label":"DefaultFullAccessPolicy","value":"DefaultFullAccessPolicy"},{"label":"DefaultFullAccessWithNotificationPolicy","value":"DefaultFullAccessWithNotificationPolicy"}]}
+            {"type":"autoComplete","multiple":false,"label":"Phish Spam Action","name":"standards.SpamFilterPolicy.PhishSpamAction","options":[{"label":"Quarantine the message","value":"Quarantine"},{"label":"Move message to Junk Email folder","value":"MoveToJmf"}]}
+            {"type":"autoComplete","multiple":false,"label":"Phish Quarantine Tag","name":"standards.SpamFilterPolicy.PhishQuarantineTag","options":[{"label":"AdminOnlyAccessPolicy","value":"AdminOnlyAccessPolicy"},{"label":"DefaultFullAccessPolicy","value":"DefaultFullAccessPolicy"},{"label":"DefaultFullAccessWithNotificationPolicy","value":"DefaultFullAccessWithNotificationPolicy"}]}
+            {"type":"autoComplete","multiple":false,"label":"High Confidence Phish Quarantine Tag","name":"standards.SpamFilterPolicy.HighConfidencePhishQuarantineTag","options":[{"label":"AdminOnlyAccessPolicy","value":"AdminOnlyAccessPolicy"},{"label":"DefaultFullAccessPolicy","value":"DefaultFullAccessPolicy"},{"label":"DefaultFullAccessWithNotificationPolicy","value":"DefaultFullAccessWithNotificationPolicy"}]}
         IMPACT
             Medium Impact
         POWERSHELLEQUIVALENT
@@ -33,7 +33,7 @@ function Invoke-CIPPStandardSpamFilterPolicy {
         UPDATECOMMENTBLOCK
             Run the Tools\Update-StandardsComments.ps1 script to update this comment block
     .LINK
-        https://docs.cipp.app/user-documentation/tenant/standards/edit-standards
+        https://docs.cipp.app/user-documentation/tenant/standards/list-standards/defender-standards#medium-impact
     #>
 
     param($Tenant, $Settings)

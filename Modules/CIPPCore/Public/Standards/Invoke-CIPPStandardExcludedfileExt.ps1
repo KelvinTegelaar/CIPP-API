@@ -15,7 +15,7 @@ function Invoke-CIPPStandardExcludedfileExt {
         TAG
             "highimpact"
         ADDEDCOMPONENT
-            {"type":"input","name":"standards.ExcludedfileExt.ext","label":"Extensions, Comma separated"}
+            {"type":"textField","name":"standards.ExcludedfileExt.ext","label":"Extensions, Comma separated"}
         IMPACT
             High Impact
         POWERSHELLEQUIVALENT
@@ -24,7 +24,7 @@ function Invoke-CIPPStandardExcludedfileExt {
         UPDATECOMMENTBLOCK
             Run the Tools\Update-StandardsComments.ps1 script to update this comment block
     .LINK
-        https://docs.cipp.app/user-documentation/tenant/standards/edit-standards
+        https://docs.cipp.app/user-documentation/tenant/standards/list-standards/sharepoint-standards#high-impact
     #>
 
     param($Tenant, $Settings)
