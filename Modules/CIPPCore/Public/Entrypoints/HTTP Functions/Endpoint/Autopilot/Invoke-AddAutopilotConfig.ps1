@@ -18,7 +18,7 @@ Function Invoke-AddAutopilotConfig {
     Write-Host 'PowerShell HTTP trigger function processed a request.'
 
     # Input bindings are passed in via param block.
-    $Tenants = ($Request.body | Select-Object Select_*).psobject.properties.value
+    $Tenants = $Request.body.selectedTenants.value
     $AssignTo = if ($request.body.Assignto -ne 'on') { $request.body.Assignto }
     $Profbod = [pscustomobject]$Request.body
     $usertype = if ($Profbod.NotLocalAdmin -eq 'true') { 'standard' } else { 'administrator' }

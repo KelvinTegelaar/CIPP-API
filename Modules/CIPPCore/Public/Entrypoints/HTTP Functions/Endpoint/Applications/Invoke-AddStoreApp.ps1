@@ -1,6 +1,6 @@
 using namespace System.Net
 
-Function Invoke-AddWinGetApp {
+Function Invoke-AddStoreApp {
     <#
     .FUNCTIONALITY
         Entrypoint
@@ -28,7 +28,7 @@ Function Invoke-AddWinGetApp {
         }
     }
 
-    $Tenants = ($Request.body | Select-Object Select_*).psobject.properties.value
+    $Tenants = $Request.body.selectedTenants.defaultDomainName
     $Results = foreach ($Tenant in $tenants) {
         try {
             $CompleteObject = [PSCustomObject]@{

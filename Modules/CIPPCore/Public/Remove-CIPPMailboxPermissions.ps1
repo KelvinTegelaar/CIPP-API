@@ -47,7 +47,7 @@ function Remove-CIPPMailboxPermissions {
                             }
                             Anchor    = $userid
                         }
-                        New-ExoRequest @ExoRequest
+                        $permissions = New-ExoRequest @ExoRequest
 
                         if ($permissions -notlike "*because the ACE doesn't exist on the object.*") {
                             Write-LogMessage -user $ExecutingUser -API $APIName -message "Removed FullAccess permissions for $($AccessUser) from $($userid)'s mailbox." -Sev 'Info' -tenant $TenantFilter

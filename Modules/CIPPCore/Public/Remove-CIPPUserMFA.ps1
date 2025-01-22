@@ -41,7 +41,7 @@ function Remove-CIPPUserMFA {
     }
     if (($Requests | Measure-Object).Count -eq 0) {
         Write-LogMessage -API 'Remove-CIPPUserMFA' -tenant $TenantFilter -message "No MFA methods found for user $UserPrincipalName" -sev 'Info'
-        $Results = [pscustomobject]@{'Results' = "No MFA methods found for user $($Request.Query.ID)" }
+        $Results = "No MFA methods found for user $($Request.Query.ID)"
         Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
                 StatusCode = [HttpStatusCode]::OK
                 Body       = $Results
@@ -57,7 +57,7 @@ function Remove-CIPPUserMFA {
         } else {
             $FailedAuthMethods = (($Results | Where-Object { $_.status -ne 204 }).id -split '-')[0] -join ', '
             Write-LogMessage -API 'Remove-CIPPUserMFA' -tenant $TenantFilter -message "Failed to remove MFA methods for $FailedAuthMethods" -sev 'Error'
-            $Results = [pscustomobject]@{'Results' = "Failed to reset MFA methods for $FailedAuthMethods" }
+            $Results = "Failed to reset MFA methods for $FailedAuthMethods"
         }
     }
 

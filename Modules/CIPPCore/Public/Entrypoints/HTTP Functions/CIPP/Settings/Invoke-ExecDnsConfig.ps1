@@ -44,8 +44,8 @@ Function Invoke-ExecDnsConfig {
 
         switch ($Request.Query.Action) {
             'SetConfig' {
-                if ($Request.Query.Resolver) {
-                    $Resolver = $Request.Query.Resolver
+                if ($Request.Body.Resolver) {
+                    $Resolver = $Request.Body.Resolver
                     if ($ValidResolvers -contains $Resolver) {
                         try {
                             $Config.Resolver = $Resolver
