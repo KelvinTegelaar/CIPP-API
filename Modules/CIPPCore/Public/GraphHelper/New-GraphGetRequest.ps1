@@ -3,21 +3,28 @@ function New-GraphGetRequest {
     .FUNCTIONALITY
     Internal
     #>
+    [CmdletBinding()]
     Param(
-        $uri,
-        $tenantid,
-        $scope,
-        $AsApp,
-        $noPagination,
-        $NoAuthCheck,
-        $skipTokenCache,
+        [string]$uri,
+        [string]$tenantid,
+        [string]$scope,
+        [bool]$AsApp,
+        [bool]$noPagination,
+        $NoAuthCheck = $false,
+        [bool]$skipTokenCache,
         $Caller,
         [switch]$ComplexFilter,
         [switch]$CountOnly,
         [switch]$IncludeResponseHeaders
     )
 
-    if ($NoAuthCheck -or (Get-AuthorisedRequest -Uri $uri -TenantID $tenantid)) {
+    if ($NoAuthCheck -eq $false) {
+        $IsAuthorised = Get-AuthorisedRequest -Uri $uri -TenantID $tenantid
+    } else {
+        $IsAuthorised = $true
+    }
+
+    if ($NoAuthCheck -eq $true -or $IsAuthorised) {
         if ($scope -eq 'ExchangeOnline') {
             $AccessToken = Get-ClassicAPIToken -resource 'https://outlook.office365.com' -Tenantid $tenantid
             $headers = @{ Authorization = "Bearer $($AccessToken.access_token)" }

@@ -21,7 +21,6 @@ function Get-CippAuditLogSearchResults {
     process {
         $GraphRequest = @{
             Uri      = ('https://graph.microsoft.com/beta/security/auditLog/queries/{0}/records?$top=999&$count=true' -f $QueryId)
-            Method   = 'GET'
             AsApp    = $true
             tenantid = $TenantFilter
         }

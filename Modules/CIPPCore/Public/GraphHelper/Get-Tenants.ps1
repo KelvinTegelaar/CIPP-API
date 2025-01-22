@@ -50,7 +50,7 @@ function Get-Tenants {
 
     $IncludedTenantsCache = Get-CIPPAzDataTableEntity @TenantsTable -Filter $Filter
 
-    if (($IncludedTenantsCache | Measure-Object).Count -eq 0) {
+    if (($IncludedTenantsCache | Measure-Object).Count -eq 0 -and $TenantFilter -ne $env:TenantID) {
         $BuildRequired = $true
     }
 
