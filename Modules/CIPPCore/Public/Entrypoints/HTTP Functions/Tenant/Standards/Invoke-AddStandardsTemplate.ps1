@@ -31,7 +31,7 @@ Function Invoke-AddStandardsTemplate {
 
     }
     Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -message "Created CA Template $($Request.body.name) with GUID $GUID" -Sev 'Debug'
-    $body = [pscustomobject]@{'Results' = 'Successfully added template' }
+    $body = [pscustomobject]@{'Results' = 'Successfully added template'; id = $GUID }
 
     # Associate values to output bindings by calling 'Push-OutputBinding'.
     Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
