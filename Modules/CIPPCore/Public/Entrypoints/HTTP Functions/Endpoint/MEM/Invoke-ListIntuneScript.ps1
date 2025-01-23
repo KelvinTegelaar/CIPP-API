@@ -19,9 +19,6 @@ function Invoke-ListIntuneScript {
     $TenantFilter = $Request.Query.TenantFilter
     $Results = [System.Collections.Generic.List[System.Object]]::new()
 
-
-
-
     $BulkRequests = [PSCustomObject]@(
         @{
             id     = 'Windows'
@@ -39,9 +36,9 @@ function Invoke-ListIntuneScript {
             url    = '/deviceManagement/deviceHealthScripts'
         }
         @{
-            id     = 'ConfigurationPolicies'
+            id     = 'Linux'
             method = 'GET'
-            url    = "/deviceManagement/configurationPolicies?`$expand=assignments&top=1000"
+            url    = '/deviceManagement/configurationPolicies'
         }
     )
 
@@ -52,65 +49,17 @@ function Invoke-ListIntuneScript {
         Write-Host "Failed to retrieve scripts. Error: $($ErrorMessage.NormalizedError)"
     }
 
-    # Windows
-    try {
+    foreach ($scriptId in @('Windows', 'MacOS', 'Remediation', 'Linux')) {
+        $scripts = ($BulkResults | Where-Object { $_.id -eq $scriptId }).body.value
 
-        $WindowsScripts = ($BulkResults | Where-Object { $_.id -eq 'Windows' }).body.value
-        $WindowsScripts | Add-Member -MemberType NoteProperty -Name scriptType -Value 'Windows'
-        if ($WindowsScripts.Count -gt 1) {
-            $Results.AddRange($WindowsScripts)
-        } else {
-            $Results.Add($WindowsScripts)
+        if ($scriptId -eq 'Linux') {
+            $scripts = $scripts | Where-Object { $_.platforms -eq 'linux' -and $_.templateReference.templateFamily -eq 'deviceConfigurationScripts' }
+            $scripts | ForEach-Object { $_ | Add-Member -MemberType NoteProperty -Name displayName -Value $_.name -Force }
         }
 
-    } catch {
-        $ErrorMessage = Get-CippException -Exception $_
-        Write-Host "Failed to retrieve Windows scripts. Error: $($ErrorMessage.NormalizedError)"
-    }
-
-    # MacOS
-    try {
-        # $MacOSScripts = New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/deviceManagement/deviceShellScripts' -tenantid $TenantFilter
-        $MacOSScripts | Add-Member -MemberType NoteProperty -Name scriptType -Value 'MacOS'
-        if ($MacOSScripts.Count -gt 1) {
-            $Results.AddRange($MacOSScripts)
-        } else {
-            $Results.Add($MacOSScripts)
-        }
-
-    } catch {
-        $ErrorMessage = Get-CippException -Exception $_
-        Write-Host "Failed to retrieve macOS scripts. Error: $($ErrorMessage.NormalizedError)"
-    }
-
-    # Remediation
-    try {
-        $RemediateScripts = New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/deviceManagement/deviceHealthScripts' -tenantid $TenantFilter
-        $RemediateScripts | Add-Member -MemberType NoteProperty -Name scriptType -Value 'Remediation'
-        if ($RemediateScripts.Count -gt 1) {
-            $Results.AddRange($RemediateScripts)
-        } else {
-            $Results.Add($RemediateScripts)
-        }
-    } catch {
-        $ErrorMessage = Get-CippException -Exception $_
-        Write-Host "Failed to retrieve remediate scripts. Error: $($ErrorMessage.NormalizedError)"
-    }
-
-    # Linux
-    try {
-        $LinuxScripts = New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/deviceManagement/configurationPolicies?`$expand=assignments&top=1000' -tenantid $TenantFilter
-        $LinuxScripts = $LinuxScripts | Where-Object { $_.platforms -eq 'linux' -and $_.templateReference.templateFamily -eq 'deviceConfigurationScripts' }
-        $LinuxScripts | Add-Member -MemberType NoteProperty -Name scriptType -Value 'Linux'
-        $LinuxScripts | ForEach-Object { $_ | Add-Member -MemberType NoteProperty -Name displayName -Value $_.name -Force }
-        if ($LinuxScripts.Count -gt 1) {
-            $Results.AddRange($LinuxScripts)
-        } else {
-            $Results.Add($LinuxScripts)
-        }
-    } catch {
-        $ErrorMessage = Get-CippException -Exception $_
-        Write-Host "Failed to retrieve Linux scripts. Error: $($ErrorMessage.NormalizedError)"
+        $scripts | Add-Member -MemberType NoteProperty -Name scriptType -Value $scriptId
+        Write-Host "$scriptId scripts count: $($scripts.Count)"
+        $Results.AddRange(@($scripts))
     }
 
 

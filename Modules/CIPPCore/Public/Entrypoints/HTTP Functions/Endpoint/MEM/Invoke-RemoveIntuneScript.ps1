@@ -23,15 +23,24 @@ function Invoke-RemoveIntuneScript {
 
     try {
 
-        $Endpoint = switch ($ScriptType) {
-            'windows' { 'deviceManagementScripts' }
-            'macOS' { 'deviceShellScripts' }
-            'remediate' { 'deviceHealthScripts' }
-            Default {}
+        $URI = switch ($ScriptType) {
+            'Windows' {
+                "https://graph.microsoft.com/beta/deviceManagement/deviceManagementScripts/$($ID)"
+            }
+            'MacOS' {
+                "https://graph.microsoft.com/beta/deviceManagement/deviceShellScripts/$($ID)"
+            }
+            'Remediation' {
+                "https://graph.microsoft.com/beta/deviceManagement/deviceHealthScripts/$($ID)"
+            }
+            'Linux' {
+                "https://graph.microsoft.com/beta/deviceManagement/ConfigurationPolicies('$($ID)')"
+            }
+            Default { $null }
         }
 
-        $null = New-GraphPOSTRequest -uri "https://graph.microsoft.com/beta/deviceManagement/$($Endpoint)/$($ID)" -tenantid $TenantFilter -type DELETE
-        $Result = "Deleted $($ScriptType) script $($DisplayName)"
+        $null = New-GraphPOSTRequest -uri $URI -type DELETE -tenantid $TenantFilter
+        $Result = "Deleted $($ScriptType) script $($DisplayName) with ID: $($ID)"
         $StatusCode = [HttpStatusCode]::OK
     } catch {
         $ErrorMessage = Get-CippException -Exception $_
