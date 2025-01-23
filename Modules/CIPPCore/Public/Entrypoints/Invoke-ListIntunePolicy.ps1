@@ -10,7 +10,8 @@ Function Invoke-ListIntunePolicy {
     param($Request, $TriggerMetadata)
 
     $APIName = $TriggerMetadata.FunctionName
-    Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -message 'Accessed this API' -Sev 'Debug'
+    $ExecutingUser = $request.headers.'x-ms-client-principal'
+    Write-LogMessage -user $ExecutingUser -API $APINAME -message 'Accessed this API' -Sev 'Debug'
 
 
     # Write to the Azure Functions log stream.
@@ -19,12 +20,12 @@ Function Invoke-ListIntunePolicy {
     # Interact with query parameters or the body of the request.
     $TenantFilter = $Request.Query.TenantFilter
     $id = $Request.Query.ID
-    $urlname = $Request.Query.URLName
+    $URLName = $Request.Query.URLName
     try {
         if ($ID) {
-            $GraphRequest = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/deviceManagement/$($urlname)('$ID')" -tenantid $tenantfilter
+            $GraphRequest = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/deviceManagement/$($URLName)('$ID')" -tenantid $TenantFilter
         } else {
-            $Groups = New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/groups?$top=999' -tenantid $tenantfilter | Select-Object -Property id, displayName
+            $Groups = New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/groups?$top=999' -tenantid $TenantFilter | Select-Object -Property id, displayName
 
             $BulkRequests = [PSCustomObject]@(
                 @{
@@ -100,13 +101,8 @@ Function Invoke-ListIntunePolicy {
             }
         }
 
-        # Filter the results to only include linux scripts or sort out linux scripts
-        if ($Request.Query.type -eq 'linuxScript') {
-            $GraphRequest = $GraphRequest | Where-Object { $_.platforms -eq 'linux' -and $_.templateReference.templateFamily -eq 'deviceConfigurationScripts' }
-        } else {
-            $GraphRequest = $GraphRequest | Where-Object { $_.platforms -ne 'linux' -and $_.templateReference.templateFamily -ne 'deviceConfigurationScripts' }
-        }
-
+        # Filter the results to sort out linux scripts
+        $GraphRequest = $GraphRequest | Where-Object { $_.platforms -ne 'linux' -and $_.templateReference.templateFamily -ne 'deviceConfigurationScripts' }
         $StatusCode = [HttpStatusCode]::OK
     } catch {
         $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
