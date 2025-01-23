@@ -15,10 +15,10 @@ Function Invoke-listStandardTemplates {
     $Templates = (Get-CIPPAzDataTableEntity @Table -Filter $Filter) | ForEach-Object {
         $JSON = $_.JSON
         try {
+            $RowKey = $_.RowKey
             $data = $_.JSON | ConvertFrom-Json -Depth 100 -ErrorAction SilentlyContinue
         } catch {
-            Write-Host "Could not load standard template: $($_.Exception.Message). Content of the template is: $($JSON)."
-            Write-Host "Template GUID: $($_.GUID)"
+            Write-Host "$($RowKey)"
             return
         }
         $data | Add-Member -NotePropertyName 'GUID' -NotePropertyValue $_.GUID -Force
