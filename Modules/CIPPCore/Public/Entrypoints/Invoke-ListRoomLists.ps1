@@ -21,10 +21,18 @@ Function Invoke-ListRoomLists {
     $TenantFilter = $Request.Query.TenantFilter
 
     try {
-        $params = @{
-            uri      = 'https://graph.microsoft.com/beta/places/microsoft.graph.roomlist'
-            tenantid = $TenantFilter
-            AsApp    = $true
+        if ($null -ne $Request.Query.PlaceListID) {
+            $params = @{
+                uri      = "https://graph.microsoft.com/beta/places/$($Request.Query.PlaceListID)/microsoft.graph.roomlist"
+                tenantid = $TenantFilter
+                AsApp    = $true
+            }
+        } else {
+            $params = @{
+                uri      = 'https://graph.microsoft.com/beta/places/microsoft.graph.roomlist'
+                tenantid = $TenantFilter
+                AsApp    = $true
+            }
         }
         $GraphRequest = New-GraphGetRequest @params
 
