@@ -107,7 +107,10 @@ function Test-CIPPGDAPRelationships {
 
     $Table = Get-CIPPTable -TableName AccessChecks
     $Data = Get-CIPPAzDataTableEntity @Table -Filter "PartitionKey eq 'AccessCheck' and RowKey eq 'GDAPRelationships'"
+
     if ($Data) {
+        Write-Host 'Existing GDAP data'
+        Write-Host ($Data | ConvertTo-Json)
         $Data.Data = [string](ConvertTo-Json -InputObject $GDAPRelationships -Depth 10 -Compress)
     } else {
         $Data = @{
