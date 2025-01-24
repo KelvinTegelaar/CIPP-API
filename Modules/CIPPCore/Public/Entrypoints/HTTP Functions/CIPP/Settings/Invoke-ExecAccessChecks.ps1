@@ -17,7 +17,7 @@ Function Invoke-ExecAccessChecks {
     $LastRun = (Get-Date).ToUniversalTime()
     switch ($Request.Query.Type) {
         'Permissions' {
-            if ($Request.Query.SkipCache -ne 'true') {
+            if ($Request.Query.SkipCache -ne 'true' -or $Request.Query.SkipCache -ne $true) {
                 try {
                     $Cache = Get-CIPPAzDataTableEntity @Table -Filter "RowKey eq 'AccessPermissions'"
                     $Results = $Cache.Data | ConvertFrom-Json
@@ -81,7 +81,7 @@ Function Invoke-ExecAccessChecks {
                 }
             }
 
-            if ($Request.Query.SkipCache -eq 'true') {
+            if ($Request.Query.SkipCache -eq 'true' -or $Request.Query.SkipCache -eq $true) {
                 $null = Test-CIPPAccessTenant -ExecutingUser $Request.Headers.'x-ms-client-principal'
             }
 
@@ -93,7 +93,7 @@ Function Invoke-ExecAccessChecks {
 
         }
         'GDAP' {
-            if (!$Request.Query.SkipCache -eq 'true') {
+            if (!$Request.Query.SkipCache -eq 'true' -or !$Request.Query.SkipCache -eq $true) {
                 try {
                     $Cache = Get-CIPPAzDataTableEntity @Table -Filter "RowKey eq 'GDAPRelationships'"
                     $Results = $Cache.Data | ConvertFrom-Json
