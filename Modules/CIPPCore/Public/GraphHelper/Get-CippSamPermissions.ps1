@@ -174,7 +174,11 @@ function Get-CippSamPermissions {
             'UpdatedBy'    = 'CIPP'
         }
         $Table = Get-CIPPTable -TableName 'AppPermissions'
-        $null = Add-CIPPAzDataTableEntity @Table -Entity $Entity -Force
+        try {
+            $null = Add-CIPPAzDataTableEntity @Table -Entity $Entity -Force
+        } catch {
+            Write-Error "Failed to save the CIPP-SAM permissions: $($_.Exception.Message)"
+        }
     }
 
     if (!$NoDiff.IsPresent -and $SamAppPermissions.Type -eq 'Table') {
