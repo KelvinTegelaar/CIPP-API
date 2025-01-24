@@ -109,8 +109,6 @@ function Test-CIPPGDAPRelationships {
     $Data = Get-CIPPAzDataTableEntity @Table -Filter "PartitionKey eq 'AccessCheck' and RowKey eq 'GDAPRelationships'"
 
     if ($Data) {
-        Write-Host 'Existing GDAP data'
-        Write-Host ($Data | ConvertTo-Json)
         $Data.Data = [string](ConvertTo-Json -InputObject $GDAPRelationships -Depth 10 -Compress)
     } else {
         $Data = @{
@@ -119,7 +117,9 @@ function Test-CIPPGDAPRelationships {
             Data         = [string](ConvertTo-Json -InputObject $GDAPRelationships -Depth 10 -Compress)
         }
     }
-    Add-CIPPAzDataTableEntity @Table -Entity $Data -Force
+    try {
+        Add-CIPPAzDataTableEntity @Table -Entity $Data -Force
+    } catch {}
 
     return $GDAPRelationships
 }
