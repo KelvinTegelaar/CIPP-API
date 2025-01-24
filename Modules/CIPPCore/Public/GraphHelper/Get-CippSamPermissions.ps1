@@ -112,7 +112,11 @@ function Get-CippSamPermissions {
     $Table = Get-CippTable -tablename 'AppPermissions'
     $SavedPermissions = Get-CippAzDataTableEntity @Table -Filter "PartitionKey eq 'CIPP-SAM' and RowKey eq 'CIPP-SAM'"
     if ($SavedPermissions.Permissions) {
-        $SavedPermissions.Permissions = $SavedPermissions.Permissions | ConvertFrom-Json
+        try {
+            $SavedPermissions.Permissions = $SavedPermissions.Permissions | ConvertFrom-Json -ErrorAction Stop
+        } catch {
+            $SavedPermissions.Permissions = [PSCustomObject]@{}
+        }
     } else {
         $SavedPermissions = @{
             Permissions = [PSCustomObject]@{}
