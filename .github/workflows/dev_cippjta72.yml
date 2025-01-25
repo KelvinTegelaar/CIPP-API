@@ -13,8 +13,8 @@ env:
   AZURE_FUNCTIONAPP_PACKAGE_PATH: '.' # set this to the path to your web app project, defaults to the repository root
 
 jobs:
-  if: github.event.repository.fork == false
   deploy:
+    if: github.event.repository.fork == false
     runs-on: windows-latest
     
     steps:
