@@ -7,7 +7,7 @@ function Set-CIPPIntuneTemplate {
         $Description,
         $templateType
     )
-
+    Write-Host "Received $DisplayName, $Description, $RawJSON, $templateType"
     if (!$DisplayName) { throw 'You must enter a displayname' }
     if ($null -eq ($RawJSON | ConvertFrom-Json)) { throw 'the JSON is invalid' }
 
