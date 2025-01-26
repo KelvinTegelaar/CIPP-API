@@ -16,7 +16,7 @@ function Invoke-CIPPStandardOauthConsent {
             "mediumimpact"
             "CIS"
         ADDEDCOMPONENT
-            {"type":"input","name":"standards.OauthConsent.AllowedApps","label":"Allowed application IDs, comma separated"}
+            {"type":"textField","name":"standards.OauthConsent.AllowedApps","label":"Allowed application IDs, comma separated","required":false}
         IMPACT
             Medium Impact
         POWERSHELLEQUIVALENT
@@ -26,7 +26,7 @@ function Invoke-CIPPStandardOauthConsent {
         UPDATECOMMENTBLOCK
             Run the Tools\Update-StandardsComments.ps1 script to update this comment block
     .LINK
-        https://docs.cipp.app/user-documentation/tenant/standards/edit-standards
+        https://docs.cipp.app/user-documentation/tenant/standards/list-standards/entra-aad-standards#medium-impact
     #>
 
     param($tenant, $settings)

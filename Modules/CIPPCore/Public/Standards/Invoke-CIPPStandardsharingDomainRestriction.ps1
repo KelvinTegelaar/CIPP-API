@@ -16,8 +16,8 @@ function Invoke-CIPPStandardsharingDomainRestriction {
             "highimpact"
             "CIS"
         ADDEDCOMPONENT
-            {"type":"Select","name":"standards.sharingDomainRestriction.Mode","label":"Limit external sharing by domains","values":[{"label":"Off","value":"none"},{"label":"Restrict sharing to specific domains","value":"allowList"},{"label":"Block sharing to specific domains","value":"blockList"}]}
-            {"type":"input","name":"standards.sharingDomainRestriction.Domains","label":"Domains to allow/block, comma separated"}
+            {"type":"select","multiple":false,"name":"standards.sharingDomainRestriction.Mode","label":"Limit external sharing by domains","options":[{"label":"Off","value":"none"},{"label":"Restrict sharing to specific domains","value":"allowList"},{"label":"Block sharing to specific domains","value":"blockList"}]}
+            {"type":"textField","name":"standards.sharingDomainRestriction.Domains","label":"Domains to allow/block, comma separated","required":false}
         IMPACT
             High Impact
         POWERSHELLEQUIVALENT
@@ -26,7 +26,7 @@ function Invoke-CIPPStandardsharingDomainRestriction {
         UPDATECOMMENTBLOCK
             Run the Tools\Update-StandardsComments.ps1 script to update this comment block
     .LINK
-        https://docs.cipp.app/user-documentation/tenant/standards/edit-standards
+        https://docs.cipp.app/user-documentation/tenant/standards/list-standards/sharepoint-standards#high-impact
     #>
 
     param($Tenant, $Settings)
