@@ -8,7 +8,7 @@ function New-GraphGetRequest {
         [string]$uri,
         [string]$tenantid,
         [string]$scope,
-        [bool]$AsApp,
+        $AsApp,
         [bool]$noPagination,
         $NoAuthCheck = $false,
         [bool]$skipTokenCache,
