@@ -22,18 +22,8 @@ function Start-CIPPStatsTimer {
         $Table = Get-CIPPTable -TableName Extensionsconfig
         try {
             $RawExt = (Get-CIPPAzDataTableEntity @Table).config | ConvertFrom-Json -Depth 10 -ErrorAction Stop
-            $Extensions = @{
-                CIPPAPI  = $RawExt.CIPPAPI.Enabled
-                Hudu     = $RawExt.Hudu.Enabled
-                Sherweb  = $RawExt.Sherweb.Enabled
-                Gradient = $RawExt.Gradient.Enabled
-                NinjaOne = $RawExt.NinjaOne.Enabled
-                haloPSA  = $RawExt.haloPSA.Enabled
-                HIBP     = $RawExt.HIBP.Enabled
-                PWPush   = $RawExt.PWPush.Enabled
-            }
         } catch {
-            $Extensions = @{}
+            $RawExt = @{}
         }
 
         $SendingObject = [PSCustomObject]@{
