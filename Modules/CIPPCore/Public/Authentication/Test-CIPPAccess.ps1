@@ -69,8 +69,8 @@ function Test-CIPPAccess {
         if ($PermissionsFound) {
             if ($TenantList.IsPresent) {
                 $LimitedTenantList = foreach ($Permission in $PermissionSet) {
-                    if (($Permission.AllowedTenants | Measure-Object).Count -eq 0 -and ($Permission.BlockedTenants | Measure-Object).Count -eq 0) {
-                        return @('AllTenants')
+                    if ((($Permission.AllowedTenants | Measure-Object).Count -eq 0 -or $Permission.AllowedTenants -contains 'AllTenants') -and (($Permission.BlockedTenants | Measure-Object).Count -eq 0)) {
+                        @('AllTenants')
                     } else {
                         if ($Permission.AllowedTenants -contains 'AllTenants') {
                             $Permission.AllowedTenants = $Tenants.customerId

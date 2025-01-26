@@ -15,16 +15,16 @@ function Invoke-CIPPStandardintuneBrandingProfile {
         TAG
             "lowimpact"
         ADDEDCOMPONENT
-            {"type":"input","name":"standards.intuneBrandingProfile.displayName","label":"Organization name"}
-            {"type":"boolean","name":"standards.intuneBrandingProfile.showLogo","label":"Show logo"}
-            {"type":"boolean","name":"standards.intuneBrandingProfile.showDisplayNameNextToLogo","label":"Show organization name next to logo"}
-            {"type":"input","name":"standards.intuneBrandingProfile.contactITName","label":"Contact IT name"}
-            {"type":"input","name":"standards.intuneBrandingProfile.contactITPhoneNumber","label":"Contact IT phone number"}
-            {"type":"input","name":"standards.intuneBrandingProfile.contactITEmailAddress","label":"Contact IT email address"}
-            {"type":"input","name":"standards.intuneBrandingProfile.contactITNotes","label":"Contact IT notes"}
-            {"type":"input","name":"standards.intuneBrandingProfile.onlineSupportSiteName","label":"Online support site name"}
-            {"type":"input","name":"standards.intuneBrandingProfile.onlineSupportSiteUrl","label":"Online support site URL"}
-            {"type":"input","name":"standards.intuneBrandingProfile.privacyUrl","label":"Privacy statement URL"}
+            {"type":"textField","name":"standards.intuneBrandingProfile.displayName","label":"Organization name","required":false}
+            {"type":"switch","name":"standards.intuneBrandingProfile.showLogo","label":"Show logo"}
+            {"type":"switch","name":"standards.intuneBrandingProfile.showDisplayNameNextToLogo","label":"Show organization name next to logo","required":false}
+            {"type":"textField","name":"standards.intuneBrandingProfile.contactITName","label":"Contact IT name","required":false}
+            {"type":"textField","name":"standards.intuneBrandingProfile.contactITPhoneNumber","label":"Contact IT phone number","required":false}
+            {"type":"textField","name":"standards.intuneBrandingProfile.contactITEmailAddress","label":"Contact IT email address","required":false}
+            {"type":"textField","name":"standards.intuneBrandingProfile.contactITNotes","label":"Contact IT notes","required":false}
+            {"type":"textField","name":"standards.intuneBrandingProfile.onlineSupportSiteName","label":"Online support site name","required":false}
+            {"type":"textField","name":"standards.intuneBrandingProfile.onlineSupportSiteUrl","label":"Online support site URL","required":false}
+            {"type":"textField","name":"standards.intuneBrandingProfile.privacyUrl","label":"Privacy statement URL","required":false}
         IMPACT
             Low Impact
         POWERSHELLEQUIVALENT
@@ -33,7 +33,7 @@ function Invoke-CIPPStandardintuneBrandingProfile {
         UPDATECOMMENTBLOCK
             Run the Tools\Update-StandardsComments.ps1 script to update this comment block
     .LINK
-        https://docs.cipp.app/user-documentation/tenant/standards/edit-standards
+        https://docs.cipp.app/user-documentation/tenant/standards/list-standards/intune-standards#low-impact
     #>
 
     param($Tenant, $Settings)
