@@ -24,6 +24,7 @@ Function Invoke-AddMSPApp {
         $InstallParams = [pscustomobject]$RMMApp.params
         switch ($rmmapp.RMMName.value) {
             'datto' {
+                Write-Host 'test'
                 $installcommandline = "powershell.exe -executionpolicy bypass .\install.ps1 -URL $($InstallParams.DattoURL) -GUID $($InstallParams.DattoGUID."$($tenant.customerId)")"
                 $UninstallCommandLine = 'powershell.exe -executionpolicy bypass .\uninstall.ps1'
             }

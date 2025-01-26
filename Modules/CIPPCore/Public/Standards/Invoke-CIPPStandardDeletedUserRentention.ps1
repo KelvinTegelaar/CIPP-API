@@ -15,7 +15,7 @@ function Invoke-CIPPStandardDeletedUserRentention {
         TAG
             "lowimpact"
         ADDEDCOMPONENT
-            {"type":"Select","name":"standards.DeletedUserRentention.Days","label":"Retention time (Default 30 days)","values":[{"label":"30 days","value":"30"},{"label":"90 days","value":"90"},{"label":"1 year","value":"365"},{"label":"2 years","value":"730"},{"label":"3 years","value":"1095"},{"label":"4 years","value":"1460"},{"label":"5 years","value":"1825"},{"label":"6 years","value":"2190"},{"label":"7 years","value":"2555"},{"label":"8 years","value":"2920"},{"label":"9 years","value":"3285"},{"label":"10 years","value":"3650"}]}
+            {"type":"select","multiple":false,"name":"standards.DeletedUserRentention.Days","label":"Retention time (Default 30 days)","options":[{"label":"30 days","value":"30"},{"label":"90 days","value":"90"},{"label":"1 year","value":"365"},{"label":"2 years","value":"730"},{"label":"3 years","value":"1095"},{"label":"4 years","value":"1460"},{"label":"5 years","value":"1825"},{"label":"6 years","value":"2190"},{"label":"7 years","value":"2555"},{"label":"8 years","value":"2920"},{"label":"9 years","value":"3285"},{"label":"10 years","value":"3650"}]}
         IMPACT
             Low Impact
         POWERSHELLEQUIVALENT
@@ -24,7 +24,7 @@ function Invoke-CIPPStandardDeletedUserRentention {
         UPDATECOMMENTBLOCK
             Run the Tools\Update-StandardsComments.ps1 script to update this comment block
     .LINK
-        https://docs.cipp.app/user-documentation/tenant/standards/edit-standards
+        https://docs.cipp.app/user-documentation/tenant/standards/list-standards/sharepoint-standards#low-impact
     #>
 
     param($Tenant, $Settings)

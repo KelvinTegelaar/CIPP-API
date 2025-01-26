@@ -7,8 +7,8 @@ function Invoke-CIPPStandardDisableEmail {
     .SYNOPSIS
         (Label) Disables Email as an MFA method
     .DESCRIPTION
-        (Helptext) This blocks users from using email as an MFA method. This disables the email OTP option for guest users, and instead promts them to create a Microsoft account.
-        (DocsDescription) This blocks users from using email as an MFA method. This disables the email OTP option for guest users, and instead promts them to create a Microsoft account.
+        (Helptext) This blocks users from using email as an MFA method. This disables the email OTP option for guest users, and instead prompts them to create a Microsoft account.
+        (DocsDescription) This blocks users from using email as an MFA method. This disables the email OTP option for guest users, and instead prompts them to create a Microsoft account.
     .NOTES
         CAT
             Entra (AAD) Standards
@@ -23,7 +23,7 @@ function Invoke-CIPPStandardDisableEmail {
         UPDATECOMMENTBLOCK
             Run the Tools\Update-StandardsComments.ps1 script to update this comment block
     .LINK
-        https://docs.cipp.app/user-documentation/tenant/standards/edit-standards
+        https://docs.cipp.app/user-documentation/tenant/standards/list-standards/entra-aad-standards#high-impact
     #>
 
     param($Tenant, $Settings)

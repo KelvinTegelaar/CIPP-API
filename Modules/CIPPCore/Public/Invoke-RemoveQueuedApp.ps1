@@ -14,7 +14,7 @@ Function Invoke-RemoveQueuedApp {
     $User = $request.headers.'x-ms-client-principal'
     Write-LogMessage -user $User -API $APINAME -message 'Accessed this API' -Sev 'Debug'
 
-    $ID = $request.query.id
+    $ID = $request.body.id
     try {
         $Table = Get-CippTable -tablename 'apps'
         $Filter = "PartitionKey eq 'apps' and RowKey eq '$id'"
@@ -25,7 +25,7 @@ Function Invoke-RemoveQueuedApp {
     } catch {
         $ErrorMessage = Get-CippException -Exception $_
         Write-LogMessage -user $User -API $APINAME -message "Failed to remove application queue for $ID. $($ErrorMessage.NormalizedError)" -Sev 'Error' -LogData $ErrorMessage
-        $body = [pscustomobject]@{'Results' = 'Failed to remove standard)' }
+        $body = [pscustomobject]@{'Results' = "Failed to remove item. $(Get-NormalizedError -message $_.Exception.Message)" }
     }
 
     # Associate values to output bindings by calling 'Push-OutputBinding'.

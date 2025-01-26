@@ -89,7 +89,7 @@ function Invoke-HuduExtensionSync {
 
         try {
             if (![string]::IsNullOrEmpty($DeviceLayoutId)) {
-                $null = Add-HuduAssetLayoutM365Field -AssetLayoutId $DeviceLayoutId
+                $null = Add-HuduAssetLayoutField -AssetLayoutId $DeviceLayoutId
                 $CreateDevices = $Configuration.CreateMissingDevices
                 $DesktopsLayout = Get-HuduAssetLayouts -Id $DeviceLayoutId
                 if ($DesktopsLayout.id) {
