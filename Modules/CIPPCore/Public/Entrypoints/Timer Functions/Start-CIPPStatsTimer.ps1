@@ -19,6 +19,22 @@ function Start-CIPPStatsTimer {
         $CIPPRoot = (Get-Item $ModuleBase).Parent.Parent.FullName
 
         $APIVersion = Get-Content "$CIPPRoot\version_latest.txt" | Out-String
+        $Table = Get-CIPPTable -TableName Extensionsconfig
+        try {
+            $RawExt = (Get-CIPPAzDataTableEntity @Table).config | ConvertFrom-Json -Depth 10 -ErrorAction Stop
+            $Extensions = @{
+                CIPPAPI  = $RawExt.CIPPAPI.Enabled
+                Hudu     = $RawExt.Hudu.Enabled
+                Sherweb  = $RawExt.Sherweb.Enabled
+                Gradient = $RawExt.Gradient.Enabled
+                NinjaOne = $RawExt.NinjaOne.Enabled
+                haloPSA  = $RawExt.haloPSA.Enabled
+                HIBP     = $RawExt.HIBP.Enabled
+                PWPush   = $RawExt.PWPush.Enabled
+            }
+        } catch {
+            $Extensions = @{}
+        }
 
         $SendingObject = [PSCustomObject]@{
             rgid                = $env:WEBSITE_SITE_NAME
@@ -26,6 +42,14 @@ function Start-CIPPStatsTimer {
             RunningVersionAPI   = $APIVersion.trim()
             CountOfTotalTenants = $tenantcount
             uid                 = $env:TenantID
+            CIPPAPI             = $RawExt.CIPPAPI.Enabled
+            Hudu                = $RawExt.Hudu.Enabled
+            Sherweb             = $RawExt.Sherweb.Enabled
+            Gradient            = $RawExt.Gradient.Enabled
+            NinjaOne            = $RawExt.NinjaOne.Enabled
+            haloPSA             = $RawExt.haloPSA.Enabled
+            HIBP                = $RawExt.HIBP.Enabled
+            PWPush              = $RawExt.PWPush.Enabled
         } | ConvertTo-Json
 
         Invoke-RestMethod -Uri 'https://management.cipp.app/api/stats' -Method POST -Body $SendingObject -ContentType 'application/json'
