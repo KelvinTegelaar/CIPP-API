@@ -21,6 +21,8 @@ function New-CIPPBackup {
                     'standards'
                     'SchedulerConfig'
                     'Extensions'
+                    'WebhookRules'
+                    'ScheduledTasks'
                 )
                 $CSVfile = foreach ($CSVTable in $BackupTables) {
                     $Table = Get-CippTable -tablename $CSVTable

@@ -21,8 +21,8 @@ function Push-ListMailboxRulesQueue {
             }
         }
         if (($Rules | Measure-Object).Count -gt 0) {
-            foreach ($Rule in $Rules) {
-                $GraphRequest = [PSCustomObject]@{
+            $GraphRequest = foreach ($Rule in $Rules) {
+                [PSCustomObject]@{
                     Rules        = [string]($Rule | ConvertTo-Json)
                     RowKey       = [string](New-Guid).guid
                     Tenant       = [string]$domainName
@@ -31,9 +31,9 @@ function Push-ListMailboxRulesQueue {
 
             }
         } else {
-            $Rules = @{
-                Name = 'No rules found'
-            } | ConvertTo-Json
+            $Rules = @(@{
+                    Name = 'No rules found'
+                }) | ConvertTo-Json
             $GraphRequest = [PSCustomObject]@{
                 Rules        = [string]$Rules
                 RowKey       = [string]$domainName

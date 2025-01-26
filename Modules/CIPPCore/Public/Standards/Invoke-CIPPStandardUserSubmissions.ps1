@@ -15,8 +15,8 @@ function Invoke-CIPPStandardUserSubmissions {
         TAG
             "mediumimpact"
         ADDEDCOMPONENT
-            {"type":"Select","label":"Select value","name":"standards.UserSubmissions.state","values":[{"label":"Enabled","value":"enable"},{"label":"Disabled","value":"disable"}]}
-            {"type":"input","name":"standards.UserSubmissions.email","label":"Destination email address"}
+            {"type":"select","multiple":false,"label":"Select value","name":"standards.UserSubmissions.state","options":[{"label":"Enabled","value":"enable"},{"label":"Disabled","value":"disable"}]}
+            {"type":"textField","name":"standards.UserSubmissions.email","required":false,"label":"Destination email address"}
         IMPACT
             Medium Impact
         POWERSHELLEQUIVALENT
@@ -25,7 +25,7 @@ function Invoke-CIPPStandardUserSubmissions {
         UPDATECOMMENTBLOCK
             Run the Tools\Update-StandardsComments.ps1 script to update this comment block
     .LINK
-        https://docs.cipp.app/user-documentation/tenant/standards/edit-standards
+        https://docs.cipp.app/user-documentation/tenant/standards/list-standards/exchange-standards#medium-impact
     #>
 
     param($Tenant, $Settings)
