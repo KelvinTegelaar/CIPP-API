@@ -7,7 +7,7 @@ function Invoke-CIPPStandardDisableBasicAuthSMTP {
     .SYNOPSIS
         (Label) Disable SMTP Basic Authentication
     .DESCRIPTION
-        (Helptext) Disables SMTP AUTH for the organization and all users. This is the default for new tenants.
+        (Helptext) Disables SMTP AUTH for the organization and all users. This is the default for new tenants. 
         (DocsDescription) Disables SMTP basic authentication for the tenant and all users with it explicitly enabled.
     .NOTES
         CAT
@@ -23,7 +23,7 @@ function Invoke-CIPPStandardDisableBasicAuthSMTP {
         UPDATECOMMENTBLOCK
             Run the Tools\Update-StandardsComments.ps1 script to update this comment block
     .LINK
-        https://docs.cipp.app/user-documentation/tenant/standards/edit-standards
+        https://docs.cipp.app/user-documentation/tenant/standards/list-standards/global-standards#medium-impact
     #>
 
     param($Tenant, $Settings)

@@ -14,7 +14,7 @@ Function Invoke-RemoveTransportRuleTemplate {
     $User = $request.headers.'x-ms-client-principal'
     Write-LogMessage -user $User -API $APINAME -message 'Accessed this API' -Sev 'Debug'
 
-    $ID = $request.query.id
+    $ID = $request.query.id ?? $request.body.id
     try {
         $Table = Get-CippTable -tablename 'templates'
         $Filter = "PartitionKey eq 'TransportTemplate' and RowKey eq '$id'"

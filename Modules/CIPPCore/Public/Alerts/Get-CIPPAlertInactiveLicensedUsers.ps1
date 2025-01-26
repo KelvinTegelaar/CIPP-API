@@ -15,10 +15,14 @@ function Get-CIPPAlertInactiveLicensedUsers {
         try {
 
             $Lookup = (Get-Date).AddDays(-90).ToUniversalTime().ToString('o')
-            $GraphRequest = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/users?`$filter=(signInActivity/lastNonInteractiveSignInDateTime le $Lookup)&`$select=id,UserPrincipalName,signInActivity,mail,userType,accountEnabled,assignedLicenses" -scope 'https://graph.microsoft.com/.default' -tenantid $TenantFilter | Where-Object { $_.assignedLicenses.skuId -ne $null }
+            $GraphRequest = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/users?`$filter=(signInActivity/lastNonInteractiveSignInDateTime le $Lookup)&`$select=id,UserPrincipalName,signInActivity,mail,userType,accountEnabled,assignedLicenses" -scope 'https://graph.microsoft.com/.default' -tenantid $TenantFilter |
+                Where-Object { $null -ne $_.assignedLicenses.skuId }
+
+            # true = only active users
+            if ($InputValue -eq $true) { $GraphRequest = $GraphRequest | Where-Object { $_.accountEnabled -eq $true } }
             $AlertData = foreach ($user in $GraphRequest) {
                 $Message = 'User {0} has been inactive for 90 days, but still has a license assigned.' -f $user.UserPrincipalName
-                $user | Select-Object -Property userPrincipalname, signInActivity, @{Name = 'Message'; Expression = { $Message } }
+                $user | Select-Object -Property UserPrincipalName, signInActivity, @{Name = 'Message'; Expression = { $Message } }
 
             }
             Write-AlertTrace -cmdletName $MyInvocation.MyCommand -tenantFilter $TenantFilter -data $AlertData

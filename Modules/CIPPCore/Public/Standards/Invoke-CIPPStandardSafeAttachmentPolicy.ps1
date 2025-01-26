@@ -19,10 +19,10 @@ function Invoke-CIPPStandardSafeAttachmentPolicy {
             "mdo_commonattachmentsfilter"
             "mdo_safeattachmentpolicy"
         ADDEDCOMPONENT
-            {"type":"Select","label":"Action","name":"standards.SafeAttachmentPolicy.Action","values":[{"label":"Allow","value":"Allow"},{"label":"Block","value":"Block"},{"label":"DynamicDelivery","value":"DynamicDelivery"}]}
-            {"type":"Select","label":"QuarantineTag","name":"standards.SafeAttachmentPolicy.QuarantineTag","values":[{"label":"AdminOnlyAccessPolicy","value":"AdminOnlyAccessPolicy"},{"label":"DefaultFullAccessPolicy","value":"DefaultFullAccessPolicy"},{"label":"DefaultFullAccessWithNotificationPolicy","value":"DefaultFullAccessWithNotificationPolicy"}]}
-            {"type":"boolean","label":"Redirect","name":"standards.SafeAttachmentPolicy.Redirect"}
-            {"type":"input","name":"standards.SafeAttachmentPolicy.RedirectAddress","label":"Redirect Address"}
+            {"type":"select","multiple":false,"label":"Action","name":"standards.SafeAttachmentPolicy.Action","options":[{"label":"Allow","value":"Allow"},{"label":"Block","value":"Block"},{"label":"DynamicDelivery","value":"DynamicDelivery"}]}
+            {"type":"select","multiple":false,"label":"QuarantineTag","name":"standards.SafeAttachmentPolicy.QuarantineTag","options":[{"label":"AdminOnlyAccessPolicy","value":"AdminOnlyAccessPolicy"},{"label":"DefaultFullAccessPolicy","value":"DefaultFullAccessPolicy"},{"label":"DefaultFullAccessWithNotificationPolicy","value":"DefaultFullAccessWithNotificationPolicy"}]}
+            {"type":"switch","label":"Redirect","name":"standards.SafeAttachmentPolicy.Redirect"}
+            {"type":"textField","name":"standards.SafeAttachmentPolicy.RedirectAddress","label":"Redirect Address","required":false}
         IMPACT
             Low Impact
         POWERSHELLEQUIVALENT
@@ -32,7 +32,7 @@ function Invoke-CIPPStandardSafeAttachmentPolicy {
         UPDATECOMMENTBLOCK
             Run the Tools\Update-StandardsComments.ps1 script to update this comment block
     .LINK
-        https://docs.cipp.app/user-documentation/tenant/standards/edit-standards
+        https://docs.cipp.app/user-documentation/tenant/standards/list-standards/defender-standards#low-impact
     #>
 
     param($Tenant, $Settings)

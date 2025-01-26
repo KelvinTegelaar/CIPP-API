@@ -13,14 +13,14 @@ Function Invoke-ExecAssignPolicy {
     $APIName = $TriggerMetadata.FunctionName
     Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -message 'Accessed this API' -Sev 'Debug'
 
-    $Tenant = $request.query.tenantfilter
-    $ID = $request.query.id
-    $displayname = $request.query.Displayname
-    $AssignTo = if ($request.query.Assignto -ne 'on') { $request.query.Assignto }
+    $Tenant = $request.body.tenantfilter
+    $ID = $request.body.id
+    $displayname = $request.body.Displayname
+    $AssignTo = if ($request.body.Assignto -ne 'on') { $request.body.Assignto }
 
     $results = try {
         if ($AssignTo) {
-            $assign = Set-CIPPAssignedPolicy -PolicyId $ID -TenantFilter $tenant -GroupName $AssignTo -Type $Request.query.Type
+            $assign = Set-CIPPAssignedPolicy -PolicyId $ID -TenantFilter $tenant -GroupName $AssignTo -Type $Request.body.Type
             Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $($Tenant) -message "Assigned policy $($Displayname) to $AssignTo" -Sev 'Info'
         }
         "Successfully edited policy for $($Tenant)"

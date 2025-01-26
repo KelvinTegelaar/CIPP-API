@@ -12,7 +12,7 @@ function Push-CIPPStandard {
     $Standard = $Item.Standard
     $FunctionName = 'Invoke-CIPPStandard{0}' -f $Standard
     Write-Information "We'll be running $FunctionName"
-    $Rerun = Test-CIPPRerun -Type Standard -Tenant $Tenant -API $Standard
+    $Rerun = Test-CIPPRerun -Type Standard -Tenant $Tenant -API "$($Standard)_$($Item.templateId)"
     if ($Rerun) {
         Write-Information 'Detected rerun. Exiting cleanly'
         exit 0
