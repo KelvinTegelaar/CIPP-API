@@ -2,6 +2,29 @@ Function Invoke-CIPPStandardTeamsEnrollUser {
     <#
     .FUNCTIONALITY
         Internal
+    .COMPONENT
+        (APIName) TeamsEnrollUser
+    .SYNOPSIS
+        (Label) Default voice and face enrollment
+    .DESCRIPTION
+        (Helptext) Controls whether users with this policy can set the voice profile capture and enrollment through the Recognition tab in their Teams client settings.
+        (DocsDescription) Controls whether users with this policy can set the voice profile capture and enrollment through the Recognition tab in their Teams client settings.
+    .NOTES
+        CAT
+            Teams Standards
+        TAG
+            "lowimpact"
+        ADDEDCOMPONENT
+            {"type":"autoComplete","name":"standards.TeamsEnrollUser.EnrollUserOverride","label":"Voice and Face Enrollment","options":[{"label":"Disabled","value":"Disabled"},{"label":"Enabled","value":"Enabled"}]}
+        IMPACT
+            Low Impact
+        POWERSHELLEQUIVALENT
+            Set-CsTeamsMeetingPolicy -Identity Global -EnrollUserOverride \$false
+        RECOMMENDEDBY
+        UPDATECOMMENTBLOCK
+            Run the Tools\Update-StandardsComments.ps1 script to update this comment block
+    .LINK
+        https://docs.cipp.app/user-documentation/tenant/standards/list-standards/teams-standards#low-impact
     #>
 
     param($Tenant, $Settings)

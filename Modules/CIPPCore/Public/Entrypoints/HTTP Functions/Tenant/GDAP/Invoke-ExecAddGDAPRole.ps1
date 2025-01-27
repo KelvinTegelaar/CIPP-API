@@ -107,10 +107,10 @@ Function Invoke-ExecAddGDAPRole {
 
     $RoleMappings = [System.Collections.Generic.List[object]]::new()
     if ($ExistingRoleMappings) {
-        $RoleMappings.AddRange($ExistingRoleMappings)
+        $RoleMappings.AddRange(@($ExistingRoleMappings))
     }
     if ($NewRoleMappings) {
-        $RoleMappings.AddRange($NewRoleMappings)
+        $RoleMappings.AddRange(@($NewRoleMappings))
     }
 
     if ($Request.Body.templateId) {

@@ -34,9 +34,9 @@ Function Invoke-ListBPA {
 
 
     if ($Request.query.tenantFilter -ne 'AllTenants' -and $Style -eq 'Tenant') {
+        $CustomerId = (Get-Tenants -TenantFilter $Request.query.tenantFilter).customerId
         $mergedObject = New-Object pscustomobject
-
-        $Data = (Get-CIPPAzDataTableEntity @Table -Filter "PartitionKey eq '$($Request.query.tenantFilter)'") | ForEach-Object {
+        $Data = (Get-CIPPAzDataTableEntity @Table -Filter "PartitionKey eq '$CustomerId'") | ForEach-Object {
             $row = $_
             $JSONFields | ForEach-Object {
                 $jsonContent = $row.$_
@@ -48,6 +48,7 @@ Function Invoke-ListBPA {
                 }
             }
             $row.PSObject.Properties | ForEach-Object {
+                Write-Host "Adding $($_.Name) to mergedObject"
                 $mergedObject | Add-Member -NotePropertyName $_.Name -NotePropertyValue $_.Value -Force
             }
         }

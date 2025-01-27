@@ -10,13 +10,6 @@ Function Invoke-ListMailboxRules {
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
 
-    $APIName = $TriggerMetadata.FunctionName
-    Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -message 'Accessed this API' -Sev 'Debug'
-
-
-    # Write to the Azure Functions log stream.
-    Write-Host 'PowerShell HTTP trigger function processed a request.'
-
     # Interact with query parameters or the body of the request.
     $TenantFilter = $Request.Query.TenantFilter
 
@@ -26,11 +19,12 @@ Function Invoke-ListMailboxRules {
     }
     $Rows = Get-CIPPAzDataTableEntity @Table | Where-Object -Property Timestamp -GT (Get-Date).Addhours(-1)
 
+    $Metadata = @{}
     if (!$Rows -or ($TenantFilter -eq 'AllTenants' -and ($Rows | Measure-Object).Count -eq 1)) {
-        $GraphRequest = [PSCustomObject]@{
-            Tenant   = 'Loading data. Please check back in 1 minute'
-            Licenses = 'Loading data. Please check back in 1 minute'
+        $Metadata = [PSCustomObject]@{
+            QueueMessage = 'Loading data. Please check back in 1 minute'
         }
+        $GraphRequest = @()
 
         if ($TenantFilter -eq 'AllTenants') {
             $Tenants = Get-Tenants -IncludeErrors | Select-Object defaultDomainName
@@ -57,15 +51,20 @@ Function Invoke-ListMailboxRules {
             $Rows = $Rows | Where-Object -Property Tenant -EQ $TenantFilter
         }
         $GraphRequest = $Rows | ForEach-Object {
-            $NewObj = $_.Rules | ConvertFrom-Json
-            $NewObj | Add-Member -NotePropertyName 'Tenant' -NotePropertyValue $_.Tenant
+            $NewObj = $_.Rules | ConvertFrom-Json -ErrorAction SilentlyContinue
+            $NewObj | Add-Member -NotePropertyName 'Tenant' -NotePropertyValue $_.Tenant -Force
             $NewObj
         }
     }
 
+    $Body = @{
+        Results  = @($GraphRequest)
+        Metadata = $Metadata
+    }
+
     Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
             StatusCode = [HttpStatusCode]::OK
-            Body       = @($GraphRequest)
+            Body       = $Body
         })
 
 }

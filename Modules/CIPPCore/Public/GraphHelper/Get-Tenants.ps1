@@ -121,6 +121,7 @@ function Get-Tenants {
                     } catch {
                         $ErrorMessage = Get-CippException -Exception $_
                         Write-LogMessage -API 'Get-Tenants' -message "Tried adding $($LatestRelationship.customerId) to tenant list but failed to get domains - $($_.Exception.Message)" -Sev 'Critical' -LogData $ErrorMessage
+                        $Domain = 'Invalid'
                     } finally {
                         $defaultDomainName = $Domain
                         $initialDomainName = $Domain
