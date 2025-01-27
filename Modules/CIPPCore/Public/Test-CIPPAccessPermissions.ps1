@@ -182,7 +182,9 @@ function Test-CIPPAccessPermissions {
             Data         = [string](ConvertTo-Json -InputObject $AccessCheck -Depth 10 -Compress)
         }
     }
-    Add-CIPPAzDataTableEntity @Table -Entity $Data -Force
+    try {
+        Add-CIPPAzDataTableEntity @Table -Entity $Data -Force
+    } catch {}
 
     return $AccessCheck
 }

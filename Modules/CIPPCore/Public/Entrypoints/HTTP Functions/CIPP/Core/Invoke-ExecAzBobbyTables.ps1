@@ -53,6 +53,6 @@ function Invoke-ExecAzBobbyTables {
 
     Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
             StatusCode = $StatusCode
-            Body       = $Results
+            Body       = @($Results)
         })
 }
