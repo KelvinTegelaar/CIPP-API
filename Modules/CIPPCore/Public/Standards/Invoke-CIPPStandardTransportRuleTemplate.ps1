@@ -1,7 +1,27 @@
 function Invoke-CIPPStandardTransportRuleTemplate {
     <#
     .FUNCTIONALITY
-    Internal
+        Internal
+    .COMPONENT
+        (APIName) TransportRuleTemplate
+    .SYNOPSIS
+        (Label) Transport Rule Template
+    .DESCRIPTION
+        (Helptext) Deploy transport rules to manage email flow.
+        (DocsDescription) Deploy transport rules to manage email flow.
+    .NOTES
+        CAT
+            Templates
+        DISABLEDFEATURES
+            
+        IMPACT
+            Medium
+        ADDEDCOMPONENT
+            {"type":"autoComplete","name":"transportRuleTemplate","label":"Select Transport Rule Template","api":{"url":"/api/ListTransportRulesTemplates","labelField":"name","valueField":"GUID","queryKey":"ListTransportRulesTemplates"}}
+        UPDATECOMMENTBLOCK
+            Run the Tools\Update-StandardsComments.ps1 script to update this comment block
+    .LINK
+        https://docs.cipp.app/user-documentation/tenant/standards/list-standards/
     #>
     param($Tenant, $Settings)
     ##$Rerun -Type Standard -Tenant $Tenant -Settings $Settings 'TransportRuleTemplate'

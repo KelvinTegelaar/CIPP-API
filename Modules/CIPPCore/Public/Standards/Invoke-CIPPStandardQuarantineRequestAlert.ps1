@@ -15,7 +15,7 @@ function Invoke-CIPPStandardQuarantineRequestAlert {
         TAG
             "lowimpact"
         ADDEDCOMPONENT
-            {"type":"input","name":"standards.QuarantineRequestAlert.NotifyUser","label":"E-mail to receive the alert"}
+            {"type":"textField","name":"standards.QuarantineRequestAlert.NotifyUser","label":"E-mail to receive the alert"}
         IMPACT
             Low Impact
         POWERSHELLEQUIVALENT
@@ -24,7 +24,7 @@ function Invoke-CIPPStandardQuarantineRequestAlert {
         UPDATECOMMENTBLOCK
             Run the Tools\Update-StandardsComments.ps1 script to update this comment block
     .LINK
-        https://docs.cipp.app/user-documentation/tenant/standards/edit-standards
+        https://docs.cipp.app/user-documentation/tenant/standards/list-standards/defender-standards#low-impact
     #>
 
     param ($Tenant, $Settings)

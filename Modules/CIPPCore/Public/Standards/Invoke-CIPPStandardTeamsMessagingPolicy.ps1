@@ -4,11 +4,35 @@ Function Invoke-CIPPStandardTeamsMessagingPolicy {
         Internal
     .COMPONENT
         (APIName) TeamsMessagingPolicy
-   .NOTES
+    .SYNOPSIS
+        (Label) Global Messaging Policy for Microsoft Teams
+    .DESCRIPTION
+        (Helptext) Sets the properties of the Global messaging policy.
+        (DocsDescription) Sets the properties of the Global messaging policy. Messaging policies control which chat and channel messaging features are available to users in Teams.
+    .NOTES
+        CAT
+            Teams Standards
+        TAG
+            "mediumimpact"
+        ADDEDCOMPONENT
+            {"type":"switch","name":"standards.TeamsMessagingPolicy.AllowOwnerDeleteMessage","label":"Allow Owner to Delete Messages","default":false}
+            {"type":"switch","name":"standards.TeamsMessagingPolicy.AllowUserDeleteMessage","label":"Allow User to Delete Messages","default":true}
+            {"type":"switch","name":"standards.TeamsMessagingPolicy.AllowUserEditMessage","label":"Allow User to Edit Messages","default":true}
+            {"type":"switch","name":"standards.TeamsMessagingPolicy.AllowUserDeleteChat","label":"Allow User to Delete Chats","default":true}
+            {"type":"autoComplete","multiple":false,"name":"standards.TeamsMessagingPolicy.ReadReceiptsEnabledType","label":"Read Receipts Enabled Type","options":[{"label":"User controlled","value":"UserPreference"},{"label":"Turned on for everyone","value":"Everyone"},{"label":"Turned off for everyone","value":"None"}]}
+            {"type":"switch","name":"standards.TeamsMessagingPolicy.CreateCustomEmojis","label":"Allow Creating Custom Emojis","default":true}
+            {"type":"switch","name":"standards.TeamsMessagingPolicy.DeleteCustomEmojis","label":"Allow Deleting Custom Emojis","default":false}
+            {"type":"switch","name":"standards.TeamsMessagingPolicy.AllowSecurityEndUserReporting","label":"Allow reporting message as security concern","default":true}
+            {"type":"switch","name":"standards.TeamsMessagingPolicy.AllowCommunicationComplianceEndUserReporting","label":"Allow reporting message as inappropriate content","default":true}
+        IMPACT
+            Medium Impact
+        POWERSHELLEQUIVALENT
+            Set-CsTeamsMessagingPolicy
+        RECOMMENDEDBY
         UPDATECOMMENTBLOCK
             Run the Tools\Update-StandardsComments.ps1 script to update this comment block
     .LINK
-        https://docs.cipp.app/user-documentation/tenant/standards/edit-standards
+        https://docs.cipp.app/user-documentation/tenant/standards/list-standards/teams-standards#medium-impact
     #>
     ##$Rerun -Type Standard -Tenant $Tenant -Settings $Settings 'TeamsMessagingPolicy'
 

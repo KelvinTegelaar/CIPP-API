@@ -23,14 +23,7 @@ Function Invoke-ListUserMailboxRules {
         $TenantFilter = $Request.Query.TenantFilter
         $UserID = $Request.Query.UserID
         $UserEmail = if ([string]::IsNullOrWhiteSpace($Request.Query.userEmail)) { $UserID } else { $Request.Query.userEmail }
-        $GraphRequest = New-ExoRequest -Anchor $UserID -tenantid $TenantFilter -cmdlet 'Get-InboxRule' -cmdParams @{mailbox = $UserID; IncludeHidden = $true } | Where-Object { $_.Name -ne 'Junk E-Mail Rule' -and $_.Name -notlike 'Microsoft.Exchange.OOF.*' } | Select-Object
-        @{ Name = 'DisplayName'; Expression = { $_.displayName } },
-        @{ Name = 'Description'; Expression = { $_.Description } },
-        @{ Name = 'Redirect To'; Expression = { $_.RedirectTo } },
-        @{ Name = 'Copy To Folder'; Expression = { $_.CopyToFolder } },
-        @{ Name = 'Move To Folder'; Expression = { $_.MoveToFolder } },
-        @{ Name = 'Soft Delete Message'; Expression = { $_.SoftDeleteMessage } },
-        @{ Name = 'Delete Message'; Expression = { $_.DeleteMessage } }
+        $GraphRequest = New-ExoRequest -Anchor $UserID -tenantid $TenantFilter -cmdlet 'Get-InboxRule' -cmdParams @{mailbox = $UserID; IncludeHidden = $true } | Where-Object { $_.Name -ne 'Junk E-Mail Rule' -and $_.Name -notlike 'Microsoft.Exchange.OOF.*' } | Select-Object * -ExcludeProperty RuleIdentity
     } catch {
         $ErrorMessage = Get-CippException -Exception $_
         Write-LogMessage -user $User -API $APINAME -message "Failed to retrieve mailbox rules $($UserEmail): $($ErrorMessage.NormalizedError) " -Sev 'Error' -tenant $TenantFilter -LogData $ErrorMessage

@@ -17,7 +17,7 @@ function Invoke-CIPPStandardActivityBasedTimeout {
             "CIS"
             "spo_idle_session_timeout"
         ADDEDCOMPONENT
-            {"type":"Select","label":"Select value","name":"standards.ActivityBasedTimeout.timeout","values":[{"label":"1 Hour","value":"01:00:00"},{"label":"3 Hours","value":"03:00:00"},{"label":"6 Hours","value":"06:00:00"},{"label":"12 Hours","value":"12:00:00"},{"label":"24 Hours","value":"1.00:00:00"}]}
+            {"type":"select","multiple":false,"label":"Select value","name":"standards.ActivityBasedTimeout.timeout","options":[{"label":"1 Hour","value":"01:00:00"},{"label":"3 Hours","value":"03:00:00"},{"label":"6 Hours","value":"06:00:00"},{"label":"12 Hours","value":"12:00:00"},{"label":"24 Hours","value":"1.00:00:00"}]}
         IMPACT
             Medium Impact
         POWERSHELLEQUIVALENT
@@ -27,7 +27,7 @@ function Invoke-CIPPStandardActivityBasedTimeout {
         UPDATECOMMENTBLOCK
             Run the Tools\Update-StandardsComments.ps1 script to update this comment block
     .LINK
-        https://docs.cipp.app/user-documentation/tenant/standards/edit-standards
+        https://docs.cipp.app/user-documentation/tenant/standards/list-standards/global-standards#medium-impact
     #>
 
     param($Tenant, $Settings)
