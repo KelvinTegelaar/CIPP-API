@@ -34,20 +34,25 @@ Function Invoke-ListIntuneTemplates {
     #List new policies
     $Table = Get-CippTable -tablename 'templates'
     $Filter = "PartitionKey eq 'IntuneTemplate'"
-    $Templates = (Get-CIPPAzDataTableEntity @Table -Filter $Filter).JSON | ConvertFrom-Json
+    $RawTemplates = (Get-CIPPAzDataTableEntity @Table -Filter $Filter)
     if ($Request.query.View) {
-        $Templates = $Templates | ForEach-Object {
-            $data = $_.RAWJson | ConvertFrom-Json -Depth 100
-            $data | Add-Member -NotePropertyName 'displayName' -NotePropertyValue $_.Displayname -Force
-            $data | Add-Member -NotePropertyName 'description' -NotePropertyValue $_.Description -Force
-            $data | Add-Member -NotePropertyName 'Type' -NotePropertyValue $_.Type -Force
+        $Templates = $RawTemplates | ForEach-Object {
+            $JSONData = $_.JSON | ConvertFrom-Json
+            $data = $JSONData.RAWJson | ConvertFrom-Json -Depth 100
+            $data | Add-Member -NotePropertyName 'displayName' -NotePropertyValue $JSONData.Displayname -Force
+            $data | Add-Member -NotePropertyName 'description' -NotePropertyValue $JSONData.Description -Force
+            $data | Add-Member -NotePropertyName 'Type' -NotePropertyValue $JSONData.Type -Force
             $data | Add-Member -NotePropertyName 'GUID' -NotePropertyValue $_.RowKey -Force
             $data
         } | Sort-Object -Property displayName
+    } else {
+        $Templates = $RawTemplates.JSON | ConvertFrom-Json
     }
 
     if ($Request.query.ID) { $Templates = $Templates | Where-Object -Property guid -EQ $Request.query.id }
 
+    # Sort all output regardless of view condition
+    $Templates = $Templates | Sort-Object -Property displayName
 
     # Associate values to output bindings by calling 'Push-OutputBinding'.
     Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
