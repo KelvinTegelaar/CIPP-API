@@ -51,7 +51,7 @@ Function Invoke-EditUser {
             'streetAddress'     = $UserObj.streetAddress
             'postalCode'        = $UserObj.PostalCode
             'companyName'       = $UserObj.CompanyName
-            'otherMails'        = @($UserObj.otherMails)
+            'otherMails'        = $UserObj.otherMails ? @($UserObj.otherMails) : @()
             'passwordProfile'   = @{
                 'forceChangePasswordNextSignIn' = [bool]$UserObj.MustChangePass
             }
