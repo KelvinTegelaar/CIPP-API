@@ -17,7 +17,7 @@ Function Invoke-ExecAccessChecks {
     $LastRun = (Get-Date).ToUniversalTime()
     switch ($Request.Query.Type) {
         'Permissions' {
-            if ($Request.Query.SkipCache -ne 'true') {
+            if ($Request.Query.SkipCache -ne 'true' -or $Request.Query.SkipCache -ne $true) {
                 try {
                     $Cache = Get-CIPPAzDataTableEntity @Table -Filter "RowKey eq 'AccessPermissions'"
                     $Results = $Cache.Data | ConvertFrom-Json
@@ -41,7 +41,7 @@ Function Invoke-ExecAccessChecks {
             $AccessChecks = Get-CIPPAzDataTableEntity @Table -Filter "PartitionKey eq 'TenantAccessChecks'"
             if (!$Request.Body.TenantId) {
                 try {
-                    $Tenants = Get-Tenants -IncludeErrors
+                    $Tenants = Get-Tenants -IncludeErrors | Where-Object { $_.customerId -ne $ENV:TenantID }
                     $Results = foreach ($Tenant in $Tenants) {
                         $TenantCheck = $AccessChecks | Where-Object -Property RowKey -EQ $Tenant.customerId | Select-Object -Property Data
                         $TenantResult = [PSCustomObject]@{
@@ -81,8 +81,8 @@ Function Invoke-ExecAccessChecks {
                 }
             }
 
-            if ($Request.Query.SkipCache -eq 'true') {
-                $null = Test-CIPPAccessTenant -ExecutingUser $Request.Headers.'x-ms-client-principal'
+            if ($Request.Query.SkipCache -eq 'true' -or $Request.Query.SkipCache -eq $true) {
+                $Message = Test-CIPPAccessTenant -ExecutingUser $Request.Headers.'x-ms-client-principal'
             }
 
             if ($Request.Body.TenantId) {
@@ -93,7 +93,7 @@ Function Invoke-ExecAccessChecks {
 
         }
         'GDAP' {
-            if (!$Request.Query.SkipCache -eq 'true') {
+            if (!$Request.Query.SkipCache -eq 'true' -or !$Request.Query.SkipCache -eq $true) {
                 try {
                     $Cache = Get-CIPPAzDataTableEntity @Table -Filter "RowKey eq 'GDAPRelationships'"
                     $Results = $Cache.Data | ConvertFrom-Json
@@ -114,12 +114,16 @@ Function Invoke-ExecAccessChecks {
             }
         }
     }
+    $Metadata = @{
+        LastRun = $LastRun
+    }
+    if ($Message) {
+        $Metadata.AlertMessage = $Message
+    }
 
     $body = [pscustomobject]@{
         'Results'  = $Results
-        'Metadata' = @{
-            'LastRun' = $LastRun
-        }
+        'Metadata' = $Metadata
     }
 
     # Associate values to output bindings by calling 'Push-OutputBinding'.

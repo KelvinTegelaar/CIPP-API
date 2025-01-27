@@ -118,7 +118,25 @@ foreach ($Standard in $StandardsInfo) {
         $NewComment.Add("           Run the Tools\Update-StandardsComments.ps1 script to update this comment block`r`n")
         # -Online help link
         $NewComment.Add("   .LINK`r`n")
-        $NewComment.Add("       https://docs.cipp.app/user-documentation/tenant/standards/edit-standards`r`n")
+        $DocsLink = 'https://docs.cipp.app/user-documentation/tenant/standards/list-standards/'
+
+        switch ($Standard.cat) {
+            'Global Standards' { $DocsLink += 'global-standards#' + $Standard.impact.ToLower() -replace ' ', '-' }
+            'Entra (AAD) Standards' { $DocsLink += 'entra-aad-standards#' + $Standard.impact.ToLower() -replace ' ', '-' }
+            'Exchange Standards' { $DocsLink += 'exchange-standards#' + $Standard.impact.ToLower() -replace ' ', '-' }
+            'Defender Standards' { $DocsLink += 'defender-standards#' + $Standard.impact.ToLower() -replace ' ', '-' }
+            'Intune Standards' { $DocsLink += 'intune-standards#' + $Standard.impact.ToLower() -replace ' ', '-' }
+            'SharePoint Standards' { $DocsLink += 'sharepoint-standards#' + $Standard.impact.ToLower() -replace ' ', '-' }
+            'Teams Standards' { $DocsLink += 'teams-standards#' + $Standard.impact.ToLower() -replace ' ', '-' }
+            Default {}
+        }
+
+        switch ($Standard.impact) {
+            condition {  }
+            Default {}
+        }
+
+        $NewComment.Add("       $DocsLink`r`n")
         $NewComment.Add('   #>')
 
         # Write the new comment block to the file

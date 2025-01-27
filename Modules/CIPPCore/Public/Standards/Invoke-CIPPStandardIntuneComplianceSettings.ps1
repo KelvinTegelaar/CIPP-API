@@ -5,23 +5,27 @@ function Invoke-CIPPStandardIntuneComplianceSettings {
     .COMPONENT
         (APIName) IntuneComplianceSettings
     .SYNOPSIS
-        (Label) InTune Compliance settings
+        (Label) Set Intune Compliance Settings
     .DESCRIPTION
         (Helptext) Sets the mark devices with no compliance policy assigned as compliance/non compliant and Compliance status validity period.
         (DocsDescription) Sets the mark devices with no compliance policy assigned as compliance/non compliant and Compliance status validity period.
     .NOTES
         CAT
-            InTune Standards
+            Intune Standards
         TAG
             "lowimpact"
         ADDEDCOMPONENT
+            {"type":"autoComplete","multiple":false,"name":"standards.IntuneComplianceSettings.secureByDefault","label":"Mark devices with no compliance policy as","options":[{"label":"Compliant","value":"false"},{"label":"Non-Compliant","value":"true"}]}
+            {"type":"number","name":"standards.IntuneComplianceSettings.deviceComplianceCheckinThresholdDays","label":"Compliance status validity period (days)"}
         IMPACT
             Low Impact
+        POWERSHELLEQUIVALENT
+            
         RECOMMENDEDBY
         UPDATECOMMENTBLOCK
             Run the Tools\Update-StandardsComments.ps1 script to update this comment block
     .LINK
-        https://docs.cipp.app/user-documentation/tenant/standards/edit-standards
+        https://docs.cipp.app/user-documentation/tenant/standards/list-standards/intune-standards#low-impact
     #>
 
     param($Tenant, $Settings)
