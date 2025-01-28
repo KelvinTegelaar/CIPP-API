@@ -190,7 +190,7 @@ function Get-GraphRequestList {
                             TenantFilter                = $_.defaultDomainName
                             Endpoint                    = $using:Endpoint
                             Parameters                  = $using:Parameters
-                            NoPagination                = $using:NoPagination.IsPresent
+                            NoPagination                = $false
                             ReverseTenantLookupProperty = $using:ReverseTenantLookupProperty
                             ReverseTenantLookup         = $using:ReverseTenantLookup.IsPresent
                             NoAuthCheck                 = $using:NoAuthCheck.IsPresent

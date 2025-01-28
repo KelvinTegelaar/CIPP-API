@@ -7,7 +7,7 @@ function Invoke-CIPPStandardTAP {
     .SYNOPSIS
         (Label) Enable Temporary Access Passwords
     .DESCRIPTION
-        (Helptext) Enables TAP and sets the default TAP lifetime to 1 hour. This configuration also allows you to select is a TAP is single use or multi-logon.
+        (Helptext) Enables TAP and sets the default TAP lifetime to 1 hour. This configuration also allows you to select if a TAP is single use or multi-logon.
         (DocsDescription) Enables Temporary Password generation for the tenant.
     .NOTES
         CAT
@@ -15,7 +15,7 @@ function Invoke-CIPPStandardTAP {
         TAG
             "lowimpact"
         ADDEDCOMPONENT
-            {"type":"Select","label":"Select TAP Lifetime","name":"standards.TAP.config","values":[{"label":"Only Once","value":"true"},{"label":"Multiple Logons","value":"false"}]}
+            {"type":"select","multiple":false,"label":"Select TAP Lifetime","name":"standards.TAP.config","options":[{"label":"Only Once","value":"true"},{"label":"Multiple Logons","value":"false"}]}
         IMPACT
             Low Impact
         POWERSHELLEQUIVALENT
@@ -24,7 +24,7 @@ function Invoke-CIPPStandardTAP {
         UPDATECOMMENTBLOCK
             Run the Tools\Update-StandardsComments.ps1 script to update this comment block
     .LINK
-        https://docs.cipp.app/user-documentation/tenant/standards/edit-standards
+        https://docs.cipp.app/user-documentation/tenant/standards/list-standards/entra-aad-standards#low-impact
     #>
 
     param($Tenant, $Settings)
