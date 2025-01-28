@@ -15,7 +15,7 @@ function Invoke-CIPPStandardNudgeMFA {
         TAG
             "lowimpact"
         ADDEDCOMPONENT
-            {"type":"Select","label":"Select value","name":"standards.NudgeMFA.state","values":[{"label":"Enabled","value":"enabled"},{"label":"Disabled","value":"disabled"}]}
+            {"type":"select","multiple":false,"label":"Select value","name":"standards.NudgeMFA.state","options":[{"label":"Enabled","value":"enabled"},{"label":"Disabled","value":"disabled"}]}
             {"type":"number","name":"standards.NudgeMFA.snoozeDurationInDays","label":"Number of days to allow users to skip registering Authenticator (0-14, default is 1)","default":1}
         IMPACT
             Low Impact
@@ -25,7 +25,7 @@ function Invoke-CIPPStandardNudgeMFA {
         UPDATECOMMENTBLOCK
             Run the Tools\Update-StandardsComments.ps1 script to update this comment block
     .LINK
-        https://docs.cipp.app/user-documentation/tenant/standards/edit-standards
+        https://docs.cipp.app/user-documentation/tenant/standards/list-standards/entra-aad-standards#low-impact
     #>
 
     param($Tenant, $Settings)

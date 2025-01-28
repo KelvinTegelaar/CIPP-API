@@ -58,6 +58,7 @@ function New-CIPPCAPolicy {
     #Remove context as it does not belong in the payload.
     try {
         $JsonObj.grantControls.PSObject.Properties.Remove('authenticationStrength@odata.context')
+        $JSONObj.templateId ? $JSONObj.PSObject.Properties.Remove('templateId') : $null
         if ($JSONObj.conditions.users.excludeGuestsOrExternalUsers.externalTenants.Members) {
             $JsonObj.conditions.users.excludeGuestsOrExternalUsers.externalTenants.PSObject.Properties.Remove('@odata.context')
         }

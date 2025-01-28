@@ -23,7 +23,7 @@ function New-BreachTenantSearch {
         @{
             RowKey       = $domain.domain
             PartitionKey = $TenantFilter
-            breaches     = "$($LatestBreach.Result | ConvertTo-Json)"
+            breaches     = "$($LatestBreach.Result | ConvertTo-Json -Depth 10 -Compress)"
             sum          = $SumOfBreaches
         }
     }
