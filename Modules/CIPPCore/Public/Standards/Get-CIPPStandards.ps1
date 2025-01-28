@@ -13,9 +13,9 @@ function Get-CIPPStandards {
     $Table = Get-CippTable -tablename 'templates'
     $Filter = "PartitionKey eq 'StandardsTemplateV2'"
     $Templates = (Get-CIPPAzDataTableEntity @Table -Filter $Filter | Sort-Object TimeStamp).JSON | ForEach-Object {
-        #in the string $_, replace the word 'action' by the word 'Action'.
         try {
-            $_ -replace 'Action', 'action' | ConvertFrom-Json -InputObject $_ -ErrorAction SilentlyContinue
+            $JSON = ($_).replace('"Action":', '"action":') #fix cap mistake of antique standards
+            ConvertFrom-Json -InputObject $JSON -ErrorAction SilentlyContinue
         } catch {
         }
     } | Where-Object {
