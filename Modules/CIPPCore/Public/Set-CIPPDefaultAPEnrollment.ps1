@@ -14,7 +14,7 @@ function Set-CIPPDefaultAPEnrollment {
         $APIName = 'Add Default Enrollment Status Page'
     )
 
-    $User = $request.headers.'x-ms-client-principal-name'
+    $User = $request.headers.'x-ms-client-principal'
 
     try {
         $ObjBody = [pscustomobject]@{
