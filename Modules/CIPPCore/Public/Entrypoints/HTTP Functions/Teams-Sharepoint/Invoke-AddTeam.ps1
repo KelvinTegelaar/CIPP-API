@@ -20,7 +20,9 @@ Function Invoke-AddTeam {
 
     $Owners = ($userobj.owner)
     try {
-
+        if ($null -eq $Owners) {
+            throw "You have to add at least one owner to the team"
+        }
         $Owners = $Owners | ForEach-Object {
             $OwnerID = "https://graph.microsoft.com/beta/users('$($_)')"
             @{
