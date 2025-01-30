@@ -18,7 +18,7 @@ Function Invoke-AddTeam {
     # Write to the Azure Functions log stream.
     Write-Host 'PowerShell HTTP trigger function processed a request.'
 
-    $Owners = ($userobj.owner).value
+    $Owners = ($userobj.owner)
     try {
 
         $Owners = $Owners | ForEach-Object {
