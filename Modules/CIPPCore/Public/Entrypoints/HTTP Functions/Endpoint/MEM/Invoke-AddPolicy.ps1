@@ -27,10 +27,9 @@ Function Invoke-AddPolicy {
         try {
             Write-Host 'Calling Adding policy'
             Set-CIPPIntunePolicy -TemplateType $Request.body.TemplateType -Description $description -DisplayName $displayname -RawJSON $RawJSON -AssignTo $AssignTo -tenantFilter $Tenant
-            "Added policy $($Displayname) to $($Tenant)"
             Write-LogMessage -user $Request.headers.'x-ms-client-principal' -API $APINAME -tenant $($Tenant) -message "Added policy $($Displayname)" -Sev 'Info'
         } catch {
-            "Failed to add policy for $($Tenant): $($_.Exception.Message)"
+            "$($_.Exception.Message)"
             Write-LogMessage -user $Request.headers.'x-ms-client-principal' -API $APINAME -tenant $($Tenant) -message "Failed adding policy $($Displayname). Error: $($_.Exception.Message)" -Sev 'Error'
             continue
         }
