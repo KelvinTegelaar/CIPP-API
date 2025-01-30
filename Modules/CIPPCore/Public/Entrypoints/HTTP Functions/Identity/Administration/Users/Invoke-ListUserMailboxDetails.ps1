@@ -104,9 +104,9 @@ Function Invoke-ListUserMailboxDetails {
 
         # Determine if the user is blocked for spam
         if ($BlockedSender -and $BlockedSender.Count -gt 0) {
-            $BlockedForSpam = $True
+            $BlockedForSpam = $false
         } else {
-            $BlockedForSpam = $False
+            $BlockedForSpam = $true
         }
     } catch {
         Write-Error "Failed Fetching Data $($_.Exception.message): $($_.InvocationInfo.ScriptLineNumber)"

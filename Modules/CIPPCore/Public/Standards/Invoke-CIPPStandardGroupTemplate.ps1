@@ -15,7 +15,7 @@ function Invoke-CIPPStandardGroupTemplate {
         CAT
             Templates
         DISABLEDFEATURES
-            
+
         IMPACT
             Medium
         ADDEDCOMPONENT
@@ -29,7 +29,9 @@ function Invoke-CIPPStandardGroupTemplate {
     ##$Rerun -Type Standard -Tenant $Tenant -Settings $Settings 'GroupTemplate'
 
     If ($Settings.remediate -eq $true) {
-
+        #Because the list name changed from TemplateList to groupTemplate by someone :@, we'll need to set it back to TemplateList
+        $Settings.groupTemplate ? ($Settings | Add-Member -NotePropertyName 'TemplateList' -NotePropertyValue $Settings.groupTemplate) : $null
+        Write-Host "Settings: $($Settings.TemplateList | ConvertTo-Json)"
         foreach ($Template in $Settings.TemplateList) {
             try {
                 $Table = Get-CippTable -tablename 'templates'
