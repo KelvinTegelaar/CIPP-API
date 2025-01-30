@@ -57,7 +57,7 @@ function Get-CIPPStandards {
 
         foreach ($Standard in $ComputedStandards.Keys) {
             $TempCopy = $ComputedStandards[$Standard].PSObject.Copy()
-            $TempCopy.PSObject.Properties.Remove('TemplateId')
+            $TempCopy.TemplateId ? $TempCopy.PSObject.Properties.Remove('TemplateId') : $null
 
             $Normalized = ConvertTo-CippStandardObject $TempCopy
 
@@ -117,7 +117,7 @@ function Get-CIPPStandards {
                             $ComputedStandards[$StandardName] = $CurrentStandard
                         } else {
                             $MergedStandard = Merge-CippStandards $ComputedStandards[$StandardName] $CurrentStandard
-                            $MergedStandard.TemplateId = $CurrentStandard.TemplateId
+                            $MergedStandard | Add-Member -NotePropertyName 'TemplateId' -NotePropertyValue $CurrentStandard.TemplateId -Force
                             $ComputedStandards[$StandardName] = $MergedStandard
                         }
                     }
