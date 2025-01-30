@@ -18,6 +18,7 @@ Function Invoke-AddPolicy {
     $displayname = $Request.Body.displayName
     $description = $Request.Body.Description
     $AssignTo = if ($Request.Body.AssignTo -ne 'on') { $Request.Body.AssignTo }
+    $Request.body.customGroup ? ($AssignTo = $Request.body.customGroup) : $null
     $RawJSON = $Request.Body.RAWJson
 
     $results = foreach ($Tenant in $tenants) {

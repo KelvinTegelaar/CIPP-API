@@ -133,6 +133,7 @@ function Set-CIPPIntunePolicy {
         if ($AssignTo) {
             Write-Host "Assigning policy to $($AssignTo) with ID $($CreateRequest.id) and type $TemplateTypeURL for tenant $tenantFilter"
             Write-Host "ID is $($CreateRequest.id)"
+            
             Set-CIPPAssignedPolicy -GroupName $AssignTo -PolicyId $CreateRequest.id -Type $TemplateTypeURL -TenantFilter $tenantFilter
         }
         return "Successfully $($PostType) policy for $($tenantFilter) with display name $($Displayname)"
