@@ -1,22 +1,25 @@
 function Convert-SingleStandardObject {
-
     param(
         [Parameter(Mandatory = $true)]
         $Obj
     )
+
+    # Ensure we have a PSCustomObject we can modify
     $Obj = [pscustomobject]$Obj
+
+    # Extract action arrays
     $AllActionValues = @()
     if ($Obj.PSObject.Properties.Name -contains 'combinedActions') {
         $AllActionValues = $Obj.combinedActions
-        $null = $Obj.PSObject.Properties.Remove('combinedActions')
+        $Obj.PSObject.Properties.Remove('combinedActions') | Out-Null
     } elseif ($Obj.PSObject.Properties.Name -contains 'action') {
         if ($Obj.action -and $Obj.action.value) {
             $AllActionValues = $Obj.action.value
         }
-        $null = $Obj.PSObject.Properties.Remove('action')
+        $Obj.PSObject.Properties.Remove('action') | Out-Null
     }
 
-    # Convert actions to booleans
+    # Convert to booleans
     $Obj | Add-Member -NotePropertyName 'remediate' -NotePropertyValue ($AllActionValues -contains 'Remediate') -Force
     $Obj | Add-Member -NotePropertyName 'alert' -NotePropertyValue ($AllActionValues -contains 'warn') -Force
     $Obj | Add-Member -NotePropertyName 'report' -NotePropertyValue ($AllActionValues -contains 'Report') -Force
@@ -31,7 +34,7 @@ function Convert-SingleStandardObject {
                 }
             }
         }
-        $null = $Obj.PSObject.Properties.Remove('standards')
+        $Obj.PSObject.Properties.Remove('standards') | Out-Null
     }
 
     return $Obj
