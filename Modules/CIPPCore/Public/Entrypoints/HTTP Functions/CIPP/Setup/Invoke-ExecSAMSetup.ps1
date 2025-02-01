@@ -150,7 +150,11 @@ Function Invoke-ExecSAMSetup {
                 $SetupPhase = $rows.tenantid = [string]($TenantId)
                 Add-CIPPAzDataTableEntity @Table -Entity $Rows -Force | Out-Null
                 if ($PartnerSetup) {
-                    $app = Get-Content '.\Cache_SAMSetup\SAMManifest.json' | ConvertFrom-Json
+                    #$app = Get-Content '.\Cache_SAMSetup\SAMManifest.json' | ConvertFrom-Json
+                    $ModuleBase = Get-Module -Name CIPPCore | Select-Object -ExpandProperty ModuleBase
+                    $SamManifestFile = Get-Item (Join-Path $ModuleBase 'Public\SAMManifest.json')
+                    $app = Get-Content $SamManifestFile.FullName | ConvertFrom-Json
+
                     $App.web.redirectUris = @($App.web.redirectUris + $URL)
                     $app = $app | ConvertTo-Json -Depth 15
                     $AppId = (Invoke-RestMethod 'https://graph.microsoft.com/v1.0/applications' -Headers @{ authorization = "Bearer $($Token.access_token)" } -Method POST -Body $app -ContentType 'application/json')
