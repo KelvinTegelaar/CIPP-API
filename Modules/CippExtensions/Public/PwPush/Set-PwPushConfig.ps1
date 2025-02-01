@@ -18,14 +18,8 @@ function Set-PwPushConfig {
         $InitParams.BaseUrl = $Configuration.BaseUrl
     }
     if (![string]::IsNullOrEmpty($Configuration.EmailAddress)) {
-        if ($env:AzureWebJobsStorage -eq 'UseDevelopmentStorage=true') {
-            $DevSecretsTable = Get-CIPPTable -tablename 'DevSecrets'
-            $ApiKey = (Get-CIPPAzDataTableEntity @DevSecretsTable -Filter "PartitionKey eq 'PWPush' and RowKey eq 'PWPush'").APIKey
-        } else {
-            $null = Connect-AzAccount -Identity
-            $VaultName = ($ENV:WEBSITE_DEPLOYMENT_ID -split '-')[0]
-            $ApiKey = Get-AzKeyVaultSecret -VaultName $VaultName -Name 'PWPush' -AsPlainText
-        }
+        $ApiKey = Get-ExtensionAPIKey -Extension 'PWPush'
+
         if (![string]::IsNullOrEmpty($ApiKey)) {
             $InitParams.APIKey = $ApiKey
             $InitParams.EmailAddress = $Configuration.EmailAddress
