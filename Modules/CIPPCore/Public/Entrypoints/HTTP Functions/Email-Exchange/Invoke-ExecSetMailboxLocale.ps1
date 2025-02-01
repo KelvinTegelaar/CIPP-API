@@ -20,7 +20,7 @@ Function Invoke-ExecSetMailboxLocale {
 
 
     # Interact with query parameters or the body of the request.
-    $Results = Set-CippMailboxLocale -username $Request.Body.user -locale $Request.body.input -tenantFilter $Tenant -APIName $APINAME -ExecutingUser $User
+    $Results = Set-CippMailboxLocale -username $Request.Body.user -locale $Request.body.locale -tenantFilter $Tenant -APIName $APINAME -ExecutingUser $User
     # Associate values to output bindings by calling 'Push-OutputBinding'.
     Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
             StatusCode = [HttpStatusCode]::OK
