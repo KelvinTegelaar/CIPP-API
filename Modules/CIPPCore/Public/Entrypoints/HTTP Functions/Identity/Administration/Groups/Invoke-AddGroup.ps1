@@ -40,11 +40,11 @@ Function Invoke-AddGroup {
                 if ($groupobj.groupType -eq 'm365') {
                     $BodyToship | Add-Member -NotePropertyName 'groupTypes' -NotePropertyValue @('Unified')
                 }
-                if ($groupobj.AddOwner -AND $groupobj.groupType -in 'generic', 'azurerole', 'security') {
+                if ($groupobj.owners -AND $groupobj.groupType -in 'generic', 'azurerole', 'security') {
                     $BodyToship | Add-Member -NotePropertyName 'owners@odata.bind' -NotePropertyValue (($groupobj.AddOwner) | ForEach-Object { "https://graph.microsoft.com/v1.0/users/$($_.value)" })
                     $bodytoship.'owners@odata.bind' = @($bodytoship.'owners@odata.bind')
                 }
-                if ($groupobj.AddMember -AND $groupobj.groupType -in 'generic', 'azurerole', 'security') {
+                if ($groupobj.members -AND $groupobj.groupType -in 'generic', 'azurerole', 'security') {
                     $BodyToship | Add-Member -NotePropertyName 'members@odata.bind' -NotePropertyValue (($groupobj.AddMember) | ForEach-Object { "https://graph.microsoft.com/v1.0/users/$($_.value)" })
                     $BodyToship.'members@odata.bind' = @($BodyToship.'members@odata.bind')
                 }
