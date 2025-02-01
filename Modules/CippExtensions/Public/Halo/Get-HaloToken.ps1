@@ -4,7 +4,7 @@ function Get-HaloToken {
         $Configuration
     )
     if (![string]::IsNullOrEmpty($Configuration.ClientID)) {
-        $Secret = Get-ExtensionAPIKey -Extension 'Halo'
+        $Secret = Get-ExtensionAPIKey -Extension 'HaloPSA'
 
         $body = @{
             grant_type    = 'client_credentials'
