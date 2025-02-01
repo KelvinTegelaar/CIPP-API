@@ -1,0 +1,176 @@
+<Objs Version="1.1.0.1" xmlns="http://schemas.microsoft.com/powershell/2004/04">
+  <Obj RefId="0">
+    <TN RefId="0">
+      <T>Microsoft.PowerShell.Commands.PSRepositoryItemInfo</T>
+      <T>System.Management.Automation.PSCustomObject</T>
+      <T>System.Object</T>
+    </TN>
+    <MS>
+      <S N="Name">Az.Functions</S>
+      <S N="Version">4.2.0</S>
+      <S N="Type">Module</S>
+      <S N="Description">Microsoft Azure PowerShell - Azure Functions service cmdlets for Azure Resource Manager in Windows PowerShell and PowerShell Core._x000D__x000A__x000D__x000A_For information on Azure Functions, please visit the following: https://learn.microsoft.com/azure/azure-functions/</S>
+      <S N="Author">Microsoft Corporation</S>
+      <S N="CompanyName">azure-sdk</S>
+      <S N="Copyright">Microsoft Corporation. All rights reserved.</S>
+      <DT N="PublishedDate">2025-01-14T03:15:04-05:00</DT>
+      <Nil N="InstalledDate" />
+      <Nil N="UpdatedDate" />
+      <URI N="LicenseUri">https://aka.ms/azps-license</URI>
+      <URI N="ProjectUri">https://github.com/Azure/azure-powershell</URI>
+      <Nil N="IconUri" />
+      <Obj N="Tags" RefId="1">
+        <TN RefId="1">
+          <T>System.Object[]</T>
+          <T>System.Array</T>
+          <T>System.Object</T>
+        </TN>
+        <LST>
+          <S>Azure</S>
+          <S>ResourceManager</S>
+          <S>ARM</S>
+          <S>PSModule</S>
+          <S>Functions</S>
+          <S>PSEdition_Core</S>
+          <S>PSEdition_Desktop</S>
+        </LST>
+      </Obj>
+      <Obj N="Includes" RefId="2">
+        <TN RefId="2">
+          <T>System.Collections.Hashtable</T>
+          <T>System.Object</T>
+        </TN>
+        <DCT>
+          <En>
+            <S N="Key">RoleCapability</S>
+            <Obj N="Value" RefId="3">
+              <TNRef RefId="1" />
+              <LST />
+            </Obj>
+          </En>
+          <En>
+            <S N="Key">Function</S>
+            <Obj N="Value" RefId="4">
+              <TNRef RefId="1" />
+              <LST>
+                <S>Get-AzFunctionApp</S>
+                <S>Get-AzFunctionAppAvailableLocation</S>
+                <S>Get-AzFunctionAppPlan</S>
+                <S>Get-AzFunctionAppSetting</S>
+                <S>New-AzFunctionApp</S>
+                <S>New-AzFunctionAppPlan</S>
+                <S>Remove-AzFunctionApp</S>
+                <S>Remove-AzFunctionAppPlan</S>
+                <S>Remove-AzFunctionAppSetting</S>
+                <S>Restart-AzFunctionApp</S>
+                <S>Start-AzFunctionApp</S>
+                <S>Stop-AzFunctionApp</S>
+                <S>Update-AzFunctionApp</S>
+                <S>Update-AzFunctionAppPlan</S>
+                <S>Update-AzFunctionAppSetting</S>
+              </LST>
+            </Obj>
+          </En>
+          <En>
+            <S N="Key">Cmdlet</S>
+            <Ref N="Value" RefId="3" />
+          </En>
+          <En>
+            <S N="Key">DscResource</S>
+            <Ref N="Value" RefId="3" />
+          </En>
+          <En>
+            <S N="Key">Workflow</S>
+            <Ref N="Value" RefId="3" />
+          </En>
+          <En>
+            <S N="Key">Command</S>
+            <Obj N="Value" RefId="5">
+              <TNRef RefId="1" />
+              <LST>
+                <S>Get-AzFunctionApp</S>
+                <S>Get-AzFunctionAppAvailableLocation</S>
+                <S>Get-AzFunctionAppPlan</S>
+                <S>Get-AzFunctionAppSetting</S>
+                <S>New-AzFunctionApp</S>
+                <S>New-AzFunctionAppPlan</S>
+                <S>Remove-AzFunctionApp</S>
+                <S>Remove-AzFunctionAppPlan</S>
+                <S>Remove-AzFunctionAppSetting</S>
+                <S>Restart-AzFunctionApp</S>
+                <S>Start-AzFunctionApp</S>
+                <S>Stop-AzFunctionApp</S>
+                <S>Update-AzFunctionApp</S>
+                <S>Update-AzFunctionAppPlan</S>
+                <S>Update-AzFunctionAppSetting</S>
+              </LST>
+            </Obj>
+          </En>
+        </DCT>
+      </Obj>
+      <Nil N="PowerShellGetFormatVersion" />
+      <S N="ReleaseNotes">* Upgraded nuget package to signed package.</S>
+      <Obj N="Dependencies" RefId="6">
+        <TNRef RefId="1" />
+        <LST>
+          <Obj RefId="7">
+            <TN RefId="3">
+              <T>System.Collections.Specialized.OrderedDictionary</T>
+              <T>System.Object</T>
+            </TN>
+            <DCT>
+              <En>
+                <S N="Key">Name</S>
+                <S N="Value">Az.Accounts</S>
+              </En>
+              <En>
+                <S N="Key">MinimumVersion</S>
+                <S N="Value">4.0.1</S>
+              </En>
+              <En>
+                <S N="Key">CanonicalId</S>
+                <S N="Value">nuget:Az.Accounts/4.0.1</S>
+              </En>
+            </DCT>
+          </Obj>
+        </LST>
+      </Obj>
+      <S N="RepositorySourceLocation">https://www.powershellgallery.com/api/v2</S>
+      <S N="Repository">PSGallery</S>
+      <S N="PackageManagementProvider">NuGet</S>
+      <Obj N="AdditionalMetadata" RefId="8">
+        <TN RefId="4">
+          <T>System.Management.Automation.PSCustomObject</T>
+          <T>System.Object</T>
+        </TN>
+        <MS>
+          <S N="copyright">Microsoft Corporation. All rights reserved.</S>
+          <S N="description">Microsoft Azure PowerShell - Azure Functions service cmdlets for Azure Resource Manager in Windows PowerShell and PowerShell Core._x000D__x000A__x000D__x000A_For information on Azure Functions, please visit the following: https://learn.microsoft.com/azure/azure-functions/</S>
+          <S N="requireLicenseAcceptance">True</S>
+          <S N="releaseNotes">* Upgraded nuget package to signed package.</S>
+          <S N="isLatestVersion">True</S>
+          <S N="isAbsoluteLatestVersion">True</S>
+          <S N="versionDownloadCount">2362118</S>
+          <S N="downloadCount">98196668</S>
+          <S N="packageSize">4036547</S>
+          <S N="published">1/14/2025 3:15:04 AM -05:00</S>
+          <S N="created">1/14/2025 3:15:04 AM -05:00</S>
+          <S N="lastUpdated">1/30/2025 5:20:00 PM -05:00</S>
+          <S N="tags">Azure ResourceManager ARM PSModule Functions PSEdition_Core PSEdition_Desktop PSFunction_Get-AzFunctionApp PSCommand_Get-AzFunctionApp PSFunction_Get-AzFunctionAppAvailableLocation PSCommand_Get-AzFunctionAppAvailableLocation PSFunction_Get-AzFunctionAppPlan PSCommand_Get-AzFunctionAppPlan PSFunction_Get-AzFunctionAppSetting PSCommand_Get-AzFunctionAppSetting PSFunction_New-AzFunctionApp PSCommand_New-AzFunctionApp PSFunction_New-AzFunctionAppPlan PSCommand_New-AzFunctionAppPlan PSFunction_Remove-AzFunctionApp PSCommand_Remove-AzFunctionApp PSFunction_Remove-AzFunctionAppPlan PSCommand_Remove-AzFunctionAppPlan PSFunction_Remove-AzFunctionAppSetting PSCommand_Remove-AzFunctionAppSetting PSFunction_Restart-AzFunctionApp PSCommand_Restart-AzFunctionApp PSFunction_Start-AzFunctionApp PSCommand_Start-AzFunctionApp PSFunction_Stop-AzFunctionApp PSCommand_Stop-AzFunctionApp PSFunction_Update-AzFunctionApp PSCommand_Update-AzFunctionApp PSFunction_Update-AzFunctionAppPlan PSCommand_Update-AzFunctionAppPlan PSFunction_Update-AzFunctionAppSetting PSCommand_Update-AzFunctionAppSetting PSIncludes_Function</S>
+          <S N="developmentDependency">False</S>
+          <S N="updated">2025-01-30T17:20:00Z</S>
+          <S N="NormalizedVersion">4.2.0</S>
+          <S N="Authors">Microsoft Corporation</S>
+          <S N="IsPrerelease">false</S>
+          <S N="ItemType">Module</S>
+          <S N="FileList">Az.Functions.nuspec|Functions.Autorest\custom\Get-AzFunctionApp.ps1|Functions.Autorest\custom\Get-AzFunctionAppSetting.ps1|Functions.Autorest\custom\New-AzFunctionAppPlan.ps1|Functions.Autorest\custom\Remove-AzFunctionAppSetting.ps1|Functions.Autorest\custom\Stop-AzFunctionApp.ps1|Functions.Autorest\custom\Update-AzFunctionAppPlan.ps1|Functions.Autorest\custom\api\Support\AvailablePlanType.cs|Functions.Autorest\custom\api\Support\FunctionAppManagedServiceIdentityUpdateType.cs|Functions.Autorest\custom\api\Support\SkuType.cs|Functions.Autorest\custom\Api20231201\AppServicePlan.cs|Functions.Autorest\custom\FunctionsStack\functionAppStacks.json|Functions.Autorest\internal\Az.Functions.internal.psm1|Functions.Autorest\utils\Get-SubscriptionIdTestSafe.ps1|Functions.Autorest\Az.Functions.format.ps1xml|Functions.Autorest\custom\Az.Functions.custom.psm1|Functions.Autorest\custom\Get-AzFunctionAppAvailableLocation.ps1|Functions.Autorest\custom\HelperFunctions.ps1|Functions.Autorest\custom\Remove-AzFunctionApp.ps1|Functions.Autorest\custom\Restart-AzFunctionApp.ps1|Functions.Autorest\custom\Update-AzFunctionApp.ps1|Functions.Autorest\custom\Update-AzFunctionAppSetting.ps1|Functions.Autorest\custom\api\Support\FunctionAppManagedServiceIdentityCreateType.cs|Functions.Autorest\custom\api\Support\PlanType.cs|Functions.Autorest\custom\api\Support\WorkerType.cs|Functions.Autorest\custom\Api20231201\Site.cs|Functions.Autorest\exports\ProxyCmdletDefinitions.ps1|Functions.Autorest\internal\ProxyCmdletDefinitions.ps1|Functions.Autorest\utils\Unprotect-SecureString.ps1|Az.Functions.psd1|Functions.Autorest\Az.Functions.psm1|Functions.Autorest\custom\Functions.format.ps1xml|Functions.Autorest\custom\Get-AzFunctionAppPlan.ps1|Functions.Autorest\custom\New-AzFunctionApp.ps1|Functions.Autorest\custom\Remove-AzFunctionAppPlan.ps1|Functions.Autorest\custom\Start-AzFunctionApp.ps1|Az.Functions.psm1|Functions.Autorest\bin\Az.Functions.private.dll|Functions.Autorest\custom\Functions.types.ps1xml|.signature.p7s</S>
+          <S N="GUID">eafced71-8742-4a2c-5afd-13117428dd90</S>
+          <S N="PowerShellVersion">5.1</S>
+          <S N="DotNetFrameworkVersion">4.7.2</S>
+          <S N="CompanyName">Microsoft Corporation</S>
+        </MS>
+      </Obj>
+      <S N="InstalledLocation">C:\GitHub\CIPP Workspace\CIPP-API\Modules\Az.Functions\4.2.0</S>
+    </MS>
+  </Obj>
+</Objs>

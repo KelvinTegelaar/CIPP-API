@@ -1,15 +1,8 @@
 function Get-SherwebAuthentication {
     $Table = Get-CIPPTable -TableName Extensionsconfig
     $Config = ((Get-CIPPAzDataTableEntity @Table).config | ConvertFrom-Json).Sherweb
+    $APIKey = Get-ExtensionAPIKey -Extension 'Sherweb'
 
-    if ($env:AzureWebJobsStorage -eq 'UseDevelopmentStorage=true') {
-        $DevSecretsTable = Get-CIPPTable -tablename 'DevSecrets'
-        $APIKey = (Get-CIPPAzDataTableEntity @DevSecretsTable -Filter "PartitionKey eq 'Sherweb' and RowKey eq 'Sherweb'").APIKey
-    } else {
-        $keyvaultname = ($ENV:WEBSITE_DEPLOYMENT_ID -split '-')[0]
-        $null = Connect-AzAccount -Identity
-        $APIKey = (Get-AzKeyVaultSecret -VaultName $keyvaultname -Name 'sherweb' -AsPlainText)
-    }
     $AuthBody = @{
         client_id     = $Config.clientId
         client_secret = $APIKey
