@@ -19,7 +19,7 @@ function Invoke-CIPPStandardRetentionPolicyTag {
     $StateIsCorrect =   ($CurrentState.Name -eq $PolicyName) -and
                         ($CurrentState.RetentionEnabled -eq $true) -and
                         ($CurrentState.RetentionAction -eq 'PermanentlyDelete') -and
-                        ($CurrentState.AgeLimitForRetention -eq $Settings.AgeLimitForRetention) -and
+                        ($CurrentState.AgeLimitForRetention -eq ([timespan]::FromDays($Settings.AgeLimitForRetention))) -and
                         ($CurrentState.Type -eq 'DeletedItems') -and
                         ($PolicyState.RetentionPolicyTagLinks -contains $PolicyName)
 
