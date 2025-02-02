@@ -11,43 +11,52 @@ Function Invoke-EditContact {
     param($Request, $TriggerMetadata)
 
     $APIName = $TriggerMetadata.FunctionName
-    Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -message 'Accessed this API' -Sev 'Debug'
+    $TenantID = $Request.body.tenantID
+    $ExecutingUser = $Request.headers.'x-ms-client-principal'
+    Write-LogMessage -user $ExecutingUser -API $APINAME -message 'Accessed this API' -Sev 'Debug'
 
-    $contactobj = $Request.body
-    write-host "This is the contact object: $contactobj"
-    # Write to the Azure Functions log stream.
-    Write-Host 'PowerShell HTTP trigger function processed a request.'
     try {
+        # Extract contact information from the request body
+        $contactInfo = $Request.body
 
-        $BodyToship = [pscustomobject] @{
-            'DisplayName'           = $contactobj.DisplayName
-            'WindowsEmailAddress'   = $contactobj.mail
-            'FirstName'             = $contactObj.firstName
-            'LastName'              = $contactobj.LastName
-            "Title"                 = $contactobj.jobTitle
-            "StreetAddress"         = $contactobj.StreetAddress
-            "PostalCode"            = $contactobj.PostalCode
-            "City"                  = $contactobj.City
-            "CountryOrRegion"       = $contactobj.Country
-            "Company"               = $contactobj.companyName
-            "mobilePhone"           = $contactobj.MobilePhone
-            "phone"                 = $contactobj.BusinessPhone
-            'identity'              = $contactobj.ContactID
+        # Log the received contact object
+        Write-Host "Received contact object: $($contactInfo | ConvertTo-Json)"
+
+        # Prepare the body for the Set-Contact cmdlet
+        $bodyForSetContact = [pscustomobject] @{
+            'DisplayName'         = $contactInfo.DisplayName
+            'WindowsEmailAddress' = $contactInfo.mail
+            'FirstName'           = $contactInfo.firstName
+            'LastName'            = $contactInfo.LastName
+            'Title'               = $contactInfo.jobTitle
+            'StreetAddress'       = $contactInfo.StreetAddress
+            'PostalCode'          = $contactInfo.PostalCode
+            'City'                = $contactInfo.City
+            'CountryOrRegion'     = $contactInfo.Country
+            'Company'             = $contactInfo.companyName
+            'mobilePhone'         = $contactInfo.MobilePhone
+            'phone'               = $contactInfo.BusinessPhone
+            'identity'            = $contactInfo.ContactID
         }
-        $EditContact = New-ExoRequest -tenantid $Request.body.tenantID -cmdlet 'Set-Contact' -cmdparams $BodyToship -UseSystemMailbox $true
-        $Results = [pscustomobject]@{'Results' = "Successfully edited contact $($contactobj.Displayname)" }
-        Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $($contactobj.tenantid) -message "Created contact $($contactobj.displayname)" -Sev 'Info'
+
+        # Call the Set-Contact cmdlet to update the contact
+        $null = New-ExoRequest -tenantid $TenantID -cmdlet 'Set-Contact' -cmdParams $bodyForSetContact -UseSystemMailbox $true
+        $Results = "Successfully edited contact $($contactInfo.DisplayName)"
+        Write-LogMessage -user $ExecutingUser -API $APINAME -tenant $TenantID -message $Results -Sev Info
+        $StatusCode = [HttpStatusCode]::OK
 
     } catch {
-        Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $($contactobj.tenantid) -message "Contact creation API failed. $($_.Exception.Message)" -Sev 'Error'
-        $Results = [pscustomobject]@{'Results' = "Failed to edit contact. $($_.Exception.Message)" }
-
+        $ErrorMessage = Get-CippException -Exception $_
+        $Results = "Failed to edit contact. $($ErrorMessage.NormalizedError)"
+        Write-LogMessage -user $ExecutingUser -API $APINAME -tenant $TenantID -message $Results -Sev Error -LogData $ErrorMessage
+        $StatusCode = [HttpStatusCode]::InternalServerError
     }
 
+
+    $Results = [pscustomobject]@{'Results' = "$Results" }
     # Associate values to output bindings by calling 'Push-OutputBinding'.
     Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
-            StatusCode = [HttpStatusCode]::OK
-            Body       = $Results
+            StatusCode = $StatusCode
+            Body       = $responseResults
         })
-
 }
