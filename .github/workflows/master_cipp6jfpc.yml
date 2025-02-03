@@ -6,7 +6,7 @@ name: Build and deploy Powershell project to Azure Function App - cipp6jfpc
 on:
   push:
     branches:
-      - master
+      - interface-rewrite
   workflow_dispatch:
 
 env:
