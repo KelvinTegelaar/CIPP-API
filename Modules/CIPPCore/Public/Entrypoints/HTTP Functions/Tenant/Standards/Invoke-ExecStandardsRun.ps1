@@ -15,7 +15,13 @@ Function Invoke-ExecStandardsRun {
     $TemplateId = if ($Request.Query.TemplateId) { $Request.Query.TemplateId } else { '*' }
     $Table = Get-CippTable -tablename 'templates'
     $Filter = "PartitionKey eq 'StandardsTemplateV2'"
-    $Templates = (Get-CIPPAzDataTableEntity @Table -Filter $Filter | Sort-Object TimeStamp).JSON | ConvertFrom-Json | Where-Object {
+    $Templates = (Get-CIPPAzDataTableEntity @Table -Filter $Filter | Sort-Object TimeStamp).JSON | ForEach-Object {
+        try {
+            ConvertFrom-Json $_ -ErrorAction SilentlyContinue
+        } catch {
+
+        }
+    } | Where-Object {
         $_.guid -like $TemplateId
     }
 
