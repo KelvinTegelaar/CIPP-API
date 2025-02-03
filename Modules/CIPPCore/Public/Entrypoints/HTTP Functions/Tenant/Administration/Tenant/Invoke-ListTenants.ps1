@@ -14,6 +14,7 @@ Function Invoke-ListTenants {
 
     Write-LogMessage -user $Request.Headers.'x-ms-client-principal' -API $APINAME -message 'Accessed this API' -Sev 'Debug'
     $TenantAccess = Test-CIPPAccess -Request $Request -TenantList
+    Write-Host "Tenant Access: $TenantAccess"
 
     if ($TenantAccess -notcontains 'AllTenants') {
         $AllTenantSelector = $false

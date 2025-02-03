@@ -44,12 +44,12 @@ Function Invoke-ListSites {
             @{
                 id     = 'listAllSites'
                 method = 'GET'
-                url    = "sites/getAllSites?`$filter=$($Filter)&`$select=id,createdDateTime,description,name,displayName,isPersonalSite,lastModifiedDateTime,webUrl,siteCollection,sharepointIds"
+                url    = "sites/getAllSites?`$filter=$($Filter)&`$select=id,createdDateTime,description,name,displayName,isPersonalSite,lastModifiedDateTime,webUrl,siteCollection,sharepointIds&`$top=999"
             }
             @{
                 id     = 'usage'
                 method = 'GET'
-                url    = "reports/get$($type)Detail(period='D7')?`$format=application/json"
+                url    = "reports/get$($type)Detail(period='D7')?`$format=application/json&`$top=999"
             }
         )
 
@@ -90,7 +90,11 @@ Function Invoke-ListSites {
                     url    = "sites/$($Site.siteId)/lists?`$select=id,name,list,parentReference"
                 }
             }
-            $Requests = (New-GraphBulkRequest -tenantid $TenantFilter -scope 'https://graph.microsoft.com/.default' -Requests @($Requests) -asapp $true).body.value | Where-Object { $_.list.template -eq 'DocumentLibrary' }
+            try {
+                $Requests = (New-GraphBulkRequest -tenantid $TenantFilter -scope 'https://graph.microsoft.com/.default' -Requests @($Requests) -asapp $true).body.value | Where-Object { $_.list.template -eq 'DocumentLibrary' }
+            } catch {
+                Write-LogMessage -Message "Error getting auto map urls: $($_.Exception.Message)" -Sev 'Error' -tenant $TenantFilter -API 'ListSites' -LogData (Get-CippException -Exception $_)
+            }
             $GraphRequest = foreach ($Site in $GraphRequest) {
                 $ListId = ($Requests | Where-Object { $_.parentReference.siteId -like "*$($Site.siteId)*" }).id
                 $site.AutoMapUrl = "tenantId=$($TenantId)&webId={$($Site.webId)}&siteid={$($Site.siteId)}&webUrl=$($Site.webUrl)&listId={$($ListId)}"

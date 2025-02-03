@@ -6,7 +6,7 @@ function Test-CIPPAccessPermissions {
         $ExecutingUser
     )
 
-    $User = $request.headers.'x-ms-client-principal-name'
+    $User = $request.headers.'x-ms-client-principal'
     Write-LogMessage -user $User -API $APINAME -message 'Started permissions check' -Sev 'Debug'
     $Messages = [System.Collections.Generic.List[string]]::new()
     $ErrorMessages = [System.Collections.Generic.List[string]]::new()
@@ -182,7 +182,9 @@ function Test-CIPPAccessPermissions {
             Data         = [string](ConvertTo-Json -InputObject $AccessCheck -Depth 10 -Compress)
         }
     }
-    Add-CIPPAzDataTableEntity @Table -Entity $Data -Force
+    try {
+        Add-CIPPAzDataTableEntity @Table -Entity $Data -Force
+    } catch {}
 
     return $AccessCheck
 }

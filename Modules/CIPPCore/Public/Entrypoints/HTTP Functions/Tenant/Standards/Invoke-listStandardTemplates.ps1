@@ -13,13 +13,13 @@ Function Invoke-listStandardTemplates {
     $Table = Get-CippTable -tablename 'templates'
     $Filter = "PartitionKey eq 'StandardsTemplateV2'"
     $Templates = (Get-CIPPAzDataTableEntity @Table -Filter $Filter) | ForEach-Object {
-        $JSON = $_.JSON
+        $JSON = $_.JSON -replace '"Action":', '"action":'
         try {
             $RowKey = $_.RowKey
-            $data = $_.JSON | ConvertFrom-Json -Depth 100 -ErrorAction SilentlyContinue
+            $data = $JSON | ConvertFrom-Json -Depth 100 -ErrorAction SilentlyContinue
+
         } catch {
-            Write-Host "Could not load standard template: $($_.Exception.Message)."
-            Write-Host "Template GUID: $($RowKey)"
+            Write-Host "$($RowKey) standard could not be loaded: $($_.Exception.Message)"
             return
         }
         $data | Add-Member -NotePropertyName 'GUID' -NotePropertyValue $_.GUID -Force

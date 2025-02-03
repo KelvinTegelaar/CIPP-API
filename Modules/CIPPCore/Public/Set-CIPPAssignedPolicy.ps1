@@ -47,6 +47,7 @@ function Set-CIPPAssignedPolicy {
                 )
             }
             default {
+                Write-Host "We're supposed to assign a custom group. The group is $GroupName"
                 $GroupNames = $GroupName.Split(',')
                 $GroupIds = New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/groups?$select=id,displayName&$top=999' -tenantid $TenantFilter | ForEach-Object {
                     $Group = $_
@@ -78,7 +79,6 @@ function Set-CIPPAssignedPolicy {
             Write-LogMessage -user $ExecutingUser -API $APIName -message "Assigned $GroupName to Policy $PolicyId" -Sev 'Info' -tenant $TenantFilter
         }
     } catch {
-        #$ErrorMessage = Get-CippException -Exception $_
         $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
         Write-LogMessage -user $ExecutingUser -API $APIName -message "Failed to assign $GroupName to Policy $PolicyId, using Platform $PlatformType and $Type. The error is:$ErrorMessage" -Sev 'Error' -tenant $TenantFilter -LogData $ErrorMessage
     }

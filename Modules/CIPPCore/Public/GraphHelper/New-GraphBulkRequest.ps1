@@ -44,7 +44,8 @@ function New-GraphBulkRequest {
             }
             foreach ($MoreData in $ReturnedData.Responses | Where-Object { $_.body.'@odata.nextLink' }) {
                 Write-Host 'Getting more'
-                $AdditionalValues = New-GraphGetRequest -ComplexFilter -uri $MoreData.body.'@odata.nextLink' -tenantid $tenantid -NoAuthCheck:$NoAuthCheck
+                Write-Host $MoreData.body.'@odata.nextLink'
+                $AdditionalValues = New-GraphGetRequest -ComplexFilter -uri $MoreData.body.'@odata.nextLink' -tenantid $tenantid -NoAuthCheck $NoAuthCheck -scope $scope -AsApp $asapp
                 $NewValues = [System.Collections.Generic.List[PSCustomObject]]$MoreData.body.value
                 $AdditionalValues | ForEach-Object { $NewValues.add($_) }
                 $MoreData.body.value = $NewValues
