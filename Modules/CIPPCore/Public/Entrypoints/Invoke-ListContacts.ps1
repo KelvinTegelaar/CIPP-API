@@ -10,35 +10,62 @@ Function Invoke-ListContacts {
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
 
-    $APIName = $TriggerMetadata.FunctionName
-    Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -message 'Accessed this API' -Sev 'Debug'
 
-    $selectlist = 'id', 'companyName', 'displayName', 'mail', 'onPremisesSyncEnabled', 'editURL', "givenName", "jobTitle", "surname", "addresses", "phones"
+    # Define fields to retrieve
+    $selectList = @(
+        'id',
+        'companyName',
+        'displayName',
+        'mail',
+        'onPremisesSyncEnabled',
+        'editURL',
+        'givenName',
+        'jobTitle',
+        'surname',
+        'addresses',
+        'phones'
+    )
 
-    # Write to the Azure Functions log stream.
-    Write-Host 'PowerShell HTTP trigger function processed a request.'
+    # Get query parameters
+    $TenantFilter = $Request.Query.tenantFilter
+    $ContactID = $Request.Query.id
 
+    # Validate required parameters
+    if (-not $TenantFilter) {
+        $StatusCode = [HttpStatusCode]::BadRequest
+        $GraphRequest = 'tenantFilter is required'
+        Write-Host 'Error: Missing tenantFilter parameter'
+    } else {
+        try {
+            # Construct Graph API URI based on whether an ID is provided
+            $graphUri = if ([string]::IsNullOrWhiteSpace($ContactID) -eq $false) {
+                "https://graph.microsoft.com/beta/contacts/$($ContactID)?`$select=$($selectList -join ',')"
+            } else {
+                "https://graph.microsoft.com/beta/contacts?`$top=999&`$select=$($selectList -join ',')"
+            }
 
-    # Interact with query parameters or the body of the request.
-    $TenantFilter = $Request.Query.TenantFilter
-    $ContactID = $Request.Query.ContactID
+            # Make the Graph API request
+            $GraphRequest = New-GraphGetRequest -uri $graphUri -tenantid $TenantFilter
 
-    Write-Host "Tenant Filter: $TenantFilter"
-    Write-Host "This is the Contact ID: $ContactID"
-    try {
-        $GraphRequest = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/contacts/$($ContactID)?`$top=999&`$select=$($selectlist -join ',')" -tenantid $TenantFilter | Select-Object $selectlist | ForEach-Object {
-            $_.editURL = "https://outlook.office365.com/ecp/@$TenantFilter/UsersGroups/EditContact.aspx?exsvurl=1&realm=$($env:TenantID)&mkt=en-US&id=$($_.id)"
-            $_
+            if ([string]::IsNullOrWhiteSpace($ContactID) -eq $false) {
+                $HiddenFromGAL = New-EXORequest -tenantid $TenantFilter -cmdlet 'Get-Recipient' -cmdParams @{RecipientTypeDetails = 'MailContact' } -Select 'HiddenFromAddressListsEnabled,ExternalDirectoryObjectId' | Where-Object { $_.ExternalDirectoryObjectId -eq $ContactID }
+                $GraphRequest | Add-Member -NotePropertyName 'hidefromGAL' -NotePropertyValue $HiddenFromGAL.HiddenFromAddressListsEnabled
+            }
+            # Ensure single result when ID is provided
+            if ($ContactID -and $GraphRequest -is [array]) {
+                $GraphRequest = $GraphRequest | Select-Object -First 1
+            }
+            $StatusCode = [HttpStatusCode]::OK
+        } catch {
+            $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
+            $StatusCode = [HttpStatusCode]::InternalServerError
+            $GraphRequest = $ErrorMessage
         }
-        $StatusCode = [HttpStatusCode]::OK
-    } catch {
-        $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
-        $StatusCode = [HttpStatusCode]::Forbidden
-        $GraphRequest = $ErrorMessage
     }
+
+    # Return response
     Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
             StatusCode = $StatusCode
-            Body       = @($GraphRequest | Where-Object -Property id -NE $null)
+            Body       = @($GraphRequest | Where-Object { $null -ne $_.id })
         })
-
 }
