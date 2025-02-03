@@ -23,7 +23,7 @@ Function Invoke-ListCSPLicenses {
     } catch {
         Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
                 StatusCode = [HttpStatusCode]::BadRequest
-                Body       = 'Error retrieving CSP licenses, ensure that you have enabled the Sherweb integration and mapped the tenant in the integration settings.'
+                Body       = 'Unable to retrieve CSP licenses, ensure that you have enabled the Sherweb integration and mapped the tenant in the integration settings.'
             }) -Clobber
     }
 }
