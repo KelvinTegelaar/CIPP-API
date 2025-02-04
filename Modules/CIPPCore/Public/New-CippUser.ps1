@@ -38,10 +38,13 @@ function New-CIPPUser {
             }
         }
         if ($userobj.businessPhone) { $bodytoShip | Add-Member -NotePropertyName businessPhones -NotePropertyValue @($UserObj.businessPhone) }
-        if ($UserObj.defaultAttributes.value) {
-            [hashtable]($UserObj.defaultAttributes).GetEnumerator() | ForEach-Object {
-                $results.add("Added property $($_.Key) with value $($_.value)")
-                $bodytoShip | Add-Member -NotePropertyName $_.Key -NotePropertyValue $_.Value
+        if ($UserObj.defaultAttributes) {
+            $UserObj.defaultAttributes | Get-Member -MemberType NoteProperty | ForEach-Object {
+                Write-Host "Editing user and adding $($_.Name) with value $($UserObj.defaultAttributes.$($_.Name).value)"
+                if (-not [string]::IsNullOrWhiteSpace($UserObj.defaultAttributes.$($_.Name).value)) {
+                    Write-Host 'adding body to ship'
+                    $BodyToShip | Add-Member -NotePropertyName $_.Name -NotePropertyValue $UserObj.defaultAttributes.$($_.Name).value -Force
+                }
             }
         }
         $bodyToShip = ConvertTo-Json -Depth 10 -InputObject $BodyToship -Compress

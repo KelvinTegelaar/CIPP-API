@@ -59,12 +59,13 @@ Function Invoke-EditUser {
             $NonEmptyProperties = $_.PSObject.Properties | Select-Object -ExpandProperty Name
             $_ | Select-Object -Property $NonEmptyProperties
         }
-        if ($UserObj.addedAttributes) {
-            Write-Host 'Found added attribute'
-            Write-Host "Added attributes: $($UserObj.addedAttributes | ConvertTo-Json)"
-            $UserObj.addedAttributes.GetEnumerator() | ForEach-Object {
-                $null = $results.Add("Edited property $($_.Key) with value $($_.Value)")
-                $bodytoShip | Add-Member -NotePropertyName $_.Key -NotePropertyValue $_.Value -Force
+        if ($UserObj.defaultAttributes) {
+            $UserObj.defaultAttributes | Get-Member -MemberType NoteProperty | ForEach-Object {
+                Write-Host "Editing user and adding $($_.Name) with value $($UserObj.defaultAttributes.$($_.Name).value)"
+                if (-not [string]::IsNullOrWhiteSpace($UserObj.defaultAttributes.$($_.Name).value)) {
+                    Write-Host 'adding body to ship'
+                    $BodyToShip | Add-Member -NotePropertyName $_.Name -NotePropertyValue $UserObj.defaultAttributes.$($_.Name).value -Force
+                }
             }
         }
         $bodyToShip = ConvertTo-Json -Depth 10 -InputObject $BodyToship -Compress
