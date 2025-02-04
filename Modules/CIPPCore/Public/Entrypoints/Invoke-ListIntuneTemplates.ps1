@@ -37,16 +37,21 @@ Function Invoke-ListIntuneTemplates {
     $RawTemplates = (Get-CIPPAzDataTableEntity @Table -Filter $Filter)
     if ($Request.query.View) {
         $Templates = $RawTemplates | ForEach-Object {
-            $JSONData = $_.JSON | ConvertFrom-Json
-            $data = $JSONData.RAWJson | ConvertFrom-Json -Depth 100
-            $data | Add-Member -NotePropertyName 'displayName' -NotePropertyValue $JSONData.Displayname -Force
-            $data | Add-Member -NotePropertyName 'description' -NotePropertyValue $JSONData.Description -Force
-            $data | Add-Member -NotePropertyName 'Type' -NotePropertyValue $JSONData.Type -Force
-            $data | Add-Member -NotePropertyName 'GUID' -NotePropertyValue $_.RowKey -Force
-            $data
+            try {
+                $JSONData = $_.JSON | ConvertFrom-Json -Depth 100 -ErrorAction SilentlyContinue
+                $data = $JSONData.RAWJson | ConvertFrom-Json -Depth 100 -ErrorAction SilentlyContinue
+                $data | Add-Member -NotePropertyName 'displayName' -NotePropertyValue $JSONData.Displayname -Force
+                $data | Add-Member -NotePropertyName 'description' -NotePropertyValue $JSONData.Description -Force
+                $data | Add-Member -NotePropertyName 'Type' -NotePropertyValue $JSONData.Type -Force
+                $data | Add-Member -NotePropertyName 'GUID' -NotePropertyValue $_.RowKey -Force
+                $data
+            } catch {
+
+            }
+
         } | Sort-Object -Property displayName
     } else {
-        $Templates = $RawTemplates.JSON | ConvertFrom-Json
+        $Templates = $RawTemplates.JSON | ForEach-Object { try { ConvertFrom-Json -InputObject $_ -Depth 100 -ErrorAction SilentlyContinue } catch {} }
     }
 
     if ($Request.query.ID) { $Templates = $Templates | Where-Object -Property guid -EQ $Request.query.id }
