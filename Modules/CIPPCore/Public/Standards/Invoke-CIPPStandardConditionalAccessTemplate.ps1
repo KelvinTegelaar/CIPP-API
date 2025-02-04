@@ -1,7 +1,30 @@
 function Invoke-CIPPStandardConditionalAccessTemplate {
     <#
     .FUNCTIONALITY
-    Internal
+        Internal
+    .COMPONENT
+        (APIName) ConditionalAccessTemplate
+    .SYNOPSIS
+        (Label) Conditional Access Template
+    .DESCRIPTION
+        (Helptext) Manage conditional access policies for better security.
+        (DocsDescription) Manage conditional access policies for better security.
+    .NOTES
+        CAT
+            Templates
+        MULTIPLE
+            True
+        DISABLEDFEATURES
+            
+        IMPACT
+            High
+        ADDEDCOMPONENT
+            {"type":"autoComplete","name":"TemplateList","multiple":false,"label":"Select Conditional Access Template","api":{"url":"/api/ListCATemplates","labelField":"displayName","valueField":"GUID","queryKey":"ListCATemplates"}}
+            {"name":"state","label":"What state should we deploy this template in?","type":"radio","options":[{"value":"donotchange","label":"Do not change state"},{"value":"Enabled","label":"Set to enabled"},{"value":"Disabled","label":"Set to disabled"},{"value":"enabledForReportingButNotEnforced","label":"Set to report only"}]}
+        UPDATECOMMENTBLOCK
+            Run the Tools\Update-StandardsComments.ps1 script to update this comment block
+    .LINK
+        https://docs.cipp.app/user-documentation/tenant/standards/list-standards/
     #>
     param($Tenant, $Settings)
     ##$Rerun -Type Standard -Tenant $Tenant -Settings $Settings 'ConditionalAccess'

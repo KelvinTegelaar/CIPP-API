@@ -12,15 +12,13 @@ function Invoke-CIPPStandardsRun {
         $runManually = $false
 
     )
-    Write-Host "Starting process for standards - $($tenantFilter)"
+    Write-Host "Starting process for standards - $($tenantFilter). TemplateID: $($TemplateID) RunManually: $($runManually) Force: $($Force.IsPresent)"
 
     $AllTasks = Get-CIPPStandards
 
     if ($Force.IsPresent) {
         Write-Host 'Clearing Rerun Cache'
-        foreach ($Task in $AllTasks) {
-            $null = Test-CIPPRerun -Type Standard -Tenant $Task.Tenant -API $Task.Standard -Clear
-        }
+        Test-CIPPRerun -ClearAll -TenantFilter $TenantFilter -Type 'Standard'
     }
 
     #For each item in our object, run the queue.
