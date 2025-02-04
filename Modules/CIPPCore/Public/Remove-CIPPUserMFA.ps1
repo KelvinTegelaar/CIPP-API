@@ -27,7 +27,12 @@ function Remove-CIPPUserMFA {
     )
 
     Write-Information "Getting auth methods for $UserPrincipalName"
-    $AuthMethods = New-GraphGetRequest -uri "https://graph.microsoft.com/v1.0/users/$UserPrincipalName/authentication/methods" -tenantid $TenantFilter -AsApp $true
+    try {
+        $AuthMethods = New-GraphGetRequest -uri "https://graph.microsoft.com/v1.0/users/$UserPrincipalName/authentication/methods" -tenantid $TenantFilter -AsApp $true
+    } catch {
+        Write-LogMessage -API 'Remove-CIPPUserMFA' -tenant $TenantFilter -message "Failed to get MFA methods for user $UserPrincipalName" -sev 'Error' -LogData (Get-CippException -Exception $_)
+        return "Failed to get MFA methods for user $UserPrincipalName - $($_.Exception.Message)"
+    }
     $Requests = [System.Collections.Generic.List[object]]::new()
     foreach ($Method in $AuthMethods) {
         if ($Method.'@odata.type' -and $Method.'@odata.type' -ne '#microsoft.graph.passwordAuthenticationMethod') {
@@ -41,23 +46,18 @@ function Remove-CIPPUserMFA {
     }
     if (($Requests | Measure-Object).Count -eq 0) {
         Write-LogMessage -API 'Remove-CIPPUserMFA' -tenant $TenantFilter -message "No MFA methods found for user $UserPrincipalName" -sev 'Info'
-        $Results = [pscustomobject]@{'Results' = "No MFA methods found for user $($Request.Query.ID)" }
-        Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
-                StatusCode = [HttpStatusCode]::OK
-                Body       = $Results
-            })
-        return
-    }
-
-    if ($PSCmdlet.ShouldProcess("Remove MFA methods for $UserPrincipalName")) {
-        $Results = New-GraphBulkRequest -Requests $Requests -tenantid $TenantFilter -asapp $true -erroraction stop
-        if ($Results.status -eq 204) {
-            Write-LogMessage -API 'Remove-CIPPUserMFA' -tenant $TenantFilter -message "Successfully removed MFA methods for user $UserPrincipalName" -sev 'Info'
-            $Results = [pscustomobject]@{'Results' = "Successfully completed request. User $($Request.Query.ID) must supply MFA at next logon" }
-        } else {
-            $FailedAuthMethods = (($Results | Where-Object { $_.status -ne 204 }).id -split '-')[0] -join ', '
-            Write-LogMessage -API 'Remove-CIPPUserMFA' -tenant $TenantFilter -message "Failed to remove MFA methods for $FailedAuthMethods" -sev 'Error'
-            $Results = [pscustomobject]@{'Results' = "Failed to reset MFA methods for $FailedAuthMethods" }
+        $Results = "No MFA methods found for user $($UserPrincipalName)"
+    } else {
+        if ($PSCmdlet.ShouldProcess("Remove MFA methods for $UserPrincipalName")) {
+            $Results = New-GraphBulkRequest -Requests $Requests -tenantid $TenantFilter -asapp $true -erroraction stop
+            if ($Results.status -eq 204) {
+                Write-LogMessage -API 'Remove-CIPPUserMFA' -tenant $TenantFilter -message "Successfully removed MFA methods for user $UserPrincipalName" -sev 'Info'
+                $Results = [pscustomobject]@{'Results' = "Successfully completed request. User $($Request.Query.ID) must supply MFA at next logon" }
+            } else {
+                $FailedAuthMethods = (($Results | Where-Object { $_.status -ne 204 }).id -split '-')[0] -join ', '
+                Write-LogMessage -API 'Remove-CIPPUserMFA' -tenant $TenantFilter -message "Failed to remove MFA methods for $FailedAuthMethods" -sev 'Error'
+                $Results = "Failed to reset MFA methods for $FailedAuthMethods"
+            }
         }
     }
 

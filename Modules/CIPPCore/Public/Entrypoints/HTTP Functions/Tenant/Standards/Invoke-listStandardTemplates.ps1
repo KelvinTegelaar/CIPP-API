@@ -10,13 +10,19 @@ Function Invoke-listStandardTemplates {
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
 
-    $APIName = $TriggerMetadata.FunctionName
-
     $Table = Get-CippTable -tablename 'templates'
-    $Filter = "PartitionKey eq 'StandardsTemplate'"
+    $Filter = "PartitionKey eq 'StandardsTemplateV2'"
     $Templates = (Get-CIPPAzDataTableEntity @Table -Filter $Filter) | ForEach-Object {
-        $data = $_.JSON | ConvertFrom-Json -Depth 100
+        $JSON = $_.JSON
+        try {
+            $RowKey = $_.RowKey
+            $data = $_.JSON | ConvertFrom-Json -Depth 100 -ErrorAction SilentlyContinue
+        } catch {
+            Write-Host "$($RowKey)"
+            return
+        }
         $data | Add-Member -NotePropertyName 'GUID' -NotePropertyValue $_.GUID -Force
+        if ($data.excludedTenants) { $data.excludedTenants = @($data.excludedTenants) }
         $data
     } | Sort-Object -Property templateName
 

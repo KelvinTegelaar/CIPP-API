@@ -5,10 +5,10 @@ function Invoke-CIPPStandardsharingCapability {
     .COMPONENT
         (APIName) sharingCapability
     .SYNOPSIS
-        (Label) Set Sharing Level for OneDrive and Sharepoint
+        (Label) Set Sharing Level for OneDrive and SharePoint
     .DESCRIPTION
-        (Helptext) Sets the default sharing level for OneDrive and Sharepoint. This is a tenant wide setting and overrules any settings set on the site level
-        (DocsDescription) Sets the default sharing level for OneDrive and Sharepoint. This is a tenant wide setting and overrules any settings set on the site level
+        (Helptext) Sets the default sharing level for OneDrive and SharePoint. This is a tenant wide setting and overrules any settings set on the site level
+        (DocsDescription) Sets the default sharing level for OneDrive and SharePoint. This is a tenant wide setting and overrules any settings set on the site level
     .NOTES
         CAT
             SharePoint Standards
@@ -16,7 +16,7 @@ function Invoke-CIPPStandardsharingCapability {
             "highimpact"
             "CIS"
         ADDEDCOMPONENT
-            {"type":"Select","label":"Select Sharing Level","name":"standards.sharingCapability.Level","values":[{"label":"Users can share only with people in the organization. No external sharing is allowed.","value":"disabled"},{"label":"Users can share with new and existing guests. Guests must sign in or provide a verification code.","value":"externalUserSharingOnly"},{"label":"Users can share with anyone by using links that do not require sign-in.","value":"externalUserAndGuestSharing"},{"label":"Users can share with existing guests (those already in the directory of the organization).","value":"existingExternalUserSharingOnly"}]}
+            {"type":"select","multiple":false,"label":"Select Sharing Level","name":"standards.sharingCapability.Level","options":[{"label":"Users can share only with people in the organization. No external sharing is allowed.","value":"disabled"},{"label":"Users can share with new and existing guests. Guests must sign in or provide a verification code.","value":"externalUserSharingOnly"},{"label":"Users can share with anyone by using links that do not require sign-in.","value":"externalUserAndGuestSharing"},{"label":"Users can share with existing guests (those already in the directory of the organization).","value":"existingExternalUserSharingOnly"}]}
         IMPACT
             High Impact
         POWERSHELLEQUIVALENT
@@ -26,7 +26,7 @@ function Invoke-CIPPStandardsharingCapability {
         UPDATECOMMENTBLOCK
             Run the Tools\Update-StandardsComments.ps1 script to update this comment block
     .LINK
-        https://docs.cipp.app/user-documentation/tenant/standards/edit-standards
+        https://docs.cipp.app/user-documentation/tenant/standards/list-standards/sharepoint-standards#high-impact
     #>
 
     param($Tenant, $Settings)

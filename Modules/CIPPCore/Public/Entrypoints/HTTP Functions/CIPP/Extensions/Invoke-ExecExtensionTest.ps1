@@ -55,9 +55,21 @@ Function Invoke-ExecExtensionTest {
                     $Results = [pscustomobject]@{'Results' = 'Failed to connect to Hudu' }
                 }
             }
+            'Sherweb' {
+                $token = Get-SherwebAuthentication
+                $Results = [pscustomobject]@{'Results' = 'Successfully Connected to Sherweb' }
+            }
+            'HIBP' {
+                $ConnectionTest = Get-HIBPConnectionTest
+                $Results = [pscustomobject]@{'Results' = 'Successfully Connected to HIBP' }
+            }
+            'GitHub' {
+                $GitHubResponse = Invoke-GitHubApiRequest -Configuration $Configuration.GitHub -Method 'GET' -Path 'user' -Verbose
+                $Results = [pscustomobject]@{ 'Results' = "Successfully connected to GitHub user: $($GitHubResponse.login)" }
+            }
         }
     } catch {
-        $Results = [pscustomobject]@{'Results' = "Failed to connect: $($_.Exception.Message) $($_.InvocationInfo.ScriptLineNumber)" }
+        $Results = [pscustomobject]@{'Results' = "Failed to connect: $($_.Exception.Message). Line $($_.InvocationInfo.ScriptLineNumber)" }
     }
 
     # Associate values to output bindings by calling 'Push-OutputBinding'.

@@ -58,6 +58,7 @@ function New-CIPPCAPolicy {
     #Remove context as it does not belong in the payload.
     try {
         $JsonObj.grantControls.PSObject.Properties.Remove('authenticationStrength@odata.context')
+        $JSONObj.templateId ? $JSONObj.PSObject.Properties.Remove('templateId') : $null
         if ($JSONObj.conditions.users.excludeGuestsOrExternalUsers.externalTenants.Members) {
             $JsonObj.conditions.users.excludeGuestsOrExternalUsers.externalTenants.PSObject.Properties.Remove('@odata.context')
         }
@@ -150,6 +151,7 @@ function New-CIPPCAPolicy {
                         $JSONObj.conditions.users.$groupType = @(Replace-GroupNameWithId -groupNames $JSONObj.conditions.users.$groupType)
                     }
                 }
+
             } catch {
                 $ErrorMessage = Get-CippException -Exception $_
                 Write-LogMessage -API 'Standards' -tenant $tenant -message "Failed to replace displayNames for conditional access rule $($JSONObj.displayName). Error: $($ErrorMessage.NormalizedError)" -sev 'Error' -LogData $ErrorMessage
@@ -158,6 +160,27 @@ function New-CIPPCAPolicy {
         }
     }
     $JsonObj.PSObject.Properties.Remove('LocationInfo')
+    foreach ($condition in $JSONObj.conditions.users.PSObject.Properties.Name) {
+        $value = $JSONObj.conditions.users.$condition
+        if ($null -eq $value) {
+            $JSONObj.conditions.users.$condition = @()
+            continue
+        }
+        if ($value -is [string]) {
+            if ([string]::IsNullOrWhiteSpace($value)) {
+                $JSONObj.conditions.users.$condition = @()
+                continue
+            }
+        }
+        if ($value -is [array]) {
+            $nonWhitespaceItems = $value | Where-Object { -not [string]::IsNullOrWhiteSpace($_) }
+            if ($nonWhitespaceItems.Count -eq 0) {
+                $JSONObj.conditions.users.$condition = @()
+                continue
+            }
+        }
+    }
+
     $RawJSON = ConvertTo-Json -InputObject $JSONObj -Depth 10 -Compress
     Write-Host $RawJSON
     try {

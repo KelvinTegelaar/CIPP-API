@@ -4,28 +4,25 @@ function Invoke-CIPPStandardsRun {
     param(
         [Parameter(Mandatory = $false)]
         [string]$TenantFilter = 'allTenants',
-        [switch]$Force
-    )
-    Write-Information "Starting process for standards - $($tenantFilter)"
+        [Parameter(Mandatory = $false)]
+        [switch]$Force,
+        [Parameter(Mandatory = $false)]
+        $TemplateID,
+        [Parameter(Mandatory = $false)]
+        $runManually = $false
 
-    $AllTasks = Get-CIPPStandards -TenantFilter $TenantFilter
+    )
+    Write-Host "Starting process for standards - $($tenantFilter). TemplateID: $($TemplateID) RunManually: $($runManually) Force: $($Force.IsPresent)"
+
+    $AllTasks = Get-CIPPStandards
 
     if ($Force.IsPresent) {
-        Write-Information 'Clearing Rerun Cache'
-        foreach ($Task in $AllTasks) {
-            $null = Test-CIPPRerun -Type Standard -Tenant $Task.Tenant -API $Task.Standard -Clear
-        }
-    }
-    $TaskCount = ($AllTasks | Measure-Object).Count
-
-    if ($TaskCount -eq 0) {
-        Write-Information "No tasks found for tenant filter '$TenantFilter'"
-        return
+        Write-Host 'Clearing Rerun Cache'
+        Test-CIPPRerun -ClearAll -TenantFilter $TenantFilter -Type 'Standard'
     }
 
-    Write-Information "Found $TaskCount tasks for tenant filter '$TenantFilter'"
     #For each item in our object, run the queue.
-    $Queue = New-CippQueueEntry -Name "Applying Standards ($TenantFilter)" -TotalTasks $TaskCount
+    $Queue = New-CippQueueEntry -Name "Applying Standards ($TenantFilter)" -TotalTasks ($AllTasks | Measure-Object).Count
 
     $InputObject = [PSCustomObject]@{
         OrchestratorName = 'StandardsOrchestrator'
@@ -34,13 +31,15 @@ function Invoke-CIPPStandardsRun {
             QueueId        = $Queue.RowKey
             StandardParams = @{
                 TenantFilter = $TenantFilter
+                runManually  = $runManually
             }
         }
     }
-
-    Write-Information 'Starting standards orchestrator'
+    if ($TemplateID) {
+        $InputObject.QueueFunction.StandardParams['TemplateId'] = $TemplateID
+    }
+    Write-Host "InputObject: $($InputObject | ConvertTo-Json -Depth 5 -Compress)"
     $InstanceId = Start-NewOrchestration -FunctionName 'CIPPOrchestrator' -InputObject ($InputObject | ConvertTo-Json -Depth 5 -Compress)
-    Write-Information "Started orchestration with ID = '$InstanceId'"
+    Write-Host "Started orchestration with ID = '$InstanceId'"
     #$Orchestrator = New-OrchestrationCheckStatusResponse -Request $Request -InstanceId $InstanceId
-    return $InstanceId
 }

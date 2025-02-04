@@ -22,7 +22,7 @@ function Invoke-CIPPStandardintuneRequireMFA {
         UPDATECOMMENTBLOCK
             Run the Tools\Update-StandardsComments.ps1 script to update this comment block
     .LINK
-        https://docs.cipp.app/user-documentation/tenant/standards/edit-standards
+        https://docs.cipp.app/user-documentation/tenant/standards/list-standards/intune-standards#medium-impact
     #>
 
     param($Tenant, $Settings)
@@ -36,8 +36,8 @@ function Invoke-CIPPStandardintuneRequireMFA {
         } else {
             try {
                 $NewSetting = $PreviousSetting
-                $NewSetting.multiFactorAuthConfiguration = '1'
-                $Newbody = ConvertTo-Json -Compress -InputObject $NewSetting
+                $NewSetting.multiFactorAuthConfiguration = 'required'
+                $Newbody = ConvertTo-Json -Compress -InputObject $NewSetting -Depth 10
                 New-GraphPostRequest -tenantid $tenant -Uri 'https://graph.microsoft.com/beta/policies/deviceRegistrationPolicy' -Type PUT -Body $NewBody -ContentType 'application/json'
                 Write-LogMessage -API 'Standards' -tenant $tenant -message 'Set required to use MFA when joining/registering Entra Devices' -sev Info
             } catch {

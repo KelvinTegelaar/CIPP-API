@@ -14,14 +14,14 @@ Function Invoke-AddGroup {
     Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -message 'Accessed this API' -Sev 'Debug'
 
     $groupobj = $Request.body
-    $SelectedTenants = if ($Request.body.selectedTenants) { $request.body.selectedTenants.defaultDomainName } else { $Request.body.tenantid }
+    $SelectedTenants = $request.body.tenantfilter.value ? $request.body.tenantfilter.value : $request.body.tenantfilter
     if ('AllTenants' -in $SelectedTenants) { $SelectedTenants = (Get-Tenants).defaultDomainName }
 
     # Write to the Azure Functions log stream.
     Write-Host 'PowerShell HTTP trigger function processed a request.'
     $results = foreach ($tenant in $SelectedTenants) {
         try {
-            $email = if ($groupobj.domain) { "$($groupobj.username)@$($groupobj.domain)" } else { "$($groupobj.username)@$($tenant)" }
+            $email = if ($groupobj.primDomain.value) { "$($groupobj.username)@$($groupobj.primDomain.value)" } else { "$($groupobj.username)@$($tenant)" }
             if ($groupobj.groupType -in 'Generic', 'azurerole', 'dynamic', 'm365') {
 
                 $BodyToship = [pscustomobject] @{
@@ -40,11 +40,11 @@ Function Invoke-AddGroup {
                 if ($groupobj.groupType -eq 'm365') {
                     $BodyToship | Add-Member -NotePropertyName 'groupTypes' -NotePropertyValue @('Unified')
                 }
-                if ($groupobj.AddOwner -AND $groupobj.groupType -in 'generic', 'azurerole', 'security') {
+                if ($groupobj.owners -AND $groupobj.groupType -in 'generic', 'azurerole', 'security') {
                     $BodyToship | Add-Member -NotePropertyName 'owners@odata.bind' -NotePropertyValue (($groupobj.AddOwner) | ForEach-Object { "https://graph.microsoft.com/v1.0/users/$($_.value)" })
                     $bodytoship.'owners@odata.bind' = @($bodytoship.'owners@odata.bind')
                 }
-                if ($groupobj.AddMember -AND $groupobj.groupType -in 'generic', 'azurerole', 'security') {
+                if ($groupobj.members -AND $groupobj.groupType -in 'generic', 'azurerole', 'security') {
                     $BodyToship | Add-Member -NotePropertyName 'members@odata.bind' -NotePropertyValue (($groupobj.AddMember) | ForEach-Object { "https://graph.microsoft.com/v1.0/users/$($_.value)" })
                     $BodyToship.'members@odata.bind' = @($BodyToship.'members@odata.bind')
                 }
@@ -68,6 +68,7 @@ Function Invoke-AddGroup {
                     }
                     $GraphRequest = New-ExoRequest -tenantid $tenant -cmdlet 'New-DistributionGroup' -cmdParams $params
                 }
+                #$GraphRequest = New-ExoRequest -tenantid $tenant -cmdlet 'New-DistributionGroup' -cmdParams $params
                 # At some point add logic to use AddOwner/AddMember for New-DistributionGroup, but idk how we're going to brr that - rvdwegen
             }
             "Successfully created group $($groupobj.displayname) for $($tenant)"

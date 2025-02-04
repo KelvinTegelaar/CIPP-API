@@ -6,7 +6,8 @@ function Test-CIPPRerun {
         $API,
         $Settings,
         $ExecutingUser,
-        [switch]$Clear
+        [switch]$Clear,
+        [switch]$ClearAll
     )
     $RerunTable = Get-CIPPTable -tablename 'RerunCache'
     $EstimatedDifference = switch ($Type) {
@@ -19,6 +20,12 @@ function Test-CIPPRerun {
 
     try {
         $RerunData = Get-CIPPAzDataTableEntity @RerunTable -filter "PartitionKey eq '$($TenantFilter)' and RowKey eq '$($Type)_$($API)'"
+        if ($ClearAll.IsPresent) {
+            $AllRerunData = Get-CIPPAzDataTableEntity @RerunTable
+            Remove-AzDataTableEntity @RerunTable -Entity $AllRerunData -Force
+            return $false
+        }
+
         if ($Clear.IsPresent) {
             if ($RerunData) {
                 Remove-AzDataTableEntity @RerunTable -Entity $RerunData
@@ -38,7 +45,7 @@ function Test-CIPPRerun {
                 }
             }
             if ($RerunData.EstimatedNextRun -gt $CurrentUnixTime) {
-                Write-LogMessage -message "Standard rerun detected for $($API). Prevented from running again." -tenant $TenantFilter -user $ExecutingUser -Sev 'Info'
+                Write-LogMessage -API $API -message "Standard rerun detected for $($API). Prevented from running again." -tenant $TenantFilter -user $ExecutingUser -Sev 'Info'
                 return $true
             } else {
                 $RerunData.EstimatedNextRun = $EstimatedNextRun

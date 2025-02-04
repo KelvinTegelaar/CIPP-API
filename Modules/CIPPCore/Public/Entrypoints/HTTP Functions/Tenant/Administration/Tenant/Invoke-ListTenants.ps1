@@ -14,6 +14,7 @@ Function Invoke-ListTenants {
 
     Write-LogMessage -user $Request.Headers.'x-ms-client-principal' -API $APINAME -message 'Accessed this API' -Sev 'Debug'
     $TenantAccess = Test-CIPPAccess -Request $Request -TenantList
+    Write-Host "Tenant Access: $TenantAccess"
 
     if ($TenantAccess -notcontains 'AllTenants') {
         $AllTenantSelector = $false
@@ -45,7 +46,20 @@ Function Invoke-ListTenants {
         return
     }
     if ($Request.Query.TriggerRefresh) {
-        Get-Tenants -IncludeAll -TriggerRefresh
+        if ($Request.Query.TenantFilter -and $Request.Query.TenantFilter -ne 'AllTenants') {
+            Get-Tenants -TriggerRefresh -TenantFilter $Request.Query.TenantFilter
+        } else {
+            $InputObject = [PSCustomObject]@{
+                Batch            = @(
+                    @{
+                        FunctionName = 'UpdateTenants'
+                    }
+                )
+                OrchestratorName = 'UpdateTenants'
+                SkipLog          = $true
+            }
+            Start-NewOrchestration -FunctionName 'CIPPOrchestrator' -InputObject ($InputObject | ConvertTo-Json -Compress -Depth 5)
+        }
     }
     try {
         $tenantfilter = $Request.Query.TenantFilter

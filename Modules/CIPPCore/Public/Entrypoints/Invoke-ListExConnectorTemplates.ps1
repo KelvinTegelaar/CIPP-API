@@ -21,8 +21,8 @@ Function Invoke-ListExConnectorTemplates {
         $GUID = $_.RowKey
         $Direction = $_.direction
         $data = $_.JSON | ConvertFrom-Json
-        $data | Add-Member -NotePropertyName 'GUID' -NotePropertyValue $GUID
-        $data | Add-Member -NotePropertyName 'cippconnectortype' -NotePropertyValue $Direction
+        $data | Add-Member -NotePropertyName 'GUID' -NotePropertyValue $GUID -Force
+        $data | Add-Member -NotePropertyName 'cippconnectortype' -NotePropertyValue $Direction -Force
         $data
     } | Sort-Object -Property displayName
 

@@ -9,7 +9,7 @@ function Set-CIPPMailboxArchive {
         [bool]$ArchiveEnabled
     )
 
-    $User = $request.headers.'x-ms-client-principal-name'
+    $User = $request.headers.'x-ms-client-principal'
 
     Try {
         if (!$username) { $username = $userid }

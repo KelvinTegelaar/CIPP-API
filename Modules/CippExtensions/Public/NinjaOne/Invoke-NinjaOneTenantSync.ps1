@@ -763,7 +763,7 @@ function Invoke-NinjaOneTenantSync {
                     $DeviceLinksData = @(
                         @{
                             Name = 'Entra ID'
-                            Link = "https://entra.microsoft.com/$($Customer.defaultDomainName)/#view/Microsoft_AAD_Devices/DeviceDetailsMenuBlade/~/Properties/deviceId/$($Device.azureADDeviceId)/deviceId/"
+                            Link = "https://entra.microsoft.com/$($Customer.defaultDomainName)/#view/Microsoft_AAD_Devices/DeviceDetailsMenuBlade/~/Properties/deviceId/$($Device.azureADDeviceId)"
                             Icon = 'fab fa-microsoft'
                         },
                         @{
@@ -773,7 +773,7 @@ function Invoke-NinjaOneTenantSync {
                         },
                         @{
                             Name = 'View Devices in CIPP'
-                            Link = "https://$($CIPPURL)/endpoint/reports/devices?customerId=$($Customer.defaultDomainName)"
+                            Link = "https://$($CIPPURL)/endpoint/MEM/devices?customerId=$($Customer.defaultDomainName)"
                             Icon = 'far fa-eye'
                         }
                     )
@@ -1748,7 +1748,7 @@ function Invoke-NinjaOneTenantSync {
                 },
                 @{
                     Name = 'Compliance Portal'
-                    Link = "https://compliance.microsoft.com/?tid=$($Customer.CustomerId)"
+                    Link = "https://purview.microsoft.com/?tid=$($Customer.CustomerId)"
                     Icon = 'fas fa-user-shield'
                 },
                 @{
@@ -1785,7 +1785,7 @@ function Invoke-NinjaOneTenantSync {
                 },
                 @{
                     Name = 'List Devices'
-                    Link = "https://$CIPPUrl/endpoint/reports/devices?customerId=$($Customer.customerId)"
+                    Link = "https://$CIPPUrl/endpoint/MEM/devices?customerId=$($Customer.customerId)"
                     Icon = 'fas fa-laptop'
                 },
                 @{
@@ -1963,7 +1963,7 @@ function Invoke-NinjaOneTenantSync {
 
             # Create the Devices Card
 
-            $TitleLink = "https://$CIPPUrl/endpoint/reports/devices?customerId=$($Customer.customerId)"
+            $TitleLink = "https://$CIPPUrl/endpoint/MEM/devices?customerId=$($Customer.customerId)"
 
             $DeviceCardBodyHTML = $DeviceComplianceChartHTML + $DeviceOsChartHTML + $DeviceOnlineChartHTML
 
@@ -2175,7 +2175,7 @@ function Invoke-NinjaOneTenantSync {
                     Value       = ($Devices | Measure-Object).count
                     Description = 'Devices'
                     Colour      = '#CCCCCC'
-                    Link        = "https://$CIPPUrl/endpoint/reports/devices?customerId=$($Customer.customerId)"
+                    Link        = "https://$CIPPUrl/endpoint/MEM/devices?customerId=$($Customer.customerId)"
                 })
 
             # Groups

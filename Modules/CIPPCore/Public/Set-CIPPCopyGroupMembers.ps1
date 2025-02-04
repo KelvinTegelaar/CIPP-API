@@ -38,8 +38,8 @@ function Set-CIPPCopyGroupMembers {
         '@odata.id' = $ODataBind
     } | ConvertTo-Json -Compress
 
-    $Success = [System.Collections.Generic.List[string]]::new()
-    $Errors = [System.Collections.Generic.List[string]]::new()
+    $Success = [System.Collections.Generic.List[object]]::new()
+    $Errors = [System.Collections.Generic.List[object]]::new()
     $Memberships = $CopyFromMemberships | Where-Object { $_.'@odata.type' -eq '#microsoft.graph.group' -and $_.groupTypes -notcontains 'DynamicMembership' -and $_.onPremisesSyncEnabled -ne $true -and $_.visibility -ne 'Public' -and $CurrentMemberships.id -notcontains $_.id }
     $ScheduleExchangeGroupTask = $false
     foreach ($MailGroup in $Memberships) {
@@ -103,5 +103,5 @@ function Set-CIPPCopyGroupMembers {
         'Error'   = $Errors
     }
 
-    return $Results
+    return @($Results)
 }

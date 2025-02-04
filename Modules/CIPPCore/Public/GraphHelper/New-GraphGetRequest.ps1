@@ -3,21 +3,28 @@ function New-GraphGetRequest {
     .FUNCTIONALITY
     Internal
     #>
+    [CmdletBinding()]
     Param(
-        $uri,
-        $tenantid,
-        $scope,
+        [string]$uri,
+        [string]$tenantid,
+        [string]$scope,
         $AsApp,
-        $noPagination,
-        $NoAuthCheck,
-        $skipTokenCache,
+        [bool]$noPagination,
+        $NoAuthCheck = $false,
+        [bool]$skipTokenCache,
         $Caller,
         [switch]$ComplexFilter,
         [switch]$CountOnly,
         [switch]$IncludeResponseHeaders
     )
 
-    if ($NoAuthCheck -or (Get-AuthorisedRequest -Uri $uri -TenantID $tenantid)) {
+    if ($NoAuthCheck -eq $false) {
+        $IsAuthorised = Get-AuthorisedRequest -Uri $uri -TenantID $tenantid
+    } else {
+        $IsAuthorised = $true
+    }
+
+    if ($NoAuthCheck -eq $true -or $IsAuthorised) {
         if ($scope -eq 'ExchangeOnline') {
             $AccessToken = Get-ClassicAPIToken -resource 'https://outlook.office365.com' -Tenantid $tenantid
             $headers = @{ Authorization = "Bearer $($AccessToken.access_token)" }
@@ -85,8 +92,11 @@ function New-GraphGetRequest {
                 if ($Message -eq $null) { $Message = $($_.Exception.Message) }
                 if ($Message -ne 'Request not applicable to target tenant.' -and $Tenant) {
                     $Tenant.LastGraphError = $Message
+                    if ($Tenant.PSObject.Properties.Name -notcontains 'GraphErrorCount') {
+                        $Tenant | Add-Member -MemberType NoteProperty -Name 'GraphErrorCount' -Value 0 -Force
+                    }
                     $Tenant.GraphErrorCount++
-                    Update-AzDataTableEntity @TenantsTable -Entity $Tenant
+                    Update-AzDataTableEntity -Force @TenantsTable -Entity $Tenant
                 }
                 throw $Message
             }
@@ -96,8 +106,12 @@ function New-GraphGetRequest {
         } else {
             $Tenant.LastGraphError = ''
         }
-        $Tenant.GraphErrorCount = 0
-        Update-AzDataTableEntity @TenantsTable -Entity $Tenant
+        if ($Tenant.PSObject.Properties.Name -notcontains 'GraphErrorCount') {
+            $Tenant | Add-Member -MemberType NoteProperty -Name 'GraphErrorCount' -Value 0 -Force
+        } else {
+            $Tenant.GraphErrorCount = 0
+        }
+        Update-AzDataTableEntity -Force @TenantsTable -Entity $Tenant
         return $ReturnedData
     } else {
         Write-Error 'Not allowed. You cannot manage your own tenant or tenants not under your scope'

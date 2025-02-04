@@ -1,13 +1,37 @@
 function Invoke-CIPPStandardGroupTemplate {
     <#
     .FUNCTIONALITY
-    Internal
+        Internal
+    .COMPONENT
+        (APIName) GroupTemplate
+    .SYNOPSIS
+        (Label) Group Template
+    .DESCRIPTION
+        (Helptext) Deploy and manage group templates.
+        (DocsDescription) Deploy and manage group templates.
+    .NOTES
+        MULTI
+            True
+        CAT
+            Templates
+        DISABLEDFEATURES
+
+        IMPACT
+            Medium
+        ADDEDCOMPONENT
+            {"type":"autoComplete","name":"groupTemplate","label":"Select Group Template","api":{"url":"/api/ListGroupTemplates","labelField":"Displayname","valueField":"GUID","queryKey":"ListGroupTemplates"}}
+        UPDATECOMMENTBLOCK
+            Run the Tools\Update-StandardsComments.ps1 script to update this comment block
+    .LINK
+        https://docs.cipp.app/user-documentation/tenant/standards/list-standards/
     #>
     param($Tenant, $Settings)
     ##$Rerun -Type Standard -Tenant $Tenant -Settings $Settings 'GroupTemplate'
 
     If ($Settings.remediate -eq $true) {
-
+        #Because the list name changed from TemplateList to groupTemplate by someone :@, we'll need to set it back to TemplateList
+        $Settings.groupTemplate ? ($Settings | Add-Member -NotePropertyName 'TemplateList' -NotePropertyValue $Settings.groupTemplate) : $null
+        Write-Host "Settings: $($Settings.TemplateList | ConvertTo-Json)"
         foreach ($Template in $Settings.TemplateList) {
             try {
                 $Table = Get-CippTable -tablename 'templates'

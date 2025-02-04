@@ -21,12 +21,17 @@ Function Invoke-ListTeamsVoice {
     $TenantFilter = $Request.Query.TenantFilter
     $tenantid = (Get-Tenants | Where-Object -Property defaultDomainName -EQ $Request.Query.TenantFilter).customerId
     try {
-        $users = (New-GraphGetRequest -uri "https://graph.microsoft.com/beta/users?`$top=999&`$select=id,userPrincipalName,displayname" -tenantid $TenantFilter)
+        $users = (New-GraphGetRequest -uri "https://graph.microsoft.com/beta/users?`$top=999&`$select=id,userPrincipalName,displayName" -tenantid $TenantFilter)
         $skip = 0
         $GraphRequest = do {
             $data = (New-TeamsAPIGetRequest -uri "https://api.interfaces.records.teams.microsoft.com/Skype.TelephoneNumberMgmt/Tenants/$($Tenantid)/telephone-numbers?skip=$($skip)&locale=en-US&top=999" -tenantid $TenantFilter).TelephoneNumbers | ForEach-Object {
-                $CompleteRequest = $_ | Select-Object *, 'AssignedTo'
-                $CompleteRequest.AcquisitionDate = $CompleteRequest.AcquisitionDate -split 'T' | Select-Object -First 1
+                try {
+                    $CompleteRequest = $_ | Select-Object *, 'AssignedTo', 'AcquisitionDate' -ErrorAction SilentlyContinue
+                    $CompleteRequest.AcquisitionDate = $CompleteRequest.AcquisitionDate -split 'T' | Select-Object -First 1
+                } catch {
+                    $CompleteRequest = $_ | Select-Object *, 'AssignedTo' -ErrorAction SilentlyContinue
+                }
+
                 if ($CompleteRequest.TargetId -eq '00000000-0000-0000-0000-000000000000') {
                     $CompleteRequest.AssignedTo = 'Unassigned'
                 } else {
