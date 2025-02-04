@@ -82,9 +82,9 @@ Function Invoke-ExecSAMSetup {
         if ($Request.Query.code) {
             try {
                 $TenantId = $Rows.tenantid
-                if (!$TenantId) { $TenantId = $ENV:TenantID }
+                if (!$TenantId -or $TenantId -eq 'NotStarted') { $TenantId = $ENV:TenantID }
                 $AppID = $Rows.appid
-                if (!$AppID) { $appid = $ENV:ApplicationID }
+                if (!$AppID -or $AppID -eq 'NotStarted') { $appid = $ENV:ApplicationID }
                 $URL = ($Request.headers.'x-ms-original-url').split('?') | Select-Object -First 1
                 if ($env:AzureWebJobsStorage -eq 'UseDevelopmentStorage=true') {
                     $clientsecret = $Secret.ApplicationSecret
