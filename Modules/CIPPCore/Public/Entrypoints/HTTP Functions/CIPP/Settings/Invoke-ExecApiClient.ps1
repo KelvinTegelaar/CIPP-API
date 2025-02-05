@@ -43,6 +43,7 @@ function Invoke-ExecApiClient {
                         $ApiConfig.AppName = $Request.Body.AppName
                     }
                     $APIConfig = New-CIPPAPIConfig @ApiConfig
+                    $ClientId = $APIConfig.AppId
                     $AddedText = $APIConfig.Results
                 } catch {
                     $AddedText = 'Could not modify App Registrations. Check the CIPP documentation for API requirements.'

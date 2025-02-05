@@ -98,7 +98,7 @@ function New-CIPPAPIConfig {
 
                 $BatchResponse = New-GraphBulkRequest -tenantid $env:TenantID -NoAuthCheck $true -asapp $true -Requests $Requests
                 $APIPassword = $BatchResponse | Where-Object { $_.id -eq 'addPassword' } | Select-Object -ExpandProperty body
-                Write-LogMessage -user $ExecutingUser -API $APINAME -tenant 'None '-message "Created CIPP API App for $($APIApp.displayName)." -Sev 'info'
+                Write-LogMessage -user $ExecutingUser -API $APINAME -tenant 'None '-message "Created CIPP-API App with name '$($APIApp.displayName)'." -Sev 'info'
             }
         }
         if ($ResetSecret.IsPresent -and $APIApp) {
@@ -133,13 +133,13 @@ function New-CIPPAPIConfig {
                 )
                 $BatchResponse = New-GraphBulkRequest -tenantid $env:TenantID -NoAuthCheck $true -asapp $true -Requests $Requests
                 $APIPassword = $BatchResponse | Where-Object { $_.id -eq 'addNewPassword' } | Select-Object -ExpandProperty body
-                Write-LogMessage -user $ExecutingUser -API $APINAME -tenant 'None '-message "Reset CIPP API Password for $($APIApp.displayName)." -Sev 'info'
+                Write-LogMessage -user $ExecutingUser -API $APINAME -tenant 'None '-message "Reset CIPP-API Password for '$($APIApp.displayName)'." -Sev 'info'
             }
         }
 
         return @{
             AppName           = $APIApp.displayName
-            ApplicationID     = $APIApp.AppId
+            ApplicationID     = $APIApp.appId
             ApplicationSecret = $APIPassword.secretText
             Results           = $Results
         }
