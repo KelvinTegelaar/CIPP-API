@@ -43,6 +43,7 @@ function Invoke-ExecApiClient {
                         $ApiConfig.AppName = $Request.Body.AppName
                     }
                     $APIConfig = New-CIPPAPIConfig @ApiConfig
+                    Write-Host ($APIConfig | ConvertTo-Json)
                     $ClientId = $APIConfig.ApplicationID
                     $AddedText = $APIConfig.Results
                 } catch {
@@ -139,13 +140,16 @@ function Invoke-ExecApiClient {
         }
         'Delete' {
             try {
-                if ($Request.Body.RemoveAppReg -eq $true) {
-                    $Apps = New-GraphGetRequest -uri "https://graph.microsoft.com/v1.0/applications?`$filter=signInAudience eq 'AzureAdMyOrg' and web/redirectUris/any(x:x eq 'https://$($sitename).azurewebsites.net/.auth/login/aad/callback')&`$top=999&`$select=id,appId&`$count=true" -NoAuthCheck $true -asapp $true -ComplexFilter
-                }
-                $Id = $Apps | Where-Object { $_.appId -eq $Request.Body.ClientId } | Select-Object -ExpandProperty id
-                if ($Id) {
-                    New-GraphPOSTRequest -uri "https://graph.microsoft.com/v1.0/applications(appId='$ClientId')" -Method DELETE -Body '{}' -NoAuthCheck $true -asapp $true
+                if ($Request.Body.ClientId) {
                     $ClientId = $Request.Body.ClientId.value ?? $Request.Body.ClientId
+                    if ($Request.Body.RemoveAppReg -eq $true) {
+                        $Apps = New-GraphGetRequest -uri "https://graph.microsoft.com/v1.0/applications?`$filter=signInAudience eq 'AzureAdMyOrg' and web/redirectUris/any(x:x eq 'https://$($sitename).azurewebsites.net/.auth/login/aad/callback')&`$top=999&`$select=id,appId&`$count=true" -NoAuthCheck $true -asapp $true -ComplexFilter
+                        $Id = $Apps | Where-Object { $_.appId -eq $ClientId } | Select-Object -ExpandProperty id
+                        if ($Id) {
+                            New-GraphPOSTRequest -uri "https://graph.microsoft.com/v1.0/applications(appId='$ClientId')" -Method DELETE -Body '{}' -NoAuthCheck $true -asapp $true
+                        }
+                    }
+
                     $Client = Get-CIPPAzDataTableEntity @Table -Filter "RowKey eq '$($ClientId)'" -Property RowKey, PartitionKey, ETag
                     Remove-AzDataTableEntity @Table -Entity $Client
                     Write-LogMessage -user $Request.Headers.'x-ms-client-principal' -API 'ExecApiClient' -message "Deleted API client $ClientId" -Sev 'Info'
@@ -167,3 +171,4 @@ function Invoke-ExecApiClient {
             Body       = $Body
         })
 }
+
