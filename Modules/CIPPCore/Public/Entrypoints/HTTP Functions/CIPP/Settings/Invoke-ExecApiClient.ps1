@@ -35,7 +35,7 @@ function Invoke-ExecApiClient {
                     $ApiConfig = @{
                         ExecutingUser = $Request.Headers.'x-ms-client-principal'
                     }
-                    if ($Request.Body.ClientId) {
+                    if ($ClientId) {
                         $ApiConfig.ClientId = $ClientId
                         $ApiConfig.ResetSecret = $Request.Body.CIPPAPI.ResetSecret
                     }
