@@ -16,9 +16,9 @@ function Get-GradientToken {
         try {
             return [hashtable]$headers
         } catch {
-            Write-Error $_.Exception.Message
+            return $false
         }
-    } catch {
-        throw 'No Gradient configuration'
+    } else {
+        return $false
     }
 }
