@@ -43,15 +43,13 @@ function Invoke-ExecApiClient {
                         $ApiConfig.AppName = $Request.Body.AppName
                     }
                     $APIConfig = New-CIPPAPIConfig @ApiConfig
-                    $ClientId = $APIConfig.AppId
+                    $ClientId = $APIConfig.ApplicationID
                     $AddedText = $APIConfig.Results
                 } catch {
                     $AddedText = 'Could not modify App Registrations. Check the CIPP documentation for API requirements.'
                     $Body = $Body | Select-Object * -ExcludeProperty CIPPAPI
                 }
             }
-
-            Write-LogMessage -user $Request.Headers.'x-ms-client-principal' -API 'ExecApiClient' -message "Updated API client $($Request.Body.ClientId)" -Sev 'Info'
 
             if ($Request.Body.IpRange.value) {
                 $IpRange = @($Request.Body.IpRange.value)
@@ -65,6 +63,8 @@ function Invoke-ExecApiClient {
                 $Client.Role = [string]$Request.Body.Role.value
                 $Client.IPRange = "$(@($IpRange) | ConvertTo-Json -Compress)"
                 $Client.Enabled = $Request.Body.Enabled ?? $false
+                Write-LogMessage -user $Request.Headers.'x-ms-client-principal' -API 'ExecApiClient' -message "Updated API client $($Request.Body.ClientId)" -Sev 'Info'
+                $Results = 'API client updated'
             } else {
                 $Client = @{
                     'PartitionKey' = 'ApiClients'
@@ -74,10 +74,15 @@ function Invoke-ExecApiClient {
                     'IPRange'      = "$(@($IpRange) | ConvertTo-Json -Compress)"
                     'Enabled'      = $Request.Body.Enabled ?? $false
                 }
+                $Results = @{
+                    text      = "API Client created '$($Client.AppName)'"
+                    copyField = $APIConfig.ApplicationSecret
+                    severity  = 'success'
+                }
             }
 
             Add-CIPPAzDataTableEntity @Table -Entity $Client -Force | Out-Null
-            $Body = @{Results = 'API client updated' }
+            $Body = @($Results)
         }
         'GetAzureConfiguration' {
             $RGName = $ENV:WEBSITE_RESOURCE_GROUP
