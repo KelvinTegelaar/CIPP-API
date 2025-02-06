@@ -76,7 +76,7 @@ function Invoke-ExecApiClient {
                     'Enabled'      = $Request.Body.Enabled ?? $false
                 }
                 $Results = @{
-                    resultText = "API Client created '$($Client.AppName)'"
+                    resultText = "API Client created with the name '$($Client.AppName)'. Use the Copy to Clipboard button to retrieve the secret."
                     copyField  = $APIConfig.ApplicationSecret
                     state      = 'success'
                 }
