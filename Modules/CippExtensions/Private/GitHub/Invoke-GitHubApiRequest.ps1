@@ -20,6 +20,7 @@ function Invoke-GitHubApiRequest {
         }
 
         $FullUri = "https://api.github.com/$Path"
+        Write-Verbose "[$Method] $FullUri"
         return Invoke-RestMethod -Method $Method -Uri $FullUri -Headers $Headers -Body $Body
     } else {
         throw 'GitHub API is not enabled'
