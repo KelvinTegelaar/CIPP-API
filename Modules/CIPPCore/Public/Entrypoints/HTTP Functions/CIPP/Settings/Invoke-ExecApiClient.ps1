@@ -76,9 +76,9 @@ function Invoke-ExecApiClient {
                     'Enabled'      = $Request.Body.Enabled ?? $false
                 }
                 $Results = @{
-                    text      = "API Client created '$($Client.AppName)'"
-                    copyField = $APIConfig.ApplicationSecret
-                    severity  = 'success'
+                    resultText = "API Client created '$($Client.AppName)'"
+                    copyField  = $APIConfig.ApplicationSecret
+                    state      = 'success'
                 }
             }
 

@@ -42,6 +42,12 @@ Function Invoke-ExecExtensionMapping {
                 $TicketTypes = Get-HaloTicketType
                 $Body = @{'TicketTypes' = $TicketTypes }
             }
+            'PWPushFields' {
+                $Accounts = Get-PwPushAccount
+                $Body = @{
+                    'Accounts' = $Accounts
+                }
+            }
         }
     }
 

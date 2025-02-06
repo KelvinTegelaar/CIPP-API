@@ -56,7 +56,7 @@ Function Invoke-ExecExtensionTest {
                 $Payload = 'This is a test from CIPP'
                 $PasswordLink = New-PwPushLink -Payload $Payload
                 if ($PasswordLink) {
-                    $Results = [pscustomobject]@{'Results' = 'Successfully generated PWPush'; 'Link' = $PasswordLink }
+                    $Results = [pscustomobject]@{Results = @(@{'resultText' = 'Successfully generated PWPush, hit the Copy to Clipboard button to retrieve the test.'; 'copyField' = $PasswordLink; 'state' = 'success' }) }
                 } else {
                     $Results = [pscustomobject]@{'Results' = 'PWPush is not enabled' }
                 }
