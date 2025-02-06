@@ -38,6 +38,10 @@ Function Invoke-ExecExtensionMapping {
             'Sherweb' {
                 $Body = Get-SherwebMapping -CIPPMapping $Table
             }
+            'HaloPSAFields' {
+                $TicketTypes = Get-HaloTicketType
+                $Body = @{'TicketTypes' = $TicketTypes }
+            }
         }
     }
 
