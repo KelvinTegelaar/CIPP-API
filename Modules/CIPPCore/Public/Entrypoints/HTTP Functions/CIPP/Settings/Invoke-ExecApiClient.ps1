@@ -117,22 +117,22 @@ function Invoke-ExecApiClient {
             $Client = Get-CIPPAzDataTableEntity @Table -Filter "RowKey eq '$($Request.Body.ClientId)'"
             if (!$Client) {
                 $Results = @{
-                    text     = 'API client not found'
-                    severity = 'error'
+                    resultText = 'API client not found'
+                    severity   = 'error'
                 }
             } else {
                 $ApiConfig = New-CIPPAPIConfig -ResetSecret -AppId $Request.Body.ClientId
 
                 if ($ApiConfig.ApplicationSecret) {
                     $Results = @{
-                        text      = "API secret reset for $($Client.AppName)"
-                        copyField = $ApiConfig.ApplicationSecret
-                        severity  = 'success'
+                        resultText = "API secret reset for $($Client.AppName). Use the Copy to Clipboard button to retrieve the new secret."
+                        copyField  = $ApiConfig.ApplicationSecret
+                        state      = 'success'
                     }
                 } else {
                     $Results = @{
-                        text     = "Failed to reset secret for $($Client.AppName)"
-                        severity = 'error'
+                        resultText = "Failed to reset secret for $($Client.AppName)"
+                        state      = 'error'
                     }
                 }
             }
