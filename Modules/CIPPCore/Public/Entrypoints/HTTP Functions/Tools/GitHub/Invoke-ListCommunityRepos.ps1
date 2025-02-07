@@ -15,15 +15,15 @@ function Invoke-ListCommunityRepos {
     $Table = Get-CIPPTable -TableName CommunityRepos
     $Repos = Get-CIPPAzDataTableEntity @Table | ForEach-Object {
         [pscustomobject]@{
-            Id          = $_.RowKey
-            Name        = $_.Name
-            Description = $_.Description
-            URL         = $_.URL
-            FullName    = $_.FullName
-            Owner       = $_.Owner
-            Visibility  = $_.Visibility
-            WriteAccess = $_.WriteAccess
-            Permissions = $_.Permissions | ConvertFrom-Json
+            Id              = $_.RowKey
+            Name            = $_.Name
+            Description     = $_.Description
+            URL             = $_.URL
+            FullName        = $_.FullName
+            Owner           = $_.Owner
+            Visibility      = $_.Visibility
+            WriteAccess     = $_.WriteAccess
+            RepoPermissions = $_.Permissions | ConvertFrom-Json
         }
     }
 

@@ -11,6 +11,17 @@ function Search-GitHub {
     )
 
     $QueryParts = [System.Collections.Generic.List[string]]::new()
+    if ($SearchTerm) {
+        $SearchTermParts = [System.Collections.Generic.List[string]]::new()
+        foreach ($Term in $SearchTerm) {
+            $SearchTermParts.Add("`"$Term`"")
+        }
+        if (($SearchTermParts | Measure-Object).Count -gt 1) {
+            $QueryParts.Add(($SearchTermParts -join ' OR '))
+        } else {
+            $QueryParts.Add($SearchTermParts[0])
+        }
+    }
     if ($Repository) {
         $RepoParts = [System.Collections.Generic.List[string]]::new()
         foreach ($Repo in $Repository) {
@@ -35,17 +46,6 @@ function Search-GitHub {
     }
     if ($Path) {
         $QueryParts.Add("path:$Path")
-    }
-    if ($SearchTerm) {
-        $SearchTermParts = [System.Collections.Generic.List[string]]::new()
-        foreach ($Term in $SearchTerm) {
-            $SearchTermParts.Add("`"$SearchTerm`"")
-        }
-        if (($SearchTermParts | Measure-Object).Count -gt 1) {
-            $QueryParts.Add('(' + ($SearchTermParts -join ' OR ') + ')')
-        } else {
-            $QueryParts.Add($SearchTermParts[0])
-        }
     }
     if ($Language) {
         $QueryParts.Add("language:$Language")
