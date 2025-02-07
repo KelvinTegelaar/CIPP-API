@@ -6,11 +6,9 @@ function Get-GitHubFileContents {
     )
 
     process {
-        $Table = Get-CIPPTable -TableName Extensionsconfig
-        $Configuration = ((Get-CIPPAzDataTableEntity @Table).config | ConvertFrom-Json).GitHub
         [uri]$Uri = $Url
         $Path = $Uri.PathAndQuery.TrimStart('/')
-        $File = Invoke-GitHubApiRequest -Configuration $Configuration -Path "$Path" -Method GET
+        $File = Invoke-GitHubApiRequest -Path "$Path" -Method GET
 
         return [PSCustomObject]@{
             name    = $File.name

@@ -83,7 +83,7 @@ Function Invoke-ExecExtensionTest {
                 $Results = [pscustomobject]@{'Results' = 'Successfully Connected to HIBP' }
             }
             'GitHub' {
-                $GitHubResponse = Invoke-GitHubApiRequest -Configuration $Configuration.GitHub -Method 'GET' -Path 'user'
+                $GitHubResponse = Invoke-GitHubApiRequest -Method 'GET' -Path 'user'
                 if ($GitHubResponse.login) {
                     $Results = [pscustomobject]@{ 'Results' = "Successfully connected to GitHub user: $($GitHubResponse.login)" }
                 } else {
