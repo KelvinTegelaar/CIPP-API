@@ -18,6 +18,7 @@ Function Invoke-ListRooms {
     $TenantFilter = $Request.Query.tenantFilter
     $RoomId = $Request.Query.roomId
 
+    # I dont like that i had to change it to EXO commands, but the waiting time for the Rooms to sync to Graph is too long :(  -Bobby
     try {
         if ($RoomId) {
             # Get specific room mailbox
