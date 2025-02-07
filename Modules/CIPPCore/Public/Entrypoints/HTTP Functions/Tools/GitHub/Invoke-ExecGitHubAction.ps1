@@ -17,6 +17,9 @@ function Invoke-ExecGitHubAction {
         $SearchResults = Search-GitHub @Search
         $Results = $SearchResults.items
         $Metadata = $SearchResults | Select-Object -Property total_count, incomplete_results
+    } elseif ($Request.Body.GetFileContents) {
+        $Url = $Request.Body.GetFileContents.Url
+        $Results = Get-GitHubFileContents -Url $Url
     }
 
     $Body = @{
@@ -27,7 +30,7 @@ function Invoke-ExecGitHubAction {
     }
 
     Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
-            StatusCode = [HttpStatusCode]::OK
-            Body       = $Body
-        })
+        StatusCode = [HttpStatusCode]::OK
+        Body       = $Body
+    })
 }
