@@ -41,7 +41,7 @@ Function Invoke-ListTeamsVoice {
             }
             $skip = $skip + 999
             $Data
-        } while ( $Data.count % 999 -eq 0 )
+        } while ($data.Count -eq 999)
         $StatusCode = [HttpStatusCode]::OK
     } catch {
         $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
