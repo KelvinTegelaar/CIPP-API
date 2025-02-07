@@ -27,19 +27,9 @@ Function Invoke-ListTeamsVoice {
             Write-Host "Getting page $skip"
             $data = (New-TeamsAPIGetRequest -uri "https://api.interfaces.records.teams.microsoft.com/Skype.TelephoneNumberMgmt/Tenants/$($Tenantid)/telephone-numbers?skip=$($skip)&locale=en-US&top=999" -tenantid $TenantFilter).TelephoneNumbers | ForEach-Object {
                 Write-Host 'Reached the loop'
-                try {
-                    $CompleteRequest = $_ | Select-Object *, 'AssignedTo', 'AcquisitionDate' -ErrorAction SilentlyContinue
-                    #Add AcquisitionDate to the object
-                    $CompleteRequest.AcquisitionDate ? ($CompleteRequest.AcquisitionDate = CompleteRequest.AcquisitionDate -split 'T' | Select-Object -First 1) : $null
-                } catch {
-                    $CompleteRequest = $_ | Select-Object *, 'AssignedTo' -ErrorAction SilentlyContinue
-                }
-                $CompleteRequest.AssignedTo ? ($CompleteRequest | Add-Member -NotePropertyName 'AssignedTo' -NotePropertyValue 'Unassigned' -Force) : $null
-                if ($CompleteRequest.TargetId -eq '00000000-0000-0000-0000-000000000000') {
-                    $CompleteRequest.AssignedTo ? ($CompleteRequest.AssignedTo = 'Unassigned') : $null
-                } else {
-                    $CompleteRequest.AssignedTo = ($users | Where-Object -Property Id -EQ $CompleteRequest.TargetId).userPrincipalName
-                }
+                $CompleteRequest = $_ | Select-Object *, @{Name = 'AssignedTo'; Expression = { $users | Where-Object -Property id -EQ $_.AssignedTo.id } }
+                $CompleteRequest.AcquisitionDate ? ($CompleteRequest.AcquisitionDate = $CompleteRequest.AcquisitionDate -split 'T' | Select-Object -First 1) : ($CompleteRequest | Add-Member -NotePropertyName 'AcquisitionDate' -NotePropertyValue 'Unknown' -Force)
+                $CompleteRequest.AssignedTo ? $null : ($CompleteRequest | Add-Member -NotePropertyName 'AssignedTo' -NotePropertyValue 'Unassigned' -Force)
                 $CompleteRequest
             }
             Write-Host 'Finished the loop'
@@ -54,7 +44,6 @@ Function Invoke-ListTeamsVoice {
         $GraphRequest = $ErrorMessage
     }
     Write-Host "Graph request is: $($GraphRequest)"
-    $Response = $GraphRequest
     Write-Host 'Returning the response'
     Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
             StatusCode = $StatusCode
