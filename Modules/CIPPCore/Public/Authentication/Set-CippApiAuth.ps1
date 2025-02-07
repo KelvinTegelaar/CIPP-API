@@ -24,19 +24,33 @@ function Set-CippApiAuth {
         "api://$ClientId"
     }
 
+    if (!$AllowedAudiences) { $AllowedAudiences = @() }
+    if (!$ClientIds) { $ClientIds = @() }
+
     # Set auth settings
-    $AuthSettings.properties.identityProviders.azureActiveDirectory = @{
-        registration = @{
-            clientId     = $ClientIds[0] ?? $ClientIds
-            openIdIssuer = "https://sts.windows.net/$TenantID/v2.0"
-        }
-        validation   = @{
-            allowedAudiences           = @($AllowedAudiences)
-            defaultAuthorizationPolicy = @{
-                allowedApplications = @($ClientIds)
+
+    if (($ClientIds | Measure-Object).Count -gt 0) {
+        $AuthSettings.properties.identityProviders.azureActiveDirectory = @{
+            enabled      = $true
+            registration = @{
+                clientId     = $ClientIds[0] ?? $ClientIds
+                openIdIssuer = "https://sts.windows.net/$TenantID/v2.0"
+            }
+            validation   = @{
+                allowedAudiences           = @($AllowedAudiences)
+                defaultAuthorizationPolicy = @{
+                    allowedApplications = @($ClientIds)
+                }
             }
         }
+    } else {
+        $AuthSettings.properties.identityProviders.azureActiveDirectory = @{
+            enabled      = $false
+            registration = @{}
+            validation   = @{}
+        }
     }
+
     $AuthSettings.properties.globalValidation = @{
         unauthenticatedClientAction = 'Return401'
     }
@@ -47,14 +61,12 @@ function Set-CippApiAuth {
         }
     }
 
-    Write-Information ($AuthSettings | ConvertTo-Json -Depth 10)
-
     if ($PSCmdlet.ShouldProcess('Update auth settings')) {
         # Update auth settings
-        Invoke-AzRestMethod -Uri "https://management.azure.com/subscriptions/$SubscriptionId/resourceGroups/$RGName/providers/Microsoft.Web/sites/$($FunctionAppName)/config/authsettingsV2?api-version=2020-06-01" -Method PUT -Payload ($AuthSettings | ConvertTo-Json -Depth 10)
+        $null = Invoke-AzRestMethod -Uri "https://management.azure.com/subscriptions/$SubscriptionId/resourceGroups/$RGName/providers/Microsoft.Web/sites/$($FunctionAppName)/config/authsettingsV2?api-version=2020-06-01" -Method PUT -Payload ($AuthSettings | ConvertTo-Json -Depth 10)
     }
 
     if ($PSCmdlet.ShouldProcess('Update allowed tenants')) {
-        Update-AzFunctionAppSetting -Name $FunctionAppName -ResourceGroupName $RGName -AppSetting @{ 'WEBSITE_AUTH_AAD_ALLOWED_TENANTS' = $TenantId }
+        $null = Update-AzFunctionAppSetting -Name $FunctionAppName -ResourceGroupName $RGName -AppSetting @{ 'WEBSITE_AUTH_AAD_ALLOWED_TENANTS' = $TenantId }
     }
 }
