@@ -62,19 +62,7 @@ function New-ExoRequest {
             }
         }
         if (!$Anchor) {
-            if ($cmdparams.Identity) { $Anchor = $cmdparams.Identity }
-            if ($cmdparams.anr) { $Anchor = $cmdparams.anr }
-            if ($cmdparams.User) { $Anchor = $cmdparams.User }
-            if ($cmdparams.mailbox) { $Anchor = $cmdparams.mailbox }
-            if (!$Anchor -or $useSystemMailbox) {
-                if (!$Tenant.initialDomainName -or $Tenant.initialDomainName -notlike '*onmicrosoft.com*') {
-                    $OnMicrosoft = (New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/domains?$top=999' -tenantid $tenantid -NoAuthCheck $NoAuthCheck | Where-Object -Property isInitial -EQ $true).id
-                } else {
-                    $OnMicrosoft = $Tenant.initialDomainName
-                }
-                $anchor = "UPN:SystemMailbox{bb558c35-97f1-4cb9-8ff7-d53741dc928c}@$($OnMicrosoft)"
-                if ($cmdlet -in 'Set-AdminAuditLogConfig', 'Get-AdminAuditLogConfig', 'Enable-OrganizationCustomization', 'Get-OrganizationConfig', 'Set-OrganizationConfig') { $anchor = "UPN:SystemMailbox{8cc370d3-822a-4ab8-a926-bb94bd0641a9}@$($OnMicrosoft)" }
-            }
+            $anchor = "APP:SystemMailbox{bb558c35-97f1-4cb9-8ff7-d53741dc928c}@$($tenant.customerId)"
         }
         #if the anchor is a GUID, try looking up the user.
         if ($Anchor -match '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$') {
