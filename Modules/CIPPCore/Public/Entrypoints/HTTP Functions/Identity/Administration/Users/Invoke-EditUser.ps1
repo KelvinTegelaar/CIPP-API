@@ -10,9 +10,9 @@ Function Invoke-EditUser {
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
 
-    $ApiName = $TriggerMetadata.FunctionName
+    $APIName = $Request.Params.CIPPEndpoint
     $User = $Request.headers.'x-ms-client-principal'
-    Write-LogMessage -user $User -API $ApiName -message 'Accessed this API' -Sev 'Debug'
+    Write-LogMessage -headers $Request.headers -API $ApiName -message 'Accessed this API' -Sev 'Debug'
 
     $UserObj = $Request.body
     if ($UserObj.id -eq '') {
@@ -71,16 +71,16 @@ Function Invoke-EditUser {
         $bodyToShip = ConvertTo-Json -Depth 10 -InputObject $BodyToship -Compress
         $null = New-GraphPostRequest -uri "https://graph.microsoft.com/beta/users/$($UserObj.id)" -tenantid $UserObj.tenantFilter -type PATCH -body $BodyToship -verbose
         $null = $results.Add( 'Success. The user has been edited.' )
-        Write-LogMessage -API $ApiName -tenant ($UserObj.tenantFilter) -user $User -message "Edited user $($UserObj.DisplayName) with id $($UserObj.id)" -Sev Info
+        Write-LogMessage -API $ApiName -tenant ($UserObj.tenantFilter) -headers $Request.Headers -message "Edited user $($UserObj.DisplayName) with id $($UserObj.id)" -Sev Info
         if ($UserObj.password) {
             $passwordProfile = [pscustomobject]@{'passwordProfile' = @{ 'password' = $UserObj.password; 'forceChangePasswordNextSignIn' = [boolean]$UserObj.MustChangePass } } | ConvertTo-Json
             $null = New-GraphPostRequest -uri "https://graph.microsoft.com/beta/users/$($UserObj.id)" -tenantid $UserObj.tenantFilter -type PATCH -body $PasswordProfile -verbose
             $null = $results.Add("Success. The password has been set to $($UserObj.password)")
-            Write-LogMessage -API $ApiName -tenant ($UserObj.tenantFilter) -user $User -message "Reset $($UserObj.DisplayName)'s Password" -Sev Info
+            Write-LogMessage -API $ApiName -tenant ($UserObj.tenantFilter) -headers $Request.Headers -message "Reset $($UserObj.DisplayName)'s Password" -Sev Info
         }
     } catch {
         $ErrorMessage = Get-CippException -Exception $_
-        Write-LogMessage -API $ApiName -tenant ($UserObj.tenantFilter) -user $User -message "User edit API failed. $($ErrorMessage.NormalizedError)" -Sev Error -LogData $ErrorMessage
+        Write-LogMessage -API $ApiName -tenant ($UserObj.tenantFilter) -headers $Request.Headers -message "User edit API failed. $($ErrorMessage.NormalizedError)" -Sev Error -LogData $ErrorMessage
         $null = $results.Add( "Failed to edit user. $($ErrorMessage.NormalizedError)")
     }
 
@@ -110,7 +110,7 @@ Function Invoke-EditUser {
 
     } catch {
         $ErrorMessage = Get-CippException -Exception $_
-        Write-LogMessage -API $ApiName -tenant ($UserObj.tenantFilter) -user $User -message "License assign API failed. $($ErrorMessage.NormalizedError)" -Sev Error -LogData $ErrorMessage
+        Write-LogMessage -API $ApiName -tenant ($UserObj.tenantFilter) -headers $Request.Headers -message "License assign API failed. $($ErrorMessage.NormalizedError)" -Sev Error -LogData $ErrorMessage
         $null = $results.Add( "We've failed to assign the license. $($ErrorMessage.NormalizedError)")
     }
 
@@ -122,13 +122,13 @@ Function Invoke-EditUser {
                 $null = New-GraphPostRequest -uri "https://graph.microsoft.com/beta/users/$($UserObj.id)" -tenantid $UserObj.tenantFilter -type 'patch' -body "{`"mail`": `"$Alias`"}" -Verbose
             }
             $null = New-GraphPostRequest -uri "https://graph.microsoft.com/beta/users/$($UserObj.id)" -tenantid $UserObj.tenantFilter -type 'patch' -body "{`"mail`": `"$UserPrincipalName`"}" -Verbose
-            Write-LogMessage -API $ApiName -tenant ($UserObj.tenantFilter) -user $User -message "Added Aliases to $($UserObj.DisplayName)" -Sev Info
+            Write-LogMessage -API $ApiName -tenant ($UserObj.tenantFilter) -headers $Request.Headers -message "Added Aliases to $($UserObj.DisplayName)" -Sev Info
             $null = $results.Add( 'Success. added aliases to user.')
         }
 
     } catch {
         $ErrorMessage = Get-CippException -Exception $_
-        Write-LogMessage -API $ApiName -tenant ($UserObj.tenantFilter) -user $User -message "Alias API failed. $($ErrorMessage.NormalizedError)" -Sev Error -LogData $ErrorMessage
+        Write-LogMessage -API $ApiName -tenant ($UserObj.tenantFilter) -headers $Request.Headers -message "Alias API failed. $($ErrorMessage.NormalizedError)" -Sev Error -LogData $ErrorMessage
         $null = $results.Add( "Successfully edited user. The password is $password. We've failed to create the Aliases: $($ErrorMessage.NormalizedError)")
     }
 
@@ -164,11 +164,11 @@ Function Invoke-EditUser {
 
                 }
 
-                Write-LogMessage -user $User -API $ApiName -tenant $UserObj.tenantFilter -message "Added $($UserObj.DisplayName) to $GroupName group" -Sev Info
+                Write-LogMessage -headers $Request.Headers -API $ApiName -tenant $UserObj.tenantFilter -message "Added $($UserObj.DisplayName) to $GroupName group" -Sev Info
                 $null = $results.Add("Success. $($UserObj.DisplayName) has been added to $GroupName")
             } catch {
                 $ErrorMessage = Get-CippException -Exception $_
-                Write-LogMessage -user $User -API $ApiName -tenant $UserObj.tenantFilter -message "Failed to add member $($UserObj.DisplayName) to $GroupName. Error:$($ErrorMessage.NormalizedError)" -Sev Error -LogData $ErrorMessage
+                Write-LogMessage -headers $Request.Headers -API $ApiName -tenant $UserObj.tenantFilter -message "Failed to add member $($UserObj.DisplayName) to $GroupName. Error:$($ErrorMessage.NormalizedError)" -Sev Error -LogData $ErrorMessage
                 $null = $results.Add("Failed to add member $($UserObj.DisplayName) to $GroupName : $($ErrorMessage.NormalizedError)")
             }
 
@@ -178,7 +178,7 @@ Function Invoke-EditUser {
         $ManagerBody = [PSCustomObject]@{'@odata.id' = "https://graph.microsoft.com/beta/users/$($Request.body.setManager.value)" }
         $ManagerBodyJSON = ConvertTo-Json -Compress -Depth 10 -InputObject $ManagerBody
         $null = New-GraphPostRequest -uri "https://graph.microsoft.com/beta/users/$($UserObj.id)/manager/`$ref" -tenantid $UserObj.tenantFilter -type PUT -body $ManagerBodyJSON -Verbose
-        Write-LogMessage -user $User -API $ApiName -tenant $UserObj.tenantFilter -message "Set $($UserObj.DisplayName)'s manager to $($Request.body.setManager.label)" -Sev Info
+        Write-LogMessage -headers $Request.Headers -API $ApiName -tenant $UserObj.tenantFilter -message "Set $($UserObj.DisplayName)'s manager to $($Request.body.setManager.label)" -Sev Info
         $null = $results.Add("Success. Set $($UserObj.DisplayName)'s manager to $($Request.body.setManager.label)")
     }
 
@@ -205,11 +205,11 @@ Function Invoke-EditUser {
 
                 }
 
-                Write-LogMessage -user $User -API $ApiName -tenant $UserObj.tenantFilter -message "Removed $($UserObj.DisplayName) from $GroupName group" -Sev Info
+                Write-LogMessage -headers $Request.Headers -API $ApiName -tenant $UserObj.tenantFilter -message "Removed $($UserObj.DisplayName) from $GroupName group" -Sev Info
                 $null = $results.Add("Success. $($UserObj.DisplayName) has been removed from $GroupName")
             } catch {
                 $ErrorMessage = Get-CippException -Exception $_
-                Write-LogMessage -user $User -API $ApiName -tenant $UserObj.tenantFilter -message "Failed to remove member $($UserObj.DisplayName) from $GroupName. Error:$($ErrorMessage.NormalizedError)" -Sev Error -LogData $ErrorMessage
+                Write-LogMessage -headers $Request.Headers -API $ApiName -tenant $UserObj.tenantFilter -message "Failed to remove member $($UserObj.DisplayName) from $GroupName. Error:$($ErrorMessage.NormalizedError)" -Sev Error -LogData $ErrorMessage
                 $null = $results.Add("Failed to remove member $($UserObj.DisplayName) from $GroupName : $($ErrorMessage.NormalizedError)")
             }
 

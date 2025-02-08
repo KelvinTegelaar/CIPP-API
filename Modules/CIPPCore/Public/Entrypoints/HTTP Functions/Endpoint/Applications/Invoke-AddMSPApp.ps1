@@ -10,8 +10,8 @@ Function Invoke-AddMSPApp {
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
 
-    $APIName = $TriggerMetadata.FunctionName
-    Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -message 'Accessed this API' -Sev 'Debug'
+    $APIName = $Request.Params.CIPPEndpoint
+    Write-LogMessage -headers $Request.Headers -API $APINAME -message 'Accessed this API' -Sev 'Debug'
 
     Write-Host 'PowerShell HTTP trigger function processed a request.'
     $RMMApp = $request.body
@@ -81,9 +81,9 @@ Function Invoke-AddMSPApp {
                 status       = 'Not Deployed yet'
             }
             "Successfully added MSP App for $($Tenant.defaultDomainName) to queue. "
-            Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $tenant.defaultDomainName -message "MSP Application $($intunebody.Displayname) added to queue" -Sev 'Info'
+            Write-LogMessage -headers $Request.Headers -API $APINAME -tenant $tenant.defaultDomainName -message "MSP Application $($intunebody.Displayname) added to queue" -Sev 'Info'
         } catch {
-            Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $tenant.defaultDomainName -message "Failed to add MSP Application $($intunebody.Displayname) to queue" -Sev 'Error'
+            Write-LogMessage -headers $Request.Headers -API $APINAME -tenant $tenant.defaultDomainName -message "Failed to add MSP Application $($intunebody.Displayname) to queue" -Sev 'Error'
             "Failed to add MSP app for $($Tenant.defaultDomainName) to queue"
         }
     }

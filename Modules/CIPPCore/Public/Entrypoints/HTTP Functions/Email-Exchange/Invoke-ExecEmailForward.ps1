@@ -15,7 +15,7 @@ Function Invoke-ExecEmailForward {
     $ForwardingAddress = $request.body.ForwardInternal.value
     $ForwardingSMTPAddress = $request.body.ForwardExternal
     $ForwardOption = $request.body.forwardOption
-    $APIName = $TriggerMetadata.FunctionName
+    $APIName = $Request.Params.CIPPEndpoint
     [bool]$KeepCopy = if ($request.body.keepCopy -eq 'true') { $true } else { $false }
 
     if ($ForwardOption -eq 'internalAddress') {
@@ -27,7 +27,7 @@ Function Invoke-ExecEmailForward {
                 $results = "Forwarding all email for $($username) to $($ForwardingAddress) and keeping a copy"
             }
         } catch {
-            Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -message "Could not add forwarding for $($username)" -Sev 'Error' -tenant $TenantFilter
+            Write-LogMessage -headers $Request.Headers -API $APINAME -message "Could not add forwarding for $($username)" -Sev 'Error' -tenant $TenantFilter
             $results = "Could not add forwarding for $($username). Error: $($_.Exception.Message)"
 
         }
@@ -42,7 +42,7 @@ Function Invoke-ExecEmailForward {
                 $results = "Forwarding all email for $($username) to $($ForwardingSMTPAddress) and keeping a copy"
             }
         } catch {
-            Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -message "Could not add forwarding for $($username)" -Sev 'Error' -tenant $TenantFilter
+            Write-LogMessage -headers $Request.Headers -API $APINAME -message "Could not add forwarding for $($username)" -Sev 'Error' -tenant $TenantFilter
             $results = "Could not add forwarding for $($username). Error: $($_.Exception.Message)"
 
         }
@@ -54,7 +54,7 @@ Function Invoke-ExecEmailForward {
             Set-CIPPForwarding -userid $username -username $username -tenantFilter $Tenantfilter -ExecutingUser $ExecutingUser -APIName $APIName -Disable $true
             $results = "Disabled Email Forwarding for $($username)"
         } catch {
-            Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -message "Could not disable Email forwarding for $($username)" -Sev 'Error' -tenant $TenantFilter
+            Write-LogMessage -headers $Request.Headers -API $APINAME -message "Could not disable Email forwarding for $($username)" -Sev 'Error' -tenant $TenantFilter
             $results = "Could not disable Email forwarding for $($username). Error: $($_.Exception.Message)"
 
         }

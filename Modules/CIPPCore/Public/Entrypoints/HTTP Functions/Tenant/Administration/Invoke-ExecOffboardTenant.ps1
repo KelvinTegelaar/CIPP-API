@@ -9,8 +9,9 @@ Function Invoke-ExecOffboardTenant {
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
+    $APIName = $Request.Params.CIPPEndpoint
     try {
-        Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -message 'Accessed this API' -Sev 'Debug'
+        Write-LogMessage -headers $Request.Headers -API $APINAME -message 'Accessed this API' -Sev 'Debug'
 
         $TenantQuery = $Request.Body.TenantFilter.value ?? $Request.Body.TenantFilter
 
@@ -49,7 +50,7 @@ Function Invoke-ExecOffboardTenant {
                         $BulkResults = New-GraphBulkRequest -Requests $BulkRequests -tenantid $TenantFilter
 
                         $results.Add('Successfully removed guest users')
-                        Write-LogMessage -user $ExecutingUser -API $APIName -message 'CSP Guest users were removed' -Sev 'Info' -tenant $TenantFilter
+                        Write-LogMessage -headers $Request.Headers -API $APIName -message 'CSP Guest users were removed' -Sev 'Info' -tenant $TenantFilter
                     } else {
                         $results.Add('No guest users found to remove')
                     }
@@ -91,7 +92,7 @@ Function Invoke-ExecOffboardTenant {
                         try {
                             New-GraphPostRequest -type PATCH -body $patchContactBody -Uri "https://graph.microsoft.com/v1.0/organization/$($orgContacts.id)" -tenantid $Tenantfilter -ContentType 'application/json'
                             $results.Add("Successfully removed notification contacts from $($property): $(($propertyContacts | Where-Object { $domains -contains $_.Split('@')[1] }))")
-                            Write-LogMessage -user $ExecutingUser -API $APIName -message "Contacts were removed from $($property)" -Sev 'Info' -tenant $TenantFilter
+                            Write-LogMessage -headers $Request.Headers -API $APIName -message "Contacts were removed from $($property)" -Sev 'Info' -tenant $TenantFilter
                         } catch {
                             $errors.Add("Failed to update property $($property): $($_.Exception.message)")
                         }
@@ -108,7 +109,7 @@ Function Invoke-ExecOffboardTenant {
                     try {
                         $delete = (New-GraphPostRequest -type 'DELETE' -Uri "https://graph.microsoft.com/v1.0/serviceprincipals/$($_.value)" -tenantid $Tenantfilter)
                         $results.Add("Successfully removed app $($_.label)")
-                        Write-LogMessage -user $ExecutingUser -API $APIName -message "App $($_.label) was removed" -Sev 'Info' -tenant $TenantFilter
+                        Write-LogMessage -headers $Request.Headers -API $APIName -message "App $($_.label) was removed" -Sev 'Info' -tenant $TenantFilter
                     } catch {
                         #$results.Add("Failed to removed app $($_.displayName)")
                         $errors.Add("Failed to removed app $($_.label)")
@@ -126,7 +127,7 @@ Function Invoke-ExecOffboardTenant {
                         try {
                             $delete = (New-GraphPostRequest -type 'DELETE' -Uri "https://graph.microsoft.com/v1.0/serviceprincipals/$($_.id)" -tenantid $Tenantfilter)
                             $results.Add("Successfully removed app $($_.displayName)")
-                            Write-LogMessage -user $ExecutingUser -API $APIName -message "App $($_.displayName) was removed" -Sev 'Info' -tenant $TenantFilter
+                            Write-LogMessage -headers $Request.Headers -API $APIName -message "App $($_.displayName) was removed" -Sev 'Info' -tenant $TenantFilter
                         } catch {
                             #$results.Add("Failed to removed app $($_.displayName)")
                             $errors.Add("Failed to removed app $($_.displayName)")
@@ -147,7 +148,7 @@ Function Invoke-ExecOffboardTenant {
                         try {
                             $terminate = (New-GraphPostRequest -type 'POST' -Uri "https://graph.microsoft.com/v1.0/tenantRelationships/delegatedAdminRelationships/$($_.id)/requests" -body '{"action":"terminate"}' -ContentType 'application/json' -tenantid $env:TenantID)
                             $results.Add("Successfully terminated GDAP relationship $($_.displayName) from tenant $TenantFilter")
-                            Write-LogMessage -user $ExecutingUser -API $APIName -message "GDAP Relationship $($_.displayName) has been terminated" -Sev 'Info' -tenant $TenantFilter
+                            Write-LogMessage -headers $Request.Headers -API $APIName -message "GDAP Relationship $($_.displayName) has been terminated" -Sev 'Info' -tenant $TenantFilter
 
                         } catch {
                             $($_.Exception.message)
@@ -167,7 +168,7 @@ Function Invoke-ExecOffboardTenant {
                 try {
                     $terminate = (New-GraphPostRequest -type 'PATCH' -body '{ "relationshipToPartner": "none" }' -Uri "https://api.partnercenter.microsoft.com/v1/customers/$TenantFilter" -ContentType 'application/json' -scope 'https://api.partnercenter.microsoft.com/user_impersonation' -tenantid $env:TenantID)
                     $results.Add('Successfully terminated contract relationship')
-                    Write-LogMessage -user $ExecutingUser -API $APIName -message 'Contract relationship terminated' -Sev 'Info' -tenant $TenantFilter
+                    Write-LogMessage -headers $Request.Headers -API $APIName -message 'Contract relationship terminated' -Sev 'Info' -tenant $TenantFilter
                 } catch {
                     #$results.Add("Failed to terminate contract relationship: $($_.Exception.message)")
                     $errors.Add("Failed to terminate contract relationship: $($_.Exception.message)")
@@ -180,6 +181,7 @@ Function Invoke-ExecOffboardTenant {
             $Results.Add('Tenant cache has been cleared')
         }
 
+        Write-LogMessage -headers $Request.Headers -API $APIName -message 'Offboarding completed' -Sev 'Info' -tenant $TenantFilter
         $StatusCode = [HttpStatusCode]::OK
         $body = [pscustomobject]@{
             'Results' = @($results)

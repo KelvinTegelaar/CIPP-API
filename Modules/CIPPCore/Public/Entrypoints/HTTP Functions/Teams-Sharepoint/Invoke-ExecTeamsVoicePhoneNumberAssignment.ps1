@@ -10,7 +10,7 @@ Function Invoke-ExecTeamsVoicePhoneNumberAssignment {
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
 
-    $APIName = $TriggerMetadata.FunctionName
+    $APIName = $Request.Params.CIPPEndpoint
     $ExecutingUser = $Request.headers.'x-ms-client-principal'
     Write-LogMessage -user $ExecutingUser -API $APINAME -message 'Accessed this API' -Sev 'Debug'
     $Identity = $Request.Body.input.value

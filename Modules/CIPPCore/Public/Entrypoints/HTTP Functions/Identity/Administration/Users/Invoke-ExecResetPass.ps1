@@ -10,8 +10,8 @@ Function Invoke-ExecResetPass {
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
 
-    $APIName = $TriggerMetadata.FunctionName
-    Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -message 'Accessed this API' -Sev 'Debug'
+    $APIName = $Request.Params.CIPPEndpoint
+    Write-LogMessage -headers $Request.Headers -API $APINAME -message 'Accessed this API' -Sev 'Debug'
 
 
     # Write to the Azure Functions log stream.
@@ -26,7 +26,7 @@ Function Invoke-ExecResetPass {
         $Results = [pscustomobject]@{'Results' = $Reset }
     } catch {
         $Results = [pscustomobject]@{'Results' = "Failed to reset password for $($Request.query.displayName): $($_.Exception.Message)" }
-        Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -message "Failed to reset password for $($Request.query.displayName): $($_.Exception.Message)" -Sev 'Error'
+        Write-LogMessage -headers $Request.Headers -API $APINAME -message "Failed to reset password for $($Request.query.displayName): $($_.Exception.Message)" -Sev 'Error'
 
     }
 

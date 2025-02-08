@@ -3,7 +3,7 @@ function New-CIPPAPIConfig {
     [CmdletBinding(SupportsShouldProcess)]
     param (
         $APIName = 'CIPP API Config',
-        $ExecutingUser,
+        $Headers,
         [switch]$ResetSecret,
         [string]$AppName,
         [string]$AppId
@@ -60,7 +60,7 @@ function New-CIPPAPIConfig {
                 $APIIdUrl = New-GraphPOSTRequest -uri "https://graph.microsoft.com/v1.0/applications/$($APIApp.id)" -NoAuthCheck $true -type PATCH -body "{`"identifierUris`":[`"api://$($APIApp.appId)`"]}"
                 Write-Information 'Adding serviceprincipal'
                 $ServicePrincipal = New-GraphPOSTRequest -uri 'https://graph.microsoft.com/v1.0/serviceprincipals' -NoAuthCheck $true -type POST -body "{`"accountEnabled`":true,`"appId`":`"$($APIApp.appId)`",`"displayName`":`"$AppName`",`"tags`":[`"WindowsAzureActiveDirectoryIntegratedApp`",`"AppServiceIntegratedApp`"]}"
-                Write-LogMessage -user $ExecutingUser -API $APINAME -tenant 'None '-message "Created CIPP-API App with name '$($APIApp.displayName)'." -Sev 'info'
+                Write-LogMessage -headers $Headers -API $APINAME -tenant 'None '-message "Created CIPP-API App with name '$($APIApp.displayName)'." -Sev 'info'
             }
         }
         if ($ResetSecret.IsPresent -and $APIApp) {
@@ -95,7 +95,7 @@ function New-CIPPAPIConfig {
                 )
                 $BatchResponse = New-GraphBulkRequest -tenantid $env:TenantID -NoAuthCheck $true -asapp $true -Requests $Requests
                 $APIPassword = $BatchResponse | Where-Object { $_.id -eq 'addNewPassword' } | Select-Object -ExpandProperty body
-                Write-LogMessage -user $ExecutingUser -API $APINAME -tenant 'None '-message "Reset CIPP-API Password for '$($APIApp.displayName)'." -Sev 'info'
+                Write-LogMessage -headers $Headers -API $APINAME -tenant 'None '-message "Reset CIPP-API Password for '$($APIApp.displayName)'." -Sev 'info'
             }
         }
 
@@ -109,7 +109,7 @@ function New-CIPPAPIConfig {
     } catch {
         $ErrorMessage = Get-CippException -Exception $_
         Write-Information ($ErrorMessage | ConvertTo-Json -Depth 10)
-        Write-LogMessage -user $ExecutingUser -API $APINAME -tenant 'None' -message "Failed to setup CIPP-API Access: $($ErrorMessage.NormalizedError) Linenumber: $($_.InvocationInfo.ScriptLineNumber)" -Sev 'Error' -LogData $ErrorMessage
+        Write-LogMessage -headers $Headers -API $APINAME -tenant 'None' -message "Failed to setup CIPP-API Access: $($ErrorMessage.NormalizedError) Linenumber: $($_.InvocationInfo.ScriptLineNumber)" -Sev 'Error' -LogData $ErrorMessage
         return @{
             Results = "Failed to setup CIPP-API Access: $($ErrorMessage.NormalizedError)"
         }

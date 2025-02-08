@@ -604,6 +604,8 @@ function Get-SecretLink {
     your username + workstation or domain name. This way the UA can be
     semi-consistent across sessions but not identifying.
 
+    Note: User agent must meet [RFC9110](https://www.rfc-editor.org/rfc/rfc9110#name-user-agent) specifications or the Password Pusher API will reject the call.
+
     .PARAMETER Force
     Force setting new information. If module is already initialized you can use this to
     Re-initialize with default settings. Implied if either ApiKey or BaseUrl is provided.
@@ -626,7 +628,7 @@ function Get-SecretLink {
 
     .EXAMPLE
     # Set a custom User Agent
-    PS > InitializePassPushPosh -UserAgent "I'm a cool dude with a cool script."
+    PS > InitializePassPushPosh -UserAgent "My-CoolUserAgent/1.12.1"
 
     .LINK
     https://github.com/adamburley/PassPushPosh/blob/main/Docs/Initialize-PassPushPosh.md
@@ -654,6 +656,7 @@ function Initialize-PassPushPosh {
 
         [Parameter(Position = 0, ParameterSetName = 'Anonymous')]
         [Parameter(Position = 2, ParameterSetName = 'Authenticated')]
+        [Parameter(ParameterSetName = 'Pro')]
         [ValidatePattern('^https?:\/\/[a-zA-Z0-9-_]+.[a-zA-Z0-9]+')]
         [string]$BaseUrl,
 
@@ -703,7 +706,7 @@ function Initialize-PassPushPosh {
             $uAD64 = [Convert]::ToBase64String([System.Text.Encoding]::Unicode.GetBytes($userAtDomain))
             Write-Debug "$userAtDomain transformed to $uAD64. First 20 characters $($uAD64.Substring(0,20))"
             # Version tag is replaced by the semantic version number at build time. See PassPushPosh/issues/11 for context
-            $UserAgent = "PassPushPosh/1.2.0 $osVersion/$($uAD64.Substring(0,20))"
+            $UserAgent = "PassPushPosh/1.2.1 $osVersion/$($uAD64.Substring(0,20))"
             # $UserAgent = "PassPushPosh/$((Get-Module -Name PassPushPosh).Version.ToString()) $osVersion/$($uAD64.Substring(0,20))"
             Write-Verbose "Generated user agent: $UserAgent"
         }
@@ -715,7 +718,7 @@ function Initialize-PassPushPosh {
         Set-Variable -WhatIf:$false -Scope Script -Name PPPUserAgent -Value $UserAgent
     }
 }
-#EndRegion '.\Public\Initialize-PassPushPosh.ps1' 143
+#EndRegion '.\Public\Initialize-PassPushPosh.ps1' 146
 #Region '.\Public\New-Push.ps1' -1
 
 <#

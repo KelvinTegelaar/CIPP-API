@@ -10,7 +10,7 @@ Function Invoke-ExecGetLocalAdminPassword {
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
 
-    $APIName = $TriggerMetadata.FunctionName
+    $APIName = $Request.Params.CIPPEndpoint
 
     try {
         $GraphRequest = Get-CIPPLapsPassword -device $($request.body.guid) -tenantFilter $Request.body.TenantFilter -APIName $APINAME -ExecutingUser $request.headers.'x-ms-client-principal'
