@@ -33,7 +33,7 @@ function Invoke-ExecApiClient {
                 $ClientId = $Request.Body.ClientId.value ?? $Request.Body.ClientId
                 try {
                     $ApiConfig = @{
-                        ExecutingUser = $Request.Headers.'x-ms-client-principal'
+                        Headers = $Request.Headers
                     }
                     if ($ClientId) {
                         $ApiConfig.ClientId = $ClientId
@@ -43,7 +43,7 @@ function Invoke-ExecApiClient {
                         $ApiConfig.AppName = $Request.Body.AppName
                     }
                     $APIConfig = New-CIPPAPIConfig @ApiConfig
-                    Write-Host ($APIConfig | ConvertTo-Json)
+
                     $ClientId = $APIConfig.ApplicationID
                     $AddedText = $APIConfig.Results
                 } catch {
@@ -64,7 +64,7 @@ function Invoke-ExecApiClient {
                 $Client.Role = [string]$Request.Body.Role.value
                 $Client.IPRange = "$(@($IpRange) | ConvertTo-Json -Compress)"
                 $Client.Enabled = $Request.Body.Enabled ?? $false
-                Write-LogMessage -user $Request.Headers.'x-ms-client-principal' -API 'ExecApiClient' -message "Updated API client $($Request.Body.ClientId)" -Sev 'Info'
+                Write-LogMessage -headers $Request.Headers -API 'ExecApiClient' -message "Updated API client $($Request.Body.ClientId)" -Sev 'Info'
                 $Results = 'API client updated'
             } else {
                 $Client = @{
@@ -109,8 +109,10 @@ function Invoke-ExecApiClient {
             try {
                 Set-CippApiAuth -RGName $RGName -FunctionAppName $FunctionAppName -TenantId $TenantId -ClientIds $ClientIds
                 $Body = @{ Results = 'API clients saved to Azure' }
+                Write-LogMessage -headers $Request.Headers -API 'ExecApiClient' -message 'Saved API clients to Azure' -Sev 'Info'
             } catch {
                 $Body = @{ Results = 'Failed to save allowed API clients to Azure, ensure your function app has the appropriate rights to make changes to the Authentication settings.' }
+                Write-Information (Get-CippException -Exception $_ | ConvertTo-Json)
             }
         }
         'ResetSecret' {
@@ -121,7 +123,7 @@ function Invoke-ExecApiClient {
                     severity   = 'error'
                 }
             } else {
-                $ApiConfig = New-CIPPAPIConfig -ResetSecret -AppId $Request.Body.ClientId
+                $ApiConfig = New-CIPPAPIConfig -ResetSecret -AppId $Request.Body.ClientId -Headers $Request.Headers
 
                 if ($ApiConfig.ApplicationSecret) {
                     $Results = @{
@@ -152,13 +154,13 @@ function Invoke-ExecApiClient {
 
                     $Client = Get-CIPPAzDataTableEntity @Table -Filter "RowKey eq '$($ClientId)'" -Property RowKey, PartitionKey, ETag
                     Remove-AzDataTableEntity @Table -Entity $Client
-                    Write-LogMessage -user $Request.Headers.'x-ms-client-principal' -API 'ExecApiClient' -message "Deleted API client $ClientId" -Sev 'Info'
+                    Write-LogMessage -headers $Request.Headers -API 'ExecApiClient' -message "Deleted API client $ClientId" -Sev 'Info'
                     $Body = @{ Results = "API client $ClientId deleted" }
                 } else {
                     $Body = @{ Results = "API client $ClientId not found or not a valid CIPP-API application" }
                 }
             } catch {
-                Write-LogMessage -user $Request.Headers.'x-ms-client-principal' -API 'ExecApiClient' -message "Failed to remove app registration for $ClientId" -Sev 'Warning'
+                Write-LogMessage -headers $Request.Headers -API 'ExecApiClient' -message "Failed to remove app registration for $ClientId" -Sev 'Warning'
             }
         }
         default {

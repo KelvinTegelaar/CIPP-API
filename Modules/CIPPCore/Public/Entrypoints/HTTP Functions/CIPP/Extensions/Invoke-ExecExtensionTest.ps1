@@ -11,7 +11,7 @@ Function Invoke-ExecExtensionTest {
     param($Request, $TriggerMetadata)
 
     $APIName = $TriggerMetadata.FunctionName
-    Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -message 'Accessed this API' -Sev 'Debug'
+    Write-LogMessage -headers $Request.Headers -API $APINAME -message 'Accessed this API' -Sev 'Debug'
     $Table = Get-CIPPTable -TableName Extensionsconfig
     $Configuration = ((Get-CIPPAzDataTableEntity @Table).config | ConvertFrom-Json)
     # Interact with query parameters or the body of the request.
@@ -62,7 +62,7 @@ Function Invoke-ExecExtensionTest {
                 }
             }
             'Hudu' {
-                Connect-HuduAPI -configuration $Configuration.Hudu
+                Connect-HuduAPI -configuration $Configuration
                 $Version = Get-HuduAppInfo
                 if ($Version.version) {
                     $Results = [pscustomobject]@{'Results' = ('Successfully Connected to Hudu, version: {0}' -f $Version.version) }
