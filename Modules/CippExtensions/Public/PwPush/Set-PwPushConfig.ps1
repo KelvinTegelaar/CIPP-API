@@ -17,7 +17,7 @@ function Set-PwPushConfig {
     if ($Configuration.BaseUrl) {
         $InitParams.BaseUrl = $Configuration.BaseUrl
     }
-    if (![string]::IsNullOrEmpty($Configuration.EmailAddress) -or $Configuration.PWPushPro -eq $true) {
+    if (![string]::IsNullOrEmpty($Configuration.EmailAddress) -or $Configuration.UseBearerAuth -eq $true) {
         $ApiKey = Get-ExtensionAPIKey -Extension 'PWPush'
 
         if (![string]::IsNullOrEmpty($ApiKey)) {
@@ -26,12 +26,10 @@ function Set-PwPushConfig {
         if (![string]::IsNullOrEmpty($Configuration.EmailAddress)) {
             $InitParams.EmailAddress = $Configuration.EmailAddress
         }
-        if ($Configuration.PWPushPro -eq $true) {
+        if ($Configuration.UseBearerAuth -eq $true) {
             $InitParams.AccountType = 'Pro'
-            $InitParams.Remove('BaseUrl')
         }
     }
-    Write-Information ($InitParams | ConvertTo-Json)
 
     $Module = Get-Module PassPushPosh -ListAvailable
     Write-Host $Module.Version
