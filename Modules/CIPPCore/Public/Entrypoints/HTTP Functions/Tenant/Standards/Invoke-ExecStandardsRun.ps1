@@ -9,7 +9,7 @@ Function Invoke-ExecStandardsRun {
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
-    $APIName = $TriggerMetadata.FunctionName
+    $APIName = $Request.Params.CIPPEndpoint
     Write-LogMessage -headers $Request.Headers -API $APINAME -message 'Accessed this API' -Sev 'Debug'
     $tenantfilter = if ($Request.Query.TenantFilter) { $Request.Query.TenantFilter } else { 'allTenants' }
     $TemplateId = if ($Request.Query.TemplateId) { $Request.Query.TemplateId } else { '*' }

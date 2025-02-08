@@ -10,7 +10,7 @@ Function Invoke-EditUser {
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
 
-    $ApiName = $TriggerMetadata.FunctionName
+    $APIName = $Request.Params.CIPPEndpoint
     $User = $Request.headers.'x-ms-client-principal'
     Write-LogMessage -headers $Request.headers -API $ApiName -message 'Accessed this API' -Sev 'Debug'
 

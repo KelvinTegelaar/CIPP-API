@@ -10,7 +10,7 @@ Function Invoke-ExecStartManagedFolderAssistant {
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
 
-    $APIName = $TriggerMetadata.FunctionName
+    $APIName = $Request.Params.CIPPEndpoint
     $User = $request.headers.'x-ms-client-principal'
     $Tenant = $Request.query.TenantFilter
     Write-LogMessage -user $User -API $APINAME -message 'Accessed this API' -Sev 'Debug'

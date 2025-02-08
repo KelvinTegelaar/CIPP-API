@@ -10,7 +10,7 @@ Function Invoke-ExecSharePointPerms {
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
 
-    $APIName = $TriggerMetadata.FunctionName
+    $APIName = $Request.Params.CIPPEndpoint
     $tenantFilter = $Request.Body.tenantFilter
     $ExecutingUser = $Request.Headers.'x-ms-client-principal'
 

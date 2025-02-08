@@ -30,7 +30,7 @@ Function Invoke-ExecSAMSetup {
         exit
     }
 
-    $APIName = $TriggerMetadata.FunctionName
+    $APIName = $Request.Params.CIPPEndpoint
     Write-LogMessage -headers $Request.Headers -API $APINAME -message 'Accessed this API' -Sev 'Debug'
     if ($env:AzureWebJobsStorage -eq 'UseDevelopmentStorage=true') {
         $DevSecretsTable = Get-CIPPTable -tablename 'DevSecrets'

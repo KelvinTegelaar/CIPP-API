@@ -9,7 +9,7 @@ function Invoke-ListAppConsentRequests {
     #>
     param($Request, $TriggerMetadata)
 
-    $APIName = $TriggerMetadata.FunctionName
+    $APIName = $Request.Params.CIPPEndpoint
     $TenantFilter = $Request.Query.TenantFilter
     Write-LogMessage -headers $Request.Headers -API $APINAME -message 'Accessed this API' -Sev 'Debug'
 

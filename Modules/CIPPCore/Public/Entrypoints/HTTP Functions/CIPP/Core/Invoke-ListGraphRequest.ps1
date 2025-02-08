@@ -9,7 +9,7 @@ function Invoke-ListGraphRequest {
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
 
-    $APIName = $TriggerMetadata.FunctionName
+    $APIName = $Request.Params.CIPPEndpoint
 
     $Message = 'Accessed this API | Endpoint: {0}' -f $Request.Query.Endpoint
     Write-LogMessage -headers $Request.Headers -API $APINAME -message $Message -Sev 'Debug'

@@ -10,8 +10,8 @@ Function Invoke-RemoveAPDevice {
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
 
-    $APIName = $TriggerMetadata.FunctionName
-    Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -message 'Accessed this API' -Sev 'Debug'
+    $APIName = $Request.Params.CIPPEndpoint
+    Write-LogMessage -headers $Request.Headers -API $APINAME -message 'Accessed this API' -Sev 'Debug'
     # Write to the Azure Functions log stream.
     Write-Host 'PowerShell HTTP trigger function processed a request.'
 
@@ -25,11 +25,11 @@ Function Invoke-RemoveAPDevice {
         } else {
             $null = New-GraphPOSTRequest -uri "https://graph.microsoft.com/beta/deviceManagement/windowsAutopilotDeviceIdentities/$Deviceid" -tenantid $TenantFilter -type DELETE
         }
-        Write-LogMessage -user $request.headers.'x-ms-client-principal' -tenant $TenantFilter -API $APINAME -message "Deleted autopilot device $Deviceid" -Sev 'Info'
+        Write-LogMessage -headers $Request.Headers -tenant $TenantFilter -API $APINAME -message "Deleted autopilot device $Deviceid" -Sev 'Info'
         $body = [pscustomobject]@{'Results' = 'Successfully deleted the autopilot device' }
     } catch {
         $ErrorMessage = Get-CippException -Exception $_
-        Write-LogMessage -user $request.headers.'x-ms-client-principal' -tenant $TenantFilter -API $APINAME -message "Autopilot Delete API failed for $deviceid. The error is: $($ErrorMessage.NormalizedError)" -Sev 'Error' -LogData $ErrorMessage
+        Write-LogMessage -headers $Request.Headers -tenant $TenantFilter -API $APINAME -message "Autopilot Delete API failed for $deviceid. The error is: $($ErrorMessage.NormalizedError)" -Sev 'Error' -LogData $ErrorMessage
         $body = [pscustomobject]@{'Results' = "Failed to delete device: $($ErrorMessage.NormalizedError)" }
     }
     #force a sync, this can give "too many requests" if deleleting a bunch of devices though.

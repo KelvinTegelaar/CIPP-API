@@ -10,7 +10,7 @@ Function Invoke-ExecBackendURLs {
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
 
-    $APIName = $TriggerMetadata.FunctionName
+    $APIName = $Request.Params.CIPPEndpoint
     Write-LogMessage -headers $Request.Headers -API $APINAME -message 'Accessed this API' -Sev 'Debug'
 
     $Subscription = ($ENV:WEBSITE_OWNER_NAME).split('+') | Select-Object -First 1

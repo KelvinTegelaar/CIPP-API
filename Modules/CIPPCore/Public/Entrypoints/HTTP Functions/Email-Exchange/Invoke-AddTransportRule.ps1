@@ -10,7 +10,7 @@ Function Invoke-AddTransportRule {
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
 
-    $APIName = $TriggerMetadata.FunctionName
+    $APIName = $Request.Params.CIPPEndpoint
     $ExetutingUser = $Request.headers.'x-ms-client-principal'
     Write-LogMessage -user $ExetutingUser -API $APINAME -message 'Accessed this API' -Sev 'Debug'
 

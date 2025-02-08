@@ -10,7 +10,7 @@ Function Invoke-ListConnectionFilter {
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
 
-    $APIName = $TriggerMetadata.FunctionName
+    $APIName = $Request.Params.CIPPEndpoint
     Write-LogMessage -headers $Request.Headers -API $APINAME -message 'Accessed this API' -Sev 'Debug'
     $Tenantfilter = $request.Query.tenantfilter
 

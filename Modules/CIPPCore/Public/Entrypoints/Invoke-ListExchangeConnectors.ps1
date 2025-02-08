@@ -10,7 +10,7 @@ Function Invoke-ListExchangeConnectors {
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
 
-    $APIName = $TriggerMetadata.FunctionName
+    $APIName = $Request.Params.CIPPEndpoint
     $ExecutingUser = $Request.headers.'x-ms-client-principal'
     Write-LogMessage -user $ExecutingUser -API $APINAME -message 'Accessed this API' -Sev 'Debug'
     $TenantFilter = $request.Query.tenantFilter

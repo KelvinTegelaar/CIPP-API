@@ -8,7 +8,7 @@ Function Invoke-ExecSetOoO {
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
     try {
-        $APIName = $TriggerMetadata.FunctionName
+        $APIName = $Request.Params.CIPPEndpoint
         Write-LogMessage -headers $Request.Headers -API $APINAME -message 'Accessed this API' -Sev 'Debug'
         $Username = $request.body.userId
         $Tenantfilter = $request.body.tenantfilter

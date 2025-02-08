@@ -15,7 +15,7 @@ Function Invoke-ExecEmailForward {
     $ForwardingAddress = $request.body.ForwardInternal.value
     $ForwardingSMTPAddress = $request.body.ForwardExternal
     $ForwardOption = $request.body.forwardOption
-    $APIName = $TriggerMetadata.FunctionName
+    $APIName = $Request.Params.CIPPEndpoint
     [bool]$KeepCopy = if ($request.body.keepCopy -eq 'true') { $true } else { $false }
 
     if ($ForwardOption -eq 'internalAddress') {

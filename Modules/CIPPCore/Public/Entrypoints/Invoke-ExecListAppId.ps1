@@ -10,7 +10,7 @@ Function Invoke-ExecListAppId {
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
     Get-CIPPAuthentication
-    $APIName = $TriggerMetadata.FunctionName
+    $APIName = $Request.Params.CIPPEndpoint
     Write-LogMessage -headers $Request.Headers -API $APINAME -message 'Accessed this API' -Sev 'Debug'
     $ResponseURL = "$(($Request.headers.'x-ms-original-url').replace('/api/ExecListAppId','/api/ExecSAMSetup'))"
 

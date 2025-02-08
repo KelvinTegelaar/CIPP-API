@@ -10,9 +10,8 @@ Function Invoke-ExecHideFromGAL {
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
 
-    $APIName = $TriggerMetadata.FunctionName
     $ExecutingUser = $Request.headers.'x-ms-client-principal'
-    $APIName = $TriggerMetadata.FunctionName
+    $APIName = $Request.Params.CIPPEndpoint
     Write-LogMessage -user $ExecutingUser -API $APINAME -message 'Accessed this API' -Sev 'Debug'
 
 

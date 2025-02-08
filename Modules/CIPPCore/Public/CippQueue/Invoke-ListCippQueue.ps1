@@ -8,7 +8,7 @@ function Invoke-ListCippQueue {
     param($Request = $null, $TriggerMetadata = $null)
 
     if ($Request) {
-        $APIName = $TriggerMetadata.FunctionName
+        $APIName = $Request.Params.CIPPEndpoint
         Write-LogMessage -headers $Request.Headers -API $APINAME -message 'Accessed this API' -Sev 'Debug'
 
         # Write to the Azure Functions log stream.
