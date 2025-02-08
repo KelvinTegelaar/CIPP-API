@@ -61,13 +61,15 @@ Function Invoke-ListLogs {
                 } else {
                     'None'
                 }
+                AppId    = $Row.AppId
+                IP       = $Row.IP
             }
         }
     }
 
     Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
             StatusCode = [HttpStatusCode]::OK
-            Body       = @($ReturnedLog)
+            Body       = @($ReturnedLog | Sort-Object -Property DateTime -Descending)
         })
 
 }
