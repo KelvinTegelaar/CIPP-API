@@ -11,13 +11,12 @@ Function Invoke-EditRoomMailbox {
     param($Request, $TriggerMetadata)
 
     $APIName = $TriggerMetadata.FunctionName
-    $ExecutingUser = $Request.headers.'x-ms-client-principal'
-    Write-LogMessage -user $ExecutingUser -API $APINAME -message 'Accessed this API' -Sev 'Debug'
+    $Tenant = $Request.body.tenantid
+    Write-LogMessage -headers $Request.Headers -API $APIName -message 'Accessed this API' -Sev 'Debug'
 
 
     $Results = [System.Collections.Generic.List[Object]]::new()
     $MailboxObject = $Request.body
-    $Tenant = $MailboxObject.tenantid
 
     # First update the mailbox properties
     $UpdateMailboxParams = @{
@@ -62,12 +61,12 @@ Function Invoke-EditRoomMailbox {
         $null = New-ExoRequest -tenantid $Tenant -cmdlet 'Set-Place' -cmdParams $UpdatePlaceParams
         $Results.Add("Successfully updated room: $($MailboxObject.DisplayName)")
 
-        Write-LogMessage -user $ExecutingUser -API $APINAME -tenant $Tenant -message "Updated room $($MailboxObject.DisplayName)" -Sev 'Info'
+        Write-LogMessage -headers $Request.Headers -API $APIName -tenant $Tenant -message "Updated room $($MailboxObject.DisplayName)" -Sev 'Info'
         $StatusCode = [HttpStatusCode]::OK
 
     } catch {
         $ErrorMessage = Get-CippException -Exception $_
-        Write-LogMessage -user $ExecutingUser -API $APINAME -tenant $Tenant -message "Failed to update room: $($MailboxObject.DisplayName). Error: $($ErrorMessage.NormalizedError)" -Sev 'Error' -LogData $ErrorMessage
+        Write-LogMessage -headers $Request.Headers -API $APIName -tenant $Tenant -message "Failed to update room: $($MailboxObject.DisplayName). Error: $($ErrorMessage.NormalizedError)" -Sev 'Error' -LogData $ErrorMessage
         $Results.Add("Failed to update Room mailbox $($MailboxObject.userPrincipalName). $($ErrorMessage.NormalizedError)")
 
         $StatusCode = [HttpStatusCode]::Forbidden
