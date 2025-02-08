@@ -11,7 +11,7 @@ Function Invoke-AddSpamFilterTemplate {
     param($Request, $TriggerMetadata)
 
     $APIName = $TriggerMetadata.FunctionName
-    Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -message 'Accessed this API' -Sev 'Debug'
+    Write-LogMessage -headers $Request.Headers -API $APINAME -message 'Accessed this API' -Sev 'Debug'
     Write-Host ($request | ConvertTo-Json -Compress)
 
     try {
@@ -34,12 +34,12 @@ Function Invoke-AddSpamFilterTemplate {
             RowKey       = "$GUID"
             PartitionKey = 'SpamfilterTemplate'
         }
-        Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -message "Created Spam Filter Template $($Request.body.name) with GUID $GUID" -Sev 'Debug'
+        Write-LogMessage -headers $Request.Headers -API $APINAME -message "Created Spam Filter Template $($Request.body.name) with GUID $GUID" -Sev 'Debug'
         $body = [pscustomobject]@{'Results' = 'Successfully added template' }
 
     }
     catch {
-        Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -message "Failed to create Spam Filter Template: $($_.Exception.Message)" -Sev 'Error'
+        Write-LogMessage -headers $Request.Headers -API $APINAME -message "Failed to create Spam Filter Template: $($_.Exception.Message)" -Sev 'Error'
         $body = [pscustomobject]@{'Results' = "Spamfilter Template Deployment failed: $($_.Exception.Message)" }
     }
 

@@ -9,7 +9,7 @@ Function Invoke-ExecSetOoO {
     param($Request, $TriggerMetadata)
     try {
         $APIName = $TriggerMetadata.FunctionName
-        Write-LogMessage -user $request.headers.'X-MS-CLIENT-PRINCIPAL' -API $APINAME -message 'Accessed this API' -Sev 'Debug'
+        Write-LogMessage -headers $Request.Headers -API $APINAME -message 'Accessed this API' -Sev 'Debug'
         $Username = $request.body.userId
         $Tenantfilter = $request.body.tenantfilter
         if ($Request.body.input) {

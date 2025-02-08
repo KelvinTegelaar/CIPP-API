@@ -30,7 +30,7 @@ function Invoke-ExecGitHubAction {
     }
 
     Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
-        StatusCode = [HttpStatusCode]::OK
-        Body       = $Body
-    })
+            StatusCode = [HttpStatusCode]::OK
+            Body       = $Body
+        })
 }

@@ -14,7 +14,7 @@ Function Invoke-ExecOffboardUser {
     $Results = foreach ($username in $AllUsers) {
         try {
             $APIName = 'ExecOffboardUser'
-            Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -message 'Accessed this API' -Sev 'Debug'
+            Write-LogMessage -headers $Request.Headers -API $APINAME -message 'Accessed this API' -Sev 'Debug'
 
             if ($Request.body.Scheduled.enabled) {
                 $taskObject = [PSCustomObject]@{

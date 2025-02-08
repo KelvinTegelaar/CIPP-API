@@ -11,7 +11,7 @@ Function Invoke-AddBPATemplate {
     param($Request, $TriggerMetadata)
 
     $APIName = $TriggerMetadata.FunctionName
-    Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -message 'Accessed this API' -Sev 'Debug'
+    Write-LogMessage -headers $Request.Headers -API $APINAME -message 'Accessed this API' -Sev 'Debug'
 
     try {
 
@@ -23,11 +23,11 @@ Function Invoke-AddBPATemplate {
             PartitionKey = 'BPATemplate'
             GUID         = $Request.body.name
         }
-        Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -message "Created BPA named $($Request.body.name)" -Sev 'Debug'
+        Write-LogMessage -headers $Request.Headers -API $APINAME -message "Created BPA named $($Request.body.name)" -Sev 'Debug'
 
         $body = [pscustomobject]@{'Results' = 'Successfully added template' }
     } catch {
-        Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -message "BPA Template Creation failed: $($_.Exception.Message)" -Sev 'Error'
+        Write-LogMessage -headers $Request.Headers -API $APINAME -message "BPA Template Creation failed: $($_.Exception.Message)" -Sev 'Error'
         $body = [pscustomobject]@{'Results' = "BPA Template Creation failed: $($_.Exception.Message)" }
     }
 

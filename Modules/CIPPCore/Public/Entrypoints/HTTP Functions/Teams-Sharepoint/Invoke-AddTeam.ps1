@@ -11,7 +11,7 @@ Function Invoke-AddTeam {
     param($Request, $TriggerMetadata)
 
     $APIName = $TriggerMetadata.FunctionName
-    Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -message 'Accessed this API' -Sev 'Debug'
+    Write-LogMessage -headers $Request.Headers -API $APINAME -message 'Accessed this API' -Sev 'Debug'
 
     $userobj = $Request.body
 
@@ -43,11 +43,11 @@ Function Invoke-AddTeam {
 
         Write-Host $TeamsSettings
         New-GraphPostRequest -AsApp $true -uri 'https://graph.microsoft.com/beta/teams' -tenantid $Userobj.tenantid -type POST -body $TeamsSettings -verbose
-        Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $($userobj.tenantid) -message "Added Team $($userobj.displayname)" -Sev 'Info'
+        Write-LogMessage -headers $Request.Headers -API $APINAME -tenant $($userobj.tenantid) -message "Added Team $($userobj.displayname)" -Sev 'Info'
         $body = [pscustomobject]@{'Results' = 'Success. Team has been added' }
 
     } catch {
-        Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $($userobj.tenantid) -message "Adding Team failed. Error: $($_.Exception.Message)" -Sev 'Error'
+        Write-LogMessage -headers $Request.Headers -API $APINAME -tenant $($userobj.tenantid) -message "Adding Team failed. Error: $($_.Exception.Message)" -Sev 'Error'
         $body = [pscustomobject]@{'Results' = "Failed. Error message: $($_.Exception.Message)" }
     }
 

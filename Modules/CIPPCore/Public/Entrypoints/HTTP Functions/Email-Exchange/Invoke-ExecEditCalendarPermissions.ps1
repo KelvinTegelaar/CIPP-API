@@ -11,7 +11,7 @@ Function Invoke-ExecEditCalendarPermissions {
     param($Request, $TriggerMetadata)
 
     $APIName = $TriggerMetadata.FunctionName
-    Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -message 'Accessed this API' -Sev 'Debug'
+    Write-LogMessage -headers $Request.Headers -API $APINAME -message 'Accessed this API' -Sev 'Debug'
 
     # Extract parameters from query or body
     $TenantFilter = if ($Request.query.TenantFilter) { $Request.query.TenantFilter } else { $Request.Body.TenantFilter }

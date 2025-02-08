@@ -11,7 +11,7 @@ Function Invoke-AddGroup {
     param($Request, $TriggerMetadata)
 
     $APIName = $TriggerMetadata.FunctionName
-    Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -message 'Accessed this API' -Sev 'Debug'
+    Write-LogMessage -headers $Request.Headers -API $APINAME -message 'Accessed this API' -Sev 'Debug'
 
     $groupobj = $Request.body
     $SelectedTenants = $request.body.tenantfilter.value ? $request.body.tenantfilter.value : $request.body.tenantfilter
@@ -72,10 +72,10 @@ Function Invoke-AddGroup {
                 # At some point add logic to use AddOwner/AddMember for New-DistributionGroup, but idk how we're going to brr that - rvdwegen
             }
             "Successfully created group $($groupobj.displayname) for $($tenant)"
-            Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $tenant -message "Created group $($groupobj.displayname) with id $($GraphRequest.id)" -Sev 'Info'
+            Write-LogMessage -headers $Request.Headers -API $APINAME -tenant $tenant -message "Created group $($groupobj.displayname) with id $($GraphRequest.id)" -Sev 'Info'
 
         } catch {
-            Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $tenant -message "Group creation API failed. $($_.Exception.Message)" -Sev 'Error'
+            Write-LogMessage -headers $Request.Headers -API $APINAME -tenant $tenant -message "Group creation API failed. $($_.Exception.Message)" -Sev 'Error'
             "Failed to create group. $($groupobj.displayname) for $($tenant) $($_.Exception.Message)"
         }
     }

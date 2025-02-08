@@ -11,7 +11,7 @@ Function Invoke-ExecGeoIPLookup {
     param($Request, $TriggerMetadata)
 
     $APIName = $TriggerMetadata.FunctionName
-    Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -message 'Accessed this API' -Sev 'Debug'
+    Write-LogMessage -headers $Request.Headers -API $APINAME -message 'Accessed this API' -Sev 'Debug'
     $IP = $Request.Query.IP ?? $Request.Body.IP
 
     if (-not $IP) {

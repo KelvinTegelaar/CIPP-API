@@ -11,7 +11,7 @@ Function Invoke-ExecBackendURLs {
     param($Request, $TriggerMetadata)
 
     $APIName = $TriggerMetadata.FunctionName
-    Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -message 'Accessed this API' -Sev 'Debug'
+    Write-LogMessage -headers $Request.Headers -API $APINAME -message 'Accessed this API' -Sev 'Debug'
 
     $Subscription = ($ENV:WEBSITE_OWNER_NAME).split('+') | Select-Object -First 1
     $SWAName = $ENV:WEBSITE_SITE_NAME -replace 'cipp', 'CIPP-SWA-'

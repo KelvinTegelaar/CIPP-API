@@ -11,7 +11,7 @@ Function Invoke-ExecSendPush {
     param($Request, $TriggerMetadata)
 
     $APIName = $TriggerMetadata.FunctionName
-    Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -message 'Accessed this API' -Sev 'Debug'
+    Write-LogMessage -headers $Request.Headers -API $APINAME -message 'Accessed this API' -Sev 'Debug'
 
     $TenantFilter = $Request.body.TenantFilter
     $UserEmail = $Request.body.UserEmail
@@ -114,7 +114,7 @@ Function Invoke-ExecSendPush {
     }
 
     $Results = [pscustomobject]@{'Results' = $Body; severity = $colour }
-    Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -message "Sent push request to $UserEmail - Result: $($obj.BeginTwoWayAuthenticationResponse.result.value | Out-String)" -Sev 'Info'
+    Write-LogMessage -headers $Request.Headers -API $APINAME -message "Sent push request to $UserEmail - Result: $($obj.BeginTwoWayAuthenticationResponse.result.value | Out-String)" -Sev 'Info'
 
     Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
             StatusCode = [HttpStatusCode]::OK

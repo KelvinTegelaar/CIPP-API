@@ -11,7 +11,7 @@ Function Invoke-ExecAddGDAPRole {
     param($Request, $TriggerMetadata)
 
     $APIName = $TriggerMetadata.FunctionName
-    Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -message 'Accessed this API' -Sev 'Debug'
+    Write-LogMessage -headers $Request.Headers -API $APINAME -message 'Accessed this API' -Sev 'Debug'
 
     $CippDefaults = @(
         @{ label = 'Application Administrator'; value = '9b895d92-2cd3-44c7-9d02-a6ac2d5ea5c3' },
