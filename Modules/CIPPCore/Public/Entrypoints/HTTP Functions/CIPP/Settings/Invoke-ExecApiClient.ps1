@@ -149,7 +149,7 @@ function Invoke-ExecApiClient {
                         $Apps = New-GraphGetRequest -uri "https://graph.microsoft.com/v1.0/applications?`$filter=signInAudience eq 'AzureAdMyOrg' and web/redirectUris/any(x:x eq 'https://$($sitename).azurewebsites.net/.auth/login/aad/callback')&`$top=999&`$select=id,appId&`$count=true" -NoAuthCheck $true -asapp $true -ComplexFilter
                         $Id = $Apps | Where-Object { $_.appId -eq $ClientId } | Select-Object -ExpandProperty id
                         if ($Id) {
-                            New-GraphPOSTRequest -uri "https://graph.microsoft.com/v1.0/applications(appId='$ClientId')" -Method DELETE -Body '{}' -NoAuthCheck $true -asapp $true
+                            New-GraphPOSTRequest -uri "https://graph.microsoft.com/v1.0/applications/$Id" -Method DELETE -Body '{}' -NoAuthCheck $true -asapp $true
                         }
                     }
                     Write-Information "Deleting API Client: $ClientId from CIPP"
