@@ -49,7 +49,7 @@
         [Parameter(Mandatory = $true)]$DeviceID,
 
         [Parameter(Mandatory = $true)]$TenantFilter,
-        $ExecutingUser,
+        $Headers,
         $APIName = 'Set Device State'
     )
     $Url = "https://graph.microsoft.com/beta/devices/$($DeviceID)"
@@ -67,11 +67,11 @@
             }
         }
         Write-Host $ActionResult
-        Write-LogMessage -user $ExecutingUser -API $APIName -message "Executed action $($Action) on $($DeviceID)" -Sev Info
+        Write-LogMessage -headers $Headers -API $APIName -message "Executed action $($Action) on $($DeviceID)" -Sev Info
         return "Executed action $($Action) on $($DeviceID)"
     } catch {
         $ErrorMessage = Get-CippException -Exception $_
-        Write-LogMessage -user $ExecutingUser -API $APIName -message "Failed to queue action $($Action) on $($DeviceID). Error: $($ErrorMessage.NormalizedError)" -Sev Error -LogData $ErrorMessage
+        Write-LogMessage -headers $Headers -API $APIName -message "Failed to queue action $($Action) on $($DeviceID). Error: $($ErrorMessage.NormalizedError)" -Sev Error -LogData $ErrorMessage
         throw "Failed to queue action $($Action) on $($DeviceID). Error: $($ErrorMessage.NormalizedError)"
     }
 

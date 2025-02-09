@@ -20,7 +20,7 @@ Function Invoke-ExecDeviceDelete {
     $DeviceID = $Request.body.ID ?? $Request.Query.ID
 
     try {
-        $Results = Set-CIPPDeviceState -Action $Action -DeviceID $DeviceID -TenantFilter $TenantFilter -ExecutingUser $ExecutingUser -APIName $APINAME
+        $Results = Set-CIPPDeviceState -Action $Action -DeviceID $DeviceID -TenantFilter $TenantFilter -Headers $Request.Headers -APIName $APINAME
         $StatusCode = [HttpStatusCode]::OK
     } catch {
         $Results = $_.Exception.Message

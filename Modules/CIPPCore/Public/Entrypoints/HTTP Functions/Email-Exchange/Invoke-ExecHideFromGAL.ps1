@@ -22,7 +22,7 @@ Function Invoke-ExecHideFromGAL {
 
 
     Try {
-        $HideResults = Set-CIPPHideFromGAL -tenantFilter $TenantFilter -UserID $UserId -hidefromgal $Hidden -ExecutingUser $ExecutingUser -APIName $APIName
+        $HideResults = Set-CIPPHideFromGAL -tenantFilter $TenantFilter -UserID $UserId -hidefromgal $Hidden -Headers $Request.Headers -APIName $APIName
         $Results = [pscustomobject]@{'Results' = $HideResults }
         $StatusCode = [HttpStatusCode]::OK
 

@@ -51,7 +51,7 @@ Function Invoke-ExecEmailForward {
 
     if ($ForwardOption -eq 'disabled') {
         try {
-            Set-CIPPForwarding -userid $username -username $username -tenantFilter $Tenantfilter -ExecutingUser $ExecutingUser -APIName $APIName -Disable $true
+            Set-CIPPForwarding -userid $username -username $username -tenantFilter $Tenantfilter -Headers $Request.Headers -APIName $APIName -Disable $true
             $results = "Disabled Email Forwarding for $($username)"
         } catch {
             Write-LogMessage -headers $Request.Headers -API $APINAME -message "Could not disable Email forwarding for $($username)" -Sev 'Error' -tenant $TenantFilter

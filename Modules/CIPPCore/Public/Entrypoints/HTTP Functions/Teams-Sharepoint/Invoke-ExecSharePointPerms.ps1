@@ -26,7 +26,7 @@ Function Invoke-ExecSharePointPerms {
         $State = Set-CIPPSharePointPerms -tenantFilter $tenantFilter `
             -UserId $UserId `
             -OnedriveAccessUser $OnedriveAccessUser `
-            -ExecutingUser $ExecutingUser `
+            -Headers $Request.Headers `
             -APIName $APIName `
             -RemovePermission $Request.body.RemovePermission `
             -URL $Request.Body.URL
