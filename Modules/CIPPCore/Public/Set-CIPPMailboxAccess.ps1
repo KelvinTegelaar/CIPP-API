@@ -15,10 +15,10 @@ function Set-CIPPMailboxAccess {
 
         if ($Automap) {
             Write-LogMessage -headers $Headers -API $APIName -message "Gave $AccessRights permissions to $($AccessUser) on $($userid) with automapping" -Sev 'Info' -tenant $TenantFilter
-            return "added $($AccessUser) to $($userid) Shared Mailbox with automapping, with the following permissions: $AccessRights"
+            return "Added $($AccessUser) to $($userid) Shared Mailbox with automapping, with the following permissions: $AccessRights"
         } else {
             Write-LogMessage -headers $Headers -API $APIName -message "Gave $AccessRights permissions to $($AccessUser) on $($userid) without automapping" -Sev 'Info' -tenant $TenantFilter
-            return "added $($AccessUser) to $($userid) Shared Mailbox without automapping, with the following permissions: $AccessRights"
+            return "Added $($AccessUser) to $($userid) Shared Mailbox without automapping, with the following permissions: $AccessRights"
         }
     } catch {
         $ErrorMessage = Get-CippException -Exception $_
