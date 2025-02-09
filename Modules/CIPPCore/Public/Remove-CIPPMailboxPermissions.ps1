@@ -6,7 +6,7 @@ function Remove-CIPPMailboxPermissions {
         $TenantFilter,
         $PermissionsLevel,
         $APIName = 'Manage Shared Mailbox Access',
-        $ExecutingUser
+        $Headers
     )
 
     try {
@@ -24,14 +24,14 @@ function Remove-CIPPMailboxPermissions {
                     'SendOnBehalf' {
                         $MailboxPerms = New-ExoRequest -Anchor $UserId -tenantid $Tenantfilter -cmdlet 'Set-Mailbox' -cmdParams @{Identity = $userid; GrantSendonBehalfTo = @{'@odata.type' = '#Exchange.GenericHashTable'; remove = $AccessUser }; }
                         if ($MailboxPerms -notlike '*completed successfully but no settings of*') {
-                            Write-LogMessage -user $ExecutingUser -API $APIName -message "Removed SendOnBehalf permissions for $($AccessUser) from $($userid)'s mailbox." -Sev 'Info' -tenant $TenantFilter
+                            Write-LogMessage -headers $Headers -API $APIName -message "Removed SendOnBehalf permissions for $($AccessUser) from $($userid)'s mailbox." -Sev 'Info' -tenant $TenantFilter
                             "Removed SendOnBehalf permissions for $($AccessUser) from $($userid)'s mailbox."
                         }
                     }
                     'SendAS' {
                         $MailboxPerms = New-ExoRequest -Anchor $userId -tenantid $Tenantfilter -cmdlet 'Remove-RecipientPermission' -cmdParams @{Identity = $userid; Trustee = $AccessUser; accessRights = @('SendAs') }
                         if ($MailboxPerms -notlike "*because the ACE isn't present*") {
-                            Write-LogMessage -user $ExecutingUser -API $APIName -message "Removed SendAs permissions for $($AccessUser) from $($userid)'s mailbox." -Sev 'Info' -tenant $TenantFilter
+                            Write-LogMessage -headers $Headers -API $APIName -message "Removed SendAs permissions for $($AccessUser) from $($userid)'s mailbox." -Sev 'Info' -tenant $TenantFilter
                             "Removed SendAs permissions for $($AccessUser) from $($userid)'s mailbox."
                         }
                     }
@@ -50,7 +50,7 @@ function Remove-CIPPMailboxPermissions {
                         $permissions = New-ExoRequest @ExoRequest
 
                         if ($permissions -notlike "*because the ACE doesn't exist on the object.*") {
-                            Write-LogMessage -user $ExecutingUser -API $APIName -message "Removed FullAccess permissions for $($AccessUser) from $($userid)'s mailbox." -Sev 'Info' -tenant $TenantFilter
+                            Write-LogMessage -headers $Headers -API $APIName -message "Removed FullAccess permissions for $($AccessUser) from $($userid)'s mailbox." -Sev 'Info' -tenant $TenantFilter
                             "Removed FullAccess permissions for $($AccessUser) from $($userid)'s mailbox."
                         }
                     }
@@ -60,7 +60,7 @@ function Remove-CIPPMailboxPermissions {
         return $Results
     } catch {
         $ErrorMessage = Get-CippException -Exception $_
-        Write-LogMessage -user $ExecutingUser -API $APIName -message "Could not remove mailbox permissions for $($userid). Error: $($ErrorMessage.NormalizedError)" -Sev 'Error' -tenant $TenantFilter -LogData $ErrorMessage
+        Write-LogMessage -headers $Headers -API $APIName -message "Could not remove mailbox permissions for $($userid). Error: $($ErrorMessage.NormalizedError)" -Sev 'Error' -tenant $TenantFilter -LogData $ErrorMessage
         return "Could not remove mailbox permissions for $($userid). Error: $($ErrorMessage.NormalizedError)"
     }
 }

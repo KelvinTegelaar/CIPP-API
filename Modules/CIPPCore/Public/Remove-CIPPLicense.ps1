@@ -1,7 +1,7 @@
 function Remove-CIPPLicense {
     [CmdletBinding(SupportsShouldProcess = $true)]
     param (
-        $ExecutingUser,
+        $Headers,
         $userid,
         $username,
         $APIName = 'Remove License',
@@ -45,16 +45,16 @@ function Remove-CIPPLicense {
                 }
                 if ($PSCmdlet.ShouldProcess($userid, "Remove licenses: $ConvertedLicense")) {
                     $null = New-GraphPostRequest -uri "https://graph.microsoft.com/beta/users/$($userid)/assignlicense" -tenantid $tenantFilter -type POST -body (ConvertTo-Json -InputObject $LicensePayload -Compress -Depth 5) -verbose
-                    Write-LogMessage -user $ExecutingUser -API $APIName -message "Removed licenses for $($username): $ConvertedLicense" -Sev 'Info' -tenant $TenantFilter
+                    Write-LogMessage -headers $Headers -API $APIName -message "Removed licenses for $($username): $ConvertedLicense" -Sev 'Info' -tenant $TenantFilter
                 }
                 return "Removed licenses for $($Username): $ConvertedLicense"
             } else {
-                Write-LogMessage -user $ExecutingUser -API $APIName -message "No licenses to remove for $username" -Sev 'Info' -tenant $TenantFilter
+                Write-LogMessage -headers $Headers -API $APIName -message "No licenses to remove for $username" -Sev 'Info' -tenant $TenantFilter
                 return "No licenses to remove for $username"
             }
         } catch {
             $ErrorMessage = Get-CippException -Exception $_
-            Write-LogMessage -user $ExecutingUser -API $APIName -message "Could not remove license for $username. Error: $($ErrorMessage.NormalizedError)" -Sev 'Error' -tenant $TenantFilter -LogData $ErrorMessage
+            Write-LogMessage -headers $Headers -API $APIName -message "Could not remove license for $username. Error: $($ErrorMessage.NormalizedError)" -Sev 'Error' -tenant $TenantFilter -LogData $ErrorMessage
             return "Could not remove license for $($username). Error: $($ErrorMessage.NormalizedError)"
         }
     }
