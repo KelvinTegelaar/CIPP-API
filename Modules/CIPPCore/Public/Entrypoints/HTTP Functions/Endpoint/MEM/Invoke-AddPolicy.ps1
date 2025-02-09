@@ -27,7 +27,7 @@ Function Invoke-AddPolicy {
         }
         try {
             Write-Host 'Calling Adding policy'
-            Set-CIPPIntunePolicy -TemplateType $Request.body.TemplateType -Description $description -DisplayName $displayname -RawJSON $RawJSON -AssignTo $AssignTo -tenantFilter $Tenant
+            Set-CIPPIntunePolicy -TemplateType $Request.body.TemplateType -Description $description -DisplayName $displayname -RawJSON $RawJSON -AssignTo $AssignTo -tenantFilter $Tenant -Headers $Request.Headers
             Write-LogMessage -headers $Request.Headers -API $APINAME -tenant $($Tenant) -message "Added policy $($Displayname)" -Sev 'Info'
         } catch {
             "$($_.Exception.Message)"
