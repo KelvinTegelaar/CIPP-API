@@ -96,12 +96,12 @@ Function Invoke-EditUser {
                 $null = $results.Add( 'Success. User license is already correct.' )
             } else {
                 if ($UserObj.removeLicenses) {
-                    $licResults = Set-CIPPUserLicense -UserId $UserObj.id -TenantFilter $UserObj.tenantFilter -RemoveLicenses $CurrentLicenses.assignedLicenses.skuId
+                    $licResults = Set-CIPPUserLicense -UserId $UserObj.id -TenantFilter $UserObj.tenantFilter -RemoveLicenses $CurrentLicenses.assignedLicenses.skuId -Headers $Request.Headers
                     $null = $results.Add($licResults)
                 } else {
                     #Remove all objects from $CurrentLicenses.assignedLicenses.skuId that are in $licenses
                     $RemoveLicenses = $CurrentLicenses.assignedLicenses.skuId | Where-Object { $_ -notin $licenses }
-                    $licResults = Set-CIPPUserLicense -UserId $UserObj.id -TenantFilter $UserObj.tenantFilter -RemoveLicenses $RemoveLicenses -AddLicenses $licenses
+                    $licResults = Set-CIPPUserLicense -UserId $UserObj.id -TenantFilter $UserObj.tenantFilter -RemoveLicenses $RemoveLicenses -AddLicenses $licenses -Headers $Request.headers
                     $null = $results.Add($licResults)
                 }
 
