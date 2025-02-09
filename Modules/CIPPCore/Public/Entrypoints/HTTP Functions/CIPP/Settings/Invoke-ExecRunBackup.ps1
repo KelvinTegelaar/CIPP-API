@@ -13,7 +13,7 @@ Function Invoke-ExecRunBackup {
     $APIName = $Request.Params.CIPPEndpoint
 
     try {
-        $CSVfile = New-CIPPBackup -BackupType 'CIPP'
+        $CSVfile = New-CIPPBackup -BackupType 'CIPP' -Request $Request
         $body = [pscustomobject]@{
             'Results' = @{
                 resultText = 'Created backup'
