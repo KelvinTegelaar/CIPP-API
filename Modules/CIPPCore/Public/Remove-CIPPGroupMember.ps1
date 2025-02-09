@@ -1,5 +1,5 @@
 function Remove-CIPPGroupMember(
-    $Headers
+    $Headers,
     [string]$GroupType,
     [string]$GroupId,
     [string]$Member,
