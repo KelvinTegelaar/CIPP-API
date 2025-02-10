@@ -12,8 +12,7 @@ Function Invoke-ExecExcludeTenant {
 
     Write-LogMessage -headers $Request.Headers -API $APINAME -message 'Accessed this API' -Sev 'Debug'
 
-    $user = $request.headers.'x-ms-client-principal'
-    $username = ([System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($user)) | ConvertFrom-Json).userDetails
+    $username = $Request.Headers.'x-ms-client-principal-name'
     $date = (Get-Date).tostring('yyyy-MM-dd')
     $TenantsTable = Get-CippTable -tablename Tenants
 

@@ -25,9 +25,9 @@ Function Invoke-ExecSetOoO {
 
         $Results = try {
             if ($Request.Body.AutoReplyState.value -ne 'Scheduled') {
-                Set-CIPPOutOfOffice -userid $Username -tenantFilter $TenantFilter -APIName $APINAME -ExecutingUser $request.headers.'X-MS-CLIENT-PRINCIPAL' -InternalMessage $InternalMessage -ExternalMessage $ExternalMessage -State $Request.Body.AutoReplyState.value
+                Set-CIPPOutOfOffice -userid $Username -tenantFilter $TenantFilter -APIName $APINAME -Headers $Request.Headers -InternalMessage $InternalMessage -ExternalMessage $ExternalMessage -State $Request.Body.AutoReplyState.value
             } else {
-                Set-CIPPOutOfOffice -userid $Username -tenantFilter $TenantFilter -APIName $APINAME -ExecutingUser $request.headers.'X-MS-CLIENT-PRINCIPAL' -InternalMessage $InternalMessage -ExternalMessage $ExternalMessage -StartTime $StartTime -EndTime $EndTime -State $Request.Body.AutoReplyState.value
+                Set-CIPPOutOfOffice -userid $Username -tenantFilter $TenantFilter -APIName $APINAME -Headers $Request.Headers -InternalMessage $InternalMessage -ExternalMessage $ExternalMessage -StartTime $StartTime -EndTime $EndTime -State $Request.Body.AutoReplyState.value
             }
         } catch {
             "Could not add out of office message for $($username). Error: $($_.Exception.Message)"

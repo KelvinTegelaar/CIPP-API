@@ -11,8 +11,8 @@ Function Invoke-RemoveApp {
     param($Request, $TriggerMetadata)
 
     $APIName = $Request.Params.CIPPEndpoint
-    $User = $request.headers.'x-ms-client-principal'
-    Write-LogMessage -user $User -API $APINAME -message 'Accessed this API' -Sev 'Debug'
+    $User = $Request.Headers
+    Write-LogMessage -Headers $User -API $APINAME -message 'Accessed this API' -Sev 'Debug'
 
     # Interact with query parameters or the body of the request.
     $TenantFilter = $Request.Query.TenantFilter
@@ -21,11 +21,11 @@ Function Invoke-RemoveApp {
     try {
         #$unAssignRequest = New-GraphPostRequest -uri "https://graph.microsoft.com/beta/deviceManagement/configurationPolicies('$($policyId)')/assign" -type POST -Body '{"assignments":[]}' -tenant $TenantFilter
         $null = New-GraphPostRequest -uri "https://graph.microsoft.com/beta/deviceAppManagement/mobileApps/$($policyId)" -type DELETE -tenant $TenantFilter
-        Write-LogMessage -user $User -API $APINAME -message "Deleted $policyId" -Sev 'Info' -tenant $TenantFilter
+        Write-LogMessage -Headers $User -API $APINAME -message "Deleted $policyId" -Sev 'Info' -tenant $TenantFilter
         $body = [pscustomobject]@{'Results' = 'Successfully deleted the application' }
     } catch {
         $ErrorMessage = Get-CippException -Exception $_
-        Write-LogMessage -user $User -API $APINAME -message "Could not delete app $policyId. $($ErrorMessage.NormalizedError)" -Sev 'Error' -tenant $TenantFilter -LogData $ErrorMessage
+        Write-LogMessage -Headers $User -API $APINAME -message "Could not delete app $policyId. $($ErrorMessage.NormalizedError)" -Sev 'Error' -tenant $TenantFilter -LogData $ErrorMessage
         $body = [pscustomobject]@{'Results' = "Could not delete this application: $($ErrorMessage.NormalizedError)" }
 
     }

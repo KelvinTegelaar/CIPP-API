@@ -117,6 +117,9 @@ function Invoke-ListGraphRequest {
     }
 
     $Metadata = $GraphRequestParams
+    if ($Request.Headers.'x-ms-coldstart' -eq 1) {
+        $Metadata.ColdStart = $true
+    }
 
     try {
         $Results = Get-GraphRequestList @GraphRequestParams

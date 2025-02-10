@@ -53,7 +53,13 @@ function Invoke-ExecApiClient {
             }
 
             if ($Request.Body.IpRange.value) {
-                $IpRange = @($Request.Body.IpRange.value)
+                $IpRange = [System.Collections.Generic.List[string]]::new()
+                $regexPattern = '^(?:(?:[0-9]{1,3}\.){3}[0-9]{1,3}(?:/\d{1,2})?|(?:[0-9A-Fa-f]{1,4}:){1,7}[0-9A-Fa-f]{1,4}(?:/\d{1,3})?)$'
+                foreach ($IP in @($Request.Body.IPRange.value)) {
+                    if ($IP -match $regexPattern) {
+                        $IpRange.Add($IP)
+                    }
+                }
             } else {
                 $IpRange = @()
             }
@@ -145,15 +151,19 @@ function Invoke-ExecApiClient {
                 if ($Request.Body.ClientId) {
                     $ClientId = $Request.Body.ClientId.value ?? $Request.Body.ClientId
                     if ($Request.Body.RemoveAppReg -eq $true) {
-                        $Apps = New-GraphGetRequest -uri "https://graph.microsoft.com/v1.0/applications?`$filter=signInAudience eq 'AzureAdMyOrg' and web/redirectUris/any(x:x eq 'https://$($sitename).azurewebsites.net/.auth/login/aad/callback')&`$top=999&`$select=id,appId&`$count=true" -NoAuthCheck $true -asapp $true -ComplexFilter
-                        $Id = $Apps | Where-Object { $_.appId -eq $ClientId } | Select-Object -ExpandProperty id
-                        if ($Id) {
-                            New-GraphPOSTRequest -uri "https://graph.microsoft.com/v1.0/applications(appId='$ClientId')" -Method DELETE -Body '{}' -NoAuthCheck $true -asapp $true
+                        Write-Information "Deleting API Client: $ClientId from Entra"
+                        $App = New-GraphGetRequest -uri "https://graph.microsoft.com/v1.0/applications?`$filter=appId eq '$($ClientId)'&`$select=id,appId,web" -NoAuthCheck $true -asapp $true
+                        $Id = $App.id
+                        if ($Id -and $App.web.redirectUris -like "*$($env:WEBSITE_SITE_NAME)*") {
+                            New-GraphPOSTRequest -uri "https://graph.microsoft.com/v1.0/applications/$Id" -type DELETE -Body '{}' -NoAuthCheck $true -asapp $true
+                            Write-Information "Deleted App Registration for $ClientId"
+                        } else {
+                            Write-Information "App Registration for $ClientId not found or Redirect URI does not match"
                         }
                     }
-
-                    $Client = Get-CIPPAzDataTableEntity @Table -Filter "RowKey eq '$($ClientId)'" -Property RowKey, PartitionKey, ETag
-                    Remove-AzDataTableEntity @Table -Entity $Client
+                    Write-Information "Deleting API Client: $ClientId from CIPP"
+                    $Client = Get-CIPPAzDataTableEntity @Table -Filter "RowKey eq '$($ClientId)'" -Property RowKey, PartitionKey
+                    Remove-AzDataTableEntity @Table -Entity $Client -Force
                     Write-LogMessage -headers $Request.Headers -API 'ExecApiClient' -message "Deleted API client $ClientId" -Sev 'Info'
                     $Body = @{ Results = "API client $ClientId deleted" }
                 } else {

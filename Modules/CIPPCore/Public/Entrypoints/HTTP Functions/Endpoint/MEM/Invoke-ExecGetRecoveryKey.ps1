@@ -20,7 +20,7 @@ Function Invoke-ExecGetRecoveryKey {
     # Interact with query parameters or the body of the request.
     $TenantFilter = $Request.Query.TenantFilter
     try {
-        $GraphRequest = Get-CIPPBitlockerKey -device $Request.query.GUID -tenantFilter $TenantFilter -APIName $APINAME -ExecutingUser $request.headers.'x-ms-client-principal'
+        $GraphRequest = Get-CIPPBitlockerKey -device $Request.query.GUID -tenantFilter $TenantFilter -APIName $APINAME -Headers $Request.Headers
         $Body = [pscustomobject]@{'Results' = $GraphRequest }
 
     } catch {

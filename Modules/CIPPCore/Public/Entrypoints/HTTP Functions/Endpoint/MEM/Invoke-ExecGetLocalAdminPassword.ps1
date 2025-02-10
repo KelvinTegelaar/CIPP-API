@@ -13,7 +13,7 @@ Function Invoke-ExecGetLocalAdminPassword {
     $APIName = $Request.Params.CIPPEndpoint
 
     try {
-        $GraphRequest = Get-CIPPLapsPassword -device $($request.body.guid) -tenantFilter $Request.body.TenantFilter -APIName $APINAME -ExecutingUser $request.headers.'x-ms-client-principal'
+        $GraphRequest = Get-CIPPLapsPassword -device $($request.body.guid) -tenantFilter $Request.body.TenantFilter -APIName $APINAME -Headers $Request.Headers
         $Body = [pscustomobject]@{'Results' = $GraphRequest }
 
     } catch {

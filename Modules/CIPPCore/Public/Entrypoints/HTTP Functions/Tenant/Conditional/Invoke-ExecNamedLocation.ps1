@@ -23,7 +23,7 @@ Function Invoke-ExecNamedLocation {
     $content = $Request.Body.input ?? $Request.Query.input
 
     try {
-        $results = Set-CIPPNamedLocation -NamedLocationId $NamedLocationId -TenantFilter $TenantFilter -change $change -content $content -ExecutingUser $request.headers.'x-ms-client-principal'
+        $results = Set-CIPPNamedLocation -NamedLocationId $NamedLocationId -TenantFilter $TenantFilter -change $change -content $content -Headers $Request.Headers
     } catch {
         $ErrorMessage = Get-CippException -Exception $_
         Write-LogMessage -headers $Request.Headers -API $APIName -message "Failed to edit named location: $($ErrorMessage.NormalizedError)" -Sev 'Error' -tenant $TenantFilter -LogData $ErrorMessage

@@ -21,7 +21,7 @@ Function Invoke-ExecCopyForSent {
     # Interact with query parameters or the body of the request.
     Try {
         $MessageCopyForSentAsEnabled = if ($request.query.MessageCopyForSentAsEnabled -eq 'false') { 'false' } else { 'true' }
-        $MessageResult = Set-CIPPMessageCopy -userid $Request.query.id -tenantFilter $Request.query.TenantFilter -APIName $APINAME -ExecutingUser $request.headers.'x-ms-client-principal' -MessageCopyForSentAsEnabled $MessageCopyForSentAsEnabled
+        $MessageResult = Set-CIPPMessageCopy -userid $Request.query.id -tenantFilter $Request.query.TenantFilter -APIName $APINAME -Headers $Request.Headers -MessageCopyForSentAsEnabled $MessageCopyForSentAsEnabled
         $Results = [pscustomobject]@{'Results' = "$MessageResult" }
     } catch {
         $Results = [pscustomobject]@{'Results' = "set MessageCopyForSentAsEnabled to $MessageCopyForSentAsEnabled failed - $($_.Exception.Message)" }

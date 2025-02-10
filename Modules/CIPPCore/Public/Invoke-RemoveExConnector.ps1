@@ -11,9 +11,9 @@ Function Invoke-RemoveExConnector {
     param($Request, $TriggerMetadata)
 
     $APIName = $Request.Params.CIPPEndpoint
-    $ExecutingUser = $request.headers.'x-ms-client-principal'
+    $Headers = $Request.Headers
     $TenantFilter = $request.Query.tenantFilter ?? $Request.Body.tenantFilter
-    Write-LogMessage -user $ExecutingUser -API $APINAME -message 'Accessed this API' -Sev 'Debug'
+    Write-LogMessage -headers $Headers -API $APINAME -message 'Accessed this API' -Sev 'Debug'
 
     try {
         $Type = $Request.Query.Type ?? $Request.Body.Type
@@ -22,11 +22,11 @@ Function Invoke-RemoveExConnector {
 
         $null = New-ExoRequest -tenantid $TenantFilter -cmdlet "Remove-$($Type)Connector" -cmdParams $params -useSystemMailbox $true
         $Result = "Deleted Connector: $($Guid)"
-        Write-LogMessage -user $ExecutingUser -API $APIName -tenant $TenantFilter -message "Deleted connector $($Guid)" -sev Debug
+        Write-LogMessage -headers $Headers -API $APIName -tenant $TenantFilter -message "Deleted connector $($Guid)" -sev Debug
         $StatusCode = [HttpStatusCode]::OK
     } catch {
         $ErrorMessage = Get-CippException -Exception $_
-        Write-LogMessage -user $ExecutingUser -API $APIName -tenant $TenantFilter -message "Failed deleting connector $($Guid). Error:$($ErrorMessage.NormalizedError)" -Sev Error -LogData $ErrorMessage
+        Write-LogMessage -headers $Headers -API $APIName -tenant $TenantFilter -message "Failed deleting connector $($Guid). Error:$($ErrorMessage.NormalizedError)" -Sev Error -LogData $ErrorMessage
         $Result = $ErrorMessage.NormalizedError
         $StatusCode = [HttpStatusCode]::Forbidden
     }

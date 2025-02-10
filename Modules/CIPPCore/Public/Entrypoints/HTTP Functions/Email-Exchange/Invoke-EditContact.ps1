@@ -12,8 +12,8 @@ Function Invoke-EditContact {
 
     $APIName = $Request.Params.CIPPEndpoint
     $TenantID = $Request.body.tenantID
-    $ExecutingUser = $Request.headers.'x-ms-client-principal'
-    Write-LogMessage -user $ExecutingUser -API $APINAME -message 'Accessed this API' -Sev 'Debug'
+    $Headers = $Request.Headers
+    Write-LogMessage -Headers $Headers -API $APINAME -message 'Accessed this API' -Sev 'Debug'
 
     try {
         # Extract contact information from the request body
@@ -43,13 +43,13 @@ Function Invoke-EditContact {
         $null = New-ExoRequest -tenantid $TenantID -cmdlet 'Set-Contact' -cmdParams $bodyForSetContact -UseSystemMailbox $true
         $null = New-ExoRequest -tenantid $TenantID -cmdlet 'Set-MailContact' -cmdParams @{Identity = $contactInfo.ContactID; HiddenFromAddressListsEnabled = [System.Convert]::ToBoolean($contactInfo.hidefromGAL) } -UseSystemMailbox $true
         $Results = "Successfully edited contact $($contactInfo.DisplayName)"
-        Write-LogMessage -user $ExecutingUser -API $APINAME -tenant $TenantID -message $Results -Sev Info
+        Write-LogMessage -Headers $Headers -API $APINAME -tenant $TenantID -message $Results -Sev Info
         $StatusCode = [HttpStatusCode]::OK
 
     } catch {
         $ErrorMessage = Get-CippException -Exception $_
         $Results = "Failed to edit contact. $($ErrorMessage.NormalizedError)"
-        Write-LogMessage -user $ExecutingUser -API $APINAME -tenant $TenantID -message $Results -Sev Error -LogData $ErrorMessage
+        Write-LogMessage -Headers $Headers -API $APINAME -tenant $TenantID -message $Results -Sev Error -LogData $ErrorMessage
         $StatusCode = [HttpStatusCode]::InternalServerError
     }
 

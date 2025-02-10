@@ -20,7 +20,7 @@ Function Invoke-ExecEnableArchive {
 
     # Interact with query parameters or the body of the request.
     Try {
-        $ResultsArch = Set-CIPPMailboxArchive -userid $Request.query.id -tenantFilter $Request.query.TenantFilter -APIName $APINAME -ExecutingUser $request.headers.'x-ms-client-principal' -ArchiveEnabled $true
+        $ResultsArch = Set-CIPPMailboxArchive -userid $Request.query.id -tenantFilter $Request.query.TenantFilter -APIName $APINAME -Headers $Request.Headers -ArchiveEnabled $true
         $Results = [pscustomobject]@{'Results' = "$ResultsArch" }
     } catch {
         $Results = [pscustomobject]@{'Results' = "Failed. $($_.Exception.Message)" }

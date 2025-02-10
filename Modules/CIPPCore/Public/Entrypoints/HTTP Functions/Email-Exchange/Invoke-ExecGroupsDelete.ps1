@@ -20,7 +20,7 @@ Function Invoke-ExecGroupsDelete {
 
     # Interact with query parameters or the body of the request.
     Try {
-        $RemoveResults = Remove-CIPPGroup -ID $Request.query.id -GroupType $Request.query.GroupType -tenantFilter $Request.query.TenantFilter -displayName $Request.query.displayName -APIName $APINAME -ExecutingUser $request.headers.'x-ms-client-principal'
+        $RemoveResults = Remove-CIPPGroup -ID $Request.query.id -GroupType $Request.query.GroupType -tenantFilter $Request.query.TenantFilter -displayName $Request.query.displayName -APIName $APINAME -Headers $Request.Headers
         $Results = [pscustomobject]@{'Results' = $RemoveResults }
     } catch {
         $Results = [pscustomobject]@{'Results' = "Failed. $($_.Exception.Message)" }

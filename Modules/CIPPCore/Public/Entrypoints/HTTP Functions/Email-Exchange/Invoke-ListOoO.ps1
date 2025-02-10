@@ -13,7 +13,7 @@ Function Invoke-ListOoO {
     $APIName = $Request.Params.CIPPEndpoint
     $Tenantfilter = $request.query.tenantFilter
     try {
-        $Body = Get-CIPPOutOfOffice -userid $Request.query.userid -tenantFilter $TenantFilter -APIName $APINAME -ExecutingUser $request.headers.'x-ms-client-principal'
+        $Body = Get-CIPPOutOfOffice -userid $Request.query.userid -tenantFilter $TenantFilter -APIName $APINAME -Headers $Request.Headers
     } catch {
         $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
         $Body = [pscustomobject]@{'Results' = "Failed. $ErrorMessage" }

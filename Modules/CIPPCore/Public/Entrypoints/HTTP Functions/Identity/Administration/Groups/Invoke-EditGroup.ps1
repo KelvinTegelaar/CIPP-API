@@ -156,7 +156,7 @@ Function Invoke-EditGroup {
 
     if ($userobj.allowExternal -eq 'true') {
         try {
-            Set-CIPPGroupAuthentication -ID $userobj.mail -GroupType $GroupType -tenantFilter $TenantId -APIName $APINAME -ExecutingUser $request.headers.'x-ms-client-principal'
+            Set-CIPPGroupAuthentication -ID $userobj.mail -GroupType $GroupType -tenantFilter $TenantId -APIName $APINAME -Headers $Request.Headers
             $body = $results.add("Allowed external senders to send to $($userobj.mail).")
         } catch {
             $body = $results.add("Failed to allow external senders to send to $($userobj.mail).")

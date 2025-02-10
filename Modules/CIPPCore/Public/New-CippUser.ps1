@@ -5,7 +5,7 @@ function New-CIPPUser {
         $Aliases = 'Scheduled',
         $RestoreValues,
         $APIName = 'New User',
-        $ExecutingUser
+        $Headers
     )
 
     try {
@@ -50,7 +50,7 @@ function New-CIPPUser {
         $bodyToShip = ConvertTo-Json -Depth 10 -InputObject $BodyToship -Compress
         Write-Host "Shipping: $bodyToShip"
         $GraphRequest = New-GraphPostRequest -uri 'https://graph.microsoft.com/beta/users' -tenantId $UserObj.tenantFilter -type POST -body $BodyToship -verbose
-        Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $($UserObj.tenantFilter) -message "Created user $($UserObj.displayname) with id $($GraphRequest.id) " -Sev 'Info'
+        Write-LogMessage -headers $Headers -API $APINAME -tenant $($UserObj.tenantFilter) -message "Created user $($UserObj.displayname) with id $($GraphRequest.id) " -Sev 'Info'
 
         try {
             $PasswordLink = New-PwPushLink -Payload $password
@@ -66,7 +66,7 @@ function New-CIPPUser {
             Password = $password
         }
     } catch {
-        Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $($UserObj.tenantFilter) -message "Failed to create user. Error:$($_.Exception.Message)" -Sev 'Error'
+        Write-LogMessage -headers $Headers -API $APINAME -tenant $($UserObj.tenantFilter) -message "Failed to create user. Error:$($_.Exception.Message)" -Sev 'Error'
         $results = @{ Results = ("Failed to create user. $($_.Exception.Message)" ) }
         throw "Failed to create user  $($_.Exception.Message)"
     }

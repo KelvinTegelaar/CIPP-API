@@ -34,7 +34,7 @@ Function Invoke-ListDomainHealth {
     }
 
     Set-DnsResolver -Resolver $Resolver
-
+    #UNDOREPLACE
     $UserCreds = ([System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($request.headers.'x-ms-client-principal')) | ConvertFrom-Json)
 
     $APIName = $Request.Params.CIPPEndpoint

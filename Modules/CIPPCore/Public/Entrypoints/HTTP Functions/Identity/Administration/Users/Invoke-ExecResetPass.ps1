@@ -22,7 +22,7 @@ Function Invoke-ExecResetPass {
     $mustChange = [System.Convert]::ToBoolean($request.query.MustChange)
 
     try {
-        $Reset = Set-CIPPResetPassword -userid $Request.query.ID -tenantFilter $TenantFilter -APIName $APINAME -ExecutingUser $request.headers.'x-ms-client-principal' -forceChangePasswordNextSignIn $mustChange
+        $Reset = Set-CIPPResetPassword -userid $Request.query.ID -tenantFilter $TenantFilter -APIName $APINAME -Headers $Request.Headers -forceChangePasswordNextSignIn $mustChange
         $Results = [pscustomobject]@{'Results' = $Reset }
     } catch {
         $Results = [pscustomobject]@{'Results' = "Failed to reset password for $($Request.query.displayName): $($_.Exception.Message)" }

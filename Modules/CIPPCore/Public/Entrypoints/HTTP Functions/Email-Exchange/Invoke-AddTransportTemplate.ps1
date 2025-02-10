@@ -11,8 +11,8 @@ Function Invoke-AddTransportTemplate {
     param($Request, $TriggerMetadata)
 
     $APIName = $Request.Params.CIPPEndpoint
-    $ExecutingUser = $Request.headers.'x-ms-client-principal'
-    Write-LogMessage -user $ExecutingUser -API $APINAME -message 'Accessed this API' -Sev Debug
+    $Headers = $Request.Headers
+    Write-LogMessage -Headers $Headers -API $APINAME -message 'Accessed this API' -Sev Debug
     Write-Host ($request | ConvertTo-Json -Depth 10 -Compress)
 
     try {
@@ -35,12 +35,12 @@ Function Invoke-AddTransportTemplate {
             RowKey       = "$GUID"
             PartitionKey = 'TransportTemplate'
         }
-        Write-LogMessage -user $ExecutingUser -API $APINAME -message "Created Transport Rule Template $($Request.body.name) with GUID $GUID" -Sev Debug
+        Write-LogMessage -Headers $Headers -API $APINAME -message "Created Transport Rule Template $($Request.body.name) with GUID $GUID" -Sev Debug
         $body = [pscustomobject]@{'Results' = "Created Transport Rule Template $($Request.body.name) with GUID $GUID" }
         $StatusCode = [HttpStatusCode]::OK
     } catch {
         $ErrorMessage = Get-CippException -Exception $_
-        Write-LogMessage -user $ExecutingUser -API $APINAME -message "Failed to create Transport Rule Template: $($ErrorMessage.NormalizedError)" -Sev Error -LogData $ErrorMessage
+        Write-LogMessage -Headers $Headers -API $APINAME -message "Failed to create Transport Rule Template: $($ErrorMessage.NormalizedError)" -Sev Error -LogData $ErrorMessage
         $body = [pscustomobject]@{'Results' = "Failed to create Transport Rule Template: $($ErrorMessage.NormalizedError)" }
         $StatusCode = [HttpStatusCode]::Forbidden
     }

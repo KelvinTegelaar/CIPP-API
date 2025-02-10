@@ -41,7 +41,7 @@ Function Invoke-ExecCAExclusion {
         Add-CIPPScheduledTask -Task $TaskBody -hidden $false
         $body = @{ Results = "Successfully added vacation mode schedule for $Username." }
     } else {
-        Set-CIPPCAExclusion -TenantFilter $Request.body.TenantFilter -ExclusionType $Request.body.ExclusionType -UserID $Request.body.UserID -PolicyId $Request.body.PolicyId -executingUser $request.headers.'x-ms-client-principal' -UserName $Username
+        Set-CIPPCAExclusion -TenantFilter $Request.body.TenantFilter -ExclusionType $Request.body.ExclusionType -UserID $Request.body.UserID -PolicyId $Request.body.PolicyId -Headers $Request.Headers -UserName $Username
     }
 
 

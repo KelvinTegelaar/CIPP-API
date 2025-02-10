@@ -50,7 +50,7 @@ function Invoke-ListAppConsentRequests {
         $StatusCode = [HttpStatusCode]::OK
     } catch {
         $StatusCode = [HttpStatusCode]::OK
-        Write-LogMessage -user $ExecutingUser -API $APIName -message 'app consent request list failed' -Sev 'Error' -tenant $TenantFilter
+        Write-LogMessage -Headers $Headers -API $APIName -message 'app consent request list failed' -Sev 'Error' -tenant $TenantFilter
         $Results = @{ appDisplayName = "Error: $($_.Exception.Message)" }
     }
 
