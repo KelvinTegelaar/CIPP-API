@@ -53,7 +53,13 @@ function Invoke-ExecApiClient {
             }
 
             if ($Request.Body.IpRange.value) {
-                $IpRange = @($Request.Body.IpRange.value)
+                $IpRange = [System.Collections.Generic.List[string]]::new()
+                $regexPattern = '^(?:(?:[0-9]{1,3}\.){3}[0-9]{1,3}(?:/\d{1,2})?|(?:[0-9A-Fa-f]{1,4}:){1,7}[0-9A-Fa-f]{1,4}(?:/\d{1,3})?)$'
+                foreach ($IP in @($Request.Body.IPRange.value)) {
+                    if ($IP -match $regexPattern) {
+                        $IpRange.Add($IP)
+                    }
+                }
             } else {
                 $IpRange = @()
             }
