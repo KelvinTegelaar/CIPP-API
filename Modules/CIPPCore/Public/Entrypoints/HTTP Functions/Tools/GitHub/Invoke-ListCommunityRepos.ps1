@@ -13,7 +13,36 @@ function Invoke-ListCommunityRepos {
     param($Request, $TriggerMetadata)
 
     $Table = Get-CIPPTable -TableName CommunityRepos
-    $Repos = Get-CIPPAzDataTableEntity @Table | ForEach-Object {
+    $Repos = Get-CIPPAzDataTableEntity @Table
+
+    $CIPPRoot = (Get-Item (Get-Module -Name CIPPCore).ModuleBase).Parent.Parent.FullName
+    $CommunityRepos = Join-Path -Path $CIPPRoot -ChildPath 'CommunityRepos.json'
+    $DefaultCommunityRepos = Get-Content -Path $CommunityRepos -Raw | ConvertFrom-Json
+
+    $DefaultsMissing = $false
+    foreach ($Repo in $DefaultCommunityRepos) {
+        if ($Repos.Url -notcontains $Repo.Url) {
+            $Entity = [PSCustomObject]@{
+                PartitionKey = 'CommunityRepos'
+                RowKey       = $Repo.Id
+                Name         = $Repo.Name
+                Description  = $Repo.Description
+                URL          = $Repo.URL
+                FullName     = $Repo.FullName
+                Owner        = $Repo.Owner
+                Visibility   = $Repo.Visibility
+                WriteAccess  = $Repo.WriteAccess
+                Permissions  = [string]($Repo.RepoPermissions | ConvertTo-Json)
+            }
+            Add-CIPPAzDataTableEntity @Table -Entity $Entity
+            $DefaultsMissing = $true
+        }
+    }
+    if ($DefaultsMissing) {
+        $Repos = Get-CIPPAzDataTableEntity @Table
+    }
+
+    $Repos = $Repos | ForEach-Object {
         [pscustomobject]@{
             Id              = $_.RowKey
             Name            = $_.Name
@@ -28,7 +57,7 @@ function Invoke-ListCommunityRepos {
     }
 
     $Body = @{
-        Results = @($Repos)
+        Results = @($Repos | Sort-Object -Property FullName)
     }
 
     Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{

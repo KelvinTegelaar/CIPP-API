@@ -2,7 +2,8 @@ function Search-GitHub {
     [CmdletBinding()]
     Param (
         [string[]]$Repository,
-        [string[]]$User,
+        [string]$User,
+        [string]$Org,
         [string]$Path,
         [string[]]$SearchTerm,
         [string]$Language,
@@ -34,15 +35,10 @@ function Search-GitHub {
         }
     }
     if ($User) {
-        $UserParts = [System.Collections.Generic.List[string]]::new()
-        foreach ($U in $User) {
-            $UserParts.Add("user:$U")
-        }
-        if (($UserParts | Measure-Object).Count -gt 1) {
-            $QueryParts.Add('(' + ($UserParts -join ' OR ') + ')')
-        } else {
-            $QueryParts.Add($UserParts[0])
-        }
+        $QueryParts.Add("user:$User")
+    }
+    if ($Org) {
+        $QueryParts.Add("org:$Org")
     }
     if ($Path) {
         $QueryParts.Add("path:$Path")

@@ -34,12 +34,16 @@ function Invoke-GitHubApiRequest {
             $RestMethod.ResponseHeadersVariable = 'ResponseHeaders'
         }
 
-        $Response = Invoke-RestMethod @RestMethod
-        if ($ReturnHeaders.IsPresent) {
-            $ResponseHeaders
-        } else {
-            $Response
-        }
+        try {
+            $Response = Invoke-RestMethod @RestMethod
+            if ($ReturnHeaders.IsPresent) {
+                $ResponseHeaders
+            } else {
+                $Response
+            }
+        } catch {
+            Write-Error $_.Exception.Message
+        } 
     } else {
         throw 'GitHub API is not enabled'
     }
