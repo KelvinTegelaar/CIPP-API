@@ -1,5 +1,3 @@
-﻿using namespace System.Net
-
 Function Invoke-AddRoomMailbox {
     <#
     .FUNCTIONALITY
@@ -11,17 +9,12 @@ Function Invoke-AddRoomMailbox {
     param($Request, $TriggerMetadata)
 
     $APIName = $Request.Params.CIPPEndpoint
+    Write-LogMessage -headers $Request.Headers -API $APINAME -message 'Accessed this API' -Sev 'Debug'
+    $Tenant = $Request.body.tenantid
     $User = $Request.Headers
-
-    Write-LogMessage -Headers $User -API $APINAME -message 'Accessed this API' -Sev 'Debug'
-
-    # Write to the Azure Functions log stream.
-    Write-Host 'PowerShell HTTP trigger function processed a request.'
-
 
     $Results = [System.Collections.Generic.List[Object]]::new()
     $MailboxObject = $Request.body
-    $Tenant = $MailboxObject.tenantid
     $AddRoomParams = [pscustomobject]@{
         Name               = $MailboxObject.username
         DisplayName        = $MailboxObject.displayName
