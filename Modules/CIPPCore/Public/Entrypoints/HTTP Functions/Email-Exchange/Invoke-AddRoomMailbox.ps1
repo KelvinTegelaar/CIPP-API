@@ -38,7 +38,7 @@ Function Invoke-AddRoomMailbox {
 
         # Block sign-in for the mailbox
         try {
-            $Request = Set-CIPPSignInState -userid $AddRoomRequest.ExternalDirectoryObjectId -TenantFilter $Tenant -APIName $APINAME -ExecutingUser $User -AccountEnabled $false
+            $Request = Set-CIPPSignInState -userid $AddRoomRequest.ExternalDirectoryObjectId -TenantFilter $Tenant -APIName $APINAME -Headers $User -AccountEnabled $false
             $Results.add("Blocked sign-in for Room mailbox; $($MailboxObject.userPrincipalName)")
         } catch {
             $ErrorMessage = Get-CippException -Exception $_

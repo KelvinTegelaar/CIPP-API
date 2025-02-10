@@ -17,10 +17,10 @@ function Remove-CIPPLicense {
                 value = 'Remove-CIPPLicense'
             }
             Parameters    = [pscustomobject]@{
-                userid        = $userid
-                username      = $username
-                APIName       = 'Scheduled License Removal'
-                ExecutingUser = $ExecutingUser
+                userid   = $userid
+                username = $username
+                APIName  = 'Scheduled License Removal'
+                Headers  = $Headers
             }
             ScheduledTime = [int64](([datetime]::UtcNow).AddMinutes(5) - (Get-Date '1/1/1970')).TotalSeconds
             PostExecution = @{

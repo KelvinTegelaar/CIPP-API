@@ -10,7 +10,7 @@ function Set-CIPPDefaultAPEnrollment {
         $TimeOutInMinutes,
         $AllowFail,
         $OBEEOnly,
-        $ExecutingUser,
+        $Headers,
         $APIName = 'Add Default Enrollment Status Page'
     )
 

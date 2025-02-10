@@ -5,7 +5,7 @@ function Get-CIPPLapsPassword {
         $device,
         $TenantFilter,
         $APIName = 'Get LAPS Password',
-        $ExecutingUser
+        $Headers
     )
 
     try {
@@ -17,7 +17,7 @@ function Get-CIPPLapsPassword {
         if ($GraphRequest) { return $GraphRequest } else { return "No LAPS password found for $device" }
     } catch {
         $ErrorMessage = Get-CippException -Exception $_
-        Write-LogMessage -user $ExecutingUser -API $APIName -message "Could not retrieve LAPS password for $($device). Error: $($ErrorMessage.NormalizedError)" -Sev 'Error' -tenant $TenantFilter -LogData $ErrorMessage
+        Write-LogMessage -headers $Headers -API $APIName -message "Could not retrieve LAPS password for $($device). Error: $($ErrorMessage.NormalizedError)" -Sev 'Error' -tenant $TenantFilter -LogData $ErrorMessage
         return "Could not retrieve LAPS password for $($device). Error: $($ErrorMessage.NormalizedError)"
     }
 }

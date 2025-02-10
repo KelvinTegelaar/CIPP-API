@@ -22,7 +22,7 @@ Function Invoke-ExecConverttoSharedMailbox {
     # Interact with query parameters or the body of the request.
     Try {
         $MailboxType = if ($request.query.ConvertToUser -eq 'true') { 'Regular' } else { 'Shared' }
-        $ConvertedMailbox = Set-CIPPMailboxType -userid $Request.query.id -tenantFilter $Tenant -APIName $APINAME -ExecutingUser $User -MailboxType $MailboxType
+        $ConvertedMailbox = Set-CIPPMailboxType -userid $Request.query.id -tenantFilter $Tenant -APIName $APINAME -Headers $User -MailboxType $MailboxType
         $Results = [pscustomobject]@{'Results' = "$ConvertedMailbox" }
         $StatusCode = [HttpStatusCode]::OK
     } catch {

@@ -19,7 +19,7 @@ Function Invoke-ExecConvertToRoomMailbox {
 
     # Interact with query parameters or the body of the request.
     Try {
-        $ConvertedMailbox = Set-CIPPMailboxType -userid $Request.query.id -tenantFilter $Request.query.TenantFilter -APIName $APINAME -ExecutingUser $User -MailboxType 'Room'
+        $ConvertedMailbox = Set-CIPPMailboxType -userid $Request.query.id -tenantFilter $Request.query.TenantFilter -APIName $APINAME -Headers $User -MailboxType 'Room'
         $Results = [pscustomobject]@{'Results' = "$ConvertedMailbox" }
         $StatusCode = [HttpStatusCode]::OK
     } catch {

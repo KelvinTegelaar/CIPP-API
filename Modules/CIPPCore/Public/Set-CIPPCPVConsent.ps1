@@ -3,7 +3,7 @@ function Set-CIPPCPVConsent {
     param(
         $TenantFilter,
         $APIName = 'CPV Consent',
-        $ExecutingUser,
+        $Headers,
         [bool]$ResetSP = $false
     )
     $Results = [System.Collections.Generic.List[string]]::new()

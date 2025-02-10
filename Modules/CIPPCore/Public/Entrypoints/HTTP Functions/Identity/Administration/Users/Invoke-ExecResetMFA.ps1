@@ -19,7 +19,7 @@ Function Invoke-ExecResetMFA {
     try {
 
         $Body = @{
-            Results = Remove-CIPPUserMFA -UserPrincipalName $UserID -TenantFilter $TenantFilter -ExecutingUser $request.headers.'x-ms-client-principal'
+            Results = Remove-CIPPUserMFA -UserPrincipalName $UserID -TenantFilter $TenantFilter -Headers $request.headers.'x-ms-client-principal'
         }
     } catch {
         $Body = [pscustomobject]@{'Results' = "Failed to reset MFA methods for $($Request.Query.ID): $(Get-NormalizedError -message $_.Exception.Message)" }

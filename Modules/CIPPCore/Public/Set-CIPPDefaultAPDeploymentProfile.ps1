@@ -14,7 +14,7 @@ function Set-CIPPDefaultAPDeploymentProfile {
         $hidePrivacy,
         $hideTerms,
         $Autokeyboard,
-        $ExecutingUser,
+        $Headers,
         $Language = 'os-default',
         $APIName = 'Add Default Enrollment Status Page'
     )

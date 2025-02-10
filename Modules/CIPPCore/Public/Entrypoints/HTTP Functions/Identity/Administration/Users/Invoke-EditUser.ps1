@@ -133,7 +133,7 @@ Function Invoke-EditUser {
     }
 
     if ($Request.body.CopyFrom.value) {
-        $CopyFrom = Set-CIPPCopyGroupMembers -ExecutingUser $User -CopyFromId $Request.body.CopyFrom.value -UserID $UserPrincipalName -TenantFilter $UserObj.tenantFilter
+        $CopyFrom = Set-CIPPCopyGroupMembers -Headers $User -CopyFromId $Request.body.CopyFrom.value -UserID $UserPrincipalName -TenantFilter $UserObj.tenantFilter
         $null = $results.AddRange(@($CopyFrom))
     }
 

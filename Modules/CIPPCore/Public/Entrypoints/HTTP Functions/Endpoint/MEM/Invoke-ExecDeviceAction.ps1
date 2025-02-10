@@ -29,7 +29,7 @@ Function Invoke-ExecDeviceAction {
             ActionBody = $ActionBody
             DeviceFilter = $Request.Body.GUID
             TenantFilter = $Request.Body.TenantFilter
-            ExecutingUser = $request.headers.'x-ms-client-principal'
+            Headers = $request.headers.'x-ms-client-principal'
             APINAME = $APINAME
         }
         $ActionResult = New-CIPPDeviceAction @cmdparams

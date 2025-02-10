@@ -8,7 +8,7 @@ function New-CIPPCAPolicy {
         $Overwrite,
         $ReplacePattern = 'none',
         $APIName = 'Create CA Policy',
-        $ExecutingUser
+        $Headers
     )
 
     $User = $request.headers.'x-ms-client-principal'

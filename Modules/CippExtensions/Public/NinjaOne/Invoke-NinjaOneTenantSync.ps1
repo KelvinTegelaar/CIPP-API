@@ -886,7 +886,7 @@ function Invoke-NinjaOneTenantSync {
 
         # Enable Device Updates Subscription if needed.
         if ($MappedFields.DeviceCompliance) {
-            New-CIPPGraphSubscription -TenantFilter $TenantFilter -TypeofSubscription 'updated' -BaseURL $CIPPUrl -Resource 'devices' -EventType 'DeviceUpdate' -ExecutingUser 'NinjaOneSync'
+            New-CIPPGraphSubscription -TenantFilter $TenantFilter -TypeofSubscription 'updated' -BaseURL $CIPPUrl -Resource 'devices' -EventType 'DeviceUpdate' -Headers 'NinjaOneSync'
         }
 
         Write-Information 'Processed Devices'

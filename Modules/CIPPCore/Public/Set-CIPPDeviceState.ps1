@@ -20,14 +20,14 @@
     .PARAMETER TenantFilter
     Specifies the tenant ID or domain against which to perform the operation.
 
-    .PARAMETER ExecutingUser
+    .PARAMETER Headers
     Specifies the user who initiated the request for logging purposes.
 
     .PARAMETER APIName
     Specifies the name of the API call for logging purposes. Defaults to 'Set Device State'.
 
     .EXAMPLE
-    Set-CIPPDeviceState -Action Enable -DeviceID "1234abcd-5678-efgh-ijkl-9012mnopqrst" -TenantFilter "contoso.onmicrosoft.com" -ExecutingUser "admin@contoso.onmicrosoft.com"
+    Set-CIPPDeviceState -Action Enable -DeviceID "1234abcd-5678-efgh-ijkl-9012mnopqrst" -TenantFilter "contoso.onmicrosoft.com" -Headers "admin@contoso.onmicrosoft.com"
 
     This command enables the specified device within the given tenant.
 

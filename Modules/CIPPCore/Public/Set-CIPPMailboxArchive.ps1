@@ -1,7 +1,7 @@
 function Set-CIPPMailboxArchive {
     [CmdletBinding()]
     param (
-        $ExecutingUser,
+        $Headers,
         $userid,
         $username,
         $APIName = 'Mailbox Archive',

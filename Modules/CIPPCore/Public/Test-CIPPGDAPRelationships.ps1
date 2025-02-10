@@ -3,7 +3,7 @@ function Test-CIPPGDAPRelationships {
     param (
         $TenantFilter,
         $APIName = 'Access Check',
-        $ExecutingUser
+        $Headers
     )
 
     $GDAPissues = [System.Collections.Generic.List[object]]@()
@@ -95,7 +95,7 @@ function Test-CIPPGDAPRelationships {
 
     } catch {
         $ErrorMessage = Get-CippException -Exception $_
-        Write-LogMessage -user $ExecutingUser -API $APINAME -message "Failed to run GDAP check for $($TenantFilter): $($ErrorMessage.NormalizedError)" -Sev 'Error' -LogData $ErrorMessage
+        Write-LogMessage -headers $Headers -API $APINAME -message "Failed to run GDAP check for $($TenantFilter): $($ErrorMessage.NormalizedError)" -Sev 'Error' -LogData $ErrorMessage
     }
 
     $GDAPRelationships = [PSCustomObject]@{

@@ -3,7 +3,7 @@ function Test-CIPPAccessPermissions {
     param (
         $TenantFilter,
         $APIName = 'Access Check',
-        $ExecutingUser
+        $Headers
     )
 
     $User = $request.headers.'x-ms-client-principal'
