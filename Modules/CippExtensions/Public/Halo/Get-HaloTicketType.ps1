@@ -15,7 +15,7 @@ function Get-HaloTicketType {
         $Configuration = ((Get-CIPPAzDataTableEntity @Table).config | ConvertFrom-Json -ea stop).HaloPSA
         $Token = Get-HaloToken -configuration $Configuration
 
-        Invoke-RestMethod -Uri "$($Configuration.ResourceURL)/TicketType?showall=true&showinactive=true&access_control_level=2&include_defaults=true&domain=reqs" -ContentType 'application/json' -Method GET -Headers @{Authorization = "Bearer $($Token.access_token)" }
+        Invoke-RestMethod -Uri "$($Configuration.ResourceURL)/TicketType?showall=true" -ContentType 'application/json' -Method GET -Headers @{Authorization = "Bearer $($Token.access_token)" }
     } catch {
         $Message = if ($_.ErrorDetails.Message) {
             Get-NormalizedError -Message $_.ErrorDetails.Message
