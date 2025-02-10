@@ -22,13 +22,13 @@ function Invoke-CIPPOffboardingJob {
             Revoke-CIPPSessions -tenantFilter $tenantFilter -username $username -userid $userid -Headers $Headers -APIName $APIName
         }
         { $_.ResetPass -eq $true } {
-            Set-CIPPResetPassword -tenantFilter $tenantFilter -userid $username -Headers $Headers -APIName $APIName
+            Set-CIPPResetPassword -tenantFilter $tenantFilter -UserID $username -Headers $Headers -APIName $APIName
         }
         { $_.RemoveGroups -eq $true } {
             Remove-CIPPGroups -userid $userid -tenantFilter $Tenantfilter -Headers $Headers -APIName $APIName -Username "$Username"
         }
         { $_.'HideFromGAL' -eq $true } {
-            Set-CIPPHideFromGAL -tenantFilter $tenantFilter -userid $username -HideFromGAL $true -Headers $Headers -APIName $APIName
+            Set-CIPPHideFromGAL -tenantFilter $tenantFilter -UserID $username -hidefromgal $true -Headers $Headers -APIName $APIName
         }
         { $_.'DisableSignIn' -eq $true } {
             Set-CIPPSignInState -TenantFilter $tenantFilter -userid $username -AccountEnabled $false -Headers $Headers -APIName $APIName
@@ -95,6 +95,9 @@ function Invoke-CIPPOffboardingJob {
         }
         { $_.'RemoveMFADevices' } {
             Remove-CIPPUserMFA -UserPrincipalName $Username -TenantFilter $TenantFilter -Headers $Headers
+        }
+        { $_.'ClearImmutableId' -eq $true } {
+            Clear-CIPPImmutableId -userid $userid -TenantFilter $TenantFilter -Headers $Headers -APIName $APIName
         }
     }
     return $Return
