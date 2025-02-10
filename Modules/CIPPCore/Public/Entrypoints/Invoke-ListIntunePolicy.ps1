@@ -11,7 +11,7 @@ Function Invoke-ListIntunePolicy {
 
     $APIName = $Request.Params.CIPPEndpoint
     $Headers = $Request.Headers
-    Write-LogMessage -Headers$Headers -API $APINAME -message 'Accessed this API' -Sev 'Debug'
+    Write-LogMessage -Headers $Headers -API $APINAME -message 'Accessed this API' -Sev 'Debug'
 
 
     # Write to the Azure Functions log stream.

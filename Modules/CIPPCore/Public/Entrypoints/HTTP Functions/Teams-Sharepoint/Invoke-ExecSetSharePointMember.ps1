@@ -13,7 +13,7 @@ Function Invoke-ExecSetSharePointMember {
 
     $APIName = $Request.Params.CIPPEndpoint
     $Headers = $Request.Headers
-    Write-LogMessage -Headers$Headers -API $APINAME -message 'Accessed this API' -Sev 'Debug'
+    Write-LogMessage -Headers $Headers -API $APINAME -message 'Accessed this API' -Sev 'Debug'
     $TenantFilter = $Request.body.tenantFilter
 
 

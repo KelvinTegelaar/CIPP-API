@@ -13,7 +13,7 @@ Function Invoke-ListDeletedItems {
     $APIName = $Request.Params.CIPPEndpoint
     $TenantFilter = $Request.Query.tenantFilter
     $Headers = $Request.Headers
-    Write-LogMessage -Headers$Headers -API $APINAME -message 'Accessed this API' -Sev 'Debug'
+    Write-LogMessage -Headers $Headers -API $APINAME -message 'Accessed this API' -Sev 'Debug'
 
     # Interact with query parameters or the body of the request.
     $Types = 'Application', 'User', 'Device', 'Group'

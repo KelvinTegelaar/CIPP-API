@@ -12,7 +12,7 @@ function Invoke-ListIntuneScript {
 
     $APIName = $Request.Params.CIPPEndpoint
     $Headers = $Request.Headers
-    Write-LogMessage -Headers$Headers -API $APINAME -message 'Accessed this API' -Sev Debug
+    Write-LogMessage -Headers $Headers -API $APINAME -message 'Accessed this API' -Sev Debug
 
     Write-Host 'PowerShell HTTP trigger function processed a request.'
 
