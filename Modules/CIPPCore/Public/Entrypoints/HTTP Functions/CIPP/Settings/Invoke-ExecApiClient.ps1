@@ -155,7 +155,7 @@ function Invoke-ExecApiClient {
                         $App = New-GraphGetRequest -uri "https://graph.microsoft.com/v1.0/applications?`$filter=appId eq '$($ClientId)'&`$select=id,appId,web" -NoAuthCheck $true -asapp $true
                         $Id = $App.id
                         if ($Id -and $App.web.redirectUris -like "*$($env:WEBSITE_SITE_NAME)*") {
-                            New-GraphPOSTRequest -uri "https://graph.microsoft.com/v1.0/applications/$Id" -Method DELETE -Body '{}' -NoAuthCheck $true -asapp $true
+                            New-GraphPOSTRequest -uri "https://graph.microsoft.com/v1.0/applications/$Id" -type DELETE -Body '{}' -NoAuthCheck $true -asapp $true
                             Write-Information "Deleted App Registration for $ClientId"
                         } else {
                             Write-Information "App Registration for $ClientId not found or Redirect URI does not match"
