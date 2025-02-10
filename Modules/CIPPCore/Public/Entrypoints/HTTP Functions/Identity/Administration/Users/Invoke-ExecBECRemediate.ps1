@@ -11,9 +11,9 @@ Function Invoke-ExecBECRemediate {
     param($Request, $TriggerMetadata)
 
     $APIName = $Request.Params.CIPPEndpoint
-    $User = $request.headers.'x-ms-client-principal'
+    $User = $Request.Headers
 
-    Write-LogMessage -user $User -API $APINAME -message 'Accessed this API' -Sev 'Debug'
+    Write-LogMessage -Headers $User -API $APINAME -message 'Accessed this API' -Sev 'Debug'
     Write-Host 'PowerShell HTTP trigger function processed a request.'
 
     $TenantFilter = $request.body.tenantfilter

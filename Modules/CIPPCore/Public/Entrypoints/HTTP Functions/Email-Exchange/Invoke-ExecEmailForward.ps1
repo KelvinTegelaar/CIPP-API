@@ -20,7 +20,7 @@ Function Invoke-ExecEmailForward {
 
     if ($ForwardOption -eq 'internalAddress') {
         try {
-            Set-CIPPForwarding -userid $username -tenantFilter $TenantFilter -APIName $APINAME -Headers $request.headers.'x-ms-client-principal' -Forward $ForwardingAddress -keepCopy $KeepCopy
+            Set-CIPPForwarding -userid $username -tenantFilter $TenantFilter -APIName $APINAME -Headers $Request.Headers -Forward $ForwardingAddress -keepCopy $KeepCopy
             if (-not $request.body.KeepCopy) {
                 $results = "Forwarding all email for $($username) to $($ForwardingAddress) and not keeping a copy"
             } else {
@@ -35,7 +35,7 @@ Function Invoke-ExecEmailForward {
 
     if ($ForwardOption -eq 'ExternalAddress') {
         try {
-            Set-CIPPForwarding -userid $username -tenantFilter $TenantFilter -APIName $APINAME -Headers $request.headers.'x-ms-client-principal' -forwardingSMTPAddress $ForwardingSMTPAddress -keepCopy $KeepCopy
+            Set-CIPPForwarding -userid $username -tenantFilter $TenantFilter -APIName $APINAME -Headers $Request.Headers -forwardingSMTPAddress $ForwardingSMTPAddress -keepCopy $KeepCopy
             if (-not $request.body.KeepCopy) {
                 $results = "Forwarding all email for $($username) to $($ForwardingSMTPAddress) and not keeping a copy"
             } else {

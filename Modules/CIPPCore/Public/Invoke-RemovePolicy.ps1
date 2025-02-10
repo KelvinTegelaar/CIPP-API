@@ -11,7 +11,7 @@ Function Invoke-RemovePolicy {
     param($Request, $TriggerMetadata)
 
     $APIName = $Request.Params.CIPPEndpoint
-    $Headers = $request.headers.'x-ms-client-principal'
+    $Headers = $Request.Headers
     Write-LogMessage -headers $Headers -API $APINAME -message 'Accessed this API' -Sev 'Debug'
 
     # Interact with query parameters or the body of the request.

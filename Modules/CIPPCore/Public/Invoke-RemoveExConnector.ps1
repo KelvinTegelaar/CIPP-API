@@ -11,7 +11,7 @@ Function Invoke-RemoveExConnector {
     param($Request, $TriggerMetadata)
 
     $APIName = $Request.Params.CIPPEndpoint
-    $Headers = $request.headers.'x-ms-client-principal'
+    $Headers = $Request.Headers
     $TenantFilter = $request.Query.tenantFilter ?? $Request.Body.tenantFilter
     Write-LogMessage -headers $Headers -API $APINAME -message 'Accessed this API' -Sev 'Debug'
 

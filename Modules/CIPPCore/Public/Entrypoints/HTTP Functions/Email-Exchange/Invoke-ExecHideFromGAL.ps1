@@ -10,9 +10,9 @@ Function Invoke-ExecHideFromGAL {
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
 
-    $Headers = $Request.headers.'x-ms-client-principal'
+    $Headers = $Request.Headers
     $APIName = $Request.Params.CIPPEndpoint
-    Write-LogMessage -user $Headers -API $APINAME -message 'Accessed this API' -Sev 'Debug'
+    Write-LogMessage -Headers$Headers -API $APINAME -message 'Accessed this API' -Sev 'Debug'
 
 
     # Support if the request is a POST or a GET. So to support legacy(GET) and new(POST) requests

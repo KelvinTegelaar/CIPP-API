@@ -11,8 +11,8 @@ function Invoke-EditIntuneScript {
     param($Request, $TriggerMetadata)
 
     $APIName = $Request.Params.CIPPEndpoint
-    $Headers = $request.headers.'x-ms-client-principal'
-    Write-LogMessage -user $Headers -API $APINAME -message 'Accessed this API' -Sev Debug
+    $Headers = $Request.Headers
+    Write-LogMessage -Headers$Headers -API $APINAME -message 'Accessed this API' -Sev Debug
 
     $graphUrl = "https://graph.microsoft.com/beta"
     switch($Request.Method) {

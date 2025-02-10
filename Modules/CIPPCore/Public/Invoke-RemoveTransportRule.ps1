@@ -11,7 +11,7 @@ Function Invoke-RemoveTransportRule {
     param($Request, $TriggerMetadata)
 
     $APIName = $Request.Params.CIPPEndpoint
-    $Headers = $Request.headers.'x-ms-client-principal'
+    $Headers = $Request.Headers
     Write-LogMessage -headers $Headers -API $APIName -message 'Accessed this API' -Sev 'Debug'
 
     $TenantFilter = $Request.Query.tenantFilter ?? $Request.body.tenantFilter
