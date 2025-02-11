@@ -43,8 +43,15 @@ function Invoke-GitHubApiRequest {
             }
         } catch {
             Write-Error $_.Exception.Message
-        } 
+        }
     } else {
-        throw 'GitHub API is not enabled'
+        $Action = @{
+            Action = 'ApiCall'
+            Path   = $Path
+            Method = $Method
+            Body   = $Body
+            Accept = $Accept
+        }
+        (Invoke-RestMethod -Uri 'https://cippy.azurewebsites.net/api/ExecGitHubAction' -Method POST -Body ($Action | ConvertTo-Json -Depth 10) -ContentType 'application/json').Results
     }
 }
