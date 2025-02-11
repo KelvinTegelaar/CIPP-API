@@ -12,14 +12,24 @@ function Invoke-ExecGitHubAction {
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
 
-    if ($Request.Body.Search) {
-        $Search = $Request.Body.Search | ConvertTo-Json | ConvertFrom-Json -AsHashtable
-        $SearchResults = Search-GitHub @Search
-        $Results = $SearchResults.items
-        $Metadata = $SearchResults | Select-Object -Property total_count, incomplete_results
-    } elseif ($Request.Body.GetFileContents) {
-        $Url = $Request.Body.GetFileContents.Url
-        $Results = Get-GitHubFileContents -Url $Url
+    $Action = $Request.Query.Action ?? $Request.Body.Action
+    $SplatParams = ($Request.Query ?? $Request.Body) | Select-Object -ExcludeProperty Action | ConvertTo-Json | ConvertFrom-Json -AsHashtable
+
+    switch ($Action) {
+        'Search' {
+            $Results = (Search-GitHub @SplatParams).items
+            $Metadata = $SearchResults | Select-Object -Property total_count, incomplete_results
+        }
+        'GetFileContents' {
+            $Results = Get-GitHubFileContents @SplatParams
+        }
+        'GetBranches' {
+            $Results = @(Get-GitHubBranch @SplatParams)
+        }
+        'GetFileTree' {
+            $Files = (Get-GitHubFileTree @SplatParams).tree | Where-Object { $_.path -match '.json$' } | Select-Object *, @{n = 'html_url'; e = { "https://github.com/$($Request.Body.GetFileTree.FullName)/tree/$($Request.Body.GetFileTree.Branch)/$($_.path)" } }
+            $Results = @($Files)
+        }
     }
 
     $Body = @{
