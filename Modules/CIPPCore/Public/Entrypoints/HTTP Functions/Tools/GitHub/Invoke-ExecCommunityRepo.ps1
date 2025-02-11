@@ -84,6 +84,13 @@ function Invoke-ExecCommunityRepo {
                 state      = 'success'
             }
         }
+        'ImportTemplate' {
+            $Path = $Request.Body.Path
+            $FullName = $Request.Body.FullName
+            $Branch = $Request.Body.Branch
+            $Template = Get-GitHubFileContents -FullName $FullName -Path $Path -Branch $Branch
+            Import-CommunityTemplate -Template $Template
+        }
         default {
             $Results = @{
                 resultText = "Action $Action not supported"
