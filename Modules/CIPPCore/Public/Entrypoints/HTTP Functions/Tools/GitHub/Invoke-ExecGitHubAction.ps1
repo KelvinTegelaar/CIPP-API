@@ -27,7 +27,7 @@ function Invoke-ExecGitHubAction {
             $Results = @(Get-GitHubBranch @SplatParams)
         }
         'GetFileTree' {
-            $Files = (Get-GitHubFileTree @SplatParams).tree | Where-Object { $_.path -match '.json$' } | Select-Object *, @{n = 'html_url'; e = { "https://github.com/$($Request.Body.GetFileTree.FullName)/tree/$($Request.Body.GetFileTree.Branch)/$($_.path)" } }
+            $Files = (Get-GitHubFileTree @SplatParams).tree | Where-Object { $_.path -match '.json$' } | Select-Object *, @{n = 'html_url'; e = { "https://github.com/$($SplatParams.FullName)/tree/$($SplatParams.Branch)/$($_.path)" } }
             $Results = @($Files)
         }
     }
