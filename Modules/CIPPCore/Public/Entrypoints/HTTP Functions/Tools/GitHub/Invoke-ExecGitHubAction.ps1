@@ -13,7 +13,7 @@ function Invoke-ExecGitHubAction {
     param($Request, $TriggerMetadata)
 
     $Action = $Request.Query.Action ?? $Request.Body.Action
-    $SplatParams = ($Request.Query ?? $Request.Body) | Select-Object -ExcludeProperty Action | ConvertTo-Json | ConvertFrom-Json -AsHashtable
+    $SplatParams = ($Request.Query ?? $Request.Body) | Select-Object -ExcludeProperty Action, TenantFilter | ConvertTo-Json | ConvertFrom-Json -AsHashtable
 
     switch ($Action) {
         'Search' {
