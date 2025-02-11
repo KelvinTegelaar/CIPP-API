@@ -58,7 +58,7 @@ function Set-CIPPAuthenticationPolicy {
         'SMS' {
             if ($State -eq 'enabled') {
                 Write-LogMessage -headers $Headers -API $APIName -tenant $Tenant -message "Setting $AuthenticationMethodId to enabled is not allowed" -sev Error
-                return "Setting $AuthenticationMethodId to enabled is not allowed"
+                throw "Setting $AuthenticationMethodId to enabled is not allowed"
             }
         }
 
@@ -89,7 +89,7 @@ function Set-CIPPAuthenticationPolicy {
             # Disallow enabling voice
             if ($State -eq 'enabled') {
                 Write-LogMessage -headers $Headers -API $APIName -tenant $Tenant -message "Setting $AuthenticationMethodId to enabled is not allowed" -sev Error
-                return "Setting $AuthenticationMethodId to enabled is not allowed"
+                throw "Setting $AuthenticationMethodId to enabled is not allowed"
             }
         }
 
@@ -97,7 +97,7 @@ function Set-CIPPAuthenticationPolicy {
         'Email' {
             if ($State -eq 'enabled') {
                 Write-LogMessage -headers $Headers -API $APIName -tenant $Tenant -message "Setting $AuthenticationMethodId to enabled is not allowed" -sev Error
-                return "Setting $AuthenticationMethodId to enabled is not allowed"
+                throw "Setting $AuthenticationMethodId to enabled is not allowed"
             }
         }
 
@@ -115,7 +115,7 @@ function Set-CIPPAuthenticationPolicy {
         }
         Default {
             Write-LogMessage -headers $Headers -API $APIName -tenant $Tenant -message "Somehow you hit the default case with an input of $AuthenticationMethodId . You probably made a typo in the input for AuthenticationMethodId. It`'s case sensitive." -sev Error
-            return "Somehow you hit the default case with an input of $AuthenticationMethodId . You probably made a typo in the input for AuthenticationMethodId. It`'s case sensitive."
+            throw "Somehow you hit the default case with an input of $AuthenticationMethodId . You probably made a typo in the input for AuthenticationMethodId. It`'s case sensitive."
         }
     }
     # Set state of the authentication method
