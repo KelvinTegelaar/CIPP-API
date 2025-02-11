@@ -22,11 +22,10 @@ function Invoke-ExecGitHubAction {
 
     $SplatParams = $Parameters | Select-Object -ExcludeProperty Action, TenantFilter | ConvertTo-Json | ConvertFrom-Json -AsHashtable
 
-    $Extensionsconfig = Get-CippTable -tablename 'Extensionsconfig'
-    $Extensions = $Extensionsconfig | Where-Object { $_.PartitionKey -eq 'Extensionsconfig' } | Select-Object -ExpandProperty JSON | ConvertFrom-Json
-    $GitHubEnabled = $Extensions.GitHub.enabled
+    $Table = Get-CIPPTable -TableName Extensionsconfig
+    $Configuration = ((Get-CIPPAzDataTableEntity @Table).config | ConvertFrom-Json).GitHub
 
-    if (-not $GitHubEnabled) {
+    if (!$Configuration.Enabled) {
         $Response = Invoke-RestMethod -Uri 'https://cippy.azurewebsites.net/api/ExecGitHubAction' -Method POST -Body ($Action | ConvertTo-Json -Depth 10) -ContentType 'application/json'
         $Results = $Response.Results
         $Metadata = $Response.Metadata
@@ -43,12 +42,19 @@ function Invoke-ExecGitHubAction {
             'GetBranches' {
                 $Results = @(Get-GitHubBranch @SplatParams)
             }
+            'GetOrgs' {
+                $Orgs = Invoke-GitHubApiRequest -Path 'user/orgs'
+                $Results = @($Orgs)
+            }
             'GetFileTree' {
                 $Files = (Get-GitHubFileTree @SplatParams).tree | Where-Object { $_.path -match '.json$' } | Select-Object *, @{n = 'html_url'; e = { "https://github.com/$($SplatParams.FullName)/tree/$($SplatParams.Branch)/$($_.path)" } }
                 $Results = @($Files)
             }
             'ImportTemplate' {
                 $Results = Import-CommunityTemplate @SplatParams
+            }
+            default {
+                $Results = "Error: Unknown action '$Action'"
             }
         }
     }
