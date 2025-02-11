@@ -8,6 +8,7 @@
     "Owner": "CyberDrain",
     "Visibility": "public",
     "WriteAccess": false,
+    "DefaultBranch": "main",
     "RepoPermissions": {
       "admin": false,
       "maintain": false,
@@ -25,6 +26,7 @@
     "Owner": "j0eyv",
     "Visibility": "public",
     "WriteAccess": false,
+    "DefaultBranch": "main",
     "RepoPermissions": {
       "admin": false,
       "maintain": false,
@@ -42,6 +44,7 @@
     "Owner": "SkipToTheEndpoint",
     "Visibility": "public",
     "WriteAccess": false,
+    "DefaultBranch": "main",
     "RepoPermissions": {
       "admin": false,
       "maintain": false,

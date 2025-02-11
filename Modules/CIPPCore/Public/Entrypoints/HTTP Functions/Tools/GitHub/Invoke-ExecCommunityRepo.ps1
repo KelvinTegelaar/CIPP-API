@@ -23,16 +23,17 @@ function Invoke-ExecCommunityRepo {
         'Add' {
             $Repo = Invoke-GitHubApiRequest -Path "repositories/$($Id)"
             $RepoEntity = @{
-                PartitionKey = 'CommunityRepos'
-                RowKey       = [string]$Repo.id
-                Name         = [string]$Repo.name
-                Description  = [string]$Repo.description
-                URL          = [string]$Repo.html_url
-                FullName     = [string]$Repo.full_name
-                Owner        = [string]$Repo.owner.login
-                Visibility   = [string]$Repo.visibility
-                WriteAccess  = [bool]$Repo.permissions.push
-                Permissions  = [string]($Repo.permissions | ConvertTo-Json -Compress)
+                PartitionKey  = 'CommunityRepos'
+                RowKey        = [string]$Repo.id
+                Name          = [string]$Repo.name
+                Description   = [string]$Repo.description
+                URL           = [string]$Repo.html_url
+                FullName      = [string]$Repo.full_name
+                Owner         = [string]$Repo.owner.login
+                Visibility    = [string]$Repo.visibility
+                WriteAccess   = [bool]$Repo.permissions.push
+                DefaultBranch = [string]$Repo.default_branch
+                Permissions   = [string]($Repo.permissions | ConvertTo-Json -Compress)
             }
 
             Add-CIPPAzDataTableEntity @Table -Entity $RepoEntity -Force | Out-Null
@@ -46,17 +47,18 @@ function Invoke-ExecCommunityRepo {
             if ($RepoEntity) {
                 $Repo = Invoke-GitHubApiRequest -Path "repositories/$($Id)"
                 $Update = @{
-                    PartitionKey = 'CommunityRepos'
-                    RowKey       = [string]$Repo.id
-                    Name         = [string]$Repo.name
-                    Description  = [string]$Repo.description
-                    URL          = [string]$Repo.html_url
-                    FullName     = [string]$Repo.full_name
-                    Owner        = [string]$Repo.owner.login
-                    Visibility   = [string]$Repo.visibility
-                    WriteAccess  = [bool]$Repo.permissions.push
-                    Permissions  = [string]($Repo.permissions | ConvertTo-Json -Compress)
-                    ETag         = $RepoEntity.ETag
+                    PartitionKey  = 'CommunityRepos'
+                    RowKey        = [string]$Repo.id
+                    Name          = [string]$Repo.name
+                    Description   = [string]$Repo.description
+                    URL           = [string]$Repo.html_url
+                    FullName      = [string]$Repo.full_name
+                    Owner         = [string]$Repo.owner.login
+                    Visibility    = [string]$Repo.visibility
+                    WriteAccess   = [bool]$Repo.permissions.push
+                    DefaultBranch = [string]$Repo.default_branch
+                    Permissions   = [string]($Repo.permissions | ConvertTo-Json -Compress)
+                    ETag          = $RepoEntity.ETag
                 }
 
                 Update-CIPPAzDataTableEntity @Table -Entity $Update

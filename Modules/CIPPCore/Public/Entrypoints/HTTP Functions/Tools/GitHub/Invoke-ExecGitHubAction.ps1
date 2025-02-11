@@ -13,11 +13,21 @@ function Invoke-ExecGitHubAction {
     param($Request, $TriggerMetadata)
 
     $Action = $Request.Query.Action ?? $Request.Body.Action
-    $SplatParams = ($Request.Query ?? $Request.Body) | Select-Object -ExcludeProperty Action, TenantFilter | ConvertTo-Json | ConvertFrom-Json -AsHashtable
+
+    if ($Request.Query.Action) {
+        $Parameters = $Request.Query
+    } else {
+        $Parameters = $Request.Body
+    }
+
+    $SplatParams = $Parameters | Select-Object -ExcludeProperty Action, TenantFilter | ConvertTo-Json | ConvertFrom-Json -AsHashtable
+
+    Write-Information ($SplatParams | ConvertTo-Json)
 
     switch ($Action) {
         'Search' {
-            $Results = (Search-GitHub @SplatParams).items
+            $SearchResults = Search-GitHub @SplatParams
+            $Results = @($SearchResults.items)
             $Metadata = $SearchResults | Select-Object -Property total_count, incomplete_results
         }
         'GetFileContents' {

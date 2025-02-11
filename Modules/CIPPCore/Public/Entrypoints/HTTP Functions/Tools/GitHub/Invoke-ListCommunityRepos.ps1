@@ -23,16 +23,17 @@ function Invoke-ListCommunityRepos {
     foreach ($Repo in $DefaultCommunityRepos) {
         if ($Repos.Url -notcontains $Repo.Url) {
             $Entity = [PSCustomObject]@{
-                PartitionKey = 'CommunityRepos'
-                RowKey       = $Repo.Id
-                Name         = $Repo.Name
-                Description  = $Repo.Description
-                URL          = $Repo.URL
-                FullName     = $Repo.FullName
-                Owner        = $Repo.Owner
-                Visibility   = $Repo.Visibility
-                WriteAccess  = $Repo.WriteAccess
-                Permissions  = [string]($Repo.RepoPermissions | ConvertTo-Json)
+                PartitionKey  = 'CommunityRepos'
+                RowKey        = $Repo.Id
+                Name          = $Repo.Name
+                Description   = $Repo.Description
+                URL           = $Repo.URL
+                FullName      = $Repo.FullName
+                Owner         = $Repo.Owner
+                Visibility    = $Repo.Visibility
+                WriteAccess   = $Repo.WriteAccess
+                DefaultBranch = $Repo.DefaultBranch
+                Permissions   = [string]($Repo.RepoPermissions | ConvertTo-Json)
             }
             Add-CIPPAzDataTableEntity @Table -Entity $Entity
             $DefaultsMissing = $true
@@ -52,6 +53,7 @@ function Invoke-ListCommunityRepos {
             Owner           = $_.Owner
             Visibility      = $_.Visibility
             WriteAccess     = $_.WriteAccess
+            DefaultBranch   = $_.DefaultBranch
             RepoPermissions = $_.Permissions | ConvertFrom-Json
         }
     }
