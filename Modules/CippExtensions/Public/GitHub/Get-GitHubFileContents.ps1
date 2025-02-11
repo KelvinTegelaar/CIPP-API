@@ -1,14 +1,20 @@
 function Get-GitHubFileContents {
     [CmdletBinding()]
     param (
-        [Parameter(ValueFromPipelineByPropertyName = $true)]
-        $Url
+        [Parameter(ValueFromPipelineByPropertyName = $true, Mandatory = $true)]
+        $FullName,
+
+        [Parameter(ValueFromPipelineByPropertyName = $true, Mandatory = $true)]
+        $Path,
+
+        [Parameter(ValueFromPipelineByPropertyName = $true, Mandatory = $true)]
+        $Branch
     )
 
     process {
-        [uri]$Uri = $Url
-        $Path = $Uri.PathAndQuery.TrimStart('/')
-        $File = Invoke-GitHubApiRequest -Path "$Path" -Method GET
+        $Path = "repos/$($FullName)/contents/$($Path)?ref=$($Branch)"
+        #Write-Information $Path
+        $File = Invoke-GitHubApiRequest -Path $Path -Method GET
 
         return [PSCustomObject]@{
             name    = $File.name

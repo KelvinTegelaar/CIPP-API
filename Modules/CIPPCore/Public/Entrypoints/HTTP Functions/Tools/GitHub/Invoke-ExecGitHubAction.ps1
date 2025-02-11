@@ -22,7 +22,7 @@ function Invoke-ExecGitHubAction {
 
     $SplatParams = $Parameters | Select-Object -ExcludeProperty Action, TenantFilter | ConvertTo-Json | ConvertFrom-Json -AsHashtable
 
-    Write-Information ($SplatParams | ConvertTo-Json)
+    #Write-Information ($SplatParams | ConvertTo-Json)
 
     switch ($Action) {
         'Search' {
