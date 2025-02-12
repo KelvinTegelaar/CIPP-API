@@ -44,7 +44,7 @@ function New-GitHubRepo {
     }
 
     # Check if repo exists
-    $Existing = Invoke-GitHubApiRequest -Path "$Path/$Name"
+    $Existing = Invoke-GitHubApiRequest -Path "$Path/$Name" -ErrorAction SilentlyContinue
     if ($Existing.id) {
         return $Existing
     }
