@@ -63,9 +63,8 @@ function Invoke-ExecGitHubAction {
             'CreateRepo' {
                 try {
                     Write-Information "Creating repository '$($SplatParams.Name)'"
-                    Write-Information ($SplatParams | ConvertTo-Json -Depth 10)
                     $Repo = New-GitHubRepo @SplatParams
-                    if ($Results.id) {
+                    if ($Repo.id) {
                         $Table = Get-CIPPTable -TableName CommunityRepos
                         $RepoEntity = @{
                             PartitionKey  = 'CommunityRepos'
@@ -83,7 +82,7 @@ function Invoke-ExecGitHubAction {
                         Add-CIPPAzDataTableEntity @Table -Entity $RepoEntity -Force | Out-Null
 
                         $Results = @{
-                            resultText = "Repository '$($Results.name)' created"
+                            resultText = "Repository '$($Repo.name)' created"
                             state      = 'success'
                         }
                     }

@@ -53,6 +53,6 @@ function New-GitHubRepo {
         }
     } catch { }
     if ($PSCmdlet.ShouldProcess("Create repository '$Name'")) {
-        return (Invoke-GitHubApiRequest -Path $Path -Method POST -Body $Body)
+        Invoke-GitHubApiRequest -Path $Path -Method POST -Body $Body
     }
 }
