@@ -100,7 +100,7 @@ function Invoke-ExecCommunityRepo {
                 Remove-AzDataTableEntity @Table -Entity $Delete
             }
             $Results = @{
-                resultText = "Repository $($Repo.name) deleted"
+                resultText = "Repository $($RepoEntity.Name) deleted"
                 state      = 'success'
             }
         }
