@@ -43,8 +43,12 @@ function Invoke-ExecGitHubAction {
                 $Results = @(Get-GitHubBranch @SplatParams)
             }
             'GetOrgs' {
-                $Orgs = Invoke-GitHubApiRequest -Path 'user/orgs'
-                $Results = @($Orgs)
+                try {
+                    $Orgs = Invoke-GitHubApiRequest -Path 'user/orgs'
+                    $Results = @($Orgs)
+                } catch {
+                    $Results = 'You may not have permission to view organizations, check your PAT scopes and try again - {0}' -f $_.Exception.Message
+                }
             }
             'GetFileTree' {
                 $Files = (Get-GitHubFileTree @SplatParams).tree | Where-Object { $_.path -match '.json$' } | Select-Object *, @{n = 'html_url'; e = { "https://github.com/$($SplatParams.FullName)/tree/$($SplatParams.Branch)/$($_.path)" } }
@@ -54,7 +58,12 @@ function Invoke-ExecGitHubAction {
                 $Results = Import-CommunityTemplate @SplatParams
             }
             'CreateRepo' {
-                $Repo = New-GitHubRepo @SplatParams
+                try {
+                    $Repo = New-GitHubRepo @SplatParams
+                } catch {
+                    $Results = 'You may not have permission to create repositories, check your PAT scopes and try again - {0}' -f $_.Exception.Message
+                    break
+                }
                 if ($Results.id) {
                     $Table = Get-CIPPTable -TableName CommunityRepos
                     $RepoEntity = @{
