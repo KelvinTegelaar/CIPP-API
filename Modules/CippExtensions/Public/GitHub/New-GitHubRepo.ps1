@@ -43,7 +43,13 @@ function New-GitHubRepo {
         $Path = 'user/repos'
     }
 
+    # Check if repo exists
+    $Existing = Invoke-GitHubApiRequest -Path "$Path/$Name"
+    if ($Existing.id) {
+        return $Existing
+    }
+
     if ($PSCmdlet.ShouldProcess("Create repository '$Name'")) {
-        Invoke-GitHubApiRequest -Path $Path -Method POST -Body $Body
+        return (Invoke-GitHubApiRequest -Path $Path -Method POST -Body $Body)
     }
 }
