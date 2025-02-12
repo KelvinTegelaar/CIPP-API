@@ -70,7 +70,7 @@ function Invoke-ExecGitHubAction {
                         $RepoEntity = @{
                             PartitionKey  = 'CommunityRepos'
                             RowKey        = [string]$Repo.id
-                            Name          = [string]$Repo.name
+                            Name          = [string]($Repo.name -replace ' ', '-')
                             Description   = [string]$Repo.description
                             URL           = [string]$Repo.html_url
                             FullName      = [string]$Repo.full_name
