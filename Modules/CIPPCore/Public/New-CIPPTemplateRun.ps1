@@ -6,7 +6,7 @@ function New-CIPPTemplateRun {
     )
     $Table = Get-CippTable -tablename 'templates'
     $ExistingTemplates = (Get-CIPPAzDataTableEntity @Table) | ForEach-Object {
-        $data = $_.JSON | ConvertFrom-Json -Depth 100
+        $data = $_.JSON | ConvertFrom-Json -ErrorAction SilentlyContinue -Depth 100
         $data | Add-Member -NotePropertyName 'GUID' -NotePropertyValue $_.RowKey -Force
         $data | Add-Member -NotePropertyName 'PartitionKey' -NotePropertyValue $_.PartitionKey -Force
         $data
@@ -20,30 +20,17 @@ function New-CIPPTemplateRun {
     }
     if ($TemplateSettings.templateRepo) {
         Write-Host 'Grabbing data from required community repo'
-        <#$RepoURI = "https://geoipdb.azurewebsites.net/api/GetTemplateRepo?repo=$($TemplateSettings.templateRepo.value)"
-        $RepoData = Invoke-RestMethod -Uri $RepoURI -Method GET -ContentType 'application/json'
-        $ImportTemplates = foreach ($task in $Tasks) {
-            switch ($Task) {
-                'caTemplates' { $RepoData.ca }
-                'policyTemplates' { $RepoData.policyTemplates }
-                'groupTemplates' { $RepoData.groupTemplates }
-                'standardTemplates' { $RepoData.standardTemplates }
-            }
-        }#>
         $Files = (Get-GitHubFileTree -FullName $TemplateSettings.templateRepo.value -Branch $TemplateSettings.templateRepo.branch).tree | Where-Object { $_.path -match '.json$' } | Select-Object *, @{n = 'html_url'; e = { "https://github.com/$($SplatParams.FullName)/tree/$($SplatParams.Branch)/$($_.path)" } }, @{n = 'name'; e = { ($_.path -split '/')[ -1 ] -replace '\.json$', '' } }
-
         foreach ($File in $Files) {
-            # find file.name in existing templates
             $ExistingTemplate = $ExistingTemplates | Where-Object { $_.displayName -eq $File.name } | Select-Object -First 1
             if ($ExistingTemplate) {
-                # check the sha hash of the file against the existing template
                 $UpdateNeeded = $false
                 if ($ExistingTemplate.sha -ne $File.sha -or !$ExistingTemplate.sha) {
                     $UpdateNeeded = $true
                 }
-
                 if ($UpdateNeeded) {
-                    
+                    $Template = Get-GitHubFileContents -FullName $TemplateSettings.templateRepo.value -Branch $TemplateSettings.templateRepo.branch -Path $File.path | ConvertFrom-Json
+                    Import-CommunityTemplate -Template $Template -SHA $File.sha
                 }
             }
         }
