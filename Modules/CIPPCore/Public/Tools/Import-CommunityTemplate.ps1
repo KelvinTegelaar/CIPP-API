@@ -17,7 +17,28 @@ function Import-CommunityTemplate {
         Write-Host "This is going to be a direct write to table, it's a CIPP template. We're writing $($Template.RowKey)"
         Add-CIPPAzDataTableEntity @Table -Entity $Template -Force
     } else {
-        switch -Wildcard ($Template.'@odata.type') {
+        if ($Template.groupTypes) { $Type = 'Group' }
+        if ($Template.'@odata.type' -like '*conditionalAccessPolicy*') { $Type = 'ConditionalAccessPolicy' }
+
+        switch -Wildcard ($Type) {
+            '*Group*' {
+                $RawJsonObj = [PSCustomObject]@{
+                    Displayname     = $Template.displayName
+                    Description     = $Template.Description
+                    MembershipRules = $Template.membershipRule
+                    username        = $Template.mailNickname
+                    GUID            = $Template.id
+                    groupType       = 'generic'
+                } | ConvertTo-Json -Depth 100 -Compress
+                $entity = @{
+                    JSON         = "$RawJsonObj"
+                    PartitionKey = 'GroupTemplate'
+                    SHA          = $SHA
+                    GUID         = $Template.id
+                    RowKey       = $Template.id
+                }
+                Add-CIPPAzDataTableEntity @Table -Entity $entity -Force
+            }
             '*conditionalAccessPolicy*' {
                 $Template = ([pscustomobject]$Template) | ForEach-Object {
                     $NonEmptyProperties = $_.psobject.Properties | Where-Object { $null -ne $_.Value } | Select-Object -ExpandProperty Name
