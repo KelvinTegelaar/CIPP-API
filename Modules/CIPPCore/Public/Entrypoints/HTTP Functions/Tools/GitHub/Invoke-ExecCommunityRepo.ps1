@@ -160,8 +160,20 @@ function Invoke-ExecCommunityRepo {
             $Path = $Request.Body.Path
             $FullName = $Request.Body.FullName
             $Branch = $Request.Body.Branch
-            $Template = Get-GitHubFileContents -FullName $FullName -Path $Path -Branch $Branch
-            Import-CommunityTemplate -Template $Template.content -SHA $Template.sha
+            try {
+                $Template = Get-GitHubFileContents -FullName $FullName -Path $Path -Branch $Branch
+                $Content = $Template.content | ConvertFrom-Json
+                Import-CommunityTemplate -Template $Content -SHA $Template.sha
+                $Results = @{
+                    resultText = 'Template imported'
+                    state      = 'success'
+                }
+            } catch {
+                $Results = @{
+                    resultText = "Error importing template: $($_.Exception.Message)"
+                    state      = 'error'
+                }
+            }
         }
         default {
             $Results = @{
