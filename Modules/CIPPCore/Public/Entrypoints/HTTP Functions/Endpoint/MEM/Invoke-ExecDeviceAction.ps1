@@ -10,8 +10,8 @@ Function Invoke-ExecDeviceAction {
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
 
-    $APIName = $TriggerMetadata.FunctionName
-    Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -message 'Accessed this API' -Sev 'Debug'
+    $APIName = $Request.Params.CIPPEndpoint
+    Write-LogMessage -headers $Request.Headers -API $APINAME -message 'Accessed this API' -Sev 'Debug'
 
     # Interact with Body parameters or the body of the request.
 
@@ -29,7 +29,7 @@ Function Invoke-ExecDeviceAction {
             ActionBody = $ActionBody
             DeviceFilter = $Request.Body.GUID
             TenantFilter = $Request.Body.TenantFilter
-            ExecutingUser = $request.headers.'x-ms-client-principal'
+            Headers = $Request.Headers
             APINAME = $APINAME
         }
         $ActionResult = New-CIPPDeviceAction @cmdparams

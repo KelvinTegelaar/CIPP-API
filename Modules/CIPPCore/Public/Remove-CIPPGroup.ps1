@@ -1,7 +1,7 @@
 function Remove-CIPPGroup {
     [CmdletBinding()]
     param (
-        $ExecutingUser,
+        $Headers,
         $GroupType,
         $ID,
         $DisplayName,
@@ -12,18 +12,18 @@ function Remove-CIPPGroup {
     try {
         if ($GroupType -eq 'Distribution List' -or $GroupType -eq 'Mail-Enabled Security') {
             New-ExoRequest -tenantid $TenantFilter -cmdlet 'Remove-DistributionGroup' -cmdParams @{Identity = $id; BypassSecurityGroupManagerCheck = $true } -useSystemMailbox $true
-            Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $($tenantfilter) -message "$($DisplayName) Deleted" -Sev 'Info'
+            Write-LogMessage -headers $Headers -API $APINAME -tenant $($tenantfilter) -message "$($DisplayName) Deleted" -Sev 'Info'
             return "Successfully Deleted $($GroupType) group $($DisplayName)"
 
         } elseif ($GroupType -eq 'Microsoft 365' -or $GroupType -eq 'Security') {
             $null = New-GraphPostRequest -uri "https://graph.microsoft.com/v1.0/groups/$($ID)" -tenantid $TenantFilter -type Delete -verbose
-            Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $($tenantfilter) -message "$($DisplayName) Deleted" -Sev 'Info'
+            Write-LogMessage -headers $Headers -API $APINAME -tenant $($tenantfilter) -message "$($DisplayName) Deleted" -Sev 'Info'
             return "Successfully Deleted $($GroupType) group $($DisplayName)"
         }
 
     } catch {
         $ErrorMessage = Get-CippException -Exception $_
-        Write-LogMessage -user $ExecutingUser -API $APIName -message "Could not delete $DisplayName. Error: $($ErrorMessage.NormalizedError)" -Sev 'Error' -tenant $TenantFilter -LogData $ErrorMessage
+        Write-LogMessage -headers $Headers -API $APIName -message "Could not delete $DisplayName. Error: $($ErrorMessage.NormalizedError)" -Sev 'Error' -tenant $TenantFilter -LogData $ErrorMessage
         return "Could not delete $DisplayName. Error: $($ErrorMessage.NormalizedError)"
     }
 }

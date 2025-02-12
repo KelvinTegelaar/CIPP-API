@@ -10,9 +10,9 @@ Function Invoke-RemoveGroupTemplate {
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
 
-    $APIName = $TriggerMetadata.FunctionName
-    $User = $request.headers.'x-ms-client-principal'
-    Write-LogMessage -user $User -API $APINAME -message 'Accessed this API' -Sev 'Debug'
+    $APIName = $Request.Params.CIPPEndpoint
+    $User = $Request.Headers
+    Write-LogMessage -Headers $User -API $APINAME -message 'Accessed this API' -Sev 'Debug'
 
     $ID = $request.query.id
     try {
@@ -23,11 +23,11 @@ Function Invoke-RemoveGroupTemplate {
         Write-Host $Filter
         $ClearRow = Get-CIPPAzDataTableEntity @Table -Filter $Filter -Property PartitionKey, RowKey
         Remove-AzDataTableEntity -Force @Table -Entity $clearRow
-        Write-LogMessage -user $User -API $APINAME -message "Removed Intune Template with ID $ID." -Sev 'Info'
+        Write-LogMessage -Headers $User -API $APINAME -message "Removed Intune Template with ID $ID." -Sev 'Info'
         $body = [pscustomobject]@{'Results' = 'Successfully removed Template' }
     } catch {
         $ErrorMessage = Get-CippException -Exception $_
-        Write-LogMessage -user $User -API $APINAME -message "Failed to remove intune template $ID. $($ErrorMessage.NormalizedError)" -Sev 'Error' -LogData $ErrorMessage
+        Write-LogMessage -Headers $User -API $APINAME -message "Failed to remove intune template $ID. $($ErrorMessage.NormalizedError)" -Sev 'Error' -LogData $ErrorMessage
         $body = [pscustomobject]@{'Results' = "Failed to remove template: $($ErrorMessage.NormalizedError)" }
     }
 

@@ -10,8 +10,8 @@ Function Invoke-AddTenantAllowBlockList {
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
 
-    $APIName = $TriggerMetadata.FunctionName
-    Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APIName -message 'Accessed this API' -Sev 'Debug'
+    $APIName = $Request.Params.CIPPEndpoint
+    Write-LogMessage -headers $Request.Headers -API $APIName -message 'Accessed this API' -Sev 'Debug'
 
     $blocklistobj = $Request.body
     if ($Request.body.tenantId -eq 'AllTenants') { $Tenants = (Get-Tenants).defaultDomainName } else { $Tenants = @($Request.body.tenantId) }
@@ -38,11 +38,11 @@ Function Invoke-AddTenantAllowBlockList {
             New-ExoRequest @ExoRequest
 
             $results.add("Successfully added $($blocklistobj.Entries) as type $($blocklistobj.ListType) to the $($blocklistobj.listMethod) list for $tenant")
-            Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APIName -tenant $Tenant -message $result -Sev 'Info'
+            Write-LogMessage -headers $Request.Headers -API $APIName -tenant $Tenant -message $result -Sev 'Info'
         } catch {
             $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
             $results.add("Failed to create blocklist. Error: $ErrorMessage")
-            Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APIName -tenant $Tenant -message $result -Sev 'Error'
+            Write-LogMessage -headers $Request.Headers -API $APIName -tenant $Tenant -message $result -Sev 'Error'
         }
     }
     # Associate values to output bindings by calling 'Push-OutputBinding'.

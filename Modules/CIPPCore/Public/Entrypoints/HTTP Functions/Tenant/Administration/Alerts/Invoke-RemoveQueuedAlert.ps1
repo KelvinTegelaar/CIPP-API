@@ -10,8 +10,8 @@ Function Invoke-RemoveQueuedAlert {
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
 
-    $APIName = $TriggerMetadata.FunctionName
-    Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -message 'Accessed this API' -Sev 'Debug'
+    $APIName = $Request.Params.CIPPEndpoint
+    Write-LogMessage -headers $Request.Headers -API $APINAME -message 'Accessed this API' -Sev 'Debug'
 
     if ($Request.query.EventType -eq 'Audit log Alert') {
         $Table = 'WebhookRules'
@@ -25,11 +25,11 @@ Function Invoke-RemoveQueuedAlert {
         $Filter = "RowKey eq '{0}'" -f $ID
         $Alert = Get-CIPPAzDataTableEntity @Table -Filter $Filter -Property PartitionKey, RowKey
         Remove-AzDataTableEntity -Force @Table -Entity $Alert
-        Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -message "Removed application queue for $ID." -Sev 'Info'
+        Write-LogMessage -headers $Request.Headers -API $APINAME -message "Removed application queue for $ID." -Sev 'Info'
 
         $body = [pscustomobject]@{'Results' = 'Successfully removed from queue.' }
     } catch {
-        Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -message "Failed to remove from queue $ID. $($_.Exception.Message)" -Sev 'Error'
+        Write-LogMessage -headers $Request.Headers -API $APINAME -message "Failed to remove from queue $ID. $($_.Exception.Message)" -Sev 'Error'
         $body = [pscustomobject]@{'Results' = "Failed to remove alert from queue $($_.Exception.Message)" }
     }
 

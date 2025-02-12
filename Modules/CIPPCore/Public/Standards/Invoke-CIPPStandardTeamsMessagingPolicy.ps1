@@ -43,7 +43,6 @@ Function Invoke-CIPPStandardTeamsMessagingPolicy {
     if ($null -eq $Settings.AllowUserDeleteMessage) { $Settings.AllowUserDeleteMessage = $CurrentState.AllowUserDeleteMessage }
     if ($null -eq $Settings.AllowUserEditMessage) { $Settings.AllowUserEditMessage = $CurrentState.AllowUserEditMessage }
     if ($null -eq $Settings.AllowUserDeleteChat) { $Settings.AllowUserDeleteChat = $CurrentState.AllowUserDeleteChat }
-    if ($null -eq $Settings.ReadReceiptsEnabledType) { $Settings.ReadReceiptsEnabledType = $CurrentState.ReadReceiptsEnabledType }
     if ($null -eq $Settings.CreateCustomEmojis) { $Settings.CreateCustomEmojis = $CurrentState.CreateCustomEmojis }
     if ($null -eq $Settings.DeleteCustomEmojis) { $Settings.DeleteCustomEmojis = $CurrentState.DeleteCustomEmojis }
     if ($null -eq $Settings.AllowSecurityEndUserReporting) { $Settings.AllowSecurityEndUserReporting = $CurrentState.AllowSecurityEndUserReporting }
@@ -53,7 +52,7 @@ Function Invoke-CIPPStandardTeamsMessagingPolicy {
                         ($CurrentState.AllowUserDeleteMessage -eq $Settings.AllowUserDeleteMessage) -and
                         ($CurrentState.AllowUserEditMessage -eq $Settings.AllowUserEditMessage) -and
                         ($CurrentState.AllowUserDeleteChat -eq $Settings.AllowUserDeleteChat) -and
-                        ($CurrentState.ReadReceiptsEnabledType -eq $Settings.ReadReceiptsEnabledType) -and
+                        ($CurrentState.ReadReceiptsEnabledType -eq $Settings.ReadReceiptsEnabledType.value) -and
                         ($CurrentState.CreateCustomEmojis -eq $Settings.CreateCustomEmojis) -and
                         ($CurrentState.DeleteCustomEmojis -eq $Settings.DeleteCustomEmojis) -and
                         ($CurrentState.AllowSecurityEndUserReporting -eq $Settings.AllowSecurityEndUserReporting) -and
@@ -69,7 +68,7 @@ Function Invoke-CIPPStandardTeamsMessagingPolicy {
                 AllowUserDeleteMessage = $Settings.AllowUserDeleteMessage
                 AllowUserEditMessage = $Settings.AllowUserEditMessage
                 AllowUserDeleteChat = $Settings.AllowUserDeleteChat
-                ReadReceiptsEnabledType = $Settings.ReadReceiptsEnabledType
+                ReadReceiptsEnabledType = $Settings.ReadReceiptsEnabledType.value
                 CreateCustomEmojis = $Settings.CreateCustomEmojis
                 DeleteCustomEmojis = $Settings.DeleteCustomEmojis
                 AllowSecurityEndUserReporting = $Settings.AllowSecurityEndUserReporting

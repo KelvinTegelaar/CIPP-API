@@ -10,9 +10,9 @@ Function Invoke-ListGlobalAddressList {
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
 
-    $APIName = $TriggerMetadata.FunctionName
-    $ExecutingUser = $Request.headers.'x-ms-client-principal'
-    Write-LogMessage -user $ExecutingUser -API $APINAME -message 'Accessed this API' -Sev 'Debug'
+    $APIName = $Request.Params.CIPPEndpoint
+    $Headers = $Request.Headers
+    Write-LogMessage -Headers $Headers -API $APINAME -message 'Accessed this API' -Sev 'Debug'
     $TenantFilter = $Request.Query.tenantFilter
 
     try {

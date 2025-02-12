@@ -4,7 +4,7 @@ function Get-CIPPLicenseOverview {
     param (
         $TenantFilter,
         $APIName = 'Get License Overview',
-        $ExecutingUser
+        $Headers
     )
 
 
