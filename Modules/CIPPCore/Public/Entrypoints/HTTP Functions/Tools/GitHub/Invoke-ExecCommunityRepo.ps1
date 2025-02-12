@@ -84,6 +84,28 @@ function Invoke-ExecCommunityRepo {
                 state      = 'success'
             }
         }
+        'UploadTemplate' {
+            $GUID = $Request.Body.GUID
+            $TemplateTable = Get-CIPPTable -TableName templates
+            $TemplateEntity = Get-CIPPAzDataTableEntity @TemplateTable -Filter "RowKey eq '$($GUID)'"
+            if ($TemplateEntity) {
+                $Template = $TemplateEntity.JSON | ConvertFrom-Json
+                $DisplayName = $Template.Displayname ?? $Template.templateName ?? $Template.name
+                $Basename = $DisplayName -replace '\s', '_' -replace '[^\w\d_]', ''
+                $Path = '{0}/{1}.json' -f $TemplateEntity.PartitionKey, $Basename
+                $Results = Push-GitHubContent -FullName $Request.Body.FullName -Path $Path -Content ($TemplateEntity | ConvertTo-Json -Compress) -Message $Request.Body.Message
+
+                $Results = @{
+                    resultText = "Template '$($DisplayName)' uploaded"
+                    state      = 'success'
+                }
+            } else {
+                $Results = @{
+                    resultText = "Template '$($GUID)' not found"
+                    state      = 'error'
+                }
+            }
+        }
         'ImportTemplate' {
             $Path = $Request.Body.Path
             $FullName = $Request.Body.FullName

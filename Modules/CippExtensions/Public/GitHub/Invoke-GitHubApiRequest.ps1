@@ -17,9 +17,10 @@ function Invoke-GitHubApiRequest {
     if ($Configuration.Enabled) {
         $APIKey = Get-ExtensionAPIKey -Extension 'GitHub'
         $Headers = @{
-            Authorization = "Bearer $($APIKey)"
-            'User-Agent'  = 'CIPP'
-            Accept        = $Accept
+            Authorization          = "Bearer $($APIKey)"
+            'User-Agent'           = 'CIPP'
+            Accept                 = $Accept
+            'X-GitHub-API-Version' = '2022-11-28'
         }
 
         $FullUri = "https://api.github.com/$Path"
@@ -34,6 +35,11 @@ function Invoke-GitHubApiRequest {
             $RestMethod.ResponseHeadersVariable = 'ResponseHeaders'
         }
 
+        if ($Body) {
+            $RestMethod.Body = $Body | ConvertTo-Json -Depth 10
+            $RestMethod.ContentType = 'application/json'
+        }
+
         try {
             $Response = Invoke-RestMethod @RestMethod
             if ($ReturnHeaders.IsPresent) {
@@ -42,7 +48,7 @@ function Invoke-GitHubApiRequest {
                 $Response
             }
         } catch {
-            Write-Error $_.Exception.Message
+            throw $_.Exception.Message
         }
     } else {
         $Action = @{

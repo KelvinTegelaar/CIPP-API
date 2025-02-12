@@ -27,14 +27,20 @@ function Push-GitHubContent {
     )
 
     $ContentBase64 = [System.Convert]::ToBase64String([System.Text.Encoding]::UTF8.GetBytes($Content))
-    $ContentSha = (Invoke-GitHubApiRequest -Path "repos/$($FullName)/contents/$($Path)?ref=$($Branch)" -Method GET).sha
+    try {
+        $ContentSha = (Invoke-GitHubApiRequest -Path "repos/$($FullName)/contents/$($Path)?ref=$($Branch)").sha
+    } catch {
+        $ContentSha = $null
+    }
     $Filename = Split-Path $Path -Leaf
 
     $Body = @{
         message = $Message ?? "Update $($Filename)"
         content = $ContentBase64
-        sha     = $ContentSha
         branch  = $Branch
+    }
+    if ($ContentSha) {
+        $Body.sha = $ContentSha
     }
 
     Invoke-GitHubApiRequest -Path "repos/$($FullName)/contents/$($Path)" -Method PUT -Body $Body

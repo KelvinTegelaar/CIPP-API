@@ -53,6 +53,31 @@ function Invoke-ExecGitHubAction {
             'ImportTemplate' {
                 $Results = Import-CommunityTemplate @SplatParams
             }
+            'CreateRepo' {
+                $Repo = New-GitHubRepo @SplatParams
+                if ($Results.id) {
+                    $Table = Get-CIPPTable -TableName CommunityRepos
+                    $RepoEntity = @{
+                        PartitionKey  = 'CommunityRepos'
+                        RowKey        = [string]$Repo.id
+                        Name          = [string]$Repo.name
+                        Description   = [string]$Repo.description
+                        URL           = [string]$Repo.html_url
+                        FullName      = [string]$Repo.full_name
+                        Owner         = [string]$Repo.owner.login
+                        Visibility    = [string]$Repo.visibility
+                        WriteAccess   = [bool]$Repo.permissions.push
+                        DefaultBranch = [string]$Repo.default_branch
+                        Permissions   = [string]($Repo.permissions | ConvertTo-Json -Compress)
+                    }
+                    Add-CIPPAzDataTableEntity @Table -Entity $RepoEntity -Force | Out-Null
+
+                    $Results = @{
+                        resultText = "Repository '$($Results.name)' created"
+                        state      = 'success'
+                    }
+                }
+            }
             default {
                 $Results = "Error: Unknown action '$Action'"
             }
