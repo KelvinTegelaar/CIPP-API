@@ -33,19 +33,21 @@ function New-GitHubRepo {
     $Body = @{
         name             = $Name
         description      = $Description
-        private          = $Private
+        private          = $Private.IsPresent
         license_template = $License
     }
 
     if ($Type -eq 'Org') {
         $Path = "orgs/$Org/repos"
+        $Owner = $Org
     } else {
         $Path = 'user/repos'
+        $Owner = (Invoke-GitHubApiRequest -Path 'user').login
     }
 
     # Check if repo exists
     try {
-        $Existing = Invoke-GitHubApiRequest -Path "$Path/$Name"
+        $Existing = Invoke-GitHubApiRequest -Path "repos/$Owner/$Name"
         if ($Existing.id) {
             return $Existing
         }
