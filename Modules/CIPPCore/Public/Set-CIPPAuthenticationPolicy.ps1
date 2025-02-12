@@ -109,8 +109,8 @@ function Set-CIPPAuthenticationPolicy {
         # QR code
         'QRCodePin' {
             if ($State -eq 'enabled') {
-                $CurrentInfo.pinLength = $QRCodePinLength
-                $CurrentInfo.standardQRCodeLifetimeInDays = $QRCodeLifetimeInDays
+                Write-LogMessage -headers $Headers -API $APIName -tenant $Tenant -message "Setting $AuthenticationMethodId to enabled is not allowed" -sev Error
+                throw "Setting $AuthenticationMethodId to enabled is not allowed"
             }
         }
         Default {
