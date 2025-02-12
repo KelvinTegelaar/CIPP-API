@@ -14,9 +14,29 @@ function Invoke-ExecCommunityRepo {
 
     $Action = $Request.Body.Action
     $Id = $Request.Body.Id
+    if ($Request.Body.Id) {
+        $Filter = "PartitionKey eq 'CommunityRepos' and RowKey eq '$($Id)'"
+    } elseif ($Request.Body.FullName) {
+        $Filter = "PartitionKey eq 'CommunityRepos' and FullName eq '$($Request.Body.FullName)'"
+    } else {
+        $Results = @(
+            @{
+                resultText = 'Id or FullName required'
+                state      = 'error'
+            }
+        )
+        $Body = @{
+            Results = $Results
+        }
+
+        Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
+                StatusCode = [HttpStatusCode]::OK
+                Body       = $Body
+            })
+        return
+    }
 
     $Table = Get-CIPPTable -TableName CommunityRepos
-    $Filter = "PartitionKey eq 'CommunityRepos' and RowKey eq '$($Id)'"
     $RepoEntity = Get-CIPPAzDataTableEntity @Table -Filter $Filter
 
     switch ($Action) {
@@ -92,6 +112,14 @@ function Invoke-ExecCommunityRepo {
             if ($TemplateEntity) {
                 $Template = $TemplateEntity.JSON | ConvertFrom-Json
                 $DisplayName = $Template.Displayname ?? $Template.templateName ?? $Template.name
+                if ($Template.tenantFilter) {
+                    $Template.tenantFilter = @(@{ label = 'Template Tenant'; value = 'Template Tenant' })
+                }
+                if ($Template.excludedTenants) {
+                    $Template.excludedTenants = @()
+                }
+                $TemplateEntity.JSON = $Template | ConvertTo-Json -Compress -Depth 100
+
                 $Basename = $DisplayName -replace '\s', '_' -replace '[^\w\d_]', ''
                 $Path = '{0}/{1}.json' -f $TemplateEntity.PartitionKey, $Basename
                 $Results = Push-GitHubContent -FullName $Request.Body.FullName -Path $Path -Content ($TemplateEntity | ConvertTo-Json -Compress) -Message $Request.Body.Message -Branch $Branch
