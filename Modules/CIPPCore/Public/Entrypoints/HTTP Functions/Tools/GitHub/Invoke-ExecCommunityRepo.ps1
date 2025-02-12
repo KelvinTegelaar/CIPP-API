@@ -161,7 +161,7 @@ function Invoke-ExecCommunityRepo {
             $FullName = $Request.Body.FullName
             $Branch = $Request.Body.Branch
             $Template = Get-GitHubFileContents -FullName $FullName -Path $Path -Branch $Branch
-            Import-CommunityTemplate -Template $Template
+            Import-CommunityTemplate -Template $Template.content -SHA $Template.sha
         }
         default {
             $Results = @{
