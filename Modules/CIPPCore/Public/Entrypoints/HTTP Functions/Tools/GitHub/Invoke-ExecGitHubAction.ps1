@@ -88,6 +88,7 @@ function Invoke-ExecGitHubAction {
                         }
                     }
                 } catch {
+                    Write-Information (Get-CippException -Exception $_ | ConvertTo-Json)
                     $Results = @{
                         resultText = 'You may not have permission to create repositories, check your PAT scopes and try again - {0}' -f $_.Exception.Message
                         state      = 'error'
