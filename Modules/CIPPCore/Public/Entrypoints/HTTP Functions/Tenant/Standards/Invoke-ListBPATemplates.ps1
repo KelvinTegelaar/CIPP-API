@@ -28,14 +28,15 @@ Function Invoke-ListBPATemplates {
     }
 
     $Filter = "PartitionKey eq 'BPATemplate'"
-    $Templates = (Get-CIPPAzDataTableEntity @Table -Filter $Filter).JSON | ConvertFrom-Json
+    $Templates = Get-CIPPAzDataTableEntity @Table -Filter $Filter
 
     if ($Request.Query.RawJson) {
         $Templates
     } else {
         $Templates = $Templates | ForEach-Object {
-            $Template = $_
+            $Template = $_.JSON | ConvertFrom-Json
             @{
+                GUID  = $_.GUID
                 Data  = $Template.fields
                 Name  = $Template.Name
                 Style = $Template.Style
