@@ -83,9 +83,13 @@ Function Invoke-ExecExtensionTest {
                 $Results = [pscustomobject]@{'Results' = 'Successfully Connected to HIBP' }
             }
             'GitHub' {
-                $GitHubResponse = Invoke-GitHubApiRequest -Method 'GET' -Path 'user'
+                $GitHubResponse = Invoke-GitHubApiRequest -Method 'GET' -Path 'user' -ReturnHeaders
                 if ($GitHubResponse.login) {
-                    $Results = [pscustomobject]@{ 'Results' = "Successfully connected to GitHub user: $($GitHubResponse.login)" }
+                    if ($GitHubResponse.Headers.'x-oauth-scopes') {
+                        $Results = [pscustomobject]@{ 'Results' = "Successfully connected to GitHub user: $($GitHubResponse.login) with scopes: $($GitHubResponse.Headers.'x-oauth-scopes')" }
+                    } else {
+                        $Results = [pscustomobject]@{ 'Results' = "Successfully connected to GitHub user: $($GitHubResponse.login) using a Fine Grained PAT" }
+                    }
                 } else {
                     $Results = [pscustomobject]@{ 'Results' = 'Failed to connect to GitHub. Check your API credentials and try again.' }
                 }

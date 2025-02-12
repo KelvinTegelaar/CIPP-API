@@ -43,9 +43,10 @@ function Invoke-GitHubApiRequest {
         try {
             $Response = Invoke-RestMethod @RestMethod
             if ($ReturnHeaders.IsPresent) {
-                $ResponseHeaders
+                $Response | Add-Member -MemberType NoteProperty -Name Headers -Value $ResponseHeaders
+                return $Response
             } else {
-                $Response
+                return $Response
             }
         } catch {
             throw $_.Exception.Message
