@@ -62,6 +62,8 @@ function Invoke-ExecGitHubAction {
             }
             'CreateRepo' {
                 try {
+                    Write-Information "Creating repository '$($SplatParams.Name)'"
+                    Write-Information ($SplatParams | ConvertTo-Json -Depth 10)
                     $Repo = New-GitHubRepo @SplatParams
                     if ($Results.id) {
                         $Table = Get-CIPPTable -TableName CommunityRepos
