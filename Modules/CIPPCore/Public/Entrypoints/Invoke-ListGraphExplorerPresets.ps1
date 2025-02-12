@@ -12,7 +12,7 @@ Function Invoke-ListGraphExplorerPresets {
 
     $APIName = $Request.Params.CIPPEndpoint
     Write-LogMessage -headers $Request.Headers -API $APINAME -message 'Accessed this API' -Sev 'Debug'
-    $Username = ([System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($Request.Headers)) | ConvertFrom-Json).userDetails
+    $Username = $Request.Headers['x-ms-client-principal-name']
 
     try {
         $Table = Get-CIPPTable -TableName 'GraphPresets'
