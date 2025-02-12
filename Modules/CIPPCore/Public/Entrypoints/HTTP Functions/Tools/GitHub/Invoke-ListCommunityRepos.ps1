@@ -41,6 +41,7 @@ function Invoke-ListCommunityRepos {
                     Visibility    = $Repo.Visibility
                     WriteAccess   = $Repo.WriteAccess
                     DefaultBranch = $Repo.DefaultBranch
+                    UploadBranch  = $Repo.DefaultBranch
                     Permissions   = [string]($Repo.RepoPermissions | ConvertTo-Json)
                 }
                 Add-CIPPAzDataTableEntity @Table -Entity $Entity
@@ -63,6 +64,7 @@ function Invoke-ListCommunityRepos {
             Visibility      = $_.Visibility
             WriteAccess     = $_.WriteAccess
             DefaultBranch   = $_.DefaultBranch
+            UploadBranch    = $_.UploadBranch ?? $_.DefaultBranch
             RepoPermissions = $_.Permissions | ConvertFrom-Json
         }
     }

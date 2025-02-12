@@ -88,12 +88,13 @@ function Invoke-ExecCommunityRepo {
             $GUID = $Request.Body.GUID
             $TemplateTable = Get-CIPPTable -TableName templates
             $TemplateEntity = Get-CIPPAzDataTableEntity @TemplateTable -Filter "RowKey eq '$($GUID)'"
+            $Branch = $RepoEntity.UploadBranch ?? $RepoEntity.DefaultBranch
             if ($TemplateEntity) {
                 $Template = $TemplateEntity.JSON | ConvertFrom-Json
                 $DisplayName = $Template.Displayname ?? $Template.templateName ?? $Template.name
                 $Basename = $DisplayName -replace '\s', '_' -replace '[^\w\d_]', ''
                 $Path = '{0}/{1}.json' -f $TemplateEntity.PartitionKey, $Basename
-                $Results = Push-GitHubContent -FullName $Request.Body.FullName -Path $Path -Content ($TemplateEntity | ConvertTo-Json -Compress) -Message $Request.Body.Message
+                $Results = Push-GitHubContent -FullName $Request.Body.FullName -Path $Path -Content ($TemplateEntity | ConvertTo-Json -Compress) -Message $Request.Body.Message -Branch $Branch
 
                 $Results = @{
                     resultText = "Template '$($DisplayName)' uploaded"
@@ -103,6 +104,27 @@ function Invoke-ExecCommunityRepo {
                 $Results = @{
                     resultText = "Template '$($GUID)' not found"
                     state      = 'error'
+                }
+            }
+        }
+        'SetBranch' {
+            if (!$RepoEntity) {
+                $Results = @{
+                    resultText = "Repository $($Id) not found"
+                    state      = 'error'
+                }
+            } else {
+                $Branch = $Request.Body.Branch
+                if (!$RepoEntity.UploadBranch) {
+                    $RepoEntity | Add-Member -NotePropertyName 'UploadBranch' -NotePropertyValue $Branch
+                } else {
+                    $RepoEntity.UploadBranch = $Branch
+                }
+                $null = Add-CIPPAzDataTableEntity @Table -Entity $RepoEntity -Force
+
+                $Results = @{
+                    resultText = "Branch set to $Branch"
+                    state      = 'success'
                 }
             }
         }
