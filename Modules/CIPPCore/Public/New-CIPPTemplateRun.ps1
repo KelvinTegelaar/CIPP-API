@@ -22,7 +22,13 @@ function New-CIPPTemplateRun {
     if ($TemplateSettings.templateRepo) {
         Write-Host 'Grabbing data from required community repo'
         $Files = (Get-GitHubFileTree -FullName $TemplateSettings.templateRepo.value -Branch $TemplateSettings.templateRepoBranch.value).tree | Where-Object { $_.path -match '.json$' -and $_.path -notmatch 'NativeImport' } | Select-Object *, @{n = 'html_url'; e = { "https://github.com/$($SplatParams.FullName)/tree/$($SplatParams.Branch)/$($_.path)" } }, @{n = 'name'; e = { ($_.path -split '/')[ -1 ] -replace '\.json$', '' } }
+        #if there is a migration table file, file the file. Store the file contents in $migrationtable
+        $MigrationTable = $Files | Where-Object { $_.name -eq 'MigrationTable' } | Select-Object -Last 1
+        if ($MigrationTable) {
+            $MigrationTable = (Get-GitHubFileContents -FullName $TemplateSettings.templateRepo.value -Branch $TemplateSettings.templateRepoBranch.value -Path $MigrationTable.path).content | ConvertFrom-Json
+        }
         foreach ($File in $Files) {
+            if ($File.name -eq 'MigrationTable') { continue }
             $ExistingTemplate = $ExistingTemplates | Where-Object { $_.displayName -eq $File.name } | Select-Object -First 1
             $Template = (Get-GitHubFileContents -FullName $TemplateSettings.templateRepo.value -Branch $TemplateSettings.templateRepoBranch.value -Path $File.path).content | ConvertFrom-Json
             if ($ExistingTemplate) {
@@ -32,11 +38,11 @@ function New-CIPPTemplateRun {
                 }
                 if ($UpdateNeeded) {
                     Write-Host "Template $($File.name) needs to be updated as the SHA is different"
-                    Import-CommunityTemplate -Template $Template -SHA $File.sha
+                    Import-CommunityTemplate -Template $Template -SHA $File.sha -MigrationTable $MigrationTable
                 }
             } else {
                 Write-Host "Template $($File.name) needs to be created"
-                Import-CommunityTemplate -Template $Template -SHA $File.sha
+                Import-CommunityTemplate -Template $Template -SHA $File.sha -MigrationTable $MigrationTable
 
             }
         }

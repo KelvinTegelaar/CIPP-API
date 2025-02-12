@@ -7,6 +7,7 @@ function Import-CommunityTemplate {
         [Parameter(Mandatory = $true)]
         $Template,
         $SHA,
+        $MigrationTable,
         [switch]$Force
     )
 
@@ -15,12 +16,14 @@ function Import-CommunityTemplate {
 
     if ($Template.RowKey) {
         Write-Host "This is going to be a direct write to table, it's a CIPP template. We're writing $($Template.RowKey)"
+        $Template = $Template | Select-Object * -ExcludeProperty timestamp
         Add-CIPPAzDataTableEntity @Table -Entity $Template -Force
     } else {
-        if ($Template.groupTypes) { $Type = 'Group' }
+        if ($Template.mailNickname) { $Type = 'Group' }
         if ($Template.'@odata.type' -like '*conditionalAccessPolicy*') { $Type = 'ConditionalAccessPolicy' }
-
+        Write-Host "The type is $Type"
         switch -Wildcard ($Type) {
+
             '*Group*' {
                 $RawJsonObj = [PSCustomObject]@{
                     Displayname     = $Template.displayName
@@ -29,7 +32,7 @@ function Import-CommunityTemplate {
                     username        = $Template.mailNickname
                     GUID            = $Template.id
                     groupType       = 'generic'
-                } | ConvertTo-Json -Depth 100 -Compress
+                } | ConvertTo-Json -Depth 100
                 $entity = @{
                     JSON         = "$RawJsonObj"
                     PartitionKey = 'GroupTemplate'
@@ -38,8 +41,10 @@ function Import-CommunityTemplate {
                     RowKey       = $Template.id
                 }
                 Add-CIPPAzDataTableEntity @Table -Entity $entity -Force
+                break
             }
             '*conditionalAccessPolicy*' {
+                Write-Host $MigrationTable
                 $Template = ([pscustomobject]$Template) | ForEach-Object {
                     $NonEmptyProperties = $_.psobject.Properties | Where-Object { $null -ne $_.Value } | Select-Object -ExpandProperty Name
                     $_ | Select-Object -Property $NonEmptyProperties
@@ -48,6 +53,12 @@ function Import-CommunityTemplate {
                 $Template = $Template | Select-Object * -ExcludeProperty lastModifiedDateTime, 'assignments', '#microsoft*', '*@odata.navigationLink', '*@odata.associationLink', '*@odata.context', 'ScopeTagIds', 'supportsScopeTags', 'createdDateTime', '@odata.id', '@odata.editLink', '*odata.type', 'roleScopeTagIds@odata.type', createdDateTime, 'createdDateTime@odata.type'
                 Remove-ODataProperties -Object $Template
                 $RawJson = ConvertTo-Json -InputObject $Template -Depth 100 -Compress
+                #Replace the ids with the displayname by using the migration table, this is a simple find and replace each instance in the JSON.
+                $MigrationTable.objects | ForEach-Object {
+                    if ($RawJson -match $_.ID) {
+                        $RawJson = $RawJson.Replace($_.ID, $($_.DisplayName))
+                    }
+                }
                 $entity = @{
                     JSON         = "$RawJson"
                     PartitionKey = 'CATemplate'
@@ -56,6 +67,7 @@ function Import-CommunityTemplate {
                     RowKey       = $ID
                 }
                 Add-CIPPAzDataTableEntity @Table -Entity $entity -Force
+                break
             }
             default {
                 $URLName = switch -Wildcard ($Template.'@odata.id') {
