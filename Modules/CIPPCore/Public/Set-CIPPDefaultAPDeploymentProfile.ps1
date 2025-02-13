@@ -14,12 +14,12 @@ function Set-CIPPDefaultAPDeploymentProfile {
         $hidePrivacy,
         $hideTerms,
         $Autokeyboard,
-        $ExecutingUser,
+        $Headers,
         $Language = 'os-default',
         $APIName = 'Add Default Enrollment Status Page'
     )
 
-    $User = $request.headers.'x-ms-client-principal'
+    $User = $Request.Headers
 
     try {
         $ObjBody = [pscustomobject]@{
@@ -50,7 +50,7 @@ function Set-CIPPDefaultAPDeploymentProfile {
                 if ($_.id -ne $Profiles[0].id) {
                     if ($PSCmdlet.ShouldProcess($_.displayName, 'Delete duplicate Autopilot profile')) {
                         $null = New-GraphPOSTRequest -uri "https://graph.microsoft.com/beta/deviceManagement/windowsAutopilotDeploymentProfiles/$($_.id)" -tenantid $tenantfilter -type DELETE
-                        Write-LogMessage -user $User -API $APIName -tenant $($tenantfilter) -message "Deleted duplicate Autopilot profile $($displayname)" -Sev 'Info'
+                        Write-LogMessage -Headers $User -API $APIName -tenant $($tenantfilter) -message "Deleted duplicate Autopilot profile $($displayname)" -Sev 'Info'
                     }
                 }
             }
@@ -60,7 +60,7 @@ function Set-CIPPDefaultAPDeploymentProfile {
             if ($PSCmdlet.ShouldProcess($displayName, 'Add Autopilot profile')) {
                 $Type = 'Add'
                 $GraphRequest = New-GraphPostRequest -uri 'https://graph.microsoft.com/beta/deviceManagement/windowsAutopilotDeploymentProfiles' -body $body -tenantid $tenantfilter
-                Write-LogMessage -user $User -API $APIName -tenant $($tenantfilter) -message "Added Autopilot profile $($displayname)" -Sev 'Info'
+                Write-LogMessage -Headers $User -API $APIName -tenant $($tenantfilter) -message "Added Autopilot profile $($displayname)" -Sev 'Info'
             }
         } else {
             $Type = 'Edit'
@@ -76,13 +76,13 @@ function Set-CIPPDefaultAPDeploymentProfile {
                 if (!$Assignments) {
                     $null = New-GraphPOSTRequest -uri "https://graph.microsoft.com/beta/deviceManagement/windowsAutopilotDeploymentProfiles/$($GraphRequest.id)/assignments" -tenantid $tenantfilter -type POST -body $AssignBody
                 }
-                Write-LogMessage -user $User -API $APIName -tenant $($tenantfilter) -message "Assigned autopilot profile $($Displayname) to $AssignTo" -Sev 'Info'
+                Write-LogMessage -Headers $User -API $APIName -tenant $($tenantfilter) -message "Assigned autopilot profile $($Displayname) to $AssignTo" -Sev 'Info'
             }
         }
         "Successfully $($Type)ed profile for $($tenantfilter)"
     } catch {
         $ErrorMessage = Get-CippException -Exception $_
-        Write-LogMessage -user $User -API $APIName -tenant $($tenantfilter) -message "Failed $($Type)ing Autopilot Profile $($Displayname). Error: $($ErrorMessage.NormalizedError)" -Sev 'Error' -LogData $ErrorMessage
+        Write-LogMessage -Headers $User -API $APIName -tenant $($tenantfilter) -message "Failed $($Type)ing Autopilot Profile $($Displayname). Error: $($ErrorMessage.NormalizedError)" -Sev 'Error' -LogData $ErrorMessage
         throw "Failed to add profile for $($tenantfilter): $($ErrorMessage.NormalizedError)"
     }
 }

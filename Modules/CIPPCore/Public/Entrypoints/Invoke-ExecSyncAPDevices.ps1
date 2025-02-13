@@ -9,20 +9,20 @@ Function Invoke-ExecSyncAPDevices {
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
-    $APIName = $TriggerMetadata.FunctionName
-    $ExecutingUser = $request.headers.'x-ms-client-principal'
+    $APIName = $Request.Params.CIPPEndpoint
+    $Headers = $Request.Headers
     $TenantFilter = $Request.Body.tenantFilter ?? $Request.Query.tenantFilter
-    Write-LogMessage -user $ExecutingUser -API $APINAME -message 'Accessed this API' -Sev Debug
+    Write-LogMessage -Headers $Headers -API $APINAME -message 'Accessed this API' -Sev Debug
 
     try {
         $null = New-GraphPOSTRequest -uri 'https://graph.microsoft.com/beta/deviceManagement/windowsAutopilotSettings/sync' -tenantid $TenantFilter
         $Results = "Successfully Started Sync for $($TenantFilter)"
-        Write-LogMessage -user $ExecutingUser -API $APINAME -tenant $TenantFilter -message 'Successfully started Autopilot sync' -Sev Info
+        Write-LogMessage -Headers $Headers -API $APINAME -tenant $TenantFilter -message 'Successfully started Autopilot sync' -Sev Info
         $StatusCode = [HttpStatusCode]::OK
     } catch {
         $ErrorMessage = Get-CippException -Exception $_
         $Results = "Failed to start sync for $TenantFilter. Did you try syncing in the last 10 minutes?"
-        Write-LogMessage -user $ExecutingUser -API $APINAME -tenant $TenantFilter -message 'Failed to start Autopilot sync. Did you try syncing in the last 10 minutes?' -Sev Error -LogData $ErrorMessage
+        Write-LogMessage -Headers $Headers -API $APINAME -tenant $TenantFilter -message 'Failed to start Autopilot sync. Did you try syncing in the last 10 minutes?' -Sev Error -LogData $ErrorMessage
         $StatusCode = [HttpStatusCode]::Forbidden
     }
 

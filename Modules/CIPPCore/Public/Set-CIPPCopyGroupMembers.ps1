@@ -1,7 +1,7 @@
 function Set-CIPPCopyGroupMembers {
     [CmdletBinding(SupportsShouldProcess = $true)]
     param(
-        [string]$ExecutingUser,
+        $Headers,
         [string]$UserId,
         [string]$CopyFromId,
         [string]$TenantFilter,
@@ -88,13 +88,13 @@ function Set-CIPPCopyGroupMembers {
                 Add-CIPPScheduledTask -Task $TaskBody -hidden $false
                 $Errors.Add("We've scheduled a task to add $UserId to the Exchange group $($MailGroup.displayName)") | Out-Null
             } else {
-                Write-LogMessage -user $ExecutingUser -API $APIName -message "Added $UserId to group $($MailGroup.displayName)" -Sev 'Info' -tenant $TenantFilter
+                Write-LogMessage -headers $Headers -API $APIName -message "Added $UserId to group $($MailGroup.displayName)" -Sev 'Info' -tenant $TenantFilter
                 $Success.Add("Added user to group: $($MailGroup.displayName)") | Out-Null
             }
         } catch {
             $ErrorMessage = Get-CippException -Exception $_
             $Errors.Add("We've failed to add the group $($MailGroup.displayName): $($ErrorMessage.NormalizedError)") | Out-Null
-            Write-LogMessage -user $ExecutingUser -API $APIName -tenant $TenantFilter -message "Group adding failed for group $($_.displayName):  $($ErrorMessage.NormalizedError)" -Sev 'Error' -LogData $ErrorMessage
+            Write-LogMessage -headers $Headers -API $APIName -tenant $TenantFilter -message "Group adding failed for group $($_.displayName):  $($ErrorMessage.NormalizedError)" -Sev 'Error' -LogData $ErrorMessage
         }
     }
 

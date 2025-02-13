@@ -10,9 +10,9 @@ Function Invoke-ExecDisableUser {
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
 
-    $APIName = $TriggerMetadata.FunctionName
+    $APIName = $Request.Params.CIPPEndpoint
     try {
-        $State = Set-CIPPSignInState -userid $Request.query.ID -TenantFilter $Request.Query.TenantFilter -APIName $APINAME -ExecutingUser $request.headers.'x-ms-client-principal' -AccountEnabled ([System.Convert]::ToBoolean($Request.Query.Enable))
+        $State = Set-CIPPSignInState -userid $Request.query.ID -TenantFilter $Request.Query.TenantFilter -APIName $APINAME -Headers $Request.Headers -AccountEnabled ([System.Convert]::ToBoolean($Request.Query.Enable))
         $Results = [pscustomobject]@{'Results' = "$State" }
     } catch {
         $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
