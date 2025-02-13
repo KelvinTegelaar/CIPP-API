@@ -7,7 +7,7 @@ function Invoke-CippWebhookProcessing {
         $Operations,
         $CIPPURL,
         $APIName = 'Process webhook',
-        $ExecutingUser
+        $Headers
     )
 
     $AuditLogTable = Get-CIPPTable -TableName 'AuditLogs'
@@ -26,13 +26,13 @@ function Invoke-CippWebhookProcessing {
         Write-Host "this is our action: $($action | ConvertTo-Json -Depth 15 -Compress)"
         switch ($action) {
             'disableUser' {
-                Set-CIPPSignInState -TenantFilter $TenantFilter -User $data.UserId -AccountEnabled $false -APIName 'Alert Engine' -ExecutingUser 'Alert Engine'
+                Set-CIPPSignInState -TenantFilter $TenantFilter -User $data.UserId -AccountEnabled $false -APIName 'Alert Engine' -Headers 'Alert Engine'
             }
             'becremediate' {
                 $username = (New-GraphGetRequest -uri "https://graph.microsoft.com/beta/users/$($data.UserId)" -tenantid $TenantFilter).UserPrincipalName
-                Set-CIPPResetPassword -UserID $username -tenantFilter $TenantFilter -APIName 'Alert Engine' -ExecutingUser 'Alert Engine'
-                Set-CIPPSignInState -userid $username -AccountEnabled $false -tenantFilter $TenantFilter -APIName 'Alert Engine' -ExecutingUser 'Alert Engine'
-                Revoke-CIPPSessions -userid $username -username $username -ExecutingUser 'Alert Engine' -APIName 'Alert Engine' -tenantFilter $TenantFilter
+                Set-CIPPResetPassword -UserID $username -tenantFilter $TenantFilter -APIName 'Alert Engine' -Headers 'Alert Engine'
+                Set-CIPPSignInState -userid $username -AccountEnabled $false -tenantFilter $TenantFilter -APIName 'Alert Engine' -Headers 'Alert Engine'
+                Revoke-CIPPSessions -userid $username -username $username -Headers 'Alert Engine' -APIName 'Alert Engine' -tenantFilter $TenantFilter
                 $RuleDisabled = 0
                 New-ExoRequest -anchor $username -tenantid $TenantFilter -cmdlet 'Get-InboxRule' -cmdParams @{Mailbox = $username; IncludeHidden = $true } | Where-Object { $_.Name -ne 'Junk E-Mail Rule' -and $_.Name -notlike 'Microsoft.Exchange.OOF.*' } | ForEach-Object {
                     $null = New-ExoRequest -anchor $username -tenantid $TenantFilter -cmdlet 'Disable-InboxRule' -cmdParams @{Confirm = $false; Identity = $_.Identity }

@@ -23,7 +23,7 @@ function Get-HuduMapping {
     $Tenants = Get-Tenants -IncludeErrors
     $Table = Get-CIPPTable -TableName Extensionsconfig
     try {
-        $Configuration = ((Get-CIPPAzDataTableEntity @Table).config | ConvertFrom-Json -ea stop).Hudu
+        $Configuration = (Get-CIPPAzDataTableEntity @Table).config | ConvertFrom-Json -ea stop
 
         Connect-HuduAPI -configuration $Configuration
         $HuduCompanies = Get-HuduCompanies

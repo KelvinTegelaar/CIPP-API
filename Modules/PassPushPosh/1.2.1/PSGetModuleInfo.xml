@@ -1,0 +1,139 @@
+<Objs Version="1.1.0.1" xmlns="http://schemas.microsoft.com/powershell/2004/04">
+  <Obj RefId="0">
+    <TN RefId="0">
+      <T>Microsoft.PowerShell.Commands.PSRepositoryItemInfo</T>
+      <T>System.Management.Automation.PSCustomObject</T>
+      <T>System.Object</T>
+    </TN>
+    <MS>
+      <S N="Name">PassPushPosh</S>
+      <S N="Version">1.2.0</S>
+      <S N="Type">Module</S>
+      <S N="Description">PassPushPosh is a PowerShell Module for accessing the Password Pusher application via API. It supports creating, retrieving, and deleting anonymous and authenticated pushes and getting Push and Dashboard data for authenticated users.</S>
+      <S N="Author">Adam Burley</S>
+      <S N="CompanyName">AdamBurley</S>
+      <S N="Copyright">Adam Burley, 2022</S>
+      <DT N="PublishedDate">2025-02-06T18:21:26-05:00</DT>
+      <Nil N="InstalledDate" />
+      <Nil N="UpdatedDate" />
+      <URI N="LicenseUri">https://www.gnu.org/licenses/gpl-3.0.en.html</URI>
+      <URI N="ProjectUri">https://github.com/adamburley/PassPushPosh</URI>
+      <URI N="IconUri">https://github.com/adamburley/PassPushPosh/blob/main/pwplogo85x85.png?raw=true</URI>
+      <Obj N="Tags" RefId="1">
+        <TN RefId="1">
+          <T>System.Object[]</T>
+          <T>System.Array</T>
+          <T>System.Object</T>
+        </TN>
+        <LST>
+          <S>PSEdition_Core</S>
+          <S>Windows</S>
+          <S>Linux</S>
+          <S>MacOS</S>
+          <S>Password</S>
+          <S>PSModule</S>
+        </LST>
+      </Obj>
+      <Obj N="Includes" RefId="2">
+        <TN RefId="2">
+          <T>System.Collections.Hashtable</T>
+          <T>System.Object</T>
+        </TN>
+        <DCT>
+          <En>
+            <S N="Key">DscResource</S>
+            <Obj N="Value" RefId="3">
+              <TNRef RefId="1" />
+              <LST />
+            </Obj>
+          </En>
+          <En>
+            <S N="Key">Function</S>
+            <Obj N="Value" RefId="4">
+              <TNRef RefId="1" />
+              <LST>
+                <S>Get-Dashboard</S>
+                <S>Get-Push</S>
+                <S>Get-PushAccount</S>
+                <S>Get-PushAuditLog</S>
+                <S>Get-SecretLink</S>
+                <S>Initialize-PassPushPosh</S>
+                <S>New-Push</S>
+                <S>Remove-Push</S>
+              </LST>
+            </Obj>
+          </En>
+          <En>
+            <S N="Key">RoleCapability</S>
+            <Ref N="Value" RefId="3" />
+          </En>
+          <En>
+            <S N="Key">Workflow</S>
+            <Ref N="Value" RefId="3" />
+          </En>
+          <En>
+            <S N="Key">Command</S>
+            <Obj N="Value" RefId="5">
+              <TNRef RefId="1" />
+              <LST>
+                <S>Get-Dashboard</S>
+                <S>Get-Push</S>
+                <S>Get-PushAccount</S>
+                <S>Get-PushAuditLog</S>
+                <S>Get-SecretLink</S>
+                <S>Initialize-PassPushPosh</S>
+                <S>New-Push</S>
+                <S>Remove-Push</S>
+              </LST>
+            </Obj>
+          </En>
+          <En>
+            <S N="Key">Cmdlet</S>
+            <Ref N="Value" RefId="3" />
+          </En>
+        </DCT>
+      </Obj>
+      <Nil N="PowerShellGetFormatVersion" />
+      <S N="ReleaseNotes">1.2.0 - Add compatibility with Premium and Pro API endpoints and branding._x000D__x000A_        1.0.0 - Major refactor, add capabilities and improve testing and build process._x000D__x000A_        0.3.0 - Remove route translations from URI segments for compatibility with PasswordPusher v1.42.0. See pglombardo/PasswordPusher/pull/2353</S>
+      <Obj N="Dependencies" RefId="6">
+        <TNRef RefId="1" />
+        <LST />
+      </Obj>
+      <S N="RepositorySourceLocation">https://www.powershellgallery.com/api/v2</S>
+      <S N="Repository">PSGallery</S>
+      <S N="PackageManagementProvider">NuGet</S>
+      <Obj N="AdditionalMetadata" RefId="7">
+        <TN RefId="3">
+          <T>System.Management.Automation.PSCustomObject</T>
+          <T>System.Object</T>
+        </TN>
+        <MS>
+          <S N="copyright">Adam Burley, 2022</S>
+          <S N="description">PassPushPosh is a PowerShell Module for accessing the Password Pusher application via API. It supports creating, retrieving, and deleting anonymous and authenticated pushes and getting Push and Dashboard data for authenticated users.</S>
+          <S N="requireLicenseAcceptance">False</S>
+          <S N="releaseNotes">1.2.0 - Add compatibility with Premium and Pro API endpoints and branding._x000D__x000A_        1.0.0 - Major refactor, add capabilities and improve testing and build process._x000D__x000A_        0.3.0 - Remove route translations from URI segments for compatibility with PasswordPusher v1.42.0. See pglombardo/PasswordPusher/pull/2353</S>
+          <S N="isLatestVersion">True</S>
+          <S N="isAbsoluteLatestVersion">True</S>
+          <S N="versionDownloadCount">2</S>
+          <S N="downloadCount">221</S>
+          <S N="packageSize">14279</S>
+          <S N="published">2/6/2025 6:21:26 PM -05:00</S>
+          <S N="created">2/6/2025 6:21:26 PM -05:00</S>
+          <S N="lastUpdated">2/6/2025 6:40:00 PM -05:00</S>
+          <S N="tags">PSEdition_Core Windows Linux MacOS Password PSModule PSFunction_Get-Dashboard PSCommand_Get-Dashboard PSFunction_Get-Push PSCommand_Get-Push PSFunction_Get-PushAccount PSCommand_Get-PushAccount PSFunction_Get-PushAuditLog PSCommand_Get-PushAuditLog PSFunction_Get-SecretLink PSCommand_Get-SecretLink PSFunction_Initialize-PassPushPosh PSCommand_Initialize-PassPushPosh PSFunction_New-Push PSCommand_New-Push PSFunction_Remove-Push PSCommand_Remove-Push PSIncludes_Function</S>
+          <S N="developmentDependency">False</S>
+          <S N="updated">2025-02-06T18:40:00Z</S>
+          <S N="NormalizedVersion">1.2.0</S>
+          <S N="Authors">Adam Burley</S>
+          <S N="IsPrerelease">false</S>
+          <S N="ItemType">Module</S>
+          <S N="FileList">PassPushPosh.nuspec|PassPushPosh.psd1|PassPushPosh.psm1</S>
+          <S N="GUID">5d8a1afd-a912-440f-a9b9-e79f42a05f21</S>
+          <S N="PowerShellVersion">7.0</S>
+          <S N="CompanyName">Burley.dev</S>
+        </MS>
+      </Obj>
+      <S N="InstalledLocation">C:\GitHub\CIPP Workspace\CIPP-API\Modules\PassPushPosh\1.2.0</S>
+    </MS>
+  </Obj>
+</Objs>

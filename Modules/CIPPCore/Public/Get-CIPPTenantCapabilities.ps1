@@ -4,7 +4,7 @@ function Get-CIPPTenantCapabilities {
     param (
         $TenantFilter,
         $APIName = 'Get Tenant Capabilities',
-        $ExecutingUser
+        $Headers
     )
 
     $Org = New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/organization' -tenantid $TenantFilter

@@ -4,7 +4,7 @@ function Set-CIPPResetPassword {
         $userid,
         $tenantFilter,
         $APIName = 'Reset Password',
-        $ExecutingUser,
+        $Headers,
         [bool]$forceChangePasswordNextSignIn = $true
     )
 
@@ -25,7 +25,7 @@ function Set-CIPPResetPassword {
         if ($PasswordLink) {
             $password = $PasswordLink
         }
-        Write-LogMessage -user $ExecutingUser -API $APIName -message "Reset the password for $($userid). User must change password is set to $forceChangePasswordNextSignIn" -Sev 'Info' -tenant $TenantFilter
+        Write-LogMessage -headers $Headers -API $APIName -message "Reset the password for $($userid). User must change password is set to $forceChangePasswordNextSignIn" -Sev 'Info' -tenant $TenantFilter
 
         if ($UserDetails.onPremisesSyncEnabled -eq $true) {
             return [pscustomobject]@{ resultText = "Reset the password for $($userid). User must change password is set to $forceChangePasswordNextSignIn. The new password is $password. WARNING: This user is AD synced. Please confirm passthrough or writeback is enabled."
@@ -40,7 +40,7 @@ function Set-CIPPResetPassword {
         }
     } catch {
         $ErrorMessage = Get-CippException -Exception $_
-        Write-LogMessage -user $ExecutingUser -API $APIName -message "Could not reset password for $($userid). Error: $($ErrorMessage.NormalizedError)" -Sev 'Error' -tenant $TenantFilter -LogData $ErrorMessage
+        Write-LogMessage -headers $Headers -API $APIName -message "Could not reset password for $($userid). Error: $($ErrorMessage.NormalizedError)" -Sev 'Error' -tenant $TenantFilter -LogData $ErrorMessage
         return [pscustomobject]@{
             resultText = "Could not reset password for $($userid). Error: $($ErrorMessage.NormalizedError)"
             state      = 'Error'

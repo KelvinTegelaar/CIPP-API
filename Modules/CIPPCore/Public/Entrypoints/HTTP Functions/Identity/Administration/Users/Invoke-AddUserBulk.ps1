@@ -11,7 +11,7 @@ Function Invoke-AddUserBulk {
     param($Request, $TriggerMetadata)
 
     $APIName = 'AddUserBulk'
-    Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -message 'Accessed this API' -Sev 'Debug'
+    Write-LogMessage -headers $Request.Headers -API $APINAME -message 'Accessed this API' -Sev 'Debug'
     $TenantFilter = $Request.body.TenantFilter
     $Body = foreach ($userobj in $request.body.BulkUser) {
         if ($userobj.usageLocation.value) {
@@ -32,7 +32,7 @@ Function Invoke-AddUserBulk {
             Write-Host "Our body to ship is $bodyToShip"
             $GraphRequest = New-GraphPostRequest -uri 'https://graph.microsoft.com/beta/users' -tenantid $TenantFilter -type POST -body $BodyToship
             Write-Host "Graph request is $GraphRequest"
-            Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $($TenantFilter) -message "Created user $($userobj.displayname) with id $($GraphRequest.id) " -Sev 'Info'
+            Write-LogMessage -headers $Request.Headers -API $APINAME -tenant $($TenantFilter) -message "Created user $($userobj.displayname) with id $($GraphRequest.id) " -Sev 'Info'
 
             #PWPush
             $PasswordLink = New-PwPushLink -Payload $password
@@ -42,7 +42,7 @@ Function Invoke-AddUserBulk {
             $results = "Created user $($UserprincipalName). Password is $password"
 
         } catch {
-            Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $($TenantFilter) -message "Failed to create user. Error:$($_.Exception.Message)" -Sev 'Error'
+            Write-LogMessage -headers $Request.Headers -API $APINAME -tenant $($TenantFilter) -message "Failed to create user. Error:$($_.Exception.Message)" -Sev 'Error'
             $results = "Failed to create user $($UserprincipalName). $($_.Exception.Message)"
         }
         [PSCustomObject]@{

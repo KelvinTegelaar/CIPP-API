@@ -10,9 +10,9 @@ Function Invoke-AddTransportRule {
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
 
-    $APIName = $TriggerMetadata.FunctionName
-    $ExetutingUser = $Request.headers.'x-ms-client-principal'
-    Write-LogMessage -user $ExetutingUser -API $APINAME -message 'Accessed this API' -Sev 'Debug'
+    $APIName = $Request.Params.CIPPEndpoint
+    $ExecutingUser = $Request.Headers
+    Write-LogMessage -Headers $ExecutingUser -API $APINAME -message 'Accessed this API' -Sev 'Debug'
 
     $RequestParams = $Request.Body.PowerShellCommand | ConvertFrom-Json | Select-Object -Property * -ExcludeProperty GUID, HasSenderOverride, ExceptIfHasSenderOverride, ExceptIfMessageContainsDataClassifications, MessageContainsDataClassifications
 
@@ -31,11 +31,11 @@ Function Invoke-AddTransportRule {
                 "Successfully created transport rule for $tenantFilter."
             }
 
-            Write-LogMessage -user $ExetutingUser -API $APINAME -tenant $tenantFilter -message "Created transport rule for $($tenantFilter)" -sev Info
+            Write-LogMessage -Headers $ExecutingUser -API $APINAME -tenant $tenantFilter -message "Created transport rule for $($tenantFilter)" -sev Info
         } catch {
             $ErrorMessage = Get-CippException -Exception $_
             "Could not create transport rule for $($tenantFilter): $($ErrorMessage.NormalizedError)"
-            Write-LogMessage -user $ExetutingUser -API $APINAME -tenant $tenantFilter -message "Could not create transport rule for $($tenantFilter). Error:$($ErrorMessage.NormalizedError)" -sev Error -LogData $ErrorMessage
+            Write-LogMessage -Headers $ExecutingUser -API $APINAME -tenant $tenantFilter -message "Could not create transport rule for $($tenantFilter). Error:$($ErrorMessage.NormalizedError)" -sev Error -LogData $ErrorMessage
         }
     }
 

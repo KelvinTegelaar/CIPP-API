@@ -66,11 +66,11 @@ Function Invoke-ListMessageTrace {
             Write-Information ($SearchParams | ConvertTo-Json)
 
             New-ExoRequest -TenantId $TenantFilter -Cmdlet 'Get-MessageTrace' -CmdParams $SearchParams | Select-Object MessageTraceId, Status, Subject, RecipientAddress, SenderAddress, @{ Name = 'Received'; Expression = { $_.Received.ToString('u') } }, FromIP, ToIP
-            Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APIName -tenant $($TenantFilter) -message 'Executed message trace' -Sev 'Info'
+            Write-LogMessage -headers $Request.Headers -API $APIName -tenant $($TenantFilter) -message 'Executed message trace' -Sev 'Info'
 
         }
     } catch {
-        Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $($tenantfilter) -message "Failed executing messagetrace. Error: $($_.Exception.Message)" -Sev 'Error'
+        Write-LogMessage -headers $Request.Headers -API $APINAME -tenant $($tenantfilter) -message "Failed executing messagetrace. Error: $($_.Exception.Message)" -Sev 'Error'
         $trace = @{Status = "Failed to retrieve message trace $($_.Exception.Message)" }
     }
 

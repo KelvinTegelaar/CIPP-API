@@ -9,10 +9,10 @@ function Invoke-ListGraphRequest {
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
 
-    $APIName = $TriggerMetadata.FunctionName
+    $APIName = $Request.Params.CIPPEndpoint
 
     $Message = 'Accessed this API | Endpoint: {0}' -f $Request.Query.Endpoint
-    Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -message $Message -Sev 'Debug'
+    Write-LogMessage -headers $Request.Headers -API $APINAME -message $Message -Sev 'Debug'
 
     $CippLink = ([System.Uri]$TriggerMetadata.Headers.Referer).PathAndQuery
 
@@ -117,6 +117,9 @@ function Invoke-ListGraphRequest {
     }
 
     $Metadata = $GraphRequestParams
+    if ($Request.Headers.'x-ms-coldstart' -eq 1) {
+        $Metadata.ColdStart = $true
+    }
 
     try {
         $Results = Get-GraphRequestList @GraphRequestParams

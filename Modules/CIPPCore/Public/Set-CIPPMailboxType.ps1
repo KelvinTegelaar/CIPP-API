@@ -1,7 +1,7 @@
 function Set-CIPPMailboxType {
     [CmdletBinding()]
     param (
-        $ExecutingUser,
+        $Headers,
         $userid,
         $username,
         $APIName = 'Mailbox Conversion',
@@ -13,11 +13,11 @@ function Set-CIPPMailboxType {
     try {
         if ([string]::IsNullOrWhiteSpace($username)) { $username = $userid }
         $null = New-ExoRequest -tenantid $TenantFilter -cmdlet 'Set-Mailbox' -cmdParams @{Identity = $userid; Type = $MailboxType } -Anchor $username
-        Write-LogMessage -user $ExecutingUser -API $APIName -message "Converted $($username) to a $MailboxType mailbox" -Sev 'Info' -tenant $TenantFilter
+        Write-LogMessage -headers $Headers -API $APIName -message "Converted $($username) to a $MailboxType mailbox" -Sev 'Info' -tenant $TenantFilter
         return "Converted $username to a $MailboxType mailbox"
     } catch {
         $ErrorMessage = Get-CippException -Exception $_
-        Write-LogMessage -user $ExecutingUser -API $APIName -message "Could not convert $username to $MailboxType mailbox. Error: $($ErrorMessage.NormalizedError)" -Sev 'Error' -tenant $TenantFilter -LogData $ErrorMessage
+        Write-LogMessage -headers $Headers -API $APIName -message "Could not convert $username to $MailboxType mailbox. Error: $($ErrorMessage.NormalizedError)" -Sev 'Error' -tenant $TenantFilter -LogData $ErrorMessage
         return  "Could not convert $username to a $MailboxType mailbox. Error: $($ErrorMessage.NormalizedError)"
     }
 }
