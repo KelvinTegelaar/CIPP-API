@@ -2,7 +2,7 @@ function Set-CIPPAuthenticationPolicy {
     [CmdletBinding(SupportsShouldProcess = $true)]
     param(
         [Parameter(Mandatory = $true)]$Tenant,
-        [Parameter(Mandatory = $true)][ValidateSet('FIDO2', 'MicrosoftAuthenticator', 'SMS', 'TemporaryAccessPass', 'HardwareOATH', 'softwareOath', 'Voice', 'Email', 'x509Certificate')]$AuthenticationMethodId,
+        [Parameter(Mandatory = $true)][ValidateSet('FIDO2', 'MicrosoftAuthenticator', 'SMS', 'TemporaryAccessPass', 'HardwareOATH', 'softwareOath', 'Voice', 'Email', 'x509Certificate', 'QRCodePin')]$AuthenticationMethodId,
         [Parameter(Mandatory = $true)][bool]$Enabled, # true = enabled or false = disabled
         $MicrosoftAuthenticatorSoftwareOathEnabled,
         $TAPMinimumLifetime = 60, #Minutes
@@ -10,6 +10,8 @@ function Set-CIPPAuthenticationPolicy {
         $TAPDefaultLifeTime = 60, #minutes
         $TAPDefaultLength = 8, #TAP password generated length in chars
         $TAPisUsableOnce = $true,
+        [Parameter()][ValidateRange(1, 395)]$QRCodeLifetimeInDays = 365,
+        [Parameter()][ValidateRange(8, 20)]$QRCodePinLength = 8,
         $APIName = 'Set Authentication Policy',
         $Headers
     )
@@ -56,7 +58,7 @@ function Set-CIPPAuthenticationPolicy {
         'SMS' {
             if ($State -eq 'enabled') {
                 Write-LogMessage -headers $Headers -API $APIName -tenant $Tenant -message "Setting $AuthenticationMethodId to enabled is not allowed" -sev Error
-                return "Setting $AuthenticationMethodId to enabled is not allowed"
+                throw "Setting $AuthenticationMethodId to enabled is not allowed"
             }
         }
 
@@ -87,7 +89,7 @@ function Set-CIPPAuthenticationPolicy {
             # Disallow enabling voice
             if ($State -eq 'enabled') {
                 Write-LogMessage -headers $Headers -API $APIName -tenant $Tenant -message "Setting $AuthenticationMethodId to enabled is not allowed" -sev Error
-                return "Setting $AuthenticationMethodId to enabled is not allowed"
+                throw "Setting $AuthenticationMethodId to enabled is not allowed"
             }
         }
 
@@ -95,7 +97,7 @@ function Set-CIPPAuthenticationPolicy {
         'Email' {
             if ($State -eq 'enabled') {
                 Write-LogMessage -headers $Headers -API $APIName -tenant $Tenant -message "Setting $AuthenticationMethodId to enabled is not allowed" -sev Error
-                return "Setting $AuthenticationMethodId to enabled is not allowed"
+                throw "Setting $AuthenticationMethodId to enabled is not allowed"
             }
         }
 
@@ -103,16 +105,24 @@ function Set-CIPPAuthenticationPolicy {
         'x509Certificate' {
             # Nothing special to do here
         }
+
+        # QR code
+        'QRCodePin' {
+            if ($State -eq 'enabled') {
+                Write-LogMessage -headers $Headers -API $APIName -tenant $Tenant -message "Setting $AuthenticationMethodId to enabled is not allowed" -sev Error
+                throw "Setting $AuthenticationMethodId to enabled is not allowed"
+            }
+        }
         Default {
             Write-LogMessage -headers $Headers -API $APIName -tenant $Tenant -message "Somehow you hit the default case with an input of $AuthenticationMethodId . You probably made a typo in the input for AuthenticationMethodId. It`'s case sensitive." -sev Error
-            return "Somehow you hit the default case with an input of $AuthenticationMethodId . You probably made a typo in the input for AuthenticationMethodId. It`'s case sensitive."
+            throw "Somehow you hit the default case with an input of $AuthenticationMethodId . You probably made a typo in the input for AuthenticationMethodId. It`'s case sensitive."
         }
     }
     # Set state of the authentication method
     try {
         if ($PSCmdlet.ShouldProcess($AuthenticationMethodId, "Set state to $State $OptionalLogMessage")) {
             # Convert body to JSON and send request
-            $null = New-GraphPostRequest -tenantid $Tenant -Uri "https://graph.microsoft.com/beta/policies/authenticationmethodspolicy/authenticationMethodConfigurations/$AuthenticationMethodId" -Type patch -Body ($CurrentInfo | ConvertTo-Json -Compress -Depth 10) -ContentType 'application/json'
+            $null = New-GraphPostRequest -tenantid $Tenant -Uri "https://graph.microsoft.com/beta/policies/authenticationmethodspolicy/authenticationMethodConfigurations/$AuthenticationMethodId" -Type PATCH -Body (ConvertTo-Json -InputObject $CurrentInfo -Compress -Depth 10) -ContentType 'application/json'
             Write-LogMessage -headers $Headers -API $APIName -tenant $Tenant -message "Set $AuthenticationMethodId state to $State $OptionalLogMessage" -sev Info
         }
         return "Set $AuthenticationMethodId state to $State $OptionalLogMessage"
@@ -120,6 +130,6 @@ function Set-CIPPAuthenticationPolicy {
     } catch {
         $ErrorMessage = Get-CippException -Exception $_
         Write-LogMessage -headers $Headers -API $APIName -tenant $Tenant -message "Failed to $State $AuthenticationMethodId Support: $ErrorMessage" -sev Error -LogData $ErrorMessage
-        return "Failed to $State $AuthenticationMethodId Support. Error: $($ErrorMessage.NormalizedError)"
+        throw "Failed to $State $AuthenticationMethodId Support. Error: $($ErrorMessage.NormalizedError)"
     }
 }

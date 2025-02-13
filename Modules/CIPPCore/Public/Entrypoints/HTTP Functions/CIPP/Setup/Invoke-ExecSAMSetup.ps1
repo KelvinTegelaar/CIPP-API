@@ -94,7 +94,7 @@ Function Invoke-ExecSAMSetup {
                     $clientsecret = Get-AzKeyVaultSecret -VaultName $kv -Name 'ApplicationSecret' -AsPlainText
                 }
                 if (!$clientsecret) { $clientsecret = $ENV:ApplicationSecret }
-                Write-Information "client_id=$appid&scope=https://graph.microsoft.com/.default+offline_access+openid+profile&code=$($Request.Query.code)&grant_type=authorization_code&redirect_uri=$($url)&client_secret=$clientsecret" -Uri "https://login.microsoftonline.com/$TenantId/oauth2/v2.0/token"
+                Write-Information "client_id=$appid&scope=https://graph.microsoft.com/.default+offline_access+openid+profile&code=$($Request.Query.code)&grant_type=authorization_code&redirect_uri=$($url)&client_secret=$clientsecret" #-Uri "https://login.microsoftonline.com/$TenantId/oauth2/v2.0/token"
                 $RefreshToken = Invoke-RestMethod -Method POST -Body "client_id=$appid&scope=https://graph.microsoft.com/.default+offline_access+openid+profile&code=$($Request.Query.code)&grant_type=authorization_code&redirect_uri=$($url)&client_secret=$clientsecret" -Uri "https://login.microsoftonline.com/$TenantId/oauth2/v2.0/token" -ContentType 'application/x-www-form-urlencoded'
 
                 if ($env:AzureWebJobsStorage -eq 'UseDevelopmentStorage=true') {
