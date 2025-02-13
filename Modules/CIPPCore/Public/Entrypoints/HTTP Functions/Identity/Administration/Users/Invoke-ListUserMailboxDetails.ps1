@@ -156,8 +156,8 @@ Function Invoke-ListUserMailboxDetails {
     $TotalItemSize = try { [math]::Round([float]($TotalItemSizeString[0]) / $ItemSizeType, 2) } catch { 0 }
 
     if ($ArchiveEnabled) {
-        $ArchiveSizeType = '1{0}' -f ($TotalArchiveItemSizeString[1] ?? 'Gb')
-        $TotalArchiveItemSize = [math]::Round([float]($TotalArchiveItemSizeString[0]) / $ArchiveSizeType, 2)
+        $TotalArchiveItemSize = try { [math]::Round([float]($TotalArchiveItemSizeString[0]), 2) } catch { 0 }
+        $TotalArchiveItemCount = try { [math]::Round($ArchiveSizeRequest.ItemCount, 2) } catch { 0 }
     }
 
     # Build the GraphRequest object
@@ -177,8 +177,8 @@ Function Invoke-ListUserMailboxDetails {
         ProhibitSendReceiveQuota = $ProhibitSendReceiveQuota
         ItemCount                = [math]::Round($StatsRequest.ItemCount, 2)
         TotalItemSize            = $TotalItemSize
-        TotalArchiveItemSize     = if ($ArchiveEnabled) { $TotalArchiveItemSize } else { '0' }
-        TotalArchiveItemCount    = if ($ArchiveEnabled) { try { [math]::Round($ArchiveSizeRequest.ItemCount, 2) } catch { 0 } } else { 0 }
+        TotalArchiveItemSize     = $TotalArchiveItemSize
+        TotalArchiveItemCount    = $TotalArchiveItemCount
         BlockedForSpam           = $BlockedForSpam
         ArchiveMailBox           = $ArchiveEnabled
         AutoExpandingArchive     = $AutoExpandingArchiveEnabled
