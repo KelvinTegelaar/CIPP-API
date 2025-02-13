@@ -53,7 +53,7 @@ function Get-NinjaOneOrgMapping {
 
     $MappingObj = [PSCustomObject]@{
         Companies = @($NinjaOrgs | Sort-Object name)
-        Mappings  = $Mappings
+        Mappings  = @($Mappings)
     }
 
     return $MappingObj
