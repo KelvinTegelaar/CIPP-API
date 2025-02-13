@@ -31,7 +31,7 @@ Function Invoke-ListBPATemplates {
     $Templates = Get-CIPPAzDataTableEntity @Table -Filter $Filter
 
     if ($Request.Query.RawJson) {
-        $Templates
+        $Templates = $Templates.JSON | ConvertFrom-Json
     } else {
         $Templates = $Templates | ForEach-Object {
             $Template = $_.JSON | ConvertFrom-Json

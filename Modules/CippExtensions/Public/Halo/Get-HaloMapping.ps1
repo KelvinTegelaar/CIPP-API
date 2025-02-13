@@ -67,7 +67,7 @@ function Get-HaloMapping {
     }
     $MappingObj = [PSCustomObject]@{
         Companies = @($HaloClients)
-        Mappings  = $Mappings
+        Mappings  = @($Mappings)
     }
 
     return $MappingObj

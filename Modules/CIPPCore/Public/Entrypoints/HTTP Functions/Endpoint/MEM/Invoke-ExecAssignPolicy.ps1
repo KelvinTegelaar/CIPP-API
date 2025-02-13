@@ -20,7 +20,7 @@ Function Invoke-ExecAssignPolicy {
 
     $results = try {
         if ($AssignTo) {
-            $assign = Set-CIPPAssignedPolicy -PolicyId $ID -TenantFilter $tenant -GroupName $AssignTo -Type $Request.body.Type
+            $assign = Set-CIPPAssignedPolicy -PolicyId $ID -TenantFilter $tenant -GroupName $AssignTo -Type $Request.body.Type -Headers $Request.Headers
             Write-LogMessage -headers $Request.Headers -API $APINAME -tenant $($Tenant) -message "Assigned policy $($Displayname) to $AssignTo" -Sev 'Info'
         }
         "Successfully edited policy for $($Tenant)"
