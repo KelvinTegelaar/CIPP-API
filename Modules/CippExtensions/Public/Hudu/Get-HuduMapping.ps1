@@ -46,7 +46,7 @@ function Get-HuduMapping {
     }
     $MappingObj = [PSCustomObject]@{
         Companies = @($HuduCompanies)
-        Mappings  = $Mappings
+        Mappings  = @($Mappings)
     }
 
     return $MappingObj
