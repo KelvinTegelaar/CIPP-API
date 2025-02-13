@@ -8,7 +8,7 @@ function Set-CIPPNamedLocation {
         $change,
         $content,
         $APIName = 'Set Named Location',
-        $ExecutingUser
+        $Headers
     )
 
     try {
@@ -36,12 +36,12 @@ function Set-CIPPNamedLocation {
             }
 
             $null = New-GraphPOSTRequest -uri "https://graph.microsoft.com/beta/identity/conditionalAccess/namedLocations/$NamedLocationId" -tenantid $TenantFilter -type PATCH -body $($NamedLocations | ConvertTo-Json -Compress -Depth 10)
-            Write-LogMessage -user $ExecutingUser -API $APIName -message "Edited named location. Change: $change with content $($content)" -Sev 'Info' -tenant $TenantFilter
+            Write-LogMessage -headers $Headers -API $APIName -message "Edited named location. Change: $change with content $($content)" -Sev 'Info' -tenant $TenantFilter
         }
         return "Edited named location. Change: $change with content $($content)"
     } catch {
         $ErrorMessage = Get-CippException -Exception $_
-        Write-LogMessage -user $ExecutingUser -API $APIName -message "Failed to edit named location: $($ErrorMessage.NormalizedError)" -Sev 'Error' -tenant $TenantFilter -LogData $ErrorMessage
+        Write-LogMessage -headers $Headers -API $APIName -message "Failed to edit named location: $($ErrorMessage.NormalizedError)" -Sev 'Error' -tenant $TenantFilter -LogData $ErrorMessage
         return "Failed to edit named location. Error: $($ErrorMessage.NormalizedError)"
     }
 }

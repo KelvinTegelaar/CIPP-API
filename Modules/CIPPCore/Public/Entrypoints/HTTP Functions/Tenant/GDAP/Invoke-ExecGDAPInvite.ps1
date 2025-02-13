@@ -10,7 +10,7 @@ Function Invoke-ExecGDAPInvite {
     param($Request, $TriggerMetadata)
 
     $APIName = 'ExecGDAPInvite'
-    Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -message 'Accessed this API' -Sev 'Debug'
+    Write-LogMessage -headers $Request.Headers -API $APINAME -message 'Accessed this API' -Sev 'Debug'
 
     $RoleMappings = $Request.Body.roleMappings
 
@@ -77,12 +77,12 @@ Function Invoke-ExecGDAPInvite {
                 $Message = 'Error creating GDAP relationship request'
             }
 
-            Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -message "Created GDAP Invite - $InviteUrl" -Sev 'Info'
+            Write-LogMessage -headers $Request.Headers -API $APINAME -message "Created GDAP Invite - $InviteUrl" -Sev 'Info'
         }
     } catch {
         $Message = 'Error creating GDAP relationship, failed at step: ' + $Step
         Write-Host "GDAP ERROR: $($_.InvocationInfo.PositionMessage)"
-        Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $env:TenantID -message "$($Message): $($_.Exception.Message)" -Sev 'Error' -LogData (Get-CippException -Exception $_)
+        Write-LogMessage -headers $Request.Headers -API $APINAME -tenant $env:TenantID -message "$($Message): $($_.Exception.Message)" -Sev 'Error' -LogData (Get-CippException -Exception $_)
     }
 
     $body = @{

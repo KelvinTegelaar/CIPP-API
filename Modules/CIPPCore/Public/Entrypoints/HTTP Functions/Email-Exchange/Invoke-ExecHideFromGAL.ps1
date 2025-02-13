@@ -10,10 +10,9 @@ Function Invoke-ExecHideFromGAL {
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
 
-    $APIName = $TriggerMetadata.FunctionName
-    $ExecutingUser = $Request.headers.'x-ms-client-principal'
-    $APIName = $TriggerMetadata.FunctionName
-    Write-LogMessage -user $ExecutingUser -API $APINAME -message 'Accessed this API' -Sev 'Debug'
+    $Headers = $Request.Headers
+    $APIName = $Request.Params.CIPPEndpoint
+    Write-LogMessage -Headers $Headers -API $APINAME -message 'Accessed this API' -Sev 'Debug'
 
 
     # Support if the request is a POST or a GET. So to support legacy(GET) and new(POST) requests
@@ -23,7 +22,7 @@ Function Invoke-ExecHideFromGAL {
 
 
     Try {
-        $HideResults = Set-CIPPHideFromGAL -tenantFilter $TenantFilter -UserID $UserId -hidefromgal $Hidden -ExecutingUser $ExecutingUser -APIName $APIName
+        $HideResults = Set-CIPPHideFromGAL -tenantFilter $TenantFilter -UserID $UserId -hidefromgal $Hidden -Headers $Request.Headers -APIName $APIName
         $Results = [pscustomobject]@{'Results' = $HideResults }
         $StatusCode = [HttpStatusCode]::OK
 

@@ -36,7 +36,7 @@ Function Invoke-CIPPStandardTeamsFederationConfiguration {
     $CurrentState = New-TeamsRequest -TenantFilter $Tenant -Cmdlet 'Get-CsTenantFederationConfiguration' -CmdParams @{Identity = 'Global' }
     | Select-Object *
 
-    Switch ($Settings.DomainControl) {
+    Switch ($Settings.DomainControl.value) {
         'AllowAllExternal' {
             $AllowFederatedUsers = $true
             $AllowedDomainsAsAList = 'AllowAllKnownDomains'
@@ -64,6 +64,10 @@ Function Invoke-CIPPStandardTeamsFederationConfiguration {
             } else {
                 $BlockedDomains = @()
             }
+        }
+        Default {
+            Write-LogMessage -API 'Standards' -tenant $Tenant -message "Federation Configuration: Invalid $($Settings.DomainControl.value) parameter" -sev Error
+            Return
         }
     }
 

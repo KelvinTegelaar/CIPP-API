@@ -5,15 +5,15 @@ function Set-CIPPMessageCopy {
         $MessageCopyForSentAsEnabled,
         $TenantFilter,
         $APIName = 'Manage OneDrive Access',
-        $ExecutingUser
+        $Headers
     )
     Try {
         New-ExoRequest -tenantid $TenantFilter -cmdlet 'Set-Mailbox' -cmdParams @{Identity = $userid; MessageCopyForSentAsEnabled = $MessageCopyForSentAsEnabled }
-        Write-LogMessage -user $ExecutingUser -API $APINAME -tenant $($tenantfilter) -message "Successfully set MessageCopyForSentAsEnabled as $MessageCopyForSentAsEnabled on $($userid)." -Sev 'Info'
+        Write-LogMessage -headers $Headers -API $APINAME -tenant $($tenantfilter) -message "Successfully set MessageCopyForSentAsEnabled as $MessageCopyForSentAsEnabled on $($userid)." -Sev 'Info'
         return "Successfully set MessageCopyForSentAsEnabled as $MessageCopyForSentAsEnabled on $($userid)."
     } catch {
         $ErrorMessage = Get-CippException -Exception $_
-        Write-LogMessage -user $ExecutingUser -API $APINAME -tenant $($tenantfilter) -message "set MessageCopyForSentAsEnabled to $MessageCopyForSentAsEnabled failed: $($ErrorMessage.NormalizedError)" -Sev 'Error' -LogData $ErrorMessage
+        Write-LogMessage -headers $Headers -API $APINAME -tenant $($tenantfilter) -message "set MessageCopyForSentAsEnabled to $MessageCopyForSentAsEnabled failed: $($ErrorMessage.NormalizedError)" -Sev 'Error' -LogData $ErrorMessage
         return "set MessageCopyForSentAsEnabled to $MessageCopyForSentAsEnabled failed - $($ErrorMessage.NormalizedError)"
     }
 }

@@ -15,7 +15,7 @@ function Invoke-CippGraphWebhookRenewal {
                 $null = New-GraphPostRequest -uri "https://graph.microsoft.com/beta/subscriptions/$($UpdateSub.SubscriptionID)" -tenantid $TenantFilter -type PATCH -body $body -Verbose
                 $UpdateSub.Expiration = $RenewalDate
                 $null = Add-AzDataTableEntity @WebhookTable -Entity $UpdateSub -Force
-                Write-LogMessage -user 'CIPP' -API 'Renew_Graph_Subscriptions' -message "Renewed Subscription:$($UpdateSub.SubscriptionID)" -Sev "Info" -tenant $TenantFilter
+                Write-LogMessage -Headers'CIPP' -API 'Renew_Graph_Subscriptions' -message "Renewed Subscription:$($UpdateSub.SubscriptionID)" -Sev "Info" -tenant $TenantFilter
 
             } catch {
                 # Rebuild creation parameters
@@ -28,8 +28,8 @@ function Invoke-CippGraphWebhookRenewal {
                 $Resource = "$($UpdateSub.Resource)"
                 $EventType = "$($UpdateSub.EventType)"
 
-                Write-LogMessage -user 'CIPP' -API 'Renew_Graph_Subscriptions' -message "Recreating: $($UpdateSub.SubscriptionID) as renewal failed." -Sev "Info" -tenant $TenantFilter
-                $CreateResult = New-CIPPGraphSubscription -TenantFilter $TenantFilter -TypeofSubscription $TypeofSubscription -BaseURL $BaseURL -Resource $Resource -EventType $EventType -ExecutingUser 'GraphSubscriptionRenewal' -Recreate
+                Write-LogMessage -Headers'CIPP' -API 'Renew_Graph_Subscriptions' -message "Recreating: $($UpdateSub.SubscriptionID) as renewal failed." -Sev "Info" -tenant $TenantFilter
+                $CreateResult = New-CIPPGraphSubscription -TenantFilter $TenantFilter -TypeofSubscription $TypeofSubscription -BaseURL $BaseURL -Resource $Resource -EventType $EventType -Headers 'GraphSubscriptionRenewal' -Recreate
 
                 if ($CreateResult -match 'Created Webhook subscription for') {
                     Remove-AzDataTableEntity -Force @WebhookTable -Entity $UpdateSub
@@ -39,7 +39,7 @@ function Invoke-CippGraphWebhookRenewal {
 
 
         } catch {
-            Write-LogMessage -user 'CIPP' -API 'Renew_Graph_Subscriptions' -message "Failed to renew Webhook Subscription: $($UpdateSub.SubscriptionID). Linenumber: $($_.InvocationInfo.ScriptLineNumber) Error: $($_.Exception.message)" -Sev "Error" -tenant $TenantFilter
+            Write-LogMessage -Headers'CIPP' -API 'Renew_Graph_Subscriptions' -message "Failed to renew Webhook Subscription: $($UpdateSub.SubscriptionID). Linenumber: $($_.InvocationInfo.ScriptLineNumber) Error: $($_.Exception.message)" -Sev "Error" -tenant $TenantFilter
         }
     }
 }

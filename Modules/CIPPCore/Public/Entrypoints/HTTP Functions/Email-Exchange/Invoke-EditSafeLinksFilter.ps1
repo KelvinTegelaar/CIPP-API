@@ -8,8 +8,8 @@ function Invoke-EditSafeLinksFilter {
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
 
-    $APIName = $TriggerMetadata.FunctionName
-    Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -message 'Accessed this API' -Sev 'Debug'
+    $APIName = $Request.Params.CIPPEndpoint
+    Write-LogMessage -headers $Request.Headers -API $APINAME -message 'Accessed this API' -Sev 'Debug'
 
     # Write to the Azure Functions log stream.
     Write-Host 'PowerShell HTTP trigger function processed a request.'
@@ -40,11 +40,11 @@ function Invoke-EditSafeLinksFilter {
         New-ExoRequest @ExoRequestParam
 
         $Result = "Sucessfully set SafeLinks rule $($Request.query.RuleName) to $($Request.query.State)"
-        Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $TenantFilter -message $Result -Sev Info
+        Write-LogMessage -headers $Request.Headers -API $APINAME -tenant $TenantFilter -message $Result -Sev Info
     } catch {
         $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
         $Result = "Failed setting SafeLinks rule $($Request.query.RuleName) to $($request.query.State). Error: $ErrorMessage"
-        Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $TenantFilter -message $Result -Sev 'Error'
+        Write-LogMessage -headers $Request.Headers -API $APINAME -tenant $TenantFilter -message $Result -Sev 'Error'
     }
 
     # Associate values to output bindings by calling 'Push-OutputBinding'.
