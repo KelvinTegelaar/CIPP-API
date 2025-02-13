@@ -22,7 +22,7 @@ function Set-CIPPUserJITAdmin {
     DateTime for expiration
 
     .EXAMPLE
-    Set-CIPPUserJITAdmin -TenantFilter 'contoso.onmicrosoft.com' -User @{UserPrincipalName = 'jit@contoso.onmicrosoft.com'} -Roles @('62e90394-69f5-4237-9190-012177145e10') -Action 'AddRoles' -Expiration (Get-Date).AddDays(1)
+    Set-CIPPUserJITAdmin -TenantFilter 'contoso.onmicrosoft.com' -Headers@{UserPrincipalName = 'jit@contoso.onmicrosoft.com'} -Roles @('62e90394-69f5-4237-9190-012177145e10') -Action 'AddRoles' -Expiration (Get-Date).AddDays(1)
 
     #>
     [CmdletBinding(SupportsShouldProcess = $true)]

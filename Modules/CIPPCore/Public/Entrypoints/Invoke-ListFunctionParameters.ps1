@@ -9,11 +9,8 @@ function Invoke-ListFunctionParameters {
     #>
     param($Request, $TriggerMetadata)
 
-    $APIName = $TriggerMetadata.FunctionName
-    Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -message 'Accessed this API' -Sev 'Debug'
-
-    # Write to the Azure Functions log stream.
-    Write-Information 'PowerShell HTTP trigger function processed a request.'
+    $APIName = $Request.Params.CIPPEndpoint
+    Write-LogMessage -headers $Request.Headers -API $APINAME -message 'Accessed this API' -Sev 'Debug'
 
     # Interact with query parameters or the body of the request.
     $Module = $Request.Query.Module
@@ -27,7 +24,7 @@ function Invoke-ListFunctionParameters {
         $CommandQuery.Name = $Function
     }
     $IgnoreList = 'entryPoint', 'internal'
-    $CommonParameters = @('Verbose', 'Debug', 'ErrorAction', 'WarningAction', 'InformationAction', 'ErrorVariable', 'WarningVariable', 'InformationVariable', 'OutVariable', 'OutBuffer', 'PipelineVariable', 'TenantFilter', 'APIName', 'ExecutingUser', 'ProgressAction', 'WhatIf', 'Confirm')
+    $CommonParameters = @('Verbose', 'Debug', 'ErrorAction', 'WarningAction', 'InformationAction', 'ErrorVariable', 'WarningVariable', 'InformationVariable', 'OutVariable', 'OutBuffer', 'PipelineVariable', 'TenantFilter', 'APIName', 'Headers', 'ProgressAction', 'WhatIf', 'Confirm', 'Headers', 'NoAuthCheck')
     $TemporaryBlacklist = 'Get-CIPPAuthentication', 'Invoke-CippWebhookProcessing', 'Invoke-ListFunctionParameters', 'New-CIPPAPIConfig', 'New-CIPPGraphSubscription'
     try {
         if ($Module -eq 'ExchangeOnlineManagement') {
@@ -40,7 +37,7 @@ function Invoke-ListFunctionParameters {
                 $ExoRequest.Compliance = $true
             }
             $Functions = New-ExoRequest @ExoRequest
-            Write-Host $Functions
+            #Write-Host $Functions
         } else {
             $Functions = Get-Command @CommandQuery | Where-Object { $_.Visibility -eq 'Public' }
         }

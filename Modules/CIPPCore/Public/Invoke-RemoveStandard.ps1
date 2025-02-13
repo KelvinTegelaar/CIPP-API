@@ -10,9 +10,9 @@ Function Invoke-RemoveStandard {
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
 
-    $APIName = $TriggerMetadata.FunctionName
-    $User = $request.headers.'x-ms-client-principal'
-    Write-LogMessage -user $User -API $APINAME -message 'Accessed this API' -Sev 'Debug'
+    $APIName = $Request.Params.CIPPEndpoint
+    $User = $Request.Headers
+    Write-LogMessage -Headers $User -API $APINAME -message 'Accessed this API' -Sev 'Debug'
 
     $ID = $request.query.id
     try {
@@ -20,13 +20,13 @@ Function Invoke-RemoveStandard {
         $Filter = "PartitionKey eq 'standards' and RowKey eq '$id'"
         $ClearRow = Get-CIPPAzDataTableEntity @Table -Filter $Filter -Property PartitionKey, RowKey
         Remove-AzDataTableEntity -Force @Table -Entity $clearRow
-        Write-LogMessage -user $User -API $APINAME -message "Removed standards for $ID." -Sev 'Info'
+        Write-LogMessage -Headers $User -API $APINAME -message "Removed standards for $ID." -Sev 'Info'
         $body = [pscustomobject]@{'Results' = 'Successfully removed standards deployment' }
 
 
     } catch {
         $ErrorMessage = Get-CippException -Exception $_
-        Write-LogMessage -user $User -API $APINAME -message "Failed to remove standard for $ID. $($ErrorMessage.NormalizedError)" -Sev 'Error'
+        Write-LogMessage -Headers $User -API $APINAME -message "Failed to remove standard for $ID. $($ErrorMessage.NormalizedError)" -Sev 'Error'
         $body = [pscustomobject]@{'Results' = 'Failed to remove standard)' }
     }
 

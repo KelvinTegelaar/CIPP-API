@@ -10,8 +10,8 @@ Function Invoke-ExecEditMailboxPermissions {
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
 
-    $APIName = $TriggerMetadata.FunctionName
-    Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME-message 'Accessed this API' -Sev 'Debug'
+    $APIName = $Request.Params.CIPPEndpoint
+    Write-LogMessage -headers $Request.Headers -API $APINAME-message 'Accessed this API' -Sev 'Debug'
     $Username = $request.body.userID
     $Tenantfilter = $request.body.tenantfilter
     if ($username -eq $null) { exit }
@@ -23,9 +23,9 @@ Function Invoke-ExecEditMailboxPermissions {
         try {
             $MailboxPerms = New-ExoRequest -Anchor $username -tenantid $Tenantfilter -cmdlet 'Remove-mailboxpermission' -cmdParams @{Identity = $userid; user = $RemoveUser; accessRights = @('FullAccess'); }
             $results.add("Removed $($removeuser) from $($username) Shared Mailbox permissions")
-            Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME-message "Removed $($RemoveUser) from $($username) Shared Mailbox permission" -Sev 'Info' -tenant $TenantFilter
+            Write-LogMessage -headers $Request.Headers -API $APINAME-message "Removed $($RemoveUser) from $($username) Shared Mailbox permission" -Sev 'Info' -tenant $TenantFilter
         } catch {
-            Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME-message "Could not remove mailbox permissions for $($removeuser) on $($username)" -Sev 'Error' -tenant $TenantFilter
+            Write-LogMessage -headers $Request.Headers -API $APINAME-message "Could not remove mailbox permissions for $($removeuser) on $($username)" -Sev 'Error' -tenant $TenantFilter
             $results.add("Could not remove $($removeuser) shared mailbox permissions for $($username). Error: $($_.Exception.Message)")
         }
     }
@@ -35,10 +35,10 @@ Function Invoke-ExecEditMailboxPermissions {
         try {
             $MailboxPerms = New-ExoRequest -Anchor $username -tenantid $Tenantfilter -cmdlet 'Add-MailboxPermission' -cmdParams @{Identity = $userid; user = $UserAutomap; accessRights = @('FullAccess'); automapping = $true }
             $results.add( "Granted $($UserAutomap) access to $($username) Mailbox with automapping")
-            Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME-message "Granted $($UserAutomap) access to $($username) Mailbox with automapping" -Sev 'Info' -tenant $TenantFilter
+            Write-LogMessage -headers $Request.Headers -API $APINAME-message "Granted $($UserAutomap) access to $($username) Mailbox with automapping" -Sev 'Info' -tenant $TenantFilter
 
         } catch {
-            Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME-message "Could not add mailbox permissions for $($UserAutomap) on $($username)" -Sev 'Error' -tenant $TenantFilter
+            Write-LogMessage -headers $Request.Headers -API $APINAME-message "Could not add mailbox permissions for $($UserAutomap) on $($username)" -Sev 'Error' -tenant $TenantFilter
             $results.add( "Could not add $($UserAutomap) shared mailbox permissions for $($username). Error: $($_.Exception.Message)")
         }
     }
@@ -48,9 +48,9 @@ Function Invoke-ExecEditMailboxPermissions {
         try {
             $MailboxPerms = New-ExoRequest -Anchor $username -tenantid $Tenantfilter -cmdlet 'Add-MailboxPermission' -cmdParams @{Identity = $userid; user = $UserNoAutomap; accessRights = @('FullAccess'); automapping = $false }
             $results.add( "Granted $UserNoAutomap access to $($username) Mailbox without automapping")
-            Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME-message "Granted $UserNoAutomap access to $($username) Mailbox without automapping" -Sev 'Info' -tenant $TenantFilter
+            Write-LogMessage -headers $Request.Headers -API $APINAME-message "Granted $UserNoAutomap access to $($username) Mailbox without automapping" -Sev 'Info' -tenant $TenantFilter
         } catch {
-            Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME-message "Could not add mailbox permissions for $($UserNoAutomap) on $($username)" -Sev 'Error' -tenant $TenantFilter
+            Write-LogMessage -headers $Request.Headers -API $APINAME-message "Could not add mailbox permissions for $($UserNoAutomap) on $($username)" -Sev 'Error' -tenant $TenantFilter
             $results.add("Could not add $($UserNoAutomap) shared mailbox permissions for $($username). Error: $($_.Exception.Message)")
         }
     }
@@ -61,9 +61,9 @@ Function Invoke-ExecEditMailboxPermissions {
         try {
             $MailboxPerms = New-ExoRequest -Anchor $username -tenantid $Tenantfilter -cmdlet 'Add-RecipientPermission' -cmdParams @{Identity = $userid; Trustee = $UserSendAs; accessRights = @('SendAs') }
             $results.add( "Granted $UserSendAs access to $($username) with Send As permissions")
-            Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME-message "Granted $UserSendAs access to $($username) with Send As permissions" -Sev 'Info' -tenant $TenantFilter
+            Write-LogMessage -headers $Request.Headers -API $APINAME-message "Granted $UserSendAs access to $($username) with Send As permissions" -Sev 'Info' -tenant $TenantFilter
         } catch {
-            Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME-message "Could not add mailbox permissions for $($UserSendAs) on $($username)" -Sev 'Error' -tenant $TenantFilter
+            Write-LogMessage -headers $Request.Headers -API $APINAME-message "Could not add mailbox permissions for $($UserSendAs) on $($username)" -Sev 'Error' -tenant $TenantFilter
             $results.add("Could not add $($UserSendAs) send-as permissions for $($username). Error: $($_.Exception.Message)")
         }
     }
@@ -74,9 +74,9 @@ Function Invoke-ExecEditMailboxPermissions {
         try {
             $MailboxPerms = New-ExoRequest -Anchor $username -tenantid $Tenantfilter -cmdlet 'Remove-RecipientPermission' -cmdParams @{Identity = $userid; Trustee = $UserSendAs; accessRights = @('SendAs') }
             $results.add( "Removed $UserSendAs from $($username) with Send As permissions")
-            Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME-message "Removed $UserSendAs from $($username) with Send As permissions" -Sev 'Info' -tenant $TenantFilter
+            Write-LogMessage -headers $Request.Headers -API $APINAME-message "Removed $UserSendAs from $($username) with Send As permissions" -Sev 'Info' -tenant $TenantFilter
         } catch {
-            Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME-message "Could not remove mailbox permissions for $($UserSendAs) on $($username)" -Sev 'Error' -tenant $TenantFilter
+            Write-LogMessage -headers $Request.Headers -API $APINAME-message "Could not remove mailbox permissions for $($UserSendAs) on $($username)" -Sev 'Error' -tenant $TenantFilter
             $results.add("Could not remove $($UserSendAs) send-as permissions for $($username). Error: $($_.Exception.Message)")
         }
     }
@@ -87,9 +87,9 @@ Function Invoke-ExecEditMailboxPermissions {
         try {
             $MailboxPerms = New-ExoRequest -Anchor $username -tenantid $Tenantfilter -cmdlet 'Set-Mailbox' -cmdParams @{Identity = $userid; GrantSendonBehalfTo = @{'@odata.type' = '#Exchange.GenericHashTable'; add = $UserSendOnBehalf }; }
             $results.add( "Granted $UserSendOnBehalf access to $($username) with Send On Behalf Permissions")
-            Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME-message "Granted $UserSendOnBehalf access to $($username) with Send On Behalf Permissions" -Sev 'Info' -tenant $TenantFilter
+            Write-LogMessage -headers $Request.Headers -API $APINAME-message "Granted $UserSendOnBehalf access to $($username) with Send On Behalf Permissions" -Sev 'Info' -tenant $TenantFilter
         } catch {
-            Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME-message "Could not add send on behalf permissions for $($UserSendOnBehalf) on $($username)" -Sev 'Error' -tenant $TenantFilter
+            Write-LogMessage -headers $Request.Headers -API $APINAME-message "Could not add send on behalf permissions for $($UserSendOnBehalf) on $($username)" -Sev 'Error' -tenant $TenantFilter
             $results.add("Could not add $($UserSendOnBehalf) send on behalf permissions for $($username). Error: $($_.Exception.Message)")
         }
     }
@@ -100,9 +100,9 @@ Function Invoke-ExecEditMailboxPermissions {
         try {
             $MailboxPerms = New-ExoRequest -Anchor $username -tenantid $Tenantfilter -cmdlet 'Set-Mailbox' -cmdParams @{Identity = $userid; GrantSendonBehalfTo = @{'@odata.type' = '#Exchange.GenericHashTable'; remove = $UserSendOnBehalf }; }
             $results.add( "Removed $UserSendOnBehalf from $($username) Send on Behalf Permissions")
-            Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME-message "Removed $UserSendOnBehalf from $($username) Send on Behalf Permissions" -Sev 'Info' -tenant $TenantFilter
+            Write-LogMessage -headers $Request.Headers -API $APINAME-message "Removed $UserSendOnBehalf from $($username) Send on Behalf Permissions" -Sev 'Info' -tenant $TenantFilter
         } catch {
-            Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME-message "Could not Remove send on behalf permissions for $($UserSendOnBehalf) on $($username)" -Sev 'Error' -tenant $TenantFilter
+            Write-LogMessage -headers $Request.Headers -API $APINAME-message "Could not Remove send on behalf permissions for $($UserSendOnBehalf) on $($username)" -Sev 'Error' -tenant $TenantFilter
             $results.add("Could not remove $($UserSendOnBehalf) send on behalf permissions for $($username). Error: $($_.Exception.Message)")
         }
     }

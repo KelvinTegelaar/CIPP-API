@@ -11,11 +11,11 @@ Function Invoke-AddConnectionFilter {
     param($Request, $TriggerMetadata)
 
 
-    $APIName = $TriggerMetadata.FunctionName
-    Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -message 'Accessed this API' -Sev 'Debug'
+    $APIName = $Request.Params.CIPPEndpoint
+    Write-LogMessage -headers $Request.Headers -API $APINAME -message 'Accessed this API' -Sev 'Debug'
 
-    $RequestParams = $Request.Body.PowerShellCommand | 
-    ConvertFrom-Json | 
+    $RequestParams = $Request.Body.PowerShellCommand |
+    ConvertFrom-Json |
     Select-Object -Property *, @{Name='identity'; Expression={$_.name}} -ExcludeProperty GUID, comments, name
 
     $Tenants = ($Request.body.selectedTenants).value
@@ -23,10 +23,10 @@ Function Invoke-AddConnectionFilter {
         try {
             $GraphRequest = New-ExoRequest -tenantid $Tenantfilter -cmdlet 'Set-HostedConnectionFilterPolicy' -cmdParams $RequestParams
             "Successfully created Connectionfilter for $tenantfilter."
-            Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $tenantfilter -message "Updated Connection filter rule for $($tenantfilter)" -sev Info
+            Write-LogMessage -headers $Request.Headers -API $APINAME -tenant $tenantfilter -message "Updated Connection filter rule for $($tenantfilter)" -sev Info
         } catch {
             "Could not create create Connection Filter rule for $($tenantfilter): $($_.Exception.message)"
-            Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $tenantfilter -message "Could not create create connection filter rule for $($tenantfilter): $($_.Exception.message)" -sev Error
+            Write-LogMessage -headers $Request.Headers -API $APINAME -tenant $tenantfilter -message "Could not create create connection filter rule for $($tenantfilter): $($_.Exception.message)" -sev Error
         }
     }
 

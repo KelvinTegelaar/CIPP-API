@@ -42,7 +42,7 @@ function Invoke-ExecPartnerWebhook {
                 PartnerCenter = $true
                 BaseURL       = $BaseURL
                 EventType     = $Request.Body.EventType
-                ExecutingUser = $Request.Headers.'x-ms-client-principal'
+                Headers = $Request.Headers.'x-ms-client-principal'
             }
 
             $Results = New-CIPPGraphSubscription @Webhook

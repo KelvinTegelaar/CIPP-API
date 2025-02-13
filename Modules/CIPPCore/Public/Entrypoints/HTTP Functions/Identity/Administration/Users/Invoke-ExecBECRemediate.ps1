@@ -10,10 +10,10 @@ Function Invoke-ExecBECRemediate {
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
 
-    $APIName = $TriggerMetadata.FunctionName
-    $User = $request.headers.'x-ms-client-principal'
+    $APIName = $Request.Params.CIPPEndpoint
+    $User = $Request.Headers
 
-    Write-LogMessage -user $User -API $APINAME -message 'Accessed this API' -Sev 'Debug'
+    Write-LogMessage -Headers $User -API $APINAME -message 'Accessed this API' -Sev 'Debug'
     Write-Host 'PowerShell HTTP trigger function processed a request.'
 
     $TenantFilter = $request.body.tenantfilter
@@ -23,13 +23,13 @@ Function Invoke-ExecBECRemediate {
     Write-Host $SuspectUser
     $Results = try {
         $Step = 'Reset Password'
-        Set-CIPPResetPassword -UserID $username -tenantFilter $TenantFilter -APIName $APINAME -ExecutingUser $User
+        Set-CIPPResetPassword -UserID $username -tenantFilter $TenantFilter -APIName $APINAME -Headers $User
         $Step = 'Disable Account'
-        Set-CIPPSignInState -userid $username -AccountEnabled $false -tenantFilter $TenantFilter -APIName $APINAME -ExecutingUser $User
+        Set-CIPPSignInState -userid $username -AccountEnabled $false -tenantFilter $TenantFilter -APIName $APINAME -Headers $User
         $Step = 'Revoke Sessions'
-        Revoke-CIPPSessions -userid $SuspectUser -username $username -ExecutingUser $User -APIName $APINAME -tenantFilter $TenantFilter
+        Revoke-CIPPSessions -userid $SuspectUser -username $username -Headers $User -APIName $APINAME -tenantFilter $TenantFilter
         $Step = 'Remove MFA methods'
-        Remove-CIPPUserMFA -UserPrincipalName $username -TenantFilter $TenantFilter -ExecutingUser $User
+        Remove-CIPPUserMFA -UserPrincipalName $username -TenantFilter $TenantFilter -Headers $User
         $Step = 'Disable Inbox Rules'
         $Rules = New-ExoRequest -anchor $username -tenantid $TenantFilter -cmdlet 'Get-InboxRule' -cmdParams @{Mailbox = $username; IncludeHidden = $true }
         $RuleDisabled = 0
