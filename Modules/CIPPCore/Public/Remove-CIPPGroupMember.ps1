@@ -1,5 +1,5 @@
 function Remove-CIPPGroupMember(
-    [string]$ExecutingUser,
+    $Headers,
     [string]$GroupType,
     [string]$GroupId,
     [string]$Member,
@@ -17,13 +17,13 @@ function Remove-CIPPGroupMember(
             New-GraphPostRequest -uri "https://graph.microsoft.com/beta/groups/$($GroupId)/members/$($Member)/`$ref" -tenantid $TenantFilter -type DELETE -body '{}' -Verbose
         }
         $Message = "Successfully removed user $($Member) from $($GroupId)."
-        Write-LogMessage -user $ExecutingUser -API $APIName -tenant $TenantFilter -message $Message -Sev 'Info'
+        Write-LogMessage -headers $Headers -API $APIName -tenant $TenantFilter -message $Message -Sev 'Info'
         return $message
 
     } catch {
         $ErrorMessage = Get-CippException -Exception $_
         $message = "Failed to remove user $($Member) from $($GroupId): $($ErrorMessage.NormalizedError)"
-        Write-LogMessage -user $ExecutingUser -API $APIName -tenant $TenantFilter -message $message -Sev 'error' -LogData $ErrorMessage
+        Write-LogMessage -headers $Headers -API $APIName -tenant $TenantFilter -message $message -Sev 'error' -LogData $ErrorMessage
         return $message
     }
 }

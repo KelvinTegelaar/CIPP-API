@@ -10,11 +10,11 @@ Function Invoke-ExecSharePointPerms {
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
 
-    $APIName = $TriggerMetadata.FunctionName
+    $APIName = $Request.Params.CIPPEndpoint
     $tenantFilter = $Request.Body.tenantFilter
-    $ExecutingUser = $Request.Headers.'x-ms-client-principal'
+    $Headers = $Request.Headers
 
-    Write-LogMessage -user $ExecutingUser -API $APIName -message 'Accessed this API' -Sev Debug
+    Write-LogMessage -Headers $Headers -API $APIName -message 'Accessed this API' -Sev Debug
 
     # The UPN or ID of the users OneDrive we are changing permissions on
     $UserId = $Request.body.UPN
@@ -26,7 +26,7 @@ Function Invoke-ExecSharePointPerms {
         $State = Set-CIPPSharePointPerms -tenantFilter $tenantFilter `
             -UserId $UserId `
             -OnedriveAccessUser $OnedriveAccessUser `
-            -ExecutingUser $ExecutingUser `
+            -Headers $Request.Headers `
             -APIName $APIName `
             -RemovePermission $Request.body.RemovePermission `
             -URL $Request.Body.URL

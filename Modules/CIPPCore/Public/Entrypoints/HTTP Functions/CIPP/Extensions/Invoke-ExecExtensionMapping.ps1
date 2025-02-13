@@ -10,8 +10,8 @@ Function Invoke-ExecExtensionMapping {
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
 
-    $APIName = $TriggerMetadata.FunctionName
-    Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -message 'Accessed this API' -Sev 'Debug'
+    $APIName = $Request.Params.CIPPEndpoint
+    Write-LogMessage -headers $Request.Headers -API $APINAME -message 'Accessed this API' -Sev 'Debug'
 
 
     # Write to the Azure Functions log stream.
@@ -37,6 +37,16 @@ Function Invoke-ExecExtensionMapping {
             }
             'Sherweb' {
                 $Body = Get-SherwebMapping -CIPPMapping $Table
+            }
+            'HaloPSAFields' {
+                $TicketTypes = Get-HaloTicketType
+                $Body = @{'TicketTypes' = $TicketTypes }
+            }
+            'PWPushFields' {
+                $Accounts = Get-PwPushAccount
+                $Body = @{
+                    'Accounts' = $Accounts
+                }
             }
         }
     }
@@ -67,7 +77,7 @@ Function Invoke-ExecExtensionMapping {
             }
         }
     } catch {
-        Write-LogMessage -API $APINAME -user $request.headers.'x-ms-client-principal' -message "mapping API failed. $($_.Exception.Message)" -Sev 'Error'
+        Write-LogMessage -API $APINAME -headers $Request.Headers -message "mapping API failed. $($_.Exception.Message)" -Sev 'Error'
         $body = [pscustomobject]@{'Results' = "Failed. $($_.Exception.Message)" }
     }
 
@@ -92,7 +102,7 @@ Function Invoke-ExecExtensionMapping {
             }
         }
     } catch {
-        Write-LogMessage -API $APINAME -user $request.headers.'x-ms-client-principal' -message "mapping API failed. $($_.Exception.Message)" -Sev 'Error'
+        Write-LogMessage -API $APINAME -headers $Request.Headers -message "mapping API failed. $($_.Exception.Message)" -Sev 'Error'
         $body = [pscustomobject]@{'Results' = "Failed. $($_.Exception.Message)" }
     }
 

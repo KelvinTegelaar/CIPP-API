@@ -10,6 +10,10 @@ function Receive-CippHttpTrigger {
         $TriggerMetadata
     )
 
+    if ($Request.Headers.'x-ms-coldstart' -eq 1) {
+        Write-Information '** Function app cold start detected **'
+    }
+
     $ConfigTable = Get-CIPPTable -tablename Config
     $Config = Get-CIPPAzDataTableEntity @ConfigTable -Filter "PartitionKey eq 'OffloadFunctions' and RowKey eq 'OffloadFunctions'"
 

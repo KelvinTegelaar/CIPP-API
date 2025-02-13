@@ -11,7 +11,7 @@ function Invoke-ExecCustomRole {
     $Table = Get-CippTable -tablename 'CustomRoles'
     switch ($Request.Query.Action) {
         'AddUpdate' {
-            Write-LogMessage -user $Request.Headers.'x-ms-client-principal' -API 'ExecCustomRole' -message "Saved custom role $($Request.Body.RoleName)" -Sev 'Info'
+            Write-LogMessage -headers $Request.Headers -API 'ExecCustomRole' -message "Saved custom role $($Request.Body.RoleName)" -Sev 'Info'
             $Role = @{
                 'PartitionKey'   = 'CustomRoles'
                 'RowKey'         = "$($Request.Body.RoleName.ToLower())"
@@ -23,7 +23,7 @@ function Invoke-ExecCustomRole {
             $Body = @{Results = 'Custom role saved' }
         }
         'Delete' {
-            Write-LogMessage -user $Request.Headers.'x-ms-client-principal' -API 'ExecCustomRole' -message "Deleted custom role $($Request.Body.RoleName)" -Sev 'Info'
+            Write-LogMessage -headers $Request.Headers -API 'ExecCustomRole' -message "Deleted custom role $($Request.Body.RoleName)" -Sev 'Info'
             $Role = Get-CIPPAzDataTableEntity @Table -Filter "RowKey eq '$($Request.Body.RoleName)'" -Property RowKey, PartitionKey
             Remove-AzDataTableEntity -Force @Table -Entity $Role
             $Body = @{Results = 'Custom role deleted' }

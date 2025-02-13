@@ -30,10 +30,10 @@ function Set-CIPPUserLicense {
         $null = New-GraphPostRequest -uri "https://graph.microsoft.com/beta/users/$UserId/assignLicense" -tenantid $TenantFilter -type POST -body $LicenseBodyJson -Verbose
     } catch {
         $ErrorMessage = Get-CippException -Exception $_
-        Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APIName -tenant $TenantFilter -message "Failed to assign the license. Error: $($ErrorMessage.NormalizedError)" -Sev Error -LogData $ErrorMessage
+        Write-LogMessage -Headers $Request.Headers -API $APIName -tenant $TenantFilter -message "Failed to assign the license. Error: $($ErrorMessage.NormalizedError)" -Sev Error -LogData $ErrorMessage
         throw "Failed to assign the license. $($ErrorMessage.NormalizedError)"
     }
 
-    Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APIName -tenant $TenantFilter -message "Assigned licenses to user $UserId. Added: $AddLicenses; Removed: $RemoveLicenses" -Sev 'Info'
+    Write-LogMessage -Headers $Request.Headers -API $APIName -tenant $TenantFilter -message "Assigned licenses to user $UserId. Added: $AddLicenses; Removed: $RemoveLicenses" -Sev 'Info'
     return 'Set licenses successfully'
 }

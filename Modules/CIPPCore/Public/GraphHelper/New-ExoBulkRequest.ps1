@@ -64,7 +64,7 @@ function New-ExoBulkRequest {
                         $OnMicrosoft = $Tenant.initialDomainName
                         $Anchor = "UPN:SystemMailbox{8cc370d3-822a-4ab8-a926-bb94bd0641a9}@$($OnMicrosoft)"
                     }
-                    $Headers['X-AnchorMailbox'] = $Anchor
+                    $Headers['X-AnchorMailbox'] = "APP:SystemMailbox{bb558c35-97f1-4cb9-8ff7-d53741dc928c}@$($tenant.customerId)"
                     $Headers['X-CmdletName'] = $cmd.CmdletInput.CmdletName
                     $Headers['Accept'] = 'application/json; odata.metadata=minimal'
                     $Headers['Accept-Encoding'] = 'gzip'
