@@ -10,8 +10,8 @@ Function Invoke-ExecEnableArchive {
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
 
-    $APIName = $TriggerMetadata.FunctionName
-    Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -message 'Accessed this API' -Sev 'Debug'
+    $APIName = $Request.Params.CIPPEndpoint
+    Write-LogMessage -headers $Request.Headers -API $APINAME -message 'Accessed this API' -Sev 'Debug'
 
 
     # Write to the Azure Functions log stream.
@@ -20,7 +20,7 @@ Function Invoke-ExecEnableArchive {
 
     # Interact with query parameters or the body of the request.
     Try {
-        $ResultsArch = Set-CIPPMailboxArchive -userid $Request.query.id -tenantFilter $Request.query.TenantFilter -APIName $APINAME -ExecutingUser $request.headers.'x-ms-client-principal' -ArchiveEnabled $true
+        $ResultsArch = Set-CIPPMailboxArchive -userid $Request.query.id -tenantFilter $Request.query.TenantFilter -APIName $APINAME -Headers $Request.Headers -ArchiveEnabled $true
         $Results = [pscustomobject]@{'Results' = "$ResultsArch" }
     } catch {
         $Results = [pscustomobject]@{'Results' = "Failed. $($_.Exception.Message)" }

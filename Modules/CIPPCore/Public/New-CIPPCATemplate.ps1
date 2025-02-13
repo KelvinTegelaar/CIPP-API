@@ -4,7 +4,7 @@ function New-CIPPCATemplate {
         $TenantFilter,
         $JSON,
         $APIName = 'Add CIPP CA Template',
-        $ExecutingUser
+        $Headers
     )
 
     $JSON = ([pscustomobject]$JSON) | ForEach-Object {

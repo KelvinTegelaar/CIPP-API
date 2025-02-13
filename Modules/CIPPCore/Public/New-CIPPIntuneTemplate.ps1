@@ -4,8 +4,32 @@ function New-CIPPIntuneTemplate {
         $id,
         $TenantFilter,
         $ActionResults,
-        $CIPPURL
+        $CIPPURL,
+        $ODataType
     )
+    Write-Host "These are all bound params: $urlname, $id, $TenantFilter, $ActionResults, $CIPPURL, $ODataType"
+    if ($ODataType) {
+        switch -wildcard ($ODataType) {
+            '*CompliancePolicy' {
+                $URLName = 'deviceCompliancePolicies'
+            }
+            '*managedAppPolicies' {
+                $URLName = 'managedAppPolicies'
+            }
+            '*configurationPolicies' {
+                $URLName = 'configurationPolicies'
+            }
+            '*windowsDriverUpdateProfiles' {
+                $URLName = 'windowsDriverUpdateProfiles'
+            }
+            '*deviceConfigurations' {
+                $URLName = 'deviceConfigurations'
+            }
+            '*groupPolicyConfigurations' {
+                $URLName = 'groupPolicyConfigurations'
+            }
+        }
+    }
     switch ($URLName) {
         'deviceCompliancePolicies' {
             $Type = 'deviceCompliancePolicies'

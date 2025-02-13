@@ -10,8 +10,8 @@ Function Invoke-ExecQuarantineManagement {
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
 
-    $APIName = $TriggerMetadata.FunctionName
-    Write-LogMessage -user $Request.headers.'x-ms-client-principal' -API $APINAME -message 'Accessed this API' -Sev 'Debug'
+    $APIName = $Request.Params.CIPPEndpoint
+    Write-LogMessage -headers $Request.Headers -API $APINAME -message 'Accessed this API' -Sev 'Debug'
 
 
     # Write to the Azure Functions log stream.
@@ -30,9 +30,9 @@ Function Invoke-ExecQuarantineManagement {
 
         New-ExoRequest -tenantid $TenantFilter -cmdlet 'Release-QuarantineMessage' -cmdParams $Params
         $Results = [pscustomobject]@{'Results' = "Successfully processed $($Request.Body.Identity)" }
-        Write-LogMessage -user $Request.headers.'x-ms-client-principal' -API $APINAME -tenant $TenantFilter -message "Successfully processed Quarantine ID $($Request.Body.Identity)" -Sev 'Info'
+        Write-LogMessage -headers $Request.Headers -API $APINAME -tenant $TenantFilter -message "Successfully processed Quarantine ID $($Request.Body.Identity)" -Sev 'Info'
     } catch {
-        Write-LogMessage -user $Request.headers.'x-ms-client-principal' -API $APINAME -tenant $TenantFilter -message "Quarantine Management failed: $($_.Exception.Message)" -Sev 'Error' -LogData $_
+        Write-LogMessage -headers $Request.Headers -API $APINAME -tenant $TenantFilter -message "Quarantine Management failed: $($_.Exception.Message)" -Sev 'Error' -LogData $_
         $Results = [pscustomobject]@{'Results' = "Failed. $($_.Exception.Message)" }
     }
     # Associate values to output bindings by calling 'Push-OutputBinding'.

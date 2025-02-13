@@ -6,6 +6,7 @@ function New-GradientAlert {
         $client
     )
 
+    $APINAME = 'GradientAlert'
     $Table = Get-CIPPTable -TableName Extensionsconfig
     $Configuration = ((Get-CIPPAzDataTableEntity @Table).config | ConvertFrom-Json).Gradient
     #creating accounts in Gradient
@@ -27,14 +28,12 @@ function New-GradientAlert {
         $AlertId = Invoke-RestMethod -Uri "https://app.usegradient.com/api/vendor-api/alerting/$($client)" -Method POST -Headers $GradientToken -Body $body -ContentType 'application/json'
         #check if the message is actually sent, if not, abort and log. check url: https://app.usegradient.com/api/vendor-api/alerting/debug/{messageId}
         $AlertStatus = Invoke-RestMethod -Uri "https://app.usegradient.com/api/vendor-api/alerting/debug/$($AlertId.messageId)" -Method GET -Headers $GradientToken
-        if ($AlertStatus.status -eq "failed") {
-            Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME  -message "Failed to create ticket in Gradient API. Error: $($AlertStatus.errors)" -Sev "Error" -tenant $client
-
+        if ($AlertStatus.status -eq 'failed') {
+            Write-LogMessage -API $APINAME -message "Failed to create ticket in Gradient API. Error: $($AlertStatus.errors)" -Sev 'Error' -tenant $client
         }
-       
-    } 
-    catch {
-        Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME  -message "Failed to create ticket in Gradient API. Error: $($_.Exception.Message)" -Sev "Error" -tenant "GradientAPI"
+
+    } catch {
+        Write-LogMessage -API $APINAME -message "Failed to create ticket in Gradient API. Error: $($_.Exception.Message)" -Sev 'Error' -tenant 'GradientAPI'
     }
 
 
