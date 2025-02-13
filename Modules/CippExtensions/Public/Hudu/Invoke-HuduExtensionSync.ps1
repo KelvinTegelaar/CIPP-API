@@ -9,6 +9,7 @@ function Invoke-HuduExtensionSync {
     )
     try {
         Connect-HuduAPI -configuration $Configuration
+        $Configuration = $Configuration.Hudu
 
         $CompanyResult = [PSCustomObject]@{
             Name    = $Tenant.displayName
@@ -78,7 +79,7 @@ function Invoke-HuduExtensionSync {
             Write-Host "Hudu People - Error: $_"
         }
 
-        Write-Host "CreateUsers: $CreateUsers"
+        Write-Host "Configuration: $($Configuration | ConvertTo-Json)"
 
 
         try {
@@ -103,8 +104,6 @@ function Invoke-HuduExtensionSync {
             $CompanyResult.Errors.add("Company: Unable to fetch Devices $_")
             Write-Host "Hudu Devices - Error: $_"
         }
-
-        Write-Host "CreateDevices: $CreateDevices"
 
         $importDomains = $Configuration.ImportDomains
         $monitordomains = $Configuration.MonitorDomains
@@ -161,9 +160,7 @@ function Invoke-HuduExtensionSync {
 
         $Users = $ExtensionCache.Users
         $licensedUsers = $Users | Where-Object { $null -ne $_.assignedLicenses.skuId } | Sort-Object userPrincipalName
-
         $CompanyResult.users = ($licensedUsers | Measure-Object).count
-
         $AllRoles = $ExtensionCache.AllRoles
 
 
@@ -263,32 +260,6 @@ function Invoke-HuduExtensionSync {
                 DeviceStatuses = $DeviceStatuses
             }
         }
-
-        #$DeviceApps = $ExtensionCache.DeviceApps
-        <#$DeviceApps = Get-BulkResultByID -Results $TenantResults -ID 'DeviceApps'
-
-        [System.Collections.Generic.List[PSCustomObject]]$RequestArray = @()
-        foreach ($InstalledApp in $DeviceApps | Where-Object { $_.isAssigned -eq $True }) {
-            $RequestArray.add(@{
-                    id     = $InstalledApp.id
-                    method = 'GET'
-                    url    = "/deviceAppManagement/mobileApps/$($InstalledApp.id)/deviceStatuses"
-                })
-        }
-        try {
-            $InstalledAppDetailsReturn = New-GraphBulkRequest -Headers $AuthHeaders -Requests $RequestArray -tenantid $TenantFilter
-        } catch {
-            $CompanyResult.Errors.add("Company: Unable to fetch Installed Device Details $_")
-            $InstalledAppDetailsReturn = $null
-        }#>
-        <#
-        $DeviceAppInstallDetails = foreach ($DeviceApp in $DeviceApps) {
-            [pscustomobject]@{
-                ID          = $DeviceApp.id
-                DisplayName = $DeviceApp.displayName
-                #InstalledAppDetails = $DeviceAppStatus
-            }
-        }#>
 
         $AllGroups = $ExtensionCache.Groups
 
@@ -635,14 +606,14 @@ function Invoke-HuduExtensionSync {
 
                     [System.Collections.Generic.List[PSCustomObject]]$CIPPLinksFormatted = @()
                     if ($EnableCIPP) {
-                        $CIPPLinksFormatted.add((Get-HuduLinkBlock -URL "$($CIPPURL)/identity/administration/users/view?customerId=$($Tenant.customerid)&userId=$($User.id)&tenantDomain=$($Tenant.defaultDomainName)&userEmail=$($User.userPrincipalName)" -Icon 'far fa-eye' -Title 'CIPP - View User'))
-                        $CIPPLinksFormatted.add((Get-HuduLinkBlock -URL "$($CIPPURL)/identity/administration/users/edit?customerId=$($Tenant.customerid)&userId=$($User.id)&tenantDomain=$($Tenant.defaultDomainName)&userEmail=$($User.userPrincipalName)" -Icon 'fas fa-user-cog' -Title 'CIPP - Edit User'))
-                        $CIPPLinksFormatted.add((Get-HuduLinkBlock -URL "$($CIPPURL)/identity/administration/ViewBec?customerId=$($Tenant.customerid)&userId=$($User.id)&tenantDomain=$($Tenant.defaultDomainName)&ID=$($User.userPrincipalName)" -Icon 'fas fa-user-secret' -Title 'CIPP - BEC Tool'))
+                        $CIPPLinksFormatted.add((Get-HuduLinkBlock -URL "$($CIPPURL)/identity/administration/users/user?tenantFilter=$($Tenant.defaultDomainName)&userId=$($User.id)" -Icon 'far fa-eye' -Title 'CIPP - View User'))
+                        $CIPPLinksFormatted.add((Get-HuduLinkBlock -URL "$($CIPPURL)/identity/administration/users/user/edit?tenantFilter=$($Tenant.defaultDomainName)&userId=$($User.id)" -Icon 'fas fa-user-cog' -Title 'CIPP - Edit User'))
+                        $CIPPLinksFormatted.add((Get-HuduLinkBlock -URL "$($CIPPURL)/identity/administration/users/user/bec?tenantFilter=$($Tenant.defaultDomainName)&userId=$($User.id))" -Icon 'fas fa-user-secret' -Title 'CIPP - BEC Tool'))
                     }
 
                     [System.Collections.Generic.List[PSCustomObject]]$UserLinksFormatted = @()
-                    $UserLinksFormatted.add((Get-HuduLinkBlock -URL "https://aad.portal.azure.com/$($Tenant.defaultDomainName)/#blade/Microsoft_AAD_IAM/UserDetailsMenuBlade/Profile/userId/$($User.id)" -Icon 'fas fa-users-cog' -Title 'Entra ID'))
-                    $UserLinksFormatted.add((Get-HuduLinkBlock -URL "https://aad.portal.azure.com/$($Tenant.defaultDomainName)/#blade/Microsoft_AAD_IAM/UserDetailsMenuBlade/SignIns/userId/$($User.id)" -Icon 'fas fa-history' -Title 'Sign Ins'))
+                    $UserLinksFormatted.add((Get-HuduLinkBlock -URL "https://entra.microsoft.com/$($Tenant.defaultDomainName)/#blade/Microsoft_AAD_IAM/UserDetailsMenuBlade/Profile/userId/$($User.id)" -Icon 'fas fa-users-cog' -Title 'Entra ID'))
+                    $UserLinksFormatted.add((Get-HuduLinkBlock -URL "https://entra.microsoft.com/$($Tenant.defaultDomainName)/#blade/Microsoft_AAD_IAM/UserDetailsMenuBlade/SignIns/userId/$($User.id)" -Icon 'fas fa-history' -Title 'Sign Ins'))
                     $UserLinksFormatted.add((Get-HuduLinkBlock -URL "https://admin.teams.microsoft.com/users/$($User.id)/account?delegatedOrg=$($Tenant.defaultDomainName)" -Icon 'fas fa-users' -Title 'Teams Admin'))
                     $UserLinksFormatted.add((Get-HuduLinkBlock -URL "https://intune.microsoft.com/$($Tenant.defaultDomainName)/#blade/Microsoft_AAD_IAM/UserDetailsMenuBlade/Profile/userId/$($User.ID)" -Icon 'fas fa-laptop' -Title 'Intune (User)'))
                     $UserLinksFormatted.add((Get-HuduLinkBlock -URL "https://intune.microsoft.com/$($Tenant.defaultDomainName)/#blade/Microsoft_AAD_IAM/UserDetailsMenuBlade/Devices/userId/$($User.ID)" -Icon 'fas fa-laptop' -Title 'Intune (Devices)'))
@@ -664,8 +635,8 @@ function Invoke-HuduExtensionSync {
                             email_address = $user.userPrincipalName
                         }
                         $NewHash = Get-StringHash -String $UserBody
-
                         $HuduUserCount = ($HuduUser | Measure-Object).Count
+
                         if ($HuduUserCount -eq 1) {
                             $ExistingAsset = Get-CIPPAzDataTableEntity @HuduAssetCache -Filter "PartitionKey eq 'HuduUser' and CompanyId eq '$company_id' and RowKey eq '$($HuduUser.id)'"
                             $ExistingHash = $ExistingAsset.Hash
@@ -683,7 +654,7 @@ function Invoke-HuduExtensionSync {
                             }
 
                         } elseif ($HuduUserCount -eq 0) {
-                            if ($CreateUsers -eq $True) {
+                            if ($CreateUsers -eq $true) {
                                 $CompanyResult.Logs.Add("Creating $($User.displayName) in Hudu")
                                 $CreateHuduUser = (New-HuduAsset -Name $User.displayName -company_id $company_id -asset_layout_id $PeopleLayout.id -Fields $UserAssetFields).asset
                                 if (!$CreateHuduUser) {
