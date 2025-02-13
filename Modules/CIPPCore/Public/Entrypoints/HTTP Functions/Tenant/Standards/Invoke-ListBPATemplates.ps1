@@ -10,11 +10,11 @@ Function Invoke-ListBPATemplates {
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
 
-    $APIName = $TriggerMetadata.FunctionName
-    Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -message 'Accessed this API' -Sev 'Debug'
+    $APIName = $Request.Params.CIPPEndpoint
+    Write-LogMessage -headers $Request.Headers -API $APINAME -message 'Accessed this API' -Sev 'Debug'
 
     Write-Host 'PowerShell HTTP trigger function processed a request.'
-  
+
     $Table = Get-CippTable -tablename 'templates'
 
     $Templates = Get-ChildItem 'Config\*.BPATemplate.json' | ForEach-Object {
@@ -28,14 +28,15 @@ Function Invoke-ListBPATemplates {
     }
 
     $Filter = "PartitionKey eq 'BPATemplate'"
-    $Templates = (Get-CIPPAzDataTableEntity @Table -Filter $Filter).JSON | ConvertFrom-Json
+    $Templates = Get-CIPPAzDataTableEntity @Table -Filter $Filter
 
     if ($Request.Query.RawJson) {
         $Templates
     } else {
         $Templates = $Templates | ForEach-Object {
-            $Template = $_
+            $Template = $_.JSON | ConvertFrom-Json
             @{
+                GUID  = $_.GUID
                 Data  = $Template.fields
                 Name  = $Template.Name
                 Style = $Template.Style

@@ -10,9 +10,9 @@ Function Invoke-RemoveCAPolicy {
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
 
-    $APIName = $TriggerMetadata.FunctionName
-    $User = $request.headers.'x-ms-client-principal'
-    Write-LogMessage -user $User -API $APINAME -message 'Accessed this API' -Sev 'Debug'
+    $APIName = $Request.Params.CIPPEndpoint
+    $User = $Request.Headers
+    Write-LogMessage -Headers $User -API $APINAME -message 'Accessed this API' -Sev 'Debug'
 
     # Interact with query parameters or the body of the request.
     $TenantFilter = $Request.Query.TenantFilter
@@ -20,12 +20,12 @@ Function Invoke-RemoveCAPolicy {
     if (!$policyId) { exit }
     try {
         $null = New-GraphPostRequest -uri "https://graph.microsoft.com/v1.0/identity/conditionalAccess/policies/$($policyId)" -type DELETE -tenant $TenantFilter -asapp $true
-        Write-LogMessage -user $User -API $APINAME -message "Deleted CA Policy $policyId" -Sev 'Info' -tenant $TenantFilter
+        Write-LogMessage -Headers $User -API $APINAME -message "Deleted CA Policy $policyId" -Sev 'Info' -tenant $TenantFilter
         $body = [pscustomobject]@{'Results' = 'Successfully deleted the policy' }
 
     } catch {
         $ErrorMessage = Get-CippException -Exception $_
-        Write-LogMessage -user $User -API $APINAME -message "Could not delete CA policy $policyId. $($ErrorMessage.NormalizedError)" -Sev 'Error' -tenant $TenantFilter -LogData $ErrorMessage
+        Write-LogMessage -Headers $User -API $APINAME -message "Could not delete CA policy $policyId. $($ErrorMessage.NormalizedError)" -Sev 'Error' -tenant $TenantFilter -LogData $ErrorMessage
         $body = [pscustomobject]@{'Results' = "Could not delete policy: $($ErrorMessage.NormalizedError)" }
 
     }

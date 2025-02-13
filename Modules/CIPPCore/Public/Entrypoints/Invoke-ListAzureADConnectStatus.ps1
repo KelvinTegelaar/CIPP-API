@@ -10,10 +10,10 @@ Function Invoke-ListAzureADConnectStatus {
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
 
-    $APIName = $TriggerMetadata.FunctionName
-    $ExecutingUser = $Request.headers.'x-ms-client-principal'
+    $APIName = $Request.Params.CIPPEndpoint
+    $Headers = $Request.Headers
     $TenantFilter = $Request.Query.TenantFilter
-    Write-LogMessage -user $ExecutingUser -API $APINAME -message 'Accessed this API' -Sev 'Debug'
+    Write-LogMessage -Headers $Headers -API $APINAME -message 'Accessed this API' -Sev 'Debug'
 
 
     $DataToReturn = $Request.Query.DataToReturn

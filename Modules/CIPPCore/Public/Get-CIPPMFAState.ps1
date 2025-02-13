@@ -4,7 +4,7 @@ function Get-CIPPMFAState {
     param (
         $TenantFilter,
         $APIName = 'Get MFA Status',
-        $ExecutingUser
+        $Headers
     )
     $PerUserMFAState = Get-CIPPPerUserMFA -TenantFilter $TenantFilter -AllUsers $true
     $users = foreach ($user in (New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/users?$top=999&$select=id,UserPrincipalName,DisplayName,accountEnabled,assignedLicenses' -tenantid $TenantFilter)) {

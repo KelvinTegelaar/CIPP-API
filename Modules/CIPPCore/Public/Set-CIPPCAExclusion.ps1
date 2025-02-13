@@ -6,7 +6,7 @@ function Set-CIPPCAExclusion {
         $UserID,
         $PolicyId,
         $Username,
-        $executingUser
+        $Headers
     )
     try {
         $CheckExististing = New-GraphGETRequest -uri "https://graph.microsoft.com/beta/identity/conditionalAccess/policies/$($PolicyId)" -tenantid $TenantFilter -AsApp $true
@@ -36,9 +36,9 @@ function Set-CIPPCAExclusion {
             }
         }
         "Successfully performed $($ExclusionType) exclusion for $username from policy $($PolicyId)"
-        Write-LogMessage -user $executingUser -API 'Set-CIPPConditionalAccessExclusion' -message "Successfully performed $($ExclusionType) exclusion for $username from policy $($PolicyId)" -Sev 'Info' -tenant $TenantFilter
+        Write-LogMessage -headers $Headers -API 'Set-CIPPConditionalAccessExclusion' -message "Successfully performed $($ExclusionType) exclusion for $username from policy $($PolicyId)" -Sev 'Info' -tenant $TenantFilter
     } catch {
         "Failed to $($ExclusionType) user exclusion for $username from policy $($PolicyId): $($_.Exception.Message)"
-        Write-LogMessage -user $executingUser -API 'Set-CIPPConditionalAccessExclusion' -message "Failed to $($ExclusionType) user exclusion for $username from policy $($PolicyId): $_" -Sev 'Error' -tenant $TenantFilter -LogData (Get-CippException -Exception $_)
+        Write-LogMessage -headers $Headers -API 'Set-CIPPConditionalAccessExclusion' -message "Failed to $($ExclusionType) user exclusion for $username from policy $($PolicyId): $_" -Sev 'Error' -tenant $TenantFilter -LogData (Get-CippException -Exception $_)
     }
 }

@@ -10,8 +10,8 @@ Function Invoke-ExecAccessChecks {
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
 
-    $APIName = $TriggerMetadata.FunctionName
-    Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -message 'Accessed this API' -Sev 'Debug'
+    $APIName = $Request.Params.CIPPEndpoint
+    Write-LogMessage -Headers $Request.Headers -API $APINAME -message 'Accessed this API' -Sev 'Debug'
 
     $Table = Get-CIPPTable -tablename 'AccessChecks'
     $LastRun = (Get-Date).ToUniversalTime()
@@ -25,7 +25,7 @@ Function Invoke-ExecAccessChecks {
                     $Results = $null
                 }
                 if (!$Results) {
-                    $Results = Test-CIPPAccessPermissions -tenantfilter $ENV:TenantID -APIName $APINAME -ExecutingUser $Request.Headers.'x-ms-client-principal'
+                    $Results = Test-CIPPAccessPermissions -tenantfilter $ENV:TenantID -APIName $APINAME -Headers $Request.Headers
                 } else {
                     try {
                         $LastRun = [DateTime]::SpecifyKind($Cache.Timestamp.DateTime, [DateTimeKind]::Utc)
@@ -34,7 +34,7 @@ Function Invoke-ExecAccessChecks {
                     }
                 }
             } else {
-                $Results = Test-CIPPAccessPermissions -tenantfilter $ENV:TenantID -APIName $APINAME -ExecutingUser $Request.Headers.'x-ms-client-principal'
+                $Results = Test-CIPPAccessPermissions -tenantfilter $ENV:TenantID -APIName $APINAME -Headers $Request.Headers
             }
         }
         'Tenants' {
@@ -82,12 +82,12 @@ Function Invoke-ExecAccessChecks {
             }
 
             if ($Request.Query.SkipCache -eq 'true' -or $Request.Query.SkipCache -eq $true) {
-                $Message = Test-CIPPAccessTenant -ExecutingUser $Request.Headers.'x-ms-client-principal'
+                $Message = Test-CIPPAccessTenant -Headers $Request.Headers
             }
 
             if ($Request.Body.TenantId) {
                 $Tenant = Get-Tenants -TenantFilter $Request.Body.TenantId
-                $null = Test-CIPPAccessTenant -Tenant $Tenant.customerId -ExecutingUser $Request.Headers.'x-ms-client-principal'
+                $null = Test-CIPPAccessTenant -Tenant $Tenant.customerId -Headers $Request.Headers
                 $Results = "Refreshing tenant $($Tenant.displayName)"
             }
 

@@ -10,8 +10,8 @@ Function Invoke-AddConnectionFilterTemplate {
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
 
-    $APIName = $TriggerMetadata.FunctionName
-    Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -message 'Accessed this API' -Sev 'Debug'
+    $APIName = $Request.Params.CIPPEndpoint
+    Write-LogMessage -headers $Request.Headers -API $APINAME -message 'Accessed this API' -Sev 'Debug'
     Write-Host ($request | ConvertTo-Json -Compress)
 
     try {
@@ -35,12 +35,12 @@ Function Invoke-AddConnectionFilterTemplate {
             RowKey       = "$GUID"
             PartitionKey = 'ConnectionfilterTemplate'
         }
-        Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -message "Created Connection Filter Template $($Request.body.name) with GUID $GUID" -Sev 'Debug'
+        Write-LogMessage -headers $Request.Headers -API $APINAME -message "Created Connection Filter Template $($Request.body.name) with GUID $GUID" -Sev 'Debug'
         $body = [pscustomobject]@{'Results' = 'Successfully added template' }
 
     }
     catch {
-        Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -message "Failed to create Connection Filter Template: $($_.Exception.Message)" -Sev 'Error'
+        Write-LogMessage -headers $Request.Headers -API $APINAME -message "Failed to create Connection Filter Template: $($_.Exception.Message)" -Sev 'Error'
         $body = [pscustomobject]@{'Results' = "ConnectionFilter Template Deployment failed: $($_.Exception.Message)" }
     }
 

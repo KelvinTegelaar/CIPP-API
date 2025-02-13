@@ -5,7 +5,7 @@ function Get-CIPPBitlockerKey {
         $device,
         $TenantFilter,
         $APIName = 'Get Bitlocker key',
-        $ExecutingUser
+        $Headers
     )
 
     try {
@@ -15,7 +15,7 @@ function Get-CIPPBitlockerKey {
         return $GraphRequest
     } catch {
         $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
-        Write-LogMessage -user $ExecutingUser -API $APIName -message "Could not retrieve bitlocker recovery key for $($device)" -Sev 'Error' -tenant $TenantFilter -LogData (Get-CippException -Exception $_)
+        Write-LogMessage -headers $Headers -API $APIName -message "Could not retrieve bitlocker recovery key for $($device)" -Sev 'Error' -tenant $TenantFilter -LogData (Get-CippException -Exception $_)
         return "Could not retrieve bitlocker recovery key for $($device). Error: $ErrorMessage"
     }
 }
