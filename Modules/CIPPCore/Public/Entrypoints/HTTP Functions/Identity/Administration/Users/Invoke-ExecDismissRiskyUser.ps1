@@ -8,8 +8,8 @@ function Invoke-ExecDismissRiskyUser {
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
 
-    $APIName = $TriggerMetadata.FunctionName
-    Write-LogMessage -user $Request.headers.'x-ms-client-principal' -API $APINAME -message 'Accessed this API' -Sev 'Debug'
+    $APIName = $Request.Params.CIPPEndpoint
+    Write-LogMessage -headers $Request.Headers -API $APINAME -message 'Accessed this API' -Sev 'Debug'
     Write-Host 'PowerShell HTTP trigger function processed a request.'
 
     $TenantFilter = $Request.Query.tenantfilter

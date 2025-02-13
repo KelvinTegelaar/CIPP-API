@@ -10,8 +10,8 @@ Function Invoke-AddPolicy {
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
 
-    $APIName = $TriggerMetadata.FunctionName
-    Write-LogMessage -user $Request.headers.'x-ms-client-principal' -API $APINAME -message 'Accessed this API' -Sev 'Debug'
+    $APIName = $Request.Params.CIPPEndpoint
+    Write-LogMessage -headers $Request.Headers -API $APINAME -message 'Accessed this API' -Sev 'Debug'
 
     $Tenants = ($Request.Body.tenantFilter.value)
     if ('AllTenants' -in $Tenants) { $Tenants = (Get-Tenants).defaultDomainName }
@@ -27,11 +27,11 @@ Function Invoke-AddPolicy {
         }
         try {
             Write-Host 'Calling Adding policy'
-            Set-CIPPIntunePolicy -TemplateType $Request.body.TemplateType -Description $description -DisplayName $displayname -RawJSON $RawJSON -AssignTo $AssignTo -tenantFilter $Tenant
-            Write-LogMessage -user $Request.headers.'x-ms-client-principal' -API $APINAME -tenant $($Tenant) -message "Added policy $($Displayname)" -Sev 'Info'
+            Set-CIPPIntunePolicy -TemplateType $Request.body.TemplateType -Description $description -DisplayName $displayname -RawJSON $RawJSON -AssignTo $AssignTo -tenantFilter $Tenant -Headers $Request.Headers
+            Write-LogMessage -headers $Request.Headers -API $APINAME -tenant $($Tenant) -message "Added policy $($Displayname)" -Sev 'Info'
         } catch {
             "$($_.Exception.Message)"
-            Write-LogMessage -user $Request.headers.'x-ms-client-principal' -API $APINAME -tenant $($Tenant) -message "Failed adding policy $($Displayname). Error: $($_.Exception.Message)" -Sev 'Error'
+            Write-LogMessage -headers $Request.Headers -API $APINAME -tenant $($Tenant) -message "Failed adding policy $($Displayname). Error: $($_.Exception.Message)" -Sev 'Error'
             continue
         }
 

@@ -32,7 +32,7 @@ function Invoke-CIPPStandardTAP {
 
     $CurrentState = New-GraphGetRequest -Uri 'https://graph.microsoft.com/beta/policies/authenticationmethodspolicy/authenticationMethodConfigurations/TemporaryAccessPass' -tenantid $Tenant
     if ($null -eq $Settings.config) { $Settings.config = $True }
-    $StateIsCorrect =   ($CurrentState.state -eq 'enabled') -and
+    $StateIsCorrect = ($CurrentState.state -eq 'enabled') -and
                         ([System.Convert]::ToBoolean($CurrentState.isUsableOnce) -eq [System.Convert]::ToBoolean($Settings.config))
 
     if ($Settings.report -eq $true) {
@@ -43,7 +43,10 @@ function Invoke-CIPPStandardTAP {
         if ($StateIsCorrect -eq $true) {
             Write-LogMessage -API 'Standards' -tenant $tenant -message 'Temporary Access Passwords is already enabled.' -sev Info
         } else {
-            Set-CIPPAuthenticationPolicy -Tenant $tenant -APIName 'Standards' -AuthenticationMethodId 'TemporaryAccessPass' -Enabled $true -TAPisUsableOnce $Settings.config
+            try {
+                Set-CIPPAuthenticationPolicy -Tenant $tenant -APIName 'Standards' -AuthenticationMethodId 'TemporaryAccessPass' -Enabled $true -TAPisUsableOnce $Settings.config
+            } catch {
+            }
         }
     }
 

@@ -10,8 +10,8 @@ Function Invoke-ListBPA {
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
 
-    $APIName = $TriggerMetadata.FunctionName
-    # Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -message "Accessed this API" -Sev "Debug"
+    $APIName = $Request.Params.CIPPEndpoint
+    # Write-LogMessage -headers $Request.Headers -API $APINAME -message "Accessed this API" -Sev "Debug"
 
     $Table = get-cipptable 'cachebpav2'
     $name = $Request.query.Report

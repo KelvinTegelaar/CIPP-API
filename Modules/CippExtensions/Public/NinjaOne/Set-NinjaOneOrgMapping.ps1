@@ -19,7 +19,7 @@ function Set-NinjaOneOrgMapping {
 
         Add-CIPPAzDataTableEntity @CIPPMapping -Entity $AddObject -Force
 
-        Write-LogMessage -API $APINAME -user $request.headers.'x-ms-client-principal' -message "Added mapping for $($mapping.name)." -Sev 'Info'
+        Write-LogMessage -API $APINAME -headers $Request.Headers -message "Added mapping for $($mapping.name)." -Sev 'Info'
     }
     $Result = [pscustomobject]@{'Results' = 'Successfully edited mapping table.' }
 

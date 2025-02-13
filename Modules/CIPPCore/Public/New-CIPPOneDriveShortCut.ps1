@@ -7,7 +7,7 @@ function New-CIPPOneDriveShortCut {
         $URL,
         $TenantFilter,
         $APIName = 'Create OneDrive shortcut',
-        $ExecutingUser
+        $Headers
     )
     Write-Host "Received $username and $userid. We're using $url and $TenantFilter"
     try {
@@ -27,11 +27,11 @@ function New-CIPPOneDriveShortCut {
             '@microsoft.graph.conflictBehavior' = 'rename'
         } | ConvertTo-Json -Depth 10
         New-GraphPOSTRequest -method POST "https://graph.microsoft.com/beta/users/$username/drive/root/children" -body $body -tenantid $TenantFilter -asapp $true
-        Write-LogMessage -API $APIName -user $ExecutingUser -message "Created OneDrive shortcut called $($SiteInfo.displayName) for $($username)" -Sev 'info'
+        Write-LogMessage -API $APIName -headers $Headers -message "Created OneDrive shortcut called $($SiteInfo.displayName) for $($username)" -Sev 'info'
         return "Created OneDrive Shortcut for $username called $($SiteInfo.displayName) "
     } catch {
         $ErrorMessage = Get-CippException -Exception $_
-        Write-LogMessage -user $ExecutingUser -API $APIName -message "Could not add Onedrive shortcut to $username : $($ErrorMessage.NormalizedError)" -Sev 'Error' -LogData $ErrorMessage
+        Write-LogMessage -headers $Headers -API $APIName -message "Could not add Onedrive shortcut to $username : $($ErrorMessage.NormalizedError)" -Sev 'Error' -LogData $ErrorMessage
         return "Could not add Onedrive shortcut to $username : $($ErrorMessage.NormalizedError)"
     }
 }

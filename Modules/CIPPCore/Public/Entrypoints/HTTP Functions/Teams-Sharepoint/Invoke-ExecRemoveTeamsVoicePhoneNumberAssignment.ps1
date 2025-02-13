@@ -10,18 +10,18 @@ Function Invoke-ExecRemoveTeamsVoicePhoneNumberAssignment {
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
 
-    $APIName = $TriggerMetadata.FunctionName
-    Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -message 'Accessed this API' -Sev 'Debug'
+    $APIName = $Request.Params.CIPPEndpoint
+    Write-LogMessage -headers $Request.Headers -API $APINAME -message 'Accessed this API' -Sev 'Debug'
 
     $tenantFilter = $Request.Body.TenantFilter
     try {
         $null = New-TeamsRequest -TenantFilter $TenantFilter -Cmdlet 'Remove-CsPhoneNumberAssignment' -CmdParams @{Identity = $Request.Body.AssignedTo; PhoneNumber = $Request.Body.PhoneNumber; PhoneNumberType = $Request.Body.PhoneNumberType; ErrorAction = 'stop'}
         $Results = [pscustomobject]@{'Results' = "Successfully unassigned $($Request.Body.PhoneNumber) from $($Request.Body.AssignedTo)"}
-        Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $($TenantFilter) -message $($Results.Results) -Sev 'Info'
+        Write-LogMessage -headers $Request.Headers -API $APINAME -tenant $($TenantFilter) -message $($Results.Results) -Sev 'Info'
     } catch {
         $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
         $Results = [pscustomobject]@{'Results' = $ErrorMessage}
-        Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $($TenantFilter) -message $($Results.Results) -Sev 'Error'
+        Write-LogMessage -headers $Request.Headers -API $APINAME -tenant $($TenantFilter) -message $($Results.Results) -Sev 'Error'
     }
     # Associate values to output bindings by calling 'Push-OutputBinding'.
     Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{

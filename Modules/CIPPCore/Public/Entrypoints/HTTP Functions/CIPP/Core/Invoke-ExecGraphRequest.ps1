@@ -8,8 +8,8 @@ Function Invoke-ExecGraphRequest {
         [CmdletBinding()]
         param($Request, $TriggerMetadata)
 
-        $APIName = $TriggerMetadata.FunctionName
-        Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -message 'Accessed this API' -Sev 'Debug'
+        $APIName = $Request.Params.CIPPEndpoint
+        Write-LogMessage -headers $Request.Headers -API $APINAME -message 'Accessed this API' -Sev 'Debug'
 
         Function ConvertTo-FlatObject {
                 # https://evotec.xyz/powershell-converting-advanced-object-to-flat-object/ - MIT License
@@ -91,10 +91,10 @@ Function Invoke-ExecGraphRequest {
                                 } catch {
                                         continue
                                 }
-                        } 
+                        }
 
                 }
-                $GraphRequest = $RawGraphRequest | Where-Object -Property '@odata.context' -EQ $null | ConvertTo-FlatObject 
+                $GraphRequest = $RawGraphRequest | Where-Object -Property '@odata.context' -EQ $null | ConvertTo-FlatObject
                 $StatusCode = [HttpStatusCode]::OK
         } catch {
                 $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message

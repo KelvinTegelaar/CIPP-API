@@ -46,16 +46,16 @@ function Invoke-CIPPStandardSpamFilterPolicy {
         Select-Object -Property *
 
     $StateIsCorrect = ($CurrentState.Name -eq $PolicyName) -and
-                        ($CurrentState.SpamAction -eq $Settings.SpamAction) -and
-                        ($CurrentState.SpamQuarantineTag -eq $Settings.SpamQuarantineTag) -and
-                        ($CurrentState.HighConfidenceSpamAction -eq $Settings.HighConfidenceSpamAction) -and
-                        ($CurrentState.HighConfidenceSpamQuarantineTag -eq $Settings.HighConfidenceSpamQuarantineTag) -and
-                        ($CurrentState.BulkSpamAction -eq $Settings.BulkSpamAction) -and
-                        ($CurrentState.BulkQuarantineTag -eq $Settings.BulkQuarantineTag) -and
-                        ($CurrentState.PhishSpamAction -eq $Settings.PhishSpamAction) -and
-                        ($CurrentState.PhishQuarantineTag -eq $Settings.PhishQuarantineTag) -and
+                        ($CurrentState.SpamAction -eq $Settings.SpamAction.value) -and
+                        ($CurrentState.SpamQuarantineTag -eq $Settings.SpamQuarantineTag.value) -and
+                        ($CurrentState.HighConfidenceSpamAction -eq $Settings.HighConfidenceSpamAction.value) -and
+                        ($CurrentState.HighConfidenceSpamQuarantineTag -eq $Settings.HighConfidenceSpamQuarantineTag.value) -and
+                        ($CurrentState.BulkSpamAction -eq $Settings.BulkSpamAction.value) -and
+                        ($CurrentState.BulkQuarantineTag -eq $Settings.BulkQuarantineTag.value) -and
+                        ($CurrentState.PhishSpamAction -eq $Settings.PhishSpamAction.value) -and
+                        ($CurrentState.PhishQuarantineTag -eq $Settings.PhishQuarantineTag.value) -and
                         ($CurrentState.HighConfidencePhishAction -eq 'Quarantine') -and
-                        ($CurrentState.HighConfidencePhishQuarantineTag -eq $Settings.HighConfidencePhishQuarantineTag) -and
+                        ($CurrentState.HighConfidencePhishQuarantineTag -eq $Settings.HighConfidencePhishQuarantineTag.value) -and
                         ($CurrentState.BulkThreshold -eq $Settings.BulkThreshold) -and
                         ($CurrentState.QuarantineRetentionPeriod -eq 30) -and
                         ($CurrentState.IncreaseScoreWithNumericIps -eq 'On') -and
@@ -86,16 +86,16 @@ function Invoke-CIPPStandardSpamFilterPolicy {
             Write-LogMessage -API 'Standards' -Tenant $Tenant -message 'Spam Filter Policy already correctly configured' -sev Info
         } else {
             $cmdparams = @{
-                SpamAction                           = $Settings.SpamAction
-                SpamQuarantineTag                    = $Settings.SpamQuarantineTag
-                HighConfidenceSpamAction             = $Settings.HighConfidenceSpamAction
-                HighConfidenceSpamQuarantineTag      = $Settings.HighConfidenceSpamQuarantineTag
-                BulkSpamAction                       = $Settings.BulkSpamAction
-                BulkQuarantineTag                    = $Settings.BulkQuarantineTag
-                PhishSpamAction                      = $Settings.PhishSpamAction
-                PhishQuarantineTag                   = $Settings.PhishQuarantineTag
+                SpamAction                           = $Settings.SpamAction.value
+                SpamQuarantineTag                    = $Settings.SpamQuarantineTag.value
+                HighConfidenceSpamAction             = $Settings.HighConfidenceSpamAction.value
+                HighConfidenceSpamQuarantineTag      = $Settings.HighConfidenceSpamQuarantineTag.value
+                BulkSpamAction                       = $Settings.BulkSpamAction.value
+                BulkQuarantineTag                    = $Settings.BulkQuarantineTag.value
+                PhishSpamAction                      = $Settings.PhishSpamAction.value
+                PhishQuarantineTag                   = $Settings.PhishQuarantineTag.value
                 HighConfidencePhishAction            = 'Quarantine'
-                HighConfidencePhishQuarantineTag     = $Settings.HighConfidencePhishQuarantineTag
+                HighConfidencePhishQuarantineTag     = $Settings.HighConfidencePhishQuarantineTag.value
                 BulkThreshold                        = $Settings.BulkThreshold
                 QuarantineRetentionPeriod            = 30
                 IncreaseScoreWithNumericIps          = 'On'
@@ -110,6 +110,8 @@ function Invoke-CIPPStandardSpamFilterPolicy {
                 PhishZapEnabled                      = $true
                 SpamZapEnabled                       = $true
             }
+            Write-Host "================== DEBUG =================="
+            Write-Host $cmdparams
 
             if ($CurrentState.Name -eq $PolicyName) {
                 try {
