@@ -7,9 +7,10 @@ function Set-CIPPIntunePolicy {
         $RawJSON,
         $AssignTo,
         $Headers,
+        $APINAME,
         $tenantFilter
     )
-    $ReturnValue = try {
+    try {
         switch ($TemplateType) {
             'AppProtection' {
                 $TemplateType = ($RawJSON | ConvertFrom-Json).'@odata.type' -replace '#microsoft.graph.', ''
@@ -39,13 +40,13 @@ function Set-CIPPIntunePolicy {
                     $PostType = 'edited'
                     $ExistingID = $CheckExististing | Where-Object -Property displayName -EQ $displayname
                     $CreateRequest = New-GraphPOSTRequest -uri "https://graph.microsoft.com/beta/deviceManagement/$TemplateTypeURL/$($ExistingID.Id)" -tenantid $tenantFilter -type PATCH -body $RawJSON
-                    Write-LogMessage -headers $Request.Headers -API $APINAME -tenant $($tenantFilter) -message "Updated policy $($DisplayName) to template defaults" -Sev 'info'
+                    Write-LogMessage -headers $Headers -API $APINAME -tenant $($tenantFilter) -message "Updated policy $($DisplayName) to template defaults" -Sev 'info'
                     $CreateRequest = $CheckExististing | Where-Object -Property displayName -EQ $DisplayName
                 } else {
                     $RawJSON = ConvertTo-Json -InputObject $JSON -Depth 20 -Compress
                     $PostType = 'added'
                     $CreateRequest = New-GraphPOSTRequest -uri "https://graph.microsoft.com/beta/deviceManagement/$TemplateTypeURL" -tenantid $tenantFilter -type POST -body $RawJSON
-                    Write-LogMessage -headers $Request.Headers -API $APINAME -tenant $($tenantFilter) -message "Added policy $($DisplayName) via template" -Sev 'info'
+                    Write-LogMessage -headers $Headers -API $APINAME -tenant $($tenantFilter) -message "Added policy $($DisplayName) via template" -Sev 'info'
                 }
             }
             'Admin' {
@@ -62,13 +63,13 @@ function Set-CIPPIntunePolicy {
                     $DeleteRequest = New-GraphPOSTRequest -uri "https://graph.microsoft.com/beta/deviceManagement/$TemplateTypeURL('$($ExistingID.id)')/updateDefinitionValues" -tenantid $tenantFilter -type POST -body $DeleteJson
                     $CreateRequest = New-GraphPOSTRequest -uri "https://graph.microsoft.com/beta/deviceManagement/$TemplateTypeURL('$($ExistingID.id)')/updateDefinitionValues" -tenantid $tenantFilter -type POST -body $RawJSON
                     $CreateRequest = $CheckExististing | Where-Object -Property displayName -EQ $DisplayName
-                    Write-LogMessage -headers $Request.Headers -API $APINAME -tenant $($tenantFilter) -message "Updated policy $($Displayname) to template defaults" -Sev 'info'
+                    Write-LogMessage -headers $Headers -API $APINAME -tenant $($tenantFilter) -message "Updated policy $($Displayname) to template defaults" -Sev 'info'
                     $PostType = 'edited'
                 } else {
                     $PostType = 'added'
                     $CreateRequest = New-GraphPOSTRequest -uri "https://graph.microsoft.com/beta/deviceManagement/$TemplateTypeURL" -tenantid $tenantFilter -type POST -body $CreateBody
                     $UpdateRequest = New-GraphPOSTRequest -uri "https://graph.microsoft.com/beta/deviceManagement/$TemplateTypeURL('$($CreateRequest.id)')/updateDefinitionValues" -tenantid $tenantFilter -type POST -body $RawJSON
-                    Write-LogMessage -headers $Request.Headers -API $APINAME -tenant $($tenantFilter) -message "Added policy $($Displayname) to template defaults" -Sev 'info'
+                    Write-LogMessage -headers $Headers -API $APINAME -tenant $($tenantFilter) -message "Added policy $($Displayname) to template defaults" -Sev 'info'
 
                 }
             }
@@ -86,11 +87,11 @@ function Set-CIPPIntunePolicy {
                     Write-Host "Raw JSON is $RawJSON"
                     $CreateRequest = New-GraphPOSTRequest -uri "https://graph.microsoft.com/beta/deviceManagement/$TemplateTypeURL/$($ExistingID.Id)" -tenantid $tenantFilter -type PATCH -body $RawJSON
                     $CreateRequest = $CheckExististing | Where-Object -Property displayName -EQ $DisplayName
-                    Write-LogMessage -headers $Request.Headers -API $APINAME -tenant $($tenantFilter) -message "Updated policy $($DisplayName) to template defaults" -Sev 'info'
+                    Write-LogMessage -headers $Headers -API $APINAME -tenant $($tenantFilter) -message "Updated policy $($DisplayName) to template defaults" -Sev 'info'
                 } else {
                     $PostType = 'added'
                     $CreateRequest = New-GraphPOSTRequest -uri "https://graph.microsoft.com/beta/deviceManagement/$TemplateTypeURL" -tenantid $tenantFilter -type POST -body $RawJSON
-                    Write-LogMessage -headers $Request.Headers -API $APINAME -tenant $($tenantFilter) -message "Added policy $($DisplayName) via template" -Sev 'info'
+                    Write-LogMessage -headers $Headers -API $APINAME -tenant $($tenantFilter) -message "Added policy $($DisplayName) via template" -Sev 'info'
 
                 }
             }
@@ -106,7 +107,7 @@ function Set-CIPPIntunePolicy {
                 } else {
                     $PostType = 'added'
                     $CreateRequest = New-GraphPOSTRequest -uri "https://graph.microsoft.com/beta/deviceManagement/$TemplateTypeURL" -tenantid $tenantFilter -type POST -body $RawJSON
-                    Write-LogMessage -headers $Request.Headers -API $APINAME -tenant $($tenantFilter) -message "Added policy $($DisplayName) via template" -Sev 'info'
+                    Write-LogMessage -headers $Headers -API $APINAME -tenant $($tenantFilter) -message "Added policy $($DisplayName) via template" -Sev 'info'
                 }
             }
             'windowsDriverUpdateProfiles' {
@@ -124,7 +125,7 @@ function Set-CIPPIntunePolicy {
                 } else {
                     $PostType = 'added'
                     $CreateRequest = New-GraphPOSTRequest -uri "https://graph.microsoft.com/beta/deviceManagement/$TemplateTypeURL" -tenantid $tenantFilter -type POST -body $RawJSON
-                    Write-LogMessage -headers $Request.Headers -API $APINAME -tenant $($tenantFilter) -message "Added policy $($DisplayName) via template" -Sev 'info'
+                    Write-LogMessage -headers $Headers -API $APINAME -tenant $($tenantFilter) -message "Added policy $($DisplayName) via template" -Sev 'info'
                 }
             }
 
@@ -142,5 +143,4 @@ function Set-CIPPIntunePolicy {
         Write-LogMessage -headers $Headers -API $APINAME -tenant $($tenantFilter) -message "Failed $($PostType) policy $($Displayname). Error: $($ErrorMessage.NormalizedError)" -Sev 'Error' -LogData $ErrorMessage
         throw "Failed to add or set policy for $($tenantFilter) with display name $($Displayname): $($ErrorMessage.NormalizedError)"
     }
-
 }
