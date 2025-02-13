@@ -393,7 +393,7 @@ function Invoke-HuduExtensionSync {
             $CompanyResult.Logs.Add('Starting User Processing')
             $OutputUsers = foreach ($user in $licensedUsers) {
                 try {
-
+                    $HuduUser = $null
                     $UserGroups = foreach ($Group in $Groups) {
                         if ($User.id -in $Group.Members.id) {
                             $FoundGroup = $AllGroups | Where-Object { $_.id -eq $Group.id }
@@ -685,13 +685,13 @@ function Invoke-HuduExtensionSync {
                         } elseif ($HuduUserCount -eq 0) {
                             if ($CreateUsers -eq $True) {
                                 $CompanyResult.Logs.Add("Creating $($User.displayName) in Hudu")
-                                $HuduUser = (New-HuduAsset -Name $User.displayName -company_id $company_id -asset_layout_id $PeopleLayout.id -Fields $UserAssetFields).asset
-                                if (!$HuduUser) {
+                                $CreateHuduUser = (New-HuduAsset -Name $User.displayName -company_id $company_id -asset_layout_id $PeopleLayout.id -Fields $UserAssetFields).asset
+                                if (!$CreateHuduUser) {
                                     $CompanyResult.Errors.add("User $($User.userPrincipalName): Unable to create user in Hudu. Check the User asset fields for 'Email Address'")
                                 } else {
                                     $AssetCache = [PSCustomObject]@{
                                         PartitionKey = 'HuduUser'
-                                        RowKey       = [string]$HuduUser.id
+                                        RowKey       = [string]$CreateHuduUser.id
                                         CompanyId    = [string]$company_id
                                         Hash         = [string]$NewHash
                                     }
@@ -851,13 +851,13 @@ function Invoke-HuduExtensionSync {
                                 }
                                 Add-CIPPAzDataTableEntity @HuduAssetCache -Entity $AssetCache -Force
 
-                                $HuduUser = $People | Where-Object { $_.primary_mail -eq $Device.userPrincipalName -or ($_.cards.integrator_name -eq 'cw_manage' -and $_.cards.data.communicationItems.communicationType -eq 'Email' -and $_.cards.data.communicationItems.value -eq $Device.userPrincipalName) }
+                                $RelHuduUser = $People | Where-Object { $_.primary_mail -eq $Device.userPrincipalName -or ($_.cards.integrator_name -eq 'cw_manage' -and $_.cards.data.communicationItems.communicationType -eq 'Email' -and $_.cards.data.communicationItems.value -eq $Device.userPrincipalName) }
 
-                                if ($HuduUser) {
-                                    $Relation = $HuduRelations | Where-Object { $_.fromable_type -eq 'Asset' -and $_.fromable_id -eq $HuduUser.id -and $_.toable_type -eq 'Asset' -and $_toable_id -eq $HuduDevice.id }
+                                if ($RelHuduUser) {
+                                    $Relation = $HuduRelations | Where-Object { $_.fromable_type -eq 'Asset' -and $_.fromable_id -eq $RelHuduUser.id -and $_.toable_type -eq 'Asset' -and $_toable_id -eq $HuduDevice.id }
                                     if (-not $Relation) {
                                         try {
-                                            $null = New-HuduRelation -FromableType 'Asset' -FromableID $HuduUser.id -ToableType 'Asset' -ToableID $HuduDevice.id -ea stop
+                                            $null = New-HuduRelation -FromableType 'Asset' -FromableID $RelHuduUser.id -ToableType 'Asset' -ToableID $HuduDevice.id -ea stop
                                         } catch {}
                                     }
                                 }
@@ -875,23 +875,23 @@ function Invoke-HuduExtensionSync {
                         }
                         if ($DeviceCreation -eq $true) {
                             $CompanyResult.Logs.Add("Creating $($device.deviceName) in Hudu")
-                            $HuduDevice = (New-HuduAsset -Name $device.deviceName -company_id $company_id -asset_layout_id $DeviceLayoutID -Fields $DeviceAssetFields -PrimarySerial $Device.serialNumber).asset
+                            $CreateHuduDevice = (New-HuduAsset -Name $device.deviceName -company_id $company_id -asset_layout_id $DeviceLayoutID -Fields $DeviceAssetFields -PrimarySerial $Device.serialNumber).asset
 
-                            if (!$HuduDevice) {
+                            if (!$CreateHuduDevice) {
                                 $CompanyResult.Errors.add("Device $($device.deviceName): Failed to create device in Hudu, check your device asset fields for 'Primary Serial'.")
                             } else {
                                 $AssetCache = [PSCustomObject]@{
                                     PartitionKey = 'HuduDevice'
-                                    RowKey       = [string]$HuduDevice.id
+                                    RowKey       = [string]$CreateHuduDevice.id
                                     CompanyId    = [string]$company_id
                                     Hash         = [string]$NewHash
                                 }
                                 Add-CIPPAzDataTableEntity @HuduAssetCache -Entity $AssetCache -Force
 
-                                $HuduUser = $People | Where-Object { $_.primary_mail -eq $Device.userPrincipalName -or ($_.cards.integrator_name -eq 'cw_manage' -and $_.cards.data.communicationItems.communicationType -eq 'Email' -and $_.cards.data.communicationItems.value -eq $Device.userPrincipalName) }
-                                if ($HuduUser) {
+                                $RelHuduUser = $People | Where-Object { $_.primary_mail -eq $Device.userPrincipalName -or ($_.cards.integrator_name -eq 'cw_manage' -and $_.cards.data.communicationItems.communicationType -eq 'Email' -and $_.cards.data.communicationItems.value -eq $Device.userPrincipalName) }
+                                if ($RelHuduUser) {
                                     try {
-                                        $null = New-HuduRelation -FromableType 'Asset' -FromableID $HuduUser.id -ToableType 'Asset' -ToableID $HuduDevice.id -ea stop
+                                        $null = New-HuduRelation -FromableType 'Asset' -FromableID $RelHuduUser.id -ToableType 'Asset' -ToableID $CreateHuduDevice.id -ea stop
                                     } catch {
                                         # No need to do anything here as its will be when relations already exist.
                                     }
