@@ -17,7 +17,7 @@ Function Set-CIPPAlwaysShowFrom {
     .PARAMETER APIName
         Specifies the name of the API. The default value is "Always Show From".
 
-    .PARAMETER ExecutingUser
+    .PARAMETER Headers
         Specifies the user who is executing the function.
 
     .PARAMETER AlwaysShowFrom
@@ -50,7 +50,7 @@ Function Set-CIPPAlwaysShowFrom {
 
         [Parameter(ParameterSetName = 'User')]
         [Parameter(ParameterSetName = 'AllUsers')]
-        $ExecutingUser,
+        $Headers,
 
         [Parameter(Mandatory = $true, ParameterSetName = 'User')]
         [Parameter(Mandatory = $true, ParameterSetName = 'AllUsers')]
@@ -63,7 +63,7 @@ Function Set-CIPPAlwaysShowFrom {
 
     if ($RunOnAllUsersInTenant.IsPresent -eq $true) {
         $AllUsers = New-ExoRequest -tenantid $TenantFilter -cmdlet 'Get-Mailbox' -cmdParams @{ ResultSize = 'Unlimited' }
-        Write-LogMessage -user $ExecutingUser -API $APIName -message "Setting Always Show From to $AlwaysShowFrom for all $($AllUsers.Count) users in $TenantFilter" -Sev 'Info' -tenant $TenantFilter
+        Write-LogMessage -headers $Headers -API $APIName -message "Setting Always Show From to $AlwaysShowFrom for all $($AllUsers.Count) users in $TenantFilter" -Sev 'Info' -tenant $TenantFilter
         $ErrorCount = 0
         foreach ($User in $AllUsers) {
             try {
@@ -73,15 +73,15 @@ Function Set-CIPPAlwaysShowFrom {
                 $ErrorCount++
             }
         }
-        Write-LogMessage -user $ExecutingUser -API $APIName -message "Set Always Show From to $AlwaysShowFrom for $($AllUsers.Count - $ErrorCount) users in $TenantFilter" -Sev 'Info' -tenant $TenantFilter
+        Write-LogMessage -headers $Headers -API $APIName -message "Set Always Show From to $AlwaysShowFrom for $($AllUsers.Count - $ErrorCount) users in $TenantFilter" -Sev 'Info' -tenant $TenantFilter
         return "Set Always Show From to $AlwaysShowFrom for $($AllUsers.Count - $ErrorCount) users in $TenantFilter"
     } else {
         try {
             $null = New-ExoRequest -tenantid $TenantFilter -cmdlet 'Set-MailboxMessageConfiguration' -anchor $UserID -cmdParams @{AlwaysShowFrom = $AlwaysShowFrom; Identity = $UserID }
-            Write-LogMessage -user $ExecutingUser -API $APIName -message "Set Always Show From to $AlwaysShowFrom for $UserID" -Sev 'Info' -tenant $TenantFilter
+            Write-LogMessage -headers $Headers -API $APIName -message "Set Always Show From to $AlwaysShowFrom for $UserID" -Sev 'Info' -tenant $TenantFilter
         } catch {
             $ErrorMessage = Get-CippException -Exception $_
-            Write-LogMessage -user $ExecutingUser -API $APIName -message "Could not set Always Show From to $AlwaysShowFrom for $UserID. Error: $($ErrorMessage.NormalizedError)" -Sev 'Error' -tenant $TenantFilter -LogData $ErrorMessage
+            Write-LogMessage -headers $Headers -API $APIName -message "Could not set Always Show From to $AlwaysShowFrom for $UserID. Error: $($ErrorMessage.NormalizedError)" -Sev 'Error' -tenant $TenantFilter -LogData $ErrorMessage
             return "Could not set Always Show From to $AlwaysShowFrom for $UserID. Error: $($ErrorMessage.NormalizedError)"
         }
         return "Set Always Show From to $AlwaysShowFrom for $UserID"

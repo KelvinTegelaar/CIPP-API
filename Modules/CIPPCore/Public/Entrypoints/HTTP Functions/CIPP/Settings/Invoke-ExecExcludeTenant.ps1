@@ -10,21 +10,20 @@ Function Invoke-ExecExcludeTenant {
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
 
-    Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -message 'Accessed this API' -Sev 'Debug'
+    Write-LogMessage -headers $Request.Headers -API $APINAME -message 'Accessed this API' -Sev 'Debug'
 
-    $user = $request.headers.'x-ms-client-principal'
-    $username = ([System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($user)) | ConvertFrom-Json).userDetails
+    $username = $Request.Headers.'x-ms-client-principal-name'
     $date = (Get-Date).tostring('yyyy-MM-dd')
     $TenantsTable = Get-CippTable -tablename Tenants
 
     if ($Request.Query.List) {
         $ExcludedFilter = "PartitionKey eq 'Tenants' and Excluded eq true"
         $ExcludedTenants = Get-CIPPAzDataTableEntity @TenantsTable -Filter $ExcludedFilter
-        Write-LogMessage -API $APINAME -user $request.headers.'x-ms-client-principal' -message 'got excluded tenants list' -Sev 'Debug'
+        Write-LogMessage -API $APINAME -headers $Request.Headers -message 'got excluded tenants list' -Sev 'Debug'
         $body = @($ExcludedTenants)
     } elseif ($Request.query.ListAll) {
         $ExcludedTenants = Get-CIPPAzDataTableEntity @TenantsTable -filter "PartitionKey eq 'Tenants'" | Sort-Object -Property displayName
-        Write-LogMessage -API $APINAME -user $request.headers.'x-ms-client-principal' -message 'got excluded tenants list' -Sev 'Debug'
+        Write-LogMessage -API $APINAME -headers $Request.Headers -message 'got excluded tenants list' -Sev 'Debug'
         $body = @($ExcludedTenants)
     }
     try {
@@ -40,7 +39,7 @@ Function Invoke-ExecExcludeTenant {
                 $Tenant
             }
             Update-AzDataTableEntity -Force @TenantsTable -Entity ([pscustomobject]$Excluded)
-            Write-LogMessage -API $APINAME -tenant $($name) -user $request.headers.'x-ms-client-principal' -message "Added exclusion for customer(s): $($Excluded.defaultDomainName -join ',')" -Sev 'Info'
+            Write-LogMessage -API $APINAME -tenant $($name) -headers $Request.Headers -message "Added exclusion for customer(s): $($Excluded.defaultDomainName -join ',')" -Sev 'Info'
             $body = [pscustomobject]@{'Results' = "Success. Added exclusions for customer(s): $($Excluded.defaultDomainName -join ',')" }
         }
 
@@ -52,11 +51,11 @@ Function Invoke-ExecExcludeTenant {
                 $Tenant.ExcludeDate = ''
                 Update-AzDataTableEntity -Force @TenantsTable -Entity $Tenant
             }
-            Write-LogMessage -API $APINAME -tenant $($name) -user $request.headers.'x-ms-client-principal' -message "Removed exclusion for customer $($name)" -Sev 'Info'
+            Write-LogMessage -API $APINAME -tenant $($name) -headers $Request.Headers -message "Removed exclusion for customer $($name)" -Sev 'Info'
             $body = [pscustomobject]@{'Results' = "Success. We've removed $name from the excluded tenants." }
         }
     } catch {
-        Write-LogMessage -API $APINAME -tenant $($name) -user $request.headers.'x-ms-client-principal' -message "Exclusion API failed. $($_.Exception.Message)" -Sev 'Error'
+        Write-LogMessage -API $APINAME -tenant $($name) -headers $Request.Headers -message "Exclusion API failed. $($_.Exception.Message)" -Sev 'Error'
         $body = [pscustomobject]@{'Results' = "Failed. $($_.Exception.Message)" }
     }
     if (!$body) { $body = @() }

@@ -12,13 +12,13 @@ Function Invoke-ExecAddTrustedIP {
 
     $Table = Get-CippTable -tablename 'trustedIps'
     Add-CIPPAzDataTableEntity @Table -Entity @{
-        PartitionKey = $request.query.tenantfilter
-        RowKey       = $Request.query.ip
-        state        = $request.query.State
+        PartitionKey = $Request.Body.tenantfilter
+        RowKey       = $Request.Body.IP
+        state        = $Request.Body.State
     } -Force
 
     Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
             StatusCode = [HttpStatusCode]::OK
-            Body       = @{ results = "Added $($Request.query.ip) to database with state $($Request.query.state) for $($Request.query.tenantfilter)" }
+            Body       = @{ results = "Added $($Request.Body.IP) to database with state $($Request.Body.State) for $($Request.Body.tenantfilter)" }
         })
 }

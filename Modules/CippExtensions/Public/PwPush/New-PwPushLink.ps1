@@ -13,6 +13,7 @@ function New-PwPushLink {
         if ($Configuration.ExpireAfterDays) { $PushParams.ExpireAfterDays = $Configuration.ExpireAfterDays }
         if ($Configuration.ExpireAfterViews) { $PushParams.ExpireAfterViews = $Configuration.ExpireAfterViews }
         if ($Configuration.DeletableByViewer) { $PushParams.DeletableByViewer = $Configuration.DeletableByViewer }
+        if ($Configuration.AccountId) { $PushParams.AccountId = $Configuration.AccountId.value }
         try {
             if ($PSCmdlet.ShouldProcess('Create a new PwPush link')) {
                 $Link = New-Push @PushParams

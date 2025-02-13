@@ -10,8 +10,8 @@ Function Invoke-ListGenericTestFunction {
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
 
-    $APIName = $TriggerMetadata.FunctionName
-    Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -message 'Accessed this API' -Sev 'Debug'
+    $APIName = $Request.Params.CIPPEndpoint
+    Write-LogMessage -headers $Request.Headers -API $APINAME -message 'Accessed this API' -Sev 'Debug'
     $graphRequest = ($request.headers.'x-ms-original-url').split('/api') | Select-Object -First 1
 
     Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{

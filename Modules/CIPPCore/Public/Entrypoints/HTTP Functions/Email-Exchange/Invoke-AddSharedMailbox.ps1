@@ -10,10 +10,10 @@ Function Invoke-AddSharedMailbox {
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
 
-    $APIName = $TriggerMetadata.FunctionName
-    $User = $request.headers.'x-ms-client-principal'
+    $APIName = $Request.Params.CIPPEndpoint
+    $User = $Request.Headers
 
-    Write-LogMessage -user $User -API $APINAME -message 'Accessed this API' -Sev 'Debug'
+    Write-LogMessage -Headers $User -API $APINAME -message 'Accessed this API' -Sev 'Debug'
 
     # Write to the Azure Functions log stream.
     Write-Host 'PowerShell HTTP trigger function processed a request.'
@@ -34,15 +34,15 @@ Function Invoke-AddSharedMailbox {
         }
         $AddSharedRequest = New-ExoRequest -tenantid $Tenant -cmdlet 'New-Mailbox' -cmdparams $BodyToShip
         $Body = $Results.add("Successfully created shared mailbox: $Email.")
-        Write-LogMessage -user $User -API $APINAME -tenant $Tenant -message "Created shared mailbox $($MailboxObject.displayname) with email $Email" -Sev 'Info'
+        Write-LogMessage -Headers $User -API $APINAME -tenant $Tenant -message "Created shared mailbox $($MailboxObject.displayname) with email $Email" -Sev 'Info'
 
         # Block sign-in for the mailbox
         try {
-            $null = Set-CIPPSignInState -userid $AddSharedRequest.ExternalDirectoryObjectId -TenantFilter $Tenant -APIName $APINAME -ExecutingUser $User -AccountEnabled $false
+            $null = Set-CIPPSignInState -userid $AddSharedRequest.ExternalDirectoryObjectId -TenantFilter $Tenant -APIName $APINAME -Headers $User -AccountEnabled $false
             $Body = $Results.add("Blocked sign-in for shared mailbox $Email")
         } catch {
             $ErrorMessage = Get-CippException -Exception $_
-            Write-LogMessage -user $User -API $APINAME -tenant $Tenant -message "Failed to block sign-in for shared mailbox $Email. Error: $($ErrorMessage.NormalizedError)" -Sev 'Error' -LogData $ErrorMessage
+            Write-LogMessage -Headers $User -API $APINAME -tenant $Tenant -message "Failed to block sign-in for shared mailbox $Email. Error: $($ErrorMessage.NormalizedError)" -Sev 'Error' -LogData $ErrorMessage
             $Body = $Results.add("Failed to block sign-in for shared mailbox $Email. Error: $($ErrorMessage.NormalizedError)")
         }
 
@@ -55,19 +55,19 @@ Function Invoke-AddSharedMailbox {
                     'EmailAddresses' = @{'@odata.type' = '#Exchange.GenericHashTable'; Add = $Aliases }
                 }
                 $null = New-ExoRequest -tenantid $Tenant -cmdlet 'Set-Mailbox' -cmdparams $AliasBodyToShip -UseSystemMailbox $true
-                Write-LogMessage -user $User -API $APINAME -tenant $Tenant -message "Added aliases to $Email : $($Aliases -join ',')" -Sev 'Info'
+                Write-LogMessage -Headers $User -API $APINAME -tenant $Tenant -message "Added aliases to $Email : $($Aliases -join ',')" -Sev 'Info'
                 $Body = $results.add("Added Aliases to $Email : $($Aliases -join ',')")
 
             } catch {
                 $ErrorMessage = Get-CippException -Exception $_
-                Write-LogMessage -user $User -API $APINAME -tenant $Tenant -message "Failed to add aliases to $Email : $($ErrorMessage.NormalizedError)" -Sev 'Error' -LogData $ErrorMessage
+                Write-LogMessage -Headers $User -API $APINAME -tenant $Tenant -message "Failed to add aliases to $Email : $($ErrorMessage.NormalizedError)" -Sev 'Error' -LogData $ErrorMessage
                 $Body = $results.add("ERROR: Failed to add aliases to $Email : $($ErrorMessage.NormalizedError)")
             }
         }
         $StatusCode = [HttpStatusCode]::OK
     } catch {
         $ErrorMessage = Get-CippException -Exception $_
-        Write-LogMessage -user $User -API $APINAME -tenant $Tenant -message "Failed to create shared mailbox. Error: $($ErrorMessage.NormalizedError)" -Sev 'Error' -LogData $ErrorMessage
+        Write-LogMessage -Headers $User -API $APINAME -tenant $Tenant -message "Failed to create shared mailbox. Error: $($ErrorMessage.NormalizedError)" -Sev 'Error' -LogData $ErrorMessage
         $Body = $Results.add("Failed to create Shared Mailbox. $($ErrorMessage.NormalizedError)")
         $StatusCode = [HttpStatusCode]::Forbidden
     }
