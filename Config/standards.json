@@ -3200,7 +3200,7 @@
       "warn": true,
       "remediate": false
     },
-    "impact": "High",
+    "impact": "High Impact",
     "helpText": "Deploy and manage Intune templates across devices.",
     "addedComponent": [
       {
@@ -3248,7 +3248,7 @@
       "warn": true,
       "remediate": false
     },
-    "impact": "Medium",
+    "impact": "Medium Impact",
     "helpText": "Deploy transport rules to manage email flow.",
     "addedComponent": [
       {
@@ -3274,7 +3274,7 @@
       "warn": true,
       "remediate": false
     },
-    "impact": "High",
+    "impact": "High Impact",
     "helpText": "Manage conditional access policies for better security.",
     "addedComponent": [
       {
@@ -3313,7 +3313,7 @@
       "warn": true,
       "remediate": false
     },
-    "impact": "Medium",
+    "impact": "Medium Impact",
     "helpText": "Deploy and manage Exchange connectors.",
     "addedComponent": [
       {
@@ -3339,7 +3339,7 @@
       "warn": true,
       "remediate": false
     },
-    "impact": "Medium",
+    "impact": "Medium Impact",
     "helpText": "Deploy and manage group templates.",
     "addedComponent": [
       {
