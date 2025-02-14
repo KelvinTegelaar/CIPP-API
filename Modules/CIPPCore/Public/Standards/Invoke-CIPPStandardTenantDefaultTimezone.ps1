@@ -19,7 +19,7 @@ function Invoke-CIPPStandardTenantDefaultTimezone {
         IMPACT
             Low Impact
         POWERSHELLEQUIVALENT
-            Update-MgBetaAdminSharepointSetting
+            Update-MgBetaAdminSharePointSetting
         RECOMMENDEDBY
         UPDATECOMMENTBLOCK
             Run the Tools\Update-StandardsComments.ps1 script to update this comment block

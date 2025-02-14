@@ -23,6 +23,7 @@ function Invoke-CIPPStandardDisableSharePointLegacyAuth {
             Set-SPOTenant -LegacyAuthProtocolsEnabled \$false
         RECOMMENDEDBY
             "CIS"
+            "CIPP"
         UPDATECOMMENTBLOCK
             Run the Tools\Update-StandardsComments.ps1 script to update this comment block
     .LINK

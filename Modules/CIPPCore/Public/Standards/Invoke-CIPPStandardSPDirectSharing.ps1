@@ -22,6 +22,7 @@ function Invoke-CIPPStandardSPDirectSharing {
             Set-SPOTenant -DefaultSharingLinkType Direct
         RECOMMENDEDBY
             "CIS 3.0"
+            "CIPP"
         UPDATECOMMENTBLOCK
             Run the Tools\Update-StandardsComments.ps1 script to update this comment block
     .LINK

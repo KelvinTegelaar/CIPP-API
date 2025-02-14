@@ -15,7 +15,7 @@ function Invoke-CIPPStandardGroupTemplate {
         CAT
             Templates
         DISABLEDFEATURES
-
+            
         IMPACT
             Medium
         ADDEDCOMPONENT

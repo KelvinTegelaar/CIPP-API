@@ -20,6 +20,7 @@ function Invoke-CIPPStandardDisableTNEF {
         POWERSHELLEQUIVALENT
             Set-RemoteDomain -Identity 'Default' -TNEFEnabled \$false
         RECOMMENDEDBY
+            "CIPP"
         UPDATECOMMENTBLOCK
             Run the Tools\Update-StandardsComments.ps1 script to update this comment block
     .LINK

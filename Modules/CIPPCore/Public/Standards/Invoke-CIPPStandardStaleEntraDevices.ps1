@@ -1,4 +1,4 @@
-﻿function Invoke-CIPPStandardStaleEntraDevices {
+function Invoke-CIPPStandardStaleEntraDevices {
     <#
     .FUNCTIONALITY
         Internal
@@ -18,7 +18,7 @@
         ADDEDCOMPONENT
             {"type":"number","name":"standards.StaleEntraDevices.deviceAgeThreshold","label":"Days before stale(Dont set below 30)"}
         DISABLEDFEATURES
-
+            
         IMPACT
             High Impact
         POWERSHELLEQUIVALENT

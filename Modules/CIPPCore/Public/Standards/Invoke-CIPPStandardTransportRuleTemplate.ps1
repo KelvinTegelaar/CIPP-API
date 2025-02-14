@@ -13,7 +13,7 @@ function Invoke-CIPPStandardTransportRuleTemplate {
         CAT
             Templates
         DISABLEDFEATURES
-
+            
         IMPACT
             Medium
         ADDEDCOMPONENT
