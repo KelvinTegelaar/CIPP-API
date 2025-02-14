@@ -13,7 +13,7 @@ Function Invoke-ListSignIns {
 
     # Write to the Azure Functions log stream.
     Write-Host 'PowerShell HTTP trigger function processed a request.'
-    Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -message 'Accessed this API' -Sev 'Debug'
+    Write-LogMessage -headers $Request.Headers -API $APINAME -message 'Accessed this API' -Sev 'Debug'
     # Interact with query parameters or the body of the request.
     $TenantFilter = $Request.Query.TenantFilter
     $Days = $Request.Query.Days ?? 7
@@ -31,7 +31,7 @@ Function Invoke-ListSignIns {
             "createdDateTime ge $($endTime) and userDisplayName ne 'On-Premises Directory Synchronization Service Account' $FailedLogons"
         }
         Write-Host $Filters
-        Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -message 'Retrieved sign in report' -Sev 'Debug' -tenant $TenantFilter
+        Write-LogMessage -headers $Request.Headers -API $APINAME -message 'Retrieved sign in report' -Sev 'Debug' -tenant $TenantFilter
 
         $GraphRequest = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/auditLogs/signIns?api-version=beta&`$filter=$($filters)" -tenantid $TenantFilter -erroraction stop
         $response = $GraphRequest | Select-Object *,
@@ -49,7 +49,7 @@ Function Invoke-ListSignIns {
                 Body       = @($response)
             })
     } catch {
-        Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -message "Failed to retrieve Sign In report: $($_.Exception.message) " -Sev 'Error' -tenant $TenantFilter
+        Write-LogMessage -headers $Request.Headers -API $APINAME -message "Failed to retrieve Sign In report: $($_.Exception.message) " -Sev 'Error' -tenant $TenantFilter
         # Associate values to output bindings by calling 'Push-OutputBinding'.
         Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
                 StatusCode = '500'

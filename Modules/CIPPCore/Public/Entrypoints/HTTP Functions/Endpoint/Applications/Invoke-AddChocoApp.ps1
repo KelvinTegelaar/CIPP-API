@@ -10,8 +10,8 @@ Function Invoke-AddChocoApp {
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
 
-    $APIName = $TriggerMetadata.FunctionName
-    Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -message 'Accessed this API' -Sev 'Debug'
+    $APIName = $Request.Params.CIPPEndpoint
+    Write-LogMessage -headers $Request.Headers -API $APINAME -message 'Accessed this API' -Sev 'Debug'
 
     Write-Host 'PowerShell HTTP trigger function processed a request.'
     $ChocoApp = $request.body
@@ -47,10 +47,10 @@ Function Invoke-AddChocoApp {
                 PartitionKey = 'apps'
             }
             "Successfully added Choco App for $($Tenant) to queue."
-            Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $tenant -message "Successfully added Choco App $($intunebody.Displayname) to queue" -Sev 'Info'
+            Write-LogMessage -headers $Request.Headers -API $APINAME -tenant $tenant -message "Successfully added Choco App $($intunebody.Displayname) to queue" -Sev 'Info'
         } catch {
             "Failed adding Choco App for $($Tenant) to queue"
-            Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $tenant -message "Failed to add Chocolatey Application $($intunebody.Displayname) to queue" -Sev 'Error'
+            Write-LogMessage -headers $Request.Headers -API $APINAME -tenant $tenant -message "Failed to add Chocolatey Application $($intunebody.Displayname) to queue" -Sev 'Error'
         }
     }
 

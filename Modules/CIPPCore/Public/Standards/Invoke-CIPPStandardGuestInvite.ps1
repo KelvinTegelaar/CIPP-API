@@ -19,7 +19,7 @@ function Invoke-CIPPStandardGuestInvite {
         IMPACT
             Medium Impact
         POWERSHELLEQUIVALENT
-            
+
         RECOMMENDEDBY
         UPDATECOMMENTBLOCK
             Run the Tools\Update-StandardsComments.ps1 script to update this comment block
@@ -31,8 +31,7 @@ function Invoke-CIPPStandardGuestInvite {
 
     $CurrentState = New-GraphGetRequest -Uri 'https://graph.microsoft.com/beta/policies/authorizationPolicy/authorizationPolicy' -tenantid $Tenant
 
-    if ($null -eq $Settings.allowInvitesFrom) { $Settings.allowInvitesFrom = 'Everyone' } # none, adminsAndGuestInviters, adminsGuestInvitersAndAllMembers, everyone
-    $StateIsCorrect =   ($CurrentState.allowInvitesFrom -eq $Settings.allowInvitesFrom)
+    $StateIsCorrect =   ($CurrentState.allowInvitesFrom -eq $Settings.allowInvitesFrom.value)
 
     if ($Settings.remediate -eq $true) {
         if ($StateIsCorrect -eq $true) {
@@ -46,13 +45,13 @@ function Invoke-CIPPStandardGuestInvite {
                     Type        = 'PATCH'
                     ContentType = 'application/json; charset=utf-8'
                     Body        = [pscustomobject]@{
-                        allowInvitesFrom = $Settings.allowInvitesFrom
+                        allowInvitesFrom = $Settings.allowInvitesFrom.value
                     } | ConvertTo-Json -Compress
                 }
                 New-GraphPostRequest @GraphRequest
-                Write-LogMessage -API 'Standards' -Tenant $Tenant -Message "Successfully updated Guest Invite setting to $($Settings.allowInvitesFrom)" -Sev Info
+                Write-LogMessage -API 'Standards' -Tenant $Tenant -Message "Successfully updated Guest Invite setting to $($Settings.allowInvitesFrom.value)" -Sev Info
             } catch {
-                Write-LogMessage -API 'Standards' -Tenant $Tenant -Message "Failed to update Guest Invite setting to $($Settings.allowInvitesFrom)" -Sev Error -LogData $_
+                Write-LogMessage -API 'Standards' -Tenant $Tenant -Message "Failed to update Guest Invite setting to $($Settings.allowInvitesFrom.value)" -Sev Error -LogData $_
             }
         }
     }

@@ -20,7 +20,7 @@ function Invoke-CIPPStandardIntuneComplianceSettings {
         IMPACT
             Low Impact
         POWERSHELLEQUIVALENT
-            
+
         RECOMMENDEDBY
         UPDATECOMMENTBLOCK
             Run the Tools\Update-StandardsComments.ps1 script to update this comment block
@@ -32,9 +32,8 @@ function Invoke-CIPPStandardIntuneComplianceSettings {
 
     $CurrentState = New-GraphGetRequest -Uri 'https://graph.microsoft.com/beta/deviceManagement/settings' -tenantid $Tenant
 
-    if ($null -eq $Settings.secureByDefault) { $Settings.secureByDefault = $true }
     if ($null -eq $Settings.deviceComplianceCheckinThresholdDays) { $Settings.deviceComplianceCheckinThresholdDays = $CurrentState.deviceComplianceCheckinThresholdDays }
-    $StateIsCorrect =   ($CurrentState.secureByDefault -eq $Settings.secureByDefault) -and
+    $StateIsCorrect =   ($CurrentState.secureByDefault -eq $Settings.secureByDefault.value) -and
                         ($CurrentState.deviceComplianceCheckinThresholdDays -eq $Settings.deviceComplianceCheckinThresholdDays)
 
     if ($Settings.remediate -eq $true) {
@@ -50,7 +49,7 @@ function Invoke-CIPPStandardIntuneComplianceSettings {
                     ContentType = 'application/json; charset=utf-8'
                     Body        = [pscustomobject]@{
                         settings = [pscustomobject]@{
-                            secureByDefault = $Settings.secureByDefault
+                            secureByDefault = $Settings.secureByDefault.value
                             deviceComplianceCheckinThresholdDays = $Settings.deviceComplianceCheckinThresholdDays
                         }
                     } | ConvertTo-Json -Compress

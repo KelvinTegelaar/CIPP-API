@@ -10,8 +10,8 @@ Function Invoke-ExecEditTemplate {
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
 
-    $APIName = $TriggerMetadata.FunctionName
-    Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -message 'Accessed this API' -Sev 'Debug'
+    $APIName = $Request.Params.CIPPEndpoint
+    Write-LogMessage -headers $Request.Headers -API $APINAME -message 'Accessed this API' -Sev 'Debug'
 
     try {
         $Table = Get-CippTable -tablename 'templates'
@@ -24,7 +24,7 @@ Function Invoke-ExecEditTemplate {
             $OriginalTemplate = Get-CIPPAzDataTableEntity @Table -Filter "PartitionKey eq 'IntuneTemplate' and RowKey eq '$GUID'"
             $OriginalTemplate = ($OriginalTemplate.JSON | ConvertFrom-Json -Depth 100)
             $RawJSON = $OriginalTemplate.RAWJson
-            Set-CIPPIntuneTemplate -RawJSON $RawJSON -GUID $GUID -DisplayName $Request.body.displayName -Description $Request.body.description -templateType $OriginalTemplate.Type
+            Set-CIPPIntuneTemplate -RawJSON $RawJSON -GUID $GUID -DisplayName $Request.body.displayName -Description $Request.body.description -templateType $OriginalTemplate.Type -Headers $Request.Headers
         } else {
             $Table.Force = $true
 
@@ -34,12 +34,12 @@ Function Invoke-ExecEditTemplate {
                 PartitionKey = "$Type"
                 GUID         = "$GUID"
             }
-            Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -message "Edited template $($Request.body.name) with GUID $GUID" -Sev 'Debug'
+            Write-LogMessage -headers $Request.Headers -API $APINAME -message "Edited template $($Request.body.name) with GUID $GUID" -Sev 'Debug'
         }
         $body = [pscustomobject]@{ 'Results' = 'Successfully saved the template' }
 
     } catch {
-        Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -message "Failed to edit template: $($_.Exception.Message)" -Sev 'Error'
+        Write-LogMessage -headers $Request.Headers -API $APINAME -message "Failed to edit template: $($_.Exception.Message)" -Sev 'Error'
         $body = [pscustomobject]@{'Results' = "Editing template failed: $($_.Exception.Message)" }
     }
 

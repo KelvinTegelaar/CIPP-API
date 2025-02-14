@@ -32,25 +32,23 @@ Function Invoke-CIPPStandardTeamsEnrollUser {
     $CurrentState = New-TeamsRequest -TenantFilter $Tenant -Cmdlet 'Get-CsTeamsMeetingPolicy' -CmdParams @{Identity = 'Global' }
     | Select-Object EnrollUserOverride
 
-    if ($null -eq $Settings.EnrollUserOverride) { $Settings.EnrollUserOverride = $CurrentState.EnrollUserOverride }
-
-    $StateIsCorrect = ($CurrentState.EnrollUserOverride -eq $Settings.EnrollUserOverride)
+    $StateIsCorrect = ($CurrentState.EnrollUserOverride -eq $Settings.EnrollUserOverride.value)
 
     if ($Settings.remediate -eq $true) {
         if ($StateIsCorrect -eq $true) {
-            Write-LogMessage -API 'Standards' -tenant $Tenant -message "Teams Enroll User Override settings already set to $($Settings.EnrollUserOverride)." -sev Info
+            Write-LogMessage -API 'Standards' -tenant $Tenant -message "Teams Enroll User Override settings already set to $($Settings.EnrollUserOverride.value)." -sev Info
         } else {
             $cmdparams = @{
                 Identity           = 'Global'
-                EnrollUserOverride = $Settings.EnrollUserOverride
+                EnrollUserOverride = $Settings.EnrollUserOverride.value
             }
 
             try {
                 New-TeamsRequest -TenantFilter $Tenant -Cmdlet 'Set-CsTeamsMeetingPolicy' -CmdParams $cmdparams
-                Write-LogMessage -API 'Standards' -tenant $Tenant -message "Updated Teams Enroll User Override setting to $($Settings.EnrollUserOverride)." -sev Info
+                Write-LogMessage -API 'Standards' -tenant $Tenant -message "Updated Teams Enroll User Override setting to $($Settings.EnrollUserOverride.value)." -sev Info
             } catch {
                 $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
-                Write-LogMessage -API 'Standards' -tenant $Tenant -message "Failed to set Teams Enroll User Override setting to $($Settings.EnrollUserOverride)." -sev Error -LogData $ErrorMessage
+                Write-LogMessage -API 'Standards' -tenant $Tenant -message "Failed to set Teams Enroll User Override setting to $($Settings.EnrollUserOverride.value)." -sev Error -LogData $ErrorMessage
             }
         }
     }

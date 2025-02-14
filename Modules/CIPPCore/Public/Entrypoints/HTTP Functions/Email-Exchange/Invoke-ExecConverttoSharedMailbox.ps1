@@ -10,10 +10,10 @@ Function Invoke-ExecConverttoSharedMailbox {
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
 
-    $APIName = $TriggerMetadata.FunctionName
+    $APIName = $Request.Params.CIPPEndpoint
     $Tenant = $Request.query.TenantFilter
-    $User = $request.headers.'x-ms-client-principal'
-    Write-LogMessage -user $User -API $APINAME -message 'Accessed this API' -Sev 'Debug'
+    $User = $Request.Headers
+    Write-LogMessage -Headers $User -API $APINAME -message 'Accessed this API' -Sev 'Debug'
 
     # Write to the Azure Functions log stream.
     Write-Host 'PowerShell HTTP trigger function processed a request.'
@@ -22,7 +22,7 @@ Function Invoke-ExecConverttoSharedMailbox {
     # Interact with query parameters or the body of the request.
     Try {
         $MailboxType = if ($request.query.ConvertToUser -eq 'true') { 'Regular' } else { 'Shared' }
-        $ConvertedMailbox = Set-CIPPMailboxType -userid $Request.query.id -tenantFilter $Tenant -APIName $APINAME -ExecutingUser $User -MailboxType $MailboxType
+        $ConvertedMailbox = Set-CIPPMailboxType -userid $Request.query.id -tenantFilter $Tenant -APIName $APINAME -Headers $User -MailboxType $MailboxType
         $Results = [pscustomobject]@{'Results' = "$ConvertedMailbox" }
         $StatusCode = [HttpStatusCode]::OK
     } catch {

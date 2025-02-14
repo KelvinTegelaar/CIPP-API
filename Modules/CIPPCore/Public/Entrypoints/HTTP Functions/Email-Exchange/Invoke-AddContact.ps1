@@ -10,8 +10,8 @@ Function Invoke-AddContact {
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
 
-    $APIName = $TriggerMetadata.FunctionName
-    Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -message 'Accessed this API' -Sev 'Debug'
+    $APIName = $Request.Params.CIPPEndpoint
+    Write-LogMessage -headers $Request.Headers -API $APINAME -message 'Accessed this API' -Sev 'Debug'
 
     $contactobj = $Request.body
 
@@ -31,10 +31,10 @@ Function Invoke-AddContact {
         Write-Host ( $NewContact | ConvertTo-Json)
         New-ExoRequest -tenantid $Request.body.tenantid -cmdlet 'Set-MailContact' -cmdparams @{identity = $NewContact.id; HiddenFromAddressListsEnabled = [boolean]$contactobj.hidefromGAL } -UseSystemMailbox $true
         $body = [pscustomobject]@{'Results' = 'Successfully added a contact.' }
-        Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $($contactobj.tenantid) -message "Created contact $($contactobj.displayname) with id $($GraphRequest.id) for " -Sev 'Info'
+        Write-LogMessage -headers $Request.Headers -API $APINAME -tenant $($contactobj.tenantid) -message "Created contact $($contactobj.displayname) with id $($GraphRequest.id) for " -Sev 'Info'
 
     } catch {
-        Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $($contactobj.tenantid) -message "Contact creation API failed. $($_.Exception.Message)" -Sev 'Error'
+        Write-LogMessage -headers $Request.Headers -API $APINAME -tenant $($contactobj.tenantid) -message "Contact creation API failed. $($_.Exception.Message)" -Sev 'Error'
         $body = [pscustomobject]@{'Results' = "Failed to create contact. $($_.Exception.Message)" }
 
     }

@@ -10,8 +10,8 @@ Function Invoke-ExecGroupsDelete {
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
 
-    $APIName = $TriggerMetadata.FunctionName
-    Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -message 'Accessed this API' -Sev 'Debug'
+    $APIName = $Request.Params.CIPPEndpoint
+    Write-LogMessage -headers $Request.Headers -API $APINAME -message 'Accessed this API' -Sev 'Debug'
 
 
     # Write to the Azure Functions log stream.
@@ -20,7 +20,7 @@ Function Invoke-ExecGroupsDelete {
 
     # Interact with query parameters or the body of the request.
     Try {
-        $RemoveResults = Remove-CIPPGroup -ID $Request.query.id -GroupType $Request.query.GroupType -tenantFilter $Request.query.TenantFilter -displayName $Request.query.displayName -APIName $APINAME -ExecutingUser $request.headers.'x-ms-client-principal'
+        $RemoveResults = Remove-CIPPGroup -ID $Request.query.id -GroupType $Request.query.GroupType -tenantFilter $Request.query.TenantFilter -displayName $Request.query.displayName -APIName $APINAME -Headers $Request.Headers
         $Results = [pscustomobject]@{'Results' = $RemoveResults }
     } catch {
         $Results = [pscustomobject]@{'Results' = "Failed. $($_.Exception.Message)" }

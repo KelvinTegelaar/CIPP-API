@@ -53,9 +53,8 @@ Function Invoke-ExecPartnerMode {
                     Body       = @{
                         results = @(
                             @{
-                                result   = "Set Tenant mode to $($Request.body.TenantMode)"
-                                copyInfo = $null
-                                state    = 'info'
+                                resultText = "Set Tenant mode to $($Request.body.TenantMode)"
+                                state      = 'success'
                             }
                         )
                     }

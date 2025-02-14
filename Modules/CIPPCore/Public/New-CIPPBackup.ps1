@@ -1,12 +1,12 @@
 function New-CIPPBackup {
-    [CmdletBinding()]
+    [CmdletBinding(SupportsShouldProcess = $true)]
     param (
         $backupType,
         $StorageOutput = 'default',
         $TenantFilter,
         $ScheduledBackupValues,
         $APIName = 'CIPP Backup',
-        $ExecutingUser
+        $Headers
     )
 
     $BackupData = switch ($backupType) {
@@ -39,17 +39,19 @@ function New-CIPPBackup {
                 }
                 $Table = Get-CippTable -tablename 'CIPPBackup'
                 try {
-                    $Result = Add-CIPPAzDataTableEntity @Table -Entity $entity -Force
-                    Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -message 'Created CIPP Backup' -Sev 'Debug'
+                    if ($PSCmdlet.ShouldProcess('CIPP Backup', 'Create')) {
+                        $Result = Add-CIPPAzDataTableEntity @Table -Entity $entity -Force
+                        Write-LogMessage -headers $Headers -API $APINAME -message 'Created CIPP Backup' -Sev 'Debug'
+                    }
                 } catch {
                     $ErrorMessage = Get-CippException -Exception $_
-                    Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -message "Failed to create backup for CIPP: $($ErrorMessage.NormalizedError)" -Sev 'Error' -LogData $ErrorMessage
+                    Write-LogMessage -headers $Headers -API $APINAME -message "Failed to create backup for CIPP: $($ErrorMessage.NormalizedError)" -Sev 'Error' -LogData $ErrorMessage
                     [pscustomobject]@{'Results' = "Backup Creation failed: $($ErrorMessage.NormalizedError)" }
                 }
 
             } catch {
                 $ErrorMessage = Get-CippException -Exception $_
-                Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -message "Failed to create backup: $($ErrorMessage.NormalizedError)" -Sev 'Error' -LogData $ErrorMessage
+                Write-LogMessage -headers $Headers -API $APINAME -message "Failed to create backup: $($ErrorMessage.NormalizedError)" -Sev 'Error' -LogData $ErrorMessage
                 [pscustomobject]@{'Results' = "Backup Creation failed: $($ErrorMessage.NormalizedError)" }
             }
         }
@@ -72,13 +74,13 @@ function New-CIPPBackup {
             $Table = Get-CippTable -tablename 'ScheduledBackup'
             try {
                 $Result = Add-CIPPAzDataTableEntity @Table -entity $entity -Force
-                Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -message 'Created backup' -Sev 'Debug'
+                Write-LogMessage -headers $Headers -API $APINAME -message 'Created backup' -Sev 'Debug'
                 $State = 'Backup finished succesfully'
                 $Result
             } catch {
                 $State = 'Failed to write backup to table storage'
                 $ErrorMessage = Get-CippException -Exception $_
-                Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -message "Failed to create backup for Conditional Access Policies: $($ErrorMessage.NormalizedError)" -Sev 'Error' -LogData $ErrorMessage
+                Write-LogMessage -headers $Headers -API $APINAME -message "Failed to create backup for Conditional Access Policies: $($ErrorMessage.NormalizedError)" -Sev 'Error' -LogData $ErrorMessage
                 [pscustomobject]@{'Results' = "Backup Creation failed: $($ErrorMessage.NormalizedError)" }
             }
         }
