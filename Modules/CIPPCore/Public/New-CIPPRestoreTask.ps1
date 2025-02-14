@@ -4,7 +4,9 @@ function New-CIPPRestoreTask {
         $Task,
         $TenantFilter,
         $backup,
-        $overwrite
+        $overwrite,
+        $APINAME,
+        $Headers
     )
     $Table = Get-CippTable -tablename 'ScheduledBackup'
     $BackupData = Get-CIPPAzDataTableEntity @Table -Filter "RowKey eq '$backup'"
@@ -99,7 +101,7 @@ function New-CIPPRestoreTask {
             $BackupConfig = $BackupData.intuneconfig | ConvertFrom-Json
             foreach ($backup in $backupConfig) {
                 try {
-                    Set-CIPPIntunePolicy -TemplateType $backup.Type -TenantFilter $TenantFilter -DisplayName $backup.DisplayName -Description $backup.Description -RawJSON ($backup.TemplateJson) -ErrorAction SilentlyContinue
+                    Set-CIPPIntunePolicy -TemplateType $backup.Type -TenantFilter $TenantFilter -DisplayName $backup.DisplayName -Description $backup.Description -RawJSON ($backup.TemplateJson) -Headers $Headers -APINAME $APINAME -ErrorAction SilentlyContinue
                 } catch {
                     $ErrorMessage = Get-CippException -Exception $_
                     "Could not restore Intune Configuration $DisplayName : $($ErrorMessage.NormalizedError) "
@@ -112,7 +114,7 @@ function New-CIPPRestoreTask {
             $BackupConfig = $BackupData.intunecompliance | ConvertFrom-Json
             foreach ($backup in $backupConfig) {
                 try {
-                    Set-CIPPIntunePolicy -TemplateType $backup.Type -TenantFilter $TenantFilter -DisplayName $backup.DisplayName -Description $backup.Description -RawJSON ($backup.TemplateJson) -ErrorAction SilentlyContinue
+                    Set-CIPPIntunePolicy -TemplateType $backup.Type -TenantFilter $TenantFilter -DisplayName $backup.DisplayName -Description $backup.Description -RawJSON ($backup.TemplateJson) -Headers $Headers -APINAME $APINAME -ErrorAction SilentlyContinue
                 } catch {
                     $ErrorMessage = Get-CippException -Exception $_
                     "Could not restore Intune Compliance $DisplayName : $($ErrorMessage.NormalizedError) "
@@ -126,7 +128,7 @@ function New-CIPPRestoreTask {
             $BackupConfig = $BackupData.intuneprotection | ConvertFrom-Json
             foreach ($backup in $backupConfig) {
                 try {
-                    Set-CIPPIntunePolicy -TemplateType $backup.Type -TenantFilter $TenantFilter -DisplayName $backup.DisplayName -Description $backup.Description -RawJSON ($backup.TemplateJson) -ErrorAction SilentlyContinue
+                    Set-CIPPIntunePolicy -TemplateType $backup.Type -TenantFilter $TenantFilter -DisplayName $backup.DisplayName -Description $backup.Description -RawJSON ($backup.TemplateJson) -Headers $Headers -APINAME $APINAME -ErrorAction SilentlyContinue
                 } catch {
                     $ErrorMessage = Get-CippException -Exception $_
                     "Could not restore Intune Protection $DisplayName : $($ErrorMessage.NormalizedError) "
@@ -281,7 +283,7 @@ function New-CIPPRestoreTask {
                             foreach ($param in $ruleparams) {
                                 if ($rule.PSObject.Properties[$param]) {
                                     if ($param -eq 'Enabled') {
-                                        $cmdparams[$param] = if ($rule.State -eq 'Enabled') {$true} else {$false}
+                                        $cmdparams[$param] = if ($rule.State -eq 'Enabled') { $true } else { $false }
                                     } else {
                                         $cmdparams[$param] = $rule.$param
                                     }
@@ -301,7 +303,7 @@ function New-CIPPRestoreTask {
                         foreach ($param in $ruleparams) {
                             if ($rule.PSObject.Properties[$param]) {
                                 if ($param -eq 'Enabled') {
-                                    $cmdparams[$param] = if ($rule.State -eq 'Enabled') {$true} else {$false}
+                                    $cmdparams[$param] = if ($rule.State -eq 'Enabled') { $true } else { $false }
                                 } else {
                                     $cmdparams[$param] = $rule.$param
                                 }
@@ -438,7 +440,7 @@ function New-CIPPRestoreTask {
                             foreach ($param in $ruleparams) {
                                 if ($rule.PSObject.Properties[$param]) {
                                     if ($param -eq 'Enabled') {
-                                        $cmdparams[$param] = if ($rule.State -eq 'Enabled') {$true} else {$false}
+                                        $cmdparams[$param] = if ($rule.State -eq 'Enabled') { $true } else { $false }
                                     } else {
                                         $cmdparams[$param] = $rule.$param
                                     }
@@ -458,7 +460,7 @@ function New-CIPPRestoreTask {
                         foreach ($param in $ruleparams) {
                             if ($rule.PSObject.Properties[$param]) {
                                 if ($param -eq 'Enabled') {
-                                    $cmdparams[$param] = if ($rule.State -eq 'Enabled') {$true} else {$false}
+                                    $cmdparams[$param] = if ($rule.State -eq 'Enabled') { $true } else { $false }
                                 } else {
                                     $cmdparams[$param] = $rule.$param
                                 }

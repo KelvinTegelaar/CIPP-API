@@ -26,7 +26,7 @@ function Invoke-ExecGitHubAction {
     $Configuration = ((Get-CIPPAzDataTableEntity @Table).config | ConvertFrom-Json).GitHub
 
     if (!$Configuration.Enabled) {
-        $Response = Invoke-RestMethod -Uri 'https://cippy.azurewebsites.net/api/ExecGitHubAction' -Method POST -Body ($Action | ConvertTo-Json -Depth 10) -ContentType 'application/json'
+        $Response = Invoke-RestMethod -Uri 'https://cippy.azurewebsites.net/api/ExecGitHubAction' -Method POST -Body ($Parameters | ConvertTo-Json -Depth 10) -ContentType 'application/json'
         $Results = $Response.Results
         $Metadata = $Response.Metadata
     } else {
