@@ -37,7 +37,7 @@ function Invoke-CIPPStandardRetentionPolicyTag {
     $PolicyState = New-ExoRequest -tenantid $Tenant -cmdlet 'Get-RetentionPolicy' |
         Where-Object -Property Identity -EQ 'Default MRM Policy'
 
-    $StateIsCorrect =   ($CurrentState.Name -eq $PolicyName) -and
+    $StateIsCorrect = ($CurrentState.Name -eq $PolicyName) -and
                         ($CurrentState.RetentionEnabled -eq $true) -and
                         ($CurrentState.RetentionAction -eq 'PermanentlyDelete') -and
                         ($CurrentState.AgeLimitForRetention -eq ([timespan]::FromDays($Settings.AgeLimitForRetention))) -and
@@ -45,45 +45,50 @@ function Invoke-CIPPStandardRetentionPolicyTag {
                         ($PolicyState.RetentionPolicyTagLinks -contains $PolicyName)
 
     if ($Settings.remediate -eq $true) {
+        Write-Host 'Time to remediate'
 
         if ($StateIsCorrect -eq $true) {
             Write-LogMessage -API 'Standards' -tenant $Tenant -message 'Retention policy tag already correctly configured' -sev Info
         } else {
-            $cmdparams = @{
+            $cmdParams = @{
                 RetentionEnabled     = $true
                 AgeLimitForRetention = $Settings.AgeLimitForRetention
-                RetentionAction     = 'PermanentlyDelete'
+                RetentionAction      = 'PermanentlyDelete'
             }
 
             if ($CurrentState.Name -eq $PolicyName) {
                 try {
-                    $cmdparams.Add('Identity', $PolicyName)
-                    New-ExoRequest -tenantid $Tenant -cmdlet 'Set-RetentionPolicyTag' -cmdparams $cmdparams -UseSystemMailbox $true
+                    $cmdParams.Add('Identity', $PolicyName)
+                    $null = New-ExoRequest -tenantid $Tenant -cmdlet 'Set-RetentionPolicyTag' -cmdParams $cmdParams -UseSystemMailbox $true
                     Write-LogMessage -API 'Standards' -tenant $Tenant -message "Updated Retention policy tag $PolicyName." -sev Info
                 } catch {
-                    Write-LogMessage -API 'Standards' -tenant $Tenant -message "Failed to update Retention policy tag $PolicyName." -sev Error -LogData $_
+                    $ErrorMessage = Get-CippException -Exception $_
+                    Write-LogMessage -API 'Standards' -tenant $Tenant -message "Failed to update Retention policy tag $PolicyName." -sev Error -LogData $ErrorMessage
                 }
             } else {
                 try {
-                    $cmdparams.Add('Name', $PolicyName)
-                    $cmdparams.Add('Type', 'DeletedItems')
-                    New-ExoRequest -tenantid $Tenant -cmdlet 'New-RetentionPolicyTag' -cmdparams $cmdparams -UseSystemMailbox $true
+                    $cmdParams.Add('Name', $PolicyName)
+                    $cmdParams.Add('Type', 'DeletedItems')
+                    $null = New-ExoRequest -tenantid $Tenant -cmdlet 'New-RetentionPolicyTag' -cmdParams $cmdParams -UseSystemMailbox $true
                     Write-LogMessage -API 'Standards' -tenant $Tenant -message "Created Retention policy tag $PolicyName." -sev Info
                 } catch {
-                    Write-LogMessage -API 'Standards' -tenant $Tenant -message "Failed to create Retention policy tag $PolicyName." -sev Error -LogData $_
+
+                    $ErrorMessage = Get-CippException -Exception $_
+                    Write-LogMessage -API 'Standards' -tenant $Tenant -message "Failed to create Retention policy tag $PolicyName." -sev Error -LogData $ErrorMessage
                 }
             }
 
             if ($PolicyState.RetentionPolicyTagLinks -notcontains $PolicyName) {
                 try {
-                    $cmdparams = @{
-                        Identity = 'Default MRM Policy'
+                    $cmdParams = @{
+                        Identity                = 'Default MRM Policy'
                         RetentionPolicyTagLinks = @($PolicyState.RetentionPolicyTagLinks + $PolicyName)
                     }
-                    New-ExoRequest -tenantid $Tenant -cmdlet 'Set-RetentionPolicy' -cmdparams $cmdparams -UseSystemMailbox $true
+                    $null = New-ExoRequest -tenantid $Tenant -cmdlet 'Set-RetentionPolicy' -cmdParams $cmdParams -UseSystemMailbox $true
                     Write-LogMessage -API 'Standards' -tenant $Tenant -message "Added $PolicyName Retention tag to $($PolicyState.Identity)." -sev Info
                 } catch {
-                    Write-LogMessage -API 'Standards' -tenant $Tenant -message "Failed to add $PolicyName Retention tag to $($PolicyState.Identity)." -sev Error -LogData $_.Exception.Message
+                    $ErrorMessage = Get-CippException -Exception $_
+                    Write-LogMessage -API 'Standards' -tenant $Tenant -message "Failed to add $PolicyName Retention tag to $($PolicyState.Identity)." -sev Error -LogData $ErrorMessage
                 }
             }
 
