@@ -5,10 +5,10 @@ function Invoke-CIPPStandardAntiSpamSafeList {
     .COMPONENT
         (APIName) AntiSpamSafeList
     .SYNOPSIS
-        (Label) Enable Anti-Spam Connection Filter Safe List
+        (Label) Set Anti-Spam Connection Filter Safe List
     .DESCRIPTION
-        (Helptext) Enables the anti-spam connection filter policy option 'safe list' in Defender.
-        (DocsDescription) Enables Microsoft's built-in 'safe list' in the anti-spam connection filter policy, rather than setting a custom safe/block list of IPs.
+        (Helptext) Sets the anti-spam connection filter policy option 'safe list' in Defender.
+        (DocsDescription) Sets [Microsoft's built-in 'safe list'](https://learn.microsoft.com/en-us/powershell/module/exchange/set-hostedconnectionfilterpolicy?view=exchange-ps#-enablesafelist) in the anti-spam connection filter policy, rather than setting a custom safe/block list of IPs.
     .NOTES
         CAT
             Defender Standards
@@ -16,12 +16,14 @@ function Invoke-CIPPStandardAntiSpamSafeList {
         ADDEDCOMPONENT
             {"type":"switch","name":"standards.AntiSpamSafeList.EnableSafeList","label":"Enable Safe List"}
         IMPACT
-            Low Impact
+            Medium Impact
         POWERSHELLEQUIVALENT
-            Set-HostedConnectionFilterPolicy "Default" -EnableSafeList $true
+            Set-HostedConnectionFilterPolicy "Default" -EnableSafeList \$true
         RECOMMENDEDBY
+        UPDATECOMMENTBLOCK
+            Run the Tools\Update-StandardsComments.ps1 script to update this comment block
     .LINK
-        https://docs.cipp.app/user-documentation/tenant/standards/list-standards/defender-standards#low-impact
+        https://docs.cipp.app/user-documentation/tenant/standards/list-standards/defender-standards#medium-impact
     #>
 
     param($Tenant, $Settings)
