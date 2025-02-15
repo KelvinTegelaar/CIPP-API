@@ -13,7 +13,6 @@ function Invoke-CIPPStandardDisableAddShortcutsToOneDrive {
         CAT
             SharePoint Standards
         TAG
-            "mediumimpact"
         ADDEDCOMPONENT
             {"type":"autoComplete","multiple":false,"creatable":false,"label":"Add Shortcuts To OneDrive button state","name":"standards.DisableAddShortcutsToOneDrive.state","options":[{"label":"Disabled","value":"true"},{"label":"Enabled","value":"false"}]}
         IMPACT

@@ -13,7 +13,6 @@ function Invoke-CIPPStandardRetentionPolicyTag {
         CAT
             Exchange Standards
         TAG
-            "highimpact"
         ADDEDCOMPONENT
             {"type":"number","name":"standards.RetentionPolicyTag.AgeLimitForRetention","label":"Retention Days","required":true}
         IMPACT

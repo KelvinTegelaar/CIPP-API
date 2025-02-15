@@ -13,7 +13,6 @@ function Invoke-CIPPStandardDisableGuests {
         CAT
             Entra (AAD) Standards
         TAG
-            "mediumimpact"
         ADDEDCOMPONENT
         IMPACT
             Medium Impact

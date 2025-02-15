@@ -13,7 +13,6 @@ function Invoke-CIPPStandardSafeSendersDisable {
         CAT
             Exchange Standards
         TAG
-            "mediumimpact"
         ADDEDCOMPONENT
         DISABLEDFEATURES
             

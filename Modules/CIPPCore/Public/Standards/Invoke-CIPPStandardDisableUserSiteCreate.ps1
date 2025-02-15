@@ -13,7 +13,6 @@ function Invoke-CIPPStandardDisableUserSiteCreate {
         CAT
             SharePoint Standards
         TAG
-            "highimpact"
         ADDEDCOMPONENT
         IMPACT
             High Impact

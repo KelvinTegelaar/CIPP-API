@@ -13,7 +13,6 @@ function Invoke-CIPPStandardUserSubmissions {
         CAT
             Exchange Standards
         TAG
-            "mediumimpact"
         ADDEDCOMPONENT
             {"type":"autoComplete","multiple":false,"label":"Select value","name":"standards.UserSubmissions.state","options":[{"label":"Enabled","value":"enable"},{"label":"Disabled","value":"disable"}]}
             {"type":"textField","name":"standards.UserSubmissions.email","required":false,"label":"Destination email address"}

@@ -13,7 +13,6 @@ function Invoke-CIPPStandardSpamFilterPolicy {
         CAT
             Defender Standards
         TAG
-            "mediumimpact"
         ADDEDCOMPONENT
             {"type":"number","label":"Bulk email threshold (Default 7)","name":"standards.SpamFilterPolicy.BulkThreshold","default":7}
             {"type":"autoComplete","required":true,"multiple":false,"creatable":false,"label":"Spam Action","name":"standards.SpamFilterPolicy.SpamAction","options":[{"label":"Quarantine the message","value":"Quarantine"},{"label":"Move message to Junk Email folder","value":"MoveToJmf"}]}

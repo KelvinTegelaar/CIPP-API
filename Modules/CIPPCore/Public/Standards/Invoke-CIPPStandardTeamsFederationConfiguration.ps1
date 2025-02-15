@@ -13,7 +13,6 @@ Function Invoke-CIPPStandardTeamsFederationConfiguration {
         CAT
             Teams Standards
         TAG
-            "mediumimpact"
         ADDEDCOMPONENT
             {"type":"switch","name":"standards.TeamsFederationConfiguration.AllowTeamsConsumer","label":"Allow users to communicate with other organizations"}
             {"type":"switch","name":"standards.TeamsFederationConfiguration.AllowPublicUsers","label":"Allow users to communicate with Skype Users"}

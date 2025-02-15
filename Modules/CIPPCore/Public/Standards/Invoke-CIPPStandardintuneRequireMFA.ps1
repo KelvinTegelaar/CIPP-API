@@ -13,7 +13,6 @@ function Invoke-CIPPStandardintuneRequireMFA {
         CAT
             Intune Standards
         TAG
-            "mediumimpact"
         IMPACT
             Medium Impact
         POWERSHELLEQUIVALENT

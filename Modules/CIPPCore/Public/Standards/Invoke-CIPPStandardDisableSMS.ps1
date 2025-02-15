@@ -13,7 +13,6 @@ function Invoke-CIPPStandardDisableSMS {
         CAT
             Entra (AAD) Standards
         TAG
-            "highimpact"
         ADDEDCOMPONENT
         IMPACT
             High Impact

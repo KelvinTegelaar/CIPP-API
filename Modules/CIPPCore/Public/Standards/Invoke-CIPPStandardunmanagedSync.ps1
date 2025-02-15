@@ -13,7 +13,6 @@ function Invoke-CIPPStandardunmanagedSync {
         CAT
             SharePoint Standards
         TAG
-            "highimpact"
         ADDEDCOMPONENT
         IMPACT
             High Impact

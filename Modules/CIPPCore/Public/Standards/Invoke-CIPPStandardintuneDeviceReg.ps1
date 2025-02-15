@@ -13,7 +13,6 @@ function Invoke-CIPPStandardintuneDeviceReg {
         CAT
             Intune Standards
         TAG
-            "mediumimpact"
         ADDEDCOMPONENT
             {"type":"number","name":"standards.intuneDeviceReg.max","label":"Maximum devices (Enter 2147483647 for unlimited.)","required":true}
         IMPACT

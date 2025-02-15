@@ -13,7 +13,6 @@ function Invoke-CIPPStandardDisableBasicAuthSMTP {
         CAT
             Global Standards
         TAG
-            "mediumimpact"
         ADDEDCOMPONENT
         IMPACT
             Medium Impact

@@ -13,7 +13,6 @@ function Invoke-CIPPStandardSPSyncButtonState {
         CAT
             SharePoint Standards
         TAG
-            "mediumimpact"
         ADDEDCOMPONENT
             {"type":"autoComplete","multiple":false,"creatable":false,"label":"SharePoint Sync Button state","name":"standards.SPSyncButtonState.state","options":[{"label":"Disabled","value":"true"},{"label":"Enabled","value":"false"}]}
         IMPACT

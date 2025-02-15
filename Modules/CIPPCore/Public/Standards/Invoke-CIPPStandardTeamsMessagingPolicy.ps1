@@ -13,7 +13,6 @@ Function Invoke-CIPPStandardTeamsMessagingPolicy {
         CAT
             Teams Standards
         TAG
-            "mediumimpact"
         ADDEDCOMPONENT
             {"type":"switch","name":"standards.TeamsMessagingPolicy.AllowOwnerDeleteMessage","label":"Allow Owner to Delete Messages","default":false}
             {"type":"switch","name":"standards.TeamsMessagingPolicy.AllowUserDeleteMessage","label":"Allow User to Delete Messages","default":true}

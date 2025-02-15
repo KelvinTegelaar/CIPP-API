@@ -13,7 +13,6 @@ function Invoke-CIPPStandardSendFromAlias {
         CAT
             Exchange Standards
         TAG
-            "mediumimpact"
         ADDEDCOMPONENT
         IMPACT
             Medium Impact
