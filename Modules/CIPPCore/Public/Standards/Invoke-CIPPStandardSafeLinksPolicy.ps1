@@ -13,7 +13,6 @@ function Invoke-CIPPStandardSafeLinksPolicy {
         CAT
             Defender Standards
         TAG
-            "lowimpact"
             "CIS"
             "mdo_safelinksforemail"
             "mdo_safelinksforOfficeApps"

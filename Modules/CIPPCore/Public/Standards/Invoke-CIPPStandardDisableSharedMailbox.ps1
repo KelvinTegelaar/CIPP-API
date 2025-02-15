@@ -13,7 +13,6 @@ function Invoke-CIPPStandardDisableSharedMailbox {
         CAT
             Exchange Standards
         TAG
-            "mediumimpact"
             "CIS"
         ADDEDCOMPONENT
         IMPACT

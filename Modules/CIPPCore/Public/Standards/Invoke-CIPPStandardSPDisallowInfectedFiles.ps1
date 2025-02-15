@@ -13,7 +13,6 @@ function Invoke-CIPPStandardSPDisallowInfectedFiles {
         CAT
             SharePoint Standards
         TAG
-            "lowimpact"
             "CIS"
         ADDEDCOMPONENT
         IMPACT

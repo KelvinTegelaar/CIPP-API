@@ -13,7 +13,6 @@ function Invoke-CIPPStandardActivityBasedTimeout {
         CAT
             Global Standards
         TAG
-            "mediumimpact"
             "CIS"
             "spo_idle_session_timeout"
         ADDEDCOMPONENT

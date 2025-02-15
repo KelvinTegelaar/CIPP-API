@@ -13,7 +13,6 @@ function Invoke-CIPPStandardStaleEntraDevices {
         CAT
             Entra (AAD) Standards
         TAG
-            "highimpact"
             "CIS"
         ADDEDCOMPONENT
             {"type":"number","name":"standards.StaleEntraDevices.deviceAgeThreshold","label":"Days before stale(Dont set below 30)"}

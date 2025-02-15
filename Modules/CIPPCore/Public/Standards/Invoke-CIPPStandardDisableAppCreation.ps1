@@ -13,7 +13,6 @@ function Invoke-CIPPStandardDisableAppCreation {
         CAT
             Entra (AAD) Standards
         TAG
-            "lowimpact"
             "CIS"
         ADDEDCOMPONENT
         IMPACT

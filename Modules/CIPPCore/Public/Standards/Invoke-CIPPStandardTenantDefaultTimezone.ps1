@@ -13,7 +13,6 @@ function Invoke-CIPPStandardTenantDefaultTimezone {
         CAT
             SharePoint Standards
         TAG
-            "lowimpact"
         ADDEDCOMPONENT
             {"type":"TimezoneSelect","name":"standards.TenantDefaultTimezone.Timezone","label":"Timezone"}
         IMPACT

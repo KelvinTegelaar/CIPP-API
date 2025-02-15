@@ -13,7 +13,6 @@ function Invoke-CIPPStandardintuneDeviceRetirementDays {
         CAT
             Intune Standards
         TAG
-            "lowimpact"
         ADDEDCOMPONENT
             {"type":"number","name":"standards.intuneDeviceRetirementDays.days","label":"Maximum days (0 equals disabled)"}
         IMPACT

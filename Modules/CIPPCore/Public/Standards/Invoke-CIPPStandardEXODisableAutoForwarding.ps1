@@ -13,7 +13,6 @@ function Invoke-CIPPStandardEXODisableAutoForwarding {
         CAT
             Exchange Standards
         TAG
-            "highimpact"
             "CIS"
             "mdo_autoforwardingmode"
             "mdo_blockmailforward"

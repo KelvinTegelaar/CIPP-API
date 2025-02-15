@@ -13,7 +13,6 @@ function Invoke-CIPPStandardDisableOutlookAddins {
         CAT
             Exchange Standards
         TAG
-            "mediumimpact"
             "CIS"
             "exo_outlookaddins"
         ADDEDCOMPONENT

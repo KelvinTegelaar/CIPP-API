@@ -13,7 +13,6 @@ function Invoke-CIPPStandardcalDefault {
         CAT
             Exchange Standards
         TAG
-            "lowimpact"
         DISABLEDFEATURES
             
         ADDEDCOMPONENT

@@ -13,7 +13,6 @@ function Invoke-CIPPStandardAntiPhishPolicy {
         CAT
             Defender Standards
         TAG
-            "lowimpact"
             "CIS"
             "mdo_safeattachments"
             "mdo_highconfidencespamaction"

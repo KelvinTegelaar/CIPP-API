@@ -13,7 +13,6 @@ function Invoke-CIPPStandardTeamsMeetingsByDefault {
         CAT
             Exchange Standards
         TAG
-            "lowimpact"
         ADDEDCOMPONENT
             {"type":"autoComplete","multiple":false,"label":"Select value","name":"standards.TeamsMeetingsByDefault.state","options":[{"label":"Enabled","value":"true"},{"label":"Disabled","value":"false"}]}
         IMPACT

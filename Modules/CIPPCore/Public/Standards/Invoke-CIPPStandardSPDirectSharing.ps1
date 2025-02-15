@@ -13,7 +13,6 @@ function Invoke-CIPPStandardSPDirectSharing {
         CAT
             SharePoint Standards
         TAG
-            "mediumimpact"
             "CIS"
         ADDEDCOMPONENT
         IMPACT

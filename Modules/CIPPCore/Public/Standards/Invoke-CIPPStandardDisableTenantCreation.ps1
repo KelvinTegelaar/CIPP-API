@@ -13,7 +13,6 @@ function Invoke-CIPPStandardDisableTenantCreation {
         CAT
             Entra (AAD) Standards
         TAG
-            "lowimpact"
             "CIS"
         ADDEDCOMPONENT
         IMPACT

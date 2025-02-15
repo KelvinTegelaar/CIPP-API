@@ -13,7 +13,6 @@ function Invoke-CIPPStandardintuneBrandingProfile {
         CAT
             Intune Standards
         TAG
-            "lowimpact"
         ADDEDCOMPONENT
             {"type":"textField","name":"standards.intuneBrandingProfile.displayName","label":"Organization name","required":false}
             {"type":"switch","name":"standards.intuneBrandingProfile.showLogo","label":"Show logo"}

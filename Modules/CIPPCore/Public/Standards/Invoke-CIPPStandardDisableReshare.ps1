@@ -13,7 +13,6 @@ function Invoke-CIPPStandardDisableReshare {
         CAT
             SharePoint Standards
         TAG
-            "highimpact"
             "CIS"
         ADDEDCOMPONENT
         IMPACT

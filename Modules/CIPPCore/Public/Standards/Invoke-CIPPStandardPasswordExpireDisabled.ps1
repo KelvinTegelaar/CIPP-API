@@ -13,7 +13,6 @@ function Invoke-CIPPStandardPasswordExpireDisabled {
         CAT
             Entra (AAD) Standards
         TAG
-            "lowimpact"
             "CIS"
             "PWAgePolicyNew"
         ADDEDCOMPONENT

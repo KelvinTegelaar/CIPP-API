@@ -13,7 +13,6 @@ function Invoke-CIPPStandardEnableFIDO2 {
         CAT
             Entra (AAD) Standards
         TAG
-            "lowimpact"
         ADDEDCOMPONENT
         IMPACT
             Low Impact

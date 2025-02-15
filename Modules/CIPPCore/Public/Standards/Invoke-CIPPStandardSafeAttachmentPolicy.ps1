@@ -13,7 +13,6 @@ function Invoke-CIPPStandardSafeAttachmentPolicy {
         CAT
             Defender Standards
         TAG
-            "lowimpact"
             "CIS"
             "mdo_safedocuments"
             "mdo_commonattachmentsfilter"

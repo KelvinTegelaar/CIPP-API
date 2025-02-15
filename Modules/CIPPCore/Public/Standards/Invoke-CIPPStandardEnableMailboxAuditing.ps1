@@ -13,7 +13,6 @@ function Invoke-CIPPStandardEnableMailboxAuditing {
         CAT
             Exchange Standards
         TAG
-            "lowimpact"
             "CIS"
             "exo_mailboxaudit"
         ADDEDCOMPONENT

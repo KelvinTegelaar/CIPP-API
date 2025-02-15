@@ -13,7 +13,6 @@ function Invoke-CIPPStandardlaps {
         CAT
             Entra (AAD) Standards
         TAG
-            "lowimpact"
         ADDEDCOMPONENT
         IMPACT
             Low Impact

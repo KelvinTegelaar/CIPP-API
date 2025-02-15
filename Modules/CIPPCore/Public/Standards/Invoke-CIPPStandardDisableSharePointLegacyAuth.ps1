@@ -13,7 +13,6 @@ function Invoke-CIPPStandardDisableSharePointLegacyAuth {
         CAT
             SharePoint Standards
         TAG
-            "mediumimpact"
             "CIS"
             "spo_legacy_auth"
         ADDEDCOMPONENT

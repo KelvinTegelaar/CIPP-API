@@ -13,7 +13,6 @@ function Invoke-CIPPStandardAnonReportDisable {
         CAT
             Global Standards
         TAG
-            "lowimpact"
         ADDEDCOMPONENT
         IMPACT
             Low Impact

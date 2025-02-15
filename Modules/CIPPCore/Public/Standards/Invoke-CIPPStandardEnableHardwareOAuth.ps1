@@ -13,7 +13,6 @@ function Invoke-CIPPStandardEnableHardwareOAuth {
         CAT
             Entra (AAD) Standards
         TAG
-            "lowimpact"
         ADDEDCOMPONENT
         IMPACT
             Low Impact

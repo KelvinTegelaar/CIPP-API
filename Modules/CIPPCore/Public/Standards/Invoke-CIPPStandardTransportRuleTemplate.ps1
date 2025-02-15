@@ -15,7 +15,7 @@ function Invoke-CIPPStandardTransportRuleTemplate {
         DISABLEDFEATURES
             
         IMPACT
-            Medium
+            Medium Impact
         ADDEDCOMPONENT
             {"type":"autoComplete","name":"transportRuleTemplate","label":"Select Transport Rule Template","api":{"url":"/api/ListTransportRulesTemplates","labelField":"name","valueField":"GUID","queryKey":"ListTransportRulesTemplates"}}
         UPDATECOMMENTBLOCK

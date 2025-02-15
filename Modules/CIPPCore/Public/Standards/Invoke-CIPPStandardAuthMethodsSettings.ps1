@@ -13,7 +13,6 @@ function Invoke-CIPPStandardAuthMethodsSettings {
         CAT
             Entra (AAD) Standards
         TAG
-            "lowimpact"
         ADDEDCOMPONENT
             {"type":"autoComplete","multiple":false,"creatable":false,"required":false,"name":"standards.AuthMethodsSettings.ReportSuspiciousActivity","label":"Report Suspicious Activity Settings","options":[{"label":"Microsoft managed","value":"default"},{"label":"Enabled","value":"enabled"},{"label":"Disabled","value":"disabled"}]}
             {"type":"autoComplete","multiple":false,"creatable":false,"required":false,"name":"standards.AuthMethodsSettings.SystemCredential","label":"System Credential Preferences","options":[{"label":"Microsoft managed","value":"default"},{"label":"Enabled","value":"enabled"},{"label":"Disabled","value":"disabled"}]}

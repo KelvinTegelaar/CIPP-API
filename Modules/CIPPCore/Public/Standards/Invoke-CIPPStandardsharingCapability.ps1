@@ -13,7 +13,6 @@ function Invoke-CIPPStandardsharingCapability {
         CAT
             SharePoint Standards
         TAG
-            "highimpact"
             "CIS"
         ADDEDCOMPONENT
             {"type":"autoComplete","multiple":false,"label":"Select Sharing Level","name":"standards.sharingCapability.Level","options":[{"label":"Users can share only with people in the organization. No external sharing is allowed.","value":"disabled"},{"label":"Users can share with new and existing guests. Guests must sign in or provide a verification code.","value":"externalUserSharingOnly"},{"label":"Users can share with anyone by using links that do not require sign-in.","value":"externalUserAndGuestSharing"},{"label":"Users can share with existing guests (those already in the directory of the organization).","value":"existingExternalUserSharingOnly"}]}

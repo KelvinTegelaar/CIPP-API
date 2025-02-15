@@ -13,7 +13,6 @@ function Invoke-CIPPStandardsharingDomainRestriction {
         CAT
             SharePoint Standards
         TAG
-            "highimpact"
             "CIS"
         ADDEDCOMPONENT
             {"type":"autoComplete","multiple":false,"name":"standards.sharingDomainRestriction.Mode","label":"Limit external sharing by domains","options":[{"label":"Off","value":"none"},{"label":"Restrict sharing to specific domains","value":"allowList"},{"label":"Block sharing to specific domains","value":"blockList"}]}

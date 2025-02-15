@@ -13,7 +13,6 @@ function Invoke-CIPPStandardBranding {
         CAT
             Global Standards
         TAG
-            "lowimpact"
         ADDEDCOMPONENT
             {"type":"textField","name":"standards.Branding.signInPageText","label":"Sign-in page text","required":false}
             {"type":"textField","name":"standards.Branding.usernameHintText","label":"Username hint Text","required":false}

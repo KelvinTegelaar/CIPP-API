@@ -13,7 +13,6 @@ function Invoke-CIPPStandardAuditLog {
         CAT
             Global Standards
         TAG
-            "lowimpact"
             "CIS"
             "mip_search_auditlog"
         ADDEDCOMPONENT

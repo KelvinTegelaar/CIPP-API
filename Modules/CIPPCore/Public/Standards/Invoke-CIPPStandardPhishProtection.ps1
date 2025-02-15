@@ -13,7 +13,6 @@ function Invoke-CIPPStandardPhishProtection {
         CAT
             Global Standards
         TAG
-            "lowimpact"
         ADDEDCOMPONENT
         IMPACT
             Low Impact

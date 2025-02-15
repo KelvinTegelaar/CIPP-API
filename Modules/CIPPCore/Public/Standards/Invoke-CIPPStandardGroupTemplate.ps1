@@ -17,7 +17,7 @@ function Invoke-CIPPStandardGroupTemplate {
         DISABLEDFEATURES
             
         IMPACT
-            Medium
+            Medium Impact
         ADDEDCOMPONENT
             {"type":"autoComplete","name":"groupTemplate","label":"Select Group Template","api":{"url":"/api/ListGroupTemplates","labelField":"Displayname","valueField":"GUID","queryKey":"ListGroupTemplates"}}
         UPDATECOMMENTBLOCK

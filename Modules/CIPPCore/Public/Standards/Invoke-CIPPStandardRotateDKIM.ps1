@@ -13,7 +13,6 @@ function Invoke-CIPPStandardRotateDKIM {
         CAT
             Exchange Standards
         TAG
-            "lowimpact"
             "CIS"
         ADDEDCOMPONENT
         IMPACT
