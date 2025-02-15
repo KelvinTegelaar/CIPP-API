@@ -20,6 +20,7 @@ function Invoke-CIPPStandardSendFromAlias {
         POWERSHELLEQUIVALENT
             Set-Mailbox
         RECOMMENDEDBY
+            "CIPP"
         UPDATECOMMENTBLOCK
             Run the Tools\Update-StandardsComments.ps1 script to update this comment block
     .LINK

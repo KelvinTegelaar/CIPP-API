@@ -22,6 +22,7 @@ function Invoke-CIPPStandardAddDKIM {
             New-DkimSigningConfig and Set-DkimSigningConfig
         RECOMMENDEDBY
             "CIS"
+            "CIPP"
         UPDATECOMMENTBLOCK
             Run the Tools\Update-StandardsComments.ps1 script to update this comment block
     .LINK

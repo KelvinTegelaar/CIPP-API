@@ -15,7 +15,7 @@ function Invoke-CIPPStandardConditionalAccessTemplate {
         MULTIPLE
             True
         DISABLEDFEATURES
-
+            
         IMPACT
             High
         ADDEDCOMPONENT

@@ -73,7 +73,7 @@ foreach ($Standard in $StandardsInfo) {
 
     if ($Content -match $Regex) {
         $NewComment = [System.Collections.Generic.List[string]]::new()
-        # Add the initial scatic comments
+        # Add the initial static comments
         $NewComment.Add("<#`r`n")
         $NewComment.Add("   .FUNCTIONALITY`r`n")
         $NewComment.Add("       Internal`r`n")

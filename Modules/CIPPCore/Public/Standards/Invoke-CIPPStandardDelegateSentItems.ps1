@@ -15,6 +15,7 @@ function Invoke-CIPPStandardDelegateSentItems {
         TAG
             "mediumimpact"
         ADDEDCOMPONENT
+            {"type":"switch","label":"Include user mailboxes","name":"standards.DelegateSentItems.IncludeUserMailboxes"}
         IMPACT
             Medium Impact
         POWERSHELLEQUIVALENT

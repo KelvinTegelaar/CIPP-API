@@ -21,6 +21,7 @@ function Invoke-CIPPStandardintuneDeviceRetirementDays {
         POWERSHELLEQUIVALENT
             Graph API
         RECOMMENDEDBY
+            "CIPP"
         UPDATECOMMENTBLOCK
             Run the Tools\Update-StandardsComments.ps1 script to update this comment block
     .LINK
