@@ -13,10 +13,6 @@ Function Invoke-ListFunctionStats {
     $APIName = $Request.Params.CIPPEndpoint
     Write-LogMessage -headers $Request.Headers -API $APINAME -message 'Accessed this API' -Sev 'Debug'
 
-    # Write to the Azure Functions log stream.
-    Write-Host 'PowerShell HTTP trigger function processed a request.'
-    # Interact with query parameters or the body of the request.
-
     try {
         $TenantFilter = $Request.Query.TenantFilter
         $PartitionKey = $Request.Query.FunctionType
@@ -69,7 +65,7 @@ Function Invoke-ListFunctionStats {
                 'AvgSeconds'     = $Stats.Average
             }
         }
-        $Status = [HttpStatusCode]::OK
+        $StatusCode = [HttpStatusCode]::OK
         $Body = @{
             Results  = @{
                 Functions = @($FunctionStats)
@@ -80,7 +76,7 @@ Function Invoke-ListFunctionStats {
             }
         }
     } catch {
-        $Status = [HttpStatusCode]::BadRequest
+        $StatusCode = [HttpStatusCode]::BadRequest
         $Body = @{
             Results  = @()
             Metadata = @{
@@ -91,7 +87,7 @@ Function Invoke-ListFunctionStats {
     }
 
     Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
-            StatusCode = $Status
+            StatusCode = $StatusCode
             Body       = $Body
         }) -Clobber
 
