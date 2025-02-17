@@ -11,20 +11,18 @@ Function Invoke-ExecConvertToRoomMailbox {
     param($Request, $TriggerMetadata)
 
     $APIName = $Request.Params.CIPPEndpoint
-    $User = $Request.Headers
-    Write-LogMessage -Headers $User -API $APINAME -message 'Accessed this API' -Sev 'Debug'
-
-    # Write to the Azure Functions log stream.
-    Write-Host 'PowerShell HTTP trigger function processed a request.'
+    $TenantFilter = $Request.Query.tenantFilter ?? $Request.Body.tenantFilter
+    Write-LogMessage -Headers $Request.Headers -API $APIName -message 'Accessed this API' -Sev 'Debug'
 
     # Interact with query parameters or the body of the request.
+    $UserID = $Request.Query.ID ?? $Request.Body.ID
+
     Try {
-        $ConvertedMailbox = Set-CIPPMailboxType -userid $Request.query.id -tenantFilter $Request.query.TenantFilter -APIName $APINAME -Headers $User -MailboxType 'Room'
+        $ConvertedMailbox = Set-CIPPMailboxType -UserID $UserID -TenantFilter $TenantFilter -APIName $APIName -Headers $Request.Headers -MailboxType 'Room'
         $Results = [pscustomobject]@{'Results' = "$ConvertedMailbox" }
         $StatusCode = [HttpStatusCode]::OK
     } catch {
-        $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
-        $Results = [pscustomobject]@{'Results' = "Failed to convert $($request.query.id) - $ErrorMessage" }
+        $Results = [pscustomobject]@{'Results' = "$($_.Exception.Message)" }
         $StatusCode = [HttpStatusCode]::Forbidden
     }
     # Associate values to output bindings by calling 'Push-OutputBinding'.
