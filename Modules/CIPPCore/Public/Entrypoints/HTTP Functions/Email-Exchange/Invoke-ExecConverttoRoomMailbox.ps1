@@ -19,11 +19,14 @@ Function Invoke-ExecConvertToRoomMailbox {
 
     Try {
         $ConvertedMailbox = Set-CIPPMailboxType -UserID $UserID -TenantFilter $TenantFilter -APIName $APIName -Headers $Request.Headers -MailboxType 'Room'
+        if ($ConvertedMailbox -like 'Could not convert*') { throw $ConvertedMailbox }
         $Results = [pscustomobject]@{'Results' = "$ConvertedMailbox" }
         $StatusCode = [HttpStatusCode]::OK
     } catch {
-        $Results = [pscustomobject]@{'Results' = "$($_.Exception.Message)" }
-        $StatusCode = [HttpStatusCode]::Forbidden
+        $ErrorMessage = $_.Exception.Message
+        Write-LogMessage -Headers $Request.Headers -API $APIName -message "Error converting mailbox: $ErrorMessage" -Sev 'Error'
+        $Results = [pscustomobject]@{'Results' = "$ErrorMessage" }
+        $StatusCode = [HttpStatusCode]::InternalServerError
     }
     # Associate values to output bindings by calling 'Push-OutputBinding'.
     Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
