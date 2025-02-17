@@ -22,7 +22,7 @@ Function Invoke-ExecResetPass {
     $MustChange = [System.Convert]::ToBoolean($MustChange)
 
     try {
-        $Result = Set-CIPPResetPassword -UserID $ID -tenantFilter $TenantFilter -APIName $APINAME -Headers $Request.Headers -forceChangePasswordNextSignIn $MustChange
+        $Result = Set-CIPPResetPassword -UserID $ID -tenantFilter $TenantFilter -APIName $APINAME -Headers $Request.Headers -forceChangePasswordNextSignIn $MustChange -DisplayName $DisplayName
         if ($Result.state -eq 'Error') { throw $Result.resultText }
         $StatusCode = [HttpStatusCode]::OK
     } catch {
