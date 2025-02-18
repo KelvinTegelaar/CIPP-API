@@ -35,13 +35,13 @@ Function Invoke-CIPPStandardTeamsGlobalMeetingPolicy {
     $CurrentState = New-TeamsRequest -TenantFilter $Tenant -Cmdlet 'Get-CsTeamsMeetingPolicy' -CmdParams @{Identity = 'Global' }
     | Select-Object AllowAnonymousUsersToJoinMeeting, AllowAnonymousUsersToStartMeeting, AutoAdmittedUsers, AllowPSTNUsersToBypassLobby, MeetingChatEnabledType, DesignatedPresenterRoleMode, AllowExternalParticipantGiveRequestControl
 
-    $StateIsCorrect = ($CurrentState.AllowAnonymousUsersToJoinMeeting -eq $Settings.AllowAnonymousUsersToJoinMeeting) -and
+    $StateIsCorrect =   ($CurrentState.AllowAnonymousUsersToJoinMeeting -eq $Settings.AllowAnonymousUsersToJoinMeeting) -and
                         ($CurrentState.AllowAnonymousUsersToStartMeeting -eq $false) -and
                         ($CurrentState.AutoAdmittedUsers -eq 'EveryoneInCompanyExcludingGuests') -and
                         ($CurrentState.AllowPSTNUsersToBypassLobby -eq $false) -and
                         ($CurrentState.MeetingChatEnabledType -eq $Settings.MeetingChatEnabledType.value) -and
                         ($CurrentState.DesignatedPresenterRoleMode -eq $Settings.DesignatedPresenterRoleMode.value) -and
-                        ($CurrentState.AllowExternalParticipantGiveRequestControl -eq $false)
+                        ($CurrentState.AllowExternalParticipantGiveRequestControl -eq $Settings.AllowExternalParticipantGiveRequestControl)
 
     if ($Settings.remediate -eq $true) {
         if ($StateIsCorrect -eq $true) {
@@ -55,7 +55,7 @@ Function Invoke-CIPPStandardTeamsGlobalMeetingPolicy {
                 AllowPSTNUsersToBypassLobby                = $false
                 MeetingChatEnabledType                     = $Settings.MeetingChatEnabledType.value
                 DesignatedPresenterRoleMode                = $Settings.DesignatedPresenterRoleMode.value
-                AllowExternalParticipantGiveRequestControl = $false
+                AllowExternalParticipantGiveRequestControl = $Settings.AllowExternalParticipantGiveRequestControl
             }
 
             try {
