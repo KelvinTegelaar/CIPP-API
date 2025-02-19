@@ -14,25 +14,27 @@ Function Invoke-RemoveTransportRuleTemplate {
     $User = $Request.Headers
     Write-LogMessage -Headers $User -API $APINAME -message 'Accessed this API' -Sev 'Debug'
 
-    $ID = $request.query.id ?? $request.body.id
+    $ID = $request.query.ID ?? $request.body.ID
     try {
         $Table = Get-CippTable -tablename 'templates'
         $Filter = "PartitionKey eq 'TransportTemplate' and RowKey eq '$id'"
         $ClearRow = Get-CIPPAzDataTableEntity @Table -Filter $Filter -Property PartitionKey, RowKey
-        Remove-AzDataTableEntity -Force @Table -Entity $clearRow
-        Write-LogMessage -Headers $User -API $APINAME -message "Removed Transport Rule Template with ID $ID." -Sev 'Info'
-        $body = [pscustomobject]@{'Results' = 'Successfully removed Transport Rule Template' }
+        Remove-AzDataTableEntity -Force @Table -Entity $ClearRow
+        $Result = "Removed Transport Rule Template with ID $ID."
+        Write-LogMessage -Headers $User -API $APINAME -message $Result -Sev 'Info'
+        $StatusCode = [HttpStatusCode]::OK
     } catch {
         $ErrorMessage = Get-CippException -Exception $_
-        Write-LogMessage -Headers $User -API $APINAME -message "Failed to remove Transport Rule template $ID. $($ErrorMessage.NormalizedError)" -Sev 'Error' -LogData $ErrorMessage
-        $body = [pscustomobject]@{'Results' = "Failed to remove template: $($ErrorMessage.NormalizedError)" }
+        $Result = "Failed to remove Transport Rule template with ID $ID. Error: $($ErrorMessage.NormalizedError)"
+        Write-LogMessage -Headers $User -API $APINAME -message $Result -Sev 'Error' -LogData $ErrorMessage
+        $StatusCode = [HttpStatusCode]::Forbidden
     }
 
 
     # Associate values to output bindings by calling 'Push-OutputBinding'.
     Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
-            StatusCode = [HttpStatusCode]::OK
-            Body       = $body
+            StatusCode = $StatusCode
+            Body       = @{ Results = $Result }
         })
 
 

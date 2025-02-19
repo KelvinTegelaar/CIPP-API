@@ -11,8 +11,8 @@ Function Invoke-RemoveSpamfilter {
     param($Request, $TriggerMetadata)
 
     $APIName = $Request.Params.CIPPEndpoint
-    $User = $Request.Headers
-    Write-LogMessage -Headers $User -API $APIName -message 'Accessed this API' -Sev 'Debug'
+    $Headers = $Request.Headers
+    Write-LogMessage -Headers $Headers -API $APIName -message 'Accessed this API' -Sev 'Debug'
     $TenantFilter = $Request.Query.tenantFilter ?? $Request.Query.tenantFilter
     $Name = $Request.Query.name ?? $Request.Body.name
 
@@ -26,12 +26,12 @@ Function Invoke-RemoveSpamfilter {
         $Cmdlet = 'Remove-HostedContentFilterPolicy'
         $null = New-ExoRequest -tenantid $TenantFilter -cmdlet $Cmdlet -cmdParams $Params -useSystemMailbox $true
         $Result = "Deleted Spam filter rule $($Name)"
-        Write-LogMessage -Headers $User -API $APIName -tenant $TenantFilter -message $Result -Sev Info
+        Write-LogMessage -Headers $Headers -API $APIName -tenant $TenantFilter -message $Result -Sev Info
         $StatusCode = [HttpStatusCode]::OK
     } catch {
         $ErrorMessage = Get-CippException -Exception $_
         $Result = "Failed to delete Spam filter rule $($Name) - $($ErrorMessage.NormalizedError)"
-        Write-LogMessage -Headers $User -API $APIName -tenant $TenantFilter -message $Result -Sev Error -LogData $ErrorMessage
+        Write-LogMessage -Headers $Headers -API $APIName -tenant $TenantFilter -message $Result -Sev Error -LogData $ErrorMessage
         $StatusCode = [HttpStatusCode]::Forbidden
     }
     # Associate values to output bindings by calling 'Push-OutputBinding'.
