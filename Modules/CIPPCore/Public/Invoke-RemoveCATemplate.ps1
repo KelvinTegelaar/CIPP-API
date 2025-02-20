@@ -11,29 +11,31 @@ Function Invoke-RemoveCATemplate {
     param($Request, $TriggerMetadata)
 
     $APIName = $Request.Params.CIPPEndpoint
-    $User = $Request.Headers
-    $ID = $request.query.id
-    Write-LogMessage -Headers $User -API $APINAME -message 'Accessed this API' -Sev 'Debug'
+    $Headers = $Request.Headers
+    $ID = $request.Query.ID ?? $Request.Body.ID
+    Write-LogMessage -Headers $Headers -API $APIName -message 'Accessed this API' -Sev 'Debug'
 
     try {
         $Table = Get-CippTable -tablename 'templates'
 
-        $Filter = "PartitionKey eq 'CATemplate' and RowKey eq '$id'"
+        $Filter = "PartitionKey eq 'CATemplate' and RowKey eq '$ID'"
         $ClearRow = Get-CIPPAzDataTableEntity @Table -Filter $Filter -Property PartitionKey, RowKey
-        Remove-AzDataTableEntity -Force @Table -Entity $clearRow
-        Write-LogMessage -Headers $User -API $APINAME -message "Removed Conditional Access Template with ID $ID." -Sev 'Info'
-        $body = [pscustomobject]@{'Results' = 'Successfully removed Conditional Access Template' }
+        Remove-AzDataTableEntity -Force @Table -Entity $ClearRow
+        $Result = "Removed Conditional Access Template with ID $ID"
+        Write-LogMessage -Headers $Headers -API $APIName -message $Result -Sev 'Info'
+        $StatusCode = [HttpStatusCode]::OK
     } catch {
         $ErrorMessage = Get-CippException -Exception $_
-        Write-LogMessage -Headers $User -API $APINAME -message "Failed to remove Conditional Access template $ID. $($ErrorMessage.NormalizedError)" -Sev 'Error'
-        $body = [pscustomobject]@{'Results' = "Failed to remove template: $($ErrorMessage.NormalizedError)" }
+        $Result = "Failed to remove Conditional Access template $($ID): $($ErrorMessage.NormalizedError)"
+        Write-LogMessage -Headers $Headers -API $APIName -message $Result -Sev 'Error' -LogData $ErrorMessage
+        $StatusCode = [HttpStatusCode]::InternalServerError
     }
 
 
     # Associate values to output bindings by calling 'Push-OutputBinding'.
     Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
-            StatusCode = [HttpStatusCode]::OK
-            Body       = $body
+            StatusCode = $StatusCode
+            Body       = @{'Results' = $Result }
         })
 
 
