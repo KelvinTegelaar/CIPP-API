@@ -14,12 +14,11 @@ Function Invoke-ListTenantAllowBlockList {
     Write-LogMessage -headers $Request.Headers -API $APINAME -message 'Accessed this API' -Sev 'Debug'
 
     # Interact with query parameters or the body of the request.
-    $TenantFilter = $Request.Query.TenantFilter
+    $TenantFilter = $Request.Query.tenantFilter
     $ListTypes = 'Sender', 'Url', 'FileHash'
     try {
         $Results = $ListTypes | ForEach-Object -Parallel {
-            Import-Module '.\Modules\AzBobbyTables'
-            Import-Module '.\Modules\CIPPCore'
+            Import-Module CIPPCore
             $TempResults = New-ExoRequest -tenantid $using:TenantFilter -cmdlet 'Get-TenantAllowBlockListItems' -cmdParams @{ListType = $_ }
             $TempResults | Add-Member -MemberType NoteProperty -Name ListType -Value $_
             $TempResults | Select-Object -ExcludeProperty *'@data.type'*, *'(DateTime])'*
