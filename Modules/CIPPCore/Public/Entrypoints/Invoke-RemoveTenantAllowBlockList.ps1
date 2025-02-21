@@ -16,15 +16,11 @@ Function Invoke-RemoveTenantAllowBlockList {
     Write-LogMessage -headers $Headers -API $APIName -message 'Accessed this API' -Sev 'Debug'
 
     # Interact with query parameters or the body of the request.
-    $Entries = $Request.Body.entries
+    $Entries = $Request.Body.Entries
+    $ListType = $Request.Body.ListType
 
     try {
 
-        $listType = switch -Wildcard ($Entries) {
-            '*@*' { 'Sender'; break }
-            '*.*' { 'Url'; break }
-            default { 'FileHash' }
-        }
         Write-Host "List type is $listType"
         $ExoRequest = @{
             tenantid  = $TenantFilter
@@ -53,7 +49,7 @@ Function Invoke-RemoveTenantAllowBlockList {
             StatusCode = $StatusCode
             Body       = @{
                 'Results' = $Result
-                'Request' = $ExoRequest
+                # 'Request' = $ExoRequest
             }
         })
 }
