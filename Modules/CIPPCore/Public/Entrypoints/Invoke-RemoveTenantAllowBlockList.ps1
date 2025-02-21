@@ -34,12 +34,12 @@ Function Invoke-RemoveTenantAllowBlockList {
         $Results = New-ExoRequest @ExoRequest
         Write-Host $Results
 
-        $Result = "Successfully removed $($Entries) from Block/Allow list"
+        $Result = "Successfully removed $($Entries) with type $ListType from Block/Allow list"
         Write-LogMessage -headers $Headers -API $APIName -tenant $TenantFilter -message $Result -Sev 'Info'
         $StatusCode = [HttpStatusCode]::OK
     } catch {
         $ErrorMessage = Get-CippException -Exception $_
-        $Result = "Failed to remove $($Entries). Error: $($ErrorMessage.NormalizedError)"
+        $Result = "Failed to remove $($Entries) type $ListType. Error: $($ErrorMessage.NormalizedError)"
         Write-LogMessage -headers $Headers -API $APIName -tenant $TenantFilter -message $Result -Sev 'Error' -LogData $ErrorMessage
         $StatusCode = [HttpStatusCode]::Forbidden
     }
