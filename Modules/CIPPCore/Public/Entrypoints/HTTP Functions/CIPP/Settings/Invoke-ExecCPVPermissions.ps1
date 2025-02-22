@@ -12,17 +12,15 @@ Function Invoke-ExecCPVPermissions {
 
     $APIName = $Request.Params.CIPPEndpoint
     Write-LogMessage -headers $Request.Headers -API $APINAME -message 'Accessed this API' -Sev 'Debug'
+    $TenantFilter = $TenantFilter
 
-    # Write to the Azure Functions log stream.
-    Write-Host 'PowerShell HTTP trigger function processed a request.'
-    $Tenant = Get-Tenants -IncludeAll | Where-Object -Property customerId -EQ $Request.Body.TenantFilter | Select-Object -First 1
+    $Tenant = Get-Tenants -IncludeAll | Where-Object -Property customerId -EQ $TenantFilter | Select-Object -First 1
 
     if ($Tenant) {
         Write-Host "Our tenant is $($Tenant.displayName) - $($Tenant.defaultDomainName)"
 
-        $TenantFilter = $Request.Body.TenantFilter
         $CPVConsentParams = @{
-            TenantFilter = $Request.Body.TenantFilter
+            TenantFilter = $TenantFilter
         }
         if ($Request.Query.ResetSP -eq 'true') {
             $CPVConsentParams.ResetSP = $true

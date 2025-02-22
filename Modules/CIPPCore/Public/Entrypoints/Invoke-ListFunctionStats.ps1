@@ -14,19 +14,21 @@ Function Invoke-ListFunctionStats {
     Write-LogMessage -headers $Request.Headers -API $APINAME -message 'Accessed this API' -Sev 'Debug'
 
     try {
-        $TenantFilter = $Request.Query.TenantFilter
+        $TenantFilter = $Request.Query.tenantFilter
         $PartitionKey = $Request.Query.FunctionType
+        $Time = $Request.Query.Time
+        $Interval = $Request.Query.Interval
 
-        $Timestamp = if (![string]::IsNullOrEmpty($Request.Query.Interval) -and ![string]::IsNullOrEmpty($Request.Query.Time)) {
-            switch ($Request.Query.Interval) {
+        $Timestamp = if (![string]::IsNullOrEmpty($Interval) -and ![string]::IsNullOrEmpty($Time)) {
+            switch ($Interval) {
                 'Days' {
-                    (Get-Date).AddDays(-$Request.Query.Time).ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ss.fffK')
+                    (Get-Date).AddDays(-$Time).ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ss.fffK')
                 }
                 'Hours' {
-                    (Get-Date).AddHours(-$Request.Query.Time).ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ss.fffK')
+                    (Get-Date).AddHours(-$Time).ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ss.fffK')
                 }
                 'Minutes' {
-                    (Get-Date).AddMinutes(-$Request.Query.Time).ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ss.fffK')
+                    (Get-Date).AddMinutes(-$Time).ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ss.fffK')
                 }
             }
         } else {
