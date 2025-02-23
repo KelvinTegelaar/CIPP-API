@@ -11,19 +11,20 @@ Function Invoke-ExecRemoveMailboxRule {
     param($Request, $TriggerMetadata)
 
     $APIName = $Request.Params.CIPPEndpoint
+    $Headers = $Request.Headers
+    Write-LogMessage -Headers $Headers -API $APIName -tenant $TenantFilter -message 'Accessed this API' -Sev 'Debug'
+
+    # Interact with the query or body of the request
     $TenantFilter = $Request.Query.TenantFilter ?? $Request.Query.TenantFilter
     $RuleName = $Request.Query.ruleName ?? $Request.Body.ruleName
     $RuleId = $Request.Query.ruleId ?? $Request.Body.ruleId
     $Username = $Request.Query.userPrincipalName ?? $Request.Body.userPrincipalName
 
-    $Headers = $Request.Headers
-    Write-LogMessage -Headers $Headers -API $APIName -tenant $TenantFilter -message 'Accessed this API' -Sev 'Debug'
-
     # Remove the rule
     $Results = Remove-CIPPMailboxRule -username $Username -TenantFilter $TenantFilter -APIName $APIName -Headers $Headers -RuleId $RuleId -RuleName $RuleName
 
     if ($Results -like '*Could not delete*') {
-        $StatusCode = [HttpStatusCode]::Forbidden
+        $StatusCode = [HttpStatusCode]::InternalServerError
     } else {
         $StatusCode = [HttpStatusCode]::OK
     }
