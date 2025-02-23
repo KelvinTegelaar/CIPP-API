@@ -10,7 +10,7 @@ function Set-CIPPHideFromGAL {
     $Text = if ($HideFromGAL) { 'hidden' } else { 'unhidden' }
     try {
         $null = New-ExoRequest -tenantid $TenantFilter -cmdlet 'Set-Mailbox' -cmdParams @{Identity = $UserId ; HiddenFromAddressListsEnabled = $HideFromGAL }
-        Write-LogMessage -headers $Headers -API $APINAME -tenant $($Tenantfilter) -message "$($UserId) $Text from GAL" -Sev Info
+        Write-LogMessage -headers $Headers -API $APIName -tenant $($TenantFilter) -message "$($UserId) $Text from GAL" -Sev Info
         return "Successfully $Text $($UserId) from GAL."
     } catch {
         $ErrorMessage = Get-CippException -Exception $_
