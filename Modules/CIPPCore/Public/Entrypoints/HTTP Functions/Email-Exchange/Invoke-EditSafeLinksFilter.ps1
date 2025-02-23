@@ -23,7 +23,7 @@ function Invoke-EditSafeLinksFilter {
             cmdParams        = @{
                 Identity = $RuleName
             }
-            useSystemmailbox = $true
+            useSystemMailbox = $true
         }
 
         switch ($State) {
