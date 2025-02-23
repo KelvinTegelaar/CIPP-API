@@ -32,10 +32,9 @@ Function Invoke-RemoveUser {
         $StatusCode = [HttpStatusCode]::InternalServerError
     }
 
-    $Body = [pscustomobject]@{ 'Results' = $Result }
     # Associate values to output bindings by calling 'Push-OutputBinding'.
     Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
             StatusCode = $StatusCode
-            Body       = $Body
+            Body       = @{ 'Results' = $Result }
         })
 }
