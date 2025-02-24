@@ -52,9 +52,7 @@ function Invoke-CIPPStandardQuarantineRequestAlert {
 
             if ($CurrentState.Name -eq $PolicyName) {
                 try {
-                    $cmdparams += @{
-                        'Identity' = $PolicyName
-                    }
+                    $cmdparams['Identity'] = $PolicyName
                     New-ExoRequest -TenantId $Tenant -cmdlet 'Set-ProtectionAlert' -Compliance -cmdparams $cmdparams -UseSystemMailbox $true
                     Write-LogMessage -API 'Standards' -Tenant $Tenant -Message 'Successfully configured Quarantine Request Alert' -sev Info
                 } catch {
@@ -63,10 +61,9 @@ function Invoke-CIPPStandardQuarantineRequestAlert {
                 }
             } else {
                 try {
-                    $cmdparams += @{
-                        'Name'       = $PolicyName
-                        'ThreatType' = 'Activity'
-                    }
+                    $cmdparams['name'] = $PolicyName
+                    $cmdparams['ThreatType'] = 'Activity'
+
                     New-ExoRequest -TenantId $Tenant -cmdlet 'New-ProtectionAlert' -Compliance -cmdparams $cmdparams -UseSystemMailbox $true
                     Write-LogMessage -API 'Standards' -Tenant $Tenant -Message 'Successfully created Quarantine Request Alert' -sev Info
                 } catch {
