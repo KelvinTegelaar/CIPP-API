@@ -9,24 +9,24 @@ function Invoke-EditAntiPhishingFilter {
     param($Request, $TriggerMetadata)
 
     $APIName = $Request.Params.CIPPEndpoint
-    Write-LogMessage -headers $Request.Headers -API $APINAME -message 'Accessed this API' -Sev 'Debug'
-
-    # Write to the Azure Functions log stream.
-    Write-Host 'PowerShell HTTP trigger function processed a request.'
+    $Headers = $Request.Headers
+    Write-LogMessage -headers $Headers -API $APINAME -message 'Accessed this API' -Sev 'Debug'
 
     # Interact with query parameters or the body of the request.
-    $TenantFilter = $Request.Query.TenantFilter
+    $TenantFilter = $Request.Query.tenantFilter ?? $Request.Body.tenantFilter
+    $RuleName = $Request.Query.RuleName ?? $Request.Body.RuleName
+    $State = $Request.Query.State ?? $Request.Body.State
 
     try {
         $ExoRequestParam = @{
-            tenantid = $TenantFilter
-            cmdParams = @{
-                Identity = $Request.query.RuleName
+            tenantid         = $TenantFilter
+            cmdParams        = @{
+                Identity = $RuleName
             }
-            useSystemmailbox = $true
+            useSystemMailbox = $true
         }
 
-        switch ($Request.query.State) {
+        switch ($State) {
             'Enable' {
                 $ExoRequestParam.Add('cmdlet', 'Enable-AntiPhishRule')
             }
@@ -37,19 +37,21 @@ function Invoke-EditAntiPhishingFilter {
                 throw 'Invalid state'
             }
         }
-        New-ExoRequest @ExoRequestParam
+        $null = New-ExoRequest @ExoRequestParam
 
-        $Result = "Sucessfully set Anti-Phishing rule $($Request.query.RuleName) to $($Request.query.State)"
-        Write-LogMessage -headers $Request.Headers -API $APINAME -tenant $TenantFilter -message $Result -Sev Info
+        $Result = "Successfully set Anti-Phishing rule $RuleName to $State"
+        Write-LogMessage -headers $Headers -API $APINAME -tenant $TenantFilter -message $Result -Sev Info
+        $StatusCode = [HttpStatusCode]::OK
     } catch {
-        $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
-        $Result = "Failed setting Anti-Phishing rule $($Request.query.RuleName) to $($request.query.State). Error: $ErrorMessage"
-        Write-LogMessage -headers $Request.Headers -API $APINAME -tenant $TenantFilter -message $Result -Sev 'Error'
+        $ErrorMessage = Get-CippException -Exception $_
+        $Result = "Failed setting Anti-Phishing rule $RuleName to $State. Error: $($ErrorMessage.NormalizedError)"
+        Write-LogMessage -headers $Headers -API $APINAME -tenant $TenantFilter -message $Result -Sev 'Error' -LogData $ErrorMessage
+        $StatusCode = [HttpStatusCode]::InternalServerError
     }
 
     # Associate values to output bindings by calling 'Push-OutputBinding'.
     Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
-            StatusCode = [HttpStatusCode]::OK
+            StatusCode = $StatusCode
             Body       = @{Results = $Result }
-    })
+        })
 }

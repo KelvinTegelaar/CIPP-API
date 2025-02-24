@@ -11,26 +11,30 @@ Function Invoke-EditSpamFilter {
     param($Request, $TriggerMetadata)
 
     $APIName = $Request.Params.CIPPEndpoint
-    Write-LogMessage -headers $Request.Headers -API $APINAME -message 'Accessed this API' -Sev 'Debug'
-    $Tenantfilter = $request.Query.tenantfilter
+    Write-LogMessage -headers $Request.Headers -API $APIName -message 'Accessed this API' -Sev 'Debug'
 
-    $Params = @{
-        Identity = $request.query.name
-    }
+    $TenantFilter = $request.Query.tenantFilter
+    $Name = $Request.Query.name ?? $Request.Body.name
+    $State = $State ?? $Request.Body.state
 
     try {
-        $cmdlet = if ($request.query.state -eq 'enable') { 'Enable-HostedContentFilterRule' } else { 'Disable-HostedContentFilterRule' }
-        $GraphRequest = New-ExoRequest -tenantid $Tenantfilter -cmdlet $cmdlet -cmdParams $params -useSystemmailbox $true
-        $Result = "Set Spamfilter rule to $($request.query.State)"
-        Write-LogMessage -headers $Request.Headers -API $APINAME -tenant $tenantfilter -message "Set Spamfilter rule $($Request.query.name) to $($request.query.State)" -sev Info
+        $Params = @{
+            Identity = $Name
+        }
+        $Cmdlet = if ($State -eq 'enable') { 'Enable-HostedContentFilterRule' } else { 'Disable-HostedContentFilterRule' }
+        $null = New-ExoRequest -tenantid $TenantFilter -cmdlet $Cmdlet -cmdParams $Params -useSystemMailbox $true
+        $Result = "Set Spamfilter rule $($Name) to $($State)"
+        Write-LogMessage -headers $Request.Headers -API $APIName -tenant $TenantFilter -message $Result -sev Info
+        $StatusCode = [HttpStatusCode]::OK
     } catch {
-        $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
-        Write-LogMessage -headers $Request.Headers -API $APINAME -tenant $tenantfilter -message "Failed setting Spamfilter rule $($Request.query.guid) to $($request.query.State). Error:$ErrorMessage" -Sev 'Error'
-        $Result = $ErrorMessage
+        $ErrorMessage = Get-CippException -Exception $_
+        $Result = "Failed setting Spamfilter rule $($Name) to $($State). Error: $($ErrorMessage.NormalizedError)"
+        Write-LogMessage -headers $Request.Headers -API $APIName -tenant $TenantFilter -message $Result -Sev 'Error' -LogData $ErrorMessage
+        $StatusCode = [HttpStatusCode]::Forbidden
     }
     # Associate values to output bindings by calling 'Push-OutputBinding'.
     Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
-            StatusCode = [HttpStatusCode]::OK
+            StatusCode = $StatusCode
             Body       = @{Results = $Result }
         })
 

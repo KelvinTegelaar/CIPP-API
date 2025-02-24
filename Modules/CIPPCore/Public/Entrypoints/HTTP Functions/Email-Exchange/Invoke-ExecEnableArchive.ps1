@@ -13,21 +13,22 @@ Function Invoke-ExecEnableArchive {
     $APIName = $Request.Params.CIPPEndpoint
     Write-LogMessage -headers $Request.Headers -API $APINAME -message 'Accessed this API' -Sev 'Debug'
 
-
-    # Write to the Azure Functions log stream.
-    Write-Host 'PowerShell HTTP trigger function processed a request.'
-
-
     # Interact with query parameters or the body of the request.
+    $TenantFilter = $Request.Query.tenantFilter ?? $Request.Body.tenantFilter
+    $ID = $Request.Query.id ?? $Request.Body.id
+
     Try {
-        $ResultsArch = Set-CIPPMailboxArchive -userid $Request.query.id -tenantFilter $Request.query.TenantFilter -APIName $APINAME -Headers $Request.Headers -ArchiveEnabled $true
-        $Results = [pscustomobject]@{'Results' = "$ResultsArch" }
+        $ResultsArch = Set-CIPPMailboxArchive -userid $ID -tenantFilter $TenantFilter -APIName $APINAME -Headers $Request.Headers -ArchiveEnabled $true
+        if ($ResultsArch -like 'Failed to set archive*') { throw $ResultsArch }
+        $StatusCode = [HttpStatusCode]::OK
     } catch {
-        $Results = [pscustomobject]@{'Results' = "Failed. $($_.Exception.Message)" }
+        $ResultsArch = $_.Exception.Message
+        $StatusCode = [HttpStatusCode]::InternalServerError
     }
+    $Results = [pscustomobject]@{'Results' = "$ResultsArch" }
     # Associate values to output bindings by calling 'Push-OutputBinding'.
     Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
-            StatusCode = [HttpStatusCode]::OK
+            StatusCode = $StatusCode
             Body       = $Results
         })
 

@@ -22,7 +22,7 @@ Function Invoke-RemovePolicy {
     if (!$PolicyId) { exit }
     try {
 
-        #$unAssignRequest = New-GraphPostRequest -uri "https://graph.microsoft.com/beta/deviceManagement/configurationPolicies('$($PolicyId)')/assign" -type POST -Body '{"assignments":[]}' -tenant $TenantFilter
+        # $unAssignRequest = New-GraphPostRequest -uri "https://graph.microsoft.com/beta/deviceManagement/configurationPolicies('$($PolicyId)')/assign" -type POST -Body '{"assignments":[]}' -tenant $TenantFilter
         $null = New-GraphPostRequest -uri "https://graph.microsoft.com/beta/deviceManagement/$($UrlName)('$($PolicyId)')" -type DELETE -tenant $TenantFilter
         $Results = "Successfully deleted the policy with ID: $($PolicyId)"
         Write-LogMessage -headers $Headers -API $APINAME -message $Results -Sev Info -tenant $TenantFilter
@@ -35,11 +35,11 @@ Function Invoke-RemovePolicy {
         $StatusCode = [HttpStatusCode]::Forbidden
     }
 
-    $body = [pscustomobject]@{'Results' = "$Results" }
+    $Body = [pscustomobject]@{'Results' = "$Results" }
     # Associate values to output bindings by calling 'Push-OutputBinding'.
     Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
             StatusCode = $StatusCode
-            Body       = $body
+            Body       = $Body
         })
 
 

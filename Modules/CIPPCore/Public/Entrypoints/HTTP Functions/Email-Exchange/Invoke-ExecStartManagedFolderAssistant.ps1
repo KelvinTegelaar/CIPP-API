@@ -11,28 +11,30 @@ Function Invoke-ExecStartManagedFolderAssistant {
     param($Request, $TriggerMetadata)
 
     $APIName = $Request.Params.CIPPEndpoint
-    $User = $Request.Headers
-    $Tenant = $Request.query.TenantFilter
-    Write-LogMessage -Headers $User -API $APINAME -message 'Accessed this API' -Sev 'Debug'
+    $Headers = $Request.Headers
+    Write-LogMessage -Headers $Headers -API $APIName -message 'Accessed this API' -Sev 'Debug'
 
-    # Write to the Azure Functions log stream.
-    Write-Host 'PowerShell HTTP trigger function processed a request.'
-    $Results = [System.Collections.Generic.List[Object]]::new()
 
     # Interact with query parameters or the body of the request.
+    $Tenant = $Request.Query.tenantFilter ?? $Request.Body.tenantFilter
+    $ID = $Request.Query.ID ?? $Request.Body.ID
 
     try {
-        $null = New-ExoRequest -tenantid $Tenant -cmdlet 'Start-ManagedFolderAssistant' -cmdparams @{Identity = $Request.query.id }
-        $Results.Add("Successfully started Managed Folder Assistant for mailbox $($Request.query.id).")
+        $null = New-ExoRequest -tenantid $Tenant -cmdlet 'Start-ManagedFolderAssistant' -cmdParams @{Identity = $ID }
+        $Result = "Successfully started Managed Folder Assistant for mailbox $($ID)."
+        $Severity = 'Info'
         $StatusCode = [HttpStatusCode]::OK
     } catch {
         $ErrorMessage = Get-CippException -Exception $_
-        Write-LogMessage -Headers $User -API $APINAME -tenant $Tenant -message "Failed to create room: $($MailboxObject.DisplayName). Error: $($ErrorMessage.NormalizedError)" -Sev 'Error' -LogData $ErrorMessage
-        $Results.Add("Failed to start Managed Folder Assistant for mailbox $($Request.query.id). Error: $($ErrorMessage.NormalizedError)")
-        $StatusCode = [HttpStatusCode]::Forbidden
+        $Result = "Failed to start Managed Folder Assistant for mailbox $($ID). Error: $($ErrorMessage.NormalizedError)"
+        $Severity = 'Error'
+        $StatusCode = [HttpStatusCode]::InternalServerError
+    } finally {
+        Write-LogMessage -Headers $Headers -API $APIName -tenant $Tenant -message $Result -Sev $Severity -LogData $ErrorMessage
+
     }
 
-    $Body = [pscustomobject] @{ 'Results' = @($Results) }
+    $Body = [pscustomobject] @{ 'Results' = $Result }
     # Associate values to output bindings by calling 'Push-OutputBinding'.
     Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
             StatusCode = $StatusCode

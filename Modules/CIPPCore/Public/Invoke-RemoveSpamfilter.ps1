@@ -11,29 +11,32 @@ Function Invoke-RemoveSpamfilter {
     param($Request, $TriggerMetadata)
 
     $APIName = $Request.Params.CIPPEndpoint
-    $User = $Request.Headers
-    Write-LogMessage -Headers $User -API $APINAME -message 'Accessed this API' -Sev 'Debug'
-    $Tenantfilter = $request.Query.tenantfilter
+    $Headers = $Request.Headers
+    Write-LogMessage -Headers $Headers -API $APIName -message 'Accessed this API' -Sev 'Debug'
+    $TenantFilter = $Request.Query.tenantFilter ?? $Request.Query.tenantFilter
+    $Name = $Request.Query.name ?? $Request.Body.name
 
-    $Params = @{
-        Identity = $request.query.name
-    }
 
     try {
-        $cmdlet = 'Remove-HostedContentFilterRule'
-        $null = New-ExoRequest -tenantid $Tenantfilter -cmdlet $cmdlet -cmdParams $params -useSystemmailbox $true
-        $cmdlet = 'Remove-HostedContentFilterPolicy'
-        $null = New-ExoRequest -tenantid $Tenantfilter -cmdlet $cmdlet -cmdParams $params -useSystemmailbox $true
-        $Result = "Deleted $($Request.query.name)"
-        Write-LogMessage -Headers $User -API 'TransportRules' -tenant $tenantfilter -message "Deleted transport rule $($Request.query.name)" -sev Debug
+        $Params = @{
+            Identity = $Name
+        }
+        $Cmdlet = 'Remove-HostedContentFilterRule'
+        $null = New-ExoRequest -tenantid $TenantFilter -cmdlet $Cmdlet -cmdParams $Params -useSystemMailbox $true
+        $Cmdlet = 'Remove-HostedContentFilterPolicy'
+        $null = New-ExoRequest -tenantid $TenantFilter -cmdlet $Cmdlet -cmdParams $Params -useSystemMailbox $true
+        $Result = "Deleted Spam filter rule $($Name)"
+        Write-LogMessage -Headers $Headers -API $APIName -tenant $TenantFilter -message $Result -Sev Info
+        $StatusCode = [HttpStatusCode]::OK
     } catch {
         $ErrorMessage = Get-CippException -Exception $_
-        Write-LogMessage -Headers $User -API 'TransportRules' -tenant $tenantfilter -message "Failed deleting transport rule $($Request.query.name). Error:$($ErrorMessage.NormalizedError)" -Sev Error -LogData $ErrorMessage
-        $Result = $ErrorMessage
+        $Result = "Failed to delete Spam filter rule $($Name) - $($ErrorMessage.NormalizedError)"
+        Write-LogMessage -Headers $Headers -API $APIName -tenant $TenantFilter -message $Result -Sev Error -LogData $ErrorMessage
+        $StatusCode = [HttpStatusCode]::Forbidden
     }
     # Associate values to output bindings by calling 'Push-OutputBinding'.
     Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
-            StatusCode = [HttpStatusCode]::OK
+            StatusCode = $StatusCode
             Body       = @{Results = $Result }
         })
 

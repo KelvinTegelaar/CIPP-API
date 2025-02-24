@@ -10,23 +10,21 @@ Function Invoke-ExecRemoveMailboxRule {
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
 
-    $APIName = 'Remove mailbox rule'
-    $TenantFilter = $Request.Query.TenantFilter
-    $RuleName = $Request.Query.ruleName
-    $RuleId = $Request.Query.ruleId
-    $Username = $Request.Query.userPrincipalName
+    $APIName = $Request.Params.CIPPEndpoint
+    $Headers = $Request.Headers
+    Write-LogMessage -Headers $Headers -API $APIName -tenant $TenantFilter -message 'Accessed this API' -Sev 'Debug'
 
-    $User = $Request.Headers
-    Write-LogMessage -Headers $User -API $APINAME -tenant $TenantFilter -message 'Accessed this API' -Sev 'Debug'
-
-    # Write to the Azure Functions log stream.
-    Write-Host 'PowerShell HTTP trigger function processed a request.'
+    # Interact with the query or body of the request
+    $TenantFilter = $Request.Query.TenantFilter ?? $Request.Query.TenantFilter
+    $RuleName = $Request.Query.ruleName ?? $Request.Body.ruleName
+    $RuleId = $Request.Query.ruleId ?? $Request.Body.ruleId
+    $Username = $Request.Query.userPrincipalName ?? $Request.Body.userPrincipalName
 
     # Remove the rule
-    $Results = Remove-CIPPMailboxRule -userid $User -username $Username -TenantFilter $TenantFilter -APIName $APINAME -Headers $User -RuleId $RuleId -RuleName $RuleName
+    $Results = Remove-CIPPMailboxRule -username $Username -TenantFilter $TenantFilter -APIName $APIName -Headers $Headers -RuleId $RuleId -RuleName $RuleName
 
     if ($Results -like '*Could not delete*') {
-        $StatusCode = [HttpStatusCode]::Forbidden
+        $StatusCode = [HttpStatusCode]::InternalServerError
     } else {
         $StatusCode = [HttpStatusCode]::OK
     }
