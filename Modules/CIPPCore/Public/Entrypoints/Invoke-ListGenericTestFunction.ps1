@@ -11,8 +11,9 @@ Function Invoke-ListGenericTestFunction {
     param($Request, $TriggerMetadata)
 
     $APIName = $Request.Params.CIPPEndpoint
-    Write-LogMessage -headers $Request.Headers -API $APINAME -message 'Accessed this API' -Sev 'Debug'
-    $graphRequest = ($request.headers.'x-ms-original-url').split('/api') | Select-Object -First 1
+    $Headers = $Request.Headers
+    Write-LogMessage -headers $Headers -API $APIName -message 'Accessed this API' -Sev 'Debug'
+    $graphRequest = ($Headers.'x-ms-original-url').split('/api') | Select-Object -First 1
 
     Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
             StatusCode = [HttpStatusCode]::OK

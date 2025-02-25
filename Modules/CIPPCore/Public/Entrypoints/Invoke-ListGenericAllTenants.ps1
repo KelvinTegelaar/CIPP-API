@@ -10,6 +10,9 @@ Function Invoke-ListGenericAllTenants {
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
 
+
+    # XXX This feels like an unused endpoint to me. -Bobby
+
     $TableURLName = ($QueueItem.tolower().split('?').Split('/') | Select-Object -First 1).toString()
     $QueueKey = (Invoke-ListCippQueue | Where-Object -Property Name -EQ $TableURLName | Select-Object -Last 1).RowKey
     Update-CippQueueEntry -RowKey $QueueKey -Status 'Started'
