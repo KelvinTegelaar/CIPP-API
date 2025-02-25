@@ -6,13 +6,12 @@ function Set-CIPPAssignedPolicy {
         $PolicyId,
         $Type,
         $TenantFilter,
-        $PlatformType,
+        $PlatformType = 'deviceManagement',
         $APIName = 'Assign Policy',
         $Headers
     )
-    if (!$PlatformType) {
-        $PlatformType = 'deviceManagement'
-    }
+
+    Write-Host "Assigning policy $PolicyId ($PlatformType/$Type) to $GroupName"
 
     try {
         $assignmentsList = New-Object System.Collections.Generic.List[System.Object]
@@ -104,8 +103,9 @@ function Set-CIPPAssignedPolicy {
         $AssignJSON = $assignmentsObject | ConvertTo-Json -Depth 10 -Compress
         Write-Host "AssignJSON: $AssignJSON"
         if ($PSCmdlet.ShouldProcess($GroupName, "Assigning policy $PolicyId")) {
-            Write-Host "https://graph.microsoft.com/beta/$($PlatformType)/$Type('$($PolicyId)')/assign"
-            $null = New-GraphPOSTRequest -uri "https://graph.microsoft.com/beta/$($PlatformType)/$Type('$($PolicyId)')/assign" -tenantid $TenantFilter -type POST -body $AssignJSON
+            $uri = "https://graph.microsoft.com/beta/$($PlatformType)/$Type('$($PolicyId)')/assign"
+            Write-Host "Calling: $uri"
+            $null = New-GraphPOSTRequest -uri $uri -tenantid $TenantFilter -type POST -body $AssignJSON
             Write-LogMessage -headers $Headers -API $APIName -message "Assigned $GroupName and excluded $excludeGroup to Policy $PolicyId" -Sev 'Info' -tenant $TenantFilter
         }
 
