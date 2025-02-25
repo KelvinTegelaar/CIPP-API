@@ -34,6 +34,7 @@ function Invoke-CIPPStandardsRun {
                 runManually  = $runManually
             }
         }
+        SkipLog          = $true
     }
     if ($TemplateID) {
         $InputObject.QueueFunction.StandardParams['TemplateId'] = $TemplateID
