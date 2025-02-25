@@ -13,7 +13,6 @@ function Invoke-CIPPStandardallowOTPTokens {
         CAT
             Entra (AAD) Standards
         TAG
-            "lowimpact"
         ADDEDCOMPONENT
         IMPACT
             Low Impact

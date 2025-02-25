@@ -13,7 +13,6 @@ function Invoke-CIPPStandardSPDisableLegacyWorkflows {
         CAT
             SharePoint Standards
         TAG
-            "lowimpact"
         ADDEDCOMPONENT
         IMPACT
             Low Impact

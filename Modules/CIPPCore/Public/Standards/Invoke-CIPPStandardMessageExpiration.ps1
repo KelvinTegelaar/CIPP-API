@@ -13,7 +13,6 @@ function Invoke-CIPPStandardMessageExpiration {
         CAT
             Exchange Standards
         TAG
-            "lowimpact"
         ADDEDCOMPONENT
         IMPACT
             Low Impact

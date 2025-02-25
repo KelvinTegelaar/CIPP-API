@@ -13,7 +13,6 @@ function Invoke-CIPPStandardLegacyMFACleanup {
         CAT
             Entra (AAD) Standards
         TAG
-            "mediumimpact"
         ADDEDCOMPONENT
         IMPACT
             Medium Impact
@@ -28,5 +27,6 @@ function Invoke-CIPPStandardLegacyMFACleanup {
 
     param($Tenant, $Settings)
     Write-LogMessage -API 'Standards' -tenant $tenant -message 'Per User MFA APIs have been disabled.' -sev Info
+    # TODO - Re-implement this standard
 
 }

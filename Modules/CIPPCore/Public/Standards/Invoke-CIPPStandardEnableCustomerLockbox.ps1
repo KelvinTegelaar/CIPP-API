@@ -13,7 +13,6 @@ function Invoke-CIPPStandardEnableCustomerLockbox {
         CAT
             Global Standards
         TAG
-            "lowimpact"
             "CIS"
             "CustomerLockBoxEnabled"
         ADDEDCOMPONENT

@@ -13,7 +13,6 @@ Function Invoke-CIPPStandardTeamsExternalFileSharing {
         CAT
             Teams Standards
         TAG
-            "lowimpact"
         ADDEDCOMPONENT
             {"type":"switch","name":"standards.TeamsExternalFileSharing.AllowGoogleDrive","label":"Allow Google Drive"}
             {"type":"switch","name":"standards.TeamsExternalFileSharing.AllowShareFile","label":"Allow ShareFile"}

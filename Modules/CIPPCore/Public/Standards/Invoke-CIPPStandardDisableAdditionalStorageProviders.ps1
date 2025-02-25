@@ -13,7 +13,6 @@ function Invoke-CIPPStandardDisableAdditionalStorageProviders {
         CAT
             Exchange Standards
         TAG
-            "lowimpact"
             "CIS"
             "exo_storageproviderrestricted"
         ADDEDCOMPONENT

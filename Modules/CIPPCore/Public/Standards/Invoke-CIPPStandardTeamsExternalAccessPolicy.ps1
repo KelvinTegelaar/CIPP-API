@@ -13,7 +13,6 @@ Function Invoke-CIPPStandardTeamsExternalAccessPolicy {
         CAT
             Teams Standards
         TAG
-            "mediumimpact"
         ADDEDCOMPONENT
             {"type":"switch","name":"standards.TeamsExternalAccessPolicy.EnableFederationAccess","label":"Allow communication from trusted organizations"}
             {"type":"switch","name":"standards.TeamsExternalAccessPolicy.EnablePublicCloudAccess","label":"Allow user to communicate with Skype users"}

@@ -13,7 +13,6 @@ function Invoke-CIPPStandardallowOAuthTokens {
         CAT
             Entra (AAD) Standards
         TAG
-            "lowimpact"
         ADDEDCOMPONENT
         IMPACT
             Low Impact

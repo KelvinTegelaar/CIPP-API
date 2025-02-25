@@ -13,8 +13,8 @@ function Invoke-CIPPStandardDelegateSentItems {
         CAT
             Exchange Standards
         TAG
-            "mediumimpact"
         ADDEDCOMPONENT
+            {"type":"switch","label":"Include user mailboxes","name":"standards.DelegateSentItems.IncludeUserMailboxes"}
         IMPACT
             Medium Impact
         POWERSHELLEQUIVALENT
