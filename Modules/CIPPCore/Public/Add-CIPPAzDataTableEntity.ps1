@@ -20,7 +20,7 @@ function Add-CIPPAzDataTableEntity {
             if ($_.Exception.ErrorCode -eq 'PropertyValueTooLarge' -or $_.Exception.ErrorCode -eq 'EntityTooLarge' -or $_.Exception.ErrorCode -eq 'RequestBodyTooLarge') {
                 try {
                     Write-Host 'Entity is too large. Splitting entity into multiple parts.'
-                    Write-Information ($SingleEnt | ConvertTo-Json)
+                    #Write-Information ($SingleEnt | ConvertTo-Json)
                     $largePropertyNames = [System.Collections.Generic.List[string]]::new()
                     $entitySize = 0
 
