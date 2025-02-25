@@ -16,6 +16,8 @@ function Invoke-CIPPStandardlaps {
         ADDEDCOMPONENT
         IMPACT
             Low Impact
+        ADDEDDATE
+            2023-04-25
         POWERSHELLEQUIVALENT
             Portal or Graph API
         RECOMMENDEDBY

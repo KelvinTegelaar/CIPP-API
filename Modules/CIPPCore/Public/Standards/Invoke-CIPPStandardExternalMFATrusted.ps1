@@ -17,6 +17,8 @@ function Invoke-CIPPStandardExternalMFATrusted {
             {"type":"autoComplete","multiple":false,"creatable":false,"label":"Select value","name":"standards.ExternalMFATrusted.state","options":[{"label":"Enabled","value":"true"},{"label":"Disabled","value":"false"}]}
         IMPACT
             Low Impact
+        ADDEDDATE
+            2024-03-26
         POWERSHELLEQUIVALENT
             Update-MgBetaPolicyCrossTenantAccessPolicyDefault
         RECOMMENDEDBY

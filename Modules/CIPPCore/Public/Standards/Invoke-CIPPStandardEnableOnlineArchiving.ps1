@@ -16,6 +16,8 @@ function Invoke-CIPPStandardEnableOnlineArchiving {
         ADDEDCOMPONENT
         IMPACT
             Low Impact
+        ADDEDDATE
+            2024-01-20
         POWERSHELLEQUIVALENT
             Enable-Mailbox -Archive \$true
         RECOMMENDEDBY

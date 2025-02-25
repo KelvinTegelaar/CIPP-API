@@ -16,6 +16,8 @@ function Invoke-CIPPStandardunmanagedSync {
         ADDEDCOMPONENT
         IMPACT
             High Impact
+        ADDEDDATE
+            2022-06-15
         POWERSHELLEQUIVALENT
             Update-MgAdminSharePointSetting
         RECOMMENDEDBY

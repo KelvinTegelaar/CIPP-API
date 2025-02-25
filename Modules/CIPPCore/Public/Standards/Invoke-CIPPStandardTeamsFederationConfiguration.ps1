@@ -20,6 +20,8 @@ Function Invoke-CIPPStandardTeamsFederationConfiguration {
             {"type":"textField","name":"standards.TeamsFederationConfiguration.DomainList","label":"Domains, Comma separated","required":false}
         IMPACT
             Medium Impact
+        ADDEDDATE
+            2024-07-31
         POWERSHELLEQUIVALENT
             Set-CsTenantFederationConfiguration
         RECOMMENDEDBY

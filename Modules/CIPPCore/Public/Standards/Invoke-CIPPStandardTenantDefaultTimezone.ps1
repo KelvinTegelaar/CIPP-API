@@ -17,6 +17,8 @@ function Invoke-CIPPStandardTenantDefaultTimezone {
             {"type":"TimezoneSelect","name":"standards.TenantDefaultTimezone.Timezone","label":"Timezone"}
         IMPACT
             Low Impact
+        ADDEDDATE
+            2024-04-20
         POWERSHELLEQUIVALENT
             Update-MgBetaAdminSharePointSetting
         RECOMMENDEDBY

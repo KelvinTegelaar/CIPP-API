@@ -16,6 +16,8 @@ function Invoke-CIPPStandardSecurityDefaults {
         ADDEDCOMPONENT
         IMPACT
             High Impact
+        ADDEDDATE
+            2021-11-19
         POWERSHELLEQUIVALENT
             [Read more here](https://www.cyberdrain.com/automating-with-powershell-enabling-secure-defaults-and-sd-explained/)
         RECOMMENDEDBY

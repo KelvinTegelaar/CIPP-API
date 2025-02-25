@@ -17,6 +17,8 @@ function Invoke-CIPPStandardFocusedInbox {
             {"type":"autoComplete","multiple":false,"label":"Select value","name":"standards.FocusedInbox.state","options":[{"label":"Enabled","value":"enabled"},{"label":"Disabled","value":"disabled"}]}
         IMPACT
             Low Impact
+        ADDEDDATE
+            2024-04-26
         POWERSHELLEQUIVALENT
             Set-OrganizationConfig -FocusedInboxOn \$true or \$false
         RECOMMENDEDBY

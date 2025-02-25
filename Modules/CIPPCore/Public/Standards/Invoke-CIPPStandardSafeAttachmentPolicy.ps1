@@ -24,6 +24,8 @@ function Invoke-CIPPStandardSafeAttachmentPolicy {
             {"type":"textField","name":"standards.SafeAttachmentPolicy.RedirectAddress","label":"Redirect Address","required":false}
         IMPACT
             Low Impact
+        ADDEDDATE
+            2024-03-25
         POWERSHELLEQUIVALENT
             Set-SafeAttachmentPolicy or New-SafeAttachmentPolicy
         RECOMMENDEDBY

@@ -18,6 +18,8 @@ function Invoke-CIPPStandardOutBoundSpamAlert {
             {"type":"textField","name":"standards.OutBoundSpamAlert.OutboundSpamContact","label":"Outbound spam contact"}
         IMPACT
             Low Impact
+        ADDEDDATE
+            2023-05-03
         POWERSHELLEQUIVALENT
             Set-HostedOutboundSpamFilterPolicy
         RECOMMENDEDBY

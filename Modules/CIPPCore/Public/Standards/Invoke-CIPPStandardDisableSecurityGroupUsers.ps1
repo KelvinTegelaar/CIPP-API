@@ -16,6 +16,8 @@ function Invoke-CIPPStandardDisableSecurityGroupUsers {
         ADDEDCOMPONENT
         IMPACT
             Medium Impact
+        ADDEDDATE
+            2022-07-17
         POWERSHELLEQUIVALENT
             Update-MgBetaPolicyAuthorizationPolicy
         RECOMMENDEDBY

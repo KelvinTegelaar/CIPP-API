@@ -16,6 +16,8 @@ function Invoke-CIPPStandardDisableGuests {
         ADDEDCOMPONENT
         IMPACT
             Medium Impact
+        ADDEDDATE
+            2022-10-20
         POWERSHELLEQUIVALENT
             Graph API
         RECOMMENDEDBY

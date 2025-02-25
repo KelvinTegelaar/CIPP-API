@@ -17,6 +17,8 @@ function Invoke-CIPPStandardAddDKIM {
         ADDEDCOMPONENT
         IMPACT
             Low Impact
+        ADDEDDATE
+            2023-03-14
         POWERSHELLEQUIVALENT
             New-DkimSigningConfig and Set-DkimSigningConfig
         RECOMMENDEDBY

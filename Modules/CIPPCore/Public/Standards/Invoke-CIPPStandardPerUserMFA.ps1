@@ -16,6 +16,8 @@ function Invoke-CIPPStandardPerUserMFA {
         ADDEDCOMPONENT
         IMPACT
             High Impact
+        ADDEDDATE
+            2024-06-14
         POWERSHELLEQUIVALENT
             Graph API
         RECOMMENDEDBY

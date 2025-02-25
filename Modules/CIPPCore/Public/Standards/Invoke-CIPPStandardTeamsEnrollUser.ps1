@@ -17,6 +17,8 @@ Function Invoke-CIPPStandardTeamsEnrollUser {
             {"type":"autoComplete","required":true,"multiple":false,"creatable":false,"name":"standards.TeamsEnrollUser.EnrollUserOverride","label":"Voice and Face Enrollment","options":[{"label":"Disabled","value":"Disabled"},{"label":"Enabled","value":"Enabled"}]}
         IMPACT
             Low Impact
+        ADDEDDATE
+            2024-11-12
         POWERSHELLEQUIVALENT
             Set-CsTeamsMeetingPolicy -Identity Global -EnrollUserOverride \$false
         RECOMMENDEDBY

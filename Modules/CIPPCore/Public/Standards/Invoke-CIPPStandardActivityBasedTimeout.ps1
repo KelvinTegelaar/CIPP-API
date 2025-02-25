@@ -19,6 +19,8 @@ function Invoke-CIPPStandardActivityBasedTimeout {
             {"type":"autoComplete","multiple":false,"creatable":false,"label":"Select value","name":"standards.ActivityBasedTimeout.timeout","options":[{"label":"1 Hour","value":"01:00:00"},{"label":"3 Hours","value":"03:00:00"},{"label":"6 Hours","value":"06:00:00"},{"label":"12 Hours","value":"12:00:00"},{"label":"24 Hours","value":"1.00:00:00"}]}
         IMPACT
             Medium Impact
+        ADDEDDATE
+            2022-04-13
         POWERSHELLEQUIVALENT
             Portal or Graph API
         RECOMMENDEDBY

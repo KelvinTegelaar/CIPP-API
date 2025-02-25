@@ -16,6 +16,8 @@ function Invoke-CIPPStandardEnableLitigationHold {
         ADDEDCOMPONENT
         IMPACT
             Low Impact
+        ADDEDDATE
+            2024-06-25
         POWERSHELLEQUIVALENT
             Set-Mailbox -LitigationHoldEnabled \$true
         RECOMMENDEDBY

@@ -17,6 +17,8 @@ function Invoke-CIPPStandardAntiSpamSafeList {
             {"type":"switch","name":"standards.AntiSpamSafeList.EnableSafeList","label":"Enable Safe List"}
         IMPACT
             Medium Impact
+        ADDEDDATE
+            2025-02-15
         POWERSHELLEQUIVALENT
             Set-HostedConnectionFilterPolicy "Default" -EnableSafeList \$true
         RECOMMENDEDBY

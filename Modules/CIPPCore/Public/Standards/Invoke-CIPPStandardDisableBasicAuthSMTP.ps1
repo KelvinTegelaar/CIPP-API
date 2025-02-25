@@ -16,6 +16,8 @@ function Invoke-CIPPStandardDisableBasicAuthSMTP {
         ADDEDCOMPONENT
         IMPACT
             Medium Impact
+        ADDEDDATE
+            2021-11-16
         POWERSHELLEQUIVALENT
             Set-TransportConfig -SmtpClientAuthenticationDisabled \$true
         RECOMMENDEDBY

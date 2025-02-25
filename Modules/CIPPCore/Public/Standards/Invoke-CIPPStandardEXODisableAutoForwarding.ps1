@@ -19,6 +19,8 @@ function Invoke-CIPPStandardEXODisableAutoForwarding {
         ADDEDCOMPONENT
         IMPACT
             High Impact
+        ADDEDDATE
+            2024-07-26
         POWERSHELLEQUIVALENT
             Set-HostedOutboundSpamFilterPolicy -AutoForwardingMode 'Off'
         RECOMMENDEDBY

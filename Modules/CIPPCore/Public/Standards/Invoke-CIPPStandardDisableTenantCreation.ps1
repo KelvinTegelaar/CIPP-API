@@ -17,6 +17,8 @@ function Invoke-CIPPStandardDisableTenantCreation {
         ADDEDCOMPONENT
         IMPACT
             Low Impact
+        ADDEDDATE
+            2022-11-29
         POWERSHELLEQUIVALENT
             Update-MgPolicyAuthorizationPolicy
         RECOMMENDEDBY

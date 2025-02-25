@@ -17,6 +17,8 @@ function Invoke-CIPPStandardSPSyncButtonState {
             {"type":"autoComplete","multiple":false,"creatable":false,"label":"SharePoint Sync Button state","name":"standards.SPSyncButtonState.state","options":[{"label":"Disabled","value":"true"},{"label":"Enabled","value":"false"}]}
         IMPACT
             Medium Impact
+        ADDEDDATE
+            2024-07-26
         POWERSHELLEQUIVALENT
             Set-SPOTenant -HideSyncButtonOnTeamSite \$true or \$false
         RECOMMENDEDBY

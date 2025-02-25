@@ -22,6 +22,8 @@ function Invoke-CIPPStandardBranding {
             {"type":"switch","name":"standards.Branding.isFooterShown","label":"Show footer"}
         IMPACT
             Low Impact
+        ADDEDDATE
+            2024-05-13
         POWERSHELLEQUIVALENT
             Portal only
         RECOMMENDEDBY

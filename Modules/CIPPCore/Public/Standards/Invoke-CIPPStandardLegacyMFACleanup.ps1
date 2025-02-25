@@ -16,6 +16,8 @@ function Invoke-CIPPStandardLegacyMFACleanup {
         ADDEDCOMPONENT
         IMPACT
             Medium Impact
+        ADDEDDATE
+            2021-11-16
         POWERSHELLEQUIVALENT
             Set-MsolUser -StrongAuthenticationRequirements \$null
         RECOMMENDEDBY

@@ -16,6 +16,8 @@ function Invoke-CIPPStandardOauthConsentLowSec {
             "IntegratedApps"
         IMPACT
             Medium Impact
+        ADDEDDATE
+            2022-08-16
         POWERSHELLEQUIVALENT
             Update-MgPolicyAuthorizationPolicy
         RECOMMENDEDBY

@@ -16,6 +16,8 @@ function Invoke-CIPPStandardSendFromAlias {
         ADDEDCOMPONENT
         IMPACT
             Medium Impact
+        ADDEDDATE
+            2022-05-25
         POWERSHELLEQUIVALENT
             Set-Mailbox
         RECOMMENDEDBY

@@ -17,6 +17,8 @@ function Invoke-CIPPStandardDisableSharedMailbox {
         ADDEDCOMPONENT
         IMPACT
             Medium Impact
+        ADDEDDATE
+            2021-11-16
         POWERSHELLEQUIVALENT
             Get-Mailbox & Update-MgUser
         RECOMMENDEDBY

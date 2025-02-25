@@ -16,6 +16,8 @@ function Invoke-CIPPStandardDisableQRCodePin {
         ADDEDCOMPONENT
         IMPACT
             High Impact
+        ADDEDDATE
+            2024-02-10
         POWERSHELLEQUIVALENT
             Update-MgBetaPolicyAuthenticationMethodPolicyAuthenticationMethodConfiguration
         RECOMMENDEDBY

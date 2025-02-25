@@ -17,6 +17,8 @@ function Invoke-CIPPStandardExcludedfileExt {
             {"type":"textField","name":"standards.ExcludedfileExt.ext","label":"Extensions, Comma separated"}
         IMPACT
             High Impact
+        ADDEDDATE
+            2022-06-15
         POWERSHELLEQUIVALENT
             Update-MgAdminSharePointSetting
         RECOMMENDEDBY

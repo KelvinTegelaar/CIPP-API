@@ -16,6 +16,8 @@ function Invoke-CIPPStandardDisableViva {
         ADDEDCOMPONENT
         IMPACT
             Low Impact
+        ADDEDDATE
+            2022-05-25
         POWERSHELLEQUIVALENT
             Set-UserBriefingConfig
         RECOMMENDEDBY

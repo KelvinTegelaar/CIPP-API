@@ -18,6 +18,8 @@ function Invoke-CIPPStandardDisableOutlookAddins {
         ADDEDCOMPONENT
         IMPACT
             Medium Impact
+        ADDEDDATE
+            2024-02-05
         POWERSHELLEQUIVALENT
             Get-ManagementRoleAssignment \| Remove-ManagementRoleAssignment
         RECOMMENDEDBY

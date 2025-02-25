@@ -19,6 +19,8 @@ function Invoke-CIPPStandardsharingDomainRestriction {
             {"type":"textField","name":"standards.sharingDomainRestriction.Domains","label":"Domains to allow/block, comma separated","required":false}
         IMPACT
             High Impact
+        ADDEDDATE
+            2024-06-20
         POWERSHELLEQUIVALENT
             Update-MgAdminSharePointSetting
         RECOMMENDEDBY

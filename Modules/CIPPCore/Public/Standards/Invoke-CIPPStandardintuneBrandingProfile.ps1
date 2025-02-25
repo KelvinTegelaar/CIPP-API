@@ -26,6 +26,8 @@ function Invoke-CIPPStandardintuneBrandingProfile {
             {"type":"textField","name":"standards.intuneBrandingProfile.privacyUrl","label":"Privacy statement URL","required":false}
         IMPACT
             Low Impact
+        ADDEDDATE
+            2024-06-20
         POWERSHELLEQUIVALENT
             Graph API
         RECOMMENDEDBY

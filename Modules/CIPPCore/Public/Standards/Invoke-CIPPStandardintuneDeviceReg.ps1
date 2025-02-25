@@ -17,6 +17,8 @@ function Invoke-CIPPStandardintuneDeviceReg {
             {"type":"number","name":"standards.intuneDeviceReg.max","label":"Maximum devices (Enter 2147483647 for unlimited.)","required":true}
         IMPACT
             Medium Impact
+        ADDEDDATE
+            2023-03-27
         POWERSHELLEQUIVALENT
             Update-MgBetaPolicyDeviceRegistrationPolicy
         RECOMMENDEDBY
