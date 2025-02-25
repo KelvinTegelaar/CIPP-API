@@ -33,10 +33,15 @@ function Invoke-CIPPStandardNudgeMFA {
     # Get state value using null-coalescing operator
     $state = $Settings.state.value ?? $Settings.state
 
-    $CurrentState = New-GraphGetRequest -Uri 'https://graph.microsoft.com/beta/policies/authenticationMethodsPolicy' -tenantid $Tenant
-    $StateIsCorrect = ($CurrentState.registrationEnforcement.authenticationMethodsRegistrationCampaign.state -eq $state) -and
+    try {
+        $CurrentState = New-GraphGetRequest -Uri 'https://graph.microsoft.com/beta/policies/authenticationMethodsPolicy' -tenantid $Tenant
+        $StateIsCorrect = ($CurrentState.registrationEnforcement.authenticationMethodsRegistrationCampaign.state -eq $state) -and
                         ($CurrentState.registrationEnforcement.authenticationMethodsRegistrationCampaign.snoozeDurationInDays -eq $Settings.snoozeDurationInDays) -and
                         ($CurrentState.registrationEnforcement.authenticationMethodsRegistrationCampaign.enforceRegistrationAfterAllowedSnoozes -eq $true)
+    } catch {
+        Write-LogMessage -API 'Standards' -tenant $Tenant -message 'Failed to get Authenticator App Nudge state, check your permissions and try again' -sev Error -LogData (Get-CippException -Exception $_)
+        Return
+    }
 
     if ($Settings.report -eq $true) {
         Add-CIPPBPAField -FieldName 'NudgeMFA' -FieldValue $StateIsCorrect -StoreAs bool -Tenant $Tenant
@@ -53,9 +58,7 @@ function Invoke-CIPPStandardNudgeMFA {
         Return
     }
 
-
-    If ($Settings.remediate -eq $true) {
-
+    if ($Settings.remediate -eq $true) {
         $StateName = $Settings.state.Substring(0, 1).ToUpper() + $Settings.state.Substring(1)
         if ($StateIsCorrect -eq $false) {
             try {
@@ -71,6 +74,8 @@ function Invoke-CIPPStandardNudgeMFA {
                                 state                                  = $state
                                 snoozeDurationInDays                   = $Settings.snoozeDurationInDays
                                 enforceRegistrationAfterAllowedSnoozes = $true
+                                includeTargets                         = $CurrentState.registrationEnforcement.authenticationMethodsRegistrationCampaign.includeTargets
+                                excludeTargets                         = $CurrentState.registrationEnforcement.authenticationMethodsRegistrationCampaign.excludeTargets
                             }
                         }
                     } | ConvertTo-Json -Depth 10 -Compress
@@ -92,4 +97,5 @@ function Invoke-CIPPStandardNudgeMFA {
             Write-LogMessage -API 'Standards' -tenant $Tenant -message "Authenticator App Nudge is not enabled with a snooze duration of $($CurrentState.registrationEnforcement.authenticationMethodsRegistrationCampaign.snoozeDurationInDays)" -sev Alert
         }
     }
+
 }
