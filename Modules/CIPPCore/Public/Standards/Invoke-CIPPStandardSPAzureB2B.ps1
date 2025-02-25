@@ -13,7 +13,6 @@ function Invoke-CIPPStandardSPAzureB2B {
         CAT
             SharePoint Standards
         TAG
-            "lowimpact"
             "CIS"
         ADDEDCOMPONENT
         IMPACT

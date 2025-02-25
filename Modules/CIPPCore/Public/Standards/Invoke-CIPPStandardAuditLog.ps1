@@ -13,7 +13,6 @@ function Invoke-CIPPStandardAuditLog {
         CAT
             Global Standards
         TAG
-            "lowimpact"
             "CIS"
             "mip_search_auditlog"
         ADDEDCOMPONENT
@@ -23,6 +22,7 @@ function Invoke-CIPPStandardAuditLog {
             Enable-OrganizationCustomization
         RECOMMENDEDBY
             "CIS"
+            "CIPP"
         UPDATECOMMENTBLOCK
             Run the Tools\Update-StandardsComments.ps1 script to update this comment block
     .LINK

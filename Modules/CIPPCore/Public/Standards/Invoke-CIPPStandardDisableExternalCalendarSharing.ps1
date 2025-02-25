@@ -13,7 +13,6 @@ function Invoke-CIPPStandardDisableExternalCalendarSharing {
         CAT
             Exchange Standards
         TAG
-            "lowimpact"
             "CIS"
             "exo_individualsharing"
         ADDEDCOMPONENT

@@ -13,13 +13,14 @@ function Invoke-CIPPStandardDisableGuests {
         CAT
             Entra (AAD) Standards
         TAG
-            "mediumimpact"
         ADDEDCOMPONENT
         IMPACT
             Medium Impact
         POWERSHELLEQUIVALENT
             Graph API
         RECOMMENDEDBY
+            "CIS"
+            "CIPP"
         UPDATECOMMENTBLOCK
             Run the Tools\Update-StandardsComments.ps1 script to update this comment block
     .LINK

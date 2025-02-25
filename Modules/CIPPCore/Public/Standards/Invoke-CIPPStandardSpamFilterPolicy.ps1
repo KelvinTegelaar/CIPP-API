@@ -13,18 +13,17 @@ function Invoke-CIPPStandardSpamFilterPolicy {
         CAT
             Defender Standards
         TAG
-            "mediumimpact"
         ADDEDCOMPONENT
             {"type":"number","label":"Bulk email threshold (Default 7)","name":"standards.SpamFilterPolicy.BulkThreshold","default":7}
-            {"type":"autoComplete","multiple":false,"label":"Spam Action","name":"standards.SpamFilterPolicy.SpamAction","options":[{"label":"Quarantine the message","value":"Quarantine"},{"label":"Move message to Junk Email folder","value":"MoveToJmf"}]}
-            {"type":"autoComplete","multiple":false,"label":"Spam Quarantine Tag","name":"standards.SpamFilterPolicy.SpamQuarantineTag","options":[{"label":"AdminOnlyAccessPolicy","value":"AdminOnlyAccessPolicy"},{"label":"DefaultFullAccessPolicy","value":"DefaultFullAccessPolicy"},{"label":"DefaultFullAccessWithNotificationPolicy","value":"DefaultFullAccessWithNotificationPolicy"}]}
-            {"type":"autoComplete","multiple":false,"label":"High Confidence Spam Action","name":"standards.SpamFilterPolicy.HighConfidenceSpamAction","options":[{"label":"Quarantine the message","value":"Quarantine"},{"label":"Move message to Junk Email folder","value":"MoveToJmf"}]}
-            {"type":"autoComplete","multiple":false,"label":"High Confidence Spam Quarantine Tag","name":"standards.SpamFilterPolicy.HighConfidenceSpamQuarantineTag","options":[{"label":"AdminOnlyAccessPolicy","value":"AdminOnlyAccessPolicy"},{"label":"DefaultFullAccessPolicy","value":"DefaultFullAccessPolicy"},{"label":"DefaultFullAccessWithNotificationPolicy","value":"DefaultFullAccessWithNotificationPolicy"}]}
-            {"type":"autoComplete","multiple":false,"label":"Bulk Spam Action","name":"standards.SpamFilterPolicy.BulkSpamAction","options":[{"label":"Quarantine the message","value":"Quarantine"},{"label":"Move message to Junk Email folder","value":"MoveToJmf"}]}
-            {"type":"autoComplete","multiple":false,"label":"Bulk Quarantine Tag","name":"standards.SpamFilterPolicy.BulkQuarantineTag","options":[{"label":"AdminOnlyAccessPolicy","value":"AdminOnlyAccessPolicy"},{"label":"DefaultFullAccessPolicy","value":"DefaultFullAccessPolicy"},{"label":"DefaultFullAccessWithNotificationPolicy","value":"DefaultFullAccessWithNotificationPolicy"}]}
-            {"type":"autoComplete","multiple":false,"label":"Phish Spam Action","name":"standards.SpamFilterPolicy.PhishSpamAction","options":[{"label":"Quarantine the message","value":"Quarantine"},{"label":"Move message to Junk Email folder","value":"MoveToJmf"}]}
-            {"type":"autoComplete","multiple":false,"label":"Phish Quarantine Tag","name":"standards.SpamFilterPolicy.PhishQuarantineTag","options":[{"label":"AdminOnlyAccessPolicy","value":"AdminOnlyAccessPolicy"},{"label":"DefaultFullAccessPolicy","value":"DefaultFullAccessPolicy"},{"label":"DefaultFullAccessWithNotificationPolicy","value":"DefaultFullAccessWithNotificationPolicy"}]}
-            {"type":"autoComplete","multiple":false,"label":"High Confidence Phish Quarantine Tag","name":"standards.SpamFilterPolicy.HighConfidencePhishQuarantineTag","options":[{"label":"AdminOnlyAccessPolicy","value":"AdminOnlyAccessPolicy"},{"label":"DefaultFullAccessPolicy","value":"DefaultFullAccessPolicy"},{"label":"DefaultFullAccessWithNotificationPolicy","value":"DefaultFullAccessWithNotificationPolicy"}]}
+            {"type":"autoComplete","required":true,"multiple":false,"creatable":false,"label":"Spam Action","name":"standards.SpamFilterPolicy.SpamAction","options":[{"label":"Quarantine the message","value":"Quarantine"},{"label":"Move message to Junk Email folder","value":"MoveToJmf"}]}
+            {"type":"autoComplete","required":true,"multiple":false,"creatable":false,"label":"Spam Quarantine Tag","name":"standards.SpamFilterPolicy.SpamQuarantineTag","options":[{"label":"AdminOnlyAccessPolicy","value":"AdminOnlyAccessPolicy"},{"label":"DefaultFullAccessPolicy","value":"DefaultFullAccessPolicy"},{"label":"DefaultFullAccessWithNotificationPolicy","value":"DefaultFullAccessWithNotificationPolicy"}]}
+            {"type":"autoComplete","required":true,"multiple":false,"creatable":false,"label":"High Confidence Spam Action","name":"standards.SpamFilterPolicy.HighConfidenceSpamAction","options":[{"label":"Quarantine the message","value":"Quarantine"},{"label":"Move message to Junk Email folder","value":"MoveToJmf"}]}
+            {"type":"autoComplete","required":true,"multiple":false,"creatable":false,"label":"High Confidence Spam Quarantine Tag","name":"standards.SpamFilterPolicy.HighConfidenceSpamQuarantineTag","options":[{"label":"AdminOnlyAccessPolicy","value":"AdminOnlyAccessPolicy"},{"label":"DefaultFullAccessPolicy","value":"DefaultFullAccessPolicy"},{"label":"DefaultFullAccessWithNotificationPolicy","value":"DefaultFullAccessWithNotificationPolicy"}]}
+            {"type":"autoComplete","required":true,"multiple":false,"creatable":false,"label":"Bulk Spam Action","name":"standards.SpamFilterPolicy.BulkSpamAction","options":[{"label":"Quarantine the message","value":"Quarantine"},{"label":"Move message to Junk Email folder","value":"MoveToJmf"}]}
+            {"type":"autoComplete","required":true,"multiple":false,"creatable":false,"label":"Bulk Quarantine Tag","name":"standards.SpamFilterPolicy.BulkQuarantineTag","options":[{"label":"AdminOnlyAccessPolicy","value":"AdminOnlyAccessPolicy"},{"label":"DefaultFullAccessPolicy","value":"DefaultFullAccessPolicy"},{"label":"DefaultFullAccessWithNotificationPolicy","value":"DefaultFullAccessWithNotificationPolicy"}]}
+            {"type":"autoComplete","required":true,"multiple":false,"creatable":false,"label":"Phish Spam Action","name":"standards.SpamFilterPolicy.PhishSpamAction","options":[{"label":"Quarantine the message","value":"Quarantine"},{"label":"Move message to Junk Email folder","value":"MoveToJmf"}]}
+            {"type":"autoComplete","required":true,"multiple":false,"creatable":false,"label":"Phish Quarantine Tag","name":"standards.SpamFilterPolicy.PhishQuarantineTag","options":[{"label":"AdminOnlyAccessPolicy","value":"AdminOnlyAccessPolicy"},{"label":"DefaultFullAccessPolicy","value":"DefaultFullAccessPolicy"},{"label":"DefaultFullAccessWithNotificationPolicy","value":"DefaultFullAccessWithNotificationPolicy"}]}
+            {"type":"autoComplete","required":true,"multiple":false,"creatable":false,"label":"High Confidence Phish Quarantine Tag","name":"standards.SpamFilterPolicy.HighConfidencePhishQuarantineTag","options":[{"label":"AdminOnlyAccessPolicy","value":"AdminOnlyAccessPolicy"},{"label":"DefaultFullAccessPolicy","value":"DefaultFullAccessPolicy"},{"label":"DefaultFullAccessWithNotificationPolicy","value":"DefaultFullAccessWithNotificationPolicy"}]}
         IMPACT
             Medium Impact
         POWERSHELLEQUIVALENT
@@ -45,17 +44,27 @@ function Invoke-CIPPStandardSpamFilterPolicy {
         Where-Object -Property Name -EQ $PolicyName |
         Select-Object -Property *
 
+    $SpamAction = $Settings.SpamAction.value ?? $Settings.SpamAction
+    $SpamQuarantineTag = $Settings.SpamQuarantineTag.value ?? $Settings.SpamQuarantineTag
+    $HighConfidenceSpamAction = $Settings.HighConfidenceSpamAction.value ?? $Settings.HighConfidenceSpamAction
+    $HighConfidenceSpamQuarantineTag = $Settings.HighConfidenceSpamQuarantineTag.value ?? $Settings.HighConfidenceSpamQuarantineTag
+    $BulkSpamAction = $Settings.BulkSpamAction.value ?? $Settings.BulkSpamAction
+    $BulkQuarantineTag = $Settings.BulkQuarantineTag.value ?? $Settings.BulkQuarantineTag
+    $PhishSpamAction = $Settings.PhishSpamAction.value ?? $Settings.PhishSpamAction
+    $PhishQuarantineTag = $Settings.PhishQuarantineTag.value ?? $Settings.PhishQuarantineTag
+    $HighConfidencePhishQuarantineTag = $Settings.HighConfidencePhishQuarantineTag.value ?? $Settings.HighConfidencePhishQuarantineTag
+
     $StateIsCorrect = ($CurrentState.Name -eq $PolicyName) -and
-                        ($CurrentState.SpamAction -eq $Settings.SpamAction.value) -and
-                        ($CurrentState.SpamQuarantineTag -eq $Settings.SpamQuarantineTag.value) -and
-                        ($CurrentState.HighConfidenceSpamAction -eq $Settings.HighConfidenceSpamAction.value) -and
-                        ($CurrentState.HighConfidenceSpamQuarantineTag -eq $Settings.HighConfidenceSpamQuarantineTag.value) -and
-                        ($CurrentState.BulkSpamAction -eq $Settings.BulkSpamAction.value) -and
-                        ($CurrentState.BulkQuarantineTag -eq $Settings.BulkQuarantineTag.value) -and
-                        ($CurrentState.PhishSpamAction -eq $Settings.PhishSpamAction.value) -and
-                        ($CurrentState.PhishQuarantineTag -eq $Settings.PhishQuarantineTag.value) -and
+                        ($CurrentState.SpamAction -eq $SpamAction) -and
+                        ($CurrentState.SpamQuarantineTag -eq $SpamQuarantineTag) -and
+                        ($CurrentState.HighConfidenceSpamAction -eq $HighConfidenceSpamAction) -and
+                        ($CurrentState.HighConfidenceSpamQuarantineTag -eq $HighConfidenceSpamQuarantineTag) -and
+                        ($CurrentState.BulkSpamAction -eq $BulkSpamAction) -and
+                        ($CurrentState.BulkQuarantineTag -eq $BulkQuarantineTag) -and
+                        ($CurrentState.PhishSpamAction -eq $PhishSpamAction) -and
+                        ($CurrentState.PhishQuarantineTag -eq $PhishQuarantineTag) -and
                         ($CurrentState.HighConfidencePhishAction -eq 'Quarantine') -and
-                        ($CurrentState.HighConfidencePhishQuarantineTag -eq $Settings.HighConfidencePhishQuarantineTag.value) -and
+                        ($CurrentState.HighConfidencePhishQuarantineTag -eq $HighConfidencePhishQuarantineTag) -and
                         ($CurrentState.BulkThreshold -eq $Settings.BulkThreshold) -and
                         ($CurrentState.QuarantineRetentionPeriod -eq 30) -and
                         ($CurrentState.IncreaseScoreWithNumericIps -eq 'On') -and
@@ -86,16 +95,16 @@ function Invoke-CIPPStandardSpamFilterPolicy {
             Write-LogMessage -API 'Standards' -Tenant $Tenant -message 'Spam Filter Policy already correctly configured' -sev Info
         } else {
             $cmdparams = @{
-                SpamAction                           = $Settings.SpamAction.value
-                SpamQuarantineTag                    = $Settings.SpamQuarantineTag.value
-                HighConfidenceSpamAction             = $Settings.HighConfidenceSpamAction.value
-                HighConfidenceSpamQuarantineTag      = $Settings.HighConfidenceSpamQuarantineTag.value
-                BulkSpamAction                       = $Settings.BulkSpamAction.value
-                BulkQuarantineTag                    = $Settings.BulkQuarantineTag.value
-                PhishSpamAction                      = $Settings.PhishSpamAction.value
-                PhishQuarantineTag                   = $Settings.PhishQuarantineTag.value
+                SpamAction                           = $SpamAction
+                SpamQuarantineTag                    = $SpamQuarantineTag
+                HighConfidenceSpamAction             = $HighConfidenceSpamAction
+                HighConfidenceSpamQuarantineTag      = $HighConfidenceSpamQuarantineTag
+                BulkSpamAction                       = $BulkSpamAction
+                BulkQuarantineTag                    = $BulkQuarantineTag
+                PhishSpamAction                      = $PhishSpamAction
+                PhishQuarantineTag                   = $PhishQuarantineTag
                 HighConfidencePhishAction            = 'Quarantine'
-                HighConfidencePhishQuarantineTag     = $Settings.HighConfidencePhishQuarantineTag.value
+                HighConfidencePhishQuarantineTag     = $HighConfidencePhishQuarantineTag
                 BulkThreshold                        = $Settings.BulkThreshold
                 QuarantineRetentionPeriod            = 30
                 IncreaseScoreWithNumericIps          = 'On'
@@ -110,21 +119,21 @@ function Invoke-CIPPStandardSpamFilterPolicy {
                 PhishZapEnabled                      = $true
                 SpamZapEnabled                       = $true
             }
-            Write-Host "================== DEBUG =================="
-            Write-Host $cmdparams
+            Write-Host '================== DEBUG =================='
+            Write-Host $cmdParams
 
             if ($CurrentState.Name -eq $PolicyName) {
                 try {
-                    $cmdparams.Add('Identity', $PolicyName)
-                    New-ExoRequest -TenantId $Tenant -cmdlet 'Set-HostedContentFilterPolicy' -cmdparams $cmdparams -UseSystemMailbox $true
+                    $cmdParams.Add('Identity', $PolicyName)
+                    $null = New-ExoRequest -TenantId $Tenant -cmdlet 'Set-HostedContentFilterPolicy' -cmdParams $cmdParams -UseSystemMailbox $true
                     Write-LogMessage -API 'Standards' -Tenant $Tenant -message "Updated Spam Filter policy $PolicyName." -sev Info
                 } catch {
                     Write-LogMessage -API 'Standards' -Tenant $Tenant -message "Failed to update Spam Filter policy $PolicyName." -sev Error -LogData $_
                 }
             } else {
                 try {
-                    $cmdparams.Add('Name', $PolicyName)
-                    New-ExoRequest -TenantId $Tenant -cmdlet 'New-HostedContentFilterPolicy' -cmdparams $cmdparams -UseSystemMailbox $true
+                    $cmdParams.Add('Name', $PolicyName)
+                    $null = New-ExoRequest -TenantId $Tenant -cmdlet 'New-HostedContentFilterPolicy' -cmdParams $cmdParams -UseSystemMailbox $true
                     Write-LogMessage -API 'Standards' -Tenant $Tenant -message "Created Spam Filter policy $PolicyName." -sev Info
                 } catch {
                     Write-LogMessage -API 'Standards' -Tenant $Tenant -message "Failed to create Spam Filter policy $PolicyName." -sev Error -LogData $_
@@ -133,27 +142,27 @@ function Invoke-CIPPStandardSpamFilterPolicy {
         }
 
         if ($RuleStateIsCorrect -eq $false) {
-            $cmdparams = @{
-                Priority                  = 0
-                RecipientDomainIs         = $AcceptedDomains.Name
+            $cmdParams = @{
+                Priority          = 0
+                RecipientDomainIs = $AcceptedDomains.Name
             }
 
             if ($RuleState.HostedContentFilterPolicy -ne $PolicyName) {
-                $cmdparams.Add('HostedContentFilterPolicy', $PolicyName)
+                $cmdParams.Add('HostedContentFilterPolicy', $PolicyName)
             }
 
             if ($RuleState.Name -eq $PolicyName) {
                 try {
-                    $cmdparams.Add('Identity', "$PolicyName")
-                    New-ExoRequest -TenantId $Tenant -cmdlet 'Set-HostedContentFilterRule' -cmdparams $cmdparams -UseSystemMailbox $true
+                    $cmdParams.Add('Identity', "$PolicyName")
+                    $null = New-ExoRequest -TenantId $Tenant -cmdlet 'Set-HostedContentFilterRule' -cmdParams $cmdParams -UseSystemMailbox $true
                     Write-LogMessage -API 'Standards' -Tenant $Tenant -message "Updated Spam Filter rule $PolicyName." -sev Info
                 } catch {
                     Write-LogMessage -API 'Standards' -Tenant $Tenant -message "Failed to update Spam Filter rule $PolicyName." -sev Error -LogData $_
                 }
             } else {
                 try {
-                    $cmdparams.Add('Name', "$PolicyName")
-                    New-ExoRequest -TenantId $Tenant -cmdlet 'New-HostedContentFilterRule' -cmdparams $cmdparams -UseSystemMailbox $true
+                    $cmdParams.Add('Name', "$PolicyName")
+                    $null = New-ExoRequest -TenantId $Tenant -cmdlet 'New-HostedContentFilterRule' -cmdParams $cmdParams -UseSystemMailbox $true
                     Write-LogMessage -API 'Standards' -Tenant $Tenant -message "Created Spam Filter rule $PolicyName." -sev Info
                 } catch {
                     Write-LogMessage -API 'Standards' -Tenant $Tenant -message "Failed to create Spam Filter rule $PolicyName." -sev Error -LogData $_
@@ -172,7 +181,7 @@ function Invoke-CIPPStandardSpamFilterPolicy {
     }
 
     if ($Settings.report -eq $true) {
-        Add-CIPPBPAField -FieldName 'SpamFilterPolicy' -FieldValue $StateIsCorrect -StoreAs bool -Tenant $tenant
+        Add-CIPPBPAField -FieldName 'SpamFilterPolicy' -FieldValue $StateIsCorrect -StoreAs [bool] -Tenant $Tenant
     }
 
 }

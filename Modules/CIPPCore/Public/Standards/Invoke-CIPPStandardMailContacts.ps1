@@ -13,7 +13,6 @@ function Invoke-CIPPStandardMailContacts {
         CAT
             Global Standards
         TAG
-            "lowimpact"
         ADDEDCOMPONENT
             {"type":"textField","name":"standards.MailContacts.GeneralContact","label":"General Contact","required":false}
             {"type":"textField","name":"standards.MailContacts.SecurityContact","label":"Security Contact","required":false}

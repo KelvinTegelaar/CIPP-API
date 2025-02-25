@@ -13,7 +13,6 @@ function Invoke-CIPPStandardPWdisplayAppInformationRequiredState {
         CAT
             Entra (AAD) Standards
         TAG
-            "lowimpact"
             "CIS"
         ADDEDCOMPONENT
         IMPACT
@@ -32,7 +31,9 @@ function Invoke-CIPPStandardPWdisplayAppInformationRequiredState {
     ##$Rerun -Type Standard -Tenant $Tenant -Settings $Settings 'PWdisplayAppInformationRequiredState'
 
     $CurrentState = New-GraphGetRequest -Uri 'https://graph.microsoft.com/beta/policies/authenticationMethodsPolicy/authenticationMethodConfigurations/microsoftAuthenticator' -tenantid $Tenant
-    $StateIsCorrect = ($CurrentState.state -eq 'enabled')
+    $StateIsCorrect =   ($CurrentState.state -eq 'enabled') -and
+                        ($CurrentState.featureSettings.numberMatchingRequiredState.state -eq 'enabled') -and
+                        ($CurrentState.featureSettings.displayAppInformationRequiredState.state -eq 'enabled')
 
     If ($Settings.remediate -eq $true) {
         if ($StateIsCorrect -eq $true) {

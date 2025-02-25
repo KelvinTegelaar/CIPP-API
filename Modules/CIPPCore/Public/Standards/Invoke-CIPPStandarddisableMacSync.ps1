@@ -13,12 +13,11 @@ function Invoke-CIPPStandarddisableMacSync {
         CAT
             SharePoint Standards
         TAG
-            "highimpact"
         ADDEDCOMPONENT
         IMPACT
             High Impact
         POWERSHELLEQUIVALENT
-            Update-MgAdminSharepointSetting
+            Update-MgAdminSharePointSetting
         RECOMMENDEDBY
         UPDATECOMMENTBLOCK
             Run the Tools\Update-StandardsComments.ps1 script to update this comment block

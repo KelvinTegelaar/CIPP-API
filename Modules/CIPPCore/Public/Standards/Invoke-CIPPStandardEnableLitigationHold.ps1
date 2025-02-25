@@ -13,7 +13,6 @@ function Invoke-CIPPStandardEnableLitigationHold {
         CAT
             Exchange Standards
         TAG
-            "lowimpact"
         ADDEDCOMPONENT
         IMPACT
             Low Impact

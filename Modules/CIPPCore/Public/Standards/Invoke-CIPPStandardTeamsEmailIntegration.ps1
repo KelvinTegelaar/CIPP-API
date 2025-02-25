@@ -13,7 +13,6 @@ Function Invoke-CIPPStandardTeamsEmailIntegration {
         CAT
             Teams Standards
         TAG
-            "lowimpact"
         ADDEDCOMPONENT
             {"type":"switch","name":"standards.TeamsEmailIntegration.AllowEmailIntoChannel","label":"Allow channel emails"}
         IMPACT

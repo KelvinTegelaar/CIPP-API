@@ -13,13 +13,13 @@ function Invoke-CIPPStandardAnonReportDisable {
         CAT
             Global Standards
         TAG
-            "lowimpact"
         ADDEDCOMPONENT
         IMPACT
             Low Impact
         POWERSHELLEQUIVALENT
             Update-MgBetaAdminReportSetting -BodyParameter @{displayConcealedNames = \$true}
         RECOMMENDEDBY
+            "CIPP"
         UPDATECOMMENTBLOCK
             Run the Tools\Update-StandardsComments.ps1 script to update this comment block
     .LINK
