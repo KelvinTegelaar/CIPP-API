@@ -11,26 +11,27 @@ Function Invoke-ExecCopyForSent {
     param($Request, $TriggerMetadata)
 
     $APIName = $Request.Params.CIPPEndpoint
-    Write-LogMessage -headers $Request.Headers -API $APINAME -message 'Accessed this API' -Sev 'Debug'
-
-
-    # Write to the Azure Functions log stream.
-    Write-Host 'PowerShell HTTP trigger function processed a request.'
-
+    $Headers = $Request.Headers
+    Write-LogMessage -headers $Headers -API $APINAME -message 'Accessed this API' -Sev 'Debug'
 
     # Interact with query parameters or the body of the request.
+    $TenantFilter = $Request.Query.TenantFilter ?? $Request.Body.TenantFilter
+    $UserID = $Request.Query.ID ?? $Request.Body.ID
+    $MessageCopyForSentAsEnabled = $Request.Query.MessageCopyForSentAsEnabled ?? $Request.Body.MessageCopyForSentAsEnabled
+    $MessageCopyForSentAsEnabled = [System.Convert]::ToBoolean($MessageCopyForSentAsEnabled)
+
     Try {
-        $MessageCopyForSentAsEnabled = if ($request.query.MessageCopyForSentAsEnabled -eq 'false') { 'false' } else { 'true' }
-        $MessageResult = Set-CIPPMessageCopy -userid $Request.query.id -tenantFilter $Request.query.TenantFilter -APIName $APINAME -Headers $Request.Headers -MessageCopyForSentAsEnabled $MessageCopyForSentAsEnabled
-        $Results = [pscustomobject]@{'Results' = "$MessageResult" }
+        $Result = Set-CIPPMessageCopy -userid $UserID -tenantFilter $TenantFilter -APIName $APIName -Headers $Headers -MessageCopyForSentAsEnabled $MessageCopyForSentAsEnabled
+        $StatusCode = [HttpStatusCode]::OK
     } catch {
-        $Results = [pscustomobject]@{'Results' = "set MessageCopyForSentAsEnabled to $MessageCopyForSentAsEnabled failed - $($_.Exception.Message)" }
+        $Result = "$($_.Exception.Message)"
+        $StatusCode = [HttpStatusCode]::InternalServerError
     }
 
     # Associate values to output bindings by calling 'Push-OutputBinding'.
     Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
-            StatusCode = [HttpStatusCode]::OK
-            Body       = $Results
+            StatusCode = $StatusCode
+            Body       = @{ 'Results' = $Result }
         })
 
 }

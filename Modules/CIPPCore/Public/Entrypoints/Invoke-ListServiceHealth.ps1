@@ -10,12 +10,13 @@ Function Invoke-ListServiceHealth {
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
 
-    Write-LogMessage -headers $Request.Headers -API $APINAME -message 'Accessed this API' -Sev 'Debug'
+    $APIName = $Request.Params.CIPPEndpoint
+    $Headers = $Request.Headers
+    $TenantFilter = $Request.Query.tenantFilter
+    Write-LogMessage -headers $Headers -API $APIName -message 'Accessed this API' -Sev 'Debug'
 
-    # Write to the Azure Functions log stream.
-    Write-Host 'PowerShell HTTP trigger function processed a request.'
 
-    if ($Request.query.tenantFilter -eq 'AllTenants') {
+    if ($TenantFilter -eq 'AllTenants') {
         $ResultHealthSummary = Get-Tenants | ForEach-Object -Parallel {
             Import-Module '.\Modules\AzBobbyTables'
             Import-Module '.\Modules\CIPPCore'
@@ -27,10 +28,9 @@ Function Invoke-ListServiceHealth {
             $prop
         }
     } else {
-        $TenantName = $Request.query.displayName
-        $TenantID = $Request.query.tenantFilter
-        $DefaultDomainName = $Request.query.defaultDomainName
-        $ResultHealthSummary = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/admin/serviceAnnouncement/issues?`$filter=endDateTime eq null" -tenantid $TenantID
+        $TenantName = $Request.Query.displayName
+        $DefaultDomainName = $Request.Query.defaultDomainName
+        $ResultHealthSummary = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/admin/serviceAnnouncement/issues?`$filter=endDateTime eq null" -tenantid $TenantFilter
         $ResultHealthSummary | Add-Member -NotePropertyName 'tenant' -NotePropertyValue $TenantName
         $ResultHealthSummary | Add-Member -NotePropertyName 'defaultDomainName' -NotePropertyValue $DefaultDomainName
         Write-Host "Processed Service Health for $TenantName"

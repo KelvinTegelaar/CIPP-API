@@ -11,30 +11,30 @@ Function Invoke-RemoveUser {
     param($Request, $TriggerMetadata)
 
     $APIName = $Request.Params.CIPPEndpoint
-    $User = $Request.Headers
-    Write-LogMessage -Headers $User -API $APINAME -message 'Accessed this API' -Sev 'Debug'
+    $Headers = $Request.Headers
+    Write-LogMessage -Headers $Headers -API $APIName -message 'Accessed this API' -Sev 'Debug'
 
     # Interact with query parameters or the body of the request.
-    $TenantFilter = $Request.Query.TenantFilter
-    $userid = $Request.Query.ID
-    if (!$userid) { exit }
+    $TenantFilter = $Request.Query.tenantFilter ?? $Request.Body.tenantFilter
+    $UserID = $Request.Query.ID ?? $Request.Body.ID
+
+    if (!$UserID) { exit }
     try {
-        $null = New-GraphPostRequest -uri "https://graph.microsoft.com/beta/users/$($userid)" -type DELETE -tenant $TenantFilter
-        Write-LogMessage -Headers $User -API $APINAME -message "Deleted $userid" -Sev 'Info' -tenant $TenantFilter
-        $body = [pscustomobject]@{'Results' = 'Successfully deleted the user.' }
+        $null = New-GraphPostRequest -uri "https://graph.microsoft.com/beta/users/$($UserID)" -type DELETE -tenant $TenantFilter
+        $Result = "Successfully deleted $UserID."
+        Write-LogMessage -Headers $Headers -API $APIName -message $Result -Sev 'Info' -tenant $TenantFilter
+        $StatusCode = [HttpStatusCode]::OK
 
     } catch {
         $ErrorMessage = Get-CippException -Exception $_
-        Write-LogMessage -Headers $User -API $APINAME -message "Could not delete user $userid. $($ErrorMessage.NormalizedError)" -Sev 'Error' -tenant $TenantFilter -LogData $ErrorMessage
-        $body = [pscustomobject]@{'Results' = "Could not delete user: $($ErrorMessage.NormalizedError)" }
-
+        $Result = "Could not delete user $($UserID). $($ErrorMessage.NormalizedError)"
+        Write-LogMessage -Headers $Headers -API $APIName -message $Result -Sev 'Error' -tenant $TenantFilter -LogData $ErrorMessage
+        $StatusCode = [HttpStatusCode]::InternalServerError
     }
 
     # Associate values to output bindings by calling 'Push-OutputBinding'.
     Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
-            StatusCode = [HttpStatusCode]::OK
-            Body       = $body
+            StatusCode = $StatusCode
+            Body       = @{ 'Results' = $Result }
         })
-
-
 }

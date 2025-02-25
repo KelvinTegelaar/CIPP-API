@@ -6,6 +6,7 @@ function Set-CIPPIntunePolicy {
         $DisplayName,
         $RawJSON,
         $AssignTo,
+        $excludeGroup,
         $Headers,
         $APINAME,
         $tenantFilter
@@ -135,7 +136,7 @@ function Set-CIPPIntunePolicy {
             Write-Host "Assigning policy to $($AssignTo) with ID $($CreateRequest.id) and type $TemplateTypeURL for tenant $tenantFilter"
             Write-Host "ID is $($CreateRequest.id)"
 
-            Set-CIPPAssignedPolicy -GroupName $AssignTo -PolicyId $CreateRequest.id -Type $TemplateTypeURL -TenantFilter $tenantFilter
+            Set-CIPPAssignedPolicy -GroupName $AssignTo -PolicyId $CreateRequest.id -Type $TemplateTypeURL -TenantFilter $tenantFilter -excludeGroup $excludeGroup
         }
         return "Successfully $($PostType) policy for $($tenantFilter) with display name $($Displayname)"
     } catch {

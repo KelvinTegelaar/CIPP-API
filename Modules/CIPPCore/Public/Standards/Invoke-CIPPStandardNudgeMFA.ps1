@@ -55,8 +55,9 @@ function Invoke-CIPPStandardNudgeMFA {
 
 
     If ($Settings.remediate -eq $true) {
-        $StateName = $state.Substring(0, 1).ToUpper() + $state.Substring(1)
-        if ($StatsIsCorrect -eq $false) {
+
+        $StateName = $Settings.state.Substring(0, 1).ToUpper() + $Settings.state.Substring(1)
+        if ($StateIsCorrect -eq $false) {
             try {
                 $GraphRequest = @{
                     tenantid    = $Tenant

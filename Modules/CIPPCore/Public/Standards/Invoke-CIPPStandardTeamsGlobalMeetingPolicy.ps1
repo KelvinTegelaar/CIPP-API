@@ -45,6 +45,7 @@ Function Invoke-CIPPStandardTeamsGlobalMeetingPolicy {
                         ($CurrentState.DesignatedPresenterRoleMode -eq $DesignatedPresenterRoleMode) -and
                         ($CurrentState.AllowExternalParticipantGiveRequestControl -eq $false)
 
+
     if ($Settings.remediate -eq $true) {
         if ($StateIsCorrect -eq $true) {
             Write-LogMessage -API 'Standards' -tenant $Tenant -message 'Teams Global Policy already set.' -sev Info
@@ -57,7 +58,7 @@ Function Invoke-CIPPStandardTeamsGlobalMeetingPolicy {
                 AllowPSTNUsersToBypassLobby                = $false
                 MeetingChatEnabledType                     = $MeetingChatEnabledType
                 DesignatedPresenterRoleMode                = $DesignatedPresenterRoleMode
-                AllowExternalParticipantGiveRequestControl = $false
+                AllowExternalParticipantGiveRequestControl = $Settings.AllowExternalParticipantGiveRequestControl
             }
 
             try {

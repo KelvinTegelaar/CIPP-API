@@ -14,15 +14,12 @@ Function Invoke-ListSharedMailboxAccountEnabled {
     Write-LogMessage -headers $Request.Headers -API $APINAME -message 'Accessed this API' -Sev 'Debug'
 
 
-    # Write to the Azure Functions log stream.
-    Write-Host 'PowerShell HTTP trigger function processed a request.'
-
-    $TenantFilter = $Request.Query.TenantFilter
+    $TenantFilter = $Request.Query.tenantFilter
 
     # Get Shared Mailbox Stuff
     try {
         $SharedMailboxList = (New-GraphGetRequest -uri "https://outlook.office365.com/adminapi/beta/$($TenantFilter)/Mailbox?`$filter=RecipientTypeDetails eq 'SharedMailbox'" -Tenantid $TenantFilter -scope ExchangeOnline)
-        $AllUsersAccountState = New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/users?select=id,userPrincipalName,accountEnabled,displayName,givenName,surname,onPremisesSyncEnabled' -tenantid $Tenantfilter
+        $AllUsersAccountState = New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/users?select=id,userPrincipalName,accountEnabled,displayName,givenName,surname,onPremisesSyncEnabled' -tenantid $TenantFilter
         $EnabledUsersWithSharedMailbox = foreach ($SharedMailbox in $SharedMailboxList) {
             # Match the User
             $User = $AllUsersAccountState | Where-Object { $_.userPrincipalName -eq $SharedMailbox.userPrincipalName } | Select-Object -Property id, userPrincipalName, accountEnabled, displayName, givenName, surname, onPremisesSyncEnabled -First 1
@@ -38,9 +35,8 @@ Function Invoke-ListSharedMailboxAccountEnabled {
 
             }
         }
-    }
-    catch {
-        Write-LogMessage -API 'Tenant' -tenant $tenantfilter -message "Shared Mailbox Enabled Accounts on $($tenantfilter). Error: $($_.exception.message)" -sev 'Error'
+    } catch {
+        Write-LogMessage -API 'Tenant' -tenant $TenantFilter -message "Shared Mailbox Enabled Accounts on $($TenantFilter). Error: $($_.exception.message)" -sev 'Error'
     }
 
     $GraphRequest = $EnabledUsersWithSharedMailbox

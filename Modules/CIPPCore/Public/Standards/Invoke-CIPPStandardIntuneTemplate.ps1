@@ -46,7 +46,7 @@ function Invoke-CIPPStandardIntuneTemplate {
                 $description = $request.body.Description
                 $RawJSON = $Request.body.RawJSON
                 $Template.customGroup ? ($Template.AssignTo = $Template.customGroup) : $null
-                Set-CIPPIntunePolicy -TemplateType $Request.body.Type -Description $description -DisplayName $displayname -RawJSON $RawJSON -AssignTo $Template.AssignTo -tenantFilter $Tenant
+                Set-CIPPIntunePolicy -TemplateType $Request.body.Type -Description $description -DisplayName $displayname -RawJSON $RawJSON -AssignTo $Template.AssignTo -excludeGroup $Template.excludeGroup -tenantFilter $Tenant
 
             } catch {
                 $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message

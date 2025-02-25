@@ -117,9 +117,6 @@ function Invoke-ListGraphRequest {
     }
 
     $Metadata = $GraphRequestParams
-    if ($Request.Headers.'x-ms-coldstart' -eq 1) {
-        $Metadata.ColdStart = $true
-    }
 
     try {
         $Results = Get-GraphRequestList @GraphRequestParams
@@ -142,6 +139,11 @@ function Invoke-ListGraphRequest {
                 $Results = @()
             }
         }
+
+        if ($Request.Headers.'x-ms-coldstart' -eq 1) {
+            $Metadata.ColdStart = $true
+        }
+
         $GraphRequestData = [PSCustomObject]@{
             Results  = @($Results)
             Metadata = $Metadata

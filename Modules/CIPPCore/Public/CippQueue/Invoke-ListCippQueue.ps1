@@ -10,9 +10,6 @@ function Invoke-ListCippQueue {
     if ($Request) {
         $APIName = $Request.Params.CIPPEndpoint
         Write-LogMessage -headers $Request.Headers -API $APINAME -message 'Accessed this API' -Sev 'Debug'
-
-        # Write to the Azure Functions log stream.
-        Write-Host 'PowerShell HTTP trigger function processed a request.'
     }
 
     $CippQueue = Get-CippTable -TableName 'CippQueue'
