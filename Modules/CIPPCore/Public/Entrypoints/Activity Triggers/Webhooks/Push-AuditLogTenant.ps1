@@ -27,13 +27,13 @@ function Push-AuditLogTenant {
             $CIPPURL = $LegacyUrl
         } else {
             if (!$CippConfig) {
-                    $CippConfig = @{
-                        PartitionKey = 'InstanceProperties'
-                        RowKey       = 'CIPPURL'
-                        Value        = [string]([System.Uri]$Request.Headers.'x-ms-original-url').Host
-                    }
-                    Add-AzDataTableEntity @ConfigTable -Entity $CippConfig -Force
-                    $CIPPURL = 'https://{0}' -f $CippConfig.Value
+                $CippConfig = @{
+                    PartitionKey = 'InstanceProperties'
+                    RowKey       = 'CIPPURL'
+                    Value        = [string]([System.Uri]$Request.Headers.'x-ms-original-url').Host
+                }
+                Add-AzDataTableEntity @CippConfigTable -Entity $CippConfig -Force
+                $CIPPURL = 'https://{0}' -f $CippConfig.Value
             } else { $CIPPURL = 'https://{0}' -f $CippConfig.Value }
         }
 
