@@ -75,6 +75,10 @@ Function Invoke-ExecAccessChecks {
                     } catch {
                         $LastRun = $null
                     }
+
+                    if (!$Results) {
+                        $Results = @()
+                    }
                 } catch {
                     Write-Host $_.Exception.Message
                     $Results = @()
