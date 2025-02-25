@@ -1,6 +1,10 @@
 function Invoke-ListExoRequest {
     param($Request, $TriggerMetadata)
 
+    $APIName = $Request.Params.CIPPEndpoint
+    $Headers = $Request.Headers
+    Write-LogMessage -headers $Headers -API $APIName -message 'Accessed this API' -Sev 'Debug'
+
     try {
         $AllowedVerbs = @(
             'Get'
@@ -12,6 +16,7 @@ function Invoke-ListExoRequest {
         $Verb = ($Cmdlet -split '-')[0]
 
         $AllowedTenants = Test-CIPPAccess -Request $Request -TenantList
+
         $TenantFilter = $Request.Body.TenantFilter
         $Tenants = Get-Tenants -IncludeErrors
         $Tenant = $Tenants | Where-Object { $_.defaultDomainName -eq $TenantFilter -or $_.customerId -eq $TenantFilter }
