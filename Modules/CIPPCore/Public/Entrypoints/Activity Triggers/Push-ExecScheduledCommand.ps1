@@ -26,14 +26,15 @@ function Push-ExecScheduledCommand {
     }
 
     try {
-        $ParamsToRemove = [System.Collections.Generic.List[string]]::new()
-        foreach ($Parameter in $commandParameters.GetEnumerator()) {
-            if (!$Function.Parameters.ContainsKey($Parameter.Key)) {
-                $ParamsToRemove.Add($Parameter.Key)
+        $PossibleParams = $Function.Parameters.Keys
+        $keysToRemove = [System.Collections.Generic.List[string]]@()
+        foreach ($key in $commandParameters.Keys) {
+            if (-not ($PossibleParams -contains $key)) {
+                $keysToRemove.Add($key)
             }
         }
-        foreach ($Param in $ParamsToRemove) {
-            $commandParameters.Remove($Param)
+        foreach ($key in $keysToRemove) {
+            $commandParameters.Remove($key)
         }
     } catch {
         Write-Host "Failed to remove parameters: $($_.Exception.Message)"
