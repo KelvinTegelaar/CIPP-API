@@ -17,6 +17,8 @@ function Invoke-CIPPStandardCloudMessageRecall {
             {"type":"autoComplete","multiple":false,"label":"Select value","name":"standards.CloudMessageRecall.state","options":[{"label":"Enabled","value":"true"},{"label":"Disabled","value":"false"}]}
         IMPACT
             Low Impact
+        ADDEDDATE
+            2024-05-31
         POWERSHELLEQUIVALENT
             Set-OrganizationConfig -MessageRecallEnabled
         RECOMMENDEDBY

@@ -18,6 +18,8 @@ function Invoke-CIPPStandardAuditLog {
         ADDEDCOMPONENT
         IMPACT
             Low Impact
+        ADDEDDATE
+            2021-11-16
         POWERSHELLEQUIVALENT
             Enable-OrganizationCustomization
         RECOMMENDEDBY

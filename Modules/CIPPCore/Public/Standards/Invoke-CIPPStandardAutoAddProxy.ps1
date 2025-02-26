@@ -17,6 +17,8 @@ function Invoke-CIPPStandardAutoAddProxy {
         ADDEDCOMPONENT
         IMPACT
             Medium Impact
+        ADDEDDATE
+            2025-02-07
         POWERSHELLEQUIVALENT
             Set-Mailbox -EmailAddresses @{add=\$EmailAddress}
         RECOMMENDEDBY

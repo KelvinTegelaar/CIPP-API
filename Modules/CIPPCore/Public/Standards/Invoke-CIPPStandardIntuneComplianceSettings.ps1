@@ -18,6 +18,8 @@ function Invoke-CIPPStandardIntuneComplianceSettings {
             {"type":"number","name":"standards.IntuneComplianceSettings.deviceComplianceCheckinThresholdDays","label":"Compliance status validity period (days)"}
         IMPACT
             Low Impact
+        ADDEDDATE
+            2024-11-12
         POWERSHELLEQUIVALENT
             
         RECOMMENDEDBY

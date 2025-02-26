@@ -16,6 +16,8 @@ function Invoke-CIPPStandardDisableTNEF {
         ADDEDCOMPONENT
         IMPACT
             Low Impact
+        ADDEDDATE
+            2024-04-26
         POWERSHELLEQUIVALENT
             Set-RemoteDomain -Identity 'Default' -TNEFEnabled \$false
         RECOMMENDEDBY

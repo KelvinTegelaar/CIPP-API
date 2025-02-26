@@ -18,6 +18,8 @@ function Invoke-CIPPStandardSafeSendersDisable {
             
         IMPACT
             Medium Impact
+        ADDEDDATE
+            2023-10-26
         POWERSHELLEQUIVALENT
             Set-MailboxJunkEmailConfiguration
         RECOMMENDEDBY

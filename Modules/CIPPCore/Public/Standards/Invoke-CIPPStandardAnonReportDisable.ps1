@@ -16,6 +16,8 @@ function Invoke-CIPPStandardAnonReportDisable {
         ADDEDCOMPONENT
         IMPACT
             Low Impact
+        ADDEDDATE
+            2021-11-16
         POWERSHELLEQUIVALENT
             Update-MgBetaAdminReportSetting -BodyParameter @{displayConcealedNames = \$true}
         RECOMMENDEDBY

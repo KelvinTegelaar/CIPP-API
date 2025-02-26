@@ -16,6 +16,8 @@ function Invoke-CIPPStandardallowOAuthTokens {
         ADDEDCOMPONENT
         IMPACT
             Low Impact
+        ADDEDDATE
+            2022-12-18
         POWERSHELLEQUIVALENT
             Update-MgBetaPolicyAuthenticationMethodPolicyAuthenticationMethodConfiguration
         RECOMMENDEDBY

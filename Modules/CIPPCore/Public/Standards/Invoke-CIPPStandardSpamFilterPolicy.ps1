@@ -14,7 +14,7 @@ function Invoke-CIPPStandardSpamFilterPolicy {
             Defender Standards
         TAG
         ADDEDCOMPONENT
-            {"type":"number","label":"Bulk email threshold (Default 7)","name":"standards.SpamFilterPolicy.BulkThreshold","default":7}
+            {"type":"number","label":"Bulk email threshold (Default 7)","name":"standards.SpamFilterPolicy.BulkThreshold","defaultValue":7}
             {"type":"autoComplete","required":true,"multiple":false,"creatable":false,"label":"Spam Action","name":"standards.SpamFilterPolicy.SpamAction","options":[{"label":"Quarantine the message","value":"Quarantine"},{"label":"Move message to Junk Email folder","value":"MoveToJmf"}]}
             {"type":"autoComplete","required":true,"multiple":false,"creatable":false,"label":"Spam Quarantine Tag","name":"standards.SpamFilterPolicy.SpamQuarantineTag","options":[{"label":"AdminOnlyAccessPolicy","value":"AdminOnlyAccessPolicy"},{"label":"DefaultFullAccessPolicy","value":"DefaultFullAccessPolicy"},{"label":"DefaultFullAccessWithNotificationPolicy","value":"DefaultFullAccessWithNotificationPolicy"}]}
             {"type":"autoComplete","required":true,"multiple":false,"creatable":false,"label":"High Confidence Spam Action","name":"standards.SpamFilterPolicy.HighConfidenceSpamAction","options":[{"label":"Quarantine the message","value":"Quarantine"},{"label":"Move message to Junk Email folder","value":"MoveToJmf"}]}
@@ -26,6 +26,8 @@ function Invoke-CIPPStandardSpamFilterPolicy {
             {"type":"autoComplete","required":true,"multiple":false,"creatable":false,"label":"High Confidence Phish Quarantine Tag","name":"standards.SpamFilterPolicy.HighConfidencePhishQuarantineTag","options":[{"label":"AdminOnlyAccessPolicy","value":"AdminOnlyAccessPolicy"},{"label":"DefaultFullAccessPolicy","value":"DefaultFullAccessPolicy"},{"label":"DefaultFullAccessWithNotificationPolicy","value":"DefaultFullAccessWithNotificationPolicy"}]}
         IMPACT
             Medium Impact
+        ADDEDDATE
+            2024-07-15
         POWERSHELLEQUIVALENT
             New-HostedContentFilterPolicy or Set-HostedContentFilterPolicy
         RECOMMENDEDBY

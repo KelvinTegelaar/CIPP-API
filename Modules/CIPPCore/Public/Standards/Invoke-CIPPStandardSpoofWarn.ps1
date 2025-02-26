@@ -18,6 +18,8 @@ function Invoke-CIPPStandardSpoofWarn {
             {"type":"autoComplete","multiple":false,"label":"Select value","name":"standards.SpoofWarn.state","options":[{"label":"Enabled","value":"enabled"},{"label":"Disabled","value":"disabled"}]}
         IMPACT
             Low Impact
+        ADDEDDATE
+            2021-11-16
         POWERSHELLEQUIVALENT
             Set-ExternalInOutlook –Enabled \$true or \$false
         RECOMMENDEDBY

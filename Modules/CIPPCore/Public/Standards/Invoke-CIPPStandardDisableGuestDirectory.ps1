@@ -16,6 +16,8 @@ function Invoke-CIPPStandardDisableGuestDirectory {
         ADDEDCOMPONENT
         IMPACT
             Low Impact
+        ADDEDDATE
+            2022-05-04
         POWERSHELLEQUIVALENT
             Set-AzureADMSAuthorizationPolicy -GuestUserRoleId '2af84b1e-32c8-42b7-82bc-daa82404023b'
         RECOMMENDEDBY

@@ -17,6 +17,8 @@ function Invoke-CIPPStandardGlobalQuarantineNotifications {
             {"type":"autoComplete","multiple":false,"label":"Select value","name":"standards.GlobalQuarantineNotifications.NotificationInterval","options":[{"label":"4 hours","value":"04:00:00"},{"label":"1 day/Daily","value":"1.00:00:00"},{"label":"7 days/Weekly","value":"7.00:00:00"}]}
         IMPACT
             Low Impact
+        ADDEDDATE
+            2024-05-03
         POWERSHELLEQUIVALENT
             Set-QuarantinePolicy -EndUserSpamNotificationFrequency
         RECOMMENDEDBY

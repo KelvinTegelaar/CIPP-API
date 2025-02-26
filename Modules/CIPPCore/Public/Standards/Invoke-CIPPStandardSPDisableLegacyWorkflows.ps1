@@ -16,6 +16,8 @@ function Invoke-CIPPStandardSPDisableLegacyWorkflows {
         ADDEDCOMPONENT
         IMPACT
             Low Impact
+        ADDEDDATE
+            2024-07-15
         POWERSHELLEQUIVALENT
             Set-SPOTenant -DisableWorkflow2010 \$true -DisableWorkflow2013 \$true -DisableBackToClassic \$true
         RECOMMENDEDBY

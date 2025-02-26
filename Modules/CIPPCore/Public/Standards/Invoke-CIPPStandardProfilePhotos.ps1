@@ -17,6 +17,8 @@ function Invoke-CIPPStandardProfilePhotos {
             {"type":"autoComplete","multiple":false,"creatable":false,"label":"Select value","name":"standards.ProfilePhotos.state","options":[{"label":"Enabled","value":"enabled"},{"label":"Disabled","value":"disabled"}]}
         IMPACT
             Low Impact
+        ADDEDDATE
+            2025-01-19
         POWERSHELLEQUIVALENT
             Set-OrganizationConfig -ProfilePhotoOptions EnablePhotos and Update-MgBetaAdminPeople
         RECOMMENDEDBY

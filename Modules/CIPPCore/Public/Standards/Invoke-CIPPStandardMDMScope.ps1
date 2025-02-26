@@ -18,6 +18,8 @@ function Invoke-CIPPStandardMDMScope {
             {"type":"textField","name":"standards.MDMScope.customGroup","label":"Custom Group Name","required":false}
         IMPACT
             Low Impact
+        ADDEDDATE
+            2025-02-18
         POWERSHELLEQUIVALENT
             Graph API
         RECOMMENDEDBY

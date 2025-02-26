@@ -15,9 +15,11 @@ function Invoke-CIPPStandardNudgeMFA {
         TAG
         ADDEDCOMPONENT
             {"type":"autoComplete","multiple":false,"creatable":false,"label":"Select value","name":"standards.NudgeMFA.state","options":[{"label":"Enabled","value":"enabled"},{"label":"Disabled","value":"disabled"}]}
-            {"type":"number","name":"standards.NudgeMFA.snoozeDurationInDays","label":"Number of days to allow users to skip registering Authenticator (0-14, default is 1)","default":1}
+            {"type":"number","name":"standards.NudgeMFA.snoozeDurationInDays","label":"Number of days to allow users to skip registering Authenticator (0-14, default is 1)","defaultValue":1}
         IMPACT
             Low Impact
+        ADDEDDATE
+            2022-12-08
         POWERSHELLEQUIVALENT
             Update-MgPolicyAuthenticationMethodPolicy
         RECOMMENDEDBY

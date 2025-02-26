@@ -19,6 +19,8 @@ Function Invoke-CIPPStandardTeamsExternalAccessPolicy {
             {"type":"switch","name":"standards.TeamsExternalAccessPolicy.EnableTeamsConsumerAccess","label":"Allow communication with unmanaged Teams accounts"}
         IMPACT
             Medium Impact
+        ADDEDDATE
+            2024-07-30
         POWERSHELLEQUIVALENT
             Set-CsExternalAccessPolicy
         RECOMMENDEDBY

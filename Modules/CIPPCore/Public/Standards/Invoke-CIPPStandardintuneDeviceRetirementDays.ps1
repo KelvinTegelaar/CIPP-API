@@ -17,6 +17,8 @@ function Invoke-CIPPStandardintuneDeviceRetirementDays {
             {"type":"number","name":"standards.intuneDeviceRetirementDays.days","label":"Maximum days (0 equals disabled)"}
         IMPACT
             Low Impact
+        ADDEDDATE
+            2023-05-19
         POWERSHELLEQUIVALENT
             Graph API
         RECOMMENDEDBY

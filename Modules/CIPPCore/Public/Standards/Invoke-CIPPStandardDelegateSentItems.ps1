@@ -17,6 +17,8 @@ function Invoke-CIPPStandardDelegateSentItems {
             {"type":"switch","label":"Include user mailboxes","name":"standards.DelegateSentItems.IncludeUserMailboxes"}
         IMPACT
             Medium Impact
+        ADDEDDATE
+            2021-11-16
         POWERSHELLEQUIVALENT
             Set-Mailbox
         RECOMMENDEDBY

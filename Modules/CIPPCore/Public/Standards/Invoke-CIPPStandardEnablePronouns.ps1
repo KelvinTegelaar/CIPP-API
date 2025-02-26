@@ -16,6 +16,8 @@ function Invoke-CIPPStandardEnablePronouns {
         ADDEDCOMPONENT
         IMPACT
             Low Impact
+        ADDEDDATE
+            2024-06-05
         POWERSHELLEQUIVALENT
             Update-MgBetaAdminPeoplePronoun -IsEnabledInOrganization:\$true
         RECOMMENDEDBY

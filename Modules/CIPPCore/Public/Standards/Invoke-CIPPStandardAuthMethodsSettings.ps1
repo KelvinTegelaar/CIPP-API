@@ -18,6 +18,8 @@ function Invoke-CIPPStandardAuthMethodsSettings {
             {"type":"autoComplete","multiple":false,"creatable":false,"required":false,"name":"standards.AuthMethodsSettings.SystemCredential","label":"System Credential Preferences","options":[{"label":"Microsoft managed","value":"default"},{"label":"Enabled","value":"enabled"},{"label":"Disabled","value":"disabled"}]}
         IMPACT
             Low Impact
+        ADDEDDATE
+            2025-02-10
         POWERSHELLEQUIVALENT
             Update-MgBetaPolicyAuthenticationMethodPolicy
         RECOMMENDEDBY

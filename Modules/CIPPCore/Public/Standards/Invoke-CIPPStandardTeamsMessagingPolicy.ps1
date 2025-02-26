@@ -14,17 +14,19 @@ Function Invoke-CIPPStandardTeamsMessagingPolicy {
             Teams Standards
         TAG
         ADDEDCOMPONENT
-            {"type":"switch","name":"standards.TeamsMessagingPolicy.AllowOwnerDeleteMessage","label":"Allow Owner to Delete Messages","default":false}
-            {"type":"switch","name":"standards.TeamsMessagingPolicy.AllowUserDeleteMessage","label":"Allow User to Delete Messages","default":true}
-            {"type":"switch","name":"standards.TeamsMessagingPolicy.AllowUserEditMessage","label":"Allow User to Edit Messages","default":true}
-            {"type":"switch","name":"standards.TeamsMessagingPolicy.AllowUserDeleteChat","label":"Allow User to Delete Chats","default":true}
+            {"type":"switch","name":"standards.TeamsMessagingPolicy.AllowOwnerDeleteMessage","label":"Allow Owner to Delete Messages","defaultValue":false}
+            {"type":"switch","name":"standards.TeamsMessagingPolicy.AllowUserDeleteMessage","label":"Allow User to Delete Messages","defaultValue":true}
+            {"type":"switch","name":"standards.TeamsMessagingPolicy.AllowUserEditMessage","label":"Allow User to Edit Messages","defaultValue":true}
+            {"type":"switch","name":"standards.TeamsMessagingPolicy.AllowUserDeleteChat","label":"Allow User to Delete Chats","defaultValue":true}
             {"type":"autoComplete","required":true,"multiple":false,"creatable":false,"name":"standards.TeamsMessagingPolicy.ReadReceiptsEnabledType","label":"Read Receipts Enabled Type","options":[{"label":"User controlled","value":"UserPreference"},{"label":"Turned on for everyone","value":"Everyone"},{"label":"Turned off for everyone","value":"None"}]}
-            {"type":"switch","name":"standards.TeamsMessagingPolicy.CreateCustomEmojis","label":"Allow Creating Custom Emojis","default":true}
-            {"type":"switch","name":"standards.TeamsMessagingPolicy.DeleteCustomEmojis","label":"Allow Deleting Custom Emojis","default":false}
-            {"type":"switch","name":"standards.TeamsMessagingPolicy.AllowSecurityEndUserReporting","label":"Allow reporting message as security concern","default":true}
-            {"type":"switch","name":"standards.TeamsMessagingPolicy.AllowCommunicationComplianceEndUserReporting","label":"Allow reporting message as inappropriate content","default":true}
+            {"type":"switch","name":"standards.TeamsMessagingPolicy.CreateCustomEmojis","label":"Allow Creating Custom Emojis","defaultValue":true}
+            {"type":"switch","name":"standards.TeamsMessagingPolicy.DeleteCustomEmojis","label":"Allow Deleting Custom Emojis","defaultValue":false}
+            {"type":"switch","name":"standards.TeamsMessagingPolicy.AllowSecurityEndUserReporting","label":"Allow reporting message as security concern","defaultValue":true}
+            {"type":"switch","name":"standards.TeamsMessagingPolicy.AllowCommunicationComplianceEndUserReporting","label":"Allow reporting message as inappropriate content","defaultValue":true}
         IMPACT
             Medium Impact
+        ADDEDDATE
+            2025-01-10
         POWERSHELLEQUIVALENT
             Set-CsTeamsMessagingPolicy
         RECOMMENDEDBY

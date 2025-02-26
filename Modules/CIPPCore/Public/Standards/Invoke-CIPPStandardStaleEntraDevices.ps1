@@ -20,6 +20,8 @@ function Invoke-CIPPStandardStaleEntraDevices {
             
         IMPACT
             High Impact
+        ADDEDDATE
+            2025-01-19
         POWERSHELLEQUIVALENT
             Remove-MgDevice, Update-MgDevice or Graph API
         RECOMMENDEDBY

@@ -16,6 +16,8 @@ function Invoke-CIPPStandardMessageExpiration {
         ADDEDCOMPONENT
         IMPACT
             Low Impact
+        ADDEDDATE
+            2024-02-23
         POWERSHELLEQUIVALENT
             Set-TransportConfig -MessageExpirationTimeout 12.00:00:00
         RECOMMENDEDBY

@@ -18,6 +18,8 @@ function Invoke-CIPPStandardDisableAdditionalStorageProviders {
         ADDEDCOMPONENT
         IMPACT
             Low Impact
+        ADDEDDATE
+            2024-01-17
         POWERSHELLEQUIVALENT
             Get-OwaMailboxPolicy \| Set-OwaMailboxPolicy -AdditionalStorageProvidersEnabled \$False
         RECOMMENDEDBY

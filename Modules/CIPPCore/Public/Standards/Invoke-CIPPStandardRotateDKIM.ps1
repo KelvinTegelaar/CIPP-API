@@ -17,6 +17,8 @@ function Invoke-CIPPStandardRotateDKIM {
         ADDEDCOMPONENT
         IMPACT
             Low Impact
+        ADDEDDATE
+            2023-03-14
         POWERSHELLEQUIVALENT
             Rotate-DkimSigningConfig
         RECOMMENDEDBY

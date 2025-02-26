@@ -18,6 +18,8 @@ function Invoke-CIPPStandardEnableMailboxAuditing {
         ADDEDCOMPONENT
         IMPACT
             Low Impact
+        ADDEDDATE
+            2024-01-08
         POWERSHELLEQUIVALENT
             Set-OrganizationConfig -AuditDisabled \$false
         RECOMMENDEDBY

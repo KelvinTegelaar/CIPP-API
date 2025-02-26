@@ -16,6 +16,8 @@ function Invoke-CIPPStandardPhishProtection {
         ADDEDCOMPONENT
         IMPACT
             Low Impact
+        ADDEDDATE
+            2024-01-22
         DISABLEDFEATURES
             
         POWERSHELLEQUIVALENT

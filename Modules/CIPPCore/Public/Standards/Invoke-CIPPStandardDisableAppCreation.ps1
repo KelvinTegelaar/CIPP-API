@@ -17,6 +17,8 @@ function Invoke-CIPPStandardDisableAppCreation {
         ADDEDCOMPONENT
         IMPACT
             Low Impact
+        ADDEDDATE
+            2024-03-20
         POWERSHELLEQUIVALENT
             Update-MgPolicyAuthorizationPolicy
         RECOMMENDEDBY

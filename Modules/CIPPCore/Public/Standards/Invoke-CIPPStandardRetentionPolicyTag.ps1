@@ -17,6 +17,8 @@ function Invoke-CIPPStandardRetentionPolicyTag {
             {"type":"number","name":"standards.RetentionPolicyTag.AgeLimitForRetention","label":"Retention Days","required":true}
         IMPACT
             High Impact
+        ADDEDDATE
+            2025-02-02
         POWERSHELLEQUIVALENT
             Set-RetentionPolicyTag
         RECOMMENDEDBY

@@ -18,6 +18,8 @@ function Invoke-CIPPStandardUserSubmissions {
             {"type":"textField","name":"standards.UserSubmissions.email","required":false,"label":"Destination email address"}
         IMPACT
             Medium Impact
+        ADDEDDATE
+            2024-06-28
         POWERSHELLEQUIVALENT
             New-ReportSubmissionPolicy or Set-ReportSubmissionPolicy and New-ReportSubmissionRule or Set-ReportSubmissionRule
         RECOMMENDEDBY

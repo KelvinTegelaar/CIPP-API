@@ -16,6 +16,8 @@ function Invoke-CIPPStandardDisableM365GroupUsers {
         ADDEDCOMPONENT
         IMPACT
             Low Impact
+        ADDEDDATE
+            2022-07-17
         POWERSHELLEQUIVALENT
             Update-MgBetaDirectorySetting
         RECOMMENDEDBY

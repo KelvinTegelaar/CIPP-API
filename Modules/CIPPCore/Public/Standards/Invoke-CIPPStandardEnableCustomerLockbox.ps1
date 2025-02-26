@@ -18,6 +18,8 @@ function Invoke-CIPPStandardEnableCustomerLockbox {
         ADDEDCOMPONENT
         IMPACT
             Low Impact
+        ADDEDDATE
+            2024-01-08
         POWERSHELLEQUIVALENT
             Set-OrganizationConfig -CustomerLockBoxEnabled \$true
         RECOMMENDEDBY

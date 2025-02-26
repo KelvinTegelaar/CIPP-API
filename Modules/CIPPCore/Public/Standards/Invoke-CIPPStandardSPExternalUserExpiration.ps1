@@ -18,6 +18,8 @@ function Invoke-CIPPStandardSPExternalUserExpiration {
             {"type":"number","name":"standards.SPExternalUserExpiration.Days","label":"Days until expiration (Default 60)"}
         IMPACT
             Medium Impact
+        ADDEDDATE
+            2024-07-09
         POWERSHELLEQUIVALENT
             Set-SPOTenant -ExternalUserExpireInDays 30 -ExternalUserExpirationRequired \$True
         RECOMMENDEDBY

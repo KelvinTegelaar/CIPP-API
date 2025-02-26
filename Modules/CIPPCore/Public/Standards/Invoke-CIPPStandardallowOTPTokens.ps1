@@ -16,6 +16,8 @@ function Invoke-CIPPStandardallowOTPTokens {
         ADDEDCOMPONENT
         IMPACT
             Low Impact
+        ADDEDDATE
+            2023-12-06
         POWERSHELLEQUIVALENT
             Update-MgBetaPolicyAuthenticationMethodPolicyAuthenticationMethodConfiguration
         RECOMMENDEDBY
