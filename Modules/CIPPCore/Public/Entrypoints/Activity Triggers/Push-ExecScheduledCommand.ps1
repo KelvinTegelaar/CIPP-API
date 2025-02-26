@@ -40,7 +40,7 @@ function Push-ExecScheduledCommand {
         Write-Host "Failed to remove parameters: $($_.Exception.Message)"
     }
 
-    $tenant = $Item.Parameters.TenantFilter
+    $tenant = $Item.Parameters.TenantFilter ?? $Item.Tenant
     Write-Host "Started Task: $($Item.Command) for tenant: $tenant"
     try {
 
