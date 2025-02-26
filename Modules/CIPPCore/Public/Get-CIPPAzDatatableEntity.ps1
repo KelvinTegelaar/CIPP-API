@@ -23,10 +23,10 @@ function Get-CIPPAzDataTableEntity {
             }
             if (-not $mergedResults[$partitionKey].ContainsKey($entityId)) {
                 $mergedResults[$partitionKey][$entityId] = @{
-                    Parts = New-Object 'System.Collections.ArrayList'
+                    Parts = [System.Collections.Generic.List[object]]::new()
                 }
             }
-            $mergedResults[$partitionKey][$entityId]['Parts'].Add($entity) > $null
+            $mergedResults[$partitionKey][$entityId]['Parts'].Add($entity)
         } else {
             $partitionKey = $entity.PartitionKey
             if (-not $mergedResults.ContainsKey($partitionKey)) {
@@ -34,16 +34,16 @@ function Get-CIPPAzDataTableEntity {
             }
             $mergedResults[$partitionKey][$entity.RowKey] = @{
                 Entity = $entity
-                Parts  = New-Object 'System.Collections.ArrayList'
+                Parts  = [System.Collections.Generic.List[object]]::new()
             }
         }
     }
 
-    $finalResults = @()
+    $finalResults = [System.Collections.Generic.List[object]]::new()
     foreach ($partitionKey in $mergedResults.Keys) {
         foreach ($entityId in $mergedResults[$partitionKey].Keys) {
             $entityData = $mergedResults[$partitionKey][$entityId]
-            if ($entityData.Parts.Count -gt 0) {
+            if (($entityData.Parts | Measure-Object).Count -gt 0) {
                 $fullEntity = [PSCustomObject]@{}
                 $parts = $entityData.Parts | Sort-Object PartIndex
                 foreach ($part in $parts) {
@@ -60,9 +60,9 @@ function Get-CIPPAzDataTableEntity {
                 $fullEntity | Add-Member -MemberType NoteProperty -Name 'PartitionKey' -Value $parts[0].PartitionKey -Force
                 $fullEntity | Add-Member -MemberType NoteProperty -Name 'RowKey' -Value $entityId -Force
                 $fullEntity | Add-Member -MemberType NoteProperty -Name 'Timestamp' -Value $parts[0].Timestamp -Force
-                $finalResults = $finalResults + @($fullEntity)
+                $finalResults.Add($fullEntity)
             } else {
-                $finalResults = $finalResults + @($entityData.Entity)
+                $FinalResults.Add($entityData.Entity)
             }
         }
     }

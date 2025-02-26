@@ -137,14 +137,18 @@ function Add-CIPPAzDataTableEntity {
 
                         foreach ($row in $rows) {
                             Write-Information "current entity is $($row.RowKey) with $($row.PartitionKey). Our size is $([System.Text.Encoding]::UTF8.GetByteCount($($row | ConvertTo-Json -Compress)))"
-                            Add-AzDataTableEntity -Context $Context -Force:$Force -CreateTableIfNotExists:$CreateTableIfNotExists -Entity $row
+                            $NewRow = [PSCustomObject]$row
+                            Add-AzDataTableEntity -Context $Context -Force:$Force -CreateTableIfNotExists:$CreateTableIfNotExists -Entity $NewRow
                         }
                     } else {
-                        Add-AzDataTableEntity -Context $Context -Force:$Force -CreateTableIfNotExists:$CreateTableIfNotExists -Entity $SingleEnt
+                        $NewEnt = [PSCustomObject]$SingleEnt
+                        Add-AzDataTableEntity -Context $Context -Force:$Force -CreateTableIfNotExists:$CreateTableIfNotExists -Entity $NewEnt
                     }
 
                 } catch {
                     $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
+                    Write-Warning ("AzBobbyTables Error")
+                    Write-Information ($SingleEnt | ConvertTo-Json)
                     throw "Error processing entity: $ErrorMessage Linenumber: $($_.InvocationInfo.ScriptLineNumber)"
                 }
             } else {
