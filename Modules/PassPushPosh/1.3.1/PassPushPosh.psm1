@@ -3,8 +3,6 @@
 class PasswordPush {
     [string]$Note
     [string]$Payload
-    [string] hidden $__UrlToken
-    [string] hidden $__LinkBase
     [bool]$RetrievalStep
     [bool]$IsExpired
     [bool]$IsDeleted
@@ -16,11 +14,12 @@ class PasswordPush {
     [DateTime]$DateCreated
     [DateTime]$DateUpdated
     [DateTime]$DateExpired
-    # Added by constructors:
-    #[string]$URLToken
-    #[string]$Link
-    #[string]$LinkDirect
-    #[string]$LinkRetrievalStep
+    [int]$AccountId
+    [string]$UrlToken
+    [string]$Link
+    [string]$LinkDirect
+    [string]$LinkRetrievalStep
+    #[PSCustomObject[]]$Files # Added if present
 
     PasswordPush() {
         # Blank constructor
@@ -28,16 +27,7 @@ class PasswordPush {
 
     # Constructor to allow casting or explicit import from a PSObject Representing the result of an API call
     PasswordPush([PSCustomObject]$APIresponseObject) {
-        throw NotImplementedException
-    }
-
-    # Allow casting or explicit import from the raw Content of an API call
-    [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSAvoidGlobalVars', '', Scope = 'Function', Justification = 'Global variables are used for module session helpers.')]
-    PasswordPush([string]$JsonResponse) {
-        Write-Debug 'New PasswordPush object instantiated from JsonResponse string'
-        Initialize-PassPushPosh # Initialize the module if not yet done.
-
-        $_j = $JsonResponse | ConvertFrom-Json
+        $_j = $APIresponseObject
         $this.Note = $_j.note
         $this.Payload = $_j.payload
         $this.IsExpired = $_j.expired
@@ -51,35 +41,18 @@ class PasswordPush {
         $this.DateUpdated = $_j.updated_at
         $this.DateExpired = if ($_j.expired_on) { $_j.expired_on } else { [DateTime]0 }
         $this.RetrievalStep = $_j.retrieval_step
+        $this.AccountId = $_j.account_id
+        $this.UrlToken = $_j.url_token
+        $this.LinkDirect = $_j.json_url ? $_j.json_url.Replace('.json','') : "$Script:PPPBaseUrl/p/$($this.UrlToken)"
+        $this.LinkRetrievalStep = $this.LinkDirect, '/r' -join ''
+        $this.Link = $_j.html_url ?? $this.RetrievalStep -eq $true ? $this.LinkRetrievalStep : $this.LinkDirect
 
-
-        $this | Add-Member -Name 'UrlToken' -MemberType ScriptProperty -Value {
-            return $this.__UrlToken
-        } -SecondValue {
-            $this.__UrlToken = $_
-            $this.__LinkBase = $_j.html_url ?? "$Script:PPPBaseUrl/p/$($this.__UrlToken)"
-        }
-        $this.__UrlToken = $_j.url_token
-        $this.__LinkBase = $_j.html_url ?? "$Script:PPPBaseUrl/p/$($this.__UrlToken)"
-        $this | Add-Member -Name 'LinkDirect' -MemberType ScriptProperty -Value { return $this.__LinkBase } -SecondValue {
-            Write-Warning 'LinkDirect is a read-only calculated member.'
-            Write-Debug 'Link* members are calculated based on the Global BaseUrl and Push Retrieval Step values'
-        }
-        $this | Add-Member -Name 'LinkRetrievalStep' -MemberType ScriptProperty -Value { return "$($this.__LinkBase)/r" } -SecondValue {
-            Write-Warning 'LinkRetrievalStep is a read-only calculated member.'
-            Write-Debug 'Link* members are calculated based on the Global BaseUrl and Push Retrieval Step values'
-        }
-        $this | Add-Member -Name 'Link' -MemberType ScriptProperty -Value {
-            $_Link = if ($this.RetrievalStep) { $this.LinkRetrievalStep } else { $this.LinkDirect }
-            Write-Debug "Presented Link: $_link"
-            $_Link
-        } -SecondValue {
-            Write-Warning 'Link is a read-only calculated member.'
-            Write-Debug 'Link* members are calculated based on the Global BaseUrl and Push Retrieval Step values'
+        if ($_j.Files) {
+            $this | Add-Member -MemberType NoteProperty -Name Files -Value $_j.files
         }
     }
 }
-#EndRegion '.\Classes\PasswordPush.ps1' 80
+#EndRegion '.\Classes\PasswordPush.ps1' 53
 #Region '.\Classes\TypeAccelerators.ps1' -1
 
 # https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.core/about/about_classes?view=powershell-7.4#exporting-classes-with-type-accelerators
@@ -189,13 +162,12 @@ function ConvertTo-PasswordPush {
     param(
         [parameter(Mandatory, ValueFromPipeline)]
         [ValidateNotNullOrEmpty()]
-        $JsonResponse
+        [PSCustomObject]$JsonResponse
     )
     process {
         try {
-            $jsonObject = if ($JsonResponse -is [string]) { $JsonResponse | ConvertFrom-Json } else { $JsonResponse }
-            foreach ($o in $jsonObject) {
-                [PasswordPush]($o | ConvertTo-Json) # TODO fix this mess
+            foreach ($o in $JsonResponse) {
+                [PasswordPush]::New($o)
             }
         }
         catch {
@@ -205,7 +177,7 @@ function ConvertTo-PasswordPush {
         }
     }
 }
-#EndRegion '.\Private\ConvertTo-PasswordPush.ps1' 84
+#EndRegion '.\Private\ConvertTo-PasswordPush.ps1' 83
 #Region '.\Private\Format-PasswordPusherSecret.ps1' -1
 
 function Format-PasswordPusherSecret {
@@ -238,12 +210,17 @@ function Format-PasswordPusherSecret {
 #Region '.\Private\Invoke-PasswordPusherAPI.ps1' -1
 
 function Invoke-PasswordPusherAPI {
-    [CmdletBinding()]
+    [CmdletBinding(DefaultParameterSetName = 'Body')]
     [OutputType([PSCustomObject])]
     param(
         [string]$Endpoint,
         [Microsoft.PowerShell.Commands.WebRequestMethod]$Method = [Microsoft.PowerShell.Commands.WebRequestMethod]::Get,
+
+        [Parameter(ParameterSetName = 'Body')]
         [object]$Body,
+
+        [Parameter(ParameterSetName = 'Form')]
+        [object]$Form,
 
         [Switch]$ReturnErrors
     )
@@ -253,18 +230,22 @@ function Invoke-PasswordPusherAPI {
 
         $iwrSplat = @{
             'Method'      = $Method
-            'ContentType' = 'application/json'
-            'Body'        = ($body | ConvertTo-Json)
             'Uri'         = $_uri
             'UserAgent'   = $Script:PPPUserAgent
         }
+        if ($PSCmdlet.ParameterSetName -eq 'Form') {
+            $iwrSplat.Form = $Form
+        } else {
+            $iwrSplat.Body = ($body | ConvertTo-Json)
+            $iwrSplat.ContentType = 'application/json'
+        }
         if ($Script:PPPHeaders.'X-User-Token') {
             $iwrSplat['Headers'] = $Script:PPPHeaders
-            Write-Debug "Authenticated with API token $(Format-PasswordPusherSecret -Secret $Script:PPPHeaders.'X-User-Token' -ShowSample)"
+            Write-Debug "Authenticated with X-User-Token $(Format-PasswordPusherSecret -Secret $Script:PPPHeaders.'X-User-Token' -ShowSample)"
         }
         if ($Script:PPPHeaders.'Authorization') {
             $iwrSplat['Headers'] = $Script:PPPHeaders
-            Write-Debug "Authenticated with API token $(Format-PasswordPusherSecret -Secret $Script:PPPHeaders.'Authorization' -ShowSample)"
+            Write-Debug "Authenticated with Bearer token $(Format-PasswordPusherSecret -Secret $Script:PPPHeaders.'Authorization' -ShowSample)"
         }
         $callInfo = "$Method $_uri"
         Write-Verbose "Sending HTTP request: $callInfo"
@@ -283,7 +264,23 @@ function Invoke-PasswordPusherAPI {
         }
     }
 }
-#EndRegion '.\Private\Invoke-PasswordPusherAPI.ps1' 47
+#EndRegion '.\Private\Invoke-PasswordPusherAPI.ps1' 56
+#Region '.\Private\New-PasswordPusherUserAgent.ps1' -1
+
+function New-PasswordPusherUserAgent {
+    [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseShouldProcessForStateChangingFunctions', '', Scope = 'Function', Justification = 'Function does not change state.')]
+    [CmdletBinding()]
+    [OutputType([string])]
+    param()
+    $osVersion = [System.Environment]::OSVersion
+    $userAtDomain = '{0}@{1}' -f [System.Environment]::UserName, [System.Environment]::UserDomainName
+    $uAD64 = [Convert]::ToBase64String([System.Text.Encoding]::Unicode.GetBytes($userAtDomain))
+    Write-Debug "$userAtDomain transformed to $uAD64. First 20 characters $($uAD64.Substring(0,20))"
+
+    # Version tag is replaced by the semantic version number at build time. See PassPushPosh/issues/11 for context
+    "PassPushPosh/1.3.1 $osVersion/$($uAD64.Substring(0,20))"
+}
+#EndRegion '.\Private\New-PasswordPusherUserAgent.ps1' 14
 #Region '.\Public\Get-Dashboard.ps1' -1
 
 <#
@@ -354,6 +351,14 @@ function Get-Dashboard {
     .PARAMETER Passhrase
     An additional phrase required to view the secret. Required if the Push was created with a Passphrase.
 
+    .PARAMETER OutFolder
+    For File pushes, a folder path to save files. If the folder path does not exist
+    it will be created. Files are saved with their original names.
+
+    .PARAMETER IncludePushObject
+    When saving files from a file push, also save the push data itself. This will
+    create a JSON object in the same path as the files with the
+
     .INPUTS
     [string]
 
@@ -370,18 +375,12 @@ function Get-Dashboard {
     https://github.com/adamburley/PassPushPosh/blob/main/Docs/Get-Push.md
 
     .LINK
-    https://pwpush.com/api/1.0/passwords.en.html
-
-    .LINK
-    https://github.com/pglombardo/PasswordPusher/blob/c2909b2d5f1315f9b66939c9fbc7fd47b0cfeb03/app/controllers/passwords_controller.rb#L89
-
-    .LINK
     New-Push
 
     #>
 function Get-Push {
     [Diagnostics.CodeAnalysis.SuppressMessageAttribute("PSAvoidUsingPlainTextForPassword", "Passphrase", Justification = "DE0001: SecureString shouldn't be used")]
-    [CmdletBinding()]
+    [CmdletBinding(DefaultParameterSetName = 'Text')]
     [OutputType([PasswordPush])]
     param(
         [Parameter(Mandatory, ValueFromPipeline)]
@@ -390,20 +389,50 @@ function Get-Push {
         $URLToken,
 
         [Parameter()]
-        [String]$Passphrase
+        [String]$Passphrase,
+
+        [Parameter(ParameterSetName = 'Out File')]
+        [Alias('OutFile')]
+        [System.IO.DirectoryInfo]$OutFolder,
+
+        [Parameter(ParameterSetName = 'Out File')]
+        [switch]$IncludePushObject
     )
     begin { Initialize-PassPushPosh -Verbose:$VerbosePreference -Debug:$DebugPreference }
     process {
         $endpoint = $Passphrase ? "p/$URLToken.json?passphrase=$Passphrase" : "p/$URLToken.json"
         $result = Invoke-PasswordPusherAPI -Endpoint $endpoint -ReturnErrors
-        switch ($result.error){
-            'not-found' { Write-Error -Message "Push not found. Check the token you provided. Tokens are case-sensitive." }
-            'This push has a passphrase that was incorrect or not provided.' { if ($Passphrase) { Write-Error -Message "Incorrect passphrase provided." } else { Write-Error -Message "Passphrase required. Specify with the -Passphrase parameter." } }
-            default { $result | ConvertTo-PasswordPush }
+        if ($result.error){
+            if ($result.error -eq 'not-found') { Write-Error -Message "Push not found. Check the token you provided. Tokens are case-sensitive." }
+            if ($result.error -eq 'This push has a passphrase that was incorrect or not provided.') { if ($Passphrase) { Write-Error -Message "Incorrect passphrase provided." } else { Write-Error -Message "Passphrase required. Specify with the -Passphrase parameter." } }
+        }
+        $pushObject = $result | ConvertTo-PasswordPush
+        if ($OutFolder) {
+            if ($pushObject.Files.Count -gt 0) {
+                if (-not (Test-Path -Path $OutFolder -PathType Container)) {
+                    New-Item -Path $OutFolder -ItemType Directory | Out-Null
+                    Write-Verbose "$OutFolder does not exist and was created."
+                } else {
+                    Write-Verbose "Saving files to $OutFolder"
+                }
+                foreach ($f in $pushObject.Files){
+                    Write-Verbose "Saving $($f.filename) [$($f.content_type)]"
+                    Invoke-WebRequest -Uri $f.url -OutFile (Join-Path -Path $OutFolder -ChildPath $f.filename)
+                }
+                if ($IncludePushObject) {
+                    $pushObject | ConvertTo-Json -Depth 10 | Out-File (Join-Path $OutFolder -ChildPath "Push_$($pushObject.UrlToken).json")
+                }
+            } else {
+                Write-Warning "No files were included in this push. Nothing was saved."
+            }
+            $pushObject
+        }
+        else {
+            $pushObject
         }
     }
 }
-#EndRegion '.\Public\Get-Push.ps1' 65
+#EndRegion '.\Public\Get-Push.ps1' 97
 #Region '.\Public\Get-PushAccount.ps1' -1
 
 <#
@@ -585,17 +614,27 @@ function Get-SecretLink {
 
     This function is called automatically if needed, defaulting to the public pwpush.com service.
 
-    .PARAMETER AccountType
-    For paid users, specify the account type as Premium or Pro. Not required for free accounts and self-hosted.
+    .PARAMETER Bearer
+    API key for authenticated calls. Supported on hosted instance and OSS v1.51.0 and newer.
+
+    .PARAMETER ApiKey
+    API key for authenticated calls. Supports older OSS installs.
+    Also supports Bearer autodetection. This will be removed in a future version.
 
     .PARAMETER EmailAddress
     Email address for authenticated calls.
+    NOTE: This is only required for legacy X-User-Token authentication. If using hosted pwpush.com
+    services or OSS v1.51.0 or newer use -Bearer
 
-    .PARAMETER ApiKey
-    API key for authenticated calls.
+    .PARAMETER UseLegacyAuth
+    Use legacy X-User-Token. Supportsversions of Password Pusher OSS older than v1.51.0.
+    If this is not set, but -ApiKey and -EmailAddress are specified the module will attempt to
+    auto-detect the correct connection.
 
     .PARAMETER BaseUrl
-    Base URL for API calls. Allows use of module with private instances of Password Pusher
+    Base URL for API calls. Allows use of custom domains with hosted Password Pusher as well as specifying
+    a private instance.
+
     Default: https://pwpush.com
 
     .PARAMETER UserAgent
@@ -608,23 +647,23 @@ function Get-SecretLink {
 
     .PARAMETER Force
     Force setting new information. If module is already initialized you can use this to
-    Re-initialize with default settings. Implied if either ApiKey or BaseUrl is provided.
+    re-initialize the module. If not specified and there is an existing session the request is ignored.
 
     .EXAMPLE
-    # Initialize with default settings
+    # Default settings
     PS > Initialize-PassPushPosh
 
     .EXAMPLE
-    # Initialize with authentication
-    PS > Initialize-PassPushPosh -EmailAddress 'youremail@example.com' -ApiKey '239jf0jsdflskdjf' -Verbose
-
-    VERBOSE: Initializing PassPushPosh. ApiKey: [x-kdjf], BaseUrl: https://pwpush.com
+    # Authentication
+    PS > Initialize-PassPushPosh -Bearer 'myreallylongapikey'
 
     .EXAMPLE
-    # Initialize with another server with authentication
-    PS > Initialize-PassPushPosh -BaseUrl https://myprivatepwpushinstance.com -EmailAddress 'youremail@example.com' -ApiKey '239jf0jsdflskdjf' -Verbose
+    # Initialize with another domain - may be a private instance or a hosted instance with custom domain
+    PS > Initialize-PassPushPosh -BaseUrl https://myprivatepwpushinstance.example.com -Bearer 'myreallylongapikey'
 
-    VERBOSE: Initializing PassPushPosh. ApiKey: [x-kdjf], BaseUrl: https://myprivatepwpushinstance.com
+    .EXAMPLE
+    # Legacy authentication support
+    PS > Initialize-PassPushPosh -ApiKey 'myreallylongapikey' -EmailAddress 'myregisteredemail@example.com' -UseLegacyAuthentication -BaseUrl https://myprivatepwpushinstance.example.com
 
     .EXAMPLE
     # Set a custom User Agent
@@ -634,29 +673,30 @@ function Get-SecretLink {
     https://github.com/adamburley/PassPushPosh/blob/main/Docs/Initialize-PassPushPosh.md
 
     .NOTES
-    -WhatIf setting for Set-Variable -Script is disabled, otherwise -WhatIf
-    calls for other functions would return incorrect data in the case this
-    function has not yet run.
+    The use of X-USER-TOKEN for authentication is depreciated and will be removed in a future release of the API.
+    This module will support it via legacy mode, initially by attempting to auto-detect if Bearer is supported.
+    New code using this module should use -Bearer (most cases) or -UseLegacyAuthentication (self-hosted older versions).
+    In a future release the module will default to Bearer unless the -UseLegacyAuthentication switch is set.
+
     #>
 function Initialize-PassPushPosh {
     [CmdletBinding(DefaultParameterSetName = 'Anonymous')]
     param (
-        [Parameter(ParameterSetName = 'Pro')]
-        [ValidateSet('Premium', 'Pro')]
-        [string]$AccountType = 'Pro',
+        [Parameter(ParameterSetName = 'Authenticated')]
+        [string]$Bearer,
 
-        [Parameter(Mandatory, Position = 0, ParameterSetName = 'Authenticated')]
-        [ValidatePattern('.+\@.+\..+', ErrorMessage = 'Please specify a valid email address')]
-        [string]$EmailAddress,
-
-        [Parameter(Mandatory, ParameterSetName = 'Pro')]
-        [Parameter(Mandatory, Position = 1, ParameterSetName = 'Authenticated')]
+        [Parameter(Mandatory, Position = 0, ParameterSetName = 'Legacy Auth')]
         [ValidateLength(5, 256)]
         [string]$ApiKey,
 
-        [Parameter(Position = 0, ParameterSetName = 'Anonymous')]
-        [Parameter(Position = 2, ParameterSetName = 'Authenticated')]
-        [Parameter(ParameterSetName = 'Pro')]
+        [Parameter(Mandatory, Position = 1, ParameterSetName = 'Legacy Auth')]
+        [ValidatePattern('.+\@.+\..+', ErrorMessage = 'Please specify a valid email address')]
+        [string]$EmailAddress,
+
+        [Parameter(ParameterSetName = 'Legacy Auth')]
+        [switch]$UseLegacyAuthentication,
+
+        [Parameter()]
         [ValidatePattern('^https?:\/\/[a-zA-Z0-9-_]+.[a-zA-Z0-9]+')]
         [string]$BaseUrl,
 
@@ -665,60 +705,65 @@ function Initialize-PassPushPosh {
         [string]
         $UserAgent,
 
-        [Parameter()][switch]$Force
+        [Parameter()]
+        [switch]$Force
     )
-    if ($Script:PPPBaseURL -and $true -inotin $Force, [bool]$ApiKey, [bool]$BaseUrl, [bool]$UserAgent) { Write-Debug -Message 'PassPushPosh is already initialized.' }
+    if ($Script:PPPBaseURL -and -not $Force) { Write-Debug -Message 'PassPushPosh is already initialized.' }
     else {
-        $defaultBaseUrl = 'https://pwpush.com'
-        $apiKeyOutput = $ApiKey ? (Format-PasswordPusherSecret -Secret $ApiKey -ShowSample) : 'None'
+        $_baseUrl = $PSBoundParameters.ContainsKey('BaseUrl') ? $BaseUrl : 'https://pwpush.com'
+        $_apiKey = $PSBoundParameters.ContainsKey('Bearer') ? $Bearer : $ApiKey
 
-        if (-not $Script:PPPBaseURL) {
-            # Not initialized
-            if (-not $BaseUrl) { $BaseUrl = $defaultBaseUrl }
-            Write-Verbose "Initializing PassPushPosh. ApiKey: [$apiKeyOutput], BaseUrl: $BaseUrl"
-        }
-        elseif ($Force -or $ApiKey -or $BaseURL) {
-            if (-not $BaseUrl) { $BaseUrl = $defaultBaseUrl }
-            $oldApiKeyOutput = if ($Script:PPPApiKey) { Format-PasswordPusherSecret -Secret $Script:PPPApiKey -ShowSample } else { 'None' }
-            Write-Verbose "Re-initializing PassPushPosh. Old ApiKey: [$oldApiKeyOutput] New ApiKey: [$apiKeyOutput], Old BaseUrl: $Script:PPPBaseUrl New BaseUrl: $BaseUrl"
-        }
-        if ($PSCmdlet.ParameterSetName -eq 'Authenticated') {
+        $apiKeySample = $_apiKey ? (Format-PasswordPusherSecret -Secret $_apiKey -ShowSample) : 'None'
 
-            Set-Variable -Scope Script -Name PPPHeaders -WhatIf:$false -Value @{
-                'X-User-Email' = $EmailAddress
-                'X-User-Token' = $ApiKey
+        $_AuthType = $PSCmdlet.ParameterSetName -iin 'Anonymous', 'Authenticated' ? $PSCmdlet.ParameterSetName : $UseLegacyAuthentication ? 'Legacy' : 'Automatic'
+
+        switch ($_AuthType) {
+            'Anonymous' {
+                # module is reinitialized from an authenticated to an anonymous session
+                Remove-Variable -Scope Script -Name PPPHeaders -WhatIf:$false -ErrorAction SilentlyContinue
+            }
+            'Authenticated' {
+                Write-Debug 'Bearer auth specified.'
+                Set-Variable -Scope Script -Name PPPHeaders -WhatIf:$false -Value @{
+                    'Authorization' = "Bearer $_apiKey"
+                }
+            }
+            'Legacy' {
+                Write-Debug 'Legacy auth specified.'
+                Set-Variable -Scope Script -Name PPPHeaders -WhatIf:$false -Value @{
+                    'X-User-Email' = $EmailAddress
+                    'X-User-Token' = $_apiKey
+                }
+            }
+            'Automatic' {
+                Write-Debug 'Legacy auth status not specified Checking for /up'
+                if ((Invoke-WebRequest "$_baseUrl/up" -SkipHttpErrorCheck).StatusCode -eq 200) {
+                    Write-Debug "Current version detected via /up"
+                    Set-Variable -Scope Script -Name PPPHeaders -WhatIf:$false -Value @{
+                        'Authorization' = "Bearer $_apiKey"
+                    }
+                } else {
+                    Write-Warning 'Instance does not appear to support modern Bearer authentication.'
+                    Write-Warning 'The module will fall back to using legacy authentication.'
+                    Write-Warning 'If you are connecting to a self-hosted instance, verify it is up to date.'
+                    Write-Warning 'If you know you need legacy (X-User-Token) authentication include  Invoke-PassPushPosh -UseLegacyAuth $true'
+                    Write-Warning 'To skip the step check and this warning.'
+                    Set-Variable -Scope Script -Name PPPHeaders -WhatIf:$false -Force -Value @{
+                        'X-User-Email' = $EmailAddress
+                        'X-User-Token' = $_apiKey
+                    }
+                }
             }
         }
-        elseif ($PSCmdlet.ParameterSetName -eq 'Pro') {
-            Write-Debug "Initializing for paid tier $($AccountType)"
-            Set-Variable -Scope Script -Name PPPHeaders -WhatIf:$false -Value @{
-                'Authorization' = "Bearer $ApiKey"
-            }
-        }
-        elseif ($Script:PPPHeaders) {
-            # Remove if present - covers case where module is reinitialized from an authenticated to an anonymous session
-            Remove-Variable -Scope Script -Name PPPHeaders -WhatIf:$false
-        }
 
-        if (-not $UserAgent) {
-            $osVersion = [System.Environment]::OSVersion
-            $userAtDomain = '{0}@{1}' -f [System.Environment]::UserName, [System.Environment]::UserDomainName
-            $uAD64 = [Convert]::ToBase64String([System.Text.Encoding]::Unicode.GetBytes($userAtDomain))
-            Write-Debug "$userAtDomain transformed to $uAD64. First 20 characters $($uAD64.Substring(0,20))"
-            # Version tag is replaced by the semantic version number at build time. See PassPushPosh/issues/11 for context
-            $UserAgent = "PassPushPosh/1.2.1 $osVersion/$($uAD64.Substring(0,20))"
-            # $UserAgent = "PassPushPosh/$((Get-Module -Name PassPushPosh).Version.ToString()) $osVersion/$($uAD64.Substring(0,20))"
-            Write-Verbose "Generated user agent: $UserAgent"
-        }
-        else {
-            Write-Verbose "Using specified user agent: $UserAgent"
-        }
+        Set-Variable -WhatIf:$false -Scope Script -Name PPPUserAgent -Value ($PSBoundParameters.ContainsKey('UserAgent') ? $UserAgent : (New-PasswordPusherUserAgent))
+        Set-Variable -WhatIf:$false -Scope Script -Name PPPBaseURL -Value $_baseUrl.TrimEnd('/')
 
-        Set-Variable -WhatIf:$false -Scope Script -Name PPPBaseURL -Value $BaseUrl.TrimEnd('/')
-        Set-Variable -WhatIf:$false -Scope Script -Name PPPUserAgent -Value $UserAgent
+        Write-Verbose -Message "PassPushPosh Initialized with these settings: Account type: [$_AuthType] API Key: $apiKeySample Base URL: [$_baseUrl]"
+        Write-Verbose -Message "User Agent: $Script:PPPUserAgent"
     }
 }
-#EndRegion '.\Public\Initialize-PassPushPosh.ps1' 146
+#EndRegion '.\Public\Initialize-PassPushPosh.ps1' 162
 #Region '.\Public\New-Push.ps1' -1
 
 <#
@@ -733,13 +778,31 @@ function Initialize-PassPushPosh {
     are always provided at LinkRetrievalStep and LinkDirect properties.
 
     .PARAMETER Payload
-    The URL password or secret text to share.
+    Generic text value to share. Use with -Kind to create arbitrary push types.
+    Payload is required for all types except File. For QR and URL pushes you
+    may directly specify those types by using the -QR and -URL parameters.
+
+    .PARAMETER QR
+    Create a QR-type secret with this text value. May be a link or other text.
+
+    .PARAMETER URL
+    Create a URL-type secret redirecting to this link. A fully-qualified URL is
+    required
+
+    .PARAMETER File
+    Attach files to a push. Up to 10 files in all referenced folders and paths
+    may be specified by passing a file or folder path or array of paths or a
+    DirectoryInfo or FileInfo object.
+
+    File pushes can be files only, files with text, or files with a QR code.
+    To add text, simply use -Payload. To specify a QR code, use -QR or use
+    -Payload 'your value' -Type QR
 
     .PARAMETER Passphrase
     Require recipients to enter this passphrase to view the created push.
 
     .PARAMETER Note
-    The note for this push.  Visible only to the push creator. Requires authentication.
+    The note for this push. Visible only to the push creator. Requires authentication.
 
     .PARAMETER ExpireAfterDays
     Expire secret link and delete after this many days.
@@ -759,6 +822,15 @@ function Initialize-PassPushPosh {
 
     .PARAMETER AccountId
     Account ID to associate with this push. Requires authentication.
+    If you have multiple accounts and you do not specify an account ID
+    Password Pusher will use the first account available, UNLESS you have a custom domain.
+    In that case it will default to the custom domain account IF you're connecting
+    to the custom domain for the API session. If you're connecting to pwpush.com,
+    it will use the unbranded / non-domain account.
+
+    .PARAMETER Kind
+    The kind of Push to send. Defaults to text. If using -QR, -URL, or -File parameters
+    the correct kind is automatically selected and this parameter is ignored.
 
     .INPUTS
     [string]
@@ -784,14 +856,30 @@ function Initialize-PassPushPosh {
     # "Burn after reading" style Push
     PS > New-Push -Payload "Still secret text!" -ExpireAfterViews 1 -RetrievalStep
 
+    .EXAMPLE
+    Create a URL push
+    PS > New-Push -URL 'https://example.com/coolplacetoforwardmyrecipientto'
+
+    .EXAMPLE
+    Create a QR push
+    PS > New-Push -QR 'thing i want to show up when someone reads the QR code'
+
+    .EXAMPLE
+    Create a file push
+    PS > New-Push -File 'C:\mytwofiles\mycoolfile.txt', 'C:\mytwofiles\mycoolfile2.txt'
+    or
+    PS > New-Push -File 'C:\mytwofiles'
+    or
+    PS > $myFolder = Get-ChildItem C:\mytwofiles
+    PS > New-Push -File $myFolder
+
+    .EXAMPLE
+    Create a QR push using -Payload
+    PS > New-Push -Payload 'this is my qr code value' -Kind QR
+
+
     .LINK
     https://github.com/adamburley/PassPushPosh/blob/main/Docs/New-Push.md
-
-    .LINK
-    https://pwpush.com/api/1.0/passwords/create.en.html
-
-    .LINK
-    https://github.com/pglombardo/PasswordPusher/blob/c2909b2d5f1315f9b66939c9fbc7fd47b0cfeb03/app/controllers/passwords_controller.rb#L120
 
     .LINK
     Get-Push
@@ -799,23 +887,35 @@ function Initialize-PassPushPosh {
     .NOTES
     Maximum for -ExpireAfterDays and -ExpireAfterViews is based on the default
     values for Password Pusher and what's used on the public instance
-    (pwpush.com). If you're using this with a private instance and want to
-    override that value you'll need to fork this module.
+    (pwpush.com).
     #>
 function New-Push {
     [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSAvoidUsingPlainTextForPassword', 'Passphrase', Justification = "DE0001: SecureString shouldn't be used")]
-    [CmdletBinding(SupportsShouldProcess, ConfirmImpact = 'Low', DefaultParameterSetName = 'Anonymous')]
+    [CmdletBinding(SupportsShouldProcess, ConfirmImpact = 'Low', DefaultParameterSetName = 'Text')]
     [OutputType([PasswordPush])]
     param(
-        [Parameter(Mandatory = $true, ValueFromPipeline, Position = 0)]
+        [Parameter(ParameterSetName = 'Text', ValueFromPipeline, Position = 0)]
         [Alias('Password')]
         [ValidateNotNullOrEmpty()]
         [string]$Payload,
 
+        [Parameter(ParameterSetName = 'QR', Mandatory)]
+        [string]$QR,
+
+        [Parameter(ParameterSetName = 'URL', Mandatory)]
+        [ValidatePattern('^https?:\/\/[a-zA-Z0-9-_]+.[a-zA-Z0-9]+')]
+        [string]$URL,
+
+        [Parameter(ParameterSetName = 'Text')]
+        [Parameter(ParameterSetName = 'QR')]
+        [ValidateCount(1, 10)]
+        [ValidateScript({ $null -ne $Script:PPPHeaders.'X-User-Token' -or $null -ne $Script:PPPHeaders.Authorization }, ErrorMessage = 'Adding files requires authentication.')]
+        [object[]]$File,
+
         [Parameter()]
         [string]$Passphrase,
 
-        [Parameter(ParameterSetName = 'Authenticated')]
+        [Parameter()]
         [ValidateScript({ $null -ne $Script:PPPHeaders.'X-User-Token' -or $null -ne $Script:PPPHeaders.Authorization }, ErrorMessage = 'Adding a note requires authentication.')]
         [ValidateNotNullOrEmpty()]
         [string]$Note,
@@ -840,60 +940,100 @@ function New-Push {
 
         [Parameter()]
         [ValidateScript({ $null -ne $Script:PPPHeaders.Authorization }, ErrorMessage = 'Adding an account id requires authentication.')]
-        $AccountId
+        $AccountId,
+
+        [Parameter(ParameterSetName = 'Text')]
+        [ValidateSet('Text', 'File', 'QR', 'URL')]
+        [string]$Kind = 'Text'
     )
 
     begin {
         Initialize-PassPushPosh -Verbose:$VerbosePreference -Debug:$DebugPreference
     }
     process {
-        $body = @{
-            'password' = @{
-                'payload' = $Payload
+        $_Kind = switch ($PSCmdlet.ParameterSetName) {
+            'QR' { 'qr' }
+            'URL' { 'url' }
+            default {
+                $File ? 'file' : $Kind.ToLower()
             }
         }
-        $shouldString = 'Submit {0} push with Payload of length {1}' -f $PSCmdlet.ParameterSetName, $Payload.Length
+        Write-Debug "Parameter Set: $($PSCmdlet.ParameterSetName)"
+        Write-Debug "Kind: $_Kind"
+
+        $passVals = @{ 'kind' = $_Kind }
+        $shouldString = "Submit $_Kind push"
+
+        if ($_Payload = $Payload ? $Payload : $QR ? $QR : $URL ? $URL : $Null) {
+            $shouldString += ", with payload of length $($_Payload.Length)"
+            $passVals.payload = $_Payload
+        }
+        elseif ($_Kind -ine 'File') {
+            Write-Error "A payload is required for all Push types except File." -ErrorAction Stop
+        }
         if ($Passphrase) {
-            $body.password.passphrase = $Passphrase
+            $passVals.passphrase = $Passphrase
             $shouldString += ", with passphrase of length $($Passphrase.Length)"
         }
         if ($Note) {
-            $body.password.note = $note
+            $passVals.note = $note
             $shouldString += ", with note $note"
         }
         if ($ExpireAfterDays) {
-            $body.password.expire_after_days = $ExpireAfterDays
-            $shouldString += ', expire after {0} days' -f $ExpireAfterDays
+            $passVals.expire_after_days = $ExpireAfterDays
+            $shouldString += ", expire after $ExpireAfterDays days"
         }
         if ($ExpireAfterViews) {
-            $body.password.expire_after_views = $ExpireAfterViews
-            $shouldString += ', expire after {0} views' -f $ExpireAfterViews
+            $passVals.expire_after_views = $ExpireAfterViews
+            $shouldString += ", expire after $ExpireAfterViews views"
         }
-        if ($AccountId) {
-            $body.account_id = $AccountId
-            $shouldString += ', with account ID {0}' -f $AccountId
+        if ($PSBoundParameters.ContainsKey('DeletableByViewer')) {
+            $passVals.deletable_by_viewer = [bool]$DeletableByViewer
+            $shouldString += $DeletableByViewer ? ', deletable by viewer' : ', not deletable by viewer'
         }
-        $body.password.deletable_by_viewer = if ($DeletableByViewer) {
-            $shouldString += ', deletable by viewer'
-            $true
+        if ($PSBoundParameters.ContainsKey('RetrievalStep')) {
+            $passVals.retrieval_step = [bool]$RetrievalStep
+            $shouldString += $RetrievalStep ? ', with a 1-click retrieval step' : ', without a retrieval step'
+        }
+
+        if ($File) {
+            $_Files = Get-ChildItem -Path $File
+            Write-Debug "Attaching $($_Files.Name -join '; ')"
+            if ($_Files.Count -gt 10) {
+                Write-Error "The total number of files is greater than allowed. Only 10 files may be attached to each Push." -ErrorAction Stop
+            }
+            else {
+                $shouldString += ", attaching $($_Files.count) files"
+            }
+            $Form = @{ }
+            $passVals.GetEnumerator() | ForEach-Object { $Form.Add("password[$($_.Name)]", $_.Value) }
+            $Form.'password[files][]' = $_Files
+            if ($AccountId) {
+                $Form.account_id = $AccountId
+                $shouldString += ', with account ID {0}' -f $AccountId
+            }
+            Write-Debug "Form looks like $($Form | Out-String)"
+            $invokeSplat = @{
+                Form = $Form
+            }
         } else {
-            $shouldString += ', NOT deletable by viewer'
-            $false
+            $Body = @{ 'password' = $passVals }
+            if ($AccountId) {
+                $Body.account_id = $AccountId
+                $shouldString += ', with account ID {0}' -f $AccountId
+            }
+            Write-Debug "Body looks like $($Body | ConvertTo-Json -Depth 5)"
+            $invokeSplat = @{
+                Body = $Body
+            }
         }
-        $body.password.retrieval_step = if ($RetrievalStep) {
-            $shouldString += ', with a 1-click retrieval step'
-            $true
-        } else {
-            $shouldString += ', with a direct link'
-            $false
-        }
-        if ($PSCmdlet.ShouldProcess($shouldString, $iwrSplat.Uri, 'Submit new Push')) {
-            $response = Invoke-PasswordPusherAPI -Endpoint 'p.json' -Method Post -Body $body
+        if ($PSCmdlet.ShouldProcess($shouldString, $Script:PPPBaseUrl, 'Submit new Push')) {
+            $response = Invoke-PasswordPusherAPI -Endpoint 'p.json' -Method Post @invokeSplat
             $response | ConvertTo-PasswordPush
         }
     }
 }
-#EndRegion '.\Public\New-Push.ps1' 173
+#EndRegion '.\Public\New-Push.ps1' 268
 #Region '.\Public\Remove-Push.ps1' -1
 
 <#
