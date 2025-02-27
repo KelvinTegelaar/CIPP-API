@@ -22,8 +22,6 @@ Function Invoke-ListCalendarPermissions {
         $CalendarFolder = New-ExoRequest -tenantid $TenantFilter -cmdlet 'Get-MailboxFolderStatistics' -anchor $UserID -cmdParams $GetCalParam | Select-Object -First 1 -ExcludeProperty *data.type*
         $CalParam = @{Identity = "$($UserID):\$($CalendarFolder.name)" }
         $GraphRequest = New-ExoRequest -tenantid $TenantFilter -cmdlet 'Get-MailboxFolderPermission' -anchor $UserID -cmdParams $CalParam -UseSystemMailbox $true | Select-Object Identity, User, AccessRights, FolderName
-        $GraphRequest | Add-Member -MemberType NoteProperty -Name 'UserID' -Value $UserID
-        $GraphRequest | Add-Member -MemberType NoteProperty -Name 'ExchangeGUID' -Value $CalendarFolder.ContentMailboxGuid
         Write-LogMessage -API $APIName -tenant $TenantFilter -message "Calendar permissions listed for $($TenantFilter)" -sev Debug
         $StatusCode = [HttpStatusCode]::OK
     } catch {
