@@ -62,9 +62,11 @@ Function Invoke-ExecExtensionMapping {
                 }
                 'NinjaOne' {
                     $Body = Set-NinjaOneOrgMapping -CIPPMapping $Table -APIName $APIName -Request $Request
+                    Register-CIPPExtensionScheduledTasks
                 }
                 'NinjaOneFields' {
                     $Body = Set-NinjaOneFieldMapping -CIPPMapping $Table -APIName $APIName -Request $Request -TriggerMetadata $TriggerMetadata
+                    Register-CIPPExtensionScheduledTasks
                 }
                 'Hudu' {
                     $Body = Set-HuduMapping -CIPPMapping $Table -APIName $APIName -Request $Request

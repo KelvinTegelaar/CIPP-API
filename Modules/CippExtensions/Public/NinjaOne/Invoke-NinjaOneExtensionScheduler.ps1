@@ -16,7 +16,11 @@ function Invoke-NinjaOneExtensionScheduler {
 
     Write-Host "Ninja Time Setting: $TimeSetting"
 
-    $LastRunTime = Get-Date(($Settings | Where-Object { $_.RowKey -eq 'NinjaLastRunTime' }).SettingValue)
+    try {
+        $LastRunTime = Get-Date(($Settings | Where-Object { $_.RowKey -eq 'NinjaLastRunTime' }).SettingValue)
+    } catch {
+        $LastRunTime = $Null
+    }
 
     Write-Host "Last Run: $LastRunTime"
 

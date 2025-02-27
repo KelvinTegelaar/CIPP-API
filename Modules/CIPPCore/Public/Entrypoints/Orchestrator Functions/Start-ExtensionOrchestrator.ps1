@@ -15,7 +15,7 @@ function Start-ExtensionOrchestrator {
     Write-Host 'Started Scheduler for Extensions'
 
     # NinjaOne Extension
-    if ($Configuration.NinjaOne.Enabled -eq $True) {
+    if ($Configuration.NinjaOne.Enabled -eq $true) {
         if ($PSCmdlet.ShouldProcess('Invoke-NinjaOneExtensionScheduler')) {
             Invoke-NinjaOneExtensionScheduler
         }
