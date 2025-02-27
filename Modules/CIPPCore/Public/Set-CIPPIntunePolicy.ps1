@@ -135,6 +135,25 @@ function Set-CIPPIntunePolicy {
                     Write-LogMessage -headers $Headers -API $APINAME -tenant $($tenantFilter) -message "Added policy $($DisplayName) via template" -Sev 'info'
                 }
             }
+            'windowsFeatureUpdateProfiles' {
+                $PlatformType = 'deviceManagement'
+                $TemplateTypeURL = 'windowsFeatureUpdateProfiles'
+                $File = ($RawJSON | ConvertFrom-Json)
+                $DisplayName = $File.displayName ?? $File.Name
+                $CheckExististing = New-GraphGETRequest -uri "https://graph.microsoft.com/beta/$PlatformType/$TemplateTypeURL" -tenantid $tenantFilter
+                if ($DisplayName -in $CheckExististing.displayName) {
+                    $PostType = 'edited'
+                    $ExistingID = $CheckExististing | Where-Object -Property displayName -EQ $displayname
+                    Write-Host 'We are editing'
+                    $CreateRequest = New-GraphPOSTRequest -uri "https://graph.microsoft.com/beta/$PlatformType/$TemplateTypeURL/$($ExistingID.Id)" -tenantid $tenantFilter -type PUT -body $RawJSON
+                    $CreateRequest = $CheckExististing | Where-Object -Property displayName -EQ $DisplayName
+
+                } else {
+                    $PostType = 'added'
+                    $CreateRequest = New-GraphPOSTRequest -uri "https://graph.microsoft.com/beta/$PlatformType/$TemplateTypeURL" -tenantid $tenantFilter -type POST -body $RawJSON
+                    Write-LogMessage -headers $Headers -API $APINAME -tenant $($tenantFilter) -message "Added policy $($DisplayName) via template" -Sev 'info'
+                }
+            }
 
         }
         Write-LogMessage -headers $Headers -API $APINAME -tenant $($tenantFilter) -message "$($PostType) policy $($Displayname)" -Sev 'Info'
