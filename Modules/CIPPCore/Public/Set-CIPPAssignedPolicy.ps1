@@ -2,17 +2,16 @@ function Set-CIPPAssignedPolicy {
     [CmdletBinding(SupportsShouldProcess = $true)]
     param(
         $GroupName,
-        $excludeGroup,
+        $ExcludeGroup,
         $PolicyId,
         $Type,
         $TenantFilter,
-        $PlatformType,
+        $PlatformType = 'deviceManagement',
         $APIName = 'Assign Policy',
         $Headers
     )
-    if (!$PlatformType) {
-        $PlatformType = 'deviceManagement'
-    }
+
+    Write-Host "Assigning policy $PolicyId ($PlatformType/$Type) to $GroupName"
 
     try {
         $assignmentsList = New-Object System.Collections.Generic.List[System.Object]
@@ -74,8 +73,9 @@ function Set-CIPPAssignedPolicy {
                 }
             }
         }
-        if ($excludeGroup) {
-            $ExcludeGroupNames = $excludeGroup.Split(',')
+        if ($ExcludeGroup) {
+            Write-Host "We're supposed to exclude a custom group. The group is $ExcludeGroup"
+            $ExcludeGroupNames = $ExcludeGroup.Split(',')
             $ExcludeGroupIds = New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/groups?$select=id,displayName&$top=999' -tenantid $TenantFilter |
             ForEach-Object {
                 foreach ($SingleName in $ExcludeGroupNames) {
@@ -104,9 +104,13 @@ function Set-CIPPAssignedPolicy {
         $AssignJSON = $assignmentsObject | ConvertTo-Json -Depth 10 -Compress
         Write-Host "AssignJSON: $AssignJSON"
         if ($PSCmdlet.ShouldProcess($GroupName, "Assigning policy $PolicyId")) {
-            Write-Host "https://graph.microsoft.com/beta/$($PlatformType)/$Type('$($PolicyId)')/assign"
-            $null = New-GraphPOSTRequest -uri "https://graph.microsoft.com/beta/$($PlatformType)/$Type('$($PolicyId)')/assign" -tenantid $TenantFilter -type POST -body $AssignJSON
-            Write-LogMessage -headers $Headers -API $APIName -message "Assigned $GroupName and excluded $excludeGroup to Policy $PolicyId" -Sev 'Info' -tenant $TenantFilter
+            $uri = "https://graph.microsoft.com/beta/$($PlatformType)/$Type('$($PolicyId)')/assign"
+            $null = New-GraphPOSTRequest -uri $uri -tenantid $TenantFilter -type POST -body $AssignJSON
+            if ($ExcludeGroup) {
+                Write-LogMessage -headers $Headers -API $APIName -message "Assigned group '$GroupName' and excluded group '$ExcludeGroup' on Policy $PolicyId" -Sev 'Info' -tenant $TenantFilter
+            } else {
+                Write-LogMessage -headers $Headers -API $APIName -message "Assigned group '$GroupName' on Policy $PolicyId" -Sev 'Info' -tenant $TenantFilter
+            }
         }
 
     } catch {
