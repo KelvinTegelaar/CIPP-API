@@ -106,8 +106,11 @@ function Invoke-CIPPStandardUserSubmissions {
                     $PolicyParams = @{
                         EnableReportToMicrosoft          = $true
                         ReportJunkToCustomizedAddress    = $false
+                        ReportJunkAddresses              = $null
                         ReportNotJunkToCustomizedAddress = $false
+                        ReportNotJunkAddresses           = $null
                         ReportPhishToCustomizedAddress   = $false
+                        ReportPhishAddresses             = $null
                     }
                 } else {
                     $PolicyParams = @{
