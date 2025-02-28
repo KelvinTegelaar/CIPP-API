@@ -1,4 +1,3 @@
-
 function Invoke-CIPPOffboardingJob {
     [CmdletBinding()]
     param (
@@ -56,14 +55,14 @@ function Invoke-CIPPOffboardingJob {
         { $_.RemoveLicenses -eq $true } {
             Remove-CIPPLicense -userid $userid -username $Username -tenantFilter $TenantFilter -Headers $Headers -APIName $APIName -Schedule
         }
-        { $_.deleteuser -eq $true } {
+        { $_.DeleteUser -eq $true } {
             Remove-CIPPUser -userid $userid -username $Username -tenantFilter $TenantFilter -Headers $Headers -APIName $APIName
         }
-        { $_.removeRules -eq $true } {
+        { $_.RemoveRules -eq $true } {
             Write-Host "Removing rules for $username"
             Remove-CIPPMailboxRule -userid $userid -username $Username -tenantFilter $TenantFilter -Headers $Headers -APIName $APIName -RemoveAllRules
         }
-        { $_.removeMobile -eq $true } {
+        { $_.RemoveMobile -eq $true } {
             Remove-CIPPMobileDevice -userid $userid -username $Username -tenantFilter $TenantFilter -Headers $Headers -APIName $APIName
         }
         { $_.removeCalendarInvites -eq $true } {
