@@ -52,7 +52,7 @@ function Set-CIPPAssignedPolicy {
             }
             default {
                 Write-Host "We're supposed to assign a custom group. The group is $GroupName"
-                $GroupNames = $GroupName -split '\s,\s'
+                $GroupNames = $GroupName.Split(',').Trim()
                 $GroupIds = New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/groups?$select=id,displayName&$top=999' -tenantid $TenantFilter |
                     ForEach-Object {
                         foreach ($SingleName in $GroupNames) {
@@ -75,7 +75,7 @@ function Set-CIPPAssignedPolicy {
         }
         if ($ExcludeGroup) {
             Write-Host "We're supposed to exclude a custom group. The group is $ExcludeGroup"
-            $ExcludeGroupNames = $GroupName -split '\s,\s'
+            $ExcludeGroupNames = $ExcludeGroup.Split(',').Trim()
             $ExcludeGroupIds = New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/groups?$select=id,displayName&$top=999' -tenantid $TenantFilter |
                 ForEach-Object {
                     foreach ($SingleName in $ExcludeGroupNames) {
