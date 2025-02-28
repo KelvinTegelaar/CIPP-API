@@ -14,13 +14,12 @@ Function Invoke-ExecStartManagedFolderAssistant {
     $Headers = $Request.Headers
     Write-LogMessage -Headers $Headers -API $APIName -message 'Accessed this API' -Sev 'Debug'
 
-
     # Interact with query parameters or the body of the request.
     $Tenant = $Request.Query.tenantFilter ?? $Request.Body.tenantFilter
     $ID = $Request.Query.ID ?? $Request.Body.ID
 
     try {
-        $null = New-ExoRequest -tenantid $Tenant -cmdlet 'Start-ManagedFolderAssistant' -cmdParams @{Identity = $ID }
+        $null = New-ExoRequest -tenantid $Tenant -cmdlet 'Start-ManagedFolderAssistant' -cmdParams @{Identity = $ID; AggMailboxCleanup = $true; FullCrawl = $true }
         $Result = "Successfully started Managed Folder Assistant for mailbox $($ID)."
         $Severity = 'Info'
         $StatusCode = [HttpStatusCode]::OK
@@ -31,7 +30,6 @@ Function Invoke-ExecStartManagedFolderAssistant {
         $StatusCode = [HttpStatusCode]::InternalServerError
     } finally {
         Write-LogMessage -Headers $Headers -API $APIName -tenant $Tenant -message $Result -Sev $Severity -LogData $ErrorMessage
-
     }
 
     $Body = [pscustomobject] @{ 'Results' = $Result }
