@@ -11,24 +11,24 @@ Function Invoke-AddExConnectorTemplate {
     param($Request, $TriggerMetadata)
 
     $APIName = $Request.Params.CIPPEndpoint
-    Write-LogMessage -headers $Request.Headers -API $APINAME -message 'Accessed this API' -Sev 'Debug'
+    $Headers = $Request.Headers
+    Write-LogMessage -headers $Headers -API $APIName -message 'Accessed this API' -Sev 'Debug'
 
-    Write-Host ($request | ConvertTo-Json -Compress)
+    Write-Host ($Request | ConvertTo-Json -Compress)
 
     try {
         $GUID = (New-Guid).GUID
-        $Select = if ($Request.body.cippconnectortype -eq 'outbound') {
+        $Select = if ($Request.Body.cippconnectortype -eq 'outbound') {
             @(
                 'name', 'AllAcceptedDomains', 'CloudServicesMailEnabled', 'Comment', 'Confirm', 'ConnectorSource', 'ConnectorType', 'Enabled', 'IsTransportRuleScoped', 'RecipientDomains', 'RouteAllMessagesViaOnPremises', 'SenderRewritingEnabled', 'SmartHosts', 'TestMode', 'TlsDomain', 'TlsSettings', 'UseMXRecord'
             )
-        }
-        else {
+        } else {
             @(
                 'name', 'SenderDomains', 'ConnectorSource', 'ConnectorType', 'EFSkipIPs', 'EFSkipLastIP', 'EFSkipMailGateway', 'EFTestMode', 'EFUsers', 'Enabled ', 'RequireTls', 'RestrictDomainsToCertificate', 'RestrictDomainsToIPAddresses', 'ScanAndDropRecipients', 'SenderIPAddresses', 'TlsSenderCertificateName', 'TreatMessagesAsInternal', 'TrustedOrganizations'
             )
         }
 
-        $JSON = ([pscustomobject]$Request.body | Select-Object $Select) | ForEach-Object {
+        $JSON = ([pscustomobject]$Request.Body | Select-Object $Select) | ForEach-Object {
             $NonEmptyProperties = $_.psobject.Properties | Where-Object { $null -ne $_.Value } | Select-Object -ExpandProperty Name
             $_ | Select-Object -Property $NonEmptyProperties
         }
@@ -36,24 +36,26 @@ Function Invoke-AddExConnectorTemplate {
         $Table = Get-CippTable -tablename 'templates'
         $Table.Force = $true
         Add-CIPPAzDataTableEntity @Table -Entity @{
-            JSON         = "$json"
+            JSON         = "$JSON"
             RowKey       = "$GUID"
-            direction    = $request.body.cippconnectortype
+            direction    = $Request.Body.cippconnectortype
             PartitionKey = 'ExConnectorTemplate'
         }
-        Write-LogMessage -headers $Request.Headers -API $APINAME -message "Created Connector Template $($Request.body.name) with GUID $GUID" -Sev 'Debug'
-        $body = [pscustomobject]@{'Results' = 'Successfully added template' }
-    }
-    catch {
-        Write-LogMessage -headers $Request.Headers -API $APINAME -message "Failed to create Connector Template: $($_.Exception.Message)" -Sev 'Error'
-        $body = [pscustomobject]@{'Results' = "Connector Template creation failed: $($_.Exception.Message)" }
+        $Result = "Successfully created Connector Template: $($Request.Body.name) with GUID $GUID"
+        Write-LogMessage -headers $Headers -API $APIName -message $Result -Sev 'Debug'
+        $StatusCode = [HttpStatusCode]::OK
+    } catch {
+        $ErrorMessage = Get-CippException -Exception $_
+        $Result = "Failed to create Connector Template: $($ErrorMessage.NormalizedError)"
+        Write-LogMessage -headers $Headers -API $APIName -message $Result -Sev 'Error'
+        $StatusCode = [HttpStatusCode]::InternalServerError
     }
 
 
     # Associate values to output bindings by calling 'Push-OutputBinding'.
     Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
-            StatusCode = [HttpStatusCode]::OK
-            Body       = $body
+            StatusCode = $StatusCode
+            Body       = @{Results = $Result }
         })
 
 }

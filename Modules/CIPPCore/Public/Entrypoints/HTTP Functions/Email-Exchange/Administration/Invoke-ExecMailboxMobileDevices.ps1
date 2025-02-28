@@ -14,10 +14,6 @@ Function Invoke-ExecMailboxMobileDevices {
     Write-LogMessage -headers $Request.Headers -API $APINAME -message 'Accessed this API' -Sev 'Debug'
 
 
-    # Write to the Azure Functions log stream.
-    Write-Host 'PowerShell HTTP trigger function processed a request.'
-
-
     # Interact with query parameters or the body of the request.
     Try {
         $MobileResults = Set-CIPPMobileDevice -UserId $request.query.Userid -Guid $request.query.guid -DeviceId $request.query.deviceid -Quarantine $request.query.Quarantine -tenantFilter $request.query.tenantfilter -APIName $APINAME -Delete $Request.query.Delete -Headers $Request.Headers

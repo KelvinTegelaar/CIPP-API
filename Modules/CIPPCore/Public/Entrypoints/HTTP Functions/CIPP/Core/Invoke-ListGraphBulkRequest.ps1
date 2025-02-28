@@ -8,16 +8,24 @@ function Invoke-ListGraphBulkRequest {
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
 
+    $APIName = $Request.Params.CIPPEndpoint
+    $Headers = $Request.Headers
+    Write-LogMessage -headers $Headers -API $APIName -message 'Accessed this API' -Sev 'Debug'
+
+    $TenantFilter = $Request.Body.tenantFilter
+    $AsApp = $Request.Body.asApp
+    $Requests = $Request.Body.requests
+
     $GraphRequestParams = @{
-        tenantid = $Request.Body.tenantFilter
+        tenantid = $TenantFilter
         Requests = @()
     }
 
-    if ($Request.Body.asapp) {
-        $GraphRequestParams.asapp = $Request.Body.asApp
+    if ($AsApp) {
+        $GraphRequestParams.asapp = $AsApp
     }
 
-    $BulkRequests = foreach ($GraphRequest in $Request.Body.requests) {
+    $BulkRequests = foreach ($GraphRequest in $Requests) {
         if ($GraphRequest.method -eq 'GET') {
             @{
                 id     = $GraphRequest.id

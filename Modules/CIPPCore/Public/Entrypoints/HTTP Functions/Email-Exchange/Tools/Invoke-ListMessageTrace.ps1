@@ -10,6 +10,10 @@ Function Invoke-ListMessageTrace {
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
 
+    $APIName = $Request.Params.CIPPEndpoint
+    $Headers = $Request.Headers
+    Write-LogMessage -headers $Headers -API $APIName -message 'Accessed this API' -Sev 'Debug'
+
     try {
         $TenantFilter = $Request.Body.tenantFilter
 

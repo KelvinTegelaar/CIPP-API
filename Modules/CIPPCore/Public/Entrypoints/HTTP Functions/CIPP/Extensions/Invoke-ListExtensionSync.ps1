@@ -52,6 +52,6 @@ Function Invoke-ListExtensionSync {
 
     Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
             StatusCode = [HttpStatusCode]::OK
-            Body       = ConvertTo-Json -Depth 5 -InputObject @($AllTasksArrayList)
+            Body       = (ConvertTo-Json -Depth 5 -InputObject @($AllTasksArrayList))
         })
 }

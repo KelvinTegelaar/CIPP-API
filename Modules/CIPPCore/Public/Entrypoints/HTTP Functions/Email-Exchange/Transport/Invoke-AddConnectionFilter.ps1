@@ -19,12 +19,12 @@ Function Invoke-AddConnectionFilter {
         ConvertFrom-Json |
         Select-Object -Property *, @{Name = 'identity'; Expression = { $_.name } } -ExcludeProperty GUID, comments, name
 
-    $Tenants = ($Request.body.selectedTenants).value
+    $Tenants = ($Request.Body.selectedTenants).value
     $Result = foreach ($TenantFilter in $Tenants) {
         try {
             $null = New-ExoRequest -tenantid $TenantFilter -cmdlet 'Set-HostedConnectionFilterPolicy' -cmdParams $RequestParams
             "Successfully created Connection filter for $TenantFilter."
-            Write-LogMessage -headers $Headers -API $APIName -tenant $TenantFilter -message "Updated Connection filter rule for $($TenantFilter)" -sev Info
+            Write-LogMessage -headers $Headers -API $APIName -tenant $TenantFilter -message "Successfully created Connection filter for $TenantFilter." -sev Info
         } catch {
             $ErrorMessage = Get-CippException -Exception $_
             "Failed to create Connection Filter rule for $($TenantFilter): $($ErrorMessage.NormalizedError)"

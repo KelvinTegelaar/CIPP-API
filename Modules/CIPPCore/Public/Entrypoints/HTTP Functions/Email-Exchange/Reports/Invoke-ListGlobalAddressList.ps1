@@ -12,7 +12,8 @@ Function Invoke-ListGlobalAddressList {
 
     $APIName = $Request.Params.CIPPEndpoint
     $Headers = $Request.Headers
-    Write-LogMessage -Headers $Headers -API $APINAME -message 'Accessed this API' -Sev 'Debug'
+    Write-LogMessage -Headers $Headers -API $APIName -message 'Accessed this API' -Sev 'Debug'
+
     $TenantFilter = $Request.Query.tenantFilter
 
     try {

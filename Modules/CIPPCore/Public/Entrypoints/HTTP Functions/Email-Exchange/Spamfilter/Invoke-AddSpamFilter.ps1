@@ -12,16 +12,17 @@ Function Invoke-AddSpamFilter {
 
 
     $APIName = $Request.Params.CIPPEndpoint
-    Write-LogMessage -headers $Request.Headers -API $APINAME -message 'Accessed this API' -Sev 'Debug'
+    $Headers = $Request.Headers
+    Write-LogMessage -headers $Headers -API $APIName -message 'Accessed this API' -Sev 'Debug'
 
     $RequestParams = $Request.Body.PowerShellCommand | ConvertFrom-Json | Select-Object -Property * -ExcludeProperty GUID, comments
     $RequestPriority = $Request.Body.Priority
 
     $Tenants = ($Request.body.selectedTenants).value
-    $Result = foreach ($Tenantfilter in $tenants) {
+    $Result = foreach ($TenantFilter in $tenants) {
         try {
-            $GraphRequest = New-ExoRequest -tenantid $Tenantfilter -cmdlet 'New-HostedContentFilterPolicy' -cmdParams $RequestParams
-            $Domains = (New-ExoRequest -tenantid $Tenantfilter -cmdlet 'Get-AcceptedDomain').name
+            $null = New-ExoRequest -tenantid $TenantFilter -cmdlet 'New-HostedContentFilterPolicy' -cmdParams $RequestParams
+            $Domains = (New-ExoRequest -tenantid $TenantFilter -cmdlet 'Get-AcceptedDomain').name
             $ruleparams = @{
                 'name'                      = "$($RequestParams.name)"
                 'hostedcontentfilterpolicy' = "$($RequestParams.name)"
@@ -29,12 +30,13 @@ Function Invoke-AddSpamFilter {
                 'Enabled'                   = $true
                 'Priority'                  = $RequestPriority
             }
-            $GraphRequest = New-ExoRequest -tenantid $Tenantfilter -cmdlet 'New-HostedContentFilterRule' -cmdParams $ruleparams
-            "Successfully created spamfilter for $tenantfilter."
-            Write-LogMessage -headers $Request.Headers -API $APINAME -tenant $tenantfilter -message "Created spamfilter rule for $($tenantfilter)" -sev Info
+            $null = New-ExoRequest -tenantid $TenantFilter -cmdlet 'New-HostedContentFilterRule' -cmdParams $ruleparams
+            "Successfully created spamfilter for $TenantFilter."
+            Write-LogMessage -headers $Headers -API $APIName -tenant $TenantFilter -message "Successfully created spamfilter for $TenantFilter." -sev Info
         } catch {
-            "Could not create create spamfilter rule for $($tenantfilter): $($_.Exception.message)"
-            Write-LogMessage -headers $Request.Headers -API $APINAME -tenant $tenantfilter -message "Could not create create spamfilter rule for $($tenantfilter): $($_.Exception.message)" -sev Error
+            $ErrorMessage = Get-CippException -Exception $_
+            "Could not create spamfilter rule for $($TenantFilter): $($ErrorMessage.NormalizedError)"
+            Write-LogMessage -headers $Headers -API $APIName -tenant $TenantFilter -message "Could not create spamfilter rule for $($TenantFilter): $($ErrorMessage.NormalizedError)" -sev Error -LogData $ErrorMessage
         }
     }
 
