@@ -37,7 +37,6 @@ function Invoke-CIPPStandardIntuneTemplate {
 
         Write-Host 'starting template deploy'
         Write-Host "The full settings are $($Settings | ConvertTo-Json)"
-        $APINAME = 'Standards'
         foreach ($Template in $Settings) {
             Write-Host "working on template deploy: $($Template | ConvertTo-Json)"
             try {
@@ -53,7 +52,7 @@ function Invoke-CIPPStandardIntuneTemplate {
 
             } catch {
                 $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
-                Write-LogMessage -API 'Standards' -tenant $tenant -message "Failed to create or update Intune Template $PolicyName, Error: $ErrorMessage" -sev 'Error'
+                Write-LogMessage -API 'Standards' -tenant $tenant -message "Failed to create or update Intune Template $displayname, Error: $ErrorMessage" -sev 'Error'
             }
         }
     }
