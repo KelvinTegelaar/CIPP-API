@@ -16,16 +16,26 @@ Function Invoke-ExecStartManagedFolderAssistant {
 
     # Interact with query parameters or the body of the request.
     $Tenant = $Request.Query.tenantFilter ?? $Request.Body.tenantFilter
-    $ID = $Request.Query.ID ?? $Request.Body.ID
+    $ID = $Request.Query.Id ?? $Request.Body.Id
+    $UserPrincipalName = $Request.Body.UserPrincipalName
+    $Identity = $ID ?? $UserPrincipalName
+    $ShownName = $UserPrincipalName ?? $ID
+
+
+    $ExoParams = @{
+        Identity          = $Identity
+        AggMailboxCleanup = $true
+        FullCrawl         = $true
+    }
 
     try {
-        $null = New-ExoRequest -tenantid $Tenant -cmdlet 'Start-ManagedFolderAssistant' -cmdParams @{Identity = $ID; AggMailboxCleanup = $true; FullCrawl = $true }
-        $Result = "Successfully started Managed Folder Assistant for mailbox $($ID)."
+        $null = New-ExoRequest -tenantid $Tenant -cmdlet 'Start-ManagedFolderAssistant' -cmdParams $ExoParams
+        $Result = "Successfully started Managed Folder Assistant for mailbox $($ShownName)."
         $Severity = 'Info'
         $StatusCode = [HttpStatusCode]::OK
     } catch {
         $ErrorMessage = Get-CippException -Exception $_
-        $Result = "Failed to start Managed Folder Assistant for mailbox $($ID). Error: $($ErrorMessage.NormalizedError)"
+        $Result = "Failed to start Managed Folder Assistant for mailbox $($ShownName). Error: $($ErrorMessage.NormalizedError)"
         $Severity = 'Error'
         $StatusCode = [HttpStatusCode]::InternalServerError
     } finally {
