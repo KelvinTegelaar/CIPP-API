@@ -60,10 +60,11 @@ class PasswordPush {
 $ExportableTypes =@(
     [PasswordPush]
 )
-<## Get the internal TypeAccelerators class to use its static methods.
+# Get the internal TypeAccelerators class to use its static methods.
 $TypeAcceleratorsClass = [psobject].Assembly.GetType(
     'System.Management.Automation.TypeAccelerators'
 )
+<#
 # Ensure none of the types would clobber an existing type accelerator.
 # If a type accelerator with the same name exists, throw an exception.
 $ExistingTypeAccelerators = $TypeAcceleratorsClass::Get
