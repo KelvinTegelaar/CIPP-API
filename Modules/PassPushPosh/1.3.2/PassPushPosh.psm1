@@ -60,7 +60,7 @@ class PasswordPush {
 $ExportableTypes =@(
     [PasswordPush]
 )
-# Get the internal TypeAccelerators class to use its static methods.
+<## Get the internal TypeAccelerators class to use its static methods.
 $TypeAcceleratorsClass = [psobject].Assembly.GetType(
     'System.Management.Automation.TypeAccelerators'
 )
@@ -81,10 +81,12 @@ foreach ($Type in $ExportableTypes) {
             $Type.FullName
         )
     }
-}
+}#>
 # Add type accelerators for every exportable type.
 foreach ($Type in $ExportableTypes) {
+    try {
     $TypeAcceleratorsClass::Add($Type.FullName, $Type)
+    } catch {}
 }
 # Remove type accelerators when the module is removed.
 ($MyInvocation.MyCommand.ScriptBlock.Module.OnRemove = {
