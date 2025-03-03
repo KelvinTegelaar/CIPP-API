@@ -16,7 +16,9 @@ function Test-CIPPAuditLogRules {
 
     # Get the CacheWebhooks table for removing processed rows
     $CacheWebhooksTable = Get-CippTable -TableName 'CacheWebhooks'
-
+    #Replace $Rows which is an array of RowIds, with the actual data from the CacheWebhooks table
+    $Rows = Get-CIPPAzDataTableEntity @CacheWebhooksTable -Filter "PartitionKey eq '$TenantFilter'" | Where-Object { $_.RowKey -in $Rows }
+    Write-Host "Rows: $($Rows.Count)"
     $ExtendedPropertiesIgnoreList = @(
         'OAuth2:Authorize'
         'OAuth2:Token'
@@ -55,7 +57,7 @@ function Test-CIPPAuditLogRules {
     if ($LogCount -gt 0) {
         $LocationTable = Get-CIPPTable -TableName 'knownlocationdb'
         $ProcessedData = foreach ($AuditRecord in $SearchResults) {
-            #Write-Host "Auditlogs: The record is $($AuditRecord.operation) - $($TenantFilter)"
+            Write-Host "Processing RowKey $($AuditRecord.id)"
             $RootProperties = $AuditRecord | Select-Object * -ExcludeProperty auditData
             $Data = $AuditRecord.auditData | Select-Object *, CIPPAction, CIPPClause, CIPPGeoLocation, CIPPBadRepIP, CIPPHostedIP, CIPPIPDetected, CIPPLocationInfo, CIPPExtendedProperties, CIPPDeviceProperties, CIPPParameters, CIPPModifiedProperties, AuditRecord -ErrorAction SilentlyContinue
             try {
@@ -235,4 +237,6 @@ function Test-CIPPAuditLogRules {
     } catch {
         Write-Information "Error removing rows from cache: $($_.Exception.Message)"
     }
+
+    return $Results
 }
