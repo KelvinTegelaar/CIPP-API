@@ -23,8 +23,8 @@ Function Invoke-ListTenants {
     }
 
     # Clear Cache
-    if ($Request.Query.ClearCache -eq $true) {
-        Remove-CIPPCache -tenantsOnly $Request.Query.TenantsOnly
+    if ($Request.Body.ClearCache -eq $true) {
+        $Results = Remove-CIPPCache -tenantsOnly $Request.Body.TenantsOnly
 
         $InputObject = [PSCustomObject]@{
             Batch            = @(
@@ -40,7 +40,12 @@ Function Invoke-ListTenants {
         $GraphRequest = [pscustomobject]@{'Results' = 'Cache has been cleared and a tenant refresh is queued.' }
         Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
                 StatusCode = [HttpStatusCode]::OK
-                Body       = $GraphRequest
+                Body       = @{
+                    Results = @($GraphRequest)
+                    Metadata = @{
+                        Details = $Results
+                    }
+                }
             })
         #Get-Tenants -IncludeAll -TriggerRefresh
         return
