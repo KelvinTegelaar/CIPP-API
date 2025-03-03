@@ -140,15 +140,14 @@ Function Invoke-EditUser {
     if ($AddToGroups) {
         $AddToGroups | ForEach-Object {
 
-            $GroupType = $_.value.groupType -join ','
-            $GroupID = $_.value.groupid
-            $GroupName = $_.value.groupName
+            $GroupType = $_.addedFields.calculatedGroupType
+            $GroupID = $_.value
+            $GroupName = $_.label
             Write-Host "About to add $($UserObj.userPrincipalName) to $GroupName. Group ID is: $GroupID and type is: $GroupType"
 
             try {
 
                 if ($GroupType -eq 'Distribution list' -or $GroupType -eq 'Mail-Enabled Security') {
-
                     Write-Host 'Adding to group via Add-DistributionGroupMember '
                     $Params = @{ Identity = $GroupID; Member = $UserObj.id; BypassSecurityGroupManagerCheck = $true }
                     $null = New-ExoRequest -tenantid $UserObj.tenantFilter -cmdlet 'Add-DistributionGroupMember' -cmdParams $params -UseSystemMailbox $true
