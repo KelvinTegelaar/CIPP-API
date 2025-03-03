@@ -2,8 +2,16 @@ using namespace System.Net
 
 function Receive-CippHttpTrigger {
     <#
+    .SYNOPSIS
+        Execute HTTP trigger function
+    .DESCRIPTION
+        Execute HTTP trigger function from an azure function app
+    .PARAMETER Request
+        The request object from the function app
+    .PARAMETER TriggerMetadata
+        The trigger metadata object from the function app
     .FUNCTIONALITY
-    Entrypoint
+        Entrypoint
     #>
     Param(
         $Request,
@@ -62,8 +70,18 @@ function Receive-CippHttpTrigger {
 }
 
 function Receive-CippOrchestrationTrigger {
+    <#
+    .SYNOPSIS
+        Execute durable orchestrator function
+    .DESCRIPTION
+        Execute orchestrator from azure function app
+    .PARAMETER Context
+        The context object from the function app
+    .FUNCTIONALITY
+        Entrypoint
+    #>
     param($Context)
-    
+
     try {
         if (Test-Json -Json $Context.Input) {
             $OrchestratorInput = $Context.Input | ConvertFrom-Json
@@ -129,9 +147,20 @@ function Receive-CippOrchestrationTrigger {
     } catch {
         Write-Information "Orchestrator error $($_.Exception.Message) line $($_.InvocationInfo.ScriptLineNumber)"
     }
+    return $true
 }
 
 function Receive-CippActivityTrigger {
+    <#
+    .SYNOPSIS
+        Execute durable activity function
+    .DESCRIPTION
+        Execute durable activity function from an orchestrator
+    .PARAMETER Item
+        The item to process
+    .FUNCTIONALITY
+        Entrypoint
+    #>
     Param($Item)
     Write-Warning "Hey Boo, the activity function is running. Here's some info: $($Item | ConvertTo-Json -Depth 10 -Compress)"
     try {
@@ -201,9 +230,20 @@ function Receive-CippActivityTrigger {
             $null = Set-CippQueueTask @QueueTask
         }
     }
+    return $true
 }
 
 function Receive-CIPPTimerTrigger {
+    <#
+    .SYNOPSIS
+        This function is used to execute timer functions based on the cron schedule.
+    .DESCRIPTION
+        This function is used to execute timer functions based on the cron schedule.
+    .PARAMETER Timer
+        The timer trigger object from the function app
+    .FUNCTIONALITY
+        Entrypoint
+    #>
     param($Timer)
 
     $UtcNow = (Get-Date).ToUniversalTime()
@@ -257,6 +297,7 @@ function Receive-CIPPTimerTrigger {
 
         Add-CIPPAzDataTableEntity @Table -Entity $FunctionStatus -Force
     }
+    return $true
 }
 
 Export-ModuleMember -Function @('Receive-CippHttpTrigger', 'Receive-CippOrchestrationTrigger', 'Receive-CippActivityTrigger', 'Receive-CIPPTimerTrigger')
