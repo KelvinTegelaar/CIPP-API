@@ -16,9 +16,7 @@ function Test-CIPPAuditLogRules {
 
     # Get the CacheWebhooks table for removing processed rows
     $CacheWebhooksTable = Get-CippTable -TableName 'CacheWebhooks'
-    #Replace $Rows which is an array of RowIds, with the actual data from the CacheWebhooks table
-    $Rows = Get-CIPPAzDataTableEntity @CacheWebhooksTable -Filter "PartitionKey eq '$TenantFilter'" | Where-Object { $_.RowKey -in $Rows }
-    Write-Host "Rows: $($Rows.Count)"
+
     $ExtendedPropertiesIgnoreList = @(
         'OAuth2:Authorize'
         'OAuth2:Token'
