@@ -9,12 +9,13 @@ Function Invoke-AddRoomMailbox {
     param($Request, $TriggerMetadata)
 
     $APIName = $Request.Params.CIPPEndpoint
-    Write-LogMessage -headers $Request.Headers -API $APINAME -message 'Accessed this API' -Sev 'Debug'
-    $Tenant = $Request.body.tenantid
-    $User = $Request.Headers
+    $Headers = $Request.Headers
+    Write-LogMessage -headers $Headers -API $APIName -message 'Accessed this API' -Sev 'Debug'
+
+    $Tenant = $Request.Body.tenantid
 
     $Results = [System.Collections.Generic.List[Object]]::new()
-    $MailboxObject = $Request.body
+    $MailboxObject = $Request.Body
     $AddRoomParams = [pscustomobject]@{
         Name               = $MailboxObject.username
         DisplayName        = $MailboxObject.displayName
@@ -25,24 +26,24 @@ Function Invoke-AddRoomMailbox {
     }
     # Interact with query parameters or the body of the request.
     try {
-        $AddRoomRequest = New-ExoRequest -tenantid $Tenant -cmdlet 'New-Mailbox' -cmdparams $AddRoomParams
+        $AddRoomRequest = New-ExoRequest -tenantid $Tenant -cmdlet 'New-Mailbox' -cmdParams $AddRoomParams
         $Results.Add("Successfully created room: $($MailboxObject.DisplayName).")
-        Write-LogMessage -Headers $User -API $APINAME -tenant $Tenant -message "Created room $($MailboxObject.DisplayName) with id $($AddRoomRequest.id)" -Sev 'Info'
+        Write-LogMessage -Headers $Headers -API $APINAME -tenant $Tenant -message "Created room $($MailboxObject.DisplayName) with id $($AddRoomRequest.id)" -Sev 'Info'
 
         # Block sign-in for the mailbox
         try {
-            $Request = Set-CIPPSignInState -userid $AddRoomRequest.ExternalDirectoryObjectId -TenantFilter $Tenant -APIName $APINAME -Headers $User -AccountEnabled $false
-            $Results.add("Blocked sign-in for Room mailbox; $($MailboxObject.userPrincipalName)")
+            $Request = Set-CIPPSignInState -userid $AddRoomRequest.ExternalDirectoryObjectId -TenantFilter $Tenant -APIName $APINAME -Headers $Headers -AccountEnabled $false
+            $Results.Add("Blocked sign-in for Room mailbox; $($MailboxObject.userPrincipalName)")
         } catch {
             $ErrorMessage = Get-CippException -Exception $_
-            $Results.add("Failed to block sign-in for Room mailbox: $($MailboxObject.userPrincipalName). Error: $($ErrorMessage.NormalizedError)")
+            $Results.Add("Failed to block sign-in for Room mailbox: $($MailboxObject.userPrincipalName). Error: $($ErrorMessage.NormalizedError)")
         }
         $StatusCode = [HttpStatusCode]::OK
     } catch {
         $ErrorMessage = Get-CippException -Exception $_
-        Write-LogMessage -Headers $User -API $APINAME -tenant $Tenant -message "Failed to create room: $($MailboxObject.DisplayName). Error: $($ErrorMessage.NormalizedError)" -Sev 'Error' -LogData $ErrorMessage
+        Write-LogMessage -Headers $Headers -API $APIName -tenant $Tenant -message "Failed to create room: $($MailboxObject.DisplayName). Error: $($ErrorMessage.NormalizedError)" -Sev 'Error' -LogData $ErrorMessage
         $Results.Add("Failed to create Room mailbox $($MailboxObject.userPrincipalName). $($ErrorMessage.NormalizedError)")
-        $StatusCode = [HttpStatusCode]::Forbidden
+        $StatusCode = [HttpStatusCode]::InternalServerError
     }
 
     $Body = [pscustomobject] @{ 'Results' = @($Results) }

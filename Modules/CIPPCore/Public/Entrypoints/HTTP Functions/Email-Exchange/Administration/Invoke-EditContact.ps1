@@ -11,13 +11,13 @@ Function Invoke-EditContact {
     param($Request, $TriggerMetadata)
 
     $APIName = $Request.Params.CIPPEndpoint
-    $TenantID = $Request.body.tenantID
     $Headers = $Request.Headers
-    Write-LogMessage -Headers $Headers -API $APINAME -message 'Accessed this API' -Sev 'Debug'
+    Write-LogMessage -Headers $Headers -API $APIName -message 'Accessed this API' -Sev 'Debug'
 
+    $TenantID = $Request.Body.tenantID
     try {
         # Extract contact information from the request body
-        $contactInfo = $Request.body
+        $contactInfo = $Request.Body
 
         # Log the received contact object
         Write-Host "Received contact object: $($contactInfo | ConvertTo-Json)"
@@ -43,21 +43,20 @@ Function Invoke-EditContact {
         $null = New-ExoRequest -tenantid $TenantID -cmdlet 'Set-Contact' -cmdParams $bodyForSetContact -UseSystemMailbox $true
         $null = New-ExoRequest -tenantid $TenantID -cmdlet 'Set-MailContact' -cmdParams @{Identity = $contactInfo.ContactID; HiddenFromAddressListsEnabled = [System.Convert]::ToBoolean($contactInfo.hidefromGAL) } -UseSystemMailbox $true
         $Results = "Successfully edited contact $($contactInfo.DisplayName)"
-        Write-LogMessage -Headers $Headers -API $APINAME -tenant $TenantID -message $Results -Sev Info
+        Write-LogMessage -Headers $Headers -API $APIName -tenant $TenantID -message $Results -Sev Info
         $StatusCode = [HttpStatusCode]::OK
 
     } catch {
         $ErrorMessage = Get-CippException -Exception $_
         $Results = "Failed to edit contact. $($ErrorMessage.NormalizedError)"
-        Write-LogMessage -Headers $Headers -API $APINAME -tenant $TenantID -message $Results -Sev Error -LogData $ErrorMessage
+        Write-LogMessage -Headers $Headers -API $APIName -tenant $TenantID -message $Results -Sev Error -LogData $ErrorMessage
         $StatusCode = [HttpStatusCode]::InternalServerError
     }
 
 
-    $Results = [pscustomobject]@{'Results' = "$Results" }
     # Associate values to output bindings by calling 'Push-OutputBinding'.
     Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
             StatusCode = $StatusCode
-            Body       = $Results
+            Body       = @{Results = $Results }
         })
 }

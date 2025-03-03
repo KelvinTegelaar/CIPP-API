@@ -11,7 +11,9 @@ Function Invoke-AddConnectionFilterTemplate {
     param($Request, $TriggerMetadata)
 
     $APIName = $Request.Params.CIPPEndpoint
-    Write-LogMessage -headers $Request.Headers -API $APINAME -message 'Accessed this API' -Sev 'Debug'
+    $Headers = $Request.Headers
+    Write-LogMessage -headers $Headers -API $APIName -message 'Accessed this API' -Sev 'Debug'
+
     Write-Host ($request | ConvertTo-Json -Compress)
 
     try {
@@ -19,8 +21,7 @@ Function Invoke-AddConnectionFilterTemplate {
         $JSON = if ($request.body.PowerShellCommand) {
             Write-Host 'PowerShellCommand'
             $request.body.PowerShellCommand | ConvertFrom-Json
-        }
-        else {
+        } else {
             $GUID = (New-Guid).GUID
         ([pscustomobject]$Request.body | Select-Object Name, EnableSafeList, IPAllowList , IPBlockList ) | ForEach-Object {
                 $NonEmptyProperties = $_.psobject.Properties | Where-Object { $null -ne $_.Value } | Select-Object -ExpandProperty Name
@@ -35,20 +36,21 @@ Function Invoke-AddConnectionFilterTemplate {
             RowKey       = "$GUID"
             PartitionKey = 'ConnectionfilterTemplate'
         }
-        Write-LogMessage -headers $Request.Headers -API $APINAME -message "Created Connection Filter Template $($Request.body.name) with GUID $GUID" -Sev 'Debug'
-        $body = [pscustomobject]@{'Results' = 'Successfully added template' }
-
-    }
-    catch {
-        Write-LogMessage -headers $Request.Headers -API $APINAME -message "Failed to create Connection Filter Template: $($_.Exception.Message)" -Sev 'Error'
-        $body = [pscustomobject]@{'Results' = "ConnectionFilter Template Deployment failed: $($_.Exception.Message)" }
+        $Result = "Successfully created Connection Filter Template: $($Request.Body.name) with GUID $GUID"
+        Write-LogMessage -headers $Headers -API $APIName -message $Result -Sev 'Debug'
+        $StatusCode = [HttpStatusCode]::OK
+    } catch {
+        $ErrorMessage = Get-CippException -Exception $_
+        $Result = "Failed to create Connection Filter Template: $($ErrorMessage.NormalizedError)"
+        Write-LogMessage -headers $Headers -API $APIName -message $Result -Sev 'Error' -LogData $ErrorMessage
+        $StatusCode = [HttpStatusCode]::InternalServerError
     }
 
 
     # Associate values to output bindings by calling 'Push-OutputBinding'.
     Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
-            StatusCode = [HttpStatusCode]::OK
-            Body       = $body
+            StatusCode = $StatusCode
+            Body       = @{Results = $Result }
         })
 
 }

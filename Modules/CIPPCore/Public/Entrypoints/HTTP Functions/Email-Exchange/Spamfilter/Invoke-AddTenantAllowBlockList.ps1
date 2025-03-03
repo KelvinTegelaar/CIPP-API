@@ -11,12 +11,11 @@ Function Invoke-AddTenantAllowBlockList {
     param($Request, $TriggerMetadata)
 
     $APIName = $Request.Params.CIPPEndpoint
-    Write-LogMessage -headers $Request.Headers -API $APIName -message 'Accessed this API' -Sev 'Debug'
+    $Headers = $Request.Headers
+    Write-LogMessage -headers $Headers -API $APIName -message 'Accessed this API' -Sev 'Debug'
 
-    $blocklistobj = $Request.body
-    if ($Request.body.tenantId -eq 'AllTenants') { $Tenants = (Get-Tenants).defaultDomainName } else { $Tenants = @($Request.body.tenantId) }
-    # Write to the Azure Functions log stream.
-    Write-Host 'PowerShell HTTP trigger function processed a request.'
+    $BlockListObject = $Request.Body
+    if ($Request.Body.tenantId -eq 'AllTenants') { $Tenants = (Get-Tenants).defaultDomainName } else { $Tenants = @($Request.body.tenantId) }
     $Results = [System.Collections.Generic.List[string]]::new()
     foreach ($Tenant in $Tenants) {
         try {
@@ -24,20 +23,20 @@ Function Invoke-AddTenantAllowBlockList {
                 tenantid  = $Tenant
                 cmdlet    = 'New-TenantAllowBlockListItems'
                 cmdParams = @{
-                    Entries                  = [string[]]$blocklistobj.entries
-                    ListType                 = [string]$blocklistobj.listType
-                    Notes                    = [string]$blocklistobj.notes
-                    $blocklistobj.listMethod = [bool]$true
+                    Entries                     = [string[]]$BlockListObject.entries
+                    ListType                    = [string]$BlockListObject.listType
+                    Notes                       = [string]$BlockListObject.notes
+                    $BlockListObject.listMethod = [bool]$true
                 }
             }
 
-            if ($blocklistobj.NoExpiration -eq $true) {
+            if ($BlockListObject.NoExpiration -eq $true) {
                 $ExoRequest.cmdParams.NoExpiration = $true
             }
 
             New-ExoRequest @ExoRequest
 
-            $results.add("Successfully added $($blocklistobj.Entries) as type $($blocklistobj.ListType) to the $($blocklistobj.listMethod) list for $tenant")
+            $results.add("Successfully added $($BlockListObject.Entries) as type $($BlockListObject.ListType) to the $($BlockListObject.listMethod) list for $tenant")
             Write-LogMessage -headers $Request.Headers -API $APIName -tenant $Tenant -message $result -Sev 'Info'
         } catch {
             $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message

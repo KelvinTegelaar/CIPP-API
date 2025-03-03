@@ -52,6 +52,9 @@ function Invoke-CIPPOffboardingJob {
                 Set-CIPPForwarding -userid $userid -username $username -tenantFilter $TenantFilter -Forward $Options.forward.value -KeepCopy $KeepCopy -Headers $Headers -APIName $APIName
             }
         }
+        { $_.disableForwarding } {
+            Set-CIPPForwarding -userid $userid -username $username -tenantFilter $TenantFilter -Disable $true -Headers $Headers -APIName $APIName
+        }
         { $_.RemoveLicenses -eq $true } {
             Remove-CIPPLicense -userid $userid -username $Username -tenantFilter $TenantFilter -Headers $Headers -APIName $APIName -Schedule
         }
