@@ -198,6 +198,7 @@ function Test-CIPPAuditLogRules {
 
         $MatchedRules = [System.Collections.Generic.List[string]]::new()
         $DataToProcess = foreach ($clause in $Where) {
+            $ClauseStartTime = Get-Date
             Write-Warning "Webhook: Processing clause: $($clause.clause)"
             $ReturnedData = $ProcessedData | Where-Object { Invoke-Expression $clause.clause }
             if ($ReturnedData) {
@@ -209,6 +210,9 @@ function Test-CIPPAuditLogRules {
                     $item
                 }
             }
+            $ClauseEndTime = Get-Date
+            $ClauseSeconds = ($ClauseEndTime - $ClauseStartTime).TotalSeconds
+            Write-Warning "Task took $ClauseSeconds seconds for clause: $($clause.clause)"
             $ReturnedData
         }
         $Results.MatchedRules = @($MatchedRules | Select-Object -Unique)
