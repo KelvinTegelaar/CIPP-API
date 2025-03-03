@@ -1,4 +1,4 @@
-function Invoke-CIPPStandardAPConfig {
+function Invoke-CIPPStandardAutopilotProfile {
     <#
     .FUNCTIONALITY
     Internal

@@ -1,4 +1,4 @@
-function Invoke-CIPPStandardAPESP {
+function Invoke-CIPPStandardAutopilotStatusPage {
     <#
     .FUNCTIONALITY
     Internal
