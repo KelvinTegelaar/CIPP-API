@@ -53,7 +53,7 @@ function Start-AuditLogOrchestrator {
                     }
                     if ($ProcessBatch.Count -gt 0) {
                         $ProcessInputObject = [PSCustomObject]@{
-                            OrchestratorName = 'AuditLogsProcess'
+                            OrchestratorName = 'AuditLogTenantProcess'
                             Batch            = @($ProcessBatch)
                             SkipLog          = $true
                         }

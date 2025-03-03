@@ -167,7 +167,7 @@ function Test-CIPPAuditLogRules {
             $RecordSeconds = ($RecordEndTime - $RecordStartTime).TotalSeconds
             Write-Warning "Task took $RecordSeconds seconds for RowKey $($AuditRecord.id)"
             Write-Host "Removing row $($AuditRecord.id) from cache"
-            $RowEntity = Get-CIPPAzDataTableEntity @CacheWebhooksTable -Filter "PartitionKey eq '$TenantFilter' and RowKey eq '$($Row.id)'"
+            $RowEntity = Get-CIPPAzDataTableEntity @CacheWebhooksTable -Filter "PartitionKey eq '$TenantFilter' and RowKey eq '$($AuditRecord.id)'"
             try {
                 Write-Information 'Removing processed rows from cache'
                 if ($AuditRecord.id) {
