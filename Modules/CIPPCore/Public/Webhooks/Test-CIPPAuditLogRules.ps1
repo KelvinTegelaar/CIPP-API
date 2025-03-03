@@ -55,7 +55,7 @@ function Test-CIPPAuditLogRules {
     if ($LogCount -gt 0) {
         $LocationTable = Get-CIPPTable -TableName 'knownlocationdb'
         $ProcessedData = foreach ($AuditRecord in $SearchResults) {
-            Write-Host "Auditlogs: The record is $($AuditRecord.operation) - $($TenantFilter)"
+            #Write-Host "Auditlogs: The record is $($AuditRecord.operation) - $($TenantFilter)"
             $RootProperties = $AuditRecord | Select-Object * -ExcludeProperty auditData
             $Data = $AuditRecord.auditData | Select-Object *, CIPPAction, CIPPClause, CIPPGeoLocation, CIPPBadRepIP, CIPPHostedIP, CIPPIPDetected, CIPPLocationInfo, CIPPExtendedProperties, CIPPDeviceProperties, CIPPParameters, CIPPModifiedProperties, AuditRecord -ErrorAction SilentlyContinue
             try {

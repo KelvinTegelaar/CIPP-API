@@ -26,7 +26,6 @@ function New-CIPPAuditLogSearchResultsCache {
         }
     } catch {
         Write-Information "Error checking for failed downloads: $($_.Exception.Message)"
-        # Continue with the process even if the rerun protection check fails
     }
 
     try {
@@ -75,7 +74,7 @@ function New-CIPPAuditLogSearchResultsCache {
                 $FailedDownloadsTable = Get-CippTable -TableName 'FailedAuditLogDownloads'
                 $failedEntities = Get-CIPPAzDataTableEntity @FailedDownloadsTable -Filter "PartitionKey eq '$TenantFilter' and SearchId eq '$SearchId'"
                 if ($failedEntities) {
-                    Remove-CIPPAzDataTableEntity @FailedDownloadsTable -Entity $entity
+                    Remove-AzDataTableEntity @FailedDownloadsTable -Entity $entity
                     Write-Information "Removed failed download records for search ID: $SearchId, tenant: $TenantFilter"
                 }
             } catch {
