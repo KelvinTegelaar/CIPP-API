@@ -63,7 +63,7 @@ function Receive-CippHttpTrigger {
 
 function Receive-CippOrchestrationTrigger {
     param($Context)
-
+    
     try {
         if (Test-Json -Json $Context.Input) {
             $OrchestratorInput = $Context.Input | ConvertFrom-Json
@@ -71,7 +71,7 @@ function Receive-CippOrchestrationTrigger {
             $OrchestratorInput = $Context.Input
         }
         Write-Information "Orchestrator started $($OrchestratorInput.OrchestratorName)"
-
+        Write-Warning "Receive-CippOrchestrationTrigger - $($OrchestratorInput.OrchestratorName)"
         $DurableRetryOptions = @{
             FirstRetryInterval  = (New-TimeSpan -Seconds 5)
             MaxNumberOfAttempts = if ($OrchestratorInput.MaxAttempts) { $OrchestratorInput.MaxAttempts } else { 1 }
