@@ -34,9 +34,10 @@ function Start-AuditLogOrchestrator {
                 $WebhookCache = Get-CIPPAzDataTableEntity @WebhookCacheTable
                 $TenantGroups = $WebhookCache | Group-Object -Property PartitionKey
 
-                if ($TenantGroups.Count -gt 0) {
+                if ($TenantGroups) {
                     Write-Information "Processing webhook cache for $($TenantGroups.Count) tenants"
-                    Write-Warning "AuditLogJobs are: $($TenantGroups.Count) tenants. Tenants: $($tenantgroups.name | ConvertTo-Json) "
+                    Write-Warning "AuditLogJobs are: $($TenantGroups.Count) tenants. Tenants: $($TenantGroups.name | ConvertTo-Json -Compress) "
+                    Write-Warning "Here are the groups: $($TenantGroups | ConvertTo-Json -Compress)"
                     $ProcessQueue = New-CippQueueEntry -Name 'Audit Logs Process' -Reference 'AuditLogsProcess' -TotalTasks ($TenantGroups | Measure-Object -Property Count -Sum).Sum
                     $ProcessBatch = foreach ($TenantGroup in $TenantGroups) {
                         $TenantFilter = $TenantGroup.Name
