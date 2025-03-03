@@ -49,8 +49,11 @@ Function Invoke-ListScheduledItems {
     }
 
     $AllowedTenants = Test-CIPPAccess -Request $Request -TenantList
+
     if ($AllowedTenants -notcontains 'AllTenants') {
-        $Tasks = $Tasks | Where-Object -Property TenantId -In $AllowedTenants
+        $TenantList = Get-Tenants -IncludeErrors | Select-Object customerId, defaultDomainName
+        $AllowedTenantDomains = $TenantList | Where-Object -Property customerId -In $AllowedTenants | Select-Object -ExpandProperty defaultDomainName
+        $Tasks = $Tasks | Where-Object -Property Tenant -In $AllowedTenantDomains
     }
     $ScheduledTasks = foreach ($Task in $tasks) {
         if ($Task.Parameters) {
