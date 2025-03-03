@@ -11,14 +11,16 @@ Function Invoke-ExecEnableArchive {
     param($Request, $TriggerMetadata)
 
     $APIName = $Request.Params.CIPPEndpoint
-    Write-LogMessage -headers $Request.Headers -API $APINAME -message 'Accessed this API' -Sev 'Debug'
+    $Headers = $Request.Headers
+    Write-LogMessage -headers $Headers -API $APIName -message 'Accessed this API' -Sev 'Debug'
 
     # Interact with query parameters or the body of the request.
     $TenantFilter = $Request.Query.tenantFilter ?? $Request.Body.tenantFilter
     $ID = $Request.Query.id ?? $Request.Body.id
+    $UserName = $Request.Query.username ?? $Request.Body.username
 
     Try {
-        $ResultsArch = Set-CIPPMailboxArchive -userid $ID -tenantFilter $TenantFilter -APIName $APINAME -Headers $Request.Headers -ArchiveEnabled $true
+        $ResultsArch = Set-CIPPMailboxArchive -userid $ID -tenantFilter $TenantFilter -APIName $APIName -Headers $Headers -ArchiveEnabled $true -Username $UserName
         if ($ResultsArch -like 'Failed to set archive*') { throw $ResultsArch }
         $StatusCode = [HttpStatusCode]::OK
     } catch {
