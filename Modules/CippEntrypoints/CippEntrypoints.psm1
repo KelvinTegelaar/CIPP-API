@@ -158,8 +158,9 @@ function Receive-CippActivityTrigger {
         if ($Item.FunctionName) {
             $FunctionName = 'Push-{0}' -f $Item.FunctionName
             try {
+                Write-Warning "Activity starting Function: Push-$FunctionName."
                 Invoke-Command -ScriptBlock { & $FunctionName -Item $Item }
-
+                Write-Warning "Activity completed Function: Push-$FunctionName."
                 if ($TaskStatus) {
                     $QueueTask.Status = 'Completed'
                     $null = Set-CippQueueTask @QueueTask
