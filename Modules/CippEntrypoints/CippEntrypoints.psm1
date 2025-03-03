@@ -133,6 +133,7 @@ function Receive-CippOrchestrationTrigger {
 
 function Receive-CippActivityTrigger {
     Param($Item)
+    Write-Warning "Hey Boo, the activity function is running. Here's some info: $($Item | ConvertTo-Json -Depth 10 -Compress)"
     try {
         $Start = Get-Date
         Set-Location (Get-Item $PSScriptRoot).Parent.Parent.FullName
