@@ -74,7 +74,7 @@ function New-CIPPAuditLogSearchResultsCache {
                 $FailedDownloadsTable = Get-CippTable -TableName 'FailedAuditLogDownloads'
                 $failedEntities = Get-CIPPAzDataTableEntity @FailedDownloadsTable -Filter "PartitionKey eq '$TenantFilter' and SearchId eq '$SearchId'"
                 if ($failedEntities) {
-                    Remove-AzDataTableEntity @FailedDownloadsTable -Entity $entity
+                    Remove-AzDataTableEntity @FailedDownloadsTable -Entity $failedEntities
                     Write-Information "Removed failed download records for search ID: $SearchId, tenant: $TenantFilter"
                 }
             } catch {
