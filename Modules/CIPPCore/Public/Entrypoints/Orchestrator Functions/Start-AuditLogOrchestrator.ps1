@@ -36,6 +36,7 @@ function Start-AuditLogOrchestrator {
 
                 if ($TenantGroups.Count -gt 0) {
                     Write-Information "Processing webhook cache for $($TenantGroups.Count) tenants"
+                    Write-Warning "AuditLogJobs are: $($TenantGroups.Count) tenants. Tenants: $($tenantgroups.name | ConvertTo-Json) "
                     $ProcessQueue = New-CippQueueEntry -Name 'Audit Logs Process' -Reference 'AuditLogsProcess' -TotalTasks ($TenantGroups | Measure-Object -Property Count -Sum).Sum
                     $ProcessBatch = foreach ($TenantGroup in $TenantGroups) {
                         $TenantFilter = $TenantGroup.Name
