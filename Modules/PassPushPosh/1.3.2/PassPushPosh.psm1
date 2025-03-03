@@ -64,6 +64,7 @@ $ExportableTypes =@(
 $TypeAcceleratorsClass = [psobject].Assembly.GetType(
     'System.Management.Automation.TypeAccelerators'
 )
+<#
 # Ensure none of the types would clobber an existing type accelerator.
 # If a type accelerator with the same name exists, throw an exception.
 $ExistingTypeAccelerators = $TypeAcceleratorsClass::Get
@@ -81,10 +82,12 @@ foreach ($Type in $ExportableTypes) {
             $Type.FullName
         )
     }
-}
+}#>
 # Add type accelerators for every exportable type.
 foreach ($Type in $ExportableTypes) {
+    try {
     $TypeAcceleratorsClass::Add($Type.FullName, $Type)
+    } catch {}
 }
 # Remove type accelerators when the module is removed.
 ($MyInvocation.MyCommand.ScriptBlock.Module.OnRemove = {
@@ -278,7 +281,7 @@ function New-PasswordPusherUserAgent {
     Write-Debug "$userAtDomain transformed to $uAD64. First 20 characters $($uAD64.Substring(0,20))"
 
     # Version tag is replaced by the semantic version number at build time. See PassPushPosh/issues/11 for context
-    "PassPushPosh/1.3.1 $osVersion/$($uAD64.Substring(0,20))"
+    "PassPushPosh/1.3.2 $osVersion/$($uAD64.Substring(0,20))"
 }
 #EndRegion '.\Private\New-PasswordPusherUserAgent.ps1' 14
 #Region '.\Public\Get-Dashboard.ps1' -1
@@ -457,6 +460,16 @@ function Get-PushAccount {
     }
 }
 #EndRegion '.\Public\Get-PushAccount.ps1' 22
+#Region '.\Public\Get-PushApiVersion.ps1' -1
+
+function Get-PushApiVersion {
+    [CmdletBinding()]
+    [OutputType([PSCustomObject])]
+    param()
+    Initialize-PassPushPosh -Verbose:$VerbosePreference -Debug:$DebugPreference
+    Invoke-PasswordPusherAPI -Endpoint 'api/v1/version.json'
+}
+#EndRegion '.\Public\Get-PushApiVersion.ps1' 8
 #Region '.\Public\Get-PushAuditLog.ps1' -1
 
 <#
@@ -736,9 +749,9 @@ function Initialize-PassPushPosh {
                 }
             }
             'Automatic' {
-                Write-Debug 'Legacy auth status not specified Checking for /up'
-                if ((Invoke-WebRequest "$_baseUrl/up" -SkipHttpErrorCheck).StatusCode -eq 200) {
-                    Write-Debug "Current version detected via /up"
+                Write-Debug 'Legacy auth status not specified Checking for /version'
+                if ((Invoke-RestMethod "$_baseUrl/api/v1/version.json" -SkipHttpErrorCheck).Api_Version -gt 1.0) {
+                    Write-Debug "Current version detected via /version"
                     Set-Variable -Scope Script -Name PPPHeaders -WhatIf:$false -Value @{
                         'Authorization' = "Bearer $_apiKey"
                     }

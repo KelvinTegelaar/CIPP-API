@@ -6,19 +6,27 @@ function Set-CIPPMailboxArchive {
         $Username,
         $APIName = 'Mailbox Archive',
         $TenantFilter,
-        [bool]$ArchiveEnabled
+        [bool]$ArchiveEnabled,
+        [switch]$AutoExpandingArchive
     )
 
     try {
-        if (!$Username) { $Username = $UserID }
-        $null = New-ExoRequest -tenantid $TenantFilter -cmdlet 'Enable-Mailbox' -cmdParams @{Identity = $UserID; Archive = $ArchiveEnabled }
-        $Message = "Successfully set archive for $Username to $ArchiveEnabled"
-        Write-LogMessage -Headers $Headers -API $APINAME -tenant $TenantFilter -message $Message -Sev 'Info'
+        if ([string]::IsNullOrWhiteSpace($Username)) { $Username = $UserID }
+        $OperationType = if ($AutoExpandingArchive.IsPresent -eq $true) { 'auto-expanding archive' } else { 'archive' }
+        if ($AutoExpandingArchive.IsPresent -eq $true) {
+            $null = New-ExoRequest -tenantid $TenantFilter -cmdlet 'Enable-Mailbox' -cmdParams @{Identity = $UserID; AutoExpandingArchive = $true }
+            $Message = "Successfully enabled $OperationType for $Username"
+        } else {
+            $null = New-ExoRequest -tenantid $TenantFilter -cmdlet 'Enable-Mailbox' -cmdParams @{Identity = $UserID; Archive = $ArchiveEnabled }
+            $Message = "Successfully set $OperationType for $Username to $ArchiveEnabled"
+        }
+
+        Write-LogMessage -Headers $Headers -API $APIName -tenant $TenantFilter -message $Message -Sev 'Info'
         return $Message
     } catch {
         $ErrorMessage = Get-CippException -Exception $_
-        $Message = "Failed to set archive for $Username. Error: $($ErrorMessage.NormalizedError)"
-        Write-LogMessage -Headers $Headers -API $APINAME -tenant $TenantFilter -message $Message -Sev 'Error' -LogData $ErrorMessage
-        return $Message
+        $Message = "Failed to set $OperationType for $Username. Error: $($ErrorMessage.NormalizedError)"
+        Write-LogMessage -Headers $Headers -API $APIName -tenant $TenantFilter -message $Message -Sev 'Error' -LogData $ErrorMessage
+        throw $Message
     }
 }

@@ -31,7 +31,6 @@ function Get-CippAuditLogSearches {
             return @()
         }
         $Queries = New-GraphBulkRequest -Requests @($BulkRequests) -AsApp $true -TenantId $TenantFilter | Select-Object -ExpandProperty body
-
         $Queries = $Queries | Where-Object { $PendingQueries.RowKey -contains $_.id -and $_.status -eq 'succeeded' }
     } else {
         $Queries = New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/security/auditLog/queries' -AsApp $true -tenantid $TenantFilter
