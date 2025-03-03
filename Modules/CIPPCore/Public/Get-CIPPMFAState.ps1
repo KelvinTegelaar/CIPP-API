@@ -17,10 +17,12 @@ function Get-CIPPMFAState {
         }
     }
 
+    $Errors = [System.Collections.Generic.List[object]]::new()
     try {
         $SecureDefaultsState = (New-GraphGetRequest -Uri 'https://graph.microsoft.com/beta/policies/identitySecurityDefaultsEnforcementPolicy' -tenantid $TenantFilter ).IsEnabled
     } catch {
         Write-Host "Secure Defaults not available: $($_.Exception.Message)"
+        $Errors.Add(@{Step = 'SecureDefaults'; Message = $_.Exception.Message })
     }
     $CAState = [System.Collections.Generic.List[object]]::new()
 
@@ -29,6 +31,7 @@ function Get-CIPPMFAState {
     } catch {
         $CAState.Add('Not Licensed for Conditional Access') | Out-Null
         $MFARegistration = $null
+        $Errors.Add(@{Step = 'MFARegistration'; Message = $_.Exception.Message })
         Write-Host "User registration details not available: $($_.Exception.Message)"
     }
 
@@ -58,6 +61,7 @@ function Get-CIPPMFAState {
         } catch {
             $CASuccess = $false
             $CAError = "CA policies not available: $($_.Exception.Message)"
+            $Errors.Add(@{Step = 'CAPolicies'; Message = $_.Exception.Message })
         }
     }
 
@@ -110,6 +114,7 @@ function Get-CIPPMFAState {
             CoveredByCA     = $CoveredByCA
             CAPolicies      = $UserCAState
             CoveredBySD     = $SecureDefaultsState
+            Errors          = $Errors
             RowKey          = [string]($_.UserPrincipalName).replace('#', '')
             PartitionKey    = 'users'
         }
