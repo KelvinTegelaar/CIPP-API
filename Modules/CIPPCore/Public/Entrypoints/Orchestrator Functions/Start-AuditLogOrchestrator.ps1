@@ -39,7 +39,7 @@ function Start-AuditLogOrchestrator {
                     $ProcessQueue = New-CippQueueEntry -Name 'Audit Logs Process' -Reference 'AuditLogsProcess' -TotalTasks ($TenantGroups | Measure-Object -Property Count -Sum).Sum
                     $ProcessBatch = foreach ($TenantGroup in $TenantGroups) {
                         $TenantFilter = $TenantGroup.Name
-                        $RowIds = $TenantGroup.Group.RowKey
+                        $RowIds = @($TenantGroup.Group.RowKey)
                         for ($i = 0; $i -lt $RowIds.Count; $i += 1000) {
                             Write-Host "Processing $TenantFilter with $($RowIds.Count) row IDs. We're processing id $($RowIds[$i]) to $($RowIds[[Math]::Min($i + 999, $RowIds.Count - 1)])"
                             $BatchRowIds = $RowIds[$i..([Math]::Min($i + 999, $RowIds.Count - 1))]
