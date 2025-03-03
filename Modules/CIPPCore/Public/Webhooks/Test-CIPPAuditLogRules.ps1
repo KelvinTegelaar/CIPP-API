@@ -166,6 +166,20 @@ function Test-CIPPAuditLogRules {
             $RecordEndTime = Get-Date
             $RecordSeconds = ($RecordEndTime - $RecordStartTime).TotalSeconds
             Write-Warning "Task took $RecordSeconds seconds for RowKey $($AuditRecord.id)"
+            Write-Host "Removing row $($AuditRecord.id) from cache"
+            $RowEntity = Get-CIPPAzDataTableEntity @CacheWebhooksTable -Filter "PartitionKey eq '$TenantFilter' and RowKey eq '$($Row.id)'"
+            try {
+                Write-Information 'Removing processed rows from cache'
+                if ($AuditRecord.id) {
+                    $RowEntity = Get-CIPPAzDataTableEntity @CacheWebhooksTable -Filter "PartitionKey eq '$TenantFilter' and RowKey eq '$($AuditRecord.id)'"
+                    if ($RowEntity) {
+                        Remove-AzDataTableEntity @CacheWebhooksTable -Entity $RowEntity -Force
+                        Write-Information "Removed row $($AuditRecord.id) from cache"
+                    }
+                }
+            } catch {
+                Write-Information "Error removing rows from cache: $($_.Exception.Message)"
+            }
         }
         #write-warning "Processed Data: $(($ProcessedData | Measure-Object).Count) - This should be higher than 0 in many cases, because the where object has not run yet."
         #write-warning "Creating filters - $(($ProcessedData.operation | Sort-Object -Unique) -join ',') - $($TenantFilter)"
@@ -237,22 +251,6 @@ function Test-CIPPAuditLogRules {
                 Write-Information "Error sending final step of auditlog processing: $($_.Exception.Message)"
             }
         }
-    }
-
-    # Remove processed rows from the cache table
-    try {
-        Write-Information 'Removing processed rows from cache'
-        foreach ($Row in $Rows) {
-            if ($Row.id) {
-                $RowEntity = Get-CIPPAzDataTableEntity @CacheWebhooksTable -Filter "PartitionKey eq '$TenantFilter' and RowKey eq '$($Row.id)'"
-                if ($RowEntity) {
-                    Remove-AzDataTableEntity @CacheWebhooksTable -Entity $RowEntity -Force
-                    Write-Information "Removed row $($Row.id) from cache"
-                }
-            }
-        }
-    } catch {
-        Write-Information "Error removing rows from cache: $($_.Exception.Message)"
     }
 
     return $Results
