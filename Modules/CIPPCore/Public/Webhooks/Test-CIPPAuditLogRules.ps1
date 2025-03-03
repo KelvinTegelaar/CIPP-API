@@ -55,7 +55,7 @@ function Test-CIPPAuditLogRules {
     }
 
     if ($LogCount -gt 0) {
-        $LocationTable = Get-CIPPTable -TableName 'knownlocationdb'
+        $LocationTable = Get-CIPPTable -TableName 'knownlocationdbv2'
         $ProcessedData = foreach ($AuditRecord in $SearchResults) {
             $RecordStartTime = Get-Date
             Write-Host "Processing RowKey $($AuditRecord.id)"
@@ -135,7 +135,7 @@ function Test-CIPPAuditLogRules {
                             $IP = $Data.ClientIP
                             $LocationInfo = @{
                                 RowKey          = [string]$Data.clientip
-                                PartitionKey    = [string]$Data.id
+                                PartitionKey    = 'ip'
                                 Tenant          = [string]$TenantFilter
                                 CountryOrRegion = "$Country"
                                 City            = "$City"
