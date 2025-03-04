@@ -13,10 +13,11 @@ function Invoke-CIPPStandardDisableViva {
         CAT
             Exchange Standards
         TAG
-            "lowimpact"
         ADDEDCOMPONENT
         IMPACT
             Low Impact
+        ADDEDDATE
+            2022-05-25
         POWERSHELLEQUIVALENT
             Set-UserBriefingConfig
         RECOMMENDEDBY

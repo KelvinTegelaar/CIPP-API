@@ -34,7 +34,7 @@ Function Invoke-EditUser {
     #Edit the user
     try {
         Write-Host "$([boolean]$UserObj.MustChangePass)"
-        $UserPrincipalName = "$($UserObj.Username ? $UserObj.username :$UserObj.mailNickname)@$($UserObj.Domain ? $UserObj.Domain : $UserObj.primDomain.value)"
+        $UserPrincipalName = "$($UserObj.username)@$($UserObj.Domain ? $UserObj.Domain : $UserObj.primDomain.value)"
         $BodyToship = [pscustomobject] @{
             'givenName'         = $UserObj.givenName
             'surname'           = $UserObj.surname
@@ -140,15 +140,14 @@ Function Invoke-EditUser {
     if ($AddToGroups) {
         $AddToGroups | ForEach-Object {
 
-            $GroupType = $_.value.groupType -join ','
-            $GroupID = $_.value.groupid
-            $GroupName = $_.value.groupName
+            $GroupType = $_.addedFields.calculatedGroupType
+            $GroupID = $_.value
+            $GroupName = $_.label
             Write-Host "About to add $($UserObj.userPrincipalName) to $GroupName. Group ID is: $GroupID and type is: $GroupType"
 
             try {
 
                 if ($GroupType -eq 'Distribution list' -or $GroupType -eq 'Mail-Enabled Security') {
-
                     Write-Host 'Adding to group via Add-DistributionGroupMember '
                     $Params = @{ Identity = $GroupID; Member = $UserObj.id; BypassSecurityGroupManagerCheck = $true }
                     $null = New-ExoRequest -tenantid $UserObj.tenantFilter -cmdlet 'Add-DistributionGroupMember' -cmdParams $params -UseSystemMailbox $true
@@ -180,6 +179,14 @@ Function Invoke-EditUser {
         $null = New-GraphPostRequest -uri "https://graph.microsoft.com/beta/users/$($UserObj.id)/manager/`$ref" -tenantid $UserObj.tenantFilter -type PUT -body $ManagerBodyJSON -Verbose
         Write-LogMessage -headers $Request.Headers -API $ApiName -tenant $UserObj.tenantFilter -message "Set $($UserObj.DisplayName)'s manager to $($Request.body.setManager.label)" -Sev Info
         $null = $results.Add("Success. Set $($UserObj.DisplayName)'s manager to $($Request.body.setManager.label)")
+    }
+
+    if ($Request.body.setSponsor.value) {
+        $SponsorBody = [PSCustomObject]@{'@odata.id' = "https://graph.microsoft.com/beta/users/$($Request.body.setSponsor.value)" }
+        $SponsorBodyJSON = ConvertTo-Json -Compress -Depth 10 -InputObject $SponsorBody
+        $null = New-GraphPostRequest -uri "https://graph.microsoft.com/beta/users/$($UserObj.id)/sponsors/`$ref" -tenantid $UserObj.tenantFilter -type POST -body $SponsorBodyJSON -Verbose
+        Write-LogMessage -headers $Request.Headers -API $ApiName -tenant $UserObj.tenantFilter -message "Set $($UserObj.DisplayName)'s sponsor to $($Request.body.setSponsor.label)" -Sev Info
+        $null = $results.Add("Success. Set $($UserObj.DisplayName)'s sponsor to $($Request.body.setSponsor.label)")
     }
 
     if ($RemoveFromGroups) {

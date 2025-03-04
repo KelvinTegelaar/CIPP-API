@@ -13,7 +13,6 @@ function Invoke-CIPPStandardSafeLinksPolicy {
         CAT
             Defender Standards
         TAG
-            "lowimpact"
             "CIS"
             "mdo_safelinksforemail"
             "mdo_safelinksforOfficeApps"
@@ -23,6 +22,8 @@ function Invoke-CIPPStandardSafeLinksPolicy {
             {"type":"switch","label":"EnableOrganizationBranding","name":"standards.SafeLinksPolicy.EnableOrganizationBranding"}
         IMPACT
             Low Impact
+        ADDEDDATE
+            2024-03-25
         POWERSHELLEQUIVALENT
             Set-SafeLinksPolicy or New-SafeLinksPolicy
         RECOMMENDEDBY

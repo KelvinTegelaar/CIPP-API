@@ -13,12 +13,13 @@ function Invoke-CIPPStandardAtpPolicyForO365 {
         CAT
             Defender Standards
         TAG
-            "lowimpact"
             "CIS"
         ADDEDCOMPONENT
-            {"type":"switch","label":"Allow people to click through Protected View even if Safe Documents identified the file as malicious","name":"standards.AtpPolicyForO365.AllowSafeDocsOpen","default":false,"required":false}
+            {"type":"switch","label":"Allow people to click through Protected View even if Safe Documents identified the file as malicious","name":"standards.AtpPolicyForO365.AllowSafeDocsOpen","defaultValue":false,"required":false}
         IMPACT
             Low Impact
+        ADDEDDATE
+            2024-03-25
         POWERSHELLEQUIVALENT
             Set-AtpPolicyForO365
         RECOMMENDEDBY

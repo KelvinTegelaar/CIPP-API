@@ -13,11 +13,12 @@ function Invoke-CIPPStandardDisableAddShortcutsToOneDrive {
         CAT
             SharePoint Standards
         TAG
-            "mediumimpact"
         ADDEDCOMPONENT
-            {"type":"autoComplete","multiple":false,"label":"Add Shortcuts To OneDrive button state","name":"standards.DisableAddShortcutsToOneDrive.state","options":[{"label":"Disabled","value":"true"},{"label":"Enabled","value":"false"}]}
+            {"type":"autoComplete","multiple":false,"creatable":false,"label":"Add Shortcuts To OneDrive button state","name":"standards.DisableAddShortcutsToOneDrive.state","options":[{"label":"Disabled","value":"true"},{"label":"Enabled","value":"false"}]}
         IMPACT
             Medium Impact
+        ADDEDDATE
+            2023-07-25
         POWERSHELLEQUIVALENT
             Set-SPOTenant -DisableAddShortcutsToOneDrive \$true or \$false
         RECOMMENDEDBY
@@ -37,12 +38,13 @@ function Invoke-CIPPStandardDisableAddShortcutsToOneDrive {
     }
 
     # Input validation
-    if (([string]::IsNullOrWhiteSpace($Settings.state) -or $Settings.state -eq 'Select a value') -and ($Settings.remediate -eq $true -or $Settings.alert -eq $true)) {
+    $StateValue = $Settings.state.value ?? $Settings.state
+    if (([string]::IsNullOrWhiteSpace($StateValue) -or $StateValue -eq 'Select a value') -and ($Settings.remediate -eq $true -or $Settings.alert -eq $true)) {
         Write-LogMessage -API 'Standards' -tenant $tenant -message 'DisableAddShortcutsToOneDrive: Invalid state parameter set' -sev Error
         Return
     }
 
-    $WantedState = [System.Convert]::ToBoolean($Settings.state)
+    $WantedState = [System.Convert]::ToBoolean($StateValue)
     $StateIsCorrect = if ($CurrentState.DisableAddToOneDrive -eq $WantedState) { $true } else { $false }
     $HumanReadableState = if ($WantedState -eq $true) { 'disabled' } else { 'enabled' }
 

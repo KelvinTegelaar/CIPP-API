@@ -10,23 +10,32 @@ Function Invoke-ExecListBackup {
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
 
+    $APIName = $Request.Params.CIPPEndpoint
+    $Headers = $Request.Headers
+    Write-LogMessage -headers $Headers -API $APIName -message 'Accessed this API' -Sev 'Debug'
+
+    $Type = $Request.Query.Type
+    $TenantFilter = $Request.Query.tenantFilter
+    $NameOnly = $Request.Query.NameOnly
+    $BackupName = $Request.Query.BackupName
+
     $CippBackupParams = @{}
-    if ($Request.Query.Type) {
-        $CippBackupParams.Type = $Request.Query.Type
+    if ($Type) {
+        $CippBackupParams.Type = $Type
     }
-    if ($Request.Query.TenantFilter) {
-        $CippBackupParams.TenantFilter = $Request.Query.TenantFilter
+    if ($TenantFilter) {
+        $CippBackupParams.TenantFilter = $TenantFilter
     }
-    if ($Request.Query.NameOnly) {
+    if ($NameOnly) {
         $CippBackupParams.NameOnly = $true
     }
-    if ($Request.Query.BackupName) {
-        $CippBackupParams.Name = $Request.Query.BackupName
+    if ($BackupName) {
+        $CippBackupParams.Name = $BackupName
     }
 
     $Result = Get-CIPPBackup @CippBackupParams
 
-    if ($request.Query.NameOnly) {
+    if ($NameOnly) {
         $Result = $Result | Select-Object @{Name = 'BackupName'; exp = { $_.RowKey } }, Timestamp | Sort-Object Timestamp -Descending
     }
 

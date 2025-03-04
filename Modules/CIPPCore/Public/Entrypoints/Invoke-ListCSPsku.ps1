@@ -12,11 +12,12 @@ Function Invoke-ListCSPsku {
 
     $APIName = $Request.Params.CIPPEndpoint
     Write-LogMessage -headers $Request.Headers -API $APINAME -message 'Accessed this API' -Sev 'Debug'
+    $TenantFilter = $Request.Query.tenantFilter
 
     if ($Request.Query.currentSkuOnly) {
-        $GraphRequest = Get-SherwebCurrentSubscription -TenantFilter $Request.Query.TenantFilter
+        $GraphRequest = Get-SherwebCurrentSubscription -TenantFilter $TenantFilter
     } else {
-        $GraphRequest = Get-SherwebCatalog -TenantFilter $Request.Query.TenantFilter
+        $GraphRequest = Get-SherwebCatalog -TenantFilter $TenantFilter
     }
 
 

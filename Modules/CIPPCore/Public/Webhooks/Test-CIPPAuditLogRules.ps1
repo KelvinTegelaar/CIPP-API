@@ -4,8 +4,10 @@ function Test-CIPPAuditLogRules {
         [Parameter(Mandatory = $true)]
         $TenantFilter,
         [Parameter(Mandatory = $true)]
-        $SearchId
+        $Rows
     )
+
+    $FunctionStartTime = Get-Date
 
     $Results = [PSCustomObject]@{
         TotalLogs     = 0
@@ -13,6 +15,9 @@ function Test-CIPPAuditLogRules {
         MatchedRules  = @()
         DataToProcess = @()
     }
+
+    # Get the CacheWebhooks table for removing processed rows
+    $CacheWebhooksTable = Get-CippTable -TableName 'CacheWebhooks'
 
     $ExtendedPropertiesIgnoreList = @(
         'OAuth2:Authorize'
@@ -35,23 +40,25 @@ function Test-CIPPAuditLogRules {
             LogType    = $_.Type
         }
     }
-    #write-warning 'Getting audit records from Graph API'
+
     try {
-        $LogCount = Get-CippAuditLogSearchResults -TenantFilter $TenantFilter -QueryId $SearchId -CountOnly
+        $LogCount = $Rows.count
         $RunGuid = (New-Guid).Guid
-        Write-Warning "Logs to process: $LogCount - SearchId: $SearchId - RunGuid: $($RunGuid) - $($TenantFilter)"
+        Write-Warning "Logs to process: $LogCount - RunGuid: $($RunGuid) - $($TenantFilter)"
         $Results.TotalLogs = $LogCount
-        Write-Information "RunGuid: $RunGud - Collecting logs"
-        $SearchResults = Get-CippAuditLogSearchResults -TenantFilter $TenantFilter -QueryId $SearchId
+        Write-Information "RunGuid: $RunGuid - Collecting logs"
+        $SearchResults = $Rows
     } catch {
         Write-Warning "Error getting audit logs: $($_.Exception.Message)"
-        Write-LogMessage -API 'Webhooks' -message "Error getting audit logs for search $($SearchId)" -LogData (Get-CippException -Exception $_) -sev Error -tenant $TenantFilter
+        Write-LogMessage -API 'Webhooks' -message 'Error Processing Audit logs' -LogData (Get-CippException -Exception $_) -sev Error -tenant $TenantFilter
         throw $_
     }
 
     if ($LogCount -gt 0) {
-        $LocationTable = Get-CIPPTable -TableName 'knownlocationdb'
+        $LocationTable = Get-CIPPTable -TableName 'knownlocationdbv2'
         $ProcessedData = foreach ($AuditRecord in $SearchResults) {
+            $RecordStartTime = Get-Date
+            Write-Host "Processing RowKey $($AuditRecord.id)"
             $RootProperties = $AuditRecord | Select-Object * -ExcludeProperty auditData
             $Data = $AuditRecord.auditData | Select-Object *, CIPPAction, CIPPClause, CIPPGeoLocation, CIPPBadRepIP, CIPPHostedIP, CIPPIPDetected, CIPPLocationInfo, CIPPExtendedProperties, CIPPDeviceProperties, CIPPParameters, CIPPModifiedProperties, AuditRecord -ErrorAction SilentlyContinue
             try {
@@ -87,7 +94,8 @@ function Test-CIPPAuditLogRules {
                     }
                 }
 
-                if ($Data.clientip) {
+                if ($Data.clientip -and $Data.clientip -notmatch '[X]+') {
+                    # Ignore IP addresses that have been redacted
                     if ($Data.clientip -match '^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}:\d+$') {
                         $Data.clientip = $Data.clientip -replace ':\d+$', '' # Remove the port number if present
                     }
@@ -98,7 +106,12 @@ function Test-CIPPAuditLogRules {
                         $Trusted = $true
                     }
                     if (!$Trusted) {
+                        $CacheLookupStartTime = Get-Date
                         $Location = Get-CIPPAzDataTableEntity @LocationTable -Filter "RowKey eq '$($Data.clientIp)'" | Select-Object -Last 1
+                        $CacheLookupEndTime = Get-Date
+                        $CacheLookupSeconds = ($CacheLookupEndTime - $CacheLookupStartTime).TotalSeconds
+                        Write-Warning "Cache lookup for IP $($Data.clientip) took $CacheLookupSeconds seconds"
+
                         if ($Location) {
                             $Country = $Location.CountryOrRegion
                             $City = $Location.City
@@ -107,7 +120,11 @@ function Test-CIPPAuditLogRules {
                             $ASName = $Location.ASName
                         } else {
                             try {
+                                $IPLookupStartTime = Get-Date
                                 $Location = Get-CIPPGeoIPLocation -IP $Data.clientip
+                                $IPLookupEndTime = Get-Date
+                                $IPLookupSeconds = ($IPLookupEndTime - $IPLookupStartTime).TotalSeconds
+                                Write-Warning "IP lookup for $($Data.clientip) took $IPLookupSeconds seconds"
                             } catch {
                                 #write-warning "Unable to get IP location for $($Data.clientip): $($_.Exception.Message)"
                             }
@@ -119,7 +136,7 @@ function Test-CIPPAuditLogRules {
                             $IP = $Data.ClientIP
                             $LocationInfo = @{
                                 RowKey          = [string]$Data.clientip
-                                PartitionKey    = [string]$Data.id
+                                PartitionKey    = 'ip'
                                 Tenant          = [string]$TenantFilter
                                 CountryOrRegion = "$Country"
                                 City            = "$City"
@@ -146,6 +163,18 @@ function Test-CIPPAuditLogRules {
             } catch {
                 #write-warning "Audit log: Error processing data: $($_.Exception.Message)`r`n$($_.InvocationInfo.PositionMessage)"
                 Write-LogMessage -API 'Webhooks' -message 'Error Processing Audit Log Data' -LogData (Get-CippException -Exception $_) -sev Error -tenant $TenantFilter
+            }
+            $RecordEndTime = Get-Date
+            $RecordSeconds = ($RecordEndTime - $RecordStartTime).TotalSeconds
+            Write-Warning "Task took $RecordSeconds seconds for RowKey $($AuditRecord.id)"
+            Write-Host "Removing row $($AuditRecord.id) from cache"
+            try {
+                Write-Information 'Removing processed rows from cache'
+                $RowEntity = Get-CIPPAzDataTableEntity @CacheWebhooksTable -Filter "PartitionKey eq '$TenantFilter' and RowKey eq '$($AuditRecord.id)'"
+                Remove-AzDataTableEntity @CacheWebhooksTable -Entity $RowEntity -Force
+                Write-Information "Removed row $($AuditRecord.id) from cache"
+            } catch {
+                Write-Information "Error removing rows from cache: $($_.Exception.Message)"
             }
         }
         #write-warning "Processed Data: $(($ProcessedData | Measure-Object).Count) - This should be higher than 0 in many cases, because the where object has not run yet."
@@ -179,10 +208,11 @@ function Test-CIPPAuditLogRules {
 
         $MatchedRules = [System.Collections.Generic.List[string]]::new()
         $DataToProcess = foreach ($clause in $Where) {
-            #write-warning "Webhook: Processing clause: $($clause.clause)"
+            $ClauseStartTime = Get-Date
+            Write-Warning "Webhook: Processing clause: $($clause.clause)"
             $ReturnedData = $ProcessedData | Where-Object { Invoke-Expression $clause.clause }
             if ($ReturnedData) {
-                #write-warning "Webhook: There is matching data: $(($ReturnedData.operation | Select-Object -Unique) -join ', ')"
+                Write-Warning "Webhook: There is matching data: $(($ReturnedData.operation | Select-Object -Unique) -join ', ')"
                 $ReturnedData = foreach ($item in $ReturnedData) {
                     $item.CIPPAction = $clause.expectedAction
                     $item.CIPPClause = $clause.CIPPClause -join ' and '
@@ -190,12 +220,49 @@ function Test-CIPPAuditLogRules {
                     $item
                 }
             }
+            $ClauseEndTime = Get-Date
+            $ClauseSeconds = ($ClauseEndTime - $ClauseStartTime).TotalSeconds
+            Write-Warning "Task took $ClauseSeconds seconds for clause: $($clause.clause)"
             $ReturnedData
         }
         $Results.MatchedRules = @($MatchedRules | Select-Object -Unique)
         $Results.MatchedLogs = ($DataToProcess | Measure-Object).Count
         $Results.DataToProcess = $DataToProcess
     }
-    Write-Warning "Finished - RunGuid: $($RunGuid) - $($TenantFilter)"
-    $Results
+
+    if ($DataToProcess) {
+        $CippConfigTable = Get-CippTable -tablename Config
+        $CippConfig = Get-CIPPAzDataTableEntity @CippConfigTable -Filter "PartitionKey eq 'InstanceProperties' and RowKey eq 'CIPPURL'"
+        $CIPPURL = 'https://{0}' -f $CippConfig.Value
+        foreach ($AuditLog in $DataToProcess) {
+            Write-Information "Processing $($AuditLog.operation)"
+            $Webhook = @{
+                Data         = $AuditLog
+                CIPPURL      = [string]$CIPPURL
+                TenantFilter = $TenantFilter
+            }
+            try {
+                Invoke-CippWebhookProcessing @Webhook
+            } catch {
+                Write-Information "Error sending final step of auditlog processing: $($_.Exception.Message)"
+            }
+        }
+    }
+
+    try {
+        Write-Information 'Removing processed rows from cache'
+        foreach ($Row in $Rows) {
+            if ($Row.id) {
+                $RowEntity = Get-CIPPAzDataTableEntity @CacheWebhooksTable -Filter "PartitionKey eq '$TenantFilter' and RowKey eq '$($Row.id)'"
+                if ($RowEntity) {
+                    Remove-AzDataTableEntity @CacheWebhooksTable -Entity $RowEntity -Force
+                    Write-Information "Removed row $($Row.id) from cache at final pass."
+                }
+            }
+        }
+    } catch {
+        Write-Information "Error removing rows from cache: $($_.Exception.Message)"
+    }
+
+    return $Results
 }
