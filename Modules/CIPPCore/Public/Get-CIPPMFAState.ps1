@@ -31,7 +31,9 @@ function Get-CIPPMFAState {
     } catch {
         $CAState.Add('Not Licensed for Conditional Access') | Out-Null
         $MFARegistration = $null
-        $Errors.Add(@{Step = 'MFARegistration'; Message = $_.Exception.Message })
+        if ($_.Exception.Message -ne "Tenant is not a B2C tenant and doesn't have premium licenses") {
+            $Errors.Add(@{Step = 'MFARegistration'; Message = $_.Exception.Message })
+        }
         Write-Host "User registration details not available: $($_.Exception.Message)"
     }
 
@@ -114,11 +116,18 @@ function Get-CIPPMFAState {
             CoveredByCA     = $CoveredByCA
             CAPolicies      = $UserCAState
             CoveredBySD     = $SecureDefaultsState
-            Errors          = $Errors
             RowKey          = [string]($_.UserPrincipalName).replace('#', '')
             PartitionKey    = 'users'
         }
-
+    }
+    $ErrorCount = ($Errors | Measure-Object).Count
+    if ($ErrorCount -gt 0) {
+        if ($ErrorCount -gt 1) {
+            $Text = 'errors'
+        } else {
+            $Text = 'an error'
+        }
+        Write-LogMessage -headers $Headers -API $APIName -Tenant $TenantFilter -message "The MFA report encountered $Text, see log data for details." -Sev 'Error' -LogData @($Errors.Message)
     }
     return $GraphRequest
 }
