@@ -138,9 +138,9 @@ function Get-GraphRequestList {
                 $Table = Get-CIPPTable -TableName $TableName
                 $Timestamp = (Get-Date).AddHours(-1).ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ss.fffK')
                 if ($TenantFilter -eq 'AllTenants') {
-                    $Filter = "PartitionKey eq '{0}' and QueueType eq 'AllTenants' and Timestamp ge datetime'{1}'" -f $PartitionKey, $Timestamp
+                    $Filter = "PartitionKey eq '{0}' and Timestamp ge datetime'{1}'" -f $PartitionKey, $Timestamp
                 } else {
-                    $Filter = "PartitionKey eq '{0}' and Tenant eq '{1}' and Timestamp ge datetime'{2}'" -f $PartitionKey, $TenantFilter, $Timestamp
+                    $Filter = "PartitionKey eq '{0}' and (RowKey eq '{1}' or OriginalEntityId eq '{1}') and Timestamp ge datetime'{2}'" -f $PartitionKey, $TenantFilter, $Timestamp
                 }
                 $Rows = Get-CIPPAzDataTableEntity @Table -Filter $Filter
                 $Type = 'Cache'
@@ -337,8 +337,16 @@ function Get-GraphRequestList {
             }
         }
     } else {
-        $Rows | ForEach-Object {
-            $_.Data | ConvertFrom-Json
+        foreach ($Row in $Rows) {
+            if ($Row.Data) {
+                try {
+                    $Row.Data | ConvertFrom-Json -ErrorAction Stop
+                } catch {
+                    Write-Warning "Could not convert data to JSON: $($_.Exception.Message)"
+                    #Write-Information ($Row | ConvertTo-Json)
+                    continue
+                }
+            }
         }
     }
 }

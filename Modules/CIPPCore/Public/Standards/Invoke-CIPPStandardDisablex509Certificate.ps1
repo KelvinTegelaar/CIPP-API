@@ -13,10 +13,11 @@ function Invoke-CIPPStandardDisablex509Certificate {
         CAT
             Entra (AAD) Standards
         TAG
-            "highimpact"
         ADDEDCOMPONENT
         IMPACT
             High Impact
+        ADDEDDATE
+            2023-12-18
         POWERSHELLEQUIVALENT
             Update-MgBetaPolicyAuthenticationMethodPolicyAuthenticationMethodConfiguration
         RECOMMENDEDBY

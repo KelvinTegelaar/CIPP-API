@@ -22,7 +22,7 @@ function Remove-CIPPMailboxRule {
                 return "No rules for $($username) to delete"
             } else {
                 ForEach ($rule in $rules) {
-                    New-ExoRequest -tenantid $TenantFilter -cmdlet 'Remove-InboxRule' -Anchor $username -cmdParams @{Identity = $rule.Identity }
+                    $null = New-ExoRequest -tenantid $TenantFilter -cmdlet 'Remove-InboxRule' -Anchor $username -cmdParams @{Identity = $rule.Identity }
                 }
                 Write-LogMessage -headers $Headers -API $APIName -message "Deleted Rules for $($username)" -Sev 'Info' -tenant $TenantFilter
                 return "Deleted Rules for $($username)"

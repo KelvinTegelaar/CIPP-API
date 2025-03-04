@@ -76,6 +76,8 @@ function Import-CommunityTemplate {
                     '*DriverUpdateProfiles*' { 'windowsDriverUpdateProfiles' }
                     '*SettingsCatalog*' { 'Catalog' }
                     '*configurationPolicies*' { 'Catalog' }
+                    '*managedAppPolicies*' { 'AppProtection' }
+                    '*deviceAppManagement*' { 'AppProtection' }
                 }
                 $id = $Template.id
                 $RawJson = $Template | Select-Object * -ExcludeProperty id, lastModifiedDateTime, 'assignments', '#microsoft*', '*@odata.navigationLink', '*@odata.associationLink', '*@odata.context', 'ScopeTagIds', 'supportsScopeTags', 'createdDateTime', '@odata.id', '@odata.editLink', 'lastModifiedDateTime@odata.type', 'roleScopeTagIds@odata.type', createdDateTime, 'createdDateTime@odata.type'

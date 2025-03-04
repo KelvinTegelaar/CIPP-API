@@ -13,12 +13,13 @@ function Invoke-CIPPStandardSPExternalUserExpiration {
         CAT
             SharePoint Standards
         TAG
-            "mediumimpact"
             "CIS"
         ADDEDCOMPONENT
             {"type":"number","name":"standards.SPExternalUserExpiration.Days","label":"Days until expiration (Default 60)"}
         IMPACT
             Medium Impact
+        ADDEDDATE
+            2024-07-09
         POWERSHELLEQUIVALENT
             Set-SPOTenant -ExternalUserExpireInDays 30 -ExternalUserExpirationRequired \$True
         RECOMMENDEDBY
@@ -33,14 +34,14 @@ function Invoke-CIPPStandardSPExternalUserExpiration {
     ##$Rerun -Type Standard -Tenant $Tenant -Settings $Settings 'SPExternalUserExpiration'
 
     $CurrentState = Get-CIPPSPOTenant -TenantFilter $Tenant |
-    Select-Object -Property ExternalUserExpireInDays, ExternalUserExpirationRequired
+        Select-Object -Property ExternalUserExpireInDays, ExternalUserExpirationRequired
 
     $StateIsCorrect = ($CurrentState.ExternalUserExpireInDays -eq $Settings.Days) -and
                       ($CurrentState.ExternalUserExpirationRequired -eq $true)
 
     if ($Settings.remediate -eq $true) {
         if ($StateIsCorrect -eq $true) {
-            Write-LogMessage -API 'Standards' -Tenant $Tenant -Message 'Sharepoint External User Expiration is already enabled.' -Sev Info
+            Write-LogMessage -API 'Standards' -Tenant $Tenant -Message 'SharePoint External User Expiration is already enabled.' -Sev Info
         } else {
             $Properties = @{
                 ExternalUserExpireInDays       = $Settings.Days
@@ -51,8 +52,8 @@ function Invoke-CIPPStandardSPExternalUserExpiration {
                 Get-CIPPSPOTenant -TenantFilter $Tenant | Set-CIPPSPOTenant -Properties $Properties
                 Write-LogMessage -API 'Standards' -Tenant $Tenant -Message 'Successfully set External User Expiration' -Sev Info
             } catch {
-                $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
-                Write-LogMessage -API 'Standards' -Tenant $Tenant -Message "Failed to set External User Expiration. Error: $ErrorMessage" -Sev Error
+                $ErrorMessage = Get-CippException -Exception $_
+                Write-LogMessage -API 'Standards' -Tenant $Tenant -Message "Failed to set External User Expiration. Error: $($ErrorMessage.NormalizedError)" -Sev Error -LogData $ErrorMessage
             }
         }
     }

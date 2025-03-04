@@ -13,18 +13,19 @@ function Invoke-CIPPStandardSafeAttachmentPolicy {
         CAT
             Defender Standards
         TAG
-            "lowimpact"
             "CIS"
             "mdo_safedocuments"
             "mdo_commonattachmentsfilter"
             "mdo_safeattachmentpolicy"
         ADDEDCOMPONENT
-            {"type":"select","multiple":false,"label":"Action","name":"standards.SafeAttachmentPolicy.Action","options":[{"label":"Allow","value":"Allow"},{"label":"Block","value":"Block"},{"label":"DynamicDelivery","value":"DynamicDelivery"}]}
+            {"type":"select","multiple":false,"label":"Safe Attachment Action","name":"standards.SafeAttachmentPolicy.SafeAttachmentAction","options":[{"label":"Allow","value":"Allow"},{"label":"Block","value":"Block"},{"label":"DynamicDelivery","value":"DynamicDelivery"}]}
             {"type":"select","multiple":false,"label":"QuarantineTag","name":"standards.SafeAttachmentPolicy.QuarantineTag","options":[{"label":"AdminOnlyAccessPolicy","value":"AdminOnlyAccessPolicy"},{"label":"DefaultFullAccessPolicy","value":"DefaultFullAccessPolicy"},{"label":"DefaultFullAccessWithNotificationPolicy","value":"DefaultFullAccessWithNotificationPolicy"}]}
             {"type":"switch","label":"Redirect","name":"standards.SafeAttachmentPolicy.Redirect"}
             {"type":"textField","name":"standards.SafeAttachmentPolicy.RedirectAddress","label":"Redirect Address","required":false}
         IMPACT
             Low Impact
+        ADDEDDATE
+            2024-03-25
         POWERSHELLEQUIVALENT
             Set-SafeAttachmentPolicy or New-SafeAttachmentPolicy
         RECOMMENDEDBY

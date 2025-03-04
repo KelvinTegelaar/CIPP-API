@@ -13,12 +13,13 @@ function Invoke-CIPPStandardOutBoundSpamAlert {
         CAT
             Exchange Standards
         TAG
-            "lowimpact"
             "CIS"
         ADDEDCOMPONENT
             {"type":"textField","name":"standards.OutBoundSpamAlert.OutboundSpamContact","label":"Outbound spam contact"}
         IMPACT
             Low Impact
+        ADDEDDATE
+            2023-05-03
         POWERSHELLEQUIVALENT
             Set-HostedOutboundSpamFilterPolicy
         RECOMMENDEDBY
