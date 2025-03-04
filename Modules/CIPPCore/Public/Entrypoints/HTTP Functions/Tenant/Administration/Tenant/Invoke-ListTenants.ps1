@@ -41,7 +41,7 @@ Function Invoke-ListTenants {
         Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
                 StatusCode = [HttpStatusCode]::OK
                 Body       = @{
-                    Results = @($GraphRequest)
+                    Results  = @($GraphRequest)
                     Metadata = @{
                         Details = $Results
                     }
@@ -93,6 +93,19 @@ Function Invoke-ListTenants {
             } else {
                 $Body = $Tenants
             }
+            if ($Request.Query.Mode -eq 'TenantList') {
+                # add portal link properties
+                $Body = $Body | Select-Object *, @{Name = 'portal_m365'; Expression = { "https://admin.microsoft.com/Partner/BeginClientSession.aspx?CTID=$($_.customerId)&CSDEST=o365admincenter" } },
+                @{Name = 'portal_exchange'; Expression = { "https://admin.exchange.microsoft.com/?landingpage=homepage&form=mac_sidebar&delegatedOrg=$($_.defaultDomainName)" } },
+                @{Name = 'portal_entra'; Expression = { "https://entra.microsoft.com/$($_.defaultDomainName)" } },
+                @{Name = 'portal_teams'; Expression = { "https://admin.teams.microsoft.com/?delegatedOrg=$($_.defaultDomainName)" } },
+                @{Name = 'portal_azure'; Expression = { "https://portal.azure.com/$($_.defaultDomainName)" } },
+                @{Name = 'portal_intune'; Expression = { "https://intune.microsoft.com/$($_.defaultDomainName)" } },
+                @{Name = 'portal_security'; Expression = { "https://security.microsoft.com/?tid=$($_.customerId)" } },
+                @{Name = 'portal_compliance'; Expression = { "https://purview.microsoft.com/?tid=$($_.customerId)" } },
+                @{Name = 'portal_sharepoint'; Expression = { "https://admin.microsoft.com/Partner/beginclientsession.aspx?CTID=$($_.customerId)&CSDEST=SharePoint" } }
+            }
+
         } else {
             $body = $Tenants | Where-Object -Property defaultDomainName -EQ $Tenantfilter
         }
