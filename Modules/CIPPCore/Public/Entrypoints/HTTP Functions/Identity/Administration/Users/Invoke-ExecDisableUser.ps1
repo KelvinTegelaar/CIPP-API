@@ -11,17 +11,28 @@ Function Invoke-ExecDisableUser {
     param($Request, $TriggerMetadata)
 
     $APIName = $Request.Params.CIPPEndpoint
+    $Headers = $Request.Headers
+    Write-LogMessage -headers $Headers -API $APIName -message 'Accessed this API' -Sev 'Debug'
+
+    # Interact with query parameters or the body of the request.
+    $TenantFilter = $Request.Query.tenantFilter ?? $Request.Body.tenantFilter
+    $ID = $Request.Query.ID ?? $Request.Body.ID
+    $Enable = $Request.Query.Enable ?? $Request.Body.Enable
+    $Enable = [System.Convert]::ToBoolean($Enable)
+
     try {
-        $State = Set-CIPPSignInState -userid $Request.query.ID -TenantFilter $Request.Query.TenantFilter -APIName $APINAME -Headers $Request.Headers -AccountEnabled ([System.Convert]::ToBoolean($Request.Query.Enable))
-        $Results = [pscustomobject]@{'Results' = "$State" }
+        $Result = Set-CIPPSignInState -UserID $ID -TenantFilter $TenantFilter -APIName $APIName -Headers $Headers -AccountEnabled $Enable
+        if ($Result -like 'Could not disable*' -or $Result -like 'WARNING: User is AD Sync enabled*') { throw $Result }
+        $StatusCode = [HttpStatusCode]::OK
     } catch {
-        $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
-        $Results = [pscustomobject]@{'Results' = "Failed. $ErrorMessage" }
+        $Result = $_.Exception.Message
+        $StatusCode = [HttpStatusCode]::InternalServerError
     }
 
+    $Results = [pscustomobject]@{'Results' = "$Result" }
     # Associate values to output bindings by calling 'Push-OutputBinding'.
     Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
-            StatusCode = [HttpStatusCode]::OK
+            StatusCode = $StatusCode
             Body       = $Results
         })
 

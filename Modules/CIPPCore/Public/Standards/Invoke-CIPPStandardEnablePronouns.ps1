@@ -13,10 +13,11 @@ function Invoke-CIPPStandardEnablePronouns {
         CAT
             Global Standards
         TAG
-            "lowimpact"
         ADDEDCOMPONENT
         IMPACT
             Low Impact
+        ADDEDDATE
+            2024-06-05
         POWERSHELLEQUIVALENT
             Update-MgBetaAdminPeoplePronoun -IsEnabledInOrganization:\$true
         RECOMMENDEDBY

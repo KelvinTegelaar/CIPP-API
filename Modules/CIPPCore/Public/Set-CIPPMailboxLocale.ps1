@@ -14,11 +14,13 @@ function Set-CippMailboxLocale {
             Language                  = $locale
             LocalizeDefaultFolderName = $true
         } -Anchor $username
-        Write-LogMessage -headers $Headers -API $APIName -message "set locale for $($username) to a $locale" -Sev 'Info' -tenant $TenantFilter
-        return "set locale for $($username) to a $locale"
+        $Result = "Set locale for $($username) to a $locale"
+        Write-LogMessage -headers $Headers -API $APIName -message $Result -Sev 'Info' -tenant $TenantFilter
+        return $Result
     } catch {
         $ErrorMessage = Get-CippException -Exception $_
-        Write-LogMessage -headers $Headers -API $APIName -message "Could not set locale for $($username). Error: $($ErrorMessage.NormalizedError)" -Sev 'Error' -tenant $TenantFilter -LogData $ErrorMessage
-        return  "Could not set locale for $username. Error: $($ErrorMessage.NormalizedError)"
+        $Result = "Could not set locale for $($username). Error: $($ErrorMessage.NormalizedError)"
+        Write-LogMessage -headers $Headers -API $APIName -message $Result -Sev 'Error' -tenant $TenantFilter -LogData $ErrorMessage
+        throw $Result
     }
 }

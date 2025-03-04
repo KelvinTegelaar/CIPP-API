@@ -13,11 +13,12 @@ function Invoke-CIPPStandardPWcompanionAppAllowedState {
         CAT
             Entra (AAD) Standards
         TAG
-            "lowimpact"
         ADDEDCOMPONENT
-            {"type":"select","multiple":false,"label":"Select value","name":"standards.PWcompanionAppAllowedState.state","options":[{"label":"Enabled","value":"enabled"},{"label":"Disabled","value":"disabled"}]}
+            {"type":"autoComplete","multiple":false,"creatable":false,"label":"Select value","name":"standards.PWcompanionAppAllowedState.state","options":[{"label":"Enabled","value":"enabled"},{"label":"Disabled","value":"disabled"}]}
         IMPACT
             Low Impact
+        ADDEDDATE
+            2023-05-18
         POWERSHELLEQUIVALENT
             Update-MgBetaPolicyAuthenticationMethodPolicyAuthenticationMethodConfiguration
         RECOMMENDEDBY
@@ -30,30 +31,33 @@ function Invoke-CIPPStandardPWcompanionAppAllowedState {
     param($Tenant, $Settings)
     ##$Rerun -Type Standard -Tenant $Tenant -Settings $Settings 'PWcompanionAppAllowedState'
 
-    $authenticatorFeaturesState = (New-GraphGetRequest -tenantid $tenant -Uri 'https://graph.microsoft.com/beta/policies/authenticationMethodsPolicy/authenticationMethodConfigurations/microsoftAuthenticator' -Type GET)
-    $authstate = if ($authenticatorFeaturesState.featureSettings.companionAppAllowedState.state -eq 'enabled') { $true } else { $false }
+    $authenticatorFeaturesState = (New-GraphGetRequest -tenantid $Tenant -Uri 'https://graph.microsoft.com/beta/policies/authenticationMethodsPolicy/authenticationMethodConfigurations/microsoftAuthenticator' -Type GET)
+    $authState = if ($authenticatorFeaturesState.featureSettings.companionAppAllowedState.state -eq 'enabled') { $true } else { $false }
 
     if ($Settings.report -eq $true) {
-        Add-CIPPBPAField -FieldName 'companionAppAllowedState' -FieldValue $authstate -StoreAs bool -Tenant $tenant
+        Add-CIPPBPAField -FieldName 'companionAppAllowedState' -FieldValue $authState -StoreAs bool -Tenant $Tenant
     }
 
+    # Get state value using null-coalescing operator
+    $state = $Settings.state.value ?? $Settings.state
+
     # Input validation
-    if (([string]::IsNullOrWhiteSpace($Settings.state) -or $Settings.state -eq 'Select a value') -and ($Settings.remediate -eq $true -or $Settings.alert -eq $true)) {
-        Write-LogMessage -API 'Standards' -tenant $tenant -message 'PWcompanionAppAllowedState: Invalid state parameter set' -sev Error
+    if (([string]::IsNullOrWhiteSpace($state) -or $state -eq 'Select a value') -and ($Settings.remediate -eq $true -or $Settings.alert -eq $true)) {
+        Write-LogMessage -API 'Standards' -tenant $Tenant -message 'PWcompanionAppAllowedState: Invalid state parameter set' -sev Error
         Return
     }
 
     If ($Settings.remediate -eq $true) {
 
-        if ($authenticatorFeaturesState.featureSettings.companionAppAllowedState.state -eq $Settings.state) {
-            Write-LogMessage -API 'Standards' -tenant $tenant -message "companionAppAllowedState is already set to the desired state of $($Settings.state)." -sev Info
+        if ($authenticatorFeaturesState.featureSettings.companionAppAllowedState.state -eq $state) {
+            Write-LogMessage -API 'Standards' -tenant $Tenant -message "companionAppAllowedState is already set to the desired state of $state." -sev Info
         } else {
             try {
                 # Remove number matching from featureSettings because this is now Microsoft enforced and shipping it returns an error
                 $authenticatorFeaturesState.featureSettings.PSObject.Properties.Remove('numberMatchingRequiredState')
                 # Define feature body
                 $featureBody = @{
-                    state         = $Settings.state
+                    state         = $state
                     includeTarget = [PSCustomObject]@{
                         targetType = 'group'
                         id         = 'all_users'
@@ -65,21 +69,21 @@ function Invoke-CIPPStandardPWcompanionAppAllowedState {
                 }
                 $authenticatorFeaturesState.featureSettings.companionAppAllowedState = $featureBody
                 $body = ConvertTo-Json -Depth 3 -Compress -InputObject $authenticatorFeaturesState
-                (New-GraphPostRequest -tenantid $tenant -Uri 'https://graph.microsoft.com/beta/policies/authenticationMethodsPolicy/authenticationMethodConfigurations/microsoftAuthenticator' -Type patch -Body $body -ContentType 'application/json')
-                Write-LogMessage -API 'Standards' -tenant $tenant -message "Set companionAppAllowedState to $($Settings.state)." -sev Info
+                $null = (New-GraphPostRequest -tenantid $Tenant -Uri 'https://graph.microsoft.com/beta/policies/authenticationMethodsPolicy/authenticationMethodConfigurations/microsoftAuthenticator' -Type patch -Body $body -ContentType 'application/json')
+                Write-LogMessage -API 'Standards' -tenant $Tenant -message "Set companionAppAllowedState to $state." -sev Info
             } catch {
-                $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
-                Write-LogMessage -API 'Standards' -tenant $tenant -message "Failed to set companionAppAllowedState to $($Settings.state). Error: $ErrorMessage" -sev Error
+                $ErrorMessage = Get-CippExceptionMessage -Exception $_
+                Write-LogMessage -API 'Standards' -tenant $Tenant -message "Failed to set companionAppAllowedState to $state. Error: $($ErrorMessage.NormalizedError)" -sev Error -LogData $ErrorMessage
             }
         }
     }
 
     if ($Settings.alert -eq $true) {
 
-        if ($authstate) {
-            Write-LogMessage -API 'Standards' -tenant $tenant -message 'companionAppAllowedState is enabled.' -sev Info
+        if ($authState) {
+            Write-LogMessage -API 'Standards' -tenant $Tenant -message 'companionAppAllowedState is enabled.' -sev Info
         } else {
-            Write-LogMessage -API 'Standards' -tenant $tenant -message 'companionAppAllowedState is not enabled.' -sev Alert
+            Write-LogMessage -API 'Standards' -tenant $Tenant -message 'companionAppAllowedState is not enabled.' -sev Alert
         }
     }
 }

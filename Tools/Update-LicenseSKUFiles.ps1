@@ -27,14 +27,16 @@ $licenseCsvURL = 'https://download.microsoft.com/download/e/3/e/e3e9faf2-f28b-49
 $TempLicenseDataFile = "$ENV:TEMP\LicenseSKUs.csv"
 Invoke-WebRequest -Uri $licenseCsvURL -OutFile $TempLicenseDataFile
 $LicenseDataFile = Get-Item -Path $TempLicenseDataFile
-$LicenseData = Import-Csv -Path $LicenseDataFile.FullName -Encoding utf8BOM
+$LicenseData = Import-Csv -Path $LicenseDataFile.FullName -Encoding utf8BOM -Delimiter ','
 # Update ConversionTable.csv with the latest license SKU data
 Set-Location $PSScriptRoot
 Set-Location ..
 $ConversionTableFiles = Get-ChildItem -Path *ConversionTable.csv -Recurse -File
+Write-Host "Updating $($ConversionTableFiles.Count) ConversionTable.csv files with the latest license SKU data..." -ForegroundColor Yellow
 
 foreach ($File in $ConversionTableFiles) {
-    $LicenseData | Export-Csv -Path $File.FullName -NoTypeInformation -Force -Encoding utf8 -UseQuotes Never
+    $LicenseData | Export-Csv -Path $File.FullName -NoTypeInformation -Force -Encoding utf8 -UseQuotes AsNeeded
+    Write-Host "Updated $($File.FullName) with new license SKU data." -ForegroundColor Green
 }
 
 
@@ -45,8 +47,11 @@ Set-Location ..
 Set-Location CIPP\src\data
 $LicenseJSONFiles = Get-ChildItem -Path *M365Licenses.json -File
 
+Write-Host "Updating $($LicenseJSONFiles.Count) M365 license JSON files with the latest license SKU data..." -ForegroundColor Yellow
+
 foreach ($File in $LicenseJSONFiles) {
     ConvertTo-Json -InputObject $LicenseData -Depth 100 | Set-Content -Path $File.FullName -Encoding utf8
+    Write-Host "Updated $($File.FullName) with new license SKU data." -ForegroundColor Green
 }
 
 # Clean up the temporary license SKU CSV file

@@ -15,11 +15,15 @@ Function Invoke-ExecAccessChecks {
 
     $Table = Get-CIPPTable -tablename 'AccessChecks'
     $LastRun = (Get-Date).ToUniversalTime()
+    $4HoursAgo = (Get-Date).AddHours(-1).ToUniversalTime()
+    $TimestampFilter = $4HoursAgo.ToString('yyyy-MM-ddTHH:mm:ss.fffK')
+
+
     switch ($Request.Query.Type) {
         'Permissions' {
             if ($Request.Query.SkipCache -ne 'true' -or $Request.Query.SkipCache -ne $true) {
                 try {
-                    $Cache = Get-CIPPAzDataTableEntity @Table -Filter "RowKey eq 'AccessPermissions'"
+                    $Cache = Get-CIPPAzDataTableEntity @Table -Filter "RowKey eq 'AccessPermissions' and Timestamp and Timestamp ge datetime'$TimestampFilter'"
                     $Results = $Cache.Data | ConvertFrom-Json
                 } catch {
                     $Results = $null
@@ -75,13 +79,17 @@ Function Invoke-ExecAccessChecks {
                     } catch {
                         $LastRun = $null
                     }
+
+                    if (!$Results) {
+                        $Results = @()
+                    }
                 } catch {
                     Write-Host $_.Exception.Message
                     $Results = @()
                 }
             }
 
-            if ($Request.Query.SkipCache -eq 'true' -or $Request.Query.SkipCache -eq $true) {
+            if ($Request.Query.SkipCache -eq 'true' -or $Request.Query.SkipCache -eq $true -or $LastRun -lt $4HoursAgo) {
                 $Message = Test-CIPPAccessTenant -Headers $Request.Headers
             }
 
@@ -95,7 +103,7 @@ Function Invoke-ExecAccessChecks {
         'GDAP' {
             if (!$Request.Query.SkipCache -eq 'true' -or !$Request.Query.SkipCache -eq $true) {
                 try {
-                    $Cache = Get-CIPPAzDataTableEntity @Table -Filter "RowKey eq 'GDAPRelationships'"
+                    $Cache = Get-CIPPAzDataTableEntity @Table -Filter "RowKey eq 'GDAPRelationships' and Timestamp ge datetime'$TimestampFilter'"
                     $Results = $Cache.Data | ConvertFrom-Json
                 } catch {
                     $Results = $null

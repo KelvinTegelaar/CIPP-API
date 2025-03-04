@@ -128,8 +128,8 @@ function Push-SchedulerCIPPNotifications {
             Add-CIPPAzDataTableEntity @Table -Entity $UpdateLogs -Force
         }
     } catch {
-        Write-Information "Could not send alerts to webhook: $($_.Exception.message)"
-        Write-LogMessage -API 'Alerts' -message "Could not send alerts to : $($_.Exception.message)" -tenant $Tenant -sev error
+        Write-Information "Could not send alerts to webhook $($config.webhook): $($_.Exception.message)"
+        Write-LogMessage -API 'Alerts' -message "Could not send alerts to webhook $($config.webhook): $($_.Exception.message)" -tenant $Tenant -sev error -LogData (Get-CippException -Exception $_)
     }
 
     if ($config.sendtoIntegration) {

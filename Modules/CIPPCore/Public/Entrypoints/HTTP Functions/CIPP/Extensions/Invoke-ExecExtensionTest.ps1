@@ -11,12 +11,14 @@ Function Invoke-ExecExtensionTest {
     param($Request, $TriggerMetadata)
 
     $APIName = $Request.Params.CIPPEndpoint
-    Write-LogMessage -headers $Request.Headers -API $APINAME -message 'Accessed this API' -Sev 'Debug'
+    $Headers = $Request.Headers
+    Write-LogMessage -headers $Headers -API $APIName -message 'Accessed this API' -Sev 'Debug'
+
     $Table = Get-CIPPTable -TableName Extensionsconfig
     $Configuration = ((Get-CIPPAzDataTableEntity @Table).config | ConvertFrom-Json)
     # Interact with query parameters or the body of the request.
     try {
-        switch ($Request.query.extensionName) {
+        switch ($Request.Query.extensionName) {
             'HaloPSA' {
                 $token = Get-HaloToken -configuration $Configuration.HaloPSA
                 if ($token) {

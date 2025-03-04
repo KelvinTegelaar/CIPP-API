@@ -57,12 +57,14 @@ function Test-CIPPGDAPRelationships {
         )
         $RoleAssignableGroups = $SAMUserMemberships | Where-Object { $_.isAssignableToRole }
         $NestedGroups = foreach ($Group in $RoleAssignableGroups) {
+            Write-Information "Getting nested group memberships for $($Group.displayName)"
             New-GraphGetRequest -uri "https://graph.microsoft.com/beta/groups/$($Group.id)/memberOf?`$select=id,displayName" -NoAuthCheck $true
         }
         foreach ($Group in $ExpectedGroups) {
             $GroupFound = $false
             foreach ($Membership in ($SAMUserMemberships + $NestedGroups)) {
-                if ($Membership.displayName -match $Group -and (($CIPPGroupCount -gt 0 -and $Group -match 'M365 GDAP') -or $Group -notmatch 'M365 GDAP')) {
+                if ($Membership.displayName -match $Group) {
+                    Write-Information "Found $Group in group memberships"
                     $GroupFound = $true
                 }
             }
