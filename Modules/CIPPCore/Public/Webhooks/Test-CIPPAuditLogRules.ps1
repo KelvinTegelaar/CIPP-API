@@ -94,7 +94,8 @@ function Test-CIPPAuditLogRules {
                     }
                 }
 
-                if ($Data.clientip -and $Data.clientip -notmatch '[X]+') { # Ignore IP addresses that have been redacted
+                if ($Data.clientip -and $Data.clientip -notmatch '[X]+') {
+                    # Ignore IP addresses that have been redacted
                     if ($Data.clientip -match '^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}:\d+$') {
                         $Data.clientip = $Data.clientip -replace ':\d+$', '' # Remove the port number if present
                     }
@@ -169,13 +170,9 @@ function Test-CIPPAuditLogRules {
             Write-Host "Removing row $($AuditRecord.id) from cache"
             try {
                 Write-Information 'Removing processed rows from cache'
-                if ($AuditRecord.id) {
-                    $RowEntity = Get-CIPPAzDataTableEntity @CacheWebhooksTable -Filter "PartitionKey eq '$TenantFilter' and RowKey eq '$($AuditRecord.id)'"
-                    if ($RowEntity) {
-                        Remove-AzDataTableEntity @CacheWebhooksTable -Entity $RowEntity -Force
-                        Write-Information "Removed row $($AuditRecord.id) from cache"
-                    }
-                }
+                $RowEntity = Get-CIPPAzDataTableEntity @CacheWebhooksTable -Filter "PartitionKey eq '$TenantFilter' and RowKey eq '$($AuditRecord.id)'"
+                Remove-AzDataTableEntity @CacheWebhooksTable -Entity $RowEntity -Force
+                Write-Information "Removed row $($AuditRecord.id) from cache"
             } catch {
                 Write-Information "Error removing rows from cache: $($_.Exception.Message)"
             }
@@ -250,6 +247,21 @@ function Test-CIPPAuditLogRules {
                 Write-Information "Error sending final step of auditlog processing: $($_.Exception.Message)"
             }
         }
+    }
+
+    try {
+        Write-Information 'Removing processed rows from cache'
+        foreach ($Row in $Rows) {
+            if ($Row.id) {
+                $RowEntity = Get-CIPPAzDataTableEntity @CacheWebhooksTable -Filter "PartitionKey eq '$TenantFilter' and RowKey eq '$($Row.id)'"
+                if ($RowEntity) {
+                    Remove-AzDataTableEntity @CacheWebhooksTable -Entity $RowEntity -Force
+                    Write-Information "Removed row $($Row.id) from cache at final pass."
+                }
+            }
+        }
+    } catch {
+        Write-Information "Error removing rows from cache: $($_.Exception.Message)"
     }
 
     return $Results
