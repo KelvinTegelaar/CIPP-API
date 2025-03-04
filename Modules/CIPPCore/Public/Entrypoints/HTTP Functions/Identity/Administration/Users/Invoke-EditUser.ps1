@@ -181,6 +181,14 @@ Function Invoke-EditUser {
         $null = $results.Add("Success. Set $($UserObj.DisplayName)'s manager to $($Request.body.setManager.label)")
     }
 
+    if ($Request.body.setSponsor.value) {
+        $SponsorBody = [PSCustomObject]@{'@odata.id' = "https://graph.microsoft.com/beta/users/$($Request.body.setSponsor.value)" }
+        $SponsorBodyJSON = ConvertTo-Json -Compress -Depth 10 -InputObject $SponsorBody
+        $null = New-GraphPostRequest -uri "https://graph.microsoft.com/beta/users/$($UserObj.id)/sponsors/`$ref" -tenantid $UserObj.tenantFilter -type POST -body $SponsorBodyJSON -Verbose
+        Write-LogMessage -headers $Request.Headers -API $ApiName -tenant $UserObj.tenantFilter -message "Set $($UserObj.DisplayName)'s sponsor to $($Request.body.setSponsor.label)" -Sev Info
+        $null = $results.Add("Success. Set $($UserObj.DisplayName)'s sponsor to $($Request.body.setSponsor.label)")
+    }
+
     if ($RemoveFromGroups) {
         $RemoveFromGroups | ForEach-Object {
 
