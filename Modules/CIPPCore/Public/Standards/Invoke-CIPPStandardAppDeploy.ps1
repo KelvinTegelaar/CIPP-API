@@ -13,11 +13,12 @@ function Invoke-CIPPStandardAppDeploy {
         CAT
             Entra (AAD) Standards
         TAG
-            "lowimpact"
         ADDEDCOMPONENT
             {"type":"textField","name":"standards.AppDeploy.appids","label":"Application IDs, comma separated"}
         IMPACT
             Low Impact
+        ADDEDDATE
+            2024-07-07
         POWERSHELLEQUIVALENT
             Portal or Graph API
         RECOMMENDEDBY

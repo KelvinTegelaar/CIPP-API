@@ -13,11 +13,12 @@ function Invoke-CIPPStandardGlobalQuarantineNotifications {
         CAT
             Exchange Standards
         TAG
-            "lowimpact"
         ADDEDCOMPONENT
-            {"type":"select","multiple":false,"label":"Select value","name":"standards.GlobalQuarantineNotifications.NotificationInterval","options":[{"label":"4 hours","value":"04:00:00"},{"label":"1 day/Daily","value":"1.00:00:00"},{"label":"7 days/Weekly","value":"7.00:00:00"}]}
+            {"type":"autoComplete","multiple":false,"label":"Select value","name":"standards.GlobalQuarantineNotifications.NotificationInterval","options":[{"label":"4 hours","value":"04:00:00"},{"label":"1 day/Daily","value":"1.00:00:00"},{"label":"7 days/Weekly","value":"7.00:00:00"}]}
         IMPACT
             Low Impact
+        ADDEDDATE
+            2024-05-03
         POWERSHELLEQUIVALENT
             Set-QuarantinePolicy -EndUserSpamNotificationFrequency
         RECOMMENDEDBY
@@ -44,29 +45,32 @@ function Invoke-CIPPStandardGlobalQuarantineNotifications {
 
     if ($Settings.report -eq $true) {
 
-        Add-CIPPBPAField -FieldName 'GlobalQuarantineNotificationsSet' -FieldValue [string]$CurrentState.EndUserSpamNotificationFrequency -StoreAs string -Tenant $tenant
+        Add-CIPPBPAField -FieldName 'GlobalQuarantineNotificationsSet' -FieldValue [string]$CurrentState.EndUserSpamNotificationFrequency -StoreAs string -Tenant $Tenant
     }
+    # Get notification interval using null-coalescing operator
+    $NotificationInterval = $Settings.NotificationInterval.value ?? $Settings.NotificationInterval
+
     # Input validation
     try {
-        $WantedState = [timespan]$Settings.NotificationInterval
+        $WantedState = [timespan]$NotificationInterval
     } catch {
         $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
-        Write-LogMessage -API 'Standards' -tenant $Tenant -message "Invalid state selected for Global Quarantine Notifications. Error: $ErrorMessage" -sev Error
+        Write-LogMessage -API 'Standards' -tenant $Tenant -message "GlobalQuarantineNotifications: Invalid NotificationInterval parameter set. Error: $ErrorMessage" -sev Error
         Return
     }
 
     if ($Settings.remediate -eq $true) {
-
         Write-Host 'Time to remediate'
+
         if ($CurrentState.EndUserSpamNotificationFrequency -eq $WantedState) {
-            Write-LogMessage -API 'Standards' -tenant $tenant -message "Global Quarantine Notifications are already set to the desired value of $WantedState" -sev Info
+            Write-LogMessage -API 'Standards' -tenant $Tenant -message "Global Quarantine Notifications are already set to the desired value of $WantedState" -sev Info
         } else {
             try {
-                New-ExoRequest -tenantid $Tenant -cmdlet 'Set-QuarantinePolicy' -cmdParams @{Identity = $CurrentState.Identity; EndUserSpamNotificationFrequency = [string]$WantedState } -useSystemmailbox $true
-                Write-LogMessage -API 'Standards' -tenant $tenant -message "Set Global Quarantine Notifications to $WantedState" -sev Info
+                $null = New-ExoRequest -tenantid $Tenant -cmdlet 'Set-QuarantinePolicy' -cmdParams @{Identity = $CurrentState.Identity; EndUserSpamNotificationFrequency = [string]$WantedState } -useSystemmailbox $true
+                Write-LogMessage -API 'Standards' -tenant $Tenant -message "Set Global Quarantine Notifications to $WantedState" -sev Info
             } catch {
                 $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
-                Write-LogMessage -API 'Standards' -tenant $tenant -message "Failed to set Global Quarantine Notifications to $WantedState. Error: $ErrorMessage" -sev Error
+                Write-LogMessage -API 'Standards' -tenant $Tenant -message "Failed to set Global Quarantine Notifications to $WantedState. Error: $ErrorMessage" -sev Error
             }
         }
     }
@@ -74,9 +78,9 @@ function Invoke-CIPPStandardGlobalQuarantineNotifications {
     if ($Settings.alert -eq $true) {
 
         if ($CurrentState.EndUserSpamNotificationFrequency -eq $WantedState) {
-            Write-LogMessage -API 'Standards' -tenant $tenant -message "Global Quarantine Notifications are set to the desired value of $WantedState" -sev Info
+            Write-LogMessage -API 'Standards' -tenant $Tenant -message "Global Quarantine Notifications are set to the desired value of $WantedState" -sev Info
         } else {
-            Write-LogMessage -API 'Standards' -tenant $tenant -message "Global Quarantine Notifications are not set to the desired value of $WantedState" -sev Alert
+            Write-LogMessage -API 'Standards' -tenant $Tenant -message "Global Quarantine Notifications are not set to the desired value of $WantedState" -sev Alert
         }
     }
 }

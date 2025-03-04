@@ -13,10 +13,11 @@ function Invoke-CIPPStandardEnableLitigationHold {
         CAT
             Exchange Standards
         TAG
-            "lowimpact"
         ADDEDCOMPONENT
         IMPACT
             Low Impact
+        ADDEDDATE
+            2024-06-25
         POWERSHELLEQUIVALENT
             Set-Mailbox -LitigationHoldEnabled \$true
         RECOMMENDEDBY

@@ -15,9 +15,11 @@ function Invoke-CIPPStandardConditionalAccessTemplate {
         MULTIPLE
             True
         DISABLEDFEATURES
-
+            
         IMPACT
-            High
+            High Impact
+        ADDEDDATE
+            2023-12-30
         ADDEDCOMPONENT
             {"type":"autoComplete","name":"TemplateList","multiple":false,"label":"Select Conditional Access Template","api":{"url":"/api/ListCATemplates","labelField":"displayName","valueField":"GUID","queryKey":"ListCATemplates"}}
             {"name":"state","label":"What state should we deploy this template in?","type":"radio","options":[{"value":"donotchange","label":"Do not change state"},{"value":"Enabled","label":"Set to enabled"},{"value":"Disabled","label":"Set to disabled"},{"value":"enabledForReportingButNotEnforced","label":"Set to report only"}]}

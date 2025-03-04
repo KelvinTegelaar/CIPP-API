@@ -10,8 +10,12 @@ Function Invoke-ExecExtensionsConfig {
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
 
+    $APIName = $Request.Params.CIPPEndpoint
+    $Headers = $Request.Headers
+    Write-LogMessage -headers $Headers -API $APIName -message 'Accessed this API' -Sev 'Debug'
+
     $Body = [PSCustomObject]$Request.Body
-    $results = try {
+    $Results = try {
         # Check if NinjaOne URL is set correctly and the instance has at least version 5.6
         if ($Body.NinjaOne) {
             $AllowedNinjaHostnames = @(
@@ -59,7 +63,7 @@ Function Invoke-ExecExtensionsConfig {
         $AddObject = @{
             PartitionKey = 'InstanceProperties'
             RowKey       = 'CIPPURL'
-            Value        = [string]([System.Uri]$Request.Headers.'x-ms-original-url').Host
+            Value        = [string]([System.Uri]$Headers.'x-ms-original-url').Host
         }
         Write-Information ($AddObject | ConvertTo-Json -Compress)
         $ConfigTable = Get-CIPPTable -tablename 'Config'
@@ -72,12 +76,11 @@ Function Invoke-ExecExtensionsConfig {
     }
 
 
-    $body = [pscustomobject]@{'Results' = $Results }
 
     # Associate values to output bindings by calling 'Push-OutputBinding'.
     Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
             StatusCode = [HttpStatusCode]::OK
-            Body       = $body
+            Body       = @{'Results' = $Results }
         })
 
 }

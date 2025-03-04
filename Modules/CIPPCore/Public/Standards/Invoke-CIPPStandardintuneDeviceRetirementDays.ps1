@@ -13,14 +13,16 @@ function Invoke-CIPPStandardintuneDeviceRetirementDays {
         CAT
             Intune Standards
         TAG
-            "lowimpact"
         ADDEDCOMPONENT
             {"type":"number","name":"standards.intuneDeviceRetirementDays.days","label":"Maximum days (0 equals disabled)"}
         IMPACT
             Low Impact
+        ADDEDDATE
+            2023-05-19
         POWERSHELLEQUIVALENT
             Graph API
         RECOMMENDEDBY
+            "CIPP"
         UPDATECOMMENTBLOCK
             Run the Tools\Update-StandardsComments.ps1 script to update this comment block
     .LINK

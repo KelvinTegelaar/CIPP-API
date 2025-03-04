@@ -13,11 +13,12 @@ function Invoke-CIPPStandardSPAzureB2B {
         CAT
             SharePoint Standards
         TAG
-            "lowimpact"
             "CIS"
         ADDEDCOMPONENT
         IMPACT
             Low Impact
+        ADDEDDATE
+            2024-07-09
         POWERSHELLEQUIVALENT
             Set-SPOTenant -EnableAzureADB2BIntegration \$true
         RECOMMENDEDBY

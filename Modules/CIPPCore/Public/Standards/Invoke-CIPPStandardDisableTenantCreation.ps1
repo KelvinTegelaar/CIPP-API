@@ -13,15 +13,17 @@ function Invoke-CIPPStandardDisableTenantCreation {
         CAT
             Entra (AAD) Standards
         TAG
-            "lowimpact"
             "CIS"
         ADDEDCOMPONENT
         IMPACT
             Low Impact
+        ADDEDDATE
+            2022-11-29
         POWERSHELLEQUIVALENT
             Update-MgPolicyAuthorizationPolicy
         RECOMMENDEDBY
             "CIS"
+            "CIPP"
         UPDATECOMMENTBLOCK
             Run the Tools\Update-StandardsComments.ps1 script to update this comment block
     .LINK

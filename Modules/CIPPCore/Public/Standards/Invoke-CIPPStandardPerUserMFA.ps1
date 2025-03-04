@@ -13,10 +13,11 @@ function Invoke-CIPPStandardPerUserMFA {
         CAT
             Entra (AAD) Standards
         TAG
-            "highimpact"
         ADDEDCOMPONENT
         IMPACT
             High Impact
+        ADDEDDATE
+            2024-06-14
         POWERSHELLEQUIVALENT
             Graph API
         RECOMMENDEDBY

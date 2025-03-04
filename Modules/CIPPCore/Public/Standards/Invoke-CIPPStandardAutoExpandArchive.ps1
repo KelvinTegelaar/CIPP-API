@@ -13,10 +13,11 @@ function Invoke-CIPPStandardAutoExpandArchive {
         CAT
             Exchange Standards
         TAG
-            "lowimpact"
         ADDEDCOMPONENT
         IMPACT
             Low Impact
+        ADDEDDATE
+            2021-11-16
         POWERSHELLEQUIVALENT
             Set-OrganizationConfig -AutoExpandingArchive
         RECOMMENDEDBY
