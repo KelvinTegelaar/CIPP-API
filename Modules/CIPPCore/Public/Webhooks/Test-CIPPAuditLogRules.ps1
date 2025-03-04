@@ -94,7 +94,7 @@ function Test-CIPPAuditLogRules {
                     }
                 }
 
-                if ($Data.clientip) {
+                if ($Data.clientip -and $Data.clientip -notmatch '[X]+') { # Ignore IP addresses that have been redacted
                     if ($Data.clientip -match '^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}:\d+$') {
                         $Data.clientip = $Data.clientip -replace ':\d+$', '' # Remove the port number if present
                     }
