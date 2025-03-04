@@ -28,7 +28,7 @@
   {
     "Id": "44a40668-ed71-403c-8c26-b32e320086ad",
     "Command": "Start-AuditLogOrchestrator",
-    "Description": "Orchestrator to process audit logs",
+    "Description": "Orchestrator to download audit logs",
     "Cron": "0 */15 * * * *",
     "Priority": 2,
     "RunOnProcessor": true,
