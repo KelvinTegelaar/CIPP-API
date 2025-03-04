@@ -20,7 +20,7 @@ Function Invoke-ListUsers {
     $userid = $Request.Query.UserID
 
     $GraphRequest = if ($TenantFilter -ne 'AllTenants') {
-        New-GraphGetRequest -uri "https://graph.microsoft.com/beta/users/$($userid)?`$top=999&`$filter=$GraphFilter&`$count=true" -tenantid $TenantFilter -ComplexFilter | ForEach-Object {
+        New-GraphGetRequest -uri "https://graph.microsoft.com/beta/users/$($userid)?`$top=999&`$filter=$GraphFilter&`$count=true&`$expand=manager(`$select=id,userPrincipalName,displayName)" -tenantid $TenantFilter -ComplexFilter | ForEach-Object {
             $_ | Add-Member -MemberType NoteProperty -Name 'onPremisesSyncEnabled' -Value ([bool]($_.onPremisesSyncEnabled)) -Force
             $_ | Add-Member -MemberType NoteProperty -Name 'username' -Value ($_.userPrincipalName -split '@' | Select-Object -First 1) -Force
             $_ | Add-Member -MemberType NoteProperty -Name 'Aliases' -Value ($_.ProxyAddresses -join ', ') -Force
