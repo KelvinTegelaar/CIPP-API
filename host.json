@@ -13,19 +13,5 @@
       "maxConcurrentActivityFunctions": 1,
       "maxConcurrentOrchestratorFunctions": 1
     }
-  },
-  "logging": {
-    "logLevel": {
-      "default": "Trace",
-      "Host.Results": "Trace",
-      "Host.Aggregator": "Trace",
-      "Function": "Trace",
-      "Host.Executor": "Trace"
-    },
-    "applicationInsights": {
-      "samplingSettings": {
-        "isEnabled": false
-      }
-    }
   }
 }
