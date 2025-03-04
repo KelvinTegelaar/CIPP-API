@@ -28,9 +28,19 @@
   {
     "Id": "44a40668-ed71-403c-8c26-b32e320086ad",
     "Command": "Start-AuditLogOrchestrator",
-    "Description": "Orchestrator to process audit logs",
+    "Description": "Orchestrator to download audit logs",
     "Cron": "0 */15 * * * *",
     "Priority": 2,
+    "RunOnProcessor": true,
+    "PreferredProcessor": "auditlog",
+    "IsSystem": true
+  },
+  {
+    "Id": "01cd512a-15c4-44a9-b8cb-1e5d879cfd2d",
+    "Command": "Start-AuditLogProcessingOrchestrator",
+    "Description": "Orchestrator to process audit logs",
+    "Cron": "0 */15 * * * *",
+    "Priority": 3,
     "RunOnProcessor": true,
     "PreferredProcessor": "auditlog",
     "IsSystem": true
@@ -40,7 +50,7 @@
     "Command": "Start-AuditLogSearchCreation",
     "Description": "Timer to create audit log searches",
     "Cron": "0 */30 * * * *",
-    "Priority": 3,
+    "Priority": 4,
     "RunOnProcessor": true,
     "PreferredProcessor": "auditlog",
     "IsSystem": true

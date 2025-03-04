@@ -11,7 +11,7 @@ Function Invoke-ListConditionalAccessPolicies {
     param($Request, $TriggerMetadata)
 
     $APIName = $Request.Params.CIPPEndpoint
-    Write-LogMessage -headers $Request.Headers -API $APINAME -message 'Accessed this API' -Sev 'Debug'
+    Write-LogMessage -headers $Request.Headers -API $APIName -message 'Accessed this API' -Sev 'Debug'
 
 
     function Get-LocationNameFromId {
@@ -114,11 +114,8 @@ Function Invoke-ListConditionalAccessPolicies {
         return $return
     }
 
-    # Write to the Azure Functions log stream.
-    Write-Host 'PowerShell HTTP trigger function processed a request.'
-
     # Interact with query parameters or the body of the request.
-    $TenantFilter = $Request.Query.TenantFilter
+    $TenantFilter = $Request.Query.tenantFilter
     try {
         $Requests = @(
             @{
@@ -158,7 +155,7 @@ Function Invoke-ListConditionalAccessPolicies {
             }
         )
 
-        $GraphRequest = New-GraphBulkRequest -Requests $Requests -tenantid $tenantfilter -asapp $true
+        $GraphRequest = New-GraphBulkRequest -Requests $Requests -tenantid $TenantFilter -asapp $true
 
         $ConditionalAccessPolicyOutput = ($GraphRequest | Where-Object { $_.id -eq 'policies' }).body.value
         $AllNamedLocations = ($GraphRequest | Where-Object { $_.id -eq 'namedLocations' }).body.value

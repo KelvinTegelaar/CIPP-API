@@ -1,4 +1,34 @@
 function Invoke-CIPPStandardAutoAddProxy {
+    <#
+    .FUNCTIONALITY
+        Internal
+    .COMPONENT
+        (APIName) AutoAddProxy
+    .SYNOPSIS
+        (Label) Automatically deploy proxy addresses
+    .DESCRIPTION
+        (Helptext) Automatically adds all available domains as a proxy address.
+        (DocsDescription) Automatically finds all available domain names in the tenant, and tries to add proxy addresses based on the user's UPN to each of these.
+    .NOTES
+        CAT
+            Exchange Standards
+        TAG
+            "CIS"
+        ADDEDCOMPONENT
+        IMPACT
+            Medium Impact
+        ADDEDDATE
+            2025-02-07
+        POWERSHELLEQUIVALENT
+            Set-Mailbox -EmailAddresses @{add=\$EmailAddress}
+        RECOMMENDEDBY
+        DISABLEDFEATURES
+            
+        UPDATECOMMENTBLOCK
+            Run the Tools\Update-StandardsComments.ps1 script to update this comment block
+    .LINK
+        https://docs.cipp.app/user-documentation/tenant/standards/list-standards/exchange-standards#medium-impact
+    #>
     param(
         $Tenant,
         $Settings,

@@ -13,12 +13,13 @@ function Invoke-CIPPStandardDisableExternalCalendarSharing {
         CAT
             Exchange Standards
         TAG
-            "lowimpact"
             "CIS"
             "exo_individualsharing"
         ADDEDCOMPONENT
         IMPACT
             Low Impact
+        ADDEDDATE
+            2024-01-08
         POWERSHELLEQUIVALENT
             Get-SharingPolicy \| Set-SharingPolicy -Enabled \$False
         RECOMMENDEDBY

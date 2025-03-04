@@ -11,12 +11,12 @@ Function Invoke-GetVersion {
     param($Request, $TriggerMetadata)
 
     $APIName = $Request.Params.CIPPEndpoint
-    Write-LogMessage -headers $Request.Headers -API $APINAME -message 'Accessed this API' -Sev 'Debug'
+    $Headers = $Request.Headers
+    Write-LogMessage -headers $Headers -API $APIName -message 'Accessed this API' -Sev 'Debug'
 
-    $CIPPVersion = $request.query.localversion
+    $CIPPVersion = $request.query.LocalVersion
 
     $Version = Assert-CippVersion -CIPPVersion $CIPPVersion
-    # Write to the Azure Functions log stream.
 
     # Associate values to output bindings by calling 'Push-OutputBinding'.
     Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{

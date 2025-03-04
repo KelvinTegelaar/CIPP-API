@@ -13,16 +13,17 @@ function Invoke-CIPPStandardBranding {
         CAT
             Global Standards
         TAG
-            "lowimpact"
         ADDEDCOMPONENT
             {"type":"textField","name":"standards.Branding.signInPageText","label":"Sign-in page text","required":false}
             {"type":"textField","name":"standards.Branding.usernameHintText","label":"Username hint Text","required":false}
             {"type":"switch","name":"standards.Branding.hideAccountResetCredentials","label":"Hide self-service password reset"}
-            {"type":"select","multiple":false,"label":"Visual Template","name":"standards.Branding.layoutTemplateType","options":[{"label":"Full-screen background","value":"default"},{"label":"Partial-screen background","value":"verticalSplit"}]}
+            {"type":"autoComplete","multiple":false,"label":"Visual Template","name":"standards.Branding.layoutTemplateType","options":[{"label":"Full-screen background","value":"default"},{"label":"Partial-screen background","value":"verticalSplit"}]}
             {"type":"switch","name":"standards.Branding.isHeaderShown","label":"Show header"}
             {"type":"switch","name":"standards.Branding.isFooterShown","label":"Show footer"}
         IMPACT
             Low Impact
+        ADDEDDATE
+            2024-05-13
         POWERSHELLEQUIVALENT
             Portal only
         RECOMMENDEDBY
@@ -44,10 +45,13 @@ function Invoke-CIPPStandardBranding {
         Write-LogMessage -API 'Standards' -Tenant $Tenant -Message "Could not get the branding for $Tenant. This tenant might not have premium licenses available: $ErrorMessage" -Sev Error
     }
 
+    # Get layoutTemplateType value using null-coalescing operator
+    $layoutTemplateType = $Settings.layoutTemplateType.value ?? $Settings.layoutTemplateType
+
     $StateIsCorrect = ($CurrentState.signInPageText -eq $Settings.signInPageText) -and
                         ($CurrentState.usernameHintText -eq $Settings.usernameHintText) -and
                         ($CurrentState.loginPageTextVisibilitySettings.hideAccountResetCredentials -eq $Settings.hideAccountResetCredentials) -and
-                        ($CurrentState.loginPageLayoutConfiguration.layoutTemplateType -eq $Settings.layoutTemplateType) -and
+                        ($CurrentState.loginPageLayoutConfiguration.layoutTemplateType -eq $layoutTemplateType) -and
                         ($CurrentState.loginPageLayoutConfiguration.isHeaderShown -eq $Settings.isHeaderShown) -and
                         ($CurrentState.loginPageLayoutConfiguration.isFooterShown -eq $Settings.isFooterShown)
 
@@ -69,17 +73,17 @@ function Invoke-CIPPStandardBranding {
                             hideAccountResetCredentials = $Settings.hideAccountResetCredentials
                         }
                         loginPageLayoutConfiguration    = [pscustomobject]@{
-                            layoutTemplateType = $Settings.layoutTemplateType
+                            layoutTemplateType = $layoutTemplateType
                             isHeaderShown      = $Settings.isHeaderShown
                             isFooterShown      = $Settings.isFooterShown
                         }
                     } | ConvertTo-Json -Compress
                 }
-                New-GraphPostRequest @GraphRequest
+                $null = New-GraphPostRequest @GraphRequest
                 Write-LogMessage -API 'Standards' -Tenant $Tenant -Message 'Successfully updated branding.' -Sev Info
             } catch {
-                $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
-                Write-LogMessage -API 'Standards' -Tenant $Tenant -Message "Failed to update branding. Error: $($ErrorMessage)" -Sev Error
+                $ErrorMessage = Get-CippException -Exception $_
+                Write-LogMessage -API 'Standards' -Tenant $Tenant -Message "Failed to update branding. Error: $($ErrorMessage.NormalizedError)" -Sev Error -LogData $ErrorMessage
             }
         }
 

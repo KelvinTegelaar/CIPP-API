@@ -13,9 +13,10 @@ function Invoke-CIPPStandardintuneRequireMFA {
         CAT
             Intune Standards
         TAG
-            "mediumimpact"
         IMPACT
             Medium Impact
+        ADDEDDATE
+            2023-10-23
         POWERSHELLEQUIVALENT
             Update-MgBetaPolicyDeviceRegistrationPolicy
         RECOMMENDEDBY

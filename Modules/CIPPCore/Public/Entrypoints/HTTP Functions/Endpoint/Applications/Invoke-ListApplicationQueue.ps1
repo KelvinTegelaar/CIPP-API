@@ -11,11 +11,10 @@ Function Invoke-ListApplicationQueue {
     param($Request, $TriggerMetadata)
 
     $APIName = $Request.Params.CIPPEndpoint
-    Write-LogMessage -headers $Request.Headers -API $APINAME -message 'Accessed this API' -Sev 'Debug'
+    $Headers = $Request.Headers
+    Write-LogMessage -headers $Headers -API $APIName -message 'Accessed this API' -Sev 'Debug'
 
 
-    # Write to the Azure Functions log stream.
-    Write-Host 'PowerShell HTTP trigger function processed a request.'
     $Table = Get-CippTable -tablename 'apps'
     $QueuedApps = (Get-CIPPAzDataTableEntity @Table)
 
@@ -24,7 +23,7 @@ Function Invoke-ListApplicationQueue {
         $ApplicationFile = $QueueFile.JSON | ConvertFrom-Json -Depth 10
         [PSCustomObject]@{
             tenantName      = $ApplicationFile.tenant
-            applicationName = $ApplicationFile.Applicationname
+            applicationName = $ApplicationFile.applicationName
             cmdLine         = $ApplicationFile.IntuneBody.installCommandLine
             assignTo        = $ApplicationFile.assignTo
             id              = $($QueueFile.RowKey)

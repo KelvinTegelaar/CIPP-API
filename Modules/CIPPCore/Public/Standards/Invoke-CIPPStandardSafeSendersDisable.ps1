@@ -13,15 +13,17 @@ function Invoke-CIPPStandardSafeSendersDisable {
         CAT
             Exchange Standards
         TAG
-            "mediumimpact"
         ADDEDCOMPONENT
         DISABLEDFEATURES
             
         IMPACT
             Medium Impact
+        ADDEDDATE
+            2023-10-26
         POWERSHELLEQUIVALENT
             Set-MailboxJunkEmailConfiguration
         RECOMMENDEDBY
+            "CIPP"
         UPDATECOMMENTBLOCK
             Run the Tools\Update-StandardsComments.ps1 script to update this comment block
     .LINK
