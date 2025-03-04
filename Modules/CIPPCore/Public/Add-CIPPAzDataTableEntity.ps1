@@ -20,7 +20,7 @@ function Add-CIPPAzDataTableEntity {
             if ($_.Exception.ErrorCode -eq 'PropertyValueTooLarge' -or $_.Exception.ErrorCode -eq 'EntityTooLarge' -or $_.Exception.ErrorCode -eq 'RequestBodyTooLarge') {
                 try {
                     Write-Host 'Entity is too large. Splitting entity into multiple parts.'
-                    Write-Information ($SingleEnt | ConvertTo-Json)
+                    #Write-Information ($SingleEnt | ConvertTo-Json)
                     $largePropertyNames = [System.Collections.Generic.List[string]]::new()
                     $entitySize = 0
 
@@ -137,14 +137,18 @@ function Add-CIPPAzDataTableEntity {
 
                         foreach ($row in $rows) {
                             Write-Information "current entity is $($row.RowKey) with $($row.PartitionKey). Our size is $([System.Text.Encoding]::UTF8.GetByteCount($($row | ConvertTo-Json -Compress)))"
-                            Add-AzDataTableEntity -Context $Context -Force:$Force -CreateTableIfNotExists:$CreateTableIfNotExists -Entity $row
+                            $NewRow = [PSCustomObject]$row
+                            Add-AzDataTableEntity -Context $Context -Force:$Force -CreateTableIfNotExists:$CreateTableIfNotExists -Entity $NewRow
                         }
                     } else {
-                        Add-AzDataTableEntity -Context $Context -Force:$Force -CreateTableIfNotExists:$CreateTableIfNotExists -Entity $SingleEnt
+                        $NewEnt = [PSCustomObject]$SingleEnt
+                        Add-AzDataTableEntity -Context $Context -Force:$Force -CreateTableIfNotExists:$CreateTableIfNotExists -Entity $NewEnt
                     }
 
                 } catch {
                     $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
+                    Write-Warning ("AzBobbyTables Error")
+                    Write-Information ($SingleEnt | ConvertTo-Json)
                     throw "Error processing entity: $ErrorMessage Linenumber: $($_.InvocationInfo.ScriptLineNumber)"
                 }
             } else {

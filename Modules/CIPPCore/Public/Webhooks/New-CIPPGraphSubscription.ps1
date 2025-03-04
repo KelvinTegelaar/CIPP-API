@@ -93,6 +93,9 @@ function New-CIPPGraphSubscription {
                     expirationDateTime = $expiredate
                 } | ConvertTo-Json
 
+                if ($BaseURL -match 'localhost' -or $BaseURL -match '127.0.0.1') {
+                    return 'Cannot create graph subscription for local development'
+                }
 
                 $GraphRequest = New-GraphPostRequest -uri 'https://graph.microsoft.com/beta/subscriptions' -tenantid $TenantFilter -type POST -body $params -verbose
                 #If creation is succesfull, we store the GUID in the storage table webhookTable to make sure we can check against this later on.

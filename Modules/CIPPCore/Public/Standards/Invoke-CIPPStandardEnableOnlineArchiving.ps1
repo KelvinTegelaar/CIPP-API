@@ -13,10 +13,11 @@ function Invoke-CIPPStandardEnableOnlineArchiving {
         CAT
             Exchange Standards
         TAG
-            "lowimpact"
         ADDEDCOMPONENT
         IMPACT
             Low Impact
+        ADDEDDATE
+            2024-01-20
         POWERSHELLEQUIVALENT
             Enable-Mailbox -Archive \$true
         RECOMMENDEDBY

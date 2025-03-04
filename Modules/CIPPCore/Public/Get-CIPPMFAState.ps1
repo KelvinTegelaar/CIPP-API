@@ -17,10 +17,12 @@ function Get-CIPPMFAState {
         }
     }
 
+    $Errors = [System.Collections.Generic.List[object]]::new()
     try {
         $SecureDefaultsState = (New-GraphGetRequest -Uri 'https://graph.microsoft.com/beta/policies/identitySecurityDefaultsEnforcementPolicy' -tenantid $TenantFilter ).IsEnabled
     } catch {
         Write-Host "Secure Defaults not available: $($_.Exception.Message)"
+        $Errors.Add(@{Step = 'SecureDefaults'; Message = $_.Exception.Message })
     }
     $CAState = [System.Collections.Generic.List[object]]::new()
 
@@ -29,6 +31,9 @@ function Get-CIPPMFAState {
     } catch {
         $CAState.Add('Not Licensed for Conditional Access') | Out-Null
         $MFARegistration = $null
+        if ($_.Exception.Message -ne "Tenant is not a B2C tenant and doesn't have premium licenses") {
+            $Errors.Add(@{Step = 'MFARegistration'; Message = $_.Exception.Message })
+        }
         Write-Host "User registration details not available: $($_.Exception.Message)"
     }
 
@@ -58,6 +63,7 @@ function Get-CIPPMFAState {
         } catch {
             $CASuccess = $false
             $CAError = "CA policies not available: $($_.Exception.Message)"
+            $Errors.Add(@{Step = 'CAPolicies'; Message = $_.Exception.Message })
         }
     }
 
@@ -113,7 +119,15 @@ function Get-CIPPMFAState {
             RowKey          = [string]($_.UserPrincipalName).replace('#', '')
             PartitionKey    = 'users'
         }
-
+    }
+    $ErrorCount = ($Errors | Measure-Object).Count
+    if ($ErrorCount -gt 0) {
+        if ($ErrorCount -gt 1) {
+            $Text = 'errors'
+        } else {
+            $Text = 'an error'
+        }
+        Write-LogMessage -headers $Headers -API $APIName -Tenant $TenantFilter -message "The MFA report encountered $Text, see log data for details." -Sev 'Error' -LogData @($Errors.Message)
     }
     return $GraphRequest
 }

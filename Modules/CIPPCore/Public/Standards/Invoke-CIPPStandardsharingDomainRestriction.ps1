@@ -13,15 +13,16 @@ function Invoke-CIPPStandardsharingDomainRestriction {
         CAT
             SharePoint Standards
         TAG
-            "highimpact"
             "CIS"
         ADDEDCOMPONENT
-            {"type":"select","multiple":false,"name":"standards.sharingDomainRestriction.Mode","label":"Limit external sharing by domains","options":[{"label":"Off","value":"none"},{"label":"Restrict sharing to specific domains","value":"allowList"},{"label":"Block sharing to specific domains","value":"blockList"}]}
+            {"type":"autoComplete","multiple":false,"name":"standards.sharingDomainRestriction.Mode","label":"Limit external sharing by domains","options":[{"label":"Off","value":"none"},{"label":"Restrict sharing to specific domains","value":"allowList"},{"label":"Block sharing to specific domains","value":"blockList"}]}
             {"type":"textField","name":"standards.sharingDomainRestriction.Domains","label":"Domains to allow/block, comma separated","required":false}
         IMPACT
             High Impact
+        ADDEDDATE
+            2024-06-20
         POWERSHELLEQUIVALENT
-            Update-MgAdminSharepointSetting
+            Update-MgAdminSharePointSetting
         RECOMMENDEDBY
         UPDATECOMMENTBLOCK
             Run the Tools\Update-StandardsComments.ps1 script to update this comment block
@@ -34,13 +35,16 @@ function Invoke-CIPPStandardsharingDomainRestriction {
 
     $CurrentState = New-GraphGetRequest -Uri 'https://graph.microsoft.com/beta/admin/sharepoint/settings' -tenantid $Tenant -AsApp $true
 
-    if ($Settings.Mode -eq 'none' -or $null -eq $Settings.Mode) {
+    # Get mode value using null-coalescing operator
+    $mode = $Settings.Mode.value ?? $Settings.Mode
+
+    if ($mode -eq 'none' -or $null -eq $mode) {
         $StateIsCorrect = $CurrentState.sharingDomainRestrictionMode -eq 'none'
     } else {
         $SelectedDomains = [String[]]$Settings.Domains.Split(',').Trim()
-        $StateIsCorrect = ($CurrentState.sharingDomainRestrictionMode -eq $Settings.Mode) -and
-                          ($Settings.Mode -eq 'allowList' -and (!(Compare-Object -ReferenceObject $CurrentState.sharingAllowedDomainList -DifferenceObject $SelectedDomains))) -or
-                          ($Settings.Mode -eq 'blockList' -and (!(Compare-Object -ReferenceObject $CurrentState.sharingBlockedDomainList -DifferenceObject $SelectedDomains)))
+        $StateIsCorrect = ($CurrentState.sharingDomainRestrictionMode -eq $mode) -and
+                          ($mode -eq 'allowList' -and (!(Compare-Object -ReferenceObject $CurrentState.sharingAllowedDomainList -DifferenceObject $SelectedDomains))) -or
+                          ($mode -eq 'blockList' -and (!(Compare-Object -ReferenceObject $CurrentState.sharingBlockedDomainList -DifferenceObject $SelectedDomains)))
     }
 
     if ($Settings.remediate -eq $true) {
@@ -48,16 +52,16 @@ function Invoke-CIPPStandardsharingDomainRestriction {
             Write-LogMessage -API 'Standards' -tenant $tenant -message 'Sharing Domain Restriction is already correctly configured' -sev Info
         } else {
             $Body = @{
-                sharingDomainRestrictionMode = $Settings.Mode
+                sharingDomainRestrictionMode = $mode
             }
 
-            if ($Settings.Mode -eq 'AllowList') {
+            if ($mode -eq 'AllowList') {
                 $Body.Add('sharingAllowedDomainList', $SelectedDomains)
-            } elseif ($Settings.Mode -eq 'BlockList') {
+            } elseif ($mode -eq 'BlockList') {
                 $Body.Add('sharingBlockedDomainList', $SelectedDomains)
             }
 
-            $cmdparams = @{
+            $cmdParams = @{
                 tenantid    = $tenant
                 uri         = 'https://graph.microsoft.com/beta/admin/sharepoint/settings'
                 AsApp       = $true
@@ -67,11 +71,11 @@ function Invoke-CIPPStandardsharingDomainRestriction {
             }
 
             try {
-                New-GraphPostRequest @cmdparams
+                $null = New-GraphPostRequest @cmdParams
                 Write-LogMessage -API 'Standards' -tenant $tenant -message 'Successfully updated Sharing Domain Restriction settings' -sev Info
             } catch {
-                $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
-                Write-LogMessage -API 'Standards' -tenant $tenant -message "Failed to update Sharing Domain Restriction settings. Error: $ErrorMessage" -sev Error
+                $ErrorMessage = Get-CippException -Exception $_
+                Write-LogMessage -API 'Standards' -tenant $tenant -message "Failed to update Sharing Domain Restriction settings. Error: $($ErrorMessage.NormalizedError)" -sev Error -LogData $ErrorMessage
             }
         }
     }

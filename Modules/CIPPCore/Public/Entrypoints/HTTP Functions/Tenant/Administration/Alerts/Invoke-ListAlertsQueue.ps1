@@ -11,11 +11,10 @@ Function Invoke-ListAlertsQueue {
     param($Request, $TriggerMetadata)
 
     $APIName = $Request.Params.CIPPEndpoint
-    Write-LogMessage -headers $Request.Headers -API $APINAME -message 'Accessed this API' -Sev 'Debug'
+    $Headers = $Request.Headers
+    Write-LogMessage -headers $Headers -API $APIName -message 'Accessed this API' -Sev 'Debug'
 
 
-    # Write to the Azure Functions log stream.
-    Write-Host 'PowerShell HTTP trigger function processed a request.'
     $WebhookTable = Get-CIPPTable -TableName 'WebhookRules'
     $WebhookRules = Get-CIPPAzDataTableEntity @WebhookTable
 
