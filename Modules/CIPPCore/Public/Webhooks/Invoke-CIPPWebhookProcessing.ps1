@@ -85,8 +85,8 @@ function Invoke-CippWebhookProcessing {
     }
     $LogId = Send-CIPPAlert @CIPPAlert
 
-    $AuditLogLink = '{0}/tenant/administration/audit-logs?customerId={1}&logId={2}' -f $CIPPURL, $Tenant.customerId, $LogId
-    $GenerateEmail = New-CIPPAlertTemplate -format 'html' -data $Data -ActionResults $ActionResults -CIPPURL $CIPPURL
+    $AuditLogLink = '{0}/tenant/administration/audit-logs/log?logId={2}' -f $CIPPURL, $LogId
+    $GenerateEmail = New-CIPPAlertTemplate -format 'html' -data $Data -ActionResults $ActionResults -CIPPURL $CIPPURL -Tenant $Tenant.defaultDomainName -AuditLogLink $AuditLogLink
 
     Write-Host 'Going to create the content'
     foreach ($action in $ActionList ) {
