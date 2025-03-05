@@ -26,7 +26,6 @@ function Test-CIPPAuditLogRules {
         'SAS:ProcessAuth'
         'deviceAuth:ReprocessTls'
         'Consent:Set'
-        'Login:reprocess'
     )
 
     $TrustedIPTable = Get-CIPPTable -TableName 'trustedIps'
@@ -100,14 +99,14 @@ function Test-CIPPAuditLogRules {
                         $Data.clientip = $Data.clientip -replace ':\d+$', '' # Remove the port number if present
                     }
                     # Check if IP is on trusted IP list
-                    $TrustedIP = Get-CIPPAzDataTableEntity @TrustedIPTable -Filter "((PartitionKey eq '$TenantFilter') or (PartitionKey eq 'AllTenants'))  and RowKey eq '$($Data.clientip)'  and state eq 'Trusted'"
+                    $TrustedIP = Get-CIPPAzDataTableEntity @TrustedIPTable -Filter "((PartitionKey eq '$TenantFilter') or (PartitionKey eq 'AllTenants')) and RowKey eq '$($Data.clientip)'  and state eq 'Trusted'"
                     if ($TrustedIP) {
                         #write-warning "IP $($Data.clientip) is trusted"
                         $Trusted = $true
                     }
                     if (!$Trusted) {
                         $CacheLookupStartTime = Get-Date
-                        $Location = Get-CIPPAzDataTableEntity @LocationTable -Filter "RowKey eq '$($Data.clientIp)'" | Select-Object -Last 1
+                        $Location = Get-CIPPAzDataTableEntity @LocationTable -Filter "RowKey eq '$($Data.clientIp)'" | Select-Object -Last 1 -ExcludeProperty Tenant
                         $CacheLookupEndTime = Get-Date
                         $CacheLookupSeconds = ($CacheLookupEndTime - $CacheLookupStartTime).TotalSeconds
                         Write-Warning "Cache lookup for IP $($Data.clientip) took $CacheLookupSeconds seconds"
@@ -128,11 +127,11 @@ function Test-CIPPAuditLogRules {
                             } catch {
                                 #write-warning "Unable to get IP location for $($Data.clientip): $($_.Exception.Message)"
                             }
-                            $Country = if ($Location.CountryCode) { $Location.CountryCode } else { 'Unknown' }
-                            $City = if ($Location.City) { $Location.City } else { 'Unknown' }
-                            $Proxy = if ($Location.Proxy -ne $null) { $Location.Proxy } else { 'Unknown' }
-                            $hosting = if ($Location.Hosting -ne $null) { $Location.Hosting } else { 'Unknown' }
-                            $ASName = if ($Location.ASName) { $Location.ASName } else { 'Unknown' }
+                            $Country = if ($Location.countryCode) { $Location.countryCode } else { 'Unknown' }
+                            $City = if ($Location.city) { $Location.city } else { 'Unknown' }
+                            $Proxy = if ($Location.proxy -ne $null) { $Location.proxy } else { 'Unknown' }
+                            $hosting = if ($Location.hosting -ne $null) { $Location.hosting } else { 'Unknown' }
+                            $ASName = if ($Location.asname) { $Location.asname } else { 'Unknown' }
                             $IP = $Data.ClientIP
                             $LocationInfo = @{
                                 RowKey          = [string]$Data.clientip
