@@ -17,7 +17,7 @@ Function Invoke-ExecExtensionsConfig {
     $Body = [PSCustomObject]$Request.Body
     $Results = try {
         # Check if NinjaOne URL is set correctly and the instance has at least version 5.6
-        if ($Body.NinjaOne) {
+        if ($Body.NinjaOne.Enabled -eq $true) {
             $AllowedNinjaHostnames = @(
                 'app.ninjarmm.com',
                 'eu.ninjarmm.com',
