@@ -44,7 +44,6 @@ Function Invoke-ListScheduledItems {
     }
     $Tasks = Get-CIPPAzDataTableEntity @Table -Filter $Filter | Where-Object { $_.Hidden -ne $HiddenTasks }
     if ($Type) {
-        $Tasks.Command
         $Tasks = $Tasks | Where-Object { $_.command -eq $Type }
     }
 
@@ -67,7 +66,7 @@ Function Invoke-ListScheduledItems {
     # Associate values to output bindings by calling 'Push-OutputBinding'.
     Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
             StatusCode = [HttpStatusCode]::OK
-            Body       = @($ScheduledTasks)
+            Body       = @($ScheduledTasks | Sort-Object -Property ExecutedTime -Descending)
         })
 
 }
