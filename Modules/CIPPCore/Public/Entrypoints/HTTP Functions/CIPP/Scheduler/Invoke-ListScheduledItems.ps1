@@ -60,6 +60,9 @@ Function Invoke-ListScheduledItems {
         } else {
             $Task | Add-Member -NotePropertyName Parameters -NotePropertyValue @{}
         }
+        if ($Task.Recurrence -eq 0 -or [string]::IsNullOrEmpty($Task.Recurrence)) {
+            $Task.Recurrence = 'Once'
+        }
         $Task
     }
 
