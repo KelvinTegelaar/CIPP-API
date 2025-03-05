@@ -13,11 +13,12 @@ function Invoke-CIPPStandardDisableSelfServiceLicenses {
         CAT
             Entra (AAD) Standards
         TAG
-            "mediumimpact"
         ADDEDCOMPONENT
             {"type":"textField","name":"standards.DisableSelfServiceLicenses.Exclusions","label":"License Ids to exclude from this standard","required":false}
         IMPACT
             Medium Impact
+        ADDEDDATE
+            2021-11-16
         POWERSHELLEQUIVALENT
             Set-MsolCompanySettings -AllowAdHocSubscriptions \$false
         RECOMMENDEDBY

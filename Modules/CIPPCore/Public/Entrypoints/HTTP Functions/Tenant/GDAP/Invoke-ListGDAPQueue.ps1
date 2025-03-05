@@ -13,9 +13,8 @@ Function Invoke-ListGDAPQueue {
     $APIName = $Request.Params.CIPPEndpoint
     Write-LogMessage -headers $Request.Headers -API $APINAME -message 'Accessed this API' -Sev 'Debug'
 
+    # XXX Seems to be an unused endpoint? -Bobby
 
-    # Write to the Azure Functions log stream.
-    Write-Host 'PowerShell HTTP trigger function processed a request.'
     $Table = Get-CIPPTable -TableName 'GDAPMigration'
     $QueuedApps = Get-CIPPAzDataTableEntity @Table
 

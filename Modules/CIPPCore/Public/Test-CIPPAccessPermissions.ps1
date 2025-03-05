@@ -128,6 +128,9 @@ function Test-CIPPAccessPermissions {
             $Messages.Add('You have all the required permissions.') | Out-Null
         }
 
+        $ApplicationToken = Get-GraphToken -returnRefresh $true -SkipCache $true -AsApp $true
+        $ApplicationTokenDetails = Read-JwtAccessDetails -Token $ApplicationToken.access_token -erroraction SilentlyContinue | Select-Object
+
         $LastUpdate = [DateTime]::SpecifyKind($GraphPermissions.Timestamp.DateTime, [DateTimeKind]::Utc)
         $CpvTable = Get-CippTable -tablename 'cpvtenants'
         $CpvRefresh = Get-CippAzDataTableEntity @CpvTable -Filter "PartitionKey eq 'Tenant'"
@@ -162,13 +165,14 @@ function Test-CIPPAccessPermissions {
     }
 
     $AccessCheck = [PSCustomObject]@{
-        AccessTokenDetails = $AccessTokenDetails
-        Messages           = @($Messages)
-        ErrorMessages      = @($ErrorMessages)
-        MissingPermissions = @($MissingPermissions)
-        CPVRefreshList     = @($CPVRefreshList)
-        Links              = @($Links)
-        Success            = $Success
+        AccessTokenDetails      = $AccessTokenDetails
+        ApplicationTokenDetails = $ApplicationTokenDetails
+        Messages                = @($Messages)
+        ErrorMessages           = @($ErrorMessages)
+        MissingPermissions      = @($MissingPermissions)
+        CPVRefreshList          = @($CPVRefreshList)
+        Links                   = @($Links)
+        Success                 = $Success
     }
 
     $Table = Get-CIPPTable -TableName AccessChecks

@@ -13,28 +13,36 @@ function Remove-CIPPCache {
     if ($ClearIncludedTenants) {
         Remove-AzDataTableEntity -Force @TenantsTable -Entity $ClearIncludedTenants
     }
+    "Removed $($ClearIncludedTenants.Count) tenants"
 
-    if ($TenantsOnly -eq 'false') {
-        Write-Host 'Clearing all'
+    if ($TenantsOnly -eq $false) {
+        'Clearing all cached table data'
+        $Context = New-AzDataTableContext -ConnectionString $env:AzureWebJobsStorage
+        $Tables = Get-AzDataTable -Context $Context
+        foreach ($Table in $Tables) {
+            if ($Table -match '^cache') {
+                "Removing cache table $Table"
+                $TableContext = Get-CIPPTable -TableName $Table
+                Remove-AzDataTable @TableContext
+            }
+        }
+
+        'Clearing domain analyser results'
         # Remove Domain Analyser cached results
         $DomainsTable = Get-CippTable -tablename 'Domains'
         $Filter = "PartitionKey eq 'TenantDomains'"
         $ClearDomainAnalyserRows = Get-CIPPAzDataTableEntity @DomainsTable -Filter $Filter | ForEach-Object {
-            $_.DomainAnalyser = ''
+            $_ | Add-Member -MemberType NoteProperty -Name DomainAnalyser -Value '' -Force
             $_
         }
         if ($ClearDomainAnalyserRows) {
             Update-AzDataTableEntity -Force @DomainsTable -Entity $ClearDomainAnalyserRows
         }
-        #Clear BPA
-        $BPATable = Get-CippTable -tablename 'cachebpav2'
-        $ClearBPARows = Get-CIPPAzDataTableEntity @BPATable
-        if ($ClearBPARows) {
-            Remove-AzDataTableEntity -Force @BPATable -Entity $ClearBPARows
-        }
+
         $ENV:SetFromProfile = $null
         $Script:SkipListCache = $Null
         $Script:SkipListCacheEmpty = $Null
         $Script:IncludedTenantsCache = $Null
     }
+    'Cache cleanup complete'
 }

@@ -10,6 +10,10 @@ Function Invoke-ExecAddAlert {
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
 
+    $APIName = $Request.Params.CIPPEndpoint
+    $Headers = $Request.Headers
+    Write-LogMessage -headers $Headers -API $APIName -message 'Accessed this API' -Sev 'Debug'
+
     $Severity = 'Alert'
 
     $Result = if ($Request.Body.sendEmailNow -or $Request.Body.sendWebhookNow -eq $true -or $Request.Body.writeLog -eq $true) {
@@ -35,11 +39,11 @@ Function Invoke-ExecAddAlert {
             Send-CIPPAlert @CIPPAlert
         }
         if ($Request.Body.writeLog) {
-            Write-LogMessage -headers $Request.Headers -API 'Alerts' -message $Request.Body.text -Sev $Severity
+            Write-LogMessage -headers $Headers -API 'Alerts' -message $Request.Body.text -Sev $Severity
             'Successfully generated alert.'
         }
     } else {
-        Write-LogMessage -headers $Request.Headers -API 'Alerts' -message $Request.Body.text -Sev $Severity
+        Write-LogMessage -headers $Headers -API 'Alerts' -message $Request.Body.text -Sev $Severity
         'Successfully generated alert.'
     }
     Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{

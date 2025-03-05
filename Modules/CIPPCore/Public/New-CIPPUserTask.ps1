@@ -49,6 +49,11 @@ function New-CIPPUserTask {
         $results.add($ManagerResult)
     }
 
+    if ($userobj.setSponsor) {
+        $SponsorResult = Set-CIPPManager -user $CreationResults.username -Manager $userObj.setSponsor.value -TenantFilter $UserObj.tenantFilter -APIName 'Set Sponsor' -Headers $Headers
+        $results.add($SponsorResult)
+    }
+
     return @{
         Results  = $results
         username = $CreationResults.username
@@ -56,4 +61,3 @@ function New-CIPPUserTask {
         CopyFrom = $CopyFrom
     }
 }
-

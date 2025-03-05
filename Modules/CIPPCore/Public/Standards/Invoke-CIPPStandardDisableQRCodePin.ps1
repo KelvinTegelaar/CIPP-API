@@ -13,10 +13,11 @@ function Invoke-CIPPStandardDisableQRCodePin {
         CAT
             Entra (AAD) Standards
         TAG
-            "highimpact"
         ADDEDCOMPONENT
         IMPACT
             High Impact
+        ADDEDDATE
+            2024-02-10
         POWERSHELLEQUIVALENT
             Update-MgBetaPolicyAuthenticationMethodPolicyAuthenticationMethodConfiguration
         RECOMMENDEDBY
