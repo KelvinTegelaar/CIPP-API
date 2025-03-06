@@ -11,10 +11,11 @@ Function Invoke-ListMailboxes {
     param($Request, $TriggerMetadata)
 
     $APIName = $Request.Params.CIPPEndpoint
-    Write-LogMessage -headers $Request.Headers -API $APINAME -message 'Accessed this API' -Sev 'Debug'
+    $Headers = $Request.Headers
+    Write-LogMessage -headers $Headers -API $APIName -message 'Accessed this API' -Sev 'Debug'
 
     # Interact with query parameters or the body of the request.
-    $TenantFilter = $Request.Query.TenantFilter
+    $TenantFilter = $Request.Query.tenantFilter
     try {
         $Select = 'id,ExchangeGuid,ArchiveGuid,UserPrincipalName,DisplayName,PrimarySMTPAddress,RecipientType,RecipientTypeDetails,EmailAddresses,WhenSoftDeleted,IsInactiveMailbox,ForwardingSmtpAddress,DeliverToMailboxAndForward,ForwardingAddress,HiddenFromAddressListsEnabled,ExternalDirectoryObjectId,MessageCopyForSendOnBehalfEnabled,MessageCopyForSentAsEnabled'
         $ExoRequest = @{
@@ -32,6 +33,7 @@ Function Invoke-ListMailboxes {
             @{Parameter = 'PublicFolder'; Type = 'Bool' }
             @{Parameter = 'RecipientTypeDetails'; Type = 'String' }
             @{Parameter = 'SoftDeletedMailbox'; Type = 'Bool' }
+            @{Parameter = 'Identity'; Type = 'String' }
         )
 
         foreach ($Param in $Request.Query.PSObject.Properties.Name) {

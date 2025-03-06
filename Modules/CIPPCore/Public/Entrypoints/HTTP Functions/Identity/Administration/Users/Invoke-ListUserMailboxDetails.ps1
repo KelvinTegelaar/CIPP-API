@@ -183,7 +183,20 @@ Function Invoke-ListUserMailboxDetails {
         AutoExpandingArchive     = $AutoExpandingArchiveEnabled
         RecipientTypeDetails     = $MailboxDetailedRequest.RecipientTypeDetails
         Mailbox                  = $MailboxDetailedRequest
-    }
+        MailboxActionsData       = ($MailboxDetailedRequest | Select-Object id, ExchangeGuid, ArchiveGuid, WhenSoftDeleted, @{ Name = 'UPN'; Expression = { $_.'UserPrincipalName' } },
+            @{ Name = 'displayName'; Expression = { $_.'DisplayName' } },
+            @{ Name = 'primarySmtpAddress'; Expression = { $_.'PrimarySMTPAddress' } },
+            @{ Name = 'recipientType'; Expression = { $_.'RecipientType' } },
+            @{ Name = 'recipientTypeDetails'; Expression = { $_.'RecipientTypeDetails' } },
+            @{ Name = 'AdditionalEmailAddresses'; Expression = { ($_.'EmailAddresses' | Where-Object { $_ -clike 'smtp:*' }).Replace('smtp:', '') -join ', ' } },
+            @{Name = 'ForwardingSmtpAddress'; Expression = { $_.'ForwardingSmtpAddress' -replace 'smtp:', '' } },
+            @{Name = 'InternalForwardingAddress'; Expression = { $_.'ForwardingAddress' } },
+            DeliverToMailboxAndForward,
+            HiddenFromAddressListsEnabled,
+            ExternalDirectoryObjectId,
+            MessageCopyForSendOnBehalfEnabled,
+            MessageCopyForSentAsEnabled)
+    } # Select statement taken from ListMailboxes to save a EXO request
 
     Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
             StatusCode = [HttpStatusCode]::OK
