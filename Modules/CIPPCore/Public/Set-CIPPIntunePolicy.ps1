@@ -122,6 +122,8 @@ function Set-CIPPIntunePolicy {
                 $DisplayName = ($RawJSON | ConvertFrom-Json).Name
                 $CheckExististing = New-GraphGETRequest -uri "https://graph.microsoft.com/beta/$PlatformType/$TemplateTypeURL" -tenantid $tenantFilter
                 if ($DisplayName -in $CheckExististing.name) {
+                    $PolicyFile = $RawJSON | ConvertFrom-Json | Select-Object * -ExcludeProperty Platform, PolicyType, CreationSource
+                    $RawJSON = ConvertTo-Json -InputObject $PolicyFile -Depth 100 -Compress
                     $ExistingID = $CheckExististing | Where-Object -Property Name -EQ $DisplayName
                     $CreateRequest = New-GraphPOSTRequest -uri "https://graph.microsoft.com/beta/$PlatformType/$TemplateTypeURL/$($ExistingID.Id)" -tenantid $tenantFilter -type PUT -body $RawJSON
                     $CreateRequest = $CheckExististing | Where-Object -Property Name -EQ $DisplayName
