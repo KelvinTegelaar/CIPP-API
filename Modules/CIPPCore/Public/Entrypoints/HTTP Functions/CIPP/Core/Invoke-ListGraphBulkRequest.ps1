@@ -15,10 +15,12 @@ function Invoke-ListGraphBulkRequest {
     $TenantFilter = $Request.Body.tenantFilter
     $AsApp = $Request.Body.asApp
     $Requests = $Request.Body.requests
+    $NoPaginateIds = $Request.Body.noPaginateIds
 
     $GraphRequestParams = @{
         tenantid = $TenantFilter
         Requests = @()
+        NoPaginateIds = $NoPaginateIds ?? @()
     }
 
     if ($AsApp) {
