@@ -142,11 +142,12 @@ function Set-CIPPIntunePolicy {
                 $CheckExististing = New-GraphGETRequest -uri "https://graph.microsoft.com/beta/$PlatformType/$TemplateTypeURL" -tenantid $tenantFilter
                 if ($DisplayName -in $CheckExististing.displayName) {
                     $PostType = 'edited'
+                    $PolicyFile = $RawJSON | ConvertFrom-Json | Select-Object * -ExcludeProperty inventorySyncStatus, newUpdates, deviceReporting, approvalType
+                    $RawJSON = ConvertTo-Json -InputObject $PolicyFile -Depth 100 -Compress
                     $ExistingID = $CheckExististing | Where-Object -Property displayName -EQ $displayname
                     Write-Host 'We are editing'
-                    $CreateRequest = New-GraphPOSTRequest -uri "https://graph.microsoft.com/beta/$PlatformType/$TemplateTypeURL/$($ExistingID.Id)" -tenantid $tenantFilter -type PUT -body $RawJSON
+                    $CreateRequest = New-GraphPOSTRequest -uri "https://graph.microsoft.com/beta/$PlatformType/$TemplateTypeURL/$($ExistingID.Id)" -tenantid $tenantFilter -type PATCH -body $RawJSON
                     $CreateRequest = $CheckExististing | Where-Object -Property displayName -EQ $DisplayName
-
                 } else {
                     $PostType = 'added'
                     $CreateRequest = New-GraphPOSTRequest -uri "https://graph.microsoft.com/beta/$PlatformType/$TemplateTypeURL" -tenantid $tenantFilter -type POST -body $RawJSON
@@ -161,9 +162,11 @@ function Set-CIPPIntunePolicy {
                 $CheckExististing = New-GraphGETRequest -uri "https://graph.microsoft.com/beta/$PlatformType/$TemplateTypeURL" -tenantid $tenantFilter
                 if ($DisplayName -in $CheckExististing.displayName) {
                     $PostType = 'edited'
+                    $PolicyFile = $RawJSON | ConvertFrom-Json | Select-Object * -ExcludeProperty deployableContentDisplayName, endOfSupportDate, installLatestWindows10OnWindows11IneligibleDevice
+                    $RawJSON = ConvertTo-Json -InputObject $PolicyFile -Depth 100 -Compress
                     $ExistingID = $CheckExististing | Where-Object -Property displayName -EQ $displayname
                     Write-Host 'We are editing'
-                    $CreateRequest = New-GraphPOSTRequest -uri "https://graph.microsoft.com/beta/$PlatformType/$TemplateTypeURL/$($ExistingID.Id)" -tenantid $tenantFilter -type PUT -body $RawJSON
+                    $CreateRequest = New-GraphPOSTRequest -uri "https://graph.microsoft.com/beta/$PlatformType/$TemplateTypeURL/$($ExistingID.Id)" -tenantid $tenantFilter -type PATCH -body $RawJSON
                     $CreateRequest = $CheckExististing | Where-Object -Property displayName -EQ $DisplayName
 
                 } else {
