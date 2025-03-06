@@ -14,7 +14,7 @@ function Register-CIPPExtensionScheduledTasks {
     $PushTasks = Get-CIPPAzDataTableEntity @ScheduledTasksTable -Filter 'Hidden eq true' | Where-Object { $_.Command -match 'Push-CippExtensionData' }
     $Tenants = Get-Tenants -IncludeErrors
 
-    $Extensions = @('Hudu')
+    $Extensions = @('Hudu', 'NinjaOne')
     $MappedTenants = [System.Collections.Generic.List[string]]::new()
     foreach ($Extension in $Extensions) {
         $ExtensionConfig = $Config.$Extension
@@ -30,14 +30,9 @@ function Register-CIPPExtensionScheduledTasks {
 
             $SyncTypes.Add('Overview')
             $SyncTypes.Add('Groups')
-
-            if ($FieldSync.Users) {
-                $SyncTypes.Add('Users')
-                $SyncTypes.Add('Mailboxes')
-            }
-            if ($FieldSync.Devices) {
-                $SyncTypes.Add('Devices')
-            }
+            $SyncTypes.Add('Users')
+            $SyncTypes.Add('Mailboxes')
+            $SyncTypes.Add('Devices')
 
             foreach ($Mapping in $Mappings) {
                 $Tenant = $Tenants | Where-Object { $_.customerId -eq $Mapping.RowKey }
