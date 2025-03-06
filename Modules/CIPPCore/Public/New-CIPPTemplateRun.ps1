@@ -91,6 +91,8 @@ function New-CIPPTemplateRun {
                         "https://graph.microsoft.com/beta/deviceAppManagement/mobileAppConfigurations?`$expand=assignments&`$filter=microsoft.graph.androidManagedStoreAppConfiguration/appSupportsOemConfig%20eq%20true"
                         'https://graph.microsoft.com/beta/deviceManagement/configurationPolicies'
                         'https://graph.microsoft.com/beta/deviceManagement/windowsFeatureUpdateProfiles'
+                        'https://graph.microsoft.com/beta/deviceManagement/windowsQualityUpdatePolicies'
+                        'https://graph.microsoft.com/beta/deviceManagement/windowsQualityUpdateProfiles'
                     )
 
                     $Policies = foreach ($url in $GraphURLS) {
