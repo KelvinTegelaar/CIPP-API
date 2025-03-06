@@ -175,7 +175,46 @@ function Set-CIPPIntunePolicy {
                     Write-LogMessage -headers $Headers -API $APINAME -tenant $($tenantFilter) -message "Added policy $($DisplayName) via template" -Sev 'info'
                 }
             }
-
+            'windowsQualityUpdatePolicies' {
+                $PlatformType = 'deviceManagement'
+                $TemplateTypeURL = 'windowsQualityUpdatePolicies'
+                $File = ($RawJSON | ConvertFrom-Json)
+                $DisplayName = $File.displayName ?? $File.Name
+                $CheckExististing = New-GraphGETRequest -uri "https://graph.microsoft.com/beta/$PlatformType/$TemplateTypeURL" -tenantid $tenantFilter
+                if ($DisplayName -in $CheckExististing.displayName) {
+                    $PostType = 'edited'
+                    $PolicyFile = $RawJSON | ConvertFrom-Json | Select-Object *
+                    $RawJSON = ConvertTo-Json -InputObject $PolicyFile -Depth 100 -Compress
+                    $ExistingID = $CheckExististing | Where-Object -Property displayName -EQ $displayname
+                    Write-Host 'We are editing'
+                    $CreateRequest = New-GraphPOSTRequest -uri "https://graph.microsoft.com/beta/$PlatformType/$TemplateTypeURL/$($ExistingID.Id)" -tenantid $tenantFilter -type PATCH -body $RawJSON
+                    $CreateRequest = $CheckExististing | Where-Object -Property displayName -EQ $DisplayName
+                } else {
+                    $PostType = 'added'
+                    $CreateRequest = New-GraphPOSTRequest -uri "https://graph.microsoft.com/beta/$PlatformType/$TemplateTypeURL" -tenantid $tenantFilter -type POST -body $RawJSON
+                    Write-LogMessage -headers $Headers -API $APINAME -tenant $($tenantFilter) -message "Added policy $($DisplayName) via template" -Sev 'info'
+                }
+            }
+            'windowsQualityUpdateProfiles' {
+                $PlatformType = 'deviceManagement'
+                $TemplateTypeURL = 'windowsQualityUpdateProfiles'
+                $File = ($RawJSON | ConvertFrom-Json)
+                $DisplayName = $File.displayName ?? $File.Name
+                $CheckExististing = New-GraphGETRequest -uri "https://graph.microsoft.com/beta/$PlatformType/$TemplateTypeURL" -tenantid $tenantFilter
+                if ($DisplayName -in $CheckExististing.displayName) {
+                    $PostType = 'edited'
+                    $PolicyFile = $RawJSON | ConvertFrom-Json | Select-Object * -ExcludeProperty releaseDateDisplayName, deployableContentDisplayName
+                    $RawJSON = ConvertTo-Json -InputObject $PolicyFile -Depth 100 -Compress
+                    $ExistingID = $CheckExististing | Where-Object -Property displayName -EQ $displayname
+                    Write-Host 'We are editing'
+                    $CreateRequest = New-GraphPOSTRequest -uri "https://graph.microsoft.com/beta/$PlatformType/$TemplateTypeURL/$($ExistingID.Id)" -tenantid $tenantFilter -type PATCH -body $RawJSON
+                    $CreateRequest = $CheckExististing | Where-Object -Property displayName -EQ $DisplayName
+                } else {
+                    $PostType = 'added'
+                    $CreateRequest = New-GraphPOSTRequest -uri "https://graph.microsoft.com/beta/$PlatformType/$TemplateTypeURL" -tenantid $tenantFilter -type POST -body $RawJSON
+                    Write-LogMessage -headers $Headers -API $APINAME -tenant $($tenantFilter) -message "Added policy $($DisplayName) via template" -Sev 'info'
+                }
+            }
         }
         Write-LogMessage -headers $Headers -API $APINAME -tenant $($tenantFilter) -message "$($PostType) policy $($Displayname)" -Sev 'Info'
         if ($AssignTo) {
