@@ -13,12 +13,13 @@ function Invoke-CIPPStandardSendReceiveLimitTenant {
         CAT
             Exchange Standards
         TAG
-            "lowimpact"
         ADDEDCOMPONENT
-            {"type":"number","name":"standards.SendReceiveLimitTenant.SendLimit","label":"Send limit in MB (Default is 35)","default":35}
-            {"type":"number","name":"standards.SendReceiveLimitTenant.ReceiveLimit","label":"Receive Limit in MB (Default is 36)","default":36}
+            {"type":"number","name":"standards.SendReceiveLimitTenant.SendLimit","label":"Send limit in MB (Default is 35)","defaultValue":35}
+            {"type":"number","name":"standards.SendReceiveLimitTenant.ReceiveLimit","label":"Receive Limit in MB (Default is 36)","defaultValue":36}
         IMPACT
             Low Impact
+        ADDEDDATE
+            2023-11-16
         POWERSHELLEQUIVALENT
             Set-MailboxPlan
         RECOMMENDEDBY

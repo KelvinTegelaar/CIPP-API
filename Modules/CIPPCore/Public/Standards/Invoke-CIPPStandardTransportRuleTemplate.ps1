@@ -13,9 +13,11 @@ function Invoke-CIPPStandardTransportRuleTemplate {
         CAT
             Templates
         DISABLEDFEATURES
-
+            
         IMPACT
-            Medium
+            Medium Impact
+        ADDEDDATE
+            2023-12-30
         ADDEDCOMPONENT
             {"type":"autoComplete","name":"transportRuleTemplate","label":"Select Transport Rule Template","api":{"url":"/api/ListTransportRulesTemplates","labelField":"name","valueField":"GUID","queryKey":"ListTransportRulesTemplates"}}
         UPDATECOMMENTBLOCK

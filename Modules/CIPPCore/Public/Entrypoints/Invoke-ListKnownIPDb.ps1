@@ -16,7 +16,7 @@ Function Invoke-ListKnownIPDb {
 
     # Write to the Azure Functions log stream.
     Write-Host 'PowerShell HTTP trigger function processed a request.'
-    $Table = Get-CIPPTable -TableName 'knownlocationdb'
+    $Table = Get-CIPPTable -TableName 'knownlocationdbv2'
     $Filter = "Tenant eq '$($Request.Query.TenantFilter)'"
     $KnownIPDb = Get-CIPPAzDataTableEntity @Table -Filter $Filter
 

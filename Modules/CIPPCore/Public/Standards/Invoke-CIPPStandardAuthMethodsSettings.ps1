@@ -7,22 +7,26 @@ function Invoke-CIPPStandardAuthMethodsSettings {
     .SYNOPSIS
         (Label) Configure Authentication Methods Policy Settings
     .DESCRIPTION
-        (Helptext) Configures the report suspicious activity settings and system credential preferences in the authentication methods policy
-        (DocsDescription) This standard allows you to configure the reportSuspiciousActivitySettings and systemCredentialPreferences properties within the authentication methods policy.
+        (Helptext) Configures the report suspicious activity settings and system credential preferences in the authentication methods policy.
+        (DocsDescription) Controls the authentication methods policy settings for reporting suspicious activity and system credential preferences. These settings help enhance the security of authentication in your organization.
     .NOTES
         CAT
-            Entra Standards
+            Entra (AAD) Standards
         TAG
-            "lowimpact"
         ADDEDCOMPONENT
-            {"type":"autoComplete","multiple":false,"name":"standards.AuthMethodsSettings.ReportSuspiciousActivity","label":"Report Suspicious Activity Settings","options":[{"label":"Default","value":"default"},{"label":"Enabled","value":"enabled"},{"label":"Disabled","value":"disabled"}]}
-            {"type":"autoComplete","multiple":false,"name":"standards.AuthMethodsSettings.SystemCredential","label":"System Credential Preferences","options":[{"label":"Default","value":"default"},{"label":"Enabled","value":"enabled"},{"label":"Disabled","value":"disabled"}]}
+            {"type":"autoComplete","multiple":false,"creatable":false,"required":false,"name":"standards.AuthMethodsSettings.ReportSuspiciousActivity","label":"Report Suspicious Activity Settings","options":[{"label":"Microsoft managed","value":"default"},{"label":"Enabled","value":"enabled"},{"label":"Disabled","value":"disabled"}]}
+            {"type":"autoComplete","multiple":false,"creatable":false,"required":false,"name":"standards.AuthMethodsSettings.SystemCredential","label":"System Credential Preferences","options":[{"label":"Microsoft managed","value":"default"},{"label":"Enabled","value":"enabled"},{"label":"Disabled","value":"disabled"}]}
         IMPACT
             Low Impact
+        ADDEDDATE
+            2025-02-10
         POWERSHELLEQUIVALENT
             Update-MgBetaPolicyAuthenticationMethodPolicy
+        RECOMMENDEDBY
+        UPDATECOMMENTBLOCK
+            Run the Tools\Update-StandardsComments.ps1 script to update this comment block
     .LINK
-        https://docs.cipp.app/user-documentation/tenant/standards/list-standards/global-standards#low-impact
+        https://docs.cipp.app/user-documentation/tenant/standards/list-standards/entra-aad-standards#low-impact
     #>
 
     param($Tenant, $Settings)

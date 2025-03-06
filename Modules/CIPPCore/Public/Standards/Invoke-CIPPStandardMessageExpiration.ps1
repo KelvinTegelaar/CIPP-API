@@ -13,10 +13,11 @@ function Invoke-CIPPStandardMessageExpiration {
         CAT
             Exchange Standards
         TAG
-            "lowimpact"
         ADDEDCOMPONENT
         IMPACT
             Low Impact
+        ADDEDDATE
+            2024-02-23
         POWERSHELLEQUIVALENT
             Set-TransportConfig -MessageExpirationTimeout 12.00:00:00
         RECOMMENDEDBY
