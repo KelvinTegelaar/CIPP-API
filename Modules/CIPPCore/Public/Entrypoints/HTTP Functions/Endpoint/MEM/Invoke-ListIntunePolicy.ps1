@@ -78,6 +78,9 @@ Function Invoke-ListIntunePolicy {
                         '*microsoft.graph.macOSEndpointProtectionConfiguration*' { 'MacOS Endpoint Protection' }
                         '*microsoft.graph.androidWorkProfileGeneralDeviceConfiguration*' { 'Android Configuration' }
                         '*windowsFeatureUpdateProfiles*' { 'Feature Update' }
+                        '*iosUpdateConfiguration*' { 'iOS Update Configuration' }
+                        '*windowsDriverUpdateProfiles*' { 'Driver Update' }
+                        '*configurationPolicies*' { 'Device Configuration' }
                         default { $_.'assignments@odata.context' }
                     }
                     $Assignments = $_.assignments.target | Select-Object -Property '@odata.type', groupId
