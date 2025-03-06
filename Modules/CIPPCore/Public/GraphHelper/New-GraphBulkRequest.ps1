@@ -8,7 +8,8 @@ function New-GraphBulkRequest {
         $NoAuthCheck,
         $scope,
         $asapp,
-        $Requests
+        $Requests,
+        $NoPaginateIds = @()
     )
 
     if ($NoAuthCheck -or (Get-AuthorisedRequest -Uri $uri -TenantID $tenantid)) {
@@ -43,6 +44,9 @@ function New-GraphBulkRequest {
                 $Return
             }
             foreach ($MoreData in $ReturnedData.Responses | Where-Object { $_.body.'@odata.nextLink' }) {
+                if ($NoPaginateIds -contains $MoreData.id) {
+                    continue
+                }
                 Write-Host 'Getting more'
                 Write-Host $MoreData.body.'@odata.nextLink'
                 $AdditionalValues = New-GraphGetRequest -ComplexFilter -uri $MoreData.body.'@odata.nextLink' -tenantid $tenantid -NoAuthCheck $NoAuthCheck -scope $scope -AsApp $asapp
