@@ -29,7 +29,7 @@ Function Invoke-ListScheduledItems {
         $ScheduledItemFilter.Add('Hidden eq false')
     }
 
-    if ($Name -eq $true) {
+    if ($Name) {
         $ScheduledItemFilter.Add("Name eq '$($Name)'")
     }
 
