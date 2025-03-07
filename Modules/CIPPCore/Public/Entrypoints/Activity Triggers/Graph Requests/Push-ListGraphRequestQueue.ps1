@@ -39,7 +39,8 @@ function Push-ListGraphRequestQueue {
         }
 
         $RawGraphRequest = try {
-            Get-GraphRequestList @GraphRequestParams
+            $Results = Get-GraphRequestList @GraphRequestParams
+            $Results | Select-Object -First ($Results.Count - 1)
         } catch {
             $CippException = Get-CippException -Exception $_.Exception
             [PSCustomObject]@{
@@ -57,6 +58,7 @@ function Push-ListGraphRequestQueue {
             Data         = [string]$Json
         }
         Add-CIPPAzDataTableEntity @Table -Entity $GraphResults -Force | Out-Null
+        return $true
     } catch {
         Write-Warning "Queue Error: $($_.Exception.Message)"
         #Write-Information ($GraphResults | ConvertTo-Json -Depth 10 -Compress)
