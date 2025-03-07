@@ -35,7 +35,7 @@ function Set-SherwebSubscription {
         }
         $OrderUri = "https://api.sherweb.com/service-provider/v1/orders?customerId=$CustomerId"
         $Order = Invoke-RestMethod -Uri $OrderUri -Method POST -Headers $AuthHeader -Body $OrderBody -ContentType 'application/json'
-        if ($Order -match 'Internal Server Error') {
+        if ($Order -match 'Internal Server Error' -and $Add -gt 0) {
             throw 'An error occurred while attempting to create a new subscription. Please check the Cumulus portal to ensure this customer has been provisioned for Microsoft 365.'
         }
         return $Order
