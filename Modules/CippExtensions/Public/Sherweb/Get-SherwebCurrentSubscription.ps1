@@ -11,6 +11,7 @@ function Get-SherwebCurrentSubscription {
         $CustomerId = Get-ExtensionMapping -Extension 'Sherweb' | Where-Object { $_.RowKey -eq $TenantFilter } | Select-Object -ExpandProperty IntegrationId
     }
 
+    Write-Information "Getting current subscription for $CustomerId"
     $AuthHeader = Get-SherwebAuthentication
     $Uri = "https://api.sherweb.com/service-provider/v1/billing/subscriptions/details?customerId=$CustomerId"
     $SubscriptionDetails = Invoke-RestMethod -Uri $Uri -Method GET -Headers $AuthHeader

@@ -479,7 +479,6 @@ function New-CIPPRestoreTask {
                 }
             }
         }
-
         'CippWebhookAlerts' {
             Write-Host "Restore Webhook Alerts for $TenantFilter"
             $WebhookTable = Get-CIPPTable -TableName 'WebhookRules'
@@ -502,18 +501,6 @@ function New-CIPPRestoreTask {
                 "Could not restore Scripted Alerts $ErrorMessage "
             }
         }
-        'CippStandards' {
-            Write-Host "Restore Standards for $TenantFilter"
-            $Table = Get-CippTable -tablename 'standards'
-            $StandardsBackup = $BackupData.CippStandards | ConvertFrom-Json
-            try {
-                Add-CIPPAzDataTableEntity @Table -Entity $StandardsBackup -Force
-            } catch {
-                $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
-                "Could not restore Standards $ErrorMessage "
-            }
-        }
-
     }
     return $RestoreData
 }
