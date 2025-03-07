@@ -34,6 +34,7 @@ function Test-CIPPAuditLogRules {
     $Configuration = $ConfigEntries | Where-Object { ($_.Tenants -match $TenantFilter -or $_.Tenants -match 'AllTenants') } | ForEach-Object {
         [pscustomobject]@{
             Tenants    = ($_.Tenants | ConvertFrom-Json)
+            Excluded   = ($_.excludedTenants | ConvertFrom-Json -ErrorAction SilentlyContinue)
             Conditions = $_.Conditions
             Actions    = $_.Actions
             LogType    = $_.Type
@@ -180,6 +181,9 @@ function Test-CIPPAuditLogRules {
         #write-warning "Creating filters - $(($ProcessedData.operation | Sort-Object -Unique) -join ',') - $($TenantFilter)"
 
         $Where = $Configuration | ForEach-Object {
+            if ($TenantFilter -In $_.Excluded.value) {
+                return
+            }
             $conditions = $_.Conditions | ConvertFrom-Json | Where-Object { $_.Input.value -ne '' }
             $actions = $_.Actions
             $conditionStrings = [System.Collections.Generic.List[string]]::new()
