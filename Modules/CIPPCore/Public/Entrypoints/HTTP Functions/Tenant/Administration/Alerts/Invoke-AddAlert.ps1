@@ -14,15 +14,17 @@ Function Invoke-AddAlert {
     $Tenants = $request.body.tenantFilter
     $Conditions = $request.body.conditions | ConvertTo-Json -Compress -Depth 10 | Out-String
     $TenantsJson = $Tenants | ConvertTo-Json -Compress -Depth 10 | Out-String
+    $excludedTenantsJson = $request.body.excludedTenants | ConvertTo-Json -Compress -Depth 10 | Out-String
     $Actions = $request.body.actions | ConvertTo-Json -Compress -Depth 10 | Out-String
     $RowKey = $Request.body.RowKey ? $Request.body.RowKey : (New-Guid).ToString()
     $CompleteObject = @{
-        Tenants      = [string]$TenantsJson
-        Conditions   = [string]$Conditions
-        Actions      = [string]$Actions
-        type         = $request.body.logbook.value
-        RowKey       = $RowKey
-        PartitionKey = 'Webhookv2'
+        Tenants         = [string]$TenantsJson
+        excludedTenants = [string]$excludedTenantsJson
+        Conditions      = [string]$Conditions
+        Actions         = [string]$Actions
+        type            = $request.body.logbook.value
+        RowKey          = $RowKey
+        PartitionKey    = 'Webhookv2'
     }
     $WebhookTable = get-cipptable -TableName 'WebhookRules'
     Add-CIPPAzDataTableEntity @WebhookTable -Entity $CompleteObject -Force
