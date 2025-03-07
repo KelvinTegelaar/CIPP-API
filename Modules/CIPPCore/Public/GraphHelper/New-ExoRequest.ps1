@@ -31,7 +31,7 @@ function New-ExoRequest {
         [Parameter(ParameterSetName = 'AvailableCmdlets')]
         [switch]$AvailableCmdlets,
 
-        $ModuleVersion = '3.5.1',
+        $ModuleVersion = '3.7.1',
         [switch]$AsApp
     )
     if ((Get-AuthorisedRequest -TenantID $tenantid) -or $NoAuthCheck -eq $True) {

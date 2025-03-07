@@ -18,7 +18,7 @@ Function Invoke-AddBPATemplate {
         $Table = Get-CippTable -tablename 'templates'
         $Table.Force = $true
         Add-CIPPAzDataTableEntity @Table -Entity @{
-            JSON         = "$($Request.body | ConvertTo-Json -Depth 10)"
+            JSON         = "$($Request.body | ConvertTo-Json -Depth 10 -Compress)"
             RowKey       = $Request.body.name
             PartitionKey = 'BPATemplate'
             GUID         = $Request.body.name
