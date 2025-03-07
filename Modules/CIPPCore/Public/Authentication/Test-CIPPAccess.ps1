@@ -12,6 +12,8 @@ function Test-CIPPAccess {
     # Check help for role
     $APIRole = $Help.Role
 
+    $AnyTenantAllowedFunctions = @('ListTenants', 'ListUserSettings', 'ListUserPhoto', 'GetCippAlerts', 'GetVersion')
+
     if ($Request.Headers.'x-ms-client-principal-idp' -eq 'aad' -and $Request.Headers.'x-ms-client-principal-name' -match '^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$') {
         # Direct API Access
         $ForwardedFor = $Request.Headers.'x-forwarded-for' -split ',' | Select-Object -First 1
@@ -106,13 +108,14 @@ function Test-CIPPAccess {
                 }
 
                 if ($APIAllowed) {
+                    $TenantFilter = $Request.Query.tenantFilter ?? $Request.Body.tenantFilter ?? $env:TenantID
                     # Check tenant level access
                     if (($Role.BlockedTenants | Measure-Object).Count -eq 0 -and $Role.AllowedTenants -contains 'AllTenants') {
                         $TenantAllowed = $true
-                    } elseif ($Request.Query.TenantFilter -eq 'AllTenants' -or $Request.Body.TenantFilter -eq 'AllTenants') {
+                    } elseif ($TenantFilter -eq 'AllTenants') {
                         $TenantAllowed = $false
                     } else {
-                        $Tenant = ($Tenants | Where-Object { $Request.Query.TenantFilter -eq $_.customerId -or $Request.Body.TenantFilter -eq $_.customerId -or $Request.Query.TenantFilter -eq $_.defaultDomainName -or $Request.Body.TenantFilter -eq $_.defaultDomainName }).customerId
+                        $Tenant = ($Tenants | Where-Object { $TenantFilter -eq $_.customerId -or $TenantFilter -eq $_.defaultDomainName }).customerId
                         if ($Role.AllowedTenants -contains 'AllTenants') {
                             $AllowedTenants = $Tenants.customerId
                         } else {
@@ -132,7 +135,7 @@ function Test-CIPPAccess {
             if (!$APIAllowed) {
                 throw "Access to this CIPP API endpoint is not allowed, the '$($Role.Role)' custom role does not have the required permission: $APIRole"
             }
-            if (!$TenantAllowed) {
+            if (!$TenantAllowed -and $AnyTenantAllowedFunctions -notcontains $Request.Params.CIPPEndpoint) {
                 throw 'Access to this tenant is not allowed'
             } else {
                 return $true

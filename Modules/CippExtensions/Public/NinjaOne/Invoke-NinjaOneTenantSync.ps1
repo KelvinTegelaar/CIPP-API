@@ -1045,24 +1045,24 @@ function Invoke-NinjaOneTenantSync {
                 $CIPPUserLinksData = @(
                     @{
                         Name = 'View User'
-                        Link = "https://$($CIPPURL)/identity/administration/users/view?userId=$($User.id)&tenantDomain=$($Customer.defaultDomainName)"
+                        Link = "https://$($CIPPURL)/identity/administration/users/user?userId=$($User.id)&tenantFilter=$($Customer.defaultDomainName)"
                         Icon = 'far fa-eye'
                     },
                     @{
                         Name = 'Edit User'
-                        Link = "https://$($CIPPURL)/identity/administration/users/edit?userId=$($User.id)&tenantDomain=$($Customer.defaultDomainName)"
+                        Link = "https://$($CIPPURL)/identity/administration/users/user/edit?userId=$($User.id)&tenantFilter=$($Customer.defaultDomainName)"
                         Icon = 'fas fa-users-cog'
                     },
                     @{
                         Name = 'Research Compromise'
-                        Link = "https://$($CIPPURL)/identity/administration/ViewBec?userId=$($User.id)&tenantDomain=$($Customer.defaultDomainName)"
+                        Link = "https://$($CIPPURL)/identity/administration/users/user/bec?userId=$($User.id)&tenantFilter=$($Customer.defaultDomainName)"
                         Icon = 'fas fa-user-secret'
                     }
                 )
 
                 # Actions
                 $ActionsHTML = @"
-                                <a href="https://$($CIPPUrl)/identity/administration/users/view?userId=$($User.id)&tenantDomain=$($Customer.defaultDomainName)&userEmail=$($User.userPrincipalName)" title="View in CIPP" class="btn secondary"><i class="fas fa-shield-halved" style="color: #337ab7;"></i></a>&nbsp;
+                                <a href="https://$($CIPPUrl)/identity/administration/users/user?userId=$($User.id)&tenantFilter=$($Customer.defaultDomainName)" title="View in CIPP" class="btn secondary"><i class="fas fa-shield-halved" style="color: #337ab7;"></i></a>&nbsp;
                                 <a href="https://entra.microsoft.com/$($Customer.DefaultDomainName)/#view/Microsoft_AAD_UsersAndTenants/UserProfileMenuBlade/~/overview/userId/$($User.id)/hidePreviewBanner~/true" title="View in Entra ID" class="btn secondary"><i class="fab fa-microsoft" style="color: #337ab7;"></i></a>&nbsp;
 "@
 
