@@ -44,6 +44,16 @@ Function Invoke-ListIntunePolicy {
                     url    = "/deviceManagement/windowsFeatureUpdateProfiles?`$expand=assignments&top=200"
                 }
                 @{
+                    id     = 'windowsQualityUpdatePolicies'
+                    method = 'GET'
+                    url    = "/deviceManagement/windowsQualityUpdatePolicies?`$expand=assignments&top=200"
+                }
+                @{
+                    id     = 'windowsQualityUpdateProfiles'
+                    method = 'GET'
+                    url    = "/deviceManagement/windowsQualityUpdateProfiles?`$expand=assignments&top=200"
+                }
+                @{
                     id     = 'GroupPolicyConfigurations'
                     method = 'GET'
                     url    = "/deviceManagement/groupPolicyConfigurations?`$expand=assignments&top=1000"
@@ -78,6 +88,11 @@ Function Invoke-ListIntunePolicy {
                         '*microsoft.graph.macOSEndpointProtectionConfiguration*' { 'MacOS Endpoint Protection' }
                         '*microsoft.graph.androidWorkProfileGeneralDeviceConfiguration*' { 'Android Configuration' }
                         '*windowsFeatureUpdateProfiles*' { 'Feature Update' }
+                        '*windowsQualityUpdatePolicies*' { 'Quality Update' }
+                        '*windowsQualityUpdateProfiles*' { 'Quality Update' }
+                        '*iosUpdateConfiguration*' { 'iOS Update Configuration' }
+                        '*windowsDriverUpdateProfiles*' { 'Driver Update' }
+                        '*configurationPolicies*' { 'Device Configuration' }
                         default { $_.'assignments@odata.context' }
                     }
                     $Assignments = $_.assignments.target | Select-Object -Property '@odata.type', groupId
