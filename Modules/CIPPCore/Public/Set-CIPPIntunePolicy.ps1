@@ -17,7 +17,8 @@ function Set-CIPPIntunePolicy {
     $ReplaceMap = Get-CIPPAzDataTableEntity @ReplaceTable -Filter "PartitionKey eq '$tenantFilter'"
     if ($ReplaceMap) {
         foreach ($Replace in $ReplaceMap) {
-            $RawJSON = $RawJSON -replace $Replace.RowKey, $Replace.Value
+            $String = '%{0}%' -f $Replace.RowKey
+            $RawJSON = $RawJSON -replace $String, $Replace.Value
         }
     }
     #default replacements for all tenants: %tenantid% becomes $tenant.customerId, %tenantfilter% becomes $tenant.defaultDomainName, %tenantname% becomes $tenant.displayName
