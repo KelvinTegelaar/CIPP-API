@@ -17,16 +17,16 @@ function Get-CIPPStandards {
     $Table = Get-CippTable -tablename 'templates'
     $Filter = "PartitionKey eq 'StandardsTemplateV2'"
     $Templates = (Get-CIPPAzDataTableEntity @Table -Filter $Filter | Sort-Object TimeStamp).JSON |
-    ForEach-Object {
-        try {
-            # Fix old "Action" => "action"
-            $JSON = $_ -replace '"Action":', '"action":'
-            ConvertFrom-Json -InputObject $JSON -ErrorAction SilentlyContinue
-        } catch {}
-    } |
-    Where-Object {
-        $_.GUID -like $TemplateId -and $_.runManually -eq $runManually
-    }
+        ForEach-Object {
+            try {
+                # Fix old "Action" => "action"
+                $JSON = $_ -replace '"Action":', '"action":' -replace '"permissionlevel":', '"permissionLevel":'
+                ConvertFrom-Json -InputObject $JSON -ErrorAction SilentlyContinue
+            } catch {}
+        } |
+        Where-Object {
+            $_.GUID -like $TemplateId -and $_.runManually -eq $runManually
+        }
 
     # 2. Get tenant list, filter if needed
     $AllTenantsList = Get-Tenants

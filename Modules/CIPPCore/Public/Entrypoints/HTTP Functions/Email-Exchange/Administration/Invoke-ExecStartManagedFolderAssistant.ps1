@@ -24,7 +24,6 @@ Function Invoke-ExecStartManagedFolderAssistant {
 
     $ExoParams = @{
         Identity          = $Identity
-        AggMailboxCleanup = $true
         FullCrawl         = $true
     }
 
