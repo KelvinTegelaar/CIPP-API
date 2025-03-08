@@ -52,12 +52,12 @@ Function Invoke-ExecIncidentsList {
                 $InputObject = [PSCustomObject]@{
                     OrchestratorName = 'IncidentOrchestrator'
                     QueueFunction    = @{
-                        FunctionName    = 'GetTenants'
-                        QueueId         = $Queue.RowKey
-                        TenantParams    = @{
+                        FunctionName = 'GetTenants'
+                        QueueId      = $Queue.RowKey
+                        TenantParams = @{
                             IncludeErrors = $true
                         }
-                        DurableFunction = 'ExecIncidentsListAllTenants'
+                        DurableName  = 'ExecIncidentsListAllTenants'
                     }
                     SkipLog          = $true
                 }
@@ -95,7 +95,7 @@ Function Invoke-ExecIncidentsList {
     if (!$body) {
         $StatusCode = [HttpStatusCode]::OK
         $body = [PSCustomObject]@{
-            Results  = @($GraphRequest | Where-Object -Property id -NE $null | Sort-Object Id -Descending)
+            Results  = @($GraphRequest | Where-Object -Property id -NE $null | Sort-Object id -Descending)
             Metadata = $Metadata
         }
     }
