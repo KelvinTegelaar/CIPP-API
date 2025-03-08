@@ -100,7 +100,8 @@ function Invoke-CIPPStandardSpamFilterPolicy {
                         ($CurrentState.EnableLanguageBlockList -eq $Settings.EnableLanguageBlockList) -and
                         ((-not $CurrentState.LanguageBlockList -and -not $Settings.LanguageBlockList.value) -or (!(Compare-Object -ReferenceObject $CurrentState.LanguageBlockList -DifferenceObject $Settings.LanguageBlockList.value))) -and
                         ($CurrentState.EnableRegionBlockList -eq $Settings.EnableRegionBlockList) -and
-                        ((-not $CurrentState.RegionBlockList -and -not $Settings.RegionBlockList.value) -or (!(Compare-Object -ReferenceObject $CurrentState.RegionBlockList -DifferenceObject $Settings.RegionBlockList.value)))
+                        ((-not $CurrentState.RegionBlockList -and -not $Settings.RegionBlockList.value) -or (!(Compare-Object -ReferenceObject $CurrentState.RegionBlockList -DifferenceObject $Settings.RegionBlockList.value))) -and
+                        (!(Compare-Object -ReferenceObject $CurrentState.AllowedSenderDomains -DifferenceObject ($Settings.AllowedSenderDomains.value ?? $Settings.AllowedSenderDomains)))
 
     $AcceptedDomains = New-ExoRequest -TenantId $Tenant -cmdlet 'Get-AcceptedDomain'
 
@@ -153,6 +154,7 @@ function Invoke-CIPPStandardSpamFilterPolicy {
                 LanguageBlockList                    = $Settings.LanguageBlockList.value
                 EnableRegionBlockList                = $Settings.EnableRegionBlockList
                 RegionBlockList                      = $Settings.RegionBlockList.value
+                AllowedSenderDomains                 = $Settings.AllowedSenderDomains.value ?? @{"@odata.type" = "#Exchange.GenericHashTable"}
             }
 
             if ($CurrentState.Name -eq $PolicyName) {
