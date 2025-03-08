@@ -17,7 +17,7 @@ function Invoke-ListMailQuarantine {
 
     try {
         $GraphRequest = if ($TenantFilter -ne 'AllTenants') {
-            New-ExoRequest -tenantid $TenantFilter -cmdlet 'Get-QuarantineMessage' -cmdParams @{ 'PageSize' = 1000 }
+            New-ExoRequest -tenantid $TenantFilter -cmdlet 'Get-QuarantineMessage' -cmdParams @{ 'PageSize' = 1000 } | Select-Object -ExcludeProperty *data.type*
         } else {
             $Table = Get-CIPPTable -TableName cacheQuarantineMessages
             $Filter = "PartitionKey eq 'QuarantineMessage'"
@@ -63,7 +63,7 @@ function Invoke-ListMailQuarantine {
     if (!$body) {
         $StatusCode = [HttpStatusCode]::OK
         $body = [PSCustomObject]@{
-            Results  = @($GraphRequest | Where-Object -Property Identity -NE $null | Sort-Object -Property ReceivedTime -Descending)
+            Results  = @($GraphRequest | Where-Object -Property Identity -NE $null | Sort-Object -Property ReceivedTime -Descending )
             Metadata = $Metadata
         }
     }
