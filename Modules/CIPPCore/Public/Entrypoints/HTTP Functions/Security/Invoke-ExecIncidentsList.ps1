@@ -95,7 +95,7 @@ Function Invoke-ExecIncidentsList {
     if (!$body) {
         $StatusCode = [HttpStatusCode]::OK
         $body = [PSCustomObject]@{
-            Results  = @($GraphRequest | Where-Object -Property id -NE $null)
+            Results  = @($GraphRequest | Where-Object -Property id -NE $null | Sort-Object Id -Descending)
             Metadata = $Metadata
         }
     }

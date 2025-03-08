@@ -105,7 +105,7 @@ Function Invoke-ExecAlertsList {
                     SeverityMediumAlertsCount  = $DisplayableAlerts | Where-Object { ($_.Status -eq 'inProgress') -or ($_.Status -eq 'newAlert') } | Where-Object { $_.Severity -eq 'medium' } | Measure-Object | Select-Object -ExpandProperty Count
                     SeverityLowAlertsCount     = $DisplayableAlerts | Where-Object { ($_.Status -eq 'inProgress') -or ($_.Status -eq 'newAlert') } | Where-Object { $_.Severity -eq 'low' } | Measure-Object | Select-Object -ExpandProperty Count
                     SeverityInformationalCount = $DisplayableAlerts | Where-Object { ($_.Status -eq 'inProgress') -or ($_.Status -eq 'newAlert') } | Where-Object { $_.Severity -eq 'informational' } | Measure-Object | Select-Object -ExpandProperty Count
-                    MSResults                  = $DisplayableAlerts
+                    MSResults                  = ($DisplayableAlerts | Sort-Object -Property EventDateTime -Descending)
                 }
             }
         }

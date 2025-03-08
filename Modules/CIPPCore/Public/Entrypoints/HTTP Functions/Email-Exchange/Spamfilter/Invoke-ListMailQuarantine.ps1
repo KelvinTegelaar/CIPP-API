@@ -24,7 +24,7 @@ function Invoke-ListMailQuarantine {
             $Rows = Get-CIPPAzDataTableEntity @Table -filter $Filter | Where-Object -Property Timestamp -GT (Get-Date).AddMinutes(-30)
             if (!$Rows) {
                 $TenantList = Get-Tenants -IncludeErrors
-                $Queue = New-CippQueueEntry -Name 'Mail Quarantine - All Tenants' -Link '/email/reports/quarantine?customerId=AllTenants' -TotalTasks ($TenantList | Measure-Object).Count
+                $Queue = New-CippQueueEntry -Name 'Mail Quarantine - All Tenants' -TotalTasks ($TenantList | Measure-Object).Count
                 $Metadata = [PSCustomObject]@{
                     QueueMessage = 'Loading data for all tenants. Please check back in a few minutes'
                 }
