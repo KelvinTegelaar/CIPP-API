@@ -9,11 +9,16 @@ function Invoke-ListMailQuarantine {
     param($Request, $TriggerMetadata)
 
     $APIName = $Request.Params.CIPPEndpoint
-    Write-LogMessage -headers $Request.Headers -API $APINAME -message 'Accessed this API' -Sev 'Debug'
-    $Tenantfilter = $request.Query.tenantfilter
+    $Headers = $Request.Headers
+    Write-LogMessage -headers $Headers -API $APIName -message 'Accessed this API' -Sev 'Debug'
+
+
+    # TODO: Add AllTenants support
+    # Interact with query parameters or the body of the request.
+    $TenantFilter = $Request.Query.tenantFilter
 
     try {
-        $GraphRequest = New-ExoRequest -tenantid $Tenantfilter -cmdlet 'Get-QuarantineMessage' -cmdParams @{ 'PageSize' = 1000 }
+        $GraphRequest = New-ExoRequest -tenantid $TenantFilter -cmdlet 'Get-QuarantineMessage' -cmdParams @{ 'PageSize' = 1000 }
         $StatusCode = [HttpStatusCode]::OK
     } catch {
         $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message

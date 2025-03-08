@@ -11,11 +11,9 @@ Function Invoke-ExecAlertsList {
     param($Request, $TriggerMetadata)
 
     $APIName = $Request.Params.CIPPEndpoint
-    Write-LogMessage -headers $Request.Headers -API $APINAME -message 'Accessed this API' -Sev 'Debug'
+    $Headers = $Request.Headers
+    Write-LogMessage -headers $Headers -API $APIName -message 'Accessed this API' -Sev 'Debug'
 
-
-    # Write to the Azure Functions log stream.
-    Write-Host 'PowerShell HTTP trigger function processed a request.'
 
     function New-FlatArray ([Array]$arr) {
         $arr | ForEach-Object {
@@ -26,30 +24,30 @@ Function Invoke-ExecAlertsList {
     }
     try {
         # Interact with query parameters or the body of the request.
-        $TenantFilter = $Request.Query.TenantFilter
+        $TenantFilter = $Request.Query.tenantFilter
         $GraphRequest = if ($TenantFilter -ne 'AllTenants') {
             $Alerts = New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/security/alerts' -tenantid $TenantFilter
-            $AlertsObj = foreach ($Alert In $alerts) {
+            $AlertsObj = foreach ($Alert in $Alerts) {
                 @{
                     Tenant        = $TenantFilter
                     GUID          = $GUID
-                    Id            = $alert.Id
-                    Title         = $alert.Title
-                    Category      = $alert.category
-                    EventDateTime = $alert.eventDateTime
-                    Severity      = $alert.Severity
-                    Status        = $alert.Status
-                    RawResult     = $($Alerts | Where-Object { $_.Id -eq $alert.Id })
-                    InvolvedUsers = $($Alerts | Where-Object { $_.Id -eq $alert.Id }).userStates
+                    Id            = $Alert.Id
+                    Title         = $Alert.Title
+                    Category      = $Alert.category
+                    EventDateTime = $Alert.eventDateTime
+                    Severity      = $Alert.Severity
+                    Status        = $Alert.Status
+                    RawResult     = $($Alerts | Where-Object { $_.Id -eq $Alert.Id })
+                    InvolvedUsers = $($Alerts | Where-Object { $_.Id -eq $Alert.Id }).userStates
                 }
             }
 
-            $DisplayableAlerts = New-FlatArray $AlertsObj | Where-Object { $_.Id -ne $null } | Sort-Object -Property EventDateTime -Descending
+            $DisplayableAlerts = New-FlatArray $AlertsObj | Where-Object { $null -ne $_.Id } | Sort-Object -Property EventDateTime -Descending
 
             [PSCustomObject]@{
                 NewAlertsCount             = $DisplayableAlerts | Where-Object { $_.Status -eq 'newAlert' } | Measure-Object | Select-Object -ExpandProperty Count
                 InProgressAlertsCount      = $DisplayableAlerts | Where-Object { $_.Status -eq 'inProgress' } | Measure-Object | Select-Object -ExpandProperty Count
-                SeverityHighAlertsCount    = ($DisplayableAlerts | Where-Object { ($_.Status -eq 'inProgress') -or ($_.Status -eq 'newAlert') } | Where-Object { $_.Severity -eq 'high' } | Measure-Object | Select-Object -ExpandProperty Count)
+                SeverityHighAlertsCount    = $DisplayableAlerts | Where-Object { ($_.Status -eq 'inProgress') -or ($_.Status -eq 'newAlert') } | Where-Object { $_.Severity -eq 'high' } | Measure-Object | Select-Object -ExpandProperty Count
                 SeverityMediumAlertsCount  = $DisplayableAlerts | Where-Object { ($_.Status -eq 'inProgress') -or ($_.Status -eq 'newAlert') } | Where-Object { $_.Severity -eq 'medium' } | Measure-Object | Select-Object -ExpandProperty Count
                 SeverityLowAlertsCount     = $DisplayableAlerts | Where-Object { ($_.Status -eq 'inProgress') -or ($_.Status -eq 'newAlert') } | Where-Object { $_.Severity -eq 'low' } | Measure-Object | Select-Object -ExpandProperty Count
                 SeverityInformationalCount = $DisplayableAlerts | Where-Object { ($_.Status -eq 'inProgress') -or ($_.Status -eq 'newAlert') } | Where-Object { $_.Severity -eq 'informational' } | Measure-Object | Select-Object -ExpandProperty Count
@@ -58,12 +56,15 @@ Function Invoke-ExecAlertsList {
         } else {
             $Table = Get-CIPPTable -TableName cachealertsandincidents
             $Filter = "PartitionKey eq 'alert'"
-            $Rows = Get-CIPPAzDataTableEntity @Table -filter $Filter | Where-Object -Property Timestamp -GT (Get-Date).AddMinutes(-10)
+            $Rows = Get-CIPPAzDataTableEntity @Table -filter $Filter | Where-Object -Property Timestamp -GT (Get-Date).AddHours(-1)
             if (!$Rows) {
                 $TenantList = Get-Tenants -IncludeErrors
                 $Queue = New-CippQueueEntry -Name 'Alerts List - All Tenants' -TotalTasks ($TenantList | Measure-Object).Count
+                $Metadata = [PSCustomObject]@{
+                    QueueMessage = 'Loading data for all tenants. Please check back in a few minutes'
+                }
                 $InputObject = [PSCustomObject]@{
-                    OrchestratorName = 'AlertsList'
+                    OrchestratorName = 'AlertsOrchestrator'
                     QueueFunction    = [PSCustomObject]@{
                         FunctionName = 'GetTenants'
                         QueueId      = $Queue.RowKey
@@ -81,7 +82,7 @@ Function Invoke-ExecAlertsList {
                 }
             } else {
                 $Alerts = $Rows
-                $AlertsObj = foreach ($Alert in $alerts) {
+                $AlertsObj = foreach ($Alert in $Alerts) {
                     $AlertInfo = $Alert.Alert | ConvertFrom-Json
                     @{
                         Tenant        = $Alert.Tenant
@@ -96,7 +97,7 @@ Function Invoke-ExecAlertsList {
                         InvolvedUsers = $AlertInfo.userStates
                     }
                 }
-                $DisplayableAlerts = New-FlatArray $AlertsObj | Where-Object { $_.Id -ne $null } | Sort-Object -Property EventDateTime -Descending
+                $DisplayableAlerts = New-FlatArray $AlertsObj | Where-Object { $null -ne $_.Id } | Sort-Object -Property EventDateTime -Descending
                 [PSCustomObject]@{
                     NewAlertsCount             = $DisplayableAlerts | Where-Object { $_.Status -eq 'newAlert' } | Measure-Object | Select-Object -ExpandProperty Count
                     InProgressAlertsCount      = $DisplayableAlerts | Where-Object { $_.Status -eq 'inProgress' } | Measure-Object | Select-Object -ExpandProperty Count
@@ -115,7 +116,10 @@ Function Invoke-ExecAlertsList {
     }
     if (!$body) {
         $StatusCode = [HttpStatusCode]::OK
-        $body = $GraphRequest
+        $body = @{
+            Results  = $GraphRequest
+            Metadata = $Metadata
+        }
     }
     Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
             StatusCode = $StatusCode
