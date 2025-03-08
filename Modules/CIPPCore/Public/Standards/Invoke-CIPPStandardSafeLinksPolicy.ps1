@@ -59,7 +59,7 @@ function Invoke-CIPPStandardSafeLinksPolicy {
 
         $CurrentState = New-ExoRequest -tenantid $Tenant -cmdlet 'Get-SafeLinksPolicy' |
             Where-Object -Property Name -EQ $PolicyName |
-            Select-Object Name, EnableSafeLinksForEmail, EnableSafeLinksForTeams, EnableSafeLinksForOffice, TrackClicks, AllowClickThrough, ScanUrls, EnableForInternalSenders, DeliverMessageAfterScan, DisableUrlRewrite, EnableOrganizationBranding
+            Select-Object Name, EnableSafeLinksForEmail, EnableSafeLinksForTeams, EnableSafeLinksForOffice, TrackClicks, AllowClickThrough, ScanUrls, EnableForInternalSenders, DeliverMessageAfterScan, DisableUrlRewrite, EnableOrganizationBranding, DoNotRewriteUrls
 
         $StateIsCorrect = ($CurrentState.Name -eq $PolicyName) -and
                         ($CurrentState.EnableSafeLinksForEmail -eq $true) -and
@@ -71,7 +71,8 @@ function Invoke-CIPPStandardSafeLinksPolicy {
                         ($CurrentState.DeliverMessageAfterScan -eq $true) -and
                         ($CurrentState.AllowClickThrough -eq $Settings.AllowClickThrough) -and
                         ($CurrentState.DisableUrlRewrite -eq $Settings.DisableUrlRewrite) -and
-                        ($CurrentState.EnableOrganizationBranding -eq $Settings.EnableOrganizationBranding)
+                        ($CurrentState.EnableOrganizationBranding -eq $Settings.EnableOrganizationBranding) -and
+                        (!(Compare-Object -ReferenceObject $CurrentState.DoNotRewriteUrls -DifferenceObject ($Settings.DoNotRewriteUrls.value ?? $Settings.DoNotRewriteUrls)))
 
         $AcceptedDomains = New-ExoRequest -tenantid $Tenant -cmdlet 'Get-AcceptedDomain'
 
@@ -100,6 +101,7 @@ function Invoke-CIPPStandardSafeLinksPolicy {
                     AllowClickThrough          = $Settings.AllowClickThrough
                     DisableUrlRewrite          = $Settings.DisableUrlRewrite
                     EnableOrganizationBranding = $Settings.EnableOrganizationBranding
+                    DoNotRewriteUrls           = $Settings.DoNotRewriteUrls.value ?? @{"@odata.type" = "#Exchange.GenericHashTable"}
                 }
 
                 if ($CurrentState.Name -eq $Policyname) {
