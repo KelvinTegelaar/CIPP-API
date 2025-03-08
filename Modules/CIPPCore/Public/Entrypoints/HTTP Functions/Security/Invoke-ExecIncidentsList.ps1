@@ -41,11 +41,23 @@ Function Invoke-ExecIncidentsList {
             }
         } else {
             $Table = Get-CIPPTable -TableName cachealertsandincidents
-            $Filter = "PartitionKey eq 'Incident'"
+            $PartitionKey = 'incident'
+            $Filter = "PartitionKey eq '$PartitionKey'"
             $Rows = Get-CIPPAzDataTableEntity @Table -filter $Filter | Where-Object -Property Timestamp -GT (Get-Date).AddMinutes(-30)
-            if (!$Rows) {
+            $QueueReference = '{0}-{1}' -f $TenantFilter, $PartitionKey
+            $RunningQueue = Invoke-ListCippQueue | Where-Object { $_.Reference -eq $QueueReference -and $_.Status -notmatch 'Completed' -and $_.Status -notmatch 'Failed' }
+            # If a queue is running, we will not start a new one
+            if ($RunningQueue) {
+                $Metadata = [PSCustomObject]@{
+                    QueueMessage = 'Still loading data for all tenants. Please check back in a few more minutes'
+                }
+                [PSCustomObject]@{
+                    Waiting = $true
+                }
+            } elseif (!$Rows -and !$RunningQueue) {
+                # If no rows are found and no queue is running, we will start a new one
                 $TenantList = Get-Tenants -IncludeErrors
-                $Queue = New-CippQueueEntry -Name 'Incidents - All Tenants' -Link '/security/reports/incident-report?customerId=AllTenants' -TotalTasks ($TenantList | Measure-Object).Count
+                $Queue = New-CippQueueEntry -Name 'Incidents - All Tenants' -Link '/security/reports/incident-report?customerId=AllTenants' -Reference $QueueReference -TotalTasks ($TenantList | Measure-Object).Count
                 $Metadata = [PSCustomObject]@{
                     QueueMessage = 'Loading data for all tenants. Please check back in a few minutes'
                 }
