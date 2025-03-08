@@ -7,42 +7,38 @@
 
     $Tenant = Get-Tenants -TenantFilter $Item.customerId
     $domainName = $Tenant.defaultDomainName
-    $Table = Get-CIPPTable -TableName 'cacheQuarantineMessages'
+    $Table = Get-CIPPTable -TableName cacheQuarantineMessages
 
     try {
-        $incidents = New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/security/incidents' -tenantid $domainName -AsApp $true
-        $GraphRequest = foreach ($incident in $incidents) {
+        $quarantineMessages = New-ExoRequest -tenantid $domainName -cmdlet 'Get-QuarantineMessage' -cmdParams @{ 'PageSize' = 1000 }
+        $GraphRequest = foreach ($message in $quarantineMessages) {
             $GUID = (New-Guid).Guid
-            $GraphRequest = @{
-                Incident     = [string]($incident | ConvertTo-Json -Depth 10)
-                RowKey       = [string]$GUID
-                PartitionKey = 'Incident'
-                Tenant       = [string]$domainName
+            $messageData = @{
+                QuarantineMessage = [string]($message | ConvertTo-Json -Depth 10)
+                RowKey            = [string]$GUID
+                PartitionKey      = 'QuarantineMessage'
+                Tenant            = [string]$domainName
             }
-            Add-CIPPAzDataTableEntity @Table -Entity $GraphRequest -Force | Out-Null
+            Add-CIPPAzDataTableEntity @Table -Entity $messageData -Force | Out-Null
         }
-
     } catch {
         $GUID = (New-Guid).Guid
-        $AlertText = ConvertTo-Json -InputObject @{
-            Tenant         = $domainName
-            displayName    = "Could not connect to Tenant: $($_.Exception.Message)"
-            comments       = @{
-                createdDateTime      = (Get-Date).ToString('s')
-                createdbyDisplayName = 'CIPP'
-                comment              = 'Could not connect'
-            }
-            classification = 'Unknown'
-            determination  = 'Unknown'
-            severity       = 'CIPP'
+        $errorData = ConvertTo-Json -InputObject @{
+            Identity         = $null
+            ReceivedTime     = (Get-Date).ToString('s')
+            SenderAddress    = 'CIPP Error'
+            RecipientAddress = 'N/A'
+            Subject          = "Could not connect to Tenant: $($_.Exception.Message)"
+            Size             = 0
+            Type             = 'Error'
+            QuarantineReason = 'ConnectionError'
         }
-        $GraphRequest = @{
-            Incident     = [string]$AlertText
-            RowKey       = [string]$GUID
-            PartitionKey = 'Incident'
-            Tenant       = [string]$domainName
+        $messageData = @{
+            QuarantineMessage = [string]$errorData
+            RowKey            = [string]$GUID
+            PartitionKey      = 'QuarantineMessage'
+            Tenant            = [string]$domainName
         }
-        Add-CIPPAzDataTableEntity @Table -Entity $GraphRequest -Force | Out-Null
+        Add-CIPPAzDataTableEntity @Table -Entity $messageData -Force | Out-Null
     }
 }
-
