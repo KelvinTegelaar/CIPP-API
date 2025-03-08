@@ -41,7 +41,7 @@ Function Invoke-ExecIncidentsList {
             }
         } else {
             $Table = Get-CIPPTable -TableName cachealertsandincidents
-            $PartitionKey = 'incident'
+            $PartitionKey = 'Incident'
             $Filter = "PartitionKey eq '$PartitionKey'"
             $Rows = Get-CIPPAzDataTableEntity @Table -filter $Filter | Where-Object -Property Timestamp -GT (Get-Date).AddMinutes(-30)
             $QueueReference = '{0}-{1}' -f $TenantFilter, $PartitionKey
