@@ -39,13 +39,18 @@ function Invoke-CIPPStandardEnableLitigationHold {
         } else {
             try {
                 $Request = $MailboxesNoLitHold | ForEach-Object {
-                    @{
+                    $params = @{
                         CmdletInput = @{
                             CmdletName = 'Set-Mailbox'
                             Parameters = @{ Identity = $_.UserPrincipalName; LitigationHoldEnabled = $true }
                         }
                     }
+                    if ($Settings.days -ne $null) {
+                        $params.CmdletInput.Parameters['LitigationHoldDuration'] = $Settings.days
+                    }
+                    $params
                 }
+
 
                 $BatchResults = New-ExoBulkRequest -tenantid $tenant -cmdletArray @($Request)
                 $BatchResults | ForEach-Object {
