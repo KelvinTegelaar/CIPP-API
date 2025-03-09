@@ -64,9 +64,9 @@ Function Invoke-ListUserMailboxDetails {
             }
         )
         Write-Host $UserID
-        #$username = (New-GraphGetRequest -tenantid $TenantFilter -uri "https://graph.microsoft.com/beta/users/$UserID").userPrincipalName
+        $usernames = New-GraphGetRequest -tenantid $TenantFilter -uri 'https://graph.microsoft.com/beta/users?$select=id,userPrincipalName&$top=999'
         $Results = New-ExoBulkRequest -TenantId $TenantFilter -CmdletArray $Requests -returnWithCommand $true -Anchor $username
-
+        Write-Host "First line of usernames is $($usernames[0] | ConvertTo-Json)"
         # Assign variables from $Results
         $MailboxDetailedRequest = $Results.'Get-Mailbox'
         $PermsRequest = $Results.'Get-MailboxPermission'
@@ -113,17 +113,33 @@ Function Invoke-ListUserMailboxDetails {
 
     # Parse permissions
 
-    $ParsedPerms = foreach ($PermSet in @($PermsRequest, $PermsRequest2)) {
+    #Implemented as an arraylist that uses .add().
+    $ParsedPerms = [System.Collections.ArrayList]::new()
+    foreach ($PermSet in @($PermsRequest, $PermsRequest2)) {
         foreach ($Perm in $PermSet) {
             # Check if Trustee or User is not NT AUTHORITY\SELF
             $user = $Perm.Trustee ? $Perm.Trustee : $Perm.User
-            if ($user -ne 'NT AUTHORITY\SELF') {
-                [PSCustomObject]@{
-                    User         = $user
-                    AccessRights = ($Perm.AccessRights) -join ', '
-                }
+            if ($user -and $user -ne 'NT AUTHORITY\SELF') {
+                $null = $ParsedPerms.Add([PSCustomObject]@{
+                        User         = $user
+                        AccessRights = ($Perm.AccessRights) -join ', '
+                    })
             }
         }
+    }
+    if ($MailboxDetailedRequest.GrantSendOnBehalfTo) {
+        $MailboxDetailedRequest.GrantSendOnBehalfTo | ForEach-Object {
+            $id = $_
+            $username = $usernames | Where-Object { $_.id -eq $id }
+
+            $null = $ParsedPerms.Add([PSCustomObject]@{
+                    User         = $username.UserPrincipalName ? $username.UserPrincipalName : $_
+                    AccessRights = 'SendOnBehalf'
+                })
+        }
+    }
+    if ($ParsedPerms.Count -eq 0) {
+        $ParsedPerms = @()
     }
 
     # Get forwarding address
