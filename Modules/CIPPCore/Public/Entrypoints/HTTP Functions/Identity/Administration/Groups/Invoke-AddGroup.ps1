@@ -39,11 +39,11 @@ Function Invoke-AddGroup {
                     $BodyParams | Add-Member -NotePropertyName 'groupTypes' -NotePropertyValue @('Unified')
                 }
                 if ($GroupObject.owners -AND $GroupObject.groupType -in 'generic', 'azurerole', 'security') {
-                    $BodyParams | Add-Member -NotePropertyName 'owners@odata.bind' -NotePropertyValue (($GroupObject.AddOwner) | ForEach-Object { "https://graph.microsoft.com/v1.0/users/$($_.value)" })
+                    $BodyParams | Add-Member -NotePropertyName 'owners@odata.bind' -NotePropertyValue (($GroupObject.owners) | ForEach-Object { "https://graph.microsoft.com/v1.0/users/$($_.value)" })
                     $BodyParams.'owners@odata.bind' = @($BodyParams.'owners@odata.bind')
                 }
                 if ($GroupObject.members -AND $GroupObject.groupType -in 'generic', 'azurerole', 'security') {
-                    $BodyParams | Add-Member -NotePropertyName 'members@odata.bind' -NotePropertyValue (($GroupObject.AddMember) | ForEach-Object { "https://graph.microsoft.com/v1.0/users/$($_.value)" })
+                    $BodyParams | Add-Member -NotePropertyName 'members@odata.bind' -NotePropertyValue (($GroupObject.members) | ForEach-Object { "https://graph.microsoft.com/v1.0/users/$($_.value)" })
                     $BodyParams.'members@odata.bind' = @($BodyParams.'members@odata.bind')
                 }
                 $GraphRequest = New-GraphPostRequest -uri 'https://graph.microsoft.com/beta/groups' -tenantid $tenant -type POST -body (ConvertTo-Json -InputObject $BodyParams -Depth 10) -Verbose
