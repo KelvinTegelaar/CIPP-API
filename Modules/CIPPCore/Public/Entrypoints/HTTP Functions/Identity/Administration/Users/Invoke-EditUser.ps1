@@ -38,7 +38,6 @@ Function Invoke-EditUser {
         $BodyToship = [pscustomobject] @{
             'givenName'         = $UserObj.givenName
             'surname'           = $UserObj.surname
-            'accountEnabled'    = $true
             'displayName'       = $UserObj.displayName
             'department'        = $UserObj.Department
             'mailNickname'      = $UserObj.Username ? $UserObj.username :$UserObj.mailNickname
