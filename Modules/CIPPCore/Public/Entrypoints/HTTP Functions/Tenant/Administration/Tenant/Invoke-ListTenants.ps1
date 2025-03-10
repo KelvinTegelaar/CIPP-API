@@ -3,7 +3,7 @@ using namespace System.Net
 Function Invoke-ListTenants {
     <#
     .FUNCTIONALITY
-        Entrypoint
+        Entrypoint,AnyTenant
     .ROLE
         CIPP.Core.Read
     #>

@@ -3,7 +3,7 @@ using namespace System.Net
 Function Invoke-ListScheduledItems {
     <#
     .FUNCTIONALITY
-        Entrypoint
+        Entrypoint,AnyTenant
     .ROLE
         CIPP.Scheduler.Read
     #>

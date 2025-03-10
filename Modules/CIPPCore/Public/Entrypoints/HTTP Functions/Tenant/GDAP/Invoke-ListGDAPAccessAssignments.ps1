@@ -1,7 +1,7 @@
 function Invoke-ListGDAPAccessAssignments {
     <#
     .FUNCTIONALITY
-        Entrypoint
+        Entrypoint,AnyTenant
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)

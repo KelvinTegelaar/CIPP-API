@@ -5,7 +5,7 @@ function Invoke-ListCommunityRepos {
     .DESCRIPTION
         This function lists community repositories in Table Storage
     .FUNCTIONALITY
-        Entrypoint
+        Entrypoint,AnyTenant
     .ROLE
         CIPP.Core.Read
     #>

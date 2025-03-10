@@ -3,7 +3,7 @@ using namespace System.Net
 Function Invoke-ListIntuneTemplates {
     <#
     .FUNCTIONALITY
-        Entrypoint
+        Entrypoint,AnyTenant
     .ROLE
         Endpoint.MEM.Read
     #>

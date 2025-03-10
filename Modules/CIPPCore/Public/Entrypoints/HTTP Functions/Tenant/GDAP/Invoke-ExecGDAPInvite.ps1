@@ -2,7 +2,7 @@ using namespace System.Net
 Function Invoke-ExecGDAPInvite {
     <#
     .FUNCTIONALITY
-        Entrypoint
+        Entrypoint,AnyTenant
     .ROLE
         Tenant.Relationship.ReadWrite
     #>
