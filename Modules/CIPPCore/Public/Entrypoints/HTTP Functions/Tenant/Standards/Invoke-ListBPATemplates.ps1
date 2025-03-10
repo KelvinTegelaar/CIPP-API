@@ -18,8 +18,9 @@ Function Invoke-ListBPATemplates {
     $Table = Get-CippTable -tablename 'templates'
 
     $Templates = Get-ChildItem 'Config\*.BPATemplate.json' | ForEach-Object {
+        $TemplateJson = Get-Content $_ | ConvertFrom-Json | ConvertTo-Json -Compress -Depth 10
         $Entity = @{
-            JSON         = "$(Get-Content $_)"
+            JSON         = "$TemplateJson"
             RowKey       = "$($_.name)"
             PartitionKey = 'BPATemplate'
             GUID         = "$($_.name)"
@@ -31,10 +32,14 @@ Function Invoke-ListBPATemplates {
     $Templates = Get-CIPPAzDataTableEntity @Table -Filter $Filter
 
     if ($Request.Query.RawJson) {
+        foreach ($Template in $Templates) {
+            $Template.JSON = $Template.JSON -replace '"parameters":', '"Parameters":'
+        }
         $Templates = $Templates.JSON | ConvertFrom-Json
     } else {
         $Templates = $Templates | ForEach-Object {
-            $Template = $_.JSON | ConvertFrom-Json
+            $TemplateJson = $_.JSON -replace '"parameters":', '"Parameters":'
+            $Template = $TemplateJson | ConvertFrom-Json
             @{
                 GUID  = $_.GUID
                 Data  = $Template.fields
