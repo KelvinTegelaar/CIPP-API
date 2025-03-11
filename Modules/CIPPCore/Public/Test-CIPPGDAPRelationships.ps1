@@ -83,16 +83,16 @@ function Test-CIPPGDAPRelationships {
                         Type = 'SAM User Membership'
                     }) | Out-Null
             }
-            if ($CIPPGroupCount -lt 12) {
-                $GDAPissues.add([PSCustomObject]@{
-                        Type         = 'Warning'
-                        Issue        = "We only found $($CIPPGroupCount) of the 12 required groups. If you have migrated outside of CIPP this is to be expected. Please perform an access check to make sure you have the correct set of permissions."
-                        Tenant       = '*Partner Tenant'
-                        Relationship = 'None'
-                        Link         = 'https://docs.cipp.app/setup/gdap/troubleshooting#groups'
+        }
+        if ($CIPPGroupCount -lt 12) {
+            $GDAPissues.add([PSCustomObject]@{
+                    Type         = 'Warning'
+                    Issue        = "We only found $($CIPPGroupCount) of the 12 required groups. If you have migrated outside of CIPP this is to be expected. Please perform an access check to make sure you have the correct set of permissions."
+                    Tenant       = '*Partner Tenant'
+                    Relationship = 'None'
+                    Link         = 'https://docs.cipp.app/setup/gdap/troubleshooting#groups'
 
-                    }) | Out-Null
-            }
+                }) | Out-Null
         }
 
     } catch {
