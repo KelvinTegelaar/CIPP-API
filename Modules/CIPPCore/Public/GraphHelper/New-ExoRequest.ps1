@@ -66,7 +66,11 @@ function New-ExoRequest {
             if ($cmdlet -in 'Set-AdminAuditLogConfig') {
                 $MailboxGuid = '8cc370d3-822a-4ab8-a926-bb94bd0641a9'
             }
-            $anchor = "APP:SystemMailbox{$MailboxGuid}@$($tenant.customerId)"
+            if ($Compliance.IsPresent) {
+                $Anchor = "UPN:SystemMailbox{$MailboxGuid}@$($tenant.initialDomainName)"
+            } else {
+                $anchor = "APP:SystemMailbox{$MailboxGuid}@$($tenant.customerId)"
+            }
         }
         #if the anchor is a GUID, try looking up the user.
         if ($Anchor -match '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$') {
