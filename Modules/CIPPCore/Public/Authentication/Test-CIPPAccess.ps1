@@ -155,7 +155,7 @@ function Test-CIPPAccess {
             }
             return $true
         }
+    } else {
+        return $true
     }
-} else {
-    return $true
 }
