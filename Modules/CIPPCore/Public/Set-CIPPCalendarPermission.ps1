@@ -44,7 +44,7 @@ function Set-CIPPCalendarPermission {
         }
     } catch {
         $ErrorMessage = Get-CippException -Message $_
-        $Result = "Failed to set calendar permissions for $LoggingName on $UserID: $($ErrorMessage.NormalizedError)"
+        $Result = "Failed to set calendar permissions for $LoggingName on $UserID : $($ErrorMessage.NormalizedError)"
         Write-LogMessage -headers $Headers -API $APIName -tenant $TenantFilter -message $Result -sev Error -LogData $ErrorMessage
         throw $Result
     }
