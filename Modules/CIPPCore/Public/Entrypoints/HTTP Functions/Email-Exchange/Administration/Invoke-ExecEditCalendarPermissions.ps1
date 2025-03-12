@@ -17,7 +17,7 @@ Function Invoke-ExecEditCalendarPermissions {
     # Extract parameters from query or body
     $TenantFilter = $Request.Query.tenantFilter ?? $Request.Body.tenantFilter
     $UserID = $Request.Query.UserID ?? $Request.Body.UserID
-    $UserToGetPermissions = $Request.Query.UserToGetPermissions ? $Request.Query.UserToGetPermissions ?? $Request.Body.UserToGetPermissions.value
+    $UserToGetPermissions = $Request.Query.UserToGetPermissions ?? $Request.Body.UserToGetPermissions.value
     $Permissions = @($Request.Query.Permissions) ?? @($Request.Body.Permissions.value)
     $FolderName = $Request.Query.FolderName ?? $Request.Body.FolderName
     $RemoveAccess = $Request.Query.RemoveAccess ?? $Request.Body.RemoveAccess.value
@@ -28,7 +28,7 @@ Function Invoke-ExecEditCalendarPermissions {
         } else {
             $Result = Set-CIPPCalendarPermission -Headers $Headers -UserID $UserID -FolderName $FolderName -TenantFilter $TenantFilter -UserToGetPermissions $UserToGetPermissions -Permissions $Permissions
         }
-    $StatusCode = [HttpStatusCode]::OK
+        $StatusCode = [HttpStatusCode]::OK
     } catch {
         $Result = $_.Exception.Message
         $StatusCode = [HttpStatusCode]::Forbidden
@@ -37,6 +37,6 @@ Function Invoke-ExecEditCalendarPermissions {
     # Associate values to output bindings by calling 'Push-OutputBinding'.
     Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
             StatusCode = $StatusCode
-            Body       = @{Results = $Result}
+            Body       = @{Results = $Result }
         })
 }
