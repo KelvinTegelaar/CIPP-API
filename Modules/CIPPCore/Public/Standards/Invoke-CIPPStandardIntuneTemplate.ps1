@@ -49,17 +49,7 @@ function Invoke-CIPPStandardIntuneTemplate {
         $RawJSON = $Request.body.RawJSON
         $ExistingPolicy = Get-CIPPIntunePolicy -tenantFilter $Tenant -DisplayName $displayname -TemplateType $Request.body.Type
         if ($ExistingPolicy) {
-            $ReplaceTable = Get-CIPPTable -tablename 'CippReplacemap'
-            $ReplaceMap = Get-CIPPAzDataTableEntity @ReplaceTable -Filter "PartitionKey eq '$tenant'"
-            if ($ReplaceMap) {
-                foreach ($Replace in $ReplaceMap) {
-                    $String = '%{0}%' -f $Replace.RowKey
-                    $RawJSON = $RawJSON -replace $String, $Replace.Value
-                }
-            }
-            $RawJSON = $RawJSON -replace '%tenantid%', $TenantList.customerId
-            $RawJSON = $RawJSON -replace '%tenantfilter%', $TenantLists.defaultDomainName
-            $RawJSON = $RawJSON -replace '%tenantname%', $TenantList.displayName
+            $RawJSON = Get-CIPPTextReplacement -Text $RawJSON -TenantFilter $Tenant
 
             $JSONExistingPolicy = $ExistingPolicy.cippconfiguration | ConvertFrom-Json
             $JSONTemplate = $RawJSON | ConvertFrom-Json
