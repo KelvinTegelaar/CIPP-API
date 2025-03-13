@@ -3,7 +3,7 @@ using namespace System.Net
 Function Invoke-EditTenant {
     <#
     .FUNCTIONALITY
-        Entrypoint
+        Entrypoint,AnyTenant
     .ROLE
         Tenant.Config.ReadWrite
     #>
@@ -16,12 +16,13 @@ Function Invoke-EditTenant {
 
     $customerId = $Request.Body.customerId
     $tenantAlias = $Request.Body.Alias
-    $tenantGroups = $Request.Body.Groups
+    $tenantGroups = $Request.Body.tenantGroups
 
     $PropertiesTable = Get-CippTable -TableName 'TenantProperties'
     $Existing = Get-CIPPAzDataTableEntity @PropertiesTable -Filter "PartitionKey eq '$customerId'"
     $Tenant = Get-Tenants -TenantFilter $customerId
     $TenantTable = Get-CippTable -TableName 'Tenants'
+    $GroupMembersTable = Get-CippTable -TableName 'TenantGroupMembers'
 
     try {
         $AliasEntity = $Existing | Where-Object { $_.RowKey -eq 'Alias' }
@@ -43,14 +44,27 @@ Function Invoke-EditTenant {
             $null = Add-CIPPAzDataTableEntity @TenantTable -Entity $Tenant -Force
         }
 
-        <## Update tenant groups
-        $groupsEntity = @{
-            PartitionKey = $customerId
-            RowKey       = 'tenantGroups'
-            Value        = ($tenantGroups | ConvertTo-Json)
+        # Update tenant groups
+        $CurrentMembers = Get-CIPPAzDataTableEntity @GroupMembersTable -Filter "customerId eq '$customerId'"
+        foreach ($Group in $tenantGroups) {
+            $GroupEntity = $CurrentMembers | Where-Object { $_.GroupId -eq $Group.groupId }
+            if (!$GroupEntity) {
+                $GroupEntity = @{
+                    PartitionKey = 'Member'
+                    RowKey       = '{0}-{1}' -f $Group.groupId, $customerId
+                    GroupId      = $Group.groupId
+                    customerId   = $customerId
+                }
+                Add-CIPPAzDataTableEntity @GroupMembersTable -Entity $GroupEntity -Force
+            }
         }
-        Set-CIPPAzDataTableEntity -Context $context -Entity $groupsEntity
-        #>
+
+        # Remove any groups that are no longer selected
+        foreach ($Group in $CurrentMembers) {
+            if ($tenantGroups -notcontains $Group.GroupId) {
+                Remove-AzDataTableEntity @GroupMembersTable -Entity $Group
+            }
+        }
 
         $response = @{
             state      = 'success'

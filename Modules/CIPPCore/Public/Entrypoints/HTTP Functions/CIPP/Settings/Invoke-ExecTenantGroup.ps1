@@ -1,7 +1,11 @@
 function Invoke-ExecTenantGroup {
     <#
+    .SYNOPSIS
+        Entrypoint for tenant group management
+    .DESCRIPTION
+        This function is used to manage tenant groups in CIPP
     .FUNCTIONALITY
-        Entrypoint
+        Entrypoint,AnyTenant
     .ROLE
         Tenant.Config.ReadWrite
     #>
@@ -14,56 +18,86 @@ function Invoke-ExecTenantGroup {
     $groupId = $Request.Body.groupId ?? [guid]::NewGuid().ToString()
     $groupName = $Request.Body.groupName
     $groupDescription = $Request.Body.groupDescription
-    $membersToAdd = $Request.Body.membersToAdd
-    $membersToRemove = $Request.Body.membersToRemove
+    $members = $Request.Body.members
 
     switch ($Action) {
         'AddEdit' {
+            $Results = [System.Collections.Generic.List[object]]::new()
             # Update group details
             $GroupEntity = Get-CIPPAzDataTableEntity @Table -Filter "PartitionKey eq 'TenantGroup' and RowKey eq '$groupId'"
             if ($GroupEntity) {
                 if ($groupName) {
-                    $GroupEntity.groupName = $groupName
+                    $GroupEntity.Name = $groupName
                 }
                 if ($groupDescription) {
-                    $GroupEntity.groupDescription = $groupDescription
+                    $GroupEntity.Description = $groupDescription
                 }
                 Add-CIPPAzDataTableEntity @Table -Entity $GroupEntity -Force
             } else {
                 $GroupEntity = @{
                     PartitionKey = 'TenantGroup'
                     RowKey       = $groupId
-                    groupName    = $groupName
-                    groupDescription = $groupDescription
+                    Name         = $groupName
+                    Description  = $groupDescription
                 }
                 Add-CIPPAzDataTableEntity @Table -Entity $GroupEntity -Force
             }
 
+            $CurrentMembers = Get-CIPPAzDataTableEntity @MembersTable -Filter "GroupId eq '$groupId'"
+
+            $Adds = [System.Collections.Generic.List[string]]::new()
+            $Removes = [System.Collections.Generic.List[string]]::new()
             # Add members
-            foreach ($member in $membersToAdd) {
+            foreach ($member in $members) {
+                if ($CurrentMembers) {
+                    $CurrentMember = $CurrentMembers | Where-Object { $_.customerId -eq $member.value }
+                    if ($CurrentMember) {
+                        continue
+                    }
+                }
                 $MemberEntity = @{
-                    PartitionKey = $groupId
-                    RowKey       = $member
+                    PartitionKey = 'Member'
+                    RowKey     = '{0}-{1}' -f $groupId, $member.value
+                    GroupId    = $groupId
+                    customerId = $member.value
                 }
                 Add-CIPPAzDataTableEntity @MembersTable -Entity $MemberEntity -Force
+                $Adds.Add('Added member {0}' -f $member.label)
             }
 
-            # Remove members
-            foreach ($member in $membersToRemove) {
-                $MemberEntity = Get-CIPPAzDataTableEntity @MembersTable -Filter "PartitionKey eq '$groupId' and RowKey eq '$member'"
-                if ($MemberEntity) {
-                    Remove-AzDataTableEntity @MembersTable -Entity $MemberEntity -Force
+            if ($CurrentMembers) {
+                foreach ($CurrentMember in $CurrentMembers) {
+                    if ($members.value -notcontains $CurrentMember.customerId) {
+                        Remove-AzDataTableEntity @MembersTable -Entity $CurrentMember -Force
+                        $Removes.Add('Removed member {0}' -f $CurrentMember.customerId)
+                    }
                 }
             }
+            $Results.Add(@{
+                    resultText = "Group '$groupName' saved successfully"
+                    state      = 'success'
+                })
+            foreach ($Add in $Adds) {
+                $Results.Add(@{
+                        resultText = $Add
+                        state      = 'success'
+                    })
+            }
+            foreach ($Remove in $Removes) {
+                $Results.Add(@{
+                        resultText = $Remove
+                        state      = 'success'
+                    })
+            }
 
-            $Body = @{ Results = "Group '$groupName' saved successfully" }
+            $Body = @{ Results = $Results }
         }
         'Delete' {
             # Delete group
             $GroupEntity = Get-CIPPAzDataTableEntity @Table -Filter "PartitionKey eq 'TenantGroup' and RowKey eq '$groupId'"
             if ($GroupEntity) {
                 Remove-AzDataTableEntity @Table -Entity $GroupEntity -Force
-                $Body = @{ Results = "Group '$groupId' deleted successfully" }
+                $Body = @{ Results = "Group '$($GroupEntity.Name)' deleted successfully" }
             } else {
                 $Body = @{ Results = "Group '$groupId' not found" }
             }
