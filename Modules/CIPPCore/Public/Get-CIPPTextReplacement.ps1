@@ -13,8 +13,12 @@ function Get-CIPPTextReplacement {
     #>
     param (
         [string]$TenantFilter,
-        [string]$Text
+        $Text
     )
+    if ($Text -isnot [string]) {
+        return $Text
+    }
+
     $Tenant = Get-Tenants -TenantFilter $TenantFilter
     $CustomerId = $Tenant.customerId
 
@@ -47,5 +51,8 @@ function Get-CIPPTextReplacement {
     $Text = $Text -replace '%tenantfilter%', $Tenant.defaultDomainName
     $Text = $Text -replace '%tenantname%', $Tenant.displayName
 
+    # Partner specific replacements
+    $Text = $Text -replace '%partnertenantid%', $ENV:TenantID
+    $Text = $Text -replace '%samappid%', $ENV:ApplicationID
     return $Text
 }
