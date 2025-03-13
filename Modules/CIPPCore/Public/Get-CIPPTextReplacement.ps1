@@ -18,15 +18,29 @@ function Get-CIPPTextReplacement {
     $Tenant = Get-Tenants -TenantFilter $TenantFilter
     $CustomerId = $Tenant.customerId
 
-    #connect to table, get replacement map. This is for future usage. The replacement map will allow users to create custom vars that get replaced by the actual values per tenant. Example:
+    #connect to table, get replacement map. The replacement map will allow users to create custom vars that get replaced by the actual values per tenant. Example:
     # %WallPaperPath% gets replaced by RowKey WallPaperPath which is set to C:\Wallpapers for tenant 1, and D:\Wallpapers for tenant 2
+
+    # Global Variables
     $ReplaceTable = Get-CIPPTable -tablename 'CippReplacemap'
+    $GlobalMap = Get-CIPPAzDataTableEntity @ReplaceTable -Filter "PartitionKey eq 'AllTenants'"
+    $Vars = @{}
+    if ($GlobalMap) {
+        foreach ($Var in $GlobalMap) {
+            $Vars[$Var.RowKey] = $Var.Value
+        }
+    }
+    # Tenant Specific Variables
     $ReplaceMap = Get-CIPPAzDataTableEntity @ReplaceTable -Filter "PartitionKey eq '$CustomerId'"
     if ($ReplaceMap) {
-        foreach ($Replace in $ReplaceMap) {
-            $String = '%{0}%' -f $Replace.RowKey
-            $Text = $Text -replace $String, $Replace.Value
+        foreach ($Var in $ReplaceMap) {
+            $Vars[$Var.RowKey] = $Var.Value
         }
+    }
+    # Replace custom variables
+    foreach ($Replace in $Vars.GetEnumerator()) {
+        $String = '%{0}%' -f $Replace.Key
+        $Text = $Text -replace $String, $Replace.Value
     }
     #default replacements for all tenants: %tenantid% becomes $tenant.customerId, %tenantfilter% becomes $tenant.defaultDomainName, %tenantname% becomes $tenant.displayName
     $Text = $Text -replace '%tenantid%', $Tenant.customerId
