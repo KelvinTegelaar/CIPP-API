@@ -15,7 +15,7 @@ Function Invoke-EditTenant {
     Write-LogMessage -headers $Request.Headers -API $APINAME -message 'Accessed this API' -Sev 'Debug'
 
     $customerId = $Request.Body.customerId
-    $tenantAlias = $Request.Body.Alias
+    $tenantAlias = $Request.Body.tenantAlias
     $tenantGroups = $Request.Body.tenantGroups
 
     $PropertiesTable = Get-CippTable -TableName 'TenantProperties'
@@ -38,7 +38,7 @@ Function Invoke-EditTenant {
                 RowKey       = 'Alias'
                 Value        = $tenantAlias
             }
-            Add-CIPPAzDataTableEntity @PropertiesTable -Entity $aliasEntity -Force
+            $null = Add-CIPPAzDataTableEntity @PropertiesTable -Entity $aliasEntity -Force
             Write-Host "Setting alias to $tenantAlias"
             $Tenant.displayName = $tenantAlias
             $null = Add-CIPPAzDataTableEntity @TenantTable -Entity $Tenant -Force
