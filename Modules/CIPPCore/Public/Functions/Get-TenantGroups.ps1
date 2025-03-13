@@ -18,9 +18,9 @@ function Get-TenantGroups {
     $GroupTable = Get-CippTable -tablename 'TenantGroups'
     $MembersTable = Get-CippTable -tablename 'TenantGroupMembers'
 
-    if ($TenantFilter) {
+    if ($TenantFilter -and $TenantFilter -ne 'allTenants') {
         $TenantParams = @{
-            TenantFilter = $TenantFilter
+            TenantFilter  = $TenantFilter
             IncludeErrors = $true
         }
     } else {
@@ -42,7 +42,7 @@ function Get-TenantGroups {
         return @()
     }
 
-    if ($TenantFilter) {
+    if ($TenantFilter -and $TenantFilter -ne 'allTenants') {
         $Memberships = $AllMembers | Where-Object { $_.customerId -eq $Tenants.customerId }
         foreach ($Group in $Memberships) {
             $Group = $Groups | Where-Object { $_.RowKey -eq $Group.GroupId }
