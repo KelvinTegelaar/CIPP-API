@@ -29,8 +29,7 @@ Function Invoke-EditUser {
     $AddToGroups = $Request.body.AddToGroups
     $RemoveFromGroups = $Request.body.RemoveFromGroups
 
-    # Write to the Azure Functions log stream.
-    Write-Host 'PowerShell HTTP trigger function processed a request.'
+
     #Edit the user
     try {
         Write-Host "$([boolean]$UserObj.MustChangePass)"
