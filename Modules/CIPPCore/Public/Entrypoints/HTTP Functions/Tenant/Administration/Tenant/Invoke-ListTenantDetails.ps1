@@ -22,6 +22,10 @@ Function Invoke-ListTenantDetails {
         @{ Name = 'technicalNotificationMails'; Expression = { $_.technicalNotificationMails -join ', ' } },
         tenantType, createdDateTime, onPremisesLastPasswordSyncDateTime, onPremisesLastSyncDateTime, onPremisesSyncEnabled, assignedPlans
 
+        $customProperties = Get-TenantProperties -customerId $tenantfilter
+
+        $org | Add-Member -MemberType NoteProperty -Name 'customProperties' -Value $customProperties
+
         # Respond with the successful output
         Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
                 StatusCode = [HttpStatusCode]::OK
