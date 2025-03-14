@@ -334,6 +334,13 @@ function Invoke-ExecCustomData {
                 }
             }
         }
+        'ListAvailableAttributes' {
+            $TargetObject = $Request.Query.targetObject ?? 'All'
+            $AvailableAttributes = Get-CippCustomDataAttributes -TargetObject $TargetObject
+            $Body = @{
+                Results = @($AvailableAttributes)
+            }
+        }
         default {
             $Body = @{
                 Results = @(
