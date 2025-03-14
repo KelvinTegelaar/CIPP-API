@@ -43,7 +43,7 @@ function Invoke-CIPPStandardAuditLog {
         $DehydratedTenant = (New-ExoRequest -tenantid $Tenant -cmdlet 'Get-OrganizationConfig' -Select IsDehydrated).IsDehydrated
         if ($DehydratedTenant -eq $true) {
             try {
-                $null = New-ExoRequest -tenantid $Tenant -cmdlet 'Enable-OrganizationCustomization' -useSystemMailbox $true
+                $null = New-ExoRequest -tenantid $Tenant -cmdlet 'Enable-OrganizationCustomization'
                 Write-LogMessage -API 'Standards' -tenant $Tenant -message 'Organization customization enabled.' -sev Info
             } catch {
                 $ErrorMessage = Get-CippException -Exception $_
@@ -55,7 +55,7 @@ function Invoke-CIPPStandardAuditLog {
             if ($AuditLogEnabled -eq $true) {
                 Write-LogMessage -API 'Standards' -tenant $Tenant -message 'Unified Audit Log already enabled.' -sev Info
             } else {
-                $null = New-ExoRequest -tenantid $Tenant -cmdlet 'Set-AdminAuditLogConfig' -cmdParams @{UnifiedAuditLogIngestionEnabled = $true } -useSystemMailbox $true
+                $null = New-ExoRequest -tenantid $Tenant -cmdlet 'Set-AdminAuditLogConfig' -cmdParams @{UnifiedAuditLogIngestionEnabled = $true }
                 Write-LogMessage -API 'Standards' -tenant $Tenant -message 'Unified Audit Log Enabled.' -sev Info
             }
 
