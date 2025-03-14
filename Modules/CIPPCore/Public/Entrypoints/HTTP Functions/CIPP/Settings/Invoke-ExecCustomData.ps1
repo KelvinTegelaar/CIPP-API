@@ -227,6 +227,113 @@ function Invoke-ExecCustomData {
                 }
             }
         }
+        'ListDirectoryExtensions' {
+            try {
+                $Uri = "https://graph.microsoft.com/beta/applications(appId='$($env:ApplicationId)')/extensionProperties"
+                $DirectoryExtensions = New-GraphGetRequest -uri $Uri -AsApp $true -NoAuthCheck $true -tenantid $env:TenantID
+
+                $Body = @{
+                    Results = @($DirectoryExtensions)
+                }
+            } catch {
+                $Body = @{
+                    Results = @(
+                        @{
+                            state      = 'error'
+                            resultText = "Failed to retrieve directory extensions: $($_.Exception.Message)"
+                        }
+                    )
+                }
+            }
+        }
+        'AddDirectoryExtension' {
+            try {
+                $ExtensionName = $Request.Body.name
+                $DataType = $Request.Body.dataType
+                $TargetObjects = $Request.Body.targetObjects
+                $IsMultiValued = $Request.Body.isMultiValued -eq $true
+
+                if (!$ExtensionName -or !$DataType -or !$TargetObjects) {
+                    throw 'Extension name, data type, and target objects are required.'
+                }
+
+                $AppId = $env:ApplicationId # Replace with your application ID
+                $Uri = "https://graph.microsoft.com/beta/applications(appId='$AppId')/extensionProperties"
+
+                $BodyContent = @{
+                    name          = $ExtensionName
+                    dataType      = $DataType
+                    targetObjects = $TargetObjects
+                    isMultiValued = $IsMultiValued
+                } | ConvertTo-Json -Depth 5 -Compress
+
+                $Response = New-GraphPOSTRequest -Uri $Uri -Body $BodyContent -AsApp $true -NoAuthCheck $true -tenantid $env:TenantID
+
+                $Body = @{
+                    Results = @{
+                        state      = 'success'
+                        resultText = "Directory extension '$ExtensionName' added successfully."
+                        extension  = $Response
+                    }
+                }
+
+                # store the extension in the custom data table
+                $Entity = @{
+                    PartitionKey = 'DirectoryExtension'
+                    RowKey       = $Response.name
+                    JSON         = [string](ConvertFrom-Json $Response -Compress -Depth 5)
+                }
+            } catch {
+                $Body = @{
+                    Results = @(
+                        @{
+                            state      = 'error'
+                            resultText = "Failed to add directory extension: $($_.Exception.Message)"
+                        }
+                    )
+                }
+            }
+        }
+        'DeleteDirectoryExtension' {
+            try {
+                $ExtensionName = $Request.Body.name
+                $ExtensionId = $Request.Body.id
+                if (!$ExtensionName) {
+                    throw 'Extension name is missing in the request body.'
+                }
+                $AppId = $env:ApplicationId # Replace with your application ID
+                $Uri = "https://graph.microsoft.com/beta/applications(appId='$AppId')/extensionProperties/$ExtensionId"
+
+                # Delete the directory extension from Microsoft Graph
+                $null = New-GraphPOSTRequest -Type DELETE -Uri $Uri -AsApp $true -NoAuthCheck $true -tenantid $env:TenantID
+                try {
+                    $CustomDataTable = Get-CippTable -TableName 'CustomData'
+                    $ExtensionEntity = Get-CIPPAzDataTableEntity @CustomDataTable -Filter "PartitionKey eq 'DirectoryExtension' and RowKey eq '$ExtensionName'"
+                    # Remove the extension from the custom data table
+                    if ($ExtensionEntity) {
+                        Remove-AzDataTableEntity @CustomDataTable -Entity $ExtensionEntity
+                    }
+                } catch {
+                    Write-Warning "Failed to delete directory extension from custom data table: $($_.Exception.Message)"
+                }
+
+                $Body = @{
+                    Results = @{
+                        state      = 'success'
+                        resultText = "Directory extension '$ExtensionName' deleted successfully."
+                    }
+                }
+            } catch {
+                $Body = @{
+                    Results = @(
+                        @{
+                            state      = 'error'
+                            resultText = "Failed to delete directory extension: $($_.Exception.Message)"
+                        }
+                    )
+                }
+            }
+        }
         default {
             $Body = @{
                 Results = @(
