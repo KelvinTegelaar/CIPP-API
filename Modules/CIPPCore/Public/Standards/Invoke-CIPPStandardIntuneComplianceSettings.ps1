@@ -21,7 +21,7 @@ function Invoke-CIPPStandardIntuneComplianceSettings {
         ADDEDDATE
             2024-11-12
         POWERSHELLEQUIVALENT
-            
+
         RECOMMENDEDBY
         UPDATECOMMENTBLOCK
             Run the Tools\Update-StandardsComments.ps1 script to update this comment block
@@ -40,7 +40,7 @@ function Invoke-CIPPStandardIntuneComplianceSettings {
 
     if ($Settings.remediate -eq $true) {
         if ($StateIsCorrect -eq $true) {
-            Write-LogMessage -API 'Standards' -Tenant $Tenant -Message 'InTune Compliance settings is already applied correctly.' -Sev Info
+            Write-LogMessage -API 'Standards' -Tenant $Tenant -Message 'Intune Compliance settings is already applied correctly.' -Sev Info
         } else {
             try {
                 $GraphRequest = @{
@@ -57,19 +57,19 @@ function Invoke-CIPPStandardIntuneComplianceSettings {
                     } | ConvertTo-Json -Compress
                 }
                 New-GraphPostRequest @GraphRequest
-                Write-LogMessage -API 'Standards' -Tenant $Tenant -Message 'Successfully updated InTune Compliance settings.' -Sev Info
+                Write-LogMessage -API 'Standards' -Tenant $Tenant -Message 'Successfully updated Intune Compliance settings.' -Sev Info
             } catch {
                 $ErrorMessage = Get-CippException -Exception $_
-                Write-LogMessage -API 'Standards' -Tenant $Tenant -Message 'Failed to update InTune Compliance settings.' -Sev Error -LogData $ErrorMessage
+                Write-LogMessage -API 'Standards' -Tenant $Tenant -Message 'Failed to update Intune Compliance settings.' -Sev Error -LogData $ErrorMessage
             }
         }
     }
 
     if ($Settings.alert -eq $true) {
         if ($StateIsCorrect -eq $true) {
-            Write-LogMessage -API 'Standards' -Tenant $Tenant -Message 'InTune Compliance settings is enabled.' -Sev Info
+            Write-LogMessage -API 'Standards' -Tenant $Tenant -Message 'Intune Compliance settings is enabled.' -Sev Info
         } else {
-            Write-LogMessage -API 'Standards' -Tenant $Tenant -Message 'InTune Compliance settings is not enabled.' -Sev Alert
+            Write-LogMessage -API 'Standards' -Tenant $Tenant -Message 'Intune Compliance settings is not enabled.' -Sev Alert
         }
     }
 
