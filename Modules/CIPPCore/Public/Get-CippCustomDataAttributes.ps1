@@ -20,6 +20,7 @@ function Get-CippCustomDataAttributes {
                 foreach ($TargetObject in $CustomData.targetTypes) {
                     [PSCustomObject]@{
                         name         = $Name
+                        type         = $Type
                         targetObject = $TargetObject.ToLower()
                         properties   = $CustomData.properties
                     }
@@ -28,8 +29,11 @@ function Get-CippCustomDataAttributes {
                 $Name = $CustomData.RowKey
                 foreach ($TargetObject in $CustomData.targetObjects) {
                     [PSCustomObject]@{
-                        name         = $Name
-                        targetObject = $TargetObject
+                        name          = $Name
+                        type          = $Type
+                        targetObject  = $TargetObject
+                        dataType      = $CustomData.dataType
+                        isMultiValued = $CustomData.isMultiValued
                     }
                 }
             }
