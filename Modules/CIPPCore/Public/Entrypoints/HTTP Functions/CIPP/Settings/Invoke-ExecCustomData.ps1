@@ -1,0 +1,246 @@
+function Invoke-ExecCustomData {
+    <#
+    .FUNCTIONALITY
+        Entrypoint,AnyTenant
+    .ROLE
+        CIPP.AppSettings.ReadWrite
+    #>
+    [CmdletBinding()]
+    param($Request, $TriggerMetadata)
+
+    $Action = $Request.Query.Action ?? $Request.Body.Action
+    $CustomDataTable = Get-CippTable -TableName 'CustomData'
+
+    Write-Information "Executing action '$Action'"
+
+    switch ($Action) {
+        'ListSchemaExtensions' {
+            try {
+                $SchemaExtensions = Get-CIPPAzDataTableEntity @CustomDataTable -Filter "PartitionKey eq 'SchemaExtension'" | Select-Object -ExpandProperty JSON | ConvertFrom-Json
+                if (!$SchemaExtensions) {
+                    $SchemaExtensions = Get-CIPPSchemaExtensions | Sort-Object id
+                }
+                $Body = @{
+                    Results = @($SchemaExtensions)
+                }
+            } catch {
+                $Body = @{
+                    Results = @(
+                        @{
+                            state      = 'error'
+                            resultText = "Failed to retrieve schema extensions: $($_.Exception.Message)"
+                        }
+                    )
+                }
+            }
+        }
+        'AddSchemaExtension' {
+            try {
+                $SchemaExtension = $Request.Body.schemaExtension
+                if (!$SchemaExtension) {
+                    throw 'SchemaExtension data is missing in the request body.'
+                }
+
+                $Entity = @{
+                    PartitionKey = 'SchemaExtension'
+                    RowKey       = $SchemaExtension.id
+                    JSON         = [string]($SchemaExtension | ConvertTo-Json -Depth 5 -Compress)
+                }
+
+                Add-CIPPAzDataTableEntity @CustomDataTable -Entity $Entity -Force
+                $SchemaExtensions = Get-CIPPSchemaExtensions | Where-Object { $_.id -eq $SchemaExtension.id }
+
+                $Body = @{
+                    Results = @{
+                        state      = 'success'
+                        resultText = "Schema extension '$($SchemaExtension.id)' added successfully."
+                    }
+                }
+            } catch {
+                $Body = @{
+                    Results = @(
+                        @{
+                            state      = 'error'
+                            resultText = "Failed to add schema extension: $($_.Exception.Message)"
+                        }
+                    )
+                }
+            }
+        }
+        'DeleteSchema' {
+            try {
+                $SchemaId = $Request.Body.id
+                if (!$SchemaId) {
+                    throw 'Schema ID is missing in the request body.'
+                }
+
+                # Retrieve the schema extension entity
+                $SchemaEntity = Get-CIPPAzDataTableEntity @CustomDataTable -Filter "PartitionKey eq 'SchemaExtension'" | Where-Object { $SchemaId -match $_.RowKey }
+                if (!$SchemaEntity) {
+                    throw "Schema extension with ID '$SchemaId' not found."
+                }
+
+                # Ensure the schema is in 'InDevelopment' state before deletion
+                $SchemaDefinition = $SchemaEntity.JSON | ConvertFrom-Json
+                if ($SchemaDefinition.status -ne 'InDevelopment') {
+                    throw "Schema extension '$SchemaId' cannot be deleted because it is not in 'InDevelopment' state."
+                }
+
+                try {
+                    $null = New-GraphPOSTRequest -Type DELETE -Uri "https://graph.microsoft.com/v1.0/schemaExtensions/$SchemaId" -AsApp $true -NoAuthCheck $true -tenantid $env:TenantID -Verbose
+                } catch {
+                    Write-Warning "Schema extension '$SchemaId' not found in Microsoft Graph."
+                }
+
+
+                # Delete the schema extension entity
+                Remove-AzDataTableEntity @CustomDataTable -Entity $SchemaEntity
+
+                $Body = @{
+                    Results = @{
+                        state      = 'success'
+                        resultText = "Schema extension '$SchemaId' deleted successfully."
+                    }
+                }
+            } catch {
+                $Body = @{
+                    Results = @(
+                        @{
+                            state      = 'error'
+                            resultText = "Failed to delete schema extension: $($_.Exception.Message)"
+                        }
+                    )
+                }
+            }
+        }
+        'AddSchemaProperty' {
+            try {
+                $SchemaId = $Request.Body.id
+                $Name = $Request.Body.name
+                $Type = $Request.Body.type
+                $NewProperty = @{
+                    name = $Name
+                    type = $Type
+                }
+                if (!$SchemaId) {
+                    throw 'Schema ID is missing in the request body.'
+                }
+                if (!$Name -or !$Type) {
+                    throw 'Property data is missing or incomplete in the request body.'
+                }
+
+                # Retrieve the schema extension entity
+                $SchemaEntity = Get-CIPPAzDataTableEntity @CustomDataTable -Filter "PartitionKey eq 'SchemaExtension'" | Where-Object { $SchemaId -match $_.RowKey }
+                if (!$SchemaEntity) {
+                    throw "Schema extension with ID '$SchemaId' not found."
+                }
+
+                # Parse the schema definition
+                $SchemaDefinition = $SchemaEntity.JSON | ConvertFrom-Json
+
+                if ($SchemaDefinition.status -eq 'Deprecated') {
+                    throw "Properties cannot be added to schema extension '$SchemaId' because it is in the 'Deprecated' state."
+                }
+
+                # Check if the property already exists
+                if ($SchemaDefinition.properties | Where-Object { $_.name -eq $NewProperty.name }) {
+                    throw "Property with name '$($NewProperty.name)' already exists in schema extension '$SchemaId'."
+                }
+
+                # Add the new property
+                $Properties = [System.Collections.Generic.List[object]]::new()
+                foreach ($Property in $SchemaDefinition.properties) {
+                    $Properties.Add($Property)
+                }
+                $Properties.Add($NewProperty)
+                $SchemaDefinition.properties = $Properties
+
+                # Update the schema extension entity
+                $SchemaEntity.JSON = [string]($SchemaDefinition | ConvertTo-Json -Depth 5 -Compress)
+                Add-CIPPAzDataTableEntity @CustomDataTable -Entity $SchemaEntity -Force
+                try { $null = Get-CIPPSchemaExtensions } catch {}
+
+                $Body = @{
+                    Results = @{
+                        state      = 'success'
+                        resultText = "Property '$($NewProperty.name)' added to schema extension '$SchemaId' successfully."
+                    }
+                }
+            } catch {
+                $Body = @{
+                    Results = @(
+                        @{
+                            state      = 'error'
+                            resultText = "Failed to add property to schema extension: $($_.Exception.Message)"
+                        }
+                    )
+                }
+            }
+        }
+        'ChangeSchemaState' {
+            try {
+                $SchemaId = $Request.Body.id
+                $NewStatus = $Request.Body.status
+                if (!$SchemaId) {
+                    throw 'Schema ID is missing in the request body.'
+                }
+                if (!$NewStatus) {
+                    throw 'New status is missing in the request body.'
+                }
+
+                # Retrieve the schema extension entity
+                $SchemaEntity = Get-CIPPAzDataTableEntity @CustomDataTable -Filter "PartitionKey eq 'SchemaExtension'" | Where-Object { $SchemaId -match $_.RowKey }
+                if (!$SchemaEntity) {
+                    throw "Schema extension with ID '$SchemaId' not found."
+                }
+
+                # Parse the schema definition
+                $SchemaDefinition = $SchemaEntity.JSON | ConvertFrom-Json
+
+                # Check if the status is already the same
+                if ($SchemaDefinition.status -eq $NewStatus) {
+                    throw "Schema extension '$SchemaId' is already in the '$NewStatus' state."
+                }
+
+                # Update the status
+                $SchemaDefinition.status = $NewStatus
+
+                # Update the schema extension entity
+                $SchemaEntity.JSON = [string]($SchemaDefinition | ConvertTo-Json -Depth 5 -Compress)
+                Add-CIPPAzDataTableEntity @CustomDataTable -Entity $SchemaEntity -Force
+                $null = Get-CIPPSchemaExtensions
+
+                $Body = @{
+                    Results = @{
+                        state      = 'success'
+                        resultText = "Schema extension '$SchemaId' status changed to '$NewStatus' successfully."
+                    }
+                }
+            } catch {
+                $Body = @{
+                    Results = @(
+                        @{
+                            state      = 'error'
+                            resultText = "Failed to change schema extension status: $($_.Exception.Message)"
+                        }
+                    )
+                }
+            }
+        }
+        default {
+            $Body = @{
+                Results = @(
+                    @{
+                        state      = 'error'
+                        resultText = 'Invalid action specified.'
+                    }
+                )
+            }
+        }
+    }
+
+    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
+            StatusCode = [HttpStatusCode]::OK
+            Body       = $Body
+        })
+}
