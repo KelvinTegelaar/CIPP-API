@@ -42,7 +42,7 @@ function Invoke-CIPPStandardSPEmailAttestation {
 
     if ($Settings.remediate -eq $true) {
         if ($StateIsCorrect -eq $true) {
-            Write-LogMessage -API 'Standards' -Tenant $Tenant -Message 'Sharepoint reauthentication with verification code is already restricted.' -Sev Info
+            Write-LogMessage -API 'Standards' -Tenant $Tenant -Message 'SharePoint reauthentication with verification code is already restricted.' -Sev Info
         } else {
             $Properties = @{
                 EmailAttestationReAuthDays = $Settings.Days
