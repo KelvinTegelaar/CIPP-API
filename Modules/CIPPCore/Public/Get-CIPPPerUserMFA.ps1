@@ -11,7 +11,7 @@ function Get-CIPPPerUserMFA {
             $AllUsers = New-graphGetRequest -Uri "https://graph.microsoft.com/v1.0/users?`$top=999&`$select=UserPrincipalName,Id,perUserMfaState" -tenantid $tenantfilter
             return $AllUsers
         } else {
-            $MFAState = New-graphGetRequest -Uri "https://graph.microsoft.com/beta/users/$($userId)?`$select=UserPrincipalName,Id,perUserMfaState" -tenantid $tenantfilter
+            $MFAState = New-graphGetRequest -Uri "https://graph.microsoft.com/v1.0/users/$($userId)?`$select=UserPrincipalName,Id,perUserMfaState" -tenantid $tenantfilter
             return [PSCustomObject]@{
                 PerUserMFAState   = $MFAState.perUserMfaState
                 UserPrincipalName = $userId
