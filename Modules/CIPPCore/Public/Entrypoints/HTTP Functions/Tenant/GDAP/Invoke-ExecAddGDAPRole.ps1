@@ -22,7 +22,7 @@ Function Invoke-ExecAddGDAPRole {
         @{ label = 'Cloud App Security Administrator'; value = '892c5842-a9a6-463a-8041-72aa08ca3cf6' },
         @{ label = 'Cloud Device Administrator'; value = '7698a772-787b-4ac8-901f-60d6b08affd2' },
         @{ label = 'Teams Administrator'; value = '69091246-20e8-4a56-aa4d-066075b2a7a8' },
-        @{ label = 'Sharepoint Administrator'; value = 'f28a1f50-f6e7-4571-818b-6a12f2af6b6c' },
+        @{ label = 'SharePoint Administrator'; value = 'f28a1f50-f6e7-4571-818b-6a12f2af6b6c' },
         @{ label = 'Authentication Policy Administrator'; value = '0526716b-113d-4c15-b2c8-68e3c22b9f80' },
         @{ label = 'Privileged Role Administrator'; value = 'e8611ab8-c189-46e8-94e1-60213ab1f814' },
         @{ label = 'Privileged Authentication Administrator'; value = '7be44c8a-adaf-4e2a-84d6-ab2649e08a13' }

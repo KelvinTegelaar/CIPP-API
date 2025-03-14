@@ -50,7 +50,7 @@ function Test-CIPPGDAPRelationships {
             'M365 GDAP Cloud App Security Administrator',
             'M365 GDAP Cloud Device Administrator',
             'M365 GDAP Teams Administrator',
-            'M365 GDAP Sharepoint Administrator',
+            'M365 GDAP SharePoint Administrator',
             'M365 GDAP Authentication Policy Administrator',
             'M365 GDAP Privileged Role Administrator',
             'M365 GDAP Privileged Authentication Administrator'
