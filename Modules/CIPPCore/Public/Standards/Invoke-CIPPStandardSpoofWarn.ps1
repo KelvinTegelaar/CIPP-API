@@ -42,6 +42,24 @@ function Invoke-CIPPStandardSpoofWarn {
 
     # Get state value using null-coalescing operator
     $state = $Settings.state.value ?? $Settings.state
+    $AllowListAdd = $Settings.AllowListAdd.value ?? $Settings.AllowListAdd
+
+    # Test if all entries in the AllowListAdd variable are in the AllowList
+    $AllowListCorrect = $true
+    $AllowListAddEntries = foreach ($entry in $AllowListAdd) {
+        if ($CurrentInfo.AllowList -notcontains $entry) {
+            $AllowListCorrect = $false
+            Write-Host "AllowList entry $entry not found in current AllowList"
+            $entry
+        } else {
+            Write-Host "AllowList entry $entry found in current AllowList."
+        }
+    }
+    $AllowListAdd = @{'@odata.type' = '#Exchange.GenericHashTable'; Add = $AllowListAddEntries }
+
+    # Debug output
+    # Write-Host ($CurrentInfo | ConvertTo-Json -Depth 10)
+    # Write-Host ($AllowListAdd | ConvertTo-Json -Depth 10)
 
     # Input validation
     if (([string]::IsNullOrWhiteSpace($state) -or $state -eq 'Select a value') -and ($Settings.remediate -eq $true -or $Settings.alert -eq $true)) {
@@ -50,22 +68,37 @@ function Invoke-CIPPStandardSpoofWarn {
     }
 
     If ($Settings.remediate -eq $true) {
+        Write-Host 'Time to remediate!'
         $status = if ($Settings.enable -and $Settings.disable) {
             # Handle pre standards v2.0 legacy settings when this was 2 separate standards
             Write-LogMessage -API 'Standards' -tenant $Tenant -message 'You cannot both enable and disable the Spoof Warnings setting' -sev Error
             Return
         } elseif ($state -eq 'enabled' -or $Settings.enable) { $true } else { $false }
 
-        if ($CurrentInfo.Enabled -eq $status) {
-            Write-LogMessage -API 'Standards' -tenant $Tenant -message "Outlook external spoof warnings are already set to $status." -sev Info
-        } else {
-            try {
+        try {
+            if ($CurrentInfo.Enabled -eq $status -and $AllowListCorrect -eq $true) {
+                # Status correct, AllowList correct
+                Write-LogMessage -API 'Standards' -tenant $Tenant -message "Outlook external spoof warnings are already set to $status and the AllowList is correct." -sev Info
+
+            } elseif ($CurrentInfo.Enabled -eq $status -and $AllowListCorrect -eq $false) {
+                # Status correct, AllowList incorrect
+                $null = New-ExoRequest -tenantid $Tenant -cmdlet 'Set-ExternalInOutlook' -cmdParams @{ AllowList = $AllowListAdd; }
+                Write-LogMessage -API 'Standards' -tenant $Tenant -message "Outlook external spoof warnings already set to $status. Added $($AllowListAdd.Add -join ', ') to the AllowList." -sev Info
+
+            } elseif ($CurrentInfo.Enabled -ne $status -and $AllowListCorrect -eq $false) {
+                # Status incorrect, AllowList incorrect
+                $null = New-ExoRequest -tenantid $Tenant -cmdlet 'Set-ExternalInOutlook' -cmdParams @{ Enabled = $status; AllowList = $AllowListAdd; }
+                Write-LogMessage -API 'Standards' -tenant $Tenant -message "Outlook external spoof warnings set to $status. Added $($AllowListAdd.Add -join ', ') to the AllowList." -sev Info
+
+            } else {
+                # Status incorrect, AllowList correct
                 $null = New-ExoRequest -tenantid $Tenant -cmdlet 'Set-ExternalInOutlook' -cmdParams @{ Enabled = $status; }
                 Write-LogMessage -API 'Standards' -tenant $Tenant -message "Outlook external spoof warnings set to $status." -sev Info
-            } catch {
-                $ErrorMessage = Get-CippException -Exception $_
-                Write-LogMessage -API 'Standards' -tenant $Tenant -message "Could not set Outlook external spoof warnings to $status. Error: $($ErrorMessage.NormalizedError)" -sev Error -LogData $ErrorMessage
+
             }
+        } catch {
+            $ErrorMessage = Get-CippException -Exception $_
+            Write-LogMessage -API 'Standards' -tenant $Tenant -message "Could not set Outlook external spoof warnings to $status. Error: $($ErrorMessage.NormalizedError)" -sev Error -LogData $ErrorMessage
         }
     }
 
