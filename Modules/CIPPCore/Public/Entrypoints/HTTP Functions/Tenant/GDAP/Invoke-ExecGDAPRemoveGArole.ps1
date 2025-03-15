@@ -9,7 +9,7 @@ Function Invoke-ExecGDAPRemoveGArole {
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
 
-    $GDAPID = $request.query.GDAPId ?? $request.Body.GDAPId
+    $GDAPID = $Request.Query.GDAPId ?? $Request.Body.GDAPId
 
     try {
         $CheckActive = New-GraphGetRequest -NoAuthCheck $True -uri "https://graph.microsoft.com/beta/tenantRelationships/delegatedAdminRelationships/$($GDAPID)" -tenantid $env:TenantID

@@ -11,7 +11,8 @@ Function Invoke-BestPracticeAnalyser_List {
     param($Request, $TriggerMetadata)
 
     $APIName = $Request.Params.CIPPEndpoint
-    Write-LogMessage -headers $Request.Headers -API $APINAME -message 'Accessed this API' -Sev 'Debug'
+    $Headers = $Request.Headers
+    Write-LogMessage -headers $Headers -API $APIName -message 'Accessed this API' -Sev 'Debug'
 
     $Tenants = Get-Tenants
     $Table = get-cipptable 'cachebpa'

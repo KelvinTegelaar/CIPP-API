@@ -11,12 +11,13 @@ Function Invoke-ExecCaCheck {
     param($Request, $TriggerMetadata)
 
     $APIName = $Request.Params.CIPPEndpoint
-    Write-LogMessage -headers $Request.Headers -API $APINAME -message 'Accessed this API' -Sev 'Debug'
+    $Headers = $Request.Headers
+    Write-LogMessage -headers $Headers -API $APIName -message 'Accessed this API' -Sev 'Debug'
 
-    $Tenant = $request.body.tenantFilter
-    $UserID = $request.body.userId.value
-    if ($Request.body.IncludeApplications.value) {
-        $IncludeApplications = $Request.body.IncludeApplications.value
+    $Tenant = $Request.Body.tenantFilter
+    $UserID = $Request.Body.userID.value
+    if ($Request.Body.IncludeApplications.value) {
+        $IncludeApplications = $Request.Body.IncludeApplications.value
     } else {
         $IncludeApplications = '67ad5377-2d78-4ac2-a867-6300cda00e85'
     }

@@ -11,14 +11,14 @@ Function Invoke-EditGroup {
     param($Request, $TriggerMetadata)
 
     $APIName = $Request.Params.CIPPEndpoint
-    Write-LogMessage -headers $Request.Headers -API $APINAME -message 'Accessed this API' -Sev 'Debug'
+    $Headers = $Request.Headers
+    Write-LogMessage -headers $Headers -API $APIName -message 'Accessed this API' -Sev 'Debug'
 
     $Results = [System.Collections.ArrayList]@()
     $userobj = $Request.body
     $GroupType = $userobj.groupId.addedFields.groupType ? $userobj.groupId.addedFields.groupType : $userobj.groupType
     $GroupName = $userobj.groupName ? $userobj.groupName : $userobj.groupId.addedFields.groupName
-    # Write to the Azure Functions log stream.
-    Write-Host 'PowerShell HTTP trigger function processed a request.'
+
 
     $AddMembers = ($userobj.Addmember).value ?? $userobj.AddMember
     $userobj.groupId = $userobj.groupId.value ?? $userobj.groupId
