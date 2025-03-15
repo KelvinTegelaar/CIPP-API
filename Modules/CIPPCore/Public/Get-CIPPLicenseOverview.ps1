@@ -20,7 +20,11 @@ function Get-CIPPLicenseOverview {
         }
     )
 
-    $AdminPortalLicenses = New-GraphGetRequest -scope 'https://admin.microsoft.com/.default' -TenantID $TenantFilter -Uri 'https://admin.microsoft.com/admin/api/tenant/accountSkus'
+    try {
+        $AdminPortalLicenses = New-GraphGetRequest -scope 'https://admin.microsoft.com/.default' -TenantID $TenantFilter -Uri 'https://admin.microsoft.com/admin/api/tenant/accountSkus'
+    } catch {
+        Write-Warning 'Failed to get Admin Portal Licenses'
+    }
 
     $Results = New-GraphBulkRequest -Requests $Requests -TenantID $TenantFilter -asapp $true
     $LicRequest = ($Results | Where-Object { $_.id -eq 'subscribedSkus' }).body.value
