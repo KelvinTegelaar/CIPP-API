@@ -38,7 +38,7 @@ Function Invoke-ExecOffloadFunctions {
             foreach ($Offload in $OffloadVersions) {
                 $FunctionName = $Offload.RowKey
                 if ($OffloadVersion -ne $MainVersion.Version) {
-                    $
+                    $CanEnable = $false
                     $Alerts.Add("The version of $FunctionName ($($Offload.Version)) does not match the current version of $($MainVersion.Version).")
                 }
             }
