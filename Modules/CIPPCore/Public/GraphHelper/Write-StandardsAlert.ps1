@@ -7,7 +7,8 @@ function Write-StandardsAlert {
         $object,
         $tenant = 'None',
         $standardName = 'None',
-        $standardId = $null
+        $standardId = $null,
+        $message
     )
     $Table = Get-CIPPTable -tablename CippStandardsAlerts
     $JSONobject = $object | ConvertTo-Json -Depth 10 -Compress
@@ -16,11 +17,12 @@ function Write-StandardsAlert {
         'tenant'       = [string]$tenant
         'standardName' = [string]$standardName
         'object'       = [string]$JSONobject
+        'message'      = [string]$message
         'standardId'   = [string]$standardId
         'sentAsAlert'  = $false
         'PartitionKey' = [string]$PartitionKey
         'RowKey'       = [string]([guid]::NewGuid()).ToString()
     }
     $Table.Entity = $TableRow
-    Add-CIPPAzDataTableEntity @Table | Out-Null
+    Add-CIPPAzDataTableEntity @Table -Force | Out-Null
 }

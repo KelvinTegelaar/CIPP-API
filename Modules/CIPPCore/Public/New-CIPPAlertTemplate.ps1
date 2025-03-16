@@ -28,13 +28,23 @@ function New-CIPPAlertTemplate {
         $ButtonText = 'C heck logbook information'
     }
     if ($InputObject -eq 'standards') {
-        #Edit to do nice compares, say which standard/tenant/template, etc etc. Make it a nice, easy, informative email per tenant.
-        $DataHTML = $Data | Select-Object * -ExcludeProperty Etag, PartitionKey, TimeStamp | ConvertTo-Html | Out-String
-        $IntroText = "<p>This is your standards email blabla, converted from json blabla.</p>$dataHTML"
+        $DataHTML = foreach ($object in $data) {
+            "<p>For the standard $($object.standardName) in template {{Template Name }} we've detected:</p> <li>$($object.message)</li>"
+            if ($object.object) {
+                $object.object = $object.object | ConvertFrom-Json
+                $object.object = $object.object | Select-Object * -ExcludeProperty Etag, PartitionKey, TimeStamp
+                ($object.object.compare | ConvertTo-Html -Fragment | Out-String).Replace('<table>', ' <table class="table-modern">')
+            }
+
+        }
+        $IntroText = "<p>You're receiving this email because you've set your standards to alert when they are out of sync with your expected baseline.</p>$dataHTML"
         $ButtonUrl = "$CIPPURL/standards/list-standards"
         $ButtonText = 'Check Standards configuration'
     }
     if ($InputObject -eq 'auditlog') {
+        $ButtonUrl = "$CIPPURL/identity/administration/users/user/bec?userId=$($data.ObjectId)&tenantFilter=$Tenant"
+        $ButtonText = 'User Management'
+        $AfterButtonText = '<p>If this is incorrect, use the user management screen to block the user and revoke the sessions</p>'
         switch ($Data.Operation) {
             'New-InboxRule' {
                 # Test if the rule is a forwarding or redirect rule
@@ -225,6 +235,13 @@ function New-CIPPAlertTemplate {
             htmlcontent = $HTMLTemplate -f $Title, $IntroText, $ButtonUrl, $ButtonText, $AfterButtonText, $AuditLogLink
         }
     } elseif ($Format -eq 'json') {
+        if ($InputObject -eq 'auditlog') {
+            return [pscustomobject]@{
+                title = $Title
+                html  = $IntroText
+                data  = $data
+            }
+        }
         return [pscustomobject]@{
             title      = $Title
             buttonurl  = $ButtonUrl
