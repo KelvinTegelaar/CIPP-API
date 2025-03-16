@@ -43,38 +43,38 @@ function Invoke-CIPPStandardAuditLog {
         $DehydratedTenant = (New-ExoRequest -tenantid $Tenant -cmdlet 'Get-OrganizationConfig' -Select IsDehydrated).IsDehydrated
         if ($DehydratedTenant -eq $true) {
             try {
-                New-ExoRequest -tenantid $Tenant -cmdlet 'Enable-OrganizationCustomization'
-                Write-LogMessage -API 'Standards' -tenant $tenant -message 'Organization customization enabled.' -sev Info
+                $null = New-ExoRequest -tenantid $Tenant -cmdlet 'Enable-OrganizationCustomization'
+                Write-LogMessage -API 'Standards' -tenant $Tenant -message 'Organization customization enabled.' -sev Info
             } catch {
-                $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
-                Write-LogMessage -API 'Standards' -tenant $tenant -message "Failed to enable organization customization. Error: $ErrorMessage" -sev Debug
+                $ErrorMessage = Get-CippException -Exception $_
+                Write-LogMessage -API 'Standards' -tenant $Tenant -message "Failed to enable organization customization. Error: $($ErrorMessage.NormalizedError)" -sev Debug -LogData $ErrorMessage
             }
         }
 
         try {
             if ($AuditLogEnabled -eq $true) {
-                Write-LogMessage -API 'Standards' -tenant $tenant -message 'Unified Audit Log already enabled.' -sev Info
+                Write-LogMessage -API 'Standards' -tenant $Tenant -message 'Unified Audit Log already enabled.' -sev Info
             } else {
-                New-ExoRequest -tenantid $Tenant -cmdlet 'Set-AdminAuditLogConfig' -cmdParams @{UnifiedAuditLogIngestionEnabled = $true }
-                Write-LogMessage -API 'Standards' -tenant $tenant -message 'Unified Audit Log Enabled.' -sev Info
+                $null = New-ExoRequest -tenantid $Tenant -cmdlet 'Set-AdminAuditLogConfig' -cmdParams @{UnifiedAuditLogIngestionEnabled = $true }
+                Write-LogMessage -API 'Standards' -tenant $Tenant -message 'Unified Audit Log Enabled.' -sev Info
             }
 
         } catch {
-            $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
-            Write-LogMessage -API 'Standards' -tenant $tenant -message "Failed to apply Unified Audit Log. Error: $ErrorMessage" -sev Error
+            $ErrorMessage = Get-CippException -Exception $_
+            Write-LogMessage -API 'Standards' -tenant $Tenant -message "Failed to apply Unified Audit Log. Error: $($ErrorMessage.NormalizedError)" -sev Error -LogData $ErrorMessage
         }
     }
     if ($Settings.alert -eq $true) {
 
         if ($AuditLogEnabled -eq $true) {
-            Write-LogMessage -API 'Standards' -tenant $tenant -message 'Unified Audit Log is enabled' -sev Info
+            Write-LogMessage -API 'Standards' -tenant $Tenant -message 'Unified Audit Log is enabled' -sev Info
         } else {
-            Write-LogMessage -API 'Standards' -tenant $tenant -message 'Unified Audit Log is not enabled' -sev Alert
+            Write-LogMessage -API 'Standards' -tenant $Tenant -message 'Unified Audit Log is not enabled' -sev Alert
         }
     }
 
     if ($Settings.report -eq $true) {
 
-        Add-CIPPBPAField -FieldName 'AuditLog' -FieldValue $AuditLogEnabled -StoreAs bool -Tenant $tenant
+        Add-CIPPBPAField -FieldName 'AuditLog' -FieldValue $AuditLogEnabled -StoreAs bool -Tenant $Tenant
     }
 }
