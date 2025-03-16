@@ -43,7 +43,7 @@ Function Invoke-ExecOffloadFunctions {
                 }
             }
 
-            $VersionTable = $Version | Select-Object @{n = 'Name'; e = { $_.RowKey } }, @{n = 'Version'; e = { $_.Version } }
+            $VersionTable = $Version | Select-Object @{n = 'Name'; e = { $_.RowKey } }, @{n = 'Version'; e = { $_.Version } }, @{n = 'Default'; e = { $_.RowKey -notmatch '-' } }
 
             $CurrentState = if (!$CurrentState) {
                 [PSCustomObject]@{
