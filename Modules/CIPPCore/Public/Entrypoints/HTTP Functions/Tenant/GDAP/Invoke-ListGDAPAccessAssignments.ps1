@@ -43,9 +43,12 @@ function Invoke-ListGDAPAccessAssignments {
             'members'          = ($Members | Where-Object id -EQ $AccessAssignment.accessContainer.accessContainerId).body.value
         }
     }
+    if (!$Results) {
+        $Results = @()
+    }
 
     $Body = @{
-        Results = $Results
+        Results = @($Results)
     }
 
     Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
