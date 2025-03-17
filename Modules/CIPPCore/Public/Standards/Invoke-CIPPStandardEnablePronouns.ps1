@@ -63,7 +63,8 @@ function Invoke-CIPPStandardEnablePronouns {
         if ($CurrentState.isEnabledInOrganization -eq $true) {
             Write-LogMessage -API 'Standards' -tenant $tenant -message 'Pronouns are enabled.' -sev Info
         } else {
-            Write-LogMessage -API 'Standards' -tenant $tenant -message 'Pronouns are not enabled.' -sev Alert
+            Write-StandardsAlert -message "Pronouns are not enabled" -object $CurrentState -tenant $tenant -standardName 'EnablePronouns' -standardId $Settings.standardId
+            Write-LogMessage -API 'Standards' -tenant $tenant -message 'Pronouns are not enabled.' -sev Info
         }
     }
 

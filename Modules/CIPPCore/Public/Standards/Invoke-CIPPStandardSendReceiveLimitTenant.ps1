@@ -81,7 +81,8 @@ function Invoke-CIPPStandardSendReceiveLimitTenant {
         if ($NotSetCorrectly.Count -eq 0) {
             Write-LogMessage -API 'Standards' -tenant $tenant -message "The tenant send($($Settings.SendLimit)MB) and receive($($Settings.ReceiveLimit)MB) limits are set correctly" -sev Info
         } else {
-            Write-LogMessage -API 'Standards' -tenant $tenant -message "The tenant send($($Settings.SendLimit)MB) and receive($($Settings.ReceiveLimit)MB) limits are not set correctly" -sev Alert
+            Write-StandardsAlert -message "The tenant send($($Settings.SendLimit)MB) and receive($($Settings.ReceiveLimit)MB) limits are not set correctly" -object $NotSetCorrectly -tenant $tenant -standardName 'SendReceiveLimitTenant' -standardId $Settings.standardId
+            Write-LogMessage -API 'Standards' -tenant $tenant -message "The tenant send($($Settings.SendLimit)MB) and receive($($Settings.ReceiveLimit)MB) limits are not set correctly" -sev Info
         }
     }
 

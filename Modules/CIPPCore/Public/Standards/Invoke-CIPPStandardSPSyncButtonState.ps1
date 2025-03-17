@@ -69,7 +69,8 @@ function Invoke-CIPPStandardSPSyncButtonState {
         if ($StateIsCorrect -eq $true) {
             Write-LogMessage -API 'Standards' -tenant $tenant -message "The SharePoint Sync Button is already set to the wanted state of $HumanReadableState" -sev Info
         } else {
-            Write-LogMessage -API 'Standards' -tenant $tenant -message "The SharePoint Sync Button is not set to the wanted state of $HumanReadableState" -sev Alert
+            Write-StandardsAlert -message "The SharePoint Sync Button is not set to the wanted state of $HumanReadableState" -object $CurrentState -tenant $tenant -standardName 'SPSyncButtonState' -standardId $Settings.standardId
+            Write-LogMessage -API 'Standards' -tenant $tenant -message "The SharePoint Sync Button is not set to the wanted state of $HumanReadableState" -sev Info
         }
     }
 }

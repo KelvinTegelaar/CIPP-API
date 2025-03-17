@@ -53,7 +53,8 @@ function Invoke-CIPPStandardDisableReshare {
     if ($Settings.alert -eq $true) {
 
         if ($CurrentInfo.isResharingByExternalUsersEnabled) {
-            Write-LogMessage -API 'Standards' -tenant $tenant -message 'Guests are allowed to reshare files' -sev Alert
+            Write-StandardsAlert -message "Guests are allowed to reshare files" -object $CurrentInfo -tenant $tenant -standardName 'DisableReshare' -standardId $Settings.standardId
+            Write-LogMessage -API 'Standards' -tenant $tenant -message 'Guests are allowed to reshare files' -sev Info
         } else {
             Write-LogMessage -API 'Standards' -tenant $tenant -message 'Guests are not allowed to reshare files' -sev Info
         }

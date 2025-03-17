@@ -96,7 +96,8 @@ function Invoke-CIPPStandardAuthMethodsSettings {
         } else {
             $CurrentReportState = $CurrentPolicy.reportSuspiciousActivitySettings.state
             $CurrentSystemState = $CurrentPolicy.systemCredentialPreferences.state
-            Write-LogMessage -API 'Standards' -tenant $tenant -message "Authentication methods policy settings are not configured correctly. Current values: Report Suspicious Activity ($CurrentReportState), System Credential Preferences ($CurrentSystemState)" -sev Alert
+            Write-StandardsAlert -message "Authentication methods policy settings are not configured correctly." -object @{CurrentReportState = $CurrentReportState; CurrentSystemState = $CurrentSystemState; WantedReportState = $ReportSuspiciousActivityState; WantedSystemState = $SystemCredentialState} -tenant $tenant -standardName 'AuthMethodsSettings' -standardId $Settings.standardId
+            Write-LogMessage -API 'Standards' -tenant $tenant -message "Authentication methods policy settings are not configured correctly. Current values: Report Suspicious Activity ($CurrentReportState), System Credential Preferences ($CurrentSystemState)" -sev Info
         }
     }
 }

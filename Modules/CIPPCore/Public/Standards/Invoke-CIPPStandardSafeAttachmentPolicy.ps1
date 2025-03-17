@@ -148,7 +148,8 @@ function Invoke-CIPPStandardSafeAttachmentPolicy {
             if ($StateIsCorrect -eq $true) {
                 Write-LogMessage -API 'Standards' -tenant $Tenant -message 'Safe Attachment Policy is enabled' -sev Info
             } else {
-                Write-LogMessage -API 'Standards' -tenant $Tenant -message 'Safe Attachment Policy is not enabled' -sev Alert
+                Write-StandardsAlert -message "Safe Attachment Policy is not enabled" -object $CurrentState -tenant $Tenant -standardName 'SafeAttachmentPolicy' -standardId $Settings.standardId
+                Write-LogMessage -API 'Standards' -tenant $Tenant -message 'Safe Attachment Policy is not enabled' -sev Info
             }
         }
 
@@ -161,7 +162,8 @@ function Invoke-CIPPStandardSafeAttachmentPolicy {
         }
 
         if ($Settings.alert -eq $true) {
-            Write-LogMessage -API 'Standards' -tenant $Tenant -message 'Safe Attachment Policy is not enabled: Tenant does not have Microsoft Defender for Office 365 license' -sev Alert
+            Write-StandardsAlert -message "Safe Attachment Policy is not enabled: Tenant does not have Microsoft Defender for Office 365 license" -object $MDOLicensed -tenant $Tenant -standardName 'SafeAttachmentPolicy' -standardId $Settings.standardId
+            Write-LogMessage -API 'Standards' -tenant $Tenant -message 'Safe Attachment Policy is not enabled: Tenant does not have Microsoft Defender for Office 365 license' -sev Info
         }
 
         if ($Settings.report -eq $true) {

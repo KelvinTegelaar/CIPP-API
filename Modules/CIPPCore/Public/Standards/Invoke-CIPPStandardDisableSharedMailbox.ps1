@@ -56,7 +56,8 @@ function Invoke-CIPPStandardDisableSharedMailbox {
     if ($Settings.alert -eq $true) {
 
         if ($SharedMailboxList) {
-            Write-LogMessage -API 'Standards' -tenant $tenant -message "Shared mailboxes with enabled accounts: $($SharedMailboxList.Count)" -sev Alert
+            Write-StandardsAlert -message "Shared mailboxes with enabled accounts: $($SharedMailboxList.Count)" -object $SharedMailboxList -tenant $tenant -standardName 'DisableSharedMailbox' -standardId $Settings.standardId
+            Write-LogMessage -API 'Standards' -tenant $tenant -message "Shared mailboxes with enabled accounts: $($SharedMailboxList.Count)" -sev Info
         } else {
             Write-LogMessage -API 'Standards' -tenant $tenant -message 'All AAD accounts for shared mailboxes are disabled.' -sev Info
         }

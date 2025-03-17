@@ -59,7 +59,8 @@ function Invoke-CIPPStandardUserPreferredLanguage {
 
     If ($Settings.alert -eq $true) {
         if (($IncorrectUsers.userPrincipalName | Measure-Object).Count -gt 0) {
-            Write-LogMessage -API 'Standards' -tenant $tenant -message "The following accounts do not have the preferred language set to $preferredLanguage : $($IncorrectUsers.userPrincipalName -join ', ')" -sev Alert
+            Write-StandardsAlert -message "The following accounts do not have the preferred language set to $preferredLanguage" -object $IncorrectUsers -tenant $tenant -standardName 'UserPreferredLanguage' -standardId $Settings.standardId
+            Write-LogMessage -API 'Standards' -tenant $tenant -message "The following accounts do not have the preferred language set to $preferredLanguage : $($IncorrectUsers.userPrincipalName -join ', ')" -sev Info
         } else {
             Write-LogMessage -API 'Standards' -tenant $tenant -message 'No accounts do not have the preferred language set to the preferred language' -sev Info
         }

@@ -56,7 +56,8 @@ function Invoke-CIPPStandardintuneDeviceReg {
         if ($StateIsCorrect -eq $true) {
             Write-LogMessage -API 'Standards' -tenant $tenant -message "User device quota is set to $($Settings.max)" -sev Info
         } else {
-            Write-LogMessage -API 'Standards' -tenant $tenant -message "User device quota is not set to $($Settings.max)" -sev Alert
+            Write-StandardsAlert -message "User device quota is not set to $($Settings.max)" -object $PreviousSetting -tenant $tenant -standardName 'intuneDeviceReg' -standardId $Settings.standardId
+            Write-LogMessage -API 'Standards' -tenant $tenant -message "User device quota is not set to $($Settings.max)" -sev Info
         }
     }
 

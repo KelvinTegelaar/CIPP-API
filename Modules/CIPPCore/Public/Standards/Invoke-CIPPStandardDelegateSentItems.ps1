@@ -82,7 +82,8 @@ function Invoke-CIPPStandardDelegateSentItems {
         if ($null -eq $Mailboxes) {
             Write-LogMessage -API 'Standards' -tenant $Tenant -message 'Delegate Sent Items Style is enabled for all mailboxes' -sev Info
         } else {
-            Write-LogMessage -API 'Standards' -tenant $Tenant -message "Delegate Sent Items Style is not enabled for $($Mailboxes.Count) mailboxes" -sev Alert
+            Write-StandardsAlert -message "Delegate Sent Items Style is not enabled for $($Mailboxes.Count) mailboxes" -object $Mailboxes -tenant $Tenant -standardName 'DelegateSentItems' -standardId $Settings.standardId
+            Write-LogMessage -API 'Standards' -tenant $Tenant -message "Delegate Sent Items Style is not enabled for $($Mailboxes.Count) mailboxes" -sev Info
         }
     }
 

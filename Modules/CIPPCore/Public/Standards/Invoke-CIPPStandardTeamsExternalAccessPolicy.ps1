@@ -69,7 +69,8 @@ Function Invoke-CIPPStandardTeamsExternalAccessPolicy {
         if ($StateIsCorrect -eq $true) {
             Write-LogMessage -API 'Standards' -tenant $Tenant -message 'External Access Policy is set correctly.' -sev Info
         } else {
-            Write-LogMessage -API 'Standards' -tenant $Tenant -message 'External Access Policy is not set correctly.' -sev Alert
+            Write-StandardsAlert -message "External Access Policy is not set correctly." -object $CurrentState -tenant $Tenant -standardName 'TeamsExternalAccessPolicy' -standardId $Settings.standardId
+            Write-LogMessage -API 'Standards' -tenant $Tenant -message 'External Access Policy is not set correctly.' -sev Info
         }
     }
 

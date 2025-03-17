@@ -83,7 +83,8 @@ function Invoke-CIPPStandardPWcompanionAppAllowedState {
         if ($authState) {
             Write-LogMessage -API 'Standards' -tenant $Tenant -message 'companionAppAllowedState is enabled.' -sev Info
         } else {
-            Write-LogMessage -API 'Standards' -tenant $Tenant -message 'companionAppAllowedState is not enabled.' -sev Alert
+            Write-StandardsAlert -message "companionAppAllowedState is not enabled" -object $authenticatorFeaturesState -tenant $Tenant -standardName 'PWcompanionAppAllowedState' -standardId $Settings.standardId
+            Write-LogMessage -API 'Standards' -tenant $Tenant -message 'companionAppAllowedState is not enabled.' -sev Info
         }
     }
 }

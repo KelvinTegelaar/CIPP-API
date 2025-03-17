@@ -92,7 +92,8 @@ Function Invoke-CIPPStandardTeamsMessagingPolicy {
         if ($StateIsCorrect -eq $true) {
             Write-LogMessage -API 'Standards' -tenant $Tenant -message 'Global Teams messaging policy is configured correctly.' -sev Info
         } else {
-            Write-LogMessage -API 'Standards' -tenant $Tenant -message 'Global Teams messaging policy is not configured correctly.' -sev Alert
+            Write-StandardsAlert -message "Global Teams messaging policy is not configured correctly." -object $CurrentState -tenant $Tenant -standardName 'TeamsMessagingPolicy' -standardId $Settings.standardId
+            Write-LogMessage -API 'Standards' -tenant $Tenant -message 'Global Teams messaging policy is not configured correctly.' -sev Info
         }
     }
 

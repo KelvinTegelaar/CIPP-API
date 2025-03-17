@@ -94,7 +94,8 @@ function Invoke-CIPPStandardBranding {
         if ($StateIsCorrect -eq $true) {
             Write-LogMessage -API 'Standards' -Tenant $Tenant -Message 'Branding is correctly set.' -Sev Info
         } else {
-            Write-LogMessage -API 'Standards' -Tenant $Tenant -Message 'Branding is incorrectly set.' -Sev Alert
+            Write-StandardsAlert -message "Branding is incorrectly set." -object $CurrentState -tenant $Tenant -standardName 'Branding' -standardId $Settings.standardId
+            Write-LogMessage -API 'Standards' -Tenant $Tenant -Message 'Branding is incorrectly set.' -Sev Info
         }
     }
 

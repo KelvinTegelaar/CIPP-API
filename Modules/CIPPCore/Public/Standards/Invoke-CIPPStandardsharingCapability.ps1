@@ -75,7 +75,8 @@ function Invoke-CIPPStandardsharingCapability {
         if ($CurrentInfo.sharingCapability -eq $level) {
             Write-LogMessage -API 'Standards' -tenant $Tenant -message "Sharing level is set to $level" -sev Info
         } else {
-            Write-LogMessage -API 'Standards' -tenant $Tenant -message "Sharing level is not set to $level" -sev Alert
+            Write-StandardsAlert -message "Sharing level is not set to $level" -object $CurrentInfo -tenant $Tenant -standardName 'sharingCapability' -standardId $Settings.standardId
+            Write-LogMessage -API 'Standards' -tenant $Tenant -message "Sharing level is not set to $level" -sev Info
         }
     }
 }

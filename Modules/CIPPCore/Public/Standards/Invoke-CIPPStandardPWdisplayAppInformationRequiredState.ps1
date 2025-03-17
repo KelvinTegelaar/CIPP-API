@@ -52,7 +52,8 @@ function Invoke-CIPPStandardPWdisplayAppInformationRequiredState {
         if ($StateIsCorrect -eq $true) {
             Write-LogMessage -API 'Standards' -tenant $tenant -message 'Passwordless with Information and Number Matching is enabled.' -sev Info
         } else {
-            Write-LogMessage -API 'Standards' -tenant $tenant -message 'Passwordless with Information and Number Matching is not enabled.' -sev Alert
+            Write-StandardsAlert -message "Passwordless with Information and Number Matching is not enabled" -object $CurrentState -tenant $tenant -standardName 'PWdisplayAppInformationRequiredState' -standardId $Settings.standardId
+            Write-LogMessage -API 'Standards' -tenant $tenant -message 'Passwordless with Information and Number Matching is not enabled.' -sev Info
         }
     }
 

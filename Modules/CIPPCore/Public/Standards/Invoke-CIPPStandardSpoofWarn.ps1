@@ -106,7 +106,8 @@ function Invoke-CIPPStandardSpoofWarn {
         if ($CurrentInfo.Enabled -eq $true) {
             Write-LogMessage -API 'Standards' -tenant $Tenant -message 'Outlook external spoof warnings are enabled.' -sev Info
         } else {
-            Write-LogMessage -API 'Standards' -tenant $Tenant -message 'Outlook external spoof warnings are not enabled.' -sev Alert
+            Write-StandardsAlert -message "Outlook external spoof warnings are not enabled." -object $CurrentInfo -tenant $Tenant -standardName 'SpoofWarn' -standardId $Settings.standardId
+            Write-LogMessage -API 'Standards' -tenant $Tenant -message 'Outlook external spoof warnings are not enabled.' -sev Info
         }
     }
 }

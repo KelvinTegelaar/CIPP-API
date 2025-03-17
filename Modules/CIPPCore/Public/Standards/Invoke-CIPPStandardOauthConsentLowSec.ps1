@@ -85,7 +85,8 @@ function Invoke-CIPPStandardOauthConsentLowSec {
 
     if ($Settings.alert -eq $true) {
         if ($State.permissionGrantPolicyIdsAssignedToDefaultUserRole -notin @('managePermissionGrantsForSelf.microsoft-user-default-low')) {
-            Write-LogMessage -API 'Standards' -tenant $tenant -message 'Application Consent Mode(microsoft-user-default-low) is not enabled.' -sev Alert
+            Write-StandardsAlert -message "Application Consent Mode(microsoft-user-default-low) is not enabled" -object $State -tenant $tenant -standardName 'OauthConsentLowSec' -standardId $Settings.standardId
+            Write-LogMessage -API 'Standards' -tenant $tenant -message 'Application Consent Mode(microsoft-user-default-low) is not enabled.' -sev Info
         } else {
             Write-LogMessage -API 'Standards' -tenant $tenant -message 'Application Consent Mode(microsoft-user-default-low) is enabled.' -sev Info
         }

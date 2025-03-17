@@ -66,7 +66,8 @@ function Invoke-CIPPStandardFocusedInbox {
         if ($StateIsCorrect -eq $true) {
             Write-LogMessage -API 'Standards' -tenant $Tenant -message "Focused Inbox is set to $state." -sev Info
         } else {
-            Write-LogMessage -API 'Standards' -tenant $Tenant -message "Focused Inbox is not set to $state." -sev Alert
+            Write-StandardsAlert -message "Focused Inbox is not set to $state" -object $CurrentState -tenant $Tenant -standardName 'FocusedInbox' -standardId $Settings.standardId
+            Write-LogMessage -API 'Standards' -tenant $Tenant -message "Focused Inbox is not set to $state." -sev Info
         }
     }
 

@@ -26,7 +26,8 @@ function Invoke-CIPPStandardDisableEntraPortal {
         if ($CurrentInfo.isSoftwareOathEnabled) {
             Write-LogMessage -API 'Standards' -tenant $tenant -message 'Disable user access to Entra Portal is enabled' -sev Info
         } else {
-            Write-LogMessage -API 'Standards' -tenant $tenant -message 'Disable user access to Entra Portal is not enabled' -sev Alert
+            Write-StandardsAlert -message "Disable user access to Entra Portal is not enabled" -object $CurrentInfo -tenant $tenant -standardName 'DisableEntraPortal' -standardId $Settings.standardId
+            Write-LogMessage -API 'Standards' -tenant $tenant -message 'Disable user access to Entra Portal is not enabled' -sev Info
         }
     }
 

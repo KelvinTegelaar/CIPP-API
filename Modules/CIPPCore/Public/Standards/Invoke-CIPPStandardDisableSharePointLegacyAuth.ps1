@@ -55,7 +55,8 @@ function Invoke-CIPPStandardDisableSharePointLegacyAuth {
     if ($Settings.alert -eq $true) {
 
         if ($CurrentInfo.isLegacyAuthProtocolsEnabled) {
-            Write-LogMessage -API 'Standards' -tenant $tenant -message 'SharePoint basic authentication is enabled' -sev Alert
+            Write-StandardsAlert -message "SharePoint basic authentication is enabled" -object $CurrentInfo -tenant $tenant -standardName 'DisableSharePointLegacyAuth' -standardId $Settings.standardId
+            Write-LogMessage -API 'Standards' -tenant $tenant -message 'SharePoint basic authentication is enabled' -sev Info
         } else {
             Write-LogMessage -API 'Standards' -tenant $tenant -message 'SharePoint basic authentication is disabled' -sev Info
         }

@@ -83,7 +83,8 @@ function Invoke-CIPPStandardDisableBasicAuthSMTP {
             if ($CurrentInfo.SmtpClientAuthenticationDisabled -and $SMTPusers.Count -eq 0) {
                 Write-LogMessage -API 'Standards' -tenant $tenant -message 'SMTP Basic Authentication for tenant and all users is disabled' -sev Info
             } else {
-                Write-LogMessage -API 'Standards' -tenant $tenant -message ($LogMessage -join '') -sev Alert
+                Write-StandardsAlert -message ($LogMessage -join '') -object @{TenantSMTPAuthDisabled = $CurrentInfo.SmtpClientAuthenticationDisabled; UsersWithSMTPAuthEnabled = $SMTPusers.Count} -tenant $tenant -standardName 'DisableBasicAuthSMTP' -standardId $Settings.standardId
+                Write-LogMessage -API 'Standards' -tenant $tenant -message ($LogMessage -join '') -sev Info
             }
         }
 

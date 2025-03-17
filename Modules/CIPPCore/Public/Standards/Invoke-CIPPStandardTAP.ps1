@@ -60,7 +60,8 @@ function Invoke-CIPPStandardTAP {
         if ($StateIsCorrect -eq $true) {
             Write-LogMessage -API 'Standards' -tenant $Tenant -message 'Temporary Access Passwords is enabled.' -sev Info
         } else {
-            Write-LogMessage -API 'Standards' -tenant $Tenant -message 'Temporary Access Passwords is not enabled.' -sev Alert
+            Write-StandardsAlert -message "Temporary Access Passwords is not enabled." -object $CurrentState -tenant $Tenant -standardName 'TAP' -standardId $Settings.standardId
+            Write-LogMessage -API 'Standards' -tenant $Tenant -message 'Temporary Access Passwords is not enabled.' -sev Info
         }
     }
 }

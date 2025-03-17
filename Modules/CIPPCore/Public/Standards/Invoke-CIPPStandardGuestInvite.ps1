@@ -68,7 +68,8 @@ function Invoke-CIPPStandardGuestInvite {
         if ($StateIsCorrect -eq $true) {
             Write-LogMessage -API 'Standards' -tenant $tenant -message 'Guest Invite settings is enabled.' -sev Info
         } else {
-            Write-LogMessage -API 'Standards' -tenant $tenant -message 'Guest Invite settings is not enabled.' -sev Alert
+            Write-StandardsAlert -message "Guest Invite settings is not enabled" -object $CurrentState -tenant $tenant -standardName 'GuestInvite' -standardId $Settings.standardId
+            Write-LogMessage -API 'Standards' -tenant $tenant -message 'Guest Invite settings is not enabled.' -sev Info
         }
     }
 

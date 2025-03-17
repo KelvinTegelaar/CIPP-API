@@ -56,7 +56,8 @@ function Invoke-CIPPStandardOutBoundSpamAlert {
         if ($CurrentInfo.NotifyOutboundSpam -eq $true) {
             Write-LogMessage -API 'Standards' -tenant $tenant -message "Outbound spam filter alert is set to $($CurrentInfo.NotifyOutboundSpamRecipients)" -sev Info
         } else {
-            Write-LogMessage -API 'Standards' -tenant $tenant -message 'Outbound spam filter alert is not set' -sev Alert
+            Write-StandardsAlert -message "Outbound spam filter alert is not set" -object $CurrentInfo -tenant $tenant -standardName 'OutBoundSpamAlert' -standardId $Settings.standardId
+            Write-LogMessage -API 'Standards' -tenant $tenant -message 'Outbound spam filter alert is not set' -sev Info
         }
     }
 

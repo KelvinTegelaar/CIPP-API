@@ -102,7 +102,8 @@ function Invoke-CIPPStandardRetentionPolicyTag {
         if ($StateIsCorrect -eq $true) {
             Write-LogMessage -API 'Standards' -tenant $Tenant -message 'Retention Policy is enabled' -sev Info
         } else {
-            Write-LogMessage -API 'Standards' -tenant $Tenant -message 'Retention Policy is not enabled' -sev Alert
+            Write-StandardsAlert -message "Retention Policy is not enabled" -object $CurrentState -tenant $Tenant -standardName 'RetentionPolicyTag' -standardId $Settings.standardId
+            Write-LogMessage -API 'Standards' -tenant $Tenant -message 'Retention Policy is not enabled' -sev Info
         }
     }
 

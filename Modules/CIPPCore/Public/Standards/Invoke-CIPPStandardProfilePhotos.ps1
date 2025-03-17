@@ -103,9 +103,10 @@ function Invoke-CIPPStandardProfilePhotos {
 
     if ($Settings.alert -eq $true) {
         if ($CurrentStatesCorrect -eq $false) {
+            Write-StandardsAlert -message "Profile photo settings do not match desired state: $StateValue" -object $CurrentOWAState -tenant $Tenant -standardName 'ProfilePhotos' -standardId $Settings.standardId
             Write-LogMessage -API 'Standards' -tenant $Tenant -message "Profile photo settings do not match desired state: $StateValue" -sev Info
         } else {
-            Write-LogMessage -API 'Standards' -tenant $Tenant -message "Profile photo settings match desired state: $StateValue" -sev Alert
+            Write-LogMessage -API 'Standards' -tenant $Tenant -message "Profile photo settings match desired state: $StateValue" -sev Info
         }
     }
 

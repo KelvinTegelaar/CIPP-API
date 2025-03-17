@@ -54,7 +54,8 @@ function Invoke-CIPPStandardDisableAdditionalStorageProviders {
 
     if ($Settings.alert -eq $true) {
         if ($AdditionalStorageProvidersState.AdditionalStorageProvidersAvailable) {
-            Write-LogMessage -API 'Standards' -tenant $tenant -message 'OWA additional storage providers are enabled' -sev Alert
+            Write-StandardsAlert -message "OWA additional storage providers are enabled" -object $AdditionalStorageProvidersState -tenant $tenant -standardName 'DisableAdditionalStorageProviders' -standardId $Settings.standardId
+            Write-LogMessage -API 'Standards' -tenant $tenant -message 'OWA additional storage providers are enabled' -sev Info
         } else {
             Write-LogMessage -API 'Standards' -tenant $tenant -message 'OWA additional storage providers are disabled' -sev Info
         }

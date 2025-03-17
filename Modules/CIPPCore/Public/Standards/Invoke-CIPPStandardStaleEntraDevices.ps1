@@ -57,7 +57,8 @@ function Invoke-CIPPStandardStaleEntraDevices {
     if ($Settings.alert -eq $true) {
 
         if ($StaleDevices.Count -gt 0) {
-            Write-LogMessage -API 'Standards' -tenant $Tenant -message "$($StaleDevices.Count) Stale devices found" -sev Alert
+            Write-StandardsAlert -message "$($StaleDevices.Count) Stale devices found" -object $StaleDevices -tenant $Tenant -standardName 'StaleEntraDevices' -standardId $Settings.standardId
+            Write-LogMessage -API 'Standards' -tenant $Tenant -message "$($StaleDevices.Count) Stale devices found" -sev Info
         } else {
             Write-LogMessage -API 'Standards' -tenant $Tenant -message 'No stale devices found' -sev Info
         }

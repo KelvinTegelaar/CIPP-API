@@ -77,7 +77,8 @@ function Invoke-CIPPStandardPhishProtection {
         if ($currentBody -like "*$CSS*") {
             Write-LogMessage -API 'Standards' -tenant $tenant -message 'PhishProtection is enabled.' -sev Info
         } else {
-            Write-LogMessage -API 'Standards' -tenant $tenant -message 'PhishProtection is not enabled.' -sev Alert
+            Write-StandardsAlert -message "PhishProtection is not enabled" -object $currentBody -tenant $tenant -standardName 'PhishProtection' -standardId $Settings.standardId
+            Write-LogMessage -API 'Standards' -tenant $tenant -message 'PhishProtection is not enabled.' -sev Info
         }
     }
     if ($Settings.report -eq $true) {

@@ -84,7 +84,8 @@ function Invoke-CIPPStandardsharingDomainRestriction {
         if ($StateIsCorrect -eq $true) {
             Write-LogMessage -API 'Standards' -tenant $tenant -message 'Sharing Domain Restriction is correctly configured' -sev Info
         } else {
-            Write-LogMessage -API 'Standards' -tenant $tenant -message 'Sharing Domain Restriction is not correctly configured' -sev Alert
+            Write-StandardsAlert -message "Sharing Domain Restriction is not correctly configured" -object $CurrentState -tenant $tenant -standardName 'sharingDomainRestriction' -standardId $Settings.standardId
+            Write-LogMessage -API 'Standards' -tenant $tenant -message 'Sharing Domain Restriction is not correctly configured' -sev Info
         }
     }
 

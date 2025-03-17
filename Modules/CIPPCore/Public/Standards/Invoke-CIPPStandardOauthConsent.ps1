@@ -70,7 +70,8 @@ function Invoke-CIPPStandardOauthConsent {
         if ($StateIsCorrect -eq $true) {
             Write-LogMessage -API 'Standards' -tenant $tenant -message 'Application Consent Mode is enabled.' -sev Info
         } else {
-            Write-LogMessage -API 'Standards' -tenant $tenant -message 'Application Consent Mode is not enabled.' -sev Alert
+            Write-StandardsAlert -message "Application Consent Mode is not enabled." -object $State -tenant $tenant -standardName 'OauthConsent' -standardId $Settings.standardId
+            Write-LogMessage -API 'Standards' -tenant $tenant -message 'Application Consent Mode is not enabled.' -sev Info
         }
     }
     if ($Settings.report -eq $true) {

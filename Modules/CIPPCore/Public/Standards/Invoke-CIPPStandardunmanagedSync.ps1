@@ -53,7 +53,8 @@ function Invoke-CIPPStandardunmanagedSync {
         if ($CurrentInfo.isUnmanagedSyncAppForTenantRestricted -eq $true) {
             Write-LogMessage -API 'Standards' -tenant $tenant -message 'Sync for unmanaged devices is disabled' -sev Info
         } else {
-            Write-LogMessage -API 'Standards' -tenant $tenant -message 'Sync for unmanaged devices is not disabled' -sev Alert
+            Write-StandardsAlert -message "Sync for unmanaged devices is not disabled" -object $CurrentInfo -tenant $tenant -standardName 'unmanagedSync' -standardId $Settings.standardId
+            Write-LogMessage -API 'Standards' -tenant $tenant -message 'Sync for unmanaged devices is not disabled' -sev Info
         }
     }
 

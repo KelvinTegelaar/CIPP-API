@@ -53,7 +53,8 @@ function Invoke-CIPPStandardDisableSecurityGroupUsers {
         if ($CurrentInfo.defaultUserRolePermissions.allowedToCreateSecurityGroups -eq $false) {
             Write-LogMessage -API 'Standards' -tenant $tenant -message 'Users are not allowed to create Security Groups.' -sev Info
         } else {
-            Write-LogMessage -API 'Standards' -tenant $tenant -message 'Users are allowed to create Security Groups.' -sev Alert
+            Write-StandardsAlert -message "Users are allowed to create Security Groups" -object $CurrentInfo -tenant $tenant -standardName 'DisableSecurityGroupUsers' -standardId $Settings.standardId
+            Write-LogMessage -API 'Standards' -tenant $tenant -message 'Users are allowed to create Security Groups.' -sev Info
         }
     }
 

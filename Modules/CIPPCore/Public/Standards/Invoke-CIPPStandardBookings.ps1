@@ -69,7 +69,8 @@ function Invoke-CIPPStandardBookings {
         if ($StateIsCorrect -eq $true) {
             Write-LogMessage -API 'Standards' -tenant $Tenant -message "The tenant Bookings is set correctly to $state" -sev Info
         } else {
-            Write-LogMessage -API 'Standards' -tenant $Tenant -message "The tenant Bookings is not set correctly to $state" -sev Alert
+            Write-StandardsAlert -message "The tenant Bookings is not set correctly to $state" -object @{CurrentState = $CurrentState; WantedState = $WantedState} -tenant $Tenant -standardName 'Bookings' -standardId $Settings.standardId
+            Write-LogMessage -API 'Standards' -tenant $Tenant -message "The tenant Bookings is not set correctly to $state" -sev Info
         }
     }
 

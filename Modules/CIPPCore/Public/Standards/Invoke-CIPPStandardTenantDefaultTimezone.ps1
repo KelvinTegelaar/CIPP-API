@@ -64,7 +64,8 @@ function Invoke-CIPPStandardTenantDefaultTimezone {
         if ($StateIsCorrect -eq $true) {
             Write-LogMessage -API 'Standards' -tenant $tenant -message "Tenant Default Timezone is set to $ExpectedTimezone." -sev Info
         } else {
-            Write-LogMessage -API 'Standards' -tenant $tenant -message 'Tenant Default Timezone is not set to the desired value.' -sev Alert
+            Write-StandardsAlert -message "Tenant Default Timezone is not set to the desired value." -object $CurrentState -tenant $tenant -standardName 'TenantDefaultTimezone' -standardId $Settings.standardId
+            Write-LogMessage -API 'Standards' -tenant $tenant -message 'Tenant Default Timezone is not set to the desired value.' -sev Info
         }
     }
 }

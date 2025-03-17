@@ -47,7 +47,8 @@ function Invoke-CIPPStandardPerUserMFA {
     }
     if ($Settings.alert -eq $true) {
         if (($UsersWithoutMFA.userPrincipalName | Measure-Object).Count -gt 0) {
-            Write-LogMessage -API 'Standards' -tenant $tenant -message "The following accounts do not have Legacy MFA Enforced: $($UsersWithoutMFA.userPrincipalName -join ', ')" -sev Alert
+            Write-StandardsAlert -message "The following accounts do not have Legacy MFA Enforced: $($UsersWithoutMFA.userPrincipalName -join ', ')" -object $UsersWithoutMFA -tenant $tenant -standardName 'PerUserMFA' -standardId $Settings.standardId
+            Write-LogMessage -API 'Standards' -tenant $tenant -message "The following accounts do not have Legacy MFA Enforced: $($UsersWithoutMFA.userPrincipalName -join ', ')" -sev Info
         } else {
             Write-LogMessage -API 'Standards' -tenant $tenant -message 'No accounts do not have legacy per user MFA Enforced' -sev Info
         }

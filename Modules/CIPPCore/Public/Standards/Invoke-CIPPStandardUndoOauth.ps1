@@ -59,7 +59,8 @@ function Invoke-CIPPStandardUndoOauth {
         if ($StateIsCorrect -eq $true) {
             Write-LogMessage -API 'Standards' -tenant $Tenant -message 'Application Consent Mode is disabled.' -sev Info
         } else {
-            Write-LogMessage -API 'Standards' -tenant $Tenant -message 'Application Consent Mode is not disabled.' -sev Alert
+            Write-StandardsAlert -message "Application Consent Mode is not disabled." -object $CurrentState -tenant $Tenant -standardName 'UndoOauth' -standardId $Settings.standardId
+            Write-LogMessage -API 'Standards' -tenant $Tenant -message 'Application Consent Mode is not disabled.' -sev Info
         }
     }
 

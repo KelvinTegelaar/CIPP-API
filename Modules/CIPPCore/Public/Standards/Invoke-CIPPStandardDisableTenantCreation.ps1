@@ -61,7 +61,8 @@ function Invoke-CIPPStandardDisableTenantCreation {
         if ($StateIsCorrect -eq $true) {
             Write-LogMessage -API 'Standards' -tenant $tenant -message 'Users are not allowed to create tenants.' -sev Info
         } else {
-            Write-LogMessage -API 'Standards' -tenant $tenant -message 'Users are allowed to create tenants.' -sev Alert
+            Write-StandardsAlert -message "Users are allowed to create tenants" -object $CurrentState -tenant $tenant -standardName 'DisableTenantCreation' -standardId $Settings.standardId
+            Write-LogMessage -API 'Standards' -tenant $tenant -message 'Users are allowed to create tenants.' -sev Info
         }
     }
 

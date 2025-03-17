@@ -63,7 +63,8 @@ function Invoke-CIPPStandardPasswordExpireDisabled {
 
     if ($Settings.alert -eq $true) {
         if ($DomainswithoutPassExpire) {
-            Write-LogMessage -API 'Standards' -tenant $tenant -message "Password Expiration is not disabled for the following $($DomainswithoutPassExpire.Count) domains: $($DomainswithoutPassExpire.id -join ', ')" -sev Alert
+            Write-StandardsAlert -message "Password Expiration is not disabled for the following $($DomainswithoutPassExpire.Count) domains: $($DomainswithoutPassExpire.id -join ', ')" -object $DomainswithoutPassExpire -tenant $tenant -standardName 'PasswordExpireDisabled' -standardId $Settings.standardId
+            Write-LogMessage -API 'Standards' -tenant $tenant -message "Password Expiration is not disabled for the following $($DomainswithoutPassExpire.Count) domains: $($DomainswithoutPassExpire.id -join ', ')" -sev Info
         } else {
             Write-LogMessage -API 'Standards' -tenant $tenant -message "Password Expiration is disabled for all $($GraphRequest.Count) domains." -sev Info
         }

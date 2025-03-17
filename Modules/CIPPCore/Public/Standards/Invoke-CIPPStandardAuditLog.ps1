@@ -69,7 +69,8 @@ function Invoke-CIPPStandardAuditLog {
         if ($AuditLogEnabled -eq $true) {
             Write-LogMessage -API 'Standards' -tenant $Tenant -message 'Unified Audit Log is enabled' -sev Info
         } else {
-            Write-LogMessage -API 'Standards' -tenant $Tenant -message 'Unified Audit Log is not enabled' -sev Alert
+            Write-StandardsAlert -message "Unified Audit Log is not enabled" -object @{AuditLogEnabled = $AuditLogEnabled} -tenant $Tenant -standardName 'AuditLog' -standardId $Settings.standardId
+            Write-LogMessage -API 'Standards' -tenant $Tenant -message 'Unified Audit Log is not enabled' -sev Info
         }
     }
 
