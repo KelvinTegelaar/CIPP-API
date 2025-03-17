@@ -118,7 +118,7 @@ function Invoke-ExecApiClient {
             $TenantId = $ENV:TenantId
             $RGName = $ENV:WEBSITE_RESOURCE_GROUP
             $FunctionAppName = $ENV:WEBSITE_SITE_NAME
-            $AllClients = Get-CIPPAzDataTableEntity @Table -Filter 'Enabled eq true'
+            $AllClients = Get-CIPPAzDataTableEntity @Table -Filter 'Enabled eq true' | Where-Object { ![string]::IsNullOrEmpty($_.RowKey) }
             $ClientIds = $AllClients.RowKey
             try {
                 Set-CippApiAuth -RGName $RGName -FunctionAppName $FunctionAppName -TenantId $TenantId -ClientIds $ClientIds
