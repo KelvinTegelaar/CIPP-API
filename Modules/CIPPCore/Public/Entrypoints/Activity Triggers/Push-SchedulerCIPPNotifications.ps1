@@ -53,7 +53,7 @@ function Push-SchedulerCIPPNotifications {
                 }
             }
             if ($CurrentStandardsLogs) {
-                foreach ($tenant in ($CurrentLog.Tenant | Sort-Object -Unique)) {
+                foreach ($tenant in ($CurrentStandardsLogs.Tenant | Sort-Object -Unique)) {
                     $Data = ($CurrentStandardsLogs | Where-Object -Property tenant -EQ $tenant)
                     $Subject = "$($Tenant): Standards are out of sync for $tenant"
                     $HTMLContent = New-CIPPAlertTemplate -Data $Data -Format 'html' -InputObject 'standards'

@@ -25,15 +25,21 @@ function New-CIPPAlertTemplate {
         $DataHTML = ($Data | Select-Object * -ExcludeProperty Etag, PartitionKey, TimeStamp | ConvertTo-Html | Out-String).Replace('<table>', ' <table class="table-modern">')
         $IntroText = "<p>You've configured CIPP to send you alerts based on the logbook. The following alerts match your configured rules</p>$dataHTML"
         $ButtonUrl = "$CIPPURL/cipp/logs"
-        $ButtonText = 'C heck logbook information'
+        $ButtonText = 'Check logbook information'
     }
     if ($InputObject -eq 'standards') {
         $DataHTML = foreach ($object in $data) {
-            "<p>For the standard $($object.standardName) in template {{Template Name }} we've detected:</p> <li>$($object.message)</li>"
+            "<p>For the standard $($object.standardName) in template {{Template Name }} we've detected the following:</p> <li>$($object.message)</li>"
             if ($object.object) {
                 $object.object = $object.object | ConvertFrom-Json
                 $object.object = $object.object | Select-Object * -ExcludeProperty Etag, PartitionKey, TimeStamp
-                ($object.object.compare | ConvertTo-Html -Fragment | Out-String).Replace('<table>', ' <table class="table-modern">')
+                if ($object.object.compare) {
+                    '<p>The following differences have been detected:</p>'
+                   ($object.object.compare | ConvertTo-Html -Fragment | Out-String).Replace('<table>', ' <table class="table-modern">')
+                } else {
+                    '<p>This is a table representation of the current settings:</p>'
+                    ($object.object | ConvertTo-Html -Fragment -As List | Out-String).Replace('<table>', ' <table class="table-modern">')
+                }
             }
 
         }
