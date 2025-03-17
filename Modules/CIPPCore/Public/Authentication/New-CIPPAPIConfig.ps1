@@ -9,6 +9,14 @@ function New-CIPPAPIConfig {
         [string]$AppId
     )
 
+    $Permissions = Get-GraphToken -tenantid $env:TenantID -scope 'https://graph.microsoft.com/.default' -AsApp $true -SkipCache $true -ReturnRefresh $true
+    $Token = Read-JwtAccessDetails -Token $Permissions.access_token
+    $Permissions = $Token.Roles | Where-Object { $_ -match 'Application.ReadWrite.All' -or $_ -match 'Directory.ReadWrite.All' }
+    if (!$Permissions -or $Permissions.Count -lt 2) {
+        Write-LogMessage -headers $Headers -API $APINAME -tenant 'None '-message 'Insufficient permissions to create API App' -Sev 'Error'
+        throw 'Insufficient permissions to create API App. This integration requires the following Application permissions in the partner tenant. Application.ReadWrite.All, Directory.ReadWrite.All'
+    }
+
     try {
         if ($AppId) {
             $APIApp = New-GraphGetRequest -uri "https://graph.microsoft.com/v1.0/applications(appid='$($AppId)')" -NoAuthCheck $true
