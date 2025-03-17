@@ -116,7 +116,7 @@ function Invoke-CIPPStandardIntuneTemplate {
     }
 
     if ($Settings.report) {
-        #think about how to store this.
+        #think about how to store this. Consideration: standards are stored seperately from BPA so they can be stored in the same format as the input.
         Add-CIPPBPAField -FieldName "policy-$displayname" -FieldValue $Compare -StoreAs bool -Tenant $tenant
     }
 }
