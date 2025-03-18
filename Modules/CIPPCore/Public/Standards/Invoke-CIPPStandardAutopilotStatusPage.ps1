@@ -61,42 +61,50 @@ function Invoke-CIPPStandardAutopilotStatusPage {
         }
     }
 
-    if ($Settings.alert) {
-        try {
-            # Get current Autopilot enrollment status page configuration
-            $CurrentConfig = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/deviceManagement/deviceEnrollmentConfigurations?`$filter=startswith(displayName,'Windows Autopilot')" -tenantid $Tenant
-            
-            # Check if the enrollment status page exists
-            $ESPConfig = $CurrentConfig.value | Where-Object { $_.displayName -like "*Enrollment Status Page*" }
-            
-            if (!$ESPConfig) {
-                Write-StandardsAlert -message "Autopilot Enrollment Status Page is not configured" -object @{} -tenant $Tenant -standardName 'AutopilotStatusPage' -standardId $Settings.standardId
-                Write-LogMessage -API 'Standards' -tenant $tenant -message "Autopilot Enrollment Status Page is not configured" -sev Info
-            } else {
-                # Check if settings match what's expected
-                $SettingsMismatch = $false
-                $MismatchDetails = @{}
-                
-                # Check timeout setting
-                if ($ESPConfig.priority -ne 0) {
-                    $SettingsMismatch = $true
-                    $MismatchDetails.Priority = @{Expected = 0; Actual = $ESPConfig.priority}
-                }
-                
-                # Check other settings as needed
-                # Note: The actual property names may differ from what's shown here
-                # You would need to examine the actual response to determine the correct property names
-                
-                if ($SettingsMismatch) {
-                    Write-StandardsAlert -message "Autopilot Enrollment Status Page settings do not match expected configuration" -object $MismatchDetails -tenant $Tenant -standardName 'AutopilotStatusPage' -standardId $Settings.standardId
-                    Write-LogMessage -API 'Standards' -tenant $tenant -message "Autopilot Enrollment Status Page settings do not match expected configuration" -sev Info
-                } else {
-                    Write-LogMessage -API 'Standards' -tenant $tenant -message "Autopilot Enrollment Status Page is configured correctly" -sev Info
-                }
+    # Get current Autopilot enrollment status page configuration
+    try {
+        $CurrentConfig = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/deviceManagement/deviceEnrollmentConfigurations?`$filter=startswith(displayName,'Windows Autopilot')" -tenantid $Tenant
+        
+        # Check if the enrollment status page exists
+        $ESPConfig = $CurrentConfig.value | Where-Object { $_.displayName -like '*Enrollment Status Page*' }
+        
+        $ESPConfigured = $null -ne $ESPConfig
+        
+        # Check if settings match what's expected
+        $SettingsMismatch = $false
+        $MismatchDetails = @{}
+        
+        if ($ESPConfigured) {
+            # Check timeout setting
+            if ($ESPConfig.priority -ne 0) {
+                $SettingsMismatch = $true
+                $MismatchDetails.Priority = @{Expected = 0; Actual = $ESPConfig.priority }
             }
-        } catch {
-            $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
-            Write-LogMessage -API 'Standards' -tenant $tenant -message "Failed to check Autopilot Enrollment Status Page: $ErrorMessage" -sev Error
+
+        }
+        
+        $StateIsCorrect = $ESPConfigured -and (-not $SettingsMismatch)
+    } catch {
+        $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
+        Write-LogMessage -API 'Standards' -tenant $tenant -message "Failed to check Autopilot Enrollment Status Page: $ErrorMessage" -sev Error
+        $StateIsCorrect = $false
+    }
+    
+    if ($Settings.report -eq $true) {
+        $state = $StateIsCorrect -eq $true ? $true : $StateIsCorrect
+        Set-CIPPStandardsCompareField -FieldName 'standard.AutopilotStatusPage' -FieldValue $state -TenantFilter $tenant
+        Add-CIPPBPAField -FieldName 'AutopilotStatusPage' -FieldValue $StateIsCorrect -StoreAs bool -Tenant $tenant
+    }
+
+    if ($Settings.alert) {
+        if (!$ESPConfigured) {
+            Write-StandardsAlert -message 'Autopilot Enrollment Status Page is not configured' -object @{} -tenant $Tenant -standardName 'AutopilotStatusPage' -standardId $Settings.standardId
+            Write-LogMessage -API 'Standards' -tenant $tenant -message 'Autopilot Enrollment Status Page is not configured' -sev Info
+        } elseif ($SettingsMismatch) {
+            Write-StandardsAlert -message 'Autopilot Enrollment Status Page settings do not match expected configuration' -object $MismatchDetails -tenant $Tenant -standardName 'AutopilotStatusPage' -standardId $Settings.standardId
+            Write-LogMessage -API 'Standards' -tenant $tenant -message 'Autopilot Enrollment Status Page settings do not match expected configuration' -sev Info
+        } else {
+            Write-LogMessage -API 'Standards' -tenant $tenant -message 'Autopilot Enrollment Status Page is configured correctly' -sev Info
         }
     }
 

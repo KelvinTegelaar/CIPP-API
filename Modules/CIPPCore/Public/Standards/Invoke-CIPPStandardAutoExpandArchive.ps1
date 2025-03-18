@@ -53,13 +53,14 @@ function Invoke-CIPPStandardAutoExpandArchive {
         if ($CurrentState) {
             Write-LogMessage -API 'Standards' -tenant $tenant -message 'Auto Expanding Archives is enabled' -sev Info
         } else {
-            Write-StandardsAlert -message "Auto Expanding Archives is not enabled" -object @{CurrentState = $CurrentState} -tenant $tenant -standardName 'AutoExpandArchive' -standardId $Settings.standardId
+            Write-StandardsAlert -message 'Auto Expanding Archives is not enabled' -object @{CurrentState = $CurrentState } -tenant $tenant -standardName 'AutoExpandArchive' -standardId $Settings.standardId
             Write-LogMessage -API 'Standards' -tenant $tenant -message 'Auto Expanding Archives is not enabled' -sev Info
         }
     }
 
     if ($Settings.report -eq $true) {
-
+        $state = $CurrentState -eq $true ? $true : $CurrentState
+        Set-CIPPStandardsCompareField -FieldName 'standard.AutoExpandArchive' -FieldValue $state -TenantFilter $tenant
         Add-CIPPBPAField -FieldName 'AutoExpandingArchive' -FieldValue $CurrentState -StoreAs bool -Tenant $tenant
     }
 }

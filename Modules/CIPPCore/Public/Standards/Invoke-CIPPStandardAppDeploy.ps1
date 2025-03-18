@@ -67,4 +67,10 @@ function Invoke-CIPPStandardAppDeploy {
             Write-LogMessage -API 'Standards' -tenant $tenant -message 'All applications are deployed' -sev Info
         }
     }
+
+    if ($Settings.report -eq $true) {
+        $StateIsCorrect = $MissingApps.Count -eq 0 ? $true : $MissingApps
+        Set-CIPPStandardsCompareField -FieldName 'standard.AppDeploy' -FieldValue $StateIsCorrect -TenantFilter $tenant
+        Add-CIPPBPAField -FieldName 'AppDeploy' -FieldValue $StateIsCorrect -StoreAs bool -Tenant $tenant
+    }
 }

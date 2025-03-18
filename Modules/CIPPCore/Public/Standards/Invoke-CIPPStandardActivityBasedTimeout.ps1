@@ -43,9 +43,6 @@ function Invoke-CIPPStandardActivityBasedTimeout {
         Return
     }
 
-    # Backwards compatibility for v5.7.0 and older
-    if ($null -eq $timeout ) { $timeout = '01:00:00' }
-
     $CurrentState = New-GraphGetRequest -Uri 'https://graph.microsoft.com/beta/policies/activityBasedTimeoutPolicies' -tenantid $Tenant
     $StateIsCorrect = if ($CurrentState.definition -like "*$timeout*") { $true } else { $false }
 
@@ -90,7 +87,7 @@ function Invoke-CIPPStandardActivityBasedTimeout {
     }
 
     if ($Settings.report -eq $true) {
-
+        Set-CIPPStandardsCompareField -FieldName 'standards.ActivityBasedTimeout' -FieldValue $StateIsCorrect -TenantFilter $Tenant
         Add-CIPPBPAField -FieldName 'ActivityBasedTimeout' -FieldValue $StateIsCorrect -StoreAs bool -Tenant $Tenant
     }
 
