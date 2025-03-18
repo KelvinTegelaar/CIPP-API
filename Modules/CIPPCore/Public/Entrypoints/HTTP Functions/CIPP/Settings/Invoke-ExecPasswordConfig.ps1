@@ -11,13 +11,13 @@ Function Invoke-ExecPasswordConfig {
     param($Request, $TriggerMetadata)
 
     $APIName = $Request.Params.CIPPEndpoint
-    Write-LogMessage -headers $Request.Headers -API $APINAME -message 'Accessed this API' -Sev 'Debug'
+    $Headers = $Request.Headers
+    Write-LogMessage -headers $Headers -API $APIName -message 'Accessed this API' -Sev 'Debug'
 
     $Table = Get-CIPPTable -TableName Settings
     $PasswordType = (Get-CIPPAzDataTableEntity @Table)
 
-    # Write to the Azure Functions log stream.
-    Write-Host 'PowerShell HTTP trigger function processed a request.'
+
     $results = try {
         if ($Request.Query.List) {
             @{ passwordType = $PasswordType.passwordType }

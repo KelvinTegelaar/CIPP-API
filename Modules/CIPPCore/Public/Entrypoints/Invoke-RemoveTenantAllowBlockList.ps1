@@ -11,11 +11,11 @@ Function Invoke-RemoveTenantAllowBlockList {
     param($Request, $TriggerMetadata)
 
     $APIName = $Request.Params.CIPPEndpoint
-    $TenantFilter = $Request.Body.tenantFilter
     $Headers = $Request.Headers
     Write-LogMessage -headers $Headers -API $APIName -message 'Accessed this API' -Sev 'Debug'
 
     # Interact with query parameters or the body of the request.
+    $TenantFilter = $Request.Body.tenantFilter
     $Entries = $Request.Body.Entries
     $ListType = $Request.Body.ListType
 

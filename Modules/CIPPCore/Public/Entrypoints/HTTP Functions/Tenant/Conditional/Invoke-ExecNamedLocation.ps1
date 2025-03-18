@@ -11,13 +11,11 @@ Function Invoke-ExecNamedLocation {
     param($Request, $TriggerMetadata)
 
     $APIName = $Request.Params.CIPPEndpoint
-    Write-LogMessage -headers $Request.Headers -API $APINAME -message 'Accessed this API' -Sev 'Debug'
+    $Headers = $Request.Headers
+    Write-LogMessage -headers $Headers -API $APIName -message 'Accessed this API' -Sev 'Debug'
 
 
-    # Write to the Azure Functions log stream.
-    Write-Host 'PowerShell HTTP trigger function processed a request.'
-
-    $TenantFilter = $Request.Body.TenantFilter ?? $Request.Query.TenantFilter
+    $TenantFilter = $Request.Body.tenantFilter ?? $Request.Query.tenantFilter
     $NamedLocationId = $Request.Body.NamedLocationId ?? $Request.Query.NamedLocationId
     $change = $Request.Body.change ?? $Request.Query.change
     $content = $Request.Body.input ?? $Request.Query.input

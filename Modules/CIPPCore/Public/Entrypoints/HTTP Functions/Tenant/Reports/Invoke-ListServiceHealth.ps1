@@ -12,9 +12,10 @@ Function Invoke-ListServiceHealth {
 
     $APIName = $Request.Params.CIPPEndpoint
     $Headers = $Request.Headers
-    $TenantFilter = $Request.Query.tenantFilter
     Write-LogMessage -headers $Headers -API $APIName -message 'Accessed this API' -Sev 'Debug'
 
+    # Interact with query parameters or the body of the request.
+    $TenantFilter = $Request.Query.tenantFilter
 
     if ($TenantFilter -eq 'AllTenants') {
         $ResultHealthSummary = Get-Tenants | ForEach-Object -Parallel {

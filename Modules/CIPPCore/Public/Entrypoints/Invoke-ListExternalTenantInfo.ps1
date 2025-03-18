@@ -11,19 +11,20 @@ Function Invoke-ListExternalTenantInfo {
     param($Request, $TriggerMetadata)
 
     $APIName = $Request.Params.CIPPEndpoint
-    Write-LogMessage -headers $Request.Headers -API $APINAME -message 'Accessed this API' -Sev 'Debug'
+    $Headers = $Request.Headers
+    Write-LogMessage -headers $Headers -API $APIName -message 'Accessed this API' -Sev 'Debug'
 
-    # Write to the Azure Functions log stream.
-    Write-Host 'PowerShell HTTP trigger function processed a request.'
+
 
     # Interact with query parameters or the body of the request.
-    $Tenant = $request.query.tenant
+    $Tenant = $Request.Query.tenant
+    $TenantFilter = $Request.Query.tenantFilter
 
     # Normalize to tenantid and determine if tenant exists
-    $TenantId = (Invoke-RestMethod -Method GET "https://login.windows.net/$tenant/.well-known/openid-configuration").token_endpoint.Split('/')[3]
+    $TenantId = (Invoke-RestMethod -Method GET "https://login.windows.net/$Tenant/.well-known/openid-configuration").token_endpoint.Split('/')[3]
 
     if ($TenantId) {
-        $GraphRequest = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/tenantRelationships/findTenantInformationByTenantId(tenantId='$TenantId')" -noauthcheck $true -tenantid $TenantFilter
+        $GraphRequest = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/tenantRelationships/findTenantInformationByTenantId(tenantId='$TenantId')" -NoAuthCheck $true -tenantid $TenantFilter
         $StatusCode = [HttpStatusCode]::OK
     }
 
@@ -52,17 +53,17 @@ Function Invoke-ListExternalTenantInfo {
 "@
 
         # Create the headers
-        $headers = @{
+        $AutoDiscoverHeaders = @{
             'Content-Type' = 'text/xml; charset=utf-8'
             'SOAPAction'   = '"http://schemas.microsoft.com/exchange/2010/Autodiscover/Autodiscover/GetFederationInformation"'
             'User-Agent'   = 'AutodiscoverClient'
         }
 
         # Invoke
-        $response = Invoke-RestMethod -UseBasicParsing -Method Post -Uri 'https://autodiscover-s.outlook.com/autodiscover/autodiscover.svc' -Body $body -Headers $headers
+        $Response = Invoke-RestMethod -UseBasicParsing -Method Post -Uri 'https://autodiscover-s.outlook.com/autodiscover/autodiscover.svc' -Body $body -Headers $AutoDiscoverHeaders
 
         # Return
-        $TenantDomains = $response.Envelope.body.GetFederationInformationResponseMessage.response.Domains.Domain | Sort-Object
+        $TenantDomains = $Response.Envelope.body.GetFederationInformationResponseMessage.response.Domains.Domain | Sort-Object
     }
 
     $results = [PSCustomObject]@{

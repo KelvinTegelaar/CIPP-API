@@ -10,7 +10,8 @@ Function Invoke-AddAlert {
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
     $APIName = $Request.Params.CIPPEndpoint
-    Write-LogMessage -headers $Request.Headers -API $APINAME -message 'Accessed this API' -Sev 'Debug'
+    $Headers = $Request.Headers
+    Write-LogMessage -headers $Headers -API $APIName -message 'Accessed this API' -Sev 'Debug'
     $Tenants = $request.body.tenantFilter
     $Conditions = $request.body.conditions | ConvertTo-Json -Compress -Depth 10 | Out-String
     $TenantsJson = $Tenants | ConvertTo-Json -Compress -Depth 10 | Out-String

@@ -11,7 +11,8 @@ Function Invoke-ListUsers {
     param($Request, $TriggerMetadata)
 
     $APIName = $Request.Params.CIPPEndpoint
-    Write-LogMessage -headers $Request.Headers -API $APIName -message 'Accessed this API' -Sev 'Debug'
+    $Headers = $Request.Headers
+    Write-LogMessage -headers $Headers -API $APIName -message 'Accessed this API' -Sev 'Debug'
 
     $ConvertTable = Import-Csv ConversionTable.csv | Sort-Object -Property 'guid' -Unique
     # Interact with query parameters or the body of the request.
