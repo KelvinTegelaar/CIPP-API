@@ -80,6 +80,8 @@ function Invoke-CIPPStandardEnableLitigationHold {
 
     if ($Settings.report -eq $true) {
         $filtered = $MailboxesNoLitHold | Select-Object -Property UserPrincipalName
+        $state = $filtered ? $true : $MailboxesNoLitHold
+        Set-CIPPStandardsCompareField -FieldName 'standards.EnableLitHold' -FieldValue $state -Tenant $Tenant
         Add-CIPPBPAField -FieldName 'EnableLitHold' -FieldValue $filtered -StoreAs json -Tenant $Tenant
     }
 }

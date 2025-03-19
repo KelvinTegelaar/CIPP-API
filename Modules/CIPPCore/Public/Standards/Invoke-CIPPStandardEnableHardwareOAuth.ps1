@@ -54,6 +54,8 @@ function Invoke-CIPPStandardEnableHardwareOAuth {
     }
 
     if ($Settings.report -eq $true) {
+        $state = $StateIsCorrect ? $true : $CurrentState
+        Set-CIPPStandardsCompareField -FieldName 'standards.EnableHardwareOAuth' -FieldValue $state -TenantFilter $Tenant
         Add-CIPPBPAField -FieldName 'EnableHardwareOAuth' -FieldValue $StateIsCorrect -StoreAs bool -Tenant $tenant
     }
 }

@@ -109,7 +109,7 @@ function Invoke-CIPPStandardEnableMailboxAuditing {
 
     if ($Settings.alert -eq $true) {
         if ($AuditState) {
-            Write-StandardsAlert -message "Tenant level mailbox audit is not enabled" -object $AuditState -tenant $Tenant -standardName 'EnableMailboxAuditing' -standardId $Settings.standardId
+            Write-StandardsAlert -message 'Tenant level mailbox audit is not enabled' -object $AuditState -tenant $Tenant -standardName 'EnableMailboxAuditing' -standardId $Settings.standardId
             Write-LogMessage -API 'Standards' -tenant $Tenant -message 'Tenant level mailbox audit is not enabled' -sev Info
         } else {
             Write-LogMessage -API 'Standards' -tenant $Tenant -message 'Tenant level mailbox audit is enabled' -sev Info
@@ -118,6 +118,7 @@ function Invoke-CIPPStandardEnableMailboxAuditing {
 
     if ($Settings.report -eq $true) {
         $AuditState = -not $AuditState
+        Set-CIPPStandardsCompareField -FieldName 'standards.EnableMailboxAuditing' -FieldValue $AuditState -Tenant $Tenant
         Add-CIPPBPAField -FieldName 'MailboxAuditingEnabled' -FieldValue $AuditState -StoreAs bool -Tenant $Tenant
     }
 
