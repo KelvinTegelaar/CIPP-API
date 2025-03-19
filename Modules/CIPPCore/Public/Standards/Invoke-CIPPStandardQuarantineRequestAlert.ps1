@@ -29,13 +29,12 @@ function Invoke-CIPPStandardQuarantineRequestAlert {
     #>
 
     param ($Tenant, $Settings)
-    ##$Rerun -Type Standard -Tenant $Tenant -Settings $Settings 'QuarantineRequestAlert'
 
     $PolicyName = 'CIPP User requested to release a quarantined message'
 
     $CurrentState = New-ExoRequest -TenantId $Tenant -cmdlet 'Get-ProtectionAlert' -Compliance |
-    Where-Object { $_.Name -eq $PolicyName } |
-    Select-Object -Property *
+        Where-Object { $_.Name -eq $PolicyName } |
+        Select-Object -Property *
 
     $StateIsCorrect = ($CurrentState.NotifyUser -contains $Settings.NotifyUser)
 
@@ -85,5 +84,12 @@ function Invoke-CIPPStandardQuarantineRequestAlert {
 
     if ($Settings.report -eq $true) {
         Add-CIPPBPAField -FieldName 'QuarantineRequestAlert' -FieldValue $StateIsCorrect -StoreAs bool -Tenant $Tenant
+
+        if ($StateIsCorrect) {
+            $FieldValue = $true
+        } else {
+            $FieldValue = $CurrentState
+        }
+        Set-CIPPStandardsCompareField -FieldName 'standards.QuarantineRequestAlert' -FieldValue $FieldValue -Tenant $Tenant
     }
 }
