@@ -58,12 +58,13 @@ function Invoke-CIPPStandardEnableCustomerLockbox {
         if ($CustomerLockboxStatus) {
             Write-LogMessage -API 'Standards' -tenant $tenant -message 'Customer Lockbox is enabled' -sev Info
         } else {
-            Write-StandardsAlert -message "Customer Lockbox is not enabled" -object $CustomerLockboxStatus -tenant $tenant -standardName 'EnableCustomerLockbox' -standardId $Settings.standardId
+            Write-StandardsAlert -message 'Customer Lockbox is not enabled' -object $CustomerLockboxStatus -tenant $tenant -standardName 'EnableCustomerLockbox' -standardId $Settings.standardId
             Write-LogMessage -API 'Standards' -tenant $tenant -message 'Customer Lockbox is not enabled' -sev Info
         }
     }
 
     if ($Settings.report -eq $true) {
+        Set-StandardsCompareField -FieldName 'CustomerLockboxEnabled' -FieldValue $CustomerLockboxStatus -Tenant $tenant
         Add-CIPPBPAField -FieldName 'CustomerLockboxEnabled' -FieldValue $CustomerLockboxStatus -StoreAs bool -Tenant $tenant
     }
 }

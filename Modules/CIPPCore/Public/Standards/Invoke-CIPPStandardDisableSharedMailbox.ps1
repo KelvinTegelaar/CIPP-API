@@ -64,6 +64,8 @@ function Invoke-CIPPStandardDisableSharedMailbox {
     }
 
     if ($Settings.report -eq $true) {
+        $state = $SharedMailboxList ? $SharedMailboxList : $true
+        Set-CIPPStandardsCompareField -FieldName 'standards.DisableSharedMailbox' -FieldValue $state -Tenant $tenant
         Add-CIPPBPAField -FieldName 'DisableSharedMailbox' -FieldValue $SharedMailboxList -StoreAs json -Tenant $tenant
     }
 }

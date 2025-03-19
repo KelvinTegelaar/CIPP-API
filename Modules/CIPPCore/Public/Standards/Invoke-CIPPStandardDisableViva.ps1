@@ -61,12 +61,14 @@ function Invoke-CIPPStandardDisableViva {
         if ($CurrentSetting.isEnabledInOrganization -eq $false) {
             Write-LogMessage -API 'Standards' -tenant $Tenant -message 'Viva is disabled' -sev Info
         } else {
-            Write-StandardsAlert -message "Viva is not disabled" -object $CurrentSetting -tenant $Tenant -standardName 'DisableViva' -standardId $Settings.standardId
+            Write-StandardsAlert -message 'Viva is not disabled' -object $CurrentSetting -tenant $Tenant -standardName 'DisableViva' -standardId $Settings.standardId
             Write-LogMessage -API 'Standards' -tenant $Tenant -message 'Viva is not disabled' -sev Info
         }
     }
 
     if ($Settings.report -eq $true) {
+        $state = $CurrentSetting.isEnabledInOrganization ? $true : $CurrentSetting
+        Set-CIPPStandardsCompareField -FieldName 'standards.DisableViva' -FieldValue $State -Tenant $Tenant
         Add-CIPPBPAField -FieldName 'DisableViva' -FieldValue $CurrentSetting.isEnabledInOrganization -StoreAs bool -Tenant $Tenant
     }
 
