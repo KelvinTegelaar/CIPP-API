@@ -112,5 +112,11 @@ function Invoke-CIPPStandardProfilePhotos {
 
     if ($Settings.report -eq $true) {
         Add-CIPPBPAField -FieldName 'ProfilePhotos' -FieldValue $CurrentStatesCorrect -StoreAs bool -Tenant $Tenant
+        if ($CurrentStatesCorrect) {
+            $FieldValue = $true
+        } else {
+            $FieldValue = $CurrentOWAState
+        }
+        Set-CIPPStandardsCompareField -FieldName 'standards.ProfilePhotos' -FieldValue $FieldValue -Tenant $Tenant
     }
 }
