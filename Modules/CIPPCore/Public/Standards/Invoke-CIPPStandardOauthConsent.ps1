@@ -32,12 +32,11 @@ function Invoke-CIPPStandardOauthConsent {
     #>
 
     param($tenant, $settings)
-    ##$Rerun -Type Standard -Tenant $Tenant -Settings $Settings 'OauthConsent'
 
     $State = New-GraphGetRequest -Uri 'https://graph.microsoft.com/beta/policies/authorizationPolicy/authorizationPolicy' -tenantid $tenant
     $StateIsCorrect = if ($State.permissionGrantPolicyIdsAssignedToDefaultUserRole -eq 'managePermissionGrantsForSelf.cipp-consent-policy') { $true } else { $false }
 
-    If ($Settings.remediate -eq $true) {
+    if ($Settings.remediate -eq $true) {
         $AllowedAppIdsForTenant = $settings.AllowedApps -split ','
         try {
             if ($State.permissionGrantPolicyIdsAssignedToDefaultUserRole -notin @('managePermissionGrantsForSelf.cipp-consent-policy')) {
@@ -70,11 +69,17 @@ function Invoke-CIPPStandardOauthConsent {
         if ($StateIsCorrect -eq $true) {
             Write-LogMessage -API 'Standards' -tenant $tenant -message 'Application Consent Mode is enabled.' -sev Info
         } else {
-            Write-StandardsAlert -message "Application Consent Mode is not enabled." -object $State -tenant $tenant -standardName 'OauthConsent' -standardId $Settings.standardId
+            Write-StandardsAlert -message 'Application Consent Mode is not enabled.' -object $State -tenant $tenant -standardName 'OauthConsent' -standardId $Settings.standardId
             Write-LogMessage -API 'Standards' -tenant $tenant -message 'Application Consent Mode is not enabled.' -sev Info
         }
     }
     if ($Settings.report -eq $true) {
         Add-CIPPBPAField -FieldName 'OauthConsent' -FieldValue $StateIsCorrect -StoreAs bool -Tenant $tenant
+        if ($StateIsCorrect) {
+            $FieldValue = $true
+        } else {
+            $FieldValue = $State
+        }
+        Set-CIPPStandardsCompareField -FieldName 'standards.OauthConsent' -FieldValue $FieldValue -Tenant $tenant
     }
 }
