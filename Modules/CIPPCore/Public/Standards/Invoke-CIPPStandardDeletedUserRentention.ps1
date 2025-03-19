@@ -32,13 +32,15 @@ function Invoke-CIPPStandardDeletedUserRentention {
     ##$Rerun -Type Standard -Tenant $Tenant -Settings $Settings 'DeletedUserRetention'
 
     $CurrentInfo = New-GraphGetRequest -Uri 'https://graph.microsoft.com/beta/admin/sharepoint/settings' -tenantid $Tenant -AsApp $true
+    $Days = $Settings.Days.value ?? $Settings.Days
 
     if ($Settings.report -eq $true) {
+        $CurrentState = $CurrentInfo.deletedUserPersonalSiteRetentionPeriodInDays -eq $Days ? $true : $CurrentInfo.deletedUserPersonalSiteRetentionPeriodInDays
+        Set-CIPPStandardsCompareField -FieldName 'standards.DeletedUserRentention' -FieldValue $CurrentState -TenantFilter $Tenant
         Add-CIPPBPAField -FieldName 'DeletedUserRentention' -FieldValue $CurrentInfo.deletedUserPersonalSiteRetentionPeriodInDays -StoreAs string -Tenant $Tenant
     }
 
     # Get days value using null-coalescing operator
-    $Days = $Settings.Days.value ?? $Settings.Days
 
     # Input validation
     if (($Days -eq 'Select a value') -and ($Settings.remediate -eq $true -or $Settings.alert -eq $true)) {

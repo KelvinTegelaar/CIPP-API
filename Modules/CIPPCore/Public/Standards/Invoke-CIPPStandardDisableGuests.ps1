@@ -36,7 +36,6 @@ function Invoke-CIPPStandardDisableGuests {
     $GraphRequest = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/users?`$filter=(signInActivity/lastSuccessfulSignInDateTime le $Lookup)&`$select=id,UserPrincipalName,signInActivity,mail,userType,accountEnabled" -scope 'https://graph.microsoft.com/.default' -tenantid $Tenant | Where-Object { $_.userType -EQ 'Guest' -and $_.AccountEnabled -EQ $true }
 
     If ($Settings.remediate -eq $true) {
-
         if ($GraphRequest) {
             foreach ($guest in $GraphRequest) {
                 try {
@@ -63,6 +62,8 @@ function Invoke-CIPPStandardDisableGuests {
     }
     if ($Settings.report -eq $true) {
         $filtered = $GraphRequest | Select-Object -Property UserPrincipalName, id, signInActivity, mail, userType, accountEnabled
+        $state = $filtered ? $filtered : $true
+        Set-CIPPStandardsCompareField -FieldName 'standards.DisableGuests' -FieldValue $state -TenantFilter $Tenant
         Add-CIPPBPAField -FieldName 'DisableGuests' -FieldValue $filtered -StoreAs json -Tenant $tenant
     }
 }

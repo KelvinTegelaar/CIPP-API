@@ -83,16 +83,18 @@ function Invoke-CIPPStandardDisableBasicAuthSMTP {
             if ($CurrentInfo.SmtpClientAuthenticationDisabled -and $SMTPusers.Count -eq 0) {
                 Write-LogMessage -API 'Standards' -tenant $tenant -message 'SMTP Basic Authentication for tenant and all users is disabled' -sev Info
             } else {
-                Write-StandardsAlert -message ($LogMessage -join '') -object @{TenantSMTPAuthDisabled = $CurrentInfo.SmtpClientAuthenticationDisabled; UsersWithSMTPAuthEnabled = $SMTPusers.Count} -tenant $tenant -standardName 'DisableBasicAuthSMTP' -standardId $Settings.standardId
+                Write-StandardsAlert -message ($LogMessage -join '') -object @{TenantSMTPAuthDisabled = $CurrentInfo.SmtpClientAuthenticationDisabled; UsersWithSMTPAuthEnabled = $SMTPusers.Count } -tenant $tenant -standardName 'DisableBasicAuthSMTP' -standardId $Settings.standardId
                 Write-LogMessage -API 'Standards' -tenant $tenant -message ($LogMessage -join '') -sev Info
             }
         }
 
         if ($Settings.report -eq $true) {
             if ($CurrentInfo.SmtpClientAuthenticationDisabled -and $SMTPusers.Count -eq 0) {
+                Set-CIPPStandardsCompareField -FieldName 'standards.DisableBasicAuthSMTP' -FieldValue $true -TenantFilter $Tenant
                 Add-CIPPBPAField -FieldName 'DisableBasicAuthSMTP' -FieldValue $CurrentInfo.SmtpClientAuthenticationDisabled -StoreAs bool -Tenant $tenant
             } else {
                 $Logs = $LogMessage | Select-Object @{n = 'Message'; e = { $_ } }
+                Set-CIPPStandardsCompareField -FieldName 'standards.DisableBasicAuthSMTP' -FieldValue $logs -TenantFilter $Tenant
                 Add-CIPPBPAField -FieldName 'DisableBasicAuthSMTP' -FieldValue $Logs -StoreAs json -Tenant $tenant
             }
         }

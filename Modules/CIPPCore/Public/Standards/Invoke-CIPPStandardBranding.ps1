@@ -94,12 +94,14 @@ function Invoke-CIPPStandardBranding {
         if ($StateIsCorrect -eq $true) {
             Write-LogMessage -API 'Standards' -Tenant $Tenant -Message 'Branding is correctly set.' -Sev Info
         } else {
-            Write-StandardsAlert -message "Branding is incorrectly set." -object $CurrentState -tenant $Tenant -standardName 'Branding' -standardId $Settings.standardId
+            Write-StandardsAlert -message 'Branding is incorrectly set.' -object $CurrentState -tenant $Tenant -standardName 'Branding' -standardId $Settings.standardId
             Write-LogMessage -API 'Standards' -Tenant $Tenant -Message 'Branding is incorrectly set.' -Sev Info
         }
     }
 
     If ($Settings.report -eq $true) {
+        $state = $StateIsCorrect -eq $true ? $true : $StateIsCorrect
+        Set-CIPPStandardsCompareField -FieldName 'standards.Branding' -FieldValue $state -TenantFilter $Tenant
         Add-CIPPBPAField -FieldName 'Branding' -FieldValue [bool]$StateIsCorrect -StoreAs bool -Tenant $Tenant
     }
 }

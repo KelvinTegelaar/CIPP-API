@@ -59,11 +59,11 @@ function Invoke-CIPPStandardDisableM365GroupUsers {
             if (($CurrentState.values | Where-Object { $_.name -eq 'EnableGroupCreation' }).value -eq 'false') {
                 Write-LogMessage -API 'Standards' -tenant $tenant -message 'Users are disabled from creating M365 Groups.' -sev Info
             } else {
-                Write-StandardsAlert -message "Users are not disabled from creating M365 Groups." -object $CurrentState -tenant $tenant -standardName 'DisableM365GroupUsers' -standardId $Settings.standardId
+                Write-StandardsAlert -message 'Users are not disabled from creating M365 Groups.' -object $CurrentState -tenant $tenant -standardName 'DisableM365GroupUsers' -standardId $Settings.standardId
                 Write-LogMessage -API 'Standards' -tenant $tenant -message 'Users are not disabled from creating M365 Groups.' -sev Info
             }
         } else {
-            Write-StandardsAlert -message "Users are not disabled from creating M365 Groups." -object @{CurrentState = $null} -tenant $tenant -standardName 'DisableM365GroupUsers' -standardId $Settings.standardId
+            Write-StandardsAlert -message 'Users are not disabled from creating M365 Groups.' -object @{CurrentState = $null } -tenant $tenant -standardName 'DisableM365GroupUsers' -standardId $Settings.standardId
             Write-LogMessage -API 'Standards' -tenant $tenant -message 'Users are not disabled from creating M365 Groups.' -sev Info
         }
     }
@@ -77,6 +77,7 @@ function Invoke-CIPPStandardDisableM365GroupUsers {
         } else {
             $CurrentState = $false
         }
+        Set-CIPPStandardsCompareField -FieldName 'standards.DisableM365GroupUsers' -FieldValue $CurrentState -TenantFilter $Tenant
         Add-CIPPBPAField -FieldName 'DisableM365GroupUsers' -FieldValue $CurrentState -StoreAs bool -Tenant $tenant
     }
 
