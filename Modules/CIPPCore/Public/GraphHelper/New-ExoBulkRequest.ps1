@@ -130,7 +130,7 @@ function New-ExoBulkRequest {
                 if ($body.'@adminapi.warnings') {
                     Write-Warning ($body.'@adminapi.warnings' | Out-String)
                 }
-                if ($body.error) {
+                if (![string]::IsNullOrEmpty($body.error.details.message) -or ![string]::IsNullOrEmpty($body.error.message)) {
                     if ($body.error.details.message) {
                         $msg = [pscustomobject]@{ error = $body.error.details.message; target = $body.error.details.target }
                     } else {
