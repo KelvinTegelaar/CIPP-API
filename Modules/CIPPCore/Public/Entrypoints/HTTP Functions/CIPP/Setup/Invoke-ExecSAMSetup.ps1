@@ -7,6 +7,7 @@ Function Invoke-ExecSAMSetup {
     .ROLE
         CIPP.AppSettings.ReadWrite
     #>
+    [System.Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSAvoidUsingConvertToSecureStringWithPlainText', '')]
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
 
@@ -24,13 +25,15 @@ Function Invoke-ExecSAMSetup {
         Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
                 ContentType = 'text/html'
                 StatusCode  = [HttpStatusCode]::Forbidden
-                Body        = 'Could not find an admin cookie in your browser. Make sure you do not have an adblocker active, use a Chromium browser, and allow cookies. If our automatic refresh does not work, try pressing the URL bar and hitting enter. We will try to refresh ourselves in 3 seconds.<meta http-equiv="refresh" content="3" />'
+                Body        = 'Could not find an admin cookie in your browser, please confirm that you have the admin role in CIPP. Make sure you do not have an adblocker active, use a Chromium browser, and allow cookies. If our automatic refresh does not work, try pressing the URL bar and hitting enter. We will try to refresh ourselves in 3 seconds.<meta http-equiv="refresh" content="3" />'
             })
         exit
     }
 
-    $APIName = $TriggerMetadata.FunctionName
-    Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -message 'Accessed this API' -Sev 'Debug'
+    $APIName = $Request.Params.CIPPEndpoint
+    $Headers = $Request.Headers
+    Write-LogMessage -headers $Headers -API $APIName -message 'Accessed this API' -Sev 'Debug'
+
     if ($env:AzureWebJobsStorage -eq 'UseDevelopmentStorage=true') {
         $DevSecretsTable = Get-CIPPTable -tablename 'DevSecrets'
         $Secret = Get-CIPPAzDataTableEntity @DevSecretsTable -Filter "PartitionKey eq 'Secret' and RowKey eq 'Secret'"
@@ -52,7 +55,7 @@ Function Invoke-ExecSAMSetup {
         }
     }
     if (!$ENV:SetFromProfile) {
-        Write-Host "We're reloading from KV"
+        Write-Information "We're reloading from KV"
         Get-CIPPAuthentication
     }
 
@@ -76,15 +79,16 @@ Function Invoke-ExecSAMSetup {
                 if ($Request.Body.applicationid) { Set-AzKeyVaultSecret -VaultName $kv -Name 'applicationid' -SecretValue (ConvertTo-SecureString -String $Request.Body.applicationid -AsPlainText -Force) }
                 if ($Request.Body.applicationsecret) { Set-AzKeyVaultSecret -VaultName $kv -Name 'applicationsecret' -SecretValue (ConvertTo-SecureString -String $Request.Body.applicationsecret -AsPlainText -Force) }
             }
+
             $Results = @{ Results = 'The keys have been replaced. Please perform a permissions check.' }
         }
         if ($Request.Query.error -eq 'invalid_client') { $Results = 'Client ID was not found in Azure. Try waiting 10 seconds to try again, if you have gotten this error after 5 minutes, please restart the process.' }
         if ($Request.Query.code) {
             try {
                 $TenantId = $Rows.tenantid
-                if (!$TenantId) { $TenantId = $ENV:TenantID }
+                if (!$TenantId -or $TenantId -eq 'NotStarted') { $TenantId = $ENV:TenantID }
                 $AppID = $Rows.appid
-                if (!$AppID) { $appid = $ENV:ApplicationID }
+                if (!$AppID -or $AppID -eq 'NotStarted') { $appid = $ENV:ApplicationID }
                 $URL = ($Request.headers.'x-ms-original-url').split('?') | Select-Object -First 1
                 if ($env:AzureWebJobsStorage -eq 'UseDevelopmentStorage=true') {
                     $clientsecret = $Secret.ApplicationSecret
@@ -92,7 +96,7 @@ Function Invoke-ExecSAMSetup {
                     $clientsecret = Get-AzKeyVaultSecret -VaultName $kv -Name 'ApplicationSecret' -AsPlainText
                 }
                 if (!$clientsecret) { $clientsecret = $ENV:ApplicationSecret }
-                Write-Host "client_id=$appid&scope=https://graph.microsoft.com/.default+offline_access+openid+profile&code=$($Request.Query.code)&grant_type=authorization_code&redirect_uri=$($url)&client_secret=$clientsecret" -Uri "https://login.microsoftonline.com/$TenantId/oauth2/v2.0/token"
+                Write-Information "client_id=$appid&scope=https://graph.microsoft.com/.default+offline_access+openid+profile&code=$($Request.Query.code)&grant_type=authorization_code&redirect_uri=$($url)&client_secret=$clientsecret" #-Uri "https://login.microsoftonline.com/$TenantId/oauth2/v2.0/token"
                 $RefreshToken = Invoke-RestMethod -Method POST -Body "client_id=$appid&scope=https://graph.microsoft.com/.default+offline_access+openid+profile&code=$($Request.Query.code)&grant_type=authorization_code&redirect_uri=$($url)&client_secret=$clientsecret" -Uri "https://login.microsoftonline.com/$TenantId/oauth2/v2.0/token" -ContentType 'application/x-www-form-urlencoded'
 
                 if ($env:AzureWebJobsStorage -eq 'UseDevelopmentStorage=true') {
@@ -140,7 +144,7 @@ Function Invoke-ExecSAMSetup {
                 $step = 2
             }
             $Token = (New-DeviceLogin -clientid '1b730954-1685-4b74-9bfd-dac224a7b894' -Scope 'https://graph.microsoft.com/.default' -device_code $SAMSetup.device_code)
-            Write-Host "Token is $($token | ConvertTo-Json)"
+            Write-Information "Token is $($token | ConvertTo-Json)"
             if ($Token.access_token) {
                 $step = 2
                 $rows.SamSetup = [string]($Token | ConvertTo-Json)
@@ -166,22 +170,22 @@ Function Invoke-ExecSAMSetup {
                             try {
                                 $SPNDefender = (Invoke-RestMethod 'https://graph.microsoft.com/v1.0/servicePrincipals' -Headers @{ authorization = "Bearer $($Token.access_token)" } -Method POST -Body "{ `"appId`": `"fc780465-2017-40d4-a0c5-307022471b92`" }" -ContentType 'application/json')
                             } catch {
-                                Write-Host "didn't deploy spn for defender, probably already there."
+                                Write-Information "didn't deploy spn for defender, probably already there."
                             }
                             try {
                                 $SPNTeams = (Invoke-RestMethod 'https://graph.microsoft.com/v1.0/servicePrincipals' -Headers @{ authorization = "Bearer $($Token.access_token)" } -Method POST -Body "{ `"appId`": `"48ac35b8-9aa8-4d74-927d-1f4a14a0b239`" }" -ContentType 'application/json')
                             } catch {
-                                Write-Host "didn't deploy spn for Teams, probably already there."
+                                Write-Information "didn't deploy spn for Teams, probably already there."
                             }
                             try {
                                 $SPNO365Manage = (Invoke-RestMethod 'https://graph.microsoft.com/v1.0/servicePrincipals' -Headers @{ authorization = "Bearer $($Token.access_token)" } -Method POST -Body "{ `"appId`": `"c5393580-f805-4401-95e8-94b7a6ef2fc2`" }" -ContentType 'application/json')
                             } catch {
-                                Write-Host "didn't deploy spn for O365 Management, probably already there."
+                                Write-Information "didn't deploy spn for O365 Management, probably already there."
                             }
                             try {
                                 $SPNPartnerCenter = (Invoke-RestMethod 'https://graph.microsoft.com/v1.0/servicePrincipals' -Headers @{ authorization = "Bearer $($Token.access_token)" } -Method POST -Body "{ `"appId`": `"fa3d9a0c-3fb0-42cc-9193-47c7ecd2edbd`" }" -ContentType 'application/json')
                             } catch {
-                                Write-Host "didn't deploy spn for PartnerCenter, probably already there."
+                                Write-Information "didn't deploy spn for PartnerCenter, probably already there."
                             }
                             $SPN = (Invoke-RestMethod 'https://graph.microsoft.com/v1.0/servicePrincipals' -Headers @{ authorization = "Bearer $($Token.access_token)" } -Method POST -Body "{ `"appId`": `"$($AppId.appId)`" }" -ContentType 'application/json')
                             Start-Sleep 3

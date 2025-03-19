@@ -13,11 +13,12 @@ function Invoke-CIPPStandardSPSyncButtonState {
         CAT
             SharePoint Standards
         TAG
-            "mediumimpact"
         ADDEDCOMPONENT
-            {"type":"autoComplete","multiple":false,"label":"SharePoint Sync Button state","name":"standards.SPSyncButtonState.state","options":[{"label":"Disabled","value":"true"},{"label":"Enabled","value":"false"}]}
+            {"type":"autoComplete","multiple":false,"creatable":false,"label":"SharePoint Sync Button state","name":"standards.SPSyncButtonState.state","options":[{"label":"Disabled","value":"true"},{"label":"Enabled","value":"false"}]}
         IMPACT
             Medium Impact
+        ADDEDDATE
+            2024-07-26
         POWERSHELLEQUIVALENT
             Set-SPOTenant -HideSyncButtonOnTeamSite \$true or \$false
         RECOMMENDEDBY
@@ -31,19 +32,21 @@ function Invoke-CIPPStandardSPSyncButtonState {
     ##$Rerun -Type Standard -Tenant $Tenant -Settings $Settings 'SPSyncButtonState'
 
     $CurrentState = Get-CIPPSPOTenant -TenantFilter $Tenant | Select-Object _ObjectIdentity_, TenantFilter, HideSyncButtonOnDocLib
-    $WantedState = [System.Convert]::ToBoolean($Settings.state)
-    $StateIsCorrect = if ($CurrentState.HideSyncButtonOnDocLib -eq $WantedState) { $true } else { $false }
-    $HumanReadableState = if ($WantedState -eq $true) { 'disabled' } else { 'enabled' }
 
     if ($Settings.report -eq $true) {
         Add-CIPPBPAField -FieldName 'SPSyncButtonDisabled' -FieldValue $CurrentState.HideSyncButtonOnDocLib -StoreAs bool -Tenant $Tenant
     }
 
     # Input validation
-    if (([string]::IsNullOrWhiteSpace($Settings.state) -or $Settings.state -eq 'Select a value') -and ($Settings.remediate -eq $true -or $Settings.alert -eq $true)) {
+    $StateValue = $Settings.state.value ?? $Settings.state
+    if (([string]::IsNullOrWhiteSpace($StateValue) -or $StateValue -eq 'Select a value') -and ($Settings.remediate -eq $true -or $Settings.alert -eq $true)) {
         Write-LogMessage -API 'Standards' -tenant $tenant -message 'SPSyncButtonState: Invalid state parameter set' -sev Error
         Return
     }
+
+    $WantedState = [System.Convert]::ToBoolean($StateValue)
+    $StateIsCorrect = if ($CurrentState.HideSyncButtonOnDocLib -eq $WantedState) { $true } else { $false }
+    $HumanReadableState = if ($WantedState -eq $true) { 'disabled' } else { 'enabled' }
 
     if ($Settings.remediate -eq $true) {
         Write-Host 'Time to remediate'

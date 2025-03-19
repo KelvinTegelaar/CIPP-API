@@ -3,13 +3,13 @@ function Set-CIPPCPVConsent {
     param(
         $TenantFilter,
         $APIName = 'CPV Consent',
-        $ExecutingUser,
+        $Headers,
         [bool]$ResetSP = $false
     )
     $Results = [System.Collections.Generic.List[string]]::new()
     $Tenant = Get-Tenants -IncludeAll | Where-Object -Property customerId -EQ $TenantFilter | Select-Object -First 1
     $TenantName = $Tenant.displayName
-    $User = $request.headers.'x-ms-client-principal'
+    $User = $Request.Headers
 
     if ($TenantFilter -eq $env:TenantID) {
         return @('Cannot modify CPV consent on partner tenant')
@@ -59,7 +59,7 @@ function Set-CIPPCPVConsent {
             Add-CIPPAzDataTableEntity @Table -Entity $GraphRequest -Force
         }
         $Results.add("Successfully added CPV Application to tenant $($TenantName)") | Out-Null
-        Write-LogMessage -user $User -API $APINAME -message "Added our Service Principal to $($TenantName)" -Sev 'Info' -tenant $Tenant.defaultDomainName -tenantId $TenantFilter
+        Write-LogMessage -Headers $User -API $APINAME -message "Added our Service Principal to $($TenantName)" -Sev 'Info' -tenant $Tenant.defaultDomainName -tenantId $TenantFilter
     } catch {
         $ErrorMessage = Get-CippException -Exception $_
         if ($ErrorMessage.NormalizedError -like '*Permission entry already exists*') {
@@ -75,7 +75,7 @@ function Set-CIPPCPVConsent {
             Add-CIPPAzDataTableEntity @Table -Entity $GraphRequest -Force
             return @("We've already added our Service Principal to $($TenantName)")
         }
-        Write-LogMessage -user $User -API $APINAME -message "Could not add our Service Principal to the client tenant $($TenantName): $($ErrorMessage.NormalizedError)" -Sev 'Error' -tenant $Tenant.defaultDomainName -tenantId $TenantFilter -LogData $ErrorMessage
+        Write-LogMessage -Headers $User -API $APINAME -message "Could not add our Service Principal to the client tenant $($TenantName): $($ErrorMessage.NormalizedError)" -Sev 'Error' -tenant $Tenant.defaultDomainName -tenantId $TenantFilter -LogData $ErrorMessage
         return @("Could not add our Service Principal to the client tenant $($TenantName). Error: $($ErrorMessage.NormalizedError)")
     }
     return $Results

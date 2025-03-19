@@ -10,29 +10,32 @@ Function Invoke-ExecResetPass {
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
 
-    $APIName = $TriggerMetadata.FunctionName
-    Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -message 'Accessed this API' -Sev 'Debug'
+    $APIName = $Request.Params.CIPPEndpoint
+    Write-LogMessage -headers $Request.Headers -API $APINAME -message 'Accessed this API' -Sev 'Debug'
 
 
-    # Write to the Azure Functions log stream.
-    Write-Host 'PowerShell HTTP trigger function processed a request.'
-    Write-Host "$($Request.query.ID)"
     # Interact with query parameters or the body of the request.
-    $TenantFilter = $Request.Query.TenantFilter
-    $mustChange = [System.Convert]::ToBoolean($request.query.MustChange)
+    $TenantFilter = $Request.Query.tenantFilter ?? $Request.Body.tenantFilter
+    $ID = $Request.Query.ID ?? $Request.Body.ID
+    $DisplayName = $Request.Query.displayName ?? $Request.Body.displayName
+    $MustChange = $Request.Query.MustChange ?? $Request.Body.MustChange
+    $MustChange = [System.Convert]::ToBoolean($MustChange)
 
     try {
-        $Reset = Set-CIPPResetPassword -userid $Request.query.ID -tenantFilter $TenantFilter -APIName $APINAME -ExecutingUser $request.headers.'x-ms-client-principal' -forceChangePasswordNextSignIn $mustChange
-        $Results = [pscustomobject]@{'Results' = $Reset }
+        $Result = Set-CIPPResetPassword -UserID $ID -tenantFilter $TenantFilter -APIName $APINAME -Headers $Request.Headers -forceChangePasswordNextSignIn $MustChange -DisplayName $DisplayName
+        if ($Result.state -eq 'Error') { throw $Result.resultText }
+        $StatusCode = [HttpStatusCode]::OK
     } catch {
-        $Results = [pscustomobject]@{'Results' = "Failed to reset password for $($Request.query.displayName): $($_.Exception.Message)" }
-        Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -message "Failed to reset password for $($Request.query.displayName): $($_.Exception.Message)" -Sev 'Error'
+        $Result = $_.Exception.Message
+        Write-LogMessage -headers $Request.Headers -API $APINAME -message $Result -Sev 'Error'
+        $StatusCode = [HttpStatusCode]::InternalServerError
 
     }
 
+    $Results = [pscustomobject]@{'Results' = $Result }
     # Associate values to output bindings by calling 'Push-OutputBinding'.
     Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
-            StatusCode = [HttpStatusCode]::OK
+            StatusCode = $StatusCode
             Body       = $Results
         })
 

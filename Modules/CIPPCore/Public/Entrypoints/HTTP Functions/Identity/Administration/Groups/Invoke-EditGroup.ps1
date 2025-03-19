@@ -10,8 +10,8 @@ Function Invoke-EditGroup {
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
 
-    $APIName = $TriggerMetadata.FunctionName
-    Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -message 'Accessed this API' -Sev 'Debug'
+    $APIName = $Request.Params.CIPPEndpoint
+    Write-LogMessage -headers $Request.Headers -API $APINAME -message 'Accessed this API' -Sev 'Debug'
 
     $Results = [System.Collections.ArrayList]@()
     $userobj = $Request.body
@@ -38,10 +38,10 @@ Function Invoke-EditGroup {
                 } else {
                     New-GraphPostRequest -uri "https://graph.microsoft.com/beta/groups/$($userobj.groupid)" -tenantid $TenantId -type patch -body $addmemberbody -Verbose
                 }
-                Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $TenantId -message "Added $member to $($GroupName) group" -Sev 'Info'
+                Write-LogMessage -headers $Request.Headers -API $APINAME -tenant $TenantId -message "Added $member to $($GroupName) group" -Sev 'Info'
                 $null = $results.add("Success. $member has been added to $($GroupName)")
             } catch {
-                Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $TenantId -message "Failed to add member $member to $($GroupName). Error:$($_.Exception.Message)" -Sev 'Error'
+                Write-LogMessage -headers $Request.Headers -API $APINAME -tenant $TenantId -message "Failed to add member $member to $($GroupName). Error:$($_.Exception.Message)" -Sev 'Error'
                 $null = $results.add("Failed to add member $member to $($GroupName): $($_.Exception.Message)")
             }
         }
@@ -56,10 +56,10 @@ Function Invoke-EditGroup {
                 if ($GroupType -eq 'Distribution list' -or $GroupType -eq 'Mail-Enabled Security') {
                     $Params = @{ Identity = $userobj.groupid; Member = $member; BypassSecurityGroupManagerCheck = $true }
                     New-ExoRequest -tenantid $TenantId -cmdlet 'Add-DistributionGroupMember' -cmdParams $params -UseSystemMailbox $true
-                    Write-LogMessage -API $APINAME -tenant $TenantId -user $request.headers.'x-ms-client-principal' -message "Added $member to $($GroupName) group" -Sev 'Info'
+                    Write-LogMessage -API $APINAME -tenant $TenantId -headers $Request.Headers -message "Added $member to $($GroupName) group" -Sev 'Info'
                     $null = $results.add("Success. $member has been added to $($GroupName)")
                 } else {
-                    Write-LogMessage -API $APINAME -tenant $TenantId -user $request.headers.'x-ms-client-principal' -message 'You cannot add a contact to a security group' -Sev 'Error'
+                    Write-LogMessage -API $APINAME -tenant $TenantId -headers $Request.Headers -message 'You cannot add a contact to a security group' -Sev 'Error'
                     $null = $results.add('You cannot add a contact to a security group')
                 }
             } catch {
@@ -82,12 +82,12 @@ Function Invoke-EditGroup {
                     $MemberInfo = (New-GraphGetRequest -uri "https://graph.microsoft.com/beta/users/$($_)" -tenantid $TenantId)
                     New-GraphPostRequest -uri "https://graph.microsoft.com/beta/groups/$($userobj.groupid)/members/$($MemberInfo.id)/`$ref" -tenantid $TenantId -type DELETE
                 }
-                Write-LogMessage -API $APINAME -tenant $TenantId -user $request.headers.'x-ms-client-principal' -message "Removed $member from $($GroupName) group" -Sev 'Info'
+                Write-LogMessage -API $APINAME -tenant $TenantId -headers $Request.Headers -message "Removed $member from $($GroupName) group" -Sev 'Info'
                 $null = $results.add("Success. Member $member has been removed from $($GroupName)")
             }
         }
     } catch {
-        Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $TenantId -message "Failed to remove $RemoveContact from $($GroupName). Error:$($_.Exception.Message)" -Sev 'Error'
+        Write-LogMessage -headers $Request.Headers -API $APINAME -tenant $TenantId -message "Failed to remove $RemoveContact from $($GroupName). Error:$($_.Exception.Message)" -Sev 'Error'
         $null = $results.add("Could not remove $RemoveContact from $($GroupName). $($_.Exception.Message)")
     }
 
@@ -105,12 +105,12 @@ Function Invoke-EditGroup {
                     $MemberInfo = (New-GraphGetRequest -uri "https://graph.microsoft.com/beta/users/$($_)" -tenantid $TenantId)
                     New-GraphPostRequest -uri "https://graph.microsoft.com/beta/groups/$($userobj.groupid)/members/$($MemberInfo.id)/`$ref" -tenantid $TenantId -type DELETE
                 }
-                Write-LogMessage -API $APINAME -tenant $TenantId -user $request.headers.'x-ms-client-principal' -message "Removed $member from $($GroupName) group" -Sev 'Info'
+                Write-LogMessage -API $APINAME -tenant $TenantId -headers $Request.Headers -message "Removed $member from $($GroupName) group" -Sev 'Info'
                 $null = $results.add("Success. Member $member has been removed from $($GroupName)")
             }
         }
     } catch {
-        Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $TenantId -message "Failed to remove $RemoveMembers from $($GroupName). Error:$($_.Exception.Message)" -Sev 'Error'
+        Write-LogMessage -headers $Request.Headers -API $APINAME -tenant $TenantId -message "Failed to remove $RemoveMembers from $($GroupName). Error:$($_.Exception.Message)" -Sev 'Error'
         $null = $results.add("Could not remove $RemoveMembers from $($GroupName). $($_.Exception.Message)")
     }
 
@@ -122,7 +122,7 @@ Function Invoke-EditGroup {
                     $ID = 'https://graph.microsoft.com/beta/users/' + (New-GraphGetRequest -uri "https://graph.microsoft.com/beta/users/$($_)" -tenantid $TenantId).id
                     Write-Host $ID
                     $null = New-GraphPostRequest -uri "https://graph.microsoft.com/beta/groups/$($userobj.groupid)/owners/`$ref" -tenantid $TenantId -type POST -body ('{"@odata.id": "' + $ID + '"}')
-                    Write-LogMessage -API $APINAME -tenant $TenantId -user $request.headers.'x-ms-client-principal' -message "Added owner $_ to $($GroupName) group" -Sev 'Info'
+                    Write-LogMessage -API $APINAME -tenant $TenantId -headers $Request.Headers -message "Added owner $_ to $($GroupName) group" -Sev 'Info'
                     $null = $results.add("Success. $_ has been added $($GroupName)")
                 } catch {
                     $null = $results.add("Failed to add owner $_ to $($GroupName): Error:$($_.Exception.Message)")
@@ -132,7 +132,7 @@ Function Invoke-EditGroup {
         }
 
     } catch {
-        Write-LogMessage -user $request.headers.'x-ms-client-principal' -tenant $TenantId -API $APINAME -message "Add member API failed. $($_.Exception.Message)" -Sev 'Error'
+        Write-LogMessage -headers $Request.Headers -tenant $TenantId -API $APINAME -message "Add member API failed. $($_.Exception.Message)" -Sev 'Error'
     }
 
     $RemoveOwners = ($userobj.RemoveOwner).value
@@ -142,7 +142,7 @@ Function Invoke-EditGroup {
                 try {
                     $MemberInfo = (New-GraphGetRequest -uri "https://graph.microsoft.com/beta/users/$($_)" -tenantid $TenantId)
                     New-GraphPostRequest -uri "https://graph.microsoft.com/beta/groups/$($userobj.groupid)/owners/$($MemberInfo.id)/`$ref" -tenantid $TenantId -type DELETE
-                    Write-LogMessage -API $APINAME -tenant $TenantId -user $request.headers.'x-ms-client-principal' -message "Removed $($MemberInfo.UserPrincipalname) from $($userobj.displayname) group" -Sev 'Info'
+                    Write-LogMessage -API $APINAME -tenant $TenantId -headers $Request.Headers -message "Removed $($MemberInfo.UserPrincipalname) from $($userobj.displayname) group" -Sev 'Info'
                     $null = $results.add("Success. Member $_ has been removed from $($GroupName)")
                 } catch {
                     $null = $results.add("Failed to remove $_ from $($GroupName): $($_.Exception.Message)")
@@ -150,17 +150,17 @@ Function Invoke-EditGroup {
             }
         }
     } catch {
-        Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $TenantId -message "Failed to remove $RemoveMembers from $($GroupName). Error:$($_.Exception.Message)" -Sev 'Error'
+        Write-LogMessage -headers $Request.Headers -API $APINAME -tenant $TenantId -message "Failed to remove $RemoveMembers from $($GroupName). Error:$($_.Exception.Message)" -Sev 'Error'
         $body = $results.add("Could not remove $RemoveMembers from $($GroupName). $($_.Exception.Message)")
     }
 
     if ($userobj.allowExternal -eq 'true') {
         try {
-            Set-CIPPGroupAuthentication -ID $userobj.mail -GroupType $GroupType -tenantFilter $TenantId -APIName $APINAME -ExecutingUser $request.headers.'x-ms-client-principal'
+            Set-CIPPGroupAuthentication -ID $userobj.mail -GroupType $GroupType -tenantFilter $TenantId -APIName $APINAME -Headers $Request.Headers
             $body = $results.add("Allowed external senders to send to $($userobj.mail).")
         } catch {
             $body = $results.add("Failed to allow external senders to send to $($userobj.mail).")
-            Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $TenantId -message "Failed to allow external senders for $($userobj.mail). Error:$($_.Exception.Message)" -Sev 'Error'
+            Write-LogMessage -headers $Request.Headers -API $APINAME -tenant $TenantId -message "Failed to allow external senders for $($userobj.mail). Error:$($_.Exception.Message)" -Sev 'Error'
         }
 
     }
@@ -180,10 +180,10 @@ Function Invoke-EditGroup {
 
 
             $body = $results.add("Send Copies of team emails and events to team members inboxes for $($userobj.mail) enabled.")
-            Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $TenantId -message "Send Copies of team emails and events to team members inboxes for $($userobj.mail) enabled." -Sev 'Info'
+            Write-LogMessage -headers $Request.Headers -API $APINAME -tenant $TenantId -message "Send Copies of team emails and events to team members inboxes for $($userobj.mail) enabled." -Sev 'Info'
         } catch {
             $body = $results.add("Failed to Send Copies of team emails and events to team members inboxes for $($userobj.mail).")
-            Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $TenantId -message "Failed to Send Copies of team emails and events to team members inboxes for $($userobj.mail). Error:$($_.Exception.Message)" -Sev 'Error'
+            Write-LogMessage -headers $Request.Headers -API $APINAME -tenant $TenantId -message "Failed to Send Copies of team emails and events to team members inboxes for $($userobj.mail). Error:$($_.Exception.Message)" -Sev 'Error'
         }
     }
 

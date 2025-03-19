@@ -27,7 +27,7 @@ Function Invoke-ExecGDAPRemoveGArole {
             New-GraphPOSTRequest -NoAuthCheck $True -uri "https://graph.microsoft.com/beta/tenantRelationships/delegatedAdminRelationships/$($GDAPID)" -tenantid $env:TenantID -type PATCH -body $RawJSON -AddedHeaders $AddedHeader
 
             $Message = "Removed Global Administrator from $($GDAPID)"
-            Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -message $Message -Sev 'Info'
+            Write-LogMessage -headers $Request.Headers -API $APINAME -message $Message -Sev 'Info'
         } else {
             if ($CheckActive.status -ne 'active') {
                 $Message = "Relationship status is currently $($CheckActive.status), it is not possible to remove the Global Administrator role in this state."
@@ -39,7 +39,7 @@ Function Invoke-ExecGDAPRemoveGArole {
     } catch {
         $Message = "Unexpected error patching GDAP relationship: $($_.Exception.Message)"
         Write-Host "GDAP ERROR: $($_.Exception.Message)"
-        Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $env:TenantID -message "$($Message): $($_.Exception.Message)" -Sev 'Error'
+        Write-LogMessage -headers $Request.Headers -API $APINAME -tenant $env:TenantID -message "$($Message): $($_.Exception.Message)" -Sev 'Error'
     }
 
     $body = @{

@@ -11,7 +11,7 @@ Function Invoke-AddUser {
     param($Request, $TriggerMetadata)
 
     $APIName = 'AddUser'
-    Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -message 'Accessed this API' -Sev 'Debug'
+    Write-LogMessage -headers $Request.Headers -API $APINAME -message 'Accessed this API' -Sev 'Debug'
 
     $UserObj = $Request.body
 
@@ -31,12 +31,12 @@ Function Invoke-AddUser {
                 PSA     = [bool]$Request.Body.PostExecution.PSA
             }
         }
-        Add-CIPPScheduledTask -Task $TaskBody -hidden $false -DisallowDuplicateName $true
+        Add-CIPPScheduledTask -Task $TaskBody -hidden $false -DisallowDuplicateName $true -Headers $Request.Headers
         $body = [pscustomobject] @{
             'Results' = @("Successfully created scheduled task to create user $($UserObj.DisplayName)")
         }
     } else {
-        $CreationResults = New-CIPPUserTask -userobj $UserObj -APIName $APINAME -ExecutingUser $request.headers.'x-ms-client-principal'
+        $CreationResults = New-CIPPUserTask -userobj $UserObj -APIName $APINAME -Headers $Request.Headers
         $body = [pscustomobject] @{
             'Results'  = $CreationResults.Results
             'Username' = $CreationResults.username

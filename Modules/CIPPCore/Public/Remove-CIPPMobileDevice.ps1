@@ -5,7 +5,7 @@ function Remove-CIPPMobileDevice {
         $tenantFilter,
         $username,
         $APIName = 'Remove Mobile',
-        $ExecutingUser
+        $Headers
     )
 
     try {
@@ -18,11 +18,11 @@ function Remove-CIPPMobileDevice {
             }
         }
         if (!$Devices) { $Devices = 'No mobile devices have been removed as we could not find any' }
-        Write-LogMessage -user $ExecutingUser -API $APIName -message "Deleted mobile devices for $($username)" -Sev 'Info' -tenant $tenantFilter
+        Write-LogMessage -headers $Headers -API $APIName -message "Deleted mobile devices for $($username)" -Sev 'Info' -tenant $tenantFilter
         return $devices
     } catch {
         $ErrorMessage = Get-CippException -Exception $_
-        Write-LogMessage -user $ExecutingUser -API $APIName -message "Could not delete mobile devices for $($username): $($ErrorMessage.NormalizedError)" -Sev 'Error' -tenant $tenantFilter -LogData $ErrorMessage
+        Write-LogMessage -headers $Headers -API $APIName -message "Could not delete mobile devices for $($username): $($ErrorMessage.NormalizedError)" -Sev 'Error' -tenant $tenantFilter -LogData $ErrorMessage
         return "Could not delete mobile devices for $($username). Error: $($ErrorMessage.NormalizedError)"
     }
 }

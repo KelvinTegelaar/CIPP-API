@@ -8,7 +8,7 @@ function Send-CIPPAlert {
         $JSONContent,
         $TenantFilter,
         $APIName = 'Send Alert',
-        $ExecutingUser,
+        $Headers,
         $TableName,
         $RowKey = [string][guid]::NewGuid()
     )

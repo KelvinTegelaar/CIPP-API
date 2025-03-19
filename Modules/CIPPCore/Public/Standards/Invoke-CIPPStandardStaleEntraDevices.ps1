@@ -1,4 +1,4 @@
-﻿function Invoke-CIPPStandardStaleEntraDevices {
+function Invoke-CIPPStandardStaleEntraDevices {
     <#
     .FUNCTIONALITY
         Internal
@@ -13,14 +13,15 @@
         CAT
             Entra (AAD) Standards
         TAG
-            "highimpact"
             "CIS"
         ADDEDCOMPONENT
             {"type":"number","name":"standards.StaleEntraDevices.deviceAgeThreshold","label":"Days before stale(Dont set below 30)"}
         DISABLEDFEATURES
-
+            
         IMPACT
             High Impact
+        ADDEDDATE
+            2025-01-19
         POWERSHELLEQUIVALENT
             Remove-MgDevice, Update-MgDevice or Graph API
         RECOMMENDEDBY

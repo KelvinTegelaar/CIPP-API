@@ -15,9 +15,11 @@ function Invoke-CIPPStandardGroupTemplate {
         CAT
             Templates
         DISABLEDFEATURES
-
+            
         IMPACT
-            Medium
+            Medium Impact
+        ADDEDDATE
+            2023-12-30
         ADDEDCOMPONENT
             {"type":"autoComplete","name":"groupTemplate","label":"Select Group Template","api":{"url":"/api/ListGroupTemplates","labelField":"Displayname","valueField":"GUID","queryKey":"ListGroupTemplates"}}
         UPDATECOMMENTBLOCK
@@ -45,8 +47,9 @@ function Invoke-CIPPStandardGroupTemplate {
                     'mailNickname'     = $groupobj.username
                     mailEnabled        = [bool]$false
                     securityEnabled    = [bool]$true
-                    isAssignableToRole = [bool]($groupobj | Where-Object -Property groupType -EQ 'AzureRole')
-
+                }
+                if ($groupobj.groupType -eq 'AzureRole') {
+                    $BodyToship | Add-Member -NotePropertyName 'isAssignableToRole' -NotePropertyValue $true
                 }
                 if ($groupobj.membershipRules) {
                     $BodyToship | Add-Member -NotePropertyName 'membershipRule' -NotePropertyValue ($groupobj.membershipRules)
@@ -54,6 +57,7 @@ function Invoke-CIPPStandardGroupTemplate {
                     $BodyToship | Add-Member -NotePropertyName 'membershipRuleProcessingState' -NotePropertyValue 'On'
                 }
                 if (!$CheckExististing) {
+                    $ActionType = 'create'
                     if ($groupobj.groupType -in 'Generic', 'azurerole', 'dynamic') {
                         $GraphRequest = New-GraphPostRequest -uri 'https://graph.microsoft.com/beta/groups' -tenantid $tenant -type POST -body (ConvertTo-Json -InputObject $BodyToship -Depth 10) -verbose
                     } else {
@@ -76,8 +80,9 @@ function Invoke-CIPPStandardGroupTemplate {
                             $GraphRequest = New-ExoRequest -tenantid $tenant -cmdlet 'New-DistributionGroup' -cmdParams $params
                         }
                     }
-                    Write-LogMessage -user $request.headers.'x-ms-client-principal' -API 'Standards' -tenant $tenant -message "Created group $($groupobj.displayname) with id $($GraphRequest.id) " -Sev 'Info'
+                    Write-LogMessage -API 'Standards' -tenant $tenant -message "Created group $($groupobj.displayname) with id $($GraphRequest.id) " -Sev 'Info'
                 } else {
+                    $ActionType = 'update'
                     if ($groupobj.groupType -in 'Generic', 'azurerole', 'dynamic') {
                         $GraphRequest = New-GraphPostRequest -uri "https://graph.microsoft.com/beta/groups/$($CheckExististing.id)" -tenantid $tenant -type PATCH -body (ConvertTo-Json -InputObject $BodyToship -Depth 10) -verbose
                     } else {
@@ -100,15 +105,13 @@ function Invoke-CIPPStandardGroupTemplate {
                             $GraphRequest = New-ExoRequest -tenantid $tenant -cmdlet 'Set-DistributionGroup' -cmdParams $params
                         }
                     }
-                    Write-LogMessage -user $request.headers.'x-ms-client-principal' -API 'Standards' -tenant $tenant -message "Group exists $($groupobj.displayname). Updated to latest settings." -Sev 'Info'
+                    Write-LogMessage -API 'Standards' -tenant $tenant -message "Group exists $($groupobj.displayname). Updated to latest settings." -Sev 'Info'
 
                 }
             } catch {
                 $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
-                Write-LogMessage -API 'Standards' -tenant $tenant -message "Failed to create group: $ErrorMessage" -sev 'Error'
+                Write-LogMessage -API 'Standards' -tenant $tenant -message "Failed to $ActionType group $($groupobj.displayname). Error: $ErrorMessage" -sev 'Error'
             }
         }
-
-
     }
 }

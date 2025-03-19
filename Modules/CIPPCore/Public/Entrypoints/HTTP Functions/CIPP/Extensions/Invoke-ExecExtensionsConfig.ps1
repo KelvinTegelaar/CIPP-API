@@ -7,30 +7,17 @@ Function Invoke-ExecExtensionsConfig {
     .ROLE
         CIPP.Extension.ReadWrite
     #>
-    [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSAvoidUsingConvertToSecureStringWithPlainText', '', Scope = 'Function')]
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
 
-    $APIName = $TriggerMetadata.FunctionName
-    Write-LogMessage -user $Request.Headers.'x-ms-client-principal' -API $APINAME -message 'Accessed this API' -Sev 'Debug'
+    $APIName = $Request.Params.CIPPEndpoint
+    $Headers = $Request.Headers
+    Write-LogMessage -headers $Headers -API $APIName -message 'Accessed this API' -Sev 'Debug'
 
-    #Connect-AzAccount -UseDeviceAuthentication
-    # Write to the Azure Functions log stream.
-    Write-Information 'PowerShell HTTP trigger function processed a request.'
     $Body = [PSCustomObject]$Request.Body
-    $results = try {
-        if ($Body.CIPPAPI.Enabled) {
-            try {
-                $APIConfig = New-CIPPAPIConfig -ExecutingUser $Request.Headers.'x-ms-client-principal' -resetpassword $Body.CIPPAPI.ResetPassword
-                $AddedText = $APIConfig.Results
-            } catch {
-                $AddedText = ' Could not enable CIPP-API. Check the CIPP documentation for API requirements.'
-                $Body = $Body | Select-Object * -ExcludeProperty CIPPAPI
-            }
-        }
-
+    $Results = try {
         # Check if NinjaOne URL is set correctly and the instance has at least version 5.6
-        if ($Body.NinjaOne) {
+        if ($Body.NinjaOne.Enabled -eq $true) {
             $AllowedNinjaHostnames = @(
                 'app.ninjarmm.com',
                 'eu.ninjarmm.com',
@@ -40,16 +27,7 @@ Function Invoke-ExecExtensionsConfig {
             )
             $SetNinjaHostname = $Body.NinjaOne.Instance -replace '/ws', '' -replace 'https://', ''
             if ($AllowedNinjaHostnames -notcontains $SetNinjaHostname) {
-                throw "NinjaOne URL is not allowed. Allowed hostnames are: $($AllowedNinjaHostnames -join ', ')"
-            }
-
-            try {
-                [version]$Version = (Invoke-WebRequest -Method GET -Uri "$SetNinjaHostname/app-version.txt" -ea stop).content
-            } catch {
-                throw "Failed to connect to NinjaOne check your Instance is set correctly eg 'app.ninjarmm.com'"
-            }
-            if ($Version -lt [version]'5.6.0.0') {
-                throw 'NinjaOne 5.6.0.0 is required.'
+                "Error: NinjaOne URL is not allowed. Allowed hostnames are: $($AllowedNinjaHostnames -join ', ')"
             }
         }
 
@@ -62,17 +40,7 @@ Function Invoke-ExecExtensionsConfig {
                 Write-Information 'writing API Key to keyvault, and clearing.'
                 Write-Information "$ENV:WEBSITE_DEPLOYMENT_ID"
                 if ($Body.$APIKey.APIKey) {
-                    if ($env:AzureWebJobsStorage -eq 'UseDevelopmentStorage=true') {
-                        $DevSecretsTable = Get-CIPPTable -tablename 'DevSecrets'
-                        $Secret = [PSCustomObject]@{
-                            'PartitionKey' = $APIKey
-                            'RowKey'       = $APIKey
-                            'APIKey'       = $Body.$APIKey.APIKey
-                        }
-                        Add-CIPPAzDataTableEntity @DevSecretsTable -Entity $Secret -Force
-                    } else {
-                        $null = Set-AzKeyVaultSecret -VaultName $ENV:WEBSITE_DEPLOYMENT_ID -Name $APIKey -SecretValue (ConvertTo-SecureString -AsPlainText -Force -String $Body.$APIKey.APIKey)
-                    }
+                    Set-ExtensionAPIKey -Extension $APIKey -APIKey $Body.$APIKey.APIKey
                 }
                 if ($Body.$APIKey.PSObject.Properties.Name -notcontains 'APIKey') {
                     $Body.$APIKey | Add-Member -MemberType NoteProperty -Name APIKey -Value 'SentToKeyVault'
@@ -95,7 +63,7 @@ Function Invoke-ExecExtensionsConfig {
         $AddObject = @{
             PartitionKey = 'InstanceProperties'
             RowKey       = 'CIPPURL'
-            Value        = [string]([System.Uri]$Request.Headers.'x-ms-original-url').Host
+            Value        = [string]([System.Uri]$Headers.'x-ms-original-url').Host
         }
         Write-Information ($AddObject | ConvertTo-Json -Compress)
         $ConfigTable = Get-CIPPTable -tablename 'Config'
@@ -108,12 +76,11 @@ Function Invoke-ExecExtensionsConfig {
     }
 
 
-    $body = [pscustomobject]@{'Results' = $Results }
 
     # Associate values to output bindings by calling 'Push-OutputBinding'.
     Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
             StatusCode = [HttpStatusCode]::OK
-            Body       = $body
+            Body       = @{'Results' = $Results }
         })
 
 }

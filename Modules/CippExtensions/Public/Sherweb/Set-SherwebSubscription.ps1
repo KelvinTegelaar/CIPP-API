@@ -10,10 +10,8 @@ function Set-SherwebSubscription {
         [string]$TenantFilter
     )
     if ($TenantFilter) {
-        Get-ExtensionMapping -Extension 'Sherweb' | Where-Object { $_.RowKey -eq $TenantFilter } | ForEach-Object {
-            Write-Host "Extracted customer id from tenant filter - It's $($_.IntegrationId)"
-            $CustomerId = $_.IntegrationId
-        }
+        $TenantFilter = (Get-Tenants -TenantFilter $TenantFilter).customerId
+        $CustomerId = Get-ExtensionMapping -Extension 'Sherweb' | Where-Object { $_.RowKey -eq $TenantFilter } | Select-Object -ExpandProperty IntegrationId
     }
     $AuthHeader = Get-SherwebAuthentication
     $ExistingSubscription = Get-SherwebCurrentSubscription -CustomerId $CustomerId -SKU $SKU

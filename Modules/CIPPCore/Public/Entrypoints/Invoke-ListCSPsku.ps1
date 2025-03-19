@@ -10,15 +10,22 @@ Function Invoke-ListCSPsku {
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
 
-    $APIName = $TriggerMetadata.FunctionName
-    Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -message 'Accessed this API' -Sev 'Debug'
+    $APIName = $Request.Params.CIPPEndpoint
+    Write-LogMessage -headers $Request.Headers -API $APINAME -message 'Accessed this API' -Sev 'Debug'
+    $TenantFilter = $Request.Query.tenantFilter
 
-    if ($Request.Query.currentSkuOnly) {
-        $GraphRequest = Get-SherwebCurrentSubscription -TenantFilter $Request.Query.TenantFilter
-    } else {
-        $GraphRequest = Get-SherwebCatalog -TenantFilter $Request.Query.TenantFilter
+    try {
+        if ($Request.Query.currentSkuOnly) {
+            $GraphRequest = Get-SherwebCurrentSubscription -TenantFilter $TenantFilter
+        } else {
+            $GraphRequest = Get-SherwebCatalog -TenantFilter $TenantFilter
+        }
+    } catch {
+        $GraphRequest = [PSCustomObject]@{
+            name = @(@{value = 'Error getting catalog' })
+            sku  = $_.Exception.Message
+        }
     }
-
 
     Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
             StatusCode = [HttpStatusCode]::OK

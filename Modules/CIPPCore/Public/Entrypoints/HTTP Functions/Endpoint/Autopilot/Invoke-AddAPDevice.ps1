@@ -10,8 +10,8 @@ Function Invoke-AddAPDevice {
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
 
-    $APIName = $TriggerMetadata.FunctionName
-    Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -message 'Accessed this API' -Sev 'Debug'
+    $APIName = $Request.Params.CIPPEndpoint
+    Write-LogMessage -headers $Request.Headers -API $APINAME -message 'Accessed this API' -Sev 'Debug'
 
 
     # Write to the Azure Functions log stream.
@@ -51,7 +51,7 @@ Function Invoke-AddAPDevice {
             $NewStatus = New-GraphgetRequest -uri "https://api.partnercenter.microsoft.com/v1/$($GraphRequest.Location)" -scope 'https://api.partnercenter.microsoft.com/user_impersonation'
         } until ($Newstatus.status -eq 'finished' -or $amount -eq 4)
         if ($NewStatus.status -ne 'finished') { throw 'Could not retrieve status of import - This job might still be running. Check the autopilot device list in 10 minutes for the latest status.' }
-        Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APIName -tenant $($Request.body.TenantFilter.value) -message "Created Autopilot devices group. Group ID is $GroupName" -Sev 'Info'
+        Write-LogMessage -headers $Request.Headers -API $APIName -tenant $($Request.body.TenantFilter.value) -message "Created Autopilot devices group. Group ID is $GroupName" -Sev 'Info'
 
         [PSCustomObject]@{
             Status  = 'Import Job Completed'
@@ -62,7 +62,7 @@ Function Invoke-AddAPDevice {
             Status  = "$($Request.body.TenantFilter.value): Failed to create autopilot devices. $($_.Exception.Message)"
             Devices = @()
         }
-        Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APIName -tenant $($Request.body.TenantFilter.value) -message "Failed to create autopilot devices. $($_.Exception.Message)" -Sev 'Error'
+        Write-LogMessage -headers $Request.Headers -API $APIName -tenant $($Request.body.TenantFilter.value) -message "Failed to create autopilot devices. $($_.Exception.Message)" -Sev 'Error'
     }
 
     $body = [pscustomobject]@{'Results' = $Result }

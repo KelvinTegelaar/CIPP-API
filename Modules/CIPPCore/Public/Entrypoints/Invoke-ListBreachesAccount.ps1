@@ -10,8 +10,8 @@ Function Invoke-ListBreachesAccount {
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
 
-    $APIName = $TriggerMetadata.FunctionName
-    Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -message 'Accessed this API' -Sev 'Debug'
+    $APIName = $Request.Params.CIPPEndpoint
+    Write-LogMessage -headers $Request.Headers -API $APINAME -message 'Accessed this API' -Sev 'Debug'
 
     if ($request.query.account -like '*@*') {
         $Results = Get-HIBPRequest "breachedaccount/$($Request.query.account)?truncateResponse=false"

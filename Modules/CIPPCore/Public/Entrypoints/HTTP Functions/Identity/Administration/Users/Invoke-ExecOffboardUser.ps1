@@ -14,7 +14,7 @@ Function Invoke-ExecOffboardUser {
     $Results = foreach ($username in $AllUsers) {
         try {
             $APIName = 'ExecOffboardUser'
-            Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -message 'Accessed this API' -Sev 'Debug'
+            Write-LogMessage -headers $Request.Headers -API $APINAME -message 'Accessed this API' -Sev 'Debug'
 
             if ($Request.body.Scheduled.enabled) {
                 $taskObject = [PSCustomObject]@{
@@ -36,9 +36,9 @@ Function Invoke-ExecOffboardUser {
                         PSA     = [bool]$Request.Body.PostExecution.psa
                     }
                 }
-                Add-CIPPScheduledTask -Task $taskObject -hidden $false
+                Add-CIPPScheduledTask -Task $taskObject -hidden $false -Headers $Request.Headers
             } else {
-                Invoke-CIPPOffboardingJob -Username $Username -TenantFilter $Tenantfilter -Options $Request.body -APIName $APIName -ExecutingUser $request.headers.'x-ms-client-principal'
+                Invoke-CIPPOffboardingJob -Username $Username -TenantFilter $Tenantfilter -Options $Request.body -APIName $APIName -Headers $Request.Headers
             }
             $StatusCode = [HttpStatusCode]::OK
 

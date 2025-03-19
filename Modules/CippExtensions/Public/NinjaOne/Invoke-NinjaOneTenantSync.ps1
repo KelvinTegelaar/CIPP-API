@@ -45,7 +45,7 @@ function Invoke-NinjaOneTenantSync {
         $Customer = Get-Tenants -IncludeErrors | Where-Object { $_.customerId -eq $MappedTenant.RowKey }
         Write-Information "Processing: $($Customer.displayName) - Queued for $((New-TimeSpan -Start $StartQueueTime -End $StartTime).TotalSeconds)"
 
-        Write-LogMessage -API 'NinjaOneSync' -user 'NinjaOneSync' -message "Processing NinjaOne Synchronization for $($Customer.displayName) - Queued for $((New-TimeSpan -Start $StartQueueTime -End $StartTime).TotalSeconds)" -Sev 'Info'
+        Write-LogMessage -API 'NinjaOneSync' -Headers'NinjaOneSync' -message "Processing NinjaOne Synchronization for $($Customer.displayName) - Queued for $((New-TimeSpan -Start $StartQueueTime -End $StartTime).TotalSeconds)" -Sev 'Info'
 
         if (($Customer | Measure-Object).count -ne 1) {
             Throw "Unable to match the recieved ID to a tenant QueueItem: $($QueueItem | ConvertTo-Json -Depth 100 | Out-String) Matched Customer: $($Customer| ConvertTo-Json -Depth 100 | Out-String)"
@@ -274,92 +274,29 @@ function Invoke-NinjaOneTenantSync {
         [System.Collections.Generic.List[PSCustomObject]]$NinjaLicenseUpdates = @()
         [System.Collections.Generic.List[PSCustomObject]]$NinjaLicenseCreation = @()
 
-        # Build bulk requests array.
-        [System.Collections.Generic.List[PSCustomObject]]$TenantRequests = @(
-            @{
-                id     = 'Users'
-                method = 'GET'
-                url    = '/users?$top=999'
-            },
-            @{
-                id     = 'TenantDetails'
-                method = 'GET'
-                url    = '/organization'
-            },
-            @{
-                id     = 'AllRoles'
-                method = 'GET'
-                url    = '/directoryRoles'
-            },
-            @{
-                id     = 'RawDomains'
-                method = 'GET'
-                url    = '/domains'
-            },
-            @{
-                id     = 'Licenses'
-                method = 'GET'
-                url    = '/subscribedSkus'
-            },
-            @{
-                id     = 'Devices'
-                method = 'GET'
-                url    = '/deviceManagement/managedDevices?$top=999'
-            },
-            @{
-                id     = 'DeviceCompliancePolicies'
-                method = 'GET'
-                url    = '/deviceManagement/deviceCompliancePolicies/'
-            },
-            <#@{
-                id     = 'DeviceApps'
-                method = 'GET'
-                url    = '/deviceAppManagement/mobileApps'
-            },#>
-            @{
-                id     = 'Groups'
-                method = 'GET'
-                url    = '/groups'
-            },
-            @{
-                id     = 'ConditionalAccess'
-                method = 'GET'
-                url    = '/identity/conditionalAccess/policies'
-            },
-            @{
-                id     = 'SecureScore'
-                method = 'GET'
-                url    = '/security/secureScores?$top=999'
-            },
-            @{
-                id     = 'SecureScoreControlProfiles'
-                method = 'GET'
-                url    = '/security/secureScoreControlProfiles?$top=999'
-            },
-            @{
-                id     = 'Subscriptions'
-                method = 'GET'
-                url    = '/directory/subscriptions'
-            }
+        # Replace direct Graph/Exchange calls with cached data
+        $ExtensionCache = Get-ExtensionCacheData -TenantFilter $Customer.defaultDomainName
 
-        )
-
-        Write-Verbose "$(Get-Date) - Fetching Bulk Data"
-        try {
-            $TenantResults = New-GraphBulkRequest -Requests $TenantRequests -tenantid $TenantFilter -NoAuthCheck $True
-        } catch {
-            Throw "Failed to fetch bulk company data: $_"
-        }
-
-        Write-Information 'Fetched Bulk M365 Data'
-
-        $Users = Get-GraphBulkResultByID -value -Results $TenantResults -ID 'Users'
-
-        $SecureScore = Get-GraphBulkResultByID -value -Results $TenantResults -ID 'SecureScore'
-
-        $Subscriptions = Get-GraphBulkResultByID -value -Results $TenantResults -ID 'Subscriptions'
-
-        [System.Collections.Generic.List[PSCustomObject]]$SecureScoreProfiles = Get-GraphBulkResultByID -value -Results $TenantResults -ID 'SecureScoreControlProfiles'
+        # Map cached data to variables
+        $Users = $ExtensionCache.Users
+        $licensedUsers = $Users | Where-Object { $null -ne $_.assignedLicenses.skuId }
+        $AllRoles = $ExtensionCache.AllRoles
+        $Devices = $ExtensionCache.Devices
+        $DeviceCompliancePolicies = $ExtensionCache.DeviceCompliancePolicies
+        $OneDriveDetails = $ExtensionCache.OneDriveUsage
+        $CASFull = $ExtensionCache.CASMailbox
+        $MailboxDetailedFull = $ExtensionCache.Mailboxes
+        $MailboxStatsFull = $ExtensionCache.MailboxUsage
+        $Permissions = $ExtensionCache.MailboxPermissions
+        $SecureScore = $ExtensionCache.SecureScore
+        $Subscriptions = $ExtensionCache.Subscriptions
+        $SecureScoreProfiles = $ExtensionCache.SecureScoreControlProfiles
+        $TenantDetails = $ExtensionCache.TenantDetails
+        $RawDomains = $ExtensionCache.Domains
+        $AllGroups = $ExtensionCache.Groups
+        $Licenses = $ExtensionCache.Licenses
+        $RawDomains = $ExtensionCache.Domains
+        $AllConditionalAccessPolicies = $ExtensionCache.ConditionalAccessPolicies
 
         $CurrentSecureScore = ($SecureScore | Sort-Object createDateTime -Descending | Select-Object -First 1)
         $MaxSecureScoreRank = ($SecureScoreProfiles.rank | Measure-Object -Maximum).maximum
@@ -384,136 +321,58 @@ function Invoke-NinjaOneTenantSync {
             }
         }
 
-        $TenantDetails = Get-GraphBulkResultByID -value -Results $TenantResults -ID 'TenantDetails'
-
-        Write-Verbose "$(Get-Date) - Parsing Users"
         # Grab licensed users
         $licensedUsers = $Users | Where-Object { $null -ne $_.AssignedLicenses.SkuId } | Sort-Object UserPrincipalName
 
-        Write-Verbose "$(Get-Date) - Parsing Roles"
-        # Get All Roles
-        $AllRoles = Get-GraphBulkResultByID -value -Results $TenantResults -ID 'AllRoles'
-
-        $SelectList = 'id', 'displayName', 'userPrincipalName'
-
-        [System.Collections.Generic.List[PSCustomObject]]$RolesRequestArray = @()
-        foreach ($Role in $AllRoles) {
-            $RolesRequestArray.add(@{
-                    id     = $Role.id
-                    method = 'GET'
-                    url    = "/directoryRoles/$($Role.id)/members?`$select=$($selectlist -join ',')"
-                })
-        }
-
-        try {
-            $MemberReturn = New-GraphBulkRequest -Requests $RolesRequestArray -tenantid $TenantFilter -NoAuthCheck $True
-        } catch {
-            $MemberReturn = $null
-        }
-
-        Write-Information 'Fetched M365 Roles'
-
-        $Roles = foreach ($Result in $MemberReturn) {
+        $Roles = foreach ($Role in $AllRoles) {
+            # Get members from cache
+            $Members = ($ExtensionCache."AllRoles_$($Role.id)")
             [PSCustomObject]@{
                 ID            = $Result.id
-                DisplayName   = ($AllRoles | Where-Object { $_.id -eq $Result.id }).displayName
-                Description   = ($AllRoles | Where-Object { $_.id -eq $Result.id }).description
-                Members       = $Result.body.value
-                ParsedMembers = $Result.body.value.Displayname -join ', '
+                DisplayName   = $Role.displayName
+                Description   = $Role.description
+                Members       = $Members
+                ParsedMembers = $Members.displayName -join ', '
             }
         }
-
-
 
         $AdminUsers = (($Roles | Where-Object { $_.Displayname -match 'Administrator' }).Members | Where-Object { $null -ne $_.displayName })
 
         Write-Verbose "$(Get-Date) - Fetching Domains"
-        try {
-            $RawDomains = Get-GraphBulkResultByID -value -Results $TenantResults -ID 'RawDomains'
-        } catch {
-            $RawDomains = $null
-        }
-        $customerDomains = ($RawDomains | Where-Object { $_.IsVerified -eq $True }).id -join ', ' | Out-String
 
+        $customerDomains = ($RawDomains | Where-Object { $_.IsVerified -eq $true }).id -join ', ' | Out-String
 
         Write-Verbose "$(Get-Date) - Parsing Licenses"
-        # Get Licenses
-        $Licenses = Get-GraphBulkResultByID -value -Results $TenantResults -ID 'Licenses'
 
         # Get the license overview for the tenant
         if ($Licenses) {
             $LicensesParsed = $Licenses | Where-Object { $_.PrepaidUnits.Enabled -gt 0 } | Select-Object @{N = 'License Name'; E = { (Get-Culture).TextInfo.ToTitleCase((convert-skuname -skuname $_.SkuPartNumber).Tolower()) } }, @{N = 'Active'; E = { $_.PrepaidUnits.Enabled } }, @{N = 'Consumed'; E = { $_.ConsumedUnits } }, @{N = 'Unused'; E = { $_.PrepaidUnits.Enabled - $_.ConsumedUnits } }
         }
 
-        Write-Verbose "$(Get-Date) - Parsing Devices"
-        # Get all devices from Intune
-        $devices = Get-GraphBulkResultByID -value -Results $TenantResults -ID 'Devices'
+        Write-Verbose "$(Get-Date) - Parsing Device Compliance Policies"
 
-        Write-Verbose "$(Get-Date) - Parsing Device Compliance Polcies"
-        # Fetch Compliance Policy Status
-        $DeviceCompliancePolicies = Get-GraphBulkResultByID -value -Results $TenantResults -ID 'DeviceCompliancePolicies'
-
-        # Get the status of each device for each policy
-        [System.Collections.Generic.List[PSCustomObject]]$PolicyRequestArray = @()
-        foreach ($CompliancePolicy in $DeviceCompliancePolicies) {
-            $PolicyRequestArray.add(@{
-                    id     = $CompliancePolicy.id
-                    method = 'GET'
-                    url    = "/deviceManagement/deviceCompliancePolicies/$($CompliancePolicy.id)/deviceStatuses"
-                })
-        }
-
-        try {
-            $PolicyReturn = New-GraphBulkRequest -Requests $PolicyRequestArray -tenantid $TenantFilter -NoAuthCheck $True
-        } catch {
-            $PolicyReturn = $null
-        }
-
-        Write-Information 'Fetched M365 Device Compliance'
-
-        $DeviceComplianceDetails = foreach ($Result in $PolicyReturn) {
+        $DeviceComplianceDetails = foreach ($Policy in $DeviceCompliancePolicies) {
+            $DeviceStatuses = $ExtensionCache."DeviceCompliancePolicy_$($Policy.id)"
             [pscustomobject]@{
-                ID             = ($DeviceCompliancePolicies | Where-Object { $_.id -eq $Result.id }).id
-                DisplayName    = ($DeviceCompliancePolicies | Where-Object { $_.id -eq $Result.id }).DisplayName
-                DeviceStatuses = $Result.body.value
+                ID             = $Policy.id
+                DisplayName    = $Policy.displayName
+                DeviceStatuses = $DeviceStatuses
             }
         }
 
         Write-Verbose "$(Get-Date) - Parsing Groups"
-        # Fetch Groups
-        $AllGroups = Get-GraphBulkResultByID -value -Results $TenantResults -ID 'Groups'
 
-        # Fetch the App status for each device
-        [System.Collections.Generic.List[PSCustomObject]]$GroupRequestArray = @()
-        foreach ($Group in $AllGroups) {
-            $GroupRequestArray.add(@{
-                    id     = $Group.id
-                    method = 'GET'
-                    url    = "/groups/$($Group.id)/members"
-                })
-        }
-
-        try {
-            $GroupMembersReturn = New-GraphBulkRequest -Requests $GroupRequestArray -tenantid $TenantFilter -NoAuthCheck $True
-        } catch {
-            $GroupMembersReturn = $null
-        }
-
-        Write-Information 'Fetched M365 Group Membership'
-
-        $Groups = foreach ($Result in $GroupMembersReturn) {
+        $Groups = foreach ($Group in $AllGroups) {
+            $Members = $ExtensionCache."Groups_$($Result.id)"
             [pscustomobject]@{
-                ID          = $Result.id
-                DisplayName = ($AllGroups | Where-Object { $_.id -eq $Result.id }).DisplayName
-                Members     = $result.body.value
+                ID          = $Group.id
+                DisplayName = $Group.displayName
+                Members     = $Members
             }
         }
-
         Write-Verbose "$(Get-Date) - Parsing Conditional Access Polcies"
-        # Fetch and parse conditional access polcies
-        $AllConditionalAccessPolcies = Get-GraphBulkResultByID -value -Results $TenantResults -ID 'ConditionalAccess'
 
-        $ConditionalAccessMembers = foreach ($CAPolicy in $AllConditionalAccessPolcies) {
+        $ConditionalAccessMembers = foreach ($CAPolicy in $AllConditionalAccessPolicies) {
             #Setup User Array
             [System.Collections.Generic.List[PSCustomObject]]$CAMembers = @()
 
@@ -567,49 +426,6 @@ function Invoke-NinjaOneTenantSync {
                 Members     = $CAMembers
             }
         }
-
-        Write-Verbose "$(Get-Date) - Fetching One Drive Details"
-        try {
-            $OneDriveDetails = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/reports/getOneDriveUsageAccountDetail(period='D7')" -tenantid $TenantFilter | ConvertFrom-Csv
-        } catch {
-            Write-Error "Failed to fetch Onedrive Details: $_"
-            $OneDriveDetails = $null
-        }
-
-        Write-Verbose "$(Get-Date) - Fetching CAS Mailbox Details"
-        try {
-            $CASFull = New-GraphGetRequest -uri "https://outlook.office365.com/adminapi/beta/$($tenantfilter)/CasMailbox" -Tenantid $Customer.defaultDomainName -scope ExchangeOnline -noPagination $true
-        } catch {
-            Write-Error "Failed to fetch CAS Details: $_"
-            $CASFull = $null
-        }
-
-        Write-Verbose "$(Get-Date) - Fetching Mailbox Details"
-        try {
-            $MailboxDetailedFull = New-ExoRequest -TenantID $Customer.defaultDomainName -cmdlet 'Get-Mailbox'
-        } catch {
-            Write-Error "Failed to fetch Mailbox Details: $_"
-            $MailboxDetailedFull = $null
-        }
-
-        Write-Verbose "$(Get-Date) - Fetching Blocked Mailbox Details"
-        try {
-            $BlockedSenders = New-ExoRequest -TenantID $Customer.defaultDomainName -cmdlet 'Get-BlockedSenderAddress'
-        } catch {
-            Write-Error "Failed to fetch Blocked Sender Details: $_"
-            $BlockedSenders = $null
-        }
-
-        Write-Verbose "$(Get-Date) - Fetching Mailbox Stats"
-        try {
-            $MailboxStatsFull = New-GraphGetRequest -uri "https://graph.microsoft.com/v1.0/reports/getMailboxUsageDetail(period='D7')" -tenantid $TenantFilter | ConvertFrom-Csv
-        } catch {
-            Write-Error "Failed to fetch Mailbox Stats: $_"
-            $MailboxStatsFull = $null
-        }
-
-        Write-Information 'Fetched M365 Additional Data'
-
 
         $FetchEnd = Get-Date
 
@@ -773,7 +589,7 @@ function Invoke-NinjaOneTenantSync {
                         },
                         @{
                             Name = 'View Devices in CIPP'
-                            Link = "https://$($CIPPURL)/endpoint/MEM/devices?customerId=$($Customer.defaultDomainName)"
+                            Link = "https://$($CIPPURL)/endpoint/MEM/devices?tenantFilter=$($Customer.defaultDomainName)"
                             Icon = 'far fa-eye'
                         }
                     )
@@ -886,11 +702,10 @@ function Invoke-NinjaOneTenantSync {
 
         # Enable Device Updates Subscription if needed.
         if ($MappedFields.DeviceCompliance) {
-            New-CIPPGraphSubscription -TenantFilter $TenantFilter -TypeofSubscription 'updated' -BaseURL $CIPPUrl -Resource 'devices' -EventType 'DeviceUpdate' -ExecutingUser 'NinjaOneSync'
+            New-CIPPGraphSubscription -TenantFilter $TenantFilter -TypeofSubscription 'updated' -BaseURL $CIPPUrl -Resource 'devices' -EventType 'DeviceUpdate' -Headers 'NinjaOneSync'
         }
 
         Write-Information 'Processed Devices'
-
 
         ########## Create / Update User Objects
 
@@ -975,20 +790,15 @@ function Invoke-NinjaOneTenantSync {
                 $MailboxDetailedRequest = $MailboxDetailedFull | Where-Object { $_.ExternalDirectoryObjectId -eq $User.iD }
                 $StatsRequest = $MailboxStatsFull | Where-Object { $_.'User Principal Name' -eq $User.UserPrincipalName }
 
-                #try {
-                #    $PermsRequest = New-GraphGetRequest -uri "https://outlook.office365.com/adminapi/beta/$($tenantfilter)/Mailbox('$($User.ID)')/MailboxPermission" -Tenantid $tenantfilter -scope ExchangeOnline -noPagination $true -NoAuthCheck $True
-                #} catch {
-                #    $PermsRequest = $null
-                #}
 
-                #$ParsedPerms = foreach ($Perm in $PermsRequest) {
-                #    if ($Perm.User -ne 'NT AUTHORITY\SELF') {
-                #        [pscustomobject]@{
-                #            User         = $Perm.User
-                #            AccessRights = $Perm.PermissionList.AccessRights -join ', '
-                #        }
-                #    }
-                #}
+                $ParsedPerms = foreach ($Perm in $Permissions) {
+                    if ($Perm.User -ne 'NT AUTHORITY\SELF') {
+                        [pscustomobject]@{
+                            User         = $Perm.User
+                            AccessRights = $Perm.PermissionList.AccessRights -join ', '
+                        }
+                    }
+                }
 
                 try {
                     $TotalItemSize = [math]::Round($StatsRequest.'Storage Used (Byte)' / 1Gb, 2)
@@ -1007,7 +817,7 @@ function Invoke-NinjaOneTenantSync {
                     MailboxImapEnabled       = $CASRequest.ImapEnabled
                     MailboxPopEnabled        = $CASRequest.PopEnabled
                     MailboxActiveSyncEnabled = $CASRequest.ActiveSyncEnabled
-                    #Permissions              = $ParsedPerms
+                    Permissions              = $ParsedPerms
                     ProhibitSendQuota        = [math]::Round([float]($MailboxDetailedRequest.ProhibitSendQuota -split ' GB')[0], 2)
                     ProhibitSendReceiveQuota = [math]::Round([float]($MailboxDetailedRequest.ProhibitSendReceiveQuota -split ' GB')[0], 2)
                     ItemCount                = [math]::Round($StatsRequest.'Item Count', 2)
@@ -1235,24 +1045,24 @@ function Invoke-NinjaOneTenantSync {
                 $CIPPUserLinksData = @(
                     @{
                         Name = 'View User'
-                        Link = "https://$($CIPPURL)/identity/administration/users/view?userId=$($User.id)&tenantDomain=$($Customer.defaultDomainName)"
+                        Link = "https://$($CIPPURL)/identity/administration/users/user?userId=$($User.id)&tenantFilter=$($Customer.defaultDomainName)"
                         Icon = 'far fa-eye'
                     },
                     @{
                         Name = 'Edit User'
-                        Link = "https://$($CIPPURL)/identity/administration/users/edit?userId=$($User.id)&tenantDomain=$($Customer.defaultDomainName)"
+                        Link = "https://$($CIPPURL)/identity/administration/users/user/edit?userId=$($User.id)&tenantFilter=$($Customer.defaultDomainName)"
                         Icon = 'fas fa-users-cog'
                     },
                     @{
                         Name = 'Research Compromise'
-                        Link = "https://$($CIPPURL)/identity/administration/ViewBec?userId=$($User.id)&tenantDomain=$($Customer.defaultDomainName)"
+                        Link = "https://$($CIPPURL)/identity/administration/users/user/bec?userId=$($User.id)&tenantFilter=$($Customer.defaultDomainName)"
                         Icon = 'fas fa-user-secret'
                     }
                 )
 
                 # Actions
                 $ActionsHTML = @"
-                                <a href="https://$($CIPPUrl)/identity/administration/users/view?userId=$($User.id)&tenantDomain=$($Customer.defaultDomainName)&userEmail=$($User.userPrincipalName)" title="View in CIPP" class="btn secondary"><i class="fas fa-shield-halved" style="color: #337ab7;"></i></a>&nbsp;
+                                <a href="https://$($CIPPUrl)/identity/administration/users/user?userId=$($User.id)&tenantFilter=$($Customer.defaultDomainName)" title="View in CIPP" class="btn secondary"><i class="fas fa-shield-halved" style="color: #337ab7;"></i></a>&nbsp;
                                 <a href="https://entra.microsoft.com/$($Customer.DefaultDomainName)/#view/Microsoft_AAD_UsersAndTenants/UserProfileMenuBlade/~/overview/userId/$($User.id)/hidePreviewBanner~/true" title="View in Entra ID" class="btn secondary"><i class="fab fa-microsoft" style="color: #337ab7;"></i></a>&nbsp;
 "@
 
@@ -1713,47 +1523,47 @@ function Invoke-NinjaOneTenantSync {
             $ManagementLinksData = @(
                 @{
                     Name = 'M365 Admin Portal'
-                    Link = "https://portal.office.com/Partner/BeginClientSession.aspx?CTID=$($customer.CustomerId)&CSDEST=o365admincenter"
+                    Link = "https://portal.office.com/Partner/BeginClientSession.aspx?CTID=$($customer.customerId)&CSDEST=o365admincenter"
                     Icon = 'fas fa-cogs'
                 },
                 @{
                     Name = 'Exchange Portal'
-                    Link = "https://admin.exchange.microsoft.com/?landingpage=homepage&form=mac_sidebar&delegatedOrg=$($Customer.DefaultDomainName)#"
+                    Link = "https://admin.exchange.microsoft.com/?landingpage=homepage&form=mac_sidebar&delegatedOrg=$($Customer.defaultDomainName)#"
                     Icon = 'fas fa-mail-bulk'
                 },
                 @{
                     Name = 'Entra Portal'
-                    Link = "https://entra.microsoft.com/$($Customer.DefaultDomainName)"
+                    Link = "https://entra.microsoft.com/$($Customer.defaultDomainName)"
                     Icon = 'fas fa-users-cog'
                 },
                 @{
                     Name = 'Intune Portal'
-                    Link = "https://endpoint.microsoft.com/$($customer.DefaultDomainName)/"
+                    Link = "https://endpoint.microsoft.com/$($customer.defaultDomainName)/"
                     Icon = 'fas fa-laptop'
                 },
                 @{
                     Name = 'Sharepoint Admin'
-                    Link = "https://admin.microsoft.com/Partner/beginclientsession.aspx?CTID=$($Customer.CustomerId)&CSDEST=SharePoint"
+                    Link = "https://admin.microsoft.com/Partner/beginclientsession.aspx?CTID=$($Customer.customerId)&CSDEST=SharePoint"
                     Icon = 'fas fa-shapes'
                 },
                 @{
                     Name = 'Teams Admin'
-                    Link = "https://admin.teams.microsoft.com/?delegatedOrg=$($Customer.DefaultDomainName)"
+                    Link = "https://admin.teams.microsoft.com/?delegatedOrg=$($Customer.defaultDomainName)"
                     Icon = 'fas fa-users'
                 },
                 @{
                     Name = 'Security Portal'
-                    Link = "https://security.microsoft.com/?tid=$($Customer.CustomerId)"
+                    Link = "https://security.microsoft.com/?tid=$($Customer.customerId)"
                     Icon = 'fas fa-building-shield'
                 },
                 @{
                     Name = 'Compliance Portal'
-                    Link = "https://purview.microsoft.com/?tid=$($Customer.CustomerId)"
+                    Link = "https://purview.microsoft.com/?tid=$($Customer.customerId)"
                     Icon = 'fas fa-user-shield'
                 },
                 @{
                     Name = 'Azure Portal'
-                    Link = "https://portal.azure.com/$($customer.DefaultDomainName)"
+                    Link = "https://portal.azure.com/$($customer.defaultDomainName)"
                     Icon = 'fas fa-server'
                 }
 
@@ -1765,37 +1575,32 @@ function Invoke-NinjaOneTenantSync {
 
                 @{
                     Name = 'CIPP Tenant Dashboard'
-                    Link = "https://$CIPPUrl/home?customerId=$($Customer.CustomerId)"
+                    Link = "https://$CIPPUrl?tenantFilter=$($Customer.defaultDomainName)"
                     Icon = 'fas fa-shield-halved'
                 },
                 @{
-                    Name = 'Edit Tenant'
-                    Link = "https://$CIPPUrl/tenant/administration/tenants/Edit?customerId=$($Customer.customerId)&tenantFilter=$($Customer.defaultDomainName)"
-                    Icon = 'fas fa-cog'
-                },
-                @{
                     Name = 'List Users'
-                    Link = "https://$CIPPUrl/identity/administration/users?customerId=$($Customer.customerId)"
+                    Link = "https://$CIPPUrl/identity/administration/users?tenantFilter=$($Customer.defaultDomainName)"
                     Icon = 'fas fa-user'
                 },
                 @{
                     Name = 'List Groups'
-                    Link = "https://$CIPPUrl/identity/administration/groups?customerId=$($Customer.customerId)"
+                    Link = "https://$CIPPUrl/identity/administration/groups?tenantFilter=$($Customer.defaultDomainName)"
                     Icon = 'fas fa-users'
                 },
                 @{
                     Name = 'List Devices'
-                    Link = "https://$CIPPUrl/endpoint/MEM/devices?customerId=$($Customer.customerId)"
+                    Link = "https://$CIPPUrl/endpoint/MEM/devices?tenantFilter=$($Customer.defaultDomainName)"
                     Icon = 'fas fa-laptop'
                 },
                 @{
                     Name = 'Create User'
-                    Link = "https://$CIPPUrl/identity/administration/users/add?customerId=$($Customer.customerId)"
+                    Link = "https://$CIPPUrl/identity/administration/users/add?tenantFilter=$($Customer.defaultDomainName)"
                     Icon = 'fas fa-user-plus'
                 },
                 @{
                     Name = 'Create Group'
-                    Link = "https://$CIPPUrl/identity/administration/groups/add?customerId=73be1f98-1003-4e1a-8e8a-4ffbff7ff2d6"
+                    Link = "https://$CIPPUrl/identity/administration/groups/add?tenantFilter=$($Customer.defaultDomainName)"
                     Icon = 'fas fa-user-group'
                 }
             )
@@ -1881,7 +1686,7 @@ function Invoke-NinjaOneTenantSync {
 
             # Create the Users Card
 
-            $TitleLink = "https://$CIPPUrl/identity/administration/users?customerId=$($Customer.customerId)"
+            $TitleLink = "https://$CIPPUrl/identity/administration/users?tenantFilter=$($Customer.defaultDomainName)"
 
             $UsersCardBodyHTML = $UsersEnabledChartHTML + $UsersTypesChartHTML
 
@@ -1963,7 +1768,7 @@ function Invoke-NinjaOneTenantSync {
 
             # Create the Devices Card
 
-            $TitleLink = "https://$CIPPUrl/endpoint/MEM/devices?customerId=$($Customer.customerId)"
+            $TitleLink = "https://$CIPPUrl/endpoint/MEM/devices?tenantFilter=$($Customer.defaultDomainName)"
 
             $DeviceCardBodyHTML = $DeviceComplianceChartHTML + $DeviceOsChartHTML + $DeviceOnlineChartHTML
 
@@ -1996,7 +1801,7 @@ function Invoke-NinjaOneTenantSync {
             # Recommended Actions HTML
             $RecommendedActionsHTML = $Top5Actions | Select-Object 'Recommended Action', @{n = 'Score Impact'; e = { "+$($_.'Score Impact')%" } }, Category, @{n = 'Link'; e = { '<a href="' + $_.link + '" target="_blank"><i class="fas fa-arrow-up-right-from-square" style="color: #337ab7;"></i></a>' } } | ConvertTo-Html -As Table -Fragment
 
-            $TitleLink = "https://security.microsoft.com/securescore?viewid=overview&tid=$($Customer.CustomerId)"
+            $TitleLink = "https://security.microsoft.com/securescore?viewid=overview&tid=$($Customer.customerId)"
 
             $SecureScoreCardBodyHTML = $SecureScoreHTML + [System.Web.HttpUtility]::HtmlDecode($RecommendedActionsHTML) -replace '<th>', '<th style="white-space: nowrap;">'
             $SecureScoreCardBodyHTML = $SecureScoreCardBodyHTML -replace '<td>', '<td>'
@@ -2012,44 +1817,39 @@ function Invoke-NinjaOneTenantSync {
 
             try {
                 $StandardsDefinitions = Get-Content 'config/standards.json' | ConvertFrom-Json -Depth 100
+                $AppliedStandards = Get-CIPPStandards -TenantFilter $Customer.defaultDomainName
+                $Templates = Get-CIPPTable 'templates'
+                $StandardTemplates = Get-CIPPAzDataTableEntity @Templates | Where-Object { $_.PartitionKey -eq 'StandardsTemplateV2' }
 
-                $Table = Get-CippTable -tablename 'standards'
-
-                $Filter = "PartitionKey eq 'standards'"
-
-                $AllStandards = (Get-CIPPAzDataTableEntity @Table -Filter $Filter).JSON | ConvertFrom-Json -Depth 100
-
-                $AppliedStandards = ($AllStandards | Where-Object { $_.Tenant -eq $Customer.defaultDomainName -or $_.Tenant -eq 'AllTenants' })
-
-                $ParsedStandards = foreach ($Standard  in $AppliedStandards) {
-                    [PSCustomObject]$Standards = $Standard.Standards
-                    $Standards.PSObject.Properties | ForEach-Object {
-                        $CheckValue = $_
-                        if ($CheckValue.value) {
-                            $MatchedStandard = $StandardsDefinitions | Where-Object { ($_.name -split 'standards.')[1] -eq $CheckValue.name }
-                            if (($MatchedStandard | Measure-Object).count -eq 1) {
-                                '<li><span>' + $($MatchedStandard.label) + ' (' + ($($Standard.Tenant)) + ')</span></li>'
-                            }
+                $ParsedStandards = foreach ($Standard in $AppliedStandards) {
+                    $Template = ($StandardTemplates | Where-Object { $_.RowKey -eq $Standard.TemplateId }).JSON | ConvertFrom-Json
+                    $StandardInfo = $StandardsDefinitions | Where-Object { ($_.name -replace 'standards.', '') -eq $Standard.Standard }
+                    $StandardLabel = $StandardInfo.label
+                    $ParsedActions = foreach ($Action in $Standard.Settings.PSObject.Properties) {
+                        if ($Action.Value -eq $true -and $Action.Name -in @('remediate', 'report', 'alert')) {
+                            (Get-Culture).TextInfo.ToTitleCase($Action.Name)
                         }
                     }
-
+                    [PSCustomObject]@{
+                        Standard = $StandardLabel
+                        Template = $Template.templateName
+                        Actions  = $ParsedActions -join ', '
+                    }
                 }
+                $ParsedStandardsHTML = $ParsedStandards | ConvertTo-Html -As Table -Fragment
+                $StandardsTableHTML = '<div class="field-container">' + (([System.Web.HttpUtility]::HtmlDecode($ParsedStandardsHTML) -replace '<th>', '<th style="white-space: nowrap;">') -replace '<td>', '<td style="white-space: nowrap;">') + '</div>'
             } catch {
-                $ParsedStandards = 'No standards applied or error retrieving standards'
+                $StandardsTableHTML = 'No standards applied or error retrieving standards'
             }
-
-            $TitleLink = "https://$CIPPUrl/tenant/standards/list-applied-standards?customerId=$($Customer.customerId)"
-
-            $CIPPStandardsBodyHTML = '<ul>' + $ParsedStandards + '</ul>'
-
-            $CIPPStandardsSummaryCardHTML = Get-NinjaOneCard -Title 'CIPP Applied Standards' -Body $CIPPStandardsBodyHTML -Icon 'fas fa-shield-halved' -TitleLink $TitleLink
+            $TitleLink = "https://$CIPPUrl/tenant/standards/list-standards"
+            $CIPPStandardsSummaryCardHTML = Get-NinjaOneCard -Title 'CIPP Applied Standards' -Body $StandardsTableHTML -Icon 'fas fa-shield-halved' -TitleLink $TitleLink
 
             ### License Card
             Write-Information 'License Details'
             $LicenseTableHTML = $LicensesParsed | Sort-Object 'License Name' | ConvertTo-Html -As Table -Fragment
             $LicenseTableHTML = '<div class="field-container">' + (([System.Web.HttpUtility]::HtmlDecode($LicenseTableHTML) -replace '<th>', '<th style="white-space: nowrap;">') -replace '<td>', '<td style="white-space: nowrap;">') + '</div>'
 
-            $TitleLink = "https://$CIPPUrl/tenant/administration/list-licenses?customerId=$($Customer.customerId)"
+            $TitleLink = "https://$CIPPUrl/tenant/reports/list-licenses?tenantFilter=$($Customer.defaultDomainName)"
             $LicensesSummaryCardHTML = Get-NinjaOneCard -Title 'Licenses' -Body $LicenseTableHTML -Icon 'fas fa-chart-bar' -TitleLink $TitleLink
 
 
@@ -2097,7 +1897,7 @@ function Invoke-NinjaOneTenantSync {
                         )
                         Description = 'Unused Licenses'
                         Colour      = $ResultColour
-                        Link        = "https://$CIPPUrl/tenant/standards/bpa-report?SearchNow=true&Report=CIPP+Best+Practices+v1.5+-+Tenant+view&tenantFilter=$($Customer.customerId)"
+                        Link        = "https://$CIPPUrl/tenant/standards/bpa-report?tenantFilter=$($Customer.defaultDomainName)"
                     })
 
 
@@ -2128,7 +1928,7 @@ function Invoke-NinjaOneTenantSync {
                         )
                         Description = 'Password Never Expires'
                         Colour      = $ResultColour
-                        Link        = "https://$CIPPUrl/tenant/standards/bpa-report?SearchNow=true&Report=CIPP+Best+Practices+v1.5+-+Tenant+view&tenantFilter=$($Customer.customerId)"
+                        Link        = "https://$CIPPUrl/tenant/standards/bpa-report?tenantFilter=$($Customer.defaultDomainName)"
                     })
 
                 # oAuth App Consent
@@ -2143,7 +1943,7 @@ function Invoke-NinjaOneTenantSync {
                         )
                         Description = 'OAuth App Consent'
                         Colour      = $ResultColour
-                        Link        = "https://entra.microsoft.com/$($Customer.customerId)/#view/Microsoft_AAD_IAM/ConsentPoliciesMenuBlade/~/UserSettings"
+                        Link        = "https://entra.microsoft.com/$($Customer.defaultDomainName)/#view/Microsoft_AAD_IAM/ConsentPoliciesMenuBlade/~/UserSettings"
                     })
 
             }
@@ -2167,7 +1967,7 @@ function Invoke-NinjaOneTenantSync {
                     Value       = ($licensedUsers | Measure-Object).count
                     Description = 'Licensed Users'
                     Colour      = '#CCCCCC'
-                    Link        = "https://$CIPPUrl/identity/administration/users?customerId=$($Customer.customerId)"
+                    Link        = "https://$CIPPUrl/identity/administration/users?tenantFilter=$($Customer.defaultDomainName)"
                 })
 
             # Devices
@@ -2175,7 +1975,7 @@ function Invoke-NinjaOneTenantSync {
                     Value       = ($Devices | Measure-Object).count
                     Description = 'Devices'
                     Colour      = '#CCCCCC'
-                    Link        = "https://$CIPPUrl/endpoint/MEM/devices?customerId=$($Customer.customerId)"
+                    Link        = "https://$CIPPUrl/endpoint/MEM/devices?tenantFilter=$($Customer.defaultDomainName)"
                 })
 
             # Groups
@@ -2183,7 +1983,7 @@ function Invoke-NinjaOneTenantSync {
                     Value       = ($AllGroups | Measure-Object).count
                     Description = 'Groups'
                     Colour      = '#CCCCCC'
-                    Link        = "https://$CIPPUrl/identity/administration/groups?customerId=$($Customer.customerId)"
+                    Link        = "https://$CIPPUrl/identity/administration/groups?tenantFilter=$($Customer.defaultDomainName)"
                 })
 
             # Roles
@@ -2191,7 +1991,7 @@ function Invoke-NinjaOneTenantSync {
                     Value       = ($AllRoles | Measure-Object).count
                     Description = 'Roles'
                     Colour      = '#CCCCCC'
-                    Link        = "https://$CIPPUrl/identity/administration/roles?customerId=$($Customer.customerId)"
+                    Link        = "https://$CIPPUrl/identity/administration/roles?tenantFilter=$($Customer.defaultDomainName)"
                 })
 
 
@@ -2285,7 +2085,7 @@ function Invoke-NinjaOneTenantSync {
     <div class="info-text">
         <div class="info-title">$($ParsedUsers.count) users found in Tenant</div>
         <div class="info-description">
-            Only the first 100 users are displayed here. To see all users please <a href="https://$CIPPUrl/identity/administration/users?customerId=$($Customer.customerId)" target="_blank">view users in CIPP</a>.
+            Only the first 100 users are displayed here. To see all users please <a href="https://$CIPPUrl/identity/administration/users?tenantFilter=$($Customer.defaultDomainName)" target="_blank">view users in CIPP</a>.
         </div>
     </div>
 </div>
@@ -2326,16 +2126,17 @@ function Invoke-NinjaOneTenantSync {
         $CurrentItem | Add-Member -NotePropertyName lastStatus -NotePropertyValue 'Completed' -Force
         Add-CIPPAzDataTableEntity @MappingTable -Entity $CurrentItem -Force
 
-        Write-LogMessage -API 'NinjaOneSync' -user 'NinjaOneSync' -message "Completed NinjaOne Sync for $($Customer.displayName). Queued for $((New-TimeSpan -Start $StartQueueTime -End $StartTime).TotalSeconds) seconds. Data fetched in $((New-TimeSpan -Start $StartTime -End $FetchEnd).TotalSeconds) seconds. Total processing time $((New-TimeSpan -Start $StartTime -End (Get-Date)).TotalSeconds) seconds" -Sev 'info'
+        Write-LogMessage -API 'NinjaOneSync' -Headers'NinjaOneSync' -message "Completed NinjaOne Sync for $($Customer.displayName). Queued for $((New-TimeSpan -Start $StartQueueTime -End $StartTime).TotalSeconds) seconds. Data fetched in $((New-TimeSpan -Start $StartTime -End $FetchEnd).TotalSeconds) seconds. Total processing time $((New-TimeSpan -Start $StartTime -End (Get-Date)).TotalSeconds) seconds" -Sev 'info'
 
     } catch {
         $Message = if ($_.ErrorDetails.Message) {
             Get-NormalizedError -Message $_.ErrorDetails.Message
+            Write-Information (Get-CippException -Exception $_ | ConvertTo-Json)
         } else {
             $_.Exception.message
         }
         Write-Error "Failed NinjaOne Processing for $($Customer.displayName) Linenumber: $($_.InvocationInfo.ScriptLineNumber) Error:  $Message"
-        Write-LogMessage -API 'NinjaOneSync' -user 'NinjaOneSync' -message "Failed NinjaOne Processing for $($Customer.displayName) Linenumber: $($_.InvocationInfo.ScriptLineNumber) Error: $Message" -Sev 'Error'
+        Write-LogMessage -API 'NinjaOneSync' -Headers'NinjaOneSync' -message "Failed NinjaOne Processing for $($Customer.displayName) Linenumber: $($_.InvocationInfo.ScriptLineNumber) Error: $Message" -Sev 'Error'
         $CurrentItem | Add-Member -NotePropertyName lastEndTime -NotePropertyValue ([string]$((Get-Date).ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ss.fffZ'))) -Force
         $CurrentItem | Add-Member -NotePropertyName lastStatus -NotePropertyValue 'Failed' -Force
         Add-CIPPAzDataTableEntity @MappingTable -Entity $CurrentItem -Force

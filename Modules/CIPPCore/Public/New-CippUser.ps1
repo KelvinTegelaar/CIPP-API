@@ -5,7 +5,7 @@ function New-CIPPUser {
         $Aliases = 'Scheduled',
         $RestoreValues,
         $APIName = 'New User',
-        $ExecutingUser
+        $Headers
     )
 
     try {
@@ -13,7 +13,7 @@ function New-CIPPUser {
         Write-Host $UserObj.PrimDomain.value
         $Aliases = ($UserObj.AddedAliases) -split '\s'
         $password = if ($UserObj.password) { $UserObj.password } else { New-passwordString }
-        $UserprincipalName = "$($UserObj.Username ? $userobj.username :$userobj.mailNickname )@$($UserObj.Domain ? $UserObj.Domain : $UserObj.PrimDomain.value)"
+        $UserprincipalName = "$($userobj.username)@$($UserObj.Domain ? $UserObj.Domain : $UserObj.PrimDomain.value)"
         Write-Host "Creating user $UserprincipalName"
         Write-Host "tenant filter is $($UserObj.tenantFilter)"
         $BodyToship = [pscustomobject] @{
@@ -22,7 +22,7 @@ function New-CIPPUser {
             'accountEnabled'    = $true
             'displayName'       = $UserObj.displayName
             'department'        = $UserObj.Department
-            'mailNickname'      = $UserObj.Username ? $userobj.username :$userobj.mailNickname
+            'mailNickname'      = $UserObj.Username ? $userobj.username : $userobj.mailNickname
             'userPrincipalName' = $UserprincipalName
             'usageLocation'     = $UserObj.usageLocation.value ? $UserObj.usageLocation.value : $UserObj.usageLocation
             'city'              = $UserObj.City
@@ -38,16 +38,19 @@ function New-CIPPUser {
             }
         }
         if ($userobj.businessPhone) { $bodytoShip | Add-Member -NotePropertyName businessPhones -NotePropertyValue @($UserObj.businessPhone) }
-        if ($UserObj.defaultAttributes.value) {
-            [hashtable]($UserObj.defaultAttributes).GetEnumerator() | ForEach-Object {
-                $results.add("Added property $($_.Key) with value $($_.value)")
-                $bodytoShip | Add-Member -NotePropertyName $_.Key -NotePropertyValue $_.Value
+        if ($UserObj.defaultAttributes) {
+            $UserObj.defaultAttributes | Get-Member -MemberType NoteProperty | ForEach-Object {
+                Write-Host "Editing user and adding $($_.Name) with value $($UserObj.defaultAttributes.$($_.Name).value)"
+                if (-not [string]::IsNullOrWhiteSpace($UserObj.defaultAttributes.$($_.Name).value)) {
+                    Write-Host 'adding body to ship'
+                    $BodyToShip | Add-Member -NotePropertyName $_.Name -NotePropertyValue $UserObj.defaultAttributes.$($_.Name).value -Force
+                }
             }
         }
         $bodyToShip = ConvertTo-Json -Depth 10 -InputObject $BodyToship -Compress
         Write-Host "Shipping: $bodyToShip"
         $GraphRequest = New-GraphPostRequest -uri 'https://graph.microsoft.com/beta/users' -tenantId $UserObj.tenantFilter -type POST -body $BodyToship -verbose
-        Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $($UserObj.tenantFilter) -message "Created user $($UserObj.displayname) with id $($GraphRequest.id) " -Sev 'Info'
+        Write-LogMessage -headers $Headers -API $APINAME -tenant $($UserObj.tenantFilter) -message "Created user $($UserObj.displayname) with id $($GraphRequest.id) " -Sev 'Info'
 
         try {
             $PasswordLink = New-PwPushLink -Payload $password
@@ -63,7 +66,7 @@ function New-CIPPUser {
             Password = $password
         }
     } catch {
-        Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $($UserObj.tenantFilter) -message "Failed to create user. Error:$($_.Exception.Message)" -Sev 'Error'
+        Write-LogMessage -headers $Headers -API $APINAME -tenant $($UserObj.tenantFilter) -message "Failed to create user. Error:$($_.Exception.Message)" -Sev 'Error'
         $results = @{ Results = ("Failed to create user. $($_.Exception.Message)" ) }
         throw "Failed to create user  $($_.Exception.Message)"
     }

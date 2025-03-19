@@ -10,27 +10,25 @@ Function Invoke-ListFunctionStats {
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
 
-    $APIName = $TriggerMetadata.FunctionName
-    Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -message 'Accessed this API' -Sev 'Debug'
-
-    # Write to the Azure Functions log stream.
-    Write-Host 'PowerShell HTTP trigger function processed a request.'
-    # Interact with query parameters or the body of the request.
+    $APIName = $Request.Params.CIPPEndpoint
+    Write-LogMessage -headers $Request.Headers -API $APINAME -message 'Accessed this API' -Sev 'Debug'
 
     try {
-        $TenantFilter = $Request.Query.TenantFilter
+        $TenantFilter = $Request.Query.tenantFilter
         $PartitionKey = $Request.Query.FunctionType
+        $Time = $Request.Query.Time
+        $Interval = $Request.Query.Interval
 
-        $Timestamp = if (![string]::IsNullOrEmpty($Request.Query.Interval) -and ![string]::IsNullOrEmpty($Request.Query.Time)) {
-            switch ($Request.Query.Interval) {
+        $Timestamp = if (![string]::IsNullOrEmpty($Interval) -and ![string]::IsNullOrEmpty($Time)) {
+            switch ($Interval) {
                 'Days' {
-                    (Get-Date).AddDays(-$Request.Query.Time).ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ss.fffK')
+                    (Get-Date).AddDays(-$Time).ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ss.fffK')
                 }
                 'Hours' {
-                    (Get-Date).AddHours(-$Request.Query.Time).ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ss.fffK')
+                    (Get-Date).AddHours(-$Time).ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ss.fffK')
                 }
                 'Minutes' {
-                    (Get-Date).AddMinutes(-$Request.Query.Time).ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ss.fffK')
+                    (Get-Date).AddMinutes(-$Time).ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ss.fffK')
                 }
             }
         } else {
@@ -69,7 +67,7 @@ Function Invoke-ListFunctionStats {
                 'AvgSeconds'     = $Stats.Average
             }
         }
-        $Status = [HttpStatusCode]::OK
+        $StatusCode = [HttpStatusCode]::OK
         $Body = @{
             Results  = @{
                 Functions = @($FunctionStats)
@@ -80,7 +78,7 @@ Function Invoke-ListFunctionStats {
             }
         }
     } catch {
-        $Status = [HttpStatusCode]::BadRequest
+        $StatusCode = [HttpStatusCode]::BadRequest
         $Body = @{
             Results  = @()
             Metadata = @{
@@ -91,7 +89,7 @@ Function Invoke-ListFunctionStats {
     }
 
     Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
-            StatusCode = $Status
+            StatusCode = $StatusCode
             Body       = $Body
         }) -Clobber
 

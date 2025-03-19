@@ -20,14 +20,14 @@
     .PARAMETER TenantFilter
     Specifies the tenant ID or domain against which to perform the operation.
 
-    .PARAMETER ExecutingUser
+    .PARAMETER Headers
     Specifies the user who initiated the request for logging purposes.
 
     .PARAMETER APIName
     Specifies the name of the API call for logging purposes. Defaults to 'Set Device State'.
 
     .EXAMPLE
-    Set-CIPPDeviceState -Action Enable -DeviceID "1234abcd-5678-efgh-ijkl-9012mnopqrst" -TenantFilter "contoso.onmicrosoft.com" -ExecutingUser "admin@contoso.onmicrosoft.com"
+    Set-CIPPDeviceState -Action Enable -DeviceID "1234abcd-5678-efgh-ijkl-9012mnopqrst" -TenantFilter "contoso.onmicrosoft.com" -Headers "admin@contoso.onmicrosoft.com"
 
     This command enables the specified device within the given tenant.
 
@@ -49,7 +49,7 @@
         [Parameter(Mandatory = $true)]$DeviceID,
 
         [Parameter(Mandatory = $true)]$TenantFilter,
-        $ExecutingUser,
+        $Headers,
         $APIName = 'Set Device State'
     )
     $Url = "https://graph.microsoft.com/beta/devices/$($DeviceID)"
@@ -67,11 +67,11 @@
             }
         }
         Write-Host $ActionResult
-        Write-LogMessage -user $ExecutingUser -API $APIName -message "Executed action $($Action) on $($DeviceID)" -Sev Info
+        Write-LogMessage -headers $Headers -API $APIName -message "Executed action $($Action) on $($DeviceID)" -Sev Info
         return "Executed action $($Action) on $($DeviceID)"
     } catch {
         $ErrorMessage = Get-CippException -Exception $_
-        Write-LogMessage -user $ExecutingUser -API $APIName -message "Failed to queue action $($Action) on $($DeviceID). Error: $($ErrorMessage.NormalizedError)" -Sev Error -LogData $ErrorMessage
+        Write-LogMessage -headers $Headers -API $APIName -message "Failed to queue action $($Action) on $($DeviceID). Error: $($ErrorMessage.NormalizedError)" -Sev Error -LogData $ErrorMessage
         throw "Failed to queue action $($Action) on $($DeviceID). Error: $($ErrorMessage.NormalizedError)"
     }
 

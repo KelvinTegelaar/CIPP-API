@@ -32,7 +32,7 @@ function Get-Tenants {
     }
 
     if ($TenantFilter) {
-        Write-Information "Getting tenant $TenantFilter"
+        #Write-Information "Getting tenant $TenantFilter"
         if ($TenantFilter -match '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$') {
             $Filter = "{0} and customerId eq '{1}'" -f $Filter, $TenantFilter
             # create where-object scriptblock

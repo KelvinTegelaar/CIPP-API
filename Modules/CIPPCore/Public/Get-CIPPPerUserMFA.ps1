@@ -3,7 +3,7 @@ function Get-CIPPPerUserMFA {
     param(
         $TenantFilter,
         $userId,
-        $executingUser,
+        $Headers,
         $AllUsers = $false
     )
     try {

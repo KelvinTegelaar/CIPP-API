@@ -7,6 +7,10 @@ function Invoke-ExecPartnerWebhook {
     #>
     Param($Request, $TriggerMetadata)
 
+    $APIName = $Request.Params.CIPPEndpoint
+    $Headers = $Request.Headers
+    Write-LogMessage -headers $Headers -API $APIName -message 'Accessed this API' -Sev 'Debug'
+
     switch ($Request.Query.Action) {
         'ListEventTypes' {
             $Uri = 'https://api.partnercenter.microsoft.com/webhooks/v1/registration/events'
@@ -42,7 +46,7 @@ function Invoke-ExecPartnerWebhook {
                 PartnerCenter = $true
                 BaseURL       = $BaseURL
                 EventType     = $Request.Body.EventType
-                ExecutingUser = $Request.Headers.'x-ms-client-principal'
+                Headers       = $Request.Headers.'x-ms-client-principal'
             }
 
             $Results = New-CIPPGraphSubscription @Webhook

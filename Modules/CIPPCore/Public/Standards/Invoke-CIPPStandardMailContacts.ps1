@@ -13,7 +13,6 @@ function Invoke-CIPPStandardMailContacts {
         CAT
             Global Standards
         TAG
-            "lowimpact"
         ADDEDCOMPONENT
             {"type":"textField","name":"standards.MailContacts.GeneralContact","label":"General Contact","required":false}
             {"type":"textField","name":"standards.MailContacts.SecurityContact","label":"Security Contact","required":false}
@@ -21,6 +20,8 @@ function Invoke-CIPPStandardMailContacts {
             {"type":"textField","name":"standards.MailContacts.TechContact","label":"Technical Contact","required":false}
         IMPACT
             Low Impact
+        ADDEDDATE
+            2022-03-13
         POWERSHELLEQUIVALENT
             Set-MsolCompanyContactInformation
         RECOMMENDEDBY

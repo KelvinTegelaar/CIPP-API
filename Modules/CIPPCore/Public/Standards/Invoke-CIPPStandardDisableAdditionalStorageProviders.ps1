@@ -13,12 +13,13 @@ function Invoke-CIPPStandardDisableAdditionalStorageProviders {
         CAT
             Exchange Standards
         TAG
-            "lowimpact"
             "CIS"
             "exo_storageproviderrestricted"
         ADDEDCOMPONENT
         IMPACT
             Low Impact
+        ADDEDDATE
+            2024-01-17
         POWERSHELLEQUIVALENT
             Get-OwaMailboxPolicy \| Set-OwaMailboxPolicy -AdditionalStorageProvidersEnabled \$False
         RECOMMENDEDBY

@@ -10,9 +10,9 @@ Function Invoke-ExecTeamsVoicePhoneNumberAssignment {
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
 
-    $APIName = $TriggerMetadata.FunctionName
-    $ExecutingUser = $Request.headers.'x-ms-client-principal'
-    Write-LogMessage -user $ExecutingUser -API $APINAME -message 'Accessed this API' -Sev 'Debug'
+    $APIName = $Request.Params.CIPPEndpoint
+    $Headers = $Request.Headers
+    Write-LogMessage -Headers $Headers -API $APINAME -message 'Accessed this API' -Sev 'Debug'
     $Identity = $Request.Body.input.value
 
     $tenantFilter = $Request.Body.TenantFilter
@@ -24,12 +24,12 @@ Function Invoke-ExecTeamsVoicePhoneNumberAssignment {
             $null = New-TeamsRequest -TenantFilter $TenantFilter -Cmdlet 'Set-CsPhoneNumberAssignment' -CmdParams @{Identity = $Identity; PhoneNumber = $Request.Body.PhoneNumber; PhoneNumberType = $Request.Body.PhoneNumberType; ErrorAction = 'stop' }
             $Results = [pscustomobject]@{'Results' = "Successfully assigned $($Request.Body.PhoneNumber) to $($Identity)" }
         }
-        Write-LogMessage -user $ExecutingUser -API $APINAME -tenant $($TenantFilter) -message $($Results.Results) -Sev Info
+        Write-LogMessage -Headers $Headers -API $APINAME -tenant $($TenantFilter) -message $($Results.Results) -Sev Info
         $StatusCode = [HttpStatusCode]::OK
     } catch {
         $ErrorMessage = Get-CippException -Exception $_
         $Results = [pscustomobject]@{'Results' = $ErrorMessage.NormalizedError }
-        Write-LogMessage -user $ExecutingUser -API $APINAME -tenant $($TenantFilter) -message $($Results.Results) -Sev Error -LogData $ErrorMessage
+        Write-LogMessage -Headers $Headers -API $APINAME -tenant $($TenantFilter) -message $($Results.Results) -Sev Error -LogData $ErrorMessage
         $StatusCode = [HttpStatusCode]::Forbidden
     }
     # Associate values to output bindings by calling 'Push-OutputBinding'.

@@ -10,8 +10,8 @@ Function Invoke-ExecSetSecurityIncident {
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
 
-    $APIName = $TriggerMetadata.FunctionName
-    Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -message 'Accessed this API' -Sev 'Debug'
+    $APIName = $Request.Params.CIPPEndpoint
+    Write-LogMessage -headers $Request.Headers -API $APINAME -message 'Accessed this API' -Sev 'Debug'
 
     $first = ''
     # Interact with query parameters or the body of the request.
@@ -60,15 +60,15 @@ Function Invoke-ExecSetSecurityIncident {
 
             $ResponseBody = [pscustomobject]@{'Results' = $BodyBuild }
             New-Graphpostrequest -uri "https://graph.microsoft.com/beta/security/incidents/$IncidentFilter" -type PATCH -tenantid $TenantFilter -body $Assignbody -asApp $true
-            Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $($tenantfilter) -message "Update incident $IncidentFilter with values $Assignbody" -Sev 'Info'
+            Write-LogMessage -headers $Request.Headers -API $APINAME -tenant $($tenantfilter) -message "Update incident $IncidentFilter with values $Assignbody" -Sev 'Info'
         } else {
             $ResponseBody = [pscustomobject]@{'Results' = 'Cannot update redirected incident' }
-            Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $($tenantfilter) -message "Refuse to pdate incident $IncidentFilter with values $Assignbody because it is redirected to another incident" -Sev 'Info'
+            Write-LogMessage -headers $Request.Headers -API $APINAME -tenant $($tenantfilter) -message "Refuse to pdate incident $IncidentFilter with values $Assignbody because it is redirected to another incident" -Sev 'Info'
         }
 
         $body = $ResponseBody
     } catch {
-        Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $($tenantfilter) -message "Failed to update alert $($AlertFilter): $($_.Exception.Message)" -Sev 'Error'
+        Write-LogMessage -headers $Request.Headers -API $APINAME -tenant $($tenantfilter) -message "Failed to update alert $($AlertFilter): $($_.Exception.Message)" -Sev 'Error'
         $body = [pscustomobject]@{'Results' = "Failed to update incident: $($_.Exception.Message)" }
     }
 

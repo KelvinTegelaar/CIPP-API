@@ -4,7 +4,8 @@ function Add-CIPPScheduledTask {
         [pscustomobject]$Task,
         [bool]$Hidden,
         $DisallowDuplicateName = $false,
-        [string]$SyncType = $null
+        [string]$SyncType = $null,
+        $Headers
     )
 
     $Table = Get-CIPPTable -TableName 'ScheduledTasks'
@@ -22,6 +23,10 @@ function Add-CIPPScheduledTask {
     $Parameters = [System.Collections.Hashtable]@{}
     foreach ($Key in $task.Parameters.PSObject.Properties.Name) {
         $Param = $task.Parameters.$Key
+
+        if ($null -eq $Param -or $Param -eq '' -or ($Param | Measure-Object).Count -eq 0) {
+            continue
+        }
         if ($Param -is [System.Collections.IDictionary] -or $Param.Key) {
             $ht = @{}
             foreach ($p in $Param.GetEnumerator()) {
@@ -31,6 +36,10 @@ function Add-CIPPScheduledTask {
         } else {
             $Parameters[$Key] = $Param
         }
+    }
+
+    if ($Headers) {
+        $Parameters.Headers = $Headers | Select-Object -Property 'x-forwarded-for', 'x-ms-client-principal', 'x-ms-client-principal-idp', 'x-ms-client-principal-name'
     }
 
     $Parameters = ($Parameters | ConvertTo-Json -Depth 10 -Compress)

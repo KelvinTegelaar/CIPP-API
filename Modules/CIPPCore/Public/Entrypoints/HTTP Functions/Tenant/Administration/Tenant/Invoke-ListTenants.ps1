@@ -10,9 +10,9 @@ Function Invoke-ListTenants {
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
 
-    $APIName = $TriggerMetadata.FunctionName
+    $APIName = $Request.Params.CIPPEndpoint
 
-    Write-LogMessage -user $Request.Headers.'x-ms-client-principal' -API $APINAME -message 'Accessed this API' -Sev 'Debug'
+    Write-LogMessage -headers $Request.Headers -API $APINAME -message 'Accessed this API' -Sev 'Debug'
     $TenantAccess = Test-CIPPAccess -Request $Request -TenantList
     Write-Host "Tenant Access: $TenantAccess"
 
@@ -23,8 +23,8 @@ Function Invoke-ListTenants {
     }
 
     # Clear Cache
-    if ($Request.Query.ClearCache -eq $true) {
-        Remove-CIPPCache -tenantsOnly $Request.Query.TenantsOnly
+    if ($Request.Body.ClearCache -eq $true) {
+        $Results = Remove-CIPPCache -tenantsOnly $Request.Body.TenantsOnly
 
         $InputObject = [PSCustomObject]@{
             Batch            = @(
@@ -40,7 +40,12 @@ Function Invoke-ListTenants {
         $GraphRequest = [pscustomobject]@{'Results' = 'Cache has been cleared and a tenant refresh is queued.' }
         Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
                 StatusCode = [HttpStatusCode]::OK
-                Body       = $GraphRequest
+                Body       = @{
+                    Results  = @($GraphRequest)
+                    Metadata = @{
+                        Details = $Results
+                    }
+                }
             })
         #Get-Tenants -IncludeAll -TriggerRefresh
         return
@@ -88,13 +93,26 @@ Function Invoke-ListTenants {
             } else {
                 $Body = $Tenants
             }
+            if ($Request.Query.Mode -eq 'TenantList') {
+                # add portal link properties
+                $Body = $Body | Select-Object *, @{Name = 'portal_m365'; Expression = { "https://admin.microsoft.com/Partner/BeginClientSession.aspx?CTID=$($_.customerId)&CSDEST=o365admincenter" } },
+                @{Name = 'portal_exchange'; Expression = { "https://admin.exchange.microsoft.com/?landingpage=homepage&form=mac_sidebar&delegatedOrg=$($_.defaultDomainName)" } },
+                @{Name = 'portal_entra'; Expression = { "https://entra.microsoft.com/$($_.defaultDomainName)" } },
+                @{Name = 'portal_teams'; Expression = { "https://admin.teams.microsoft.com/?delegatedOrg=$($_.defaultDomainName)" } },
+                @{Name = 'portal_azure'; Expression = { "https://portal.azure.com/$($_.defaultDomainName)" } },
+                @{Name = 'portal_intune'; Expression = { "https://intune.microsoft.com/$($_.defaultDomainName)" } },
+                @{Name = 'portal_security'; Expression = { "https://security.microsoft.com/?tid=$($_.customerId)" } },
+                @{Name = 'portal_compliance'; Expression = { "https://purview.microsoft.com/?tid=$($_.customerId)" } },
+                @{Name = 'portal_sharepoint'; Expression = { "https://admin.microsoft.com/Partner/beginclientsession.aspx?CTID=$($_.customerId)&CSDEST=SharePoint" } }
+            }
+
         } else {
             $body = $Tenants | Where-Object -Property defaultDomainName -EQ $Tenantfilter
         }
 
-        Write-LogMessage -user $request.headers.'x-ms-client-principal' -tenant $Tenantfilter -API $APINAME -message 'Listed Tenant Details' -Sev 'Debug'
+        Write-LogMessage -headers $Request.Headers -tenant $Tenantfilter -API $APINAME -message 'Listed Tenant Details' -Sev 'Debug'
     } catch {
-        Write-LogMessage -user $request.headers.'x-ms-client-principal' -tenant $Tenantfilter -API $APINAME -message "List Tenant failed. The error is: $($_.Exception.Message)" -Sev 'Error'
+        Write-LogMessage -headers $Request.Headers -tenant $Tenantfilter -API $APINAME -message "List Tenant failed. The error is: $($_.Exception.Message)" -Sev 'Error'
         $body = [pscustomobject]@{
             'Results'         = "Failed to retrieve tenants: $($_.Exception.Message)"
             defaultDomainName = ''

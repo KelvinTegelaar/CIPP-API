@@ -10,8 +10,8 @@ Function Invoke-AddStandardsDeploy {
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
 
-    $APIName = $TriggerMetadata.FunctionName
-    Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -message 'Accessed this API' -Sev 'Debug'
+    $APIName = $Request.Params.CIPPEndpoint
+    Write-LogMessage -headers $Request.Headers -API $APINAME -message 'Accessed this API' -Sev 'Debug'
 
     $user = $request.headers.'x-ms-client-principal'
     $username = ([System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($user)) | ConvertFrom-Json).userDetails
@@ -48,11 +48,11 @@ Function Invoke-AddStandardsDeploy {
             RowKey       = "$Tenant"
             PartitionKey = 'standards'
         }
-        Write-LogMessage -user $request.headers.'x-ms-client-principal' -tenant $tenant -API 'Standards' -message 'Successfully added standards deployment' -Sev 'Info'
+        Write-LogMessage -headers $Request.Headers -tenant $tenant -API 'Standards' -message 'Successfully added standards deployment' -Sev 'Info'
 
         $body = [pscustomobject]@{'Results' = 'Successfully added standards deployment' }
     } catch {
-        Write-LogMessage -user $request.headers.'x-ms-client-principal' -API 'Standards' -message "Standards API failed. Error:$($_.Exception.Message)" -Sev 'Error'
+        Write-LogMessage -headers $Request.Headers -API 'Standards' -message "Standards API failed. Error:$($_.Exception.Message)" -Sev 'Error'
         $body = [pscustomobject]@{'Results' = "Failed to add standard: $($_.Exception.Message)" }
     }
 

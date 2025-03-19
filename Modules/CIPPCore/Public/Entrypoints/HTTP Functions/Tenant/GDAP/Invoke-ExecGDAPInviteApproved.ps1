@@ -10,7 +10,7 @@ Function Invoke-ExecGDAPInviteApproved {
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
 
-    Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -message 'Accessed this API' -Sev 'Debug'
+    Write-LogMessage -headers $Request.Headers -API $APINAME -message 'Accessed this API' -Sev 'Debug'
 
     Set-CIPPGDAPInviteGroups
 

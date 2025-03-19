@@ -5,7 +5,7 @@ function Test-CIPPRerun {
         $Type,
         $API,
         $Settings,
-        $ExecutingUser,
+        $Headers,
         [switch]$Clear,
         [switch]$ClearAll
     )
@@ -22,7 +22,9 @@ function Test-CIPPRerun {
         $RerunData = Get-CIPPAzDataTableEntity @RerunTable -filter "PartitionKey eq '$($TenantFilter)' and RowKey eq '$($Type)_$($API)'"
         if ($ClearAll.IsPresent) {
             $AllRerunData = Get-CIPPAzDataTableEntity @RerunTable
-            Remove-AzDataTableEntity @RerunTable -Entity $AllRerunData -Force
+            if ($AllRerunData) {
+                Remove-AzDataTableEntity @RerunTable -Entity $AllRerunData -Force
+            }
             return $false
         }
 
@@ -45,7 +47,7 @@ function Test-CIPPRerun {
                 }
             }
             if ($RerunData.EstimatedNextRun -gt $CurrentUnixTime) {
-                Write-LogMessage -API $API -message "Standard rerun detected for $($API). Prevented from running again." -tenant $TenantFilter -user $ExecutingUser -Sev 'Info'
+                Write-LogMessage -API $API -message "Standard rerun detected for $($API). Prevented from running again." -tenant $TenantFilter -headers $Headers -Sev 'Info'
                 return $true
             } else {
                 $RerunData.EstimatedNextRun = $EstimatedNextRun
@@ -67,7 +69,7 @@ function Test-CIPPRerun {
     } catch {
         $ErrorMessage = Get-CippException -Exception $_
         Write-Host "Could not detect if this is a rerun: $($ErrorMessage.NormalizedError)"
-        Write-LogMessage -user $ExecutingUser -API $API -message "Could not detect if this is a rerun: $($ErrorMessage.NormalizedError)" -Sev 'Error' -LogData $ErrorMessage
+        Write-LogMessage -headers $Headers -API $API -message "Could not detect if this is a rerun: $($ErrorMessage.NormalizedError)" -Sev 'Error' -LogData (Get-CippException -Exception $_)
         return $false
     }
 }

@@ -10,81 +10,77 @@ Function Invoke-AddGroup {
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
 
-    $APIName = $TriggerMetadata.FunctionName
-    Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -message 'Accessed this API' -Sev 'Debug'
+    $APIName = $Request.Params.CIPPEndpoint
+    $SelectedTenants = if ('AllTenants' -in $SelectedTenants) { (Get-Tenants).defaultDomainName } else { $Request.body.tenantFilter.value ? $Request.body.tenantFilter.value : $Request.body.tenantFilter }
+    Write-LogMessage -headers $Request.Headers -API $APIName -message 'Accessed this API' -Sev Debug
 
-    $groupobj = $Request.body
-    $SelectedTenants = $request.body.tenantfilter.value ? $request.body.tenantfilter.value : $request.body.tenantfilter
-    if ('AllTenants' -in $SelectedTenants) { $SelectedTenants = (Get-Tenants).defaultDomainName }
 
-    # Write to the Azure Functions log stream.
-    Write-Host 'PowerShell HTTP trigger function processed a request.'
-    $results = foreach ($tenant in $SelectedTenants) {
+    $GroupObject = $Request.body
+
+    $Results = foreach ($tenant in $SelectedTenants) {
         try {
-            $email = if ($groupobj.primDomain.value) { "$($groupobj.username)@$($groupobj.primDomain.value)" } else { "$($groupobj.username)@$($tenant)" }
-            if ($groupobj.groupType -in 'Generic', 'azurerole', 'dynamic', 'm365') {
+            $Email = if ($GroupObject.primDomain.value) { "$($GroupObject.username)@$($GroupObject.primDomain.value)" } else { "$($GroupObject.username)@$($tenant)" }
+            if ($GroupObject.groupType -in 'Generic', 'azurerole', 'dynamic', 'm365') {
 
-                $BodyToship = [pscustomobject] @{
-                    'displayName'      = $groupobj.Displayname
-                    'description'      = $groupobj.Description
-                    'mailNickname'     = $groupobj.username
+                $BodyParams = [pscustomobject] @{
+                    'displayName'      = $GroupObject.displayName
+                    'description'      = $GroupObject.description
+                    'mailNickname'     = $GroupObject.username
                     mailEnabled        = [bool]$false
                     securityEnabled    = [bool]$true
-                    isAssignableToRole = [bool]($groupobj | Where-Object -Property groupType -EQ 'AzureRole')
+                    isAssignableToRole = [bool]($GroupObject | Where-Object -Property groupType -EQ 'AzureRole')
                 }
-                if ($groupobj.membershipRules) {
-                    $BodyToship | Add-Member -NotePropertyName 'membershipRule' -NotePropertyValue ($groupobj.membershipRules)
-                    $BodyToship | Add-Member -NotePropertyName 'groupTypes' -NotePropertyValue @('DynamicMembership')
-                    $BodyToship | Add-Member -NotePropertyName 'membershipRuleProcessingState' -NotePropertyValue 'On'
+                if ($GroupObject.membershipRules) {
+                    $BodyParams | Add-Member -NotePropertyName 'membershipRule' -NotePropertyValue ($GroupObject.membershipRules)
+                    $BodyParams | Add-Member -NotePropertyName 'groupTypes' -NotePropertyValue @('DynamicMembership')
+                    $BodyParams | Add-Member -NotePropertyName 'membershipRuleProcessingState' -NotePropertyValue 'On'
                 }
-                if ($groupobj.groupType -eq 'm365') {
-                    $BodyToship | Add-Member -NotePropertyName 'groupTypes' -NotePropertyValue @('Unified')
+                if ($GroupObject.groupType -eq 'm365') {
+                    $BodyParams | Add-Member -NotePropertyName 'groupTypes' -NotePropertyValue @('Unified')
                 }
-                if ($groupobj.owners -AND $groupobj.groupType -in 'generic', 'azurerole', 'security') {
-                    $BodyToship | Add-Member -NotePropertyName 'owners@odata.bind' -NotePropertyValue (($groupobj.AddOwner) | ForEach-Object { "https://graph.microsoft.com/v1.0/users/$($_.value)" })
-                    $bodytoship.'owners@odata.bind' = @($bodytoship.'owners@odata.bind')
+                if ($GroupObject.owners -AND $GroupObject.groupType -in 'generic', 'azurerole', 'security') {
+                    $BodyParams | Add-Member -NotePropertyName 'owners@odata.bind' -NotePropertyValue (($GroupObject.AddOwner) | ForEach-Object { "https://graph.microsoft.com/v1.0/users/$($_.value)" })
+                    $BodyParams.'owners@odata.bind' = @($BodyParams.'owners@odata.bind')
                 }
-                if ($groupobj.members -AND $groupobj.groupType -in 'generic', 'azurerole', 'security') {
-                    $BodyToship | Add-Member -NotePropertyName 'members@odata.bind' -NotePropertyValue (($groupobj.AddMember) | ForEach-Object { "https://graph.microsoft.com/v1.0/users/$($_.value)" })
-                    $BodyToship.'members@odata.bind' = @($BodyToship.'members@odata.bind')
+                if ($GroupObject.members -AND $GroupObject.groupType -in 'generic', 'azurerole', 'security') {
+                    $BodyParams | Add-Member -NotePropertyName 'members@odata.bind' -NotePropertyValue (($GroupObject.AddMember) | ForEach-Object { "https://graph.microsoft.com/v1.0/users/$($_.value)" })
+                    $BodyParams.'members@odata.bind' = @($BodyParams.'members@odata.bind')
                 }
-                $GraphRequest = New-GraphPostRequest -uri 'https://graph.microsoft.com/beta/groups' -tenantid $tenant -type POST -body (ConvertTo-Json -InputObject $BodyToship -Depth 10) -verbose
+                $GraphRequest = New-GraphPostRequest -uri 'https://graph.microsoft.com/beta/groups' -tenantid $tenant -type POST -body (ConvertTo-Json -InputObject $BodyParams -Depth 10) -Verbose
             } else {
-                if ($groupobj.groupType -eq 'dynamicdistribution') {
-                    $Params = @{
-                        Name               = $groupobj.Displayname
-                        RecipientFilter    = $groupobj.membershipRules
-                        PrimarySmtpAddress = $email
+                if ($GroupObject.groupType -eq 'dynamicDistribution') {
+                    $ExoParams = @{
+                        Name               = $GroupObject.displayName
+                        RecipientFilter    = $GroupObject.membershipRules
+                        PrimarySmtpAddress = $Email
                     }
-                    $GraphRequest = New-ExoRequest -tenantid $tenant -cmdlet 'New-DynamicDistributionGroup' -cmdParams $params
+                    $GraphRequest = New-ExoRequest -tenantid $tenant -cmdlet 'New-DynamicDistributionGroup' -cmdParams $ExoParams
                 } else {
-                    $Params = @{
-                        Name                               = $groupobj.Displayname
-                        Alias                              = $groupobj.username
-                        Description                        = $groupobj.Description
-                        PrimarySmtpAddress                 = $email
-                        Type                               = $groupobj.groupType
-                        RequireSenderAuthenticationEnabled = [bool]!$groupobj.AllowExternal
+                    $ExoParams = @{
+                        Name                               = $GroupObject.displayName
+                        Alias                              = $GroupObject.username
+                        Description                        = $GroupObject.description
+                        PrimarySmtpAddress                 = $Email
+                        Type                               = $GroupObject.groupType
+                        RequireSenderAuthenticationEnabled = [bool]!$GroupObject.allowExternal
                     }
-                    $GraphRequest = New-ExoRequest -tenantid $tenant -cmdlet 'New-DistributionGroup' -cmdParams $params
+                    $GraphRequest = New-ExoRequest -tenantid $tenant -cmdlet 'New-DistributionGroup' -cmdParams $ExoParams
                 }
-                #$GraphRequest = New-ExoRequest -tenantid $tenant -cmdlet 'New-DistributionGroup' -cmdParams $params
-                # At some point add logic to use AddOwner/AddMember for New-DistributionGroup, but idk how we're going to brr that - rvdwegen
             }
-            "Successfully created group $($groupobj.displayname) for $($tenant)"
-            Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $tenant -message "Created group $($groupobj.displayname) with id $($GraphRequest.id)" -Sev 'Info'
+            "Successfully created group $($GroupObject.displayName) for $($tenant)"
+            Write-LogMessage -headers $Request.Headers -API $APIName -tenant $tenant -message "Created group $($GroupObject.displayName) with id $($GraphRequest.id)" -Sev Info
 
         } catch {
-            Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $tenant -message "Group creation API failed. $($_.Exception.Message)" -Sev 'Error'
-            "Failed to create group. $($groupobj.displayname) for $($tenant) $($_.Exception.Message)"
+            $ErrorMessage = Get-CippException -Exception $_
+            Write-LogMessage -headers $Request.Headers -API $APIName -tenant $tenant -message "Group creation API failed. $($ErrorMessage.NormalizedError)" -Sev Error -LogData $ErrorMessage
+            "Failed to create group. $($GroupObject.displayName) for $($tenant) $($ErrorMessage.NormalizedError)"
         }
     }
-    $body = [pscustomobject]@{'Results' = @($results) }
+    $ResponseBody = [pscustomobject]@{'Results' = @($Results) }
 
     # Associate values to output bindings by calling 'Push-OutputBinding'.
     Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
             StatusCode = [HttpStatusCode]::OK
-            Body       = $Body
+            Body       = $ResponseBody
         })
-
 }

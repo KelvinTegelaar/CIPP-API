@@ -7,7 +7,7 @@ function Set-CIPPAssignedApplication {
         $ApplicationId,
         $TenantFilter,
         $APIName = 'Assign Application',
-        $ExecutingUser
+        $Headers
     )
 
     try {
@@ -111,12 +111,12 @@ function Set-CIPPAssignedApplication {
         if ($PSCmdlet.ShouldProcess($GroupName, "Assigning Application $ApplicationId")) {
             Start-Sleep -Seconds 1
             $null = New-GraphPOSTRequest -uri "https://graph.microsoft.com/beta/deviceAppManagement/mobileApps/$($ApplicationId)/assign" -tenantid $TenantFilter -type POST -body ($DefaultAssignmentObject | ConvertTo-Json -Compress -Depth 10)
-            Write-LogMessage -user $ExecutingUser -API $APIName -message "Assigned Application to $($GroupName)" -Sev 'Info' -tenant $TenantFilter
+            Write-LogMessage -headers $Headers -API $APIName -message "Assigned Application to $($GroupName)" -Sev 'Info' -tenant $TenantFilter
         }
         return "Assigned Application to $($GroupName)"
     } catch {
         $ErrorMessage = Get-CippException -Exception $_
-        Write-LogMessage -user $ExecutingUser -API $APIName -message "Could not assign application to $GroupName. Error: $($ErrorMessage.NormalizedError)" -Sev 'Error' -tenant $TenantFilter -LogData $ErrorMessage
+        Write-LogMessage -headers $Headers -API $APIName -message "Could not assign application to $GroupName. Error: $($ErrorMessage.NormalizedError)" -Sev 'Error' -tenant $TenantFilter -LogData $ErrorMessage
         return "Could not assign application to $GroupName. Error: $($ErrorMessage.NormalizedError)"
     }
 }

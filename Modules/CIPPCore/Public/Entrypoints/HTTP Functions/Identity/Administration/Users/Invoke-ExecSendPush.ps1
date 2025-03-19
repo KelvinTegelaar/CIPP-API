@@ -10,15 +10,15 @@ Function Invoke-ExecSendPush {
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
 
-    $APIName = $TriggerMetadata.FunctionName
-    Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -message 'Accessed this API' -Sev 'Debug'
+    $APIName = $Request.Params.CIPPEndpoint
+    Write-LogMessage -headers $Request.Headers -API $APINAME -message 'Accessed this API' -Sev 'Debug'
 
     $TenantFilter = $Request.body.TenantFilter
     $UserEmail = $Request.body.UserEmail
     $MFAAppID = '981f26a1-7f43-403b-a875-f8b09b8cd720'
 
     # Function to keep trying to get the access token while we wait for MS to actually set the temp password
-    function get-clientaccess {
+    function Get-ClientAccess {
         param(
             $uri,
             $body,
@@ -31,7 +31,7 @@ Function Invoke-ExecSendPush {
 
                 $count++
                 Start-Sleep 1
-                $ClientToken = get-clientaccess -uri $uri -body $body -count $count
+                $ClientToken = Get-ClientAccess -uri $uri -body $body -count $count
             } else {
                 Throw "Could not get Client Token: $_"
             }
@@ -46,7 +46,7 @@ Function Invoke-ExecSendPush {
     # Check if we have one for the MFA App
     $SPID = ($SPResult | Where-Object { $_.appId -eq $MFAAppID }).id
 
-    # Create a serivce principal if needed
+    # Create a service principal if needed
     if (!$SPID) {
 
         $SPBody = [pscustomobject]@{
@@ -59,8 +59,8 @@ Function Invoke-ExecSendPush {
     $PassReqBody = @{
         'passwordCredential' = @{
             'displayName'   = 'MFA Temporary Password'
-            'endDateTime'   = $(((Get-Date).addminutes(5)))
-            'startDateTime' = $((Get-Date).addminutes(-5))
+            'endDateTime'   = $((Get-Date).AddMinutes(5))
+            'startDateTime' = $((Get-Date).AddMinutes(-5))
         }
     } | ConvertTo-Json -Depth 5
 
@@ -90,7 +90,7 @@ Function Invoke-ExecSendPush {
     # Attempt to get a token using the temp password
     $ClientUri = "https://login.microsoftonline.com/$TenantFilter/oauth2/token"
     try {
-        $ClientToken = get-clientaccess -Uri $ClientUri -Body $body
+        $ClientToken = Get-ClientAccess -Uri $ClientUri -Body $body
     } catch {
         $Body = 'Failed to create temporary token for MFA Application. Error: ' + $_.Exception.Message
     }
@@ -107,14 +107,14 @@ Function Invoke-ExecSendPush {
             $colour = 'success'
         }
         if ($obj.BeginTwoWayAuthenticationResponse.AuthenticationResult -ne $true) {
-            $Body = "Authentication Failed! Does the user have Push/Phone call MFA configured? Errorcode: $($obj.BeginTwoWayAuthenticationResponse.result.value | Out-String)"
+            $Body = "Authentication Failed! Does the user have Push/Phone call MFA configured? ErrorCode: $($obj.BeginTwoWayAuthenticationResponse.result.value | Out-String)"
             $colour = 'error'
         }
 
     }
 
     $Results = [pscustomobject]@{'Results' = $Body; severity = $colour }
-    Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -message "Sent push request to $UserEmail - Result: $($obj.BeginTwoWayAuthenticationResponse.result.value | Out-String)" -Sev 'Info'
+    Write-LogMessage -headers $Request.Headers -API $APINAME -message "Sent push request to $UserEmail - Result: $($obj.BeginTwoWayAuthenticationResponse.result.value | Out-String)" -Sev 'Info'
 
     Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
             StatusCode = [HttpStatusCode]::OK

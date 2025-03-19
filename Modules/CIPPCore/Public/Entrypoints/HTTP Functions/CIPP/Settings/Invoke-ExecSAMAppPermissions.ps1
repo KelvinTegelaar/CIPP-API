@@ -25,7 +25,7 @@ function Invoke-ExecSAMAppPermissions {
                 $Body = @{
                     'Results' = 'Permissions Updated'
                 }
-                Write-LogMessage -user $request.headers.'x-ms-client-principal' -API 'ExecSAMAppPermissions' -message 'CIPP-SAM Permissions Updated' -Sev 'Info' -LogData $Permissions
+                Write-LogMessage -headers $Request.Headers -API 'ExecSAMAppPermissions' -message 'CIPP-SAM Permissions Updated' -Sev 'Info' -LogData $Permissions
             } catch {
                 $Body = @{
                     'Results' = $_.Exception.Message

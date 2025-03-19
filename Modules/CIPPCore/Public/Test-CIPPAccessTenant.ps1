@@ -3,7 +3,7 @@ function Test-CIPPAccessTenant {
     param (
         $Tenant = 'AllTenants',
         $APIName = 'Access Check',
-        $ExecutingUser
+        $Headers
     )
     $ExpectedRoles = @(
         @{ Name = 'Application Administrator'; Id = '9b895d92-2cd3-44c7-9d02-a6ac2d5ea5c3' },
@@ -98,7 +98,7 @@ function Test-CIPPAccessTenant {
         } catch {
             $ErrorMessage = Get-CippException -Exception $_
             $GraphTest = "Failed to connect to Graph: $($ErrorMessage.NormalizedError)"
-            Write-LogMessage -user $ExecutingUser -API $APINAME -tenant $tenant.defaultDomainName -message "Tenant access check failed: $($ErrorMessage.NormalizedError) " -Sev 'Error' -LogData $ErrorMessage
+            Write-LogMessage -headers $Headers -API $APINAME -tenant $tenant.defaultDomainName -message "Tenant access check failed: $($ErrorMessage.NormalizedError) " -Sev 'Error' -LogData $ErrorMessage
         }
 
         try {
@@ -112,11 +112,11 @@ function Test-CIPPAccessTenant {
             if ($null -eq $Message) { $Message = $($_.Exception.Message) }
 
             $ExchangeTest = "Failed to connect to Exchange: $($ErrorMessage.NormalizedError)"
-            Write-LogMessage -user $ExecutingUser -API $APINAME -tenant $tenant.defaultDomainName -message "Tenant access check for Exchange failed: $($ErrorMessage.NormalizedError) " -Sev 'Error' -LogData $ErrorMessage
+            Write-LogMessage -headers $Headers -API $APINAME -tenant $tenant.defaultDomainName -message "Tenant access check for Exchange failed: $($ErrorMessage.NormalizedError) " -Sev 'Error' -LogData $ErrorMessage
         }
 
         if ($GraphStatus -and $ExchangeStatus) {
-            Write-LogMessage -user $ExecutingUser -API $APINAME -tenant $Tenant.defaultDomainName -tenantId $Tenant.customerId -message 'Tenant access check executed successfully' -Sev 'Info'
+            Write-LogMessage -headers $Headers -API $APINAME -tenant $Tenant.defaultDomainName -tenantId $Tenant.customerId -message 'Tenant access check executed successfully' -Sev 'Info'
         }
 
         $Results.GraphStatus = $GraphStatus
@@ -126,7 +126,7 @@ function Test-CIPPAccessTenant {
         $Results.GDAPRoles = @($GDAPRoles)
         $Results.MissingRoles = @($MissingRoles)
 
-        $ExecutingUser = $ExecutingUser.UserDetails
+        $Headers = $Headers.UserDetails
         $Entity = @{
             PartitionKey = 'TenantAccessChecks'
             RowKey       = $Tenant.customerId
@@ -136,7 +136,7 @@ function Test-CIPPAccessTenant {
         try {
             $null = Add-CIPPAzDataTableEntity @Table -Entity $Entity -Force
         } catch {
-            Write-LogMessage -user $ExecutingUser -API $APINAME -tenant $Tenant.defaultDomainName -message "Failed to add access check for $($Tenant.customerId): $($_.Exception.Message)" -Sev 'Error' -LogData (Get-CippException -Exception $_)
+            Write-LogMessage -headers $Headers -API $APINAME -tenant $Tenant.defaultDomainName -message "Failed to add access check for $($Tenant.customerId): $($_.Exception.Message)" -Sev 'Error' -LogData (Get-CippException -Exception $_)
         }
     }
 

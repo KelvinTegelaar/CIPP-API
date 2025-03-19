@@ -229,25 +229,24 @@ Function Push-ExecOnboardTenantQueue {
             if ($AccessAssignments.status -notcontains 'pending') {
                 $OnboardingSteps.Step3.Message = 'Group check: Access assignments are mapped and active'
                 $OnboardingSteps.Step3.Status = 'succeeded'
-                if ($Item.AddMissingGroups -eq $true) {
-                    $Logs.Add([PSCustomObject]@{ Date = (Get-Date).ToUniversalTime(); Log = 'Checking for missing groups for SAM user' })
-                    $SamUserId = (New-GraphGetRequest -uri "https://graph.microsoft.com/beta/me?`$select=id").id
-                    $CurrentMemberships = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/me/transitiveMemberOf?`$select=id,displayName"
-                    foreach ($Role in $Item.Roles) {
-                        if ($CurrentMemberships.id -notcontains $Role.GroupId) {
-                            $PostBody = @{
-                                '@odata.id' = 'https://graph.microsoft.com/v1.0/directoryObjects/{0}' -f $SamUserId
-                            } | ConvertTo-Json -Compress
-                            try {
-                                New-GraphPostRequest -uri "https://graph.microsoft.com/beta/groups/$($Role.GroupId)/members/`$ref" -body $PostBody -AsApp $true -NoAuthCheck $true
-                                $Logs.Add([PSCustomObject]@{ Date = (Get-Date).ToUniversalTime(); Log = "Added SAM user to $($Role.GroupName)" })
-                            } catch {
-                                $Logs.Add([PSCustomObject]@{ Date = (Get-Date).ToUniversalTime(); Log = "Failed to add SAM user to $($Role.GroupName) - $($_.Exception.Message)" })
-                            }
+
+                $Logs.Add([PSCustomObject]@{ Date = (Get-Date).ToUniversalTime(); Log = 'Checking for missing groups for SAM user' })
+                $SamUserId = (New-GraphGetRequest -uri "https://graph.microsoft.com/beta/me?`$select=id" -NoAuthCheck $true).id
+                $CurrentMemberships = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/me/transitiveMemberOf?`$select=id,displayName" -NoAuthCheck $true
+                foreach ($Role in $Item.Roles) {
+                    if ($CurrentMemberships.id -notcontains $Role.GroupId) {
+                        $PostBody = @{
+                            '@odata.id' = 'https://graph.microsoft.com/v1.0/directoryObjects/{0}' -f $SamUserId
+                        } | ConvertTo-Json -Compress
+                        try {
+                            New-GraphPostRequest -uri "https://graph.microsoft.com/beta/groups/$($Role.GroupId)/members/`$ref" -body $PostBody -AsApp $true -NoAuthCheck $true
+                            $Logs.Add([PSCustomObject]@{ Date = (Get-Date).ToUniversalTime(); Log = "Added SAM user to $($Role.GroupName)" })
+                        } catch {
+                            $Logs.Add([PSCustomObject]@{ Date = (Get-Date).ToUniversalTime(); Log = "Failed to add SAM user to $($Role.GroupName) - $($_.Exception.Message)" })
                         }
                     }
-                    $Logs.Add([PSCustomObject]@{ Date = (Get-Date).ToUniversalTime(); Log = 'SAM user group check completed' })
                 }
+                $Logs.Add([PSCustomObject]@{ Date = (Get-Date).ToUniversalTime(); Log = 'SAM user group check completed' })
             } else {
                 $OnboardingSteps.Step3.Message = 'Group check: Access assignments are still pending, try again later'
                 $OnboardingSteps.Step3.Status = 'failed'
