@@ -36,7 +36,7 @@ Function Invoke-ListGroups {
     }
 
     if ($Request.Query.owners) {
-        if ($Request.Query.groupType -ne 'Distribution List' -or $Request.Query.groupType -ne 'Mail-Enabled Security') {
+        if ($Request.Query.groupType -ne 'Distribution List' -and $Request.Query.groupType -ne 'Mail-Enabled Security') {
             $selectstring = 'id,userPrincipalName,displayName,hideFromOutlookClients,hideFromAddressLists,mail,mailEnabled,mailNickname,resourceProvisioningOptions,securityEnabled,visibility,organizationId,onPremisesSamAccountName,membershipRule'
             $BulkRequestArrayList.add(@{
                     id     = 3
