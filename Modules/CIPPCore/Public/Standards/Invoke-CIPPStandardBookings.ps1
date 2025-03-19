@@ -40,7 +40,7 @@ function Invoke-CIPPStandardBookings {
 
     if ($Settings.report -eq $true) {
         $state = $StateIsCorrect ? $true : $CurrentState
-        Set-CIPPStandardsCompareField -FieldName 'standard.Bookings' -FieldValue $state -TenantFilter $Tenant
+        Set-CIPPStandardsCompareField -FieldName 'standards.Bookings' -FieldValue $state -TenantFilter $Tenant
         if ($null -eq $CurrentState ) { $CurrentState = $true }
         Add-CIPPBPAField -FieldName 'BookingsState' -FieldValue $CurrentState -StoreAs bool -Tenant $Tenant
     }

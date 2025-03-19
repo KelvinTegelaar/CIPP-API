@@ -52,7 +52,7 @@ function Invoke-CIPPStandardAutoAddProxy {
     
     if ($Settings.report -eq $true) {
         $state = $StateIsCorrect ? $true : $MissingProxies
-        Set-CIPPStandardsCompareField -FieldName 'standard.AutoAddProxy' -FieldValue $state -TenantFilter $Tenant
+        Set-CIPPStandardsCompareField -FieldName 'standards.AutoAddProxy' -FieldValue $state -TenantFilter $Tenant
         Add-CIPPBPAField -FieldName 'AutoAddProxy' -FieldValue $StateIsCorrect -StoreAs bool -Tenant $Tenant
     }
     

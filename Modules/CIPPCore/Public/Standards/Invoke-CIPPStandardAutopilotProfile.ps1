@@ -54,7 +54,7 @@ function Invoke-CIPPStandardAutopilotProfile {
 
     if ($Settings.report -eq $true) {
         $state = $ProfileExists -eq $true ? $true : $ProfileExists
-        Set-CIPPStandardsCompareField -FieldName 'standard.AutopilotProfile' -FieldValue $state -TenantFilter $tenant
+        Set-CIPPStandardsCompareField -FieldName 'standards.AutopilotProfile' -FieldValue $state -TenantFilter $tenant
         Add-CIPPBPAField -FieldName 'AutopilotProfile' -FieldValue $ProfileExists -StoreAs bool -Tenant $tenant
     }
 

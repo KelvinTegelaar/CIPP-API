@@ -49,7 +49,7 @@ function Invoke-CIPPStandardAntiSpamSafeList {
     $StateIsCorrect = if ($CurrentState -eq $WantedState) { $true } else { $false }
 
     if ($Settings.report -eq $true) {
-        Set-CIPPStandardsCompareField -FieldName 'standard.AntiSpamSafeList' -FieldValue $StateIsCorrect -TenantFilter $Tenant
+        Set-CIPPStandardsCompareField -FieldName 'standards.AntiSpamSafeList' -FieldValue $StateIsCorrect -TenantFilter $Tenant
         Add-CIPPBPAField -FieldName 'AntiSpamSafeList' -FieldValue $CurrentState -StoreAs bool -Tenant $Tenant
     }
 

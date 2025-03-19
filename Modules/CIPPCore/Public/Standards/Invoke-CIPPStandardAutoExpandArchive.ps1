@@ -60,7 +60,7 @@ function Invoke-CIPPStandardAutoExpandArchive {
 
     if ($Settings.report -eq $true) {
         $state = $CurrentState -eq $true ? $true : $CurrentState
-        Set-CIPPStandardsCompareField -FieldName 'standard.AutoExpandArchive' -FieldValue $state -TenantFilter $tenant
+        Set-CIPPStandardsCompareField -FieldName 'standards.AutoExpandArchive' -FieldValue $state -TenantFilter $tenant
         Add-CIPPBPAField -FieldName 'AutoExpandingArchive' -FieldValue $CurrentState -StoreAs bool -Tenant $tenant
     }
 }

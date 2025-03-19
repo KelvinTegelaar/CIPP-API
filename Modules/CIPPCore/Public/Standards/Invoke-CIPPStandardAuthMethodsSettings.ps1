@@ -89,7 +89,7 @@ function Invoke-CIPPStandardAuthMethodsSettings {
 
     if ($Settings.report -eq $true) {
         $state = $StateSetCorrectly ? $true : $CurrentPolicy
-        Set-CIPPStandardsCompareField -FieldName 'standard.AuthMethodsSettings' -FieldValue $state -TenantFilter $tenant
+        Set-CIPPStandardsCompareField -FieldName 'standards.AuthMethodsSettings' -FieldValue $state -TenantFilter $tenant
         Add-CIPPBPAField -FieldName 'ReportSuspiciousActivity' -FieldValue $CurrentPolicy.reportSuspiciousActivitySettings.state -StoreAs string -Tenant $tenant
         Add-CIPPBPAField -FieldName 'SystemCredential' -FieldValue $CurrentPolicy.systemCredentialPreferences.state -StoreAs string -Tenant $tenant
     }

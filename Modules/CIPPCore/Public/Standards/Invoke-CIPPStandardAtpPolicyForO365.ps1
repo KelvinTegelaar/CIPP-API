@@ -72,7 +72,7 @@ function Invoke-CIPPStandardAtpPolicyForO365 {
 
     if ($Settings.report -eq $true) {
         $state = $StateIsCorrect -eq $true ? $true : $CurrentState
-        Set-CIPPStandardsCompareField -FieldName 'standard.AtpPolicyForO365' -FieldValue $state -TenantFilter $tenant
+        Set-CIPPStandardsCompareField -FieldName 'standards.AtpPolicyForO365' -FieldValue $state -TenantFilter $tenant
         Add-CIPPBPAField -FieldName 'AtpPolicyForO365' -FieldValue $StateIsCorrect -StoreAs bool -Tenant $tenant
     }
 

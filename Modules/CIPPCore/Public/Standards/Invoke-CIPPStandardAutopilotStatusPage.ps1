@@ -92,7 +92,7 @@ function Invoke-CIPPStandardAutopilotStatusPage {
     
     if ($Settings.report -eq $true) {
         $state = $StateIsCorrect -eq $true ? $true : $StateIsCorrect
-        Set-CIPPStandardsCompareField -FieldName 'standard.AutopilotStatusPage' -FieldValue $state -TenantFilter $tenant
+        Set-CIPPStandardsCompareField -FieldName 'standards.AutopilotStatusPage' -FieldValue $state -TenantFilter $tenant
         Add-CIPPBPAField -FieldName 'AutopilotStatusPage' -FieldValue $StateIsCorrect -StoreAs bool -Tenant $tenant
     }
 

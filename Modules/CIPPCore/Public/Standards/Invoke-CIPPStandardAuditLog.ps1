@@ -76,7 +76,7 @@ function Invoke-CIPPStandardAuditLog {
 
     if ($Settings.report -eq $true) {
         $state = $AuditLogEnabled -eq $true ? $true : $AuditLogEnabled
-        Set-CIPPStandardsCompareField -FieldName 'standard.AuditLog' -FieldValue $state -TenantFilter $Tenant
+        Set-CIPPStandardsCompareField -FieldName 'standards.AuditLog' -FieldValue $state -TenantFilter $Tenant
         Add-CIPPBPAField -FieldName 'AuditLog' -FieldValue $AuditLogEnabled -StoreAs bool -Tenant $tenant
     }
 }
