@@ -38,12 +38,6 @@ function Invoke-CIPPStandardTeamsMeetingsByDefault {
     $WantedState = if ($state -eq 'true') { $true } else { $false }
     $StateIsCorrect = if ($CurrentState -eq $WantedState) { $true } else { $false }
 
-    if ($Settings.report -eq $true) {
-        # Default is not set, not set means it's enabled
-        if ($null -eq $CurrentState ) { $CurrentState = $true }
-        Add-CIPPBPAField -FieldName 'TeamsMeetingsByDefault' -FieldValue $CurrentState -StoreAs bool -Tenant $Tenant
-    }
-
     # Input validation
     if (([string]::IsNullOrWhiteSpace($state) -or $state -eq 'Select a value') -and ($Settings.remediate -eq $true -or $Settings.alert -eq $true)) {
         Write-LogMessage -API 'Standards' -tenant $Tenant -message 'TeamsMeetingsByDefault: Invalid state parameter set' -sev Error
@@ -73,5 +67,17 @@ function Invoke-CIPPStandardTeamsMeetingsByDefault {
             Write-StandardsAlert -message "The tenant TeamsMeetingsByDefault is not set correctly to $state" -object @{CurrentState = $CurrentState; WantedState = $WantedState} -tenant $Tenant -standardName 'TeamsMeetingsByDefault' -standardId $Settings.standardId
             Write-LogMessage -API 'Standards' -tenant $Tenant -message "The tenant TeamsMeetingsByDefault is not set correctly to $state" -sev Info
         }
+    }
+
+    if ($Settings.report -eq $true) {
+        # Default is not set, not set means it's enabled
+        if ($null -eq $CurrentState ) { $CurrentState = $true }
+        Add-CIPPBPAField -FieldName 'TeamsMeetingsByDefault' -FieldValue $CurrentState -StoreAs bool -Tenant $Tenant
+        if ($StateIsCorrect) {
+            $FieldValue = $true
+        } else {
+            $FieldValue = $CurrentState
+        }
+        Set-CIPPStandardsCompareField -FieldName 'standards.TeamsMeetingsByDefault' -FieldValue $FieldValue -Tenant $Tenant
     }
 }
