@@ -37,21 +37,29 @@ function Invoke-CustomDataSync {
             'user' {
                 $Query = @{
                     id     = 'user'
-                    url    = 'users?$select=id,userPrincipalName,displayName&$count=true&$top=999'
+                    url    = 'users?$select=id,userPrincipalName,displayName,mailNickname&$count=true&$top=999'
                     method = 'GET'
                 }
             }
         }
-        $DirectoryObjectQueries.Add($Query)
         $SyncConfig
+        if ($DirectoryObjectQueries | Where-Object { $_.id -eq $Query.id }) {
+            continue
+        } else {
+            $DirectoryObjectQueries.Add($Query)
+        }
     }
 
     Write-Information "Getting directory objects for tenant $TenantFilter"
     #Write-Information ($DirectoryObjectQueries | ConvertTo-Json -Depth 10)
     $AllDirectoryObjects = New-GraphBulkRequest -tenantid $TenantFilter -Requests @($DirectoryObjectQueries)
+    Write-Information "Retrieved $($AllDirectoryObjects.Count) result sets"
+    #Write-Information ($AllDirectoryObjects | ConvertTo-Json -Depth 10)
+
+    $PatchObjects = @{}
 
     foreach ($SyncConfig in $SyncConfigs) {
-        Write-Warning "Processing Custom Data mapping for $($Mapping.customDataAttribute.value)"
+        Write-Warning "Processing Custom Data mapping for $($SyncConfig.Dataset)"
         Write-Information ($SyncConfig | ConvertTo-Json -Depth 10)
         $Rows = $Cache.$($SyncConfig.Dataset)
         if (!$Rows) {
@@ -75,62 +83,87 @@ function Invoke-CustomDataSync {
         foreach ($Row in $Rows) {
             #Write-Warning 'Processing row'
             #Write-Information ($Row | ConvertTo-Json -Depth 10)
-            #Write-Host "Comparing $SourceMatchProperty $($Row.$SourceMatchProperty) to $($DirectoryObjects.Count) directory objects on $DestinationMatchProperty"
-            $DirectoryObject = $DirectoryObjects | Where-Object { $_.$DestinationMatchProperty -eq $Row.$SourceMatchProperty }
+            Write-Host "Comparing $SourceMatchProperty $($Row.$SourceMatchProperty) to $($DirectoryObjects.Count) directory objects on $DestinationMatchProperty"
+            if ($DestinationMatchProperty.Count -gt 1) {
+                foreach ($Prop in $DestinationMatchProperty) {
+                    $DirectoryObject = $DirectoryObjects | Where-Object { $_.$Prop -eq $Row.$SourceMatchProperty }
+                    if ($DirectoryObject) {
+                        break
+                    }
+                }
+            } else {
+                $DirectoryObject = $DirectoryObjects | Where-Object { $_.$DestinationMatchProperty -eq $Row.$SourceMatchProperty }
+            }
+
             if (!$DirectoryObject) {
                 Write-Warning "No directory object found for $($Row.$SourceMatchProperty)"
             }
             if ($DirectoryObject) {
                 $ObjectUrl = "$($url)/$($DirectoryObject.id)"
 
+                # check if key in patch objects already exists otherwise create one with object url
+                if (!$PatchObjects.ContainsKey($ObjectUrl)) {
+                    Write-Host "Creating new object for $($ObjectUrl)"
+                    $PatchObjects[$ObjectUrl] = @{}
+                }
+
                 if ($DatasetConfig.type -eq 'object') {
                     if ($CustomDataAttribute -match '\.') {
                         $Props = @($CustomDataAttribute -split '\.')
-                        $Body = [PSCustomObject]@{
-                            $Props[0] = [PSCustomObject]@{
-                                $Props[1] = $Row.$ExtensionSyncProperty
-                            }
+                        if (!$PatchObjects[$ObjectUrl].ContainsKey($Props[0])) {
+                            Write-Host "Creating new object for $($Props[0])"
+                            $PatchObjects[$ObjectUrl][$Props[0]] = @{}
+                        }
+                        if (!$PatchObjects[$ObjectUrl][$Props[0]].ContainsKey($Props[1])) {
+                            Write-Host "Creating new object for $($Props[1])"
+                            $PatchObjects[$ObjectUrl][$Props[0]][$Props[1]] = $Row.$ExtensionSyncProperty
                         }
                     } else {
-                        $Body = [PSCustomObject]@{
-                            $CustomDataAttribute = @($Row.$ExtensionSyncProperty)
-                        }
+                        $PatchObjects[$ObjectUrl][$CustomDataAttribute] = $Row.$ExtensionSyncProperty
                     }
                 } elseif ($DatasetConfig.type -eq 'array') {
-
-                    $Data = foreach ($Entry in $Row.$ExtensionSyncProperty) {
-                        if ($DatasetConfig.storeAs -eq 'json') {
-                            $Entry | ConvertTo-Json -Depth 5 -Compress
-                        } else {
-                            $Entry
-                        }
+                    Write-Warning "Processing array data for $($CustomDataAttribute) on $($DirectoryObject.id) - found $($Row.Count) entries"
+                    #Write-Information ($Row | ConvertTo-Json -Depth 10)
+                    if ($DatasetConfig.select) {
+                        $Row = $Row | Select-Object -Property ($DatasetConfig.select -split ',')
                     }
 
-                    $Body = [PSCustomObject]@{
-                        $CustomDataAttribute = @($Data)
+                    if (!$PatchObjects[$ObjectUrl].ContainsKey($CustomDataAttribute)) {
+                        $PatchObjects[$ObjectUrl][$CustomDataAttribute] = [System.Collections.Generic.List[string]]::new()
                     }
+
+                    $Data = if ($DatasetConfig.storeAs -eq 'json') {
+                        $Row | ConvertTo-Json -Depth 5 -Compress
+                    } else {
+                        $Row
+                    }
+
+                    $PatchObjects[$ObjectUrl][$CustomDataAttribute].Add($Data)
                 }
-
-                $BulkRequests.Add([PSCustomObject]@{
-                        id      = $DirectoryObject.$DestinationMatchProperty
-                        url     = $ObjectUrl
-                        method  = 'PATCH'
-                        headers = @{
-                            'Content-Type' = 'application/json'
-                        }
-                        body    = $Body.PSObject.Copy()
-                    })
             }
         }
     }
 
-    #Write-Host ($BulkRequests | ConvertTo-Json -Depth 10)
+    foreach ($ObjectUrl in $PatchObjects.Keys) {
+        $PatchObject = $PatchObjects[$ObjectUrl]
+        $BulkRequests.Add([PSCustomObject]@{
+                id      = ($ObjectUrl -split '/' | Select-Object -Last 1)
+                url     = $ObjectUrl
+                method  = 'PATCH'
+                body    = $PatchObject
+                headers = @{
+                    'Content-Type' = 'application/json'
+                }
+            })
+    }
+
+    Write-Host ($BulkRequests | ConvertTo-Json -Depth 10)
     if ($BulkRequests.Count -gt 0) {
         Write-Information "Sending $($BulkRequests.Count) requests to Graph API"
         $Responses = New-GraphBulkRequest -tenantid $TenantFilter -Requests @($BulkRequests)
         if ($Responses | Where-Object { $_.statusCode -ne 204 }) {
             Write-Warning 'Some requests failed'
-            Write-Information ($Responses | Where-Object { $_.statusCode -ne 204 } | Select-Object -Property id, statusCode | ConvertTo-Json)
+            Write-Information ($Responses | Where-Object { $_.status -ne 204 } | ConvertTo-Json -Depth 10)
         }
     }
 }
