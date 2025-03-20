@@ -1,5 +1,5 @@
 function Register-CIPPExtensionScheduledTasks {
-    Param(
+    param(
         [switch]$Reschedule
     )
 
@@ -14,13 +14,23 @@ function Register-CIPPExtensionScheduledTasks {
     $PushTasks = Get-CIPPAzDataTableEntity @ScheduledTasksTable -Filter 'Hidden eq true' | Where-Object { $_.Command -match 'Push-CippExtensionData' }
     $Tenants = Get-Tenants -IncludeErrors
 
-    $Extensions = @('Hudu', 'NinjaOne')
+    $Extensions = @('Hudu', 'NinjaOne', 'CustomData')
     $MappedTenants = [System.Collections.Generic.List[string]]::new()
     foreach ($Extension in $Extensions) {
         $ExtensionConfig = $Config.$Extension
-        if ($ExtensionConfig.Enabled -eq $true) {
-            $Mappings = Get-CIPPAzDataTableEntity @MappingsTable -Filter "PartitionKey eq '$($Extension)Mapping'"
-            $FieldMapping = Get-CIPPAzDataTableEntity @MappingsTable -Filter "PartitionKey eq '$($Extension)FieldMapping'"
+        if ($ExtensionConfig.Enabled -eq $true -or $Extension -eq 'CustomData') {
+            if ($Extension -eq 'CustomData') {
+                $CustomDataMappingTable = Get-CIPPTable -TableName CustomDataMapping
+                $Mappings = Get-CIPPAzDataTableEntity @CustomDataMappingTable | ForEach-Object {
+                    $Mapping = $_.JSON | ConvertFrom-Json
+                    [pscustomobject]@{
+                        RowKey = $Mapping.tenantFilter.value
+                    }
+                }
+            } else {
+                $Mappings = Get-CIPPAzDataTableEntity @MappingsTable -Filter "PartitionKey eq '$($Extension)Mapping'"
+                $FieldMapping = Get-CIPPAzDataTableEntity @MappingsTable -Filter "PartitionKey eq '$($Extension)FieldMapping'"
+            }
             $FieldSync = @{}
             $SyncTypes = [System.Collections.Generic.List[string]]::new()
 
@@ -35,7 +45,7 @@ function Register-CIPPExtensionScheduledTasks {
             $SyncTypes.Add('Devices')
 
             foreach ($Mapping in $Mappings) {
-                $Tenant = $Tenants | Where-Object { $_.customerId -eq $Mapping.RowKey }
+                $Tenant = $Tenants | Where-Object { $_.customerId -eq $Mapping.RowKey -or $_.defaultDomainName -eq $Mapping.RowKey -or $Mapping.RowKey -eq 'AllTenants' }
                 if (!$Tenant) {
                     Write-Warning "Tenant $($Mapping.RowKey) not found"
                     continue

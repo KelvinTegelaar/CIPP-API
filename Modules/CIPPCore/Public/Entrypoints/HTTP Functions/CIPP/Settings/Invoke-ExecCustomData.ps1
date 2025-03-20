@@ -10,6 +10,7 @@ function Invoke-ExecCustomData {
 
     $Action = $Request.Query.Action ?? $Request.Body.Action
     $CustomDataTable = Get-CippTable -TableName 'CustomData'
+    $CustomDataMappingsTable = Get-CippTable -TableName 'CustomDataMappings'
 
     Write-Information "Executing action '$Action'"
 
@@ -231,6 +232,19 @@ function Invoke-ExecCustomData {
             try {
                 $Uri = "https://graph.microsoft.com/beta/applications(appId='$($env:ApplicationId)')/extensionProperties"
                 $DirectoryExtensions = New-GraphGetRequest -uri $Uri -AsApp $true -NoAuthCheck $true -tenantid $env:TenantID
+                $Existing = Get-CIPPAzDataTableEntity @CustomDataTable -Filter "PartitionKey eq 'DirectoryExtension'"
+
+                foreach ($DirectoryExtension in $DirectoryExtensions) {
+                    if ($Existing -match $DirectoryExtension.name) {
+                        continue
+                    }
+                    $Entity = @{
+                        PartitionKey = 'DirectoryExtension'
+                        RowKey       = $DirectoryExtension.name
+                        JSON         = [string](ConvertTo-Json $DirectoryExtension -Compress -Depth 5)
+                    }
+                    Add-CIPPAzDataTableEntity @CustomDataTable -Entity $Entity -Force
+                }
 
                 $Body = @{
                     Results = @($DirectoryExtensions)
@@ -281,8 +295,9 @@ function Invoke-ExecCustomData {
                 $Entity = @{
                     PartitionKey = 'DirectoryExtension'
                     RowKey       = $Response.name
-                    JSON         = [string](ConvertFrom-Json $Response -Compress -Depth 5)
+                    JSON         = [string](ConvertTo-Json $Response -Compress -Depth 5)
                 }
+                Add-CIPPAzDataTableEntity @CustomDataTable -Entity $Entity -Force
             } catch {
                 $Body = @{
                     Results = @(
@@ -341,6 +356,64 @@ function Invoke-ExecCustomData {
                 Results = @($AvailableAttributes)
             }
         }
+        'ListMappings' {
+            try {
+                $Mappings = Get-CIPPAzDataTableEntity @CustomDataMappingsTable | ForEach-Object {
+                    $Mapping = $_.JSON | ConvertFrom-Json -AsHashtable
+                    [PSCustomObject]@{
+                        id            = $_.RowKey
+                        tenant        = $Mapping.tenantFilter.label
+                        sourceDataset = $Mapping.sourceDataset.label
+                    }
+                }
+                $Body = @{
+                    Results = @($Mappings)
+                }
+            } catch {
+                $Body = @{
+                    Results = @(
+                        @{
+                            state      = 'error'
+                            resultText = "Failed to retrieve mappings: $($_.Exception.Message)"
+                        }
+                    )
+                }
+            }
+        }
+        'AddMapping' {
+            try {
+                $Mapping = $Request.Body.Mapping
+                if (!$Mapping) {
+                    throw 'Mapping data is missing in the request body.'
+                }
+                $id = [Guid]::NewGuid().ToString()
+                $Entity = @{
+                    PartitionKey = 'Mapping'
+                    RowKey       = $id
+                    JSON         = [string]($Mapping | ConvertTo-Json -Depth 5 -Compress)
+                }
+
+                Add-CIPPAzDataTableEntity @CustomDataMappingsTable -Entity $Entity -Force
+                Register-CIPPExtensionScheduledTasks
+
+                $Body = @{
+                    Results = @{
+                        state      = 'success'
+                        resultText = "Mapping with ID '$($id)' added successfully."
+                    }
+                }
+            } catch {
+                $Body = @{
+                    Results = @(
+                        @{
+                            state      = 'error'
+                            resultText = "Failed to add mapping: $($_.Exception.Message)"
+                        }
+                    )
+                }
+            }
+        }
+
         default {
             $Body = @{
                 Results = @(
