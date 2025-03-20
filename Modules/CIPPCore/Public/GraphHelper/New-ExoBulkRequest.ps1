@@ -85,7 +85,7 @@ function New-ExoBulkRequest {
                 }
                 $BatchBodyJson = ConvertTo-Json -InputObject $BatchBodyObj -Depth 10
                 $Results = Invoke-RestMethod $BatchURL -ResponseHeadersVariable responseHeaders -Method POST -Body $BatchBodyJson -Headers $Headers -ContentType 'application/json; charset=utf-8'
-                $ReturnedData.Add($Results.responses)
+                $ReturnedData.AddRange(@($Results.responses))
 
                 Write-Host "Batch #$($batches.IndexOf($batch) + 1) of $($batches.Count) processed"
             }
@@ -101,7 +101,7 @@ function New-ExoBulkRequest {
             foreach ($item in $ReturnedData) {
                 $itemId = $item.id
                 $CmdletName = $IdToCmdletName[$itemId]
-                $body = $item.body
+                $body = $item.body.PSObject.Copy()
 
                 if ($body.'@adminapi.warnings') {
                     Write-Warning ($body.'@adminapi.warnings' | Out-String)
@@ -116,16 +116,16 @@ function New-ExoBulkRequest {
                 }
                 $resultValue = $body.value
 
-                # Assign results without using += or ArrayList
                 if (-not $FinalData.ContainsKey($CmdletName)) {
-                    $FinalData[$CmdletName] = @($resultValue)
+                    $FinalData[$CmdletName] = [System.Collections.Generic.List[object]]::new()
+                    $FinalData.$CmdletName.Add($resultValue)
                 } else {
-                    $FinalData[$CmdletName] = $FinalData[$CmdletName] + $resultValue
+                    $FinalData.$CmdletName.Add($resultValue)
                 }
             }
         } else {
             $FinalData = foreach ($item in $ReturnedData) {
-                $body = $item.body
+                $body = $item.body.PSObject.Copy()
 
                 if ($body.'@adminapi.warnings') {
                     Write-Warning ($body.'@adminapi.warnings' | Out-String)
@@ -141,7 +141,6 @@ function New-ExoBulkRequest {
                 $body.value
             }
         }
-
         return $FinalData
 
     } else {

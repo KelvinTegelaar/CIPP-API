@@ -1,6 +1,6 @@
 using namespace System.Net
 
-Function Invoke-ListUserMailboxDetails {
+function Invoke-ListUserMailboxDetails {
     <#
     .FUNCTIONALITY
         Entrypoint
@@ -67,6 +67,7 @@ Function Invoke-ListUserMailboxDetails {
         $usernames = New-GraphGetRequest -tenantid $TenantFilter -uri 'https://graph.microsoft.com/beta/users?$select=id,userPrincipalName&$top=999'
         $Results = New-ExoBulkRequest -TenantId $TenantFilter -CmdletArray $Requests -returnWithCommand $true -Anchor $username
         Write-Host "First line of usernames is $($usernames[0] | ConvertTo-Json)"
+
         # Assign variables from $Results
         $MailboxDetailedRequest = $Results.'Get-Mailbox'
         $PermsRequest = $Results.'Get-MailboxPermission'
@@ -75,7 +76,8 @@ Function Invoke-ListUserMailboxDetails {
         $ArchiveSizeRequest = $Results.'Get-MailboxStatistics'
         $BlockedSender = $Results.'Get-BlockedSenderAddress'
         $PermsRequest2 = $Results.'Get-RecipientPermission'
-        $StatsRequest = New-GraphGetRequest -uri "https://outlook.office365.com/adminapi/beta/$($TenantFilter)/Mailbox('$($MailboxDetailedRequest.UserPrincipalName)')/Exchange.GetMailboxStatistics()" -Tenantid $TenantFilter -scope ExchangeOnline -noPagination $true
+
+        $StatsRequest = New-GraphGetRequest -uri "https://outlook.office365.com/adminapi/beta/$($TenantFilter)/Mailbox('$($UserID)')/Exchange.GetMailboxStatistics()" -Tenantid $TenantFilter -scope ExchangeOnline -noPagination $true
 
 
         # Handle ArchiveEnabled and AutoExpandingArchiveEnabled
