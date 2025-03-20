@@ -23,15 +23,18 @@ function Register-CIPPExtensionScheduledTasks {
                 $CustomDataMappingTable = Get-CIPPTable -TableName CustomDataMappings
                 $Mappings = Get-CIPPAzDataTableEntity @CustomDataMappingTable | ForEach-Object {
                     $Mapping = $_.JSON | ConvertFrom-Json
-
-                    $TenantMappings = if ($Mapping.tenantFilter.value -eq 'AllTenants') {
-                        $Tenants
-                    } else {
-                        $Tenants | Where-Object { $_.customerId -eq $Mapping.tenantFilter.value -or $_.defaultDomainName -eq $Mapping.tenantFilter.value }
-                    }
-                    foreach ($TenantMapping in $TenantMappings) {
-                        [pscustomobject]@{
-                            RowKey = $TenantMapping.customerId
+                    if ($Mapping.sourceType -eq 'extensionSync') {
+                        $TenantMappings = if ($Mapping.tenantFilter.value -contains 'AllTenants') {
+                            $Tenants
+                        } else {
+                            foreach ($TenantMapping in $TenantMappings) {
+                                $TenantMapping | Where-Object { $_.customerId -eq $Mapping.tenantFilter.value -or $_.defaultDomainName -eq $Mapping.tenantFilter.value }
+                            }
+                        }
+                        foreach ($TenantMapping in $TenantMappings) {
+                            [pscustomobject]@{
+                                RowKey = $TenantMapping.customerId
+                            }
                         }
                     }
                 } | Sort-Object -Property RowKey -Unique
