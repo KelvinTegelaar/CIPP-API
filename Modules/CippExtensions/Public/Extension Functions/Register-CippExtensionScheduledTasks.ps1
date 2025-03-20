@@ -20,12 +20,25 @@ function Register-CIPPExtensionScheduledTasks {
         $ExtensionConfig = $Config.$Extension
         if ($ExtensionConfig.Enabled -eq $true -or $Extension -eq 'CustomData') {
             if ($Extension -eq 'CustomData') {
-                $CustomDataMappingTable = Get-CIPPTable -TableName CustomDataMapping
+                $CustomDataMappingTable = Get-CIPPTable -TableName CustomDataMappings
                 $Mappings = Get-CIPPAzDataTableEntity @CustomDataMappingTable | ForEach-Object {
                     $Mapping = $_.JSON | ConvertFrom-Json
-                    [pscustomobject]@{
-                        RowKey = $Mapping.tenantFilter.value
+
+                    $TenantMappings = if ($Mapping.tenantFilter.value -eq 'AllTenants') {
+                        $Tenants
+                    } else {
+                        $Tenants | Where-Object { $_.customerId -eq $Mapping.tenantFilter.value -or $_.defaultDomainName -eq $Mapping.tenantFilter.value }
                     }
+                    foreach ($TenantMapping in $TenantMappings) {
+                        [pscustomobject]@{
+                            RowKey = $TenantMapping.customerId
+                        }
+                    }
+                } | Sort-Object -Property RowKey -Unique
+
+                if (($Mappings | Measure-Object).Count -eq 0) {
+                    Write-Warning 'No tenants found for CustomData extension'
+                    continue
                 }
             } else {
                 $Mappings = Get-CIPPAzDataTableEntity @MappingsTable -Filter "PartitionKey eq '$($Extension)Mapping'"
@@ -45,7 +58,7 @@ function Register-CIPPExtensionScheduledTasks {
             $SyncTypes.Add('Devices')
 
             foreach ($Mapping in $Mappings) {
-                $Tenant = $Tenants | Where-Object { $_.customerId -eq $Mapping.RowKey -or $_.defaultDomainName -eq $Mapping.RowKey -or $Mapping.RowKey -eq 'AllTenants' }
+                $Tenant = $Tenants | Where-Object { $_.customerId -eq $Mapping.RowKey }
                 if (!$Tenant) {
                     Write-Warning "Tenant $($Mapping.RowKey) not found"
                     continue
