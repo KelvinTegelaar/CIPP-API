@@ -367,7 +367,7 @@ function Invoke-ExecCustomData {
                         tenant              = $Mapping.tenantFilter.label
                         dataset             = $Mapping.extensionSyncDataset.label
                         sourceType          = $Mapping.sourceType.label
-                        directoryType       = $Mapping.directoryObjectType.label
+                        directoryObject     = $Mapping.directoryObjectType.label
                         syncProperty        = $Mapping.extensionSyncProperty.label ?? @($Mapping.extensionSyncDataset.addedFields.select -split ',')
                         customDataAttribute = $Mapping.customDataAttribute.label
                     }
