@@ -368,7 +368,7 @@ function Invoke-ExecCustomData {
                         dataset             = $Mapping.extensionSyncDataset.label
                         sourceType          = $Mapping.sourceType.label
                         directoryType       = $Mapping.directoryObjectType.label
-                        syncProperty        = $Mapping.extensionSyncProperty.label
+                        syncProperty        = $Mapping.extensionSyncProperty.label ?? @($Mapping.extensionSyncDataset.addedFields.select -split ',')
                         customDataAttribute = $Mapping.customDataAttribute.label
                     }
                 }
@@ -438,7 +438,7 @@ function Invoke-ExecCustomData {
                 $Body = @{
                     Results = @{
                         state      = 'success'
-                        resultText = "Mapping deleted successfully."
+                        resultText = 'Mapping deleted successfully.'
                     }
                 }
             } catch {
