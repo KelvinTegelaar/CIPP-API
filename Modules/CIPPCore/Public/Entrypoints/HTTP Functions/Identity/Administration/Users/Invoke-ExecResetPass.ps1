@@ -18,7 +18,7 @@ Function Invoke-ExecResetPass {
     # Interact with query parameters or the body of the request.
     $TenantFilter = $Request.Query.tenantFilter ?? $Request.Body.tenantFilter
     $ID = $Request.Query.ID ?? $Request.Body.ID
-    $DisplayName = $Request.Query.displayName ?? $Request.Body.displayName
+    $DisplayName = $Request.Query.displayName ?? $Request.Body.displayName ?? $ID
     $MustChange = $Request.Query.MustChange ?? $Request.Body.MustChange
     $MustChange = [System.Convert]::ToBoolean($MustChange)
 
