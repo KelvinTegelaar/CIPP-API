@@ -80,6 +80,7 @@ function Invoke-CIPPStandardOauthConsent {
         } else {
             $FieldValue = $State
         }
+
         Set-CIPPStandardsCompareField -FieldName 'standards.OauthConsent' -FieldValue $FieldValue -Tenant $tenant
     }
 }

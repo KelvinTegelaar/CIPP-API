@@ -69,12 +69,14 @@ function Invoke-CIPPStandardIntuneComplianceSettings {
         if ($StateIsCorrect -eq $true) {
             Write-LogMessage -API 'Standards' -Tenant $Tenant -Message 'Intune Compliance settings is enabled.' -Sev Info
         } else {
-            Write-StandardsAlert -message "Intune Compliance settings is not enabled" -object $CurrentState -tenant $Tenant -standardName 'IntuneComplianceSettings' -standardId $Settings.standardId
+            Write-StandardsAlert -message 'Intune Compliance settings is not enabled' -object $CurrentState -tenant $Tenant -standardName 'IntuneComplianceSettings' -standardId $Settings.standardId
             Write-LogMessage -API 'Standards' -Tenant $Tenant -Message 'Intune Compliance settings is not enabled.' -Sev Info
         }
     }
 
     if ($Settings.report -eq $true) {
+        $state = $StateIsCorrect ? $true : $CurrentState
+        Set-CIPPStandardsCompareField -FieldName 'standards.IntuneComplianceSettings' -FieldValue $state -Tenant $Tenant
         Add-CIPPBPAField -FieldName 'IntuneComplianceSettings' -FieldValue $StateIsCorrect -StoreAs bool -Tenant $Tenant
     }
 }

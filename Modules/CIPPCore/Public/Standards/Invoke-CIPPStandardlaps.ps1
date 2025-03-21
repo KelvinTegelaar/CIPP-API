@@ -61,6 +61,7 @@ function Invoke-CIPPStandardlaps {
     }
 
     if ($Settings.report -eq $true) {
+        Set-CIPPStandardsCompareField -=FieldName 'standards.laps' -FieldValue $PreviousSetting.localAdminPassword.isEnabled -Tenant $Tenant
         Add-CIPPBPAField -FieldName 'laps' -FieldValue $PreviousSetting.localAdminPassword.isEnabled -StoreAs bool -Tenant $tenant
     }
 }

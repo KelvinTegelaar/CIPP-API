@@ -62,7 +62,8 @@ function Invoke-CIPPStandardintuneDeviceReg {
     }
 
     if ($Settings.report -eq $true) {
-
+        $state = $StateIsCorrect ? $true : $PreviousSetting.userDeviceQuota
+        Set-CIPPStandardsCompareField -FieldName 'standards.intuneDeviceReg' -FieldValue $state -TenantFilter $Tenant
         Add-CIPPBPAField -FieldName 'intuneDeviceReg' -FieldValue $StateIsCorrect -StoreAs bool -Tenant $tenant
     }
 }

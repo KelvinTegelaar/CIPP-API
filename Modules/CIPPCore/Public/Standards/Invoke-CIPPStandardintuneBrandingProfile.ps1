@@ -99,8 +99,7 @@ function Invoke-CIPPStandardintuneBrandingProfile {
 
     if ($Settings.report -eq $true) {
         $ReportState = $StateIsCorrect ? $true : $CurrentState
-        Set-CIPPStandardsCompareField -FieldName 'intuneBrandingProfile' -FieldValue $ReportState -TenantFilter $Tenant
+        Set-CIPPStandardsCompareField -FieldName 'standards.intuneBrandingProfile' -FieldValue $ReportState -TenantFilter $Tenant
         Add-CIPPBPAField -FieldName 'intuneBrandingProfile' -FieldValue [bool]$StateIsCorrect -StoreAs bool -Tenant $tenant
     }
 }
- 

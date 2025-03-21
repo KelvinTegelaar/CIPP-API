@@ -51,12 +51,13 @@ function Invoke-CIPPStandardMessageExpiration {
         if ($MessageExpiration -eq '12:00:00') {
             Write-LogMessage -API 'Standards' -tenant $tenant -message 'Transport configuration message expiration is set to 12 hours' -sev Info
         } else {
-            Write-StandardsAlert -message "Transport configuration message expiration is not set to 12 hours" -object $MessageExpiration -tenant $tenant -standardName 'MessageExpiration' -standardId $Settings.standardId
+            Write-StandardsAlert -message 'Transport configuration message expiration is not set to 12 hours' -object $MessageExpiration -tenant $tenant -standardName 'MessageExpiration' -standardId $Settings.standardId
             Write-LogMessage -API 'Standards' -tenant $tenant -message 'Transport configuration message expiration is not set to 12 hours' -sev Info
         }
     }
     if ($Settings.report -eq $true) {
         if ($MessageExpiration -ne '12:00:00') { $MessageExpiration = $false } else { $MessageExpiration = $true }
+        Set-CIPPStandardsCompareField -FieldName 'standards.messageExpiration' -FieldValue $MessageExpiration -TenantFilter $Tenant
         Add-CIPPBPAField -FieldName 'messageExpiration' -FieldValue $MessageExpiration -StoreAs bool -Tenant $tenant
     }
 }

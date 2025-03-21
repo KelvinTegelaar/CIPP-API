@@ -40,11 +40,11 @@ function Invoke-CIPPStandardMailContacts {
     $TechAndSecurityContacts = @($Contacts.SecurityContact, $Contacts.TechContact)
 
     If ($Settings.remediate -eq $true) {
-
-        if ($CurrentInfo.marketingNotificationEmails -eq $Contacts.MarketingContact -and `
-            ($CurrentInfo.securityComplianceNotificationMails -in $TechAndSecurityContacts -or
-                $CurrentInfo.technicalNotificationMails -in $TechAndSecurityContacts) -and `
-                $CurrentInfo.privacyProfile.contactEmail -eq $Contacts.GeneralContact) {
+        $state = $CurrentInfo.marketingNotificationEmails -eq $Contacts.MarketingContact -and `
+        ($CurrentInfo.securityComplianceNotificationMails -in $TechAndSecurityContacts -or
+            $CurrentInfo.technicalNotificationMails -in $TechAndSecurityContacts) -and `
+            $CurrentInfo.privacyProfile.contactEmail -eq $Contacts.GeneralContact
+        if ($state) {
             Write-LogMessage -API 'Standards' -tenant $tenant -message 'Contact emails are already set.' -sev Info
         } else {
             try {
@@ -94,6 +94,8 @@ function Invoke-CIPPStandardMailContacts {
 
     }
     if ($Settings.report -eq $true) {
+        $ReportState = $state ? $true : $CurrentInfo
+        Set-CIPPStandardsCompareField -FieldName 'standards.MailContacts' -FieldValue $ReportState -Tenant $tenant
         Add-CIPPBPAField -FieldName 'MailContacts' -FieldValue $CurrentInfo -StoreAs json -Tenant $tenant
     }
 }

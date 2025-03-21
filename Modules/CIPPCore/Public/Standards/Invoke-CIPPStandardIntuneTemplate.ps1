@@ -116,7 +116,12 @@ function Invoke-CIPPStandardIntuneTemplate {
     }
 
     if ($Settings.report) {
-        #think about how to store this. Consideration: standards are stored seperately from BPA so they can be stored in the same format as the input.
-        Add-CIPPBPAField -FieldName "policy-$displayname" -FieldValue $Compare -StoreAs bool -Tenant $tenant
+        foreach ($Template in $CompareList) {
+            $id = $Template.body.RowKey
+            $Compare = $Template.compare
+            $state = $Compare ? $Compare : $true
+            Set-CIPPStandardsCompareField -FieldName "standards.IntuneTemplate.$id" -FieldValue $state -TenantFilter $Tenant
+        }
+        Add-CIPPBPAField -FieldName "policy-$id" -FieldValue $Compare -StoreAs bool -Tenant $tenant
     }
 }

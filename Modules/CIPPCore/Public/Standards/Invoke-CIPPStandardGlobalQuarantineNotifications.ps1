@@ -45,7 +45,7 @@ function Invoke-CIPPStandardGlobalQuarantineNotifications {
 
     if ($Settings.report -eq $true) {
         $ReportState = $CurrentState.EndUserSpamNotificationFrequency -eq $WantedState ? $true : $CurrentState.EndUserSpamNotificationFrequency
-        Set-CIPPStandardsCompareField -FieldName 'GlobalQuarantineNotificationsSet' -FieldValue $ReportState -Tenant $Tenant
+        Set-CIPPStandardsCompareField -FieldName 'standards.GlobalQuarantineNotificationsSet' -FieldValue $ReportState -Tenant $Tenant
         Add-CIPPBPAField -FieldName 'GlobalQuarantineNotificationsSet' -FieldValue [string]$CurrentState.EndUserSpamNotificationFrequency -StoreAs string -Tenant $Tenant
     }
     # Get notification interval using null-coalescing operator
