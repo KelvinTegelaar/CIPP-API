@@ -92,12 +92,15 @@ function Invoke-CIPPStandardintuneBrandingProfile {
         if ($StateIsCorrect -eq $true) {
             Write-LogMessage -API 'Standards' -tenant $tenant -message 'Intune Branding Profile is correctly configured' -sev Info
         } else {
-            Write-StandardsAlert -message "Intune Branding Profile is not correctly configured" -object $CurrentState -tenant $tenant -standardName 'intuneBrandingProfile' -standardId $Settings.standardId
+            Write-StandardsAlert -message 'Intune Branding Profile is not correctly configured' -object $CurrentState -tenant $tenant -standardName 'intuneBrandingProfile' -standardId $Settings.standardId
             Write-LogMessage -API 'Standards' -tenant $tenant -message 'Intune Branding Profile is not correctly configured' -sev Info
         }
     }
 
     if ($Settings.report -eq $true) {
+        $ReportState = $StateIsCorrect ? $true : $CurrentState
+        Set-CIPPStandardsCompareField -FieldName 'intuneBrandingProfile' -FieldValue $ReportState -TenantFilter $Tenant
         Add-CIPPBPAField -FieldName 'intuneBrandingProfile' -FieldValue [bool]$StateIsCorrect -StoreAs bool -Tenant $tenant
     }
 }
+ 

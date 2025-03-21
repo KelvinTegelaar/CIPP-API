@@ -20,7 +20,7 @@ function Invoke-CIPPStandardGuestInvite {
         ADDEDDATE
             2024-11-12
         POWERSHELLEQUIVALENT
-            
+
         RECOMMENDEDBY
         UPDATECOMMENTBLOCK
             Run the Tools\Update-StandardsComments.ps1 script to update this comment block
@@ -68,12 +68,13 @@ function Invoke-CIPPStandardGuestInvite {
         if ($StateIsCorrect -eq $true) {
             Write-LogMessage -API 'Standards' -tenant $tenant -message 'Guest Invite settings is enabled.' -sev Info
         } else {
-            Write-StandardsAlert -message "Guest Invite settings is not enabled" -object $CurrentState -tenant $tenant -standardName 'GuestInvite' -standardId $Settings.standardId
+            Write-StandardsAlert -message 'Guest Invite settings is not enabled' -object $CurrentState -tenant $tenant -standardName 'GuestInvite' -standardId $Settings.standardId
             Write-LogMessage -API 'Standards' -tenant $tenant -message 'Guest Invite settings is not enabled.' -sev Info
         }
     }
 
     if ($Settings.report -eq $true) {
+        Set-CIPPStandardsCompareField -FieldName 'GuestInvite' -FieldValue $StateIsCorrect -TenantFilter $Tenant
         Add-CIPPBPAField -FieldName 'GuestInvite' -FieldValue $StateIsCorrect -StoreAs bool -Tenant $tenant
     }
 }

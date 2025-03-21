@@ -38,10 +38,7 @@ function Invoke-CIPPStandardExternalMFATrusted {
     $WantedState = if ($state -eq 'true') { $true } else { $false }
     $StateMessage = if ($WantedState) { 'enabled' } else { 'disabled' }
 
-    if ($Settings.report -eq $true) {
 
-        Add-CIPPBPAField -FieldName 'ExternalMFATrusted' -FieldValue $ExternalMFATrusted.inboundTrust.isMfaAccepted -StoreAs bool -Tenant $Tenant
-    }
 
     # Input validation
     if (([string]::IsNullOrWhiteSpace($state) -or $state -eq 'Select a value') -and ($Settings.remediate -eq $true -or $Settings.alert -eq $true)) {
@@ -66,6 +63,11 @@ function Invoke-CIPPStandardExternalMFATrusted {
                 Write-LogMessage -API 'Standards' -tenant $Tenant -message "Failed to set External MFA Trusted to $StateMessage. Error: $ErrorMessage" -sev Error
             }
         }
+    }
+    if ($Settings.report -eq $true) {
+        $state = $ExternalMFATrusted.inboundTrust.isMfaAccepted ? $true : $ExternalMFATrusted.inboundTrust
+        Set-CIPPStandardsCompareField -FieldName 'ExternalMFATrusted' -FieldValue $ExternalMFATrusted.inboundTrust.isMfaAccepted -TenantFilter $Tenant
+        Add-CIPPBPAField -FieldName 'ExternalMFATrusted' -FieldValue $ExternalMFATrusted.inboundTrust.isMfaAccepted -StoreAs bool -Tenant $Tenant
     }
 
     if ($Settings.alert -eq $true) {

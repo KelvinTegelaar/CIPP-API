@@ -76,6 +76,7 @@ function Invoke-CIPPStandardExcludedfileExt {
     }
 
     if ($Settings.report -eq $true) {
+        Set-CIPPStandardsCompareField -FieldName 'standards.ExcludedfileExt' -FieldValue $CurrentInfo.excludedFileExtensionsForSyncApp -Tenant $tenant
         Add-CIPPBPAField -FieldName 'ExcludedfileExt' -FieldValue $CurrentInfo.excludedFileExtensionsForSyncApp -StoreAs json -Tenant $tenant
     }
 }

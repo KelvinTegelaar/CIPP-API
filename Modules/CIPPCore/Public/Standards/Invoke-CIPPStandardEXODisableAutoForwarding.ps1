@@ -59,12 +59,14 @@ function Invoke-CIPPStandardEXODisableAutoForwarding {
         if ($StateIsCorrect -eq $true) {
             Write-LogMessage -API 'Standards' -tenant $tenant -message 'Auto forwarding is disabled.' -sev Info
         } else {
-            Write-StandardsAlert -message "Auto forwarding is not disabled" -object $CurrentInfo -tenant $tenant -standardName 'EXODisableAutoForwarding' -standardId $Settings.standardId
+            Write-StandardsAlert -message 'Auto forwarding is not disabled' -object $CurrentInfo -tenant $tenant -standardName 'EXODisableAutoForwarding' -standardId $Settings.standardId
             Write-LogMessage -API 'Standards' -tenant $tenant -message 'Auto forwarding is not disabled.' -sev Info
         }
     }
 
     if ($Settings.report -eq $true) {
+        $state = $StateIsCorrect ? $true : $CurrentInfo.AutoForwardingMode
+        Set-CIPPStandardsCompareField -FieldName 'AutoForwardingDisabled' -FieldValue $state -TenantFilter $Tenant
         Add-CIPPBPAField -FieldName 'AutoForwardingDisabled' -FieldValue $StateIsCorrect -StoreAs bool -Tenant $tenant
     }
 
