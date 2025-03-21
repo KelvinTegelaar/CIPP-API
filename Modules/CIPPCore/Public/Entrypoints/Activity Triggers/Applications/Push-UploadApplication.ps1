@@ -80,7 +80,7 @@ function Push-UploadApplication {
                         Set-CIPPAssignedApplication -ApplicationId $NewApp.Id -Intent $intent -TenantFilter $tenant -groupName "$AssignTo" -AppType 'WinGet'
                     }
                     Write-LogMessage -api 'AppUpload' -tenant $tenant -message "$($ChocoApp.Applicationname) Successfully created" -Sev 'Info'
-                    exit 0
+                    continue
                 } else {
                     $NewApp = New-GraphPostRequest -Uri $baseuri -Body ($intuneBody | ConvertTo-Json) -Type POST -tenantid $tenant
 
