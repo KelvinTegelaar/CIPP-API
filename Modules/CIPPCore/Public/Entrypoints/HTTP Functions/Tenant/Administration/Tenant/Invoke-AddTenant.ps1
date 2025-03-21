@@ -10,24 +10,29 @@ function Invoke-AddTenant {
 
     $APIName = $Request.Params.CIPPEndpoint
     Write-LogMessage -headers $Request.Headers -API $APINAME -message 'Accessed this API' -Sev 'Debug'
+    $Action = $Request.Body.Action ?? $Request.Query.Action
+    $TenantName = $Request.Body.TenantName ?? $Request.Query.TenantName
+    $StatusCode = [HttpStatusCode]::OK
 
-    switch ($Request.Body.Action) {
+    switch ($Action) {
         'ValidateDomain' {
             # Validate the onmicrosoft.com domain
-            $Domain = "$($Request.Body.TenantName).onmicrosoft.com"
+            $Domain = "$($TenantName).onmicrosoft.com"
             $DomainCheckUri = "https://api.partnercenter.microsoft.com/v1/domains/$Domain"
+            Write-Information "Checking $Domain"
             try {
-                $DomainCheckResponse = New-GraphPOSTRequest -type HEAD -uri $DomainCheckUri -scope 'https://api.partnercenter.microsoft.com/.default' -NoAuthCheck $true
-            } catch {
-                return @{
-                    Status  = 'Error'
+                $null = New-GraphPOSTRequest -type HEAD -uri $DomainCheckUri -scope 'https://api.partnercenter.microsoft.com/.default' -NoAuthCheck $true
+
+                $Body = @{
+                    Success = $false
                     Message = "The domain '$Domain' is already in use."
                 }
+            } catch {
+                $Body = @{
+                    Success = $true
+                }
             }
-            return @{
-                Status  = 'Success'
-                Message = "The domain '$Domain' is available."
-            }
+
         }
         'AddTenant' {
             # Fetch the organization id for Tier 2 CSPs
@@ -41,6 +46,7 @@ function Invoke-AddTenant {
                         state      = 'Error'
                         resultText = "Failed to retrieve organization profile: $($_.Exception.Message)"
                     }
+                    $StatusCode = [HttpStatusCode]::BadRequest
                     break
                 }
             }
@@ -51,7 +57,7 @@ function Invoke-AddTenant {
                 CommerceId            = $null
                 CompanyProfile        = @{
                     TenantId    = $null
-                    Domain      = '{0}.onmicrosoft.com' -f $Request.Body.TenantName
+                    Domain      = '{0}.onmicrosoft.com' -f $TenantName
                     CompanyName = $Request.Body.CompanyName
                     Attributes  = @{ ObjectType = 'CustomerCompanyProfile' }
                 }
@@ -94,7 +100,7 @@ function Invoke-AddTenant {
 
                 $Body = @{
                     state      = 'Success'
-                    resultText = "Tenant created successfully. 'Username is $($Response.userCredentials.userName)@{0}.onmicrosoft.com'. Click copy to retrieve the password." -f $Request.Body.TenantName
+                    resultText = "Tenant created successfully. 'Username is $($Response.userCredentials.userName)@{0}.onmicrosoft.com'. Click copy to retrieve the password." -f $TenantName
                     copyField  = $Response.userCredentials.password
                 }
             } catch {
@@ -102,6 +108,7 @@ function Invoke-AddTenant {
                     state      = 'Error'
                     resultText = "Failed to create tenant: $($_.Exception.Message)"
                 }
+                $StatusCode = [HttpStatusCode]::BadRequest
             }
         }
         'ValidateAddress' {
@@ -126,21 +133,21 @@ function Invoke-AddTenant {
                 }
             } catch {
                 return @{
-                    state  = 'Error'
+                    state      = 'Error'
                     resultText = "Address validation failed: $($_.Exception.Message)"
                 }
             }
         }
         default {
             return @{
-                state  = 'Error'
+                state      = 'Error'
                 resultText = "Invalid action specified: $($Request.Body.Action)"
             }
         }
     }
 
     Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
-        StatusCode = [HttpStatusCode]::InternalServerError
-        Body       = $Body
-    })
+            StatusCode = $StatusCode
+            Body       = $Body
+        })
 }
