@@ -33,7 +33,7 @@ function Invoke-CIPPStandardSPExternalUserExpiration {
     param($Tenant, $Settings)
 
     $CurrentState = Get-CIPPSPOTenant -TenantFilter $Tenant |
-        Select-Object -Property ExternalUserExpireInDays, ExternalUserExpirationRequired
+    Select-Object -Property ExternalUserExpireInDays, ExternalUserExpirationRequired
 
     $StateIsCorrect = ($CurrentState.ExternalUserExpireInDays -eq $Settings.Days) -and
     ($CurrentState.ExternalUserExpirationRequired -eq $true)
@@ -72,6 +72,7 @@ function Invoke-CIPPStandardSPExternalUserExpiration {
         } else {
             $FieldValue = $CurrentState
         }
+        Set-CIPPStandardsCompareField -FieldName 'standards.SPExternalUserExpiration' -FieldValue $FieldValue -TenantFilter $Tenant
         Add-CIPPBPAField -FieldName 'standards.SPExternalUserExpiration' -FieldValue $FieldValue -StoreAs bool -Tenant $Tenant
     }
 }

@@ -52,6 +52,8 @@ function Invoke-CIPPStandardPerUserMFA {
         }
     }
     if ($Settings.report -eq $true) {
+        $State = $UsersWithoutMFA ? $UsersWithoutMFA : $true
+        Set-CIPPStandardsCompareField -FieldName 'standards.PerUserMFA' -FieldValue $State -Tenant $tenant
         Add-CIPPBPAField -FieldName 'LegacyMFAUsers' -FieldValue $UsersWithoutMFA -StoreAs json -Tenant $tenant
     }
 }
