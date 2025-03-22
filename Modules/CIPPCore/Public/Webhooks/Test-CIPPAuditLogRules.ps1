@@ -1,6 +1,6 @@
 function Test-CIPPAuditLogRules {
     [CmdletBinding()]
-    Param(
+    param(
         [Parameter(Mandatory = $true)]
         $TenantFilter,
         [Parameter(Mandatory = $true)]
@@ -94,7 +94,9 @@ function Test-CIPPAuditLogRules {
                     }
                 }
 
-                if ($Data.clientip -and $Data.clientip -notmatch '[X]+') {
+
+                $HasLocationData = $false
+                if (![string]::IsNullOrEmpty($Data.clientip) -and $Data.clientip -notmatch '[X]+') {
                     # Ignore IP addresses that have been redacted
                     if ($Data.clientip -match '^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}:\d+$') {
                         $Data.clientip = $Data.clientip -replace ':\d+$', '' # Remove the port number if present
@@ -144,6 +146,7 @@ function Test-CIPPAuditLogRules {
                                 Hosting         = "$hosting"
                                 ASName          = "$ASName"
                             }
+                            $HasLocationData = $true
                             try {
                                 $null = Add-CIPPAzDataTableEntity @LocationTable -Entity $LocationInfo -Force
                             } catch {
@@ -159,7 +162,7 @@ function Test-CIPPAuditLogRules {
                         $Data.AuditRecord = ($RootProperties | ConvertTo-Json)
                     }
                 }
-                $Data | Select-Object * -ExcludeProperty ExtendedProperties, DeviceProperties, parameters
+                $Data | Select-Object *, @{n = 'HasLocationData'; exp = { $HasLocationData } } -ExcludeProperty ExtendedProperties, DeviceProperties, parameters
             } catch {
                 #write-warning "Audit log: Error processing data: $($_.Exception.Message)`r`n$($_.InvocationInfo.PositionMessage)"
                 Write-LogMessage -API 'Webhooks' -message 'Error Processing Audit Log Data' -LogData (Get-CippException -Exception $_) -sev Error -tenant $TenantFilter
@@ -181,14 +184,20 @@ function Test-CIPPAuditLogRules {
         #write-warning "Creating filters - $(($ProcessedData.operation | Sort-Object -Unique) -join ',') - $($TenantFilter)"
 
         $Where = $Configuration | ForEach-Object {
-            if ($TenantFilter -In $_.Excluded.value) {
+            if ($TenantFilter -in $_.Excluded.value) {
                 return
             }
             $conditions = $_.Conditions | ConvertFrom-Json | Where-Object { $_.Input.value -ne '' }
             $actions = $_.Actions
             $conditionStrings = [System.Collections.Generic.List[string]]::new()
             $CIPPClause = [System.Collections.Generic.List[string]]::new()
+            $AddedLocationCondition = $false
             foreach ($condition in $conditions) {
+                if ($condition.Input.value -eq 'CIPPGeoLocation' -and !$AddedLocationCondition) {
+                    $conditionsString.Add("`$_.HasLocationData -eq `$true")
+                    $CIPPClause.Add('HasLocationData is true')
+                    $AddedLocationCondition = $true
+                }
                 $value = if ($condition.Input.value -is [array]) {
                     $arrayAsString = $condition.Input.value | ForEach-Object {
                         "'$_'"
