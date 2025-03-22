@@ -63,7 +63,7 @@ function Test-CIPPAuditLogRules {
             $Data = $AuditRecord.auditData | Select-Object *, CIPPAction, CIPPClause, CIPPGeoLocation, CIPPBadRepIP, CIPPHostedIP, CIPPIPDetected, CIPPLocationInfo, CIPPExtendedProperties, CIPPDeviceProperties, CIPPParameters, CIPPModifiedProperties, AuditRecord -ErrorAction SilentlyContinue
             try {
                 if ($Data.ExtendedProperties) {
-                    $Data.CIPPExtendedProperties = ($Data.ExtendedProperties | ConvertTo-Json)
+                    $Data.CIPPExtendedProperties = ($Data.ExtendedProperties | ConvertTo-Json -Compress)
                     $Data.ExtendedProperties | ForEach-Object {
                         if ($_.Value -in $ExtendedPropertiesIgnoreList) {
                             #write-warning "No need to process this operation as its in our ignore list. Some extended information: $($data.operation):$($_.Value) - $($TenantFilter)"
@@ -73,15 +73,15 @@ function Test-CIPPAuditLogRules {
                     }
                 }
                 if ($Data.DeviceProperties) {
-                    $Data.CIPPDeviceProperties = ($Data.DeviceProperties | ConvertTo-Json)
+                    $Data.CIPPDeviceProperties = ($Data.DeviceProperties | ConvertTo-Json -Compress)
                     $Data.DeviceProperties | ForEach-Object { $Data | Add-Member -NotePropertyName $_.Name -NotePropertyValue $_.Value -Force -ErrorAction SilentlyContinue }
                 }
                 if ($Data.parameters) {
-                    $Data.CIPPParameters = ($Data.parameters | ConvertTo-Json)
+                    $Data.CIPPParameters = ($Data.parameters | ConvertTo-Json -Compress)
                     $Data.parameters | ForEach-Object { $Data | Add-Member -NotePropertyName $_.Name -NotePropertyValue $_.Value -Force -ErrorAction SilentlyContinue }
                 }
                 if ($Data.ModifiedProperties) {
-                    $Data.CIPPModifiedProperties = ($Data.ModifiedProperties | ConvertTo-Json)
+                    $Data.CIPPModifiedProperties = ($Data.ModifiedProperties | ConvertTo-Json -Compress)
                     try {
                         $Data.ModifiedProperties | ForEach-Object { $Data | Add-Member -NotePropertyName "$($_.Name)" -NotePropertyValue "$($_.NewValue)" -Force -ErrorAction SilentlyContinue }
                     } catch {
@@ -146,7 +146,7 @@ function Test-CIPPAuditLogRules {
                                 Hosting         = "$hosting"
                                 ASName          = "$ASName"
                             }
-                            $HasLocationData = $true
+
                             try {
                                 $null = Add-CIPPAzDataTableEntity @LocationTable -Entity $LocationInfo -Force
                             } catch {
@@ -158,11 +158,13 @@ function Test-CIPPAuditLogRules {
                         $Data.CIPPBadRepIP = $Proxy
                         $Data.CIPPHostedIP = $hosting
                         $Data.CIPPIPDetected = $IP
-                        $Data.CIPPLocationInfo = ($Location | ConvertTo-Json)
-                        $Data.AuditRecord = ($RootProperties | ConvertTo-Json)
+                        $Data.CIPPLocationInfo = ($Location | ConvertTo-Json -Compress)
+                        $HasLocationData = $true
                     }
                 }
-                $Data | Select-Object *, @{n = 'HasLocationData'; exp = { $HasLocationData } } -ExcludeProperty ExtendedProperties, DeviceProperties, parameters
+                $Data | Select-Object *,
+                @{n = 'HasLocationData'; exp = { $HasLocationData } },
+                @{n = 'AuditRecord'; exp = { $RootProperties | ConvertTo-Json -Compress } } -ExcludeProperty ExtendedProperties, DeviceProperties, parameters
             } catch {
                 #write-warning "Audit log: Error processing data: $($_.Exception.Message)`r`n$($_.InvocationInfo.PositionMessage)"
                 Write-LogMessage -API 'Webhooks' -message 'Error Processing Audit Log Data' -LogData (Get-CippException -Exception $_) -sev Error -tenant $TenantFilter
@@ -193,7 +195,7 @@ function Test-CIPPAuditLogRules {
             $CIPPClause = [System.Collections.Generic.List[string]]::new()
             $AddedLocationCondition = $false
             foreach ($condition in $conditions) {
-                if ($condition.Input.value -eq 'CIPPGeoLocation' -and !$AddedLocationCondition) {
+                if ($condition.Property.value -eq 'CIPPGeoLocation' -and !$AddedLocationCondition) {
                     $conditionsString.Add("`$_.HasLocationData -eq `$true")
                     $CIPPClause.Add('HasLocationData is true')
                     $AddedLocationCondition = $true
