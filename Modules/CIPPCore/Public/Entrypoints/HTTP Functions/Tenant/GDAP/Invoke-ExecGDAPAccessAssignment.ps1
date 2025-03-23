@@ -117,7 +117,7 @@ function Invoke-ExecGDAPAccessAssignment {
 
                 } else {
                     $Results = @{
-                        resultText = 'GDAP access assignments are up to date'
+                        resultText = 'This relationship already has the correct access assignments'
                         state      = 'success'
                     }
                 }
