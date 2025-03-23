@@ -162,9 +162,9 @@ function Test-CIPPAuditLogRules {
                         $HasLocationData = $true
                     }
                 }
+                $Data.AuditRecord = $AuditRecord
                 $Data | Select-Object *,
-                @{n = 'HasLocationData'; exp = { $HasLocationData } },
-                @{n = 'AuditRecord'; exp = { $RootProperties | ConvertTo-Json -Compress } } -ExcludeProperty ExtendedProperties, DeviceProperties, parameters
+                @{n = 'HasLocationData'; exp = { $HasLocationData } } -ExcludeProperty ExtendedProperties, DeviceProperties, parameters
             } catch {
                 #write-warning "Audit log: Error processing data: $($_.Exception.Message)`r`n$($_.InvocationInfo.PositionMessage)"
                 Write-LogMessage -API 'Webhooks' -message 'Error Processing Audit Log Data' -LogData (Get-CippException -Exception $_) -sev Error -tenant $TenantFilter
