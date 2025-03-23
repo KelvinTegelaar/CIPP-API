@@ -41,6 +41,7 @@ function Invoke-CIPPStandardCloudMessageRecall {
     if ($Settings.report -eq $true) {
         # Default is not set, not set means it's enabled
         if ($null -eq $CurrentState ) { $CurrentState = $true }
+        Set-CIPPStandardsCompareField -FieldName 'standards.CloudMessageRecall' -FieldValue $CurrentState -TenantFilter $Tenant
         Add-CIPPBPAField -FieldName 'MessageRecall' -FieldValue $CurrentState -StoreAs bool -Tenant $Tenant
     }
 
@@ -70,7 +71,8 @@ function Invoke-CIPPStandardCloudMessageRecall {
         if ($StateIsCorrect -eq $true) {
             Write-LogMessage -API 'Standards' -tenant $Tenant -message "The tenant Message Recall is set correctly to $state" -sev Info
         } else {
-            Write-LogMessage -API 'Standards' -tenant $Tenant -message "The tenant Message Recall is not set correctly to $state" -sev Alert
+            Write-StandardsAlert -message "The tenant Message Recall is not set correctly to $state" -object @{CurrentState = $CurrentState; WantedState = $WantedState } -tenant $Tenant -standardName 'CloudMessageRecall' -standardId $Settings.standardId
+            Write-LogMessage -API 'Standards' -tenant $Tenant -message "The tenant Message Recall is not set correctly to $state" -sev Info
         }
     }
 }

@@ -55,11 +55,13 @@ function Invoke-CIPPStandardlaps {
         if ($PreviousSetting.localAdminPassword.isEnabled) {
             Write-LogMessage -API 'Standards' -tenant $Tenant -message 'LAPS is enabled.' -sev Info
         } else {
-            Write-LogMessage -API 'Standards' -tenant $Tenant -message 'LAPS is not enabled.' -sev Alert
+            Write-StandardsAlert -message "LAPS is not enabled" -object $PreviousSetting -tenant $Tenant -standardName 'laps' -standardId $Settings.standardId
+            Write-LogMessage -API 'Standards' -tenant $Tenant -message 'LAPS is not enabled.' -sev Info
         }
     }
 
     if ($Settings.report -eq $true) {
+        Set-CIPPStandardsCompareField -=FieldName 'standards.laps' -FieldValue $PreviousSetting.localAdminPassword.isEnabled -Tenant $Tenant
         Add-CIPPBPAField -FieldName 'laps' -FieldValue $PreviousSetting.localAdminPassword.isEnabled -StoreAs bool -Tenant $tenant
     }
 }

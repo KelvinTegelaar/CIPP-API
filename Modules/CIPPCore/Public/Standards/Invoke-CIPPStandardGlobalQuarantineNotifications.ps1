@@ -44,7 +44,8 @@ function Invoke-CIPPStandardGlobalQuarantineNotifications {
     }
 
     if ($Settings.report -eq $true) {
-
+        $ReportState = $CurrentState.EndUserSpamNotificationFrequency -eq $WantedState ? $true : $CurrentState.EndUserSpamNotificationFrequency
+        Set-CIPPStandardsCompareField -FieldName 'standards.GlobalQuarantineNotificationsSet' -FieldValue $ReportState -Tenant $Tenant
         Add-CIPPBPAField -FieldName 'GlobalQuarantineNotificationsSet' -FieldValue [string]$CurrentState.EndUserSpamNotificationFrequency -StoreAs string -Tenant $Tenant
     }
     # Get notification interval using null-coalescing operator
@@ -80,7 +81,8 @@ function Invoke-CIPPStandardGlobalQuarantineNotifications {
         if ($CurrentState.EndUserSpamNotificationFrequency -eq $WantedState) {
             Write-LogMessage -API 'Standards' -tenant $Tenant -message "Global Quarantine Notifications are set to the desired value of $WantedState" -sev Info
         } else {
-            Write-LogMessage -API 'Standards' -tenant $Tenant -message "Global Quarantine Notifications are not set to the desired value of $WantedState" -sev Alert
+            Write-StandardsAlert -message "Global Quarantine Notifications are not set to the desired value of $WantedState" -object $CurrentState -tenant $Tenant -standardName 'GlobalQuarantineNotifications' -standardId $Settings.standardId
+            Write-LogMessage -API 'Standards' -tenant $Tenant -message "Global Quarantine Notifications are not set to the desired value of $WantedState" -sev Info
         }
     }
 }

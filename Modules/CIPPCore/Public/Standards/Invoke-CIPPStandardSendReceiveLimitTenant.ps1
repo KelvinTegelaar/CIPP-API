@@ -30,18 +30,17 @@ function Invoke-CIPPStandardSendReceiveLimitTenant {
     #>
 
     param($Tenant, $Settings)
-    ##$Rerun -Type Standard -Tenant $Tenant -Settings $Settings 'SendReceiveLimitTenant'
 
     # Input validation
     if ([Int32]$Settings.SendLimit -lt 1 -or [Int32]$Settings.SendLimit -gt 150) {
         Write-LogMessage -API 'Standards' -tenant $tenant -message 'SendReceiveLimitTenant: Invalid SendLimit parameter set' -sev Error
-        Return
+        return
     }
 
     # Input validation
     if ([Int32]$Settings.ReceiveLimit -lt 1 -or [Int32]$Settings.ReceiveLimit -gt 150) {
         Write-LogMessage -API 'Standards' -tenant $tenant -message 'SendReceiveLimitTenant: Invalid ReceiveLimit parameter set' -sev Error
-        Return
+        return
     }
 
 
@@ -57,7 +56,7 @@ function Invoke-CIPPStandardSendReceiveLimitTenant {
         }
     }
 
-    If ($Settings.remediate -eq $true) {
+    if ($Settings.remediate -eq $true) {
         Write-Host "Time to remediate. Our Settings are $($Settings.SendLimit)MB and $($Settings.ReceiveLimit)MB"
 
         if ($NotSetCorrectly.Count -gt 0) {
@@ -81,11 +80,19 @@ function Invoke-CIPPStandardSendReceiveLimitTenant {
         if ($NotSetCorrectly.Count -eq 0) {
             Write-LogMessage -API 'Standards' -tenant $tenant -message "The tenant send($($Settings.SendLimit)MB) and receive($($Settings.ReceiveLimit)MB) limits are set correctly" -sev Info
         } else {
-            Write-LogMessage -API 'Standards' -tenant $tenant -message "The tenant send($($Settings.SendLimit)MB) and receive($($Settings.ReceiveLimit)MB) limits are not set correctly" -sev Alert
+            Write-StandardsAlert -message "The tenant send($($Settings.SendLimit)MB) and receive($($Settings.ReceiveLimit)MB) limits are not set correctly" -object $NotSetCorrectly -tenant $tenant -standardName 'SendReceiveLimitTenant' -standardId $Settings.standardId
+            Write-LogMessage -API 'Standards' -tenant $tenant -message "The tenant send($($Settings.SendLimit)MB) and receive($($Settings.ReceiveLimit)MB) limits are not set correctly" -sev Info
         }
     }
 
     if ($Settings.report -eq $true) {
         Add-CIPPBPAField -FieldName 'SendReceiveLimit' -FieldValue $NotSetCorrectly -StoreAs json -Tenant $tenant
+
+        if ($NotSetCorrectly.Count -eq 0) {
+            $FieldValue = $true
+        } else {
+            $FieldValue = $NotSetCorrectly
+        }
+        Set-CIPPStandardsCompareField -FieldName 'standards.SendReceiveLimitTenant' -FieldValue $FieldValue -Tenant $tenant
     }
 }

@@ -64,9 +64,16 @@ Function Invoke-AddGroup {
                         Type                               = $GroupObject.groupType
                         RequireSenderAuthenticationEnabled = [bool]!$GroupObject.allowExternal
                     }
+                    if ($GroupObject.owners) {
+                        $ExoParams.ManagedBy = @($GroupObject.owners.value)
+                    }
+                    if ($GroupObject.members) {
+                        $ExoParams.Members = @($GroupObject.members.value)
+                    }
                     $GraphRequest = New-ExoRequest -tenantid $tenant -cmdlet 'New-DistributionGroup' -cmdParams $ExoParams
                 }
             }
+
             "Successfully created group $($GroupObject.displayName) for $($tenant)"
             Write-LogMessage -headers $Request.Headers -API $APIName -tenant $tenant -message "Created group $($GroupObject.displayName) with id $($GraphRequest.id)" -Sev Info
 
