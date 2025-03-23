@@ -162,7 +162,7 @@ function Test-CIPPAuditLogRules {
                         $HasLocationData = $true
                     }
                 }
-                $Data.AuditRecord = $AuditRecord
+                $Data.AuditRecord = $RootProperties
                 $Data | Select-Object *,
                 @{n = 'HasLocationData'; exp = { $HasLocationData } } -ExcludeProperty ExtendedProperties, DeviceProperties, parameters
             } catch {
