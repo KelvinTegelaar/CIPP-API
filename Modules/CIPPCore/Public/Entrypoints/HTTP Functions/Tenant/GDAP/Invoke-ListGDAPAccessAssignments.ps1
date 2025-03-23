@@ -18,10 +18,12 @@ function Invoke-ListGDAPAccessAssignments {
     $AccessAssignments = New-GraphGetRequest -Uri "https://graph.microsoft.com/beta/tenantRelationships/delegatedAdminRelationships/$Id/accessAssignments" -tenantid $TenantFilter
 
     # get groups asapp
-    $Groups = New-GraphGetRequest -Uri "https://graph.microsoft.com/beta/groups?`$top=999&`$select=id,displayName&`$filter=securityEnabled eq true" -tenantid $TenantFilter -asApp $true
+    $Groups = New-GraphGetRequest -Uri "https://graph.microsoft.com/beta/groups?`$top=999&`$select=id,displayName&`$filter=securityEnabled eq true" -tenantid $TenantFilter -asApp $true -NoAuthCheck $true
+    
 
     # Get all the access containers
     $AccessContainers = $AccessAssignments.accessContainer.accessContainerId
+    Write-Information "Getting access containers for $($AccessContainers -join ',')"
 
     $ContainerMembers = foreach ($AccessContainer in $AccessContainers) {
         @{
