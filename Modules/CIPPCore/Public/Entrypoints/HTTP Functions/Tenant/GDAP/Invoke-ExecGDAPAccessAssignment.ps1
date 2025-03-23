@@ -52,6 +52,7 @@ function Invoke-ExecGDAPAccessAssignment {
                 $Messages = [System.Collections.Generic.List[object]]::new()
 
                 foreach ($AccessAssignment in $AccessAssignments) {
+                    $RoleCount = ($AccessAssignment.accessDetails.unifiedRoles | Measure-Object).Count
                     if ($Mappings.GroupId -notcontains $AccessAssignment.accessContainer.accessContainerId -and $AccessAssignment.status -notin @('deleting', 'deleted', 'error')) {
                         Write-Warning "Deleting access assignment for $($AccessAssignment.accessContainer.accessContainerId)"
                         $Group = $Groups | Where-Object id -EQ $AccessAssignment.accessContainer.accessContainerId
@@ -65,31 +66,71 @@ function Invoke-ExecGDAPAccessAssignment {
                             })
 
                         $Messages.Add(@{
-                                'id'      = $AccessAssignment.id
+                                'id'      = "delete-$($AccessAssignment.id)"
                                 'message' = "Deleting access assignment for $($Group.displayName)"
                             })
 
+                    } elseif ($AccessAssignment.status -notin @('deleting', 'deleted', 'error')) {
+                        # check for mismatched role definitions (e.g. role in assignment does not match role in mapping)
+                        $Mapping = $Mappings | Where-Object { $_.GroupId -eq $AccessAssignment.accessContainer.accessContainerId }
+                        $Group = $Groups | Where-Object id -EQ $AccessAssignment.accessContainer.accessContainerId
+
+                        if ($RoleCount -gt 1 -or $AccessAssignment.accessDetails.unifiedRoles.roleDefinitionId -notcontains $Mapping.roleDefinitionId) {
+                            Write-Warning "Patching access assignment for $($AccessAssignment.accessContainer.accessContainerId)"
+                            $Requests.Add(@{
+                                    'id'      = "patch-$($AccessAssignment.id)"
+                                    'url'     = "tenantRelationships/delegatedAdminRelationships/$Id/accessAssignments/$($AccessAssignment.id)"
+                                    'method'  = 'PATCH'
+                                    'body'    = @{
+                                        'accessDetails' = @{
+                                            'unifiedRoles' = @(
+                                                @{
+                                                    roleDefinitionId = $Mapping.roleDefinitionId
+                                                }
+                                            )
+                                        }
+                                    }
+                                    'headers' = @{
+                                        'If-Match'     = $AccessAssignment.'@odata.etag'
+                                        'Content-Type' = 'application/json'
+                                    }
+                                })
+
+                            $Messages.Add(@{
+                                    'id'      = "patch-$($AccessAssignment.id)"
+                                    'message' = "Updating access assignment for $($Group.displayName)"
+                                })
+                        }
                     }
                 }
 
                 foreach ($Mapping in $Mappings) {
-                    if ($AccessAssignments.accessContainer.accessContainerId -notcontains $Mapping.GroupId -and $Relationship.accessDetails.unifiedRoles.roleDefinitionId -contains $Mapping.roleDefinitionId) {
+                    $DeletedAssignments = $AccessAssignments | Where-Object { $_.accessContainer.accessContainerId -eq $Mapping.GroupId -and $_.status -eq 'deleted' }
+                    if (($AccessAssignments.accessContainer.accessContainerId -notcontains $Mapping.GroupId -or $DeletedAssignments.accessContainer.accessContainerId -contains $Mapping.GroupId) -and $Relationship.accessDetails.unifiedRoles.roleDefinitionId -contains $Mapping.roleDefinitionId) {
                         Write-Information "Creating access assignment for $($Mapping.GroupId)"
                         $Requests.Add(@{
-                                'id'     = "create-$($Mapping.GroupId)"
-                                'url'    = "tenantRelationships/delegatedAdminRelationships/$Id/accessAssignments"
-                                'method' = 'POST'
-                                'body'   = @{
+                                'id'      = "create-$($Mapping.GroupId)"
+                                'url'     = "tenantRelationships/delegatedAdminRelationships/$Id/accessAssignments"
+                                'method'  = 'POST'
+                                'body'    = @{
                                     'accessDetails'   = @{
-                                        'unifiedRoles' = @($Mapping.roleDefinitionId)
+                                        'unifiedRoles' = @(
+                                            @{
+                                                roleDefinitionId = $Mapping.roleDefinitionId
+                                            }
+                                        )
                                     }
                                     'accessContainer' = @{
-                                        'accessContainerId' = $Mapping.GroupId
+                                        'accessContainerId'   = $Mapping.GroupId
+                                        'accessContainerType' = 'securityGroup'
                                     }
+                                }
+                                'headers' = @{
+                                    'Content-Type' = 'application/json'
                                 }
                             })
                         $Messages.Add(@{
-                                'id'      = $Mapping.GroupId
+                                'id'      = "create-$($Mapping.GroupId)"
                                 'message' = "Creating access assignment for $($Mapping.GroupName)"
                             })
                     }
@@ -97,12 +138,15 @@ function Invoke-ExecGDAPAccessAssignment {
 
                 if ($Requests) {
                     Write-Warning "Executing $($Requests.Count) access assignment changes"
-                    #Write-Information ($Requests | ConvertTo-Json -Depth 10)
+                    Write-Information ($Requests | ConvertTo-Json -Depth 10)
 
                     $BulkResults = New-GraphBulkRequest -Requests $Requests -NoAuthCheck $true
+
+                    Write-Warning "Received $($BulkResults.Count) access assignment results"
+                    Write-Information ($BulkResults | ConvertTo-Json -Depth 10)
                     $Results = foreach ($Result in $BulkResults) {
                         $Message = $Messages | Where-Object id -EQ $Result.id
-                        if ($Result.status -eq 204) {
+                        if ($Result.status -in @('201', '202', '204')) {
                             @{
                                 resultText = $Message.message
                                 state      = 'success'

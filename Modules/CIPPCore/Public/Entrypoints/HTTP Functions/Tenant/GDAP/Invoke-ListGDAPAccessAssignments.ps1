@@ -19,7 +19,7 @@ function Invoke-ListGDAPAccessAssignments {
 
     # get groups asapp
     $Groups = New-GraphGetRequest -Uri "https://graph.microsoft.com/beta/groups?`$top=999&`$select=id,displayName&`$filter=securityEnabled eq true" -tenantid $TenantFilter -asApp $true -NoAuthCheck $true
-    
+
 
     # Get all the access containers
     $AccessContainers = $AccessAssignments.accessContainer.accessContainerId
@@ -47,6 +47,8 @@ function Invoke-ListGDAPAccessAssignments {
     }
     if (!$Results) {
         $Results = @()
+    } else {
+        $Results = $Results | Sort-Object -Property @{Expression = { $_.group.displayName }; Ascending = $true }
     }
 
     $Body = @{
