@@ -8,7 +8,7 @@ function New-CIPPGraphSubscription {
         $Resource,
         $EventType,
         $APIName = 'Create Webhook',
-        $ExecutingUser,
+        $Headers,
         [Switch]$Recreate,
         [switch]$PartnerCenter
     )
@@ -68,14 +68,14 @@ function New-CIPPGraphSubscription {
                         WebhookNotificationUrl = [string]$Body.WebhookUrl
                     }
                     $null = Add-CIPPAzDataTableEntity @WebhookTable -Entity $WebhookRow -Force
-                    Write-LogMessage -user $ExecutingUser -API $APIName -message "$Action Partner Center Webhook subscription" -Sev 'Info' -tenant 'PartnerTenant'
+                    Write-LogMessage -headers $Headers -API $APIName -message "$Action Partner Center Webhook subscription" -Sev 'Info' -tenant 'PartnerTenant'
                     return "$Action Partner Center Webhook subscription"
                 } else {
-                    Write-LogMessage -user $ExecutingUser -API $APIName -message 'Existing Partner Center Webhook subscription found' -Sev 'Info' -tenant 'PartnerTenant'
+                    Write-LogMessage -headers $Headers -API $APIName -message 'Existing Partner Center Webhook subscription found' -Sev 'Info' -tenant 'PartnerTenant'
                     return 'Existing Partner Center Webhook subscription found'
                 }
             } catch {
-                Write-LogMessage -user $ExecutingUser -API $APIName -message "Failed to create Partner Center Webhook Subscription: $($_.Exception.Message)" -Sev 'Error' -tenant 'PartnerTenant'
+                Write-LogMessage -headers $Headers -API $APIName -message "Failed to create Partner Center Webhook Subscription: $($_.Exception.Message)" -Sev 'Error' -tenant 'PartnerTenant'
                 return "Failed to create Partner Webhook Subscription: $($_.Exception.Message)"
             }
 
@@ -93,6 +93,9 @@ function New-CIPPGraphSubscription {
                     expirationDateTime = $expiredate
                 } | ConvertTo-Json
 
+                if ($BaseURL -match 'localhost' -or $BaseURL -match '127.0.0.1') {
+                    return 'Cannot create graph subscription for local development'
+                }
 
                 $GraphRequest = New-GraphPostRequest -uri 'https://graph.microsoft.com/beta/subscriptions' -tenantid $TenantFilter -type POST -body $params -verbose
                 #If creation is succesfull, we store the GUID in the storage table webhookTable to make sure we can check against this later on.
@@ -111,14 +114,14 @@ function New-CIPPGraphSubscription {
                 $null = Add-CIPPAzDataTableEntity @WebhookTable -Entity $WebhookRow
                 #todo: add remove webhook function, add check webhook function, add list webhooks function
                 #add refresh webhook function based on table.
-                Write-LogMessage -user $ExecutingUser -API $APIName -message "Created Graph Webhook subscription for $($TenantFilter)" -Sev 'Info' -tenant $TenantFilter
+                Write-LogMessage -headers $Headers -API $APIName -message "Created Graph Webhook subscription for $($TenantFilter)" -Sev 'Info' -tenant $TenantFilter
             } else {
-                Write-LogMessage -user $ExecutingUser -API $APIName -message "Existing Graph Webhook subscription for $($TenantFilter) found" -Sev 'Info' -tenant $TenantFilter
+                Write-LogMessage -headers $Headers -API $APIName -message "Existing Graph Webhook subscription for $($TenantFilter) found" -Sev 'Info' -tenant $TenantFilter
             }
         }
         return "Created Webhook subscription for $($TenantFilter)"
     } catch {
-        Write-LogMessage -user $ExecutingUser -API $APIName -message "Failed to create Webhook Subscription: $($_.Exception.Message)" -Sev 'Error' -tenant $TenantFilter
+        Write-LogMessage -headers $Headers -API $APIName -message "Failed to create Webhook Subscription: $($_.Exception.Message)" -Sev 'Error' -tenant $TenantFilter
         Return "Failed to create Webhook Subscription for $($TenantFilter): $($_.Exception.Message)"
     }
 }

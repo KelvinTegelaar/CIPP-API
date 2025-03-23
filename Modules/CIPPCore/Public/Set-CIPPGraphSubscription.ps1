@@ -6,7 +6,7 @@ function Set-CIPPGraphSubscription {
         $Resource,
         $EventType,
         $APIName = 'Set Graph Webhook',
-        $ExecutingUser
+        $Headers
     )
 
     if ($RenewSubscriptions) {
@@ -26,7 +26,7 @@ function Set-CIPPGraphSubscription {
 
             } catch {
                 $ErrorMessage = Get-CippException -Exception $_
-                Write-LogMessage -user $ExecutingUser -API $APIName -message "Failed to renew Webhook Subscription: $($ErrorMessage.NormalizedError)" -Sev 'Error' -tenant $TenantFilter -LogData $ErrorMessage
+                Write-LogMessage -headers $Headers -API $APIName -message "Failed to renew Webhook Subscription: $($ErrorMessage.NormalizedError)" -Sev 'Error' -tenant $TenantFilter -LogData $ErrorMessage
                 return   "Failed to renew Webhook Subscription $($WebhookRow.RowKey): $($ErrorMessage.NormalizedError)"
             }
         }

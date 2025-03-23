@@ -10,37 +10,46 @@ Function Invoke-RemoveTenantAllowBlockList {
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
 
-    $APIName = $TriggerMetadata.FunctionName
-    Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APIName -message 'Accessed this API' -Sev 'Debug'
+    $APIName = $Request.Params.CIPPEndpoint
+    $TenantFilter = $Request.Body.tenantFilter
+    $Headers = $Request.Headers
+    Write-LogMessage -headers $Headers -API $APIName -message 'Accessed this API' -Sev 'Debug'
 
-    # Write to the Azure Functions log stream.
-    Write-Host 'PowerShell HTTP trigger function processed a request.'
+    # Interact with query parameters or the body of the request.
+    $Entries = $Request.Body.Entries
+    $ListType = $Request.Body.ListType
+
     try {
+
+        Write-Host "List type is $listType"
         $ExoRequest = @{
-            tenantid  = $Request.query.tenantfilter
+            tenantid  = $TenantFilter
             cmdlet    = 'Remove-TenantAllowBlockListItems'
             cmdParams = @{
-                Entries     = [string[]]$Request.query.entries
-                ListType    = [string]$Request.query.listType
+                Entries  = @($Entries)
+                ListType = $ListType
             }
         }
 
-        New-ExoRequest @ExoRequest
+        $Results = New-ExoRequest @ExoRequest
+        Write-Host $Results
 
-        $result = "Successfully removed $($Request.query.entries) from Block/Allow list"
-        Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APIName -tenant $Request.query.tenantfilter -message $result -Sev 'Info'
+        $Result = "Successfully removed $($Entries) with type $ListType from Block/Allow list"
+        Write-LogMessage -headers $Headers -API $APIName -tenant $TenantFilter -message $Result -Sev 'Info'
+        $StatusCode = [HttpStatusCode]::OK
     } catch {
-        $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
-        $result = "Failed to remove $($Request.query.entries). Error: $ErrorMessage"
-        Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APIName -tenant $Request.query.tenantfilter -message $result -Sev 'Error'
+        $ErrorMessage = Get-CippException -Exception $_
+        $Result = "Failed to remove $($Entries) type $ListType. Error: $($ErrorMessage.NormalizedError)"
+        Write-LogMessage -headers $Headers -API $APIName -tenant $TenantFilter -message $Result -Sev 'Error' -LogData $ErrorMessage
+        $StatusCode = [HttpStatusCode]::Forbidden
     }
 
     # Associate values to output bindings by calling 'Push-OutputBinding'.
     Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
-        StatusCode = [HttpStatusCode]::OK
-        Body       = @{
-            'Results' = $result
-            'Request' = $ExoRequest
-        }
-    })
+            StatusCode = $StatusCode
+            Body       = @{
+                'Results' = $Result
+                # 'Request' = $ExoRequest
+            }
+        })
 }

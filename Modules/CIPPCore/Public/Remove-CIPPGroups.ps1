@@ -4,7 +4,7 @@ function Remove-CIPPGroups {
         $Username,
         $tenantFilter,
         $APIName = 'Remove From Groups',
-        $ExecutingUser,
+        $Headers,
         $userid
     )
 
@@ -32,17 +32,17 @@ function Remove-CIPPGroups {
                 New-ExoRequest -tenantid $using:tenantFilter -cmdlet 'Remove-DistributionGroupMember' -cmdParams $params -UseSystemMailbox $true
             }
 
-            Write-LogMessage -user $using:ExecutingUser -API $($using:APIName) -message "Removed $($using:Username) from $groupname" -Sev 'Info' -tenant $using:TenantFilter
+            Write-LogMessage -headers $using:Headers -API $($using:APIName) -message "Removed $($using:Username) from $groupname" -Sev 'Info' -tenant $using:TenantFilter
             "Successfully removed $($using:Username) from group $Groupname"
         } catch {
             $ErrorMessage = Get-CippException -Exception $_
-            Write-LogMessage -user $using:ExecutingUser -API $($using:APIName) -message "Could not remove $($using:Username) from group $groupname : $($ErrorMessage.NormalizedError)" -Sev 'Error' -tenant $using:TenantFilter -LogData $ErrorMessage
+            Write-LogMessage -headers $using:Headers -API $($using:APIName) -message "Could not remove $($using:Username) from group $groupname : $($ErrorMessage.NormalizedError)" -Sev 'Error' -tenant $using:TenantFilter -LogData $ErrorMessage
             "Could not remove $($using:Username) from group $($Groupname): $($ErrorMessage.NormalizedError). This is likely because its a Dynamic Group or synched with active directory"
         }
     }
     if (!$Returnval) {
         $Returnval = "$($Username) is not a member of any groups."
-        Write-LogMessage -user $ExecutingUser -API $APIName -message "$($Username) is not a member of any groups" -Sev 'Info' -tenant $TenantFilter
+        Write-LogMessage -headers $Headers -API $APIName -message "$($Username) is not a member of any groups" -Sev 'Info' -tenant $TenantFilter
     }
     return $Returnval
 }

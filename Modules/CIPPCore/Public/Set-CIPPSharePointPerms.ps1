@@ -6,7 +6,7 @@ function Set-CIPPSharePointPerms {
         $TenantFilter,
         $APIName = 'Manage SharePoint Owner',
         $RemovePermission,
-        $ExecutingUser,
+        $Headers,
         $URL
     )
     if ($RemovePermission -eq $true) {
@@ -43,16 +43,16 @@ function Set-CIPPSharePointPerms {
         # Write-Host $($request)
         if (!$request.ErrorInfo.ErrorMessage) {
             $Message = "$($OnedriveAccessUser) has been $($RemovePermission ? 'removed from' : 'given') access to $URL"
-            Write-LogMessage -user $ExecutingUser -API $APIName -message $Message -Sev Info -tenant $TenantFilter
+            Write-LogMessage -headers $Headers -API $APIName -message $Message -Sev Info -tenant $TenantFilter
             return $Message
         } else {
             $message = "Failed to change access: $($request.ErrorInfo.ErrorMessage)"
-            Write-LogMessage -user $ExecutingUser -API $APIName -message $message -Sev Error -tenant $TenantFilter
+            Write-LogMessage -headers $Headers -API $APIName -message $message -Sev Error -tenant $TenantFilter
             throw $Message
         }
     } catch {
         $ErrorMessage = Get-CippException -Exception $_
-        Write-LogMessage -user $ExecutingUser -API $APIName -message "Could not add new owner to $($OnedriveAccessUser) on $URL. Error: $($ErrorMessage.NormalizedError)" -Sev Error -tenant $TenantFilter -LogData $ErrorMessage
+        Write-LogMessage -headers $Headers -API $APIName -message "Could not add new owner to $($OnedriveAccessUser) on $URL. Error: $($ErrorMessage.NormalizedError)" -Sev Error -tenant $TenantFilter -LogData $ErrorMessage
         return "Could not add owner for $($URL). Error: $($ErrorMessage.NormalizedError)"
     }
 }

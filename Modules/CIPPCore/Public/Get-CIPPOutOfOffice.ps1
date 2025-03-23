@@ -4,7 +4,7 @@ function Get-CIPPOutOfOffice {
         $userid,
         $TenantFilter,
         $APIName = 'Get Out of Office',
-        $ExecutingUser
+        $Headers
     )
 
     try {

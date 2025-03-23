@@ -8,26 +8,31 @@ function Invoke-ListAuditLogs {
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
 
-    $APIName = 'ListAuditLogs'
-    Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -message 'Accessed this API' -Sev 'Debug'
+    $APIName = $Request.Params.CIPPEndpoint
+    $Headers = $Request.Headers
+    Write-LogMessage -headers $Headers -API $APIName -message 'Accessed this API' -Sev 'Debug'
 
-    $TenantFilter = $Request.Query.TenantFilter
+    # Interact with query parameters or the body of the request.
+    $TenantFilter = $Request.Query.tenantFilter
+    $LogID = $Request.Query.LogId
+    $StartDate = $Request.Query.StartDate
+    $EndDate = $Request.Query.EndDate
+    $RelativeTime = $Request.Query.RelativeTime
     $FilterConditions = [System.Collections.Generic.List[string]]::new()
 
-    if ($Request.Query.LogId) {
-        $FilterConditions.Add("RowKey eq '$($Request.Query.LogId)'")
+    if ($LogID) {
+        $FilterConditions.Add("RowKey eq '$($LogID)'")
     } else {
         if ($TenantFilter -and $TenantFilter -ne 'AllTenants') {
             $FilterConditions.Add("Tenant eq '$TenantFilter'")
         }
 
-        if (!$Request.Query.StartDate -and !$Request.Query.EndDate -and !$Request.Query.RelativeTime) {
-            $Request.Query.StartDate = (Get-Date).AddDays(-7).ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ssZ')
-            $Request.Query.EndDate = (Get-Date).ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ssZ')
+        if (!$StartDate -and !$EndDate -and !$RelativeTime) {
+            $StartDate = (Get-Date).AddDays(-7).ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ssZ')
+            $EndDate = (Get-Date).ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ssZ')
         }
 
-        if ($Request.Query.RelativeTime) {
-            $RelativeTime = $Request.Query.RelativeTime
+        if ($RelativeTime) {
 
             if ($RelativeTime -match '(\d+)([dhm])') {
                 $EndDate = (Get-Date).ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ssZ')
@@ -40,19 +45,19 @@ function Invoke-ListAuditLogs {
             }
             $FilterConditions.Add("Timestamp ge datetime'$StartDate' and Timestamp le datetime'$EndDate'")
         } else {
-            if ($Request.Query.StartDate) {
-                if ($Request.Query.StartDate -match '^\d+$') {
-                    $StartDate = [DateTimeOffset]::FromUnixTimeSeconds([int]$Request.Query.StartDate).DateTime.ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ssZ')
+            if ($StartDate) {
+                if ($StartDate -match '^\d+$') {
+                    $StartDate = [DateTimeOffset]::FromUnixTimeSeconds([int]$StartDate).DateTime.ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ssZ')
                 } else {
-                    $StartDate = (Get-Date $Request.Query.StartDate).ToString('yyyy-MM-ddTHH:mm:ssZ')
+                    $StartDate = (Get-Date $StartDate).ToString('yyyy-MM-ddTHH:mm:ssZ')
                 }
                 $FilterConditions.Add("Timestamp ge datetime'$StartDate'")
 
-                if ($Request.Query.EndDate) {
-                    if ($Request.Query.EndDate -match '^\d+$') {
-                        $EndDate = [DateTimeOffset]::FromUnixTimeSeconds([int]$Request.Query.EndDate).DateTime.ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ssZ')
+                if ($EndDate) {
+                    if ($EndDate -match '^\d+$') {
+                        $EndDate = [DateTimeOffset]::FromUnixTimeSeconds([int]$EndDate).DateTime.ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ssZ')
                     } else {
-                        $EndDate = (Get-Date $Request.Query.EndDate).ToString('yyyy-MM-ddTHH:mm:ssZ')
+                        $EndDate = (Get-Date $EndDate).ToString('yyyy-MM-ddTHH:mm:ssZ')
                     }
                     $FilterConditions.Add("Timestamp le datetime'$EndDate'")
                 }

@@ -10,11 +10,11 @@ Function Invoke-AddDefenderDeployment {
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
 
-    $APIName = $TriggerMetadata.FunctionName
-    Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -message 'Accessed this API' -Sev 'Debug'
+    $APIName = $Request.Params.CIPPEndpoint
+    Write-LogMessage -headers $Request.Headers -API $APINAME -message 'Accessed this API' -Sev 'Debug'
 
     $Tenants = ($Request.body.selectedTenants).value
-    if ('AllTenants' -in $Tenants) { $Tenants = (Get-Tenants).defaultDomainName }
+    if ('AllTenants' -in $Tenants) { $Tenants = (Get-Tenants -IncludeErrors).defaultDomainName }
     $Compliance = $request.body.Compliance
     $PolicySettings = $request.body.Policy
     $ASR = $request.body.ASR
@@ -35,7 +35,12 @@ Function Invoke-AddDefenderDeployment {
                 iosMobileApplicationManagementEnabled               = [bool]$Compliance.appSync
                 microsoftDefenderForEndpointAttachEnabled           = [bool]$true
             } | ConvertTo-Json -Compress
-            $ExistingSettings = New-GraphGETRequest -uri 'https://graph.microsoft.com/beta/deviceManagement/mobileThreatDefenseConnectors/fc780465-2017-40d4-a0c5-307022471b92' -tenantid $tenant
+            try {
+                $ExistingSettings = New-GraphGETRequest -uri 'https://graph.microsoft.com/beta/deviceManagement/mobileThreatDefenseConnectors/fc780465-2017-40d4-a0c5-307022471b92' -tenantid $tenant
+            } catch {
+                $ExistingSettings = $false
+            }
+
             if ($ExistingSettings) {
                 "Defender Intune Configuration already active for $($Tenant). Skipping"
             } else {
@@ -81,9 +86,9 @@ Function Invoke-AddDefenderDeployment {
                         @{ '@odata.type' = '#microsoft.graph.deviceManagementConfigurationSetting' ; settingInstance = @{ '@odata.type' = '#microsoft.graph.deviceManagementConfigurationChoiceSettingInstance' ; settingDefinitionId = 'device_vendor_msft_policy_config_defender_enablelowcpupriority' ; choiceSettingValue = @{'@odata.type' = '#microsoft.graph.deviceManagementConfigurationChoiceSettingValue'; value = 'device_vendor_msft_policy_config_defender_enablelowcpupriority_1' ; settingValueTemplateReference = @{settingValueTemplateId = '045a4a13-deee-4e24-9fe4-985c9357680d' } } ; settingInstanceTemplateReference = @{settingInstanceTemplateId = 'cdeb96cf-18f5-4477-a710-0ea9ecc618af' } } }
                     }
                 }
-                $CheckExististing = New-GraphGETRequest -uri 'https://graph.microsoft.com/beta/deviceManagement/configurationPolicies' -tenantid $tenant
-                Write-Host ($CheckExististing | ConvertTo-Json)
-                if ('Default AV Policy' -in $CheckExististing.Name) {
+                $CheckExisting = New-GraphGETRequest -uri 'https://graph.microsoft.com/beta/deviceManagement/configurationPolicies' -tenantid $tenant
+                Write-Host ($CheckExisting | ConvertTo-Json)
+                if ('Default AV Policy' -in $CheckExisting.Name) {
                     "$($Tenant): AV Policy already exists. Skipping"
                 } else {
                     $PolBody = ConvertTo-Json -Depth 10 -Compress -InputObject @{
@@ -93,13 +98,16 @@ Function Invoke-AddDefenderDeployment {
                         technologies      = 'mdm,microsoftSense'
                         roleScopeTagIds   = @('0')
                         templateReference = @{templateId = '804339ad-1553-4478-a742-138fb5807418_1' }
-                        settings          = $Settings
+                        settings          = @($Settings)
                     }
+
+                    Write-Information ($PolBody)
+
                     $PolicyRequest = New-GraphPOSTRequest -uri 'https://graph.microsoft.com/beta/deviceManagement/configurationPolicies' -tenantid $tenant -type POST -body $PolBody
                     if ($PolicySettings.AssignTo -ne 'None') {
                         $AssignBody = if ($PolicySettings.AssignTo -ne 'AllDevicesAndUsers') { '{"assignments":[{"id":"","target":{"@odata.type":"#microsoft.graph.' + $($PolicySettings.AssignTo) + 'AssignmentTarget"}}]}' } else { '{"assignments":[{"id":"","target":{"@odata.type":"#microsoft.graph.allDevicesAssignmentTarget"}},{"id":"","target":{"@odata.type":"#microsoft.graph.allLicensedUsersAssignmentTarget"}}]}' }
                         $assign = New-GraphPOSTRequest -uri "https://graph.microsoft.com/beta/deviceManagement/configurationPolicies('$($PolicyRequest.id)')/assign" -tenantid $tenant -type POST -body $AssignBody
-                        Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $($Tenant) -message "Assigned policy $($Displayname) to $($PolicySettings.AssignTo)" -Sev 'Info'
+                        Write-LogMessage -headers $Request.Headers -API $APINAME -tenant $($Tenant) -message "Assigned policy $($Displayname) to $($PolicySettings.AssignTo)" -Sev 'Info'
                     }
                     "$($Tenant): Successfully set Default AV Policy settings"
                 }
@@ -123,8 +131,6 @@ Function Invoke-AddDefenderDeployment {
                     { $_.BlockUnsignedDrivers } { @{'@odata.type' = '#microsoft.graph.deviceManagementConfigurationChoiceSettingInstance'; settingDefinitionId = 'device_vendor_msft_policy_config_defender_attacksurfacereductionrules_blockabuseofexploitedvulnerablesigneddrivers'; choiceSettingValue = @{'@odata.type' = '#microsoft.graph.deviceManagementConfigurationchoiceSettingValue'; value = 'device_vendor_msft_policy_config_defender_attacksurfacereductionrules_blockabuseofexploitedvulnerablesigneddrivers_block' } } }
 
                 }
-
-
                 $ASRbody = ConvertTo-Json -Depth 15 -Compress -InputObject @{
                     name              = 'ASR Default rules'
                     description       = ''
@@ -147,14 +153,16 @@ Function Invoke-AddDefenderDeployment {
                     "$($Tenant): ASR Policy already exists. Skipping"
                 } else {
                     Write-Host $ASRbody
-                    $ASRRequest = New-GraphPOSTRequest -uri 'https://graph.microsoft.com/beta/deviceManagement/configurationPolicies' -tenantid $tenant -type POST -body $ASRbody
-                    Write-Host ($ASRRequest.id)
-                    if ($ASR.AssignTo -ne 'none') {
-                        $AssignBody = if ($ASR.AssignTo -ne 'AllDevicesAndUsers') { '{"assignments":[{"id":"","target":{"@odata.type":"#microsoft.graph.' + $($asr.AssignTo) + 'AssignmentTarget"}}]}' } else { '{"assignments":[{"id":"","target":{"@odata.type":"#microsoft.graph.allDevicesAssignmentTarget"}},{"id":"","target":{"@odata.type":"#microsoft.graph.allLicensedUsersAssignmentTarget"}}]}' }
-                        $assign = New-GraphPOSTRequest -uri "https://graph.microsoft.com/beta/deviceManagement/configurationPolicies('$($ASRRequest.id)')/assign" -tenantid $tenant -type POST -body $AssignBody
-                        Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $($Tenant) -message "Assigned policy $($Displayname) to $($ASR.AssignTo)" -Sev 'Info'
+                    if (($ASRSettings | Measure-Object).Count -gt 0) {
+                        $ASRRequest = New-GraphPOSTRequest -uri 'https://graph.microsoft.com/beta/deviceManagement/configurationPolicies' -tenantid $tenant -type POST -body $ASRbody
+                        Write-Host ($ASRRequest.id)
+                        if ($ASR.AssignTo -and $ASR.AssignTo -ne 'none') {
+                            $AssignBody = if ($ASR.AssignTo -ne 'AllDevicesAndUsers') { '{"assignments":[{"id":"","target":{"@odata.type":"#microsoft.graph.' + $($asr.AssignTo) + 'AssignmentTarget"}}]}' } else { '{"assignments":[{"id":"","target":{"@odata.type":"#microsoft.graph.allDevicesAssignmentTarget"}},{"id":"","target":{"@odata.type":"#microsoft.graph.allLicensedUsersAssignmentTarget"}}]}' }
+                            $assign = New-GraphPOSTRequest -uri "https://graph.microsoft.com/beta/deviceManagement/configurationPolicies('$($ASRRequest.id)')/assign" -tenantid $tenant -type POST -body $AssignBody
+                            Write-LogMessage -headers $Request.Headers -API $APINAME -tenant $($Tenant) -message "Assigned policy $($Displayname) to $($ASR.AssignTo)" -Sev 'Info'
+                        }
+                        "$($Tenant): Successfully added ASR Settings"
                     }
-                    "$($Tenant): Successfully added ASR Settings"
                 }
             }
             if ($EDR) {
@@ -209,32 +217,34 @@ Function Invoke-AddDefenderDeployment {
 
                     }
                 }
-                $EDRbody = ConvertTo-Json -Depth 15 -Compress -InputObject @{
-                    name              = 'EDR Configuration'
-                    description       = ''
-                    platforms         = 'windows10'
-                    technologies      = 'mdm,microsoftSense'
-                    roleScopeTagIds   = @('0')
-                    templateReference = @{templateId = '0385b795-0f2f-44ac-8602-9f65bf6adede_1' }
-                    settings          = @($EDRSettings)
-                }
-                Write-Host ( $EDRbody)
-                $CheckExististingEDR = New-GraphGETRequest -uri 'https://graph.microsoft.com/beta/deviceManagement/configurationPolicies' -tenantid $tenant | Where-Object -Property Name -EQ 'EDR Configuration'
-                if ('EDR Configuration' -in $CheckExististingEDR.Name) {
-                    "$($Tenant): EDR Policy already exists. Skipping"
-                } else {
-                    $EDRRequest = New-GraphPOSTRequest -uri 'https://graph.microsoft.com/beta/deviceManagement/configurationPolicies' -tenantid $tenant -type POST -body $EDRbody
-                    if ($ASR.AssignTo -ne 'none') {
-                        $AssignBody = if ($ASR.AssignTo -ne 'AllDevicesAndUsers') { '{"assignments":[{"id":"","target":{"@odata.type":"#microsoft.graph.' + $($asr.AssignTo) + 'AssignmentTarget"}}]}' } else { '{"assignments":[{"id":"","target":{"@odata.type":"#microsoft.graph.allDevicesAssignmentTarget"}},{"id":"","target":{"@odata.type":"#microsoft.graph.allLicensedUsersAssignmentTarget"}}]}' }
-                        $assign = New-GraphPOSTRequest -uri "https://graph.microsoft.com/beta/deviceManagement/configurationPolicies('$($EDRRequest.id)')/assign" -tenantid $tenant -type POST -body $AssignBody
-                        Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $($Tenant) -message "Assigned EDR policy $($Displayname) to $($ASR.AssignTo)" -Sev 'Info'
+                if (($EDRSettings | Measure-Object).Count -gt 0) {
+                    $EDRbody = ConvertTo-Json -Depth 15 -Compress -InputObject @{
+                        name              = 'EDR Configuration'
+                        description       = ''
+                        platforms         = 'windows10'
+                        technologies      = 'mdm,microsoftSense'
+                        roleScopeTagIds   = @('0')
+                        templateReference = @{templateId = '0385b795-0f2f-44ac-8602-9f65bf6adede_1' }
+                        settings          = @($EDRSettings)
                     }
-                    "$($Tenant): Successfully added EDR Settings"
+                    Write-Host ( $EDRbody)
+                    $CheckExististingEDR = New-GraphGETRequest -uri 'https://graph.microsoft.com/beta/deviceManagement/configurationPolicies' -tenantid $tenant | Where-Object -Property Name -EQ 'EDR Configuration'
+                    if ('EDR Configuration' -in $CheckExististingEDR.Name) {
+                        "$($Tenant): EDR Policy already exists. Skipping"
+                    } else {
+                        $EDRRequest = New-GraphPOSTRequest -uri 'https://graph.microsoft.com/beta/deviceManagement/configurationPolicies' -tenantid $tenant -type POST -body $EDRbody
+                        if ($ASR -and $ASR.AssignTo -ne 'none') {
+                            $AssignBody = if ($ASR.AssignTo -ne 'AllDevicesAndUsers') { '{"assignments":[{"id":"","target":{"@odata.type":"#microsoft.graph.' + $($asr.AssignTo) + 'AssignmentTarget"}}]}' } else { '{"assignments":[{"id":"","target":{"@odata.type":"#microsoft.graph.allDevicesAssignmentTarget"}},{"id":"","target":{"@odata.type":"#microsoft.graph.allLicensedUsersAssignmentTarget"}}]}' }
+                            $assign = New-GraphPOSTRequest -uri "https://graph.microsoft.com/beta/deviceManagement/configurationPolicies('$($EDRRequest.id)')/assign" -tenantid $tenant -type POST -body $AssignBody
+                            Write-LogMessage -headers $Request.Headers -API $APINAME -tenant $($Tenant) -message "Assigned EDR policy $($Displayname) to $($ASR.AssignTo)" -Sev 'Info'
+                        }
+                        "$($Tenant): Successfully added EDR Settings"
+                    }
                 }
             }
         } catch {
             "Failed to add policy for $($Tenant): $($_.Exception.Message)"
-            Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $($Tenant) -message "Failed adding policy $($Displayname). Error: $($_.Exception.Message)" -Sev 'Error'
+            Write-LogMessage -headers $Request.Headers -API $APINAME -tenant $($Tenant) -message "Failed adding policy $($Displayname). Error: $($_.Exception.Message)" -Sev 'Error'
             continue
         }
 

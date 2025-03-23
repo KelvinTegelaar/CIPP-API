@@ -6,7 +6,7 @@ function Add-CIPPAlias {
         $UserprincipalName,
         $TenantFilter,
         $APIName = 'Set Manager',
-        $ExecutingUser
+        $Headers
     )
 
     try {
@@ -16,10 +16,10 @@ function Add-CIPPAlias {
         }
         Write-Host "Resetting primary alias to $User"
         New-GraphPostRequest -uri "https://graph.microsoft.com/beta/users/$($user)" -tenantid $TenantFilter -type 'patch' -body "{`"mail`": `"$User`"}" -verbose
-        Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $($TenantFilter) -message "Added alias $($Alias) to $($UserprincipalName)" -Sev 'Info'
+        Write-LogMessage -headers $Headers -API $APINAME -tenant $($TenantFilter) -message "Added alias $($Alias) to $($UserprincipalName)" -Sev 'Info'
         return ("Added Aliases: $($Aliases -join ',')")
     } catch {
-        Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -tenant $($TenantFilter) -message "Failed to set alias. Error:$($_.Exception.Message)" -Sev 'Error'
+        Write-LogMessage -headers $Headers -API $APINAME -tenant $($TenantFilter) -message "Failed to set alias. Error:$($_.Exception.Message)" -Sev 'Error'
         throw "Failed to set alias: $($_.Exception.Message)"
     }
 }

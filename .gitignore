@@ -8,3 +8,4 @@ Cache_*
 Logs
 ExcludedTenants
 SendNotifications/config.json
+.env

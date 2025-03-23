@@ -10,14 +10,13 @@ Function Invoke-ListUserMailboxDetails {
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
 
-    $APIName = $TriggerMetadata.FunctionName
-    Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -message 'Accessed this API' -Sev 'Debug'
+    $APIName = $Request.Params.CIPPEndpoint
+    $Headers = $Request.Headers
+    Write-LogMessage -headers $Headers -API $APIName -message 'Accessed this API' -Sev 'Debug'
 
-    # Write to the Azure Functions log stream.
-    Write-Host 'PowerShell HTTP trigger function processed a request.'
 
     # Interact with query parameters or the body of the request.
-    $TenantFilter = $Request.Query.TenantFilter
+    $TenantFilter = $Request.Query.tenantFilter
     $UserID = $Request.Query.UserID
 
     try {
@@ -76,15 +75,15 @@ Function Invoke-ListUserMailboxDetails {
         $ArchiveSizeRequest = $Results.'Get-MailboxStatistics'
         $BlockedSender = $Results.'Get-BlockedSenderAddress'
         $PermsRequest2 = $Results.'Get-RecipientPermission'
-        $StatsRequest = New-GraphGetRequest -uri "https://outlook.office365.com/adminapi/beta/$($tenantfilter)/Mailbox('$($MailboxDetailedRequest.UserPrincipalName)')/Exchange.GetMailboxStatistics()" -Tenantid $tenantfilter -scope ExchangeOnline -noPagination $true
+        $StatsRequest = New-GraphGetRequest -uri "https://outlook.office365.com/adminapi/beta/$($TenantFilter)/Mailbox('$($MailboxDetailedRequest.UserPrincipalName)')/Exchange.GetMailboxStatistics()" -Tenantid $TenantFilter -scope ExchangeOnline -noPagination $true
 
 
         # Handle ArchiveEnabled and AutoExpandingArchiveEnabled
         try {
-            if ($MailboxDetailedRequest.ArchiveStatus -eq 'Active') {
-                $ArchiveEnabled = $True
+            if ($MailboxDetailedRequest.ArchiveGuid -ne '00000000-0000-0000-0000-000000000000') {
+                $ArchiveEnabled = $true
             } else {
-                $ArchiveEnabled = $False
+                $ArchiveEnabled = $false
             }
 
             # Get organization config of auto-expanding archive if it's disabled on user level
@@ -94,7 +93,7 @@ Function Invoke-ListUserMailboxDetails {
                 $AutoExpandingArchiveEnabled = $MailboxDetailedRequest.AutoExpandingArchiveEnabled
             }
         } catch {
-            $ArchiveEnabled = $False
+            $ArchiveEnabled = $false
             $ArchiveSizeRequest = @{
                 TotalItemSize = '0'
                 ItemCount     = '0'
@@ -104,9 +103,9 @@ Function Invoke-ListUserMailboxDetails {
 
         # Determine if the user is blocked for spam
         if ($BlockedSender -and $BlockedSender.Count -gt 0) {
-            $BlockedForSpam = $True
+            $BlockedForSpam = $false
         } else {
-            $BlockedForSpam = $False
+            $BlockedForSpam = $true
         }
     } catch {
         Write-Error "Failed Fetching Data $($_.Exception.message): $($_.InvocationInfo.ScriptLineNumber)"
@@ -155,9 +154,9 @@ Function Invoke-ListUserMailboxDetails {
     $ItemSizeType = '1{0}' -f ($TotalItemSizeString[1] ?? 'Gb')
     $TotalItemSize = try { [math]::Round([float]($TotalItemSizeString[0]) / $ItemSizeType, 2) } catch { 0 }
 
-    if ($ArchiveEnabled) {
-        $ArchiveSizeType = '1{0}' -f ($TotalArchiveItemSizeString[1] ?? 'Gb')
-        $TotalArchiveItemSize = [math]::Round([float]($TotalArchiveItemSizeString[0]) / $ArchiveSizeType, 2)
+    if ($ArchiveEnabled -eq $true) {
+        $TotalArchiveItemSize = try { [math]::Round([float]($TotalArchiveItemSizeString[0]), 2) } catch { 0 }
+        $TotalArchiveItemCount = try { [math]::Round($ArchiveSizeRequest.ItemCount, 2) } catch { 0 }
     }
 
     # Build the GraphRequest object
@@ -177,14 +176,27 @@ Function Invoke-ListUserMailboxDetails {
         ProhibitSendReceiveQuota = $ProhibitSendReceiveQuota
         ItemCount                = [math]::Round($StatsRequest.ItemCount, 2)
         TotalItemSize            = $TotalItemSize
-        TotalArchiveItemSize     = if ($ArchiveEnabled) { $TotalArchiveItemSize } else { '0' }
-        TotalArchiveItemCount    = if ($ArchiveEnabled) { try { [math]::Round($ArchiveSizeRequest.ItemCount, 2) } catch { 0 } } else { 0 }
+        TotalArchiveItemSize     = $TotalArchiveItemSize
+        TotalArchiveItemCount    = $TotalArchiveItemCount
         BlockedForSpam           = $BlockedForSpam
         ArchiveMailBox           = $ArchiveEnabled
         AutoExpandingArchive     = $AutoExpandingArchiveEnabled
         RecipientTypeDetails     = $MailboxDetailedRequest.RecipientTypeDetails
         Mailbox                  = $MailboxDetailedRequest
-    }
+        MailboxActionsData       = ($MailboxDetailedRequest | Select-Object id, ExchangeGuid, ArchiveGuid, WhenSoftDeleted, @{ Name = 'UPN'; Expression = { $_.'UserPrincipalName' } },
+            @{ Name = 'displayName'; Expression = { $_.'DisplayName' } },
+            @{ Name = 'primarySmtpAddress'; Expression = { $_.'PrimarySMTPAddress' } },
+            @{ Name = 'recipientType'; Expression = { $_.'RecipientType' } },
+            @{ Name = 'recipientTypeDetails'; Expression = { $_.'RecipientTypeDetails' } },
+            @{ Name = 'AdditionalEmailAddresses'; Expression = { ($_.'EmailAddresses' | Where-Object { $_ -clike 'smtp:*' }).Replace('smtp:', '') -join ', ' } },
+            @{Name = 'ForwardingSmtpAddress'; Expression = { $_.'ForwardingSmtpAddress' -replace 'smtp:', '' } },
+            @{Name = 'InternalForwardingAddress'; Expression = { $_.'ForwardingAddress' } },
+            DeliverToMailboxAndForward,
+            HiddenFromAddressListsEnabled,
+            ExternalDirectoryObjectId,
+            MessageCopyForSendOnBehalfEnabled,
+            MessageCopyForSentAsEnabled)
+    } # Select statement taken from ListMailboxes to save a EXO request
 
     Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
             StatusCode = [HttpStatusCode]::OK

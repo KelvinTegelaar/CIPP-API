@@ -13,16 +13,18 @@ function Invoke-CIPPStandardPasswordExpireDisabled {
         CAT
             Entra (AAD) Standards
         TAG
-            "lowimpact"
             "CIS"
             "PWAgePolicyNew"
         ADDEDCOMPONENT
         IMPACT
             Low Impact
+        ADDEDDATE
+            2021-11-16
         POWERSHELLEQUIVALENT
             Update-MgDomain
         RECOMMENDEDBY
             "CIS"
+            "CIPP"
         UPDATECOMMENTBLOCK
             Run the Tools\Update-StandardsComments.ps1 script to update this comment block
     .LINK

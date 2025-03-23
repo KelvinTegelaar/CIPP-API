@@ -1,24 +1,32 @@
 function Set-CIPPMailboxArchive {
     [CmdletBinding()]
     param (
-        $ExecutingUser,
-        $userid,
-        $username,
+        $Headers,
+        $UserID,
+        $Username,
         $APIName = 'Mailbox Archive',
         $TenantFilter,
-        [bool]$ArchiveEnabled
+        [bool]$ArchiveEnabled,
+        [switch]$AutoExpandingArchive
     )
 
-    $User = $request.headers.'x-ms-client-principal-name'
+    try {
+        if ([string]::IsNullOrWhiteSpace($Username)) { $Username = $UserID }
+        $OperationType = if ($AutoExpandingArchive.IsPresent -eq $true) { 'auto-expanding archive' } else { 'archive' }
+        if ($AutoExpandingArchive.IsPresent -eq $true) {
+            $null = New-ExoRequest -tenantid $TenantFilter -cmdlet 'Enable-Mailbox' -cmdParams @{Identity = $UserID; AutoExpandingArchive = $true }
+            $Message = "Successfully enabled $OperationType for $Username"
+        } else {
+            $null = New-ExoRequest -tenantid $TenantFilter -cmdlet 'Enable-Mailbox' -cmdParams @{Identity = $UserID; Archive = $ArchiveEnabled }
+            $Message = "Successfully set $OperationType for $Username to $ArchiveEnabled"
+        }
 
-    Try {
-        if (!$username) { $username = $userid }
-        $null = New-ExoRequest -tenantid $TenantFilter -cmdlet 'Enable-Mailbox' -cmdParams @{Identity = $userid; Archive = $ArchiveEnabled }
-        "Successfully set archive for $username to $ArchiveEnabled"
-        Write-LogMessage -user $User -API $APINAME -tenant $($tenantfilter) -message "Successfully set archive for $username to $ArchiveEnabled" -Sev 'Info'
+        Write-LogMessage -Headers $Headers -API $APIName -tenant $TenantFilter -message $Message -Sev 'Info'
+        return $Message
     } catch {
         $ErrorMessage = Get-CippException -Exception $_
-        Write-LogMessage -user $User -API $APINAME -tenant $($tenantfilter) -message "Failed to set archive for $username. Error: $($ErrorMessage.NormalizedError)" -Sev 'Error' -LogData $ErrorMessage
-        "Failed. $($ErrorMessage.NormalizedError)"
+        $Message = "Failed to set $OperationType for $Username. Error: $($ErrorMessage.NormalizedError)"
+        Write-LogMessage -Headers $Headers -API $APIName -tenant $TenantFilter -message $Message -Sev 'Error' -LogData $ErrorMessage
+        throw $Message
     }
 }

@@ -10,21 +10,27 @@ Function Invoke-ExecRevokeSessions {
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
 
-    $APIName = $TriggerMetadata.FunctionName
-    Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -message 'Accessed this API' -Sev 'Debug'
+    $APIName = $Request.Params.CIPPEndpoint
+    Write-LogMessage -headers $Request.Headers -API $APINAME -message 'Accessed this API' -Sev 'Debug'
 
     # Interact with query parameters or the body of the request.
-    $TenantFilter = $Request.Query.TenantFilter
+    $TenantFilter = $Request.Query.tenantFilter ?? $Request.Body.tenantFilter
+    $ID = $Request.Query.id ?? $Request.Body.id
+    $Username = $Request.Query.Username ?? $Request.Body.Username
+
     try {
-        $RevokeSessions = Revoke-CIPPSessions -userid $Request.Query.id -tenantFilter $TenantFilter -username $Request.Query.Username -APIName $APINAME -ExecutingUser $request.headers.'x-ms-client-principal'
-        $Results = [pscustomobject]@{'Results' = $RevokeSessions }
+        $Result = Revoke-CIPPSessions -UserID $ID -TenantFilter $TenantFilter -Username $Username -APIName $APIName -Headers $Request.Headers
+        if ($Result -like 'Revoke Session Failed*') { throw $Result }
+        $StatusCode = [HttpStatusCode]::OK
     } catch {
-        $Results = [pscustomobject]@{'Results' = "Failed. $($_.Exception.Message)" }
+        $Result = $_.Exception.Message
+        $StatusCode = [HttpStatusCode]::InternalServerError
     }
 
+    $Results = [pscustomobject]@{'Results' = $Result }
     # Associate values to output bindings by calling 'Push-OutputBinding'.
     Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
-            StatusCode = [HttpStatusCode]::OK
+            StatusCode = $StatusCode
             Body       = $Results
         })
 

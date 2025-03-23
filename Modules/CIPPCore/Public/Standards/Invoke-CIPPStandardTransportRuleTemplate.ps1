@@ -15,7 +15,9 @@ function Invoke-CIPPStandardTransportRuleTemplate {
         DISABLEDFEATURES
             
         IMPACT
-            Medium
+            Medium Impact
+        ADDEDDATE
+            2023-12-30
         ADDEDCOMPONENT
             {"type":"autoComplete","name":"transportRuleTemplate","label":"Select Transport Rule Template","api":{"url":"/api/ListTransportRulesTemplates","labelField":"name","valueField":"GUID","queryKey":"ListTransportRulesTemplates"}}
         UPDATECOMMENTBLOCK
@@ -27,7 +29,8 @@ function Invoke-CIPPStandardTransportRuleTemplate {
     ##$Rerun -Type Standard -Tenant $Tenant -Settings $Settings 'TransportRuleTemplate'
 
     If ($Settings.remediate -eq $true) {
-
+        Write-Host "Settings: $($Settings | ConvertTo-Json)"
+        $Settings.transportRuleTemplate ? ($Settings | Add-Member -NotePropertyName 'TemplateList' -NotePropertyValue $Settings.transportRuleTemplate) : $null
         foreach ($Template in $Settings.TemplateList) {
             Write-Host "working on $($Template.value)"
             $Table = Get-CippTable -tablename 'templates'

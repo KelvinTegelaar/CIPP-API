@@ -16,7 +16,7 @@ function Invoke-ExecPerUserMFAAllUsers {
         userId        = $Users.id
         TenantFilter  = $tenantfilter
         State         = $Request.query.State
-        executingUser = $Request.Headers.'x-ms-client-principal'
+        Headers = $Request.Headers
     }
     $Result = Set-CIPPPerUserMFA @Request
     $Body = @{

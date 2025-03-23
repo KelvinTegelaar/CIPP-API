@@ -8,8 +8,9 @@ function Invoke-ExecDurableFunctions {
     [CmdletBinding(SupportsShouldProcess = $true)]
     param($Request, $TriggerMetadata)
 
-    $APIName = 'ExecDurableStats'
-    Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -message 'Accessed this API' -Sev 'Debug'
+    $APIName = $Request.Params.CIPPEndpoint
+    $Headers = $Request.Headers
+    Write-LogMessage -headers $Headers -API $APIName -message 'Accessed this API' -Sev 'Debug'
 
     # Collect info
     $StorageContext = New-AzStorageContext -ConnectionString $env:AzureWebJobsStorage

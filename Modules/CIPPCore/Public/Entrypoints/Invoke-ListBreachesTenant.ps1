@@ -10,7 +10,11 @@ Function Invoke-ListBreachesTenant {
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
 
-    $TenantFilter = $Request.query.TenantFilter
+    $APIName = $Request.Params.CIPPEndpoint
+    Write-LogMessage -headers $Request.Headers -API $APIName -message 'Accessed this API' -Sev 'Debug'
+
+    $TenantFilter = $Request.query.tenantFilter
+
     $Table = Get-CIPPTable -TableName UserBreaches
     if ($TenantFilter -ne 'AllTenants') {
         $filter = "PartitionKey eq '$TenantFilter'"
@@ -22,7 +26,7 @@ Function Invoke-ListBreachesTenant {
     } catch {
         $usersResults = $null
     }
-    if ($usersResults -eq $null) {
+    if ($null -eq $usersResults) {
         $usersResults = @()
     }
     # Associate values to output bindings by calling 'Push-OutputBinding'.

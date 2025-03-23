@@ -28,7 +28,7 @@ function Invoke-ExecAppPermissionTemplate {
                     'Results'    = 'Template Saved'
                     'TemplateId' = $Entity.RowKey
                 }
-                Write-LogMessage -user $request.headers.'x-ms-client-principal' -API 'ExecAppPermissionTemplate' -message "Permissions Saved for template: $($Request.Body.TemplateName)" -Sev 'Info' -LogData $Permissions
+                Write-LogMessage -headers $Request.Headers -API 'ExecAppPermissionTemplate' -message "Permissions Saved for template: $($Request.Body.TemplateName)" -Sev 'Info' -LogData $Permissions
             } catch {
                 $Body = @{
                     'Results' = $_.Exception.Message

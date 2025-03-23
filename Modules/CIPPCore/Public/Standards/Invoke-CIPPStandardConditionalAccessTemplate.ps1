@@ -17,7 +17,9 @@ function Invoke-CIPPStandardConditionalAccessTemplate {
         DISABLEDFEATURES
             
         IMPACT
-            High
+            High Impact
+        ADDEDDATE
+            2023-12-30
         ADDEDCOMPONENT
             {"type":"autoComplete","name":"TemplateList","multiple":false,"label":"Select Conditional Access Template","api":{"url":"/api/ListCATemplates","labelField":"displayName","valueField":"GUID","queryKey":"ListCATemplates"}}
             {"name":"state","label":"What state should we deploy this template in?","type":"radio","options":[{"value":"donotchange","label":"Do not change state"},{"value":"Enabled","label":"Set to enabled"},{"value":"Disabled","label":"Set to disabled"},{"value":"enabledForReportingButNotEnforced","label":"Set to report only"}]}
@@ -39,7 +41,7 @@ function Invoke-CIPPStandardConditionalAccessTemplate {
                 $Table = Get-CippTable -tablename 'templates'
                 $Filter = "PartitionKey eq 'CATemplate' and RowKey eq '$($Setting.TemplateList.value)'"
                 $JSONObj = (Get-CippAzDataTableEntity @Table -Filter $Filter).JSON
-                $null = New-CIPPCAPolicy -TenantFilter $tenant -state $Setting.state -RawJSON $JSONObj -Overwrite $true -APIName $APIName -ExecutingUser $request.headers.'x-ms-client-principal' -ReplacePattern 'displayName'
+                $null = New-CIPPCAPolicy -replacePattern 'displayName' -TenantFilter $tenant -state $Setting.state -RawJSON $JSONObj -Overwrite $true -APIName $APIName -Headers $Request.Headers
             } catch {
                 $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
                 Write-LogMessage -API 'Standards' -tenant $tenant -message "Failed to create or update conditional access rule $($JSONObj.displayName). Error: $ErrorMessage" -sev 'Error'

@@ -13,16 +13,18 @@ function Invoke-CIPPStandardDisableSharePointLegacyAuth {
         CAT
             SharePoint Standards
         TAG
-            "mediumimpact"
             "CIS"
             "spo_legacy_auth"
         ADDEDCOMPONENT
         IMPACT
             Medium Impact
+        ADDEDDATE
+            2024-02-05
         POWERSHELLEQUIVALENT
             Set-SPOTenant -LegacyAuthProtocolsEnabled \$false
         RECOMMENDEDBY
             "CIS"
+            "CIPP"
         UPDATECOMMENTBLOCK
             Run the Tools\Update-StandardsComments.ps1 script to update this comment block
     .LINK

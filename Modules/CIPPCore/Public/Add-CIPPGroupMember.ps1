@@ -1,5 +1,5 @@
 function Add-CIPPGroupMember(
-    [string]$ExecutingUser,
+    $Headers,
     [string]$GroupType,
     [string]$GroupId,
     [string]$Member,
@@ -17,11 +17,11 @@ function Add-CIPPGroupMember(
             $null = New-GraphPostRequest -uri "https://graph.microsoft.com/beta/groups/$($GroupId)" -tenantid $TenantFilter -type patch -body $addmemberbody -Verbose
         }
         $Message = "Successfully added user $($Member) to $($GroupId)."
-        Write-LogMessage -user $ExecutingUser -API $APIName -tenant $TenantFilter -message $Message -Sev 'Info'
+        Write-LogMessage -headers $Headers -API $APIName -tenant $TenantFilter -message $Message -Sev 'Info'
         return $message
     } catch {
         $message = "Failed to add user $($Member) to $($GroupId) - $($_.Exception.Message)"
-        Write-LogMessage -user $ExecutingUser -API $APIName -tenant $TenantFilter -message $message -Sev 'error' -LogData (Get-CippException -Exception $_)
+        Write-LogMessage -headers $Headers -API $APIName -tenant $TenantFilter -message $message -Sev 'error' -LogData (Get-CippException -Exception $_)
         return $message
     }
 }
