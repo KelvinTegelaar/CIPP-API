@@ -29,15 +29,14 @@ function New-CIPPAlertTemplate {
     }
     if ($InputObject -eq 'standards') {
         $DataHTML = foreach ($object in $data) {
-            "<p>For the standard $($object.standardName) in template {{Template Name }} we've detected the following:</p> <li>$($object.message)</li>"
+            "<p>For the standard $($object.standardName) we've detected the following:</p> <li>$($object.message)</li>"
             if ($object.object) {
                 $StandardObject = $object.object | ConvertFrom-Json
-                $StandardObject = $newobject | Select-Object * -ExcludeProperty Etag, PartitionKey, TimeStamp
+                $StandardObject = $StandardObject | Select-Object * -ExcludeProperty Etag, PartitionKey, TimeStamp
                 if ($StandardObject.compare) {
                     '<p>The following differences have been detected:</p>'
                     ($StandardObject.compare | ConvertTo-Html -Fragment | Out-String).Replace('<table>', ' <table class="table-modern">')
                 } else {
-                    '<p>This is a table representation of the current settings:</p>'
                     ($StandardObject | ConvertTo-Html -Fragment -As List | Out-String).Replace('<table>', ' <table class="table-modern">')
                 }
             }
