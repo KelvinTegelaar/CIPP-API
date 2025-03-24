@@ -57,7 +57,7 @@ function Invoke-CIPPStandardMessageExpiration {
     }
     if ($Settings.report -eq $true) {
         if ($MessageExpiration -ne '12:00:00') { $MessageExpiration = $false } else { $MessageExpiration = $true }
-        Set-CIPPStandardsCompareField -FieldName 'standards.messageExpiration' -FieldValue $MessageExpiration -TenantFilter $Tenant
+        Set-CIPPStandardsCompareField -FieldName 'standards.MessageExpiration' -FieldValue $MessageExpiration -TenantFilter $Tenant
         Add-CIPPBPAField -FieldName 'messageExpiration' -FieldValue $MessageExpiration -StoreAs bool -Tenant $tenant
     }
 }

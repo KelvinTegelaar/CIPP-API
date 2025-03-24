@@ -34,7 +34,7 @@ function Invoke-CIPPStandardIntuneComplianceSettings {
     $CurrentState = New-GraphGetRequest -Uri 'https://graph.microsoft.com/beta/deviceManagement/settings' -tenantid $Tenant
 
     if ($null -eq $Settings.deviceComplianceCheckinThresholdDays) { $Settings.deviceComplianceCheckinThresholdDays = $CurrentState.deviceComplianceCheckinThresholdDays }
-    $SecureByDefault = $Settings.secureByDefault.value ?? $Settings.secureByDefault
+    $SecureByDefault = $Settings.secureByDefault.value ? $Settings.secureByDefault.value : $Settings.secureByDefault
     $StateIsCorrect = ($CurrentState.secureByDefault -eq $SecureByDefault) -and
                         ($CurrentState.deviceComplianceCheckinThresholdDays -eq $Settings.deviceComplianceCheckinThresholdDays)
 

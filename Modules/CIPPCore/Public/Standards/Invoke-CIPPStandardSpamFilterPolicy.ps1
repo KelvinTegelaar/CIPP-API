@@ -41,9 +41,7 @@ function Invoke-CIPPStandardSpamFilterPolicy {
 
     $PolicyName = 'CIPP Default Spam Filter Policy'
 
-    $CurrentState = New-ExoRequest -TenantId $Tenant -cmdlet 'Get-HostedContentFilterPolicy' |
-        Where-Object -Property Name -EQ $PolicyName |
-        Select-Object -Property *
+    $CurrentState = New-ExoRequest -TenantId $Tenant -cmdlet 'Get-HostedContentFilterPolicy' | Where-Object -Property Name -EQ $PolicyName | Select-Object -Property *
 
     $SpamAction = $Settings.SpamAction.value ?? $Settings.SpamAction
     $SpamQuarantineTag = $Settings.SpamQuarantineTag.value ?? $Settings.SpamQuarantineTag
@@ -105,8 +103,8 @@ function Invoke-CIPPStandardSpamFilterPolicy {
     $AcceptedDomains = New-ExoRequest -TenantId $Tenant -cmdlet 'Get-AcceptedDomain'
 
     $RuleState = New-ExoRequest -TenantId $Tenant -cmdlet 'Get-HostedContentFilterRule' |
-        Where-Object -Property Name -EQ $PolicyName |
-        Select-Object -Property *
+    Where-Object -Property Name -EQ $PolicyName |
+    Select-Object -Property *
 
     $RuleStateIsCorrect = ($RuleState.Name -eq $PolicyName) -and
     ($RuleState.HostedContentFilterPolicy -eq $PolicyName) -and
@@ -215,11 +213,11 @@ function Invoke-CIPPStandardSpamFilterPolicy {
     }
 
     if ($Settings.report -eq $true) {
-        Add-CIPPBPAField -FieldName 'SpamFilterPolicy' -FieldValue $StateIsCorrect -StoreAs [bool] -Tenant $Tenant
+        Add-CIPPBPAField -FieldName 'SpamFilterPolicy' -FieldValue $StateIsCorrect -StoreAs bool -Tenant $Tenant
         if ($StateIsCorrect) {
             $FieldValue = $true
         } else {
-            $FieldValue = $CurrentState
+            $FieldValue = $CurrentState ? $CurrentState : $false
         }
         Set-CIPPStandardsCompareField -FieldName 'standards.SpamFilterPolicy' -FieldValue $FieldValue -Tenant $Tenant
     }
