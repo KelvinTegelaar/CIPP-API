@@ -35,7 +35,7 @@ function Test-CIPPAccessPermissions {
             try {
                 Disable-AzContextAutosave -Scope Process | Out-Null
                 $null = Connect-AzAccount -Identity
-                $SubscriptionId = $ENV:WEBSITE_OWNER_NAME -split '+' | Select-Object -First 1
+                $SubscriptionId = $ENV:WEBSITE_OWNER_NAME -split '\+' | Select-Object -First 1
                 $null = Set-AzContext -SubscriptionId $SubscriptionId
 
                 $KV = $ENV:WEBSITE_DEPLOYMENT_ID

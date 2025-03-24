@@ -9,7 +9,7 @@ function Get-HIBPAuth {
             $Secret = (Get-CIPPAzDataTableEntity @DevSecretsTable -Filter "PartitionKey eq 'HIBP' and RowKey eq 'HIBP'").APIKey
         } else {
             $null = Connect-AzAccount -Identity
-            $SubscriptionId = $ENV:WEBSITE_OWNER_NAME -split '+' | Select-Object -First 1
+            $SubscriptionId = $ENV:WEBSITE_OWNER_NAME -split '\+' | Select-Object -First 1
             $null = Set-AzContext -SubscriptionId $SubscriptionId
 
             $VaultName = ($ENV:WEBSITE_DEPLOYMENT_ID -split '-')[0]
