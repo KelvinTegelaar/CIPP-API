@@ -61,7 +61,7 @@ Function Invoke-CIPPStandardTeamsEmailIntegration {
         if ($StateIsCorrect -eq $true) {
             Write-LogMessage -API 'Standards' -tenant $Tenant -message 'Teams Email Integration settings is set correctly.' -sev Info
         } else {
-            Write-StandardsAlert -message "Teams Email Integration settings is not set correctly." -object $CurrentState -tenant $Tenant -standardName 'TeamsEmailIntegration' -standardId $Settings.standardId
+            Write-StandardsAlert -message 'Teams Email Integration settings is not set correctly.' -object $CurrentState -tenant $Tenant -standardName 'TeamsEmailIntegration' -standardId $Settings.standardId
             Write-LogMessage -API 'Standards' -tenant $Tenant -message 'Teams Email Integration settings is not set correctly.' -sev Info
         }
     }
@@ -74,6 +74,6 @@ Function Invoke-CIPPStandardTeamsEmailIntegration {
         } else {
             $FieldValue = $CurrentState
         }
-        Set-CIPPStandardsCompareField -FieldName 'standards.TeamsEmailIntoChannel' -FieldValue $FieldValue -Tenant $Tenant
+        Set-CIPPStandardsCompareField -FieldName 'standards.TeamsEmailIntegration' -FieldValue $FieldValue -Tenant $Tenant
     }
 }

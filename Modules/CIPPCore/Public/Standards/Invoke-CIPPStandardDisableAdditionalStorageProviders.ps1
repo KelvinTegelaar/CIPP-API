@@ -62,7 +62,8 @@ function Invoke-CIPPStandardDisableAdditionalStorageProviders {
     }
 
     if ($Settings.report -eq $true) {
-        Set-CIPPStandardsCompareField -FieldName 'standards.AdditionalStorageProvidersEnabled' -FieldValue $AdditionalStorageProvidersState.AdditionalStorageProvidersEnabled -TenantFilter $Tenant
+        $state = $AdditionalStorageProvidersState.AdditionalStorageProvidersEnabled ? $false : $true
+        Set-CIPPStandardsCompareField -FieldName 'standards.DisableAdditionalStorageProviders' -FieldValue $state -TenantFilter $Tenant
         Add-CIPPBPAField -FieldName 'AdditionalStorageProvidersEnabled' -FieldValue $AdditionalStorageProvidersState.AdditionalStorageProvidersEnabled -StoreAs bool -Tenant $tenant
     }
 }

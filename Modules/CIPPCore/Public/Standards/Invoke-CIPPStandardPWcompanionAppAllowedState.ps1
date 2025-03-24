@@ -30,7 +30,7 @@ function Invoke-CIPPStandardPWcompanionAppAllowedState {
 
     param($Tenant, $Settings)
 
-    $authenticatorFeaturesState = (New-GraphGetRequest -tenantid $Tenant -Uri 'https://graph.microsoft.com/beta/policies/authenticationMethodsPolicy/authenticationMethodConfigurations/microsoftAuthenticator' -Type GET)
+    $authenticatorFeaturesState = (New-GraphGetRequest -tenantid $Tenant -Uri 'https://graph.microsoft.com/beta/policies/authenticationMethodsPolicy/authenticationMethodConfigurations/microsoftAuthenticator')
     $authState = if ($authenticatorFeaturesState.featureSettings.companionAppAllowedState.state -eq 'enabled') { $true } else { $false }
 
 
@@ -80,7 +80,7 @@ function Invoke-CIPPStandardPWcompanionAppAllowedState {
         if ($authState) {
             Write-LogMessage -API 'Standards' -tenant $Tenant -message 'companionAppAllowedState is enabled.' -sev Info
         } else {
-            Write-StandardsAlert -message "companionAppAllowedState is not enabled" -object $authenticatorFeaturesState -tenant $Tenant -standardName 'PWcompanionAppAllowedState' -standardId $Settings.standardId
+            Write-StandardsAlert -message 'companionAppAllowedState is not enabled' -object $authenticatorFeaturesState -tenant $Tenant -standardName 'PWcompanionAppAllowedState' -standardId $Settings.standardId
             Write-LogMessage -API 'Standards' -tenant $Tenant -message 'companionAppAllowedState is not enabled.' -sev Info
         }
     }
@@ -90,7 +90,7 @@ function Invoke-CIPPStandardPWcompanionAppAllowedState {
         if ($authState) {
             $FieldValue = $true
         } else {
-            $FieldValue = $authenticatorFeaturesState.featureSettings
+            $FieldValue = $authenticatorFeaturesState.featureSettings.companionAppAllowedState
         }
         Set-CIPPStandardsCompareField -FieldName 'standards.PWcompanionAppAllowedState' -FieldValue $FieldValue -Tenant $Tenant
     }

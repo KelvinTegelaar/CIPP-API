@@ -64,6 +64,8 @@ function Invoke-CIPPStandardEnableMailTips {
     }
 
     if ($Settings.report -eq $true) {
+        $state = $StateIsCorrect ? $true : $MailTipsState
+        Set-CIPPStandardsCompareField -FieldName 'standards.EnableMailTips' -FieldValue $State -Tenant $tenant
         Add-CIPPBPAField -FieldName 'MailTipsEnabled' -FieldValue $StateIsCorrect -StoreAs bool -Tenant $tenant
     }
 

@@ -100,7 +100,7 @@ function Invoke-CIPPStandardBranding {
     }
 
     If ($Settings.report -eq $true) {
-        $state = $StateIsCorrect -eq $true ? $true : $StateIsCorrect
+        $state = $StateIsCorrect -eq $true ? $true : ($CurrentState | Select-Object -Property signInPageText, usernameHintText, loginPageTextVisibilitySettings, loginPageLayoutConfiguration)
         Set-CIPPStandardsCompareField -FieldName 'standards.Branding' -FieldValue $state -TenantFilter $Tenant
         Add-CIPPBPAField -FieldName 'Branding' -FieldValue [bool]$StateIsCorrect -StoreAs bool -Tenant $Tenant
     }

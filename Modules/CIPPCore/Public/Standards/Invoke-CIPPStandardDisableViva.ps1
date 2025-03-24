@@ -67,7 +67,7 @@ function Invoke-CIPPStandardDisableViva {
     }
 
     if ($Settings.report -eq $true) {
-        $state = $CurrentSetting.isEnabledInOrganization ? $true : $CurrentSetting
+        $state = $CurrentSetting.isEnabledInOrganization ? $true : ($CurrentSetting | Select-Object isEnabledInOrganization)
         Set-CIPPStandardsCompareField -FieldName 'standards.DisableViva' -FieldValue $State -Tenant $Tenant
         Add-CIPPBPAField -FieldName 'DisableViva' -FieldValue $CurrentSetting.isEnabledInOrganization -StoreAs bool -Tenant $Tenant
     }

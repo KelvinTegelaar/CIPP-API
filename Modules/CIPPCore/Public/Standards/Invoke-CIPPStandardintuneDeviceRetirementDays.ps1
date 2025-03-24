@@ -56,13 +56,14 @@ function Invoke-CIPPStandardintuneDeviceRetirementDays {
         if ($StateIsCorrect -eq $true) {
             Write-LogMessage -API 'Standards' -tenant $tenant -message 'DeviceInactivityBeforeRetirementInDays is enabled.' -sev Info
         } else {
-            Write-StandardsAlert -message "DeviceInactivityBeforeRetirementInDays is not enabled" -object $CurrentInfo -tenant $tenant -standardName 'intuneDeviceRetirementDays' -standardId $Settings.standardId
+            Write-StandardsAlert -message 'DeviceInactivityBeforeRetirementInDays is not enabled' -object $CurrentInfo -tenant $tenant -standardName 'intuneDeviceRetirementDays' -standardId $Settings.standardId
             Write-LogMessage -API 'Standards' -tenant $tenant -message 'DeviceInactivityBeforeRetirementInDays is not enabled.' -sev Info
         }
     }
 
     if ($Settings.report -eq $true) {
-
+        $state = $StateIsCorrect ? $true : $CurrentInfo.DeviceInactivityBeforeRetirementInDays
+        Set-CIPPStandardsCompareField -FieldName 'standards.intuneDeviceRetirementDays' -FieldValue $state -Tenant $tenant
         Add-CIPPBPAField -FieldName 'intuneDeviceRetirementDays' -FieldValue $StateIsCorrect -StoreAs bool -Tenant $tenant
     }
 }

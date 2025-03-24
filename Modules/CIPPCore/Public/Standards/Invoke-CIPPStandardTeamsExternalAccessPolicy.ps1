@@ -79,7 +79,7 @@ function Invoke-CIPPStandardTeamsExternalAccessPolicy {
         if ($StateIsCorrect) {
             $FieldValue = $true
         } else {
-            $FieldValue = $CurrentState
+            $FieldValue = $CurrentState | Select-Object EnableFederationAccess, EnablePublicCloudAccess, EnableTeamsConsumerAccess
         }
 
         Set-CIPPStandardsCompareField -FieldName 'standards.TeamsExternalAccessPolicy' -FieldValue $FieldValue -Tenant $Tenant

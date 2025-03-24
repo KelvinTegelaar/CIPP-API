@@ -94,7 +94,7 @@ function Invoke-CIPPStandardMailContacts {
 
     }
     if ($Settings.report -eq $true) {
-        $ReportState = $state ? $true : $CurrentInfo
+        $ReportState = $state ? $true : ($CurrentInfo | Select-Object marketingNotificationEmails, technicalNotificationMails, privacyProfile)
         Set-CIPPStandardsCompareField -FieldName 'standards.MailContacts' -FieldValue $ReportState -Tenant $tenant
         Add-CIPPBPAField -FieldName 'MailContacts' -FieldValue $CurrentInfo -StoreAs json -Tenant $tenant
     }

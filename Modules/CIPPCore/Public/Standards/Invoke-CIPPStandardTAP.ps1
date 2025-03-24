@@ -56,7 +56,7 @@ function Invoke-CIPPStandardTAP {
         if ($StateIsCorrect -eq $true) {
             Write-LogMessage -API 'Standards' -tenant $Tenant -message 'Temporary Access Passwords is enabled.' -sev Info
         } else {
-            Write-StandardsAlert -message "Temporary Access Passwords is not enabled." -object $CurrentState -tenant $Tenant -standardName 'TAP' -standardId $Settings.standardId
+            Write-StandardsAlert -message 'Temporary Access Passwords is not enabled.' -object $CurrentState -tenant $Tenant -standardName 'TAP' -standardId $Settings.standardId
             Write-LogMessage -API 'Standards' -tenant $Tenant -message 'Temporary Access Passwords is not enabled.' -sev Info
         }
     }
@@ -67,7 +67,7 @@ function Invoke-CIPPStandardTAP {
         if ($StateIsCorrect) {
             $FieldValue = $true
         } else {
-            $FieldValue = $CurrentState
+            $FieldValue = $CurrentState | Select-Object state, isUsableOnce
         }
         Set-CIPPStandardsCompareField -FieldName 'standards.TAP' -FieldValue $FieldValue -Tenant $Tenant
     }

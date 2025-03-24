@@ -78,7 +78,7 @@ function Invoke-CIPPStandardOauthConsent {
         if ($StateIsCorrect) {
             $FieldValue = $true
         } else {
-            $FieldValue = $State
+            $FieldValue = $State | Select-Object -Property permissionGrantPolicyIdsAssignedToDefaultUserRole
         }
 
         Set-CIPPStandardsCompareField -FieldName 'standards.OauthConsent' -FieldValue $FieldValue -Tenant $tenant

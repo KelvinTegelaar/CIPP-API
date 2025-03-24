@@ -32,10 +32,10 @@ function Invoke-CIPPStandardRetentionPolicyTag {
 
     $PolicyName = 'CIPP Deleted Items'
     $CurrentState = New-ExoRequest -tenantid $Tenant -cmdlet 'Get-RetentionPolicyTag' |
-        Where-Object -Property Identity -EQ $PolicyName
+    Where-Object -Property Identity -EQ $PolicyName
 
     $PolicyState = New-ExoRequest -tenantid $Tenant -cmdlet 'Get-RetentionPolicy' |
-        Where-Object -Property Identity -EQ 'Default MRM Policy'
+    Where-Object -Property Identity -EQ 'Default MRM Policy'
 
     $StateIsCorrect = ($CurrentState.Name -eq $PolicyName) -and
     ($CurrentState.RetentionEnabled -eq $true) -and
@@ -112,7 +112,7 @@ function Invoke-CIPPStandardRetentionPolicyTag {
         if ($StateIsCorrect) {
             $FieldValue = $true
         } else {
-            $FieldValue = $CurrentState
+            $FieldValue = @{ CurrentState = $CurrentState; PolicyState = $PolicyState }
         }
         Set-CIPPStandardsCompareField -FieldName 'standards.RetentionPolicyTag' -FieldValue $FieldValue -Tenant $Tenant
     }

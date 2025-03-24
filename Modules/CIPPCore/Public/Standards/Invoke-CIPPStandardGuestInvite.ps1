@@ -74,7 +74,8 @@ function Invoke-CIPPStandardGuestInvite {
     }
 
     if ($Settings.report -eq $true) {
-        Set-CIPPStandardsCompareField -FieldName 'standards.GuestInvite' -FieldValue $StateIsCorrect -TenantFilter $Tenant
+        $state = $StateIsCorrect ? $true : ($CurrentState | Select-Object allowInvitesFrom)
+        Set-CIPPStandardsCompareField -FieldName 'standards.GuestInvite' -FieldValue $state -TenantFilter $Tenant
         Add-CIPPBPAField -FieldName 'GuestInvite' -FieldValue $StateIsCorrect -StoreAs bool -Tenant $tenant
     }
 }

@@ -65,8 +65,8 @@ function Invoke-CIPPStandardEXODisableAutoForwarding {
     }
 
     if ($Settings.report -eq $true) {
-        $state = $StateIsCorrect ? $true : $CurrentInfo.AutoForwardingMode
-        Set-CIPPStandardsCompareField -FieldName 'standards.AutoForwardingDisabled' -FieldValue $state -TenantFilter $Tenant
+        $state = $StateIsCorrect ? $true : $CurrentInfo | Select-Object autoForwardingMode
+        Set-CIPPStandardsCompareField -FieldName 'standards.EXODisableAutoForwarding' -FieldValue $state -TenantFilter $Tenant
         Add-CIPPBPAField -FieldName 'AutoForwardingDisabled' -FieldValue $StateIsCorrect -StoreAs bool -Tenant $tenant
     }
 

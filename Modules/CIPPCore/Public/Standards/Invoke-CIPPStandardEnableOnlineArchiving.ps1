@@ -79,7 +79,7 @@ function Invoke-CIPPStandardEnableOnlineArchiving {
 
     if ($Settings.report -eq $true) {
         $filtered = $MailboxesNoArchive | Select-Object -Property UserPrincipalName, ArchiveGuid
-        $stateReport = $filtered ? $true : $filtered
+        $stateReport = $filtered ? $filtered : $true
         Set-CIPPStandardsCompareField -FieldName 'standards.EnableOnlineArchiving' -FieldValue $stateReport -TenantFilter $Tenant
         Add-CIPPBPAField -FieldName 'EnableOnlineArchiving' -FieldValue $filtered -StoreAs json -Tenant $Tenant
     }
