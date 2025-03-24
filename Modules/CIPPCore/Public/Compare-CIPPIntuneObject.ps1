@@ -61,139 +61,178 @@ function Compare-CIPPIntuneObject {
         $excludeProps = $defaultExcludeProperties + $ExcludeProperties
 
         # Create a list to store comparison results
-        $compareProperties = [System.Collections.Generic.List[PSObject]]::new()
+        $result = [System.Collections.Generic.List[PSObject]]::new()
 
-        # Clean up objects by removing excluded properties
-        $obj1 = $ReferenceObject | Select-Object * -ExcludeProperty @($excludeProps | ForEach-Object { $_ })
-        $obj2 = $DifferenceObject | Select-Object * -ExcludeProperty @($excludeProps | ForEach-Object { $_ })
-
-        # Skip OData properties and excluded properties
-        $skipProps = [System.Collections.Generic.List[string]]::new()
-        foreach ($propName in ($obj1.PSObject.Properties | Select-Object Name).Name) {
-            if ($propName -like '*@OData*' -or $propName -like '#microsoft.graph*' -or $excludeProps -contains $propName) {
-                $skipProps.Add($propName)
-            }
+        # Helper function to check if a property should be skipped
+        function ShouldSkipProperty {
+            param (
+                [string]$PropertyName
+            )
+            return ($PropertyName -like '*@OData*' -or
+                    $PropertyName -like '#microsoft.graph*' -or
+                    $excludeProps -contains $PropertyName)
         }
 
-        # Define core properties to compare first
-        $coreProps = @('displayName', 'Description', 'Id')
-        $postProps = @('Advertisements')
-        $skipPropertiesToCompare = @()
+        # Recursive function to compare objects deeply
+        function Compare-ObjectsRecursively {
+            param (
+                [Parameter(Mandatory = $true)]
+                $Object1,
 
-        # Compare core properties
-        foreach ($propName in $coreProps) {
-            if (-not ($obj1.PSObject.Properties | Where-Object Name -EQ $propName)) {
-                continue
+                [Parameter(Mandatory = $true)]
+                $Object2,
+
+                [Parameter(Mandatory = $false)]
+                [string]$PropertyPath = ""
+            )
+
+            # If both objects are null or empty, they're equal
+            if (($null -eq $Object1 -or $Object1 -eq '') -and ($null -eq $Object2 -or $Object2 -eq '')) {
+                return
             }
-            $val1 = ($obj1.$propName | ConvertTo-Json -Depth 10)
-            $val2 = ($obj2.$propName | ConvertTo-Json -Depth 10)
 
-            $value1 = if ($null -eq $val1) { '' } else { $val1.ToString().Trim('"') }
-            $value2 = if ($null -eq $val2) { '' } else { $val2.ToString().Trim('"') }
+            # If one object is null but the other isn't, they're different
+            if (($null -eq $Object1 -or $Object1 -eq '') -xor ($null -eq $Object2 -or $Object2 -eq '')) {
+                $result.Add([PSCustomObject]@{
+                    Property      = $PropertyPath
+                    ExpectedValue = if ($null -eq $Object1) { '' } else { $Object1 }
+                    ReceivedValue = if ($null -eq $Object2) { '' } else { $Object2 }
+                })
+                return
+            }
 
-            $match = ($value1 -eq $value2)
+            # If objects are of different types, they're different
+            if ($Object1.GetType() -ne $Object2.GetType()) {
+                $result.Add([PSCustomObject]@{
+                    Property      = $PropertyPath
+                    ExpectedValue = $Object1
+                    ReceivedValue = $Object2
+                })
+                return
+            }
 
-            if (-not $match) {
-                $compareProperties.Add([PSCustomObject]@{
-                        PropertyName = $propName
-                        Object1Value = $value1
-                        Object2Value = $value2
-                        Match        = $match
+            # Handle different object types
+            if ($Object1 -is [System.Collections.IDictionary]) {
+                # Compare dictionaries
+                $allKeys = @($Object1.Keys) + @($Object2.Keys) | Select-Object -Unique
+
+                foreach ($key in $allKeys) {
+                    if (ShouldSkipProperty -PropertyName $key) { continue }
+
+                    $newPath = if ($PropertyPath) { "$PropertyPath.$key" } else { $key }
+
+                    if ($Object1.ContainsKey($key) -and $Object2.ContainsKey($key)) {
+                        Compare-ObjectsRecursively -Object1 $Object1[$key] -Object2 $Object2[$key] -PropertyPath $newPath
+                    }
+                    elseif ($Object1.ContainsKey($key)) {
+                        $result.Add([PSCustomObject]@{
+                            Property      = $newPath
+                            ExpectedValue = $Object1[$key]
+                            ReceivedValue = ''
+                        })
+                    }
+                    else {
+                        $result.Add([PSCustomObject]@{
+                            Property      = $newPath
+                            ExpectedValue = ''
+                            ReceivedValue = $Object2[$key]
+                        })
+                    }
+                }
+            }
+            elseif ($Object1 -is [Array] -or $Object1 -is [System.Collections.IList]) {
+                # Compare arrays
+                $maxLength = [Math]::Max($Object1.Count, $Object2.Count)
+
+                for ($i = 0; $i -lt $maxLength; $i++) {
+                    $newPath = "$PropertyPath.$i"
+
+                    if ($i -lt $Object1.Count -and $i -lt $Object2.Count) {
+                        Compare-ObjectsRecursively -Object1 $Object1[$i] -Object2 $Object2[$i] -PropertyPath $newPath
+                    }
+                    elseif ($i -lt $Object1.Count) {
+                        $result.Add([PSCustomObject]@{
+                            Property      = $newPath
+                            ExpectedValue = $Object1[$i]
+                            ReceivedValue = ''
+                        })
+                    }
+                    else {
+                        $result.Add([PSCustomObject]@{
+                            Property      = $newPath
+                            ExpectedValue = ''
+                            ReceivedValue = $Object2[$i]
+                        })
+                    }
+                }
+            }
+            elseif ($Object1 -is [PSCustomObject] -or $Object1.PSObject.Properties.Count -gt 0) {
+                # Compare PSCustomObjects or objects with properties
+                $allPropertyNames = @(
+                    $Object1.PSObject.Properties | Select-Object -ExpandProperty Name
+                    $Object2.PSObject.Properties | Select-Object -ExpandProperty Name
+                ) | Select-Object -Unique
+
+                foreach ($propName in $allPropertyNames) {
+                    if (ShouldSkipProperty -PropertyName $propName) { continue }
+
+                    $newPath = if ($PropertyPath) { "$PropertyPath.$propName" } else { $propName }
+                    $prop1Exists = $Object1.PSObject.Properties.Name -contains $propName
+                    $prop2Exists = $Object2.PSObject.Properties.Name -contains $propName
+
+                    if ($prop1Exists -and $prop2Exists) {
+                        Compare-ObjectsRecursively -Object1 $Object1.$propName -Object2 $Object2.$propName -PropertyPath $newPath
+                    }
+                    elseif ($prop1Exists) {
+                        $result.Add([PSCustomObject]@{
+                            Property      = $newPath
+                            ExpectedValue = $Object1.$propName
+                            ReceivedValue = ''
+                        })
+                    }
+                    else {
+                        $result.Add([PSCustomObject]@{
+                            Property      = $newPath
+                            ExpectedValue = ''
+                            ReceivedValue = $Object2.$propName
+                        })
+                    }
+                }
+            }
+            else {
+                # Compare primitive values
+                $val1 = $Object1.ToString()
+                $val2 = $Object2.ToString()
+
+                if ($val1 -ne $val2) {
+                    $result.Add([PSCustomObject]@{
+                        Property      = $PropertyPath
+                        ExpectedValue = $val1
+                        ReceivedValue = $val2
                     })
+                }
             }
         }
 
-        # Compare all other properties
-        $addedProps = [System.Collections.Generic.List[string]]::new()
-        foreach ($propName in ($obj1.PSObject.Properties | Select-Object Name).Name) {
-            if ($propName -in $coreProps) { continue }
-            if ($propName -in $postProps) { continue }
-            if ($propName -in $skipProps) { continue }
-
-            if ($propName -like '*@OData*' -or $propName -like '#microsoft.graph*') { continue }
-
-            $addedProps.Add($propName)
-            $val1 = ($obj1.$propName | ConvertTo-Json -Depth 10)
-            $val2 = ($obj2.$propName | ConvertTo-Json -Depth 10)
-
-            $value1 = if ($null -eq $val1) { '' } else { $val1.ToString().Trim('"') }
-            $value2 = if ($null -eq $val2) { '' } else { $val2.ToString().Trim('"') }
-
-            $match = ($value1 -eq $value2)
-
-            if (-not $match) {
-                $compareProperties.Add([PSCustomObject]@{
-                        PropertyName = $propName
-                        Object1Value = $value1
-                        Object2Value = $value2
-                        Match        = $match
-                    })
-            }
+        # Convert objects to PowerShell objects if they're not already
+        $obj1 = if ($ReferenceObject -is [string]) {
+            $ReferenceObject | ConvertFrom-Json -AsHashtable -Depth 100
+        } else {
+            $ReferenceObject
         }
 
-        # Check for properties in obj2 that aren't in obj1
-        foreach ($propName in ($obj2.PSObject.Properties | Select-Object Name).Name) {
-            if ($propName -in $coreProps) { continue }
-            if ($propName -in $postProps) { continue }
-            if ($propName -in $skipProps) { continue }
-            if ($propName -in $addedProps) { continue }
-
-            if ($propName -like '*@OData*' -or $propName -like '#microsoft.graph*') { continue }
-
-            $val1 = ($obj1.$propName | ConvertTo-Json -Depth 10)
-            $val2 = ($obj2.$propName | ConvertTo-Json -Depth 10)
-
-            $value1 = if ($null -eq $val1) { '' } else { $val1.ToString().Trim('"') }
-            $value2 = if ($null -eq $val2) { '' } else { $val2.ToString().Trim('"') }
-
-            $match = ($value1 -eq $value2)
-
-            if (-not $match) {
-                $compareProperties.Add([PSCustomObject]@{
-                        PropertyName = $propName
-                        Object1Value = $value1
-                        Object2Value = $value2
-                        Match        = $match
-                    })
-            }
+        $obj2 = if ($DifferenceObject -is [string]) {
+            $DifferenceObject | ConvertFrom-Json -AsHashtable -Depth 100
+        } else {
+            $DifferenceObject
         }
 
-        # Compare post properties (like Advertisements)
-        foreach ($propName in $postProps) {
-            if (-not ($obj1.PSObject.Properties | Where-Object Name -EQ $propName)) {
-                continue
-            }
-            $val1 = ($obj1.$propName | ConvertTo-Json -Depth 10)
-            $val2 = ($obj2.$propName | ConvertTo-Json -Depth 10)
-
-            $value1 = if ($null -eq $val1) { '' } else { $val1.ToString().Trim('"') }
-            $value2 = if ($null -eq $val2) { '' } else { $val2.ToString().Trim('"') }
-
-            $match = ($value1 -eq $value2)
-
-            if (-not $match) {
-                $compareProperties.Add([PSCustomObject]@{
-                        PropertyName = $propName
-                        Object1Value = $value1
-                        Object2Value = $value2
-                        Match        = $match
-                    })
-            }
-        }
+        # Start the recursive comparison
+        Compare-ObjectsRecursively -Object1 $obj1 -Object2 $obj2
 
         # If no differences found, return null
-        if ($compareProperties.Count -eq 0) {
+        if ($result.Count -eq 0) {
             return $null
-        }
-
-        # Convert to a more user-friendly format
-        $result = [System.Collections.Generic.List[PSObject]]::new()
-        foreach ($diff in $compareProperties) {
-            $result.Add([PSCustomObject]@{
-                    Property      = $diff.PropertyName
-                    ExpectedValue = $diff.Object1Value
-                    ReceivedValue = $diff.Object2Value
-                })
         }
     } else {
         $intuneCollection = Get-Content .\intuneCollection.json | ConvertFrom-Json -ErrorAction SilentlyContinue

@@ -65,20 +65,21 @@ function Invoke-CIPPStandardIntuneTemplate {
                 excludeGroup     = $Template.excludeGroup
                 remediate        = $Template.remediate
                 existingPolicyId = $ExistingPolicy.id
+                templateId       = $Template.TemplateList.value
             }
         } else {
             [PSCustomObject]@{
                 MatchFailed      = $false
                 displayname      = $displayname
                 description      = $description
-                compare          = $Compare
+                compare          = $false
                 rawJSON          = $RawJSON
                 body             = $Request.body
                 assignTo         = $Template.AssignTo
                 excludeGroup     = $Template.excludeGroup
                 remediate        = $Template.remediate
                 existingPolicyId = $ExistingPolicy.id
-
+                templateId       = $Template.TemplateList.value
             }
         }
     }
@@ -117,9 +118,9 @@ function Invoke-CIPPStandardIntuneTemplate {
 
     if ($Settings.report) {
         foreach ($Template in $CompareList) {
-            $id = $Template.body.RowKey
-            $Compare = $Template.compare
-            $state = $Compare ? $Compare : $true
+            $id = $Template.templateId
+            $CompareObj = $Template.compare
+            $state = $CompareObj ? $CompareObj : $true
             Set-CIPPStandardsCompareField -FieldName "standards.IntuneTemplate.$id" -FieldValue $state -TenantFilter $Tenant
         }
         Add-CIPPBPAField -FieldName "policy-$id" -FieldValue $Compare -StoreAs bool -Tenant $tenant
