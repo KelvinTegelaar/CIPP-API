@@ -162,7 +162,7 @@ function Test-CIPPAuditLogRules {
                         $HasLocationData = $true
                     }
                 }
-                $Data.AuditRecord = $RootProperties
+                $Data.AuditRecord = [string]($RootProperties | ConvertTo-Json -Compress)
                 $Data | Select-Object *,
                 @{n = 'HasLocationData'; exp = { $HasLocationData } } -ExcludeProperty ExtendedProperties, DeviceProperties, parameters
             } catch {
@@ -258,7 +258,8 @@ function Test-CIPPAuditLogRules {
             try {
                 Invoke-CippWebhookProcessing @Webhook
             } catch {
-                Write-Information "Error sending final step of auditlog processing: $($_.Exception.Message)"
+                Write-Warning "Error sending final step of auditlog processing: $($_.Exception.Message)"
+                Write-Information $_.InvocationInfo.PositionMessage
             }
         }
     }
