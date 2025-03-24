@@ -63,6 +63,16 @@ Function Invoke-ListScheduledItems {
         if ($Task.Recurrence -eq 0 -or [string]::IsNullOrEmpty($Task.Recurrence)) {
             $Task.Recurrence = 'Once'
         }
+        try {
+            $Task.ExecutedTime = [DateTimeOffset]::FromUnixTimeSeconds($Task.ExecutedTime).UtcDateTime
+        } catch {
+            $Task.ExecutedTime = [DateTime]::MinValue
+        }
+        try {
+            $Task.ScheduledTime = [DateTimeOffset]::FromUnixTimeSeconds($Task.ScheduledTime).UtcDateTime
+        } catch {
+            $Task.ScheduledTime = [DateTime]::MinValue
+        }
         $Task
     }
 
