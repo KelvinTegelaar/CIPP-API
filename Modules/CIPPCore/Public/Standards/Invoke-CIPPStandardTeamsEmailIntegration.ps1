@@ -67,7 +67,6 @@ Function Invoke-CIPPStandardTeamsEmailIntegration {
     }
 
     if ($Setings.report -eq $true) {
-        Add-CIPPBPAField -FieldName 'TeamsEmailIntoChannel' -FieldValue $StateIsCorrect -StoreAs bool -Tenant $Tenant
 
         if ($StateIsCorrect) {
             $FieldValue = $true
@@ -75,5 +74,7 @@ Function Invoke-CIPPStandardTeamsEmailIntegration {
             $FieldValue = $CurrentState
         }
         Set-CIPPStandardsCompareField -FieldName 'standards.TeamsEmailIntegration' -FieldValue $FieldValue -Tenant $Tenant
+        Add-CIPPBPAField -FieldName 'TeamsEmailIntoChannel' -FieldValue $StateIsCorrect -StoreAs bool -Tenant $Tenant
+
     }
 }

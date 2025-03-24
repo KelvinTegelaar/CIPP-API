@@ -64,7 +64,8 @@ function Invoke-CIPPStandardEnableCustomerLockbox {
     }
 
     if ($Settings.report -eq $true) {
-        Set-StandardsCompareField -FieldName 'standards.EnableCustomerLockbox' -FieldValue $CustomerLockboxStatus -Tenant $tenant
+        $state = $CustomerLockboxStatus ? $true : $false
+        Set-CIPPStandardsCompareField -FieldName 'standards.EnableCustomerLockbox' -FieldValue $state -Tenant $tenant
         Add-CIPPBPAField -FieldName 'CustomerLockboxEnabled' -FieldValue $CustomerLockboxStatus -StoreAs bool -Tenant $tenant
     }
 }

@@ -60,7 +60,7 @@ function Invoke-CIPPStandardDisableUserSiteCreate {
     }
 
     if ($Settings.report -eq $true) {
-        $state = $CurrentInfo.isSiteCreationEnabled -and $CurrentInfo.isSiteCreationUIEnabled ? $true : ($CurrentInfo | Select-Object isSiteCreationEnabled, isSiteCreationUIEnabled)
+        $state = $CurrentInfo.isSiteCreationEnabled -and $CurrentInfo.isSiteCreationUIEnabled ? ($CurrentInfo | Select-Object isSiteCreationEnabled, isSiteCreationUIEnabled) : $true
         Set-CIPPStandardsCompareField -FieldName 'standards.DisableUserSiteCreate' -FieldValue $State -Tenant $tenant
         Add-CIPPBPAField -FieldName 'DisableUserSiteCreate' -FieldValue $CurrentInfo.isSiteCreationEnabled -StoreAs bool -Tenant $tenant
         Add-CIPPBPAField -FieldName 'DisableUserSiteCreateUI' -FieldValue $CurrentInfo.isSiteCreationUIEnabled -StoreAs bool -Tenant $tenant

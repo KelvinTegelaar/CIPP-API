@@ -35,7 +35,7 @@ function Invoke-CIPPStandardTeamsExternalFileSharing {
 
     param($Tenant, $Settings)
     ##$Rerun -Type Standard -Tenant $Tenant -Settings $Settings 'TeamsExternalFileSharing'
-
+    Write-Host "TeamsExternalFileSharing: $($Settings | ConvertTo-Json)"
     $CurrentState = New-TeamsRequest -TenantFilter $Tenant -Cmdlet 'Get-CsTeamsClientConfiguration' | Select-Object AllowGoogleDrive, AllowShareFile, AllowBox, AllowDropBox, AllowEgnyte
 
     if ($null -eq $Settings.AllowGoogleDrive) { $Settings.AllowGoogleDrive = $false }

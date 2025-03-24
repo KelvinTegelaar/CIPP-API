@@ -83,7 +83,6 @@ function Invoke-CIPPStandardTeamsGlobalMeetingPolicy {
     }
 
     if ($Settings.report -eq $true) {
-        Add-CIPPBPAField -FieldName 'TeamsGlobalMeetingPolicy' -FieldValue $StateIsCorrect -StoreAs bool -Tenant $Tenant
 
         if ($StateIsCorrect) {
             $FieldValue = $true
@@ -91,5 +90,7 @@ function Invoke-CIPPStandardTeamsGlobalMeetingPolicy {
             $FieldValue = $CurrentState
         }
         Set-CIPPStandardsCompareField -FieldName 'standards.TeamsGlobalMeetingPolicy' -FieldValue $FieldValue -Tenant $Tenant
+        Add-CIPPBPAField -FieldName 'TeamsGlobalMeetingPolicy' -FieldValue $StateIsCorrect -StoreAs bool -Tenant $Tenant
+
     }
 }

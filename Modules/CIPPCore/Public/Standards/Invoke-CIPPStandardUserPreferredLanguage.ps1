@@ -74,6 +74,6 @@ function Invoke-CIPPStandardUserPreferredLanguage {
         } else {
             $FieldValue = $true
         }
-        Set-CIPPStandardsCompareField -FieldName 'standards.PreferredLanguage' -FieldValue $FieldValue -Tenant $Tenant
+        Set-CIPPStandardsCompareField -FieldName 'standards.UserPreferredLanguage' -FieldValue $FieldValue -Tenant $Tenant
     }
 }
