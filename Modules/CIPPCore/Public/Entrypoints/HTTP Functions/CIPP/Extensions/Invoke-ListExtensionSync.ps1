@@ -3,7 +3,7 @@ using namespace System.Net
 Function Invoke-ListExtensionSync {
     <#
     .FUNCTIONALITY
-        Entrypoint
+        Entrypoint,AnyTenant
     .ROLE
         CIPP.Extension.Read
     #>

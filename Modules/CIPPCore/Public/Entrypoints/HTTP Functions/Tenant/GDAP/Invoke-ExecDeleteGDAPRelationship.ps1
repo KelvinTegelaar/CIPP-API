@@ -3,7 +3,7 @@ using namespace System.Net
 Function Invoke-ExecDeleteGDAPRelationship {
     <#
     .FUNCTIONALITY
-        Entrypoint
+        Entrypoint,AnyTenant
     .ROLE
         Tenant.Relationship.ReadWrite
     #>

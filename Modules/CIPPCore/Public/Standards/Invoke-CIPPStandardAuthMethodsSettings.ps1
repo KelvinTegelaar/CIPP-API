@@ -41,10 +41,7 @@ function Invoke-CIPPStandardAuthMethodsSettings {
         return
     }
 
-    if ($Settings.report -eq $true) {
-        Add-CIPPBPAField -FieldName 'ReportSuspiciousActivity' -FieldValue $CurrentPolicy.reportSuspiciousActivitySettings.state -StoreAs string -Tenant $tenant
-        Add-CIPPBPAField -FieldName 'SystemCredential' -FieldValue $CurrentPolicy.systemCredentialPreferences.state -StoreAs string -Tenant $tenant
-    }
+
     # Set wanted states
     $ReportSuspiciousActivityState = $Settings.ReportSuspiciousActivity.value ?? $Settings.ReportSuspiciousActivity
     $SystemCredentialState = $Settings.SystemCredential.value ?? $Settings.SystemCredential
@@ -90,13 +87,21 @@ function Invoke-CIPPStandardAuthMethodsSettings {
         }
     }
 
+    if ($Settings.report -eq $true) {
+        $state = $StateSetCorrectly ? $true :  @{CurrentReportState = $CurrentReportState; CurrentSystemState = $CurrentSystemState; WantedReportState = $ReportSuspiciousActivityState; WantedSystemState = $SystemCredentialState }
+        Set-CIPPStandardsCompareField -FieldName 'standards.AuthMethodsSettings' -FieldValue $state -TenantFilter $tenant
+        Add-CIPPBPAField -FieldName 'ReportSuspiciousActivity' -FieldValue $CurrentPolicy.reportSuspiciousActivitySettings.state -StoreAs string -Tenant $tenant
+        Add-CIPPBPAField -FieldName 'SystemCredential' -FieldValue $CurrentPolicy.systemCredentialPreferences.state -StoreAs string -Tenant $tenant
+    }
+
     if ($Settings.alert -eq $true) {
         if ($StateSetCorrectly -eq $true) {
             Write-LogMessage -API 'Standards' -tenant $tenant -message "Authentication methods policy settings are correctly configured: Report Suspicious Activity ($ReportSuspiciousActivityState), System Credential Preferences ($SystemCredentialState)" -sev Info
         } else {
             $CurrentReportState = $CurrentPolicy.reportSuspiciousActivitySettings.state
             $CurrentSystemState = $CurrentPolicy.systemCredentialPreferences.state
-            Write-LogMessage -API 'Standards' -tenant $tenant -message "Authentication methods policy settings are not configured correctly. Current values: Report Suspicious Activity ($CurrentReportState), System Credential Preferences ($CurrentSystemState)" -sev Alert
+            Write-StandardsAlert -message 'Authentication methods policy settings are not configured correctly.' -object @{CurrentReportState = $CurrentReportState; CurrentSystemState = $CurrentSystemState; WantedReportState = $ReportSuspiciousActivityState; WantedSystemState = $SystemCredentialState } -tenant $tenant -standardName 'AuthMethodsSettings' -standardId $Settings.standardId
+            Write-LogMessage -API 'Standards' -tenant $tenant -message "Authentication methods policy settings are not configured correctly. Current values: Report Suspicious Activity ($CurrentReportState), System Credential Preferences ($CurrentSystemState)" -sev Info
         }
     }
 }

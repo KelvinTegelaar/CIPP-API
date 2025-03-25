@@ -21,7 +21,7 @@ Function Invoke-ExecGroupsDeliveryManagement {
     $ID = $Request.Query.ID ?? $Request.Body.ID
 
     Try {
-        $Result = Set-CIPPGroupAuthentication -ID $ID -GroupType $GroupType -OnlyAllowInternalString $OnlyAllowInternal -tenantFilter $TenantFilter -APIName $APIName -Headers $Headers
+        $Result = Set-CIPPGroupAuthentication -ID $ID -GroupType $GroupType -OnlyAllowInternal $OnlyAllowInternal -tenantFilter $TenantFilter -APIName $APIName -Headers $Headers
         $StatusCode = [HttpStatusCode]::OK
     } catch {
         $Result = "$($_.Exception.Message)"

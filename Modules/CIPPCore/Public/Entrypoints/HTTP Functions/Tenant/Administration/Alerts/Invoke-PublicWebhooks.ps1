@@ -3,6 +3,8 @@ function Invoke-PublicWebhooks {
     <#
     .FUNCTIONALITY
         Entrypoint
+    .ROLE
+        Public
     #>
     param($Request, $TriggerMetadata)
 

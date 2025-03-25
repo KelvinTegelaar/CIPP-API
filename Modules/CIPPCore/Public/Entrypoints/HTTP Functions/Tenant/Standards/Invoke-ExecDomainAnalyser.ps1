@@ -1,7 +1,7 @@
 function Invoke-ExecDomainAnalyser {
     <#
     .FUNCTIONALITY
-        Entrypoint
+        Entrypoint,AnyTenant
     .ROLE
         Tenant.DomainAnalyser.Read
     #>

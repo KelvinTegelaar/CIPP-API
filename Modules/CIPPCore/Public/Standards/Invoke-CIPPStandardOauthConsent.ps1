@@ -32,19 +32,19 @@ function Invoke-CIPPStandardOauthConsent {
     #>
 
     param($tenant, $settings)
-    ##$Rerun -Type Standard -Tenant $Tenant -Settings $Settings 'OauthConsent'
 
     $State = New-GraphGetRequest -Uri 'https://graph.microsoft.com/beta/policies/authorizationPolicy/authorizationPolicy' -tenantid $tenant
     $StateIsCorrect = if ($State.permissionGrantPolicyIdsAssignedToDefaultUserRole -eq 'managePermissionGrantsForSelf.cipp-consent-policy') { $true } else { $false }
 
-    If ($Settings.remediate -eq $true) {
+    if ($Settings.remediate -eq $true) {
         $AllowedAppIdsForTenant = $settings.AllowedApps -split ','
         try {
             if ($State.permissionGrantPolicyIdsAssignedToDefaultUserRole -notin @('managePermissionGrantsForSelf.cipp-consent-policy')) {
                 $Existing = (New-GraphGetRequest -Uri 'https://graph.microsoft.com/beta/policies/permissionGrantPolicies/' -tenantid $tenant) | Where-Object -Property id -EQ 'cipp-consent-policy'
                 if (!$Existing) {
                     New-GraphPostRequest -tenantid $tenant -Uri 'https://graph.microsoft.com/beta/policies/permissionGrantPolicies' -Type POST -Body '{ "id":"cipp-consent-policy", "displayName":"Application Consent Policy", "description":"This policy controls the current application consent policies."}' -ContentType 'application/json'
-                    New-GraphPostRequest -tenantid $tenant -Uri 'https://graph.microsoft.com/beta/policies/permissionGrantPolicies/cipp-consent-policy/includes' -Type POST -Body '{"permissionClassification":"all","permissionType":"delegated","clientApplicationIds":["d414ee2d-73e5-4e5b-bb16-03ef55fea597"]}' -ContentType 'application/json'
+                    #Replaced static web app appid with Office 365 Management by Microsofts recommendation; this application is always consented, cannot be removed nor elevated as the portals run on this app id.
+                    New-GraphPostRequest -tenantid $tenant -Uri 'https://graph.microsoft.com/beta/policies/permissionGrantPolicies/cipp-consent-policy/includes' -Type POST -Body '{"permissionClassification":"all","permissionType":"delegated","clientApplicationIds":["00b41c95-dab0-4487-9791-b9d2c32c80f2"]}' -ContentType 'application/json'
                 }
                 try {
                     foreach ($AllowedApp in $AllowedAppIdsForTenant) {
@@ -69,10 +69,18 @@ function Invoke-CIPPStandardOauthConsent {
         if ($StateIsCorrect -eq $true) {
             Write-LogMessage -API 'Standards' -tenant $tenant -message 'Application Consent Mode is enabled.' -sev Info
         } else {
-            Write-LogMessage -API 'Standards' -tenant $tenant -message 'Application Consent Mode is not enabled.' -sev Alert
+            Write-StandardsAlert -message 'Application Consent Mode is not enabled.' -object ($State.defaultUserRolePermissions) -tenant $tenant -standardName 'OauthConsent' -standardId $Settings.standardId
+            Write-LogMessage -API 'Standards' -tenant $tenant -message 'Application Consent Mode is not enabled.' -sev Info
         }
     }
     if ($Settings.report -eq $true) {
         Add-CIPPBPAField -FieldName 'OauthConsent' -FieldValue $StateIsCorrect -StoreAs bool -Tenant $tenant
+        if ($StateIsCorrect) {
+            $FieldValue = $true
+        } else {
+            $FieldValue = $State | Select-Object -Property permissionGrantPolicyIdsAssignedToDefaultUserRole
+        }
+
+        Set-CIPPStandardsCompareField -FieldName 'standards.OauthConsent' -FieldValue $FieldValue -Tenant $tenant
     }
 }
