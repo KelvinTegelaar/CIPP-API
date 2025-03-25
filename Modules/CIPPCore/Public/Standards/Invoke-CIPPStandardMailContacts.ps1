@@ -39,7 +39,7 @@ function Invoke-CIPPStandardMailContacts {
     $contacts = $settings
     $TechAndSecurityContacts = @($Contacts.SecurityContact, $Contacts.TechContact)
 
-    If ($Settings.remediate -eq $true) {
+    if ($Settings.remediate -eq $true) {
         $state = $CurrentInfo.marketingNotificationEmails -eq $Contacts.MarketingContact -and `
         ($CurrentInfo.securityComplianceNotificationMails -in $TechAndSecurityContacts -or
             $CurrentInfo.technicalNotificationMails -in $TechAndSecurityContacts) -and `
@@ -70,25 +70,29 @@ function Invoke-CIPPStandardMailContacts {
         if ($CurrentInfo.marketingNotificationEmails -eq $Contacts.MarketingContact) {
             Write-LogMessage -API 'Standards' -tenant $tenant -message "Marketing contact email is set to $($Contacts.MarketingContact)" -sev Info
         } else {
-            Write-StandardsAlert -message "Marketing contact email is not set to $($Contacts.MarketingContact)" -object $CurrentInfo -tenant $tenant -standardName 'MailContacts' -standardId $Settings.standardId
+            $Object = $CurrentInfo | Select-Object marketingNotificationEmails
+            Write-StandardsAlert -message "Marketing contact email is not set to $($Contacts.MarketingContact)" -object $Object -tenant $tenant -standardName 'MailContacts' -standardId $Settings.standardId
             Write-LogMessage -API 'Standards' -tenant $tenant -message "Marketing contact email is not set to $($Contacts.MarketingContact)" -sev Info
         }
         if ($CurrentInfo.securityComplianceNotificationMails -eq $Contacts.SecurityContact) {
             Write-LogMessage -API 'Standards' -tenant $tenant -message "Security contact email is set to $($Contacts.SecurityContact)" -sev Info
         } else {
-            Write-StandardsAlert -message "Security contact email is not set to $($Contacts.SecurityContact)" -object $CurrentInfo -tenant $tenant -standardName 'MailContacts' -standardId $Settings.standardId
+            $Object = $CurrentInfo | Select-Object securityComplianceNotificationMails
+            Write-StandardsAlert -message "Security contact email is not set to $($Contacts.SecurityContact)" -object $Object -tenant $tenant -standardName 'MailContacts' -standardId $Settings.standardId
             Write-LogMessage -API 'Standards' -tenant $tenant -message "Security contact email is not set to $($Contacts.SecurityContact)" -sev Info
         }
         if ($CurrentInfo.technicalNotificationMails -eq $Contacts.TechContact) {
             Write-LogMessage -API 'Standards' -tenant $tenant -message "Technical contact email is set to $($Contacts.TechContact)" -sev Info
         } else {
-            Write-StandardsAlert -message "Technical contact email is not set to $($Contacts.TechContact)" -object $CurrentInfo -tenant $tenant -standardName 'MailContacts' -standardId $Settings.standardId
+            $Object = $CurrentInfo | Select-Object technicalNotificationMails
+            Write-StandardsAlert -message "Technical contact email is not set to $($Contacts.TechContact)" -object $Object -tenant $tenant -standardName 'MailContacts' -standardId $Settings.standardId
             Write-LogMessage -API 'Standards' -tenant $tenant -message "Technical contact email is not set to $($Contacts.TechContact)" -sev Info
         }
         if ($CurrentInfo.privacyProfile.contactEmail -eq $Contacts.GeneralContact) {
             Write-LogMessage -API 'Standards' -tenant $tenant -message "General contact email is set to $($Contacts.GeneralContact)" -sev Info
         } else {
-            Write-StandardsAlert -message "General contact email is not set to $($Contacts.GeneralContact)" -object $CurrentInfo -tenant $tenant -standardName 'MailContacts' -standardId $Settings.standardId
+            $Object = $CurrentInfo | Select-Object privacyProfile
+            Write-StandardsAlert -message "General contact email is not set to $($Contacts.GeneralContact)" -object $Object -tenant $tenant -standardName 'MailContacts' -standardId $Settings.standardId
             Write-LogMessage -API 'Standards' -tenant $tenant -message "General contact email is not set to $($Contacts.GeneralContact)" -sev Info
         }
 
