@@ -38,7 +38,6 @@ Function Invoke-EditUser {
         $BodyToship = [pscustomobject] @{
             'givenName'         = $UserObj.givenName
             'surname'           = $UserObj.surname
-            'accountEnabled'    = $true
             'displayName'       = $UserObj.displayName
             'department'        = $UserObj.Department
             'mailNickname'      = $UserObj.Username ? $UserObj.username :$UserObj.mailNickname
@@ -51,6 +50,7 @@ Function Invoke-EditUser {
             'streetAddress'     = $UserObj.streetAddress
             'postalCode'        = $UserObj.PostalCode
             'companyName'       = $UserObj.CompanyName
+            'businessPhones'    = $UserObj.businessPhones ? @($UserObj.businessPhones) : @()
             'otherMails'        = $UserObj.otherMails ? @($UserObj.otherMails) : @()
             'passwordProfile'   = @{
                 'forceChangePasswordNextSignIn' = [bool]$UserObj.MustChangePass

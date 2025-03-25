@@ -3,7 +3,7 @@ using namespace System.Net
 Function Invoke-ListExConnectorTemplates {
     <#
     .FUNCTIONALITY
-        Entrypoint
+        Entrypoint,AnyTenant
     .ROLE
         Exchange.Connector.Read
     #>

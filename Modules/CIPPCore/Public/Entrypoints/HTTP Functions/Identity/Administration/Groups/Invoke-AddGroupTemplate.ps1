@@ -3,7 +3,7 @@ using namespace System.Net
 Function Invoke-AddGroupTemplate {
     <#
     .FUNCTIONALITY
-        Entrypoint
+        Entrypoint,AnyTenant
     .ROLE
         Identity.Group.ReadWrite
     #>

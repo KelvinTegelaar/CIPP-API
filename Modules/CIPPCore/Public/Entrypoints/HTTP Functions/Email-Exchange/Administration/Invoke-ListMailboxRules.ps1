@@ -10,14 +10,18 @@ Function Invoke-ListMailboxRules {
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
 
+    $APIName = $Request.Params.CIPPEndpoint
+    $Headers = $Request.Headers
+    Write-LogMessage -headers $Headers -API $APIName -message 'Accessed this API' -Sev 'Debug'
+
     # Interact with query parameters or the body of the request.
-    $TenantFilter = $Request.Query.TenantFilter
+    $TenantFilter = $Request.Query.tenantFilter
 
     $Table = Get-CIPPTable -TableName cachembxrules
     if ($TenantFilter -ne 'AllTenants') {
         $Table.Filter = "Tenant eq '$TenantFilter'"
     }
-    $Rows = Get-CIPPAzDataTableEntity @Table | Where-Object -Property Timestamp -GT (Get-Date).Addhours(-1)
+    $Rows = Get-CIPPAzDataTableEntity @Table | Where-Object -Property Timestamp -GT (Get-Date).AddHours(-1)
 
     $Metadata = @{}
     if (!$Rows -or ($TenantFilter -eq 'AllTenants' -and ($Rows | Measure-Object).Count -eq 1)) {
@@ -43,7 +47,7 @@ Function Invoke-ListMailboxRules {
             }
             #Write-Host ($InputObject | ConvertTo-Json)
             $InstanceId = Start-NewOrchestration -FunctionName 'CIPPOrchestrator' -InputObject ($InputObject | ConvertTo-Json -Depth 5 -Compress)
-            Write-Host "Started permissions orchestration with ID = '$InstanceId'"
+            Write-Host "Started mailbox rules orchestration with ID = '$InstanceId'"
         }
 
     } else {

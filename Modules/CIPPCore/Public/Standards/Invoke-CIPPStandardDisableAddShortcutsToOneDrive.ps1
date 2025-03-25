@@ -34,6 +34,7 @@ function Invoke-CIPPStandardDisableAddShortcutsToOneDrive {
     $CurrentState = Get-CIPPSPOTenant -TenantFilter $Tenant | Select-Object _ObjectIdentity_, TenantFilter, DisableAddToOneDrive
 
     if ($Settings.report -eq $true) {
+        Set-CIPPStandardsCompareField -FieldName 'standards.DisableAddShortcutsToOneDrive' -FieldValue $CurrentState.DisableAddToOneDrive -TenantFilter $Tenant
         Add-CIPPBPAField -FieldName 'OneDriveAddShortcutButtonDisabled' -FieldValue $CurrentState.DisableAddToOneDrive -StoreAs bool -Tenant $Tenant
     }
 
@@ -69,7 +70,8 @@ function Invoke-CIPPStandardDisableAddShortcutsToOneDrive {
         if ($StateIsCorrect -eq $true) {
             Write-LogMessage -API 'Standards' -tenant $tenant -message "The Add Shortcuts To OneDrive Button is already set to the wanted state of $HumanReadableState" -sev Info
         } else {
-            Write-LogMessage -API 'Standards' -tenant $tenant -message "The Add Shortcuts To OneDrive Button Button is not set to the wanted state of $HumanReadableState" -sev Alert
+            Write-StandardsAlert -message "The Add Shortcuts To OneDrive Button is not set to the wanted state of $HumanReadableState" -object $CurrentState -tenant $tenant -standardName 'DisableAddShortcutsToOneDrive' -standardId $Settings.standardId
+            Write-LogMessage -API 'Standards' -tenant $tenant -message "The Add Shortcuts To OneDrive Button Button is not set to the wanted state of $HumanReadableState" -sev Info
         }
     }
 

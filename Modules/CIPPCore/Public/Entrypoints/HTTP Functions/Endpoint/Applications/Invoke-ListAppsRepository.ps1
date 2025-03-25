@@ -3,7 +3,7 @@ using namespace System.Net
 Function Invoke-ListAppsRepository {
     <#
     .FUNCTIONALITY
-        Entrypoint
+        Entrypoint,AnyTenant
     .ROLE
         Endpoint.Application.Read
     #>

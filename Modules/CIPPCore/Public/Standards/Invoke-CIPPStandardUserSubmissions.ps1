@@ -86,15 +86,6 @@ function Invoke-CIPPStandardUserSubmissions {
 
     $StateIsCorrect = $PolicyIsCorrect -and $RuleIsCorrect
 
-
-    if ($Settings.report -eq $true) {
-        if ($PolicyState.length -eq 0) {
-            Add-CIPPBPAField -FieldName 'UserSubmissionPolicy' -FieldValue $false -StoreAs bool -Tenant $Tenant
-        } else {
-            Add-CIPPBPAField -FieldName 'UserSubmissionPolicy' -FieldValue $StateIsCorrect -StoreAs bool -Tenant $Tenant
-        }
-    }
-
     If ($Settings.remediate -eq $true) {
 
         # If policy is set correctly, log and skip setting the policy
@@ -185,10 +176,29 @@ function Invoke-CIPPStandardUserSubmissions {
             Write-LogMessage -API 'Standards' -tenant $Tenant -message 'User Submission policy is properly configured.' -sev Info
         } else {
             if ($Policy.EnableReportToMicrosoft -eq $true) {
-                Write-LogMessage -API 'Standards' -tenant $Tenant -message 'User Submission policy is enabled but incorrectly configured' -sev Alert
+                Write-StandardsAlert -message "User Submission policy is enabled but incorrectly configured" -object $PolicyState -tenant $Tenant -standardName 'UserSubmissions' -standardId $Settings.standardId
+                Write-LogMessage -API 'Standards' -tenant $Tenant -message 'User Submission policy is enabled but incorrectly configured' -sev Info
             } else {
-                Write-LogMessage -API 'Standards' -tenant $Tenant -message 'User Submission policy is disabled.' -sev Alert
+                Write-StandardsAlert -message "User Submission policy is disabled." -object $PolicyState -tenant $Tenant -standardName 'UserSubmissions' -standardId $Settings.standardId
+                Write-LogMessage -API 'Standards' -tenant $Tenant -message 'User Submission policy is disabled.' -sev Info
             }
         }
+    }
+
+
+    if ($Settings.report -eq $true) {
+        if ($PolicyState.length -eq 0) {
+            Add-CIPPBPAField -FieldName 'UserSubmissionPolicy' -FieldValue $false -StoreAs bool -Tenant $Tenant
+        } else {
+            Add-CIPPBPAField -FieldName 'UserSubmissionPolicy' -FieldValue $StateIsCorrect -StoreAs bool -Tenant $Tenant
+        }
+
+        if ($StateIsCorrect) {
+            $FieldValue = $true
+        } else {
+            $FieldValue = @{ PolicyState = $PolicyState; RuleState = $RuleState }
+        }
+
+        Set-CIPPStandardsCompareField -FieldName 'standards.UserSubmissions' -FieldValue $FieldValue -TenantFilter $Tenant
     }
 }

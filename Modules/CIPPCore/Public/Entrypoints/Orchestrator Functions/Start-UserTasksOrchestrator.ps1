@@ -35,7 +35,9 @@ function Start-UserTasksOrchestrator {
                 }
 
                 if ($task.Tenant -eq 'AllTenants') {
-                    $AllTenantCommands = foreach ($Tenant in $TenantList) {
+                    $ExcludedTenants = $task.excludedTenants -split ','
+                    Write-Host "Excluded Tenants from this task: $ExcludedTenants"
+                    $AllTenantCommands = foreach ($Tenant in $TenantList | Where-Object { $_.defaultDomainName -notin $ExcludedTenants }) {
                         $NewParams = $task.Parameters.Clone()
                         if ((Get-Command $task.Command).Parameters.TenantFilter) {
                             $NewParams.TenantFilter = $Tenant.defaultDomainName

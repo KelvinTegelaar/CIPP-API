@@ -18,11 +18,11 @@ function Invoke-ListGraphRequest {
 
     $Parameters = @{}
     if ($Request.Query.'$filter') {
-        $Parameters.'$filter' = $Request.Query.'$filter' -replace '%tenantid%', $env:TenantID
+        $Parameters.'$filter' = $Request.Query.'$filter'
     }
 
     if (!$Request.Query.'$filter' -and $Request.Query.graphFilter) {
-        $Parameters.'$filter' = $Request.Query.graphFilter -replace '%tenantid%', $env:TenantID
+        $Parameters.'$filter' = $Request.Query.graphFilter
     }
 
     if ($Request.Query.'$select') {
