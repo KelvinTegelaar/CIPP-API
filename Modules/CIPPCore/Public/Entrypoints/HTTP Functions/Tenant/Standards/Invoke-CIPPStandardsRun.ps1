@@ -1,5 +1,11 @@
 
 function Invoke-CIPPStandardsRun {
+    <#
+    .FUNCTIONALITY
+        Entrypoint,AnyTenant
+    .ROLE
+        CIPP.Standards.ReadWrite
+    #>
     [CmdletBinding()]
     param(
         [Parameter(Mandatory = $false)]

@@ -356,6 +356,28 @@ Dynamics 365 for Marketing USL,D365_MARKETING_USER,4b32a493-9a67-4649-8eb9-9fc5a
 Dynamics 365 for Marketing USL,D365_MARKETING_USER,4b32a493-9a67-4649-8eb9-9fc5a5f75c12,DYN365_MARKETING_USER,5d7a6abc-eebd-46ab-96e1-e4a2f54a2248,Dynamics 365 for Marketing USL
 Dynamics 365 for Marketing USL,D365_MARKETING_USER,4b32a493-9a67-4649-8eb9-9fc5a5f75c12,Forms_Pro_Marketing,76366ba0-d230-47aa-8087-b6d55dae454f,Microsoft Dynamics 365 Customer Voice for Marketing
 Dynamics 365 for Marketing USL,D365_MARKETING_USER,4b32a493-9a67-4649-8eb9-9fc5a5f75c12,EXCHANGE_S_FOUNDATION,113feb6c-3fe4-4440-bddc-54d774bf0318,Exchange Foundation
+Dynamics 365 Multi-app,Dynamics_365_Multi_app_,6c75fb1b-61f2-42d0-b1b8-6492ca9ae159,CUSTOMER_VOICE_DYN365_VIRAL_TRIAL,dbe07046-af68-4861-a20d-1c8cbda9194f,Customer Voice for Dynamics 365 vTrial
+Dynamics 365 Multi-app,Dynamics_365_Multi_app_,6c75fb1b-61f2-42d0-b1b8-6492ca9ae159,DYN365_CS_MESSAGING_TPS,47c2b191-a5fb-4129-b690-00c474d2f623,Dynamics 365 Customer Service Digital Messaging add-on
+Dynamics 365 Multi-app,Dynamics_365_Multi_app_,6c75fb1b-61f2-42d0-b1b8-6492ca9ae159,D365_CSI_EMBED_CSEnterprise,5b1e5982-0e88-47bb-a95e-ae6085eda612,Dynamics 365 Customer Service Insights for CS Enterprise
+Dynamics 365 Multi-app,Dynamics_365_Multi_app_,6c75fb1b-61f2-42d0-b1b8-6492ca9ae159,DYN365_ENTERPRISE_CUSTOMER_SERVICE,99340b49-fb81-4b1e-976b-8f2ae8e9394f,Dynamics 365 for Customer Service
+Dynamics 365 Multi-app,Dynamics_365_Multi_app_,6c75fb1b-61f2-42d0-b1b8-6492ca9ae159,DYN365_CS_VOICE,f6ec6dfa-2402-468d-a455-89be11116d43,Dynamics 365 for Customer Service Voice Add-in
+Dynamics 365 Multi-app,Dynamics_365_Multi_app_,6c75fb1b-61f2-42d0-b1b8-6492ca9ae159,DYN365_ENTERPRISE_FIELD_SERVICE,8c66ef8a-177f-4c0d-853c-d4f219331d09,Dynamics 365 for Field Service
+Dynamics 365 Multi-app,Dynamics_365_Multi_app_,6c75fb1b-61f2-42d0-b1b8-6492ca9ae159,DYN365_MARKETING_APP,a3a4fa10-5092-401a-af30-0462a95a7ac8,Dynamics 365 for Marketing
+Dynamics 365 Multi-app,Dynamics_365_Multi_app_,6c75fb1b-61f2-42d0-b1b8-6492ca9ae159,DYN365_ENTERPRISE_SALES,2da8e897-7791-486b-b08f-cc63c8129df7,Dynamics 365 for Sales
+Dynamics 365 Multi-app,Dynamics_365_Multi_app_,6c75fb1b-61f2-42d0-b1b8-6492ca9ae159,Forms_Pro_FS,9c439259-63b0-46cc-a258-72be4313a42d,Microsoft Dynamics 365 Customer Voice for Field Service
+Dynamics 365 Multi-app,Dynamics_365_Multi_app_,6c75fb1b-61f2-42d0-b1b8-6492ca9ae159,Forms_Pro_SalesEnt,8839ef0e-91f1-4085-b485-62e06e7c7987,Microsoft Dynamics 365 Customer Voice for Sales Enterprise
+Dynamics 365 Multi-app,Dynamics_365_Multi_app_,6c75fb1b-61f2-42d0-b1b8-6492ca9ae159,FLOW_DYN_APPS,7e6d7d78-73de-46ba-83b1-6d25117334ba,Power Automate for Dynamics 365
+Dynamics 365 Multi-app,Dynamics_365_Multi_app_,6c75fb1b-61f2-42d0-b1b8-6492ca9ae159,POWER_VIRTUAL_AGENTS_D365_CS_VOICE,a3dce1be-e9ca-453a-9483-e69a5b46ce98,Power Virtual Agents for Customer Service Voice
+Dynamics 365 Multi-app,Dynamics_365_Multi_app_,6c75fb1b-61f2-42d0-b1b8-6492ca9ae159,POWER_VIRTUAL_AGENTS_D365_CS_MESSAGING,2d2f174c-c3cc-4abe-9ce8-4dd86f469ab1,Power Virtual Agents for Digital Messaging
+Dynamics 365 Multi-app,Dynamics_365_Multi_app_,6c75fb1b-61f2-42d0-b1b8-6492ca9ae159,POWERAPPS_DYN_APPS,874fc546-6efe-4d22-90b8-5c4e7aa59f4b,Power Apps for Dynamics 365
+Dynamics 365 Multi-app,Dynamics_365_Multi_app_,6c75fb1b-61f2-42d0-b1b8-6492ca9ae159,GUIDES,0b2c029c-dca0-454a-a336-887285d6ef07,Dynamics 365 Guides
+Dynamics 365 Multi-app,Dynamics_365_Multi_app_,6c75fb1b-61f2-42d0-b1b8-6492ca9ae159,MICROSOFT_REMOTE_ASSIST,4f4c7800-298a-4e22-8867-96b17850d4dd,Dynamics 365 Remote Assist
+Dynamics 365 Multi-app,Dynamics_365_Multi_app_,6c75fb1b-61f2-42d0-b1b8-6492ca9ae159,POWERAPPS_GUIDES,816971f4-37c5-424a-b12b-b56881f402e7,Power Apps for Guides
+Dynamics 365 Multi-app,Dynamics_365_Multi_app_,6c75fb1b-61f2-42d0-b1b8-6492ca9ae159,EXCHANGE_S_FOUNDATION,113feb6c-3fe4-4440-bddc-54d774bf0318,Exchange Foundation
+Dynamics 365 Multi-app,Dynamics_365_Multi_app_,6c75fb1b-61f2-42d0-b1b8-6492ca9ae159,TEAMS1,57ff2da0-773e-42df-b2af-ffb7a2317929,Microsoft Teams
+Dynamics 365 Multi-app,Dynamics_365_Multi_app_,6c75fb1b-61f2-42d0-b1b8-6492ca9ae159,SHAREPOINTWAC,e95bec33-7c88-4a70-8e19-b10bd9d0c014,Office for the Web
+Dynamics 365 Multi-app,Dynamics_365_Multi_app_,6c75fb1b-61f2-42d0-b1b8-6492ca9ae159,PROJECT_ESSENTIALS,1259157c-8581-4875-bca7-2ffb18c51bda,Project Online Essentials
+Dynamics 365 Multi-app,Dynamics_365_Multi_app_,6c75fb1b-61f2-42d0-b1b8-6492ca9ae159,SHAREPOINTENTERPRISE,5dbe027f-2339-4123-9542-606e4d348a72,SharePoint (Plan 2)
 Dynamics 365 Operations – Activity,Dyn365_Operations_Activity,b75074f1-4c54-41bf-970f-c9ac871567f5,DYN365_RETAIL_Activity,f06754ec-6d72-4bf6-991c-4cb5413d9932,Dynamics 365 for Retail Activity
 Dynamics 365 Operations – Activity,Dyn365_Operations_Activity,b75074f1-4c54-41bf-970f-c9ac871567f5,DYN365_Enterprise_Talent_Attract_Activity,aac5a56b-b02e-4608-8014-b076646d4011,Dynamics 365 for Talent - Attract Experience Activity
 Dynamics 365 Operations – Activity,Dyn365_Operations_Activity,b75074f1-4c54-41bf-970f-c9ac871567f5,DYN365_Enterprise_Talent_Onboard_Activity,db225597-e9c2-4d96-8ace-5424744c80f8,Dynamics 365 for Talent - Onboard Experience
@@ -1156,6 +1178,40 @@ Microsoft 365 Business Basic,SMB_BUSINESS_ESSENTIALS,dab7782a-93b1-4074-8bb1-0e6
 Microsoft 365 Business Basic,SMB_BUSINESS_ESSENTIALS,dab7782a-93b1-4074-8bb1-0e61318bea0b,TEAMS1,57ff2da0-773e-42df-b2af-ffb7a2317929,TEAMS1
 Microsoft 365 Business Basic,SMB_BUSINESS_ESSENTIALS,dab7782a-93b1-4074-8bb1-0e61318bea0b,VIVAENGAGE_CORE,a82fbf69-b4d7-49f4-83a6-915b2cf354f4,Viva Engage Core
 Microsoft 365 Business Basic,SMB_BUSINESS_ESSENTIALS,dab7782a-93b1-4074-8bb1-0e61318bea0b,YAMMER_MIDSIZE,41bf139a-4e60-409f-9346-a1361efc6dfb,YAMMER MIDSIZE
+Microsoft 365 Business Basic (no Teams),Microsoft_365_Business_Basic_(no Teams),21502a13-c8dc-4744-be9c-177fd9d2eafc,MESH_AVATARS_FOR_TEAMS,dcf9d2f4-772e-4434-b757-77a453cfbc02,Avatars for Teams
+Microsoft 365 Business Basic (no Teams),Microsoft_365_Business_Basic_(no Teams),21502a13-c8dc-4744-be9c-177fd9d2eafc,MESH_AVATARS_ADDITIONAL_FOR_TEAMS,3efbd4ed-8958-4824-8389-1321f8730af8,Avatars for Teams (additional)
+Microsoft 365 Business Basic (no Teams),Microsoft_365_Business_Basic_(no Teams),21502a13-c8dc-4744-be9c-177fd9d2eafc,CDS_O365_P1,bed136c6-b799-4462-824d-fc045d3a9d25,Common Data Service for Teams
+Microsoft 365 Business Basic (no Teams),Microsoft_365_Business_Basic_(no Teams),21502a13-c8dc-4744-be9c-177fd9d2eafc,EXCHANGE_S_STANDARD,9aaf7827-d63c-4b61-89c3-182f06f82e5c,Exchange Online (Plan 1)
+Microsoft 365 Business Basic (no Teams),Microsoft_365_Business_Basic_(no Teams),21502a13-c8dc-4744-be9c-177fd9d2eafc,GRAPH_CONNECTORS_SEARCH_INDEX,a6520331-d7d4-4276-95f5-15c0933bc757,Graph Connectors Search with Index
+Microsoft 365 Business Basic (no Teams),Microsoft_365_Business_Basic_(no Teams),21502a13-c8dc-4744-be9c-177fd9d2eafc,MESH_IMMERSIVE_FOR_TEAMS,f0ff6ac6-297d-49cd-be34-6dfef97f0c28,Immersive spaces for Teams
+Microsoft 365 Business Basic (no Teams),Microsoft_365_Business_Basic_(no Teams),21502a13-c8dc-4744-be9c-177fd9d2eafc,MYANALYTICS_P2,33c4f319-9bdd-48d6-9c4d-410b750a4a5a,Insights by MyAnalytics
+Microsoft 365 Business Basic (no Teams),Microsoft_365_Business_Basic_(no Teams),21502a13-c8dc-4744-be9c-177fd9d2eafc,M365_LIGHTHOUSE_CUSTOMER_PLAN1,6f23d6a9-adbf-481c-8538-b4c095654487,Microsoft 365 Lighthouse (Plan 1)
+Microsoft 365 Business Basic (no Teams),Microsoft_365_Business_Basic_(no Teams),21502a13-c8dc-4744-be9c-177fd9d2eafc,MICROSOFTBOOKINGS,199a5c09-e0ca-4e37-8f7c-b05d533e1ea2,Microsoft Bookings
+Microsoft 365 Business Basic (no Teams),Microsoft_365_Business_Basic_(no Teams),21502a13-c8dc-4744-be9c-177fd9d2eafc,FORMS_PLAN_E1,159f4cd6-e380-449f-a816-af1a9ef76344,Microsoft Forms (Plan E1)
+Microsoft 365 Business Basic (no Teams),Microsoft_365_Business_Basic_(no Teams),21502a13-c8dc-4744-be9c-177fd9d2eafc,KAIZALA_O365_P2,54fc630f-5a40-48ee-8965-af0503c1386e,Microsoft Kaizala Pro
+Microsoft 365 Business Basic (no Teams),Microsoft_365_Business_Basic_(no Teams),21502a13-c8dc-4744-be9c-177fd9d2eafc,PROJECTWORKMANAGEMENT,b737dad2-2f6c-4c65-90e3-ca563267e8b9,Microsoft Planner
+Microsoft 365 Business Basic (no Teams),Microsoft_365_Business_Basic_(no Teams),21502a13-c8dc-4744-be9c-177fd9d2eafc,MICROSOFT_SEARCH,94065c59-bc8e-4e8b-89e5-5138d471eaff,Microsoft Search
+Microsoft 365 Business Basic (no Teams),Microsoft_365_Business_Basic_(no Teams),21502a13-c8dc-4744-be9c-177fd9d2eafc,INTUNE_O365,882e1d05-acd1-4ccb-8708-6ee03664b117,Mobile Device Management for Office 365
+Microsoft 365 Business Basic (no Teams),Microsoft_365_Business_Basic_(no Teams),21502a13-c8dc-4744-be9c-177fd9d2eafc,Nucleus,db4d623d-b514-490b-b7ef-8885eee514de,Nucleus
+Microsoft 365 Business Basic (no Teams),Microsoft_365_Business_Basic_(no Teams),21502a13-c8dc-4744-be9c-177fd9d2eafc,SHAREPOINTWAC,e95bec33-7c88-4a70-8e19-b10bd9d0c014,Office for the Web
+Microsoft 365 Business Basic (no Teams),Microsoft_365_Business_Basic_(no Teams),21502a13-c8dc-4744-be9c-177fd9d2eafc,OFFICEMOBILE_SUBSCRIPTION,c63d4d19-e8cb-460e-b37c-4d6c34603745,Office Mobile Apps for Office 365
+Microsoft 365 Business Basic (no Teams),Microsoft_365_Business_Basic_(no Teams),21502a13-c8dc-4744-be9c-177fd9d2eafc,PLACES_CORE,1fe6227d-3e01-46d0-9510-0acad4ff6e94,Places Core
+Microsoft 365 Business Basic (no Teams),Microsoft_365_Business_Basic_(no Teams),21502a13-c8dc-4744-be9c-177fd9d2eafc,PROJECT_O365_P1,a55dfd10-0864-46d9-a3cd-da5991a3e0e2,Project for Office (Plan E1)
+Microsoft 365 Business Basic (no Teams),Microsoft_365_Business_Basic_(no Teams),21502a13-c8dc-4744-be9c-177fd9d2eafc,Bing_Chat_Enterprise,0d0c0d31-fae7-41f2-b909-eaf4d7f26dba,RETIRED - Commercial data protection for Microsoft Copilot
+Microsoft 365 Business Basic (no Teams),Microsoft_365_Business_Basic_(no Teams),21502a13-c8dc-4744-be9c-177fd9d2eafc,SHAREPOINTSTANDARD,c7699d2e-19aa-44de-8edf-1736da088ca1,SharePoint (Plan 1)
+Microsoft 365 Business Basic (no Teams),Microsoft_365_Business_Basic_(no Teams),21502a13-c8dc-4744-be9c-177fd9d2eafc,MCOSTANDARD,0feaeb32-d00e-4d66-bd5a-43b5b83db82c,Skype for Business Online (Plan 2)
+Microsoft 365 Business Basic (no Teams),Microsoft_365_Business_Basic_(no Teams),21502a13-c8dc-4744-be9c-177fd9d2eafc,STREAM_O365_SMB,3c53ea51-d578-46fa-a4c0-fd0a92809a60,Stream for Office 365
+Microsoft 365 Business Basic (no Teams),Microsoft_365_Business_Basic_(no Teams),21502a13-c8dc-4744-be9c-177fd9d2eafc,SWAY,a23b959c-7ce8-4e57-9140-b90eb88a9e97,Sway
+Microsoft 365 Business Basic (no Teams),Microsoft_365_Business_Basic_(no Teams),21502a13-c8dc-4744-be9c-177fd9d2eafc,BPOS_S_TODO_1,5e62787c-c316-451f-b873-1d05acd4d12c,To-Do (Plan 1)
+Microsoft 365 Business Basic (no Teams),Microsoft_365_Business_Basic_(no Teams),21502a13-c8dc-4744-be9c-177fd9d2eafc,VIVAENGAGE_CORE,a82fbf69-b4d7-49f4-83a6-915b2cf354f4,Viva Engage Core
+Microsoft 365 Business Basic (no Teams),Microsoft_365_Business_Basic_(no Teams),21502a13-c8dc-4744-be9c-177fd9d2eafc,VIVA_LEARNING_SEEDED,b76fb638-6ba6-402a-b9f9-83d28acb3d86,Viva Learning Seeded
+Microsoft 365 Business Basic (no Teams),Microsoft_365_Business_Basic_(no Teams),21502a13-c8dc-4744-be9c-177fd9d2eafc,WHITEBOARD_PLAN1,b8afc642-032e-4de5-8c0a-507a7bba7e5d,Whiteboard (Plan 1)
+Microsoft 365 Business Basic (no Teams),Microsoft_365_Business_Basic_(no Teams),21502a13-c8dc-4744-be9c-177fd9d2eafc,YAMMER_ENTERPRISE,7547a3fe-08ee-4ccb-b430-5077c5041653,Yammer Enterprise
+Microsoft 365 Business Basic (no Teams),Microsoft_365_Business_Basic_(no Teams),21502a13-c8dc-4744-be9c-177fd9d2eafc,DYN365_CDS_O365_P1,40b010bb-0b69-4654-ac5e-ba161433f4b4,Common Data Service
+Microsoft 365 Business Basic (no Teams),Microsoft_365_Business_Basic_(no Teams),21502a13-c8dc-4744-be9c-177fd9d2eafc,RMS_S_BASIC,31cf2cfc-6b0d-4adc-a336-88b724ed8122,Microsoft Azure Rights Management Service
+Microsoft 365 Business Basic (no Teams),Microsoft_365_Business_Basic_(no Teams),21502a13-c8dc-4744-be9c-177fd9d2eafc,POWERAPPS_O365_P1,92f7a6f3-b89b-4bbd-8c30-809e6da5ad1c,Power Apps for Office 365
+Microsoft 365 Business Basic (no Teams),Microsoft_365_Business_Basic_(no Teams),21502a13-c8dc-4744-be9c-177fd9d2eafc,FLOW_O365_P1,0f9b09cb-62d1-4ff4-9129-43f4996f83f4,Power Automate for Office 365
+Microsoft 365 Business Basic (no Teams),Microsoft_365_Business_Basic_(no Teams),21502a13-c8dc-4744-be9c-177fd9d2eafc,POWER_VIRTUAL_AGENTS_O365_P1,0683001c-0492-4d59-9515-d9a6426b5813,Power Virtual Agents for Office 365
 Microsoft 365 Business Basic EEA (no Teams),Microsoft_365_Business_Basic_EEA_(no_Teams),b1f3042b-a390-4b56-ab61-b88e7e767a97,CDS_O365_P1,bed136c6-b799-4462-824d-fc045d3a9d25,Common Data Service for Teams
 Microsoft 365 Business Basic EEA (no Teams),Microsoft_365_Business_Basic_EEA_(no_Teams),b1f3042b-a390-4b56-ab61-b88e7e767a97,EXCHANGE_S_STANDARD,9aaf7827-d63c-4b61-89c3-182f06f82e5c,Exchange Online (Plan 1)
 Microsoft 365 Business Basic EEA (no Teams),Microsoft_365_Business_Basic_EEA_(no_Teams),b1f3042b-a390-4b56-ab61-b88e7e767a97,MYANALYTICS_P2,33c4f319-9bdd-48d6-9c4d-410b750a4a5a,Insights by MyAnalytics
@@ -1221,6 +1277,41 @@ Microsoft 365 Business Standard,O365_BUSINESS_PREMIUM,f245ecc8-75af-4f8e-b61f-27
 Microsoft 365 Business Standard,O365_BUSINESS_PREMIUM,f245ecc8-75af-4f8e-b61f-27d8114de5f3,POWERAPPS_O365_P1,92f7a6f3-b89b-4bbd-8c30-809e6da5ad1c,Power Apps for Office 365
 Microsoft 365 Business Standard,O365_BUSINESS_PREMIUM,f245ecc8-75af-4f8e-b61f-27d8114de5f3,FLOW_O365_P1,0f9b09cb-62d1-4ff4-9129-43f4996f83f4,Power Automate for Office 365
 Microsoft 365 Business Standard,O365_BUSINESS_PREMIUM,f245ecc8-75af-4f8e-b61f-27d8114de5f3,POWER_VIRTUAL_AGENTS_O365_P2,041fe683-03e4-45b6-b1af-c0cdc516daee,Power Virtual Agents for Office 365
+Microsoft 365 Business Standard (no Teams),MICROSOFT_365_BUSINESS_STANDARD_NO_TEAMS,5a1c7b8d-0739-4ca8-bf69-ec87e69133ac,MESH_AVATARS_FOR_TEAMS,dcf9d2f4-772e-4434-b757-77a453cfbc02,Avatars for Teams
+Microsoft 365 Business Standard (no Teams),MICROSOFT_365_BUSINESS_STANDARD_NO_TEAMS,5a1c7b8d-0739-4ca8-bf69-ec87e69133ac,MESH_AVATARS_ADDITIONAL_FOR_TEAMS,3efbd4ed-8958-4824-8389-1321f8730af8,Avatars for Teams (additional)
+Microsoft 365 Business Standard (no Teams),MICROSOFT_365_BUSINESS_STANDARD_NO_TEAMS,5a1c7b8d-0739-4ca8-bf69-ec87e69133ac,CDS_O365_P2,95b76021-6a53-4741-ab8b-1d1f3d66a95a,Common Data Service for Teams
+Microsoft 365 Business Standard (no Teams),MICROSOFT_365_BUSINESS_STANDARD_NO_TEAMS,5a1c7b8d-0739-4ca8-bf69-ec87e69133ac,EXCHANGE_S_STANDARD,9aaf7827-d63c-4b61-89c3-182f06f82e5c,Exchange Online (Plan 1)
+Microsoft 365 Business Standard (no Teams),MICROSOFT_365_BUSINESS_STANDARD_NO_TEAMS,5a1c7b8d-0739-4ca8-bf69-ec87e69133ac,GRAPH_CONNECTORS_SEARCH_INDEX,a6520331-d7d4-4276-95f5-15c0933bc757,Graph Connectors Search with Index
+Microsoft 365 Business Standard (no Teams),MICROSOFT_365_BUSINESS_STANDARD_NO_TEAMS,5a1c7b8d-0739-4ca8-bf69-ec87e69133ac,MESH_IMMERSIVE_FOR_TEAMS,f0ff6ac6-297d-49cd-be34-6dfef97f0c28,Immersive spaces for Teams
+Microsoft 365 Business Standard (no Teams),MICROSOFT_365_BUSINESS_STANDARD_NO_TEAMS,5a1c7b8d-0739-4ca8-bf69-ec87e69133ac,MYANALYTICS_P2,33c4f319-9bdd-48d6-9c4d-410b750a4a5a,Insights by MyAnalytics
+Microsoft 365 Business Standard (no Teams),MICROSOFT_365_BUSINESS_STANDARD_NO_TEAMS,5a1c7b8d-0739-4ca8-bf69-ec87e69133ac,OFFICE_BUSINESS,094e7854-93fc-4d55-b2c0-3ab5369ebdc1,Microsoft 365 Apps for Business
+Microsoft 365 Business Standard (no Teams),MICROSOFT_365_BUSINESS_STANDARD_NO_TEAMS,5a1c7b8d-0739-4ca8-bf69-ec87e69133ac,M365_LIGHTHOUSE_CUSTOMER_PLAN1,6f23d6a9-adbf-481c-8538-b4c095654487,Microsoft 365 Lighthouse (Plan 1)
+Microsoft 365 Business Standard (no Teams),MICROSOFT_365_BUSINESS_STANDARD_NO_TEAMS,5a1c7b8d-0739-4ca8-bf69-ec87e69133ac,MICROSOFTBOOKINGS,199a5c09-e0ca-4e37-8f7c-b05d533e1ea2,Microsoft Bookings
+Microsoft 365 Business Standard (no Teams),MICROSOFT_365_BUSINESS_STANDARD_NO_TEAMS,5a1c7b8d-0739-4ca8-bf69-ec87e69133ac,CLIPCHAMP,a1ace008-72f3-4ea0-8dac-33b3a23a2472,Microsoft Clipchamp
+Microsoft 365 Business Standard (no Teams),MICROSOFT_365_BUSINESS_STANDARD_NO_TEAMS,5a1c7b8d-0739-4ca8-bf69-ec87e69133ac,FORMS_PLAN_E1,159f4cd6-e380-449f-a816-af1a9ef76344,Microsoft Forms (Plan E1)
+Microsoft 365 Business Standard (no Teams),MICROSOFT_365_BUSINESS_STANDARD_NO_TEAMS,5a1c7b8d-0739-4ca8-bf69-ec87e69133ac,MICROSOFT_LOOP,c4b8c31a-fb44-4c65-9837-a21f55fcabda,Microsoft Loop
+Microsoft 365 Business Standard (no Teams),MICROSOFT_365_BUSINESS_STANDARD_NO_TEAMS,5a1c7b8d-0739-4ca8-bf69-ec87e69133ac,PROJECTWORKMANAGEMENT,b737dad2-2f6c-4c65-90e3-ca563267e8b9,Microsoft Planner
+Microsoft 365 Business Standard (no Teams),MICROSOFT_365_BUSINESS_STANDARD_NO_TEAMS,5a1c7b8d-0739-4ca8-bf69-ec87e69133ac,MICROSOFT_SEARCH,94065c59-bc8e-4e8b-89e5-5138d471eaff,Microsoft Search
+Microsoft 365 Business Standard (no Teams),MICROSOFT_365_BUSINESS_STANDARD_NO_TEAMS,5a1c7b8d-0739-4ca8-bf69-ec87e69133ac,Deskless,8c7d2df8-86f0-4902-b2ed-a0458298f3b3,Microsoft StaffHub
+Microsoft 365 Business Standard (no Teams),MICROSOFT_365_BUSINESS_STANDARD_NO_TEAMS,5a1c7b8d-0739-4ca8-bf69-ec87e69133ac,INTUNE_O365,882e1d05-acd1-4ccb-8708-6ee03664b117,Mobile Device Management for Office 365
+Microsoft 365 Business Standard (no Teams),MICROSOFT_365_BUSINESS_STANDARD_NO_TEAMS,5a1c7b8d-0739-4ca8-bf69-ec87e69133ac,Nucleus,db4d623d-b514-490b-b7ef-8885eee514de,Nucleus
+Microsoft 365 Business Standard (no Teams),MICROSOFT_365_BUSINESS_STANDARD_NO_TEAMS,5a1c7b8d-0739-4ca8-bf69-ec87e69133ac,SHAREPOINTWAC,e95bec33-7c88-4a70-8e19-b10bd9d0c014,Office for the Web
+Microsoft 365 Business Standard (no Teams),MICROSOFT_365_BUSINESS_STANDARD_NO_TEAMS,5a1c7b8d-0739-4ca8-bf69-ec87e69133ac,PLACES_CORE,1fe6227d-3e01-46d0-9510-0acad4ff6e94,Places Core
+Microsoft 365 Business Standard (no Teams),MICROSOFT_365_BUSINESS_STANDARD_NO_TEAMS,5a1c7b8d-0739-4ca8-bf69-ec87e69133ac,PROJECT_O365_P2,31b4e2fc-4cd6-4e7d-9c1b-41407303bd66,Project for Office (Plan E3)
+Microsoft 365 Business Standard (no Teams),MICROSOFT_365_BUSINESS_STANDARD_NO_TEAMS,5a1c7b8d-0739-4ca8-bf69-ec87e69133ac,Bing_Chat_Enterprise,0d0c0d31-fae7-41f2-b909-eaf4d7f26dba,RETIRED - Commercial data protection for Microsoft Copilot
+Microsoft 365 Business Standard (no Teams),MICROSOFT_365_BUSINESS_STANDARD_NO_TEAMS,5a1c7b8d-0739-4ca8-bf69-ec87e69133ac,SHAREPOINTSTANDARD,c7699d2e-19aa-44de-8edf-1736da088ca1,SharePoint (Plan 1)
+Microsoft 365 Business Standard (no Teams),MICROSOFT_365_BUSINESS_STANDARD_NO_TEAMS,5a1c7b8d-0739-4ca8-bf69-ec87e69133ac,MCOSTANDARD,0feaeb32-d00e-4d66-bd5a-43b5b83db82c,Skype for Business Online (Plan 2)
+Microsoft 365 Business Standard (no Teams),MICROSOFT_365_BUSINESS_STANDARD_NO_TEAMS,5a1c7b8d-0739-4ca8-bf69-ec87e69133ac,STREAM_O365_SMB,3c53ea51-d578-46fa-a4c0-fd0a92809a60,Stream for Office 365
+Microsoft 365 Business Standard (no Teams),MICROSOFT_365_BUSINESS_STANDARD_NO_TEAMS,5a1c7b8d-0739-4ca8-bf69-ec87e69133ac,SWAY,a23b959c-7ce8-4e57-9140-b90eb88a9e97,Sway
+Microsoft 365 Business Standard (no Teams),MICROSOFT_365_BUSINESS_STANDARD_NO_TEAMS,5a1c7b8d-0739-4ca8-bf69-ec87e69133ac,BPOS_S_TODO_1,5e62787c-c316-451f-b873-1d05acd4d12c,To-Do (Plan 1)
+Microsoft 365 Business Standard (no Teams),MICROSOFT_365_BUSINESS_STANDARD_NO_TEAMS,5a1c7b8d-0739-4ca8-bf69-ec87e69133ac,VIVAENGAGE_CORE,a82fbf69-b4d7-49f4-83a6-915b2cf354f4,Viva Engage Core
+Microsoft 365 Business Standard (no Teams),MICROSOFT_365_BUSINESS_STANDARD_NO_TEAMS,5a1c7b8d-0739-4ca8-bf69-ec87e69133ac,VIVA_LEARNING_SEEDED,b76fb638-6ba6-402a-b9f9-83d28acb3d86,Viva Learning Seeded
+Microsoft 365 Business Standard (no Teams),MICROSOFT_365_BUSINESS_STANDARD_NO_TEAMS,5a1c7b8d-0739-4ca8-bf69-ec87e69133ac,WHITEBOARD_PLAN1,b8afc642-032e-4de5-8c0a-507a7bba7e5d,Whiteboard (Plan 1)
+Microsoft 365 Business Standard (no Teams),MICROSOFT_365_BUSINESS_STANDARD_NO_TEAMS,5a1c7b8d-0739-4ca8-bf69-ec87e69133ac,DYN365_CDS_O365_P2,4ff01e01-1ba7-4d71-8cf8-ce96c3bbcf14,Common Data Service
+Microsoft 365 Business Standard (no Teams),MICROSOFT_365_BUSINESS_STANDARD_NO_TEAMS,5a1c7b8d-0739-4ca8-bf69-ec87e69133ac,RMS_S_BASIC,31cf2cfc-6b0d-4adc-a336-88b724ed8122,Microsoft Azure Rights Management Service
+Microsoft 365 Business Standard (no Teams),MICROSOFT_365_BUSINESS_STANDARD_NO_TEAMS,5a1c7b8d-0739-4ca8-bf69-ec87e69133ac,POWERAPPS_O365_P1,92f7a6f3-b89b-4bbd-8c30-809e6da5ad1c,Power Apps for Office 365
+Microsoft 365 Business Standard (no Teams),MICROSOFT_365_BUSINESS_STANDARD_NO_TEAMS,5a1c7b8d-0739-4ca8-bf69-ec87e69133ac,FLOW_O365_P1,0f9b09cb-62d1-4ff4-9129-43f4996f83f4,Power Automate for Office 365
+Microsoft 365 Business Standard (no Teams),MICROSOFT_365_BUSINESS_STANDARD_NO_TEAMS,5a1c7b8d-0739-4ca8-bf69-ec87e69133ac,POWER_VIRTUAL_AGENTS_O365_P2,041fe683-03e4-45b6-b1af-c0cdc516daee,Power Virtual Agents for Office 365
 Microsoft 365 Business Standard EEA (no Teams),Office_365_w/o_Teams_Bundle_Business_Standard,c1f79c29-5d7a-4bec-a2c1-1a76774864c0,DYN365BC_MS_INVOICING,39b5c996-467e-4e60-bd62-46066f572726,Microsoft Invoicing
 Microsoft 365 Business Standard EEA (no Teams),Office_365_w/o_Teams_Bundle_Business_Standard,c1f79c29-5d7a-4bec-a2c1-1a76774864c0,Bing_Chat_Enterprise,0d0c0d31-fae7-41f2-b909-eaf4d7f26dba,Commercial data protection for Microsoft Copilot
 Microsoft 365 Business Standard EEA (no Teams),Office_365_w/o_Teams_Bundle_Business_Standard,c1f79c29-5d7a-4bec-a2c1-1a76774864c0,CDS_O365_P2,95b76021-6a53-4741-ab8b-1d1f3d66a95a,Common Data Service for Teams
@@ -1357,6 +1448,120 @@ Microsoft 365 Business Premium,SPB,cbdc14ab-d96c-4c30-b9f4-6ada7cdc1d46,STREAM_O
 Microsoft 365 Business Premium,SPB,cbdc14ab-d96c-4c30-b9f4-6ada7cdc1d46,POWERAPPS_O365_P1,92f7a6f3-b89b-4bbd-8c30-809e6da5ad1c,Power Apps for Office 365
 Microsoft 365 Business Premium,SPB,cbdc14ab-d96c-4c30-b9f4-6ada7cdc1d46,FLOW_O365_P1,0f9b09cb-62d1-4ff4-9129-43f4996f83f4,Power Automate for Office 365
 Microsoft 365 Business Premium,SPB,cbdc14ab-d96c-4c30-b9f4-6ada7cdc1d46,POWER_VIRTUAL_AGENTS_O365_P3,ded3d325-1bdc-453e-8432-5bac26d7a014,Power Virtual Agents for Office 365
+Microsoft 365 Business Premium (no Teams),Microsoft_365_ Business_ Premium_(no Teams),00e1ec7b-e4a3-40d1-9441-b69b597ab222,EXCHANGE_S_FOUNDATION,113feb6c-3fe4-4440-bddc-54d774bf0318,Exchange Foundation
+Microsoft 365 Business Premium (no Teams),Microsoft_365_ Business_ Premium_(no Teams),00e1ec7b-e4a3-40d1-9441-b69b597ab222,DYN365BC_MS_INVOICING,39b5c996-467e-4e60-bd62-46066f572726,Microsoft Invoicing
+Microsoft 365 Business Premium (no Teams),Microsoft_365_ Business_ Premium_(no Teams),00e1ec7b-e4a3-40d1-9441-b69b597ab222,MESH_AVATARS_FOR_TEAMS,dcf9d2f4-772e-4434-b757-77a453cfbc02,Avatars for Teams
+Microsoft 365 Business Premium (no Teams),Microsoft_365_ Business_ Premium_(no Teams),00e1ec7b-e4a3-40d1-9441-b69b597ab222,MESH_AVATARS_ADDITIONAL_FOR_TEAMS,3efbd4ed-8958-4824-8389-1321f8730af8,Avatars for Teams (additional)
+Microsoft 365 Business Premium (no Teams),Microsoft_365_ Business_ Premium_(no Teams),00e1ec7b-e4a3-40d1-9441-b69b597ab222,RMS_S_ENTERPRISE,bea4c11e-220a-4e6d-8eb8-8ea15d019f90,Azure Rights Management
+Microsoft 365 Business Premium (no Teams),Microsoft_365_ Business_ Premium_(no Teams),00e1ec7b-e4a3-40d1-9441-b69b597ab222,CDS_O365_P3,afa73018-811e-46e9-988f-f75d2b1b8430,Common Data Service for Teams
+Microsoft 365 Business Premium (no Teams),Microsoft_365_ Business_ Premium_(no Teams),00e1ec7b-e4a3-40d1-9441-b69b597ab222,BPOS_S_DlpAddOn,9bec7e34-c9fa-40b7-a9d1-bd6d1165c7ed,Data Loss Prevention
+Microsoft 365 Business Premium (no Teams),Microsoft_365_ Business_ Premium_(no Teams),00e1ec7b-e4a3-40d1-9441-b69b597ab222,EXCHANGE_S_STANDARD,9aaf7827-d63c-4b61-89c3-182f06f82e5c,Exchange Online (Plan 1)
+Microsoft 365 Business Premium (no Teams),Microsoft_365_ Business_ Premium_(no Teams),00e1ec7b-e4a3-40d1-9441-b69b597ab222,EXCHANGE_S_ARCHIVE_ADDON,176a09a6-7ec5-4039-ac02-b2791c6ba793,Exchange Online Archiving
+Microsoft 365 Business Premium (no Teams),Microsoft_365_ Business_ Premium_(no Teams),00e1ec7b-e4a3-40d1-9441-b69b597ab222,GRAPH_CONNECTORS_SEARCH_INDEX,a6520331-d7d4-4276-95f5-15c0933bc757,Graph Connectors Search with Index
+Microsoft 365 Business Premium (no Teams),Microsoft_365_ Business_ Premium_(no Teams),00e1ec7b-e4a3-40d1-9441-b69b597ab222,MESH_IMMERSIVE_FOR_TEAMS,f0ff6ac6-297d-49cd-be34-6dfef97f0c28,Immersive spaces for Teams
+Microsoft 365 Business Premium (no Teams),Microsoft_365_ Business_ Premium_(no Teams),00e1ec7b-e4a3-40d1-9441-b69b597ab222,MYANALYTICS_P2,33c4f319-9bdd-48d6-9c4d-410b750a4a5a,Insights by MyAnalytics
+Microsoft 365 Business Premium (no Teams),Microsoft_365_ Business_ Premium_(no Teams),00e1ec7b-e4a3-40d1-9441-b69b597ab222,OFFICE_BUSINESS,094e7854-93fc-4d55-b2c0-3ab5369ebdc1,Microsoft 365 Apps for Business
+Microsoft 365 Business Premium (no Teams),Microsoft_365_ Business_ Premium_(no Teams),00e1ec7b-e4a3-40d1-9441-b69b597ab222,M365_LIGHTHOUSE_CUSTOMER_PLAN1,6f23d6a9-adbf-481c-8538-b4c095654487,Microsoft 365 Lighthouse (Plan 1)
+Microsoft 365 Business Premium (no Teams),Microsoft_365_ Business_ Premium_(no Teams),00e1ec7b-e4a3-40d1-9441-b69b597ab222,M365_LIGHTHOUSE_PARTNER_PLAN1,d55411c9-cfff-40a9-87c7-240f14df7da5,Microsoft 365 Lighthouse (Plan 2)
+Microsoft 365 Business Premium (no Teams),Microsoft_365_ Business_ Premium_(no Teams),00e1ec7b-e4a3-40d1-9441-b69b597ab222,MICROSOFTBOOKINGS,199a5c09-e0ca-4e37-8f7c-b05d533e1ea2,Microsoft Bookings
+Microsoft 365 Business Premium (no Teams),Microsoft_365_ Business_ Premium_(no Teams),00e1ec7b-e4a3-40d1-9441-b69b597ab222,CLIPCHAMP,a1ace008-72f3-4ea0-8dac-33b3a23a2472,Microsoft Clipchamp
+Microsoft 365 Business Premium (no Teams),Microsoft_365_ Business_ Premium_(no Teams),00e1ec7b-e4a3-40d1-9441-b69b597ab222,MDE_SMB,bfc1bbd9-981b-4f71-9b82-17c35fd0e2a4,Microsoft Defender for Business
+Microsoft 365 Business Premium (no Teams),Microsoft_365_ Business_ Premium_(no Teams),00e1ec7b-e4a3-40d1-9441-b69b597ab222,ATP_ENTERPRISE,f20fedf3-f3c3-43c3-8267-2bfdd51c0939,Microsoft Defender for Office 365 (Plan 1)
+Microsoft 365 Business Premium (no Teams),Microsoft_365_ Business_ Premium_(no Teams),00e1ec7b-e4a3-40d1-9441-b69b597ab222,FORMS_PLAN_E1,159f4cd6-e380-449f-a816-af1a9ef76344,Microsoft Forms (Plan E1)
+Microsoft 365 Business Premium (no Teams),Microsoft_365_ Business_ Premium_(no Teams),00e1ec7b-e4a3-40d1-9441-b69b597ab222,INTUNE_SMBIZ,8e9ff0ff-aa7a-4b20-83c1-2f636b600ac2,Microsoft Intune
+Microsoft 365 Business Premium (no Teams),Microsoft_365_ Business_ Premium_(no Teams),00e1ec7b-e4a3-40d1-9441-b69b597ab222,KAIZALA_O365_P2,54fc630f-5a40-48ee-8965-af0503c1386e,Microsoft Kaizala Pro
+Microsoft 365 Business Premium (no Teams),Microsoft_365_ Business_ Premium_(no Teams),00e1ec7b-e4a3-40d1-9441-b69b597ab222,MICROSOFT_LOOP,c4b8c31a-fb44-4c65-9837-a21f55fcabda,Microsoft Loop
+Microsoft 365 Business Premium (no Teams),Microsoft_365_ Business_ Premium_(no Teams),00e1ec7b-e4a3-40d1-9441-b69b597ab222,PROJECTWORKMANAGEMENT,b737dad2-2f6c-4c65-90e3-ca563267e8b9,Microsoft Planner
+Microsoft 365 Business Premium (no Teams),Microsoft_365_ Business_ Premium_(no Teams),00e1ec7b-e4a3-40d1-9441-b69b597ab222,MICROSOFT_SEARCH,94065c59-bc8e-4e8b-89e5-5138d471eaff,Microsoft Search
+Microsoft 365 Business Premium (no Teams),Microsoft_365_ Business_ Premium_(no Teams),00e1ec7b-e4a3-40d1-9441-b69b597ab222,Deskless,8c7d2df8-86f0-4902-b2ed-a0458298f3b3,Microsoft StaffHub
+Microsoft 365 Business Premium (no Teams),Microsoft_365_ Business_ Premium_(no Teams),00e1ec7b-e4a3-40d1-9441-b69b597ab222,INTUNE_O365,882e1d05-acd1-4ccb-8708-6ee03664b117,Mobile Device Management for Office 365
+Microsoft 365 Business Premium (no Teams),Microsoft_365_ Business_ Premium_(no Teams),00e1ec7b-e4a3-40d1-9441-b69b597ab222,Nucleus,db4d623d-b514-490b-b7ef-8885eee514de,Nucleus
+Microsoft 365 Business Premium (no Teams),Microsoft_365_ Business_ Premium_(no Teams),00e1ec7b-e4a3-40d1-9441-b69b597ab222,SHAREPOINTWAC,e95bec33-7c88-4a70-8e19-b10bd9d0c014,Office for the Web
+Microsoft 365 Business Premium (no Teams),Microsoft_365_ Business_ Premium_(no Teams),00e1ec7b-e4a3-40d1-9441-b69b597ab222,OFFICE_SHARED_COMPUTER_ACTIVATION,276d6e8a-f056-4f70-b7e8-4fc27f79f809,Office Shared Computer Activation
+Microsoft 365 Business Premium (no Teams),Microsoft_365_ Business_ Premium_(no Teams),00e1ec7b-e4a3-40d1-9441-b69b597ab222,PLACES_CORE,1fe6227d-3e01-46d0-9510-0acad4ff6e94,Places Core
+Microsoft 365 Business Premium (no Teams),Microsoft_365_ Business_ Premium_(no Teams),00e1ec7b-e4a3-40d1-9441-b69b597ab222,PROJECT_O365_P3,b21a6b06-1988-436e-a07b-51ec6d9f52ad,Project for Office (Plan E5)
+Microsoft 365 Business Premium (no Teams),Microsoft_365_ Business_ Premium_(no Teams),00e1ec7b-e4a3-40d1-9441-b69b597ab222,PURVIEW_DISCOVERY,c948ea65-2053-4a5a-8a62-9eaaaf11b522,Purview Discovery
+Microsoft 365 Business Premium (no Teams),Microsoft_365_ Business_ Premium_(no Teams),00e1ec7b-e4a3-40d1-9441-b69b597ab222,Bing_Chat_Enterprise,0d0c0d31-fae7-41f2-b909-eaf4d7f26dba,RETIRED - Commercial data protection for Microsoft Copilot
+Microsoft 365 Business Premium (no Teams),Microsoft_365_ Business_ Premium_(no Teams),00e1ec7b-e4a3-40d1-9441-b69b597ab222,O365_SB_Relationship_Management,5bfe124c-bbdc-4494-8835-f1297d457d79,RETIRED - Outlook Customer Manager
+Microsoft 365 Business Premium (no Teams),Microsoft_365_ Business_ Premium_(no Teams),00e1ec7b-e4a3-40d1-9441-b69b597ab222,SHAREPOINTSTANDARD,c7699d2e-19aa-44de-8edf-1736da088ca1,SharePoint (Plan 1)
+Microsoft 365 Business Premium (no Teams),Microsoft_365_ Business_ Premium_(no Teams),00e1ec7b-e4a3-40d1-9441-b69b597ab222,MCOSTANDARD,0feaeb32-d00e-4d66-bd5a-43b5b83db82c,Skype for Business Online (Plan 2)
+Microsoft 365 Business Premium (no Teams),Microsoft_365_ Business_ Premium_(no Teams),00e1ec7b-e4a3-40d1-9441-b69b597ab222,SWAY,a23b959c-7ce8-4e57-9140-b90eb88a9e97,Sway
+Microsoft 365 Business Premium (no Teams),Microsoft_365_ Business_ Premium_(no Teams),00e1ec7b-e4a3-40d1-9441-b69b597ab222,BPOS_S_TODO_1,5e62787c-c316-451f-b873-1d05acd4d12c,To-Do (Plan 1)
+Microsoft 365 Business Premium (no Teams),Microsoft_365_ Business_ Premium_(no Teams),00e1ec7b-e4a3-40d1-9441-b69b597ab222,VIVAENGAGE_CORE,a82fbf69-b4d7-49f4-83a6-915b2cf354f4,Viva Engage Core
+Microsoft 365 Business Premium (no Teams),Microsoft_365_ Business_ Premium_(no Teams),00e1ec7b-e4a3-40d1-9441-b69b597ab222,VIVA_LEARNING_SEEDED,b76fb638-6ba6-402a-b9f9-83d28acb3d86,Viva Learning Seeded
+Microsoft 365 Business Premium (no Teams),Microsoft_365_ Business_ Premium_(no Teams),00e1ec7b-e4a3-40d1-9441-b69b597ab222,WHITEBOARD_PLAN1,b8afc642-032e-4de5-8c0a-507a7bba7e5d,Whiteboard (Plan 1)
+Microsoft 365 Business Premium (no Teams),Microsoft_365_ Business_ Premium_(no Teams),00e1ec7b-e4a3-40d1-9441-b69b597ab222,YAMMER_ENTERPRISE,7547a3fe-08ee-4ccb-b430-5077c5041653,Yammer Enterprise
+Microsoft 365 Business Premium (no Teams),Microsoft_365_ Business_ Premium_(no Teams),00e1ec7b-e4a3-40d1-9441-b69b597ab222,UNIVERSAL_PRINT_01,795f6fe0-cc4d-4773-b050-5dde4dc704c9,Universal Print
+Microsoft 365 Business Premium (no Teams),Microsoft_365_ Business_ Premium_(no Teams),00e1ec7b-e4a3-40d1-9441-b69b597ab222,WINBIZ,8e229017-d77b-43d5-9305-903395523b99,Windows 10/11 Business
+Microsoft 365 Business Premium (no Teams),Microsoft_365_ Business_ Premium_(no Teams),00e1ec7b-e4a3-40d1-9441-b69b597ab222,WINDOWSUPDATEFORBUSINESS_DEPLOYMENTSERVICE,7bf960f6-2cd9-443a-8046-5dbff9558365,Windows Update for Business Deployment Service
+Microsoft 365 Business Premium (no Teams),Microsoft_365_ Business_ Premium_(no Teams),00e1ec7b-e4a3-40d1-9441-b69b597ab222,AAD_SMB,de377cbc-0019-4ec2-b77c-3f223947e102,Azure Active Directory
+Microsoft 365 Business Premium (no Teams),Microsoft_365_ Business_ Premium_(no Teams),00e1ec7b-e4a3-40d1-9441-b69b597ab222,RMS_S_PREMIUM,6c57d4b6-3b23-47a5-9bc9-69f17b4947b3,Azure Information Protection Premium P1
+Microsoft 365 Business Premium (no Teams),Microsoft_365_ Business_ Premium_(no Teams),00e1ec7b-e4a3-40d1-9441-b69b597ab222,DYN365_CDS_O365_P3,28b0fa46-c39a-4188-89e2-58e979a6b014,Common Data Service
+Microsoft 365 Business Premium (no Teams),Microsoft_365_ Business_ Premium_(no Teams),00e1ec7b-e4a3-40d1-9441-b69b597ab222,MFA_PREMIUM,8a256a2b-b617-496d-b51b-e76466e88db0,Microsoft Azure Multi-Factor Authentication
+Microsoft 365 Business Premium (no Teams),Microsoft_365_ Business_ Premium_(no Teams),00e1ec7b-e4a3-40d1-9441-b69b597ab222,ADALLOM_S_DISCOVERY,932ad362-64a8-4783-9106-97849a1a30b9,Microsoft Defender for Cloud Apps Discovery
+Microsoft 365 Business Premium (no Teams),Microsoft_365_ Business_ Premium_(no Teams),00e1ec7b-e4a3-40d1-9441-b69b597ab222,AAD_PREMIUM,41781fb2-bc02-4b7c-bd55-b576c07bb09d,Microsoft Entra ID P1
+Microsoft 365 Business Premium (no Teams),Microsoft_365_ Business_ Premium_(no Teams),00e1ec7b-e4a3-40d1-9441-b69b597ab222,INTUNE_A,c1ec4a95-1f05-45b3-a911-aa3fa01094f5,Microsoft Intune Plan 1
+Microsoft 365 Business Premium (no Teams),Microsoft_365_ Business_ Premium_(no Teams),00e1ec7b-e4a3-40d1-9441-b69b597ab222,STREAM_O365_E1,743dd19e-1ce3-4c62-a3ad-49ba8f63a2f6,Microsoft Stream for Office 365 E1
+Microsoft 365 Business Premium (no Teams),Microsoft_365_ Business_ Premium_(no Teams),00e1ec7b-e4a3-40d1-9441-b69b597ab222,POWERAPPS_O365_P1,92f7a6f3-b89b-4bbd-8c30-809e6da5ad1c,Power Apps for Office 365
+Microsoft 365 Business Premium (no Teams),Microsoft_365_ Business_ Premium_(no Teams),00e1ec7b-e4a3-40d1-9441-b69b597ab222,FLOW_O365_P1,0f9b09cb-62d1-4ff4-9129-43f4996f83f4,Power Automate for Office 365
+Microsoft 365 Business Premium (no Teams),Microsoft_365_ Business_ Premium_(no Teams),00e1ec7b-e4a3-40d1-9441-b69b597ab222,POWER_VIRTUAL_AGENTS_O365_P3,ded3d325-1bdc-453e-8432-5bac26d7a014,Power Virtual Agents for Office 365
+Microsoft 365 Business Premium Donation,Microsoft_365_Business_Premium_Donation_(Non_Profit_Pricing),24c35284-d768-4e53-84d9-b7ae73dddf69,DYN365BC_MS_INVOICING,39b5c996-467e-4e60-bd62-46066f572726,Microsoft Invoicing
+Microsoft 365 Business Premium Donation,Microsoft_365_Business_Premium_Donation_(Non_Profit_Pricing),24c35284-d768-4e53-84d9-b7ae73dddf69,MESH_AVATARS_FOR_TEAMS,dcf9d2f4-772e-4434-b757-77a453cfbc02,Avatars for Teams
+Microsoft 365 Business Premium Donation,Microsoft_365_Business_Premium_Donation_(Non_Profit_Pricing),24c35284-d768-4e53-84d9-b7ae73dddf69,MESH_AVATARS_ADDITIONAL_FOR_TEAMS,3efbd4ed-8958-4824-8389-1321f8730af8,Avatars for Teams (additional)
+Microsoft 365 Business Premium Donation,Microsoft_365_Business_Premium_Donation_(Non_Profit_Pricing),24c35284-d768-4e53-84d9-b7ae73dddf69,RMS_S_ENTERPRISE,bea4c11e-220a-4e6d-8eb8-8ea15d019f90,Azure Rights Management
+Microsoft 365 Business Premium Donation,Microsoft_365_Business_Premium_Donation_(Non_Profit_Pricing),24c35284-d768-4e53-84d9-b7ae73dddf69,CDS_O365_P3,afa73018-811e-46e9-988f-f75d2b1b8430,Common Data Service for Teams
+Microsoft 365 Business Premium Donation,Microsoft_365_Business_Premium_Donation_(Non_Profit_Pricing),24c35284-d768-4e53-84d9-b7ae73dddf69,BPOS_S_DlpAddOn,9bec7e34-c9fa-40b7-a9d1-bd6d1165c7ed,Data Loss Prevention
+Microsoft 365 Business Premium Donation,Microsoft_365_Business_Premium_Donation_(Non_Profit_Pricing),24c35284-d768-4e53-84d9-b7ae73dddf69,EXCHANGE_S_FOUNDATION,113feb6c-3fe4-4440-bddc-54d774bf0318,Exchange Foundation
+Microsoft 365 Business Premium Donation,Microsoft_365_Business_Premium_Donation_(Non_Profit_Pricing),24c35284-d768-4e53-84d9-b7ae73dddf69,EXCHANGE_S_STANDARD,9aaf7827-d63c-4b61-89c3-182f06f82e5c,Exchange Online (Plan 1)
+Microsoft 365 Business Premium Donation,Microsoft_365_Business_Premium_Donation_(Non_Profit_Pricing),24c35284-d768-4e53-84d9-b7ae73dddf69,EXCHANGE_S_ARCHIVE_ADDON,176a09a6-7ec5-4039-ac02-b2791c6ba793,Exchange Online Archiving
+Microsoft 365 Business Premium Donation,Microsoft_365_Business_Premium_Donation_(Non_Profit_Pricing),24c35284-d768-4e53-84d9-b7ae73dddf69,GRAPH_CONNECTORS_SEARCH_INDEX,a6520331-d7d4-4276-95f5-15c0933bc757,Graph Connectors Search with Index
+Microsoft 365 Business Premium Donation,Microsoft_365_Business_Premium_Donation_(Non_Profit_Pricing),24c35284-d768-4e53-84d9-b7ae73dddf69,MESH_IMMERSIVE_FOR_TEAMS,f0ff6ac6-297d-49cd-be34-6dfef97f0c28,Immersive spaces for Teams
+Microsoft 365 Business Premium Donation,Microsoft_365_Business_Premium_Donation_(Non_Profit_Pricing),24c35284-d768-4e53-84d9-b7ae73dddf69,MYANALYTICS_P2,33c4f319-9bdd-48d6-9c4d-410b750a4a5a,Insights by MyAnalytics
+Microsoft 365 Business Premium Donation,Microsoft_365_Business_Premium_Donation_(Non_Profit_Pricing),24c35284-d768-4e53-84d9-b7ae73dddf69,OFFICE_BUSINESS,094e7854-93fc-4d55-b2c0-3ab5369ebdc1,Microsoft 365 Apps for Business
+Microsoft 365 Business Premium Donation,Microsoft_365_Business_Premium_Donation_(Non_Profit_Pricing),24c35284-d768-4e53-84d9-b7ae73dddf69,M365_LIGHTHOUSE_CUSTOMER_PLAN1,6f23d6a9-adbf-481c-8538-b4c095654487,Microsoft 365 Lighthouse (Plan 1)
+Microsoft 365 Business Premium Donation,Microsoft_365_Business_Premium_Donation_(Non_Profit_Pricing),24c35284-d768-4e53-84d9-b7ae73dddf69,M365_LIGHTHOUSE_PARTNER_PLAN1,d55411c9-cfff-40a9-87c7-240f14df7da5,Microsoft 365 Lighthouse (Plan 2)
+Microsoft 365 Business Premium Donation,Microsoft_365_Business_Premium_Donation_(Non_Profit_Pricing),24c35284-d768-4e53-84d9-b7ae73dddf69,MICROSOFTBOOKINGS,199a5c09-e0ca-4e37-8f7c-b05d533e1ea2,Microsoft Bookings
+Microsoft 365 Business Premium Donation,Microsoft_365_Business_Premium_Donation_(Non_Profit_Pricing),24c35284-d768-4e53-84d9-b7ae73dddf69,CLIPCHAMP,a1ace008-72f3-4ea0-8dac-33b3a23a2472,Microsoft Clipchamp
+Microsoft 365 Business Premium Donation,Microsoft_365_Business_Premium_Donation_(Non_Profit_Pricing),24c35284-d768-4e53-84d9-b7ae73dddf69,MDE_SMB,bfc1bbd9-981b-4f71-9b82-17c35fd0e2a4,Microsoft Defender for Business
+Microsoft 365 Business Premium Donation,Microsoft_365_Business_Premium_Donation_(Non_Profit_Pricing),24c35284-d768-4e53-84d9-b7ae73dddf69,ATP_ENTERPRISE,f20fedf3-f3c3-43c3-8267-2bfdd51c0939,Microsoft Defender for Office 365 (Plan 1)
+Microsoft 365 Business Premium Donation,Microsoft_365_Business_Premium_Donation_(Non_Profit_Pricing),24c35284-d768-4e53-84d9-b7ae73dddf69,FORMS_PLAN_E1,159f4cd6-e380-449f-a816-af1a9ef76344,Microsoft Forms (Plan E1)
+Microsoft 365 Business Premium Donation,Microsoft_365_Business_Premium_Donation_(Non_Profit_Pricing),24c35284-d768-4e53-84d9-b7ae73dddf69,KAIZALA_O365_P2,54fc630f-5a40-48ee-8965-af0503c1386e,Microsoft Kaizala Pro
+Microsoft 365 Business Premium Donation,Microsoft_365_Business_Premium_Donation_(Non_Profit_Pricing),24c35284-d768-4e53-84d9-b7ae73dddf69,MICROSOFT_LOOP,c4b8c31a-fb44-4c65-9837-a21f55fcabda,Microsoft Loop
+Microsoft 365 Business Premium Donation,Microsoft_365_Business_Premium_Donation_(Non_Profit_Pricing),24c35284-d768-4e53-84d9-b7ae73dddf69,PROJECTWORKMANAGEMENT,b737dad2-2f6c-4c65-90e3-ca563267e8b9,Microsoft Planner
+Microsoft 365 Business Premium Donation,Microsoft_365_Business_Premium_Donation_(Non_Profit_Pricing),24c35284-d768-4e53-84d9-b7ae73dddf69,MICROSOFT_SEARCH,94065c59-bc8e-4e8b-89e5-5138d471eaff,Microsoft Search
+Microsoft 365 Business Premium Donation,Microsoft_365_Business_Premium_Donation_(Non_Profit_Pricing),24c35284-d768-4e53-84d9-b7ae73dddf69,Deskless,8c7d2df8-86f0-4902-b2ed-a0458298f3b3,Microsoft StaffHub
+Microsoft 365 Business Premium Donation,Microsoft_365_Business_Premium_Donation_(Non_Profit_Pricing),24c35284-d768-4e53-84d9-b7ae73dddf69,TEAMS1,57ff2da0-773e-42df-b2af-ffb7a2317929,Microsoft Teams
+Microsoft 365 Business Premium Donation,Microsoft_365_Business_Premium_Donation_(Non_Profit_Pricing),24c35284-d768-4e53-84d9-b7ae73dddf69,INTUNE_O365,882e1d05-acd1-4ccb-8708-6ee03664b117,Mobile Device Management for Office 365
+Microsoft 365 Business Premium Donation,Microsoft_365_Business_Premium_Donation_(Non_Profit_Pricing),24c35284-d768-4e53-84d9-b7ae73dddf69,Nucleus,db4d623d-b514-490b-b7ef-8885eee514de,Nucleus
+Microsoft 365 Business Premium Donation,Microsoft_365_Business_Premium_Donation_(Non_Profit_Pricing),24c35284-d768-4e53-84d9-b7ae73dddf69,SHAREPOINTWAC,e95bec33-7c88-4a70-8e19-b10bd9d0c014,Office for the Web
+Microsoft 365 Business Premium Donation,Microsoft_365_Business_Premium_Donation_(Non_Profit_Pricing),24c35284-d768-4e53-84d9-b7ae73dddf69,OFFICE_SHARED_COMPUTER_ACTIVATION,276d6e8a-f056-4f70-b7e8-4fc27f79f809,Office Shared Computer Activation
+Microsoft 365 Business Premium Donation,Microsoft_365_Business_Premium_Donation_(Non_Profit_Pricing),24c35284-d768-4e53-84d9-b7ae73dddf69,PROJECT_O365_P3,b21a6b06-1988-436e-a07b-51ec6d9f52ad,Project for Office (Plan E5)
+Microsoft 365 Business Premium Donation,Microsoft_365_Business_Premium_Donation_(Non_Profit_Pricing),24c35284-d768-4e53-84d9-b7ae73dddf69,PURVIEW_DISCOVERY,c948ea65-2053-4a5a-8a62-9eaaaf11b522,Purview Discovery
+Microsoft 365 Business Premium Donation,Microsoft_365_Business_Premium_Donation_(Non_Profit_Pricing),24c35284-d768-4e53-84d9-b7ae73dddf69,Bing_Chat_Enterprise,0d0c0d31-fae7-41f2-b909-eaf4d7f26dba,RETIRED - Commercial data protection for Microsoft Copilot
+Microsoft 365 Business Premium Donation,Microsoft_365_Business_Premium_Donation_(Non_Profit_Pricing),24c35284-d768-4e53-84d9-b7ae73dddf69,O365_SB_Relationship_Management,5bfe124c-bbdc-4494-8835-f1297d457d79,RETIRED - Outlook Customer Manager
+Microsoft 365 Business Premium Donation,Microsoft_365_Business_Premium_Donation_(Non_Profit_Pricing),24c35284-d768-4e53-84d9-b7ae73dddf69,SHAREPOINTSTANDARD,c7699d2e-19aa-44de-8edf-1736da088ca1,SharePoint (Plan 1)
+Microsoft 365 Business Premium Donation,Microsoft_365_Business_Premium_Donation_(Non_Profit_Pricing),24c35284-d768-4e53-84d9-b7ae73dddf69,MCOSTANDARD,0feaeb32-d00e-4d66-bd5a-43b5b83db82c,Skype for Business Online (Plan 2)
+Microsoft 365 Business Premium Donation,Microsoft_365_Business_Premium_Donation_(Non_Profit_Pricing),24c35284-d768-4e53-84d9-b7ae73dddf69,SWAY,a23b959c-7ce8-4e57-9140-b90eb88a9e97,Sway
+Microsoft 365 Business Premium Donation,Microsoft_365_Business_Premium_Donation_(Non_Profit_Pricing),24c35284-d768-4e53-84d9-b7ae73dddf69,BPOS_S_TODO_1,5e62787c-c316-451f-b873-1d05acd4d12c,To-Do (Plan 1)
+Microsoft 365 Business Premium Donation,Microsoft_365_Business_Premium_Donation_(Non_Profit_Pricing),24c35284-d768-4e53-84d9-b7ae73dddf69,VIVAENGAGE_CORE,a82fbf69-b4d7-49f4-83a6-915b2cf354f4,Viva Engage Core
+Microsoft 365 Business Premium Donation,Microsoft_365_Business_Premium_Donation_(Non_Profit_Pricing),24c35284-d768-4e53-84d9-b7ae73dddf69,VIVA_LEARNING_SEEDED,b76fb638-6ba6-402a-b9f9-83d28acb3d86,Viva Learning Seeded
+Microsoft 365 Business Premium Donation,Microsoft_365_Business_Premium_Donation_(Non_Profit_Pricing),24c35284-d768-4e53-84d9-b7ae73dddf69,WHITEBOARD_PLAN1,b8afc642-032e-4de5-8c0a-507a7bba7e5d,Whiteboard (Plan 1)
+Microsoft 365 Business Premium Donation,Microsoft_365_Business_Premium_Donation_(Non_Profit_Pricing),24c35284-d768-4e53-84d9-b7ae73dddf69,YAMMER_ENTERPRISE,7547a3fe-08ee-4ccb-b430-5077c5041653,Yammer Enterprise
+Microsoft 365 Business Premium Donation,Microsoft_365_Business_Premium_Donation_(Non_Profit_Pricing),24c35284-d768-4e53-84d9-b7ae73dddf69,UNIVERSAL_PRINT_01,795f6fe0-cc4d-4773-b050-5dde4dc704c9,Universal Print
+Microsoft 365 Business Premium Donation,Microsoft_365_Business_Premium_Donation_(Non_Profit_Pricing),24c35284-d768-4e53-84d9-b7ae73dddf69,WINBIZ,8e229017-d77b-43d5-9305-903395523b99,Windows 10/11 Business
+Microsoft 365 Business Premium Donation,Microsoft_365_Business_Premium_Donation_(Non_Profit_Pricing),24c35284-d768-4e53-84d9-b7ae73dddf69,WINDOWSUPDATEFORBUSINESS_DEPLOYMENTSERVICE,7bf960f6-2cd9-443a-8046-5dbff9558365,Windows Update for Business Deployment Service
+Microsoft 365 Business Premium Donation,Microsoft_365_Business_Premium_Donation_(Non_Profit_Pricing),24c35284-d768-4e53-84d9-b7ae73dddf69,AAD_SMB,de377cbc-0019-4ec2-b77c-3f223947e102,Azure Active Directory
+Microsoft 365 Business Premium Donation,Microsoft_365_Business_Premium_Donation_(Non_Profit_Pricing),24c35284-d768-4e53-84d9-b7ae73dddf69,RMS_S_PREMIUM,6c57d4b6-3b23-47a5-9bc9-69f17b4947b3,Azure Information Protection Premium P1
+Microsoft 365 Business Premium Donation,Microsoft_365_Business_Premium_Donation_(Non_Profit_Pricing),24c35284-d768-4e53-84d9-b7ae73dddf69,DYN365_CDS_O365_P3,28b0fa46-c39a-4188-89e2-58e979a6b014,Common Data Service
+Microsoft 365 Business Premium Donation,Microsoft_365_Business_Premium_Donation_(Non_Profit_Pricing),24c35284-d768-4e53-84d9-b7ae73dddf69,MFA_PREMIUM,8a256a2b-b617-496d-b51b-e76466e88db0,Microsoft Azure Multi-Factor Authentication
+Microsoft 365 Business Premium Donation,Microsoft_365_Business_Premium_Donation_(Non_Profit_Pricing),24c35284-d768-4e53-84d9-b7ae73dddf69,ADALLOM_S_DISCOVERY,932ad362-64a8-4783-9106-97849a1a30b9,Microsoft Defender for Cloud Apps Discovery
+Microsoft 365 Business Premium Donation,Microsoft_365_Business_Premium_Donation_(Non_Profit_Pricing),24c35284-d768-4e53-84d9-b7ae73dddf69,AAD_PREMIUM,41781fb2-bc02-4b7c-bd55-b576c07bb09d,Microsoft Entra ID P1
+Microsoft 365 Business Premium Donation,Microsoft_365_Business_Premium_Donation_(Non_Profit_Pricing),24c35284-d768-4e53-84d9-b7ae73dddf69,INTUNE_SMBIZ,8e9ff0ff-aa7a-4b20-83c1-2f636b600ac2,Microsoft Intune
+Microsoft 365 Business Premium Donation,Microsoft_365_Business_Premium_Donation_(Non_Profit_Pricing),24c35284-d768-4e53-84d9-b7ae73dddf69,INTUNE_A,c1ec4a95-1f05-45b3-a911-aa3fa01094f5,Microsoft Intune Plan 1
+Microsoft 365 Business Premium Donation,Microsoft_365_Business_Premium_Donation_(Non_Profit_Pricing),24c35284-d768-4e53-84d9-b7ae73dddf69,STREAM_O365_E1,743dd19e-1ce3-4c62-a3ad-49ba8f63a2f6,Microsoft Stream for Office 365 E1
+Microsoft 365 Business Premium Donation,Microsoft_365_Business_Premium_Donation_(Non_Profit_Pricing),24c35284-d768-4e53-84d9-b7ae73dddf69,POWERAPPS_O365_P1,92f7a6f3-b89b-4bbd-8c30-809e6da5ad1c,Power Apps for Office 365
+Microsoft 365 Business Premium Donation,Microsoft_365_Business_Premium_Donation_(Non_Profit_Pricing),24c35284-d768-4e53-84d9-b7ae73dddf69,FLOW_O365_P1,0f9b09cb-62d1-4ff4-9129-43f4996f83f4,Power Automate for Office 365
+Microsoft 365 Business Premium Donation,Microsoft_365_Business_Premium_Donation_(Non_Profit_Pricing),24c35284-d768-4e53-84d9-b7ae73dddf69,POWER_VIRTUAL_AGENTS_O365_P3,ded3d325-1bdc-453e-8432-5bac26d7a014,Power Virtual Agents for Office 365
 Microsoft 365 Business Premium EEA (no Teams),Office_365_w/o_Teams_Bundle_Business_Premium,a3f586b6-8cce-4d9b-99d6-55238397f77a,EXCHANGE_S_FOUNDATION,113feb6c-3fe4-4440-bddc-54d774bf0318,Exchange Foundation
 Microsoft 365 Business Premium EEA (no Teams),Office_365_w/o_Teams_Bundle_Business_Premium,a3f586b6-8cce-4d9b-99d6-55238397f77a,DYN365BC_MS_INVOICING,39b5c996-467e-4e60-bd62-46066f572726,Microsoft Invoicing
 Microsoft 365 Business Premium EEA (no Teams),Office_365_w/o_Teams_Bundle_Business_Premium,a3f586b6-8cce-4d9b-99d6-55238397f77a,Bing_Chat_Enterprise,0d0c0d31-fae7-41f2-b909-eaf4d7f26dba,Commercial data protection for Microsoft Copilot
@@ -1421,6 +1626,14 @@ Microsoft 365 Business Voice (without Calling Plan),BUSINESS_VOICE_DIRECTROUTING
 Microsoft 365 Business Voice,BUSINESS_VOICE_MED2,a6051f20-9cbc-47d2-930d-419183bf6cf1,MCOMEETADV,3e26ee1f-8a5f-4d52-aee2-b81ce45c8f40,Microsoft 365 Audio Conferencing
 Microsoft 365 Business Voice,BUSINESS_VOICE_MED2,a6051f20-9cbc-47d2-930d-419183bf6cf1,MCOPSTN1,4ed3ff63-69d7-4fb7-b984-5aec7f605ca8,Microsoft 365 Domestic Calling Plan
 Microsoft 365 Business Voice,BUSINESS_VOICE_MED2,a6051f20-9cbc-47d2-930d-419183bf6cf1,MCOEV,4828c8ec-dc2e-4779-b502-87ac9ce28ab7,Microsoft 365 Phone System
+Microsoft 365 Copilot (Education Faculty),Microsoft_365_Copilot_EDU,ad9c22b3-52d7-4e7e-973c-88121ea96436,COPILOT_STUDIO_IN_COPILOT_FOR_M365,fe6c28b3-d468-44ea-bbd0-a10a5167435c,Copilot Studio in Copilot for M365
+Microsoft 365 Copilot (Education Faculty),Microsoft_365_Copilot_EDU,ad9c22b3-52d7-4e7e-973c-88121ea96436,GRAPH_CONNECTORS_COPILOT,82d30987-df9b-4486-b146-198b21d164c7,Graph Connectors in Microsoft 365 Copilot
+Microsoft 365 Copilot (Education Faculty),Microsoft_365_Copilot_EDU,ad9c22b3-52d7-4e7e-973c-88121ea96436,M365_COPILOT_INTELLIGENT_SEARCH,931e4a88-a67f-48b5-814f-16a5f1e6028d,Intelligent Search
+Microsoft 365 Copilot (Education Faculty),Microsoft_365_Copilot_EDU,ad9c22b3-52d7-4e7e-973c-88121ea96436,M365_COPILOT_SHAREPOINT,0aedf20c-091d-420b-aadf-30c042609612,Microsoft 365 Copilot for SharePoint
+Microsoft 365 Copilot (Education Faculty),Microsoft_365_Copilot_EDU,ad9c22b3-52d7-4e7e-973c-88121ea96436,M365_COPILOT_TEAMS,b95945de-b3bd-46db-8437-f2beb6ea2347,Microsoft 365 Copilot in Microsoft Teams
+Microsoft 365 Copilot (Education Faculty),Microsoft_365_Copilot_EDU,ad9c22b3-52d7-4e7e-973c-88121ea96436,M365_COPILOT_APPS,a62f8878-de10-42f3-b68f-6149a25ceb97,Microsoft 365 Copilot in Productivity Apps
+Microsoft 365 Copilot (Education Faculty),Microsoft_365_Copilot_EDU,ad9c22b3-52d7-4e7e-973c-88121ea96436,M365_COPILOT_BUSINESS_CHAT,3f30311c-6b1e-48a4-ab79-725b469da960,Microsoft Copilot with Graph-grounded chat
+Microsoft 365 Copilot (Education Faculty),Microsoft_365_Copilot_EDU,ad9c22b3-52d7-4e7e-973c-88121ea96436,M365_COPILOT_CONNECTORS,89f1c4c8-0878-40f7-804d-869c9128ab5d,Power Platform Connectors in Microsoft 365 Copilot
 Microsoft Copilot for Microsoft 365,M365_Copilot,a809996b-059e-42e2-9866-db24b99a9782,GRAPH_CONNECTORS_COPILOT,82d30987-df9b-4486-b146-198b21d164c7,Graph Connectors in Microsoft 365 Copilot
 Microsoft Copilot for Microsoft 365,M365_Copilot,a809996b-059e-42e2-9866-db24b99a9782,M365_COPILOT_INTELLIGENT_SEARCH,931e4a88-a67f-48b5-814f-16a5f1e6028d,Intelligent Search
 Microsoft Copilot for Microsoft 365,M365_Copilot,a809996b-059e-42e2-9866-db24b99a9782,M365_COPILOT_TEAMS,b95945de-b3bd-46db-8437-f2beb6ea2347,Microsoft 365 Copilot in Microsoft Teams
@@ -3227,6 +3440,10 @@ Microsoft Cloud for Sustainability vTrial,Microsoft_Cloud_for_Sustainability_vTr
 Microsoft Cloud for Sustainability vTrial,Microsoft_Cloud_for_Sustainability_vTrial,556640c0-53ea-4773-907d-29c55332983f,POWER_AUTOMATE_DYN365_VIRAL_TRIAL,81d4ecb8-0481-42fb-8868-51536c5aceeb,Power Automate for Dynamics 365 vTrial
 Microsoft Cloud for Sustainability vTrial,Microsoft_Cloud_for_Sustainability_vTrial,556640c0-53ea-4773-907d-29c55332983f,EXCHANGE_S_FOUNDATION,113feb6c-3fe4-4440-bddc-54d774bf0318,Exchange Foundation
 Microsoft Cloud for Sustainability vTrial,Microsoft_Cloud_for_Sustainability_vTrial,556640c0-53ea-4773-907d-29c55332983f,DYN365_CDS_VIRAL,17ab22cd-a0b3-4536-910a-cb6eb12696c0,Common Data Service
+Microsoft Defender for Business,MDE_SMB,5e1e7702-a2b7-4360-8d07-2f515792896f,Intune_Defender,1689aade-3d6a-4bfc-b017-46d2672df5ad,MDE_SecurityManagement
+Microsoft Defender for Business,MDE_SMB,5e1e7702-a2b7-4360-8d07-2f515792896f,M365_LIGHTHOUSE_CUSTOMER_PLAN1,6f23d6a9-adbf-481c-8538-b4c095654487,Microsoft 365 Lighthouse (Plan 1)
+Microsoft Defender for Business,MDE_SMB,5e1e7702-a2b7-4360-8d07-2f515792896f,M365_LIGHTHOUSE_PARTNER_PLAN1,d55411c9-cfff-40a9-87c7-240f14df7da5,Microsoft 365 Lighthouse (Plan 2)
+Microsoft Defender for Business,MDE_SMB,5e1e7702-a2b7-4360-8d07-2f515792896f,MDE_SMB,bfc1bbd9-981b-4f71-9b82-17c35fd0e2a4,Microsoft Defender for Business
 Microsoft Defender for Endpoint,WIN_DEF_ATP,111046dd-295b-4d6d-9724-d52ac90bd1f2,EXCHANGE_S_FOUNDATION,113feb6c-3fe4-4440-bddc-54d774bf0318,Exchange Foundation
 Microsoft Defender for Endpoint,WIN_DEF_ATP,111046dd-295b-4d6d-9724-d52ac90bd1f2,WINDEFATP,871d91ec-ec1a-452b-a83f-bd76c7d770ef,MICROSOFT DEFENDER FOR ENDPOINT
 Microsoft Defender for Endpoint F2,Microsoft_Defender_for_Endpoint_F2,e430a580-c37b-4d16-adba-d881d7cd0364,WINDEFATP,871d91ec-ec1a-452b-a83f-bd76c7d770ef,Microsoft Defender for Endpoint
@@ -3321,6 +3538,9 @@ Microsoft Stream Plan 2,STREAM_P2,ec156933-b85b-4c50-84ec-c9e5603709ef,EXCHANGE_
 Microsoft Stream Plan 2,STREAM_P2,ec156933-b85b-4c50-84ec-c9e5603709ef,STREAM_P2,d3a458d0-f10d-48c2-9e44-86f3f684029e,Microsoft Stream Plan 2
 Microsoft Stream Storage Add-On (500 GB),STREAM_STORAGE,9bd7c846-9556-4453-a542-191d527209e8,EXCHANGE_S_FOUNDATION,113feb6c-3fe4-4440-bddc-54d774bf0318,Exchange Foundation
 Microsoft Stream Storage Add-On (500 GB),STREAM_STORAGE,9bd7c846-9556-4453-a542-191d527209e8,STREAM_STORAGE,83bced11-77ce-4071-95bd-240133796768,Microsoft Stream Storage Add-On
+Microsoft Sustainability Manager Premium,Microsoft_Sustainability_Manager_Premium,aecb477b-2f56-4e38-b711-b752c24fc19b,CDS_CLOUD_FOR_SUSTAINABILITY_PLUS,ba80223c-e515-4642-a838-3e7d66f70cb6,Common Data Services for Cloud for Sustainability Plus
+Microsoft Sustainability Manager Premium,Microsoft_Sustainability_Manager_Premium,aecb477b-2f56-4e38-b711-b752c24fc19b,MCS_BIZAPPS_CLOUD_FOR_SUSTAINABILITY_PLUS,ed29ae92-ff5f-4446-8460-83c54d0e7088,MCS - BizApps Cloud for Sustainability Plus
+Microsoft Sustainability Manager Premium,Microsoft_Sustainability_Manager_Premium,aecb477b-2f56-4e38-b711-b752c24fc19b,EXCHANGE_S_FOUNDATION,113feb6c-3fe4-4440-bddc-54d774bf0318,Exchange Foundation
 Microsoft Sustainability Manager USL Essentials,Microsoft_Cloud_for_Sustainability_USL,ece037b4-a52b-4cf8-93ea-649e5d83767a,MCS_BizApps_Cloud_for_Sustainability_USL,c46c42af-d654-4385-8c85-29a84f3dfb22,MCS - BizApps - Cloud for Sustainability USL
 Microsoft Sustainability Manager USL Essentials,Microsoft_Cloud_for_Sustainability_USL,ece037b4-a52b-4cf8-93ea-649e5d83767a,POWER_APPS_FOR_MCS_USL,5ffd371c-037a-41a2-98a3-6452f8c5de17,Power Apps for Cloud for Sustainability USL
 Microsoft Sustainability Manager USL Essentials,Microsoft_Cloud_for_Sustainability_USL,ece037b4-a52b-4cf8-93ea-649e5d83767a,POWER_AUTOMATE_FOR_MCS_USL,ccbe468e-7973-442c-8ec4-5fbe16438711,Power Automate for Cloud for Sustainability USL
@@ -4732,6 +4952,8 @@ Power Automate Premium,POWERAUTOMATE_ATTENDED_RPA,eda1941c-3c4f-4995-b5eb-e85a42
 Power Automate Premium for Government,POWERAUTOMATE_ATTENDED_RPA_GCC,d3987516-4b53-4dc0-8335-411260bf5626,EXCHANGE_S_FOUNDATION_GOV,922ba911-5694-4e99-a794-73aed9bfeec8,Exchange Foundation for Government
 Power Automate Premium for Government,POWERAUTOMATE_ATTENDED_RPA_GCC,d3987516-4b53-4dc0-8335-411260bf5626,CDS_ATTENDED_RPA_GCC,4802707d-47e1-45dc-82c5-b6981f0fb38c,Common Data Service Attended RPA for Government
 Power Automate Premium for Government,POWERAUTOMATE_ATTENDED_RPA_GCC,d3987516-4b53-4dc0-8335-411260bf5626,POWER_AUTOMATE_ATTENDED_RPA_GCC,fb613c67-1a58-4645-a8df-21e95a37d433,Power Automate Attended RPA for Government
+Power Automate Process,Power_Automate_per_process,253ce8d3-6122-4240-8b04-f434a8fa831f,EXCHANGE_S_FOUNDATION,113feb6c-3fe4-4440-bddc-54d774bf0318,Exchange Foundation
+Power Automate Process,Power_Automate_per_process,253ce8d3-6122-4240-8b04-f434a8fa831f,DATAVERSE_FOR_POWER_AUTOMATE_PER_PROCESS,d7c3df99-6f58-40b9-8940-cd3a51679d85,Dataverse for Power Automate Per Process
 Power Automate unattended RPA add-on,POWERAUTOMATE_UNATTENDED_RPA,3539d28c-6e35-4a30-b3a9-cd43d5d3e0e2,CDS_UNATTENDED_RPA,b475952f-128a-4a44-b82a-0b98a45ca7fb,Common Data Service Unattended RPA
 Power Automate unattended RPA add-on,POWERAUTOMATE_UNATTENDED_RPA,3539d28c-6e35-4a30-b3a9-cd43d5d3e0e2,EXCHANGE_S_FOUNDATION,113feb6c-3fe4-4440-bddc-54d774bf0318,Exchange Foundation
 Power Automate unattended RPA add-on,POWERAUTOMATE_UNATTENDED_RPA,3539d28c-6e35-4a30-b3a9-cd43d5d3e0e2,POWER_AUTOMATE_UNATTENDED_RPA,0d373a98-a27a-426f-8993-f9a425ae99c5,Power Automate Unattended RPA add-on

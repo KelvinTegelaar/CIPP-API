@@ -47,6 +47,7 @@
 
 .table-modern {{
   width: 100%;
+  table-layout: fixed;
   border-collapse: separate;
   border-spacing: 0;
   font-family: Arial, sans-serif;
@@ -56,7 +57,6 @@
   padding: 10px;
   text-align: left;
   border: 1px solid #e0e0e0;
-  white-space: nowrap;
 }}
 
 .table-modern tr:nth-child(even) {{
@@ -369,7 +369,6 @@ class="" style="vertical-align:top;width:800px;"
                               color: #54595f;
                             "
                           >
-                            <p style="margin: 5px 0">Webhook received.</p>
                             <p style="margin: 5px 0">{1}</p>
                           </div>
                         </td>
@@ -429,42 +428,7 @@ class="" style="vertical-align:top;width:800px;"
                                     {3}
                                   </a>
                                 </td>
-                                <td
-                                  align="center"
-                                  bgcolor="#54595f"
-                                  role="presentation"
-                                  style="
-                                    border: none;
-                                    border-radius: 30px;
-                                    cursor: auto;
-                                    mso-padding-alt: 10px 25px;
-                                    background: #54595f;
-                                  "
-                                  valign="middle"
-                                >
-                                  <a
-                                    href="{5}"
-                                    style="
-                                      display: inline-block;
-                                      background: #54595f;
-                                      color: white;
-                                      font-family: Nunito, Helvetica, Arial,
-                                        sans-serif;
-                                      font-size: 16px;
-                                      font-weight: normal;
-                                      line-height: 30px;
-                                      margin: 0;
-                                      text-decoration: none;
-                                      text-transform: none;
-                                      padding: 10px 25px;
-                                      mso-padding-alt: 0px;
-                                      border-radius: 30px;
-                                    "
-                                    target="_blank"
-                                  >
-                                    View Audit Log
-                                  </a>
-                                </td>
+                
                               </tr>
                             </tbody>
                           </table>

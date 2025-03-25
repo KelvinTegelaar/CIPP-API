@@ -5,7 +5,7 @@ function Invoke-ExecCommunityRepo {
     .DESCRIPTION
         This function makes changes to a community repository in table storage
     .FUNCTIONALITY
-        Entrypoint
+        Entrypoint,AnyTenant
     .ROLE
         CIPP.Core.ReadWrite
     #>

@@ -212,11 +212,13 @@ function Invoke-CIPPStandardAntiPhishPolicy {
         if ($StateIsCorrect -eq $true) {
             Write-LogMessage -API 'Standards' -tenant $Tenant -message 'Anti-phishing policy is enabled' -sev Info
         } else {
-            Write-LogMessage -API 'Standards' -tenant $Tenant -message 'Anti-phishing policy is not enabled' -sev Alert
+            Write-StandardsAlert -message "Anti-phishing policy is not enabled" -object $CurrentState -tenant $Tenant -standardName 'AntiPhishPolicy' -standardId $Settings.standardId
+            Write-LogMessage -API 'Standards' -tenant $Tenant -message 'Anti-phishing policy is not enabled' -sev Info
         }
     }
 
     if ($Settings.report -eq $true) {
+        Set-CIPPStandardsCompareField -FieldName 'standards.AntiPhishPolicy' -FieldValue $StateIsCorrect -TenantFilter $tenant
         Add-CIPPBPAField -FieldName 'AntiPhishPolicy' -FieldValue $StateIsCorrect -StoreAs bool -Tenant $tenant
     }
 

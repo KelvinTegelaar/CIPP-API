@@ -3,7 +3,7 @@ using namespace System.Net
 Function Invoke-ExecEditTemplate {
     <#
     .FUNCTIONALITY
-        Entrypoint
+        Entrypoint,AnyTenant
     .ROLE
         CIPP.Core.ReadWrite
     #>

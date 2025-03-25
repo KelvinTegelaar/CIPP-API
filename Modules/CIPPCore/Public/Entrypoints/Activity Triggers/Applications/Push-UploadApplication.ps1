@@ -16,12 +16,12 @@ function Push-UploadApplication {
 
         $ChocoApp = (Get-CIPPAzDataTableEntity @Table -filter $Filter).JSON | ConvertFrom-Json
         $intuneBody = $ChocoApp.IntuneBody
-        $tenants = if ($chocoapp.Tenant -eq 'AllTenants') {
-    (Get-tenants).defaultDomainName
+        $tenants = if ($ChocoApp.tenant -eq 'AllTenants') {
+            (Get-Tenants -IncludeErrors).defaultDomainName
         } else {
-            $chocoapp.Tenant
+            $ChocoApp.tenant
         }
-        if ($chocoApp.type -eq 'MSPApp') {
+        if ($ChocoApp.type -eq 'MSPApp') {
             [xml]$Intunexml = Get-Content "AddMSPApp\$($ChocoApp.MSPAppName).app.xml"
             $intunewinFilesize = (Get-Item "AddMSPApp\$($ChocoApp.MSPAppName).intunewin")
             $Infile = "AddMSPApp\$($ChocoApp.MSPAppName).intunewin"
@@ -30,7 +30,7 @@ function Push-UploadApplication {
             $intunewinFilesize = (Get-Item 'AddChocoApp\IntunePackage.intunewin')
             $Infile = "AddChocoApp\$($intunexml.ApplicationInfo.FileName)"
         }
-        $assignTo = $ChocoApp.AssignTo
+        $assignTo = $ChocoApp.assignTo
         $AssignToIntent = $ChocoApp.InstallationIntent
         $Baseuri = 'https://graph.microsoft.com/beta/deviceAppManagement/mobileApps'
         $ContentBody = ConvertTo-Json @{
@@ -39,7 +39,7 @@ function Push-UploadApplication {
             sizeEncrypted = [int64]($intunewinFilesize).length
         }
         $ClearRow = Get-CIPPAzDataTableEntity @Table -Filter $Filter
-        $RemoveCacheFile = if ($chocoapp.Tenant -ne 'AllTenants') {
+        $RemoveCacheFile = if ($ChocoApp.tenant -ne 'AllTenants') {
             Remove-AzDataTableEntity -Force @Table -Entity $clearRow
         } else {
             $Table.Force = $true
@@ -63,24 +63,24 @@ function Push-UploadApplication {
         } | ConvertTo-Json
 
         foreach ($tenant in $tenants) {
-            Try {
-                $ApplicationList = (New-graphGetRequest -Uri $baseuri -tenantid $Tenant) | Where-Object { $_.DisplayName -eq $ChocoApp.ApplicationName }
+            try {
+                $ApplicationList = (New-GraphGetRequest -Uri $baseuri -tenantid $tenant) | Where-Object { $_.DisplayName -eq $ChocoApp.Applicationname }
                 if ($ApplicationList.displayname.count -ge 1) {
-                    Write-LogMessage -api 'AppUpload' -tenant $($Tenant) -message "$($ChocoApp.ApplicationName) exists. Skipping this application" -Sev 'Info'
+                    Write-LogMessage -api 'AppUpload' -tenant $tenant -message "$($ChocoApp.Applicationname) exists. Skipping this application" -Sev 'Info'
                     continue
                 }
-                if ($chocoApp.type -eq 'WinGet') {
+                if ($ChocoApp.type -eq 'WinGet') {
                     Write-Host 'Winget!'
                     Write-Host ($intuneBody | ConvertTo-Json -Compress)
                     $NewApp = New-GraphPostRequest -Uri $baseuri -Body ($intuneBody | ConvertTo-Json -Compress) -Type POST -tenantid $tenant
                     Start-Sleep -Milliseconds 200
-                    Write-LogMessage -api 'AppUpload' -tenant $($Tenant) -message "$($ChocoApp.ApplicationName) uploaded as WinGet app." -Sev 'Info'
+                    Write-LogMessage -api 'AppUpload' -tenant $tenant -message "$($ChocoApp.Applicationname) uploaded as WinGet app." -Sev 'Info'
                     if ($AssignTo -ne 'On') {
                         $intent = if ($AssignToIntent) { 'Uninstall' } else { 'Required' }
                         Set-CIPPAssignedApplication -ApplicationId $NewApp.Id -Intent $intent -TenantFilter $tenant -groupName "$AssignTo" -AppType 'WinGet'
                     }
-                    Write-LogMessage -api 'AppUpload' -tenant $($Tenant) -message "$($ChocoApp.ApplicationName) Successfully created" -Sev 'Info'
-                    exit 0
+                    Write-LogMessage -api 'AppUpload' -tenant $tenant -message "$($ChocoApp.Applicationname) Successfully created" -Sev 'Info'
+                    continue
                 } else {
                     $NewApp = New-GraphPostRequest -Uri $baseuri -Body ($intuneBody | ConvertTo-Json) -Type POST -tenantid $tenant
 
@@ -109,23 +109,23 @@ function Push-UploadApplication {
                     $CommitStateReq = New-graphGetRequest -Uri "$($BaseURI)/$($NewApp.id)/microsoft.graph.win32lobapp/contentVersions/1/files/$($ContentReq.id)" -tenantid $tenant
                     Write-Host "Commit State Request: $($CommitStateReq | ConvertTo-Json -Depth 10)"
                     if ($CommitStateReq.uploadState -like '*fail*') {
-                        Write-LogMessage -api 'AppUpload' -tenant $($Tenant) -message "$($ChocoApp.ApplicationName) Commit failed. Please check if app uploaded succesful" -Sev 'Warning'
+                        Write-LogMessage -api 'AppUpload' -tenant $tenant -message "$($ChocoApp.Applicationname) Commit failed. Please check if app uploaded succesful" -Sev 'Warning'
                         break
                     }
                     Start-Sleep -Milliseconds 300
                 } while ($CommitStateReq.uploadState -eq 'commitFilePending')
                 $CommitFinalizeReq = New-graphPostRequest -Uri "$($BaseURI)/$($NewApp.id)" -tenantid $tenant -Body '{"@odata.type":"#microsoft.graph.win32lobapp","committedContentVersion":"1"}' -type PATCH
                 Write-Host "Commit Finalize Request: $($CommitFinalizeReq | ConvertTo-Json -Depth 10)"
-                Write-LogMessage -api 'AppUpload' -tenant $($Tenant) -message "Added Application $($chocoApp.ApplicationName)" -Sev 'Info'
+                Write-LogMessage -api 'AppUpload' -tenant $tenant -message "Added Application $($ChocoApp.Applicationname)" -Sev 'Info'
                 if ($AssignTo -ne 'On') {
                     $intent = if ($AssignToIntent) { 'Uninstall' } else { 'Required' }
                     Set-CIPPAssignedApplication -ApplicationId $NewApp.Id -Intent $intent -TenantFilter $tenant -groupName "$AssignTo" -AppType 'Win32Lob'
 
                 }
-                Write-LogMessage -api 'AppUpload' -tenant $($Tenant) -message 'Successfully added Application' -Sev 'Info'
+                Write-LogMessage -api 'AppUpload' -tenant $tenant -message 'Successfully added Application' -Sev 'Info'
             } catch {
                 "Failed to add Application for $($Tenant): $($_.Exception.Message)"
-                Write-LogMessage -api 'AppUpload' -tenant $($Tenant) -message "Failed adding Application $($ChocoApp.ApplicationName). Error: $($_.Exception.Message)" -LogData (Get-CippException -Exception $_) -Sev 'Error'
+                Write-LogMessage -api 'AppUpload' -tenant $tenant -message "Failed adding Application $($ChocoApp.Applicationname). Error: $($_.Exception.Message)" -LogData (Get-CippException -Exception $_) -Sev 'Error'
                 continue
             }
         }

@@ -71,13 +71,16 @@ function Invoke-CIPPStandardDisableOutlookAddins {
 
     if ($Settings.alert -eq $true) {
         if ($RolesToRemove) {
-            Write-LogMessage -API 'Standards' -tenant $tenant -message 'Users are not disabled from installing Outlook add-ins.' -sev Alert
+            Write-StandardsAlert -message 'Users are not disabled from installing Outlook add-ins.' -object @{ AllowedApps = $RolesToRemove -join ',' } -tenant $tenant -standardName 'DisableOutlookAddins' -standardId $Settings.standardId
+            Write-LogMessage -API 'Standards' -tenant $tenant -message 'Users are not disabled from installing Outlook add-ins.' -sev Info
         } else {
             Write-LogMessage -API 'Standards' -tenant $tenant -message 'Users are disabled from installing Outlook add-ins.' -sev Info
         }
     }
     if ($Settings.report -eq $true) {
         $State = if ($RolesToRemove) { $false } else { $true }
+        $StateForCompare = if ($RolesToRemove) { @{ AllowedApps = $RolesToRemove } } else { $true }
+        Set-CIPPStandardsCompareField -FieldName 'standards.DisableOutlookAddins' -FieldValue $StateForCompare -TenantFilter $Tenant
         Add-CIPPBPAField -FieldName 'DisabledOutlookAddins' -FieldValue $State -StoreAs bool -Tenant $tenant
     }
 }

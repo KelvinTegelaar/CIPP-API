@@ -12,7 +12,14 @@ function Test-CIPPAccess {
     # Check help for role
     $APIRole = $Help.Role
 
-    $AnyTenantAllowedFunctions = @('ListTenants', 'ListUserSettings', 'ListUserPhoto', 'GetCippAlerts', 'GetVersion')
+    if ($APIRole -eq 'Public') {
+        return $true
+    }
+
+    # Get default roles from config
+    $CIPPCoreModuleRoot = Get-Module -Name CIPPCore | Select-Object -ExpandProperty ModuleBase
+    $CIPPRoot = (Get-Item $CIPPCoreModuleRoot).Parent.Parent
+    $BaseRoles = Get-Content -Path $CIPPRoot\Config\cipp-roles.json | ConvertFrom-Json
 
     if ($Request.Headers.'x-ms-client-principal-idp' -eq 'aad' -and $Request.Headers.'x-ms-client-principal-name' -match '^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$') {
         # Direct API Access
@@ -108,7 +115,7 @@ function Test-CIPPAccess {
                 }
 
                 if ($APIAllowed) {
-                    $TenantFilter = $Request.Query.tenantFilter ?? $Request.Body.tenantFilter ?? $env:TenantID
+                    $TenantFilter = $Request.Query.tenantFilter ?? $Request.Body.tenantFilter ?? $Request.Query.tenantId ?? $Request.Body.tenantId ?? $env:TenantID
                     # Check tenant level access
                     if (($Role.BlockedTenants | Measure-Object).Count -eq 0 -and $Role.AllowedTenants -contains 'AllTenants') {
                         $TenantAllowed = $true
@@ -132,15 +139,15 @@ function Test-CIPPAccess {
                     }
                 }
             }
+
             if (!$APIAllowed) {
-                throw "Access to this CIPP API endpoint is not allowed, the '$($Role.Role)' custom role does not have the required permission: $APIRole"
+                throw "Access to this CIPP API endpoint is not allowed, you do not have the required permission: $APIRole"
             }
-            if (!$TenantAllowed -and $AnyTenantAllowedFunctions -notcontains $Request.Params.CIPPEndpoint) {
+            if (!$TenantAllowed -and $Help.Functionality -notmatch 'AnyTenant') {
                 throw 'Access to this tenant is not allowed'
             } else {
                 return $true
             }
-
         } else {
             # No permissions found for any roles
             if ($TenantList.IsPresent) {

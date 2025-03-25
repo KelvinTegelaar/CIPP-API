@@ -2401,7 +2401,7 @@
         <member name="P:Microsoft.Teams.PowerShell.TeamsCmdlets.SetTeamArchivedState.SetSpoSiteReadOnlyForMembers">
             <summary>
             Optional parameter. Used with Archived == $true.
-            This optional parameter defines whether to set permissions for team members to read-only on the Sharepoint Online site associated with the team.
+            This optional parameter defines whether to set permissions for team members to read-only on the SharePoint Online site associated with the team.
             See the following API docs for shouldSetSpoSiteReadOnlyForMembers
             https://docs.microsoft.com/en-us/graph/api/team-archive?view=graph-rest-beta
             https://docs.microsoft.com/en-us/graph/api/team-archive?view=graph-rest-1.0

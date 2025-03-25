@@ -29,19 +29,15 @@ function Invoke-CIPPStandardSPSyncButtonState {
     #>
 
     param($Tenant, $Settings)
-    ##$Rerun -Type Standard -Tenant $Tenant -Settings $Settings 'SPSyncButtonState'
 
     $CurrentState = Get-CIPPSPOTenant -TenantFilter $Tenant | Select-Object _ObjectIdentity_, TenantFilter, HideSyncButtonOnDocLib
 
-    if ($Settings.report -eq $true) {
-        Add-CIPPBPAField -FieldName 'SPSyncButtonDisabled' -FieldValue $CurrentState.HideSyncButtonOnDocLib -StoreAs bool -Tenant $Tenant
-    }
 
     # Input validation
     $StateValue = $Settings.state.value ?? $Settings.state
     if (([string]::IsNullOrWhiteSpace($StateValue) -or $StateValue -eq 'Select a value') -and ($Settings.remediate -eq $true -or $Settings.alert -eq $true)) {
         Write-LogMessage -API 'Standards' -tenant $tenant -message 'SPSyncButtonState: Invalid state parameter set' -sev Error
-        Return
+        return
     }
 
     $WantedState = [System.Convert]::ToBoolean($StateValue)
@@ -69,7 +65,19 @@ function Invoke-CIPPStandardSPSyncButtonState {
         if ($StateIsCorrect -eq $true) {
             Write-LogMessage -API 'Standards' -tenant $tenant -message "The SharePoint Sync Button is already set to the wanted state of $HumanReadableState" -sev Info
         } else {
-            Write-LogMessage -API 'Standards' -tenant $tenant -message "The SharePoint Sync Button is not set to the wanted state of $HumanReadableState" -sev Alert
+            Write-StandardsAlert -message "The SharePoint Sync Button is not set to the wanted state of $HumanReadableState" -object $CurrentState -tenant $tenant -standardName 'SPSyncButtonState' -standardId $Settings.standardId
+            Write-LogMessage -API 'Standards' -tenant $tenant -message "The SharePoint Sync Button is not set to the wanted state of $HumanReadableState" -sev Info
         }
     }
+
+    if ($Settings.report -eq $true) {
+        Add-CIPPBPAField -FieldName 'SPSyncButtonDisabled' -FieldValue $CurrentState.HideSyncButtonOnDocLib -StoreAs bool -Tenant $Tenant
+        if ($StateIsCorrect) {
+            $FieldValue = $true
+        } else {
+            $FieldValue = $CurrentState
+        }
+        Set-CIPPStandardsCompareField -FieldName 'standards.SPSyncButtonState' -FieldValue $FieldValue -Tenant $Tenant
+    }
+
 }
