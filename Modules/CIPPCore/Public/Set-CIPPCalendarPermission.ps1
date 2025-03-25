@@ -13,6 +13,7 @@ function Set-CIPPCalendarPermission {
     )
 
     try {
+
         # If a pretty logging name is not provided, use the ID instead
         if ([string]::IsNullOrWhiteSpace($LoggingName) -and $RemoveAccess) {
             $LoggingName = $RemoveAccess
@@ -25,6 +26,7 @@ function Set-CIPPCalendarPermission {
             AccessRights = @($Permissions)
             User         = $UserToGetPermissions
         }
+        
         if ($RemoveAccess) {
             if ($PSCmdlet.ShouldProcess("$UserID\$folderName", "Remove permissions for $LoggingName")) {
                 $null = New-ExoRequest -tenantid $TenantFilter -cmdlet 'Remove-MailboxFolderPermission' -cmdParams @{Identity = "$($UserID):\$folderName"; User = $RemoveAccess }
@@ -43,7 +45,9 @@ function Set-CIPPCalendarPermission {
             }
         }
     } catch {
-        $ErrorMessage = Get-CippException -Message $_
+        $ErrorMessage = Get-CippException -Exception $_
+        Write-Warning "Error changing calendar permissions $($_.Exception.Message)"
+        Write-Information $_.InvocationInfo.PositionMessage
         $Result = "Failed to set calendar permissions for $LoggingName on $UserID : $($ErrorMessage.NormalizedError)"
         Write-LogMessage -headers $Headers -API $APIName -tenant $TenantFilter -message $Result -sev Error -LogData $ErrorMessage
         throw $Result

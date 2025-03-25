@@ -1,6 +1,6 @@
 using namespace System.Net
 
-Function Invoke-ExecEditCalendarPermissions {
+function Invoke-ExecEditCalendarPermissions {
     <#
     .FUNCTIONALITY
         Entrypoint
@@ -16,9 +16,9 @@ Function Invoke-ExecEditCalendarPermissions {
 
     # Extract parameters from query or body
     $TenantFilter = $Request.Query.tenantFilter ?? $Request.Body.tenantFilter
-    $UserID = $Request.Query.UserID ?? $Request.Body.UserID
+    $UserID = $Request.Query.userid ?? $Request.Body.userid
     $UserToGetPermissions = $Request.Query.UserToGetPermissions ?? $Request.Body.UserToGetPermissions.value
-    $Permissions = @($Request.Query.Permissions) ?? @($Request.Body.Permissions.value)
+    $Permissions = $Request.Query.Permissions ?? $Request.Body.Permissions.value
     $FolderName = $Request.Query.FolderName ?? $Request.Body.FolderName
     $RemoveAccess = $Request.Query.RemoveAccess ?? $Request.Body.RemoveAccess.value
 
@@ -32,6 +32,8 @@ Function Invoke-ExecEditCalendarPermissions {
     } catch {
         $Result = $_.Exception.Message
         $StatusCode = [HttpStatusCode]::Forbidden
+        Write-Warning "Error in ExecEditCalendarPermissions: $($_.Exception.Message)"
+        Write-Information $_.InvocationInfo.PositionMessage
     }
 
     # Associate values to output bindings by calling 'Push-OutputBinding'.
