@@ -5,7 +5,7 @@ function New-HaloPSATicket {
         $description,
         $client
     )
-    #Get Halo PSA Token based on the config we have.
+    #Get HaloPSA Token based on the config we have.
     $Table = Get-CIPPTable -TableName Extensionsconfig
     $Configuration = ((Get-CIPPAzDataTableEntity @Table).config | ConvertFrom-Json).HaloPSA
     $TicketTable = Get-CIPPTable -TableName 'PSATickets'

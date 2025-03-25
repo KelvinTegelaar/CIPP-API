@@ -32,7 +32,7 @@ Function Invoke-AddContact {
         $null = New-ExoRequest -tenantid $TenantId -cmdlet 'Set-MailContact' -cmdParams @{Identity = $NewContact.id; HiddenFromAddressListsEnabled = [boolean]$ContactObject.hidefromGAL } -UseSystemMailbox $true
 
         # Log the result
-        $Result = "Created contact $($ContactObject.displayName) with id $($NewContact.id)"
+        $Result = "Created contact $($ContactObject.displayName) with email address $($ContactObject.email)"
         Write-LogMessage -headers $Headers -API $APIName -tenant $TenantId -message $Result -Sev 'Info'
         $StatusCode = [HttpStatusCode]::OK
 

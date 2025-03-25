@@ -48,11 +48,14 @@ function Invoke-CIPPStandardDisableEmail {
         if ($StateIsCorrect -eq $true) {
             Write-LogMessage -API 'Standards' -tenant $tenant -message 'Email authentication method is not enabled' -sev Info
         } else {
-            Write-LogMessage -API 'Standards' -tenant $tenant -message 'Email authentication method is enabled' -sev Alert
+            Write-StandardsAlert -message 'Email authentication method is enabled' -object $CurrentState -tenant $tenant -standardName 'DisableEmail' -standardId $Settings.standardId
+            Write-LogMessage -API 'Standards' -tenant $tenant -message 'Email authentication method is enabled' -sev Info
         }
     }
 
     if ($Settings.report -eq $true) {
+        $state = $StateIsCorrect -eq $true ? $true :  $CurrentState 
+        Set-CIPPStandardsCompareField -FieldName 'standards.DisableEmail' -FieldValue $state -TenantFilter $Tenant
         Add-CIPPBPAField -FieldName 'DisableEmail' -FieldValue $StateIsCorrect -StoreAs bool -Tenant $tenant
     }
 }

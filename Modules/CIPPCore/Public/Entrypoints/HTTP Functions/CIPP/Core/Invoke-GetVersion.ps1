@@ -3,7 +3,7 @@ using namespace System.Net
 Function Invoke-GetVersion {
     <#
     .FUNCTIONALITY
-        Entrypoint
+        Entrypoint,AnyTenant
     .ROLE
         CIPP.AppSettings.Read
     #>
