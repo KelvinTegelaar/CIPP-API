@@ -1,6 +1,6 @@
 using namespace System.Net
 
-Function Invoke-ExecSendPush {
+function Invoke-ExecSendPush {
     <#
     .FUNCTIONALITY
         Entrypoint
@@ -33,7 +33,7 @@ Function Invoke-ExecSendPush {
                 Start-Sleep 1
                 $ClientToken = Get-ClientAccess -uri $uri -body $body -count $count
             } else {
-                Throw "Could not get Client Token: $_"
+                throw "Could not get Client Token: $_"
             }
         }
         return $ClientToken
@@ -41,7 +41,7 @@ Function Invoke-ExecSendPush {
 
 
     # Get all service principals
-    $SPResult = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/servicePrincipals?`$top=999&`$select=id,appId" -tenantid $TenantFilter
+    $SPResult = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/servicePrincipals?`$top=999&`$select=id,appId" -tenantid $TenantFilter -AsApp $true
 
     # Check if we have one for the MFA App
     $SPID = ($SPResult | Where-Object { $_.appId -eq $MFAAppID }).id
@@ -52,7 +52,7 @@ Function Invoke-ExecSendPush {
         $SPBody = [pscustomobject]@{
             appId = $MFAAppID
         }
-        $SPID = (New-GraphPostRequest -uri 'https://graph.microsoft.com/v1.0/servicePrincipals' -tenantid $TenantFilter -type POST -body $SPBody ).id
+        $SPID = (New-GraphPostRequest -uri 'https://graph.microsoft.com/v1.0/servicePrincipals' -tenantid $TenantFilter -type POST -body $SPBody -AsApp $true).id
     }
 
 
