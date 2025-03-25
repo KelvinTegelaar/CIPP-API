@@ -3,7 +3,7 @@ using namespace System.Net
 Function Invoke-ExecExtensionTest {
     <#
     .FUNCTIONALITY
-        Entrypoint
+        Entrypoint,AnyTenant
     .ROLE
         CIPP.Extension.Read
     #>

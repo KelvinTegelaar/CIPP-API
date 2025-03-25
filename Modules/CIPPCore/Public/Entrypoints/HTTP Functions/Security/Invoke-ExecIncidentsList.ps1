@@ -11,16 +11,19 @@ Function Invoke-ExecIncidentsList {
     param($Request, $TriggerMetadata)
 
     $APIName = $Request.Params.CIPPEndpoint
-    Write-LogMessage -headers $Request.Headers -API $APINAME -message 'Accessed this API' -Sev 'Debug'
+    $Headers = $Request.Headers
+    Write-LogMessage -headers $Headers -API $APIName -message 'Accessed this API' -Sev 'Debug'
+
+    # Interact with query parameters or the body of the request.
+    $TenantFilter = $Request.Query.tenantFilter
+
     try {
-        # Interact with query parameters or the body of the request.
-        $TenantFilter = $Request.Query.TenantFilter
         $GraphRequest = if ($TenantFilter -ne 'AllTenants') {
-            $incidents = New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/security/incidents' -tenantid $Request.Query.TenantFilter -AsApp $true
+            $incidents = New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/security/incidents' -tenantid $TenantFilter -AsApp $true
 
             foreach ($incident in $incidents) {
                 [PSCustomObject]@{
-                    Tenant         = $Request.Query.TenantFilter
+                    Tenant         = $TenantFilter
                     Id             = $incident.id
                     Status         = $incident.status
                     IncidentUrl    = $incident.incidentWebUrl
@@ -38,20 +41,35 @@ Function Invoke-ExecIncidentsList {
             }
         } else {
             $Table = Get-CIPPTable -TableName cachealertsandincidents
-            $Filter = "PartitionKey eq 'Incident'"
-            $Rows = Get-CIPPAzDataTableEntity @Table -filter $Filter | Where-Object -Property Timestamp -GT (Get-Date).AddMinutes(-10)
-            if (!$Rows) {
+            $PartitionKey = 'Incident'
+            $Filter = "PartitionKey eq '$PartitionKey'"
+            $Rows = Get-CIPPAzDataTableEntity @Table -filter $Filter | Where-Object -Property Timestamp -GT (Get-Date).AddMinutes(-30)
+            $QueueReference = '{0}-{1}' -f $TenantFilter, $PartitionKey
+            $RunningQueue = Invoke-ListCippQueue | Where-Object { $_.Reference -eq $QueueReference -and $_.Status -notmatch 'Completed' -and $_.Status -notmatch 'Failed' }
+            # If a queue is running, we will not start a new one
+            if ($RunningQueue) {
+                $Metadata = [PSCustomObject]@{
+                    QueueMessage = 'Still loading data for all tenants. Please check back in a few more minutes'
+                }
+                [PSCustomObject]@{
+                    Waiting = $true
+                }
+            } elseif (!$Rows -and !$RunningQueue) {
+                # If no rows are found and no queue is running, we will start a new one
                 $TenantList = Get-Tenants -IncludeErrors
-                $Queue = New-CippQueueEntry -Name 'Incidents - All Tenants' -Link '/security/reports/incident-report?customerId=AllTenants' -TotalTasks ($TenantList | Measure-Object).Count
+                $Queue = New-CippQueueEntry -Name 'Incidents - All Tenants' -Link '/security/reports/incident-report?customerId=AllTenants' -Reference $QueueReference -TotalTasks ($TenantList | Measure-Object).Count
+                $Metadata = [PSCustomObject]@{
+                    QueueMessage = 'Loading data for all tenants. Please check back in a few minutes'
+                }
                 $InputObject = [PSCustomObject]@{
                     OrchestratorName = 'IncidentOrchestrator'
                     QueueFunction    = @{
-                        FunctionName    = 'GetTenants'
-                        TenantParams    = @{
+                        FunctionName = 'GetTenants'
+                        QueueId      = $Queue.RowKey
+                        TenantParams = @{
                             IncludeErrors = $true
                         }
-                        QueueId         = $Queue.RowKey
-                        DurableFunction = 'ExecIncidentsListAllTenants'
+                        DurableName  = 'ExecIncidentsListAllTenants'
                     }
                     SkipLog          = $true
                 }
@@ -89,12 +107,13 @@ Function Invoke-ExecIncidentsList {
     if (!$body) {
         $StatusCode = [HttpStatusCode]::OK
         $body = [PSCustomObject]@{
-            Results = @($GraphRequest | Where-Object -Property id -NE $null)
+            Results  = @($GraphRequest | Where-Object -Property id -NE $null | Sort-Object id -Descending)
+            Metadata = $Metadata
         }
     }
     Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
             StatusCode = $StatusCode
-            Body       = $Body
+            Body       = $body
         })
 
 }

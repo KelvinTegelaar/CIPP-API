@@ -14,7 +14,7 @@ function Invoke-CIPPStandardcalDefault {
             Exchange Standards
         TAG
         DISABLEDFEATURES
-            
+
         ADDEDCOMPONENT
             {"type":"autoComplete","multiple":false,"label":"Select Sharing Level","name":"standards.calDefault.permissionLevel","options":[{"label":"Owner - The user can create, read, edit, and delete all items in the folder, and create subfolders. The user is both folder owner and folder contact.","value":"Owner"},{"label":"Publishing Editor - The user can create, read, edit, and delete all items in the folder, and create subfolders.","value":"PublishingEditor"},{"label":"Editor - The user can create items in the folder. The contents of the folder do not appear.","value":"Editor"},{"label":"Publishing Author.  The user can read, create all items/subfolders. Can modify and delete only items they create.","value":"PublishingAuthor"},{"label":"Author - The user can create and read items, and modify and delete items that they create.","value":"Author"},{"label":"Non Editing Author - The user has full read access and create items. Can can delete only own items.","value":"NonEditingAuthor"},{"label":"Reviewer - The user can read all items in the folder.","value":"Reviewer"},{"label":"Contributor - The user can create items and folders.","value":"Contributor"},{"label":"Availability Only - Indicates that the user can view only free/busy time within the calendar.","value":"AvailabilityOnly"},{"label":"Limited Details - The user can view free/busy time within the calendar and the subject and location of appointments.","value":"LimitedDetails"},{"label":"None - The user has no permissions on the folder.","value":"none"}]}
         IMPACT
@@ -34,7 +34,7 @@ function Invoke-CIPPStandardcalDefault {
     ##$Rerun -Type Standard -Tenant $Tenant -Settings $Settings 'calDefault'
 
     # Get permissionlevel value using null-coalescing operator
-    $permissionLevel = $Settings.permissionlevel.value ?? $Settings.permissionlevel
+    $permissionLevel = $Settings.permissionLevel.value ?? $Settings.permissionLevel
 
     # Input validation
     if ([string]::IsNullOrWhiteSpace($permissionLevel) -or $permissionLevel -eq 'Select a value') {

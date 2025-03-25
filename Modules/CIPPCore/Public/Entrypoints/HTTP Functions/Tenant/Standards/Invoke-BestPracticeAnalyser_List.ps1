@@ -3,7 +3,7 @@ using namespace System.Net
 Function Invoke-BestPracticeAnalyser_List {
     <#
     .FUNCTIONALITY
-        Entrypoint
+        Entrypoint,AnyTenant
     .ROLE
         Tenant.BestPracticeAnalyser.Read
     #>

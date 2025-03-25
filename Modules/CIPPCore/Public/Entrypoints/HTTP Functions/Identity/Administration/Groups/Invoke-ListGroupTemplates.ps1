@@ -3,7 +3,7 @@ using namespace System.Net
 Function Invoke-ListGroupTemplates {
     <#
     .FUNCTIONALITY
-        Entrypoint
+        Entrypoint,AnyTenant
     .ROLE
         Identity.Group.Read
     #>

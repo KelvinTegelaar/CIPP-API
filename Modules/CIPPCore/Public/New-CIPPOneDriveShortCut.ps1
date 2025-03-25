@@ -14,7 +14,7 @@ function New-CIPPOneDriveShortCut {
         $SiteInfo = New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/sites/' -tenantid $TenantFilter -asapp $true | Where-Object -Property weburl -EQ $url
         $ListItemUniqueId = (New-GraphGetRequest -uri "https://graph.microsoft.com/beta/sites/$($siteInfo.id)/drive?`$select=SharepointIds" -tenantid $TenantFilter -asapp $true).SharePointIds
         $body = [PSCustomObject]@{
-            name                                = "$($SiteInfo.displayName)"
+            name                                = 'Documents'
             remoteItem                          = @{
                 sharepointIds = @{
                     listId           = $($ListItemUniqueId.listid)

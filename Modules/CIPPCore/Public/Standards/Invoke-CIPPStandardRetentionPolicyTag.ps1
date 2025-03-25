@@ -29,21 +29,20 @@ function Invoke-CIPPStandardRetentionPolicyTag {
     #>
 
     param($Tenant, $Settings)
-    ##$Rerun -Type Standard -Tenant $Tenant -Settings $Settings 'RetentionPolicyTag'
 
     $PolicyName = 'CIPP Deleted Items'
     $CurrentState = New-ExoRequest -tenantid $Tenant -cmdlet 'Get-RetentionPolicyTag' |
-        Where-Object -Property Identity -EQ $PolicyName
+    Where-Object -Property Identity -EQ $PolicyName
 
     $PolicyState = New-ExoRequest -tenantid $Tenant -cmdlet 'Get-RetentionPolicy' |
-        Where-Object -Property Identity -EQ 'Default MRM Policy'
+    Where-Object -Property Identity -EQ 'Default MRM Policy'
 
     $StateIsCorrect = ($CurrentState.Name -eq $PolicyName) -and
-                        ($CurrentState.RetentionEnabled -eq $true) -and
-                        ($CurrentState.RetentionAction -eq 'PermanentlyDelete') -and
-                        ($CurrentState.AgeLimitForRetention -eq ([timespan]::FromDays($Settings.AgeLimitForRetention))) -and
-                        ($CurrentState.Type -eq 'DeletedItems') -and
-                        ($PolicyState.RetentionPolicyTagLinks -contains $PolicyName)
+    ($CurrentState.RetentionEnabled -eq $true) -and
+    ($CurrentState.RetentionAction -eq 'PermanentlyDelete') -and
+    ($CurrentState.AgeLimitForRetention -eq ([timespan]::FromDays($Settings.AgeLimitForRetention))) -and
+    ($CurrentState.Type -eq 'DeletedItems') -and
+    ($PolicyState.RetentionPolicyTagLinks -contains $PolicyName)
 
     if ($Settings.remediate -eq $true) {
         Write-Host 'Time to remediate'
@@ -102,12 +101,20 @@ function Invoke-CIPPStandardRetentionPolicyTag {
         if ($StateIsCorrect -eq $true) {
             Write-LogMessage -API 'Standards' -tenant $Tenant -message 'Retention Policy is enabled' -sev Info
         } else {
-            Write-LogMessage -API 'Standards' -tenant $Tenant -message 'Retention Policy is not enabled' -sev Alert
+            Write-StandardsAlert -message 'Retention Policy is not enabled' -object $CurrentState -tenant $Tenant -standardName 'RetentionPolicyTag' -standardId $Settings.standardId
+            Write-LogMessage -API 'Standards' -tenant $Tenant -message 'Retention Policy is not enabled' -sev Info
         }
     }
 
     if ($Settings.report -eq $true) {
         Add-CIPPBPAField -FieldName 'RetentionPolicy' -FieldValue $StateIsCorrect -StoreAs bool -Tenant $tenant
+
+        if ($StateIsCorrect) {
+            $FieldValue = $true
+        } else {
+            $FieldValue = @{ CurrentState = $CurrentState; PolicyState = $PolicyState }
+        }
+        Set-CIPPStandardsCompareField -FieldName 'standards.RetentionPolicyTag' -FieldValue $FieldValue -Tenant $Tenant
     }
 
 }

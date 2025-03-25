@@ -54,12 +54,14 @@ function Invoke-CIPPStandardDisableGuestDirectory {
         if ($CurrentInfo.guestUserRoleId -eq '2af84b1e-32c8-42b7-82bc-daa82404023b') {
             Write-LogMessage -API 'Standards' -tenant $tenant -message 'Guest access to directory information is disabled.' -sev Info
         } else {
-            Write-LogMessage -API 'Standards' -tenant $tenant -message 'Guest access to directory information is not disabled.' -sev Alert
+            Write-StandardsAlert -message 'Guest access to directory information is not disabled.' -object $CurrentInfo -tenant $tenant -standardName 'DisableGuestDirectory' -standardId $Settings.standardId
+            Write-LogMessage -API 'Standards' -tenant $tenant -message 'Guest access to directory information is not disabled.' -sev Info
         }
     }
 
     if ($Settings.report -eq $true) {
         if ($CurrentInfo.guestUserRoleId -eq '2af84b1e-32c8-42b7-82bc-daa82404023b') { $CurrentInfo.guestUserRoleId = $true } else { $CurrentInfo.guestUserRoleId = $false }
+        Set-CIPPStandardsCompareField -FieldName 'standards.DisableGuestDirectory' -FieldValue $CurrentInfo.guestUserRoleId -TenantFilter $Tenant
         Add-CIPPBPAField -FieldName 'DisableGuestDirectory' -FieldValue $CurrentInfo.guestUserRoleId -StoreAs bool -Tenant $tenant
     }
 }

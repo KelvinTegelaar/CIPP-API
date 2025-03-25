@@ -3,7 +3,7 @@ using namespace System.Net
 Function Invoke-ListDomainHealth {
     <#
     .FUNCTIONALITY
-        Entrypoint
+        Entrypoint,AnyTenant
     .ROLE
         Tenant.DomainAnalyser.Read
     #>
