@@ -81,7 +81,7 @@ function Invoke-CIPPStandardActivityBasedTimeout {
         if ($StateIsCorrect -eq $true) {
             Write-LogMessage -API 'Standards' -tenant $Tenant -message "Activity Based Timeout is enabled and set to $timeout" -sev Info
         } else {
-            Write-StandardsAlert -message "Activity Based Timeout is not set to $timeout" -object $CurrentState -tenant $Tenant -standardName 'ActivityBasedTimeout' -standardId $Settings.standardId
+            Write-StandardsAlert -message "Activity Based Timeout is not set to $timeout" -object ($CurrentState.definition | ConvertFrom-Json -ErrorAction SilentlyContinue).activitybasedtimeoutpolicy.ApplicationPolicies -tenant $Tenant -standardName 'ActivityBasedTimeout' -standardId $Settings.standardId
             Write-LogMessage -API 'Standards' -tenant $Tenant -message "Activity Based Timeout is not set to $timeout" -sev Info
         }
     }

@@ -55,7 +55,7 @@ function Invoke-CIPPStandardDisableExternalCalendarSharing {
 
     if ($Settings.alert -eq $true) {
         if ($CurrentInfo.Enabled) {
-            Write-StandardsAlert -message 'External calendar sharing is enabled' -object $CurrentInfo -tenant $tenant -standardName 'DisableExternalCalendarSharing' -standardId $Settings.standardId
+            Write-StandardsAlert -message 'External calendar sharing is enabled' -object ($CurrentInfo | Select-Object enabled) -tenant $tenant -standardName 'DisableExternalCalendarSharing' -standardId $Settings.standardId
             Write-LogMessage -API 'Standards' -tenant $tenant -message 'External calendar sharing is enabled' -sev Info
         } else {
             Write-LogMessage -API 'Standards' -tenant $tenant -message 'External calendar sharing is not enabled' -sev Info
