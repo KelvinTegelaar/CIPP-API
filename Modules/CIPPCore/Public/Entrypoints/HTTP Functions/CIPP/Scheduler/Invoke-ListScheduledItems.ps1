@@ -1,6 +1,6 @@
 using namespace System.Net
 
-Function Invoke-ListScheduledItems {
+function Invoke-ListScheduledItems {
     <#
     .FUNCTIONALITY
         Entrypoint,AnyTenant
@@ -65,14 +65,10 @@ Function Invoke-ListScheduledItems {
         }
         try {
             $Task.ExecutedTime = [DateTimeOffset]::FromUnixTimeSeconds($Task.ExecutedTime).UtcDateTime
-        } catch {
-            $Task.ExecutedTime = [DateTime]::MinValue
-        }
+        } catch {}
         try {
             $Task.ScheduledTime = [DateTimeOffset]::FromUnixTimeSeconds($Task.ScheduledTime).UtcDateTime
-        } catch {
-            $Task.ScheduledTime = [DateTime]::MinValue
-        }
+        } catch {}
         $Task
     }
 
