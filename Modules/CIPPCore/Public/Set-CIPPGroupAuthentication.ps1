@@ -2,13 +2,12 @@ function Set-CIPPGroupAuthentication(
     [string]$Headers,
     [string]$GroupType,
     [string]$Id,
-    [string]$OnlyAllowInternalString,
+    [bool]$OnlyAllowInternal,
     [string]$TenantFilter,
     [string]$APIName = 'Group Sender Authentication'
 ) {
     try {
-        $OnlyAllowInternal = if ($OnlyAllowInternalString -eq 'true') { 'true' } else { 'false' }
-        $messageSuffix = if ($OnlyAllowInternal -eq 'true') { 'inside the organisation.' } else { 'inside and outside the organisation.' }
+        $messageSuffix = if ($OnlyAllowInternal -eq $true) { 'inside the organisation.' } else { 'inside and outside the organisation.' }
 
         if ($GroupType -eq 'Distribution List' -or $GroupType -eq 'Mail-Enabled Security') {
             New-ExoRequest -tenantid $TenantFilter -cmdlet 'Set-DistributionGroup' -cmdParams @{Identity = $Id; RequireSenderAuthenticationEnabled = $OnlyAllowInternal }

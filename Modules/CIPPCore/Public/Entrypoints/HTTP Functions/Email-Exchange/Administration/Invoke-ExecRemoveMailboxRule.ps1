@@ -15,7 +15,7 @@ Function Invoke-ExecRemoveMailboxRule {
     Write-LogMessage -Headers $Headers -API $APIName -tenant $TenantFilter -message 'Accessed this API' -Sev 'Debug'
 
     # Interact with the query or body of the request
-    $TenantFilter = $Request.Query.TenantFilter ?? $Request.Query.TenantFilter
+    $TenantFilter = $Request.Query.TenantFilter ?? $Request.Body.TenantFilter
     $RuleName = $Request.Query.ruleName ?? $Request.Body.ruleName
     $RuleId = $Request.Query.ruleId ?? $Request.Body.ruleId
     $Username = $Request.Query.userPrincipalName ?? $Request.Body.userPrincipalName

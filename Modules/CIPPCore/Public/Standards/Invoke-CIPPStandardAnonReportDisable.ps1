@@ -52,10 +52,13 @@ function Invoke-CIPPStandardAnonReportDisable {
         if ($CurrentInfo.displayConcealedNames -eq $false) {
             Write-LogMessage -API 'Standards' -tenant $tenant -message 'Anonymous Reports is disabled' -sev Info
         } else {
-            Write-LogMessage -API 'Standards' -tenant $tenant -message 'Anonymous Reports is not disabled' -sev Alert
+            Write-StandardsAlert -message 'Anonymous Reports is not disabled' -object $CurrentInfo -tenant $tenant -standardName 'AnonReportDisable' -standardId $Settings.standardId
+            Write-LogMessage -API 'Standards' -tenant $tenant -message 'Anonymous Reports is not disabled' -sev Info
         }
     }
     if ($Settings.report -eq $true) {
+        $stateisCorrrect = $CurrentInfo.displayConcealedNames ? $false : $true
+        Set-CIPPStandardsCompareField -FieldName 'standards.AnonReportDisable' -FieldValue $stateisCorrrect -TenantFilter $tenant
         Add-CIPPBPAField -FieldName 'AnonReport' -FieldValue $CurrentInfo.displayConcealedNames -StoreAs bool -Tenant $tenant
     }
 }

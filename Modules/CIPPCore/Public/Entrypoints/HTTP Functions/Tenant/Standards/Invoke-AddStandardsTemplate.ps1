@@ -1,6 +1,6 @@
 using namespace System.Net
 
-Function Invoke-AddStandardsTemplate {
+function Invoke-AddStandardsTemplate {
     <#
     .FUNCTIONALITY
         Entrypoint,AnyTenant
@@ -31,7 +31,7 @@ Function Invoke-AddStandardsTemplate {
 
     }
     Write-LogMessage -headers $Request.Headers -API $APINAME -message "Created CA Template $($Request.body.name) with GUID $GUID" -Sev 'Debug'
-    $body = [pscustomobject]@{'Results' = 'Successfully added template'; id = $GUID }
+    $body = [pscustomobject]@{'Results' = 'Successfully added template'; Metadata = @{id = $GUID } }
 
     # Associate values to output bindings by calling 'Push-OutputBinding'.
     Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{

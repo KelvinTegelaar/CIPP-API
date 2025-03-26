@@ -34,7 +34,9 @@ function Test-CIPPAccessPermissions {
         if ($env:MSI_SECRET) {
             try {
                 Disable-AzContextAutosave -Scope Process | Out-Null
-                $AzSession = Connect-AzAccount -Identity
+                $null = Connect-AzAccount -Identity
+                $SubscriptionId = $ENV:WEBSITE_OWNER_NAME -split '\+' | Select-Object -First 1
+                $null = Set-AzContext -SubscriptionId $SubscriptionId
 
                 $KV = $ENV:WEBSITE_DEPLOYMENT_ID
                 $KeyVaultRefresh = Get-AzKeyVaultSecret -VaultName $kv -Name 'RefreshToken' -AsPlainText
@@ -138,7 +140,7 @@ function Test-CIPPAccessPermissions {
         $CPVRefreshList = [System.Collections.Generic.List[object]]::new()
         $CPVSuccess = $true
         foreach ($Tenant in $TenantList) {
-            $LastRefresh = ($CpvRefresh | Where-Object { $_.RowKey -EQ $Tenant.customerId }).Timestamp.DateTime
+            $LastRefresh = ($CpvRefresh | Where-Object { $_.RowKey -eq $Tenant.customerId }).Timestamp.DateTime
             if ($LastRefresh -lt $LastUpdate) {
                 $CPVSuccess = $false
                 $CPVRefreshList.Add([PSCustomObject]@{
@@ -157,6 +159,19 @@ function Test-CIPPAccessPermissions {
         $ErrorMessage = Get-CippException -Exception $_
         Write-LogMessage -Headers $User -API $APINAME -message "Permissions check failed: $($ErrorMessage.NormalizedError) " -Sev 'Error' -LogData $ErrorMessage
         $ErrorMessages.Add("We could not connect to the API to retrieve the permissions. There might be a problem with the secure application model configuration. The returned error is: $($ErrorMessage.NormalizedError)") | Out-Null
+
+        try {
+            $MFAServicePolicy = New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/policies/mfaServicePolicy' -tenantid $env:TenantID -AsApp $true -NoAuthCheck $true
+            if ($MFAServicePolicy.rememberMfaOnTrustedDevice.isEnabled -eq $true -and $MFAServicePolicy.rememberMfaOnTrustedDevice.allowedNumberOfDays -gt 0) {
+                $ErrorMessages.Add("MFA Service Policy has a session lifetime of $($MFAServicePolicy.rememberMfaOnTrustedDevice.allowedNumberOfDays) days. This may cause athentication issues for your service account.") | Out-Null
+                $Links.Add([PSCustomObject]@{
+                        Text = 'Troubleshooting'
+                        Href = 'https://docs.cipp.app/troubleshooting/troubleshooting#multi-factor-authentication-troubleshooting'
+                    }
+                ) | Out-Null
+            }
+        } catch {}
+
         $Success = $false
     }
 

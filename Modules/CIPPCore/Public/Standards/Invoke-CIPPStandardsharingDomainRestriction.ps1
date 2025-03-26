@@ -31,7 +31,6 @@ function Invoke-CIPPStandardsharingDomainRestriction {
     #>
 
     param($Tenant, $Settings)
-    ##$Rerun -Type Standard -Tenant $Tenant -Settings $Settings 'sharingDomainRestriction'
 
     $CurrentState = New-GraphGetRequest -Uri 'https://graph.microsoft.com/beta/admin/sharepoint/settings' -tenantid $Tenant -AsApp $true
 
@@ -84,11 +83,19 @@ function Invoke-CIPPStandardsharingDomainRestriction {
         if ($StateIsCorrect -eq $true) {
             Write-LogMessage -API 'Standards' -tenant $tenant -message 'Sharing Domain Restriction is correctly configured' -sev Info
         } else {
-            Write-LogMessage -API 'Standards' -tenant $tenant -message 'Sharing Domain Restriction is not correctly configured' -sev Alert
+            Write-StandardsAlert -message 'Sharing Domain Restriction is not correctly configured' -object $CurrentState -tenant $tenant -standardName 'sharingDomainRestriction' -standardId $Settings.standardId
+            Write-LogMessage -API 'Standards' -tenant $tenant -message 'Sharing Domain Restriction is not correctly configured' -sev Info
         }
     }
 
     if ($Settings.report -eq $true) {
         Add-CIPPBPAField -FieldName 'sharingDomainRestriction' -FieldValue [bool]$StateIsCorrect -StoreAs bool -Tenant $tenant
+
+        if ($StateIsCorrect) {
+            $FieldValue = $true
+        } else {
+            $FieldValue = $CurrentState | Select-Object sharingAllowedDomainList, sharingDomainRestrictionMode
+        }
+        Set-CIPPStandardsCompareField -FieldName 'standards.sharingDomainRestriction' -FieldValue $FieldValue -Tenant $Tenant
     }
 }

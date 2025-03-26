@@ -115,7 +115,7 @@ function Test-CIPPAccess {
                 }
 
                 if ($APIAllowed) {
-                    $TenantFilter = $Request.Query.tenantFilter ?? $Request.Body.tenantFilter ?? $env:TenantID
+                    $TenantFilter = $Request.Query.tenantFilter ?? $Request.Body.tenantFilter ?? $Request.Query.tenantId ?? $Request.Body.tenantId ?? $env:TenantID
                     # Check tenant level access
                     if (($Role.BlockedTenants | Measure-Object).Count -eq 0 -and $Role.AllowedTenants -contains 'AllTenants') {
                         $TenantAllowed = $true

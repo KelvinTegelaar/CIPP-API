@@ -31,11 +31,10 @@ function Invoke-CIPPStandardOutBoundSpamAlert {
     #>
 
     param($Tenant, $Settings)
-    ##$Rerun -Type Standard -Tenant $Tenant -Settings $Settings 'OutBoundSpamAlert'
 
     $CurrentInfo = New-ExoRequest -tenantid $Tenant -cmdlet 'Get-HostedOutboundSpamFilterPolicy' -useSystemMailbox $true
 
-    If ($Settings.remediate -eq $true) {
+    if ($Settings.remediate -eq $true) {
 
         if ($CurrentInfo.NotifyOutboundSpam -ne $true -or $CurrentInfo.NotifyOutboundSpamRecipients -ne $settings.OutboundSpamContact) {
             $Contacts = $settings.OutboundSpamContact
@@ -56,11 +55,19 @@ function Invoke-CIPPStandardOutBoundSpamAlert {
         if ($CurrentInfo.NotifyOutboundSpam -eq $true) {
             Write-LogMessage -API 'Standards' -tenant $tenant -message "Outbound spam filter alert is set to $($CurrentInfo.NotifyOutboundSpamRecipients)" -sev Info
         } else {
-            Write-LogMessage -API 'Standards' -tenant $tenant -message 'Outbound spam filter alert is not set' -sev Alert
+            $Object = $CurrentInfo | Select-Object -Property NotifyOutboundSpamRecipients, NotifyOutboundSpam
+            Write-StandardsAlert -message 'Outbound spam filter alert is not set' -object $Object -tenant $tenant -standardName 'OutBoundSpamAlert' -standardId $Settings.standardId
+            Write-LogMessage -API 'Standards' -tenant $tenant -message 'Outbound spam filter alert is not set' -sev Info
         }
     }
 
     if ($Settings.report -eq $true) {
         Add-CIPPBPAField -FieldName 'OutboundSpamAlert' -FieldValue $CurrentInfo.NotifyOutboundSpam -StoreAs bool -Tenant $tenant
+        if ($CurrentInfo.NotifyOutboundSpam -ne $true -or $CurrentInfo.NotifyOutboundSpamRecipients -ne $settings.OutboundSpamContact) {
+            $ValueField = $CurrentInfo | Select-Object -Property NotifyOutboundSpamRecipients, NotifyOutboundSpam
+        } else {
+            $ValueField = $true
+        }
+        Set-CIPPStandardsCompareField -FieldName 'standards.OutBoundSpamAlert' -FieldValue $ValueField -Tenant $tenant
     }
 }
