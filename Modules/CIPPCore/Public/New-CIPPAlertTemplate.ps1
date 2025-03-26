@@ -22,6 +22,13 @@ function New-CIPPAlertTemplate {
     $Table = ''
     $LocationInfo = $LocationInfo ?? $Data.CIPPLocationInfo | ConvertFrom-Json -ErrorAction SilentlyContinue | Select-Object * -ExcludeProperty Etag, PartitionKey, TimeStamp
     if ($InputObject -eq 'table') {
+        #data can be a array of strings or a string, if it is, we need to convert it to an object so it shows up nicely, that object will have one header: message.
+        if ($Data -is [string]) {
+            $Data = @{ message = $Data }
+        }
+        if ($Data -is [array] -and $Data[0] -is [string]) {
+            $Data = $Data | ForEach-Object { @{ message = $_ } }
+        }
         $DataHTML = ($Data | Select-Object * -ExcludeProperty Etag, PartitionKey, TimeStamp | ConvertTo-Html | Out-String).Replace('<table>', ' <table class="table-modern">')
         $IntroText = "<p>You've configured CIPP to send you alerts based on the logbook. The following alerts match your configured rules</p>$dataHTML"
         $ButtonUrl = "$CIPPURL/cipp/logs"
