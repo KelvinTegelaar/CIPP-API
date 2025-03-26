@@ -5320,7 +5320,7 @@
   },
   {
     "description": "Allows the app to have full control of all site collections on behalf of the signed-in user.",
-    "displayName": "Manage Sharepoint Online",
+    "displayName": "Manage SharePoint Online",
     "id": "56680e0d-d2a3-4ae1-80d8-3c4f2100e3d0",
     "Origin": "Delegated (Office 365 SharePoint Online)",
     "userConsentDescription": "Have full control of all site collections",

@@ -26,12 +26,20 @@ function Start-DurableCleanup {
 
     $CleanupCount = 0
     $QueueCount = 0
+    $ClearQueues = $false
+
+    $FunctionsWithLongRunningOrchestrators = [System.Collections.Generic.List[object]]::new()
     foreach ($Table in $InstancesTables) {
+        $RunningOrchestratorCount = 0
         $Table = Get-CippTable -TableName $Table
-        $ClearQueues = $false
         $FunctionName = $Table.TableName -replace 'Instances', ''
         $Orchestrators = Get-CIPPAzDataTableEntity @Table -Filter "RuntimeStatus eq 'Running'" | Select-Object * -ExcludeProperty Input
+        $Queues = Get-AzStorageQueue -Context $StorageContext -Name ('{0}*' -f $FunctionName) | Select-Object -Property Name, ApproximateMessageCount, QueueClient
+        $RunningOrchestratorCount = $Orchestrators.Count
         $LongRunningOrchestrators = $Orchestrators | Where-Object { $_.CreatedTime.DateTime -lt $TargetTime }
+        if ($LongRunningOrchestrators.Count -gt 0) {
+            $FunctionsWithLongRunningOrchestrators.Add(@{'FunctionName' = $FunctionName })
+        }
         foreach ($Orchestrator in $LongRunningOrchestrators) {
             $CreatedTime = [DateTime]::SpecifyKind($Orchestrator.CreatedTime.DateTime, [DateTimeKind]::Utc)
             $TimeSpan = New-TimeSpan -Start $CreatedTime -End (Get-Date).ToUniversalTime()
@@ -45,9 +53,7 @@ function Start-DurableCleanup {
                 $CleanupCount++
             }
         }
-
-        if ($ClearQueues) {
-            $Queues = Get-AzStorageQueue -Context $StorageContext -Name ('{0}*' -f $FunctionName) | Select-Object -Property Name, ApproximateMessageCount, QueueClient
+        if ($ClearQueues -or ($RunningOrchestratorCount -eq 0 -and $Queues.ApproximateMessageCount -gt 0)) {
             $RunningQueues = $Queues | Where-Object { $_.ApproximateMessageCount -gt 0 }
             foreach ($Queue in $RunningQueues) {
                 Write-Information "- Removing queue: $($Queue.Name), message count: $($Queue.ApproximateMessageCount)"
@@ -58,5 +64,10 @@ function Start-DurableCleanup {
             }
         }
     }
-    Write-Information "Cleanup complete. $CleanupCount orchestrators were terminated. $QueueCount queues were cleared."
+
+    if ($CleanupCount -gt 0 -or $QueueCount -gt 0) {
+        Write-LogMessage -api 'Durable Cleanup' -message "$CleanupCount orchestrators were terminated. $QueueCount queues were cleared." -sev 'Info' -LogData $FunctionsWithLongRunningOrchestrators
+    }
+
+    Write-Information "Durable cleanup complete. $CleanupCount orchestrators were terminated. $QueueCount queues were cleared."
 }

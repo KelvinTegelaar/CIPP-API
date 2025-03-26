@@ -11,11 +11,12 @@ Function Invoke-RemoveContact {
     param($Request, $TriggerMetadata)
 
     $APIName = $Request.Params.CIPPEndpoint
-    $TenantFilter = $Request.Query.tenantFilter
+    $TenantFilter = $Request.Query.tenantFilter ?? $Request.Body.tenantFilter
     Write-LogMessage -Headers $Request.Headers -API $APIName -message 'Accessed this API' -Sev 'Debug'
 
     # Interact with query parameters or the body of the request.
     $GUID = $Request.query.GUID ?? $Request.body.GUID
+    $Mail = $Request.query.Mail ?? $Request.body.Mail
 
     try {
         $Params = @{
@@ -23,7 +24,7 @@ Function Invoke-RemoveContact {
         }
         $null = New-ExoRequest -tenantid $TenantFilter -cmdlet 'Remove-MailContact' -cmdParams $Params -UseSystemMailbox $true
         Write-LogMessage -Headers $Request.Headers -API $APIName -tenant $TenantFilter -message "Deleted contact $GUID" -sev Debug
-        $Result = "Deleted $GUID"
+        $Result = "Deleted $Mail"
         $StatusCode = [HttpStatusCode]::OK
     } catch {
         $ErrorMessage = Get-CippException -Exception $_

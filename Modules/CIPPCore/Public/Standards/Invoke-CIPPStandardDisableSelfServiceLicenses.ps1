@@ -90,7 +90,8 @@ function Invoke-CIPPStandardDisableSelfServiceLicenses {
         if (!$selfServiceItemsToAlert) {
             Write-LogMessage -API 'Standards' -tenant $tenant -message 'All self-service licenses are disabled' -sev Info
         } else {
-            Write-LogMessage -API 'Standards' -tenant $tenant -message 'One or more self-service licenses are enabled' -sev Alert
+            Write-StandardsAlert -message "One or more self-service licenses are enabled" -object $selfServiceItemsToAlert -tenant $tenant -standardName 'DisableSelfServiceLicenses' -standardId $Settings.standardId
+            Write-LogMessage -API 'Standards' -tenant $tenant -message 'One or more self-service licenses are enabled' -sev Info
         }
     }
 

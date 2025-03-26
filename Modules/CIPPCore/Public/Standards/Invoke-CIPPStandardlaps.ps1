@@ -34,32 +34,29 @@ function Invoke-CIPPStandardlaps {
     $PreviousSetting = New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/policies/deviceRegistrationPolicy' -tenantid $Tenant
 
     If ($Settings.remediate -eq $true) {
-        Write-Host 'Time to remediate!'
-        if ($PreviousSetting.localAdminPassword.isEnabled) {
-            Write-LogMessage -API 'Standards' -tenant $Tenant -message 'LAPS is already enabled.' -sev Info
-        } else {
-            try {
-                $PreviousSetting.localAdminPassword.isEnabled = $true
-                $Newbody = ConvertTo-Json -Compress -InputObject $PreviousSetting -Depth 10
-                New-GraphPostRequest -tenantid $Tenant -Uri 'https://graph.microsoft.com/beta/policies/deviceRegistrationPolicy' -Type PUT -Body $NewBody -ContentType 'application/json'
-                Write-LogMessage -API 'Standards' -tenant $Tenant -message 'LAPS has been enabled.' -sev Info
-            } catch {
-                $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
-                $PreviousSetting.localAdminPassword.isEnabled = $false
-                Write-LogMessage -API 'Standards' -tenant $Tenant -message "Failed to enable LAPS: $ErrorMessage" -sev Error
-            }
+        try {
+            $PreviousSetting.localAdminPassword.isEnabled = $true
+            $Newbody = ConvertTo-Json -Compress -InputObject $PreviousSetting -Depth 10
+            New-GraphPostRequest -tenantid $Tenant -Uri 'https://graph.microsoft.com/beta/policies/deviceRegistrationPolicy' -Type PUT -Body $NewBody -ContentType 'application/json'
+            Write-LogMessage -API 'Standards' -tenant $Tenant -message 'LAPS has been enabled.' -sev Info
+        } catch {
+            $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
+            $PreviousSetting.localAdminPassword.isEnabled = $false
+            Write-LogMessage -API 'Standards' -tenant $Tenant -message "Failed to enable LAPS: $ErrorMessage" -sev Error
         }
     }
     if ($Settings.alert -eq $true) {
-
         if ($PreviousSetting.localAdminPassword.isEnabled) {
             Write-LogMessage -API 'Standards' -tenant $Tenant -message 'LAPS is enabled.' -sev Info
         } else {
-            Write-LogMessage -API 'Standards' -tenant $Tenant -message 'LAPS is not enabled.' -sev Alert
+            Write-StandardsAlert -message 'LAPS is not enabled' -object $PreviousSetting -tenant $Tenant -standardName 'laps' -standardId $Settings.standardId
+            Write-LogMessage -API 'Standards' -tenant $Tenant -message 'LAPS is not enabled.' -sev Info
         }
     }
 
     if ($Settings.report -eq $true) {
+        $state = $PreviousSetting.localAdminPassword.isEnabled ? $true : $false
+        Set-CIPPStandardsCompareField -FieldName 'standards.laps' -FieldValue $state -Tenant $Tenant
         Add-CIPPBPAField -FieldName 'laps' -FieldValue $PreviousSetting.localAdminPassword.isEnabled -StoreAs bool -Tenant $tenant
     }
 }

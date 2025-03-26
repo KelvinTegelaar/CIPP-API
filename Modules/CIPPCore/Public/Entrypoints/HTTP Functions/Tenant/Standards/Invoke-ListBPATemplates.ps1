@@ -3,7 +3,7 @@ using namespace System.Net
 Function Invoke-ListBPATemplates {
     <#
     .FUNCTIONALITY
-        Entrypoint
+        Entrypoint,AnyTenant
     .ROLE
         Tenant.BestPracticeAnalyser.Read
     #>
