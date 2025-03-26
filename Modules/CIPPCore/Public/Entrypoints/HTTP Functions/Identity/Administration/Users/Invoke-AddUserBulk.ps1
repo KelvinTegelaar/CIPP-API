@@ -15,6 +15,8 @@ function Invoke-AddUserBulk {
     $TenantFilter = $Request.body.TenantFilter
 
     $BulkUsers = $Request.Body.BulkUser
+    $AssignedLicenses = $Request.Body.licenses
+    $UsageLocation = $Request.Body.usageLocation
 
     if (!$BulkUsers) {
         $Body = @{
@@ -47,6 +49,7 @@ function Invoke-AddUserBulk {
                         state      = 'error'
                     })
             } else {
+                Write-Information "## Creating user for $($Name) - $($User.mailNickName)@$($User.domain)"
                 # Create user body with required properties
                 $Password = if ($User.password) { $User.password } else { New-passwordString }
                 $UserBody = @{
@@ -60,9 +63,18 @@ function Invoke-AddUserBulk {
                     }
                 }
 
-                # Add optional properties if not null or empty
-                if (![string]::IsNullOrEmpty($User.usageLocation)) {
-                    $UserBody.usageLocation = $User.usageLocation.value ?? $User.usageLocation
+                # Usage location and licensing
+                if ($UsageLocation) {
+                    $UserBody.usageLocation = $UsageLocation.value ?? $UsageLocation
+                    Write-Information "- Usage location set to $($UsageLocation.label ?? $UsageLocation)"
+                    if ($AssignedLicenses) {
+                        $GuidPattern = '([a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12})'
+                        $LicenseSkus = $AssignedLicenses.value ?? $AssignedLicenses | Where-Object { $_ -match $GuidPattern }
+                        if (($LicenseSkus | Measure-Object).Count -gt 0) {
+                            Write-Information "- Assigned licenses set to $(($AssignedLicenses.label ?? $AssignedLicenses) -join ', ')"
+                            $UserBody.assignedLicenses = @($LicenseSkus)
+                        }
+                    }
                 }
 
                 # Convert businessPhones to array if not null or empty
@@ -70,7 +82,7 @@ function Invoke-AddUserBulk {
                     $UserBody.businessPhones = @($User.businessPhones)
                 }
 
-                # loop through rest of post body and add to user body if not null or empty or not already set in the user body
+                # Add all other properties
                 foreach ($key in $User.PSObject.Properties.Name) {
                     if ($key -notin @('displayName', 'mailNickName', 'domain', 'password', 'usageLocation', 'businessPhones')) {
                         if (![string]::IsNullOrEmpty($User.$key) -and $UserBody.$key -eq $null) {
@@ -107,11 +119,10 @@ function Invoke-AddUserBulk {
 
         if ($BulkRequests.Count -gt 0) {
             Write-Warning "We have $($BulkRequests.Count) users to import"
-            Write-Information ($BulkRequests | ConvertTo-Json -Depth 5)
+            #Write-Information ($BulkRequests | ConvertTo-Json -Depth 5)
             $BulkResults = New-GraphBulkRequest -tenantid $TenantFilter -Requests $BulkRequests
             Write-Warning "We have $($BulkResults.Count) results"
-            Write-Information ($BulkResults | ConvertTo-Json -Depth 10
-            )
+            #Write-Information ($BulkResults | ConvertTo-Json -Depth 10)
             foreach ($BulkResult in $BulkResults) {
                 if ($BulkResult.status -ne 201) {
                     Write-LogMessage -headers $Request.Headers -API $APINAME -tenant $($TenantFilter) -message "Failed to create user $($BulkResult.id). Error:$($BulkResult.body.error.message)" -Sev 'Error'
@@ -126,7 +137,6 @@ function Invoke-AddUserBulk {
                             state      = 'success'
                             copyField  = $Message.copyField
                             username   = $BulkResult.body.userPrincipalName
-                            id         = $BulkResult.id
                         })
                 }
             }
