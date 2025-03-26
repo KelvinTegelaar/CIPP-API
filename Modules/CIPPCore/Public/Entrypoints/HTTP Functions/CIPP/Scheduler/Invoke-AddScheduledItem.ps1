@@ -14,7 +14,7 @@ Function Invoke-AddScheduledItem {
     } else {
         $hidden = $true
     }
-    $Result = Add-CIPPScheduledTask -Task $Request.body -Headers $Request.Headers -hidden $hidden -DisallowDuplicateName $Request.query.DisallowDuplicateName
+    $Result = Add-CIPPScheduledTask -Task $Request.body -Headers $Request.Headers -hidden $hidden -DisallowDuplicateName $Request.query.DisallowDuplicateName 
     Write-LogMessage -headers $Request.Headers -API $APINAME -message $Result -Sev 'Info'
 
     Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{

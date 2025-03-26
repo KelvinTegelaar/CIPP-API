@@ -1,4 +1,4 @@
-Function Invoke-CIPPStandardTeamsFederationConfiguration {
+function Invoke-CIPPStandardTeamsFederationConfiguration {
     <#
     .FUNCTIONALITY
         Internal
@@ -34,11 +34,10 @@ Function Invoke-CIPPStandardTeamsFederationConfiguration {
     param($Tenant, $Settings)
     ##$Rerun -Type Standard -Tenant $Tenant -Settings $Settings 'TeamsFederationConfiguration'
 
-    $CurrentState = New-TeamsRequest -TenantFilter $Tenant -Cmdlet 'Get-CsTenantFederationConfiguration' -CmdParams @{Identity = 'Global' }
-    | Select-Object *
+    $CurrentState = New-TeamsRequest -TenantFilter $Tenant -Cmdlet 'Get-CsTenantFederationConfiguration' -CmdParams @{Identity = 'Global' } | Select-Object *
 
     $DomainControl = $Settings.DomainControl.value ?? $Settings.DomainControl
-    Switch ($DomainControl) {
+    switch ($DomainControl) {
         'AllowAllExternal' {
             $AllowFederatedUsers = $true
             $AllowedDomainsAsAList = 'AllowAllKnownDomains'
@@ -67,9 +66,9 @@ Function Invoke-CIPPStandardTeamsFederationConfiguration {
                 $BlockedDomains = @()
             }
         }
-        Default {
+        default {
             Write-LogMessage -API 'Standards' -tenant $Tenant -message "Federation Configuration: Invalid $DomainControl parameter" -sev Error
-            Return
+            return
         }
     }
 
@@ -77,10 +76,10 @@ Function Invoke-CIPPStandardTeamsFederationConfiguration {
     # $CurrentState.AllowedDomains returns a PSObject System.Object and adds a Domain= for each allowed domain, ex {Domain=example.com, Domain=example2.com}
 
     $StateIsCorrect = ($CurrentState.AllowTeamsConsumer -eq $Settings.AllowTeamsConsumer) -and
-                        ($CurrentState.AllowPublicUsers -eq $Settings.AllowPublicUsers) -and
-                        ($CurrentState.AllowFederatedUsers -eq $AllowFederatedUsers) -and
-                        ($CurrentState.AllowedDomains -eq $AllowedDomainsAsAList) -and
-                        ($CurrentState.BlockedDomains -eq $BlockedDomains)
+    ($CurrentState.AllowPublicUsers -eq $Settings.AllowPublicUsers) -and
+    ($CurrentState.AllowFederatedUsers -eq $AllowFederatedUsers) -and
+    ($CurrentState.AllowedDomains -eq $AllowedDomainsAsAList) -and
+    ($CurrentState.BlockedDomains -eq $BlockedDomains)
 
     if ($Settings.remediate -eq $true) {
         if ($StateIsCorrect -eq $true) {
@@ -109,11 +108,18 @@ Function Invoke-CIPPStandardTeamsFederationConfiguration {
         if ($StateIsCorrect -eq $true) {
             Write-LogMessage -API 'Standards' -tenant $Tenant -message 'Federation Configuration is set correctly.' -sev Info
         } else {
-            Write-LogMessage -API 'Standards' -tenant $Tenant -message 'Federation Configuration is not set correctly.' -sev Alert
+            Write-StandardsAlert -message 'Federation Configuration is not set correctly.' -object $CurrentState -tenant $Tenant -standardName 'TeamsFederationConfiguration' -standardId $Settings.standardId
+            Write-LogMessage -API 'Standards' -tenant $Tenant -message 'Federation Configuration is not set correctly.' -sev Info
         }
     }
 
     if ($Setings.report -eq $true) {
         Add-CIPPBPAField -FieldName 'FederationConfiguration' -FieldValue $StateIsCorrect -StoreAs bool -Tenant $Tenant
+        if ($StateIsCorrect) {
+            $FieldValue = $true
+        } else {
+            $FieldValue = $CurrentState
+        }
+        Set-CIPPStandardsCompareField -FieldName 'standards.TeamsFederationConfiguration' -FieldValue $FieldValue -Tenant $Tenant
     }
 }

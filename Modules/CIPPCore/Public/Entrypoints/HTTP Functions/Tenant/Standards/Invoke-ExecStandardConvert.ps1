@@ -3,7 +3,7 @@ using namespace System.Net
 function Invoke-ExecStandardConvert {
     <#
     .FUNCTIONALITY
-        Entrypoint
+        Entrypoint,AnyTenant
     .ROLE
         Tenant.Standards.ReadWrite
     #>

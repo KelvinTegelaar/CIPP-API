@@ -1,7 +1,7 @@
 function Invoke-ListApiTest {
     <#
     .FUNCTIONALITY
-        Entrypoint
+        Entrypoint,AnyTenant
     .ROLE
         CIPP.Core.Read
     #>

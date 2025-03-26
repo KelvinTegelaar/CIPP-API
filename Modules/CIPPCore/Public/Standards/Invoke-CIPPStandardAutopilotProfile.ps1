@@ -42,35 +42,63 @@ function Invoke-CIPPStandardAutopilotProfile {
     param($Tenant, $Settings)
     ##$Rerun -Type Standard -Tenant $Tenant -Settings $Settings 'APConfig'
 
-    If ($Settings.remediate -eq $true) {
+    # Check if profile exists
+    $ProfileExists = $false
+    try {
+        $Profiles = New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/deviceManagement/windowsAutopilotDeploymentProfiles' -tenantid $Tenant
+        $ProfileExists = ($Profiles.displayName -contains $settings.DisplayName)
+    } catch {
+        $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
+        Write-LogMessage -API 'Standards' -tenant $tenant -message "Failed to check Autopilot profiles: $ErrorMessage" -sev 'Error'
+    }
 
-        try {
-            Write-Host $($settings | ConvertTo-Json -Depth 100)
-            if ($settings.NotLocalAdmin -eq $true) { $usertype = 'Standard' } else { $usertype = 'Administrator' }
-            $DeploymentMode = if ($settings.DeploymentMode -eq 'true') { 'shared' } else { 'singleUser' }
+    if ($Settings.report -eq $true) {
+        $state = $ProfileExists -eq $true ? $true : $ProfileExists
+        Set-CIPPStandardsCompareField -FieldName 'standards.AutopilotProfile' -FieldValue $state -TenantFilter $tenant
+        Add-CIPPBPAField -FieldName 'AutopilotProfile' -FieldValue $ProfileExists -StoreAs bool -Tenant $tenant
+    }
 
-            $Parameters = @{
-                tenantFilter       = $tenant
-                displayname        = $settings.DisplayName
-                description        = $settings.Description
-                usertype           = $usertype
-                DeploymentMode     = $DeploymentMode
-                assignto           = $settings.Assignto
-                devicenameTemplate = $Settings.DeviceNameTemplate
-                allowWhiteGlove    = $Settings.allowWhiteglove
-                CollectHash        = $Settings.CollectHash
-                hideChangeAccount  = $Settings.HideChangeAccount
-                hidePrivacy        = $Settings.HidePrivacy
-                hideTerms          = $Settings.HideTerms
-                Autokeyboard       = $Settings.Autokeyboard
-                Language           = $Settings.languages.value
-            }
-            Set-CIPPDefaultAPDeploymentProfile @Parameters
-        } catch {
-            $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
-            # Write-LogMessage -API 'Standards' -tenant $tenant -message "Failed to create Default Autopilot config: $ErrorMessage" -sev 'Error'
-            throw $ErrorMessage
+    if ($Settings.alert -eq $true) {
+        if ($ProfileExists) {
+            Write-LogMessage -API 'Standards' -tenant $tenant -message "Autopilot profile '$($settings.DisplayName)' exists" -sev Info
+        } else {
+            Write-StandardsAlert -message "Autopilot profile '$($settings.DisplayName)' does not exist" -object @{ProfileName = $settings.DisplayName } -tenant $tenant -standardName 'AutopilotProfile' -standardId $Settings.standardId
+            Write-LogMessage -API 'Standards' -tenant $tenant -message "Autopilot profile '$($settings.DisplayName)' does not exist" -sev Info
         }
+    }
 
+    If ($Settings.remediate -eq $true) {
+        if ($ProfileExists) {
+            Write-LogMessage -API 'Standards' -tenant $tenant -message "Autopilot profile '$($settings.DisplayName)' already exists" -sev Info
+        } else {
+            try {
+                Write-Host $($settings | ConvertTo-Json -Depth 100)
+                if ($settings.NotLocalAdmin -eq $true) { $usertype = 'Standard' } else { $usertype = 'Administrator' }
+                $DeploymentMode = if ($settings.DeploymentMode -eq 'true') { 'shared' } else { 'singleUser' }
+
+                $Parameters = @{
+                    tenantFilter       = $tenant
+                    displayname        = $settings.DisplayName
+                    description        = $settings.Description
+                    usertype           = $usertype
+                    DeploymentMode     = $DeploymentMode
+                    assignto           = $settings.Assignto
+                    devicenameTemplate = $Settings.DeviceNameTemplate
+                    allowWhiteGlove    = $Settings.allowWhiteglove
+                    CollectHash        = $Settings.CollectHash
+                    hideChangeAccount  = $Settings.HideChangeAccount
+                    hidePrivacy        = $Settings.HidePrivacy
+                    hideTerms          = $Settings.HideTerms
+                    Autokeyboard       = $Settings.Autokeyboard
+                    Language           = $Settings.languages.value
+                }
+                Set-CIPPDefaultAPDeploymentProfile @Parameters
+                Write-LogMessage -API 'Standards' -tenant $tenant -message "Created Autopilot profile '$($settings.DisplayName)'" -sev Info
+            } catch {
+                $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
+                Write-LogMessage -API 'Standards' -tenant $tenant -message "Failed to create Autopilot profile: $ErrorMessage" -sev 'Error'
+                throw $ErrorMessage
+            }
+        }
     }
 }

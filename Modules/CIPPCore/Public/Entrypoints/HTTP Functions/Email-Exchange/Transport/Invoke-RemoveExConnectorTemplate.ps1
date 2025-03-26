@@ -3,7 +3,7 @@ using namespace System.Net
 Function Invoke-RemoveExConnectorTemplate {
     <#
     .FUNCTIONALITY
-        Entrypoint
+        Entrypoint,AnyTenant
     .ROLE
         Exchange.Connector.ReadWrite
     #>

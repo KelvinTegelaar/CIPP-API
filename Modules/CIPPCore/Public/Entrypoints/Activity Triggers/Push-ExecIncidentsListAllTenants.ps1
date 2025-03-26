@@ -3,9 +3,7 @@ function Push-ExecIncidentsListAllTenants {
     .FUNCTIONALITY
         Entrypoint
     #>
-    param(
-        $Item
-    )
+    param($Item)
 
     $Tenant = Get-Tenants -TenantFilter $Item.customerId
     $domainName = $Tenant.defaultDomainName

@@ -39,13 +39,18 @@ function Invoke-CIPPStandardEnableLitigationHold {
         } else {
             try {
                 $Request = $MailboxesNoLitHold | ForEach-Object {
-                    @{
+                    $params = @{
                         CmdletInput = @{
                             CmdletName = 'Set-Mailbox'
                             Parameters = @{ Identity = $_.UserPrincipalName; LitigationHoldEnabled = $true }
                         }
                     }
+                    if ($Settings.days -ne $null) {
+                        $params.CmdletInput.Parameters['LitigationHoldDuration'] = $Settings.days
+                    }
+                    $params
                 }
+
 
                 $BatchResults = New-ExoBulkRequest -tenantid $tenant -cmdletArray @($Request)
                 $BatchResults | ForEach-Object {
@@ -66,7 +71,8 @@ function Invoke-CIPPStandardEnableLitigationHold {
     if ($Settings.alert -eq $true) {
 
         if ($MailboxesNoLitHold) {
-            Write-LogMessage -API 'Standards' -tenant $Tenant -message "Mailboxes without Litigation Hold: $($MailboxesNoLitHold.Count)" -sev Alert
+            Write-StandardsAlert -message "Mailboxes without Litigation Hold: $($MailboxesNoLitHold.Count)" -object $MailboxesNoLitHold -tenant $Tenant -standardName 'EnableLitigationHold' -standardId $Settings.standardId
+            Write-LogMessage -API 'Standards' -tenant $Tenant -message "Mailboxes without Litigation Hold: $($MailboxesNoLitHold.Count)" -sev Info
         } else {
             Write-LogMessage -API 'Standards' -tenant $Tenant -message 'All mailboxes have Litigation Hold enabled' -sev Info
         }
@@ -74,6 +80,8 @@ function Invoke-CIPPStandardEnableLitigationHold {
 
     if ($Settings.report -eq $true) {
         $filtered = $MailboxesNoLitHold | Select-Object -Property UserPrincipalName
+        $state = $filtered ? $MailboxesNoLitHold : $true
+        Set-CIPPStandardsCompareField -FieldName 'standards.EnableLitigationHold' -FieldValue $state -Tenant $Tenant
         Add-CIPPBPAField -FieldName 'EnableLitHold' -FieldValue $filtered -StoreAs json -Tenant $Tenant
     }
 }
