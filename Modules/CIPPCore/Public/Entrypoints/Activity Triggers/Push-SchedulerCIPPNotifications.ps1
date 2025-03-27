@@ -25,11 +25,11 @@ function Push-SchedulerCIPPNotifications {
     $PartitionKey = Get-Date -UFormat '%Y%m%d'
     $Filter = "PartitionKey eq '{0}'" -f $PartitionKey
     $Currentlog = Get-CIPPAzDataTableEntity @Table -Filter $Filter | Where-Object {
-        $_.API -In $Settings -and $_.SentAsAlert -ne $true -and $_.Severity -In $severity
+        $_.API -in $Settings -and $_.SentAsAlert -ne $true -and $_.Severity -in $severity
     }
     $StandardsTable = Get-CIPPTable -tablename CippStandardsAlerts
     $CurrentStandardsLogs = Get-CIPPAzDataTableEntity @StandardsTable -Filter $Filter | Where-Object {
-        $_.SentAsAlert -ne $true
+        $_.sentAsAlert -ne $true
     }
     Write-Information "Alerts: $($Currentlog.count) found"
     Write-Information "Standards: $($CurrentStandardsLogs.count) found"
