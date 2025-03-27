@@ -26,7 +26,7 @@ function Set-CIPPUserJITAdmin {
 
     #>
     [CmdletBinding(SupportsShouldProcess = $true)]
-    Param(
+    param(
         [Parameter(Mandatory = $true)]
         [string]$TenantFilter,
 
@@ -50,7 +50,7 @@ function Set-CIPPUserJITAdmin {
         switch ($Action) {
             'Create' {
                 $Password = New-passwordString
-                $Schema = Get-CIPPSchemaExtensions | Where-Object { $_.id -match '_cippUser' }
+                $Schema = Get-CIPPSchemaExtensions | Where-Object { $_.id -match '_cippUser' } | Select-Object -First 1
 
                 $Body = @{
                     givenName         = $User.FirstName
