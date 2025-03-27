@@ -25,11 +25,11 @@ function Push-SchedulerCIPPNotifications {
     $PartitionKey = Get-Date -UFormat '%Y%m%d'
     $Filter = "PartitionKey eq '{0}'" -f $PartitionKey
     $Currentlog = Get-CIPPAzDataTableEntity @Table -Filter $Filter | Where-Object {
-        $_.API -In $Settings -and $_.SentAsAlert -ne $true -and $_.Severity -In $severity
+        $_.API -in $Settings -and $_.SentAsAlert -ne $true -and $_.Severity -in $severity
     }
     $StandardsTable = Get-CIPPTable -tablename CippStandardsAlerts
     $CurrentStandardsLogs = Get-CIPPAzDataTableEntity @StandardsTable -Filter $Filter | Where-Object {
-        $_.SentAsAlert -ne $true
+        $_.sentAsAlert -ne $true
     }
     Write-Information "Alerts: $($Currentlog.count) found"
     Write-Information "Standards: $($CurrentStandardsLogs.count) found"
@@ -58,7 +58,7 @@ function Push-SchedulerCIPPNotifications {
                     $Subject = "$($Tenant): Standards are out of sync for $tenant"
                     $HTMLContent = New-CIPPAlertTemplate -Data $Data -Format 'html' -InputObject 'standards'
                     Send-CIPPAlert -Type 'email' -Title $Subject -HTMLContent $HTMLContent.htmlcontent -TenantFilter $tenant -APIName 'Alerts'
-                    $updateStandards = $CurrentStandardsLogs | ForEach-Object { $_.SentAsAlert = $true; $_ }
+                    $updateStandards = $CurrentStandardsLogs | ForEach-Object { $_.sentAsAlert = $true; $_ }
                     if ($updateStandards) { Add-CIPPAzDataTableEntity @StandardsTable -Entity $updateStandards -Force }
                 }
             }
@@ -83,7 +83,7 @@ function Push-SchedulerCIPPNotifications {
                 $JSONContent = New-CIPPAlertTemplate -Data $Data -Format 'json' -InputObject 'table'
                 $CurrentStandardsLogs | ConvertTo-Json -Compress
                 Send-CIPPAlert -Type 'webhook' -JSONContent $JSONContent -TenantFilter $Tenant -APIName 'Alerts'
-                $updateStandards = $CurrentStandardsLogs | ForEach-Object { $_.SentAsAlert = $true; $_ }
+                $updateStandards = $CurrentStandardsLogs | ForEach-Object { $_.sentAsAlert = $true; $_ }
                 if ($updateStandards) { Add-CIPPAzDataTableEntity @StandardsTable -Entity $updateStandards -Force }
             }
 
@@ -108,7 +108,7 @@ function Push-SchedulerCIPPNotifications {
                 $Subject = "$($standardsTenant): Standards are out of sync for $standardsTenant"
                 $HTMLContent = New-CIPPAlertTemplate -Data $Data -Format 'html' -InputObject 'standards'
                 Send-CIPPAlert -Type 'psa' -Title $Subject -HTMLContent $HTMLContent.htmlcontent -TenantFilter $standardsTenant -APIName 'Alerts'
-                $updateStandards = $CurrentStandardsLogs | ForEach-Object { $_.SentAsAlert = $true; $_ }
+                $updateStandards = $CurrentStandardsLogs | ForEach-Object { $_.sentAsAlert = $true; $_ }
                 if ($updateStandards) { Add-CIPPAzDataTableEntity @StandardsTable -Entity $updateStandards -Force }
             }
         } catch {
