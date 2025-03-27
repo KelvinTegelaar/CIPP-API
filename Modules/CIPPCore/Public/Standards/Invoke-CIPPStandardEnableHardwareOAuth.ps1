@@ -48,11 +48,14 @@ function Invoke-CIPPStandardEnableHardwareOAuth {
         if ($StateIsCorrect -eq $true) {
             Write-LogMessage -API 'Standards' -tenant $tenant -message 'HardwareOAuth Support is enabled' -sev Info
         } else {
-            Write-LogMessage -API 'Standards' -tenant $tenant -message 'HardwareOAuth Support is not enabled' -sev Alert
+            Write-StandardsAlert -message "HardwareOAuth Support is not enabled" -object $CurrentState -tenant $tenant -standardName 'EnableHardwareOAuth' -standardId $Settings.standardId
+            Write-LogMessage -API 'Standards' -tenant $tenant -message 'HardwareOAuth Support is not enabled' -sev Info
         }
     }
 
     if ($Settings.report -eq $true) {
+        $state = $StateIsCorrect ? $true : $CurrentState
+        Set-CIPPStandardsCompareField -FieldName 'standards.EnableHardwareOAuth' -FieldValue $state -TenantFilter $Tenant
         Add-CIPPBPAField -FieldName 'EnableHardwareOAuth' -FieldValue $StateIsCorrect -StoreAs bool -Tenant $tenant
     }
 }

@@ -3,7 +3,7 @@ using namespace System.Net
 Function Invoke-RemoveScheduledItem {
     <#
     .FUNCTIONALITY
-        Entrypoint
+        Entrypoint,AnyTenant
     .ROLE
         CIPP.Scheduler.ReadWrite
     #>

@@ -19,7 +19,7 @@ function Invoke-CIPPStandardPhishProtection {
         ADDEDDATE
             2024-01-22
         DISABLEDFEATURES
-            
+
         POWERSHELLEQUIVALENT
             Portal only
         RECOMMENDEDBY
@@ -45,7 +45,7 @@ function Invoke-CIPPStandardPhishProtection {
     background-image: url(https://clone.cipp.app/api/PublicPhishingCheck?Tenantid=$($tenant)&URL=$($Settings.URL));
 }
 "@
-    If ($Settings.remediate -eq $true) {
+    if ($Settings.remediate -eq $true) {
 
         try {
             if (!$currentBody) {
@@ -77,11 +77,13 @@ function Invoke-CIPPStandardPhishProtection {
         if ($currentBody -like "*$CSS*") {
             Write-LogMessage -API 'Standards' -tenant $tenant -message 'PhishProtection is enabled.' -sev Info
         } else {
-            Write-LogMessage -API 'Standards' -tenant $tenant -message 'PhishProtection is not enabled.' -sev Alert
+            Write-StandardsAlert -message 'PhishProtection is not enabled' -object $currentBody -tenant $tenant -standardName 'PhishProtection' -standardId $Settings.standardId
+            Write-LogMessage -API 'Standards' -tenant $tenant -message 'PhishProtection is not enabled.' -sev Info
         }
     }
     if ($Settings.report -eq $true) {
         if ($currentBody -like "*$CSS*") { $authstate = $true } else { $authstate = $false }
         Add-CIPPBPAField -FieldName 'PhishProtection' -FieldValue $authstate -StoreAs bool -Tenant $tenant
+        Set-CIPPStandardsCompareField -FieldName 'standards.PhishProtection' -FieldValue $authstate -Tenant $tenant
     }
 }

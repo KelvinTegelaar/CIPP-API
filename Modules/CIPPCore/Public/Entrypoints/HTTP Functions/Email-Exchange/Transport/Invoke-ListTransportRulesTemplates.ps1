@@ -3,7 +3,7 @@ using namespace System.Net
 Function Invoke-ListTransportRulesTemplates {
     <#
     .FUNCTIONALITY
-        Entrypoint
+        Entrypoint,AnyTenant
     .ROLE
         Exchange.TransportRule.Read
     #>

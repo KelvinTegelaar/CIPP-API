@@ -55,13 +55,15 @@ function Invoke-CIPPStandardDisableSharePointLegacyAuth {
     if ($Settings.alert -eq $true) {
 
         if ($CurrentInfo.isLegacyAuthProtocolsEnabled) {
-            Write-LogMessage -API 'Standards' -tenant $tenant -message 'SharePoint basic authentication is enabled' -sev Alert
+            Write-StandardsAlert -message 'SharePoint basic authentication is enabled' -object $CurrentInfo -tenant $tenant -standardName 'DisableSharePointLegacyAuth' -standardId $Settings.standardId
+            Write-LogMessage -API 'Standards' -tenant $tenant -message 'SharePoint basic authentication is enabled' -sev Info
         } else {
             Write-LogMessage -API 'Standards' -tenant $tenant -message 'SharePoint basic authentication is disabled' -sev Info
         }
     }
     if ($Settings.report -eq $true) {
-
+        $state = $CurrentInfo.isLegacyAuthProtocolsEnabled ? ($CurrentInfo | Select-Object isLegacyAuthProtocolsEnabled) : $true
+        Set-CIPPStandardsCompareField -FieldName 'standards.DisableSharePointLegacyAuth' -FieldValue $state -TenantFilter $Tenant
         Add-CIPPBPAField -FieldName 'SharePointLegacyAuthEnabled' -FieldValue $CurrentInfo.isLegacyAuthProtocolsEnabled -StoreAs bool -Tenant $tenant
     }
 }

@@ -2,7 +2,7 @@ using namespace System.Net
 Function Invoke-ExecGDAPRemoveGArole {
     <#
     .FUNCTIONALITY
-        Entrypoint
+        Entrypoint,AnyTenant
     .ROLE
         Tenant.Relationship.ReadWrite
     #>

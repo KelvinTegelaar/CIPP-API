@@ -19,7 +19,7 @@ function New-PwPushLink {
             if ($PSCmdlet.ShouldProcess('Create a new PwPush link')) {
                 $Link = New-Push @PushParams
                 if ($Configuration.RetrievalStep) {
-                    return $Link.LinkRetrievalStep
+                    return $Link.LinkRetrievalStep -replace '/r/r', '/r'
                 }
                 return $Link.Link
             }

@@ -11,21 +11,9 @@ function Set-CIPPIntunePolicy {
         $APINAME,
         $tenantFilter
     )
-    #connect to table, get replacement map. This is for future usage. The replacement map will allow users to create custom vars that get replaced by the actual values per tenant. Example:
-    # %WallPaperPath% gets replaced by RowKey WallPaperPath which is set to C:\Wallpapers for tenant 1, and D:\Wallpapers for tenant 2
-    $ReplaceTable = Get-CIPPTable -tablename 'CippReplacemap'
-    $ReplaceMap = Get-CIPPAzDataTableEntity @ReplaceTable -Filter "PartitionKey eq '$tenantFilter'"
-    if ($ReplaceMap) {
-        foreach ($Replace in $ReplaceMap) {
-            $RawJSON = $RawJSON -replace $Replace.RowKey, $Replace.Value
-        }
-    }
-    #default replacements for all tenants: %tenantid% becomes $tenant.customerId, %tenantfilter% becomes $tenant.defaultDomainName, %tenantname% becomes $tenant.displayName
-    $Tenant = Get-Tenants -TenantFilter $tenantFilter
-    $RawJSON = $RawJSON -replace '%tenantid%', $Tenant.customerId
-    $RawJSON = $RawJSON -replace '%tenantfilter%', $Tenant.defaultDomainName
-    $RawJSON = $RawJSON -replace '%tenantname%', $Tenant.displayName
-
+    $APINAME = 'Set-CIPPIntunePolicy'
+   
+    $RawJSON = Get-CIPPTextReplacement -TenantFilter $tenantFilter -Text $RawJSON
 
     try {
         switch ($TemplateType) {

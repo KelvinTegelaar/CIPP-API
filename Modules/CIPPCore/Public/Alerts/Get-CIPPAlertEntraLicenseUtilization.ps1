@@ -18,9 +18,9 @@ function Get-CIPPAlertEntraLicenseUtilization {
         $Alerts = [System.Collections.Generic.List[string]]::new()
 
         # Check P1 License utilization
-        if ($LicenseData.entitledP1LicenseCount -gt 0) {
+        if ($LicenseData.entitledP1LicenseCount -gt 0 -or $LicenseData.entitledP2LicenseCount -gt 0) {
             $P1Used = $LicenseData.p1FeatureUtilizations.conditionalAccess.userCount
-            $P1Entitled = $LicenseData.entitledP1LicenseCount
+            $P1Entitled = $LicenseData.entitledP1LicenseCount + $LicenseData.entitledP2LicenseCount
             $P1Usage = ($P1Used / $P1Entitled) * 100
             $P1Overage = $P1Used - $P1Entitled
 
