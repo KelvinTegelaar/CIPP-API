@@ -58,7 +58,7 @@ function Push-SchedulerCIPPNotifications {
                     $Subject = "$($Tenant): Standards are out of sync for $tenant"
                     $HTMLContent = New-CIPPAlertTemplate -Data $Data -Format 'html' -InputObject 'standards'
                     Send-CIPPAlert -Type 'email' -Title $Subject -HTMLContent $HTMLContent.htmlcontent -TenantFilter $tenant -APIName 'Alerts'
-                    $updateStandards = $CurrentStandardsLogs | ForEach-Object { $_.SentAsAlert = $true; $_ }
+                    $updateStandards = $CurrentStandardsLogs | ForEach-Object { $_.sentAsAlert = $true; $_ }
                     if ($updateStandards) { Add-CIPPAzDataTableEntity @StandardsTable -Entity $updateStandards -Force }
                 }
             }
@@ -83,7 +83,7 @@ function Push-SchedulerCIPPNotifications {
                 $JSONContent = New-CIPPAlertTemplate -Data $Data -Format 'json' -InputObject 'table'
                 $CurrentStandardsLogs | ConvertTo-Json -Compress
                 Send-CIPPAlert -Type 'webhook' -JSONContent $JSONContent -TenantFilter $Tenant -APIName 'Alerts'
-                $updateStandards = $CurrentStandardsLogs | ForEach-Object { $_.SentAsAlert = $true; $_ }
+                $updateStandards = $CurrentStandardsLogs | ForEach-Object { $_.sentAsAlert = $true; $_ }
                 if ($updateStandards) { Add-CIPPAzDataTableEntity @StandardsTable -Entity $updateStandards -Force }
             }
 
@@ -108,7 +108,7 @@ function Push-SchedulerCIPPNotifications {
                 $Subject = "$($standardsTenant): Standards are out of sync for $standardsTenant"
                 $HTMLContent = New-CIPPAlertTemplate -Data $Data -Format 'html' -InputObject 'standards'
                 Send-CIPPAlert -Type 'psa' -Title $Subject -HTMLContent $HTMLContent.htmlcontent -TenantFilter $standardsTenant -APIName 'Alerts'
-                $updateStandards = $CurrentStandardsLogs | ForEach-Object { $_.SentAsAlert = $true; $_ }
+                $updateStandards = $CurrentStandardsLogs | ForEach-Object { $_.sentAsAlert = $true; $_ }
                 if ($updateStandards) { Add-CIPPAzDataTableEntity @StandardsTable -Entity $updateStandards -Force }
             }
         } catch {
