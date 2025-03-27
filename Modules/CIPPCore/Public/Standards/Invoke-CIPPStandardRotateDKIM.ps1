@@ -31,11 +31,10 @@ function Invoke-CIPPStandardRotateDKIM {
     #>
 
     param($Tenant, $Settings)
-    ##$Rerun -Type Standard -Tenant $Tenant -Settings $Settings 'RotateDKIM'
 
-    $DKIM = (New-ExoRequest -tenantid $tenant -cmdlet 'Get-DkimSigningConfig') | Where-Object { $_.Selector1KeySize -Eq 1024 -and $_.Enabled -eq $true }
+    $DKIM = (New-ExoRequest -tenantid $tenant -cmdlet 'Get-DkimSigningConfig') | Where-Object { $_.Selector1KeySize -eq 1024 -and $_.Enabled -eq $true }
 
-    If ($Settings.remediate -eq $true) {
+    if ($Settings.remediate -eq $true) {
 
         if ($DKIM) {
             $DKIM | ForEach-Object {
@@ -55,7 +54,8 @@ function Invoke-CIPPStandardRotateDKIM {
 
     if ($Settings.alert -eq $true) {
         if ($DKIM) {
-            Write-LogMessage -API 'Standards' -tenant $tenant -message "DKIM is not rotated for $($DKIM.Identity -join ';')" -sev Alert
+            Write-StandardsAlert -message "DKIM is not rotated for $($DKIM.Identity -join ';')" -object $DKIM -tenant $tenant -standardName 'RotateDKIM' -standardId $Settings.standardId
+            Write-LogMessage -API 'Standards' -tenant $tenant -message "DKIM is not rotated for $($DKIM.Identity -join ';')" -sev Info
         } else {
             Write-LogMessage -API 'Standards' -tenant $tenant -message 'DKIM is rotated for all domains' -sev Info
         }
@@ -63,5 +63,10 @@ function Invoke-CIPPStandardRotateDKIM {
 
     if ($Settings.report -eq $true) {
         Add-CIPPBPAField -FieldName 'DKIM' -FieldValue $DKIM -StoreAs json -Tenant $tenant
+        if ($DKIM) {
+            Set-CIPPStandardsCompareField -FieldName 'standards.RotateDKIM' -FieldValue $DKIM -Tenant $tenant
+        } else {
+            Set-CIPPStandardsCompareField -FieldName 'standards.RotateDKIM' -FieldValue $true -Tenant $tenant
+        }
     }
 }

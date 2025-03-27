@@ -1,7 +1,7 @@
 function Invoke-ExecBPA {
     <#
         .FUNCTIONALITY
-        Entrypoint
+        Entrypoint,AnyTenant
         .ROLE
         Tenant.BestPracticeAnalyser.ReadWrite
     #>

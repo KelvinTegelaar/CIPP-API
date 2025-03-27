@@ -31,15 +31,16 @@ Function Invoke-ListAlertsQueue {
         $TranslatedActions = ($Task.Actions | ConvertFrom-Json -Depth 10 -ErrorAction SilentlyContinue).label -join ','
         $Tenants = ($Task.Tenants | ConvertFrom-Json -Depth 10 -ErrorAction SilentlyContinue)
         $TaskEntry = [PSCustomObject]@{
-            Tenants      = @($Tenants.label)
-            Conditions   = $TranslatedConditions
-            Actions      = $TranslatedActions
-            LogType      = $Task.type
-            EventType    = 'Audit log Alert'
-            RowKey       = $Task.RowKey
-            PartitionKey = $Task.PartitionKey
-            RepeatsEvery = 'When received'
-            RawAlert     = @{
+            Tenants         = @($Tenants.label)
+            Conditions      = $TranslatedConditions
+            excludedTenants = ($Task.excludedTenants | ConvertFrom-Json -Depth 10 -ErrorAction SilentlyContinue)
+            Actions         = $TranslatedActions
+            LogType         = $Task.type
+            EventType       = 'Audit log Alert'
+            RowKey          = $Task.RowKey
+            PartitionKey    = $Task.PartitionKey
+            RepeatsEvery    = 'When received'
+            RawAlert        = @{
                 Conditions   = @($Conditions)
                 Actions      = @($($Task.Actions | ConvertFrom-Json -Depth 10 -ErrorAction SilentlyContinue))
                 Tenants      = @($Tenants)
@@ -64,15 +65,16 @@ Function Invoke-ListAlertsQueue {
 
     foreach ($Task in $ScheduledTasks) {
         $TaskEntry = [PSCustomObject]@{
-            RowKey       = $Task.RowKey
-            PartitionKey = $Task.PartitionKey
-            Tenants      = @($Task.Tenant)
-            Conditions   = $Task.Name
-            Actions      = $Task.PostExecution
-            LogType      = 'Scripted'
-            EventType    = 'Scheduled Task'
-            RepeatsEvery = $Task.Recurrence
-            RawAlert     = $Task
+            RowKey          = $Task.RowKey
+            PartitionKey    = $Task.PartitionKey
+            excludedTenants = $Task.excludedTenants
+            Tenants         = @($Task.Tenant)
+            Conditions      = $Task.Name
+            Actions         = $Task.PostExecution
+            LogType         = 'Scripted'
+            EventType       = 'Scheduled Task'
+            RepeatsEvery    = $Task.Recurrence
+            RawAlert        = $Task
         }
         if ($AllowedTenants -notcontains 'AllTenants') {
             $Tenant = $TenantList | Where-Object -Property defaultDomainName -EQ $Task.Tenant

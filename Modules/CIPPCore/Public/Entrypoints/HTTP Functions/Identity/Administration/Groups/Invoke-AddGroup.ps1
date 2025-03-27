@@ -39,11 +39,11 @@ Function Invoke-AddGroup {
                     $BodyParams | Add-Member -NotePropertyName 'groupTypes' -NotePropertyValue @('Unified')
                 }
                 if ($GroupObject.owners -AND $GroupObject.groupType -in 'generic', 'azurerole', 'security') {
-                    $BodyParams | Add-Member -NotePropertyName 'owners@odata.bind' -NotePropertyValue (($GroupObject.AddOwner) | ForEach-Object { "https://graph.microsoft.com/v1.0/users/$($_.value)" })
+                    $BodyParams | Add-Member -NotePropertyName 'owners@odata.bind' -NotePropertyValue (($GroupObject.owners) | ForEach-Object { "https://graph.microsoft.com/v1.0/users/$($_.value)" })
                     $BodyParams.'owners@odata.bind' = @($BodyParams.'owners@odata.bind')
                 }
                 if ($GroupObject.members -AND $GroupObject.groupType -in 'generic', 'azurerole', 'security') {
-                    $BodyParams | Add-Member -NotePropertyName 'members@odata.bind' -NotePropertyValue (($GroupObject.AddMember) | ForEach-Object { "https://graph.microsoft.com/v1.0/users/$($_.value)" })
+                    $BodyParams | Add-Member -NotePropertyName 'members@odata.bind' -NotePropertyValue (($GroupObject.members) | ForEach-Object { "https://graph.microsoft.com/v1.0/users/$($_.value)" })
                     $BodyParams.'members@odata.bind' = @($BodyParams.'members@odata.bind')
                 }
                 $GraphRequest = New-GraphPostRequest -uri 'https://graph.microsoft.com/beta/groups' -tenantid $tenant -type POST -body (ConvertTo-Json -InputObject $BodyParams -Depth 10) -Verbose
@@ -64,9 +64,16 @@ Function Invoke-AddGroup {
                         Type                               = $GroupObject.groupType
                         RequireSenderAuthenticationEnabled = [bool]!$GroupObject.allowExternal
                     }
+                    if ($GroupObject.owners) {
+                        $ExoParams.ManagedBy = @($GroupObject.owners.value)
+                    }
+                    if ($GroupObject.members) {
+                        $ExoParams.Members = @($GroupObject.members.value)
+                    }
                     $GraphRequest = New-ExoRequest -tenantid $tenant -cmdlet 'New-DistributionGroup' -cmdParams $ExoParams
                 }
             }
+
             "Successfully created group $($GroupObject.displayName) for $($tenant)"
             Write-LogMessage -headers $Request.Headers -API $APIName -tenant $tenant -message "Created group $($GroupObject.displayName) with id $($GraphRequest.id)" -Sev Info
 

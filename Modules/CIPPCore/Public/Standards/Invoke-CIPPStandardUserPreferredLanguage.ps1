@@ -33,10 +33,10 @@ function Invoke-CIPPStandardUserPreferredLanguage {
     $preferredLanguage = $Settings.preferredLanguage.value
     $IncorrectUsers = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/users?`$top=999&`$select=userPrincipalName,displayName,preferredLanguage,userType,onPremisesSyncEnabled&`$filter=preferredLanguage ne '$preferredLanguage' and userType eq 'Member' and onPremisesSyncEnabled ne true&`$count=true&ConsistencyLevel=eventual" -tenantid $Tenant
 
-    If ($Settings.remediate -eq $true) {
+    if ($Settings.remediate -eq $true) {
         if (($IncorrectUsers | Measure-Object).Count -gt 0) {
             try {
-                ForEach ($user in $IncorrectUsers) {
+                foreach ($user in $IncorrectUsers) {
                     $cmdparams = @{
                         tenantid    = $Tenant
                         uri         = "https://graph.microsoft.com/beta/users/$($user.userPrincipalName)"
@@ -48,24 +48,32 @@ function Invoke-CIPPStandardUserPreferredLanguage {
                         ContentType = 'application/json; charset=utf-8'
                     }
                     $null = New-GraphPOSTRequest @cmdparams
-                    Write-LogMessage -API 'Standards' -tenant $tenant -message "Preferred language for $($user.userPrincipalName) has been set to $preferredLanguage" -sev Info
+                    Write-LogMessage -API 'Standards' -tenant $Tenant -message "Preferred language for $($user.userPrincipalName) has been set to $preferredLanguage" -sev Info
                 }
             } catch {
                 $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
-                Write-LogMessage -API 'Standards' -tenant $tenant -message "Failed to set preferred language to $preferredLanguage for all users." -sev Error -LogData $ErrorMessage
+                Write-LogMessage -API 'Standards' -tenant $Tenant -message "Failed to set preferred language to $preferredLanguage for all users." -sev Error -LogData $ErrorMessage
             }
         }
     }
 
-    If ($Settings.alert -eq $true) {
+    if ($Settings.alert -eq $true) {
         if (($IncorrectUsers.userPrincipalName | Measure-Object).Count -gt 0) {
-            Write-LogMessage -API 'Standards' -tenant $tenant -message "The following accounts do not have the preferred language set to $preferredLanguage : $($IncorrectUsers.userPrincipalName -join ', ')" -sev Alert
+            Write-StandardsAlert -message "The following accounts do not have the preferred language set to $preferredLanguage" -object $IncorrectUsers -tenant $Tenant -standardName 'UserPreferredLanguage' -standardId $Settings.standardId
+            Write-LogMessage -API 'Standards' -tenant $Tenant -message "The following accounts do not have the preferred language set to $preferredLanguage : $($IncorrectUsers.userPrincipalName -join ', ')" -sev Info
         } else {
-            Write-LogMessage -API 'Standards' -tenant $tenant -message 'No accounts do not have the preferred language set to the preferred language' -sev Info
+            Write-LogMessage -API 'Standards' -tenant $Tenant -message 'No accounts do not have the preferred language set to the preferred language' -sev Info
         }
     }
 
     if ($Settings.report -eq $true) {
-        Add-CIPPBPAField -FieldName 'IncorrectUsers' -FieldValue $IncorrectUsers -StoreAs json -Tenant $tenant
+        Add-CIPPBPAField -FieldName 'IncorrectUsers' -FieldValue $IncorrectUsers -StoreAs json -Tenant $Tenant
+
+        if ($IncorrectUsers.userPrincipalName) {
+            $FieldValue = $IncorrectUsers | Select-Object -Property userPrincipalName, displayName, preferredLanguage, userType
+        } else {
+            $FieldValue = $true
+        }
+        Set-CIPPStandardsCompareField -FieldName 'standards.UserPreferredLanguage' -FieldValue $FieldValue -Tenant $Tenant
     }
 }

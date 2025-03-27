@@ -7,7 +7,7 @@ function Invoke-ExecGitHubAction {
     .ROLE
         CIPP.Extension.ReadWrite
     .FUNCTIONALITY
-        Entrypoint
+        Entrypoint,AnyTenant
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)

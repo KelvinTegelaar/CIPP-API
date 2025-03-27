@@ -3,7 +3,7 @@ using namespace System.Net
 Function Invoke-RemoveTransportRuleTemplate {
     <#
     .FUNCTIONALITY
-        Entrypoint
+        Entrypoint,AnyTenant
     .ROLE
         Exchange.TransportRule.ReadWrite
     #>
