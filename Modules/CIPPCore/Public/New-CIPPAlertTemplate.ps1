@@ -27,6 +27,11 @@ function New-CIPPAlertTemplate {
     if ($Data -is [array] -and $Data[0] -is [string]) {
         $Data = $Data | ForEach-Object { @{ message = $_ } }
     }
+
+    if ($InputObject -eq 'sherwebmig') {
+        $DataHTML = ($Data | ConvertTo-Html | Out-String).Replace('<table>', ' <table class="table-modern">')
+        $IntroText = "<p>The following licenses have not yet been found at Sherweb, and are expiring within 7 days:</p>$dataHTML"
+    }
     if ($InputObject -eq 'table') {
         #data can be a array of strings or a string, if it is, we need to convert it to an object so it shows up nicely, that object will have one header: message.
 

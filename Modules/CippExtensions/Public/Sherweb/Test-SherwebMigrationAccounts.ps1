@@ -29,15 +29,18 @@ function Test-SherwebMigrationAccounts {
         }
     }
 
-    switch ($config.migrationMethods) {
-        notifyOnly {
-            #Create HTML report for this tenant. Send to webhook/notifications/etc
+    switch -wildcard ($config.migrationMethods) {
+        '*notify*' {
+            $HTMLContent = New-CIPPAlertTemplate -Data $LicencesToMigrate -Format 'html' -InputObject 'sherwebmig'
+            $JSONContent = New-CIPPAlertTemplate -Data $LicencesToMigrate -Format 'json' -InputObject 'sherwebmig'
+            Send-CIPPAlert -Type 'email' -Title $Subject -HTMLContent $HTMLContent.htmlcontent -TenantFilter $tenant -APIName 'Alerts'
+            Send-CIPPAlert -Type 'psa' -Title $Subject -HTMLContent $HTMLContent.htmlcontent -TenantFilter $standardsTenant -APIName 'Alerts'
+            Send-CIPPAlert -Type 'webhook' -JSONContent $JSONContent -TenantFilter $Tenant -APIName 'Alerts'
         }
-        buyAndNotify {
-            #Create HTML report for this tenant. Send to webhook/notifications/etc
+        'buyAndNotify' {
             #Buy the licenses at Sherweb using the matching CSV.
         }
-        buyAndCancel {
+        'buyAndCancel' {
             #Create HTML report for this tenant. Send to webhook/notifications/etc
             #Buy the licenses at Sherweb using the matching CSV.
             #Cancel the licenses in old vendor.
