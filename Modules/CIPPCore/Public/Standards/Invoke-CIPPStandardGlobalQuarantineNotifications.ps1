@@ -63,15 +63,15 @@ function Invoke-CIPPStandardGlobalQuarantineNotifications {
             Write-LogMessage -API 'Standards' -tenant $Tenant -message "Global Quarantine Notifications are already set to the desired value of $WantedState" -sev Info
         } else {
             try {
-                $null = New-ExoRequest -tenantid $Tenant -cmdlet 'Set-QuarantinePolicy' -cmdParams @{Identity = $CurrentState.Identity; EndUserSpamNotificationFrequency = [string]$WantedState }
+                if ($CurrentState.Name -eq 'DefaultGlobalPolicy') {
+                    $null = New-ExoRequest -tenantid $Tenant -cmdlet 'New-QuarantinePolicy' -cmdParams @{ Name = 'DefaultGlobalTag'; QuarantinePolicyType = 'GlobalQuarantinePolicy'; EndUserSpamNotificationFrequency = [string]$WantedState.TotalHours }
+                } else {
+                    $null = New-ExoRequest -tenantid $Tenant -cmdlet 'Set-QuarantinePolicy' -cmdParams @{Identity = $CurrentState.Identity; EndUserSpamNotificationFrequency = [string]$WantedState }
+                }
                 Write-LogMessage -API 'Standards' -tenant $Tenant -message "Set Global Quarantine Notifications to $WantedState" -sev Info
             } catch {
-                try {
-                    $null = New-ExoRequest -tenantid $Tenant -cmdlet 'New-QuarantinePolicy' -cmdParams @{ Name = 'DefaultGlobalTag'; QuarantinePolicyType = 'GlobalQuarantinePolicy'; EndUserSpamNotificationFrequency = [string]$WantedState.TotalHours }
-                } catch {
-                    $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
-                    Write-LogMessage -API 'Standards' -tenant $Tenant -message "Failed to set Global Quarantine Notifications to $WantedState. Error: $ErrorMessage" -sev Error
-                }
+                $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
+                Write-LogMessage -API 'Standards' -tenant $Tenant -message "Failed to set Global Quarantine Notifications to $WantedState. Error: $ErrorMessage" -sev Error
             }
         }
     }
