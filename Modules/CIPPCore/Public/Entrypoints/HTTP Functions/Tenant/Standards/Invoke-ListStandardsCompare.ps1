@@ -17,7 +17,8 @@ Function Invoke-ListStandardsCompare {
     $Results | ForEach-Object {
         $Object = $_
         $Object.PSObject.Properties | ForEach-Object {
-            if ($_.Name -like 'standards.*') {
+            if ($_.Name -like 'standards_*') {
+                $_.Name = $_.Name.replace('standards_', 'standards.')
                 if ($_.Value -is [System.Boolean]) {
                     $_.Value = [bool]$_.Value
                 } elseif ($_.Value -like '*{*') {
