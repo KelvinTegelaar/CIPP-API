@@ -40,10 +40,10 @@ function Invoke-CIPPStandardsharingDomainRestriction {
     if ($mode -eq 'none' -or $null -eq $mode) {
         $StateIsCorrect = $CurrentState.sharingDomainRestrictionMode -eq 'none'
     } else {
-        $SelectedDomains = [String[]]$Settings.Domains.Split(',').Trim()
+        $SelectedDomains = [String[]]$Settings.Domains.Split(',').Trim() ?? @()
         $StateIsCorrect = ($CurrentState.sharingDomainRestrictionMode -eq $mode) -and
-                          ($mode -eq 'allowList' -and (!(Compare-Object -ReferenceObject $CurrentState.sharingAllowedDomainList -DifferenceObject $SelectedDomains))) -or
-                          ($mode -eq 'blockList' -and (!(Compare-Object -ReferenceObject $CurrentState.sharingBlockedDomainList -DifferenceObject $SelectedDomains)))
+        ($mode -eq 'allowList' -and (!(Compare-Object -ReferenceObject $CurrentState.sharingAllowedDomainList -DifferenceObject $SelectedDomains))) -or
+        ($mode -eq 'blockList' -and (!(Compare-Object -ReferenceObject $CurrentState.sharingBlockedDomainList -DifferenceObject $SelectedDomains)))
     }
 
     if ($Settings.remediate -eq $true) {
