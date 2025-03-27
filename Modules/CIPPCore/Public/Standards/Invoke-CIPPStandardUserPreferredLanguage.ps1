@@ -31,7 +31,7 @@ function Invoke-CIPPStandardUserPreferredLanguage {
     param($Tenant, $Settings)
 
     $preferredLanguage = $Settings.preferredLanguage.value
-    $IncorrectUsers = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/users?`$top=999&`$select=userPrincipalName,displayName,preferredLanguage,userType,onPremisesSyncEnabled&`$filter=preferredLanguage ne '$preferredLanguage' and userType eq 'Member' and onPremisesSyncEnabled ne true&`$count=true&ConsistencyLevel=eventual" -tenantid $Tenant
+    $IncorrectUsers = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/users?`$top=999&`$select=userPrincipalName,displayName,preferredLanguage,userType,onPremisesSyncEnabled&`$filter=preferredLanguage ne '$preferredLanguage' and userType eq 'Member' and onPremisesSyncEnabled ne true&`$count=true" -tenantid $Tenant -ComplexFilter
 
     if ($Settings.remediate -eq $true) {
         if (($IncorrectUsers | Measure-Object).Count -gt 0) {
