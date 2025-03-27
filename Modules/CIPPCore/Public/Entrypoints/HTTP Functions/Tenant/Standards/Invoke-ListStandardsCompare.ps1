@@ -18,7 +18,6 @@ Function Invoke-ListStandardsCompare {
         $Object = $_
         $Object.PSObject.Properties | ForEach-Object {
             if ($_.Name -like 'standards_*') {
-                $_.Name = $_.Name.replace('standards_', 'standards.')
                 if ($_.Value -is [System.Boolean]) {
                     $_.Value = [bool]$_.Value
                 } elseif ($_.Value -like '*{*') {
@@ -26,7 +25,10 @@ Function Invoke-ListStandardsCompare {
                 } else {
                     $_.Value = [string]$_.Value
                 }
+                $object | Add-Member -MemberType NoteProperty -Name $_.Name.Replace('standards_', 'standards.') -Value $_.Value -Force
+                $object.PSObject.Properties.Remove($_.Name)
             }
+
         }
     }
 
