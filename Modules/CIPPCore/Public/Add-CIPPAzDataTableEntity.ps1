@@ -153,11 +153,11 @@ function Add-CIPPAzDataTableEntity {
 
                         foreach ($row in $rows) {
                             Write-Information "current entity is $($row.RowKey) with $($row.PartitionKey). Our size is $([System.Text.Encoding]::UTF8.GetByteCount($($row | ConvertTo-Json -Compress)))"
-                            $NewRow = [PSCustomObject]$row
+                            $NewRow = ([PSCustomObject]$row) | Select-Object * -ExcludeProperty Timestamp
                             Add-AzDataTableEntity @Parameters -Entity $NewRow
                         }
                     } else {
-                        $NewEnt = [PSCustomObject]$SingleEnt
+                        $NewEnt = ([PSCustomObject]$SingleEnt) | Select-Object * -ExcludeProperty Timestamp
                         Add-AzDataTableEntity @Parameters -Entity $NewEnt
                     }
 
