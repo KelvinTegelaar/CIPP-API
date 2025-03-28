@@ -45,7 +45,7 @@ function Invoke-CIPPStandardTeamsGlobalMeetingPolicy {
     ($CurrentState.AllowPSTNUsersToBypassLobby -eq $false) -and
     ($CurrentState.MeetingChatEnabledType -eq $MeetingChatEnabledType) -and
     ($CurrentState.DesignatedPresenterRoleMode -eq $DesignatedPresenterRoleMode) -and
-    ($CurrentState.AllowExternalParticipantGiveRequestControl -eq $false)
+    ($CurrentState.AllowExternalParticipantGiveRequestControl -eq $Settings.AllowExternalParticipantGiveRequestControl)
 
 
     if ($Settings.remediate -eq $true) {

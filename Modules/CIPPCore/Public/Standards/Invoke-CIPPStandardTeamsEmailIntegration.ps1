@@ -66,7 +66,7 @@ Function Invoke-CIPPStandardTeamsEmailIntegration {
         }
     }
 
-    if ($Setings.report -eq $true) {
+    if ($Settings.report -eq $true) {
 
         if ($StateIsCorrect) {
             $FieldValue = $true
