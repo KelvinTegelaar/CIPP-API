@@ -34,6 +34,9 @@ function Invoke-EditGroup {
             try {
                 $member = $_.value
                 $memberid = $_.addedFields.id
+                if (!$memberid) {
+                    $memberid = (New-GraphGetRequest -uri "https://graph.microsoft.com/beta/users/$member" -tenantid $TenantId).id
+                }
 
                 if ($GroupType -eq 'Distribution List' -or $GroupType -eq 'Mail-Enabled Security') {
                     $Params = @{ Identity = $userobj.groupid; Member = $member; BypassSecurityGroupManagerCheck = $true }
@@ -262,7 +265,7 @@ function Invoke-EditGroup {
         foreach ($GraphLog in $GraphLogs) {
             $GraphError = $RawGraphRequest | Where-Object { $_.id -eq $GraphLog.id -and $_.status -notmatch '^2[0-9]+' }
             if ($GraphError) {
-                $Message = $GraphError.body.error.message
+                $Message = Get-NormalizedError -message $GraphError.body.error
                 $Sev = 'Error'
                 $Results.Add("Error - $Message")
             } else {
