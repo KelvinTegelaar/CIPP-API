@@ -103,8 +103,8 @@ function Invoke-CIPPStandardSpamFilterPolicy {
     $AcceptedDomains = New-ExoRequest -TenantId $Tenant -cmdlet 'Get-AcceptedDomain'
 
     $RuleState = New-ExoRequest -TenantId $Tenant -cmdlet 'Get-HostedContentFilterRule' |
-    Where-Object -Property Name -EQ $PolicyName |
-    Select-Object -Property *
+        Where-Object -Property Name -EQ $PolicyName |
+        Select-Object -Property *
 
     $RuleStateIsCorrect = ($RuleState.Name -eq $PolicyName) -and
     ($RuleState.HostedContentFilterPolicy -eq $PolicyName) -and
@@ -147,12 +147,23 @@ function Invoke-CIPPStandardSpamFilterPolicy {
                 InlineSafetyTipsEnabled              = $true
                 PhishZapEnabled                      = $true
                 SpamZapEnabled                       = $true
-                EnableLanguageBlockList              = $Settings.EnableLanguageBlockList
-                LanguageBlockList                    = $Settings.LanguageBlockList.value
-                EnableRegionBlockList                = $Settings.EnableRegionBlockList
-                RegionBlockList                      = $Settings.RegionBlockList.value
                 AllowedSenderDomains                 = $Settings.AllowedSenderDomains.value ?? @{'@odata.type' = '#Exchange.GenericHashTable' }
             }
+
+            # Remove optional block lists if not configured
+            if ($Settings.EnableLanguageBlockList -eq $true) {
+                $cmdParams.Add('EnableLanguageBlockList', $Settings.EnableLanguageBlockList)
+                $cmdParams.Add('LanguageBlockList', $Settings.LanguageBlockList.value)
+            } else {
+                $cmdParams.Add('EnableLanguageBlockList', $false)
+            }
+            if ($Settings.EnableRegionBlockList -eq $true) {
+                $cmdParams.Add('EnableRegionBlockList', $Settings.EnableRegionBlockList)
+                $cmdParams.Add('RegionBlockList', $Settings.RegionBlockList.value)
+            } else {
+                $cmdParams.Add('EnableRegionBlockList', $false)
+            }
+
 
             if ($CurrentState.Name -eq $PolicyName) {
                 try {
