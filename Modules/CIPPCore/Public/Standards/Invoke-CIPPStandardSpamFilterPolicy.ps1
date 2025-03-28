@@ -73,7 +73,7 @@ function Invoke-CIPPStandardSpamFilterPolicy {
     ($CurrentState.PhishQuarantineTag -eq $PhishQuarantineTag) -and
     ($CurrentState.HighConfidencePhishAction -eq 'Quarantine') -and
     ($CurrentState.HighConfidencePhishQuarantineTag -eq $HighConfidencePhishQuarantineTag) -and
-    ($CurrentState.BulkThreshold -eq $Settings.BulkThreshold) -and
+    ($CurrentState.BulkThreshold -eq [int]$Settings.BulkThreshold) -and
     ($CurrentState.QuarantineRetentionPeriod -eq 30) -and
     ($CurrentState.IncreaseScoreWithImageLinks -eq $IncreaseScoreWithImageLinks) -and
     ($CurrentState.IncreaseScoreWithNumericIps -eq 'On') -and
@@ -103,8 +103,8 @@ function Invoke-CIPPStandardSpamFilterPolicy {
     $AcceptedDomains = New-ExoRequest -TenantId $Tenant -cmdlet 'Get-AcceptedDomain'
 
     $RuleState = New-ExoRequest -TenantId $Tenant -cmdlet 'Get-HostedContentFilterRule' |
-    Where-Object -Property Name -EQ $PolicyName |
-    Select-Object -Property *
+        Where-Object -Property Name -EQ $PolicyName |
+        Select-Object -Property *
 
     $RuleStateIsCorrect = ($RuleState.Name -eq $PolicyName) -and
     ($RuleState.HostedContentFilterPolicy -eq $PolicyName) -and
@@ -126,7 +126,7 @@ function Invoke-CIPPStandardSpamFilterPolicy {
                 PhishQuarantineTag                   = $PhishQuarantineTag
                 HighConfidencePhishAction            = 'Quarantine'
                 HighConfidencePhishQuarantineTag     = $HighConfidencePhishQuarantineTag
-                BulkThreshold                        = $Settings.BulkThreshold
+                BulkThreshold                        = [int]$Settings.BulkThreshold
                 QuarantineRetentionPeriod            = 30
                 IncreaseScoreWithImageLinks          = $IncreaseScoreWithImageLinks
                 IncreaseScoreWithNumericIps          = 'On'
@@ -147,12 +147,23 @@ function Invoke-CIPPStandardSpamFilterPolicy {
                 InlineSafetyTipsEnabled              = $true
                 PhishZapEnabled                      = $true
                 SpamZapEnabled                       = $true
-                EnableLanguageBlockList              = $Settings.EnableLanguageBlockList
-                LanguageBlockList                    = $Settings.LanguageBlockList.value
-                EnableRegionBlockList                = $Settings.EnableRegionBlockList
-                RegionBlockList                      = $Settings.RegionBlockList.value
                 AllowedSenderDomains                 = $Settings.AllowedSenderDomains.value ?? @{'@odata.type' = '#Exchange.GenericHashTable' }
             }
+
+            # Remove optional block lists if not configured
+            if ($Settings.EnableLanguageBlockList -eq $true -and $Settings.LanguageBlockList.value) {
+                $cmdParams.Add('EnableLanguageBlockList', $Settings.EnableLanguageBlockList)
+                $cmdParams.Add('LanguageBlockList', $Settings.LanguageBlockList.value)
+            } else {
+                $cmdParams.Add('EnableLanguageBlockList', $false)
+            }
+            if ($Settings.EnableRegionBlockList -eq $true -and $Settings.RegionBlockList.value) {
+                $cmdParams.Add('EnableRegionBlockList', $Settings.EnableRegionBlockList)
+                $cmdParams.Add('RegionBlockList', $Settings.RegionBlockList.value)
+            } else {
+                $cmdParams.Add('EnableRegionBlockList', $false)
+            }
+
 
             if ($CurrentState.Name -eq $PolicyName) {
                 try {
@@ -217,7 +228,7 @@ function Invoke-CIPPStandardSpamFilterPolicy {
         if ($StateIsCorrect) {
             $FieldValue = $true
         } else {
-            $FieldValue = $CurrentState ? $CurrentState : $false
+            $FieldValue = $CurrentState ? $CurrentState : @{ state = 'Spam filter policy not found' }
         }
         Set-CIPPStandardsCompareField -FieldName 'standards.SpamFilterPolicy' -FieldValue $FieldValue -Tenant $Tenant
     }

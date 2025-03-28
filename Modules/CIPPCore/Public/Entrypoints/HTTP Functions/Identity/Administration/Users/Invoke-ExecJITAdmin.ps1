@@ -1,6 +1,6 @@
 using namespace System.Net
 
-Function Invoke-ExecJITAdmin {
+function Invoke-ExecJITAdmin {
     <#
     .FUNCTIONALITY
         Entrypoint
@@ -16,8 +16,7 @@ Function Invoke-ExecJITAdmin {
     Write-LogMessage -Headers $User -API $APINAME -message 'Accessed this API' -Sev 'Debug'
 
     if ($Request.Query.Action -eq 'List') {
-        $Schema = Get-CIPPSchemaExtensions | Where-Object { $_.id -match '_cippUser' }
-        #Write-Information "Schema: $($Schema)"
+        $Schema = Get-CIPPSchemaExtensions | Where-Object { $_.id -match '_cippUser' } | Select-Object -First 1
         $Query = @{
             TenantFilter = $Request.Query.TenantFilter
             Endpoint     = 'users'
