@@ -10,7 +10,7 @@ Function Invoke-ExecOffboardUser {
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
     $AllUsers = $Request.Body.user.value
-    $TenantFilter = $request.Body.tenantFilter.value
+    $TenantFilter = $request.Body.tenantFilter.value ? $request.Body.tenantFilter.value : $request.Body.tenantFilter
     $Results = foreach ($username in $AllUsers) {
         try {
             $APIName = 'ExecOffboardUser'
