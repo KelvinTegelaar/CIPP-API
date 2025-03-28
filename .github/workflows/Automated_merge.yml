@@ -11,32 +11,32 @@ jobs:
   dev-to-nightly:
     runs-on: ubuntu-latest
     steps:
-      - name: Check the weekday
+      - name: Check weekday
         id: check-day
         run: |
-          # +%u returns a number for day of week: Monday=1 ... Sunday=7
+          # Monday=1 ... Friday=5 ... Sunday=7
           DAY_OF_WEEK=$(date +'%u')
           echo "day_of_week=$DAY_OF_WEEK" >> $GITHUB_OUTPUT
 
       - name: Create and merge PR from dev to release/nightly
         if: ${{ steps.check-day.outputs.day_of_week != '5' }}
-        uses: peter-evans/create-pull-request@v3
+        uses: peter-evans/create-pull-request@v7
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
-          base: release/nightly
-          head: dev
+          source-branch: dev
+          target-branch: release/nightly
+          branch: auto/dev-to-nightly
           title: "Nightly Merge: dev → release/nightly"
           body: "This PR was automatically created and merged by GitHub Actions."
-          branch: "auto/dev-to-nightly"
-          merge: true
-          merge_method: squash
+          auto-merge: true
+          merge-method: squash
 
   # Job 2: Merge release/nightly -> release/beta (run only on Friday)
   nightly-to-beta:
     runs-on: ubuntu-latest
     needs: [dev-to-nightly]
     steps:
-      - name: Check the weekday
+      - name: Check weekday
         id: check-day
         run: |
           DAY_OF_WEEK=$(date +'%u')
@@ -44,13 +44,13 @@ jobs:
 
       - name: Create and merge PR from release/nightly to release/beta
         if: ${{ steps.check-day.outputs.day_of_week == '5' }}
-        uses: peter-evans/create-pull-request@v3
+        uses: peter-evans/create-pull-request@v7
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
-          base: release/beta
-          head: release/nightly
+          source-branch: release/nightly
+          target-branch: release/beta
+          branch: auto/nightly-to-beta
           title: "Weekly Merge: release/nightly → release/beta"
           body: "This PR was automatically created and merged by GitHub Actions."
-          branch: "auto/nightly-to-beta"
-          merge: true
-          merge_method: squash
+          auto-merge: true
+          merge-method: squash
