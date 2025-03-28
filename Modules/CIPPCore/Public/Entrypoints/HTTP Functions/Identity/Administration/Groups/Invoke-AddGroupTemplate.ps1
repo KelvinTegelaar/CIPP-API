@@ -17,7 +17,7 @@ Function Invoke-AddGroupTemplate {
         if (!$Request.body.displayname) { throw 'You must enter a displayname' }
 
         $object = [PSCustomObject]@{
-            Displayname     = $request.body.displayname
+            Displayname     = $request.body.displayName
             Description     = $request.body.description
             groupType       = $request.body.groupType
             MembershipRules = $request.body.membershipRules

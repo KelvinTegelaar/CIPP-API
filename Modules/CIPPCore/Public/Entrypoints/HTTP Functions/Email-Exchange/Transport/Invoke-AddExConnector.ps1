@@ -16,8 +16,8 @@ Function Invoke-AddExConnector {
 
 
     $ConnectorType = ($Request.Body.PowerShellCommand | ConvertFrom-Json).cippConnectorType
-    $RequestParams = $Request.Body.PowerShellCommand | ConvertFrom-Json | Select-Object -Property * -ExcludeProperty GUID, cippConnectorType, comments
-
+    $RequestParams = $Request.Body.PowerShellCommand | ConvertFrom-Json | Select-Object -Property * -ExcludeProperty GUID, cippConnectorType, SenderRewritingEnabled
+    if ($RequestParams.comment) { $RequestParams.comment = Get-CIPPTextReplacement -Text $RequestParams.comment -TenantFilter $Tenant } else { $RequestParams | Add-Member -NotePropertyValue 'no comment' -NotePropertyName comment -Force }
     $Tenants = ($Request.Body.selectedTenants).value
     $Result = foreach ($TenantFilter in $Tenants) {
         try {
