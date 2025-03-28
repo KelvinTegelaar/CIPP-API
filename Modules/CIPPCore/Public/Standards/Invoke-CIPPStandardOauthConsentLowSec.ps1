@@ -36,55 +36,61 @@ function Invoke-CIPPStandardOauthConsentLowSec {
     $missingPermissions = $requiredPermissions | Where-Object { $PermissionState.permissionName -notcontains $_ }
 
     if ($Settings.remediate -eq $true) {
-        if ($State.permissionGrantPolicyIdsAssignedToDefaultUserRole -in @('managePermissionGrantsForSelf.microsoft-user-default-low')) {
-            Write-LogMessage -API 'Standards' -tenant $tenant -message 'Application Consent Mode(microsoft-user-default-low) is already enabled.' -sev Info
-        } else {
-            try {
-                $GraphParam = @{
-                    tenantid    = $tenant
-                    Uri         = 'https://graph.microsoft.com/beta/policies/authorizationPolicy/authorizationPolicy'
-                    Type        = 'PATCH'
-                    Body        = @{
-                        permissionGrantPolicyIdsAssignedToDefaultUserRole = @('managePermissionGrantsForSelf.microsoft-user-default-low')
-                    } | ConvertTo-Json
-                    ContentType = 'application/json'
-                }
-                $null = New-GraphPostRequest @GraphParam
-                Write-LogMessage -API 'Standards' -tenant $tenant -message 'Application Consent Mode(microsoft-user-default-low) has been enabled.' -sev Info
-            } catch {
-                $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
-                Write-LogMessage -API 'Standards' -tenant $tenant -message "Failed to apply Application Consent Mode (microsoft-user-default-low) Error: $ErrorMessage" -sev Error
-            }
-        }
-
-        if ($missingPermissions.Count -eq 0) {
-            Write-LogMessage -API 'Standards' -tenant $tenant -message 'All permissions for Application Consent already assigned.' -sev Info
-        } else {
-            try {
-                $missingPermissions | ForEach-Object {
+        if (!$State.permissionGrantPolicyIdsAssignedToDefaultUserRole -contains 'ManagePermissionGrantsForSelf.cipp-consent-policy') {
+            if ($State.permissionGrantPolicyIdsAssignedToDefaultUserRole -in @('managePermissionGrantsForSelf.microsoft-user-default-low')) {
+                Write-LogMessage -API 'Standards' -tenant $tenant -message 'Application Consent Mode(microsoft-user-default-low) is already enabled.' -sev Info
+            } else {
+                try {
                     $GraphParam = @{
                         tenantid    = $tenant
-                        Uri         = "https://graph.microsoft.com/beta/servicePrincipals(appId='00000003-0000-0000-c000-000000000000')/delegatedPermissionClassifications"
-                        Type        = 'POST'
+                        Uri         = 'https://graph.microsoft.com/beta/policies/authorizationPolicy/authorizationPolicy'
+                        Type        = 'PATCH'
                         Body        = @{
-                            permissionName = $_
-                            classification = 'low'
+                            permissionGrantPolicyIdsAssignedToDefaultUserRole = @('managePermissionGrantsForSelf.microsoft-user-default-low')
                         } | ConvertTo-Json
                         ContentType = 'application/json'
                     }
                     $null = New-GraphPostRequest @GraphParam
-                    Write-LogMessage -API 'Standards' -tenant $tenant -message "Permission $_ has been added to low Application Consent" -sev Info
+                    Write-LogMessage -API 'Standards' -tenant $tenant -message 'Application Consent Mode(microsoft-user-default-low) has been enabled.' -sev Info
+                } catch {
+                    $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
+                    Write-LogMessage -API 'Standards' -tenant $tenant -message "Failed to apply Application Consent Mode (microsoft-user-default-low) Error: $ErrorMessage" -sev Error
                 }
-            } catch {
-                $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
-                Write-LogMessage -API 'Standards' -tenant $tenant -message "Failed to apply low consent permissions Error: $ErrorMessage" -sev Error
+            }
+
+            if ($missingPermissions.Count -eq 0) {
+                Write-LogMessage -API 'Standards' -tenant $tenant -message 'All permissions for Application Consent already assigned.' -sev Info
+            } else {
+                try {
+                    $missingPermissions | ForEach-Object {
+                        $GraphParam = @{
+                            tenantid    = $tenant
+                            Uri         = "https://graph.microsoft.com/beta/servicePrincipals(appId='00000003-0000-0000-c000-000000000000')/delegatedPermissionClassifications"
+                            Type        = 'POST'
+                            Body        = @{
+                                permissionName = $_
+                                classification = 'low'
+                            } | ConvertTo-Json
+                            ContentType = 'application/json'
+                        }
+                        $null = New-GraphPostRequest @GraphParam
+                        Write-LogMessage -API 'Standards' -tenant $tenant -message "Permission $_ has been added to low Application Consent" -sev Info
+                    }
+                } catch {
+                    $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
+                    Write-LogMessage -API 'Standards' -tenant $tenant -message "Failed to apply low consent permissions Error: $ErrorMessage" -sev Error
+                }
             }
         }
     }
 
     if ($Settings.alert -eq $true) {
         if ($State.permissionGrantPolicyIdsAssignedToDefaultUserRole -notin @('managePermissionGrantsForSelf.microsoft-user-default-low')) {
-            Write-StandardsAlert -message 'Application Consent Mode(microsoft-user-default-low) is not enabled' -object $State -tenant $tenant -standardName 'OauthConsentLowSec' -standardId $Settings.standardId
+            if ($State.permissionGrantPolicyIdsAssignedToDefaultUserRole -eq 'managePermissionGrantsForSelf.cipp-consent-policy') {
+                Write-StandardsAlert -message 'There is a conflicting OAuth Consent policy standard enabled for this tenant.' -object $State -tenant $tenant -standardName 'OauthConsentLowSec' -standardId $Settings.standardId
+            } else {
+                Write-StandardsAlert -message 'Application Consent Mode(microsoft-user-default-low) is not enabled' -object $State -tenant $tenant -standardName 'OauthConsentLowSec' -standardId $Settings.standardId
+            }
             Write-LogMessage -API 'Standards' -tenant $tenant -message 'Application Consent Mode(microsoft-user-default-low) is not enabled.' -sev Info
         } else {
             Write-LogMessage -API 'Standards' -tenant $tenant -message 'Application Consent Mode(microsoft-user-default-low) is enabled.' -sev Info
@@ -95,7 +101,7 @@ function Invoke-CIPPStandardOauthConsentLowSec {
         if ($State.permissionGrantPolicyIdsAssignedToDefaultUserRole -notin @('managePermissionGrantsForSelf.microsoft-user-default-low')) {
             $State.permissionGrantPolicyIdsAssignedToDefaultUserRole = $false
             $ValueField = @{
-                authorizationPolicy       = $State
+                authorizationPolicy       = $State.permissionGrantPolicyIdsAssignedToDefaultUserRole
                 permissionClassifications = $PermissionState
             }
         } else {
