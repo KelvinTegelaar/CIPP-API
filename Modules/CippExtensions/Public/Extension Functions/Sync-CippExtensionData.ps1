@@ -151,20 +151,26 @@ function Sync-CippExtensionData {
                 )
             }
             'Mailboxes' {
-                $Select = 'id,ExchangeGuid,ArchiveGuid,UserPrincipalName,DisplayName,PrimarySMTPAddress,RecipientType,RecipientTypeDetails,EmailAddresses,WhenSoftDeleted,IsInactiveMailbox,ProhibitSendQuota,ProhibitSendReceiveQuota,LitigationHoldEnabled,InPlaceHolds,HiddenFromAddressListsEnabled'
+                $Select = 'id,ExchangeGuid,ArchiveGuid,UserPrincipalName,DisplayName,PrimarySMTPAddress,RecipientType,RecipientTypeDetails,EmailAddresses,WhenSoftDeleted,IsInactiveMailbox,ForwardingSmtpAddress,DeliverToMailboxAndForward,ForwardingAddress,HiddenFromAddressListsEnabled,ExternalDirectoryObjectId,MessageCopyForSendOnBehalfEnabled,MessageCopyForSentAsEnabled'
                 $ExoRequest = @{
                     tenantid  = $TenantFilter
                     cmdlet    = 'Get-Mailbox'
                     cmdParams = @{}
                     Select    = $Select
                 }
-                $Mailboxes = (New-ExoRequest @ExoRequest) | Select-Object id, ExchangeGuid, ArchiveGuid, WhenSoftDeleted, ProhibitSendQuota, ProhibitSendReceiveQuota, LitigationHoldEnabled, InplaceHolds, HiddenFromAddressListsEnabled, @{ Name = 'UPN'; Expression = { $_.'UserPrincipalName' } },
-
+                $Mailboxes = (New-ExoRequest @ExoRequest) | Select-Object id, ExchangeGuid, ArchiveGuid, WhenSoftDeleted, @{ Name = 'UPN'; Expression = { $_.'UserPrincipalName' } },
                 @{ Name = 'displayName'; Expression = { $_.'DisplayName' } },
                 @{ Name = 'primarySmtpAddress'; Expression = { $_.'PrimarySMTPAddress' } },
                 @{ Name = 'recipientType'; Expression = { $_.'RecipientType' } },
                 @{ Name = 'recipientTypeDetails'; Expression = { $_.'RecipientTypeDetails' } },
-                @{ Name = 'AdditionalEmailAddresses'; Expression = { ($_.'EmailAddresses' | Where-Object { $_ -clike 'smtp:*' }).Replace('smtp:', '') -join ', ' } }
+                @{ Name = 'AdditionalEmailAddresses'; Expression = { ($_.'EmailAddresses' | Where-Object { $_ -clike 'smtp:*' }).Replace('smtp:', '') -join ', ' } },
+                @{Name = 'ForwardingSmtpAddress'; Expression = { $_.'ForwardingSmtpAddress' -replace 'smtp:', '' } },
+                @{Name = 'InternalForwardingAddress'; Expression = { $_.'ForwardingAddress' } },
+                DeliverToMailboxAndForward,
+                HiddenFromAddressListsEnabled,
+                ExternalDirectoryObjectId,
+                MessageCopyForSendOnBehalfEnabled,
+                MessageCopyForSentAsEnabled
 
                 $Entity = @{
                     PartitionKey = $TenantFilter

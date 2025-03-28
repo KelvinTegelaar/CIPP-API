@@ -3,7 +3,7 @@ using namespace System.Net
 function Invoke-ListFunctionParameters {
     <#
     .FUNCTIONALITY
-        Entrypoint
+        Entrypoint,AnyTenant
     .ROLE
         CIPP.Core.Read
     #>
@@ -52,6 +52,7 @@ function Invoke-ListFunctionParameters {
             $Help = Get-Help @GetHelp
             $ParamsHelp = ($Help | Select-Object -ExpandProperty parameters).parameter | Select-Object name, @{n = 'description'; exp = { $_.description.Text } }
             if ($Help.Functionality -in $IgnoreList) { continue }
+            if ($Help.Functionality -match 'Entrypoint') { continue }
             $Parameters = foreach ($Key in $Function.Parameters.Keys) {
                 if ($CommonParameters -notcontains $Key) {
                     $Param = $Function.Parameters.$Key

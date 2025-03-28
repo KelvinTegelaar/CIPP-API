@@ -10,10 +10,8 @@ function Set-SherwebSubscription {
         [string]$TenantFilter
     )
     if ($TenantFilter) {
-        Get-ExtensionMapping -Extension 'Sherweb' | Where-Object { $_.RowKey -eq $TenantFilter } | ForEach-Object {
-            Write-Host "Extracted customer id from tenant filter - It's $($_.IntegrationId)"
-            $CustomerId = $_.IntegrationId
-        }
+        $TenantFilter = (Get-Tenants -TenantFilter $TenantFilter).customerId
+        $CustomerId = Get-ExtensionMapping -Extension 'Sherweb' | Where-Object { $_.RowKey -eq $TenantFilter } | Select-Object -ExpandProperty IntegrationId
     }
     $AuthHeader = Get-SherwebAuthentication
     $ExistingSubscription = Get-SherwebCurrentSubscription -CustomerId $CustomerId -SKU $SKU
@@ -37,6 +35,9 @@ function Set-SherwebSubscription {
         }
         $OrderUri = "https://api.sherweb.com/service-provider/v1/orders?customerId=$CustomerId"
         $Order = Invoke-RestMethod -Uri $OrderUri -Method POST -Headers $AuthHeader -Body $OrderBody -ContentType 'application/json'
+        if ($Order -match 'Internal Server Error' -and $Add -gt 0) {
+            throw 'An error occurred while attempting to create a new subscription. Please check the Cumulus portal to ensure this customer has been provisioned for Microsoft 365.'
+        }
         return $Order
 
     } else {

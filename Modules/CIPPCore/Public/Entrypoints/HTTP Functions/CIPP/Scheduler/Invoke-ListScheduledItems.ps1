@@ -1,9 +1,9 @@
 using namespace System.Net
 
-Function Invoke-ListScheduledItems {
+function Invoke-ListScheduledItems {
     <#
     .FUNCTIONALITY
-        Entrypoint
+        Entrypoint,AnyTenant
     .ROLE
         CIPP.Scheduler.Read
     #>
@@ -29,7 +29,7 @@ Function Invoke-ListScheduledItems {
         $ScheduledItemFilter.Add('Hidden eq false')
     }
 
-    if ($Name -eq $true) {
+    if ($Name) {
         $ScheduledItemFilter.Add("Name eq '$($Name)'")
     }
 
@@ -44,7 +44,6 @@ Function Invoke-ListScheduledItems {
     }
     $Tasks = Get-CIPPAzDataTableEntity @Table -Filter $Filter | Where-Object { $_.Hidden -ne $HiddenTasks }
     if ($Type) {
-        $Tasks.Command
         $Tasks = $Tasks | Where-Object { $_.command -eq $Type }
     }
 
@@ -61,13 +60,22 @@ Function Invoke-ListScheduledItems {
         } else {
             $Task | Add-Member -NotePropertyName Parameters -NotePropertyValue @{}
         }
+        if ($Task.Recurrence -eq 0 -or [string]::IsNullOrEmpty($Task.Recurrence)) {
+            $Task.Recurrence = 'Once'
+        }
+        try {
+            $Task.ExecutedTime = [DateTimeOffset]::FromUnixTimeSeconds($Task.ExecutedTime).UtcDateTime
+        } catch {}
+        try {
+            $Task.ScheduledTime = [DateTimeOffset]::FromUnixTimeSeconds($Task.ScheduledTime).UtcDateTime
+        } catch {}
         $Task
     }
 
     # Associate values to output bindings by calling 'Push-OutputBinding'.
     Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
             StatusCode = [HttpStatusCode]::OK
-            Body       = @($ScheduledTasks)
+            Body       = @($ScheduledTasks | Sort-Object -Property ExecutedTime -Descending)
         })
 
 }

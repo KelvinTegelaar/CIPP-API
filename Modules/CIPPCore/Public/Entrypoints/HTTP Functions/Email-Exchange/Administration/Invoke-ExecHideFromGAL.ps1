@@ -10,8 +10,8 @@ Function Invoke-ExecHideFromGAL {
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
 
-    $Headers = $Request.Headers
     $APIName = $Request.Params.CIPPEndpoint
+    $Headers = $Request.Headers
     Write-LogMessage -Headers $Headers -API $APINAME -message 'Accessed this API' -Sev 'Debug'
 
 
@@ -22,19 +22,17 @@ Function Invoke-ExecHideFromGAL {
     $HideFromGAL = [System.Convert]::ToBoolean($HideFromGAL)
 
     Try {
-        $HideResults = Set-CIPPHideFromGAL -tenantFilter $TenantFilter -UserID $UserId -hidefromgal $Hidden -Headers $Request.Headers -APIName $APIName
-        $Results = [pscustomobject]@{'Results' = $HideResults }
+        $Result = Set-CIPPHideFromGAL -tenantFilter $TenantFilter -UserID $UserId -hidefromgal $HideFromGAL -Headers $Headers -APIName $APIName
         $StatusCode = [HttpStatusCode]::OK
 
     } catch {
-        $ErrorMessage = Get-CippException -Exception $_
-        $Results = [pscustomobject]@{'Results' = "Failed. $($ErrorMessage.NormalizedError)" }
+        $Result = $_.Exception.Message
         $StatusCode = [HttpStatusCode]::Forbidden
     }
     # Associate values to output bindings by calling 'Push-OutputBinding'.
     Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
             StatusCode = $StatusCode
-            Body       = $Results
+            Body       = @{ 'Results' = $Result }
         })
 
 }

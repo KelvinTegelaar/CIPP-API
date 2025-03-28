@@ -29,11 +29,10 @@ function Invoke-CIPPStandardSendFromAlias {
     #>
 
     param($Tenant, $Settings)
-    ##$Rerun -Type Standard -Tenant $Tenant -Settings $Settings 'SendFromAlias'
 
     $CurrentInfo = (New-ExoRequest -tenantid $Tenant -cmdlet 'Get-OrganizationConfig').SendFromAliasEnabled
 
-    If ($Settings.remediate -eq $true) {
+    if ($Settings.remediate -eq $true) {
         if ($CurrentInfo -eq $false) {
             try {
                 New-ExoRequest -tenantid $Tenant -cmdlet 'Set-OrganizationConfig' -cmdParams @{ SendFromAliasEnabled = $true }
@@ -52,11 +51,13 @@ function Invoke-CIPPStandardSendFromAlias {
         if ($CurrentInfo -eq $true) {
             Write-LogMessage -API 'Standards' -tenant $tenant -message 'Send from alias is enabled.' -sev Info
         } else {
-            Write-LogMessage -API 'Standards' -tenant $tenant -message 'Send from alias is not enabled.' -sev Alert
+            Write-StandardsAlert -message 'Send from alias is not enabled' -object $CurrentInfo -tenant $tenant -standardName 'SendFromAlias' -standardId $Settings.standardId
+            Write-LogMessage -API 'Standards' -tenant $tenant -message 'Send from alias is not enabled.' -sev Info
         }
     }
 
     if ($Settings.report -eq $true) {
         Add-CIPPBPAField -FieldName 'SendFromAlias' -FieldValue $CurrentInfo -StoreAs bool -Tenant $tenant
+        Set-CIPPStandardsCompareField -FieldName 'standards.SendFromAlias' -FieldValue $CurrentInfo -Tenant $tenant
     }
 }

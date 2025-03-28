@@ -7,7 +7,7 @@ function Start-AuditLogSearchCreation {
     param()
     try {
         $ConfigTable = Get-CippTable -TableName 'WebhookRules'
-        $ConfigEntries = Get-CIPPAzDataTableEntity @ConfigTable
+        $ConfigEntries = Get-CIPPAzDataTableEntity @ConfigTable -Filter "PartitionKey eq 'Webhookv2'"
 
         $TenantList = Get-Tenants -IncludeErrors
         # Round time down to nearest minute

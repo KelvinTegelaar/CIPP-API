@@ -38,7 +38,7 @@ Function Invoke-AddAPDevice {
             }
             $body = ConvertTo-Json -Depth 10 -Compress -InputObject @($body)
             Write-Host $body
-            $GraphRequest = (New-GraphPostRequest -returnHeaders $true -uri "https://api.partnercenter.microsoft.com/v1/$($CurrentStatus.items.deviceslink.uri)" -body $body -scope 'https://api.partnercenter.microsoft.com/user_impersonation')
+            $GraphRequest = (New-GraphPostRequest -returnHeaders $true -uri "https://api.partnercenter.microsoft.com/v1/customers/$TenantFilter/deviceBatches/$groupname/devices" -body $body -scope 'https://api.partnercenter.microsoft.com/user_impersonation')
         } else {
             $body = '{"batchId":"' + $($GroupName) + '","devices":' + $Devices + '}'
             $GraphRequest = (New-GraphPostRequest -returnHeaders $true -uri "https://api.partnercenter.microsoft.com/v1/customers/$TenantFilter/DeviceBatches" -body $body -scope 'https://api.partnercenter.microsoft.com/user_impersonation')

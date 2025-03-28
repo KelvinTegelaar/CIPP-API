@@ -3,7 +3,7 @@ using namespace System.Net
 Function Invoke-RemoveGroupTemplate {
     <#
     .FUNCTIONALITY
-        Entrypoint
+        Entrypoint,AnyTenant
     .ROLE
         Identity.Group.ReadWrite
     #>

@@ -3,7 +3,7 @@ using namespace System.Net
 Function Invoke-ExecAddAlert {
     <#
     .FUNCTIONALITY
-        Entrypoint
+        Entrypoint,AnyTenant
     .ROLE
         CIPP.Alert.ReadWrite
     #>
