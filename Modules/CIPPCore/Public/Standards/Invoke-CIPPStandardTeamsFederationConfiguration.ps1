@@ -38,7 +38,7 @@ function Invoke-CIPPStandardTeamsFederationConfiguration {
 
     $AllowAllKnownDomains = New-CsEdgeAllowAllKnownDomains
     $DomainControl = $Settings.DomainControl.value ?? $Settings.DomainControl
-    $AllowedDomainsAsAList = $null
+    $AllowedDomainsAsAList = @()
     switch ($DomainControl) {
         'AllowAllExternal' {
             $AllowFederatedUsers = $true
@@ -77,7 +77,7 @@ function Invoke-CIPPStandardTeamsFederationConfiguration {
     $CurrentAllowedDomains = $CurrentState.AllowedDomains
     if ($CurrentAllowedDomains.GetType().Name -eq 'PSObject') {
         $CurrentAllowedDomains = $CurrentAllowedDomains.Domain | Sort-Object
-        $DomainList = $CurrentAllowedDomains | Sort-Object
+        $DomainList = ($CurrentAllowedDomains | Sort-Object) ?? @()
         $AllowedDomainsMatches = -not (Compare-Object -ReferenceObject $AllowedDomainsAsAList -DifferenceObject $DomainList)
     } elseif ($CurrentAllowedDomains.GetType().Name -eq 'Deserialized.Microsoft.Rtc.Management.WritableConfig.Settings.Edge.AllowAllKnownDomains') {
         $CurrentAllowedDomains = $CurrentAllowedDomains.ToString()
