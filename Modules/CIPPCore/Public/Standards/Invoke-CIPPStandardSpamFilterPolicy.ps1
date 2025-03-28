@@ -228,7 +228,7 @@ function Invoke-CIPPStandardSpamFilterPolicy {
         if ($StateIsCorrect) {
             $FieldValue = $true
         } else {
-            $FieldValue = $CurrentState ? $CurrentState : $false
+            $FieldValue = $CurrentState ? $CurrentState : @{ state = 'Spam filter policy not found' }
         }
         Set-CIPPStandardsCompareField -FieldName 'standards.SpamFilterPolicy' -FieldValue $FieldValue -Tenant $Tenant
     }
