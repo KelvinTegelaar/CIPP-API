@@ -31,7 +31,7 @@ function Invoke-CIPPStandardUserPreferredLanguage {
     param($Tenant, $Settings)
 
     $preferredLanguage = $Settings.preferredLanguage.value
-    $IncorrectUsers = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/users?`$top=999&`$select=userPrincipalName,displayName,preferredLanguage,userType,onPremisesSyncEnabled&`$filter=preferredLanguage ne '$preferredLanguage' and userType eq 'Member' and onPremisesSyncEnabled ne true&`$count=true&ConsistencyLevel=eventual" -tenantid $Tenant
+    $IncorrectUsers = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/users?`$top=999&`$select=userPrincipalName,displayName,preferredLanguage,userType,onPremisesSyncEnabled&`$filter=preferredLanguage ne '$preferredLanguage' and userType eq 'Member' and onPremisesSyncEnabled ne true&`$count=true" -tenantid $Tenant -ComplexFilter
 
     if ($Settings.remediate -eq $true) {
         if (($IncorrectUsers | Measure-Object).Count -gt 0) {
@@ -62,7 +62,7 @@ function Invoke-CIPPStandardUserPreferredLanguage {
             Write-StandardsAlert -message "The following accounts do not have the preferred language set to $preferredLanguage" -object $IncorrectUsers -tenant $Tenant -standardName 'UserPreferredLanguage' -standardId $Settings.standardId
             Write-LogMessage -API 'Standards' -tenant $Tenant -message "The following accounts do not have the preferred language set to $preferredLanguage : $($IncorrectUsers.userPrincipalName -join ', ')" -sev Info
         } else {
-            Write-LogMessage -API 'Standards' -tenant $Tenant -message 'No accounts do not have the preferred language set to the preferred language' -sev Info
+            Write-LogMessage -API 'Standards' -tenant $Tenant -message 'All accounts have the preferred language set.' -sev Info
         }
     }
 

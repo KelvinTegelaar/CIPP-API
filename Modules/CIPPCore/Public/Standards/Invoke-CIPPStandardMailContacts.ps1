@@ -74,14 +74,14 @@ function Invoke-CIPPStandardMailContacts {
             Write-StandardsAlert -message "Marketing contact email is not set to $($Contacts.MarketingContact)" -object $Object -tenant $tenant -standardName 'MailContacts' -standardId $Settings.standardId
             Write-LogMessage -API 'Standards' -tenant $tenant -message "Marketing contact email is not set to $($Contacts.MarketingContact)" -sev Info
         }
-        if ($CurrentInfo.securityComplianceNotificationMails -eq $Contacts.SecurityContact) {
+        if (!$Contacts.SecurityContact -or $CurrentInfo.technicalNotificationMails -contains $Contacts.SecurityContact) {
             Write-LogMessage -API 'Standards' -tenant $tenant -message "Security contact email is set to $($Contacts.SecurityContact)" -sev Info
         } else {
-            $Object = $CurrentInfo | Select-Object securityComplianceNotificationMails
+            $Object = $CurrentInfo | Select-Object technicalNotificationMails
             Write-StandardsAlert -message "Security contact email is not set to $($Contacts.SecurityContact)" -object $Object -tenant $tenant -standardName 'MailContacts' -standardId $Settings.standardId
             Write-LogMessage -API 'Standards' -tenant $tenant -message "Security contact email is not set to $($Contacts.SecurityContact)" -sev Info
         }
-        if ($CurrentInfo.technicalNotificationMails -eq $Contacts.TechContact) {
+        if (!$Contacts.TechContact -or $CurrentInfo.technicalNotificationMails -contains $Contacts.TechContact) {
             Write-LogMessage -API 'Standards' -tenant $tenant -message "Technical contact email is set to $($Contacts.TechContact)" -sev Info
         } else {
             $Object = $CurrentInfo | Select-Object technicalNotificationMails
