@@ -31,7 +31,7 @@ function Invoke-CIPPStandardIntuneComplianceSettings {
 
     param($Tenant, $Settings)
 
-    $CurrentState = New-GraphGetRequest -Uri 'https://graph.microsoft.com/beta/deviceManagement/settings' -tenantid $Tenant
+    $CurrentState = New-GraphGetRequest -Uri 'https://graph.microsoft.com/beta/deviceManagement/settings' -tenantid $Tenant | Select-Object secureByDefault, deviceComplianceCheckinThresholdDays
 
     if ($null -eq $Settings.deviceComplianceCheckinThresholdDays) { $Settings.deviceComplianceCheckinThresholdDays = $CurrentState.deviceComplianceCheckinThresholdDays }
     $SecureByDefault = [bool]($Settings.secureByDefault.value ? $Settings.secureByDefault.value : $Settings.secureByDefault)

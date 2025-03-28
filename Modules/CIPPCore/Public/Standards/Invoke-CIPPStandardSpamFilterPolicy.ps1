@@ -73,7 +73,7 @@ function Invoke-CIPPStandardSpamFilterPolicy {
     ($CurrentState.PhishQuarantineTag -eq $PhishQuarantineTag) -and
     ($CurrentState.HighConfidencePhishAction -eq 'Quarantine') -and
     ($CurrentState.HighConfidencePhishQuarantineTag -eq $HighConfidencePhishQuarantineTag) -and
-    ($CurrentState.BulkThreshold -eq $Settings.BulkThreshold) -and
+    ($CurrentState.BulkThreshold -eq [int]$Settings.BulkThreshold) -and
     ($CurrentState.QuarantineRetentionPeriod -eq 30) -and
     ($CurrentState.IncreaseScoreWithImageLinks -eq $IncreaseScoreWithImageLinks) -and
     ($CurrentState.IncreaseScoreWithNumericIps -eq 'On') -and
@@ -126,7 +126,7 @@ function Invoke-CIPPStandardSpamFilterPolicy {
                 PhishQuarantineTag                   = $PhishQuarantineTag
                 HighConfidencePhishAction            = 'Quarantine'
                 HighConfidencePhishQuarantineTag     = $HighConfidencePhishQuarantineTag
-                BulkThreshold                        = $Settings.BulkThreshold
+                BulkThreshold                        = [int]$Settings.BulkThreshold
                 QuarantineRetentionPeriod            = 30
                 IncreaseScoreWithImageLinks          = $IncreaseScoreWithImageLinks
                 IncreaseScoreWithNumericIps          = 'On'
