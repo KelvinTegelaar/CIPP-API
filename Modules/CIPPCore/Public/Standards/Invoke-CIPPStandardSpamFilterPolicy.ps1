@@ -151,13 +151,13 @@ function Invoke-CIPPStandardSpamFilterPolicy {
             }
 
             # Remove optional block lists if not configured
-            if ($Settings.EnableLanguageBlockList -eq $true) {
+            if ($Settings.EnableLanguageBlockList -eq $true -and $Settings.LanguageBlockList.value) {
                 $cmdParams.Add('EnableLanguageBlockList', $Settings.EnableLanguageBlockList)
                 $cmdParams.Add('LanguageBlockList', $Settings.LanguageBlockList.value)
             } else {
                 $cmdParams.Add('EnableLanguageBlockList', $false)
             }
-            if ($Settings.EnableRegionBlockList -eq $true) {
+            if ($Settings.EnableRegionBlockList -eq $true -and $Settings.RegionBlockList.value) {
                 $cmdParams.Add('EnableRegionBlockList', $Settings.EnableRegionBlockList)
                 $cmdParams.Add('RegionBlockList', $Settings.RegionBlockList.value)
             } else {
