@@ -34,6 +34,7 @@ function Invoke-CIPPStandardUserSubmissions {
 
     # Get state value using null-coalescing operator
     $state = $Settings.state.value ?? $Settings.state
+    $Email = Get-CIPPTextReplacement -TenantFilter $Tenant -Text $Settings.email
 
     # Input validation
     if ($Settings.remediate -eq $true -or $Settings.alert -eq $true) {
@@ -42,8 +43,8 @@ function Invoke-CIPPStandardUserSubmissions {
             return
         }
 
-        if (!([string]::IsNullOrWhiteSpace($Settings.email))) {
-            if ($Settings.email -notmatch '@') {
+        if (!([string]::IsNullOrWhiteSpace($Email))) {
+            if ($Email -notmatch '@') {
                 Write-LogMessage -API 'Standards' -tenant $Tenant -message 'UserSubmissions: Invalid Email parameter set' -sev Error
                 return
             }
@@ -54,7 +55,7 @@ function Invoke-CIPPStandardUserSubmissions {
     $RuleState = New-ExoRequest -tenantid $Tenant -cmdlet 'Get-ReportSubmissionRule'
 
     if ($state -eq 'enable') {
-        if (([string]::IsNullOrWhiteSpace($Settings.email))) {
+        if (([string]::IsNullOrWhiteSpace($Email))) {
             $PolicyIsCorrect = ($PolicyState.EnableReportToMicrosoft -eq $true) -and
             ($PolicyState.ReportJunkToCustomizedAddress -eq $false) -and
             ($PolicyState.ReportNotJunkToCustomizedAddress -eq $false) -and
@@ -63,13 +64,13 @@ function Invoke-CIPPStandardUserSubmissions {
         } else {
             $PolicyIsCorrect = ($PolicyState.EnableReportToMicrosoft -eq $true) -and
             ($PolicyState.ReportJunkToCustomizedAddress -eq $true) -and
-            ($PolicyState.ReportJunkAddresses -eq $Settings.email) -and
+            ($PolicyState.ReportJunkAddresses -eq $Email) -and
             ($PolicyState.ReportNotJunkToCustomizedAddress -eq $true) -and
-            ($PolicyState.ReportNotJunkAddresses -eq $Settings.email) -and
+            ($PolicyState.ReportNotJunkAddresses -eq $Email) -and
             ($PolicyState.ReportPhishToCustomizedAddress -eq $true) -and
-            ($PolicyState.ReportPhishAddresses -eq $Settings.email)
+            ($PolicyState.ReportPhishAddresses -eq $Email)
             $RuleIsCorrect = ($RuleState.State -eq 'Enabled') -and
-            ($RuleState.SentTo -eq $Settings.email)
+            ($RuleState.SentTo -eq $Email)
         }
     } else {
         if ($PolicyState.length -eq 0) {
@@ -87,13 +88,12 @@ function Invoke-CIPPStandardUserSubmissions {
     $StateIsCorrect = $PolicyIsCorrect -and $RuleIsCorrect
 
     if ($Settings.remediate -eq $true) {
-
         # If policy is set correctly, log and skip setting the policy
         if ($StateIsCorrect -eq $true) {
             Write-LogMessage -API 'Standards' -tenant $Tenant -message 'User Submission policy is already configured' -sev Info
         } else {
             if ($state -eq 'enable') {
-                if (([string]::IsNullOrWhiteSpace($Settings.email))) {
+                if (([string]::IsNullOrWhiteSpace())) {
                     $PolicyParams = @{
                         EnableReportToMicrosoft          = $true
                         ReportJunkToCustomizedAddress    = $false
@@ -107,14 +107,14 @@ function Invoke-CIPPStandardUserSubmissions {
                     $PolicyParams = @{
                         EnableReportToMicrosoft          = $true
                         ReportJunkToCustomizedAddress    = $true
-                        ReportJunkAddresses              = $Settings.email
+                        ReportJunkAddresses              = $Email
                         ReportNotJunkToCustomizedAddress = $true
-                        ReportNotJunkAddresses           = $Settings.email
+                        ReportNotJunkAddresses           = $Email
                         ReportPhishToCustomizedAddress   = $true
-                        ReportPhishAddresses             = $Settings.email
+                        ReportPhishAddresses             = $Email
                     }
                     $RuleParams = @{
-                        SentTo = $Settings.email
+                        SentTo = $Email
                     }
                 }
             } else {
