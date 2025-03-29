@@ -40,11 +40,16 @@ function Invoke-CIPPStandardsharingDomainRestriction {
     if ($mode -eq 'none' -or $null -eq $mode) {
         $StateIsCorrect = $CurrentState.sharingDomainRestrictionMode -eq 'none'
     } else {
-        $SelectedDomains = [String[]]$Settings.Domains.Split(',').Trim()
-        $StateIsCorrect = ($CurrentState.sharingDomainRestrictionMode -eq $mode) -and
-                          ($mode -eq 'allowList' -and (!(Compare-Object -ReferenceObject $CurrentState.sharingAllowedDomainList -DifferenceObject $SelectedDomains))) -or
-                          ($mode -eq 'blockList' -and (!(Compare-Object -ReferenceObject $CurrentState.sharingBlockedDomainList -DifferenceObject $SelectedDomains)))
+        $SelectedDomains = [String[]]$Settings.Domains.Split(',').Trim() ?? @()
+        $CurrentAllowedDomains = $CurrentState.sharingAllowedDomainList ?? @()
+        $CurrentBlockedDomains = $CurrentState.sharingBlockedDomainList ?? @()
+
+        $StateIsCorrect = ($CurrentState.sharingDomainRestrictionMode -eq $mode) -and (
+            ($mode -eq 'allowList' -and ([string[]]($CurrentAllowedDomains | Sort-Object) -join ',') -eq ([string[]]($SelectedDomains | Sort-Object) -join ',')) -or
+            ($mode -eq 'blockList' -and ([string[]]($CurrentBlockedDomains | Sort-Object) -join ',') -eq ([string[]]($SelectedDomains | Sort-Object) -join ','))
+        )
     }
+    Write-Host "StateIsCorrect: $StateIsCorrect"
 
     if ($Settings.remediate -eq $true) {
         if ($StateIsCorrect -eq $true) {
@@ -61,13 +66,14 @@ function Invoke-CIPPStandardsharingDomainRestriction {
             }
 
             $cmdParams = @{
-                tenantid    = $tenant
-                uri         = 'https://graph.microsoft.com/beta/admin/sharepoint/settings'
-                AsApp       = $true
-                Type        = 'PATCH'
-                Body        = ($Body | ConvertTo-Json)
-                ContentType = 'application/json'
+                tenantid = $tenant
+                uri      = 'https://graph.microsoft.com/beta/admin/sharepoint/settings'
+                AsApp    = $true
+                Type     = 'PATCH'
+                body     = ($Body | ConvertTo-Json)
             }
+
+            Write-Host ($cmdParams | ConvertTo-Json -Depth 5)
 
             try {
                 $null = New-GraphPostRequest @cmdParams
