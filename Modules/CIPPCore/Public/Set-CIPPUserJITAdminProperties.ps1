@@ -8,7 +8,7 @@ function Set-CIPPUserJITAdminProperties {
         [switch]$Clear
     )
     try {
-        $Schema = Get-CIPPSchemaExtensions | Where-Object { $_.id -match '_cippUser' }
+        $Schema = Get-CIPPSchemaExtensions | Where-Object { $_.id -match '_cippUser' } | Select-Object -First 1
         if ($Clear.IsPresent) {
             $Body = [PSCustomObject]@{
                 "$($Schema.id)" = @{
@@ -24,7 +24,7 @@ function Set-CIPPUserJITAdminProperties {
                 }
             }
         }
-        
+
         $Json = ConvertTo-Json -Depth 5 -InputObject $Body
         Write-Information $Json
         New-GraphPOSTRequest -type PATCH -Uri "https://graph.microsoft.com/beta/users/$UserId" -Body $Json -tenantid $TenantFilter | Out-Null

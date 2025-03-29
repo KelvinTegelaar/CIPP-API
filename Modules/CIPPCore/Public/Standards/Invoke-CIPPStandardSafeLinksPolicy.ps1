@@ -57,8 +57,8 @@ function Invoke-CIPPStandardSafeLinksPolicy {
         }
 
         $CurrentState = New-ExoRequest -tenantid $Tenant -cmdlet 'Get-SafeLinksPolicy' |
-        Where-Object -Property Name -EQ $PolicyName |
-        Select-Object Name, EnableSafeLinksForEmail, EnableSafeLinksForTeams, EnableSafeLinksForOffice, TrackClicks, AllowClickThrough, ScanUrls, EnableForInternalSenders, DeliverMessageAfterScan, DisableUrlRewrite, EnableOrganizationBranding, DoNotRewriteUrls
+            Where-Object -Property Name -EQ $PolicyName |
+            Select-Object Name, EnableSafeLinksForEmail, EnableSafeLinksForTeams, EnableSafeLinksForOffice, TrackClicks, AllowClickThrough, ScanUrls, EnableForInternalSenders, DeliverMessageAfterScan, DisableUrlRewrite, EnableOrganizationBranding, DoNotRewriteUrls
 
         $StateIsCorrect = ($CurrentState.Name -eq $PolicyName) -and
         ($CurrentState.EnableSafeLinksForEmail -eq $true) -and
@@ -71,13 +71,13 @@ function Invoke-CIPPStandardSafeLinksPolicy {
         ($CurrentState.AllowClickThrough -eq $Settings.AllowClickThrough) -and
         ($CurrentState.DisableUrlRewrite -eq $Settings.DisableUrlRewrite) -and
         ($CurrentState.EnableOrganizationBranding -eq $Settings.EnableOrganizationBranding) -and
-        (!(Compare-Object -ReferenceObject $CurrentState.DoNotRewriteUrls -DifferenceObject ($Settings.DoNotRewriteUrls.value ?? $Settings.DoNotRewriteUrls)))
+        (!(Compare-Object -ReferenceObject $CurrentState.DoNotRewriteUrls -DifferenceObject ($Settings.DoNotRewriteUrls.value ?? $Settings.DoNotRewriteUrls ?? @())))
 
         $AcceptedDomains = New-ExoRequest -tenantid $Tenant -cmdlet 'Get-AcceptedDomain'
 
         $RuleState = New-ExoRequest -tenantid $Tenant -cmdlet 'Get-SafeLinksRule' |
-        Where-Object -Property Name -EQ $RuleName |
-        Select-Object Name, SafeLinksPolicy, Priority, RecipientDomainIs
+            Where-Object -Property Name -EQ $RuleName |
+            Select-Object Name, SafeLinksPolicy, Priority, RecipientDomainIs
 
         $RuleStateIsCorrect = ($RuleState.Name -eq $RuleName) -and
         ($RuleState.SafeLinksPolicy -eq $PolicyName) -and

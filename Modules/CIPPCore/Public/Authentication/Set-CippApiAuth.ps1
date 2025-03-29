@@ -14,9 +14,8 @@ function Set-CippApiAuth {
         $Context = Set-AzContext -SubscriptionId $SubscriptionId
     } else {
         $Context = Get-AzContext
+        $SubscriptionId = $Context.Subscription.Id
     }
-    # Get subscription id
-    $SubscriptionId = $Context.Subscription.Id
 
     # Get auth settings
     $AuthSettings = Invoke-AzRestMethod -Uri "https://management.azure.com/subscriptions/$SubscriptionId/resourceGroups/$RGName/providers/Microsoft.Web/sites/$($FunctionAppName)/config/authsettingsV2/list?api-version=2020-06-01" | Select-Object -ExpandProperty Content | ConvertFrom-Json

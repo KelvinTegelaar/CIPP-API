@@ -23,7 +23,7 @@ function Register-CIPPExtensionScheduledTasks {
                 $CustomDataMappingTable = Get-CIPPTable -TableName CustomDataMappings
                 $Mappings = Get-CIPPAzDataTableEntity @CustomDataMappingTable | ForEach-Object {
                     $Mapping = $_.JSON | ConvertFrom-Json
-                    if ($Mapping.sourceType -eq 'extensionSync') {
+                    if ($Mapping.sourceType.value -eq 'extensionSync') {
                         $TenantMappings = if ($Mapping.tenantFilter.value -contains 'AllTenants') {
                             $Tenants
                         } else {

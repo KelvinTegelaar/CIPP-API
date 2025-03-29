@@ -40,18 +40,18 @@ function Invoke-CIPPStandardintuneBrandingProfile {
     param($Tenant, $Settings)
     ##$Rerun -Type Standard -Tenant $Tenant -Settings $Settings 'intuneBrandingProfile'
 
-    $CurrentState = New-GraphGetRequest -Uri 'https://graph.microsoft.com/beta/deviceManagement/intuneBrandingProfiles/c3a59481-1bf2-46ce-94b3-66eec07a8d60/' -tenantid $Tenant -AsApp $true
+    $CurrentState = New-GraphGetRequest -Uri 'https://graph.microsoft.com/beta/deviceManagement/intuneBrandingProfiles/c3a59481-1bf2-46ce-94b3-66eec07a8d60' -tenantid $Tenant -AsApp $true
 
     $StateIsCorrect = ((-not $Settings.displayName) -or ($CurrentState.displayName -eq $Settings.displayName)) -and
-                        ((-not $Settings.showLogo) -or ($CurrentState.showLogo -eq $Settings.showLogo)) -and
-                        ((-not $Settings.showDisplayNameNextToLogo) -or ($CurrentState.showDisplayNameNextToLogo -eq $Settings.showDisplayNameNextToLogo)) -and
-                        ((-not $Settings.contactITName) -or ($CurrentState.contactITName -eq $Settings.contactITName)) -and
-                        ((-not $Settings.contactITPhoneNumber) -or ($CurrentState.contactITPhoneNumber -eq $Settings.contactITPhoneNumber)) -and
-                        ((-not $Settings.contactITEmailAddress) -or ($CurrentState.contactITEmailAddress -eq $Settings.contactITEmailAddress)) -and
-                        ((-not $Settings.contactITNotes) -or ($CurrentState.contactITNotes -eq $Settings.contactITNotes)) -and
-                        ((-not $Settings.onlineSupportSiteName) -or ($CurrentState.onlineSupportSiteName -eq $Settings.onlineSupportSiteName)) -and
-                        ((-not $Settings.onlineSupportSiteUrl) -or ($CurrentState.onlineSupportSiteUrl -eq $Settings.onlineSupportSiteUrl)) -and
-                        ((-not $Settings.privacyUrl) -or ($CurrentState.privacyUrl -eq $Settings.privacyUrl))
+    ((-not $Settings.showLogo) -or ($CurrentState.showLogo -eq $Settings.showLogo)) -and
+    ((-not $Settings.showDisplayNameNextToLogo) -or ($CurrentState.showDisplayNameNextToLogo -eq $Settings.showDisplayNameNextToLogo)) -and
+    ((-not $Settings.contactITName) -or ($CurrentState.contactITName -eq $Settings.contactITName)) -and
+    ((-not $Settings.contactITPhoneNumber) -or ($CurrentState.contactITPhoneNumber -eq $Settings.contactITPhoneNumber)) -and
+    ((-not $Settings.contactITEmailAddress) -or ($CurrentState.contactITEmailAddress -eq $Settings.contactITEmailAddress)) -and
+    ((-not $Settings.contactITNotes) -or ($CurrentState.contactITNotes -eq $Settings.contactITNotes)) -and
+    ((-not $Settings.onlineSupportSiteName) -or ($CurrentState.onlineSupportSiteName -eq $Settings.onlineSupportSiteName)) -and
+    ((-not $Settings.onlineSupportSiteUrl) -or ($CurrentState.onlineSupportSiteUrl -eq $Settings.onlineSupportSiteUrl)) -and
+    ((-not $Settings.privacyUrl) -or ($CurrentState.privacyUrl -eq $Settings.privacyUrl))
 
     if ($Settings.remediate -eq $true) {
         if ($StateIsCorrect -eq $true) {
@@ -71,7 +71,7 @@ function Invoke-CIPPStandardintuneBrandingProfile {
 
             $cmdparams = @{
                 tenantid    = $tenant
-                uri         = 'https://graph.microsoft.com/beta/deviceManagement/intuneBrandingProfiles/c3a59481-1bf2-46ce-94b3-66eec07a8d60/'
+                uri         = 'https://graph.microsoft.com/beta/deviceManagement/intuneBrandingProfiles/c3a59481-1bf2-46ce-94b3-66eec07a8d60'
                 AsApp       = $true
                 Type        = 'PATCH'
                 Body        = ($Body | ConvertTo-Json)

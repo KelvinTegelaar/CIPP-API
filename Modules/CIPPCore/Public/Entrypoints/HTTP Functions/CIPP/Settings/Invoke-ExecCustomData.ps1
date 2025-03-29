@@ -18,7 +18,7 @@ function Invoke-ExecCustomData {
         'ListSchemaExtensions' {
             try {
                 $SchemaExtensions = Get-CIPPAzDataTableEntity @CustomDataTable -Filter "PartitionKey eq 'SchemaExtension'" | Select-Object -ExpandProperty JSON | ConvertFrom-Json
-                if (!$SchemaExtensions) {
+                if (!$SchemaExtensions -or $SchemaExtensions.id -notmatch '_') {
                     $SchemaExtensions = Get-CIPPSchemaExtensions | Sort-Object id
                 }
                 $Body = @{
