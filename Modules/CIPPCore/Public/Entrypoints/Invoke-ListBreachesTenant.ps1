@@ -11,9 +11,10 @@ Function Invoke-ListBreachesTenant {
     param($Request, $TriggerMetadata)
 
     $APIName = $Request.Params.CIPPEndpoint
-    Write-LogMessage -headers $Request.Headers -API $APIName -message 'Accessed this API' -Sev 'Debug'
+    $Headers = $Request.Headers
+    Write-LogMessage -headers $Headers -API $APIName -message 'Accessed this API' -Sev 'Debug'
 
-    $TenantFilter = $Request.query.tenantFilter
+    $TenantFilter = $Request.Query.tenantFilter
 
     $Table = Get-CIPPTable -TableName UserBreaches
     if ($TenantFilter -ne 'AllTenants') {

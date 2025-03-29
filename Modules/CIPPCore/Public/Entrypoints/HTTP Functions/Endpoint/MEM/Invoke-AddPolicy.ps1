@@ -11,7 +11,8 @@ Function Invoke-AddPolicy {
     param($Request, $TriggerMetadata)
 
     $APIName = $Request.Params.CIPPEndpoint
-    Write-LogMessage -headers $Request.Headers -API $APINAME -message 'Accessed this API' -Sev 'Debug'
+    $Headers = $Request.Headers
+    Write-LogMessage -headers $Headers -API $APIName -message 'Accessed this API' -Sev 'Debug'
 
     $Tenants = ($Request.Body.tenantFilter.value)
     if ('AllTenants' -in $Tenants) { $Tenants = (Get-Tenants).defaultDomainName }

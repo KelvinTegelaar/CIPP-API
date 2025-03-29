@@ -14,12 +14,13 @@ function Invoke-ExecUserSettings {
     Write-LogMessage -headers $Headers -API $APIName -message 'Accessed this API' -Sev 'Debug'
 
     try {
-        $object = $request.body.currentSettings | Select-Object * -ExcludeProperty CurrentTenant, pageSizes, sidebarShow, sidebarUnfoldable, _persist | ConvertTo-Json -Compress -Depth 10
+        $object = $Request.Body.currentSettings | Select-Object * -ExcludeProperty CurrentTenant, pageSizes, sidebarShow, sidebarUnfoldable, _persist | ConvertTo-Json -Compress -Depth 10
+        $User = $Request.Body.user
         $Table = Get-CippTable -tablename 'UserSettings'
         $Table.Force = $true
         Add-CIPPAzDataTableEntity @Table -Entity @{
             JSON         = "$object"
-            RowKey       = "$($Request.body.user)"
+            RowKey       = "$User"
             PartitionKey = 'UserSettings'
         }
         $StatusCode = [HttpStatusCode]::OK
