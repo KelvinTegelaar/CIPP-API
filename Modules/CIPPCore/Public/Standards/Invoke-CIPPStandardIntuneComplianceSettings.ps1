@@ -31,12 +31,14 @@ function Invoke-CIPPStandardIntuneComplianceSettings {
 
     param($Tenant, $Settings)
 
-    $CurrentState = New-GraphGetRequest -Uri 'https://graph.microsoft.com/beta/deviceManagement/settings' -tenantid $Tenant
+    $CurrentState = New-GraphGetRequest -Uri 'https://graph.microsoft.com/beta/deviceManagement/settings' -tenantid $Tenant | Select-Object secureByDefault, deviceComplianceCheckinThresholdDays
 
     if ($null -eq $Settings.deviceComplianceCheckinThresholdDays) { $Settings.deviceComplianceCheckinThresholdDays = $CurrentState.deviceComplianceCheckinThresholdDays }
-    $SecureByDefault = $Settings.secureByDefault.value ? $Settings.secureByDefault.value : $Settings.secureByDefault
+    $SecureByDefault = [bool]($Settings.secureByDefault.value ? $Settings.secureByDefault.value : $Settings.secureByDefault)
+    $DeviceComplianceCheckinThresholdDays = [int]$Settings.deviceComplianceCheckinThresholdDays
+
     $StateIsCorrect = ($CurrentState.secureByDefault -eq $SecureByDefault) -and
-                        ($CurrentState.deviceComplianceCheckinThresholdDays -eq $Settings.deviceComplianceCheckinThresholdDays)
+    ($CurrentState.deviceComplianceCheckinThresholdDays -eq $DeviceComplianceCheckinThresholdDays)
 
     if ($Settings.remediate -eq $true) {
         if ($StateIsCorrect -eq $true) {
@@ -52,9 +54,9 @@ function Invoke-CIPPStandardIntuneComplianceSettings {
                     Body        = [pscustomobject]@{
                         settings = [pscustomobject]@{
                             secureByDefault                      = $SecureByDefault
-                            deviceComplianceCheckinThresholdDays = $Settings.deviceComplianceCheckinThresholdDays
+                            deviceComplianceCheckinThresholdDays = $DeviceComplianceCheckinThresholdDays
                         }
-                    } | ConvertTo-Json -Compress
+                    } | ConvertTo-Json -Compress -Depth 5
                 }
                 New-GraphPostRequest @GraphRequest
                 Write-LogMessage -API 'Standards' -Tenant $Tenant -Message 'Successfully updated Intune Compliance settings.' -Sev Info
