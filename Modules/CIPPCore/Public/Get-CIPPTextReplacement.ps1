@@ -18,7 +18,17 @@ function Get-CIPPTextReplacement {
     if ($Text -isnot [string]) {
         return $Text
     }
-
+    $blacklist = @(
+        '%serial%',
+        '%systemroot%',
+        '%systemdrive%',
+        '%temp%',
+        '%tenantid%',
+        '%tenantfilter%',
+        '%tenantname%',
+        '%partnertenantid%',
+        '%samappid%'
+    )
     $Tenant = Get-Tenants -TenantFilter $TenantFilter
     $CustomerId = $Tenant.customerId
 
@@ -44,7 +54,9 @@ function Get-CIPPTextReplacement {
     # Replace custom variables
     foreach ($Replace in $Vars.GetEnumerator()) {
         $String = '%{0}%' -f $Replace.Key
-        $Text = $Text -replace $String, $Replace.Value
+        if ($string -notin $blacklist) {
+            $Text = $Text -replace $String, $Replace.Value
+        }
     }
     #default replacements for all tenants: %tenantid% becomes $tenant.customerId, %tenantfilter% becomes $tenant.defaultDomainName, %tenantname% becomes $tenant.displayName
     $Text = $Text -replace '%tenantid%', $Tenant.customerId
