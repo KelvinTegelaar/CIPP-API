@@ -50,7 +50,6 @@ function Invoke-ExecApiClient {
                     $AddUpdateSuccess = $true
                 } catch {
                     $AddedText = "Could not modify App Registrations. Check the CIPP documentation for API requirements. Error: $($_.Exception.Message)"
-                    $Body = $Body | Select-Object * -ExcludeProperty CIPPAPI
                 }
             }
 
