@@ -8,7 +8,7 @@ function Get-CippApiAuth {
         Disable-AzContextAutosave -Scope Process | Out-Null
         $null = Connect-AzAccount -Identity
         $SubscriptionId = $env:WEBSITE_OWNER_NAME -split '\+' | Select-Object -First 1
-        $Context = Set-AzContext -SubscriptionId $SubscriptionId -TenantId $env:TenantId -ErrorAction Stop
+        $Context = Set-AzContext -SubscriptionId $SubscriptionId
     } else {
         $Context = Get-AzContext
         $SubscriptionId = $Context.Subscription.Id
