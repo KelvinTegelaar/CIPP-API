@@ -36,16 +36,18 @@ function Invoke-CIPPStandardTeamsFederationConfiguration {
 
     $CurrentState = New-TeamsRequest -TenantFilter $Tenant -Cmdlet 'Get-CsTenantFederationConfiguration' -CmdParams @{Identity = 'Global' } | Select-Object *
 
+    $AllowAllKnownDomains = New-CsEdgeAllowAllKnownDomains
     $DomainControl = $Settings.DomainControl.value ?? $Settings.DomainControl
+    $AllowedDomainsAsAList = @()
     switch ($DomainControl) {
         'AllowAllExternal' {
             $AllowFederatedUsers = $true
-            $AllowedDomainsAsAList = 'AllowAllKnownDomains'
+            $AllowedDomains = $AllowAllKnownDomains
             $BlockedDomains = @()
         }
         'BlockAllExternal' {
             $AllowFederatedUsers = $false
-            $AllowedDomainsAsAList = 'AllowAllKnownDomains'
+            $AllowedDomains = $AllowAllKnownDomains
             $BlockedDomains = @()
         }
         'AllowSpecificExternal' {
@@ -72,26 +74,40 @@ function Invoke-CIPPStandardTeamsFederationConfiguration {
         }
     }
 
-    # TODO : Add proper validation for the domain list
-    # $CurrentState.AllowedDomains returns a PSObject System.Object and adds a Domain= for each allowed domain, ex {Domain=example.com, Domain=example2.com}
+    $CurrentAllowedDomains = $CurrentState.AllowedDomains
+    if ($CurrentAllowedDomains.GetType().Name -eq 'PSObject') {
+        $CurrentAllowedDomains = $CurrentAllowedDomains.Domain | Sort-Object
+        $DomainList = ($CurrentAllowedDomains | Sort-Object) ?? @()
+        $AllowedDomainsMatches = -not (Compare-Object -ReferenceObject $AllowedDomainsAsAList -DifferenceObject $DomainList)
+    } elseif ($CurrentAllowedDomains.GetType().Name -eq 'Deserialized.Microsoft.Rtc.Management.WritableConfig.Settings.Edge.AllowAllKnownDomains') {
+        $CurrentAllowedDomains = $CurrentAllowedDomains.ToString()
+        $AllowedDomainsMatches = $CurrentAllowedDomains -eq $AllowedDomains.ToString()
+    }
+
+    $BlockedDomainsMatches = -not (Compare-Object -ReferenceObject $BlockedDomains -DifferenceObject $CurrentState.BlockedDomains)
 
     $StateIsCorrect = ($CurrentState.AllowTeamsConsumer -eq $Settings.AllowTeamsConsumer) -and
     ($CurrentState.AllowPublicUsers -eq $Settings.AllowPublicUsers) -and
     ($CurrentState.AllowFederatedUsers -eq $AllowFederatedUsers) -and
-    ($CurrentState.AllowedDomains -eq $AllowedDomainsAsAList) -and
-    ($CurrentState.BlockedDomains -eq $BlockedDomains)
+    $AllowedDomainsMatches -and
+    $BlockedDomainsMatches
 
     if ($Settings.remediate -eq $true) {
         if ($StateIsCorrect -eq $true) {
             Write-LogMessage -API 'Standards' -tenant $Tenant -message 'Federation Configuration already set.' -sev Info
         } else {
             $cmdparams = @{
-                Identity              = 'Global'
-                AllowTeamsConsumer    = $Settings.AllowTeamsConsumer
-                AllowPublicUsers      = $Settings.AllowPublicUsers
-                AllowFederatedUsers   = $AllowFederatedUsers
-                AllowedDomainsAsAList = $AllowedDomainsAsAList
-                BlockedDomains        = $BlockedDomains
+                Identity            = 'Global'
+                AllowTeamsConsumer  = $Settings.AllowTeamsConsumer
+                AllowPublicUsers    = $Settings.AllowPublicUsers
+                AllowFederatedUsers = $AllowFederatedUsers
+                BlockedDomains      = $BlockedDomains
+            }
+
+            if (!$AllowedDomainsAsAList) {
+                $cmdparams.AllowedDomains = $AllowedDomains
+            } else {
+                $cmdparams.AllowedDomainsAsAList = $AllowedDomainsAsAList
             }
 
             try {
@@ -113,9 +129,9 @@ function Invoke-CIPPStandardTeamsFederationConfiguration {
         }
     }
 
-    if ($Setings.report -eq $true) {
+    if ($Settings.report -eq $true) {
         Add-CIPPBPAField -FieldName 'FederationConfiguration' -FieldValue $StateIsCorrect -StoreAs bool -Tenant $Tenant
-        if ($StateIsCorrect) {
+        if ($StateIsCorrect -eq $true) {
             $FieldValue = $true
         } else {
             $FieldValue = $CurrentState

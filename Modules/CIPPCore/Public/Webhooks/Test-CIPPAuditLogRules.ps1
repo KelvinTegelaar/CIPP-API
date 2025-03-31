@@ -195,7 +195,7 @@ function Test-CIPPAuditLogRules {
             $CIPPClause = [System.Collections.Generic.List[string]]::new()
             $AddedLocationCondition = $false
             foreach ($condition in $conditions) {
-                if ($condition.Property.value -eq 'CIPPGeoLocation' -and !$AddedLocationCondition) {
+                if ($condition.Property.label -eq 'CIPPGeoLocation' -and !$AddedLocationCondition) {
                     $conditionsString.Add("`$_.HasLocationData -eq `$true")
                     $CIPPClause.Add('HasLocationData is true')
                     $AddedLocationCondition = $true

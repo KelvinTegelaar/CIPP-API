@@ -8,6 +8,7 @@ function Get-CippException {
         Message         = $Exception.Exception.Message
         NormalizedError = Get-NormalizedError -message $Exception.Exception.Message
         Position        = $Exception.InvocationInfo.PositionMessage
+        StackTrace      = ($Exception.ScriptStackTrace | Out-String)
         ScriptName      = $Exception.InvocationInfo.ScriptName
         LineNumber      = $Exception.InvocationInfo.ScriptLineNumber
         Category        = $Exception.CategoryInfo.ToString()

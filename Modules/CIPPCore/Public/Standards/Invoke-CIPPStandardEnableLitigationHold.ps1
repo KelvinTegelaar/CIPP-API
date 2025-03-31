@@ -30,10 +30,9 @@ function Invoke-CIPPStandardEnableLitigationHold {
     param($Tenant, $Settings)
     ##$Rerun -Type Standard -Tenant $Tenant -Settings $Settings 'EnableLitigationHold'
 
-    $MailboxesNoLitHold = New-ExoRequest -tenantid $Tenant -cmdlet 'Get-Mailbox' -cmdparams @{ Filter = 'LitigationHoldEnabled -eq "False"' } | Where-Object { $_.PersistedCapabilities -contains 'BPOS_S_DlpAddOn' -or $_.PersistedCapabilities -contains 'BPOS_S_Enterprise' }
+    $MailboxesNoLitHold = New-ExoRequest -tenantid $Tenant -cmdlet 'Get-Mailbox' -cmdparams @{ Filter = 'LitigationHoldEnabled -eq "False"' } -Select 'UserPrincipalName,PersistedCapabilities,LitigationHoldEnabled' | Where-Object { $_.PersistedCapabilities -contains 'BPOS_S_DlpAddOn' -or $_.PersistedCapabilities -contains 'BPOS_S_Enterprise' }
 
-    If ($Settings.remediate -eq $true) {
-
+    if ($Settings.remediate -eq $true) {
         if ($null -eq $MailboxesNoLitHold) {
             Write-LogMessage -API 'Standards' -tenant $Tenant -message 'Litigation Hold already enabled for all accounts' -sev Info
         } else {
@@ -69,8 +68,7 @@ function Invoke-CIPPStandardEnableLitigationHold {
     }
 
     if ($Settings.alert -eq $true) {
-
-        if ($MailboxesNoLitHold) {
+        if (($MailboxesNoLitHold | Measure-Object).Count -gt 0) {
             Write-StandardsAlert -message "Mailboxes without Litigation Hold: $($MailboxesNoLitHold.Count)" -object $MailboxesNoLitHold -tenant $Tenant -standardName 'EnableLitigationHold' -standardId $Settings.standardId
             Write-LogMessage -API 'Standards' -tenant $Tenant -message "Mailboxes without Litigation Hold: $($MailboxesNoLitHold.Count)" -sev Info
         } else {
