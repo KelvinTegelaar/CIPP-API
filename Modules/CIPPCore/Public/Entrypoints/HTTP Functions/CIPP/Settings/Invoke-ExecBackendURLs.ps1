@@ -21,6 +21,8 @@ Function Invoke-ExecBackendURLs {
     $Owner = $env:WEBSITE_OWNER_NAME
     if ($Owner -match '^(?<SubscriptionId>[^+]+)\+(?<RGName>[^-]+(?:-[^-]+)*?)(?:-[^-]+webspace(?:-Linux)?)?$') {
         $RGName = $Matches.RGName
+    } else {
+        $RGName = $env:WEBSITE_RESOURCE_GROUP
     }
 
     $results = [PSCustomObject]@{

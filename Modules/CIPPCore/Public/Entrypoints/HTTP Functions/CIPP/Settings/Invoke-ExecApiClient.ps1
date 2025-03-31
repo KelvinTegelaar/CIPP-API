@@ -102,6 +102,8 @@ function Invoke-ExecApiClient {
             $Owner = $env:WEBSITE_OWNER_NAME
             if ($Owner -match '^(?<SubscriptionId>[^+]+)\+(?<RGName>[^-]+(?:-[^-]+)*?)(?:-[^-]+webspace(?:-Linux)?)?$') {
                 $RGName = $Matches.RGName
+            } else {
+                $RGName = $env:WEBSITE_RESOURCE_GROUP
             }
             $FunctionAppName = $env:WEBSITE_SITE_NAME
             try {
@@ -118,10 +120,12 @@ function Invoke-ExecApiClient {
             }
         }
         'SaveToAzure' {
-            $TenantId = $env:TenantId
+            $TenantId = $env:TenantID
             $Owner = $env:WEBSITE_OWNER_NAME
             if ($Owner -match '^(?<SubscriptionId>[^+]+)\+(?<RGName>[^-]+(?:-[^-]+)*?)(?:-[^-]+webspace(?:-Linux)?)?$') {
                 $RGName = $Matches.RGName
+            } else {
+                $RGName = $env:WEBSITE_RESOURCE_GROUP
             }
             $FunctionAppName = $env:WEBSITE_SITE_NAME
             $AllClients = Get-CIPPAzDataTableEntity @Table -Filter 'Enabled eq true' | Where-Object { ![string]::IsNullOrEmpty($_.RowKey) }
