@@ -18,11 +18,9 @@ Function Invoke-ExecBackendURLs {
     # Write to the Azure Functions log stream.
     Write-Host 'PowerShell HTTP trigger function processed a request.'
 
-    $RGName = $env:WEBSITE_RESOURCE_GROUP
-    if (!$RGName) {
-        $Owner = $env:WEBSITE_OWNER_NAME
-        $RGName = $Owner -split '\+' | Select-Object -Last 1
-        $RGName = $RGName -replace '-[^-]+$', ''
+    $Owner = $env:WEBSITE_OWNER_NAME
+    if ($Owner -match '^(?<SubscriptionId>[^+]+)\+(?<RGName>[^-]+(?:-[^-]+)*?)(?:-[^-]+webspace(?:-Linux)?)?$') {
+        $RGName = $Matches.RGName
     }
 
     $results = [PSCustomObject]@{
