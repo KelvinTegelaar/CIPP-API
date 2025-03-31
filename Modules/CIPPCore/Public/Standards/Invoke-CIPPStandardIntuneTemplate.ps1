@@ -57,9 +57,14 @@ function Invoke-CIPPStandardIntuneTemplate {
         if ($ExistingPolicy) {
             Write-Host "IntuneTemplate: $($Template.TemplateList.value) - Found existing policy."
             $RawJSON = Get-CIPPTextReplacement -Text $RawJSON -TenantFilter $Tenant
+            Write-Host "IntuneTemplate: $($Template.TemplateList.value) - Grabbing JSON existing."
             $JSONExistingPolicy = $ExistingPolicy.cippconfiguration | ConvertFrom-Json -ErrorAction SilentlyContinue
+            Write-Host "IntuneTemplate: $($Template.TemplateList.value) - Got existing JSON. Converting RawJSON to Template"
             $JSONTemplate = $RawJSON | ConvertFrom-Json
+            Write-Host "IntuneTemplate: $($Template.TemplateList.value) - Converted RawJSON to Template."
+            Write-Host "IntuneTemplate: $($Template.TemplateList.value) - Comparing JSON."
             $Compare = Compare-CIPPIntuneObject -ReferenceObject $JSONTemplate -DifferenceObject $JSONExistingPolicy -compareType $Request.body.Type -ErrorAction SilentlyContinue
+            Write-Host "IntuneTemplate: $($Template.TemplateList.value) - Compared JSON: $($Compare | ConvertTo-Json -Compress)"
         } else {
             Write-Host "IntuneTemplate: $($Template.TemplateList.value) - No existing policy found."
         }
