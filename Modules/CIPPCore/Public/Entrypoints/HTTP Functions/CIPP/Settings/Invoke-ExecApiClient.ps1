@@ -101,6 +101,8 @@ function Invoke-ExecApiClient {
         'GetAzureConfiguration' {
             $RGName = $env:WEBSITE_RESOURCE_GROUP
             $FunctionAppName = $env:WEBSITE_SITE_NAME
+            Write-Information "All environment vars: "
+            Write-Information ([System.Environment]::GetEnvironmentVariables() | ConvertTo-Json -Depth 10)
             try {
                 $APIClients = Get-CippApiAuth -RGName $RGName -FunctionAppName $FunctionAppName
                 $Results = $ApiClients
