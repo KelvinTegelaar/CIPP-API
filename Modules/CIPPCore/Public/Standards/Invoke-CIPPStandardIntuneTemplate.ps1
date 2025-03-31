@@ -55,12 +55,16 @@ function Invoke-CIPPStandardIntuneTemplate {
             Write-Host "IntuneTemplate: $($Template.TemplateList.value) - Failed to get existing."
         }
         if ($ExistingPolicy) {
+            Write-Host "IntuneTemplate: $($Template.TemplateList.value) - Found existing policy."
             $RawJSON = Get-CIPPTextReplacement -Text $RawJSON -TenantFilter $Tenant
             $JSONExistingPolicy = $ExistingPolicy.cippconfiguration | ConvertFrom-Json -ErrorAction SilentlyContinue
             $JSONTemplate = $RawJSON | ConvertFrom-Json
             $Compare = Compare-CIPPIntuneObject -ReferenceObject $JSONTemplate -DifferenceObject $JSONExistingPolicy -compareType $Request.body.Type -ErrorAction SilentlyContinue
+        } else {
+            Write-Host "IntuneTemplate: $($Template.TemplateList.value) - No existing policy found."
         }
         if ($Compare) {
+            Write-Host "IntuneTemplate: $($Template.TemplateList.value) - Compare found differences."
             [PSCustomObject]@{
                 MatchFailed      = $true
                 displayname      = $displayname
@@ -75,6 +79,7 @@ function Invoke-CIPPStandardIntuneTemplate {
                 templateId       = $Template.TemplateList.value
             }
         } else {
+            Write-Host "IntuneTemplate: $($Template.TemplateList.value) - No differences found."
             [PSCustomObject]@{
                 MatchFailed      = $false
                 displayname      = $displayname
