@@ -99,10 +99,13 @@ function Invoke-ExecApiClient {
             }
         }
         'GetAzureConfiguration' {
+            $Owner = $env:WEBSITE_OWNER_NAME
             $RGName = $env:WEBSITE_RESOURCE_GROUP
+            if (!$RGName) {
+                $RGName = $Owner -split '\+' | Select-Object -Last 1
+                $RGName = $RGName -replace '-[^-]+$', ''
+            }
             $FunctionAppName = $env:WEBSITE_SITE_NAME
-            Write-Information "All environment vars: "
-            Write-Information ([System.Environment]::GetEnvironmentVariables() | ConvertTo-Json -Depth 10)
             try {
                 $APIClients = Get-CippApiAuth -RGName $RGName -FunctionAppName $FunctionAppName
                 $Results = $ApiClients
@@ -119,6 +122,10 @@ function Invoke-ExecApiClient {
         'SaveToAzure' {
             $TenantId = $env:TenantId
             $RGName = $env:WEBSITE_RESOURCE_GROUP
+            if (!$RGName) {
+                $RGName = $Owner -split '\+' | Select-Object -Last 1
+                $RGName = $RGName -replace '-[^-]+$', ''
+            }
             $FunctionAppName = $env:WEBSITE_SITE_NAME
             $AllClients = Get-CIPPAzDataTableEntity @Table -Filter 'Enabled eq true' | Where-Object { ![string]::IsNullOrEmpty($_.RowKey) }
             $ClientIds = $AllClients.RowKey
