@@ -11,29 +11,32 @@ Function Invoke-RemoveStandard {
     param($Request, $TriggerMetadata)
 
     $APIName = $Request.Params.CIPPEndpoint
-    $User = $Request.Headers
-    Write-LogMessage -Headers $User -API $APINAME -message 'Accessed this API' -Sev 'Debug'
+    $Headers = $Request.Headers
+    Write-LogMessage -Headers $Headers -API $APIName -message 'Accessed this API' -Sev 'Debug'
 
-    $ID = $request.query.id
+    # Interact with query parameters or the body of the request.
+    $ID = $Request.Query.ID
     try {
         $Table = Get-CippTable -tablename 'standards'
-        $Filter = "PartitionKey eq 'standards' and RowKey eq '$id'"
+        $Filter = "PartitionKey eq 'standards' and RowKey eq '$ID'"
         $ClearRow = Get-CIPPAzDataTableEntity @Table -Filter $Filter -Property PartitionKey, RowKey
-        Remove-AzDataTableEntity -Force @Table -Entity $clearRow
-        Write-LogMessage -Headers $User -API $APINAME -message "Removed standards for $ID." -Sev 'Info'
+        Remove-AzDataTableEntity -Force @Table -Entity $ClearRow
+        Write-LogMessage -Headers $Headers -API $APIName -message "Removed standards for $ID." -Sev 'Info'
         $body = [pscustomobject]@{'Results' = 'Successfully removed standards deployment' }
+        $StatusCode = [HttpStatusCode]::OK
 
 
     } catch {
         $ErrorMessage = Get-CippException -Exception $_
-        Write-LogMessage -Headers $User -API $APINAME -message "Failed to remove standard for $ID. $($ErrorMessage.NormalizedError)" -Sev 'Error'
-        $body = [pscustomobject]@{'Results' = 'Failed to remove standard)' }
+        Write-LogMessage -Headers $Headers -API $APIName -message "Failed to remove standard for $ID. $($ErrorMessage.NormalizedError)" -Sev 'Error' -LogData $ErrorMessage
+        $StatusCode = [HttpStatusCode]::InternalServerError
+        $body = [pscustomobject]@{'Results' = 'Failed to remove standard' }
     }
 
 
     # Associate values to output bindings by calling 'Push-OutputBinding'.
     Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
-            StatusCode = [HttpStatusCode]::OK
+            StatusCode = $StatusCode
             Body       = $body
         })
 

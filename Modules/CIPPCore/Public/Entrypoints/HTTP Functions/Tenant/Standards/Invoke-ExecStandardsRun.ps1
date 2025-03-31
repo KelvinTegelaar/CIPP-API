@@ -10,9 +10,12 @@ Function Invoke-ExecStandardsRun {
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
     $APIName = $Request.Params.CIPPEndpoint
-    Write-LogMessage -headers $Request.Headers -API $APINAME -message 'Accessed this API' -Sev 'Debug'
-    $tenantfilter = if ($Request.Query.TenantFilter) { $Request.Query.TenantFilter } else { 'allTenants' }
-    $TemplateId = if ($Request.Query.TemplateId) { $Request.Query.TemplateId } else { '*' }
+    $Headers = $Request.Headers
+    Write-LogMessage -headers $Headers -API $APIName -message 'Accessed this API' -Sev 'Debug'
+
+
+    $TenantFilter = $Request.Query.tenantFilter ?? 'allTenants'
+    $TemplateId = $Request.Query.templateId ?? '*'
     $Table = Get-CippTable -tablename 'templates'
     $Filter = "PartitionKey eq 'StandardsTemplateV2'"
     $Templates = (Get-CIPPAzDataTableEntity @Table -Filter $Filter | Sort-Object TimeStamp).JSON | ForEach-Object {
@@ -35,10 +38,10 @@ Function Invoke-ExecStandardsRun {
 
             $ProcessorFunction = [PSCustomObject]@{
                 PartitionKey = 'Function'
-                RowKey       = "Invoke-CIPPStandardsRun-$tenantfilter"
+                RowKey       = "Invoke-CIPPStandardsRun-$TenantFilter"
                 FunctionName = 'Invoke-CIPPStandardsRun'
                 Parameters   = [string](ConvertTo-Json -Compress -InputObject @{
-                        TenantFilter = $tenantfilter
+                        TenantFilter = $TenantFilter
                         TemplateId   = $TemplateId
                         runManually  = [bool]$Templates.runManually
                         Force        = $true
@@ -46,20 +49,21 @@ Function Invoke-ExecStandardsRun {
             }
             $ProcessorQueue = Get-CIPPTable -TableName 'ProcessorQueue'
             Add-AzDataTableEntity @ProcessorQueue -Entity $ProcessorFunction -Force
-            $Results = "Successfully Queued Standards Run for Tenant $tenantfilter"
+            $Results = "Successfully Queued Standards Run for Tenant $TenantFilter"
         }
     } else {
         try {
-            $null = Invoke-CIPPStandardsRun -Tenantfilter $tenantfilter -TemplateID $TemplateId -runManually ([bool]$Templates.runManually) -Force
-            $Results = "Successfully Started Standards Run for Tenant $tenantfilter"
-            Write-LogMessage -tenant $tenantfilter -API $APINAME -message $Results -Sev 'Info'
+            $null = Invoke-CIPPStandardsRun -TenantFilter $TenantFilter -TemplateID $TemplateId -runManually ([bool]$Templates.runManually) -Force
+            $Results = "Successfully started Standards Run for tenant: $TenantFilter"
+            Write-LogMessage -headers $Headers -tenant $TenantFilter -API $APIName -message $Results -Sev 'Info'
         } catch {
-            $Results = "Failed to start standards run for $tenantfilter. Error: $($_.Exception.Message)"
-            Write-LogMessage -tenant $tenantfilter -API $APINAME -message $Results -Sev 'Error'
+            $ErrorMessage = Get-CippException -Exception $_
+            $Results = "Failed to start standards run for tenant: $TenantFilter. Error: $($ErrorMessage.NormalizedError)"
+            Write-LogMessage -headers $Headers -tenant $TenantFilter -API $APIName -message $Results -Sev 'Error' -LogData $ErrorMessage
         }
     }
 
-    $Results = [pscustomobject]@{'Results' = "$results" }
+    $Results = [pscustomobject]@{'Results' = "$Results" }
 
     # Associate values to output bindings by calling 'Push-OutputBinding'.
     Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{

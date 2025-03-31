@@ -11,12 +11,12 @@ Function Invoke-ExecBackendURLs {
     param($Request, $TriggerMetadata)
 
     $APIName = $Request.Params.CIPPEndpoint
-    Write-LogMessage -headers $Request.Headers -API $APINAME -message 'Accessed this API' -Sev 'Debug'
+    $Headers = $Request.Headers
+    Write-LogMessage -headers $Headers -API $APIName -message 'Accessed this API' -Sev 'Debug'
 
     $Subscription = ($ENV:WEBSITE_OWNER_NAME).split('+') | Select-Object -First 1
     $SWAName = $ENV:WEBSITE_SITE_NAME -replace 'cipp', 'CIPP-SWA-'
-    # Write to the Azure Functions log stream.
-    Write-Host 'PowerShell HTTP trigger function processed a request.'
+
 
     $results = [PSCustomObject]@{
         ResourceGroup      = "https://portal.azure.com/#@Go/resource/subscriptions/$Subscription/resourceGroups/$ENV:WEBSITE_RESOURCE_GROUP/overview"

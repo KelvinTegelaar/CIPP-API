@@ -11,7 +11,8 @@ function Invoke-ExecAddGDAPRole {
     param($Request, $TriggerMetadata)
 
     $APIName = $Request.Params.CIPPEndpoint
-    Write-LogMessage -headers $Request.Headers -API $APINAME -message 'Accessed this API' -Sev 'Debug'
+    $Headers = $Request.Headers
+    Write-LogMessage -headers $Headers -API $APIName -message 'Accessed this API' -Sev 'Debug'
 
     $Action = $Request.Body.Action ?? $Request.Query.Action ?? 'AddRoleSimple'
     $GroupBlockList = @('All Users', 'AdminAgents', 'HelpdeskAgents', 'SalesAgents')
@@ -80,9 +81,9 @@ function Invoke-ExecAddGDAPRole {
                 @{ label = 'Privileged Authentication Administrator'; value = '7be44c8a-adaf-4e2a-84d6-ab2649e08a13' }
             )
 
-            $Groups = $Request.body.gdapRoles ?? $CippDefaults
+            $Groups = $Request.Body.gdapRoles ?? $CippDefaults
 
-            $CustomSuffix = $Request.body.customSuffix
+            $CustomSuffix = $Request.Body.customSuffix
             $Table = Get-CIPPTable -TableName 'GDAPRoles'
 
             $Results = [System.Collections.Generic.List[string]]::new()
