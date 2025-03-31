@@ -20,9 +20,9 @@ function Get-ExtensionAPIKey {
             $DevSecretsTable = Get-CIPPTable -tablename 'DevSecrets'
             $APIKey = (Get-CIPPAzDataTableEntity @DevSecretsTable -Filter "PartitionKey eq '$Extension' and RowKey eq '$Extension'").APIKey
         } else {
-            $keyvaultname = ($ENV:WEBSITE_DEPLOYMENT_ID -split '-')[0]
+            $keyvaultname = ($env:WEBSITE_DEPLOYMENT_ID -split '-')[0]
             $null = Connect-AzAccount -Identity
-            $SubscriptionId = $ENV:WEBSITE_OWNER_NAME -split '\+' | Select-Object -First 1
+            $SubscriptionId = $env:WEBSITE_OWNER_NAME -split '\+' | Select-Object -First 1
             $null = Set-AzContext -SubscriptionId $SubscriptionId
             $APIKey = (Get-AzKeyVaultSecret -VaultName $keyvaultname -Name $Extension -AsPlainText)
         }

@@ -99,8 +99,8 @@ function Invoke-ExecApiClient {
             }
         }
         'GetAzureConfiguration' {
-            $RGName = $ENV:WEBSITE_RESOURCE_GROUP
-            $FunctionAppName = $ENV:WEBSITE_SITE_NAME
+            $RGName = $env:WEBSITE_RESOURCE_GROUP
+            $FunctionAppName = $env:WEBSITE_SITE_NAME
             try {
                 $APIClients = Get-CippApiAuth -RGName $RGName -FunctionAppName $FunctionAppName
                 $Results = $ApiClients
@@ -115,9 +115,9 @@ function Invoke-ExecApiClient {
             }
         }
         'SaveToAzure' {
-            $TenantId = $ENV:TenantId
-            $RGName = $ENV:WEBSITE_RESOURCE_GROUP
-            $FunctionAppName = $ENV:WEBSITE_SITE_NAME
+            $TenantId = $env:TenantId
+            $RGName = $env:WEBSITE_RESOURCE_GROUP
+            $FunctionAppName = $env:WEBSITE_SITE_NAME
             $AllClients = Get-CIPPAzDataTableEntity @Table -Filter 'Enabled eq true' | Where-Object { ![string]::IsNullOrEmpty($_.RowKey) }
             $ClientIds = $AllClients.RowKey
             try {

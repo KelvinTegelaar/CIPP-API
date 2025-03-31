@@ -315,8 +315,8 @@ Function Push-ExecOnboardTenantQueue {
                     $LastCPVError = ''
                     do {
                         try {
-                            Add-CIPPApplicationPermission -RequiredResourceAccess 'CIPPDefaults' -ApplicationId $ENV:ApplicationID -tenantfilter $Relationship.customer.tenantId
-                            Add-CIPPDelegatedPermission -RequiredResourceAccess 'CIPPDefaults' -ApplicationId $ENV:ApplicationID -tenantfilter $Relationship.customer.tenantId
+                            Add-CIPPApplicationPermission -RequiredResourceAccess 'CIPPDefaults' -ApplicationId $env:ApplicationID -tenantfilter $Relationship.customer.tenantId
+                            Add-CIPPDelegatedPermission -RequiredResourceAccess 'CIPPDefaults' -ApplicationId $env:ApplicationID -tenantfilter $Relationship.customer.tenantId
                             $CPVSuccess = $true
                             $Refreshing = $false
                         } catch {

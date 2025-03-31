@@ -15,11 +15,11 @@ function New-CIPPApplicationCopy {
 
     try {
         try {
-            $ExistingApp = New-GraphGETRequest -uri "https://graph.microsoft.com/beta/applications(appId='$($app)')" -tenantid $ENV:TenantID -NoAuthCheck $true -AsApp $true
+            $ExistingApp = New-GraphGETRequest -uri "https://graph.microsoft.com/beta/applications(appId='$($app)')" -tenantid $env:TenantID -NoAuthCheck $true -AsApp $true
             $Type = 'Application'
         } catch {
-            $ExistingApp = New-GraphGETRequest -uri "https://graph.microsoft.com/beta/servicePrincipals(appId='$($app)')/oauth2PermissionGrants" -tenantid $ENV:TenantID -NoAuthCheck $true -AsApp $true
-            $ExistingAppRoleAssignments = New-GraphGETRequest -uri "https://graph.microsoft.com/beta/servicePrincipals(appId='$($app)')/appRoleAssignments" -tenantid $ENV:TenantID -NoAuthCheck $true -AsApp $true
+            $ExistingApp = New-GraphGETRequest -uri "https://graph.microsoft.com/beta/servicePrincipals(appId='$($app)')/oauth2PermissionGrants" -tenantid $env:TenantID -NoAuthCheck $true -AsApp $true
+            $ExistingAppRoleAssignments = New-GraphGETRequest -uri "https://graph.microsoft.com/beta/servicePrincipals(appId='$($app)')/appRoleAssignments" -tenantid $env:TenantID -NoAuthCheck $true -AsApp $true
             $Type = 'ServicePrincipal'
         }
         if (!$ExistingApp) {

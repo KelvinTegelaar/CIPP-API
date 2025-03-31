@@ -64,7 +64,7 @@ function Get-CIPPTextReplacement {
     $Text = $Text -replace '%tenantname%', $Tenant.displayName
 
     # Partner specific replacements
-    $Text = $Text -replace '%partnertenantid%', $ENV:TenantID
-    $Text = $Text -replace '%samappid%', $ENV:ApplicationID
+    $Text = $Text -replace '%partnertenantid%', $env:TenantID
+    $Text = $Text -replace '%samappid%', $env:ApplicationID
     return $Text
 }

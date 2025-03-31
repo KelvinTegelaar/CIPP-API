@@ -26,7 +26,7 @@ Function Invoke-AddChocoApp {
         $intuneBody.installCommandLine = $intuneBody.installCommandLine + " -CustomRepo $($chocoapp.CustomRepo)"
     }
     $intuneBody.UninstallCommandLine = "powershell.exe -executionpolicy bypass .\Uninstall.ps1 -Packagename $($chocoapp.PackageName)"
-    $intunebody.detectionRules[0].path = "$($ENV:SystemDrive)\programdata\chocolatey\lib"
+    $intunebody.detectionRules[0].path = "$($env:SystemDrive)\programdata\chocolatey\lib"
     $intunebody.detectionRules[0].fileOrFolderName = "$($chocoapp.PackageName)"
 
     $Tenants = $Request.body.selectedTenants.defaultDomainName

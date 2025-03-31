@@ -15,9 +15,9 @@ Function Invoke-ExecListAppId {
     $ResponseURL = "$(($Request.headers.'x-ms-original-url').replace('/api/ExecListAppId','/api/ExecSAMSetup'))"
 
     $Results = @{
-        applicationId = $ENV:ApplicationID
-        tenantId      = $ENV:TenantID
-        refreshUrl    = "https://login.microsoftonline.com/$ENV:TenantID/oauth2/v2.0/authorize?client_id=$ENV:ApplicationID&response_type=code&redirect_uri=$ResponseURL&response_mode=query&scope=https%3A%2F%2Fgraph.microsoft.com%2F.default+offline_access+profile+openid&state=1&prompt=select_account"
+        applicationId = $env:ApplicationID
+        tenantId      = $env:TenantID
+        refreshUrl    = "https://login.microsoftonline.com/$env:TenantID/oauth2/v2.0/authorize?client_id=$env:ApplicationID&response_type=code&redirect_uri=$ResponseURL&response_mode=query&scope=https%3A%2F%2Fgraph.microsoft.com%2F.default+offline_access+profile+openid&state=1&prompt=select_account"
     }
     # Associate values to output bindings by calling 'Push-OutputBinding'.
     Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{

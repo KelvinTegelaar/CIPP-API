@@ -55,7 +55,7 @@ function New-CIPPAPIConfig {
                         enableAccessTokenIssuance = $false
                         enableIdTokenIssuance     = $true
                     }
-                    redirectUris          = @("https://$($ENV:WEBSITE_HOSTNAME)/.auth/login/aad/callback")
+                    redirectUris          = @("https://$($env:WEBSITE_HOSTNAME)/.auth/login/aad/callback")
                 }
             } | ConvertTo-Json -Depth 10 -Compress
 

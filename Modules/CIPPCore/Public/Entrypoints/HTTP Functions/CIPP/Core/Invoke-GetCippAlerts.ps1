@@ -43,7 +43,7 @@ Function Invoke-GetCippAlerts {
         Write-LogMessage -message 'Your CIPP API is out of date. Please update to the latest version' -API 'Updates' -tenant 'All Tenants' -sev Alert
     }
 
-    if ($env:ApplicationID -eq 'LongApplicationID' -or $null -eq $ENV:ApplicationID) {
+    if ($env:ApplicationID -eq 'LongApplicationID' -or $null -eq $env:ApplicationID) {
         $Alerts.Add(@{
                 title          = 'SAM Setup Incomplete'
                 Alert          = 'You have not yet completed your setup. Please go to the Setup Wizard in Application Settings to connect CIPP to your tenants.'
