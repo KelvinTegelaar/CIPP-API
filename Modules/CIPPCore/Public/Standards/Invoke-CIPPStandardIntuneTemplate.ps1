@@ -86,6 +86,7 @@ function Invoke-CIPPStandardIntuneTemplate {
                 remediate        = $Template.remediate
                 existingPolicyId = $ExistingPolicy.id
                 templateId       = $Template.TemplateList.value
+                customGroup      = $Template.customGroup
             }
         } else {
             Write-Host "IntuneTemplate: $($Template.TemplateList.value) - No differences found."
@@ -101,6 +102,7 @@ function Invoke-CIPPStandardIntuneTemplate {
                 remediate        = $Template.remediate
                 existingPolicyId = $ExistingPolicy.id
                 templateId       = $Template.TemplateList.value
+                customGroup      = $Template.customGroup
             }
         }
     }
