@@ -32,7 +32,7 @@ Function Invoke-ExecExcludeTenant {
     }
     try {
         # Interact with query parameters or the body of the request.
-        $Name = $Request.Query.TenantFilter
+        $Name = $Request.Query.tenantFilter
         if ($Request.Query.AddExclusion) {
             $Tenants = Get-Tenants -IncludeAll | Where-Object { $Request.body.value -contains $_.customerId }
 
