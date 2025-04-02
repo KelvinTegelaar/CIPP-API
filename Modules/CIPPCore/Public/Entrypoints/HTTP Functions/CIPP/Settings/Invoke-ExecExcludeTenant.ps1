@@ -59,8 +59,9 @@ Function Invoke-ExecExcludeTenant {
             $body = [pscustomobject]@{'Results' = "Success. We've removed $Name from the excluded tenants." }
         }
     } catch {
-        Write-LogMessage -API $APIName -tenant $($Name) -headers $Headers -message "Exclusion API failed. $($_.Exception.Message)" -Sev 'Error'
-        $body = [pscustomobject]@{'Results' = "Failed. $($_.Exception.Message)" }
+        $ErrorMessage = Get-CippException -Exception $_
+        Write-LogMessage -API $APIName -tenant $($Name) -headers $Headers -message "Exclusion API failed. $($ErrorMessage.NormalizedError)" -Sev 'Error' -LogData $ErrorMessage
+        $body = [pscustomobject]@{'Results' = "Failed. $($ErrorMessage.NormalizedError)" }
     }
     if (!$body) { $body = @() }
 
