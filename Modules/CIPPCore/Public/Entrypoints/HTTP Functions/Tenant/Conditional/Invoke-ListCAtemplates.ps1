@@ -3,7 +3,7 @@ using namespace System.Net
 Function Invoke-ListCAtemplates {
     <#
     .FUNCTIONALITY
-        Entrypoint
+        Entrypoint,AnyTenant
     .ROLE
         Tenant.ConditionalAccess.Read
     #>
