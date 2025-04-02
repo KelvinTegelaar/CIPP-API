@@ -69,7 +69,10 @@ Function Invoke-ListMailboxes {
         HiddenFromAddressListsEnabled,
         ExternalDirectoryObjectId,
         MessageCopyForSendOnBehalfEnabled,
-        MessageCopyForSentAsEnabled
+        MessageCopyForSentAsEnabled,
+        LitigationHoldEnabled,
+        LitigationHoldDate,
+        LitigationHoldDuration
         $StatusCode = [HttpStatusCode]::OK
     } catch {
         $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
