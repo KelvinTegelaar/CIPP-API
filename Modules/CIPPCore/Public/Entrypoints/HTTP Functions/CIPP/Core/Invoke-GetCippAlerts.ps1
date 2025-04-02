@@ -1,6 +1,6 @@
 using namespace System.Net
 
-Function Invoke-GetCippAlerts {
+function Invoke-GetCippAlerts {
     <#
     .FUNCTIONALITY
         Entrypoint,AnyTenant
@@ -60,7 +60,7 @@ Function Invoke-GetCippAlerts {
                 type  = 'error'
             })
     }
-    if ($env:WEBSITE_RUN_FROM_PACKAGE -ne '1' -and $env:AzureWebJobsStorage -ne 'UseDevelopmentStorage=true') {
+    if ((!$env:WEBSITE_RUN_FROM_PACKAGE -or [string]::IsNullOrEmpty($env:WEBSITE_RUN_FROM_PACKAGE)) -and $env:AzureWebJobsStorage -ne 'UseDevelopmentStorage=true') {
         $Alerts.Add(
             @{
                 title = 'Function App in Write Mode'
