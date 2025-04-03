@@ -1,4 +1,4 @@
-Function Invoke-CIPPStandardTeamsExternalAccessPolicy {
+function Invoke-CIPPStandardTeamsExternalAccessPolicy {
     <#
     .FUNCTIONALITY
         Internal
@@ -33,16 +33,15 @@ Function Invoke-CIPPStandardTeamsExternalAccessPolicy {
     param($Tenant, $Settings)
     ##$Rerun -Type Standard -Tenant $Tenant -Settings $Settings 'TeamsExternalAccessPolicy'
 
-    $CurrentState = New-TeamsRequest -TenantFilter $Tenant -Cmdlet 'Get-CsExternalAccessPolicy' -CmdParams @{Identity = 'Global' }
-    | Select-Object *
+    $CurrentState = New-TeamsRequest -TenantFilter $Tenant -Cmdlet 'Get-CsExternalAccessPolicy' -CmdParams @{Identity = 'Global' } | Select-Object *
 
     if ($null -eq $Settings.EnableFederationAccess) { $Settings.EnableFederationAccess = $false }
     if ($null -eq $Settings.EnablePublicCloudAccess) { $Settings.EnablePublicCloudAccess = $false }
     if ($null -eq $Settings.EnableTeamsConsumerAccess) { $Settings.EnableTeamsConsumerAccess = $false }
 
     $StateIsCorrect = ($CurrentState.EnableFederationAccess -eq $Settings.EnableFederationAccess) -and
-                        ($CurrentState.EnablePublicCloudAccess -eq $Settings.EnablePublicCloudAccess) -and
-                        ($CurrentState.EnableTeamsConsumerAccess -eq $Settings.EnableTeamsConsumerAccess)
+    ($CurrentState.EnablePublicCloudAccess -eq $Settings.EnablePublicCloudAccess) -and
+    ($CurrentState.EnableTeamsConsumerAccess -eq $Settings.EnableTeamsConsumerAccess)
 
     if ($Settings.remediate -eq $true) {
         if ($StateIsCorrect -eq $true) {
@@ -69,11 +68,20 @@ Function Invoke-CIPPStandardTeamsExternalAccessPolicy {
         if ($StateIsCorrect -eq $true) {
             Write-LogMessage -API 'Standards' -tenant $Tenant -message 'External Access Policy is set correctly.' -sev Info
         } else {
-            Write-LogMessage -API 'Standards' -tenant $Tenant -message 'External Access Policy is not set correctly.' -sev Alert
+            Write-StandardsAlert -message 'External Access Policy is not set correctly.' -object $CurrentState -tenant $Tenant -standardName 'TeamsExternalAccessPolicy' -standardId $Settings.standardId
+            Write-LogMessage -API 'Standards' -tenant $Tenant -message 'External Access Policy is not set correctly.' -sev Info
         }
     }
 
-    if ($Setings.report -eq $true) {
+    if ($Settings.report -eq $true) {
         Add-CIPPBPAField -FieldName 'TeamsExternalAccessPolicy' -FieldValue $StateIsCorrect -StoreAs bool -Tenant $Tenant
+
+        if ($StateIsCorrect) {
+            $FieldValue = $true
+        } else {
+            $FieldValue = $CurrentState | Select-Object EnableFederationAccess, EnablePublicCloudAccess, EnableTeamsConsumerAccess
+        }
+
+        Set-CIPPStandardsCompareField -FieldName 'standards.TeamsExternalAccessPolicy' -FieldValue $FieldValue -Tenant $Tenant
     }
 }

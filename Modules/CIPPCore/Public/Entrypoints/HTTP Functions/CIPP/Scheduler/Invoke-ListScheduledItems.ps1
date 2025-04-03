@@ -1,9 +1,9 @@
 using namespace System.Net
 
-Function Invoke-ListScheduledItems {
+function Invoke-ListScheduledItems {
     <#
     .FUNCTIONALITY
-        Entrypoint
+        Entrypoint,AnyTenant
     .ROLE
         CIPP.Scheduler.Read
     #>
@@ -29,7 +29,7 @@ Function Invoke-ListScheduledItems {
         $ScheduledItemFilter.Add('Hidden eq false')
     }
 
-    if ($Name -eq $true) {
+    if ($Name) {
         $ScheduledItemFilter.Add("Name eq '$($Name)'")
     }
 
@@ -63,6 +63,12 @@ Function Invoke-ListScheduledItems {
         if ($Task.Recurrence -eq 0 -or [string]::IsNullOrEmpty($Task.Recurrence)) {
             $Task.Recurrence = 'Once'
         }
+        try {
+            $Task.ExecutedTime = [DateTimeOffset]::FromUnixTimeSeconds($Task.ExecutedTime).UtcDateTime
+        } catch {}
+        try {
+            $Task.ScheduledTime = [DateTimeOffset]::FromUnixTimeSeconds($Task.ScheduledTime).UtcDateTime
+        } catch {}
         $Task
     }
 

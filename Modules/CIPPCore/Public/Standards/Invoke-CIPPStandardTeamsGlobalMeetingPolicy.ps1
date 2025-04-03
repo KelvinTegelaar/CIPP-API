@@ -1,4 +1,4 @@
-Function Invoke-CIPPStandardTeamsGlobalMeetingPolicy {
+function Invoke-CIPPStandardTeamsGlobalMeetingPolicy {
     <#
     .FUNCTIONALITY
         Internal
@@ -34,19 +34,18 @@ Function Invoke-CIPPStandardTeamsGlobalMeetingPolicy {
     ##$Rerun -Type Standard -Tenant $Tenant -Settings $Settings 'TeamsGlobalMeetingPolicy'
 
     param($Tenant, $Settings)
-    $CurrentState = New-TeamsRequest -TenantFilter $Tenant -Cmdlet 'Get-CsTeamsMeetingPolicy' -CmdParams @{Identity = 'Global' }
-    | Select-Object AllowAnonymousUsersToJoinMeeting, AllowAnonymousUsersToStartMeeting, AutoAdmittedUsers, AllowPSTNUsersToBypassLobby, MeetingChatEnabledType, DesignatedPresenterRoleMode, AllowExternalParticipantGiveRequestControl
+    $CurrentState = New-TeamsRequest -TenantFilter $Tenant -Cmdlet 'Get-CsTeamsMeetingPolicy' -CmdParams @{Identity = 'Global' } | Select-Object AllowAnonymousUsersToJoinMeeting, AllowAnonymousUsersToStartMeeting, AutoAdmittedUsers, AllowPSTNUsersToBypassLobby, MeetingChatEnabledType, DesignatedPresenterRoleMode, AllowExternalParticipantGiveRequestControl
 
     $MeetingChatEnabledType = $Settings.MeetingChatEnabledType.value ?? $Settings.MeetingChatEnabledType
     $DesignatedPresenterRoleMode = $Settings.DesignatedPresenterRoleMode.value ?? $Settings.DesignatedPresenterRoleMode
 
     $StateIsCorrect = ($CurrentState.AllowAnonymousUsersToJoinMeeting -eq $Settings.AllowAnonymousUsersToJoinMeeting) -and
-                        ($CurrentState.AllowAnonymousUsersToStartMeeting -eq $false) -and
-                        ($CurrentState.AutoAdmittedUsers -eq 'EveryoneInCompanyExcludingGuests') -and
-                        ($CurrentState.AllowPSTNUsersToBypassLobby -eq $false) -and
-                        ($CurrentState.MeetingChatEnabledType -eq $MeetingChatEnabledType) -and
-                        ($CurrentState.DesignatedPresenterRoleMode -eq $DesignatedPresenterRoleMode) -and
-                        ($CurrentState.AllowExternalParticipantGiveRequestControl -eq $false)
+    ($CurrentState.AllowAnonymousUsersToStartMeeting -eq $false) -and
+    ($CurrentState.AutoAdmittedUsers -eq 'EveryoneInCompanyExcludingGuests') -and
+    ($CurrentState.AllowPSTNUsersToBypassLobby -eq $false) -and
+    ($CurrentState.MeetingChatEnabledType -eq $MeetingChatEnabledType) -and
+    ($CurrentState.DesignatedPresenterRoleMode -eq $DesignatedPresenterRoleMode) -and
+    ($CurrentState.AllowExternalParticipantGiveRequestControl -eq $Settings.AllowExternalParticipantGiveRequestControl)
 
 
     if ($Settings.remediate -eq $true) {
@@ -78,11 +77,20 @@ Function Invoke-CIPPStandardTeamsGlobalMeetingPolicy {
         if ($StateIsCorrect -eq $true) {
             Write-LogMessage -API 'Standards' -tenant $Tenant -message 'Teams Global Policy is set correctly.' -sev Info
         } else {
-            Write-LogMessage -API 'Standards' -tenant $Tenant -message 'Teams Global Policy is not set correctly.' -sev Alert
+            Write-StandardsAlert -message 'Teams Global Policy is not set correctly.' -object $CurrentState -tenant $Tenant -standardName 'TeamsGlobalMeetingPolicy' -standardId $Settings.standardId
+            Write-LogMessage -API 'Standards' -tenant $Tenant -message 'Teams Global Policy is not set correctly.' -sev Info
         }
     }
 
     if ($Settings.report -eq $true) {
+
+        if ($StateIsCorrect) {
+            $FieldValue = $true
+        } else {
+            $FieldValue = $CurrentState
+        }
+        Set-CIPPStandardsCompareField -FieldName 'standards.TeamsGlobalMeetingPolicy' -FieldValue $FieldValue -Tenant $Tenant
         Add-CIPPBPAField -FieldName 'TeamsGlobalMeetingPolicy' -FieldValue $StateIsCorrect -StoreAs bool -Tenant $Tenant
+
     }
 }

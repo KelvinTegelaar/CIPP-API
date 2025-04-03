@@ -3,7 +3,7 @@ using namespace System.Net
 Function Invoke-listStandardTemplates {
     <#
     .FUNCTIONALITY
-        Entrypoint
+        Entrypoint,AnyTenant
     .ROLE
         Tenant.Standards.Read
     #>

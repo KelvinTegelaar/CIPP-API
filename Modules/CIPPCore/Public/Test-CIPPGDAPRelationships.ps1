@@ -50,7 +50,7 @@ function Test-CIPPGDAPRelationships {
             'M365 GDAP Cloud App Security Administrator',
             'M365 GDAP Cloud Device Administrator',
             'M365 GDAP Teams Administrator',
-            'M365 GDAP Sharepoint Administrator',
+            'M365 GDAP SharePoint Administrator',
             'M365 GDAP Authentication Policy Administrator',
             'M365 GDAP Privileged Role Administrator',
             'M365 GDAP Privileged Authentication Administrator'
@@ -83,16 +83,16 @@ function Test-CIPPGDAPRelationships {
                         Type = 'SAM User Membership'
                     }) | Out-Null
             }
-            if ($CIPPGroupCount -lt 12) {
-                $GDAPissues.add([PSCustomObject]@{
-                        Type         = 'Warning'
-                        Issue        = "We only found $($CIPPGroupCount) of the 12 required groups. If you have migrated outside of CIPP this is to be expected. Please perform an access check to make sure you have the correct set of permissions."
-                        Tenant       = '*Partner Tenant'
-                        Relationship = 'None'
-                        Link         = 'https://docs.cipp.app/setup/gdap/troubleshooting#groups'
+        }
+        if ($CIPPGroupCount -lt 12) {
+            $GDAPissues.add([PSCustomObject]@{
+                    Type         = 'Warning'
+                    Issue        = "We only found $($CIPPGroupCount) of the 12 required groups. If you have migrated outside of CIPP this is to be expected. Please perform an access check to make sure you have the correct set of permissions."
+                    Tenant       = '*Partner Tenant'
+                    Relationship = 'None'
+                    Link         = 'https://docs.cipp.app/setup/gdap/troubleshooting#groups'
 
-                    }) | Out-Null
-            }
+                }) | Out-Null
         }
 
     } catch {

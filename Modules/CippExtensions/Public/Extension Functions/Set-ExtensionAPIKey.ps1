@@ -25,6 +25,8 @@ function Set-ExtensionAPIKey {
         } else {
             $keyvaultname = ($ENV:WEBSITE_DEPLOYMENT_ID -split '-')[0]
             $null = Connect-AzAccount -Identity
+            $SubscriptionId = $ENV:WEBSITE_OWNER_NAME -split '\+' | Select-Object -First 1
+            $null = Set-AzContext -SubscriptionId $SubscriptionId
             $null = Set-AzKeyVaultSecret -VaultName $keyvaultname -Name $Extension -SecretValue (ConvertTo-SecureString -AsPlainText -Force -String $APIKey)
         }
         Set-Item -Path "ENV:$Var" -Value $APIKey -Force -ErrorAction SilentlyContinue

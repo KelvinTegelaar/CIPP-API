@@ -8,6 +8,8 @@ Function Push-ListBasicAuthAllTenants {
 
     $domainName = $Item.defaultDomainName
 
+    # XXX; This function seems to be unused in the frontend. -Bobby
+
     $currentTime = Get-Date -Format 'yyyy-MM-ddTHH:MM:ss'
     $ts = (Get-Date).AddDays(-30)
     $endTime = $ts.ToString('yyyy-MM-ddTHH:MM:ss')

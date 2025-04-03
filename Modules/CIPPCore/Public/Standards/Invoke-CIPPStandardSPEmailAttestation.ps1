@@ -32,26 +32,29 @@ function Invoke-CIPPStandardSPEmailAttestation {
     #>
 
     param($Tenant, $Settings)
-    ##$Rerun -Type Standard -Tenant $Tenant -Settings $Settings 'SPEmailAttestation'
 
-    $CurrentState = Get-CIPPSPOTenant -TenantFilter $Tenant |
-    Select-Object -Property EmailAttestationReAuthDays, EmailAttestationRequired
+    $CurrentState = Get-CIPPSPOTenant -TenantFilter $Tenant | Select-Object -Property EmailAttestationReAuthDays, EmailAttestationRequired
 
-    $StateIsCorrect = ($CurrentState.EmailAttestationReAuthDays -eq $Settings.Days) -and
-                      ($CurrentState.EmailAttestationRequired -eq $true)
+    $StateIsCorrect = ($CurrentState.EmailAttestationReAuthDays -eq [int]$Settings.Days) -and
+    ($CurrentState.EmailAttestationRequired -eq $true)
 
     if ($Settings.remediate -eq $true) {
         if ($StateIsCorrect -eq $true) {
-            Write-LogMessage -API 'Standards' -Tenant $Tenant -Message 'Sharepoint reauthentication with verification code is already restricted.' -Sev Info
+            Write-LogMessage -API 'Standards' -Tenant $Tenant -Message 'SharePoint reauthentication with verification code is already restricted.' -Sev Info
         } else {
             $Properties = @{
-                EmailAttestationReAuthDays = $Settings.Days
+                EmailAttestationReAuthDays = [int]$Settings.Days
                 EmailAttestationRequired   = $true
             }
 
             try {
-                Get-CIPPSPOTenant -TenantFilter $Tenant | Set-CIPPSPOTenant -Properties $Properties
-                Write-LogMessage -API 'Standards' -Tenant $Tenant -Message 'Successfully set reauthentication with verification code restriction.' -Sev Info
+                $Response = Get-CIPPSPOTenant -TenantFilter $Tenant | Set-CIPPSPOTenant -Properties $Properties
+                if ($Response.ErrorInfo.ErrorMessage) {
+                    $ErrorMessage = Get-NormalizedError -Message $Response.ErrorInfo.ErrorMessage
+                    Write-LogMessage -API 'Standards' -Tenant $Tenant -Message "Failed to set reauthentication with verification code restriction. Error: $ErrorMessage" -Sev Error
+                } else {
+                    Write-LogMessage -API 'Standards' -Tenant $Tenant -Message 'Successfully set reauthentication with verification code restriction.' -Sev Info
+                }
             } catch {
                 $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
                 Write-LogMessage -API 'Standards' -Tenant $Tenant -Message "Failed to set reauthentication with verification code restriction. Error: $ErrorMessage" -Sev Error
@@ -69,5 +72,11 @@ function Invoke-CIPPStandardSPEmailAttestation {
 
     if ($Settings.report -eq $true) {
         Add-CIPPBPAField -FieldName 'SPEmailAttestation' -FieldValue $StateIsCorrect -StoreAs bool -Tenant $Tenant
+        if ($StateIsCorrect) {
+            $FieldValue = $true
+        } else {
+            $FieldValue = $CurrentState
+        }
+        Set-CIPPStandardsCompareField -FieldName 'standards.SPEmailAttestation' -FieldValue $FieldValue -TenantFilter $Tenant
     }
 }

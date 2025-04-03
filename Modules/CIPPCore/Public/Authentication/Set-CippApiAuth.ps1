@@ -1,6 +1,6 @@
 function Set-CippApiAuth {
     [CmdletBinding(SupportsShouldProcess)]
-    Param(
+    param(
         [string]$RGName,
         [string]$FunctionAppName,
         [string]$TenantId,
@@ -9,12 +9,13 @@ function Set-CippApiAuth {
 
     if ($env:MSI_SECRET) {
         Disable-AzContextAutosave -Scope Process | Out-Null
-        $Context = (Connect-AzAccount -Identity).Context
+        $null = Connect-AzAccount -Identity
+        $SubscriptionId = $ENV:WEBSITE_OWNER_NAME -split '\+' | Select-Object -First 1
+        $Context = Set-AzContext -SubscriptionId $SubscriptionId
     } else {
         $Context = Get-AzContext
+        $SubscriptionId = $Context.Subscription.Id
     }
-    # Get subscription id
-    $SubscriptionId = $Context.Subscription.Id
 
     # Get auth settings
     $AuthSettings = Invoke-AzRestMethod -Uri "https://management.azure.com/subscriptions/$SubscriptionId/resourceGroups/$RGName/providers/Microsoft.Web/sites/$($FunctionAppName)/config/authsettingsV2/list?api-version=2020-06-01" | Select-Object -ExpandProperty Content | ConvertFrom-Json
