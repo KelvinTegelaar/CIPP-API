@@ -72,12 +72,12 @@ function Invoke-AddUserBulk {
                         $LicenseSkus = $AssignedLicenses.value ?? $AssignedLicenses | Where-Object { $_ -match $GuidPattern }
                         if (($LicenseSkus | Measure-Object).Count -gt 0) {
                             Write-Information "- Assigned licenses set to $(($AssignedLicenses.label ?? $AssignedLicenses) -join ', ')"
-                            $AssignedLicenses = foreach ($Sku in $LicenseSkus) {
+                            $Licenses = foreach ($Sku in $LicenseSkus) {
                                 [PSCustomObject]@{
                                     skuId = $Sku
                                 }
                             }
-                            $UserBody.assignedLicenses = @($AssignedLicenses)
+                            $UserBody.assignedLicenses = @($Licenses)
                         }
                     }
                 }
