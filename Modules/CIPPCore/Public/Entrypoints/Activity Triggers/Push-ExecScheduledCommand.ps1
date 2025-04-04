@@ -13,6 +13,12 @@ function Push-ExecScheduledCommand {
     $Tenant = $Item.Parameters.TenantFilter ?? $Item.TaskInfo.Tenant
     $TenantInfo = Get-Tenants -TenantFilter $Tenant
 
+    $null = Update-AzDataTableEntity -Force @Table -Entity @{
+        PartitionKey = $task.PartitionKey
+        RowKey       = $task.RowKey
+        TaskState    = 'Running'
+    }
+
     $Function = Get-Command -Name $Item.Command
     if ($null -eq $Function) {
         $Results = "Task Failed: The command $($Item.Command) does not exist."
@@ -23,6 +29,7 @@ function Push-ExecScheduledCommand {
             Results      = "$Results"
             TaskState    = $State
         }
+
         Write-LogMessage -API 'Scheduler_UserTasks' -tenant $Tenant -tenantid $TenantInfo.customerId -message "Failed to execute task $($task.Name): The command $($Item.Command) does not exist." -sev Error
         return
     }
