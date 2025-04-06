@@ -103,14 +103,14 @@ function Test-CIPPAuditLogRules {
                     $Data.clientip = $Data.clientip -replace $IPRegex, '$1' -replace '[\[\]]', ''
 
                     # Check if IP is on trusted IP list
-                    $TrustedIP = Get-CIPPAzDataTableEntity @TrustedIPTable -Filter "((PartitionKey eq '$TenantFilter') or (PartitionKey eq 'AllTenants')) and RowKey eq '$($Data.clientip)'  and state eq 'Trusted'"
+                    $TrustedIP = Get-CIPPAzDataTableEntity @TrustedIPTable -Filter "((PartitionKey eq '$TenantFilter') or (PartitionKey eq 'AllTenants')) and RowKey eq '$($Data.clientip)' and state eq 'Trusted'"
                     if ($TrustedIP) {
                         #write-warning "IP $($Data.clientip) is trusted"
                         $Trusted = $true
                     }
                     if (!$Trusted) {
                         $CacheLookupStartTime = Get-Date
-                        $Location = Get-CIPPAzDataTableEntity @LocationTable -Filter "RowKey eq '$($Data.clientIp)'" | Select-Object -Last 1 -ExcludeProperty Tenant
+                        $Location = Get-AzDataTableEntity @LocationTable -Filter "RowKey eq '$($Data.clientIp)'" | Select-Object -ExcludeProperty Tenant
                         $CacheLookupEndTime = Get-Date
                         $CacheLookupSeconds = ($CacheLookupEndTime - $CacheLookupStartTime).TotalSeconds
                         Write-Warning "Cache lookup for IP $($Data.clientip) took $CacheLookupSeconds seconds"
