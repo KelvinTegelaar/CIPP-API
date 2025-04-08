@@ -65,6 +65,7 @@ function Get-NormalizedError {
         '*AADSTS900023*' { 'This tenant is not available for this operation. Please check the selected tenant and try again.' }
         '*AADSTS9002313*' { 'The credentials used to connect to the Graph API are not available, please retry. If this issue persists you may need to execute the SAM wizard.' }
         '*One or more platform(s) is/are not configured for the customer. Please configure the platform before trying to purchase a SKU.*' { 'One or more platform(s) is/are not configured for the customer. Please configure the platform before trying to purchase a SKU.' }
+        "One or more added object references already exist for the following modified properties: 'members'." { 'This user is already a member of the selected group.' }
         Default { $message }
 
     }

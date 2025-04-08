@@ -32,8 +32,7 @@ Function Invoke-CIPPStandardTeamsEmailIntegration {
     param($Tenant, $Settings)
     ##$Rerun -Type Standard -Tenant $Tenant -Settings $Settings 'TeamsEmailIntegration'
 
-    $CurrentState = New-TeamsRequest -TenantFilter $Tenant -Cmdlet 'Get-CsTeamsClientConfiguration' -CmdParams @{Identity = 'Global' }
-    | Select-Object AllowEmailIntoChannel
+    $CurrentState = New-TeamsRequest -TenantFilter $Tenant -Cmdlet 'Get-CsTeamsClientConfiguration' -CmdParams @{Identity = 'Global' } | Select-Object AllowEmailIntoChannel
 
     if ($null -eq $Settings.AllowEmailIntoChannel) { $Settings.AllowEmailIntoChannel = $false }
 
@@ -62,11 +61,20 @@ Function Invoke-CIPPStandardTeamsEmailIntegration {
         if ($StateIsCorrect -eq $true) {
             Write-LogMessage -API 'Standards' -tenant $Tenant -message 'Teams Email Integration settings is set correctly.' -sev Info
         } else {
-            Write-LogMessage -API 'Standards' -tenant $Tenant -message 'Teams Email Integration settings is not set correctly.' -sev Alert
+            Write-StandardsAlert -message 'Teams Email Integration settings is not set correctly.' -object $CurrentState -tenant $Tenant -standardName 'TeamsEmailIntegration' -standardId $Settings.standardId
+            Write-LogMessage -API 'Standards' -tenant $Tenant -message 'Teams Email Integration settings is not set correctly.' -sev Info
         }
     }
 
-    if ($Setings.report -eq $true) {
+    if ($Settings.report -eq $true) {
+
+        if ($StateIsCorrect) {
+            $FieldValue = $true
+        } else {
+            $FieldValue = $CurrentState
+        }
+        Set-CIPPStandardsCompareField -FieldName 'standards.TeamsEmailIntegration' -FieldValue $FieldValue -Tenant $Tenant
         Add-CIPPBPAField -FieldName 'TeamsEmailIntoChannel' -FieldValue $StateIsCorrect -StoreAs bool -Tenant $Tenant
+
     }
 }

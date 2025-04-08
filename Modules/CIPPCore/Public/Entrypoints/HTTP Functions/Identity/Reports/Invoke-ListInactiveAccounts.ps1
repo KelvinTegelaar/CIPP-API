@@ -11,15 +11,11 @@ Function Invoke-ListInactiveAccounts {
     param($Request, $TriggerMetadata)
 
     $APIName = $Request.Params.CIPPEndpoint
-    $User = $Request.Headers
-    Write-LogMessage -Headers $User -API $APINAME -message 'Accessed this API' -Sev 'Debug'
-
-
-    # Write to the Azure Functions log stream.
-    Write-Host 'PowerShell HTTP trigger function processed a request.'
+    $Headers = $Request.Headers
+    Write-LogMessage -Headers $Headers -API $APIName -message 'Accessed this API' -Sev 'Debug'
 
     # Convert the TenantFilter parameter to a list of tenant IDs for AllTenants or a single tenant ID
-    $TenantFilter = $Request.Query.TenantFilter
+    $TenantFilter = $Request.Query.tenantFilter
     if ($TenantFilter -eq 'AllTenants') {
         $TenantFilter = (Get-Tenants).customerId
     } else {

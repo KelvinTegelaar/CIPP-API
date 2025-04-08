@@ -49,11 +49,13 @@ function Invoke-CIPPStandardDisableVoice {
         if ($StateIsCorrect -eq $true) {
             Write-LogMessage -API 'Standards' -tenant $tenant -message 'Voice authentication method is not enabled' -sev Info
         } else {
-            Write-LogMessage -API 'Standards' -tenant $tenant -message 'Voice authentication method is enabled' -sev Alert
+            Write-StandardsAlert -message 'Voice authentication method is enabled' -object $CurrentState -tenant $tenant -standardName 'DisableVoice' -standardId $Settings.standardId
+            Write-LogMessage -API 'Standards' -tenant $tenant -message 'Voice authentication method is enabled' -sev Info
         }
     }
 
     if ($Settings.report -eq $true) {
+        Set-CIPPStandardsCompareField -FieldName 'standards.DisableVoice' -FieldValue $StateIsCorrect -TenantFilter $Tenant
         Add-CIPPBPAField -FieldName 'DisableVoice' -FieldValue $StateIsCorrect -StoreAs bool -Tenant $tenant
     }
 }

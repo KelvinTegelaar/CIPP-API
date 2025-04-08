@@ -9,6 +9,7 @@ function Get-CIPPHttpFunctions {
         $Results = foreach ($Function in $Functions) {
             $Help = Get-Help $Function
             if ($Help.Functionality -ne 'Entrypoint') { continue }
+            if ($Help.Role -eq 'Public') { continue }
             [PSCustomObject]@{
                 Function = $Function.Name
                 Role     = $Help.Role

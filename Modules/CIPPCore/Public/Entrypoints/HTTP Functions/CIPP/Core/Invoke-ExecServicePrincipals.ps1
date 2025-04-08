@@ -1,7 +1,7 @@
 function Invoke-ExecServicePrincipals {
     <#
     .FUNCTIONALITY
-        Entrypoint
+        Entrypoint,AnyTenant
     .ROLE
         CIPP.Core.ReadWrite
     #>

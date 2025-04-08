@@ -3,7 +3,7 @@ using namespace System.Net
 Function Invoke-AddExConnectorTemplate {
     <#
     .FUNCTIONALITY
-        Entrypoint
+        Entrypoint,AnyTenant
     .ROLE
         Exchange.Connector.ReadWrite
     #>
@@ -20,7 +20,7 @@ Function Invoke-AddExConnectorTemplate {
         $GUID = (New-Guid).GUID
         $Select = if ($Request.Body.cippconnectortype -eq 'outbound') {
             @(
-                'name', 'AllAcceptedDomains', 'CloudServicesMailEnabled', 'Comment', 'Confirm', 'ConnectorSource', 'ConnectorType', 'Enabled', 'IsTransportRuleScoped', 'RecipientDomains', 'RouteAllMessagesViaOnPremises', 'SenderRewritingEnabled', 'SmartHosts', 'TestMode', 'TlsDomain', 'TlsSettings', 'UseMXRecord'
+                'name', 'AllAcceptedDomains', 'CloudServicesMailEnabled', 'Comment', 'Confirm', 'ConnectorSource', 'ConnectorType', 'Enabled', 'IsTransportRuleScoped', 'RecipientDomains', 'RouteAllMessagesViaOnPremises', 'SmartHosts', 'TestMode', 'TlsDomain', 'TlsSettings', 'UseMXRecord'
             )
         } else {
             @(

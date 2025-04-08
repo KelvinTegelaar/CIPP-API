@@ -21,7 +21,7 @@ function Invoke-CIPPStandardIntuneComplianceSettings {
         ADDEDDATE
             2024-11-12
         POWERSHELLEQUIVALENT
-            
+
         RECOMMENDEDBY
         UPDATECOMMENTBLOCK
             Run the Tools\Update-StandardsComments.ps1 script to update this comment block
@@ -31,16 +31,18 @@ function Invoke-CIPPStandardIntuneComplianceSettings {
 
     param($Tenant, $Settings)
 
-    $CurrentState = New-GraphGetRequest -Uri 'https://graph.microsoft.com/beta/deviceManagement/settings' -tenantid $Tenant
+    $CurrentState = New-GraphGetRequest -Uri 'https://graph.microsoft.com/beta/deviceManagement/settings' -tenantid $Tenant | Select-Object secureByDefault, deviceComplianceCheckinThresholdDays
 
     if ($null -eq $Settings.deviceComplianceCheckinThresholdDays) { $Settings.deviceComplianceCheckinThresholdDays = $CurrentState.deviceComplianceCheckinThresholdDays }
-    $SecureByDefault = $Settings.secureByDefault.value ?? $Settings.secureByDefault
+    $SecureByDefault = [bool]($Settings.secureByDefault.value ? $Settings.secureByDefault.value : $Settings.secureByDefault)
+    $DeviceComplianceCheckinThresholdDays = [int]$Settings.deviceComplianceCheckinThresholdDays
+
     $StateIsCorrect = ($CurrentState.secureByDefault -eq $SecureByDefault) -and
-                        ($CurrentState.deviceComplianceCheckinThresholdDays -eq $Settings.deviceComplianceCheckinThresholdDays)
+    ($CurrentState.deviceComplianceCheckinThresholdDays -eq $DeviceComplianceCheckinThresholdDays)
 
     if ($Settings.remediate -eq $true) {
         if ($StateIsCorrect -eq $true) {
-            Write-LogMessage -API 'Standards' -Tenant $Tenant -Message 'InTune Compliance settings is already applied correctly.' -Sev Info
+            Write-LogMessage -API 'Standards' -Tenant $Tenant -Message 'Intune Compliance settings is already applied correctly.' -Sev Info
         } else {
             try {
                 $GraphRequest = @{
@@ -52,28 +54,31 @@ function Invoke-CIPPStandardIntuneComplianceSettings {
                     Body        = [pscustomobject]@{
                         settings = [pscustomobject]@{
                             secureByDefault                      = $SecureByDefault
-                            deviceComplianceCheckinThresholdDays = $Settings.deviceComplianceCheckinThresholdDays
+                            deviceComplianceCheckinThresholdDays = $DeviceComplianceCheckinThresholdDays
                         }
-                    } | ConvertTo-Json -Compress
+                    } | ConvertTo-Json -Compress -Depth 5
                 }
                 New-GraphPostRequest @GraphRequest
-                Write-LogMessage -API 'Standards' -Tenant $Tenant -Message 'Successfully updated InTune Compliance settings.' -Sev Info
+                Write-LogMessage -API 'Standards' -Tenant $Tenant -Message 'Successfully updated Intune Compliance settings.' -Sev Info
             } catch {
                 $ErrorMessage = Get-CippException -Exception $_
-                Write-LogMessage -API 'Standards' -Tenant $Tenant -Message 'Failed to update InTune Compliance settings.' -Sev Error -LogData $ErrorMessage
+                Write-LogMessage -API 'Standards' -Tenant $Tenant -Message 'Failed to update Intune Compliance settings.' -Sev Error -LogData $ErrorMessage
             }
         }
     }
 
     if ($Settings.alert -eq $true) {
         if ($StateIsCorrect -eq $true) {
-            Write-LogMessage -API 'Standards' -Tenant $Tenant -Message 'InTune Compliance settings is enabled.' -Sev Info
+            Write-LogMessage -API 'Standards' -Tenant $Tenant -Message 'Intune Compliance settings is enabled.' -Sev Info
         } else {
-            Write-LogMessage -API 'Standards' -Tenant $Tenant -Message 'InTune Compliance settings is not enabled.' -Sev Alert
+            Write-StandardsAlert -message 'Intune Compliance settings is not enabled' -object $CurrentState -tenant $Tenant -standardName 'IntuneComplianceSettings' -standardId $Settings.standardId
+            Write-LogMessage -API 'Standards' -Tenant $Tenant -Message 'Intune Compliance settings is not enabled.' -Sev Info
         }
     }
 
     if ($Settings.report -eq $true) {
+        $state = $StateIsCorrect ? $true : $CurrentState
+        Set-CIPPStandardsCompareField -FieldName 'standards.IntuneComplianceSettings' -FieldValue $state -Tenant $Tenant
         Add-CIPPBPAField -FieldName 'IntuneComplianceSettings' -FieldValue $StateIsCorrect -StoreAs bool -Tenant $Tenant
     }
 }

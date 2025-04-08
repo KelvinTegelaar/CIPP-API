@@ -1,0 +1,3547 @@
+<?xml version="1.0"?>
+<doc>
+    <assembly>
+        <name>Microsoft.Teams.PowerShell.TeamsCmdlets</name>
+    </assembly>
+    <members>
+        <member name="T:Microsoft.Teams.PowerShell.TeamsCmdlets.AddTeamChannelUser">
+            <summary>
+            Cmdlet to add user to a private channel. Role of the user can be specified for member promotion.
+            </summary>
+        </member>
+        <member name="M:Microsoft.Teams.PowerShell.TeamsCmdlets.AddTeamChannelUser.#ctor">
+            <summary>
+            Default constructor necessary for cmdlet.
+            </summary>
+        </member>
+        <member name="M:Microsoft.Teams.PowerShell.TeamsCmdlets.AddTeamChannelUser.#ctor(Microsoft.TeamsCmdlets.Powershell.Connect.Common.IHttpClientFactory)">
+            <summary>
+            Constructor with an implementation of <see cref="T:Microsoft.TeamsCmdlets.Powershell.Connect.Common.IHttpClientFactory" />.
+            Creates an instance of <see cref="T:Microsoft.Teams.PowerShell.TeamsCmdlets.AddTeamChannelUser" />
+            </summary>
+            <param name="httpClientFactory"></param>
+        </member>
+        <member name="P:Microsoft.Teams.PowerShell.TeamsCmdlets.AddTeamChannelUser.CmdletName">
+            <summary>
+            The name of the cmdlet.
+            </summary>
+        </member>
+        <member name="P:Microsoft.Teams.PowerShell.TeamsCmdlets.AddTeamChannelUser.GroupId">
+            <summary>
+            The AAD group id of the team.
+            </summary>
+        </member>
+        <member name="P:Microsoft.Teams.PowerShell.TeamsCmdlets.AddTeamChannelUser.DisplayName">
+            <summary>
+            The display name of channel.
+            </summary>
+        </member>
+        <member name="P:Microsoft.Teams.PowerShell.TeamsCmdlets.AddTeamChannelUser.User">
+            <summary>
+            The id or upn of the user.
+            </summary>
+        </member>
+        <member name="P:Microsoft.Teams.PowerShell.TeamsCmdlets.AddTeamChannelUser.Role">
+            <summary>
+            The role of the user.
+            </summary>
+        </member>
+        <member name="P:Microsoft.Teams.PowerShell.TeamsCmdlets.AddTeamChannelUser.TenantId">
+            <summary>
+            The tenantId of the external user.
+            </summary>
+        </member>
+        <member name="M:Microsoft.Teams.PowerShell.TeamsCmdlets.AddTeamChannelUser.ProcessRecord">
+            <inheritdoc/>
+        </member>
+        <member name="T:Microsoft.Teams.PowerShell.TeamsCmdlets.AddTeamsAppInstallation">
+            <summary>
+                cmdlet to Add a Teams App to MS Teams.
+            </summary>
+        </member>
+        <member name="M:Microsoft.Teams.PowerShell.TeamsCmdlets.AddTeamsAppInstallation.#ctor">
+            <summary>
+                Default constructor necessary for cmdlet.
+            </summary>
+        </member>
+        <member name="M:Microsoft.Teams.PowerShell.TeamsCmdlets.AddTeamsAppInstallation.#ctor(Microsoft.TeamsCmdlets.Powershell.Connect.Common.IHttpClientFactory)">
+            <summary>
+                Constructor with an implementation of <see cref="T:Microsoft.TeamsCmdlets.Powershell.Connect.Common.IHttpClientFactory" />.
+                Creates an instance of <see cref="T:Microsoft.Teams.PowerShell.TeamsCmdlets.AddTeamsAppInstallation" />
+            </summary>
+            <param name="httpClientFactory"></param>
+        </member>
+        <member name="P:Microsoft.Teams.PowerShell.TeamsCmdlets.AddTeamsAppInstallation.CmdletName">
+            <summary>
+                Name of the cmdlet.
+            </summary>
+        </member>
+        <member name="P:Microsoft.Teams.PowerShell.TeamsCmdlets.AddTeamsAppInstallation.AppId">
+            <summary>
+                Teams App identifier in MS Teams.
+            </summary>
+        </member>
+        <member name="P:Microsoft.Teams.PowerShell.TeamsCmdlets.AddTeamsAppInstallation.TeamId">
+            <summary>
+                Team identifier in MS Teams.
+            </summary>
+        </member>
+        <member name="P:Microsoft.Teams.PowerShell.TeamsCmdlets.AddTeamsAppInstallation.UserId">
+            <summary>
+                User identifier in MS Teams.
+            </summary>
+        </member>
+        <member name="P:Microsoft.Teams.PowerShell.TeamsCmdlets.AddTeamsAppInstallation.Permissions">
+            <summary>
+                RSC permissions for the Teams App.
+            </summary>
+        </member>
+        <member name="T:Microsoft.Teams.PowerShell.TeamsCmdlets.AddTeamUser">
+            <summary>
+            Cmdlet to add user to a team. Role of the user can be specified
+            </summary>
+        </member>
+        <member name="M:Microsoft.Teams.PowerShell.TeamsCmdlets.AddTeamUser.#ctor">
+            <summary>
+            Default constructor necessary for cmdlet.
+            </summary>
+        </member>
+        <member name="M:Microsoft.Teams.PowerShell.TeamsCmdlets.AddTeamUser.#ctor(Microsoft.TeamsCmdlets.Powershell.Connect.Common.IHttpClientFactory)">
+            <summary>
+            Constructor with an implementation of <see cref="T:Microsoft.TeamsCmdlets.Powershell.Connect.Common.IHttpClientFactory" />.
+            Creates an instance of <see cref="T:Microsoft.Teams.PowerShell.TeamsCmdlets.AddTeamUser" />
+            </summary>
+            <param name="httpClientFactory"></param>
+        </member>
+        <member name="M:Microsoft.Teams.PowerShell.TeamsCmdlets.AddTeamUser.AddUserToUnifiedGroup(System.Net.Http.HttpClient,System.String,System.Boolean)">
+            <summary>
+            Helper method which adds user to the unified group either as member (default) or as Owner.
+            Safe to call even if the user already exists in member or owner list for a given group.
+            Throws exceptions if httpClient is null, userId is (null or whitespace),  when the graph api calls fail.
+            </summary>
+            <param name="httpClient">Http client reference.</param>
+            <param name="userId">UserId represented as either guid or upn or emailid.</param>
+            <param name="isOwner">Denotes whether user should be added as Owner or not.</param>
+        </member>
+        <member name="T:Microsoft.Teams.PowerShell.TeamsCmdlets.Common.HttpStatusCodeGroup.codesWorthRetrying">
+            <summary>
+            Enum of HttpStatusCodes worth retrying when received
+            </summary>
+        </member>
+        <member name="M:Microsoft.Teams.PowerShell.TeamsCmdlets.Common.HttpStatusCodeGroup.IsWorthRetrying(System.Int32)">
+            <summary>
+            Determines if the returned status code is worth retring
+            </summary>
+            <param name="httpStatusCode"></param>
+            <returns></returns>
+        </member>
+        <member name="T:Microsoft.Teams.PowerShell.TeamsCmdlets.Common.JsonPathConverter">
+             <summary>
+             JsonConverter to flatten a nested json object path into an object.
+             <example>
+             {
+             "name": "Joe Doe",
+             "dateOfBirth": {
+                 "month": "January",
+                 "day": 1
+                 }
+             }
+            
+             can be serialized into the object:
+            
+             [JsonConverter(typeof(JsonPathConverter))]
+             class Person
+             {
+                 [JsonProperty("name")]
+                 public string Name { get; set; }
+            
+                 [JsonProperty("dateOfBirth.month")]
+                 public string DateOfBirthMonth  { get; set; }
+             
+                 [JsonProperty("dateOfBirth.day")]
+                 public int DateOfBirthDay  { get; set; }
+             }
+             </example>
+             </summary>
+        </member>
+        <member name="M:Microsoft.Teams.PowerShell.TeamsCmdlets.Common.JsonPathConverter.ReadJson(Newtonsoft.Json.JsonReader,System.Type,System.Object,Newtonsoft.Json.JsonSerializer)">
+            <summary>
+            Deserializes the object from JSON.
+            </summary>
+            <param name="reader"><see cref="T:Newtonsoft.Json.JsonReader"/>.</param>
+            <param name="objectType">Type of object to deserialize into.</param>
+            <param name="existingValue">The existing value of the object.</param>
+            <param name="serializer">Instance of <see cref="T:Newtonsoft.Json.JsonSerializer"/>.</param>
+            <returns></returns>
+        </member>
+        <member name="M:Microsoft.Teams.PowerShell.TeamsCmdlets.Common.JsonPathConverter.CanConvert(System.Type)">
+            <summary>
+            Determines whether this instance can convert the specified object type.
+            </summary>
+            <param name="objectType">The object type that can be converted</param>
+            <returns>Returns if this object can be converted by this converter.</returns>
+        </member>
+        <member name="M:Microsoft.Teams.PowerShell.TeamsCmdlets.Common.JsonPathConverter.WriteJson(Newtonsoft.Json.JsonWriter,System.Object,Newtonsoft.Json.JsonSerializer)">
+            <summary>
+            Serializes the object as JSON.
+            </summary>
+            <param name="writer">Instance of <see cref="T:Newtonsoft.Json.JsonWriter"/>.</param>
+            <param name="value">The object to serialize.</param>
+            <param name="serializer">Instance of <see cref="T:Newtonsoft.Json.JsonSerializer"/>.</param>
+        </member>
+        <member name="T:Microsoft.Teams.PowerShell.TeamsCmdlets.Common.MicrosoftGraphConstants">
+            <summary>
+            Constants for Microsoft Graph requests.
+            </summary>
+        </member>
+        <member name="F:Microsoft.Teams.PowerShell.TeamsCmdlets.Common.MicrosoftGraphConstants.BatchLimit">
+            <summary>
+            The limit imposed by Microsoft Graph for sending batch requests.
+            </summary>
+        </member>
+        <member name="F:Microsoft.Teams.PowerShell.TeamsCmdlets.Common.TeamConfigurations.MaxTeamAliasCharactersLimit">
+            <summary>
+            Team name character limit (from MSGraph, the limit is 64).
+            If alias is greater than 64 characters, we trim it to around 60 characters, so MT can append some number, if alias is already taken.
+            </summary>
+        </member>
+        <member name="F:Microsoft.Teams.PowerShell.TeamsCmdlets.Common.TeamConfigurations.ValidateAliasRetryCount">
+            <summary>
+            validate team alias uniqueness retry limit
+            </summary>
+        </member>
+        <member name="F:Microsoft.Teams.PowerShell.TeamsCmdlets.Common.TeamConfigurations.TeamAliasSuffixRandomNumberRange">
+            <summary>
+            team alias suffix: random number range
+            </summary>
+        </member>
+        <member name="T:Microsoft.Teams.PowerShell.TeamsCmdlets.Common.TeamsAppInstallationScope">
+            <summary>
+            The installation scope of a TeamsApp.
+            </summary>
+        </member>
+        <member name="F:Microsoft.Teams.PowerShell.TeamsCmdlets.Common.TeamsAppInstallationScope.Unknown">
+            <summary>
+            Default installation scope.
+            </summary>
+        </member>
+        <member name="F:Microsoft.Teams.PowerShell.TeamsCmdlets.Common.TeamsAppInstallationScope.Team">
+            <summary>
+            TeamsApp installed in Team scope.
+            </summary>
+        </member>
+        <member name="F:Microsoft.Teams.PowerShell.TeamsCmdlets.Common.TeamsAppInstallationScope.Chat">
+            <summary>
+            TeamsApp installed in Chat scope.
+            </summary>
+        </member>
+        <member name="F:Microsoft.Teams.PowerShell.TeamsCmdlets.Common.TeamsAppInstallationScope.User">
+            <summary>
+            TeamsApp installed in User scope.
+            </summary>
+        </member>
+        <member name="T:Microsoft.Teams.PowerShell.TeamsCmdlets.Constants.ChannelMembershipType">
+            <summary>
+            Channel membership type
+            </summary>
+        </member>
+        <member name="T:Microsoft.Teams.PowerShell.TeamsCmdlets.Constants.EndpointEnv">
+            <summary>
+            Endpoint versions
+            </summary>
+        </member>
+        <member name="T:Microsoft.Teams.PowerShell.TeamsCmdlets.Constants.SubstrateEndpointEnv">
+            <summary>
+            UAM substrate endpoint version.
+            </summary>
+        </member>
+        <member name="T:Microsoft.Teams.PowerShell.TeamsCmdlets.Constants.SubstrateGesture">
+            <summary>
+            UAM service Admin App gesture constants.
+            </summary>
+        </member>
+        <member name="F:Microsoft.Teams.PowerShell.TeamsCmdlets.Constants.SubstrateGesture.AvailableTo">
+            <summary>
+            AvailableTo gesture administered by the admin to the user(s) or group(s) for a specific app.
+            To make the app available to the user(s) or group(s).
+            </summary>
+        </member>
+        <member name="F:Microsoft.Teams.PowerShell.TeamsCmdlets.Constants.SubstrateGesture.DeployTo">
+            <summary>
+            DeployTo gesture administered by the admin to the user(s) or group(s) for a specific app.
+            To deploy the app to the specified user(s) or group(s).
+            </summary>
+        </member>
+        <member name="T:Microsoft.Teams.PowerShell.TeamsCmdlets.Constants.SubstrateOperationType">
+            <summary>
+            Operation type that the Admin is using to perform the operation.
+            </summary>
+        </member>
+        <member name="F:Microsoft.Teams.PowerShell.TeamsCmdlets.Constants.SubstrateOperationType.Add">
+            <summary>
+            Add operation to add an App to user(s) or group(s)
+            </summary>
+        </member>
+        <member name="F:Microsoft.Teams.PowerShell.TeamsCmdlets.Constants.SubstrateOperationType.Remove">
+            <summary>
+             Remove operation to remove an App from user(s) or group(s)
+            </summary>
+        </member>
+        <member name="F:Microsoft.Teams.PowerShell.TeamsCmdlets.Constants.SubstrateUserAssignmentType.Everyone">
+            <summary>
+            Available to all users.
+            </summary>
+        </member>
+        <member name="F:Microsoft.Teams.PowerShell.TeamsCmdlets.Constants.SubstrateUserAssignmentType.UsersAndGroups">
+            <summary>
+            Available to some users.
+            </summary>
+        </member>
+        <member name="F:Microsoft.Teams.PowerShell.TeamsCmdlets.Constants.SubstrateUserAssignmentType.Noone">
+            <summary>
+            Available to no users.
+            </summary>
+        </member>
+        <member name="T:Microsoft.Teams.PowerShell.TeamsCmdlets.Constants.HierarchyConstants">
+            <summary>
+            Constants used by Teams Hierarchy cmdlets.
+            </summary>
+        </member>
+        <member name="F:Microsoft.Teams.PowerShell.TeamsCmdlets.Constants.HierarchyConstants.SetTeamTargetingHierarchyCmdletName">
+            <summary>
+            Cmdlet name for Set-TeamTargetingHierarchy.
+            </summary>
+        </member>
+        <member name="F:Microsoft.Teams.PowerShell.TeamsCmdlets.Constants.HierarchyConstants.GetTeamTargetingHierarchyStatusCmdletName">
+            <summary>
+            Cmdlet name for Get-TeamTargetingHierarchyStatus.
+            </summary>
+        </member>
+        <member name="F:Microsoft.Teams.PowerShell.TeamsCmdlets.Constants.HierarchyConstants.RemoveTeamTargetingHierarchyCmdletName">
+            <summary>
+            Cmdlet name for Remove-TeamTargetingHierarchy.
+            </summary>
+        </member>
+        <member name="F:Microsoft.Teams.PowerShell.TeamsCmdlets.Constants.HierarchyConstants.LatestOperation">
+            <summary>
+            Url name for latest operation in Teams Hierarchy service.
+            </summary>
+        </member>
+        <member name="F:Microsoft.Teams.PowerShell.TeamsCmdlets.Constants.HierarchyConstants.OperationId">
+            <summary>
+            Attribute name for operation id in operation models for THS.
+            </summary>
+        </member>
+        <member name="F:Microsoft.Teams.PowerShell.TeamsCmdlets.Constants.HierarchyConstants.RequestId">
+            <summary>
+            Attribute name for request id for get status output.
+            </summary>
+        </member>
+        <member name="F:Microsoft.Teams.PowerShell.TeamsCmdlets.Constants.HierarchyConstants.CsvContentName">
+            <summary>
+            Name for the http content in upload csv requets.
+            </summary>
+        </member>
+        <member name="F:Microsoft.Teams.PowerShell.TeamsCmdlets.Constants.HierarchyConstants.CsvContentMediaType">
+            <summary>
+            Media type for the http content in upload csv requets.
+            </summary>
+        </member>
+        <member name="F:Microsoft.Teams.PowerShell.TeamsCmdlets.Constants.HierarchyConstants.HierarchyContentMediaType">
+            <summary>
+            Media type for the http content in hierarchy create requests.
+            </summary>
+        </member>
+        <member name="F:Microsoft.Teams.PowerShell.TeamsCmdlets.Constants.HierarchyConstants.HierarchyDisplayName">
+            <summary>
+            Hierarchy display name for new hierarchies.
+            </summary>
+        </member>
+        <member name="T:Microsoft.Teams.PowerShell.TeamsCmdlets.ErrorHandling.ApiException">
+            <summary>
+            API Exception
+            </summary>
+        </member>
+        <member name="P:Microsoft.Teams.PowerShell.TeamsCmdlets.ErrorHandling.ApiException.ErrorCode">
+            <summary>
+            Gets or sets the error code (HTTP status code)
+            </summary>
+            <value>The error code (HTTP status code).</value>
+        </member>
+        <member name="P:Microsoft.Teams.PowerShell.TeamsCmdlets.ErrorHandling.ApiException.ErrorContent">
+            <summary>
+            Gets or sets the error content (body json object)
+            </summary>
+            <value>The error content (Http response body).</value>
+        </member>
+        <member name="P:Microsoft.Teams.PowerShell.TeamsCmdlets.ErrorHandling.ApiException.GraphErrorCode">
+            <summary>
+            The Microsoft Graph error code
+            </summary>
+            <value>The error code from the MS Graph API call</value>
+        </member>
+        <member name="M:Microsoft.Teams.PowerShell.TeamsCmdlets.ErrorHandling.ApiException.#ctor">
+            <summary>
+            Initializes a new instance of the <see cref="T:Microsoft.Teams.PowerShell.TeamsCmdlets.ErrorHandling.ApiException"/> class.
+            </summary>
+        </member>
+        <member name="M:Microsoft.Teams.PowerShell.TeamsCmdlets.ErrorHandling.ApiException.#ctor(System.Int32,System.String)">
+            <summary>
+            Initializes a new instance of the <see cref="T:Microsoft.Teams.PowerShell.TeamsCmdlets.ErrorHandling.ApiException"/> class.
+            </summary>
+            <param name="errorCode">HTTP status code.</param>
+            <param name="message">Error message.</param>
+        </member>
+        <member name="M:Microsoft.Teams.PowerShell.TeamsCmdlets.ErrorHandling.ApiException.#ctor(System.Int32,System.String,System.String)">
+            <summary>
+            Initializes a new instance of the <see cref="T:Microsoft.Teams.PowerShell.TeamsCmdlets.ErrorHandling.ApiException"/> class.
+            </summary>
+            <param name="errorCode">HTTP status code.</param>
+            <param name="message">Error message.</param>
+            <param name="graphErrorCode">MSGraph error code.</param>
+        </member>
+        <member name="M:Microsoft.Teams.PowerShell.TeamsCmdlets.ErrorHandling.ApiException.#ctor(System.Int32,System.String,System.Object)">
+            <summary>
+            Initializes a new instance of the <see cref="T:Microsoft.Teams.PowerShell.TeamsCmdlets.ErrorHandling.ApiException"/> class.
+            </summary>
+            <param name="errorCode">HTTP status code.</param>
+            <param name="message">Error message.</param>
+            <param name="errorContent">Error content.</param>
+        </member>
+        <member name="M:Microsoft.Teams.PowerShell.TeamsCmdlets.ErrorHandling.ApiException.#ctor(System.Runtime.Serialization.SerializationInfo,System.Runtime.Serialization.StreamingContext)">
+            <summary>
+            Initializes a new instance of the <see cref="T:Microsoft.Teams.PowerShell.TeamsCmdlets.ErrorHandling.ApiException" /> class.
+            </summary>
+        </member>
+        <member name="M:Microsoft.Teams.PowerShell.TeamsCmdlets.ErrorHandling.DeserializeMSGraphApiErrorRoot.TryDeserializeMSGraphApiErrorRoot(System.Net.Http.HttpResponseMessage,Microsoft.Teams.PowerShell.TeamsCmdlets.ErrorHandling.MSGraphApiErrorRoot@)">
+            <summary>
+            Deserializes the http response string to MS Graph api error root.
+            </summary>
+            <param name="httpResponse">Http response</param>
+            <param name="result">MSGraphApiErrorRoot object</param>
+            <returns>True if deserialization succeeds, otherwise false.</returns>
+        </member>
+        <member name="M:Microsoft.Teams.PowerShell.TeamsCmdlets.ErrorHandling.DeserializeMSGraphApiErrorRoot.TryDeserializeMSGraphApiErrorRoot(System.String,Microsoft.Teams.PowerShell.TeamsCmdlets.ErrorHandling.MSGraphApiErrorRoot@)">
+            <summary>
+            Deserializes the http response string to MS Graph api error root.
+            </summary>
+            <param name="contentString">The content string</param>
+            <param name="result">MSGraphApiErrorRoot object</param>
+            <returns>True if deserialization succeeds, otherwise false.</returns>
+        </member>
+        <member name="T:Microsoft.Teams.PowerShell.TeamsCmdlets.ErrorHandling.DeserializeSubstrateApiErrorRoot">
+            <summary>
+            Root class for DeserializeSubstrate API Error.
+            </summary>
+        </member>
+        <member name="M:Microsoft.Teams.PowerShell.TeamsCmdlets.ErrorHandling.DeserializeSubstrateApiErrorRoot.TryDeserializeSubstrateApiErrorRoot(System.Net.Http.HttpResponseMessage,Microsoft.Teams.PowerShell.TeamsCmdlets.ErrorHandling.SubstrateApiErrorRoot@)">
+            <summary>
+            Deserializes the http response string to Substrate api error root.
+            </summary>
+            <param name="httpResponse">Http response</param>
+            <param name="result">SubstrateErrorRoot object</param>
+            <returns>True if deserialization succeeds, otherwise false.</returns>
+        </member>
+        <member name="M:Microsoft.Teams.PowerShell.TeamsCmdlets.ErrorHandling.DeserializeSubstrateApiErrorRoot.TryDeserializeSubstrateApiErrorRoot(System.String,Microsoft.Teams.PowerShell.TeamsCmdlets.ErrorHandling.SubstrateApiErrorRoot@)">
+            <summary>
+            Deserializes the http response string to Substrate api error root.
+            </summary>
+            <param name="contentString">The content string</param>
+            <param name="result">SubstrateApiErrorRoot object</param>
+            <returns>True if deserialization succeeds, otherwise false.</returns>
+        </member>
+        <member name="M:Microsoft.Teams.PowerShell.TeamsCmdlets.ErrorHandling.DeserializeSubstrateApiErrorRoot.GetResponseDisplayString(Microsoft.Teams.PowerShell.TeamsCmdlets.ErrorHandling.SubstrateApiErrorRoot)">
+            <summary>
+            Get the display string for the response.
+            </summary>
+            <param name="substrateError"> Substrate error generated.</param>
+            <returns>error string for the display.</returns>
+        </member>
+        <member name="T:Microsoft.Teams.PowerShell.TeamsCmdlets.ErrorHandling.MSGraphApiErrorRoot">
+            <summary>
+            Root class for MS Graph API Error.
+            For more information go to https://graph.microsoft.io/en-us/docs/overview/errors
+            </summary>
+        </member>
+        <member name="T:Microsoft.Teams.PowerShell.TeamsCmdlets.ErrorHandling.MSGraphApiInnerError">
+            <summary>
+            InnerError class for MS Graph API Error.
+            For more information go to https://graph.microsoft.io/en-us/docs/overview/errors
+            </summary>
+        </member>
+        <member name="T:Microsoft.Teams.PowerShell.TeamsCmdlets.ErrorHandling.SubstrateApiError">
+            <summary>
+            Substrate API Error class.
+            </summary>
+        </member>
+        <member name="P:Microsoft.Teams.PowerShell.TeamsCmdlets.ErrorHandling.SubstrateApiError.Code">
+            <summary>
+            Code for the error.
+            </summary>
+        </member>
+        <member name="P:Microsoft.Teams.PowerShell.TeamsCmdlets.ErrorHandling.SubstrateApiError.Message">
+            <summary>
+            Message for the error.
+            </summary>
+        </member>
+        <member name="P:Microsoft.Teams.PowerShell.TeamsCmdlets.ErrorHandling.SubstrateApiError.InnerError">
+            <summary>
+            Inner error object.
+            </summary>
+        </member>
+        <member name="T:Microsoft.Teams.PowerShell.TeamsCmdlets.ErrorHandling.SubstrateApiErrorRoot">
+            <summary>
+            Root class for Substrate API Error.
+            </summary>
+        </member>
+        <member name="P:Microsoft.Teams.PowerShell.TeamsCmdlets.ErrorHandling.SubstrateApiErrorRoot.Error">
+            <summary>
+            Error object.
+            </summary>
+        </member>
+        <member name="T:Microsoft.Teams.PowerShell.TeamsCmdlets.ErrorHandling.SubstrateApiInnerError">
+            <summary>
+            InnerError class for Substrate API Error.
+            </summary>
+        </member>
+        <member name="P:Microsoft.Teams.PowerShell.TeamsCmdlets.ErrorHandling.SubstrateApiInnerError.RequestId">
+            <summary>
+            Request ID for the error.
+            </summary>
+        </member>
+        <member name="P:Microsoft.Teams.PowerShell.TeamsCmdlets.ErrorHandling.SubstrateApiInnerError.Date">
+            <summary>
+            Date 
+            </summary>
+        </member>
+        <member name="T:Microsoft.Teams.PowerShell.TeamsCmdlets.GetAssociatedTeam">
+            <summary>
+            Cmdlet to list teams where the user is direct member or 
+            indirect member because they are part of a shared channel 
+            that is hosted under the team.
+            </summary>
+        </member>
+        <member name="M:Microsoft.Teams.PowerShell.TeamsCmdlets.GetAssociatedTeam.#ctor">
+            <summary>
+            Default constructor necessary for cmdlet.
+            </summary>
+        </member>
+        <member name="M:Microsoft.Teams.PowerShell.TeamsCmdlets.GetAssociatedTeam.#ctor(Microsoft.TeamsCmdlets.Powershell.Connect.Common.IHttpClientFactory)">
+            <summary>
+            Constructor with an implementation of <see cref="T:Microsoft.TeamsCmdlets.Powershell.Connect.Common.IHttpClientFactory" />.
+            Creates an instance of <see cref="T:Microsoft.Teams.PowerShell.TeamsCmdlets.GetAssociatedTeam" />
+            </summary>
+            <param name="httpClientFactory"></param>
+        </member>
+        <member name="P:Microsoft.Teams.PowerShell.TeamsCmdlets.GetAssociatedTeam.CmdletName">
+            <summary>
+            The name of cmdlet.
+            </summary>
+        </member>
+        <member name="P:Microsoft.Teams.PowerShell.TeamsCmdlets.GetAssociatedTeam.User">
+            <summary>
+            User id or email.
+            </summary>
+        </member>
+        <member name="M:Microsoft.Teams.PowerShell.TeamsCmdlets.GetAssociatedTeam.ProcessRecord">
+            <summary>
+            Process record.
+            </summary>
+        </member>
+        <member name="M:Microsoft.Teams.PowerShell.TeamsCmdlets.GetAssociatedTeam.GetUserId(System.Net.Http.HttpClient)">
+            <summary>
+            Returns the userId if the input is a id else fetch userId by making graph api call.
+            </summary>
+        </member>
+        <member name="T:Microsoft.Teams.PowerShell.TeamsCmdlets.GetLicenseReportForChangeNotificationSubscription">
+            <summary>
+            Cmdlet to get Teams usage report for users in a tenant, particularly messages sent per user, as well as a check on
+            whether each user has the appropriate DLP license SKU.
+            </summary>
+        </member>
+        <member name="M:Microsoft.Teams.PowerShell.TeamsCmdlets.GetLicenseReportForChangeNotificationSubscription.#ctor">
+            <summary>
+            Default constructor necessary for cmdlet.
+            </summary>
+        </member>
+        <member name="M:Microsoft.Teams.PowerShell.TeamsCmdlets.GetLicenseReportForChangeNotificationSubscription.#ctor(Microsoft.TeamsCmdlets.Powershell.Connect.Common.IHttpClientFactory)">
+            <summary>
+            Constructor with an implementation of <see cref="T:Microsoft.TeamsCmdlets.Powershell.Connect.Common.IHttpClientFactory" />.
+            Creates an instance of <see cref="T:Microsoft.Teams.PowerShell.TeamsCmdlets.GetLicenseReportForChangeNotificationSubscription" />
+            </summary>
+            <param name="httpClientFactory"></param>
+        </member>
+        <member name="P:Microsoft.Teams.PowerShell.TeamsCmdlets.GetLicenseReportForChangeNotificationSubscription.CmdletName">
+            <summary>
+            Name of the cmdlet.
+            </summary>
+        </member>
+        <member name="P:Microsoft.Teams.PowerShell.TeamsCmdlets.GetLicenseReportForChangeNotificationSubscription.Period">
+            <summary>
+            Indicates the period over which this usage report is generated.
+            </summary>
+        </member>
+        <member name="M:Microsoft.Teams.PowerShell.TeamsCmdlets.GetLicenseReportForChangeNotificationSubscription.FetchUserLicenseDetails(System.Collections.Generic.IEnumerable{Microsoft.Teams.PowerShell.TeamsCmdlets.Model.TeamsUserActivityUserDetail},System.Net.Http.HttpClient)">
+            <summary>
+            Fetches user license details given the available Teams usage data for the users in a tenant.
+            </summary>
+            <param name="teamsUserActivityUserDetails">The Teams user activity details.</param>
+            <param name="httpClient">The http client.</param>
+            <returns>The user license details for the users.</returns>
+            <returns>A collection of error strings if any calls to get license details fails.</returns>
+        </member>
+        <member name="M:Microsoft.Teams.PowerShell.TeamsCmdlets.GetLicenseReportForChangeNotificationSubscription.BatchFetchUserLicenseDetails(System.Net.Http.HttpClient,System.Collections.Generic.IEnumerable{Microsoft.Teams.PowerShell.TeamsCmdlets.Model.TeamsUserActivityUserDetail})">
+            <summary>
+            Fetches the user license details for a batch of users (max 20 due to Graph $batch limits).
+            </summary>
+            <param name="httpClient">The HTTP client.</param>
+            <param name="teamsUserActivityUserDetailsBatch">The batch of Teams user activity details for which the UPN is extracted to retrieve license details.</param>
+            <returns>A dictionary of licenses mapping UPN to license details.</returns>
+            <returns>A collection of error strings containing error messages if any individual call within the $batch call fails.</returns>
+        </member>
+        <member name="M:Microsoft.Teams.PowerShell.TeamsCmdlets.GetLicenseReportForChangeNotificationSubscription.GenerateDlpUserLicenseReports(System.Collections.Generic.IEnumerable{Microsoft.Teams.PowerShell.TeamsCmdlets.Model.TeamsUserActivityUserDetail},System.Collections.Generic.IEnumerable{Microsoft.Teams.PowerShell.TeamsCmdlets.Model.AadUser},System.Collections.Generic.IDictionary{System.String,System.Collections.Generic.IEnumerable{Microsoft.Teams.PowerShell.TeamsCmdlets.Model.LicenseDetails}})">
+            <summary>
+            Given the Teams user activity details, AAD user details, and a mapping from UPN to license details, generates a collection of DlpUserLicenseReports.
+            </summary>
+            <param name="teamsUserActivityUserDetails">The Teams user activity details.</param>
+            <param name="userDetails">The AAD user details for the tenant.</param>
+            <param name="upnToLicenseDetailsDictionary">The user UPN to license details dictionary.</param>
+            <returns>A collection of DlpUserLicenseReports.</returns>
+        </member>
+        <member name="M:Microsoft.Teams.PowerShell.TeamsCmdlets.GetMultiGeoRegion.#ctor">
+            <summary>
+            Default constructor necessary for cmdlet.
+            </summary>
+        </member>
+        <member name="T:Microsoft.Teams.PowerShell.TeamsCmdlets.GetSharedWithTeam">
+            <summary>
+            Represents a cmdlet to list teams with which specified channel is shared.
+            </summary>
+        </member>
+        <member name="M:Microsoft.Teams.PowerShell.TeamsCmdlets.GetSharedWithTeam.#ctor">
+            <summary>
+            Initializes a new instance of <see cref="T:Microsoft.Teams.PowerShell.TeamsCmdlets.GetSharedWithTeam"/>.
+            </summary>
+        </member>
+        <member name="M:Microsoft.Teams.PowerShell.TeamsCmdlets.GetSharedWithTeam.#ctor(Microsoft.TeamsCmdlets.Powershell.Connect.Common.IHttpClientFactory)">
+            <summary>
+            Initializes a new instance of <see cref="T:Microsoft.Teams.PowerShell.TeamsCmdlets.GetSharedWithTeam"/> with an implementation of <see cref="T:Microsoft.TeamsCmdlets.Powershell.Connect.Common.IHttpClientFactory"/>.
+            </summary>
+            <param name="httpClientFactory">The http client factory.</param>
+        </member>
+        <member name="P:Microsoft.Teams.PowerShell.TeamsCmdlets.GetSharedWithTeam.CmdletName">
+            <summary>
+            The name of the cmdlet.
+            </summary>
+        </member>
+        <member name="P:Microsoft.Teams.PowerShell.TeamsCmdlets.GetSharedWithTeam.HostTeamId">
+            <summary>
+            The AAD group id of the host team.
+            </summary>
+        </member>
+        <member name="P:Microsoft.Teams.PowerShell.TeamsCmdlets.GetSharedWithTeam.ChannelId">
+            <summary>
+            The thread id of the channel.
+            </summary>
+        </member>
+        <member name="P:Microsoft.Teams.PowerShell.TeamsCmdlets.GetSharedWithTeam.SharedWithTeamId">
+            <summary>
+            The AAD group id of the shared with team.
+            </summary>
+        </member>
+        <member name="M:Microsoft.Teams.PowerShell.TeamsCmdlets.GetSharedWithTeam.ProcessRecord">
+            <inheritdoc/>
+        </member>
+        <member name="T:Microsoft.Teams.PowerShell.TeamsCmdlets.GetSharedWithTeamUser">
+            <summary>
+            Represents a cmdlet to list users of a shared with team.
+            </summary>
+        </member>
+        <member name="M:Microsoft.Teams.PowerShell.TeamsCmdlets.GetSharedWithTeamUser.#ctor">
+            <summary>
+            Initializes a new instance of <see cref="T:Microsoft.Teams.PowerShell.TeamsCmdlets.GetSharedWithTeamUser" />.
+            </summary>
+        </member>
+        <member name="M:Microsoft.Teams.PowerShell.TeamsCmdlets.GetSharedWithTeamUser.#ctor(Microsoft.TeamsCmdlets.Powershell.Connect.Common.IHttpClientFactory)">
+            <summary>
+            Initializes a new instance of <see cref="T:Microsoft.Teams.PowerShell.TeamsCmdlets.GetSharedWithTeamUser" /> with an implementation of <see cref="T:Microsoft.TeamsCmdlets.Powershell.Connect.Common.IHttpClientFactory" />.
+            </summary>
+            <param name="httpClientFactory">The http client factory.</param>
+        </member>
+        <member name="P:Microsoft.Teams.PowerShell.TeamsCmdlets.GetSharedWithTeamUser.CmdletName">
+            <summary>
+            The name of the cmdlet.
+            </summary>
+        </member>
+        <member name="P:Microsoft.Teams.PowerShell.TeamsCmdlets.GetSharedWithTeamUser.HostTeamId">
+            <summary>
+            The AAD group id of the host team.
+            </summary>
+        </member>
+        <member name="P:Microsoft.Teams.PowerShell.TeamsCmdlets.GetSharedWithTeamUser.ChannelId">
+            <summary>
+            The thread id of the channel.
+            </summary>
+        </member>
+        <member name="P:Microsoft.Teams.PowerShell.TeamsCmdlets.GetSharedWithTeamUser.SharedWithTeamId">
+            <summary>
+            The AAD group id of the shared with team.
+            </summary>
+        </member>
+        <member name="P:Microsoft.Teams.PowerShell.TeamsCmdlets.GetSharedWithTeamUser.Role">
+            <summary>
+            The role of the users.
+            </summary>
+        </member>
+        <member name="M:Microsoft.Teams.PowerShell.TeamsCmdlets.GetSharedWithTeamUser.ProcessRecord">
+            <inheritdoc/>
+        </member>
+        <member name="M:Microsoft.Teams.PowerShell.TeamsCmdlets.GetTeam.#ctor">
+            <summary>
+            Default constructor necessary for cmdlet.
+            </summary>
+        </member>
+        <member name="M:Microsoft.Teams.PowerShell.TeamsCmdlets.GetTeam.#ctor(Microsoft.TeamsCmdlets.Powershell.Connect.Common.IHttpClientFactory)">
+            <summary>
+            Constructor with an implementation of <see cref="T:Microsoft.TeamsCmdlets.Powershell.Connect.Common.IHttpClientFactory" />.
+            Creates an instance of <see cref="T:Microsoft.Teams.PowerShell.TeamsCmdlets.GetTeam" />
+            </summary>
+            <param name="httpClientFactory"></param>
+        </member>
+        <member name="M:Microsoft.Teams.PowerShell.TeamsCmdlets.GetTeam.GetTeamProperties(System.Collections.Generic.List{Microsoft.Teams.PowerShell.TeamsCmdlets.Model.Team},System.Int32,System.Boolean)">
+            <summary>
+            Takes in the groups, divides the groups by batch size and sends the batch to be processed in parallel
+            If GetNextTeamBatch returns False for shouldContinue, then stop processing
+            </summary>
+            <param name="batchNumber">Current batch number to process</param>
+            <param name="groups">List of groups to process</param>
+            <returns>List of team data; List of error messages</returns>
+        </member>
+        <member name="M:Microsoft.Teams.PowerShell.TeamsCmdlets.GetTeam.GetNextTeamBatch(System.Collections.Generic.List{Microsoft.Teams.PowerShell.TeamsCmdlets.Model.Team})">
+            <summary>
+            Retrieves team properties using Graph Batch API.
+            </summary>
+            <param name="nextGroupBatch">List of groups to process</param>
+            <returns>List of team data</returns>
+            <returns>List of error messages from trying to get team data</returns>
+        </member>
+        <member name="T:Microsoft.Teams.PowerShell.TeamsCmdlets.GetTeamAllChannel">
+            <summary>
+            Represents a cmdlet to list all channels of a team, including incoming channels and channels hosted by the team.
+            </summary>
+        </member>
+        <member name="M:Microsoft.Teams.PowerShell.TeamsCmdlets.GetTeamAllChannel.#ctor">
+            <summary>
+            Initializes a new instance of <see cref="T:Microsoft.Teams.PowerShell.TeamsCmdlets.GetTeamAllChannel" />.
+            </summary>
+        </member>
+        <member name="M:Microsoft.Teams.PowerShell.TeamsCmdlets.GetTeamAllChannel.#ctor(Microsoft.TeamsCmdlets.Powershell.Connect.Common.IHttpClientFactory)">
+            <summary>
+            Initializes a new instance of <see cref="T:Microsoft.Teams.PowerShell.TeamsCmdlets.GetTeamAllChannel" /> with an implementation of <see cref="T:Microsoft.TeamsCmdlets.Powershell.Connect.Common.IHttpClientFactory" />.
+            </summary>
+            <param name="httpClientFactory">The http client factory.</param>
+        </member>
+        <member name="P:Microsoft.Teams.PowerShell.TeamsCmdlets.GetTeamAllChannel.CmdletName">
+            <summary>
+            The name of the cmdlet.
+            </summary>
+        </member>
+        <member name="P:Microsoft.Teams.PowerShell.TeamsCmdlets.GetTeamAllChannel.GroupId">
+            <summary>
+            The AAD group id of the team.
+            </summary>
+        </member>
+        <member name="P:Microsoft.Teams.PowerShell.TeamsCmdlets.GetTeamAllChannel.MembershipType">
+            <summary>
+            The membership type of the channels.
+            </summary>
+        </member>
+        <member name="M:Microsoft.Teams.PowerShell.TeamsCmdlets.GetTeamAllChannel.ProcessRecord">
+            <inheritdoc/>
+        </member>
+        <member name="M:Microsoft.Teams.PowerShell.TeamsCmdlets.GetTeamChannel.#ctor">
+            <summary>
+            Default constructor necessary for cmdlet.
+            </summary>
+        </member>
+        <member name="M:Microsoft.Teams.PowerShell.TeamsCmdlets.GetTeamChannel.#ctor(Microsoft.TeamsCmdlets.Powershell.Connect.Common.IHttpClientFactory)">
+            <summary>
+            Constructor with an implementation of <see cref="T:Microsoft.TeamsCmdlets.Powershell.Connect.Common.IHttpClientFactory" />.
+            Creates an instance of <see cref="T:Microsoft.Teams.PowerShell.TeamsCmdlets.GetTeamChannel" />
+            </summary>
+            <param name="httpClientFactory"></param>
+        </member>
+        <member name="T:Microsoft.Teams.PowerShell.TeamsCmdlets.GetTeamChannelUser">
+            <summary>
+            Represents a cmdlet to list users of a channel.
+            </summary>
+        </member>
+        <member name="M:Microsoft.Teams.PowerShell.TeamsCmdlets.GetTeamChannelUser.#ctor">
+            <summary>
+            Initializes a new instance of <see cref="T:Microsoft.Teams.PowerShell.TeamsCmdlets.GetTeamChannelUser" />.
+            </summary>
+        </member>
+        <member name="M:Microsoft.Teams.PowerShell.TeamsCmdlets.GetTeamChannelUser.#ctor(Microsoft.TeamsCmdlets.Powershell.Connect.Common.IHttpClientFactory)">
+            <summary>
+            Initializes a new instance of <see cref="T:Microsoft.Teams.PowerShell.TeamsCmdlets.GetTeamChannelUser" /> with an implementation of <see cref="T:Microsoft.TeamsCmdlets.Powershell.Connect.Common.IHttpClientFactory" />.
+            </summary>
+            <param name="httpClientFactory">The http client factory.</param>
+        </member>
+        <member name="P:Microsoft.Teams.PowerShell.TeamsCmdlets.GetTeamChannelUser.CmdletName">
+            <summary>
+            The name of the cmdlet.
+            </summary>
+        </member>
+        <member name="P:Microsoft.Teams.PowerShell.TeamsCmdlets.GetTeamChannelUser.GroupId">
+            <summary>
+            The AAD group id of the team.
+            </summary>
+        </member>
+        <member name="P:Microsoft.Teams.PowerShell.TeamsCmdlets.GetTeamChannelUser.DisplayName">
+            <summary>
+            The display name.
+            </summary>
+        </member>
+        <member name="P:Microsoft.Teams.PowerShell.TeamsCmdlets.GetTeamChannelUser.Role">
+            <summary>
+            The role of the users.
+            </summary>
+        </member>
+        <member name="M:Microsoft.Teams.PowerShell.TeamsCmdlets.GetTeamChannelUser.ProcessRecord">
+            <inheritdoc/>
+        </member>
+        <member name="T:Microsoft.Teams.PowerShell.TeamsCmdlets.GetTeamIncomingChannel">
+            <summary>
+            Represents a cmdlet to list incoming channels of a team.
+            </summary>
+        </member>
+        <member name="M:Microsoft.Teams.PowerShell.TeamsCmdlets.GetTeamIncomingChannel.#ctor">
+            <summary>
+            Initializes a new instance of <see cref="T:Microsoft.Teams.PowerShell.TeamsCmdlets.GetTeamIncomingChannel" />.
+            </summary>
+        </member>
+        <member name="M:Microsoft.Teams.PowerShell.TeamsCmdlets.GetTeamIncomingChannel.#ctor(Microsoft.TeamsCmdlets.Powershell.Connect.Common.IHttpClientFactory)">
+            <summary>
+            Initializes a new instance of <see cref="T:Microsoft.Teams.PowerShell.TeamsCmdlets.GetTeamIncomingChannel" /> with an implementation of <see cref="T:Microsoft.TeamsCmdlets.Powershell.Connect.Common.IHttpClientFactory" />.
+            </summary>
+            <param name="httpClientFactory">The http client factory.</param>
+        </member>
+        <member name="P:Microsoft.Teams.PowerShell.TeamsCmdlets.GetTeamIncomingChannel.CmdletName">
+            <summary>
+            The name of the cmdlet.
+            </summary>
+        </member>
+        <member name="P:Microsoft.Teams.PowerShell.TeamsCmdlets.GetTeamIncomingChannel.GroupId">
+            <summary>
+            The AAD group id of the team.
+            </summary>
+        </member>
+        <member name="M:Microsoft.Teams.PowerShell.TeamsCmdlets.GetTeamIncomingChannel.ProcessRecord">
+            <inheritdoc/>
+        </member>
+        <member name="M:Microsoft.Teams.PowerShell.TeamsCmdlets.GetTeamsApp.#ctor">
+            <summary>
+            Default constructor necessary for cmdlet.
+            </summary>
+        </member>
+        <member name="M:Microsoft.Teams.PowerShell.TeamsCmdlets.GetTeamsApp.#ctor(Microsoft.TeamsCmdlets.Powershell.Connect.Common.IHttpClientFactory)">
+            <summary>
+            Constructor with an implementation of <see cref="T:Microsoft.TeamsCmdlets.Powershell.Connect.Common.IHttpClientFactory" />.
+            Creates an instance of <see cref="T:Microsoft.Teams.PowerShell.TeamsCmdlets.GetTeamsApp" />
+            </summary>
+            <param name="httpClientFactory"></param>
+        </member>
+        <member name="T:Microsoft.Teams.PowerShell.TeamsCmdlets.GetTeamsAppInstallation">
+            <summary>
+                cmdlet to get a Teams App installed in MS Teams.
+            </summary>
+        </member>
+        <member name="M:Microsoft.Teams.PowerShell.TeamsCmdlets.GetTeamsAppInstallation.#ctor">
+            <summary>
+                Default constructor necessary for cmdlet.
+            </summary>
+        </member>
+        <member name="M:Microsoft.Teams.PowerShell.TeamsCmdlets.GetTeamsAppInstallation.#ctor(Microsoft.TeamsCmdlets.Powershell.Connect.Common.IHttpClientFactory)">
+            <summary>
+                Constructor with an implementation of <see cref="T:Microsoft.TeamsCmdlets.Powershell.Connect.Common.IHttpClientFactory" />.
+                Creates an instance of <see cref="T:Microsoft.Teams.PowerShell.TeamsCmdlets.GetTeamsAppInstallation" />
+            </summary>
+            <param name="httpClientFactory"></param>
+        </member>
+        <member name="P:Microsoft.Teams.PowerShell.TeamsCmdlets.GetTeamsAppInstallation.CmdletName">
+            <summary>
+                Name of the cmdlet.
+            </summary>
+        </member>
+        <member name="P:Microsoft.Teams.PowerShell.TeamsCmdlets.GetTeamsAppInstallation.TeamId">
+            <summary>
+                Team identifier in MS Teams.
+            </summary>
+        </member>
+        <member name="P:Microsoft.Teams.PowerShell.TeamsCmdlets.GetTeamsAppInstallation.UserId">
+            <summary>
+                User identifier in MS Teams.
+            </summary>
+        </member>
+        <member name="P:Microsoft.Teams.PowerShell.TeamsCmdlets.GetTeamsAppInstallation.AppInstallationId">
+            <summary>
+                Installation identifier of the Teams App.
+            </summary>
+        </member>
+        <member name="P:Microsoft.Teams.PowerShell.TeamsCmdlets.GetTeamsAppInstallation.AppId">
+            <summary>
+                Teams App identifier in MS Teams.
+            </summary>
+        </member>
+        <member name="M:Microsoft.Teams.PowerShell.TeamsCmdlets.GetTeamTargetingHierarchyStatus.#ctor">
+            <summary>
+            Default constructor necessary for cmdlet.
+            </summary>
+        </member>
+        <member name="M:Microsoft.Teams.PowerShell.TeamsCmdlets.GetTeamTargetingHierarchyStatus.#ctor(Microsoft.TeamsCmdlets.Powershell.Connect.Common.IHttpClientFactory)">
+            <summary>
+            Constructor with an implementation of <see cref="T:Microsoft.TeamsCmdlets.Powershell.Connect.Common.IHttpClientFactory" />.
+            Creates an instance of <see cref="T:Microsoft.Teams.PowerShell.TeamsCmdlets.GetTeamTargetingHierarchyStatus" />
+            </summary>
+            <param name="httpClientFactory"></param>
+        </member>
+        <member name="P:Microsoft.Teams.PowerShell.TeamsCmdlets.GetTeamTargetingHierarchyStatus.CmdletName">
+            <summary>
+            Name of the Cmdlet.
+            </summary>
+        </member>
+        <member name="P:Microsoft.Teams.PowerShell.TeamsCmdlets.GetTeamTargetingHierarchyStatus.RequestId">
+            <summary>
+            Id for the request instance of an upload operation.
+            </summary>
+        </member>
+        <member name="P:Microsoft.Teams.PowerShell.TeamsCmdlets.GetTeamTargetingHierarchyStatus.ApiVersion">
+            <summary>
+            Version of the api service endpoints that will be used.
+            </summary>
+        </member>
+        <member name="M:Microsoft.Teams.PowerShell.TeamsCmdlets.GetTeamUser.#ctor">
+            <summary>
+            Default constructor necessary for cmdlet.
+            </summary>
+        </member>
+        <member name="M:Microsoft.Teams.PowerShell.TeamsCmdlets.GetTeamUser.#ctor(Microsoft.TeamsCmdlets.Powershell.Connect.Common.IHttpClientFactory)">
+            <summary>
+            Constructor with an implementation of <see cref="T:Microsoft.TeamsCmdlets.Powershell.Connect.Common.IHttpClientFactory" />.
+            Creates an instance of <see cref="T:Microsoft.Teams.PowerShell.TeamsCmdlets.GetTeamUser" />
+            </summary>
+            <param name="httpClientFactory"></param>
+        </member>
+        <member name="T:Microsoft.Teams.PowerShell.TeamsCmdlets.GetTenantSettings">
+            <summary>
+            Get the Unified App from UAM service.
+            </summary>
+        </member>
+        <member name="M:Microsoft.Teams.PowerShell.TeamsCmdlets.GetTenantSettings.#ctor">
+            <summary>
+            Default Constructor
+            </summary>
+        </member>
+        <member name="M:Microsoft.Teams.PowerShell.TeamsCmdlets.GetTenantSettings.#ctor(Microsoft.TeamsCmdlets.Powershell.Connect.Common.IHttpClientFactory)">
+            <summary>
+            Constructor with an implementation of <see cref="T:Microsoft.TeamsCmdlets.Powershell.Connect.Common.IHttpClientFactory" />.
+            Creates an instance of <see cref="T:Microsoft.Teams.PowerShell.TeamsCmdlets.GetUnifiedApp" />
+            </summary>
+            <param name="httpClientFactory"></param>
+        </member>
+        <member name="P:Microsoft.Teams.PowerShell.TeamsCmdlets.GetTenantSettings.SettingNames">
+            <summary>
+            get specific app settings: DefaultApp, GlobalApp, PrivateApp, EnableCopilotExtensibility
+            </summary>
+        </member>
+        <member name="T:Microsoft.Teams.PowerShell.TeamsCmdlets.GetUnifiedApp">
+            <summary>
+            Get the Unified App from UAM service.
+            </summary>
+        </member>
+        <member name="M:Microsoft.Teams.PowerShell.TeamsCmdlets.GetUnifiedApp.#ctor">
+            <summary>
+            Default Constructor
+            </summary>
+        </member>
+        <member name="M:Microsoft.Teams.PowerShell.TeamsCmdlets.GetUnifiedApp.#ctor(Microsoft.TeamsCmdlets.Powershell.Connect.Common.IHttpClientFactory)">
+            <summary>
+            Constructor with an implementation of <see cref="T:Microsoft.TeamsCmdlets.Powershell.Connect.Common.IHttpClientFactory" />.
+            Creates an instance of <see cref="T:Microsoft.Teams.PowerShell.TeamsCmdlets.GetUnifiedApp" />
+            </summary>
+            <param name="httpClientFactory"></param>
+        </member>
+        <member name="P:Microsoft.Teams.PowerShell.TeamsCmdlets.GetUnifiedApp.Id">
+            <summary>
+            The Id of the app to get.
+            </summary>
+        </member>
+        <member name="T:Microsoft.Teams.PowerShell.TeamsCmdlets.GetUnifiedApps">
+            <summary>
+            Gets all unified apps from UAM service.
+            </summary>
+        </member>
+        <member name="M:Microsoft.Teams.PowerShell.TeamsCmdlets.GetUnifiedApps.#ctor">
+            <summary>
+            Default Constructor
+            </summary>
+        </member>
+        <member name="M:Microsoft.Teams.PowerShell.TeamsCmdlets.GetUnifiedApps.#ctor(Microsoft.TeamsCmdlets.Powershell.Connect.Common.IHttpClientFactory)">
+            <summary>
+            Constructor with an implementation of <see cref="T:Microsoft.TeamsCmdlets.Powershell.Connect.Common.IHttpClientFactory" />.
+            Creates an instance of <see cref="T:Microsoft.Teams.PowerShell.TeamsCmdlets.GetUnifiedApp" />
+            </summary>
+            <param name="httpClientFactory"></param>
+        </member>
+        <member name="T:Microsoft.Teams.PowerShell.TeamsCmdlets.GetUnifiedStagedApps">
+            <summary>
+            Gets all unified apps from UAM service.
+            </summary>
+        </member>
+        <member name="M:Microsoft.Teams.PowerShell.TeamsCmdlets.GetUnifiedStagedApps.#ctor">
+            <summary>
+            Default Constructor
+            </summary>
+        </member>
+        <member name="M:Microsoft.Teams.PowerShell.TeamsCmdlets.GetUnifiedStagedApps.#ctor(Microsoft.TeamsCmdlets.Powershell.Connect.Common.IHttpClientFactory)">
+            <summary>
+            Constructor with an implementation of <see cref="T:Microsoft.TeamsCmdlets.Powershell.Connect.Common.IHttpClientFactory" />.
+            Creates an instance of <see cref="T:Microsoft.Teams.PowerShell.TeamsCmdlets.GetUnifiedApp" />
+            </summary>
+            <param name="httpClientFactory"></param>
+        </member>
+        <member name="P:Microsoft.Teams.PowerShell.TeamsCmdlets.Model.AadUser.AccountEnabled">
+            <summary>
+            Gets or sets a value indicating whether [account enabled].
+            </summary>
+        </member>
+        <member name="P:Microsoft.Teams.PowerShell.TeamsCmdlets.Model.AadUser.Description">
+            <summary>
+            Description for the user
+            </summary>
+        </member>
+        <member name="P:Microsoft.Teams.PowerShell.TeamsCmdlets.Model.AadUser.DisplayName">
+            <summary>
+            Gets or sets the display name.
+            </summary>
+        </member>
+        <member name="P:Microsoft.Teams.PowerShell.TeamsCmdlets.Model.AadUser.Email">
+            <summary>
+            Gets or sets the email.
+            </summary>
+        </member>
+        <member name="P:Microsoft.Teams.PowerShell.TeamsCmdlets.Model.AadUser.GivenName">
+            <summary>
+            Gets or sets the name of the given.
+            </summary>
+        </member>
+        <member name="P:Microsoft.Teams.PowerShell.TeamsCmdlets.Model.AadUser.Mail">
+            <summary>
+            Gets or sets the mail.
+            </summary>
+        </member>
+        <member name="P:Microsoft.Teams.PowerShell.TeamsCmdlets.Model.AadUser.Mri">
+            <summary>
+            User Mri - used for skype requests
+            </summary>
+        </member>
+        <member name="P:Microsoft.Teams.PowerShell.TeamsCmdlets.Model.AadUser.Id">
+            <summary>
+            Gets or sets the object identifier.
+            </summary>
+        </member>
+        <member name="P:Microsoft.Teams.PowerShell.TeamsCmdlets.Model.AadUser.ObjectType">
+            <summary>
+            Gets or sets the type of the object.
+            </summary>
+        </member>
+        <member name="P:Microsoft.Teams.PowerShell.TeamsCmdlets.Model.AadUser.Surname">
+            <summary>
+            Gets or sets the surname.
+            </summary>
+        </member>
+        <member name="P:Microsoft.Teams.PowerShell.TeamsCmdlets.Model.AadUser.TelephoneNumber">
+            <summary>
+            Gets or sets the telephone number.
+            </summary>
+        </member>
+        <member name="P:Microsoft.Teams.PowerShell.TeamsCmdlets.Model.AadUser.UserType">
+            <summary>
+            Gets or sets the type.
+            </summary>
+        </member>
+        <member name="P:Microsoft.Teams.PowerShell.TeamsCmdlets.Model.AadUser.UserPrincipalName">
+            <summary>
+            Gets or sets the name of the user principal.
+            </summary>
+        </member>
+        <member name="P:Microsoft.Teams.PowerShell.TeamsCmdlets.Model.AadUser.PreferredLanguage">
+            <summary>
+            Gets or sets the preferred language of the user.
+            </summary>
+        </member>
+        <member name="P:Microsoft.Teams.PowerShell.TeamsCmdlets.Model.BatchResponse`1.Responses">
+            <summary>
+            The response from the Batch request
+            </summary>
+        </member>
+        <member name="T:Microsoft.Teams.PowerShell.TeamsCmdlets.Model.Channel">
+            <summary>
+            Represents MS Graph channel source.
+            https://docs.microsoft.com/en-us/graph/api/resources/channel?view=graph-rest-beta
+            </summary>
+        </member>
+        <member name="P:Microsoft.Teams.PowerShell.TeamsCmdlets.Model.Channel.OdataId">
+            <summary>
+            The odata id.
+            </summary>
+        </member>
+        <member name="P:Microsoft.Teams.PowerShell.TeamsCmdlets.Model.Channel.Id">
+            <summary>
+            Channel id
+            </summary>
+        </member>
+        <member name="P:Microsoft.Teams.PowerShell.TeamsCmdlets.Model.Channel.DisplayName">
+            <summary>
+            Channel display name
+            </summary>
+        </member>
+        <member name="P:Microsoft.Teams.PowerShell.TeamsCmdlets.Model.Channel.Description">
+            <summary>
+            Channel description
+            </summary>
+        </member>
+        <member name="P:Microsoft.Teams.PowerShell.TeamsCmdlets.Model.Channel.MembershipType">
+            <summary>
+            Channel membership type
+            </summary>
+        </member>
+        <member name="P:Microsoft.Teams.PowerShell.TeamsCmdlets.Model.Channel.TenantId">
+            <summary>
+            The tenant id.
+            </summary>
+        </member>
+        <member name="T:Microsoft.Teams.PowerShell.TeamsCmdlets.Model.ChannelEnhancedInfo">
+            <summary>
+            Represents channel enhanced info used to model cmdlet response.
+            </summary>
+        </member>
+        <member name="M:Microsoft.Teams.PowerShell.TeamsCmdlets.Model.ChannelEnhancedInfo.#ctor">
+            <summary>
+            Initializes a new instance of the ChannelEnhancedInfo class.
+            </summary>
+        </member>
+        <member name="M:Microsoft.Teams.PowerShell.TeamsCmdlets.Model.ChannelEnhancedInfo.#ctor(Microsoft.Teams.PowerShell.TeamsCmdlets.Model.Channel)">
+            <summary>
+            Initializes a new instance of the ChannelEnhancedInfo class with an object of Channel class.
+            </summary>
+            <param name="channel">The graph channel object used to initialize the instance.</param>
+        </member>
+        <member name="P:Microsoft.Teams.PowerShell.TeamsCmdlets.Model.ChannelEnhancedInfo.Id">
+            <summary>
+            The thread id of the channel.
+            </summary>
+        </member>
+        <member name="P:Microsoft.Teams.PowerShell.TeamsCmdlets.Model.ChannelEnhancedInfo.DisplayName">
+            <summary>
+            The display name of the channel.
+            </summary>
+        </member>
+        <member name="P:Microsoft.Teams.PowerShell.TeamsCmdlets.Model.ChannelEnhancedInfo.Description">
+            <summary>
+            The description of the channel.
+            </summary>
+        </member>
+        <member name="P:Microsoft.Teams.PowerShell.TeamsCmdlets.Model.ChannelEnhancedInfo.MembershipType">
+            <summary>
+            The membership type of the channel.
+            </summary>
+        </member>
+        <member name="P:Microsoft.Teams.PowerShell.TeamsCmdlets.Model.ChannelEnhancedInfo.HostTeamId">
+            <summary>
+            The id of the host team.
+            </summary>
+        </member>
+        <member name="P:Microsoft.Teams.PowerShell.TeamsCmdlets.Model.ChannelEnhancedInfo.TenantId">
+            <summary>
+            The tenant id.
+            </summary>
+        </member>
+        <member name="T:Microsoft.Teams.PowerShell.TeamsCmdlets.Model.ChannelInfo">
+            <summary>
+            Represents channel basic info used to model cmdlet response.
+            </summary>
+        </member>
+        <member name="M:Microsoft.Teams.PowerShell.TeamsCmdlets.Model.ChannelInfo.#ctor">
+            <summary>
+            Initializes a new instance of the ChannelInfo class.
+            </summary>
+        </member>
+        <member name="M:Microsoft.Teams.PowerShell.TeamsCmdlets.Model.ChannelInfo.#ctor(Microsoft.Teams.PowerShell.TeamsCmdlets.Model.Channel)">
+            <summary>
+            Initializes a new instance of the ChannelInfo class with an object of Channel class.
+            </summary>
+            <param name="channel">The graph channel object used to initialize the instance.</param>
+        </member>
+        <member name="P:Microsoft.Teams.PowerShell.TeamsCmdlets.Model.ChannelInfo.Id">
+            <summary>
+            The thread id of the channel.
+            </summary>
+        </member>
+        <member name="P:Microsoft.Teams.PowerShell.TeamsCmdlets.Model.ChannelInfo.DisplayName">
+            <summary>
+            The display name of the channel.
+            </summary>
+        </member>
+        <member name="P:Microsoft.Teams.PowerShell.TeamsCmdlets.Model.ChannelInfo.Description">
+            <summary>
+            The description of the channel.
+            </summary>
+        </member>
+        <member name="P:Microsoft.Teams.PowerShell.TeamsCmdlets.Model.ChannelInfo.MembershipType">
+            <summary>
+            The membership type of the channel.
+            </summary>
+        </member>
+        <member name="T:Microsoft.Teams.PowerShell.TeamsCmdlets.Model.DlpUserLicenseReport">
+            <summary>
+            Class representing the Dlp User License report for a Teams user.
+            </summary>
+        </member>
+        <member name="P:Microsoft.Teams.PowerShell.TeamsCmdlets.Model.DlpUserLicenseReport.UserPrincipalName">
+            <summary>
+            Gets or sets the UPN of the user for this report.
+            </summary>
+        </member>
+        <member name="P:Microsoft.Teams.PowerShell.TeamsCmdlets.Model.DlpUserLicenseReport.DisplayName">
+            <summary>
+            Gets or sets the display name of the user.
+            </summary>
+        </member>
+        <member name="P:Microsoft.Teams.PowerShell.TeamsCmdlets.Model.DlpUserLicenseReport.NumberOfMessagesSent">
+            <summary>
+            Gets or sets the number of messages sent by the user.
+            </summary>
+        </member>
+        <member name="P:Microsoft.Teams.PowerShell.TeamsCmdlets.Model.DlpUserLicenseReport.HasRequiredLicensePlan">
+            <summary>
+            Gets or sets a boolean string describing whether or not a user is licensed by a Microsoft DLP license plan.
+            </summary>
+        </member>
+        <member name="T:Microsoft.Teams.PowerShell.TeamsCmdlets.Model.EntityType">
+            <summary>
+            EnityType
+            </summary>
+        </member>
+        <member name="T:Microsoft.Teams.PowerShell.TeamsCmdlets.Model.GiphyRatingType">
+            <summary>
+            Team giphy rating setting
+            </summary>
+        </member>
+        <member name="T:Microsoft.Teams.PowerShell.TeamsCmdlets.Model.GraphAadUserConversationMember">
+            <summary>
+            Represents a model of conversation member.
+            </summary>
+        </member>
+        <member name="M:Microsoft.Teams.PowerShell.TeamsCmdlets.Model.GraphAadUserConversationMember.#ctor">
+            <summary>
+            Initializes a new instance of the GraphAadUserConversationMember class.
+            </summary>
+        </member>
+        <member name="P:Microsoft.Teams.PowerShell.TeamsCmdlets.Model.GraphAadUserConversationMember.UserId">
+            <summary>
+            Member object id
+            </summary>
+        </member>
+        <member name="P:Microsoft.Teams.PowerShell.TeamsCmdlets.Model.GraphAadUserConversationMember.UserPrincipalName">
+            <summary>
+            Member UPN
+            </summary>
+        </member>
+        <member name="P:Microsoft.Teams.PowerShell.TeamsCmdlets.Model.GraphAadUserConversationMember.Id">
+            <summary>
+            Member Id (composite id generated from channel id and user id)
+            </summary>
+        </member>
+        <member name="P:Microsoft.Teams.PowerShell.TeamsCmdlets.Model.GraphAadUserConversationMember.Roles">
+            <summary>
+            Member roles
+            </summary>
+        </member>
+        <member name="P:Microsoft.Teams.PowerShell.TeamsCmdlets.Model.GraphAadUserConversationMember.DisplayName">
+            <summary>
+            Member display name.
+            </summary>
+        </member>
+        <member name="P:Microsoft.Teams.PowerShell.TeamsCmdlets.Model.GraphAadUserConversationMember.Email">
+            <summary>
+            Member email.
+            </summary>
+        </member>
+        <member name="P:Microsoft.Teams.PowerShell.TeamsCmdlets.Model.GraphAadUserConversationMember.TenantId">
+            <summary>
+            The tenant id.
+            </summary>
+        </member>
+        <member name="M:Microsoft.Teams.PowerShell.TeamsCmdlets.Model.GraphAadUserConversationMember.GetRole">
+            <summary>
+            Gets role of the conversation member.
+            </summary>
+            <returns>The role of the member.</returns>
+        </member>
+        <member name="P:Microsoft.Teams.PowerShell.TeamsCmdlets.Model.Group.Id">
+            <summary>
+            Group id. MSGraph version "v1.0"/ "beta" uses this property name.
+            Please use GetId() method when seeking group ids
+            </summary>
+        </member>
+        <member name="P:Microsoft.Teams.PowerShell.TeamsCmdlets.Model.Group.ObjectId">
+            <summary>
+            Group id. MSGraph version "edu" uses this property name.
+            Please use GetId() method when seeking group ids
+            </summary>
+        </member>
+        <member name="P:Microsoft.Teams.PowerShell.TeamsCmdlets.Model.Group.DisplayName">
+            <summary>
+            Display Name
+            </summary>
+        </member>
+        <member name="P:Microsoft.Teams.PowerShell.TeamsCmdlets.Model.Group.Description">
+            <summary>
+            Group Description
+            </summary>
+        </member>
+        <member name="P:Microsoft.Teams.PowerShell.TeamsCmdlets.Model.Group.GroupTypes">
+            <summary>
+            Group Types
+            </summary>
+        </member>
+        <member name="P:Microsoft.Teams.PowerShell.TeamsCmdlets.Model.Group.Classification">
+            <summary>
+            Group classification
+            </summary>
+        </member>
+        <member name="P:Microsoft.Teams.PowerShell.TeamsCmdlets.Model.Group.MailEnabled">
+            <summary>
+            Mail Enabled
+            </summary>
+        </member>
+        <member name="P:Microsoft.Teams.PowerShell.TeamsCmdlets.Model.Group.MailNickname">
+            <summary>
+            Group Mail Nickname
+            </summary>
+        </member>
+        <member name="P:Microsoft.Teams.PowerShell.TeamsCmdlets.Model.Group.SecurityEnabled">
+            <summary>
+            Security Enabled
+            </summary>
+        </member>
+        <member name="P:Microsoft.Teams.PowerShell.TeamsCmdlets.Model.Group.Members">
+            <summary>
+            Members
+            </summary>
+        </member>
+        <member name="P:Microsoft.Teams.PowerShell.TeamsCmdlets.Model.Group.Owners">
+            <summary>
+            Members
+            </summary>
+        </member>
+        <member name="P:Microsoft.Teams.PowerShell.TeamsCmdlets.Model.Group.Visibility">
+            <summary>
+            Group Visiblilty
+            </summary>
+        </member>
+        <member name="P:Microsoft.Teams.PowerShell.TeamsCmdlets.Model.Group.CreationOptions">
+            <summary>
+            creation Options
+            </summary>
+        </member>
+        <member name="P:Microsoft.Teams.PowerShell.TeamsCmdlets.Model.Group.EducationObjectType">
+            <summary>
+            Education Object Type
+            </summary>
+        </member>
+        <member name="M:Microsoft.Teams.PowerShell.TeamsCmdlets.Model.Group.GetId">
+            <summary>
+            Get Group Id
+            MSGraph version "v1.0" uses "Id" property name.
+            MSGraph version "edu" uses "ObjectId" property name.
+            Please use GetId() method when seeking group ids
+            </summary>
+            <returns>Returns group id</returns>
+        </member>
+        <member name="T:Microsoft.Teams.PowerShell.TeamsCmdlets.Model.IUserInfo">
+            <summary>
+            Represents a model of user info.
+            </summary>
+        </member>
+        <member name="P:Microsoft.Teams.PowerShell.TeamsCmdlets.Model.IUserInfo.UserId">
+            <summary>
+            The id of AAD user.
+            </summary>
+        </member>
+        <member name="P:Microsoft.Teams.PowerShell.TeamsCmdlets.Model.IUserInfo.User">
+            <summary>
+            The upn of user.
+            </summary>
+        </member>
+        <member name="T:Microsoft.Teams.PowerShell.TeamsCmdlets.Model.JsonExtensionContainer">
+            <summary>
+            Abstract definition which registers a <see cref="T:Newtonsoft.Json.JsonExtensionDataAttribute"/> and corresponding dictionary for use when serializing/deserializing an object.
+            </summary>
+        </member>
+        <member name="P:Microsoft.Teams.PowerShell.TeamsCmdlets.Model.JsonExtensionContainer._extensionData">
+            <summary>
+            Gets or sets the dynamic properties populated during JSON serialization/deserialization.
+            </summary>
+        </member>
+        <member name="T:Microsoft.Teams.PowerShell.TeamsCmdlets.Model.LicenseDetails">
+            <summary>
+            MS Graph License Details object.
+            https://docs.microsoft.com/en-us/graph/api/resources/licensedetails?view=graph-rest-1.0
+            </summary>
+        </member>
+        <member name="P:Microsoft.Teams.PowerShell.TeamsCmdlets.Model.LicenseDetails.Id">
+            <summary>
+            Unique identifier for the license detail object.
+            </summary>
+        </member>
+        <member name="P:Microsoft.Teams.PowerShell.TeamsCmdlets.Model.LicenseDetails.ServicePlans">
+            <summary>
+            Information about the service plans assigned with the license.
+            </summary>
+        </member>
+        <member name="P:Microsoft.Teams.PowerShell.TeamsCmdlets.Model.LicenseDetails.SkuId">
+            <summary>
+            Unique identifier (GUID) for the service SKU.
+            </summary>
+        </member>
+        <member name="P:Microsoft.Teams.PowerShell.TeamsCmdlets.Model.LicenseDetails.SkuPartNumber">
+            <summary>
+            Unique SKU display name.
+            </summary>
+        </member>
+        <member name="T:Microsoft.Teams.PowerShell.TeamsCmdlets.Model.MicrosoftGraphCollectionResponse`1">
+            <summary>
+            Represents a response to a Microsoft Graph API that returns a collection.
+            </summary>
+            <typeparam name="T">Type of items.</typeparam>
+        </member>
+        <member name="P:Microsoft.Teams.PowerShell.TeamsCmdlets.Model.MicrosoftGraphCollectionResponse`1.Value">
+            <summary>
+            Gets or sets the value of the collection.
+            </summary>
+        </member>
+        <member name="T:Microsoft.Teams.PowerShell.TeamsCmdlets.Model.PageResponse`1">
+            <summary>
+            Response received which support paging
+            </summary>
+            <typeparam name="T">The type of item the collection contains.</typeparam>
+        </member>
+        <member name="M:Microsoft.Teams.PowerShell.TeamsCmdlets.Model.PageResponse`1.IsExceeded(System.Int32)">
+            <summary>
+            Check if Objects count exceed team members limit or not
+            </summary>
+            <param name="teamMembersLimit">Team Members Limit</param>
+            <returns>True if exceeded or False</returns>
+        </member>
+        <member name="T:Microsoft.Teams.PowerShell.TeamsCmdlets.Model.ServicePlanInfo">
+            <summary>
+            Contains information about a service plan associated with a subscribed SKU.
+            </summary>
+        </member>
+        <member name="P:Microsoft.Teams.PowerShell.TeamsCmdlets.Model.ServicePlanInfo.ServicePlanId">
+            <summary>
+            The unique identifier of the service plan.
+            </summary>
+        </member>
+        <member name="P:Microsoft.Teams.PowerShell.TeamsCmdlets.Model.ServicePlanInfo.ServicePlanName">
+            <summary>
+            The name of the service plan.
+            </summary>
+        </member>
+        <member name="P:Microsoft.Teams.PowerShell.TeamsCmdlets.Model.ServicePlanInfo.ProvisioningStatus">
+            <summary>
+            The provisioning status of the service plan.
+            </summary>
+        </member>
+        <member name="T:Microsoft.Teams.PowerShell.TeamsCmdlets.Model.ServicePlanProvisioningStatus">
+            <summary>
+            Enum describing the provisioning status of a service plan. 
+            </summary>
+        </member>
+        <member name="T:Microsoft.Teams.PowerShell.TeamsCmdlets.Model.SharedWithTeamInfo">
+            <summary>
+            Represents a model of shared with team info.
+            </summary>
+        </member>
+        <member name="P:Microsoft.Teams.PowerShell.TeamsCmdlets.Model.SharedWithTeamInfo.GroupId">
+            <summary>
+            The AAD group id of the team.
+            </summary>
+        </member>
+        <member name="P:Microsoft.Teams.PowerShell.TeamsCmdlets.Model.SharedWithTeamInfo.DisplayName">
+            <summary>
+            The name of the team.
+            </summary>
+        </member>
+        <member name="P:Microsoft.Teams.PowerShell.TeamsCmdlets.Model.SharedWithTeamInfo.TenantId">
+            <summary>
+            The tenant id.
+            </summary>
+        </member>
+        <member name="P:Microsoft.Teams.PowerShell.TeamsCmdlets.Model.SharedWithTeamInfo.IsHostTeam">
+            <summary>
+            Indicates whether the team is the host of the channel.
+            </summary>
+        </member>
+        <member name="P:Microsoft.Teams.PowerShell.TeamsCmdlets.Model.SingleRequest.Id">
+            <summary>
+            Id of the request
+            </summary>
+        </member>
+        <member name="P:Microsoft.Teams.PowerShell.TeamsCmdlets.Model.SingleRequest.Method">
+            <summary>
+            Http Method used for the request
+            </summary>
+        </member>
+        <member name="P:Microsoft.Teams.PowerShell.TeamsCmdlets.Model.SingleRequest.RequestUri">
+            <summary>
+            Uri used for the request
+            </summary>
+        </member>
+        <member name="P:Microsoft.Teams.PowerShell.TeamsCmdlets.Model.SingleRequestAadUser.Id">
+            <summary>
+            Id of the response, maps to the id of the request
+            </summary>
+        </member>
+        <member name="P:Microsoft.Teams.PowerShell.TeamsCmdlets.Model.SingleRequestAadUser.Status">
+            <summary>
+            Http Status Code of the request
+            </summary>
+        </member>
+        <member name="P:Microsoft.Teams.PowerShell.TeamsCmdlets.Model.SingleRequestAadUser.Body">
+            <summary>
+            Body of the response which contains the License details object or an Error bject
+            </summary>
+        </member>
+        <member name="T:Microsoft.Teams.PowerShell.TeamsCmdlets.Model.SingleResponseAadUserBody">
+            <summary>
+            The body can either be a LicenseDetails model or an Error model
+            </summary>
+        </member>
+        <member name="P:Microsoft.Teams.PowerShell.TeamsCmdlets.Model.SingleResponseAadUserBody.Error">
+            <summary>
+            Body of the response which contains the Team object
+            </summary>
+        </member>
+        <member name="P:Microsoft.Teams.PowerShell.TeamsCmdlets.Model.SingleResponseLicenseDetails.Id">
+            <summary>
+            Id of the response, maps to the id of the request
+            </summary>
+        </member>
+        <member name="P:Microsoft.Teams.PowerShell.TeamsCmdlets.Model.SingleResponseLicenseDetails.Status">
+            <summary>
+            Http Status Code of the request
+            </summary>
+        </member>
+        <member name="P:Microsoft.Teams.PowerShell.TeamsCmdlets.Model.SingleResponseLicenseDetails.Body">
+            <summary>
+            Body of the response which contains the License details object or an Error bject
+            </summary>
+        </member>
+        <!-- Badly formed XML comment ignored for member "T:Microsoft.Teams.PowerShell.TeamsCmdlets.Model.SingleResponseLicenseDetailsBody" -->
+        <member name="P:Microsoft.Teams.PowerShell.TeamsCmdlets.Model.SingleResponseLicenseDetailsBody.Error">
+            <summary>
+            Body of the response which contains the Team object
+            </summary>
+        </member>
+        <member name="P:Microsoft.Teams.PowerShell.TeamsCmdlets.Model.SingleResponseTeam.Id">
+            <summary>
+            Id of the response, maps to the id of the request
+            </summary>
+        </member>
+        <member name="P:Microsoft.Teams.PowerShell.TeamsCmdlets.Model.SingleResponseTeam.Status">
+            <summary>
+            Http Status Code
+            </summary>
+        </member>
+        <member name="P:Microsoft.Teams.PowerShell.TeamsCmdlets.Model.SingleResponseTeam.Body">
+            <summary>
+            Body of the response which contains the Team object or an Error bject
+            </summary>
+        </member>
+        <member name="T:Microsoft.Teams.PowerShell.TeamsCmdlets.Model.SingleResponseTeamBody">
+            <summary>
+            The body can either be a Team model or an Error model
+            </summary>
+        </member>
+        <member name="P:Microsoft.Teams.PowerShell.TeamsCmdlets.Model.SingleResponseTeamBody.Error">
+            <summary>
+            Body of the response which contains the Team object
+            </summary>
+        </member>
+        <member name="P:Microsoft.Teams.PowerShell.TeamsCmdlets.Model.Error.Code">
+            <summary>
+            Code of the error, NOT Http status code
+            </summary>
+        </member>
+        <member name="P:Microsoft.Teams.PowerShell.TeamsCmdlets.Model.Error.Message">
+            <summary>
+            Code of the error, NOT Http status code
+            </summary>
+        </member>
+        <member name="T:Microsoft.Teams.PowerShell.TeamsCmdlets.Model.StagedAppDetailsResponse">
+            <summary>
+            Staged App Details Response
+            </summary>
+        </member>
+        <member name="P:Microsoft.Teams.PowerShell.TeamsCmdlets.Model.StagedAppDetailsResponse.StagedAppEntitlement">
+            <summary>
+            The Staged App Entitlement
+            </summary>
+        </member>
+        <member name="T:Microsoft.Teams.PowerShell.TeamsCmdlets.Model.StagedAppEntitlement">
+            <summary>
+            Staged App Entitlement
+            </summary>
+        </member>
+        <member name="P:Microsoft.Teams.PowerShell.TeamsCmdlets.Model.StagedAppEntitlement.Iteration">
+            <summary>
+            The Staged App Details Definition Etag
+            </summary>
+        </member>
+        <member name="T:Microsoft.Teams.PowerShell.TeamsCmdlets.Model.StagedAppUpdateRequestBody">
+            <summary>
+            Staged App Update Request Body
+            </summary>
+        </member>
+        <member name="P:Microsoft.Teams.PowerShell.TeamsCmdlets.Model.StagedAppUpdateRequestBody.Id">
+            <summary>
+            Gets or sets the App Id for the Staged App
+            </summary>
+        </member>
+        <member name="P:Microsoft.Teams.PowerShell.TeamsCmdlets.Model.StagedAppUpdateRequestBody.ReviewStatus">
+            <summary>
+            Gets or sets the Review Status for the Staged App
+            Published | Rejected
+            </summary>
+        </member>
+        <member name="P:Microsoft.Teams.PowerShell.TeamsCmdlets.Model.StagedAppUpdateRequestBody.StagedAppDefinitionEtag">
+            <summary>
+            Gets or sets the Staged App Definition Etag
+            </summary>
+        </member>
+        <member name="P:Microsoft.Teams.PowerShell.TeamsCmdlets.Model.Team.GroupId">
+            <summary>
+            Team Id
+            </summary>
+        </member>
+        <member name="P:Microsoft.Teams.PowerShell.TeamsCmdlets.Model.Team.InternalId">
+            <summary>
+            Internal Id
+            </summary>
+        </member>
+        <member name="P:Microsoft.Teams.PowerShell.TeamsCmdlets.Model.Team.DisplayName">
+            <summary>
+            Display Name
+            </summary>
+        </member>
+        <member name="P:Microsoft.Teams.PowerShell.TeamsCmdlets.Model.Team.Description">
+            <summary>
+            Group Description
+            </summary>
+        </member>
+        <member name="P:Microsoft.Teams.PowerShell.TeamsCmdlets.Model.Team.Visibility">
+            <summary>
+            Group Visibility
+            </summary>
+        </member>
+        <member name="P:Microsoft.Teams.PowerShell.TeamsCmdlets.Model.Team.MailNickName">
+            <summary>
+            Group MailNickName
+            </summary>
+        </member>
+        <member name="P:Microsoft.Teams.PowerShell.TeamsCmdlets.Model.Team.Classification">
+            <summary>
+            Group Classification
+            </summary>
+        </member>
+        <member name="P:Microsoft.Teams.PowerShell.TeamsCmdlets.Model.Team.Archived">
+            <summary>
+            Archived
+            </summary>
+        </member>
+        <member name="P:Microsoft.Teams.PowerShell.TeamsCmdlets.Model.Team.MemberSettings">
+            <summary>
+            Team Member settings
+            For example: Can user create/update channels? etc.
+            </summary>
+        </member>
+        <member name="P:Microsoft.Teams.PowerShell.TeamsCmdlets.Model.Team.GuestSettings">
+            <summary>
+            Team guest settings
+            For example: Can guest create/update channels? etc.
+            </summary>
+        </member>
+        <member name="P:Microsoft.Teams.PowerShell.TeamsCmdlets.Model.Team.MessagingSettings">
+            <summary>
+            Team Messaging settings
+            For example: Can user edit/delete messages? etc.
+            </summary>
+        </member>
+        <member name="P:Microsoft.Teams.PowerShell.TeamsCmdlets.Model.Team.FunSettings">
+            <summary>
+            Team fun settings
+            For example: Can user post giphy etc.
+            </summary>
+        </member>
+        <member name="P:Microsoft.Teams.PowerShell.TeamsCmdlets.Model.Team.DiscoverySettings">
+            <summary>
+            Team discovery settings
+            For example: If team visible in search results/suggestions in Teams client
+            </summary>
+        </member>
+        <member name="T:Microsoft.Teams.PowerShell.TeamsCmdlets.Model.TeamDiscoverySettings">
+            <summary>
+            Team settings which determine team's discoverability.
+            </summary>
+        </member>
+        <member name="T:Microsoft.Teams.PowerShell.TeamsCmdlets.Model.TeamInfo">
+            <summary>
+            Represents a team with basic information.
+            </summary>
+        </member>
+        <member name="P:Microsoft.Teams.PowerShell.TeamsCmdlets.Model.TeamInfo.GroupId">
+            <summary>
+            Team Id
+            </summary>
+        </member>
+        <member name="P:Microsoft.Teams.PowerShell.TeamsCmdlets.Model.TeamInfo.DisplayName">
+            <summary>
+            Display Name
+            </summary>
+        </member>
+        <member name="P:Microsoft.Teams.PowerShell.TeamsCmdlets.Model.TeamInfo.TenantId">
+            <summary>
+            Tenant Id.
+            </summary>
+        </member>
+        <member name="T:Microsoft.Teams.PowerShell.TeamsCmdlets.Model.TeamsApp">
+            <summary>
+            App data returned by Graph API
+            </summary>
+        </member>
+        <member name="P:Microsoft.Teams.PowerShell.TeamsCmdlets.Model.TeamsApp.Id">
+            <summary>
+            The app's internal, generated app ID (different from the external ID)
+            </summary>
+        </member>
+        <member name="P:Microsoft.Teams.PowerShell.TeamsCmdlets.Model.TeamsApp.DisplayName">
+            <summary>
+            The display name of the app
+            </summary>
+        </member>
+        <member name="P:Microsoft.Teams.PowerShell.TeamsCmdlets.Model.TeamsApp.DistributionMethod">
+            <summary>
+            The method by which the app is distributed
+            Although this is an Enum in Middle Tier, marking this as a string here
+            so that Json deserialization doesn't break if we add a new Enum value to MT
+            without making a code change in these cmdlets
+            </summary>
+        </member>
+        <member name="T:Microsoft.Teams.PowerShell.TeamsCmdlets.Model.TeamsAppInstallation">
+            <summary>
+            MS Graph TeamsAppInstallation Object
+            </summary>
+        </member>
+        <member name="P:Microsoft.Teams.PowerShell.TeamsCmdlets.Model.TeamsAppInstallation.Id">
+            <summary>
+            The TeamsAppInstallationId
+            </summary>
+        </member>
+        <member name="P:Microsoft.Teams.PowerShell.TeamsCmdlets.Model.TeamsAppInstallation.TeamsAppDefinitionId">
+            <summary>
+            A unique id (not the teams appid).
+            </summary>
+        </member>
+        <member name="P:Microsoft.Teams.PowerShell.TeamsCmdlets.Model.TeamsAppInstallation.TeamsAppId">
+            <summary>
+            The id from the Teams App manifest.
+            </summary>
+        </member>
+        <member name="P:Microsoft.Teams.PowerShell.TeamsCmdlets.Model.TeamsAppInstallation.DisplayName">
+            <summary>
+            The name of the app provided by the app developer.
+            </summary>
+        </member>
+        <member name="P:Microsoft.Teams.PowerShell.TeamsCmdlets.Model.TeamsAppInstallation.Version">
+            <summary>
+            The version number of the application.
+            </summary>
+        </member>
+        <member name="P:Microsoft.Teams.PowerShell.TeamsCmdlets.Model.TeamsAsyncOperation.OperationId">
+            <summary>
+            Gets or sets the operation id that uniquely identifies a specific instance of the async operation.
+            </summary>
+        </member>
+        <member name="P:Microsoft.Teams.PowerShell.TeamsCmdlets.Model.TeamsAsyncOperation.AsyncOperationType">
+            <summary>
+            Gets or sets the type of async operation.
+            </summary>
+        </member>
+        <member name="P:Microsoft.Teams.PowerShell.TeamsCmdlets.Model.TeamsAsyncOperation.AsyncOperationStatus">
+            <summary>
+            Gets or sets the latest status of the async operation.
+            </summary>
+        </member>
+        <member name="P:Microsoft.Teams.PowerShell.TeamsCmdlets.Model.TeamsAsyncOperation.CreatedDateTime">
+            <summary>
+            Gets or sets the UTC time when the async operation was created.
+            </summary>
+        </member>
+        <member name="P:Microsoft.Teams.PowerShell.TeamsCmdlets.Model.TeamsAsyncOperation.LastUpdateDateTimeUtc">
+            <summary>
+            Gets or sets the UTC time when the async operation was last updated.
+            </summary>
+        </member>
+        <member name="P:Microsoft.Teams.PowerShell.TeamsCmdlets.Model.TeamsAsyncOperation.AttemptsCount">
+            <summary>
+            Gets or sets the number of times the operation was attempted before being marked suceeded/failed.
+            </summary>
+        </member>
+        <member name="P:Microsoft.Teams.PowerShell.TeamsCmdlets.Model.TeamsAsyncOperation.TargetResourceId">
+            <summary>
+            Gets or sets the target resource id.
+            </summary>
+        </member>
+        <member name="P:Microsoft.Teams.PowerShell.TeamsCmdlets.Model.TeamsAsyncOperation.TargetResourceLocation">
+            <summary>
+            Gets or sets the target resource location.
+            </summary>
+        </member>
+        <member name="F:Microsoft.Teams.PowerShell.TeamsCmdlets.Model.AsyncOperationType.Invalid">
+            <summary>
+            Invalid value.
+            </summary>
+        </member>
+        <member name="F:Microsoft.Teams.PowerShell.TeamsCmdlets.Model.AsyncOperationType.CloneTeam">
+            <summary>
+            Operation to clone a team.
+            </summary>
+        </member>
+        <member name="F:Microsoft.Teams.PowerShell.TeamsCmdlets.Model.AsyncOperationType.ArchiveTeam">
+            <summary>
+            Operation to archive a team.
+            </summary>
+        </member>
+        <member name="F:Microsoft.Teams.PowerShell.TeamsCmdlets.Model.AsyncOperationType.UnarchiveTeam">
+            <summary>
+            Operation to unarchive a team.
+            </summary>
+        </member>
+        <member name="F:Microsoft.Teams.PowerShell.TeamsCmdlets.Model.AsyncOperationType.CreateTeam">
+            <summary>
+            Operation to create a team.
+            </summary>
+        </member>
+        <member name="F:Microsoft.Teams.PowerShell.TeamsCmdlets.Model.AsyncOperationType.TeamifyGroup">
+            <summary>
+            Operation to teamify an existing group.
+            </summary>
+        </member>
+        <member name="F:Microsoft.Teams.PowerShell.TeamsCmdlets.Model.AsyncOperationType.CreateChannel">
+            <summary>
+            Operation to create a channel.
+            </summary>
+        </member>
+        <member name="F:Microsoft.Teams.PowerShell.TeamsCmdlets.Model.AsyncOperationStatus.Invalid">
+            <summary>
+            Invalid value.
+            </summary>
+        </member>
+        <member name="F:Microsoft.Teams.PowerShell.TeamsCmdlets.Model.AsyncOperationStatus.NotStarted">
+            <summary>
+            Indicates that the operation has not started.
+            </summary>
+        </member>
+        <member name="F:Microsoft.Teams.PowerShell.TeamsCmdlets.Model.AsyncOperationStatus.InProgress">
+            <summary>
+            Indicates that the operation in running.
+            </summary>
+        </member>
+        <member name="F:Microsoft.Teams.PowerShell.TeamsCmdlets.Model.AsyncOperationStatus.Succeeded">
+            <summary>
+            Indicates that the operation has succeeded.
+            </summary>
+        </member>
+        <member name="F:Microsoft.Teams.PowerShell.TeamsCmdlets.Model.AsyncOperationStatus.Failed">
+            <summary>
+            Indicates that the operation has failed.
+            </summary>
+        </member>
+        <member name="P:Microsoft.Teams.PowerShell.TeamsCmdlets.Model.TeamSettings.GroupId">
+            <summary>
+            Team Id
+            </summary>
+        </member>
+        <member name="P:Microsoft.Teams.PowerShell.TeamsCmdlets.Model.TeamSettings.InternalId">
+            <summary>
+            Internal Id
+            </summary>
+        </member>
+        <member name="P:Microsoft.Teams.PowerShell.TeamsCmdlets.Model.TeamSettings.DisplayName">
+            <summary>
+            Display Name
+            </summary>
+        </member>
+        <member name="P:Microsoft.Teams.PowerShell.TeamsCmdlets.Model.TeamSettings.Description">
+            <summary>
+            Description
+            </summary>
+        </member>
+        <member name="P:Microsoft.Teams.PowerShell.TeamsCmdlets.Model.TeamSettings.Visibility">
+            <summary>
+            Visibility
+            </summary>
+        </member>
+        <member name="P:Microsoft.Teams.PowerShell.TeamsCmdlets.Model.TeamSettings.MailNickName">
+            <summary>
+            MailNickName
+            </summary>
+        </member>
+        <member name="P:Microsoft.Teams.PowerShell.TeamsCmdlets.Model.TeamSettings.Classification">
+            <summary>
+            Classification
+            </summary>
+        </member>
+        <member name="P:Microsoft.Teams.PowerShell.TeamsCmdlets.Model.TeamSettings.Archived">
+            <summary>
+            Archived
+            </summary>
+        </member>
+        <member name="T:Microsoft.Teams.PowerShell.TeamsCmdlets.Model.TeamsTenantApp">
+            <summary>
+            App data returned by Graph API
+            </summary>
+        </member>
+        <member name="P:Microsoft.Teams.PowerShell.TeamsCmdlets.Model.TeamsTenantApp.ExternalId">
+            <summary>
+            The external ID provided by the app developer
+            </summary>
+        </member>
+        <member name="T:Microsoft.Teams.PowerShell.TeamsCmdlets.Model.TeamsUserActivityUserDetail">
+            <summary>
+            A report that details the activity of a particular user on Teams.
+            </summary>
+        </member>
+        <member name="P:Microsoft.Teams.PowerShell.TeamsCmdlets.Model.TeamsUserActivityUserDetail.UserPrincipalName">
+            <summary>
+            The user principal name of the user.
+            </summary>
+        </member>
+        <member name="P:Microsoft.Teams.PowerShell.TeamsCmdlets.Model.TeamsUserActivityUserDetail.TeamChatMessageCount">
+            <summary>
+            The number of messages the user sent to team/channel threads.
+            </summary>
+        </member>
+        <member name="P:Microsoft.Teams.PowerShell.TeamsCmdlets.Model.TeamsUserActivityUserDetail.PrivateChatMessageCount">
+            <summary>
+            The number of messages the user sent to private chats.
+            </summary>
+        </member>
+        <member name="T:Microsoft.Teams.PowerShell.TeamsCmdlets.Model.TeamHierarchy">
+            <summary>
+            Model for the Hierarchy object returned by Hierarchy service's APIs.
+            </summary>
+        </member>
+        <member name="T:Microsoft.Teams.PowerShell.TeamsCmdlets.Model.ApiVersion">
+            <summary>
+            Version for Teams Hierarchy cmdlets that defines which service are the cmdlets pointing to.
+            </summary>
+        </member>
+        <member name="F:Microsoft.Teams.PowerShell.TeamsCmdlets.Model.ApiVersion.RetailService">
+            <summary>
+            Version of the API pointing to the Retail service.
+            </summary>
+        </member>
+        <member name="F:Microsoft.Teams.PowerShell.TeamsCmdlets.Model.ApiVersion.HierarchyService">
+            <summary>
+            Version of the API pointing to the Hierarchy service.
+            </summary>
+        </member>
+        <member name="T:Microsoft.Teams.PowerShell.TeamsCmdlets.Model.RetailServiceOperation">
+            <summary>
+            Model for import hierarchy operation status comming from Retail service.
+            </summary>
+        </member>
+        <member name="T:Microsoft.Teams.PowerShell.TeamsCmdlets.Model.HierarchyServiceOperation">
+            <summary>
+            Model for import hierarchy operation status comming from Teams Hierarchy service.
+            </summary>
+        </member>
+        <member name="T:Microsoft.Teams.PowerShell.TeamsCmdlets.Model.TemplateType">
+            <summary>
+            Template
+            </summary>
+        </member>
+        <member name="T:Microsoft.Teams.PowerShell.TeamsCmdlets.Model.UnifiedAppResponse">
+            <summary>
+            Unified App response!
+            </summary>
+        </member>
+        <member name="P:Microsoft.Teams.PowerShell.TeamsCmdlets.Model.UnifiedAppResponse.Id">
+            <summary>
+            Gets or sets the app id for the Enhanced teams app or Teams app.
+            </summary>
+        </member>
+        <member name="P:Microsoft.Teams.PowerShell.TeamsCmdlets.Model.UnifiedAppResponse.IsBlocked">
+            <summary>
+            Gets or Sets the app blocked state.
+            if true then the app is blocked.If false then the app is unblocked.
+            Denotes whether the app is blocked by the administrator.
+            </summary>
+        </member>
+        <member name="P:Microsoft.Teams.PowerShell.TeamsCmdlets.Model.UnifiedAppResponse.AppType">
+            <summary>
+            App Type.
+            </summary>
+        </member>
+        <member name="P:Microsoft.Teams.PowerShell.TeamsCmdlets.Model.UnifiedAppResponse.AvailableTo">
+            <summary>
+            Gets or sets the app Available to data.
+            </summary>
+        </member>
+        <member name="P:Microsoft.Teams.PowerShell.TeamsCmdlets.Model.UnifiedAppResponse.InstalledFor">
+            <summary>
+            Gets or sets the app Deploy to data.
+            </summary>
+        </member>
+        <member name="T:Microsoft.Teams.PowerShell.TeamsCmdlets.Model.AppAvailableToDetails">
+            <summary>
+            available To data for the pscmdlet response (V2).
+            </summary>
+        </member>
+        <member name="P:Microsoft.Teams.PowerShell.TeamsCmdlets.Model.AppAvailableToDetails.AssignmentType">
+            <summary>
+            available To data for the unified app response.
+            </summary>
+        </member>
+        <member name="P:Microsoft.Teams.PowerShell.TeamsCmdlets.Model.AppAvailableToDetails.Users">
+            <summary>
+            Gets or sets the list of user assignment for available data.
+            </summary>
+        </member>
+        <member name="P:Microsoft.Teams.PowerShell.TeamsCmdlets.Model.AppAvailableToDetails.Groups">
+            <summary>
+            Gets or sets the list of group assignment for available data.
+            </summary>
+        </member>
+        <member name="P:Microsoft.Teams.PowerShell.TeamsCmdlets.Model.AppAvailableToDetails.LastUpdatedTimestamp">
+            <summary>
+            Last updated timestamp
+            </summary>
+        </member>
+        <member name="P:Microsoft.Teams.PowerShell.TeamsCmdlets.Model.AppAvailableToDetails.AssignedBy">
+            <summary>
+            UserId of the assigner
+            </summary>
+        </member>
+        <member name="T:Microsoft.Teams.PowerShell.TeamsCmdlets.Model.AppInstalledForDetails">
+            <summary>
+            deployed To data for the pscmdlet response (V2).
+            </summary>
+        </member>
+        <member name="P:Microsoft.Teams.PowerShell.TeamsCmdlets.Model.AppInstalledForDetails.AppInstallType">
+            <summary>
+            available To data for the unified app response.
+            </summary>
+        </member>
+        <member name="P:Microsoft.Teams.PowerShell.TeamsCmdlets.Model.AppInstalledForDetails.LastUpdatedTimestamp">
+            <summary>
+            Last updated date
+            </summary>
+        </member>
+        <member name="P:Microsoft.Teams.PowerShell.TeamsCmdlets.Model.AppInstalledForDetails.InstalledBy">
+            <summary>
+            UserId of the deployer
+            </summary>
+        </member>
+        <member name="P:Microsoft.Teams.PowerShell.TeamsCmdlets.Model.AppInstalledForDetails.InstalledSource">
+            <summary>
+            Deploy reason
+            </summary>
+        </member>
+        <member name="P:Microsoft.Teams.PowerShell.TeamsCmdlets.Model.AppInstalledForDetails.Version">
+            <summary>
+            Version
+            </summary>
+        </member>
+        <member name="P:Microsoft.Teams.PowerShell.TeamsCmdlets.Model.AppInstalledForDetails.InstallForUsers">
+            <summary>
+            Gets or sets the list of user assignment for available data.
+            </summary>
+        </member>
+        <member name="P:Microsoft.Teams.PowerShell.TeamsCmdlets.Model.AppInstalledForDetails.InstallForGroups">
+            <summary>
+            Gets or sets the list of group assignment for available data.
+            </summary>
+        </member>
+        <member name="T:Microsoft.Teams.PowerShell.TeamsCmdlets.Model.AssignmentDetails">
+            <summary>
+            Group or user assignment id with assignment details
+            </summary>
+        </member>
+        <member name="P:Microsoft.Teams.PowerShell.TeamsCmdlets.Model.AssignmentDetails.Id">
+            <summary>
+            Group or User Id
+            </summary>
+        </member>
+        <member name="P:Microsoft.Teams.PowerShell.TeamsCmdlets.Model.AssignmentDetails.LastUpdatedTimestamp">
+            <summary>
+            Last updated timestamp
+            </summary>
+        </member>
+        <member name="P:Microsoft.Teams.PowerShell.TeamsCmdlets.Model.AssignmentDetails.AssignedBy">
+            <summary>
+            UserId of the assigner
+            </summary>
+        </member>
+        <member name="T:Microsoft.Teams.PowerShell.TeamsCmdlets.Model.InstallationDetails">
+            <summary>
+            Group or user assignment id with assignment details
+            </summary>
+        </member>
+        <member name="P:Microsoft.Teams.PowerShell.TeamsCmdlets.Model.InstallationDetails.Id">
+            <summary>
+            Group or User Id
+            </summary>
+        </member>
+        <member name="P:Microsoft.Teams.PowerShell.TeamsCmdlets.Model.InstallationDetails.LastUpdatedTimestamp">
+            <summary>
+            Last updated timestamp
+            </summary>
+        </member>
+        <member name="P:Microsoft.Teams.PowerShell.TeamsCmdlets.Model.InstallationDetails.InstalledBy">
+            <summary>
+            UserId of the assigner
+            </summary>
+        </member>
+        <member name="T:Microsoft.Teams.PowerShell.TeamsCmdlets.Model.UnifiedAppsResponse">
+            <summary>
+            Class for GetUnifiedAppsResponse.
+            </summary>
+        </member>
+        <member name="P:Microsoft.Teams.PowerShell.TeamsCmdlets.Model.UnifiedAppsResponse.Id">
+            <summary>
+            Gets or sets the app id for the Enhanced teams app or Teams app.
+            </summary>
+        </member>
+        <member name="P:Microsoft.Teams.PowerShell.TeamsCmdlets.Model.UnifiedAppsResponse.IsBlocked">
+            <summary>
+            Gets or Sets the app blocked state.
+            if true then the app is blocked.If false then the app is unblocked.
+            Denotes whether the app is blocked by the administrator.
+            </summary>
+        </member>
+        <member name="P:Microsoft.Teams.PowerShell.TeamsCmdlets.Model.UnifiedAppsResponse.AvailableTo">
+            <summary>
+            Gets or sets the app Available to data.
+            </summary>
+        </member>
+        <member name="P:Microsoft.Teams.PowerShell.TeamsCmdlets.Model.UnifiedAppsResponse.InstalledFor">
+            <summary>
+            Gets or sets the app Deployed to data.
+            </summary>
+        </member>
+        <member name="T:Microsoft.Teams.PowerShell.TeamsCmdlets.Model.AvailableTo">
+            <summary>
+            AvailableTo details for the unified app (V2).
+            </summary>
+        </member>
+        <member name="P:Microsoft.Teams.PowerShell.TeamsCmdlets.Model.AvailableTo.AssignmentType">
+            <summary>
+            available To data for the unified app response.
+            </summary>
+        </member>
+        <member name="P:Microsoft.Teams.PowerShell.TeamsCmdlets.Model.AvailableTo.LastUpdatedTimestamp">
+            <summary>
+            Last updated timestamp
+            </summary>
+        </member>
+        <member name="P:Microsoft.Teams.PowerShell.TeamsCmdlets.Model.AvailableTo.AssignedBy">
+            <summary>
+            UserId of the assigner
+            </summary>
+        </member>
+        <member name="T:Microsoft.Teams.PowerShell.TeamsCmdlets.Model.InstalledFor">
+            <summary>
+            DeployedTo details for the unified app (V2).
+            </summary>
+        </member>
+        <member name="P:Microsoft.Teams.PowerShell.TeamsCmdlets.Model.InstalledFor.AppInstallType">
+            <summary>
+            deployed To data for the unified app response.
+            </summary>
+        </member>
+        <member name="P:Microsoft.Teams.PowerShell.TeamsCmdlets.Model.InstalledFor.LastUpdatedTimestamp">
+            <summary>
+            Last updated date
+            </summary>
+        </member>
+        <member name="P:Microsoft.Teams.PowerShell.TeamsCmdlets.Model.InstalledFor.InstalledBy">
+            <summary>
+            UserId of the deployer
+            </summary>
+        </member>
+        <member name="P:Microsoft.Teams.PowerShell.TeamsCmdlets.Model.InstalledFor.InstalledSource">
+            <summary>
+            Deploy reason
+            </summary>
+        </member>
+        <member name="P:Microsoft.Teams.PowerShell.TeamsCmdlets.Model.InstalledFor.Version">
+            <summary>
+            Version
+            </summary>
+        </member>
+        <member name="T:Microsoft.Teams.PowerShell.TeamsCmdlets.Model.UnifiedAppsTenantSettingsRequest">
+            <summary>
+            Class for UnifiedAppsTenantSettingsResponse.
+            </summary>
+        </member>
+        <member name="P:Microsoft.Teams.PowerShell.TeamsCmdlets.Model.UnifiedAppsTenantSettingsRequest.Operation">
+            <summary>
+            Add or Remove users/groups
+            </summary>
+        </member>
+        <member name="T:Microsoft.Teams.PowerShell.TeamsCmdlets.Model.UnifiedAppsTenantSettingsResponse">
+            <summary>
+            Class for UnifiedAppsTenantSettingsResponse.
+            </summary>
+        </member>
+        <member name="P:Microsoft.Teams.PowerShell.TeamsCmdlets.Model.UnifiedAppsTenantSettingsResponse.SettingName">
+            <summary>
+            Gets or Sets the Setting Name. Applicable values DefaultApp|GlobalApp|PrivateApp|CoPilotApp
+            </summary>
+        </member>
+        <member name="P:Microsoft.Teams.PowerShell.TeamsCmdlets.Model.UnifiedAppsTenantSettingsResponse.SettingValue">
+            <summary>
+            Gets or Sets the Setting Value. Applicable values Some|All|None
+            </summary>
+        </member>
+        <member name="P:Microsoft.Teams.PowerShell.TeamsCmdlets.Model.UnifiedAppsTenantSettingsResponse.Users">
+            <summary>
+            Gets or sets List of user guid for Apps with EnableCopilotExtensibility.
+            </summary>
+        </member>
+        <member name="P:Microsoft.Teams.PowerShell.TeamsCmdlets.Model.UnifiedAppsTenantSettingsResponse.Groups">
+            <summary>
+            Gets or sets List of group guid for Apps with EnableCopilotExtensibility.
+            </summary>
+        </member>
+        <member name="T:Microsoft.Teams.PowerShell.TeamsCmdlets.Model.UnifiedAppUpdateRequestBody">
+            <summary>
+            Unified App Update Request Body
+            </summary>
+        </member>
+        <member name="P:Microsoft.Teams.PowerShell.TeamsCmdlets.Model.UnifiedAppUpdateRequestBody.Id">
+            <summary>
+            Gets or sets app ID for the m365 App / unified app.
+            </summary>
+        </member>
+        <member name="P:Microsoft.Teams.PowerShell.TeamsCmdlets.Model.UnifiedAppUpdateRequestBody.IsBlocked">
+            <summary>
+            Gets or Sets the app blocked state.
+            if true then the app is blocked.If false then the app is unblocked.
+            Denotes whether the app is blocked by the administrator.
+            </summary>
+        </member>
+        <member name="P:Microsoft.Teams.PowerShell.TeamsCmdlets.Model.UnifiedAppUpdateRequestBody.AvailableTo">
+            <summary>
+            Gets or sets the available to information of the app.
+            </summary>
+        </member>
+        <member name="P:Microsoft.Teams.PowerShell.TeamsCmdlets.Model.UnifiedAppUpdateRequestBody.DeployTo">
+            <summary>
+            Gets or sets the deploy to information of the app.
+            </summary>
+        </member>
+        <member name="T:Microsoft.Teams.PowerShell.TeamsCmdlets.Model.AvailableToRequest">
+            <summary>
+            Available To Request
+            </summary>
+        </member>
+        <member name="P:Microsoft.Teams.PowerShell.TeamsCmdlets.Model.AvailableToRequest.Type">
+            <summary>
+            Gets or Sets the type of availability Information none | some | all.
+            </summary>
+        </member>
+        <member name="P:Microsoft.Teams.PowerShell.TeamsCmdlets.Model.AvailableToRequest.Users">
+            <summary>
+            Gets or sets List of user guid for available data.
+            </summary>
+        </member>
+        <member name="P:Microsoft.Teams.PowerShell.TeamsCmdlets.Model.AvailableToRequest.Groups">
+            <summary>
+            Gets or sets List of group guid for available data.
+            </summary>
+        </member>
+        <member name="P:Microsoft.Teams.PowerShell.TeamsCmdlets.Model.AvailableToRequest.Operation">
+            <summary>
+            Gets or Sets the operation add | remove.
+            </summary>
+        </member>
+        <member name="T:Microsoft.Teams.PowerShell.TeamsCmdlets.Model.DeployToRequest">
+            <summary>
+            Deploy To Request
+            </summary>
+        </member>
+        <member name="P:Microsoft.Teams.PowerShell.TeamsCmdlets.Model.DeployToRequest.Type">
+            <summary>
+            Gets or Sets the type of deployTo Information none | some | all.
+            </summary>
+        </member>
+        <member name="P:Microsoft.Teams.PowerShell.TeamsCmdlets.Model.DeployToRequest.Users">
+            <summary>
+            Gets or sets List of user guid for available data.
+            </summary>
+        </member>
+        <member name="P:Microsoft.Teams.PowerShell.TeamsCmdlets.Model.DeployToRequest.Groups">
+            <summary>
+            Gets or sets List of group guid for available data.
+            </summary>
+        </member>
+        <member name="P:Microsoft.Teams.PowerShell.TeamsCmdlets.Model.DeployToRequest.Operation">
+            <summary>
+            Gets or Sets the operation add | remove.
+            </summary>
+        </member>
+        <member name="P:Microsoft.Teams.PowerShell.TeamsCmdlets.Model.DeployToRequest.Version">
+            <summary>
+            Gets or Sets the version.
+            </summary>
+        </member>
+        <member name="T:Microsoft.Teams.PowerShell.TeamsCmdlets.Model.UnifiedStagedAppsResponse">
+            <summary>
+            Class for UnifiedStagedAppsResponse.
+            </summary>
+        </member>
+        <member name="P:Microsoft.Teams.PowerShell.TeamsCmdlets.Model.UnifiedStagedAppsResponse.Id">
+            <summary>
+            Gets or sets the app id for the Enhanced teams app or Teams app.
+            </summary>
+        </member>
+        <member name="P:Microsoft.Teams.PowerShell.TeamsCmdlets.Model.UnifiedStagedAppsResponse.ExternalId">
+            <summary>
+            The app ID provided by the developer
+            </summary>
+        </member>
+        <member name="P:Microsoft.Teams.PowerShell.TeamsCmdlets.Model.UnifiedStagedAppsResponse.Iteration">
+            <summary>
+            Indicating how many times the app has been updated
+            </summary>
+        </member>
+        <member name="P:Microsoft.Teams.PowerShell.TeamsCmdlets.Model.UnifiedStagedAppsResponse.CreatedBy">
+            <summary>
+            Indicates who created this app.
+            </summary>
+        </member>
+        <member name="P:Microsoft.Teams.PowerShell.TeamsCmdlets.Model.UnifiedStagedAppsResponse.LastUpdateDateTime">
+            <summary>
+            Last timestamp when the app is being updated
+            </summary>
+        </member>
+        <member name="P:Microsoft.Teams.PowerShell.TeamsCmdlets.Model.UnifiedStagedAppsResponse.ReviewStatus">
+            <summary>
+            The app review status
+            </summary>
+        </member>
+        <member name="P:Microsoft.Teams.PowerShell.TeamsCmdlets.Model.UnifiedStagedAppsResponse.Metadata">
+            <summary>
+            Metadata data
+            </summary>
+        </member>
+        <member name="T:Microsoft.Teams.PowerShell.TeamsCmdlets.Model.Metadata">
+            <summary>
+            App metadata for the Admin 
+            </summary>
+        </member>
+        <member name="P:Microsoft.Teams.PowerShell.TeamsCmdlets.Model.Metadata.AppName">
+            <summary>
+            The user facing app name
+            </summary>
+        </member>
+        <member name="P:Microsoft.Teams.PowerShell.TeamsCmdlets.Model.Metadata.TermsOfUseUrl">
+            <summary>
+            Terms of Use URL of the app
+            </summary>
+        </member>
+        <member name="P:Microsoft.Teams.PowerShell.TeamsCmdlets.Model.Metadata.LongDescription">
+            <summary>
+            A long description of the app
+            </summary>
+        </member>
+        <member name="P:Microsoft.Teams.PowerShell.TeamsCmdlets.Model.Metadata.ShortDescription">
+            <summary>
+            A short description of the app
+            </summary>
+        </member>
+        <member name="P:Microsoft.Teams.PowerShell.TeamsCmdlets.Model.Metadata.LargeImageUrl">
+            <summary>
+            Large image URL. Can contain raw image data.
+            </summary>
+        </member>
+        <member name="P:Microsoft.Teams.PowerShell.TeamsCmdlets.Model.Metadata.SmallImageUrl">
+            <summary>
+            Smallimage URL. Can contain raw image data.
+            </summary>
+        </member>
+        <member name="P:Microsoft.Teams.PowerShell.TeamsCmdlets.Model.Metadata.DeveloperName">
+            <summary>
+            Developer name
+            </summary>
+        </member>
+        <member name="P:Microsoft.Teams.PowerShell.TeamsCmdlets.Model.Metadata.DeveloperUrl">
+            <summary>
+            Developer link
+            </summary>
+        </member>
+        <member name="P:Microsoft.Teams.PowerShell.TeamsCmdlets.Model.Metadata.ManifestVersion">
+            <summary>
+            Version of the manifest of the app
+            </summary>
+        </member>
+        <member name="P:Microsoft.Teams.PowerShell.TeamsCmdlets.Model.Metadata.AppVersion">
+            <summary>
+            The latest published app version
+            </summary>
+        </member>
+        <member name="P:Microsoft.Teams.PowerShell.TeamsCmdlets.Model.Metadata.CopilotEnabled">
+            <summary>
+            Indicates whether or not the title has Copilot capabilities.
+            </summary>
+        </member>
+        <member name="P:Microsoft.Teams.PowerShell.TeamsCmdlets.Model.Metadata.CompatibleHubs">
+            <summary>
+            A list of the different hubs.
+            </summary>
+        </member>
+        <member name="P:Microsoft.Teams.PowerShell.TeamsCmdlets.Model.Metadata.PublishDateTime">
+            <summary>
+            Gets the date the title was published.
+            </summary>
+        </member>
+        <member name="T:Microsoft.Teams.PowerShell.TeamsCmdlets.Model.UserEnhancedInfo">
+            <summary>
+            Represents a model of user enhanced info.
+            </summary>
+        </member>
+        <member name="M:Microsoft.Teams.PowerShell.TeamsCmdlets.Model.UserEnhancedInfo.#ctor">
+            <summary>
+            Initializes a new instance of the UserEnhancedInfo class.
+            </summary>
+        </member>
+        <member name="M:Microsoft.Teams.PowerShell.TeamsCmdlets.Model.UserEnhancedInfo.#ctor(Microsoft.Teams.PowerShell.TeamsCmdlets.Model.GraphAadUserConversationMember)">
+            <summary>
+            Initializes a new instance of the UserEnhancedInfo class with an object of GraphAadUserConversationMember class.
+            </summary>
+            <param name="user"></param>
+        </member>
+        <member name="P:Microsoft.Teams.PowerShell.TeamsCmdlets.Model.UserEnhancedInfo.UserId">
+            <summary>
+            The id of AAD user.
+            </summary>
+        </member>
+        <member name="P:Microsoft.Teams.PowerShell.TeamsCmdlets.Model.UserEnhancedInfo.User">
+            <summary>
+            The upn of user.
+            </summary>
+        </member>
+        <member name="P:Microsoft.Teams.PowerShell.TeamsCmdlets.Model.UserEnhancedInfo.Name">
+            <summary>
+            The display name of the user.
+            </summary>
+        </member>
+        <member name="P:Microsoft.Teams.PowerShell.TeamsCmdlets.Model.UserEnhancedInfo.Role">
+            <summary>
+            The role of the user.
+            </summary>
+        </member>
+        <member name="P:Microsoft.Teams.PowerShell.TeamsCmdlets.Model.UserEnhancedInfo.TenantId">
+            <summary>
+            The tenant id of the user.
+            </summary>
+        </member>
+        <member name="T:Microsoft.Teams.PowerShell.TeamsCmdlets.Model.UserInfo">
+            <summary>
+            Represents a model of user info.
+            </summary>
+        </member>
+        <member name="M:Microsoft.Teams.PowerShell.TeamsCmdlets.Model.UserInfo.#ctor">
+            <summary>
+            Initializes a new instance of the UserInfo class.
+            </summary>
+        </member>
+        <member name="M:Microsoft.Teams.PowerShell.TeamsCmdlets.Model.UserInfo.#ctor(Microsoft.Teams.PowerShell.TeamsCmdlets.Model.GraphAadUserConversationMember)">
+            <summary>
+            Initializes a new instance of the UserInfo class with an object of GraphAadUserConversationMember class.
+            </summary>
+            <param name="user"></param>
+        </member>
+        <member name="P:Microsoft.Teams.PowerShell.TeamsCmdlets.Model.UserInfo.UserId">
+            <summary>
+            The id of AAD user.
+            </summary>
+        </member>
+        <member name="P:Microsoft.Teams.PowerShell.TeamsCmdlets.Model.UserInfo.User">
+            <summary>
+            The upn of user.
+            </summary>
+        </member>
+        <member name="P:Microsoft.Teams.PowerShell.TeamsCmdlets.Model.UserInfo.Name">
+            <summary>
+            The display name of the user.
+            </summary>
+        </member>
+        <member name="P:Microsoft.Teams.PowerShell.TeamsCmdlets.Model.UserInfo.Role">
+            <summary>
+            The role of the user.
+            </summary>
+        </member>
+        <member name="M:Microsoft.Teams.PowerShell.TeamsCmdlets.NewTeam.#ctor">
+            <summary>
+            Default constructor necessary for cmdlet.
+            </summary>
+        </member>
+        <member name="M:Microsoft.Teams.PowerShell.TeamsCmdlets.NewTeam.#ctor(Microsoft.TeamsCmdlets.Powershell.Connect.Common.IHttpClientFactory)">
+            <summary>
+            Constructor with an implementation of <see cref="T:Microsoft.TeamsCmdlets.Powershell.Connect.Common.IHttpClientFactory" />.
+            Creates an instance of <see cref="T:Microsoft.Teams.PowerShell.TeamsCmdlets.NewTeam" />
+            </summary>
+            <param name="httpClientFactory"></param>
+        </member>
+        <member name="F:Microsoft.Teams.PowerShell.TeamsCmdlets.NewTeam.MaxChecksForGroupAvailability">
+            <summary>
+            Max number of attempts check if group is available for team creation
+            </summary>
+        </member>
+        <member name="F:Microsoft.Teams.PowerShell.TeamsCmdlets.NewTeam.MaxCreateTeamAttempts">
+            <summary>
+            Max number of attempts to try creating a team.
+            </summary>
+        </member>
+        <member name="F:Microsoft.Teams.PowerShell.TeamsCmdlets.NewTeam.SleepTimeBetweenGroupAvailabilityChecks">
+            <summary>
+            Sleep time to check for group availability in milliseconds
+            </summary>
+        </member>
+        <member name="F:Microsoft.Teams.PowerShell.TeamsCmdlets.NewTeam.SleepTimeBetweenCreateTeamCall">
+            <summary>
+            Sleep time in milliseconds.
+            </summary>
+        </member>
+        <member name="M:Microsoft.Teams.PowerShell.TeamsCmdlets.NewTeam.SetGroupPropertiesBasedOnTemplate(Microsoft.Teams.PowerShell.TeamsCmdlets.Model.Group,Microsoft.Teams.PowerShell.TeamsCmdlets.Model.TemplateType)">
+            <summary>
+            Set group properties based on template value.
+            </summary>
+            <param name="group"></param>
+            <param name="templateType"></param>
+            <returns>Group</returns>
+        </member>
+        <member name="M:Microsoft.Teams.PowerShell.TeamsCmdlets.NewTeam.CreateGroup(System.Net.Http.HttpClient)">
+            <summary>
+            Create new unified group
+            </summary>
+            <param name="httpClient"></param>
+            <returns>New created group</returns>
+        </member>
+        <member name="M:Microsoft.Teams.PowerShell.TeamsCmdlets.NewTeam.CreateTeam(System.Net.Http.HttpClient,System.String)">
+            <summary>
+            Provision team portion of an unified group.
+            </summary>
+            <param name="httpClient">http client</param>
+            <param name="groupId">Unified group id</param>
+            <returns>If successful, return created Team object, else return null</returns>
+        </member>
+        <member name="M:Microsoft.Teams.PowerShell.TeamsCmdlets.NewTeam.GenerateUniqueAlisas(System.Net.Http.HttpClient,System.String)">
+            <summary>
+            Generates unique team alias
+            1. Generate valid alias base on DisplayName
+            2. Check if the alias exists in MsGraph, if exists, check "originalAlias"+"3 digits random numbers" as alias again, this logic up to 3 times
+            </summary>
+            <param name="httpClient">http client</param>
+            <param name="alias">Team alias</param>
+            <returns>Unique Alias</returns>
+        </member>
+        <member name="M:Microsoft.Teams.PowerShell.TeamsCmdlets.NewTeam.IsGroupAvailable(System.Net.Http.HttpClient,System.String)">
+            <summary>
+            Validate that the group is available before trying to create a team.
+            Tries to validate up to <see cref="F:Microsoft.Teams.PowerShell.TeamsCmdlets.NewTeam.MaxChecksForGroupAvailability"/> and waits <see cref="F:Microsoft.Teams.PowerShell.TeamsCmdlets.NewTeam.SleepTimeBetweenGroupAvailabilityChecks"/>
+            inbetween validation attempts.
+            </summary>
+            <param name="httpClient"></param>
+            <param name="groupId">Group Id to validate.</param>
+            <returns>True if group with corresponding groupId is available, else false.</returns>
+        </member>
+        <member name="M:Microsoft.Teams.PowerShell.TeamsCmdlets.NewTeam.RetainOrRemoveGroup(System.Net.Http.HttpClient,System.String)">
+            <summary>
+            Handles scenario when group is created but not yet ready or when team creation fails
+            </summary>
+            <param name="httpClient"></param>
+            <param name="groupId"></param>
+        </member>
+        <member name="M:Microsoft.Teams.PowerShell.TeamsCmdlets.NewTeamChannel.#ctor">
+            <summary>
+            Default constructor necessary for cmdlet.
+            </summary>
+        </member>
+        <member name="M:Microsoft.Teams.PowerShell.TeamsCmdlets.NewTeamChannel.#ctor(Microsoft.TeamsCmdlets.Powershell.Connect.Common.IHttpClientFactory)">
+            <summary>
+            Constructor with an implementation of <see cref="T:Microsoft.TeamsCmdlets.Powershell.Connect.Common.IHttpClientFactory" />.
+            Creates an instance of <see cref="T:Microsoft.Teams.PowerShell.TeamsCmdlets.NewTeamChannel" />
+            </summary>
+            <param name="httpClientFactory"></param>
+        </member>
+        <member name="P:Microsoft.Teams.PowerShell.TeamsCmdlets.NewTeamChannel.ChannelModelForCreation.Members">
+            <summary>
+            Support specifying owner during channel creation
+            </summary>
+        </member>
+        <member name="M:Microsoft.Teams.PowerShell.TeamsCmdlets.NewTeamsApp.#ctor">
+            <summary>
+            Default constructor necessary for cmdlet.
+            </summary>
+        </member>
+        <member name="M:Microsoft.Teams.PowerShell.TeamsCmdlets.NewTeamsApp.#ctor(Microsoft.TeamsCmdlets.Powershell.Connect.Common.IHttpClientFactory)">
+            <summary>
+            Constructor with an implementation of <see cref="T:Microsoft.TeamsCmdlets.Powershell.Connect.Common.IHttpClientFactory" />.
+            Creates an instance of <see cref="T:Microsoft.Teams.PowerShell.TeamsCmdlets.NewTeamsApp" />
+            </summary>
+            <param name="httpClientFactory"></param>
+        </member>
+        <member name="T:Microsoft.Teams.PowerShell.TeamsCmdlets.RemoveSharedWithTeam">
+            <summary>
+            Represents a cmdlet to unshare a channel with a team.
+            </summary>
+        </member>
+        <member name="M:Microsoft.Teams.PowerShell.TeamsCmdlets.RemoveSharedWithTeam.#ctor">
+            <summary>
+            Initializes a new instance of <see cref="T:Microsoft.Teams.PowerShell.TeamsCmdlets.RemoveSharedWithTeam" />.
+            </summary>
+        </member>
+        <member name="M:Microsoft.Teams.PowerShell.TeamsCmdlets.RemoveSharedWithTeam.#ctor(Microsoft.TeamsCmdlets.Powershell.Connect.Common.IHttpClientFactory)">
+            <summary>
+            Initializes a new instance of <see cref="T:Microsoft.Teams.PowerShell.TeamsCmdlets.RemoveSharedWithTeam" /> with an implementation of <see cref="T:Microsoft.TeamsCmdlets.Powershell.Connect.Common.IHttpClientFactory" />.
+            </summary>
+            <param name="httpClientFactory">The http client factory.</param>
+        </member>
+        <member name="P:Microsoft.Teams.PowerShell.TeamsCmdlets.RemoveSharedWithTeam.CmdletName">
+            <summary>
+            The name of the cmdlet.
+            </summary>
+        </member>
+        <member name="P:Microsoft.Teams.PowerShell.TeamsCmdlets.RemoveSharedWithTeam.HostTeamId">
+            <summary>
+            The aad group id of the host team.
+            </summary>
+        </member>
+        <member name="P:Microsoft.Teams.PowerShell.TeamsCmdlets.RemoveSharedWithTeam.ChannelId">
+            <summary>
+            The thread id of the shared channel.
+            </summary>
+        </member>
+        <member name="P:Microsoft.Teams.PowerShell.TeamsCmdlets.RemoveSharedWithTeam.SharedWithTeamId">
+            <summary>
+            The aad group id of the shared with team.
+            </summary>
+        </member>
+        <member name="M:Microsoft.Teams.PowerShell.TeamsCmdlets.RemoveSharedWithTeam.ProcessRecord">
+            <inheritdoc/>
+        </member>
+        <member name="M:Microsoft.Teams.PowerShell.TeamsCmdlets.RemoveTeam.#ctor">
+            <summary>
+                Default constructor necessary for cmdlet.
+            </summary>
+        </member>
+        <member name="M:Microsoft.Teams.PowerShell.TeamsCmdlets.RemoveTeam.#ctor(Microsoft.TeamsCmdlets.Powershell.Connect.Common.IHttpClientFactory)">
+            <summary>
+                Constructor with an implementation of <see cref="T:Microsoft.TeamsCmdlets.Powershell.Connect.Common.IHttpClientFactory" />.
+            </summary>
+            <param name="httpClientFactory"></param>
+        </member>
+        <member name="M:Microsoft.Teams.PowerShell.TeamsCmdlets.RemoveTeamChannel.#ctor">
+            <summary>
+                Default constructor necessary for cmdlet.
+            </summary>
+        </member>
+        <member name="M:Microsoft.Teams.PowerShell.TeamsCmdlets.RemoveTeamChannel.#ctor(Microsoft.TeamsCmdlets.Powershell.Connect.Common.IHttpClientFactory)">
+            <summary>
+                Constructor with an implementation of <see cref="T:Microsoft.TeamsCmdlets.Powershell.Connect.Common.IHttpClientFactory" />.
+                Creates an instance of <see cref="T:Microsoft.Teams.PowerShell.TeamsCmdlets.SetTeamChannel" />
+            </summary>
+            <param name="httpClientFactory"></param>
+        </member>
+        <member name="T:Microsoft.Teams.PowerShell.TeamsCmdlets.RemoveTeamChannelUser">
+            <summary>
+            Cmdlet to remove user from a private channel. Role of the user can be specified for member demotion.
+            </summary>
+        </member>
+        <member name="M:Microsoft.Teams.PowerShell.TeamsCmdlets.RemoveTeamChannelUser.#ctor">
+            <summary>
+            Default constructor necessary for cmdlet.
+            </summary>
+        </member>
+        <member name="M:Microsoft.Teams.PowerShell.TeamsCmdlets.RemoveTeamChannelUser.#ctor(Microsoft.TeamsCmdlets.Powershell.Connect.Common.IHttpClientFactory)">
+            <summary>
+            Constructor with an implementation of <see cref="T:Microsoft.TeamsCmdlets.Powershell.Connect.Common.IHttpClientFactory" />.
+            Creates an instance of <see cref="T:Microsoft.Teams.PowerShell.TeamsCmdlets.RemoveTeamChannelUser" />
+            </summary>
+            <param name="httpClientFactory"></param>
+        </member>
+        <member name="P:Microsoft.Teams.PowerShell.TeamsCmdlets.RemoveTeamChannelUser.CmdletName">
+            <summary>
+            The name of the cmdlet.
+            </summary>
+        </member>
+        <member name="P:Microsoft.Teams.PowerShell.TeamsCmdlets.RemoveTeamChannelUser.GroupId">
+            <summary>
+            The AAD group id of the team.
+            </summary>
+        </member>
+        <member name="P:Microsoft.Teams.PowerShell.TeamsCmdlets.RemoveTeamChannelUser.DisplayName">
+            <summary>
+            The display name of channel.
+            </summary>
+        </member>
+        <member name="P:Microsoft.Teams.PowerShell.TeamsCmdlets.RemoveTeamChannelUser.User">
+            <summary>
+            The id or upn of the user.
+            </summary>
+        </member>
+        <member name="P:Microsoft.Teams.PowerShell.TeamsCmdlets.RemoveTeamChannelUser.Role">
+            <summary>
+            The role of the user.
+            </summary>
+        </member>
+        <member name="M:Microsoft.Teams.PowerShell.TeamsCmdlets.RemoveTeamChannelUser.ProcessRecord">
+            <inheritdoc/>
+        </member>
+        <member name="M:Microsoft.Teams.PowerShell.TeamsCmdlets.RemoveTeamsApp.#ctor">
+            <summary>
+            Default constructor necessary for cmdlet.
+            </summary>
+        </member>
+        <member name="M:Microsoft.Teams.PowerShell.TeamsCmdlets.RemoveTeamsApp.#ctor(Microsoft.TeamsCmdlets.Powershell.Connect.Common.IHttpClientFactory)">
+            <summary>
+            Constructor with an implementation of <see cref="T:Microsoft.TeamsCmdlets.Powershell.Connect.Common.IHttpClientFactory" />.
+            Creates an instance of <see cref="T:Microsoft.Teams.PowerShell.TeamsCmdlets.RemoveTeamsApp" />
+            </summary>
+            <param name="httpClientFactory"></param>
+        </member>
+        <member name="T:Microsoft.Teams.PowerShell.TeamsCmdlets.RemoveTeamsAppInstallation">
+            <summary>
+                cmdlet to remove a Teams App from MS Teams.
+            </summary>
+        </member>
+        <member name="M:Microsoft.Teams.PowerShell.TeamsCmdlets.RemoveTeamsAppInstallation.#ctor">
+            <summary>
+                Default constructor necessary for cmdlet.
+            </summary>
+        </member>
+        <member name="M:Microsoft.Teams.PowerShell.TeamsCmdlets.RemoveTeamsAppInstallation.#ctor(Microsoft.TeamsCmdlets.Powershell.Connect.Common.IHttpClientFactory)">
+            <summary>
+                Constructor with an implementation of <see cref="T:Microsoft.TeamsCmdlets.Powershell.Connect.Common.IHttpClientFactory" />.
+                Creates an instance of <see cref="T:Microsoft.Teams.PowerShell.TeamsCmdlets.RemoveTeamsAppInstallation" />
+            </summary>
+            <param name="httpClientFactory"></param>
+        </member>
+        <member name="P:Microsoft.Teams.PowerShell.TeamsCmdlets.RemoveTeamsAppInstallation.CmdletName">
+            <summary>
+                Name of the cmdlet.
+            </summary>
+        </member>
+        <member name="P:Microsoft.Teams.PowerShell.TeamsCmdlets.RemoveTeamsAppInstallation.AppInstallationId">
+            <summary>
+                Installation identifier of the Teams App.
+            </summary>
+        </member>
+        <member name="P:Microsoft.Teams.PowerShell.TeamsCmdlets.RemoveTeamsAppInstallation.AppId">
+            <summary>
+                Teams App identifier in MS Teams.
+            </summary>
+        </member>
+        <member name="P:Microsoft.Teams.PowerShell.TeamsCmdlets.RemoveTeamsAppInstallation.TeamId">
+            <summary>
+                Team identifier in MS Teams.
+            </summary>
+        </member>
+        <member name="P:Microsoft.Teams.PowerShell.TeamsCmdlets.RemoveTeamsAppInstallation.UserId">
+            <summary>
+                User identifier in MS Teams.
+            </summary>
+        </member>
+        <member name="M:Microsoft.Teams.PowerShell.TeamsCmdlets.RemoveTeamTargetingHierarchy.#ctor">
+            <summary>
+            Default constructor necessary for cmdlet.
+            </summary>
+        </member>
+        <member name="M:Microsoft.Teams.PowerShell.TeamsCmdlets.RemoveTeamTargetingHierarchy.#ctor(Microsoft.TeamsCmdlets.Powershell.Connect.Common.IHttpClientFactory)">
+            <summary>
+            Constructor with an implementation of <see cref="T:Microsoft.TeamsCmdlets.Powershell.Connect.Common.IHttpClientFactory" />.
+            Creates an instance of <see cref="T:Microsoft.Teams.PowerShell.TeamsCmdlets.RemoveTeamTargetingHierarchy" />
+            </summary>
+            <param name="httpClientFactory"></param>
+        </member>
+        <member name="P:Microsoft.Teams.PowerShell.TeamsCmdlets.RemoveTeamTargetingHierarchy.ClientRequestId">
+            <summary>
+            Id for the request instance of an upload operation.
+            </summary>
+        </member>
+        <member name="P:Microsoft.Teams.PowerShell.TeamsCmdlets.RemoveTeamTargetingHierarchy.CmdletName">
+            <summary>
+            Name of the Cmdlet.
+            </summary>
+        </member>
+        <member name="P:Microsoft.Teams.PowerShell.TeamsCmdlets.RemoveTeamTargetingHierarchy.ApiVersion">
+            <summary>
+            Version of the api service endpoints that will be used.
+            </summary>
+        </member>
+        <member name="T:Microsoft.Teams.PowerShell.TeamsCmdlets.RemoveTeamUser">
+            <summary>
+            Cmdlet to add user to a team. Role of the user can be specified
+            </summary>
+        </member>
+        <member name="M:Microsoft.Teams.PowerShell.TeamsCmdlets.RemoveTeamUser.#ctor">
+            <summary>
+            Default constructor necessary for cmdlet.
+            </summary>
+        </member>
+        <member name="M:Microsoft.Teams.PowerShell.TeamsCmdlets.RemoveTeamUser.#ctor(Microsoft.TeamsCmdlets.Powershell.Connect.Common.IHttpClientFactory)">
+            <summary>
+            Constructor with an implementation of <see cref="T:Microsoft.TeamsCmdlets.Powershell.Connect.Common.IHttpClientFactory" />.
+            Creates an instance of <see cref="T:Microsoft.Teams.PowerShell.TeamsCmdlets.RemoveTeamUser" />
+            </summary>
+            <param name="httpClientFactory"></param>
+        </member>
+        <member name="M:Microsoft.Teams.PowerShell.TeamsCmdlets.SetTeam.#ctor">
+            <summary>
+            Default constructor necessary for cmdlet.
+            </summary>
+        </member>
+        <member name="M:Microsoft.Teams.PowerShell.TeamsCmdlets.SetTeam.#ctor(Microsoft.TeamsCmdlets.Powershell.Connect.Common.IHttpClientFactory)">
+            <summary>
+            Constructor with an implementation of <see cref="T:Microsoft.TeamsCmdlets.Powershell.Connect.Common.IHttpClientFactory" />.
+            Creates an instance of <see cref="T:Microsoft.Teams.PowerShell.TeamsCmdlets.SetTeam" />
+            </summary>
+            <param name="httpClientFactory"></param>
+        </member>
+        <member name="M:Microsoft.Teams.PowerShell.TeamsCmdlets.SetTeamArchivedState.#ctor">
+            <summary>
+            Default constructor necessary for cmdlet.
+            </summary>
+        </member>
+        <member name="M:Microsoft.Teams.PowerShell.TeamsCmdlets.SetTeamArchivedState.#ctor(Microsoft.TeamsCmdlets.Powershell.Connect.Common.IHttpClientFactory)">
+            <summary>
+            Constructor with an implementation of <see cref="T:Microsoft.TeamsCmdlets.Powershell.Connect.Common.IHttpClientFactory" />.
+            Creates an instance of <see cref="T:Microsoft.Teams.PowerShell.TeamsCmdlets.SetTeamArchivedState" />
+            </summary>
+            <param name="httpClientFactory"></param>
+        </member>
+        <member name="P:Microsoft.Teams.PowerShell.TeamsCmdlets.SetTeamArchivedState.GroupId">
+            <summary>
+            The groupid to be archived.
+            </summary>
+        </member>
+        <member name="P:Microsoft.Teams.PowerShell.TeamsCmdlets.SetTeamArchivedState.Archived">
+            <summary>
+            If true, archive team (API above).  If false, unarchive team.
+            </summary>
+        </member>
+        <member name="P:Microsoft.Teams.PowerShell.TeamsCmdlets.SetTeamArchivedState.SetSpoSiteReadOnlyForMembers">
+            <summary>
+            Optional parameter. Used with Archived == $true.
+            This optional parameter defines whether to set permissions for team members to read-only on the Sharepoint Online site associated with the team.
+            See the following API docs for shouldSetSpoSiteReadOnlyForMembers
+            https://docs.microsoft.com/en-us/graph/api/team-archive?view=graph-rest-beta
+            https://docs.microsoft.com/en-us/graph/api/team-archive?view=graph-rest-1.0
+            </summary>
+        </member>
+        <member name="M:Microsoft.Teams.PowerShell.TeamsCmdlets.SetTeamChannel.#ctor">
+            <summary>
+                Default constructor necessary for cmdlet.
+            </summary>
+        </member>
+        <member name="M:Microsoft.Teams.PowerShell.TeamsCmdlets.SetTeamChannel.#ctor(Microsoft.TeamsCmdlets.Powershell.Connect.Common.IHttpClientFactory)">
+            <summary>
+                Constructor with an implementation of <see cref="T:Microsoft.TeamsCmdlets.Powershell.Connect.Common.IHttpClientFactory" />.
+                Creates an instance of <see cref="T:Microsoft.Teams.PowerShell.TeamsCmdlets.SetTeamChannel" />
+            </summary>
+            <param name="httpClientFactory"></param>
+        </member>
+        <member name="T:Microsoft.Teams.PowerShell.TeamsCmdlets.SetTeamChannel.TeamChannelModelForPatch">
+            <summary>
+            Channel model without membershiptype as the property is not supported on Graph patch endpoint
+            </summary>
+        </member>
+        <member name="M:Microsoft.Teams.PowerShell.TeamsCmdlets.SetTeamPicture.#ctor">
+            <summary>
+            Default constructor necessary for cmdlet.
+            </summary>
+        </member>
+        <member name="M:Microsoft.Teams.PowerShell.TeamsCmdlets.SetTeamPicture.#ctor(Microsoft.TeamsCmdlets.Powershell.Connect.Common.IHttpClientFactory)">
+            <summary>
+            Constructor with an implementation of <see cref="T:Microsoft.TeamsCmdlets.Powershell.Connect.Common.IHttpClientFactory" />.
+            Creates an instance of <see cref="T:Microsoft.Teams.PowerShell.TeamsCmdlets.SetTeamPicture" />
+            </summary>
+            <param name="httpClientFactory"></param>
+        </member>
+        <member name="M:Microsoft.Teams.PowerShell.TeamsCmdlets.SetTeamsApp.#ctor">
+            <summary>
+            Default constructor necessary for cmdlet.
+            </summary>
+        </member>
+        <member name="M:Microsoft.Teams.PowerShell.TeamsCmdlets.SetTeamsApp.#ctor(Microsoft.TeamsCmdlets.Powershell.Connect.Common.IHttpClientFactory)">
+            <summary>
+            Constructor with an implementation of <see cref="T:Microsoft.TeamsCmdlets.Powershell.Connect.Common.IHttpClientFactory" />.
+            Creates an instance of <see cref="T:Microsoft.Teams.PowerShell.TeamsCmdlets.SetTeamsApp" />
+            </summary>
+            <param name="httpClientFactory"></param>
+        </member>
+        <member name="M:Microsoft.Teams.PowerShell.TeamsCmdlets.SetTeamTargetingHierarchy.#ctor">
+            <summary>
+            Default constructor necessary for cmdlet.
+            </summary>
+        </member>
+        <member name="M:Microsoft.Teams.PowerShell.TeamsCmdlets.SetTeamTargetingHierarchy.#ctor(Microsoft.TeamsCmdlets.Powershell.Connect.Common.IHttpClientFactory)">
+            <summary>
+            Constructor with an implementation of <see cref="T:Microsoft.TeamsCmdlets.Powershell.Connect.Common.IHttpClientFactory" />.
+            Creates an instance of <see cref="T:Microsoft.Teams.PowerShell.TeamsCmdlets.SetTeamTargetingHierarchy" />
+            </summary>
+            <param name="httpClientFactory"></param>
+        </member>
+        <member name="P:Microsoft.Teams.PowerShell.TeamsCmdlets.SetTeamTargetingHierarchy.CmdletName">
+            <summary>
+            Name of the Cmdlet.
+            </summary>
+        </member>
+        <member name="P:Microsoft.Teams.PowerShell.TeamsCmdlets.SetTeamTargetingHierarchy.FilePath">
+            <summary>
+            Path for the CSV file that will be consumed.
+            </summary>
+        </member>
+        <member name="P:Microsoft.Teams.PowerShell.TeamsCmdlets.SetTeamTargetingHierarchy.ApiVersion">
+            <summary>
+            Version of the api service endpoints that will be used.
+            </summary>
+        </member>
+        <member name="T:Microsoft.Teams.PowerShell.TeamsCmdlets.TeamsCmdlet">
+            <summary>
+            Base class for all teams cmdlet which need AUTH.
+            </summary>
+        </member>
+        <member name="F:Microsoft.Teams.PowerShell.TeamsCmdlets.TeamsCmdlet.CancelKeyPress">
+            <summary>
+            Used to detect system interrupts
+            </summary>
+        </member>
+        <member name="M:Microsoft.Teams.PowerShell.TeamsCmdlets.TeamsCmdlet.BeginProcessing">
+            <summary>
+            Check whether user is authenticated or not.
+            </summary>
+        </member>
+        <member name="M:Microsoft.Teams.PowerShell.TeamsCmdlets.TeamsCmdlet.InterruptHandler(System.Object,System.ConsoleCancelEventArgs)">
+            <summary>
+            Signal for when the user sends a cancel interrupt (ctrl + c)
+            </summary>
+            <param name="sender"></param>
+            <param name="args"></param>
+        </member>
+        <member name="T:Microsoft.Teams.PowerShell.TeamsCmdlets.UpdateStagedApp">
+            <summary>
+            Updates the Review Status of a Staged App with Published/Rejected
+            </summary>
+        </member>
+        <member name="M:Microsoft.Teams.PowerShell.TeamsCmdlets.UpdateStagedApp.#ctor">
+            <summary>
+            Default Constructor
+            </summary>
+        </member>
+        <member name="M:Microsoft.Teams.PowerShell.TeamsCmdlets.UpdateStagedApp.#ctor(Microsoft.TeamsCmdlets.Powershell.Connect.Common.IHttpClientFactory)">
+            <summary>
+            Constructor with an implementation of <see cref="T:Microsoft.TeamsCmdlets.Powershell.Connect.Common.IHttpClientFactory" />
+            Creates an instance of <see cref="T:Microsoft.Teams.PowerShell.TeamsCmdlets.UpdateStagedApp" />
+            </summary>
+            <param name="httpClientFactory"></param>
+        </member>
+        <member name="P:Microsoft.Teams.PowerShell.TeamsCmdlets.UpdateStagedApp.CmdletName">
+            <summary>
+            Commandlet name
+            </summary>
+        </member>
+        <member name="P:Microsoft.Teams.PowerShell.TeamsCmdlets.UpdateStagedApp.Id">
+            <summary>
+            App Id of the Staged App
+            </summary>
+        </member>
+        <member name="P:Microsoft.Teams.PowerShell.TeamsCmdlets.UpdateStagedApp.ReviewStatus">
+            <summary>
+            Review Status of the Staged App
+            This can be Published|Rejected
+            </summary>
+        </member>
+        <member name="M:Microsoft.Teams.PowerShell.TeamsCmdlets.UpdateStagedApp.ProcessRecord">
+            <inheritdoc/>
+        </member>
+        <member name="M:Microsoft.Teams.PowerShell.TeamsCmdlets.UpdateStagedApp.CreateStagedAppUpdateRequestBody(System.Net.Http.HttpClient,System.String)">
+            <summary>
+            Create and validate the StagedAppUpdateRequestBody
+            </summary>
+            <param name="httpClient"><see cref="T:System.Net.Http.HttpClient" /></param>
+            <param name="baseUrl">Base URL</param>
+            <returns>Staged App Updated Request Body</returns>
+        </member>
+        <member name="M:Microsoft.Teams.PowerShell.TeamsCmdlets.UpdateStagedApp.FetchStagedAppDefinitionEtag(System.Net.Http.HttpClient,System.String)">
+            <summary>
+            Fetches the Staged App Definition Etag 
+            </summary>
+            <param name="httpClient"><see cref="T:System.Net.Http.HttpClient" /></param>
+            <param name="baseUrl">Base URL</param>
+            <returns>The Staged App Definition Etag</returns>
+        </member>
+        <member name="T:Microsoft.Teams.PowerShell.TeamsCmdlets.UpdateTeamsAppInstallation">
+            <summary>
+                cmdlet to update a Teams App in MS Teams.
+            </summary>
+        </member>
+        <member name="M:Microsoft.Teams.PowerShell.TeamsCmdlets.UpdateTeamsAppInstallation.#ctor">
+            <summary>
+                Default constructor necessary for cmdlet.
+            </summary>
+        </member>
+        <member name="M:Microsoft.Teams.PowerShell.TeamsCmdlets.UpdateTeamsAppInstallation.#ctor(Microsoft.TeamsCmdlets.Powershell.Connect.Common.IHttpClientFactory)">
+            <summary>
+                Constructor with an implementation of <see cref="T:Microsoft.TeamsCmdlets.Powershell.Connect.Common.IHttpClientFactory" />.
+                Creates an instance of <see cref="T:Microsoft.Teams.PowerShell.TeamsCmdlets.UpdateTeamsAppInstallation" />
+            </summary>
+            <param name="httpClientFactory"></param>
+        </member>
+        <member name="P:Microsoft.Teams.PowerShell.TeamsCmdlets.UpdateTeamsAppInstallation.CmdletName">
+            <summary>
+                Name of the cmdlet.
+            </summary>
+        </member>
+        <member name="P:Microsoft.Teams.PowerShell.TeamsCmdlets.UpdateTeamsAppInstallation.AppInstallationId">
+            <summary>
+                Installation identifier of the Teams App.
+            </summary>
+        </member>
+        <member name="P:Microsoft.Teams.PowerShell.TeamsCmdlets.UpdateTeamsAppInstallation.AppId">
+            <summary>
+                Teams App identifier in MS Teams.
+            </summary>
+        </member>
+        <member name="P:Microsoft.Teams.PowerShell.TeamsCmdlets.UpdateTeamsAppInstallation.TeamId">
+            <summary>
+                Team identifier in MS Teams.
+            </summary>
+        </member>
+        <member name="P:Microsoft.Teams.PowerShell.TeamsCmdlets.UpdateTeamsAppInstallation.UserId">
+            <summary>
+                User identifier in MS Teams.
+            </summary>
+        </member>
+        <member name="P:Microsoft.Teams.PowerShell.TeamsCmdlets.UpdateTeamsAppInstallation.Permissions">
+            <summary>
+                RSC permissions for the Teams App.
+            </summary>
+        </member>
+        <member name="T:Microsoft.Teams.PowerShell.TeamsCmdlets.UpdateTenantSettings">
+            <summary>
+            Update unified app in the UAMService cmdlet
+            </summary>
+        </member>
+        <member name="M:Microsoft.Teams.PowerShell.TeamsCmdlets.UpdateTenantSettings.#ctor">
+            <summary>
+            Default Constructor
+            </summary>
+        </member>
+        <member name="M:Microsoft.Teams.PowerShell.TeamsCmdlets.UpdateTenantSettings.#ctor(Microsoft.TeamsCmdlets.Powershell.Connect.Common.IHttpClientFactory)">
+            <summary>
+            Constructor with an implementation of <see cref="T:Microsoft.TeamsCmdlets.Powershell.Connect.Common.IHttpClientFactory" />.
+            Updates an instance of <see cref="T:Microsoft.Teams.PowerShell.TeamsCmdlets.UpdateTenantSettings" />
+            </summary>
+            <param name="httpClientFactory"></param>
+        </member>
+        <member name="P:Microsoft.Teams.PowerShell.TeamsCmdlets.UpdateTenantSettings.CmdletName">
+            <summary>
+            Cmdlet Name.
+            </summary>
+        </member>
+        <member name="P:Microsoft.Teams.PowerShell.TeamsCmdlets.UpdateTenantSettings.SettingName">
+            <summary>
+            Gets or Sets the Setting Name. Applicable values DefaultApp | GlobalApp | PrivateApp | EnableCopilotExtensibility
+            </summary>
+        </member>
+        <member name="P:Microsoft.Teams.PowerShell.TeamsCmdlets.UpdateTenantSettings.SettingValue">
+            <summary>
+            Gets or Sets the Setting Value. Applicable values Some|All|None
+            </summary>
+        </member>
+        <member name="P:Microsoft.Teams.PowerShell.TeamsCmdlets.UpdateTenantSettings.Users">
+            <summary>
+            Gets or sets List of user guid for CoPilot Apps.
+            </summary>
+        </member>
+        <member name="P:Microsoft.Teams.PowerShell.TeamsCmdlets.UpdateTenantSettings.Groups">
+            <summary>
+            Gets or sets List of group guid for CoPilot Apps.
+            </summary>
+        </member>
+        <member name="P:Microsoft.Teams.PowerShell.TeamsCmdlets.UpdateTenantSettings.Operation">
+            <summary>
+            Gets or Sets the Setting Value. Applicable values add|remove
+            </summary>
+        </member>
+        <member name="T:Microsoft.Teams.PowerShell.TeamsCmdlets.UpdateUnifiedApp">
+            <summary>
+            Update unified app in the UAMService cmdlet
+            </summary>
+        </member>
+        <member name="M:Microsoft.Teams.PowerShell.TeamsCmdlets.UpdateUnifiedApp.#ctor">
+            <summary>
+            Default Constructor
+            </summary>
+        </member>
+        <member name="M:Microsoft.Teams.PowerShell.TeamsCmdlets.UpdateUnifiedApp.#ctor(Microsoft.TeamsCmdlets.Powershell.Connect.Common.IHttpClientFactory)">
+            <summary>
+            Constructor with an implementation of <see cref="T:Microsoft.TeamsCmdlets.Powershell.Connect.Common.IHttpClientFactory" />.
+            Updates an instance of <see cref="T:Microsoft.Teams.PowerShell.TeamsCmdlets.UpdateUnifiedApp" />
+            </summary>
+            <param name="httpClientFactory"></param>
+        </member>
+        <member name="P:Microsoft.Teams.PowerShell.TeamsCmdlets.UpdateUnifiedApp.CmdletName">
+            <summary>
+            Cmdlet Name.
+            </summary>
+        </member>
+        <member name="P:Microsoft.Teams.PowerShell.TeamsCmdlets.UpdateUnifiedApp.Id">
+            <summary>
+            Id of the Unified App required.
+            </summary>
+        </member>
+        <member name="P:Microsoft.Teams.PowerShell.TeamsCmdlets.UpdateUnifiedApp.IsBlocked">
+            <summary>
+            IsBlocked flag for the Unified App.
+            </summary>
+        </member>
+        <member name="P:Microsoft.Teams.PowerShell.TeamsCmdlets.UpdateUnifiedApp.AppAssignmentType">
+            <summary>
+            AppAssignmentType for the Unified App.
+            This can be 'UsersAndGroups', 'Everyone' or 'Noone'.
+            </summary>
+        </member>
+        <member name="P:Microsoft.Teams.PowerShell.TeamsCmdlets.UpdateUnifiedApp.OperationType">
+            <summary>
+            OperationType for the Unified App.
+            This is either 'Add' or 'Remove' and it represents the operation to be performed on the Users or Groups.
+            It is a required parameter.
+            </summary>
+        </member>
+        <member name="P:Microsoft.Teams.PowerShell.TeamsCmdlets.UpdateUnifiedApp.Users">
+            <summary>
+            Users to be added or removed from the Unified App.
+            If not provided the default value is null.
+            </summary>
+        </member>
+        <member name="P:Microsoft.Teams.PowerShell.TeamsCmdlets.UpdateUnifiedApp.Groups">
+            <summary>
+            Groups to be added or removed from the Unified App.
+            If not provided the default value is null.
+            </summary>
+        </member>
+        <member name="P:Microsoft.Teams.PowerShell.TeamsCmdlets.UpdateUnifiedApp.AppInstallType">
+            <summary>
+            AppAssignmentType for the Unified App.
+            This can be 'UsersAndGroups', 'Everyone' or 'Noone'.
+            </summary>
+        </member>
+        <member name="P:Microsoft.Teams.PowerShell.TeamsCmdlets.UpdateUnifiedApp.InstallForOperationType">
+            <summary>
+            OperationType for the Unified App.
+            This is either 'Add' or 'Remove' and it represents the operation to be performed on the Users or Groups.
+            It is a required parameter.
+            </summary>
+        </member>
+        <member name="P:Microsoft.Teams.PowerShell.TeamsCmdlets.UpdateUnifiedApp.InstallForUsers">
+            <summary>
+            Users to be added or removed from the Unified App.
+            If not provided the default value is null.
+            </summary>
+        </member>
+        <member name="P:Microsoft.Teams.PowerShell.TeamsCmdlets.UpdateUnifiedApp.InstallForGroups">
+            <summary>
+            Groups to be added or removed from the Unified App.
+            If not provided the default value is null.
+            </summary>
+        </member>
+        <member name="P:Microsoft.Teams.PowerShell.TeamsCmdlets.UpdateUnifiedApp.InstallVersion">
+            <summary>
+            DeployVersion for the Unified App.
+            Only applicable for deployTo
+            </summary>
+        </member>
+        <member name="M:Microsoft.Teams.PowerShell.TeamsCmdlets.UpdateUnifiedApp.CreateUnifiedAppUpdateRequestBody">
+            <summary>
+            Create and validate the UnifiedAppUpdateRequestBody
+            </summary>
+            <returns></returns>
+            <exception cref="T:System.Exception"></exception>
+        </member>
+        <member name="T:Microsoft.Teams.PowerShell.TeamsCmdlets.Utils.GraphUtilities">
+            <summary>
+            The utilities of graph APIs.
+            </summary>
+        </member>
+        <member name="M:Microsoft.Teams.PowerShell.TeamsCmdlets.Utils.GraphUtilities.GetUserId(System.Net.Http.HttpClient,System.String)">
+            <summary>
+            Return the current user user id.
+            </summary>
+            <param name="httpClient">http client</param>
+            <param name="graphResource">graph resource</param>
+            <returns>AAD user id</returns>
+        </member>
+        <member name="M:Microsoft.Teams.PowerShell.TeamsCmdlets.Utils.GraphUtilities.GetUserId(System.Net.Http.HttpClient,System.String,System.String)">
+            <summary>
+            Given a user UPN or email Id, return user Id.
+            </summary>
+            <param name="httpClient">http client</param>
+            <param name="upn">user's upn</param>
+            <param name="graphResource">graph resource</param>
+            <returns>AAD user id</returns>
+        </member>
+        <member name="M:Microsoft.Teams.PowerShell.TeamsCmdlets.Utils.GraphUtilities.GetUpnForUsers(System.Net.Http.HttpClient,System.Collections.Generic.IList{System.String},System.String)">
+            <summary>
+            Given a list of userIds, get the dictionary of userId - upn.
+            </summary>
+            <param name="httpClient">httpClient</param>
+            <param name="userIds">list of userIds</param>
+            <param name="graphResource">graph resource</param>
+            <returns>dictionary of userId - upn</returns>
+        </member>
+        <member name="M:Microsoft.Teams.PowerShell.TeamsCmdlets.Utils.GraphUtilities.GetGraphAadUserConversationMembersOfChannel(System.Net.Http.HttpClient,System.String,System.String,Microsoft.Teams.PowerShell.TeamsCmdlets.Model.Channel)">
+            <summary>
+            GET all AAD members of a channel.
+            </summary>
+            <param name="httpClient">http client</param>
+            <param name="graphResource">graph resource</param>
+            <param name="groupId">AAD group id</param>
+            <param name="channel">Channel object</param>
+            <returns>list of AAD members</returns>
+        </member>
+        <member name="F:Microsoft.Teams.PowerShell.TeamsCmdlets.Utils.HttpUtilities.MaxRetries">
+            <summary>
+            Maximum number of retries for each http call under special conditions (ex. Service Unavailable)
+            </summary>
+        </member>
+        <member name="F:Microsoft.Teams.PowerShell.TeamsCmdlets.Utils.HttpUtilities.JsonSerializerSettings">
+            <summary>
+            JSON Serializer settings.
+            </summary>
+        </member>
+        <member name="M:Microsoft.Teams.PowerShell.TeamsCmdlets.Utils.HttpUtilities.Get``1(System.Net.Http.HttpClient,System.Uri)">
+            <summary>
+            Send a GET request to the specified Uri.
+            </summary>
+            <typeparam name="T">Return type</typeparam>
+            <param name="requestUri">The Uri the request is sent to.</param>
+            <returns>Returns resource as specified type T</returns>
+        </member>
+        <member name="M:Microsoft.Teams.PowerShell.TeamsCmdlets.Utils.HttpUtilities.Get``1(System.Net.Http.HttpClient,System.Uri,System.Collections.Generic.Dictionary{System.String,System.String})">
+            <summary>
+            Send a GET request to the specified Uri with headers
+            </summary>
+            <typeparam name="T">Return type</typeparam>
+            <param name="requestUri">The Uri the request is sent to.</param>
+            <param name="headers">Custom headers sent with the request.</param>
+            <returns>Returns resource.</returns>
+        </member>
+        <member name="M:Microsoft.Teams.PowerShell.TeamsCmdlets.Utils.HttpUtilities.GetAll``1(System.Net.Http.HttpClient,System.Uri)">
+            <summary>
+            GET all entities from Graph
+            </summary>
+            <typeparam name="T">Return type</typeparam>
+            <param name="requestUri">The Uri the request is sent to.</param>
+            <returns>List of resources.</returns>
+        </member>
+        <member name="M:Microsoft.Teams.PowerShell.TeamsCmdlets.Utils.HttpUtilities.Post``1(System.Net.Http.HttpClient,System.Uri,``0)">
+            <summary>
+            Send a POST request to the specified Uri
+            </summary>
+            <typeparam name="T">Input type</typeparam>
+            <param name="httpClient">http client</param>
+            <param name="requestUri">The Uri the request is sent to.</param>
+            <param name="content">Resource to post</param>
+            <returns>Returns created resource.</returns>
+        </member>
+        <member name="M:Microsoft.Teams.PowerShell.TeamsCmdlets.Utils.HttpUtilities.PostToAPIWithLocation``1(System.Net.Http.HttpClient,System.Uri,``0)">
+            <summary>
+            Special POST for APIs that return async operation ids via Location header.
+            </summary>
+            <param name="httpClient">http client</param>
+            <param name="requestUri">The Uri the request is sent to.</param>
+            <param name="content">Resource to post</param>
+            <returns>Returns created resource.</returns>
+        </member>
+        <member name="M:Microsoft.Teams.PowerShell.TeamsCmdlets.Utils.HttpUtilities.BatchCall``1(System.Net.Http.HttpClient,System.Uri,Microsoft.Teams.PowerShell.TeamsCmdlets.Utils.BatchRequest)">
+            <summary>
+            Special POST for batch requests. Takes in a GraphBatchRequest and returns a BatchResponse. The response will have an id which maps to the id in the request
+            </summary>
+            <param name="httpClient"></param>
+            <param name="requestUri"></param>
+            <param name="graphBatchRequest"></param>
+            <returns></returns>
+        </member>
+        <member name="M:Microsoft.Teams.PowerShell.TeamsCmdlets.Utils.HttpUtilities.Put``1(System.Net.Http.HttpClient,System.Uri,``0)">
+            <summary>
+            Send a PUT request to the specified Uri
+            </summary>
+            <typeparam name="T">Input type</typeparam>
+            <param name="httpClient">http client</param>
+            <param name="requestUri">The Uri the request is sent to.</param>
+            <param name="content">Resource to update</param>
+            <returns>Returns updated resource.</returns>
+        </member>
+        <member name="M:Microsoft.Teams.PowerShell.TeamsCmdlets.Utils.HttpUtilities.Patch``1(System.Net.Http.HttpClient,System.Uri,``0)">
+            <summary>
+            Send a PATCH request to the specified Uri
+            </summary>
+            <typeparam name="T">Input type</typeparam>
+            <param name="httpClient">http client</param>
+            <param name="requestUri">The Uri the request is sent to.</param>
+            <param name="content">Resource to update</param>
+        </member>
+        <member name="M:Microsoft.Teams.PowerShell.TeamsCmdlets.Utils.HttpUtilities.PatchUnifiedApp``1(System.Net.Http.HttpClient,System.Uri,``0)">
+            <summary>
+            Send a patch request to the UAM service for updating an app.
+            </summary>
+            <typeparam name="T">Body type</typeparam>
+            <param name="httpClient">http client</param>
+            <param name="requestUri">The uri the request is sent to</param>
+            <param name="content">App to update</param>
+            <exception cref="T:Microsoft.Teams.PowerShell.TeamsCmdlets.ErrorHandling.ApiException"></exception>
+        </member>
+        <member name="M:Microsoft.Teams.PowerShell.TeamsCmdlets.Utils.HttpUtilities.Delete(System.Net.Http.HttpClient,System.Uri)">
+            <summary>
+            Send a DELETE request to the specified Uri
+            </summary>
+            <typeparam name="T">Input type</typeparam>
+            <param name="httpClient">http client</param>
+            <param name="requestUri">The Uri the request is sent to.</param>
+        </member>
+        <member name="M:Microsoft.Teams.PowerShell.TeamsCmdlets.Utils.HttpUtilities.GetAsync``1(System.Net.Http.HttpClient,System.Uri,System.Func{System.String})">
+            <summary>
+            Send a async GET request to the specified Uri.
+            </summary>
+            <typeparam name="T"></typeparam>
+            <param name="httpClient"></param>
+            <param name="requestUri"></param>
+            <param name="refreshToken"></param>
+            <returns></returns>
+        </member>
+        <member name="M:Microsoft.Teams.PowerShell.TeamsCmdlets.Utils.HttpUtilities.GetAsync``1(System.Net.Http.HttpClient,System.Uri,System.Collections.Generic.Dictionary{System.String,System.String},System.Func{System.String})">
+            <summary>
+            Send a GET request to the specified Uri with headers
+            </summary>
+            <typeparam name="T">Return type</typeparam>
+            <param name="httpClient">http client</param>
+            <param name="requestUri">The Uri the request is sent to.</param>
+            <param name="headers">Custom headers sent with the request.</param>
+            <param name="refreshToken">Function for refreshing authorization token when we get a 401.</param>
+            <returns>Returns resource.</returns>
+        </member>
+        <member name="M:Microsoft.Teams.PowerShell.TeamsCmdlets.Utils.HttpUtilities.SendRequest(System.Net.Http.HttpClient,System.Net.Http.HttpMethod,System.Uri,System.Collections.Generic.Dictionary{System.String,System.String},System.Net.Http.HttpContent)">
+            <summary>
+            Sends requests and handles retries, backoff and wait-after time spans
+            Will only retry if the status code returned is worth retrying
+            If header has retry-after then wait for the timespan specified
+            Else uses a decorrelated jitter exponential backoff strategry, useful for multithreaded applications
+            Creates a new HttpRequestMessage for every request since it cannot be reused with the same HttpClient
+            </summary>
+            <param name="httpClient"></param>
+            <param name="method"></param>
+            <param name="requestUri"></param>
+            <param name="headers"></param>
+            <param name="content"></param>
+            <returns></returns>
+        </member>
+        <member name="M:Microsoft.Teams.PowerShell.TeamsCmdlets.Utils.HttpUtilities.CreateRequest(System.Net.Http.HttpMethod,System.Uri,System.Collections.Generic.Dictionary{System.String,System.String},System.Net.Http.HttpContent)">
+            <summary>
+            Function for creating HttpRequestMessages
+            </summary>
+            <param name="method"></param>
+            <param name="requestUri"></param>
+            <param name="headers"></param>
+            <param name="content"></param>
+            <returns></returns>
+        </member>
+        <member name="F:Microsoft.Teams.PowerShell.TeamsCmdlets.Utils.TeamsCmdletExtensions.MaximumGetUsersPageSize">
+            <summary>
+            The maximum number of users that can get returned per page in the GET /users API.
+            </summary>
+        </member>
+        <member name="F:Microsoft.Teams.PowerShell.TeamsCmdlets.Utils.TeamsCmdletExtensions.MaximumGetTeamsUserActivityUserDetailPageSize">
+            <summary>
+            The maximum number of Teams user activity details that can get returned per page in the GET /getTeamsUserActivityUserDetail API.
+            </summary>
+        </member>
+        <member name="F:Microsoft.Teams.PowerShell.TeamsCmdlets.Utils.TeamsCmdletExtensions.ValidTeamsUserActivityReportPeriods">
+            <summary>
+            The valid report periods for the Teams usage report API.
+            https://docs.microsoft.com/en-us/graph/api/reportroot-getteamsuseractivityuserdetail?view=graph-rest-beta
+            </summary>
+        </member>
+        <member name="M:Microsoft.Teams.PowerShell.TeamsCmdlets.Utils.TeamsCmdletExtensions.ValidateAndGetScope(Microsoft.Teams.PowerShell.TeamsCmdlets.TeamsCmdlet,System.String,System.String,System.String)">
+            <summary>
+                Validates and returns the scope and the scope identifier based on the identifier arguments provided.
+            </summary>
+            <param name="teamsCmdlet">Instance of <see cref="T:Microsoft.Teams.PowerShell.TeamsCmdlets.TeamsCmdlet" />.</param>
+            <param name="teamId">Team Id in MS Teams.</param>
+            <param name="chatId">Chat Id in MS Teams.</param>
+            <param name="userId">User Id in MS Teams.</param>
+            <returns>scope <see cref="T:Microsoft.Teams.PowerShell.TeamsCmdlets.Common.TeamsAppInstallationScope" /> and scope identifier.</returns>
+        </member>
+        <member name="M:Microsoft.Teams.PowerShell.TeamsCmdlets.Utils.TeamsCmdletExtensions.FetchTeamsAppInstallationsFromAppId(Microsoft.Teams.PowerShell.TeamsCmdlets.TeamsCmdlet,System.Net.Http.HttpClient,System.String,Microsoft.Teams.PowerShell.TeamsCmdlets.Common.TeamsAppInstallationScope,System.String,System.String)">
+            <summary>
+                Fetches the TeamsAppInstallation for a given scope, scopeIdentifier and appId.
+            </summary>
+            <param name="teamsCmdlet">Instance of <see cref="T:Microsoft.Teams.PowerShell.TeamsCmdlets.TeamsCmdlet" />.</param>
+            <param name="httpClient"><see cref="T:System.Net.Http.HttpClient" />.</param>
+            <param name="graphResourceBaseUrl">Base MS Graph URL.</param>
+            <param name="scope">Scope of the app installation <see cref="T:Microsoft.Teams.PowerShell.TeamsCmdlets.Common.TeamsAppInstallationScope" />.</param>
+            <param name="scopeIdentifier">Identifier of the scope where the app is installed.</param>
+            <param name="appId">Installation identifier of the Teams App.</param>
+            <returns>The corresponding Teams App installed.</returns>
+        </member>
+        <member name="M:Microsoft.Teams.PowerShell.TeamsCmdlets.Utils.TeamsCmdletExtensions.CreateTeamsAppLifecycleManagementUri(Microsoft.Teams.PowerShell.TeamsCmdlets.TeamsCmdlet,System.String,Microsoft.Teams.PowerShell.TeamsCmdlets.Common.TeamsAppInstallationScope,System.String)">
+            <summary>
+                Creates the base url for Teams App lifecycle management.
+            </summary>
+            <param name="teamsCmdlet">Instance of <see cref="T:Microsoft.Teams.PowerShell.TeamsCmdlets.TeamsCmdlet" />.</param>
+            <param name="graphResourceBaseUrl">The MS Graph base url.</param>
+            <param name="scope">Scope of the app installation <see cref="T:Microsoft.Teams.PowerShell.TeamsCmdlets.Common.TeamsAppInstallationScope" />.</param>
+            <param name="scopeIdentifier">Identifier of the scope where the app is installed.</param>
+            <returns>The url for Teams App lifecycle management</returns>
+        </member>
+        <member name="M:Microsoft.Teams.PowerShell.TeamsCmdlets.Utils.TeamsCmdletExtensions.BatchFetchUserLicenseDetails(Microsoft.Teams.PowerShell.TeamsCmdlets.TeamsCmdlet,System.Net.Http.HttpClient,System.String,System.Collections.Generic.List{System.String})">
+            <summary>
+            Fetches the license details for a number of users.
+            </summary>
+            <param name="teamsCmdlet">Instance of <see cref="T:Microsoft.Teams.PowerShell.TeamsCmdlets.TeamsCmdlet" />.</param>
+            <param name="httpClient"><see cref="T:System.Net.Http.HttpClient" />.</param>
+            <param name="graphResourceBaseUrl">Base MS Graph URL.</param>
+            <param name="userUpns">The unique IDs or UPNs of the users for which to retrieve license details.</param>
+            <returns>A dictionary representing the license details for a number of users, mapping the UPN to the license details.</returns>
+            <returns>A list of error messages from the batch request.</returns>
+        </member>
+        <member name="M:Microsoft.Teams.PowerShell.TeamsCmdlets.Utils.TeamsCmdletExtensions.FetchUsers(Microsoft.Teams.PowerShell.TeamsCmdlets.TeamsCmdlet,System.Net.Http.HttpClient,System.String)">
+            <summary>
+            Fetches the details of all users in the tenant.
+            </summary>
+            <param name="teamsCmdlet">Instance of <see cref="T:Microsoft.Teams.PowerShell.TeamsCmdlets.TeamsCmdlet" />.</param>
+            <param name="httpClient"><see cref="T:System.Net.Http.HttpClient" />.</param>
+            <param name="graphResourceBaseUrl">Base MS Graph URL.</param>
+            <returns>The details about all users in the tenant.</returns>
+        </member>
+        <member name="M:Microsoft.Teams.PowerShell.TeamsCmdlets.Utils.TeamsCmdletExtensions.FetchTeamsUserActivityUserDetails(Microsoft.Teams.PowerShell.TeamsCmdlets.TeamsCmdlet,System.Net.Http.HttpClient,System.String,System.Int32)">
+            <summary>
+            Fetches the Teams user activity details for all users in a tenant.
+            </summary>
+            <param name="teamsCmdlet">Instance of <see cref="T:Microsoft.Teams.PowerShell.TeamsCmdlets.TeamsCmdlet" />.</param>
+            <param name="httpClient"><see cref="T:System.Net.Http.HttpClient" />.</param>
+            <param name="graphResourceBaseUrl">Base MS Graph URL.</param>
+            <param name="periodInDays">The period for which we want to fetch teh user activity details.</param>
+            <returns>The Teams user activity details for all users in a tenant.</returns>
+        </member>
+        <member name="F:Microsoft.Teams.PowerShell.TeamsCmdlets.Utils.TeamUtilities.TeamScopeParameterSet">
+            <summary>
+            ParameterSet name for resource management in Team scope
+            </summary>
+        </member>
+        <member name="F:Microsoft.Teams.PowerShell.TeamsCmdlets.Utils.TeamUtilities.UserScopeParameterSet">
+            <summary>
+            ParameterSet name for resource management in User scope
+            </summary>
+        </member>
+        <member name="F:Microsoft.Teams.PowerShell.TeamsCmdlets.Utils.TeamUtilities.DefaultTeamAlias">
+            <summary>
+            Default team alias used when the input alias contains invalid characters
+            </summary>
+        </member>
+        <member name="F:Microsoft.Teams.PowerShell.TeamsCmdlets.Utils.TeamUtilities.AliasSuffixLength">
+            <summary>
+            Team alias suffix length
+            For example: Team alias is "msteams_d010ac", suffix will be "_"+"d010ac"
+            </summary>
+        </member>
+        <member name="F:Microsoft.Teams.PowerShell.TeamsCmdlets.Utils.TeamUtilities.TeamAliasAllowedCharacterSet">
+            <summary>
+            Allowed set of characters in team alias
+            </summary>
+        </member>
+        <member name="M:Microsoft.Teams.PowerShell.TeamsCmdlets.Utils.TeamUtilities.GenerateValidAlias(System.String,System.Int32,System.Boolean@)">
+            <summary>
+            Generates valid team alias
+                This function will be used for generate original alias base on displayName
+                1. Only Keeps allowed characters and alias can't exceeds
+                2. If genenrated alias in step 1 don't contain alphanumeric characters, MT generate a new alias
+            </summary>
+            <param name="alias">Team alias</param>
+            <param name="office365PrefixSuffixLength">Prefix/Suffix Length</param>
+            <param name="useDefaultAlias">If use default alias which starts with "DefaultTeamAlias"</param>
+            <returns>Valid team alias</returns>
+        </member>
+        <member name="M:Microsoft.Teams.PowerShell.TeamsCmdlets.Utils.TeamUtilities.GenerateAliasSuffix">
+            <summary>
+            Generates (0-9, a-f) alias suffix base on Guid
+            </summary>
+            <returns>Valid team alias</returns>
+        </member>
+        <member name="M:Microsoft.Teams.PowerShell.TeamsCmdlets.Utils.TeamUtilities.CheckLimitAndGenerateUniqueAlias(System.String,System.String,System.Int32)">
+            <summary>
+            Generates unique team alias
+                This function will be used for generate new alias base on orginal alias if the original alias duplicated
+                The new alias length must less than alias.Length + suffix.Length
+            </summary>
+            <param name="alias">Team alias</param>
+            <param name="suffix">Team alias suffix</param>
+            <param name="office365PrefixSuffixLength">Office365 mailNickname Prefix/Suffix Length</param>
+            <returns>Valid team alias</returns>
+        </member>
+        <member name="M:Microsoft.Teams.PowerShell.TeamsCmdlets.Utils.TeamUtilities.KeepAllowedCharacters(System.String,System.Boolean[])">
+            <summary>
+            Keeps allowed characters and removes the not allowed ones.
+            </summary>
+            <param name="str">Input string</param>
+            <param name="allowedCharSet">Allowed character set</param>
+            <returns>Input string with only the allowed characters</returns>
+        </member>
+        <member name="T:Microsoft.Teams.PowerShell.TeamsCmdlets.Utils.UserUtilities">
+            <summary>
+            Represents some utilities for user objects.
+            </summary>
+        </member>
+        <member name="M:Microsoft.Teams.PowerShell.TeamsCmdlets.Utils.UserUtilities.GetUsersToOutputFromGraphAadUsersByRole(System.Net.Http.HttpClient,System.String,System.Collections.Generic.IList{Microsoft.Teams.PowerShell.TeamsCmdlets.Model.GraphAadUserConversationMember},System.String,System.Type)">
+            <summary>
+            Gets the list of UserInfo objects to output.
+            </summary>
+            <param name="graphAadUsers">The list of graph aad users.</param>
+            <param name="httpClient">Http client.</param>
+            <param name="graphResource">Graph resource.</param>
+            <param name="role">The specified role of users.</param>
+            <param name="userInfoType">The type used to create objects.</param>
+            <returns>The list of objects which implement IUserInfo.</returns>
+        </member>
+        <!-- Badly formed XML comment ignored for member "M:Microsoft.Teams.PowerShell.TeamsCmdlets.Utils.UserUtilities.GetMembershipIdFromUserIdOrUPN(System.Net.Http.HttpClient,System.String,System.String,Microsoft.Teams.PowerShell.TeamsCmdlets.Model.Channel,System.String)" -->
+    </members>
+</doc>

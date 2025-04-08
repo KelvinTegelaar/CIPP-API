@@ -3,7 +3,7 @@ using namespace System.Net
 Function Invoke-RemoveStandardTemplate {
     <#
     .FUNCTIONALITY
-        Entrypoint
+        Entrypoint,AnyTenant
     .ROLE
         Tenant.Standards.ReadWrite
     #>

@@ -19,8 +19,10 @@ function Invoke-ExecAzBobbyTables {
 
     $AllowList = @(
         'Add-AzDataTableEntity'
+        'Add-CIPPAzDataTableEntity'
         'Update-AzDataTableEntity'
         'Get-AzDataTableEntity'
+        'Get-CIPPAzDataTableEntity'
         'Get-AzDataTable'
         'New-AzDataTable'
         'Remove-AzDataTableEntity'
