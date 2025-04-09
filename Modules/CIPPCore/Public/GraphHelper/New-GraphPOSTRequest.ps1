@@ -20,6 +20,7 @@ function New-GraphPOSTRequest ($uri, $tenantid, $body, $type, $scope, $AsApp, $N
             $contentType = 'application/json; charset=utf-8'
         }
         try {
+            $body = Get-CIPPTextReplacement -TenantFilter $tenantid -Text $body
             $ReturnedData = (Invoke-RestMethod -Uri $($uri) -Method $TYPE -Body $body -Headers $headers -ContentType $contentType -SkipHttpErrorCheck:$IgnoreErrors -ResponseHeadersVariable responseHeaders)
         } catch {
             $Message = if ($_.ErrorDetails.Message) {
