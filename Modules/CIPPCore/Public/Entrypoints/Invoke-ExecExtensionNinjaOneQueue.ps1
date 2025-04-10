@@ -18,4 +18,13 @@ Function Invoke-ExecExtensionNinjaOneQueue {
         'SyncTenant' { Invoke-NinjaOneTenantSync -QueueItem $QueueItem }
     }
 
+    $Body = [PSCustomObject]@{
+        StatusCode = [HttpStatusCode]::OK
+        Body       = 'Success'
+    }
+
+    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
+        StatusCode = [HttpStatusCode]::OK
+        Body       = $Body
+    })
 }
