@@ -22,8 +22,8 @@ function New-CIPPApplicationCopy {
             $ExistingAppRoleAssignments = New-GraphGETRequest -uri "https://graph.microsoft.com/beta/servicePrincipals(appId='$($app)')/appRoleAssignments" -tenantid $env:TenantID -NoAuthCheck $true -AsApp $true
             $Type = 'ServicePrincipal'
         }
-        if (!$ExistingApp) {
-            Write-LogMessage -message "Failed to add $App to tenant. This app does not exist." -tenant $tenant -API 'Application Copy' -sev error
+        if (!$ExistingApp -and !$ExistingAppRoleAssignments) {
+            Write-LogMessage -message "Failed to add $App to tenant. This app does not exist or does not have any consented permissions." -tenant $tenant -API 'Application Copy' -sev error
             continue
         }
         if ($Type -eq 'Application') {
