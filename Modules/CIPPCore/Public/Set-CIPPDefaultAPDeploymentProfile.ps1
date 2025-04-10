@@ -33,14 +33,6 @@ function Set-CIPPDefaultAPDeploymentProfile {
             'extractHardwareHash'                    = $([bool]($CollectHash))
             'roleScopeTagIds'                        = @()
             'hybridAzureADJoinSkipConnectivityCheck' = $false
-            <#'outOfBoxExperienceSettings'             = @{
-                'deviceUsageType'           = "$DeploymentMode"
-                'hideEscapeLink'            = $([bool]($hideChangeAccount))
-                'hidePrivacySettings'       = $([bool]($hidePrivacy))
-                'hideEULA'                  = $([bool]($hideTerms))
-                'userType'                  = "$usertype"
-                'skipKeyboardSelectionPage' = $([bool]($Autokeyboard))
-            } #>
             'outOfBoxExperienceSetting'             = @{
                 'deviceUsageType'           = "$DeploymentMode"
                 'escapeLinkHidden'            = $([bool]($hideChangeAccount))
