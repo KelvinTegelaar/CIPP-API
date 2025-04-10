@@ -18,7 +18,8 @@ function Get-CIPPTextReplacement {
     if ($Text -isnot [string]) {
         return $Text
     }
-    $blacklist = @(
+
+    $ReservedVariables = @(
         '%serial%',
         '%systemroot%',
         '%systemdrive%',
@@ -27,8 +28,16 @@ function Get-CIPPTextReplacement {
         '%tenantfilter%',
         '%tenantname%',
         '%partnertenantid%',
-        '%samappid%'
+        '%samappid%',
+        '%userprofile%',
+        '%username%',
+        '%userdomain%',
+        '%windir%',
+        '%programfiles%',
+        '%programfiles(x86)%',
+        '%programdata%'
     )
+    
     $Tenant = Get-Tenants -TenantFilter $TenantFilter
     $CustomerId = $Tenant.customerId
 
@@ -54,7 +63,7 @@ function Get-CIPPTextReplacement {
     # Replace custom variables
     foreach ($Replace in $Vars.GetEnumerator()) {
         $String = '%{0}%' -f $Replace.Key
-        if ($string -notin $blacklist) {
+        if ($string -notin $ReservedVariables) {
             $Text = $Text -replace $String, $Replace.Value
         }
     }
