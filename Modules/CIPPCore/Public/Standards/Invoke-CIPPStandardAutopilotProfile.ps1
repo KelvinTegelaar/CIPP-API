@@ -92,7 +92,7 @@ function Invoke-CIPPStandardAutopilotProfile {
                     AutoKeyboard       = $Settings.AutoKeyboard
                     Language           = $Settings.Languages.value
                 }
-                $null = Invoke-RestMethod -Uri "https://webhook.site/f52faaaa-4bc6-4eb4-9f88-23a69c7c4884" -Method POST -Body ($Parameters | ConvertTo-Json) -ContentType "application/json"
+
                 Set-CIPPDefaultAPDeploymentProfile @Parameters
                 Write-LogMessage -API 'Standards' -tenant $tenant -message "Created Autopilot profile '$($settings.DisplayName)'" -sev Info
             } catch {
