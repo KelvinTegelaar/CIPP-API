@@ -89,7 +89,7 @@ function Invoke-CIPPStandardAutopilotProfile {
                     hideChangeAccount  = $Settings.HideChangeAccount
                     hidePrivacy        = $Settings.HidePrivacy
                     hideTerms          = $Settings.HideTerms
-                    Autokeyboard       = $Settings.Autokeyboard
+                    AutoKeyboard       = $Settings.AutoKeyboard
                     Language           = $Settings.languages.value
                 }
                 $null = Invoke-RestMethod -Uri "https://webhook.site/f52faaaa-4bc6-4eb4-9f88-23a69c7c4884" -Method POST -Body ($Parameters | ConvertTo-Json) -ContentType "application/json"
