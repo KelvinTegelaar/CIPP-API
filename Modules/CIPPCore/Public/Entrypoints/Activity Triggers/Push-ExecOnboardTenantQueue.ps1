@@ -233,7 +233,8 @@ Function Push-ExecOnboardTenantQueue {
                 $Logs.Add([PSCustomObject]@{ Date = (Get-Date).ToUniversalTime(); Log = 'Checking for missing groups for SAM user' })
                 $SamUserId = (New-GraphGetRequest -uri "https://graph.microsoft.com/beta/me?`$select=id" -NoAuthCheck $true).id
                 $CurrentMemberships = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/me/transitiveMemberOf?`$select=id,displayName" -NoAuthCheck $true
-                foreach ($Role in $Item.Roles) {
+                $ExpectedCippRoles = $Item.Roles | Where-Object { $_.roleDefinitionId -in $ExpectedRoles.roleDefinitionId }
+                foreach ($Role in $ExpectedCippRoles) {
                     if ($CurrentMemberships.id -notcontains $Role.GroupId) {
                         $PostBody = @{
                             '@odata.id' = 'https://graph.microsoft.com/v1.0/directoryObjects/{0}' -f $SamUserId
