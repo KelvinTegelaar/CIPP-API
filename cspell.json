@@ -1,0 +1,33 @@
+{
+    "version": "0.2",
+    "ignorePaths": [],
+    "dictionaryDefinitions": [],
+    "dictionaries": [],
+    "words": [
+      "Intune",
+      "Entra",
+      "GDAP",
+      "CIPP",
+      "CIPP-API",
+      "Sherweb",
+      "Autotask",
+      "Connectwise",
+      "Datto",
+      "Bluetrait",
+    ],
+    "ignoreWords": [
+      "tenantid",
+      "APINAME",
+      "CIPPBPA",
+      "CIPPSPO",
+      "CIPPAPI",
+      "Helptext",
+      "ADDEDCOMPONENT",
+      "ADDEDDATE",
+      "POWERSHELLEQUIVALENT",
+      "RECOMMENDEDBY",
+      "UPDATECOMMENTBLOCK",
+      "DISABLEDFEATURES",
+    ],
+    "import": []
+}
