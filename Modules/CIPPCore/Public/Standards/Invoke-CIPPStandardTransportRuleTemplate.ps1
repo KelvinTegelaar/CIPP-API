@@ -13,7 +13,7 @@ function Invoke-CIPPStandardTransportRuleTemplate {
         CAT
             Templates
         DISABLEDFEATURES
-            
+            {"report":true,"warn":true,"remediate":false}
         IMPACT
             Medium Impact
         ADDEDDATE

@@ -19,7 +19,7 @@ function Invoke-CIPPStandardPhishProtection {
         ADDEDDATE
             2024-01-22
         DISABLEDFEATURES
-
+            {"report":true,"warn":true,"remediate":false}
         POWERSHELLEQUIVALENT
             Portal only
         RECOMMENDEDBY

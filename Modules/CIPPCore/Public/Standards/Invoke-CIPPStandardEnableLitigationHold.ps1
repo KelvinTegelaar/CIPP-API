@@ -14,6 +14,7 @@ function Invoke-CIPPStandardEnableLitigationHold {
             Exchange Standards
         TAG
         ADDEDCOMPONENT
+            {"type":"textField","name":"standards.EnableLitigationHold.days","required":false,"label":"Days to apply for litigation hold"}
         IMPACT
             Low Impact
         ADDEDDATE

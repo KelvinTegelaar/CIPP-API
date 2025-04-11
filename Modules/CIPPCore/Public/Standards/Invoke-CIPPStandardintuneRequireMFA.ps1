@@ -5,7 +5,7 @@ function Invoke-CIPPStandardintuneRequireMFA {
     .COMPONENT
         (APIName) intuneRequireMFA
     .SYNOPSIS
-        (Label) Require Multifactor Authentication to register or join devices with Microsoft Entra
+        (Label) Require Multi-factor Authentication to register or join devices with Microsoft Entra
     .DESCRIPTION
         (Helptext) Requires MFA for all users to register devices with Intune. This is useful when not using Conditional Access.
         (DocsDescription) Requires MFA for all users to register devices with Intune. This is useful when not using Conditional Access.

@@ -15,9 +15,9 @@ function Invoke-CIPPStandardStaleEntraDevices {
         TAG
             "CIS"
         ADDEDCOMPONENT
-            {"type":"number","name":"standards.StaleEntraDevices.deviceAgeThreshold","label":"Days before stale(Dont set below 30)"}
+            {"type":"number","name":"standards.StaleEntraDevices.deviceAgeThreshold","label":"Days before stale(Do not set below 30)"}
         DISABLEDFEATURES
-
+            {"report":false,"warn":false,"remediate":true}
         IMPACT
             High Impact
         ADDEDDATE

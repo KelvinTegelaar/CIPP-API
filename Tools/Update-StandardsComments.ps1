@@ -112,7 +112,9 @@ foreach ($Standard in $StandardsInfo) {
                         continue
                     }
                     else {
-                        $NewComment.Add("           $(EscapeMarkdown($Property.Value.ToString()))`n")
+                        if ($null -ne $Property.Value) {
+                            $NewComment.Add("           $(EscapeMarkdown($Property.Value.ToString()))`n")
+                        }
                     }
                 }
             }
