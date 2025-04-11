@@ -15,7 +15,7 @@ function Get-CIPPAuthentication {
             }
             foreach ($Var in $Variables) {
                 if ($Secret.$Var) {
-                    Set-Item -Path ENV:$Var -Value $Secret.$Var -Force -ErrorAction Stop
+                    Set-Item -Path env:$Var -Value $Secret.$Var -Force -ErrorAction Stop
                 }
             }
         } else {
@@ -24,7 +24,7 @@ function Get-CIPPAuthentication {
             $null = Set-AzContext -SubscriptionId $SubscriptionId
             $keyvaultname = ($env:WEBSITE_DEPLOYMENT_ID -split '-')[0]
             $Variables | ForEach-Object {
-                Set-Item -Path ENV:$_ -Value (Get-AzKeyVaultSecret -VaultName $keyvaultname -Name $_ -AsPlainText -ErrorAction Stop) -Force
+                Set-Item -Path env:$_ -Value (Get-AzKeyVaultSecret -VaultName $keyvaultname -Name $_ -AsPlainText -ErrorAction Stop) -Force
             }
         }
         $env:SetFromProfile = $true
