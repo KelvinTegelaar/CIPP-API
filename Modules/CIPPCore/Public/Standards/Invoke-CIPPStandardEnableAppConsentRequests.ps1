@@ -104,8 +104,8 @@ function Invoke-CIPPStandardEnableAppConsentRequests {
         }
     }
     if ($Settings.report -eq $true) {
-        $state = $CurrentInfo.isEnabled -eq 'true' ? $true : $CurrentInfo
-        Set-CIPPStandardsCompareField -FieldName 'standards.Disablex509Certificate' -FieldValue $state -TenantFilter $Tenant
+        $state = $CurrentInfo.isEnabled ? $true : $CurrentInfo
+        Set-CIPPStandardsCompareField -FieldName 'standards.EnableAppConsentRequests' -FieldValue $state -TenantFilter $Tenant
         Add-CIPPBPAField -FieldName 'EnableAppConsentAdminRequests' -FieldValue $CurrentInfo.isEnabled -StoreAs bool -Tenant $tenant
     }
 }

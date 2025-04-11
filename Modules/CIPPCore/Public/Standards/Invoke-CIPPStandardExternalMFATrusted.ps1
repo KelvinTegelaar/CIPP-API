@@ -75,7 +75,7 @@ function Invoke-CIPPStandardExternalMFATrusted {
         if ($ExternalMFATrusted.inboundTrust.isMfaAccepted -eq $WantedState) {
             Write-LogMessage -API 'Standards' -tenant $Tenant -message "External MFA Trusted is $StateMessage." -sev Info
         } else {
-            Write-StandardsAlert -message "External MFA Trusted is not $StateMessage" -object $ExternalMFATrusted -tenant $Tenant -standardName 'ExternalMFATrusted' -standardId $Settings.standardId
+            Write-StandardsAlert -message "External MFA Trusted is not $StateMessage" -object $ExternalMFATrusted.inboundTrust -tenant $Tenant -standardName 'ExternalMFATrusted' -standardId $Settings.standardId
             Write-LogMessage -API 'Standards' -tenant $Tenant -message "External MFA Trusted is not $StateMessage." -sev Info
         }
     }

@@ -35,6 +35,9 @@ function Invoke-EditGroup {
             try {
                 $member = $_.value
                 $memberid = $_.addedFields.id
+                if (!$memberid) {
+                    $memberid = (New-GraphGetRequest -uri "https://graph.microsoft.com/beta/users/$member" -tenantid $TenantId).id
+                }
 
                 if ($GroupType -eq 'Distribution List' -or $GroupType -eq 'Mail-Enabled Security') {
                     $Params = @{ Identity = $userobj.groupid; Member = $member; BypassSecurityGroupManagerCheck = $true }
@@ -168,29 +171,7 @@ function Invoke-EditGroup {
     $AddOwners = $userobj.AddOwner
     try {
         if ($AddOwners) {
-            if ($GroupType -eq 'Distribution List' -or $GroupType -eq 'Mail-Enabled Security') {
-                $CurrentOwners = New-ExoRequest -tenantid $TenantId -cmdlet 'Get-DistributionGroup' -cmdParams @{ Identity = $userobj.groupid } -UseSystemMailbox $true | Select-Object -ExpandProperty ManagedBy
-                $NewManagedBy = [System.Collections.Generic.List[string]]::new()
-                foreach ($CurrentOwner in $CurrentOwners) {
-                    $NewManagedBy.Add($CurrentOwner)
-                }
-                foreach ($NewOwner in $AddOwners) {
-                    $NewManagedBy.Add($NewOwner.addedFields.id)
-                }
-
-                $NewManagedBy = $NewManagedBy | Sort-Object -Unique
-                $params = @{ Identity = $userobj.groupid; ManagedBy = $NewManagedBy }
-                $ExoBulkRequests.Add(@{
-                        CmdletInput = @{
-                            CmdletName = 'Set-DistributionGroup'
-                            Parameters = $params
-                        }
-                    })
-                $ExoLogs.Add(@{
-                        message = "Added owner(s) $($AddOwners.value -join ', ') to $($GroupName) group"
-                        target  = $userobj.groupid
-                    })
-            } else {
+            if ($GroupType -notin @('Distribution List', 'Mail-Enabled Security')) {
                 $AddOwners | ForEach-Object {
                     $Owner = $_.value
                     $ID = $_.addedFields.id
@@ -220,22 +201,7 @@ function Invoke-EditGroup {
     $RemoveOwners = $userobj.RemoveOwner
     try {
         if ($RemoveOwners) {
-            if ($GroupType -eq 'Distribution List' -or $GroupType -eq 'Mail-Enabled Security') {
-                # get current owners
-                $CurrentOwners = New-ExoRequest -tenantid $TenantId -cmdlet 'Get-DistributionGroup' -cmdParams @{ Identity = $userobj.groupid } -UseSystemMailbox $true | Select-Object -ExpandProperty ManagedBy
-                $NewManagedBy = $CurrentOwners | Where-Object { $_ -notin $RemoveOwners.addedFields.id }
-                $params = @{ Identity = $userobj.groupid; ManagedBy = $NewManagedBy }
-                $ExoBulkRequests.Add(@{
-                        CmdletInput = @{
-                            CmdletName = 'Set-DistributionGroup'
-                            Parameters = $params
-                        }
-                    })
-                $ExoLogs.Add(@{
-                        message = "Removed owner(s) $($RemoveOwners.value -join ', ') from $($GroupName) group"
-                        target  = $userobj.groupid
-                    })
-            } else {
+            if ($GroupType -notin @('Distribution List', 'Mail-Enabled Security')) {
                 $RemoveOwners | ForEach-Object {
                     $ID = $_.addedFields.id
                     $BulkRequests.Add(@{
@@ -254,6 +220,41 @@ function Invoke-EditGroup {
         Write-Warning "Error in RemoveOwners: $($_.Exception.Message)"
     }
 
+    if ($GroupType -in @( 'Distribution List', 'Mail-Enabled Security') -and ($AddOwners -or $RemoveOwners)) {
+        $CurrentOwners = New-ExoRequest -tenantid $TenantId -cmdlet 'Get-DistributionGroup' -cmdParams @{ Identity = $userobj.groupid } -UseSystemMailbox $true | Select-Object -ExpandProperty ManagedBy
+
+        $NewManagedBy = [system.collections.generic.list[string]]::new()
+        foreach ($CurrentOwner in $CurrentOwners) {
+            if ($RemoveOwners -and $RemoveOwners.addedFields.id -contains $CurrentOwner) {
+                $OwnerToRemove = $RemoveOwners | Where-Object { $_.addedFields.id -eq $CurrentOwner }
+                $ExoLogs.Add(@{
+                        message = "Removed owner $($OwnerToRemove.label) from $($GroupName) group"
+                        target  = $userobj.groupid
+                    })
+                continue
+            }
+            $NewManagedBy.Add($CurrentOwner)
+        }
+        if ($AddOwners) {
+            foreach ($NewOwner in $AddOwners) {
+                $NewManagedBy.Add($NewOwner.addedFields.id)
+                $ExoLogs.Add(@{
+                        message = "Added owner $($NewOwner.label) to $($GroupName) group"
+                        target  = $userobj.groupid
+                    })
+            }
+        }
+
+        $NewManagedBy = $NewManagedBy | Sort-Object -Unique
+        $params = @{ Identity = $userobj.groupid; ManagedBy = $NewManagedBy }
+        $ExoBulkRequests.Add(@{
+                CmdletInput = @{
+                    CmdletName = 'Set-DistributionGroup'
+                    Parameters = $params
+                }
+            })
+    }
+
     Write-Information "Graph Bulk Requests: $($BulkRequests.Count)"
     if ($BulkRequests.Count -gt 0) {
         #Write-Warning 'EditUser - Executing Graph Bulk Requests'
@@ -265,7 +266,7 @@ function Invoke-EditGroup {
         foreach ($GraphLog in $GraphLogs) {
             $GraphError = $RawGraphRequest | Where-Object { $_.id -eq $GraphLog.id -and $_.status -notmatch '^2[0-9]+' }
             if ($GraphError) {
-                $Message = $GraphError.body.error.message
+                $Message = Get-NormalizedError -message $GraphError.body.error
                 $Sev = 'Error'
                 $Results.Add("Error - $Message")
             } else {

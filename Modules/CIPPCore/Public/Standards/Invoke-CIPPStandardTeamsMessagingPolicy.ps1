@@ -97,7 +97,7 @@ Function Invoke-CIPPStandardTeamsMessagingPolicy {
         }
     }
 
-    if ($Setings.report -eq $true) {
+    if ($Settings.report -eq $true) {
         Add-CIPPBPAField -FieldName 'TeamsMessagingPolicy' -FieldValue $StateIsCorrect -StoreAs bool -Tenant $Tenant
 
         if ($StateIsCorrect) {

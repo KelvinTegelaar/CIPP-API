@@ -33,10 +33,18 @@ function Invoke-CIPPStandardDisableGuests {
     ##$Rerun -Type Standard -Tenant $Tenant -Settings $Settings 'DisableGuests'
 
     $Lookup = (Get-Date).AddDays(-90).ToUniversalTime().ToString('o')
-    $GraphRequest = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/users?`$filter=(signInActivity/lastSuccessfulSignInDateTime le $Lookup)&`$select=id,UserPrincipalName,signInActivity,mail,userType,accountEnabled" -scope 'https://graph.microsoft.com/.default' -tenantid $Tenant | Where-Object { $_.userType -EQ 'Guest' -and $_.AccountEnabled -EQ $true }
+    $AuditLookup = (Get-Date).AddDays(-7).ToUniversalTime().ToString('o')
+
+    $GraphRequest = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/users?`$filter=(signInActivity/lastSuccessfulSignInDateTime le $Lookup)&`$select=id,UserPrincipalName,signInActivity,mail,userType,accountEnabled" -scope 'https://graph.microsoft.com/.default' -tenantid $Tenant |
+        Where-Object { $_.userType -eq 'Guest' -and $_.AccountEnabled -eq $true }
+
+    $RecentlyReactivatedUsers = (New-GraphGetRequest -uri "https://graph.microsoft.com/beta/auditLogs/directoryAudits?`$filter=activityDisplayName eq 'Enable account' and activityDateTime ge $AuditLookup" -scope 'https://graph.microsoft.com/.default' -tenantid $Tenant |
+        ForEach-Object { $_.targetResources[0].id } | Select-Object -Unique)
+
+    $GraphRequest = $GraphRequest | Where-Object { -not ($RecentlyReactivatedUsers -contains $_.id) }
 
     If ($Settings.remediate -eq $true) {
-        if ($GraphRequest) {
+        if ($GraphRequest.Count -gt 0) {
             foreach ($guest in $GraphRequest) {
                 try {
                     New-GraphPostRequest -type Patch -tenantid $tenant -uri "https://graph.microsoft.com/beta/users/$($guest.id)" -body '{"accountEnabled":"false"}'
@@ -53,7 +61,7 @@ function Invoke-CIPPStandardDisableGuests {
     }
     if ($Settings.alert -eq $true) {
 
-        if ($GraphRequest) {
+        if ($GraphRequest.Count -gt 0) {
             Write-StandardsAlert -message "Guests accounts with a login longer than 90 days ago: $($GraphRequest.count)" -object $GraphRequest -tenant $tenant -standardName 'DisableGuests' -standardId $Settings.standardId
             Write-LogMessage -API 'Standards' -tenant $tenant -message "Guests accounts with a login longer than 90 days ago: $($GraphRequest.count)" -sev Info
         } else {

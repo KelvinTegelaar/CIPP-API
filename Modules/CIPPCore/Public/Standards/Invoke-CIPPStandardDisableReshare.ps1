@@ -61,7 +61,8 @@ function Invoke-CIPPStandardDisableReshare {
     }
 
     if ($Settings.report -eq $true) {
-        Set-CIPPStandardsCompareField -FieldName 'standards.DisableReshare' -FieldValue $CurrentInfo.isResharingByExternalUsersEnabled -TenantFilter $Tenant
+        $state = $CurrentInfo.isResharingByExternalUsersEnabled ? ($CurrentInfo | Select-Object isResharingByExternalUsersEnabled) : $true
+        Set-CIPPStandardsCompareField -FieldName 'standards.DisableReshare' -FieldValue $state -TenantFilter $Tenant
         Add-CIPPBPAField -FieldName 'DisableReshare' -FieldValue $CurrentInfo.isResharingByExternalUsersEnabled -StoreAs bool -Tenant $tenant
     }
 }

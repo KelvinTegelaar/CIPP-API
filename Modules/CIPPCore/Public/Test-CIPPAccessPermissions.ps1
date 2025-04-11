@@ -34,11 +34,13 @@ function Test-CIPPAccessPermissions {
         if ($env:MSI_SECRET) {
             try {
                 Disable-AzContextAutosave -Scope Process | Out-Null
-                $AzSession = Connect-AzAccount -Identity
+                $null = Connect-AzAccount -Identity
+                $SubscriptionId = $env:WEBSITE_OWNER_NAME -split '\+' | Select-Object -First 1
+                $null = Set-AzContext -SubscriptionId $SubscriptionId
 
-                $KV = $ENV:WEBSITE_DEPLOYMENT_ID
+                $KV = $env:WEBSITE_DEPLOYMENT_ID
                 $KeyVaultRefresh = Get-AzKeyVaultSecret -VaultName $kv -Name 'RefreshToken' -AsPlainText
-                if ($ENV:RefreshToken -ne $KeyVaultRefresh) {
+                if ($env:RefreshToken -ne $KeyVaultRefresh) {
                     $Success = $false
                     $ErrorMessages.Add('Your refresh token does not match key vault, wait 30 minutes for the function app to update.') | Out-Null
                 } else {

@@ -1,6 +1,6 @@
 using namespace System.Net
 
-Function Invoke-GetCippAlerts {
+function Invoke-GetCippAlerts {
     <#
     .FUNCTIONALITY
         Entrypoint,AnyTenant
@@ -43,7 +43,7 @@ Function Invoke-GetCippAlerts {
         Write-LogMessage -message 'Your CIPP API is out of date. Please update to the latest version' -API 'Updates' -tenant 'All Tenants' -sev Alert
     }
 
-    if ($env:ApplicationID -eq 'LongApplicationID' -or $null -eq $ENV:ApplicationID) {
+    if ($env:ApplicationID -eq 'LongApplicationID' -or $null -eq $env:ApplicationID) {
         $Alerts.Add(@{
                 title          = 'SAM Setup Incomplete'
                 Alert          = 'You have not yet completed your setup. Please go to the Setup Wizard in Application Settings to connect CIPP to your tenants.'
@@ -60,7 +60,7 @@ Function Invoke-GetCippAlerts {
                 type  = 'error'
             })
     }
-    if ($env:WEBSITE_RUN_FROM_PACKAGE -ne '1' -and $env:AzureWebJobsStorage -ne 'UseDevelopmentStorage=true') {
+    if ((!$env:WEBSITE_RUN_FROM_PACKAGE -or [string]::IsNullOrEmpty($env:WEBSITE_RUN_FROM_PACKAGE)) -and $env:AzureWebJobsStorage -ne 'UseDevelopmentStorage=true') {
         $Alerts.Add(
             @{
                 title = 'Function App in Write Mode'

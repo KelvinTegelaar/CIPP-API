@@ -82,16 +82,17 @@ function Invoke-CIPPStandardAutopilotProfile {
                     description        = $settings.Description
                     usertype           = $usertype
                     DeploymentMode     = $DeploymentMode
-                    assignto           = $settings.Assignto
+                    assignto           = $settings.AssignToAllDevices
                     devicenameTemplate = $Settings.DeviceNameTemplate
-                    allowWhiteGlove    = $Settings.allowWhiteglove
+                    allowWhiteGlove    = $Settings.AllowWhiteGlove
                     CollectHash        = $Settings.CollectHash
                     hideChangeAccount  = $Settings.HideChangeAccount
                     hidePrivacy        = $Settings.HidePrivacy
                     hideTerms          = $Settings.HideTerms
-                    Autokeyboard       = $Settings.Autokeyboard
-                    Language           = $Settings.languages.value
+                    AutoKeyboard       = $Settings.AutoKeyboard
+                    Language           = $Settings.Languages.value
                 }
+
                 Set-CIPPDefaultAPDeploymentProfile @Parameters
                 Write-LogMessage -API 'Standards' -tenant $tenant -message "Created Autopilot profile '$($settings.DisplayName)'" -sev Info
             } catch {

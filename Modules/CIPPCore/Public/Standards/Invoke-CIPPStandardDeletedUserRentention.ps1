@@ -35,7 +35,7 @@ function Invoke-CIPPStandardDeletedUserRentention {
     $Days = $Settings.Days.value ?? $Settings.Days
 
     if ($Settings.report -eq $true) {
-        $CurrentState = $CurrentInfo.deletedUserPersonalSiteRetentionPeriodInDays -eq $Days ? $true : $CurrentInfo.deletedUserPersonalSiteRetentionPeriodInDays
+        $CurrentState = $CurrentInfo.deletedUserPersonalSiteRetentionPeriodInDays -eq $Days ? $true : ($CurrentInfo | Select-Object deletedUserPersonalSiteRetentionPeriodInDays)
         Set-CIPPStandardsCompareField -FieldName 'standards.DeletedUserRentention' -FieldValue $CurrentState -TenantFilter $Tenant
         Add-CIPPBPAField -FieldName 'DeletedUserRentention' -FieldValue $CurrentInfo.deletedUserPersonalSiteRetentionPeriodInDays -StoreAs string -Tenant $Tenant
     }

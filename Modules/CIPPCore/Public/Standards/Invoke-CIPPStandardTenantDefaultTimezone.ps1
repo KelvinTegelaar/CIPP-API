@@ -69,7 +69,7 @@ function Invoke-CIPPStandardTenantDefaultTimezone {
         if ($StateIsCorrect) {
             $FieldValue = $true
         } else {
-            $FieldValue = $CurrentState.tenantDefaultTimezone
+            $FieldValue = $CurrentState | Select-Object tenantDefaultTimezone
         }
         Set-CIPPStandardsCompareField -FieldName 'standards.TenantDefaultTimezone' -FieldValue $FieldValue -Tenant $Tenant
     }

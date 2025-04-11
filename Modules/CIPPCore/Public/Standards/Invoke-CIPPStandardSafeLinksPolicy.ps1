@@ -71,7 +71,7 @@ function Invoke-CIPPStandardSafeLinksPolicy {
         ($CurrentState.AllowClickThrough -eq $Settings.AllowClickThrough) -and
         ($CurrentState.DisableUrlRewrite -eq $Settings.DisableUrlRewrite) -and
         ($CurrentState.EnableOrganizationBranding -eq $Settings.EnableOrganizationBranding) -and
-        (!(Compare-Object -ReferenceObject $CurrentState.DoNotRewriteUrls -DifferenceObject ($Settings.DoNotRewriteUrls.value ?? $Settings.DoNotRewriteUrls)))
+        (!(Compare-Object -ReferenceObject $CurrentState.DoNotRewriteUrls -DifferenceObject ($Settings.DoNotRewriteUrls.value ?? $Settings.DoNotRewriteUrls ?? @())))
 
         $AcceptedDomains = New-ExoRequest -tenantid $Tenant -cmdlet 'Get-AcceptedDomain'
 

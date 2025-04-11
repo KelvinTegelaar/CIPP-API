@@ -3,7 +3,7 @@ using namespace System.Net
 Function Invoke-ListConnectionFilterTemplates {
     <#
     .FUNCTIONALITY
-        Entrypoint
+        Entrypoint,AnyTenant
     .ROLE
         Exchange.ConnectionFilter.Read
     #>

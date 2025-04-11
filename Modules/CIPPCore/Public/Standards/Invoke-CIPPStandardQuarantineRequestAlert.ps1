@@ -33,8 +33,8 @@ function Invoke-CIPPStandardQuarantineRequestAlert {
     $PolicyName = 'CIPP User requested to release a quarantined message'
 
     $CurrentState = New-ExoRequest -TenantId $Tenant -cmdlet 'Get-ProtectionAlert' -Compliance |
-        Where-Object { $_.Name -eq $PolicyName } |
-        Select-Object -Property *
+    Where-Object { $_.Name -eq $PolicyName } |
+    Select-Object -Property *
 
     $StateIsCorrect = ($CurrentState.NotifyUser -contains $Settings.NotifyUser)
 
@@ -88,7 +88,7 @@ function Invoke-CIPPStandardQuarantineRequestAlert {
         if ($StateIsCorrect) {
             $FieldValue = $true
         } else {
-            $FieldValue = $CurrentState
+            $FieldValue = @{NotifyUser = $CurrentState.notifyUser }
         }
         Set-CIPPStandardsCompareField -FieldName 'standards.QuarantineRequestAlert' -FieldValue $FieldValue -Tenant $Tenant
     }

@@ -112,7 +112,7 @@ function Invoke-CIPPStandardSpoofWarn {
         if ($AllowListCorrect -eq $true -and $CurrentInfo.Enabled -eq $status) {
             $FieldValue = $true
         } else {
-            $FieldValue = $CurrentInfo
+            $FieldValue = $CurrentInfo | Select-Object Enabled, AllowList
         }
         Set-CIPPStandardsCompareField -FieldName 'standards.SpoofWarn' -FieldValue $FieldValue -Tenant $Tenant
     }

@@ -59,8 +59,8 @@ function Invoke-CIPPStandardSafeAttachmentPolicy {
         }
 
         $CurrentState = New-ExoRequest -tenantid $Tenant -cmdlet 'Get-SafeAttachmentPolicy' |
-            Where-Object -Property Name -EQ $PolicyName |
-            Select-Object Name, Enable, Action, QuarantineTag, Redirect, RedirectAddress
+        Where-Object -Property Name -EQ $PolicyName |
+        Select-Object Name, Enable, Action, QuarantineTag, Redirect, RedirectAddress
 
         $StateIsCorrect = ($CurrentState.Name -eq $PolicyName) -and
         ($CurrentState.Enable -eq $true) -and
@@ -72,8 +72,8 @@ function Invoke-CIPPStandardSafeAttachmentPolicy {
         $AcceptedDomains = New-ExoRequest -tenantid $Tenant -cmdlet 'Get-AcceptedDomain'
 
         $RuleState = New-ExoRequest -tenantid $Tenant -cmdlet 'Get-SafeAttachmentRule' |
-            Where-Object -Property Name -EQ $RuleName |
-            Select-Object Name, SafeAttachmentPolicy, Priority, RecipientDomainIs
+        Where-Object -Property Name -EQ $RuleName |
+        Select-Object Name, SafeAttachmentPolicy, Priority, RecipientDomainIs
 
         $RuleStateIsCorrect = ($RuleState.Name -eq $RuleName) -and
         ($RuleState.SafeAttachmentPolicy -eq $PolicyName) -and
@@ -172,8 +172,9 @@ function Invoke-CIPPStandardSafeAttachmentPolicy {
         }
 
         if ($Settings.report -eq $true) {
+            $state = @{ License = 'Failed to set policy: This tenant might not be licensed for this feature' }
             Add-CIPPBPAField -FieldName 'SafeAttachmentPolicy' -FieldValue $false -StoreAs bool -Tenant $tenant
-            Set-CIPPStandardsCompareField -FieldName 'standards.SafeAttachmentPolicy' -FieldValue $false -Tenant $Tenant
+            Set-CIPPStandardsCompareField -FieldName 'standards.SafeAttachmentPolicy' -FieldValue $state -Tenant $Tenant
         }
     }
 }

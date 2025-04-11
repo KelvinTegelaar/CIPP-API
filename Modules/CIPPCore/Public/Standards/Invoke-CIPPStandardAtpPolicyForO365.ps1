@@ -32,10 +32,14 @@ function Invoke-CIPPStandardAtpPolicyForO365 {
 
     param($Tenant, $Settings)
     ##$Rerun -Type Standard -Tenant $Tenant -Settings $Settings 'AtpPolicyForO365'
-
-    $CurrentState = New-ExoRequest -tenantid $Tenant -cmdlet 'Get-AtpPolicyForO365' |
-    Select-Object EnableATPForSPOTeamsODB, EnableSafeDocs, AllowSafeDocsOpen
-
+    try {
+        $CurrentState = New-ExoRequest -tenantid $Tenant -cmdlet 'Get-AtpPolicyForO365' |
+        Select-Object EnableATPForSPOTeamsODB, EnableSafeDocs, AllowSafeDocsOpen
+    } catch {
+        $CurrentState = @{
+            License = 'This tenant might not be licensed for this feature'
+        }
+    }
     $StateIsCorrect = ($CurrentState.EnableATPForSPOTeamsODB -eq $true) -and
                       ($CurrentState.EnableSafeDocs -eq $true) -and
                       ($CurrentState.AllowSafeDocsOpen -eq $Settings.AllowSafeDocsOpen)

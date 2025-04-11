@@ -53,7 +53,7 @@ function Invoke-CIPPStandardSecurityDefaults {
         if ($SecureDefaultsState.IsEnabled -eq $true) {
             Write-LogMessage -API 'Standards' -tenant $tenant -message 'Security Defaults is enabled.' -sev Info
         } else {
-            Write-StandardsAlert -message 'Security Defaults is not enabled' -object $SecureDefaultsState -tenant $tenant -standardName 'SecurityDefaults' -standardId $Settings.standardId
+            Write-StandardsAlert -message 'Security Defaults is not enabled' -object ($SecureDefaultsState | Select-Object displayName, isEnabled, description) -tenant $tenant -standardName 'SecurityDefaults' -standardId $Settings.standardId
             Write-LogMessage -API 'Standards' -tenant $tenant -message 'Security Defaults is not enabled.' -sev Info
         }
     }

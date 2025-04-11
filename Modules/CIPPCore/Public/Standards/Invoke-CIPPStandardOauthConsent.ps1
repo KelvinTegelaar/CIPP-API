@@ -69,7 +69,7 @@ function Invoke-CIPPStandardOauthConsent {
         if ($StateIsCorrect -eq $true) {
             Write-LogMessage -API 'Standards' -tenant $tenant -message 'Application Consent Mode is enabled.' -sev Info
         } else {
-            Write-StandardsAlert -message 'Application Consent Mode is not enabled.' -object $State -tenant $tenant -standardName 'OauthConsent' -standardId $Settings.standardId
+            Write-StandardsAlert -message 'Application Consent Mode is not enabled.' -object ($State.defaultUserRolePermissions) -tenant $tenant -standardName 'OauthConsent' -standardId $Settings.standardId
             Write-LogMessage -API 'Standards' -tenant $tenant -message 'Application Consent Mode is not enabled.' -sev Info
         }
     }
@@ -78,7 +78,7 @@ function Invoke-CIPPStandardOauthConsent {
         if ($StateIsCorrect) {
             $FieldValue = $true
         } else {
-            $FieldValue = $State
+            $FieldValue = $State | Select-Object -Property permissionGrantPolicyIdsAssignedToDefaultUserRole
         }
 
         Set-CIPPStandardsCompareField -FieldName 'standards.OauthConsent' -FieldValue $FieldValue -Tenant $tenant

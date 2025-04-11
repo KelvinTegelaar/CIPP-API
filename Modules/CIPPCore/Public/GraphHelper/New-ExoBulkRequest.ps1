@@ -84,8 +84,11 @@ function New-ExoBulkRequest {
                     $IdToCmdletName[$RequestId] = $cmd.CmdletInput.CmdletName
                 }
                 $BatchBodyJson = ConvertTo-Json -InputObject $BatchBodyObj -Depth 10
+                $BatchBodyJson = Get-CIPPTextReplacement -TenantFilter $tenantid -Text $BatchBodyJson
                 $Results = Invoke-RestMethod $BatchURL -ResponseHeadersVariable responseHeaders -Method POST -Body $BatchBodyJson -Headers $Headers -ContentType 'application/json; charset=utf-8'
-                $ReturnedData.AddRange(@($Results.responses))
+                foreach ($Response in $Results.responses) {
+                    $ReturnedData.Add($Response)
+                }
 
                 Write-Host "Batch #$($batches.IndexOf($batch) + 1) of $($batches.Count) processed"
             }
@@ -93,7 +96,7 @@ function New-ExoBulkRequest {
             # Error handling (omitted for brevity)
         }
 
-        Write-Information ($ReturnedHeaders | ConvertTo-Json -Depth 10)
+        #Write-Information ($responseHeaders | ConvertTo-Json -Depth 10)
 
         # Process the returned data
         if ($ReturnWithCommand) {
@@ -114,13 +117,14 @@ function New-ExoBulkRequest {
                     }
                     $body | Add-Member -MemberType NoteProperty -Name 'value' -Value $msg -Force
                 }
-                $resultValue = $body.value
-
-                if (-not $FinalData.ContainsKey($CmdletName)) {
-                    $FinalData[$CmdletName] = [System.Collections.Generic.List[object]]::new()
-                    $FinalData.$CmdletName.Add($resultValue)
-                } else {
-                    $FinalData.$CmdletName.Add($resultValue)
+                $resultValues = $body.value
+                foreach ($resultValue in $resultValues) {
+                    if (-not $FinalData.ContainsKey($CmdletName)) {
+                        $FinalData[$CmdletName] = [System.Collections.Generic.List[object]]::new()
+                        $FinalData.$CmdletName.Add($resultValue)
+                    } else {
+                        $FinalData.$CmdletName.Add($resultValue)
+                    }
                 }
             }
         } else {
