@@ -29,7 +29,7 @@ function Set-ExtensionAPIKey {
             $null = Set-AzContext -SubscriptionId $SubscriptionId
             $null = Set-AzKeyVaultSecret -VaultName $keyvaultname -Name $Extension -SecretValue (ConvertTo-SecureString -AsPlainText -Force -String $APIKey)
         }
-        Set-Item -Path "ENV:$Var" -Value $APIKey -Force -ErrorAction SilentlyContinue
+        Set-Item -Path "env:$Var" -Value $APIKey -Force -ErrorAction SilentlyContinue
     }
     return $true
 }
