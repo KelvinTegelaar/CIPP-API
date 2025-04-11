@@ -23,7 +23,7 @@ function Invoke-CIPPStandardAutoAddProxy {
             Set-Mailbox -EmailAddresses @{add=\$EmailAddress}
         RECOMMENDEDBY
         DISABLEDFEATURES
-            
+            {"report":true,"warn":true,"remediate":false}
         UPDATECOMMENTBLOCK
             Run the Tools\Update-StandardsComments.ps1 script to update this comment block
     .LINK

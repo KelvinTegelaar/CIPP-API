@@ -7,8 +7,8 @@ function Invoke-CIPPStandardAntiPhishPolicy {
     .SYNOPSIS
         (Label) Default Anti-Phishing Policy
     .DESCRIPTION
-        (Helptext) This creates a Anti-Phishing policy that automatically enables Mailbox Intelligence and spoofing, optional switches for Mailtips.
-        (DocsDescription) This creates a Anti-Phishing policy that automatically enables Mailbox Intelligence and spoofing, optional switches for Mailtips.
+        (Helptext) This creates a Anti-Phishing policy that automatically enables Mailbox Intelligence and spoofing, optional switches for Mail tips.
+        (DocsDescription) This creates a Anti-Phishing policy that automatically enables Mailbox Intelligence and spoofing, optional switches for Mail tips.
     .NOTES
         CAT
             Defender Standards
@@ -40,7 +40,7 @@ function Invoke-CIPPStandardAntiPhishPolicy {
         ADDEDDATE
             2024-03-25
         POWERSHELLEQUIVALENT
-            Set-AntiphishPolicy or New-AntiphishPolicy
+            Set-AntiPhishPolicy or New-AntiPhishPolicy
         RECOMMENDEDBY
             "CIS"
         UPDATECOMMENTBLOCK

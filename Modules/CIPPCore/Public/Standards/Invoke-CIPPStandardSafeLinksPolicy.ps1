@@ -5,10 +5,10 @@ function Invoke-CIPPStandardSafeLinksPolicy {
     .COMPONENT
         (APIName) SafeLinksPolicy
     .SYNOPSIS
-        (Label) Default SafeLinks Policy
+        (Label) Default Safe Links Policy
     .DESCRIPTION
-        (Helptext) This creates a safelink policy that automatically scans, tracks, and and enables safe links for Email, Office, and Teams for both external and internal senders
-        (DocsDescription) This creates a safelink policy that automatically scans, tracks, and and enables safe links for Email, Office, and Teams for both external and internal senders
+        (Helptext) This creates a Safe Links policy that automatically scans, tracks, and and enables safe links for Email, Office, and Teams for both external and internal senders
+        (DocsDescription) This creates a Safe Links policy that automatically scans, tracks, and and enables safe links for Email, Office, and Teams for both external and internal senders
     .NOTES
         CAT
             Defender Standards
@@ -20,6 +20,7 @@ function Invoke-CIPPStandardSafeLinksPolicy {
             {"type":"switch","label":"AllowClickThrough","name":"standards.SafeLinksPolicy.AllowClickThrough"}
             {"type":"switch","label":"DisableUrlRewrite","name":"standards.SafeLinksPolicy.DisableUrlRewrite"}
             {"type":"switch","label":"EnableOrganizationBranding","name":"standards.SafeLinksPolicy.EnableOrganizationBranding"}
+            {"type":"autoComplete","multiple":true,"creatable":true,"required":false,"name":"standards.SafeLinksPolicy.DoNotRewriteUrls","label":"Do not rewrite the following URLs in email"}
         IMPACT
             Low Impact
         ADDEDDATE

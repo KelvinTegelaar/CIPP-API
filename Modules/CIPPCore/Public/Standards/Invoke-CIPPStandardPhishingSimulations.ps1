@@ -16,7 +16,7 @@ function Invoke-CIPPStandardPhishingSimulations {
         ADDEDCOMPONENT
             {"type":"autoComplete","multiple":true,"creatable":true,"required":true,"label":"Phishing Simulation Domains","name":"standards.PhishingSimulations.Domains"}
             {"type":"autoComplete","multiple":true,"creatable":true,"required":true,"label":"Phishing Simulation Sender IP Ranges","name":"standards.PhishingSimulations.SenderIpRanges"}
-            {"type":"autoComplete","multiple":true,"creatable":true,"required":true,"label":"Phishing Simulation Urls","name":"standards.PhishingSimulations.PhishingSimUrls"}
+            {"type":"autoComplete","multiple":true,"creatable":true,"required":false,"label":"Phishing Simulation Urls","name":"standards.PhishingSimulations.PhishingSimUrls"}
         IMPACT
             Medium Impact
         ADDEDDATE
