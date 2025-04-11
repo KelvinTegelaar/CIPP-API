@@ -153,7 +153,9 @@ function New-CIPPCAPolicy {
     }
 
     foreach ($location in $JSONObj.conditions.locations.excludeLocations) {
+        Write-Information "Replacing (exclude) $location"
         $lookup = $LocationLookupTable | Where-Object -Property name -EQ $location
+        Write-Information "Found (exclude) $lookup"
         if (!$lookup) { continue }
         $index = [array]::IndexOf($JSONObj.conditions.locations.excludeLocations, $location)
         $JSONObj.conditions.locations.excludeLocations[$index] = $lookup.id
@@ -235,6 +237,8 @@ function New-CIPPCAPolicy {
             }
         } else {
             Write-Information 'Creating'
+            # Found issue where named location's are not getting created quick enough before the CA policy is created causing it to fail until next run. Sleep for 5 seconds
+            Start-Sleep -Seconds 5
             $null = New-GraphPOSTRequest -uri 'https://graph.microsoft.com/beta/identity/conditionalAccess/policies' -tenantid $tenantfilter -type POST -body $RawJSON -asApp $true
             Write-LogMessage -Headers $User -API $APINAME -tenant $($Tenant) -message "Added Conditional Access Policy $($JSONObj.Displayname)" -Sev 'Info'
             return "Created policy $displayname for $tenantfilter"
