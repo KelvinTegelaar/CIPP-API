@@ -39,7 +39,7 @@ function Invoke-CIPPStandardIntuneTemplate {
     $CompareList = foreach ($Template in $Settings) {
         Write-Host "IntuneTemplate: $($Template.TemplateList.value) - Trying to find template"
         $Request.body = (Get-CIPPAzDataTableEntity @Table -Filter $Filter | Where-Object -Property RowKey -Like "$($Template.TemplateList.value)*").JSON | ConvertFrom-Json -ErrorAction SilentlyContinue
-        if ($Request.body -eq $null) {
+        if ($null -eq $Request.body) {
             Write-LogMessage -API 'Standards' -tenant $tenant -message "Failed to find template $($Template.TemplateList.value). Has this Intune Template been deleted?" -sev 'Error'
             continue
         }

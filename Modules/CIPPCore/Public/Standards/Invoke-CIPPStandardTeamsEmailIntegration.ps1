@@ -42,13 +42,13 @@ Function Invoke-CIPPStandardTeamsEmailIntegration {
         if ($StateIsCorrect -eq $true) {
             Write-LogMessage -API 'Standards' -tenant $Tenant -message 'Teams Email Integration settings already set.' -sev Info
         } else {
-            $cmdparams = @{
+            $cmdParams = @{
                 Identity              = 'Global'
                 AllowEmailIntoChannel = $Settings.AllowEmailIntoChannel
             }
 
             try {
-                New-TeamsRequest -TenantFilter $Tenant -Cmdlet 'Set-CsTeamsClientConfiguration' -CmdParams $cmdparams
+                New-TeamsRequest -TenantFilter $Tenant -Cmdlet 'Set-CsTeamsClientConfiguration' -CmdParams $cmdParams
                 Write-LogMessage -API 'Standards' -tenant $Tenant -message 'Updated Teams Email Integration settings' -sev Info
             } catch {
                 $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message

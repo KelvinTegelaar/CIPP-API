@@ -128,7 +128,7 @@ function Invoke-CIPPStandardSpamFilterPolicy {
         if ($StateIsCorrect -eq $true) {
             Write-LogMessage -API 'Standards' -Tenant $Tenant -message 'Spam Filter Policy already correctly configured' -sev Info
         } else {
-            $cmdparams = @{
+            $cmdParams = @{
                 SpamAction                           = $SpamAction
                 SpamQuarantineTag                    = $SpamQuarantineTag
                 HighConfidenceSpamAction             = $HighConfidenceSpamAction

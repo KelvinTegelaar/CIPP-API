@@ -70,7 +70,7 @@ function Invoke-CIPPStandardPhishingSimulations {
         If ($StateIsCorrect -eq $true) {
             Write-LogMessage -API 'Standards' -Tenant $Tenant -message 'Advanced Phishing Simulations already correctly configured' -sev Info
         } Else {
-            # Remedidate incorrect Phishing Simulations Policy
+            # Remediate incorrect Phishing Simulations Policy
             If ($PolicyIsCorrect -eq $false) {
                 If ($PolicyState.Name -eq 'PhishSimOverridePolicy') {
                     Try {
@@ -89,7 +89,7 @@ function Invoke-CIPPStandardPhishingSimulations {
                 }
             }
 
-            # Remedidate incorrect Phishing Simulations Policy Rule
+            # Remediate incorrect Phishing Simulations Policy Rule
             If ($RuleIsCorrect -eq $false) {
                 If ($RuleState.Name -like "*PhishSimOverr*") {
                     $cmdParams = @{
@@ -121,7 +121,7 @@ function Invoke-CIPPStandardPhishingSimulations {
                 }
             }
 
-            # Remedidate incorrect Phishing Simulations URLs
+            # Remediate incorrect Phishing Simulations URLs
             If ($PhishingSimUrlsIsCorrect -eq $false) {
                 $cmdParams = @{
                     ListType = 'Url'
