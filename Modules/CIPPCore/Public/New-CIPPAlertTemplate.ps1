@@ -39,6 +39,10 @@ function New-CIPPAlertTemplate {
         $DataHTML = ($Data | ConvertTo-Html | Out-String).Replace('<table>', ' <table class="table-modern">')
         $IntroText = "<p>The following licenses have not been cancelled due to an API error at the old provider:</p>$dataHTML"
     }
+    if ($InputObject -eq 'sherwebmigBuyFail') {
+        $DataHTML = ($Data | ConvertTo-Html | Out-String).Replace('<table>', ' <table class="table-modern">')
+        $IntroText = "<p>The following licenses have not been bought as we could not find a correctly matching license. Please login and buy the license:</p>$dataHTML"
+    }
     if ($InputObject -eq 'table') {
         #data can be a array of strings or a string, if it is, we need to convert it to an object so it shows up nicely, that object will have one header: message.
 
