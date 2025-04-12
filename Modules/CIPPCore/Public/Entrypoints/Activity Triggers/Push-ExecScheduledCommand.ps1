@@ -89,7 +89,7 @@ function Push-ExecScheduledCommand {
                 Results      = [string](ConvertTo-Json -Compress -Depth 20 $results)
             }
             $null = Add-AzDataTableEntity @TaskResultsTable -Entity $TaskResults -Force
-            $StoredResults = @{ Results = 'Completed, click see details for more information' } | ConvertTo-Json -Compress
+            $StoredResults = @{ Results = 'Completed, details are available in the More Info pane' } | ConvertTo-Json -Compress
         }
     } catch {
         $errorMessage = $_.Exception.Message
