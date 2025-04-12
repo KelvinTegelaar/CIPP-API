@@ -31,19 +31,57 @@ function Test-SherwebMigrationAccounts {
 
     switch -wildcard ($config.migrationMethods) {
         '*notify*' {
+            $Subject = "Sherweb Migration: $($TenantFilter) - $($LicencesToMigrate.Count) licenses to migrate"
             $HTMLContent = New-CIPPAlertTemplate -Data $LicencesToMigrate -Format 'html' -InputObject 'sherwebmig'
             $JSONContent = New-CIPPAlertTemplate -Data $LicencesToMigrate -Format 'json' -InputObject 'sherwebmig'
             Send-CIPPAlert -Type 'email' -Title $Subject -HTMLContent $HTMLContent.htmlcontent -TenantFilter $tenant -APIName 'Alerts'
             Send-CIPPAlert -Type 'psa' -Title $Subject -HTMLContent $HTMLContent.htmlcontent -TenantFilter $standardsTenant -APIName 'Alerts'
             Send-CIPPAlert -Type 'webhook' -JSONContent $JSONContent -TenantFilter $Tenant -APIName 'Alerts'
         }
-        'buyAndNotify' {
-            #Buy the licenses at Sherweb using the matching CSV.
+        '*buy*' {
+            try {
+                $PotentialLicenses = Get-SherwebCatalog -TenantFilter $TenantFilter | Where-Object { $_.microsoftSkuId -in $LicencesToMigrate.SkuId -and $_.sku -like "*$($Config.migrateToLicense)" }
+                if (!$PotentialLicenses) {
+                    throw 'cannot buy new license: no matching license found in catalog'
+                } else {
+                    $PotentialLicenses | ForEach-Object {
+                        Set-SherwebSubscription -TenantFilter $TenantFilter -SKU $PotentialLicenses.sku -Quantity $LicencesToMigrate.TotalLicensesAtUnknownCSP
+                    }
+                }
+            } catch {
+                $Subject = "Sherweb Migration: $($TenantFilter) - Failed to buy licenses."
+                $HTMLContent = New-CIPPAlertTemplate -Data $LicencesToMigrate -Format 'html' -InputObject 'sherwebmig'
+                $JSONContent = New-CIPPAlertTemplate -Data $LicencesToMigrate -Format 'json' -InputObject 'sherwebmig'
+                Send-CIPPAlert -Type 'email' -Title $Subject -HTMLContent $HTMLContent.htmlcontent -TenantFilter $tenant -APIName 'Alerts'
+                Send-CIPPAlert -Type 'psa' -Title $Subject -HTMLContent $HTMLContent.htmlcontent -TenantFilter $standardsTenant -APIName 'Alerts'
+                Send-CIPPAlert -Type 'webhook' -JSONContent $JSONContent -TenantFilter $Tenant -APIName 'Alerts'
+            }
+
         }
-        'buyAndCancel' {
-            #Create HTML report for this tenant. Send to webhook/notifications/etc
-            #Buy the licenses at Sherweb using the matching CSV.
-            #Cancel the licenses in old vendor.
+        '*Cancel' {
+            try {
+                $tenantid = (Get-Tenants -TenantFilter $TenantFilter).customerId
+                $paxBody = @{
+                    client_id     = $Config.paxclientId
+                    client_secret = $Config.paxclientSecret
+                    audience      = 'https://api.pax8.com'
+                    grant_type    = 'client_credentials'
+                }
+                $Token = Invoke-RestMethod -Uri 'https://api.pax8.com/v1/token' -Method POST -Headers $headers -ContentType 'application/json' -Body $paxBody
+                $headers = @{ Authorization = "Bearer $($Token.access_token)" }
+                $cancelSubList = Invoke-RestMethod -Uri "https://api.pax8.com/v1/subscriptions?page=0&size=10&status=Active&companyId=$($tenantid)" -Method GET -Headers $headers | Where-Object -Property productId -In $LicencesToMigrate.SkuId
+                $cancelSubList | ForEach-Object {
+                    $response = Invoke-RestMethod -Uri "https://api.pax8.com/v1/subscriptions/$($_.subscriptionId)" -Method DELETE -Headers $headers -ContentType 'application/json' -Body ($body | ConvertTo-Json)
+                }
+
+            } catch {
+                $Subject = 'Sherweb Migration: Pax Migration failed'
+                $HTMLContent = New-CIPPAlertTemplate -Data $LicencesToMigrate -Format 'html' -InputObject 'sherwebmigfailpax'
+                $JSONContent = New-CIPPAlertTemplate -Data $LicencesToMigrate -Format 'json' -InputObject 'sherwebmigfailpax'
+                Send-CIPPAlert -Type 'email' -Title $Subject -HTMLContent $HTMLContent.htmlcontent -TenantFilter $tenant -APIName 'Alerts'
+                Send-CIPPAlert -Type 'psa' -Title $Subject -HTMLContent $HTMLContent.htmlcontent -TenantFilter $standardsTenant -APIName 'Alerts'
+                Send-CIPPAlert -Type 'webhook' -JSONContent $JSONContent -TenantFilter $Tenant -APIName 'Alerts'
+            }
         }
 
     }

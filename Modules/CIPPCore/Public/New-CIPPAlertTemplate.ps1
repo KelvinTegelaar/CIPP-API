@@ -31,6 +31,13 @@ function New-CIPPAlertTemplate {
     if ($InputObject -eq 'sherwebmig') {
         $DataHTML = ($Data | ConvertTo-Html | Out-String).Replace('<table>', ' <table class="table-modern">')
         $IntroText = "<p>The following licenses have not yet been found at Sherweb, and are expiring within 7 days:</p>$dataHTML"
+        if ($data.SherwebMig -like '*buy*') {
+            $introText = "<p>The following licenses have not yet been found at Sherweb, and are expiring within 7 days. We have started the process to automatically buy these licenses:</p>$dataHTML"
+        }
+    }
+    if ($InputObject -eq 'sherwebmigfailcancel') {
+        $DataHTML = ($Data | ConvertTo-Html | Out-String).Replace('<table>', ' <table class="table-modern">')
+        $IntroText = "<p>The following licenses have not been cancelled due to an API error at the old provider:</p>$dataHTML"
     }
     if ($InputObject -eq 'table') {
         #data can be a array of strings or a string, if it is, we need to convert it to an object so it shows up nicely, that object will have one header: message.
