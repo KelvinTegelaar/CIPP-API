@@ -47,12 +47,15 @@ function New-CIPPTemplateRun {
                     if ($UpdateNeeded) {
                         Write-Host "Template $($File.name) needs to be updated as the SHA is different"
                         Import-CommunityTemplate -Template $Template -SHA $File.sha -MigrationTable $MigrationTable
+                        "Template $($File.name) updated"
                     } else {
                         Write-Host "Template $($File.name) already exists and is up to date"
+                        "Template $($File.name) already exists and is up to date"
                     }
                 } else {
                     Write-Host "Template $($File.name) needs to be created"
                     Import-CommunityTemplate -Template $Template -SHA $File.sha -MigrationTable $MigrationTable
+                    "Template $($File.name) created"
                 }
             }
         } catch {
