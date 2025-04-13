@@ -69,8 +69,8 @@ function Compare-CIPPIntuneObject {
                 [string]$PropertyName
             )
             return ($PropertyName -like '*@OData*' -or
-                    $PropertyName -like '#microsoft.graph*' -or
-                    $excludeProps -contains $PropertyName)
+                $PropertyName -like '#microsoft.graph*' -or
+                $excludeProps -contains $PropertyName)
         }
 
         # Recursive function to compare objects deeply
@@ -83,7 +83,7 @@ function Compare-CIPPIntuneObject {
                 $Object2,
 
                 [Parameter(Mandatory = $false)]
-                [string]$PropertyPath = ""
+                [string]$PropertyPath = ''
             )
 
             # If both objects are null or empty, they're equal
@@ -94,20 +94,20 @@ function Compare-CIPPIntuneObject {
             # If one object is null but the other isn't, they're different
             if (($null -eq $Object1 -or $Object1 -eq '') -xor ($null -eq $Object2 -or $Object2 -eq '')) {
                 $result.Add([PSCustomObject]@{
-                    Property      = $PropertyPath
-                    ExpectedValue = if ($null -eq $Object1) { '' } else { $Object1 }
-                    ReceivedValue = if ($null -eq $Object2) { '' } else { $Object2 }
-                })
+                        Property      = $PropertyPath
+                        ExpectedValue = if ($null -eq $Object1) { '' } else { $Object1 }
+                        ReceivedValue = if ($null -eq $Object2) { '' } else { $Object2 }
+                    })
                 return
             }
 
             # If objects are of different types, they're different
             if ($Object1.GetType() -ne $Object2.GetType()) {
                 $result.Add([PSCustomObject]@{
-                    Property      = $PropertyPath
-                    ExpectedValue = $Object1
-                    ReceivedValue = $Object2
-                })
+                        Property      = $PropertyPath
+                        ExpectedValue = $Object1
+                        ReceivedValue = $Object2
+                    })
                 return
             }
 
@@ -122,25 +122,25 @@ function Compare-CIPPIntuneObject {
                     $newPath = if ($PropertyPath) { "$PropertyPath.$key" } else { $key }
 
                     if ($Object1.ContainsKey($key) -and $Object2.ContainsKey($key)) {
-                        Compare-ObjectsRecursively -Object1 $Object1[$key] -Object2 $Object2[$key] -PropertyPath $newPath
-                    }
-                    elseif ($Object1.ContainsKey($key)) {
+                        #only run if both props are not null
+                        if ($Object1[$key] -and $Object2[$key]) {
+                            Compare-ObjectsRecursively -Object1 $Object1[$key] -Object2 $Object2[$key] -PropertyPath $newPath
+                        }
+                    } elseif ($Object1.ContainsKey($key)) {
                         $result.Add([PSCustomObject]@{
-                            Property      = $newPath
-                            ExpectedValue = $Object1[$key]
-                            ReceivedValue = ''
-                        })
-                    }
-                    else {
+                                Property      = $newPath
+                                ExpectedValue = $Object1[$key]
+                                ReceivedValue = ''
+                            })
+                    } else {
                         $result.Add([PSCustomObject]@{
-                            Property      = $newPath
-                            ExpectedValue = ''
-                            ReceivedValue = $Object2[$key]
-                        })
+                                Property      = $newPath
+                                ExpectedValue = ''
+                                ReceivedValue = $Object2[$key]
+                            })
                     }
                 }
-            }
-            elseif ($Object1 -is [Array] -or $Object1 -is [System.Collections.IList]) {
+            } elseif ($Object1 -is [Array] -or $Object1 -is [System.Collections.IList]) {
                 # Compare arrays
                 $maxLength = [Math]::Max($Object1.Count, $Object2.Count)
 
@@ -149,24 +149,21 @@ function Compare-CIPPIntuneObject {
 
                     if ($i -lt $Object1.Count -and $i -lt $Object2.Count) {
                         Compare-ObjectsRecursively -Object1 $Object1[$i] -Object2 $Object2[$i] -PropertyPath $newPath
-                    }
-                    elseif ($i -lt $Object1.Count) {
+                    } elseif ($i -lt $Object1.Count) {
                         $result.Add([PSCustomObject]@{
-                            Property      = $newPath
-                            ExpectedValue = $Object1[$i]
-                            ReceivedValue = ''
-                        })
-                    }
-                    else {
+                                Property      = $newPath
+                                ExpectedValue = $Object1[$i]
+                                ReceivedValue = ''
+                            })
+                    } else {
                         $result.Add([PSCustomObject]@{
-                            Property      = $newPath
-                            ExpectedValue = ''
-                            ReceivedValue = $Object2[$i]
-                        })
+                                Property      = $newPath
+                                ExpectedValue = ''
+                                ReceivedValue = $Object2[$i]
+                            })
                     }
                 }
-            }
-            elseif ($Object1 -is [PSCustomObject] -or $Object1.PSObject.Properties.Count -gt 0) {
+            } elseif ($Object1 -is [PSCustomObject] -or $Object1.PSObject.Properties.Count -gt 0) {
                 # Compare PSCustomObjects or objects with properties
                 $allPropertyNames = @(
                     $Object1.PSObject.Properties | Select-Object -ExpandProperty Name
@@ -181,35 +178,35 @@ function Compare-CIPPIntuneObject {
                     $prop2Exists = $Object2.PSObject.Properties.Name -contains $propName
 
                     if ($prop1Exists -and $prop2Exists) {
-                        Compare-ObjectsRecursively -Object1 $Object1.$propName -Object2 $Object2.$propName -PropertyPath $newPath
-                    }
-                    elseif ($prop1Exists) {
+                        #only run if both props are not null
+                        if ($Object1.$propName -and $Object2.$propName) {
+                            Compare-ObjectsRecursively -Object1 $Object1.$propName -Object2 $Object2.$propName -PropertyPath $newPath
+                        }
+                    } elseif ($prop1Exists) {
                         $result.Add([PSCustomObject]@{
-                            Property      = $newPath
-                            ExpectedValue = $Object1.$propName
-                            ReceivedValue = ''
-                        })
-                    }
-                    else {
+                                Property      = $newPath
+                                ExpectedValue = $Object1.$propName
+                                ReceivedValue = ''
+                            })
+                    } else {
                         $result.Add([PSCustomObject]@{
-                            Property      = $newPath
-                            ExpectedValue = ''
-                            ReceivedValue = $Object2.$propName
-                        })
+                                Property      = $newPath
+                                ExpectedValue = ''
+                                ReceivedValue = $Object2.$propName
+                            })
                     }
                 }
-            }
-            else {
+            } else {
                 # Compare primitive values
                 $val1 = $Object1.ToString()
                 $val2 = $Object2.ToString()
 
                 if ($val1 -ne $val2) {
                     $result.Add([PSCustomObject]@{
-                        Property      = $PropertyPath
-                        ExpectedValue = $val1
-                        ReceivedValue = $val2
-                    })
+                            Property      = $PropertyPath
+                            ExpectedValue = $val1
+                            ReceivedValue = $val2
+                        })
                 }
             }
         }
@@ -228,7 +225,10 @@ function Compare-CIPPIntuneObject {
         }
 
         # Start the recursive comparison
-        Compare-ObjectsRecursively -Object1 $obj1 -Object2 $obj2
+        #only do the compare if the objects are not null
+        if ($obj1 -and $obj2) {
+            Compare-ObjectsRecursively -Object1 $obj1 -Object2 $obj2
+        }
 
         # If no differences found, return null
         if ($result.Count -eq 0) {

@@ -34,7 +34,7 @@ function Get-CIPPSchemaExtensions {
         $SchemaExtensions = Get-CIPPAzDataTableEntity @CustomDataTable -Filter "PartitionKey eq 'SchemaExtension'"
     }
 
-    $Schemas = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/schemaExtensions?`$filter=owner eq '$($ENV:ApplicationID)'" -NoAuthCheck $true -AsApp $true | Where-Object { $_.status -ne 'Deprecated' }
+    $Schemas = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/schemaExtensions?`$filter=owner eq '$($env:ApplicationID)'" -NoAuthCheck $true -AsApp $true | Where-Object { $_.status -ne 'Deprecated' }
 
     foreach ($SchemaExtension in $SchemaExtensions) {
         $SchemaFound = $false

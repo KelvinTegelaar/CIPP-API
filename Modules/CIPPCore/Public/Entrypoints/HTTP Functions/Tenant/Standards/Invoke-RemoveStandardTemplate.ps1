@@ -14,6 +14,7 @@ Function Invoke-RemoveStandardTemplate {
     $Headers = $Request.Headers
     Write-LogMessage -Headers $Headers -API $APINAME -message 'Accessed this API' -Sev 'Debug'
 
+    # Interact with query parameters or the body of the request.
     $ID = $Request.Body.ID ?? $Request.Query.ID
     try {
         $Table = Get-CippTable -tablename 'templates'

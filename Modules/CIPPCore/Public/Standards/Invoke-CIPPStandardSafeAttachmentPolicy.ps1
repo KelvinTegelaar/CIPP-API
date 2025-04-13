@@ -85,7 +85,7 @@ function Invoke-CIPPStandardSafeAttachmentPolicy {
             if ($StateIsCorrect -eq $true) {
                 Write-LogMessage -API 'Standards' -tenant $Tenant -message 'Safe Attachment Policy already correctly configured' -sev Info
             } else {
-                $cmdparams = @{
+                $cmdParams = @{
                     Enable          = $true
                     Action          = $Settings.SafeAttachmentAction
                     QuarantineTag   = $Settings.QuarantineTag
@@ -95,16 +95,16 @@ function Invoke-CIPPStandardSafeAttachmentPolicy {
 
                 if ($CurrentState.Name -eq $PolicyName) {
                     try {
-                        $cmdparams.Add('Identity', $PolicyName)
-                        New-ExoRequest -tenantid $Tenant -cmdlet 'Set-SafeAttachmentPolicy' -cmdparams $cmdparams -UseSystemMailbox $true
+                        $cmdParams.Add('Identity', $PolicyName)
+                        New-ExoRequest -tenantid $Tenant -cmdlet 'Set-SafeAttachmentPolicy' -cmdParams $cmdParams -UseSystemMailbox $true
                         Write-LogMessage -API 'Standards' -tenant $Tenant -message "Updated Safe Attachment policy $PolicyName." -sev Info
                     } catch {
                         Write-LogMessage -API 'Standards' -tenant $Tenant -message "Failed to update Safe Attachment policy $PolicyName." -sev Error -LogData $_
                     }
                 } else {
                     try {
-                        $cmdparams.Add('Name', $PolicyName)
-                        New-ExoRequest -tenantid $Tenant -cmdlet 'New-SafeAttachmentPolicy' -cmdparams $cmdparams -UseSystemMailbox $true
+                        $cmdParams.Add('Name', $PolicyName)
+                        New-ExoRequest -tenantid $Tenant -cmdlet 'New-SafeAttachmentPolicy' -cmdParams $cmdParams -UseSystemMailbox $true
                         Write-LogMessage -API 'Standards' -tenant $Tenant -message "Created Safe Attachment policy $PolicyName." -sev Info
                     } catch {
                         Write-LogMessage -API 'Standards' -tenant $Tenant -message "Failed to create Safe Attachment policy $PolicyName." -sev Error -LogData $_
@@ -113,27 +113,27 @@ function Invoke-CIPPStandardSafeAttachmentPolicy {
             }
 
             if ($RuleStateIsCorrect -eq $false) {
-                $cmdparams = @{
+                $cmdParams = @{
                     Priority          = 0
                     RecipientDomainIs = $AcceptedDomains.Name
                 }
 
                 if ($RuleState.SafeAttachmentPolicy -ne $PolicyName) {
-                    $cmdparams.Add('SafeAttachmentPolicy', $PolicyName)
+                    $cmdParams.Add('SafeAttachmentPolicy', $PolicyName)
                 }
 
                 if ($RuleState.Name -eq $RuleName) {
                     try {
-                        $cmdparams.Add('Identity', $RuleName)
-                        New-ExoRequest -tenantid $Tenant -cmdlet 'Set-SafeAttachmentRule' -cmdparams $cmdparams -UseSystemMailbox $true
+                        $cmdParams.Add('Identity', $RuleName)
+                        New-ExoRequest -tenantid $Tenant -cmdlet 'Set-SafeAttachmentRule' -cmdParams $cmdParams -UseSystemMailbox $true
                         Write-LogMessage -API 'Standards' -tenant $Tenant -message "Updated Safe Attachment rule $RuleName." -sev Info
                     } catch {
                         Write-LogMessage -API 'Standards' -tenant $Tenant -message "Failed to update Safe Attachment rule $RuleName." -sev Error -LogData $_
                     }
                 } else {
                     try {
-                        $cmdparams.Add('Name', $RuleName)
-                        New-ExoRequest -tenantid $Tenant -cmdlet 'New-SafeAttachmentRule' -cmdparams $cmdparams -UseSystemMailbox $true
+                        $cmdParams.Add('Name', $RuleName)
+                        New-ExoRequest -tenantid $Tenant -cmdlet 'New-SafeAttachmentRule' -cmdParams $cmdParams -UseSystemMailbox $true
                         Write-LogMessage -API 'Standards' -tenant $Tenant -message "Created Safe Attachment rule $RuleName." -sev Info
                     } catch {
                         Write-LogMessage -API 'Standards' -tenant $Tenant -message "Failed to create Safe Attachment rule $RuleName." -sev Error -LogData $_
