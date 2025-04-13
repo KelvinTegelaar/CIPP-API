@@ -44,7 +44,7 @@ function Clear-CippDurables {
     }
 
     $CippQueueTasks = Get-CippTable -TableName 'CippQueueTasks'
-    $RunningTasks = Get-CIPPAzDataTableEntity @CippQueueTasks -Filter "Status eq 'Running'" -Property RowKey, PartitionKey, Status
+    $RunningTasks = Get-CIPPAzDataTableEntity @CippQueueTasks -Filter "PartitionKey eq 'Task' and Status eq 'Running'" -Property RowKey, PartitionKey, Status
     if (($RunningTasks | Measure-Object).Count -gt 0) {
         if ($PSCmdlet.ShouldProcess('Tasks', 'Mark Failed')) {
             $UpdatedTasks = foreach ($Task in $RunningTasks) {

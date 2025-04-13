@@ -43,6 +43,10 @@ Function Invoke-ExecAlertsList {
             }
 
             $DisplayableAlerts = New-FlatArray $AlertsObj | Where-Object { $null -ne $_.Id } | Sort-Object -Property EventDateTime -Descending
+            if (!$DisplayableAlerts) {
+                $DisplayableAlerts = @()
+            }
+            $Metadata = [PSCustomObject]@{}
 
             [PSCustomObject]@{
                 NewAlertsCount             = $DisplayableAlerts | Where-Object { $_.Status -eq 'newAlert' } | Measure-Object | Select-Object -ExpandProperty Count
@@ -51,7 +55,7 @@ Function Invoke-ExecAlertsList {
                 SeverityMediumAlertsCount  = $DisplayableAlerts | Where-Object { ($_.Status -eq 'inProgress') -or ($_.Status -eq 'newAlert') } | Where-Object { $_.Severity -eq 'medium' } | Measure-Object | Select-Object -ExpandProperty Count
                 SeverityLowAlertsCount     = $DisplayableAlerts | Where-Object { ($_.Status -eq 'inProgress') -or ($_.Status -eq 'newAlert') } | Where-Object { $_.Severity -eq 'low' } | Measure-Object | Select-Object -ExpandProperty Count
                 SeverityInformationalCount = $DisplayableAlerts | Where-Object { ($_.Status -eq 'inProgress') -or ($_.Status -eq 'newAlert') } | Where-Object { $_.Severity -eq 'informational' } | Measure-Object | Select-Object -ExpandProperty Count
-                MSResults                  = $DisplayableAlerts
+                MSResults                  = @($DisplayableAlerts)
             }
         } else {
             $Table = Get-CIPPTable -TableName cachealertsandincidents

@@ -75,7 +75,7 @@ function Test-CIPPAccessTenant {
 
             foreach ($RoleId in $ExpectedRoles) {
                 $GraphRole = $GDAPRolesGraph.body.value | Where-Object -Property roleDefinitionId -EQ $RoleId.Id
-                $Role = $GraphRole.principal | Where-Object -Property organizationId -EQ $ENV:TenantID
+                $Role = $GraphRole.principal | Where-Object -Property organizationId -EQ $env:TenantID
 
                 if (!$Role) {
                     $MissingRoles.Add(

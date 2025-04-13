@@ -9,7 +9,9 @@ Function Invoke-ExecExtensionNinjaOneQueue {
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
-
+    $APIName = $Request.Params.CIPPEndpoint
+    $Headers = $Request.Headers
+    Write-LogMessage -headers $Headers -API $APIName -message 'Accessed this API' -Sev 'Debug'
 
 
     Switch ($QueueItem.NinjaAction) {
@@ -18,4 +20,13 @@ Function Invoke-ExecExtensionNinjaOneQueue {
         'SyncTenant' { Invoke-NinjaOneTenantSync -QueueItem $QueueItem }
     }
 
+    $Body = [PSCustomObject]@{
+        StatusCode = [HttpStatusCode]::OK
+        Body       = 'Success'
+    }
+
+    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
+        StatusCode = [HttpStatusCode]::OK
+        Body       = $Body
+    })
 }

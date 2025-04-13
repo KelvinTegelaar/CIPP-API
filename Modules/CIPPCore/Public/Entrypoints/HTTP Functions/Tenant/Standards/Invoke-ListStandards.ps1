@@ -11,13 +11,18 @@ Function Invoke-ListStandards {
     param($Request, $TriggerMetadata)
 
     $APIName = $Request.Params.CIPPEndpoint
-    Write-LogMessage -headers $Request.Headers -API $APINAME -message 'Accessed this API' -Sev 'Debug'
+    $Headers = $Request.Headers
+    Write-LogMessage -headers $Headers -API $APIName -message 'Accessed this API' -Sev 'Debug'
+
+    # Interact with query parameters or the body of the request.
+    $TenantFilter = $Request.Query.tenantFilter
+
 
     if ($Request.Query.ShowConsolidated -eq $true) {
         $StandardQuery = @{
-            TenantFilter = $Request.Query.TenantFilter
+            TenantFilter = $TenantFilter
         }
-        if ($Request.Query.TenantFilter -eq 'AllTenants') {
+        if ($TenantFilter -eq 'AllTenants') {
             $StandardQuery.ListAllTenants = $true
         }
         $CurrentStandards = @(Get-CIPPStandards @StandardQuery)
@@ -26,20 +31,20 @@ Function Invoke-ListStandards {
         $Filter = "PartitionKey eq 'standards'"
 
         try {
-            if ($Request.query.TenantFilter) {
-                $tenants = (Get-CIPPAzDataTableEntity @Table -Filter $Filter).JSON | ConvertFrom-Json -Depth 15 -ErrorAction Stop | Where-Object Tenant -EQ $Request.query.tenantFilter
+            if ($TenantFilter) {
+                $Tenants = (Get-CIPPAzDataTableEntity @Table -Filter $Filter).JSON | ConvertFrom-Json -Depth 15 -ErrorAction Stop | Where-Object Tenant -EQ $TenantFilter
             } else {
                 $Tenants = (Get-CIPPAzDataTableEntity @Table -Filter $Filter).JSON | ConvertFrom-Json -Depth 15 -ErrorAction Stop
             }
         } catch {}
 
-        $CurrentStandards = foreach ($tenant in $tenants) {
+        $CurrentStandards = foreach ($tenant in $Tenants) {
             [PSCustomObject]@{
                 displayName     = $tenant.tenant
                 appliedBy       = $tenant.addedBy
                 appliedAt       = $tenant.appliedAt
                 standards       = $tenant.Standards
-                StandardsExport = ($tenant.Standards.psobject.properties.name) -join ', '
+                StandardsExport = ($tenant.Standards.PSObject.Properties.Name) -join ', '
             }
         }
 

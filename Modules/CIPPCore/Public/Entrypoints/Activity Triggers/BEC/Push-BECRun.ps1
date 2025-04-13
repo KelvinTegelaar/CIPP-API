@@ -96,7 +96,8 @@ function Push-BECRun {
         Write-Information 'Getting rules'
 
         try {
-            $RulesLog = New-ExoRequest -cmdlet 'Get-InboxRule' -tenantid $TenantFilter -cmdParams @{ Mailbox = $Username; IncludeHidden = $true } -Anchor $Username
+            $RulesLog = New-ExoRequest -cmdlet 'Get-InboxRule' -tenantid $TenantFilter -cmdParams @{ Mailbox = $Username; IncludeHidden = $true } -Anchor $Username |
+                Where-Object { $_.Name -ne 'Junk E-Mail Rule' -and $_.Name -notlike 'Microsoft.Exchange.OOF.*' }
         } catch {
             Write-Host 'Failed to get rules: ' + $_.Exception.Message
             $RulesLog = @()
