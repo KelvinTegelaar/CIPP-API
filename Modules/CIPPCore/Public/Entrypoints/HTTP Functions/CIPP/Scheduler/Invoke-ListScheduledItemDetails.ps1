@@ -64,7 +64,36 @@ function Invoke-ListScheduledItemDetails {
     $Results = Get-CIPPAzDataTableEntity @ResultsTable -Filter $ResultsFilter
 
     if (!$Results) {
-        $ResultData = ($Task.Results | ConvertFrom-Json -ErrorAction SilentlyContinue) ?? $Task.Results
+        try {
+            # Handle the case when we need to use Task.Results
+            if ($Task.Results) {
+                # Try to safely parse JSON or use the raw value if parsing fails
+                try {
+                    if ($Task.Results -is [string]) {
+                        $ResultString = $Task.Results.ToString().Trim()
+                        if (($ResultString -match '^\[.*\]$') -or ($ResultString -match '^\{.*\}$')) {
+                            $ResultData = $Task.Results | ConvertFrom-Json -ErrorAction Stop
+                        } else {
+                            # Not valid JSON format, use as is
+                            $ResultData = $Task.Results
+                        }
+                    } else {
+                        # Already an object, use as is
+                        $ResultData = $Task.Results
+                    }
+                } catch {
+                    # If JSON parsing fails, use raw value
+                    Write-LogMessage -API $APIName -message "Error parsing Task.Results as JSON: $_" -Sev 'Warning'
+                    $ResultData = $Task.Results
+                }
+            } else {
+                $ResultData = $null
+            }
+        } catch {
+            Write-LogMessage -API $APIName -message "Error processing Task.Results: $_" -Sev 'Error'
+            $ResultData = $null
+        }
+
         $Results = @(
             [PSCustomObject]@{
                 RowKey    = $Task.Tenant
@@ -73,17 +102,43 @@ function Invoke-ListScheduledItemDetails {
             }
         )
     }
+
     # Process the results if they exist
     $ProcessedResults = [System.Collections.Generic.List[object]]::new()
     foreach ($Result in $Results) {
         try {
-            if ($Result.Results) {
-                $ParsedResults = ($Result.Results | ConvertFrom-Json -ErrorAction SilentlyContinue) ?? $Result.Results
-                if (!$ParsedResults -or 'null' -eq $ParsedResults) {
+            if ($null -ne $Result.Results) {
+                # Safe handling based on result type
+                if ($Result.Results -is [array] -or $Result.Results -is [System.Collections.ICollection]) {
+                    # Already a collection, use as is
+                    $ParsedResults = $Result.Results
+                } elseif ($Result.Results -is [string]) {
+                    $ResultString = $Result.Results.ToString().Trim()
+                    # Only try to parse as JSON if it looks like JSON
+                    if (($ResultString -match '^\[.*\]$') -or ($ResultString -match '^\{.*\}$')) {
+                        try {
+                            $ParsedResults = $Result.Results | ConvertFrom-Json -ErrorAction Stop
+                        } catch {
+                            Write-LogMessage -API $APIName -message "Failed to parse result as JSON: $_" -Sev 'Warning'
+                            # On failure, keep as string
+                            $ParsedResults = $Result.Results
+                        }
+                    } else {
+                        # Not valid JSON format
+                        $ParsedResults = $Result.Results
+                    }
+                } else {
+                    # Any other object type
+                    $ParsedResults = $Result.Results
+                }
+
+                # Ensure results is always an array
+                if ($null -eq $ParsedResults -or 'null' -eq $ParsedResults) {
                     $Result.Results = @()
                 } else {
                     $Result.Results = @($ParsedResults)
                 }
+
                 # Store tenant information with the result
                 $TenantId = $Result.RowKey
                 $TenantInfo = Get-Tenants -TenantFilter $TenantId -ErrorAction SilentlyContinue
@@ -95,6 +150,8 @@ function Invoke-ListScheduledItemDetails {
             }
         } catch {
             Write-LogMessage -API $APIName -message "Error processing results for task $RowKey with tenant $($Result.RowKey): $_" -Sev 'Error'
+            # Set Results to an empty array to prevent further errors
+            $Result.Results = @()
         }
         $EndResult = $Result | Select-Object Timestamp, @{n = 'Tenant'; Expression = { $_.RowKey } }, Results
         $ProcessedResults.Add($EndResult)
