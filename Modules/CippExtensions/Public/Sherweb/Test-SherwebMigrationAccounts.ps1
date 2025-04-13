@@ -5,9 +5,10 @@ function Test-SherwebMigrationAccounts {
     )
 
     $Table = Get-CIPPTable -TableName Extensionsconfig
-    $Config = ((Get-CIPPAzDataTableEntity @Table).config | ConvertFrom-Json).Sherweb
+    $ExtensionConfig = (Get-CIPPAzDataTableEntity @Table).config | ConvertFrom-Json
+    $Config = $ExtensionConfig.Sherweb
     #First get a list of all subscribed skus for this tenant, that are in the transfer window.
-    $Licenses = (Get-CIPPLicenseOverview -TenantFilter $TenantFilter) | ForEach-Object { $_.terminfo = ($_.terminfo | ConvertFrom-Json -ErrorAction SilentlyContinue) ; $_ } | Where-Object { $_.terminfo -ne $null -and $_.terminfo.TransferWindow -LE 7 }
+    $Licenses = (Get-CIPPLicenseOverview -TenantFilter $TenantFilter) | ForEach-Object { $_.terminfo = ($_.terminfo | ConvertFrom-Json -ErrorAction SilentlyContinue) ; $_ } | Where-Object { $_.terminfo -ne $null -and $_.terminfo.TransferWindow -le 7 }
 
     #now check if this exact count of licenses is available at Sherweb, if not, we need to migrate them.
     $SherwebLicenses = Get-SherwebCurrentSubscription -TenantFilter $TenantFilter
@@ -61,9 +62,12 @@ function Test-SherwebMigrationAccounts {
         '*Cancel' {
             try {
                 $tenantid = (Get-Tenants -TenantFilter $TenantFilter).customerId
+                $Pax8Config = $ExtensionConfig.Pax8
+                $Pax8ClientId = $Pax8Config.clientId
+                $Pax8ClientSecret = Get-ExtensionAPIKey -Extension 'Pax8'
                 $paxBody = @{
-                    client_id     = $Config.paxclientId
-                    client_secret = $Config.paxclientSecret
+                    client_id     = $Pax8ClientId
+                    client_secret = $Pax8ClientSecret
                     audience      = 'https://api.pax8.com'
                     grant_type    = 'client_credentials'
                 }
