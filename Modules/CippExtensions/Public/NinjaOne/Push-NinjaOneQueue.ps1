@@ -11,5 +11,5 @@ function Push-NinjaOneQueue {
         'SyncTenant' { Invoke-NinjaOneTenantSync -QueueItem $Item }
         'SyncTenants' { Invoke-NinjaOneSync }
     }
-
+    return $true
 }

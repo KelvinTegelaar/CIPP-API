@@ -40,6 +40,7 @@ Function Invoke-EditTenant {
             }
             $null = Add-CIPPAzDataTableEntity @PropertiesTable -Entity $aliasEntity -Force
             Write-Host "Setting alias to $tenantAlias"
+            $Tenant | Add-Member -NotePropertyName 'originalDisplayName' -NotePropertyValue $tenant.displayName -Force
             $Tenant.displayName = $tenantAlias
             $null = Add-CIPPAzDataTableEntity @TenantTable -Entity $Tenant -Force
         }

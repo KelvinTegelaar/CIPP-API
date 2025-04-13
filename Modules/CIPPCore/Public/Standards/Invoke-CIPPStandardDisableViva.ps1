@@ -7,8 +7,8 @@ function Invoke-CIPPStandardDisableViva {
     .SYNOPSIS
         (Label) Disable daily Insight/Viva reports
     .DESCRIPTION
-        (Helptext) Disables the daily viva reports for all users.
-        (DocsDescription) Disables the daily viva reports for all users.
+        (Helptext) Disables the daily viva reports for all users. This standard requires the CIPP-SAM application to have the Company Administrator (Global Admin) role in the tenant. Enable this using CIPP > Advanced > Super Admin > SAM App Roles. Activate the roles with a CPV refresh.
+        (DocsDescription) Disables the daily viva reports for all users. This standard requires the CIPP-SAM application to have the Company Administrator (Global Admin) role in the tenant. Enable this using CIPP \> Advanced \> Super Admin \> SAM App Roles. Activate the roles with a CPV refresh.
     .NOTES
         CAT
             Exchange Standards
