@@ -122,7 +122,7 @@ Function Invoke-ExecOffboardTenant {
                 # Remove multi-tenant apps with the CSP tenant as origin
                 try {
                     $multitenantCSPApps = (New-GraphGETRequest -Uri "https://graph.microsoft.com/v1.0/servicePrincipals?`$count=true&`$select=displayName,appId,id,appOwnerOrganizationId&`$filter=appOwnerOrganizationId eq $($env:TenantID)" -tenantid $Tenantfilter -ComplexFilter)
-                    $sortedArray = $multitenantCSPApps | Sort-Object @{Expression = { if ($_.appId -eq $ENV:ApplicationID) { 1 } else { 0 } }; Ascending = $true }
+                    $sortedArray = $multitenantCSPApps | Sort-Object @{Expression = { if ($_.appId -eq $env:ApplicationID) { 1 } else { 0 } }; Ascending = $true }
                     $sortedArray | ForEach-Object {
                         try {
                             $delete = (New-GraphPostRequest -type 'DELETE' -Uri "https://graph.microsoft.com/v1.0/serviceprincipals/$($_.id)" -tenantid $Tenantfilter)

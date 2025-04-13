@@ -21,7 +21,7 @@ function Start-UserTasksOrchestrator {
                     PartitionKey = $task.PartitionKey
                     RowKey       = $task.RowKey
                     ExecutedTime = "$currentUnixTime"
-                    TaskState    = 'Running'
+                    TaskState    = 'Planned'
                 }
                 $task.Parameters = $task.Parameters | ConvertFrom-Json -AsHashtable
                 $task.AdditionalProperties = $task.AdditionalProperties | ConvertFrom-Json

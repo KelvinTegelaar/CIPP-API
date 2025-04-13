@@ -19,6 +19,25 @@ function Get-CIPPTextReplacement {
         return $Text
     }
 
+    $ReservedVariables = @(
+        '%serial%',
+        '%systemroot%',
+        '%systemdrive%',
+        '%temp%',
+        '%tenantid%',
+        '%tenantfilter%',
+        '%tenantname%',
+        '%partnertenantid%',
+        '%samappid%',
+        '%userprofile%',
+        '%username%',
+        '%userdomain%',
+        '%windir%',
+        '%programfiles%',
+        '%programfiles(x86)%',
+        '%programdata%'
+    )
+    
     $Tenant = Get-Tenants -TenantFilter $TenantFilter
     $CustomerId = $Tenant.customerId
 
@@ -44,7 +63,9 @@ function Get-CIPPTextReplacement {
     # Replace custom variables
     foreach ($Replace in $Vars.GetEnumerator()) {
         $String = '%{0}%' -f $Replace.Key
-        $Text = $Text -replace $String, $Replace.Value
+        if ($string -notin $ReservedVariables) {
+            $Text = $Text -replace $String, $Replace.Value
+        }
     }
     #default replacements for all tenants: %tenantid% becomes $tenant.customerId, %tenantfilter% becomes $tenant.defaultDomainName, %tenantname% becomes $tenant.displayName
     $Text = $Text -replace '%tenantid%', $Tenant.customerId
@@ -52,7 +73,7 @@ function Get-CIPPTextReplacement {
     $Text = $Text -replace '%tenantname%', $Tenant.displayName
 
     # Partner specific replacements
-    $Text = $Text -replace '%partnertenantid%', $ENV:TenantID
-    $Text = $Text -replace '%samappid%', $ENV:ApplicationID
+    $Text = $Text -replace '%partnertenantid%', $env:TenantID
+    $Text = $Text -replace '%samappid%', $env:ApplicationID
     return $Text
 }

@@ -52,16 +52,16 @@ Function Invoke-ExecSAMSetup {
         if ($env:MSI_SECRET) {
             Disable-AzContextAutosave -Scope Process | Out-Null
             $null = Connect-AzAccount -Identity
-            $SubscriptionId = $ENV:WEBSITE_OWNER_NAME -split '\+' | Select-Object -First 1
+            $SubscriptionId = $env:WEBSITE_OWNER_NAME -split '\+' | Select-Object -First 1
             $null = Set-AzContext -SubscriptionId $SubscriptionId
         }
     }
-    if (!$ENV:SetFromProfile) {
+    if (!$env:SetFromProfile) {
         Write-Information "We're reloading from KV"
         Get-CIPPAuthentication
     }
 
-    $KV = $ENV:WEBSITE_DEPLOYMENT_ID
+    $KV = $env:WEBSITE_DEPLOYMENT_ID
     $Table = Get-CIPPTable -TableName SAMWizard
     $Rows = Get-CIPPAzDataTableEntity @Table | Where-Object -Property Timestamp -GT (Get-Date).AddMinutes(-10)
 
@@ -88,16 +88,16 @@ Function Invoke-ExecSAMSetup {
         if ($Request.Query.code) {
             try {
                 $TenantId = $Rows.tenantid
-                if (!$TenantId -or $TenantId -eq 'NotStarted') { $TenantId = $ENV:TenantID }
+                if (!$TenantId -or $TenantId -eq 'NotStarted') { $TenantId = $env:TenantID }
                 $AppID = $Rows.appid
-                if (!$AppID -or $AppID -eq 'NotStarted') { $appid = $ENV:ApplicationID }
+                if (!$AppID -or $AppID -eq 'NotStarted') { $appid = $env:ApplicationID }
                 $URL = ($Request.headers.'x-ms-original-url').split('?') | Select-Object -First 1
                 if ($env:AzureWebJobsStorage -eq 'UseDevelopmentStorage=true') {
                     $clientsecret = $Secret.ApplicationSecret
                 } else {
                     $clientsecret = Get-AzKeyVaultSecret -VaultName $kv -Name 'ApplicationSecret' -AsPlainText
                 }
-                if (!$clientsecret) { $clientsecret = $ENV:ApplicationSecret }
+                if (!$clientsecret) { $clientsecret = $env:ApplicationSecret }
                 Write-Information "client_id=$appid&scope=https://graph.microsoft.com/.default+offline_access+openid+profile&code=$($Request.Query.code)&grant_type=authorization_code&redirect_uri=$($url)&client_secret=$clientsecret" #-Uri "https://login.microsoftonline.com/$TenantId/oauth2/v2.0/token"
                 $RefreshToken = Invoke-RestMethod -Method POST -Body "client_id=$appid&scope=https://graph.microsoft.com/.default+offline_access+openid+profile&code=$($Request.Query.code)&grant_type=authorization_code&redirect_uri=$($url)&client_secret=$clientsecret" -Uri "https://login.microsoftonline.com/$TenantId/oauth2/v2.0/token" -ContentType 'application/x-www-form-urlencoded'
 

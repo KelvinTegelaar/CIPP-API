@@ -46,7 +46,7 @@ function Push-SchedulerCIPPNotifications {
                         Send-CIPPAlert -Type 'email' -Title $Subject -HTMLContent $HTMLContent.htmlcontent -TenantFilter $tenant -APIName 'Alerts'
                     }
                 } else {
-                    $Data = ($CurrentLog | Select-Object Message, API, Tenant, Username, Severity | ConvertTo-Html -frag)
+                    $Data = ($CurrentLog | Select-Object Message, API, Tenant, Username, Severity)
                     $Subject = "CIPP Alert: Alerts found starting at $((Get-Date).AddMinutes(-15))"
                     $HTMLContent = New-CIPPAlertTemplate -Data $Data -Format 'html' -InputObject 'table'
                     Send-CIPPAlert -Type 'email' -Title $Subject -HTMLContent $HTMLContent.htmlcontent -TenantFilter $tenant -APIName 'Alerts'
@@ -109,7 +109,7 @@ function Push-SchedulerCIPPNotifications {
     if ($config.sendtoIntegration) {
         try {
             foreach ($tenant in ($CurrentLog.Tenant | Sort-Object -Unique)) {
-                $Data = ($CurrentLog | Select-Object Message, API, Tenant, Username, Severity | Where-Object -Property tenant -EQ $tenant | ConvertTo-Html -frag)
+                $Data = ($CurrentLog | Select-Object Message, API, Tenant, Username, Severity | Where-Object -Property tenant -EQ $tenant)
                 $HTMLContent = New-CIPPAlertTemplate -Data $Data -Format 'html' -InputObject 'table'
                 $Title = "$tenant CIPP Alert: Alerts found starting at $((Get-Date).AddMinutes(-15))"
                 Send-CIPPAlert -Type 'psa' -Title $Title -HTMLContent $HTMLContent.htmlcontent -TenantFilter $tenant -APIName 'Alerts'
