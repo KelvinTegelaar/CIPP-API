@@ -235,6 +235,10 @@ function New-CIPPCAPolicy {
             }
         } else {
             Write-Information 'Creating'
+            if ($JSONobj.GrantControls.authenticationStrength.policyType -or $JSONObj.$jsonobj.LocationInfo) {
+                #quick fix for if the policy isn't available
+                Start-Sleep 1
+            }
             $null = New-GraphPOSTRequest -uri 'https://graph.microsoft.com/beta/identity/conditionalAccess/policies' -tenantid $tenantfilter -type POST -body $RawJSON -asApp $true
             Write-LogMessage -Headers $User -API $APINAME -tenant $($Tenant) -message "Added Conditional Access Policy $($JSONObj.Displayname)" -Sev 'Info'
             return "Created policy $displayname for $tenantfilter"
