@@ -37,8 +37,8 @@ Function Invoke-ExecCPVPermissions {
                     defaultDomainName = $env:TenantID
                 }
             }
-            Add-CIPPApplicationPermission -RequiredResourceAccess 'CIPPDefaults' -ApplicationId $ENV:ApplicationID -tenantfilter $TenantFilter
-            Add-CIPPDelegatedPermission -RequiredResourceAccess 'CIPPDefaults' -ApplicationId $ENV:ApplicationID -tenantfilter $TenantFilter
+            Add-CIPPApplicationPermission -RequiredResourceAccess 'CIPPDefaults' -ApplicationId $env:ApplicationID -tenantfilter $TenantFilter
+            Add-CIPPDelegatedPermission -RequiredResourceAccess 'CIPPDefaults' -ApplicationId $env:ApplicationID -tenantfilter $TenantFilter
             if ($TenantFilter -notin @('PartnerTenant', $env:TenantID)) {
                 Set-CIPPSAMAdminRoles -TenantFilter $TenantFilter
             }

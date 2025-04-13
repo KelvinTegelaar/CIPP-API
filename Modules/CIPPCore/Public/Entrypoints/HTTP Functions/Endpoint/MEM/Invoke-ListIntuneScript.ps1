@@ -12,11 +12,9 @@ function Invoke-ListIntuneScript {
 
     $APIName = $Request.Params.CIPPEndpoint
     $Headers = $Request.Headers
-    Write-LogMessage -Headers $Headers -API $APINAME -message 'Accessed this API' -Sev Debug
+    Write-LogMessage -Headers $Headers -API $APIName -message 'Accessed this API' -Sev Debug
 
-    Write-Host 'PowerShell HTTP trigger function processed a request.'
-
-    $TenantFilter = $Request.Query.TenantFilter
+    $TenantFilter = $Request.Query.tenantFilter
     $Results = [System.Collections.Generic.List[System.Object]]::new()
 
     $BulkRequests = [PSCustomObject]@(

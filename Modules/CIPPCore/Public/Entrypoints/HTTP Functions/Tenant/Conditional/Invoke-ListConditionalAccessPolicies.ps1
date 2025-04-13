@@ -11,7 +11,8 @@ Function Invoke-ListConditionalAccessPolicies {
     param($Request, $TriggerMetadata)
 
     $APIName = $Request.Params.CIPPEndpoint
-    Write-LogMessage -headers $Request.Headers -API $APIName -message 'Accessed this API' -Sev 'Debug'
+    $Headers = $Request.Headers
+    Write-LogMessage -headers $Headers -API $APIName -message 'Accessed this API' -Sev 'Debug'
 
 
     function Get-LocationNameFromId {
@@ -170,7 +171,7 @@ Function Invoke-ListConditionalAccessPolicies {
                 id                                          = $cap.id
                 displayName                                 = $cap.displayName
                 customer                                    = $cap.Customer
-                tenantID                                    = $cap.TenantID
+                tenantID                                    = $TenantFilter
                 createdDateTime                             = $(if (![string]::IsNullOrEmpty($cap.createdDateTime)) { [datetime]$cap.createdDateTime } else { '' })
                 modifiedDateTime                            = $(if (![string]::IsNullOrEmpty($cap.modifiedDateTime)) { [datetime]$cap.modifiedDateTime }else { '' })
                 state                                       = $cap.state

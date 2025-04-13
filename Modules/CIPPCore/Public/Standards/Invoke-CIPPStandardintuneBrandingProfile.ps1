@@ -69,7 +69,7 @@ function Invoke-CIPPStandardintuneBrandingProfile {
             if ($Settings.onlineSupportSiteUrl) { $Body.onlineSupportSiteUrl = $Settings.onlineSupportSiteUrl }
             if ($Settings.privacyUrl) { $Body.privacyUrl = $Settings.privacyUrl }
 
-            $cmdparams = @{
+            $cmdParams = @{
                 tenantid    = $tenant
                 uri         = 'https://graph.microsoft.com/beta/deviceManagement/intuneBrandingProfiles/c3a59481-1bf2-46ce-94b3-66eec07a8d60'
                 AsApp       = $true
@@ -79,7 +79,7 @@ function Invoke-CIPPStandardintuneBrandingProfile {
             }
 
             try {
-                New-GraphPostRequest @cmdparams
+                New-GraphPostRequest @cmdParams
                 Write-LogMessage -API 'Standards' -tenant $tenant -message 'Successfully updated Intune Branding Profile' -sev Info
             } catch {
                 $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message

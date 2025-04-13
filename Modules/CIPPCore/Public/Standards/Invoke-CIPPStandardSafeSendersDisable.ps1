@@ -15,7 +15,7 @@ function Invoke-CIPPStandardSafeSendersDisable {
         TAG
         ADDEDCOMPONENT
         DISABLEDFEATURES
-
+            {"report":true,"warn":true,"remediate":false}
         IMPACT
             Medium Impact
         ADDEDDATE

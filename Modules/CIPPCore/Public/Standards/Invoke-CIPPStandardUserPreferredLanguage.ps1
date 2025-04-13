@@ -37,7 +37,7 @@ function Invoke-CIPPStandardUserPreferredLanguage {
         if (($IncorrectUsers | Measure-Object).Count -gt 0) {
             try {
                 foreach ($user in $IncorrectUsers) {
-                    $cmdparams = @{
+                    $cmdParams = @{
                         tenantid    = $Tenant
                         uri         = "https://graph.microsoft.com/beta/users/$($user.userPrincipalName)"
                         AsApp       = $true
@@ -47,7 +47,7 @@ function Invoke-CIPPStandardUserPreferredLanguage {
                         } | ConvertTo-Json
                         ContentType = 'application/json; charset=utf-8'
                     }
-                    $null = New-GraphPOSTRequest @cmdparams
+                    $null = New-GraphPOSTRequest @cmdParams
                     Write-LogMessage -API 'Standards' -tenant $Tenant -message "Preferred language for $($user.userPrincipalName) has been set to $preferredLanguage" -sev Info
                 }
             } catch {
