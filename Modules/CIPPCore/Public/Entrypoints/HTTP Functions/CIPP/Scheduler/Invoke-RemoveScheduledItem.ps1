@@ -1,6 +1,6 @@
 using namespace System.Net
 
-Function Invoke-RemoveScheduledItem {
+function Invoke-RemoveScheduledItem {
     <#
     .FUNCTIONALITY
         Entrypoint,AnyTenant
@@ -13,12 +13,20 @@ Function Invoke-RemoveScheduledItem {
     $APIName = 'RemoveScheduledItem'
     $User = $Request.Headers
 
+    $RowKey = $Request.Query.id ? $Request.Query.id : $Request.Body.id
     $task = @{
-        RowKey       = $Request.Query.id ? $Request.Query.id : $Request.Body.id
+        RowKey       = $RowKey
         PartitionKey = 'ScheduledTask'
     }
     $Table = Get-CIPPTable -TableName 'ScheduledTasks'
     Remove-AzDataTableEntity -Force @Table -Entity $task
+
+    $DetailTable = Get-CIPPTable -TableName 'ScheduledTaskDetails'
+    $Details = Get-CIPPAzDataTableEntity @DetailTable -Filter "PartitionKey eq '$($RowKey)'" -Property RowKey, PartitionKey, ETag
+
+    if ($Details) {
+        Remove-AzDataTableEntity -Force @DetailTable -Entity $Details
+    }
 
     Write-LogMessage -Headers $User -API $APINAME -message "Task removed: $($task.RowKey)" -Sev 'Info'
 

@@ -22,7 +22,7 @@ Function Invoke-ExecCreateTAP {
         $Result = New-CIPPTAP -userid $UserID -TenantFilter $TenantFilter -APIName $APIName -Headers $Headers
         $StatusCode = [HttpStatusCode]::OK
     } catch {
-        $Result = "$($_.Exception.Message)"
+        $Result = Get-NormalizedError -message $($_.Exception.Message)
         $StatusCode = [HttpStatusCode]::InternalServerError
     }
 
