@@ -40,12 +40,16 @@ function Push-ListGraphRequestQueue {
 
         $RawGraphRequest = try {
             $Results = Get-GraphRequestList @GraphRequestParams
-            $Results | Select-Object -First ($Results.Count - 1)
+            if ($Results[-1].PSObject.Properties.Name -contains 'nextLink') {
+                $Results | Select-Object -First ($Results.Count - 1)
+            } else {
+                $Results
+            }
         } catch {
             $CippException = Get-CippException -Exception $_.Exception
             [PSCustomObject]@{
-                Tenant     = $Item.TenantFilter
-                CippStatus = "Could not connect to tenant. $($CippException.NormalizedMessage)"
+                Tenant        = $Item.TenantFilter
+                CippStatus    = "Could not connect to tenant. $($CippException.NormalizedMessage)"
                 CippException = [string]($CippException | ConvertTo-Json -Depth 10 -Compress)
             }
         }

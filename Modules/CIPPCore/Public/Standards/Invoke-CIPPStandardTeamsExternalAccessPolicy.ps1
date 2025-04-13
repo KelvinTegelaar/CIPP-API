@@ -47,7 +47,7 @@ function Invoke-CIPPStandardTeamsExternalAccessPolicy {
         if ($StateIsCorrect -eq $true) {
             Write-LogMessage -API 'Standards' -tenant $Tenant -message 'External Access Policy already set.' -sev Info
         } else {
-            $cmdparams = @{
+            $cmdParams = @{
                 Identity                  = 'Global'
                 EnableFederationAccess    = $Settings.EnableFederationAccess
                 EnablePublicCloudAccess   = $Settings.EnablePublicCloudAccess
@@ -55,7 +55,7 @@ function Invoke-CIPPStandardTeamsExternalAccessPolicy {
             }
 
             try {
-                New-TeamsRequest -TenantFilter $Tenant -Cmdlet 'Set-CsExternalAccessPolicy' -CmdParams $cmdparams
+                New-TeamsRequest -TenantFilter $Tenant -Cmdlet 'Set-CsExternalAccessPolicy' -CmdParams $cmdParams
                 Write-LogMessage -API 'Standards' -tenant $Tenant -message 'Updated External Access Policy' -sev Info
             } catch {
                 $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message

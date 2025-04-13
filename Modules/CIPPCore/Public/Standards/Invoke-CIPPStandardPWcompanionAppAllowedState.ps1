@@ -36,7 +36,8 @@ function Invoke-CIPPStandardPWcompanionAppAllowedState {
 
 
     # Get state value using null-coalescing operator
-    $state = $Settings.state.value ?? $Settings.state
+    $state = $Settings.state.value ? $Settings.state.value : $settings.state
+    $authState = if ($authenticatorFeaturesState.featureSettings.companionAppAllowedState.state -eq $state) { $true } else { $false }
 
     # Input validation
     if (([string]::IsNullOrWhiteSpace($state) -or $state -eq 'Select a value') -and ($Settings.remediate -eq $true -or $Settings.alert -eq $true)) {

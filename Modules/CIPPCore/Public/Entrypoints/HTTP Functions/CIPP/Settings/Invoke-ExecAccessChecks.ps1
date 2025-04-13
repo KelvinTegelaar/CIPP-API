@@ -11,7 +11,8 @@ Function Invoke-ExecAccessChecks {
     param($Request, $TriggerMetadata)
 
     $APIName = $Request.Params.CIPPEndpoint
-    Write-LogMessage -Headers $Request.Headers -API $APINAME -message 'Accessed this API' -Sev 'Debug'
+    $Headers = $Request.Headers
+    Write-LogMessage -headers $Headers -API $APIName -message 'Accessed this API' -Sev 'Debug'
 
     $Table = Get-CIPPTable -tablename 'AccessChecks'
     $LastRun = (Get-Date).ToUniversalTime()
@@ -29,7 +30,7 @@ Function Invoke-ExecAccessChecks {
                     $Results = $null
                 }
                 if (!$Results) {
-                    $Results = Test-CIPPAccessPermissions -tenantfilter $ENV:TenantID -APIName $APINAME -Headers $Request.Headers
+                    $Results = Test-CIPPAccessPermissions -tenantfilter $env:TenantID -APIName $APINAME -Headers $Request.Headers
                 } else {
                     try {
                         $LastRun = [DateTime]::SpecifyKind($Cache.Timestamp.DateTime, [DateTimeKind]::Utc)
@@ -38,14 +39,14 @@ Function Invoke-ExecAccessChecks {
                     }
                 }
             } else {
-                $Results = Test-CIPPAccessPermissions -tenantfilter $ENV:TenantID -APIName $APINAME -Headers $Request.Headers
+                $Results = Test-CIPPAccessPermissions -tenantfilter $env:TenantID -APIName $APINAME -Headers $Request.Headers
             }
         }
         'Tenants' {
             $AccessChecks = Get-CIPPAzDataTableEntity @Table -Filter "PartitionKey eq 'TenantAccessChecks'"
             if (!$Request.Body.TenantId) {
                 try {
-                    $Tenants = Get-Tenants -IncludeErrors | Where-Object { $_.customerId -ne $ENV:TenantID }
+                    $Tenants = Get-Tenants -IncludeErrors | Where-Object { $_.customerId -ne $env:TenantID }
                     $Results = foreach ($Tenant in $Tenants) {
                         $TenantCheck = $AccessChecks | Where-Object -Property RowKey -EQ $Tenant.customerId | Select-Object -Property Data
                         $TenantResult = [PSCustomObject]@{

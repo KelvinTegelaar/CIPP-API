@@ -144,6 +144,7 @@ function Test-CIPPAccess {
                 throw "Access to this CIPP API endpoint is not allowed, you do not have the required permission: $APIRole"
             }
             if (!$TenantAllowed -and $Help.Functionality -notmatch 'AnyTenant') {
+                Write-Information "Tenant not allowed: $TenantFilter"
                 throw 'Access to this tenant is not allowed'
             } else {
                 return $true
