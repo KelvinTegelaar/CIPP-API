@@ -38,7 +38,7 @@ function Invoke-CIPPStandardintuneRequireMFA {
             try {
                 $NewSetting = $PreviousSetting
                 $NewSetting.multiFactorAuthConfiguration = 'required'
-                $Newbody = ConvertTo-Json -Compress -InputObject $NewSetting -Depth 10
+                $NewBody = ConvertTo-Json -Compress -InputObject $NewSetting -Depth 10
                 New-GraphPostRequest -tenantid $tenant -Uri 'https://graph.microsoft.com/beta/policies/deviceRegistrationPolicy' -Type PUT -Body $NewBody -ContentType 'application/json'
                 Write-LogMessage -API 'Standards' -tenant $tenant -message 'Set required to use MFA when joining/registering Entra Devices' -sev Info
             } catch {
