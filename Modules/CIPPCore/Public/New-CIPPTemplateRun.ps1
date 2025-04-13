@@ -13,6 +13,13 @@ function New-CIPPTemplateRun {
         $data
     } | Sort-Object -Property displayName
 
+    function Get-SanitizedFilename {
+        param (
+            [string]$filename
+        )
+        $filename = $filename -replace '\s', '_' -replace '[^\w\d_]', ''
+        return $filename
+    }
 
     $Tasks = foreach ($key in $TemplateSettings.Keys) {
         if ($TemplateSettings[$key] -eq $true) {
@@ -30,7 +37,7 @@ function New-CIPPTemplateRun {
             }
             foreach ($File in $Files) {
                 if ($File.name -eq 'MigrationTable' -or $file.name -eq 'ALLOWED COUNTRIES') { continue }
-                $ExistingTemplate = $ExistingTemplates | Where-Object { $_.displayName -eq $File.name } | Select-Object -First 1
+                $ExistingTemplate = $ExistingTemplates | Where-Object { ($_.displayName -and (Get-SanitizedFilename -filename $_.displayName) -eq $File.name) -or ($_.templateName -and (Get-SanitizedFilename -filename $_.templateName) -eq $_.templateName ) } | Select-Object -First 1
                 $Template = (Get-GitHubFileContents -FullName $TemplateSettings.templateRepo.value -Branch $TemplateSettings.templateRepoBranch.value -Path $File.path).content | ConvertFrom-Json
                 if ($ExistingTemplate) {
                     $UpdateNeeded = $false
@@ -40,6 +47,8 @@ function New-CIPPTemplateRun {
                     if ($UpdateNeeded) {
                         Write-Host "Template $($File.name) needs to be updated as the SHA is different"
                         Import-CommunityTemplate -Template $Template -SHA $File.sha -MigrationTable $MigrationTable
+                    } else {
+                        Write-Host "Template $($File.name) already exists and is up to date"
                     }
                 } else {
                     Write-Host "Template $($File.name) needs to be created"
