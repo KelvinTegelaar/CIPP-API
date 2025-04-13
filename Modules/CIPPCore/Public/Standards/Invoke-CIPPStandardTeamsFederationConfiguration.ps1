@@ -96,7 +96,7 @@ function Invoke-CIPPStandardTeamsFederationConfiguration {
         if ($StateIsCorrect -eq $true) {
             Write-LogMessage -API 'Standards' -tenant $Tenant -message 'Federation Configuration already set.' -sev Info
         } else {
-            $cmdparams = @{
+            $cmdParams = @{
                 Identity            = 'Global'
                 AllowTeamsConsumer  = $Settings.AllowTeamsConsumer
                 AllowPublicUsers    = $Settings.AllowPublicUsers
@@ -105,13 +105,13 @@ function Invoke-CIPPStandardTeamsFederationConfiguration {
             }
 
             if (!$AllowedDomainsAsAList) {
-                $cmdparams.AllowedDomains = $AllowedDomains
+                $cmdParams.AllowedDomains = $AllowedDomains
             } else {
-                $cmdparams.AllowedDomainsAsAList = $AllowedDomainsAsAList
+                $cmdParams.AllowedDomainsAsAList = $AllowedDomainsAsAList
             }
 
             try {
-                New-TeamsRequest -TenantFilter $Tenant -Cmdlet 'Set-CsTenantFederationConfiguration' -CmdParams $cmdparams
+                New-TeamsRequest -TenantFilter $Tenant -Cmdlet 'Set-CsTenantFederationConfiguration' -CmdParams $cmdParams
                 Write-LogMessage -API 'Standards' -tenant $Tenant -message 'Updated Federation Configuration Policy' -sev Info
             } catch {
                 $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message

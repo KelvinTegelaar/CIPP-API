@@ -15,9 +15,9 @@ function Invoke-CIPPStandardStaleEntraDevices {
         TAG
             "CIS"
         ADDEDCOMPONENT
-            {"type":"number","name":"standards.StaleEntraDevices.deviceAgeThreshold","label":"Days before stale(Dont set below 30)"}
+            {"type":"number","name":"standards.StaleEntraDevices.deviceAgeThreshold","label":"Days before stale(Do not set below 30)"}
         DISABLEDFEATURES
-
+            {"report":false,"warn":false,"remediate":true}
         IMPACT
             High Impact
         ADDEDDATE
@@ -47,7 +47,7 @@ function Invoke-CIPPStandardStaleEntraDevices {
         # Properties to look at:
         # approximateLastSignInDateTime: For knowing when the device last signed in
         # enrollmentProfileName and operatingSystem: For knowing if it's an AutoPilot device
-        # managementType or isManaged: For knowing if it's an Intune managed device. If it is, should be removed from Intune also. Stale intune standard could prossibly be used for this.
+        # managementType or isManaged: For knowing if it's an Intune managed device. If it is, should be removed from Intune also. Stale intune standard could possibly be used for this.
         # profileType: For knowing if it's only registered or also managed
         # accountEnabled: For knowing if the device is disabled or not
 

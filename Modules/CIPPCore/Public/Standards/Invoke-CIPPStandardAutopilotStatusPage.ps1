@@ -14,7 +14,7 @@ function Invoke-CIPPStandardAutopilotStatusPage {
             Device Management Standards
         TAG
         DISABLEDFEATURES
-            
+            {"report":true,"warn":true,"remediate":false}
         ADDEDCOMPONENT
             {"type":"number","name":"standards.AutopilotStatusPage.TimeOutInMinutes","label":"Timeout in minutes","defaultValue":60}
             {"type":"textField","name":"standards.AutopilotStatusPage.ErrorMessage","label":"Custom Error Message","required":false}

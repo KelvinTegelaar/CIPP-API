@@ -32,7 +32,7 @@ function Invoke-CIPPStandardEnableOnlineArchiving {
 
     $MailboxPlans = @( 'ExchangeOnline', 'ExchangeOnlineEnterprise' )
     $MailboxesNoArchive = $MailboxPlans | ForEach-Object {
-        New-ExoRequest -tenantid $Tenant -cmdlet 'Get-Mailbox' -cmdparams @{ MailboxPlan = $_; Filter = 'ArchiveGuid -Eq "00000000-0000-0000-0000-000000000000" -AND RecipientTypeDetails -Eq "UserMailbox"' }
+        New-ExoRequest -tenantid $Tenant -cmdlet 'Get-Mailbox' -cmdParams @{ MailboxPlan = $_; Filter = 'ArchiveGuid -Eq "00000000-0000-0000-0000-000000000000" -AND RecipientTypeDetails -Eq "UserMailbox"' }
         Write-Host "Getting mailboxes without Online Archiving for plan $_"
     }
 
