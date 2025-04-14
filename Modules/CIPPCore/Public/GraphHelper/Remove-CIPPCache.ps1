@@ -39,7 +39,7 @@ function Remove-CIPPCache {
             Update-AzDataTableEntity -Force @DomainsTable -Entity $ClearDomainAnalyserRows
         }
 
-        $ENV:SetFromProfile = $null
+        $env:SetFromProfile = $null
         $Script:SkipListCache = $Null
         $Script:SkipListCacheEmpty = $Null
         $Script:IncludedTenantsCache = $Null

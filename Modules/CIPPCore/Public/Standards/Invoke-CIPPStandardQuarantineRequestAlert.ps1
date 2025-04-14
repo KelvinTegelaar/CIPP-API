@@ -42,7 +42,7 @@ function Invoke-CIPPStandardQuarantineRequestAlert {
         if ($StateIsCorrect -eq $true) {
             Write-LogMessage -API 'Standards' -Tenant $Tenant -Message 'Quarantine Request Alert is configured correctly' -sev Info
         } else {
-            $cmdparams = @{
+            $cmdParams = @{
                 'NotifyUser'      = $Settings.NotifyUser
                 'Category'        = 'ThreatManagement'
                 'Operation'       = 'QuarantineRequestReleaseMessage'
@@ -52,8 +52,8 @@ function Invoke-CIPPStandardQuarantineRequestAlert {
 
             if ($CurrentState.Name -eq $PolicyName) {
                 try {
-                    $cmdparams['Identity'] = $PolicyName
-                    New-ExoRequest -TenantId $Tenant -cmdlet 'Set-ProtectionAlert' -Compliance -cmdparams $cmdparams -UseSystemMailbox $true
+                    $cmdParams['Identity'] = $PolicyName
+                    New-ExoRequest -TenantId $Tenant -cmdlet 'Set-ProtectionAlert' -Compliance -cmdParams $cmdParams -UseSystemMailbox $true
                     Write-LogMessage -API 'Standards' -Tenant $Tenant -Message 'Successfully configured Quarantine Request Alert' -sev Info
                 } catch {
                     $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
@@ -61,10 +61,10 @@ function Invoke-CIPPStandardQuarantineRequestAlert {
                 }
             } else {
                 try {
-                    $cmdparams['name'] = $PolicyName
-                    $cmdparams['ThreatType'] = 'Activity'
+                    $cmdParams['name'] = $PolicyName
+                    $cmdParams['ThreatType'] = 'Activity'
 
-                    New-ExoRequest -TenantId $Tenant -cmdlet 'New-ProtectionAlert' -Compliance -cmdparams $cmdparams -UseSystemMailbox $true
+                    New-ExoRequest -TenantId $Tenant -cmdlet 'New-ProtectionAlert' -Compliance -cmdParams $cmdParams -UseSystemMailbox $true
                     Write-LogMessage -API 'Standards' -Tenant $Tenant -Message 'Successfully created Quarantine Request Alert' -sev Info
                 } catch {
                     $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message

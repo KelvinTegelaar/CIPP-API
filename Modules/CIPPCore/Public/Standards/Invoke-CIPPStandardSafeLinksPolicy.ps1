@@ -5,10 +5,10 @@ function Invoke-CIPPStandardSafeLinksPolicy {
     .COMPONENT
         (APIName) SafeLinksPolicy
     .SYNOPSIS
-        (Label) Default SafeLinks Policy
+        (Label) Default Safe Links Policy
     .DESCRIPTION
-        (Helptext) This creates a safelink policy that automatically scans, tracks, and and enables safe links for Email, Office, and Teams for both external and internal senders
-        (DocsDescription) This creates a safelink policy that automatically scans, tracks, and and enables safe links for Email, Office, and Teams for both external and internal senders
+        (Helptext) This creates a Safe Links policy that automatically scans, tracks, and and enables safe links for Email, Office, and Teams for both external and internal senders
+        (DocsDescription) This creates a Safe Links policy that automatically scans, tracks, and and enables safe links for Email, Office, and Teams for both external and internal senders
     .NOTES
         CAT
             Defender Standards
@@ -20,6 +20,7 @@ function Invoke-CIPPStandardSafeLinksPolicy {
             {"type":"switch","label":"AllowClickThrough","name":"standards.SafeLinksPolicy.AllowClickThrough"}
             {"type":"switch","label":"DisableUrlRewrite","name":"standards.SafeLinksPolicy.DisableUrlRewrite"}
             {"type":"switch","label":"EnableOrganizationBranding","name":"standards.SafeLinksPolicy.EnableOrganizationBranding"}
+            {"type":"autoComplete","multiple":true,"creatable":true,"required":false,"name":"standards.SafeLinksPolicy.DoNotRewriteUrls","label":"Do not rewrite the following URLs in email"}
         IMPACT
             Low Impact
         ADDEDDATE
@@ -89,7 +90,7 @@ function Invoke-CIPPStandardSafeLinksPolicy {
             if ($StateIsCorrect -eq $true) {
                 Write-LogMessage -API 'Standards' -tenant $Tenant -message 'SafeLink Policy already correctly configured' -sev Info
             } else {
-                $cmdparams = @{
+                $cmdParams = @{
                     EnableSafeLinksForEmail    = $true
                     EnableSafeLinksForTeams    = $true
                     EnableSafeLinksForOffice   = $true
@@ -105,16 +106,16 @@ function Invoke-CIPPStandardSafeLinksPolicy {
 
                 if ($CurrentState.Name -eq $Policyname) {
                     try {
-                        $cmdparams.Add('Identity', $PolicyName)
-                        New-ExoRequest -tenantid $Tenant -cmdlet 'Set-SafeLinksPolicy' -cmdparams $cmdparams -UseSystemMailbox $true
+                        $cmdParams.Add('Identity', $PolicyName)
+                        New-ExoRequest -tenantid $Tenant -cmdlet 'Set-SafeLinksPolicy' -cmdParams $cmdParams -UseSystemMailbox $true
                         Write-LogMessage -API 'Standards' -tenant $Tenant -message "Updated SafeLink policy $PolicyName." -sev Info
                     } catch {
                         Write-LogMessage -API 'Standards' -tenant $Tenant -message "Failed to update SafeLink policy $PolicyName." -sev Error -LogData $_
                     }
                 } else {
                     try {
-                        $cmdparams.Add('Name', $PolicyName)
-                        New-ExoRequest -tenantid $Tenant -cmdlet 'New-SafeLinksPolicy' -cmdparams $cmdparams -UseSystemMailbox $true
+                        $cmdParams.Add('Name', $PolicyName)
+                        New-ExoRequest -tenantid $Tenant -cmdlet 'New-SafeLinksPolicy' -cmdParams $cmdParams -UseSystemMailbox $true
                         Write-LogMessage -API 'Standards' -tenant $Tenant -message "Created SafeLink policy $PolicyName." -sev Info
                     } catch {
                         Write-LogMessage -API 'Standards' -tenant $Tenant -message "Failed to create SafeLink policy $PolicyName." -sev Error -LogData $_
@@ -123,27 +124,27 @@ function Invoke-CIPPStandardSafeLinksPolicy {
             }
 
             if ($RuleStateIsCorrect -eq $false) {
-                $cmdparams = @{
+                $cmdParams = @{
                     Priority          = 0
                     RecipientDomainIs = $AcceptedDomains.Name
                 }
 
                 if ($RuleState.SafeLinksPolicy -ne $PolicyName) {
-                    $cmdparams.Add('SafeLinksPolicy', $PolicyName)
+                    $cmdParams.Add('SafeLinksPolicy', $PolicyName)
                 }
 
                 if ($RuleState.Name -eq $RuleName) {
                     try {
-                        $cmdparams.Add('Identity', $RuleName)
-                        New-ExoRequest -tenantid $Tenant -cmdlet 'Set-SafeLinksRule' -cmdparams $cmdparams -UseSystemMailbox $true
+                        $cmdParams.Add('Identity', $RuleName)
+                        New-ExoRequest -tenantid $Tenant -cmdlet 'Set-SafeLinksRule' -cmdParams $cmdParams -UseSystemMailbox $true
                         Write-LogMessage -API 'Standards' -tenant $Tenant -message "Updated SafeLink rule $RuleName." -sev Info
                     } catch {
                         Write-LogMessage -API 'Standards' -tenant $Tenant -message "Failed to update SafeLink rule $RuleName." -sev Error -LogData $_
                     }
                 } else {
                     try {
-                        $cmdparams.Add('Name', $RuleName)
-                        New-ExoRequest -tenantid $Tenant -cmdlet 'New-SafeLinksRule' -cmdparams $cmdparams -UseSystemMailbox $true
+                        $cmdParams.Add('Name', $RuleName)
+                        New-ExoRequest -tenantid $Tenant -cmdlet 'New-SafeLinksRule' -cmdParams $cmdParams -UseSystemMailbox $true
                         Write-LogMessage -API 'Standards' -tenant $Tenant -message "Created SafeLink rule $RuleName." -sev Info
                     } catch {
                         Write-LogMessage -API 'Standards' -tenant $Tenant -message "Failed to create SafeLink rule $RuleName." -sev Error -LogData $_

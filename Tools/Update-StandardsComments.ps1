@@ -107,7 +107,15 @@ foreach ($Standard in $StandardsInfo) {
                         }
                         continue
                     }
-                    $NewComment.Add("           $(EscapeMarkdown($Property.Value.ToString()))`n")
+                    elseif ($Property.Value -is [System.Management.Automation.PSCustomObject]) {
+                        $NewComment.Add("           $(ConvertTo-Json -InputObject $Property.Value -Depth 5 -Compress)`n")
+                        continue
+                    }
+                    else {
+                        if ($null -ne $Property.Value) {
+                            $NewComment.Add("           $(EscapeMarkdown($Property.Value.ToString()))`n")
+                        }
+                    }
                 }
             }
 
