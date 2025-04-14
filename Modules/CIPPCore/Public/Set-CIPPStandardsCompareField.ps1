@@ -6,8 +6,12 @@ function Set-CIPPStandardsCompareField {
     )
     $Table = Get-CippTable -tablename 'CippStandardsReports'
     $TenantName = Get-Tenants | Where-Object -Property defaultDomainName -EQ $Tenant
-    #if the fieldname does not contain standards. prepend it.
-    $FieldName = $FieldName -replace '\.', '_'
+
+    # Sanitize invalid c#/xml characters for Azure Tables
+    $FieldName = $FieldName.replace('standards.', 'standards_')
+    $FieldName = $FieldName.replace('IntuneTemplate.', 'IntuneTemplate_')
+    $FieldName = $FieldName -replace '-', '__'
+
     if ($FieldValue -is [System.Boolean]) {
         $fieldValue = [bool]$FieldValue
     } elseif ($FieldValue -is [string]) {
@@ -40,6 +44,6 @@ function Set-CIPPStandardsCompareField {
         }
         Write-Information "Adding $FieldName to StandardCompare for $Tenant. content is $FieldValue"
     } catch {
-        Write-Warning "Failed to add $FieldName to StandardCompare for $Tenant. content is $FieldValue. The error was: $($_.Exception.Message)"
+        Write-Warning "Failed to add $FieldName to StandardCompare for $Tenant. content is $FieldValue - $($_.Exception.Message)"
     }
 }
