@@ -84,6 +84,8 @@ function Invoke-CIPPStandardIntuneTemplate {
                 assignTo         = $Template.AssignTo
                 excludeGroup     = $Template.excludeGroup
                 remediate        = $Template.remediate
+                alert            = $Template.alert
+                report           = $Template.report
                 existingPolicyId = $ExistingPolicy.id
                 templateId       = $Template.TemplateList.value
                 customGroup      = $Template.customGroup
@@ -100,6 +102,8 @@ function Invoke-CIPPStandardIntuneTemplate {
                 assignTo         = $Template.AssignTo
                 excludeGroup     = $Template.excludeGroup
                 remediate        = $Template.remediate
+                alert            = $Template.alert
+                report           = $Template.report
                 existingPolicyId = $ExistingPolicy.id
                 templateId       = $Template.TemplateList.value
                 customGroup      = $Template.customGroup
@@ -148,6 +152,6 @@ function Invoke-CIPPStandardIntuneTemplate {
             $state = $CompareObj ? $CompareObj : $true
             Set-CIPPStandardsCompareField -FieldName "standards.IntuneTemplate.$id" -FieldValue $state -TenantFilter $Tenant
         }
-        Add-CIPPBPAField -FieldName "policy-$id" -FieldValue $Compare -StoreAs bool -Tenant $tenant
+        #Add-CIPPBPAField -FieldName "policy-$id" -FieldValue $Compare -StoreAs bool -Tenant $tenant
     }
 }
