@@ -44,11 +44,16 @@ function Compare-CIPPIntuneObject {
 
         function Compare-ObjectsRecursively {
             param (
-                [Parameter(Mandatory = $true)] $Object1,
-                [Parameter(Mandatory = $true)] $Object2,
-                [Parameter(Mandatory = $false)] [string]$PropertyPath = '',
+                [Parameter(Mandatory = $true)]
+                $Object1,
+
+                [Parameter(Mandatory = $true)]
+                $Object2,
+
+                [Parameter(Mandatory = $false)]
+                [string]$PropertyPath = '',
                 [int]$Depth = 0,
-                [int]$MaxDepth = 15
+                [int]$MaxDepth = 20
             )
 
             if ($Depth -ge $MaxDepth) {
@@ -80,6 +85,21 @@ function Compare-CIPPIntuneObject {
                         ReceivedValue = $Object2
                     })
                 return
+            }
+
+            # Short-circuit recursion for primitive types
+            $primitiveTypes = @([double], [decimal], [datetime], [timespan], [guid] )
+            foreach ($type in $primitiveTypes) {
+                if ($Object1 -is $type -and $Object2 -is $type) {
+                    if ($Object1 -ne $Object2) {
+                        $result.Add([PSCustomObject]@{
+                                Property      = $PropertyPath
+                                ExpectedValue = $Object1
+                                ReceivedValue = $Object2
+                            })
+                    }
+                    return
+                }
             }
 
             if ($Object1 -is [System.Collections.IDictionary]) {
@@ -197,6 +217,7 @@ function Compare-CIPPIntuneObject {
     } else {
         $intuneCollection = Get-Content .\intuneCollection.json | ConvertFrom-Json -ErrorAction SilentlyContinue
 
+        # Process reference object settings
         $referenceItems = $ReferenceObject.settings | ForEach-Object {
             $settingInstance = $_.settingInstance
             $intuneObj = $intuneCollection | Where-Object { $_.id -eq $settingInstance.settingDefinitionId }
@@ -223,6 +244,8 @@ function Compare-CIPPIntuneObject {
                                             $child.choiceSettingValue.value
                                         }
                                     }
+
+                                    # Add object to our temporary list
                                     [PSCustomObject]@{
                                         Key    = "GroupChild-$($child.settingDefinitionId)"
                                         Label  = $childLabel
@@ -288,6 +311,7 @@ function Compare-CIPPIntuneObject {
             $tempOutput
         }
 
+        # Process difference object settings
         $differenceItems = $DifferenceObject.settings | ForEach-Object {
             $settingInstance = $_.settingInstance
             $intuneObj = $intuneCollection | Where-Object { $_.id -eq $settingInstance.settingDefinitionId }
@@ -314,6 +338,8 @@ function Compare-CIPPIntuneObject {
                                             $child.choiceSettingValue.value
                                         }
                                     }
+
+                                    # Add object to our temporary list
                                     [PSCustomObject]@{
                                         Key    = "GroupChild-$($child.settingDefinitionId)"
                                         Label  = $childLabel
