@@ -17,7 +17,7 @@ function Invoke-ExecPerUserMFA {
         userId       = $Request.Body.userId
         TenantFilter = $Request.Body.tenantFilter
         State        = $Request.Body.State.value ?  $Request.Body.State.value : $Request.Body.State
-        Headers      = $Request.Headers
+        Headers      = $Headers
         APIName      = $APIName
     }
     try {
