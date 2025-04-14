@@ -57,7 +57,6 @@ Function Invoke-ListMailboxes {
         }
 
         $GraphRequest = (New-ExoRequest @ExoRequest) | Select-Object id, ExchangeGuid, ArchiveGuid, WhenSoftDeleted, @{ Name = 'UPN'; Expression = { $_.'UserPrincipalName' } },
-
         @{ Name = 'displayName'; Expression = { $_.'DisplayName' } },
         @{ Name = 'primarySmtpAddress'; Expression = { $_.'PrimarySMTPAddress' } },
         @{ Name = 'recipientType'; Expression = { $_.'RecipientType' } },
@@ -74,6 +73,7 @@ Function Invoke-ListMailboxes {
         LitigationHoldDate,
         LitigationHoldDuration,
         @{ Name = 'LicensedForLitigationHold'; Expression = { ($_.PersistedCapabilities -contains 'BPOS_S_DlpAddOn' -or $_.PersistedCapabilities -contains 'BPOS_S_Enterprise') } }
+        # This select also exists in ListUserMailboxDetails and should be updated if this is changed here
 
         $StatusCode = [HttpStatusCode]::OK
     } catch {

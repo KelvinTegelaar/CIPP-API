@@ -213,7 +213,11 @@ function Invoke-ListUserMailboxDetails {
             HiddenFromAddressListsEnabled,
             ExternalDirectoryObjectId,
             MessageCopyForSendOnBehalfEnabled,
-            MessageCopyForSentAsEnabled)
+            MessageCopyForSentAsEnabled,
+            LitigationHoldEnabled,
+            LitigationHoldDate,
+            LitigationHoldDuration,
+            @{ Name = 'LicensedForLitigationHold'; Expression = { ($_.PersistedCapabilities -contains 'BPOS_S_DlpAddOn' -or $_.PersistedCapabilities -contains 'BPOS_S_Enterprise') } })
     } # Select statement taken from ListMailboxes to save a EXO request
 
     Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
