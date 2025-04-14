@@ -7,7 +7,7 @@ function Set-CIPPStandardsCompareField {
     $Table = Get-CippTable -tablename 'CippStandardsReports'
     $TenantName = Get-Tenants | Where-Object -Property defaultDomainName -EQ $Tenant
     #if the fieldname does not contain standards. prepend it.
-    $FieldName = $FieldName.replace('standards.', 'standards_')
+    $FieldName = $FieldName.replace('.', '_')
     if ($FieldValue -is [System.Boolean]) {
         $fieldValue = [bool]$FieldValue
     } elseif ($FieldValue -is [string]) {
