@@ -84,6 +84,8 @@ function Invoke-CIPPStandardIntuneTemplate {
                 assignTo         = $Template.AssignTo
                 excludeGroup     = $Template.excludeGroup
                 remediate        = $Template.remediate
+                alert            = $Template.alert
+                report           = $Template.report
                 existingPolicyId = $ExistingPolicy.id
                 templateId       = $Template.TemplateList.value
                 customGroup      = $Template.customGroup
@@ -100,6 +102,8 @@ function Invoke-CIPPStandardIntuneTemplate {
                 assignTo         = $Template.AssignTo
                 excludeGroup     = $Template.excludeGroup
                 remediate        = $Template.remediate
+                alert            = $Template.alert
+                report           = $Template.report
                 existingPolicyId = $ExistingPolicy.id
                 templateId       = $Template.TemplateList.value
                 customGroup      = $Template.customGroup
@@ -122,8 +126,9 @@ function Invoke-CIPPStandardIntuneTemplate {
 
     }
 
-    if ($Settings.alert) {
-        foreach ($Template in $CompareList) {
+    if ($true -in $Settings.alert) {
+        foreach ($Template in $CompareList | Where-Object -Property alert -EQ $true) {
+            Write-Host "working on template alert: $($Template.displayname)"
             $AlertObj = $Template | Select-Object -Property displayname, description, compare, assignTo, excludeGroup, existingPolicyId
             if ($Template.compare) {
                 Write-StandardsAlert -message "Template $($Template.displayname) does not match the expected configuration." -object $AlertObj -tenant $Tenant -standardName 'IntuneTemplate' -standardId $Settings.templateId
@@ -139,13 +144,14 @@ function Invoke-CIPPStandardIntuneTemplate {
         }
     }
 
-    if ($Settings.report) {
-        foreach ($Template in $CompareList) {
+    if ($true -in $Settings.report) {
+        foreach ($Template in $CompareList | Where-Object -Property report -EQ $true) {
+            Write-Host "working on template report: $($Template.displayname)"
             $id = $Template.templateId
             $CompareObj = $Template.compare
             $state = $CompareObj ? $CompareObj : $true
             Set-CIPPStandardsCompareField -FieldName "standards.IntuneTemplate.$id" -FieldValue $state -TenantFilter $Tenant
         }
-        Add-CIPPBPAField -FieldName "policy-$id" -FieldValue $Compare -StoreAs bool -Tenant $tenant
+        #Add-CIPPBPAField -FieldName "policy-$id" -FieldValue $Compare -StoreAs bool -Tenant $tenant
     }
 }
