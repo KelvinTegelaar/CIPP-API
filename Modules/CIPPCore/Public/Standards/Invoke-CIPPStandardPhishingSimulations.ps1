@@ -167,7 +167,11 @@ function Invoke-CIPPStandardPhishingSimulations {
         If ($StateIsCorrect -eq $true) {
             $FieldValue = $true
         } Else {
-            $FieldValue = $CurrentState ? $CurrentState : $false
+            $FieldValue = [PSCustomObject]@{
+                Domains = $RuleState.Domains
+                SenderIpRanges = $RuleState.SenderIpRanges
+                PhishingSimUrls = $SimUrlState.value
+            }
         }
         Set-CIPPStandardsCompareField -FieldName 'standards.PhishingSimulations' -FieldValue $FieldValue -Tenant $Tenant
     }
