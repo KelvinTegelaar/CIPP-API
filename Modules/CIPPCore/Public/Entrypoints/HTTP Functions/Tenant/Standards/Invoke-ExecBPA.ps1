@@ -34,7 +34,7 @@ function Invoke-ExecBPA {
             $Results = [pscustomobject]@{'Results' = 'BPA queued for execution' }
         }
     } else {
-        Start-BPAOrchestrator -TenantFilter $Request.Query.TenantFilter
+        Start-BPAOrchestrator -TenantFilter $TenantFilter
         $Results = [pscustomobject]@{'Results' = 'BPA started' }
     }
 
