@@ -1,30 +1,4 @@
 function Compare-CIPPIntuneObject {
-    <#
-    .SYNOPSIS
-    Compares two Intune objects and returns only the differences.
-
-    .DESCRIPTION
-    This function takes two Intune objects and performs a comparison, returning only the properties that differ.
-    If no differences are found, it returns null.
-    It's useful for identifying changes between template objects and existing policies.
-
-    .PARAMETER ReferenceObject
-    The reference Intune object to compare against.
-
-    .PARAMETER DifferenceObject
-    The Intune object to compare with the reference object.
-
-    .PARAMETER ExcludeProperties
-    Additional properties to exclude from the comparison.
-
-    .EXAMPLE
-    $template = Get-CIPPIntunePolicy -tenantFilter $Tenant -DisplayName "Template Policy" -TemplateType "Device"
-    $existing = Get-CIPPIntunePolicy -tenantFilter $Tenant -DisplayName "Existing Policy" -TemplateType "Device"
-    $differences = Compare-CIPPIntuneObject -ReferenceObject $template -DifferenceObject $existing
-
-    .NOTES
-    This function performs a comparison of objects, including nested properties.
-    #>
     [CmdletBinding()]
     param(
         [Parameter(Mandatory = $true)]
@@ -39,7 +13,6 @@ function Compare-CIPPIntuneObject {
         [string[]]$CompareType = @()
     )
     if ($CompareType -ne 'Catalog') {
-        # Default properties to exclude from comparison
         $defaultExcludeProperties = @(
             'id',
             'createdDateTime',
@@ -57,13 +30,9 @@ function Compare-CIPPIntuneObject {
             'featureUpdatesPauseStartDate'
         )
 
-        # Combine default and custom exclude properties
         $excludeProps = $defaultExcludeProperties + $ExcludeProperties
-
-        # Create a list to store comparison results
         $result = [System.Collections.Generic.List[PSObject]]::new()
 
-        # Helper function to check if a property should be skipped
         function ShouldSkipProperty {
             param (
                 [string]$PropertyName
@@ -73,7 +42,6 @@ function Compare-CIPPIntuneObject {
                 $excludeProps -contains $PropertyName)
         }
 
-        # Recursive function to compare objects deeply
         function Compare-ObjectsRecursively {
             param (
                 [Parameter(Mandatory = $true)]
@@ -83,15 +51,24 @@ function Compare-CIPPIntuneObject {
                 $Object2,
 
                 [Parameter(Mandatory = $false)]
-                [string]$PropertyPath = ''
+                [string]$PropertyPath = '',
+                [int]$Depth = 0,
+                [int]$MaxDepth = 20
             )
 
-            # If both objects are null or empty, they're equal
+            if ($Depth -ge $MaxDepth) {
+                $result.Add([PSCustomObject]@{
+                        Property      = $PropertyPath
+                        ExpectedValue = '[MaxDepthExceeded]'
+                        ReceivedValue = '[MaxDepthExceeded]'
+                    })
+                return
+            }
+
             if (($null -eq $Object1 -or $Object1 -eq '') -and ($null -eq $Object2 -or $Object2 -eq '')) {
                 return
             }
 
-            # If one object is null but the other isn't, they're different
             if (($null -eq $Object1 -or $Object1 -eq '') -xor ($null -eq $Object2 -or $Object2 -eq '')) {
                 $result.Add([PSCustomObject]@{
                         Property      = $PropertyPath
@@ -101,7 +78,6 @@ function Compare-CIPPIntuneObject {
                 return
             }
 
-            # If objects are of different types, they're different
             if ($Object1.GetType() -ne $Object2.GetType()) {
                 $result.Add([PSCustomObject]@{
                         Property      = $PropertyPath
@@ -111,9 +87,22 @@ function Compare-CIPPIntuneObject {
                 return
             }
 
-            # Handle different object types
+            # Short-circuit recursion for primitive types
+            $primitiveTypes = @([double], [decimal], [datetime], [timespan], [guid] )
+            foreach ($type in $primitiveTypes) {
+                if ($Object1 -is $type -and $Object2 -is $type) {
+                    if ($Object1 -ne $Object2) {
+                        $result.Add([PSCustomObject]@{
+                                Property      = $PropertyPath
+                                ExpectedValue = $Object1
+                                ReceivedValue = $Object2
+                            })
+                    }
+                    return
+                }
+            }
+
             if ($Object1 -is [System.Collections.IDictionary]) {
-                # Compare dictionaries
                 $allKeys = @($Object1.Keys) + @($Object2.Keys) | Select-Object -Unique
 
                 foreach ($key in $allKeys) {
@@ -122,9 +111,8 @@ function Compare-CIPPIntuneObject {
                     $newPath = if ($PropertyPath) { "$PropertyPath.$key" } else { $key }
 
                     if ($Object1.ContainsKey($key) -and $Object2.ContainsKey($key)) {
-                        #only run if both props are not null
                         if ($Object1[$key] -and $Object2[$key]) {
-                            Compare-ObjectsRecursively -Object1 $Object1[$key] -Object2 $Object2[$key] -PropertyPath $newPath
+                            Compare-ObjectsRecursively -Object1 $Object1[$key] -Object2 $Object2[$key] -PropertyPath $newPath -Depth ($Depth + 1) -MaxDepth $MaxDepth
                         }
                     } elseif ($Object1.ContainsKey($key)) {
                         $result.Add([PSCustomObject]@{
@@ -141,14 +129,13 @@ function Compare-CIPPIntuneObject {
                     }
                 }
             } elseif ($Object1 -is [Array] -or $Object1 -is [System.Collections.IList]) {
-                # Compare arrays
                 $maxLength = [Math]::Max($Object1.Count, $Object2.Count)
 
                 for ($i = 0; $i -lt $maxLength; $i++) {
                     $newPath = "$PropertyPath.$i"
 
                     if ($i -lt $Object1.Count -and $i -lt $Object2.Count) {
-                        Compare-ObjectsRecursively -Object1 $Object1[$i] -Object2 $Object2[$i] -PropertyPath $newPath
+                        Compare-ObjectsRecursively -Object1 $Object1[$i] -Object2 $Object2[$i] -PropertyPath $newPath -Depth ($Depth + 1) -MaxDepth $MaxDepth
                     } elseif ($i -lt $Object1.Count) {
                         $result.Add([PSCustomObject]@{
                                 Property      = $newPath
@@ -164,7 +151,6 @@ function Compare-CIPPIntuneObject {
                     }
                 }
             } elseif ($Object1 -is [PSCustomObject] -or $Object1.PSObject.Properties.Count -gt 0) {
-                # Compare PSCustomObjects or objects with properties
                 $allPropertyNames = @(
                     $Object1.PSObject.Properties | Select-Object -ExpandProperty Name
                     $Object2.PSObject.Properties | Select-Object -ExpandProperty Name
@@ -178,9 +164,8 @@ function Compare-CIPPIntuneObject {
                     $prop2Exists = $Object2.PSObject.Properties.Name -contains $propName
 
                     if ($prop1Exists -and $prop2Exists) {
-                        #only run if both props are not null
                         if ($Object1.$propName -and $Object2.$propName) {
-                            Compare-ObjectsRecursively -Object1 $Object1.$propName -Object2 $Object2.$propName -PropertyPath $newPath
+                            Compare-ObjectsRecursively -Object1 $Object1.$propName -Object2 $Object2.$propName -PropertyPath $newPath -Depth ($Depth + 1) -MaxDepth $MaxDepth
                         }
                     } elseif ($prop1Exists) {
                         $result.Add([PSCustomObject]@{
@@ -197,7 +182,6 @@ function Compare-CIPPIntuneObject {
                     }
                 }
             } else {
-                # Compare primitive values
                 $val1 = $Object1.ToString()
                 $val2 = $Object2.ToString()
 
@@ -211,7 +195,6 @@ function Compare-CIPPIntuneObject {
             }
         }
 
-        # Convert objects to PowerShell objects if they're not already
         $obj1 = if ($ReferenceObject -is [string]) {
             $ReferenceObject | ConvertFrom-Json -AsHashtable -Depth 100
         } else {
@@ -224,13 +207,10 @@ function Compare-CIPPIntuneObject {
             $DifferenceObject
         }
 
-        # Start the recursive comparison
-        #only do the compare if the objects are not null
         if ($obj1 -and $obj2) {
             Compare-ObjectsRecursively -Object1 $obj1 -Object2 $obj2
         }
 
-        # If no differences found, return null
         if ($result.Count -eq 0) {
             return $null
         }
@@ -425,17 +405,14 @@ function Compare-CIPPIntuneObject {
             $tempOutput
         }
 
-        # Compare the items and create result
         $result = [System.Collections.Generic.List[PSObject]]::new()
 
-        # Group all items by Key for comparison
         $allKeys = @($referenceItems | Select-Object -ExpandProperty Key) + @($differenceItems | Select-Object -ExpandProperty Key) | Sort-Object -Unique
 
         foreach ($key in $allKeys) {
             $refItem = $referenceItems | Where-Object { $_.Key -eq $key } | Select-Object -First 1
             $diffItem = $differenceItems | Where-Object { $_.Key -eq $key } | Select-Object -First 1
 
-            # Get the setting definition ID from the key
             $settingId = $key
             if ($key -like 'Simple-*') {
                 $settingId = $key.Substring(7)
@@ -447,20 +424,15 @@ function Compare-CIPPIntuneObject {
                 $settingId = $key.Substring(8)
             }
 
-            # Look up the setting in the collection
             $settingDefinition = $intuneCollection | Where-Object { $_.id -eq $settingId }
 
-            # Get the raw values
             $refRawValue = if ($refItem) { $refItem.Value } else { $null }
             $diffRawValue = if ($diffItem) { $diffItem.Value } else { $null }
 
-            # Try to translate the values to display names if they're option IDs
             $refValue = $refRawValue
             $diffValue = $diffRawValue
 
-            # If the setting has options, try to find the display name for the values
             if ($null -ne $settingDefinition -and $null -ne $settingDefinition.options) {
-                # For reference value
                 if ($null -ne $refRawValue -and $refRawValue -match '_\d+$') {
                     $option = $settingDefinition.options | Where-Object { $_.id -eq $refRawValue }
                     if ($null -ne $option -and $null -ne $option.displayName) {
@@ -468,7 +440,6 @@ function Compare-CIPPIntuneObject {
                     }
                 }
 
-                # For difference value
                 if ($null -ne $diffRawValue -and $diffRawValue -match '_\d+$') {
                     $option = $settingDefinition.options | Where-Object { $_.id -eq $diffRawValue }
                     if ($null -ne $option -and $null -ne $option.displayName) {
@@ -477,7 +448,6 @@ function Compare-CIPPIntuneObject {
                 }
             }
 
-            # Use the display name for the property label if available
             $label = if ($null -ne $settingDefinition -and $null -ne $settingDefinition.displayName) {
                 $settingDefinition.displayName
             } elseif ($refItem) {
@@ -488,7 +458,6 @@ function Compare-CIPPIntuneObject {
                 $key
             }
 
-            # Only add to result if values are different or one is missing
             if ($refRawValue -ne $diffRawValue -or $null -eq $refRawValue -or $null -eq $diffRawValue) {
                 $result.Add([PSCustomObject]@{
                         Property      = $label
@@ -502,4 +471,3 @@ function Compare-CIPPIntuneObject {
     }
     return $result
 }
-
