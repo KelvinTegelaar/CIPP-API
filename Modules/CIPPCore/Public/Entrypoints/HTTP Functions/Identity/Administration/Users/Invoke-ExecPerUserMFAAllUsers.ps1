@@ -6,17 +6,22 @@ function Invoke-ExecPerUserMFAAllUsers {
     .ROLE
     Identity.User.ReadWrite
     #>
-    Param(
-        $Request,
-        $TriggerMetadata
-    )
-    $TenantFilter = $request.query.TenantFilter
+    Param($Request, $TriggerMetadata)
+
+    $APIName = $Request.Params.CIPPEndpoint
+    $Headers = $Request.Headers
+    Write-LogMessage -headers $Headers -API $APIName -message 'Accessed this API' -Sev 'Debug'
+
+    # XXX Seems to be an unused endpoint? - Bobby
+
+    $TenantFilter = $request.Query.tenantFilter
     $Users = New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/users' -tenantid $TenantFilter
     $Request = @{
-        userId        = $Users.id
-        TenantFilter  = $tenantfilter
-        State         = $Request.query.State
-        Headers = $Request.Headers
+        userId       = $Users.id
+        TenantFilter = $TenantFilter
+        State        = $Request.Query.State
+        Headers      = $Request.Headers
+        APIName      = $APIName
     }
     $Result = Set-CIPPPerUserMFA @Request
     $Body = @{
