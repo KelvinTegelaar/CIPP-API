@@ -29,8 +29,10 @@ function Set-CIPPPerUserMFA {
         [string[]]$userId,
         [ValidateSet('enabled', 'disabled', 'enforced')]
         $State = 'enabled',
-        [string]$Headers = 'CIPP'
+        $Headers,
+        $APIName = 'Set-CIPPPerUserMFA'
     )
+
     try {
         $int = 0
         $Body = @{
@@ -48,8 +50,7 @@ function Set-CIPPPerUserMFA {
             }
         }
 
-        $Requests = New-GraphBulkRequest -tenantid $tenantfilter -scope 'https://graph.microsoft.com/.default' -Requests @($Requests) -asapp $true
-
+        $Requests = New-GraphBulkRequest -tenantid $TenantFilter -scope 'https://graph.microsoft.com/.default' -Requests @($Requests) -asapp $true
         "Successfully set Per user MFA State for $userId"
 
         $Users = foreach ($id in $userId) {
@@ -61,10 +62,11 @@ function Set-CIPPPerUserMFA {
             }
         }
         Set-CIPPUserSchemaProperties -TenantFilter $TenantFilter -Users $Users
-        Write-LogMessage -headers $Headers -API 'Set-CIPPPerUserMFA' -message "Successfully set Per user MFA State to $State for $id" -Sev 'Info' -tenant $TenantFilter
+        Write-LogMessage -headers $Headers -API $APIName -message "Successfully set Per user MFA State to $State for $id" -Sev Info -tenant $TenantFilter
     } catch {
         $ErrorMessage = Get-CippException -Exception $_
-        "Failed to set MFA State for $id. Error: $($ErrorMessage.NormalizedError)"
-        Write-LogMessage -headers $Headers -API 'Set-CIPPPerUserMFA' -message "Failed to set MFA State to $State for $id. Error: $($ErrorMessage.NormalizedError)" -Sev 'Error' -tenant $TenantFilter -LogData $ErrorMessage
+        $Result = "Failed to set MFA State to $State for $id. Error: $($ErrorMessage.NormalizedError)"
+        Write-LogMessage -headers $Headers -API $APIName -message $Result -Sev Error -tenant $TenantFilter -LogData $ErrorMessage
+        throw $Result
     }
 }
