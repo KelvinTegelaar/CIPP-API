@@ -56,15 +56,15 @@ Function Invoke-ListMailboxes {
             }
         }
 
-        $GraphRequest = (New-ExoRequest @ExoRequest) | Select-Object id, ExchangeGuid, ArchiveGuid, WhenSoftDeleted, @{ Name = 'UPN'; Expression = { $_.'UserPrincipalName' } },
-
+        $GraphRequest = (New-ExoRequest @ExoRequest) | Select-Object id, ExchangeGuid, ArchiveGuid, WhenSoftDeleted,
+        @{ Name = 'UPN'; Expression = { $_.'UserPrincipalName' } },
         @{ Name = 'displayName'; Expression = { $_.'DisplayName' } },
         @{ Name = 'primarySmtpAddress'; Expression = { $_.'PrimarySMTPAddress' } },
         @{ Name = 'recipientType'; Expression = { $_.'RecipientType' } },
         @{ Name = 'recipientTypeDetails'; Expression = { $_.'RecipientTypeDetails' } },
         @{ Name = 'AdditionalEmailAddresses'; Expression = { ($_.'EmailAddresses' | Where-Object { $_ -clike 'smtp:*' }).Replace('smtp:', '') -join ', ' } },
-        @{Name = 'ForwardingSmtpAddress'; Expression = { $_.'ForwardingSmtpAddress' -replace 'smtp:', '' } },
-        @{Name = 'InternalForwardingAddress'; Expression = { $_.'ForwardingAddress' } },
+        @{ Name = 'ForwardingSmtpAddress'; Expression = { $_.'ForwardingSmtpAddress' -replace 'smtp:', '' } },
+        @{ Name = 'InternalForwardingAddress'; Expression = { $_.'ForwardingAddress' } },
         DeliverToMailboxAndForward,
         HiddenFromAddressListsEnabled,
         ExternalDirectoryObjectId,
@@ -75,7 +75,7 @@ Function Invoke-ListMailboxes {
         LitigationHoldDuration,
         @{ Name = 'LicensedForLitigationHold'; Expression = { ($_.PersistedCapabilities -contains 'BPOS_S_DlpAddOn' -or $_.PersistedCapabilities -contains 'BPOS_S_Enterprise') } },
         ComplianceTagHoldApplied,
-        RetentionHoldEnabled,
+        RetentionHoldEnabled
 
         $StatusCode = [HttpStatusCode]::OK
     } catch {
