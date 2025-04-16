@@ -178,9 +178,9 @@ function Invoke-ListUserMailboxDetails {
     }
 
     # Parse InPlaceHolds to determine hold types if avaliable
-    $InPlaceHold             = $false
-    $EDiscoveryHold          = $false
-    $PurviewRetentionHold    = $false
+    $InPlaceHold = $false
+    $EDiscoveryHold = $false
+    $PurviewRetentionHold = $false
     $ExcludedFromOrgWideHold = $false
 
     # Check if InPlaceHolds property exists and has values
@@ -192,10 +192,10 @@ function Invoke-ListUserMailboxDetails {
             }
             # In-Place Hold - no prefix or starts with cld
             # Check if it doesn't match any of the other known prefixes
-            elseif (($hold -like 'cld*' -or 
-                    ($hold -notlike 'UniH*' -and 
-                    $hold -notlike 'mbx*' -and 
-                    $hold -notlike 'skp*' -and 
+            elseif (($hold -like 'cld*' -or
+                    ($hold -notlike 'UniH*' -and
+                    $hold -notlike 'mbx*' -and
+                    $hold -notlike 'skp*' -and
                     $hold -notlike '-mbx*'))) {
                 $InPlaceHold = $true
             }
@@ -240,20 +240,28 @@ function Invoke-ListUserMailboxDetails {
         AutoExpandingArchive     = $AutoExpandingArchiveEnabled
         RecipientTypeDetails     = $MailboxDetailedRequest.RecipientTypeDetails
         Mailbox                  = $MailboxDetailedRequest
-        MailboxActionsData       = ($MailboxDetailedRequest | Select-Object id, ExchangeGuid, ArchiveGuid, WhenSoftDeleted, @{ Name = 'UPN'; Expression = { $_.'UserPrincipalName' } },
+        MailboxActionsData       = ($MailboxDetailedRequest | Select-Object id, ExchangeGuid, ArchiveGuid, WhenSoftDeleted,
+            @{ Name = 'UPN'; Expression = { $_.'UserPrincipalName' } },
             @{ Name = 'displayName'; Expression = { $_.'DisplayName' } },
             @{ Name = 'primarySmtpAddress'; Expression = { $_.'PrimarySMTPAddress' } },
             @{ Name = 'recipientType'; Expression = { $_.'RecipientType' } },
             @{ Name = 'recipientTypeDetails'; Expression = { $_.'RecipientTypeDetails' } },
             @{ Name = 'AdditionalEmailAddresses'; Expression = { ($_.'EmailAddresses' | Where-Object { $_ -clike 'smtp:*' }).Replace('smtp:', '') -join ', ' } },
-            @{Name = 'ForwardingSmtpAddress'; Expression = { $_.'ForwardingSmtpAddress' -replace 'smtp:', '' } },
-            @{Name = 'InternalForwardingAddress'; Expression = { $_.'ForwardingAddress' } },
+            @{ Name = 'ForwardingSmtpAddress'; Expression = { $_.'ForwardingSmtpAddress' -replace 'smtp:', '' } },
+            @{ Name = 'InternalForwardingAddress'; Expression = { $_.'ForwardingAddress' } },
             DeliverToMailboxAndForward,
             HiddenFromAddressListsEnabled,
             ExternalDirectoryObjectId,
             MessageCopyForSendOnBehalfEnabled,
-            MessageCopyForSentAsEnabled)
-    } # Select statement taken from ListMailboxes to save a EXO request
+            MessageCopyForSentAsEnabled,
+            LitigationHoldEnabled,
+            LitigationHoldDate,
+            LitigationHoldDuration,
+            @{ Name = 'LicensedForLitigationHold'; Expression = { ($_.PersistedCapabilities -contains 'BPOS_S_DlpAddOn' -or $_.PersistedCapabilities -contains 'BPOS_S_Enterprise') } },
+            ComplianceTagHoldApplied,
+            RetentionHoldEnabled,
+            InPlaceHolds)
+    } # Select statement taken from ListMailboxes to save a EXO request. If updated here, update in ListMailboxes as well.
 
     Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
             StatusCode = [HttpStatusCode]::OK

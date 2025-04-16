@@ -77,6 +77,7 @@ Function Invoke-ListMailboxes {
         ComplianceTagHoldApplied,
         RetentionHoldEnabled,
         InPlaceHolds
+        # This select also exists in ListUserMailboxDetails and should be updated if this is changed here
 
         $StatusCode = [HttpStatusCode]::OK
     } catch {
