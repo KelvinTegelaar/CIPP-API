@@ -182,6 +182,8 @@ function Invoke-ListUserMailboxDetails {
         ForwardAndDeliver        = $MailboxDetailedRequest.DeliverToMailboxAndForward
         ForwardingAddress        = $ForwardingAddress
         LitigationHold           = $MailboxDetailedRequest.LitigationHoldEnabled
+        RetentionHold            = $MailboxDetailedRequest.RetentionHoldEnabled
+        ComplianceTagHold        = $MailboxDetailedRequest.ComplianceTagHoldApplied
         HiddenFromAddressLists   = $MailboxDetailedRequest.HiddenFromAddressListsEnabled
         EWSEnabled               = $CASRequest.EwsEnabled
         MailboxMAPIEnabled       = $CASRequest.MAPIEnabled
