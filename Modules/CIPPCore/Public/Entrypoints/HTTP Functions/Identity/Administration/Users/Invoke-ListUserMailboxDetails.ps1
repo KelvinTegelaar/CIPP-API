@@ -177,6 +177,39 @@ function Invoke-ListUserMailboxDetails {
         $TotalArchiveItemCount = try { [math]::Round($ArchiveSizeRequest.ItemCount, 2) } catch { 0 }
     }
 
+    # Parse InPlaceHolds to determine hold types if avaliable
+    $InPlaceHold             = $false
+    $EDiscoveryHold          = $false
+    $PurviewRetentionHold    = $false
+    $ExcludedFromOrgWideHold = $false
+
+    # Check if InPlaceHolds property exists and has values
+    if ($MailboxDetailedRequest.InPlaceHolds) {
+        foreach ($hold in $MailboxDetailedRequest.InPlaceHolds) {
+            # eDiscovery hold - starts with UniH
+            if ($hold -like 'UniH*') {
+                $EDiscoveryHold = $true
+            }
+            # In-Place Hold - no prefix or starts with cld
+            # Check if it doesn't match any of the other known prefixes
+            elseif (($hold -like 'cld*' -or 
+                    ($hold -notlike 'UniH*' -and 
+                    $hold -notlike 'mbx*' -and 
+                    $hold -notlike 'skp*' -and 
+                    $hold -notlike '-mbx*'))) {
+                $InPlaceHold = $true
+            }
+            # Microsoft Purview retention policy - starts with mbx or skp
+            elseif ($hold -like 'mbx*' -or $hold -like 'skp*') {
+                $PurviewRetentionHold = $true
+            }
+            # Excluded from organization-wide Microsoft Purview retention policy - starts with -mbx
+            elseif ($hold -like '-mbx*') {
+                $ExcludedFromOrgWideHold = $true
+            }
+        }
+    }
+
     # Build the GraphRequest object
     $GraphRequest = [ordered]@{
         ForwardAndDeliver        = $MailboxDetailedRequest.DeliverToMailboxAndForward
@@ -184,6 +217,10 @@ function Invoke-ListUserMailboxDetails {
         LitigationHold           = $MailboxDetailedRequest.LitigationHoldEnabled
         RetentionHold            = $MailboxDetailedRequest.RetentionHoldEnabled
         ComplianceTagHold        = $MailboxDetailedRequest.ComplianceTagHoldApplied
+        InPlaceHold              = $InPlaceHold
+        EDiscoveryHold           = $EDiscoveryHold
+        PurviewRetentionHold     = $PurviewRetentionHold
+        ExcludedFromOrgWideHold  = $ExcludedFromOrgWideHold
         HiddenFromAddressLists   = $MailboxDetailedRequest.HiddenFromAddressListsEnabled
         EWSEnabled               = $CASRequest.EwsEnabled
         MailboxMAPIEnabled       = $CASRequest.MAPIEnabled
