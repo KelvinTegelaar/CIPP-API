@@ -33,8 +33,42 @@ function Invoke-CIPPStandardAddDKIM {
     param($Tenant, $Settings)
     #$Rerun -Type Standard -Tenant $Tenant -API 'AddDKIM' -Settings $Settings
 
-    $AllDomains = (New-ExoRequest -tenantid $Tenant -cmdlet 'Get-AcceptedDomain').DomainName
-    $DKIM = (New-ExoRequest -tenantid $Tenant -cmdlet 'Get-DkimSigningConfig') | Select-Object Domain, Enabled, Status
+
+    $DkimRequest = @(
+        @{
+            CmdletInput = @{
+                CmdletName = 'Get-AcceptedDomain'
+                Parameters = @{}
+            }
+        },
+        @{
+            CmdletInput = @{
+                CmdletName = 'Get-DkimSigningConfig'
+                Parameters = @{}
+            }
+        }
+    )
+
+    $BatchResults = New-ExoBulkRequest -tenantid $Tenant -cmdletArray $DkimRequest -useSystemMailbox $true
+
+    # Check for errors in the batch results. Cannot continue if there are errors.
+    $ErrorCounter = 0
+    $ErrorMessages = [System.Collections.Generic.List[string]]::new()
+    $BatchResults | ForEach-Object {
+        if ($_.error) {
+            $ErrorCounter++
+            $ErrorMessage = Get-NormalizedError -Message $_.error
+            $ErrorMessages.Add($ErrorMessage)
+        }
+    }
+    if ($ErrorCounter -gt 0) {
+        Write-LogMessage -API 'Standards' -tenant $Tenant -message "Failed to get DKIM config. Error: $($ErrorMessages -join ', ')" -sev Error
+        return
+    }
+
+
+    $AllDomains = ($BatchResults | Where-Object { $_.DomainName }).DomainName
+    $DKIM = $BatchResults | Where-Object { $_.Domain } | Select-Object Domain, Enabled, Status
 
     # List of domains for each way to enable DKIM
     $NewDomains = $AllDomains | Where-Object { $DKIM.Domain -notcontains $_ }
