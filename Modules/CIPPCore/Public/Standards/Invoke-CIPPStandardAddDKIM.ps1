@@ -33,9 +33,8 @@ function Invoke-CIPPStandardAddDKIM {
     param($Tenant, $Settings)
     #$Rerun -Type Standard -Tenant $Tenant -API 'AddDKIM' -Settings $Settings
 
-
-    $AllDomains = (New-GraphGetRequest -uri 'https://graph.microsoft.com/v1.0/domains?$top=999' -tenantid $Tenant | Where-Object { $_.supportedServices -contains 'Email' -or $_.id -like '*mail.onmicrosoft.com' }).id
-    $DKIM = (New-ExoRequest -tenantid $tenant -cmdlet 'Get-DkimSigningConfig') | Select-Object Domain, Enabled, Status
+    $AllDomains = (New-ExoRequest -tenantid $Tenant -cmdlet 'Get-AcceptedDomain').DomainName
+    $DKIM = (New-ExoRequest -tenantid $Tenant -cmdlet 'Get-DkimSigningConfig') | Select-Object Domain, Enabled, Status
 
     # List of domains for each way to enable DKIM
     $NewDomains = $AllDomains | Where-Object { $DKIM.Domain -notcontains $_ }
@@ -44,10 +43,10 @@ function Invoke-CIPPStandardAddDKIM {
     If ($Settings.remediate -eq $true) {
 
         if ($null -eq $NewDomains -and $null -eq $SetDomains) {
-            Write-LogMessage -API 'Standards' -tenant $tenant -message 'DKIM is already enabled for all available domains.' -sev Info
+            Write-LogMessage -API 'Standards' -tenant $Tenant -message 'DKIM is already enabled for all available domains.' -sev Info
         } else {
             $ErrorCounter = 0
-            Write-LogMessage -API 'Standards' -tenant $tenant -message "Trying to enable DKIM for:$($NewDomains -join ', ' ) $($SetDomains.Domain -join ', ')" -sev Info
+            Write-LogMessage -API 'Standards' -tenant $Tenant -message "Trying to enable DKIM for:$($NewDomains -join ', ' ) $($SetDomains.Domain -join ', ')" -sev Info
 
             # New-domains
             $Request = $NewDomains | ForEach-Object {
@@ -58,12 +57,12 @@ function Invoke-CIPPStandardAddDKIM {
                     }
                 }
             }
-            if ($null -ne $Request) { $BatchResults = New-ExoBulkRequest -tenantid $tenant -cmdletArray @($Request) -useSystemMailbox $true }
+            if ($null -ne $Request) { $BatchResults = New-ExoBulkRequest -tenantid $Tenant -cmdletArray @($Request) -useSystemMailbox $true }
             $BatchResults | ForEach-Object {
                 if ($_.error) {
                     $ErrorCounter ++
                     $ErrorMessage = Get-NormalizedError -Message $_.error
-                    Write-LogMessage -API 'Standards' -tenant $tenant -message "Failed to enable DKIM. Error: $ErrorMessage" -sev Error
+                    Write-LogMessage -API 'Standards' -tenant $Tenant -message "Failed to enable DKIM. Error: $ErrorMessage" -sev Error
                 }
             }
 
@@ -76,21 +75,21 @@ function Invoke-CIPPStandardAddDKIM {
                     }
                 }
             }
-            if ($null -ne $Request) { $BatchResults = New-ExoBulkRequest -tenantid $tenant -cmdletArray @($Request) -useSystemMailbox $true }
+            if ($null -ne $Request) { $BatchResults = New-ExoBulkRequest -tenantid $Tenant -cmdletArray @($Request) -useSystemMailbox $true }
             $BatchResults | ForEach-Object {
                 if ($_.error) {
                     $ErrorCounter ++
                     $ErrorMessage = Get-NormalizedError -Message $_.error
-                    Write-LogMessage -API 'Standards' -tenant $tenant -message "Failed to set DKIM. Error: $ErrorMessage" -sev Error
+                    Write-LogMessage -API 'Standards' -tenant $Tenant -message "Failed to set DKIM. Error: $ErrorMessage" -sev Error
                 }
             }
 
             if ($ErrorCounter -eq 0) {
-                Write-LogMessage -API 'Standards' -tenant $tenant -message 'Enabled DKIM for all domains in tenant' -sev Info
+                Write-LogMessage -API 'Standards' -tenant $Tenant -message 'Enabled DKIM for all domains in tenant' -sev Info
             } elseif ($ErrorCounter -gt 0 -and $ErrorCounter -lt ($NewDomains.Count + $SetDomains.Count)) {
-                Write-LogMessage -API 'Standards' -tenant $tenant -message 'Failed to enable DKIM for some domains in tenant' -sev Error
+                Write-LogMessage -API 'Standards' -tenant $Tenant -message 'Failed to enable DKIM for some domains in tenant' -sev Error
             } else {
-                Write-LogMessage -API 'Standards' -tenant $tenant -message 'Failed to enable DKIM for all domains in tenant' -sev Error
+                Write-LogMessage -API 'Standards' -tenant $Tenant -message 'Failed to enable DKIM for all domains in tenant' -sev Error
             }
         }
     }
