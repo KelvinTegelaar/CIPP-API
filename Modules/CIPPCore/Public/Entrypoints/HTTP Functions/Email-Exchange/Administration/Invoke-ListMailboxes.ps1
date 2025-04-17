@@ -56,8 +56,8 @@ Function Invoke-ListMailboxes {
             }
         }
 
-        $GraphRequest = (New-ExoRequest @ExoRequest) | Select-Object id, ExchangeGuid, ArchiveGuid, WhenSoftDeleted, @{ Name = 'UPN'; Expression = { $_.'UserPrincipalName' } },
-
+        $GraphRequest = (New-ExoRequest @ExoRequest) | Select-Object id, ExchangeGuid, ArchiveGuid, WhenSoftDeleted,
+        @{ Name = 'UPN'; Expression = { $_.'UserPrincipalName' } },
         @{ Name = 'displayName'; Expression = { $_.'DisplayName' } },
         @{ Name = 'primarySmtpAddress'; Expression = { $_.'PrimarySMTPAddress' } },
         @{ Name = 'recipientType'; Expression = { $_.'RecipientType' } },
@@ -76,7 +76,7 @@ Function Invoke-ListMailboxes {
         @{ Name = 'LicensedForLitigationHold'; Expression = { ($_.PersistedCapabilities -contains 'BPOS_S_DlpAddOn' -or $_.PersistedCapabilities -contains 'BPOS_S_Enterprise') } },
         ComplianceTagHoldApplied,
         RetentionHoldEnabled,
-        InPlaceHolds,
+        InPlaceHolds
 
         $StatusCode = [HttpStatusCode]::OK
     } catch {
