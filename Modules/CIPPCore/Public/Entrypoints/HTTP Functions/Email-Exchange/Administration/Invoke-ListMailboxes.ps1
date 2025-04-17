@@ -63,8 +63,8 @@ Function Invoke-ListMailboxes {
         @{ Name = 'recipientType'; Expression = { $_.'RecipientType' } },
         @{ Name = 'recipientTypeDetails'; Expression = { $_.'RecipientTypeDetails' } },
         @{ Name = 'AdditionalEmailAddresses'; Expression = { ($_.'EmailAddresses' | Where-Object { $_ -clike 'smtp:*' }).Replace('smtp:', '') -join ', ' } },
-        @{Name = 'ForwardingSmtpAddress'; Expression = { $_.'ForwardingSmtpAddress' -replace 'smtp:', '' } },
-        @{Name = 'InternalForwardingAddress'; Expression = { $_.'ForwardingAddress' } },
+        @{ Name = 'ForwardingSmtpAddress'; Expression = { $_.'ForwardingSmtpAddress' -replace 'smtp:', '' } },
+        @{ Name = 'InternalForwardingAddress'; Expression = { $_.'ForwardingAddress' } },
         DeliverToMailboxAndForward,
         HiddenFromAddressListsEnabled,
         ExternalDirectoryObjectId,
@@ -77,6 +77,8 @@ Function Invoke-ListMailboxes {
         ComplianceTagHoldApplied,
         RetentionHoldEnabled,
         InPlaceHolds
+        # This select also exists in ListUserMailboxDetails and should be updated if this is changed here
+
 
         $StatusCode = [HttpStatusCode]::OK
     } catch {
