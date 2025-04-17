@@ -164,7 +164,7 @@ function Invoke-ListUserMailboxDetails {
     $ProhibitSendQuotaString = $MailboxDetailedRequest.ProhibitSendQuota -split ' '
     $ProhibitSendReceiveQuotaString = $MailboxDetailedRequest.ProhibitSendReceiveQuota -split ' '
     $TotalItemSizeString = $StatsRequest.TotalItemSize -split ' '
-    $TotalArchiveItemSizeString = Get-ExoOnlineStringBytes -SizeString $ArchiveSizeRequest.TotalItemSize.Value
+    $TotalArchiveItemSizeString = (Get-ExoOnlineStringBytes -SizeString $ArchiveSizeRequest.TotalItemSize) / 1GB
 
     $ProhibitSendQuota = try { [math]::Round([float]($ProhibitSendQuotaString[0]), 2) } catch { 0 }
     $ProhibitSendReceiveQuota = try { [math]::Round([float]($ProhibitSendReceiveQuotaString[0]), 2) } catch { 0 }
