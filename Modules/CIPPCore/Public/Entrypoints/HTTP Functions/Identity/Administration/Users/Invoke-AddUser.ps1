@@ -38,15 +38,20 @@ Function Invoke-AddUser {
     } else {
         $CreationResults = New-CIPPUserTask -userobj $UserObj -APIName $APINAME -Headers $Request.Headers
         $body = [pscustomobject] @{
-            'Results'  = $CreationResults.Results
-            'Username' = $CreationResults.username
-            'Password' = $CreationResults.password
+            'Results'  = @(
+                $CreationResults.Results[0],
+                $CreationResults.Results[1],
+                @{
+                    'resultText' = $CreationResults.Results[2]
+                    'copyField' = $CreationResults.password
+                    'state' = 'success'
+                }
+            )
             'CopyFrom' = @{
                 'Success' = $CreationResults.CopyFrom.Success
                 'Error'   = $CreationResults.CopyFrom.Error
             }
         }
-
     }
     # Associate values to output bindings by calling 'Push-OutputBinding'.
     Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
