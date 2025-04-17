@@ -13,7 +13,6 @@ function New-CIPPUserTask {
         $Results.Add('Created New User.')
         $Results.Add("Username: $($CreationResults.Username)")
         $Results.Add("Password: $($CreationResults.Password)")
-        $Results.Add("$($CreationResults.Password)")
     } catch {
         $Results.Add("Failed to create user. $($_.Exception.Message)" )
         return @{'Results' = $Results }
