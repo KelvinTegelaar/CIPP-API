@@ -3,7 +3,7 @@ function Invoke-ExecCippReplacemap {
     .FUNCTIONALITY
         Entrypoint
     .ROLE
-        CIPP.Extension.ReadWrite
+        Tenant.Config.ReadWrite
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
