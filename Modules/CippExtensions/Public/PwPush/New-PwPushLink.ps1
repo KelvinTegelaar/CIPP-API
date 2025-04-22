@@ -6,18 +6,20 @@ function New-PwPushLink {
     $Table = Get-CIPPTable -TableName Extensionsconfig
     $Configuration = ((Get-CIPPAzDataTableEntity @Table).config | ConvertFrom-Json).PWPush
     if ($Configuration.Enabled -eq $true) {
-        Set-PwPushConfig -Configuration $Configuration
-        $PushParams = @{
-            Payload = $Payload
-        }
-        if ($Configuration.ExpireAfterDays) { $PushParams.ExpireAfterDays = $Configuration.ExpireAfterDays }
-        if ($Configuration.ExpireAfterViews) { $PushParams.ExpireAfterViews = $Configuration.ExpireAfterViews }
-        if ($Configuration.DeletableByViewer) { $PushParams.DeletableByViewer = $Configuration.DeletableByViewer }
         try {
+            Set-PwPushConfig -Configuration $Configuration
+            $PushParams = @{
+                Payload = $Payload
+            }
+            if ($Configuration.ExpireAfterDays) { $PushParams.ExpireAfterDays = $Configuration.ExpireAfterDays }
+            if ($Configuration.ExpireAfterViews) { $PushParams.ExpireAfterViews = $Configuration.ExpireAfterViews }
+            if ($Configuration.DeletableByViewer) { $PushParams.DeletableByViewer = $Configuration.DeletableByViewer }
+            if ($Configuration.AccountId) { $PushParams.AccountId = $Configuration.AccountId.value }
+
             if ($PSCmdlet.ShouldProcess('Create a new PwPush link')) {
                 $Link = New-Push @PushParams
                 if ($Configuration.RetrievalStep) {
-                    return $Link.LinkRetrievalStep
+                    return $Link.LinkRetrievalStep -replace '/r/r', '/r'
                 }
                 return $Link.Link
             }

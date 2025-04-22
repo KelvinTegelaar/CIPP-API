@@ -10,8 +10,9 @@ Function Invoke-ListConditionalAccessPolicies {
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
 
-    $APIName = $TriggerMetadata.FunctionName
-    Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -message 'Accessed this API' -Sev 'Debug'
+    $APIName = $Request.Params.CIPPEndpoint
+    $Headers = $Request.Headers
+    Write-LogMessage -headers $Headers -API $APIName -message 'Accessed this API' -Sev 'Debug'
 
 
     function Get-LocationNameFromId {
@@ -114,11 +115,8 @@ Function Invoke-ListConditionalAccessPolicies {
         return $return
     }
 
-    # Write to the Azure Functions log stream.
-    Write-Host 'PowerShell HTTP trigger function processed a request.'
-
     # Interact with query parameters or the body of the request.
-    $TenantFilter = $Request.Query.TenantFilter
+    $TenantFilter = $Request.Query.tenantFilter
     try {
         $Requests = @(
             @{
@@ -158,7 +156,7 @@ Function Invoke-ListConditionalAccessPolicies {
             }
         )
 
-        $GraphRequest = New-GraphBulkRequest -Requests $Requests -tenantid $tenantfilter -asapp $true
+        $GraphRequest = New-GraphBulkRequest -Requests $Requests -tenantid $TenantFilter -asapp $true
 
         $ConditionalAccessPolicyOutput = ($GraphRequest | Where-Object { $_.id -eq 'policies' }).body.value
         $AllNamedLocations = ($GraphRequest | Where-Object { $_.id -eq 'namedLocations' }).body.value
@@ -173,7 +171,7 @@ Function Invoke-ListConditionalAccessPolicies {
                 id                                          = $cap.id
                 displayName                                 = $cap.displayName
                 customer                                    = $cap.Customer
-                tenantID                                    = $cap.TenantID
+                tenantID                                    = $TenantFilter
                 createdDateTime                             = $(if (![string]::IsNullOrEmpty($cap.createdDateTime)) { [datetime]$cap.createdDateTime } else { '' })
                 modifiedDateTime                            = $(if (![string]::IsNullOrEmpty($cap.modifiedDateTime)) { [datetime]$cap.modifiedDateTime }else { '' })
                 state                                       = $cap.state

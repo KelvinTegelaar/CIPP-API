@@ -13,15 +13,17 @@ function Invoke-CIPPStandardSafeSendersDisable {
         CAT
             Exchange Standards
         TAG
-            "mediumimpact"
         ADDEDCOMPONENT
         DISABLEDFEATURES
-            
+            {"report":true,"warn":true,"remediate":false}
         IMPACT
             Medium Impact
+        ADDEDDATE
+            2023-10-26
         POWERSHELLEQUIVALENT
             Set-MailboxJunkEmailConfiguration
         RECOMMENDEDBY
+            "CIPP"
         UPDATECOMMENTBLOCK
             Run the Tools\Update-StandardsComments.ps1 script to update this comment block
     .LINK
@@ -29,9 +31,8 @@ function Invoke-CIPPStandardSafeSendersDisable {
     #>
 
     param($Tenant, $Settings)
-    ##$Rerun -Type Standard -Tenant $Tenant -Settings $Settings 'SafeSendersDisable'
 
-    If ($Settings.remediate -eq $true) {
+    if ($Settings.remediate -eq $true) {
         try {
             $Mailboxes = New-ExoRequest -tenantid $Tenant -cmdlet 'Get-Mailbox' -select 'UserPrincipalName'
             $Request = $Mailboxes | ForEach-Object {

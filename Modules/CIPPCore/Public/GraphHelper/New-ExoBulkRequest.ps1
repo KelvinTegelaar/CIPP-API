@@ -45,12 +45,12 @@ function New-ExoBulkRequest {
             $IdToCmdletName = @{}
 
             # Split the cmdletArray into batches of 10
-            $batches = [System.Collections.ArrayList]@()
+            $batches = [System.Collections.Generic.List[object]]::new()
             for ($i = 0; $i -lt $cmdletArray.Length; $i += 10) {
-                $null = $batches.Add($cmdletArray[$i..[math]::Min($i + 9, $cmdletArray.Length - 1)])
+                $batches.Add($cmdletArray[$i..[math]::Min($i + 9, $cmdletArray.Length - 1)])
             }
 
-            $ReturnedData = @()
+            $ReturnedData = [System.Collections.Generic.List[object]]::new()
             foreach ($batch in $batches) {
                 $BatchBodyObj = @{
                     requests = @()
@@ -64,7 +64,7 @@ function New-ExoBulkRequest {
                         $OnMicrosoft = $Tenant.initialDomainName
                         $Anchor = "UPN:SystemMailbox{8cc370d3-822a-4ab8-a926-bb94bd0641a9}@$($OnMicrosoft)"
                     }
-                    $Headers['X-AnchorMailbox'] = $Anchor
+                    $Headers['X-AnchorMailbox'] = "APP:SystemMailbox{bb558c35-97f1-4cb9-8ff7-d53741dc928c}@$($tenant.customerId)"
                     $Headers['X-CmdletName'] = $cmd.CmdletInput.CmdletName
                     $Headers['Accept'] = 'application/json; odata.metadata=minimal'
                     $Headers['Accept-Encoding'] = 'gzip'
@@ -84,13 +84,19 @@ function New-ExoBulkRequest {
                     $IdToCmdletName[$RequestId] = $cmd.CmdletInput.CmdletName
                 }
                 $BatchBodyJson = ConvertTo-Json -InputObject $BatchBodyObj -Depth 10
+                $BatchBodyJson = Get-CIPPTextReplacement -TenantFilter $tenantid -Text $BatchBodyJson
                 $Results = Invoke-RestMethod $BatchURL -ResponseHeadersVariable responseHeaders -Method POST -Body $BatchBodyJson -Headers $Headers -ContentType 'application/json; charset=utf-8'
-                $ReturnedData = $ReturnedData + $Results.responses
+                foreach ($Response in $Results.responses) {
+                    $ReturnedData.Add($Response)
+                }
+
                 Write-Host "Batch #$($batches.IndexOf($batch) + 1) of $($batches.Count) processed"
             }
         } catch {
             # Error handling (omitted for brevity)
         }
+
+        #Write-Information ($responseHeaders | ConvertTo-Json -Depth 10)
 
         # Process the returned data
         if ($ReturnWithCommand) {
@@ -98,12 +104,12 @@ function New-ExoBulkRequest {
             foreach ($item in $ReturnedData) {
                 $itemId = $item.id
                 $CmdletName = $IdToCmdletName[$itemId]
-                $body = $item.body
+                $body = $item.body.PSObject.Copy()
 
                 if ($body.'@adminapi.warnings') {
                     Write-Warning ($body.'@adminapi.warnings' | Out-String)
                 }
-                if ($body.error) {
+                if (![string]::IsNullOrEmpty($body.error.details.message) -or ![string]::IsNullOrEmpty($body.error.message)) {
                     if ($body.error.details.message) {
                         $msg = [pscustomobject]@{ error = $body.error.details.message; target = $body.error.details.target }
                     } else {
@@ -111,23 +117,24 @@ function New-ExoBulkRequest {
                     }
                     $body | Add-Member -MemberType NoteProperty -Name 'value' -Value $msg -Force
                 }
-                $resultValue = $body.value
-
-                # Assign results without using += or ArrayList
-                if (-not $FinalData.ContainsKey($CmdletName)) {
-                    $FinalData[$CmdletName] = @($resultValue)
-                } else {
-                    $FinalData[$CmdletName] = $FinalData[$CmdletName] + $resultValue
+                $resultValues = $body.value
+                foreach ($resultValue in $resultValues) {
+                    if (-not $FinalData.ContainsKey($CmdletName)) {
+                        $FinalData[$CmdletName] = [System.Collections.Generic.List[object]]::new()
+                        $FinalData.$CmdletName.Add($resultValue)
+                    } else {
+                        $FinalData.$CmdletName.Add($resultValue)
+                    }
                 }
             }
         } else {
             $FinalData = foreach ($item in $ReturnedData) {
-                $body = $item.body
+                $body = $item.body.PSObject.Copy()
 
                 if ($body.'@adminapi.warnings') {
                     Write-Warning ($body.'@adminapi.warnings' | Out-String)
                 }
-                if ($body.error) {
+                if (![string]::IsNullOrEmpty($body.error.details.message) -or ![string]::IsNullOrEmpty($body.error.message)) {
                     if ($body.error.details.message) {
                         $msg = [pscustomobject]@{ error = $body.error.details.message; target = $body.error.details.target }
                     } else {
@@ -138,7 +145,6 @@ function New-ExoBulkRequest {
                 $body.value
             }
         }
-
         return $FinalData
 
     } else {

@@ -1,6 +1,6 @@
 using namespace System.Net
 
-Function Invoke-ListUserMailboxDetails {
+function Invoke-ListUserMailboxDetails {
     <#
     .FUNCTIONALITY
         Entrypoint
@@ -10,14 +10,13 @@ Function Invoke-ListUserMailboxDetails {
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
 
-    $APIName = $TriggerMetadata.FunctionName
-    Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -message 'Accessed this API' -Sev 'Debug'
+    $APIName = $Request.Params.CIPPEndpoint
+    $Headers = $Request.Headers
+    Write-LogMessage -headers $Headers -API $APIName -message 'Accessed this API' -Sev 'Debug'
 
-    # Write to the Azure Functions log stream.
-    Write-Host 'PowerShell HTTP trigger function processed a request.'
 
     # Interact with query parameters or the body of the request.
-    $TenantFilter = $Request.Query.TenantFilter
+    $TenantFilter = $Request.Query.tenantFilter
     $UserID = $Request.Query.UserID
 
     try {
@@ -65,8 +64,9 @@ Function Invoke-ListUserMailboxDetails {
             }
         )
         Write-Host $UserID
-        #$username = (New-GraphGetRequest -tenantid $TenantFilter -uri "https://graph.microsoft.com/beta/users/$UserID").userPrincipalName
+        $usernames = New-GraphGetRequest -tenantid $TenantFilter -uri 'https://graph.microsoft.com/beta/users?$select=id,userPrincipalName&$top=999'
         $Results = New-ExoBulkRequest -TenantId $TenantFilter -CmdletArray $Requests -returnWithCommand $true -Anchor $username
+        Write-Host "First line of usernames is $($usernames[0] | ConvertTo-Json)"
 
         # Assign variables from $Results
         $MailboxDetailedRequest = $Results.'Get-Mailbox'
@@ -76,15 +76,16 @@ Function Invoke-ListUserMailboxDetails {
         $ArchiveSizeRequest = $Results.'Get-MailboxStatistics'
         $BlockedSender = $Results.'Get-BlockedSenderAddress'
         $PermsRequest2 = $Results.'Get-RecipientPermission'
-        $StatsRequest = New-GraphGetRequest -uri "https://outlook.office365.com/adminapi/beta/$($tenantfilter)/Mailbox('$($MailboxDetailedRequest.UserPrincipalName)')/Exchange.GetMailboxStatistics()" -Tenantid $tenantfilter -scope ExchangeOnline -noPagination $true
+
+        $StatsRequest = New-GraphGetRequest -uri "https://outlook.office365.com/adminapi/beta/$($TenantFilter)/Mailbox('$($UserID)')/Exchange.GetMailboxStatistics()" -Tenantid $TenantFilter -scope ExchangeOnline -noPagination $true
 
 
         # Handle ArchiveEnabled and AutoExpandingArchiveEnabled
         try {
-            if ($MailboxDetailedRequest.ArchiveStatus -eq 'Active') {
-                $ArchiveEnabled = $True
+            if ($MailboxDetailedRequest.ArchiveGuid -ne '00000000-0000-0000-0000-000000000000') {
+                $ArchiveEnabled = $true
             } else {
-                $ArchiveEnabled = $False
+                $ArchiveEnabled = $false
             }
 
             # Get organization config of auto-expanding archive if it's disabled on user level
@@ -94,7 +95,7 @@ Function Invoke-ListUserMailboxDetails {
                 $AutoExpandingArchiveEnabled = $MailboxDetailedRequest.AutoExpandingArchiveEnabled
             }
         } catch {
-            $ArchiveEnabled = $False
+            $ArchiveEnabled = $false
             $ArchiveSizeRequest = @{
                 TotalItemSize = '0'
                 ItemCount     = '0'
@@ -114,17 +115,33 @@ Function Invoke-ListUserMailboxDetails {
 
     # Parse permissions
 
-    $ParsedPerms = foreach ($PermSet in @($PermsRequest, $PermsRequest2)) {
+    #Implemented as an arraylist that uses .add().
+    $ParsedPerms = [System.Collections.ArrayList]::new()
+    foreach ($PermSet in @($PermsRequest, $PermsRequest2)) {
         foreach ($Perm in $PermSet) {
             # Check if Trustee or User is not NT AUTHORITY\SELF
             $user = $Perm.Trustee ? $Perm.Trustee : $Perm.User
-            if ($user -ne 'NT AUTHORITY\SELF') {
-                [PSCustomObject]@{
-                    User         = $user
-                    AccessRights = ($Perm.AccessRights) -join ', '
-                }
+            if ($user -and $user -ne 'NT AUTHORITY\SELF') {
+                $null = $ParsedPerms.Add([PSCustomObject]@{
+                        User         = $user
+                        AccessRights = ($Perm.AccessRights) -join ', '
+                    })
             }
         }
+    }
+    if ($MailboxDetailedRequest.GrantSendOnBehalfTo) {
+        $MailboxDetailedRequest.GrantSendOnBehalfTo | ForEach-Object {
+            $id = $_
+            $username = $usernames | Where-Object { $_.id -eq $id }
+
+            $null = $ParsedPerms.Add([PSCustomObject]@{
+                    User         = $username.UserPrincipalName ? $username.UserPrincipalName : $_
+                    AccessRights = 'SendOnBehalf'
+                })
+        }
+    }
+    if ($ParsedPerms.Count -eq 0) {
+        $ParsedPerms = @()
     }
 
     # Get forwarding address
@@ -147,7 +164,7 @@ Function Invoke-ListUserMailboxDetails {
     $ProhibitSendQuotaString = $MailboxDetailedRequest.ProhibitSendQuota -split ' '
     $ProhibitSendReceiveQuotaString = $MailboxDetailedRequest.ProhibitSendReceiveQuota -split ' '
     $TotalItemSizeString = $StatsRequest.TotalItemSize -split ' '
-    $TotalArchiveItemSizeString = $ArchiveSizeRequest.TotalItemSize -split ' '
+    $TotalArchiveItemSizeString = Get-ExoOnlineStringBytes -SizeString $ArchiveSizeRequest.TotalItemSize.Value
 
     $ProhibitSendQuota = try { [math]::Round([float]($ProhibitSendQuotaString[0]), 2) } catch { 0 }
     $ProhibitSendReceiveQuota = try { [math]::Round([float]($ProhibitSendReceiveQuotaString[0]), 2) } catch { 0 }
@@ -155,9 +172,9 @@ Function Invoke-ListUserMailboxDetails {
     $ItemSizeType = '1{0}' -f ($TotalItemSizeString[1] ?? 'Gb')
     $TotalItemSize = try { [math]::Round([float]($TotalItemSizeString[0]) / $ItemSizeType, 2) } catch { 0 }
 
-    if ($ArchiveEnabled) {
-        $ArchiveSizeType = '1{0}' -f ($TotalArchiveItemSizeString[1] ?? 'Gb')
-        $TotalArchiveItemSize = [math]::Round([float]($TotalArchiveItemSizeString[0]) / $ArchiveSizeType, 2)
+    if ($ArchiveEnabled -eq $true) {
+        $TotalArchiveItemSize = try { [math]::Round([float]($TotalArchiveItemSizeString[0]), 2) } catch { 0 }
+        $TotalArchiveItemCount = try { [math]::Round($ArchiveSizeRequest.ItemCount, 2) } catch { 0 }
     }
 
     # Build the GraphRequest object
@@ -177,14 +194,27 @@ Function Invoke-ListUserMailboxDetails {
         ProhibitSendReceiveQuota = $ProhibitSendReceiveQuota
         ItemCount                = [math]::Round($StatsRequest.ItemCount, 2)
         TotalItemSize            = $TotalItemSize
-        TotalArchiveItemSize     = if ($ArchiveEnabled) { $TotalArchiveItemSize } else { '0' }
-        TotalArchiveItemCount    = if ($ArchiveEnabled) { try { [math]::Round($ArchiveSizeRequest.ItemCount, 2) } catch { 0 } } else { 0 }
+        TotalArchiveItemSize     = $TotalArchiveItemSize
+        TotalArchiveItemCount    = $TotalArchiveItemCount
         BlockedForSpam           = $BlockedForSpam
         ArchiveMailBox           = $ArchiveEnabled
         AutoExpandingArchive     = $AutoExpandingArchiveEnabled
         RecipientTypeDetails     = $MailboxDetailedRequest.RecipientTypeDetails
         Mailbox                  = $MailboxDetailedRequest
-    }
+        MailboxActionsData       = ($MailboxDetailedRequest | Select-Object id, ExchangeGuid, ArchiveGuid, WhenSoftDeleted, @{ Name = 'UPN'; Expression = { $_.'UserPrincipalName' } },
+            @{ Name = 'displayName'; Expression = { $_.'DisplayName' } },
+            @{ Name = 'primarySmtpAddress'; Expression = { $_.'PrimarySMTPAddress' } },
+            @{ Name = 'recipientType'; Expression = { $_.'RecipientType' } },
+            @{ Name = 'recipientTypeDetails'; Expression = { $_.'RecipientTypeDetails' } },
+            @{ Name = 'AdditionalEmailAddresses'; Expression = { ($_.'EmailAddresses' | Where-Object { $_ -clike 'smtp:*' }).Replace('smtp:', '') -join ', ' } },
+            @{Name = 'ForwardingSmtpAddress'; Expression = { $_.'ForwardingSmtpAddress' -replace 'smtp:', '' } },
+            @{Name = 'InternalForwardingAddress'; Expression = { $_.'ForwardingAddress' } },
+            DeliverToMailboxAndForward,
+            HiddenFromAddressListsEnabled,
+            ExternalDirectoryObjectId,
+            MessageCopyForSendOnBehalfEnabled,
+            MessageCopyForSentAsEnabled)
+    } # Select statement taken from ListMailboxes to save a EXO request
 
     Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
             StatusCode = [HttpStatusCode]::OK

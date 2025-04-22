@@ -4,12 +4,31 @@ function Get-CIPPLicenseOverview {
     param (
         $TenantFilter,
         $APIName = 'Get License Overview',
-        $ExecutingUser
+        $Headers
     )
 
+    $Requests = @(
+        @{
+            id     = 'subscribedSkus'
+            url    = 'subscribedSkus'
+            method = 'GET'
+        }
+        @{
+            id     = 'directorySubscriptions'
+            url    = 'directory/subscriptions'
+            method = 'GET'
+        }
+    )
 
-    $LicRequest = New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/subscribedSkus' -tenantid $TenantFilter
-    $SkuIDs = New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/directory/subscriptions' -tenantid $TenantFilter
+    try {
+        $AdminPortalLicenses = New-GraphGetRequest -scope 'https://admin.microsoft.com/.default' -TenantID $TenantFilter -Uri 'https://admin.microsoft.com/admin/api/tenant/accountSkus'
+    } catch {
+        Write-Warning 'Failed to get Admin Portal Licenses'
+    }
+
+    $Results = New-GraphBulkRequest -Requests $Requests -TenantID $TenantFilter -asapp $true
+    $LicRequest = ($Results | Where-Object { $_.id -eq 'subscribedSkus' }).body.value
+    $SkuIDs = ($Results | Where-Object { $_.id -eq 'directorySubscriptions' }).body.value
 
     $RawGraphRequest = [PSCustomObject]@{
         Tenant   = $TenantFilter
@@ -23,8 +42,9 @@ function Get-CIPPLicenseOverview {
         $skuid = $singlereq.Licenses
         foreach ($sku in $skuid) {
             if ($sku.skuId -in $ExcludedSkuList.GUID) { continue }
-            $PrettyName = ($ConvertTable | Where-Object { $_.guid -eq $sku.skuid }).'Product_Display_Name' | Select-Object -Last 1
-            if (!$PrettyName) { $PrettyName = $sku.skuPartNumber }
+            $PrettyNameAdmin = $AdminPortalLicenses | Where-Object { $_.SkuId -eq $sku.skuId } | Select-Object -ExpandProperty Name
+            $PrettyNameCSV = ($ConvertTable | Where-Object { $_.guid -eq $sku.skuid }).'Product_Display_Name' | Select-Object -Last 1
+            $PrettyName = $PrettyNameAdmin ?? $PrettyNameCSV ?? $sku.skuPartNumber
 
             # Initialize $Term with the default value
             $TermInfo = foreach ($Subscription in $sku.subscriptionIds) {

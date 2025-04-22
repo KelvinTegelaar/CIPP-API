@@ -10,9 +10,9 @@ Function Invoke-ListTenantDetails {
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
 
-    $APIName = $TriggerMetadata.FunctionName
+    $APIName = $Request.Params.CIPPEndpoint
 
-    Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -message 'Accessed this API' -Sev 'Debug'
+    Write-LogMessage -headers $Request.Headers -API $APINAME -message 'Accessed this API' -Sev 'Debug'
 
     $tenantfilter = $Request.Query.TenantFilter
 
@@ -22,6 +22,13 @@ Function Invoke-ListTenantDetails {
         @{ Name = 'technicalNotificationMails'; Expression = { $_.technicalNotificationMails -join ', ' } },
         tenantType, createdDateTime, onPremisesLastPasswordSyncDateTime, onPremisesLastSyncDateTime, onPremisesSyncEnabled, assignedPlans
 
+        $customProperties = Get-TenantProperties -customerId $tenantfilter
+        $org | Add-Member -MemberType NoteProperty -Name 'customProperties' -Value $customProperties
+
+        $Groups = (Get-TenantGroups -TenantFilter $tenantfilter) ?? @()
+        $org | Add-Member -MemberType NoteProperty -Name 'Groups' -Value @($Groups)
+
+
         # Respond with the successful output
         Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
                 StatusCode = [HttpStatusCode]::OK
@@ -29,7 +36,7 @@ Function Invoke-ListTenantDetails {
             })
     } catch {
         # Log the exception message
-        Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -message "Error: $($_.Exception.Message)" -Sev 'Error'
+        Write-LogMessage -headers $Request.Headers -API $APINAME -message "Error: $($_.Exception.Message)" -Sev 'Error'
 
         # Respond with a 500 error and include the exception message in the response body
         Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{

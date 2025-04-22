@@ -10,9 +10,9 @@ Function Invoke-ExecDeviceDelete {
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
 
-    $APIName = $TriggerMetadata.FunctionName
-    $ExecutingUser = $Request.headers.'x-ms-client-principal'
-    Write-LogMessage -user $ExecutingUser -API $APINAME -message 'Accessed this API' -Sev 'Debug'
+    $APIName = $Request.Params.CIPPEndpoint
+    $Headers = $Request.Headers
+    Write-LogMessage -Headers $Headers -API $APINAME -message 'Accessed this API' -Sev 'Debug'
 
     # Interact with body parameters or the body of the request.
     $TenantFilter = $Request.body.tenantFilter ?? $Request.Query.tenantFilter
@@ -20,7 +20,7 @@ Function Invoke-ExecDeviceDelete {
     $DeviceID = $Request.body.ID ?? $Request.Query.ID
 
     try {
-        $Results = Set-CIPPDeviceState -Action $Action -DeviceID $DeviceID -TenantFilter $TenantFilter -ExecutingUser $ExecutingUser -APIName $APINAME
+        $Results = Set-CIPPDeviceState -Action $Action -DeviceID $DeviceID -TenantFilter $TenantFilter -Headers $Request.Headers -APIName $APINAME
         $StatusCode = [HttpStatusCode]::OK
     } catch {
         $Results = $_.Exception.Message

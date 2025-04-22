@@ -13,11 +13,12 @@ function Invoke-CIPPStandardPWdisplayAppInformationRequiredState {
         CAT
             Entra (AAD) Standards
         TAG
-            "lowimpact"
             "CIS"
         ADDEDCOMPONENT
         IMPACT
             Low Impact
+        ADDEDDATE
+            2021-11-16
         POWERSHELLEQUIVALENT
             Update-MgBetaPolicyAuthenticationMethodPolicyAuthenticationMethodConfiguration
         RECOMMENDEDBY
@@ -29,16 +30,20 @@ function Invoke-CIPPStandardPWdisplayAppInformationRequiredState {
     #>
 
     param($Tenant, $Settings)
-    ##$Rerun -Type Standard -Tenant $Tenant -Settings $Settings 'PWdisplayAppInformationRequiredState'
 
     $CurrentState = New-GraphGetRequest -Uri 'https://graph.microsoft.com/beta/policies/authenticationMethodsPolicy/authenticationMethodConfigurations/microsoftAuthenticator' -tenantid $Tenant
-    $StateIsCorrect = ($CurrentState.state -eq 'enabled')
+    $StateIsCorrect = ($CurrentState.state -eq 'enabled') -and
+    ($CurrentState.featureSettings.numberMatchingRequiredState.state -eq 'enabled') -and
+    ($CurrentState.featureSettings.displayAppInformationRequiredState.state -eq 'enabled')
 
-    If ($Settings.remediate -eq $true) {
+    if ($Settings.remediate -eq $true) {
         if ($StateIsCorrect -eq $true) {
             Write-LogMessage -API 'Standards' -tenant $tenant -message 'Passwordless with Information and Number Matching is already enabled.' -sev Info
         } else {
-            Set-CIPPAuthenticationPolicy -Tenant $tenant -APIName 'Standards' -AuthenticationMethodId 'MicrosoftAuthenticator' -Enabled $true
+            try {
+                Set-CIPPAuthenticationPolicy -Tenant $tenant -APIName 'Standards' -AuthenticationMethodId 'MicrosoftAuthenticator' -Enabled $true
+            } catch {
+            }
         }
     }
 
@@ -46,11 +51,18 @@ function Invoke-CIPPStandardPWdisplayAppInformationRequiredState {
         if ($StateIsCorrect -eq $true) {
             Write-LogMessage -API 'Standards' -tenant $tenant -message 'Passwordless with Information and Number Matching is enabled.' -sev Info
         } else {
-            Write-LogMessage -API 'Standards' -tenant $tenant -message 'Passwordless with Information and Number Matching is not enabled.' -sev Alert
+            Write-StandardsAlert -message 'Passwordless with Information and Number Matching is not enabled' -object $CurrentState -tenant $tenant -standardName 'PWdisplayAppInformationRequiredState' -standardId $Settings.standardId
+            Write-LogMessage -API 'Standards' -tenant $tenant -message 'Passwordless with Information and Number Matching is not enabled.' -sev Info
         }
     }
 
     if ($Settings.report -eq $true) {
         Add-CIPPBPAField -FieldName 'PWdisplayAppInformationRequiredState' -FieldValue $StateIsCorrect -StoreAs bool -Tenant $tenant
+        if ($StateIsCorrect) {
+            $FieldValue = $true
+        } else {
+            $FieldValue = $CurrentState
+        }
+        Set-CIPPStandardsCompareField -FieldName 'standards.PWdisplayAppInformationRequiredState' -FieldValue $FieldValue -Tenant $tenant
     }
 }

@@ -13,16 +13,18 @@ function Invoke-CIPPStandardEnableMailboxAuditing {
         CAT
             Exchange Standards
         TAG
-            "lowimpact"
             "CIS"
             "exo_mailboxaudit"
         ADDEDCOMPONENT
         IMPACT
             Low Impact
+        ADDEDDATE
+            2024-01-08
         POWERSHELLEQUIVALENT
             Set-OrganizationConfig -AuditDisabled \$false
         RECOMMENDEDBY
             "CIS"
+            "CIPP"
         UPDATECOMMENTBLOCK
             Run the Tools\Update-StandardsComments.ps1 script to update this comment block
     .LINK
@@ -107,7 +109,8 @@ function Invoke-CIPPStandardEnableMailboxAuditing {
 
     if ($Settings.alert -eq $true) {
         if ($AuditState) {
-            Write-LogMessage -API 'Standards' -tenant $Tenant -message 'Tenant level mailbox audit is not enabled' -sev Alert
+            Write-StandardsAlert -message 'Tenant level mailbox audit is not enabled' -object $AuditState -tenant $Tenant -standardName 'EnableMailboxAuditing' -standardId $Settings.standardId
+            Write-LogMessage -API 'Standards' -tenant $Tenant -message 'Tenant level mailbox audit is not enabled' -sev Info
         } else {
             Write-LogMessage -API 'Standards' -tenant $Tenant -message 'Tenant level mailbox audit is enabled' -sev Info
         }
@@ -115,6 +118,7 @@ function Invoke-CIPPStandardEnableMailboxAuditing {
 
     if ($Settings.report -eq $true) {
         $AuditState = -not $AuditState
+        Set-CIPPStandardsCompareField -FieldName 'standards.EnableMailboxAuditing' -FieldValue $AuditState -Tenant $Tenant
         Add-CIPPBPAField -FieldName 'MailboxAuditingEnabled' -FieldValue $AuditState -StoreAs bool -Tenant $Tenant
     }
 

@@ -7,13 +7,12 @@ function Invoke-CIPPStandardAntiPhishPolicy {
     .SYNOPSIS
         (Label) Default Anti-Phishing Policy
     .DESCRIPTION
-        (Helptext) This creates a Anti-Phishing policy that automatically enables Mailbox Intelligence and spoofing, optional switches for Mailtips.
-        (DocsDescription) This creates a Anti-Phishing policy that automatically enables Mailbox Intelligence and spoofing, optional switches for Mailtips.
+        (Helptext) This creates a Anti-Phishing policy that automatically enables Mailbox Intelligence and spoofing, optional switches for Mail tips.
+        (DocsDescription) This creates a Anti-Phishing policy that automatically enables Mailbox Intelligence and spoofing, optional switches for Mail tips.
     .NOTES
         CAT
             Defender Standards
         TAG
-            "lowimpact"
             "CIS"
             "mdo_safeattachments"
             "mdo_highconfidencespamaction"
@@ -23,11 +22,11 @@ function Invoke-CIPPStandardAntiPhishPolicy {
             "mdo_antiphishingpolicies"
             "mdo_phishthresholdlevel"
         ADDEDCOMPONENT
-            {"type":"number","label":"Phishing email threshold. (Default 1)","name":"standards.AntiPhishPolicy.PhishThresholdLevel","default":1}
-            {"type":"switch","label":"Show first contact safety tip","name":"standards.AntiPhishPolicy.EnableFirstContactSafetyTips","default":true}
-            {"type":"switch","label":"Show user impersonation safety tip","name":"standards.AntiPhishPolicy.EnableSimilarUsersSafetyTips","default":true}
-            {"type":"switch","label":"Show domain impersonation safety tip","name":"standards.AntiPhishPolicy.EnableSimilarDomainsSafetyTips","default":true}
-            {"type":"switch","label":"Show user impersonation unusual characters safety tip","name":"standards.AntiPhishPolicy.EnableUnusualCharactersSafetyTips","default":true}
+            {"type":"number","label":"Phishing email threshold. (Default 1)","name":"standards.AntiPhishPolicy.PhishThresholdLevel","defaultValue":1}
+            {"type":"switch","label":"Show first contact safety tip","name":"standards.AntiPhishPolicy.EnableFirstContactSafetyTips","defaultValue":true}
+            {"type":"switch","label":"Show user impersonation safety tip","name":"standards.AntiPhishPolicy.EnableSimilarUsersSafetyTips","defaultValue":true}
+            {"type":"switch","label":"Show domain impersonation safety tip","name":"standards.AntiPhishPolicy.EnableSimilarDomainsSafetyTips","defaultValue":true}
+            {"type":"switch","label":"Show user impersonation unusual characters safety tip","name":"standards.AntiPhishPolicy.EnableUnusualCharactersSafetyTips","defaultValue":true}
             {"type":"select","multiple":false,"label":"If the message is detected as spoof by spoof intelligence","name":"standards.AntiPhishPolicy.AuthenticationFailAction","options":[{"label":"Quarantine the message","value":"Quarantine"},{"label":"Move to Junk Folder","value":"MoveToJmf"}]}
             {"type":"select","multiple":false,"label":"Quarantine policy for Spoof","name":"standards.AntiPhishPolicy.SpoofQuarantineTag","options":[{"label":"AdminOnlyAccessPolicy","value":"AdminOnlyAccessPolicy"},{"label":"DefaultFullAccessPolicy","value":"DefaultFullAccessPolicy"},{"label":"DefaultFullAccessWithNotificationPolicy","value":"DefaultFullAccessWithNotificationPolicy"}]}
             {"type":"select","multiple":false,"label":"If a message is detected as user impersonation","name":"standards.AntiPhishPolicy.TargetedUserProtectionAction","options":[{"label":"Move to Junk Folder","value":"MoveToJmf"},{"label":"Delete the message before its delivered","value":"Delete"},{"label":"Quarantine the message","value":"Quarantine"}]}
@@ -38,8 +37,10 @@ function Invoke-CIPPStandardAntiPhishPolicy {
             {"type":"select","multiple":false,"label":"Apply quarantine policy","name":"standards.AntiPhishPolicy.MailboxIntelligenceQuarantineTag","options":[{"label":"AdminOnlyAccessPolicy","value":"AdminOnlyAccessPolicy"},{"label":"DefaultFullAccessPolicy","value":"DefaultFullAccessPolicy"},{"label":"DefaultFullAccessWithNotificationPolicy","value":"DefaultFullAccessWithNotificationPolicy"}]}
         IMPACT
             Low Impact
+        ADDEDDATE
+            2024-03-25
         POWERSHELLEQUIVALENT
-            Set-AntiphishPolicy or New-AntiphishPolicy
+            Set-AntiPhishPolicy or New-AntiPhishPolicy
         RECOMMENDEDBY
             "CIS"
         UPDATECOMMENTBLOCK
@@ -123,7 +124,7 @@ function Invoke-CIPPStandardAntiPhishPolicy {
             Write-LogMessage -API 'Standards' -tenant $Tenant -message 'Anti-phishing policy already correctly configured' -sev Info
         } else {
             if ($MDOLicensed) {
-                $cmdparams = @{
+                $cmdParams = @{
                     Enabled                             = $true
                     PhishThresholdLevel                 = $Settings.PhishThresholdLevel
                     EnableMailboxIntelligence           = $true
@@ -146,7 +147,7 @@ function Invoke-CIPPStandardAntiPhishPolicy {
                     EnableOrganizationDomainsProtection = $true
                 }
             } else {
-                $cmdparams = @{
+                $cmdParams = @{
                     Enabled                             = $true
                     EnableSpoofIntelligence             = $true
                     EnableFirstContactSafetyTips        = $Settings.EnableFirstContactSafetyTips
@@ -159,16 +160,16 @@ function Invoke-CIPPStandardAntiPhishPolicy {
 
             if ($CurrentState.Name -eq $PolicyName) {
                 try {
-                    $cmdparams.Add('Identity', $PolicyName)
-                    New-ExoRequest -tenantid $Tenant -cmdlet 'Set-AntiPhishPolicy' -cmdparams $cmdparams -UseSystemMailbox $true
+                    $cmdParams.Add('Identity', $PolicyName)
+                    New-ExoRequest -tenantid $Tenant -cmdlet 'Set-AntiPhishPolicy' -cmdParams $cmdParams -UseSystemMailbox $true
                     Write-LogMessage -API 'Standards' -tenant $Tenant -message "Updated Anti-phishing policy $PolicyName." -sev Info
                 } catch {
                     Write-LogMessage -API 'Standards' -tenant $Tenant -message "Failed to update Anti-phishing policy $PolicyName." -sev Error -LogData $_
                 }
             } else {
                 try {
-                    $cmdparams.Add('Name', $PolicyName)
-                    New-ExoRequest -tenantid $Tenant -cmdlet 'New-AntiPhishPolicy' -cmdparams $cmdparams -UseSystemMailbox $true
+                    $cmdParams.Add('Name', $PolicyName)
+                    New-ExoRequest -tenantid $Tenant -cmdlet 'New-AntiPhishPolicy' -cmdParams $cmdParams -UseSystemMailbox $true
                     Write-LogMessage -API 'Standards' -tenant $Tenant -message "Created Anti-phishing policy $PolicyName." -sev Info
                 } catch {
                     Write-LogMessage -API 'Standards' -tenant $Tenant -message "Failed to create Anti-phishing policy $PolicyName." -sev Error -LogData $_
@@ -177,27 +178,27 @@ function Invoke-CIPPStandardAntiPhishPolicy {
         }
 
         if ($RuleStateIsCorrect -eq $false) {
-            $cmdparams = @{
+            $cmdParams = @{
                 Priority          = 0
                 RecipientDomainIs = $AcceptedDomains.Name
             }
 
             if ($RuleState.AntiPhishPolicy -ne $PolicyName) {
-                $cmdparams.Add('AntiPhishPolicy', $PolicyName)
+                $cmdParams.Add('AntiPhishPolicy', $PolicyName)
             }
 
             if ($RuleState.Name -eq $RuleName) {
                 try {
-                    $cmdparams.Add('Identity', $RuleName)
-                    New-ExoRequest -tenantid $Tenant -cmdlet 'Set-AntiPhishRule' -cmdparams $cmdparams -UseSystemMailbox $true
+                    $cmdParams.Add('Identity', $RuleName)
+                    New-ExoRequest -tenantid $Tenant -cmdlet 'Set-AntiPhishRule' -cmdParams $cmdParams -UseSystemMailbox $true
                     Write-LogMessage -API 'Standards' -tenant $Tenant -message "Updated Anti-phishing rule $RuleName." -sev Info
                 } catch {
                     Write-LogMessage -API 'Standards' -tenant $Tenant -message "Failed to update Anti-phishing rule $RuleName." -sev Error -LogData $_
                 }
             } else {
                 try {
-                    $cmdparams.Add('Name', $RuleName)
-                    New-ExoRequest -tenantid $Tenant -cmdlet 'New-AntiPhishRule' -cmdparams $cmdparams -UseSystemMailbox $true
+                    $cmdParams.Add('Name', $RuleName)
+                    New-ExoRequest -tenantid $Tenant -cmdlet 'New-AntiPhishRule' -cmdParams $cmdParams -UseSystemMailbox $true
                     Write-LogMessage -API 'Standards' -tenant $Tenant -message "Created Anti-phishing rule $RuleName." -sev Info
                 } catch {
                     Write-LogMessage -API 'Standards' -tenant $Tenant -message "Failed to create Anti-phishing rule $RuleName." -sev Error -LogData $_
@@ -211,11 +212,13 @@ function Invoke-CIPPStandardAntiPhishPolicy {
         if ($StateIsCorrect -eq $true) {
             Write-LogMessage -API 'Standards' -tenant $Tenant -message 'Anti-phishing policy is enabled' -sev Info
         } else {
-            Write-LogMessage -API 'Standards' -tenant $Tenant -message 'Anti-phishing policy is not enabled' -sev Alert
+            Write-StandardsAlert -message "Anti-phishing policy is not enabled" -object $CurrentState -tenant $Tenant -standardName 'AntiPhishPolicy' -standardId $Settings.standardId
+            Write-LogMessage -API 'Standards' -tenant $Tenant -message 'Anti-phishing policy is not enabled' -sev Info
         }
     }
 
     if ($Settings.report -eq $true) {
+        Set-CIPPStandardsCompareField -FieldName 'standards.AntiPhishPolicy' -FieldValue $StateIsCorrect -TenantFilter $tenant
         Add-CIPPBPAField -FieldName 'AntiPhishPolicy' -FieldValue $StateIsCorrect -StoreAs bool -Tenant $tenant
     }
 

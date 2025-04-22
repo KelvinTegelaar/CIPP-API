@@ -10,10 +10,10 @@ Function Invoke-ExecOneDriveProvision {
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
 
-    $APIName = $TriggerMetadata.FunctionName
+    $APIName = $Request.Params.CIPPEndpoint
     $Params = $Request.Body ?? $Request.Query
     try {
-        $State = Request-CIPPSPOPersonalSite -TenantFilter $Params.TenantFilter -UserEmails $Params.UserPrincipalName -ExecutingUser $Request.Headers.'x-ms-client-principal' -APIName $APINAME
+        $State = Request-CIPPSPOPersonalSite -TenantFilter $Params.TenantFilter -UserEmails $Params.UserPrincipalName -Headers $Request.Headers -APIName $APINAME
         $Results = [pscustomobject]@{'Results' = "$State" }
     } catch {
         $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message

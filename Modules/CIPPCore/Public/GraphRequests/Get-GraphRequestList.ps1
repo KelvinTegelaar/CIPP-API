@@ -95,7 +95,6 @@ function Get-GraphRequestList {
     $GraphQuery.Query = $ParamCollection.ToString()
     $PartitionKey = Get-StringHash -String (@($Endpoint, $ParamCollection.ToString()) -join '-')
     Write-Information "PK: $PartitionKey"
-    Write-Information ( 'GET [ {0} ]' -f $GraphQuery.ToString())
 
     # Perform $count check before caching
     $Count = 0
@@ -117,12 +116,27 @@ function Get-GraphRequestList {
         if ($AsApp) {
             $GraphRequest.asApp = $AsApp
         }
+
+        if ($Endpoint -match '%' -or $Parameters.Values -match '%') {
+            $TenantId = (Get-Tenants -IncludeErrors | Where-Object { $_.defaultDomainName -eq $TenantFilter -or $_.customerId -eq $TenantFilter }).customerId
+            $Endpoint = Get-CIPPTextReplacement -TenantFilter $TenantFilter -Text $Endpoint
+            $GraphQuery = [System.UriBuilder]('https://graph.microsoft.com/{0}/{1}' -f $Version, $Endpoint)
+            $ParamCollection = [System.Web.HttpUtility]::ParseQueryString([String]::Empty)
+            foreach ($Item in ($Parameters.GetEnumerator() | Sort-Object -CaseSensitive -Property Key)) {
+                $Value = Get-CIPPTextReplacement -TenantFilter $TenantFilter -Text $Item.Value
+                $ParamCollection.Add($Item.Key, $Value)
+            }
+            $GraphQuery.Query = $ParamCollection.ToString()
+            $GraphRequest.uri = $GraphQuery.ToString()
+        }
+
         if ($Parameters.'$count' -and !$SkipCache.IsPresent -and !$NoPagination.IsPresent) {
             $Count = New-GraphGetRequest @GraphRequest -CountOnly -ErrorAction Stop
             if ($CountOnly.IsPresent) { return $Count }
             Write-Information "Total results (`$count): $Count"
         }
     }
+    Write-Information ( 'GET [ {0} ]' -f $GraphQuery.ToString())
 
     try {
         if ($QueueId) {
@@ -138,44 +152,19 @@ function Get-GraphRequestList {
                 $Table = Get-CIPPTable -TableName $TableName
                 $Timestamp = (Get-Date).AddHours(-1).ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ss.fffK')
                 if ($TenantFilter -eq 'AllTenants') {
-                    $Filter = "PartitionKey eq '{0}' and QueueType eq 'AllTenants' and Timestamp ge datetime'{1}'" -f $PartitionKey, $Timestamp
+                    $Filter = "PartitionKey eq '{0}' and Timestamp ge datetime'{1}'" -f $PartitionKey, $Timestamp
                 } else {
-                    $Filter = "PartitionKey eq '{0}' and Tenant eq '{1}' and Timestamp ge datetime'{2}'" -f $PartitionKey, $TenantFilter, $Timestamp
+                    $Filter = "PartitionKey eq '{0}' and (RowKey eq '{1}' or OriginalEntityId eq '{1}') and Timestamp ge datetime'{2}'" -f $PartitionKey, $TenantFilter, $Timestamp
                 }
                 $Rows = Get-CIPPAzDataTableEntity @Table -Filter $Filter
                 $Type = 'Cache'
                 Write-Information "Cached: $(($Rows | Measure-Object).Count) rows (Type: $($Type))"
                 $QueueReference = '{0}-{1}' -f $TenantFilter, $PartitionKey
-                $RunningQueue = Invoke-ListCippQueue | Where-Object { $_.Reference -eq $QueueReference -and $_.Status -ne 'Completed' -and $_.Status -ne 'Failed' }
+                $RunningQueue = Invoke-ListCippQueue | Where-Object { $_.Reference -eq $QueueReference -and $_.Status -notmatch 'Completed' -and $_.Status -notmatch 'Failed' }
             }
         }
     } catch {
         Write-Information $_.InvocationInfo.PositionMessage
-    }
-
-    if ($TenantFilter -ne 'AllTenants' -and $Endpoint -match '%tenantid%') {
-        Write-Information "Replacing TenantId in endpoint with $TenantFilter"
-        $TenantId = (Get-Tenants -IncludeErrors | Where-Object { $_.defaultDomainName -eq $TenantFilter -or $_.customerId -eq $TenantFilter }).customerId
-        $Endpoint = $Endpoint -replace '%tenantid%', $TenantId
-        $GraphQuery = [System.UriBuilder]('https://graph.microsoft.com/{0}/{1}' -f $Version, $Endpoint)
-        $ParamCollection = [System.Web.HttpUtility]::ParseQueryString([String]::Empty)
-        foreach ($Item in ($Parameters.GetEnumerator() | Sort-Object -CaseSensitive -Property Key)) {
-            $ParamCollection.Add($Item.Key, $Item.Value -replace '%tenantid%', $TenantId)
-        }
-        $GraphQuery.Query = $ParamCollection.ToString()
-        $GraphRequest.uri = $GraphQuery.ToString()
-    }
-
-    if ($TenantFilter -ne 'AllTenants' -and $Endpoint -match '%appid%') {
-        Write-Information "Replacing AppId in endpoint with $env:ApplicationID"
-        $Endpoint = $Endpoint -replace '%appid%', $env:ApplicationID
-        $GraphQuery = [System.UriBuilder]('https://graph.microsoft.com/{0}/{1}' -f $Version, $Endpoint)
-        $ParamCollection = [System.Web.HttpUtility]::ParseQueryString([String]::Empty)
-        foreach ($Item in ($Parameters.GetEnumerator() | Sort-Object -CaseSensitive -Property Key)) {
-            $ParamCollection.Add($Item.Key, $Item.Value -replace '%appid%', $env:ApplicationID)
-        }
-        $GraphQuery.Query = $ParamCollection.ToString()
-        $GraphRequest.uri = $GraphQuery.ToString()
     }
 
     if (!$Rows) {
@@ -337,8 +326,16 @@ function Get-GraphRequestList {
             }
         }
     } else {
-        $Rows | ForEach-Object {
-            $_.Data | ConvertFrom-Json
+        foreach ($Row in $Rows) {
+            if ($Row.Data) {
+                try {
+                    $Row.Data | ConvertFrom-Json -ErrorAction Stop
+                } catch {
+                    Write-Warning "Could not convert data to JSON: $($_.Exception.Message)"
+                    #Write-Information ($Row | ConvertTo-Json)
+                    continue
+                }
+            }
         }
     }
 }

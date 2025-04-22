@@ -3,21 +3,22 @@ using namespace System.Net
 Function Invoke-AddGroupTemplate {
     <#
     .FUNCTIONALITY
-        Entrypoint
+        Entrypoint,AnyTenant
     .ROLE
         Identity.Group.ReadWrite
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
-    $APIName = $TriggerMetadata.FunctionName
-    Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -message 'Accessed this API' -Sev 'Debug'
+    $APIName = $Request.Params.CIPPEndpoint
+    $Headers = $Request.Headers
+    Write-LogMessage -headers $Headers -API $APIName -message 'Accessed this API' -Sev 'Debug'
 
     $GUID = (New-Guid).GUID
     try {
         if (!$Request.body.displayname) { throw 'You must enter a displayname' }
 
         $object = [PSCustomObject]@{
-            Displayname     = $request.body.displayname
+            Displayname     = $request.body.displayName
             Description     = $request.body.description
             groupType       = $request.body.groupType
             MembershipRules = $request.body.membershipRules
@@ -32,11 +33,11 @@ Function Invoke-AddGroupTemplate {
             RowKey       = "$GUID"
             PartitionKey = 'GroupTemplate'
         }
-        Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -message "Created Group template named $($Request.body.displayname) with GUID $GUID" -Sev 'Debug'
+        Write-LogMessage -headers $Request.Headers -API $APINAME -message "Created Group template named $($Request.body.displayname) with GUID $GUID" -Sev 'Debug'
 
         $body = [pscustomobject]@{'Results' = 'Successfully added template' }
     } catch {
-        Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -message "Group Template Creation failed: $($_.Exception.Message)" -Sev 'Error'
+        Write-LogMessage -headers $Request.Headers -API $APINAME -message "Group Template Creation failed: $($_.Exception.Message)" -Sev 'Error'
         $body = [pscustomobject]@{'Results' = "Group Template Creation failed: $($_.Exception.Message)" }
     }
 

@@ -1,0 +1,58 @@
+services:
+  azurite:
+    image: mcr.microsoft.com/azure-storage/azurite
+    container_name: azurite
+    ports:
+      - "10000:10000"
+      - "10001:10001"
+      - "10002:10002"
+    networks:
+      - func-network
+    environment:
+      - AZURITE_ACCOUNTS=devstoreaccount1:Eby8vdM02xNoBnZf6KgBVU4=
+
+  cippapi:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    environment:
+      - FUNCTIONS_WORKER_RUNTIME=${FUNCTIONS_WORKER_RUNTIME}
+      - FUNCTIONS_WORKER_RUNTIME_VERSION=${FUNCTIONS_WORKER_RUNTIME_VERSION}
+      - AzureWebJobsStorage=${AzureWebJobsStorage}
+      - ApplicationID=${ApplicationID}
+      - ApplicationSecret=${ApplicationSecret}
+      - RefreshToken=${RefreshToken}
+      - TenantID=${TenantID}
+      - DEV_SKIP_BPA_TIMER=${DEV_SKIP_BPA_TIMER}
+      - DEV_SKIP_DOMAIN_TIMER=${DEV_SKIP_DOMAIN_TIMER}
+      - SetFromProfile=${SetFromProfile}
+      - FUNCTIONS_EXTENSION_VERSION=${FUNCTIONS_EXTENSION_VERSION}
+      - AzureWebJobs.BestPracticeAnalyser_OrchestrationStarterTimer.Disabled=true
+      - AzureWebJobs.Domain_OrchestrationStarterTimer.Disabled=true
+      - WEBSITE_HOSTNAME=cippapi
+    depends_on:
+      - azurite
+    networks:
+      - func-network
+    deploy:
+      replicas: 3
+
+  nginx:
+    image: nginx:alpine
+    container_name: nginx
+    ports:
+      - "7071:80"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      - cippapi
+    networks:
+      - func-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://cippapi:7071"]
+      interval: 30s
+      retries: 5
+
+networks:
+  func-network:
+    driver: bridge

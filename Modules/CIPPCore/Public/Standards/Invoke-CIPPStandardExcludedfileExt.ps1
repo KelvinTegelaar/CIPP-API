@@ -13,13 +13,14 @@ function Invoke-CIPPStandardExcludedfileExt {
         CAT
             SharePoint Standards
         TAG
-            "highimpact"
         ADDEDCOMPONENT
             {"type":"textField","name":"standards.ExcludedfileExt.ext","label":"Extensions, Comma separated"}
         IMPACT
             High Impact
+        ADDEDDATE
+            2022-06-15
         POWERSHELLEQUIVALENT
-            Update-MgAdminSharepointSetting
+            Update-MgAdminSharePointSetting
         RECOMMENDEDBY
         UPDATECOMMENTBLOCK
             Run the Tools\Update-StandardsComments.ps1 script to update this comment block
@@ -36,20 +37,20 @@ function Invoke-CIPPStandardExcludedfileExt {
     $Exts = $Exts | ForEach-Object { if ($_ -notlike '*.*') { "*.$_" } else { $_ } }
 
 
-    $MissingExclutions = foreach ($Exclusion in $Exts) {
+    $MissingExclusions = foreach ($Exclusion in $Exts) {
         if ($Exclusion -notin $CurrentInfo.excludedFileExtensionsForSyncApp) {
             $Exclusion
         }
     }
 
-    Write-Host "MissingExclutions: $($MissingExclutions)"
+    Write-Host "MissingExclusions: $($MissingExclusions)"
 
 
     If ($Settings.remediate -eq $true) {
 
         # If the number of extensions in the settings does not match the number of extensions in the current settings, we need to update the settings
-        $MissingExclutions = if ($Exts.Count -ne $CurrentInfo.excludedFileExtensionsForSyncApp.Count) { $true } else { $MissingExclutions }
-        if ($MissingExclutions) {
+        $MissingExclusions = if ($Exts.Count -ne $CurrentInfo.excludedFileExtensionsForSyncApp.Count) { $true } else { $MissingExclusions }
+        if ($MissingExclusions) {
             Write-Host "CurrentInfo.excludedFileExtensionsForSyncApp: $($CurrentInfo.excludedFileExtensionsForSyncApp)"
             Write-Host "Exts: $($Exts)"
             try {
@@ -67,14 +68,16 @@ function Invoke-CIPPStandardExcludedfileExt {
 
     if ($Settings.alert -eq $true) {
 
-        if ($MissingExclutions) {
-            Write-LogMessage -API 'Standards' -tenant $tenant -message "Excluded synced files does not contain $($MissingExclutions -join ',')" -sev Alert
+        if ($MissingExclusions) {
+            Write-LogMessage -API 'Standards' -tenant $tenant -message "Excluded synced files does not contain $($MissingExclusions -join ',')" -sev Alert
         } else {
             Write-LogMessage -API 'Standards' -tenant $tenant -message "Excluded synced files contains $($Settings.ext)" -sev Info
         }
     }
 
     if ($Settings.report -eq $true) {
+        $state = $MissingExclusions ? (@{ ext = $CurrentInfo.excludedFileExtensionsForSyncApp -join ',' }): $true
+        Set-CIPPStandardsCompareField -FieldName 'standards.ExcludedfileExt' -FieldValue $state -Tenant $tenant
         Add-CIPPBPAField -FieldName 'ExcludedfileExt' -FieldValue $CurrentInfo.excludedFileExtensionsForSyncApp -StoreAs json -Tenant $tenant
     }
 }

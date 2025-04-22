@@ -13,10 +13,11 @@ function Invoke-CIPPStandardSPDisableLegacyWorkflows {
         CAT
             SharePoint Standards
         TAG
-            "lowimpact"
         ADDEDCOMPONENT
         IMPACT
             Low Impact
+        ADDEDDATE
+            2024-07-15
         POWERSHELLEQUIVALENT
             Set-SPOTenant -DisableWorkflow2010 \$true -DisableWorkflow2013 \$true -DisableBackToClassic \$true
         RECOMMENDEDBY
@@ -26,14 +27,13 @@ function Invoke-CIPPStandardSPDisableLegacyWorkflows {
         https://docs.cipp.app/user-documentation/tenant/standards/list-standards/sharepoint-standards#low-impact
     #>
     param($Tenant, $Settings)
-    ##$Rerun -Type Standard -Tenant $Tenant -Settings $Settings 'SPDisableLegacyWorkflows'
 
     $CurrentState = Get-CIPPSPOTenant -TenantFilter $Tenant |
-    Select-Object -Property *
+        Select-Object -Property *
 
     $StateIsCorrect = ($CurrentState.StopNew2010Workflows -eq $true) -and
-                      ($CurrentState.StopNew2013Workflows -eq $true) -and
-                      ($CurrentState.DisableBackToClassic -eq $true)
+    ($CurrentState.StopNew2013Workflows -eq $true) -and
+    ($CurrentState.DisableBackToClassic -eq $true)
 
     if ($Settings.remediate -eq $true) {
         if ($StateIsCorrect -eq $true) {
@@ -65,5 +65,11 @@ function Invoke-CIPPStandardSPDisableLegacyWorkflows {
 
     if ($Settings.report -eq $true) {
         Add-CIPPBPAField -FieldName 'SPDisableLegacyWorkflows' -FieldValue $StateIsCorrect -StoreAs bool -Tenant $Tenant
+        if ($StateIsCorrect) {
+            $FieldValue = $true
+        } else {
+            $FieldValue = $CurrentState
+        }
+        Set-CIPPStandardsCompareField -FieldName 'standards.SPDisableLegacyWorkflows' -FieldValue $FieldValue -Tenant $Tenant
     }
 }

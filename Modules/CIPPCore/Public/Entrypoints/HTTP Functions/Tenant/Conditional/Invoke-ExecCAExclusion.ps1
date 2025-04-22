@@ -10,25 +10,35 @@ Function Invoke-ExecCAExclusion {
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
 
-    $APIName = $TriggerMetadata.FunctionName
-    Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -message 'Accessed this API' -Sev 'Debug'
+    $APIName = $Request.Params.CIPPEndpoint
+    $Headers = $Request.Headers
+    Write-LogMessage -headers $Headers -API $APIName -message 'Accessed this API' -Sev 'Debug'
+
     #If UserId is a guid, get the user's UPN
-    if ($Request.body.UserId -match '^[a-f0-9]{8}-([a-f0-9]{4}-){3}[a-f0-9]{12}$') {
-        $Username = (New-GraphGetRequest -uri "https://graph.microsoft.com/v1.0/users/$($Request.body.UserId)" -tenantid $Request.body.TenantFilter).userPrincipalName
+    $TenantFilter = $Request.Body.tenantFilter
+    $UserId = $Request.Body.UserID
+    $EndDate = $Request.Body.EndDate
+    $PolicyId = $Request.Body.PolicyId
+    $ExclusionType = $Request.Body.ExclusionType
+
+
+    if ($UserId -match '^[a-f0-9]{8}-([a-f0-9]{4}-){3}[a-f0-9]{12}$') {
+        $Username = (New-GraphGetRequest -uri "https://graph.microsoft.com/v1.0/users/$($UserId)" -tenantid $TenantFilter).userPrincipalName
     }
-    if ($Request.body.vacation -eq 'true') {
-        $StartDate = $Request.body.StartDate
+    if ($Request.Body.vacation -eq 'true') {
+        $StartDate = $Request.Body.StartDate
+        $EndDate = $Request.Body.EndDate
         $TaskBody = [pscustomobject]@{
-            TenantFilter  = $Request.body.TenantFilter
-            Name          = "Add CA Exclusion Vacation Mode: $Username - $($Request.body.TenantFilter)"
+            TenantFilter  = $TenantFilter
+            Name          = "Add CA Exclusion Vacation Mode: $Username - $($TenantFilter)"
             Command       = @{
                 value = 'Set-CIPPCAExclusion'
                 label = 'Set-CIPPCAExclusion'
             }
             Parameters    = [pscustomobject]@{
                 ExclusionType = 'Add'
-                UserID        = $Request.body.UserID
-                PolicyId      = $Request.body.PolicyId
+                UserID        = $UserID
+                PolicyId      = $PolicyId
                 UserName      = $Username
             }
             ScheduledTime = $StartDate
@@ -36,12 +46,12 @@ Function Invoke-ExecCAExclusion {
         Add-CIPPScheduledTask -Task $TaskBody -hidden $false
         #Removal of the exclusion
         $TaskBody.Parameters.ExclusionType = 'Remove'
-        $TaskBody.Name = "Remove CA Exclusion Vacation Mode: $username - $($Request.body.TenantFilter)"
-        $TaskBody.ScheduledTime = $Request.body.EndDate
+        $TaskBody.Name = "Remove CA Exclusion Vacation Mode: $Username - $($TenantFilter)"
+        $TaskBody.ScheduledTime = $EndDate
         Add-CIPPScheduledTask -Task $TaskBody -hidden $false
         $body = @{ Results = "Successfully added vacation mode schedule for $Username." }
     } else {
-        Set-CIPPCAExclusion -TenantFilter $Request.body.TenantFilter -ExclusionType $Request.body.ExclusionType -UserID $Request.body.UserID -PolicyId $Request.body.PolicyId -executingUser $request.headers.'x-ms-client-principal' -UserName $Username
+        Set-CIPPCAExclusion -TenantFilter $TenantFilter -ExclusionType $ExclusionType -UserID $UserID -PolicyId $PolicyId -Headers $Headers -UserName $Username
     }
 
 

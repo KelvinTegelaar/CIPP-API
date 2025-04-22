@@ -3,25 +3,48 @@ using namespace System.Net
 Function Invoke-ExecAddAlert {
     <#
     .FUNCTIONALITY
-        Entrypoint
+        Entrypoint,AnyTenant
     .ROLE
         CIPP.Alert.ReadWrite
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
 
-    if ($Request.Body.sendEmailNow) {
-        $CIPPAlert = @{
-            Type         = 'email'
-            Title        = 'Test Email Alert'
-            HTMLContent  = 'This is a test from CIPP'
-            TenantFilter = 'PartnerTenant'
+    $APIName = $Request.Params.CIPPEndpoint
+    $Headers = $Request.Headers
+    Write-LogMessage -headers $Headers -API $APIName -message 'Accessed this API' -Sev 'Debug'
+
+    $Severity = 'Alert'
+
+    $Result = if ($Request.Body.sendEmailNow -or $Request.Body.sendWebhookNow -eq $true -or $Request.Body.writeLog -eq $true) {
+        $Title = 'CIPP Notification Test'
+        if ($Request.Body.sendEmailNow) {
+            $CIPPAlert = @{
+                Type        = 'email'
+                Title       = $Title
+                HTMLContent = $Request.Body.text
+            }
+            Send-CIPPAlert @CIPPAlert
         }
-        $Result = Send-CIPPAlert @CIPPAlert
+        if ($Request.Body.sendWebhookNow) {
+            $JSONContent = @{
+                Title = $Title
+                Text  = $Request.Body.text
+            } | ConvertTo-Json -Compress
+            $CIPPAlert = @{
+                Type        = 'webhook'
+                Title       = $Title
+                JSONContent = $JSONContent
+            }
+            Send-CIPPAlert @CIPPAlert
+        }
+        if ($Request.Body.writeLog) {
+            Write-LogMessage -headers $Headers -API 'Alerts' -message $Request.Body.text -Sev $Severity
+            'Successfully generated alert.'
+        }
     } else {
-        Write-LogMessage -user $request.headers.'x-ms-client-principal' -API 'Alerts' -message $request.body.text -Sev $request.body.Severity
-        $Result = 'Successfully generated alert.'
-        # Associate values to output bindings by calling 'Push-OutputBinding'.
+        Write-LogMessage -headers $Headers -API 'Alerts' -message $Request.Body.text -Sev $Severity
+        'Successfully generated alert.'
     }
     Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
             StatusCode = [HttpStatusCode]::OK

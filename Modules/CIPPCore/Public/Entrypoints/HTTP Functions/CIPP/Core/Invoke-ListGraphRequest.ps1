@@ -9,20 +9,20 @@ function Invoke-ListGraphRequest {
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
 
-    $APIName = $TriggerMetadata.FunctionName
-
+    $APIName = $Request.Params.CIPPEndpoint
+    $Headers = $Request.Headers
     $Message = 'Accessed this API | Endpoint: {0}' -f $Request.Query.Endpoint
-    Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -message $Message -Sev 'Debug'
+    Write-LogMessage -headers $Headers -API $APIName -message $Message -Sev 'Debug'
 
     $CippLink = ([System.Uri]$TriggerMetadata.Headers.Referer).PathAndQuery
 
     $Parameters = @{}
     if ($Request.Query.'$filter') {
-        $Parameters.'$filter' = $Request.Query.'$filter' -replace '%tenantid%', $env:TenantID
+        $Parameters.'$filter' = $Request.Query.'$filter'
     }
 
     if (!$Request.Query.'$filter' -and $Request.Query.graphFilter) {
-        $Parameters.'$filter' = $Request.Query.graphFilter -replace '%tenantid%', $env:TenantID
+        $Parameters.'$filter' = $Request.Query.graphFilter
     }
 
     if ($Request.Query.'$select') {
@@ -139,6 +139,11 @@ function Invoke-ListGraphRequest {
                 $Results = @()
             }
         }
+
+        if ($Request.Headers.'x-ms-coldstart' -eq 1) {
+            $Metadata.ColdStart = $true
+        }
+
         $GraphRequestData = [PSCustomObject]@{
             Results  = @($Results)
             Metadata = $Metadata

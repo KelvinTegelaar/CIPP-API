@@ -13,10 +13,12 @@ function Invoke-CIPPStandardDelegateSentItems {
         CAT
             Exchange Standards
         TAG
-            "mediumimpact"
         ADDEDCOMPONENT
+            {"type":"switch","label":"Include user mailboxes","name":"standards.DelegateSentItems.IncludeUserMailboxes"}
         IMPACT
             Medium Impact
+        ADDEDDATE
+            2021-11-16
         POWERSHELLEQUIVALENT
             Set-Mailbox
         RECOMMENDEDBY
@@ -37,10 +39,10 @@ function Invoke-CIPPStandardDelegateSentItems {
 
     if ($Settings.IncludeUserMailboxes -eq $true) {
         $Mailboxes = New-ExoRequest -tenantid $Tenant -cmdlet 'Get-Mailbox' -cmdParams @{ RecipientTypeDetails = @('UserMailbox', 'SharedMailbox') } -Select 'Identity,UserPrincipalName,MessageCopyForSendOnBehalfEnabled,MessageCopyForSentAsEnabled' |
-            Where-Object { $_.MessageCopyForSendOnBehalfEnabled -eq $false -or $_.MessageCopyForSentAsEnabled -eq $false }
+        Where-Object { $_.MessageCopyForSendOnBehalfEnabled -eq $false -or $_.MessageCopyForSentAsEnabled -eq $false }
     } else {
         $Mailboxes = New-ExoRequest -tenantid $Tenant -cmdlet 'Get-Mailbox' -cmdParams @{ RecipientTypeDetails = @('SharedMailbox') } -Select 'Identity,UserPrincipalName,MessageCopyForSendOnBehalfEnabled,MessageCopyForSentAsEnabled' |
-            Where-Object { $_.MessageCopyForSendOnBehalfEnabled -eq $false -or $_.MessageCopyForSentAsEnabled -eq $false }
+        Where-Object { $_.MessageCopyForSendOnBehalfEnabled -eq $false -or $_.MessageCopyForSentAsEnabled -eq $false }
     }
 
 
@@ -80,12 +82,15 @@ function Invoke-CIPPStandardDelegateSentItems {
         if ($null -eq $Mailboxes) {
             Write-LogMessage -API 'Standards' -tenant $Tenant -message 'Delegate Sent Items Style is enabled for all mailboxes' -sev Info
         } else {
-            Write-LogMessage -API 'Standards' -tenant $Tenant -message "Delegate Sent Items Style is not enabled for $($Mailboxes.Count) mailboxes" -sev Alert
+            Write-StandardsAlert -message "Delegate Sent Items Style is not enabled for $($Mailboxes.Count) mailboxes" -object $Mailboxes -tenant $Tenant -standardName 'DelegateSentItems' -standardId $Settings.standardId
+            Write-LogMessage -API 'Standards' -tenant $Tenant -message "Delegate Sent Items Style is not enabled for $($Mailboxes.Count) mailboxes" -sev Info
         }
     }
 
     if ($Settings.report -eq $true) {
         $Filtered = $Mailboxes | Select-Object -Property UserPrincipalName, MessageCopyForSendOnBehalfEnabled, MessageCopyForSentAsEnabled
+        $CurrentState = if ($null -eq $Mailboxes) { $true } else { $Filtered }
+        Set-CIPPStandardsCompareField -FieldName 'standards.DelegateSentItems' -FieldValue $CurrentState -TenantFilter $Tenant
         Add-CIPPBPAField -FieldName 'DelegateSentItems' -FieldValue $Filtered -StoreAs json -Tenant $Tenant
     }
 }

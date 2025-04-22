@@ -18,8 +18,8 @@ function Set-CIPPForwarding {
     .PARAMETER username
     Username to manage for forwarding.
 
-    .PARAMETER ExecutingUser
-    CIPP user executing the command.
+    .PARAMETER Headers
+    CIPP HTTP Request headers.
 
     .PARAMETER APIName
     Name of the API executing the command.
@@ -40,7 +40,7 @@ function Set-CIPPForwarding {
         [string]$forwardingSMTPAddress,
         [string]$tenantFilter,
         [string]$username,
-        [string]$ExecutingUser,
+        $Headers,
         [string]$APIName = 'Forwarding',
         [string]$Forward,
         $KeepCopy,
@@ -63,11 +63,11 @@ function Set-CIPPForwarding {
                 $Message = "Forwarding all email for $username to External Address $ForwardingSMTPAddress and keeping a copy set to $KeepCopy"
             }
         }
-        Write-LogMessage -user $ExecutingUser -API $APIName -message $Message -Sev 'Info' -tenant $TenantFilter
+        Write-LogMessage -headers $Headers -API $APIName -message $Message -Sev 'Info' -tenant $TenantFilter
         return $Message
     } catch {
         $ErrorMessage = Get-CippException -Exception $_
-        Write-LogMessage -user $ExecutingUser -API $APIName -message "Could not add forwarding for $($username). Error: $($ErrorMessage.NormalizedError)" -Sev 'Error' -tenant $TenantFilter -LogData $ErrorMessage
+        Write-LogMessage -headers $Headers -API $APIName -message "Could not add forwarding for $($username). Error: $($ErrorMessage.NormalizedError)" -Sev 'Error' -tenant $TenantFilter -LogData $ErrorMessage
         return "Could not add forwarding for $($username). Error: $($ErrorMessage.NormalizedError)"
     }
 }

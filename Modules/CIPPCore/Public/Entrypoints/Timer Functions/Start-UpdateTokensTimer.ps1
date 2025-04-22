@@ -25,9 +25,11 @@ function Start-UpdateTokensTimer {
             } else {
                 if ($env:MSI_SECRET) {
                     Disable-AzContextAutosave -Scope Process | Out-Null
-                    $AzSession = Connect-AzAccount -Identity
+                    $null = Connect-AzAccount -Identity
+                    $SubscriptionId = $env:WEBSITE_OWNER_NAME -split '\+' | Select-Object -First 1
+                    $null = Set-AzContext -SubscriptionId $SubscriptionId
                 }
-                $KV = ($ENV:WEBSITE_DEPLOYMENT_ID -split '-')[0]
+                $KV = ($env:WEBSITE_DEPLOYMENT_ID -split '-')[0]
                 if ($Refreshtoken) {
                     Set-AzKeyVaultSecret -VaultName $KV -Name 'RefreshToken' -SecretValue (ConvertTo-SecureString -String $Refreshtoken -AsPlainText -Force)
                 } else {

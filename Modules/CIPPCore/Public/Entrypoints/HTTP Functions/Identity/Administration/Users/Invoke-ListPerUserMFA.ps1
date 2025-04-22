@@ -10,12 +10,11 @@ function Invoke-ListPerUserMFA {
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
 
-    $APIName = $TriggerMetadata.FunctionName
-    $User = $request.headers.'x-ms-client-principal'
-    Write-LogMessage -user $User -API $APINAME -message 'Accessed this API' -Sev 'Debug'
+    $APIName = $Request.Params.CIPPEndpoint
+    $User = $Request.Headers
+    Write-LogMessage -Headers $User -API $APINAME -message 'Accessed this API' -Sev 'Debug'
 
-    # Write to the Azure Functions log stream.
-    Write-Host 'PowerShell HTTP trigger function processed a request.'
+
 
     # Parse query parameters
     $Tenant = $Request.query.tenantFilter

@@ -13,10 +13,11 @@ function Invoke-CIPPStandardEnablePronouns {
         CAT
             Global Standards
         TAG
-            "lowimpact"
         ADDEDCOMPONENT
         IMPACT
             Low Impact
+        ADDEDDATE
+            2024-06-05
         POWERSHELLEQUIVALENT
             Update-MgBetaAdminPeoplePronoun -IsEnabledInOrganization:\$true
         RECOMMENDEDBY
@@ -62,12 +63,13 @@ function Invoke-CIPPStandardEnablePronouns {
         if ($CurrentState.isEnabledInOrganization -eq $true) {
             Write-LogMessage -API 'Standards' -tenant $tenant -message 'Pronouns are enabled.' -sev Info
         } else {
-            Write-LogMessage -API 'Standards' -tenant $tenant -message 'Pronouns are not enabled.' -sev Alert
+            Write-StandardsAlert -message 'Pronouns are not enabled' -object $CurrentState -tenant $tenant -standardName 'EnablePronouns' -standardId $Settings.standardId
+            Write-LogMessage -API 'Standards' -tenant $tenant -message 'Pronouns are not enabled.' -sev Info
         }
     }
 
     if ($Settings.report -eq $true) {
-
+        Set-CIPPStandardsCompareField -FieldName 'standards.EnablePronouns' -FieldValue $CurrentState.isEnabledInOrganization -Tenant $tenant
         Add-CIPPBPAField -FieldName 'PronounsEnabled' -FieldValue $CurrentState.isEnabledInOrganization -StoreAs bool -Tenant $tenant
     }
 }

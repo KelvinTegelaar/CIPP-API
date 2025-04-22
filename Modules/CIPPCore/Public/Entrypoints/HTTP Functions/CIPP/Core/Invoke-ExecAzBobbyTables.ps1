@@ -13,10 +13,16 @@ function Invoke-ExecAzBobbyTables {
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
 
+    $APIName = $Request.Params.CIPPEndpoint
+    $Headers = $Request.Headers
+    Write-LogMessage -headers $Headers -API $APIName -message 'Accessed this API' -Sev 'Debug'
+
     $AllowList = @(
         'Add-AzDataTableEntity'
+        'Add-CIPPAzDataTableEntity'
         'Update-AzDataTableEntity'
         'Get-AzDataTableEntity'
+        'Get-CIPPAzDataTableEntity'
         'Get-AzDataTable'
         'New-AzDataTable'
         'Remove-AzDataTableEntity'

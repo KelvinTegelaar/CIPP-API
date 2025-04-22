@@ -10,8 +10,9 @@ Function Invoke-RemoveWebhookAlert {
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
 
-    $APIName = $TriggerMetadata.FunctionName
-    Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -message 'Accessed this API' -Sev 'Debug'
+    $APIName = $Request.Params.CIPPEndpoint
+    $Headers = $Request.Headers
+    Write-LogMessage -headers $Headers -API $APIName -message 'Accessed this API' -Sev 'Debug'
 
     try {
         $WebhookTable = Get-CIPPTable -TableName 'SchedulerConfig'
@@ -33,7 +34,7 @@ Function Invoke-RemoveWebhookAlert {
                     }
                     Remove-AzDataTableEntity -Force @Table -Entity $CompleteObject -ErrorAction SilentlyContinue | Out-Null
                 } catch {
-                    Write-LogMessage -user $Request.headers.'x-ms-client-principal' -API $APIName -message "Failed to remove webhook for AllTenants. $($_.Exception.Message)" -Sev 'Error'
+                    Write-LogMessage -headers $Request.Headers -API $APIName -message "Failed to remove webhook for AllTenants. $($_.Exception.Message)" -Sev 'Error'
                 }
             } else {
                 $Tenants = $Request.query.TenantFilter
@@ -48,7 +49,7 @@ Function Invoke-RemoveWebhookAlert {
         }
         $body = [pscustomobject]@{'Results' = $Results }
     } catch {
-        Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -message "Failed to remove webhook alert. $($_.Exception.Message)" -Sev 'Error'
+        Write-LogMessage -headers $Request.Headers -API $APINAME -message "Failed to remove webhook alert. $($_.Exception.Message)" -Sev 'Error'
         $body = [pscustomobject]@{'Results' = "Failed to remove webhook alert: $($_.Exception.Message)" }
     }
 

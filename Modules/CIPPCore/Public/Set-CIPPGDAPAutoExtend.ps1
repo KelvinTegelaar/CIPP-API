@@ -4,7 +4,7 @@ function Set-CIPPGDAPAutoExtend {
         $RelationShipid,
         [switch]$All,
         $APIName = 'Set GDAP Auto Exension',
-        $ExecutingUser
+        $Headers
     )
 
     $ReturnedData = if ($All -eq $true) {
@@ -14,7 +14,7 @@ function Set-CIPPGDAPAutoExtend {
                 $AddedHeader = @{'If-Match' = $Relation.'@odata.etag' }
                 if ($PSCmdlet.ShouldProcess($Relation.id, "Set auto renew for $($Relation.customer.displayName)")) {
                     $null = New-GraphPostRequest -uri "https://graph.microsoft.com/beta/tenantRelationships/delegatedAdminRelationships/$($Relation.id)" -tenantid $env:TenantID -type PATCH -body '{"autoExtendDuration":"P180D"}' -Verbose -NoAuthCheck $true -AddedHeaders $AddedHeader
-                    Write-LogMessage -user $ExecutingUser -API $APIName -message "Successfully set auto renew for tenant $($Relation.customer.displayName) with ID $($RelationShipid)" -Sev 'Info'
+                    Write-LogMessage -headers $Headers -API $APIName -message "Successfully set auto renew for tenant $($Relation.customer.displayName) with ID $($RelationShipid)" -Sev 'Info'
                     @("Successfully set auto renew for tenant $($Relation.customer.displayName) with ID $($Relation.id)" )
                 }
             } catch {
@@ -29,7 +29,7 @@ function Set-CIPPGDAPAutoExtend {
             $AddedHeader = @{'If-Match' = $Relationship.'@odata.etag' }
             if ($PSCmdlet.ShouldProcess($RelationShipid, "Set auto renew for $($Relationship.customer.displayName)")) {
                 $null = New-GraphPostRequest -uri "https://graph.microsoft.com/beta/tenantRelationships/delegatedAdminRelationships/$($RelationShipid)" -tenantid $env:TenantID -type PATCH -body '{"autoExtendDuration":"P180D"}' -Verbose -NoAuthCheck $true -AddedHeaders $AddedHeader
-                write-LogMessage -user $ExecutingUser -API $APIName -message "Successfully set auto renew for tenant $($Relationship.customer.displayName) with ID $($RelationShipid)" -Sev 'Info'
+                write-LogMessage -headers $Headers -API $APIName -message "Successfully set auto renew for tenant $($Relationship.customer.displayName) with ID $($RelationShipid)" -Sev 'Info'
                 @("Successfully set auto renew for tenant $($Relationship.customer.displayName) with ID $($RelationShipid)" )
             }
         } catch {

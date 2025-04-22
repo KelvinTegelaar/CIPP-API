@@ -23,7 +23,7 @@ function New-GradientServiceSyncRun {
             $ActivateRequest = Invoke-RestMethod -Uri 'https://app.usegradient.com/api/vendor-api/organization/status/active' -Method PATCH -Headers $GradientToken
         }
     } catch {
-        Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -message "Failed to create tenants in Gradient API. Error: $($_.Exception.Message)" -Sev 'Error' -tenant 'GradientAPI'
+        Write-LogMessage -API $APINAME -message "Failed to create tenants in Gradient API. Error: $($_.Exception.Message)" -Sev 'Error' -tenant 'GradientAPI'
     }
 
 
@@ -83,7 +83,7 @@ function New-GradientServiceSyncRun {
                 } | ConvertTo-Json -Depth 10
                 $Results = Invoke-RestMethod -Uri "https://app.usegradient.com/api/vendor-api/service/$($ExistingService.id)/count" -Method POST -Headers $GradientToken -Body $ServiceBody -ContentType 'application/json'
             } catch {
-                Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -message "Failed to create license in Gradient API. Error: $($_). $results" -Sev 'Error' -tenant $singlereq.tenant
+                Write-LogMessage -API $APINAME -message "Failed to create license in Gradient API. Error: $($_). $results" -Sev 'Error' -tenant $singlereq.tenant
 
             }
         }

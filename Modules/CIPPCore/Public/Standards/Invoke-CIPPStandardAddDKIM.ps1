@@ -13,15 +13,17 @@ function Invoke-CIPPStandardAddDKIM {
         CAT
             Exchange Standards
         TAG
-            "lowimpact"
             "CIS"
         ADDEDCOMPONENT
         IMPACT
             Low Impact
+        ADDEDDATE
+            2023-03-14
         POWERSHELLEQUIVALENT
             New-DkimSigningConfig and Set-DkimSigningConfig
         RECOMMENDEDBY
             "CIS"
+            "CIPP"
         UPDATECOMMENTBLOCK
             Run the Tools\Update-StandardsComments.ps1 script to update this comment block
     .LINK
@@ -99,12 +101,14 @@ function Invoke-CIPPStandardAddDKIM {
             Write-LogMessage -API 'Standards' -tenant $tenant -message 'DKIM is enabled for all available domains' -sev Info
         } else {
             $NoDKIM = ($NewDomains + $SetDomains.Domain) -join ';'
-            Write-LogMessage -API 'Standards' -tenant $tenant -message "DKIM is not enabled for: $NoDKIM" -sev Alert
+            Write-StandardsAlert -message "DKIM is not enabled for: $NoDKIM" -object @{NewDomains = $NewDomains; SetDomains = $SetDomains } -tenant $tenant -standardName 'AddDKIM' -standardId $Settings.standardId
+            Write-LogMessage -API 'Standards' -tenant $tenant -message "DKIM is not enabled for: $NoDKIM" -sev Info
         }
     }
 
     if ($Settings.report -eq $true) {
-        $DKIMState = if ($null -eq $NewDomains -and $null -eq $SetDomains) { $true } else { $false }
+        $DKIMState = if ($null -eq $NewDomains -and $null -eq $SetDomains) { $true } else { $SetDomains, $NewDomains }
+        Set-CIPPStandardsCompareField -FieldName 'standards.AddDKIM' -FieldValue $DKIMState -TenantFilter $tenant
         Add-CIPPBPAField -FieldName 'DKIM' -FieldValue $DKIMState -StoreAs bool -Tenant $tenant
     }
 }

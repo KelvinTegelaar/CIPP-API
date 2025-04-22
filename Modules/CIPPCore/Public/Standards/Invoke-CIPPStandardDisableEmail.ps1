@@ -13,10 +13,11 @@ function Invoke-CIPPStandardDisableEmail {
         CAT
             Entra (AAD) Standards
         TAG
-            "highimpact"
         ADDEDCOMPONENT
         IMPACT
             High Impact
+        ADDEDDATE
+            2023-12-18
         POWERSHELLEQUIVALENT
             Update-MgBetaPolicyAuthenticationMethodPolicyAuthenticationMethodConfiguration
         RECOMMENDEDBY
@@ -36,7 +37,10 @@ function Invoke-CIPPStandardDisableEmail {
         if ($StateIsCorrect -eq $true) {
             Write-LogMessage -API 'Standards' -tenant $tenant -message 'Email authentication method is already disabled.' -sev Info
         } else {
-            Set-CIPPAuthenticationPolicy -Tenant $tenant -APIName 'Standards' -AuthenticationMethodId 'Email' -Enabled $false
+            try {
+                Set-CIPPAuthenticationPolicy -Tenant $tenant -APIName 'Standards' -AuthenticationMethodId 'Email' -Enabled $false
+            } catch {
+            }
         }
     }
 
@@ -44,11 +48,14 @@ function Invoke-CIPPStandardDisableEmail {
         if ($StateIsCorrect -eq $true) {
             Write-LogMessage -API 'Standards' -tenant $tenant -message 'Email authentication method is not enabled' -sev Info
         } else {
-            Write-LogMessage -API 'Standards' -tenant $tenant -message 'Email authentication method is enabled' -sev Alert
+            Write-StandardsAlert -message 'Email authentication method is enabled' -object $CurrentState -tenant $tenant -standardName 'DisableEmail' -standardId $Settings.standardId
+            Write-LogMessage -API 'Standards' -tenant $tenant -message 'Email authentication method is enabled' -sev Info
         }
     }
 
     if ($Settings.report -eq $true) {
+        $state = $StateIsCorrect -eq $true ? $true :  $CurrentState 
+        Set-CIPPStandardsCompareField -FieldName 'standards.DisableEmail' -FieldValue $state -TenantFilter $Tenant
         Add-CIPPBPAField -FieldName 'DisableEmail' -FieldValue $StateIsCorrect -StoreAs bool -Tenant $tenant
     }
 }

@@ -1,0 +1,56 @@
+[
+  {
+    "Id": "930523724",
+    "Name": "CIPP-Templates",
+    "Description": "CIPP Community Templates",
+    "URL": "https://github.com/CyberDrain/CIPP-Templates",
+    "FullName": "CyberDrain/CIPP-Templates",
+    "Owner": "CyberDrain",
+    "Visibility": "public",
+    "WriteAccess": false,
+    "DefaultBranch": "main",
+    "RepoPermissions": {
+      "admin": false,
+      "maintain": false,
+      "push": false,
+      "triage": false,
+      "pull": true
+    }
+  },
+  {
+    "Id": "784230225",
+    "Name": "ConditionalAccessBaseline",
+    "Description": "",
+    "URL": "https://github.com/j0eyv/ConditionalAccessBaseline",
+    "FullName": "j0eyv/ConditionalAccessBaseline",
+    "Owner": "j0eyv",
+    "Visibility": "public",
+    "WriteAccess": false,
+    "DefaultBranch": "main",
+    "RepoPermissions": {
+      "admin": false,
+      "maintain": false,
+      "push": false,
+      "triage": false,
+      "pull": true
+    }
+  },
+  {
+    "Id": "493403016",
+    "Name": "OpenIntuneBaseline",
+    "Description": "Community-driven baseline to accelerate Intune adoption and learning.",
+    "URL": "https://github.com/SkipToTheEndpoint/OpenIntuneBaseline",
+    "FullName": "SkipToTheEndpoint/OpenIntuneBaseline",
+    "Owner": "SkipToTheEndpoint",
+    "Visibility": "public",
+    "WriteAccess": false,
+    "DefaultBranch": "main",
+    "RepoPermissions": {
+      "admin": false,
+      "maintain": false,
+      "push": false,
+      "triage": false,
+      "pull": true
+    }
+  }
+]

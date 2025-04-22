@@ -13,10 +13,11 @@ function Invoke-CIPPStandardAutoExpandArchive {
         CAT
             Exchange Standards
         TAG
-            "lowimpact"
         ADDEDCOMPONENT
         IMPACT
             Low Impact
+        ADDEDDATE
+            2021-11-16
         POWERSHELLEQUIVALENT
             Set-OrganizationConfig -AutoExpandingArchive
         RECOMMENDEDBY
@@ -52,12 +53,14 @@ function Invoke-CIPPStandardAutoExpandArchive {
         if ($CurrentState) {
             Write-LogMessage -API 'Standards' -tenant $tenant -message 'Auto Expanding Archives is enabled' -sev Info
         } else {
-            Write-LogMessage -API 'Standards' -tenant $tenant -message 'Auto Expanding Archives is not enabled' -sev Alert
+            Write-StandardsAlert -message 'Auto Expanding Archives is not enabled' -object @{CurrentState = $CurrentState } -tenant $tenant -standardName 'AutoExpandArchive' -standardId $Settings.standardId
+            Write-LogMessage -API 'Standards' -tenant $tenant -message 'Auto Expanding Archives is not enabled' -sev Info
         }
     }
 
     if ($Settings.report -eq $true) {
-
+        $state = $CurrentState -eq $true ? $true : $CurrentState
+        Set-CIPPStandardsCompareField -FieldName 'standards.AutoExpandArchive' -FieldValue $state -TenantFilter $tenant
         Add-CIPPBPAField -FieldName 'AutoExpandingArchive' -FieldValue $CurrentState -StoreAs bool -Tenant $tenant
     }
 }

@@ -1,10 +1,10 @@
 function Set-CIPPSPOTenant {
     <#
     .SYNOPSIS
-    Set Sharepoint Tenant properties
+    Set SharePoint Tenant properties
 
     .DESCRIPTION
-    Set Sharepoint Tenant properties via SPO API
+    Set SharePoint Tenant properties via SPO API
 
     .PARAMETER TenantFilter
     Tenant to apply settings to

@@ -15,11 +15,11 @@ function Set-CIPPPerUserMFA {
     .PARAMETER State
     State to set the user to (enabled, disabled, enforced)
 
-    .PARAMETER executingUser
+    .PARAMETER Headers
     User executing the command
 
     .EXAMPLE
-    Set-CIPPPerUserMFA -TenantFilter 'contoso.onmicrosoft.com' -userId user@contoso.onmicrosoft.com -State 'disabled' -executingUser 'mspuser@partner.com'
+    Set-CIPPPerUserMFA -TenantFilter 'contoso.onmicrosoft.com' -userId user@contoso.onmicrosoft.com -State 'disabled' -Headers 'mspuser@partner.com'
     #>
     [CmdletBinding()]
     param(
@@ -29,8 +29,10 @@ function Set-CIPPPerUserMFA {
         [string[]]$userId,
         [ValidateSet('enabled', 'disabled', 'enforced')]
         $State = 'enabled',
-        [string]$executingUser = 'CIPP'
+        $Headers,
+        $APIName = 'Set-CIPPPerUserMFA'
     )
+
     try {
         $int = 0
         $Body = @{
@@ -48,8 +50,7 @@ function Set-CIPPPerUserMFA {
             }
         }
 
-        $Requests = New-GraphBulkRequest -tenantid $tenantfilter -scope 'https://graph.microsoft.com/.default' -Requests @($Requests) -asapp $true
-
+        $Requests = New-GraphBulkRequest -tenantid $TenantFilter -scope 'https://graph.microsoft.com/.default' -Requests @($Requests) -asapp $true
         "Successfully set Per user MFA State for $userId"
 
         $Users = foreach ($id in $userId) {
@@ -61,10 +62,11 @@ function Set-CIPPPerUserMFA {
             }
         }
         Set-CIPPUserSchemaProperties -TenantFilter $TenantFilter -Users $Users
-        Write-LogMessage -user $executingUser -API 'Set-CIPPPerUserMFA' -message "Successfully set Per user MFA State to $State for $id" -Sev 'Info' -tenant $TenantFilter
+        Write-LogMessage -headers $Headers -API $APIName -message "Successfully set Per user MFA State to $State for $id" -Sev Info -tenant $TenantFilter
     } catch {
         $ErrorMessage = Get-CippException -Exception $_
-        "Failed to set MFA State for $id. Error: $($ErrorMessage.NormalizedError)"
-        Write-LogMessage -user $executingUser -API 'Set-CIPPPerUserMFA' -message "Failed to set MFA State to $State for $id. Error: $($ErrorMessage.NormalizedError)" -Sev 'Error' -tenant $TenantFilter -LogData $ErrorMessage
+        $Result = "Failed to set MFA State to $State for $id. Error: $($ErrorMessage.NormalizedError)"
+        Write-LogMessage -headers $Headers -API $APIName -message $Result -Sev Error -tenant $TenantFilter -LogData $ErrorMessage
+        throw $Result
     }
 }

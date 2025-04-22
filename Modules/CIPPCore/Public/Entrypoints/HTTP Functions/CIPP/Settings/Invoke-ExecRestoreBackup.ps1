@@ -10,8 +10,9 @@ Function Invoke-ExecRestoreBackup {
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
 
-    $APIName = $TriggerMetadata.FunctionName
-    Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -message 'Accessed this API' -Sev 'Debug'
+    $APIName = $Request.Params.CIPPEndpoint
+    $Headers = $Request.Headers
+    Write-LogMessage -headers $Headers -API $APIName -message 'Accessed this API' -Sev 'Debug'
     try {
 
         if ($Request.Body.BackupName -like 'CippBackup_*') {
@@ -26,7 +27,7 @@ Function Invoke-ExecRestoreBackup {
                     $Table.Entity = $ht2
                     Add-CIPPAzDataTableEntity @Table -Force
                 }
-                Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -message 'Created backup' -Sev 'Debug'
+                Write-LogMessage -headers $Request.Headers -API $APINAME -message 'Created backup' -Sev 'Debug'
                 $body = [pscustomobject]@{
                     'Results' = 'Successfully restored backup.'
                 }
@@ -43,14 +44,14 @@ Function Invoke-ExecRestoreBackup {
                 $Table.Entity = $ht2
                 Add-AzDataTableEntity @Table -Force
             }
-            Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -message 'Created backup' -Sev 'Debug'
+            Write-LogMessage -headers $Request.Headers -API $APINAME -message 'Created backup' -Sev 'Debug'
 
             $body = [pscustomobject]@{
                 'Results' = 'Successfully restored backup.'
             }
         }
     } catch {
-        Write-LogMessage -user $request.headers.'x-ms-client-principal' -API $APINAME -message "Failed to restore backup: $($_.Exception.Message)" -Sev 'Error'
+        Write-LogMessage -headers $Request.Headers -API $APINAME -message "Failed to restore backup: $($_.Exception.Message)" -Sev 'Error'
         $body = [pscustomobject]@{'Results' = "Backup restore failed: $($_.Exception.Message)" }
     }
 

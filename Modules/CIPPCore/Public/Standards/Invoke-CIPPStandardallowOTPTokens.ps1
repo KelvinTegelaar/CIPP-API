@@ -13,10 +13,11 @@ function Invoke-CIPPStandardallowOTPTokens {
         CAT
             Entra (AAD) Standards
         TAG
-            "lowimpact"
         ADDEDCOMPONENT
         IMPACT
             Low Impact
+        ADDEDDATE
+            2023-12-06
         POWERSHELLEQUIVALENT
             Update-MgBetaPolicyAuthenticationMethodPolicyAuthenticationMethodConfiguration
         RECOMMENDEDBY
@@ -35,7 +36,10 @@ function Invoke-CIPPStandardallowOTPTokens {
         if ($CurrentInfo.isSoftwareOathEnabled) {
             Write-LogMessage -API 'Standards' -tenant $tenant -message 'MS authenticator OTP/oAuth tokens is already enabled.' -sev Info
         } else {
-            Set-CIPPAuthenticationPolicy -Tenant $tenant -APIName 'Standards' -AuthenticationMethodId 'MicrosoftAuthenticator' -Enabled $true -MicrosoftAuthenticatorSoftwareOathEnabled $true
+            try {
+                Set-CIPPAuthenticationPolicy -Tenant $tenant -APIName 'Standards' -AuthenticationMethodId 'MicrosoftAuthenticator' -Enabled $true -MicrosoftAuthenticatorSoftwareOathEnabled $true
+            } catch {
+            }
         }
     }
 
@@ -43,11 +47,13 @@ function Invoke-CIPPStandardallowOTPTokens {
         if ($CurrentInfo.isSoftwareOathEnabled) {
             Write-LogMessage -API 'Standards' -tenant $tenant -message 'MS authenticator OTP/oAuth tokens is enabled' -sev Info
         } else {
-            Write-LogMessage -API 'Standards' -tenant $tenant -message 'MS authenticator OTP/oAuth tokens is not enabled' -sev Alert
+            Write-StandardsAlert -message 'MS authenticator OTP/oAuth tokens is not enabled' -object $CurrentInfo -tenant $tenant -standardName 'allowOTPTokens' -standardId $Settings.standardId
+            Write-LogMessage -API 'Standards' -tenant $tenant -message 'MS authenticator OTP/oAuth tokens is not enabled' -sev Info
         }
     }
 
     if ($Settings.report -eq $true) {
+        Set-CIPPStandardsCompareField -FieldName 'standards.allowOTPTokens' -FieldValue $CurrentInfo.isSoftwareOathEnabled -TenantFilter $tenant
         Add-CIPPBPAField -FieldName 'MSAuthenticator' -FieldValue $CurrentInfo.isSoftwareOathEnabled -StoreAs bool -Tenant $tenant
     }
 

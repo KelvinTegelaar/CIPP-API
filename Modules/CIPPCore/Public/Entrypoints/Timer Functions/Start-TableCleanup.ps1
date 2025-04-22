@@ -17,7 +17,7 @@ function Start-TableCleanup {
         @{
             DataTableProps = @{
                 Context  = (Get-CIPPTable -tablename 'AuditLogSearches').Context
-                Filter   = "Timestamp lt datetime'$((Get-Date).AddDays(-7).ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ssZ'))'"
+                Filter   = "PartitionKey eq 'Search' and Timestamp lt datetime'$((Get-Date).AddDays(-1).ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ssZ'))'"
                 First    = 10000
                 Property = @('PartitionKey', 'RowKey', 'ETag')
             }
@@ -25,7 +25,7 @@ function Start-TableCleanup {
         @{
             DataTableProps = @{
                 Context  = (Get-CIPPTable -tablename 'CippFunctionStats').Context
-                Filter   = "Timestamp lt datetime'$((Get-Date).AddDays(-7).ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ssZ'))'"
+                Filter   = "PartitionKey eq 'Durable' and Timestamp lt datetime'$((Get-Date).AddDays(-7).ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ssZ'))'"
                 First    = 10000
                 Property = @('PartitionKey', 'RowKey', 'ETag')
             }
@@ -33,7 +33,7 @@ function Start-TableCleanup {
         @{
             DataTableProps = @{
                 Context  = (Get-CIPPTable -tablename 'CippQueue').Context
-                Filter   = "Timestamp lt datetime'$((Get-Date).AddDays(-7).ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ssZ'))'"
+                Filter   = "PartitionKey eq 'CippQueue' and Timestamp lt datetime'$((Get-Date).AddDays(-7).ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ssZ'))'"
                 First    = 10000
                 Property = @('PartitionKey', 'RowKey', 'ETag')
             }
@@ -41,14 +41,34 @@ function Start-TableCleanup {
         @{
             DataTableProps = @{
                 Context  = (Get-CIPPTable -tablename 'CippQueueTasks').Context
-                Filter   = "Timestamp lt datetime'$((Get-Date).AddDays(-7).ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ssZ'))'"
+                Filter   = "PartitionKey eq 'Task' and Timestamp lt datetime'$((Get-Date).AddDays(-7).ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ssZ'))'"
                 First    = 10000
                 Property = @('PartitionKey', 'RowKey', 'ETag')
             }
         }
     )
 
+    $DeleteTables = @(
+        'knownlocationdb'
+    )
+
     if ($PSCmdlet.ShouldProcess('Start-TableCleanup', 'Starting Table Cleanup')) {
+        foreach ($Table in $DeleteTables) {
+            try {
+                $Table = Get-CIPPTable -tablename $Table
+                if ($Table) {
+                    Write-Information "Deleting table $($Table.Context.TableName)"
+                    try {
+                        Remove-AzDataTable -Context $Table.Context -Force
+                    } catch {
+                        #Write-LogMessage -API 'TableCleanup' -message "Failed to delete table $($Table.Context.TableName)" -sev Error -LogData (Get-CippException -Exception $_)
+                    }
+                }
+            } catch {
+                Write-Information "Table $Table not found"
+            }
+        }
+
         Write-Information 'Starting table cleanup'
         foreach ($Rule in $CleanupRules) {
             if ($Rule.Where) {
