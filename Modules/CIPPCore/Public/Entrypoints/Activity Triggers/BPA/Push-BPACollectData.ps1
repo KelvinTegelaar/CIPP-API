@@ -5,7 +5,7 @@ function Push-BPACollectData {
     #>
     param($Item)
 
-    $TenantName = Get-Tenants | Where-Object -Property defaultDomainName -EQ $Item.Tenant
+    $TenantName = Get-Tenants | Where-Object -Property defaultDomainName -EQ $Item.Tenant.value
     $BPATemplateTable = Get-CippTable -tablename 'templates'
     $Filter = "PartitionKey eq 'BPATemplate'"
     $TemplatesLoc = (Get-CIPPAzDataTableEntity @BPATemplateTable -Filter $Filter).JSON | ConvertFrom-Json
