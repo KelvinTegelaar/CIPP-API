@@ -15,7 +15,7 @@ function Get-CIPPAlertNewAppApproval {
     try {
         $Approvals = New-GraphGetRequest -Uri "https://graph.microsoft.com/beta/identityGovernance/appConsent/appConsentRequests?`$filter=userConsentRequests/any (u:u/status eq 'InProgress')" -tenantid $TenantFilter
         if ($Approvals.count -gt 0) {
-            $AlertData = [System.Collections.Generic.List[string]]::new()
+            $AlertData = [System.Collections.Generic.List[PSCustomObject]]::new()
             foreach ($App in $Approvals) {
                 $userConsentRequests = New-GraphGetRequest -Uri "https://graph.microsoft.com/v1.0/identityGovernance/appConsent/appConsentRequests/$($App.id)/userConsentRequests" -tenantid $TenantFilter
                 $userConsentRequests | ForEach-Object {
