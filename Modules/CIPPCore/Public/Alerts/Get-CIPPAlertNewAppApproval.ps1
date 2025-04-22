@@ -28,7 +28,15 @@ function Get-CIPPAlertNewAppApproval {
                         "https://login.microsoftonline.com/$($TenantFilter)/adminConsent?client_id=$($App.appId)&bf_id=$($App.id)&redirect_uri=https://entra.microsoft.com/TokenAuthorize"
                     }
 
-                    $Message = "App name: $($App.appDisplayName) - Request user: $($_.createdBy.user.userPrincipalName) - Reason: $($_.reason)`nApp Id: $($App.appId) - Scopes: $($App.pendingScopes.displayName)`nConsent URL: $consentUrl"
+                    $Message = [PSCustomObject]@{
+                        AppName     = $App.appDisplayName
+                        RequestUser = $_.createdBy.user.userPrincipalName
+                        Reason      = $_.reason
+                        AppId       = $App.appId
+                        Scopes      = ($App.pendingScopes.displayName -join ', ')
+                        ConsentURL  = $consentUrl
+                        Tenant      = $TenantFilter
+                    }
                     $AlertData.Add($Message)
                 }
             }
