@@ -7,8 +7,8 @@ function Invoke-CIPPStandardAntiPhishPolicy {
     .SYNOPSIS
         (Label) Default Anti-Phishing Policy
     .DESCRIPTION
-        (Helptext) This creates a Anti-Phishing policy that automatically enables Mailbox Intelligence and spoofing, optional switches for Mailtips.
-        (DocsDescription) This creates a Anti-Phishing policy that automatically enables Mailbox Intelligence and spoofing, optional switches for Mailtips.
+        (Helptext) This creates a Anti-Phishing policy that automatically enables Mailbox Intelligence and spoofing, optional switches for Mail tips.
+        (DocsDescription) This creates a Anti-Phishing policy that automatically enables Mailbox Intelligence and spoofing, optional switches for Mail tips.
     .NOTES
         CAT
             Defender Standards
@@ -40,7 +40,7 @@ function Invoke-CIPPStandardAntiPhishPolicy {
         ADDEDDATE
             2024-03-25
         POWERSHELLEQUIVALENT
-            Set-AntiphishPolicy or New-AntiphishPolicy
+            Set-AntiPhishPolicy or New-AntiPhishPolicy
         RECOMMENDEDBY
             "CIS"
         UPDATECOMMENTBLOCK
@@ -124,7 +124,7 @@ function Invoke-CIPPStandardAntiPhishPolicy {
             Write-LogMessage -API 'Standards' -tenant $Tenant -message 'Anti-phishing policy already correctly configured' -sev Info
         } else {
             if ($MDOLicensed) {
-                $cmdparams = @{
+                $cmdParams = @{
                     Enabled                             = $true
                     PhishThresholdLevel                 = $Settings.PhishThresholdLevel
                     EnableMailboxIntelligence           = $true
@@ -147,7 +147,7 @@ function Invoke-CIPPStandardAntiPhishPolicy {
                     EnableOrganizationDomainsProtection = $true
                 }
             } else {
-                $cmdparams = @{
+                $cmdParams = @{
                     Enabled                             = $true
                     EnableSpoofIntelligence             = $true
                     EnableFirstContactSafetyTips        = $Settings.EnableFirstContactSafetyTips
@@ -160,16 +160,16 @@ function Invoke-CIPPStandardAntiPhishPolicy {
 
             if ($CurrentState.Name -eq $PolicyName) {
                 try {
-                    $cmdparams.Add('Identity', $PolicyName)
-                    New-ExoRequest -tenantid $Tenant -cmdlet 'Set-AntiPhishPolicy' -cmdparams $cmdparams -UseSystemMailbox $true
+                    $cmdParams.Add('Identity', $PolicyName)
+                    New-ExoRequest -tenantid $Tenant -cmdlet 'Set-AntiPhishPolicy' -cmdParams $cmdParams -UseSystemMailbox $true
                     Write-LogMessage -API 'Standards' -tenant $Tenant -message "Updated Anti-phishing policy $PolicyName." -sev Info
                 } catch {
                     Write-LogMessage -API 'Standards' -tenant $Tenant -message "Failed to update Anti-phishing policy $PolicyName." -sev Error -LogData $_
                 }
             } else {
                 try {
-                    $cmdparams.Add('Name', $PolicyName)
-                    New-ExoRequest -tenantid $Tenant -cmdlet 'New-AntiPhishPolicy' -cmdparams $cmdparams -UseSystemMailbox $true
+                    $cmdParams.Add('Name', $PolicyName)
+                    New-ExoRequest -tenantid $Tenant -cmdlet 'New-AntiPhishPolicy' -cmdParams $cmdParams -UseSystemMailbox $true
                     Write-LogMessage -API 'Standards' -tenant $Tenant -message "Created Anti-phishing policy $PolicyName." -sev Info
                 } catch {
                     Write-LogMessage -API 'Standards' -tenant $Tenant -message "Failed to create Anti-phishing policy $PolicyName." -sev Error -LogData $_
@@ -178,27 +178,27 @@ function Invoke-CIPPStandardAntiPhishPolicy {
         }
 
         if ($RuleStateIsCorrect -eq $false) {
-            $cmdparams = @{
+            $cmdParams = @{
                 Priority          = 0
                 RecipientDomainIs = $AcceptedDomains.Name
             }
 
             if ($RuleState.AntiPhishPolicy -ne $PolicyName) {
-                $cmdparams.Add('AntiPhishPolicy', $PolicyName)
+                $cmdParams.Add('AntiPhishPolicy', $PolicyName)
             }
 
             if ($RuleState.Name -eq $RuleName) {
                 try {
-                    $cmdparams.Add('Identity', $RuleName)
-                    New-ExoRequest -tenantid $Tenant -cmdlet 'Set-AntiPhishRule' -cmdparams $cmdparams -UseSystemMailbox $true
+                    $cmdParams.Add('Identity', $RuleName)
+                    New-ExoRequest -tenantid $Tenant -cmdlet 'Set-AntiPhishRule' -cmdParams $cmdParams -UseSystemMailbox $true
                     Write-LogMessage -API 'Standards' -tenant $Tenant -message "Updated Anti-phishing rule $RuleName." -sev Info
                 } catch {
                     Write-LogMessage -API 'Standards' -tenant $Tenant -message "Failed to update Anti-phishing rule $RuleName." -sev Error -LogData $_
                 }
             } else {
                 try {
-                    $cmdparams.Add('Name', $RuleName)
-                    New-ExoRequest -tenantid $Tenant -cmdlet 'New-AntiPhishRule' -cmdparams $cmdparams -UseSystemMailbox $true
+                    $cmdParams.Add('Name', $RuleName)
+                    New-ExoRequest -tenantid $Tenant -cmdlet 'New-AntiPhishRule' -cmdParams $cmdParams -UseSystemMailbox $true
                     Write-LogMessage -API 'Standards' -tenant $Tenant -message "Created Anti-phishing rule $RuleName." -sev Info
                 } catch {
                     Write-LogMessage -API 'Standards' -tenant $Tenant -message "Failed to create Anti-phishing rule $RuleName." -sev Error -LogData $_

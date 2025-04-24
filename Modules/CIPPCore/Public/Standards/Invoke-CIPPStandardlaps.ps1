@@ -36,7 +36,7 @@ function Invoke-CIPPStandardlaps {
     If ($Settings.remediate -eq $true) {
         try {
             $PreviousSetting.localAdminPassword.isEnabled = $true
-            $Newbody = ConvertTo-Json -Compress -InputObject $PreviousSetting -Depth 10
+            $NewBody = ConvertTo-Json -Compress -InputObject $PreviousSetting -Depth 10
             New-GraphPostRequest -tenantid $Tenant -Uri 'https://graph.microsoft.com/beta/policies/deviceRegistrationPolicy' -Type PUT -Body $NewBody -ContentType 'application/json'
             Write-LogMessage -API 'Standards' -tenant $Tenant -message 'LAPS has been enabled.' -sev Info
         } catch {

@@ -24,6 +24,19 @@ function Invoke-CIPPStandardSpamFilterPolicy {
             {"type":"autoComplete","required":true,"multiple":false,"creatable":false,"label":"Phish Spam Action","name":"standards.SpamFilterPolicy.PhishSpamAction","options":[{"label":"Quarantine the message","value":"Quarantine"},{"label":"Move message to Junk Email folder","value":"MoveToJmf"}]}
             {"type":"autoComplete","required":true,"multiple":false,"creatable":false,"label":"Phish Quarantine Tag","name":"standards.SpamFilterPolicy.PhishQuarantineTag","options":[{"label":"AdminOnlyAccessPolicy","value":"AdminOnlyAccessPolicy"},{"label":"DefaultFullAccessPolicy","value":"DefaultFullAccessPolicy"},{"label":"DefaultFullAccessWithNotificationPolicy","value":"DefaultFullAccessWithNotificationPolicy"}]}
             {"type":"autoComplete","required":true,"multiple":false,"creatable":false,"label":"High Confidence Phish Quarantine Tag","name":"standards.SpamFilterPolicy.HighConfidencePhishQuarantineTag","options":[{"label":"AdminOnlyAccessPolicy","value":"AdminOnlyAccessPolicy"},{"label":"DefaultFullAccessPolicy","value":"DefaultFullAccessPolicy"},{"label":"DefaultFullAccessWithNotificationPolicy","value":"DefaultFullAccessWithNotificationPolicy"}]}
+            {"type":"switch","name":"standards.SpamFilterPolicy.IncreaseScoreWithImageLinks","label":"Increase score if message contains image links to remote websites","defaultValue":false}
+            {"type":"switch","name":"standards.SpamFilterPolicy.IncreaseScoreWithBizOrInfoUrls","label":"Increase score if message contains links to .biz or .info domains","defaultValue":false}
+            {"type":"switch","name":"standards.SpamFilterPolicy.MarkAsSpamFramesInHtml","label":"Mark as spam if message contains HTML or iframe tags","defaultValue":false}
+            {"type":"switch","name":"standards.SpamFilterPolicy.MarkAsSpamObjectTagsInHtml","label":"Mark as spam if message contains HTML object tags","defaultValue":false}
+            {"type":"switch","name":"standards.SpamFilterPolicy.MarkAsSpamEmbedTagsInHtml","label":"Mark as spam if message contains HTML embed tags","defaultValue":false}
+            {"type":"switch","name":"standards.SpamFilterPolicy.MarkAsSpamFormTagsInHtml","label":"Mark as spam if message contains HTML form tags","defaultValue":false}
+            {"type":"switch","name":"standards.SpamFilterPolicy.MarkAsSpamWebBugsInHtml","label":"Mark as spam if message contains web bugs (also known as web beacons)","defaultValue":false}
+            {"type":"switch","name":"standards.SpamFilterPolicy.MarkAsSpamSensitiveWordList","label":"Mark as spam if message contains words from the sensitive words list","defaultValue":false}
+            {"type":"switch","name":"standards.SpamFilterPolicy.EnableLanguageBlockList","label":"Enable language block list","defaultValue":false}
+            {"type":"autoComplete","multiple":true,"creatable":true,"required":false,"name":"standards.SpamFilterPolicy.LanguageBlockList","label":"Languages to block (uppercase ISO 639-1 two-letter)"}
+            {"type":"switch","name":"standards.SpamFilterPolicy.EnableRegionBlockList","label":"Enable region block list","defaultValue":false}
+            {"type":"autoComplete","multiple":true,"creatable":true,"required":false,"name":"standards.SpamFilterPolicy.RegionBlockList","label":"Regions to block (uppercase ISO 3166-1 two-letter)"}
+            {"type":"autoComplete","multiple":true,"creatable":true,"required":false,"name":"standards.SpamFilterPolicy.AllowedSenderDomains","label":"Allowed sender domains"}
         IMPACT
             Medium Impact
         ADDEDDATE
@@ -73,7 +86,7 @@ function Invoke-CIPPStandardSpamFilterPolicy {
     ($CurrentState.PhishQuarantineTag -eq $PhishQuarantineTag) -and
     ($CurrentState.HighConfidencePhishAction -eq 'Quarantine') -and
     ($CurrentState.HighConfidencePhishQuarantineTag -eq $HighConfidencePhishQuarantineTag) -and
-    ($CurrentState.BulkThreshold -eq $Settings.BulkThreshold) -and
+    ($CurrentState.BulkThreshold -eq [int]$Settings.BulkThreshold) -and
     ($CurrentState.QuarantineRetentionPeriod -eq 30) -and
     ($CurrentState.IncreaseScoreWithImageLinks -eq $IncreaseScoreWithImageLinks) -and
     ($CurrentState.IncreaseScoreWithNumericIps -eq 'On') -and
@@ -103,8 +116,8 @@ function Invoke-CIPPStandardSpamFilterPolicy {
     $AcceptedDomains = New-ExoRequest -TenantId $Tenant -cmdlet 'Get-AcceptedDomain'
 
     $RuleState = New-ExoRequest -TenantId $Tenant -cmdlet 'Get-HostedContentFilterRule' |
-    Where-Object -Property Name -EQ $PolicyName |
-    Select-Object -Property *
+        Where-Object -Property Name -EQ $PolicyName |
+        Select-Object -Property *
 
     $RuleStateIsCorrect = ($RuleState.Name -eq $PolicyName) -and
     ($RuleState.HostedContentFilterPolicy -eq $PolicyName) -and
@@ -115,7 +128,7 @@ function Invoke-CIPPStandardSpamFilterPolicy {
         if ($StateIsCorrect -eq $true) {
             Write-LogMessage -API 'Standards' -Tenant $Tenant -message 'Spam Filter Policy already correctly configured' -sev Info
         } else {
-            $cmdparams = @{
+            $cmdParams = @{
                 SpamAction                           = $SpamAction
                 SpamQuarantineTag                    = $SpamQuarantineTag
                 HighConfidenceSpamAction             = $HighConfidenceSpamAction
@@ -126,7 +139,7 @@ function Invoke-CIPPStandardSpamFilterPolicy {
                 PhishQuarantineTag                   = $PhishQuarantineTag
                 HighConfidencePhishAction            = 'Quarantine'
                 HighConfidencePhishQuarantineTag     = $HighConfidencePhishQuarantineTag
-                BulkThreshold                        = $Settings.BulkThreshold
+                BulkThreshold                        = [int]$Settings.BulkThreshold
                 QuarantineRetentionPeriod            = 30
                 IncreaseScoreWithImageLinks          = $IncreaseScoreWithImageLinks
                 IncreaseScoreWithNumericIps          = 'On'
@@ -147,12 +160,23 @@ function Invoke-CIPPStandardSpamFilterPolicy {
                 InlineSafetyTipsEnabled              = $true
                 PhishZapEnabled                      = $true
                 SpamZapEnabled                       = $true
-                EnableLanguageBlockList              = $Settings.EnableLanguageBlockList
-                LanguageBlockList                    = $Settings.LanguageBlockList.value
-                EnableRegionBlockList                = $Settings.EnableRegionBlockList
-                RegionBlockList                      = $Settings.RegionBlockList.value
                 AllowedSenderDomains                 = $Settings.AllowedSenderDomains.value ?? @{'@odata.type' = '#Exchange.GenericHashTable' }
             }
+
+            # Remove optional block lists if not configured
+            if ($Settings.EnableLanguageBlockList -eq $true -and $Settings.LanguageBlockList.value) {
+                $cmdParams.Add('EnableLanguageBlockList', $Settings.EnableLanguageBlockList)
+                $cmdParams.Add('LanguageBlockList', $Settings.LanguageBlockList.value)
+            } else {
+                $cmdParams.Add('EnableLanguageBlockList', $false)
+            }
+            if ($Settings.EnableRegionBlockList -eq $true -and $Settings.RegionBlockList.value) {
+                $cmdParams.Add('EnableRegionBlockList', $Settings.EnableRegionBlockList)
+                $cmdParams.Add('RegionBlockList', $Settings.RegionBlockList.value)
+            } else {
+                $cmdParams.Add('EnableRegionBlockList', $false)
+            }
+
 
             if ($CurrentState.Name -eq $PolicyName) {
                 try {
@@ -217,7 +241,7 @@ function Invoke-CIPPStandardSpamFilterPolicy {
         if ($StateIsCorrect) {
             $FieldValue = $true
         } else {
-            $FieldValue = $CurrentState ? $CurrentState : $false
+            $FieldValue = $CurrentState ? $CurrentState : @{ state = 'Spam filter policy not found' }
         }
         Set-CIPPStandardsCompareField -FieldName 'standards.SpamFilterPolicy' -FieldValue $FieldValue -Tenant $Tenant
     }

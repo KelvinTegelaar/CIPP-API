@@ -11,12 +11,14 @@ function Invoke-ExecBPA {
     $ConfigTable = Get-CIPPTable -tablename Config
     $Config = Get-CIPPAzDataTableEntity @ConfigTable -Filter "PartitionKey eq 'OffloadFunctions' and RowKey eq 'OffloadFunctions'"
 
+    $TenantFilter = $Request.Query.tenantFilter ?? $Request.Body.tenantFilter
+
     if ($Config -and $Config.state -eq $true) {
         if ($env:CIPP_PROCESSOR -ne 'true') {
             $Parameters = @{Force = $true }
-            if ($Request.Query.TenantFilter) {
-                $Parameters.TenantFilter = $Request.Query.TenantFilter
-                $RowKey = "Start-BPAOrchestrator-$($Request.Query.TenantFilter)"
+            if ($TenantFilter -and $TenantFilter -ne 'AllTenants') {
+                $Parameters.TenantFilter = $TenantFilter
+                $RowKey = "Start-BPAOrchestrator-$($TenantFilter)"
             } else {
                 $RowKey = 'Start-BPAOrchestrator'
             }
@@ -32,7 +34,7 @@ function Invoke-ExecBPA {
             $Results = [pscustomobject]@{'Results' = 'BPA queued for execution' }
         }
     } else {
-        Start-BPAOrchestrator -TenantFilter $Request.Query.TenantFilter
+        Start-BPAOrchestrator -TenantFilter $TenantFilter
         $Results = [pscustomobject]@{'Results' = 'BPA started' }
     }
 

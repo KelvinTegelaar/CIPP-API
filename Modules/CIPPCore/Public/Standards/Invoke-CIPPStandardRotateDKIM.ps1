@@ -39,7 +39,7 @@ function Invoke-CIPPStandardRotateDKIM {
         if ($DKIM) {
             $DKIM | ForEach-Object {
                 try {
-                    (New-ExoRequest -tenantid $tenant -cmdlet 'Rotate-DkimSigningConfig' -cmdparams @{ KeySize = 2048; Identity = $_.Identity } -useSystemMailbox $true)
+                    (New-ExoRequest -tenantid $tenant -cmdlet 'Rotate-DkimSigningConfig' -cmdParams @{ KeySize = 2048; Identity = $_.Identity } -useSystemMailbox $true)
                     Write-LogMessage -API 'Standards' -tenant $tenant -message "Rotated DKIM for $($_.Identity)" -sev Info
                 } catch {
                     $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message

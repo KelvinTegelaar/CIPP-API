@@ -23,7 +23,7 @@ function Invoke-CIPPStandardSPExternalUserExpiration {
         POWERSHELLEQUIVALENT
             Set-SPOTenant -ExternalUserExpireInDays 30 -ExternalUserExpirationRequired \$True
         RECOMMENDEDBY
-            "CIS 3.0"
+            "CIS"
         UPDATECOMMENTBLOCK
             Run the Tools\Update-StandardsComments.ps1 script to update this comment block
     .LINK

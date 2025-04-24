@@ -9,8 +9,9 @@ function Invoke-ExecGDAPInvite {
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
 
-    $APIName = 'ExecGDAPInvite'
-    Write-LogMessage -headers $Request.Headers -API $APINAME -message 'Accessed this API' -Sev 'Debug'
+    $APIName = $Request.Params.CIPPEndpoint
+    $Headers = $Request.Headers
+    Write-LogMessage -headers $Headers -API $APIName -message 'Accessed this API' -Sev 'Debug'
 
 
     $Action = $Request.Body.Action ?? $Request.Query.Action ?? 'Create'

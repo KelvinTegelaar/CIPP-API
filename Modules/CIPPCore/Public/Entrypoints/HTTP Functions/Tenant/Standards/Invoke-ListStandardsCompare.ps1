@@ -17,7 +17,7 @@ Function Invoke-ListStandardsCompare {
     $Results | ForEach-Object {
         $Object = $_
         $Object.PSObject.Properties | ForEach-Object {
-            if ($_.Name -like 'standards.*') {
+            if ($_.Name -like 'standards_*') {
                 if ($_.Value -is [System.Boolean]) {
                     $_.Value = [bool]$_.Value
                 } elseif ($_.Value -like '*{*') {
@@ -25,6 +25,13 @@ Function Invoke-ListStandardsCompare {
                 } else {
                     $_.Value = [string]$_.Value
                 }
+
+                $Key = $_.Name.replace('standards_', 'standards.')
+                $Key = $Key.replace('IntuneTemplate_', 'IntuneTemplate.')
+                $Key = $Key -replace '__', '-'
+
+                $object | Add-Member -MemberType NoteProperty -Name $Key -Value $_.Value -Force
+                $object.PSObject.Properties.Remove($_.Name)
             }
         }
     }

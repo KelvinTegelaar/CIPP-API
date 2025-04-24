@@ -22,7 +22,7 @@ Function Invoke-CIPPStandardTeamsEmailIntegration {
         POWERSHELLEQUIVALENT
             Set-CsTeamsClientConfiguration -AllowEmailIntoChannel \$false
         RECOMMENDEDBY
-            "CIS 3.0"
+            "CIS"
         UPDATECOMMENTBLOCK
             Run the Tools\Update-StandardsComments.ps1 script to update this comment block
     .LINK
@@ -42,13 +42,13 @@ Function Invoke-CIPPStandardTeamsEmailIntegration {
         if ($StateIsCorrect -eq $true) {
             Write-LogMessage -API 'Standards' -tenant $Tenant -message 'Teams Email Integration settings already set.' -sev Info
         } else {
-            $cmdparams = @{
+            $cmdParams = @{
                 Identity              = 'Global'
                 AllowEmailIntoChannel = $Settings.AllowEmailIntoChannel
             }
 
             try {
-                New-TeamsRequest -TenantFilter $Tenant -Cmdlet 'Set-CsTeamsClientConfiguration' -CmdParams $cmdparams
+                New-TeamsRequest -TenantFilter $Tenant -Cmdlet 'Set-CsTeamsClientConfiguration' -CmdParams $cmdParams
                 Write-LogMessage -API 'Standards' -tenant $Tenant -message 'Updated Teams Email Integration settings' -sev Info
             } catch {
                 $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
@@ -66,7 +66,7 @@ Function Invoke-CIPPStandardTeamsEmailIntegration {
         }
     }
 
-    if ($Setings.report -eq $true) {
+    if ($Settings.report -eq $true) {
 
         if ($StateIsCorrect) {
             $FieldValue = $true

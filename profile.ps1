@@ -38,7 +38,7 @@ try {
 } catch {}
 
 try {
-    if (!$ENV:SetFromProfile) {
+    if (!$env:SetFromProfile) {
         Write-Information "We're reloading from KV"
         $Auth = Get-CIPPAuthentication
     }
