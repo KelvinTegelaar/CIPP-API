@@ -18,9 +18,9 @@ function Invoke-ExecNewSafeLinksPolicy {
 
     # Interact with query parameters or the body of the request.
     $TenantFilter = $Request.Query.tenantFilter ?? $Request.Body.tenantFilter
-    $Name = $Request.Query.Name ?? $Request.Body.Name
 
     # Extract policy settings from body
+    $PolicyName = $Request.Body.PolicyName
     $EnableSafeLinksForEmail = $Request.Body.EnableSafeLinksForEmail
     $EnableSafeLinksForTeams = $Request.Body.EnableSafeLinksForTeams
     $EnableSafeLinksForOffice = $Request.Body.EnableSafeLinksForOffice
@@ -39,6 +39,7 @@ function Invoke-ExecNewSafeLinksPolicy {
     $Priority = $Request.Body.Priority
     $Comments = $Request.Body.Comments
     $Enabled = $Request.Body.Enabled
+    $RuleName = $Request.Body.RuleName
 
     # Extract recipient fields and handle different input formats
     $SentTo = $Request.Body.SentTo
@@ -111,10 +112,41 @@ function Invoke-ExecNewSafeLinksPolicy {
     $DoNotRewriteUrls = Process-ArrayField -Field $DoNotRewriteUrls
 
     try {
+        # Check if policy exists by listing all policies and filtering
+        $ExistingPoliciesParam = @{
+            tenantid         = $TenantFilter
+            cmdlet           = 'Get-SafeLinksPolicy'
+            useSystemMailbox = $true
+        }
+
+        $ExistingPolicies = New-ExoRequest @ExistingPoliciesParam
+        $PolicyExists = $ExistingPolicies | Where-Object { $_.Name -eq $PolicyName }
+
+        if ($PolicyExists) {
+            Write-LogMessage -headers $Headers -API $APIName -tenant $TenantFilter -message "Policy with name '$PolicyName' already exists in tenant $TenantFilter" -Sev 'Warning'
+            "Policy with name '$PolicyName' already exists in tenant $TenantFilter"
+            continue
+        }
+
+        # Check if rule exists by listing all rules and filtering
+        $ExistingRulesParam = @{
+            tenantid         = $TenantFilter
+            cmdlet           = 'Get-SafeLinksRule'
+            useSystemMailbox = $true
+        }
+
+        $ExistingRules = New-ExoRequest @ExistingRulesParam
+        $RuleExists = $ExistingRules | Where-Object { $_.Name -eq $RuleName }
+
+        if ($RuleExists) {
+            Write-LogMessage -headers $Headers -API $APIName -tenant $TenantFilter -message "Rule with name '$RuleName' already exists in tenant $TenantFilter" -Sev 'Warning'
+            "Rule with name '$RuleName' already exists in tenant $TenantFilter"
+            continue
+        }
         # PART 1: Create SafeLinks Policy
         # Build command parameters for policy
         $policyParams = @{
-            Name = $Name
+            Name = $PolicyName
         }
 
         # Only add parameters that are explicitly provided
@@ -140,14 +172,14 @@ function Invoke-ExecNewSafeLinksPolicy {
         }
 
         $null = New-ExoRequest @ExoPolicyRequestParam
-        $PolicyResult = "Successfully created new SafeLinks policy '$Name'"
+        $PolicyResult = "Successfully created new SafeLinks policy '$PolicyName'"
         Write-LogMessage -headers $Headers -API $APIName -tenant $TenantFilter -message $PolicyResult -Sev 'Info'
 
         # PART 2: Create SafeLinks Rule
         # Build command parameters for rule
         $ruleParams = @{
-            Name = $Name
-            SafeLinksPolicy = $Name
+            Name = $RuleName
+            SafeLinksPolicy = $PolicyName
         }
 
         # Only add parameters that are explicitly provided
@@ -176,7 +208,7 @@ function Invoke-ExecNewSafeLinksPolicy {
                 tenantid         = $TenantFilter
                 cmdlet           = $EnableCmdlet
                 cmdParams        = @{
-                    Identity = $Name
+                    Identity = $RuleName
                 }
                 useSystemMailbox = $true
             }
@@ -184,15 +216,15 @@ function Invoke-ExecNewSafeLinksPolicy {
             $null = New-ExoRequest @EnableRequestParam
         }
 
-        $RuleResult = "Successfully created new SafeLinks rule '$Name'"
+        $RuleResult = "Successfully created new SafeLinks rule '$RuleName'"
         Write-LogMessage -headers $Headers -API $APIName -tenant $TenantFilter -message $RuleResult -Sev 'Info'
 
-        $Result = "Successfully created new SafeLinks policy and rule '$Name'"
+        $Result = "Successfully created new SafeLinks policy '$PolicyName'and rule '$RuleName'"
         $StatusCode = [HttpStatusCode]::OK
     }
     catch {
         $ErrorMessage = Get-CippException -Exception $_
-        $Result = "Failed creating SafeLinks configuration '$Name'. Error: $($ErrorMessage.NormalizedError)"
+        $Result = "Failed creating new SafeLinks policy '$PolicyName'and rule '$RuleName'. Error: $($ErrorMessage.NormalizedError)"
         Write-LogMessage -headers $Headers -API $APIName -tenant $TenantFilter -message $Result -Sev 'Error'
         $StatusCode = [HttpStatusCode]::InternalServerError
     }

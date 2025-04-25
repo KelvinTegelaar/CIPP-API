@@ -18,8 +18,8 @@ function Invoke-EditSafeLinksPolicy {
 
     # Interact with query parameters or the body of the request.
     $TenantFilter = $Request.Query.tenantFilter ?? $Request.Body.tenantFilter
-    $OriginalPolicyName = $Request.Query.OriginalPolicyName ?? $Request.Body.OriginalPolicyName
-    $PolicyName = $OriginalPolicyName
+    $PolicyName = $Request.Query.PolicyName ?? $Request.Body.PolicyName
+    $RuleName = $Request.Query.RuleName ?? $Request.Body.RuleName
 
     # Helper function to process array fields
     function Process-ArrayField {
@@ -131,9 +131,8 @@ function Invoke-EditSafeLinksPolicy {
         if ($null -ne $EnableOrganizationBranding) { $policyParams.Add('EnableOrganizationBranding', $EnableOrganizationBranding); $hasPolicyParams = $true }
 
         # PART 2: Build and check rule parameters
-        $ruleName = $PolicyName
         $ruleParams = @{
-            Identity = $ruleName
+            Identity = $RuleName
         }
 
         # Add parameters that are explicitly provided
@@ -183,7 +182,7 @@ function Invoke-EditSafeLinksPolicy {
                 tenantid         = $TenantFilter
                 cmdlet           = $EnableCmdlet
                 cmdParams        = @{
-                    Identity = $ruleName
+                    Identity = $RuleName
                 }
                 useSystemMailbox = $true
             }
@@ -197,14 +196,8 @@ function Invoke-EditSafeLinksPolicy {
         # Add combined rule message if any rule operations were performed
         if ($hasRuleOperation) {
             $ruleOperations = $ruleMessages -join " and "
-            $Results.Add("Successfully $ruleOperations SafeLinks rule '$ruleName'")
-            Write-LogMessage -headers $Headers -API $APIName -tenant $TenantFilter -message "$ruleOperations SafeLinks rule '$ruleName'" -Sev 'Info'
-        }
-
-        # If no operations were performed, inform the user
-        if (!$hasPolicyParams && !$hasRuleOperation) {
-            $Results.Add("No changes were made to SafeLinks configuration '$PolicyName'")
-            Write-LogMessage -headers $Headers -API $APIName -tenant $TenantFilter -message "No changes were made to SafeLinks configuration '$PolicyName'" -Sev 'Info'
+            $Results.Add("Successfully $ruleOperations SafeLinks rule '$RuleName'")
+            Write-LogMessage -headers $Headers -API $APIName -tenant $TenantFilter -message "$ruleOperations SafeLinks rule '$RuleName'" -Sev 'Info'
         }
 
         $StatusCode = [HttpStatusCode]::OK

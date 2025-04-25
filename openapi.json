@@ -3170,6 +3170,119 @@
         }
       }
     },
+    "/ListSafeLinksPolicyTemplates": {
+      "get": {
+        "description": "List SafeLinks Policy Templates",
+        "summary": "List SafeLinks Policy Templates",
+        "tags": ["GET"],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {}
+                  }
+                }
+              }
+            },
+            "description": "Successful operation"
+          }
+        }
+      }
+    },
+    "/RemoveSafeLinksPolicyTemplate": {
+      "get": {
+        "description": "Remove SafeLinks Policy Template",
+        "summary": "Remove SafeLinks Policy Template",
+        "tags": ["GET"],
+        "parameters": [
+          {
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "name": "id",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {},
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful operation"
+          }
+        }
+      }
+    },
+    "/AddSafeLinksPolicyTemplate": {
+      "post": {
+        "description": "Add SafeLinks Policy Template",
+        "summary": "Add SafeLinks Policy Template",
+        "tags": ["POST"],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {}
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {},
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful operation"
+          }
+        }
+      }
+    },
+    "/AddSafeLinksPolicyFromTemplate": {
+      "post": {
+        "description": "Deploy SafeLinks Policy From Template",
+        "summary": "Deploy SafeLinks Policy From Template",
+        "tags": ["POST"],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {}
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {},
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful operation"
+          }
+        }
+      }
+    },
     "/EditSpamFilter": {
       "get": {
         "description": "EditSpamFilter",
