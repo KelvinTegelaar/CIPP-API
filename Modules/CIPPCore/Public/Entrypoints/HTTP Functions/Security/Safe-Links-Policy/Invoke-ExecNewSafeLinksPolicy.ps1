@@ -39,12 +39,76 @@ function Invoke-ExecNewSafeLinksPolicy {
     $Priority = $Request.Body.Priority
     $Comments = $Request.Body.Comments
     $Enabled = $Request.Body.Enabled
+
+    # Extract recipient fields and handle different input formats
     $SentTo = $Request.Body.SentTo
     $SentToMemberOf = $Request.Body.SentToMemberOf
     $RecipientDomainIs = $Request.Body.RecipientDomainIs
     $ExceptIfSentTo = $Request.Body.ExceptIfSentTo
     $ExceptIfSentToMemberOf = $Request.Body.ExceptIfSentToMemberOf
     $ExceptIfRecipientDomainIs = $Request.Body.ExceptIfRecipientDomainIs
+
+    # Helper function to process array fields
+    function Process-ArrayField {
+        param (
+            [Parameter(Mandatory = $false)]
+            $Field
+        )
+
+        if ($null -eq $Field) { return @() }
+
+        # If already an array, process each item
+        if ($Field -is [array]) {
+            $result = @()
+            foreach ($item in $Field) {
+                if ($item -is [string]) {
+                    $result += $item
+                }
+                elseif ($item -is [hashtable] -or $item -is [PSCustomObject]) {
+                    # Extract value from object
+                    if ($null -ne $item.value) {
+                        $result += $item.value
+                    }
+                    elseif ($null -ne $item.userPrincipalName) {
+                        $result += $item.userPrincipalName
+                    }
+                    elseif ($null -ne $item.id) {
+                        $result += $item.id
+                    }
+                    else {
+                        $result += $item.ToString()
+                    }
+                }
+                else {
+                    $result += $item.ToString()
+                }
+            }
+            return $result
+        }
+
+        # If it's a single object
+        if ($Field -is [hashtable] -or $Field -is [PSCustomObject]) {
+            if ($null -ne $Field.value) { return @($Field.value) }
+            if ($null -ne $Field.userPrincipalName) { return @($Field.userPrincipalName) }
+            if ($null -ne $Field.id) { return @($Field.id) }
+        }
+
+        # If it's a string, return as an array with one item
+        if ($Field -is [string]) {
+            return @($Field)
+        }
+
+        return @($Field)
+    }
+
+    # Process all array fields
+    $SentTo = Process-ArrayField -Field $SentTo
+    $SentToMemberOf = Process-ArrayField -Field $SentToMemberOf
+    $RecipientDomainIs = Process-ArrayField -Field $RecipientDomainIs
+    $ExceptIfSentTo = Process-ArrayField -Field $ExceptIfSentTo
+    $ExceptIfSentToMemberOf = Process-ArrayField -Field $ExceptIfSentToMemberOf
+    $ExceptIfRecipientDomainIs = Process-ArrayField -Field $ExceptIfRecipientDomainIs
+    $DoNotRewriteUrls = Process-ArrayField -Field $DoNotRewriteUrls
 
     try {
         # PART 1: Create SafeLinks Policy

@@ -2653,102 +2653,6 @@
         }
       }
     },
-    "/EditSafeLinksPolicyState": {
-      "get": {
-        "description": "EditSafeLinksPolicyState",
-        "summary": "EditSafeLinksPolicyState",
-        "tags": [
-          "GET"
-        ],
-        "parameters": [
-          {
-            "required": true,
-            "schema": {
-              "type": "string"
-            },
-            "name": "tenantFilter",
-            "in": "query"
-          },
-          {
-            "required": true,
-            "schema": {
-              "type": "string"
-            },
-            "name": "RuleName",
-            "in": "query"
-          },
-          {
-            "required": true,
-            "schema": {
-              "type": "string"
-            },
-            "name": "State",
-            "in": "query"
-          }
-        ],
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "properties": {},
-                  "type": "object"
-                }
-              }
-            },
-            "description": "Successful operation"
-          }
-        }
-      }
-    },
-    "/EditSafeLinksPolicyPriority": {
-      "get": {
-        "description": "EditSafeLinksPolicyPriority",
-        "summary": "EditSafeLinksPolicyPriority",
-        "tags": [
-          "GET"
-        ],
-        "parameters": [
-          {
-            "required": true,
-            "schema": {
-              "type": "string"
-            },
-            "name": "tenantFilter",
-            "in": "query"
-          },
-          {
-            "required": true,
-            "schema": {
-              "type": "string"
-            },
-            "name": "RuleName",
-            "in": "query"
-          },
-          {
-            "required": true,
-            "schema": {
-              "type": "integer"
-            },
-            "name": "Priority",
-            "in": "query"
-          }
-        ],
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "properties": {},
-                  "type": "object"
-                }
-              }
-            },
-            "description": "Successful operation"
-          }
-        }
-      }
-    },
     "/ExecDeleteSafeLinksPolicy": {
       "get": {
         "description": "ExecDeleteSafeLinksPolicy",
@@ -2818,7 +2722,7 @@
             "schema": {
               "type": "string"
             },
-            "name": "PolicyName",
+            "name": "OriginalPolicyName",
             "in": "query"
           }
         ],
@@ -2828,6 +2732,9 @@
               "schema": {
                 "type": "object",
                 "properties": {
+                  "Name": {
+                    "type": "string"
+                  },
                   "EnableSafeLinksForEmail": {
                     "type": "boolean"
                   },
@@ -2869,6 +2776,51 @@
                   },
                   "EnableOrganizationBranding": {
                     "type": "boolean"
+                  },
+                  "Priority": {
+                    "type": "integer"
+                  },
+                  "Comments": {
+                    "type": "string"
+                  },
+                  "Enabled": {
+                    "type": "boolean"
+                  },
+                  "SentTo": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "ExceptIfSentTo": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "SentToMemberOf": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "ExceptIfSentToMemberOf": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "RecipientDomainIs": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "ExceptIfRecipientDomainIs": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
                   }
                 }
               }
@@ -2880,8 +2832,15 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "properties": {},
-                  "type": "object"
+                  "type": "object",
+                  "properties": {
+                    "Results": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    }
+                  }
                 }
               }
             },
@@ -2915,7 +2874,7 @@
             "in": "query"
           },
           {
-            "required": true,
+            "required": false,
             "schema": {
               "type": "string"
             },
@@ -2928,8 +2887,84 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "properties": {},
-                  "type": "object"
+                  "type": "object",
+                  "properties": {
+                    "Results": {
+                      "type": "object",
+                      "properties": {
+                        "Policy": {
+                          "type": "object",
+                          "properties": {
+                            "Name": { "type": "string" },
+                            "EnableSafeLinksForEmail": { "type": "boolean" },
+                            "EnableSafeLinksForTeams": { "type": "boolean" },
+                            "EnableSafeLinksForOffice": { "type": "boolean" },
+                            "TrackClicks": { "type": "boolean" },
+                            "AllowClickThrough": { "type": "boolean" },
+                            "ScanUrls": { "type": "boolean" },
+                            "EnableForInternalSenders": { "type": "boolean" },
+                            "DeliverMessageAfterScan": { "type": "boolean" },
+                            "DisableUrlRewrite": { "type": "boolean" },
+                            "DoNotRewriteUrls": {
+                              "type": "array",
+                              "items": {
+                                "type": "string"
+                              }
+                            },
+                            "AdminDisplayName": { "type": "string" },
+                            "CustomNotificationText": { "type": "string" },
+                            "EnableOrganizationBranding": { "type": "boolean" }
+                          }
+                        },
+                        "Rule": {
+                          "type": "object",
+                          "properties": {
+                            "Name": { "type": "string" },
+                            "Priority": { "type": "integer" },
+                            "Comments": { "type": "string" },
+                            "State": { "type": "string" },
+                            "SentTo": {
+                              "type": "array",
+                              "items": {
+                                "type": "string"
+                              }
+                            },
+                            "ExceptIfSentTo": {
+                              "type": "array",
+                              "items": {
+                                "type": "string"
+                              }
+                            },
+                            "SentToMemberOf": {
+                              "type": "array",
+                              "items": {
+                                "type": "string"
+                              }
+                            },
+                            "ExceptIfSentToMemberOf": {
+                              "type": "array",
+                              "items": {
+                                "type": "string"
+                              }
+                            },
+                            "RecipientDomainIs": {
+                              "type": "array",
+                              "items": {
+                                "type": "string"
+                              }
+                            },
+                            "ExceptIfRecipientDomainIs": {
+                              "type": "array",
+                              "items": {
+                                "type": "string"
+                              }
+                            }
+                          }
+                        },
+                        "Message": { "type": "string" }
+                      }
+                    }
+                  }
                 }
               }
             },
@@ -5139,38 +5174,6 @@
       "get": {
         "description": "ListIntuneIntents",
         "summary": "ListIntuneIntents",
-        "tags": [
-          "GET"
-        ],
-        "parameters": [
-          {
-            "required": true,
-            "schema": {
-              "type": "string"
-            },
-            "name": "TenantFilter",
-            "in": "query"
-          }
-        ],
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "properties": {},
-                  "type": "object"
-                }
-              }
-            },
-            "description": "Successful operation"
-          }
-        }
-      }
-    },
-    "/ListSafeLinksPolicy": {
-      "get": {
-        "description": "ListSafeLinksPolicy",
-        "summary": "ListSafeLinksPolicy",
         "tags": [
           "GET"
         ],
