@@ -24,10 +24,12 @@ function Get-CIPPAuthentication {
             $SubscriptionId = $env:WEBSITE_OWNER_NAME -split '\+' | Select-Object -First 1
             try {
                 $Context = Get-AzContext
-                Write-Information "Current context: $($Context | ConvertTo-Json)"
-                if ($Context.Subscription.Id -ne $SubscriptionId) {
-                    Write-Information "Setting context to subscription $SubscriptionId"
-                    $null = Set-AzContext -SubscriptionId $SubscriptionId
+                if ($Context.Subscription) {
+                    #Write-Information "Current context: $($Context | ConvertTo-Json)"
+                    if ($Context.Subscription.Id -ne $SubscriptionId) {
+                        Write-Information "Setting context to subscription $SubscriptionId"
+                        $null = Set-AzContext -SubscriptionId $SubscriptionId
+                    }
                 }
             } catch {
                 Write-Information "ERROR: Could not set context to subscription $SubscriptionId."
