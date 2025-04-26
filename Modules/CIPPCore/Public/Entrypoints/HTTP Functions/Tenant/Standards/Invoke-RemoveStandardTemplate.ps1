@@ -1,6 +1,6 @@
 using namespace System.Net
 
-Function Invoke-RemoveStandardTemplate {
+function Invoke-RemoveStandardTemplate {
     <#
     .FUNCTIONALITY
         Entrypoint,AnyTenant
@@ -19,9 +19,20 @@ Function Invoke-RemoveStandardTemplate {
     try {
         $Table = Get-CippTable -tablename 'templates'
         $Filter = "PartitionKey eq 'StandardsTemplateV2' and RowKey eq '$id'"
-        $ClearRow = Get-CIPPAzDataTableEntity @Table -Filter $Filter -Property PartitionKey, RowKey
+        $ClearRow = Get-CIPPAzDataTableEntity @Table -Filter $Filter -Property PartitionKey, RowKey, JSON
+        if (!$ClearRow) {
+            $Result = "Standards template with id $ID not found"
+            Write-LogMessage -Headers $Headers -API $APINAME -message $Result -Sev 'Error'
+            $StatusCode = [HttpStatusCode]::NotFound
+            Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
+                    StatusCode = $StatusCode
+                    Body       = @{'Results' = $Result }
+                })
+            return
+        }
+        $Template = $ClearRow.JSON | ConvertFrom-Json
         Remove-AzDataTableEntity -Force @Table -Entity $clearRow
-        $Result = "Removed Standards Template named $($ClearRow.name) and id $($id)"
+        $Result = "Removed Standards Template named $($Template.templateName) ($($id))"
         Write-LogMessage -Headers $Headers -API $APINAME -message $Result -Sev 'Info'
         $StatusCode = [HttpStatusCode]::OK
     } catch {
