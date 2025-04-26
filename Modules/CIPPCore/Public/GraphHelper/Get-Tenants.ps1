@@ -107,8 +107,6 @@ function Get-Tenants {
                 Add-CIPPAzDataTableEntity @TenantsTable -Entity $ExistingTenantInfo -Force | Out-Null
             }
 
-            $LatestRelationship = $_.Group | Sort-Object -Property relationshipEnd | Select-Object -Last 1
-
             if ($ExistingTenantInfo -and $ExistingTenantInfo.RequiresRefresh -eq $false -and ($ExistingTenantInfo.displayName -eq $LatestRelationship.displayName -or $ExistingTenantInfo.displayName -eq $Alias)) {
                 Write-Host 'Existing tenant found. We already have it cached, skipping.'
 
@@ -135,7 +133,7 @@ function Get-Tenants {
                 $ExistingTenantInfo
                 return
             }
-
+            $LatestRelationship = $_.Group | Sort-Object -Property relationshipEnd | Select-Object -Last 1
             $AutoExtend = ($_.Group | Where-Object { $_.autoExtend -eq $true } | Measure-Object).Count -gt 0
             if (!$SkipDomains.IsPresent) {
                 try {
