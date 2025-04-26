@@ -104,8 +104,29 @@ function Get-Tenants {
                 Add-CIPPAzDataTableEntity @TenantsTable -Entity $ExistingTenantInfo -Force | Out-Null
             }
 
-            if ($ExistingTenantInfo -and $ExistingTenantInfo.RequiresRefresh -eq $false -and $ExistingTenantInfo.displayName -eq $LatestRelationship.displayName) {
+            if ($ExistingTenantInfo -and $ExistingTenantInfo.RequiresRefresh -eq $false -and ($ExistingTenantInfo.displayName -eq $LatestRelationship.displayName -or $ExistingTenantInfo.displayName -eq $Alias)) {
                 Write-Host 'Existing tenant found. We already have it cached, skipping.'
+
+                $DisplayNameUpdated = $false
+                if (![string]::IsNullOrEmpty($Alias.Value)) {
+                    if ($Alias.Value -ne $ExistingTenantInfo.displayName) {
+                        Write-Host "Alias found for $($_.Name)."
+                        $ExistingTenantInfo.displayName = $Alias.Value
+                        $DisplayNameUpdated = $true
+                    }
+                } else {
+                    if ($LatestRelationship.displayName -ne $ExistingTenantInfo.displayName) {
+                        Write-Host "Display name changed from relationship, updating."
+                        $ExistingTenantInfo.displayName = $LatestRelationship.displayName
+                        $DisplayNameUpdated = $true
+                    }
+                }
+
+                if ($DisplayNameUpdated) {
+                    $ExistingTenantInfo.displayName = $LatestRelationship.displayName
+                    Add-CIPPAzDataTableEntity @TenantsTable -Entity $ExistingTenantInfo -Force | Out-Null
+                }
+
                 $ExistingTenantInfo
                 return
             }
@@ -136,8 +157,8 @@ function Get-Tenants {
                 }
                 Write-Host 'finished getting domain'
 
-                if ($Aliases.PartitionKey -contains $_.Name -and ![string]::IsNullOrEmpty($Alias)) {
-                    $Alias = $Aliases | Where-Object { $_.PartitionKey -eq $_.Name }
+                if (![string]::IsNullOrEmpty($Alias.Value)) {
+                    Write-Host "Alias found for $($_.Name)."
                     $displayName = $Alias.Value
                 } else {
                     $displayName = $LatestRelationship.displayName
