@@ -75,7 +75,6 @@ function Get-Tenants {
     if (($BuildRequired -or $TriggerRefresh.IsPresent) -and $PartnerTenantState.state -ne 'owntenant') {
         # Get TenantProperties table
         $PropertiesTable = Get-CippTable -TableName 'TenantProperties'
-        $Aliases = Get-CIPPAzDataTableEntity @PropertiesTable -Filter "RowKey eq 'Alias'"
 
         #get the full list of tenants
         $GDAPRelationships = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/tenantRelationships/delegatedAdminRelationships?`$filter=status eq 'active' and not startsWith(displayName,'MLT_')$RelationshipFilter&`$select=customer,autoExtendDuration,endDateTime&`$top=300" -NoAuthCheck:$true
@@ -95,7 +94,7 @@ function Get-Tenants {
             # Write-Host "Processing $($_.Name), $($_.displayName) to add to tenant list."
             $ExistingTenantInfo = Get-CIPPAzDataTableEntity @TenantsTable -Filter "PartitionKey eq 'Tenants' and RowKey eq '$($_.Name)'"
 
-            $Alias = ($Aliases | Where-Object { $_.PartitionKey -eq $_.Name }).Value
+            $Alias = (Get-AzDataTableEntity @PropertiesTable -Filter "PartitionKey eq '$($_.Name)' and RowKey eq 'Alias'").Value
 
             if ($TriggerRefresh.IsPresent -and $ExistingTenantInfo.customerId) {
                 # Reset error count
@@ -116,7 +115,7 @@ function Get-Tenants {
                     }
                 } else {
                     if ($LatestRelationship.displayName -ne $ExistingTenantInfo.displayName) {
-                        Write-Host "Display name changed from relationship, updating."
+                        Write-Host 'Display name changed from relationship, updating.'
                         $ExistingTenantInfo.displayName = $LatestRelationship.displayName
                         $DisplayNameUpdated = $true
                     }
