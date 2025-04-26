@@ -96,6 +96,10 @@ function Get-Tenants {
 
             $Alias = (Get-AzDataTableEntity @PropertiesTable -Filter "PartitionKey eq '$($_.Name)' and RowKey eq 'Alias'").Value
 
+            if ($Alias) {
+                Write-Host "Alias found for $($_.Name) - $Alias."
+            }
+
             if ($TriggerRefresh.IsPresent -and $ExistingTenantInfo.customerId) {
                 # Reset error count
                 Write-Host "Resetting error count for $($_.Name)"
@@ -103,12 +107,14 @@ function Get-Tenants {
                 Add-CIPPAzDataTableEntity @TenantsTable -Entity $ExistingTenantInfo -Force | Out-Null
             }
 
+            $LatestRelationship = $_.Group | Sort-Object -Property relationshipEnd | Select-Object -Last 1
+
             if ($ExistingTenantInfo -and $ExistingTenantInfo.RequiresRefresh -eq $false -and ($ExistingTenantInfo.displayName -eq $LatestRelationship.displayName -or $ExistingTenantInfo.displayName -eq $Alias)) {
                 Write-Host 'Existing tenant found. We already have it cached, skipping.'
 
                 $DisplayNameUpdated = $false
                 if (![string]::IsNullOrEmpty($Alias)) {
-                    if ($Alias.Value -ne $ExistingTenantInfo.displayName) {
+                    if ($Alias -ne $ExistingTenantInfo.displayName) {
                         Write-Host "Alias found for $($_.Name)."
                         $ExistingTenantInfo.displayName = $Alias
                         $DisplayNameUpdated = $true
@@ -129,7 +135,7 @@ function Get-Tenants {
                 $ExistingTenantInfo
                 return
             }
-            $LatestRelationship = $_.Group | Sort-Object -Property relationshipEnd | Select-Object -Last 1
+
             $AutoExtend = ($_.Group | Where-Object { $_.autoExtend -eq $true } | Measure-Object).Count -gt 0
             if (!$SkipDomains.IsPresent) {
                 try {
@@ -157,7 +163,7 @@ function Get-Tenants {
                 Write-Host 'finished getting domain'
 
                 if (![string]::IsNullOrEmpty($Alias)) {
-                    Write-Host "Alias found for $($_.Name)."
+                    Write-Information "Setting display name to $Alias."
                     $displayName = $Alias
                 } else {
                     $displayName = $LatestRelationship.displayName
