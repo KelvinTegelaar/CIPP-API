@@ -108,10 +108,10 @@ function Get-Tenants {
                 Write-Host 'Existing tenant found. We already have it cached, skipping.'
 
                 $DisplayNameUpdated = $false
-                if (![string]::IsNullOrEmpty($Alias.Value)) {
+                if (![string]::IsNullOrEmpty($Alias)) {
                     if ($Alias.Value -ne $ExistingTenantInfo.displayName) {
                         Write-Host "Alias found for $($_.Name)."
-                        $ExistingTenantInfo.displayName = $Alias.Value
+                        $ExistingTenantInfo.displayName = $Alias
                         $DisplayNameUpdated = $true
                     }
                 } else {
@@ -157,9 +157,9 @@ function Get-Tenants {
                 }
                 Write-Host 'finished getting domain'
 
-                if (![string]::IsNullOrEmpty($Alias.Value)) {
+                if (![string]::IsNullOrEmpty($Alias)) {
                     Write-Host "Alias found for $($_.Name)."
-                    $displayName = $Alias.Value
+                    $displayName = $Alias
                 } else {
                     $displayName = $LatestRelationship.displayName
                 }
