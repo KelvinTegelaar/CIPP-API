@@ -1,4 +1,4 @@
-Function Push-ExecOnboardTenantQueue {
+function Push-ExecOnboardTenantQueue {
     <#
     .FUNCTIONALITY
     Entrypoint
@@ -354,22 +354,29 @@ Function Push-ExecOnboardTenantQueue {
         if ($OnboardingSteps.Step4.Status -eq 'succeeded') {
             if ($Item.StandardsExcludeAllTenants -eq $true) {
                 $AddExclusionObj = [PSCustomObject]@{
-                    label       = $Tenant.defaultDomainName
+                    label       = '{0} ({1})' -f $Tenant.displayName, $Tenant.defaultDomainName
                     value       = $Tenant.defaultDomainName
-                    addedFields = @{}
+                    addedFields = @{
+                        customerId        = $Tenant.customerId
+                        defaultDomainName = $Tenant.defaultDomainName
+                    }
                 }
                 $Table = Get-CippTable -tablename 'templates'
                 $ExistingTemplates = Get-CippazDataTableEntity @Table -Filter "PartitionKey eq 'StandardsTemplateV2'" | Where-Object { $_.JSON -match 'AllTenants' }
-                foreach ($AllTenantesTemplate in $ExistingTemplates) {
+                foreach ($AllTenantsTemplate in $ExistingTemplates) {
                     $object = $AllTenantesTemplate.JSON | ConvertFrom-Json
-                    $NewExcludedTenants = $object.excludedTenants + $AddExclusionObj
+                    $NewExcludedTenants = [system.collections.generic.list[object]]::new()
+                    foreach ($Tenant in $object.excludedTenants) {
+                        $NewExcludedTenants.Add($Tenant)
+                    }
+                    $NewExcludedTenants.Add($AddExclusionObj)
                     $object.excludedTenants = $NewExcludedTenants
                     $JSON = ConvertTo-Json -InputObject $object -Compress -Depth 10
                     $Table.Force = $true
                     Add-CIPPAzDataTableEntity @Table -Entity @{
                         JSON         = "$JSON"
-                        RowKey       = $AllTenantesTemplate.RowKey
-                        GUID         = $AllTenantesTemplate.GUID
+                        RowKey       = $AllTenantsTemplate.RowKey
+                        GUID         = $AllTenantsTemplate.GUID
                         PartitionKey = 'StandardsTemplateV2'
                     }
                 }
