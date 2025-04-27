@@ -93,7 +93,7 @@ Function Invoke-EditUser {
                 $null = $results.Add('Added Sherweb License, scheduling assignment')
                 $taskObject = [PSCustomObject]@{
                     TenantFilter  = $UserObj.tenantFilter
-                    Name          = "Assign License: $Username"
+                    Name          = "Assign License: $UserPrincipalName"
                     Command       = @{
                         value = 'Set-CIPPUserLicense'
                     }
