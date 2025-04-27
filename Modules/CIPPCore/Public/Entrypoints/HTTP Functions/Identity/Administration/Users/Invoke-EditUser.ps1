@@ -88,8 +88,8 @@ Function Invoke-EditUser {
     try {
 
         if ($licenses -or $UserObj.removeLicenses) {
-            if ($UserObj.sherwebLicense) {
-                $License = Set-SherwebSubscription -TenantFilter $UserObj.tenantFilter -SKU $UserObj.sherwebLicense -Add 1
+            if ($UserObj.sherwebLicense.value) {
+                $License = Set-SherwebSubscription -TenantFilter $UserObj.tenantFilter -SKU $UserObj.sherwebLicense.value -Add 1
                 $null = $results.Add('Added Sherweb License, scheduling assignment')
                 $taskObject = [PSCustomObject]@{
                     TenantFilter  = $UserObj.tenantFilter
