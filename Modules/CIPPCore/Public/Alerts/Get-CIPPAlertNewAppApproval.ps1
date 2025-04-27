@@ -15,7 +15,7 @@ function Get-CIPPAlertNewAppApproval {
     try {
         $Approvals = New-GraphGetRequest -Uri "https://graph.microsoft.com/beta/identityGovernance/appConsent/appConsentRequests?`$filter=userConsentRequests/any (u:u/status eq 'InProgress')" -tenantid $TenantFilter
         if ($Approvals.count -gt 0) {
-            $AlertData = [System.Collections.Generic.List[string]]::new()
+            $AlertData = [System.Collections.Generic.List[PSCustomObject]]::new()
             foreach ($App in $Approvals) {
                 $userConsentRequests = New-GraphGetRequest -Uri "https://graph.microsoft.com/v1.0/identityGovernance/appConsent/appConsentRequests/$($App.id)/userConsentRequests" -tenantid $TenantFilter
                 $userConsentRequests | ForEach-Object {
@@ -28,7 +28,15 @@ function Get-CIPPAlertNewAppApproval {
                         "https://login.microsoftonline.com/$($TenantFilter)/adminConsent?client_id=$($App.appId)&bf_id=$($App.id)&redirect_uri=https://entra.microsoft.com/TokenAuthorize"
                     }
 
-                    $Message = "App name: $($App.appDisplayName) - Request user: $($_.createdBy.user.userPrincipalName) - Reason: $($_.reason)`nApp Id: $($App.appId) - Scopes: $($App.pendingScopes.displayName)`nConsent URL: $consentUrl"
+                    $Message = [PSCustomObject]@{
+                        AppName     = $App.appDisplayName
+                        RequestUser = $_.createdBy.user.userPrincipalName
+                        Reason      = $_.reason
+                        AppId       = $App.appId
+                        Scopes      = ($App.pendingScopes.displayName -join ', ')
+                        ConsentURL  = $consentUrl
+                        Tenant      = $TenantFilter
+                    }
                     $AlertData.Add($Message)
                 }
             }
