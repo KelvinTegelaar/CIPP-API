@@ -102,7 +102,7 @@ Function Invoke-EditUser {
                         APIName     = 'Sherweb License Assignment'
                         AddLicenses = $licenses
                     }
-                    ScheduledTime = $Request.Body.scheduled.date
+                    ScheduledTime = 0 #right now, which is in the next 15 minutes and should cover most cases.
                     PostExecution = @{
                         Webhook = [bool]$Request.Body.PostExecution.webhook
                         Email   = [bool]$Request.Body.PostExecution.email
