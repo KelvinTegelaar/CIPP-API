@@ -106,12 +106,10 @@ foreach ($Standard in $StandardsInfo) {
                             $NewComment.Add("           $(ConvertTo-Json -InputObject $Value -Depth 5 -Compress)`n")
                         }
                         continue
-                    }
-                    elseif ($Property.Value -is [System.Management.Automation.PSCustomObject]) {
+                    } elseif ($Property.Value -is [System.Management.Automation.PSCustomObject]) {
                         $NewComment.Add("           $(ConvertTo-Json -InputObject $Property.Value -Depth 5 -Compress)`n")
                         continue
-                    }
-                    else {
+                    } else {
                         if ($null -ne $Property.Value) {
                             $NewComment.Add("           $(EscapeMarkdown($Property.Value.ToString()))`n")
                         }
