@@ -34,10 +34,18 @@ function Invoke-CIPPStandardMDMScope {
     $CurrentInfo = New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/policies/mobileDeviceManagementPolicies/0000000a-0000-0000-c000-000000000000?$expand=includedGroups' -tenantid $Tenant
 
     $StateIsCorrect = ($CurrentInfo.termsOfUseUrl -eq 'https://portal.manage.microsoft.com/TermsofUse.aspx') -and
-                        ($CurrentInfo.discoveryUrl -eq 'https://enrollment.manage.microsoft.com/enrollmentserver/discovery.svc') -and
-                        ($CurrentInfo.complianceUrl -eq 'https://portal.manage.microsoft.com/?portalAction=Compliance') -and
-                        ($CurrentInfo.appliesTo -eq $Settings.appliesTo) -and
-                        ($Settings.appliesTo -ne 'selected' -or ($CurrentInfo.includedGroups.displayName -contains $Settings.customGroup))
+        ($CurrentInfo.discoveryUrl -eq 'https://enrollment.manage.microsoft.com/enrollmentserver/discovery.svc') -and
+        ($CurrentInfo.complianceUrl -eq 'https://portal.manage.microsoft.com/?portalAction=Compliance') -and
+        ($CurrentInfo.appliesTo -eq $Settings.appliesTo) -and
+        ($Settings.appliesTo -ne 'selected' -or ($CurrentInfo.includedGroups.displayName -contains $Settings.customGroup))
+
+    $CompareField = [PSCustomObject]@{
+        termsOfUseUrl = $CurrentInfo.termsOfUseUrl
+        discoveryUrl  = $CurrentInfo.discoveryUrl
+        complianceUrl = $CurrentInfo.complianceUrl
+        appliesTo     = $CurrentInfo.appliesTo
+        customGroup   = $CurrentInfo.includedGroups.displayName
+    }
 
     If ($Settings.remediate -eq $true) {
         if ($StateIsCorrect -eq $true) {
@@ -112,17 +120,17 @@ function Invoke-CIPPStandardMDMScope {
     }
 
     if ($Settings.alert -eq $true) {
-        if ($StateIsCorrect) {
+        if ($StateIsCorrect -eq $true) {
             Write-LogMessage -API 'Standards' -tenant $tenant -message 'MDM Scope is correctly configured' -sev Info
         } else {
-            Write-StandardsAlert -message 'MDM Scope is not correctly configured' -object $CurrentInfo -tenant $tenant -standardName 'MDMScope' -standardId $Settings.standardId
+            Write-StandardsAlert -message 'MDM Scope is not correctly configured' -object $CompareField -tenant $tenant -standardName 'MDMScope' -standardId $Settings.standardId
             Write-LogMessage -API 'Standards' -tenant $tenant -message 'MDM Scope is not correctly configured' -sev Info
         }
     }
 
     if ($Settings.report -eq $true) {
-        $state = $StateIsCorrect ? $true : $CurrentInfo
-        Set-CIPPStandardsCompareField -FieldName 'standards.MDMScope' -FieldValue $state -TenantFilter $Tenant
+        $FieldValue = $StateIsCorrect ? $true : $CompareField
+        Set-CIPPStandardsCompareField -FieldName 'standards.MDMScope' -FieldValue $FieldValue -TenantFilter $Tenant
         Add-CIPPBPAField -FieldName 'MDMScope' -FieldValue $StateIsCorrect -StoreAs bool -Tenant $tenant
     }
 
