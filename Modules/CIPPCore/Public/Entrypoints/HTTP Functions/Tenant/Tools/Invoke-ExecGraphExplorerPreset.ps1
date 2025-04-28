@@ -1,6 +1,6 @@
 using namespace System.Net
 
-Function Invoke-ExecGraphExplorerPreset {
+function Invoke-ExecGraphExplorerPreset {
     <#
     .FUNCTIONALITY
         Entrypoint
@@ -22,7 +22,7 @@ Function Invoke-ExecGraphExplorerPreset {
 
     switch ($Action) {
         'Copy' {
-            $Id = $Request.Body.preset.id ?  $Request.Body.preset.id: (New-Guid).Guid
+            $Id = $Request.Body.preset.id ? $Request.Body.preset.id : (New-Guid).Guid
         }
         'Save' {
             $Id = $Request.Body.preset.id
@@ -40,6 +40,32 @@ Function Invoke-ExecGraphExplorerPreset {
 
     if ($params.'$select'.value) {
         $params.'$select' = ($params.'$select').value -join ','
+    }
+
+    if (!$Request.Body.preset.name) {
+        $Message = 'Error: Preset name is required'
+        $StatusCode = [HttpStatusCode]::BadRequest
+        Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
+                StatusCode = $StatusCode
+                Body       = @{
+                    Results = $Message
+                    Success = $false
+                }
+            })
+        return
+    }
+
+    if (!$Request.Body.preset.endpoint) {
+        $Message = 'Error: Preset endpoint is required'
+        $StatusCode = [HttpStatusCode]::BadRequest
+        Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
+                StatusCode = $StatusCode
+                Body       = @{
+                    Results = $Message
+                    Success = $false
+                }
+            })
+        return
     }
 
     $Preset = [PSCustomObject]@{

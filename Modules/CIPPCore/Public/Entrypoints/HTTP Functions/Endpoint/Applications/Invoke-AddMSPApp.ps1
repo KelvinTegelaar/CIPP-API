@@ -1,6 +1,6 @@
 using namespace System.Net
 
-Function Invoke-AddMSPApp {
+function Invoke-AddMSPApp {
     <#
     .FUNCTIONALITY
         Entrypoint
@@ -36,10 +36,6 @@ Function Invoke-AddMSPApp {
             'Huntress' {
                 $installCommandLine = "powershell.exe -ExecutionPolicy Bypass .\install.ps1 -OrgKey $($InstallParams.Orgkey."$($Tenant.customerId)") -acctkey $($InstallParams.AccountKey)"
                 $uninstallCommandLine = 'powershell.exe -ExecutionPolicy Bypass .\install.ps1 -Uninstall'
-            }
-            'Immybot' {
-                $installCommandLine = "powershell.exe -ExecutionPolicy Bypass .\install.ps1 -url $($InstallParams.ClientURL."$($tenant.customerId)")"
-                $UninstallCommandLine = 'powershell.exe -ExecutionPolicy Bypass .\uninstall.ps1'
             }
             'syncro' {
                 $installCommandLine = "powershell.exe -ExecutionPolicy Bypass .\install.ps1 -URL $($InstallParams.ClientURL."$($Tenant.customerId)")"

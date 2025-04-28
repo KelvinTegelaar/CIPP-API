@@ -66,6 +66,12 @@ function Invoke-CIPPStandardPhishingSimulations {
     # Check state for all components
     $StateIsCorrect = $PolicyIsCorrect -and $RuleIsCorrect -and $PhishingSimUrlsIsCorrect
 
+    $CompareField = [PSCustomObject]@{
+        Domains         = $RuleState.Domains -join ', '
+        SenderIpRanges  = $RuleState.SenderIpRanges -join ', '
+        PhishingSimUrls = $SimUrlState.value -join ', '
+    }
+
     If ($Settings.remediate -eq $true) {
         If ($StateIsCorrect -eq $true) {
             Write-LogMessage -API 'Standards' -Tenant $Tenant -message 'Advanced Phishing Simulations already correctly configured' -sev Info
@@ -157,18 +163,14 @@ function Invoke-CIPPStandardPhishingSimulations {
         If ($StateIsCorrect -eq $true) {
             Write-LogMessage -API 'Standards' -Tenant $Tenant -message 'Phishing Simulation Configuration is correctly configured' -sev Info
         } Else {
-            Write-StandardsAlert -message 'Phishing Simulation Configuration is not correctly configured' -object $CurrentState -tenant $Tenant -standardName 'PhishingSimulations' -standardId $Settings.standardId
+            Write-StandardsAlert -message 'Phishing Simulation Configuration is not correctly configured' -object $CompareField -tenant $Tenant -standardName 'PhishingSimulations' -standardId $Settings.standardId
             Write-LogMessage -API 'Standards' -Tenant $Tenant -message 'Phishing Simulation Configuration is not correctly configured' -sev Info
         }
     }
 
     If ($Settings.report -eq $true) {
+        $FieldValue = $StateIsCorrect ? $true : $CompareField
         Add-CIPPBPAField -FieldName 'PhishingSimulations' -FieldValue $StateIsCorrect -StoreAs bool -Tenant $Tenant
-        If ($StateIsCorrect -eq $true) {
-            $FieldValue = $true
-        } Else {
-            $FieldValue = $CurrentState ? $CurrentState : $false
-        }
         Set-CIPPStandardsCompareField -FieldName 'standards.PhishingSimulations' -FieldValue $FieldValue -Tenant $Tenant
     }
 }

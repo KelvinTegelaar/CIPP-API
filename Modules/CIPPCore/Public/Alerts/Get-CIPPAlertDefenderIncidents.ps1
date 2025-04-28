@@ -13,7 +13,14 @@ function Get-CIPPAlertDefenderIncidents {
     )
     try {
         $AlertData = New-GraphGetRequest -uri "https://graph.microsoft.com/v1.0/security/incidents?`$top=50&`$filter=status eq 'active'" -tenantid $TenantFilter | ForEach-Object {
-            "Incident ID $($_.id): Created at $($_.createdDateTime). Severity: $($_.severity). `nIncident name: $($_.displayName). Incident URL: $($_.incidentWebUrl)."
+            [PSCustomObject]@{
+                IncidentID   = $_.id
+                CreatedAt    = $_.createdDateTime
+                Severity     = $_.severity
+                IncidentName = $_.displayName
+                IncidentUrl  = $_.incidentWebUrl
+                Tenant       = $TenantFilter
+            }
         }
         Write-AlertTrace -cmdletName $MyInvocation.MyCommand -tenantFilter $TenantFilter -data $AlertData
 

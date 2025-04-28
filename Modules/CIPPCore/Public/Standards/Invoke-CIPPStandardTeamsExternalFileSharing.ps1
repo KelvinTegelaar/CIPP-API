@@ -38,23 +38,18 @@ function Invoke-CIPPStandardTeamsExternalFileSharing {
     Write-Host "TeamsExternalFileSharing: $($Settings | ConvertTo-Json)"
     $CurrentState = New-TeamsRequest -TenantFilter $Tenant -Cmdlet 'Get-CsTeamsClientConfiguration' | Select-Object AllowGoogleDrive, AllowShareFile, AllowBox, AllowDropBox, AllowEgnyte
 
-    if ($null -eq $Settings.AllowGoogleDrive) { $Settings.AllowGoogleDrive = $false }
-    if ($null -eq $Settings.AllowShareFile) { $Settings.AllowShareFile = $false }
-    if ($null -eq $Settings.AllowBox) { $Settings.AllowBox = $false }
-    if ($null -eq $Settings.AllowDropBox) { $Settings.AllowDropBox = $false }
-    if ($null -eq $Settings.AllowEgnyte) { $Settings.AllowEgnyte = $false }
-
-    $StateIsCorrect = ($CurrentState.AllowGoogleDrive -eq $Settings.AllowGoogleDrive) -and
-    ($CurrentState.AllowShareFile -eq $Settings.AllowShareFile) -and
-    ($CurrentState.AllowBox -eq $Settings.AllowBox) -and
-    ($CurrentState.AllowDropBox -eq $Settings.AllowDropBox) -and
-    ($CurrentState.AllowEgnyte -eq $Settings.AllowEgnyte)
+    $StateIsCorrect = ($CurrentState.AllowGoogleDrive -eq $Settings.AllowGoogleDrive ?? $false ) -and
+    ($CurrentState.AllowShareFile -eq $Settings.AllowShareFile ?? $false ) -and
+    ($CurrentState.AllowBox -eq $Settings.AllowBox ?? $false ) -and
+    ($CurrentState.AllowDropBox -eq $Settings.AllowDropBox ?? $false ) -and
+    ($CurrentState.AllowEgnyte -eq $Settings.AllowEgnyte ?? $false )
 
     if ($Settings.remediate -eq $true) {
         if ($StateIsCorrect -eq $true) {
             Write-LogMessage -API 'Standards' -tenant $Tenant -message 'Teams External File Sharing already set.' -sev Info
         } else {
             $cmdParams = @{
+                Identity         = 'Global'
                 AllowGoogleDrive = $Settings.AllowGoogleDrive
                 AllowShareFile   = $Settings.AllowShareFile
                 AllowBox         = $Settings.AllowBox
@@ -84,7 +79,7 @@ function Invoke-CIPPStandardTeamsExternalFileSharing {
     if ($Settings.report -eq $true) {
         Add-CIPPBPAField -FieldName 'TeamsExternalFileSharing' -FieldValue $StateIsCorrect -StoreAs bool -Tenant $Tenant
 
-        if ($StateIsCorrect) {
+        if ($StateIsCorrect -eq $true) {
             $FieldValue = $true
         } else {
             $FieldValue = $CurrentState
