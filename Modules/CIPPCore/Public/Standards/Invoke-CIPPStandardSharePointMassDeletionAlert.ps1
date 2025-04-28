@@ -42,9 +42,15 @@ function Invoke-CIPPStandardSharePointMassDeletionAlert {
     $MissingEmailsInSettings = $Settings.NotifyUser.value | Where-Object { $_ -notin $CurrentState.NotifyUser }
 
     $StateIsCorrect = ($EmailsOutsideSettings.Count -eq 0) -and
-                      ($MissingEmailsInSettings.Count -eq 0) -and
-                      ($CurrentState.Threshold -eq $Settings.Threshold) -and
-                      ($CurrentState.TimeWindow -eq $Settings.TimeWindow)
+        ($MissingEmailsInSettings.Count -eq 0) -and
+        ($CurrentState.Threshold -eq $Settings.Threshold) -and
+        ($CurrentState.TimeWindow -eq $Settings.TimeWindow)
+
+    $CompareField = [PSCustomObject]@{
+        'Threshold'  = $CurrentState.Threshold
+        'TimeWindow' = $CurrentState.TimeWindow
+        'NotifyUser' = $CurrentState.NotifyUser -join ', '
+    }
 
     If ($Settings.remediate -eq $true) {
         If ($StateIsCorrect -eq $true) {
@@ -88,22 +94,14 @@ function Invoke-CIPPStandardSharePointMassDeletionAlert {
         If ($StateIsCorrect -eq $true) {
             Write-LogMessage -API 'Standards' -Tenant $Tenant -Message 'SharePoint mass deletion of files alert is enabled' -sev Info
         } Else {
+            Write-StandardsAlert -message 'SharePoint mass deletion of files alert is disabled' -object $CompareField -tenant $tenant -standardName 'SharePointMassDeletionAlert' -standardId $Settings.standardId
             Write-LogMessage -API 'Standards' -Tenant $Tenant -Message 'SharePoint mass deletion of files alert is disabled' -sev Info
         }
     }
 
     If ($Settings.report -eq $true) {
-        If ($StateIsCorrect -eq $true) {
-            $Table = $true
-        } Else {
-            $Table = [PSCustomObject]@{
-                Threshold  = $CurrentState.Threshold
-                TimeWindow = $CurrentState.TimeWindow
-                NotifyUser = $CurrentState.NotifyUser
-            }
-        }
-
-        Set-CIPPStandardsCompareField -FieldName 'standards.SharePointMassDeletionAlert' -FieldValue $Table -TenantFilter $Tenant
+        $FieldValue = $StateIsCorrect ? $true : $CompareField
+        Set-CIPPStandardsCompareField -FieldName 'standards.SharePointMassDeletionAlert' -FieldValue $FieldValue -TenantFilter $Tenant
         Add-CIPPBPAField -FieldName 'SharePointMassDeletionAlert' -FieldValue [bool]$StateIsCorrect -StoreAs bool -Tenant $Tenant
     }
 }
