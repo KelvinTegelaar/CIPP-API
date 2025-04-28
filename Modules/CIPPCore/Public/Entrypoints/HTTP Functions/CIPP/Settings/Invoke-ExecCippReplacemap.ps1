@@ -10,7 +10,7 @@ function Invoke-ExecCippReplacemap {
 
     $Table = Get-CippTable -tablename 'CippReplacemap'
     $Action = $Request.Query.Action ?? $Request.Body.Action
-    $customerId = $Request.Query.customerId ?? $Request.Body.customerId
+    $customerId = $Request.Query.tenantId ?? $Request.Body.tenantId
 
     if (!$customerId) {
         Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
