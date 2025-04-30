@@ -15,7 +15,7 @@ function Start-DurableCleanup {
 
     [CmdletBinding(SupportsShouldProcess = $true)]
     param(
-        [int]$MaxDuration = 3600
+        [int]$MaxDuration = 86400
     )
 
     $WarningPreference = 'SilentlyContinue'
@@ -49,6 +49,7 @@ function Start-DurableCleanup {
             if ($PSCmdlet.ShouldProcess($_.PartitionKey, 'Terminate Orchestrator')) {
                 $Orchestrator = Get-CIPPAzDataTableEntity @Table -Filter "PartitionKey eq '$($Orchestrator.PartitionKey)'"
                 $Orchestrator.RuntimeStatus = 'Failed'
+                $Orchestrator.CustomStatus = "Terminated by Durable Cleanup - Exceeded max duration of $MaxDuration seconds"
                 Update-AzDataTableEntity @Table -Entity $Orchestrator
                 $CleanupCount++
             }
