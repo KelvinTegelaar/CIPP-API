@@ -1,6 +1,6 @@
 using namespace System.Net
 
-Function Invoke-ListTenants {
+function Invoke-ListTenants {
     <#
     .FUNCTIONALITY
         Entrypoint,AnyTenant
@@ -95,15 +95,15 @@ Function Invoke-ListTenants {
             }
             if ($Request.Query.Mode -eq 'TenantList') {
                 # add portal link properties
-                $Body = $Body | Select-Object *, @{Name = 'portal_m365'; Expression = { "https://admin.microsoft.com/Partner/BeginClientSession.aspx?CTID=$($_.customerId)&CSDEST=o365admincenter" } },
-                @{Name = 'portal_exchange'; Expression = { "https://admin.exchange.microsoft.com/?landingpage=homepage&form=mac_sidebar&delegatedOrg=$($_.defaultDomainName)" } },
+                $Body = $Body | Select-Object *, @{Name = 'portal_m365'; Expression = { "https://admin.cloud.microsoft/?delegatedOrg=$($_.initialDomainName)" } },
+                @{Name = 'portal_exchange'; Expression = { "https://admin.cloud.microsoft/exchange/?delegatedOrg=$($_.initialDomainName)" } },
                 @{Name = 'portal_entra'; Expression = { "https://entra.microsoft.com/$($_.defaultDomainName)" } },
-                @{Name = 'portal_teams'; Expression = { "https://admin.teams.microsoft.com/?delegatedOrg=$($_.defaultDomainName)" } },
+                @{Name = 'portal_teams'; Expression = { "https://admin.teams.microsoft.com/?delegatedOrg=$($_.initialDomainName)" } },
                 @{Name = 'portal_azure'; Expression = { "https://portal.azure.com/$($_.defaultDomainName)" } },
                 @{Name = 'portal_intune'; Expression = { "https://intune.microsoft.com/$($_.defaultDomainName)" } },
                 @{Name = 'portal_security'; Expression = { "https://security.microsoft.com/?tid=$($_.customerId)" } },
                 @{Name = 'portal_compliance'; Expression = { "https://purview.microsoft.com/?tid=$($_.customerId)" } },
-                @{Name = 'portal_sharepoint'; Expression = { "https://admin.microsoft.com/Partner/beginclientsession.aspx?CTID=$($_.customerId)&CSDEST=SharePoint" } }
+                @{Name = 'portal_sharepoint'; Expression = { "/api/ListSharePointAdminUrl?tenantFilter=$($_.defaultDomainName)" } }
             }
 
         } else {

@@ -20,16 +20,16 @@ function Get-CIPPStandards {
     $Table = Get-CippTable -tablename 'templates'
     $Filter = "PartitionKey eq 'StandardsTemplateV2'"
     $Templates = (Get-CIPPAzDataTableEntity @Table -Filter $Filter | Sort-Object TimeStamp).JSON |
-        ForEach-Object {
-            try {
-                # Fix old "Action" => "action"
-                $JSON = $_ -replace '"Action":', '"action":' -replace '"permissionlevel":', '"permissionLevel":'
-                ConvertFrom-Json -InputObject $JSON -ErrorAction SilentlyContinue
-            } catch {}
-        } |
-        Where-Object {
-            $_.GUID -like $TemplateId -and $_.runManually -eq $runManually
-        }
+    ForEach-Object {
+        try {
+            # Fix old "Action" => "action"
+            $JSON = $_ -replace '"Action":', '"action":' -replace '"permissionlevel":', '"permissionLevel":'
+            ConvertFrom-Json -InputObject $JSON -ErrorAction SilentlyContinue
+        } catch {}
+    } |
+    Where-Object {
+        $_.GUID -like $TemplateId -and $_.runManually -eq $runManually
+    }
 
     # 2. Get tenant list, filter if needed
     $AllTenantsList = Get-Tenants
@@ -138,7 +138,15 @@ function Get-CIPPStandards {
 
                 if ($template.excludedTenants) {
                     if ($template.excludedTenants -is [System.Collections.IEnumerable] -and -not ($template.excludedTenants -is [string])) {
-                        $excludedTenantValues = $template.excludedTenants | ForEach-Object { $_.value }
+                        $excludedTenantValues = $template.excludedTenants | ForEach-Object {
+                            $FilterValue = $_.value
+                            if ($_.type -eq 'Group') {
+                        ($TenantGroups | Where-Object {
+                                    $_.Id -eq $FilterValue
+                                }).Members.defaultDomainName
+                            } else {
+                                $FilterValue
+                            } }
                     } else {
                         $excludedTenantValues = @($template.excludedTenants)
                     }
