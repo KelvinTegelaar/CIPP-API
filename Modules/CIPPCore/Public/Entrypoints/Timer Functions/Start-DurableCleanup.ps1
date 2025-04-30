@@ -49,7 +49,11 @@ function Start-DurableCleanup {
             if ($PSCmdlet.ShouldProcess($_.PartitionKey, 'Terminate Orchestrator')) {
                 $Orchestrator = Get-CIPPAzDataTableEntity @Table -Filter "PartitionKey eq '$($Orchestrator.PartitionKey)'"
                 $Orchestrator.RuntimeStatus = 'Failed'
-                $Orchestrator.CustomStatus = "Terminated by Durable Cleanup - Exceeded max duration of $MaxDuration seconds"
+                if ($Orchestrator.PSObject.Properties.Name -contains 'CustomStatus') {
+                    $Orchestrator.CustomStatus = "Terminated by Durable Cleanup - Exceeded max duration of $MaxDuration seconds"
+                } else {
+                    $Orchestrator | Add-Member -MemberType NoteProperty -Name CustomStatus -Value "Terminated by Durable Cleanup - Exceeded max duration of $MaxDuration seconds"
+                }
                 Update-AzDataTableEntity @Table -Entity $Orchestrator
                 $CleanupCount++
             }
