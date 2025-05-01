@@ -68,7 +68,7 @@ function Get-HuduFieldMapping {
         CIPPFields        = $CIPPFields
         CIPPFieldHeaders  = $CIPPFieldHeaders
         IntegrationFields = @($Unset) + @($AssetLayouts)
-        Mappings          = $Mappings
+        Mappings          = @($Mappings)
     }
 
     return $MappingObj
