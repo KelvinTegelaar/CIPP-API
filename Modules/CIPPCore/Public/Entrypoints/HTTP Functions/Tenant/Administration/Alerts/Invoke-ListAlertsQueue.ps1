@@ -33,7 +33,7 @@ Function Invoke-ListAlertsQueue {
         $TaskEntry = [PSCustomObject]@{
             Tenants         = @($Tenants.label)
             Conditions      = $TranslatedConditions
-            excludedTenants = ($Task.excludedTenants | ConvertFrom-Json -Depth 10 -ErrorAction SilentlyContinue)
+            excludedTenants = @($Task.excludedTenants | ConvertFrom-Json -Depth 10 -ErrorAction SilentlyContinue)
             Actions         = $TranslatedActions
             LogType         = $Task.type
             EventType       = 'Audit log Alert'
@@ -64,10 +64,16 @@ Function Invoke-ListAlertsQueue {
     }
 
     foreach ($Task in $ScheduledTasks) {
+        if ($Task.excludedTenants) {
+            $ExcludedTenants = @($Task.excludedTenants)
+        } else {
+            $ExcludedTenants = @()
+        }
+
         $TaskEntry = [PSCustomObject]@{
             RowKey          = $Task.RowKey
             PartitionKey    = $Task.PartitionKey
-            excludedTenants = $Task.excludedTenants
+            excludedTenants = @($ExcludedTenants)
             Tenants         = @($Task.Tenant)
             Conditions      = $Task.Name
             Actions         = $Task.PostExecution

@@ -13,6 +13,13 @@ function New-CIPPTemplateRun {
         $data
     } | Sort-Object -Property displayName
 
+    function Get-SanitizedFilename {
+        param (
+            [string]$filename
+        )
+        $filename = $filename -replace '\s', '_' -replace '[^\w\d_]', ''
+        return $filename
+    }
 
     $Tasks = foreach ($key in $TemplateSettings.Keys) {
         if ($TemplateSettings[$key] -eq $true) {
@@ -20,40 +27,54 @@ function New-CIPPTemplateRun {
         }
     }
     if ($TemplateSettings.templateRepo) {
-        Write-Host 'Grabbing data from required community repo'
-        $Files = (Get-GitHubFileTree -FullName $TemplateSettings.templateRepo.value -Branch $TemplateSettings.templateRepoBranch.value).tree | Where-Object { $_.path -match '.json$' -and $_.path -notmatch 'NativeImport' } | Select-Object *, @{n = 'html_url'; e = { "https://github.com/$($SplatParams.FullName)/tree/$($SplatParams.Branch)/$($_.path)" } }, @{n = 'name'; e = { ($_.path -split '/')[ -1 ] -replace '\.json$', '' } }
-        #if there is a migration table file, file the file. Store the file contents in $migrationtable
-        $MigrationTable = $Files | Where-Object { $_.name -eq 'MigrationTable' } | Select-Object -Last 1
-        if ($MigrationTable) {
-            $MigrationTable = (Get-GitHubFileContents -FullName $TemplateSettings.templateRepo.value -Branch $TemplateSettings.templateRepoBranch.value -Path $MigrationTable.path).content | ConvertFrom-Json
-        }
-        foreach ($File in $Files) {
-            if ($File.name -eq 'MigrationTable' -or $file.name -eq 'ALLOWED COUNTRIES') { continue }
-            $ExistingTemplate = $ExistingTemplates | Where-Object { $_.displayName -eq $File.name } | Select-Object -First 1
-            $Template = (Get-GitHubFileContents -FullName $TemplateSettings.templateRepo.value -Branch $TemplateSettings.templateRepoBranch.value -Path $File.path).content | ConvertFrom-Json
-            if ($ExistingTemplate) {
-                $UpdateNeeded = $false
-                if ($ExistingTemplate.sha -ne $File.sha -or !$ExistingTemplate.sha) {
-                    $UpdateNeeded = $true
-                }
-                if ($UpdateNeeded) {
-                    Write-Host "Template $($File.name) needs to be updated as the SHA is different"
-                    Import-CommunityTemplate -Template $Template -SHA $File.sha -MigrationTable $MigrationTable
-                }
-            } else {
-                Write-Host "Template $($File.name) needs to be created"
-                Import-CommunityTemplate -Template $Template -SHA $File.sha -MigrationTable $MigrationTable
-
+        Write-Information 'Grabbing data from community repo'
+        try {
+            $Files = (Get-GitHubFileTree -FullName $TemplateSettings.templateRepo.value -Branch $TemplateSettings.templateRepoBranch.value).tree | Where-Object { $_.path -match '.json$' -and $_.path -notmatch 'NativeImport' } | Select-Object *, @{n = 'html_url'; e = { "https://github.com/$($SplatParams.FullName)/tree/$($SplatParams.Branch)/$($_.path)" } }, @{n = 'name'; e = { ($_.path -split '/')[ -1 ] -replace '\.json$', '' } }
+            #if there is a migration table file, file the file. Store the file contents in $migrationtable
+            $MigrationTable = $Files | Where-Object { $_.name -eq 'MigrationTable' } | Select-Object -Last 1
+            if ($MigrationTable) {
+                $MigrationTable = (Get-GitHubFileContents -FullName $TemplateSettings.templateRepo.value -Branch $TemplateSettings.templateRepoBranch.value -Path $MigrationTable.path).content | ConvertFrom-Json
             }
+            foreach ($File in $Files) {
+                if ($File.name -eq 'MigrationTable' -or $file.name -eq 'ALLOWED COUNTRIES') { continue }
+                $ExistingTemplate = $ExistingTemplates | Where-Object { (![string]::IsNullOrEmpty($_.displayName) -and (Get-SanitizedFilename -filename $_.displayName) -eq $File.name) -or (![string]::IsNullOrEmpty($_.templateName) -and (Get-SanitizedFilename -filename $_.templateName) -eq $File.name ) } | Select-Object -First 1
+
+                $UpdateNeeded = $false
+                if ($ExistingTemplate -and $ExistingTemplate.SHA -ne $File.sha) {
+                    $Name = $ExistingTemplate.displayName ?? $ExistingTemplate.templateName
+                    Write-Information "Existing template $($Name) found, but SHA is different. Updating template."
+                    $UpdateNeeded = $true
+                    "Template $($Name) needs to be updated as the SHA is different"
+                } else {
+                    Write-Information "Existing template $($File.name) found, but SHA is the same. No update needed."
+                    "Template $($File.name) found, but SHA is the same. No update needed."
+                }
+
+                if (!$ExistingTemplate -or $UpdateNeeded) {
+                    $Template = (Get-GitHubFileContents -FullName $TemplateSettings.templateRepo.value -Branch $TemplateSettings.templateRepoBranch.value -Path $File.path).content | ConvertFrom-Json
+                    Import-CommunityTemplate -Template $Template -SHA $File.sha -MigrationTable $MigrationTable
+                    if ($UpdateNeeded) {
+                        Write-Information "Template $($File.name) needs to be updated as the SHA is different"
+                        "Template $($File.name) updated"
+                    } else {
+                        Write-Information "Template $($File.name) needs to be created"
+                        "Template $($File.name) created"
+                    }
+                }
+            }
+        } catch {
+            $Message = "Failed to get data from community repo $($TemplateSettings.templateRepo.value). Error: $($_.Exception.Message)"
+            Write-LogMessage -API 'Community Repo' -tenant $TenantFilter -message $Message -sev Error
+            return "Failed to get data from community repo $($TemplateSettings.templateRepo.value). Error: $($_.Exception.Message)"
         }
     } else {
         foreach ($Task in $Tasks) {
-            Write-Host "Working on task $Task"
+            Write-Information "Working on task $Task"
             switch ($Task) {
                 'ca' {
-                    Write-Host "Template Conditional Access Policies for $TenantFilter"
+                    Write-Information "Template Conditional Access Policies for $TenantFilter"
                     $Policies = New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/conditionalAccess/policies?$top=999' -tenantid $TenantFilter
-                    Write-Host 'Creating templates for found Conditional Access Policies'
+                    Write-Information 'Creating templates for found Conditional Access Policies'
                     foreach ($policy in $policies) {
                         try {
                             $Template = New-CIPPCATemplate -TenantFilter $TenantFilter -JSON $policy
@@ -84,7 +105,7 @@ function New-CIPPTemplateRun {
                     }
                 }
                 'intuneconfig' {
-                    Write-Host "Backup Intune Configuration Policies for $TenantFilter"
+                    Write-Information "Backup Intune Configuration Policies for $TenantFilter"
                     $GraphURLS = @("https://graph.microsoft.com/beta/deviceManagement/deviceConfigurations?`$select=id,displayName,lastModifiedDateTime,roleScopeTagIds,microsoft.graph.unsupportedDeviceConfiguration/originalEntityTypeName&`$expand=assignments&top=1000"
                         'https://graph.microsoft.com/beta/deviceManagement/windowsDriverUpdateProfiles'
                         "https://graph.microsoft.com/beta/deviceManagement/groupPolicyConfigurations?`$expand=assignments&top=999"
@@ -141,12 +162,12 @@ function New-CIPPTemplateRun {
                                 }
                             }
                         } catch {
-                            Write-Host "Failed to backup $url"
+                            Write-Information "Failed to backup $url"
                         }
                     }
                 }
                 'intunecompliance' {
-                    Write-Host "Backup Intune Compliance Policies for $TenantFilter"
+                    Write-Information "Backup Intune Compliance Policies for $TenantFilter"
                     New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/deviceManagement/deviceCompliancePolicies?$top=999' -tenantid $TenantFilter | ForEach-Object {
                         $Template = New-CIPPIntuneTemplate -TenantFilter $TenantFilter -URLName 'deviceCompliancePolicies' -ID $_.ID
                         $ExistingPolicy = $ExistingTemplates | Where-Object { $_.displayName -eq $Template.DisplayName } | Select-Object -First 1
@@ -187,7 +208,7 @@ function New-CIPPTemplateRun {
                 }
 
                 'intuneprotection' {
-                    Write-Host "Backup Intune Protection Policies for $TenantFilter"
+                    Write-Information "Backup Intune Protection Policies for $TenantFilter"
                     New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/deviceAppManagement/managedAppPolicies?$top=999' -tenantid $TenantFilter | ForEach-Object {
                         $Template = New-CIPPIntuneTemplate -TenantFilter $TenantFilter -URLName 'managedAppPolicies' -ID $_.ID
                         $ExistingPolicy = $ExistingTemplates | Where-Object { $_.displayName -eq $Template.DisplayName } | Select-Object -First 1

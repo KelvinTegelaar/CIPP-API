@@ -19,7 +19,7 @@ function Invoke-CIPPStandardPhishProtection {
         ADDEDDATE
             2024-01-22
         DISABLEDFEATURES
-
+            {"report":true,"warn":true,"remediate":false}
         POWERSHELLEQUIVALENT
             Portal only
         RECOMMENDEDBY
@@ -62,7 +62,7 @@ function Invoke-CIPPStandardPhishProtection {
                 Write-LogMessage -API 'Standards' -tenant $tenant -message 'Logon Screen Phishing Protection system already active' -sev Info
             } else {
                 $currentBody = $currentBody + $CSS
-                Write-Host 'Creating Logon Screen Phising Protection System'
+                Write-Host 'Creating Logon Screen Phishing Protection System'
                 New-GraphPostRequest -tenantid $tenant -Uri "https://graph.microsoft.com/beta/organization/$($TenantId.customerId)/branding/localizations/0/customCSS" -ContentType 'text/css' -asApp $true -Type PUT -Body $currentBody
 
                 Write-LogMessage -API 'Standards' -tenant $tenant -message 'Enabled Logon Screen Phishing Protection system' -sev Info
@@ -82,8 +82,8 @@ function Invoke-CIPPStandardPhishProtection {
         }
     }
     if ($Settings.report -eq $true) {
-        if ($currentBody -like "*$CSS*") { $authstate = $true } else { $authstate = $false }
-        Add-CIPPBPAField -FieldName 'PhishProtection' -FieldValue $authstate -StoreAs bool -Tenant $tenant
-        Set-CIPPStandardsCompareField -FieldName 'standards.PhishProtection' -FieldValue $authstate -Tenant $tenant
+        if ($currentBody -like "*$CSS*") { $authState = $true } else { $authState = $false }
+        Add-CIPPBPAField -FieldName 'PhishProtection' -FieldValue $authState -StoreAs bool -Tenant $tenant
+        Set-CIPPStandardsCompareField -FieldName 'standards.PhishProtection' -FieldValue $authState -Tenant $tenant
     }
 }

@@ -14,8 +14,7 @@ Function Invoke-ListIntunePolicy {
     Write-LogMessage -Headers $Headers -API $APINAME -message 'Accessed this API' -Sev 'Debug'
 
 
-    # Write to the Azure Functions log stream.
-    Write-Host 'PowerShell HTTP trigger function processed a request.'
+
 
     # Interact with query parameters or the body of the request.
     $TenantFilter = $Request.Query.TenantFilter

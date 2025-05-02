@@ -5,7 +5,7 @@ function Invoke-CIPPStandardDisableReshare {
     .COMPONENT
         (APIName) DisableReshare
     .SYNOPSIS
-        (Label) Disable Resharing by External Users
+        (Label) Disable Re-sharing by External Users
     .DESCRIPTION
         (Helptext) Disables the ability for external users to share files they don't own. Sharing links can only be made for People with existing access
         (DocsDescription) Disables the ability for external users to share files they don't own. Sharing links can only be made for People with existing access. This is a tenant wide setting and overrules any settings set on the site level

@@ -41,7 +41,7 @@ function Invoke-CIPPStandardintuneDeviceReg {
         } else {
             try {
                 $PreviousSetting.userDeviceQuota = $Settings.max
-                $Newbody = ConvertTo-Json -Compress -InputObject $PreviousSetting -Depth 5
+                $NewBody = ConvertTo-Json -Compress -InputObject $PreviousSetting -Depth 5
                 $null = New-GraphPostRequest -tenantid $tenant -Uri 'https://graph.microsoft.com/beta/policies/deviceRegistrationPolicy' -Type PUT -Body $NewBody -ContentType 'application/json'
                 Write-LogMessage -API 'Standards' -tenant $tenant -message "Set user device quota to $($Settings.max)" -sev Info
             } catch {

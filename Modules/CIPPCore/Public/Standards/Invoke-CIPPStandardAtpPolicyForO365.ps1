@@ -48,14 +48,14 @@ function Invoke-CIPPStandardAtpPolicyForO365 {
         if ($StateIsCorrect -eq $true) {
             Write-LogMessage -API 'Standards' -tenant $Tenant -message 'Atp Policy For O365 already set.' -sev Info
         } else {
-            $cmdparams = @{
+            $cmdParams = @{
                 EnableATPForSPOTeamsODB = $true
                 EnableSafeDocs          = $true
                 AllowSafeDocsOpen       = $Settings.AllowSafeDocsOpen
             }
 
             try {
-                New-ExoRequest -tenantid $Tenant -cmdlet 'Set-AtpPolicyForO365' -cmdparams $cmdparams -UseSystemMailbox $true
+                New-ExoRequest -tenantid $Tenant -cmdlet 'Set-AtpPolicyForO365' -cmdParams $cmdParams -UseSystemMailbox $true
                 Write-LogMessage -API 'Standards' -tenant $Tenant -message 'Updated Atp Policy For O365' -sev Info
             } catch {
                 $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message

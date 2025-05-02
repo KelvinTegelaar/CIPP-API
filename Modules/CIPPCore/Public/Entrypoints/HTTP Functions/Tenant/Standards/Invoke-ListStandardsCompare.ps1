@@ -25,10 +25,14 @@ Function Invoke-ListStandardsCompare {
                 } else {
                     $_.Value = [string]$_.Value
                 }
-                $object | Add-Member -MemberType NoteProperty -Name $_.Name.Replace('standards_', 'standards.') -Value $_.Value -Force
+
+                $Key = $_.Name.replace('standards_', 'standards.')
+                $Key = $Key.replace('IntuneTemplate_', 'IntuneTemplate.')
+                $Key = $Key -replace '__', '-'
+
+                $object | Add-Member -MemberType NoteProperty -Name $Key -Value $_.Value -Force
                 $object.PSObject.Properties.Remove($_.Name)
             }
-
         }
     }
 

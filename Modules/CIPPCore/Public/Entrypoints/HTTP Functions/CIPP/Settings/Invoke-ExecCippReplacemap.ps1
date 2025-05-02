@@ -3,14 +3,14 @@ function Invoke-ExecCippReplacemap {
     .FUNCTIONALITY
         Entrypoint
     .ROLE
-        CIPP.Extension.ReadWrite
+        Tenant.Config.ReadWrite
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
 
     $Table = Get-CippTable -tablename 'CippReplacemap'
     $Action = $Request.Query.Action ?? $Request.Body.Action
-    $customerId = $Request.Query.customerId ?? $Request.Body.customerId
+    $customerId = $Request.Query.tenantId ?? $Request.Body.tenantId
 
     if (!$customerId) {
         Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{

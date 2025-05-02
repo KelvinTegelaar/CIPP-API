@@ -24,7 +24,7 @@ Needs to be run from the "Tools" folder in the CIPP-API project.
 
 # Download the latest license SKU CSV file from Microsoft. Saved to the TEMP folder to circumvent a bug where "???" is added to the first property name.
 $licenseCsvURL = 'https://download.microsoft.com/download/e/3/e/e3e9faf2-f28b-490a-9ada-c6089a1fc5b0/Product%20names%20and%20service%20plan%20identifiers%20for%20licensing.csv'
-$TempLicenseDataFile = "$ENV:TEMP\LicenseSKUs.csv"
+$TempLicenseDataFile = "$env:TEMP\LicenseSKUs.csv"
 Invoke-WebRequest -Uri $licenseCsvURL -OutFile $TempLicenseDataFile
 $LicenseDataFile = Get-Item -Path $TempLicenseDataFile
 $LicenseData = Import-Csv -Path $LicenseDataFile.FullName -Encoding utf8BOM -Delimiter ','

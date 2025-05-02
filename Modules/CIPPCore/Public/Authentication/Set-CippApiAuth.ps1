@@ -10,7 +10,7 @@ function Set-CippApiAuth {
     if ($env:MSI_SECRET) {
         Disable-AzContextAutosave -Scope Process | Out-Null
         $null = Connect-AzAccount -Identity
-        $SubscriptionId = $ENV:WEBSITE_OWNER_NAME -split '\+' | Select-Object -First 1
+        $SubscriptionId = $env:WEBSITE_OWNER_NAME -split '\+' | Select-Object -First 1
         $Context = Set-AzContext -SubscriptionId $SubscriptionId
     } else {
         $Context = Get-AzContext
@@ -19,6 +19,8 @@ function Set-CippApiAuth {
 
     # Get auth settings
     $AuthSettings = Invoke-AzRestMethod -Uri "https://management.azure.com/subscriptions/$SubscriptionId/resourceGroups/$RGName/providers/Microsoft.Web/sites/$($FunctionAppName)/config/authsettingsV2/list?api-version=2020-06-01" | Select-Object -ExpandProperty Content | ConvertFrom-Json
+
+    Write-Information "AuthSettings: $($AuthSettings | ConvertTo-Json -Depth 10)"
 
     # Set allowed audiences
     $AllowedAudiences = foreach ($ClientId in $ClientIds) {
