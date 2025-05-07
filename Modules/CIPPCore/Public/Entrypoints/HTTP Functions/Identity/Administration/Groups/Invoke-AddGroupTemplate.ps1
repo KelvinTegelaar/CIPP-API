@@ -10,14 +10,15 @@ Function Invoke-AddGroupTemplate {
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
     $APIName = $Request.Params.CIPPEndpoint
-    Write-LogMessage -headers $Request.Headers -API $APINAME -message 'Accessed this API' -Sev 'Debug'
+    $Headers = $Request.Headers
+    Write-LogMessage -headers $Headers -API $APIName -message 'Accessed this API' -Sev 'Debug'
 
     $GUID = (New-Guid).GUID
     try {
         if (!$Request.body.displayname) { throw 'You must enter a displayname' }
 
         $object = [PSCustomObject]@{
-            Displayname     = $request.body.displayname
+            Displayname     = $request.body.displayName
             Description     = $request.body.description
             groupType       = $request.body.groupType
             MembershipRules = $request.body.membershipRules

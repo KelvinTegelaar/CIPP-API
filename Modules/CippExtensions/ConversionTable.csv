@@ -3433,6 +3433,44 @@ Microsoft Copilot for Microsoft 365,Microsoft_365_Copilot,639dec6b-bb19-468b-871
 Microsoft Copilot for Microsoft 365,Microsoft_365_Copilot,639dec6b-bb19-468b-871c-c5c441c4b0cb,M365_COPILOT_TEAMS,b95945de-b3bd-46db-8437-f2beb6ea2347,Microsoft 365 Copilot in Microsoft Teams
 Microsoft Copilot for Microsoft 365,Microsoft_365_Copilot,639dec6b-bb19-468b-871c-c5c441c4b0cb,M365_COPILOT_APPS,a62f8878-de10-42f3-b68f-6149a25ceb97,Microsoft 365 Copilot in Productivity Apps
 Microsoft Copilot for Microsoft 365,Microsoft_365_Copilot,639dec6b-bb19-468b-871c-c5c441c4b0cb,M365_COPILOT_CONNECTORS,89f1c4c8-0878-40f7-804d-869c9128ab5d,Power Platform Connectors in Microsoft 365 Copilot
+Microsoft 365 Copilot for Sales,Microsoft_Copilot_for_Sales,15f2e9fc-b782-4f73-bf51-81d8b7fff6f4,COPILOT_STUDIO_IN_COPILOT_FOR_M365,fe6c28b3-d468-44ea-bbd0-a10a5167435c,Copilot Studio in Copilot for M365
+Microsoft 365 Copilot for Sales,Microsoft_Copilot_for_Sales,15f2e9fc-b782-4f73-bf51-81d8b7fff6f4,GRAPH_CONNECTORS_COPILOT,82d30987-df9b-4486-b146-198b21d164c7,Graph Connectors in Microsoft 365 Copilot
+Microsoft 365 Copilot for Sales,Microsoft_Copilot_for_Sales,15f2e9fc-b782-4f73-bf51-81d8b7fff6f4,M365_COPILOT_INTELLIGENT_SEARCH,931e4a88-a67f-48b5-814f-16a5f1e6028d,Intelligent Search
+Microsoft 365 Copilot for Sales,Microsoft_Copilot_for_Sales,15f2e9fc-b782-4f73-bf51-81d8b7fff6f4,M365_COPILOT_SHAREPOINT,0aedf20c-091d-420b-aadf-30c042609612,Microsoft 365 Copilot for SharePoint
+Microsoft 365 Copilot for Sales,Microsoft_Copilot_for_Sales,15f2e9fc-b782-4f73-bf51-81d8b7fff6f4,M365_COPILOT_TEAMS,b95945de-b3bd-46db-8437-f2beb6ea2347,Microsoft 365 Copilot in Microsoft Teams
+Microsoft 365 Copilot for Sales,Microsoft_Copilot_for_Sales,15f2e9fc-b782-4f73-bf51-81d8b7fff6f4,M365_COPILOT_APPS,a62f8878-de10-42f3-b68f-6149a25ceb97,Microsoft 365 Copilot in Productivity Apps
+Microsoft 365 Copilot for Sales,Microsoft_Copilot_for_Sales,15f2e9fc-b782-4f73-bf51-81d8b7fff6f4,Microsoft_Copilot_for_Sales,a2194428-ead1-4fc1-bb81-ab8675125f42,Microsoft Copilot for Sales
+Microsoft 365 Copilot for Sales,Microsoft_Copilot_for_Sales,15f2e9fc-b782-4f73-bf51-81d8b7fff6f4,Microsoft_Copilot_for_Sales_PowerAutomate,0c1c2af2-6c51-43c7-9c55-fa487ac147ff,Microsoft Copilot for Sales with Power Automate
+Microsoft 365 Copilot for Sales,Microsoft_Copilot_for_Sales,15f2e9fc-b782-4f73-bf51-81d8b7fff6f4,M365_COPILOT_BUSINESS_CHAT,3f30311c-6b1e-48a4-ab79-725b469da960,Microsoft Copilot with Graph-grounded chat
+Microsoft 365 Copilot for Sales,Microsoft_Copilot_for_Sales,15f2e9fc-b782-4f73-bf51-81d8b7fff6f4,WORKPLACE_ANALYTICS_INSIGHTS_USER,b622badb-1b45-48d5-920f-4b27a2c0996c,Microsoft Viva Insights
+Microsoft 365 Copilot for Sales,Microsoft_Copilot_for_Sales,15f2e9fc-b782-4f73-bf51-81d8b7fff6f4,WORKPLACE_ANALYTICS_INSIGHTS_BACKEND,ff7b261f-d98b-415b-827c-42a3fdf015af,Microsoft Viva Insights Backend
+Microsoft 365 Copilot for Sales,Microsoft_Copilot_for_Sales,15f2e9fc-b782-4f73-bf51-81d8b7fff6f4,M365_COPILOT_CONNECTORS,89f1c4c8-0878-40f7-804d-869c9128ab5d,Power Platform Connectors in Microsoft 365 Copilot
+Microsoft Copilot Studio,Power_Virtual_Agents,75564b9c-51e8-431c-b8fe-d472d5a545c8,CDS_VIRTUAL_AGENT_BASE_MESSAGES,5dd1819f-0de7-487f-985b-c450a4c9cc1d,Dataverse for Microsoft Copilot Studio
+Microsoft Copilot Studio,Power_Virtual_Agents,75564b9c-51e8-431c-b8fe-d472d5a545c8,VIRTUAL_AGENT_BASE_MESSAGES,7b0640f1-63cc-4f83-b8c6-0a4d78b8b988,Microsoft Copilot Studio – Messages
+Microsoft Copilot Studio,Power_Virtual_Agents,75564b9c-51e8-431c-b8fe-d472d5a545c8,FLOW_VIRTUAL_AGENT_BASE_MESSAGES,4b9ec373-ed29-4192-8a47-c9ab9048b079,Power Automate for Microsoft Copilot Studio
+Microsoft Copilot Studio for GCC,Power_Virtual_Agents_for_GCC_GCC,d7974fa0-ddd7-4899-9589-1ea04273aa26,CDS_VIRTUAL_AGENT_BASE_MESSAGES,5dd1819f-0de7-487f-985b-c450a4c9cc1d,Dataverse for Microsoft Copilot Studio
+Microsoft Copilot Studio for GCC,Power_Virtual_Agents_for_GCC_GCC,d7974fa0-ddd7-4899-9589-1ea04273aa26,VIRTUAL_AGENT_BASE_MESSAGES,7b0640f1-63cc-4f83-b8c6-0a4d78b8b988,Microsoft Copilot Studio – Messages
+Microsoft Copilot Studio for GCC,Power_Virtual_Agents_for_GCC_GCC,d7974fa0-ddd7-4899-9589-1ea04273aa26,FLOW_VIRTUAL_AGENT_BASE_MESSAGES,4b9ec373-ed29-4192-8a47-c9ab9048b079,Power Automate for Microsoft Copilot Studio
+Microsoft Copilot Studio_USGOV_GCCHIGH,Power_Virtual_Agents_USGOV_GCCHIGH,84ed7c30-3738-43a0-aa03-cf6c577d8dbb,CDS_VIRTUAL_AGENT_BASE_MESSAGES,5dd1819f-0de7-487f-985b-c450a4c9cc1d,CDS_VIRTUAL_AGENT_BASE_MESSAGES
+Microsoft Copilot Studio_USGOV_GCCHIGH,Power_Virtual_Agents_USGOV_GCCHIGH,84ed7c30-3738-43a0-aa03-cf6c577d8dbb,VIRTUAL_AGENT_BASE_MESSAGES,7b0640f1-63cc-4f83-b8c6-0a4d78b8b988,VIRTUAL_AGENT_BASE_MESSAGES
+Microsoft Copilot Studio_USGOV_GCCHIGH,Power_Virtual_Agents_USGOV_GCCHIGH,84ed7c30-3738-43a0-aa03-cf6c577d8dbb,FLOW_VIRTUAL_AGENT_BASE_MESSAGES,4b9ec373-ed29-4192-8a47-c9ab9048b079,FLOW_VIRTUAL_AGENT_BASE_MESSAGES
+Microsoft Copilot Studio User License,VIRTUAL_AGENT_USL,4b74a65c-8b4a-4fc8-9f6b-5177ed11ddfa,CDS_VIRTUAL_AGENT_USL,cb867b3c-7f38-4d0d-99ce-e29cd69812c8,Common Data Service
+Microsoft Copilot Studio User License,VIRTUAL_AGENT_USL,4b74a65c-8b4a-4fc8-9f6b-5177ed11ddfa,FLOW_VIRTUAL_AGENT_USL,82f141c9-2e87-4f43-8cb2-12d2701dc6b3,Power Automate for Virtual Agent
+Microsoft Copilot Studio User License,VIRTUAL_AGENT_USL,4b74a65c-8b4a-4fc8-9f6b-5177ed11ddfa,VIRTUAL_AGENT_USL,1263586c-59a4-4ad0-85e1-d50bc7149501,Virtual Agent
+Microsoft Copilot Studio User License for GCC,VIRTUAL_AGENT_USL_GCC,f1de227b-f1bd-4959-bd80-b80547095e6d,CDS_Virtual_Agent_Usl_Gov,bcc0702e-ba97-48d9-ae04-fa8689c53bba,Dataverse for Virtual Agent USL for GCC
+Microsoft Copilot Studio User License for GCC,VIRTUAL_AGENT_USL_GCC,f1de227b-f1bd-4959-bd80-b80547095e6d,Virtual_Agent_Usl_Gov,00b6f978-853b-4041-9de0-a233d18669aa,Virtual Agent for GCC
+Microsoft Copilot Studio User License for GCC,VIRTUAL_AGENT_USL_GCC,f1de227b-f1bd-4959-bd80-b80547095e6d,CDS_Virtual_Agent_Usl_GCC,95df1203-fee7-4726-b7e1-8037a8e899eb,Dataverse for Virtual Agent USL for GCC
+Microsoft Copilot Studio User License for GCC,VIRTUAL_AGENT_USL_GCC,f1de227b-f1bd-4959-bd80-b80547095e6d,Flow_Virtual_Agent_Usl_Gov,0b939472-1861-45f1-ab6d-208f359c05cd,Flow for Virtual Agent for GCC
+Microsoft Copilot Studio User License for GCC,VIRTUAL_AGENT_USL_GCC,f1de227b-f1bd-4959-bd80-b80547095e6d,FLOW_Virtual_Agent_Base_Gov,f9f6db16-ace6-4838-b11c-892ee75e810a,Power Automate for Virtual Agent for GCC
+Microsoft Copilot Studio User License for GCC,VIRTUAL_AGENT_USL_GCC,f1de227b-f1bd-4959-bd80-b80547095e6d,Power_Virtual_Agent_Usl_GCC,0bdd5466-65c3-470a-9fa6-f679b48286b0,Power Virtual Agent USL for GCC
+Microsoft Copilot Studio User License for GCC High_USGOV_GCCHIGH,VIRTUAL_AGENT_USL_AR_USGOV_GCCHIGH,470845c0-6884-47e1-89d0-9d6244a77b44,Virtual_Agent_Usl_Gov_High,7ffee552-ebe8-4725-8678-5c1775c05847,Virtual Agent for GCC High
+Microsoft Copilot Studio User License for GCC High_USGOV_GCCHIGH,VIRTUAL_AGENT_USL_AR_USGOV_GCCHIGH,470845c0-6884-47e1-89d0-9d6244a77b44,CDS_VIRTUAL_AGENT_USL,cb867b3c-7f38-4d0d-99ce-e29cd69812c8,Common Data Service
+Microsoft Copilot Studio User License for GCC High_USGOV_GCCHIGH,VIRTUAL_AGENT_USL_AR_USGOV_GCCHIGH,470845c0-6884-47e1-89d0-9d6244a77b44,FLOW_Virtual_Agent_Base_Gov_High,225e52e5-7bbf-4793-8fb1-4307a7a1ae8e,Flow for Virtual Agent for GCC High
+Microsoft Copilot Studio User License for GCC High_USGOV_GCCHIGH,VIRTUAL_AGENT_USL_AR_USGOV_GCCHIGH,470845c0-6884-47e1-89d0-9d6244a77b44,Flow_Virtual_Agent_Usl_Gov_High,aaae1744-dc7a-4811-9dd0-2bf926ff9d80,Flow for Virtual Agent for GCC High
+Microsoft Copilot Studio User License for GCC High_USGOV_GCCHIGH,VIRTUAL_AGENT_USL_AR_USGOV_GCCHIGH,470845c0-6884-47e1-89d0-9d6244a77b44,Power_Virtual_Agent_Usl_GCC_High,3fbe8cdf-c735-44bf-bbfa-646724af4bb4,Power Virtual Agent USL for GCC High
+Microsoft Copilot Studio Viral Trial,CCIBOTS_PRIVPREV_VIRAL,606b54a9-78d8-4298-ad8b-df6ef4481c80,DYN365_CDS_CCI_BOTS,cf7034ed-348f-42eb-8bbd-dddeea43ee81,DYN365_CDS_CCI_BOTS
+Microsoft Copilot Studio Viral Trial,CCIBOTS_PRIVPREV_VIRAL,606b54a9-78d8-4298-ad8b-df6ef4481c80,CCIBOTS_PRIVPREV_VIRAL,ce312d15-8fdf-44c0-9974-a25a177125ee,CCIBOTS_PRIVPREV_VIRAL
+Microsoft Copilot Studio Viral Trial,CCIBOTS_PRIVPREV_VIRAL,606b54a9-78d8-4298-ad8b-df6ef4481c80,FLOW_CCI_BOTS,5d798708-6473-48ad-9776-3acc301c40af,FLOW_CCI_BOTS
 Microsoft Cloud App Security,ADALLOM_STANDALONE,df845ce7-05f9-4894-b5f2-11bbfbcfd2b6,EXCHANGE_S_FOUNDATION,113feb6c-3fe4-4440-bddc-54d774bf0318,Exchange Foundation
 Microsoft Cloud App Security,ADALLOM_STANDALONE,df845ce7-05f9-4894-b5f2-11bbfbcfd2b6,ADALLOM_S_STANDALONE,2e2ddb96-6af9-4b1d-a3f0-d6ecfd22edb2,Microsoft Cloud App Security
 Microsoft Cloud for Sustainability vTrial,Microsoft_Cloud_for_Sustainability_vTrial,556640c0-53ea-4773-907d-29c55332983f,MCS_BizApps_Cloud_for_Sustainability_vTrial,c1c902e3-a956-4273-abdb-c92afcd027ef,MCS - BizApps_Cloud for Sustainability_vTrial

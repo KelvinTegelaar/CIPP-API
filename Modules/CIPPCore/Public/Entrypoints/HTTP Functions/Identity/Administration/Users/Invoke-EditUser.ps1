@@ -29,8 +29,7 @@ Function Invoke-EditUser {
     $AddToGroups = $Request.body.AddToGroups
     $RemoveFromGroups = $Request.body.RemoveFromGroups
 
-    # Write to the Azure Functions log stream.
-    Write-Host 'PowerShell HTTP trigger function processed a request.'
+
     #Edit the user
     try {
         Write-Host "$([boolean]$UserObj.MustChangePass)"
@@ -89,22 +88,46 @@ Function Invoke-EditUser {
     try {
 
         if ($licenses -or $UserObj.removeLicenses) {
-            $CurrentLicenses = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/users/$($UserObj.id)" -tenantid $UserObj.tenantFilter
-            #if the list of skuIds in $CurrentLicenses.assignedLicenses is EXACTLY the same as $licenses, we don't need to do anything, but the order in both can be different.
-            if (($CurrentLicenses.assignedLicenses.skuId -join ',') -eq ($licenses -join ',') -and $UserObj.removeLicenses -eq $false) {
-                Write-Host "$($CurrentLicenses.assignedLicenses.skuId -join ',') $(($licenses -join ','))"
-                $null = $results.Add( 'Success. User license is already correct.' )
-            } else {
-                if ($UserObj.removeLicenses) {
-                    $licResults = Set-CIPPUserLicense -UserId $UserObj.id -TenantFilter $UserObj.tenantFilter -RemoveLicenses $CurrentLicenses.assignedLicenses.skuId -Headers $Request.Headers
-                    $null = $results.Add($licResults)
-                } else {
-                    #Remove all objects from $CurrentLicenses.assignedLicenses.skuId that are in $licenses
-                    $RemoveLicenses = $CurrentLicenses.assignedLicenses.skuId | Where-Object { $_ -notin $licenses }
-                    $licResults = Set-CIPPUserLicense -UserId $UserObj.id -TenantFilter $UserObj.tenantFilter -RemoveLicenses $RemoveLicenses -AddLicenses $licenses -Headers $Request.headers
-                    $null = $results.Add($licResults)
+            if ($UserObj.sherwebLicense.value) {
+                $License = Set-SherwebSubscription -TenantFilter $UserObj.tenantFilter -SKU $UserObj.sherwebLicense.value -Add 1
+                $null = $results.Add('Added Sherweb License, scheduling assignment')
+                $taskObject = [PSCustomObject]@{
+                    TenantFilter  = $UserObj.tenantFilter
+                    Name          = "Assign License: $UserPrincipalName"
+                    Command       = @{
+                        value = 'Set-CIPPUserLicense'
+                    }
+                    Parameters    = [pscustomobject]@{
+                        userId      = $UserObj.id
+                        APIName     = 'Sherweb License Assignment'
+                        AddLicenses = $licenses
+                    }
+                    ScheduledTime = 0 #right now, which is in the next 15 minutes and should cover most cases.
+                    PostExecution = @{
+                        Webhook = [bool]$Request.Body.PostExecution.webhook
+                        Email   = [bool]$Request.Body.PostExecution.email
+                        PSA     = [bool]$Request.Body.PostExecution.psa
+                    }
                 }
+                Add-CIPPScheduledTask -Task $taskObject -hidden $false -Headers $Headers
+            } else {
+                $CurrentLicenses = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/users/$($UserObj.id)" -tenantid $UserObj.tenantFilter
+                #if the list of skuIds in $CurrentLicenses.assignedLicenses is EXACTLY the same as $licenses, we don't need to do anything, but the order in both can be different.
+                if (($CurrentLicenses.assignedLicenses.skuId -join ',') -eq ($licenses -join ',') -and $UserObj.removeLicenses -eq $false) {
+                    Write-Host "$($CurrentLicenses.assignedLicenses.skuId -join ',') $(($licenses -join ','))"
+                    $null = $results.Add( 'Success. User license is already correct.' )
+                } else {
+                    if ($UserObj.removeLicenses) {
+                        $licResults = Set-CIPPUserLicense -UserId $UserObj.id -TenantFilter $UserObj.tenantFilter -RemoveLicenses $CurrentLicenses.assignedLicenses.skuId -Headers $Request.Headers
+                        $null = $results.Add($licResults)
+                    } else {
+                        #Remove all objects from $CurrentLicenses.assignedLicenses.skuId that are in $licenses
+                        $RemoveLicenses = $CurrentLicenses.assignedLicenses.skuId | Where-Object { $_ -notin $licenses }
+                        $licResults = Set-CIPPUserLicense -UserId $UserObj.id -TenantFilter $UserObj.tenantFilter -RemoveLicenses $RemoveLicenses -AddLicenses $licenses -Headers $Request.headers
+                        $null = $results.Add($licResults)
+                    }
 
+                }
             }
         }
 

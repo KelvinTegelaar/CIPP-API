@@ -11,13 +11,15 @@ Function Invoke-ListKnownIPDb {
     param($Request, $TriggerMetadata)
 
     $APIName = $Request.Params.CIPPEndpoint
-    Write-LogMessage -headers $Request.Headers -API $APINAME -message 'Accessed this API' -Sev 'Debug'
+    $Headers = $Request.Headers
+    Write-LogMessage -headers $Headers -API $APIName -message 'Accessed this API' -Sev 'Debug'
+
+    # Interact with query parameters or the body of the request.
+    $TenantFilter = $Request.Query.tenantFilter
 
 
-    # Write to the Azure Functions log stream.
-    Write-Host 'PowerShell HTTP trigger function processed a request.'
     $Table = Get-CIPPTable -TableName 'knownlocationdbv2'
-    $Filter = "Tenant eq '$($Request.Query.TenantFilter)'"
+    $Filter = "Tenant eq '$($TenantFilter)'"
     $KnownIPDb = Get-CIPPAzDataTableEntity @Table -Filter $Filter
 
     # Associate values to output bindings by calling 'Push-OutputBinding'.

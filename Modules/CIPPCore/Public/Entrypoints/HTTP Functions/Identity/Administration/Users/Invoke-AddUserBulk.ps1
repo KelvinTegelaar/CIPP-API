@@ -1,6 +1,6 @@
 using namespace System.Net
 
-Function Invoke-AddUserBulk {
+function Invoke-AddUserBulk {
     <#
     .FUNCTIONALITY
         Entrypoint
@@ -13,49 +13,153 @@ Function Invoke-AddUserBulk {
     $APIName = 'AddUserBulk'
     Write-LogMessage -headers $Request.Headers -API $APINAME -message 'Accessed this API' -Sev 'Debug'
     $TenantFilter = $Request.body.TenantFilter
-    $Body = foreach ($userobj in $request.body.BulkUser) {
-        if ($userobj.usageLocation.value) {
-            $userobj.usageLocation = $userobj.usageLocation.value
-        }
-        try {
-            $password = if ($userobj.password) { $userobj.password } else { New-passwordString }
-            $UserprincipalName = "$($userobj.mailNickName)@$($userobj.domain)"
-            $BodyToship = $userobj
-            #Remove domain from body to ship
-            $BodyToship = $BodyToship | Select-Object * -ExcludeProperty password, domain
-            $BodyToship | Add-Member -NotePropertyName accountEnabled -NotePropertyValue $true -Force
-            $BodyToship | Add-Member -NotePropertyName userPrincipalName -NotePropertyValue $UserprincipalName -Force
-            $BodyToship | Add-Member -NotePropertyName passwordProfile -NotePropertyValue @{'password' = $password; 'forceChangePasswordNextSignIn' = $true } -Force
-            Write-Host "body is now: $($BodyToship | ConvertTo-Json -Depth 10 -Compress)"
-            if ($userobj.businessPhones) { $bodytoShip.businessPhones = @($userobj.businessPhones) }
-            $bodyToShip = ConvertTo-Json -Depth 10 -InputObject $BodyToship -Compress
-            Write-Host "Our body to ship is $bodyToShip"
-            $GraphRequest = New-GraphPostRequest -uri 'https://graph.microsoft.com/beta/users' -tenantid $TenantFilter -type POST -body $BodyToship
-            Write-Host "Graph request is $GraphRequest"
-            Write-LogMessage -headers $Request.Headers -API $APINAME -tenant $($TenantFilter) -message "Created user $($userobj.displayname) with id $($GraphRequest.id) " -Sev 'Info'
 
-            #PWPush
-            $PasswordLink = New-PwPushLink -Payload $password
-            if ($PasswordLink) {
-                $password = $PasswordLink
+    $BulkUsers = $Request.Body.BulkUser
+    $AssignedLicenses = $Request.Body.licenses
+    $UsageLocation = $Request.Body.usageLocation
+
+    if (!$BulkUsers) {
+        $Body = @{
+            Results = @{
+                resultText = 'No users specified to import'
+                state      = 'error'
             }
-            $results = "Created user $($UserprincipalName). Password is $password"
-
-        } catch {
-            Write-LogMessage -headers $Request.Headers -API $APINAME -tenant $($TenantFilter) -message "Failed to create user. Error:$($_.Exception.Message)" -Sev 'Error'
-            $results = "Failed to create user $($UserprincipalName). $($_.Exception.Message)"
         }
-        [PSCustomObject]@{
-            'Results'  = $results
-            'Username' = $UserprincipalName
-            'Password' = $password
+    } else {
+        $BulkRequests = [System.Collections.Generic.List[object]]::new()
+        $Results = [System.Collections.Generic.List[object]]::new()
+        $Messages = [System.Collections.Generic.List[object]]::new()
+        foreach ($User in $BulkUsers) {
+            # User input validation
+            $missingFields = [System.Collections.Generic.List[string]]::new()
+            if (!$User.mailNickName) { $missingFields.Add('mailNickName') }
+            if (!$User.domain) { $missingFields.Add('domain') }
+            if (!$User.displayName -and !$User.givenName -and !$User.surname) { $missingFields.Add('displayName') }
+
+            $Name = if ([string]::IsNullOrEmpty($User.displayName)) {
+                '{0} {1}' -f $User.givenName, $User.surname
+            } else {
+                $User.displayName
+            }
+
+            # Check for missing required fields
+            if ($missingFields.Count -gt 0) {
+                $Results.Add(@{
+                        resultText = "Required fields missing for $($User ?? 'No name specified'): $($missingFields -join ', ')"
+                        state      = 'error'
+                    })
+            } else {
+                Write-Information "## Creating user for $($Name) - $($User.mailNickName)@$($User.domain)"
+                # Create user body with required properties
+                $Password = if ($User.password) { $User.password } else { New-passwordString }
+                $UserBody = @{
+                    accountEnabled    = $true
+                    displayName       = $Name
+                    mailNickName      = $User.mailNickName
+                    userPrincipalName = '{0}@{1}' -f $User.mailNickName, $User.domain
+                    passwordProfile   = @{
+                        password                      = $Password
+                        forceChangePasswordNextSignIn = $true
+                    }
+                }
+
+                # Usage location and licensing
+                if ($UsageLocation) {
+                    $UserBody.usageLocation = $UsageLocation.value ?? $UsageLocation
+                    Write-Information "- Usage location set to $($UsageLocation.label ?? $UsageLocation)"
+                    if ($AssignedLicenses) {
+                        $GuidPattern = '([a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12})'
+                        $LicenseSkus = $AssignedLicenses.value ?? $AssignedLicenses | Where-Object { $_ -match $GuidPattern }
+                        if (($LicenseSkus | Measure-Object).Count -gt 0) {
+                            Write-Information "- Assigned licenses set to $(($AssignedLicenses.label ?? $AssignedLicenses) -join ', ')"
+                            $Licenses = foreach ($Sku in $LicenseSkus) {
+                                [PSCustomObject]@{
+                                    skuId = $Sku
+                                }
+                            }
+                            $UserBody.assignedLicenses = @($Licenses)
+                        }
+                    }
+                }
+
+                # Convert businessPhones to array if not null or empty
+                if (![string]::IsNullOrEmpty($User.businessPhones)) {
+                    $UserBody.businessPhones = @($User.businessPhones)
+                }
+
+                # Add all other properties
+                foreach ($key in $User.PSObject.Properties.Name) {
+                    if ($key -notin @('displayName', 'mailNickName', 'domain', 'password', 'usageLocation', 'businessPhones')) {
+                        if (![string]::IsNullOrEmpty($User.$key) -and $UserBody.$key -eq $null) {
+                            $UserBody.$key = $User.$key
+                        }
+                    }
+                }
+
+                # Build bulk request
+                $BulkRequests.Add(@{
+                        'id'      = $UserBody.userPrincipalName
+                        'url'     = 'users'
+                        'method'  = 'POST'
+                        'body'    = $UserBody
+                        'headers' = @{
+                            'Content-Type' = 'application/json'
+                        }
+                    })
+
+                # Create password link
+                $PasswordLink = New-PwPushLink -Payload $password
+                if ($PasswordLink) {
+                    $password = $PasswordLink
+                }
+
+                # Set success messages
+                $Messages.Add(@{
+                        id         = $UserBody.userPrincipalName
+                        resultText = "Created user for $($Name) with username $($UserBody.userPrincipalName)"
+                        copyField  = $Password
+                    })
+            }
+        }
+
+        if ($BulkRequests.Count -gt 0) {
+            Write-Warning "We have $($BulkRequests.Count) users to import"
+            #Write-Information ($BulkRequests | ConvertTo-Json -Depth 5)
+            $BulkResults = New-GraphBulkRequest -tenantid $TenantFilter -Requests $BulkRequests
+            Write-Warning "We have $($BulkResults.Count) results"
+            #Write-Information ($BulkResults | ConvertTo-Json -Depth 10)
+            foreach ($BulkResult in $BulkResults) {
+                if ($BulkResult.status -ne 201) {
+                    Write-LogMessage -headers $Request.Headers -API $APINAME -tenant $($TenantFilter) -message "Failed to create user $($BulkResult.id). Error:$($BulkResult.body.error.message)" -Sev 'Error'
+                    $Results.Add(@{
+                            resultText = "Failed to create user $($BulkResult.id). Error: $($BulkResult.body.error.message)"
+                            state      = 'error'
+                        })
+                } else {
+                    $Message = $Messages.Where({ $_.id -eq $BulkResult.id })
+                    $Results.Add(@{
+                            resultText = $Message.resultText
+                            state      = 'success'
+                            copyField  = $Message.copyField
+                            username   = $BulkResult.body.userPrincipalName
+                        })
+                }
+            }
+        } else {
+            $Results.Add(@{
+                    resultText = 'No users to import'
+                    state      = 'error'
+                })
+        }
+        $Body = @{
+            Results = @($Results)
         }
     }
 
     # Associate values to output bindings by calling 'Push-OutputBinding'.
     Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
             StatusCode = [HttpStatusCode]::OK
-            Body       = @($Body)
+            Body       = $Body
         })
 
 }

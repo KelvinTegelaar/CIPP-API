@@ -15,7 +15,7 @@ function Invoke-CIPPStandardConditionalAccessTemplate {
         MULTIPLE
             True
         DISABLEDFEATURES
-            
+            {"report":true,"warn":true,"remediate":false}
         IMPACT
             High Impact
         ADDEDDATE

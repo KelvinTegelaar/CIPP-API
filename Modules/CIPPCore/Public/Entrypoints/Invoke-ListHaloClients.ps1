@@ -11,11 +11,9 @@ Function Invoke-ListHaloClients {
     param($Request, $TriggerMetadata)
 
     $APIName = $Request.Params.CIPPEndpoint
-    Write-LogMessage -headers $Request.Headers -API $APINAME -message 'Accessed this API' -Sev 'Debug'
+    $Headers = $Request.Headers
+    Write-LogMessage -headers $Headers -API $APIName -message 'Accessed this API' -Sev 'Debug'
 
-
-    # Write to the Azure Functions log stream.
-    Write-Host 'PowerShell HTTP trigger function processed a request.'
 
     # Interact with query parameters or the body of the request.
     try {
@@ -24,17 +22,18 @@ Function Invoke-ListHaloClients {
         $Token = Get-HaloToken -configuration $Configuration
         $i = 1
         $RawHaloClients = do {
-            $Result = Invoke-RestMethod -Uri "$($Configuration.ResourceURL)/Client?page_no=$i&page_size=999&pageinate=true" -ContentType 'application/json' -Method GET -Headers @{Authorization = "Bearer $($token.access_token)" }
+            $Result = Invoke-RestMethod -Uri "$($Configuration.ResourceURL)/Client?page_no=$i&page_size=999&pageinate=true" -ContentType 'application/json' -Method GET -Headers @{Authorization = "Bearer $($Token.access_token)" }
             $Result.clients | Select-Object * -ExcludeProperty logo
             $i++
-            $pagecount = [Math]::Ceiling($Result.record_count / 999)
-        } while ($i -le $pagecount)
+            $PageCount = [Math]::Ceiling($Result.record_count / 999)
+        } while ($i -le $PageCount)
         $HaloClients = $RawHaloClients | ForEach-Object {
             [PSCustomObject]@{
                 label = $_.name
                 value = $_.id
             }
         }
+        Write-Host "Found $($HaloClients.Count) Halo Clients"
         $StatusCode = [HttpStatusCode]::OK
     } catch {
         $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message

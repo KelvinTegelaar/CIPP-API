@@ -11,7 +11,8 @@ Function Invoke-ListTransportRulesTemplates {
     param($Request, $TriggerMetadata)
 
     $APIName = $Request.Params.CIPPEndpoint
-    Write-LogMessage -headers $Request.Headers -API $APINAME -message 'Accessed this API' -Sev 'Debug'
+    $Headers = $Request.Headers
+    Write-LogMessage -headers $Headers -API $APIName -message 'Accessed this API' -Sev 'Debug'
     $Table = Get-CippTable -tablename 'templates'
 
     $Templates = Get-ChildItem 'Config\*.TransportRuleTemplate.json' | ForEach-Object {

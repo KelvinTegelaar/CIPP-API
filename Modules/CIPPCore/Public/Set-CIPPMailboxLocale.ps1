@@ -2,25 +2,32 @@ function Set-CippMailboxLocale {
     [CmdletBinding()]
     param (
         $Headers,
-        $locale,
-        $username,
+        $Locale,
+        $Username,
         $APIName = 'Mailbox Locale',
         $TenantFilter
     )
 
     try {
+        # Validate the locale. Also if the locale is not valid, it will throw an exception, not wasting a request.
+        if ([System.Globalization.CultureInfo]::GetCultureInfo($Locale).IsNeutralCulture) {
+            throw "$Locale is not a valid Locale. Neutral cultures are not supported."
+        }
+
         $null = New-ExoRequest -tenantid $TenantFilter -cmdlet 'Set-MailboxRegionalConfiguration' -cmdParams @{
-            Identity                  = $username
-            Language                  = $locale
+            Identity                  = $Username
+            Language                  = $Locale
             LocalizeDefaultFolderName = $true
+            DateFormat                = $null
+            TimeFormat                = $null
         } -Anchor $username
-        $Result = "Set locale for $($username) to a $locale"
-        Write-LogMessage -headers $Headers -API $APIName -message $Result -Sev 'Info' -tenant $TenantFilter
+        $Result = "Set locale for $($Username) to $Locale"
+        Write-LogMessage -headers $Headers -API $APIName -message $Result -Sev Info -tenant $TenantFilter
         return $Result
     } catch {
         $ErrorMessage = Get-CippException -Exception $_
-        $Result = "Could not set locale for $($username). Error: $($ErrorMessage.NormalizedError)"
-        Write-LogMessage -headers $Headers -API $APIName -message $Result -Sev 'Error' -tenant $TenantFilter -LogData $ErrorMessage
+        $Result = "Failed to set locale for $($Username). Error: $($ErrorMessage.NormalizedError)"
+        Write-LogMessage -headers $Headers -API $APIName -message $Result -Sev Error -tenant $TenantFilter -LogData $ErrorMessage
         throw $Result
     }
 }

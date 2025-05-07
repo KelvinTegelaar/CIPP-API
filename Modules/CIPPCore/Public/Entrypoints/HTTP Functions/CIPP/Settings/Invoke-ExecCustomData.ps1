@@ -18,7 +18,7 @@ function Invoke-ExecCustomData {
         'ListSchemaExtensions' {
             try {
                 $SchemaExtensions = Get-CIPPAzDataTableEntity @CustomDataTable -Filter "PartitionKey eq 'SchemaExtension'" | Select-Object -ExpandProperty JSON | ConvertFrom-Json
-                if (!$SchemaExtensions) {
+                if (!$SchemaExtensions -or $SchemaExtensions.id -notmatch '_') {
                     $SchemaExtensions = Get-CIPPSchemaExtensions | Sort-Object id
                 }
                 $Body = @{
@@ -230,7 +230,7 @@ function Invoke-ExecCustomData {
         }
         'ListDirectoryExtensions' {
             try {
-                $Uri = "https://graph.microsoft.com/beta/applications(appId='$($env:ApplicationId)')/extensionProperties"
+                $Uri = "https://graph.microsoft.com/beta/applications(appId='$($env:ApplicationID)')/extensionProperties"
                 $DirectoryExtensions = New-GraphGetRequest -uri $Uri -AsApp $true -NoAuthCheck $true -tenantid $env:TenantID
                 $Existing = Get-CIPPAzDataTableEntity @CustomDataTable -Filter "PartitionKey eq 'DirectoryExtension'"
 
@@ -271,7 +271,7 @@ function Invoke-ExecCustomData {
                     throw 'Extension name, data type, and target objects are required.'
                 }
 
-                $AppId = $env:ApplicationId # Replace with your application ID
+                $AppId = $env:ApplicationID # Replace with your application ID
                 $Uri = "https://graph.microsoft.com/beta/applications(appId='$AppId')/extensionProperties"
 
                 $BodyContent = @{
@@ -316,7 +316,7 @@ function Invoke-ExecCustomData {
                 if (!$ExtensionName) {
                     throw 'Extension name is missing in the request body.'
                 }
-                $AppId = $env:ApplicationId # Replace with your application ID
+                $AppId = $env:ApplicationID # Replace with your application ID
                 $Uri = "https://graph.microsoft.com/beta/applications(appId='$AppId')/extensionProperties/$ExtensionId"
 
                 # Delete the directory extension from Microsoft Graph

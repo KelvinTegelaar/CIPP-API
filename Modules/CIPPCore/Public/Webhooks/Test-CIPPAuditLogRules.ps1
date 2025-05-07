@@ -41,6 +41,9 @@ function Test-CIPPAuditLogRules {
         }
     }
 
+    Write-Warning '## Audit Log Configuration ##'
+    Write-Information ($Configuration | ConvertTo-Json -Depth 10)
+
     try {
         $LogCount = $Rows.count
         $RunGuid = (New-Guid).Guid
@@ -98,18 +101,19 @@ function Test-CIPPAuditLogRules {
                 $HasLocationData = $false
                 if (![string]::IsNullOrEmpty($Data.clientip) -and $Data.clientip -notmatch '[X]+') {
                     # Ignore IP addresses that have been redacted
-                    if ($Data.clientip -match '^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}:\d+$') {
-                        $Data.clientip = $Data.clientip -replace ':\d+$', '' # Remove the port number if present
-                    }
+
+                    $IPRegex = '^(?<IP>(?:\d{1,3}(?:\.\d{1,3}){3}|\[[0-9a-fA-F:]+\]|[0-9a-fA-F:]+))(?::\d+)?$'
+                    $Data.clientip = $Data.clientip -replace $IPRegex, '$1' -replace '[\[\]]', ''
+
                     # Check if IP is on trusted IP list
-                    $TrustedIP = Get-CIPPAzDataTableEntity @TrustedIPTable -Filter "((PartitionKey eq '$TenantFilter') or (PartitionKey eq 'AllTenants')) and RowKey eq '$($Data.clientip)'  and state eq 'Trusted'"
+                    $TrustedIP = Get-CIPPAzDataTableEntity @TrustedIPTable -Filter "((PartitionKey eq '$TenantFilter') or (PartitionKey eq 'AllTenants')) and RowKey eq '$($Data.clientip)' and state eq 'Trusted'"
                     if ($TrustedIP) {
                         #write-warning "IP $($Data.clientip) is trusted"
                         $Trusted = $true
                     }
                     if (!$Trusted) {
                         $CacheLookupStartTime = Get-Date
-                        $Location = Get-CIPPAzDataTableEntity @LocationTable -Filter "RowKey eq '$($Data.clientIp)'" | Select-Object -Last 1 -ExcludeProperty Tenant
+                        $Location = Get-AzDataTableEntity @LocationTable -Filter "PartitionKey eq 'ip' and RowKey eq '$($Data.clientIp)'" | Select-Object -ExcludeProperty Tenant
                         $CacheLookupEndTime = Get-Date
                         $CacheLookupSeconds = ($CacheLookupEndTime - $CacheLookupStartTime).TotalSeconds
                         Write-Warning "Cache lookup for IP $($Data.clientip) took $CacheLookupSeconds seconds"
@@ -185,39 +189,45 @@ function Test-CIPPAuditLogRules {
         #write-warning "Processed Data: $(($ProcessedData | Measure-Object).Count) - This should be higher than 0 in many cases, because the where object has not run yet."
         #write-warning "Creating filters - $(($ProcessedData.operation | Sort-Object -Unique) -join ',') - $($TenantFilter)"
 
-        $Where = $Configuration | ForEach-Object {
-            if ($TenantFilter -in $_.Excluded.value) {
-                return
-            }
-            $conditions = $_.Conditions | ConvertFrom-Json | Where-Object { $_.Input.value -ne '' }
-            $actions = $_.Actions
-            $conditionStrings = [System.Collections.Generic.List[string]]::new()
-            $CIPPClause = [System.Collections.Generic.List[string]]::new()
-            $AddedLocationCondition = $false
-            foreach ($condition in $conditions) {
-                if ($condition.Property.value -eq 'CIPPGeoLocation' -and !$AddedLocationCondition) {
-                    $conditionsString.Add("`$_.HasLocationData -eq `$true")
-                    $CIPPClause.Add('HasLocationData is true')
-                    $AddedLocationCondition = $true
+        try {
+            $Where = foreach ($Config in $Configuration) {
+                if ($TenantFilter -in $Config.Excluded.value) {
+                    continue
                 }
-                $value = if ($condition.Input.value -is [array]) {
-                    $arrayAsString = $condition.Input.value | ForEach-Object {
-                        "'$_'"
+                $conditions = $Config.Conditions | ConvertFrom-Json | Where-Object { $Config.Input.value -ne '' }
+                $actions = $Config.Actions
+                $conditionStrings = [System.Collections.Generic.List[string]]::new()
+                $CIPPClause = [System.Collections.Generic.List[string]]::new()
+                $AddedLocationCondition = $false
+                foreach ($condition in $conditions) {
+                    if ($condition.Property.label -eq 'CIPPGeoLocation' -and !$AddedLocationCondition) {
+                        $conditionStrings.Add("`$_.HasLocationData -eq `$true")
+                        $CIPPClause.Add('HasLocationData is true')
+                        $AddedLocationCondition = $true
                     }
-                    "@($($arrayAsString -join ', '))"
-                } else { "'$($condition.Input.value)'" }
+                    $value = if ($condition.Input.value -is [array]) {
+                        $arrayAsString = $condition.Input.value | ForEach-Object {
+                            "'$_'"
+                        }
+                        "@($($arrayAsString -join ', '))"
+                    } else { "'$($condition.Input.value)'" }
 
-                $conditionStrings.Add("`$(`$_.$($condition.Property.label)) -$($condition.Operator.value) $value")
-                $CIPPClause.Add("$($condition.Property.label) is $($condition.Operator.label) $value")
+                    $conditionStrings.Add("`$(`$_.$($condition.Property.label)) -$($condition.Operator.value) $value")
+                    $CIPPClause.Add("$($condition.Property.label) is $($condition.Operator.label) $value")
+                }
+                $finalCondition = $conditionStrings -join ' -AND '
+
+                [PSCustomObject]@{
+                    clause         = $finalCondition
+                    expectedAction = $actions
+                    CIPPClause     = $CIPPClause
+                }
             }
-            $finalCondition = $conditionStrings -join ' -AND '
-
-            [PSCustomObject]@{
-                clause         = $finalCondition
-                expectedAction = $actions
-                CIPPClause     = $CIPPClause
-            }
-
+        } catch {
+            Write-Warning "Error creating where clause: $($_.Exception.Message)"
+            Write-Information $_.InvocationInfo.PositionMessage
+            #Write-LogMessage -API 'Webhooks' -message 'Error creating where clause' -LogData (Get-CippException -Exception $_) -sev Error -tenant $TenantFilter
+            throw $_
         }
 
         $MatchedRules = [System.Collections.Generic.List[string]]::new()
