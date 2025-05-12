@@ -73,7 +73,7 @@ function Invoke-CIPPStandardAntiPhishPolicy {
     }
 
     $CurrentState = $ExistingPolicy |
-        Select-Object Name, Enabled, PhishThresholdLevel, EnableMailboxIntelligence, EnableMailboxIntelligenceProtection, EnableSpoofIntelligence, EnableFirstContactSafetyTips, EnableSimilarUsersSafetyTips, EnableSimilarDomainsSafetyTips, EnableUnusualCharactersSafetyTips, EnableUnauthenticatedSender, EnableViaTag, AuthenticationFailAction, SpoofQuarantineTag, MailboxIntelligenceProtectionAction, MailboxIntelligenceQuarantineTag, TargetedUserProtectionAction, TargetedUserQuarantineTag, TargetedDomainProtectionAction, TargetedDomainQuarantineTag, EnableOrganizationDomainsProtection
+        Select-Object Name, Enabled, PhishThresholdLevel, EnableMailboxIntelligence, EnableMailboxIntelligenceProtection, EnableSpoofIntelligence, EnableFirstContactSafetyTips, EnableSimilarUsersSafetyTips, EnableSimilarDomainsSafetyTips, EnableUnusualCharactersSafetyTips, EnableUnauthenticatedSender, EnableViaTag, AuthenticationFailAction, SpoofQuarantineTag, MailboxIntelligenceProtectionAction, MailboxIntelligenceQuarantineTag, TargetedUserProtectionAction, TargetedUserQuarantineTag, TargetedDomainProtectionAction, TargetedDomainQuarantineTag, EnableOrganizationDomainsProtection, EnableTargetedDomainsProtection, EnableTargetedUserProtection
 
     if ($MDOLicensed) {
         $StateIsCorrect = ($CurrentState.Name -eq $PolicyName) -and
@@ -96,6 +96,8 @@ function Invoke-CIPPStandardAntiPhishPolicy {
                           ($CurrentState.TargetedUserQuarantineTag -eq $Settings.TargetedUserQuarantineTag) -and
                           ($CurrentState.TargetedDomainProtectionAction -eq $Settings.TargetedDomainProtectionAction) -and
                           ($CurrentState.TargetedDomainQuarantineTag -eq $Settings.TargetedDomainQuarantineTag) -and
+                          ($CurrentState.EnableTargetedDomainsProtection -eq $true) -and
+                          ($CurrentState.EnableTargetedUserProtection -eq $true) -and
                           ($CurrentState.EnableOrganizationDomainsProtection -eq $true)
     } else {
         $StateIsCorrect = ($CurrentState.Name -eq $PolicyName) -and
@@ -144,6 +146,8 @@ function Invoke-CIPPStandardAntiPhishPolicy {
                     TargetedUserQuarantineTag           = $Settings.TargetedUserQuarantineTag
                     TargetedDomainProtectionAction      = $Settings.TargetedDomainProtectionAction
                     TargetedDomainQuarantineTag         = $Settings.TargetedDomainQuarantineTag
+                    EnableTargetedDomainsProtection     = $true
+                    EnableTargetedUserProtection        = $true
                     EnableOrganizationDomainsProtection = $true
                 }
             } else {
@@ -218,8 +222,9 @@ function Invoke-CIPPStandardAntiPhishPolicy {
     }
 
     if ($Settings.report -eq $true) {
-        Set-CIPPStandardsCompareField -FieldName 'standards.AntiPhishPolicy' -FieldValue $StateIsCorrect -TenantFilter $tenant
-        Add-CIPPBPAField -FieldName 'AntiPhishPolicy' -FieldValue $StateIsCorrect -StoreAs bool -Tenant $tenant
+        $FieldValue = $StateIsCorrect ? $true : $CurrentState
+        Set-CIPPStandardsCompareField -FieldName 'standards.AntiPhishPolicy' -FieldValue $FieldValue -TenantFilter $Tenant
+        Add-CIPPBPAField -FieldName 'AntiPhishPolicy' -FieldValue $StateIsCorrect -StoreAs bool -Tenant $Tenant
     }
 
 }
