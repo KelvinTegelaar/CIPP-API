@@ -121,11 +121,8 @@ function Invoke-ExecJITAdmin {
                 $PasswordExpiration = $TapRequest.LifetimeInMinutes
 
                 $PasswordLink = New-PwPushLink -Payload $TempPass
-                if ($PasswordLink) {
-                    $Password = $PasswordLink
-                } else {
-                    $Password = $TempPass
-                }
+                $Password = $PasswordLink ? $PasswordLink : $TempPass
+
                 $Results.Add("Temporary Access Pass: $Password")
                 $Results.Add("This TAP is usable starting at $($TapRequest.startDateTime) UTC for the next $PasswordExpiration minutes")
             } catch {
