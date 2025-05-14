@@ -30,9 +30,10 @@ Function Invoke-RemoveDeletedObject {
         $StatusCode = [HttpStatusCode]::OK
     } catch {
         $ErrorMessage = Get-CippException -Exception $_
-        $Result = "Failed to permanently delete item with ID: $($RequestID). Error: $($ErrorMessage.NormalizedError)"
+        $Result = "Failed to permanently delete item with ID: $($RequestID)"
         if ($UserPrincipalName) { $Result += " User Principal Name: '$($UserPrincipalName)'" }
         if ($DisplayName) { $Result += " Display Name: '$($DisplayName)'" }
+        $Result += " Error: $($ErrorMessage.NormalizedError)"
 
         Write-LogMessage -headers $Headers -tenant $TenantFilter -API $APIName -message $Result -Sev 'Error' -LogData $ErrorMessage
         $StatusCode = [HttpStatusCode]::InternalServerError
