@@ -1,6 +1,6 @@
 using namespace System.Net
 
-Function Invoke-EditTenant {
+function Invoke-EditTenant {
     <#
     .FUNCTIONALITY
         Entrypoint,AnyTenant
@@ -46,9 +46,9 @@ Function Invoke-EditTenant {
         }
 
         # Update tenant groups
-        $CurrentMembers = Get-CIPPAzDataTableEntity @GroupMembersTable -Filter "customerId eq '$customerId'"
+        $CurrentGroupMemberships = Get-CIPPAzDataTableEntity @GroupMembersTable -Filter "customerId eq '$customerId'"
         foreach ($Group in $tenantGroups) {
-            $GroupEntity = $CurrentMembers | Where-Object { $_.GroupId -eq $Group.groupId }
+            $GroupEntity = $CurrentGroupMemberships | Where-Object { $_.GroupId -eq $Group.groupId }
             if (!$GroupEntity) {
                 $GroupEntity = @{
                     PartitionKey = 'Member'
@@ -61,8 +61,8 @@ Function Invoke-EditTenant {
         }
 
         # Remove any groups that are no longer selected
-        foreach ($Group in $CurrentMembers) {
-            if ($tenantGroups -notcontains $Group.GroupId) {
+        foreach ($Group in $CurrentGroupMemberships) {
+            if ($tenantGroups.GroupId -notcontains $Group.GroupId) {
                 Remove-AzDataTableEntity @GroupMembersTable -Entity $Group
             }
         }
