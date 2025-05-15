@@ -1,6 +1,6 @@
 using namespace System.Net
 
-Function Invoke-ExecRestoreDeleted {
+Function Invoke-RemoveDeletedObject {
     <#
     .FUNCTIONALITY
         Entrypoint
@@ -21,8 +21,8 @@ Function Invoke-ExecRestoreDeleted {
     $DisplayName = $Request.Body.displayName
 
     try {
-        $null = New-GraphPostRequest -uri "https://graph.microsoft.com/v1.0/directory/deletedItems/$($RequestID)/restore" -tenantid $TenantFilter -type POST -body '{}' -Verbose
-        $Result = "Successfully restored deleted item with ID: '$($RequestID)'"
+        $null = New-GraphPostRequest -uri "https://graph.microsoft.com/v1.0/directory/deletedItems/$($RequestID)" -tenantid $TenantFilter -type DELETE -body '{}' -Verbose
+        $Result = "Successfully permanently deleted item with ID: '$($RequestID)'"
         if ($UserPrincipalName) { $Result += " User Principal Name: '$($UserPrincipalName)'" }
         if ($DisplayName) { $Result += " Display Name: '$($DisplayName)'" }
 
@@ -30,7 +30,7 @@ Function Invoke-ExecRestoreDeleted {
         $StatusCode = [HttpStatusCode]::OK
     } catch {
         $ErrorMessage = Get-CippException -Exception $_
-        $Result = "Failed to restore deleted item with ID: '$($RequestID)'"
+        $Result = "Failed to permanently delete item with ID: $($RequestID)"
         if ($UserPrincipalName) { $Result += " User Principal Name: '$($UserPrincipalName)'" }
         if ($DisplayName) { $Result += " Display Name: '$($DisplayName)'" }
         $Result += " Error: $($ErrorMessage.NormalizedError)"
