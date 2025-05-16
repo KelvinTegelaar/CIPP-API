@@ -10,51 +10,126 @@ function Invoke-ExecJITAdmin {
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
 
-    $APIName = 'ExecJITAdmin'
+    $APIName = $Request.Params.CIPPEndpoint
     $User = $Request.Headers
-    $TenantFilter = $Request.body.TenantFilter.value ? $Request.body.TenantFilter.value : $Request.body.TenantFilter
-    Write-LogMessage -Headers $User -API $APINAME -message 'Accessed this API' -Sev 'Debug'
+    $TenantFilter = $Request.Body.tenantFilter.value ? $Request.Body.tenantFilter.value : $Request.Body.tenantFilter
+    Write-LogMessage -Headers $User -API $APIName -message 'Accessed this API' -Sev 'Debug'
 
     if ($Request.Query.Action -eq 'List') {
         $Schema = Get-CIPPSchemaExtensions | Where-Object { $_.id -match '_cippUser' } | Select-Object -First 1
-        $Query = @{
-            TenantFilter = $Request.Query.TenantFilter
-            Endpoint     = 'users'
-            Parameters   = @{
-                '$count'  = 'true'
-                '$select' = "id,accountEnabled,displayName,userPrincipalName,$($Schema.id)"
-                '$filter' = "$($Schema.id)/jitAdminEnabled eq true or $($Schema.id)/jitAdminEnabled eq false"
-            }
-        }
-        $Users = Get-GraphRequestList @Query | Where-Object { $_.id }
-        $BulkRequests = $Users | ForEach-Object { @(
-                @{
-                    id     = $_.id
-                    method = 'GET'
-                    url    = "users/$($_.id)/memberOf/microsoft.graph.directoryRole/?`$select=id,displayName"
+        if ($TenantFilter -ne 'AllTenants') {
+            $Query = @{
+                TenantFilter = $Request.Query.TenantFilter
+                Endpoint     = 'users'
+                Parameters   = @{
+                    '$count'  = 'true'
+                    '$select' = "id,accountEnabled,displayName,userPrincipalName,$($Schema.id)"
+                    '$filter' = "$($Schema.id)/jitAdminEnabled eq true or $($Schema.id)/jitAdminEnabled eq false"
                 }
-            )
-        }
-        $RoleResults = New-GraphBulkRequest -tenantid $Request.Query.TenantFilter -Requests @($BulkRequests)
-        #Write-Information ($RoleResults | ConvertTo-Json -Depth 10 )
-        $Results = $Users | ForEach-Object {
-            $MemberOf = ($RoleResults | Where-Object -Property id -EQ $_.id).body.value | Select-Object displayName, id
-            [PSCustomObject]@{
-                id                 = $_.id
-                displayName        = $_.displayName
-                userPrincipalName  = $_.userPrincipalName
-                accountEnabled     = $_.accountEnabled
-                jitAdminEnabled    = $_.($Schema.id).jitAdminEnabled
-                jitAdminExpiration = $_.($Schema.id).jitAdminExpiration
-                memberOf           = $MemberOf
             }
-        }
+            $Users = Get-GraphRequestList @Query | Where-Object { $_.id }
+            $BulkRequests = $Users | ForEach-Object { @(
+                    @{
+                        id     = $_.id
+                        method = 'GET'
+                        url    = "users/$($_.id)/memberOf/microsoft.graph.directoryRole/?`$select=id,displayName"
+                    }
+                )
+            }
+            # Use $TenantFilter consistently, which is derived from Body or Query params at line 15
+            $RoleResults = New-GraphBulkRequest -tenantid $Request.Query.TenantFilter -Requests @($BulkRequests)
+            #Write-Information ($RoleResults | ConvertTo-Json -Depth 10 )
+            $Results = $Users | ForEach-Object {
+                $MemberOf = ($RoleResults | Where-Object -Property id -EQ $_.id).body.value | Select-Object displayName, id
+                [PSCustomObject]@{
+                    id                 = $_.id
+                    displayName        = $_.displayName
+                    userPrincipalName  = $_.userPrincipalName
+                    accountEnabled     = $_.accountEnabled
+                    jitAdminEnabled    = $_.($Schema.id).jitAdminEnabled
+                    jitAdminExpiration = $_.($Schema.id).jitAdminExpiration
+                    memberOf           = $MemberOf
+                }
+            }
 
-        #Write-Information ($Results | ConvertTo-Json -Depth 10)
-        $Body = @{
-            Results  = @($Results)
-            Metadata = @{
-                Parameters = $Query.Parameters
+            #Write-Information ($Results | ConvertTo-Json -Depth 10)
+            $Body = @{
+                Results  = @($Results)
+                Metadata = @{
+                    Parameters = $Query.Parameters
+                }
+            }
+        } else {
+            # AllTenants logic
+            $Results = [System.Collections.Generic.List[object]]::new()
+            $Metadata = @{}
+            # Assumed table name for JIT Admin cache. User might need to adjust.
+            $Table = Get-CIPPTable -TableName CacheJITAdmin
+            $PartitionKey = 'JITAdminUsers' # Assumed partition key
+
+            # Filter for recent data, e.g., last 60 minutes. Orchestrator populates this.
+            $Filter = "PartitionKey eq '$PartitionKey'"
+            $Rows = Get-CIPPAzDataTableEntity @Table -filter $Filter | Where-Object -Property Timestamp -GT (Get-Date).AddMinutes(-1)
+
+            $QueueReference = '{0}-{1}' -f $Request.Query.TenantFilter, $PartitionKey # $TenantFilter is 'AllTenants'
+            $RunningQueue = Invoke-ListCippQueue | Where-Object { $_.Reference -eq $QueueReference -and $_.Status -notmatch 'Completed' -and $_.Status -notmatch 'Failed' }
+
+            if ($RunningQueue) {
+                $Metadata = [PSCustomObject]@{
+                    QueueMessage = 'Still loading JIT Admin data for all tenants. Please check back in a few more minutes.'
+                }
+                $Results.Add([PSCustomObject]@{ Waiting = $true })
+            } elseif (!$dRows -and !$RunningQueue) {
+                $TenantList = Get-Tenants -IncludeErrors
+                $QueueLink = if ($Request.RequestUri) { $Request.RequestUri.ToString() -replace $Request.Query.Action, 'List' } else { '/identity/administration/users/jit-admin?Action=List&TenantFilter=AllTenants' } # Fallback link
+                $Queue = New-CippQueueEntry -Name 'JIT Admin List - All Tenants' -Link $QueueLink -Reference $QueueReference -TotalTasks ($TenantList | Measure-Object).Count
+
+                $Metadata = [PSCustomObject]@{
+                    QueueMessage = 'Loading JIT Admin data for all tenants. Please check back in a few minutes.'
+                }
+                $InputObject = [PSCustomObject]@{
+                    OrchestratorName = 'JITAdminListAllTenantsOrchestrator' # Assumed orchestrator name
+                    QueueFunction    = @{
+                        FunctionName = 'GetTenants' # Generic entry, durable function handles per-tenant logic
+                        QueueId      = $Queue.RowKey
+                        TenantParams = @{
+                            IncludeErrors = $true
+                        }
+                        DurableName  = 'ExecJITAdminListAllTenants'
+                    }
+                    SkipLog          = $true
+                }
+                Start-NewOrchestration -FunctionName 'CIPPOrchestrator' -InputObject ($InputObject | ConvertTo-Json -Depth 5 -Compress)
+                $Results.Add([PSCustomObject]@{ Waiting = $true })
+            } else {
+                # $dRows exist
+                foreach ($row in $Rows) {
+                    # Assuming $row.JITUserObject contains the serialized PSCustomObject for the user's JIT details
+                    # And $row.TenantId (or $row.TenantDisplayName) contains the tenant identifier
+                    try {
+                        $UserObject = $row.JITUserObject | ConvertFrom-Json
+                        $Results.Add(
+                            [PSCustomObject]@{
+                                Tenant             = $row.TenantId # Or TenantDisplayName, ensure orchestrator stores this
+                                id                 = $UserObject.id
+                                displayName        = $UserObject.displayName
+                                userPrincipalName  = $UserObject.userPrincipalName
+                                accountEnabled     = $UserObject.accountEnabled
+                                jitAdminEnabled    = $UserObject.jitAdminEnabled
+                                jitAdminExpiration = $UserObject.jitAdminExpiration
+                                memberOf           = $UserObject.memberOf # This should be an array of role objects
+                            }
+                        )
+                    } catch {
+                        Write-LogMessage -Headers $User -API $APIName -message "Failed to process cached JIT admin row for Tenant $($row.TenantId), RowKey $($row.RowKey). Error: $($_.Exception.Message)" -Sev 'Warning'
+                        # Optionally add a placeholder or skip if critical
+                    }
+                }
+                $Metadata = @{ Info = 'Displaying cached JIT Admin data for all tenants.' }
+            }
+            $Body = @{
+                Results  = @($Results)
+                Metadata = $Metadata
             }
         }
     } else {
