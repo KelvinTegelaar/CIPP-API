@@ -1,6 +1,6 @@
 using namespace System.Net
 
-Function Invoke-ExecAddAlert {
+function Invoke-ExecAddAlert {
     <#
     .FUNCTIONALITY
         Entrypoint,AnyTenant
@@ -16,9 +16,9 @@ Function Invoke-ExecAddAlert {
 
     $Severity = 'Alert'
 
-    $Result = if ($Request.Body.sendEmailNow -or $Request.Body.sendWebhookNow -eq $true -or $Request.Body.writeLog -eq $true) {
+    $Result = if ($Request.Body.sendEmailNow -or $Request.Body.sendWebhookNow -eq $true -or $Request.Body.writeLog -eq $true -or $Request.Body.sendPsaNow -eq $true) {
         $Title = 'CIPP Notification Test'
-        if ($Request.Body.sendEmailNow) {
+        if ($Request.Body.sendEmailNow -eq $true) {
             $CIPPAlert = @{
                 Type        = 'email'
                 Title       = $Title
@@ -26,7 +26,7 @@ Function Invoke-ExecAddAlert {
             }
             Send-CIPPAlert @CIPPAlert
         }
-        if ($Request.Body.sendWebhookNow) {
+        if ($Request.Body.sendWebhookNow -eq $true) {
             $JSONContent = @{
                 Title = $Title
                 Text  = $Request.Body.text
@@ -38,7 +38,16 @@ Function Invoke-ExecAddAlert {
             }
             Send-CIPPAlert @CIPPAlert
         }
-        if ($Request.Body.writeLog) {
+        if ($Request.Body.sendPsaNow -eq $true) {
+            $CIPPAlert = @{
+                Type        = 'psa'
+                Title       = $Title
+                HTMLContent = $Request.Body.text
+            }
+            Send-CIPPAlert @CIPPAlert
+        }
+
+        if ($Request.Body.writeLog -eq $true) {
             Write-LogMessage -headers $Headers -API 'Alerts' -message $Request.Body.text -Sev $Severity
             'Successfully generated alert.'
         }
