@@ -4,7 +4,7 @@ function New-GraphGetRequest {
     Internal
     #>
     [CmdletBinding()]
-    Param(
+    param(
         [string]$uri,
         [string]$tenantid,
         [string]$scope,
@@ -67,7 +67,7 @@ function New-GraphGetRequest {
                     $NextURL = $null
                 } else {
                     if ($Data.PSObject.Properties.Name -contains 'value') { $data.value } else { $Data }
-                    if ($noPagination) {
+                    if ($noPagination -eq $true) {
                         if ($Caller -eq 'Get-GraphRequestList') {
                             @{ 'nextLink' = $data.'@odata.nextLink' }
                         }
