@@ -18,6 +18,7 @@ function Get-CIPPAuthentication {
                     Set-Item -Path env:$Var -Value $Secret.$Var -Force -ErrorAction Stop
                 }
             }
+            Write-Host "Got secrets from dev storage. ApplicationID: $env:ApplicationID"
         } else {
             Write-Information 'Connecting to Azure'
             Connect-AzAccount -Identity
