@@ -19,17 +19,28 @@ Function Invoke-ExecCreateTAP {
     $UserID = $Request.Query.ID ?? $Request.Body.ID
 
     try {
-        $Result = New-CIPPTAP -userid $UserID -TenantFilter $TenantFilter -APIName $APIName -Headers $Headers
+        $TAPResult = New-CIPPTAP -userid $UserID -TenantFilter $TenantFilter -APIName $APIName -Headers $Headers
+
+        # Create results array with both TAP and UserID as separate items
+        $Results = @(
+            $TAPResult,
+            @{
+                resultText = "User ID: $UserID"
+                copyField = $UserID
+                state = 'success'
+            }
+        )
+
         $StatusCode = [HttpStatusCode]::OK
     } catch {
-        $Result = Get-NormalizedError -message $($_.Exception.Message)
+        $Results = Get-NormalizedError -message $($_.Exception.Message)
         $StatusCode = [HttpStatusCode]::InternalServerError
     }
 
     # Associate values to output bindings by calling 'Push-OutputBinding'.
     Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
             StatusCode = $StatusCode
-            Body       = @{'Results' = $Result }
+            Body       = @{'Results' = $Results }
         })
 
 }
