@@ -6,6 +6,8 @@ Function Invoke-ExecSAMSetup {
         Entrypoint,AnyTenant
     .ROLE
         CIPP.AppSettings.ReadWrite
+    .LEGACY
+        This function is a legacy function that was used to set up the CIPP application in Azure AD. It is not used in the current version of CIPP, look at Invoke-ExecCreateSAMApp for the new version.
     #>
     [System.Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSAvoidUsingConvertToSecureStringWithPlainText', '')]
     [CmdletBinding()]
