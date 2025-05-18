@@ -24,18 +24,27 @@ Function Invoke-ExecUpdateRefreshToken {
                 $Secret.RefreshToken = $Request.body.RefreshToken
             } else {
                 Write-Host "$($env:Applicationid) does not match $($Request.body.tenantId)"
-                $secret | Add-Member -MemberType NoteProperty -Name $($Request.body.tenantId) -Value $Request.body.refreshtoken -Force
+                $name = $Request.body.tenantId -replace '-', '_'
+                $secret | Add-Member -MemberType NoteProperty -Name $name -Value $Request.body.refreshtoken -Force
             }
             Add-CIPPAzDataTableEntity @DevSecretsTable -Entity $Secret -Force
         } else {
             if ($env:ApplicationId -eq $Request.body.tenantId) {
                 Set-AzKeyVaultSecret -VaultName $kv -Name 'RefreshToken' -SecretValue (ConvertTo-SecureString -String $Request.body.refreshtoken -AsPlainText -Force)
             } else {
-                Set-AzKeyVaultSecret -VaultName $kv -Name $Request.body.tenantId -SecretValue (ConvertTo-SecureString -String $Request.body.refreshtoken -AsPlainText -Force)
+                $name = $Request.body.tenantId -replace '-', '_'
+                Set-AzKeyVaultSecret -VaultName $kv -Name $name -SecretValue (ConvertTo-SecureString -String $Request.body.refreshtoken -AsPlainText -Force)
             }
         }
         $InstanceId = Start-UpdatePermissionsOrchestrator #start the CPV refresh immediately while wizard still runs.
-        $Results = @{'message' = "Successfully updated your stored authentication for $($request.body.tenantId)."; severity = 'success' }
+
+
+        $Results = @{
+            'message' = "Successfully updated your stored authentication for $($request.body.tenantId)."
+            'severity' = 'success'
+            'state' = 'success'
+            'tenantId' = $Request.body.tenantId
+        }
     } catch {
         $Results = [pscustomobject]@{'Results' = "Failed. $($_.InvocationInfo.ScriptLineNumber):  $($_.Exception.message)"; severity = 'failed' }
     }

@@ -5,6 +5,7 @@ function Get-GraphToken($tenantid, $scope, $AsApp, $AppID, $AppSecret, $refreshT
     #>
     if (!$scope) { $scope = 'https://graph.microsoft.com/.default' }
     if (!$env:SetFromProfile) { $CIPPAuth = Get-CIPPAuthentication; Write-Host 'Could not get Refreshtoken from environment variable. Reloading token.' }
+    #If the $env:<$tenantid> is set, use that instead of the refreshtoken for all tenants.
     $AuthBody = @{
         client_id     = $env:ApplicationID
         client_secret = $env:ApplicationSecret
