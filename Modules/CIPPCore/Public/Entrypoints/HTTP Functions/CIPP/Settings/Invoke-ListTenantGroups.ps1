@@ -12,8 +12,7 @@ function Invoke-ListTenantGroups {
 
     $groupFilter = $Request.Query.groupId ?? $Request.Body.groupId
     $TenantGroups = (Get-TenantGroups -GroupId $groupFilter) ?? @()
-    $SortedTenantGroups = $TenantGroups | Sort-Object Name
-    $Body = @{ Results = @($SortedTenantGroups) }
+    $Body = @{ Results = @($TenantGroups) }
 
     Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
             StatusCode = [HttpStatusCode]::OK

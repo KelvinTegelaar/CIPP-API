@@ -43,18 +43,21 @@ function Get-TenantGroups {
     }
 
     if ($TenantFilter -and $TenantFilter -ne 'allTenants') {
+        $Results = @()
         $Memberships = $AllMembers | Where-Object { $_.customerId -eq $Tenants.customerId }
         foreach ($Group in $Memberships) {
             $Group = $Groups | Where-Object { $_.RowKey -eq $Group.GroupId }
             if ($Group) {
-                [PSCustomObject]@{
+                $Results += [PSCustomObject]@{
                     Id          = $Group.RowKey
                     Name        = $Group.Name
                     Description = $Group.Description
                 }
             }
         }
+        return $Results | Sort-Object Name
     } else {
+        $Results = @()
         $Groups | ForEach-Object {
             $Group = $_
             $Members = $AllMembers | Where-Object { $_.GroupId -eq $Group.RowKey }
@@ -75,14 +78,16 @@ function Get-TenantGroups {
             }
             if (!$Members) {
                 $Members = @()
+            } else {
+                $Members = $Members | Sort-Object displayName
             }
-
-            [PSCustomObject]@{
+            $Results += [PSCustomObject]@{
                 Id          = $Group.RowKey
                 Name        = $Group.Name
                 Description = $Group.Description
                 Members     = @($Members)
             }
         }
+        return $Results | Sort-Object Name
     }
 }
