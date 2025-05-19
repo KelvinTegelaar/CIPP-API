@@ -1523,7 +1523,7 @@ function Invoke-NinjaOneTenantSync {
             $ManagementLinksData = @(
                 @{
                     Name = 'M365 Admin Portal'
-                    Link = "https://admin.cloud.microsoft/?delegatedOrg=$($customer.defaultDomainName)"
+                    Link = "https://admin.cloud.microsoft?delegatedOrg=$($customer.defaultDomainName)"
                     Icon = 'fas fa-cogs'
                 },
                 @{
@@ -1548,7 +1548,7 @@ function Invoke-NinjaOneTenantSync {
                 },
                 @{
                     Name = 'Teams Admin'
-                    Link = "https://admin.teams.microsoft.com/?delegatedOrg=$($Customer.defaultDomainName)"
+                    Link = "https://admin.teams.microsoft.com?delegatedOrg=$($Customer.defaultDomainName)"
                     Icon = 'fas fa-users'
                 },
                 @{

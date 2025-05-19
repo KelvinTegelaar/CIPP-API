@@ -122,12 +122,12 @@ function Invoke-HuduExtensionSync {
         $Links = @(
             @{
                 Title = 'M365 Admin Portal'
-                URL   = 'https://admin.cloud.microsoft/?delegatedOrg={0}' -f $Tenant.initialDomainName
+                URL   = 'https://admin.cloud.microsoft?delegatedOrg={0}' -f $Tenant.initialDomainName
                 Icon  = 'fas fa-cogs'
             }
             @{
                 Title = 'Exchange Admin Portal'
-                URL   = 'https://admin.cloud.microsoft/exchange/?delegatedOrg={0}' -f $Tenant.initialDomainName
+                URL   = 'https://admin.cloud.microsoft/exchange?delegatedOrg={0}' -f $Tenant.initialDomainName
                 Icon  = 'fas fa-mail-bulk'
             }
             @{
