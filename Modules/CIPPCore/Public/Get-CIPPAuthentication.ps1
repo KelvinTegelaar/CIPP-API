@@ -22,13 +22,10 @@ function Get-CIPPAuthentication {
             #Get list of tenants that have 'directTenant' set to true
             $tenants = Get-Tenants -IncludeErrors | Where-Object -Property delegatedPrivilegeStatus -EQ 'directTenant'
             if ($tenants) {
-                Write-Host "Found $($tenants.Count) tenants with directTenant set to true"
                 $tenants | ForEach-Object {
                     $secretname = $_.customerId -replace '-', '_'
                     if ($secret.$secretname) {
                         $name = $_.customerId
-                        Write-Host "Setting $name to $($secret.$secretname)"
-
                         Set-Item -Path env:$name -Value $secret.$secretname -Force
                     }
                 }
