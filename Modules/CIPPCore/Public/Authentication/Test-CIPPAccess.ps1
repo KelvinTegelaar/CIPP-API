@@ -100,7 +100,7 @@ function Test-CIPPAccess {
             $User = Test-CIPPAccessUserRole -User $User
         }
 
-        Write-Information ($User | ConvertTo-Json -Depth 5)
+        #Write-Information ($User | ConvertTo-Json -Depth 5)
         # Return user permissions
         if ($Request.Params.CIPPEndpoint -eq 'me') {
             Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
