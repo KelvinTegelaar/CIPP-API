@@ -26,7 +26,7 @@ function Push-UploadApplication {
             $intunewinFilesize = (Get-Item "AddMSPApp\$($ChocoApp.MSPAppName).intunewin")
             $Infile = "AddMSPApp\$($ChocoApp.MSPAppName).intunewin"
         } else {
-            [xml]$Intunexml = Get-Content 'AddChocoApp\choco.app.xml'
+            [xml]$Intunexml = Get-Content 'AddChocoApp\Choco.App.xml'
             $intunewinFilesize = (Get-Item 'AddChocoApp\IntunePackage.intunewin')
             $Infile = "AddChocoApp\$($intunexml.ApplicationInfo.FileName)"
         }
