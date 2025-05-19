@@ -19,6 +19,18 @@ function Get-CIPPAuthentication {
                 }
             }
             Write-Host "Got secrets from dev storage. ApplicationID: $env:ApplicationID"
+            #Get list of tenants that have 'directTenant' set to true
+            $tenants = Get-Tenants | Where-Object -Property delegatedPrivilegeStatus -EQ 'directTenant'
+            if ($tenants) {
+                Write-Host "Found $($tenants.Count) tenants with directTenant set to true"
+                $tenants | ForEach-Object {
+                    $name = $_.customerId -replace '-', '_'
+                    if ($secret.$name) {
+                        $name = $_.customerId
+                        Set-Item -Path env:$name -Value $secret.$name -Force
+                    }
+                }
+            }
         } else {
             Write-Information 'Connecting to Azure'
             Connect-AzAccount -Identity
@@ -37,6 +49,19 @@ function Get-CIPPAuthentication {
             }
 
             $keyvaultname = ($env:WEBSITE_DEPLOYMENT_ID -split '-')[0]
+            #Get list of tenants that have 'directTenant' set to true
+            $tenants = Get-Tenants | Where-Object -Property delegatedPrivilegeStatus -EQ 'directTenant'
+            if ($tenants) {
+                $tenants | ForEach-Object {
+                    $name = $_.tenantId -replace '-', '_'
+                    $secret = Get-AzKeyVaultSecret -VaultName $keyvaultname -Name $name -AsPlainText -ErrorAction Stop
+                    if ($secret) {
+                        #set the name back to the original tenantId
+                        $name = $_.customerId
+                        Set-Item -Path env:$name -Value $secret -Force
+                    }
+                }
+            }
             $Variables | ForEach-Object {
                 Set-Item -Path env:$_ -Value (Get-AzKeyVaultSecret -VaultName $keyvaultname -Name $_ -AsPlainText -ErrorAction Stop) -Force
             }
