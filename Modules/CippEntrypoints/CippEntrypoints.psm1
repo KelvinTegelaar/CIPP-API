@@ -13,7 +13,7 @@ function Receive-CippHttpTrigger {
     .FUNCTIONALITY
         Entrypoint
     #>
-    Param(
+    param(
         $Request,
         $TriggerMetadata
     )
@@ -47,15 +47,19 @@ function Receive-CippHttpTrigger {
         TriggerMetadata = $TriggerMetadata
     }
 
-    if (Get-Command -Name $FunctionName -ErrorAction SilentlyContinue) {
+    if ((Get-Command -Name $FunctionName -ErrorAction SilentlyContinue) -or $FunctionName -eq 'Invoke-Me') {
         try {
             $Access = Test-CIPPAccess -Request $Request
+            if ($FunctionName -eq 'Invoke-Me') {
+                return
+            }
+
             Write-Information "Access: $Access"
             if ($Access) {
                 & $FunctionName @HttpTrigger
             }
         } catch {
-            Write-Information $_.Exception.Message
+            Write-Warning "Exception occurred on HTTP trigger ($FunctionName): $($_.Exception.Message)"
             Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
                     StatusCode = [HttpStatusCode]::Forbidden
                     Body       = $_.Exception.Message
@@ -67,6 +71,7 @@ function Receive-CippHttpTrigger {
                 Body       = 'Endpoint not found'
             })
     }
+    return
 }
 
 function Receive-CippOrchestrationTrigger {
@@ -161,7 +166,7 @@ function Receive-CippActivityTrigger {
     .FUNCTIONALITY
         Entrypoint
     #>
-    Param($Item)
+    param($Item)
     Write-Warning "Hey Boo, the activity function is running. Here's some info: $($Item | ConvertTo-Json -Depth 10 -Compress)"
     try {
         $Start = Get-Date
