@@ -40,9 +40,7 @@ Function Invoke-ExecUpdateRefreshToken {
 
 
         $Results = @{
-            'message' = "Successfully updated your stored authentication for $($request.body.tenantId)."
-            'severity' = 'success'
-            'state' = 'success'
+            'message'  = "Successfully updated your stored authentication for $($request.body.tenantId)."
             'tenantId' = $Request.body.tenantId
         }
     } catch {
