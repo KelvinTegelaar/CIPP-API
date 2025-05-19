@@ -20,10 +20,10 @@ Function Invoke-ExecUpdateRefreshToken {
         if ($env:AzureWebJobsStorage -eq 'UseDevelopmentStorage=true') {
             $DevSecretsTable = Get-CIPPTable -tablename 'DevSecrets'
             $Secret = Get-CIPPAzDataTableEntity @DevSecretsTable -Filter "PartitionKey eq 'Secret' and RowKey eq 'Secret'"
-            if ($env:ApplicationId -eq $Request.body.tenantId) {
+            if ($env:TenantID -eq $Request.body.tenantId) {
                 $Secret.RefreshToken = $Request.body.RefreshToken
             } else {
-                Write-Host "$($env:Applicationid) does not match $($Request.body.tenantId)"
+                Write-Host "$($env:TenantID) does not match $($Request.body.tenantId)"
                 $name = $Request.body.tenantId -replace '-', '_'
                 $secret | Add-Member -MemberType NoteProperty -Name $name -Value $Request.body.refreshtoken -Force
             }
@@ -38,13 +38,17 @@ Function Invoke-ExecUpdateRefreshToken {
         }
         $InstanceId = Start-UpdatePermissionsOrchestrator #start the CPV refresh immediately while wizard still runs.
 
-
+        if ($request.body.tenantId -eq $env:TenantID) {
+            $TenantName = 'your partner tenant'
+        } else {
+            $TenantName = $request.body.tenantId
+        }
         $Results = @{
-            'message'  = "Successfully updated your stored authentication for $($request.body.tenantId)."
-            'tenantId' = $Request.body.tenantId
+            'message'  = "Successfully updated the credentials for $($TenantName). You may continue to the next step, or add additional tenants if required."
+            'severity' = 'success'
         }
     } catch {
-        $Results = [pscustomobject]@{'Results' = "Failed. $($_.InvocationInfo.ScriptLineNumber):  $($_.Exception.message)"; severity = 'failed' }
+        $Results = [pscustomobject]@{'Results' = "Failed. $($_.InvocationInfo.ScriptLineNumber): $($_.Exception.message)"; severity = 'failed' }
     }
 
     # Associate values to output bindings by calling 'Push-OutputBinding'.
