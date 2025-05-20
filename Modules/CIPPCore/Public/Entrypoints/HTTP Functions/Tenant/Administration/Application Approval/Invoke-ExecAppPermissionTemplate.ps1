@@ -16,8 +16,8 @@ function Invoke-ExecAppPermissionTemplate {
 
     switch ($Action) {
         'Save' {
-            $RowKey = $Request.Body.TemplateId ?? [guid]::NewGuid().ToString()
             try {
+                $RowKey = $Request.Body.TemplateId ?? [guid]::NewGuid().ToString()
                 $Permissions = $Request.Body.Permissions
                 $Entity = @{
                     'PartitionKey' = 'Templates'
@@ -36,6 +36,7 @@ function Invoke-ExecAppPermissionTemplate {
                 }
                 Write-LogMessage -headers $Request.Headers -API 'ExecAppPermissionTemplate' -message "Permissions Saved for template: $($Request.Body.TemplateName)" -Sev 'Info' -LogData $Permissions
             } catch {
+                Write-Information "Failed to save template: $($_.Exception.Message) - $($_.InvocationInfo.PositionMessage)"
                 $Body = @{
                     'Results' = $_.Exception.Message
                 }
