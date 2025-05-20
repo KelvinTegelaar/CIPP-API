@@ -53,12 +53,10 @@ function Invoke-ListAppApprovalTemplates {
             }
         }
 
-        Write-LogMessage -headers $Headers -API $APIName -message "Listed App Deployment Templates: $($Body.Count) templates found" -Sev 'Info'
     } catch {
         $Body = @{
             Results = "Failed to list app deployment templates: $($_.Exception.Message)"
         }
-        Write-LogMessage -headers $Headers -API $APIName -message "Failed to list App Deployment Templates: $($_.Exception.Message)" -Sev 'Error'
     }
 
     Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
