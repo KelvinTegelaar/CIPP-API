@@ -1,4 +1,4 @@
-function Invoke-ListAppDeploymentTemplates {
+function Invoke-ListAppApprovalTemplates {
     <#
     .FUNCTIONALITY
         Entrypoint,AnyTenant
@@ -15,8 +15,8 @@ function Invoke-ListAppDeploymentTemplates {
     $Table = Get-CIPPTable -TableName 'templates'
 
     try {
-        # Use the templates table with AppDeploymentTemplate partition key
-        $filter = "PartitionKey eq 'AppDeploymentTemplate'"
+        # Use the templates table with AppApprovalTemplate partition key
+        $filter = "PartitionKey eq 'AppApprovalTemplate'"
 
         $Templates = Get-CIPPAzDataTableEntity @Table -Filter $filter
 

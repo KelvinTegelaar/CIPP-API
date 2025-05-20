@@ -1,4 +1,4 @@
-function Invoke-ExecAppDeploymentTemplate {
+function Invoke-ExecAppApprovalTemplate {
     <#
     .FUNCTIONALITY
         Entrypoint,AnyTenant
@@ -39,12 +39,12 @@ function Invoke-ExecAppDeploymentTemplate {
                 # Convert to JSON, preserving the original structure
                 $templateJson = $templateObject | ConvertTo-Json -Depth 10 -Compress
 
-                # Add to templates table with AppDeploymentTemplate partition key
+                # Add to templates table with AppApprovalTemplate partition key
                 $Table.Force = $true
                 Add-CIPPAzDataTableEntity @Table -Entity @{
                     JSON         = [string]$templateJson
                     RowKey       = "$GUID"
-                    PartitionKey = 'AppDeploymentTemplate'
+                    PartitionKey = 'AppApprovalTemplate'
                 }
 
                 # Return a proper array with ONE element containing the TemplateId
@@ -71,7 +71,7 @@ function Invoke-ExecAppDeploymentTemplate {
                 $TemplateId = $Request.Body.TemplateId
 
                 # Get the template to delete
-                $Template = Get-CIPPAzDataTableEntity @Table -Filter "PartitionKey eq 'AppDeploymentTemplate' and RowKey eq '$TemplateId'"
+                $Template = Get-CIPPAzDataTableEntity @Table -Filter "PartitionKey eq 'AppApprovalTemplate' and RowKey eq '$TemplateId'"
 
                 if ($Template) {
                     $TemplateData = $Template.JSON | ConvertFrom-Json
@@ -98,10 +98,10 @@ function Invoke-ExecAppDeploymentTemplate {
         }
         'Get' {
             # Check if TemplateId is provided to filter results
-            $filter = "PartitionKey eq 'AppDeploymentTemplate'"
+            $filter = "PartitionKey eq 'AppApprovalTemplate'"
             if ($Request.Query.TemplateId) {
                 $templateId = $Request.Query.TemplateId
-                $filter = "PartitionKey eq 'AppDeploymentTemplate' and RowKey eq '$templateId'"
+                $filter = "PartitionKey eq 'AppApprovalTemplate' and RowKey eq '$templateId'"
                 Write-LogMessage -headers $Request.Headers -API $APIName -message "Retrieved specific template: $templateId" -Sev 'Info'
             }
 
@@ -125,7 +125,7 @@ function Invoke-ExecAppDeploymentTemplate {
         }
         default {
             # Default action - list all templates
-            $filter = "PartitionKey eq 'AppDeploymentTemplate'"
+            $filter = "PartitionKey eq 'AppApprovalTemplate'"
 
             $Templates = Get-CIPPAzDataTableEntity @Table -Filter $filter
 
