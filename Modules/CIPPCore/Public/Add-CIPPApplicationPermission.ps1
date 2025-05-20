@@ -2,6 +2,7 @@ function Add-CIPPApplicationPermission {
     [CmdletBinding()]
     param(
         $RequiredResourceAccess,
+        $TemplateId,
         $ApplicationId,
         $Tenantfilter
     )
@@ -31,7 +32,34 @@ function Add-CIPPApplicationPermission {
 
             $RequiredResourceAccess.Add($Resource)
         }
+    } else {
+        if (!$RequiredResourceAccess -and $TemplateId) {
+            Write-Information "Adding application permissions for template $TemplateId"
+            $TemplateTable = Get-CIPPTable -TableName 'templates'
+            $Filter = "RowKey eq '$TemplateId' and PartitionKey eq 'AppApprovalTemplate'"
+            $Template = (Get-CIPPAzDataTableEntity @TemplateTable -Filter $Filter).JSON | ConvertFrom-Json -ErrorAction SilentlyContinue
+            $ApplicationId = $Template.AppId
+            $Permissions = $Template.Permissions
+            $RequiredResourceAccess = [System.Collections.Generic.List[object]]::new()
+            foreach ($AppId in $Permissions.PSObject.Properties.Name) {
+                $AppPermissions = @($Permissions.$AppId.applicationPermissions)
+                $Resource = @{
+                    resourceAppId  = $AppId
+                    resourceAccess = [System.Collections.Generic.List[object]]::new()
+                }
+                foreach ($Permission in $AppPermissions) {
+                    $Resource.ResourceAccess.Add(@{
+                            id   = $Permission.id
+                            type = 'Role'
+                        })
+                }
+
+                $RequiredResourceAccess.Add($Resource)
+            }
+        }
     }
+
+
     $ServicePrincipalList = New-GraphGETRequest -uri "https://graph.microsoft.com/beta/servicePrincipals?`$select=AppId,id,displayName&`$top=999" -skipTokenCache $true -tenantid $Tenantfilter -NoAuthCheck $true
     $ourSVCPrincipal = $ServicePrincipalList | Where-Object -Property AppId -EQ $ApplicationId
     if (!$ourSVCPrincipal) {
@@ -59,7 +87,7 @@ function Add-CIPPApplicationPermission {
             }
         }
         foreach ($SingleResource in $App.ResourceAccess | Where-Object -Property Type -EQ 'Role') {
-            if ($SingleResource.id -In $CurrentRoles.appRoleId) { continue }
+            if ($SingleResource.id -in $CurrentRoles.appRoleId) { continue }
             [pscustomobject]@{
                 principalId = $($ourSVCPrincipal.id)
                 resourceId  = $($svcPrincipalId.id)

@@ -33,26 +33,30 @@ function Invoke-ExecAddMultiTenantApp {
 
             $TenantCount = ($TenantFilter | Measure-Object).Count
             $Queue = New-CippQueueEntry -Name 'Application Approval' -TotalTasks $TenantCount
-            foreach ($Tenant in $TenantFilter) {
-                try {
-                    $InputObject = @{
-                        OrchestratorName = 'ExecMultiTenantAppOrchestrator'
-                        Batch            = @([pscustomobject]@{
-                                FunctionName              = $Command
-                                Tenant                    = $tenant
-                                AppId                     = $Request.Body.AppId
-                                applicationResourceAccess = $ApplicationResourceAccess
-                                delegateResourceAccess    = $DelegateResourceAccess
-                                QueueId                   = $Queue.RowKey
-                            })
-                        SkipLog          = $true
-                    }
-                    $null = Start-NewOrchestration -FunctionName 'CIPPOrchestrator' -InputObject ($InputObject | ConvertTo-Json -Depth 5 -Compress)
-                    "Queued application to tenant $Tenant. See the logbook for deployment details"
-                } catch {
-                    "Error queuing application to tenant $Tenant - $($_.Exception.Message)"
+            $Batch = foreach ($Tenant in $TenantFilter) {
+                [pscustomobject]@{
+                    FunctionName              = $Command
+                    Tenant                    = $tenant
+                    AppId                     = $Request.Body.AppId
+                    applicationResourceAccess = $ApplicationResourceAccess
+                    delegateResourceAccess    = $DelegateResourceAccess
+                    QueueId                   = $Queue.RowKey
                 }
             }
+
+            try {
+                $InputObject = @{
+                    OrchestratorName = 'ExecMultiTenantAppOrchestrator'
+                    Batch            = @($Batch)
+                    SkipLog          = $true
+                }
+                $null = Start-NewOrchestration -FunctionName 'CIPPOrchestrator' -InputObject ($InputObject | ConvertTo-Json -Depth 5 -Compress)
+                $Results = 'Deploying {0} to {1}, see the logbook for details' -f $Request.Body.AppId, ($Request.Body.tenantFilter.label -join ', ')
+            } catch {
+                $ErrorMsg = Get-NormalizedError -message $($_.Exception.Message)
+                $Results = "Function Error: $ErrorMsg"
+            }
+
             $StatusCode = [HttpStatusCode]::OK
         } catch {
             $ErrorMsg = Get-NormalizedError -message $($_.Exception.Message)
@@ -61,14 +65,34 @@ function Invoke-ExecAddMultiTenantApp {
         }
     } elseif ($Request.Body.configMode -eq 'template') {
         Write-Information 'Application Approval - Template Mode'
-        Write-Information ($Request.Body | ConvertTo-Json -Depth 5)
+        if ('allTenants' -in $Request.Body.tenantFilter.value) {
+            $TenantFilter = (Get-Tenants).defaultDomainName
+        } else {
+            $TenantFilter = $Request.Body.tenantFilter.value
+        }
+        $TenantCount = ($TenantFilter | Measure-Object).Count
+        $Queue = New-CippQueueEntry -Name 'Application Approval (Template)' -TotalTasks $TenantCount
 
-
-        
-
-
-
-        $Results = 'Deploying {0} to {1}' -f $Request.Body.selectedTemplate.label, ($Request.Body.tenantFilter.label -join ', ')
+        $Batch = foreach ($Tenant in $TenantFilter) {
+            [pscustomobject]@{
+                FunctionName = 'ExecAppApprovalTemplate'
+                Tenant       = $tenant
+                TemplateId   = $Request.Body.selectedTemplate.value
+                AppId        = $Request.Body.selectedTemplate.addedFields.AppId
+                QueueId      = $Queue.RowKey
+            }
+        }
+        try {
+            $InputObject = @{
+                OrchestratorName = 'ExecMultiTenantAppOrchestrator'
+                Batch            = @($Batch)
+                SkipLog          = $true
+            }
+            $null = Start-NewOrchestration -FunctionName 'CIPPOrchestrator' -InputObject ($InputObject | ConvertTo-Json -Depth 5 -Compress)
+            $Results = 'Deploying {0} to {1}, see the logbook for details' -f $Request.Body.selectedTemplate.label, ($Request.Body.tenantFilter.label -join ', ')
+        } catch {
+            $Results = "Error queuing application - $($_.Exception.Message)"
+        }
         $StatusCode = [HttpStatusCode]::OK
     }
 

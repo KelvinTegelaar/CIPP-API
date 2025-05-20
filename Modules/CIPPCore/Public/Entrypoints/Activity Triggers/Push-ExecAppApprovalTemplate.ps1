@@ -8,29 +8,23 @@ function Push-ExecAppApprovalTemplate {
     try {
         $Item = $Item | ConvertTo-Json -Depth 10 | ConvertFrom-Json
         $TemplateId = $Item.templateId
-
-        $TemplateTable = Get-CIPPTable -TableName 'templates'
-        $Filter = "RowKey eq '$TemplateId' and PartitionKey eq 'AppApprovalTemplate'"
-        $Template = (Get-CIPPAzDataTableEntity @TemplateTable -Filter $Filter).JSON | ConvertFrom-Json -ErrorAction SilentlyContinue
-
-        if (!$Template) {
-            Write-LogMessage -message "Template $TemplateId not found" -tenant $Item.Tenant -API 'Add Multitenant App' -sev Error
+        if (!$TemplateId) {
+            Write-LogMessage -message 'No template specified' -tenant $Item.Tenant -API 'Add Multitenant App' -sev Error
             return
         }
 
-        $Permissions = $Template.Permissions
-
-        Write-Host "$($Item | ConvertTo-Json -Depth 10)"
         $ServicePrincipalList = New-GraphGETRequest -uri "https://graph.microsoft.com/beta/servicePrincipals?`$select=AppId,id,displayName&`$top=999" -tenantid $Item.Tenant
         if ($Item.AppId -notin $ServicePrincipalList.appId) {
+            Write-Information "Adding $($Item.AppId) to tenant $($Item.Tenant)."
             $PostResults = New-GraphPostRequest 'https://graph.microsoft.com/beta/servicePrincipals' -type POST -tenantid $Item.tenant -body "{ `"appId`": `"$($Item.appId)`" }"
             Write-LogMessage -message "Added $($Item.AppId) to tenant $($Item.Tenant)" -tenant $Item.Tenant -API 'Add Multitenant App' -sev Info
         } else {
             Write-LogMessage -message "This app already exists in tenant $($Item.Tenant). We're adding the required permissions." -tenant $Item.Tenant -API 'Add Multitenant App' -sev Info
         }
-        Add-CIPPApplicationPermission -RequiredResourceAccess ($Item.applicationResourceAccess) -ApplicationId $Item.AppId -Tenantfilter $Item.Tenant
-        Add-CIPPDelegatedPermission -RequiredResourceAccess ($Item.DelegateResourceAccess) -ApplicationId $Item.AppId -Tenantfilter $Item.Tenant
+        Add-CIPPApplicationPermission -TemplateId $TemplateId -Tenantfilter $Item.Tenant
+        Add-CIPPDelegatedPermission -TemplateId $TemplateId -Tenantfilter $Item.Tenant
     } catch {
         Write-LogMessage -message "Error adding application to tenant $($Item.Tenant) - $($_.Exception.Message)" -tenant $Item.Tenant -API 'Add Multitenant App' -sev Error
+        Write-Error $_.Exception.Message
     }
 }
