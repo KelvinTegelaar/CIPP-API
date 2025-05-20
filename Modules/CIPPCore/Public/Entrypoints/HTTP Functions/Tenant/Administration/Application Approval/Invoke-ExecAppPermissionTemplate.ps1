@@ -16,11 +16,12 @@ function Invoke-ExecAppPermissionTemplate {
 
     switch ($Action) {
         'Save' {
+            $RowKey = $Request.Body.TemplateId ?? [guid]::NewGuid().ToString()
             try {
                 $Permissions = $Request.Body.Permissions
                 $Entity = @{
                     'PartitionKey' = 'Templates'
-                    'RowKey'       = [string]($Request.Body.TemplateId ?? [guid]::NewGuid().ToString())
+                    'RowKey'       = [string]$RowKey
                     'TemplateName' = [string]$Request.Body.TemplateName
                     'Permissions'  = [string]($Permissions | ConvertTo-Json -Depth 10 -Compress)
                     'UpdatedBy'    = $User.UserDetails ?? 'CIPP-API'
@@ -30,7 +31,7 @@ function Invoke-ExecAppPermissionTemplate {
                     'Results'  = 'Template Saved'
                     'Metadata' = @{
                         'TemplateName' = $Entity.TemplateName
-                        'TemplateId'   = $Entity.RowKey
+                        'TemplateId'   = $RowKey
                     }
                 }
                 Write-LogMessage -headers $Request.Headers -API 'ExecAppPermissionTemplate' -message "Permissions Saved for template: $($Request.Body.TemplateName)" -Sev 'Info' -LogData $Permissions
