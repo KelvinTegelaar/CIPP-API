@@ -75,11 +75,14 @@ Function Invoke-ExecCreateSAMApp {
             if ($env:AzureWebJobsStorage -eq 'UseDevelopmentStorage=true') {
                 $DevSecretsTable = Get-CIPPTable -tablename 'DevSecrets'
                 $Secret = Get-CIPPAzDataTableEntity @DevSecretsTable -Filter "PartitionKey eq 'Secret' and RowKey eq 'Secret'"
+                if (!$Secret) { $Secret = New-Object -TypeName PSObject }
+                $Secret | Add-Member -MemberType NoteProperty -Name 'PartitionKey' -Value 'Secret' -Force
+                $Secret | Add-Member -MemberType NoteProperty -Name 'RowKey' -Value 'Secret' -Force
                 $Secret | Add-Member -MemberType NoteProperty -Name 'tenantid' -Value $TenantId -Force
                 $Secret | Add-Member -MemberType NoteProperty -Name 'applicationid' -Value $AppId.appId -Force
                 $Secret | Add-Member -MemberType NoteProperty -Name 'applicationsecret' -Value $AppPassword -Force
-                Add-CIPPAzDataTableEntity @DevSecretsTable -Entity $Secret -Force
                 Write-Information ($Secret | ConvertTo-Json -Depth 5)
+                Add-CIPPAzDataTableEntity @DevSecretsTable -Entity $Secret -Force
             } else {
                 Set-AzKeyVaultSecret -VaultName $kv -Name 'tenantid' -SecretValue (ConvertTo-SecureString -String $TenantId -AsPlainText -Force)
                 Set-AzKeyVaultSecret -VaultName $kv -Name 'applicationid' -SecretValue (ConvertTo-SecureString -String $Appid.appId -AsPlainText -Force)
