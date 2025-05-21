@@ -7,7 +7,6 @@ function Push-ExecJITAdminListAllTenants {
 
     $Tenant = Get-Tenants -TenantFilter $Item.customerId
     $DomainName = $Tenant.defaultDomainName
-    Write-Host "Processing push queue for JIT Admin for tenant: $DomainName"
     $Table = Get-CIPPTable -TableName CacheJITAdmin
 
     try {
@@ -62,17 +61,18 @@ function Push-ExecJITAdminListAllTenants {
                         accountEnabled     = $currentUser.accountEnabled
                         jitAdminEnabled    = $jitAdminEnabled
                         jitAdminExpiration = $jitAdminExpiration
-                        memberOf           = ($MemberOf | ConvertTo-Json -Depth 5 -Compress) # Store as JSON string
+                        memberOf           = ($MemberOf | ConvertTo-Json -Depth 5 -Compress)
                     }
                 }
 
                 # Add to Azure Table
                 foreach ($result in $Results) {
                     $GUID = (New-Guid).Guid
+                    Write-Host ($result | ConvertTo-Json -Depth 10 -Compress)
                     $GraphRequest = @{
-                        JITAdminUser = ($result | ConvertTo-Json -Depth 10 -Compress)
+                        JITAdminUser = [string]($result | ConvertTo-Json -Depth 10 -Compress)
                         RowKey       = [string]$GUID
-                        PartitionKey = 'JITAdminUsers' # Use the specified partition key
+                        PartitionKey = 'JITAdminUser'
                         Tenant       = [string]$DomainName
                         UserId       = [string]$result.id # Add UserId for easier querying if needed
                         UserUPN      = [string]$result.userPrincipalName # Add UserUPN for easier querying
@@ -89,7 +89,6 @@ function Push-ExecJITAdminListAllTenants {
 
     } catch {
         $GUID = (New-Guid).Guid
-        $ErrorRecord = $_ | Select-Object *
         $ErrorMessage = "Could not process JIT Admin users for Tenant: $($DomainName). Error: $($_.Exception.Message)"
         if ($_.ScriptStackTrace) {
             $ErrorMessage += " StackTrace: $($_.ScriptStackTrace)"
@@ -97,15 +96,14 @@ function Push-ExecJITAdminListAllTenants {
         $ErrorJson = ConvertTo-Json -InputObject @{
             Tenant    = $DomainName
             Error     = $ErrorMessage
-            Exception = ($_.Exception | ConvertTo-Json -Depth 3 -Compress)
-            FullError = ($ErrorRecord | ConvertTo-Json -Depth 3 -Compress)
+            Exception = ($_.Exception.Message | ConvertTo-Json -Depth 3 -Compress)
             Timestamp = (Get-Date).ToString('s')
         }
         $GraphRequest = @{
-            JITAdminUserError = [string]$ErrorJson
-            RowKey            = [string]$GUID
-            PartitionKey      = 'JITAdminUsers_Error' # Differentiate errors
-            Tenant            = [string]$DomainName
+            JITAdminUser = [string]$ErrorJson
+            RowKey       = [string]$GUID
+            PartitionKey = 'JITAdminUser'
+            Tenant       = [string]$DomainName
         }
         Add-CIPPAzDataTableEntity @Table -Entity $GraphRequest -Force | Out-Null
         Write-Error ('Error processing JIT Admin for {0}: {1}' -f $DomainName, $_.Exception.Message)
