@@ -20,7 +20,10 @@ function Get-CIPPAuthentication {
             }
             Write-Host "Got secrets from dev storage. ApplicationID: $env:ApplicationID"
             #Get list of tenants that have 'directTenant' set to true
-            $tenants = Get-Tenants -IncludeErrors | Where-Object -Property delegatedPrivilegeStatus -EQ 'directTenant'
+            #get directtenants directly from table, avoid get-tenants due to performance issues
+            $TenantsTable = Get-CippTable -tablename 'Tenants'
+            $Filter = "PartitionKey eq 'Tenants' and delegatedPrivilegeStatus eq 'directTenant'"
+            $tenants = Get-CIPPAzDataTableEntity @TenantsTable -Filter $Filter
             if ($tenants) {
                 $tenants | ForEach-Object {
                     $secretname = $_.customerId -replace '-', '_'
@@ -49,7 +52,9 @@ function Get-CIPPAuthentication {
 
             $keyvaultname = ($env:WEBSITE_DEPLOYMENT_ID -split '-')[0]
             #Get list of tenants that have 'directTenant' set to true
-            $tenants = Get-Tenants -IncludeErrors | Where-Object -Property delegatedPrivilegeStatus -EQ 'directTenant'
+            $TenantsTable = Get-CippTable -tablename 'Tenants'
+            $Filter = "PartitionKey eq 'Tenants' and delegatedPrivilegeStatus eq 'directTenant'"
+            $tenants = Get-CIPPAzDataTableEntity @TenantsTable -Filter $Filter
             if ($tenants) {
                 $tenants | ForEach-Object {
                     $name = $_.tenantId -replace '-', '_'
