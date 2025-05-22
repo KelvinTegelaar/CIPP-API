@@ -43,12 +43,12 @@ function Get-TenantGroups {
     }
 
     if ($TenantFilter -and $TenantFilter -ne 'allTenants') {
-        $Results = New-Object System.Collections.ArrayList
+        $Results = [System.Collections.Generic.List[PSCustomObject]]::new()
         $Memberships = $AllMembers | Where-Object { $_.customerId -eq $Tenants.customerId }
         foreach ($Group in $Memberships) {
             $Group = $Groups | Where-Object { $_.RowKey -eq $Group.GroupId }
             if ($Group) {
-                $null = $Results.Add([PSCustomObject]@{
+                $Results.Add([PSCustomObject]@{
                     Id          = $Group.RowKey
                     Name        = $Group.Name
                     Description = $Group.Description
@@ -57,15 +57,15 @@ function Get-TenantGroups {
         }
         return $Results | Sort-Object Name
     } else {
-        $Results = New-Object System.Collections.ArrayList
+        $Results = [System.Collections.Generic.List[PSCustomObject]]::new()
         foreach ($Group in $Groups) {
             $Members = $AllMembers | Where-Object { $_.GroupId -eq $Group.RowKey }
-            $MembersList = New-Object System.Collections.ArrayList
+            $MembersList = [System.Collections.Generic.List[hashtable]]::new()
             if ($Members) {
                 foreach ($Member in $Members) {
                     $Tenant = $Tenants | Where-Object { $Member.customerId -eq $_.customerId }
                     if ($Tenant) {
-                        $null = $MembersList.Add(@{
+                        $MembersList.Add(@{
                             customerId        = $Tenant.customerId
                             displayName       = $Tenant.displayName
                             defaultDomainName = $Tenant.defaultDomainName
@@ -76,7 +76,7 @@ function Get-TenantGroups {
             } else {
                 $SortedMembers = @()
             }
-            $null = $Results.Add([PSCustomObject]@{
+            $Results.Add([PSCustomObject]@{
                 Id          = $Group.RowKey
                 Name        = $Group.Name
                 Description = $Group.Description
