@@ -8537,6 +8537,270 @@
         }
       }
     },
+    "/ListQuarantinePolicy": {
+      "get": {
+        "description": "ListQuarantinePolicy",
+        "summary": "ListQuarantinePolicy",
+        "tags": [
+          "GET"
+        ],
+        "parameters": [
+          {
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "name": "tenantfilter",
+            "in": "query"
+          },
+          {
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "name": "Type",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {},
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful operation"
+          }
+        }
+      }
+    },
+    "/AddQuarantinePolicy": {
+      "post": {
+        "description": "AddQuarantinePolicy",
+        "summary": "AddQuarantinePolicy",
+        "tags": [
+          "POST"
+        ],
+        "parameters": [
+          {
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "name": "tenantfilter",
+            "in": "query"
+          },
+          {
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "name": "Name",
+            "in": "body"
+          },
+          {
+            "required": true,
+            "schema": {
+              "type": "boolean"
+            },
+            "name": "BlockSender",
+            "in": "body"
+          },
+          {
+            "required": true,
+            "schema": {
+              "type": "boolean"
+            },
+            "name": "Delete",
+            "in": "body"
+          },
+          {
+            "required": true,
+            "schema": {
+              "type": "boolean"
+            },
+            "name": "Preview",
+            "in": "body"
+          },
+          {
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "name": "ReleaseActionPreference",
+            "in": "body"
+          },
+          {
+            "required": true,
+            "schema": {
+              "type": "boolean"
+            },
+            "name": "AllowSender",
+            "in": "body"
+          },
+          {
+            "required": true,
+            "schema": {
+              "type": "boolean"
+            },
+            "name": "QuarantineNotification",
+            "in": "body"
+          },
+          {
+            "required": true,
+            "schema": {
+              "type": "boolean"
+            },
+            "name": "IncludeMessagesFromBlockedSenderAddress",
+            "in": "body"
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {},
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful operation"
+          }
+        }
+      }
+    },
+    "/EditQuarantinePolicy": {
+      "post": {
+        "description": "EditQuarantinePolicy",
+        "summary": "EditQuarantinePolicy",
+        "tags": [
+          "POST"
+        ],
+        "parameters": [
+          {
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "name": "tenantfilter",
+            "in": "query"
+          },
+          {
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "name": "Type",
+            "in": "query"
+          },
+          {
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "name": "Identity",
+            "in": "body"
+          },
+          {
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "name": "EndUserSpamNotificationFrequency",
+            "in": "body"
+          },
+          {
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "name": "EndUserSpamNotificationCustomFromAddress",
+            "in": "body"
+          },
+          {
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            },
+            "name": "OrganizationBrandingEnabled",
+            "in": "body"
+          },
+          {
+            "required": true,
+            "schema": {
+              "type": "boolean"
+            },
+            "name": "BlockSender",
+            "in": "body"
+          },
+          {
+            "required": true,
+            "schema": {
+              "type": "boolean"
+            },
+            "name": "Delete",
+            "in": "body"
+          },
+          {
+            "required": true,
+            "schema": {
+              "type": "boolean"
+            },
+            "name": "Preview",
+            "in": "body"
+          },
+          {
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "name": "ReleaseActionPreference",
+            "in": "body"
+          },
+          {
+            "required": true,
+            "schema": {
+              "type": "boolean"
+            },
+            "name": "AllowSender",
+            "in": "body"
+          },
+          {
+            "required": true,
+            "schema": {
+              "type": "boolean"
+            },
+            "name": "QuarantineNotification",
+            "in": "body"
+          },
+          {
+            "required": true,
+            "schema": {
+              "type": "boolean"
+            },
+            "name": "IncludeMessagesFromBlockedSenderAddress",
+            "in": "body"
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {},
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful operation"
+          }
+        }
+      }
+    },
     "/RemoveExConnector": {
       "get": {
         "description": "RemoveExConnector",
@@ -8568,6 +8832,54 @@
             },
             "name": "Type",
             "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {},
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful operation"
+          }
+        }
+      }
+    },
+    "/RemoveQuarantinePolicy": {
+      "get": {
+        "description": "RemoveQuarantinePolicy",
+        "summary": "RemoveQuarantinePolicy",
+        "tags": [
+          "GET"
+        ],
+        "parameters": [
+          {
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "name": "tenantfilter",
+            "in": "query"
+          },
+          {
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "name": "Identity",
+            "in": "body"
+          },
+          {
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "name": "Name",
+            "in": "body"
           }
         ],
         "responses": {
