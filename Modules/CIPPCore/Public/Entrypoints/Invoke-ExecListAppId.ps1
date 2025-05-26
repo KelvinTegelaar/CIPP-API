@@ -36,12 +36,14 @@ Function Invoke-ExecListAppId {
         } catch {
             Write-Information "ERROR: Could not set context to subscription $SubscriptionId."
         }
+
         $keyvaultname = ($env:WEBSITE_DEPLOYMENT_ID -split '-')[0]
         try {
             $env:ApplicationID = (Get-AzKeyVaultSecret -AsPlainText -VaultName $keyvaultname -Name 'ApplicationID')
             $env:TenantID = (Get-AzKeyVaultSecret -AsPlainText -VaultName $keyvaultname -Name 'TenantID')
-            Write-Host "Retrieving secrets from KeyVault: $keyvaultname. The AppId is $($env:ApplicationID) and the TenantId is $($env:TenantID)"
+            Write-Information "Retrieving secrets from KeyVault: $keyvaultname. The AppId is $($env:ApplicationID) and the TenantId is $($env:TenantID)"
         } catch {
+            Write-Information "Retrieving secrets from KeyVault: $keyvaultname. The AppId is $($env:ApplicationID) and the TenantId is $($env:TenantID)"
             Write-LogMessage -message "Failed to retrieve secrets from KeyVault: $keyvaultname" -LogData (Get-CippException -Exception $_) -Sev 'Error'
             $env:ApplicationID = (Get-CippException -Exception $_)
             $env:TenantID = (Get-CippException -Exception $_)
