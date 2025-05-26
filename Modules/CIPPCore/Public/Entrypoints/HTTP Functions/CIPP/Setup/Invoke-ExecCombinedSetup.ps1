@@ -51,7 +51,8 @@ Function Invoke-ExecCombinedSetup {
             }
         }
         if ($Request.body.email -or $Request.body.webhook) {
-            $notificationConfig = $request.body
+            #create hashtable from pscustomobject
+            $notificationConfig = $request.body | Select-Object email, webhook, onepertenant, logsToInclude, sendtoIntegration, sev | ConvertTo-Json | ConvertFrom-Json -AsHashtable
             $notificationResults = Set-CIPPNotificationConfig @notificationConfig
             $Results.add($notificationResults)
         }
