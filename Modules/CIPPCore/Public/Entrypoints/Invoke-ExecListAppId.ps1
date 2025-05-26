@@ -38,8 +38,8 @@ Function Invoke-ExecListAppId {
         }
         $keyvaultname = ($env:WEBSITE_DEPLOYMENT_ID -split '-')[0]
         try {
-            $env:ApplicationID = (Get-AzKeyVaultSecret -AsPlainText -VaultName $keyvaultname -Name 'ApplicationID').SecretValueText
-            $env:TenantID = (Get-AzKeyVaultSecret -AsPlainText -VaultName $keyvaultname -Name 'TenantID').SecretValueText
+            $env:ApplicationID = (Get-AzKeyVaultSecret -AsPlainText -VaultName $keyvaultname -Name 'ApplicationID')
+            $env:TenantID = (Get-AzKeyVaultSecret -AsPlainText -VaultName $keyvaultname -Name 'TenantID')
         } catch {
             Write-LogMessage -message "Failed to retrieve secrets from KeyVault: $keyvaultname" -LogData (Get-CippException -Exception $_) -Sev 'Error'
             $env:ApplicationID = (Get-CippException -Exception $_)
