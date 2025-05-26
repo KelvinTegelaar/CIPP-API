@@ -17,7 +17,7 @@ Function Invoke-ListUserGroups {
     # Interact with query parameters or the body of the request.
     $TenantFilter = $Request.Query.tenantFilter
     $UserID = $Request.Query.userId
-    $URI = "https://graph.microsoft.com/beta/users/$UserID/memberOf/$/microsoft.graph.group?`$select=id,displayName,mailEnabled,securityEnabled,groupTypes,onPremisesSyncEnabled,mail,isAssignableToRole`&`$orderby=displayName asc"
+    $URI = "https://graph.microsoft.com/beta/users/$UserID/memberOf/$/microsoft.graph.group?`$select=id,displayName,mailEnabled,securityEnabled,groupTypes,onPremisesSyncEnabled,mail,isAssignableToRole&`$orderby=displayName asc"
     Write-Host $URI
 
     $GraphRequest = New-GraphGetRequest -uri $URI -tenantid $TenantFilter -noPagination $true -Verbose | Select-Object id,
