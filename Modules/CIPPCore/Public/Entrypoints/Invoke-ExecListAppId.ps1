@@ -40,6 +40,7 @@ Function Invoke-ExecListAppId {
         try {
             $env:ApplicationID = (Get-AzKeyVaultSecret -AsPlainText -VaultName $keyvaultname -Name 'ApplicationID')
             $env:TenantID = (Get-AzKeyVaultSecret -AsPlainText -VaultName $keyvaultname -Name 'TenantID')
+            Write-Host "Retrieving secrets from KeyVault: $keyvaultname. The AppId is $($env:ApplicationID) and the TenantId is $($env:TenantID)"
         } catch {
             Write-LogMessage -message "Failed to retrieve secrets from KeyVault: $keyvaultname" -LogData (Get-CippException -Exception $_) -Sev 'Error'
             $env:ApplicationID = (Get-CippException -Exception $_)
