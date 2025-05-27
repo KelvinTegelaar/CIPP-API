@@ -5,7 +5,7 @@ Function Invoke-ExecCreateSAMApp {
     .FUNCTIONALITY
         Entrypoint,AnyTenant
     .ROLE
-        CIPP.AppSettings.ReadWrite.
+        CIPP.AppSettings.ReadWrite
     #>
     [System.Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSAvoidUsingConvertToSecureStringWithPlainText', '')]
     [CmdletBinding()]

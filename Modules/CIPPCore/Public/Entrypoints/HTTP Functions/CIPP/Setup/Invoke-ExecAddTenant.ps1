@@ -5,7 +5,7 @@ Function Invoke-ExecAddTenant {
     .FUNCTIONALITY
         Entrypoint,AnyTenant
     .ROLE
-        CIPP.AppSettings.ReadWrite.
+        CIPP.AppSettings.ReadWrite
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)

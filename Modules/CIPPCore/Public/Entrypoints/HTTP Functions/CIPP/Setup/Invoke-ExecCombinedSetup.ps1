@@ -5,7 +5,7 @@ Function Invoke-ExecCombinedSetup {
     .FUNCTIONALITY
         Entrypoint,AnyTenant
     .ROLE
-        CIPP.AppSettings.ReadWrite.
+        CIPP.AppSettings.ReadWrite
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
