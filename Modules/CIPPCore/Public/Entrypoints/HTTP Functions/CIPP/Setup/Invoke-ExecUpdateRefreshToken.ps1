@@ -32,8 +32,14 @@ Function Invoke-ExecUpdateRefreshToken {
             if ($env:TenantID -eq $Request.body.tenantId) {
                 Set-AzKeyVaultSecret -VaultName $kv -Name 'RefreshToken' -SecretValue (ConvertTo-SecureString -String $Request.body.refreshtoken -AsPlainText -Force)
             } else {
+                Write-Host "$($env:TenantID) does not match $($Request.body.tenantId) - we're adding a new secret for the tenant."
                 $name = $Request.body.tenantId -replace '-', '_'
-                Set-AzKeyVaultSecret -VaultName $kv -Name $name -SecretValue (ConvertTo-SecureString -String $Request.body.refreshtoken -AsPlainText -Force)
+                try {
+                    Set-AzKeyVaultSecret -VaultName $kv -Name $name -SecretValue (ConvertTo-SecureString -String $Request.body.refreshtoken -AsPlainText -Force)
+                } catch {
+                    Write-Host "Failed to set secret $name in KeyVault. $($_.Exception.Message)"
+                    throw $_
+                }
             }
         }
         $InstanceId = Start-UpdatePermissionsOrchestrator #start the CPV refresh immediately while wizard still runs.
