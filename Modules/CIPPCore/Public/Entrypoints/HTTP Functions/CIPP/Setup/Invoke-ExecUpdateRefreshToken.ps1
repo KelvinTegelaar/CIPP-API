@@ -33,7 +33,7 @@ Function Invoke-ExecUpdateRefreshToken {
                 Set-AzKeyVaultSecret -VaultName $kv -Name 'RefreshToken' -SecretValue (ConvertTo-SecureString -String $Request.body.refreshtoken -AsPlainText -Force)
             } else {
                 Write-Host "$($env:TenantID) does not match $($Request.body.tenantId) - we're adding a new secret for the tenant."
-                $name = $Request.body.tenantId -replace '-', '_'
+                $name = $Request.body.tenantId
                 try {
                     Set-AzKeyVaultSecret -VaultName $kv -Name $name -SecretValue (ConvertTo-SecureString -String $Request.body.refreshtoken -AsPlainText -Force)
                 } catch {
