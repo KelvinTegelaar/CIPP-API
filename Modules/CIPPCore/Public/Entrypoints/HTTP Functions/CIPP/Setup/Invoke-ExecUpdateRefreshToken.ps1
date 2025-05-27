@@ -29,7 +29,7 @@ Function Invoke-ExecUpdateRefreshToken {
             }
             Add-CIPPAzDataTableEntity @DevSecretsTable -Entity $Secret -Force
         } else {
-            if ($env:ApplicationId -eq $Request.body.tenantId) {
+            if ($env:TenantID -eq $Request.body.tenantId) {
                 Set-AzKeyVaultSecret -VaultName $kv -Name 'RefreshToken' -SecretValue (ConvertTo-SecureString -String $Request.body.refreshtoken -AsPlainText -Force)
             } else {
                 $name = $Request.body.tenantId -replace '-', '_'
