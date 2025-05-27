@@ -84,6 +84,14 @@ Function Invoke-ExecCreateSAMApp {
                 Write-Information ($Secret | ConvertTo-Json -Depth 5)
                 Add-CIPPAzDataTableEntity @DevSecretsTable -Entity $Secret -Force
             } else {
+                $ConfigTable = Get-CippTable -tablename 'Config'
+                #update the ConfigTable with the latest appId, for caching compare.
+                $NewConfig = @{
+                    PartitionKey  = 'AppCache'
+                    RowKey        = 'AppCache'
+                    ApplicationId = $AppId.appId
+                }
+                Set-CIPPAzDataTableEntity @ConfigTable -Entity $NewConfig -Force | Out-Null
                 Set-AzKeyVaultSecret -VaultName $kv -Name 'tenantid' -SecretValue (ConvertTo-SecureString -String $TenantId -AsPlainText -Force)
                 Set-AzKeyVaultSecret -VaultName $kv -Name 'applicationid' -SecretValue (ConvertTo-SecureString -String $Appid.appId -AsPlainText -Force)
                 Set-AzKeyVaultSecret -VaultName $kv -Name 'applicationsecret' -SecretValue (ConvertTo-SecureString -String $AppPassword -AsPlainText -Force)
