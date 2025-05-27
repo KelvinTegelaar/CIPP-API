@@ -1,6 +1,6 @@
 using namespace System.Net
 
-Function Invoke-ExecAddTenant {
+function Invoke-ExecAddTenant {
     <#
     .FUNCTIONALITY
         Entrypoint,AnyTenant
@@ -63,7 +63,8 @@ Function Invoke-ExecAddTenant {
 
             # Add tenant to table
             Add-CIPPAzDataTableEntity @TenantsTable -Entity $NewTenant -Force | Out-Null
-            $Results = @{'message' = "Successfully added tenant $tenantId to the tenant list with directTenant status."; 'severity' = 'success' }
+            $Results = @{'message' = "Successfully added tenant $displayName ($defaultDomainName) to the tenant list with Direct Tenant status."; 'severity' = 'success' }
+            Write-LogMessage -tenant $defaultDomainName -tenantid $tenantId -API 'Add-Tenant' -message "Added tenant $displayName ($defaultDomainName) with Direct Tenant status." -Sev 'Info'
         }
     } catch {
         $Results = @{'message' = "Failed to add tenant: $($_.Exception.Message)"; 'state' = 'error'; 'severity' = 'error' }
