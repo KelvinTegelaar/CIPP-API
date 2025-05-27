@@ -65,6 +65,7 @@ function Start-UpdateTokensTimer {
                 } else {
                     Set-AzKeyVaultSecret -VaultName $KV -Name 'ApplicationSecret' -SecretValue (ConvertTo-SecureString -String $AppSecret.secretText -AsPlainText -Force)
                 }
+                Write-LogMessage -API 'Update Tokens' -message "New application secret generated for $AppId. Expiration date: $($AppSecret.endDateTime)." -sev 'INFO'
             }
 
             # Clean up expired application secrets
