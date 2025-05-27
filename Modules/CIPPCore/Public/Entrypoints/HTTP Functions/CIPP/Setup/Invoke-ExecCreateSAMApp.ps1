@@ -96,7 +96,7 @@ Function Invoke-ExecCreateSAMApp {
                 RowKey        = 'AppCache'
                 ApplicationId = $AppId.appId
             }
-            Set-CIPPAzDataTableEntity @ConfigTable -Entity $NewConfig -Force | Out-Null
+            Add-CIPPAzDataTableEntity @ConfigTable -Entity $NewConfig -Force | Out-Null
             $Results = @{'message' = "Succesfully $state the application registration. The application ID is $($AppId.appid). You may continue to the next step."; severity = 'success' }
         }
 
