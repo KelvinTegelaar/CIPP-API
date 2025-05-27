@@ -16,10 +16,9 @@ Function Invoke-AddQuarantinePolicy {
 
     $Tenants = ($Request.body.selectedTenants).value
 
-    # If allTenants is selected, get all tenants from table and overwrite any other tenant selection
+    # If allTenants is selected, get all tenants and overwrite any other tenant selection
     if ("AllTenants" -in $Tenants) {
-        $TenantTable = Get-CIPPTable -tablename 'Tenants'
-        $tenants = (Get-CIPPAzDataTableEntity @TenantTable -Filter "PartitionKey eq 'Tenants'").defaultDomainName
+        $tenants = (Get-Tenants).defaultDomainName
     }
 
     $Result = foreach ($TenantFilter in $tenants) {
