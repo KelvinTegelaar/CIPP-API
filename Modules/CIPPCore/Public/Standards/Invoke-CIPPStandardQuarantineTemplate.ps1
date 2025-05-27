@@ -64,7 +64,7 @@ function Invoke-CIPPStandardQuarantineTemplate {
                 if ($Policy.displayName.value -in $CurrentPolicies.Name) {
                     #Get the current policy and convert EndUserQuarantinePermissions from string to hashtable for compare
                     $ExistingPolicy = $CurrentPolicies | Where-Object -Property Name -eq $Policy.displayName.value
-                    $ExistingPolicyEndUserQuarantinePermissions = Convert-QuarantinePermissionsValue -InputObject $ExistingPolicy.EndUserQuarantinePermissions -ErrorAction Stop
+                    $ExistingPolicyEndUserQuarantinePermissions = Convert-QuarantinePermissionsValue @EndUserQuarantinePermissions -ErrorAction Stop
 
                     #Compare the current policy
                     $StateIsCorrect = ($ExistingPolicy.Name -eq $Policy.displayName.value) -and

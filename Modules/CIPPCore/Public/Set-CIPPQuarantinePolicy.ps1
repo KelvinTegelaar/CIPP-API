@@ -85,7 +85,7 @@ function Set-CIPPQuarantinePolicy {
              }
             "QuarantinePolicy" {
                 $cmdParams = @{
-                    EndUserQuarantinePermissionsValue = Convert-QuarantinePermissionsValue -InputObject $EndUserQuarantinePermissions
+                    EndUserQuarantinePermissionsValue = Convert-QuarantinePermissionsValue @EndUserQuarantinePermissions -ErrorAction Stop
                     ESNEnabled = $ESNEnabled
                     IncludeMessagesFromBlockedSenderAddress = $IncludeMessagesFromBlockedSenderAddress
                 }
