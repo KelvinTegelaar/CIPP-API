@@ -21,8 +21,33 @@ Function Invoke-ExecListAppId {
         $env:ApplicationID = $Secret.ApplicationID
         $env:TenantID = $Secret.TenantID
     } else {
-        $env:ApplicationID = (Get-AzKeyVaultSecret -AsPlainText -VaultName $env:WEBSITE_DEPLOYMENT_ID -Name 'ApplicationID').SecretValueText
-        $env:TenantID = (Get-AzKeyVaultSecret -AsPlainText -VaultName $env:WEBSITE_DEPLOYMENT_ID -Name 'TenantID').SecretValueText
+        Write-Information 'Connecting to Azure'
+        Connect-AzAccount -Identity
+        $SubscriptionId = $env:WEBSITE_OWNER_NAME -split '\+' | Select-Object -First 1
+        try {
+            $Context = Get-AzContext
+            if ($Context.Subscription) {
+                #Write-Information "Current context: $($Context | ConvertTo-Json)"
+                if ($Context.Subscription.Id -ne $SubscriptionId) {
+                    Write-Information "Setting context to subscription $SubscriptionId"
+                    $null = Set-AzContext -SubscriptionId $SubscriptionId
+                }
+            }
+        } catch {
+            Write-Information "ERROR: Could not set context to subscription $SubscriptionId."
+        }
+
+        $keyvaultname = ($env:WEBSITE_DEPLOYMENT_ID -split '-')[0]
+        try {
+            $env:ApplicationID = (Get-AzKeyVaultSecret -AsPlainText -VaultName $keyvaultname -Name 'ApplicationID')
+            $env:TenantID = (Get-AzKeyVaultSecret -AsPlainText -VaultName $keyvaultname -Name 'TenantID')
+            Write-Information "Retrieving secrets from KeyVault: $keyvaultname. The AppId is $($env:ApplicationID) and the TenantId is $($env:TenantID)"
+        } catch {
+            Write-Information "Retrieving secrets from KeyVault: $keyvaultname. The AppId is $($env:ApplicationID) and the TenantId is $($env:TenantID)"
+            Write-LogMessage -message "Failed to retrieve secrets from KeyVault: $keyvaultname" -LogData (Get-CippException -Exception $_) -Sev 'Error'
+            $env:ApplicationID = (Get-CippException -Exception $_)
+            $env:TenantID = (Get-CippException -Exception $_)
+        }
     }
     $Results = @{
         applicationId = $env:ApplicationID

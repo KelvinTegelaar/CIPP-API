@@ -1,6 +1,6 @@
 using namespace System.Net
 
-Function Invoke-ListGroups {
+function Invoke-ListGroups {
     <#
     .FUNCTIONALITY
         Entrypoint
@@ -103,8 +103,9 @@ Function Invoke-ListGroups {
         } else {
             $GraphRequest = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/groups/$($GroupID)/$($members)?`$top=999&select=$SelectString" -tenantid $TenantFilter | Select-Object *, @{ Name = 'primDomain'; Expression = { $_.mail -split '@' | Select-Object -Last 1 } },
             @{Name = 'membersCsv'; Expression = { $_.members.userPrincipalName -join ',' } },
-            @{Name = 'teamsEnabled'; Expression = { if ($_.resourceProvisioningOptions -Like '*Team*') { $true }else { $false } } },
+            @{Name = 'teamsEnabled'; Expression = { if ($_.resourceProvisioningOptions -like '*Team*') { $true }else { $false } } },
             @{Name = 'calculatedGroupType'; Expression = {
+
                     if ($_.mailEnabled -and $_.securityEnabled) { 'Mail-Enabled Security' }
                     if (!$_.mailEnabled -and $_.securityEnabled) { 'Security' }
                     if ($_.groupTypes -contains 'Unified') { 'Microsoft 365' }

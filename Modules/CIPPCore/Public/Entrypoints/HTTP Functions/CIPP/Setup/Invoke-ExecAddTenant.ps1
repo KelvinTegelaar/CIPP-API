@@ -1,11 +1,11 @@
 using namespace System.Net
 
-Function Invoke-ExecAddTenant {
+function Invoke-ExecAddTenant {
     <#
     .FUNCTIONALITY
         Entrypoint,AnyTenant
     .ROLE
-        CIPP.AppSettings.ReadWrite.
+        CIPP.AppSettings.ReadWrite
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
@@ -31,7 +31,7 @@ Function Invoke-ExecAddTenant {
             # Create new tenant entry
             try {
                 # Get tenant information from Microsoft Graph
-                $headers = @{ Authorization = "Bearer $($request.body.access_token)" }
+                $headers = @{ Authorization = "Bearer $($request.body.accessToken)" }
                 $Organization = (Invoke-RestMethod -Uri 'https://graph.microsoft.com/v1.0/organization' -Headers $headers -Method GET -ContentType 'application/json' -ErrorAction Stop).value
                 $displayName = $Organization.displayName
                 $Domains = (Invoke-RestMethod -Uri 'https://graph.microsoft.com/v1.0/domains?$top=999' -Headers $headers -Method GET -ContentType 'application/json' -ErrorAction Stop).value
@@ -63,7 +63,8 @@ Function Invoke-ExecAddTenant {
 
             # Add tenant to table
             Add-CIPPAzDataTableEntity @TenantsTable -Entity $NewTenant -Force | Out-Null
-            $Results = @{'message' = "Successfully added tenant $tenantId to the tenant list with directTenant status."; 'severity' = 'success' }
+            $Results = @{'message' = "Successfully added tenant $displayName ($defaultDomainName) to the tenant list with Direct Tenant status."; 'severity' = 'success' }
+            Write-LogMessage -tenant $defaultDomainName -tenantid $tenantId -API 'Add-Tenant' -message "Added tenant $displayName ($defaultDomainName) with Direct Tenant status." -Sev 'Info'
         }
     } catch {
         $Results = @{'message' = "Failed to add tenant: $($_.Exception.Message)"; 'state' = 'error'; 'severity' = 'error' }

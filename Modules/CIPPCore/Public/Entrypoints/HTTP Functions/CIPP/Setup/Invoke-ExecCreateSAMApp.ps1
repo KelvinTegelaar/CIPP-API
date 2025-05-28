@@ -5,7 +5,7 @@ Function Invoke-ExecCreateSAMApp {
     .FUNCTIONALITY
         Entrypoint,AnyTenant
     .ROLE
-        CIPP.AppSettings.ReadWrite.
+        CIPP.AppSettings.ReadWrite
     #>
     [System.Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSAvoidUsingConvertToSecureStringWithPlainText', '')]
     [CmdletBinding()]
@@ -84,10 +84,19 @@ Function Invoke-ExecCreateSAMApp {
                 Write-Information ($Secret | ConvertTo-Json -Depth 5)
                 Add-CIPPAzDataTableEntity @DevSecretsTable -Entity $Secret -Force
             } else {
+
                 Set-AzKeyVaultSecret -VaultName $kv -Name 'tenantid' -SecretValue (ConvertTo-SecureString -String $TenantId -AsPlainText -Force)
                 Set-AzKeyVaultSecret -VaultName $kv -Name 'applicationid' -SecretValue (ConvertTo-SecureString -String $Appid.appId -AsPlainText -Force)
                 Set-AzKeyVaultSecret -VaultName $kv -Name 'applicationsecret' -SecretValue (ConvertTo-SecureString -String $AppPassword -AsPlainText -Force)
             }
+            $ConfigTable = Get-CippTable -tablename 'Config'
+            #update the ConfigTable with the latest appId, for caching compare.
+            $NewConfig = @{
+                PartitionKey  = 'AppCache'
+                RowKey        = 'AppCache'
+                ApplicationId = $AppId.appId
+            }
+            Add-CIPPAzDataTableEntity @ConfigTable -Entity $NewConfig -Force | Out-Null
             $Results = @{'message' = "Succesfully $state the application registration. The application ID is $($AppId.appid). You may continue to the next step."; severity = 'success' }
         }
 

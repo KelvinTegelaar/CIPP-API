@@ -57,11 +57,9 @@ function Get-CIPPAuthentication {
             $tenants = Get-CIPPAzDataTableEntity @TenantsTable -Filter $Filter
             if ($tenants) {
                 $tenants | ForEach-Object {
-                    $name = $_.tenantId -replace '-', '_'
+                    $name = $_.customerId
                     $secret = Get-AzKeyVaultSecret -VaultName $keyvaultname -Name $name -AsPlainText -ErrorAction Stop
                     if ($secret) {
-                        #set the name back to the original tenantId
-                        $name = $_.customerId
                         Set-Item -Path env:$name -Value $secret -Force
                     }
                 }
