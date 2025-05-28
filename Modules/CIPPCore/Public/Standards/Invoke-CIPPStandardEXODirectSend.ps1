@@ -31,6 +31,14 @@ function Invoke-CIPPStandardEXODirectSend {
     param ($Tenant, $Settings)
 
 
+    # Determine desired state. These double negative MS loves are a bit confusing
+    $DesiredStateName = $Settings.state.value ?? $Settings.state
+    # Input validation
+    if ([string]::IsNullOrWhiteSpace($DesiredStateName) -or $DesiredStateName -eq 'Select a value') {
+        Write-LogMessage -API 'Standards' -tenant $Tenant -message 'EXODirectSend: Invalid state parameter set' -sev Error
+        Return
+    }
+
     # Get current organization config
     try {
         $CurrentConfig = (New-ExoRequest -TenantID $Tenant -cmdlet 'Get-OrganizationConfig' -Select 'RejectDirectSend').RejectDirectSend
@@ -40,16 +48,8 @@ function Invoke-CIPPStandardEXODirectSend {
         return
     }
 
-    # Determine desired state. These double negative MS loves are a bit confusing
-    $DesiredStateName = $Settings.state.value ?? $Settings.state
     $DesiredState = $DesiredStateName -eq 'disabled' ? $true : $false
     $StateIsCorrect = $CurrentConfig -eq $DesiredState
-
-    # Input validation
-    if ([string]::IsNullOrWhiteSpace($DesiredStateName) -or $DesiredState -eq 'Select a value') {
-        Write-LogMessage -API 'Standards' -tenant $Tenant -message 'EXODirectSend: Invalid state parameter set' -sev Error
-        Return
-    }
 
     # Remediate if needed
     if ($Settings.remediate -eq $true) {
