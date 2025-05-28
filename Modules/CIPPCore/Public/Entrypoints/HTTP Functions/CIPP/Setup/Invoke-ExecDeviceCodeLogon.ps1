@@ -1,6 +1,6 @@
 using namespace System.Net
 
-Function Invoke-ExecDeviceCodeLogon {
+function Invoke-ExecDeviceCodeLogon {
     <#
     .FUNCTIONALITY
         Entrypoint,AnyTenant
@@ -9,19 +9,6 @@ Function Invoke-ExecDeviceCodeLogon {
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
-
-    $UserCreds = ([System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($request.headers.'x-ms-client-principal')) | ConvertFrom-Json)
-    if ('admin' -notin $UserCreds.userRoles) {
-        Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
-                ContentType = 'application/json'
-                StatusCode  = [HttpStatusCode]::Forbidden
-                Body        = @{
-                    error        = 'Forbidden'
-                    errorMessage = 'You do not have permission to perform this action'
-                } | ConvertTo-Json
-            })
-        exit
-    }
 
     $APIName = $Request.Params.CIPPEndpoint
     $Headers = $Request.Headers
