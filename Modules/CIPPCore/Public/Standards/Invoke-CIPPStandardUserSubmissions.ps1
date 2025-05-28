@@ -93,7 +93,7 @@ function Invoke-CIPPStandardUserSubmissions {
             Write-LogMessage -API 'Standards' -tenant $Tenant -message 'User Submission policy is already configured' -sev Info
         } else {
             if ($state -eq 'enable') {
-                if (([string]::IsNullOrWhiteSpace())) {
+                if (([string]::IsNullOrWhiteSpace($Settings.email))) {
                     $PolicyParams = @{
                         EnableReportToMicrosoft          = $true
                         ReportJunkToCustomizedAddress    = $false
