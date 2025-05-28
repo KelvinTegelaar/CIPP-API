@@ -1634,6 +1634,18 @@ Microsoft 365 Copilot (Education Faculty),Microsoft_365_Copilot_EDU,ad9c22b3-52d
 Microsoft 365 Copilot (Education Faculty),Microsoft_365_Copilot_EDU,ad9c22b3-52d7-4e7e-973c-88121ea96436,M365_COPILOT_APPS,a62f8878-de10-42f3-b68f-6149a25ceb97,Microsoft 365 Copilot in Productivity Apps
 Microsoft 365 Copilot (Education Faculty),Microsoft_365_Copilot_EDU,ad9c22b3-52d7-4e7e-973c-88121ea96436,M365_COPILOT_BUSINESS_CHAT,3f30311c-6b1e-48a4-ab79-725b469da960,Microsoft Copilot with Graph-grounded chat
 Microsoft 365 Copilot (Education Faculty),Microsoft_365_Copilot_EDU,ad9c22b3-52d7-4e7e-973c-88121ea96436,M365_COPILOT_CONNECTORS,89f1c4c8-0878-40f7-804d-869c9128ab5d,Power Platform Connectors in Microsoft 365 Copilot
+Microsoft 365 Copilot for Sales,Microsoft_Copilot_for_Sales,15f2e9fc-b782-4f73-bf51-81d8b7fff6f4,COPILOT_STUDIO_IN_COPILOT_FOR_M365,fe6c28b3-d468-44ea-bbd0-a10a5167435c,Copilot Studio in Copilot for M365
+Microsoft 365 Copilot for Sales,Microsoft_Copilot_for_Sales,15f2e9fc-b782-4f73-bf51-81d8b7fff6f4,GRAPH_CONNECTORS_COPILOT,82d30987-df9b-4486-b146-198b21d164c7,Graph Connectors in Microsoft 365 Copilot
+Microsoft 365 Copilot for Sales,Microsoft_Copilot_for_Sales,15f2e9fc-b782-4f73-bf51-81d8b7fff6f4,M365_COPILOT_INTELLIGENT_SEARCH,931e4a88-a67f-48b5-814f-16a5f1e6028d,Intelligent Search
+Microsoft 365 Copilot for Sales,Microsoft_Copilot_for_Sales,15f2e9fc-b782-4f73-bf51-81d8b7fff6f4,M365_COPILOT_SHAREPOINT,0aedf20c-091d-420b-aadf-30c042609612,Microsoft 365 Copilot for SharePoint
+Microsoft 365 Copilot for Sales,Microsoft_Copilot_for_Sales,15f2e9fc-b782-4f73-bf51-81d8b7fff6f4,M365_COPILOT_TEAMS,b95945de-b3bd-46db-8437-f2beb6ea2347,Microsoft 365 Copilot in Microsoft Teams
+Microsoft 365 Copilot for Sales,Microsoft_Copilot_for_Sales,15f2e9fc-b782-4f73-bf51-81d8b7fff6f4,M365_COPILOT_APPS,a62f8878-de10-42f3-b68f-6149a25ceb97,Microsoft 365 Copilot in Productivity Apps
+Microsoft 365 Copilot for Sales,Microsoft_Copilot_for_Sales,15f2e9fc-b782-4f73-bf51-81d8b7fff6f4,Microsoft_Copilot_for_Sales,a2194428-ead1-4fc1-bb81-ab8675125f42,Microsoft Copilot for Sales
+Microsoft 365 Copilot for Sales,Microsoft_Copilot_for_Sales,15f2e9fc-b782-4f73-bf51-81d8b7fff6f4,Microsoft_Copilot_for_Sales_PowerAutomate,0c1c2af2-6c51-43c7-9c55-fa487ac147ff,Microsoft Copilot for Sales with Power Automate
+Microsoft 365 Copilot for Sales,Microsoft_Copilot_for_Sales,15f2e9fc-b782-4f73-bf51-81d8b7fff6f4,M365_COPILOT_BUSINESS_CHAT,3f30311c-6b1e-48a4-ab79-725b469da960,Microsoft Copilot with Graph-grounded chat
+Microsoft 365 Copilot for Sales,Microsoft_Copilot_for_Sales,15f2e9fc-b782-4f73-bf51-81d8b7fff6f4,WORKPLACE_ANALYTICS_INSIGHTS_USER,b622badb-1b45-48d5-920f-4b27a2c0996c,Microsoft Viva Insights
+Microsoft 365 Copilot for Sales,Microsoft_Copilot_for_Sales,15f2e9fc-b782-4f73-bf51-81d8b7fff6f4,WORKPLACE_ANALYTICS_INSIGHTS_BACKEND,ff7b261f-d98b-415b-827c-42a3fdf015af,Microsoft Viva Insights Backend
+Microsoft 365 Copilot for Sales,Microsoft_Copilot_for_Sales,15f2e9fc-b782-4f73-bf51-81d8b7fff6f4,M365_COPILOT_CONNECTORS,89f1c4c8-0878-40f7-804d-869c9128ab5d,Power Platform Connectors in Microsoft 365 Copilot
 Microsoft Copilot for Microsoft 365,M365_Copilot,a809996b-059e-42e2-9866-db24b99a9782,GRAPH_CONNECTORS_COPILOT,82d30987-df9b-4486-b146-198b21d164c7,Graph Connectors in Microsoft 365 Copilot
 Microsoft Copilot for Microsoft 365,M365_Copilot,a809996b-059e-42e2-9866-db24b99a9782,M365_COPILOT_INTELLIGENT_SEARCH,931e4a88-a67f-48b5-814f-16a5f1e6028d,Intelligent Search
 Microsoft Copilot for Microsoft 365,M365_Copilot,a809996b-059e-42e2-9866-db24b99a9782,M365_COPILOT_TEAMS,b95945de-b3bd-46db-8437-f2beb6ea2347,Microsoft 365 Copilot in Microsoft Teams
@@ -4887,7 +4899,7 @@ PowerApps & Flow GCC Test - O365 & Dyn365 Plans,POWERFLOWGCC_TEST,0f13a262-dc6f-
 PowerApps & Flow GCC Test - O365 & Dyn365 Plans,POWERFLOWGCC_TEST,0f13a262-dc6f-4800-8dc6-a62f72c95fad,DYN365_CDS_P2_GOV,37396c73-2203-48e6-8be1-d882dae53275,Common Data Service for Government
 PowerApps & Flow GCC Test - O365 & Dyn365 Plans,POWERFLOWGCC_TEST,0f13a262-dc6f-4800-8dc6-a62f72c95fad,DYN365_CDS_FOR_PROJECT_GCC_P5,684a2229-5c57-43ab-b69f-f86fe8997358,Common Data Service for Project P5 for GCC
 PowerApps & Flow GCC Test - O365 & Dyn365 Plans,POWERFLOWGCC_TEST,0f13a262-dc6f-4800-8dc6-a62f72c95fad,FLOW_FOR_PROJECT_GOV,16687e20-06f9-4577-9cc0-34a2704260fc,Data integration for Project with Power Automate for GCC
-PowerApps & Flow GCC Test - O365 & Dyn365 Plans,POWERFLOWGCC_TEST,0f13a262-dc6f-4800-8dc6-a62f72c95fad,CDSAICAPACITY_PERUSER,91f50f7b-2204-4803-acac-5cf5668b8b39,DO NOT USE - AI Builder capacity Per User add-on
+PowerApps & Flow GCC Test - O365 & Dyn365 Plans,POWERFLOWGCC_TEST,0f13a262-dc6f-4800-8dc6-a62f72c95fad,CDSAICAPACITY_PERUSER,91f50f7b-2204-4803-acac-5cf5668b8b39,AI Builder capacity Per User add-on
 PowerApps & Flow GCC Test - O365 & Dyn365 Plans,POWERFLOWGCC_TEST,0f13a262-dc6f-4800-8dc6-a62f72c95fad,POWERAPPS_O365_S1_GOV,49f06c3d-da7d-4fa0-bcce-1458fdd18a59,Power Apps for Office 365 F3 for Government
 PowerApps & Flow GCC Test - O365 & Dyn365 Plans,POWERFLOWGCC_TEST,0f13a262-dc6f-4800-8dc6-a62f72c95fad,POWERAPPS_O365_P1_GOV,c42aa49a-f357-45d5-9972-bc29df885fee,Power Apps for Office 365 for Government
 PowerApps & Flow GCC Test - O365 & Dyn365 Plans,POWERFLOWGCC_TEST,0f13a262-dc6f-4800-8dc6-a62f72c95fad,POWERAPPS_O365_P2_GOV,0a20c815-5e81-4727-9bdc-2b5a117850c3,Power Apps for Office 365 for Government
