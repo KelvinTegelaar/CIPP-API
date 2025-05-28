@@ -29,34 +29,63 @@ function Invoke-CIPPStandardAppDeploy {
     #>
 
     param($Tenant, $Settings)
+    Write-Information "Running AppDeploy standard for tenant $($Tenant)."
+
     $AppsToAdd = $Settings.appids -split ','
     $AppExists = New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/servicePrincipals?$top=999' -tenantid $Tenant
+    $Mode = $Settings.mode ?? 'copy'
 
+    if ($Mode -eq 'template') {
+        $AppsToAdd = $Settings.templateIds.addedFields.AppId
+    }
+
+    $MissingApps = foreach ($App in $AppsToAdd) {
+        if ($App -notin $AppExists.appId) {
+            $App
+        }
+    }
     if ($Settings.remediate -eq $true) {
-        foreach ($App In $AppsToAdd) {
-            $App = $App.Trim()
-            if (!$App) {
-                continue
+        if ($Mode -eq 'copy') {
+            foreach ($App in $AppsToAdd) {
+                $App = $App.Trim()
+                if (!$App) {
+                    continue
+                }
+                $Application = $AppExists | Where-Object -Property appId -EQ $App
+                try {
+                    New-CIPPApplicationCopy -App $App -Tenant $Tenant
+                    Write-LogMessage -API 'Standards' -tenant $tenant -message "Added application $($Application.displayName) ($App) to $Tenant and updated it's permissions" -sev Info
+                } catch {
+                    $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
+                    Write-LogMessage -API 'Standards' -tenant $tenant -message "Failed to add app $($Application.displayName) ($App). Error: $ErrorMessage" -sev Error
+                }
             }
-            $Application = $AppExists | Where-Object -Property appId -EQ $App
-            try {
-                New-CIPPApplicationCopy -App $App -Tenant $Tenant
-                Write-LogMessage -API 'Standards' -tenant $tenant -message "Added application $($Application.displayName) ($App) to $Tenant and updated it's permissions" -sev Info
-            } catch {
-                $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
-                Write-LogMessage -API 'Standards' -tenant $tenant -message "Failed to add app $($Application.displayName) ($App). Error: $ErrorMessage" -sev Error
+        } elseif ($Mode -eq 'template') {
+            $TemplateIds = $Settings.templateIds.value
+            $TemplateName = $Settings.templateIds.label
+            $AppIds = $Settings.templateIds.addedFields.AppId
+
+            foreach ($AppId in $AppIds) {
+                if ($AppId -notin $AppExists.appId) {
+                    Write-Information "Adding $($AppId) to tenant $($Tenant)."
+                    $PostResults = New-GraphPostRequest 'https://graph.microsoft.com/beta/servicePrincipals' -type POST -tenantid $Item.tenant -body "{ `"appId`": `"$($Item.appId)`" }"
+                    Write-LogMessage -message "Added $($Item.AppId) to tenant $($Item.Tenant)" -tenant $Item.Tenant -API 'Add Multitenant App' -sev Info
+                }
+            }
+            foreach ($TemplateId in $TemplateIds) {
+                try {
+                    Add-CIPPApplicationPermission -TemplateId $TemplateId -Tenantfilter $Tenant
+                    Add-CIPPDelegatedPermission -TemplateId $TemplateId -Tenantfilter $Tenant
+                    Write-LogMessage -API 'Standards' -tenant $tenant -message "Added application(s) from template $($TemplateName) and updated it's permissions" -sev Info
+                } catch {
+                    $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
+                    Write-LogMessage -API 'Standards' -tenant $tenant -message "Failed to add app from approval template $($TemplateName). Error: $ErrorMessage" -sev Error
+                }
             }
         }
     }
 
     if ($Settings.alert) {
-
-        $MissingApps = foreach ($App in $AppsToAdd) {
-            if ($App -notin $AppExists.appId) {
-                $App
-            }
-        }
-
         if ($MissingApps.Count -gt 0) {
             Write-StandardsAlert -message "The following applications are not deployed: $($MissingApps -join ', ')" -object (@{ 'Missing Apps' = $MissingApps -join ',' }) -tenant $Tenant -standardName 'AppDeploy' -standardId $Settings.standardId
             Write-LogMessage -API 'Standards' -tenant $tenant -message "The following applications are not deployed: $($MissingApps -join ', ')" -sev Info
@@ -70,4 +99,5 @@ function Invoke-CIPPStandardAppDeploy {
         Set-CIPPStandardsCompareField -FieldName 'standards.AppDeploy' -FieldValue $StateIsCorrect -TenantFilter $tenant
         Add-CIPPBPAField -FieldName 'AppDeploy' -FieldValue $StateIsCorrect -StoreAs bool -Tenant $tenant
     }
+
 }
