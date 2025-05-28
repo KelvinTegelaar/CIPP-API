@@ -17,8 +17,9 @@ function Start-AuditLogSearchCreation {
 
         Write-Information 'Audit Logs: Creating new searches'
         foreach ($Tenant in $TenantList) {
+            $TenantsList = Expand-CIPPTenantGroups -TenantFilter ($ConfigEntries.Tenants | ConvertFrom-Json)
             $Configuration = $ConfigEntries | Where-Object { ($_.Tenants -match $TenantFilter -or $_.Tenants -match 'AllTenants') }
-            if ($Configuration) {
+            if ($Configuration -and $Tenant -in $TenantsList) {
                 $ServiceFilters = $Configuration | Select-Object -Property type | Sort-Object -Property type -Unique | ForEach-Object { $_.type.split('.')[1] }
                 try {
                     $LogSearch = @{

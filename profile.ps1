@@ -62,7 +62,7 @@ if (!$LastStartup -or $CurrentVersion -ne $LastStartup.Version) {
             Version      = $CurrentVersion
         }
     }
-    Update-AzDataTableEntity @Table -Entity $LastStartup -Force
+    Update-AzDataTableEntity @Table -Entity $LastStartup -Force -ErrorAction SilentlyContinue
     try {
         Clear-CippDurables
     } catch {
