@@ -65,13 +65,13 @@ function Invoke-CIPPStandardDeployMailContact {
         }
     }
 
-    if ($ExistingContact) {
-        Write-LogMessage -API 'Standards' -tenant $Tenant -message "Mail contact with email $($Settings.ExternalEmailAddress) already exists" -sev Info
-        return
-    }
-
     # Remediation
     if ($Settings.remediate -eq $true) {
+        if ($ExistingContact) {
+            Write-LogMessage -API 'Standards' -tenant $Tenant -message "Mail contact with email $($Settings.ExternalEmailAddress) already exists" -sev Info
+            return
+        }
+
         try {
             $NewContactParams = @{
                 ExternalEmailAddress = $Settings.ExternalEmailAddress
