@@ -6,20 +6,27 @@ function New-CIPPDeviceAction {
         $DeviceFilter,
         $TenantFilter,
         $Headers,
-        $APINAME
+        $APIName
     )
     try {
-        if ($action -eq 'delete') {
-            $null = New-Graphpostrequest -uri "https://graph.microsoft.com/beta/deviceManagement/managedDevices/$DeviceFilter" -type DELETE -tenantid $TenantFilter
-            Write-LogMessage -headers $Headers -API $APINAME -tenant $TenantFilter -message "Queued $Action on $DeviceFilter" -Sev 'Info'
-            return "Queued $Action on $DeviceFilter"
+        if ($Action -eq 'delete') {
+            $null = New-GraphPOSTRequest -uri "https://graph.microsoft.com/beta/deviceManagement/managedDevices/$DeviceFilter" -type DELETE -tenantid $TenantFilter
+        } elseif ($Action -eq 'users') {
+            $null = New-GraphPOSTRequest -uri "https://graph.microsoft.com/beta/deviceManagement/managedDevices('$DeviceFilter')/$($Action)/`$ref" -type POST -tenantid $TenantFilter -body $ActionBody
+            $regex = "(?<=\(')([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})(?='|\))"
+            $PrimaryUser = $ActionBody | Select-String -Pattern $regex -AllMatches | Select-Object -ExpandProperty Matches | Select-Object -ExpandProperty Value
+            $Result = "Changed primary user on device $DeviceFilter to $PrimaryUser"
+        } else {
+            $null = New-GraphPOSTRequest -uri "https://graph.microsoft.com/beta/deviceManagement/managedDevices('$DeviceFilter')/$($Action)" -type POST -tenantid $TenantFilter -body $ActionBody
+            $Result = "Queued $Action on $DeviceFilter"
         }
-        $null = New-Graphpostrequest -uri "https://graph.microsoft.com/beta/deviceManagement/managedDevices('$DeviceFilter')/$($Action)" -type POST -tenantid $TenantFilter -body $ActionBody
-        Write-LogMessage -headers $Headers -API $APINAME -tenant $TenantFilter -message "Queued $Action on $DeviceFilter" -Sev 'Info'
-        return "Queued $Action on $DeviceFilter"
+
+        Write-LogMessage -headers $Headers -API $APIName -tenant $TenantFilter -message $Result -Sev Info
+        return $Result
     } catch {
         $ErrorMessage = Get-CippException -Exception $_
-        Write-LogMessage -headers $Headers -API $APINAME -tenant $TenantFilter -message "Failed to queue action $Action on $DeviceFilter : $($ErrorMessage.NormalizedError)" -Sev 'Error' -LogData $ErrorMessage
-        return    "Failed to queue action $Action on $DeviceFilter $($ErrorMessage.NormalizedError)"
+        $Result = "Failed to queue action $Action on $DeviceFilter : $($ErrorMessage.NormalizedError)"
+        Write-LogMessage -headers $Headers -API $APIName -tenant $TenantFilter -message $Result -Sev Error -LogData $ErrorMessage
+        throw $Result
     }
 }

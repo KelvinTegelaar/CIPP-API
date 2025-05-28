@@ -1,9 +1,9 @@
 using namespace System.Net
 
-Function Invoke-ExecNamedLocation {
+function Invoke-ExecNamedLocation {
     <#
     .FUNCTIONALITY
-        Entrypoint
+        Entrypoint,AnyTenant
     .ROLE
         Tenant.ConditionalAccess.ReadWrite
     #>
