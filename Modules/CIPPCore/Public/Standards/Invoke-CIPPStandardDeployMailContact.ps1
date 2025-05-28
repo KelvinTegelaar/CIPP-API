@@ -31,18 +31,25 @@ function Invoke-CIPPStandardDeployMailContact {
     param($Tenant, $Settings)
 
     # Input validation
-    if (-not $Settings.ExternalEmailAddress -or -not $Settings.DisplayName) {
-        Write-LogMessage -API 'Standards' -tenant $Tenant -message 'DeployMailContact: ExternalEmailAddress and DisplayName are required parameters.' -sev Error
+    if ([string]::IsNullOrWhiteSpace($Settings.DisplayName)) {
+        Write-LogMessage -API 'Standards' -tenant $Tenant -message 'DeployMailContact: DisplayName cannot be empty or just whitespace.' -sev Error
         return
     }
 
-    # Validate email address format
     try {
         $null = [System.Net.Mail.MailAddress]::new($Settings.ExternalEmailAddress)
     }
     catch {
         Write-LogMessage -API 'Standards' -tenant $Tenant -message "DeployMailContact: Invalid email address format: $($Settings.ExternalEmailAddress)" -sev Error
         return
+    }
+
+    # Prepare contact data for reuse
+    $ContactData = @{
+        DisplayName          = $Settings.DisplayName
+        ExternalEmailAddress = $Settings.ExternalEmailAddress
+        FirstName            = $Settings.FirstName
+        LastName             = $Settings.LastName
     }
 
     # Check if contact already exists
@@ -53,42 +60,25 @@ function Invoke-CIPPStandardDeployMailContact {
         }
     }
     catch {
-        # If the error is that the contact wasn't found, that's expected and we can proceed
         if ($_.Exception.Message -like "*couldn't be found*") {
             $ExistingContact = $null
         }
         else {
-            # For any other error, we should log it and return
-            $ErrorMessage = Get-CippException -Exception $_
-            Write-LogMessage -API 'Standards' -tenant $Tenant -message "Error checking for existing mail contact: $($ErrorMessage.NormalizedError)" -sev Error -LogData $ErrorMessage
+            Write-LogMessage -API 'Standards' -tenant $Tenant -message "Error checking for existing mail contact: $(Get-CippException -Exception $_).NormalizedError" -sev Error
             return
         }
     }
 
     # Remediation
-    if ($Settings.remediate -eq $true) {
-        if ($ExistingContact) {
-            Write-LogMessage -API 'Standards' -tenant $Tenant -message "Mail contact with email $($Settings.ExternalEmailAddress) already exists" -sev Info
+    if ($Settings.remediate -eq $true -and -not $ExistingContact) {
+        try {
+            $NewContactParams = $ContactData.Clone()
+            $NewContactParams.Name = $Settings.DisplayName
+            $null = New-ExoRequest -tenantid $Tenant -cmdlet 'New-MailContact' -cmdParams $NewContactParams
+            Write-LogMessage -API 'Standards' -tenant $Tenant -message "Successfully created mail contact $($Settings.DisplayName) with email $($Settings.ExternalEmailAddress)" -sev Info
         }
-        else {
-            try {
-                $NewContactParams = @{
-                    ExternalEmailAddress = $Settings.ExternalEmailAddress
-                    DisplayName          = $Settings.DisplayName
-                    Name                 = $Settings.DisplayName
-                }
-
-                # Add optional parameters if provided
-                if ($Settings.FirstName) { $NewContactParams.FirstName = $Settings.FirstName }
-                if ($Settings.LastName) { $NewContactParams.LastName = $Settings.LastName }
-
-                $null = New-ExoRequest -tenantid $Tenant -cmdlet 'New-MailContact' -cmdParams $NewContactParams
-                Write-LogMessage -API 'Standards' -tenant $Tenant -message "Successfully created mail contact $($Settings.DisplayName) with email $($Settings.ExternalEmailAddress)" -sev Info
-            }
-            catch {
-                $ErrorMessage = Get-CippException -Exception $_
-                Write-LogMessage -API 'Standards' -tenant $Tenant -message "Could not create mail contact. $($ErrorMessage.NormalizedError)" -sev Error -LogData $ErrorMessage
-            }
+        catch {
+            Write-LogMessage -API 'Standards' -tenant $Tenant -message "Could not create mail contact. $(Get-CippException -Exception $_).NormalizedError" -sev Error
         }
     }
 
@@ -98,33 +88,16 @@ function Invoke-CIPPStandardDeployMailContact {
             Write-LogMessage -API 'Standards' -tenant $Tenant -message "Mail contact $($Settings.DisplayName) already exists" -sev Info
         }
         else {
-            Write-StandardsAlert -message "Mail contact $($Settings.DisplayName) needs to be created" -object @{
-                DisplayName          = $Settings.DisplayName
-                ExternalEmailAddress = $Settings.ExternalEmailAddress
-                FirstName            = $Settings.FirstName
-                LastName             = $Settings.LastName
-            } -tenant $Tenant -standardName 'DeployMailContact' -standardId $Settings.standardId
+            Write-StandardsAlert -message "Mail contact $($Settings.DisplayName) needs to be created" -object $ContactData -tenant $Tenant -standardName 'DeployMailContact' -standardId $Settings.standardId
             Write-LogMessage -API 'Standards' -tenant $Tenant -message "Mail contact $($Settings.DisplayName) needs to be created" -sev Info
         }
     }
 
     # Report
     if ($Settings.report -eq $true) {
-        $ReportData = @{
-            DisplayName          = $Settings.DisplayName
-            ExternalEmailAddress = $Settings.ExternalEmailAddress
-            FirstName            = $Settings.FirstName
-            LastName             = $Settings.LastName
-            Exists               = [bool]$ExistingContact
-        }
+        $ReportData = $ContactData.Clone()
+        $ReportData.Exists = [bool]$ExistingContact
         Add-CIPPBPAField -FieldName 'DeployMailContact' -FieldValue $ReportData -StoreAs json -Tenant $Tenant
-
-        if ($ExistingContact) {
-            $FieldValue = $true
-        }
-        else {
-            $FieldValue = $ReportData
-        }
-        Set-CIPPStandardsCompareField -FieldName 'standards.DeployMailContact' -FieldValue $FieldValue -Tenant $Tenant
+        Set-CIPPStandardsCompareField -FieldName 'standards.DeployMailContact' -FieldValue $($ExistingContact ? $true : $ReportData) -Tenant $Tenant
     }
 } 
