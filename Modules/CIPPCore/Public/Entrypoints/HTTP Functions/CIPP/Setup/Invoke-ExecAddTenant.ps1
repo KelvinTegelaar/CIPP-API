@@ -31,7 +31,7 @@ function Invoke-ExecAddTenant {
             # Create new tenant entry
             try {
                 # Get tenant information from Microsoft Graph
-                $headers = @{ Authorization = "Bearer $($request.body.access_token)" }
+                $headers = @{ Authorization = "Bearer $($request.body.accessToken)" }
                 $Organization = (Invoke-RestMethod -Uri 'https://graph.microsoft.com/v1.0/organization' -Headers $headers -Method GET -ContentType 'application/json' -ErrorAction Stop).value
                 $displayName = $Organization.displayName
                 $Domains = (Invoke-RestMethod -Uri 'https://graph.microsoft.com/v1.0/domains?$top=999' -Headers $headers -Method GET -ContentType 'application/json' -ErrorAction Stop).value
