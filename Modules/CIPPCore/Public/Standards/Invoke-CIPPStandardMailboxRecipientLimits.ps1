@@ -67,15 +67,24 @@ function Invoke-CIPPStandardMailboxRecipientLimits {
         if ($Plan) {
             $PlanMaxRecipients = $Plan.MaxRecipientsPerMessage
             
+            # If mailbox has "Unlimited" set but has a plan, use the plan's limit as the current limit
+            $CurrentLimit = if ($Mailbox.RecipientLimits -eq 'Unlimited') {
+                $PlanMaxRecipients
+            }
+            else {
+                $Mailbox.RecipientLimits
+            }
+            
             if ($Settings.RecipientLimit -gt $PlanMaxRecipients) {
                 [PSCustomObject]@{
-                    Type      = 'PlanIssue'
-                    Mailbox   = $Mailbox
-                    PlanLimit = $PlanMaxRecipients
-                    PlanName  = $Plan.DisplayName
+                    Type         = 'PlanIssue'
+                    Mailbox      = $Mailbox
+                    CurrentLimit = $CurrentLimit
+                    PlanLimit    = $PlanMaxRecipients
+                    PlanName     = $Plan.DisplayName
                 }
             }
-            elseif ($Mailbox.RecipientLimits -ne $Settings.RecipientLimit) {
+            elseif ($CurrentLimit -ne $Settings.RecipientLimit) {
                 [PSCustomObject]@{
                     Type    = 'ToUpdate'
                     Mailbox = $Mailbox
@@ -95,7 +104,7 @@ function Invoke-CIPPStandardMailboxRecipientLimits {
     $MailboxesWithPlanIssues = $MailboxResults | Where-Object { $_.Type -eq 'PlanIssue' } | ForEach-Object {
         [PSCustomObject]@{
             Identity     = $_.Mailbox.Identity
-            CurrentLimit = $_.Mailbox.RecipientLimits
+            CurrentLimit = $_.CurrentLimit
             PlanLimit    = $_.PlanLimit
             PlanName     = $_.PlanName
         }
