@@ -53,7 +53,7 @@ function Invoke-ListLogs {
         $AllowedTenants = Test-CIPPAccess -Request $Request -TenantList
         Write-Host "Getting logs for filter: $Filter, LogLevel: $LogLevel, Username: $username"
 
-        $Rows = Get-AzDataTableEntity @Table -Filter $Filter | Where-Object { $_.Severity -in $LogLevel -and $_.user -like $username }
+        $Rows = Get-AzDataTableEntity @Table -Filter $Filter | Where-Object { $_.Severity -in $LogLevel -and $_.Username -like $username }
         foreach ($Row in $Rows) {
             if ($AllowedTenants -notcontains 'AllTenants') {
                 $TenantList = Get-Tenants -IncludeErrors
