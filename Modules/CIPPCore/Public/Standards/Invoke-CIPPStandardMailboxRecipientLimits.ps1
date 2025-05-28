@@ -33,31 +33,29 @@ function Invoke-CIPPStandardMailboxRecipientLimits {
         return
     }
 
-    # Get all mailboxes and their associated mailbox plans in a single batch
-    $Requests = @(
-        @{
-            CmdletInput = @{
-                CmdletName = 'Get-Mailbox'
-                Parameters = @{ ResultSize = 'Unlimited' }
-            }
-        },
-        @{
-            CmdletInput = @{
-                CmdletName = 'Get-MailboxPlan'
-                Parameters = @{ ResultSize = 'Unlimited' }
-            }
-        }
-    )
-
-    $Results = New-ExoBulkRequest -tenantid $Tenant -cmdletArray $Requests
-    $Mailboxes = $Results.GetMailbox
-    $MailboxPlans = $Results.GetMailboxPlan
+    # Get mailbox plans first
+    $MailboxPlans = New-ExoRequest -tenantid $Tenant -cmdlet 'Get-MailboxPlan' -cmdParams @{ ResultSize = 'Unlimited' }
 
     # Create a hashtable of mailbox plans for quick lookup
     $MailboxPlanLookup = @{}
     foreach ($Plan in $MailboxPlans) {
         $MailboxPlanLookup[$Plan.Guid] = $Plan
     }
+
+    # Get mailboxes that need updating (either different from target limit or have "Unlimited" set)
+    $Requests = @(
+        @{
+            CmdletInput = @{
+                CmdletName = 'Get-Mailbox'
+                Parameters = @{
+                    ResultSize = 'Unlimited'
+                    Filter     = "RecipientLimits -ne '$($Settings.RecipientLimit)' -or RecipientLimits -eq 'Unlimited'"
+                }
+            }
+        }
+    )
+
+    $Mailboxes = New-ExoBulkRequest -tenantid $Tenant -cmdletArray $Requests
 
     # Process mailboxes and categorize them based on their plan limits
     $MailboxResults = $Mailboxes | ForEach-Object {
