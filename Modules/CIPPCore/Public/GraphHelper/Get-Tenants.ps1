@@ -14,10 +14,10 @@ function Get-Tenants {
         [switch]$CleanOld,
         [string]$TenantFilter
     )
-    $caller = $MyInvocation.InvocationName
-    $scriptName = $MyInvocation.ScriptName
-    Write-Host "Called by: $caller"
-    Write-Host "In script: $scriptName"
+    #$caller = $MyInvocation.InvocationName
+    #$scriptName = $MyInvocation.ScriptName
+    #Write-Host "Called by: $caller"
+    #Write-Host "In script: $scriptName"
     $TenantsTable = Get-CippTable -tablename 'Tenants'
     $ExcludedFilter = "PartitionKey eq 'Tenants' and Excluded eq true"
 
