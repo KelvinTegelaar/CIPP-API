@@ -32,9 +32,9 @@ function New-HaloPSATicket {
                 try {
                     if ($PSCmdlet.ShouldProcess('Add note to HaloPSA ticket', 'Add note')) {
                         $Action = Invoke-RestMethod -Uri "$($Configuration.ResourceURL)/actions" -ContentType 'application/json; charset=utf-8' -Method Post -Body $body -Headers @{Authorization = "Bearer $($token.access_token)" }
-                        Write-Information "Note added to ticket in HaloPSA: $($Action.id)"
+                        Write-Information "Note added to ticket in HaloPSA: $($ExistingTicket.TicketID)"
                     }
-                    return
+                    return "Note added to ticket in HaloPSA: $($ExistingTicket.TicketID)"
                 } catch {
                     $Message = if ($_.ErrorDetails.Message) {
                         Get-NormalizedError -Message $_.ErrorDetails.Message
@@ -44,7 +44,7 @@ function New-HaloPSATicket {
                     Write-LogMessage -message "Failed to add note to HaloPSA ticket: $Message" -API 'HaloPSATicket' -sev Error -LogData (Get-CippException -Exception $_)
                     Write-Information "Failed to add note to HaloPSA ticket: $Message"
                     Write-Information "Body we tried to ship: $body"
-                    return
+                    return "Failed to add note to HaloPSA ticket: $Message"
                 }
             }
         }
@@ -66,6 +66,7 @@ function New-HaloPSATicket {
         details_html               = $description
         donotapplytemplateintheapi = $true
         attachments                = @()
+        _novalidate                = $true
     }
 
     if ($Configuration.TicketType) {
@@ -93,6 +94,7 @@ function New-HaloPSATicket {
                 Add-CIPPAzDataTableEntity @TicketTable -Entity $TicketObject -Force
                 Write-Information 'Ticket added to consolidation table'
             }
+            return "Ticket created in HaloPSA: $($Ticket.id)"
         }
     } catch {
         $Message = if ($_.ErrorDetails.Message) {
@@ -103,5 +105,6 @@ function New-HaloPSATicket {
         Write-LogMessage -message "Failed to send ticket to HaloPSA: $Message" -API 'HaloPSATicket' -sev Error -LogData (Get-CippException -Exception $_)
         Write-Information "Failed to send ticket to HaloPSA: $Message"
         Write-Information "Body we tried to ship: $body"
+        return "Failed to send ticket to HaloPSA: $Message"
     }
 }
