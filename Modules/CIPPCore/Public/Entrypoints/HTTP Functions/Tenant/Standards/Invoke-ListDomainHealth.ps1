@@ -1,6 +1,6 @@
 using namespace System.Net
 
-Function Invoke-ListDomainHealth {
+function Invoke-ListDomainHealth {
     <#
     .FUNCTIONALITY
         Entrypoint,AnyTenant
@@ -38,8 +38,8 @@ Function Invoke-ListDomainHealth {
     }
 
     Set-DnsResolver -Resolver $Resolver
-    #UNDOREPLACE
-    $UserCreds = ([System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($request.headers.'x-ms-client-principal')) | ConvertFrom-Json)
+
+    $UserRoles = Get-CIPPAccessPermissions -Request $Request
 
     $APIName = $Request.Params.CIPPEndpoint
     $Headers = $Request.Headers
@@ -87,7 +87,7 @@ Function Invoke-ListDomainHealth {
                         if ($Request.Query.Selector) {
                             $DkimQuery.Selectors = ($Request.Query.Selector).trim() -split '\s*,\s*'
 
-                            if ('admin' -in $UserCreds.userRoles -or 'editor' -in $UserCreds.userRoles) {
+                            if ('admin' -in $UserRoles -or 'editor' -in $UserRoles) {
                                 $DkimSelectors = [string]($DkimQuery.Selectors | ConvertTo-Json -Compress)
                                 if ($DomainInfo) {
                                     $DomainInfo.DkimSelectors = $DkimSelectors

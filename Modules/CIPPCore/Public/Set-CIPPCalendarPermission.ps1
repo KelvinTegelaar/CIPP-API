@@ -9,7 +9,8 @@ function Set-CIPPCalendarPermission {
         $folderName,
         $UserToGetPermissions,
         $LoggingName,
-        $Permissions
+        $Permissions,
+        [bool]$CanViewPrivateItems
     )
 
     try {
@@ -25,6 +26,10 @@ function Set-CIPPCalendarPermission {
             Identity     = "$($UserID):\$folderName"
             AccessRights = @($Permissions)
             User         = $UserToGetPermissions
+        }
+
+        if ($CanViewPrivateItems) {
+            $CalParam | Add-Member -NotePropertyName 'SharingPermissionFlags' -NotePropertyValue 'Delegate,CanViewPrivateItems'
         }
         
         if ($RemoveAccess) {
@@ -42,6 +47,9 @@ function Set-CIPPCalendarPermission {
                 }
                 Write-LogMessage -headers $Headers -API $APIName -tenant $TenantFilter -message "Successfully set Calendar permissions $Permissions for $LoggingName on $UserID." -sev Info
                 $Result = "Successfully set permissions on folder $($CalParam.Identity). The user $LoggingName now has $Permissions permissions on this folder."
+                if ($CanViewPrivateItems) {
+                    $Result += " The user can also view private items."
+                }
             }
         }
     } catch {

@@ -21,12 +21,13 @@ function Invoke-ExecEditCalendarPermissions {
     $Permissions = $Request.Query.Permissions ?? $Request.Body.Permissions.value
     $FolderName = $Request.Query.FolderName ?? $Request.Body.FolderName
     $RemoveAccess = $Request.Query.RemoveAccess ?? $Request.Body.RemoveAccess.value
+    $CanViewPrivateItems = $Request.Query.CanViewPrivateItems ?? $Request.Body.CanViewPrivateItems
 
     try {
         if ($RemoveAccess) {
             $Result = Set-CIPPCalendarPermission -Headers $Headers -UserID $UserID -FolderName $FolderName -RemoveAccess $RemoveAccess -TenantFilter $TenantFilter
         } else {
-            $Result = Set-CIPPCalendarPermission -Headers $Headers -UserID $UserID -FolderName $FolderName -TenantFilter $TenantFilter -UserToGetPermissions $UserToGetPermissions -Permissions $Permissions
+            $Result = Set-CIPPCalendarPermission -Headers $Headers -UserID $UserID -FolderName $FolderName -TenantFilter $TenantFilter -UserToGetPermissions $UserToGetPermissions -Permissions $Permissions -CanViewPrivateItems $CanViewPrivateItems
         }
         $StatusCode = [HttpStatusCode]::OK
     } catch {

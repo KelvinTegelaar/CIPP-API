@@ -16,7 +16,7 @@ Function Invoke-ListTenantAllowBlockList {
 
     # Interact with query parameters or the body of the request.
     $TenantFilter = $Request.Query.tenantFilter
-    $ListTypes = 'Sender', 'Url', 'FileHash'
+    $ListTypes = 'Sender', 'Url', 'FileHash', 'IP'
     try {
         $Results = $ListTypes | ForEach-Object -Parallel {
             Import-Module CIPPCore

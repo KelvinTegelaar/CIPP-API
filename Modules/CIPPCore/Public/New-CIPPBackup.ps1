@@ -14,8 +14,17 @@ function New-CIPPBackup {
         'CIPP' {
             try {
                 $BackupTables = @(
+                    'AppPermissions'
+                    'AccessRoleGroups'
+                    'ApiClients'
+                    'CustomData'
+                    'CustomRoles'
                     'Config'
+                    'CommunityRepos'
                     'Domains'
+                    'GraphPresets'
+                    'GDAPRoles'
+                    'GDAPRoleTemplates'
                     'ExcludedLicenses'
                     'templates'
                     'standards'
@@ -23,10 +32,11 @@ function New-CIPPBackup {
                     'Extensions'
                     'WebhookRules'
                     'ScheduledTasks'
+                    'TenantProperties'
                 )
                 $CSVfile = foreach ($CSVTable in $BackupTables) {
                     $Table = Get-CippTable -tablename $CSVTable
-                    Get-AzDataTableEntity @Table | Select-Object * -ExcludeProperty DomainAnalyser, table, Timestamp, ETag | Select-Object *, @{l = 'table'; e = { $CSVTable } }
+                    Get-AzDataTableEntity @Table | Select-Object * -ExcludeProperty DomainAnalyser, table, Timestamp, ETag, Results | Select-Object *, @{l = 'table'; e = { $CSVTable } }
                 }
                 $RowKey = 'CIPPBackup' + '_' + (Get-Date).ToString('yyyy-MM-dd-HHmm')
                 $CSVfile

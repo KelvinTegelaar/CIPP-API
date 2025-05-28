@@ -17,7 +17,7 @@ function Start-TableCleanup {
         @{
             DataTableProps = @{
                 Context  = (Get-CIPPTable -tablename 'AuditLogSearches').Context
-                Filter   = "PartitionKey eq 'Search' and Timestamp lt datetime'$((Get-Date).AddDays(-1).ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ssZ'))'"
+                Filter   = "PartitionKey eq 'Search' and Timestamp lt datetime'$((Get-Date).AddHours(-12).ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ssZ'))'"
                 First    = 10000
                 Property = @('PartitionKey', 'RowKey', 'ETag')
             }

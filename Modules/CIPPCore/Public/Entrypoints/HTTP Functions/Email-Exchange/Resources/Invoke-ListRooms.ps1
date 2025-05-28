@@ -32,7 +32,17 @@ Function Invoke-ListRooms {
                 Identity = $RoomId
             } | Select-Object -ExcludeProperty *@odata.type*
 
-            if ($RoomMailbox -and $PlaceDetails) {
+            # Get calendar properties
+            $CalendarProperties = New-ExoRequest -tenantid $TenantFilter -cmdlet 'Get-CalendarProcessing' -cmdParams @{
+                Identity = $RoomId
+            } | Select-Object -ExcludeProperty *@odata.type*
+
+            # Get calendar properties
+            $CalendarConfigurationProperties = New-ExoRequest -tenantid $TenantFilter -cmdlet 'Get-MailboxCalendarConfiguration' -cmdParams @{
+                Identity = $RoomId
+            } | Select-Object -ExcludeProperty *@odata.type*
+
+            if ($RoomMailbox -and $PlaceDetails -and $CalendarProperties -and $CalendarConfigurationProperties) {
                 $GraphRequest = @(
                     [PSCustomObject]@{
                         # Core Mailbox Properties
@@ -70,6 +80,23 @@ Function Invoke-ListRooms {
                         phone                         = if ([string]::IsNullOrWhiteSpace($PlaceDetails.Phone)) { $null } else { $PlaceDetails.Phone }
                         tags                          = $PlaceDetails.Tags
                         spaceType                     = $PlaceDetails.SpaceType
+
+                        # Calendar Properties
+                        AllowConflicts                = $CalendarProperties.AllowConflicts
+                        AllowRecurringMeetings        = $CalendarProperties.AllowRecurringMeetings
+                        BookingWindowInDays           = $CalendarProperties.BookingWindowInDays
+                        MaximumDurationInMinutes      = $CalendarProperties.MaximumDurationInMinutes
+                        ProcessExternalMeetingMessages= $CalendarProperties.ProcessExternalMeetingMessages
+                        EnforceCapacity               = $CalendarProperties.EnforceCapacity
+                        ForwardRequestsToDelegates    = $CalendarProperties.ForwardRequestsToDelegates
+                        ScheduleOnlyDuringWorkHours   = $CalendarProperties.ScheduleOnlyDuringWorkHours
+                        AutomateProcessing            = $CalendarProperties.AutomateProcessing
+
+                        # Calendar Configuration Properties
+                        WorkDays                      = if ([string]::IsNullOrWhiteSpace($CalendarConfigurationProperties.WorkDays)) { $null } else { $CalendarConfigurationProperties.WorkDays }
+                        WorkHoursStartTime            = if ([string]::IsNullOrWhiteSpace($CalendarConfigurationProperties.WorkHoursStartTime)) { $null } else { $CalendarConfigurationProperties.WorkHoursStartTime }
+                        WorkHoursEndTime              = if ([string]::IsNullOrWhiteSpace($CalendarConfigurationProperties.WorkHoursEndTime)) { $null } else { $CalendarConfigurationProperties.WorkHoursEndTime }
+                        WorkingHoursTimeZone          = $CalendarConfigurationProperties.WorkingHoursTimeZone
                     }
                 )
             }

@@ -17,6 +17,9 @@ function Set-CIPPCPVConsent {
     if ($Tenant.customerId -ne $TenantFilter) {
         return @('Not a valid tenant')
     }
+    if ($Tenant.delegatedPrivilegeStatus -eq 'directTenant') {
+        return @('Application is already consented to this tenant')
+    }
 
     if ($ResetSP) {
         try {
@@ -40,7 +43,7 @@ function Set-CIPPCPVConsent {
                         'DelegatedPermissionGrant.ReadWrite.All',
                         'Directory.ReadWrite.All',
                         'AppRoleAssignment.ReadWrite.All'
-                    ) -Join ','
+                    ) -join ','
                 }
             )
         } | ConvertTo-Json

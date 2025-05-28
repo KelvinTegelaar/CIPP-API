@@ -1,31 +1,25 @@
 using namespace System.Net
 
-Function Invoke-ExecSAMSetup {
+function Invoke-ExecSAMSetup {
     <#
     .FUNCTIONALITY
         Entrypoint,AnyTenant
     .ROLE
         CIPP.AppSettings.ReadWrite
+    .LEGACY
+        This function is a legacy function that was used to set up the CIPP application in Azure AD. It is not used in the current version of CIPP, look at Invoke-ExecCreateSAMApp for the new version.
     #>
     [System.Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSAvoidUsingConvertToSecureStringWithPlainText', '')]
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
 
-    $UserCreds = ([System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($request.headers.'x-ms-client-principal')) | ConvertFrom-Json)
+
     if ($Request.Query.error) {
         Add-Type -AssemblyName System.Web
         Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
                 ContentType = 'text/html'
                 StatusCode  = [HttpStatusCode]::Forbidden
                 Body        = Get-normalizedError -Message [System.Web.HttpUtility]::UrlDecode($Request.Query.error_description)
-            })
-        exit
-    }
-    if ('admin' -notin $UserCreds.userRoles) {
-        Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
-                ContentType = 'text/html'
-                StatusCode  = [HttpStatusCode]::Forbidden
-                Body        = 'Could not find an admin cookie in your browser, please confirm that you have the admin role in CIPP. Make sure you do not have an adblocker active, use a Chromium browser, and allow cookies. If our automatic refresh does not work, try pressing the URL bar and hitting enter. We will try to refresh ourselves in 3 seconds.<meta http-equiv="refresh" content="3" />'
             })
         exit
     }

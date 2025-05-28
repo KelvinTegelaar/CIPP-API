@@ -21,8 +21,8 @@ function Set-CIPPOutOfOffice {
         }
         if ($State -ne 'Scheduled') {
             $null = New-ExoRequest -tenantid $TenantFilter -cmdlet 'Set-MailboxAutoReplyConfiguration' -cmdParams @{Identity = $userid; AutoReplyState = $State; InternalMessage = $InternalMessage; ExternalMessage = $ExternalMessage } -Anchor $userid
-            Write-LogMessage -headers $Headers -API $APIName -message "Set Out-of-office for $($userid) to $state" -Sev 'Info' -tenant $TenantFilter
-            return "Set Out-of-office for $($userid) to $state."
+            Write-LogMessage -headers $Headers -API $APIName -message "Set Out-of-office for $($userid) to $State" -Sev 'Info' -tenant $TenantFilter
+            return "Set Out-of-office for $($userid) to $State."
         } else {
             $null = New-ExoRequest -tenantid $TenantFilter -cmdlet 'Set-MailboxAutoReplyConfiguration' -cmdParams @{Identity = $userid; AutoReplyState = $State; InternalMessage = $InternalMessage; ExternalMessage = $ExternalMessage; StartTime = $StartTime; EndTime = $EndTime } -Anchor $userid
             Write-LogMessage -headers $Headers -API $APIName -message "Scheduled Out-of-office for $($userid) between $StartTime and $EndTime" -Sev 'Info' -tenant $TenantFilter

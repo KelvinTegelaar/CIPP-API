@@ -14,12 +14,12 @@ function Invoke-CIPPStandardAutopilotProfile {
             Device Management Standards
         TAG
         DISABLEDFEATURES
-            {"report":true,"warn":true,"remediate":false}
+            {"report":false,"warn":false,"remediate":false}
         ADDEDCOMPONENT
             {"type":"textField","name":"standards.AutopilotProfile.DisplayName","label":"Profile Display Name"}
             {"type":"textField","name":"standards.AutopilotProfile.Description","label":"Profile Description"}
             {"type":"textField","name":"standards.AutopilotProfile.DeviceNameTemplate","label":"Unique Device Name Template"}
-            {"type":"autoComplete","multiple":false,"creatable":false,"name":"standards.AutopilotProfile.Languages","label":"Languages","api":{"url":"/languageList.json","labelField":"language","valueField":"tag"}}
+            {"type":"autoComplete","multiple":false,"creatable":false,"required":false,"name":"standards.AutopilotProfile.Languages","label":"Languages","api":{"url":"/languageList.json","labelField":"language","valueField":"tag"}}
             {"type":"switch","name":"standards.AutopilotProfile.CollectHash","label":"Convert all targeted devices to Autopilot","defaultValue":true}
             {"type":"switch","name":"standards.AutopilotProfile.AssignToAllDevices","label":"Assign to all devices","defaultValue":true}
             {"type":"switch","name":"standards.AutopilotProfile.SelfDeployingMode","label":"Enable Self-deploying Mode","defaultValue":true}

@@ -1,6 +1,6 @@
 using namespace System.Net
 
-Function Invoke-ListLogs {
+function Invoke-ListLogs {
     <#
     .FUNCTIONALITY
         Entrypoint
@@ -25,17 +25,35 @@ Function Invoke-ListLogs {
         }
     } else {
         if ($request.Query.Filter -eq 'True') {
-            $LogLevel = if ($Request.query.Severity) { ($Request.query.Severity).split(',') } else { 'Info', 'Warn', 'Error', 'Critical', 'Alert' }
-            $PartitionKey = $Request.query.DateFilter
-            $username = $Request.Query.User
+            $LogLevel = if ($Request.Query.Severity) { ($Request.query.Severity).split(',') } else { 'Info', 'Warn', 'Error', 'Critical', 'Alert' }
+            $PartitionKey = $Request.Query.DateFilter
+            $username = $Request.Query.User ?? '*'
+
+            $StartDate = $Request.Query.StartDate ?? $Request.Query.DateFilter
+            $EndDate = $Request.Query.EndDate ?? $Request.Query.DateFilter
+
+            if ($StartDate -and $EndDate) {
+                # Collect logs for each partition key date in range
+                $PartitionKeys = for ($Date = [datetime]::ParseExact($StartDate, 'yyyyMMdd', $null); $Date -le [datetime]::ParseExact($EndDate, 'yyyyMMdd', $null); $Date = $Date.AddDays(1)) {
+                    $PartitionKey = $Date.ToString('yyyyMMdd')
+                    "PartitionKey eq '$PartitionKey'"
+                }
+                $Filter = $PartitionKeys -join ' or '
+            } elseif ($StartDate) {
+                $Filter = "PartitionKey eq '{0}'" -f $StartDate
+            } else {
+                $Filter = "PartitionKey eq '{0}'" -f (Get-Date -UFormat '%Y%m%d')
+            }
         } else {
             $LogLevel = 'Info', 'Warn', 'Error', 'Critical', 'Alert'
             $PartitionKey = Get-Date -UFormat '%Y%m%d'
             $username = '*'
+            $Filter = "PartitionKey eq '{0}'" -f $PartitionKey
         }
         $AllowedTenants = Test-CIPPAccess -Request $Request -TenantList
-        $Filter = "PartitionKey eq '{0}'" -f $PartitionKey
-        $Rows = Get-AzDataTableEntity @Table -Filter $Filter | Where-Object { $_.Severity -In $LogLevel -and $_.user -like $username }
+        Write-Host "Getting logs for filter: $Filter, LogLevel: $LogLevel, Username: $username"
+
+        $Rows = Get-AzDataTableEntity @Table -Filter $Filter | Where-Object { $_.Severity -in $LogLevel -and $_.Username -like $username }
         foreach ($Row in $Rows) {
             if ($AllowedTenants -notcontains 'AllTenants') {
                 $TenantList = Get-Tenants -IncludeErrors

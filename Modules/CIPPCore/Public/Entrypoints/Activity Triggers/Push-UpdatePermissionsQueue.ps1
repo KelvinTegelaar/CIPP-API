@@ -16,7 +16,9 @@ function Push-UpdatePermissionsQueue {
         $Table = Get-CIPPTable -TableName cpvtenants
         $CPVRows = Get-CIPPAzDataTableEntity @Table | Where-Object -Property Tenant -EQ $Item.customerId
 
-        if (!$CPVRows -or $env:ApplicationID -notin $CPVRows.applicationId) {
+        $Tenant = Get-Tenants -TenantFilter $Item.customerId -IncludeErrors
+
+        if ((!$CPVRows -or $env:ApplicationID -notin $CPVRows.applicationId) -and $Tenant.delegatedPrivilegeStatus -ne 'directTenant') {
             Write-LogMessage -tenant $Item.defaultDomainName -tenantId $Item.customerId -message 'A New tenant has been added, or a new CIPP-SAM Application is in use' -Sev 'Warn' -API 'NewTenant'
             Write-Information 'Adding CPV permissions'
             Set-CIPPCPVConsent -Tenantfilter $Item.customerId

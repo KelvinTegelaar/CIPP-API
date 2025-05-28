@@ -122,12 +122,12 @@ function Invoke-HuduExtensionSync {
         $Links = @(
             @{
                 Title = 'M365 Admin Portal'
-                URL   = 'https://admin.microsoft.com/Partner/BeginClientSession.aspx?CTID={0}&CSDEST=o365admincenter' -f $Tenant.customerId
+                URL   = 'https://admin.cloud.microsoft?delegatedOrg={0}' -f $Tenant.initialDomainName
                 Icon  = 'fas fa-cogs'
             }
             @{
                 Title = 'Exchange Admin Portal'
-                URL   = 'https://admin.exchange.microsoft.com/?landingpage=homepage&form=mac_sidebar&delegatedOrg={0}' -f $Tenant.initialDomainName
+                URL   = 'https://admin.cloud.microsoft/exchange?delegatedOrg={0}' -f $Tenant.initialDomainName
                 Icon  = 'fas fa-mail-bulk'
             }
             @{
@@ -432,9 +432,9 @@ function Invoke-HuduExtensionSync {
                         TotalItemSize            = $TotalItemSize
                     }
 
-                    $userDevices = ($devices | Where-Object { $_.userPrincipalName -eq $user.userPrincipalName } | Select-Object @{N = 'Name'; E = { "<a target='_blank' href=https://endpoint.microsoft.com/$($Tenant.defaultDomainName)/#blade/Microsoft_Intune_Devices/DeviceSettingsBlade/overview/mdmDeviceId/$($_.id)>$($_.deviceName) ($($_.operatingSystem))" } }).name -join '<br/>'
+                    $userDevices = ($devices | Where-Object { $_.userPrincipalName -eq $user.userPrincipalName } | Select-Object @{N = 'Name'; E = { "<a target='_blank' href=https://intune.microsoft.com/$($Tenant.defaultDomainName)/#blade/Microsoft_Intune_Devices/DeviceSettingsBlade/overview/mdmDeviceId/$($_.id)>$($_.deviceName) ($($_.operatingSystem))" } }).name -join '<br/>'
 
-                    $UserDevicesDetailsRaw = $devices | Where-Object { $_.userPrincipalName -eq $user.userPrincipalName } | Select-Object @{N = 'Name'; E = { "<a target='_blank' href=https://endpoint.microsoft.com/$($Tenant.defaultDomainName)/#blade/Microsoft_Intune_Devices/DeviceSettingsBlade/overview/mdmDeviceId/$($_.id)>$($_.deviceName)</a>" } }, @{n = 'Owner'; e = { $_.managedDeviceOwnerType } }, `
+                    $UserDevicesDetailsRaw = $devices | Where-Object { $_.userPrincipalName -eq $user.userPrincipalName } | Select-Object @{N = 'Name'; E = { "<a target='_blank' href=https://intune.microsoft.com/$($Tenant.defaultDomainName)/#blade/Microsoft_Intune_Devices/DeviceSettingsBlade/overview/mdmDeviceId/$($_.id)>$($_.deviceName)</a>" } }, @{n = 'Owner'; e = { $_.managedDeviceOwnerType } }, `
                     @{n = 'Enrolled'; e = { $_.enrolledDateTime } }, `
                     @{n = 'Last Sync'; e = { $_.lastSyncDateTime } }, `
                     @{n = 'OS'; e = { $_.operatingSystem } }, `
@@ -443,7 +443,7 @@ function Invoke-HuduExtensionSync {
                     @{n = 'Model'; e = { $_.model } }, `
                     @{n = 'Manufacturer'; e = { $_.manufacturer } },
                     deviceName,
-                    @{n = 'url'; e = { "https://endpoint.microsoft.com/$($Tenant.defaultDomainName)/#blade/Microsoft_Intune_Devices/DeviceSettingsBlade/overview/mdmDeviceId/$($_.id)" } }
+                    @{n = 'url'; e = { "https://intune.microsoft.com/$($Tenant.defaultDomainName)/#blade/Microsoft_Intune_Devices/DeviceSettingsBlade/overview/mdmDeviceId/$($_.id)" } }
 
                     $aliases = (($user.proxyAddresses | Where-Object { $_ -cnotmatch 'SMTP' -and $_ -notmatch '.onmicrosoft.com' }) -replace 'SMTP:', ' ') -join ', '
 
@@ -781,7 +781,7 @@ function Invoke-HuduExtensionSync {
                 }
 
                 [System.Collections.Generic.List[PSCustomObject]]$DeviceLinksFormatted = @()
-                $DeviceLinksFormatted.add((Get-HuduLinkBlock -URL "https://endpoint.microsoft.com/$($Tenant.defaultDomainName)/#blade/Microsoft_Intune_Devices/DeviceSettingsBlade/overview/mdmDeviceId/$($Device.id)" -Icon 'fas fa-laptop' -Title 'Endpoint Manager'))
+                $DeviceLinksFormatted.add((Get-HuduLinkBlock -URL "https://intune.microsoft.com/$($Tenant.defaultDomainName)/#blade/Microsoft_Intune_Devices/DeviceSettingsBlade/overview/mdmDeviceId/$($Device.id)" -Icon 'fas fa-laptop' -Title 'Endpoint Manager'))
 
                 if ($HuduDevice) {
                     $DRMMCard = $HuduDevice.cards | Where-Object { $_.integrator_name -eq 'dattormm' }

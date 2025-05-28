@@ -47,7 +47,7 @@ function Get-GraphRequestList {
 
     #>
     [CmdletBinding()]
-    Param(
+    param(
         [string]$TenantFilter = $env:TenantID,
         [Parameter(Mandatory = $true)]
         [string]$Endpoint,
@@ -69,7 +69,7 @@ function Get-GraphRequestList {
     )
 
     $SingleTenantThreshold = 8000
-
+    Write-Information "Tenant: $TenantFilter"
     $TableName = ('cache{0}' -f ($Endpoint -replace '[^A-Za-z0-9]'))[0..62] -join ''
     Write-Information "Table: $TableName"
     $Endpoint = $Endpoint -replace '^/', ''
@@ -93,7 +93,7 @@ function Get-GraphRequestList {
         }
     }
     $GraphQuery.Query = $ParamCollection.ToString()
-    $PartitionKey = Get-StringHash -String (@($Endpoint, $ParamCollection.ToString()) -join '-')
+    $PartitionKey = Get-StringHash -String (@($Endpoint, $ParamCollection.ToString(), 'v2') -join '-')
     Write-Information "PK: $PartitionKey"
 
     # Perform $count check before caching

@@ -1,6 +1,6 @@
 using namespace System.Net
 
-Function Invoke-ExecCaCheck {
+function Invoke-ExecCaCheck {
     <#
     .FUNCTIONALITY
         Entrypoint
@@ -23,18 +23,18 @@ Function Invoke-ExecCaCheck {
     }
     $results = try {
         $CAContext = @{
-            '@odata.type'         = '#microsoft.graph.whatIfApplicationContext'
+            '@odata.type'         = '#microsoft.graph.applicationContext'
             'includeApplications' = @($IncludeApplications)
         }
         $ConditionalAccessWhatIfDefinition = @{
-            'conditionalAccessWhatIfSubject'    = @{
-                '@odata.type' = '#microsoft.graph.userSubject'
+            'signInIdentity'   = @{
+                '@odata.type' = '#microsoft.graph.userSignIn'
                 'userId'      = "$userId"
             }
-            'conditionalAccessContext'          = $CAContext
-            'conditionalAccessWhatIfConditions' = @{}
+            'signInContext'    = $CAContext
+            'signInConditions' = @{}
         }
-        $whatIfConditions = $ConditionalAccessWhatIfDefinition.conditionalAccessWhatIfConditions
+        $whatIfConditions = $ConditionalAccessWhatIfDefinition.signInConditions
         if ($Request.body.UserRiskLevel) { $whatIfConditions.userRiskLevel = $Request.body.UserRiskLevel.value }
         if ($Request.body.SignInRiskLevel) { $whatIfConditions.signInRiskLevel = $Request.body.SignInRiskLevel.value }
         if ($Request.body.ClientAppType) { $whatIfConditions.clientAppType = $Request.body.ClientAppType.value }

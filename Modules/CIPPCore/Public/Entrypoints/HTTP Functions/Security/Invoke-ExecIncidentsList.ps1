@@ -19,9 +19,10 @@ Function Invoke-ExecIncidentsList {
 
     try {
         $GraphRequest = if ($TenantFilter -ne 'AllTenants') {
-            $incidents = New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/security/incidents' -tenantid $TenantFilter -AsApp $true
+            # Single tenant functionality
+            $Incidents = New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/security/incidents' -tenantid $TenantFilter -AsApp $true
 
-            foreach ($incident in $incidents) {
+            foreach ($incident in $Incidents) {
                 [PSCustomObject]@{
                     Tenant         = $TenantFilter
                     Id             = $incident.id
@@ -40,6 +41,7 @@ Function Invoke-ExecIncidentsList {
                 }
             }
         } else {
+            # AllTenants functionality
             $Table = Get-CIPPTable -TableName cachealertsandincidents
             $PartitionKey = 'Incident'
             $Filter = "PartitionKey eq '$PartitionKey'"
@@ -50,9 +52,6 @@ Function Invoke-ExecIncidentsList {
             if ($RunningQueue) {
                 $Metadata = [PSCustomObject]@{
                     QueueMessage = 'Still loading data for all tenants. Please check back in a few more minutes'
-                }
-                [PSCustomObject]@{
-                    Waiting = $true
                 }
             } elseif (!$Rows -and !$RunningQueue) {
                 # If no rows are found and no queue is running, we will start a new one
@@ -73,13 +72,10 @@ Function Invoke-ExecIncidentsList {
                     }
                     SkipLog          = $true
                 }
-                Start-NewOrchestration -FunctionName 'CIPPOrchestrator' -InputObject ($InputObject | ConvertTo-Json -Depth 5 -Compress)
-                [PSCustomObject]@{
-                    Waiting = $true
-                }
+                Start-NewOrchestration -FunctionName 'CIPPOrchestrator' -InputObject ($InputObject | ConvertTo-Json -Depth 5 -Compress) | Out-Null
             } else {
-                $incidents = $Rows
-                foreach ($incident in $incidents) {
+                $Incidents = $Rows
+                foreach ($incident in $Incidents) {
                     $IncidentObj = $incident.Incident | ConvertFrom-Json
                     [PSCustomObject]@{
                         Tenant         = $incident.Tenant
@@ -101,19 +97,19 @@ Function Invoke-ExecIncidentsList {
             }
         }
     } catch {
+        $Body = Get-NormalizedError -Message $_.Exception.Message
         $StatusCode = [HttpStatusCode]::Forbidden
-        $body = $_.Exception.message
     }
-    if (!$body) {
+    if (!$Body) {
         $StatusCode = [HttpStatusCode]::OK
-        $body = [PSCustomObject]@{
+        $Body = [PSCustomObject]@{
             Results  = @($GraphRequest | Where-Object -Property id -NE $null | Sort-Object id -Descending)
             Metadata = $Metadata
         }
     }
     Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
             StatusCode = $StatusCode
-            Body       = $body
+            Body       = $Body
         })
 
 }

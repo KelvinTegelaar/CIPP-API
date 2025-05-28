@@ -3,7 +3,7 @@ function Write-LogMessage {
     .FUNCTIONALITY
     Internal
     #>
-    Param(
+    param(
         $message,
         $tenant = 'None',
         $API = 'None',
@@ -51,7 +51,7 @@ function Write-LogMessage {
         'Message'      = [string]$message
         'Username'     = [string]$username
         'Severity'     = [string]$sev
-        'SentAsAlert'  = $false
+        'sentAsAlert'  = $false
         'PartitionKey' = [string]$PartitionKey
         'RowKey'       = [string]([guid]::NewGuid()).ToString()
         'FunctionNode' = [string]$env:WEBSITE_SITE_NAME

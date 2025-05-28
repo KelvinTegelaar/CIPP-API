@@ -8,7 +8,7 @@ function Remove-CIPPCache {
     )
     # Remove all tenants except excluded
     $TenantsTable = Get-CippTable -tablename 'Tenants'
-    $Filter = "PartitionKey eq 'Tenants' and Excluded eq false"
+    $Filter = "PartitionKey eq 'Tenants' and Excluded eq false and delegatedPrivilegeStatus eq 'granularDelegatedAdminPrivileges'"
     $ClearIncludedTenants = Get-CIPPAzDataTableEntity @TenantsTable -Filter $Filter -Property PartitionKey, RowKey
     if ($ClearIncludedTenants) {
         Remove-AzDataTableEntity -Force @TenantsTable -Entity $ClearIncludedTenants

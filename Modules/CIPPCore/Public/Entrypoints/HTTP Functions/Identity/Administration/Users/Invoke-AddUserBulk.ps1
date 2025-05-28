@@ -67,20 +67,8 @@ function Invoke-AddUserBulk {
                 if ($UsageLocation) {
                     $UserBody.usageLocation = $UsageLocation.value ?? $UsageLocation
                     Write-Information "- Usage location set to $($UsageLocation.label ?? $UsageLocation)"
-                    if ($AssignedLicenses) {
-                        $GuidPattern = '([a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12})'
-                        $LicenseSkus = $AssignedLicenses.value ?? $AssignedLicenses | Where-Object { $_ -match $GuidPattern }
-                        if (($LicenseSkus | Measure-Object).Count -gt 0) {
-                            Write-Information "- Assigned licenses set to $(($AssignedLicenses.label ?? $AssignedLicenses) -join ', ')"
-                            $Licenses = foreach ($Sku in $LicenseSkus) {
-                                [PSCustomObject]@{
-                                    skuId = $Sku
-                                }
-                            }
-                            $UserBody.assignedLicenses = @($Licenses)
-                        }
-                    }
                 }
+
 
                 # Convert businessPhones to array if not null or empty
                 if (![string]::IsNullOrEmpty($User.businessPhones)) {
@@ -137,6 +125,11 @@ function Invoke-AddUserBulk {
                         })
                 } else {
                     $Message = $Messages.Where({ $_.id -eq $BulkResult.id })
+                    if ($AssignedLicenses) {
+                        $GuidPattern = '([a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12})'
+                        $LicenseSkus = $AssignedLicenses.value ?? $AssignedLicenses | Where-Object { $_ -match $GuidPattern }
+                        Set-CIPPUserLicense -User $BulkResult.id -AddLicenses $LicenseSkus -TenantFilter $TenantFilter
+                    }
                     $Results.Add(@{
                             resultText = $Message.resultText
                             state      = 'success'

@@ -5,13 +5,13 @@ function New-TeamsAPIGetRequest($Uri, $tenantID, $Method = 'GET', $Resource = '4
     #>
 
     if ((Get-AuthorisedRequest -Uri $uri -TenantID $tenantid)) {
-        $token = Get-ClassicAPIToken -Tenant $tenantid -Resource $Resource
+        $token = Get-GraphToken -TenantID $tenantID -Scope "$Resource/.default"
 
         $NextURL = $Uri
         $ReturnedData = do {
             try {
                 $Data = Invoke-RestMethod -ContentType "$ContentType;charset=UTF-8" -Uri $NextURL -Method $Method -Headers @{
-                    Authorization            = "Bearer $($token.access_token)"
+                    Authorization            = $token.Authorization
                     'x-ms-client-request-id' = [guid]::NewGuid().ToString()
                     'x-ms-client-session-id' = [guid]::NewGuid().ToString()
                     'x-ms-correlation-id'    = [guid]::NewGuid()

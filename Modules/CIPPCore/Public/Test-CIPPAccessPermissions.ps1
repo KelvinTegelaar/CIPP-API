@@ -133,7 +133,7 @@ function Test-CIPPAccessPermissions {
         $ApplicationToken = Get-GraphToken -returnRefresh $true -SkipCache $true -AsApp $true
         $ApplicationTokenDetails = Read-JwtAccessDetails -Token $ApplicationToken.access_token -erroraction SilentlyContinue | Select-Object
 
-        $LastUpdate = [DateTime]::SpecifyKind($GraphPermissions.Timestamp.DateTime, [DateTimeKind]::Utc)
+        $LastUpdate = [DateTime]::SpecifyKind($GraphPermissions.Timestamp.ToString('yyyy-MM-ddTHH:mm:ssZ'), [DateTimeKind]::Utc)
         $CpvTable = Get-CippTable -tablename 'cpvtenants'
         $CpvRefresh = Get-CippAzDataTableEntity @CpvTable -Filter "PartitionKey eq 'Tenant'"
         $TenantList = Get-Tenants -IncludeErrors | Where-Object { $_.customerId -ne $env:TenantID -and $_.Excluded -eq $false }
