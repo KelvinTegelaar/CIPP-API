@@ -69,26 +69,26 @@ function Invoke-CIPPStandardDeployMailContact {
     if ($Settings.remediate -eq $true) {
         if ($ExistingContact) {
             Write-LogMessage -API 'Standards' -tenant $Tenant -message "Mail contact with email $($Settings.ExternalEmailAddress) already exists" -sev Info
-            return
         }
+        else {
+            try {
+                $NewContactParams = @{
+                    ExternalEmailAddress = $Settings.ExternalEmailAddress
+                    DisplayName          = $Settings.DisplayName
+                    Name                 = $Settings.DisplayName
+                }
 
-        try {
-            $NewContactParams = @{
-                ExternalEmailAddress = $Settings.ExternalEmailAddress
-                DisplayName          = $Settings.DisplayName
-                Name                 = $Settings.DisplayName
+                # Add optional parameters if provided
+                if ($Settings.FirstName) { $NewContactParams.FirstName = $Settings.FirstName }
+                if ($Settings.LastName) { $NewContactParams.LastName = $Settings.LastName }
+
+                $null = New-ExoRequest -tenantid $Tenant -cmdlet 'New-MailContact' -cmdParams $NewContactParams
+                Write-LogMessage -API 'Standards' -tenant $Tenant -message "Successfully created mail contact $($Settings.DisplayName) with email $($Settings.ExternalEmailAddress)" -sev Info
             }
-
-            # Add optional parameters if provided
-            if ($Settings.FirstName) { $NewContactParams.FirstName = $Settings.FirstName }
-            if ($Settings.LastName) { $NewContactParams.LastName = $Settings.LastName }
-
-            $null = New-ExoRequest -tenantid $Tenant -cmdlet 'New-MailContact' -cmdParams $NewContactParams
-            Write-LogMessage -API 'Standards' -tenant $Tenant -message "Successfully created mail contact $($Settings.DisplayName) with email $($Settings.ExternalEmailAddress)" -sev Info
-        }
-        catch {
-            $ErrorMessage = Get-CippException -Exception $_
-            Write-LogMessage -API 'Standards' -tenant $Tenant -message "Could not create mail contact. $($ErrorMessage.NormalizedError)" -sev Error -LogData $ErrorMessage
+            catch {
+                $ErrorMessage = Get-CippException -Exception $_
+                Write-LogMessage -API 'Standards' -tenant $Tenant -message "Could not create mail contact. $($ErrorMessage.NormalizedError)" -sev Error -LogData $ErrorMessage
+            }
         }
     }
 
