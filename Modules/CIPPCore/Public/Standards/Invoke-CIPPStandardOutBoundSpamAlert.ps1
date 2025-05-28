@@ -32,7 +32,7 @@ function Invoke-CIPPStandardOutBoundSpamAlert {
 
     param($Tenant, $Settings)
 
-    $CurrentInfo = New-ExoRequest -tenantid $Tenant -cmdlet 'Get-HostedOutboundSpamFilterPolicy' -useSystemMailbox $true
+    $CurrentInfo = New-ExoRequest -tenantid $Tenant -cmdlet 'Get-HostedOutboundSpamFilterPolicy' -cmdParams @{ Identity = 'Default' } -useSystemMailbox $true
 
     if ($Settings.remediate -eq $true) {
 

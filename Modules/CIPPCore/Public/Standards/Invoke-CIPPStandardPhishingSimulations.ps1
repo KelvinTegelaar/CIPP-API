@@ -45,10 +45,18 @@ function Invoke-CIPPStandardPhishingSimulations {
     Select-Object -Property Identity,Name,SenderIpRanges,Domains,SenderDomainIs
 
     [String[]]$AddSenderIpRanges = $Settings.SenderIpRanges.value | Where-Object { $_ -notin $RuleState.SenderIpRanges }
-    [String[]]$RemoveSenderIpRanges = $RuleState.SenderIpRanges | Where-Object { $_ -notin $Settings.SenderIpRanges.value }
+    if ($Settings.RemoveExtraUrls -eq $true) {
+        [String[]]$RemoveSenderIpRanges = $RuleState.SenderIpRanges | Where-Object { $_ -notin $Settings.SenderIpRanges.value }
+    } else {
+        $RemoveSenderIpRanges = @()
+    }
 
     [String[]]$AddDomains = $Settings.Domains.value | Where-Object { $_ -notin $RuleState.Domains }
-    [String[]]$RemoveDomains = $RuleState.Domains | Where-Object { $_ -notin $Settings.Domains.value }
+    if ($Settings.RemoveExtraUrls -eq $true) {
+        [String[]]$RemoveDomains = $RuleState.Domains | Where-Object { $_ -notin $Settings.Domains.value }
+    } else {
+        $RemoveDomains = @()
+    }
 
     $RuleIsCorrect = ($RuleState.Name -like "*PhishSimOverr*") -and
     ($AddSenderIpRanges.Count -eq 0 -and $RemoveSenderIpRanges.Count -eq 0) -and
@@ -59,7 +67,11 @@ function Invoke-CIPPStandardPhishingSimulations {
     Select-Object -Property Value
 
     [String[]]$AddEntries = $Settings.PhishingSimUrls.value | Where-Object { $_ -notin $SimUrlState.value }
-    [String[]]$RemoveEntries = $SimUrlState.value | Where-Object { $_ -notin $Settings.PhishingSimUrls.value }
+    if ($Settings.RemoveExtraUrls -eq $true) {
+        [String[]]$RemoveEntries = $SimUrlState.value | Where-Object { $_ -notin $Settings.PhishingSimUrls.value }
+    } else {
+        $RemoveEntries = @()
+    }
 
     $PhishingSimUrlsIsCorrect = ($AddEntries.Count -eq 0 -and $RemoveEntries.Count -eq 0)
 
@@ -133,14 +145,16 @@ function Invoke-CIPPStandardPhishingSimulations {
                     ListType = 'Url'
                     ListSubType = 'AdvancedDelivery'
                 }
-                # Remove entries that are not in the settings
-                If ($RemoveEntries.Count -gt 0) {
-                    $cmdParams.Entries = $RemoveEntries
-                    Try {
-                        $null = New-ExoRequest -TenantId $Tenant -cmdlet 'Remove-TenantAllowBlockListItems' -cmdParams $cmdParams
-                        Write-LogMessage -API 'Standards' -Tenant $Tenant -message "Removed Phishing Simulation URLs from Allowlist." -sev Info
-                    } Catch {
-                        Write-LogMessage -API 'Standards' -Tenant $Tenant -message "Failed to remove Phishing Simulation URLs from Allowlist." -sev Error -LogData $_
+                if ($Settings.RemoveExtraUrls -eq $true) {
+                    # Remove entries that are not in the settings
+                    If ($RemoveEntries.Count -gt 0) {
+                        $cmdParams.Entries = $RemoveEntries
+                        Try {
+                            $null = New-ExoRequest -TenantId $Tenant -cmdlet 'Remove-TenantAllowBlockListItems' -cmdParams $cmdParams
+                            Write-LogMessage -API 'Standards' -Tenant $Tenant -message "Removed Phishing Simulation URLs from Allowlist." -sev Info
+                        } Catch {
+                            Write-LogMessage -API 'Standards' -Tenant $Tenant -message "Failed to remove Phishing Simulation URLs from Allowlist." -sev Error -LogData $_
+                        }
                     }
                 }
                 # Add entries that are in the settings

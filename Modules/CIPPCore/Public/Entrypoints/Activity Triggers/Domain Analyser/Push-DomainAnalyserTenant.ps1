@@ -20,7 +20,7 @@ function Push-DomainAnalyserTenant {
         return
     } else {
         try {
-            # Remove domains that are not wanted, and used for cloud signature services
+            # Remove domains that are not wanted, and used for cloud signature services. Same exclusions also found in Invoke-CIPPStandardAddDKIM
             $ExclusionDomains = @(
                 '*.microsoftonline.com'
                 '*.exclaimer.cloud'
