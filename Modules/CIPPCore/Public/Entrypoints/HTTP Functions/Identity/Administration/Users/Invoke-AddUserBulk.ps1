@@ -128,7 +128,7 @@ function Invoke-AddUserBulk {
                     if ($AssignedLicenses) {
                         $GuidPattern = '([a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12})'
                         $LicenseSkus = $AssignedLicenses.value ?? $AssignedLicenses | Where-Object { $_ -match $GuidPattern }
-                        Set-CIPPUserLicense -User $BulkResult.id -AddLicenses $LicenseSkus
+                        Set-CIPPUserLicense -User $BulkResult.id -AddLicenses $LicenseSkus -TenantFilter $TenantFilter
                     }
                     $Results.Add(@{
                             resultText = $Message.resultText
