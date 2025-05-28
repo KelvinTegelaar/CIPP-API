@@ -14,6 +14,7 @@ function Invoke-CIPPStandardPhishSimSpoofIntelligence {
             Defender Standards
         TAG
         ADDEDCOMPONENT
+            {"type":"switch","label":"Remove extra domains from the allow list","name":"standards.PhishSimSpoofIntelligence.RemoveExtraDomains","defaultValue":false,"required":false}
             {"type":"autoComplete","multiple":true,"creatable":true,"required":false,"label":"Allowed Domains","name":"standards.PhishSimSpoofIntelligence.AllowedDomains"}
         IMPACT
             Medium Impact

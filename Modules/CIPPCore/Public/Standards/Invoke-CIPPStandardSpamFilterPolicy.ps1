@@ -33,9 +33,9 @@ function Invoke-CIPPStandardSpamFilterPolicy {
             {"type":"switch","name":"standards.SpamFilterPolicy.MarkAsSpamWebBugsInHtml","label":"Mark as spam if message contains web bugs (also known as web beacons)","defaultValue":false}
             {"type":"switch","name":"standards.SpamFilterPolicy.MarkAsSpamSensitiveWordList","label":"Mark as spam if message contains words from the sensitive words list","defaultValue":false}
             {"type":"switch","name":"standards.SpamFilterPolicy.EnableLanguageBlockList","label":"Enable language block list","defaultValue":false}
-            {"type":"autoComplete","multiple":true,"creatable":true,"required":false,"name":"standards.SpamFilterPolicy.LanguageBlockList","label":"Languages to block (uppercase ISO 639-1 two-letter)"}
+            {"type":"autoComplete","multiple":true,"creatable":true,"required":false,"name":"standards.SpamFilterPolicy.LanguageBlockList","label":"Languages to block (uppercase ISO 639-1 two-letter)","condition":{"field":"standards.SpamFilterPolicy.EnableLanguageBlockList","compareType":"is","compareValue":true}}
             {"type":"switch","name":"standards.SpamFilterPolicy.EnableRegionBlockList","label":"Enable region block list","defaultValue":false}
-            {"type":"autoComplete","multiple":true,"creatable":true,"required":false,"name":"standards.SpamFilterPolicy.RegionBlockList","label":"Regions to block (uppercase ISO 3166-1 two-letter)"}
+            {"type":"autoComplete","multiple":true,"creatable":true,"required":false,"name":"standards.SpamFilterPolicy.RegionBlockList","label":"Regions to block (uppercase ISO 3166-1 two-letter)","condition":{"field":"standards.SpamFilterPolicy.EnableRegionBlockList","compareType":"is","compareValue":true}}
             {"type":"autoComplete","multiple":true,"creatable":true,"required":false,"name":"standards.SpamFilterPolicy.AllowedSenderDomains","label":"Allowed sender domains"}
         IMPACT
             Medium Impact
