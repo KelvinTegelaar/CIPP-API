@@ -33,22 +33,100 @@ function Invoke-CIPPStandardMailboxRecipientLimits {
         return
     }
 
-    # Get all mailboxes in the tenant
-    $Mailboxes = New-ExoRequest -tenantid $Tenant -cmdlet 'Get-Mailbox' -cmdParams @{ResultSize = 'Unlimited' }
+    # Get all mailboxes and their associated mailbox plans in a single batch
+    $Requests = @(
+        @{
+            CmdletInput = @{
+                CmdletName = 'Get-Mailbox'
+                Parameters = @{ ResultSize = 'Unlimited' }
+            }
+        },
+        @{
+            CmdletInput = @{
+                CmdletName = 'Get-MailboxPlan'
+                Parameters = @{ ResultSize = 'Unlimited' }
+            }
+        }
+    )
 
-    # Check which mailboxes need to be updated
-    $MailboxesToUpdate = $Mailboxes | Where-Object { $_.RecipientLimits -ne $Settings.RecipientLimit }
+    $Results = New-ExoBulkRequest -tenantid $Tenant -cmdletArray $Requests
+    $Mailboxes = $Results.GetMailbox
+    $MailboxPlans = $Results.GetMailboxPlan
+
+    # Create a hashtable of mailbox plans for quick lookup
+    $MailboxPlanLookup = @{}
+    foreach ($Plan in $MailboxPlans) {
+        $MailboxPlanLookup[$Plan.Guid] = $Plan
+    }
+
+    # Process mailboxes and categorize them based on their plan limits
+    $MailboxResults = $Mailboxes | ForEach-Object {
+        $Mailbox = $_
+        $Plan = $MailboxPlanLookup[$Mailbox.MailboxPlanId]
+        
+        if ($Plan) {
+            $PlanMaxRecipients = $Plan.MaxRecipientsPerMessage
+            
+            if ($Settings.RecipientLimit -gt $PlanMaxRecipients) {
+                [PSCustomObject]@{
+                    Type      = 'PlanIssue'
+                    Mailbox   = $Mailbox
+                    PlanLimit = $PlanMaxRecipients
+                    PlanName  = $Plan.DisplayName
+                }
+            }
+            elseif ($Mailbox.RecipientLimits -ne $Settings.RecipientLimit) {
+                [PSCustomObject]@{
+                    Type    = 'ToUpdate'
+                    Mailbox = $Mailbox
+                }
+            }
+        }
+        elseif ($Mailbox.RecipientLimits -ne $Settings.RecipientLimit) {
+            [PSCustomObject]@{
+                Type    = 'ToUpdate'
+                Mailbox = $Mailbox
+            }
+        }
+    }
+
+    # Separate mailboxes into their respective categories
+    $MailboxesToUpdate = $MailboxResults | Where-Object { $_.Type -eq 'ToUpdate' } | Select-Object -ExpandProperty Mailbox
+    $MailboxesWithPlanIssues = $MailboxResults | Where-Object { $_.Type -eq 'PlanIssue' } | ForEach-Object {
+        [PSCustomObject]@{
+            Identity     = $_.Mailbox.Identity
+            CurrentLimit = $_.Mailbox.RecipientLimits
+            PlanLimit    = $_.PlanLimit
+            PlanName     = $_.PlanName
+        }
+    }
 
     # Remediation
     if ($Settings.remediate -eq $true) {
+        if ($MailboxesWithPlanIssues.Count -gt 0) {
+            Write-LogMessage -API 'Standards' -tenant $Tenant -message "Found $($MailboxesWithPlanIssues.Count) mailboxes where the requested recipient limit ($($Settings.RecipientLimit)) exceeds their mailbox plan limit. These mailboxes will not be updated." -sev Info
+            foreach ($Mailbox in $MailboxesWithPlanIssues) {
+                Write-LogMessage -API 'Standards' -tenant $Tenant -message "Mailbox $($Mailbox.Identity) has plan $($Mailbox.PlanName) with maximum limit of $($Mailbox.PlanLimit)" -sev Info
+            }
+        }
+
         if ($MailboxesToUpdate.Count -gt 0) {
             try {
-                foreach ($Mailbox in $MailboxesToUpdate) {
-                    $null = New-ExoRequest -tenantid $Tenant -cmdlet 'Set-Mailbox' -cmdParams @{
-                        Identity        = $Mailbox.Identity
-                        RecipientLimits = $Settings.RecipientLimit
+                # Create batch requests for mailbox updates
+                $UpdateRequests = $MailboxesToUpdate | ForEach-Object {
+                    @{
+                        CmdletInput = @{
+                            CmdletName = 'Set-Mailbox'
+                            Parameters = @{
+                                Identity        = $_.Identity
+                                RecipientLimits = $Settings.RecipientLimit
+                            }
+                        }
                     }
                 }
+
+                # Execute batch update
+                $null = New-ExoBulkRequest -tenantid $Tenant -cmdletArray $UpdateRequests
                 Write-LogMessage -API 'Standards' -tenant $Tenant -message "Successfully set recipient limits to $($Settings.RecipientLimit) for $($MailboxesToUpdate.Count) mailboxes" -sev Info
             }
             catch {
@@ -63,24 +141,32 @@ function Invoke-CIPPStandardMailboxRecipientLimits {
 
     # Alert
     if ($Settings.alert -eq $true) {
-        if ($MailboxesToUpdate.Count -eq 0) {
+        if ($MailboxesToUpdate.Count -eq 0 -and $MailboxesWithPlanIssues.Count -eq 0) {
             Write-LogMessage -API 'Standards' -tenant $Tenant -message "All mailboxes have the correct recipient limit of $($Settings.RecipientLimit)" -sev Info
         }
         else {
-            Write-StandardsAlert -message "Found $($MailboxesToUpdate.Count) mailboxes with incorrect recipient limits" -object $MailboxesToUpdate -tenant $Tenant -standardName 'MailboxRecipientLimits' -standardId $Settings.standardId
-            Write-LogMessage -API 'Standards' -tenant $Tenant -message "Found $($MailboxesToUpdate.Count) mailboxes with incorrect recipient limits" -sev Info
+            $AlertMessage = "Found $($MailboxesToUpdate.Count) mailboxes with incorrect recipient limits"
+            if ($MailboxesWithPlanIssues.Count -gt 0) {
+                $AlertMessage += " and $($MailboxesWithPlanIssues.Count) mailboxes where the requested limit exceeds their mailbox plan limit"
+            }
+            Write-StandardsAlert -message $AlertMessage -object ($MailboxesToUpdate + $MailboxesWithPlanIssues) -tenant $Tenant -standardName 'MailboxRecipientLimits' -standardId $Settings.standardId
+            Write-LogMessage -API 'Standards' -tenant $Tenant -message $AlertMessage -sev Info
         }
     }
 
     # Report
     if ($Settings.report -eq $true) {
-        Add-CIPPBPAField -FieldName 'MailboxRecipientLimits' -FieldValue $MailboxesToUpdate -StoreAs json -Tenant $Tenant
+        $ReportData = @{
+            MailboxesToUpdate       = $MailboxesToUpdate
+            MailboxesWithPlanIssues = $MailboxesWithPlanIssues
+        }
+        Add-CIPPBPAField -FieldName 'MailboxRecipientLimits' -FieldValue $ReportData -StoreAs json -Tenant $Tenant
 
-        if ($MailboxesToUpdate.Count -eq 0) {
+        if ($MailboxesToUpdate.Count -eq 0 -and $MailboxesWithPlanIssues.Count -eq 0) {
             $FieldValue = $true
         }
         else {
-            $FieldValue = $MailboxesToUpdate
+            $FieldValue = $ReportData
         }
         Set-CIPPStandardsCompareField -FieldName 'standards.MailboxRecipientLimits' -FieldValue $FieldValue -Tenant $Tenant
     }
