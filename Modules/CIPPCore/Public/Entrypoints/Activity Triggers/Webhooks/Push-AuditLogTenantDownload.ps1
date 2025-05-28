@@ -51,7 +51,7 @@ function Push-AuditLogTenantDownload {
                     $SearchEntity.CippStatus = 'Processing'
                     Add-CIPPAzDataTableEntity @LogSearchesTable -Entity $SearchEntity -Force
                     try {
-                        Write-Information "Audit Log search: Processing search ID: $($Search.id) for tenant: $TenantFilter" 
+                        Write-Information "Audit Log search: Processing search ID: $($Search.id) for tenant: $TenantFilter"
                         $Downloads = New-CIPPAuditLogSearchResultsCache -TenantFilter $TenantFilter -searchId $Search.id
                         $SearchEntity.CippStatus = 'Downloaded'
                     } catch {

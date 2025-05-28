@@ -53,13 +53,54 @@ Function Invoke-EditRoomMailbox {
         }
     }
 
+
+    # Then update the calendar properties
+    $UpdateCalendarParams = @{
+        Identity = $MailboxObject.roomId
+    }
+
+    $CalendarProperties = @(
+        'AllowConflicts', 'AllowRecurringMeetings', 'BookingWindowInDays',
+        'MaximumDurationInMinutes', 'ProcessExternalMeetingMessages', 'EnforceCapacity',
+        'ForwardRequestsToDelegates', 'ScheduleOnlyDuringWorkHours ', 'AutomateProcessing'
+    )
+
+    foreach ($prop in $CalendarProperties) {
+        if (![string]::IsNullOrWhiteSpace($MailboxObject.$prop)) {
+            $UpdateCalendarParams[$prop] = $MailboxObject.$prop
+        }
+    }
+
+    # Then update the calendar configuration
+    $UpdateCalendarConfigParams = @{
+        Identity = $MailboxObject.roomId
+    }
+
+    $CalendarConfiguration = @(
+        'WorkDays', 'WorkHoursStartTime', 'WorkHoursEndTime', 'WorkingHoursTimeZone'
+    )
+
+    foreach ($prop in $CalendarConfiguration) {
+        if (![string]::IsNullOrWhiteSpace($MailboxObject.$prop)) {
+            $UpdateCalendarConfigParams[$prop] = $MailboxObject.$prop
+        }
+    }
+
     try {
         # Update mailbox properties
         $null = New-ExoRequest -tenantid $Tenant -cmdlet 'Set-Mailbox' -cmdParams $UpdateMailboxParams
 
         # Update place properties
         $null = New-ExoRequest -tenantid $Tenant -cmdlet 'Set-Place' -cmdParams $UpdatePlaceParams
-        $Results.Add("Successfully updated room: $($MailboxObject.DisplayName)")
+        $Results.Add("Successfully updated room: $($MailboxObject.DisplayName) (Place Properties)")
+
+        # Update calendar properties
+        $null = New-ExoRequest -tenantid $Tenant -cmdlet 'Set-CalendarProcessing' -cmdParams $UpdateCalendarParams
+        $Results.Add("Successfully updated room: $($MailboxObject.DisplayName) (Calendar Properties)")
+
+        # Update calendar configuration properties
+        $null = New-ExoRequest -tenantid $Tenant -cmdlet 'Set-MailboxCalendarConfiguration' -cmdParams $UpdateCalendarConfigParams
+        $Results.Add("Successfully updated room: $($MailboxObject.DisplayName) (Calendar Configuration)")
 
         Write-LogMessage -headers $Request.Headers -API $APIName -tenant $Tenant -message "Updated room $($MailboxObject.DisplayName)" -Sev 'Info'
         $StatusCode = [HttpStatusCode]::OK

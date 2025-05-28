@@ -1,6 +1,6 @@
 using namespace System.Net
 
-Function Invoke-AddGroup {
+function Invoke-AddGroup {
     <#
     .FUNCTIONALITY
         Entrypoint
@@ -38,11 +38,11 @@ Function Invoke-AddGroup {
                 if ($GroupObject.groupType -eq 'm365') {
                     $BodyParams | Add-Member -NotePropertyName 'groupTypes' -NotePropertyValue @('Unified')
                 }
-                if ($GroupObject.owners -AND $GroupObject.groupType -in 'generic', 'azurerole', 'security') {
+                if ($GroupObject.owners) {
                     $BodyParams | Add-Member -NotePropertyName 'owners@odata.bind' -NotePropertyValue (($GroupObject.owners) | ForEach-Object { "https://graph.microsoft.com/v1.0/users/$($_.value)" })
                     $BodyParams.'owners@odata.bind' = @($BodyParams.'owners@odata.bind')
                 }
-                if ($GroupObject.members -AND $GroupObject.groupType -in 'generic', 'azurerole', 'security') {
+                if ($GroupObject.members) {
                     $BodyParams | Add-Member -NotePropertyName 'members@odata.bind' -NotePropertyValue (($GroupObject.members) | ForEach-Object { "https://graph.microsoft.com/v1.0/users/$($_.value)" })
                     $BodyParams.'members@odata.bind' = @($BodyParams.'members@odata.bind')
                 }

@@ -2,6 +2,7 @@ function Add-CIPPDelegatedPermission {
     [CmdletBinding()]
     param(
         $RequiredResourceAccess,
+        $TemplateId,
         $ApplicationId,
         $NoTranslateRequired,
         $Tenantfilter
@@ -40,7 +41,34 @@ function Add-CIPPDelegatedPermission {
             # remove the partner center permission if not pushing to partner tenant
             $RequiredResourceAccess = $RequiredResourceAccess | Where-Object { $_.resourceAppId -ne 'fa3d9a0c-3fb0-42cc-9193-47c7ecd2edbd' }
         }
+    } else {
+        if (!$RequiredResourceAccess -and $TemplateId) {
+            Write-Information "Adding delegated permissions for template $TemplateId"
+            $TemplateTable = Get-CIPPTable -TableName 'templates'
+            $Filter = "RowKey eq '$TemplateId' and PartitionKey eq 'AppApprovalTemplate'"
+            $Template = (Get-CIPPAzDataTableEntity @TemplateTable -Filter $Filter).JSON | ConvertFrom-Json -ErrorAction SilentlyContinue
+            $ApplicationId = $Template.AppId
+            $Permissions = $Template.Permissions
+            $NoTranslateRequired = $true
+            $RequiredResourceAccess = [System.Collections.Generic.List[object]]::new()
+            foreach ($AppId in $Permissions.PSObject.Properties.Name) {
+                $DelegatedPermissions = @($Permissions.$AppId.delegatedPermissions)
+                $ResourceAccess = [System.Collections.Generic.List[object]]::new()
+                foreach ($Permission in $DelegatedPermissions) {
+                    $ResourceAccess.Add(@{
+                            id   = $Permission.value
+                            type = 'Scope'
+                        })
+                }
+                $Resource = @{
+                    resourceAppId  = $AppId
+                    resourceAccess = @($ResourceAccess)
+                }
+                $RequiredResourceAccess.Add($Resource)
+            }
+        }
     }
+
     $Translator = Get-Content '.\PermissionsTranslator.json' | ConvertFrom-Json
     $ServicePrincipalList = New-GraphGETRequest -uri "https://graph.microsoft.com/beta/servicePrincipals?`$select=appId,id,displayName&`$top=999" -tenantid $Tenantfilter -skipTokenCache $true -NoAuthCheck $true
     $ourSVCPrincipal = $ServicePrincipalList | Where-Object -Property appId -EQ $ApplicationId
@@ -66,6 +94,7 @@ function Add-CIPPDelegatedPermission {
         }
 
         $DelegatedScopes = $App.resourceAccess | Where-Object -Property type -EQ 'Scope'
+
         if ($NoTranslateRequired) {
             $NewScope = @($DelegatedScopes | ForEach-Object { $_.id } | Sort-Object -Unique) -join ' '
         } else {
