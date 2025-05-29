@@ -25,8 +25,8 @@ Function Invoke-SetUserAliases {
     }
 
     $Results = [System.Collections.Generic.List[object]]::new()
-    $Aliases = if ($UserObj.AddedAliases) { ($UserObj.AddedAliases) -split '\s' }
-    $RemoveAliases = if ($UserObj.RemovedAliases) { ($UserObj.RemovedAliases) -split '\s' }
+    $Aliases = if ($UserObj.AddedAliases) { ($UserObj.AddedAliases -split ',').ForEach({ $_.Trim() }) }
+    $RemoveAliases = if ($UserObj.RemovedAliases) { ($UserObj.RemovedAliases -split ',').ForEach({ $_.Trim() }) }
 
     try {
         if ($Aliases -or $RemoveAliases -or $UserObj.MakePrimary) {
