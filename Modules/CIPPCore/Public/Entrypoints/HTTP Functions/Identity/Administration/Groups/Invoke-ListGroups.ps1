@@ -1,6 +1,6 @@
 using namespace System.Net
 
-Function Invoke-ListGroups {
+function Invoke-ListGroups {
     <#
     .FUNCTIONALITY
         Entrypoint
@@ -15,34 +15,34 @@ Function Invoke-ListGroups {
     Write-LogMessage -headers $Headers -API $APIName -message 'Accessed this API' -Sev 'Debug'
 
     $TenantFilter = $Request.Query.TenantFilter
-    $selectstring = "id,createdDateTime,displayName,description,mail,mailEnabled,mailNickname,resourceProvisioningOptions,securityEnabled,visibility,organizationId,onPremisesSamAccountName,membershipRule,grouptypes,onPremisesSyncEnabled,resourceProvisioningOptions,userPrincipalName&`$expand=members(`$select=userPrincipalName)"
+    $SelectString = 'id,createdDateTime,displayName,description,mail,mailEnabled,mailNickname,resourceProvisioningOptions,securityEnabled,visibility,organizationId,onPremisesSamAccountName,membershipRule,groupTypes,onPremisesSyncEnabled,resourceProvisioningOptions,userPrincipalName&$expand=members($select=userPrincipalName)'
 
     $BulkRequestArrayList = [System.Collections.Generic.List[object]]::new()
 
     if ($Request.Query.GroupID) {
-        $selectstring = 'id,createdDateTime,displayName,description,mail,mailEnabled,mailNickname,resourceProvisioningOptions,securityEnabled,visibility,organizationId,onPremisesSamAccountName,membershipRule,groupTypes,userPrincipalName'
+        $SelectString = 'id,createdDateTime,displayName,description,mail,mailEnabled,mailNickname,resourceProvisioningOptions,securityEnabled,visibility,organizationId,onPremisesSamAccountName,membershipRule,groupTypes,userPrincipalName'
         $BulkRequestArrayList.add(@{
                 id     = 1
                 method = 'GET'
-                url    = "groups/$($Request.Query.GroupID)?`$select=$selectstring"
+                url    = "groups/$($Request.Query.GroupID)?`$select=$SelectString"
             })
     }
     if ($Request.Query.members) {
-        $selectstring = 'id,userPrincipalName,displayName,hideFromOutlookClients,hideFromAddressLists,mail,mailEnabled,mailNickname,resourceProvisioningOptions,securityEnabled,visibility,organizationId,onPremisesSamAccountName,membershipRule'
+        $SelectString = 'id,userPrincipalName,displayName,hideFromOutlookClients,hideFromAddressLists,mail,mailEnabled,mailNickname,resourceProvisioningOptions,securityEnabled,visibility,organizationId,onPremisesSamAccountName,membershipRule'
         $BulkRequestArrayList.add(@{
                 id     = 2
                 method = 'GET'
-                url    = "groups/$($Request.Query.GroupID)/members?`$top=999&select=$selectstring"
+                url    = "groups/$($Request.Query.GroupID)/members?`$top=999&select=$SelectString"
             })
     }
 
     if ($Request.Query.owners) {
         if ($Request.Query.groupType -ne 'Distribution List' -and $Request.Query.groupType -ne 'Mail-Enabled Security') {
-            $selectstring = 'id,userPrincipalName,displayName,hideFromOutlookClients,hideFromAddressLists,mail,mailEnabled,mailNickname,resourceProvisioningOptions,securityEnabled,visibility,organizationId,onPremisesSamAccountName,membershipRule'
+            $SelectString = 'id,userPrincipalName,displayName,hideFromOutlookClients,hideFromAddressLists,mail,mailEnabled,mailNickname,resourceProvisioningOptions,securityEnabled,visibility,organizationId,onPremisesSamAccountName,membershipRule'
             $BulkRequestArrayList.add(@{
                     id     = 3
                     method = 'GET'
-                    url    = "groups/$($Request.Query.GroupID)/owners?`$top=999&select=$selectstring"
+                    url    = "groups/$($Request.Query.GroupID)/owners?`$top=999&select=$SelectString"
                 })
         } else {
             $OwnerIds = New-ExoRequest -cmdlet 'Get-DistributionGroup' -tenantid $TenantFilter -cmdParams @{Identity = $Request.Query.GroupID } -useSystemMailbox $true | Select-Object -ExpandProperty ManagedBy
@@ -86,40 +86,33 @@ Function Invoke-ListGroups {
         if ($BulkRequestArrayList.Count -gt 0) {
             $RawGraphRequest = New-GraphBulkRequest -tenantid $TenantFilter -scope 'https://graph.microsoft.com/.default' -Requests @($BulkRequestArrayList) -asapp $true
             $GraphRequest = [PSCustomObject]@{
-                groupInfo     = ($RawGraphRequest | Where-Object { $_.id -eq 1 }).body
+                groupInfo     = ($RawGraphRequest | Where-Object { $_.id -eq 1 }).body | Select-Object *, @{ Name = 'primDomain'; Expression = { $_.mail -split '@' | Select-Object -Last 1 } },
+                @{Name = 'teamsEnabled'; Expression = { if ($_.resourceProvisioningOptions -Like '*Team*') { $true } else { $false } } },
+                @{Name = 'calculatedGroupType'; Expression = {
+                        if ($_.mailEnabled -and $_.securityEnabled) { 'Mail-Enabled Security' }
+                        if (!$_.mailEnabled -and $_.securityEnabled) { 'Security' }
+                        if ($_.groupTypes -contains 'Unified') { 'Microsoft 365' }
+                        if (([string]::isNullOrEmpty($_.groupTypes)) -and ($_.mailEnabled) -and (!$_.securityEnabled)) { 'Distribution List' }
+                    }
+                }, @{Name = 'dynamicGroupBool'; Expression = { if ($_.groupTypes -contains 'DynamicMembership') { $true } else { $false } } }
                 members       = ($RawGraphRequest | Where-Object { $_.id -eq 2 }).body.value
                 owners        = ($RawGraphRequest | Where-Object { $_.id -eq 3 }).body.value
                 allowExternal = (!$OnlyAllowInternal)
                 sendCopies    = $SendCopies
             }
         } else {
-            $GraphRequest = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/groups/$($GroupID)/$($members)?`$top=999&select=$selectstring" -tenantid $TenantFilter | Select-Object *, @{ Name = 'primDomain'; Expression = { $_.mail -split '@' | Select-Object -Last 1 } },
+            $GraphRequest = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/groups/$($GroupID)/$($members)?`$top=999&select=$SelectString" -tenantid $TenantFilter | Select-Object *, @{ Name = 'primDomain'; Expression = { $_.mail -split '@' | Select-Object -Last 1 } },
             @{Name = 'membersCsv'; Expression = { $_.members.userPrincipalName -join ',' } },
-            @{Name = 'teamsEnabled'; Expression = { if ($_.resourceProvisioningOptions -Like '*Team*') { $true }else { $false } } },
+            @{Name = 'teamsEnabled'; Expression = { if ($_.resourceProvisioningOptions -like '*Team*') { $true }else { $false } } },
             @{Name = 'calculatedGroupType'; Expression = {
 
-                    if ($_.mailEnabled -and $_.securityEnabled) {
-                        'Mail-Enabled Security'
-                    }
-                    if (!$_.mailEnabled -and $_.securityEnabled) {
-                        'Security'
-                    }
-                    if ($_.groupTypes -contains 'Unified') {
-                        'Microsoft 365'
-                    }
-                    if (([string]::isNullOrEmpty($_.groupTypes)) -and ($_.mailEnabled) -and (!$_.securityEnabled)) {
-                        'Distribution List'
-                    }
+                    if ($_.mailEnabled -and $_.securityEnabled) { 'Mail-Enabled Security' }
+                    if (!$_.mailEnabled -and $_.securityEnabled) { 'Security' }
+                    if ($_.groupTypes -contains 'Unified') { 'Microsoft 365' }
+                    if (([string]::isNullOrEmpty($_.groupTypes)) -and ($_.mailEnabled) -and (!$_.securityEnabled)) { 'Distribution List' }
                 }
             },
-            @{Name = 'dynamicGroupBool'; Expression = {
-                    if ($_.groupTypes -contains 'DynamicMembership') {
-                        $true
-                    } else {
-                        $false
-                    }
-                }
-            }
+            @{Name = 'dynamicGroupBool'; Expression = { if ($_.groupTypes -contains 'DynamicMembership') { $true } else { $false } } }
             $GraphRequest = @($GraphRequest | Sort-Object displayName)
         }
 

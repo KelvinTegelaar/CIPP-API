@@ -1179,7 +1179,7 @@ function Read-MXRecord {
 
             catch { Write-Verbose $_.Exception.Message }
         }
-        $ValidationPasses.Add('Mail exchanger record(s) are present for this domain.') | Out-Null
+        $ValidationPasses.Add('Mail exchanger records record(s) are present for this domain.') | Out-Null
         $MXRecords = $MXRecords | Sort-Object -Property Priority
 
         # Attempt to identify mail provider based on MX record
@@ -2073,9 +2073,11 @@ function Read-WhoisRecord {
     $WhoisRegex = '^(?!(?:%|>>>|-+|#|[*]))[^\S\n]*(?<PropName>.+?):(?:[\r\n]+)?(:?(?!([0-9]|[/]{2}))[^\S\r\n]*(?<PropValue>.+))?$'
 
     Write-Verbose "Querying WHOIS Server: $Server"
-    # TCP Client for Whois
-    $Client = New-Object System.Net.Sockets.TcpClient($Server, 43)
+
     try {
+        # TCP Client for Whois
+        $Client = New-Object System.Net.Sockets.TcpClient($Server, 43)
+
         # Open TCP connection and send query
         $Stream = $Client.GetStream()
         $ReferralServers = [System.Collections.Generic.List[string]]::new()
@@ -2159,16 +2161,18 @@ function Read-WhoisRecord {
                     $Results = $LastResult
                 }
             }
-        }
-
-        else {
+        } else {
             if ($Results._Raw -Match '(No match|Not Found|No Data)') {
                 $first, $newquery = ($Query -split '\.')
                 if (($newquery | Measure-Object).Count -gt 1) {
                     $Query = $newquery -join '.'
-                    $Results = Read-WhoisRecord -Query $Query -Server $Server -Port $Port
-                    foreach ($s in $Results._ReferralServers) {
-                        $ReferralServers.Add($s) | Out-Null
+                    try {
+                        $Results = Read-WhoisRecord -Query $Query -Server $Server -Port $Port
+                        foreach ($s in $Results._ReferralServers) {
+                            $ReferralServers.Add($s) | Out-Null
+                        }
+                    } catch {
+                        $Results = $LastResult
                     }
                 }
             }
@@ -2185,17 +2189,17 @@ function Read-WhoisRecord {
             $Stream.Dispose()
         }
     }
-
-    # Collect referral server list
-    $Results._ReferralServers = $ReferralServers
-
+    if ($ReferralServers) {
+        # Collect referral server list
+        $Results._ReferralServers = $ReferralServers
+    }
     # Convert to json and back to preserve object order
     $WhoisResults = $Results | ConvertTo-Json | ConvertFrom-Json
 
     # Return Whois results as PSObject
     $WhoisResults
 }
-#EndRegion './Public/Records/Read-WhoisRecord.ps1' 175
+#EndRegion './Public/Records/Read-WhoisRecord.ps1' 179
 #Region './Public/Resolver/Resolve-DnsHttpsQuery.ps1' -1
 
 function Resolve-DnsHttpsQuery {
@@ -2221,7 +2225,7 @@ function Resolve-DnsHttpsQuery {
 
     #>
     [cmdletbinding()]
-    Param(
+    param(
         [Parameter(Mandatory = $true)]
         [string]$Domain,
 
@@ -2251,23 +2255,23 @@ function Resolve-DnsHttpsQuery {
     $Uri = $QueryTemplate -f $BaseUri, $Domain, $RecordType
 
     $x = 0
+    $Exception = $null
     do {
         $x++
         try {
             $Results = Invoke-RestMethod -Uri $Uri -Headers $Headers -ErrorAction Stop
-        }
-
-        catch {
+        } catch {
+            $Exception = $_
             Start-Sleep -Milliseconds 300
         }
     }
     while (-not $Results -and $x -le 3)
-    if (!$Results) { throw $_ }
+    if (!$Results) { throw 'Exception querying resolver {0}: {1}' -f $Resolver.Resolver, $Exception.Exception.Message }
 
     if ($RecordType -eq 'txt' -and $Results.Answer) {
         if ($Resolver -eq 'Cloudflare' -or $Resolver -eq 'Quad9') {
             $Results.Answer | ForEach-Object {
-                $_.data = $_.data -replace '"' -replace '\s+', ' '
+                $_.data = $_.data -replace '" "' -replace '"', ''
             }
         }
         $Results.Answer = $Results.Answer | Where-Object { $_.type -eq 16 }

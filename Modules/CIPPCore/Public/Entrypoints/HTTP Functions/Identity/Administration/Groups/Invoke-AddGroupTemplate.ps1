@@ -1,6 +1,6 @@
 using namespace System.Net
 
-Function Invoke-AddGroupTemplate {
+function Invoke-AddGroupTemplate {
     <#
     .FUNCTIONALITY
         Entrypoint,AnyTenant
@@ -13,27 +13,27 @@ Function Invoke-AddGroupTemplate {
     $Headers = $Request.Headers
     Write-LogMessage -headers $Headers -API $APIName -message 'Accessed this API' -Sev 'Debug'
 
-    $GUID = (New-Guid).GUID
+    $GUID = $Request.Body.GUID ?? (New-Guid).GUID
     try {
-        if (!$Request.body.displayname) { throw 'You must enter a displayname' }
+        if (!$Request.Body.displayname) { throw 'You must enter a displayname' }
 
         $object = [PSCustomObject]@{
-            Displayname     = $request.body.displayName
-            Description     = $request.body.description
-            groupType       = $request.body.groupType
-            MembershipRules = $request.body.membershipRules
-            allowExternal   = $request.body.allowExternal
-            username        = $request.body.username
+            displayName     = $Request.Body.displayName
+            description     = $Request.Body.description
+            groupType       = $Request.Body.groupType
+            membershipRules = $Request.Body.membershipRules
+            allowExternal   = $Request.Body.allowExternal
+            username        = $Request.Body.username
             GUID            = $GUID
         } | ConvertTo-Json
         $Table = Get-CippTable -tablename 'templates'
         $Table.Force = $true
-        Add-CIPPAzDataTableEntity @Table -Entity @{
+        Add-CIPPAzDataTableEntity @Table -Force -Entity @{
             JSON         = "$object"
             RowKey       = "$GUID"
             PartitionKey = 'GroupTemplate'
         }
-        Write-LogMessage -headers $Request.Headers -API $APINAME -message "Created Group template named $($Request.body.displayname) with GUID $GUID" -Sev 'Debug'
+        Write-LogMessage -headers $Request.Headers -API $APINAME -message "Created Group template named $($Request.Body.displayname) with GUID $GUID" -Sev 'Debug'
 
         $body = [pscustomobject]@{'Results' = 'Successfully added template' }
     } catch {

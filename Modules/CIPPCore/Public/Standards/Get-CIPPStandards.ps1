@@ -141,7 +141,7 @@ function Get-CIPPStandards {
                         $excludedTenantValues = $template.excludedTenants | ForEach-Object {
                             $FilterValue = $_.value
                             if ($_.type -eq 'Group') {
-                        ($TenantGroups | Where-Object {
+                                ($TenantGroups | Where-Object {
                                     $_.Id -eq $FilterValue
                                 }).Members.defaultDomainName
                             } else {
@@ -158,7 +158,7 @@ function Get-CIPPStandards {
                 if ($tenantFilterValues -contains 'AllTenants' -and -not ($excludedTenantValues -contains $TenantName)) {
                     $AllTenantsApplicable = $true
                 }
-                if ($tenantFilterValues -contains $TenantName) {
+                if ($tenantFilterValues -contains $TenantName -and -not ($excludedTenantValues -contains $TenantName)) {
                     $TenantSpecificApplicable = $true
                 }
 
