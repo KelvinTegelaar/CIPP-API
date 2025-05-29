@@ -120,7 +120,7 @@ function Invoke-CIPPStandardIntuneTemplate {
                 Set-CIPPIntunePolicy -TemplateType $TemplateFile.body.Type -Description $TemplateFile.description -DisplayName $TemplateFile.displayname -RawJSON $templateFile.rawJSON -AssignTo $TemplateFile.AssignTo -ExcludeGroup $TemplateFile.excludeGroup -tenantFilter $Tenant
             } catch {
                 $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
-                Write-LogMessage -API 'Standards' -tenant $tenant -message "Failed to create or update Intune Template $PolicyName, Error: $ErrorMessage" -sev 'Error'
+                Write-LogMessage -API 'Standards' -tenant $tenant -message "Failed to create or update Intune Template $($TemplateFile.displayname), Error: $ErrorMessage" -sev 'Error'
             }
         }
 
