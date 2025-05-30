@@ -1,6 +1,6 @@
 using namespace System.Net
 
-Function Invoke-ListConditionalAccessPolicies {
+function Invoke-ListConditionalAccessPolicies {
     <#
     .FUNCTIONALITY
         Entrypoint
@@ -164,6 +164,7 @@ Function Invoke-ListConditionalAccessPolicies {
         $AllRoleDefinitions = ($GraphRequest | Where-Object { $_.id -eq 'roleDefinitions' }).body.value
         $GroupListOutput = ($GraphRequest | Where-Object { $_.id -eq 'groups' }).body.value
         $UserListOutput = ($GraphRequest | Where-Object { $_.id -eq 'users' }).body.value
+        $AllServicePrincipals = ($GraphRequest | Where-Object { $_.id -eq 'servicePrincipals' }).body.value
 
 
         $GraphRequest = foreach ($cap in $ConditionalAccessPolicyOutput) {
@@ -180,8 +181,8 @@ Function Invoke-ListConditionalAccessPolicies {
                 excludePlatforms                            = ($cap.conditions.platforms.excludePlatforms) -join ','
                 includeLocations                            = (Get-LocationNameFromId -Locations $AllNamedLocations -id $cap.conditions.locations.includeLocations) -join ','
                 excludeLocations                            = (Get-LocationNameFromId -Locations $AllNamedLocations -id $cap.conditions.locations.excludeLocations) -join ','
-                includeApplications                         = ($cap.conditions.applications.includeApplications | ForEach-Object { Get-ApplicationNameFromId -Applications $AllApplications -id $_ }) -join ','
-                excludeApplications                         = ($cap.conditions.applications.excludeApplications | ForEach-Object { Get-ApplicationNameFromId -Applications $AllApplications -id $_ }) -join ','
+                includeApplications                         = ($cap.conditions.applications.includeApplications | ForEach-Object { Get-ApplicationNameFromId -Applications $AllApplications -ServicePrincipals $AllServicePrincipals -id $_ }) -join ','
+                excludeApplications                         = ($cap.conditions.applications.excludeApplications | ForEach-Object { Get-ApplicationNameFromId -Applications $AllApplications -ServicePrincipals $AllServicePrincipals -id $_ }) -join ','
                 includeUserActions                          = ($cap.conditions.applications.includeUserActions | Out-String)
                 includeAuthenticationContextClassReferences = ($cap.conditions.applications.includeAuthenticationContextClassReferences | Out-String)
                 includeUsers                                = ($cap.conditions.users.includeUsers | ForEach-Object { Get-UserNameFromId -Users $UserListOutput -id $_ }) | Out-String
