@@ -21,7 +21,7 @@ Function Invoke-ExecGroupsDelete {
     $DisplayName = $Request.Query.displayName ?? $Request.Body.displayName
 
     Try {
-        $Result = Remove-CIPPGroup -ID $ID -Grouptype $GroupType -TenantFilter $TenantFilter -DisplayName $DisplayName -APIName $APIName -Headers $Headers
+        $Result = Remove-CIPPGroup -ID $ID -GroupType $GroupType -TenantFilter $TenantFilter -DisplayName $DisplayName -APIName $APIName -Headers $Headers
         $StatusCode = [HttpStatusCode]::OK
     } catch {
         $Result = "$($_.Exception.Message)"

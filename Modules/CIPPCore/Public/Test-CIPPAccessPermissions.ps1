@@ -163,7 +163,7 @@ function Test-CIPPAccessPermissions {
         try {
             $MFAServicePolicy = New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/policies/mfaServicePolicy' -tenantid $env:TenantID -AsApp $true -NoAuthCheck $true
             if ($MFAServicePolicy.rememberMfaOnTrustedDevice.isEnabled -eq $true -and $MFAServicePolicy.rememberMfaOnTrustedDevice.allowedNumberOfDays -gt 0) {
-                $ErrorMessages.Add("MFA Service Policy has a session lifetime of $($MFAServicePolicy.rememberMfaOnTrustedDevice.allowedNumberOfDays) days. This may cause athentication issues for your service account.") | Out-Null
+                $ErrorMessages.Add("MFA Service Policy has a session lifetime of $($MFAServicePolicy.rememberMfaOnTrustedDevice.allowedNumberOfDays) days. This may cause authentication issues for your service account.") | Out-Null
                 $Links.Add([PSCustomObject]@{
                         Text = 'Troubleshooting'
                         Href = 'https://docs.cipp.app/troubleshooting/troubleshooting#multi-factor-authentication-troubleshooting'
