@@ -16,7 +16,6 @@ function Get-CIPPAlertHuntressRogueApps {
         $InputValue,
         $TenantFilter,
         [Parameter(Mandatory = $false)]
-        [Alias('ignoreDisabledApps')]
         [bool]$IgnoreDisabledApps = $false
     )
 
