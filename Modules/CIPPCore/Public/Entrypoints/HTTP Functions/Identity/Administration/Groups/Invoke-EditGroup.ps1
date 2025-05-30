@@ -33,7 +33,8 @@ function Invoke-EditGroup {
     if ($AddMembers) {
         $AddMembers | ForEach-Object {
             try {
-                $member = $_.value
+                # Add to group user action and edit group page sends in different formats, so we need to handle both
+                $Member = $_.value ?? $_
                 $memberid = $_.addedFields.id
                 if (!$memberid) {
                     $memberid = (New-GraphGetRequest -uri "https://graph.microsoft.com/beta/users/$member" -tenantid $TenantId).id
