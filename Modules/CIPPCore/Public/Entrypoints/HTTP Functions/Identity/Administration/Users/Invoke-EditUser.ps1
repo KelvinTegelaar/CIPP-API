@@ -1,6 +1,6 @@
 using namespace System.Net
 
-Function Invoke-EditUser {
+function Invoke-EditUser {
     <#
     .FUNCTIONALITY
         Entrypoint
@@ -89,7 +89,7 @@ Function Invoke-EditUser {
 
         if ($licenses -or $UserObj.removeLicenses) {
             if ($UserObj.sherwebLicense.value) {
-                $null = Set-SherwebSubscription -TenantFilter $UserObj.tenantFilter -SKU $UserObj.sherwebLicense.value -Add 1
+                $null = Set-SherwebSubscription -Headers $Headers -TenantFilter $UserObj.tenantFilter -SKU $UserObj.sherwebLicense.value -Add 1
                 $null = $Results.Add('Added Sherweb License, scheduling assignment')
                 $taskObject = [PSCustomObject]@{
                     TenantFilter  = $UserObj.tenantFilter
@@ -135,6 +135,8 @@ Function Invoke-EditUser {
         $ErrorMessage = Get-CippException -Exception $_
         Write-LogMessage -API $ApiName -tenant ($UserObj.tenantFilter) -headers $Headers -message "License assign API failed. $($ErrorMessage.NormalizedError)" -Sev Error -LogData $ErrorMessage
         $null = $results.Add( "We've failed to assign the license. $($ErrorMessage.NormalizedError)")
+        Write-Warning "License assign API failed. $($_.Exception.Message)"
+        Write-Information $_.InvocationInfo.PositionMessage
     }
 
     #Add Aliases, removal currently not supported.

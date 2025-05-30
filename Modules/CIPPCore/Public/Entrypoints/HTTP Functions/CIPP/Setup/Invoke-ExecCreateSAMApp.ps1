@@ -1,6 +1,6 @@
 using namespace System.Net
 
-Function Invoke-ExecCreateSAMApp {
+function Invoke-ExecCreateSAMApp {
     <#
     .FUNCTIONALITY
         Entrypoint,AnyTenant
@@ -19,7 +19,7 @@ Function Invoke-ExecCreateSAMApp {
             $URL = ($Request.headers.'x-ms-original-url').split('/api') | Select-Object -First 1
             $TenantId = (Invoke-RestMethod 'https://graph.microsoft.com/v1.0/organization' -Headers @{ authorization = "Bearer $($Token.access_token)" } -Method GET -ContentType 'application/json').value.id
             #Find Existing app registration
-            $AppId = (Invoke-RestMethod 'https://graph.microsoft.com/v1.0/applications' -Headers @{ authorization = "Bearer $($Token.access_token)" } -Method GET -ContentType 'application/json' -Body "{ `"filter`": `"displayName eq 'CIPP-SAM'`" }").value | Select-Object -Last 1
+            $AppId = (Invoke-RestMethod "https://graph.microsoft.com/v1.0/applications?`$filter=displayName eq 'CIPP-SAM'" -Headers @{ authorization = "Bearer $($Token.access_token)" } -Method GET -ContentType 'application/json').value | Select-Object -Last 1
             #Check if the appId has the redirect URI, if not, add it.
             if ($AppId) {
                 Write-Host "Found existing app: $($AppId.id). Reusing."

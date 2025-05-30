@@ -16,24 +16,34 @@ function Get-CIPPAccessRole {
     Internal
     #>
     [CmdletBinding()]
-    param($Request)
+    param($Request, $Headers)
 
-    $CacheAccessUserRoleTable = Get-CIPPTable -tablename 'cacheAccessUserRole'
-    $CachedRoles = Get-CIPPAzDataTableEntity @CacheAccessUserRoleTable -Filter "PartitionKey eq 'AccessUser' and RowKey eq '$($Request.Headers.'x-ms-client-principal-name')'" | Select-Object -ExpandProperty Role | ConvertFrom-Json
+    $Headers = $Request.Headers ?? $Headers
 
-    $SwaCreds = ([System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($request.headers.'x-ms-client-principal')) | ConvertFrom-Json)
+    $CacheAccessUserRoleTable = Get-CIPPTable -tablename 'cacheAccessUserRoles'
+
+    $SwaCreds = ([System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($Headers.'x-ms-client-principal')) | ConvertFrom-Json)
     $SwaRoles = $SwaCreds.userRoles
+    $Username = $SwaCreds.userDetails
+
+    $CachedRoles = Get-CIPPAzDataTableEntity @CacheAccessUserRoleTable -Filter "PartitionKey eq 'AccessUser' and RowKey eq '$Username'" | Select-Object -ExpandProperty Role | ConvertFrom-Json
+
+    Write-Information "SWA Roles: $($SwaRoles -join ', ')"
+    Write-Information "Cached Roles: $($CachedRoles -join ', ')"
 
     # Combine SWA roles and cached roles into a single deduplicated list
     $AllRoles = [System.Collections.Generic.List[string]]::new()
-    if ($null -ne $SwaRoles) {
-        $AllRoles.AddRange($SwaRoles)
-    }
-    if ($null -ne $CachedRoles) {
-        $AllRoles.AddRange($CachedRoles)
-    }
 
-    # Remove duplicates and ensure we have a clean array
+    foreach ($Role in $SwaRoles) {
+        if (-not $AllRoles.Contains($Role)) {
+            $AllRoles.Add($Role)
+        }
+    }
+    foreach ($Role in $CachedRoles) {
+        if (-not $AllRoles.Contains($Role)) {
+            $AllRoles.Add($Role)
+        }
+    }
     $CombinedRoles = $AllRoles | Select-Object -Unique
 
     # For debugging
