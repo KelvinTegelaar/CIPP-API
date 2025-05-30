@@ -98,7 +98,7 @@ function Invoke-EditGroup {
                             target  = $Member.value
                         })
                 } else {
-                    Write-LogMessage -API $APINAME -tenant $TenantId -headers $Headers -message 'You cannot add a Contact to a Security Group or a M365 Group' -Sev 'Error'
+                    Write-LogMessage -API $APIName -tenant $TenantId -headers $Headers -message 'You cannot add a Contact to a Security Group or a M365 Group' -Sev 'Error'
                     $null = $Results.Add('Error - You cannot add a contact to a Security Group or a M365 Group')
                 }
             } catch {
@@ -126,7 +126,7 @@ function Invoke-EditGroup {
                             target  = $MemberID
                         })
                 } else {
-                    Write-LogMessage -API $APINAME -tenant $TenantId -headers $Headers -message 'You cannot remove a contact from a Security Group' -Sev 'Error'
+                    Write-LogMessage -API $APIName-tenant $TenantId -headers $Headers -message 'You cannot remove a contact from a Security Group' -Sev 'Error'
                     $null = $Results.Add('You cannot remove a contact from a Security Group')
                 }
             }
@@ -276,7 +276,7 @@ function Invoke-EditGroup {
                 $Sev = 'Info'
                 $Results.Add("Success - $Message")
             }
-            Write-LogMessage -headers $Request.Headers -API $APINAME -tenant $TenantId -message $Message -Sev $Sev
+            Write-LogMessage -headers $Headers -API $APIName -tenant $TenantId -message $Message -Sev $Sev
         }
     }
 
@@ -293,7 +293,7 @@ function Invoke-EditGroup {
         foreach ($ExoError in $LastError.error) {
             $Sev = 'Error'
             $Results.Add("Error - $ExoError")
-            Write-LogMessage -headers $Request.Headers -API $APINAME -tenant $TenantId -message $Message -Sev $Sev
+            Write-LogMessage -headers $Headers -API $APIName -tenant $TenantId -message $Message -Sev $Sev
         }
 
         foreach ($ExoLog in $ExoLogs) {
@@ -302,7 +302,7 @@ function Invoke-EditGroup {
                 $Message = $ExoLog.message
                 $Sev = 'Info'
                 $Results.Add("Success - $Message")
-                Write-LogMessage -headers $Request.Headers -API $APINAME -tenant $TenantId -message $Message -Sev $Sev
+                Write-LogMessage -headers $Headers -API $APIName -tenant $TenantId -message $Message -Sev $Sev
             }
         }
     }
