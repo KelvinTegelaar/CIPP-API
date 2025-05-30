@@ -14,7 +14,9 @@ function Invoke-CIPPStandardAppDeploy {
             Entra (AAD) Standards
         TAG
         ADDEDCOMPONENT
-            {"type":"textField","name":"standards.AppDeploy.appids","label":"Application IDs, comma separated"}
+            {"type":"select","multiple":false,"creatable":false,"label":"App Approval Mode","name":"standards.AppDeploy.mode","options":[{"label":"Template","value":"template"},{"label":"Copy Permissions","value":"copy"}]}
+            {"type":"autoComplete","multiple":true,"creatable":false,"label":"Select Applications","name":"standards.AppDeploy.templateIds","api":{"url":"/api/ListAppApprovalTemplates","labelField":"TemplateName","valueField":"TemplateId","queryKey":"StdAppApprovalTemplateList","addedField":{"AppId":"AppId"}},"condition":{"field":"standards.AppDeploy.mode","compareType":"is","compareValue":"template"}}
+            {"type":"textField","name":"standards.AppDeploy.appids","label":"Application IDs, comma separated","condition":{"field":"standards.AppDeploy.mode","compareType":"isNot","compareValue":"template"}}
         IMPACT
             Low Impact
         ADDEDDATE
@@ -25,7 +27,7 @@ function Invoke-CIPPStandardAppDeploy {
         UPDATECOMMENTBLOCK
             Run the Tools\Update-StandardsComments.ps1 script to update this comment block
     .LINK
-        https://docs.cipp.app/user-documentation/tenant/standards/list-standards/entra-aad-standards#low-impact
+        https://docs.cipp.app/user-documentation/tenant/standards/list-standards
     #>
 
     param($Tenant, $Settings)
