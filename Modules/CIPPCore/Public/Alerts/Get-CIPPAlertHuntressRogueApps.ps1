@@ -14,13 +14,19 @@ function Get-CIPPAlertHuntressRogueApps {
         [Parameter(Mandatory = $false)]
         [Alias('input')]
         $InputValue,
-        $TenantFilter
+        $TenantFilter,
+        [Parameter(Mandatory = $false)]
+        [bool]$IgnoreDisabledApps = $false
     )
 
     try {
         $RogueApps = Invoke-RestMethod -Uri 'https://raw.githubusercontent.com/huntresslabs/rogueapps/main/public/rogueapps.json'
         $RogueAppFilter = $RogueApps.appId -join "','"
         $ServicePrincipals = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/servicePrincipals?`$filter=appId in ('$RogueAppFilter')" -tenantid $TenantFilter
+        # If IgnoreDisabledApps is true, filter out disabled service principals
+        if ($IgnoreDisabledApps) {
+            $ServicePrincipals = $ServicePrincipals | Where-Object { $_.accountEnabled -eq $true }
+        }
 
         if (($ServicePrincipals | Measure-Object).Count -gt 0) {
             $AlertData = foreach ($ServicePrincipal in $ServicePrincipals) {
