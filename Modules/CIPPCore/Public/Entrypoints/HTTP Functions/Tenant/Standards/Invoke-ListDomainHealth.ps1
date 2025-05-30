@@ -39,7 +39,7 @@ function Invoke-ListDomainHealth {
 
     Set-DnsResolver -Resolver $Resolver
 
-    $UserRoles = Get-CIPPAccessPermissions -Request $Request
+    $UserRoles = Get-CIPPAccessRole -Request $Request
 
     $APIName = $Request.Params.CIPPEndpoint
     $Headers = $Request.Headers

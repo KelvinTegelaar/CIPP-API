@@ -21,7 +21,7 @@ function New-CIPPUserTask {
     try {
         if ($UserObj.licenses.value) {
             if ($UserObj.sherwebLicense.value) {
-                $License = Set-SherwebSubscription -TenantFilter $UserObj.tenantFilter -SKU $UserObj.sherwebLicense.value -Add 1
+                $License = Set-SherwebSubscription -Headers $Headers -TenantFilter $UserObj.tenantFilter -SKU $UserObj.sherwebLicense.value -Add 1
                 $null = $results.Add('Added Sherweb License, scheduling assignment')
                 $taskObject = [PSCustomObject]@{
                     TenantFilter  = $UserObj.tenantFilter

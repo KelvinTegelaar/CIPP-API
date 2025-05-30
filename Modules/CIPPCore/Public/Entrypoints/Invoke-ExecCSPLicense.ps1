@@ -21,18 +21,18 @@ Function Invoke-ExecCSPLicense {
 
     try {
         if ($Action -eq 'Add') {
-            $null = Set-SherwebSubscription -tenantFilter $TenantFilter -SKU $SKU -add $Request.Body.Add
+            $null = Set-SherwebSubscription -Headers $Headers -tenantFilter $TenantFilter -SKU $SKU -add $Request.Body.Add
         }
 
         if ($Action -eq 'Remove') {
-            $null = Set-SherwebSubscription -tenantFilter $TenantFilter -SKU $SKU -remove $Request.Body.Remove
+            $null = Set-SherwebSubscription -Headers $Headers -tenantFilter $TenantFilter -SKU $SKU -remove $Request.Body.Remove
         }
 
         if ($Action -eq 'NewSub') {
-            $null = Set-SherwebSubscription -tenantFilter $TenantFilter -SKU $SKU -Quantity $Request.Body.Quantity
+            $null = Set-SherwebSubscription -Headers $Headers -tenantFilter $TenantFilter -SKU $SKU -Quantity $Request.Body.Quantity
         }
         if ($Action -eq 'Cancel') {
-            $null = Remove-SherwebSubscription -tenantFilter $TenantFilter -SubscriptionIds $Request.Body.SubscriptionIds
+            $null = Remove-SherwebSubscription -Headers $Headers -tenantFilter $TenantFilter -SubscriptionIds $Request.Body.SubscriptionIds
         }
         $Result = 'License change executed successfully.'
         $StatusCode = [HttpStatusCode]::OK
