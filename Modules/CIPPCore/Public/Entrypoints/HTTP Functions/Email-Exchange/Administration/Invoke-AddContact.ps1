@@ -58,7 +58,15 @@ Function Invoke-AddContact {
 
         # Update the contact with additional details only if we have properties to set
         if ($SetContactParams.Count -gt 1) {
-            $null = New-ExoRequest -tenantid $TenantId -cmdlet 'Set-Contact' -cmdParams $SetContactParams -UseSystemMailbox $true
+            for ($i = 1; $i -le 3; $i++) {
+                try {
+                    $null = New-ExoRequest -tenantid $TenantId -cmdlet 'Set-Contact' -cmdParams $SetContactParams -UseSystemMailbox $true
+                    break
+                }
+                catch {
+                    if ($i -eq 3) { throw }
+                }
+            }
         }
 
         # Build MailContact parameters efficiently
@@ -72,7 +80,15 @@ Function Invoke-AddContact {
             $MailContactParams.MailTip = $ContactObject.mailTip
         }
 
-        $null = New-ExoRequest -tenantid $TenantId -cmdlet 'Set-MailContact' -cmdParams $MailContactParams -UseSystemMailbox $true
+        for ($i = 1; $i -le 3; $i++) {
+            try {
+                $null = New-ExoRequest -tenantid $TenantId -cmdlet 'Set-MailContact' -cmdParams $MailContactParams -UseSystemMailbox $true
+                break
+            }
+            catch {
+                if ($i -eq 3) { throw }
+            }
+        }
 
         # Log the result
         $Result = "Successfully created contact $($ContactObject.displayName) with email address $($ContactObject.email)"
