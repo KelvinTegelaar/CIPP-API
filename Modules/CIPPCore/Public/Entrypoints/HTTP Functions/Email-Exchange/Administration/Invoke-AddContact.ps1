@@ -58,36 +58,32 @@ Function Invoke-AddContact {
 
         # Update the contact with additional details only if we have properties to set
         if ($SetContactParams.Count -gt 1) {
-            for ($i = 1; $i -le 3; $i++) {
-                try {
-                    $null = New-ExoRequest -tenantid $TenantId -cmdlet 'Set-Contact' -cmdParams $SetContactParams -UseSystemMailbox $true
-                    break
-                }
-                catch {
-                    if ($i -eq 3) { throw }
-                }
-            }
+            Start-Sleep -Milliseconds 500 # Ensure the contact is created before updating
+            $null = New-ExoRequest -tenantid $TenantId -cmdlet 'Set-Contact' -cmdParams $SetContactParams -UseSystemMailbox $true
         }
 
-        # Build MailContact parameters efficiently
+        # Check if we need to update MailContact properties
+        $needsMailContactUpdate = $false
         $MailContactParams = @{
             Identity = $NewContact.id
-            HiddenFromAddressListsEnabled = [bool]$ContactObject.hidefromGAL
+        }
+
+        # Only add HiddenFromAddressListsEnabled if we're actually hiding from GAL
+        if ([bool]$ContactObject.hidefromGAL) {
+            $MailContactParams.HiddenFromAddressListsEnabled = $true
+            $needsMailContactUpdate = $true
         }
 
         # Add MailTip if provided
         if (![string]::IsNullOrWhiteSpace($ContactObject.mailTip)) {
             $MailContactParams.MailTip = $ContactObject.mailTip
+            $needsMailContactUpdate = $true
         }
 
-        for ($i = 1; $i -le 3; $i++) {
-            try {
-                $null = New-ExoRequest -tenantid $TenantId -cmdlet 'Set-MailContact' -cmdParams $MailContactParams -UseSystemMailbox $true
-                break
-            }
-            catch {
-                if ($i -eq 3) { throw }
-            }
+        # Only call Set-MailContact if we have changes to make
+        if ($needsMailContactUpdate) {
+            Start-Sleep -Milliseconds 500 # Ensure the contact is created before updating
+            $null = New-ExoRequest -tenantid $TenantId -cmdlet 'Set-MailContact' -cmdParams $MailContactParams -UseSystemMailbox $true
         }
 
         # Log the result
